@@ -2985,3 +2985,18 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+## Benchmark concurrents (src/benchmark.php)
+
+Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Rapport de référence : `docs/benchmarks/cougnou-2026-11.md`.
+
+| Besoin | Route |
+|---|---|
+| Vérifier les routes Benchmark en lecture | `GET /benchmarks/verification?shop=4` → `{ ok, etapes: [{ etape, methode, route, ok, code, ms, note }], alertes, resume }` |
+| … avec un cycle d'écriture sur un concurrent témoin, supprimé ensuite | `POST /benchmarks/verification` `{ shop?, ecrire: true }` |
+| Poser le relevé cougnou dans TFBuddy (idempotent, étiquette `[cockpit:cougnou:<date>]`) | `POST /benchmarks/cougnou/semer` `{ simuler?: true par défaut, magasins?: [2,3,4,5] }` |
+| Rapport cougnou (prix au kilo, position, contrôles web, rang Google si clé) | `GET /benchmarks/cougnou/rapport` (`web=0` sans les contrôles web) ; en HTML : `GET /benchmarks/cougnou/rapport.html` |
+| Routine (lundi 7 h ; + jeudi 7 h du 1/11 au 6/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
+| Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], poidsCougnou?: int, magasins?: { id: nom } }` → réglage `benchmark` |
+
+Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|cougnou|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.

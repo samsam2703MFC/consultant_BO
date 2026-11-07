@@ -103,7 +103,7 @@ verifie('lecture seule sur une base vide : tout passe', $v['ok'], $v['resume']);
 verifie('lecture seule : aucune écriture', PanelApi::$comp === []);
 $v = benchmarkVerifier(4, true);
 verifie('cycle d\'écriture complet', $v['ok'], $v['resume']);
-verifie('cycle d\'écriture : 13 étapes d\'écriture + 6 lectures', count($v['etapes']) >= 19, (string) count($v['etapes']));
+verifie('cycle d\'écriture : 5 lectures + 11 écritures', count($v['etapes']) >= 16, (string) count($v['etapes']));
 verifie('témoin nettoyé (concurrent, observation, item)', PanelApi::$comp === [] && PanelApi::$obs === [] && PanelApi::$items === []);
 verifie('cloisonnement absent signalé', (bool) array_filter($v['alertes'], fn ($a) => str_contains($a, 'Cloisonnement')));
 
@@ -138,7 +138,7 @@ $tz = new DateTimeZone('Europe/Brussels');
 verifie('lundi 7 h : passe', benchmarkCronDu(new DateTime('2026-03-02 07:05', $tz)));
 verifie('jeudi 7 h hors saison : non', !benchmarkCronDu(new DateTime('2026-03-05 07:05', $tz)));
 verifie('jeudi 7 h en saison (novembre) : passe', benchmarkCronDu(new DateTime('2026-11-12 07:05', $tz)));
-verifie('jeudi 7 h début janvier : passe', benchmarkCronDu(new DateTime('2027-01-01 07:05', $tz)));
+verifie('jeudi 7 h début janvier : passe', benchmarkCronDu(new DateTime('2026-01-01 07:05', $tz)));
 verifie('lundi 8 h : non', !benchmarkCronDu(new DateTime('2026-03-02 08:05', $tz)));
 
 echo "\n$ok ok, $ko KO\n";

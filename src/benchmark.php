@@ -511,7 +511,7 @@ function benchmarkVisibiliteSite(): array
         ['cle' => 'description', 'libelle' => '« cougnou » dans la meta description', 'ok' => stripos($desc, 'cougnou') !== false, 'detail' => $desc ?: '—'],
         ['cle' => 'texte', 'libelle' => 'Cougnous lisibles dans le HTML servi', 'ok' => substr_count($vg, 'cougnou') >= 2, 'detail' => substr_count($vg, 'cougnou') . ' mention(s)'],
         ['cle' => 'prix', 'libelle' => 'Prix affiché sur la page', 'ok' => (bool) preg_match('/\d+[,.]\d{2}\s*(€|eur)/u', $vg), 'detail' => ''],
-        ['cle' => 'poids', 'libelle' => 'Poids affiché (g) pour comparer au kilo', 'ok' => (bool) preg_match('/cougnou[^.]{0,60}\d{3}\s*g/u', $vg) && substr_count($vg, ' g') >= 3, 'detail' => ''],
+        ['cle' => 'poids', 'libelle' => 'Poids affiché (g) pour comparer au kilo', 'ok' => ($nPoids = preg_match_all('/cougnou[^€]{0,60}?\d{2,4}\s*g\b/u', $vg)) >= 3, 'detail' => $nPoids . ' cougnou(s) avec poids'],
         ['cle' => 'schema', 'libelle' => 'Balisage schema.org Product / Offer', 'ok' => (bool) preg_match('/"@type"\s*:\s*"(Product|Offer)"/', $hG), 'detail' => ''],
         ['cle' => 'accueil', 'libelle' => 'Cougnou visible sur l\'accueil (HTML servi)', 'ok' => str_contains($visible($hA), 'cougnou'), 'detail' => $cA === 200 ? '' : 'HTTP ' . $cA],
         ['cle' => 'sitemap', 'libelle' => 'Page de gamme dans le sitemap', 'ok' => $cS === 200 && str_contains($hS, (string) ($d['site']['pageGamme'] ?? 'gamme-noel')), 'detail' => ''],

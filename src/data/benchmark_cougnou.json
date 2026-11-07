@@ -1,0 +1,651 @@
+{
+ "releve": "2026-11-07",
+ "site": {
+  "url": "https://atelierby.be",
+  "pageGamme": "/gammes/gamme-noel-nouvel-an/"
+ },
+ "nous": {
+  "poidsEstime_g": 220,
+  "poidsConfirme": false,
+  "poidsNote": "Poids non publié : estimé à ~220 g d'après le coût de recette (Cougnou Nature 400 g = 1,79 € ; Cougnou Sucre = 0,98 €). À confirmer par la fiche technique (réglage benchmark.poidsCougnou).",
+  "correspondance": {
+   "sucre": 4100001,
+   "raisin": 4100002,
+   "chocolat": 4100003,
+   "cannelle": 4100016,
+   "nature400": 6700139
+  },
+  "produits": [
+   {
+    "id": 4100001,
+    "nom": "Cougnou - Sucre",
+    "prix": 2.9,
+    "individuel": true
+   },
+   {
+    "id": 4100002,
+    "nom": "Cougnou - Sucre & Raisin",
+    "prix": 2.9,
+    "individuel": true
+   },
+   {
+    "id": 4100003,
+    "nom": "Cougnou - Sucre & Chocolat",
+    "prix": 2.9,
+    "individuel": true
+   },
+   {
+    "id": 4100016,
+    "nom": "Cougnou - Sucre & Cannelle",
+    "prix": 2.9,
+    "individuel": true
+   },
+   {
+    "id": null,
+    "nom": "Cougnou 4+1 (5 pièces)",
+    "prix": 11.6,
+    "poids_g": 1100
+   },
+   {
+    "id": 6700139,
+    "nom": "Cougnou Nature - 400 g",
+    "prix": 0,
+    "poids_g": 400
+   }
+  ],
+  "boutiques": [
+   {
+    "id": 2,
+    "ville": "Corbais"
+   },
+   {
+    "id": 3,
+    "ville": "Gosselies"
+   },
+   {
+    "id": 5,
+    "ville": "Sombreffe"
+   },
+   {
+    "id": 4,
+    "ville": "Halle",
+    "nl": true
+   }
+  ]
+ },
+ "concurrents": [
+  {
+   "cle": "colruyt",
+   "nom": "Colruyt (Boni)",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.colruyt.be",
+   "note": "Collect&Go",
+   "items": [
+    {
+     "name_raw": "Cougnou nature Boni 500 g",
+     "unit_type": "g",
+     "unit_size": 500,
+     "price": 4.99,
+     "comparer_a": "nature400",
+     "source": "https://www.colruyt.be/fr/produits/19671",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou sucre Boni 250 g",
+     "unit_type": "g",
+     "unit_size": 250,
+     "price": 2.59,
+     "comparer_a": "sucre",
+     "source": "https://www.collectandgo.be/colruyt/fr/assortiment/boni-selection-pain-pr%C3%A9emball%C3%A9-cougnou-sucre-250g",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou beurre sucre La Lorraine 2×100 g",
+     "unit_type": "g",
+     "unit_size": 200,
+     "price": 2.99,
+     "comparer_a": "sucre",
+     "source": "https://www.colruyt.be/fr/produits/23381",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "aldi",
+   "nom": "Aldi",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.aldi.be",
+   "note": "pas de commande en ligne",
+   "items": [
+    {
+     "name_raw": "Cougnou au sucre 4 pièces (400 g)",
+     "unit_type": "g",
+     "unit_size": 400,
+     "price": 2.99,
+     "comparer_a": "sucre",
+     "source": "https://www.aldi.be/fr/p/cougnou-au-sucre-4-pcs-4940-1-0.article.html",
+     "vu_le": "index moteur, sept. 2025"
+    },
+    {
+     "name_raw": "Cougnou sucre et raisins 4 pièces (400 g)",
+     "unit_type": "g",
+     "unit_size": 400,
+     "price": 2.99,
+     "comparer_a": "raisin",
+     "source": "https://www.aldi.be/fr/p/cougnou-au-sucre-et-aux-raisins-secs-4-pcs-4983-1-0.article.html",
+     "vu_le": "index moteur, 2025"
+    }
+   ]
+  },
+  {
+   "cle": "carrefour",
+   "nom": "Carrefour",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.carrefour.be",
+   "note": "Drive",
+   "items": [
+    {
+     "name_raw": "Cougnou nature Carrefour Extra 250 g",
+     "unit_type": "g",
+     "unit_size": 250,
+     "price": 2.89,
+     "comparer_a": "sucre",
+     "source": "https://www.carrefour.be/fr/extra-cougnou-nature-250-g/01024052.html",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou sucre perlé Carrefour Extra 250 g",
+     "unit_type": "g",
+     "unit_size": 250,
+     "price": 2.89,
+     "comparer_a": "sucre",
+     "source": "https://www.carrefour.be/fr/extra-cougnou-au-sucre-perle-250-g/01024055.html",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnolle frais sucre La Lorraine 2×90 g",
+     "unit_type": "g",
+     "unit_size": 180,
+     "price": 3.59,
+     "comparer_a": "sucre",
+     "source": "https://www.carrefour.be/fr/cougnolle-frais-sucre-2-x-90-g/06706023.html",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "delhaize",
+   "nom": "Delhaize",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.delhaize.be",
+   "note": "Taste of Inspirations",
+   "items": [
+    {
+     "name_raw": "Cougnou sucre-raisins Tradition Taste of Inspirations 125 g",
+     "unit_type": "g",
+     "unit_size": 125,
+     "price": 2.99,
+     "comparer_a": "raisin",
+     "source": "https://www.delhaize.be/nl/shop",
+     "vu_le": "index moteur, non daté (promo 2e à -50 %)"
+    }
+   ]
+  },
+  {
+   "cle": "match",
+   "nom": "Match",
+   "type": "GMS",
+   "magasins": [
+    3,
+    5
+   ],
+   "ville": {
+    "*": "régional"
+   },
+   "site": "https://www.supermarche-match.be",
+   "note": "non vérifié",
+   "items": [
+    {
+     "name_raw": "Cougnous 4×100 g (0,94 € pièce par 4)",
+     "unit_type": "g",
+     "unit_size": 400,
+     "price": 3.76,
+     "comparer_a": "sucre",
+     "source": "https://www.supermarche-match.be/be-fr/products/cougnous",
+     "vu_le": "index moteur, non vérifié"
+    }
+   ]
+  },
+  {
+   "cle": "paindantan",
+   "nom": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "magasins": [
+    2,
+    3
+   ],
+   "ville": {
+    "2": "Wavre",
+    "3": "Gosselies"
+   },
+   "distance_km": {
+    "2": 8,
+    "3": 3
+   },
+   "site": "https://lepaindantan.be",
+   "note": "click & collect",
+   "items": [
+    {
+     "name_raw": "Cougnou nature 90 g",
+     "unit_type": "g",
+     "unit_size": 90,
+     "price": 2.75,
+     "comparer_a": "sucre",
+     "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-nature-90g",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou sucre 180 g",
+     "unit_type": "g",
+     "unit_size": 180,
+     "price": 3.9,
+     "comparer_a": "sucre",
+     "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-sucre-180g",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou chocolat 180 g",
+     "unit_type": "g",
+     "unit_size": 180,
+     "price": 4.1,
+     "comparer_a": "chocolat",
+     "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-chocolat-180g",
+     "vu_le": "index moteur, saison 2025 probable"
+    },
+    {
+     "name_raw": "Cougnou nature / cannelle-sucre 180 g",
+     "unit_type": "g",
+     "unit_size": 180,
+     "price": 3.8,
+     "comparer_a": "cannelle",
+     "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-nature-180g",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "lpq",
+   "nom": "Le Pain Quotidien Wavre",
+   "type": "Chaîne",
+   "magasins": [
+    2
+   ],
+   "ville": {
+    "2": "Wavre"
+   },
+   "distance_km": {
+    "2": 9
+   },
+   "site": "https://www.lepainquotidien.com",
+   "note": "click & collect",
+   "items": [
+    {
+     "name_raw": "Cougnou sucre / raisin (poids non affiché)",
+     "unit_type": "g",
+     "price": 5.5,
+     "comparer_a": "sucre",
+     "source": "https://pickup.deliverect.com/click_collect/menu/order/?res=lpq-be-wavre-fr&lang=fr",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "cle": "louise",
+   "nom": "Boulangerie Louise",
+   "type": "Chaîne",
+   "magasins": [
+    2,
+    3
+   ],
+   "ville": {
+    "2": "Genappe",
+    "3": "Charleroi"
+   },
+   "site": "https://boulangerielouise.be",
+   "note": "3+1 gratuit",
+   "items": [
+    {
+     "name_raw": "Cougnou petit (poids non affiché), 3+1 gratuit",
+     "unit_type": "g",
+     "price": 2.2,
+     "comparer_a": "sucre",
+     "source": "https://boulangerielouise.be/wp-content/uploads/2025/12/Bon-de-commande-Fetes-2025.pdf",
+     "vu_le": "bon de commande Fêtes 2025"
+    },
+    {
+     "name_raw": "Cougnou grand (poids non affiché), 3+1 gratuit",
+     "unit_type": "g",
+     "price": 4.8,
+     "comparer_a": "nature400",
+     "source": "https://boulangerielouise.be/wp-content/uploads/2025/12/Bon-de-commande-Fetes-2025.pdf",
+     "vu_le": "bon de commande Fêtes 2025"
+    }
+   ]
+  },
+  {
+   "cle": "blesdor",
+   "nom": "Les Blés d'Or",
+   "type": "Artisan",
+   "magasins": [
+    2,
+    4
+   ],
+   "ville": {
+    "*": "Braine-le-Château"
+   },
+   "site": "https://www.bakeronline.be/be-fr/les-bles-dor",
+   "note": "précommande Bakeronline",
+   "items": [
+    {
+     "name_raw": "Cougnou nature (à partir de, poids non affiché)",
+     "unit_type": "g",
+     "price": 2.8,
+     "comparer_a": "sucre",
+     "source": "https://www.bakeronline.be/be-fr/les-bles-dor/product/549906/cougnou-nature",
+     "vu_le": "index moteur, vendu du 15/11 au 31/12"
+    }
+   ]
+  },
+  {
+   "cle": "christophe",
+   "nom": "Viennoiseries Christophe",
+   "type": "Artisan",
+   "magasins": [
+    3
+   ],
+   "ville": {
+    "3": "Gouy-lez-Piéton"
+   },
+   "distance_km": {
+    "3": 10
+   },
+   "site": "https://viennoiserieschristophe.be",
+   "note": "livraison ou marché",
+   "items": [
+    {
+     "name_raw": "Cougnou nature 150 g",
+     "unit_type": "g",
+     "unit_size": 150,
+     "price": 2.2,
+     "comparer_a": "sucre",
+     "source": "https://viennoiserieschristophe.be/nos-cougnous/186-cougnou-disponible-a-partir-du-2310.html",
+     "vu_le": "lu le 2026-11-07, saison 2026",
+     "promo_price": 1.95,
+     "is_promo": true
+    },
+    {
+     "name_raw": "Cougnou 500 g (vente école Montigny-le-Tilleul)",
+     "unit_type": "g",
+     "unit_size": 500,
+     "price": 8.5,
+     "comparer_a": "nature400",
+     "source": "https://sjb-mlt.be/ap/cougnous/",
+     "vu_le": "lu le 2026-11-07, saison 2026"
+    }
+   ]
+  },
+  {
+   "cle": "byo",
+   "nom": "B'YO & Circomedie (Soleilmont)",
+   "type": "Artisan",
+   "magasins": [
+    3,
+    5
+   ],
+   "ville": {
+    "*": "Gilly"
+   },
+   "site": "https://b-yo.be",
+   "note": "formulaire en ligne",
+   "items": [
+    {
+     "name_raw": "Cougnou 250 g (nature, choco, sucre, raisin)",
+     "unit_type": "g",
+     "unit_size": 250,
+     "price": 5.0,
+     "comparer_a": "sucre",
+     "source": "https://b-yo.be/atelier-boulangerie/vente-cougnou",
+     "vu_le": "lu, décembre 2025"
+    }
+   ]
+  },
+  {
+   "cle": "dumont",
+   "nom": "Pâtisserie Dumont (Bouge)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Namur"
+   },
+   "distance_km": {
+    "5": 25
+   },
+   "site": "https://patisseriedumont.com",
+   "note": "livraison 3 €",
+   "items": [
+    {
+     "name_raw": "Cougnou sucré (poids non affiché)",
+     "unit_type": "g",
+     "price": 2.5,
+     "comparer_a": "sucre",
+     "source": "https://patisseriedumont.com/product-page/cougnou-sucr%C3%A9",
+     "vu_le": "lu, non daté"
+    }
+   ]
+  },
+  {
+   "cle": "cocoricoop",
+   "nom": "Cocoricoop / Fournil du Loup",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Ciney"
+   },
+   "site": "https://eshop.cocoricoop.be",
+   "note": "bio",
+   "items": [
+    {
+     "name_raw": "Cougnou sucre bio 200 g",
+     "unit_type": "g",
+     "unit_size": 200,
+     "price": 3.5,
+     "comparer_a": "sucre",
+     "source": "https://eshop.cocoricoop.be/cougnou-sucre-p1382545208852.htm",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "efarmz",
+   "nom": "eFarmz (Fernelmont)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Fernelmont"
+   },
+   "site": "https://www.efarmz.be",
+   "note": "bio, e-shop",
+   "items": [
+    {
+     "name_raw": "Cougnou sucre bio 100 g",
+     "unit_type": "g",
+     "unit_size": 100,
+     "price": 2.69,
+     "comparer_a": "sucre",
+     "source": "https://www.efarmz.be/fr/shop/boulangerie/patisseries/viennoiseries/A6072+cougnou-sucre",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "gerlache",
+   "nom": "Gerlache (Ciney)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Ciney"
+   },
+   "site": "https://www.bakeronline.be/be-en/gerlache",
+   "note": "Bakeronline",
+   "items": [
+    {
+     "name_raw": "Cougnou sucre-raisins 250 g",
+     "unit_type": "g",
+     "unit_size": 250,
+     "price": 5.5,
+     "comparer_a": "raisin",
+     "source": "https://www.bakeronline.be/be-en/gerlache/product/49585/le-cougnou-250gr-sucre-raisins",
+     "vu_le": "index moteur, saison 2025 probable"
+    }
+   ]
+  },
+  {
+   "cle": "vandessel",
+   "nom": "Bakkerij Van Dessel (Dilbeek)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Dilbeek"
+   },
+   "distance_km": {
+    "4": 15
+   },
+   "site": "https://bakkerijvandessel.be",
+   "note": "webshop",
+   "items": [
+    {
+     "name_raw": "Cougnou met suiker klein (poids non affiché)",
+     "unit_type": "g",
+     "price": 3.25,
+     "comparer_a": "sucre",
+     "source": "https://bakkerijvandessel.be/product/conjoux-met-suiker-enkel-tijdens-kerst",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Cougnou groot (poids non affiché)",
+     "unit_type": "g",
+     "price": 4.75,
+     "comparer_a": "nature400",
+     "source": "https://bakkerijvandessel.be/product/conjoux-groot",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "cle": "kiekebich",
+   "nom": "Kiekebich (Anderlecht)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Anderlecht"
+   },
+   "distance_km": {
+    "4": 12
+   },
+   "site": "https://kiekebich.be",
+   "note": "précommande en ligne",
+   "items": [
+    {
+     "name_raw": "Cougnou 180 g",
+     "unit_type": "g",
+     "unit_size": 180,
+     "price": 3.9,
+     "comparer_a": "sucre",
+     "source": "https://kiekebich.be/product/cougnou/",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "cle": "hucheapain",
+   "nom": "La Huche à Pain (Ronquières)",
+   "type": "Artisan",
+   "magasins": [
+    2,
+    4
+   ],
+   "ville": {
+    "*": "Ronquières"
+   },
+   "site": "https://lescarrieres.be",
+   "note": "vente d'école",
+   "items": [
+    {
+     "name_raw": "Cougnole 500 g",
+     "unit_type": "g",
+     "unit_size": 500,
+     "price": 7.5,
+     "comparer_a": "nature400",
+     "source": "https://lescarrieres.be/product/cougnole-500-g/",
+     "vu_le": "lu, non daté"
+    }
+   ]
+  }
+ ],
+ "constats": [
+  "Fixer un prix au Cougnou Nature 400 g (affiché 0 € sur le site) : entre 5,20 € (13 €/kg, notre niveau) et 6,50 € (16 €/kg), toujours sous les artisans (15–24 €/kg au 500 g).",
+  "Publier le poids de nos cougnous : sans lui, aucune comparaison au kilo n'est possible pour le client.",
+  "Créer une page /cougnou/ (et /nl/koekebrood/ pour Halle) avec prix, poids, date limite de commande et lien de précommande ; titre et meta description de la gamme Noël centrés sur le cougnou.",
+  "Ouvrir la précommande des cougnous sur le webshop : les artisans concurrents la proposent presque tous (Bakeronline), nos cougnous n'y sont pas commandables.",
+  "Corriger les fiches Google/Yelp/Pages d'Or (nom unique « L'Atelier By – Ville », Halle au n° 22, horaires, lien du site) et rediriger les anciennes URL en 404.",
+  "Relire les prix GMS et artisans vers le 20–25 novembre (webshops de saison rouverts) : la routine du jeudi le rappelle."
+ ]
+}
