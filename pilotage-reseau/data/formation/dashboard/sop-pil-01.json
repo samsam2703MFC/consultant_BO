@@ -8,6 +8,7 @@
  "langue_origine": "FR",
  "poste": "vente",
  "moment": "ouverture",
+ "acces": "responsable",
  "duree": "10 min chaque matin · 2 × 3 min en journée · 5 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
  "titre": {
   "fr": "Analyser le dashboard magasin : la routine",

@@ -911,4 +911,14 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   `tools/formation/encoder_sop.py` (photos envoyées une fois, création ou nouvelle version, classement ; simulation par
   défaut). Captures : `tools/formation/captures_dashboard.js`. NL de travail : `tools/formation/nl_dashboard.py`.
 - **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire ».
+- **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
+  (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
+  colonne `ceo_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
+  {acces}`). Sur la tablette, un document réservé se range dans l'onglet **Manuel**, en tête, sous « Réservé au
+  franchisé et au responsable » (cadenas et liseré or, `--prize`), quel que soit son moment ; l'ouvrir demande le **PIN
+  du responsable** : `POST /formation/sop/tablette/acces {pin}` rend un jeton signé de 4 h (gardé dans l'onglet), que
+  `GET /formation/sop/tablette/sop/{id}?acces=` et le quiz exigent (403 sinon). Cinq PIN faux bloquent dix minutes. Le PIN
+  est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
+  (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
+  réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
 

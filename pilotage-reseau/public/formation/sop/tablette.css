@@ -337,3 +337,18 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-video{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:14px;border-radius:12px;overflow:hidden;background:#000}
 .tb-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
 .tb-video__lien{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:12px 18px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--accent);font-size:15px;text-decoration:none}
+
+/* Les documents RÉSERVÉS au franchisé et au responsable (07/11/2026) : cadenas et liseré dorés, dans l'onglet Manuel ;
+   le PIN du responsable les ouvre. L'or est celui du design system (--prize). */
+.tb-grp--res .sec-t{display:flex;align-items:center;gap:8px;color:var(--prize)}
+.tb-sop.res{border-color:var(--prize);box-shadow:inset 4px 0 0 var(--prize)}
+.tb-sop.res:hover{border-color:var(--prize)}
+.tb-sop.res .st{color:var(--prize);background:#F8EEDC;display:flex;align-items:center;justify-content:center}
+.tb-sop.res .x small{color:var(--prize)}
+.cad{flex:none;color:var(--prize)}
+.tb-acces{max-width:440px;margin:28px auto;background:#fff;border:1px solid var(--prize);border-radius:16px;padding:26px 24px;text-align:center}
+.tb-acces__cad{width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:#F8EEDC;display:flex;align-items:center;justify-content:center}
+.tb-acces__cad .cad{width:28px;height:28px}
+.tb-acces h2{font:400 20px 'Gotham',system-ui,sans-serif;margin:4px 0 6px;text-transform:none;letter-spacing:normal;color:var(--ink)}
+.tb-acces p{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 10px}
+.tb-acces .erreur{margin:6px 0}

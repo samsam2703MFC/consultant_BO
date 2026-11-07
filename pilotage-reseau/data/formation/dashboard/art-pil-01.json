@@ -8,6 +8,7 @@
  "langue_origine": "FR",
  "poste": "vente",
  "moment": null,
+ "acces": "responsable",
  "duree": "45 min de lecture, puis 30 min sur le dashboard de son magasin",
  "titre": {
   "fr": "Comprendre le dashboard magasin",

@@ -161,6 +161,17 @@ def main():
                 c, r = appel(a.api, 'PUT', '/formation/ref/standards/' + sid, dict(diff, par=a.par))
                 if c >= 300:
                     sys.exit(f'  classement refusé ({c}) : {r}')
+        # L'accès (« responsable » = réservé, PIN du responsable sur la tablette ; « tous » sinon). Un serveur qui ne
+        # rend pas encore `acces` n'a pas la colonne : on le dit au lieu d'écrire.
+        acces = doc.get('acces') or 'tous'
+        if 'acces' not in (actuel or {}) and code != 404:
+            print('  accès : le serveur ne connaît pas encore les documents réservés (mise en ligne attendue)')
+        elif (actuel or {}).get('acces', 'tous') != acces:
+            print('  accès →', acces)
+            if a.ecrire:
+                c, r = appel(a.api, 'PATCH', '/formation/sop/fiche/' + sid, {'acces': acces, 'par': a.par})
+                if c >= 300:
+                    sys.exit(f'  accès refusé ({c}) : {r}')
         if code != 404 and (actuel or {}).get('moment') != doc.get('moment'):
             print('  moment →', doc.get('moment'))
             if a.ecrire:
