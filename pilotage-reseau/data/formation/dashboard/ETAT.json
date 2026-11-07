@@ -4,11 +4,11 @@
  "capturesLe": "2026-11-07",
  "capturesMagasin": "4",
  "encode": true,
- "note": "Encodé le 07/11/2026 (v1.0, NL à relire), réservé au responsable le même jour. Le seuil matière de Budget › Paramètres est en ligne (40,0 %) : les captures dash-pl, dash-resultat et dash-mobile montrent encore 32 % et sont à refaire (routine du lundi).",
+ "note": "v1.0 encodées le 07/11/2026, réservées au responsable le même jour ; v1.1 le 07/11/2026 : captures dash-pl, dash-resultat et dash-mobile refaites avec le seuil matière de Budget › Paramètres (40,0 %). NL à relire.",
  "encodeLe": "2026-11-07",
  "versions": {
-  "art-pil-01": "1.0",
-  "sop-pil-01": "1.0"
+  "art-pil-01": "1.1",
+  "sop-pil-01": "1.1"
  },
  "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)"
 }
