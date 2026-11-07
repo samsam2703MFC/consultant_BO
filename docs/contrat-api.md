@@ -383,6 +383,37 @@ référence calculée). `PUT /promo/{id}` change `statut`, `note`, `cible`, `can
 ceJour, effet, creneau } ] }`, les promotions en cours dont la période couvre la date ; `ceJour` dit si ce jour de
 semaine est un jour du créneau.
 
+### `/exploitation/temps-morts` — les temps morts du dashboard magasin
+
+`GET /exploitation/temps-morts?shop=5&date=2026-10-30&seuil=10` — l'onglet « Temps morts » du dashboard. Un temps mort :
+un trou d'au moins `seuil` minutes (5, 10 ou 15 ; 10 par défaut) entre deux tickets qui se suivent, entre le premier et
+le dernier ticket du jour. Mesuré sur l'heure de chaque ticket (`insert_timestamp` de la liste
+`/shops/{id}/transactions?date=`) ; tous les tickets comptent, comptoir et pro. Un ticket à `isole` minutes ou plus du
+suivant en début ou en fin de journée est écarté (`isoles`, `ecartes` en secondes depuis minuit). Les heures des tickets
+se gravent sous `tmT{shop}:{date}` (`{ q, t: [secondes…], pro }`) : une journée close ne se relit plus, la journée en
+cours toutes les dix minutes ; 24 listes au plus lues par appel, `manquants` dit ce qui reste.
+
+```json
+{ "shop": 5, "date": "2026-10-30", "seuil": 10, "seuils": [5, 10, 15], "isole": 45,
+  "jour": { "date": "2026-10-30", "etat": "lu", "ferme": false, "tickets": 126, "isoles": 2, "debut": "07:03", "fin": "17:50",
+            "ouvert": 648, "nb": 18, "mort": 307, "pct": 47.5, "plusLong": { "min": 37.2, "de": "15:04", "a": "15:41" },
+            "heures": { "7": { "ouvert": 57.0, "mort": 33.6, "pct": 59.0, "nb": 2, "tk": 15 } },
+            "ticks": [25380, 25740], "trous": [[25380, 26100]], "ecartes": [18600, 68018] },
+  "habitude": { "dates": ["2026-10-23", "2026-10-16", "2026-10-09", "2026-10-02"], "jours": 4, "nb": 21.0, "mort": 339,
+                "ouvert": 719, "tickets": 137, "pct": 47.1, "plusLong": 37.5 },
+  "semaine": { "du": "2026-10-26", "au": "2026-11-01",
+               "jours": [ { "date": "2026-10-26", "etat": "lu", "nb": 18, "mort": 284, "pct": 45.3, "…": "…" },
+                          { "date": "2026-11-08", "etat": "avenir" } ],
+               "moyenne": { "jours": 7, "nb": 16.1, "mort": 271, "ouvert": 621, "tickets": 134, "pct": 43.7, "plusLong": 37.2 } },
+  "semainePrecedente": { "du": "2026-10-19", "au": "2026-10-25", "moyenne": { "jours": 7, "nb": 18.3, "…": "…" } },
+  "manquants": 0, "source": "…" }
+```
+
+`etat` d'un jour : `lu`, `encours` (aujourd'hui), `ferme` (moins de deux tickets), `nonlu` (le panel n'a pas répondu),
+`avenir`. Minutes : `ouvert`, `mort` ; `pct` = minutes mortes ÷ minutes entre le premier et le dernier ticket ; par heure,
+`nb` compte les trous qui y commencent et `tk` les tickets. Les moyennes (`habitude`, `semaine.moyenne`,
+`semainePrecedente`) ne prennent que les journées closes ; `plusLong` y est le plus long trou de la période.
+
 ### `/exploitation/pro` — les clients pro (B2B) du dashboard magasin
 
 `GET /exploitation/pro?shop=5&date=2026-09-29` — ce que les tickets du panel disent des ventes aux sociétés. Un ticket

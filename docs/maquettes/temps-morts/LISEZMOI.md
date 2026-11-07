@@ -1,6 +1,9 @@
 # Les temps morts au comptoir
 
-**Statut : maquette du 07/11/2026, calculée sur les ventes réelles. Rien n'est codé dans le BO.**
+**Statut : maquette du 07/11/2026, calculée sur les ventes réelles.** Le même jour, l'onglet
+**« Temps morts » du dashboard magasin** est codé (`public/dashboard/?vue=morts`) : le jour et sa semaine
+pour un magasin, **mesurés sur l'heure de chaque ticket** — la liste des tickets du panel la porte, ce que
+cette maquette ignorait. La vue réseau ci-dessous, à plusieurs magasins, reste une maquette.
 
 Demande du 07/11/2026 : « calcule-moi le nombre de temps morts par jour et en % par heure dans chaque
 magasin, en moyenne, tous les jours de la semaine, et fais-en une maquette ».
@@ -98,12 +101,10 @@ générateur est celui du seed (mulberry32) : le même `heures.json` donne toujo
   portent 18 à 29 % des minutes mortes (seuil 10 min) : leur part est donnée à côté de chaque total, elles
   sont marquées d'un astérisque, et elles sont écartées de « Les heures les plus mortes ».
 
-**Pour mesurer au lieu d'estimer** : le BO lit déjà chaque ticket du jour, avec sa minute
-(`insert_timestamp`), dans `svProduitsJour()` (`src/stats_ventes.php`). Il ne la garde que pour les
-lignes sans produit. Garder la minute de chaque ticket dans le relevé gravé (`svP{shop}:{date}`)
-permettrait une lecture `/ventes/temps-morts` qui compte les vrais trous, à partir du jour où ce relevé
-commence. Les horaires d'ouverture de chaque magasin, s'ils étaient saisis, corrigeraient aussi les
-heures d'ouverture et de fermeture.
+**Mesurer au lieu d'estimer** : c'est ce que fait l'onglet « Temps morts » du dashboard magasin. La liste des
+tickets d'un jour (`/shops/{id}/transactions?date=`, un appel) porte l'heure de chaque ticket ; le BO la grave sous
+`tmT{shop}:{date}` (`src/temps_morts.php`). Les horaires d'ouverture de chaque magasin, s'ils étaient saisis,
+corrigeraient encore le début et la fin de journée.
 
 ## Les fichiers
 

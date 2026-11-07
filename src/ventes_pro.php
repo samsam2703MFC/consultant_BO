@@ -98,6 +98,8 @@ function vpGraveListe(int $sid, string $j, array $liste): array
     $c = is_array($c) ? $c : ['quand' => time()];
     $c['b'] = $b;
     svGrave($cle, $c);
+    // La même liste porte l'heure de chaque ticket : les temps morts la gardent, sans appel de plus.
+    if (function_exists('tmGraveListe')) { tmGraveListe($sid, $j, $liste); }
     return $b;
 }
 

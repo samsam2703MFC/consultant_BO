@@ -42,6 +42,7 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
+require __DIR__ . '/../../src/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/assortiment.php';
 require __DIR__ . '/../../src/plano_proposition.php';
@@ -223,6 +224,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
+            $path === '/exploitation/temps-morts'      => ep_temps_morts(),
             $path === '/exploitation/invendus'         => ep_exploitation_invendus(),
             $path === '/exploitation/semaine-jours'    => ep_exploitation_semaine_jours(),
             $path === '/production/plan'               => ep_production_plan(),

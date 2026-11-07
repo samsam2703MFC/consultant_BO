@@ -1904,3 +1904,39 @@ html.db-fiche-ouverte{overflow:hidden}
 .acp-t td{font-size:11.5px}.acp-t tr.tk td{color:var(--prize-ink)}.acp-t tr.clic{cursor:pointer}.acp-t tr.clic:hover td{background:#fff}
 .acp-n{font:400 11px var(--font-ui);color:var(--color-text-muted);margin-top:6px}
 .db-card.acp.ok .db-mini{color:var(--green);font-weight:400}
+
+/* Temps morts (07/11/2026) : l'onglet du bureau — la journée minute par minute, puis sa semaine. */
+.tm-seuil{margin-left:auto;display:inline-flex;align-items:center;gap:8px;font-family:var(--font-ui)}
+.tm-seuil .db-ong button{padding:5px 12px}
+.db-tuiles.tm-tuiles{grid-template-columns:repeat(5,minmax(0,1fr))}
+.tm-frise{padding:10px 16px 4px}
+.tm-l{display:grid;grid-template-columns:44px minmax(0,1fr) 62px 118px;gap:10px;align-items:center;margin-bottom:4px}
+.tm-hr{font-size:11.5px;color:var(--color-text-muted);text-align:right;font-variant-numeric:tabular-nums}
+.tm-piste{position:relative;height:22px;background:var(--table-head);border:1px solid var(--color-border-tertiary);border-radius:6px;overflow:hidden}
+.tm-piste i{position:absolute;top:0;bottom:0}
+.tm-piste i.tm-trou{background:#E2AAB5;border-left:1px solid #B03048;border-right:1px solid #B03048}
+.tm-piste i.tm-ferme{background:repeating-linear-gradient(135deg,#fff 0 4px,var(--table-head) 4px 8px)}
+.tm-piste b{position:absolute;top:4px;bottom:4px;width:1.5px;margin-left:-.75px;background:var(--color-text);border-radius:1px}
+.tm-pct{font-size:11.5px;text-align:center;border-radius:6px;padding:3px 0;font-variant-numeric:tabular-nums}
+.tm-n{font-size:10.5px;white-space:nowrap}
+.tm-ax{margin-bottom:2px}
+.tm-ax .tm-pct,.tm-ax .tm-n{font-size:10px;padding:0}
+.tm-graduation{display:flex;justify-content:space-between;font-size:9.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums}
+.tm-graduation span{width:0;white-space:nowrap}
+.tm-leg{display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);padding:8px 16px 12px}
+.tm-rampe{display:inline-flex;gap:2px}
+.tm-rampe i{font-style:normal;width:36px;height:15px;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:9.5px}
+.tm-leg-i{display:inline-flex;align-items:center;gap:5px}
+.tm-ech-trou{display:inline-block;width:18px;height:11px;background:#E2AAB5;border-left:1px solid #B03048;border-right:1px solid #B03048}
+.tm-ech-tick{display:inline-block;width:2px;height:11px;background:var(--color-text);border-radius:1px}
+.tm-ech-ferme{display:inline-block;width:18px;height:11px;border:1px solid var(--color-border-tertiary);background:repeating-linear-gradient(135deg,#fff 0 4px,var(--table-head) 4px 8px)}
+.tm-fl{display:inline-flex;gap:6px}
+.tm-fl .db-btn[disabled]{opacity:.45;cursor:default}
+.db-t.tm-sem td,.db-t.tm-sem th{text-align:left}
+.db-t.tm-sem td b{font-weight:400;font-size:14px}
+.tm-pastille{display:inline-block;min-width:46px;text-align:center;border-radius:6px;padding:2px 6px;font-variant-numeric:tabular-nums}
+.tm-cases,.tm-cases-h{display:grid;gap:2px;min-width:260px}
+.tm-cases i{display:block;height:16px;border-radius:3px}
+.tm-cases i.vide{background:repeating-linear-gradient(135deg,#fff 0 3px,var(--table-head) 3px 6px)}
+.tm-cases-h span{text-align:center;font-size:9.5px;letter-spacing:0}
+.tm-tuiles .db-dl{align-self:flex-start}

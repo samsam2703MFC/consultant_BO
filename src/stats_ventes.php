@@ -580,6 +580,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
+    // La liste du jour porte l'heure de chaque ticket : les temps morts la gardent, sans appel de plus.
+    if (function_exists('tmGraveListe')) { tmGraveListe($sid, $j, $liste); }
     return $p;
 }
 
@@ -1189,6 +1191,8 @@ function svCron(): string
     if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
     // Et la part pro produit par produit, que les rotations du comptoir retirent.
     try { $pb = svB2bMoisson(); $pro .= $pb['ok'] ? ' · produits pro : ' . $pb['joursFaits'] . ' jour(s) complétés, ' . $pb['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · produits pro : échec'; }
+    // Les heures des tickets des huit dernières semaines, pour l'onglet Temps morts du dashboard.
+    if (function_exists('tmMoisson')) { try { $tm = tmMoisson(); $pro .= $tm['ok'] ? ' · temps morts : ' . $tm['joursFaits'] . ' jour(s) gravés, ' . $tm['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · temps morts : échec'; } }
     return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;
 }
 

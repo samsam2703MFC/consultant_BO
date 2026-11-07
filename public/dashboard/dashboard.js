@@ -17,7 +17,7 @@
   // ?embed=1 : la page servie dans le cockpit (Gestion de production) — sans entête, sans onglets ;
   // seule la vue Production y vit, le sous-onglet vient du rail (?onglet=plan|suivi|params).
   const EMBED = q.get('embed') === '1';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'morts', 'reclamation'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { return localStorage.getItem('db.cVue') === 'treemap' ? 'treemap' : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -30,7 +30,8 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
-    pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
+    pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
+    tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -118,6 +119,8 @@
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
+    // Les temps morts : une lecture, le jour et sa semaine (07/11/2026).
+    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
@@ -2663,6 +2666,109 @@
     return h;
   }
 
+  /* --- Temps morts (07/11/2026) ---------------------------------------------------------------
+   * L'onglet « Temps morts » du bureau : un trou d'au moins N minutes entre deux tickets qui se
+   * suivent, entre le premier et le dernier ticket du jour. Le jour regardé minute par minute, puis
+   * sa semaine du lundi au dimanche, jour par jour. Une lecture : /exploitation/temps-morts, qui
+   * mesure sur l'heure de chaque ticket (rien n'est estimé). Le seuil (5, 10, 15 min) se garde. */
+  const TM_SEUILS = [5, 10, 15];
+  // La part de l'heure sans client : une seule teinte, du clair au foncé (maquette docs/maquettes/temps-morts).
+  const TM_RAMPE = [[10, '#F7EDEF', 'var(--color-text)', '< 10'], [25, '#EFD3D9', 'var(--color-text)', '10–25'], [40, '#E2AAB5', 'var(--color-text)', '25–40'],
+    [55, '#CF7488', 'var(--color-text)', '40–55'], [70, '#B03048', '#fff', '55–70'], [101, '#7C1C30', '#fff', '≥ 70']];
+  const tmTeinte = p => TM_RAMPE.find(r => p < r[0]) || TM_RAMPE[TM_RAMPE.length - 1];
+  const tmStyle = p => { const t = tmTeinte(p); return `background:${t[1]};color:${t[2]}`; };
+  const fMin = m => { if (m == null) { return '—'; } const r = Math.round(m); return r < 60 ? r + ' min' : Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0'); };
+  const tmHm = s => String(Math.floor(s / 3600)).padStart(2, '0') + ':' + String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+  const JOUR_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  function cleTM() { return 'tm|' + S.shop + '|' + S.date + '|' + S.tmSeuil; }
+  function cheminTM() { return '/exploitation/temps-morts?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&seuil=' + S.tmSeuil; }
+
+  /** L'écart avec une référence, moins étant mieux : vert quand on fait moins de temps mort. */
+  function tmEcart(v, ref, lib, fmt) {
+    if (v == null || ref == null) { return ''; }
+    const d = v - ref, sens = Math.abs(d) < (fmt === 'pct' ? 1 : 0.5) ? 'eq' : (d < 0 ? 'up' : 'dn');
+    if (sens === 'eq') { return `<span class="db-dl eq">comme ${lib.replace(/^vs /, 'l’').replace('l’sem.', 'la sem.')}</span>`; }
+    const txt = fmt === 'pct' ? nf(Math.abs(d), 0) + ' pt' : (fmt === 'min' ? fMin(Math.abs(d)) : nf(Math.abs(d), 1));
+    return `<span class="db-dl ${sens}">${d >= 0 ? '+ ' : '− '}${txt} ${lib}</span>`;
+  }
+
+  /** La journée heure par heure : chaque ticket est un trait, chaque temps mort une plage teintée. */
+  function tmFrise(J) {
+    const t = J.ticks || [], tr = J.trous || [], deb = t[0], fin = t[t.length - 1];
+    const h0 = Math.floor(deb / 3600), h1 = Math.floor(fin / 3600);
+    let h = '';
+    for (let x = h0; x <= h1; x++) {
+      const a = x * 3600, b = a + 3600, H = (J.heures || {})[x] || {};
+      const pc = v => (100 * (v - a) / 3600).toFixed(2) + '%';
+      let piste = '';
+      if (deb > a) { piste += `<i class="tm-ferme" style="left:0;width:${pc(deb)}"></i>`; }
+      if (fin < b) { piste += `<i class="tm-ferme" style="left:${pc(fin)};right:0"></i>`; }
+      tr.forEach(([u, v]) => { if (v <= a || u >= b) { return; } const g = Math.max(u, a), e = Math.min(v, b);
+        piste += `<i class="tm-trou" style="left:${pc(g)};width:${pc(a + e - g)}" title="${tmHm(u)} → ${tmHm(v)} · ${fMin((v - u) / 60)} sans ticket"></i>`; });
+      t.forEach(s => { if (s >= a && s < b) { piste += `<b style="left:${pc(s)}"></b>`; } });
+      const p = H.pct;
+      h += `<div class="tm-l"><span class="tm-hr">${x} h</span><div class="tm-piste">${piste}</div>
+        <span class="tm-pct"${p == null ? '' : ` style="${tmStyle(p)}"`} title="${H.ouvert != null ? fN(H.mort) + ' min sans client sur ' + fN(H.ouvert) + ' min ouvertes · ' + (H.tk || 0) + ' ticket' + (H.tk > 1 ? 's' : '') : ''}">${p == null ? '—' : fN(p) + ' %'}</span>
+        <span class="tm-n mu">${H.tk || 0} tk${H.nb ? ' · ' + H.nb + ' tm' : ''}</span></div>`;
+    }
+    const gr = x => `<span>${String(x).padStart(2, '0')}</span>`;
+    return `<div class="tm-frise"><div class="tm-l tm-ax"><span class="tm-hr"></span><div class="tm-graduation">${gr(0)}${gr(15)}${gr(30)}${gr(45)}<span></span></div><span class="tm-pct mu">sans client</span><span class="tm-n mu">tickets · temps morts</span></div>${h}</div>`;
+  }
+
+  function tmLegende() {
+    return `<div class="tm-leg"><span>part de l’heure sans client</span><span class="tm-rampe">${TM_RAMPE.map(r => `<i style="background:${r[1]};color:${r[2]}">${r[3]}</i>`).join('')}</span><span>%</span>
+      <span class="tm-leg-i"><i class="tm-ech-trou"></i>temps mort</span><span class="tm-leg-i"><i class="tm-ech-tick"></i>un ticket</span><span class="tm-leg-i"><i class="tm-ech-ferme"></i>avant le premier, après le dernier ticket</span></div>`;
+  }
+
+  function rendTempsMorts() {
+    const cle = cleTM(), D = S.aux[cle];
+    const dj = new Date(S.date + 'T12:00:00'), nomJ = JOUR_L[dj.getDay()];
+    let h = `<div class="db-sec">Temps morts — ${esc(fDL(S.date))}<small>un temps mort : ${S.tmSeuil} minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée</small>
+      <span class="tm-seuil"><span class="db-lab">Temps mort dès</span><span class="db-ong">${TM_SEUILS.map(s => `<button type="button" data-tmseuil="${s}" class="${s === S.tmSeuil ? 'on' : ''}">${s} min</button>`).join('')}</span></span></div>`;
+    if (S.err[cle]) { h += `<div class="db-err">Temps morts : ${esc(S.err[cle])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+    if (!D) { return h + (S.err[cle] ? '' : squelette(6)); }
+    if (D.manquants) { h += `<div class="db-alerte">${D.manquants} journée${D.manquants > 1 ? 's' : ''} pas encore lue${D.manquants > 1 ? 's' : ''} au panel : les chiffres se complètent à la relecture. <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+
+    // Le jour.
+    const J = D.jour, Hb = D.habitude || {}, enCours = J && J.etat === 'encours';
+    if (!J) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Les tickets de ce jour n’ont pas pu être lus au panel. <button class="db-btn" data-recharger="1">↻ Relire</button></div></div>`; }
+    else if (J.ferme) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Magasin fermé ce jour-là : ${J.tickets ? J.tickets + ' ticket' + (J.tickets > 1 ? 's' : '') + ', pas de journée' : 'aucun ticket'}.</div></div>`; }
+    else {
+      const hab = Hb.jours ? `${nomJ}s d’avant` : '';
+      h += `<div class="db-tuiles tm-tuiles">
+        ${`<div class="db-tui"><div class="k">Temps morts${enCours ? ' · en cours' : ''}</div><div class="v">${J.nb}</div><div class="s">${Hb.jours ? 'habitude : ' + nf(Hb.nb, 1) + ' les ' + Hb.jours + ' ' + hab : 'pas d’habitude lue'}</div>${enCours ? '' : tmEcart(J.nb, Hb.nb, 'vs habitude')}</div>`}
+        <div class="db-tui"><div class="k">Sans client</div><div class="v">${fMin(J.mort)}</div><div class="s">sur ${fMin(J.ouvert)}, de ${esc(J.debut)} à ${esc(J.fin)}</div>${enCours ? '' : tmEcart(J.mort, Hb.mort, 'vs habitude', 'min')}</div>
+        <div class="db-tui"><div class="k">Part de l’ouverture</div><div class="v">${fP0(J.pct)}</div><div class="s">${Hb.jours ? 'habitude : ' + fP0(Hb.pct) : ''}</div>${enCours ? '' : tmEcart(J.pct, Hb.pct, 'vs habitude', 'pct')}</div>
+        <div class="db-tui"><div class="k">Le plus long trou</div><div class="v">${fMin(J.plusLong.min)}</div><div class="s">de ${esc(J.plusLong.de)} à ${esc(J.plusLong.a)}</div></div>
+        <div class="db-tui"><div class="k">Tickets</div><div class="v">${fN(J.tickets)}</div><div class="s">${J.isoles ? J.isoles + ' isolé' + (J.isoles > 1 ? 's' : '') + ' en bord de journée, écarté' + (J.isoles > 1 ? 's' : '') + (J.ecartes && J.ecartes.length ? ' (' + J.ecartes.map(tmHm).join(', ') + ')' : '') : 'tous comptés, comptoir et pro'}</div></div></div>`;
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">La journée minute par minute</span><span class="db-mini">${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus · survolez une plage pour ses heures</span></div>${tmFrise(J)}${tmLegende()}</div>`;
+    }
+
+    // La semaine, du lundi au dimanche.
+    const W = D.semaine, M = W.moyenne || {}, P = (D.semainePrecedente || {}).moyenne || {};
+    const hs = [...new Set(W.jours.flatMap(j => Object.keys(j.heures || {}).map(Number)))].sort((a, b) => a - b);
+    const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
+    const ligne = j => {
+      const d = new Date(j.date + 'T12:00:00'), lib = JOUR_L[d.getDay()].slice(0, 3) + '. ' + fD(j.date), sel = j.date === S.date;
+      const attr = j.etat === 'avenir' ? '' : ` class="hv${sel ? ' sel' : ''}" data-tmjour="${j.date}"`;
+      if (j.etat === 'avenir' || j.etat === 'nonlu' || j.etat === 'ferme') {
+        const t = { avenir: 'à venir', nonlu: 'pas encore lu au panel', ferme: 'fermé' }[j.etat];
+        return `<tr${attr}${j.etat === 'avenir' ? ' style="opacity:.55"' : ''}><td>${lib}</td><td colspan="${6 + (hs.length ? 1 : 0)}" class="mu" style="text-align:left">${t}</td></tr>`;
+      }
+      const cells = hs.map(x => { const H = (j.heures || {})[x]; return H && H.pct != null && H.ouvert > 0 ? `<i style="${tmStyle(H.pct)}" title="${x} h · ${fN(H.pct)} % sans client · ${H.tk} tickets"></i>` : '<i class="vide"></i>'; }).join('');
+      return `<tr${attr}><td>${lib}${j.etat === 'encours' ? ' <span class="mu">· en cours</span>' : ''}</td><td><b>${j.nb}</b></td><td>${fMin(j.mort)}</td><td><span class="tm-pastille" style="${tmStyle(j.pct)}">${fP0(j.pct)}</span></td><td>${fMin(j.plusLong.min)} <span class="mu">${esc(j.plusLong.de)}</span></td><td>${fN(j.tickets)}</td><td class="mu">${esc(j.debut)} – ${esc(j.fin)}</td>${hs.length ? `<td><div class="tm-cases" style="grid-template-columns:repeat(${hs.length},1fr)">${cells}</div></td>` : ''}</tr>`;
+    };
+    const moy = (lib, X, cmp) => X.jours ? `<tr class="tot"><td>${lib} <span class="mu">· ${X.jours} jour${X.jours > 1 ? 's' : ''}</span></td><td><b>${nf(X.nb, 1)}</b>${cmp ? ' ' + tmEcart(X.nb, cmp.nb, 'vs sem. d’avant') : ''}</td><td>${fMin(X.mort)}</td><td><span class="tm-pastille" style="${tmStyle(X.pct)}">${fP0(X.pct)}</span></td><td>${fMin(X.plusLong)} <span class="mu">au plus</span></td><td>${fN(X.tickets)}</td><td class="mu">${fMin(X.ouvert)} ouvert</td>${hs.length ? '<td></td>' : ''}</tr>` : `<tr class="tot"><td>${lib}</td><td colspan="${6 + (hs.length ? 1 : 0)}" class="mu" style="text-align:left">aucune journée close lue</td></tr>`;
+    const finSem = W.au >= AUJ;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">La semaine du ${esc(fdC(W.du))} au ${esc(fdC(W.au))}</span>
+        <span class="db-mini">par jour : nombre de temps morts, temps sans client, part de l’ouverture · cliquez un jour pour le lire ci-dessus</span>
+        <span class="tm-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${finSem ? ' disabled' : ''}>semaine d’après ›</button></span></div>
+      <div style="overflow-x:auto"><table class="db-t tm-sem"><thead><tr><th>Jour</th><th>Temps morts</th><th>Sans client</th><th>Part de l’ouverture</th><th>Plus long trou</th><th>Tickets</th><th>Premier – dernier</th>${hs.length ? `<th><div class="tm-cases-h" style="grid-template-columns:repeat(${hs.length},1fr)">${hs.map(x => `<span>${x} h</span>`).join('')}</div></th>` : ''}</tr></thead>
+      <tbody>${W.jours.map(ligne).join('')}${moy('Moyenne par jour', M, P.jours ? P : null)}${moy('Semaine d’avant', P)}</tbody></table></div>
+      <div class="db-mini" style="padding:10px 16px 12px">Mesuré sur l’heure de chaque ticket (liste des tickets du panel) : tous les tickets comptent, comptoir et pro. L’attente avant le premier client et ce qui suit le dernier ticket ne comptent pas ; un ticket isolé à ${D.isole || 45} min ou plus du suivant en début ou en fin de journée est écarté. Les moyennes ne prennent que les journées closes. Habitude : les ${(Hb.dates || []).length || 4} mêmes jours de semaine d’avant.</div></div>`;
+    return h;
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -2702,14 +2808,15 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       ${['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${(S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
+    if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
@@ -5415,7 +5522,7 @@
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
+      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
@@ -5429,6 +5536,8 @@
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    $.querySelectorAll('[data-tmseuil]').forEach(b => b.addEventListener('click', () => { S.tmSeuil = +b.dataset.tmseuil; try { localStorage.setItem('db.tmSeuil', String(S.tmSeuil)); } catch (e) { /* navigation privée */ } charger(false); }));
+    $.querySelectorAll('[data-tmjour]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.tmjour; if (!d || d > AUJ || d === S.date) { return; } S.date = d; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
     $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
@@ -5540,7 +5649,7 @@
   urlMaj();
   charger(false);
   // La journée en cours se relit toutes les dix minutes.
-  setInterval(() => { if (S.vue === 'jour' && S.date === AUJ) { charger(true); } }, 600000);
+  setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.
   setInterval(() => { if (S.vue === 'ops' && S.date === AUJ && !document.hidden) { charger(true); } }, 120000);
 })();

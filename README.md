@@ -266,6 +266,25 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.
+- **Temps morts** (onglet du bureau, `?vue=morts`) : le comptoir sans client,
+  **mesuré ticket par ticket**. Un temps mort est un trou d'au moins 10 minutes
+  (5 ou 15 au choix, gardé dans le navigateur) entre deux tickets qui se
+  suivent, entre le premier et le dernier ticket du jour. Le jour regardé : le
+  nombre de temps morts, le temps sans client, sa part de l'ouverture, le plus
+  long trou, face à l'habitude (les 4 mêmes jours de semaine d'avant), puis la
+  journée minute par minute — un trait par ticket, chaque temps mort en plage
+  teintée, la part de chaque heure sans client. Dessous, la semaine du lundi au
+  dimanche, jour par jour, sa moyenne et la semaine d'avant ; un clic sur un
+  jour le lit au-dessus. Source : la **liste des tickets** du panel
+  (`/shops/{id}/transactions?date=`), qui porte l'heure de chaque ticket — une
+  liste par jour, complète (159 tickets dans la liste de Sombreffe le 06/11,
+  159 dans `hourly-distribution`). Les heures se gravent (`tmT{shop}:{date}`)
+  partout où le BO lit déjà cette liste, à la demande et au cron horaire
+  (`tmMoisson`, huit semaines en arrière, 40 listes par battement). Un ticket
+  isolé à 45 minutes ou plus du suivant en début ou en fin de journée (un pro
+  encodé à 5 h, une correction à 21 h) est écarté. Pas au téléphone. Lecture :
+  `GET /exploitation/temps-morts` ; tests : `php bin/tests_temps_morts.php` ;
+  maquette et calcul réseau : `docs/maquettes/temps-morts/`.
 
 ## Tablette des vendeuses (Book vendeuses)
 
