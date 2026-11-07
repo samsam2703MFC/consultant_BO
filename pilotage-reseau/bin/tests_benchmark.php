@@ -121,6 +121,13 @@ $lie = array_filter(PanelApi::$items, fn ($i) => isset($i['my_product_id']));
 verifie('items rattachés à nos produits (my_product_id)', count($lie) > 0);
 verifie('chaque concurrent a son magasin', !array_filter(PanelApi::$comp, fn ($c) => !in_array($c['shop_id'], [2, 3, 4, 5], true)));
 
+echo "Top 10 réseau\n";
+$t1 = benchmarkSemer('top10', false);
+verifie('semis top 10 : sans erreur', $t1['ok'], implode(' | ', array_slice($t1['journal'], 0, 3)));
+$avecProduit = array_filter(PanelApi::$items, fn ($i) => isset($i['my_product_id'], $i['my_category_id']) && str_contains((string) ($i['notes'] ?? ''), 'http'));
+verifie('top 10 : chaque item porte produit et catégorie', count($avecProduit) >= $t1['compte']['items'], count($avecProduit) . ' / ' . $t1['compte']['items']);
+$t2 = benchmarkSemer('top10', false);
+verifie('top 10 rejoué : aucun doublon', $t2['compte']['items'] === 0, json_encode($t2['compte']));
 echo "Calculs\n";
 verifie('€/kg : 4,50 € les 500 g = 9 €/kg', benchmarkPrixKg(['price' => 4.5, 'unit_type' => 'g', 'unit_size' => 500]) === 9.0);
 verifie('€/kg : la promo prime', benchmarkPrixKg(['price' => 10, 'promo_price' => 8, 'is_promo' => true, 'unit_type' => 'kg', 'unit_size' => 1]) === 8.0);
