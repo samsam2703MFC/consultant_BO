@@ -4,10 +4,11 @@
  "capturesLe": "2026-11-07",
  "capturesMagasin": "4",
  "encode": true,
- "note": "Validé et encodé le 07/11/2026 par l’API (tools/formation/encoder_sop.py) : v1.0 publiées, NL « à relire ». Les captures montrent encore le seuil matière de 32 % : à refaire quand le seuil de Budget › Paramètres sera en ligne.",
+ "note": "Encodé le 07/11/2026 (v1.0, NL à relire), réservé au responsable le même jour. Le seuil matière de Budget › Paramètres est en ligne (40,0 %) : les captures dash-pl, dash-resultat et dash-mobile montrent encore 32 % et sont à refaire (routine du lundi).",
  "encodeLe": "2026-11-07",
  "versions": {
   "art-pil-01": "1.0",
   "sop-pil-01": "1.0"
- }
+ },
+ "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)"
 }
