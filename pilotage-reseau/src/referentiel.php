@@ -70,11 +70,13 @@ const RF_FORMATIONS_PHASES_2026_11 = [
     'FO-36' => ['pre'], 'FO-37' => ['pre'], 'FO-38' => ['pre'], 'FO-39' => ['con'], 'FO-40' => ['con'], 'FO-41' => ['con'],
     'FO-42' => ['con'], 'FO-43' => ['ouv', 'con'], 'FO-44' => ['con'], 'FO-45' => ['ouv', 'con'], 'FO-46' => ['pre'], 'FO-47' => ['pre'],
     'FO-48' => ['con'], 'FO-49' => ['con'], 'FO-50' => ['con'], 'FO-51' => ['pre'], 'FO-52' => ['pre'], 'FO-53' => ['pre'],
+    // Ajoutée par le réseau (src/data/formations_reseau.json, 07/11/2026).
+    'FO-54' => ['pre'],
 ];
 /** Les familles des formations (regroupement de lecture du portail). NL à relire. */
 const RF_FAMILLES_FORMATION = [
     'franchise' => ['fr' => 'Franchise & gestion', 'nl' => 'Franchise & beheer',
-        'fo' => ['FO-31', 'FO-32', 'FO-33', 'FO-34', 'FO-35', 'FO-36', 'FO-37', 'FO-38', 'FO-40', 'FO-42', 'FO-47', 'FO-48', 'FO-49', 'FO-50']],
+        'fo' => ['FO-31', 'FO-32', 'FO-33', 'FO-34', 'FO-35', 'FO-36', 'FO-37', 'FO-38', 'FO-40', 'FO-42', 'FO-47', 'FO-48', 'FO-49', 'FO-50', 'FO-54']],
     'production' => ['fr' => 'Production', 'nl' => 'Productie', 'fo' => ['FO-03', 'FO-07', 'FO-08', 'FO-09', 'FO-12']],
     'vente' => ['fr' => 'Vente & développement commercial', 'nl' => 'Verkoop & commerciële ontwikkeling',
         'fo' => ['FO-01', 'FO-04', 'FO-11', 'FO-13', 'FO-14', 'FO-15', 'FO-17', 'FO-18', 'FO-19', 'FO-20', 'FO-43', 'FO-45']],

@@ -922,3 +922,14 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
   réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
 
+
+## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)
+
+`src/data/referentiel_v25.json` reste tel que `tools/formation/referentiel_excel.py` l'a généré. Une formation que le
+réseau ajoute vit dans `src/data/formations_reseau.json` (même forme : code, nom, fréquence, contrôleur, postes
+`attendu`…) ; `pcV25()` l'ajoute à la suite des 53 (un code déjà dans le v25 est ignoré), donc le portail, les
+classements (`rfValides`), les postes et les plans la voient comme les autres. Ses phases et sa famille de lecture se
+posent dans `RF_FORMATIONS_PHASES_2026_11` et `RF_FAMILLES_FORMATION`, sa partie par défaut dans
+`manuel_formations.json`. Première : **FO-54 « Gestion de trésorerie »** (client : « une formation de pré-ouverture »),
+pré-ouverture, P9 à P12 obligatoire, contrôleur consultant finance, famille « Franchise & gestion » ; son article
+`art-fo-54` est dans le Manuel.
