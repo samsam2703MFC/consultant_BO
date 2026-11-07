@@ -368,18 +368,36 @@
     return `<div class="tk-ct" style="border-top:1px solid var(--tk-trait)"><span class="tk-k">Résultat</span></div>${tete}${planTable(r, true)}`;
   }
 
+  /**
+   * Ce qui a été créé depuis cet écran — les seules choses qu'on peut y supprimer. Replié par défaut en une
+   * ligne (07/11/2026 : 110 tâches listées sous chaque checklist faisaient une page de 5 000 px) ; ouvert, il
+   * ne montre que ce qui touche la checklist affichée, par paquets de 40, « toute la liste » à la demande.
+   */
   function creees() {
     const L = (S.cadre && S.cadre.creees) || [];
     const C = (S.cadre && S.cadre.checklistsCreees) || [];
     if (!L.length && !C.length) { return ''; }
-    return `<div class="tk-card"><div class="tk-ct"><span class="tk-k">Créé depuis cet écran</span><span class="mu" style="font-size:11px">les seules choses qu’on peut supprimer ici</span></div>
-      <div class="tk-defile"><table class="tk-tab"><thead><tr><th></th><th>Nom</th><th>Jour</th><th>Heure</th><th>Checklist</th><th>Le</th><th class="n">ID</th><th></th></tr></thead><tbody>
-      ${C.map(c => `<tr><td><span class="tk-pas">checklist</span></td><td>${esc(c.nom)}</td><td></td><td></td><td></td>
-        <td class="mu">${esc(c.le)}${c.compte === 'admin' ? ' · admin' : ''}</td><td class="n mu">${c.id}</td>
-        <td class="act"><button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}">Supprimer</button></td></tr>`).join('')}
-      ${L.map(c => `<tr><td><span class="tk-pas">tâche</span></td><td>${esc(c.nom)}</td><td>${jourAff(c.jour)}</td><td>${esc(c.heure || '—')}</td><td class="mu">${esc((checklist(c.checklistId) || {}).nom || (c.checklistId ? '#' + c.checklistId : '—'))}</td>
-        <td class="mu">${esc(c.le)}${c.compte === 'admin' ? ' · admin' : ''}</td><td class="n mu">${c.id}</td>
-        <td class="act"><button class="tk-lien ko" data-a="supprimer" data-id="${c.id}">Supprimer</button></td></tr>`).join('')}</tbody></table></div></div>`;
+    const c = checklist(S.cl);
+    const ici = c && !S.creesTout;
+    const Lv = ici ? L.filter(x => x.checklistId === c.id) : L;
+    const Cv = ici ? C.filter(x => x.id === c.id) : C;
+    const max = S.creesMax || 40;
+    const pl = (n, m) => n + ' ' + m + (n > 1 ? 's' : '');
+    const resume = [L.length ? pl(L.length, 'tâche') : '', C.length ? pl(C.length, 'checklist') : ''].filter(Boolean).join(' · ')
+      + (c && (Lv.length || Cv.length) && !S.creesTout ? ` — dont ${pl(Lv.length + Cv.length, 'élément')} pour cette checklist` : '');
+    const tete = `<div class="tk-ct"><span class="tk-k">Créé depuis cet écran</span><span class="mu" style="font-size:11.5px">${esc(resume)}</span><span class="sp"></span>
+      ${S.creesOuvert && c ? `<button class="tk-lien" data-a="creesTout">${S.creesTout ? 'cette checklist seulement' : 'toute la liste'}</button>` : ''}
+      <button class="tk-btn mini" data-a="creesOuvrir">${S.creesOuvert ? 'Masquer' : 'Afficher'}</button></div>`;
+    if (!S.creesOuvert) { return `<div class="tk-card">${tete}</div>`; }
+    if (!Lv.length && !Cv.length) { return `<div class="tk-card">${tete}<div class="tk-astuce">Rien n’a été créé ici pour cette checklist.</div></div>`; }
+    const lignesC = Cv.map(x => `<tr><td><span class="tk-pas">checklist</span></td><td class="nom"><span class="tk-nom">${esc(x.nom)}</span><small>#${x.id} · ${esc(x.le)}${x.compte === 'admin' ? ' · admin' : ''}</small></td><td></td>
+        <td class="act"><button class="tk-btn mini danger" data-a="supprimerCl" data-id="${x.id}">Supprimer</button></td></tr>`).join('');
+    const lignesT = Lv.slice(0, max).map(x => `<tr><td><span class="tk-pas">tâche</span></td><td class="nom"><span class="tk-nom">${esc(x.nom)}</span>
+        <small>#${x.id} · ${esc(x.le)}${ici ? '' : ' · ' + esc((checklist(x.checklistId) || {}).nom || (x.checklistId ? '#' + x.checklistId : 'sans checklist'))}${x.compte === 'admin' ? ' · admin' : ''}</small></td>
+        <td><span class="tk-quand">${esc(x.jour ? (jourFr(x.jour) ? 'Chaque ' + jourFr(x.jour) : x.jour) : 'Tous les jours')}</span><small>${esc(x.heure || 'sans heure')}</small></td>
+        <td class="act"><button class="tk-btn mini danger" data-a="supprimer" data-id="${x.id}">Supprimer</button></td></tr>`).join('');
+    const plus = Lv.length > max ? `<div class="tk-astuce"><button class="tk-lien" data-a="creesPlus">Afficher ${Math.min(40, Lv.length - max)} de plus</button> · ${Lv.length - max} restante${Lv.length - max > 1 ? 's' : ''}</div>` : '';
+    return `<div class="tk-card">${tete}<div class="tk-defile"><table class="tk-tab tk-taches"><tbody>${lignesC}${lignesT}</tbody></table></div>${plus}</div>`;
   }
 
   /* --- l'assistant : checklist et tâches, en quatre étapes ---------------- */
@@ -940,6 +958,9 @@
         if (cid && checklist(cid)) { S.cl = String(cid); adresse(String(cid)); }
         return rendre();
       }
+      case 'creesOuvrir': S.creesOuvert = !S.creesOuvert; S.creesMax = 40; return rendre();
+      case 'creesTout': S.creesTout = !S.creesTout; S.creesMax = 40; return rendre();
+      case 'creesPlus': S.creesMax = (S.creesMax || 40) + 40; return rendre();
       case 'supprimerCl': {
         const c = ((S.cadre && S.cadre.checklistsCreees) || []).find(x => x.id === +id);
         if (!confirm('Supprimer du panel la checklist « ' + (c ? c.nom : '#' + id) + ' » (#' + id + ') ? Ses tâches restent dans le panel.')) { return; }
