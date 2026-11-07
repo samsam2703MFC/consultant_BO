@@ -2335,6 +2335,9 @@
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
    * suivi (`vie`), réglée dans /production. */
   const OP_VIES = ['S', 'M', 'L'];
+  // La courbe « Heure par heure » s'arrête à 20 h (07/11/2026, Sam : « 20 h 21 h 22 h 23 h 24 h, retire ») : les heures du
+  // soir, vides, n'étiraient que l'axe. Une vente tardive reste comptée : le cumul la rabat sur la dernière heure, 19 – 20 h.
+  const OP_H_FIN = 20;
   const OP_VIE_NOM = { S: 'Short life', M: 'Medium life', L: 'Long life' };
   const OP_VIE_SOUS = { S: 'vendu le jour même', M: 'se garde 2 à 3 jours', L: 'se garde une semaine et plus' };
   const OP_VIE_JOURS = 3;   // le stock d'un long life se lit face à trois jours de vente, comme au suivi
@@ -3007,7 +3010,7 @@
     const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : (sep ? B.objC : B.obj);
     const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : (sep ? 'objectif comptoir ' : 'objectif ') + fE(cible));
     const cibleB = sep && mode === 'ca' && B.objB ? B.objB : null;
-    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); out.push({ h: x.h, v: c }); }); return out; };
+    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); const h = Math.min(+x.h, OP_H_FIN - 1), der = out[out.length - 1]; if (der && der.h === h) { der.v = c; } else { out.push({ h, v: c }); } }); return out; };
     const lim = fin ? null : hNow, jn = esc(B.jourNom) + ' dernier', auj = fin ? 'cette journée' : 'aujourd’hui';
     // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
     const L = sep
@@ -3018,7 +3021,8 @@
       : [[cumul(h7, null, x => +x[champ] || 0), 'l7', 'p7', jn, 't7', false], [cumul(hA, lim, x => +x[champ] || 0), 'la', 'pa', auj, 'ta', false]];
     if (L.some(c => !c[0].length)) { return ''; }
     const fins = L.map(c => c[0][c[0].length - 1].v);
-    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1));
+    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.min(OP_H_FIN, Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1)));
+    const nowVu = !fin && now != null && hNow + frac < h1;   // passé 20 h, le trait « maintenant » sortirait du graphique
     const mx = Math.max(cible || 0, cibleB || 0, ...fins, 1) * (cible && cible >= Math.max(...fins) ? 1 : 1.08);
     const axe = v => mode === 'tk' ? fN(Math.round(v)) : fN(Math.round(v / 10) * 10);
     const dessine = (W, Hh, pas, cls) => {
@@ -3038,11 +3042,14 @@
       const cA = L[sep ? 2 : 1][0], c7 = L[0][0], lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
       // L'heure qu'il est : en haut de son trait, sauf quand l'étiquette de fin de J−7 est à côté (fin de journée),
       // alors en bas ; au téléphone, toujours en bas et les valeurs de fin passent dans la légende.
-      if (!fin && now != null) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
+      if (nowVu) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
       L.forEach(c => { const p = c[0][c[0].length - 1]; g += `<circle cx="${x(p.h + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" class="${c[2]}"/>`; });
       if (!tel) {
-        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
-        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
+        // Les deux fins sont voisines depuis que l'axe s'arrête à 20 h : l'étiquette de la courbe la plus haute au-dessus
+        // de son point, l'autre dessous — elles ne se chevauchent plus.
+        const aDessus = lastA.v > last7.v;
+        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + (aDessus ? -10 : 18)).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
+        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) + (aDessus ? 18 : -10)).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
       }
       return g + '</svg>';
     };
@@ -3051,7 +3058,7 @@
       : [['la', auj, fins[1]], ['l7', jn + ' (' + fD(j7.date) + ')', fins[0]]];
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${basculePro}${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${nowVu ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /**
    * Le panier moyen heure par heure (01/11/2026, Sam : « l'évolution du panier moyen par rapport aux heures ») : le CA de
@@ -3067,13 +3074,15 @@
       const ca = Math.max(0, (+x.ca || 0) - (sep ? +pr.ca || 0 : 0)), n = Math.max(0, (+x.tickets || 0) - (sep ? +pr.n || 0 : 0));
       return { h: +x.h, ca, n, v: n > 0 ? ca / n : null };
     });
-    const PA = par(hA, true, fin ? null : hNow), P7 = par(h7, false, null);
+    const PAt = par(hA, true, fin ? null : hNow), P7t = par(h7, false, null);
+    const PA = PAt.filter(p => p.h < OP_H_FIN), P7 = P7t.filter(p => p.h < OP_H_FIN);
     const vA = PA.filter(p => p.v != null), v7 = P7.filter(p => p.v != null);
     if (!vA.length || !v7.length) { return ''; }
     const moyDe = L => { const n = L.reduce((s, p) => s + p.n, 0); return n ? L.reduce((s, p) => s + p.ca, 0) / n : null; };
-    const panA = moyDe(PA), pan7 = moyDe(P7), de7 = new Map(P7.map(p => [p.h, p]));
+    const panA = moyDe(PAt), pan7 = moyDe(P7t), de7 = new Map(P7.map(p => [p.h, p]));
     const SEUIL = 5, enCours = p => !fin && now != null && p.h === hNow, leger = p => p.n < SEUIL || enCours(p);
-    const h0 = Math.min(6, PA[0].h, P7[0].h), h1 = Math.max(19, PA[PA.length - 1].h + 1, P7[P7.length - 1].h + 1);
+    const h0 = Math.min(6, PA[0].h, P7[0].h), h1 = Math.min(OP_H_FIN, Math.max(19, PA[PA.length - 1].h + 1, P7[P7.length - 1].h + 1));
+    const nowVu = !fin && now != null && hNow + frac < h1;
     const haut = Math.max(...vA.map(p => p.v), ...v7.map(p => p.v), panA || 0, pan7 || 0);
     const pasE = haut > 40 ? 10 : 5, mx = Math.ceil(haut * 1.12 / pasE) * pasE, nMx = Math.max(1, ...PA.map(p => p.n));
     const auj = fin ? 'cette journée' : 'aujourd’hui', jn = esc(B.jourNom) + ' dernier', cpt = sep ? ' · comptoir' : '';
@@ -3105,7 +3114,7 @@
       }
       for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
       g += `<path d="${chemin(P7)}" class="l7"/><path d="${chemin(PA)}" class="la"/>`;
-      if (!fin && now != null) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 10}" class="nowt">${opHM(now)}</text>`; }
+      if (nowVu) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 10}" class="nowt">${opHM(now)}</text>`; }
       v7.forEach(p => { g += `<circle cx="${x(p.h + 0.5).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" class="${p.n < SEUIL ? 'p7l' : 'p7'}"><title>${jn} · ${p.h} – ${p.h + 1} h · panier ${fV(p.v)} · ${fN(p.n)} client${p.n > 1 ? 's' : ''}</title></circle>`; });
       vA.forEach(p => {
         const q = de7.get(p.h), lg = leger(p);
@@ -3120,7 +3129,7 @@
     const pic = pleins.length > 1 ? `<span class="db-mini op-pk">le plus haut <b>${pleins[0].h} h · ${fV(pleins[0].v)}</b> · le plus bas <b>${pleins[pleins.length - 1].h} h · ${fV(pleins[pleins.length - 1].v)}</b></span>` : '';
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${entete}${pic}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg"><span><i class="la"></i>${auj}${cpt}</span><span><i class="pmj"></i>panier ${fin ? 'de la journée' : 'du jour'} <b>${fV(panA)}</b></span><span><i class="l7"></i>${jn} (${fD(j7.date)})${cpt} · panier de la journée <b>${fV(pan7)}</b></span><span><i class="cl"></i>clients de l’heure</span>${vA.some(leger) || v7.some(p => p.n < SEUIL) ? `<span><i class="pal"></i>moins de ${SEUIL} clients${fin ? '' : ' ou heure en cours'}</span>` : ''}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg"><span><i class="la"></i>${auj}${cpt}</span><span><i class="pmj"></i>panier ${fin ? 'de la journée' : 'du jour'} <b>${fV(panA)}</b></span><span><i class="l7"></i>${jn} (${fD(j7.date)})${cpt} · panier de la journée <b>${fV(pan7)}</b></span><span><i class="cl"></i>clients de l’heure</span>${vA.some(leger) || v7.some(p => p.n < SEUIL) ? `<span><i class="pal"></i>moins de ${SEUIL} clients${fin ? '' : ' ou heure en cours'}</span>` : ''}${nowVu ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
   function opDuelTable(D, opt) {
