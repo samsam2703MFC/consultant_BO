@@ -31,6 +31,25 @@
   // le cockpit porte déjà ; la checklist ouverte lui est dite, pour qu'il la garde dans son adresse.
   const EMBED = q.get('embed') === '1';
   if (EMBED) { document.documentElement.classList.add('tk-emb'); }
+  /** Remonter en haut de la page — dans le cockpit, c'est lui qui fait défiler le cadre. */
+  function voirHaut() {
+    if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkVoir: 0 }, location.origin); } catch (e) { /* cockpit absent */ } return; }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  // Intégrée, la page prend la hauteur de son contenu : le cadre du cockpit la suit, et il ne reste qu'une
+  // barre de défilement, celle du cockpit (07/11/2026 : trois barres imbriquées, « attention à l'UX »).
+  if (EMBED && window.parent !== window && window.ResizeObserver) {
+    let attente = 0, derniere = 0;
+    new ResizeObserver(() => {
+      cancelAnimationFrame(attente);
+      attente = requestAnimationFrame(() => {
+        const h = Math.ceil(document.getElementById('tk').getBoundingClientRect().height) + 8;
+        if (Math.abs(h - derniere) < 2) { return; }
+        derniere = h;
+        try { window.parent.postMessage({ tkHauteur: h }, location.origin); } catch (e) { /* cockpit absent */ }
+      });
+    }).observe(document.getElementById('tk'));
+  }
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
@@ -142,15 +161,18 @@
   /* --- rendu -------------------------------------------------------------- */
   function enTete() {
     const a = admin();
-    const compte = a ? '<b>Compte administrateur du panel</b> · jusqu’à ' + new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })
-      : '<b>Compte du cockpit</b>' + (S.cadre && S.cadre.api && !S.cadre.api.configure ? ' (non configuré)' : '');
-    return `<div class="tk-hd">${EMBED ? '' : `<img src="../assets/img/logo.png" alt=""><div><div class="tk-titre">Cadre des tâches</div>
-      <div class="tk-sous">Les tâches que les magasins font chaque jour, telles que le panel les définit${S.cadre && S.cadre.api ? ' · ' + esc(S.cadre.api.base) : ''}</div></div>`}
-      <span class="sp"></span><span class="tk-compte">${compte}</span>
-      ${a ? '<button class="tk-btn" data-a="deconnexion">Revenir au compte du cockpit</button>' : '<button class="tk-btn" data-a="connexion">Compte administrateur…</button>'}
-      <button class="tk-btn" data-a="recharger" ${S.charge ? 'disabled' : ''}>${S.charge ? 'Lecture…' : 'Relire le panel'}</button>
-      ${S.wz ? '' : '<button class="tk-btn prim" data-a="wzOuvrir" data-mode="nouvelle">Assistant : checklist et tâches</button>'}</div>
-      ${S.wz ? '' : `<p class="tk-intro"><b>Assistant</b> : créer une checklist et ses tâches, ou ajouter des tâches à une checklist, en quatre étapes. <b>Dupliquer</b> : cocher des tâches et en faire des copies avec d’autres jours, une autre heure, obligatoires ou avec photo. Rien ne part au panel sans un aperçu des appels exacts.</p>`}`;
+    // Le compte, en une ligne discrète : on n'en change qu'en cas de refus du panel.
+    const compte = a
+      ? `Compte administrateur du panel, jusqu’à ${new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' })} · <button class="tk-lien" data-a="deconnexion">revenir au compte du cockpit</button>`
+      : `Compte du cockpit${S.cadre && S.cadre.api && !S.cadre.api.configure ? ' (non configuré)' : ''} · <button class="tk-lien" data-a="connexion">compte administrateur…</button>`;
+    const outils = `<span class="tk-compte">${compte}</span><span class="sp"></span>
+      <button class="tk-btn ghost" data-a="recharger" ${S.charge ? 'disabled' : ''} title="Relire les checklists et les tâches du panel">${S.charge ? 'Lecture…' : '↻ Relire'}</button>
+      ${EMBED ? `<a class="tk-btn ghost" href="./${/^\d+$/.test(String(S.cl || '')) ? '?checklist=' + S.cl : ''}" target="_blank" rel="noopener" title="La même page, seule, dans un onglet">Ouvrir seul ↗</a>` : ''}
+      ${S.wz ? '' : '<button class="tk-btn prim" data-a="wzOuvrir" data-mode="nouvelle">＋ Assistant : checklist et tâches</button>'}`;
+    if (EMBED) { return `<div class="tk-hd">${outils}</div>`; }
+    return `<div class="tk-hd"><img src="../assets/img/logo.png" alt=""><div><div class="tk-titre">Cadre des tâches</div>
+      <div class="tk-sous">Les checklists et les tâches que les magasins font chaque jour, telles que le panel les définit</div></div></div>
+      <div class="tk-hd tk-hd2">${outils}</div>`;
   }
 
   function erreurs() {
@@ -171,38 +193,53 @@
       ${checklists().map(c => b(c.id, c.nom, [c.heure, c.poste].filter(Boolean).join(' · '), c.taches.length)).join('')}</div></div>`;
   }
 
-  function oui(v) { return v ? '<span class="tk-pas oui">oui</span>' : '<span class="mu">non</span>'; }
+  /** Quand la tâche revient, en français : « Tous les jours », « Chaque samedi ». */
+  function quandAff(t) {
+    const f = String(t.frequence || '').toUpperCase(), j = t.jour || '';
+    const freq = { DAILY: 'Tous les jours', WEEKLY: 'Chaque semaine', MONTHLY: 'Chaque mois', YEARLY: 'Chaque année' };
+    if (j) { const fr = jourFr(j) || j; return f === 'WEEKLY' || f === '' ? 'Chaque ' + fr : fr + ' · ' + (freq[f] || f).toLowerCase(); }
+    return freq[f] || (f ? t.frequence : 'Tous les jours');
+  }
 
   function tableau() {
     const L = lignes();
     const c = checklist(S.cl);
     const tous = L.length && L.every(x => S.sel.has(x.t.id));
     const titre = c ? c.nom : (S.cl === 'hors' ? 'Dans aucune checklist' : 'Toutes les tâches');
-    const sous = c ? [c.heure && 'checklist à ' + c.heure, c.poste, c.description].filter(Boolean).join(' · ') : '';
-    return `<div class="tk-card"><div class="tk-ct"><div><div style="font-size:15px">${esc(titre)}</div>${sous ? `<div class="tk-sous">${esc(sous)}</div>` : ''}</div>
-      <span class="sp" style="flex:1"></span>
-      <input class="tk-in" data-f="filtre" placeholder="Filtrer…" value="${esc(S.filtre)}" style="width:180px">
-      ${c ? `<button class="tk-btn" data-a="wzOuvrir" data-mode="existante">Ajouter des tâches…</button>` : ''}
-      ${S.sel.size ? `<button class="tk-btn" data-a="wzOuvrir" data-mode="selection">Assistant avec la sélection (${S.sel.size})</button>` : ''}
-      <button class="tk-btn prim" data-a="dupliquer" ${S.sel.size ? '' : 'disabled'}>Dupliquer la sélection${S.sel.size ? ' (' + S.sel.size + ')' : ''}</button>
-      ${S.sel.size ? '<button class="tk-lien" data-a="vider">tout décocher</button>' : ''}</div>
-      <div class="tk-defile"><table class="tk-tab"><thead><tr>
-        <th class="c"><input type="checkbox" data-a="tous" ${tous ? 'checked' : ''} aria-label="Tout cocher"></th>
-        ${c ? '<th class="n">Ordre</th>' : ''}<th>Tâche</th><th>Jour</th><th>Heure</th><th>Fréquence</th><th class="c">Obligatoire</th><th class="c">Photo</th><th class="c">Active</th><th class="n">ID</th><th></th></tr></thead><tbody>
+    const sous = c ? [c.heure && 'à ' + c.heure, c.poste, c.description].filter(Boolean).join(' · ') : '';
+    const n = S.sel.size;
+    // La barre de sélection n'apparaît qu'avec une sélection : sans elle, un bouton grisé ressemblait à une erreur.
+    const selection = n
+      ? `<div class="tk-selbar"><b>${n} tâche${n > 1 ? 's' : ''} cochée${n > 1 ? 's' : ''}</b>
+          <button class="tk-btn prim" data-a="dupliquer">Dupliquer…</button>
+          <button class="tk-btn" data-a="wzOuvrir" data-mode="selection">Ouvrir dans l’assistant</button>
+          <button class="tk-lien" data-a="vider">tout décocher</button></div>`
+      : '';
+    return `<div class="tk-card"><div class="tk-ct"><div class="tk-cl-titre"><div class="tk-t15">${esc(titre)}</div>${sous ? `<div class="tk-sous">${esc(sous)}</div>` : ''}</div>
+      <span class="sp"></span>
+      <input class="tk-in" data-f="filtre" placeholder="Filtrer…" value="${esc(S.filtre)}" style="width:170px">
+      ${c ? `<button class="tk-btn" data-a="wzOuvrir" data-mode="existante">＋ Ajouter des tâches</button>` : ''}</div>
+      ${selection}
+      <div class="tk-defile"><table class="tk-tab tk-taches"><thead><tr>
+        <th class="c" style="width:34px"><input type="checkbox" data-a="tous" ${tous ? 'checked' : ''} aria-label="Tout cocher" title="Tout cocher"></th>
+        ${c ? '<th class="n" style="width:34px">#</th>' : ''}<th>Tâche</th><th style="width:130px">Quand</th><th style="width:150px">Exigences</th><th style="width:118px"></th></tr></thead><tbody>
       ${L.length ? L.map(x => {
         const t = x.t;
         const chemin = [t.section, t.categorie, t.sousCategorie].filter(Boolean).join(' › ');
+        const sops = (((S.cadre || {}).sopLiens || {})[t.id] || []).map(y => `<a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(y.sopId)}" target="_blank" rel="noopener" title="${esc(y.titre)}">${esc(y.code || 'SOP')}${y.etape ? ' · ' + esc(y.etape) : ''}</a>`).join(' ');
+        const exig = [t.obligatoire ? '<span class="tk-pas oui">obligatoire</span>' : '', t.photo ? '<span class="tk-pas photo">photo</span>' : '',
+          t.actif === false ? '<span class="tk-pas att">en pause</span>' : ''].filter(Boolean).join(' ') || '<span class="mu">—</span>';
         return `<tr class="${S.sel.has(t.id) ? 'sel' : ''}${t.actif === false ? ' pause' : ''}">
-          <td class="c"><input type="checkbox" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''}></td>
-          ${c ? `<td class="n">${x.ordre == null ? '' : x.ordre}</td>` : ''}
-          <td>${esc(t.nom)}${t.horsListe ? ' <span class="tk-pas att">absente de /tasks</span>' : ''}${(((S.cadre || {}).sopLiens || {})[t.id] || []).map(x => ` <a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(x.sopId)}" target="_blank" rel="noopener" title="${esc(x.titre)}">${esc(x.code || 'SOP')}${x.etape ? ' · ' + esc(x.etape) : ''}</a>`).join('')}${chemin ? `<small>${esc(chemin)}</small>` : ''}${x.note ? `<small>Note : ${esc(x.note)}</small>` : ''}</td>
-          <td>${jourAff(t.jour)}</td><td>${esc(t.heure || '—')}</td><td>${esc(t.frequence || '—')}</td>
-          <td class="c">${oui(t.obligatoire)}</td><td class="c">${oui(t.photo)}</td>
-          <td class="c">${t.actif == null ? '<span class="mu">?</span>' : (t.actif ? '<span class="tk-pas oui">oui</span>' : '<span class="tk-pas att">en pause</span>')}</td>
-          <td class="n mu">${t.id}</td>
-          <td class="act"><button class="tk-lien" data-a="modifier" data-id="${t.id}">Modifier</button><button class="tk-lien" data-a="brut" data-id="${t.id}">Donnée brute</button></td></tr>`;
-      }).join('') : `<tr><td colspan="11" class="mu" style="padding:16px">${S.charge ? 'Lecture…' : 'Aucune tâche.'}</td></tr>`}
-      </tbody></table></div></div>`;
+          <td class="c"><input type="checkbox" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}"></td>
+          ${c ? `<td class="n mu">${x.ordre == null ? '' : x.ordre}</td>` : ''}
+          <td class="nom"><span class="tk-nom">${esc(t.nom)}</span>${t.horsListe ? ' <span class="tk-pas att">absente de /tasks</span>' : ''}${sops ? ' ' + sops : ''}
+            <small title="${esc(chemin)}">${esc(t.sousCategorie || chemin || '')}${t.sousCategorie || chemin ? ' · ' : ''}#${t.id}</small>${x.note ? `<small>Note : ${esc(x.note)}</small>` : ''}</td>
+          <td><span class="tk-quand">${esc(quandAff(t))}</span><small>${esc(t.heure || 'sans heure')}</small></td>
+          <td>${exig}</td>
+          <td class="act"><button class="tk-btn mini" data-a="modifier" data-id="${t.id}">Modifier</button><button class="tk-btn mini ghost" data-a="brut" data-id="${t.id}" title="La tâche telle que le panel la rend, ses niveaux de poste et ses contrôleurs">Détails</button></td></tr>`;
+      }).join('') : `<tr><td colspan="6" class="mu" style="padding:16px">${S.charge ? 'Lecture…' : (S.filtre ? 'Aucune tâche ne correspond au filtre.' : 'Aucune tâche.')}</td></tr>`}
+      </tbody></table></div>
+      ${L.length && !n ? '<div class="tk-astuce">Cochez des tâches pour les dupliquer avec d’autres jours, une autre heure, obligatoires ou avec photo.</div>' : ''}</div>`;
   }
 
   /* --- duplication -------------------------------------------------------- */
@@ -375,7 +412,7 @@
       Array.from(S.sel).map(tache).filter(Boolean).forEach(t => S.wz.lignes.push(wzLigneDe(t)));
     }
     S.dup = null;
-    rendre(); window.scrollTo({ top: 0 });
+    rendre(); voirHaut();
     if (!S.struct) {
       try { S.struct = await api('GET', '/task/structure'); } catch (e) { S.struct = { sousCategories: [], postes: [], erreurs: { structure: e.message } }; }
       if (S.wz) { S.wz.struct = S.struct; rendre(); }
@@ -647,7 +684,8 @@
           ${m.plan && !m.plan.fait ? `<button class="tk-btn prim" data-a="modifEnvoyer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button>` : ''}
           <button class="tk-btn" data-a="fermer">${m.plan && m.plan.fait ? 'Fermer' : 'Annuler'}</button></div>`;
     }
-    return `<div class="tk-voile" data-a="voile"><div class="tk-modale" role="dialog" aria-modal="true">${corps}</div></div>`;
+    const y = EMBED ? `style="margin-top:${Math.max(8, (m.y || 0) - 140)}px"` : '';
+    return `<div class="tk-voile" data-a="voile"><div class="tk-modale" role="dialog" aria-modal="true" ${y}>${corps}</div></div>`;
   }
 
   function rendre() {
@@ -683,11 +721,12 @@
     const id = el.dataset.id;
     switch (a) {
       case 'recharger': return charger();
-      case 'cl': S.cl = id; S.filtre = ''; adresse(id); return rendre();
+      // Une checklist choisie en bas de la liste : le tableau est en haut, on y remonte.
+      case 'cl': S.cl = id; S.filtre = ''; adresse(id); rendre(); voirHaut(); return;
       case 'coche': if (el.checked) { S.sel.add(+id); } else { S.sel.delete(+id); } return rendre();
       case 'tous': { const L = lignes(); if (el.checked) { L.forEach(x => S.sel.add(x.t.id)); } else { L.forEach(x => S.sel.delete(x.t.id)); } return rendre(); }
       case 'vider': S.sel.clear(); return rendre();
-      case 'dupliquer': ouvrirDup(); rendre(); window.scrollTo({ top: 0, behavior: 'smooth' }); return;
+      case 'dupliquer': ouvrirDup(); rendre(); voirHaut(); return;
       case 'fermerDup': S.dup = null; S.plan = null; S.res = null; return rendre();
       case 'jour': { const v = el.dataset.v; const j = S.dup.jours; const i = j.indexOf(v); if (i >= 0) { j.splice(i, 1); } else { j.push(v); } S.plan = null; return rendre(); }
       case 'autreJour': { const v = S.dup.autre.trim(); if (v && !S.dup.jours.includes(v)) { S.dup.jours.push(v); } S.dup.autre = ''; S.plan = null; return rendre(); }
@@ -719,11 +758,11 @@
         return charger(true);
       }
       case 'brut': {
-        S.modale = { type: 'brut', id: +id, data: null }; rendre();
+        S.modale = { type: 'brut', id: +id, data: null, y: el.getBoundingClientRect().top + window.scrollY }; rendre();
         try { S.modale.data = await api('GET', '/task/taches/' + id); } catch (e) { S.modale.data = { erreur: e.message, niveaux: [], controleurs: { brut: null } }; }
         return rendre();
       }
-      case 'modifier': { const t = tache(id); if (!t) { return; } S.modale = { type: 'modif', id: +id, f: champsModif(t), plan: null }; return rendre(); }
+      case 'modifier': { const t = tache(id); if (!t) { return; } S.modale = { type: 'modif', id: +id, f: champsModif(t), plan: null, y: el.getBoundingClientRect().top + window.scrollY }; return rendre(); }
       case 'modifApercu':
       case 'modifEnvoyer': {
         const m = S.modale; const b = diffModif();
@@ -738,7 +777,7 @@
         }
         m.envoi = false; return rendre();
       }
-      case 'connexion': S.modale = { type: 'connexion', f: {} }; return rendre();
+      case 'connexion': S.modale = { type: 'connexion', f: {}, y: el.getBoundingClientRect().top + window.scrollY }; return rendre();
       case 'deconnexion': sessionStorage.removeItem(CLE); return charger();
       case 'seConnecter': {
         const m = S.modale;
@@ -765,7 +804,7 @@
         w.err = null;
         if (w.etape === 1 && !w.lignes.length) { w.lignes.push(wzLigneVide()); }
         w.etape++;
-        window.scrollTo({ top: 0 });
+        voirHaut();
         if (w.etape === 4) { return wzApercu(); }
         return rendre();
       }

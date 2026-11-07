@@ -7873,10 +7873,9 @@ function tplManque(c, x){
  * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
 function tplCadreTaches(c, x){
   const { esc } = x;
-  return `<div data-screen="cadreTaches" style="display:flex;flex-direction:column;gap:8px">
-    <div style="display:flex;justify-content:flex-end"><button class="ps-btn" ${x.A(c.ct.plein)} title="La même page, seule, dans un onglet">Ouvrir dans un onglet ↗</button></div>
-    <iframe src="${esc(c.ct.src)}" title="Cadre des tâches" style="width:100%;height:calc(100vh - 170px);min-height:560px;border:1px solid var(--line);border-radius:12px;background:var(--paper);display:block"></iframe>
-  </div>`;
+  // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.
+  // « Ouvrir seul ↗ » vit dans la page elle-même, à côté de « Relire ».
+  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;border:none;background:transparent;display:block"></iframe></div>`;
 }
 /* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
 /* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que

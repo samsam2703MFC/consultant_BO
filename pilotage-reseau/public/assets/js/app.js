@@ -9244,15 +9244,27 @@ class App {
     if (!this._ctEcoute) {
       this._ctEcoute = true;
       window.addEventListener('message', ev => {
-        if (ev.origin !== location.origin || !ev.data || ev.data.tkChecklist == null || this.state.screen !== 'cadreTaches') { return; }
+        if (ev.origin !== location.origin || !ev.data || this.state.screen !== 'cadreTaches') { return; }
+        const cadre = document.querySelector('iframe[data-ct]');
+        // La page prend la hauteur de son contenu : une seule barre de défilement, celle du cockpit.
+        if (typeof ev.data.tkHauteur === 'number' && cadre) {
+          this._ctHaut = Math.max(480, Math.min(20000, Math.round(ev.data.tkHauteur)));
+          cadre.style.height = this._ctHaut + 'px';
+          return;
+        }
+        // « Remonter » (une étape de l'assistant, la duplication) : le cockpit fait défiler jusqu'au haut du cadre.
+        if (ev.data.tkVoir != null && cadre) {
+          if (cadre.getBoundingClientRect().top < 0) { cadre.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+          return;
+        }
+        if (ev.data.tkChecklist == null) { return; }
         const id = String(ev.data.tkChecklist);
         if (!/^(\d{1,10}|tout|hors)$/.test(id)) { return; }
         this.state.ctChecklist = /^\d+$/.test(id) ? id : '';
         try { history.replaceState(null, '', this.adresseDe('cadreTaches')); } catch (e) { /* l'ancre reste l'ancienne */ }
       });
     }
-    common.ct = { src: this._ctSrc,
-      plein: () => { const c = this.state.ctChecklist; window.open('task/' + (c ? '?checklist=' + encodeURIComponent(c) : ''), '_blank', 'noopener'); } };
+    common.ct = { src: this._ctSrc, haut: this._ctHaut || 900 };
   }
   valsTablette(common){
     const S = this.state;
