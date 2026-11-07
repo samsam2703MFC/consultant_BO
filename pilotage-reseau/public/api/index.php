@@ -129,6 +129,7 @@ require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
 require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/task_cadre.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -340,6 +341,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
+    if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);

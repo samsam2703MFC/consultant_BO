@@ -335,9 +335,21 @@ final class PanelApi
         return $r;
     }
 
+    /**
+     * Jeton IMPOSÉ par l'appelant — celui d'un compte administrateur du panel, connecté depuis
+     * l'écran /task (POST /panel/authenticate). Il remplace le compte consultant du cockpit le
+     * temps d'une requête ; il n'est jamais mis en cache ni renouvelé ici : périmé, c'est à la
+     * personne de se reconnecter, pas au cockpit de retomber sur un autre compte en silence.
+     */
+    public static ?string $jetonImpose = null;
+
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */
     private static function token(bool $force = false): ?string
     {
+        if (self::$jetonImpose !== null) {
+            if ($force) { self::$lastError = 'session du panel expirée — reconnectez-vous'; return null; }
+            return self::$jetonImpose;
+        }
         if (!$force) {
             if (self::$token !== null) { return self::$token; }
             $cached = setting('panelApiToken');
@@ -421,6 +433,29 @@ final class PanelApi
             return [false, $res];
         }
         return [true, $res];
+    }
+
+    /**
+     * Connexion d'un compte ADMINISTRATEUR du panel (POST /panel/authenticate), pour les routes
+     * du cadre opérationnel que le compte consultant du cockpit n'a peut-être pas le droit
+     * d'écrire (écran /task). Le formulaire de connexion du panel admin demande le téléphone et
+     * le mot de passe ; la route rend un jeton de 30 minutes et un jeton de renouvellement. Rien
+     * n'est gardé ici : le jeton repart vers le navigateur, qui le renvoie à chaque appel.
+     *
+     * @return array{code:int, corps:mixed}
+     */
+    public static function connexionPanel(string $phone, string $password): array
+    {
+        [$code, $res] = self::http('POST', self::config()['base'] . '/panel/authenticate',
+            ['phone' => $phone, 'password' => $password]);
+        return ['code' => $code, 'corps' => $res];
+    }
+
+    /** Renouvelle un jeton admin (POST /panel/refresh {refresh_token}). */
+    public static function renouvelerPanel(string $refresh): array
+    {
+        [$code, $res] = self::http('POST', self::config()['base'] . '/panel/refresh', ['refresh_token' => $refresh]);
+        return ['code' => $code, 'corps' => $res];
     }
 
     /** Même chose qu'un POST, avec le verbe demandé (PUT, PATCH). */
