@@ -5066,6 +5066,8 @@
     return (D.releves || []).filter(x => x.prix > 0 && !/cougn|galette|frangipane/.test(BM_NORM(x.produit)) && !/plateau|\d+ ?pc/.test(BM_NORM(x.produit))
       && ((x.monProduit != null && String(x.monProduit) === String(p.pid)) || (r ? (r[1].test(BM_NORM(x.produit)) && !r[2].test(BM_NORM(x.produit))) : bmMots(p.nom).every(w => BM_NORM(x.produit).includes(w)))));
   }
+  const BM_GMS = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|bio-planet|albert heijn|\bah\b|jumbo/i;
+  const bmEstGms = r => /gms|super|hyper/i.test(r.type || '') || BM_GMS.test(r.concurrent || '');
   function rendTop10() {
     const A = S.aux.bmTop, T = bmTopListe(), Pm = bmProduits();
     if (S.err.bmTop && !A) { return `<div class="db-err">Ventes du réseau : ${esc(S.err.bmTop)}</div>`; }
@@ -5073,7 +5075,9 @@
     const prix = id => { const x = Pm.find(q => String(q.id) === String(id)); return x ? x.prixTtc : null; };
     let nAu = 0, nSous = 0, nSur = 0;
     const lignes = T.map((p, i) => {
-      const R = bmTopRelevés(p), v = R.map(r => r.promo > 0 ? r.promo : r.prix), m = bmMed(v), nous = prix(p.pid);
+      const Rt = bmTopRelevés(p), pp = r => r.promo > 0 ? r.promo : r.prix;
+      // Le verdict se lit face aux boulangeries (artisans, chaînes, stations) ; les supermarchés ont leur colonne.
+      const R = Rt.filter(r => !bmEstGms(r)), v = R.map(pp), m = bmMed(v), nous = prix(p.pid), mg = bmMed(Rt.filter(bmEstGms).map(pp));
       const e = nous != null && m ? (nous - m) / m * 100 : null;
       const verdict = e == null ? '<span class="mu">pas de relevé</span>' : (e > 5 ? '<span class="ko">au-dessus</span>' : (e < -5 ? '<span class="ok">en dessous</span>' : '<span class="mu">au prix du marché</span>'));
       if (e != null) { if (e > 5) { nSur++; } else if (e < -5) { nSous++; } else { nAu++; } }
@@ -5081,13 +5085,13 @@
       const W = 150, x = val => ma > mi ? 6 + (val - mi) / (ma - mi) * (W - 12) : W / 2;
       const bar = v.length && nous != null ? `<svg width="${W}" height="18" viewBox="0 0 ${W} 18"><line x1="6" x2="${W - 6}" y1="9" y2="9" stroke="#e6e0d8" stroke-width="4" stroke-linecap="round"/>${v.map(val => `<circle cx="${x(val).toFixed(1)}" cy="9" r="3" fill="#B8B2A8"/>`).join('')}<line x1="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" x2="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" y1="1" y2="17" stroke="var(--color-primary)" stroke-width="2.5"/></svg>` : '';
       return `<tr data-bmtop="${p.pid}" class="bm-cl"><td class="n mu">${i + 1}</td><td>${esc(p.nom)}<div class="db-mini">${esc(p.cat || '')} · ${nf(p.total || 0, 0)} vendus · ${fE(p.ca)}</div></td>
-        <td class="n"><b>${fU(nous)}</b></td><td class="n">${fU(m)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}</td><td class="n">${e == null ? '—' : `<span class="${e > 5 ? 'ko' : (e < -5 ? 'ok' : 'mu')}">${(e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0)} %</span>`}</td><td>${verdict}</td></tr>`;
+        <td class="n"><b>${fU(nous)}</b></td><td class="n">${fU(m)}</td><td class="n mu">${fU(mg)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}${Rt.length > v.length ? ` <span class="mu">+ ${Rt.length - v.length}</span>` : ''}</td><td class="n">${e == null ? '—' : `<span class="${e > 5 ? 'ko' : (e < -5 ? 'ok' : 'mu')}">${(e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0)} %</span>`}</td><td>${verdict}</td></tr>`;
     }).join('');
     const per = A.bornes && A.bornes.length ? fD(A.bornes[0][0]) + '/' + A.bornes[0][0].slice(2, 4) + ' → ' + fD(A.bornes[A.bornes.length - 1][1]) + '/' + A.bornes[A.bornes.length - 1][1].slice(2, 4) : '3 mois';
     const tui = (k, v, s2, c) => `<div class="db-tui ${c || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s2}</div></div>`;
-    let h = `<div class="db-tuiles">${tui('Top 10 réseau', nf(T.reduce((a, p) => a + (p.total || 0), 0), 0), 'pièces vendues · 4 magasins · ' + per, 'vif')}${tui('Au prix du marché', String(nAu), 'à ± 5 % de la médiane des concurrents')}${tui('Au-dessus', String(nSur), 'plus de 5 % au-dessus de la médiane', nSur ? '' : 'bon')}${tui('En dessous', String(nSous), 'plus de 5 % sous la médiane')}${tui('Relevés', String(T.reduce((a, p) => a + bmTopRelevés(p).length, 0)), 'prix concurrents de ce magasin dans TFBuddy')}${tui('Sans relevé', String(T.filter(p => !bmTopRelevés(p).length).length), 'produits à relever sur le terrain')}</div>`;
-    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">prix à la pièce, promo comprise · trait bordeaux = notre prix · cliquer une ligne pour le détail</span></div>
-      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th class="n">#</th><th>Produit</th><th class="n">Nous</th><th class="n">Médiane</th><th class="n">Fourchette</th><th>Position</th><th class="n">Relevés</th><th class="n">Écart</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+    let h = `<div class="db-tuiles">${tui('Top 10 réseau', nf(T.reduce((a, p) => a + (p.total || 0), 0), 0), 'pièces vendues · 4 magasins · ' + per, 'vif')}${tui('Au prix du marché', String(nAu), 'à ± 5 % de la médiane des boulangeries')}${tui('Au-dessus', String(nSur), 'plus de 5 % au-dessus de la médiane', nSur ? '' : 'bon')}${tui('En dessous', String(nSous), 'plus de 5 % sous la médiane')}${tui('Relevés', String(T.reduce((a, p) => a + bmTopRelevés(p).length, 0)), 'prix concurrents de ce magasin dans TFBuddy')}${tui('Sans relevé', String(T.filter(p => !bmTopRelevés(p).length).length), 'produits à relever sur le terrain')}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">prix à la pièce, promo comprise · position et verdict face aux boulangeries (artisans, chaînes, stations), hors supermarchés · relevés : boulangeries + supermarchés · cliquer une ligne pour le détail</span></div>
+      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th class="n">#</th><th>Produit</th><th class="n">Nous</th><th class="n">Médiane boulangeries</th><th class="n">Médiane supermarchés</th><th class="n">Fourchette</th><th>Position</th><th class="n">Relevés</th><th class="n">Écart</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
     return h;
   }
   function rendConcurrence() {
