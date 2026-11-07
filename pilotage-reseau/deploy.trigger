@@ -1318,3 +1318,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T12:07:00Z Dashboard magasin : onglet Concurrence (recherche de produit, relevé terrain) ; benchmark : unités sondées, prix recomptés
 2026-11-07T12:13:21Z Benchmark : champs exigés par TFBuddy pour un item
 2026-11-07T12:23:25Z Concurrence : recherche de produit exacte, produits proches, type d'enseigne
+2026-11-07T12:51:25Z Concurrence : vue Top 10 réseau ; benchmark top 10 posable dans TFBuddy
