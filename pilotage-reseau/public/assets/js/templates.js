@@ -163,7 +163,7 @@ export function render(c, x){
         ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" class="btn btn--sm">${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
       </div>
     </header>
-  <main id="main-scroll" class="app__body">
+  <main id="main-scroll" class="app__body${c.large ? ' app__body--wide' : ''}">
     <div class="shell-page">
       ${c.screenSub ? `<p class="shell-sub page-intro">${esc(c.screenSub)}</p>` : ''}
 
@@ -7875,7 +7875,7 @@ function tplCadreTaches(c, x){
   const { esc } = x;
   // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.
   // « Ouvrir seul ↗ » vit dans la page elle-même, à côté de « Relire ».
-  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;border:none;background:transparent;display:block"></iframe></div>`;
+  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;min-height:calc(100vh - 110px);border:none;background:transparent;display:block"></iframe></div>`;
 }
 /* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
 /* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
