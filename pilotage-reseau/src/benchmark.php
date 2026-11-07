@@ -283,12 +283,43 @@ function benchmarkVerifier(int $shop = 4, bool $ecrire = false): array
                     }
                     $unites[$nomU] = $unites[$nomU] ?? false;
                 }
+                // Aucune unité ne passe : un champ requis manque. Une ligne complète, puis on retire
+                // un champ à la fois pour trouver ceux que TFBuddy exige ; ils sont retenus (réglage
+                // `benchmark.itemRequis`) et ajoutés à chaque item.
+                if (!array_filter($unites)) {
+                    $complet = ['price' => 1.0, 'promo_price' => 0, 'is_promo' => false, 'quality_score' => 0, 'notes' => 'sonde',
+                        'my_product_id' => 4100001, 'my_category_id' => 81126, 'unit_type' => 'piece', 'unit_size' => 1];
+                    $essai = function (array $corps, string $lib) use ($base, $cid, $oid, $shop): bool {
+                        BenchmarkApi::appel('POST', "$base/competitors/$cid/observations/$oid/items", ['name_raw' => $lib] + $corps);
+                        $ok = false;
+                        foreach ((array) BenchmarkApi::items($shop, $oid) as $i) {
+                            if (($i['name_raw'] ?? '') === $lib) { $ok = true; BenchmarkApi::appel('DELETE', "$base/observations/$oid/items/" . (int) $i['id']); }
+                        }
+                        return $ok;
+                    };
+                    if ($essai($complet, 'Sonde complète')) {
+                        $requis = [];
+                        foreach (array_keys($complet) as $champ) {
+                            if ($champ === 'price') { continue; }
+                            $sans = $complet; unset($sans[$champ]);
+                            if (!$essai($sans, 'Sonde sans ' . $champ)) { $requis[$champ] = $complet[$champ]; }
+                        }
+                        $alertes[] = 'Ligne complète acceptée ; champs exigés par TFBuddy : ' . ($requis ? implode(', ', array_keys($requis)) : 'aucun isolément (combinaison)') . '.';
+                        benchmarkReglage('itemRequis', $requis ?: $complet);
+                        foreach (['g', 'kg', 'cm'] as $nomU) {
+                            $unites[$nomU] = $essai(['unit_type' => $nomU, 'unit_size' => 2] + ($requis ?: $complet), 'Sonde unité+ ' . $nomU);
+                        }
+                        $unites['piece'] = true;
+                    } else {
+                        $alertes[] = 'Même une ligne complète (produit, catégorie, unité, promo, note) est refusée : la création d\'items est cassée côté TFBuddy.';
+                    }
+                }
                 $acc = array_keys(array_filter($unites));
                 $alertes[] = 'Unités acceptées par TFBuddy pour un item : ' . ($acc ? implode(', ', $acc) : 'aucune') . ' ; refusées : ' . (implode(', ', array_keys(array_filter($unites, fn ($v) => !$v))) ?: 'aucune') . '.';
                 if ($acc) { benchmarkReglage('unites', $acc); }
                 $uT = in_array('g', $acc, true) ? ['unit_type' => 'g', 'unit_size' => 250] : (in_array('kg', $acc, true) ? ['unit_type' => 'kg', 'unit_size' => 0.25] : (in_array('piece', $acc, true) ? ['unit_type' => 'piece', 'unit_size' => 1] : []));
                 $r = BenchmarkApi::appel('POST', "$base/competitors/$cid/observations/$oid/items",
-                    ['name_raw' => 'Cougnou témoin', 'price' => 3.0, 'is_promo' => false, 'notes' => 'témoin'] + $uT);
+                    benchmarkItemPourApi(['name_raw' => 'Cougnou témoin', 'price' => 3.0, 'is_promo' => false, 'notes' => 'témoin'] + $uT));
                 $iid = (int) ($r['corps']['inserted_id'] ?? 0);
                 if ($r['ok'] && $iid <= 1) {
                     foreach ((array) BenchmarkApi::items($shop, $oid) as $i) { if (($i['name_raw'] ?? '') === 'Cougnou témoin') { $iid = (int) $i['id']; } }
@@ -336,7 +367,14 @@ function benchmarkReglage(string $cle, mixed $valeur): void
  */
 function benchmarkItemPourApi(array $corps): array
 {
-    $acc = (array) ((setting('benchmark', []) ?: [])['unites'] ?? ['g', 'kg', 'piece', 'cm']);
+    $reg = setting('benchmark', []) ?: [];
+    foreach ((array) ($reg['itemRequis'] ?? []) as $champ => $defaut) {
+        if (!array_key_exists($champ, $corps) || $corps[$champ] === null) {
+            // Une catégorie ou un produit exigé : celui du produit rattaché s'il y en a un, sinon la valeur sondée.
+            $corps[$champ] = $defaut;
+        }
+    }
+    $acc = (array) ($reg['unites'] ?? ['g', 'kg', 'piece', 'cm']);
     $u = (string) ($corps['unit_type'] ?? ''); $t = $corps['unit_size'] ?? null;
     if ($u === '' || in_array($u, $acc, true)) { return $corps; }
     if ($u === 'g' && in_array('kg', $acc, true) && $t !== null) { $corps['unit_type'] = 'kg'; $corps['unit_size'] = round((float) $t / 1000, 3); return $corps; }
@@ -469,6 +507,7 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
                     'unit_size' => isset($i['unit_size']) ? (float) $i['unit_size'] : null, 'price' => (float) $i['price'],
                     'promo_price' => isset($i['promo_price']) ? (float) $i['promo_price'] : null, 'is_promo' => !empty($i['is_promo']),
                     'my_product_id' => isset($i['comparer_a'], $produits[$i['comparer_a']]) ? (int) $produits[$i['comparer_a']] : null,
+                    'my_category_id' => isset($d['nous']['categorie']) ? (int) $d['nous']['categorie'] : null,
                     'notes' => trim(($i['vu_le'] ?? '') . ' ' . ($i['source'] ?? '')),
                 ], fn ($v) => $v !== null && $v !== '');
                 $corps = benchmarkItemPourApi($corps);
