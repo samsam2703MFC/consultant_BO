@@ -5261,32 +5261,42 @@
     return `<span class="db-dl ${sens}">${d >= 0 ? '+ ' : '− '}${txt} ${lib}</span>`;
   }
 
-  /** La journée heure par heure : chaque ticket est un trait, chaque temps mort une plage teintée. */
+  /**
+   * La journée en grille des minutes (choisie le 07/11/2026, maquette docs/maquettes/temps-morts-tickets) :
+   * une ligne par heure, un carré par minute. Foncé : au moins un ticket dans la minute (le chiffre quand il
+   * y en a plusieurs) ; rose : la minute tombe dans un temps mort ; clair : minute calme ; hachuré : avant le
+   * premier ou après le dernier ticket du jour.
+   */
   function tmFrise(J) {
     const t = J.ticks || [], tr = J.trous || [], deb = t[0], fin = t[t.length - 1];
     const h0 = Math.floor(deb / 3600), h1 = Math.floor(fin / 3600);
+    const parMin = {}; t.forEach(s => { const m = Math.floor(s / 60); parMin[m] = (parMin[m] || 0) + 1; });
+    // Le temps mort d'une minute : celui qui couvre son milieu.
+    const trouDe = m => tr.find(([u, v]) => m * 60 + 30 > u && m * 60 + 30 < v);
     let h = '';
     for (let x = h0; x <= h1; x++) {
-      const a = x * 3600, b = a + 3600, H = (J.heures || {})[x] || {};
-      const pc = v => (100 * (v - a) / 3600).toFixed(2) + '%';
-      let piste = '';
-      if (deb > a) { piste += `<i class="tm-ferme" style="left:0;width:${pc(deb)}"></i>`; }
-      if (fin < b) { piste += `<i class="tm-ferme" style="left:${pc(fin)};right:0"></i>`; }
-      tr.forEach(([u, v]) => { if (v <= a || u >= b) { return; } const g = Math.max(u, a), e = Math.min(v, b);
-        piste += `<i class="tm-trou" style="left:${pc(g)};width:${pc(a + e - g)}" title="${tmHm(u)} → ${tmHm(v)} · ${fMin((v - u) / 60)} sans ticket"></i>`; });
-      t.forEach(s => { if (s >= a && s < b) { piste += `<b style="left:${pc(s)}"></b>`; } });
+      const H = (J.heures || {})[x] || {};
+      let c = '';
+      for (let i = 0; i < 60; i++) {
+        const m = x * 60 + i, s = m * 60, n = parMin[m] || 0;
+        if (s + 59 < deb || s > fin) { c += `<i class="hors" title="${tmHm(s)} · avant le premier ou après le dernier ticket"></i>`; continue; }
+        if (n) { c += `<i class="tk" title="${tmHm(s)} · ${n} ticket${n > 1 ? 's' : ''}">${n > 1 ? n : ''}</i>`; continue; }
+        const tm = trouDe(m);
+        c += tm ? `<i class="mort" title="${tmHm(s)} · temps mort de ${tmHm(tm[0])} à ${tmHm(tm[1])}, ${fMin((tm[1] - tm[0]) / 60)}"></i>` : `<i title="${tmHm(s)}"></i>`;
+      }
       const p = H.pct;
-      h += `<div class="tm-l"><span class="tm-hr">${x} h</span><div class="tm-piste">${piste}</div>
+      h += `<div class="tm-l"><span class="tm-hr">${x} h</span><div class="tm-min">${c}</div>
         <span class="tm-pct"${p == null ? '' : ` style="${tmStyle(p)}"`} title="${H.ouvert != null ? fN(H.mort) + ' min sans client sur ' + fN(H.ouvert) + ' min ouvertes · ' + (H.tk || 0) + ' ticket' + (H.tk > 1 ? 's' : '') : ''}">${p == null ? '—' : fN(p) + ' %'}</span>
-        <span class="tm-n mu">${H.tk || 0} tk${H.nb ? ' · ' + H.nb + ' tm' : ''}</span></div>`;
+        <span class="tm-n mu">${H.tk || 0} ticket${H.tk > 1 ? 's' : ''}${H.nb ? ' · ' + H.nb + ' tm' : ''}</span></div>`;
     }
-    const gr = x => `<span>${String(x).padStart(2, '0')}</span>`;
-    return `<div class="tm-frise"><div class="tm-l tm-ax"><span class="tm-hr"></span><div class="tm-graduation">${gr(0)}${gr(15)}${gr(30)}${gr(45)}<span></span></div><span class="tm-pct mu">sans client</span><span class="tm-n mu">tickets · temps morts</span></div>${h}</div>`;
+    const ax = Array.from({ length: 60 }, (_, i) => `<span>${i % 15 === 0 ? String(i).padStart(2, '0') : ''}</span>`).join('');
+    return `<div class="tm-frise"><div class="tm-l tm-ax"><span class="tm-hr"></span><div class="tm-min-ax">${ax}</div><span class="tm-pct mu">sans client</span><span class="tm-n mu">tickets · temps morts</span></div>${h}</div>`;
   }
 
   function tmLegende() {
-    return `<div class="tm-leg"><span>part de l’heure sans client</span><span class="tm-rampe">${TM_RAMPE.map(r => `<i style="background:${r[1]};color:${r[2]}">${r[3]}</i>`).join('')}</span><span>%</span>
-      <span class="tm-leg-i"><i class="tm-ech-trou"></i>temps mort</span><span class="tm-leg-i"><i class="tm-ech-tick"></i>un ticket</span><span class="tm-leg-i"><i class="tm-ech-ferme"></i>avant le premier, après le dernier ticket</span></div>`;
+    return `<div class="tm-leg"><span class="tm-leg-i"><i class="tm-ech tk"></i>un ticket dans la minute</span><span class="tm-leg-i"><i class="tm-ech tk">3</i>trois tickets dans la même minute</span>
+      <span class="tm-leg-i"><i class="tm-ech mort"></i>minute dans un temps mort</span><span class="tm-leg-i"><i class="tm-ech"></i>minute calme, moins de ${S.tmSeuil} min sans ticket</span><span class="tm-leg-i"><i class="tm-ech hors"></i>avant le premier, après le dernier ticket</span>
+      <span class="tm-leg-r">part de l’heure sans client <span class="tm-rampe">${TM_RAMPE.map(r => `<i style="background:${r[1]};color:${r[2]}">${r[3]}</i>`).join('')}</span> %</span></div>`;
   }
 
   function rendTempsMorts() {
@@ -5310,7 +5320,7 @@
         <div class="db-tui"><div class="k">Part de l’ouverture</div><div class="v">${fP0(J.pct)}</div><div class="s">${Hb.jours ? 'habitude : ' + fP0(Hb.pct) : ''}</div>${enCours ? '' : tmEcart(J.pct, Hb.pct, 'vs habitude', 'pct')}</div>
         <div class="db-tui"><div class="k">Le plus long trou</div><div class="v">${fMin(J.plusLong.min)}</div><div class="s">de ${esc(J.plusLong.de)} à ${esc(J.plusLong.a)}</div></div>
         <div class="db-tui"><div class="k">Tickets</div><div class="v">${fN(J.tickets)}</div><div class="s">${J.isoles ? J.isoles + ' isolé' + (J.isoles > 1 ? 's' : '') + ' en bord de journée, écarté' + (J.isoles > 1 ? 's' : '') + (J.ecartes && J.ecartes.length ? ' (' + J.ecartes.map(tmHm).join(', ') + ')' : '') : 'tous comptés, comptoir et pro'}</div></div></div>`;
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">La journée minute par minute</span><span class="db-mini">${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus · survolez une plage pour ses heures</span></div>${tmFrise(J)}${tmLegende()}</div>`;
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">La journée minute par minute</span><span class="db-mini">un carré = une minute · ${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus · survolez un carré pour son heure</span></div>${tmFrise(J)}${tmLegende()}</div>`;
     }
 
     // La semaine, du lundi au dimanche.
