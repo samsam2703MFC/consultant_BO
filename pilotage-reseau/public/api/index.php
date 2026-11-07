@@ -7,6 +7,7 @@ declare(strict_types=1);
  */
 
 require __DIR__ . '/../../src/Db.php';
+require_once __DIR__ . '/../../src/erp_cles.php';
 require __DIR__ . '/../../src/endpoints.php';
 require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/mkt_types.php';
@@ -269,10 +270,14 @@ try {
 
     $out = authRoute($method, $path);       // /auth/* : toujours accessibles
     if ($out === null) {
-        if (authEnabled() && !authOk()) {   // session exigée seulement si l'auth intégrée est activée
+        // Les autres portails lisent quelques routes avec le jeton de service d'erp_cles (X-Service-Token).
+        $service = erpRouteIntegration($method, $path) && erpJetonServiceOk();
+        if (authEnabled() && !authOk() && !$service) {   // session exigée seulement si l'auth intégrée est activée
             http_response_code(401);
             $out = ['error' => 'auth', 'setup' => authIsSetup()];
         } else {
+            // L'adresse https par nom de domaine de cette API, publiée pour les autres portails (pil_api_url).
+            if (!authEnabled() || authOk()) { erpPublierAdresse(); }
             $out = routeGardee($method, $path);
         }
     }
