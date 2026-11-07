@@ -316,7 +316,7 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-n{font:700 24px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.02em}
 
 /* Trois grands onglets : Ouverture · Journée de travail · Fermeture, et « Comment ça marche » (06/11/2026). */
-.tb-moments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tb-moments{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin-bottom:16px}
 .tb-moments button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;min-height:76px;border-radius:12px;background:#fff;border:1px solid var(--line);color:var(--ink);text-align:left}
 .tb-moments button b{font:400 18px/1.15 'Gotham',system-ui,sans-serif}
 .tb-moments button small{font:400 12px 'Gotham',system-ui,sans-serif;color:var(--muted)}
@@ -331,7 +331,7 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .tb-aide li span{font-size:14px;color:var(--muted-2);line-height:1.45}
 .tb-aide__leg{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;padding-top:12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted-2)}
 .tb-aide__leg .st{margin-left:8px}
-@media (max-width:900px){.tb-moments{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){.tb-moments{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
 /* La vidéo d'une étape (assistant de création, 06/11/2026). */
 .tb-video{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:14px;border-radius:12px;overflow:hidden;background:#000}

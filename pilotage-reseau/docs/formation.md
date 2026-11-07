@@ -854,3 +854,31 @@ tous les magasins la même chose ».
 - L'ordre des étapes est celui de la SOP : les SOP rangent différemment leurs « Informations clés », « Contrôle
   rapide » (parfois un par produit, au milieu) — rien n'est déplacé d'office.
 
+## Articles du manuel opératoire, création depuis une formation, vue tablette partout (07/11/2026)
+
+- Client (capture de la fiche FO-31, « Aucune SOP ne s'y rattache encore ») : « je dois pouvoir éditer et créer, avec un
+  assistant, les différentes SOP et articles du manuel opératoire ; tout doit être présenté comme les SOP, en vue
+  tablette ».
+- **Type « Article »** (« Article du manuel ») à côté de SOP, Checklist, Mémo, Fiche (`foType`, `src/sop.php` ; libellés
+  du PDF FR / NL ; « Création rapide »). Un article = le même modèle qu'une SOP (sections → parties, photo, vidéo,
+  point critique, quiz facultatif), sans moment.
+- **Fiche d'une formation** (`portail.js`, `ficheFormation`, `ligneManuel`) — « Dans le manuel » : les SOP et articles
+  qui la citent dans leur classement (« formations ») ou qui montrent une de ses compétences ; chacun avec « Vue
+  tablette » et « Modifier » ; puis **« ＋ Article du manuel »** et **« ＋ SOP »**.
+- **Assistant** (`assistant-sop.js`) : `#/sopnouvelle/fo/<FO-xx>[/article]` prépare un brouillon rattaché à la formation
+  (classement « formations », bandeau « Pour la formation … ») ; un article prend d'office le nom de la formation pour
+  titre et n'a pas de moment (étape 1 « Le type ») ; « Les parties », « ＋ Partie », « Créer l'article ». Un brouillon
+  déjà commencé n'est pas écrasé (la formation est ajoutée à son classement). L'aperçu de droite montre chaque étape
+  comme une carte de la tablette (photo 4:3, numéro, une action par ligne, point critique en rouge). Créé : « Vue
+  tablette », « ← Retour à FO-xx » ; le référentiel du portail est relu (`FormationPortail.relire`).
+- **Vue tablette** (`apercu-tablette.js`, `apercu-tablette.css`) : la tablette ELLE-MÊME (`sop/tablette.html?sop=<id>&apercu=1`)
+  dans un cadre d'appareil, portrait (800 × 1110) d'office ou paysage, FR | NL, « Ouvrir la tablette ↗ », Échap. Tout
+  élément `data-tbx="<id>"` l'ouvre : fiche d'une formation, liste « Rédaction des SOP », fin de l'assistant, fiche
+  d'une SOP (« Agrandir la vue tablette »). La fiche d'une SOP a aussi « Vue tablette » dans son sélecteur (FR · NL · FR
+  et NL côte à côte) : la tablette dans la page.
+- **Tablette** (`sop/tablette.js`) : `?sop=<id>` ouvre ce document tout de suite (« ← » ramène à son onglet) ; onglet
+  **« Manuel »** (avant « Comment ça marche ») = les articles, pour tous les postes (pas de filtre de poste) ; un
+  article se lit en « Partie n sur N », « Toutes les parties », « Lu · suivante → ».
+- Restent hors de ce geste : rattacher une compétence C-… à une formation (le référentiel v25) et créer une évaluation
+  au panel (TF Buddy).
+

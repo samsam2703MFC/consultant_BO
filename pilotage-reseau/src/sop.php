@@ -1164,11 +1164,11 @@ function foPdfTextes(string $l): array
         ? ['manuel' => 'Operationeel handboek', 'std' => 'De standaarden van het netwerk', 'ed' => 'Editie van', 'som' => 'Inhoud', 'obj' => 'Doel', 'pour' => 'Voor',
             'ver' => 'Versie', 'maj' => 'Bijgewerkt', 'comp' => 'Competentie', 'crit' => 'Kritieke punten', 'pc' => 'Kritiek punt', 'trad' => 'Vertaling na te lezen',
             'aval' => 'Te valideren', 'duree' => 'Duur', 'langue' => 'Taal', 'code' => 'Code', 'titre' => 'Titel', 'type' => 'Type', 'page' => 'Pagina',
-            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Memo', 'Fiche' => 'Fiche']]
+            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Memo', 'Fiche' => 'Fiche', 'Article' => 'Artikel']]
         : ['manuel' => 'Manuel opératoire', 'std' => 'Les standards du réseau', 'ed' => 'Édition du', 'som' => 'Sommaire', 'obj' => 'Objectif', 'pour' => 'Pour',
             'ver' => 'Version', 'maj' => 'Mise à jour', 'comp' => 'Compétence', 'crit' => 'Points critiques', 'pc' => 'Point critique', 'trad' => 'Traduction à relire',
             'aval' => 'À valider', 'duree' => 'Durée', 'langue' => 'Langue', 'code' => 'Code', 'titre' => 'Titre', 'type' => 'Type', 'page' => 'Page',
-            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Mémo', 'Fiche' => 'Fiche']];
+            'types' => ['SOP' => 'SOP', 'Checklist' => 'Checklist', 'Mémo' => 'Mémo', 'Fiche' => 'Fiche', 'Article' => 'Article']];
 }
 
 /** Le nom du réseau (réglage `reseau`, comme les rapports du cockpit). */
@@ -1695,7 +1695,8 @@ function foCourt(mixed $v, int $max): ?string
     return $v === '' ? null : mb_substr($v, 0, $max);
 }
 
-function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche'], true) ? (string) $v : 'SOP'; }
+/** Le type d'un document du manuel ; « Article » (07/11/2026) = un article du manuel opératoire (lu comme une SOP sur la tablette). */
+function foType(mixed $v): string { return in_array($v, ['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article'], true) ? (string) $v : 'SOP'; }
 function foDossier(mixed $v): string { $v = str_pad(substr((string) $v, 0, 2), 2, '0', STR_PAD_LEFT); return isset(FO_DOSSIERS[$v]) ? $v : '01'; }
 function foPoste(mixed $v): string { return in_array($v, FO_POSTES, true) ? (string) $v : 'vente'; }
 

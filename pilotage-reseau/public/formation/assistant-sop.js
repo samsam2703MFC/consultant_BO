@@ -20,11 +20,16 @@
   const CLE = 'fm.sop.assistant';
   const MOMENTS = [['ouverture', 'Ouverture'], ['journee', 'Journée'], ['apres-midi', 'Après-midi'], ['fermeture', 'Fermeture'], ['', 'Au besoin']];
   const POSTES = [['vente', 'Vente'], ['production', 'Production'], ['cuisson', 'Cuisson'], ['nettoyage', 'Nettoyage']];
-  const TYPES = ['SOP', 'Checklist', 'Mémo', 'Fiche'];
-  const ETAPES = [['ou', 'Où et quand'], ['sujet', 'Le sujet'], ['etapes', 'Les étapes'], ['quiz', 'Points critiques et quiz'], ['fin', 'Relire et créer']];
+  const TYPES = [['SOP', 'SOP'], ['Checklist', 'Checklist'], ['Mémo', 'Mémo'], ['Fiche', 'Fiche'], ['Article', 'Article du manuel']];
+  /* Un article du manuel opératoire (07/11/2026) : le même assistant, des « parties » plutôt que des étapes ; il se lit
+     comme une SOP sur la tablette, sous l'onglet « Manuel ». */
+  const art = () => A.type === 'Article';
+  const ETAPES_DE = () => [['ou', art() ? 'Le type' : 'Où et quand'], ['sujet', 'Le sujet'], ['etapes', art() ? 'Les parties' : 'Les étapes'],
+    ['quiz', art() ? 'Points clés et quiz' : 'Points critiques et quiz'], ['fin', 'Relire et créer']];
+  const nomDoc = () => art() ? 'l’article' : 'la SOP';
   const esc = v => (C ? C.esc(v) : String(v == null ? '' : v));
   const vide = () => ({ etape: 1, moment: 'journee', poste: 'vente', type: 'SOP', dossier: '', code: '', titreFr: '', titreNl: '', objectifFr: '', pourFr: '', duree: '',
-    competences: [], formations: [], etapes: [{ titre: '', texte: '', critique: false, photo: null, video: '' }], points: [''], quiz: [] });
+    competences: [], formations: [], depuisFo: '', etapes: [{ titre: '', texte: '', critique: false, photo: null, video: '' }], points: [''], quiz: [] });
   // A : le brouillon ; R : le référentiel (compétences, formations) et les familles des SOP ; X : l'état de l'écran.
   let A = null;
   const R = { ref: null, dossiers: null, charge: false, err: null };
@@ -40,15 +45,27 @@
     if ((R.ref && R.dossiers) || R.charge) { return; }
     R.charge = true;
     Promise.all([C.lire('/formation/ref?detail=1', 30000), C.lire('/formation/sop/liste', 30000)])
-      .then(([ref, l]) => { R.ref = ref; R.dossiers = l.dossiers || []; R.charge = false; if (!A.dossier && R.dossiers[0]) { A.dossier = R.dossiers[0].id; } C.rendre(true); },
+      .then(([ref, l]) => { R.ref = ref; R.dossiers = l.dossiers || []; R.charge = false; if (!A.dossier && R.dossiers[0]) { A.dossier = R.dossiers[0].id; } titreDepuisFo(); C.rendre(true); },
         e => { R.err = e.message; R.charge = false; C.rendre(true); });
   }
-  /** Une adresse #/sopnouvelle/<moment>/<titre> préremplit le brouillon (depuis « à rédiger » de l'écran Opérationnel). */
+  /** Une adresse #/sopnouvelle/<moment>/<titre> préremplit le brouillon (depuis « à rédiger » de l'écran Opérationnel) ;
+   *  #/sopnouvelle/fo/<FO-xx>[/article] le rattache à une formation (sa fiche : « ＋ Article du manuel », « ＋ SOP »). */
   let adresseLue = '';
+  const nomFo = code => ((R.ref && (R.ref.formations || []).find(x => x.code === code)) || {}).fr || '';
+  /** Un article créé depuis une formation prend d'office le nom de la formation pour titre. */
+  function titreDepuisFo() { if (A.depuisFo && art() && !A.titreFr && nomFo(A.depuisFo)) { A.titreFr = nomFo(A.depuisFo); garder(); } }
   function depuisAdresse() {
     const a = C.S.route.a;
     if (!a.length || location.hash === adresseLue) { return; }
     adresseLue = location.hash;   // une seule fois par adresse : l'écran se redessine souvent
+    if (a[0] === 'fo' && a[1]) {
+      const fo = decodeURIComponent(a[1]), article = a[2] === 'article';
+      if (!A.titreFr && !A.etapes.some(e => e.texte)) {
+        const d = A.dossier; A = vide(); A.dossier = d;
+        A.type = article ? 'Article' : 'SOP'; A.moment = article ? '' : 'journee'; A.formations = [fo]; A.depuisFo = fo;
+      } else if (!A.formations.includes(fo)) { A.formations.push(fo); toast('Un brouillon est en cours : ' + fo + ' est ajoutée à son classement.'); }
+      titreDepuisFo(); garder(); C.rendre(true); return;
+    }
     const m = MOMENTS.some(x => x[0] === a[0]) ? a[0] : null;
     const titre = a[1] ? decodeURIComponent(a[1]) : '';
     // Un brouillon déjà commencé n'est pas écrasé : seulement un brouillon vide prend le moment et le titre proposés.
@@ -59,23 +76,26 @@
   function ecran() {
     const K = 'Rédaction des SOP';
     if (X.fait) {
-      const f = X.fait;
-      return { titre: 'SOP créée', kicker: K, corps: `<section class="card as-fin"><div class="as-fin__t">${esc(f.titre)}</div>
-        <p class="muted">Créée « à valider » ${f.moment ? 'pour l’onglet « ' + esc(f.onglet) + ' » de la tablette' : ''} · ${f.etapes} étape(s)${f.photos ? ' · ' + f.photos + ' photo(s)' : ''}.
-        Le néerlandais et la publication se font dans l’éditeur de la SOP.</p>
-        <div class="as-act"><a class="btn btn--primary" href="#/sop/${encodeURIComponent(f.id)}">Ouvrir la SOP</a><a class="btn" href="#/sop/${encodeURIComponent(f.id)}/editer">Traduire et compléter</a>
-        <button type="button" class="btn btn--ghost" data-as="nouvelle">Créer une autre SOP</button></div></section>` };
+      const f = X.fait, a = f.type === 'Article';
+      return { titre: a ? 'Article créé' : 'SOP créée', kicker: K, corps: `<section class="card as-fin"><div class="as-fin__t">${esc(f.titre)}</div>
+        <p class="muted">${a ? 'Créé' : 'Créée'} « à valider » ${a ? 'pour l’onglet « Manuel » de la tablette' : f.moment ? 'pour l’onglet « ' + esc(f.onglet) + ' » de la tablette' : ''} · ${f.etapes} ${a ? 'partie(s)' : 'étape(s)'}${f.photos ? ' · ' + f.photos + ' photo(s)' : ''}${f.fo ? ' · rattaché' + (a ? '' : 'e') + ' à ' + esc(f.fo) : ''}.
+        Le néerlandais et la publication se font dans son éditeur.</p>
+        <div class="as-act"><button type="button" class="btn btn--primary" data-tbx="${esc(f.id)}" data-tbx-titre="${esc(f.titre)}">Vue tablette</button><a class="btn" href="#/sop/${encodeURIComponent(f.id)}">Ouvrir ${a ? 'l’article' : 'la SOP'}</a><a class="btn" href="#/sop/${encodeURIComponent(f.id)}/editer">Traduire et compléter</a>
+        ${f.fo ? `<a class="btn" href="#/rfformations/${esc(f.foPhase)}/${encodeURIComponent(f.fo)}">← Retour à ${esc(f.fo)}</a>` : ''}
+        <button type="button" class="btn btn--ghost" data-as="nouvelle">Créer un autre document</button></div></section>` };
     }
-    if (!R.ref || !R.dossiers) { return { titre: 'Nouvelle SOP', kicker: K, corps: R.err ? `<p class="error">${esc(R.err)}</p>` : '<p class="muted">Lecture du référentiel…</p>' }; }
-    const n = A.etape;
+    const titreEc = art() ? 'Nouvel article du manuel' : 'Nouvelle SOP';
+    if (!R.ref || !R.dossiers) { return { titre: titreEc, kicker: K, corps: R.err ? `<p class="error">${esc(R.err)}</p>` : '<p class="muted">Lecture du référentiel…</p>' }; }
+    const n = A.etape, ETAPES = ETAPES_DE();
     const rail = `<ol class="as-rail">${ETAPES.map(([k, l], i) => `<li><button type="button" data-as="aller" data-v="${i + 1}" class="${i + 1 === n ? 'is-on' : i + 1 < n ? 'is-fait' : ''}">
       <span class="as-rail__n">${i + 1 < n ? '✓' : i + 1}</span>${esc(l)}</button></li>`).join('')}</ol>`;
     const vues = [vueOu, vueSujet, vueEtapes, vueQuiz, vueFin];
     const pied = `<div class="as-pied">${n > 1 ? '<button type="button" class="btn" data-as="prec">← Précédent</button>' : '<span></span>'}
       <span class="muted fm-small">Brouillon gardé dans cet onglet · <button type="button" class="linklike" data-as="effacer">tout effacer</button></span>
-      ${n < 5 ? '<button type="button" class="btn btn--primary" data-as="suiv">Suivant →</button>' : `<button type="button" class="btn btn--primary" data-as="creer" ${X.occupe ? 'disabled' : ''}>${X.occupe ? 'Création…' : 'Créer la SOP'}</button>`}</div>`;
-    const corps = `<div class="as-lay">${rail}<section class="card as-form"><h2 class="as-titre">${n} · ${esc(ETAPES[n - 1][1])}</h2>${X.err ? `<p class="error" role="alert">${esc(X.err)}</p>` : ''}${vues[n - 1]()}${pied}</section>${apercu()}</div>`;
-    return { titre: 'Nouvelle SOP', kicker: K, corps, large: true };
+      ${n < 5 ? '<button type="button" class="btn btn--primary" data-as="suiv">Suivant →</button>' : `<button type="button" class="btn btn--primary" data-as="creer" ${X.occupe ? 'disabled' : ''}>${X.occupe ? 'Création…' : 'Créer ' + nomDoc()}</button>`}</div>`;
+    const fo = A.depuisFo ? `<div class="fm-banner as-fo"><span>Pour la formation <b>${esc(A.depuisFo)}</b> · ${esc(nomFo(A.depuisFo))} — ${art() ? 'l’article' : 'la SOP'} lui sera rattaché${art() ? '' : 'e'}.</span></div>` : '';
+    const corps = `${fo}<div class="as-lay">${rail}<section class="card as-form"><h2 class="as-titre">${n} · ${esc(ETAPES[n - 1][1])}</h2>${X.err ? `<p class="error" role="alert">${esc(X.err)}</p>` : ''}${vues[n - 1]()}${pied}</section>${apercu()}</div>`;
+    return { titre: titreEc, kicker: K, corps, large: true };
   }
   const pill = (k, v, l, on) => `<button type="button" class="choice-pill as-pill${on ? ' is-on' : ''}" data-as="choix" data-k="${k}" data-v="${esc(v)}">${esc(l)}</button>`;
   const champ = (k, lib, ph, opt) => `<label class="as-champ"><span>${esc(lib)}${opt && opt.requis ? ' *' : ''}</span>${opt && opt.zone
@@ -83,9 +103,10 @@
     : `<input class="sop-in${opt && opt.requis && !A[k] ? ' is-vide' : ''}" data-asin="${k}" placeholder="${esc(ph)}" value="${esc(A[k])}">`}${opt && opt.aide ? `<small>${esc(opt.aide)}</small>` : ''}</label>`;
 
   function vueOu() {
-    return `<div class="as-bloc"><h3>Le moment</h3><p class="muted fm-small">L’onglet de la tablette où la SOP sera rangée.</p><div class="as-pills">${MOMENTS.map(([v, l]) => pill('moment', v, l, A.moment === v)).join('')}</div></div>
+    return `<div class="as-bloc"><h3>Le type</h3><div class="as-pills">${TYPES.map(([v, l]) => pill('type', v, l, A.type === v)).join('')}</div></div>
+      ${art() ? '<div class="as-bloc"><h3>Sur la tablette</h3><p class="muted fm-small">Un article se lit comme une SOP, une partie à la fois, sous l’onglet « Manuel ».</p></div>'
+        : `<div class="as-bloc"><h3>Le moment</h3><p class="muted fm-small">L’onglet de la tablette où la SOP sera rangée.</p><div class="as-pills">${MOMENTS.map(([v, l]) => pill('moment', v, l, A.moment === v)).join('')}</div></div>`}
       <div class="as-bloc"><h3>Le poste</h3><div class="as-pills">${POSTES.map(([v, l]) => pill('poste', v, l, A.poste === v)).join('')}</div></div>
-      <div class="as-bloc"><h3>Le type</h3><div class="as-pills">${TYPES.map(v => pill('type', v, v, A.type === v)).join('')}</div></div>
       <div class="as-deux"><label class="as-champ"><span>Famille</span><select class="fm-select" data-asch="dossier">${R.dossiers.map(d => `<option value="${esc(d.id)}"${A.dossier === d.id ? ' selected' : ''}>${esc(d.id + ' · ' + ((d.nom && d.nom.fr) || ''))}</option>`).join('')}</select></label>
         ${champ('code', 'Code', 'ex. SOP-WKL-006', { aide: 'Facultatif : il sert aussi d’identifiant.' })}</div>`;
   }
@@ -102,17 +123,17 @@
   }
   function vueEtapes() {
     return A.etapes.map((e, i) => `<div class="as-et${e.critique ? ' is-crit' : ''}">
-      <div class="as-et__h"><span class="as-et__n">${i + 1}</span><input class="sop-in as-et__t" data-asin="etapes.${i}.titre" placeholder="Titre de l’étape (facultatif)" value="${esc(e.titre)}">
+      <div class="as-et__h"><span class="as-et__n">${i + 1}</span><input class="sop-in as-et__t" data-asin="etapes.${i}.titre" placeholder="${art() ? 'Titre de la partie' : 'Titre de l’étape (facultatif)'}" value="${esc(e.titre)}">
         <span class="as-et__ac"><button type="button" class="btn btn--icon" data-as="etMove" data-i="${i}" data-d="-1" aria-label="Monter l’étape" ${i === 0 ? 'disabled' : ''}>↑</button>
         <button type="button" class="btn btn--icon" data-as="etMove" data-i="${i}" data-d="1" aria-label="Descendre l’étape" ${i === A.etapes.length - 1 ? 'disabled' : ''}>↓</button>
         <button type="button" class="btn btn--icon btn--danger" data-as="etDel" data-i="${i}" aria-label="Retirer l’étape" ${A.etapes.length === 1 ? 'disabled' : ''}>×</button></span></div>
-      <textarea class="sop-in${e.texte ? '' : ' is-vide'}" data-asin="etapes.${i}.texte" rows="3" placeholder="Ce qu’il faut faire, simplement.">${esc(e.texte)}</textarea>
+      <textarea class="sop-in${e.texte ? '' : ' is-vide'}" data-asin="etapes.${i}.texte" rows="3" placeholder="${art() ? 'Le texte de la partie : une idée par ligne.' : 'Ce qu’il faut faire, simplement : une action par ligne.'}">${esc(e.texte)}</textarea>
       <div class="as-et__med">${e.photo ? `<span class="as-photo"><img src="${esc(photoUrl(e.photo))}" alt=""><button type="button" class="btn btn--icon" data-as="photoDel" data-i="${i}" aria-label="Retirer la photo">×</button></span>`
         : X.envoi === i ? '<span class="as-photo as-photo--envoi">Envoi de la photo…</span>' : ''}
         <label class="btn btn--sm as-photo__btn">${e.photo ? '↻ Changer la photo' : '＋ Photo'}<input type="file" accept="image/jpeg,image/png,image/webp" data-asfile="${i}" hidden></label>
         <input class="sop-in as-video" data-asin="etapes.${i}.video" placeholder="Vidéo : lien https (YouTube, Vimeo…)" value="${esc(e.video)}">
         <button type="button" class="btn btn--sm as-crit${e.critique ? ' is-on' : ''}" data-as="crit" data-i="${i}">! Point critique</button></div></div>`).join('')
-      + '<button type="button" class="btn as-ajout" data-as="etAdd">＋ Étape</button>';
+      + `<button type="button" class="btn as-ajout" data-as="etAdd">${art() ? '＋ Partie' : '＋ Étape'}</button>`;
   }
   function vueQuiz() {
     const pts = A.points.map((p, i) => `<div class="as-ligne"><input class="sop-in" data-asin="points.${i}" placeholder="Un point à ne jamais manquer" value="${esc(p)}">
@@ -128,7 +149,7 @@
   function manques() {
     const m = [];
     if (!A.titreFr.trim()) { m.push(['sujet', 'le titre']); }
-    if (!A.etapes.some(e => e.texte.trim())) { m.push(['etapes', 'au moins une étape avec son texte']); }
+    if (!A.etapes.some(e => e.texte.trim())) { m.push(['etapes', art() ? 'au moins une partie avec son texte' : 'au moins une étape avec son texte']); }
     A.quiz.forEach((q, i) => { if (q.question.trim() && q.choix.filter(c => c.trim()).length < 2) { m.push(['quiz', 'deux réponses à la question ' + (i + 1)]); } });
     return m;
   }
@@ -136,19 +157,27 @@
     const m = manques();
     const mom = (MOMENTS.find(x => x[0] === A.moment) || [0, 'Au besoin'])[1];
     return `${m.length ? `<div class="fm-banner fm-banner--warn"><span>Il manque : ${m.map(x => esc(x[1])).join(', ')}.</span></div>` : ''}
-      <dl class="as-recap"><dt>Moment</dt><dd>${esc(mom)}</dd><dt>Poste</dt><dd>${esc((POSTES.find(x => x[0] === A.poste) || [0, A.poste])[1])}</dd><dt>Type</dt><dd>${esc(A.type)}</dd>
+      <dl class="as-recap"><dt>Type</dt><dd>${esc((TYPES.find(x => x[0] === A.type) || [0, A.type])[1])}</dd><dt>Sur la tablette</dt><dd>${art() ? 'Onglet « Manuel »' : esc(mom)}</dd><dt>Poste</dt><dd>${esc((POSTES.find(x => x[0] === A.poste) || [0, A.poste])[1])}</dd>
         <dt>Titre</dt><dd>${esc(A.titreFr || '—')}${A.titreNl ? ' · ' + esc(A.titreNl) : ' <span class="muted">· NL à traduire</span>'}</dd>
-        <dt>Étapes</dt><dd>${A.etapes.filter(e => e.texte.trim()).length} · ${A.etapes.filter(e => e.photo).length} photo(s) · ${A.etapes.filter(e => e.video.trim()).length} vidéo(s) · ${A.etapes.filter(e => e.critique).length} critique(s)</dd>
+        <dt>${art() ? 'Parties' : 'Étapes'}</dt><dd>${A.etapes.filter(e => e.texte.trim()).length} · ${A.etapes.filter(e => e.photo).length} photo(s) · ${A.etapes.filter(e => e.video.trim()).length} vidéo(s) · ${A.etapes.filter(e => e.critique).length} critique(s)</dd>
         <dt>Quiz</dt><dd>${A.quiz.filter(q => q.question.trim()).length} question(s)</dd>
         <dt>Classement</dt><dd>${esc(A.competences.concat(A.formations).join(', ') || '—')}</dd></dl>
-      <p class="muted fm-small">La SOP est créée « à valider » : elle se lit déjà sur la tablette ; le néerlandais et la publication se font ensuite dans son éditeur.</p>`;
+      <p class="muted fm-small">${art() ? 'L’article est créé' : 'La SOP est créée'} « à valider » : ${art() ? 'il' : 'elle'} se lit déjà sur la tablette ; le néerlandais et la publication se font ensuite dans son éditeur.</p>`;
   }
-  /** À droite : la SOP telle que la tablette la montrera. */
+  /** À droite : le document tel que la tablette le montrera — une carte par étape (photo 4:3, numéro, une action par
+   *  ligne, point critique en rouge), comme la lecture « une étape, une carte » (07/11/2026). */
   function apercu() {
     const et = A.etapes.filter(e => e.texte.trim() || e.photo);
-    return `<aside class="card as-apercu"><div class="as-apercu__k">Sur la tablette · ${esc((MOMENTS.find(x => x[0] === A.moment) || [0, 'Au besoin'])[1])}</div>
-      <div class="as-apercu__t">${esc(A.titreFr || 'Titre de la SOP')}</div>${A.objectifFr ? `<p class="as-apercu__o">${esc(A.objectifFr)}</p>` : ''}
-      ${et.map((e, i) => `<div class="as-apercu__e${e.critique ? ' is-crit' : ''}"><span>${i + 1}</span><div><b>${esc(e.titre || '')}</b>${esc(e.texte)}${e.video.trim() ? '<small>▶ vidéo</small>' : ''}</div>${e.photo ? `<img src="${esc(photoUrl(e.photo))}" alt="">` : ''}</div>`).join('') || '<p class="muted fm-small">Les étapes apparaîtront ici.</p>'}
+    const lignes = t => String(t || '').split('\n').map(l => l.trim()).filter(Boolean);
+    const onglet = art() ? 'Manuel' : (MOMENTS.find(x => x[0] === A.moment) || [0, 'Au besoin'])[1];
+    return `<aside class="card as-apercu"><div class="as-apercu__k">Sur la tablette · onglet « ${esc(onglet)} »</div>
+      <div class="as-apercu__t">${esc(A.titreFr || (art() ? 'Titre de l’article' : 'Titre de la SOP'))}</div>${A.objectifFr ? `<p class="as-apercu__o">${esc(A.objectifFr)}</p>` : ''}
+      ${et.map((e, i) => {
+        const ul = `<ul>${lignes(e.texte).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`;
+        return `<div class="as-tb">${e.photo ? `<img class="as-tb__ph" src="${esc(photoUrl(e.photo))}" alt="">` : ''}<div class="as-tb__x">
+          <div class="as-tb__h"><span>${i + 1}</span>${e.titre.trim() ? `<b>${esc(e.titre)}</b>` : ''}</div>
+          ${e.critique ? `<div class="as-tb__crit"><em>Point critique</em>${ul}</div>` : ul}${e.video.trim() ? '<small>▶ vidéo</small>' : ''}</div></div>`; }).join('')
+        || `<p class="muted fm-small">${art() ? 'Les parties' : 'Les étapes'} apparaîtront ici, comme sur la tablette.</p>`}
       ${A.points.filter(p => p.trim()).length ? `<div class="as-apercu__pc">${A.points.filter(p => p.trim()).map(p => `<div>! ${esc(p)}</div>`).join('')}</div>` : ''}</aside>`;
   }
 
@@ -156,7 +185,7 @@
   function suivant() {
     X.err = null;
     if (A.etape === 2 && !A.titreFr.trim()) { X.err = 'Le titre est attendu.'; return C.rendre(true); }
-    if (A.etape === 3 && !A.etapes.some(e => e.texte.trim())) { X.err = 'Au moins une étape, avec son texte.'; return C.rendre(true); }
+    if (A.etape === 3 && !A.etapes.some(e => e.texte.trim())) { X.err = art() ? 'Au moins une partie, avec son texte.' : 'Au moins une étape, avec son texte.'; return C.rendre(true); }
     A.etape = Math.min(5, A.etape + 1); garder(); C.rendre(true); window.scrollTo(0, 0);
   }
   /** Une photo d'étape : recadrée au format fixe 4:3 (recadrer.js), puis envoyée ; rangée « u/… » sur l'étape. */
@@ -185,9 +214,9 @@
       const bonne = Math.max(0, choix.indexOf(String(q.choix[q.bonne] || '').trim()));
       return { question: bi(q.question), choix: { fr: choix, nl: [] }, bonne };
     });
-    const corps = { code: A.code.trim() || null, dossier: A.dossier, type: A.type, poste: A.poste, moment: A.moment || null,
+    const corps = { code: A.code.trim() || null, dossier: A.dossier, type: A.type, poste: A.poste, moment: art() ? null : (A.moment || null),
       titre: { fr: A.titreFr.trim(), nl: A.titreNl.trim() }, objectif: bi(A.objectifFr),
-      contenu: { pour: bi(A.pourFr), duree: A.duree.trim() || null, sections: [{ titre: { fr: 'Marche à suivre', nl: 'Werkwijze' }, etapes }],
+      contenu: { pour: bi(A.pourFr), duree: A.duree.trim() || null, sections: [{ titre: art() ? { fr: 'Article', nl: 'Artikel' } : { fr: 'Marche à suivre', nl: 'Werkwijze' }, etapes }],
         points_critiques: A.points.map(p => p.trim()).filter(Boolean).map(bi), quiz } };
     try {
       const r = await C.appel('POST', '/formation/sop/fiche', corps, 60000);
@@ -196,9 +225,13 @@
         catch (e) { toast('SOP créée, mais le classement n’a pas été enregistré : ' + e.message); }
       }
       const onglet = { ouverture: 'Ouverture', fermeture: 'Fermeture' }[A.moment] || 'Journée de travail';
-      X.fait = { id: r.id, titre: A.titreFr.trim(), moment: A.moment, onglet, etapes: etapes.length, photos: etapes.filter(e => e.photo).length };
+      const foF = A.depuisFo && R.ref ? (R.ref.formations || []).find(x => x.code === A.depuisFo) : null;
+      X.fait = { id: r.id, titre: A.titreFr.trim(), type: A.type, moment: A.moment, onglet, etapes: etapes.length, photos: etapes.filter(e => e.photo).length,
+        fo: A.depuisFo, foPhase: (foF && foF.phases && foF.phases[0]) || 'pre' };
       A = vide(); garder();
-    } catch (e) { X.err = 'SOP non créée : ' + e.message; }
+      // La fiche de la formation et l'écran Opérationnel relisent le référentiel : le nouveau document y apparaît.
+      if (window.FormationPortail && window.FormationPortail.relire) { window.FormationPortail.relire(); }
+    } catch (e) { X.err = (art() ? 'Article non créé : ' : 'SOP non créée : ') + e.message; }
     X.occupe = false; C.rendre(true); window.scrollTo(0, 0);
   }
   const chemin = (k, v) => { const p = k.split('.'); let o = A; while (p.length > 1) { o = o[p.shift()]; } o[p[0]] = v; };

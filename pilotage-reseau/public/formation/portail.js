@@ -57,7 +57,12 @@
   }
   const nomPh = k => ((X && X.phase[k]) || { fr: k }).fr;
   const courtPh = k => ((X && X.phase[k]) || { court: k }).court;
-  const stdsDeFo = f => [...new Set(f.competences.flatMap(c => ((X.comp[c] || {}).standards || [])))].map(id => X.std[id]).filter(Boolean);
+  // Les SOP et articles du manuel d'une formation : ceux qui la citent dans leur classement, et ceux de ses compétences.
+  const stdsDeFo = f => [...new Set(X.R.standards.filter(s => (s.formations || []).includes(f.code)).map(s => s.id)
+    .concat(f.competences.flatMap(c => ((X.comp[c] || {}).standards || []))))].map(id => X.std[id]).filter(Boolean);
+  /** Une ligne du manuel : code, titre et type ; « Vue tablette » (la tablette elle-même) et « Modifier ». */
+  const ligneManuel = s => `<div class="pt-man"><a class="pt-man__l" href="#/sop/${enc(s.id)}">${esc(s.fr)}<small>${esc([s.code, s.type === 'Article' ? 'Article du manuel' : (s.type || 'SOP'), s.statut === 'a_valider' ? 'à valider' : s.statut === 'brouillon' ? 'brouillon' : ''].filter(Boolean).join(' · '))}</small></a>
+    <span class="pt-man__ac"><button type="button" class="btn btn--sm" data-tbx="${esc(s.id)}" data-tbx-titre="${esc(s.fr)}">Vue tablette</button><a class="btn btn--sm" href="#/sop/${enc(s.id)}/editer">Modifier</a></span></div>`;
   const evaluations = code => ((C.S.ref && C.S.ref.formations) || []).filter(e => String(e.nom || '').indexOf('[' + code + ']') === 0);
   const postesTries = att => Object.keys(att || {}).sort((a, b) => (+a.slice(1)) - (+b.slice(1)));
   const enc = s => encodeURIComponent(s);
@@ -168,7 +173,8 @@
       <div class="pt-bloc"><h3>Phases <i>un clic ajoute ou retire</i></h3><div class="pt-togs">${togg}</div></div>
       <div class="pt-bloc"><h3>Pour qui <i>${postesTries(f.postes).length} postes</i></h3><div class="pt-postes">${postesTries(f.postes).map(p => `<a href="#/rfmetiers/${esc(p)}" class="pt-bd ${f.postes[p] === 'O' ? 'pt-bd--pre' : 'pt-bd--r'}" title="${f.postes[p] === 'O' ? 'obligatoire' : 'recommandée'}">${esc(p)} · ${esc((X.poste[p] || {}).fr || '')}</a>`).join('') || '<span class="muted">—</span>'}</div></div>
       <div class="pt-bloc"><h3>Ce qu’on apprend <i>${comps.length} compétence${comps.length > 1 ? 's' : ''}</i></h3>${comps.map(c => `<a class="pt-it" href="#/rfcompetences/${enc(c.code)}"><span class="pt-it__cd">${esc(c.code)}</span><span class="pt-it__tx">${esc(c.fr)}<small>${c.panel && c.panel.nom && ['valide', 'certain'].includes(c.panel.etat) ? 'Panel : ' + esc(c.panel.nom) : '<span class="pt-ambre">pas de compétence au panel</span>'}</small></span></a>`).join('') || '<p class="muted">Aucune compétence du v25 n’est rattachée à cette formation.</p>'}</div>
-      <div class="pt-bloc"><h3>Dans le manuel <i>à lire avant, « vu faire » après</i></h3>${stds.map(s => `<a class="pt-it" href="#/sop/${enc(s.id)}"><span class="pt-it__cd">${esc(s.code)}</span><span class="pt-it__tx">${esc(s.fr)}</span></a>`).join('') || '<p class="muted">Aucune SOP ne s’y rattache encore.</p>'}</div>
+      <div class="pt-bloc"><h3>Dans le manuel <i>SOP et articles · en vue tablette</i></h3>${stds.map(ligneManuel).join('') || '<p class="muted">Aucune SOP ni aucun article ne s’y rattache encore.</p>'}
+        <div class="pt-man__new"><a class="btn btn--sm btn--primary" href="#/sopnouvelle/fo/${enc(f.code)}/article" title="Un article du manuel opératoire, rattaché à ${esc(f.code)}, avec l’assistant">＋ Article du manuel</a><a class="btn btn--sm" href="#/sopnouvelle/fo/${enc(f.code)}" title="Une procédure pas à pas, rattachée à ${esc(f.code)}, avec l’assistant">＋ SOP</a></div></div>
       <div class="pt-bloc"><h3>Évaluation au panel</h3>${evs.map(e => `<div class="pt-it"><span class="pt-it__cd">#${esc(e.id)}</span><span class="pt-it__tx">${esc(e.nom)}</span></div>`).join('') || `<p class="muted">${C.S.ref ? 'Aucune évaluation [' + esc(f.code) + '] au panel.' : 'Panel en cours de lecture…'}</p>`}</div>
     </section>`;
   }
@@ -277,7 +283,7 @@
         : '<p class="muted">Pas encore de critère.</p>'}${it ? `<a class="linklike" href="#/rfform/${esc(it.bloc)}/${enc(c.code)}">Modifier le critère</a>` : ''}</div>
       <div class="pt-bloc"><h3>Formation qui l’enseigne</h3>${fo ? `<a class="pt-it" href="#/rfformations/${fo.phases[0] || 'pre'}/${enc(fo.code)}"><span class="pt-it__cd">${esc(fo.code)}</span><span class="pt-it__tx">${esc(fo.fr)}<small>${fo.phases.map(k => esc(nomPh(k))).join(' · ')}</small></span></a>` : '<p class="muted">Aucune formation.</p>'}</div>
       <div class="pt-bloc"><h3>Pour qui <i>d’après la formation</i></h3><div class="pt-postes">${postes.map(p => `<a href="#/rfmetiers/${esc(p)}" class="pt-bd ${fo.postes[p] === 'O' ? 'pt-bd--pre' : 'pt-bd--r'}">${esc(p)} · ${esc((X.poste[p] || {}).fr || '')}</a>`).join('') || '<span class="muted">—</span>'}</div></div>
-      <div class="pt-bloc"><h3>Dans le manuel <i>${stds.length} SOP</i></h3>${stds.map(s => `<a class="pt-it" href="#/sop/${enc(s.id)}"><span class="pt-it__cd">${esc(s.code)}</span><span class="pt-it__tx">${esc(s.fr)}</span></a>`).join('') || '<p class="muted">Aucune SOP ne montre encore cette compétence.</p>'}</div>
+      <div class="pt-bloc"><h3>Dans le manuel <i>${stds.length} SOP</i></h3>${stds.map(ligneManuel).join('') || '<p class="muted">Aucune SOP ne montre encore cette compétence.</p>'}</div>
       ${blocPanel(c)}
     </section>`;
   }
@@ -558,6 +564,7 @@
    */
   window.FormationPortail = {
     defaut: 'rfformations',
+    relire: () => charger(true),
     titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
     // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
     // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].

@@ -43,7 +43,7 @@
       vus: 'vues faire', quiz: 'quiz réussis', lues: 'lues', etapes: 'étapes', etape: 'Étape', crit: 'Point critique',
       prec: '← Précédente', suiv: 'C’est fait · suivante →', fini: 'J’ai tout lu ✓', faites: 'étapes faites', faite: 'étape faite', restent: 'restantes', sur: 'sur', toutesEtapes: 'Toutes les étapes', ensuite: 'Ensuite', quiPrevenir: 'Qui prévenir', fermer: 'Fermer', critCourt: 'critique',
       st: { non: 'à lire', lu: 'lue · quiz à faire', quiz: 'quiz réussi · à voir faire', vu: 'vue faire ✓', a_revoir: 'nouvelle version · à revoir' },
-      aValider: 'à valider', aValiderS: 'SOP à valider : lisible, sans quiz ni validation pour l’instant.', sansComp: 'Autres SOP',
+      aValider: 'à valider', aValiderS: 'À valider : lisible, sans quiz ni validation pour l’instant.', sansComp: 'Autres SOP',
       question: 'Question', valider: 'Valider', reussi: 'Quiz réussi', rate: 'Pas encore', relire: 'Relire la SOP', recommencer: 'Recommencer le quiz',
       demander: 'Demander à être vu(e) faire', plusTard: 'Plus tard', reste: 'Il reste à être vu(e) faire par la responsable du magasin, sur le poste.',
       vuFaire: 'Vu faire', vuFaireS: 'La responsable a vu faire cette SOP, sur place.', responsable: 'Responsable', pasEncore: 'Pas encore', okVu: '✓ Vu faire',
@@ -51,8 +51,9 @@
       faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
       journee: 'Ma journée', toutes: 'Toutes les SOP', sesPostes: 'Mes postes', rienJournee: 'Aucun standard n’est encore rangé pour tes postes.',
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
-      onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', aide: 'Comment ça marche' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
-      ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', aide: 'la tablette' },
+      onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel', aide: 'Comment ça marche' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
+      ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles', aide: 'la tablette' }, article1: 'article',
+      rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
       rienMoment: 'Aucune SOP pour ce moment.', aideT: 'La tablette du magasin',
       aide: [['Choisir le moment', 'Ouverture, Journée de travail ou Fermeture : les SOP du moment.'],
@@ -70,7 +71,7 @@
       vus: 'voorgedaan', quiz: 'quiz geslaagd', lues: 'gelezen', etapes: 'stappen', etape: 'Stap', crit: 'Kritiek punt',
       prec: '← Vorige', suiv: 'Klaar · volgende →', fini: 'Alles gelezen ✓', faites: 'stappen klaar', faite: 'stap klaar', restent: 'te gaan', sur: 'van', toutesEtapes: 'Alle stappen', ensuite: 'Daarna', quiPrevenir: 'Wie verwittigen', fermer: 'Sluiten', critCourt: 'kritiek',
       st: { non: 'te lezen', lu: 'gelezen · quiz te doen', quiz: 'quiz geslaagd · voor te doen', vu: 'voorgedaan ✓', a_revoir: 'nieuwe versie · opnieuw' },
-      aValider: 'te valideren', aValiderS: 'SOP te valideren: leesbaar, nog zonder quiz of validatie.', sansComp: 'Andere SOP',
+      aValider: 'te valideren', aValiderS: 'Te valideren: leesbaar, nog zonder quiz of validatie.', sansComp: 'Andere SOP',
       question: 'Vraag', valider: 'Bevestigen', reussi: 'Quiz geslaagd', rate: 'Nog niet', relire: 'SOP opnieuw lezen', recommencer: 'Quiz opnieuw',
       demander: 'Vragen om voor te doen', plusTard: 'Later', reste: 'Nu nog voordoen voor de winkelverantwoordelijke, op de post.',
       vuFaire: 'Voorgedaan', vuFaireS: 'De verantwoordelijke heeft deze SOP zien uitvoeren, ter plaatse.', responsable: 'Verantwoordelijke', pasEncore: 'Nog niet', okVu: '✓ Voorgedaan',
@@ -78,8 +79,9 @@
       faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', pasDeQuiz: 'Deze SOP heeft geen quiz.',
       journee: 'Mijn dag', toutes: 'Alle SOP', sesPostes: 'Mijn posten', rienJournee: 'Er staat nog geen standaard voor jouw posten.',
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
-      onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', aide: 'Hoe werkt het' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
-      ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', aide: 'de tablet' },
+      onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek', aide: 'Hoe werkt het' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
+      ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels', aide: 'de tablet' }, article1: 'artikel',
+      rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
       rienMoment: 'Geen SOP voor dit moment.', aideT: 'De tablet van de winkel',
       aide: [['Het moment kiezen', 'Opening, Werkdag of Sluiting: de SOP van dat moment.'],
@@ -175,9 +177,16 @@
     appareilFerme(); S.prechoix = null; rendre();
   }
 
+  const SOP_LIEN = Q.get('sop') || '';   // ?sop=<id> : ouvrir ce document tout de suite (vue tablette du portail)
   async function charger() {
     try { S.init = await api('/formation/sop/tablette/init'); S.erreur = null; }
     catch (e) { S.erreur = t().erreurCharge + ' : ' + e.message; }
+    if (SOP_LIEN && S.init && !S.lienOuvert) {
+      S.lienOuvert = true;
+      const s = (S.init.sops || []).find(x => x.id === SOP_LIEN);
+      if (s) { S.onglet = ongletDe(s); }   // « ← » ramène à l'onglet du document
+      return ouvrir(SOP_LIEN);
+    }
     rendre();
   }
 
@@ -220,19 +229,20 @@
     const m = S.init && S.init.magasin ? S.init.magasin.nom : t().manuel;
     const aide = S.vue === 'lecture' && S.sop && sectionsAide().length;
     return `<div class="tb-hd${S.sop ? ' tb-hd--sop' : ''}">${retour ? `<button class="tb-ret" data-a="liste" aria-label="${esc(t().retour)}">←</button>` : ''}${S.sop ? '' : `<img src="../img/logo.png" alt="L'Atelier">`}
-      <div class="t"><span class="tt">${S.sop ? esc(L(S.sop.titre)) : esc(t().titre) + ' · ' + esc(m)}</span><small>${esc(S.sop ? (S.sop.code || '') + ' · v' + S.sop.version : (S.poste === 'tous' ? t().poste.tous : t().poste[S.poste]))}</small></div>
+      <div class="t"><span class="tt">${S.sop ? esc(L(S.sop.titre)) : esc(t().titre) + ' · ' + esc(m)}</span><small>${esc(S.sop ? (S.sop.code ? S.sop.code + ' · ' : '') + 'v' + S.sop.version : (S.poste === 'tous' ? t().poste.tous : t().poste[S.poste]))}</small></div>
       <span class="sp"></span>${aide ? `<button class="tb-qui" data-a="aide">${ICO_TEL}<span>${esc(t().quiPrevenir)}</span></button>` : ''}
       <span class="tb-bascule"><button data-l="fr" class="${S.langue === 'fr' ? 'on' : ''}">FR</button><button data-l="nl" class="${S.langue === 'nl' ? 'on' : ''}">NL</button></span>
 </div>`;
   }
 
-  /* ── La liste : trois grands onglets, Ouverture · Journée de travail · Fermeture, et « Comment ça marche » ── */
-  const ONGLETS = ['ouverture', 'journee', 'fermeture', 'aide'];
-  const ongletDe = m => m === 'ouverture' ? 'ouverture' : m === 'fermeture' ? 'fermeture' : 'journee';
+  /* ── La liste : trois grands onglets, Ouverture · Journée de travail · Fermeture, puis « Manuel » (les articles du
+     manuel opératoire, 07/11/2026) et « Comment ça marche » ── */
+  const ONGLETS = ['ouverture', 'journee', 'fermeture', 'manuel', 'aide'];
+  const ongletDe = s => s.type === 'Article' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
   function onglets() {
-    const n = k => (S.init.sops || []).filter(s => ongletDe(s.moment) === k && visible(s)).length;
+    const n = k => (S.init.sops || []).filter(s => ongletDe(s) === k && (k === 'manuel' || visible(s))).length;
     return `<div class="tb-moments" role="tablist">${ONGLETS.map(k => `<button role="tab" data-onglet="${k}" class="${S.onglet === k ? 'on' : ''}" aria-selected="${S.onglet === k}">
-      <b>${esc(t().onglets[k])}</b><small>${k === 'aide' ? esc(t().ongletsS[k]) : n(k) + ' SOP · ' + esc(t().ongletsS[k])}</small></button>`).join('')}</div>`;
+      <b>${esc(t().onglets[k])}</b><small>${k === 'aide' ? esc(t().ongletsS[k]) : n(k) + (k === 'manuel' ? ' ' + (n(k) === 1 ? t().article1 : t().ongletsS[k]) : ' SOP · ' + t().ongletsS[k])}</small></button>`).join('')}</div>`;
   }
   /** Un standard est de la journée de la personne : un de ses postes v25 est celui du standard (sinon l'ancien poste). */
   function pourMoi(s) {
@@ -247,9 +257,12 @@
     if (S.onglet === 'aide') { return `<div class="tb-corps"><div class="tb-liste">${onglets()}${vueAide()}</div></div>`; }
     const st = id => (S.suivi[id] || {}).statut || 'non';
     const ic = { non: '·', lu: 'L', quiz: 'Q', vu: '✓', a_revoir: '!' };
-    const sops = (S.init.sops || []).filter(s => ongletDe(s.moment) === S.onglet && visible(s));
+    // Les articles du manuel valent pour tout le monde : ils ne dépendent pas du poste choisi.
+    const sops = (S.init.sops || []).filter(s => ongletDe(s) === S.onglet && (S.onglet === 'manuel' || visible(s)));
     // La journée se lit dans l'ordre : la journée, l'après-midi, puis ce qui se fait au besoin ; ouverture et fermeture par poste.
-    const groupes = S.onglet === 'journee'
+    const groupes = S.onglet === 'manuel'
+      ? [{ l: t().articlesT, sops: sops.slice().sort((a, b) => L(a.titre).localeCompare(L(b.titre), 'fr')) }]
+      : S.onglet === 'journee'
       ? [['journee', t().sousJ.journee], ['apres-midi', t().sousJ['apres-midi']], ['autres', t().sousJ.autres]].map(([m, l]) => ({ l, sops: sops.filter(s => m === 'autres' ? !['journee', 'apres-midi'].includes(s.moment) : s.moment === m) }))
       : POSTES.map(p => ({ l: t().poste[p], sops: sops.filter(s => s.poste === p) })).concat([{ l: t().sansComp, sops: sops.filter(s => !POSTES.includes(s.poste)) }]);
     const corps = groupes.filter(g => g.sops.length).map(g => {
@@ -257,11 +270,12 @@
       return `<div class="tb-grp"><div class="sec-t">${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
         ${g.sops.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
           <small>${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
-    }).join('') || `<div class="vide">${esc(S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;
+    }).join('') || `<div class="vide">${esc(S.onglet === 'manuel' ? t().rienManuel : S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;
     const chips = S.moi
       ? `<div class="tb-chips"><button data-tout="0" class="${S.tout ? '' : 'on'}">${esc(t().mesPostes)}</button><button data-tout="1" class="${S.tout ? 'on' : ''}">${esc(t().toutMagasin)}</button></div>`
       : `<div class="tb-chips">${['tous'].concat(POSTES).map(p => `<button data-poste="${p}" class="${S.poste === p ? 'on' : ''}">${esc(t().poste[p])}</button>`).join('')}</div>`;
-    return `<div class="tb-corps"><div class="tb-liste">${onglets()}${chips}${corps}</div></div>`;
+    // Les articles du manuel valent pour tous les postes : pas de filtre de poste sous l'onglet « Manuel ».
+    return `<div class="tb-corps"><div class="tb-liste">${onglets()}${S.onglet === 'manuel' ? '' : chips}${corps}</div></div>`;
   }
   function vueAide() {
     return `<div class="tb-aide"><div class="sec-t">${esc(t().aideT)}</div><ol>${t().aide.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ol>
@@ -329,6 +343,7 @@
     const E = etapes();
     if (!E.length) { return `<div class="vide">—</div>`; }
     const i = Math.min(S.etape, E.length - 1), e = E[i], nxt = E[i + 1];
+    const art = S.sop.type === 'Article';   // un article du manuel : des « parties » plutôt que des étapes
     const dernier = i === E.length - 1;
     const faites = Object.keys(S.vuEtapes).length;
     const seg = E.length <= 40
@@ -338,8 +353,8 @@
     const media = (e.photo ? `<img class="photo" src="${esc(photoUrl(e.photo))}" alt="" data-zoom="${esc(photoUrl(e.photo))}">` : '') + (e.video ? video(e.video) : '');
     return `<div class="tb-pas">
       <div class="tb-avance">${seg}
-        <div class="tb-ou"><span><b>${esc(t().etape)} ${i + 1}</b> ${esc(t().sur)} ${E.length} · ${esc(L(e.section))}</span>
-          <button class="tb-toutes" data-a="sommaire">${ICO_LISTE}${esc(t().toutesEtapes)}</button></div></div>
+        <div class="tb-ou"><span><b>${esc(art ? t().partie : t().etape)} ${i + 1}</b> ${esc(t().sur)} ${E.length} · ${esc(L(e.section))}</span>
+          <button class="tb-toutes" data-a="sommaire">${ICO_LISTE}${esc(art ? t().toutesParties : t().toutesEtapes)}</button></div></div>
       <main class="tb-zone" data-balayage><article class="tb-carte${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}">
         ${media ? `<div class="tb-media">${media}</div>` : ''}
         <div class="tb-txt">${S.sop.statut === 'a_valider' ? `<div class="note">${esc(t().aValiderS)}</div>` : ''}
@@ -348,7 +363,7 @@
           ${nxt ? `<button class="tb-ensuite" data-a="suiv">${esc(t().ensuite)} · <b>${esc(nxt.numero)} ${esc(courtDe(nxt))}</b><span aria-hidden="true">›</span></button>` : ''}</div>
       </article></main>
       <div class="tb-pied"><button class="gb" data-a="prec" ${i === 0 ? 'disabled' : ''}>${esc(t().prec)}</button>
-        ${dernier ? `<button class="gb g" data-a="fini">${esc(t().fini)}</button>` : `<button class="gb p" data-a="suiv">${esc(t().suiv)}</button>`}</div>
+        ${dernier ? `<button class="gb g" data-a="fini">${esc(t().fini)}</button>` : `<button class="gb p" data-a="suiv">${esc(art ? t().suivArt : t().suiv)}</button>`}</div>
       ${S.sommaire ? sommaire(E, i) : ''}${S.aide ? panneauAide() : ''}</div>`;
   }
   /** Le tiroir « Toutes les étapes » : les sections et leurs étapes ; un toucher va à l'étape. */

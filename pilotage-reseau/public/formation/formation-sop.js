@@ -126,16 +126,16 @@ window.FormationSop = (function () {
       });
     });
     const vb = (v, lib) => `<button type="button" data-sa="vue" data-v="${v}"${D.vue === v ? ' class="is-on"' : ''}>${lib}</button>`;
-    const outils = `<div class="filters"><div class="filters__row"><div class="seg" role="group">${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
+    const outils = `<div class="filters"><div class="filters__row"><div class="seg" role="group">${vb('tablette', 'Vue tablette')}${vb('fr', 'FR')}${vb('nl', 'NL')}${vb('deux', 'FR et NL côte à côte')}</div>
       <a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'fr')}" target="_blank">PDF FR</a><a class="btn btn--sm" href="${pdf('/formation/sop/fiche/' + s.id + '.pdf', 'nl')}" target="_blank">PDF NL</a>
-      <a class="btn btn--sm" href="${tabletteLien(s.poste)}" target="_blank" rel="noopener">Tablette du poste ↗</a>
+      <button type="button" class="btn btn--sm" data-tbx="${esc(s.id)}" data-tbx-titre="${esc(s.titre.fr)}">Agrandir la vue tablette</button>
       ${tablette() ? '' : `<a class="btn btn--primary" href="#/sop/${esc(s.id)}/editer" style="margin-left:auto">Modifier</a>`}</div></div>`;
     const partie = phasesDe(s) ? `<p><span class="muted">Parties du manuel</span> ${phasesDe(s).map(p => `<a class="chip chip--accent" href="#/rfphase/${esc(p)}">${esc(NOM_PARTIE[p] || p)}</a>`).join(' ')} <span class="muted fm-small">les phases du classement</span></p>` : `<p><span class="muted">Partie du manuel</span> <a class="chip chip--accent" href="#/rfphase/${esc(s.partie)}">${esc(NOM_PARTIE[s.partie])}</a>${s.partieReglee || tablette() ? '' : ' <span class="muted fm-small">déduite du moment</span>'}</p>
       ${tablette() ? '' : `<div class="seg fm-seg--petit" role="group">${PARTIES.map(p => `<button type="button" data-sa="partie" data-id="${esc(s.id)}" data-v="${p[0]}"${p[0] === s.partie ? ' class="is-on"' : ''}>${esc(p[1])}</button>`).join('')}</div>${s.partieReglee ? ` <button type="button" class="btn btn--sm" data-sa="partie" data-id="${esc(s.id)}" data-v="">↺ Partie déduite</button>` : ''}`}`;
-    const infos = `<section class="card"><h2>La SOP</h2><dl class="sop-dl">
+    const infos = `<section class="card"><h2>${s.type === 'Article' ? 'L’article du manuel' : 'La SOP'}</h2><dl class="sop-dl">
       <dt>Code</dt><dd>${esc(s.code || '—')} · ${esc(s.dossier)} ${esc(famNom(s.dossier))}</dd><dt>Poste</dt><dd>${esc(POSTE_NOM[s.poste] || s.poste)}${s.moment ? ' · ' + esc(s.moment) : ''}</dd>
       <dt>Langues</dt><dd>${trad(s)} origine : ${esc(s.langueOrigine)}</dd><dt>Version</dt><dd>v${esc(s.version)} · ${esc(dt(s.majLe))}${s.majPar ? ' · ' + esc(s.majPar) : ''}</dd>
-      <dt>Étapes</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · ' + s.nbPhotos + ' photo' + (s.nbPhotos > 1 ? 's' : '') : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
+      <dt>${s.type === 'Article' ? 'Parties' : 'Étapes'}</dt><dd>${s.nbEtapes}${s.nbPhotos ? ' · ' + s.nbPhotos + ' photo' + (s.nbPhotos > 1 ? 's' : '') : ''}${c.duree ? ' · ' + esc(c.duree) : ''}</dd><dt>Compétence</dt><dd>${comp(s)}</dd>
       ${s.statut === 'a_valider' ? '<dt>Statut</dt><dd><span class="chip chip--warn">À valider</span> lisible, sans quiz ni validation</dd>' : ''}</dl><div style="margin-top:12px">${partie}</div></section>`;
     const eq = '';   // le suivi par personne a quitté le portail (06/11/2026, client : « je n'ai pas besoin du suivi pour les SOP »)
     const crit = (c.points_critiques || []).length ? `<section class="card"><h2>Points critiques</h2><div class="sop-crit"><ul>${c.points_critiques.map(x => `<li>${esc(L(x, l1))}${deux && x.nl ? `<br><span class="muted">${esc(x.nl)}</span>` : ''}</li>`).join('')}</ul></div></section>` : '';
@@ -148,7 +148,10 @@ window.FormationSop = (function () {
       ${(c.remarques || []).map(x => `<div class="sop-ligne"><span class="chip chip--warn">à confirmer</span><div class="sop-ligne__x fm-small">${esc(x)}</div></div>`).join('')}</section>` : '';
     const arch = D.archive && D.archive.id === id ? C.bandeau(`Version archivée v${esc(D.archive.version)} (${esc(dth(D.archive.publieLe))}) — <button type="button" class="btn btn--sm" data-sa="archive" data-id="${esc(id)}" data-v="">Revenir à la version en vigueur</button>`, 'warn') : '';
     const corps = fil + `<p class="muted">${trad(s)} <span class="sop-lg is-on">v${esc(D.archive && D.archive.id === id ? D.archive.version : s.version)}</span> ${esc(L(s.objectif))}</p>` + arch + outils +
-      `<div class="sop-deux"><section class="card">${etapes || '<p class="muted">Aucune étape.</p>'}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
+      `<div class="sop-deux"><section class="card">${D.vue === 'tablette' && window.FormationTablette
+        // La SOP telle que la tablette la montre (07/11/2026, client : « tout doit être présenté comme les SOP, en vue tablette »).
+        ? `<div class="tbx-page">${FormationTablette.cadre(s.id, { largeurMax: 620, hauteurMax: Math.max(560, innerHeight - 230) })}<span class="muted">La tablette du magasin, en portrait · balayer ou « C’est fait » pour avancer</span></div>`
+        : (etapes || '<p class="muted">Aucune étape.</p>')}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
     return { titre: s.titre.fr, kicker: K + ' · ' + (s.code || ''), corps, large: true };
   }
 
@@ -168,7 +171,7 @@ window.FormationSop = (function () {
       h += `<section class="card"><h2>Nouvelle SOP</h2><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
         <input class="sop-in" placeholder="Code (ex. SOP-CUI-XYZ-01)" data-sin="nouv.code" value="${esc(N.code)}">
         <select class="fm-select" data-sch="nouv.dossier">${D.dossiers.map(d => `<option value="${d.id}" ${N.dossier === d.id ? 'selected' : ''}>${d.id} · ${esc(d.nom.fr)}</option>`).join('')}</select>
-        <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche'].map(x => `<option ${N.type === x ? 'selected' : ''}>${x}</option>`).join('')}</select>
+        <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article'].map(x => `<option value="${x}" ${N.type === x ? 'selected' : ''}>${x === 'Article' ? 'Article du manuel' : x}</option>`).join('')}</select>
         <select class="fm-select" data-sch="nouv.poste">${POSTES.map(x => `<option value="${x}" ${N.poste === x ? 'selected' : ''}>${POSTE_NOM[x]}</option>`).join('')}</select>
         <input class="sop-in" style="grid-column:span 2" placeholder="Titre FR" data-sin="nouv.fr" value="${esc(N.fr)}"><input class="sop-in" style="grid-column:span 2" placeholder="Titel NL" data-sin="nouv.nl" value="${esc(N.nl)}"></div>
         <p style="margin-top:10px"><button type="button" class="btn btn--primary" data-sa="creer">Créer (à valider)</button> <button type="button" class="btn btn--ghost" data-sa="annulerNouv">Annuler</button></p></section>`;
@@ -179,7 +182,7 @@ window.FormationSop = (function () {
         <td><select class="fm-select" style="max-width:240px" data-sch="comp" data-id="${esc(s.id)}">${opts(s)}</select></td>
         <td class="fm-small">${esc(NOM_PARTIE[s.partie])}${s.partieReglee ? '' : '<br><span class="muted">déduite</span>'}</td>
         <td><select class="fm-select" style="width:auto" data-sch="statut" data-id="${esc(s.id)}"><option value="publiee" ${s.statut === 'publiee' ? 'selected' : ''}>publiée</option><option value="a_valider" ${s.statut === 'a_valider' ? 'selected' : ''}>à valider</option><option value="brouillon" ${s.statut === 'brouillon' ? 'selected' : ''}>brouillon</option></select></td>
-        <td><a class="btn btn--sm" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
+        <td class="sop-act"><button type="button" class="btn btn--sm" data-tbx="${esc(s.id)}" data-tbx-titre="${esc(s.titre.fr)}">Vue tablette</button> <a class="btn btn--sm" href="#/sop/${esc(s.id)}/editer">Modifier</a></td></tr>`).join('')}</tbody></table></div></section>
       <p class="muted fm-small">Reprise du Drive du 05/11/2026 (44 fichiers → 25 SOP) : corrections et points à confirmer dans <code>data/formation/REPRISE.md</code> et sur chaque fiche (« Relevé à la reprise »).</p>`;
     return { titre: 'Rédaction et versions', kicker: K, corps: h, large: true };
   }
