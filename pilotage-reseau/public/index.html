@@ -56,6 +56,23 @@
   } catch (e) { /* sans app : le cockpit */ }
 })();
 </script>
+<script>
+// Au téléphone (07/11/2026) : l'écran Résultat s'ouvre dans sa vue téléphone (resultat-mobile/), une colonne,
+// Jour / Semaine / Mois. « Version complète » (?bureau=1) garde le cockpit de bureau pour la session.
+(function () {
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('embed') === '1' || q.get('app')) { return; }
+    if (q.get('bureau') === '1') { sessionStorage.setItem('cockpit.bureau', '1'); return; }
+    if (sessionStorage.getItem('cockpit.bureau') === '1') { return; }
+    var etroit = function () { return window.matchMedia && matchMedia('(max-width: 760px)').matches; };
+    var resultat = function () { var h = location.hash || ''; return !h || h === '#' || h === '#/' || /^#\/(resultat|resultat-du-jour|performance)(\?|$|\/)/.test(h); };
+    var aller = function () { if (etroit() && resultat()) { location.replace('resultat-mobile/'); } };
+    aller();
+    window.addEventListener('hashchange', aller);
+  } catch (e) { /* le cockpit de bureau */ }
+})();
+</script>
 </head>
 <body>
 <div id="app"><div style="padding:60px;color:var(--muted);font-size:13px">Chargement des données du réseau…</div></div>
