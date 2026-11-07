@@ -1,6 +1,6 @@
 # Temps morts — trois autres façons de montrer les tickets
 
-**Statut : maquette du 07/11/2026. Rien n'est codé.** Question posée sur l'onglet « Temps morts » du
+**Statut : variante 1 (grille des minutes) choisie et codée le 07/11/2026 dans l’onglet du dashboard.** Question posée sur l'onglet « Temps morts » du
 dashboard magasin : « c'est quoi les petites barres noires ? » — chaque trait noir y est un ticket. Trois
 autres façons de dessiner la même journée, pour choisir :
 
