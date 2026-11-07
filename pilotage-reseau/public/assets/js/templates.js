@@ -2008,14 +2008,20 @@ function tplBudgetParam(c, x){
       <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
         <div>
           <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Répartition des charges</div>
-          <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Un taux par poste, lu en euros sur trois bases : le CA théorique de l’étude, le CA validé avec le franchisé, et le CA réel déjà encaissé. Catégories, libellés et comptes se saisissent ici.</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">${c.encCrm ? 'Le Compte de résultat réseau du CRM fait foi : rubriques, postes et % réseau viennent de lui. Ici, le % validé du réseau et les euros — de quoi voir si le franchisé reste dans les clous.' : 'Un taux par poste, lu en euros sur trois bases : le CA théorique de l’étude, le CA validé avec le franchisé, et le CA réel déjà encaissé. Catégories, libellés et comptes se saisissent ici.'}</div>
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button ${x.A(c.encCatAdd)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Catégorie</button>
+          ${c.encCrm ? `<button ${x.A(c.encCrm.relire)} ${c.encCrm.enCours ? 'disabled' : ''} title="Relire le Compte de résultat réseau du CRM" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.encCrm.enCours ? 'Lecture…' : '↻ Relire le CRM'}</button>
+          ${c.encCrm.modifier ? `<a href="${esc(c.encCrm.modifier)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-size:12px;text-decoration:none">Modifier dans le CRM ↗</a>` : ''}` : `<button ${x.A(c.encCatAdd)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Catégorie</button>`}
           <span style="font-size:11.5px;color:var(--color-text-muted);margin-right:8px">${esc(c.encChargesAuto || '')}</span>
-          <button ${x.A(c.encChargesSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Enregistrer pour le réseau</button>
+          <button ${x.A(c.encChargesSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.encCrm ? 'Enregistrer le % validé' : 'Enregistrer pour le réseau'}</button>
         </div>
       </div>
+      ${c.encCrm ? `<div style="display:flex;gap:9px;align-items:flex-start;background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:9px;padding:10px 13px;margin:11px 0 0">
+        <span style="font-size:10px;font-weight:400;padding:2px 9px;border-radius:6px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">CRM</span>
+        <div style="font-size:11.5px;line-height:1.5">Compte de résultat réseau du CRM (référentiel d’implantation) — ${c.encCrm.lu ? 'lu le ' + esc(c.encCrm.lu) : 'pas encore lu'}. Rubriques, postes, libellés, % réseau et sous-totaux sont ceux du DIP, du contrat et des dossiers d’implantation : ils se changent dans le CRM. Écart = % validé − % réseau : en bordeaux, au-dessus du modèle.
+          ${c.encCrm.erreur ? `<div style="color:var(--color-primary);margin-top:3px">⚠ ${esc(c.encCrm.erreur)} La dernière copie lue reste affichée.</div>` : ''}</div>
+      </div>` : ''}
       <!-- Les taux sont communs : le dire à l'endroit où on les modifie évite
            de croire qu'on ajuste seulement le magasin qu'on regarde. -->
       <div style="display:flex;gap:9px;align-items:flex-start;background:rgba(141,29,44,0.05);border:1px solid rgba(141,29,44,0.2);border-radius:9px;padding:10px 13px;margin:11px 0 12px">
@@ -2031,7 +2037,7 @@ function tplBudgetParam(c, x){
           <th style="text-align:left;${lbl};padding:0 6px 9px;width:170px">Description</th>
           <th style="text-align:left;${lbl};padding:0 6px 9px;width:180px">Gestion</th>
           <th style="text-align:left;${lbl};padding:0 6px 9px;width:96px" title="Plan comptable minimum normalisé">PCMN</th>
-          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:92px">% théo.</th>
+          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:92px"${c.encCrm ? ' title="% du Compte de résultat réseau du CRM"' : ''}>${c.encCrm ? '% réseau · CRM' : '% théo.'}</th>
           <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:120px">€ théorique</th>
           <th style="text-align:right;${lbl};padding:0 6px 9px;width:92px">% validé</th>
           <th style="text-align:right;${lbl};padding:0 6px 9px;width:120px">€ validé</th>
@@ -2039,7 +2045,7 @@ function tplBudgetParam(c, x){
           <th style="text-align:right;${lbl};padding:0 0 9px 6px;width:96px">Écart</th>
         </tr></thead>
         <tbody>
-          ${c.encCats.map(cat => `
+          ${c.encCats.map(cat => c.encCrm ? tplEncCatCrm(cat, c, x) : `
             <!-- L'ordre des catégories EST la lecture du compte de résultat :
                  il se change ici, à la souris ou aux flèches. Une catégorie
                  emporte ses postes et les étapes qui s'y rattachent. -->
@@ -2730,6 +2736,44 @@ function tplScoringDetail(c, x){
    « Marge brute = CA − coût matière ». L'étape ne porte aucun montant propre :
    elle nomme une soustraction entre deux valeurs déjà présentes, et se
    recalcule d'elle-même quand un taux bouge. */
+/* Répartition des charges en mode CRM (07/11/2026) : la catégorie, ses postes et ses étapes en LECTURE — le Compte de
+   résultat réseau du CRM fait foi — ; seul le « % validé » du réseau se saisit. */
+function tplEncCatCrm(cat, c, x){
+  const { esc } = x;
+  const td = 'padding:7px 6px;text-align:right;white-space:nowrap';
+  const verrou = v => `<span title="% réseau du CRM" style="display:inline-block;min-width:44px;padding:5px 8px;border-radius:7px;background:var(--color-surface-2,#FBF9F5);border:1px solid var(--color-border-tertiary);color:var(--color-text-muted);text-align:right">${esc(String(v).replace('.', ','))}</span>`;
+  return `
+            <tr><td colspan="10" style="padding:14px 0 6px">
+              <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                <span style="font-size:13px">${esc(cat.nom)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA validé · ${esc(cat.totalE)}</span>
+              </div>
+            </td></tr>
+            ${cat.lignes.map(ch => `
+            <tr style="border-top:1px solid var(--color-border-tertiary)">
+              <td style="padding:7px 10px 7px 0"><span style="display:inline-flex;align-items:center;gap:8px"><span class="levier-dot" data-lev="${ch.lev}"></span>${esc(ch.nom)}</span>${ch.special === 'loyer' ? '<div style="font-size:10.5px;color:var(--color-text-muted)">lu du bail du dossier, au CRM</div>' : ''}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.description) || '—'}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.gestion) || '—'}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.pcmn) || '—'}</td>
+              <td style="${td}">${ch.hors ? '<span style="font-size:11px;color:var(--color-text-muted)">hors CRM</span>' : verrou(ch.valeurT)}</td>
+              <td style="${td};color:var(--pkg-abricot)">${ch.montantT}</td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
+              <td style="${td};font-weight:400">${ch.montant}</td>
+              <td style="${td};color:var(--color-text-muted)">${ch.montantR}</td>
+              <td style="${ch.ecartSt}">${ch.ecart}</td>
+            </tr>`).join('')}
+            ${cat.paliers.map(p2 => `
+            <tr style="border-top:1px solid var(--color-border-secondary);background:rgba(141,29,44,0.035)">
+              <td colspan="4" style="padding:9px 10px 9px 0"><span style="font-size:12.5px">= ${esc(p2.nom)}</span><div style="font-size:11px;color:var(--color-text-muted)">${esc(p2.formule)}</div></td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:var(--pkg-abricot)">${esc(p2.pctT)}</td>
+              <td style="${td};padding:9px 6px;color:var(--pkg-abricot)">${esc(p2.montantT)}</td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:${p2.col}">${esc(p2.pct)}</td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:${p2.col}">${esc(p2.montant)}</td>
+              <td style="${td};padding:9px 6px;color:var(--color-text-muted)">${esc(p2.montantR)}</td>
+              <td style="padding:9px 0 9px 6px"></td>
+            </tr>`).join('')}`;
+}
+
 function tplEncPalier(p, x){
   const { esc } = x;
   const sel = (opts, set) => `<select ${x.C(set)} style="border:1px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:26px;padding:0 6px;font-family:var(--font-ui);font-size:11px;max-width:190px">

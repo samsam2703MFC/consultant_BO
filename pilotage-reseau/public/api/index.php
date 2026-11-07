@@ -9,6 +9,7 @@ declare(strict_types=1);
 require __DIR__ . '/../../src/Db.php';
 require_once __DIR__ . '/../../src/erp_cles.php';
 require __DIR__ . '/../../src/endpoints.php';
+require __DIR__ . '/../../src/budget_crm.php';   // Répartition des charges alignée sur le CRM (07/11/2026)
 require __DIR__ . '/../../src/writes.php';
 require __DIR__ . '/../../src/mkt_types.php';
 require __DIR__ . '/../../src/fbcontrole.php';
@@ -909,6 +910,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/fonds/royalties') { return wr_fonds_royalties(); }
     if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
+    if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- fidélité : les règles du programme, publiées en un envoi

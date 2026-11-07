@@ -322,6 +322,22 @@ tant que la production n'est pas ouverte ; un certificat par société. Code `sr
 API `/api/v1/erp/dimona/*`, tables `hr_dimona_*`, tests `php tests/hr/run.php`. Tout est dans
 **`docs/dimona.md`**.
 
+## Paramètres du budget : Répartition des charges = le Compte de résultat réseau du CRM
+
+Décision du 07/11/2026 (« option A, % validé réseau, corrige les fautes, mets en ligne — le CRM fait foi ; dans le
+Cockpit, c'est pour voir si le franchisé est dans les clous » ; analyse : `docs/maquettes/budget-pnl-crm/`).
+`src/budget_crm.php` lit le Compte de résultat réseau du Recrutement (`impl_pnl`) par sa route d'intégration
+(`GET …/v1/integration/recrutement/compte-resultat`, `erpLireRecrutement`, jeton de service — jamais ses tables) et
+réécrit `budgetCharges` : rubriques, postes (clé `cle` du CRM), libellés, **% réseau** (`pctTheo`, verrouillé) et
+sous-totaux (« Marge brute », « Disponible pour rémunération » = CA − `tout`). Le Cockpit ne garde que le **% validé**
+du réseau (`pct`, seul champ que `PUT /parametres/budgetCharges` écrit encore) ; l'écart = validé − réseau, en bordeaux
+au-dessus du modèle. Les identifiants des lignes sont gardés (charges encodées mois par mois) ; deux lignes du Cockpit
+pour un poste du CRM sont fondues (« Royalties franchise » + « Redevance assistance » → « Royalties franchise &
+assistance », % validés additionnés, charges encodées reportées). Relu à la lecture de `/stores/budgets` toutes les
+dix minutes au plus, et sur « ↻ Relire le CRM » (`POST /budget/charges/crm`) ; « Modifier dans le CRM ↗ ». CRM
+injoignable : la dernière copie reste, le bandeau le dit. Sauvegarde d'avant : `budgetCharges_avant_crm_2026_11` ;
+état : `budgetChargesCrm`. La pondération des jours a sa propre carte (elle n'est pas un taux de charge).
+
 ## Dashboard magasin
 
 Une page à part, `public/dashboard/?shop=4&vue=mois&date=…`, hors SPA : cinq

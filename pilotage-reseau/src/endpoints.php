@@ -5825,6 +5825,9 @@ function ep_stores_etp(): array
 
 function ep_budgets(): array
 {
+    // Répartition des charges = le Compte de résultat réseau du CRM (07/11/2026, src/budget_crm.php) : relu au plus
+    // toutes les dix minutes, avant de rendre le modèle.
+    if (function_exists('bcSyncSiVieux')) { bcSyncSiVieux(); }
     $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
     $slugByTag = levierSlugByTag();
     $out = [];
@@ -5913,6 +5916,10 @@ function ep_budgets(): array
         // Les étapes intermédiaires voyagent avec le modèle : sans elles,
         // l'écran ne saurait pas où poser « marge brute ».
         $out[0]['paliers'] = is_array($mod) && isset($mod['paliers']) ? $mod['paliers'] : [];
+        // D'où vient le modèle : le CRM (structure et % réseau verrouillés, seul le % validé se saisit) ou le Cockpit.
+        $etat = function_exists('bcEtat') ? bcEtat() : [];
+        $out[0]['crm'] = ['actif' => is_array($mod) && ($mod['source'] ?? '') === 'crm', 'lu' => $etat['lu'] ?? null,
+            'erreur' => $etat['erreur'] ?? null, 'modifier' => $etat['modifier'] ?? null];
     }
     return $out;
 }
