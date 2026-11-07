@@ -97,10 +97,10 @@ try {
     $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
-    if ($method === 'GET' && $path === '/benchmarks/cougnou/rapport.html') {
+    if ($method === 'GET' && preg_match('#^/benchmarks/(cougnou|galette)/rapport\.html$#', $path, $m)) {
         if (authEnabled() && !authOk()) { http_response_code(401); exit; }
         header('Content-Type: text/html; charset=utf-8');
-        echo benchmarkCougnouHtml(benchmarkCougnouRapport(($_GET['web'] ?? '1') !== '0'));
+        echo benchmarkHtml([benchmarkRapport($m[1], ($_GET['web'] ?? '1') !== '0')]);
         exit;
     }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
@@ -286,7 +286,7 @@ function route(string $method, string $path): mixed
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             $path === '/benchmarks/cron'               => ep_benchmark_cron(),
             $path === '/benchmarks/verification'       => ep_benchmark_verification(),
-            $path === '/benchmarks/cougnou/rapport'    => ep_benchmark_cougnou_rapport(),
+            (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/reputation'                    => ep_reputation(),
@@ -654,7 +654,7 @@ function route(string $method, string $path): mixed
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- benchmark concurrents (module Benchmark de TFBuddy, src/benchmark.php)
     if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
-    if ($method === 'POST' && $path === '/benchmarks/cougnou/semer') { return wr_benchmark_cougnou_semer(); }
+    if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
     if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
     if ($method === 'POST' && $path === '/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }

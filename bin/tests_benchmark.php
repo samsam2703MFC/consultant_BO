@@ -108,14 +108,14 @@ verifie('témoin nettoyé (concurrent, observation, item)', PanelApi::$comp === 
 verifie('cloisonnement absent signalé', (bool) array_filter($v['alertes'], fn ($a) => str_contains($a, 'Cloisonnement')));
 
 echo "Semis cougnou\n";
-$d = benchmarkCougnouDonnees();
-$sim = benchmarkCougnouSemer(true);
+$d = benchmarkDonnees('cougnou');
+$sim = benchmarkSemer('cougnou', true);
 verifie('simulation : rien n\'est écrit', PanelApi::$comp === [] && $sim['compte']['items'] > 0, json_encode($sim['compte']));
-$r1 = benchmarkCougnouSemer(false);
+$r1 = benchmarkSemer('cougnou', false);
 verifie('semis : sans erreur', $r1['ok'], implode(' | ', $r1['journal']));
 verifie('semis : autant d\'items que simulés', $r1['compte']['items'] === $sim['compte']['items'], $r1['compte']['items'] . ' vs ' . $sim['compte']['items']);
 $nItems = count(PanelApi::$items);
-$r2 = benchmarkCougnouSemer(false);
+$r2 = benchmarkSemer('cougnou', false);
 verifie('rejouer ne crée aucun doublon', count(PanelApi::$items) === $nItems && $r2['compte']['concurrents'] === 0 && $r2['compte']['deja'] > 0, json_encode($r2['compte']));
 $lie = array_filter(PanelApi::$items, fn ($i) => isset($i['my_product_id']));
 verifie('items rattachés à nos produits (my_product_id)', count($lie) > 0);
@@ -127,19 +127,36 @@ verifie('€/kg : la promo prime', benchmarkPrixKg(['price' => 10, 'promo_price'
 verifie('€/kg : sans poids, rien', benchmarkPrixKg(['price' => 3]) === null);
 verifie('médiane paire', benchmarkMediane([1, 3, 2, 4]) === 2.5);
 verifie('date sûre pour le SQL de l\'API', BenchmarkApi::date("2026-11-07' OR 1=1") === null && BenchmarkApi::date('2026-02-30') === null && BenchmarkApi::date('2026-11-07') === '2026-11-07');
-$rap = benchmarkCougnouRapport(false);
+$rap = benchmarkRapport('cougnou', false);
 verifie('rapport : source API quand l\'API répond', $rap['source'] === 'api', $rap['source']);
-verifie('rapport : notre prix au kilo calculé', is_float($rap['ref_eur_kg']) && $rap['ref_eur_kg'] > 5);
+verifie('rapport : notre prix au kilo calculé', is_float($rap['ref']) && $rap['ref'] > 5);
 verifie('rapport : relevés dédoublonnés entre magasins', count($rap['concurrents']) <= count(array_merge(...array_map(fn ($c) => $c['items'], $d['concurrents']))));
-verifie('rapport HTML rendu', str_contains(benchmarkCougnouHtml($rap), 'Prix au kilo'));
+verifie('rapport HTML rendu', str_contains(benchmarkHtml([$rap]), '€/kg'));
+
+echo "Galette des rois\n";
+$nAvant = count(PanelApi::$comp);
+$g1 = benchmarkSemer('galette', false);
+verifie('semis galette : sans erreur', $g1['ok'], implode(' | ', $g1['journal']));
+verifie('les concurrents communs (Aldi, Colruyt…) ne sont pas recréés', $g1['compte']['concurrents'] < count(benchmarkDonnees('galette')['concurrents']) * 4, json_encode($g1['compte']));
+$g2 = benchmarkSemer('galette', false);
+verifie('rejouer la galette ne crée aucun doublon', $g2['compte']['items'] === 0 && $g2['compte']['deja'] > 0, json_encode($g2['compte']));
+verifie('Ø 24 : 24,90 € reste 24,90 €', benchmarkPrixDiametre(['price' => 24.9, 'unit_type' => 'cm', 'unit_size' => 24], 24) === 24.9);
+verifie('Ø 28 à 32 € ramené à Ø 24 = 23,51 €', benchmarkPrixDiametre(['price' => 32, 'unit_type' => 'cm', 'unit_size' => 28], 24) === 23.51);
+verifie('galette au poids : pas de valeur au diamètre', benchmarkPrixDiametre(['price' => 5.5, 'unit_type' => 'g', 'unit_size' => 400], 24) === null);
+$rg = benchmarkRapport('galette', false);
+verifie('rapport galette : référence 24,90 € à Ø 24', $rg['ref'] === 24.9 && $rg['unite'] === '€ ramené à Ø 24 cm', json_encode([$rg['ref'], $rg['unite']]));
+verifie('rapport galette : seuls les items galette', !array_filter($rg['concurrents'], fn ($l) => stripos($l['produit'], 'cougnou') !== false));
+verifie('mail à deux familles', str_contains(benchmarkHtml([$rap, $rg]), 'galette des rois'));
 
 echo "Routine\n";
 $tz = new DateTimeZone('Europe/Brussels');
-verifie('lundi 7 h : passe', benchmarkCronDu(new DateTime('2026-03-02 07:05', $tz)));
-verifie('jeudi 7 h hors saison : non', !benchmarkCronDu(new DateTime('2026-03-05 07:05', $tz)));
-verifie('jeudi 7 h en saison (novembre) : passe', benchmarkCronDu(new DateTime('2026-11-12 07:05', $tz)));
-verifie('jeudi 7 h début janvier : passe', benchmarkCronDu(new DateTime('2026-01-01 07:05', $tz)));
-verifie('lundi 8 h : non', !benchmarkCronDu(new DateTime('2026-03-02 08:05', $tz)));
+$du = fn (string $q) => benchmarkFamillesDues(new DateTime($q, $tz));
+verifie('lundi 7 h : toutes les familles', $du('2026-03-02 07:05') === ['cougnou', 'galette']);
+verifie('jeudi 7 h hors saison : rien', $du('2026-03-05 07:05') === []);
+verifie('jeudi 12 novembre : cougnou seul', $du('2026-11-12 07:05') === ['cougnou']);
+verifie('jeudi 3 décembre : cougnou et galette', $du('2026-12-03 07:05') === ['cougnou', 'galette']);
+verifie('jeudi 14 janvier : galette seule', $du('2027-01-14 07:05') === ['galette']);
+verifie('lundi 8 h : rien', $du('2026-03-02 08:05') === []);
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko === 0 ? 0 : 1);

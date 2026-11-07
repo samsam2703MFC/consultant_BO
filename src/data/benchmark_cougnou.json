@@ -1,13 +1,34 @@
 {
+ "famille": "cougnou",
+ "libelle": "cougnou",
+ "mesure": "poids",
+ "motif": "cougn|koekebr|kerstkoek",
+ "saison": {
+  "du": "1101",
+  "au": "0106"
+ },
  "releve": "2026-11-07",
  "site": {
   "url": "https://atelierby.be",
-  "pageGamme": "/gammes/gamme-noel-nouvel-an/"
+  "page": "/gammes/gamme-noel-nouvel-an/",
+  "pageNl": "/nl/gammas/gamme-noel-nouvel-an/",
+  "motCle": "cougnou",
+  "motCleNl": "koekebrood",
+  "motifTaille": "\\d{2,4}\\s*g\\b",
+  "libelleTaille": "Poids affiché (g) pour comparer au kilo",
+  "minTaille": 3
  },
+ "requetesGoogle": [
+  "cougnou {ville}",
+  "boulangerie {ville}"
+ ],
+ "requetesGoogleNl": [
+  "koekebrood {ville}"
+ ],
  "nous": {
-  "poidsEstime_g": 220,
-  "poidsConfirme": false,
-  "poidsNote": "Poids non publié : estimé à ~220 g d'après le coût de recette (Cougnou Nature 400 g = 1,79 € ; Cougnou Sucre = 0,98 €). À confirmer par la fiche technique (réglage benchmark.poidsCougnou).",
+  "tailleRef": 220,
+  "tailleConfirmee": false,
+  "tailleNote": "Poids non publié : estimé à ~220 g d'après le coût de recette (Cougnou Nature 400 g = 1,79 € ; Cougnou Sucre = 0,98 €). À confirmer par la fiche technique (réglage benchmark.poidsCougnou).",
   "correspondance": {
    "sucre": 4100001,
    "raisin": 4100002,
@@ -20,37 +41,37 @@
     "id": 4100001,
     "nom": "Cougnou - Sucre",
     "prix": 2.9,
-    "individuel": true
+    "reference": true
    },
    {
     "id": 4100002,
     "nom": "Cougnou - Sucre & Raisin",
     "prix": 2.9,
-    "individuel": true
+    "reference": true
    },
    {
     "id": 4100003,
     "nom": "Cougnou - Sucre & Chocolat",
     "prix": 2.9,
-    "individuel": true
+    "reference": true
    },
    {
     "id": 4100016,
     "nom": "Cougnou - Sucre & Cannelle",
     "prix": 2.9,
-    "individuel": true
+    "reference": true
    },
    {
     "id": null,
     "nom": "Cougnou 4+1 (5 pièces)",
     "prix": 11.6,
-    "poids_g": 1100
+    "taille": 1100
    },
    {
     "id": 6700139,
     "nom": "Cougnou Nature - 400 g",
     "prix": 0,
-    "poids_g": 400
+    "taille": 400
    }
   ],
   "boutiques": [
