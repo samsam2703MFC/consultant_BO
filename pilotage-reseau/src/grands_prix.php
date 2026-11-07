@@ -232,6 +232,8 @@ function gpClassement(array $gp, ?string $auj = null): array
     if ($sa['etat'] === 'a_venir') { return $res; }
     $mois = gpMois($gp['du'], $gp['au'], $auj);
     $dansScope = static fn (string $sid) => $gp['portee'] !== 'magasin' || $sid === (string) $gp['shop'];
+    // Un franchisé ne court pas pour un grand prix (07/11/2026, il n'a droit à aucune prime) ; un magasin, si.
+    $horsCourse = static fn (int $id): bool => function_exists('venteEstFranchise') && venteEstFranchise($id);
     $fr = static fn (float $v, int $k = 0) => number_format($v, $k, ',', ' ');
     // Le minimum monte avec la saison : à mi-saison, la moitié des heures suffit pour être classée.
     $seuil = $gp['seuil'] !== null ? (int) round($gp['seuil'] * ($sa['etat'] === 'finie' ? 1.0 : $sa['part'])) : 0;
@@ -253,7 +255,7 @@ function gpClassement(array $gp, ?string $auj = null): array
         $emps = function_exists('venteEmployes') ? venteEmployes() : [];
         foreach ($gp['defi'] === 'b2b' ? $tk['b2b'] : $tk['max'] as $id => $v) {
             $sid = (string) ($cu[$id]['s'] ?? ($emps[(int) $id]['shop'] ?? ''));
-            if ($v <= 0 || !$dansScope($sid)) { continue; }
+            if ($v <= 0 || !$dansScope($sid) || $horsCourse((int) $id)) { continue; }
             $L[] = ['id' => (string) $id, 'nom' => (string) ($cu[$id]['n'] ?? ($emps[(int) $id]['nom'] ?? ('Vendeuse ' . $id))), 'shop' => $sid, 'magasin' => $nomDe[$sid] ?? '',
                 'valeur' => $v, 'txt' => $fr($v, $gp['defi'] === 'ticket' ? 2 : 0) . ' €' . ($gp['defi'] === 'b2b' ? ' HT' : ''), 'detail' => ''];
         }
@@ -266,7 +268,7 @@ function gpClassement(array $gp, ?string $auj = null): array
             $avant = gpCumul($moisAvant)['v'];
         }
         foreach ($cu['v'] as $id => $x) {
-            if (!$dansScope($x['s'])) { continue; }
+            if (!$dansScope($x['s']) || $horsCourse((int) $id)) { continue; }
             if ($gp['defi'] === 'vendeuse') {
                 if ($x['h'] <= 0 || $x['ca'] <= 0) { continue; }
                 if ($x['h'] < $seuil) { $res['horsSeuil']++; $res['sous'][$id] = ['a' => round($x['h']), 'seuil' => $seuil]; continue; }
