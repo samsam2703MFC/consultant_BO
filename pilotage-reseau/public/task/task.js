@@ -59,6 +59,21 @@
     });
   }
   if (EMBED && window.ResizeObserver) { new ResizeObserver(signalerHauteur).observe(document.getElementById('tk')); }
+  // Intégrée, le cockpit dit où il en est de son défilement (tkDefile, en px depuis le haut du cadre) : le sommaire
+  // de la vue Document le suit, sans sortir de sa colonne.
+  let defileCockpit = 0;
+  function placerSommaire() {
+    if (!EMBED) { return; }
+    const som = document.querySelector('.dc-som'); const dc = document.querySelector('.dc');
+    if (!som || !dc) { return; }
+    const haut = dc.getBoundingClientRect().top + window.scrollY;
+    const y = Math.max(0, Math.min(dc.offsetHeight - som.offsetHeight, defileCockpit + 12 - haut));
+    som.style.transform = y > 0 ? `translateY(${Math.round(y)}px)` : '';
+  }
+  window.addEventListener('message', ev => {
+    if (ev.origin !== location.origin || !ev.data || typeof ev.data.tkDefile !== 'number') { return; }
+    defileCockpit = ev.data.tkDefile; placerSommaire();
+  });
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
@@ -1248,6 +1263,7 @@
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
     }
     signalerHauteur();   // une fenêtre ouverte ou fermée ne change pas la taille du contenu : on mesure à chaque rendu
+    placerSommaire();
   }
 
   /* --- actions ------------------------------------------------------------ */

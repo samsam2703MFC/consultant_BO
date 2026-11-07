@@ -9244,6 +9244,20 @@ class App {
     }
     if (!this._ctEcoute) {
       this._ctEcoute = true;
+      // Le cockpit dit au cadre où il en est de son défilement : le sommaire de la vue Document reste à l'écran
+      // (dans un cadre, « position: sticky » ne voit pas le défilement de la page qui le contient).
+      let attente = 0;
+      document.addEventListener('scroll', () => {
+        if (this.state.screen !== 'cadreTaches' || attente) { return; }
+        attente = requestAnimationFrame(() => {
+          attente = 0;
+          const cadre = document.querySelector('iframe[data-ct]');
+          if (!cadre || !cadre.contentWindow) { return; }
+          const sc = document.getElementById('main-scroll');
+          const haut = sc && sc.scrollHeight > sc.clientHeight + 2 ? sc.getBoundingClientRect().top : 0;
+          try { cadre.contentWindow.postMessage({ tkDefile: Math.max(0, Math.round(haut - cadre.getBoundingClientRect().top)) }, location.origin); } catch (e) { /* cadre pas prêt */ }
+        });
+      }, { capture: true, passive: true });
       window.addEventListener('message', ev => {
         if (ev.origin !== location.origin || !ev.data || this.state.screen !== 'cadreTaches') { return; }
         const cadre = document.querySelector('iframe[data-ct]');

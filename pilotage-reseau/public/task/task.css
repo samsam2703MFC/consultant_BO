@@ -219,7 +219,7 @@ html.tk-emb .tk-voile{position:absolute;inset:0 0 auto 0;min-height:100%;padding
 .dc{display:grid;grid-template-columns:270px minmax(0,1fr);gap:14px;align-items:start}
 @media (max-width:1100px){.dc{grid-template-columns:minmax(0,1fr)}.dc-som{display:none}}
 .dc-som{padding:12px 10px 14px;position:sticky;top:12px;max-height:calc(100vh - 24px);overflow:auto}
-html.tk-emb .dc-som{position:static;max-height:none}
+html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s ease-out;will-change:transform}
 .dc-som-t{padding:2px 8px 4px}
 .dc-som-g{font:400 9.5px var(--font-ui);letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:12px 8px 4px}
 .dc-som-i{display:flex;gap:7px;align-items:baseline;width:100%;text-align:left;border:none;background:none;border-radius:7px;padding:6px 8px;font:400 12px var(--font-ui);color:var(--ink);cursor:pointer;white-space:nowrap;overflow:hidden}
