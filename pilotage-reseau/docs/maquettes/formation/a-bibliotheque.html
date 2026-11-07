@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Les standards du réseau</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+/* A — Les standards : les 25 SOP rangées dans nos bases, une carte par SOP, en FR et en NL (la langue d'origine
+   est notée, l'autre traduite puis relue). Chaque SOP fait partie d'une compétence à acquérir. Les standards valent
+   pour tout le réseau : la progression est celle des 4 magasins. */
+const S = FO.sops, R = FO.reseau;
+const nbVal = S.filter(s => s.statut).length;
+const aRelire = S.filter(s => s.trad.FR === 'à relire' || s.trad.NL === 'à relire').length;
+const nbEt = S.reduce((a, s) => a + (s.nbEtapes || 0), 0);
+// La progression réseau d'une SOP : Halle (fictive, détaillée) + les autres magasins au prorata de leur taux (fictif).
+const res = id => { const h = FO.halle.parSop[id] || { v: 0, n: 0 }; let v = h.v, n = h.n;
+  R.slice(1).forEach(m => { const k = Math.round(h.n * m.equipe / 7); n += k; v += Math.round(k * m.taux / 100); }); return { v, n }; };
+const kpis = `<div class="kpis">
+  <div class="kpi"><div class="k">Standards du réseau</div><div class="v">${S.length - nbVal}<small> + ${nbVal} à valider</small></div><div class="s">${nbEt} étapes · ${FO.competences.length} compétences · 4 familles</div></div>
+  <div class="kpi"><div class="k">Compétences acquises · réseau</div><div class="v att">${Math.round(R.reduce((a, m) => a + m.taux * m.equipe, 0) / R.reduce((a, m) => a + m.equipe, 0))} %</div><div class="s">${R.map(m => m.nom + ' ' + m.taux + ' %').join(' · ')}</div></div>
+  <div class="kpi"><div class="k">FR et NL</div><div class="v">${S.length} / ${S.length}</div><div class="s">${S.length - aRelire} relues dans les deux langues · <span class="att">${aRelire} traductions à relire</span></div></div>
+  <div class="kpi"><div class="k">Écarts entre SOP</div><div class="v ok">7 / 7</div><div class="s">tranchés le 05/11 · corrections reportées dans les SOP</div></div>
+</div>`;
+const filtres = `<div class="filtres"><em>Poste</em><span class="on">Tous</span><span>Vente · comptoir</span><span>Cuisson</span><span>Production</span><span>Nettoyage</span>
+  <span class="sep">|</span><em>Moment</em><span>Ouverture</span><span>Journée</span><span>Après-midi</span><span>Fermeture</span>
+  <span class="sep">|</span><em>Compétence</em><span>Toutes ▾</span>
+  <span class="sep">|</span><span>📷 Illustrées</span><span style="border-color:#E8C27A;color:#8a5a00">Traduction à relire · ${aRelire}</span><span style="border-color:#D97706;color:#8a5a00">À valider · ${nbVal}</span></div>`;
+const carte = s => {
+  const r = res(s.id), pct = r.n ? Math.round(r.v / r.n * 100) : 0;
+  return `<div class="sop ${s.statut ? 'vl' : ''}">
+    <div class="ty"><span class="pill">${esc(s.type)}</span>${trad(s)}<span class="lg">v${esc(s.version)}</span>${s.statut ? '<span class="pill att">À valider</span>' : ''}${s.revoir ? '<span class="pill ko">nouvelle version</span>' : ''}${s.deplacee ? '<span class="pill">déplacée ' + esc(s.deplacee) + '</span>' : ''}</div>
+    <div class="tt">${esc(s.court)}</div>
+    <div class="ob">${esc(s.objectif)}</div>
+    ${s.comp ? `<div><span class="comp">${esc(s.comp)}</span></div>` : ''}
+    ${r.n && !s.statut ? `<div class="eq"><span>Réseau</span><div class="prog"><i style="width:${pct}%" class="${pct < 40 ? 'att' : ''}"></i></div><span><b style="color:var(--color-text)">${r.v}/${r.n}</b> vus faire</span></div>` : s.statut ? '<div class="eq"><span>Lisible, sans validation tant qu’elle est à valider</span></div>' : ''}
+    <div class="pd"><span><b>${s.nbEtapes || '—'}</b> étapes</span>${s.photos ? `<span>📷 ${s.photos}</span>` : ''}<span class="r" style="white-space:nowrap">${esc(s.code || '')}</span></div>
+  </div>`;
+};
+const familles = Object.keys(FAM).map(d => {
+  const l = S.filter(s => s.dossier === d);
+  return `<div class="famille"><div class="fh"><span class="fam ${FAM[d].c}" style="font-size:11px;padding:3px 8px">${d}</span><h2>${FAM[d].nom}</h2><span>${l.length} SOP · ${l.reduce((a, s) => a + (s.nbEtapes || 0), 0)} étapes</span></div>
+    <div class="cartes">${l.map(carte).join('')}</div></div>`;
+}).join('');
+const leg = `<div class="mini" style="margin:-4px 2px 14px"><span class="lg on">FR</span> <span class="lg on">NL</span> langue relue ou d’origine · <span class="lg ar">NL ·</span> traduite à la reprise, à relire · une SOP se lit sur la tablette du poste, en FR ou en NL, et s’imprime en PDF dans les deux langues</div>`;
+coque('bib', `<div class="titre"><h1>Les standards du réseau</h1><span class="ss">les 25 SOP reprises du Drive et rangées dans nos bases · une carte par SOP · chaque SOP en FR et en NL · valables pour les 4 magasins</span></div>${kpis}${filtres}${leg}${familles}`,
+  { boutons: ['Nouvelle SOP', 'Imprimer le manuel'], prim: 0 });
+</script></body></html>

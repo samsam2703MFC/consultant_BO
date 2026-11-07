@@ -1,0 +1,29 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zadania zespołu{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Zadania zespołu</h3>
+            <p class="text-subtitle text-muted mb-0">Kto co zrobił › Tablica · zadania stanowisk ERP, grup produkcji (tablety) i osób — zrobione / niezrobione, przypomnienia (osoba : dzwonek + e-mail ; grupa : komunikat na tablecie).</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/execution"><i class="bi bi-grid-3x3"></i> Kto co zrobił (dni)</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Zadania zespołu [232] (makiety 7 i 8) : App\Services\Organization\TeamTasksService::board (filtry, kafelki, sekcje) i remind.
+   Widok budowany w assets/js/organization/team-tasks.js ; filtr = GET /ajax/organization/team-tasks?view=&offset=&group=&person=&state=&freq=&category=&q= #}
+<section class="section" id="ttApp">
+    <div class="kw"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="ttBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/team-tasks.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -1,0 +1,826 @@
+{
+ "famille": "top10",
+ "libelle": "top 10 du réseau",
+ "mesure": "piece",
+ "motif": "",
+ "releve": "2026-11-07",
+ "note": "Top 10 des quantités vendues dans le réseau, 03/08 → 07/11/2026 (GET /analyse/produits?mois=3). Prix comparés à la pièce.",
+ "nous": {
+  "produits": [
+   {
+    "id": 1610009,
+    "nom": "Pain au Chocolat Nappé",
+    "categorie": 16100
+   },
+   {
+    "id": 1620005,
+    "nom": "Mini - Croissant",
+    "categorie": 16200
+   },
+   {
+    "id": 1620003,
+    "nom": "Mini - Chocolat",
+    "categorie": 16200
+   },
+   {
+    "id": 1610004,
+    "nom": "Pain au Chocolat",
+    "categorie": 16100
+   },
+   {
+    "id": 1610006,
+    "nom": "Croissant",
+    "categorie": 16100
+   },
+   {
+    "id": 1300012,
+    "nom": "Sandwich",
+    "categorie": 13000
+   },
+   {
+    "id": 1300003,
+    "nom": "Baguette Tradition 500 g.",
+    "categorie": 13000
+   },
+   {
+    "id": 1300001,
+    "nom": "Pistolet à l'Ancienne",
+    "categorie": 13000
+   },
+   {
+    "id": 1200003,
+    "nom": "Pain Doré",
+    "categorie": 12000
+   },
+   {
+    "id": 1200002,
+    "nom": "Pain 10 Céréales",
+    "categorie": 12000
+   }
+  ],
+  "correspondance": {
+   "1610009": 1610009,
+   "1620005": 1620005,
+   "1620003": 1620003,
+   "1610004": 1610004,
+   "1610006": 1610006,
+   "1300012": 1300012,
+   "1300003": 1300003,
+   "1300001": 1300001,
+   "1200003": 1200003,
+   "1200002": 1200002
+  }
+ },
+ "concurrents": [
+  {
+   "nom": "Aldi",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.aldi.be",
+   "items": [
+    {
+     "name_raw": "Croissant au beurre",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.65,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://www.aldi.be/fr/p/croissant-1104-1-0.article.html",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pain au chocolat (6 pc à 1,55 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.26,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://www.aldi.be/fr/produits/brood-bakkerij-en-zelf-bakken/koffiekoeken-en-gebak.html",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Baguette artisanale",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.29,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://www.aldi.be/fr/produits/brood-bakkerij-en-zelf-bakken/brood.html",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Petits pains au chocolat surgelés (8 pc à 2,75 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.34,
+     "my_product_id": 1620003,
+     "my_category_id": 16200,
+     "source": "https://www.aldi.be/fr/produits/produits-surgeles/patisseries-et-viennoiseries-surgelees.html",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Carrefour",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.carrefour.be",
+   "items": [
+    {
+     "name_raw": "Croissant au beurre 80 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.15,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://www.carrefour.be/fr/vb/croissant-achat",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pain au chocolat avec beurre 70 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.99,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://www.carrefour.be/fr/pain-au-chocolat-avec-beurre-70/06990401.html",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Baguette blanc 290 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.79,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://www.carrefour.be/fr/pains-toasts-et-patisserie/pains-et-biscottes/baguettes",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pain carré blanc 800 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.75,
+     "my_product_id": 1200003,
+     "my_category_id": 12000,
+     "source": "https://www.carrefour.be/fr/pain-carre-blanc-800g/05495021.html",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pain multicéréales à l'ancienne 600 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.29,
+     "my_product_id": 1200002,
+     "my_category_id": 12000,
+     "source": "https://www.carrefour.be/fr/pains-toasts-et-patisserie/pains-et-biscottes/pains-classiques",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Colruyt (Boni)",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.colruyt.be",
+   "items": [
+    {
+     "name_raw": "Croissants Boni préemballés (12 pc à 3,67 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.31,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://www.colruyt.be/fr/produits/30705",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Vraie baguette française 350 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.59,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://www.colruyt.be/fr/produits/21087",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Everyday pain blanc tranché 800 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.89,
+     "my_product_id": 1200003,
+     "my_category_id": 12000,
+     "source": "https://www.colruyt.be/fr/produits/29921",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Delhaize",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.delhaize.be",
+   "items": [
+    {
+     "name_raw": "Carré blanc préemballé 800 g (2,31 €/kg)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.85,
+     "my_product_id": 1200003,
+     "my_category_id": 12000,
+     "source": "https://www.delhaize.be/fr/shop/Boulangerie-et-patisserie/Pain-frais-baguettes-et-petits-pains/Pain-frais/Pain-blanc/Carre-Blanc-Pre-emballe/p/S2026021000934070000",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Lidl",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.lidl.be",
+   "items": [
+    {
+     "name_raw": "Pain au chocolat XXL 130 g (2 pour 1,49 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.75,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://www.lidl.be/p/fr-BE/pain-au-chocolat-xxl/p10024649",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pistolet blanc 80 g (6 pc à 1,17 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.2,
+     "my_product_id": 1300012,
+     "my_category_id": 13000,
+     "source": "https://www.lidl.be/p/fr-BE/pistolet-blanc/p10023979",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Albert Heijn",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.ah.be",
+   "items": [
+    {
+     "name_raw": "Petit roomboter croissant",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.85,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://www.ah.be/producten/product/wi365994/petit-roomboter-croissant",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Chocoladebroodje 80 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.69,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://www.ah.be/producten/product/wi231924/chocoladebroodje",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Mini roomboter croissants (8 pc à 2,19 €)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.27,
+     "my_product_id": 1620005,
+     "my_category_id": 16200,
+     "source": "https://www.ah.be/producten/product/wi236184/mini-roomboter-croissants",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Meergranen brood ovenvers",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.89,
+     "my_product_id": 1200002,
+     "my_category_id": 12000,
+     "source": "https://www.ah.be/producten/bakkerij-en-banket/brood/ovenvers/meergranen-brood-ovenvers",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "magasins": [
+    2,
+    3,
+    5
+   ],
+   "ville": {
+    "2": "Wavre",
+    "3": "Gosselies",
+    "5": "Gembloux"
+   },
+   "distance_km": {
+    "2": 8,
+    "3": 3,
+    "5": 12
+   },
+   "site": "https://lepaindantan.be",
+   "items": [
+    {
+     "name_raw": "Croissant pur beurre AOP",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.7,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://lepaindantan.be/en/bakery/viennoiseries",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pain au chocolat pur beurre AOP",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.8,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://lepaindantan.be/en/bakery/viennoiseries/pure-butter-chocolate-croissant-pdo",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pain au chocolat fondant (équivalence à confirmer)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.95,
+     "my_product_id": 1610009,
+     "my_category_id": 16100,
+     "source": "https://lepaindantan.be/en/bakery/viennoiseries",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Mini croissant pur beurre",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.1,
+     "my_product_id": 1620005,
+     "my_category_id": 16200,
+     "source": "https://lepaindantan.be/en/bakery/viennoiseries/pure-butter-mini-croissant",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Mini pain au chocolat artisanal",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.15,
+     "my_product_id": 1620003,
+     "my_category_id": 16200,
+     "source": "https://lepaindantan.be/en/bakery/viennoiseries",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Baguette tradition française",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.3,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://lepaindantan.be/en/bakery/baguettes-and-small-rolls",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pain sandwich mou, mie blanche",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.9,
+     "my_product_id": 1300012,
+     "my_category_id": 13000,
+     "source": "https://lepaindantan.be/en/bakery/baguettes-and-small-rolls",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pistolet d'Antan",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.85,
+     "my_product_id": 1300001,
+     "my_category_id": 13000,
+     "source": "https://lepaindantan.be/en/bakery/baguettes-and-small-rolls",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pistolet tradition française",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.0,
+     "my_product_id": 1300001,
+     "my_category_id": 13000,
+     "source": "https://lepaindantan.be/en/bakery/baguettes-and-small-rolls",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Carré blanc (poids non affiché)",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.3,
+     "my_product_id": 1200003,
+     "my_category_id": 12000,
+     "source": "https://lepaindantan.be/en/bakery/white-breads",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pain 7 céréales",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.9,
+     "my_product_id": 1200002,
+     "my_category_id": 12000,
+     "source": "https://lepaindantan.be/en/bakery/grey-bread",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "nom": "Panos",
+   "type": "Chaîne",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.panos.be",
+   "note": "prix d'un blog comparatif, fiabilité moyenne",
+   "items": [
+    {
+     "name_raw": "Croissant beurre",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.8,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://blog.iambeezy.app/fr/panos-paul-boulangerie-comparatif-belgique-2026/",
+     "vu_le": "article de février 2026"
+    },
+    {
+     "name_raw": "Pain au chocolat",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.1,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://blog.iambeezy.app/fr/panos-paul-boulangerie-comparatif-belgique-2026/",
+     "vu_le": "article de février 2026"
+    }
+   ]
+  },
+  {
+   "nom": "Paul",
+   "type": "Chaîne",
+   "magasins": [
+    3
+   ],
+   "ville": {
+    "3": "Gosselies"
+   },
+   "site": "https://www.paul-belgium.be",
+   "note": "prix d'un blog comparatif, fiabilité moyenne",
+   "items": [
+    {
+     "name_raw": "Croissant beurre",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.4,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://blog.iambeezy.app/fr/panos-paul-boulangerie-comparatif-belgique-2026/",
+     "vu_le": "article de février 2026"
+    },
+    {
+     "name_raw": "Pain au chocolat",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.8,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://blog.iambeezy.app/fr/panos-paul-boulangerie-comparatif-belgique-2026/",
+     "vu_le": "article de février 2026"
+    }
+   ]
+  },
+  {
+   "nom": "Kiekebich (Anderlecht)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Anderlecht"
+   },
+   "distance_km": {
+    "4": 12
+   },
+   "site": "https://kiekebich.be",
+   "items": [
+    {
+     "name_raw": "Croissant",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.1,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://kiekebich.be/order/",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Couque au chocolat",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.3,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://kiekebich.be/order/",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Baguette tradition",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.1,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://kiekebich.be/order/",
+     "vu_le": "lu le 2026-11-07"
+    },
+    {
+     "name_raw": "Pistolet",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.05,
+     "my_product_id": 1300012,
+     "my_category_id": 13000,
+     "source": "https://kiekebich.be/order/",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "nom": "Bakkerij Bossuyt (Dilbeek)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Dilbeek"
+   },
+   "distance_km": {
+    "4": 15
+   },
+   "site": "https://bestelonline.be/be-nl/bakkerijbossuyt-dilbeek",
+   "items": [
+    {
+     "name_raw": "Croissant",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.0,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://bestelonline.be/be-nl/bakkerijbossuyt-dilbeek/product/384643/croissant",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Chocoladekoek zonder iets op",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.0,
+     "my_product_id": 1610004,
+     "my_category_id": 16100,
+     "source": "https://bakeronline.be/be-en/bakkerijbossuyt-dilbeek/product/384647/chocoladekoek-zonder-iets-op",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Chocoladekoek glazuur",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.0,
+     "my_product_id": 1610009,
+     "my_category_id": 16100,
+     "source": "https://bestelonline.be/be-nl/bakkerijbossuyt-dilbeek/product/384646/chocoladekoek-glazuur",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Boerenbrood 800 g",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 3.2,
+     "my_product_id": 1200003,
+     "my_category_id": 12000,
+     "source": "https://bakeronline.be/be-fr/bakkerijbossuyt-dilbeek/product/384658/boerenbrood",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Wittamer",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Bruxelles"
+   },
+   "distance_km": {
+    "4": 15
+   },
+   "site": "https://www.wittamer.com",
+   "note": "pâtissier haut de gamme",
+   "items": [
+    {
+     "name_raw": "Croissant",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.2,
+     "my_product_id": 1610006,
+     "my_category_id": 16100,
+     "source": "https://www.wittamer.com/en/produit/croissant/",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "nom": "Les Trésors du Pain",
+   "type": "Artisan",
+   "magasins": [
+    2
+   ],
+   "ville": {
+    "2": "Mont-Saint-Guibert"
+   },
+   "distance_km": {
+    "2": 3
+   },
+   "site": "https://bakeronline.be/be-fr/les-tresors-du-pain",
+   "items": [
+    {
+     "name_raw": "Pain au chocolat nappé",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.0,
+     "my_product_id": 1610009,
+     "my_category_id": 16100,
+     "source": "https://bakeronline.be/be-fr/les-tresors-du-pain/product/706618/pain-au-chocolat-nappe",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Laurent Dumont (Wavre)",
+   "type": "Artisan",
+   "magasins": [
+    2
+   ],
+   "ville": {
+    "2": "Wavre"
+   },
+   "distance_km": {
+    "2": 9
+   },
+   "site": "https://bakeronline.be/be-en/laurent-dumont-wavre",
+   "note": "pages produit désormais en 404",
+   "items": [
+    {
+     "name_raw": "Pistolet à l'ancienne",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.7,
+     "my_product_id": 1300001,
+     "my_category_id": 13000,
+     "source": "https://bakeronline.be/be-en/laurent-dumont-wavre/product/511321/pistolet-a-lancienne",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Pain chocolat nappé",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 1.9,
+     "my_product_id": 1610009,
+     "my_category_id": 16100,
+     "source": "https://bakeronline.be/be-fr/laurent-dumont-wavre/product/423095/pain-chocolat-nappe",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  },
+  {
+   "nom": "Boulangerie Giot (Lasne)",
+   "type": "Artisan",
+   "magasins": [
+    2
+   ],
+   "ville": {
+    "2": "Lasne"
+   },
+   "distance_km": {
+    "2": 15
+   },
+   "site": "https://www.dhnet.be",
+   "items": [
+    {
+     "name_raw": "Baguette",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.1,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://www.dhnet.be/conso/consommation/2025/09/03/baguettes-a-moins-dun-euro-la-grande-distribution-est-dans-le-viseur-des-boulangers-cest-de-la-concurrence-deloyale-OOLBF2DGAVEBZDUKSS2MKUERGY/",
+     "vu_le": "article DH du 03/09/2025"
+    }
+   ]
+  },
+  {
+   "nom": "Gerlache (Ciney)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Ciney"
+   },
+   "site": "https://bakeronline.be/be-en/gerlache",
+   "items": [
+    {
+     "name_raw": "La baguette rustique",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 2.1,
+     "my_product_id": 1300003,
+     "my_category_id": 13000,
+     "source": "https://bakeronline.be/be-en/gerlache/product/49448/la-baguette-rustique",
+     "vu_le": "index moteur, non daté"
+    },
+    {
+     "name_raw": "Le pistolet tradition",
+     "unit_type": "piece",
+     "unit_size": 1,
+     "price": 0.9,
+     "my_product_id": 1300001,
+     "my_category_id": 13000,
+     "source": "https://bakeronline.be/be-fr/gerlache-Celles/product/49323/le-pistolet-tradition",
+     "vu_le": "index moteur, non daté"
+    }
+   ]
+  }
+ ]
+}

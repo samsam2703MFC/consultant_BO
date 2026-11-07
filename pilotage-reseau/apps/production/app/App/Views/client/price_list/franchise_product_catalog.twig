@@ -1,0 +1,113 @@
+{% extends "layouts/base.twig" %}
+
+{% block content %}
+{% set diagnostic_labels = {
+    'ok': 'Poprawny',
+    'inactive_matched': 'Wyłączony — zgodny',
+    'activity_mismatch': 'Niezgodna dostępność',
+    'inactive_supplier': 'Wyłączony u dostawcy',
+    'missing_price': 'Brak ceny',
+    'zero_price': 'Cena zero',
+    'missing_sku': 'Brak SKU',
+    'invalid_payload': 'Nieprawidłowe dane'
+} %}
+{% set diagnostic_classes = {
+    'ok': 'bg-success',
+    'inactive_matched': 'bg-secondary',
+    'activity_mismatch': 'bg-warning text-dark',
+    'inactive_supplier': 'bg-secondary',
+    'missing_price': 'bg-warning text-dark',
+    'zero_price': 'bg-warning text-dark',
+    'missing_sku': 'bg-danger',
+    'invalid_payload': 'bg-danger'
+} %}
+
+
+<style>
+    #franchise-products-table { font-size: .8rem; }
+    #franchise-products-table thead th { background: #f8f9fa; border-bottom: 1px solid #dee2e6; color: #6c757d; font-size: .7rem; font-weight: 600; letter-spacing: .05em; padding: .45rem .6rem; text-transform: uppercase; white-space: nowrap; }
+    #franchise-products-table tbody td { padding: .5rem .6rem; vertical-align: middle; }
+    .catalog-stat { min-width: 135px; }
+    .catalog-stat .value { font-size: 1.35rem; font-weight: 600; line-height: 1.1; }
+    .shop-details td { background: #f8f9fa; }
+    .shop-details-table { font-size: .76rem; }
+    .shop-details-table th { color: #6c757d; font-weight: 600; text-transform: uppercase; }
+</style>
+
+<div class="page-heading">
+    <div class="page-title">
+        <div class="row align-items-center">
+            <div class="col-12 col-md-7 order-md-1 order-last">
+                <h3 class="mb-0">Produkty franczyzowe</h3>
+                <p class="text-subtitle text-muted mb-0">Zbiorczy widok najnowszych poprawnych snapshotów wszystkich klientów franczyzowych.</p>
+            </div>
+            <div class="col-12 col-md-5 order-md-2 order-first">
+                <nav aria-label="breadcrumb" class="breadcrumb-header float-start float-lg-end">
+                    <ol class="breadcrumb"><li class="breadcrumb-item"><a href="{{ root }}">Dashboard</a></li><li class="breadcrumb-item active">Produkty franczyzowe</li></ol>
+                </nav>
+            </div>
+        </div>
+    </div>
+
+    <section class="section"><div class="card">
+        <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div><h4 class="card-title mb-1">Katalog produktów</h4><span class="text-muted small">Rozbieżność oznacza, że co najmniej jeden parametr produktu różni się między sklepami.</span></div>
+            <div class="d-flex gap-2"><input type="search" id="catalog-search" class="form-control form-control-sm" style="width: 240px;" placeholder="Szukaj po SKU lub nazwie"><button type="button" class="btn btn-primary btn-sm" id="refresh-all-snapshots"><i class="bi bi-arrow-clockwise me-1"></i>Odśwież wszystkie</button></div>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap gap-2 mb-4">
+                <div class="border rounded p-2 catalog-stat"><div class="text-muted small">Produkty</div><div class="value">{{ statistics.all }}</div></div>
+                <div class="border rounded p-2 catalog-stat"><div class="text-muted small">Z problemem</div><div class="value text-danger">{{ statistics.problems }}</div></div>
+                <div class="border rounded p-2 catalog-stat"><div class="text-muted small">Rozbieżności</div><div class="value text-warning">{{ statistics.discrepancies }}</div></div>
+                <div class="border rounded p-2 catalog-stat"><div class="text-muted small">Brak ceny</div><div class="value text-danger">{{ statistics.missing_price }}</div></div>
+            </div>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                <div class="btn-group" role="group" aria-label="Filtr produktów franczyzowych">
+                    <button type="button" class="btn btn-outline-secondary active" data-catalog-filter="all">Wszystkie</button><button type="button" class="btn btn-outline-secondary" data-catalog-filter="problems">Problemy</button><button type="button" class="btn btn-outline-secondary" data-catalog-filter="discrepancies">Rozbieżności</button><button type="button" class="btn btn-outline-secondary" data-catalog-filter="missing-price">Brak ceny</button>
+                </div><span class="text-muted small" id="visible-products-count"></span>
+            </div>
+            <div class="table-responsive"><table class="table table-sm table-hover mb-0" id="franchise-products-table">
+                <thead><tr><th></th><th>SKU</th><th>Nazwa</th><th class="text-center">Sklepy</th><th>Dostępność</th><th class="text-end">Cena netto</th><th>Stan</th><th>Ostatni snapshot</th></tr></thead>
+                <tbody>
+                {% for product in products %}
+                    {% set prices_differ = product.price_min != product.price_max %}
+                    <tr class="catalog-product-row" data-product-id="{{ loop.index0 }}" data-problem="{{ product.has_problem ? '1' : '0' }}" data-discrepancy="{{ product.has_discrepancy ? '1' : '0' }}" data-missing-price="{{ product.missing_price_count > 0 ? '1' : '0' }}" data-search="{{ (product.sku|default('') ~ ' ' ~ product.product_name|default(''))|lower }}">
+                        <td><button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2 toggle-details" data-product-id="{{ loop.index0 }}" title="Pokaż sklepy"><i class="bi bi-chevron-down"></i></button></td>
+                        <td>{{ product.sku ?: 'Brak SKU' }}</td><td>{{ product.product_name ?: '-' }}</td><td class="text-center">{{ product.shop_count }}</td>
+                        <td><i class="bi bi-check-circle-fill text-success" title="Aktywne"></i> {{ product.active_count }} <i class="bi bi-dash-circle-fill text-danger ms-1" title="Wyłączone"></i> {{ product.inactive_count }}</td>
+                        <td class="text-end">{% if product.price_min is null %}<span class="text-danger">Brak ceny</span>{% elseif prices_differ %}<span class="text-warning">{{ product.price_min|number_format(2, ',', ' ') }} - {{ product.price_max|number_format(2, ',', ' ') }}</span>{% else %}{{ product.price_min|number_format(2, ',', ' ') }}{% endif %}</td>
+                        <td>{% if product.has_problem %}<span class="badge bg-danger">Problemy: {{ product.problem_count }}</span>{% endif %}{% if product.has_discrepancy %}<span class="badge bg-warning text-dark">Rozbieżność</span>{% endif %}{% if not product.has_problem and not product.has_discrepancy %}<span class="badge bg-success">Zgodny</span>{% endif %}</td>
+                        <td>{{ product.latest_snapshot_at ? product.latest_snapshot_at|date('d.m.Y H:i') : '-' }}</td>
+                    </tr>
+                    <tr class="shop-details d-none" data-details-id="{{ loop.index0 }}"><td colspan="8"><div class="p-2"><table class="table table-sm table-bordered mb-0 shop-details-table"><thead><tr><th>Klient</th><th>Dostawca</th><th>Franczyza</th><th>Cena netto</th><th>Valid from</th><th>Opakowanie</th><th>Status diagnostyczny</th><th>Snapshot</th></tr></thead><tbody>
+                    {% for shop in product.shops %}
+                        {% set status = shop.diagnostic_status|default('invalid_payload') %}
+                        <tr><td>{{ shop.customer_company|default('-') }}</td><td>{% if shop.supplier_is_active == 1 %}<i class="bi bi-check-circle-fill text-success" title="Włączony"></i> Włączony{% elseif shop.supplier_is_active == 0 %}<i class="bi bi-dash-circle-fill text-danger" title="Wyłączony"></i> Wyłączony{% else %}<i class="bi bi-question-circle-fill text-warning" title="Nie znaleziono produktu"></i> Brak danych{% endif %}</td><td>{% if shop.is_active == 1 %}<i class="bi bi-check-circle-fill text-success" title="Włączona"></i> Włączona{% elseif shop.is_active == 0 %}<i class="bi bi-dash-circle-fill text-danger" title="Wyłączona"></i> Wyłączona{% else %}<i class="bi bi-question-circle-fill text-warning" title="Nieznana"></i> Nieznana{% endif %}</td><td>{{ shop.price_net is not null and shop.price_net != '' ? shop.price_net|number_format(2, ',', ' ') : 'Brak' }}</td><td>{{ shop.valid_from|default('-') }}</td><td><span class="package-size" data-package-size="{{ shop.package_size|default('') }}"></span> {{ shop.package_unit|default('') }}</td><td><span class="badge {{ diagnostic_classes[status]|default('bg-danger') }}">{{ diagnostic_labels[status]|default('Nieprawidłowe dane') }}</span></td><td>{{ shop.snapshot_created_at ? shop.snapshot_created_at|date('d.m.Y H:i') : '-' }}</td></tr>
+                    {% endfor %}
+                    </tbody></table></div></td></tr>
+                {% else %}<tr><td colspan="8" class="text-center text-muted py-5">Brak poprawnych snapshotów produktów franczyzowych.</td></tr>{% endfor %}
+                </tbody>
+            </table></div>
+        </div>
+    </div></section>
+</div>
+
+<script>
+(() => {
+    const rows = Array.from(document.querySelectorAll('.catalog-product-row'));
+    const filters = document.querySelectorAll('[data-catalog-filter]');
+    const search = document.getElementById('catalog-search');
+    const count = document.getElementById('visible-products-count');
+    const filterAttribute = { problems: 'problem', discrepancies: 'discrepancy', 'missing-price': 'missingPrice' };
+    let activeFilter = 'all';
+    const applyFilters = () => { const query = search.value.trim().toLowerCase(); let visible = 0; rows.forEach((row) => { const matchesFilter = activeFilter === 'all' || row.dataset[filterAttribute[activeFilter]] === '1'; const show = matchesFilter && (!query || row.dataset.search.includes(query)); row.classList.toggle('d-none', !show); document.querySelector(`[data-details-id="${row.dataset.productId}"]`).classList.add('d-none'); if (show) visible++; }); count.textContent = rows.length ? `Widoczne: ${visible} z ${rows.length}` : ''; };
+    filters.forEach((button) => button.addEventListener('click', () => { activeFilter = button.dataset.catalogFilter; filters.forEach((other) => other.classList.remove('active')); button.classList.add('active'); applyFilters(); }));
+    search.addEventListener('input', applyFilters);
+    document.querySelectorAll('.toggle-details').forEach((button) => button.addEventListener('click', () => { const details = document.querySelector(`[data-details-id="${button.dataset.productId}"]`); details.classList.toggle('d-none'); button.querySelector('i').classList.toggle('bi-chevron-up'); button.querySelector('i').classList.toggle('bi-chevron-down'); }));
+    document.querySelectorAll('.package-size').forEach((element) => { const value = Number(element.dataset.packageSize); element.textContent = Number.isFinite(value) ? value.toLocaleString('pl-PL', { maximumFractionDigits: 4 }) : '-'; });
+    document.getElementById('refresh-all-snapshots').addEventListener('click', (event) => { const button = event.currentTarget; const label = button.innerHTML; button.disabled = true; button.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Odświeżanie'; api('/ajax/franchise-products/refresh-all', { method: 'POST' }).then((response) => { const message = `Odświeżono: ${response.successful || 0}, błędy: ${response.failed || 0}.`; showSnack(response.failed === 0, message); if (response.successful) setTimeout(() => window.location.reload(), 800); }).catch(() => showSnack(false, 'Nie udało się odświeżyć snapshotów.')).finally(() => { button.disabled = false; button.innerHTML = label; }); });
+    applyFilters();
+})();
+</script>
+
+{% endblock %}

@@ -1,0 +1,52 @@
+<?php
+use FastRoute\RouteCollector;
+return function (RouteCollector $r) {
+    $controller = App\Controllers\Web\Communication\CommunicationController::class;
+    $automation = App\Controllers\Web\Communication\MailAutomationController::class;
+    // « Automatyczne e-maile » : zastąpione tabelą « Dystrybucja dokumentów » (historia wysyłek w zakładce)
+    $r->addRoute('GET', '/communication/automations', ['redirect' => '/communication/distribution']);
+    $distribution = App\Controllers\Web\Communication\DocumentDistributionController::class;
+    $r->addRoute('GET', '/communication/distribution', ['controller' => $distribution, 'method' => 'index']);
+    $r->addRoute('PUT', '/ajax/communication/distribution/cell', ['controller' => $distribution, 'method' => 'saveCell']);
+    $r->addRoute('PUT', '/ajax/communication/distribution/moment', ['controller' => $distribution, 'method' => 'saveMoment']);
+    $r->addRoute('POST', '/ajax/communication/distribution/copy', ['controller' => $distribution, 'method' => 'copy']);
+    $r->addRoute('POST', '/ajax/communication/automations/settings', ['controller' => $automation, 'method' => 'saveSettings']);
+    $r->addRoute('POST', '/ajax/communication/automations/run', ['controller' => $automation, 'method' => 'runNow']);
+    $r->addRoute('POST', '/ajax/communication/automations/dispatches/{id:\\d+}/retry', ['controller' => $automation, 'method' => 'retry']);
+    $documents = App\Controllers\Web\Communication\DocumentTemplateController::class;
+    $r->addRoute('GET', '/communication/document-templates', ['controller' => $documents, 'method' => 'index']);
+    $r->addRoute('GET', '/communication/document-templates/{key:[a-z_]+}.pdf', ['controller' => $documents, 'method' => 'preview']);
+    $r->addRoute('GET', '/communication/templates', ['controller' => $controller, 'method' => 'templates']);
+    $r->addRoute('GET', '/communication/email-settings', ['controller' => $controller, 'method' => 'emailSettings']);
+    $r->addRoute('POST', '/communication/email-settings', ['controller' => $controller, 'method' => 'saveEmailSettings']);
+    $r->addRoute('POST', '/ajax/communication/email-settings/test', ['controller' => $controller, 'method' => 'testEmailSettings']);
+    $r->addRoute('POST', '/communication/templates', ['controller' => $controller, 'method' => 'saveTemplate']);
+    $r->addRoute('POST', '/communication/templates/{id:\\d+}', ['controller' => $controller, 'method' => 'saveTemplate']);
+    $r->addRoute('GET', '/communication/compose/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'composeProforma']);
+    $r->addRoute('POST', '/ajax/communication/compose/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'saveProformaMessage']);
+    $r->addRoute('GET', '/communication/compose/invoice/{id:\\d+}', ['controller' => $controller, 'method' => 'composeInvoice']);
+    $r->addRoute('POST', '/ajax/communication/compose/invoice/{id:\\d+}', ['controller' => $controller, 'method' => 'saveInvoiceMessage']);
+    $r->addRoute('GET', '/communication/compose/wdt/{id:\\d+}', ['controller' => $controller, 'method' => 'composeWdt']);
+    $r->addRoute('GET', '/communication/compose/sales-goal/{id:\\d+}', ['controller' => $controller, 'method' => 'composeSalesGoal']);
+    $r->addRoute('POST', '/ajax/communication/compose/sales-goal/{id:\\d+}', ['controller' => $controller, 'method' => 'saveSalesGoalMessage']);
+    $r->addRoute('POST', '/ajax/communication/compose/wdt/{id:\\d+}', ['controller' => $controller, 'method' => 'saveWdtMessage']);
+    $r->addRoute('GET', '/communication/compose/reminder/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'composeReminderProforma']);
+    $r->addRoute('POST', '/ajax/communication/compose/reminder/proforma/{id:\\d+}', ['controller' => $controller, 'method' => 'saveReminderProformaMessage']);
+    $r->addRoute('GET', '/communication/compose/reminder/difference/{id:\\d+}', ['controller' => $controller, 'method' => 'composeReminderDifference']);
+    $r->addRoute('POST', '/ajax/communication/compose/reminder/difference/{id:\\d+}', ['controller' => $controller, 'method' => 'saveReminderDifferenceMessage']);
+    $r->addRoute('GET', '/communication/messages', ['controller' => $controller, 'method' => 'messages']);
+    $r->addRoute('POST', '/ajax/communication/messages/{id:\\d+}/send-now', ['controller' => $controller, 'method' => 'sendMessageNow']);
+    $r->addRoute('GET', '/communication/messages/{id:\\d+}', ['controller' => $controller, 'method' => 'message']);
+    // Stan wysyłek : błędy i kolejki (e-maile, sklepy franczyzy, e-maile automatyczne, monitoring) — ponów jedną pozycję, rozwiązane z powodem
+    $sendStatus = App\Controllers\Web\Communication\SendStatusController::class;
+    $r->addRoute('GET', '/communication/outbox', ['controller' => $sendStatus, 'method' => 'index']);
+    $r->addRoute('POST', '/ajax/communication/outbox/{source:[a-z]+}/{id:\\d+}/retry', ['controller' => $sendStatus, 'method' => 'retry']);
+    $r->addRoute('POST', '/ajax/communication/outbox/{source:[a-z]+}/{id:\\d+}/resolve', ['controller' => $sendStatus, 'method' => 'resolve']);
+    $r->addRoute('GET', '/communication/payment-reminders', ['controller' => $controller, 'method' => 'reminder']);
+    $r->addRoute('GET', '/ajax/communication/differences/{idDifference:\\d+}/compose', ['controller' => $controller, 'method' => 'ajaxComposeReminder']);
+    $r->addRoute('POST', '/ajax/communication/payment-reminders/draft', ['controller' => $controller, 'method' => 'saveReminderDraft']);
+    // P5 : wysyłka automatyczna poziomów 1–2 i « Opłacone » dla zaznaczonych proform
+    $reminders = App\Controllers\Web\Communication\PaymentReminderController::class;
+    $r->addRoute('PUT', '/ajax/communication/payment-reminders/settings', ['controller' => $reminders, 'method' => 'saveSettings']);
+    $r->addRoute('POST', '/ajax/communication/payment-reminders/paid', ['controller' => $reminders, 'method' => 'markPaid']);
+};

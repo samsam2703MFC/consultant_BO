@@ -1,0 +1,35 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Śledzenie produkcji{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Śledzenie produkcji</h3>
+            <p class="text-subtitle text-muted">Plan tygodnia wobec partii i strat zapisanych na tabletach, dni zatwierdzone przez zespoły, niezgodności — {{ f.from|date('d.m.Y') }} – {{ f.to|date('d.m.Y') }}</p>
+        </div>
+        <a class="btn btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły zebrań</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-follow">
+    <div class="card">
+        <div class="card-body">
+            <form class="at-follow-period d-flex flex-wrap gap-2 align-items-end" method="get" action="{{ root }}/production/follow-up">
+                <div class="btn-group flex-wrap" role="group" aria-label="Okres">
+                    {% for p in presets %}<a class="btn btn-sm {{ p.from == f.from and p.to == f.to ? 'btn-primary' : 'btn-outline-primary' }}" href="{{ root }}/production/follow-up?from={{ p.from }}&to={{ p.to }}">{{ p.label }}</a>{% endfor %}
+                </div>
+                <label class="at-purch-label">Od<input class="form-control form-control-sm" type="date" name="from" value="{{ f.from }}"></label>
+                <label class="at-purch-label">Do<input class="form-control form-control-sm" type="date" name="to" value="{{ f.to }}"></label>
+                <button class="btn btn-sm btn-primary" type="submit">Pokaż</button>
+            </form>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body">
+            {% include 'production/_follow_up.twig' %}
+        </div>
+    </div>
+</section>
+{% endblock %}

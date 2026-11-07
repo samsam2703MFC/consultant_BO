@@ -1,0 +1,602 @@
+{
+  "id": "baguettes",
+  "code": "SOP-CUI-001",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": "a_valider",
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": null,
+  "duree": null,
+  "titre": {
+    "fr": "Cuisson des baguettes et des pains",
+    "nl": "Bakken van baguettes en broden"
+  },
+  "objectif": {
+    "fr": "Lancer le bon programme, charger le four au bon moment et contrôler la fin de cuisson sans modifier un réglage non validé.",
+    "nl": "Het juiste programma starten, de oven op het juiste moment laden en het einde van het bakken controleren zonder een niet-gevalideerde instelling te wijzigen."
+  },
+  "pour": {
+    "fr": "Équipe de cuisson.",
+    "nl": "Bakploeg."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Informations clés", "nl": "Belangrijke informatie"},
+      "etapes": [
+        {
+          "numero": "0.1",
+          "titre": {"fr": "Matériel", "nl": "Materiaal"},
+          "texte": {
+            "fr": "Four UNOX à interface MIND.Maps, plaques ou grilles adaptées, chariot de production et protections thermiques validées par le responsable.",
+            "nl": "UNOX-oven met MIND.Maps-interface, geschikte platen of roosters, productierekwagen en hittebescherming die door de verantwoordelijke is goedgekeurd."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "0.2",
+          "titre": {"fr": "Prérequis", "nl": "Vereisten"},
+          "texte": {
+            "fr": "Fiche du jour, commandes et restes vérifiés ; produits destinés à la cuisson prêts selon l’organisation du poste. Le niveau de pousse requis n’est pas montré dans les vidéos : À confirmer.",
+            "nl": "Dagfiche, bestellingen en overschotten nagekeken; te bakken producten klaar volgens de organisatie van de post. Het vereiste rijsniveau wordt niet getoond in de video’s: te bevestigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.3",
+          "titre": {"fr": "Quantités", "nl": "Hoeveelheden"},
+          "texte": {
+            "fr": "Cibles du projet : 16 baguettes ; 11 pains dorés, 11 demi-gris et 11 dix céréales. Ce sont des cibles magasin, pas une capacité par fournée.",
+            "nl": "Doelen van het project: 16 baguettes; 11 pains dorés, 11 demi-gris en 11 dix céréales. Dit zijn doelen voor de winkel, geen capaciteit per ovenlading."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.4",
+          "titre": {"fr": "Sources", "nl": "Bronnen"},
+          "texte": {
+            "fr": "Faits observés dans 4 vidéos du 17/08/2026 et données déjà présentes dans le projet SOP L’Atelier. Toute donnée absente est indiquée « À confirmer ».",
+            "nl": "Feiten vastgesteld in 4 video’s van 17/08/2026 en gegevens die al in het SOP-project van L’Atelier stonden. Elk ontbrekend gegeven staat aangeduid als “te bevestigen”."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Mode opératoire — grands pains", "nl": "Werkwijze — grote broden"},
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {"fr": "Valider le besoin avant de cuire", "nl": "De behoefte bevestigen vóór het bakken"},
+          "texte": {
+            "fr": "Consulter la fiche du jour. Déduire les restes encore vendables et ajouter uniquement les commandes validées. Ne pas confondre la cible magasin avec la quantité à charger dans le four.",
+            "nl": "De dagfiche raadplegen. De nog verkoopbare overschotten aftrekken en alleen de gevalideerde bestellingen toevoegen. Het winkeldoel niet verwarren met de hoeveelheid die in de oven moet."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {"fr": "Vérifier la préparation des produits", "nl": "De voorbereiding van de producten nakijken"},
+          "texte": {
+            "fr": "Identifier les pains courants concernés : pain doré, pain demi-gris et pain dix céréales. La disposition sur plaque, le nombre de pains par niveau et le critère de pousse ne sont pas visibles : À confirmer.",
+            "nl": "De betrokken gewone broden herkennen: pain doré, pain demi-gris en pain dix céréales. De schikking op de plaat, het aantal broden per niveau en het rijscriterium zijn niet zichtbaar: te bevestigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {"fr": "Ouvrir la bibliothèque de programmes", "nl": "De programmabibliotheek openen"},
+          "texte": {
+            "fr": "Sur l’écran d’accueil du four BAKERTOP MIND.Maps Plus, toucher PROGRAMMES, puis MES PROGRAMMES.",
+            "nl": "Op het startscherm van de BAKERTOP MIND.Maps Plus-oven op PROGRAMMES tikken, daarna op MES PROGRAMMES."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {"fr": "Sélectionner le bon programme", "nl": "Het juiste programma kiezen"},
+          "texte": {
+            "fr": "Dans le groupe 1, faire défiler la liste jusqu’à GRANDS PAINS. Toucher ce programme. Ne pas sélectionner BAGUETTE pour les grands pains.",
+            "nl": "In groep 1 door de lijst scrollen tot GRANDS PAINS. Op dit programma tikken. Voor grote broden niet BAGUETTE kiezen."
+          },
+          "critique": true,
+          "photo": "photos/baguettes-1.jpg"
+        },
+        {
+          "numero": "5",
+          "titre": {"fr": "Lancer et attendre le préchauffage", "nl": "Starten en het voorverwarmen afwachten"},
+          "texte": {
+            "fr": "Appuyer sur START / STOP. Le SMART.Preheating démarre vers une température cible observée de 205 °C. Attendre la fin du préchauffage et le signal de chargement ; ne pas charger lorsque l’écran indique encore 83 °C et 20 %.",
+            "nl": "Op START / STOP drukken. De SMART.Preheating start naar een vastgestelde doeltemperatuur van 205 °C. Wachten tot het voorverwarmen klaar is en het signaal om te laden verschijnt; niet laden zolang het scherm nog 83 °C en 20 % aangeeft."
+          },
+          "critique": true,
+          "photo": "photos/baguettes-2.jpg"
+        },
+        {
+          "numero": "6",
+          "titre": {"fr": "Charger le four", "nl": "De oven laden"},
+          "texte": {
+            "fr": "Lorsque l’écran affiche la porte et la flèche verte, ouvrir avec la poignée, introduire les plaques ou grilles préparées, puis refermer complètement. Le geste de chargement des produits n’est pas filmé : disposition et capacité À confirmer.",
+            "nl": "Als het scherm de deur en de groene pijl toont, openen met de handgreep, de klaargemaakte platen of roosters erin schuiven en daarna volledig sluiten. Het laden van de producten is niet gefilmd: schikking en capaciteit te bevestigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {"fr": "Laisser le cycle se dérouler", "nl": "De cyclus laten lopen"},
+          "texte": {
+            "fr": "Après fermeture, contrôler l’écran. Le programme GRANDS PAINS affiche un temps total observé de 8 minutes, en 2 étapes ; l’écran montre 3 min 59 s restantes pour l’étape en cours lorsque 7 min 59 s restent au total.",
+            "nl": "Na het sluiten het scherm controleren. Het programma GRANDS PAINS toont een vastgestelde totale tijd van 8 minuten, in 2 stappen; het scherm toont nog 3 min 59 s voor de lopende stap wanneer er in totaal nog 7 min 59 s resten."
+          },
+          "critique": true,
+          "photo": "photos/baguettes-3.jpg"
+        },
+        {
+          "numero": "8",
+          "titre": {"fr": "Ne pas modifier sans validation", "nl": "Niets wijzigen zonder validatie"},
+          "texte": {
+            "fr": "Les fonctions Ajouter du temps, Déplacer la sonde et Ajouter température apparaissent à l’écran. Ne pas les utiliser sans consigne validée du responsable.",
+            "nl": "De functies Ajouter du temps (tijd toevoegen), Déplacer la sonde (sonde verplaatsen) en Ajouter température (temperatuur toevoegen) verschijnen op het scherm. Ze niet gebruiken zonder gevalideerde instructie van de verantwoordelijke."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {"fr": "Décharger et isoler tout doute", "nl": "Uitladen en elke twijfel apart zetten"},
+          "texte": {
+            "fr": "À la fin du programme, ouvrir prudemment, retirer les plaques avec les protections prévues et placer les produits dans la zone définie. Les vidéos ne montrent pas les pains terminés : les critères de coloration et de cuisson restent À confirmer.",
+            "nl": "Op het einde van het programma voorzichtig openen, de platen met de voorziene bescherming uithalen en de producten in de afgesproken zone zetten. De video’s tonen de afgebakken broden niet: de criteria voor kleur en baktoestand blijven te bevestigen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Réglages et repères écran", "nl": "Instellingen en richtpunten op het scherm"},
+      "etapes": [
+        {
+          "numero": "R1",
+          "titre": {"fr": "Règle", "nl": "Regel"},
+          "texte": {
+            "fr": "Utiliser les libellés exacts du four ; ne jamais transposer un réglage non affiché.",
+            "nl": "De exacte benamingen van de oven gebruiken; nooit een instelling overnemen die niet op het scherm staat."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "R2",
+          "titre": {"fr": "Repères observés dans les vidéos", "nl": "Richtpunten vastgesteld in de video’s"},
+          "texte": {
+            "fr": "1. Programme GRANDS PAINS.\n2. Préchauffage cible 205 °C.\n3. Cycle observé : 8 min, 2 étapes.\n4. Programme BAGUETTE distinct.",
+            "nl": "1. Programma GRANDS PAINS.\n2. Voorverwarmen tot doeltemperatuur 205 °C.\n3. Vastgestelde cyclus: 8 min, 2 stappen.\n4. Apart programma BAGUETTE."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "R3",
+          "titre": {"fr": "Tableau de réglage — grands pains", "nl": "Insteltabel — grote broden"},
+          "texte": {
+            "fr": "Programme GRANDS PAINS ; température 205 °C ; durée 8 min observées, 2 étapes de 4 min. Cibles : 11 dorés + 11 demi-gris + 11 dix céréales. Charge par fournée : À confirmer.",
+            "nl": "Programma GRANDS PAINS; temperatuur 205 °C; duur 8 min vastgesteld, 2 stappen van 4 min. Doelen: 11 dorés + 11 demi-gris + 11 dix céréales. Lading per ovenlading: te bevestigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "R4",
+          "titre": {"fr": "Tableau de réglage — baguettes", "nl": "Insteltabel — baguettes"},
+          "texte": {
+            "fr": "Programme BAGUETTE ; température À confirmer ; durée À confirmer. Cible projet : 16 pièces. Programme distinct visible ; réglages non affichés.",
+            "nl": "Programma BAGUETTE; temperatuur te bevestigen; duur te bevestigen. Doel van het project: 16 stuks. Apart programma zichtbaar; instellingen niet getoond."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "R5",
+          "titre": {"fr": "Tableau de réglage — pains spéciaux / focaccias", "nl": "Insteltabel — speciale broden / focaccia’s"},
+          "texte": {
+            "fr": "Même mode que les pains selon le projet ; programme exact à confirmer ; température À confirmer ; durée À confirmer. Quantités selon fiche, commandes et restes.",
+            "nl": "Zelfde werkwijze als de broden volgens het project; exact programma te bevestigen; temperatuur te bevestigen; duur te bevestigen. Hoeveelheden volgens fiche, bestellingen en overschotten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "R6",
+          "titre": {"fr": "Tableau de réglage — pains de la veille", "nl": "Insteltabel — broden van gisteren"},
+          "texte": {
+            "fr": "Programme À confirmer ; température À confirmer ; durée 5 min selon le projet. La source ne précise pas si cette recuisson utilise GRANDS PAINS. Précision : ce temps de 5 min concerne un autre produit ; il ne s’agit pas de la recuisson du matin des pains de la veille. Celle-ci se fait dans le même four, juste après les grands pains, sans relancer de programme, avec « Ajouter du temps » : 4 min et 20 % d’humidité, et elle ne vaut que pour la catégorie pain (voir SOP-CUI-OUV-01).",
+            "nl": "Programma te bevestigen; temperatuur te bevestigen; duur 5 min volgens het project. De bron vermeldt niet of dit opbakken GRANDS PAINS gebruikt. Verduidelijking: deze 5 min gaat over een ander product; het gaat niet om het opbakken ’s ochtends van de broden van gisteren. Dat gebeurt in dezelfde oven, meteen na de grote broden, zonder een programma opnieuw te starten, met “Ajouter du temps” (tijd toevoegen): 4 min en 20 % vochtigheid, en het geldt alleen voor de categorie brood (zie SOP-CUI-OUV-01)."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Différence baguettes / autres pains", "nl": "Verschil baguettes / andere broden"},
+      "etapes": [
+        {
+          "numero": "D1",
+          "titre": {"fr": "Fait observé", "nl": "Vastgesteld feit"},
+          "texte": {
+            "fr": "Le four possède deux programmes nommés séparément : BAGUETTE et GRANDS PAINS. Ils ne doivent pas être considérés comme interchangeables.",
+            "nl": "De oven heeft twee programma’s met een aparte naam: BAGUETTE en GRANDS PAINS. Ze mogen niet als onderling verwisselbaar beschouwd worden."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "D2",
+          "titre": {"fr": "Grands pains", "nl": "Grote broden"},
+          "texte": {
+            "fr": "Séquence complète filmée : sélection, préchauffage à 205 °C, chargement et cycle de 8 minutes en deux étapes.",
+            "nl": "Volledige reeks gefilmd: selectie, voorverwarmen tot 205 °C, laden en cyclus van 8 minuten in twee stappen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "D3",
+          "titre": {"fr": "Baguettes", "nl": "Baguettes"},
+          "texte": {
+            "fr": "Le programme BAGUETTE apparaît actif, mais la température, la durée, le nombre d’étapes et la capacité de chargement ne sont pas visibles : À confirmer.",
+            "nl": "Het programma BAGUETTE staat actief, maar de temperatuur, de duur, het aantal stappen en de laadcapaciteit zijn niet zichtbaar: te bevestigen."
+          },
+          "critique": false,
+          "photo": "photos/baguettes-4.jpg"
+        },
+        {
+          "numero": "D4",
+          "titre": {"fr": "Hors cuisson", "nl": "Buiten het bakken"},
+          "texte": {
+            "fr": "Une vidéo ouvre le menu de lavage et sélectionne RINÇAGE 00:07. Ce geste ne définit pas quand lancer le rinçage après les pains ; appliquer uniquement la consigne de nettoyage validée du site.",
+            "nl": "Eén video opent het reinigingsmenu en kiest RINÇAGE 00:07. Die handeling bepaalt niet wanneer het spoelen na de broden moet starten; alleen de gevalideerde reinigingsinstructie van de vestiging toepassen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Synthèse et contrôles — la cuisson n’est validée que si tout est contrôlé",
+        "nl": "Overzicht en controles — het bakken is pas goedgekeurd als alles gecontroleerd is"
+      },
+      "etapes": [
+        {
+          "numero": "C1",
+          "titre": {"fr": "Utilisation", "nl": "Gebruik"},
+          "texte": {
+            "fr": "Utiliser cette page comme carte de contrôle au poste de cuisson.",
+            "nl": "Deze pagina gebruiken als controlekaart op de bakpost."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C2",
+          "titre": null,
+          "texte": {"fr": "Fiche du jour, commandes et restes vérifiés avant la sortie.", "nl": "Dagfiche, bestellingen en overschotten nagekeken vóór het uithalen."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C3",
+          "titre": null,
+          "texte": {"fr": "Bon produit associé au bon programme : BAGUETTE ou GRANDS PAINS.", "nl": "Juiste product bij het juiste programma: BAGUETTE of GRANDS PAINS."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C4",
+          "titre": null,
+          "texte": {"fr": "Programme GRANDS PAINS : préchauffage terminé à 205 °C avant chargement.", "nl": "Programma GRANDS PAINS: voorverwarmen tot 205 °C klaar vóór het laden."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C5",
+          "titre": null,
+          "texte": {"fr": "Porte refermée complètement après chargement.", "nl": "Deur volledig gesloten na het laden."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C6",
+          "titre": null,
+          "texte": {"fr": "Cycle GRANDS PAINS affiché à 8 min avec 2 étapes.", "nl": "Cyclus GRANDS PAINS toont 8 min met 2 stappen."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C7",
+          "titre": null,
+          "texte": {"fr": "Aucun ajout de temps ou de température sans validation.", "nl": "Geen tijd of temperatuur toegevoegd zonder validatie."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C8",
+          "titre": null,
+          "texte": {"fr": "Produits retirés avec les protections prévues.", "nl": "Producten uitgehaald met de voorziene bescherming."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C9",
+          "titre": null,
+          "texte": {"fr": "Aspect final contrôlé selon les critères du responsable - À confirmer.", "nl": "Eindresultaat gecontroleerd volgens de criteria van de verantwoordelijke – te bevestigen."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C10",
+          "titre": null,
+          "texte": {"fr": "Produit douteux isolé et signalé avant mise en vente ou service.", "nl": "Twijfelachtig product apart gezet en gemeld vóór verkoop of service."},
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Recommandations complémentaires", "nl": "Bijkomende aanbevelingen"},
+      "etapes": [
+        {
+          "numero": "S1",
+          "titre": {"fr": "Sécurité", "nl": "Veiligheid"},
+          "texte": {
+            "fr": "Ces précautions ne sont pas démontrées par les vidéos : utiliser les protections thermiques approuvées, se placer à l’écart du flux de chaleur à l’ouverture, ne pas toucher les parois chaudes et garder la zone devant la porte dégagée.",
+            "nl": "Deze voorzorgen worden niet getoond in de video’s: de goedgekeurde hittebescherming gebruiken, bij het openen uit de hittestroom blijven, de hete wanden niet aanraken en de zone voor de deur vrijhouden."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "S2",
+          "titre": {"fr": "Qualité", "nl": "Kwaliteit"},
+          "texte": {
+            "fr": "En attendant la validation des critères internes, signaler toute cuisson manifestement irrégulière, trop pâle, trop foncée ou présentant une déformation anormale. Ne pas libérer un produit douteux à la vente.",
+            "nl": "In afwachting van de validatie van de interne criteria elke bakbeurt melden die duidelijk onregelmatig, te bleek of te donker is of een abnormale vervorming vertoont. Een twijfelachtig product niet vrijgeven voor de verkoop."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Erreurs courantes et correction", "nl": "Veelgemaakte fouten en correctie"},
+      "etapes": [
+        {
+          "numero": "E1",
+          "titre": {"fr": "Charger pendant le préchauffage", "nl": "Laden tijdens het voorverwarmen"},
+          "texte": {
+            "fr": "Action correcte : attendre le signal de chargement ; l’écran filmé indique 205 °C comme cible du programme GRANDS PAINS.",
+            "nl": "Juiste handeling: het signaal om te laden afwachten; het gefilmde scherm geeft 205 °C aan als doeltemperatuur van het programma GRANDS PAINS."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "E2",
+          "titre": {"fr": "Choisir BAGUETTE pour des grands pains", "nl": "BAGUETTE kiezen voor grote broden"},
+          "texte": {
+            "fr": "Action correcte : revenir à la bibliothèque et sélectionner GRANDS PAINS.",
+            "nl": "Juiste handeling: terug naar de bibliotheek gaan en GRANDS PAINS kiezen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "E3",
+          "titre": {"fr": "Modifier le temps ou la température", "nl": "De tijd of de temperatuur wijzigen"},
+          "texte": {
+            "fr": "Action correcte : ne pas utiliser les boutons d’ajustement sans consigne validée.",
+            "nl": "Juiste handeling: de aanpassingsknoppen niet gebruiken zonder gevalideerde instructie."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "E4",
+          "titre": {"fr": "Prendre 16 ou 11 comme capacité du four", "nl": "16 of 11 als capaciteit van de oven nemen"},
+          "texte": {
+            "fr": "Action correcte : ces nombres sont des cibles magasin. La charge par plaque et par fournée reste À confirmer.",
+            "nl": "Juiste handeling: die aantallen zijn winkeldoelen. De lading per plaat en per ovenlading blijft te bevestigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "E5",
+          "titre": {"fr": "Valider la cuisson uniquement au minuteur", "nl": "Het bakken alleen op de timer goedkeuren"},
+          "texte": {
+            "fr": "Action correcte : effectuer aussi le contrôle qualité interne ; critères exacts À confirmer.",
+            "nl": "Juiste handeling: ook de interne kwaliteitscontrole uitvoeren; exacte criteria te bevestigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "E6",
+          "titre": {"fr": "Lancer RINÇAGE comme étape automatique", "nl": "RINÇAGE als automatische stap starten"},
+          "texte": {
+            "fr": "Action correcte : le menu montre un cycle de 7 min, mais son moment d’utilisation n’est pas établi.",
+            "nl": "Juiste handeling: het menu toont een cyclus van 7 min, maar wanneer die gebruikt moet worden, is niet vastgelegd."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Points à confirmer avec le responsable", "nl": "Punten te bevestigen met de verantwoordelijke"},
+      "etapes": [
+        {
+          "numero": "Q1",
+          "titre": {"fr": "Priorité haute", "nl": "Hoge prioriteit"},
+          "texte": {
+            "fr": "Température, durée et nombre d’étapes du programme BAGUETTE.",
+            "nl": "Temperatuur, duur en aantal stappen van het programma BAGUETTE."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q2",
+          "titre": {"fr": "Priorité haute", "nl": "Hoge prioriteit"},
+          "texte": {
+            "fr": "Disposition des pains et baguettes sur plaques/grilles ; capacité par niveau et par fournée.",
+            "nl": "Schikking van de broden en baguettes op platen/roosters; capaciteit per niveau en per ovenlading."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q3",
+          "titre": {"fr": "Priorité haute", "nl": "Hoge prioriteit"},
+          "texte": {
+            "fr": "Critères visuels et tactiles exacts autorisant la mise en vente ou le service.",
+            "nl": "Exacte visuele en tastbare criteria om een product te mogen verkopen of serveren."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q4",
+          "titre": {"fr": "Priorité moyenne", "nl": "Gemiddelde prioriteit"},
+          "texte": {
+            "fr": "État de pousse / décongélation requis avant enfournement et temps d’attente associé.",
+            "nl": "Vereiste rijs- of ontdooitoestand vóór het inzetten in de oven en de bijhorende wachttijd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q5",
+          "titre": {"fr": "Priorité moyenne", "nl": "Gemiddelde prioriteit"},
+          "texte": {
+            "fr": "Programme et température à utiliser pour la recuisson de 5 min des pains de la veille. Précision : ce temps de 5 min ne correspond pas à la recuisson du matin des pains de la veille, qui se fait dans le même four, sans relancer de programme, avec « Ajouter du temps » 4 min et 20 % d’humidité, pour la catégorie pain uniquement.",
+            "nl": "Programma en temperatuur voor het opbakken van 5 min van de broden van gisteren. Verduidelijking: deze 5 min is niet het opbakken ’s ochtends van de broden van gisteren; dat gebeurt in dezelfde oven, zonder een programma opnieuw te starten, met “Ajouter du temps” (tijd toevoegen) 4 min en 20 % vochtigheid, en alleen voor de categorie brood."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q6",
+          "titre": {"fr": "Priorité moyenne", "nl": "Gemiddelde prioriteit"},
+          "texte": {
+            "fr": "Programme exact des pains spéciaux et focaccias ; confirmer s’il s’agit de GRANDS PAINS.",
+            "nl": "Exact programma voor de speciale broden en focaccia’s; bevestigen of het om GRANDS PAINS gaat."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "Q7",
+          "titre": {"fr": "Priorité faible", "nl": "Lage prioriteit"},
+          "texte": {
+            "fr": "Moment et fréquence d’utilisation du cycle RINÇAGE 00:07 après les cuissons.",
+            "nl": "Moment en frequentie van gebruik van de cyclus RINÇAGE 00:07 na het bakken."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Règle d’or", "nl": "Gouden regel"},
+      "etapes": [
+        {
+          "numero": "G1",
+          "titre": {"fr": "Règle d’or", "nl": "Gouden regel"},
+          "texte": {
+            "fr": "Si un réglage, une quantité de chargement ou un critère de cuisson n’est pas confirmé, ne pas improviser : arrêter, noter l’écart et demander validation.",
+            "nl": "Als een instelling, een laadhoeveelheid of een bakcriterium niet bevestigd is, niet improviseren: stoppen, de afwijking noteren en om validatie vragen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "GRANDS PAINS et BAGUETTE sont deux programmes distincts, non interchangeables : ne pas choisir BAGUETTE pour les grands pains.",
+      "nl": "GRANDS PAINS en BAGUETTE zijn twee aparte programma’s die niet verwisselbaar zijn: voor grote broden niet BAGUETTE kiezen."
+    },
+    {
+      "fr": "Ne charger qu’après la fin du préchauffage (cible 205 °C) et le signal de chargement (porte et flèche verte) ; jamais à 83 °C / 20 %.",
+      "nl": "Pas laden na het einde van het voorverwarmen (doel 205 °C) en het signaal om te laden (deur en groene pijl); nooit bij 83 °C / 20 %."
+    },
+    {
+      "fr": "Ne pas utiliser Ajouter du temps, Déplacer la sonde ou Ajouter température sans consigne validée du responsable.",
+      "nl": "Ajouter du temps, Déplacer la sonde of Ajouter température niet gebruiken zonder gevalideerde instructie van de verantwoordelijke."
+    },
+    {
+      "fr": "Retirer les plaques avec les protections thermiques prévues ; produit douteux isolé, signalé et jamais libéré à la vente.",
+      "nl": "De platen uithalen met de voorziene hittebescherming; twijfelachtig product apart zetten, melden en nooit vrijgeven voor de verkoop."
+    },
+    {
+      "fr": "Règle d’or : réglage, charge ou critère non confirmé — ne pas improviser, arrêter, noter l’écart et demander validation.",
+      "nl": "Gouden regel: instelling, lading of criterium niet bevestigd — niet improviseren, stoppen, de afwijking noteren en om validatie vragen."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {"fr": "Quel programme utilise-t-on pour les grands pains ?", "nl": "Welk programma gebruik je voor de grote broden?"},
+      "choix": {
+        "fr": ["BAGUETTE", "GRANDS PAINS", "RINÇAGE"],
+        "nl": ["BAGUETTE", "GRANDS PAINS", "RINÇAGE"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {"fr": "Quand peut-on charger le four ?", "nl": "Wanneer mag je de oven laden?"},
+      "choix": {
+        "fr": ["Quand l’écran indique 83 °C et 20 %", "Dès qu’on a appuyé sur START / STOP", "Après la fin du préchauffage, quand l’écran affiche la porte et la flèche verte"],
+        "nl": ["Als het scherm 83 °C en 20 % aangeeft", "Zodra je op START / STOP gedrukt hebt", "Na het einde van het voorverwarmen, als het scherm de deur en de groene pijl toont"]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {"fr": "Que représentent les nombres 16 et 11 ?", "nl": "Wat betekenen de getallen 16 en 11?"},
+      "choix": {
+        "fr": ["Des cibles magasin, pas la capacité du four", "Le nombre de pièces par fournée", "Les minutes de cuisson"],
+        "nl": ["Doelen voor de winkel, niet de capaciteit van de oven", "Het aantal stuks per ovenlading", "De bakminuten"]
+      },
+      "bonne": 0
+    }
+  ],
+  "corrections": [
+    "Tableau de réglage, ligne « Pains de la veille » (R6), et point à confirmer sur la « recuisson de 5 min des pains de la veille » (Q5) : le temps de 5 min est gardé, avec une précision indiquant qu’il ne s’agit pas de la recuisson du matin des pains de la veille — décision 2 : celle-ci se fait dans le même four, sans relancer de programme, +4 min et 20 % d’humidité, et ne vaut que pour la catégorie pain."
+  ],
+  "remarques": [
+    "Document au statut « version 1.0 à valider » : toutes les mentions « À confirmer » sont gardées telles quelles en français et rendues par « te bevestigen » en néerlandais ; rien n’a été complété.",
+    "Le produit auquel s’applique le temps de 5 min n’est pas nommé dans le document : à identifier avec le responsable.",
+    "L’étape 8 interdit « Ajouter du temps » sans consigne validée ; la recuisson des pains de la veille (décision 2, SOP-CUI-OUV-01) utilise justement cette fonction et vaut consigne validée : à harmoniser lors de la validation.",
+    "Le programme s’appelle « BAGUETTE » ici et sur l’écran du four, mais « baguettes » dans la SOP-CUI-OUV-01 : libellé à harmoniser.",
+    "RINÇAGE 00:07 : moment d’utilisation non établi. La décision 4 place le nettoyage des fours après 16 h, mais le document ne dit pas si le rinçage en fait partie ; texte laissé tel quel.",
+    "Moment de la journée non indiqué dans le document : champ moment laissé à null.",
+    "Les libellés d’écran du four (PROGRAMMES, MES PROGRAMMES, START / STOP, SMART.Preheating, Ajouter du temps, Déplacer la sonde, Ajouter température, RINÇAGE) sont gardés en français dans la version néerlandaise, avec une traduction entre parenthèses quand c’est utile.",
+    "Photos : 4 photos d’écran (page 2 du PDF) copiées en photos/baguettes-1.jpg à baguettes-4.jpg et rattachées aux étapes 4 (écran GRANDS PAINS), 5 (préchauffage 83 °C vers 205 °C, 20 %), 7 (cycle 0:07:59, étape 0:03:59) et D3 (programme BAGUETTE actif, avec l’écran de chargement porte et flèche verte)."
+  ],
+  "source": {
+    "fichiers": {"pdf": "1I79T3XmckGHW7DA0RjAnVm_O5GCJyxcl", "docx": null},
+    "lu": "pdf"
+  }
+}

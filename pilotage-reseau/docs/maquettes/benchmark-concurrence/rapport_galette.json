@@ -1,0 +1,572 @@
+{
+ "famille": "galette",
+ "libelle": "galette des rois",
+ "mesure": "diametre",
+ "unite": "€ ramené à Ø 24 cm",
+ "genere_le": "2026-11-07 11:36",
+ "releve": "2026-11-07",
+ "source": "referentiel",
+ "taille_ref": 24,
+ "taille_confirmee": true,
+ "taille_note": "Ø 24 cm (confirmé). Prix : 24,90 € du 31/12, 19,90 € en précommande webshop jusqu'au 30/12 (atelierby.be) ; le panel de Halle affichait encore 20,50 € le 9/10/2026.",
+ "nous": [
+  {
+   "id": 4100013,
+   "nom": "Galette frangipane Ø 24 cm",
+   "prix": 24.9,
+   "reference": true,
+   "taille": 24,
+   "taille_retenue": 24,
+   "valeur": 24.9
+  },
+  {
+   "id": 4100013,
+   "nom": "Galette frangipane Ø 24 cm, précommande jusqu'au 30/12",
+   "prix": 19.9,
+   "taille": 24,
+   "taille_retenue": 24,
+   "valeur": 19.9
+  }
+ ],
+ "ref": 24.9,
+ "concurrents": [
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Driekoningsgebak frangipane 6 portions (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 4.69,
+   "promo": null,
+   "valeur": 5.58,
+   "ecart_pct": 346.2,
+   "vu_le": "janv. 2026, index moteur",
+   "source": "https://www.carrefour.be/nl/driekoningentaart",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Aldi",
+   "type": "GMS",
+   "produit": "Galette frangipane (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 4.99,
+   "promo": null,
+   "valeur": 5.94,
+   "ecart_pct": 319.2,
+   "vu_le": "janv. 2026 (test DH)",
+   "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Lidl",
+   "type": "GMS",
+   "produit": "Galette des rois (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 5.99,
+   "promo": null,
+   "valeur": 7.13,
+   "ecart_pct": 249.2,
+   "vu_le": "janv. 2026 (test DH)",
+   "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Intermarché",
+   "type": "GMS",
+   "produit": "Galette des rois (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 5.99,
+   "promo": null,
+   "valeur": 7.13,
+   "ecart_pct": 249.2,
+   "vu_le": "janv. 2026 (test DH)",
+   "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+   "magasins": [
+    3,
+    5
+   ]
+  },
+  {
+   "concurrent": "Colruyt (Boni)",
+   "type": "GMS",
+   "produit": "Galette des rois (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 5.99,
+   "promo": null,
+   "valeur": 7.13,
+   "ecart_pct": 249.2,
+   "vu_le": "janv. 2026 (test DH)",
+   "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Galette Pasquier frangipane 6P (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 6.89,
+   "promo": null,
+   "valeur": 8.2,
+   "ecart_pct": 203.7,
+   "vu_le": "janv. 2026 (communiqué)",
+   "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Galette des rois (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 6.99,
+   "promo": null,
+   "valeur": 8.32,
+   "ecart_pct": 199.3,
+   "vu_le": "janv. 2026 (test DH)",
+   "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Galette des rois frangipane 6P (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 8.69,
+   "promo": null,
+   "valeur": 10.34,
+   "ecart_pct": 140.8,
+   "vu_le": "janv. 2026 (communiqué)",
+   "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Galette pommes-frangipane 6P (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 9.99,
+   "promo": null,
+   "valeur": 11.89,
+   "ecart_pct": 109.4,
+   "vu_le": "janv. 2026 (communiqué)",
+   "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Maison Dandoy",
+   "type": "Chaîne",
+   "produit": "Galette aux amandes 6/8 p, Ø 28 cm",
+   "taille": 28,
+   "unite": "cm",
+   "prix": 32,
+   "promo": null,
+   "valeur": 23.51,
+   "ecart_pct": 5.9,
+   "vu_le": "fin d'année 2025",
+   "source": "https://d16n391k7whr4.cloudfront.net/images/DAN_CORPO_CATALOGUE_FIN_ANNEE_25-2-1_compressed.pdf",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Boulangerie Lefevre (Marche)",
+   "type": "Artisan",
+   "produit": "Galette des rois 600 g, Ø 22 cm",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 19.9,
+   "promo": null,
+   "valeur": 23.68,
+   "ecart_pct": 5.2,
+   "vu_le": "lu, saison non précisée",
+   "source": "https://www.patisserie-lefevre.be/galette-des-rois/",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Paysans-Artisans (Le pain de François)",
+   "type": "Artisan",
+   "produit": "Galette frangipane 6/8 p, Ø 24 cm",
+   "taille": 24,
+   "unite": "cm",
+   "prix": 24.33,
+   "promo": null,
+   "valeur": 24.33,
+   "ecart_pct": 2.3,
+   "vu_le": "lu le 2026-11-07",
+   "source": "https://eshop.paysans-artisans.be/galette-des-rois-frangipane-6-8-pers-p1382545081163.htm",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Bakkerij Van Dessel (Dilbeek)",
+   "type": "Artisan",
+   "produit": "Driekoningentaart appel (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 21,
+   "promo": null,
+   "valeur": 24.99,
+   "ecart_pct": -0.4,
+   "vu_le": "page janv. 2025, toujours en ligne",
+   "source": "https://www.bakkerijvandessel.be/product/driekoningentaart-appel",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Chacolathé (Andenne)",
+   "type": "Artisan",
+   "produit": "Petite galette 4–6 p (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 22,
+   "promo": null,
+   "valeur": 26.18,
+   "ecart_pct": -4.9,
+   "vu_le": "janv. 2026",
+   "source": "https://chacolathe.be/2025/12/27/galette-des-rois-2026/",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Galette des rois (8 p, Ø 25 cm estimé)",
+   "taille": 25,
+   "unite": "cm",
+   "prix": 29,
+   "promo": null,
+   "valeur": 26.73,
+   "ecart_pct": -6.8,
+   "vu_le": "janv. 2026 probable, index moteur",
+   "source": "https://lepaindantan.be/en/our-news/artisanal-galettes-des-rois-discover-our-creations-from-3-january-onwards-307",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Chacolathé (Andenne)",
+   "type": "Artisan",
+   "produit": "Grande galette 8–12 p (8 p, Ø 25 cm estimé)",
+   "taille": 25,
+   "unite": "cm",
+   "prix": 32,
+   "promo": null,
+   "valeur": 29.49,
+   "ecart_pct": -15.6,
+   "vu_le": "janv. 2026",
+   "source": "https://chacolathe.be/2025/12/27/galette-des-rois-2026/",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Boulengier (Saint-Gilles)",
+   "type": "Artisan",
+   "produit": "Galette frangipane (6 p, Ø 22 cm estimé)",
+   "taille": 22,
+   "unite": "cm",
+   "prix": 29,
+   "promo": null,
+   "valeur": 34.51,
+   "ecart_pct": -27.8,
+   "vu_le": "janv. 2025",
+   "source": "https://www.dhnet.be/regions/bruxelles/2025/01/04/ne-pas-avoir-peur-de-mettre-du-beurre-voici-les-secrets-dune-bonne-galette-des-rois-par-la-boulangerie-qui-fait-la-meilleure-de-bruxelles-37OBQOLTEZGHTJ47LEUP6APABQ/",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Boulengier (Saint-Gilles)",
+   "type": "Artisan",
+   "produit": "Galette frangipane (4 p, Ø 18 cm estimé)",
+   "taille": 18,
+   "unite": "cm",
+   "prix": 21,
+   "promo": null,
+   "valeur": 37.33,
+   "ecart_pct": -33.3,
+   "vu_le": "janv. 2025",
+   "source": "https://www.dhnet.be/regions/bruxelles/2025/01/04/ne-pas-avoir-peur-de-mettre-du-beurre-voici-les-secrets-dune-bonne-galette-des-rois-par-la-boulangerie-qui-fait-la-meilleure-de-bruxelles-37OBQOLTEZGHTJ47LEUP6APABQ/",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Galette des rois (4 p, Ø 18 cm estimé)",
+   "taille": 18,
+   "unite": "cm",
+   "prix": 23,
+   "promo": null,
+   "valeur": 40.89,
+   "ecart_pct": -39.1,
+   "vu_le": "janv. 2026 probable, index moteur",
+   "source": "https://lepaindantan.be/en/our-news/artisanal-galettes-des-rois-discover-our-creations-from-3-january-onwards-307",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Colruyt (Boni)",
+   "type": "GMS",
+   "produit": "Pasquier frangipane 400 g (promo 1–12 janv.)",
+   "taille": 400,
+   "unite": "g",
+   "prix": 5.5,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "janv. 2026, index moteur",
+   "source": "https://www.colruyt.be/nl/producten/9173",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Driekoningentaart frangipane 400 g",
+   "taille": 400,
+   "unite": "g",
+   "prix": 6.99,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "janv. 2026, index moteur",
+   "source": "https://www.carrefour.be/nl/driekoningentaart",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Galette Taste of Inspirations (taille non précisée)",
+   "taille": null,
+   "unite": "pièce",
+   "prix": 12.59,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "janv. 2026 (communiqué)",
+   "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Galette cuite en magasin (taille non précisée)",
+   "taille": null,
+   "unite": "pièce",
+   "prix": 12.99,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "janv. 2026 (communiqué)",
+   "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "eFarmz",
+   "type": "Artisan",
+   "produit": "Galette des rois bio 6–8 parts, 500 g",
+   "taille": 500,
+   "unite": "g",
+   "prix": 23,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "janv. 2026, index moteur",
+   "source": "https://www.efarmz.be/fr/shop/boulangerie/patisseries/brioches/A6107+galette-des-rois",
+   "magasins": [
+    2,
+    4
+   ]
+  }
+ ],
+ "par_type": [
+  {
+   "type": "GMS",
+   "n": 9,
+   "min": 5.58,
+   "mediane": 7.13,
+   "max": 11.89,
+   "ecart_pct": 249.2
+  },
+  {
+   "type": "Chaîne",
+   "n": 3,
+   "min": 23.51,
+   "mediane": 26.73,
+   "max": 40.89,
+   "ecart_pct": -6.8
+  },
+  {
+   "type": "Artisan",
+   "n": 7,
+   "min": 23.68,
+   "mediane": 26.18,
+   "max": 37.33,
+   "ecart_pct": -4.9
+  }
+ ],
+ "position": {
+  "moins_chers": 12,
+  "sur": 19,
+  "mediane": 23.51
+ },
+ "analyses_api": [],
+ "web": {
+  "score": 64,
+  "ok": 7,
+  "total": 11,
+  "controles": [
+   {
+    "cle": "page",
+    "libelle": "Page dédiée en ligne",
+    "ok": true,
+    "detail": "https://atelierby.be/galette-des-rois.html → HTTP 200"
+   },
+   {
+    "cle": "titre",
+    "libelle": "« galette » dans le titre de la page",
+    "ok": true,
+    "detail": "Galette des Rois · L'Atelier By"
+   },
+   {
+    "cle": "description",
+    "libelle": "« galette » dans la meta description",
+    "ok": true,
+    "detail": "Feuilletage pur beurre, frangipane à l’ancienne, fève signée. Réservez votre galette des Rois en ligne, retirez-la dans votre boutique, couronne comprise."
+   },
+   {
+    "cle": "texte",
+    "libelle": "Produit lisible dans le HTML servi",
+    "ok": true,
+    "detail": "13 mention(s)"
+   },
+   {
+    "cle": "prix",
+    "libelle": "Prix affiché sur la page",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "cle": "taille",
+    "libelle": "Diamètre ou nombre de parts affiché",
+    "ok": false,
+    "detail": "0 mention(s)"
+   },
+   {
+    "cle": "schema",
+    "libelle": "Balisage schema.org Product / Offer",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "cle": "accueil",
+    "libelle": "« galette » visible sur l'accueil (HTML servi)",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "cle": "sitemap",
+    "libelle": "Page dans le sitemap",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "cle": "robots",
+    "libelle": "robots.txt présent",
+    "ok": false,
+    "detail": "HTTP 404"
+   },
+   {
+    "cle": "nl",
+    "libelle": "« driekoningentaart » sur la version NL (Halle)",
+    "ok": true,
+    "detail": "HTTP 200 · Driekoningentaart · L'Atelier By"
+   }
+  ],
+  "lu_le": "2026-11-07 11:36"
+ },
+ "constats": [
+  "Garder 24,90 € : à surface égale (Ø 24 cm), c'est le prix des artisans et chaînes qui donnent un vrai diamètre (Paysans-Artisans 24,33 €, Dandoy 23,51 €, Lefevre 23,68 €), et nettement sous les pâtissiers bruxellois (Boulengier ≈ 34–37 €, Pain d'Antan 8 p ≈ 27 €).",
+  "Mettre en avant la précommande à 19,90 € : aucun concurrent relevé n'offre de remise pour réserver tôt. C'est notre argument face aux supermarchés (6 à 12 € à Ø 24).",
+  "Afficher le diamètre (24 cm) et le nombre de parts (8) sur la page Galette et le webshop : les concurrents comparent au nombre de personnes.",
+  "Aligner le prix du panel (20,50 € à Halle) sur 24,90 € / 19,90 € avant l'ouverture des précommandes.",
+  "Ajouter « galette des rois » + nom des villes dans le titre de la page, et un balisage Product/Offer avec les deux prix et les dates.",
+  "Relever à nouveau les prix vers le 3 janvier : la plupart des concurrents publient les leurs pour l'Épiphanie (la routine du jeudi le rappelle)."
+ ]
+}

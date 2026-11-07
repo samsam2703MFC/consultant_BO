@@ -1,0 +1,129 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Niezgodności{% endblock %}
+
+{% set sourceLabels = {supplier_delivery: 'Dostawa surowca', production: 'Produkcja', customer: 'Klient', internal: 'Wewnętrzna'} %}
+{% set severityLabels = {minor: 'drobna', major: 'poważna', critical: 'krytyczna'} %}
+{% set statusLabels = {open: 'otwarta', in_progress: 'w toku', closed: 'zamknięta'} %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Niezgodności (NC)</h3>
+            <p class="text-subtitle text-muted"><a href="{{ root }}/purchasing">Koszty surowców</a> · dostawy, produkcja, klienci · przyczyna i działanie korygujące</p>
+        </div>
+        <a href="#ncNew" class="btn btn-primary" data-bs-toggle="collapse" role="button" aria-expanded="false"><i class="bi bi-plus"></i> Zgłoś niezgodność</a>
+    </div>
+{% endblock %}
+
+{% macro fields(nc, materials, suppliers, products, users, sourceLabels, severityLabels, statusLabels) %}
+    <label class="at-purch-label">Data <input class="form-control" type="date" name="reported_at" value="{{ nc.reported_at ?? 'now'|date('Y-m-d') }}"></label>
+    <label class="at-purch-label">Źródło <span class="text-danger">*</span>
+        <select class="form-select" name="source" required>
+            {% for k, l in sourceLabels %}<option value="{{ k }}" {{ nc.source is defined and nc.source == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label">Waga
+        <select class="form-select" name="severity">
+            {% for k, l in severityLabels %}<option value="{{ k }}" {{ nc.severity is defined and nc.severity == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label">Dostawca
+        <select class="form-select" name="supplier_id" data-nullable>
+            <option value="">—</option>
+            {% for s in suppliers %}<option value="{{ s.id }}" {{ nc.id_supplier is defined and nc.id_supplier == s.id ? 'selected' : '' }}>{{ s.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label">Surowiec
+        <select class="form-select" name="material_id" data-nullable>
+            <option value="">—</option>
+            {% for r in materials %}<option value="{{ r.id }}" {{ nc.id_raw_material is defined and nc.id_raw_material == r.id ? 'selected' : '' }}>{{ r.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label">Produkt
+        <select class="form-select" name="product_id" data-nullable>
+            <option value="">—</option>
+            {% for p in products %}<option value="{{ p.id }}" {{ nc.id_final_product is defined and nc.id_final_product == p.id ? 'selected' : '' }}>{{ p.name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label at-purch-wide">Opis <span class="text-danger">*</span><textarea class="form-control" name="description" rows="2" required>{{ nc.description ?? '' }}</textarea></label>
+    <label class="at-purch-label">Ilość<input class="form-control" name="quantity" inputmode="decimal" data-nullable value="{{ nc.quantity ?? '' }}"></label>
+    <label class="at-purch-label">Jednostka<input class="form-control" name="unit" maxlength="16" data-nullable value="{{ nc.unit ?? '' }}" placeholder="kg, kart., szt."></label>
+    <label class="at-purch-label">Koszt (zł)<input class="form-control" name="cost_impact" inputmode="decimal" data-nullable value="{{ nc.cost_impact ?? '' }}"></label>
+    <label class="at-purch-label">Odpowiedzialny
+        <select class="form-select" name="owner_user" data-nullable>
+            <option value="">—</option>
+            {% for u in users %}<option value="{{ u.id }}" {{ nc.owner_user is defined and nc.owner_user == u.id ? 'selected' : '' }}>{{ u.displayed_name }}</option>{% endfor %}
+        </select>
+    </label>
+    <label class="at-purch-label">Termin<input class="form-control" type="date" name="due_date" data-nullable value="{{ nc.due_date ?? '' }}"></label>
+    <label class="at-purch-label at-purch-wide">Działanie natychmiastowe<textarea class="form-control" name="immediate_action" rows="1" data-nullable>{{ nc.immediate_action ?? '' }}</textarea></label>
+    {% if nc.id is defined %}
+        <label class="at-purch-label at-purch-wide">Przyczyna<textarea class="form-control" name="root_cause" rows="1" data-nullable>{{ nc.root_cause ?? '' }}</textarea></label>
+        <label class="at-purch-label at-purch-wide">Działanie korygujące<textarea class="form-control" name="corrective_action" rows="1" data-nullable>{{ nc.corrective_action ?? '' }}</textarea></label>
+        <label class="at-purch-label">Status
+            <select class="form-select" name="status">
+                {% for k, l in statusLabels %}<option value="{{ k }}" {{ nc.status == k ? 'selected' : '' }}>{{ l }}</option>{% endfor %}
+            </select>
+        </label>
+    {% endif %}
+{% endmacro %}
+
+{% block content %}
+<section class="section at-purch">
+    <div class="collapse" id="ncNew">
+        <div class="card">
+            <div class="card-header"><h4 class="card-title">Nowa niezgodność</h4></div>
+            <div class="card-body pt-0">
+                <form id="ncForm" class="at-purch-form">
+                    {{ _self.fields({}, materials, suppliers, products, users, sourceLabels, severityLabels, statusLabels) }}
+                    <div class="at-purch-actions"><span></span><button type="submit" class="btn btn-primary">Zapisz</button></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Rejestr</h4>
+            <div class="btn-group btn-group-sm">
+                <a class="btn {{ status is null ? 'btn-primary' : 'btn-outline-primary' }}" href="?">Wszystkie</a>
+                {% for k, l in statusLabels %}
+                    <a class="btn {{ status == k ? 'btn-primary' : 'btn-outline-primary' }}" href="?status={{ k }}">{{ l|capitalize }} ({{ counts[k] ?? 0 }})</a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            {% for nc in items %}
+                <details class="at-nc {{ nc.status == 'closed' ? 'is-closed' : '' }} at-nc-{{ nc.severity }}">
+                    <summary>
+                        <strong>{{ nc.number }}</strong>
+                        <span class="badge {{ nc.severity == 'critical' ? 'bg-danger' : (nc.severity == 'major' ? 'bg-warning' : 'bg-secondary') }}">{{ severityLabels[nc.severity] }}</span>
+                        <span class="badge {{ nc.status == 'closed' ? 'bg-success' : 'bg-info' }}">{{ statusLabels[nc.status] }}</span>
+                        {{ nc.reported_at|date('d.m.Y') }} · {{ sourceLabels[nc.source] }}
+                        {{ nc.supplier_name ? '· ' ~ nc.supplier_name : '' }}{{ nc.material_name ? ' · ' ~ nc.material_name : '' }}{{ nc.product_name ? ' · ' ~ nc.product_name : '' }}
+                        <div class="at-sub">{{ nc.description|length > 140 ? nc.description|slice(0, 140) ~ '…' : nc.description }}{{ nc.owner_name ? ' — ' ~ nc.owner_name : '' }}{{ nc.due_date and nc.status != 'closed' ? ' · termin ' ~ nc.due_date|date('d.m') : '' }}</div>
+                    </summary>
+                    <form class="at-purch-form at-nc-edit" data-id="{{ nc.id }}">
+                        {{ _self.fields(nc, materials, suppliers, products, users, sourceLabels, severityLabels, statusLabels) }}
+                        <div class="at-purch-actions"><span class="at-sub">Zgłosił(a): {{ nc.created_at|date('d.m.Y H:i') }}{{ nc.closed_at ? ' · zamknięta ' ~ nc.closed_at|date('d.m.Y') : '' }}</span><button type="submit" class="btn btn-primary btn-sm">Zapisz zmiany</button></div>
+                    </form>
+                </details>
+            {% else %}
+                <p class="at-empty">Brak niezgodności{{ status ? ' o tym statusie' : '' }}.</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    at.bindForm(document.getElementById('ncForm'), '/ajax/purchasing/nc');
+    document.querySelectorAll('.at-nc-edit').forEach(form => at.bindForm(form, `/ajax/purchasing/nc/${form.dataset.id}`, 'PATCH'));
+    if (window.location.hash === '#new') document.getElementById('ncNew').classList.add('show');
+})();
+</script>
+{% endblock %}

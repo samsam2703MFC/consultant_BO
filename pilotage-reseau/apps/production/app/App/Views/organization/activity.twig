@@ -1,0 +1,148 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Aktywność w ERP{% endblock %}
+
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Aktywność w ERP</h3>
+            <p class="text-subtitle text-muted">Ile czasu zespół spędza w ERP i na czym : sesje, strony, czas aktywny (karta widoczna i ruch w ostatniej minucie), kliknięcia ; koszt czasu = godziny aktywne × koszt godziny osoby. Zapisywane są tylko etykiety przycisków i trasy linków — nigdy treść pól.</p>
+        </div>
+        <form class="d-flex gap-2 flex-wrap align-items-end" method="get">
+            <label class="at-purch-label">Od<input class="form-control" type="date" name="from" value="{{ from }}"></label>
+            <label class="at-purch-label">Do<input class="form-control" type="date" name="to" value="{{ to }}"></label>
+            <label class="at-purch-label">Osoba<select class="form-select" name="user"><option value="">wszyscy</option>{% for p in people %}<option value="{{ p.id }}" {{ user_id == p.id ? 'selected' : '' }}>{{ p.name }}</option>{% endfor %}</select></label>
+            <button class="btn btn-primary" type="submit">Pokaż</button>
+        </form>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-activity">
+    <div class="at-kpis">
+        <div class="at-kpi"><span>Czas aktywny</span><strong>{{ (total.active_h|number_format(1, ',', ' ') ~ ' h') }}</strong></div>
+        <div class="at-kpi"><span>Koszt czasu</span><strong>{{ (total.cost is null ? '—' : total.cost|number_format(0, ',', ' ') ~ ' zł') }}</strong>{% if total.uncosted_h > 0 %}<small class="at-sub">+ {{ (total.uncosted_h|number_format(1, ',', ' ') ~ ' h') }} bez kosztu godziny</small>{% endif %}</div>
+        <div class="at-kpi"><span>Sesje</span><strong>{{ total.sessions }}</strong></div>
+        <div class="at-kpi"><span>Strony</span><strong>{{ total.views|number_format(0, ',', ' ') }}</strong></div>
+        <div class="at-kpi"><span>Kliknięcia</span><strong>{{ total.clicks|number_format(0, ',', ' ') }}</strong></div>
+        <div class="at-kpi"><span>Osoby</span><strong>{{ total.users }}</strong></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Osoby</h4><p class="at-sub mb-0">Koszt godziny (zł, koszt pracodawcy) wpisz raz — zapis od razu.</p></div>
+        <div class="card-body pt-0"><div class="table-responsive">
+            <table class="table table-sm mb-0" id="activityUsers">
+                <thead><tr><th>Osoba</th><th class="text-end">Sesje</th><th class="text-end">Dni</th><th class="text-end">Czas aktywny</th><th class="text-end">Strony</th><th class="text-end">Klik. / h</th><th>Najwięcej czasu</th><th class="text-end">Koszt godziny</th><th class="text-end">Koszt czasu</th></tr></thead>
+                <tbody>
+                {% for u in users %}
+                    <tr>
+                        <td><a href="?from={{ from }}&to={{ to }}&user={{ u.user_id }}"><strong>{{ u.name }}</strong></a>{% if u.position %}<div class="at-sub">{{ u.position }}</div>{% endif %}</td>
+                        <td class="text-end">{{ u.sessions }}</td>
+                        <td class="text-end">{{ u.days }}</td>
+                        <td class="text-end">{{ (u.active_h|number_format(1, ',', ' ') ~ ' h') }}</td>
+                        <td class="text-end">{{ u.views }}</td>
+                        <td class="text-end">{{ u.clicks_per_h ?? '—' }}</td>
+                        <td class="at-sub">{% for m in u.top_modules %}{{ m.label|split(' (')|first }} {{ (m.active_h|number_format(1, ',', ' ') ~ ' h') }}{{ not loop.last ? ' · ' : '' }}{% endfor %}</td>
+                        <td class="text-end"><input class="form-control form-control-sm text-end at-cost" data-cost="{{ u.user_id }}" inputmode="decimal" value="{{ u.hourly_cost is null ? '' : u.hourly_cost|number_format(2, ',', '') }}" aria-label="Koszt godziny {{ u.name }}" style="width: 100px; display: inline-block"></td>
+                        <td class="text-end"><strong>{{ (u.cost is null ? '—' : u.cost|number_format(0, ',', ' ') ~ ' zł') }}</strong></td>
+                    </tr>
+                {% else %}
+                    <tr><td colspan="9" class="at-sub">Brak aktywności w tym okresie — zapis zaczyna się od pierwszej strony otwartej po wdrożeniu.</td></tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Moduły (pozycje railu)</h4><p class="at-sub mb-0">Gdzie idzie czas i ile kosztuje — kandydaci do uproszczenia albo automatyzacji.</p></div>
+        <div class="card-body pt-0"><div class="table-responsive">
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Moduł</th><th class="text-end">Udział</th><th class="text-end">Czas aktywny</th><th class="text-end">Osoby</th><th class="text-end">Strony</th><th class="text-end">Kliknięcia</th><th class="text-end">Koszt czasu</th></tr></thead>
+                <tbody>
+                {% for m in modules %}
+                    <tr>
+                        <td>{{ m.label }}{% if m.section %} <span class="at-sub">· {{ m.section }}</span>{% endif %}</td>
+                        <td class="text-end"><div class="at-activity-bar"><span style="width: {{ m.share }}%"></span></div> {{ m.share|number_format(1, ',', ' ') }} %</td>
+                        <td class="text-end">{{ (m.active_h|number_format(1, ',', ' ') ~ ' h') }}</td>
+                        <td class="text-end">{{ m.users }}</td>
+                        <td class="text-end">{{ m.views }}</td>
+                        <td class="text-end">{{ m.clicks }}</td>
+                        <td class="text-end">{{ (m.cost is null ? '—' : m.cost|number_format(0, ',', ' ') ~ ' zł') }}{% if m.uncosted_h > 0 %} <span class="at-sub">+ {{ (m.uncosted_h|number_format(1, ',', ' ') ~ ' h') }} bez kosztu</span>{% endif %}</td>
+                    </tr>
+                {% else %}<tr><td colspan="7" class="at-sub">Brak danych.</td></tr>{% endfor %}
+                </tbody>
+            </table>
+        </div></div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 col-xl-7">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Strony</h4></div>
+                <div class="card-body pt-0"><div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Strona</th><th class="text-end">Czas aktywny</th><th class="text-end">Wyświetlenia</th><th class="text-end">Śr. min</th><th class="text-end">Kliknięcia</th><th class="text-end">Osoby</th></tr></thead>
+                        <tbody>
+                        {% for r in routes %}
+                            <tr><td><code>{{ r.route }}</code>{% if r.title %}<div class="at-sub">{{ r.title|split(' · ')|first }}</div>{% endif %}</td>
+                                <td class="text-end">{{ (r.active_h|number_format(1, ',', ' ') ~ ' h') }}</td><td class="text-end">{{ r.views }}</td><td class="text-end">{{ r.avg_min|number_format(1, ',', ' ') }}</td>
+                                <td class="text-end">{{ r.clicks }}</td><td class="text-end">{{ r.users }}</td></tr>
+                        {% else %}<tr><td colspan="6" class="at-sub">Brak danych.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+        <div class="col-12 col-xl-5">
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Najczęstsze kliknięcia</h4><p class="at-sub mb-0">Przyciski (etykieta) i linki (→ trasa) — wszystkie osoby.</p></div>
+                <div class="card-body pt-0"><div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Element</th><th>Strona</th><th class="text-end">Kliknięcia</th></tr></thead>
+                        <tbody>
+                        {% for c in clicks %}
+                            <tr><td>{{ c.target }}</td><td class="at-sub"><code>{{ c.route }}</code></td><td class="text-end">{{ c.clicks }}</td></tr>
+                        {% else %}<tr><td colspan="3" class="at-sub">Brak danych.</td></tr>{% endfor %}
+                        </tbody>
+                    </table>
+                </div></div>
+            </div>
+            <div class="card">
+                <div class="card-header"><h4 class="card-title">Dni</h4></div>
+                <div class="card-body pt-0"><div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead><tr><th>Dzień</th><th class="text-end">Czas aktywny</th><th class="text-end">Strony</th><th class="text-end">Osoby</th></tr></thead>
+                        <tbody>{% for d in days|reverse %}<tr><td>{{ d.date|date('d.m.Y') }}</td><td class="text-end">{{ (d.active_h|number_format(1, ',', ' ') ~ ' h') }}</td><td class="text-end">{{ d.views }}</td><td class="text-end">{{ d.users }}</td></tr>{% else %}<tr><td colspan="4" class="at-sub">Brak danych.</td></tr>{% endfor %}</tbody>
+                    </table>
+                </div></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Sesje</h4><p class="at-sub mb-0">Sesja = wejście do ERP aż do przerwy dłuższej niż 30 minut ; kliknij, aby zobaczyć przebieg stron.</p></div>
+        <div class="card-body pt-0">
+            {% for s in sessions %}
+            <details class="at-activity-session">
+                <summary><strong>{{ s.name }}</strong> · {{ s.started_at|date('d.m.Y H:i') }}–{{ s.last_seen_at|date('H:i') }} · {{ s.duration_min }} min (aktywne {{ s.active_min }} min) · {{ s.views }} stron · {{ s.clicks }} klik.</summary>
+                <ol class="at-activity-pages">{% for p in s.pages %}<li><span class="at-sub">{{ p.at }}</span> <code>{{ p.route }}</code>{% if p.title %} — {{ p.title|split(' · ')|first }}{% endif %} <span class="at-sub">· {{ (p.active_s / 60)|number_format(1, ',', ' ') }} min · {{ p.clicks }} klik.</span></li>{% endfor %}</ol>
+            </details>
+            {% else %}<p class="at-sub">Brak sesji w tym okresie.</p>{% endfor %}
+        </div>
+    </div>
+
+    <p class="at-sub">Monitorowanie aktywności w systemie pracy : poinformuj zespół (cel, zakres, okres przechowywania — 13 miesięcy), np. w regulaminie pracy lub mailem.</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+document.querySelectorAll('[data-cost]').forEach(input => input.addEventListener('change', () => {
+    at.send(`/ajax/organization/activity/users/${input.dataset.cost}/cost`, 'PUT', {hourly_cost: input.value})
+        .then(res => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 500); });
+}));
+</script>
+{% endblock %}

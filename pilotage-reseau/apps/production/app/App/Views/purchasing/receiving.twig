@@ -1,0 +1,113 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kontrola przyjęć dnia{% endblock %}
+
+{% set d = data %}
+{% set st = d.stats %}
+{% set dayLabel = d.day|date('d.m.Y') %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Kontrola przyjęć dnia</h3>
+            <p class="text-subtitle text-muted mb-0">Zaopatrzenie › Przyjęcia · {{ dayLabel }} — dostawy z zamówień sprawdzane na tablecie pakowania (tryb « Przyjęcia »), tu podsumowanie, zdjęcia i e-mail do dostawcy.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <div class="at-seg" role="group" aria-label="Dzień">
+                <a class="{{ d.day == yesterday ? 'is-on' }}" href="{{ root }}/workshop/receiving?date={{ yesterday }}">Wczoraj</a>
+                <a class="{{ d.day == today ? 'is-on' }}" href="{{ root }}/workshop/receiving">Dziś</a>
+            </div>
+            <a class="btn btn-outline-primary" href="{{ root }}/tablet/packing?mode=receiving" target="_blank" rel="noopener"><i class="bi bi-tablet"></i> Tablet pakowania › Przyjęcia</a>
+            {% if can_see('/purchasing/nc') %}<a class="btn btn-outline-primary" href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-triangle"></i> Niezgodności</a>{% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Kontrola przyjęć dnia [230] (makieta 4) : App\Services\Purchasing\ReceivingWizardService::summary — wpisy z tabletu pakowania.
+   Zadanie « Kontrola przyjęć » (Jakość / Kierownik produkcji) zalicza się samo, gdy wszystkie dostawy dnia są sprawdzone. #}
+<section class="section">
+    <div class="rcv-task"><i class="bi bi-magic"></i> Zadanie « Kontrola przyjęć dnia » (Jakość, codziennie do 14:00 ; nikt na stanowisku Jakość → Kierownik produkcji) zalicza się samo, gdy wszystkie dostawy dnia są sprawdzone na tablecie pakowania.</div>
+    <div class="rcv-wz">
+        <div class="rcv-steps">
+            <div class="s {{ st.due ? 'ok' }}"><span class="n">{{ st.due ? '✓' : '1' }}</span><span>Dostawy dnia<small>{{ st.due }} {{ st.due == 1 ? 'dostawa' : (st.due in [2,3,4] ? 'dostawy' : 'dostaw') }} · {{ st.lines }} poz.{% if st.overdue %} · {{ st.overdue }} zaległe{% endif %}</small></span></div>
+            <div class="s {{ st.due and st.checked >= st.due ? 'ok' : (st.checked ? 'on') }}"><span class="n">{{ st.due and st.checked >= st.due ? '✓' : '2' }}</span><span>Sprawdź pozycje (tablet)<small>{{ st.checked }} z {{ st.due }} sprawdzone</small></span></div>
+            <div class="s {{ d.ncs|length ? 'on' }}"><span class="n">3</span><span>Podsumowanie<small>{{ d.ncs|length }} NC → dostawca</small></span></div>
+        </div>
+        <div class="rcv-mainc">
+            <div class="kw-card">
+                <h5 class="rcv-h">Dostawy {{ d.day == today ? 'dziś' : dayLabel }}<span class="kw-badge {{ st.due and st.checked >= st.due ? 'ok' }}">{{ st.checked }} z {{ st.due }} sprawdzone</span></h5>
+                {% if d.orders|length %}
+                <div class="table-responsive"><table class="rcv-tbl">
+                    <thead><tr><th>Dostawca</th><th>Zamówienie</th><th class="r">Pozycje</th><th>Termin</th><th>Kontrola</th><th>Kto · kiedy</th></tr></thead>
+                    <tbody>
+                    {% for o in d.orders %}
+                        <tr class="{{ o.due ? '' : 'is-late' }}">
+                            <td><b>{{ o.supplier }}</b></td>
+                            <td>{{ o.code }}</td>
+                            <td class="r">{{ o.lines }}</td>
+                            <td>{{ o.delivery_date ? o.delivery_date|date('d.m') : '—' }}{% if not o.due %} <span class="kw-badge warn">zaległa</span>{% endif %}</td>
+                            <td>{% if o.check %}{% if o.check.arrived %}<span class="kw-badge {{ o.check.nc ? 'bad' : 'ok' }}">{{ o.check.ok }} OK · {{ o.check.nc }} NC</span>{% else %}<span class="kw-badge warn">nie dotarła</span>{% endif %}{% else %}<span class="kw-badge">do sprawdzenia</span>{% endif %}</td>
+                            <td class="at-sub">{% if o.check %}{{ o.check.by ?: '—' }} · {{ o.check.at }}{% else %}—{% endif %}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table></div>
+                {% else %}
+                <p class="at-empty">Brak dostaw z zamówień na ten dzień — zadanie zalicza się samo (« brak dostaw »).</p>
+                {% endif %}
+            </div>
+
+            <div class="kw-card">
+                <h5 class="rcv-h">Niezgodności dnia<span class="kw-badge {{ d.ncs|length ? 'bad' : 'ok' }}">{{ d.ncs|length }}</span></h5>
+                {% for n in d.ncs %}
+                    <div class="rcv-nc">
+                        <div class="rcv-nc-h"><b>{{ n.number }} · {{ n.material }}</b><span class="at-sub">{{ n.supplier }}</span><span class="kw-badge {{ n.status == 'open' ? 'bad' : 'warn' }}">{{ n.status == 'open' ? 'otwarta' : 'w toku' }}</span></div>
+                        <div class="rcv-nc-d">{{ n.description }}</div>
+                        <div class="at-sub">{{ n.decision }}</div>
+                        {% if n.photos|length %}<div class="rcv-ph">{% for pid in n.photos %}<a href="{{ root }}/purchasing/nc/photo/{{ pid }}" target="_blank" rel="noopener"><img src="{{ root }}/purchasing/nc/photo/{{ pid }}" alt="Zdjęcie {{ n.number }}" loading="lazy"></a>{% endfor %}</div>{% endif %}
+                    </div>
+                {% else %}
+                    <p class="at-empty">Brak niezgodności przy przyjęciach tego dnia.</p>
+                {% endfor %}
+            </div>
+
+            {% if d.mails|length %}
+            <div class="kw-card">
+                <h5 class="rcv-h">E-mail do dostawcy (szkic — wysyłasz Ty)</h5>
+                {% for m in d.mails %}
+                    <div class="rcv-mail" data-mail>
+                        <div class="rcv-nc-h"><b>{{ m.supplier }}</b><span class="at-sub">{{ m.email ?: 'brak adresu e-mail w karcie dostawcy' }}</span></div>
+                        <input class="form-control" value="{{ m.subject }}" data-mail-subject aria-label="Temat">
+                        <textarea class="form-control" rows="7" data-mail-body aria-label="Treść">{{ m.body }}</textarea>
+                        <div class="rcv-row">
+                            <button type="button" class="kw-btn" data-mail-copy><i class="bi bi-clipboard"></i> Kopiuj</button>
+                            {% if m.email %}<a class="kw-btn pri" data-mail-open href="mailto:{{ m.email }}"><i class="bi bi-envelope"></i> Otwórz w poczcie</a>{% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        <div class="rcv-side">
+            <div class="kw-card rcv-sum"><h5>{{ d.day == today ? 'Dziś' : dayLabel }}</h5>
+                <div class="rcv-kv"><span>Dostawy sprawdzone</span><b>{{ st.checked }} z {{ st.due }}</b></div>
+                <div class="rcv-kv"><span>Pozycje OK</span><b>{{ st.ok }} z {{ st.lines }}</b></div>
+                <div class="rcv-kv"><span>Niezgodności</span><b class="{{ st.nc ? 'is-bad' }}">{{ st.nc }}</b></div>
+                <p class="at-sub">Każda pozycja zapisuje przyjęcie (ilość, partia, termin, temperatura) w zamówieniu — stan surowca i partie dla receptur od razu aktualne.</p>
+            </div>
+            <div class="kw-card"><h5 class="rcv-h">Po ostatniej dostawie</h5>
+                <div class="rcv-list">
+                    <span><i class="bi bi-envelope"></i> Szkic e-maila do dostawcy z niezgodnością — wysyłasz Ty</span>
+                    <span><i class="bi bi-bell"></i> Kierownik w dzwonku, gdy decyzja « do decyzji kierownika » albo « zwrot »</span>
+                    <span><i class="bi bi-magic"></i> Zadanie zaliczone : « {{ st.due }} dostawy · {{ st.ok }} OK · {{ st.nc }} NC »</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/purchasing/receiving.js?v={{ asset_v() }}"></script>
+{% endblock %}

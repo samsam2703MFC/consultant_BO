@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>E — Compétences</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+/* E — Les compétences à acquérir : chaque compétence regroupe les SOP d'un même geste ; elle est acquise quand la
+   responsable du magasin a vu faire chacune de ses SOP (sur la tablette, avec son PIN). Le réseau magasin par
+   magasin, puis Halle personne par personne. Équipe et chiffres FICTIFS ; noms de compétences à caler sur le panel. */
+const C = FO.competences, R = FO.reseau, CP = FO.compPers;
+const POSTES = [['vente', 'Vente · comptoir'], ['cuisson', 'Cuisson'], ['production', 'Production']];
+const heat = v => v == null ? '<span class="heat" style="color:#ccc">—</span>' : `<span class="heat" style="background:${v < 20 ? '#F3EEE7' : v < 40 ? '#E3EFE2' : v < 60 ? '#C6E0CA' : v < 80 ? '#86BF94' : '#2d7a3e'};color:${v < 60 ? '#24502f' : '#fff'};${v < 20 ? 'color:#999' : ''}">${v} %</span>`;
+const tete = `<tr><th class="l">${'&nbsp;'}</th>${POSTES.map(p => C.filter(c => c.poste === p[0]).map((c, i) => `<th style="min-width:62px">${i === 0 ? `<span class="po">${p[1]}</span>` : '<span class="po">&nbsp;</span>'}${esc(c.nom)}</th>`).join('')).join('')}<th>Acquises</th></tr>`;
+const ordre = POSTES.flatMap(p => C.filter(c => c.poste === p[0]));
+const reseau = `<div class="carte" style="margin-bottom:16px"><h3>Le réseau<small>part de l’équipe qui a acquis chaque compétence · les standards valent pour les 4 magasins</small></h3>
+  <table class="cm">${tete}${R.map(m => `<tr><td class="p"><b>${m.nom}</b><small>${m.equipe} personnes · ${m.aValider} à valider par ${m.resp === 'responsable' ? 'la responsable' : m.resp}</small></td>${ordre.map(c => `<td>${heat(m.parComp[c.id])}</td>`).join('')}<td><b>${m.taux} %</b></td></tr>`).join('')}</table></div>`;
+const CELL = x => x.st === 'na' ? '<span class="cp na"></span>' : x.st === 'acq' ? '<span class="cp acq">✓</span>' : x.st === 'rv' ? '<span class="cp rv">! à revoir</span>' : x.st === 'enc' ? `<span class="cp enc">${x.v} / ${x.n}</span>` : `<span class="cp aq">0 / ${x.n}</span>`;
+const halle = `<div class="carte" style="margin-bottom:16px"><h3>Halle · qui a quoi<small>une compétence est acquise quand Elke V. (responsable) a vu faire chacune de ses SOP · « 2 / 3 » = SOP vues faire</small></h3>
+  <table class="cm">${tete}${EQUIPE.map(p => { const r = CP[p.id]; const l = ordre.filter(c => r[c.id].st !== 'na'); const a = l.filter(c => r[c.id].st === 'acq').length;
+    return `<tr><td class="p"><b>${esc(p.nom)}</b><small>${esc(p.role)} · ${p.langue}</small></td>${ordre.map(c => `<td>${CELL(r[c.id])}</td>`).join('')}<td><b>${a} / ${l.length}</b></td></tr>`; }).join('')}</table>
+  <div class="leg"><span><span class="cp acq" style="min-width:26px;height:18px">✓</span> acquise</span><span><span class="cp enc" style="min-width:34px;height:18px">1 / 3</span> en cours</span><span><span class="cp aq" style="min-width:34px;height:18px">0 / 1</span> à acquérir</span><span><span class="cp rv" style="height:18px">!</span> une SOP a changé depuis</span><span>vide : pas son poste</span><span>Pains et baguettes : SOP à valider, pas encore acquérable</span></div></div>`;
+const AV = FO.halle.aValider;
+const avalider = `<div class="carte"><h3>À voir faire par Elke V.<small>quiz réussi · la validation se donne sur la tablette du poste, avec son PIN · ${AV.length} en attente</small></h3>
+  ${AV.map(a => `<div class="fil"><div class="d">${esc(a.le)}</div><div class="x"><b>${esc(a.qui)}</b> · ${esc(a.sop)}<small>${esc(a.note)}</small></div><span class="pill att">à voir faire</span></div>`).join('')}
+  <div style="display:flex;gap:8px;margin-top:10px"><span class="b s">Rappeler à Elke V.</span><span class="mini" style="align-self:center">le consultant suit et relance ; il ne valide pas</span></div></div>`;
+const liens = `<div class="carte" style="margin-bottom:16px"><h3>Fiche technique · compétences requises</h3><div class="mini" style="font-size:12.5px;line-height:1.55">Dans l’app Cuisine, la fiche technique d’un produit affiche déjà ses <b>compétences requises</b> (panel). On y ajoute, pour chacune, la SOP à lire et qui, dans l’équipe du jour, l’a acquise. Exemple : une tarte aux fruits → <span class="comp">Crèmes et tartes</span> → 5 SOP → à Halle : ${['ka', 'mr'].map(id => { const x = CP[id]['c-tartes']; return EQUIPE.find(p => p.id === id).nom + ' (' + (x.st === 'rv' ? 'à revoir' : x.v + ' / ' + x.n) + ')'; }).join(', ')}.</div></div>
+  <div class="carte" style="margin-bottom:16px"><h3>Dans le cockpit</h3><div class="mini" style="font-size:12.5px;line-height:1.55">La <b>fiche franchisé</b> prend le taux de compétences acquises du magasin (Halle ${R[0].taux} %). Le point « Formation production et vente faite » du <b>cadre de visite</b> se coche d’après ce tableau. Une entrée <b>Formation ↗</b> dans le rail, sous Suivi de terrain.</div></div>`;
+const fil = `<div class="carte"><h3>Le fil<small>Halle · 7 derniers jours</small></h3>${FO.halle.fil.slice(0, 5).map(f => `<div class="fil"><div class="d">${esc(f.le)}</div><div class="x">${f.x}${f.s ? `<small>${esc(f.s)}</small>` : ''}</div></div>`).join('')}</div>`;
+const kpis = `<div class="kpis">
+  <div class="kpi"><div class="k">Compétences acquises · réseau</div><div class="v att">${Math.round(R.reduce((a, m) => a + m.taux * m.equipe, 0) / R.reduce((a, m) => a + m.equipe, 0))} %</div><div class="s">${R.map(m => m.nom + ' ' + m.taux + ' %').join(' · ')}</div></div>
+  <div class="kpi"><div class="k">À voir faire</div><div class="v">${R.reduce((a, m) => a + m.aValider, 0)}</div><div class="s">quiz réussis, en attente de la responsable du magasin</div></div>
+  <div class="kpi"><div class="k">À revoir</div><div class="v ko">${FO.halle.aRevoir}</div><div class="s">Fermeture v1.3 · Flans v1.1 : à relire et revalider</div></div>
+  <div class="kpi"><div class="k">Compétences</div><div class="v">${C.length}</div><div class="s">${POSTES.map(p => C.filter(c => c.poste === p[0]).length + ' ' + p[1].split(' ')[0].toLowerCase()).join(' · ')}</div></div></div>`;
+coque('competences', `<div class="titre"><h1>Compétences</h1><span class="ss">les compétences à acquérir, SOP par SOP · validées par la responsable du magasin · tout le réseau</span></div>${kpis}${reseau}${halle}
+  <div class="grille g2"><div>${avalider}</div><div>${liens}${fil}</div></div>`, { boutons: ['Exporter (PDF)'], magasin: 'Réseau · 4 magasins' });
+</script></body></html>

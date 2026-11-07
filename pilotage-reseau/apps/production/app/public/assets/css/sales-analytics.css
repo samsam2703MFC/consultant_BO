@@ -1,0 +1,114 @@
+/* [254] Analiza sprzedaży — makiety 32 + 34 : werdykt, przyciski działów, miesiące obok roku wcześniej,
+   produkty w górę / w dół. Kolory i promienie z atelier.css. */
+.sa { --sa-up: var(--at-success); --sa-down: #b3261e; --sa-mid: var(--at-warning); --sa-ghost: #d9d2ca; --sa-line: #ece7e1; }
+.sa .num { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.sa .up { color: var(--sa-up); } .sa .down { color: var(--sa-down); }
+.sa-card { background: var(--at-surface); border: 1px solid var(--sa-line); border-radius: 16px; }
+.sa-pad { padding: 18px 22px; }
+
+/* Okresy i filtr klienta */
+.sa-bar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 14px; }
+.sa-chip { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--at-line-2); background: var(--at-surface); font-size: 14px; font-weight: 600; color: var(--at-muted); text-decoration: none; }
+.sa-chip:hover { color: var(--at-text); border-color: var(--at-primary); }
+.sa-chip.on { background: var(--at-primary); border-color: var(--at-primary); color: #fff; }
+.sa-spacer { flex: 1; }
+.sa-select { min-height: 44px; border-radius: 10px; min-width: 220px; }
+.sa-other summary { list-style: none; cursor: pointer; }
+.sa-other summary::-webkit-details-marker { display: none; }
+.sa-other[open] .sa-other-form { display: flex; }
+.sa-other-form { display: none; gap: 8px; align-items: center; margin-top: 8px; }
+.sa-other-form input { min-height: 44px; border-radius: 10px; }
+
+/* Przyciski działów */
+.sa-secs { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.sa-sec { display: flex; flex-direction: column; background: var(--at-surface); border: 1.5px solid var(--sa-line); border-radius: 14px; padding: 14px 14px 10px; color: var(--at-text); text-decoration: none; min-height: 48px; }
+.sa-sec:hover { border-color: var(--at-primary); color: var(--at-text); }
+.sa-sec.on { border-color: var(--at-primary); box-shadow: 0 0 0 3px var(--at-primary-soft); }
+.sa-sec h6 { margin: 0; font-size: 14px; font-weight: 700; }
+.sa-sec .v { font-size: 22px; font-weight: 800; font-variant-numeric: tabular-nums; margin: 8px 0 6px; }
+.sa-sec .r { display: flex; justify-content: space-between; align-items: center; font-size: 12.5px; color: var(--at-muted); margin-top: 6px; gap: 8px; }
+.sa-sec .r b { font-variant-numeric: tabular-nums; }
+.sa-badges { min-height: 30px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--sa-line); display: flex; flex-wrap: wrap; gap: 4px; }
+.sa-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 7px; }
+.sa-badge.sales { background: var(--at-primary-soft); color: var(--at-primary); }
+.sa-badge.growth, .sa-badge.margin { background: rgba(46, 125, 79, 0.10); color: var(--sa-up); }
+.sa-badge.loss { background: rgba(179, 38, 30, 0.10); color: var(--sa-down); }
+.sa-pill { display: inline-flex; align-items: center; justify-content: flex-end; padding: 3px 9px; border-radius: 8px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sa-pill.up { background: rgba(46, 125, 79, 0.10); color: var(--sa-up); }
+.sa-pill.down { background: rgba(179, 38, 30, 0.10); color: var(--sa-down); }
+.sa-pill.new { background: #eef1fb; color: #2f4aa0; }
+.sa-pill.none { background: var(--at-bg-2); color: var(--at-muted); }
+.sa-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 5px; }
+.sa-m-ok { color: var(--sa-up); } .sa-m-ok .sa-dot { background: var(--sa-up); }
+.sa-m-mid { color: var(--sa-mid); } .sa-m-mid .sa-dot { background: var(--sa-mid); }
+.sa-m-bad { color: var(--sa-down); } .sa-m-bad .sa-dot { background: var(--sa-down); }
+
+/* Werdykt */
+.sa-verdict { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 22px; align-items: center; padding: 22px 26px; margin-bottom: 14px; }
+.sa-verdict .ic { width: 64px; height: 64px; border-radius: 16px; display: grid; place-items: center; font-size: 34px; color: #fff; background: var(--sa-up); }
+.sa-verdict .ic.down { background: var(--sa-down); }
+.sa-verdict .ic.none { background: var(--at-muted); }
+.sa-verdict h2 { margin: 0; font-size: 28px; font-weight: 800; }
+.sa-verdict p { margin: 6px 0 0; font-size: 15px; color: var(--at-muted); }
+.sa-verdict .fig { text-align: right; }
+.sa-verdict .fig b { display: block; font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.sa-verdict .fig small { font-size: 13px; color: var(--at-muted); }
+.sa-strip { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 12px 16px; border-radius: 12px; background: var(--at-bg-2); font-size: 13.5px; color: var(--at-muted); margin-bottom: 14px; }
+.sa-strip b { color: var(--at-text); }
+.sa-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--at-line-2); background: var(--at-surface); color: var(--at-text); font-weight: 600; font-size: 13.5px; text-decoration: none; }
+.sa-btn:hover { border-color: var(--at-primary); color: var(--at-text); }
+
+/* Wykres miesięcy */
+.sa-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin: 0 0 12px; }
+.sa-h h5 { margin: 0; font-size: 16px; font-weight: 700; }
+.sa-h span { color: var(--at-muted); font-size: 13px; }
+.sa-legend { display: flex; gap: 16px; font-size: 12.5px; color: var(--at-muted); margin-left: auto; }
+.sa-legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+.sa-chart { position: relative; display: grid; grid-template-columns: 70px minmax(0, 1fr); }
+.sa-axis { position: relative; height: 220px; }
+.sa-axis span { position: absolute; right: 10px; transform: translateY(50%); font-size: 12px; color: var(--at-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sa-plot { position: relative; }
+.sa-grid { position: absolute; inset: 0 0 auto 0; height: 220px; pointer-events: none; }
+.sa-grid i { position: absolute; left: 0; right: 0; border-top: 1px solid #eee8e1; }
+.sa-cols { position: relative; display: flex; gap: 4px; }
+.sa-col { flex: 1 1 0; min-width: 0; text-align: center; }
+.sa-bars { height: 220px; display: flex; align-items: flex-end; justify-content: center; gap: 4px; }
+.sa-bars i { display: block; width: min(28px, 34%); border-radius: 4px 4px 0 0; }
+.sa-bars i.prev { background: var(--sa-ghost); }
+.sa-bars i.cur { background: var(--at-primary); }
+.sa-bars i.cur.partial { background: var(--sa-mid); }
+.sa-col .m { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--at-muted); }
+.sa-col .m small { display: block; min-height: 15px; font-size: 11px; font-weight: 400; }
+.sa-col .p { font-size: 13px; font-weight: 700; margin-top: 2px; }
+.sa-alert { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 12px 16px; border-radius: 12px; background: #fdf4e6; color: #7a4a0d; font-size: 13.5px; margin-top: 14px; }
+
+/* Produkty w górę / w dół */
+.sa-two { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 14px; margin-bottom: 14px; }
+.sa-mover { display: grid; grid-template-columns: minmax(0, 1fr) 120px 96px; gap: 12px; align-items: center; min-height: 52px; border-top: 1px solid var(--sa-line); font-size: 14px; cursor: pointer; }
+.sa-mover:first-of-type { border-top: 0; }
+.sa-mover .n { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.sa-mover .n small { display: block; font-weight: 400; color: var(--at-muted); font-size: 12px; }
+.sa-track { height: 10px; border-radius: 6px; background: var(--at-bg-2); overflow: hidden; }
+.sa-track i { display: block; height: 100%; border-radius: 6px; }
+.sa-empty { color: var(--at-muted); font-size: 13.5px; padding: 8px 0; }
+
+/* Wszystkie produkty */
+.sa-all summary { list-style: none; display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 52px; font-size: 14px; font-weight: 600; color: var(--at-primary); cursor: pointer; }
+.sa-all summary::-webkit-details-marker { display: none; }
+.sa-all[open] summary { border-bottom: 1px solid var(--sa-line); }
+.sa-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sa-table th { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--at-muted); padding: 10px 12px; border-bottom: 1px solid var(--sa-line); background: #fcfbf9; text-align: left; }
+.sa-table th.num { text-align: right; }
+.sa-table td { padding: 0 12px; height: 50px; border-bottom: 1px solid var(--sa-line); }
+.sa-table tr.product-row { cursor: pointer; }
+.sa-table tr.product-row:hover td { background: #fcfaf7; }
+.sa-table td small { display: block; color: var(--at-muted); font-size: 12px; }
+.sa-note { margin-top: 4px; padding: 12px 16px; border: 1px dashed #d9cfc4; border-radius: 12px; font-size: 13px; color: var(--at-muted); background: #fffdfa; }
+
+@media (max-width: 900px) {
+    .sa-verdict { grid-template-columns: auto minmax(0, 1fr); }
+    .sa-verdict .fig { display: none; }
+    .sa-verdict h2 { font-size: 22px; }
+    .sa-mover { grid-template-columns: minmax(0, 1fr) 88px; }
+    .sa-mover .sa-track { display: none; }
+}

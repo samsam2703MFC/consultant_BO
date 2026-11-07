@@ -1,0 +1,21 @@
+{
+  "shops": { "4": "Wavre", "7": "Louvain-la-Neuve", "9": "Namur" },
+  "employees": {
+    "4": [
+      { "id": 101, "name": "Léa", "surname": "Martin" },
+      { "id": 102, "name": "Tom", "surname": "Dubois" },
+      { "id": 103, "name": "Inès", "surname": "Peeters" }
+    ],
+    "7": [
+      { "id": 201, "name": "Hugo", "surname": "Lambert" },
+      { "id": 202, "name": "Zoé", "surname": "Claes", "active": false }
+    ],
+    "9": [
+      { "id": 301, "name": "Noah", "surname": "Jacobs" }
+    ]
+  },
+  "profiles": {
+    "101": { "givenName": "Léa", "familyName": "Martin", "birthDate": "2005-07-30", "ssin": "05073012333", "status": "etudiant" },
+    "102": { "givenName": "Tom", "familyName": "Dubois", "birthDate": "1985-07-30", "ssin": "85073003328", "status": "employe" }
+  }
+}

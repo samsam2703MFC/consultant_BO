@@ -1,0 +1,137 @@
+<nav class="navbar navbar-expand navbar-light ">
+    <div class="container-fluid">
+        <a href="#" class="burger-btn d-block">
+            <i class="bi bi-justify fs-3"></i>
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+
+            <div class="at-search" id="atSearch" data-root="{{ root }}" role="search">
+                <i class="bi bi-search" aria-hidden="true"></i>
+                <input type="search" class="at-search-input" placeholder="Szukaj: moduł, zamówienie, klient, produkt…"
+                       aria-label="Szukaj w ERP (skrót: /)" autocomplete="off" spellcheck="false"
+                       role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="atSearchList">
+                <kbd class="at-search-key" aria-hidden="true">/</kbd>
+                <div class="at-search-panel" id="atSearchList" role="listbox" aria-label="Wyniki wyszukiwania" hidden></div>
+            </div>
+            <script src="{{ root }}/assets/js/atelier-search.js?v={{ asset_v() }}" defer></script>
+
+            <div class="navbar-center flex-grow-1 d-flex justify-content-center">
+
+                <div class="quick-tags d-flex align-items-center">
+                    {# [255] Skróty tylko do stron, które użytkownik widzi (bez 403). #}
+                    {% if can_see('/dashboard') %}
+                    <a href="{{ root }}/dashboard" class="badge bg-dark me-2 py-2 px-3 at-profit-pill" data-profit title="Koszt personelu / sprzedaż w bieżącym miesiącu">
+                        <i class="icon bi bi-graph-up"></i> Rentowność <span data-profit-value></span>
+                    </a>
+                    {% endif %}
+                    {% if can_see('/shipping/wizard') %}
+                    <a href="{{ root }}/shipping/wizard" class="badge bg-primary me-2 py-2 px-3" title="Kreator wysyłki (tryb klasyczny : link na stronie kreatora)">
+                        <i class="icon bi bi-truck"></i> Wysyłka
+                    </a>
+                    {% endif %}
+                    {% if can_see('/workshop/team-sheet') %}
+                    <a href="{{ root }}/workshop/team-sheet" class="badge bg-secondary me-2 py-2 px-3" title="Plan zespołów na tydzień (PDF, tablet) i listy dnia (PDF)">
+                        <i class="icon dripicons-document"></i> Listy produkcyjne
+                    </a>
+                    {% endif %}
+                    {% if can_see('/client-orders') %}
+                    <a href="{{ root }}/client-orders" class="badge bg-info me-2 py-2 px-3">
+                        <i class="icon dripicons-user-group"></i> Zamówienia
+                    </a>
+                    {% endif %}
+                    {% if can_see('/test-products/new') %}
+                    <a href="{{ root }}/test-products/new" class="badge bg-success me-2 py-2 px-3" title="Nowy produkt testowy : z filmu (karta technologiczna), z karty .docx albo sam pomysł">
+                        <i class="icon bi bi-stars"></i> Nowy produkt
+                    </a>
+                    {% endif %}
+                    {% if can_see('/franchise-complaints') %}
+                    <a href="{{ root }}/franchise-complaints" class="badge bg-warning me-2 py-2 px-3">
+                        <i class="icon dripicons-warning"></i> Reklamacje <span class="at-count" data-count="complaints" hidden></span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+
+
+            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+
+                <li class="nav-item dropdown me-3" id="atBell" data-root="{{ root }}">
+                    <a class="nav-link at-bell-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                       aria-expanded="false" aria-label="Powiadomienia">
+                        <i class="bi bi-bell"></i>
+                        <span class="at-bell-count" hidden></span>
+                    </a>
+                    <div class="dropdown-menu dropdown-menu-end at-bell-menu">
+                        <div class="at-bell-head">
+                            <span>Powiadomienia</span>
+                            <button type="button" class="at-bell-readall" data-notifications-read-all hidden>Oznacz wszystkie jako odczytane</button>
+                        </div>
+                        <div class="at-bell-list"><p class="at-bell-empty">Brak nowych powiadomień</p></div>
+                    </div>
+                </li>
+            </ul>
+            {% set vs = view_session() %}
+            <div class="dropdown">
+                <a href="#" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Konto{{ vs.can_switch ? ' i sesja' : '' }}">
+                    <div class="user-menu d-flex">
+                        <div class="user-name text-end me-3">
+                            <h6 class="mb-0 text-gray-600">{{ user.displayName }}</h6>
+                            <p class="mb-0 text-sm {{ vs.current ? 'at-vs-on' : 'text-gray-600' }}">{{ vs.label ?: 'Administrator' }}</p>
+                        </div>
+                        <div class="user-img d-flex align-items-center">
+                            <div class="avatar avatar-md">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end at-vs-menu" aria-labelledby="dropdownMenuButton">
+                    <li>
+                        <h6 class="dropdown-header">Witaj{{ user.displayName ? ', ' ~ user.displayName : '' }}!</h6>
+                    </li>
+                    {% if vs.can_switch %}
+                    {# [239] Sesja : administrator ogląda ERP jak dane stanowisko (menu, strona startowa, zadania) ; uprawnienia bez zmian. #}
+                    <li><h6 class="dropdown-header at-vs-head">Sesja</h6></li>
+                    {% for s in vs.sessions %}
+                    <li><button type="button" class="dropdown-item at-vs-item{{ s.current ? ' on' : '' }}" data-view-session="{{ s.id ?? '' }}" aria-pressed="{{ s.current ? 'true' : 'false' }}">
+                        <i class="bi {{ s.icon }}"></i><span><b>{{ s.name }}</b><small>{{ s.sub }}</small></span>{% if s.current %}<i class="bi bi-check2 at-vs-check"></i>{% endif %}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    {% endif %}
+                    <li><a class="dropdown-item" href="#"><i class="icon-mid bi bi-person me-2"></i>
+                            Mój profil</a></li>
+                    {% if can_see('/settings') %}<li><a class="dropdown-item" href="{{ root }}/settings"><i class="icon-mid bi bi-gear me-2"></i>
+                            Ustawienia</a></li>{% endif %}
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li><a class="dropdown-item" href="{{ root }}/logout"><i
+                                class="icon-mid bi bi-box-arrow-left me-2"></i>Wyloguj</a></li>
+                </ul>
+            </div>
+            {% if vs.can_switch %}
+            <script>
+                // [239] Zmiana sesji : zapis na serwerze, potem strona startowa sesji.
+                document.querySelectorAll('[data-view-session]').forEach(function (b) {
+                    b.addEventListener('click', function () {
+                        if (b.classList.contains('on')) return;
+                        var id = b.dataset.viewSession;
+                        b.disabled = true;
+                        fetch('{{ root }}/ajax/view-session', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', Accept: 'application/json'},
+                            body: JSON.stringify({position_id: id === '' ? null : Number(id)})})
+                            .then(function (r) { return r.json(); })
+                            .then(function (j) { if (j && j.data && j.data.home) location.href = '{{ root }}' + j.data.home; else { b.disabled = false; alert((j && j.message) || 'Nie udało się zmienić sesji.'); } })
+                            .catch(function () { b.disabled = false; alert('Nie udało się zmienić sesji.'); });
+                    });
+                });
+            </script>
+            {% endif %}
+        </div>
+    </div>
+</nav>

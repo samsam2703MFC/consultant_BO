@@ -1,0 +1,19 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Wydajność i straty{% endblock %}
+
+{% block content %}
+{# Kreator « Wydajność i straty kwartału » [247] (makieta 23) : App\Services\Organization\Wizards\YieldReviewService — widok w
+   assets/js/production/yield-review.js, rama kreatora w assets/js/organization/task-wizard.js. Zadanie « Wydajność i straty kwartału »
+   (Kierownik produkcji, co kwartał) zalicza się samo po « Zatwierdź przegląd ». #}
+<section class="section">
+    <div id="yrApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="yrBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/production/yield-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposition 3 — Par poste</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../formation/fo.css"><link rel="stylesheet" href="fu.css">
+<script src="coque.js"></script></head><body><div class="page" id="p"></div><script>
+/* Proposition 3 : le manuel se lit par poste (les 12 postes P1–P12 du référentiel v25, regroupés) et par phase.
+   Une case = ce que ce poste lit, apprend et prouve dans cette phase. Le parcours d'une personne : lire → quiz →
+   vu faire (validé par le responsable) → compétence acquise (cochée dans le panel). L'équipe de Halle est FICTIVE. */
+const c = (t, on) => `<td class="${on ? 'on' : ''}">${t}</td>`;
+const pl = (x, m) => `<b>${x}</b> ${m}${x > 1 ? 's' : ''}`;
+const n = (s, f, k) => `<div class="n">${pl(s, 'standard')} · <b>${f}</b> FO · ${pl(k, 'compétence')}</div>`;
+const st = (code, t, l, q, v, a) => `<div class="li" style="grid-template-columns:96px minmax(0,1fr) 58px 58px 70px 84px"><span class="code">${code}</span><span>${t}</span>
+  <span class="pill ${l ? 'ok' : ''}">${l ? '✓ lu' : 'à lire'}</span><span class="pill ${q ? 'ok' : ''}">${q ? '✓ quiz' : 'quiz'}</span><span class="pill ${v === 1 ? 'ok' : v === 2 ? 'att' : ''}">${v === 1 ? '✓ vu faire' : v === 2 ? 'à revoir' : 'vu faire'}</span><span class="pill ${a ? 'ok' : ''}">${a ? '◆ acquise' : 'à acquérir'}</span></div>`;
+document.getElementById('p').innerHTML = entete('postes') + `
+<div class="prop"><span class="n">Proposition 3</span><h1>Par poste</h1><span class="ss">chacun voit son chemin : ce qu'il lit, apprend et prouve à son poste, phase par phase</span></div>
+<div class="lay"><div>
+  <div class="carte" style="padding:8px 10px">
+  <table class="mat"><thead><tr><th>Poste (référentiel v25)</th><th>Pré-ouverture</th><th>Ouverture · 6 semaines</th><th>Opérationnel</th><th>Formation continue</th></tr></thead><tbody>
+    <tr><td class="p"><b>Franchisé</b><small>P9 · P10 · P11 · plan PF-GER</small></td>
+      ${c(n(25, 12, 32) + '<div class="mini">38 points du guide · blocs 1 → 9 · stage pratique</div>')}${c(n(25, 3, 3) + '<div class="mini">bloc 10 · garant d\'ouverture · porte : attestation</div>')}${c(n(4, 3, 8) + '<div class="mini">pilotage, caisse, obligations</div>')}${c(n(0, 6, 7) + '<div class="mini">bloc 11 · FO-41, FO-42</div>')}</tr>
+    <tr><td class="p"><b>Manager · adjoint</b><small>P7 · P8</small></td>
+      ${c(n(8, 4, 6))}${c(n(25, 2, 3))}${c(n(25, 4, 9) + '<div class="mini">valide le « vu faire » de son équipe</div>')}${c(n(0, 3, 4))}</tr>
+    <tr><td class="p"><b>Vente</b><small>P3 · P4 · plans PF-VEND, PF-ETU</small></td>
+      ${c(n(7, 3, 11), true)}${c(n(7, 2, 4))}${c(n(7, 4, 11) + '<div class="mini">tablette du comptoir</div>')}${c(n(0, 3, 3))}</tr>
+    <tr><td class="p"><b>Cuisson · boulangerie</b><small>P1 · P5</small></td>
+      ${c(n(7, 3, 4))}${c(n(7, 1, 2))}${c(n(8, 3, 4) + '<div class="mini">tablette du poste de cuisson</div>')}${c(n(0, 1, 2) + '<div class="mini">FO-39 master class</div>')}</tr>
+    <tr><td class="p"><b>Production · pâtisserie</b><small>P1 · P5</small></td>
+      ${c(n(10, 2, 2))}${c(n(10, 1, 2))}${c(n(10, 2, 3))}${c(n(0, 1, 2))}</tr>
+    <tr><td class="p"><b>Traiteur</b><small>P2 · P6</small></td>
+      ${c(n(1, 1, 2))}${c('<span class="mu">rien de propre au poste</span>')}${c(n(1, 2, 4) + '<div class="mini att">2 compétences sans standard</div>')}${c(n(0, 1, 1))}</tr>
+  </tbody></table><div class="mini" style="padding:0 8px 6px">Nombres indicatifs : ils se calculent tout seuls une fois chaque objet rangé (lot 2 du plan).</div></div>
+  <div class="carte" style="margin-top:14px">
+    <div class="titre" style="margin-bottom:6px"><h1 style="font-size:23px">Inès B. · Vente · Halle</h1><span class="ss">plan PF-VEND · pré-ouverture du nouveau magasin · 11 compétences, 4 acquises</span></div>
+    <div class="etp"><div class="ok"><b>Lire</b>sur la tablette, en FR ou NL · 6 / 7</div><div class="ok"><b>Quiz</b>3 questions par standard · 5 / 7</div><div class="att"><b>Vu faire</b>validé par la responsable · 3 / 7</div><div><b>Acquise</b>cochée dans le panel · 4 / 11</div></div>
+    <div style="margin-top:10px">
+      ${st('SOP-WKL-001', 'Ouverture du magasin et des comptoirs', 1, 1, 1, 1)}
+      ${st('SOP-WKL-002', 'Encodage des commandes clients en caisse', 1, 1, 1, 1)}
+      ${st('SOP-VEN-001', 'Recuisson d’appoint – pains et baguettes', 1, 1, 2, 0)}
+      ${st('SOP-VER-TGTG', 'Gestion des paniers Too Good To Go', 1, 1, 1, 1)}
+      ${st('CHK-WKL-004', 'Checklist de fermeture quotidienne', 1, 1, 0, 0)}
+      ${st('SOP-WKL-003', 'Procédure de fermeture', 1, 0, 0, 0)}
+      ${st('CHK-WKL-005', 'Moments calmes – tâches des périodes calmes', 0, 0, 0, 0)}
+    </div>
+  </div>
+</div>
+<div class="aside">
+  <div class="carte"><h4>Pour qui</h4><div class="mini">L'<b>équipe en magasin</b> et son responsable : c'est la lecture de la tablette du poste.</div></div>
+  <div class="carte"><h4>Forces</h4><ul class="plus"><li>Parle la langue du magasin : « mon poste, mes standards ».</li><li>Le « vu faire » et la compétence du panel sont au même endroit.</li><li>Les plans de formation v25 (PF-VEND, PF-ETU…) deviennent une ligne du tableau.</li></ul></div>
+  <div class="carte"><h4>Limites</h4><ul class="moins"><li>Un même standard sert plusieurs postes : il faut une source unique derrière.</li><li>Les démarches du franchisé (BCE, AFSCA…) n'ont pas de poste.</li></ul></div>
+</div></div>`;
+</script></body></html>

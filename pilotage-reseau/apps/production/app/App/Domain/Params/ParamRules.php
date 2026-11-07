@@ -1,0 +1,101 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Domain\Params;
+
+/**
+ * Une seule règle par paramètre (n_prod_param), quelle que soit la porte d'entrée : page Ustawienia › Pozostałe,
+ * API des référentiels, import du tableau Excel (Tabela do wypełnienia). Bornes par code et règles entre deux
+ * paramètres (le second ne peut pas être plus petit que le premier).
+ */
+final class ParamRules
+{
+    /** code => [min, max, entier ?] */
+    public const RANGES = [
+        'stock.suggest_weeks' => [1, 52, true],
+        // Plan logistyki [200]
+        'logistics.plan_weeks' => [4, 26, true],
+        'logistics.plan_ship_weekday' => [1, 5, true],
+        'logistics.plan_delivery_days' => [0, 3, true],
+        'logistics.plan_avg_weeks' => [4, 26, true],
+        'logistics.plan_coef_default' => [0.3, 5, false],
+        // Kartony i palety [205], Kalendarz tras [207]
+        'logistics.pallet_max_height_mm' => [300, 3000, true],
+        'logistics.pallet_max_kg' => [50, 3000, true],
+        'logistics.pallet_overhang_mm' => [0, 100, true],
+        'logistics.truck_inner_height_mm' => [1000, 3500, true],
+        'logistics.trip_load_min' => [0, 600, true],
+        'logistics.trip_drive_out_min' => [0, 3000, true],
+        'logistics.trip_between_min' => [0, 600, true],
+        'logistics.trip_unload_min' => [0, 600, true],
+        'logistics.trip_unload_pallet_min' => [0, 60, true],
+        'logistics.trip_drive_back_min' => [0, 3000, true],
+        'logistics.trip_weekly_rest_min' => [0, 6000, true],
+        // Ceny klientów wg marży [212]
+        'prices.client_cap_pct' => [0.5, 50, false],
+        'prices.client_round_eur' => [0.01, 1, false],
+        'prices.client_interval_days' => [0, 365, true],
+        // Kreator cen [218]
+        'prices.material_coef_default' => [1, 10, false],
+        'prices.notice_days' => [0, 60, true],
+        'stock.suggest_min_weeks' => [0, 26, false],
+        'stock.plan_safety_pct' => [0, 200, false],
+        'stock.freezer_pallet_places' => [0, 100000, true],
+        'stock.suggest_max_weeks' => [0.5, 52, false],
+        'alerts.complaint_days' => [1, 60, true],
+        'alerts.complaint_escalate_days' => [1, 90, true],
+        'alerts.cost_due_day' => [1, 28, true],
+        'shipping_issue.decision_days' => [1, 30, true],
+        'shipping_issue.min_amount' => [0, 1000, true],
+        'shipping_issue.lookback_days' => [7, 365, true],
+        'send_status.stuck_minutes' => [5, 1440, true],
+        'send_status.lookback_days' => [1, 365, true],
+        'reminders.auto_levels' => [0, 2, true],
+        'kiosk.waste_photo_required' => [0, 1, true],
+        'kiosk.waste_photo_max' => [1, 8, true],
+        'trace.label_days' => [0, 7, true],
+        'kiosk.office_qr_ttl_s' => [30, 600, true],
+        'supply.invoice_price_alert_pct' => [1, 100, false],
+        'kiosk.ordered_days' => [1, 28, true],
+        'new_product.factory_coef' => [1, 10, false],
+        'new_product.store_mult' => [1, 10, false],
+        'new_product.store_round_eur' => [0, 1, false],
+    ];
+
+    /** [code bas, code haut, code d'erreur API, message ERP] : la valeur haute ne peut pas être inférieure à la basse. */
+    public const ORDER = [
+        ['alerts.complaint_days', 'alerts.complaint_escalate_days', 'PARAM_ESCALATE_BEFORE_ALERT', 'Alert pilny nie może być wcześniej niż zwykły.'],
+        ['stock.suggest_min_weeks', 'stock.suggest_max_weeks', 'PARAM_MAX_BELOW_MIN', 'Zapas maksymalny nie może być mniejszy niż minimalny.'],
+    ];
+
+    /** Message d'erreur de borne pour un code connu (null = valeur correcte ou code sans borne). */
+    public static function rangeError(string $code, string $raw): ?string
+    {
+        if (!isset(self::RANGES[$code])) return null;
+        [$min, $max, $int] = self::RANGES[$code];
+        $raw = str_replace(',', '.', trim($raw));
+        if (!is_numeric($raw) || ($int && (string) (int) $raw !== $raw) || (float) $raw < $min || (float) $raw > $max) {
+            return "Wartość od {$min} do {$max}" . ($int ? ' (liczba całkowita)' : '') . '.';
+        }
+        return null;
+    }
+
+    /**
+     * Règles entre paramètres sur l'état final : $values (nouvelles valeurs) complétées par $current (code => valeur).
+     * @return array<string, array{0:string, 1:string}> code fautif => [code d'erreur API, message ERP]
+     */
+    public static function orderErrors(array $values, callable $current): array
+    {
+        $errors = [];
+        foreach (self::ORDER as [$low, $high, $code, $message]) {
+            if (!array_key_exists($low, $values) && !array_key_exists($high, $values)) continue;
+            $a = $values[$low] ?? $current($low);
+            $b = $values[$high] ?? $current($high);
+            if ($a === null || $b === null || $a === '' || $b === '') continue;
+            if ((float) str_replace(',', '.', (string) $b) < (float) str_replace(',', '.', (string) $a)) {
+                $errors[array_key_exists($high, $values) ? $high : $low] = [$code, $message];
+            }
+        }
+        return $errors;
+    }
+}

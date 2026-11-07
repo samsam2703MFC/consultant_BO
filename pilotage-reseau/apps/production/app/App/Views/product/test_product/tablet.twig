@@ -1,0 +1,353 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ product.name }} · nowy produkt{% endblock %}
+
+{% set stage = product.dev.stage %}
+{% set planned = trials|filter(t => t.status == 'planned') %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3><i class="bi bi-kanban"></i> {{ product.name }}</h3>
+            <p class="text-subtitle text-muted">Nowy produkt : etap {{ product.dev.stage_label|lower }}{% if product.dev.group %} · grupa {{ product.dev.group.name }} (jej tablet){% endif %}{% if product.target_date %} · cel {{ product.target_date|date('d.m.Y') }}{% endif %}.
+                Testy i recepturę zespół potwierdza na tablecie — tu widać wynik, bez ponownego wpisywania.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/edit?from=card"><i class="bi bi-pencil"></i> Dane produktu testowego</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/test-products/{{ product.id }}/changelogs"><i class="bi bi-clock-history"></i> Dziennik</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/test-products/pipeline"><i class="bi bi-kanban"></i> Wszystkie etapy</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-dev">
+    <div class="card">
+        <div class="card-body">
+            <ol class="at-dev-flow" aria-label="Etapy">
+                {% for f in flow %}<li class="is-{{ f.state }}"><span class="at-dev-flow-dot">{{ f.state == 'done' ? '✓' : loop.index }}</span>{{ f.label }}</li>{% endfor %}
+            </ol>
+            <div class="at-dev-next">
+                {% if stage == 'stopped' %}<span class="at-pill at-pill-muted">Wstrzymany</span> Produkt nie jest pokazywany na tablecie.
+                {% elseif product.dev.next %}<i class="bi bi-arrow-right-circle"></i> <strong>Następny krok :</strong> {{ product.dev.next.label }}
+                    {% if product.dev.next.kind == 'trial' and not planned %} — zaplanuj test poniżej albo zespół doda go sam na tablecie.{% endif %}
+                    {% if product.dev.next.kind == 'recipe' %} — na tablecie grupy (karta produktu → « Potwierdź recepturę »).{% endif %}
+                    {% if product.dev.next.kind == 'office' %} — wybierz produkt ERP w « Wprowadzenie ».{% endif %}
+                {% elseif stage == 'launched' %}<i class="bi bi-check2-circle"></i> Wprowadzony{% if product.final_product_name %} : <a href="{{ root }}/products/{{ product.final_product_id }}/edit">{{ product.final_product_name }}</a>{% endif %}.
+                {% endif %}
+                <form id="stageForm" class="at-dev-stage">
+                    <select class="form-select form-select-sm" name="stage" aria-label="Etap">
+                        {% if stage == 'launched' %}<option value="" selected disabled>Wprowadzony</option>{% endif %}
+                        {% for s in stage_choices %}<option value="{{ s.code }}" {{ s.code == stage ? 'selected' : '' }}>{{ s.label }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-outline-secondary" type="submit">Zmień etap</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Karta technologiczna z filmu i prognoza sprzedaży [196]. #}
+    {% if card and card.card %}
+    <div class="card at-devcard">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi bi-file-earmark-richtext"></i> Karta technologiczna</h4>
+            <span class="at-sub">{{ card.card.title }}{% if card.card.author %} · wg {{ card.card.author }}{% endif %}</span>
+            <span class="ms-auto d-flex gap-2 flex-wrap">
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.docx"><i class="bi bi-file-earmark-word"></i> .docx</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/test-products/cards/{{ card.id }}/card.pdf?inline=1" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> PDF</a>
+                <a class="btn btn-sm btn-outline-primary" href="{{ root }}/test-products/new/{{ card.id }}"><i class="bi bi-pencil"></i> Popraw kartę</a></span></div>
+        <div class="card-body pt-0">
+            <div class="at-devcard-facts">
+                <div><small>Wydajność</small>{{ card.card.yield ?: '—' }}</div><div><small>Pieczenie</small>{{ card.card.baking ?: '—' }}</div><div><small>Czas</small>{{ card.card.time ?: '—' }}</div>
+            </div>
+            <p class="at-sub mb-2">{{ card.card.ingredients|reduce((n, g) => n + g.items|length, 0) }} składników · {{ card.card.steps|length }} kroków · {{ card.card.photos|length }} zdjęć etapów — na tablecie grupy w karcie produktu.</p>
+            {% set fr = {} %}{% for f in card.frames %}{% set fr = fr|merge({('f' ~ f.id): f}) %}{% endfor %}
+            <div class="at-devcard-photos">{% for p in card.card.photos %}{% set f = fr['f' ~ p.frame_id] ?? null %}{% if f %}<figure><img src="{{ root }}{{ f.src }}" alt="" loading="lazy"><figcaption><b>{{ loop.index }}.</b> {{ p.caption }}</figcaption></figure>{% endif %}{% endfor %}</div>
+        </div>
+    </div>
+    {# Koszt i cena [198] : ostatni zapis kroku 4 kreatora (receptura karty → nasze surowce). #}
+    {% set pr = card.pricing %}
+    <div class="card at-devcard-cost">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi bi-calculator"></i> Koszt i cena</h4>
+            {% if pr and pr.at %}<span class="at-sub">policzone {{ pr.at|date('d.m.Y') }}</span>{% endif %}
+            <a class="btn btn-sm btn-outline-primary ms-auto" href="{{ root }}/test-products/new/{{ card.id }}#koszt"><i class="bi bi-calculator"></i> {{ pr and pr.cost_pc_pln is not null ? 'Popraw koszt i cenę' : 'Policz koszt i cenę' }}</a></div>
+        <div class="card-body pt-0">
+            {% if pr and pr.cost_pc_pln is not null %}
+            <div class="at-devcard-facts at-devcard-prices">
+                <div><small>Koszt surowców / szt.</small><b>{{ pr.cost_pc_pln|number_format(2, ',', ' ') }} zł</b>{% if pr.cost_pc_eur is not null %} · {{ pr.cost_pc_eur|number_format(2, ',', ' ') }} €{% endif %}</div>
+                <div><small>Cena fabryczna</small><b>{{ pr.factory_eur is not null ? pr.factory_eur|number_format(2, ',', ' ') ~ ' €' : '—' }}</b> (× {{ pr.factory_coef|number_format(1, ',', ' ') }})</div>
+                <div><small>Cena w sklepie (netto)</small><b>{{ pr.store_eur is not null ? pr.store_eur|number_format(2, ',', ' ') ~ ' €' : '—' }}</b> (× {{ pr.store_mult|number_format(pr.store_mult == pr.store_mult|round ? 0 : 1, ',', ' ') }})
+                    {% if pr.ratio is not null %}<span class="at-pill {{ pr.verdict == 'ok' ? 'at-pill-ok' : (pr.verdict == 'warn' ? 'at-pill-warn' : 'at-pill-danger') }}">{{ pr.verdict == 'ok' ? '✓' : (pr.verdict == 'warn' ? 'na granicy' : 'za drogo') }} × {{ pr.ratio|number_format(2, ',', ' ') }}</span>{% endif %}</div>
+            </div>
+            {% else %}
+            <p class="at-sub mb-2">Nie policzone : przypisz składniki karty do naszych surowców — ERP policzy koszt na sztukę, cenę fabryczną i cenę w sklepie.</p>
+            {% endif %}
+            {% if pr and pr.cobot %}<p class="mb-0"><b>Cobot :</b> {{ {'yes': 'tak', 'no': 'nie', 'check': 'do sprawdzenia'}[pr.cobot] }}{% if pr.cobot_steps|length %} — {{ pr.cobot_steps|join(', ') }}{% endif %}</p>{% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% if product.forecast.weekly is not null %}
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0"><i class="bi bi-graph-up"></i> Prognoza sprzedaży</h4></div>
+        <div class="card-body pt-0"><table class="table table-sm at-devcard-q mb-0"><thead><tr><th></th>{% for q in 1..4 %}<th class="text-end">Q{{ q }}</th>{% endfor %}<th class="text-end">Rok</th></tr></thead>
+            <tbody><tr><td>{{ product.forecast.weekly|number_format(0, ',', ' ') }} szt./tydz. × 13{{ product.forecast.seasonal ? ' · sezon' : ' · cały rok' }}</td>
+            {% for q in 1..4 %}<td class="text-end {{ product.forecast.per_quarter[q] ? '' : 'text-muted' }}">{{ product.forecast.per_quarter[q] ? product.forecast.per_quarter[q]|number_format(0, ',', ' ') : '—' }}</td>{% endfor %}
+            <td class="text-end fw-semibold">{{ product.forecast.year|number_format(0, ',', ' ') }}</td></tr></tbody></table></div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Testy receptury</h4>
+            <p class="at-sub mb-0">Zaplanowany test pojawia się na tablecie grupy. Zespół robi go i potwierdza : zdjęcia (z godziną), ilość, wynik, co zmienić.
+                OK po teście 1 → test 2 ; OK po teście 2 → receptura do zatwierdzenia ; « do poprawy » → kolejny test.</p></div>
+        <div class="card-body pt-0">
+            {% for t in trials %}
+            <div class="at-dev-trial {{ t.status == 'planned' ? 'is-planned' : '' }}">
+                <div class="at-dev-trial-head">
+                    <strong>Test {{ t.no }}</strong>
+                    {% if t.status == 'planned' %}
+                        <span class="at-pill at-pill-muted">Zaplanowany{% if t.planned_date %} · {{ t.planned_date|date('d.m.Y') }}{% endif %}</span>
+                        {% if t.group %}<span class="at-sub">{{ t.group }}</span>{% endif %}
+                        <button type="button" class="btn btn-sm btn-outline-danger ms-auto" data-cancel-trial="{{ t.id }}"><i class="bi bi-x-lg"></i> Usuń</button>
+                    {% else %}
+                        <span class="at-pill {{ {ok: 'at-pill-ok', fix: 'at-pill-warn', ko: 'at-pill-danger'}[t.result] }}">{{ t.result_label }}</span>
+                        <span class="at-sub">{{ t.done_at|date('d.m.Y H:i') }}{% if t.employee %} · {{ t.employee }}{% endif %}{% if t.group %} · {{ t.group }}{% endif %}{% if t.quantity is not null %} · ilość {{ t.quantity|number_format(t.quantity == t.quantity|round ? 0 : 2, ',', ' ') }}{% endif %}</span>
+                    {% endif %}
+                </div>
+                {% if t.instructions %}<p class="mb-1"><span class="at-sub">Wskazówki :</span> {{ t.instructions|nl2br }}</p>{% endif %}
+                {% if t.notes %}<p class="mb-1"><span class="at-sub">Zespół :</span> {{ t.notes|nl2br }}</p>{% endif %}
+                {% if t.photos %}
+                <div class="at-dev-trial-photos">
+                    {% for ph in t.photos %}<a href="{{ root }}/test-products/trial-photos/{{ ph.id }}" target="_blank" rel="noopener"><img src="{{ root }}/test-products/trial-photos/{{ ph.id }}" alt="Test {{ t.no }} — {{ ph.taken_at|date('d.m H:i') }}" loading="lazy"><span>{{ ph.taken_at|date('d.m H:i') }}</span></a>{% endfor %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p class="at-empty">Brak testów.</p>
+            {% endfor %}
+
+            {% if stage not in ['launch', 'launched', 'stopped'] %}
+            <form id="trialForm" class="at-purch-form mt-3">
+                <label class="at-purch-label">Data testu<input class="form-control" type="date" name="planned_date"></label>
+                <label class="at-purch-label">Grupa (jej tablet)
+                    <select class="form-select" name="id_group" required>
+                        {% for g in groups %}<option value="{{ g.id }}" {{ g.id == product.group_id ? 'selected' : '' }}>{{ g.name_pl }}</option>{% endfor %}
+                    </select></label>
+                <label class="at-purch-label at-purch-wide">Wskazówki dla zespołu (co sprawdzić, ile zrobić)<input class="form-control" name="instructions" maxlength="2000"></label>
+                <div class="at-purch-actions"><span class="at-sub">Test {{ (trials|last ? trials|last.no : 0) + 1 }}</span><button class="btn btn-primary" type="submit"><i class="bi bi-calendar-plus"></i> Zaplanuj test</button></div>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title">Receptura{% if stage == 'launched' and product.recipe_id %} <span class="at-sub">— produkt wprowadzony</span>{% endif %}</h4></div>
+                <div class="card-body pt-0">
+                    {# Receptura testu [201] : po wprowadzeniu = receptura produktu ERP ; przed — wybór na miejscu (szukaj) albo z karty technologicznej. #}
+                    {% set card_lines = 0 %}
+                    {% if card and card.card %}{% for g in card.card.ingredients ?? [] %}{% set card_lines = card_lines + (g.items ?? [])|length %}{% endfor %}{% endif %}
+                    {% if product.recipe_id %}
+                        <div class="at-dev-recipe">
+                            <p class="mb-1"><strong>{{ product.recipe_name ?: 'Receptura #' ~ product.recipe_id }}</strong>
+                                <span class="at-pill {{ stage == 'launched' ? 'at-pill-ok' : '' }}">{{ stage == 'launched' ? 'receptura produktu ERP' : 'powiązana' }}</span></p>
+                            {% if recipe_info %}<p class="at-sub mb-2">{{ recipe_info.lines }} składników{% if recipe_info.id_type == 3 and recipe_info.ppc %} · 1 karton = {{ recipe_info.ppc }} szt.{% endif %}
+                                · koszt surowców <span class="tfb-num">{{ recipe_info.cost|number_format(2, ',', ' ') }} zł</span>{{ recipe_info.id_type == 3 ? ' / karton' : ' / ' ~ recipe_info.yield_quantity ~ ' ' ~ recipe_info.unit }}</p>{% endif %}
+                            <div class="d-flex gap-2 flex-wrap">
+                                <a class="btn btn-outline-primary" href="{{ root }}/recipes/{{ product.recipe_id }}/calculation"><i class="bi bi-calculator"></i> Kalkulacja</a>
+                                <a class="btn btn-outline-secondary" href="{{ root }}/recipes/{{ product.recipe_id }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
+                                {% if stage != 'launched' %}<button type="button" class="btn btn-link" data-recipe-change>Zmień</button>{% endif %}
+                            </div>
+                        </div>
+                    {% elseif stage == 'launched' %}
+                        <p class="mb-2"><span class="at-pill at-pill-warn">Brak receptury</span> Produkt ERP nie ma jeszcze receptury — dodaj ją w Karcie produktu (krok « Receptura »).</p>
+                    {% endif %}
+                    {% if stage != 'launched' %}
+                        <form id="recipeForm" class="at-dev-recipe-pick"{{ product.recipe_id ? ' hidden' : '' }}>
+                            <label class="form-label" for="recipePick">{{ product.recipe_id ? 'Inna receptura' : 'Receptura testu' }}</label>
+                            <select id="recipePick" name="id_recipe">
+                                <option value="">Szukaj receptury : nazwa, kompozycja, półprodukt, #numer…</option>
+                                {% for r in recipes %}<option value="{{ r.id }}" {{ r.id == product.recipe_id ? 'selected' : '' }}>{{ r.name }} · {{ r.type ?: 'receptura' }} · #{{ r.id }}</option>{% endfor %}
+                            </select>
+                            <div class="d-flex gap-2 flex-wrap mt-2">
+                                <button class="btn btn-primary" type="submit"><i class="bi bi-link-45deg"></i> Powiąż recepturę</button>
+                                {% if product.recipe_id %}<button class="btn btn-outline-danger" type="button" data-recipe-clear>Odłącz recepturę</button>{% endif %}
+                            </div>
+                        </form>
+                        {% if not product.recipe_id and card_lines > 0 %}
+                            <a class="btn btn-outline-primary mt-2" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-plus-lg"></i> Utwórz z karty technologicznej ({{ card_lines }} składników)</a>
+                            <p class="at-sub mt-1 mb-2">Kreator produktu ze składnikami kroku « Koszt i cena » karty, przeliczonymi na 1 karton — po zapisie test jest « Wprowadzony », a receptura powiązana.</p>
+                        {% elseif not product.recipe_id %}
+                            <p class="at-sub mt-2 mb-2">Tablet pokaże składniki wybranej receptury, a zespół ją zatwierdzi.</p>
+                        {% endif %}
+                    {% endif %}
+                    {% if product.recipe_confirmed_at %}
+                        <p class="mb-0"><i class="bi bi-patch-check text-success"></i> Zatwierdzona na tablecie {{ product.recipe_confirmed_at|date('d.m.Y H:i') }}{% if product.recipe_confirmed_name %} — {{ product.recipe_confirmed_name }}{% endif %}.</p>
+                    {% else %}
+                        <p class="at-sub mb-0">Zespół zatwierdza recepturę na tablecie po udanym teście 2.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card h-100">
+                <div class="card-header"><h4 class="card-title">Wprowadzenie</h4></div>
+                <div class="card-body pt-0">
+                    {% if stage == 'launched' %}
+                        <p class="mb-0"><i class="bi bi-check2-circle text-success"></i> Produkt ERP : {% if product.final_product_id %}<a href="{{ root }}/products/{{ product.final_product_id }}/edit">{{ product.final_product_name }}</a>{% else %}—{% endif %}. Data wprowadzenia w module kierownika produkcji i w raporcie miesięcznym.</p>
+                    {% else %}
+                        <a class="btn btn-primary" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-rocket-takeoff"></i> Wprowadź : utwórz produkt z tego testu</a>
+                        <p class="at-sub mt-2">Kreator produktu z nazwą, kategorią, działem, etykietą i recepturą testu — bez ponownego wpisywania. Po zapisie test jest « Wprowadzony » i powiązany z produktem, znika z tabletu.</p>
+                        <details class="mt-2">
+                            <summary class="at-sub">Produkt już istnieje w ERP ? Powiąż test z nim</summary>
+                            <form id="launchForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">
+                                <label class="at-purch-label" style="flex: 1 1 320px">Produkt ERP
+                                    <select name="final_product" id="launchProduct">
+                                        <option value="">Szukaj w nazwie, kategorii albo #numerze…</option>
+                                        {% for fp in final_products %}<option value="{{ fp.id }}">{{ fp.name }} · {{ fp.category ?: 'bez kategorii' }} · #{{ fp.id }}</option>{% endfor %}
+                                    </select></label>
+                                <button class="btn btn-outline-primary" type="submit"><i class="bi bi-link-45deg"></i> Powiąż i wprowadź</button>
+                            </form>
+                        </details>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header"><h4 class="card-title">Na tablecie</h4>
+            <p class="at-sub mb-0">{{ product.status ?: '—' }} · {{ product.type ?: '—' }}{% if product.section %} · dział {{ product.section }}{% endif %}{% if stages %} · dziennik : {{ stages[0].stage }}{% endif %}</p></div>
+        <div class="card-body pt-0">
+            <form id="devForm" class="at-purch-form">
+                <label class="form-check form-switch at-purch-wide"><input class="form-check-input" type="checkbox" name="on_tablet" {{ product.on_tablet ? 'checked' : '' }}> Pokaż na tablecie grupy</label>
+                <label class="at-purch-label">Grupa (jej tablet)
+                    <select class="form-select" name="id_group">
+                        <option value="">— według działu —</option>
+                        {% for g in groups %}<option value="{{ g.id }}" {{ g.id == product.group_id ? 'selected' : '' }}>{{ g.name_pl }}</option>{% endfor %}
+                    </select></label>
+                <label class="at-purch-label">Data docelowa<input class="form-control" type="date" name="target_date" value="{{ product.target_date }}"></label>
+                <label class="at-purch-label at-purch-wide">Film (YouTube, Vimeo, plik mp4 albo link)<input class="form-control" name="video_url" type="url" maxlength="500" value="{{ product.video_url }}" placeholder="https://www.youtube.com/watch?v=…"></label>
+                {% if product.video %}<p class="at-sub at-purch-wide mb-0 align-self-end"><i class="bi bi-play-btn"></i> {{ {youtube: 'YouTube — odtwarzacz na tablecie', vimeo: 'Vimeo — odtwarzacz na tablecie', file: 'plik wideo — odtwarzacz na tablecie', link: 'link — otwierany w nowej karcie'}[product.video.kind] }}</p>{% endif %}
+                <label class="at-purch-label" style="grid-column: 1 / -1">Notatki dla zespołu (wykonanie, na co uważać, co ocenić)<textarea class="form-control" name="notes" rows="4" maxlength="5000">{{ product.notes }}</textarea></label>
+                <div class="at-purch-actions"><span></span><button class="btn btn-primary" type="submit">Zapisz</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Zdjęcia wzorcowe <span class="at-sub">({{ photos|length }} / {{ max_photos }})</span></h4>
+            <p class="at-sub mb-0">Jak ma wyglądać produkt (zdjęcia z testów są wyżej). Zmniejszane w przeglądarce (JPEG, najdłuższy bok 1600 px) ; podpis opcjonalny.</p></div>
+        <div class="card-body pt-0">
+            <div class="at-dev-photos">
+                {% for ph in photos %}
+                <figure class="at-dev-photo">
+                    <img src="{{ root }}/test-products/photos/{{ ph.id }}" alt="{{ ph.caption ?: product.name }}" loading="lazy">
+                    <figcaption>{{ ph.caption ?: '—' }} <button type="button" class="btn btn-sm btn-outline-danger" data-del-photo="{{ ph.id }}" aria-label="Usuń zdjęcie"><i class="bi bi-trash"></i></button></figcaption>
+                </figure>
+                {% else %}<p class="at-sub">Brak zdjęć.</p>{% endfor %}
+            </div>
+            {% if photos|length < max_photos %}
+            <form id="photoForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">
+                <input class="form-control" type="file" name="file" accept="image/*" multiple required style="flex: 2 1 240px">
+                <input class="form-control" name="caption" maxlength="200" placeholder="Podpis (opcjonalnie)" style="flex: 2 1 200px">
+                <button class="btn btn-primary" type="submit"><i class="bi bi-upload"></i> Dodaj</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(function () {
+    const id = {{ product.id }};
+    const done = (res) => { at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd')); if (res.ok) setTimeout(() => location.reload(), 500); };
+    const form = document.getElementById('devForm');
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        at.send(`/ajax/test-products/${id}/tablet`, 'PUT', {on_tablet: form.on_tablet.checked, video_url: form.video_url.value, notes: form.notes.value,
+            id_group: form.id_group.value || null, target_date: form.target_date.value || null}).then(done);
+    });
+    const stageForm = document.getElementById('stageForm');
+    stageForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        at.send(`/ajax/test-products/${id}/stage`, 'PUT', {stage: stageForm.stage.value}).then(done);
+    });
+    const trialForm = document.getElementById('trialForm');
+    if (trialForm) trialForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        at.send(`/ajax/test-products/${id}/trials`, 'POST', {planned_date: trialForm.planned_date.value || null, id_group: trialForm.id_group.value, instructions: trialForm.instructions.value}).then(done);
+    });
+    document.querySelectorAll('[data-cancel-trial]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm('Usunąć zaplanowany test ?')) return;
+        at.send(`/ajax/test-products/${id}/trials/${b.dataset.cancelTrial}`, 'DELETE').then(done);
+    }));
+    const launchForm = document.getElementById('launchForm');
+    if (launchForm) launchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const pid = Number(launchForm.final_product.value);
+        if (!pid) { at.notify(false, 'Wybierz produkt ERP z listy.'); return; }
+        if (!confirm('Wprowadzić produkt ? Zniknie z tabletu.')) return;
+        at.send(`/ajax/test-products/${id}/launch`, 'PUT', {final_product_id: pid}).then(done);
+    });
+    // Listy z wyszukiwarką [201] : produkt ERP (nazwa · kategoria · #id) i receptura testu (nazwa · rodzaj · #id).
+    const pick = (el) => {
+        if (!el || typeof Choices !== 'function') return null;
+        el.dataset.choicesInited = '1';
+        return new Choices(el, {searchEnabled: true, shouldSort: false, itemSelectText: '', searchResultLimit: 30, searchPlaceholderValue: 'Szukaj…',
+            noResultsText: 'Brak wyników', fuseOptions: {threshold: 0.3, ignoreLocation: true}});
+    };
+    // Choices ładuje się po bloku skryptów strony : inicjalizacja po DOMContentLoaded.
+    document.addEventListener('DOMContentLoaded', () => { pick(document.getElementById('launchProduct')); pick(document.getElementById('recipePick')); });
+    const recipeForm = document.getElementById('recipeForm');
+    if (recipeForm) recipeForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const rid = Number(recipeForm.id_recipe.value);
+        if (!rid) { at.notify(false, 'Wybierz recepturę z listy.'); return; }
+        at.send(`/ajax/test-products/${id}/recipe`, 'PUT', {id_recipe: rid}).then(done);
+    });
+    document.querySelector('[data-recipe-change]')?.addEventListener('click', (e) => { recipeForm.hidden = false; e.target.hidden = true; });
+    document.querySelector('[data-recipe-clear]')?.addEventListener('click', () => {
+        if (!confirm('Odłączyć recepturę od testu ? Tablet nie pokaże składników.')) return;
+        at.send(`/ajax/test-products/${id}/recipe`, 'PUT', {id_recipe: null}).then(done);
+    });
+    // Zdjęcie zmniejszone w przeglądarce do JPEG (najdłuższy bok 1600 px).
+    const shrink = (file) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, 1600 / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            URL.revokeObjectURL(img.src);
+            resolve(c.toDataURL('image/jpeg', 0.8));
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(file);
+    });
+    const photoForm = document.getElementById('photoForm');
+    if (photoForm) photoForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const btn = photoForm.querySelector('button');
+        btn.disabled = true;
+        let ok = true;
+        for (const file of photoForm.file.files) {
+            let image;
+            try { image = await shrink(file); } catch (err) { at.notify(false, 'Nie udało się wczytać zdjęcia : ' + file.name); ok = false; continue; }
+            const res = await at.send(`/ajax/test-products/${id}/photos`, 'POST', {image, caption: photoForm.caption.value});
+            if (!res.ok) { at.notify(false, res.message || 'Błąd'); ok = false; break; }
+        }
+        btn.disabled = false;
+        if (ok) at.notify(true, 'Dodano zdjęcia.');
+        setTimeout(() => location.reload(), 500);
+    });
+    document.querySelectorAll('[data-del-photo]').forEach(b => b.addEventListener('click', () => {
+        if (!confirm('Usunąć zdjęcie ?')) return;
+        at.send(`/ajax/test-products/${id}/photos/${b.dataset.delPhoto}`, 'DELETE').then(res => { at.notify(res.ok, res.message); if (res.ok) b.closest('figure').remove(); });
+    }));
+})();
+</script>
+{% endblock %}

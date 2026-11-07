@@ -1,0 +1,12 @@
+{
+  "_": "Notes d'exemple de la maquette, données par nous pour la capture : rien de cela n'existe en base.",
+  "notes": {
+    "proprete": { "note": 4, "com": "Comptoir et vitrines nets ; l’arrière-boutique est à ranger." },
+    "metier": { "note": 3, "com": "Cuissons inégales le matin : deux fournées de croissants trop claires." },
+    "management": { "note": 2, "com": "Planning fait la veille au soir, pas de briefing d’ouverture." },
+    "commercial": { "note": 3, "com": "" },
+    "client": { "note": 5, "com": "Accueil chaleureux, les habitués sont appelés par leur prénom." },
+    "normes": { "note": 4, "com": "" }
+  },
+  "precedent": { "le": "2026-10-24", "notes": { "proprete": 3, "metier": 3, "management": 3, "commercial": 2, "client": 4, "normes": 3 } }
+}

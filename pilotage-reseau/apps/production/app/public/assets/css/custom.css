@@ -1,0 +1,22 @@
+.mark-table-row{
+    background-color: #d4edda;
+    -webkit-animation: fadein 0.5s, fadeout 0.5s 1s;
+    animation: fadein 0.5s, fadeout 0.5s 1.5s;
+
+}
+
+.hideRow{
+    display: none;
+}
+
+.hideElem{
+    display: none;
+}
+
+.stickyHeader{
+    position: sticky;
+    top: 0;
+    background-color: #EFEFEF;
+    border-bottom: 2px solid;
+    height: 70px;
+}

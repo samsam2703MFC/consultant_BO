@@ -1,0 +1,112 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.material_aliases }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <h3>{{ translations.aliases_manage }}</h3>
+        <p class="text-subtitle text-muted">{{ translations.aliases_manage_subtitle }}</p>
+    </div>
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        {{ translations.material_aliases }}
+                    </h4>
+                </div>
+                <div class="card-content">
+                    <div class="card-body px-3 py-4-5">
+                        <div class="row mb-4">
+                            <div class="col-12 col-md-6 mb-3">
+                                <label for="aliasTypeSelect" class="form-label fw-bold">{{ translations.alias_type_label }}</label>
+                                <select class="form-select" id="aliasTypeSelect" name="alias_type">
+                                    <option value="-1">{{ translations.select_alias_type }}</option>
+                                    <option value="default" {% if (aliasType == "default") or (aliasType is empty) %}selected{% endif %}>{{ translations.default }}</option>
+                                    <option value="product_label" {% if aliasType == "product_label" %}selected{% endif %}>{{ translations.product_label }}</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-md-6 mb-3">
+                                <label for="langSelect" class="form-label fw-bold">{{ translations.language_label }}</label>
+                                <select class="form-select" id="langSelect" name="lang">
+                                    <option value="-1">{{ translations.select_language }}</option>
+                                    {% for lang in languages %}
+                                        <option value="{{ lang.code }}" {% if langCode == lang.code %}selected{% endif %}>{{ lang.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="row mb-4">
+                            <div class="col-12 text-center">
+                                <input type="hidden" id="langCode" value="{{ langCode }}">
+                                <input type="hidden" id="aliasType" value="{{ aliasType }}">
+                                <button type="button" class="btn btn-primary btn-lg" id="langLoadBtn">
+                                    {{ translations.load }}
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-12">
+                                <table class="table">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 45%">{{ translations.name }}</th>
+                                        <th style="width: 45%">{{ translations.alias }}</th>
+                                        <th style="width: 10%"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    {% for alias in aliases %}
+                                        <tr data-alias-id="{{ alias.id }}" data-alias-id_elem="{{ alias.idSubject }}">
+                                            <td>{{ alias.name }}</td>
+                                            <td>
+                                                <span class="alias-text">{{ alias.alias }}</span>
+                                                <input type="text" class="form-control alias-input d-none"
+                                                       value="{{ alias.alias }}">
+                                            </td>
+                                            <td>
+                                                <button type="button" class="btn btn-warning btn-edit-alias">
+                                                    {{ translations.edit }}
+                                                </button>
+                                                <button type="button" class="btn btn-success d-none btn-save-alias">
+                                                    {{ translations.save }}
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="text-center">{{ translations.no_aliases }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div class="col-12">
+                                <a href="{{ root }}/aliases" class="btn btn-secondary" role="button">{{ translations.back }}</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+{% block scripts %}
+
+    <script>
+        window.translations = {
+            select_valid_language: "{{ translations.select_valid_language }}",
+            select_valid_alias_type: "{{ translations.select_valid_alias_type }}",
+            save_was_successful: "{{ translations.save_was_successful }}",
+            error_saving_alias: "{{ translations.error_saving_alias }}"
+        };
+        window.endpoint = "/ajax/materials/{id}/aliases";
+    </script>
+    <script src="{{ root }}/assets/js/modules/alias-editor.js"></script>
+
+{% endblock %}

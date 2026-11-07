@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plan de fusion — une seule structure pour le réseau</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../formation/fo.css"><link rel="stylesheet" href="fu.css">
+<script src="coque.js"></script></head><body><div class="page" id="p"></div><script>
+/* Plan de fusion : ce qui existe aujourd'hui (inventaire réel du 06/11/2026), la structure cible (un référentiel,
+   un éditeur, trois lectures), les six lots et les trois décisions. Voir PLAN.md. */
+const ob = (code, nom, t) => `<div class="obj"><span><span class="code">${code}</span></span><span><b>${nom}</b><br><small>${t}</small></span></div>`;
+document.getElementById('p').innerHTML = entete('plan') + `
+<div class="prop"><span class="n">Plan de fusion</span><h1>Une seule structure pour tout le réseau</h1><span class="ss">un référentiel · un éditeur · trois lectures</span></div>
+
+<div class="lab">Aujourd'hui · trois endroits disent la même chose autrement</div>
+<div class="grille g3" style="margin-bottom:16px">
+  <div class="carte"><h3>Cockpit › Formation <small>consultant_BO</small></h3><div class="mini">
+    <b>25 SOP</b> FR + NL, versions, 780 étapes · tablette du poste (PIN de l'employé) : lu, quiz, vu faire → compétence cochée dans le panel<br>
+    <b>Manuel en ligne</b> en 4 parties (procédures du panel)<br><b>Référentiel v25</b> : 8 domaines, 36 sous-catégories, 53 FO, 56 compétences, 4 plans</div></div>
+  <div class="carte"><h3>CRM › Exploitation et Suivi <small>atelier-espace-candidat</small></h3><div class="mini">
+    <b>Manuel opératoire</b> : 13 chapitres, routines AC-01…03 en brouillon, éditeur, tablette (PIN du magasin)<br>
+    <b>Guides</b> : pré-ouverture (5 sections, 38 points) · formations et compétences (11 blocs, 45 compétences, 5 pôles, « Réussi si… ») · examen<br>
+    <b>App des formateurs</b>, attestation, documents du DIP</div></div>
+  <div class="carte"><h3>Panel TF Buddy <small>ERP, lu par API</small></h3><div class="mini">
+    <b>107 compétences</b> et l'état de chaque employé<br><b>Procédures opérationnelles</b> (reprises par le Manuel en ligne et par le CRM)<br>postes et fiches RH</div></div>
+</div>
+<div class="carte" style="margin-bottom:16px"><table class="av"><thead><tr><th>Doublon</th><th>Aujourd'hui</th><th>Demain</th></tr></thead><tbody>
+  <tr><td>Manuels</td><td class="x">3 : Manuel en ligne (Cockpit), Manuel opératoire (CRM), procédures du panel</td><td class="v">1 « Manuel du réseau », lu partout</td></tr>
+  <tr><td>Éditeurs de procédures</td><td class="x">2 : rédaction des SOP (Cockpit) et éditeur du Manuel opératoire (CRM)</td><td class="v">1 éditeur, brouillon → publié, FR + NL</td></tr>
+  <tr><td>Listes de compétences</td><td class="x">3 : 107 du panel · 56 codes C-… du v25 · 45 points des blocs du CRM</td><td class="v">1 code C-… ; le panel garde l'état par employé</td></tr>
+  <tr><td>Tablettes</td><td class="x">2 : Manuel du CRM (PIN magasin) et SOP du Cockpit (PIN employé)</td><td class="v">1 app du magasin : PIN du magasin pour ouvrir, PIN de l'employé pour signer</td></tr>
+  <tr><td>« Ouverture du magasin »</td><td class="x">écrite 2 fois : SOP-WKL-001 (validée) et AC-01 (brouillon)</td><td class="v">le standard SOP-WKL-001 + sa checklist de contrôle AC-01</td></tr>
+</tbody></table></div>
+
+<div class="lab">Demain · la structure cible</div>
+<div class="archi" style="margin-bottom:16px">
+  <div class="boite"><h3>Un éditeur</h3><div class="mini"><b>Cockpit › Formation</b> devient le « Manuel du réseau » : le franchiseur écrit, traduit, relit et publie. Les vues par domaine, par phase et par poste lisent la même base.<br><br>
+    Recommandé : c'est l'outil de la marque pour <b>tout le réseau</b>, il a déjà les 25 SOP en FR + NL, les versions et la connexion au panel.</div></div>
+  <div class="boite coeur"><h3>Un référentiel</h3><div class="mini" style="margin-bottom:6px">Base commune (déjà partagée par le CRM et le Cockpit). Colonne vertébrale = <b>v25 : 8 domaines → 36 sous-catégories</b>. Phase (pré-ouverture · ouverture · opérationnel · continu) et poste (P1–P12) sont des <b>étiquettes</b>.</div>
+    ${ob('PO-…', 'Point à faire', 'démarche, preuve, J-, qui (guide pré-ouverture, countdown)')}
+    ${ob('SOP-…', 'Standard', 'comment faire : étapes, photos, points critiques, quiz')}
+    ${ob('AC · CP · CL', 'Checklist', 'contrôle du standard (autocontrôle, consultant, Marque)')}
+    ${ob('FO-…', 'Formation', 'qui forme, quand, combien d\'heures')}
+    ${ob('C-…', 'Compétence', '« réussi si… », bloquante, 5 pôles, renouvellement')}
+    ${ob('PF-…', 'Plan', 'par profil : étudiant, vendeur, gérant, multi-boutique')}</div>
+  <div class="fleches">
+    <div class="boite"><h3>Candidat franchisé <small>CRM</small></h3><div class="mini">Guide pré-ouverture, Guide des formations et compétences, annexes 9 · 17 · 18 du DIP, app des formateurs, attestation. Le CRM garde ce qui est propre au dossier (dates, validations, signatures).</div></div>
+    <div class="boite" style="margin-top:10px"><h3>Magasin <small>une tablette</small></h3><div class="mini">« Ma journée » par poste et moment, pas à pas, lu · quiz · vu faire. L'app Cuisine y mène.</div></div>
+    <div class="boite" style="margin-top:10px"><h3>Panel <small>TF Buddy</small></h3><div class="mini">Reçoit la compétence acquise au « vu faire ». Reste la source des employés et des postes.</div></div>
+  </div>
+</div>
+
+<div class="lab">Six lots · chacun se met en ligne seul, rien n'est retiré avant que son remplaçant tourne</div>
+<div class="steps" style="margin-bottom:16px">
+  <div class="step"><span class="k">Lot 1</span><b>Décider et geler</b><ul><li>Structure v25, éditeur unique, codes.</li><li>Plus de nouvelle procédure dans le Manuel du CRM.</li></ul><div class="q">Visible : rien.</div></div>
+  <div class="step"><span class="k">Lot 2</span><b>Table de correspondance</b><ul><li>C-… ↔ 107 du panel ↔ 45 points des blocs.</li><li>SOP ↔ sous-catégorie ↔ FO ↔ checklist ; points ↔ domaine.</li><li>Seules les certaines sont écrites ; le reste à trancher.</li></ul><div class="q">Visible : une liste d'arbitrage.</div></div>
+  <div class="step"><span class="k">Lot 3</span><b>Référentiel commun</b><ul><li>Tables et API de lecture.</li><li>Reprise : 25 SOP, v25, blocs et « réussi si… », 38 points, routines du CRM.</li></ul><div class="q">Visible : le classeur dans le Cockpit.</div></div>
+  <div class="step"><span class="k">Lot 4</span><b>Un seul éditeur</b><ul><li>Cockpit : vues domaine, phase, poste.</li><li>CRM : Manuel en lecture + « Modifier dans le Cockpit ↗ » ; Guides lisent le référentiel.</li></ul><div class="q">Visible : les deux écrans disent pareil.</div></div>
+  <div class="step"><span class="k">Lot 5</span><b>Une seule tablette</b><ul><li>« Ma journée » + pas à pas SOP.</li><li>PIN magasin + PIN employé.</li><li>App Cuisine et anciens liens redirigés.</li></ul><div class="q">Visible : une app par magasin.</div></div>
+  <div class="step"><span class="k">Lot 6</span><b>Documents et contrôles</b><ul><li>Guides et annexes du DIP générés depuis le référentiel.</li><li>Grille annexe 18 = checklists des standards.</li><li>Retrait des doublons.</li></ul><div class="q">Visible : tableau par magasin.</div></div>
+</div>
+
+<div class="grille g2">
+  <div class="carte"><h3>Règles de la structure uniforme</h3><ul style="margin:0;padding-left:18px;font-size:12.5px;line-height:1.6">
+    <li>Un objet = un code = une place (sa sous-catégorie). On relie, on ne recopie jamais.</li>
+    <li>Toujours FR et NL ; une traduction est relue avant publication.</li>
+    <li>Une version publiée par objet, la même pour tous les magasins. Pas de standard local : « Moments calmes à l'Atelier Halle » devient un standard du réseau.</li>
+    <li>Phase et poste sont des étiquettes : les vues se calculent, rien ne se range deux fois.</li>
+    <li>Chaque compétence dit « réussi si… » et renvoie à au moins un standard et une formation ; chaque standard a sa checklist de contrôle.</li></ul></div>
+  <div class="carte"><h3>Trois décisions à prendre</h3>
+    <div class="li" style="grid-template-columns:22px minmax(0,1fr)"><b>1</b><span><b>Colonne vertébrale</b> : les 8 domaines du v25 (recommandé) — ou un autre classement.</span></div>
+    <div class="li" style="grid-template-columns:22px minmax(0,1fr)"><b>2</b><span><b>Éditeur unique</b> : Cockpit › Formation (recommandé) — ou CRM › Manuel opératoire.</span></div>
+    <div class="li" style="grid-template-columns:22px minmax(0,1fr)"><b>3</b><span><b>Clé des compétences</b> : le code C-… du v25, le panel garde l'état par employé (recommandé) — ou les 107 du panel comme liste maîtresse.</span></div></div>
+</div>`;
+</script></body></html>

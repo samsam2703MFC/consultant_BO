@@ -1,0 +1,29 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kto co zrobił{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Kto co zrobił</h3>
+            <p class="text-subtitle text-muted mb-0">Funkcje i zadania › Wykonanie · wszystkie stanowiska — zadania z kreatorem, ręczne i automatyczne (cron), spóźnione z przypomnieniem.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            {% if can_see('/organization/positions') %}<a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-arrow-left"></i> Funkcje i zadania</a>{% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Kto co zrobił [227] (makieta 3) : App\Services\Organization\PositionTaskService::execution (dziś / tydzień / miesiąc) i remind.
+   Widok budowany w assets/js/organization/execution.js z danych poniżej ; przełącznik okresu = GET /ajax/organization/execution?view=. #}
+<section class="section" id="execApp">
+    <div class="kw"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="execBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/execution.js?v={{ asset_v() }}"></script>
+{% endblock %}

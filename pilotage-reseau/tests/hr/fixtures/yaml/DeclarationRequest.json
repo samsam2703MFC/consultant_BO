@@ -1,0 +1,123 @@
+{
+  "dimonaCancel": {
+    "periodId": 123456789123,
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    }
+  },
+  "dailyRegistrationIn": {
+    "periodId": 123456789123,
+    "endHour": "1645",
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "endDate": "2000-12-31",
+    "startHour": "1545",
+    "startDate": "2000-12-30"
+  },
+  "dimonaUpdate": {
+    "periodId": 123456789123,
+    "endHour": "1645",
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "endDate": "2000-12-31",
+    "startHour": "1545",
+    "plannedDaysNumber": 111,
+    "plannedHoursNumber": 160,
+    "startDate": "2000-12-30"
+  },
+  "dimonaOut": {
+    "periodId": 123456789123,
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "endDate": "2000-12-31"
+  },
+  "dimonaIn": {
+    "endHour": "1645",
+    "features": {
+      "workerType": "STU",
+      "subEntityNumber": "1234567891",
+      "userEnterprise": {
+        "employerId": 480497095,
+        "address": {
+          "country": 231,
+          "street": "street",
+          "houseNumber": "houseNumber",
+          "municipality": {
+            "code": 64246,
+            "name": "name"
+          },
+          "boxNumber": "boxNumber",
+          "postCode": "postCode"
+        },
+        "jointCommissionNumber": "124",
+        "enterpriseNumber": "enterpriseNumber",
+        "name": "name"
+      },
+      "jointCommissionNumber": "124"
+    },
+    "constructionControlCards": {
+      "firstMonthC32aNumber": "firstMonthC32aNumber",
+      "nextMonthC32aNumber": "nextMonthC32aNumber"
+    },
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "endDate": "2000-12-31",
+    "startHour": "1545",
+    "plannedDaysNumber": 111,
+    "plannedHoursNumber": 160,
+    "studentPlaceOfWork": {
+      "address": {
+        "country": 231,
+        "street": "street",
+        "houseNumber": "houseNumber",
+        "municipality": {
+          "code": 64246,
+          "name": "name"
+        },
+        "boxNumber": "boxNumber",
+        "postCode": "postCode"
+      },
+      "name": "name"
+    },
+    "smallStatutesInformation": {
+      "employmentNature": "worker",
+      "activityWithRisk": 401,
+      "workerStatus": "F1"
+    },
+    "startDate": "2000-12-30"
+  },
+  "dailyRegistrationCancel": {
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "dailyRegistrationId": 234567891234
+  },
+  "dailyRegistrationUpdate": {
+    "endHour": "1645",
+    "references": {
+      "employer": "employer",
+      "worker": "worker",
+      "declaration": "declaration"
+    },
+    "endDate": "2000-12-31",
+    "startHour": "1545",
+    "dailyRegistrationId": 234567891234,
+    "startDate": "2000-12-30"
+  }
+}

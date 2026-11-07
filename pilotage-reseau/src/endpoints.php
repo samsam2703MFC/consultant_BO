@@ -1,0 +1,9078 @@
+<?php
+declare(strict_types=1);
+
+require_once __DIR__ . '/erp_cles.php';
+
+/**
+ * Cockpit CEO — endpoints de lecture (GET), un par écran + référentiels.
+ * Formes JSON : voir contrat-api.md. Aucune donnée métier dans le HTML :
+ * tout ce que le front affiche sort d'ici.
+ */
+
+/** Correspondance slug levier ↔ of_tag.id (le nom/type/desc sont applicatifs, la couleur vient d'of_tag). */
+const LEVIER_DEFS = [
+    ['slug' => 'trafic',        'nom' => 'Trafic',            'type' => 'Vente', 'tag' => 4, 'desc' => 'Faire venir plus de monde : visibilité locale, vitrine, animations, signalétique.'],
+    ['slug' => 'recurrence',    'nom' => 'Récurrence',        'type' => 'Vente', 'tag' => 3, 'desc' => 'Faire revenir les clients : fidélisation PWA, qualité constante, loyalty, suivi B2B.'],
+    ['slug' => 'xp',            'nom' => 'Expérience Client', 'type' => 'Vente', 'tag' => 2, 'desc' => 'Qualité du moment en boutique : accueil < 3 s, conseil, ambiance, rapidité.'],
+    ['slug' => 'food-cost',     'nom' => 'Food Cost',         'type' => 'Coût',  'tag' => 5, 'desc' => 'Coût matière : recettes, contrôle réception ProdAtelier, FIFO, casse & invendus.'],
+    ['slug' => 'labour-cost',   'nom' => 'Labour Cost',       'type' => 'Coût',  'tag' => 6, 'desc' => 'Coût main d\'œuvre : plannings au flux, productivité, ratio CA/ETP, polyvalence.'],
+    ['slug' => 'overhead-cost', 'nom' => 'Overhead Cost',     'type' => 'Coût',  'tag' => 7, 'desc' => 'Charges fixes : loyer, énergies, abonnements, assurances, maintenance.'],
+];
+
+function levierSlugByTag(): array
+{
+    $out = [];
+    foreach (LEVIER_DEFS as $l) { $out[$l['tag']] = $l['slug']; }
+    return $out;
+}
+
+function setting(string $key, mixed $default = null): mixed
+{
+    // Une clé du module Motivation (les primes) vit dans ses tables mot_ (src/motivation.php, 23/10/2026).
+    if (function_exists('motCle') && ($t = motCle($key)) !== null) { return $t === 'cache' ? motCache($key, $default) : motReglage($key, $default); }
+    $r = Db::row('SELECT value FROM ceo_app_setting WHERE `key` = ?', [$key]);
+    return $r === null ? $default : json_decode($r['value'], true);
+}
+
+/**
+ * L'identifiant CONSULTANT du compte connecté.
+ *
+ * Le cockpit connaît son utilisateur par son nom (« Sam Verheyden ») ; les
+ * tâches, elles, sont portées par un identifiant (« u6 »). Rapprocher les deux
+ * par le nom serait fragile — « Sam V. » côté panel, « Sam Verheyden » côté
+ * réglage. La route `/consultant/tasks` rend la POSITION du compte qui
+ * interroge : son `membership_id` EST cet identifiant, sans configuration.
+ *
+ * Mémorisé pour la journée : c'est une identité, elle ne change pas d'une
+ * heure à l'autre, et l'écran d'accueil ne doit pas attendre le panel.
+ */
+function consultantIdCompte(): ?string
+{
+    $memo = setting('consultantCompte', null);
+    $connu = is_array($memo) ? ($memo['id'] ?? null) : null;
+    if ($connu !== null && (string) ($memo['le'] ?? '') === date('Y-m-d')) { return (string) $connu; }
+    if (!PanelApi::configured()) { return $connu !== null ? (string) $connu : null; }
+    $r = PanelApi::get('/consultant/tasks');
+    $mid = is_array($r) ? (($r['position']['membership_id'] ?? null)) : null;
+    if ($mid === null || !is_numeric($mid)) { return $connu !== null ? (string) $connu : null; }
+    $id = 'u' . (int) $mid;
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['consultantCompte', json_encode(['id' => $id, 'le' => date('Y-m-d')])]);
+    } catch (PDOException $e) { /* mémorisation best-effort */ }
+    return $id;
+}
+
+/**
+ * L'identifiant que le PANEL attend pour écrire une note : l'`auth_user_id` du
+ * compte, pas son `membership_id`. Mesuré : les deux existent et diffèrent
+ * (6 et 104), et la route n'accepte que le second.
+ */
+function consultantAuthId(): ?int
+{
+    $memo = setting('consultantAuthId', null);
+    if (is_numeric($memo)) { return (int) $memo; }
+    $uid = consultantIdCompte();                       // « u6 »
+    if ($uid === null || !preg_match('/^u(\d+)$/', $uid, $m)) { return null; }
+    try {
+        $r = Db::row('SELECT auth_user_id FROM user_membership WHERE id = ?', [(int) $m[1]]);
+    } catch (PDOException $e) { return null; }
+    if ($r === null || !is_numeric($r['auth_user_id'])) { return null; }
+    $id = (int) $r['auth_user_id'];
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['consultantAuthId', json_encode($id)]);
+    } catch (PDOException $e) { /* mémorisation best-effort */ }
+    return $id;
+}
+
+function ep_meta(): array
+{
+    // Horodatage du JS RÉELLEMENT déployé. « Je ne le vois pas en ligne » est
+    // une question qu'on ne doit pas avoir à trancher en tâtonnant : si l'écran
+    // affiche une version plus ancienne que la livraison, c'est le cache du
+    // navigateur, pas le serveur. On lit le fichier servi, pas une constante
+    // qu'on aurait pu oublier de mettre à jour.
+    $js = __DIR__ . '/../public/assets/js/app.js';
+    $build = is_file($js) ? date('d/m H:i', (int) filemtime($js)) : null;
+    $seuils = [];
+    foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi WHERE code IS NOT NULL") as $k) {
+        $seuils[$k['code']] = $k['seuil_haut'] !== null ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+    }
+    return [
+        'build'            => $build,
+        'reseau'           => setting('reseau', ['nom' => '', 'sousTitre' => '']),
+        // Adresse de l'ERP pour le lien « Retour à l’ERP » du rail (design
+        // system §8.3) : jamais écrite en dur. config/config.php ('erpUrl'),
+        // sinon COCKPIT_ERP_URL, sinon le réglage erpUrl ; absente = pas de lien.
+        'erpUrl'           => (string) (Db::config()['erpUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ERP_URL') ?: '') ?: (string) setting('erpUrl', '')),
+        // L'utilisateur, et — quand le compte API en est un — l'identifiant
+        // consultant qui lui correspond : c'est lui qui dit « mes tâches ».
+        'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => ''])
+                              + ['consultantId' => consultantIdCompte()],
+        // « Aujourd'hui » pilote la logique de dates (défaut du planning d'un
+        // nouveau projet, jalons/tâches en retard). Sans réglage explicite, on
+        // prend la date réelle du serveur — jamais null (sinon les comparaisons
+        // de dates côté écran deviennent fausses) et jamais figée. Un réglage
+        // passé ne fige plus le cockpit (22/10/2026) : la base de démonstration
+        // pose « 2026-07-31 », et l'écran des objectifs restait « à fin juillet ».
+        'aujourdhui'       => max(date('Y-m-d'), is_string($ajd = setting('aujourdhui', '')) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $ajd) ? $ajd : ''),
+        'dateLabel'        => setting('dateLabel', ''),
+        'periodeLabel'     => setting('periodeLabel', ''),
+        'exercice'         => (int) setting('exercice', (int) date('Y')),
+        'moisLabels'       => setting('moisLabels', []),
+        'seuils'           => [
+            'food'        => $seuils['food'] ?? 32,
+            'labour'      => $seuils['labour'] ?? 33,
+            'overhead'    => $seuils['overhead'] ?? 13.5,
+            'royalties'   => $seuils['royalties'] ?? 3,
+            'financieres' => $seuils['financieres'] ?? 2.2,
+            'caEtp'       => $seuils['ca_etp'] ?? 13000,
+        ],
+        // Période réellement servie par le scoring produit (le backend replie
+        // sur le dernier mois de caisse encodé) — la modale « perte par
+        // magasin » doit interroger la MÊME fenêtre, sinon les deux chiffres
+        // se contredisent sans que rien ne le signale.
+        'periodeProduits'  => setting('periodeProduits', date('Y-m')),
+        'contribOuverture' => setting('contribOuverture', 0),
+        'notes'            => setting('notes', new stdClass()),
+        'familles'         => setting('familles', []),
+        // Pondération et seuils du scoring produit — réglage, jamais une
+        // constante d'écran : le score qui décide de retirer une référence
+        // doit pouvoir se discuter et s'ajuster sans déploiement.
+        'scoring'          => setting('scoring', ['poids' => ['volume' => 40, 'marge' => 30, 'perte' => 20, 'comptoir' => 10],
+                                                  'seuils' => ['moteur' => 68, 'conforter' => 46],
+                                                  'marge' => ['bas' => 20, 'basNote' => 20, 'haut' => 80, 'hautNote' => 100]]),
+        'reportTypes'      => setting('reportTypes', []),
+        // Validation des tâches : une seule source pour les cinq niveaux, le
+        // seuil et le référentiel famille → type. Rien n'est recopié dans le
+        // JavaScript, sinon les deux se mettent à diverger en silence.
+        'signalement'      => setting('signalement', [
+            'seuil'    => 4,
+            'niveaux'  => [],
+            'familles' => [],
+        ]),
+    ];
+}
+
+function ep_leviers(): array
+{
+    $colors = [];
+    foreach (Db::rows('SELECT id, color FROM of_tag') as $t) { $colors[(int) $t['id']] = $t['color']; }
+    return array_map(fn ($l) => [
+        'slug' => $l['slug'], 'nom' => $l['nom'], 'type' => $l['type'],
+        'color' => $colors[$l['tag']] ?? '#666666', 'desc' => $l['desc'],
+    ], LEVIER_DEFS);
+}
+
+function ep_kpis(): array
+{
+    return array_map(fn ($r) => ['nom' => $r['name']], Db::rows('SELECT name FROM kpi WHERE code IS NULL ORDER BY id'));
+}
+
+function ep_email_templates(): array
+{
+    return array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'sujet' => $r['subject'], 'corps' => $r['body']],
+        Db::rows('SELECT * FROM ceo_email_template ORDER BY id'));
+}
+
+function ep_project_templates(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project_template') as $r) {
+        $out[$r['axe']] = ['jalons' => json_decode($r['jalons_json'], true), 'couts' => json_decode($r['couts_json'], true)];
+    }
+    return $out;
+}
+
+function ep_stores(): array
+{
+    // Vraies boutiques du panel (table partagée `shops` d'atelierby_db) — même
+    // source que le panel consultant. Repli sur `ceo_shop` si la table partagée
+    // est absente (installation autonome / démo).
+    try {
+        // Le code postal, si la table en a un (le nom de la colonne varie selon les versions du panel).
+        static $colCp = false;
+        if ($colCp === false) {
+            $colCp = null;
+            $cols = array_map(fn ($c) => (string) $c['Field'], Db::rows('SHOW COLUMNS FROM shops'));
+            foreach (['postal_code', 'postcode', 'zip', 'zipcode', 'zip_code', 'cp', 'code_postal'] as $c) { if (in_array($c, $cols, true)) { $colCp = $c; break; } }
+        }
+        $rows = Db::rows('SELECT id, slug, name, legal_name, city, zone, region, active, kind,
+                                 is_franchise, operator, contrat, since_year, sort_order' . ($colCp ? ", `$colCp` AS cp" : '') . '
+                          FROM shops ORDER BY sort_order, id');
+        return array_map(fn ($r) => [
+            'id'     => (string) $r['id'],
+            'code'   => $r['slug'] !== null ? strtoupper((string) $r['slug']) : (string) $r['id'],
+            'nom'    => $r['name'],
+            'fr'     => $r['operator'] ?: ($r['legal_name'] ?: ''),
+            'zone'   => $r['zone'] ?: ($r['region'] ?: $r['city']),
+            'status' => ((int) $r['active'] === 1) ? 'Ouvert' : 'Fermé',
+            'opened' => $r['since_year'] ? sprintf('%04d-01', (int) $r['since_year']) : null,
+            // La valorisation n'est calculée ni ici ni en amont : elle est
+            // déclarée en lacune plutôt que rendue par un null muet.
+            'valT'   => null,
+            // Le panier moyen n'est PAS un manque : /stores/perf le rend. Le
+            // laisser nul ici est correct ; le déclarer manquant serait faux.
+            'panier' => null,
+            'pwaId'  => (int) $r['id'], // la boutique du panel EST le pwa_shop_id
+            // Pour les autres portails (Recrutement : réseau, DIP), qui ne lisent plus la table `shops`.
+            'franchise' => $r['is_franchise'] !== null ? (int) $r['is_franchise'] === 1 : null,
+            'cp'     => trim((string) ($r['cp'] ?? '')),
+        ], $rows);
+    } catch (PDOException $e) {
+        return array_map(fn ($r) => [
+            'id' => $r['id'], 'code' => $r['code'], 'nom' => $r['name'], 'fr' => $r['franchisee'],
+            'zone' => $r['zone'], 'status' => $r['status'],
+            'opened' => $r['opened_on'] ? substr($r['opened_on'], 0, 7) : null,
+            'valT' => $r['valuation_target'] !== null ? (float) $r['valuation_target'] : null,
+            'panier' => $r['basket_ref'] !== null ? (float) $r['basket_ref'] : null,
+            'pwaId' => isset($r['pwa_shop_id']) && $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null,
+        ], Db::rows('SELECT * FROM ceo_shop ORDER BY id'));
+    }
+}
+
+/**
+ * GET /pwa/reports — rapports du panel consultant (pwa_consultant).
+ *
+ * Deux volets :
+ *  - `base` + `magasins[].pwaId` : de quoi construire côté client les liens de
+ *    GÉNÉRATION (`/reports/view?type=week|month&scope=all|{id}`,
+ *    `/reports/checklist/week|month?scope={id}`) — le rapport est rendu par le
+ *    panel à l'ouverture, c'est sa génération ;
+ *  - `partages` : les liens de partage FIGÉS récupérés de `mac_report_share`
+ *    (un rapport mensuel, une boutique, un mois — page publique `/r/{token}`),
+ *    avec état, ouvertures et expiration.
+ */
+function ep_pwa_reports(): array
+{
+    $cfgBase = Db::config()['pwaBase'] ?? null;                       // config/env prime
+    $base = rtrim((string) ($cfgBase ?: setting('pwaBase', '')), '/');
+    // Boutiques : vraies boutiques du panel (`shops`) si disponibles, sinon
+    // ceo_shop. pwaId = id de la boutique du panel (= id_shop de mac_report_share).
+    try {
+        $magasins = array_map(fn ($r) => ['id' => (string) $r['id'], 'nom' => $r['name'], 'pwaId' => (int) $r['id']],
+            Db::rows("SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id"));
+    } catch (PDOException $e) {
+        $magasins = array_map(fn ($r) => ['id' => $r['id'], 'nom' => $r['name'], 'pwaId' => $r['pwa_shop_id'] !== null ? (int) $r['pwa_shop_id'] : null],
+            Db::rows("SELECT id, name, pwa_shop_id FROM ceo_shop WHERE status = 'Ouvert' ORDER BY id"));
+    }
+    $shopByPwa = [];
+    foreach ($magasins as $m) { if ($m['pwaId'] !== null) { $shopByPwa[$m['pwaId']] = $m['nom']; } }
+
+    $partages = [];
+    try {
+        $rows = Db::rows('SELECT token, id_shop, ym, label, consultant_name, created_at, expires_at, revoked_at, opens, last_opened_at
+                            FROM mac_report_share ORDER BY created_at DESC LIMIT 100');
+    } catch (PDOException $e) {
+        $rows = []; // table absente (panel sur une autre base) : volet vide, pas d'erreur
+    }
+    $now = date('Y-m-d H:i:s');
+    foreach ($rows as $r) {
+        $etat = $r['revoked_at'] !== null ? 'Révoqué' : ($r['expires_at'] < $now ? 'Expiré' : 'Actif');
+        $partages[] = [
+            'label' => $r['label'], 'ym' => $r['ym'],
+            'magasin' => $shopByPwa[(int) $r['id_shop']] ?? ('Boutique #' . $r['id_shop']),
+            'consultant' => $r['consultant_name'],
+            'url' => $base !== '' ? $base . '/r/' . $r['token'] : '/r/' . $r['token'],
+            'cree' => substr($r['created_at'], 0, 10), 'expire' => substr($r['expires_at'], 0, 10),
+            'etat' => $etat, 'opens' => (int) $r['opens'],
+            'derniereOuverture' => $r['last_opened_at'] ? substr($r['last_opened_at'], 0, 10) : null,
+        ];
+    }
+    return ['base' => $base, 'magasins' => $magasins, 'partages' => $partages];
+}
+
+/**
+ * Noms des tâches prédéfinies du panel (table partagée `todo_task`).
+ *
+ * Le schéma de `todo_task` varie ; on détecte la colonne du libellé comme le
+ * fait le panel (TodoTaskRepository) plutôt que de supposer `name`. Table ou
+ * colonne absente → map vide (les tâches s'afficheront par leur identifiant).
+ *
+ * @return array<int, string> id_task => libellé
+ */
+function todoTaskNames(): array
+{
+    try {
+        $cols = array_map(fn ($r) => (string) $r['COLUMN_NAME'],
+            Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'todo_task'"));
+        if ($cols === []) { return []; }
+        $lower = array_map('strtolower', $cols);
+        $nameCol = null;
+        foreach (['name', 'title', 'label', 'task_name', 'task'] as $cand) {
+            $i = array_search($cand, $lower, true);
+            if ($i !== false) { $nameCol = $cols[$i]; break; }
+        }
+        if ($nameCol === null) {
+            foreach ($cols as $c) { if (stripos($c, 'name') !== false) { $nameCol = $c; break; } }
+        }
+        if ($nameCol === null) { return []; }
+        $idCol = in_array('id', $lower, true) ? 'id' : $cols[0];
+        $out = [];
+        foreach (Db::rows("SELECT `$idCol` AS id, `$nameCol` AS name FROM todo_task LIMIT 1000") as $r) {
+            $out[(int) $r['id']] = trim((string) $r['name']);
+        }
+        return $out;
+    } catch (PDOException $e) {
+        return [];
+    }
+}
+
+/**
+ * GET /pwa/tasks?date=YYYY-MM-DD — contrôle des tâches consultants du panel.
+ *
+ * Arbre Boutique › Tâche › avis consultant, lu dans la table partagée
+ * `mac_task_review` (même source que l'écran « réseau » du panel). Chaque avis
+ * porte la note, l'acceptation, le commentaire, qui a évalué, ET la validation
+ * de l'Owner (owner_validated_at/owner_name) — le CEO valide ou retire depuis
+ * ici. Les libellés de tâche viennent de `todo_task`, les magasins de `shops`.
+ *
+ * Sans date : la dernière journée réellement évaluée (l'écran n'est pas vide).
+ * Le contenu VIVANT des checklists (tâches planifiées du jour, photos) vient de
+ * l'API amont du panel, hors de portée ici : on montre ce qui est persité.
+ */
+function ep_pwa_tasks(): array
+{
+    // L'adresse publique du cockpit, vue d'un navigateur : le bouton de l'e-mail de 19:00 en a besoin (cq_mail.php).
+    if (function_exists('cqMailBase')) { try { cqMailBase(); } catch (Throwable $eB) { /* le bouton attendra */ } }
+    $date = $_GET['date'] ?? null;
+    if ($date === null || !preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) $date)) { $date = null; }
+
+    $empty = ['date' => $date ?? date('Y-m-d'), 'dates' => [], 'shops' => [],
+        'consultants' => [], 'totals' => ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0,
+            'aControler' => 0, 'nonRendues' => 0, 'sansPhoto' => 0, 'noteMoy' => null],
+        'indispo' => true];
+
+    try {
+        // Journées réellement évaluées (sélecteur de date) + date active par défaut.
+        // Les dates proposées partaient des NOTES : aujourd'hui n'y figurait
+        // jamais, et le sélecteur ouvrait sur la dernière journée déjà notée.
+        // Or c'est précisément aujourd'hui qu'il y a à contrôler. La journée
+        // courante et la veille sont donc toujours offertes.
+        $dates = array_map(fn ($r) => (string) $r['d'],
+            Db::rows("SELECT DISTINCT review_date d FROM mac_task_review ORDER BY review_date DESC LIMIT 90"));
+        foreach ([date('Y-m-d'), date('Y-m-d', strtotime('-1 day'))] as $d) {
+            if (!in_array($d, $dates, true)) { $dates[] = $d; }
+        }
+        rsort($dates);
+        if ($date === null) { $date = date('Y-m-d'); }
+
+        $taskNames = todoTaskNames();
+        $shopNames = [];
+        try {
+            foreach (Db::rows("SELECT id, name FROM shops") as $s) { $shopNames[(int) $s['id']] = $s['name']; }
+        } catch (PDOException $e) { /* shops absente : nom = #id */ }
+
+        $rows = Db::rows("SELECT * FROM mac_task_review WHERE review_date = ? ORDER BY id_shop, id_task", [$date]);
+        // Une seule boutique (l'application visites, au téléphone) : les appels
+        // au panel et les lignes se limitent à elle.
+        $shopF = (int) ($_GET['shop'] ?? 0);
+        if ($shopF > 0) { $rows = array_values(array_filter($rows, fn ($r) => (int) $r['id_shop'] === $shopF)); }
+
+        // Noms RÉELS des tâches : l'API amont du panel est la seule à les porter
+        // (la base ne garde que l'identifiant). On interroge une fois par
+        // boutique concernée, et on complète le référentiel local `todo_task`.
+        // Sans identifiants API configurés, on garde les noms disponibles.
+        // L'ÉCRAN PART DES TÂCHES, PLUS DES NOTES. Auparavant l'API n'était
+        // interrogée que pour les boutiques ayant déjà une note : sans note,
+        // aucun appel, donc rien à contrôler — jamais. Mesuré : au 17/08 la
+        // route rendait 34 tâches par boutique quand l'écran en affichait zéro.
+        // On interroge donc toutes les boutiques actives, et `status` (PENDING
+        // ou DONE) dit ce qui est rendu et attend un contrôle.
+        $apiNames = [];
+        $apiTaches = [];        // sid|tid => tâche telle que rendue par le panel
+        $apiOn = PanelApi::configured();
+        if ($apiOn) {
+            try {
+                $actifs = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+            } catch (PDOException $eA) { $actifs = []; }
+            if ($shopF > 0) { $actifs = [$shopF]; }
+            $sids = array_values(array_unique(array_merge($actifs,
+                array_map(fn ($r) => (int) $r['id_shop'], $rows))));
+            $req = [];
+            foreach ($sids as $sid) { $req[$sid] = '/consultant/shops/' . $sid . '/tasks?date=' . urlencode($date); }
+            foreach (PanelApi::getParallele($req) as $sid => $rep) {
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $t) {
+                    $tid = (int) ($t['task_id'] ?? $t['id'] ?? 0);
+                    if ($tid <= 0) { continue; }
+                    $nom = trim((string) ($t['task_name'] ?? $t['name'] ?? ''));
+                    if ($nom !== '') { $apiNames[$sid . '|' . $tid] = $nom; }
+                    $apiTaches[$sid . '|' . $tid] = $t + ['_shop' => (int) $sid, '_task' => $tid];
+                }
+            }
+
+            // LA PHOTO FAIT LA TÂCHE À NOTER. « status = DONE » ne suffit pas :
+            // c'est la photo de réalisation que le consultant regarde pour
+            // noter, et elle n'est pas dans la liste des tâches — elle vit dans
+            // l'avancement de la checklist, sous `attachment_id`. Sans ce
+            // second niveau d'appel, l'écran proposerait à la notation des
+            // tâches sans rien à voir.
+            $req2 = [];
+            foreach ($sids as $sid) { $req2[$sid] = '/consultant/shops/' . $sid . '/checklists?date=' . urlencode($date); }
+            $req3 = [];
+            foreach (PanelApi::getParallele($req2) as $sid => $rep) {
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $cl) {
+                    $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+                    if ($cid > 0) {
+                        $req3[$sid . '#' . $cid] = '/consultant/shops/' . $sid . '/checklists/' . $cid
+                            . '/progress?date=' . urlencode($date);
+                    }
+                }
+            }
+            foreach (PanelApi::getParallele($req3) as $k3 => $rep) {
+                $sid = (int) strstr((string) $k3, '#', true);
+                $cid = (int) substr((string) $k3, strpos((string) $k3, '#') + 1);
+                foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $pr) {
+                    $tid = (int) ($pr['task_id'] ?? $pr['id'] ?? 0);
+                    if ($tid <= 0) { continue; }
+                    $cle3 = $sid . '|' . $tid;
+                    $att = (int) ($pr['attachment_id'] ?? 0);
+                    $apiTaches[$cle3] = ($apiTaches[$cle3] ?? ['_shop' => $sid, '_task' => $tid])
+                        + ['_att' => $att, '_cl' => $cid,
+                           '_completion' => (int) ($pr['completion_id'] ?? 0),
+                           '_statutProg' => (string) ($pr['status'] ?? '')];
+                    if ($att > 0) { $apiTaches[$cle3]['_att'] = $att; }
+                    if (!isset($apiNames[$cle3])) {
+                        $n3 = trim((string) ($pr['task_name'] ?? $pr['name'] ?? ''));
+                        if ($n3 !== '') { $apiNames[$cle3] = $n3; }
+                    }
+                }
+            }
+        }
+
+        $byShop = [];
+        $cons = [];
+        $tot = ['taches' => 0, 'valides' => 0, 'refuses' => 0, 'aValider' => 0];
+        $noteSum = 0; $noteN = 0;
+        foreach ($rows as $r) {
+            $sid = (int) $r['id_shop'];
+            $tid = (int) $r['id_task'];
+            $note = isset($r['rating']) && $r['rating'] !== null ? (int) $r['rating'] : null;
+            $acc  = isset($r['is_accepted']) && $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null;
+            // Une tâche NOTÉE est validée : la note EST la validation. Le
+            // contrôle de la direction consiste à noter (ou à renoter), pas à
+            // cocher une case en plus — sans quoi l'écran annonce « 0 validée »
+            // devant dix tâches déjà évaluées.
+            $valide = $note !== null;
+            $ctrlDir = !empty($r['owner_validated_at']);
+            if (!isset($byShop[$sid])) {
+                $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
+            }
+            $byShop[$sid]['taches'][] = [
+                'taskId'      => (string) $tid,
+                'tache'       => $apiNames[$sid . '|' . $tid] ?? $taskNames[$tid] ?? ('Tâche #' . $tid),
+                'note'        => $note,
+                'accepte'     => $acc,
+                'comment'     => $r['comment'] !== null && $r['comment'] !== '' ? (string) $r['comment'] : null,
+                'consultant'  => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+                'consultantId' => (int) ($r['id_consultant'] ?? 0),
+                'date'        => (string) $r['review_date'],
+                'valide'      => $valide,
+                // Qui a validé = qui a noté (le consultant), sauf si la
+                // direction a explicitement contresigné : elle prime alors.
+                'valideePar'  => $valide ? ($r['consultant_name'] ?? null) : null,
+                'revuePar'    => $ctrlDir ? ($r['owner_name'] ?? null) : null,
+                'valideeLe'   => $ctrlDir ? substr((string) $r['owner_validated_at'], 0, 16)
+                                          : ($valide && $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null),
+                'ctrlDir'     => $ctrlDir,
+                'majLe'       => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+                // Le geste en boutique, distinct du contrôle : quand la photo a
+                // été prise et par qui. Le panel les porte sur la tâche ; une
+                // tâche notée les perdait, et l'écran ne montrait plus que
+                // l'heure de la NOTATION.
+                'faitLe'      => !empty($apiTaches[$sid . '|' . $tid]['completed_at'])
+                    ? substr((string) $apiTaches[$sid . '|' . $tid]['completed_at'], 0, 16) : null,
+                'faitePar'    => trim((string) ($apiTaches[$sid . '|' . $tid]['completed_by'] ?? '')) ?: null,
+                'statut'      => $valide ? 'notee' : 'aControler',
+                // La checklist aussi pour une tâche notée : la fiche franchisé range les tâches du jour par checklist.
+                'checklist'   => trim((string) ($apiTaches[$sid . '|' . $tid]['checklist_name'] ?? '')) ?: null,
+                // Le drapeau du panel aussi (20/10/2026) : sans lui, le relevé gardait une tâche notée pour
+                // facultative et le mois des tâches obligatoires la perdait. null = le panel ne l'a pas dit.
+                'obligatoire' => array_key_exists('is_mandatory', $apiTaches[$sid . '|' . $tid] ?? []) ? !empty($apiTaches[$sid . '|' . $tid]['is_mandatory']) : null,
+            ];
+            $tot['taches']++;
+            if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
+            if ($acc === false) { $tot['refuses']++; }
+            if ($note !== null) { $noteSum += $note; $noteN++; }
+
+            // Agrégat par consultant (pilotage des consultants).
+            $cid = (int) ($r['id_consultant'] ?? 0);
+            if (!isset($cons[$cid])) {
+                $cons[$cid] = ['id' => $cid, 'nom' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : ('#' . $cid),
+                    'avis' => 0, 'refuses' => 0, 'valides' => 0, 'noteSum' => 0, 'noteN' => 0];
+            }
+            $cons[$cid]['avis']++;
+            if ($acc === false) { $cons[$cid]['refuses']++; }
+            if ($valide) { $cons[$cid]['valides']++; }
+            if ($note !== null) { $cons[$cid]['noteSum'] += $note; $cons[$cid]['noteN']++; }
+        }
+
+        // --- LES TÂCHES RENDUES ET NON ENCORE NOTÉES : le reste à contrôler.
+        // C'était le trou : elles n'existent pas dans mac_task_review, donc
+        // l'écran les ignorait. Une tâche DONE sans note est exactement ce que
+        // le consultant doit regarder ; une PENDING n'est pas encore rendue et
+        // n'est pas contrôlable — on distingue les deux plutôt que de les
+        // mélanger sous un même « à valider ».
+        $deja = [];
+        foreach ($rows as $r) { $deja[(int) $r['id_shop'] . '|' . (int) $r['id_task']] = true; }
+        foreach ($apiTaches as $cle => $t) {
+            if (isset($deja[$cle])) { continue; }
+            $sid = (int) $t['_shop']; $tid = (int) $t['_task'];
+            $st = strtoupper(trim((string) ($t['status'] ?? ($t['_statutProg'] ?? ''))));
+            $rendue = $st === 'DONE' || $st === 'COMPLETED' || !empty($t['completed_at']);
+            // À NOTER = une photo existe. Rendue sans photo, il n'y a rien à
+            // regarder : la tâche est faite mais non notable, et l'écran le dit
+            // au lieu de la ranger avec celles qui attendent un avis.
+            $photo = (int) ($t['_att'] ?? 0) > 0;
+            $faite = $photo;
+            if (!isset($byShop[$sid])) {
+                $byShop[$sid] = ['shopId' => (string) $sid, 'shop' => $shopNames[$sid] ?? ('Boutique #' . $sid), 'taches' => []];
+            }
+            $byShop[$sid]['taches'][] = [
+                'taskId' => (string) $tid,
+                'tache'  => $apiNames[$cle] ?? ('Tâche #' . $tid),
+                'note' => null, 'accepte' => null,
+                'comment' => ($t['note'] ?? null) !== '' ? ($t['note'] ?? null) : null,
+                'consultant' => null, 'consultantId' => 0, 'date' => $date,
+                'valide' => false, 'valideePar' => null, 'revuePar' => null, 'valideeLe' => null,
+                'ctrlDir' => false,
+                'majLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
+                'faitLe' => !empty($t['completed_at']) ? substr((string) $t['completed_at'], 0, 16) : null,
+                // Deux états bien séparés, portés jusqu'à l'écran.
+                'statut' => $photo ? 'aControler' : ($rendue ? 'sansPhoto' : 'nonRendue'),
+                'photo' => $photo,
+                'faitePar' => ($t['completed_by'] ?? null) ?: null,
+                'photoRequise' => !empty($t['requires_photo']),
+                'obligatoire' => !empty($t['is_mandatory']),
+                'checklist' => trim((string) ($t['checklist_name'] ?? '')) ?: null,
+            ];
+            $tot['taches']++;
+            if ($photo) { $tot['aControler'] = ($tot['aControler'] ?? 0) + 1; $tot['aValider']++; }
+            elseif ($rendue) { $tot['sansPhoto'] = ($tot['sansPhoto'] ?? 0) + 1; }
+            else { $tot['nonRendues'] = ($tot['nonRendues'] ?? 0) + 1; }
+        }
+        $tot['aControler'] = $tot['aControler'] ?? 0;
+        $tot['nonRendues'] = $tot['nonRendues'] ?? 0;
+        $tot['sansPhoto']  = $tot['sansPhoto'] ?? 0;
+
+        $consultants = array_map(fn ($c) => [
+            'id' => $c['id'], 'nom' => $c['nom'], 'avis' => $c['avis'], 'refuses' => $c['refuses'], 'valides' => $c['valides'],
+            'noteMoy' => $c['noteN'] > 0 ? round($c['noteSum'] / $c['noteN'], 1) : null,
+        ], array_values($cons));
+        usort($consultants, fn ($a, $b) => $b['avis'] <=> $a['avis']);
+
+        $tot['noteMoy'] = $noteN > 0 ? round($noteSum / $noteN, 1) : null;
+
+        // Répartition par NIVEAU DE CONFORMITÉ — le barème des cinq niveaux
+        // (Exemplaire / Conforme / NC mineur / majeur / critique) est le
+        // réglage `signalement`, partagé avec l'écran de validation : un
+        // « majeur » doit vouloir dire la même chose partout.
+        $sig = setting('signalement', []);
+        $niveaux = (is_array($sig) && isset($sig['niveaux']) && is_array($sig['niveaux'])) ? $sig['niveaux'] : [];
+        $parNote = [];
+        foreach ($rows as $r) {
+            if ($r['rating'] !== null) { $n = (int) $r['rating']; $parNote[$n] = ($parNote[$n] ?? 0) + 1; }
+        }
+        $repartition = [];
+        foreach ($niveaux as $lv) {
+            $n = (int) ($lv['n'] ?? 0);
+            $c = $parNote[$n] ?? 0;
+            $repartition[] = [
+                'n' => $n, 'nom' => (string) ($lv['nom'] ?? ($n . '/5')),
+                'couleur' => (string) ($lv['couleur'] ?? '#666666'),
+                'aide' => (string) ($lv['aide'] ?? ''),
+                'conforme' => $n >= (int) ($sig['seuil'] ?? 4),
+                'nb' => $c, 'pct' => $noteN > 0 ? round(100 * $c / $noteN) : 0,
+            ];
+        }
+        $tot['notees'] = $noteN;
+        $tot['nonNotees'] = $tot['taches'] - $noteN;
+
+        return ['date' => $date, 'dates' => $dates, 'shops' => array_values($byShop),
+            'repartition' => $repartition, 'seuil' => (int) ($sig['seuil'] ?? 4),
+            'consultants' => $consultants, 'totals' => $tot, 'indispo' => false,
+            // L'écran doit pouvoir DIRE pourquoi il manque des noms/photos.
+            'api' => ['configure' => $apiOn, 'erreur' => $apiOn ? PanelApi::$lastError : null]];
+    } catch (PDOException $e) {
+        // mac_task_review absente (panel sur une autre base / jamais alimentée).
+        return $empty;
+    }
+}
+
+/**
+ * GET /pwa/tasks/detail?shop=&task=&date= — le détail d'une tâche : photo de
+ * réalisation + avis en cours.
+ *
+ * La photo n'est pas en base : l'API donne un `attachment_id` sur le flux
+ * d'avancement de la checklist, puis une URL signée pour l'image. On parcourt
+ * les checklists du jour pour retrouver la ligne de CETTE tâche.
+ */
+/**
+ * GET /pwa/waste/debug?shop=&from=&to= — forme brute de la réponse « pertes ».
+ *
+ * Sonde de diagnostic : la structure exacte de /shops/{id}/products/waste n'est
+ * pas documentée ici. Plutôt que de deviner les noms de champs et d'écrire un
+ * calcul qui échouerait en silence, on regarde. Lecture seule, quelques lignes.
+ */
+function ep_pwa_waste_debug(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    if ($shopId <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $from = $_GET['from'] ?? null; $to = $_GET['to'] ?? null;
+    $q = [];
+    if ($from) { $q['from'] = $from; $q['date_from'] = $from; }
+    if ($to)   { $q['to'] = $to;     $q['date_to'] = $to; }
+    $path = '/shops/' . $shopId . '/products/waste' . ($q ? '?' . http_build_query($q) : '');
+    $brut = PanelApi::brut($path);
+    $liste = PanelApi::shopWaste($shopId, $from, $to);
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return ['type' => gettype($v), 'valeur' => $v]; }
+        if (array_is_list($v)) {
+            return ['type' => 'liste', 'n' => count($v),
+                'clesPremier' => ($v && is_array($v[0])) ? array_slice(array_keys($v[0]), 0, 25) : null,
+                'premier' => $v[0] ?? null];
+        }
+        return ['type' => 'objet', 'cles' => array_slice(array_keys($v), 0, 25), 'extrait' => array_slice($v, 0, 6, true)];
+    };
+    return [
+        'chemin'    => $path,
+        'erreur'    => PanelApi::$lastError,
+        'clesBrut'  => is_array($brut) ? array_slice(array_keys($brut), 0, 15) : null,
+        'products'         => is_array($brut) && isset($brut['products']) ? $apercu($brut['products']) : null,
+        'grouped_products' => is_array($brut) && isset($brut['grouped_products']) ? $apercu($brut['grouped_products']) : null,
+        'period_summary'   => is_array($brut) && isset($brut['period_summary']) ? $apercu($brut['period_summary']) : null,
+        'nbLignesApresDepaquetage' => count($liste),
+    ];
+}
+
+/**
+ * GET /products/waste?produit=&periode=YYYY-MM — perte d'une référence,
+ * magasin par magasin, pour la modale du scoring.
+ *
+ * Le taux réseau d'une référence peut cacher un seul magasin qui jette : la
+ * décision (retirer ? reformer une équipe ?) n'est pas la même. On rend donc
+ * le détail par boutique, trié du plus mauvais au meilleur.
+ */
+/**
+ * GET /products/periodes?produit=… — le CA réseau et la marge brute d'UNE
+ * référence, sur trois fenêtres : le mois affiché par le scoring, le
+ * trimestre qui s'y termine, et l'année civile précédente.
+ *
+ * Servi à la FICHE de la référence, à l'ouverture : la ligne du tableau ne
+ * porte plus ces chiffres — trois sommes SQL par référence n'ont rien à
+ * faire dans un tableau de deux cents lignes. La marge brute = CA − volume ×
+ * coût matière, le coût venant des mêmes sources que le score (recettes,
+ * panel, saisie du cockpit) ; sans coût, la marge reste absente — pas un
+ * zéro qui se lirait comme « aucune marge ».
+ */
+function ep_product_periodes(): array
+{
+    $pid = (int) ($_GET['produit'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'produit requis']; }
+    // La même fenêtre que le tableau : la fiche doit répondre sur le mois
+    // qu'on vient de regarder, pas sur un mois courant sans caisse.
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m');
+    $moisDeb   = $per . '-01 00:00:00';
+    $moisFin   = date('Y-m-01 00:00:00', strtotime($moisDeb . ' +1 month'));
+    $triDeb    = date('Y-m-01 00:00:00', strtotime($moisDeb . ' -2 months'));
+    $anPrec    = ((int) substr($per, 0, 4)) - 1;
+
+    // Le coût matière : les mêmes sources que le score, dans le même ordre —
+    // recettes (et panel, via catalogueCouts), puis la saisie du cockpit.
+    $cout = catalogueCouts()[$pid]['mat'] ?? null;
+    try {
+        $ov = Db::row('SELECT mat FROM ceo_prod_product WHERE pwa_id = ? AND mat IS NOT NULL AND actif = 1', [$pid]);
+        if ($ov !== null) { $cout = (float) $ov['mat']; }
+    } catch (PDOException $e) { /* référentiel absent : recettes seules */ }
+
+    $fenetre = static function (string $du, string $au) use ($pid, $cout): array {
+        $r = Db::row('SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                             COALESCE(SUM(tp.quantity), 0) vol,
+                             COALESCE(SUM(tp.total_gross_value_after_discount), 0) ca
+                        FROM transaction t
+                        JOIN transaction_product tp ON tp.id_transaction = t.id
+                       WHERE tp.id_product = ? AND t.insert_timestamp >= ? AND t.insert_timestamp < ?',
+            [$pid, $du, $au]);
+        $vol = (float) ($r['vol'] ?? 0); $ca = (float) ($r['ca'] ?? 0);
+        return ['volume' => (int) round($vol), 'ca' => round($ca, 2),
+            'marge' => $cout !== null ? round($ca - $vol * $cout, 2) : null];
+    };
+
+    // SOURCE PREMIÈRE : le panel, les mêmes tranches mensuelles par magasin
+    // que le tableau (gravées dès qu'un mois est clos) — dernier mois clos,
+    // dernier trimestre, douze derniers mois. La caisse locale, arrêtée à la
+    // mi-juillet, ne sert plus que de repli.
+    if (PanelApi::configured() && function_exists('apTranches2')) {
+        try {
+            $shopIds = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+        } catch (PDOException $eS) { $shopIds = []; }
+        if ($shopIds !== []) {
+            $finTs = strtotime(date('Y-m-01') . ' -1 day');
+            $mois12 = [];
+            for ($i = 11; $i >= 0; $i--) { $mois12[] = strtotime(date('Y-m-01', $finTs) . " -$i month"); }
+            $couples = [];
+            foreach ($mois12 as $t) { foreach ($shopIds as $sid) { $couples[] = [$sid, date('Y-m-01', $t), date('Y-m-t', $t)]; } }
+            $lu = apTranches2($couples);
+            $somme = function (int $nb) use ($mois12, $shopIds, $lu, $pid, $cout): array {
+                $vol = 0.0; $ca = 0.0; $servis = 0;
+                foreach (array_slice($mois12, -$nb) as $t) {
+                    foreach ($shopIds as $sid) {
+                        $pr = $lu[$sid . ':' . date('Y-m-01', $t)] ?? null;
+                        if (!is_array($pr)) { continue; }
+                        $servis++;
+                        $vol += (float) ($pr[$pid][2] ?? 0); $ca += (float) ($pr[$pid][3] ?? 0);
+                    }
+                }
+                return ['volume' => (int) round($vol), 'ca' => round($ca, 2),
+                    'marge' => $cout !== null ? round($ca - $vol * $cout, 2) : null, 'servis' => $servis];
+            };
+            $m1 = $somme(1);
+            if ($m1['servis'] > 0) {
+                $lib = fn (int $i) => strftime_fr($mois12[$i], 'M Y');
+                return ['produit' => $pid, 'periode' => date('Y-m', $finTs), 'cout' => $cout, 'source' => 'panel',
+                    'fenetres' => [
+                        ['cle' => 'mois', 'label' => $lib(11)] + $m1,
+                        ['cle' => 'trimestre', 'label' => $lib(9) . ' → ' . $lib(11)] + $somme(3),
+                        ['cle' => 'annee', 'label' => '12 mois : ' . $lib(0) . ' → ' . $lib(11)] + $somme(12),
+                    ]];
+            }
+        }
+    }
+
+    try {
+        return ['produit' => $pid, 'periode' => $per, 'cout' => $cout, 'source' => 'caisse locale',
+            'fenetres' => [
+                ['cle' => 'mois', 'label' => 'Mois ' . $per] + $fenetre($moisDeb, $moisFin),
+                ['cle' => 'trimestre', 'label' => 'Trimestre ' . substr($triDeb, 0, 7) . ' → ' . $per] + $fenetre($triDeb, $moisFin),
+                ['cle' => 'annee', 'label' => 'Année ' . $anPrec] + $fenetre($anPrec . '-01-01 00:00:00', ($anPrec + 1) . '-01-01 00:00:00'),
+            ]];
+    } catch (PDOException $e) {
+        http_response_code(503);
+        return ['error' => 'tables de caisse indisponibles'];
+    }
+}
+
+function ep_product_waste(): array
+{
+    $pid = (int) ($_GET['produit'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'produit requis']; }
+    // Défaut : le mois de caisse réellement encodé, PAS le mois courant. La
+    // caisse s'arrête à la mi-juillet ; interroger août rend des rebuts réels
+    // face à zéro vente, donc 100 % de perte partout — un chiffre faux qui a
+    // l'air d'une catastrophe. L'écran de scoring travaille déjà sur ce mois.
+    $periode = (string) ($_GET['periode'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}$/', $periode)) {
+        $ref = setting('periodeProduits');
+        $periode = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m');
+    }
+    preg_match('/^(\d{4})-(\d{2})$/', $periode, $m);
+    $from = sprintf('%04d-%02d-01', (int) $m[1], (int) $m[2]);
+    $to   = date('Y-m-d', strtotime($from . ' +1 month -1 day'));
+
+    $out = ['produitId' => (string) $pid, 'nom' => null, 'periode' => $periode,
+        'du' => $from, 'au' => $to, 'magasins' => [],
+        'reseau' => ['jete' => 0, 'vendu' => 0, 'taux' => null],
+        'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'compte consultant non configuré (Mon compte)';
+        return $out;
+    }
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+
+    // Ventes PAR MAGASIN : notre propre agrégat de caisse. L'API rend un
+    // `sold_qty` identique pour tous les magasins (valeur réseau) — s'en servir
+    // comme dénominateur par magasin donnerait des taux faux, d'autant plus
+    // trompeurs qu'ils paraissent plausibles.
+    $venteParShop = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */ t.id_shop, SUM(tp.quantity) q
+                           FROM transaction t JOIN transaction_product tp ON tp.id_transaction = t.id
+                           WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ? AND tp.id_product = ?
+                           GROUP BY t.id_shop",
+            [$from . ' 00:00:00', date('Y-m-d 00:00:00', strtotime($to . ' +1 day')), $pid]) as $v) {
+            $venteParShop[(int) $v['id_shop']] = (float) $v['q'];
+        }
+    } catch (PDOException $eV) { /* caisse indisponible : ventes inconnues */ }
+
+    $totJ = 0.0; $totV = 0.0;
+    foreach ($shops as $sh) {
+        $sid = (int) $sh['id'];
+        $w = PanelApi::shopProductWaste($sid, $pid, $from, $to);
+        $j = $w !== null ? (float) ($w['waste_qty'] ?? 0) : 0.0;
+        $v = $venteParShop[$sid] ?? 0.0;
+        if ($out['nom'] === null && $w !== null && !empty($w['product_name'])) { $out['nom'] = (string) $w['product_name']; }
+        $den = $j + $v;
+        $totJ += $j; $totV += $v;
+        $out['magasins'][] = [
+            'shopId' => (string) $sid, 'magasin' => (string) $sh['name'],
+            'jete' => (int) round($j), 'vendu' => (int) round($v),
+            // Pas de vente ni de rebut : la référence n'était pas proposée ici.
+            // C'est différent d'un taux nul, et l'écran doit pouvoir le dire.
+            'taux' => $den > 0 ? round($j / $den, 4) : null,
+            'motif' => $w !== null && !empty($w['top_reason']) ? (string) $w['top_reason'] : null,
+            'caPerdu' => $w !== null && isset($w['ca_waste_net']) ? round((float) $w['ca_waste_net'], 2) : null,
+        ];
+    }
+    usort($out['magasins'], function ($a, $b) {
+        if ($a['taux'] === null) { return 1; }
+        if ($b['taux'] === null) { return -1; }
+        return $b['taux'] <=> $a['taux'];
+    });
+    $den = $totJ + $totV;
+    $out['reseau'] = ['jete' => (int) round($totJ), 'vendu' => (int) round($totV),
+        'taux' => $den > 0 ? round($totJ / $den, 4) : null];
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
+}
+
+/**
+ * GET /pwa/probe?paths=a,b,c — quels chemins de l'API amont répondent.
+ *
+ * Sonde de branchement : avant de câbler l'ETP il faut savoir COMMENT lister
+ * les employés d'une boutique. On essaie les chemins plausibles et on rapporte
+ * ce qui répond, plutôt que d'en supposer un et d'écrire un calcul muet.
+ */
+function ep_pwa_probe(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $paths = array_filter(array_map('trim', explode(',', (string) ($_GET['paths'] ?? ''))));
+    if (!$paths) { http_response_code(400); return ['error' => 'paths requis']; }
+    $out = [];
+    foreach (array_slice($paths, 0, 12) as $p) {
+        PanelApi::$lastError = null;
+        $r = PanelApi::brut($p);
+        $apercu = null;
+        if (is_array($r)) {
+            $apercu = array_is_list($r)
+                ? ['type' => 'liste', 'n' => count($r), 'clesPremier' => ($r && is_array($r[0])) ? array_slice(array_keys($r[0]), 0, 20) : null, 'premier' => $r[0] ?? null]
+                : ['type' => 'objet', 'cles' => array_slice(array_keys($r), 0, 20)];
+        }
+        $out[] = ['chemin' => $p, 'erreur' => PanelApi::$lastError, 'apercu' => $apercu];
+    }
+    return ['resultats' => $out];
+}
+
+/**
+ * GET /production/catalogue — référentiel produit RÉSEAU (partie franchiseur).
+ *
+ * Temps de production, batchs, capacité four, durée de vie, coût matière : rien
+ * de tout cela n'existe côté panel ni en base partagée. Le cockpit en est la
+ * source. `pwaId` rapproche la référence du catalogue de caisse, ce qui permet
+ * de croiser avec les ventes et les pertes réelles.
+ */
+/**
+ * Catalogue produit du réseau.
+ *
+ * Le catalogue N'EST PAS tenu par le cockpit : il vit dans `product`
+ * (atelierby_db), avec ses catégories et ses gammes saisonnières. Le cockpit
+ * n'ajoute que ce qui n'existe nulle part ailleurs — les paramètres de
+ * production (temps, batchs, four) et le coût matière saisi à la main. On
+ * enrichit donc, on ne duplique pas : dupliquer ferait diverger les deux
+ * listes sans que personne ne s'en aperçoive.
+ */
+function ep_prod_catalogue(): array
+{
+    // La saison des obligatoires (colonne ajoutée avec l'assortiment saisonnier).
+    if (function_exists('aoEnsure')) { aoEnsure(); }
+    $enrich = [];   // id_product du panel → ligne cockpit
+    $parRef = [];
+    foreach (Db::rows('SELECT * FROM ceo_prod_product') as $r) {
+        $parRef[(string) $r['ref']] = $r;
+        if ($r['pwa_id'] !== null) { $enrich[(int) $r['pwa_id']] = $r; }
+    }
+    // Où chaque produit est posé : le planogramme STANDARD (zone, « Section N »,
+    // étage). L'ancienne table des placements n'est plus lue.
+    $plano = function_exists('psPlacements') ? psPlacements() : [];
+
+    $reel = ep_prod_catalogue_reel($enrich, $parRef, $plano);
+    // Gammes du produit, saison de l'obligatoire, exigée aujourd'hui ou non.
+    if ($reel !== null) { return function_exists('aoEnrichir') ? aoEnrichir($reel) : $reel; }
+
+    // Repli : installation autonome, sans la base de caisse.
+    $rows = Db::rows('SELECT * FROM ceo_prod_product WHERE actif = 1 ORDER BY categorie, nom');
+    $repli = array_map(function ($r) use ($plano) {
+        $pl = $plano[$r['ref']] ?? null;
+        $mat = $r['mat'] !== null ? (float) $r['mat'] : null;
+        $prix = $r['prix'] !== null ? (float) $r['prix'] : null;
+        return [
+            'ref' => $r['ref'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
+            'prep' => (int) $r['prep'], 'cuisson' => (int) $r['cuisson'], 'fin' => (int) $r['fin'],
+            'bmin' => (int) $r['bmin'], 'bmult' => (int) $r['bmult'], 'four' => (int) $r['four'],
+            'dlv' => (int) $r['dlv'], 'mat' => $mat, 'prix' => $prix,
+            // Marge unitaire : disponible ici parce que le coût matière est
+            // tenu par le réseau — l'API de caisse ne l'expose pas.
+            'marge' => ($mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
+            'margePct' => ($mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'commission' => caCommission($prix),
+            'margeNette' => caMargeNette($prix, $mat),
+            'margeNettePct' => caMargeNettePct($prix, $mat),
+            'must' => (bool) $r['must'], 'qmin' => (int) $r['qmin'],
+            'periods' => $r['periods'], 'profil' => $r['profil'],
+            'parametre' => ficheRemplie($r),
+            'pwaId' => $r['pwa_id'] !== null ? (int) $r['pwa_id'] : null,
+            'zone' => $pl ? $pl['zone'] : null,
+            'meuble' => $pl ? $pl['meuble'] : null,
+            'niveau' => $pl ? $pl['niveau'] : null,
+            'slot' => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
+        ];
+    }, $rows);
+    return function_exists('aoEnrichir') ? aoEnrichir($repli) : $repli;
+}
+
+/**
+ * Exploitation — le P&L court des magasins : jour, semaine, mois.
+ *
+ * Trois précautions de fond.
+ *
+ * D'abord, « aujourd'hui » n'est pas la date du jour mais le DERNIER JOUR
+ * ENCODÉ en caisse. La caisse s'arrête au 14 juillet ; afficher un vrai
+ * « aujourd'hui » rendrait des zéros partout, qu'on lirait comme un effondrement
+ * du réseau au lieu d'un simple retard d'encodage.
+ *
+ * Ensuite, l'objectif du jour et de la semaine se déduit du budget MENSUEL au
+ * prorata des jours d'ouverture : c'est une convention, elle est donc annoncée
+ * (`objectifBase`) plutôt que présentée comme une cible saisie.
+ *
+ * Enfin, un magasin sans budget encodé n'a pas un objectif de zéro : il n'en a
+ * pas. La différence décide de la couleur d'une pastille.
+ */
+function ep_exploitation(): array
+{
+    $out = ['jour' => null, 'semaine' => null, 'mois' => null, 'magasins' => [],
+        'reseau' => [], 'objectifBase' => 'budget mensuel au prorata des jours',
+        'avertissement' => null];
+
+    // FRAÎCHEUR : quand le compte consultant est là, les trois blocs viennent
+    // de l'API du panel — ancrés sur AUJOURD'HUI, pas sur la dernière journée
+    // encodée en base (la caisse partagée a des jours de retard). Trois
+    // plages, mêmes définitions que le calcul de repli ci-dessous. Si l'API
+    // ne répond pas, on retombe sans bruit sur la caisse en base.
+    if (PanelApi::configured()) {
+        $api = ep_exploitation_api($out);
+        if ($api !== null) { return $api; }
+    }
+
+    try {
+        $d = Db::rows('SELECT MAX(DATE(insert_timestamp)) j FROM transaction');
+    } catch (PDOException $e) { return $out + ['erreur' => 'caisse indisponible']; }
+    $jour = ($d && !empty($d[0]['j'])) ? (string) $d[0]['j'] : null;
+    if ($jour === null) { return $out + ['erreur' => 'aucune vente enregistrée']; }
+
+    $ts   = strtotime($jour);
+    $lundi = date('Y-m-d', strtotime('monday this week', $ts));
+    $mois1 = date('Y-m-01', $ts);
+    $out['jour'] = $jour; $out['semaine'] = $lundi; $out['mois'] = substr($mois1, 0, 7);
+    if ($jour !== date('Y-m-d')) {
+        $out['avertissement'] = 'dernier jour encodé en caisse : ' . $jour
+            . ' (la caisse n\'a rien remonté depuis)';
+    }
+
+    // Un seul balayage : le mois courant par magasin ET par jour. Tout le reste
+    // — jour, semaine, mois — s'en déduit sans repasser sur la table.
+    $par = [];
+    try {
+        foreach (Db::rows("SELECT /*+ MAX_EXECUTION_TIME(9000) */
+                                  id_shop, DATE(insert_timestamp) j,
+                                  COUNT(DISTINCT ticket_key) tickets,
+                                  SUM(total_gross_amount_after_discount) ca
+                             FROM transaction
+                            WHERE insert_timestamp >= ? AND insert_timestamp < ?
+                         GROUP BY id_shop, j", [$mois1 . ' 00:00:00',
+                            date('Y-m-d 00:00:00', strtotime($jour . ' +1 day'))]) as $r) {
+            $par[(int) $r['id_shop']][(string) $r['j']] = ['ca' => (float) $r['ca'], 'tk' => (int) $r['tickets']];
+        }
+    } catch (PDOException $e) { return $out + ['erreur' => 'agrégat de caisse indisponible']; }
+
+    // Objectif du mois : le budget validé, et à défaut le CA théorique de
+    // l'étude de marché. Un magasin dont le budget n'est pas encore négocié a
+    // quand même une cible — la rendre invisible affichait « sans budget » sur
+    // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
+    $budget = []; $budgetSrc = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            $sid = (string) $b['shop_id'];
+            if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
+                $budget[$sid] = (float) $b['revenue_budget']; $budgetSrc[$sid] = 'budget';
+            } elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) {
+                $budget[$sid] = (float) $b['ca_theorique']; $budgetSrc[$sid] = 'theorique';
+            }
+        }
+    } catch (PDOException $e) { /* budget non encodé */ }
+
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $joursMois   = (int) date('t', $ts);
+    $joursEcoule = (int) date('j', $ts);
+    $joursSem    = (int) round((strtotime($jour) - strtotime($lundi)) / 86400) + 1;
+
+    $bloc = function (array $jours, ?float $obj): array {
+        $ca = 0.0; $tk = 0;
+        foreach ($jours as $x) { $ca += $x['ca']; $tk += $x['tk']; }
+        return ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $obj !== null ? round($obj, 2) : null,
+            'atteinte' => ($obj !== null && $obj > 0) ? round($ca / $obj, 4) : null];
+    };
+
+    $tot = ['jour' => [], 'semaine' => [], 'mois' => []];
+    foreach ($par as $sid => $jours) {
+        $b = $budget[(string) $sid] ?? null;
+        $dJour = isset($jours[$jour]) ? [$jours[$jour]] : [];
+        $dSem  = []; $dMois = [];
+        foreach ($jours as $j => $x) {
+            $dMois[] = $x;
+            if ($j >= $lundi) { $dSem[] = $x; }
+        }
+        $ligne = ['shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+            'budgetMois' => $b,
+            'jour'    => $bloc($dJour, $b !== null ? $b / $joursMois : null),
+            'semaine' => $bloc($dSem,  $b !== null ? $b * $joursSem / $joursMois : null),
+            'mois'    => $bloc($dMois, $b !== null ? $b * $joursEcoule / $joursMois : null),
+            'moisPlein' => $b, 'budgetSource' => $b === null ? null : ($budgetSrc[(string) $sid] ?? 'budget')];
+        $out['magasins'][] = $ligne;
+        foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
+    }
+    usort($out['magasins'], fn($a, $b2) => $b2['mois']['ca'] <=> $a['mois']['ca']);
+
+    foreach (['jour', 'semaine', 'mois'] as $p) {
+        $ca = 0.0; $tk = 0; $ob = 0.0; $aucun = true;
+        foreach ($tot[$p] as $x) {
+            $ca += $x['ca']; $tk += $x['tickets'];
+            if ($x['objectif'] !== null) { $ob += $x['objectif']; $aucun = false; }
+        }
+        $out['reseau'][$p] = ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $aucun ? null : round($ob, 2),
+            'atteinte' => (!$aucun && $ob > 0) ? round($ca / $ob, 4) : null];
+    }
+    $out['magasinsSansBudget'] = count($out['magasins']) - count($budget);
+    return $out;
+}
+
+/**
+ * Le tableau d'exploitation par l'API du panel — le chemin FRAIS.
+ *
+ * Trois appels (jour, semaine, mois), chacun agrégé par boutique côté ERP :
+ * mêmes définitions que le calcul sur la caisse en base, mais servies jusqu'au
+ * jour même. Renvoie null si l'API ne rend rien — l'appelant retombe alors sur
+ * la caisse.
+ */
+function ep_exploitation_api(array $out): ?array
+{
+    $auj = date('Y-m-d');
+    $ts = strtotime($auj);
+    $plages = [
+        'jour'    => [$auj, $auj],
+        'semaine' => [date('Y-m-d', strtotime('monday this week', $ts)), $auj],
+        'mois'    => [date('Y-m-01', $ts), $auj],
+    ];
+    $parPer = [];
+    foreach ($plages as $p => [$du, $au]) {
+        $liste = analyseListe(PanelApi::shopsSalesKpisEntre($du, $au) ?? []);
+        if ($liste === [] && $p === 'mois') { return null; }   // l'API ne sert rien : repli
+        foreach ($liste as $x) {
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+            }
+            if ($id <= 0) { continue; }
+            $parPer[$p][$id] = [
+                'ca' => (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0),
+                'tk' => (int) (nombreOuNull($x, ['tickets', 'receipts', 'transactions']) ?? 0)];
+        }
+    }
+    if (empty($parPer['mois'])) { return null; }
+
+    $out['jour'] = $auj;
+    $out['semaine'] = $plages['semaine'][0];
+    $out['mois'] = substr($plages['mois'][0], 0, 7);
+    $out['source'] = 'API panel — ventes servies jusqu’au jour même';
+
+    // Objectif du mois : le budget validé, et à défaut le CA théorique de
+    // l'étude de marché. Un magasin dont le budget n'est pas encore négocié a
+    // quand même une cible — la rendre invisible affichait « sans budget » sur
+    // une carte qui, ailleurs dans le cockpit, sait très bien ce qu'elle vise.
+    $budget = []; $budgetSrc = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ? AND month = ?',
+            [(int) date('Y', $ts), (int) date('n', $ts)]) as $b) {
+            $sid = (string) $b['shop_id'];
+            if ($b['revenue_budget'] !== null && (float) $b['revenue_budget'] > 0) {
+                $budget[$sid] = (float) $b['revenue_budget']; $budgetSrc[$sid] = 'budget';
+            } elseif ($b['ca_theorique'] !== null && (float) $b['ca_theorique'] > 0) {
+                $budget[$sid] = (float) $b['ca_theorique']; $budgetSrc[$sid] = 'theorique';
+            }
+        }
+    } catch (PDOException $e) { /* budget non encodé */ }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $joursMois   = (int) date('t', $ts);
+    $joursEcoule = (int) date('j', $ts);
+    $joursSem    = (int) round((strtotime($auj) - strtotime($plages['semaine'][0])) / 86400) + 1;
+
+    $bloc = static function (?array $x, ?float $obj): array {
+        $ca = $x['ca'] ?? 0.0; $tk = $x['tk'] ?? 0;
+        return ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $obj !== null ? round($obj, 2) : null,
+            'atteinte' => ($obj !== null && $obj > 0) ? round($ca / $obj, 4) : null];
+    };
+
+    $tot = ['jour' => [], 'semaine' => [], 'mois' => []];
+    foreach ($parPer['mois'] as $sid => $dMois) {
+        // sales-kpis rend aussi des entrées techniques : un identifiant que le
+        // référentiel `shops` ne connaît pas, zéro partout (« Magasin 10 »).
+        // Sans nom ET sans la moindre vente du mois, la carte n'apprend rien —
+        // on la retire. Un inconnu AVEC du chiffre resterait affiché sous son
+        // numéro : masquer un CA réel serait pire qu'un nom manquant.
+        if (!isset($noms[$sid]) && (float) ($dMois['ca'] ?? 0) <= 0) { continue; }
+        $b = $budget[(string) $sid] ?? null;
+        $ligne = ['shopId' => (string) $sid, 'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+            'budgetMois' => $b,
+            'jour'    => $bloc($parPer['jour'][$sid] ?? null,    $b !== null ? $b / $joursMois : null),
+            'semaine' => $bloc($parPer['semaine'][$sid] ?? null, $b !== null ? $b * $joursSem / $joursMois : null),
+            'mois'    => $bloc($dMois,                           $b !== null ? $b * $joursEcoule / $joursMois : null),
+            'moisPlein' => $b, 'budgetSource' => $b === null ? null : ($budgetSrc[(string) $sid] ?? 'budget')];
+        $out['magasins'][] = $ligne;
+        foreach (['jour', 'semaine', 'mois'] as $p) { $tot[$p][] = $ligne[$p]; }
+    }
+    usort($out['magasins'], fn ($a, $b2) => $b2['mois']['ca'] <=> $a['mois']['ca']);
+
+    foreach (['jour', 'semaine', 'mois'] as $p) {
+        $ca = 0.0; $tk = 0; $ob = 0.0; $aucun = true;
+        foreach ($tot[$p] as $x) {
+            $ca += $x['ca']; $tk += $x['tickets'];
+            if ($x['objectif'] !== null) { $ob += $x['objectif']; $aucun = false; }
+        }
+        $out['reseau'][$p] = ['ca' => round($ca, 2), 'tickets' => $tk,
+            'panier' => $tk > 0 ? round($ca / $tk, 2) : null,
+            'objectif' => $aucun ? null : round($ob, 2),
+            'atteinte' => (!$aucun && $ob > 0) ? round($ca / $ob, 4) : null];
+    }
+    $out['magasinsSansBudget'] = count($out['magasins']) - count($budget);
+    return $out;
+}
+
+/** Première clé numérique présente parmi plusieurs écritures possibles. */
+function nombreOuNull(array $d, array $cles): ?float
+{
+    foreach ($cles as $c) {
+        if (isset($d[$c]) && is_numeric($d[$c])) { return (float) $d[$c]; }
+    }
+    return null;
+}
+
+/**
+ * Indicateurs de toutes les boutiques, N contre N-1.
+ *
+ * Un seul appel réseau (/consultant/shops/sales-kpis) plutôt qu'un par
+ * boutique : mêmes chiffres, calculés de la même façon pour tout le monde, et
+ * une seule occasion de manquer une réponse au lieu de cinq.
+ *
+ * `?debug=1` rend la forme brute d'une ligne — la comparaison N-1 n'est pas
+ * documentée, et supposer un nom de champ est le moyen le plus sûr d'afficher
+ * un écart qui n'existe pas.
+ */
+function ep_exploitation_reseau(): array
+{
+    $per = (string) ($_GET['periode'] ?? 'mois');
+    if (!in_array($per, ['jour', 'semaine', 'mois', 'annee'], true)) { $per = 'mois'; }
+    $date = date('Y-m-d');
+    $out = ['periode' => $per, 'date' => $date, 'etat' => 'attente', 'source' => null,
+        'magasins' => [], 'motif' => null];
+
+    if (!PanelApi::configured()) {
+        $out['motif'] = 'compte consultant non configuré (Mon compte)';
+        return $out;
+    }
+    // Bornes de la période, puis LES MÊMES un an plus tôt. La comparaison N-1
+    // n'est pas rendue par cet endpoint : plutôt que de la déduire d'une autre
+    // source — qui ne compterait pas pareil — on lui repose la même question
+    // sur l'exercice précédent. Deux appels, une seule définition du chiffre.
+    $ts = strtotime($date);
+    $du = $per === 'jour' ? $date
+        : ($per === 'semaine' ? date('Y-m-d', strtotime('monday this week', $ts))
+        : ($per === 'annee' ? date('Y-01-01', $ts) : date('Y-m-01', $ts)));
+    $r = PanelApi::shopsSalesKpisEntre($du, $date);
+    if (!is_array($r)) { $out['motif'] = PanelApi::$lastError ?: 'endpoint non disponible'; return $out; }
+    $src = PanelApi::$lastPath;
+
+    $extraire = static function ($rep): ?array {
+        foreach ([$rep, $rep['shops'] ?? null, $rep['data'] ?? null,
+                  $rep['items'] ?? null, $rep['results'] ?? null] as $c) {
+            if (is_array($c) && $c && array_is_list($c)) { return $c; }
+        }
+        return null;
+    };
+    $liste = $extraire($r);
+    if ($liste === null) {
+        $out['motif'] = 'forme non reconnue, clés : ' . implode(', ', array_slice(array_keys($r), 0, 12));
+        return $out;
+    }
+    $n1par = [];
+    $rn1 = PanelApi::shopsSalesKpisEntre(date('Y-m-d', strtotime($du . ' -1 year')),
+                                         date('Y-m-d', strtotime($date . ' -1 year')));
+    foreach ($extraire(is_array($rn1) ? $rn1 : []) ?? [] as $x) {
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) {
+                $n1par[(int) $x[$c]] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); break;
+            }
+        }
+    }
+    // Les noms ne sont pas dans les indicateurs : « Magasin 2 » n'aide personne.
+    $noms = [];
+    foreach (PanelApi::consultantShops() ?? [] as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        foreach (['representative_name', 'name', 'label'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $noms[$id] = trim($sh[$c]); break; }
+        }
+    }
+    $out['etat'] = 'ok';
+    $out['source'] = $src;
+    $out['du'] = $du; $out['au'] = $date;
+    if (!empty($_GET['debug'])) { $out['brut'] = array_slice($liste, 0, 2); }
+
+    foreach ($liste as $x) {
+        if (!is_array($x)) { continue; }
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+        }
+        $n  = nombreOuNull($x, ['ca', 'turnover', 'revenue', 'value', 'total']);
+        $n1 = $n1par[$id] ?? nombreOuNull($x, ['ca_n1', 'previous', 'last_year']);
+        // Aucun écart sans un N-1 non nul : un « 0 % » calculé faute de mieux se
+        // lirait comme une stabilité alors qu'il signifie une absence.
+        $ec = ($n !== null && $n1 !== null && $n1 != 0.0) ? round(100 * ($n - $n1) / $n1, 1) : null;
+        $out['magasins'][] = ['shopId' => (string) $id,
+            'magasin' => $noms[$id] ?? ('Magasin ' . $id),
+            'n' => $n, 'n1' => $n1, 'ecart' => $ec,
+            'tickets' => nombreOuNull($x, ['tickets', 'ticket_count']),
+            'panier' => nombreOuNull($x, ['avg_basket', 'average_basket']),
+            'produits' => nombreOuNull($x, ['products', 'product_count'])];
+    }
+    usort($out['magasins'], fn($a, $b) => ($b['n'] ?? 0) <=> ($a['n'] ?? 0));
+    // Dire si la comparaison N-1 manque, plutôt que d'afficher une colonne vide
+    // que chacun interprétera à sa façon.
+    if ($out['magasins'] && !array_filter($out['magasins'], fn($m) => $m['ecart'] !== null)) {
+        $out['motif'] = 'l\'API ne renvoie pas de comparaison N-1 sur cet appel';
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/rentabilite?periode=semaine|mois — le résultat net par jour
+ * et par magasin, comme l'« Analyse rentabilité » de la PWA consultant.
+ *
+ * La construction est celle de la PWA, vérifiée chiffre à chiffre sur ses
+ * écrans (Halle, mardi 11/08 : CA 1 186 €, marge brute 765,24 €, overhead
+ * 420,73 €/jour = 13 042,65 ÷ 31) :
+ *
+ *  - le CA et la marge BRUTE par jour viennent de margin-heatmap (volet
+ *    `days`) — le coût matière est CA − marge brute ;
+ *  - labour et overhead viennent du P&L MENSUEL, répartis par jour
+ *    d'ouverture : jours du mois plein dont le jour de semaine a montré de
+ *    l'activité sur le mois courant (une boutique 7 j/7 en août → 31) ;
+ *  - résultat net du jour = marge brute − labour/j − overhead/j.
+ *
+ * LIMITE ASSUMÉE : le panel ne rend le P&L mensuel que pour le mois COURANT
+ * (/pnl/monthly répond 422 sur toute forme d'appel, la route générique ignore
+ * la date transmise — mesuré). Un jour d'un autre mois garde donc son CA et sa
+ * marge brute, mais son résultat net est nul avec le motif dit : inventer un
+ * labour de juillet à partir d'août serait un chiffre faux présenté juste.
+ */
+function ep_exploitation_rentabilite(): array
+{
+    $per = (($_GET['periode'] ?? 'semaine') === 'mois') ? 'mois' : 'semaine';
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+    $auj = new DateTimeImmutable('today');
+    if ($per === 'semaine') {
+        // Dernière semaine PLEINE : le lundi précédant le lundi de la semaine
+        // en cours. Une semaine entamée mélangerait jours réels et cases vides.
+        $du = $auj->modify('monday this week')->modify('-7 days');
+        $au = $du->modify('+6 days');
+    } else {
+        $du = $auj->modify('first day of this month');
+        $au = $auj; // les jours à venir n'ont pas de ventes, inutile de les demander
+    }
+    $duS = $du->format('Y-m-d'); $auS = $au->format('Y-m-d');
+    $moisCourant = $auj->format('Y-m');
+    $mDebut = $auj->modify('first day of this month')->format('Y-m-d');
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    } catch (PDOException $e) {
+        $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name");
+    }
+
+    $paths = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $paths['hm' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $duS . '&to=' . $auS;
+        // En vue mois, la fenêtre EST le mois courant : un seul appel sert les
+        // jours et la détection des jours d'ouverture.
+        if ($per === 'semaine') {
+            $paths['hmM' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from=' . $mDebut . '&to=' . $auj->format('Y-m-d');
+        }
+        // Les jours d'OUVERTURE se détectent sur quatre semaines pleines, pas
+        // sur le mois entamé : au 3 du mois, trois jours de semaine seulement
+        // ont des ventes et le diviseur tombe à 14 — les frais du jour
+        // doublent. Vingt-huit jours voient chaque jour de semaine quatre fois
+        // (la route refuse au-delà de 31).
+        $paths['hmW' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?from='
+            . $auj->modify('-27 days')->format('Y-m-d') . '&to=' . $auj->format('Y-m-d');
+        $paths['pnl' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj->format('Y-m-d');
+        // Le P&L JOUR par jour : matière, main-d'œuvre, charges et résultat déjà
+        // répartis par la source. Quand il répond, on ne répartit plus rien.
+        $paths['pnlj' . $id] = '/consultant/shops/' . $id . '/pnl/daily?'
+            . http_build_query(['date_from' => $duS, 'date_to' => $auS, 'from' => $duS, 'to' => $auS]);
+    }
+    $res = PanelApi::getParallele($paths, 6);
+
+    $joursMois = (int) $auj->format('t');
+    $premier = new DateTimeImmutable($moisCourant . '-01');
+    $magasins = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $hm = $res['hm' . $id] ?? null;
+        if (!is_array($hm) || !isset($hm['days'])) {
+            $magasins[] = ['id' => (string) $id, 'nom' => $s['name'], 'indispo' => true,
+                'motif' => 'margin-heatmap sans réponse pour ce magasin'];
+            continue;
+        }
+        // Jours d'ouverture du mois plein : les jours de semaine vus actifs sur
+        // le mois courant, comptés sur tout le mois. C'est le diviseur de la
+        // PWA (« mois ÷ jours ouverts »).
+        $hmM = $per === 'semaine' ? ($res['hmM' . $id] ?? null) : $hm;
+        // Quatre semaines pleines d'abord ; le mois entamé ne sert qu'en repli
+        // si cette fenêtre n'a pas répondu.
+        $hmW = $res['hmW' . $id] ?? null;
+        $wdActifs = [];
+        foreach ((array) (($hmW['days'] ?? null) ?: ($hmM['days'] ?? [])) as $d) {
+            if (!empty($d['has_data']) && (float) ($d['ca'] ?? 0) > 0) { $wdActifs[(int) $d['weekday']] = true; }
+        }
+        $joursOuverts = 0;
+        for ($i = 0; $i < $joursMois; $i++) {
+            if (isset($wdActifs[(int) $premier->modify('+' . $i . ' days')->format('N')])) { $joursOuverts++; }
+        }
+        $pnl = $res['pnl' . $id] ?? null;
+        $labourM = is_array($pnl) ? ($pnl['labour']['value'] ?? null) : null;
+        $overM   = is_array($pnl) ? ($pnl['overhead']['value'] ?? null) : null;
+        $labJ = ($labourM !== null && $joursOuverts > 0) ? $labourM / $joursOuverts : null;
+        $ovJ  = ($overM !== null && $joursOuverts > 0) ? $overM / $joursOuverts : null;
+
+        // Le P&L quotidien, s'il a répondu : une ligne par date, avec le
+        // résultat DÉJÀ calculé. Le reste du bloc s'en sert quand la date y
+        // figure, et retombe sinon sur la répartition au prorata.
+        $pj = [];
+        $pjr = $res['pnlj' . $id] ?? null;
+        foreach ((array) (is_array($pjr) ? ($pjr['days'] ?? []) : []) as $x) {
+            $dt = (string) ($x['date'] ?? '');
+            if ($dt !== '') { $pj[$dt] = $x; }
+        }
+        $srcJour = $pj !== [] ? 'P&L quotidien du panel' : 'labour et overhead du mois répartis sur les jours ouverts';
+
+        $jours = []; $caTot = 0.0; $netTot = 0.0; $netOk = true;
+        foreach ((array) $hm['days'] as $d) {
+            $ca = (float) ($d['ca'] ?? 0);
+            // La marge du panel ne vaut que si son coût est COMPLET (cost_unknown faux) ; sinon la
+            // journée se recompose depuis les tickets gravés, et le P&L quotidien du panel, qui
+            // porte le même coût incomplet, ne la remplace pas.
+            $incomplet = !empty($d['cost_unknown']);
+            $mb = !$incomplet && isset($d['margin_value']) && is_numeric($d['margin_value']) ? (float) $d['margin_value'] : null;
+            $ouvert = !empty($d['has_data']) && $ca > 0;
+            $eR = null;
+            if ($mb === null && $ouvert && function_exists('svMatiereJour')) {
+                $zeroR = 0; $eR = svMatiereJour($id, (string) ($d['date'] ?? ''), $zeroR, 0);
+                if ($eR !== null) { $mb = $ca - (float) $eR['estime']; }
+            }
+            $dansMois = str_starts_with((string) ($d['date'] ?? ''), $moisCourant);
+            $lj = $dansMois ? $labJ : null; $oj = $dansMois ? $ovJ : null;
+            $net = ($ouvert && $mb !== null && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null;
+            // La source du jour l'emporte sur la reconstruction : elle connaît
+            // les heures réellement prestées ce jour-là, pas une moyenne.
+            $q = $pj[(string) ($d['date'] ?? '')] ?? null;
+            if ($ouvert && is_array($q)) {
+                $rev = isset($q['revenue']) ? (float) $q['revenue'] : null;
+                $mat = isset($q['material']) ? (float) $q['material'] : null;
+                if ($rev !== null && $mat !== null && !$incomplet) { $mb = $rev - $mat; }
+                if (isset($q['labour'])) { $lj = (float) $q['labour']; }
+                if (isset($q['overhead'])) { $oj = (float) $q['overhead']; }
+                $net = isset($q['result']) ? (float) $q['result']
+                    : (($mb !== null && $lj !== null && $oj !== null) ? $mb - $lj - $oj : null);
+            }
+            if ($ouvert) { $caTot += $ca; if ($net === null) { $netOk = false; } else { $netTot += $net; } }
+            $jours[] = [
+                'date' => $d['date'], 'wd' => (int) ($d['weekday'] ?? 0),
+                'ouvert' => $ouvert,
+                'ca' => $ouvert ? round($ca, 2) : null,
+                'tickets' => $ouvert ? (int) ($d['tickets'] ?? 0) : null,
+                'panier' => $ouvert ? round((float) ($d['avg_basket'] ?? 0), 2) : null,
+                'coutMatiere' => $ouvert && $mb !== null ? round($ca - $mb, 2) : null,
+                'margeBrute' => $ouvert && $mb !== null ? round($mb, 2) : null,
+                'margePct' => $ouvert && $mb !== null && $ca > 0 ? round($mb / $ca * 100, 1) : null,
+                'labourJour' => $ouvert && $lj !== null ? round($lj, 2) : null,
+                'overheadJour' => $ouvert && $oj !== null ? round($oj, 2) : null,
+                'net' => $net !== null ? round($net, 2) : null,
+                'netPct' => $net !== null && $ca > 0 ? round($net / $ca * 100, 1) : null,
+                'motifNet' => $ouvert && $net === null
+                    ? ($dansMois ? 'P&L mensuel sans réponse — labour et overhead indisponibles'
+                                 : 'le panel ne rend le P&L mensuel que pour le mois courant — labour et overhead de ce mois-là indisponibles')
+                    : null,
+            ];
+        }
+        $magasins[] = ['id' => (string) $id, 'nom' => $s['name'],
+            'sourceJour' => $srcJour,
+            'joursOuverts' => $joursOuverts,
+            'labourMois' => $labourM !== null ? round((float) $labourM, 2) : null,
+            'overheadMois' => $overM !== null ? round((float) $overM, 2) : null,
+            'jours' => $jours,
+            'total' => ['ca' => round($caTot, 2),
+                'net' => $netOk && $caTot > 0 ? round($netTot, 2) : null,
+                'netPct' => $netOk && $caTot > 0 ? round($netTot / $caTot * 100, 1) : null]];
+    }
+
+    return ['periode' => $per, 'du' => $duS, 'au' => $auS, 'mois' => $moisCourant,
+        'magasins' => $magasins,
+        'source' => 'API panel — P&L quotidien quand la route le sert, sinon margin-heatmap avec labour et overhead du mois répartis par jour d\'ouverture'];
+}
+
+/** Les six mêmes jours de semaine précédant une date : six vendredis avant un
+ *  vendredi. C'est la référence de comparaison de l'écran — un vendredi ne se
+ *  compare pas à un mardi, et l'an dernier compare deux saisons différentes. */
+function jourReference(string $date, int $n = 6): array
+{
+    $out = [];
+    for ($i = 1; $i <= $n; $i++) { $out[] = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days')); }
+    return $out;
+}
+
+/** Le nom du jour de la semaine, au pluriel — « vendredis ». */
+function jourNomSemaine(string $date, bool $pluriel = false): string
+{
+    $noms = [1 => 'lundi', 2 => 'mardi', 3 => 'mercredi', 4 => 'jeudi', 5 => 'vendredi',
+        6 => 'samedi', 7 => 'dimanche'];
+    $n = $noms[(int) date('N', strtotime($date))] ?? '';
+    return $pluriel ? $n . 's' : $n;
+}
+
+/**
+ * GET /exploitation/jour[?date=YYYY-MM-DD] — le résultat d'UNE journée, magasin
+ * par magasin, puis le détail du magasin qu'on ouvre.
+ *
+ * Ce que l'API du panel mesure vraiment, et ce qui est reconstitué :
+ *  · ventes, tickets, panier, produits par client : mesurés, pour la date
+ *    demandée (sales/kpis et margin-heatmap acceptent des bornes) ;
+ *  · coût matière et marge brute : margin-heatmap — la marge est brute, donc
+ *    coût matière = CA − marge ;
+ *  · main-d'œuvre : mesurée AU JOUR seulement pour aujourd'hui (le /pnl
+ *    quotidien ignore la date demandée et rend toujours le jour courant). Pour
+ *    une date passée, la masse salariale du mois est répartie sur les jours
+ *    d'ouverture, et la ligne le dit (`labourSource`) ;
+ *  · frais généraux : le panel ne les tient qu'au MOIS. Ils sont donc toujours
+ *    répartis par jour d'ouverture — jamais présentés comme une mesure ;
+ *  · ventilation par catégorie : mesurée à la date demandée.
+ *
+ * LA COMPARAISON. Pas « vs N-1 » : la moyenne des SIX MÊMES JOURS DE SEMAINE
+ * qui précèdent — six vendredis avant un vendredi. Un jour de boulangerie
+ * ressemble d'abord au même jour de la semaine d'avant : comparer un vendredi
+ * à un mardi, ou à un vendredi d'il y a un an (autre saison, autre gamme,
+ * autres prix), fabrique un écart qui ne dit rien. Six jours lissent une
+ * fermeture ou un jour de fête sans diluer la tendance. Les jours fermés sont
+ * écartés du calcul, et le nombre de jours réellement retenus voyage avec la
+ * réponse (`refJours`) — comparer sur deux jours n'a pas le poids de six.
+ *
+ * Le résultat du jour = CA − coût matière − main-d'œuvre − frais généraux.
+ * Il n'est jamais deviné : sans l'un des quatre, il vaut null et le motif suit.
+ */
+/**
+ * Le PROFIL de semaine d'un magasin : ce que pèse chaque jour, en moyenne.
+ *
+ * Il servait déjà à répartir le budget du jour, mais il vivait le temps d'une
+ * requête. Il est désormais écrit : un mois où le panel rend une fenêtre trop
+ * courte garde ainsi le rythme mesuré la veille, et le profil devient une
+ * donnée du cockpit — lisible, datée, réutilisable ailleurs (budget, rapports).
+ */
+function ensureProfilJour(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_jour ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'jour TINYINT NOT NULL,'            // 1 = lundi … 7 = dimanche
+        . 'ca_moyen DECIMAL(12,2) NULL,'
+        . 'jours INT NOT NULL DEFAULT 0,'     // occurrences observées
+        . 'du DATE NULL, au DATE NULL,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, jour)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Écrire le profil d'un magasin — un jour de semaine par ligne. */
+function profilJourEcrire(string $shopId, array $parWd, ?string $du, ?string $au): void
+{
+    ensureProfilJour();
+    $now = date('Y-m-d H:i:s');
+    foreach ($parWd as $wd => $v) {
+        if ((int) ($v['n'] ?? 0) < 1) { continue; }
+        Db::exec('INSERT INTO ceo_shop_profil_jour (shop_id, jour, ca_moyen, jours, du, au, maj)
+                  VALUES (?,?,?,?,?,?,?)
+                  ON DUPLICATE KEY UPDATE ca_moyen = VALUES(ca_moyen), jours = VALUES(jours),
+                    du = VALUES(du), au = VALUES(au), maj = VALUES(maj)',
+            [$shopId, (int) $wd, round($v['s'] / $v['n'], 2), (int) $v['n'], $du, $au, $now]);
+    }
+}
+
+/** Relire le profil mémorisé : [jour => ['moyenne'=>…, 'jours'=>…, 'maj'=>…]]. */
+function profilJourLire(string $shopId): array
+{
+    ensureProfilJour();
+    $out = [];
+    try {
+        foreach (Db::rows('SELECT jour, ca_moyen, jours, maj FROM ceo_shop_profil_jour WHERE shop_id = ?', [$shopId]) as $r) {
+            $out[(int) $r['jour']] = ['moyenne' => $r['ca_moyen'] !== null ? (float) $r['ca_moyen'] : null,
+                'jours' => (int) $r['jours'], 'maj' => $r['maj']];
+        }
+    } catch (PDOException $e) { /* table absente : pas de mémoire */ }
+    return $out;
+}
+
+/**
+ * Le PROFIL HORAIRE d'un magasin, jour de semaine par jour de semaine.
+ *
+ * C'est lui qui permet de dire, à 15 h, ce que la journée fera au total : on
+ * connaît la part du chiffre déjà passée. Il coûte six lectures (les six
+ * derniers mêmes jours), on ne les refait donc qu'UNE FOIS PAR SEMAINE et on
+ * garde le résultat.
+ */
+function ensureProfilHeure(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_profil_heure ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'jour TINYINT NOT NULL,'           // 1 = lundi … 7 = dimanche
+        . 'heure TINYINT NOT NULL,'          // 0 … 23
+        . 'ca_moyen DECIMAL(12,2) NULL,'
+        . 'part DECIMAL(6,3) NULL,'          // % du CA de la journée
+        . 'jours INT NOT NULL DEFAULT 0,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, jour, heure)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Les profils bâtis avant le 06/10/2026 portent les heures décalées de margin-heatmap : ils
+    // s'effacent une fois et se rebâtissent à la lecture suivante, à l'heure de Bruxelles.
+    static $vu = false;
+    if (!$vu) {
+        $vu = true;
+        if (setting('profilHeureV') !== 2) {
+            Db::exec('DELETE FROM ceo_shop_profil_heure');
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['profilHeureV', json_encode(2)]);
+        }
+    }
+}
+
+/**
+ * L'heure de Bruxelles d'une heure lue sur margin-heatmap. La route du panel prend l'heure locale
+ * du ticket pour de l'UTC et la convertit encore : ses heures sont en avance du décalage du jour
+ * (2 h l'été, 1 h l'hiver ; mesuré le 06/10/2026 face à hourly-distribution et aux tickets). Rend
+ * -1 pour une heure qui tomberait avant minuit.
+ */
+function hmHeureLocale(int $h, string $date): int
+{
+    static $dec = [];
+    if (!isset($dec[$date])) {
+        try { $dec[$date] = intdiv((new DateTimeZone('Europe/Brussels'))->getOffset(new DateTimeImmutable($date . ' 12:00:00', new DateTimeZone('UTC'))), 3600); }
+        catch (Throwable $e) { $dec[$date] = 0; }
+    }
+    $l = $h - $dec[$date];
+    return $l >= 0 && $l <= 23 ? $l : -1;
+}
+
+/**
+ * Le profil horaire mémorisé : la part de chaque heure ET le montant moyen
+ * qu'elle rapporte. Les deux servent : la part dit où l'on en est dans la
+ * journée, les montants disent ce que les heures restantes rapportent
+ * d'habitude.
+ */
+function profilHeureLire(string $shopId, int $jour): array
+{
+    ensureProfilHeure();
+    $parts = []; $montants = []; $n = 0; $maj = null;
+    try {
+        foreach (Db::rows('SELECT heure, part, ca_moyen, jours, maj FROM ceo_shop_profil_heure
+                            WHERE shop_id = ? AND jour = ? ORDER BY heure', [$shopId, $jour]) as $r) {
+            $h = (int) $r['heure'];
+            if ($r['part'] !== null) { $parts[$h] = (float) $r['part']; }
+            if ($r['ca_moyen'] !== null) { $montants[$h] = (float) $r['ca_moyen']; }
+            $n = max($n, (int) $r['jours']); $maj = $r['maj'];
+        }
+    } catch (PDOException $e) { /* table absente */ }
+    return ['parts' => $parts, 'montants' => $montants, 'jours' => $n, 'maj' => $maj];
+}
+
+/**
+ * Reconstruire le profil horaire d'un jour de semaine : les six dernières
+ * occurrences, heure par heure. Rend le nombre de journées retenues.
+ */
+function profilHeureBatir(int $shopId, string $date): int
+{
+    ensureProfilHeure();
+    $req = [];
+    for ($i = 1; $i <= 6; $i++) {
+        $d = date('Y-m-d', strtotime($date . ' -' . (7 * $i) . ' days'));
+        $req[$d] = '/consultant/shops/' . $shopId . '/margin-heatmap?' . http_build_query(['from' => $d, 'to' => $d]);
+    }
+    $somme = []; $retenus = 0;
+    foreach (PanelApi::getParallele($req, 4) as $d => $r) {
+        $h = is_array($r) ? ($r['hours'] ?? null) : null;
+        if (!is_array($h)) { continue; }
+        $tot = 0.0;
+        foreach ($h as $x) { $tot += (float) ($x['ca'] ?? 0); }
+        if ($tot <= 0) { continue; }          // magasin fermé ce jour-là
+        $retenus++;
+        foreach ($h as $x) {
+            $hh = hmHeureLocale((int) ($x['hour'] ?? -1), (string) $d);
+            if ($hh < 0) { continue; }
+            $somme[$hh] = ($somme[$hh] ?? 0) + (float) ($x['ca'] ?? 0);
+        }
+    }
+    if ($retenus === 0) { return 0; }
+    $total = array_sum($somme);
+    if ($total <= 0) { return 0; }
+    $jour = (int) date('N', strtotime($date));
+    $now = date('Y-m-d H:i:s');
+    Db::exec('DELETE FROM ceo_shop_profil_heure WHERE shop_id = ? AND jour = ?', [(string) $shopId, $jour]);
+    foreach ($somme as $hh => $v) {
+        if ($v <= 0) { continue; }
+        Db::exec('INSERT INTO ceo_shop_profil_heure (shop_id, jour, heure, ca_moyen, part, jours, maj)
+                  VALUES (?,?,?,?,?,?,?)',
+            [(string) $shopId, $jour, (int) $hh, round($v / $retenus, 2), round(100 * $v / $total, 3), $retenus, $now]);
+    }
+    return $retenus;
+}
+
+/**
+ * J−7 au même moment : les clients et le CA du même jour de la semaine d'avant, arrêtés à
+ * l'heure qu'il est quand la journée regardée est aujourd'hui (l'heure en cours comptée au
+ * prorata des minutes), la journée entière sinon. Lu dans les heures gravées (svHeuresJours).
+ * Depuis le 08/10/2026 (dashboard opérationnel, maquette B) : aussi la marge brute à la même
+ * heure et sur la journée (la matière gravée de chaque heure, sans appel au panel), et les heures
+ * de J−7 elles-mêmes, pour la courbe du cumul face à aujourd'hui.
+ */
+function exJ7(int $sid, string $date, bool $estAuj): ?array
+{
+    $j7 = date('Y-m-d', strtotime($date . ' -7 day'));
+    try { $hs = svHeuresJours($sid, [$j7])[$j7] ?? null; } catch (Throwable $e) { $hs = null; }
+    if (!is_array($hs) || $hs === []) { return null; }
+    // La matière de chaque heure, si elle est gravée : la marge brute de J−7 à la même heure.
+    try { $hs = svHeuresAvecMatiere($sid, $j7, $hs); } catch (Throwable $e) { /* sans matière, pas de marge */ }
+    $hNow = (int) date('G'); $frac = ((int) date('i')) / 60;
+    $tk = 0.0; $ca = 0.0; $mat = 0.0; $matOk = true; $tkJour = 0; $caJour = 0.0; $matJour = 0.0; $matJourOk = true;
+    $heures = [];
+    foreach ($hs as $l) {
+        if (!is_array($l)) { continue; }
+        $h = (int) ($l['h'] ?? -1); $t = (int) ($l['tickets'] ?? 0); $c = (float) ($l['ca'] ?? 0); $mt = $l['mat'] ?? null;
+        if ($h < 0) { continue; }
+        $heures[] = ['h' => $h, 'tickets' => $t, 'ca' => round($c, 2)];
+        $tkJour += $t; $caJour += $c;
+        if ($mt === null) { if ($c > 0) { $matJourOk = false; } } else { $matJour += (float) $mt; }
+        $k = (!$estAuj || $h < $hNow) ? 1.0 : ($h === $hNow ? $frac : 0.0);
+        if ($k <= 0) { continue; }
+        $tk += $t * $k; $ca += $c * $k;
+        if ($mt === null) { if ($c > 0) { $matOk = false; } } else { $mat += (float) $mt * $k; }
+    }
+    usort($heures, static fn ($a, $b) => $a['h'] <=> $b['h']);
+    // Le pro (B2B) de J−7 (23/10/2026, jauges comptoir et B2B) : les tickets pro gravés du jour, au même moment et sur la
+    // journée, et heure par heure. Null quand le jour n'est pas lu : la jauge comptoir le dit.
+    $moment = $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null;
+    $pro = ['caPro' => null, 'ticketsPro' => null, 'caProJour' => null, 'ticketsProJour' => null];
+    $b7 = function_exists('vpLu') ? vpLu($sid, $j7) : null;
+    if ($b7 !== null) {
+        $cp = 0.0; $np = 0; $cpJ = 0.0; $npJ = 0; $parH = [];
+        foreach ((array) $b7['t'] as $t) {
+            $m = (float) $t[2]; $cpJ += $m; $npJ++;
+            $hh = (int) substr((string) $t[0], 0, 2); $parH[$hh] = ($parH[$hh] ?? [0.0, 0]); $parH[$hh][0] += $m; $parH[$hh][1]++;
+            if ($moment === null || (string) $t[0] <= $moment) { $cp += $m; $np++; }
+        }
+        $pro = ['caPro' => round($cp, 2), 'ticketsPro' => $np, 'caProJour' => round($cpJ, 2), 'ticketsProJour' => $npJ];
+        foreach ($heures as $i => $l) { $heures[$i]['pro'] = round($parH[$l['h']][0] ?? 0.0, 2); $heures[$i]['proN'] = $parH[$l['h']][1] ?? 0; }
+    }
+    // J−7 hors clients pro (21/10/2026) : ses tickets pro gravés (vpLu, TVA valide) se retirent du CA et des clients, au
+    // même moment heure par heure (le `h` du relevé pro, l'heure en cours au prorata comme le reste), et sur la journée.
+    // Sans relevé pro lu, rien : le dashboard compare alors les deux paniers pro compris, jamais l'un sans l'autre.
+    $cmp = [];
+    $bP = function_exists('vpLu') ? vpLu($sid, $j7) : null;
+    if ($bP !== null) {
+        $caP = 0.0; $tkP = 0.0; $caPJ = 0.0; $tkPJ = 0;
+        foreach ((array) ($bP['h'] ?? []) as $hh => $v) {
+            $h = (int) $hh; $k = (!$estAuj || $h < $hNow) ? 1.0 : ($h === $hNow ? $frac : 0.0);
+            $caPJ += (float) $v[0]; $tkPJ += (int) $v[1]; $caP += (float) $v[0] * $k; $tkP += (int) $v[1] * $k;
+        }
+        $cmp = ['caComptoir' => round(max(0.0, $ca - $caP), 2), 'ticketsComptoir' => (int) max(0, round($tk - $tkP)),
+            'caComptoirJour' => round(max(0.0, $caJour - $caPJ), 2), 'ticketsComptoirJour' => max(0, $tkJour - $tkPJ)];
+    }
+    $out = ['date' => $j7, 'moment' => $moment,
+        'tickets' => (int) round($tk), 'ca' => round($ca, 2), 'ticketsJour' => $tkJour, 'caJour' => round($caJour, 2),
+        'mb' => $matOk && $ca > 0 ? round($ca - $mat, 2) : null, 'mbJour' => $matJourOk && $caJour > 0 ? round($caJour - $matJour, 2) : null,
+        'heures' => $heures] + $cmp + $pro;
+    if (function_exists('vpPanier')) {
+        $pM = vpPanier($cmp['caComptoir'] ?? null, $cmp['ticketsComptoir'] ?? null, $tk > 0 ? $ca / $tk : null);
+        $pJ = vpPanier($cmp['caComptoirJour'] ?? null, $cmp['ticketsComptoirJour'] ?? null, $tkJour > 0 ? $caJour / $tkJour : null);
+        $out += $pM + ['panierRetenuJour' => $pJ['panierRetenu']];
+    }
+    return $out;
+}
+
+/**
+ * Le pro (B2B) d'une journée heure par heure : [{h, ca, n}] depuis le relevé des tickets pro (vpDuListe, `h`). Null sans
+ * relevé.
+ */
+function exHeuresPro(?array $b): ?array
+{
+    if ($b === null) { return null; }
+    $out = [];
+    foreach ((array) ($b['h'] ?? []) as $h => $v) { $out[] = ['h' => (int) $h, 'ca' => round((float) ($v[0] ?? 0), 2), 'n' => (int) ($v[1] ?? 0)]; }
+    usort($out, static fn ($a, $b) => $a['h'] <=> $b['h']);
+    return $out;
+}
+
+/**
+ * La part B2B habituelle d'un jour de la semaine (23/10/2026) : le CA pro sur le CA des tickets, sur les quatre derniers
+ * mêmes jours dont le relevé est gravé (sans appel au panel). Elle partage l'objectif du jour entre le comptoir et le
+ * B2B. {part (en %), jours} ; part null quand aucun de ces jours n'est lu.
+ */
+function exPartProHabituelle(int $sid, string $date): array
+{
+    $ca = 0.0; $pro = 0.0; $n = 0;
+    for ($k = 1; $k <= 4; $k++) {
+        $b = function_exists('vpLu') ? vpLu($sid, date('Y-m-d', strtotime($date . ' -' . (7 * $k) . ' day'))) : null;
+        if ($b === null || (float) ($b['ca'] ?? 0) <= 0) { continue; }
+        $ca += (float) $b['ca']; $n++;
+        foreach ((array) $b['t'] as $t) { $pro += (float) $t[2]; }
+    }
+    return ['part' => $ca > 0 ? round(100 * $pro / $ca, 1) : null, 'jours' => $n];
+}
+
+/* --- Le Résultat gardé quelques minutes (04/10/2026 : « extrêmement lent ») ------------------
+ * Une lecture de /exploitation/jour fait ~45 appels au panel (tous les magasins : le classement
+ * réseau en a besoin), /exploitation/periode une trentaine : 10 à 60 s, à chaque affichage. Le
+ * calcul se garde donc, pour tous les appelants (dashboard, cockpit, tablette, visites, PDF). */
+const RC_PERIME_S = 1800;   // servi périmé jusqu'à une demi-heure, recalculé en arrière-plan
+const RC_VERROU_S = 45;     // attente au plus du calcul qu'un autre appel a lancé
+
+/**
+ * Une réponse lourde du Résultat. Fraîche (plus jeune que la durée que `$ttl` lui a donnée), elle
+ * part du cache ; périmée de moins d'une demi-heure, elle part aussi et se recalcule en
+ * arrière-plan (`cache.relu` : relire dans une demi-minute) — après la réponse sous PHP-FPM,
+ * sinon par une requête interne à `$route` (rcRelancer) ; sinon elle se calcule sous verrou
+ * MySQL — les appels qui arrivent ensemble attendent le même calcul. `$ttl($r)` : secondes de
+ * fraîcheur de la réponse calculée, 0 pour ne pas la garder. `cache` dit l'âge de ce qui part.
+ */
+function rcServi(string $cle, callable $calc, callable $ttl, bool $forcer = false, ?string $route = null, int $perime = RC_PERIME_S): array
+{
+    $fond = !empty($GLOBALS['rcFond']);
+    $c = $forcer ? null : setting($cle);
+    $ok = is_array($c) && is_array($c['r'] ?? null);
+    $age = $ok ? max(0, time() - (int) ($c['le'] ?? 0)) : null;
+    // Gardé avant l'adoption de la pondération des jours en vigueur : ses objectifs sont ceux de
+    // l'ancienne pondération, il part périmé et se recalcule (11/10/2026).
+    $pjTs = function_exists('pjAdopteTs') ? pjAdopteTs() : 0;
+    $avantPj = static fn (array $x): bool => $pjTs > 0 && (int) ($x['le'] ?? 0) < $pjTs;
+    // Une liste reste une liste : elle ne porte pas l'âge de son calcul.
+    $avec = static fn (array $r, int $le, bool $frais, bool $relu = false): array => array_is_list($r) ? $r : $r + ['cache' => ['le' => date('c', $le), 'age' => max(0, time() - $le), 'frais' => $frais, 'relu' => $relu]];
+    if ($ok && $age < (int) ($c['ttl'] ?? 0) && !$avantPj($c)) { return $avec($c['r'], (int) $c['le'], true); }
+    if ($ok && !$fond && $age < $perime && function_exists('fastcgi_finish_request')) {
+        $get = $_GET;
+        register_shutdown_function(static function () use ($cle, $calc, $ttl, $get): void {
+            try { fastcgi_finish_request(); @set_time_limit(180); $_GET = $get; $GLOBALS['rcFond'] = true; rcServi($cle, $calc, $ttl); }
+            catch (Throwable $e) { /* le prochain appel recalculera */ }
+        });
+        return $avec($c['r'], (int) $c['le'], false, true);
+    }
+    // Sans PHP-FPM (mesuré en ligne le 04/10/2026 : mod_php) : une requête interne refait le calcul.
+    if ($ok && !$fond && $age < $perime && $route !== null && rcRelancer($cle, $route)) { return $avec($c['r'], (int) $c['le'], false, true); }
+    $verrou = false;
+    try { $l = Db::row('SELECT GET_LOCK(?, ?) AS l', [$cle, $fond ? 0 : RC_VERROU_S]); $verrou = $l !== null && (int) $l['l'] === 1; }
+    catch (Throwable $e) { /* sans verrou : on calcule quand même */ }
+    try {
+        // Après l'attente, un autre appel a pu finir le même calcul.
+        if ($verrou && !$forcer) { $c2 = setting($cle); if (is_array($c2) && is_array($c2['r'] ?? null) && time() - (int) ($c2['le'] ?? 0) < (int) ($c2['ttl'] ?? 0) && !$avantPj($c2)) { return $avec($c2['r'], (int) $c2['le'], true); } }
+        // En arrière-plan, un calcul déjà en cours ailleurs suffit (sans rien en cache, on calcule quand même).
+        if ($fond && !$verrou && $ok) { return $avec($c['r'], (int) $c['le'], false); }
+        $r = $calc();
+        $t = (int) $ttl($r);
+        if ($t > 0) {
+            $j = json_encode(['le' => time(), 'ttl' => $t, 'r' => $r], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_INVALID_UTF8_SUBSTITUTE);
+            if (is_string($j)) { try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, $j]); } catch (Throwable $e) { /* sans cache : la réponse part quand même */ } }
+        }
+        return $avec($r, time(), true);
+    } finally {
+        if ($verrou) { try { Db::row('SELECT RELEASE_LOCK(?) AS l', [$cle]); } catch (Throwable $e) { /* le verrou tombe avec la connexion */ } }
+    }
+}
+
+/**
+ * Relance le calcul en arrière-plan : une requête à soi-même (`$route?…&fond=1`, 127.0.0.1)
+ * qu'on n'attend pas — la route continue seule (ignore_user_abort). Pas pendant un calcul en
+ * cours, pas deux fois par minute. Faux si elle n'a pas pu partir ou a été refusée (une
+ * authentification, par exemple) : l'appelant calcule alors lui-même.
+ */
+function rcRelancer(string $cle, string $route): bool
+{
+    try { $l = Db::row('SELECT IS_FREE_LOCK(?) AS l', [$cle]); if ($l !== null && (int) $l['l'] === 0) { return true; } }
+    catch (Throwable $e) { /* sans verrou lisible : on relance */ }
+    $k = 'rcRelance:' . $cle; $t = setting($k);
+    if (is_numeric($t) && time() - (int) $t < 60) { return true; }
+    $uri = (string) ($_SERVER['REQUEST_URI'] ?? ''); $p = strpos($uri, '/api/cockpit');
+    if ($p === false || !function_exists('curl_init')) { return false; }
+    try { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$k, (string) time()]); }
+    catch (Throwable $e) { /* la relance part quand même */ }
+    $get = $_GET; unset($get['rafraichir'], $get['fond']);
+    $ch = curl_init('http://127.0.0.1' . substr($uri, 0, $p) . '/api/cockpit' . $route . '?' . http_build_query($get + ['fond' => 1]));
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_NOSIGNAL => true, CURLOPT_TIMEOUT_MS => 600, CURLOPT_CONNECTTIMEOUT_MS => 300]);
+    curl_exec($ch);
+    $err = curl_errno($ch); $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    // Le calcul dure des secondes : le délai dépassé dit qu'il tourne. Une réponse immédiate n'est bonne qu'en 200.
+    return $err === CURLE_OPERATION_TIMEDOUT || ($err === 0 && $code === 200);
+}
+
+/** Une requête interne de rcRelancer (`fond=1`) : elle calcule sans servir de périmé et continue sans client. */
+function rcFondDemande(): void
+{
+    if (empty($_GET['fond'])) { return; }
+    ignore_user_abort(true); @set_time_limit(180);
+    $GLOBALS['rcFond'] = true;
+}
+
+/** La fraîcheur d'un Résultat calculé : rien s'il est indisponible, une minute s'il manque une réponse du panel. */
+function rcTtl(array $r, int $normal): int
+{
+    if (!empty($r['indispo'])) { return 0; }
+    $m = json_encode($r['magasins'] ?? [], JSON_UNESCAPED_UNICODE);
+    return is_string($m) && str_contains($m, 'sans réponse') ? 60 : $normal;
+}
+
+/**
+ * Au battement horaire (cron des rapports) : le Résultat d'aujourd'hui — jour, semaine, mois —
+ * recalculé s'il n'est plus frais, pour que le premier écran du matin n'attende pas le panel.
+ */
+function exPrechauffer(): string
+{
+    $mem = $_GET; $fond = $GLOBALS['rcFond'] ?? null; $GLOBALS['rcFond'] = true; $dit = [];
+    try {
+        foreach ([['jour', null], ['periode', 'semaine'], ['periode', 'mois']] as [$q, $vue]) {
+            $_GET = ['date' => date('Y-m-d')] + ($vue !== null ? ['vue' => $vue] : []);
+            $t0 = microtime(true);
+            try { $r = $q === 'jour' ? ep_exploitation_jour() : ep_exploitation_periode(); $dit[] = ($vue ?? 'jour') . ' ' . (!empty($r['cache']['frais']) && ($r['cache']['age'] ?? 0) > 0 ? 'frais' : round(microtime(true) - $t0, 1) . ' s'); }
+            catch (Throwable $e) { $dit[] = ($vue ?? 'jour') . ' échec'; }
+        }
+    } finally { $_GET = $mem; if ($fond === null) { unset($GLOBALS['rcFond']); } else { $GLOBALS['rcFond'] = $fond; } }
+    return implode(' · ', $dit);
+}
+
+/**
+ * Les ventes d'une journée par vendeuse : /shops/{id}/statistics/sales/employees/{date} → [{nom, ca, tickets,
+ * articles}] (articles : null si la route ne les rend pas). null quand la route n'a rien rendu de lisible.
+ */
+function exVendeurs($r): ?array
+{
+    if (!is_array($r)) { return null; }
+    $out = [];
+    foreach (analyseListe($r) as $x) {
+        if (!is_array($x)) { continue; }
+        $nom = trim((string) ($x['display_name'] ?? $x['name'] ?? ''));
+        $t = (int) (nombreOuNull($x, ['transactions_qty', 'tickets', 'receipts']) ?? 0);
+        $ca = (float) (nombreOuNull($x, ['total_receipt_value', 'ca', 'turnover']) ?? 0);
+        if ($t === 0 && $ca == 0.0) { continue; }
+        $a = nombreOuNull($x, ['products_qty', 'items_qty', 'products', 'items']);
+        $out[] = ['nom' => $nom, 'ca' => round($ca, 2), 'tickets' => $t, 'articles' => $a !== null ? (int) round($a) : null];
+    }
+    return $out;
+}
+
+/**
+ * GET /exploitation/equipe-heures?shop=4&date=YYYY-MM-DD — les ventes de chaque personne, heure par heure (dashboard
+ * magasin, l'équipe du jour, une ligne dépliée ; 20/10/2026). Une lecture de la liste des tickets du jour au panel
+ * (`/shops/{id}/transactions?date=`) : le vendeur (`id_employee`, nommé comme au planning), l'heure (`insert_timestamp`,
+ * la même heure que la séparation des clients pro) et le montant. Rend {personnes: {nom: {h6: [ca, tickets, articles,
+ * tickets aux articles lus], …}}, aLire}. Gardé dix minutes ; un jour lu le lendemain ou plus tard est clos et se garde.
+ * Les articles (20/10/2026, demandé par Sam : les articles par ticket de l'heure) : la liste ne les porte pas, chaque
+ * ticket se relit avec ses lignes (`/transactions/{id}?include=products`) — une fois, gardé ticket par ticket
+ * (`eqA{magasin}:{date}`), dans un budget de temps ; `aLire` compte ce qui attend le passage suivant.
+ */
+function ep_exploitation_equipe_heures(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($sid <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(400); return ['error' => 'shop et date (AAAA-MM-JJ) attendus']; }
+    $cle = 'eqH' . $sid . ':' . $date;
+    $c = setting($cle);
+    // `v` 2 : les heures portent leurs articles ; `v` 3 : la liste des tickets à la minute. Un relevé plus ancien se refait.
+    if (is_array($c) && (int) ($c['v'] ?? 0) >= 3 && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
+        return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'noms' => $c['n'] ?? [], 'tickets' => $c['t'] ?? [], 'aLire' => 0, 'lu' => date('H:i', (int) $c['q'])];
+    }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'compte du panel non configuré']; }
+    $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
+    if (!is_array($liste)) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel n’a pas rendu les tickets du jour']; }
+    $noms = function_exists('venteEmployes') ? venteEmployes() : [];
+    $T = [];
+    foreach (analyseListe($liste) as $t) {
+        if (!is_array($t)) { continue; }
+        $ts = (string) ($t['insert_timestamp'] ?? '');
+        if (strlen($ts) < 13) { continue; }
+        // La clé « h6 », jamais « 6 » : des heures 0, 1, 2… feraient une liste JSON au lieu d'un objet.
+        $ide = (int) ($t['id_employee'] ?? 0);
+        $T[] = ['id' => (int) ($t['id'] ?? 0), 'h' => 'h' . (int) substr($ts, 11, 2), 'mn' => 60 * (int) substr($ts, 11, 2) + (int) substr($ts, 14, 2),
+            'm' => (float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0),
+            'nom' => $ide > 0 ? ($noms[$ide]['nom'] ?? ('Employé ' . $ide)) : ''];
+    }
+    // Les articles, ticket par ticket : ceux déjà lus viennent du relevé gardé, les autres se lisent dans le budget.
+    $cleA = 'eqA' . $sid . ':' . $date;
+    $A = setting($cleA);
+    $A = is_array($A) ? $A : [];
+    $manque = array_values(array_filter(array_map(static fn ($x) => $x['id'], $T), static fn ($id) => $id > 0 && !isset($A[$id])));
+    $fin = microtime(true) + 20;
+    foreach (array_chunk($manque, 40) as $lot) {
+        if (microtime(true) > $fin) { break; }
+        $chemins = [];
+        foreach ($lot as $id) { $chemins[$id] = '/transactions/' . $id . '?include=products'; }
+        foreach (PanelApi::getParallele($chemins, 4) as $id => $tk) {
+            if (!is_array($tk) || !isset($tk['products'])) { continue; }
+            // Un article = une pièce : la quantité de chaque ligne produit ; une ligne au poids (quantité non entière) en vaut une.
+            $n = 0.0;
+            foreach ((array) $tk['products'] as $l) {
+                if ((int) ($l['id_product'] ?? 0) <= 0) { continue; }
+                $q = (float) ($l['quantity'] ?? 0);
+                $n += $q > 0 && abs($q - round($q)) < 0.001 ? round($q) : 1;
+            }
+            $A[$id] = $n;
+        }
+    }
+    if (count($A) > 0 && $manque !== []) { try { svGrave($cleA, $A); } catch (Throwable $e) { /* relu la prochaine fois */ } }
+    // La liste des tickets à la minute (20/10/2026) : [minute du jour, vendeur (rang dans `noms`, -1 sans vendeur), montant,
+    // articles ou null]. Le dashboard rend à la personne seule en vente le ticket passé au compte de quelqu'un qui n'est
+    // pas en poste à cette minute.
+    $P = []; $sans = []; $aLire = 0; $noms = []; $rang = []; $lst = [];
+    $ajoute = static function (?array $x, float $m, ?float $a): array {
+        $x = $x ?? [0.0, 0, 0.0, 0];
+        return [round($x[0] + $m, 2), $x[1] + 1, $a !== null ? $x[2] + $a : ($x[2] ?? 0), ($x[3] ?? 0) + ($a !== null ? 1 : 0)];
+    };
+    foreach ($T as $x) {
+        $a = $x['id'] > 0 && isset($A[$x['id']]) ? (float) $A[$x['id']] : null;
+        if ($a === null) { $aLire++; }
+        if ($x['nom'] !== '' && !isset($rang[$x['nom']])) { $rang[$x['nom']] = count($noms); $noms[] = $x['nom']; }
+        $lst[] = [$x['mn'], $x['nom'] === '' ? -1 : $rang[$x['nom']], round($x['m'], 2), $a];
+        if ($x['nom'] === '') { $sans[$x['h']] = $ajoute($sans[$x['h']] ?? null, $x['m'], $a); continue; }
+        $P[$x['nom']][$x['h']] = $ajoute($P[$x['nom']][$x['h']] ?? null, $x['m'], $a);
+    }
+    // Gardé seulement complet : un relevé à qui manquent des articles se reprend à la lecture suivante.
+    if ($aLire === 0) { try { svGrave($cle, ['v' => 3, 'q' => time(), 'p' => $P, 's' => $sans, 'n' => $noms, 't' => $lst]); } catch (Throwable $e) { /* sans cache */ } }
+    return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $P, 'sansNom' => $sans, 'noms' => $noms, 'tickets' => $lst, 'aLire' => $aLire, 'lu' => date('H:i')];
+}
+
+/** GET /exploitation/jour?date= — le calcul (exJourCalcul) gardé : trois minutes pour aujourd'hui, un quart d'heure pour hier, une heure avant. */
+function ep_exploitation_jour(): array
+{
+    $auj = date('Y-m-d');
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    $_GET['date'] = $date;
+    $n = $date === $auj ? 180 : ($date === date('Y-m-d', strtotime('-1 day')) ? 900 : 3600);
+    rcFondDemande();
+    return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/jour');
+}
+
+/**
+ * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
+ * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
+ *
+ * Le coût matière vient de Budget › Paramètres (réglage `budgetCharges`, 07/11/2026) : le taux du réseau qu'on y
+ * pose est celui que le dashboard montre, pas une seconde valeur tenue ailleurs. La catégorie lue est celle que le
+ * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
+ * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
+ * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
+ * comme avant. Sans réglage ni table : 32 / 33 / 13,5. `food` y passe aussi en dernier repli.
+ */
+function seuilsCharges(): array
+{
+    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    try {
+        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
+                            WHERE code IN ('food','labour','overhead')") as $k) {
+            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
+                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+        }
+    } catch (PDOException $e) { /* seuils par défaut */ }
+    $food = seuilMatiereBudget();
+    if ($food !== null) { $seuils['food'] = $food; }
+    return $seuils;
+}
+
+/** Le taux matière du réseau posé dans Budget › Paramètres (voir seuilsCharges) ; null s'il n'y est pas. */
+function seuilMatiereBudget(): ?float
+{
+    try { $m = setting('budgetCharges'); } catch (Throwable $e) { return null; }
+    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return null; }
+    $nom = null;
+    foreach ((array) ($m['paliers'] ?? []) as $p) {
+        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
+        if (str_starts_with($d, 'cat:')) { $nom = substr($d, 4); break; }
+    }
+    $cat = null;
+    foreach ($m['categories'] as $c) {
+        $n = is_array($c) ? (string) ($c['nom'] ?? '') : '';
+        if (($nom !== null && $n === $nom) || ($nom === null && preg_match('/^mati[eè]re/iu', $n) === 1)) { $cat = $c; break; }
+    }
+    if (!is_array($cat) || !is_array($cat['lignes'] ?? null) || $cat['lignes'] === []) { return null; }
+    $budget = 0.0; $theo = 0.0;
+    foreach ($cat['lignes'] as $l) {
+        if (!is_array($l)) { continue; }
+        $budget += is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
+        $theo += is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
+    }
+    $t = $budget > 0 ? $budget : $theo;
+    return $t > 0 && $t < 100 ? round($t, 1) : null;
+}
+
+function exJourCalcul(): array
+{
+    $auj  = date('Y-m-d');
+    $date = (string) ($_GET['date'] ?? $auj);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
+    $estAuj = $date === $auj;
+    $refDates = jourReference($date);
+    $refLibelle = 'moyenne des 6 derniers ' . jourNomSemaine($date, true);
+
+    $seuils = seuilsCharges();
+
+    $out = ['date' => $date, 'aujourdhui' => $auj, 'estAujourdhui' => $estAuj,
+        'seuils' => $seuils, 'magasins' => [], 'reseau' => null,
+        'reference' => ['libelle' => $refLibelle, 'jours' => $refDates,
+            'jourSemaine' => jourNomSemaine($date), 'nom' => jourNomSemaine($date, true),
+            'explication' => 'Chaque écart compare la journée à la ' . $refLibelle
+                . ' (' . implode(', ', array_map(fn ($d) => date('d/m', strtotime($d)), $refDates))
+                . '). Les jours de fermeture sont écartés du calcul. Un même jour de semaine se'
+                . ' compare à lui-même : le trafic d’une boulangerie dépend d’abord du jour, pas du mois.'],
+        'source' => 'API panel — ventes et marge brute mesurées à la date, frais généraux mensuels répartis par jour d’ouverture'];
+    if (!PanelApi::configured()) {
+        return $out + ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    } catch (PDOException $e) {
+        $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name");
+    }
+    if (!$shops) { return $out + ['indispo' => true, 'motif' => 'aucun magasin actif']; }
+
+    $mois1  = date('Y-m-01', strtotime($date));
+    $depuis = min($mois1, $refDates[count($refDates) - 1]);
+
+    // L'OBJECTIF du jour : le budget validé du mois, à défaut le CA théorique
+    // de l'étude — la règle du cockpit — ramené au jour d'ouverture. Un mois
+    // sans budget n'a pas d'objectif : on ne fabrique pas de zéro.
+    // Le budget du mois de la date — et celui du mois du lundi de sa semaine
+    // quand la semaine en cours chevauche deux mois (le graphique de la
+    // semaine a besoin de l'objectif de chacun de ses jours).
+    $nSem = (int) date('N', strtotime($date));
+    $lundiSem = date('Y-m-d', strtotime($date . ' -' . ($nSem - 1) . ' days'));
+    $moisBud = array_values(array_unique([substr($date, 0, 7), substr($lundiSem, 0, 7)]));
+    $budMoisPar = [];
+    try {
+        $condB = implode(' OR ', array_fill(0, count($moisBud), '(year = ? AND month = ?)'));
+        $argsB = [];
+        foreach ($moisBud as $ym) { $argsB[] = (int) substr($ym, 0, 4); $argsB[] = (int) substr($ym, 5, 2); }
+        foreach (Db::rows('SELECT shop_id, year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE ' . $condB, $argsB) as $b2) {
+            $v = null; $src = null;
+            if ($b2['revenue_budget'] !== null && (float) $b2['revenue_budget'] > 0) {
+                $v = (float) $b2['revenue_budget']; $src = 'budget';
+            } elseif ($b2['ca_theorique'] !== null && (float) $b2['ca_theorique'] > 0) {
+                $v = (float) $b2['ca_theorique']; $src = 'theorique';
+            }
+            if ($v !== null) { $budMoisPar[sprintf('%04d-%02d', (int) $b2['year'], (int) $b2['month'])][(string) $b2['shop_id']] = ['montant' => $v, 'source' => $src]; }
+        }
+    } catch (PDOException $e) { /* budget non encodé : pas d'objectif */ }
+    $budMois = $budMoisPar[substr($date, 0, 7)] ?? [];
+    // « The heatmap window cannot exceed 31 days » (mesuré sur la route) : la
+    // fenêtre qui va du plus ancien jour de référence à aujourd'hui fait 43
+    // jours, elle part donc en tranches de 31 jours au plus. Les jours des
+    // deux tranches sont ensuite recollés.
+    $fenetres = [];
+    $cur = $depuis;
+    while ($cur <= $date) {
+        $fin = date('Y-m-d', min(strtotime($cur . ' +30 days'), strtotime($date)));
+        $fenetres[] = [$cur, $fin];
+        $cur = date('Y-m-d', strtotime($fin . ' +1 day'));
+    }
+    $paths = ['cats' => '/consultant/shops/category-sales?'
+        . http_build_query(['date_from' => $date, 'date_to' => $date])];
+    // Une lecture par jour de référence, pour TOUS les magasins à la fois :
+    // six appels au total, pas six par magasin.
+    foreach ($refDates as $i => $rd) {
+        $paths['catsR' . $i] = '/consultant/shops/category-sales?'
+            . http_build_query(['date_from' => $rd, 'date_to' => $rd]);
+    }
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        // Les fenêtres portent la journée, la série du mois ET les six jours
+        // de référence.
+        foreach ($fenetres as $k => [$du, $au2]) {
+            $paths['hm' . $id . '_' . $k] = '/consultant/shops/' . $id . '/margin-heatmap?'
+                . http_build_query(['from' => $du, 'to' => $au2]);
+        }
+        $paths['kpi' . $id]  = '/shops/' . $id . '/statistics/sales/kpis?'
+            . http_build_query(['date_from' => $date, 'date_to' => $date]);
+        $paths['pnlM' . $id] = '/consultant/shops/' . $id . '/pnl?period=month&date=' . $auj;
+        // Le /pnl du jour ne sert QUE pour aujourd'hui : sur une date passée il
+        // rendrait la main-d'œuvre du jour courant.
+        if ($estAuj) { $paths['pnlJ' . $id] = '/consultant/shops/' . $id . '/pnl'; }
+        // Les frais et la main-d'œuvre DU JOUR tels que le panel les alloue
+        // lui-même. Indispensable pour une date passée : /pnl?period=month
+        // ignore la date et rend toujours le mois courant (mesuré : demandé
+        // pour juin, il répond septembre) — les 13 043 € d'août tombaient à
+        // 10 663 €. C'est aussi la source du dossier PDF : l'écran et le papier
+        // disent enfin le même chiffre.
+        $paths['ds' . $id] = '/shops/' . $id . '/statistics/daily-summary?date=' . $date;
+        // Le PLANNING du jour, en direct : la route filtre bien par date
+        // (mesuré : ?date= rend les seuls créneaux du jour, là où from/to
+        // sont ignorés) et porte le nom de chaque personne — plus besoin ni
+        // de la table synchronisée ni du référentiel employés, tous deux
+        // en retard sur les embauches.
+        $paths['sch' . $id] = '/shops/' . $id . '/schedule?date=' . $date;
+        // Le TAUX HORAIRE de chacun (money_per_hour) et son statut : c'est ce
+        // qui relie le planning à la main-d'œuvre du P&L. Un franchisé est à
+        // 0 €/h chez le panel — ses heures ne coûtent rien dans le résultat,
+        // et il faut le dire plutôt que de laisser croire à une équipe bon
+        // marché. La route rend aussi des secrets (hachages, jetons) : on ne
+        // garde que le taux et le rôle, rien d'autre ne sort de la mémoire.
+        $paths['emp' . $id] = '/shops/' . $id . '/employees';
+        // Les VENTES de chaque vendeuse sur la journée (le vendeur sur le ticket) : l'équipe du jour du dashboard magasin
+        // (20/10/2026) les met face à ses heures et à son coût.
+        $paths['sve' . $id] = '/shops/' . $id . '/statistics/sales/employees/' . $date;
+        // Les HEURES de la journée regardée : c'est la part déjà écoulée qui
+        // permet de projeter la fin de journée. Une seule date, sinon la
+        // route agrège les heures de toute la fenêtre.
+        $paths['hj' . $id] = '/consultant/shops/' . $id . '/margin-heatmap?'
+            . http_build_query(['from' => $date, 'to' => $date]);
+    }
+    // Les clients pro du jour : la LISTE des tickets de chaque magasin porte
+    // `is_client_b2b` — un appel par magasin, dans le même lot, sauf si le
+    // relevé du jour les a déjà (clos, ou lus il y a moins de dix minutes).
+    $proLu = [];
+    if (function_exists('vpLu')) {
+        foreach ($shops as $s) {
+            $id = (int) $s['id'];
+            $bP = vpLu($id, $date);
+            if ($bP !== null) { $proLu[$id] = $bP; } else { $paths['tkl' . $id] = '/shops/' . $id . '/transactions?date=' . $date; }
+        }
+    }
+    $res = PanelApi::getParallele($paths, 6);
+    if (function_exists('vpGraveListe')) {
+        foreach ($shops as $s) {
+            $id = (int) $s['id'];
+            if (!isset($proLu[$id]) && is_array($res['tkl' . $id] ?? null)) { $proLu[$id] = vpGraveListe($id, $date, $res['tkl' . $id]); }
+        }
+    }
+
+    /** La ventilation d'une réponse category-sales : [magasin => [catégorie => CA]]. */
+    $lireCats = static function ($cs): array {
+        $par = [];
+        $liste = is_array($cs) ? ($cs['shops'] ?? (array_is_list($cs) ? $cs : [])) : [];
+        foreach ((array) $liste as $e) {
+            if (!is_array($e)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($e[$c]) && is_numeric($e[$c])) { $id = (int) $e[$c]; break; }
+            }
+            if ($id <= 0 || !isset($e['categories']) || !is_array($e['categories'])) { continue; }
+            foreach ($e['categories'] as $c) {
+                $v = nombreOuNull($c, ['ca', 'value', 'amount', 'turnover']);
+                $nom = (string) ($c['name'] ?? $c['label'] ?? '');
+                if ($nom === '' || $v === null) { continue; }
+                $par[$id][$nom] = ($par[$id][$nom] ?? 0) + $v;
+            }
+        }
+        return $par;
+    };
+    $catsJour = $lireCats($res['cats'] ?? null);
+    $catsRef = [];
+    foreach ($refDates as $i => $rd) { $catsRef[$rd] = $lireCats($res['catsR' . $i] ?? null); }
+
+    // Le PLANNING de la journée, par personne : qui est en poste, de quand à
+    // quand — la face humaine des ventes par heure. Le CA attribué se calcule
+    // dans la boucle, une fois les heures du magasin connues.
+    // Chaque créneau, d'où qu'il vienne, devient une ligne du planning.
+    $planParShop = []; $planSrc = [];
+    $poseCreneau = function (string $shopJ, string $nom, string $debut, string $fin, int $idEmp = 0) use (&$planParShop): void {
+        $dj = substr($debut, 0, 5); $fj = substr($fin, 0, 5);
+        $hD = (int) substr($dj, 0, 2) + ((int) substr($dj, 3, 2)) / 60;
+        $hF = (int) substr($fj, 0, 2) + ((int) substr($fj, 3, 2)) / 60;
+        if ($hF <= $hD) { return; }   // un service qui passe minuit sort du cadre du jour
+        $planParShop[$shopJ][] = ['nom' => $nom, 'debut' => $dj, 'fin' => $fj,
+            'hD' => $hD, 'hF' => $hF, 'h' => round($hF - $hD, 2), 'idEmp' => $idEmp];
+    };
+    // Le taux horaire et le statut de chaque personne, par magasin — rien
+    // d'autre de la route employés n'est conservé.
+    $tauxDe = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $emps = $res['emp' . $id] ?? null;
+        if (!is_array($emps)) { continue; }
+        foreach (analyseListe($emps) as $em) {
+            $ide = (int) ($em['id'] ?? 0);
+            if ($ide <= 0) { continue; }
+            // Les postes de travail (workstations) de la personne, dans l'ordre du panel : le premier fait son secteur.
+            $postes = [];
+            foreach ((array) ($em['workstations'] ?? []) as $w) { $nw = trim((string) (is_array($w) ? ($w['name'] ?? '') : $w)); if ($nw !== '') { $postes[] = $nw; } }
+            $tauxDe[(string) $id][$ide] = [
+                'taux' => isset($em['money_per_hour']) && $em['money_per_hour'] !== null ? (float) $em['money_per_hour'] : null,
+                'franchise' => (string) ($em['franchise_role'] ?? '') === 'franchisee',
+                'postes' => $postes,
+            ];
+        }
+    }
+    // 1) LA SOURCE : le panel, en direct, magasin par magasin. Le créneau
+    //    porte son magasin et le nom de la personne — rien à croiser.
+    $muets = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id'];
+        $sch = $res['sch' . $id] ?? null;
+        if (!is_array($sch)) { $muets[(string) $id] = true; continue; }
+        $planSrc[(string) $id] = 'panel';
+        foreach (analyseListe($sch) as $r) {
+            if (($r['work_date'] ?? $date) !== $date) { continue; }
+            $shopJ = (int) ($r['id_shop'] ?? $id) > 0 ? (string) (int) ($r['id_shop'] ?? $id) : (string) $id;
+            $nom = trim((string) ($r['display_name'] ?? ''));
+            if ($nom === '') { $nom = trim(((string) ($r['name'] ?? '')) . ' ' . ((string) ($r['surname'] ?? ''))); }
+            if ($nom === '') { $nom = 'Employé ' . (int) ($r['id_employee'] ?? 0); }
+            $poseCreneau($shopJ, $nom, (string) ($r['start_hour'] ?? ''), (string) ($r['end_hour'] ?? ''), (int) ($r['id_employee'] ?? 0));
+        }
+    }
+    // 2) LE REPLI, pour les seuls magasins que le panel n'a pas servis : la
+    //    table synchronisée, qui date au plus de l'heure. Marqué comme tel —
+    //    un planning de repli ne se fait pas passer pour du direct.
+    if ($muets !== []) {
+        try {
+            $empsJ = function_exists('venteEmployes') ? venteEmployes() : [];
+            $colsS = array_column(Db::rows('SHOW COLUMNS FROM franchisee_employee_schedule'), 'Field');
+            $selS = 'id_employee, start_hour, end_hour' . (in_array('id_shop', $colsS, true) ? ', id_shop' : '');
+            foreach (Db::rows('SELECT ' . $selS . ' FROM franchisee_employee_schedule
+                                WHERE work_date = ? ORDER BY start_hour', [$date]) as $pj) {
+                $ej = $empsJ[(int) $pj['id_employee']] ?? null;
+                $shopJ = (int) ($pj['id_shop'] ?? 0) > 0 ? (string) (int) $pj['id_shop'] : (string) ($ej['shop'] ?? '');
+                if ($shopJ === '' || !isset($muets[$shopJ])) { continue; }
+                $planSrc[$shopJ] = 'table locale';
+                $poseCreneau($shopJ, $ej['nom'] ?? ('Employé ' . (int) $pj['id_employee']),
+                    (string) $pj['start_hour'], (string) $pj['end_hour'], (int) $pj['id_employee']);
+            }
+        } catch (PDOException $e) { /* planning illisible : les lignes s'en passent */ }
+    }
+
+    $GLOBALS['_profilHRefaits'] = 0;
+    $joursMois = (int) date('t', strtotime($date));
+    $premier   = new DateTimeImmutable($mois1);
+    $moisAff   = substr($date, 0, 7);
+    // Les invendus du jour (pièces jetées, coût de production net) : une lecture par magasin,
+    // en parallèle, en cache dix minutes. Ils se retranchent du résultat.
+    $invM = function_exists('invCoutsMagasins') ? invCoutsMagasins(array_map(static fn ($s) => (int) $s['id'], $shops), $date, $date) : [];
+    $lignes = [];
+    foreach ($shops as $s) {
+        $id = (int) $s['id']; $nom = (string) $s['name'];
+        $parJour = []; $repondu = false;
+        foreach (array_keys($fenetres) as $k) {
+            $hm = $res['hm' . $id . '_' . $k] ?? null;
+            if (!is_array($hm) || !isset($hm['days'])) { continue; }
+            $repondu = true;
+            foreach ((array) $hm['days'] as $d) {
+                $j = (string) ($d['date'] ?? '');
+                if ($j === '') { continue; }
+                $ca = (float) ($d['ca'] ?? 0);
+                // La marge du panel vaut quand il la connaît ; nulle (COST_INCOMPLETE), elle se
+                // recompose depuis les tickets — jamais zéro, qui ferait un coût matière de 100 %.
+                $mbConnu = isset($d['margin_value']) && is_numeric($d['margin_value']) && empty($d['cost_unknown']);
+                $parJour[$j] = ['ca' => $ca, 'mb' => $mbConnu ? (float) $d['margin_value'] : null, 'mbConnu' => $mbConnu,
+                    'tickets' => (int) ($d['tickets'] ?? 0), 'weekday' => (int) ($d['weekday'] ?? 0),
+                    'ouvert' => !empty($d['has_data']) && $ca > 0];
+            }
+        }
+        if (!$repondu) {
+            $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
+                'motif' => 'margin-heatmap sans réponse pour ce magasin'];
+            continue;
+        }
+        ksort($parJour);
+
+        // Jours d'ouverture du mois : les jours de semaine vus actifs, comptés
+        // sur le mois entier. Même diviseur que l'écran rentabilité.
+        // Les jours actifs se cherchent sur TOUTE la fenêtre lue (six semaines),
+        // pas sur le seul mois en cours : au 3 du mois, trois jours de semaine
+        // seulement avaient des ventes, le diviseur tombait à 14 et les frais
+        // généraux du jour doublaient (762 € au lieu de ~355 € pour 10 663 €
+        // mensuels chez un magasin ouvert 7 jours sur 7).
+        $wdActifs = [];
+        foreach ($parJour as $j => $d) {
+            if ($d['ouvert']) { $wdActifs[$d['weekday']] = true; }
+        }
+        $joursOuverts = 0;
+        for ($i = 0; $i < $joursMois; $i++) {
+            if (isset($wdActifs[(int) $premier->modify('+' . $i . ' days')->format('N')])) { $joursOuverts++; }
+        }
+
+        $pnlM = $res['pnlM' . $id] ?? null;
+        $labourMois = is_array($pnlM) ? nombreOuNull((array) ($pnlM['labour'] ?? []), ['value', 'amount']) : null;
+        // Frais généraux : le détail mensuel PRIME sur la valeur de tête. Mesuré
+        // en ligne, /pnl rend `overhead.value = 0` et le vrai montant dans
+        // `overhead.breakdown.month` — lire la tête d'abord donnait un zéro
+        // parfaitement crédible, et un résultat du jour surévalué d'autant.
+        $ohMois = is_array($pnlM)
+            ? nombreOuNull((array) ($pnlM['overhead']['breakdown']['month'] ?? []), ['value', 'amount'])
+            : null;
+        if (($ohMois === null || $ohMois <= 0) && is_array($pnlM)) {
+            $v = nombreOuNull((array) ($pnlM['overhead'] ?? []), ['value', 'amount']);
+            if ($v !== null && $v > 0) { $ohMois = $v; }
+        }
+        $labJ = ($labourMois !== null && $joursOuverts > 0) ? $labourMois / $joursOuverts : null;
+        $ohJ  = ($ohMois !== null && $joursOuverts > 0) ? $ohMois / $joursOuverts : null;
+
+        // La marge brute d'un jour : celle du panel, sinon recomposée depuis les tickets gravés
+        // (svMatiereJour, le gravé seul), sinon inconnue.
+        $zeroMb = 0;
+        $mbDe = static function (string $j, array $d) use ($id, &$zeroMb): ?float {
+            if (!empty($d['mbConnu'])) { return (float) $d['mb']; }
+            if (!function_exists('svMatiereJour')) { return null; }
+            $e = svMatiereJour($id, $j, $zeroMb, 0);
+            return $e !== null ? (float) $d['ca'] - (float) $e['estime'] : null;
+        };
+        $serie = [];
+        foreach ($parJour as $j => $d) {
+            if (!str_starts_with($j, $moisAff)) { continue; }   // la série montre le MOIS
+            $mbJ = $d['ouvert'] ? $mbDe($j, $d) : null;
+            $net = ($d['ouvert'] && $mbJ !== null && $labJ !== null && $ohJ !== null) ? $mbJ - $labJ - $ohJ : null;
+            $serie[] = ['date' => $j, 'ouvert' => $d['ouvert'],
+                'ca' => $d['ouvert'] ? round($d['ca'], 2) : null,
+                'tickets' => $d['ouvert'] ? $d['tickets'] : null,
+                'net' => $net !== null ? round($net, 2) : null,
+                'netPct' => ($net !== null && $d['ca'] > 0) ? round($net / $d['ca'] * 100, 1) : null];
+        }
+
+        $jour = $parJour[$date] ?? null;
+        if ($jour === null || !$jour['ouvert']) {
+            $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => false,
+                'motif' => 'aucune vente ce jour-là', 'serie' => $serie];
+            continue;
+        }
+
+        // --- la référence : les mêmes jours de semaine, fermetures écartées
+        $refOuverts = [];
+        foreach ($refDates as $rd) {
+            if (isset($parJour[$rd]) && $parJour[$rd]['ouvert']) { $refOuverts[] = $rd; }
+        }
+        $refN = count($refOuverts);
+        $refCa = $refN ? array_sum(array_map(fn ($d2) => $parJour[$d2]['ca'], $refOuverts)) / $refN : null;
+        $refTickets = $refN ? array_sum(array_map(fn ($d2) => $parJour[$d2]['tickets'], $refOuverts)) / $refN : null;
+        $ecart = static fn (?float $v, ?float $ref): ?float
+            => ($v !== null && $ref !== null && $ref > 0) ? round(($v / $ref - 1) * 100, 1) : null;
+
+        $ca = $jour['ca'];
+        $mb = $jour['mb']; $matSrc = 'panel';
+        if (!$jour['mbConnu'] && function_exists('svMatiereJour')) {
+            // Le jour regardé mérite une lecture de tickets si elle manque encore.
+            $coutMat = 0;
+            $e = svMatiereJour($id, $date, $coutMat, SV_BUDGET_DEMANDE);
+            if ($e !== null) { $mb = $ca - (float) $e['estime']; $matSrc = (string) $e['source']; }
+            else { $mb = null; $matSrc = 'coût matière inconnu : le panel ne le chiffre pas et les tickets ne sont pas lus'; }
+        }
+        $fc = $mb !== null ? $ca - $mb : null;
+        $k = $res['kpi' . $id] ?? null;
+        $tickets  = (int) (nombreOuNull(is_array($k) ? $k : [], ['tickets', 'ticket_count']) ?? $jour['tickets']);
+        $produits = nombreOuNull(is_array($k) ? $k : [], ['products', 'product_count']);
+        $panier   = nombreOuNull(is_array($k) ? $k : [], ['avg_basket', 'average_basket'])
+            ?? ($tickets > 0 ? $ca / $tickets : null);
+        $ppc      = nombreOuNull(is_array($k) ? $k : [], ['products_per_ticket', 'products_per_client'])
+            ?? (($produits !== null && $tickets > 0) ? $produits / $tickets : null);
+
+        $pnlJ = $estAuj ? ($res['pnlJ' . $id] ?? null) : null;
+        $labourReel = is_array($pnlJ) ? nombreOuNull((array) ($pnlJ['labour'] ?? []), ['value', 'amount']) : null;
+        // L'allocation du panel pour CE jour (daily-summary). Sur une date
+        // passée elle prime : c'est le seul chiffre qui connaisse le bon mois.
+        // Aujourd'hui, la main-d'œuvre mesurée en direct garde la main.
+        $ds = $res['ds' . $id] ?? null;
+        $dsOh  = is_array($ds) ? nombreOuNull($ds, ['shop_cost']) : null;
+        $dsLab = is_array($ds) ? nombreOuNull($ds, ['employee_cost']) : null;
+        if ($labourReel === null && !$estAuj && $dsLab !== null && $dsLab > 0) { $labourReel = $dsLab; }
+        $labour = $labourReel !== null ? $labourReel : $labJ;
+        $labourSource = $labourReel !== null ? 'mesure' : ($labJ !== null ? 'reparti' : null);
+        // Aujourd'hui compris : le panel alloue 378,92 €/jour en septembre là
+        // où sa route mensuelle divisée par nos jours donnait 355,42 € — deux
+        // chiffres pour un même mois selon qu'on regarde hier ou aujourd'hui.
+        // Une seule source, la sienne ; notre répartition ne sert plus qu'en
+        // repli quand elle ne répond pas.
+        $ohSource = 'reparti';
+        $oh = $ohJ;
+        if ($dsOh !== null && $dsOh > 0) { $oh = $dsOh; $ohSource = 'mesure'; }
+        // Les invendus : le coût de production de ce qui a été jeté se retranche du résultat ;
+        // rien de déclaré vaut zéro, un panel muet ne retranche rien et le dit.
+        $inv = $invM[$id] ?? ['cout' => null, 'pieces' => null, 'declare' => null, 'source' => 'panel muet'];
+        $invCout = $inv['cout'] ?? 0.0;
+        $net = ($fc !== null && $labour !== null && $oh !== null) ? $ca - $fc - $invCout - $labour - $oh : null;
+
+        // --- catégories : le CA du jour, comparé à la moyenne des mêmes jours.
+        // Une catégorie absente d'un jour de référence OUVERT compte zéro : ne
+        // pas la compter reviendrait à comparer à ses seuls bons jours.
+        $cats = [];
+        $totCat = 0.0;
+        foreach (($catsJour[$id] ?? []) as $nomCat => $v) {
+            if ($v <= 0) { continue; }
+            $totCat += $v;
+            $refCat = null;
+            if ($refN) {
+                $somme = 0.0;
+                foreach ($refOuverts as $rd) { $somme += (float) ($catsRef[$rd][$id][$nomCat] ?? 0); }
+                $refCat = $somme / $refN;
+            }
+            $cats[] = ['categorie' => (string) $nomCat, 'ca' => round($v, 2),
+                'ref' => $refCat !== null ? round($refCat, 2) : null,
+                'delta' => $ecart($v, $refCat)];
+        }
+        foreach ($cats as &$c) { $c['part'] = $totCat > 0 ? round($c['ca'] / $totCat, 4) : null; }
+        unset($c);
+        usort($cats, fn ($a, $b) => $b['ca'] <=> $a['ca']);
+
+        // ── L'OBJECTIF DU JOUR.
+        //
+        // Diviser le budget du mois par le nombre de jours serait malhonnête :
+        // un dimanche ne ressemble pas à un lundi, et deux mois n'ont pas le
+        // même nombre de dimanches. On répartit donc le budget selon le POIDS
+        // RÉEL de chaque jour de semaine, mesuré sur CE magasin, sur les six
+        // dernières semaines déjà lues ici — rien à demander de plus.
+        //
+        //   poids(jour) = CA moyen de ce jour de semaine
+        //   attendu(mois) = somme des poids de tous les jours du mois
+        //   objectif(jour) = budget du mois × poids(jour) / attendu(mois)
+        //
+        // Un jour de semaine jamais ouvert pèse zéro et ne prend rien aux
+        // autres. Sans historique suffisant, on retombe sur la répartition
+        // plate — et l'écran dit laquelle des deux a servi.
+        $parWd = [];
+        foreach ($parJour as $j2 => $d2) {
+            if (empty($d2['ouvert'])) { continue; }
+            $wd2 = (int) date('N', strtotime($j2));
+            $parWd[$wd2]['s'] = ($parWd[$wd2]['s'] ?? 0) + (float) $d2['ca'];
+            $parWd[$wd2]['n'] = ($parWd[$wd2]['n'] ?? 0) + 1;
+        }
+        $moyWd = [];
+        foreach ($parWd as $wd2 => $v2) { if ($v2['n'] > 0) { $moyWd[$wd2] = $v2['s'] / $v2['n']; } }
+        $attMois = 0.0;
+        for ($i2 = 0; $i2 < $joursMois; $i2++) {
+            $attMois += $moyWd[(int) $premier->modify('+' . $i2 . ' days')->format('N')] ?? 0.0;
+        }
+        // Le profil mesuré est ÉCRIT : il devient une donnée du cockpit, pas un
+        // calcul jetable.
+        $dates = array_keys($parJour);
+        profilJourEcrire((string) $id, $parWd, $dates ? (string) min($dates) : null, $dates ? (string) max($dates) : null);
+
+        $wdJour = (int) date('N', strtotime($date));
+        $vus = (int) ($parWd[$wdJour]['n'] ?? 0);
+        // Deux occurrences au moins : un seul dimanche observé n'est pas un
+        // profil, c'est une anecdote. Si la fenêtre vive n'en montre pas assez,
+        // le profil MÉMORISÉ prend le relais — un rythme ne change pas d'un
+        // jour à l'autre.
+        $profilSrc = 'vif';
+        if ($vus < 2 || $attMois <= 0) {
+            $mem = profilJourLire((string) $id);
+            $moyMem = []; $vusMem = 0;
+            foreach ($mem as $wdM => $vM) {
+                if ($vM['moyenne'] !== null && $vM['jours'] >= 1) { $moyMem[(int) $wdM] = (float) $vM['moyenne']; }
+            }
+            $vusMem = (int) ($mem[$wdJour]['jours'] ?? 0);
+            if ($vusMem >= 2 && isset($moyMem[$wdJour])) {
+                $attMem = 0.0;
+                for ($i3 = 0; $i3 < $joursMois; $i3++) {
+                    $attMem += $moyMem[(int) $premier->modify('+' . $i3 . ' days')->format('N')] ?? 0.0;
+                }
+                if ($attMem > 0) { $moyWd = $moyMem; $attMois = $attMem; $vus = $vusMem; $profilSrc = 'memoire'; }
+            }
+        }
+        $part = ($attMois > 0 && $vus >= 2 && isset($moyWd[$wdJour])) ? $moyWd[$wdJour] / $attMois : null;
+        // La PONDÉRATION RÉSEAU adoptée (Paramètres du budget) prime sur le
+        // profil du magasin : décision produit, les mêmes poids pour tous —
+        // un magasin faible le samedi doit se mesurer à la courbe du réseau,
+        // pas à sa propre faiblesse. Seuls ses jours d'ouverture entrent au
+        // dénominateur : un lundi jamais ouvert ne prend rien aux autres.
+        $pjR = pjPoids();
+        if ($pjR !== null) {
+            $denR = 0.0;
+            for ($i5 = 0; $i5 < $joursMois; $i5++) {
+                $wd5 = (int) $premier->modify('+' . $i5 . ' days')->format('N');
+                if (isset($wdActifs[$wd5])) { $denR += $pjR['poids'][$wd5]; }
+            }
+            if ($denR > 0 && isset($wdActifs[$wdJour])) {
+                $part = $pjR['poids'][$wdJour] / $denR; $profilSrc = 'reseau';
+            }
+        }
+
+        // ── PROJECTION DE FIN DE JOURNÉE.
+        //
+        // Le profil horaire du même jour de semaine dit quelle part du chiffre
+        // est déjà passée à cette heure-ci. Le reste est une règle de trois.
+        // Il est MÉMORISÉ et rebâti une fois par semaine : six lectures par
+        // magasin, pas à chaque affichage. Et au plus deux magasins rafraîchis
+        // par requête — un écran ne doit pas payer le rattrapage de tous.
+        $proj = null; $projPart = null; $projHeure = null; $projJours = 0; $projMotif = null;
+        $projReste = null; $projRythme = null;
+        if ($estAuj) {
+            $ph = profilHeureLire((string) $id, $wdJour);
+            $vieux = $ph['maj'] === null || strtotime((string) $ph['maj']) < strtotime('-7 days');
+            if (($ph['parts'] === [] || $vieux) && $GLOBALS['_profilHRefaits'] < 2) {
+                $GLOBALS['_profilHRefaits']++;
+                if (profilHeureBatir($id, $date) > 0) { $ph = profilHeureLire((string) $id, $wdJour); }
+            }
+            $hj = $res['hj' . $id] ?? null;
+            $heuresJour = is_array($hj) ? ($hj['hours'] ?? null) : null;
+            $derniere = -1;
+            foreach ((array) $heuresJour as $x) {
+                if ((float) ($x['ca'] ?? 0) > 0) { $derniere = max($derniere, hmHeureLocale((int) ($x['hour'] ?? -1), $date)); }
+            }
+            if ($ph['parts'] === []) { $projMotif = 'profil horaire indisponible'; }
+            elseif ($derniere < 0) { $projMotif = 'aucune vente encore aujourd’hui'; }
+            else {
+                $cum = 0.0; $reste = 0.0;
+                foreach ($ph['parts'] as $h4 => $p4) { if ((int) $h4 <= $derniere) { $cum += (float) $p4; } }
+                foreach ($ph['montants'] as $h5 => $m5) { if ((int) $h5 > $derniere) { $reste += (float) $m5; } }
+                $projPart = round($cum, 1);
+                $projHeure = $derniere;
+                $projJours = (int) $ph['jours'];
+                $projReste = round($reste, 2);
+                // Sous 30 % de journée écoulée, une projection est du vent :
+                // trois quarts du chiffre restent à faire et la moindre heure
+                // creuse la ferait mentir.
+                if ($cum >= 30 && $ca > 0) {
+                    // CE QUI EST AFFICHÉ : le réalisé PLUS ce que les heures
+                    // restantes rapportent d'habitude — la moyenne des six
+                    // mêmes jours, heure par heure. On additionne des euros
+                    // observés, on n'extrapole pas une tendance.
+                    $proj = round($ca + $reste, 2);
+                    // Second regard : la même journée prolongée AU RYTHME DU
+                    // JOUR (règle de trois sur la part écoulée). Elle dit ce
+                    // que donnerait la journée si l'après-midi ressemblait à la
+                    // matinée. Les deux ensemble encadrent la vérité.
+                    $projRythme = round($ca / ($cum / 100), 2);
+                } else { $projMotif = 'moins de 30 % de la journée écoulée'; }
+            }
+        }
+
+        $bm = $budMois[(string) $id] ?? null;
+        $objMois = $bm !== null ? round($bm['montant'], 2) : null;
+        $objSrc  = $bm !== null ? $bm['source'] : null;
+        $objBase = $part !== null ? ($profilSrc === 'reseau' ? 'reseau' : 'profil') : 'plat';
+        $objJour = null;
+        if ($bm !== null) {
+            $objJour = $part !== null ? round($bm['montant'] * $part, 2)
+                : ($joursOuverts > 0 ? round($bm['montant'] / $joursOuverts, 2) : null);
+        }
+
+        // ── LA SEMAINE EN COURS, jour par jour, du lundi au dimanche : ventes,
+        //    résultat et objectif de chaque jour — la même règle que l'objectif
+        //    du jour, appliquée au jour de semaine, avec le budget du mois de
+        //    chaque jour. Les jours à venir n'ont qu'un objectif ; le jour
+        //    regardé porte son résultat mesuré, les autres le résultat réparti.
+        $semaine = [];
+        for ($i6 = 0; $i6 < 7; $i6++) {
+            $j6 = date('Y-m-d', strtotime($lundiSem . ' +' . $i6 . ' days'));
+            $wd6 = $i6 + 1;
+            $ym6 = substr($j6, 0, 7);
+            $bm6 = $budMoisPar[$ym6][(string) $id] ?? null;
+            $obj6 = null;
+            if ($bm6 !== null) {
+                $p6 = new DateTimeImmutable($ym6 . '-01');
+                $nj6 = (int) $p6->format('t');
+                $part6 = null;
+                if ($pjR !== null) {
+                    $den6 = 0.0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) {
+                        $w6 = (int) $p6->modify('+' . $k6 . ' days')->format('N');
+                        if (isset($wdActifs[$w6])) { $den6 += $pjR['poids'][$w6]; }
+                    }
+                    if ($den6 > 0 && isset($wdActifs[$wd6])) { $part6 = $pjR['poids'][$wd6] / $den6; }
+                } elseif (isset($moyWd[$wd6]) && ($profilSrc === 'memoire' || ($parWd[$wd6]['n'] ?? 0) >= 2)) {
+                    $att6 = 0.0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) { $att6 += $moyWd[(int) $p6->modify('+' . $k6 . ' days')->format('N')] ?? 0.0; }
+                    if ($att6 > 0) { $part6 = $moyWd[$wd6] / $att6; }
+                }
+                if ($part6 !== null) { $obj6 = round($bm6['montant'] * $part6, 2); }
+                elseif (isset($wdActifs[$wd6])) {
+                    $jo6 = 0;
+                    for ($k6 = 0; $k6 < $nj6; $k6++) { if (isset($wdActifs[(int) $p6->modify('+' . $k6 . ' days')->format('N')])) { $jo6++; } }
+                    if ($jo6 > 0) { $obj6 = round($bm6['montant'] / $jo6, 2); }
+                }
+            }
+            $d6 = $parJour[$j6] ?? null;
+            $ouv6 = $d6 !== null && $d6['ouvert'];
+            $mb6 = $ouv6 ? $mbDe($j6, $d6) : null;
+            $net6 = ($ouv6 && $mb6 !== null && $labJ !== null && $ohJ !== null) ? $mb6 - $labJ - $ohJ : null;
+            if ($j6 === $date && $net !== null) { $net6 = $net; }
+            $semaine[] = ['date' => $j6, 'wd' => $wd6, 'passe' => $j6 <= $date, 'aujourdhui' => $j6 === $date,
+                'ouvert' => $ouv6, 'ca' => $ouv6 ? round($d6['ca'], 2) : null, 'tickets' => $ouv6 ? $d6['tickets'] : null,
+                'net' => $net6 !== null ? round($net6, 2) : null, 'objectif' => $obj6];
+        }
+        // Les ventes PAR HEURE du jour (déjà lues par la route des heures) et
+        // le planning par personne : la sparkline de la vue réseau et le Gantt
+        // du détail. Le CA attribué = le CA de chaque heure partagé entre les
+        // personnes en poste cette heure-là.
+        $hjV = $res['hj' . $id] ?? null;
+        $heuresCa = [];
+        foreach ((array) (is_array($hjV) ? ($hjV['hours'] ?? []) : []) as $x9) {
+            // À l'heure de Bruxelles : margin-heatmap avance du décalage du jour (hmHeureLocale).
+            $h9 = hmHeureLocale((int) ($x9['hour'] ?? -1), $date);
+            if ($h9 >= 0) { $heuresCa[$h9] = round(($heuresCa[$h9] ?? 0) + (float) ($x9['ca'] ?? 0), 2); }
+        }
+        ksort($heuresCa);
+        // La nuit ne se dessine pas : la série se coupe à la première et à la
+        // dernière heure vendue — sinon la sparkline traîne 24 barres vides.
+        $actives = array_keys(array_filter($heuresCa, static fn ($v9) => $v9 > 0));
+        if ($actives !== []) {
+            $heuresCa = array_filter($heuresCa,
+                static fn ($h9) => $h9 >= min($actives) && $h9 <= max($actives), ARRAY_FILTER_USE_KEY);
+        }
+        $planM = $planParShop[(string) $id] ?? [];
+        // Le nombre de personnes en poste, heure par heure, compté UNE fois
+        // avant de partager. Il se recomptait pour chaque personne après avoir
+        // effacé les heures des précédentes : la première partageait juste,
+        // la deuxième ne voyait plus la première, la troisième plus aucune —
+        // Corbais attribuait 10 162 € pour 4 585 € vendus.
+        $nbParH = [];
+        foreach ($heuresCa as $h9 => $ca9) {
+            $nb9 = 0;
+            foreach ($planM as $q9) { if ($q9['hD'] < $h9 + 1 && $q9['hF'] > $h9) { $nb9++; } }
+            $nbParH[$h9] = $nb9;
+        }
+        // Le COÛT de chaque service au taux du panel, et ce qu'il laisse dans
+        // l'ombre : les heures à 0 €/h (le franchisé) n'entrent pas dans la
+        // main-d'œuvre du P&L — 9 h de travail qui ne coûtent rien au
+        // résultat, ça se lit sur la ligne, pas entre les lignes.
+        // La règle du panel, mesurée sur les quatre magasins : la main-d'œuvre
+        // du P&L = les heures des SALARIÉS × leur taux. Les franchisés en sont
+        // exclus même avec un taux (Gosselies : Max D. et Sandra C. à 18 €/h,
+        // 369 € hors P&L). On compte donc à part ce qui entre au résultat et
+        // ce que le franchisé donne sans y peser.
+        $labPlan = 0.0; $hPlan = 0.0; $hFr = 0.0; $coutFr = 0.0; $frNoms = []; $hZero = 0.0; $zeroNoms = [];
+        foreach ($planM as $i9 => $p9) {
+            $att = 0.0;
+            foreach ($heuresCa as $h9 => $ca9) {
+                if ($ca9 <= 0 || $p9['hD'] >= $h9 + 1 || $p9['hF'] <= $h9) { continue; }
+                $att += $ca9 / max(1, $nbParH[$h9]);
+            }
+            $planM[$i9]['ca'] = $att > 0 ? round($att, 2) : null;
+            $planM[$i9]['caH'] = ($att > 0 && $p9['h'] > 0) ? round($att / $p9['h'], 2) : null;
+            $tx = $tauxDe[(string) $id][(int) $p9['idEmp']] ?? null;
+            $fr = (bool) ($tx['franchise'] ?? false);
+            $cout = ($tx !== null && $tx['taux'] !== null) ? round($p9['h'] * $tx['taux'], 2) : null;
+            $planM[$i9]['tauxH'] = $tx['taux'] ?? null;
+            $planM[$i9]['franchise'] = $fr;
+            $planM[$i9]['cout'] = $cout;
+            $planM[$i9]['horsPnl'] = $fr;
+            $planM[$i9]['postes'] = $tx['postes'] ?? [];
+            $hPlan += $p9['h'];
+            if ($fr) {
+                $hFr += $p9['h']; $coutFr += $cout ?? 0.0;
+                if (!in_array($p9['nom'], $frNoms, true)) { $frNoms[] = $p9['nom']; }
+            } elseif ($cout !== null) {
+                $labPlan += $cout;
+                if ($cout <= 0) {
+                    $hZero += $p9['h'];
+                    if (!in_array($p9['nom'], $zeroNoms, true)) { $zeroNoms[] = $p9['nom']; }
+                }
+            }
+        }
+        foreach ($planM as $i9 => $p9) { unset($planM[$i9]['hD'], $planM[$i9]['hF'], $planM[$i9]['idEmp']); }
+        usort($planM, static fn ($a9, $b9) => [$a9['debut'], $a9['nom']] <=> [$b9['debut'], $b9['nom']]);
+
+        $pph = exPartProHabituelle($id, $date);
+        $lignes[] = ['shopId' => (string) $id, 'magasin' => $nom, 'ouvert' => true,
+            'heures' => array_map(static fn ($h9) => ['h' => $h9, 'ca' => $heuresCa[$h9]], array_keys($heuresCa)),
+            'planning' => $planM,
+            'planningSource' => $planSrc[(string) $id] ?? 'aucune réponse',
+            // Ce que chaque personne a vendu, au nom du planning (le même display_name au panel) ; null si la route n'a
+            // pas répondu — jamais une équipe à zéro inventée.
+            'vendeurs' => exVendeurs($res['sve' . $id] ?? null),
+            // Le planning en euros : ce que coûtent les services au taux du
+            // panel, et les heures qui n'y coûtent rien.
+            'planningHeures' => round($hPlan, 2),
+            'planningCout' => isset($tauxDe[(string) $id]) ? round($labPlan, 2) : null,   // ce qui entre au P&L
+            'planningHeuresFranchise' => round($hFr, 2),
+            'planningCoutFranchise' => round($coutFr, 2),   // au taux du panel, hors P&L
+            'planningFranchiseNoms' => $frNoms,
+            'planningHeuresZero' => round($hZero, 2),        // salariés sans taux : une anomalie de fiche
+            'planningZeroNoms' => $zeroNoms,
+            'ca' => round($ca, 2),
+            'refCa' => $refCa !== null ? round($refCa, 2) : null,
+            'refJours' => $refN,
+            'caDelta' => $ecart($ca, $refCa),
+            'tickets' => $tickets,
+            'refTickets' => $refTickets !== null ? round($refTickets) : null,
+            'ticketsDelta' => $ecart((float) $tickets, $refTickets),
+            // Les clients du même jour de la semaine passée, AU MÊME MOMENT : la journée en cours
+            // se compare à J−7 arrêté à la même heure, une journée close à J−7 entière.
+            'j7' => exJ7($id, $date, $estAuj),
+            // Le B2B à part (23/10/2026) : ses tickets heure par heure, et sa part habituelle qui partage l'objectif.
+            'heuresPro' => exHeuresPro($proLu[$id] ?? null),
+            'partProHabituelle' => $pph['part'], 'partProJours' => $pph['jours'],
+            'panier' => $panier !== null ? round($panier, 2) : null,
+            'produits' => $produits !== null ? (int) $produits : null,
+            'produitsParClient' => $ppc !== null ? round($ppc, 2) : null,
+            'coutMatiere' => $fc !== null ? round($fc, 2) : null, 'coutMatierePct' => ($fc !== null && $ca > 0) ? round($fc / $ca * 100, 1) : null,
+            'coutMatiereSource' => $matSrc,
+            'margeBrute' => $mb !== null ? round($mb, 2) : null, 'margeBrutePct' => ($mb !== null && $ca > 0) ? round($mb / $ca * 100, 1) : null,
+            'invendus' => $inv['cout'] !== null ? round((float) $inv['cout'], 2) : null,
+            'invendusPct' => ($inv['cout'] !== null && $ca > 0) ? round((float) $inv['cout'] / $ca * 100, 1) : null,
+            'invendusPieces' => $inv['pieces'], 'invendusDeclare' => $inv['declare'], 'invendusSource' => $inv['source'],
+            'labour' => $labour !== null ? round($labour, 2) : null,
+            'labourPct' => ($labour !== null && $ca > 0) ? round($labour / $ca * 100, 1) : null,
+            'labourSource' => $labourSource,
+            'overhead' => $oh !== null ? round($oh, 2) : null,
+            'overheadPct' => ($oh !== null && $ca > 0) ? round($oh / $ca * 100, 1) : null,
+            'overheadSource' => $oh !== null ? $ohSource : null,
+            'overheadMois' => $ohMois !== null ? round($ohMois, 2) : null,
+            'labourMois' => $labourMois !== null ? round($labourMois, 2) : null,
+            'joursOuverts' => $joursOuverts,
+            'semaine' => $semaine,
+            'objectifJour' => $objJour, 'objectifSource' => $objSrc,
+            'objectifMois' => $objMois, 'objectifBase' => $objBase,
+            'objectifPart' => $part === null ? null : round($part * 100, 2),
+            'objectifJoursVus' => $vus,
+            'objectifProfil' => $part === null ? null : $profilSrc,
+            'projection' => $proj,
+            'projectionPart' => $projPart, 'projectionHeure' => $projHeure,
+            'projectionJours' => $projJours, 'projectionMotif' => $projMotif,
+            'projectionReste' => $projReste, 'projectionRythme' => $projRythme,
+            'projectionAtteinte' => ($proj !== null && $objJour !== null && $objJour > 0)
+                ? round($proj / $objJour, 4) : null,
+            'objectifJourNom' => jourNomSemaine($date),
+            'objectifAtteinte' => ($objJour !== null && $objJour > 0) ? round($ca / $objJour, 4) : null,
+            'net' => $net !== null ? round($net, 2) : null,
+            'netPct' => ($net !== null && $ca > 0) ? round($net / $ca * 100, 1) : null,
+            'motifNet' => $net === null ? ($fc === null ? 'coût matière inconnu — le panel ne le chiffre pas et les tickets ne sont pas lus' : 'P&L mensuel sans réponse — main-d’œuvre ou frais généraux indisponibles') : null,
+            'categories' => $cats, 'serie' => $serie]
+            // Le split pro / comptoir : les tickets des clients pro du panel,
+            // le reste du CA de la ligne au comptoir.
+            + (function_exists('vpSplit') ? vpSplit($proLu[$id] ?? null, (float) $ca, (int) $tickets) : []);
+        // Les clients manquants du jour se comptent au comptoir (CA pro exclu).
+        if (function_exists('vpClientsComptoir')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] = array_merge($lignes[$iL], vpClientsComptoir($lignes[$iL], $objJour !== null ? (float) $objJour : null));
+        }
+        // Le panier moyen du dashboard, hors clients pro quand leurs tickets sont lus (21/10/2026) ; `panier` reste le total.
+        if (function_exists('vpPanier')) {
+            $iL = count($lignes) - 1;
+            $lignes[$iL] += vpPanier($lignes[$iL]['caComptoir'] ?? null, $lignes[$iL]['ticketsComptoir'] ?? null, $panier);
+        }
+    }
+    usort($lignes, fn ($a, $b) => ($b['ca'] ?? -1) <=> ($a['ca'] ?? -1));
+    $out['magasins'] = $lignes;
+
+    // --- Réseau : la somme de ce qui est connu, jamais une extrapolation.
+    $t = ['ca' => 0.0, 'refCa' => 0.0, 'coutMatiere' => 0.0, 'margeBrute' => 0.0, 'labour' => 0.0,
+        'overhead' => 0.0, 'net' => 0.0, 'tickets' => 0, 'produits' => 0, 'invendus' => 0.0, 'invendusPieces' => 0.0];
+    $ouverts = 0; $netComplet = true; $refComplet = true; $refMin = null; $cats = []; $invLus = 0; $invDeclarent = 0;
+    $pro = ['ca' => 0.0, 'tickets' => 0, 'caMag' => 0.0, 'ticketsMag' => 0, 'n' => 0];
+    foreach ($lignes as $l) {
+        if (empty($l['ouvert'])) { continue; }
+        $ouverts++;
+        if (isset($l['caPro']) && $l['caPro'] !== null) {
+            $pro['n']++; $pro['ca'] += $l['caPro']; $pro['tickets'] += (int) $l['ticketsPro'];
+            $pro['caMag'] += $l['ca']; $pro['ticketsMag'] += (int) $l['tickets'];
+        }
+        $t['ca'] += $l['ca']; $t['coutMatiere'] += (float) ($l['coutMatiere'] ?? 0); $t['margeBrute'] += (float) ($l['margeBrute'] ?? 0);
+        $t['tickets'] += $l['tickets']; $t['produits'] += (int) ($l['produits'] ?? 0);
+        if (($l['invendus'] ?? null) !== null) { $invLus++; $t['invendus'] += (float) $l['invendus']; $t['invendusPieces'] += (float) ($l['invendusPieces'] ?? 0); if (!empty($l['invendusDeclare'])) { $invDeclarent++; } }
+        if ($l['refCa'] === null) { $refComplet = false; }
+        else { $t['refCa'] += $l['refCa']; $refMin = $refMin === null ? $l['refJours'] : min($refMin, $l['refJours']); }
+        if ($l['labour'] === null || $l['overhead'] === null) { $netComplet = false; }
+        else { $t['labour'] += $l['labour']; $t['overhead'] += $l['overhead']; $t['net'] += $l['net']; }
+        foreach ($l['categories'] as $c) {
+            $e = $cats[$c['categorie']] ?? ['categorie' => $c['categorie'], 'ca' => 0.0, 'ref' => 0.0, 'sansRef' => false];
+            $e['ca'] += $c['ca'];
+            if ($c['ref'] === null) { $e['sansRef'] = true; } else { $e['ref'] += $c['ref']; }
+            $cats[$c['categorie']] = $e;
+        }
+    }
+    $catsR = [];
+    $totR = array_sum(array_map(fn ($c) => $c['ca'], $cats)) ?: 0.0;
+    foreach ($cats as $c) {
+        $catsR[] = ['categorie' => $c['categorie'], 'ca' => round($c['ca'], 2),
+            'part' => $totR > 0 ? round($c['ca'] / $totR, 4) : null,
+            'ref' => $c['sansRef'] ? null : round($c['ref'], 2),
+            'delta' => (!$c['sansRef'] && $c['ref'] > 0) ? round(($c['ca'] / $c['ref'] - 1) * 100, 1) : null];
+    }
+    usort($catsR, fn ($a, $b) => $b['ca'] <=> $a['ca']);
+    $ca = $t['ca'];
+    $out['reseau'] = ['magasins' => $ouverts, 'ca' => round($ca, 2), 'tickets' => $t['tickets'],
+        'produits' => $t['produits'],
+        'refCa' => $refComplet ? round($t['refCa'], 2) : null,
+        'refJours' => $refMin,
+        'caDelta' => ($refComplet && $t['refCa'] > 0) ? round(($ca / $t['refCa'] - 1) * 100, 1) : null,
+        'panier' => $t['tickets'] > 0 ? round($ca / $t['tickets'], 2) : null,
+        'produitsParClient' => $t['tickets'] > 0 ? round($t['produits'] / $t['tickets'], 2) : null,
+        'coutMatiere' => round($t['coutMatiere'], 2),
+        'coutMatierePct' => $ca > 0 ? round($t['coutMatiere'] / $ca * 100, 1) : null,
+        'margeBrute' => round($t['margeBrute'], 2),
+        'margeBrutePct' => $ca > 0 ? round($t['margeBrute'] / $ca * 100, 1) : null,
+        'invendus' => $invLus ? round($t['invendus'], 2) : null,
+        'invendusPct' => ($invLus && $ca > 0) ? round($t['invendus'] / $ca * 100, 1) : null,
+        'invendusPieces' => $invLus ? round($t['invendusPieces'], 1) : null,
+        'invendusDeclare' => $invLus ? $invDeclarent > 0 : null,
+        'invendusSource' => $invLus ? ($invDeclarent . ' magasin' . ($invDeclarent > 1 ? 's' : '') . ' sur ' . $ouverts . ' déclare' . ($invDeclarent > 1 ? 'nt' : '') . ' la poubelle') : 'panel muet',
+        'labour' => $netComplet ? round($t['labour'], 2) : null,
+        'labourPct' => ($netComplet && $ca > 0) ? round($t['labour'] / $ca * 100, 1) : null,
+        'overhead' => $netComplet ? round($t['overhead'], 2) : null,
+        'overheadPct' => ($netComplet && $ca > 0) ? round($t['overhead'] / $ca * 100, 1) : null,
+        'net' => $netComplet ? round($t['net'], 2) : null,
+        'netPct' => ($netComplet && $ca > 0) ? round($t['net'] / $ca * 100, 1) : null,
+        // Le split du réseau sur les magasins dont les tickets sont lus :
+        // `proMagasins` < `magasins` dit qu'il en manque.
+        'caPro' => $pro['n'] ? round($pro['ca'], 2) : null,
+        'ticketsPro' => $pro['n'] ? $pro['tickets'] : null,
+        'caComptoir' => $pro['n'] ? round(max(0.0, $pro['caMag'] - $pro['ca']), 2) : null,
+        'ticketsComptoir' => $pro['n'] ? max(0, $pro['ticketsMag'] - $pro['tickets']) : null,
+        'partPro' => ($pro['n'] && $pro['caMag'] > 0) ? round(100 * $pro['ca'] / $pro['caMag'], 1) : null,
+        'proMagasins' => $pro['n'],
+        'panierPro' => $pro['tickets'] > 0 ? round($pro['ca'] / $pro['tickets'], 2) : null,
+        'panierComptoir' => ($pro['n'] && $pro['ticketsMag'] - $pro['tickets'] > 0) ? round(max(0.0, $pro['caMag'] - $pro['ca']) / ($pro['ticketsMag'] - $pro['tickets']), 2) : null,
+        // Les clients manquants du réseau : la somme de ceux de chaque magasin,
+        // comptés au comptoir quand son split est lu.
+        'clientsManquants' => (function () use ($lignes) { $n = 0; $vu = false; foreach ($lignes as $l) { if (!empty($l['ouvert']) && isset($l['clientsManquants'])) { $n += $l['clientsManquants']; $vu = true; } } return $vu ? $n : null; })(),
+        'clientsBase' => (function () use ($lignes) { $b = []; foreach ($lignes as $l) { if (!empty($l['ouvert']) && ($l['objectifJour'] ?? null) !== null) { $b[$l['clientsBase'] ?? 'total'] = true; } } return count($b) === 1 ? array_key_first($b) : ($b ? 'mixte' : null); })(),
+        'categories' => $catsR];
+    // Le panier moyen du réseau hors clients pro (21/10/2026) : seulement quand chaque magasin ouvert a ses tickets pro
+    // lus — sinon le total, dit (`panierBase`). `panierComptoir` garde, lui, le comptoir des seuls magasins lus.
+    if (function_exists('vpPanier')) {
+        $tous = $pro['n'] > 0 && $pro['n'] === $ouverts;
+        $out['reseau'] += vpPanier($tous ? max(0.0, $pro['caMag'] - $pro['ca']) : null, $tous ? max(0, $pro['ticketsMag'] - $pro['tickets']) : null,
+            $t['tickets'] > 0 ? $ca / $t['tickets'] : null);
+    }
+    return $out;
+}
+
+/**
+ * GET /stores/kpis-annuels — trois lectures mensuelles sur l'année en cours,
+ * par magasin : clients par jour, ticket moyen, articles par ticket.
+ *
+ * Une passe sales-kpis PAR MOIS écoulé (janvier → aujourd'hui), en parallèle :
+ * l'API ne rend pas de série mensuelle, on la reconstruit borne à borne — même
+ * technique que le CA mensuel de la centrale d'achat.
+ *
+ *  - clients/jour = tickets du mois ÷ jours du mois (mois en cours : jours
+ *    écoulés). Le réseau ouvre 7 j/7 (mesuré sur margin-heatmap) : le jour
+ *    calendaire EST le jour d'ouverture ;
+ *  - ticket moyen = CA ÷ tickets — recalculé plutôt que lu (avg_basket sert de
+ *    repli), pour que les trois tableaux sortent des mêmes deux chiffres ;
+ *  - articles/ticket = produits vendus ÷ tickets.
+ */
+function ep_stores_kpis_annuels(): array
+{
+    if (!PanelApi::configured()) {
+        return ['indispo' => true, 'motif' => 'compte consultant non configuré (Mon compte)'];
+    }
+    $annee = (int) date('Y');
+    $moisMax = (int) date('n');
+    $auj = date('Y-m-d');
+    $paths = [];
+    for ($m = 1; $m <= $moisMax; $m++) {
+        $du = sprintf('%04d-%02d-01', $annee, $m);
+        $au = min(date('Y-m-t', strtotime($du)), $auj);
+        $paths['m' . $m] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $du, 'date_to' => $au]);
+    }
+    $res = PanelApi::getParallele($paths, 4);
+
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1') as $s) {
+            $noms[(int) $s['id']] = (string) $s['name'];
+        }
+    } catch (PDOException $e) { /* référentiel indisponible : les numéros feront foi */ }
+
+    $par = []; $reseau = [];
+    for ($m = 1; $m <= $moisMax; $m++) {
+        $liste = analyseListe($res['m' . $m] ?? []);
+        $jours = ($m < $moisMax) ? (int) date('t', strtotime(sprintf('%04d-%02d-01', $annee, $m))) : (int) date('j');
+        $tCa = 0.0; $tTk = 0; $tPr = 0; $aTk = false; $aPr = false;
+        foreach ($liste as $x) {
+            if (!is_array($x)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c) {
+                if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+            }
+            if ($id <= 0) { continue; }
+            $ca = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+            $tk = nombreOuNull($x, ['tickets', 'receipts', 'transactions']);
+            $pr = nombreOuNull($x, ['products', 'items', 'product_count']);
+            // Même règle que le P&L : une entrée que le référentiel ne connaît
+            // pas et qui n'a rien vendu est technique, pas commerciale.
+            if (!isset($noms[$id]) && ($ca ?? 0) <= 0) { continue; }
+            $panier = ($ca !== null && $tk !== null && $tk > 0) ? $ca / $tk
+                : nombreOuNull($x, ['avg_basket', 'average_basket']);
+            $par[$id][$m] = [
+                'clientsJour' => ($tk !== null && $jours > 0) ? round($tk / $jours, 1) : null,
+                'panier' => $panier !== null ? round($panier, 2) : null,
+                'items' => ($pr !== null && $tk !== null && $tk > 0) ? round($pr / $tk, 2) : null,
+            ];
+            if ($ca !== null) { $tCa += $ca; }
+            if ($tk !== null) { $tTk += (int) $tk; $aTk = true; }
+            if ($pr !== null) { $tPr += (int) $pr; $aPr = true; }
+        }
+        // La ligne réseau se calcule sur les SOMMES, pas sur la moyenne des
+        // moyennes : un panier réseau est le CA total ÷ les tickets totaux —
+        // pondéré de fait par la taille de chaque magasin.
+        $reseau[$m] = [
+            'clientsJour' => ($aTk && $jours > 0) ? round($tTk / $jours, 1) : null,
+            'panier' => ($aTk && $tTk > 0) ? round($tCa / $tTk, 2) : null,
+            'items' => ($aPr && $tTk > 0) ? round($tPr / $tTk, 2) : null,
+        ];
+    }
+    $magasins = [];
+    foreach ($par as $id => $mois) {
+        $magasins[] = ['id' => (string) $id, 'nom' => $noms[$id] ?? ('Magasin ' . $id), 'mois' => $mois];
+    }
+    usort($magasins, fn ($a, $b) => strcmp($a['nom'], $b['nom']));
+    return ['annee' => $annee, 'moisMax' => $moisMax, 'magasins' => $magasins, 'reseau' => $reseau,
+        'source' => 'API panel — sales-kpis mois par mois ; clients/jour = tickets ÷ jours du mois (mois en cours : jours écoulés)'];
+}
+
+/**
+ * Analyse d'une catégorie ou d'une référence dans le temps.
+ *
+ * Une série se construit en interrogeant l'API sur des bornes successives :
+ * aucune route ne rend d'historique par catégorie ou par référence. Le nombre
+ * de points est donc PLAFONNÉ — chaque point est un aller-retour, et un
+ * graphique de vingt-quatre mois ferait attendre une demi-minute pour une
+ * précision que personne ne lit.
+ *
+ * Deux sources, selon ce qu'on regarde :
+ *  · catégorie → /consultant/shops/category-sales, ventilé par boutique ;
+ *  · référence → /shops/{id}/products/waste, dont `sold_qty` est une valeur
+ *    RÉSEAU. Employée par boutique elle serait fausse ; au niveau réseau,
+ *    c'est exactement ce qu'on cherche.
+ *
+ * Les deux séries mesurent donc le RÉSEAU. Le rebut a été écarté : `waste_qty`
+ * est propre au magasin alors que `sold_qty` est réseau — les afficher côte à
+ * côte donnait un taux de perte divisé par le nombre de magasins, faux et
+ * d'autant plus crédible qu'il paraissait bas. Un rebut réseau exigerait un
+ * appel par magasin ET par point (24 allers-retours pour six mois) : hors
+ * budget pour un écran interactif.
+ */
+function ep_produits_analyse(): array
+{
+    // Trois niveaux, et deux sources bien distinctes. Les GROUPES (douze) sont
+    // les seuls que la caisse ventile en chiffre d'affaires ; les CATÉGORIES
+    // (quatre-vingt-une) et les références ne se lisent qu'en volume, sur la
+    // route des rebuts qui porte `category_name` pour chaque produit.
+    $type = (string) ($_GET['type'] ?? 'categorie');
+    if (!in_array($type, ['categorie', 'souscategorie', 'produit'], true)) { $type = 'categorie'; }
+    $cle  = trim((string) ($_GET['cle'] ?? ''));
+    $gran = (string) ($_GET['granularite'] ?? 'mois');
+    if (!in_array($gran, ['mois', 'trimestre', 'annee'], true)) { $gran = 'mois'; }
+    $out = ['type' => $type, 'cle' => $cle, 'granularite' => $gran,
+        'points' => [], 'source' => null, 'motif' => null, 'plafond' => null,
+        'libelle' => $cle, 'mesure' => $type === 'categorie' ? "chiffre d'affaires réseau" : 'volume vendu réseau',
+        'unite' => $type === 'categorie' ? '€' : 'u'];
+    if ($cle === '') { http_response_code(400); return $out + ['error' => 'sélection requise']; }
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+
+    // Bornes des points, du plus ancien au plus récent. Le dernier point est
+    // marqué « en cours » : un mois entamé comparé à des mois clos ressemble
+    // toujours à un effondrement, et ce n'en est pas un.
+    $n = $gran === 'mois' ? 6 : ($gran === 'trimestre' ? 4 : 3);
+    $out['plafond'] = $n;
+    $auj = time();
+    $bornes = [];
+    for ($i = $n - 1; $i >= 0; $i--) {
+        if ($gran === 'mois') {
+            $t = strtotime("-$i month", $auj);
+            $bornes[] = ['lib' => strftime_fr($t, 'M Y'), 'du' => date('Y-m-01', $t), 'au' => date('Y-m-t', $t)];
+        } elseif ($gran === 'trimestre') {
+            $t = strtotime('-' . ($i * 3) . ' month', $auj);
+            $q = (int) ceil((int) date('n', $t) / 3);
+            $m1 = ($q - 1) * 3 + 1;
+            $d1 = sprintf('%04d-%02d-01', (int) date('Y', $t), $m1);
+            $bornes[] = ['lib' => 'T' . $q . ' ' . date('Y', $t), 'du' => $d1,
+                'au' => date('Y-m-t', strtotime($d1 . ' +2 month'))];
+        } else {
+            $y = (int) date('Y', $auj) - $i;
+            $bornes[] = ['lib' => (string) $y, 'du' => $y . '-01-01', 'au' => $y . '-12-31'];
+        }
+    }
+
+    // Ne jamais interroger au-delà d'aujourd'hui : l'API rendrait une période
+    // vide qu'on lirait comme une chute à zéro. Les bornes N-1 reprennent la
+    // MÊME étendue décalée d'un an : comparer un mois entamé à un mois entier
+    // de l'an dernier annoncerait un effondrement qui n'existe pas.
+    foreach ($bornes as $i => $b) {
+        $bornes[$i]['au'] = min($b['au'], date('Y-m-d'));
+        $bornes[$i]['encours'] = $b['au'] > date('Y-m-d');
+        $bornes[$i]['n1du'] = date('Y-m-d', strtotime($b['du'] . ' -1 year'));
+        $bornes[$i]['n1au'] = date('Y-m-d', strtotime($bornes[$i]['au'] . ' -1 year'));
+    }
+
+    // Les plages élémentaires des deux exercices sont réunies avant tout appel :
+    // elles partent ensemble, et celles déjà mémorisées ne repartent pas.
+    $cN = $cN1 = $toutes = [];
+    foreach ($bornes as $i => $b) {
+        $cN[$i]  = analysePlages($type, $b['du'], $b['au']);
+        $cN1[$i] = analysePlages($type, $b['n1du'], $b['n1au']);
+        $toutes = array_merge($toutes, $cN[$i], $cN1[$i]);
+    }
+    $agg = analyseAgregats($type, $toutes);
+
+    // Le détail par magasin n'existe que pour les catégories : la route des
+    // références rend un `sold_qty` RÉSEAU, identique d'un magasin à l'autre
+    // (seul le rebut y est propre au magasin). Plutôt que de présenter cinq
+    // courbes superposées qui vaudraient toutes la même chose, l'écran le dit.
+    // Le détail par magasin existe aux trois niveaux, mais il ne mesure pas la
+    // même chose : le chiffre d'affaires pour les groupes, le REBUT en dessous.
+    // Mesuré sur une même référence et un même mois, `sold_qty` vaut 5165 dans
+    // les quatre boutiques quand `waste_qty` y vaut 47, 34, 5 et 30 : la vente
+    // est une valeur réseau, le rebut non. Tracer quatre courbes de ventes
+    // identiques aurait donné un « chacun sa part » entièrement faux.
+    $out['parMagasin'] = 'ok';
+    $out['parMagasinMesure'] = $type === 'categorie' ? "chiffre d'affaires" : 'rebut';
+    $out['parMagasinUnite'] = $type === 'categorie' ? '€' : 'u';
+    $out['parMagasinMotif'] = $type === 'categorie' ? null
+        : 'Par magasin, ce niveau montre le REBUT : c\'est la seule grandeur que l\'API rende '
+        . 'boutique par boutique ici — le volume vendu y est une valeur réseau, identique partout.';
+    $out['magasins'] = [];
+    $vus = [];
+    foreach ($agg as $a) {
+        foreach ((array) $a as $sid => $e) {
+            if ($type === 'categorie') { $vus[(string) $sid] = true; continue; }
+            foreach ((array) ($e['w'] ?? []) as $s2 => $_) { $vus[(string) $s2] = true; }
+        }
+    }
+    $noms = analyseNoms();
+    foreach (array_keys($vus) as $sid) {
+        $out['magasins'][] = ['id' => (string) $sid, 'nom' => $noms[(string) $sid] ?? ('Magasin ' . $sid)];
+    }
+    usort($out['magasins'], fn($a, $b) => strcmp($a['nom'], $b['nom']));
+
+    foreach ($bornes as $i => $b) {
+        [$val, $par, $rendu, $lib] = analyseLire($type, $agg, $cN[$i], $cle);
+        [$n1, $parN1] = analyseLire($type, $agg, $cN1[$i], $cle);
+        if ($lib !== null) { $out['libelle'] = $lib; }
+        $out['points'][] = ['libelle' => $b['lib'], 'du' => $b['du'], 'au' => $b['au'],
+            'valeur' => $val, 'enCours' => $b['encours'],
+            'n1' => $n1, 'n1du' => $b['n1du'], 'n1au' => $b['n1au'],
+            // L'écart ne se calcule que sur deux chiffres connus : « +100 % »
+            // face à un N-1 absent dirait une croissance là où il n'y a qu'un
+            // trou dans l'historique.
+            'delta' => ($val !== null && $n1 !== null && $n1 != 0) ? round(($val - $n1) / $n1, 4) : null,
+            'parMagasin' => $par, 'parMagasinN1' => $parN1,
+            'motif' => $val !== null ? null : (!$rendu ? 'aucune donnée'
+                : ['categorie' => 'groupe absent de la réponse',
+                   'souscategorie' => 'catégorie sans vente sur la période',
+                   'produit' => 'référence non vendue sur la période'][$type])];
+    }
+
+
+
+    $connus = array_filter($out['points'], fn($p) => $p['valeur'] !== null);
+    if (!$connus) {
+        $raisons = array_unique(array_filter(array_column($out['points'], 'motif')));
+        $out['motif'] = 'aucune donnée sur cette sélection — '
+            . (PanelApi::$lastError ?: ($raisons ? implode(' ; ', $raisons)
+                : 'l\'API n\'a rien rendu pour ces périodes'));
+    }
+    return $out;
+}
+
+/**
+ * Plages élémentaires couvrant [du, au] pour le type demandé.
+ *
+ * `category-sales` expire dès qu'on dépasse le mois : ses points se
+ * reconstituent en additionnant leurs mois, ce que la nature additive du CA
+ * autorise. La route des références encaisse les bornes larges — la découper
+ * obligerait à SUPPOSER que les quantités s'additionnent d'un mois à l'autre,
+ * autant le lui demander directement.
+ */
+function analysePlages(string $type, string $du, string $au): array
+{
+    if ($du > $au) { return []; }
+    if ($type !== 'categorie') { return [$du . '.' . $au]; }
+    $out = [];
+    foreach (analyseMois($du, $au) as $mm) { $out[] = $mm[0] . '.' . $mm[1]; }
+    return $out;
+}
+
+/** Identifiant de boutique d'une ligne, quelle que soit son orthographe. */
+function analyseShopId(array $ligne): string
+{
+    foreach (['shop_id', 'id_shop', 'id'] as $c) {
+        if (isset($ligne[$c]) && is_numeric($ligne[$c])) { return (string) (int) $ligne[$c]; }
+    }
+    return '0';
+}
+
+/** Noms des boutiques — « Magasin 3 » n'aide personne à lire une courbe. */
+function analyseNoms(): array
+{
+    static $n = null;
+    if ($n !== null) { return $n; }
+    $n = [];
+    foreach (analyseListe(PanelApi::consultantShops()) as $sh) {
+        $id = analyseShopId($sh);
+        if ($id === '0') { continue; }
+        foreach (['representative_name', 'name', 'label'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $n[$id] = trim($sh[$c]); break; }
+        }
+    }
+    return $n;
+}
+
+/**
+ * Agrégats des plages demandées : mémoire d'abord, API pour le reste.
+ *
+ * Les catégories sont conservées VENTILÉES PAR BOUTIQUE. Agréger dès la lecture
+ * aurait interdit la vue par magasin sans tout relire, et l'agrégat réseau se
+ * retrouve de toute façon en sommant — l'inverse n'est pas vrai.
+ */
+function analyseAgregats(string $type, array $cles): array
+{
+    $pref = $type === 'categorie' ? 'an.cat2.' : 'an.prod3.';
+    $agg = []; $req = [];
+    foreach (array_unique($cles) as $k) {
+        $c = analyseCache($pref . $k);
+        if ($c !== null) { $agg[$k] = $c; continue; }
+        [$du, $au] = explode('.', $k, 2);
+        if ($type === 'categorie') {
+            $req[$k] = '/consultant/shops/category-sales?' . http_build_query(
+                ['shop_id' => analyseShop(), 'date_from' => $du, 'date_to' => $au]);
+        } else {
+            foreach (analyseShops() as $sid) {
+                $req[$k . '#' . $sid] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+                    ['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+            }
+        }
+    }
+    foreach (PanelApi::getParallele($req) as $rk => $r) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        $sidReq = (string) (substr((string) $rk, strlen($k) + 1) ?: '0');
+        if ($type === 'categorie') {
+            // Le vocabulaire de cette route est celui des GROUPES (douze), pas
+            // celui des 81 catégories du catalogue : « Boissons chaudes » n'y
+            // existe pas, seul « Boissons ». Le sélecteur étant alimenté par la
+            // route elle-même, aucune sélection ne peut retomber dans le vide.
+            foreach (analyseListe($r) as $sh) {
+                $sid = analyseShopId($sh);
+                foreach (($sh['categories'] ?? []) as $c) {
+                    $nom = trim((string) ($c['name'] ?? ''));
+                    if ($nom === '') { continue; }
+                    $v = nombreOuNull($c, ['ca', 'value', 'amount']);
+                    $agg[$k][$sid][$nom] = ($agg[$k][$sid][$nom] ?? 0) + (float) ($v ?? 0);
+                }
+            }
+        } else {
+            // `sold_qty` est une valeur RÉSEAU rendue à l'identique par chaque
+            // boutique : maximum et non somme, faute de quoi les ventes
+            // seraient multipliées par le nombre de magasins.
+            $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+            foreach ($lignes as $p) {
+                $pid = trim((string) ($p['id_product'] ?? ''));
+                if ($pid === '') { continue; }
+                $v = (float) (nombreOuNull($p, ['sold_qty', 'sold', 'quantity']) ?? 0);
+                // Le REBUT, lui, est bien propre au magasin — mesuré : pour une
+                // même référence sur un même mois, 47 / 34 / 5 / 30 selon la
+                // boutique, quand `sold_qty` y vaut 5165 partout. C'est donc la
+                // seule grandeur qui permette, sous le niveau groupe, de voir
+                // si une boutique décroche du réseau.
+                $w = nombreOuNull($p, ['waste_qty', 'waste']);
+                if ($w !== null && $sidReq !== '0') { $agg[$k][$pid]['w'][$sidReq] = (float) $w; }
+                if (!isset($agg[$k][$pid]['v']) || $v > $agg[$k][$pid]['v']) {
+                    // `c` porte la catégorie de la référence : les totaux par
+                    // catégorie s'en déduisent en sommant les volumes RÉSEAU
+                    // déjà dédoublonnés. `grouped_products` ne rend, lui, que
+                    // les catégories ayant connu du rebut — neuf sur quatre-
+                    // vingt-une : le lire aurait amputé le sélecteur.
+                    $agg[$k][$pid]['n'] = (string) ($p['product_name'] ?? $p['name'] ?? $pid);
+                    $agg[$k][$pid]['v'] = $v;
+                    $agg[$k][$pid]['c'] = trim((string) ($p['category_name'] ?? ''));
+                }
+            }
+        }
+    }
+    // Mémoriser les plages CLOSES qui viennent d'être lues. La période en cours
+    // ne l'est jamais : elle changera encore aujourd'hui.
+    foreach ($req as $rk => $_) {
+        $k = strstr((string) $rk, '#', true) ?: (string) $rk;
+        if (!isset($agg[$k]) || substr($k, -10) >= date('Y-m-d')) { continue; }
+        analyseCacheMaj($pref . $k, $agg[$k]);
+    }
+    return $agg;
+}
+
+/** Valeur d'un point : [total, par magasin, l'API a répondu, libellé]. */
+function analyseLire(string $type, array $agg, array $cles, string $sel): array
+{
+    $val = null; $par = []; $rendu = false; $lib = null;
+    foreach ($cles as $k) {
+        if (!isset($agg[$k])) { continue; }
+        $rendu = true;
+        if ($type === 'categorie') {
+            foreach ((array) $agg[$k] as $sid => $cats) {
+                foreach ((array) $cats as $nom => $ca) {
+                    if (strcasecmp((string) $nom, $sel) !== 0) { continue; }
+                    $val = ($val ?? 0) + (float) $ca;
+                    $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $ca, 2);
+                }
+            }
+        } elseif ($type === 'souscategorie') {
+            foreach ((array) $agg[$k] as $p) {
+                if (strcasecmp((string) ($p['c'] ?? ''), $sel) !== 0) { continue; }
+                $val = ($val ?? 0) + (float) ($p['v'] ?? 0);
+                foreach ((array) ($p['w'] ?? []) as $sid => $w) {
+                    $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $w, 2);
+                }
+            }
+        } elseif (isset($agg[$k][$sel])) {
+            $val = ($val ?? 0) + (float) ($agg[$k][$sel]['v'] ?? 0);
+            $lib = (string) ($agg[$k][$sel]['n'] ?? $sel);
+            foreach ((array) ($agg[$k][$sel]['w'] ?? []) as $sid => $w) {
+                $par[(string) $sid] = round(($par[(string) $sid] ?? 0) + (float) $w, 2);
+            }
+        }
+    }
+    return [$val === null ? null : round($val, 2), $par, $rendu, $lib];
+}
+
+/**
+ * Agrégat d'une période close, relu depuis la base.
+ *
+ * Les périodes closes sont immuables : les relire à chaque ouverture d'écran
+ * coûtait cinquante secondes pour six mois, et tenter d'aller plus vite en
+ * multipliant les connexions simultanées faisait échouer les appels plutôt
+ * qu'accélérer. Seule la période en cours reste interrogée en direct.
+ */
+function analyseCache(string $cle): ?array
+{
+    try { $v = setting($cle); } catch (PDOException $e) { return null; }
+    return is_array($v) ? $v : null;
+}
+
+function analyseCacheMaj(string $cle, array $v): void
+{
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            [$cle, json_encode($v, JSON_UNESCAPED_UNICODE)]);
+    } catch (PDOException $e) { /* le cache est un confort, pas une dépendance */ }
+}
+
+/** Découpe [du, au] en bornes mensuelles — l'unité que l'API sait servir. */
+function analyseMois(string $du, string $au): array
+{
+    $out = []; $c = date('Y-m-01', strtotime($du));
+    while ($c <= $au) {
+        $fin = min(date('Y-m-t', strtotime($c)), $au);
+        $out[] = [max($c, $du), $fin];
+        $c = date('Y-m-01', strtotime($c . ' +1 month'));
+    }
+    return $out;
+}
+
+/** Boutiques du réseau, via l'API. La première sert de laissez-passer aux
+ *  routes réseau, qui exigent un `shop_id` sans pour autant filtrer dessus. */
+function analyseShops(): array
+{
+    static $ids = null;
+    if ($ids !== null) { return $ids; }
+    $ids = [];
+    foreach (analyseListe(PanelApi::consultantShops()) as $s) {
+        $v = (int) ($s['id'] ?? $s['id_shop'] ?? $s['shop_id'] ?? 0);
+        if ($v > 0) { $ids[] = $v; }
+    }
+    return $ids = $ids ?: [2];
+}
+
+function analyseShop(): int { return analyseShops()[0]; }
+
+
+/**
+ * Vocabulaire analysable — alimenté par les routes qui portent les DONNÉES.
+ *
+ * C'est le cœur du correctif : le sélecteur était rempli avec les catégories du
+ * catalogue (81), alors que les ventes sont ventilées par groupe (12). Aucun
+ * nom ne se rencontrait, et l'écran rendait une série vide sans la moindre
+ * erreur — un silence qui se lit comme « pas de vente ». Une liste d'options
+ * dérivée de la source interdit structurellement ce décalage : on ne peut
+ * demander que ce que l'API sait rendre.
+ */
+function ep_produits_analyse_options(): array
+{
+    $out = ['categories' => [], 'souscategories' => [], 'produits' => [], 'periode' => null,
+        'source' => null, 'erreur' => null];
+    if (!PanelApi::configured()) { $out['erreur'] = 'compte consultant non configuré'; return $out; }
+
+    // Fenêtre de référence : le dernier mois de caisse réellement encodé, jamais
+    // le mois courant — un mois entamé rendrait une liste tronquée aux seules
+    // références déjà vendues, et masquerait le reste de l'assortiment.
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m', strtotime('-1 month'));
+    $du = $per . '-01';
+    $au = min(date('Y-m-t', strtotime($du)), date('Y-m-d'));
+    $out['periode'] = $per;
+
+    // Les groupes passent par le MÊME agrégat mémorisé que les séries. Les lire
+    // par un appel direct les rendait tributaires d'un aller-retour de douze
+    // secondes : sous charge il expirait une fois sur deux et le sélecteur
+    // revenait vide — sans erreur, donc indiscernable d'un réseau sans vente.
+    $cats = [];
+    foreach (analyseAgregats('categorie', analysePlages('categorie', $du, $au)) as $a) {
+        foreach ((array) $a as $parCat) {
+            foreach ((array) $parCat as $nom => $ca) {
+                $cats[(string) $nom] = ($cats[(string) $nom] ?? 0) + (float) $ca;
+            }
+        }
+    }
+    $out['source'] = '/consultant/shops/category-sales (par mois, réseau)';
+    arsort($cats);
+    foreach ($cats as $nom => $ca) { $out['categories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($ca, 2)]; }
+
+    // Références ET sous-catégories viennent de la route qui les mesurera :
+    // mêmes identifiants, même agrégation réseau, donc aucune sélection ne peut
+    // retomber dans le vide. Triées par volume : sur des centaines de lignes,
+    // l'ordre alphabétique suppose de connaître le nom exact avant de chercher.
+    $prods = []; $sous = [];
+    foreach (analyseAgregats('produit', analysePlages('produit', $du, $au)) as $a) {
+        foreach ((array) $a as $pid => $p) {
+            $prods[] = ['cle' => (string) $pid, 'nom' => (string) $p['n'], 'poids' => (float) $p['v']];
+            $c = trim((string) ($p['c'] ?? ''));
+            if ($c !== '') { $sous[$c] = ($sous[$c] ?? 0) + (float) $p['v']; }
+        }
+    }
+    usort($prods, fn($a, $b) => $b['poids'] <=> $a['poids']);
+    $out['produits'] = $prods;
+    arsort($sous);
+    foreach ($sous as $nom => $v) { $out['souscategories'][] = ['cle' => $nom, 'nom' => $nom, 'poids' => round($v, 2)]; }
+    // Un niveau vide se signale NIVEAU PAR NIVEAU. Ne parler qu'au cas où tout
+    // manque laissait passer le cas réel : les groupes absents, le reste rempli,
+    // et un sélecteur muet qui ressemble à un réseau sans vente.
+    $vides = [];
+    foreach (['categories' => 'groupe', 'souscategories' => 'catégorie', 'produits' => 'référence'] as $k => $lib) {
+        if (!$out[$k]) { $vides[] = $lib; }
+    }
+    if ($vides) {
+        $out['erreur'] = 'aucun niveau « ' . implode(' », « ', $vides) . ' » rendu sur ' . $per
+            . ' — ' . (PanelApi::$lastError ?: 'l\'API n\'a pas répondu pour cette période');
+    }
+    return $out;
+}
+
+/** Liste d'une réponse d'API, quelle que soit son enveloppe. */
+function analyseListe($r): array
+{
+    if (!is_array($r)) { return []; }
+    if (array_is_list($r)) { return $r; }
+    foreach (['data', 'items', 'shops', 'results'] as $k) {
+        if (isset($r[$k]) && is_array($r[$k]) && array_is_list($r[$k])) { return $r[$k]; }
+    }
+    return [];
+}
+
+/** Libellé de mois en français — `strftime` est déprécié et dépend du locale. */
+function strftime_fr(int $ts, string $fmt): string
+{
+    $M = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+    return $M[(int) date('n', $ts) - 1] . ' ' . date('Y', $ts);
+}
+
+/**
+ * Catégories produit indexées par id, avec leur groupe.
+ * La liaison porte `id_category` / `id_group`, et une catégorie peut relever
+ * de PLUSIEURS groupes (les boissons sont aussi du traiteur) : sans
+ * regroupement, la jointure dupliquerait la catégorie autant de fois.
+ * Rend null si la base partagée n'est pas là.
+ */
+/**
+ * Le catalogue du panel, lu EN DIRECT : les groupes (/product-category-groups), les
+ * catégories (/product-categories) et les produits de chaque magasin du compte
+ * (/shops/{id}/products/available) avec leur catégorie, leurs groupes et leur prix pratiqué.
+ * Mémo d'une heure dans ceo_app_setting (`panelCatalogue`), la dernière lecture servie si le
+ * panel se tait, jamais une lecture vide. Demande du 03/10/2026 : plus de copie locale.
+ *
+ * @return array{produits: array<int, array>, categories: array<int, array{nom: string, groupe: ?string, actif: int}>, groupes: array<int, string>}
+ */
+function panelCatalogue(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $vide = ['produits' => [], 'categories' => [], 'groupes' => []];
+    $c = setting('panelCatalogue');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    $deCache = static fn ($c) => ['produits' => (array) ($c['produits'] ?? []), 'categories' => (array) ($c['categories'] ?? []), 'groupes' => (array) ($c['groupes'] ?? [])];
+    if (is_array($c) && isset($c['ts'], $c['produits'], $c['categories']) && time() - (int) $c['ts'] < 3600) { return $memo = $deCache($c); }
+    if (!PanelApi::configured()) { return $memo = is_array($c) ? $deCache($c) : $vide; }
+    $lis = static function (array $x, array $cles): string { foreach ($cles as $k) { if (!empty($x[$k]) && is_string($x[$k])) { return trim($x[$k]); } } return ''; };
+    $num = static function (array $x, array $cles): int { foreach ($cles as $k) { if (isset($x[$k]) && is_numeric($x[$k])) { return (int) $x[$k]; } } return 0; };
+    $groupes = [];
+    foreach (PanelApi::productCategoryGroups() as $g) { $id = $num($g, ['id', 'id_group', 'group_id']); $n = $lis($g, ['base_name', 'name', 'group_name', 'label']); if ($id > 0 && $n !== '') { $groupes[$id] = $n; } }
+    $cats = [];
+    foreach (PanelApi::productCategories() as $r) { $id = $num($r, ['id', 'id_category', 'category_id']); $n = $lis($r, ['base_name', 'name', 'category_name', 'label']); if ($id > 0 && $n !== '') { $cats[$id] = ['nom' => $n, 'groupe' => null, 'actif' => isset($r['is_active']) ? (int) $r['is_active'] : 1]; } }
+    $prods = []; $prix = [];
+    foreach (PanelApi::consultantShops() ?? [] as $sh) {
+        $sid = (int) ($sh['id'] ?? 0);
+        if ($sid <= 0) { continue; }
+        foreach (PanelApi::produitsDisponibles($sid) as $l) {
+            $pid = $num($l, ['id', 'product_id', 'id_product']);
+            if ($pid <= 0) { continue; }
+            $cid = $num($l, ['id_category', 'category_id']);
+            $co = isset($l['category']) && is_array($l['category']) ? $l['category'] : null;
+            if ($co !== null) {
+                if ($cid <= 0) { $cid = $num($co, ['id']); }
+                $cn = $lis($co, ['base_name', 'name']);
+                if ($cid > 0 && !isset($cats[$cid]) && $cn !== '') { $cats[$cid] = ['nom' => $cn, 'groupe' => null, 'actif' => isset($co['is_active']) ? (int) $co['is_active'] : 1]; }
+                // Les groupes de la catégorie, quand la ligne les porte : objets, identifiants ou noms.
+                if ($cid > 0 && isset($cats[$cid]) && $cats[$cid]['groupe'] === null && isset($co['groups']) && is_array($co['groups'])) {
+                    $noms = [];
+                    foreach ($co['groups'] as $g) {
+                        $n = is_array($g) ? ($lis($g, ['base_name', 'name', 'group_name']) ?: ($groupes[$num($g, ['id', 'id_group', 'group_id'])] ?? '')) : (is_numeric($g) ? ($groupes[(int) $g] ?? '') : trim((string) $g));
+                        if ($n !== '') { $noms[$n] = true; }
+                    }
+                    if ($noms !== []) { $cats[$cid]['groupe'] = implode(' · ', array_keys($noms)); }
+                }
+            }
+            $pp = 0.0;
+            foreach (['portion_price_gross', 'portion_price'] as $k) { if (isset($l[$k]) && is_numeric($l[$k]) && (float) $l[$k] > 0) { $pp = (float) $l[$k]; break; } }
+            if ($pp > 0) { $prix[$pid][$sid] = round($pp, 2); }
+            if (!isset($prods[$pid])) {
+                $prods[$pid] = ['id' => $pid, 'nom' => $lis($l, ['base_name', 'name', 'product_name']), 'catId' => $cid,
+                    'cat' => $lis($l, ['base_category_name', 'category_name']) ?: (string) ($cats[$cid]['nom'] ?? ''),
+                    'actif' => isset($l['is_active']) ? (int) $l['is_active'] : 1,
+                    'recette' => $num($l, ['id_recipe', 'recipe_id']) ?: null,
+                    'suggere' => isset($l['suggested_sale_price']) && is_numeric($l['suggested_sale_price']) ? (float) $l['suggested_sale_price'] : null,
+                    'attendu' => isset($l['expected_margin']) && is_numeric($l['expected_margin']) ? (float) $l['expected_margin'] : null,
+                    'shelf' => $num($l, ['shelf_life_minutes']), 'prepare' => (int) ($l['is_prepared_before_sales'] ?? 0), 'poids' => $num($l, ['single_weight']),
+                    'nutriscore' => (string) ($l['nutriscore'] ?? ''), 'allergene' => (string) ($l['allergene'] ?? ''),
+                    'prix' => null, 'prixParMagasin' => []];
+            }
+        }
+    }
+    foreach ($prix as $pid => $m) { $prods[$pid]['prixParMagasin'] = $m; $prods[$pid]['prix'] = round(array_sum($m) / count($m), 2); }
+    if ($prods === [] && $cats === []) { return $memo = is_array($c) ? $deCache($c) : $vide; }
+    $v = ['ts' => time(), 'produits' => $prods, 'categories' => $cats, 'groupes' => $groupes];
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['panelCatalogue', json_encode($v, JSON_UNESCAPED_UNICODE)]);
+    } catch (PDOException $e) { /* sans mémo */ }
+    return $memo = $deCache($v);
+}
+
+/**
+ * Le catalogue COMPLET du panel : panelCatalogue (ce que les magasins vendent aujourd'hui),
+ * complété par les produits de chaque catégorie (/product-categories/{id}/products) — les
+ * références qu'aucun magasin ne propose en ce moment (saisonnières, retirées de la vente)
+ * y figurent, marquées `dispo` = false. Lu en parallèle, en mémo une heure
+ * (`panelCatalogueComplet`). Le référentiel et les recherches le lisent ; le détail des
+ * ventes se contente de panelCatalogue, plus léger.
+ */
+function panelCatalogueComplet(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $base = panelCatalogue();
+    $c = setting('panelCatalogueComplet');
+    if (is_string($c)) { $c = json_decode($c, true); }
+    if (is_array($c) && isset($c['ts'], $c['produits']) && time() - (int) $c['ts'] < 3600) {
+        $prods = (array) $c['produits'];
+        foreach ($base['produits'] as $pid => $x) { $prods[(int) $pid] = $x + ['dispo' => true]; }
+        return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+    }
+    $prods = [];
+    foreach ($base['produits'] as $pid => $x) { $prods[(int) $pid] = $x + ['dispo' => true]; }
+    if (PanelApi::configured() && $base['categories'] !== []) {
+        $lis = static function (array $x, array $cles): string { foreach ($cles as $k) { if (!empty($x[$k]) && is_string($x[$k])) { return trim($x[$k]); } } return ''; };
+        $num = static function (array $x, array $cles): int { foreach ($cles as $k) { if (isset($x[$k]) && is_numeric($x[$k])) { return (int) $x[$k]; } } return 0; };
+        $chemins = [];
+        foreach (array_keys($base['categories']) as $cid) { $chemins[(int) $cid] = '/product-categories/' . (int) $cid . '/products'; }
+        $hors = []; $lus = 0;
+        foreach (PanelApi::getParallele($chemins, 8, 25) as $cid => $r) {
+            if (!is_array($r)) { continue; }
+            $lus++;
+            foreach (PanelApi::liste($r) as $l) {
+                $pid = $num($l, ['id', 'id_product', 'product_id']);
+                $nom = $lis($l, ['base_name', 'name', 'product_name', 'label']);
+                if ($pid <= 0 || $nom === '' || isset($prods[$pid])) { continue; }
+                $hors[$pid] = ['id' => $pid, 'nom' => $nom, 'catId' => (int) $cid, 'cat' => (string) ($base['categories'][$cid]['nom'] ?? ''),
+                    'actif' => isset($l['is_active']) ? (int) $l['is_active'] : 1,
+                    'recette' => $num($l, ['id_recipe', 'recipe_id']) ?: null,
+                    'suggere' => isset($l['suggested_sale_price']) && is_numeric($l['suggested_sale_price']) ? (float) $l['suggested_sale_price'] : null,
+                    'attendu' => isset($l['expected_margin']) && is_numeric($l['expected_margin']) ? (float) $l['expected_margin'] : null,
+                    'shelf' => $num($l, ['shelf_life_minutes']), 'prepare' => (int) ($l['is_prepared_before_sales'] ?? 0), 'poids' => $num($l, ['single_weight']),
+                    'nutriscore' => (string) ($l['nutriscore'] ?? ''), 'allergene' => (string) ($l['allergene'] ?? ''),
+                    'prix' => null, 'prixParMagasin' => [], 'dispo' => false];
+            }
+        }
+        // Une lecture qui n'a rien rendu ne s'écrit pas : le panel s'est tu, on ressert la précédente.
+        if ($lus > 0) {
+            try {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['panelCatalogueComplet', json_encode(['ts' => time(), 'produits' => $hors], JSON_UNESCAPED_UNICODE)]);
+            } catch (PDOException $e) { /* sans mémo */ }
+            foreach ($hors as $pid => $x) { $prods[$pid] = $x; }
+            return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+        }
+    }
+    foreach ((array) ($c['produits'] ?? []) as $pid => $x) { if (!isset($prods[(int) $pid])) { $prods[(int) $pid] = $x; } }
+    return $memo = ['produits' => $prods, 'categories' => $base['categories'], 'groupes' => $base['groupes']];
+}
+
+function catalogueCategories(): ?array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    // L'API du panel d'abord : les catégories qu'elle liste, leurs groupes quand les lignes
+    // produit les portent. La table de liaison de la copie locale ne sert plus qu'à combler
+    // un groupe que l'API ne donne pas — et la copie entière, que si le panel se tait.
+    $pc = panelCatalogue();
+    if ($pc['categories'] !== []) {
+        $cat = [];
+        foreach ($pc['categories'] as $id => $x) { $cat[(int) $id] = ['nom' => (string) $x['nom'], 'groupe' => isset($x['groupe']) && $x['groupe'] !== '' ? (string) $x['groupe'] : null]; }
+        if (array_filter($cat, static fn ($x) => $x['groupe'] === null) !== []) {
+            try {
+                foreach (Db::rows("SELECT c.id, GROUP_CONCAT(DISTINCT g.name ORDER BY g.id SEPARATOR ' · ') AS groupe
+                                     FROM product_category c
+                                     JOIN product_category_group_connection k ON k.id_category = c.id
+                                     JOIN product_category_group g ON g.id = k.id_group
+                                 GROUP BY c.id") as $r) {
+                    $id = (int) $r['id'];
+                    if (isset($cat[$id]) && $cat[$id]['groupe'] === null && !empty($r['groupe'])) { $cat[$id]['groupe'] = (string) $r['groupe']; }
+                }
+            } catch (PDOException $e) { /* sans copie : les groupes de l'API suffisent */ }
+        }
+        return $memo = $cat;
+    }
+    $sql = "SELECT c.id, c.name,
+                   GROUP_CONCAT(DISTINCT g.name ORDER BY g.id SEPARATOR ' · ') AS groupe
+              FROM product_category c
+         LEFT JOIN product_category_group_connection k ON k.id_category = c.id
+         LEFT JOIN product_category_group g ON g.id = k.id_group
+          GROUP BY c.id, c.name";
+    try {
+        $rows = Db::rows($sql);
+    } catch (PDOException $e) {
+        // Le regroupement est un confort ; la catégorie, elle, est nécessaire.
+        try { $rows = Db::rows('SELECT id, name, NULL AS groupe FROM product_category'); }
+        catch (PDOException $e2) { return null; }
+    }
+    $cat = [];
+    foreach ($rows as $c) {
+        $cat[(int) $c['id']] = ['nom' => (string) $c['name'],
+            'groupe' => !empty($c['groupe']) ? (string) $c['groupe'] : null];
+    }
+    return $memo = ($cat ?: null);
+}
+
+/**
+ * Coût matière par référence : l'API du panel d'abord, les recettes de la copie locale en
+ * dernier recours (demande du 03/10/2026 : tout en direct depuis l'API, plus de copie).
+ *
+ * `product` ne porte aucun coût : il vit dans `recipe_cost`, rattaché à la
+ * recette et non au produit. Deux natures de lignes s'y côtoient — le coût
+ * de référence du réseau (id_shop = 0, price_type « suggested ») et le coût
+ * recalculé par magasin. On préfère la référence réseau ; à défaut, la
+ * moyenne des magasins. Les zéros sont écartés : ils signifient « pas encore
+ * calculé », pas « gratuit », et les prendre pour argent comptant afficherait
+ * une marge de 100 %.
+ */
+function catalogueCouts(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    // L'API DU PANEL D'ABORD : chaque ligne de GET /shops/{id}/products/available porte
+    // recipe_cost_net, le coût de la recette tel que le panel le calcule aujourd'hui — la
+    // moyenne des magasins du compte, en mémo une heure (coutsPanelEnCache). La copie
+    // locale des recettes ne comble plus que les références que le panel ne chiffre pas.
+    $out = [];
+    foreach (coutsPanelEnCache() as $pid => $c) {
+        $out[(int) $pid] = ['mat' => (float) $c, 'rendement' => 1.0, 'source' => 'panel (products/available)'];
+    }
+    try {
+        // Le rendement divise le coût quand la recette en déclare un. Mesuré
+        // sur la base : il vaut 1,00 partout aujourd'hui, la division ne change
+        // donc aucun chiffre — elle protège d'une recette future au rendement
+        // multiple. Les coûts aberrants constatés (un cannelloni à 734 € de
+        // matière pour 7,50 € de vente) ne viennent PAS de là : ce sont des
+        // recettes mal chiffrées en amont. Seul le contrôle de vraisemblance
+        // ci-dessous les empêche de nourrir le score.
+        $rows = Db::rows("SELECT p.id AS pid, r.yield_quantity AS rendement,
+                                 AVG(CASE WHEN rc.id_shop = 0 AND rc.calculated_cost_net > 0
+                                          THEN rc.calculated_cost_net END) AS reseau,
+                                 AVG(CASE WHEN rc.id_shop > 0 AND rc.calculated_cost_net > 0
+                                          THEN rc.calculated_cost_net END) AS magasins
+                            FROM product p
+                            JOIN recipe_cost rc ON rc.id_recipe = p.id_recipe
+                       LEFT JOIN product_recipe r ON r.id = p.id_recipe
+                           WHERE p.id_recipe IS NOT NULL AND p.is_active = 1
+                        GROUP BY p.id, r.yield_quantity");
+    } catch (PDOException $e) { return $memo = $out; }
+    foreach ($rows as $r) {
+        if (isset($out[(int) $r['pid']])) { continue; }   // le panel l'a chiffré : il a la main
+        $res = $r['reseau'] !== null ? (float) $r['reseau'] : null;
+        $mag = $r['magasins'] !== null ? (float) $r['magasins'] : null;
+        $v = $res ?? $mag;
+        if ($v === null || $v <= 0) { continue; }
+        $rend = $r['rendement'] !== null ? (float) $r['rendement'] : 1.0;
+        if ($rend > 0) { $v /= $rend; }
+        $out[(int) $r['pid']] = ['mat' => round($v, 3), 'rendement' => $rend,
+            'source' => $res !== null ? 'recette réseau (copie locale)' : 'moyenne magasins (copie locale)'];
+    }
+
+    // Les références que recipe_cost ne couvre pas (~289 sur 711) ne restent
+    // plus sans coût : le panel les chiffre aussi — chaque ligne de
+    // GET /shops/{id}/products/available porte recipe_cost_net, la même
+    // nature que calculated_cost_net. Il ne fait que COMBLER les trous : la
+    // recette locale garde la main quand elle existe, et la saisie du cockpit
+    // prime toujours en aval. Servi ici et non chez chaque appelant : trois
+    // écrans lisent ce coût, deux réponses différentes sur la même référence
+    // seraient pires que pas de coût du tout.
+    //
+    // Et le panel se lit EN CACHE (6 h), pas à chaque requête : mesuré en
+    // production, l'appel en direct portait /products/scoring à 13 s quand
+    // les trente lectures du chargement partent ensemble — au-delà du délai
+    // client de 20 s pour certains navigateurs, et l'écran s'affichait vide.
+    // Des coûts de recette vieux de quelques heures ne changent aucun
+    // arbitrage ; un écran vide, si.
+    return $memo = $out;
+}
+
+/** Le coût matière d'un magasin, par produit, tel que le panel le chiffre pour lui ; sinon la moyenne du réseau. */
+function coutsPanelMagasin(int $sid): array
+{
+    $m = coutsPanelParMagasinEnCache();
+    return $m[$sid] ?? ($m[(string) $sid] ?? []);
+}
+
+/**
+ * Les coûts matière du panel, servis depuis ceo_app_setting (6 heures).
+ *
+ * Cache PÉRIMÉ plutôt que vide : si le panel ne répond pas au moment du
+ * rafraîchissement, on ressert la dernière lecture réussie — un coût d'hier
+ * vaut mieux qu'une marge qui disparaît de l'écran. Un cache vide n'est
+ * jamais écrit : il fixerait une panne passagère pour six heures.
+ *
+ * @return array<int|string, float>
+ */
+function coutsPanelEnCache(): array
+{
+    return coutsPanelLecture()['couts'];
+}
+
+/** Le même mémo, par magasin — [sid => [pid => coût]]. */
+function coutsPanelParMagasinEnCache(): array
+{
+    return coutsPanelLecture()['parMagasin'];
+}
+
+/**
+ * La lecture du panel, mémoïsée dans la requête et gardée UNE HEURE dans ceo_app_setting
+ * (`coutsPanel` : ts, couts = la moyenne du réseau, parMagasin). Le panel muet ressert la
+ * dernière lecture plutôt que rien ; une lecture vide ne s'écrit jamais.
+ */
+function coutsPanelLecture(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $cache = setting('coutsPanel');
+    if (is_string($cache)) { $cache = json_decode($cache, true); }
+    $frais = is_array($cache) && isset($cache['ts'], $cache['couts'], $cache['parMagasin'])
+        && (time() - (int) $cache['ts']) < 3600;
+    if ($frais) { return $memo = ['couts' => (array) $cache['couts'], 'parMagasin' => (array) $cache['parMagasin']]; }
+
+    $panel = PanelApi::coutsMatiere();
+    if ($panel !== []) {
+        $v = ['ts' => time(), 'couts' => $panel, 'parMagasin' => PanelApi::coutsMatiereParMagasin()];
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['coutsPanel', json_encode($v)]);
+        } catch (PDOException $e) { /* pas de cache : on servira quand même */ }
+        return $memo = ['couts' => $panel, 'parMagasin' => $v['parMagasin']];
+    }
+    return $memo = ['couts' => is_array($cache) && isset($cache['couts']) ? (array) $cache['couts'] : [],
+        'parMagasin' => is_array($cache) && isset($cache['parMagasin']) ? (array) $cache['parMagasin'] : []];
+}
+
+/**
+ * Un coût matière est-il exploitable pour calculer une marge ?
+ *
+ * Le seuil bas est un réglage (`production.coutRatioMin`, 5 % par défaut) et
+ * non une constante cachée : c'est un jugement métier, il doit pouvoir se
+ * discuter. Un coût nul ou négatif n'est jamais crédible.
+ */
+function coutVraisemblable(?float $mat, ?float $prix): bool
+{
+    if ($mat === null || $prix === null || $prix <= 0) { return true; }  // rien à juger
+    if ($mat <= 0 || $mat >= $prix) { return false; }
+    $p = setting('production', []);
+    $min = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
+    if ($min <= 0) { return true; }
+    return ($mat / $prix) >= $min;
+}
+
+/**
+ * Prix de vente réellement pratiqué, moyenne des magasins du compte : `portion_price` de
+ * /shops/{id}/products/available (l'API, en direct), la copie `shop_product` ne comblant que
+ * les références que le panel ne liste plus.
+ */
+function cataloguePrix(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $out = [];
+    foreach (panelCatalogue()['produits'] as $pid => $x) { if (($x['prix'] ?? null) !== null && (float) $x['prix'] > 0) { $out[(int) $pid] = round((float) $x['prix'], 2); } }
+    try {
+        foreach (Db::rows('SELECT id_product, AVG(portion_price) prix
+                             FROM shop_product WHERE portion_price > 0 GROUP BY id_product') as $r) {
+            if (!isset($out[(int) $r['id_product']])) { $out[(int) $r['id_product']] = round((float) $r['prix'], 2); }
+        }
+    } catch (PDOException $e) { /* sans copie : le panel suffit */ }
+    return $memo = $out;
+}
+
+/** Le prix pratiqué par UN magasin, par produit, tel que products/available le donne pour lui. */
+function cataloguePrixMagasin(int $sid): array
+{
+    $out = [];
+    foreach (panelCatalogue()['produits'] as $pid => $x) { $m = $x['prixParMagasin'] ?? []; $v = $m[$sid] ?? ($m[(string) $sid] ?? null); if ($v !== null && (float) $v > 0) { $out[(int) $pid] = (float) $v; } }
+    return $out;
+}
+
+/**
+ * Lecture du catalogue réel dans la base partagée.
+ * Rend null — et non un tableau vide — si les tables ne sont pas là : un vide
+ * se confondrait avec « catalogue sans produit » et masquerait la panne.
+ */
+/**
+ * La fiche de production porte-t-elle au moins une valeur ?
+ *
+ * L'existence de la ligne ne suffit pas : cocher « obligatoire » puis décocher
+ * laisse une ligne à zéro derrière, et compter cette ligne comme une fiche
+ * remplie gonflait la couverture du catalogue sans qu'une seule donnée ait été
+ * saisie. On regarde donc le contenu, pas la présence.
+ */
+function ficheRemplie(?array $e): bool
+{
+    if ($e === null) { return false; }
+    foreach (['prep', 'cuisson', 'fin', 'bmin', 'four', 'dlv', 'qmin'] as $k) {
+        if ((int) ($e[$k] ?? 0) > 0) { return true; }
+    }
+    if ((int) ($e['bmult'] ?? 1) > 1) { return true; }
+    if (($e['mat'] ?? null) !== null || ($e['prix'] ?? null) !== null) { return true; }
+    if ((string) ($e['profil'] ?? '') !== '') { return true; }
+    return !empty($e['must']);
+}
+
+function ep_prod_catalogue_reel(array $enrich, array $parRef, array $plano): ?array
+{
+    // Catégorie + groupe. La liaison passe par une table dédiée ; si elle
+    // manque, on garde la catégorie et on perd seulement le regroupement.
+    $cat = catalogueCategories();
+    if ($cat === null) { return null; }
+
+    // Gammes saisonnières : plusieurs périodes possibles par référence.
+    $per = [];
+    try {
+        foreach (Db::rows('SELECT k.id_product, p.name
+                             FROM product_availability_period_connection k
+                             JOIN product_availability_period p ON p.id = k.id_period
+                            WHERE p.is_active = 1') as $r) {
+            $per[(int) $r['id_product']][] = (string) $r['name'];
+        }
+    } catch (PDOException $e) { /* sans gamme : le produit reste permanent */ }
+
+    try {
+        // Les produits : ceux que le panel liste pour les magasins du compte (products/available),
+        // dans la forme de la table `product` ; la copie locale seulement si le panel se tait.
+        $prods = [];
+        foreach (panelCatalogueComplet()['produits'] as $x) {
+            if (empty($x['actif'])) { continue; }
+            $prods[] = ['id' => (int) $x['id'], 'name' => (string) $x['nom'], 'id_category' => (int) ($x['catId'] ?? 0), 'id_recipe' => $x['recette'] ?? null, 'is_active' => 1,
+                'suggested_sale_price' => $x['suggere'] ?? null, 'expected_margin' => $x['attendu'] ?? null, 'shelf_life_minutes' => (int) ($x['shelf'] ?? 0),
+                'is_prepared_before_sales' => (int) ($x['prepare'] ?? 0), 'single_weight' => (int) ($x['poids'] ?? 0), 'nutriscore' => (string) ($x['nutriscore'] ?? ''), 'allergene' => (string) ($x['allergene'] ?? '')];
+        }
+        if ($prods !== []) { usort($prods, static fn ($a, $b) => [$a['id_category'], $a['name']] <=> [$b['id_category'], $b['name']]); }
+        else {
+            $prods = Db::rows('SELECT id, name, id_category, id_recipe, is_active,
+                                      suggested_sale_price, expected_margin, shelf_life_minutes,
+                                      is_prepared_before_sales, single_weight, nutriscore, allergene
+                                 FROM product WHERE is_active = 1 ORDER BY id_category, name');
+        }
+    } catch (PDOException $e) { return null; }
+    if (!$prods) { return null; }
+    $fins = [];
+    foreach (Db::rows('SELECT ref, end_on, note FROM ceo_prod_fin') as $fx) {
+        $fins[(string) $fx['ref']] = ['end_on' => $fx['end_on'], 'note' => $fx['note']];
+    }
+
+    $couts = catalogueCouts();
+    $prixR = cataloguePrix();
+    $out = [];
+    foreach ($prods as $p) {
+        $pid = (int) $p['id'];
+        // Un identifiant négatif n'est pas une référence : le catalogue du panel
+        // en porte un (« 1/4 - Chocolat », id -99, catégorie -1 qui n'existe
+        // pas). Trié en tête, il ouvrait le référentiel sur une ligne qu'aucun
+        // magasin ne peut tenir. Il est écarté ici et DÉCLARÉ dans les lacunes,
+        // pour qu'on sache qu'il a été écarté au lieu de le croire absent.
+        if ($pid <= 0) { continue; }
+        $c   = $cat[(int) $p['id_category']] ?? null;
+        $e   = $enrich[$pid] ?? ($parRef[(string) $pid] ?? null);
+        $ref = $e !== null ? (string) $e['ref'] : (string) $pid;
+        $pl  = $plano[$ref] ?? null;
+
+        // Prix : la saisie réseau prime, puis le prix réellement pratiqué en
+        // boutique (`shop_product`), puis seulement le prix conseillé de la
+        // fiche — qui vaut 1,00 partout, donc ne veut rien dire.
+        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : null;
+        $prixSrc = $prix !== null ? 'réseau' : null;
+        if ($prix === null && isset($prixR[$pid])) { $prix = $prixR[$pid]; $prixSrc = 'boutiques'; }
+        if ($prix === null && (float) $p['suggested_sale_price'] > 0) {
+            $prix = (float) $p['suggested_sale_price']; $prixSrc = 'fiche';
+        }
+        // Coût matière : la saisie cockpit prime, sinon la recette du réseau.
+        $mat = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : null;
+        $matSrc = $mat !== null ? 'saisi' : null;
+        if ($mat === null && isset($couts[$pid])) {
+            $mat = $couts[$pid]['mat']; $matSrc = $couts[$pid]['source'];
+        }
+        // Vraisemblance du coût. Au-dessus du prix, la recette est mal
+        // chiffrée ; très en dessous, elle est incomplète — un granola à
+        // 0,01 € de matière pour 8,95 € donne 99,9 % de marge et hisserait la
+        // référence en tête du critère. Les deux erreurs se valent, on écarte
+        // les deux. On MONTRE le coût malgré tout : c'est ce qui permet de le
+        // corriger à la source.
+        $matFiable = coutVraisemblable($mat, $prix);
+
+        $dlv = $e !== null && (int) $e['dlv'] > 0 ? (int) $e['dlv'] : null;
+        if ($dlv === null && (int) $p['shelf_life_minutes'] > 0) {
+            $dlv = (int) round(((int) $p['shelf_life_minutes']) / 60);
+        }
+
+        $fin = $fins[$ref] ?? null;
+        $out[] = [
+            'ref' => $ref, 'pwaId' => $pid, 'nom' => (string) $p['name'],
+            // Fin de gamme annoncée : la date et la note voyagent avec la
+            // référence, chaque écran qui l'affiche peut la marquer.
+            'finLe' => $fin['end_on'] ?? null, 'finNote' => $fin['note'] ?? null,
+            'categorie' => $c['nom'] ?? '', 'groupe' => $c['groupe'] ?? null,
+            'categorieId' => (int) $p['id_category'],
+            'prep'    => $e ? (int) $e['prep'] : 0,
+            'cuisson' => $e ? (int) $e['cuisson'] : 0,
+            'fin'     => $e ? (int) $e['fin'] : 0,
+            'bmin'    => $e ? (int) $e['bmin'] : 0,
+            'bmult'   => $e ? (int) $e['bmult'] : 1,
+            'four'    => $e ? (int) $e['four'] : 0,
+            'dlv' => $dlv ?? 0, 'mat' => $mat, 'prix' => $prix,
+            'matSource' => $matSrc, 'prixSource' => $prixSrc, 'matFiable' => $matFiable,
+            'marge'    => ($matFiable && $mat !== null && $prix !== null) ? round($prix - $mat, 3) : null,
+            'margePct' => ($matFiable && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            // Marge NETTE : la commission de marque retirée. Elle vient de la
+            // centrale d'achat, qui n'a plus son propre écran catalogue —
+            // deux catalogues sur les mêmes 711 références se contredisent tôt
+            // ou tard. Le référentiel porte donc les deux marges.
+            'commission'  => $matFiable ? caCommission($prix) : null,
+            'margeNette'  => $matFiable ? caMargeNette($prix, $mat) : null,
+            'margeNettePct' => $matFiable ? caMargeNettePct($prix, $mat) : null,
+            'margeAttendue' => $p['expected_margin'] !== null && (float) $p['expected_margin'] > 0
+                ? round((float) $p['expected_margin'], 2) : null,
+            'must'   => $e ? (bool) $e['must'] : false,
+            'qmin'   => $e ? (int) $e['qmin'] : 0,
+            'profil' => $e ? (string) $e['profil'] : '',
+            'periods' => $per[$pid] ?? [],
+            'recetteId' => $p['id_recipe'] !== null ? (int) $p['id_recipe'] : null,
+            'prepare'   => (int) $p['is_prepared_before_sales'] === 1,
+            'poids'     => (int) $p['single_weight'] ?: null,
+            'parametre' => ficheRemplie($e),
+            'zone'   => $pl ? $pl['zone'] : null,
+            'meuble' => $pl ? $pl['meuble'] : null,
+            'niveau' => $pl ? $pl['niveau'] : null,
+            'slot'   => $pl && $pl['slot'] !== null ? (int) $pl['slot'] : null,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * GET /production/categories — catégories produit du réseau.
+ *
+ * Source : API du panel (/product-categories). Repli sur les tables partagées
+ * (product_category ⨝ product_category_group) si l'API n'est pas configurée —
+ * les deux existent, autant ne pas dépendre d'une seule.
+ *
+ * `debug=1` rend les clés brutes : la forme n'est pas documentée ici, et un
+ * mapping deviné produirait un référentiel faux sans erreur visible.
+ */
+function ep_prod_categories(): array
+{
+    $debug = !empty($_GET['debug']);
+    $out = ['source' => null, 'categories' => [], 'erreur' => null];
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::productCategories();
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
+            foreach ($rows as $c) {
+                $id = null;
+                foreach (['id', 'id_category', 'category_id'] as $k) {
+                    if (isset($c[$k]) && is_numeric($c[$k])) { $id = (int) $c[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'category_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($c[$k]) && is_string($c[$k])) { $nom = trim($c[$k]); break; }
+                }
+                if ($nom === '') { continue; }
+                $grp = '';
+                foreach (['group_name', 'category_group_name', 'group', 'parent_name'] as $k) {
+                    if (!empty($c[$k]) && is_string($c[$k])) { $grp = trim($c[$k]); break; }
+                }
+                $out['categories'][] = ['id' => $id, 'nom' => $nom, 'groupe' => $grp !== '' ? $grp : null];
+            }
+            if ($out['categories']) {
+                // L'API rend les catégories SANS leur groupe : mesuré en ligne,
+                // 81 sur 81 arrivaient orphelines. Le rattachement n'existe que
+                // dans la base (product_category_group_connection). On garde
+                // donc les intitulés de l'API, qui font foi, et on va chercher
+                // le groupe là où il se trouve — plutôt que de livrer un arbre
+                // sans branches.
+                $sans = 0;
+                foreach ($out['categories'] as $c) { if ($c['groupe'] === null) { $sans++; } }
+                if ($sans > 0) {
+                    $ref = catalogueCategories();
+                    if ($ref !== null) {
+                        $repris = 0;
+                        foreach ($out['categories'] as &$c) {
+                            if ($c['groupe'] === null && $c['id'] !== null && !empty($ref[$c['id']]['groupe'])) {
+                                $c['groupe'] = $ref[$c['id']]['groupe'];
+                                $repris++;
+                            }
+                        }
+                        unset($c);
+                        if ($repris > 0) { $out['source'] = 'api + groupes atelierby_db'; }
+                    }
+                }
+                return $out;
+            }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    // Repli base partagée. `catalogueCategories()` porte la jointure correcte
+    // (product_category_group_connection : id_category / id_group) et regroupe
+    // les catégories rattachées à plusieurs groupes, qui sinon apparaîtraient
+    // en double.
+    if (!$out['categories']) {
+        $cat = catalogueCategories();
+        if ($cat !== null) {
+            foreach ($cat as $id => $c) {
+                $out['categories'][] = ['id' => $id, 'nom' => $c['nom'], 'groupe' => $c['groupe']];
+            }
+            usort($out['categories'], function ($a, $b) {
+                return [$a['groupe'] === null, (string) $a['groupe'], $a['id']]
+                   <=> [$b['groupe'] === null, (string) $b['groupe'], $b['id']];
+            });
+            $out['source'] = 'atelierby_db';
+        }
+    }
+    return $out;
+}
+
+/**
+ * Gammes saisonnières du réseau, avec leurs intitulés traduits.
+ *
+ * Les gammes datent l'offre (printanière, estivale, Saint-Nicolas…) et 441
+ * références en portent au moins une. La base tient les dates et le
+ * rattachement ; les traductions n'existent que dans l'API — la table d'alias
+ * de la base est vide, et le réseau est bilingue.
+ */
+function ep_prod_periodes(): array
+{
+    $out = ['source' => null, 'chemin' => null, 'periodes' => [], 'erreur' => null];
+
+    // Combien de références par gamme : une gamme sans référence encombre un
+    // filtre sans rien filtrer.
+    $n = [];
+    try {
+        foreach (Db::rows('SELECT id_period, COUNT(DISTINCT id_product) n
+                             FROM product_availability_period_connection GROUP BY id_period') as $r) {
+            $n[(int) $r['id_period']] = (int) $r['n'];
+        }
+    } catch (PDOException $e) { /* rattachement indisponible */ }
+
+    try {
+        foreach (Db::rows('SELECT id, name, description, start_date, end_date,
+                                  is_recurring, is_active
+                             FROM product_availability_period ORDER BY from_md, id') as $p) {
+            $id = (int) $p['id'];
+            $out['periodes'][] = [
+                'id' => $id, 'nom' => (string) $p['name'],
+                'description' => $p['description'] !== null ? (string) $p['description'] : null,
+                'debut' => $p['start_date'], 'fin' => $p['end_date'],
+                'recurrente' => (int) $p['is_recurring'] === 1,
+                'active' => (int) $p['is_active'] === 1,
+                'references' => $n[$id] ?? 0,
+                'alias' => [],
+            ];
+        }
+        if ($out['periodes']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $e->getMessage();
+    }
+
+    if (!PanelApi::configured()) { return $out; }
+
+    // Les gammes elles-mêmes, si la base n'a rien pu rendre.
+    if (!$out['periodes']) {
+        foreach (PanelApi::availabilityPeriods() as $p) {
+            $id = null;
+            foreach (['id', 'id_period', 'period_id'] as $k) {
+                if (isset($p[$k]) && is_numeric($p[$k])) { $id = (int) $p[$k]; break; }
+            }
+            $nom = '';
+            foreach (['name', 'period_name', 'label', 'title', 'nom'] as $k) {
+                if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+            }
+            if ($nom === '') { continue; }
+            $out['periodes'][] = ['id' => $id, 'nom' => $nom, 'description' => null,
+                'debut' => $p['start_date'] ?? null, 'fin' => $p['end_date'] ?? null,
+                'recurrente' => !empty($p['is_recurring']), 'active' => !isset($p['is_active']) || !empty($p['is_active']),
+                'references' => $id !== null ? ($n[$id] ?? 0) : 0, 'alias' => []];
+        }
+        if ($out['periodes']) { $out['source'] = 'api'; $out['chemin'] = PanelApi::$lastPath; }
+    }
+
+    // Traductions. Clés incertaines : on reconnaît la langue et l'intitulé
+    // parmi les écritures usuelles plutôt que d'en imposer une.
+    $alias = PanelApi::periodNameAliases();
+    if ($alias) {
+        // Les clés ne sont pas documentées : `?debug=1` rend la forme réelle
+        // d'une ligne. Sans cela, un alias non reconnu se solde par une gamme
+        // sans traduction et par AUCUNE erreur — donc par rien à corriger.
+        if (!empty($_GET['debug'])) {
+            $out['aliasBrut'] = array_slice($alias, 0, 3);
+            $out['aliasCles'] = array_slice(array_keys($alias[0]), 0, 25);
+            $out['aliasNb']   = count($alias);
+        }
+        // Forme réelle constatée en ligne : fk_id / base_value / alias_value /
+        // effective_value / lang_code. `alias_value` porte la traduction quand
+        // elle est saisie ; `effective_value` porte ce qu'il faut afficher et
+        // retombe sur l'intitulé de base sinon.
+        $par = [];      // traductions réellement saisies
+        $eff = [];      // intitulé à afficher
+        $rattaches = 0;
+        foreach ($alias as $a) {
+            $id = null;
+            foreach (['fk_id', 'id_period', 'period_id', 'id_product_availability_period', 'id'] as $k) {
+                if (isset($a[$k]) && is_numeric($a[$k])) { $id = (int) $a[$k]; break; }
+            }
+            if ($id === null) { continue; }
+            $rattaches++;
+            $lang = '';
+            foreach (['lang_code', 'lang', 'language', 'locale', 'language_code', 'code'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $lang = strtolower(trim($a[$k])); break; }
+            }
+            foreach (['effective_value', 'base_value'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $eff[$id] = trim($a[$k]); break; }
+            }
+            $val = '';
+            foreach (['alias_value', 'translation', 'alias', 'value', 'text'] as $k) {
+                if (!empty($a[$k]) && is_string($a[$k])) { $val = trim($a[$k]); break; }
+            }
+            if ($val === '') { continue; }            // ligne présente, traduction non saisie
+            $par[$id][$lang !== '' ? $lang : 'defaut'] = $val;
+        }
+        $traduites = 0;
+        foreach ($out['periodes'] as &$p) {
+            if ($p['id'] === null) { continue; }
+            if (isset($par[$p['id']])) { $p['alias'] = $par[$p['id']]; $traduites++; }
+            if (isset($eff[$p['id']])) { $p['nomAffiche'] = $eff[$p['id']]; }
+        }
+        unset($p);
+        $out['aliasSource'] = PanelApi::$lastPath;
+        $out['aliasRecus'] = count($alias);
+        $out['aliasTraduits'] = $traduites;
+        // Deux situations très différentes, qu'il ne faut pas confondre : des
+        // alias qui ne se rattachent à rien (rapprochement cassé, à corriger
+        // ici) et des alias bien rattachés mais vides (traductions jamais
+        // saisies, à compléter dans le panel).
+        if ($rattaches === 0) {
+            $out['aliasErreur'] = count($alias) . ' alias reçus, aucun rattaché à une gamme'
+                . ' — clés inattendues (voir ?debug=1)';
+        } elseif ($traduites === 0) {
+            $out['aliasInfo'] = count($alias) . ' alias rattachés mais aucune traduction saisie'
+                . ' — les gammes s\'affichent dans leur seule langue de base';
+        }
+    } elseif (PanelApi::$lastError !== null) {
+        $out['aliasErreur'] = PanelApi::$lastError;
+    }
+    return $out;
+}
+
+/**
+ * Fabrique la fonction qui met en forme UNE référence, quelle que soit la
+ * branche par laquelle on y arrive — catégorie, gamme, assortiment.
+ *
+ * Les prix, coûts et paramètres de production sont chargés une seule fois et
+ * partagés par toutes les lignes. Deux écrans qui répondraient différemment
+ * sur la même référence seraient pires que pas d'écran du tout : c'est
+ * pourquoi le contrôle de vraisemblance vit ici, et nulle part ailleurs.
+ *
+ * @return callable(int,string):array
+ */
+function produitLigne(): callable
+{
+    $couts = catalogueCouts();
+    $prixR = cataloguePrix();
+    $enrich = [];
+    try {
+        foreach (Db::rows('SELECT pwa_id, mat, prix, must FROM ceo_prod_product WHERE pwa_id IS NOT NULL') as $r) {
+            $enrich[(int) $r['pwa_id']] = $r;
+        }
+    } catch (PDOException $e) { /* référentiel de production absent */ }
+
+    return function (int $pid, string $nom) use ($couts, $prixR, $enrich): array {
+        $e = $enrich[$pid] ?? null;
+        $prix = $e !== null && $e['prix'] !== null ? (float) $e['prix'] : ($prixR[$pid] ?? null);
+        $mat  = $e !== null && $e['mat'] !== null ? (float) $e['mat'] : ($couts[$pid]['mat'] ?? null);
+        $ok   = coutVraisemblable($mat, $prix);
+        return ['id' => (string) $pid, 'nom' => $nom, 'prix' => $prix, 'mat' => $mat,
+            'matFiable' => $ok,
+            'margePct' => ($ok && $mat !== null && $prix > 0) ? round(($prix - $mat) / $prix, 4) : null,
+            'must' => $e !== null ? (bool) $e['must'] : false];
+    };
+}
+
+/**
+ * Références d'une gamme saisonnière.
+ * Même mise en forme que l'ouverture d'une catégorie : c'est la même
+ * référence, vue par une autre branche de l'arbre.
+ */
+function ep_prod_periode_produits(): array
+{
+    $pid = (int) ($_GET['id'] ?? 0);
+    if ($pid <= 0) { http_response_code(400); return ['error' => 'gamme requise']; }
+
+    $out = ['periodeId' => $pid, 'gamme' => null, 'source' => null, 'chemin' => null,
+        'produits' => [], 'erreur' => null];
+    try {
+        $g = Db::rows('SELECT name FROM product_availability_period WHERE id = ?', [$pid]);
+        if ($g) { $out['gamme'] = (string) $g[0]['name']; }
+    } catch (PDOException $e) { /* intitulé indisponible */ }
+
+    $ligne = produitLigne();
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::periodProducts($pid);
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            foreach ($rows as $p) {
+                $id = 0;
+                foreach (['id', 'id_product', 'product_id', 'fk_id'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $id = (int) $p[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'product_name', 'base_value', 'effective_value', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+                }
+                if ($id <= 0 || $nom === '') { continue; }
+                $out['produits'][] = $ligne($id, $nom);
+            }
+            if ($out['produits']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    try {
+        foreach (Db::rows('SELECT p.id, p.name
+                             FROM product_availability_period_connection k
+                             JOIN product p ON p.id = k.id_product
+                            WHERE k.id_period = ? AND p.is_active = 1
+                         ORDER BY p.name', [$pid]) as $p) {
+            $out['produits'][] = $ligne((int) $p['id'], (string) $p['name']);
+        }
+        if ($out['produits']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+    return $out;
+}
+
+/**
+ * Références d'une catégorie, pour ouvrir une branche de l'arbre produit.
+ *
+ * L'API donne la liste faisant foi ; le coût matière, la marge et les
+ * paramètres de production viennent de chez nous. Repli sur la base partagée,
+ * qui porte le même rattachement (`product.id_category`).
+ */
+function ep_prod_categorie_produits(): array
+{
+    $cid = (int) ($_GET['id'] ?? 0);
+    if ($cid <= 0) { http_response_code(400); return ['error' => 'catégorie requise']; }
+
+    $cats = catalogueCategories();
+    $out = ['categorieId' => $cid, 'categorie' => $cats[$cid]['nom'] ?? null,
+        'groupe' => $cats[$cid]['groupe'] ?? null,
+        'source' => null, 'chemin' => null, 'produits' => [], 'erreur' => null];
+
+    $ligne = produitLigne();
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::categoryProducts($cid);
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            foreach ($rows as $p) {
+                $pid = 0;
+                foreach (['id', 'id_product', 'product_id'] as $k) {
+                    if (isset($p[$k]) && is_numeric($p[$k])) { $pid = (int) $p[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'product_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($p[$k]) && is_string($p[$k])) { $nom = trim($p[$k]); break; }
+                }
+                if ($pid <= 0 || $nom === '') { continue; }
+                $out['produits'][] = $ligne($pid, $nom);
+            }
+            if ($out['produits']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    try {
+        foreach (Db::rows('SELECT id, name FROM product WHERE id_category = ? AND is_active = 1 ORDER BY name',
+            [$cid]) as $p) {
+            $out['produits'][] = $ligne((int) $p['id'], (string) $p['name']);
+        }
+        if ($out['produits']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+    return $out;
+}
+
+/**
+ * Groupes de catégories du réseau (/product-category-groups).
+ * C'est le premier niveau de l'arbre produit : Boulangerie, Viennoiserie,
+ * Pâtisserie… Les catégories s'y rattachent par une table de liaison, et une
+ * catégorie peut relever de plusieurs groupes.
+ */
+function ep_prod_groupes(): array
+{
+    $debug = !empty($_GET['debug']);
+    $out = ['source' => null, 'groupes' => [], 'erreur' => null];
+
+    if (PanelApi::configured()) {
+        $rows = PanelApi::productCategoryGroups();
+        if ($rows) {
+            $out['source'] = 'api';
+            $out['chemin'] = PanelApi::$lastPath;
+            if ($debug) { $out['clesBrut'] = array_slice(array_keys($rows[0]), 0, 25); $out['premier'] = $rows[0]; }
+            foreach ($rows as $g) {
+                $id = null;
+                foreach (['id', 'id_group', 'group_id', 'id_product_category_group'] as $k) {
+                    if (isset($g[$k]) && is_numeric($g[$k])) { $id = (int) $g[$k]; break; }
+                }
+                $nom = '';
+                foreach (['name', 'group_name', 'category_group_name', 'label', 'title', 'nom'] as $k) {
+                    if (!empty($g[$k]) && is_string($g[$k])) { $nom = trim($g[$k]); break; }
+                }
+                if ($nom === '') { continue; }
+                $out['groupes'][] = ['id' => $id, 'nom' => $nom];
+            }
+            if ($out['groupes']) { return $out; }
+        }
+        $out['erreur'] = PanelApi::$lastError;
+    }
+
+    // Repli base partagée, avec le nombre de catégories rattachées : un groupe
+    // vide n'est pas une erreur, mais il ne mérite pas d'entrée dans un filtre.
+    try {
+        foreach (Db::rows('SELECT g.id, g.name, COUNT(k.id_category) n
+                             FROM product_category_group g
+                        LEFT JOIN product_category_group_connection k ON k.id_group = g.id
+                         GROUP BY g.id, g.name ORDER BY g.name') as $g) {
+            $out['groupes'][] = ['id' => (int) $g['id'], 'nom' => (string) $g['name'],
+                'categories' => (int) $g['n']];
+        }
+        if ($out['groupes']) { $out['source'] = 'atelierby_db'; }
+    } catch (PDOException $e) {
+        $out['erreur'] = $out['erreur'] ?? $e->getMessage();
+    }
+    return $out;
+}
+
+/**
+ * GET /pwa/tasks/nc — les non-conformités d'une boutique, sur un jour ou une
+ * période. Ce que le dashboard magasin lit sous ses vues Jour, Semaine et Mois.
+ *
+ *   ?shop=4&date=2026-09-13          une journée (la veille, en vue Jour)
+ *   ?shop=4&du=2026-09-07&au=…       une période (la semaine, le mois)
+ *
+ * Tout vient de `mac_task_review`, la table partagée avec le panel : la note,
+ * le motif, qui a relevé. AUCUN appel au panel — ces journées sont révolues,
+ * donc figées. Le prix est une poignée de requêtes SQL.
+ *
+ * Une non-conformité, c'est une tâche NOTÉE sous le seuil du barème (réglage
+ * `signalement`, défaut 4) ; `is_accepted = 0` vaut aussi, pour un avis posé
+ * par un panel qui aurait un autre seuil. Le barème part avec la réponse : le
+ * dashboard n'a pas à lire /meta pour nommer une gravité.
+ *
+ * Deux champs disent la suite de l'histoire, et ils sont le cœur de l'écran :
+ *  - `recidive` : les journées où la MÊME tâche était déjà non conforme sur les
+ *    sept jours qui précèdent, bornes comprises — un écart qui revient ne se
+ *    traite pas comme un écart isolé ;
+ *  - `suite` : la PREMIÈRE note posée sur la même tâche après ce jour-là.
+ *    C'est elle qui dit si l'écart a été repris, et quand. Sans elle, une liste
+ *    de non-conformités d'un mois ne serait qu'un palmarès des reproches.
+ */
+function ep_pwa_tasks_nc(): array
+{
+    $sid  = (int) ($_GET['shop'] ?? 0);
+    $date = trim((string) ($_GET['date'] ?? ''));
+    $du   = trim((string) ($_GET['du'] ?? ''));
+    $au   = trim((string) ($_GET['au'] ?? ''));
+    $estD = static fn ($d) => (bool) preg_match('/^\d{4}-\d{2}-\d{2}$/', $d);
+    $jourSeul = $estD($date);
+    if ($jourSeul) { $du = $au = $date; }
+    if ($sid <= 0 || !$estD($du) || !$estD($au)) {
+        http_response_code(422);
+        return ['error' => 'shop et (date | du + au) au format YYYY-MM-DD sont requis'];
+    }
+    if ($du > $au) { [$du, $au] = [$au, $du]; }
+
+    $sig     = setting('signalement', []);
+    $seuil   = (is_array($sig) && isset($sig['seuil'])) ? (int) $sig['seuil'] : 4;
+    $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : [];
+
+    $out = ['shopId' => (string) $sid, 'date' => $jourSeul ? $date : null, 'du' => $du, 'au' => $au,
+        'seuil' => $seuil, 'niveaux' => $niveaux,
+        'notees' => 0, 'nc' => [], 'semaine' => [], 'indispo' => false];
+
+    try {
+        // `SELECT *` à dessein : les colonnes de validation (owner_*) sont
+        // ajoutées à chaud par la première validation. Les nommer ferait
+        // échouer la lecture entière sur une base qui n'a jamais validé, et le
+        // bandeau disparaîtrait au lieu d'afficher les non-conformités.
+        $rows = Db::rows('SELECT * FROM mac_task_review WHERE id_shop = ? AND review_date BETWEEN ? AND ?'
+            . ' ORDER BY review_date DESC, rating ASC, id_task ASC', [$sid, $du, $au]);
+    } catch (PDOException $e) {
+        $out['indispo'] = true;
+        return $out;
+    }
+
+    // Le nom de la tâche : le référentiel local d'abord, le relevé quotidien
+    // ensuite. Sans l'un ni l'autre, l'identifiant — jamais un nom inventé.
+    $noms = todoTaskNames();
+    try {
+        foreach (Db::rows('SELECT id_task, nom FROM con_tache_jour WHERE id_shop = ? AND jour BETWEEN ? AND ?',
+                          [$sid, $du, $au]) as $r) {
+            $n = trim((string) $r['nom']);
+            if ($n !== '') { $noms[(int) $r['id_task']] = $n; }
+        }
+    } catch (PDOException $e) { /* relevé absent : on garde le référentiel */ }
+
+    // Ce qui manque encore : le relevé quotidien ne couvre que les journées
+    // RÉVOLUES, donc jamais aujourd'hui. Une non-conformité du jour même —
+    // courante sous Semaine et Mois — s'affichait « Tâche #1209 ». Le nom d'une
+    // tâche ne change pas : on va chercher le plus récent connu, quel que soit
+    // le jour et quelle que soit la boutique. Une requête, bornée aux
+    // identifiants qui manquent.
+    $manquants = [];
+    foreach ($rows as $r) {
+        $t = (int) $r['id_task'];
+        if (!isset($noms[$t])) { $manquants[$t] = true; }
+    }
+    if ($manquants !== []) {
+        try {
+            $ids = array_keys($manquants);
+            $in  = implode(',', array_fill(0, count($ids), '?'));
+            foreach (Db::rows('SELECT id_task, nom FROM con_tache_jour WHERE id_task IN (' . $in . ')'
+                . " AND nom <> '' ORDER BY jour DESC", $ids) as $r) {
+                $t = (int) $r['id_task'];
+                if (!isset($noms[$t])) { $noms[$t] = trim((string) $r['nom']); }
+            }
+        } catch (PDOException $e) { /* tant pis : l'identifiant, jamais un nom inventé */ }
+    }
+
+    $estNC = static fn ($r) => ($r['rating'] !== null && (int) $r['rating'] < $seuil)
+        || ($r['is_accepted'] !== null && (int) $r['is_accepted'] === 0);
+
+    // L'historique de chaque tâche, du septième jour avant la période jusqu'à
+    // aujourd'hui : la récidive regarde en arrière, la suite regarde en avant.
+    $parTache = [];
+    try {
+        $fenDu = date('Y-m-d', strtotime($du . ' -6 days'));
+        $fenAu = max($au, date('Y-m-d'));
+        foreach (Db::rows('SELECT id_task, review_date, rating, is_accepted FROM mac_task_review'
+            . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ? ORDER BY review_date',
+            [$sid, $fenDu, $fenAu]) as $r) {
+            $parTache[(int) $r['id_task']][] = ['jour' => (string) $r['review_date'],
+                'note' => $r['rating'] !== null ? (int) $r['rating'] : null, 'nc' => $estNC($r)];
+        }
+    } catch (PDOException $e) { /* sans historique, la liste reste juste */ }
+
+    foreach ($rows as $r) {
+        if ($r['rating'] !== null) { $out['notees']++; }
+        if (!$estNC($r)) { continue; }
+        $tid  = (int) $r['id_task'];
+        $jour = (string) $r['review_date'];
+        $hist = $parTache[$tid] ?? [];
+
+        // Récidive : les journées non conformes de cette tâche dans les sept
+        // jours qui se terminent à celle-ci.
+        $debRec = date('Y-m-d', strtotime($jour . ' -6 days'));
+        $jRec = [];
+        foreach ($hist as $h) {
+            if ($h['nc'] && $h['jour'] >= $debRec && $h['jour'] <= $jour) { $jRec[$h['jour']] = true; }
+        }
+        $nRec = count($jRec);
+
+        // Suite : la PREMIÈRE note posée sur la même tâche après ce jour-là.
+        $suite = null;
+        foreach ($hist as $h) {
+            if ($h['jour'] > $jour && $h['note'] !== null) {
+                $suite = ['jour' => $h['jour'], 'note' => $h['note'], 'conforme' => !$h['nc']];
+                break;
+            }
+        }
+
+        $out['nc'][] = [
+            'taskId'     => (string) $tid,
+            'jour'       => $jour,
+            'tache'      => $noms[$tid] ?? ('Tâche #' . $tid),
+            'note'       => $r['rating'] !== null ? (int) $r['rating'] : null,
+            'comment'    => ($r['comment'] !== null && $r['comment'] !== '') ? (string) $r['comment'] : null,
+            'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+            'releveeLe'  => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            'recidive'   => $nRec > 1 ? $nRec : null,
+            'suite'      => $suite,
+            // Ce jour-là a-t-il DÉJÀ été contresigné ? Sans ça, une
+            // non-conformité validée hier soir reviendrait à l'écran ce matin
+            // comme si personne ne l'avait regardée.
+            'valideeLe'  => ($r['owner_validated_at'] ?? null) !== null ? substr((string) $r['owner_validated_at'], 0, 16) : null,
+            'valideePar' => ($r['owner_name'] ?? null) !== null ? (string) $r['owner_name'] : null,
+        ];
+    }
+
+    // Les sept derniers jours : seulement en vue Jour, pour situer la veille.
+    // Sur une période, le compte de la période EST déjà l'échelle.
+    if ($jourSeul) {
+        try {
+            $par = [];
+            $du7 = date('Y-m-d', strtotime($date . ' -6 days'));
+            foreach (Db::rows('SELECT review_date, rating, is_accepted FROM mac_task_review'
+                . ' WHERE id_shop = ? AND review_date BETWEEN ? AND ?', [$sid, $du7, $date]) as $r) {
+                $j = (string) $r['review_date'];
+                if (!isset($par[$j])) { $par[$j] = ['nc' => 0, 'notees' => 0]; }
+                if ($r['rating'] !== null) { $par[$j]['notees']++; }
+                if ($estNC($r)) { $par[$j]['nc']++; }
+            }
+            for ($i = 6; $i >= 0; $i--) {
+                $j = date('Y-m-d', strtotime($date . ' -' . $i . ' days'));
+                $out['semaine'][] = ['jour' => $j, 'nc' => $par[$j]['nc'] ?? 0,
+                    'notees' => $par[$j]['notees'] ?? 0, 'releve' => isset($par[$j])];
+            }
+        } catch (PDOException $e) { $out['semaine'] = []; }
+    }
+
+    return $out;
+}
+
+/**
+ * GET /pwa/tasks/photos?shop=&date= — toutes les photos rendues d'un magasin
+ * sur une journée, en UNE lecture. Ce que le carrousel « Les contrôles en
+ * photo » du dashboard magasin montre au franchisé qui n'est pas là.
+ *
+ * `/pwa/tasks/detail` rend une tâche : lu tâche par tâche, un comptoir de
+ * seize contrôles coûtait seize fois la liste des tâches, la liste des
+ * checklists et leur avancement. Ici chaque niveau part UNE fois, de front :
+ * les checklists et les tâches du jour, puis l'avancement de chaque
+ * checklist (c'est lui qui porte `attachment_id`), puis les URL signées.
+ *
+ * L'avis (note, motif, consultant) et les repères posés sur la photo sont
+ * locaux : ils reviennent même quand le panel ne répond pas. L'URL signée,
+ * elle, expire (20 min) : `validite` le dit, la page relit au-delà.
+ */
+function ep_pwa_tasks_photos(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop et date (YYYY-MM-DD) sont requis'];
+    }
+    $out = ['shopId' => (string) $shopId, 'date' => $date, 'photos' => [], 'checklists' => [],
+        'validite' => 1200, 'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+
+    $avis = [];
+    try {
+        foreach (Db::rows('SELECT id_task, rating, is_accepted, comment, consultant_name, updated_at'
+            . ' FROM mac_task_review WHERE id_shop = ? AND review_date = ?', [$shopId, $date]) as $r) {
+            $avis[(int) $r['id_task']] = [
+                'note' => $r['rating'] !== null ? (int) $r['rating'] : null,
+                'accepte' => $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null,
+                'comment' => $r['comment'] !== null && $r['comment'] !== '' ? (string) $r['comment'] : null,
+                'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+                'le' => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            ];
+        }
+    } catch (PDOException $e) { /* table absente : pas d'avis */ }
+    $reperes = [];
+    try {
+        foreach (Db::rows('SELECT id_task, reperes FROM ceo_task_annotation WHERE id_shop = ? AND annot_date = ?',
+            [$shopId, $date]) as $r) {
+            $j = json_decode((string) $r['reperes'], true);
+            $reperes[(int) $r['id_task']] = annotationNormalise(is_array($j) ? $j : []);
+        }
+    } catch (PDOException $e) { /* table absente : pas de repère */ }
+
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'identifiants API du panel non configurés (Paramètres)';
+        return $out;
+    }
+
+    // 1) Les checklists du jour — lecture simple : elle reprend la connexion
+    //    si le jeton a expiré, ce que la volée ne fait pas. Puis les tâches,
+    //    qui portent le NOM de la checklist.
+    $cls = PanelApi::shopChecklists($shopId, $date);
+    $nomCl = [];
+    foreach (PanelApi::shopTasks($shopId, $date) as $t) {
+        $tid = (int) ($t['task_id'] ?? $t['id'] ?? 0);
+        $n = trim((string) ($t['checklist_name'] ?? ''));
+        if ($tid > 0 && $n !== '') { $nomCl[$tid] = $n; }
+    }
+
+    // 2) L'avancement de chaque checklist, de front : il porte la photo.
+    $req = []; $nomParCl = [];
+    foreach ($cls as $cl) {
+        $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+        if ($cid <= 0) { continue; }
+        $req[$cid] = '/consultant/shops/' . $shopId . '/checklists/' . $cid . '/progress?date=' . urlencode($date);
+        $n = trim((string) ($cl['name'] ?? $cl['checklist_name'] ?? ''));
+        if ($n !== '') { $nomParCl[$cid] = $n; }
+    }
+    $att = []; $clDe = []; $compDe = [];
+    foreach (PanelApi::getParallele($req) as $cid => $rep) {
+        foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $p) {
+            $tid = (int) ($p['task_id'] ?? $p['id'] ?? 0);
+            if ($tid <= 0) { continue; }
+            if (!isset($nomCl[$tid]) && isset($nomParCl[$cid])) { $nomCl[$tid] = $nomParCl[$cid]; }
+            $a = (int) ($p['attachment_id'] ?? 0);
+            // La checklist et la completion : ce qu'une note doit citer au panel.
+            if ($a > 0 && !isset($att[$tid])) { $att[$tid] = $a; $clDe[$tid] = (int) $cid; $compDe[$tid] = (int) ($p['completion_id'] ?? 0); }
+        }
+    }
+    foreach ($nomCl as $tid => $n) { $out['checklists'][(string) $tid] = $n; }
+
+    // 3) Les URL signées, de front. La réponse est tantôt la chaîne nue,
+    //    tantôt un objet : même lecture que PanelApi::attachmentUrl.
+    $req = [];
+    foreach ($att as $tid => $a) { $req[$tid] = '/attachments/' . $a . '/presigned-url'; }
+    foreach (PanelApi::getParallele($req) as $tid => $r) {
+        $url = is_string($r) ? $r : null;
+        foreach (['url', 'presigned_url', 'presignedUrl', 'link'] as $k) {
+            if ($url === null && is_array($r) && isset($r[$k]) && is_string($r[$k])) { $url = $r[$k]; }
+        }
+        if ($url === null || !preg_match('#^https://#', $url)) { continue; }
+        $out['photos'][] = ['taskId' => (string) $tid, 'photo' => $url,
+            'checklist' => $nomCl[$tid] ?? null, 'reperes' => $reperes[$tid] ?? [], 'avis' => $avis[$tid] ?? null,
+            'checklistId' => !empty($clDe[$tid]) ? $clDe[$tid] : null, 'completionId' => !empty($compDe[$tid]) ? $compDe[$tid] : null];
+    }
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
+}
+
+/** GET /production/params — réglages du moteur de production. */
+function ep_prod_params(): array
+{
+    $p = setting('production', []);
+    return is_array($p) ? $p : [];
+}
+
+function ep_pwa_task_detail(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $taskId = (int) ($_GET['task'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop, task et date (YYYY-MM-DD) sont requis'];
+    }
+
+    // Ce que la base partagée sait déjà de l'avis (toujours disponible).
+    $avis = null;
+    try {
+        $r = Db::row('SELECT * FROM mac_task_review WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+            [$shopId, $taskId, $date]);
+        if ($r !== null) {
+            $avis = [
+                'note' => $r['rating'] !== null ? (int) $r['rating'] : null,
+                'accepte' => $r['is_accepted'] !== null ? (bool) (int) $r['is_accepted'] : null,
+                'comment' => $r['comment'], 'consultant' => $r['consultant_name'],
+                'checklistId' => $r['id_checklist'] !== null ? (int) $r['id_checklist'] : null,
+                'completionId' => $r['completion_id'] !== null ? (int) $r['completion_id'] : null,
+                'valide' => !empty($r['owner_validated_at']), 'valideePar' => $r['owner_name'],
+            ];
+        }
+    } catch (PDOException $e) { /* table absente : avis inconnu */ }
+
+    $out = ['shopId' => (string) $shopId, 'taskId' => (string) $taskId, 'date' => $date,
+        'tache' => null, 'checklist' => null, 'photo' => null, 'obligatoire' => null,
+        // QUAND la photo a été prise et PAR QUI : sans ces deux-là, un écart
+        // se discute sans savoir de quel service ni de quelle personne il
+        // vient — et l'heure dit souvent à elle seule ce qui s'est passé.
+        'faitLe' => null, 'faitPar' => null,
+        'photoRequise' => null, 'statut' => null, 'completionId' => $avis['completionId'] ?? null,
+        'checklistId' => $avis['checklistId'] ?? null, 'avis' => $avis,
+        // Référence : la photo de la fiche technique du produit contrôlé, pour
+        // juger par COMPARAISON. Rapprochée par identifiant seul (jamais le nom).
+        'produitId' => null, 'produit' => null, 'photoRef' => null,
+        // Une photo de comptoir n'a pas de produit : sa référence est la photo
+        // TYPE du rayon, posée dans le cockpit (src/rayons_photos.php). Chemin
+        // local, à part de photoRef que le rapport PDF et l'IA téléchargent.
+        'rayon' => null,
+        // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
+        // doivent revenir même si le panel ne répond pas.
+        'reperes' => annotationLire($shopId, $taskId, $date),
+        'api' => ['configure' => PanelApi::configured(), 'erreur' => null]];
+
+    if (!PanelApi::configured()) {
+        $out['api']['erreur'] = 'identifiants API du panel non configurés (Paramètres)';
+        return $out;
+    }
+
+    // 1) Nom / obligation / photo requise : la liste des tâches du jour.
+    foreach (PanelApi::shopTasks($shopId, $date) as $t) {
+        if ((int) ($t['task_id'] ?? $t['id'] ?? 0) === $taskId) {
+            $out['tache']        = trim((string) ($t['task_name'] ?? $t['name'] ?? '')) ?: null;
+            $out['checklist']    = $t['checklist_name'] ?? null;
+            $out['obligatoire']  = isset($t['is_mandatory']) ? (bool) $t['is_mandatory'] : null;
+            $out['photoRequise'] = isset($t['requires_photo']) ? (bool) $t['requires_photo'] : null;
+            $out['statut']       = $t['status'] ?? null;
+            $out['faitLe']       = ($t['completed_at'] ?? null) !== null ? substr((string) $t['completed_at'], 0, 16) : null;
+            $out['faitPar']      = trim((string) ($t['completed_by'] ?? '')) ?: null;
+            foreach (['product_id', 'id_product', 'productId'] as $pk) {
+                if (!empty($t[$pk]) && is_numeric($t[$pk])) { $out['produitId'] = (int) $t[$pk]; break; }
+            }
+            break;
+        }
+    }
+
+    // 2) Pièce jointe + completion : c'est l'AVANCEMENT qui les porte.
+    $attId = 0;
+    $checklists = $out['checklistId'] !== null
+        ? [['id' => $out['checklistId']]]
+        : PanelApi::shopChecklists($shopId, $date);
+    foreach ($checklists as $cl) {
+        $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+        if ($cid <= 0) { continue; }
+        foreach (PanelApi::checklistProgress($shopId, $cid, $date) as $p) {
+            if ((int) ($p['task_id'] ?? $p['id'] ?? 0) !== $taskId) { continue; }
+            $attId = (int) ($p['attachment_id'] ?? 0);
+            $out['checklistId']  = $cid;
+            $out['completionId'] = $p['completion_id'] !== null ? (int) $p['completion_id'] : $out['completionId'];
+            $out['statut']       = $p['status'] ?? $out['statut'];
+            if ($out['tache'] === null) {
+                $out['tache'] = trim((string) ($p['task_name'] ?? $p['name'] ?? '')) ?: null;
+            }
+            if ($out['produitId'] === null) {
+                foreach (['product_id', 'id_product', 'productId'] as $pk) {
+                    if (!empty($p[$pk]) && is_numeric($p[$pk])) { $out['produitId'] = (int) $p[$pk]; break; }
+                }
+            }
+            break 2;
+        }
+    }
+    if ($attId > 0) { $out['photo'] = PanelApi::attachmentUrl($attId); }
+    if ($out['produitId'] !== null) {
+        $ref = PanelApi::productPhoto($out['produitId'], $shopId);
+        if ($ref !== null) { $out['produit'] = $ref['nom']; $out['photoRef'] = $ref['url']; }
+    }
+    if ($out['tache'] !== null && function_exists('rvRayonDeTache') && ($rv = rvRayonDeTache($out['tache'])) !== null) {
+        $out['rayon'] = ['cle' => $rv['cle'], 'nom' => $rv['nom'], 'photo' => $rv['photo'], 'consigne' => $rv['consigne']];
+    }
+    $out['api']['erreur'] = PanelApi::$lastError;
+    return $out;
+}
+
+/**
+ * GET /fonds — le fonds marketing et les redevances.
+ *
+ * La donnée n'est PAS recopiée : elle est lue en direct sur le module
+ * marketing, déployé sur le même serveur. Dupliquer un grand livre donnerait
+ * deux soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait.
+ *
+ * Le relais se fait côté serveur parce que le module vit sous un autre chemin :
+ * un appel depuis le navigateur y serait une requête d'origine différente, que
+ * rien n'autorise aujourd'hui.
+ */
+/**
+ * Un appel au module marketing, quelle que soit la méthode.
+ *
+ * Le fonds est tenu par le module ; le cockpit ne recopie pas son grand livre,
+ * il l'ADRESSE. Lectures et écritures passent donc par ici — un seul endroit
+ * qui sait construire l'URL, poser l'en-tête et rendre le corps.
+ *
+ * Rend `['code' => int, 'corps' => mixed, 'erreur' => ?string]`. Un refus du
+ * module est rendu TEL QUEL : c'est lui qui valide, pas nous, et réécrire son
+ * message ferait deux vocabulaires pour la même règle.
+ */
+function marketingAppel(string $methode, string $chemin, ?array $corps = null): array
+{
+    $base = (string) (setting('marketingApi') ?: '/marketing/api/v1/marketing');
+    // Relais local : on reconstruit l'URL absolue depuis l'hôte courant, sans
+    // quoi un chemin relatif ne veut rien dire pour curl.
+    $hote = ($_SERVER['HTTPS'] ?? '') === 'on' ? 'https://' : 'http://';
+    $hote .= $_SERVER['HTTP_HOST'] ?? '127.0.0.1';
+    $url = preg_match('#^https?://#', $base) ? $base . $chemin : $hote . $base . $chemin;
+
+    $entetes = ['Accept: application/json'];
+    // Le jeton de service de l'API Marketing : sans lui, elle répond 401 une fois son identité de
+    // développement coupée. Son déploiement le tire sur le serveur et le pose dans service-token,
+    // à côté de son .env (lisible par www-data) ; il ne passe ni par ce dépôt ni par le navigateur.
+    $fichier = (string) (setting('marketingServiceTokenFile') ?: '/var/www/private/marketing/service-token');
+    $jeton = is_readable($fichier) ? trim((string) @file_get_contents($fichier)) : '';
+    if (strlen($jeton) >= 32) {
+        $entetes[] = 'X-Marketing-Service: ' . $jeton;
+    }
+    $ch = curl_init($url);
+    $opts = [
+        CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 15,
+        CURLOPT_CUSTOMREQUEST => strtoupper($methode),
+    ];
+    if ($corps !== null) {
+        $opts[CURLOPT_POSTFIELDS] = json_encode($corps, JSON_UNESCAPED_UNICODE);
+        $entetes[] = 'Content-Type: application/json';
+    }
+    $opts[CURLOPT_HTTPHEADER] = $entetes;
+    curl_setopt_array($ch, $opts);
+    $rep = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+
+    if ($rep === false) { return ['code' => 0, 'corps' => null, 'erreur' => $err !== '' ? $err : 'module injoignable']; }
+    $j = json_decode((string) $rep, true);
+    if (!is_array($j)) {
+        return ['code' => $code, 'corps' => null,
+            'erreur' => $code >= 400 ? 'HTTP ' . $code : 'réponse illisible'];
+    }
+    // Le module enveloppe ses lectures dans `data` ; certaines rendent la liste
+    // nue. On accepte les deux plutôt que d'imposer une forme.
+    $donnees = array_key_exists('data', $j) ? $j['data'] : $j;
+    $msg = null;
+    if ($code >= 400) {
+        $msg = (string) ($j['description'] ?? $j['message'] ?? ('HTTP ' . $code));
+    }
+    return ['code' => $code, 'corps' => $donnees, 'erreur' => $msg, 'brut' => $j];
+}
+
+/**
+ * Les redevances d'un mois : magasin par magasin, SORTE par sorte.
+ *
+ * La grille des taux vit sur la FICHE boutique du panel (royalty_*_percentage,
+ * en FRACTION : 0.0100 = 1 %), le chiffre d'affaires sur l'API de ventes —
+ * borné au jour même quand le mois demandé est en cours. Rend null quand le
+ * compte consultant n'est pas configuré ou que les fiches ne se lisent pas :
+ * absent, pas inventé. Servi à l'écran (ep_fonds) ET à l'écriture au fonds
+ * (fondsRoyaltiesEcrire) : un seul calcul, pas deux jeux de règles.
+ */
+function fondsRoyaltiesCalcul(string $mois): ?array
+{
+    if (!preg_match('/^\d{4}-\d{2}$/', $mois) || !PanelApi::configured()) { return null; }
+    $du = $mois . '-01';
+    $fin = date('Y-m-t', strtotime($du));
+    $au = min($fin, date('Y-m-d'));
+    if ($du > $au) { return null; }
+    $caPar = [];
+    foreach (analyseListe(PanelApi::shopsSalesKpisEntre($du, $au) ?? []) as $x) {
+        $id = 0;
+        foreach (['shop_id', 'id_shop', 'id'] as $c) {
+            if (isset($x[$c]) && is_numeric($x[$c])) { $id = (int) $x[$c]; break; }
+        }
+        if ($id > 0) { $caPar[$id] = nombreOuNull($x, ['ca', 'turnover', 'revenue']); }
+    }
+    $fiches = PanelApi::consultantShops() ?? [];
+    if ($fiches === []) { return null; }
+    // La liste ne porte pas les taux : ils vivent sur la FICHE complète
+    // (/shops/{id} — royalties_enabled, royalty_*_percentage). Une lecture
+    // parallèle par boutique, fusionnée dans la ligne.
+    $chemins = [];
+    foreach ($fiches as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id > 0) { $chemins[$id] = '/shops/' . $id; }
+    }
+    $details = PanelApi::getParallele($chemins);
+    foreach ($fiches as $i => $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        $d = $details[$id] ?? null;
+        if (is_array($d)) {
+            if (isset($d['shop']) && is_array($d['shop'])) { $d = $d['shop']; }
+            $fiches[$i] = $d + $sh;
+        }
+    }
+    $shops = [];
+    foreach ($fiches as $sh) {
+        $id = (int) ($sh['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $ca = $caPar[$id] ?? null;
+        $actif = (int) ($sh['royalties_enabled'] ?? 0) === 1;
+        $nom = '';
+        foreach (['representative_name', 'name'] as $c) {
+            if (!empty($sh[$c]) && is_string($sh[$c])) { $nom = trim((string) $sh[$c]); break; }
+        }
+        $sortes = [];
+        // Trois sortes, pas quatre : `royalties_percentage` est le champ
+        // global/hérité de la fiche boutique, PAS un type de redevance. Le
+        // compter comme une sorte « Générale » inventait une redevance qui
+        // n'existe pas — et l'aurait ajoutée par-dessus les trois vraies.
+        foreach ([['royalty_marketing_percentage', 'MARKETING', 'Marketing'],
+                  ['royalty_brand_percentage', 'MARQUE', 'Marque'],
+                  ['royalty_assistance_percentage', 'ASSISTANCE', 'Assistance']] as [$cle, $code, $label]) {
+            $t = isset($sh[$cle]) ? (float) $sh[$cle] : 0.0;
+            if ($t <= 0) { continue; }
+            $sortes[] = ['cle' => $cle, 'code' => $code, 'label' => $label, 'taux' => $t,
+                'du' => ($actif && $ca !== null) ? round((float) $ca * $t, 2) : null];
+        }
+        $shops[] = ['shop_id' => $id, 'shop_name' => $nom !== '' ? $nom : ('Magasin ' . $id),
+            'city' => (string) ($sh['city'] ?? ''), 'ca' => $ca, 'enabled' => $actif,
+            'billing_frequency' => $sh['royalty_billing_frequency'] ?? null, 'sortes' => $sortes];
+    }
+    return ['month' => $mois, 'du' => $du, 'au' => $au, 'fin' => $fin, 'shops' => $shops];
+}
+
+function ep_fonds(): array
+{
+    // Lecture DIRECTE des tables mar_* : le module marketing autonome
+    // disparaît, son API avec lui. Les tables restent — c'est la même base
+    // partagée — et le grand livre survit tel quel. Le relais HTTP d'avant
+    // vivait dans marketingAppel(), conservé le temps de la bascule.
+    $out = ['base' => 'tables mar_* (base partagée)', 'ledger' => null, 'leviers' => [],
+        'royalties' => null, 'recurrences' => [], 'magasins' => [], 'campagnes' => [],
+        'fournisseurs' => [], 'erreurs' => [], 'manque' => [], 'source' => null];
+    try {
+        $mvts = Db::rows('SELECT m.*, s.name AS shop_name, c.name AS campaign_name,
+                                 l.label AS lever_label, l.color_hex AS lever_color_hex
+                          FROM mar_fund_movement m
+                          LEFT JOIN mar_shop s ON s.id = m.shop_id
+                          LEFT JOIN mar_campaign c ON c.id = m.campaign_id
+                          LEFT JOIN mar_lever l ON l.id = m.lever_id
+                          ORDER BY m.movement_date, m.id');
+    } catch (PDOException $e) {
+        $out['erreurs'][] = 'tables mar_fund_* absentes : le module marketing n’a jamais été installé sur cette base';
+        return $out;
+    }
+
+    $out['fournisseurs'] = array_map(fn ($f) => ['id' => (string) $f['id'], 'nom' => (string) $f['name']],
+        Db::rows('SELECT id, name FROM ceo_supplier ORDER BY name'));
+
+    // Le grand livre, période par période (mois civils), avec les soldes.
+    $periodes = [];
+    $solde = 0.0;
+    foreach ($mvts as $m) {
+        $cle = substr((string) $m['movement_date'], 0, 7) . '-01';
+        if (!isset($periodes[$cle])) {
+            $periodes[$cle] = ['period_key' => $cle, 'entries' => [], 'exits' => [],
+                'entries_total' => 0.0, 'exits_total' => 0.0,
+                'opening_balance' => $solde, 'closing_balance' => $solde];
+        }
+        $ligne = [
+            'id' => (int) $m['id'], 'movement_date' => $m['movement_date'],
+            'direction' => $m['direction'], 'label' => $m['label'],
+            'amount' => (float) $m['amount'], 'source' => $m['source'],
+            'shop_id' => $m['shop_id'] !== null ? (int) $m['shop_id'] : null,
+            'shop_name' => $m['shop_name'], 'campaign_id' => $m['campaign_id'] !== null ? (int) $m['campaign_id'] : null,
+            'campaign_name' => $m['campaign_name'],
+            'lever_id' => $m['lever_id'] !== null ? (int) $m['lever_id'] : null,
+            'lever_label' => $m['lever_label'], 'lever_color_hex' => $m['lever_color_hex'],
+            'supplier_name' => $m['supplier_name'], 'document_ref' => $m['document_ref'],
+            'is_investment' => (int) ($m['is_investment'] ?? 0) === 1,
+            'recurrence_id' => ($m['recurrence_id'] ?? null) !== null ? (int) $m['recurrence_id'] : null,
+        ];
+        if ($m['direction'] === 'OUT') {
+            $periodes[$cle]['exits'][] = $ligne;
+            $periodes[$cle]['exits_total'] += (float) $m['amount'];
+            $solde -= (float) $m['amount'];
+        } else {
+            $periodes[$cle]['entries'][] = $ligne;
+            $periodes[$cle]['entries_total'] += (float) $m['amount'];
+            $solde += (float) $m['amount'];
+        }
+        $periodes[$cle]['closing_balance'] = $solde;
+    }
+    $out['ledger'] = ['granularity' => 'month', 'periods' => array_values($periodes),
+        'closing_balance' => $solde];
+
+    // Les leviers, avec la dépense qui leur est imputée. Le ROI du module
+    // reposait sur des objectifs de campagne qui ne sont pas repris : absent,
+    // pas inventé.
+    $out['leviers'] = array_map(fn ($l) => [
+        'lever_id' => (int) $l['id'], 'lever_code' => $l['code'], 'lever_label' => $l['label'],
+        'color_hex' => $l['color_hex'], 'spent_amount' => (float) $l['spent'],
+        'roi_value' => null,
+    ], Db::rows("SELECT l.*, COALESCE(SUM(CASE WHEN m.direction = 'OUT' THEN m.amount END), 0) AS spent
+                 FROM mar_lever l
+                 LEFT JOIN mar_fund_movement m ON m.lever_id = l.id
+                 WHERE l.is_active = 1
+                 GROUP BY l.id ORDER BY l.sort_order, l.id"));
+
+    try {
+        $out['recurrences'] = array_map(fn ($r) => [
+            'id' => (int) $r['id'], 'direction' => $r['direction'], 'frequency' => $r['frequency'],
+            'label' => $r['label'], 'amount' => (float) $r['amount'],
+            'starts_on' => $r['starts_on'], 'ends_on' => $r['ends_on'],
+            'shop_name' => $r['shop_name'],
+        ], Db::rows('SELECT r.*, s.name AS shop_name FROM mar_fund_recurrence r
+                     LEFT JOIN mar_shop s ON s.id = r.shop_id ORDER BY r.starts_on DESC, r.id DESC'));
+    } catch (PDOException $e) { /* table absente sur une vieille base */ }
+
+    $out['magasins'] = array_map(fn ($s2) => ['id' => (int) $s2['id'], 'name' => (string) $s2['name'],
+        'city' => $s2['city'] ?? ''], Db::rows('SELECT id, name, city FROM mar_shop ORDER BY name'));
+    $out['campagnes'] = array_map(fn ($c2) => ['id' => (int) $c2['id'], 'name' => (string) $c2['name']],
+        Db::rows('SELECT id, name FROM mar_campaign ORDER BY starts_on DESC, id DESC'));
+
+    // Les redevances : le calcul partagé fondsRoyaltiesCalcul() — grille des
+    // taux depuis la FICHE BOUTIQUE du panel (royalty_*_percentage), chiffre
+    // d'affaires du mois choisi depuis l'API de ventes (borné au jour même
+    // quand ce mois est en cours). Les écritures ROYALTY déjà passées au
+    // fonds pour ce mois sont rappelées en face du dû théorique. Factures et
+    // règlements émis relèvent du realm ADMIN (compte « admin ERP »).
+    $royFait = false;
+    // ?mois=AAAA-MM : la période s'arrête à l'écran, l'API recalcule CA, taux
+    // et dû pour ce mois-là. Un mois invalide ou futur retombe sur le courant
+    // — un CA qui n'existe pas encore ne se facture pas.
+    $moisCle = (string) ($_GET['mois'] ?? '');
+    if (!preg_match('/^\d{4}-\d{2}$/', $moisCle) || $moisCle > date('Y-m')) { $moisCle = date('Y-m'); }
+    $calc = fondsRoyaltiesCalcul($moisCle);
+    if ($calc !== null) {
+        // Écritures ROYALTY du mois déjà au fonds, par magasin.
+        $ecrit = [];
+        foreach ($mvts as $m) {
+            if (($m['source'] ?? '') === 'ROYALTY' && $m['direction'] === 'IN' && $m['shop_id'] !== null
+                && (str_starts_with((string) $m['movement_date'], $moisCle)
+                    || str_starts_with((string) ($m['period_from'] ?? ''), $moisCle))) {
+                $ecrit[(int) $m['shop_id']][] = ['amount' => (float) $m['amount'], 'label' => $m['label']];
+            }
+        }
+        $shops = [];
+        foreach ($calc['shops'] as $s) {
+            $rates = []; $dues = []; $duTotal = 0.0; $aDu = false; $duMkt = null;
+            foreach ($s['sortes'] as $k) {
+                $rates[] = ['code' => $k['cle'], 'label' => $k['label'], 'rate_pct' => round($k['taux'] * 100, 2)];
+                if ($k['du'] !== null) {
+                    $dues[] = ['code' => $k['code'], 'label' => $k['label'],
+                        'rate_pct' => round($k['taux'] * 100, 2), 'amount' => $k['du'],
+                        // Seule la sorte Marketing part au fonds : l'écran le
+                        // dit ligne à ligne, sinon le « Dû » total laisse
+                        // croire que tout alimente la caisse commune.
+                        'au_fonds' => $k['code'] === 'MARKETING'];
+                    $duTotal += $k['du']; $aDu = true;
+                    if ($k['code'] === 'MARKETING') { $duMkt = $k['du']; }
+                }
+            }
+            $shops[] = [
+                'shop_id' => $s['shop_id'], 'shop_name' => $s['shop_name'], 'city' => $s['city'],
+                'revenue_amount' => $s['ca'], 'rates' => $rates,
+                'royalties_enabled' => $s['enabled'],
+                'billing_frequency' => $s['billing_frequency'],
+                // Le dû du mois TOUTES sortes confondues ; le détail sorte par
+                // sorte suit dans `dues`. Au fonds ne part que la sorte
+                // Marketing — `due_marketing` la donne seule.
+                'due_theorique' => $aDu ? round($duTotal, 2) : null,
+                'due_marketing' => $duMkt !== null ? round($duMkt, 2) : null,
+                'dues' => $dues,
+                'movements' => $ecrit[$s['shop_id']] ?? [],
+            ];
+        }
+        $roy = ['month' => $moisCle, 'shops' => $shops,
+            'source' => 'API panel — fiche boutique (taux) et ventes du mois (CA, jour même)',
+            'erp' => ['available' => true]];
+        if (ErpApi::disponible()) {
+            // Réponses enveloppées ({invoices: […]}, {settlements: […]}).
+            $fac = ErpApi::get('/admin/royalties/invoices');
+            $reg = ErpApi::get('/admin/royalties/settlements');
+            if (is_array($fac)) { $roy['factures'] = array_slice((array) ($fac['invoices'] ?? (analyseListe($fac) ?: [])), 0, 24); }
+            if (is_array($reg)) { $roy['reglements'] = array_slice((array) ($reg['settlements'] ?? (analyseListe($reg) ?: [])), 0, 24); }
+        } else {
+            $roy['facturesNote'] = 'Factures et règlements émis : renseignez le compte admin ERP (Mon compte) pour les lire.';
+        }
+        $out['royalties'] = $roy;
+        $royFait = true;
+    }
+    if (!$royFait) {
+        $out['manque'][] = [
+            'champ' => 'Redevances par magasin',
+            'quoi' => 'la grille des taux, les chiffres d’affaires du mois et l’écriture des redevances au fonds',
+            'source' => 'La grille et le CA se lisent sur l’API du panel : configurez le compte consultant '
+                . '(Mon compte) pour les afficher ici. ' . (PanelApi::$lastError ? 'Dernière erreur : ' . PanelApi::$lastError : ''),
+        ];
+    }
+    $out['source'] = 'tables mar_* (module marketing repris)';
+    return $out;
+}
+
+/**
+ * La grille d'un produit dans un emplacement : combien de colonnes, combien de
+ * rangées, pour un nombre par slot donné.
+ *
+ * La règle du comptoir : une ligne va jusqu'à SIX produits, et les rangées se
+ * déduisent par division arrondie vers le bas. Prise telle quelle, elle laisse
+ * des restes — neuf croissants sur une ligne de six n'en posent que six. On
+ * propose donc d'office la LIGNE JUSTE : celle qui divise exactement, et parmi
+ * celles-là celle qui donne la case la plus proche du carré dans les dimensions
+ * réelles de l'emplacement — quatre produits dans un 30 × 30 se posent 2 × 2,
+ * les mêmes quatre dans un 60 × 15 se posent 4 × 1.
+ *
+ * Une ligne imposée à la main est RESPECTÉE, reste compris : c'est l'écran qui
+ * l'écrit, pas le calcul qui le cache.
+ */
+function planoGrille(int $n, ?int $largeurMm = null, ?int $hauteurMm = null, ?int $colsVoulues = null): array
+{
+    $n = max(0, min(400, $n));
+    if ($n === 0) { return ['parSlot' => 0, 'cols' => 0, 'rangs' => 0, 'poses' => 0, 'reste' => 0, 'juste' => true]; }
+    $lar = ($largeurMm !== null && $largeurMm > 0) ? (float) $largeurMm : 1.0;
+    $hau = ($hauteurMm !== null && $hauteurMm > 0) ? (float) $hauteurMm : 1.0;
+
+    if ($colsVoulues !== null && $colsVoulues > 0) {
+        $c = min(6, min($n, $colsVoulues));
+        $r = max(1, intdiv($n, $c));
+        return ['parSlot' => $n, 'cols' => $c, 'rangs' => $r, 'poses' => $c * $r,
+            'reste' => max(0, $n - $c * $r), 'juste' => $c * $r === $n];
+    }
+    // La ligne juste : elle existe toujours (une colonne divise tout).
+    $best = null; $bestScore = null;
+    for ($c = 1; $c <= 6 && $c <= $n; $c++) {
+        if ($n % $c !== 0) { continue; }
+        $r = intdiv($n, $c);
+        $l = $lar / $c; $h = $hau / $r;
+        $score = $l > 0 && $h > 0 ? max($l / $h, $h / $l) : 1e9;
+        // À égalité, la ligne la plus large : on remplit la vitrine de face
+        // avant de la remplir en profondeur.
+        $mieux = $bestScore === null || $score < $bestScore - 1e-9
+            || (abs($score - $bestScore) <= 1e-9 && $c > (int) $best[0]);
+        if ($mieux) { $best = [$c, $r]; $bestScore = $score; }
+    }
+    [$c, $r] = $best ?? [1, $n];
+    return ['parSlot' => $n, 'cols' => $c, 'rangs' => $r, 'poses' => $c * $r, 'reste' => 0, 'juste' => true];
+}
+
+/** Les deux listes de choix du comptoir : formats d'emplacement, contenants. */
+function planoReferentielsTables(): array
+{
+    static $cache = null;
+    if ($cache !== null) { return $cache; }
+    $formats = []; $contenants = [];
+    try {
+        foreach (Db::rows('SELECT * FROM pla_format ORDER BY rang, id') as $f) {
+            $formats[] = ['id' => (int) $f['id'], 'nom' => (string) $f['nom'],
+                'largeurMm' => $f['largeur_mm'] !== null ? (int) $f['largeur_mm'] : null,
+                'hauteurMm' => $f['hauteur_mm'] !== null ? (int) $f['hauteur_mm'] : null];
+        }
+        foreach (Db::rows('SELECT * FROM pla_contenant ORDER BY rang, id') as $c) {
+            $contenants[] = ['id' => (int) $c['id'], 'nom' => (string) $c['nom']];
+        }
+    } catch (PDOException $e) { /* tables absentes : listes vides, jamais inventées */ }
+    $cache = ['formats' => $formats, 'contenants' => $contenants];
+    return $cache;
+}
+
+/**
+ * GET /planogramme — la structure du comptoir, avec son occupation.
+ *
+ * Un seul appel rend l'arbre complet : zones → meubles → niveaux →
+ * emplacements, chaque emplacement portant son occupant ou `null`. C'est ce qui
+ * permet à l'écran de proposer les places libres sans rien calculer, et de
+ * dessiner le comptoir tel qu'il est.
+ *
+ * La structure vit dans le cockpit : l'API du panel n'expose rien de tout cela
+ * (mesuré). Ce qui en dépend vraiment — la photo de présentation et la
+ * diffusion de la consigne en boutique — est annoncé comme manquant, jamais
+ * remplacé par une invention.
+ */
+function ep_planogramme(): array
+{
+    $ref = setting('planogramme', []);
+    $out = ['zones' => [], 'slots' => [], 'placements' => [], 'notes' => [],
+        'totaux' => ['slots' => 0, 'libres' => 0, 'places' => 0, 'refs' => 0],
+        // Les choix proposés à la déclaration d'un meuble. Ce sont des listes
+        // de réglage, pas du code : un réseau qui travaille en surgelé ajoute
+        // sa température sans livraison.
+        'referentiels' => [
+            'types' => is_array($ref['types'] ?? null) ? $ref['types'] : [],
+            'temperatures' => is_array($ref['temperatures'] ?? null) ? $ref['temperatures'] : [],
+            'presentations' => is_array($ref['presentations'] ?? null) ? $ref['presentations'] : [],
+            // Les moments de la journée : le comptoir du matin n'est pas celui
+            // de midi, et un meuble peut n'être monté qu'à l'un des deux.
+            'periodes' => is_array($ref['periodes'] ?? null) ? $ref['periodes'] : [],
+            'slotDefaut' => is_array($ref['slotDefaut'] ?? null) ? $ref['slotDefaut']
+                : ['longueur' => 300, 'largeur' => 300, 'hauteur' => 250],
+            // Formats d'emplacement et contenants : deux listes éditables
+            // depuis l'écran, d'où la table plutôt que le réglage figé.
+            'formats' => planoReferentielsTables()['formats'],
+            'contenants' => planoReferentielsTables()['contenants'],
+        ],
+        'manque' => planoManque()];
+
+    // Placements, indexés par emplacement — et par référence pour l'écran.
+    $parSlot = []; $placements = [];
+    foreach (Db::rows('SELECT * FROM pla_placement') as $p) {
+        $sid = $p['slot_id'] !== null ? (int) $p['slot_id'] : null;
+        $l = ['ref' => (string) $p['ref'], 'slotId' => $sid,
+            'fronts' => (int) ($p['fronts'] ?? 1), 'ordre' => (int) ($p['ordre'] ?? 1),
+            // Une grille absente reste absente : un placement d'avant la
+            // notion ne vaut pas « un produit par emplacement ».
+            'parSlot' => ($p['par_slot'] ?? null) !== null ? (int) $p['par_slot'] : null,
+            'cols' => ($p['grille_cols'] ?? null) !== null ? (int) $p['grille_cols'] : null,
+            'rangs' => ($p['grille_rangs'] ?? null) !== null ? (int) $p['grille_rangs'] : null,
+            // Vide = toute la journée — même lecture que pour un meuble.
+            'periodes' => array_values(array_filter(explode(',', (string) ($p['periodes'] ?? '')))),
+            'zone' => $p['zone'], 'meuble' => $p['meuble'], 'niveau' => $p['niveau'],
+            'position' => $p['slot'] !== null ? (int) $p['slot'] : null];
+        $placements[] = $l;
+        if ($sid !== null) { $parSlot[$sid][] = $l; }
+    }
+    $out['placements'] = $placements;
+
+    // Noms des références, pour afficher l'occupant sans second appel.
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT ref, nom FROM ceo_prod_product') as $r) {
+            $noms[(string) $r['ref']] = (string) $r['nom'];
+        }
+    } catch (PDOException $e) { /* sans nom : la référence seule */ }
+    if (count($noms) < count($placements)) {
+        // Le nom vient du catalogue réel quand la fiche cockpit n'existe pas.
+        foreach (ep_prod_catalogue() as $c) { $noms[(string) $c['ref']] = (string) $c['nom']; }
+    }
+
+    $zones = Db::rows('SELECT * FROM pla_zone ORDER BY rang, id');
+    $meubles = Db::rows('SELECT * FROM pla_meuble ORDER BY rang, id');
+    $niveaux = Db::rows('SELECT * FROM pla_niveau ORDER BY rang, id');
+    $slots = Db::rows('SELECT * FROM pla_slot ORDER BY niveau_id, position');
+
+    $parNiveau = [];
+    foreach ($slots as $s) { $parNiveau[(int) $s['niveau_id']][] = $s; }
+    $parMeuble = [];
+    foreach ($niveaux as $n) { $parMeuble[(int) $n['meuble_id']][] = $n; }
+    $parZone = [];
+    foreach ($meubles as $m) { $parZone[(int) $m['zone_id']][] = $m; }
+
+    foreach ($zones as $z) {
+        $zid = (int) $z['id'];
+        $zl = ['id' => $zid, 'nom' => (string) $z['nom'], 'rang' => (int) $z['rang'], 'meubles' => []];
+        foreach ($parZone[$zid] ?? [] as $m) {
+            $mid = (int) $m['id'];
+            // `periodes` vide = toute la journée. C'est ce que portent les
+            // meubles déclarés avant l'ajout de la notion : les compter comme
+            // « aucun moment » les ferait disparaître du plan.
+            $per = array_values(array_filter(explode(',', (string) ($m['periodes'] ?? ''))));
+            $ml = ['id' => $mid, 'nom' => (string) $m['nom'], 'rang' => (int) $m['rang'],
+                'type' => (string) ($m['type'] ?? ''), 'temperature' => (string) ($m['temperature'] ?? ''),
+                'presentation' => (string) ($m['presentation'] ?? ''),
+                'periodes' => $per, 'toutLeJour' => !$per, 'niveaux' => []];
+            foreach ($parMeuble[$mid] ?? [] as $n) {
+                $nid = (int) $n['id'];
+                $nl = ['id' => $nid, 'nom' => (string) $n['nom'], 'rang' => (int) $n['rang'], 'slots' => []];
+                foreach ($parNiveau[$nid] ?? [] as $s) {
+                    $sid = (int) $s['id'];
+                    $occ = $parSlot[$sid] ?? [];
+                    $ligne = [
+                        'id' => $sid, 'position' => (int) $s['position'],
+                        'largeurMm' => $s['largeur_mm'] !== null ? (int) $s['largeur_mm'] : null,
+                        'longueurMm' => ($s['longueur_mm'] ?? null) !== null ? (int) $s['longueur_mm'] : null,
+                        'hauteurMm' => ($s['hauteur_mm'] ?? null) !== null ? (int) $s['hauteur_mm'] : null,
+                        'capacite' => $s['capacite'] !== null ? (int) $s['capacite'] : null,
+                        'format' => (string) ($s['format'] ?? ''),
+                        'contenant' => (string) ($s['contenant'] ?? ''),
+                        'zoneId' => $zid, 'zone' => (string) $z['nom'],
+                        'meubleId' => $mid, 'meuble' => (string) $m['nom'],
+                        'meubleType' => (string) ($m['type'] ?? ''),
+                        'meubleTemp' => (string) ($m['temperature'] ?? ''),
+                        'meublePres' => (string) ($m['presentation'] ?? ''),
+                        'meublePeriodes' => $per,
+                        'niveauId' => $nid, 'niveau' => (string) $n['nom'],
+                        'occupants' => array_map(fn ($o) => [
+                            'ref' => $o['ref'], 'nom' => $noms[$o['ref']] ?? $o['ref'],
+                            'fronts' => $o['fronts'], 'ordre' => $o['ordre'],
+                            'parSlot' => $o['parSlot'], 'cols' => $o['cols'], 'rangs' => $o['rangs'],
+                            'periodes' => $o['periodes']], $occ),
+                    ];
+                    $nl['slots'][] = $ligne;
+                    $out['slots'][] = $ligne;
+                    $out['totaux']['slots']++;
+                    if (!$occ) { $out['totaux']['libres']++; }
+                }
+                $ml['niveaux'][] = $nl;
+            }
+            $zl['meubles'][] = $ml;
+        }
+        $out['zones'][] = $zl;
+    }
+
+    $out['totaux']['places'] = count(array_filter($placements, fn ($p) => $p['slotId'] !== null));
+    $out['totaux']['refs'] = count($placements);
+
+    foreach (Db::rows('SELECT * FROM pla_note') as $n) {
+        $out['notes'][(string) $n['cible'] . ':' . (string) $n['cible_id']] = [
+            'cible' => $n['cible'], 'cibleId' => (string) $n['cible_id'],
+            'texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
+            'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'photo' => $n['photo'] ?? null,
+            'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
+    }
+    return $out;
+}
+
+/**
+ * GET /planogramme/photos — le visuel que le PANEL a pour chaque référence
+ * placée, par la MÊME chaîne que le contrôle qualité : produits disponibles
+ * d'une boutique → id_recipe → /recipes/{id} → shop_photo_path (sinon
+ * main_photo_path, sinon photo_1..3), résolu contre photoBase.
+ *
+ * Le résultat est MÉMORISÉ sept jours (table ceo_plano_photo), absence
+ * comprise : deux appels panel par référence, à chaque ouverture d'écran,
+ * feraient payer le comptoir entier pour rien. `?rafraichir=1` force la
+ * relecture quand une photo vient d'être posée côté panel.
+ *
+ * La photo annexée dans le cockpit reste prioritaire à l'écran : celle-ci
+ * COMPLÈTE, elle ne remplace pas.
+ */
+/**
+ * Une URL de photo signée est-elle périmée ? Le panel sert ses visuels par
+ * des liens S3 signés UNE HEURE (mesuré : X-Amz-Expires=3600). Les mémoriser
+ * sept jours servirait des cadres morts — un lien signé se re-demande donc dès
+ * qu'il expire, avec une minute de marge ; seule l'ABSENCE de visuel garde la
+ * mémoire longue, c'est elle qui coûte deux appels pour rien.
+ */
+function planoPhotoPerimee(?string $url): bool
+{
+    if ($url === null || $url === '') { return false; }
+    if (!preg_match('/[?&]X-Amz-Date=(\d{8}T\d{6}Z)/', $url, $md)) { return false; }
+    $duree = preg_match('/[?&]X-Amz-Expires=(\d+)/', $url, $me) ? (int) $me[1] : 3600;
+    $depuis = strtotime(substr($md[1], 0, 8) . 'T' . substr($md[1], 9, 6) . 'Z');
+    return $depuis !== false && time() > $depuis + $duree - 60;
+}
+
+function ep_plano_photos(): array
+{
+    $rafraichir = !empty($_GET['rafraichir']);
+    $refs = [];
+    try {
+        foreach (Db::rows('SELECT ref FROM pla_placement WHERE slot_id IS NOT NULL') as $r) {
+            $refs[] = (string) $r['ref'];
+        }
+    } catch (PDOException $e) { return ['photos' => [], 'source' => 'aucun placement']; }
+    $refs = array_slice(array_values(array_unique($refs)), 0, 120);
+    if (!$refs) { return ['photos' => [], 'source' => 'aucun placement']; }
+
+    // La mémoire d'abord : ce qui a moins de sept jours ne se redemande pas.
+    $enMemoire = [];
+    try {
+        $in = implode(',', array_fill(0, count($refs), '?'));
+        foreach (Db::rows('SELECT * FROM ceo_plano_photo WHERE ref IN (' . $in . ')', $refs) as $c) {
+            $age = time() - (strtotime((string) $c['maj_le']) ?: 0);
+            if (!$rafraichir && $age < 7 * 86400 && !planoPhotoPerimee($c['url'] ?? null)) {
+                $enMemoire[(string) $c['ref']] = $c;
+            }
+        }
+    } catch (PDOException $e) { /* table absente : tout se relit */ }
+
+    // Les boutiques qui peuvent porter la correspondance produit → recette.
+    // N'importe laquelle fait l'affaire quand la référence y est vendue ; on
+    // en essaie trois avant de conclure à l'absence.
+    $boutiques = [];
+    try {
+        foreach (Db::rows('SELECT id FROM ceo_shop') as $b2) {
+            if (is_numeric($b2['id'])) { $boutiques[] = (int) $b2['id']; }
+        }
+    } catch (PDOException $e) { /* pas de boutiques locales */ }
+    $boutiques = array_slice($boutiques, 0, 3);
+
+    $photos = []; $lus = 0;
+    foreach ($refs as $ref) {
+        if (isset($enMemoire[$ref])) {
+            $photos[$ref] = ['nom' => (string) $enMemoire[$ref]['nom'],
+                'url' => $enMemoire[$ref]['url'] !== null ? (string) $enMemoire[$ref]['url'] : null];
+            continue;
+        }
+        $trouve = null;
+        if (PanelApi::configured() && is_numeric($ref)) {
+            foreach ($boutiques ?: [0] as $bid) {
+                $r = PanelApi::productPhoto((int) $ref, $bid);
+                if ($r !== null && $r['url'] !== null) { $trouve = $r; break; }
+                if ($r !== null && $trouve === null) { $trouve = $r; }
+            }
+            $lus++;
+        }
+        $photos[$ref] = ['nom' => (string) ($trouve['nom'] ?? ''), 'url' => $trouve['url'] ?? null];
+        try {
+            Db::exec('INSERT INTO ceo_plano_photo (ref, nom, url, maj_le) VALUES (?,?,?,?)'
+                . ' ON DUPLICATE KEY UPDATE nom = VALUES(nom), url = VALUES(url), maj_le = VALUES(maj_le)',
+                [$ref, mb_substr((string) ($trouve['nom'] ?? ''), 0, 190), $trouve['url'] ?? null,
+                 date('Y-m-d H:i:s')]);
+        } catch (PDOException $e) { /* sans mémoire : la réponse part quand même */ }
+    }
+    return ['photos' => $photos,
+        'source' => 'panel — recette de chaque référence ; lien signé relu à l’expiration, absence mémorisée 7 jours'
+            . ($lus ? ' (' . $lus . ' relue(s) à l’instant)' : ''),
+        'api' => ['erreur' => PanelApi::$lastError]];
+}
+
+/**
+ * Ce qui manque au planogramme, et qui ne peut PAS venir du cockpit.
+ *
+ * La structure, les placements et les consignes se saisissent ici. Restent deux
+ * dépendances réelles au panel : le visuel du produit, et le fait que la
+ * consigne parvienne à la boutique. Les nommer évite de laisser croire qu'un
+ * planogramme rempli est un planogramme diffusé.
+ */
+function planoManque(): array
+{
+    return [
+        // La photo n'est plus une lacune : elle se lit sur la RECETTE de la
+        // référence (la même chaîne que le contrôle qualité), et le cockpit
+        // peut toujours en annexer une qui prime. Ce qui manque encore, c'est
+        // le sens inverse : déposer un visuel côté panel depuis le cockpit.
+        lacune('Dépôt du visuel côté panel',
+            'remplacer la photo de recette depuis le cockpit — aujourd\'hui elle se lit, elle ne s\'écrit pas',
+            'API panel — aucune route de dépôt de visuel produit. '
+            . 'À obtenir : POST /consultant/products/{id}/photos avec kind: presentation'),
+        lacune('Diffusion de la consigne en boutique',
+            'afficher les notes épinglées sur la tâche de comptoir, côté application terrain',
+            'API panel — aucune route ne porte de consigne de présentation vers la boutique. '
+            . 'Sans elle, la consigne reste lisible du seul côté cockpit'),
+    ];
+}
+
+/**
+ * GET /production/produit/fiche — la fiche de vente d'UNE référence.
+ *
+ * Lue produit par produit, et en `SELECT *` : les colonnes utiles de la caisse
+ * (nutriscore, allergènes, conservation, réchauffe, positionnement…) existent
+ * mais leur présence varie d'une installation à l'autre. Les nommer une par une
+ * dans le SELECT ferait échouer toute la fiche sur une colonne absente ; on
+ * prend la ligne entière et on ne rend que ce qu'on y trouve.
+ */
+function ep_prod_produit_fiche(): array
+{
+    $ref = trim((string) ($_GET['ref'] ?? ''));
+    if ($ref === '') { http_response_code(400); return ['error' => 'référence requise']; }
+
+    $cat = null;
+    foreach (ep_prod_catalogue() as $c) {
+        if ((string) $c['ref'] === $ref) { $cat = $c; break; }
+    }
+    if ($cat === null) { http_response_code(404); return ['error' => 'référence inconnue']; }
+
+    $out = ['ref' => $ref, 'catalogue' => $cat, 'technique' => [], 'source' => null,
+        'note' => null, 'manque' => planoManque()];
+
+    // Fiche technique : la ligne produit de la caisse, telle quelle.
+    $pid = $cat['pwaId'] ?? null;
+    if ($pid !== null) {
+        try {
+            // La fiche du panel (/products/{id}) porte les mêmes champs que la table `product`,
+            // et en plus les libellés (conservation, positionnement, secteur) ; la copie en repli.
+            $r = null;
+            if (PanelApi::configured()) {
+                $f = PanelApi::get('/products/' . (int) $pid);
+                if (is_array($f) && isset($f['data']) && is_array($f['data'])) { $f = $f['data']; }
+                if (is_array($f) && isset($f['id'])) { $r = $f; $out['source'] = 'panel'; }
+            }
+            if ($r === null) { $r = Db::row('SELECT * FROM product WHERE id = ?', [(int) $pid]); }
+            if ($r !== null) {
+                $out['source'] = $out['source'] ?? 'caisse';
+                // Libellé lisible → valeur, en ne gardant que le renseigné : un
+                // champ vide affiché ferait passer une absence pour un zéro.
+                $champs = [
+                    'nutriscore' => 'Nutriscore',
+                    'allergene' => 'Allergènes',
+                    'is_vegetarian' => 'Végétarien',
+                    'storage_name' => 'Conservation',
+                    'storage_description' => 'Consigne de conservation',
+                    'storage_temperature' => 'Température de conservation',
+                    'shelf_life_category' => 'Catégorie de DLV',
+                    'reheating_time_minutes' => 'Réchauffe (minutes)',
+                    'reheating_temperature_celsius' => 'Réchauffe (°C)',
+                    'preparation_lead_time_hours' => 'Délai de préparation (h)',
+                    'positioning_name' => 'Positionnement',
+                    'positioning_description' => 'Description du positionnement',
+                    'sector_name' => 'Secteur',
+                    'quantity_per_label' => 'Quantité par étiquette',
+                    'label_size' => 'Format d\'étiquette',
+                    'is_divisible' => 'Divisible',
+                    'is_piece_based' => 'Vendu à la pièce',
+                ];
+                // Un zéro de réchauffe veut dire « pas de réchauffe », pas
+                // « réchauffer zéro minute », et un format « none » n'est pas un
+                // format. Les afficher remplirait la fiche de bruit et rendrait
+                // les vrais renseignements plus durs à trouver.
+                $zeroAbsent = ['reheating_time_minutes', 'reheating_temperature_celsius',
+                    'preparation_lead_time_hours', 'storage_temperature'];
+                $motsVides = ['none', 'n/a', 'na', 'null', '-', 'aucun', 'aucune'];
+                foreach ($champs as $col => $lib) {
+                    if (!array_key_exists($col, $r)) { continue; }
+                    $v = $r[$col];
+                    if ($v === null || $v === '') { continue; }
+                    if (in_array($col, $zeroAbsent, true) && (float) $v === 0.0) { continue; }
+                    if (in_array(mb_strtolower(trim((string) $v)), $motsVides, true)) { continue; }
+                    if (in_array($col, ['is_vegetarian', 'is_divisible', 'is_piece_based'], true)) {
+                        $v = ((int) $v === 1) ? 'oui' : 'non';
+                    }
+                    $out['technique'][] = ['champ' => $lib, 'valeur' => (string) $v];
+                }
+            }
+        } catch (PDOException $e) { /* table de caisse absente : fiche réduite */ }
+    }
+
+    // La consigne de présentation de l'ancien planogramme, si elle existe encore.
+    try { $n = Db::row('SELECT * FROM pla_note WHERE cible = ? AND cible_id = ?', ['ref', $ref]); }
+    catch (PDOException $e) { $n = null; }
+    if ($n !== null) {
+        $out['note'] = ['texte' => (string) ($n['texte'] ?? ''), 'epinglee' => (bool) (int) $n['epinglee'],
+            'gravite' => (int) $n['gravite'], 'du' => $n['du'], 'au' => $n['au'],
+            'photo' => $n['photo'] ?? null,
+            'auteur' => $n['auteur'], 'majLe' => $n['maj_le']];
+    }
+    return $out;
+}
+
+/**
+ * Repères d'une photo de contrôle : lecture.
+ *
+ * Rend toujours une forme exploitable — liste vide et `maj` nul quand rien n'a
+ * été posé — pour que l'écran n'ait pas à distinguer « pas de repère » de
+ * « table absente ».
+ */
+function annotationLire(int $shopId, int $taskId, string $date): array
+{
+    $out = ['liste' => [], 'maj' => null, 'auteur' => null];
+    try {
+        $r = Db::row('SELECT reperes, auteur, maj_le FROM ceo_task_annotation'
+            . ' WHERE id_shop = ? AND id_task = ? AND annot_date = ?', [$shopId, $taskId, $date]);
+    } catch (PDOException $e) { return $out; }
+    if ($r === null) { return $out; }
+    $j = json_decode((string) $r['reperes'], true);
+    $out['liste']  = annotationNormalise(is_array($j) ? $j : []);
+    $out['maj']    = $r['maj_le'];
+    $out['auteur'] = $r['auteur'] !== '' ? $r['auteur'] : null;
+    return $out;
+}
+
+/**
+ * Normalise et BORNE une liste de repères, à l'écriture comme à la lecture.
+ *
+ * Un repère vient du navigateur : ses coordonnées, sa taille et son texte sont
+ * ramenés dans des limites tenables avant d'être gardés ou rendus. Sans cela un
+ * cadre à x = 40 sortirait de la photo sans qu'aucun écran puisse le rattraper,
+ * et un texte sans limite ferait de cette table un dépotoir.
+ *
+ * La numérotation est RECALCULÉE ici, dans l'ordre de la liste : elle ne peut
+ * donc pas se trouer ni doubler, quoi que le navigateur envoie.
+ */
+function annotationNormalise(array $liste): array
+{
+    $borne = static fn ($v) => max(0.0, min(1.0, round((float) $v, 4)));
+    // La gravité d'un repère est celle du barème DÉJÀ partagé par l'écran de
+    // validation (réglage `signalement`) : « non conforme mineur / majeur /
+    // critique » y sont nommés, avec leur couleur. Un second barème pour les
+    // repères se serait mis à diverger du premier au premier changement.
+    $echelle = [];
+    $sig = setting('signalement', []);
+    foreach ((is_array($sig) && is_array($sig['niveaux'] ?? null)) ? $sig['niveaux'] : [] as $nv) {
+        if (isset($nv['n'])) { $echelle[(int) $nv['n']] = true; }
+    }
+    $defaut = isset($echelle[3]) ? 3 : (int) (array_key_first($echelle) ?? 3);
+
+    $out = [];
+    foreach ($liste as $r) {
+        if (!is_array($r)) { continue; }
+        // La TAILLE est bornée d'abord, l'origine ensuite : un cadre d'au moins
+        // 1,5 % de la photo (en dessous, le ✕ le recouvre et le repère
+        // n'indique plus rien) et jamais un bord au-delà de l'image. L'inverse
+        // — origine puis taille — laisse un x = 1 pousser le cadre hors cadre.
+        $l = max(0.015, min(1.0, $borne($r['l'] ?? 0.1)));
+        $h = max(0.015, min(1.0, $borne($r['h'] ?? 0.1)));
+        $x = min($borne($r['x'] ?? 0), round(1 - $l, 4));
+        $y = min($borne($r['y'] ?? 0), round(1 - $h, 4));
+        $txt = trim((string) ($r['txt'] ?? ''));
+        if (function_exists('mb_substr')) { $txt = mb_substr($txt, 0, 400); }
+        $niv = (int) ($r['niveau'] ?? $defaut);
+        if (!isset($echelle[$niv])) { $niv = $defaut; }
+        $out[] = ['n' => count($out) + 1, 'x' => $x, 'y' => $y, 'l' => $l, 'h' => $h,
+            'niveau' => $niv, 'txt' => $txt];
+        if (count($out) >= 40) { break; }   // au-delà, la photo n'est plus lisible
+    }
+    return $out;
+}
+
+/**
+ * Ce qu'il faudrait pour que la photo annotée PARTE au franchisé.
+ *
+ * L'annotation est complète côté cockpit ; ce qui manque est le canal retour.
+ * L'écran le dit lui-même plutôt que de laisser croire que le magasin a reçu
+ * quelque chose.
+ */
+function annotationLacune(): array
+{
+    return lacune('Envoi des repères au franchisé',
+        'joindre la photo annotée à l’avis de tâche, côté panel',
+        'API panel — /consultant/shops/{id}/task-reviews n’accepte que note, conformité et commentaire ; '
+        . 'aucune route de dépôt de pièce jointe n’est exposée. À obtenir : POST d’une pièce jointe '
+        . '(image ou calque) rattachable à un task-review, ou un champ de commentaire portant les repères');
+}
+
+function ep_perf(): array
+{
+    $annees = array_values(array_unique(array_filter(array_map('intval', explode(',', $_GET['annees'] ?? '2025,2026')))));
+    // L'API du panel seule (11/10/2026, demande de Sam : « pas de table locale, API only »). Plus de copie
+    // locale du panel : ni `mac_shop_monthly_pnl` (le P&L mensuel figé à juillet-août), ni `transaction`
+    // (la caisse copiée, arrêtée au 14/07). Le budget reste celui du cockpit (`ceo_shop_month_perf`, saisi
+    // dans le cockpit, que le panel ne porte pas).
+    if (!PanelApi::configured() || $annees === []) { return []; }
+    $in = implode(',', array_fill(0, count($annees), '?'));   // la requête du budget du cockpit
+    $ids = [];
+    foreach (analyseListe(PanelApi::consultantShops() ?? []) as $sh) { if ((int) ($sh['id'] ?? 0) > 0) { $ids[] = (int) $sh['id']; } }
+    if ($ids === []) { return []; }
+    try {
+        $key = fn ($s, $y, $m) => $s . '-' . $y . '-' . $m;
+        $vide = static fn (int $s, int $y, int $m): array => ['storeId' => (string) $s, 'annee' => $y, 'mois' => $m,
+            'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+            'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null, 'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null];
+        $cells = [];
+        // 1) CA, tickets et panier de chaque mois : /shops/{id}/statistics/sales/kpis (pvKpisMois, gardé une fois
+        //    le mois clos, une heure pour le mois en cours), les mois manquants lus en parallèle.
+        $moisC = date('Y-m');
+        $paires = [];
+        foreach ($annees as $y) {
+            for ($m = 1; $m <= 12; $m++) {
+                $ym = sprintf('%04d-%02d', $y, $m);
+                if ($ym > $moisC) { break; }
+                foreach ($ids as $sid) { $paires[] = [$sid, $ym]; }
+            }
+        }
+        if (function_exists('pvKpisMoisLot')) { pvKpisMoisLot($paires); }
+        foreach ($paires as [$sid, $ym]) {
+            $kp = function_exists('pvKpisMois') ? pvKpisMois($sid, $ym) : null;
+            if ($kp === null || !($kp['ca'] > 0)) { continue; }
+            $y = (int) substr($ym, 0, 4); $m = (int) substr($ym, 5, 2);
+            $cells[$key($sid, $y, $m)] = ['ca' => round($kp['ca'], 2), 'tickets' => $kp['tickets'],
+                'panierMoyen' => $kp['panier'] !== null ? round($kp['panier'], 2) : ($kp['tickets'] > 0 ? round($kp['ca'] / $kp['tickets'], 2) : null)] + $vide($sid, $y, $m);
+        }
+
+        // 2bis) Le MOIS COURANT vient de l'API du panel : la caisse en base
+        //       s'arrête à sa dernière journée encodée, l'API sert le jour
+        //       même. Seule la cellule du mois en cours est rafraîchie —
+        //       l'historique reste celui du P&L mensuel et de la caisse.
+        if (in_array((int) date('Y'), $annees, true) && PanelApi::configured()) {
+            foreach (analyseListe(PanelApi::shopsSalesKpisEntre(date('Y-m-01'), date('Y-m-d')) ?? []) as $x) {
+                $id = 0;
+                foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                    if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+                }
+                if ($id <= 0) { continue; }
+                $caF = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+                $tkF = nombreOuNull($x, ['tickets', 'receipts', 'transactions']);
+                $paF = nombreOuNull($x, ['avg_basket', 'basket_avg', 'panier']);
+                $k = $key($id, (int) date('Y'), (int) date('n'));
+                if (!isset($cells[$k])) {
+                    $cells[$k] = [
+                        'storeId' => (string) $id, 'annee' => (int) date('Y'), 'mois' => (int) date('n'),
+                        'ca' => null, 'caBudget' => null, 'caTheorique' => null, 'margeNette' => null, 'margePct' => null,
+                        'tickets' => null, 'panierMoyen' => null, 'foodCostPct' => null,
+                        'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
+                    ];
+                }
+                if ($caF !== null) { $cells[$k]['ca'] = round($caF, 2); }
+                if ($tkF !== null) { $cells[$k]['tickets'] = (int) $tkF; }
+                if ($paF !== null) { $cells[$k]['panierMoyen'] = round($paF, 2); }
+            }
+        }
+
+        // 2quinquies) Le panier hors clients pro d'UN magasin (21/10/2026, `pro=4` : le dashboard magasin et son plan) :
+        //       le CA et les tickets du mois moins les tickets pro gravés de chacun de ses jours vendus (les jours de la
+        //       heatmap, vsPanelJours, gravés une fois le mois clos) — seulement si tous sont lus, sinon le mois garde le
+        //       panier total et le dit (`panierBase` = total). Le réseau entier ne se calcule pas : trente relevés par
+        //       magasin et par mois, pour un tableau qui n'en montre qu'un.
+        $proS = (int) ($_GET['pro'] ?? 0);
+        if ($proS > 0 && function_exists('vpPanier') && function_exists('vpProJours') && function_exists('vpJoursLus') && function_exists('vsPanelJours')) {
+            $debP = defined('SV_DEBUT') ? SV_DEBUT : date('Y-m-01');
+            $fenP = [];
+            foreach ($cells as $cP) {
+                $duP = sprintf('%04d-%02d-01', (int) $cP['annee'], (int) $cP['mois']);
+                if ((int) $cP['storeId'] === $proS && ($cP['ca'] ?? 0) > 0 && date('Y-m-t', strtotime($duP)) >= $debP) { $fenP[] = [$duP, min(date('Y-m-t', strtotime($duP)), date('Y-m-d'))]; }
+            }
+            $vendusP = $fenP === [] ? [] : array_keys(vsPanelJours($proS, $fenP));
+            sort($vendusP);
+            $lusP = $vendusP === [] ? [] : (vpJoursLus([$proS], array_values(array_filter($vendusP, static fn ($j) => $j >= $debP)), 3)[$proS] ?? []);
+            foreach ($cells as $kP => $cP) {
+                if ((int) $cP['storeId'] !== $proS || !(($cP['ca'] ?? 0) > 0) || $cP['tickets'] === null) { continue; }
+                $ymP = sprintf('%04d-%02d', (int) $cP['annee'], (int) $cP['mois']);
+                $jP = array_values(array_filter($vendusP, static fn ($j) => str_starts_with($j, $ymP)));
+                $sP = vpComptoirDe(vpProJours($proS, $jP, true, $lusP), (float) $cP['ca'], (int) $cP['tickets']);
+                $cells[$kP] += $sP + vpPanier($sP['caComptoir'], $sP['ticketsComptoir'], $cP['panierMoyen'] !== null ? (float) $cP['panierMoyen'] : null);
+            }
+        }
+
+        // 2ter) FOOD COST par magasin et par mois — la heatmap de marge du
+        //       panel, seule source : le P&L mensuel ne porte pas le poste
+        //       matière (ticket T5a). La route plafonne sa fenêtre à 31 jours
+        //       (mesuré : 422 au-delà) : UN appel par boutique ET par mois,
+        //       avec les bornes `from`/`to` — les seules qu'elle honore.
+        //       Un mois CLOS ne change plus : son ratio est mis en cache
+        //       (ceo_app_setting), seul le mois courant se recalcule.
+        if (PanelApi::configured()) {
+            $shopIds = $ids;   // les magasins de l'API (11/10/2026)
+            $yF = max($annees);
+            $cache = setting('foodCostApi', []);
+            if (!is_array($cache)) { $cache = []; }
+            $moisFin = $yF < (int) date('Y') ? 12 : (int) date('n');
+            $chemins = [];
+            foreach ($shopIds as $sid) {
+                for ($mm = 1; $mm <= $moisFin; $mm++) {
+                    $cle = $sid . '-' . $yF . '-' . $mm;
+                    $clos = !($yF === (int) date('Y') && $mm === (int) date('n'));
+                    if ($clos && array_key_exists($cle, $cache)) { continue; }
+                    $du = sprintf('%04d-%02d-01', $yF, $mm);
+                    $au = $clos ? date('Y-m-t', strtotime($du)) : date('Y-m-d');
+                    $chemins[$cle] = '/consultant/shops/' . $sid . '/margin-heatmap?'
+                        . http_build_query(['from' => $du, 'to' => $au]);
+                }
+            }
+            $change = false;
+            foreach (PanelApi::getParallele($chemins) as $cle => $hm) {
+                $tot = is_array($hm) ? ($hm['totals'] ?? null) : null;
+                $ca2 = is_array($tot) ? (float) ($tot['ca'] ?? 0) : 0.0;
+                // La marge du mois ne vaut que si le panel la chiffre ; sinon les journées se
+                // recomposent depuis les tickets gravés, et le mois ne prend un ratio que si ces
+                // journées portent au moins 80 % de son CA. Jamais 100 % faute de marge connue.
+                $mg2 = is_array($tot) && isset($tot['margin_value']) && is_numeric($tot['margin_value']) ? (float) $tot['margin_value'] : null;
+                $pct2 = ($mg2 !== null && $ca2 > 0) ? round((($ca2 - $mg2) / $ca2) * 100, 1) : null;
+                if ($pct2 === null && is_array($hm) && function_exists('svMatiereJour')) {
+                    [$sid2] = explode('-', (string) $cle);
+                    $caE = 0.0; $matE = 0.0; $zero2 = 0;
+                    foreach ((array) ($hm['days'] ?? []) as $d2) {
+                        $caJ = (float) ($d2['ca'] ?? 0);
+                        if ($caJ <= 0 || empty($d2['has_data'])) { continue; }
+                        $e2 = svMatiereJour((int) $sid2, (string) ($d2['date'] ?? ''), $zero2, 0);
+                        if ($e2 !== null) { $caE += $caJ; $matE += (float) $e2['estime']; }
+                    }
+                    if ($ca2 > 0 && $caE >= 0.8 * $ca2 && $caE > 0) { $pct2 = round(100 * $matE / $caE, 1); }
+                }
+                // Un mois sans ratio ne se mémorise pas : il se recalculera quand ses journées seront lues.
+                if ($pct2 !== null) { $cache[$cle] = $pct2; $change = true; } else { unset($cache[$cle]); }
+            }
+            if ($change) {
+                try {
+                    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                        ['foodCostApi', json_encode($cache)]);
+                } catch (PDOException $eFc) { /* cache facultatif */ }
+            }
+            foreach ($cache as $cle => $pct) {
+                if ($pct === null) { continue; }
+                [$sid2, $y2, $m2] = array_map('intval', explode('-', (string) $cle));
+                $k = $key($sid2, $y2, $m2);
+                if (isset($cells[$k])) { $cells[$k]['foodCostPct'] = (float) $pct; }
+            }
+        }
+
+        // 2quater) MAIN-D'ŒUVRE, FRAIS GÉNÉRAUX ET MARGE NETTE de chaque mois (11/10/2026) : le P&L mensuel du panel
+        //       (resPnlMensuel : /consultant/shops/{id}/pnl/monthly?from=&to=, un appel par magasin, 24 mois au plus).
+        //       Marge nette = CA − food cost − main-d'œuvre − frais généraux. Les jours vendus sans planning au panel
+        //       (relevé jour par jour déjà gravé par le cron, sans appel ici) se signalent : `sansPlanning`, la
+        //       main-d'œuvre du panel y est incomplète.
+        if (PanelApi::configured() && function_exists('resPnlMensuel')) {
+            $deP = min($annees) . '-01'; $aP = min(max($annees) . '-12', date('Y-m'));
+            $aujDs = date('Y-m-d'); $zeroDs = 0; $pnlP = [];
+            foreach ($cells as $kDs => $cDs) {
+                $caDs = (float) ($cDs['ca'] ?? 0);
+                if (!in_array((int) $cDs['annee'], $annees, true) || $caDs <= 0) { continue; }
+                $sidP = (int) $cDs['storeId'];
+                $pnlP[$sidP] ??= resPnlMensuel($sidP, $deP, $aP);
+                $ym = sprintf('%04d-%02d', (int) $cDs['annee'], (int) $cDs['mois']);
+                $p = $pnlP[$sidP][$ym] ?? null;
+                // Le mois en cours : le P&L mensuel compte les frais (et le planning) du mois entier face au CA à date —
+                // mesuré à Halle le 11/10 : 68,9 % de frais. Le cumul jour par jour à date le remplace.
+                if ($ym === date('Y-m') && function_exists('resCoutsPeriode')) {
+                    $budCur = 12;
+                    $co = resCoutsPeriode($sidP, $ym . '-01', date('Y-m-t'), $budCur, $aujDs);
+                    $p = $co['manque'] === 0 && $co['jours'] > 0 ? ['lab' => $co['lab'], 'oh' => $co['oh']] : null;
+                }
+                if ($p === null || $p['lab'] === null || $p['oh'] === null) { $cells[$kDs]['coutsManque'] = 1; continue; }
+                $cells[$kDs]['labourCostPct'] = round(100 * $p['lab'] / $caDs, 1);
+                $cells[$kDs]['overheadPct'] = round(100 * $p['oh'] / $caDs, 1);
+                $fcDs = $cells[$kDs]['foodCostPct'] ?? null;
+                $netDs = $fcDs !== null ? $caDs * (1 - (float) $fcDs / 100) - $p['lab'] - $p['oh'] : null;
+                $cells[$kDs]['margeNette'] = $netDs !== null ? round($netDs, 2) : null;
+                $cells[$kDs]['margePct'] = $netDs !== null ? round($netDs / $caDs, 4) : null;
+                $cells[$kDs]['coutsSource'] = 'P&L mensuel du panel';
+                if (function_exists('resCoutsPeriode')) {
+                    $duDs = $ym . '-01';
+                    $co = resCoutsPeriode($sidP, $duDs, date('Y-m-t', strtotime($duDs)), $zeroDs, $aujDs);
+                    if (($co['sansPlanning'] ?? 0) > 0) { $cells[$kDs]['sansPlanning'] = $co['sansPlanning']; }
+                }
+            }
+        }
+
+        // 3) Le BUDGET encodé (`ceo_shop_month_perf`) — table du cockpit, la
+        //    seule qui le porte. Ni `mac_shop_monthly_pnl` ni `transaction` ne
+        //    connaissent le budget : sans cette passe, l'encodage était écrit
+        //    en base et jamais relu, et tous les écrans qui comparent au
+        //    budget (suivi budget, heatmap, objectifs de CA) affichaient un
+        //    objectif vide sans la moindre erreur.
+        //
+        //    Un mois budgété SANS réel doit exister aussi : « budget 80 k,
+        //    rien encaissé » est une information, pas une ligne à masquer.
+        try {
+            foreach (Db::rows("SELECT shop_id, year, month, revenue_budget, ca_theorique
+                               FROM ceo_shop_month_perf
+                               WHERE year IN ($in) AND (revenue_budget IS NOT NULL OR ca_theorique IS NOT NULL)", $annees) as $r) {
+                $k = $key($r['shop_id'], $r['year'], $r['month']);
+                $bud = $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null;
+                $theo = $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null;
+                if (isset($cells[$k])) {
+                    $cells[$k]['caBudget'] = $bud;
+                    $cells[$k]['caTheorique'] = $theo;
+                } else {
+                    $cells[$k] = [
+                        'storeId' => (string) $r['shop_id'], 'annee' => (int) $r['year'], 'mois' => (int) $r['month'],
+                        'ca' => null, 'caBudget' => $bud, 'caTheorique' => $theo,
+                        'margeNette' => null, 'margePct' => null, 'tickets' => null, 'panierMoyen' => null,
+                        'foodCostPct' => null, 'labourCostPct' => null, 'overheadPct' => null, 'valorisation' => null,
+                    ];
+                }
+            }
+        } catch (PDOException $eBud) { /* table du cockpit absente : réel seul */ }
+
+        uasort($cells, static fn ($a2, $b2) => [(int) $a2['storeId'], $a2['annee'], $a2['mois']] <=> [(int) $b2['storeId'], $b2['annee'], $b2['mois']]);
+        return array_values($cells);
+    } catch (PDOException $e) {
+        // Plus de repli sur une table locale (11/10/2026) : l'API seule, sans réponse rien.
+        return [];
+    }
+}
+
+/**
+ * GET /stores/etp?annees=2025,2026 — ETP réel par boutique et par mois.
+ *
+ * L'écran Marge & coûts déduisait l'effectif du chiffre d'affaires
+ * (max(3, ca/14200)) : un ETP inventé, qui déclenchait pourtant une alerte de
+ * dimensionnement d'équipe. On le calcule ici depuis le planning réel :
+ * somme des heures planifiées du mois ÷ 168 = 1 ETP (règle du réseau).
+ *
+ * Un seul appel par boutique. Seules des heures agrégées sont conservées — le
+ * flux porte des données personnelles (nom, téléphone) qui n'ont pas à entrer
+ * dans le cockpit.
+ */
+function ep_stores_etp(): array
+{
+    $annees = array_map('intval', explode(',', $_GET['annees'] ?? date('Y')));
+    $out = [];
+    if (!PanelApi::configured()) { return $out; }
+    try {
+        $shops = Db::rows('SELECT id FROM shops WHERE active = 1');
+    } catch (PDOException $e) { return $out; }
+
+    $HEURES_ETP = (float) setting('heuresEtpMois', 168);
+    foreach ($shops as $sh) {
+        $sid = (int) $sh['id'];
+        $parMois = [];
+        foreach (PanelApi::shopSchedule($sid) as $c) {
+            $d = (string) ($c['work_date'] ?? '');
+            if (!preg_match('/^(\d{4})-(\d{2})/', $d, $m)) { continue; }
+            $an = (int) $m[1];
+            if (!in_array($an, $annees, true)) { continue; }
+            $deb = strtotime('1970-01-01 ' . (string) ($c['start_hour'] ?? ''));
+            $fin = strtotime('1970-01-01 ' . (string) ($c['end_hour'] ?? ''));
+            if ($deb === false || $fin === false) { continue; }
+            // Un créneau qui finit avant de commencer passe minuit : sans ça,
+            // une nuit compterait des heures négatives.
+            if ($fin <= $deb) { $fin += 86400; }
+            $h = ($fin - $deb) / 3600;
+            if ($h <= 0 || $h > 24) { continue; }
+            $k = $an . '-' . (int) $m[2];
+            $parMois[$k] = ($parMois[$k] ?? 0) + $h;
+        }
+        foreach ($parMois as $k => $h) {
+            [$an, $mo] = array_map('intval', explode('-', $k));
+            $out[] = ['storeId' => (string) $sid, 'annee' => $an, 'mois' => $mo,
+                'heures' => round($h, 1), 'etp' => $HEURES_ETP > 0 ? round($h / $HEURES_ETP, 2) : null];
+        }
+    }
+    return $out;
+}
+
+function ep_budgets(): array
+{
+    // Répartition des charges = le Compte de résultat réseau du CRM (07/11/2026, src/budget_crm.php) : relu au plus
+    // toutes les dix minutes, avant de rendre le modèle.
+    if (function_exists('bcSyncSiVieux')) { bcSyncSiVieux(); }
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    $slugByTag = levierSlugByTag();
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_shop_budget WHERE fiscal_year = ?', [$exercice]) as $b) {
+        $sid = $b['shop_id'];
+        // Mois encodés = mois dont le BUDGET est saisi. On comptait les mois
+        // ayant un `revenue` dans ceo_shop_month_perf — or le réel vient
+        // désormais du panel (mac_shop_monthly_pnl / transaction) et cette
+        // colonne reste vide : le compteur affichait « 0 / 12 » même après une
+        // saisie complète, laissant croire que l'encodage n'avait rien gardé.
+        $enc = Db::row('SELECT COUNT(*) n, MAX(encoded_at) last FROM ceo_shop_month_perf
+                        WHERE shop_id = ? AND year = ? AND revenue_budget IS NOT NULL AND revenue_budget > 0',
+            [$sid, $exercice]);
+        // Les charges viennent du modèle RÉSEAU : les taux sont communs à tous
+        // les magasins, seul le chiffre d'affaires qui les traduit en euros
+        // change. Les lignes par magasin ne sont plus lues — elles ne sont plus
+        // écrites non plus.
+        $modele = setting('budgetCharges');
+        // La courbe de référence du RÉSEAU : elle sert de repli à un magasin
+        // dont l'étude n'est pas encore encodée, et s'édite au même endroit.
+        $saisReseau = setting('saisonnaliteReseau', []);
+        $saisReseau = is_array($saisReseau) && count($saisReseau) === 12 ? array_map('floatval', $saisReseau) : [];
+        $charges = [];
+        foreach ((array) ($modele['categories'] ?? []) as $cat) {
+            foreach ((array) ($cat['lignes'] ?? []) as $l) {
+                $charges[] = [
+                    'id' => (string) ($l['id'] ?? ''),
+                    'poste' => (string) ($l['poste'] ?? ''), 'levier' => '',
+                    'categorie' => (string) ($cat['nom'] ?? ''),
+                    'description' => (string) ($l['description'] ?? ''),
+                    'gestion' => (string) ($l['gestion'] ?? ''),
+                    'pcmn' => (string) ($l['pcmn'] ?? ''),
+                    'pctBudget' => (float) ($l['pct'] ?? 0),
+                    'pctTheorique' => (float) ($l['pctTheo'] ?? ($l['pct'] ?? 0)),
+                    'champReel' => null,
+                ];
+            }
+        }
+        $ancien = array_map(fn ($l) => [
+            'poste' => $l['label'],
+            'levier' => $l['levid'] !== null ? ($slugByTag[(int) $l['levid']] ?? '') : '',
+            // Catégorie, description, mode de gestion et compte au plan
+            // comptable : une charge se pilote et se comptabilise, le seul
+            // pourcentage ne suffisait ni à l'un ni à l'autre.
+            'categorie' => (string) ($l['categorie'] ?? ''),
+            'description' => (string) ($l['description'] ?? ''),
+            'gestion' => (string) ($l['gestion'] ?? ''),
+            'pcmn' => (string) ($l['pcmn'] ?? ''),
+            'pctBudget' => (float) $l['pct_budget'],
+            'pctTheorique' => $l['pct_theorique'] !== null ? (float) $l['pct_theorique'] : null,
+            'champReel' => $l['real_field'],
+        ], Db::rows('SELECT * FROM ceo_shop_budget_line WHERE shop_id = ? AND fiscal_year = ? ORDER BY sort_order', [$sid, $exercice]));
+        // Repli : tant que le modèle réseau est vide, ce qu'un magasin avait
+        // encodé reste lisible plutôt que de disparaître de l'écran.
+        if ($charges === []) { $charges = $ancien; }
+        $out[] = [
+            'storeId' => $sid, 'exercice' => $exercice,
+            'moisEncodes' => (int) $enc['n'], 'moisTotal' => (int) $b['months_total'],
+            'dernierEncodage' => $enc['last'] ? substr($enc['last'], 0, 10) : null,
+            'panierEngagement' => $b['basket_target'] !== null ? (float) $b['basket_target'] : null,
+            'caTheoriqueAn' => $b['ca_theorique_an'] !== null ? (float) $b['ca_theorique_an'] : null,
+            'etudeMarche' => [
+                'date' => $b['etude_date'], 'source' => $b['etude_source'],
+                'potentielMenages' => $b['etude_potentiel_menages'] !== null ? (int) $b['etude_potentiel_menages'] : null,
+                'potentielMaturite' => $b['etude_potentiel_maturite'] !== null ? (float) $b['etude_potentiel_maturite'] : null,
+                'anneeExploitation' => $b['annee_exploitation'] !== null ? (int) $b['annee_exploitation'] : null,
+                'monteeEnRegime' => $b['montee_regime'] !== null ? json_decode($b['montee_regime'], true) : null,
+                'saisonnalite' => $b['saisonnalite'] !== null ? json_decode($b['saisonnalite'], true) : null,
+                'annexe' => $b['etude_annexe'] !== null ? json_decode($b['etude_annexe'], true) : null,
+            ],
+            'charges' => $charges,
+            // La courbe du réseau voyage avec chaque magasin : l'écran s'en
+            // sert comme repli et l'édite au même endroit.
+            'saisonnaliteReseau' => $saisReseau,
+            // Ce qui a été RÉELLEMENT encodé, mois par mois et poste par poste.
+            // Le modèle dit ce qui est attendu ; ceci dit ce qui est sorti.
+            'chargesMois' => chargesEncodees($sid, $exercice),
+        ];
+    }
+    // Le modèle de charges du réseau, joint à la lecture : un magasin qui n'a
+    // rien encodé doit pouvoir le reprendre d'un geste, sans que l'écran ait à
+    // le connaître par cœur.
+    if ($out !== []) {
+        $mod = setting('budgetCharges');
+        $out[0]['modele'] = is_array($mod) && isset($mod['categories']) ? $mod['categories'] : [];
+        // Les étapes intermédiaires voyagent avec le modèle : sans elles,
+        // l'écran ne saurait pas où poser « marge brute ».
+        $out[0]['paliers'] = is_array($mod) && isset($mod['paliers']) ? $mod['paliers'] : [];
+        // D'où vient le modèle : le CRM (structure et % réseau verrouillés, seul le % validé se saisit) ou le Cockpit.
+        $etat = function_exists('bcEtat') ? bcEtat() : [];
+        $out[0]['crm'] = ['actif' => is_array($mod) && ($mod['source'] ?? '') === 'crm', 'lu' => $etat['lu'] ?? null,
+            'erreur' => $etat['erreur'] ?? null, 'modifier' => $etat['modifier'] ?? null];
+    }
+    return $out;
+}
+
+/**
+ * Les charges encodées d'un magasin, par mois et par poste.
+ *
+ * Rendu en table indexée `mois => poste => montant` : l'écran interroge un
+ * couple, il ne parcourt pas une liste de cent lignes pour trouver la case
+ * qu'il affiche.
+ */
+function chargesEncodees(string $shopId, int $exercice): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT month, poste_id, amount FROM ceo_shop_charge_month
+                       WHERE shop_id = ? AND fiscal_year = ?', [$shopId, $exercice]) as $r) {
+        $m = (string) (int) $r['month'];
+        if (!isset($out[$m])) { $out[$m] = []; }
+        $out[$m][(string) $r['poste_id']] = (float) $r['amount'];
+    }
+    return $out;
+}
+
+function ep_targets(): array
+{
+    $ca = []; $expansion = [];
+    foreach (Db::rows('SELECT * FROM ceo_network_target') as $t) {
+        $h = $t['horizon'];
+        $ca[$h] = ['an' => (int) $t['target_year'], 'cible' => (float) $t['revenue_target']];
+        if ($t['note'] !== null) { $ca[$h]['note'] = $t['note']; }
+        $expansion[$h] = ['an' => (int) $t['target_year'], 'cible' => (int) $t['openings_target'], 'reel' => (int) $t['openings_real']];
+    }
+    return ['ca' => $ca, 'expansion' => $expansion, 'caMoyenOuverture' => (float) setting('caMoyenOuverture', 0)];
+}
+
+/**
+ * GET /referentiels/roles — rôles disponibles, lus dans `atelierby_db`.
+ *
+ * Le rôle affiché sur un compte ne doit pas être un texte libre : il vient du
+ * référentiel du panel (`position`), pour que « Consultant réseau » désigne la
+ * même chose des deux côtés. Le schéma de `position` variant, la colonne du
+ * libellé est détectée comme le fait le panel plutôt que supposée.
+ *
+ * Repli, dans l'ordre : `position` → rôles réellement portés par les comptes
+ * actifs (user_membership) → liste vide (l'écran laisse alors le champ libre).
+ */
+function ep_roles(): array
+{
+    // 1) Référentiel des positions du panel.
+    try {
+        $cols = array_map(fn ($r) => (string) $r['COLUMN_NAME'],
+            Db::rows("SELECT COLUMN_NAME FROM information_schema.COLUMNS
+                      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'position'"));
+        if ($cols !== []) {
+            $lower = array_map('strtolower', $cols);
+            $nameCol = null;
+            foreach (['name', 'label', 'title', 'nom', 'libelle'] as $cand) {
+                $i = array_search($cand, $lower, true);
+                if ($i !== false) { $nameCol = $cols[$i]; break; }
+            }
+            if ($nameCol === null) {
+                foreach ($cols as $c) { if (stripos($c, 'name') !== false) { $nameCol = $c; break; } }
+            }
+            if ($nameCol !== null) {
+                $where = '';
+                // Beaucoup de schémas portent un drapeau d'activité : on ne
+                // propose pas un rôle désactivé.
+                foreach (['active', 'is_active', 'enabled'] as $a) {
+                    $i = array_search($a, $lower, true);
+                    if ($i !== false) { $where = ' WHERE `' . $cols[$i] . '` = 1'; break; }
+                }
+                $out = [];
+                foreach (Db::rows("SELECT DISTINCT `$nameCol` AS nom FROM `position`$where ORDER BY `$nameCol` LIMIT 200") as $r) {
+                    $n = trim((string) $r['nom']);
+                    if ($n !== '') { $out[] = $n; }
+                }
+                if ($out !== []) { return ['source' => 'position', 'roles' => $out]; }
+            }
+        }
+    } catch (PDOException $e) { /* table absente : on tente le repli */ }
+
+    // 2) À défaut, les rôles réellement portés par les comptes actifs.
+    try {
+        $out = [];
+        foreach (Db::rows("SELECT DISTINCT app, scope_type FROM user_membership WHERE is_active = 1") as $r) {
+            $app = trim((string) ($r['app'] ?? ''));
+            if ($app === '') { continue; }
+            $lib = ucfirst(strtolower($app)) . ((string) ($r['scope_type'] ?? '') === 'SHOP' ? ' boutique' : ' réseau');
+            if (!in_array($lib, $out, true)) { $out[] = $lib; }
+        }
+        sort($out);
+        if ($out !== []) { return ['source' => 'user_membership', 'roles' => $out]; }
+    } catch (PDOException $e) { /* rien */ }
+
+    return ['source' => null, 'roles' => []];
+}
+
+function ep_consultants(): array
+{
+    // Vrais consultants du panel : user_membership(app='CONSULTANT') ⨝ user_profile.
+    // Repli sur con_consultant pour une installation autonome.
+    try {
+        $rows = Db::rows(
+            "SELECT m.id, m.scope_type, m.scope_id,
+                    COALESCE(NULLIF(TRIM(p.display_name), ''),
+                             NULLIF(TRIM(CONCAT(COALESCE(p.first_name,''),' ',COALESCE(p.last_name,''))), ''),
+                             CONCAT('Consultant #', m.id)) AS nom,
+                    NULLIF(TRIM(p.email), '') AS email
+               FROM user_membership m
+               LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+              WHERE m.app = 'CONSULTANT' AND m.is_active = 1
+              ORDER BY nom");
+        return array_map(fn ($c) => [
+            'id'     => 'u' . $c['id'],
+            'nom'    => $c['nom'],
+            'role'   => $c['scope_type'] === 'SHOP' ? 'Consultant boutique' : 'Consultant réseau',
+            'email'  => $c['email'],
+            'tjm'    => null,        // TJM/charge : données RH propres au cockpit, non présentes côté panel
+            'charge' => null,
+            'visites' => [],         // les visites (mac_consultant_visit) sont branchées séparément si présentes
+        ], $rows);
+    } catch (PDOException $e) {
+        $out = [];
+        foreach (Db::rows('SELECT * FROM con_consultant ORDER BY id') as $c) {
+            $visites = array_map(fn ($v) => ['date' => $v['visited_on'], 'store' => $v['store_label'], 'objet' => $v['subject']],
+                Db::rows('SELECT * FROM con_consultant_visit WHERE consultant_id = ? ORDER BY visited_on DESC', [$c['id']]));
+            $out[] = ['id' => $c['id'], 'nom' => $c['name'], 'role' => $c['role'], 'email' => $c['email'],
+                'tjm' => $c['daily_rate'] !== null ? (float) $c['daily_rate'] : null,
+                'charge' => $c['workload'] !== null ? (int) $c['workload'] : null, 'visites' => $visites];
+        }
+        return $out;
+    }
+}
+
+function ep_suppliers(): array
+{
+    return array_map(fn ($s) => ['id' => $s['id'], 'nom' => $s['name'], 'perim' => $s['perimeter'], 'email' => $s['email']],
+        Db::rows('SELECT * FROM ceo_supplier ORDER BY id'));
+}
+
+function ep_projects(): array
+{
+    $slugByTag = levierSlugByTag();
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project ORDER BY id') as $p) {
+        $id = $p['id'];
+        $leviers = array_map(fn ($r) => $slugByTag[(int) $r['levid']] ?? '', Db::rows('SELECT levid FROM ceo_project_levid WHERE project_id = ?', [$id]));
+        $jalons = array_map(fn ($j) => ['nom' => $j['name'], 'cible' => $j['target_on'], 'reel' => $j['done_on']],
+            Db::rows('SELECT * FROM ceo_project_milestone WHERE project_id = ? ORDER BY sort_order, id', [$id]));
+        $couts = array_map(fn ($c) => ['poste' => $c['label'], 'prevu' => (float) $c['planned'], 'reel' => (float) $c['actual']],
+            Db::rows('SELECT * FROM ceo_project_cost WHERE project_id = ? ORDER BY id', [$id]));
+        $taches = array_map(fn ($t) => [
+            'id' => $t['id'], 'nom' => $t['name'],
+            'owner' => ['t' => $t['owner_kind'], 'id' => $t['owner_id']],
+            'magasin' => $t['shop_id'], 'due' => $t['due_on'], 'done' => $t['done_on'],
+            'relance' => $t['reminded_on'], 'desc' => $t['description'],
+            'valideeLe' => $t['validated_at'] ?? null,
+            'renduePar' => $t['delivered_by'] ?? null,
+            'noteRemise' => $t['delivery_note'] ?? null,
+            'budget' => $t['budget'] !== null ? (float) $t['budget'] : null,
+            // `note` nulle sur une tâche rendue = elle attend une validation :
+            // c'est ce qui alimente le groupe « À valider » de l'écran.
+            'note' => $t['note'] !== null ? (int) $t['note'] : null,
+            'valideePar' => $t['validated_by'],
+            'signalement' => tacheSignalement($t['id']),
+            // La tâche de contrôle d'origine, quand la tâche est née d'une note
+            // posée sur une photo : de quoi retrouver le cliché et ses repères.
+            'panelNote' => isset($t['panel_note']) && $t['panel_note'] !== null ? (int) $t['panel_note'] : null,
+            'source' => (($t['src_task'] ?? null) && ($t['src_date'] ?? null))
+                ? ['shopId' => (string) ($t['src_shop'] ?? ''), 'taskId' => (string) $t['src_task'],
+                   'date' => (string) $t['src_date']]
+                : null,
+        ], Db::rows('SELECT * FROM ceo_project_task WHERE project_id = ? ORDER BY id', [$id]));
+        $out[] = [
+            'id' => $id, 'nom' => $p['name'], 'famille' => $p['famille'], 'statut' => $p['status'], 'prio' => $p['priority'],
+            'debut' => $p['starts_on'], 'fin' => $p['ends_on'],
+            'axes' => $p['axes_json'] ? json_decode($p['axes_json'], true) : [$p['axe']],
+            'leviers' => $leviers,
+            'budget' => $p['budget'] !== null ? (float) $p['budget'] : null,
+            'valeurEst' => $p['value_est'] !== null ? (float) $p['value_est'] : null,
+            'valeurReal' => $p['value_real'] !== null ? (float) $p['value_real'] : null,
+            'valeurTxt' => $p['value_txt'],
+            'kpis' => $p['kpis_json'] ? json_decode($p['kpis_json'], true) : [],
+            // Les hypothèses économiques du projet, telles qu'elles ont été
+            // posées à sa création : marge visée, prix, volumes, royalties.
+            'economie' => ($p['economie_json'] ?? null) ? json_decode($p['economie_json'], true) : null,
+            'jalons' => $jalons, 'taches' => $taches, 'couts' => $couts,
+        ];
+    }
+    return $out;
+}
+
+/**
+ * Le dernier signalement d'une tâche, ouvert ou clos.
+ *
+ * Une tâche validée sous le seuil garde son signalement au suivi : l'écran
+ * affiche « 1 ouvert depuis 4 jours » sur l'intervenant, ce qui n'a de sens
+ * que si la ligne survit à la clôture de la tâche.
+ */
+function tacheSignalement(string $taskId): ?array
+{
+    $r = Db::row('SELECT * FROM ceo_task_issue WHERE task_id = ? ORDER BY id DESC LIMIT 1', [$taskId]);
+    if ($r === null) {
+        return null;
+    }
+    return [
+        'id'      => (int) $r['id'],
+        'note'    => (int) $r['note'],
+        'famille' => $r['famille'],
+        'type'    => $r['type'],
+        'comment' => $r['comment'],
+        'copie'   => $r['recipients'] !== null && $r['recipients'] !== '' ? explode(',', $r['recipients']) : [],
+        'statut'  => $r['status'],
+        'ouvert'  => $r['closed_at'] === null,
+        'creeLe'  => $r['created_at'],
+        'creePar' => $r['created_by'],
+    ];
+}
+
+/**
+ * Suivi des tâches — les chiffres d'une période, et les signalements à traiter.
+ *
+ * Calculé en SQL plutôt qu'au client : l'écran doit pouvoir répondre « combien
+ * de tâches validées cette semaine » sans charger tous les projets, et le même
+ * calcul sert au rapport hebdomadaire et au rapport mensuel.
+ *
+ * `periode` vaut `semaine` ou `mois`. La borne est la date du jour côté base —
+ * pas celle du navigateur, qui peut être n'importe où.
+ */
+function ep_taches_suivi(string $periode = 'mois'): array
+{
+    $jours = $periode === 'semaine' ? 7 : 30;
+    $depuis = date('Y-m-d', strtotime('-' . $jours . ' days'));
+
+    // Les tâches validées sur la période, bornées sur la date de VALIDATION.
+    // Borner sur `done_on` — la livraison — situerait une validation d'
+    // aujourd'hui dans le mois où la tâche a été rendue : une tâche livrée en
+    // mars et jugée en août n'apparaîtrait dans aucun suivi utile.
+    // COALESCE pour les validations d'avant l'existence de la colonne.
+    $val = Db::rows(
+        'SELECT t.id, t.name, t.note, t.done_on, t.validated_at, t.owner_kind, t.owner_id, t.shop_id,'
+        . ' p.name AS projet FROM ceo_project_task t'
+        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' WHERE t.note IS NOT NULL AND COALESCE(t.validated_at, t.done_on) >= ?'
+        . ' ORDER BY COALESCE(t.validated_at, t.done_on) DESC', [$depuis]);
+
+    $notes = array_map(static fn ($r) => (int) $r['note'], $val);
+    $repartition = [1 => 0, 2 => 0, 3 => 0, 4 => 0, 5 => 0];
+    foreach ($notes as $n) { $repartition[$n] = ($repartition[$n] ?? 0) + 1; }
+
+    // Les signalements : ceux de la période, plus TOUS ceux qui restent
+    // ouverts. Un signalement de trois semaines qui traîne doit apparaître
+    // dans le suivi de la semaine — c'est même le premier à devoir sauter aux
+    // yeux, alors qu'une borne de date l'aurait masqué.
+    $sig = Db::rows(
+        'SELECT i.*, t.name AS tache, t.owner_kind, t.owner_id, p.name AS projet'
+        . ' FROM ceo_task_issue i'
+        . ' JOIN ceo_project_task t ON t.id = i.task_id'
+        . ' JOIN ceo_project p ON p.id = t.project_id'
+        . ' WHERE i.closed_at IS NULL OR i.created_at >= ?'
+        . ' ORDER BY (i.closed_at IS NULL) DESC, i.note ASC, i.created_at ASC', [$depuis]);
+
+    $signalements = array_map(static fn ($r) => [
+        'id'       => (int) $r['id'],
+        'tacheId'  => $r['task_id'],
+        'tache'    => $r['tache'],
+        'projet'   => $r['projet'],
+        'owner'    => ['t' => $r['owner_kind'], 'id' => $r['owner_id']],
+        'note'     => (int) $r['note'],
+        'famille'  => $r['famille'],
+        'type'     => $r['type'],
+        'comment'  => $r['comment'],
+        'statut'   => $r['status'],
+        'ouvert'   => $r['closed_at'] === null,
+        'creeLe'   => $r['created_at'],
+        'creePar'  => $r['created_by'],
+        'vuLe'     => $r['seen_at'],
+        'closLe'   => $r['closed_at'],
+        'closPar'  => $r['closed_by'],
+    ], $sig);
+
+    // Par intervenant : ce qui permet de dire à qui parler, pas seulement
+    // combien de lignes il reste.
+    $par = [];
+    foreach ($val as $r) {
+        $k = $r['owner_kind'] . ':' . $r['owner_id'];
+        $par[$k] ??= ['owner' => ['t' => $r['owner_kind'], 'id' => $r['owner_id']], 'validees' => 0, 'somme' => 0, 'sousSeuil' => 0, 'ouverts' => 0];
+        $par[$k]['validees']++;
+        $par[$k]['somme'] += (int) $r['note'];
+    }
+    foreach ($signalements as $g) {
+        $k = $g['owner']['t'] . ':' . $g['owner']['id'];
+        $par[$k] ??= ['owner' => $g['owner'], 'validees' => 0, 'somme' => 0, 'sousSeuil' => 0, 'ouverts' => 0];
+        if ($g['ouvert']) { $par[$k]['ouverts']++; }
+    }
+    $parIntervenant = array_values(array_map(static function (array $x): array {
+        $x['moyenne'] = $x['validees'] > 0 ? round($x['somme'] / $x['validees'], 2) : null;
+        unset($x['somme'], $x['sousSeuil']);
+        return $x;
+    }, $par));
+
+    $ouverts = count(array_filter($signalements, static fn ($g) => $g['ouvert']));
+    return [
+        'periode'    => $periode,
+        'depuis'     => $depuis,
+        'validees'   => count($val),
+        'moyenne'    => $notes !== [] ? round(array_sum($notes) / count($notes), 2) : null,
+        'repartition' => $repartition,
+        'ouverts'    => $ouverts,
+        'traites'    => count($signalements) - $ouverts,
+        'signalements' => $signalements,
+        'parIntervenant' => $parIntervenant,
+        'taches'     => array_map(static fn ($r) => [
+            'id' => $r['id'], 'nom' => $r['name'], 'note' => (int) $r['note'],
+            'le' => $r['validated_at'] ?? $r['done_on'], 'projet' => $r['projet'],
+            'owner' => ['t' => $r['owner_kind'], 'id' => $r['owner_id']],
+        ], $val),
+    ];
+}
+
+
+/**
+ * GET /marketing/social/regles (ancienne adresse /referentiels/facebook-regles) — le pack de règles de l'agent de contrôle.
+ *
+ * Le front n'a aucune règle en dur : il affiche ce que renvoie cet endpoint
+ * (libellés, gravités, aide, actif/inactif) et repasse le pack entier par
+ * `PUT /marketing/social/regles` (ou `PUT /parametres/fbControle`) quand le CEO désactive une règle. Les cinq
+ * niveaux de notes ne sont PAS recopiés ici : ils viennent de
+ * `meta.signalement`, une seule échelle pour tout le réseau.
+ */
+function ep_fb_regles(): array
+{
+    $r = fbRegles();
+    return [
+        'seuil'    => fbSeuil(),
+        'familles' => $r['familles'] ?? [],
+        'regles'   => array_map(fn ($x) => [
+            'code' => $x['code'], 'nom' => $x['nom'], 'famille' => $x['famille'], 'type' => $x['type'],
+            'gravite' => (int) $x['gravite'], 'actif' => !empty($x['actif']), 'aide' => $x['aide'] ?? '',
+        ], $r['regles'] ?? []),
+    ];
+}
+
+/** GET /facebook/posts — les posts soumis, leur contrôle et leur décision. */
+function ep_fb_posts(): array
+{
+    $out = [];
+    $rows = Db::rows(
+        'SELECT p.*, s.name AS shop_name FROM mar_social_post p LEFT JOIN ceo_shop s ON s.id = p.shop_id
+          ORDER BY COALESCE(p.planned_at, p.submitted_at) DESC, p.id DESC LIMIT 300');
+    foreach ($rows as $p) {
+        $out[] = [
+            'id' => $p['id'], 'magasinId' => $p['shop_id'], 'magasin' => $p['shop_name'],
+            'auteur' => $p['author'], 'format' => $p['format'],
+            // Les réseaux visés et la campagne d'appartenance (portail Marketing, 13/10/2026).
+            'reseaux' => function_exists('spReseauxDe') ? spReseauxDe($p) : ['facebook'],
+            'campagneId' => isset($p['campagne_id']) && $p['campagne_id'] !== null ? (int) $p['campagne_id'] : null,
+            'message' => $p['message'], 'lien' => $p['link'],
+            'medias' => $p['medias_json'] !== null ? json_decode($p['medias_json'], true) : [],
+            'publierLe' => $p['planned_at'] !== null ? substr($p['planned_at'], 0, 16) : null,
+            'soumisLe' => substr($p['submitted_at'], 0, 16),
+            'statut' => $p['status'],
+            // Ce que l'agent propose — jamais confondu avec ce que le CEO décide.
+            'agent' => [
+                'note' => $p['agent_note'] !== null ? (int) $p['agent_note'] : null,
+                'resume' => $p['agent_summary'],
+                'le' => $p['agent_ran_at'] !== null ? substr($p['agent_ran_at'], 0, 16) : null,
+                'passages' => (int) $p['agent_runs'],
+            ],
+            'ecarts' => fbEcartsDuPost($p['id']),
+            'decision' => [
+                'note' => $p['note'] !== null ? (int) $p['note'] : null,
+                'famille' => $p['decision_famille'], 'type' => $p['decision_type'],
+                'commentaire' => $p['decision_comment'],
+                'le' => $p['decided_at'] !== null ? substr($p['decided_at'], 0, 16) : null,
+                'par' => $p['decided_by'],
+            ],
+            'publie' => [
+                'le' => $p['published_at'] !== null ? substr($p['published_at'], 0, 16) : null,
+                'fbId' => $p['fb_post_id'],
+            ],
+        ];
+    }
+    return $out;
+}
+
+/** Les écarts d'un post, du plus grave au plus léger. */
+function fbEcartsDuPost(string $postId): array
+{
+    return array_map(fn ($e) => [
+        'id' => (int) $e['id'], 'code' => $e['rule_code'], 'regle' => $e['rule_name'],
+        'famille' => $e['famille'], 'type' => $e['type'], 'gravite' => (int) $e['gravite'],
+        'message' => $e['message'], 'extrait' => $e['extrait'], 'statut' => $e['status'],
+    ], Db::rows('SELECT * FROM mar_social_ecart WHERE post_id = ? ORDER BY gravite DESC, id', [$postId]));
+}
+
+function ep_crm(): array
+{
+    $out = [];
+    foreach (Db::rows('SELECT * FROM ceo_project_crm') as $r) {
+        $out[$r['project_id']] = ['gain' => $r['gain'], 'apport' => $r['apport'], 'objectif' => $r['objectif'],
+            'attendu' => $r['attendu'] !== null ? (float) $r['attendu'] : null,
+            'realise' => $r['realise'] !== null ? (float) $r['realise'] : null];
+    }
+    return $out;
+}
+
+/**
+ * Les personnes destinataires des rapports.
+ *
+ * Source de vérité : les comptes du panel (`user_membership` ⨝ `user_profile`),
+ * comme pour les consultants. `ceo_person` n'est qu'un repli d'installation
+ * autonome — sur une base réelle il est vide, et l'écran Reporting n'offrait
+ * alors AUCUN destinataire sélectionnable, sans le moindre message.
+ *
+ * On rend TOUS les comptes actifs, adresse ou non. Filtrer sur l'e-mail
+ * paraissait raisonnable — « un destinataire sans adresse n'en est pas un » —
+ * mais sur la vraie base cela faisait disparaître trois consultants sur cinq
+ * de la liste, sans rien dire. On ne peut pas corriger une fiche qu'on ne voit
+ * plus : l'écran les montre, et signale l'adresse manquante.
+ */
+function ep_people(): array
+{
+    try {
+        $rows = Db::rows(
+            "SELECT m.id, m.app, m.scope_type,
+                    COALESCE(NULLIF(TRIM(p.display_name), ''),
+                             NULLIF(TRIM(CONCAT(COALESCE(p.first_name,''),' ',COALESCE(p.last_name,''))), ''),
+                             CONCAT('Compte #', m.id)) AS nom,
+                    NULLIF(TRIM(p.email), '') AS email
+               FROM user_membership m
+               LEFT JOIN user_profile p ON p.auth_user_id = m.auth_user_id
+              WHERE m.is_active = 1 AND p.auth_user_id IS NOT NULL
+              GROUP BY m.id, m.app, m.scope_type, nom, email
+              ORDER BY nom");
+        if ($rows !== []) {
+            return array_map(static fn ($r) => [
+                'id'    => 'u' . $r['id'],
+                'nom'   => $r['nom'],
+                'role'  => $r['app'] === 'CONSULTANT'
+                    ? ($r['scope_type'] === 'SHOP' ? 'Consultant boutique' : 'Consultant réseau')
+                    : ucfirst(strtolower((string) $r['app'])),
+                'email' => $r['email'],
+                // Un rapport ne part pas sans adresse : l'écran doit pouvoir le
+                // dire, plutôt que de proposer un destinataire injoignable.
+                'joignable' => $r['email'] !== null && $r['email'] !== '',
+            ], $rows);
+        }
+    } catch (PDOException $e) { /* tables du panel absentes : repli local */ }
+
+    return array_map(fn ($p) => ['id' => $p['id'], 'nom' => $p['name'], 'role' => $p['role'], 'email' => $p['email']],
+        Db::rows('SELECT * FROM ceo_person ORDER BY id'));
+}
+
+function ep_reporting(): array
+{
+    $reports = array_map(fn ($r) => [
+        'id' => $r['id'], 'nom' => $r['name'], 'type' => $r['type'], 'desc' => $r['description'],
+        'freq' => $r['frequency'], 'postes' => json_decode($r['postes_json'], true),
+        'destId' => $r['dest_id'], 'ccId' => $r['cc_id'] ?? '',
+        'dernier' => $r['last_run'], 'actif' => (bool) $r['active'],
+    ], Db::rows('SELECT * FROM ceo_report_schedule ORDER BY id'));
+    $alertRules = array_map(fn ($a) => ['id' => $a['id'], 'nom' => $a['name'], 'canal' => $a['channel'], 'actif' => (bool) $a['active']],
+        Db::rows('SELECT * FROM ceo_alert_rule ORDER BY id'));
+    return ['reports' => $reports, 'alertRules' => $alertRules];
+}
+
+function ep_journal(): array
+{
+    return array_map(fn ($l) => [
+        'ts' => substr($l['happened_at'], 0, 16), 'qui' => $l['actor'], 'type' => $l['kind'],
+        'projet' => $l['project'] ?? '—', 'msg' => $l['message'],
+    ], Db::rows('SELECT * FROM ceo_journal_entry ORDER BY happened_at DESC, id DESC LIMIT 500'));
+}
+
+/**
+ * GET /journal/mails — les e-mails partis du cockpit, les deux sources réunies.
+ *
+ * Deux machines envoient : les RAPPORTS (ceo_rapport_run, statut « envoye » ou
+ * « erreur », avec la liste des destinataires) et les commandes de la CENTRALE
+ * D'ACHAT (ceo_app_setting.caMailJournal, tenu par caMailJournal()). Les lire
+ * séparément obligeait à ouvrir deux écrans pour répondre à « ce mail est-il
+ * parti ? » ; ils sont donc fusionnés ici, du plus récent au plus ancien.
+ *
+ * Une source absente n'est pas une panne : une installation sans centrale
+ * d'achat n'a pas de journal d'achats, et le tableau montre l'autre.
+ */
+function ep_journal_mails(): array
+{
+    $out = [];
+
+    try {
+        foreach (Db::rows("SELECT r.genere_le, r.statut, r.envoye_a, r.resume, p.nom
+                             FROM ceo_rapport_run r
+                             LEFT JOIN ceo_rapport p ON p.id = r.rapport_id
+                            WHERE r.statut IN ('envoye', 'erreur')
+                         ORDER BY r.genere_le DESC, r.id DESC LIMIT 120") as $r) {
+            $dests = json_decode((string) ($r['envoye_a'] ?? '[]'), true);
+            $out[] = [
+                'ts' => substr((string) $r['genere_le'], 0, 16),
+                'source' => 'Rapport',
+                'objet' => (string) ($r['nom'] ?? 'Rapport supprimé'),
+                'dest' => is_array($dests) ? implode(', ', $dests) : '',
+                'ok' => $r['statut'] === 'envoye',
+                'detail' => (string) ($r['resume'] ?? ''),
+            ];
+        }
+    } catch (PDOException $e) { /* rapports jamais installés : l'autre source suffit */ }
+
+    $achats = setting('caMailJournal');
+    foreach (is_array($achats) ? $achats : [] as $a) {
+        if (!is_array($a)) { continue; }
+        // « recu » n'est pas un envoi : c'est la commande repérée, la trace qui
+        // explique l'e-mail de la ligne suivante. Elle reste, en le disant.
+        $type = (string) ($a['type'] ?? '');
+        $out[] = [
+            'ts' => substr((string) ($a['quand'] ?? ''), 0, 16),
+            'source' => 'Achat',
+            'objet' => $type === 'recu' ? 'Commande reçue' : 'Commande fournisseur',
+            'dest' => (string) ($a['destinataire'] ?? ''),
+            'ok' => $type !== 'echec',
+            'detail' => (string) ($a['detail'] ?? ''),
+        ];
+    }
+
+    usort($out, fn ($a, $b) => strcmp((string) $b['ts'], (string) $a['ts']));
+    return array_slice($out, 0, 200);
+}
+
+function ep_products(): array
+{
+    // La FENÊTRE : le dernier mois clos, le dernier trimestre clos (trois
+    // mois) ou les douze derniers mois clos. Des mois entiers, jamais un
+    // mois en cours : on ne note pas une gamme sur une semaine.
+    $fenetre = (string) ($_GET['fenetre'] ?? 'mois');
+    if (!in_array($fenetre, ['mois', 'trimestre', 'annee'], true)) { $fenetre = 'mois'; }
+    $nbMois = ['mois' => 1, 'trimestre' => 3, 'annee' => 12][$fenetre];
+    $finTs = strtotime(date('Y-m-01') . ' -1 day');                  // dernier jour du mois clos
+    $debTs = strtotime(date('Y-m-01', $finTs) . ' -' . ($nbMois - 1) . ' month');
+    $from = date('Y-m-01 00:00:00', $debTs);
+    $to   = date('Y-m-01 00:00:00', strtotime(date('Y-m-01', $finTs) . ' +1 month'));
+    $lib = $nbMois === 1 ? strftime_fr($finTs, 'M Y')
+        : strftime_fr($debTs, 'M Y') . ' à ' . strftime_fr($finTs, 'M Y') . ' (' . $nbMois . ' mois)';
+
+    // Les magasins actifs, pour la ventilation par magasin.
+    $shopNoms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name') as $sh) { $shopNoms[(int) $sh['id']] = (string) $sh['name']; }
+    } catch (PDOException $eS) { /* pas de table shops */ }
+
+    try {
+        $rows = []; $catApi = []; $parMag = []; $source = '';
+        // SOURCE PREMIÈRE : les ventes du panel, magasin par magasin, mois par
+        // mois (product-category-groups, les mêmes tranches que l'analyse des
+        // prix, gravées dès qu'un mois est clos). La caisse locale, elle,
+        // s'est arrêtée le 14 juillet : elle ne sert plus que de repli.
+        if (PanelApi::configured() && function_exists('apTranches2') && $shopNoms !== []) {
+            $couples = [];
+            for ($i = 0; $i < $nbMois; $i++) {
+                $t = strtotime(date('Y-m-01', $debTs) . " +$i month");
+                foreach (array_keys($shopNoms) as $sid) { $couples[] = [$sid, date('Y-m-01', $t), date('Y-m-t', $t)]; }
+            }
+            $lu = apTranches2($couples);
+            $agg = []; $servis = 0;
+            foreach ($couples as [$sid, $du, $au]) {
+                $pr = $lu[$sid . ':' . $du] ?? null;
+                if (!is_array($pr)) { continue; }
+                $servis++;
+                foreach ($pr as $pid => $x) {
+                    $pid = (int) $pid;
+                    if (!isset($agg[$pid])) { $agg[$pid] = ['nom' => $x[0], 'cat' => $x[1], 'vol' => 0.0, 'ca' => 0.0, 'mag' => []]; }
+                    $agg[$pid]['vol'] += (float) $x[2];
+                    $agg[$pid]['ca'] += (float) $x[3];
+                    $agg[$pid]['mag'][$sid] = ($agg[$pid]['mag'][$sid] ?? 0.0) + (float) $x[2];
+                }
+            }
+            if ($servis > 0) {
+                $source = 'panel';
+                foreach ($agg as $pid => $x) {
+                    $nMag = count(array_filter($x['mag'], fn ($v) => $v > 0));
+                    $rows[] = ['id_product' => $pid, 'nom' => $x['nom'], 'volume' => $x['vol'], 'ca' => $x['ca'], 'magasins' => $nMag];
+                    if ($x['cat'] !== '') { $catApi[$pid] = $x['cat']; }
+                    $parMag[$pid] = $x['mag'];
+                }
+                usort($rows, fn ($u, $v) => $v['volume'] <=> $u['volume']);
+            }
+        }
+
+        // REPLI : la caisse locale (transaction ⨝ transaction_product), sur
+        // la même fenêtre ; si elle est vide, sur son dernier mois complet.
+        if ($rows === []) {
+            $venteMois = static function (string $from, string $to): array {
+                return Db::rows("SELECT /*+ MAX_EXECUTION_TIME(6000) */
+                                        tp.id_product,
+                                        MAX(tp.product_name) nom,
+                                        SUM(tp.quantity) volume,
+                                        SUM(tp.total_gross_value_after_discount) ca,
+                                        COUNT(DISTINCT t.id_shop) magasins
+                                 FROM transaction t
+                                 JOIN transaction_product tp ON tp.id_transaction = t.id
+                                 WHERE t.insert_timestamp >= ? AND t.insert_timestamp < ?
+                                 GROUP BY tp.id_product
+                                 ORDER BY volume DESC", [$from, $to]);
+            };
+            $rows = $venteMois($from, $to);
+            if (!$rows) {
+                $last = Db::row("SELECT /*+ MAX_EXECUTION_TIME(4000) */ MAX(insert_timestamp) d FROM transaction");
+                if ($last !== null && $last['d'] !== null) {
+                    $ts = strtotime((string) $last['d']);
+                    $from = date('Y-m-01 00:00:00', (int) date('d', $ts) < 25 ? strtotime(date('Y-m-01', $ts) . ' -1 month') : $ts);
+                    $to   = date('Y-m-01 00:00:00', strtotime("$from +1 month"));
+                    $rows = $venteMois($from, $to);
+                    $lib = strftime_fr(strtotime($from), 'M Y');
+                }
+            }
+            $source = 'caisse locale';
+        }
+
+        // Mémoriser la fenêtre réellement servie : la fiche et la perte
+        // interrogent la même. `periodeProduits` garde le dernier mois (les
+        // lecteurs existants attendent un « AAAA-MM »).
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['periodeProduits', json_encode(date('Y-m', strtotime($to . ' -1 day')))]);
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['periodeProduitsFenetre', json_encode(['fenetre' => $fenetre, 'du' => substr($from, 0, 10),
+                    'au' => date('Y-m-d', strtotime($to . ' -1 day')), 'libelle' => $lib, 'source' => $source, 'mois' => $nbMois], JSON_UNESCAPED_UNICODE)]);
+        } catch (PDOException $eP) { /* sans importance */ }
+
+        // PERTES par référence — API du panel (/shops/{id}/products/waste), la
+        // seule source : la base partagée ne connaît que les ventes. On agrège
+        // les quantités jetées et vendues sur TOUTES les boutiques pour la même
+        // période que le volume, puis on en tire un taux réseau. Le volet
+        // rapporte aussi la catégorie réelle et le motif principal de rebut.
+        $perteVol = []; $motif = [];
+        if (PanelApi::configured()) {
+            $dFrom = substr($from, 0, 10);
+            $dTo   = date('Y-m-d', strtotime($to . ' -1 day'));
+            try {
+                $shopIds = array_map(fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1'));
+            } catch (PDOException $eS) { $shopIds = []; }
+            foreach ($shopIds as $sid) {
+                foreach (PanelApi::shopWaste($sid, $dFrom, $dTo) as $w) {
+                    $pid = (int) ($w['id_product'] ?? 0);
+                    if ($pid <= 0) { continue; }
+                    // `waste_qty` est bien propre au magasin (il diffère d'un
+                    // magasin à l'autre) et s'additionne. `sold_qty`, lui, est
+                    // rendu IDENTIQUE pour tous les magasins : c'est une valeur
+                    // réseau. L'additionner multipliait les ventes par le nombre
+                    // de magasins et écrasait le taux. On l'ignore : le volume
+                    // vendu vient de notre propre agrégat de caisse.
+                    $perteVol[$pid] = ($perteVol[$pid] ?? 0) + (float) ($w['waste_qty'] ?? 0);
+                    $cn = trim((string) ($w['category_name'] ?? ''));
+                    if ($cn !== '' && !isset($catApi[$pid])) { $catApi[$pid] = $cn; }
+                    $tr = trim((string) ($w['top_reason'] ?? ''));
+                    if ($tr !== '' && !isset($motif[$pid])) { $motif[$pid] = $tr; }
+                }
+            }
+        }
+
+        // COÛT MATIÈRE — sans lui, « marge nette » (30 % du score) reste nulle
+        // pour tout le monde et le classement se joue sur le seul volume.
+        // Trois sources, dans cet ordre : les recettes du réseau
+        // (product_recipe ⨝ recipe_cost, ~422 références sur 711), le panel
+        // pour les références sans recette (recipe_cost_net de
+        // /shops/{id}/products/available, dans catalogueCouts), puis la
+        // saisie du cockpit qui prime — elle corrige au cas par cas.
+        // Le rapprochement se fait par identifiant de caisse UNIQUEMENT,
+        // jamais par l'intitulé : deux références peuvent porter des noms
+        // voisins et une marge fausse ne se voit pas.
+        $cout = [];
+        foreach (catalogueCouts() as $pid => $c) { $cout[$pid] = $c['mat']; }
+        try {
+            foreach (Db::rows('SELECT pwa_id, mat FROM ceo_prod_product WHERE pwa_id IS NOT NULL AND mat IS NOT NULL AND actif = 1') as $c) {
+                $cout[(int) $c['pwa_id']] = (float) $c['mat'];
+            }
+        } catch (PDOException $eC) { /* référentiel absent : recettes seules */ }
+
+        // Catégorie : le vrai catalogue (product ⨝ product_category), indexé
+        // par identifiant de caisse. La table miroir sig_products porte des
+        // identifiants d'un autre format (« pwp1000001 ») : la recherche par
+        // id numérique n'y trouvait jamais rien, et la catégorie retombait
+        // silencieusement sur « Non catégorisé » dès que l'API était muette.
+        $cat = [];
+        // La catégorie de chaque produit : le panel d'abord (svCategories lit products/available),
+        // la copie `product` ne comblant que les références que le panel ne liste plus.
+        if (function_exists('svCategories')) {
+            // Le nom se nettoie : « Viennoiserie réduction » suivi d'une
+            // espace fabriquait une seconde catégorie d'une référence.
+            foreach (svCategories() as $pid => $n) { $cat[(int) $pid] = trim((string) $n); }
+        }
+        $refCat = $cat === [] ? catalogueCategories() : null;
+        if ($refCat !== null) {
+            try {
+                foreach (Db::rows('SELECT id, id_category FROM product WHERE is_active = 1') as $c) {
+                    $k = (int) $c['id_category'];
+                    if (isset($refCat[$k])) { $cat[(int) $c['id']] = trim((string) $refCat[$k]['nom']); }
+                }
+            } catch (PDOException $eCat) { /* catalogue absent : catégorie vide */ }
+        }
+
+        // TOUT le catalogue actif, pas seulement ce qui s'est vendu : une
+        // référence sans vente sur la période entre à volume zéro, marquée
+        // « sans vente ». Elle se note (score de volume nul), elle se filtre,
+        // elle ne disparaît plus en silence.
+        $vus = [];
+        foreach ($rows as $r) { $vus[(int) $r['id_product']] = true; }
+        try {
+            foreach (Db::rows('SELECT id, name FROM product WHERE is_active = 1') as $c) {
+                $pid = (int) $c['id'];
+                if ($pid <= 0 || isset($vus[$pid])) { continue; }
+                $rows[] = ['id_product' => $pid, 'nom' => (string) $c['name'], 'volume' => 0, 'ca' => 0,
+                    'magasins' => 0, 'sansVente' => true];
+            }
+        } catch (PDOException $eAll) { /* catalogue absent : les ventes seules */ }
+
+        // Les catégories désactivées au panel (bases, cartons B2B, gammes
+        // arrêtées) sortent du scoring : on ne note pas ce qui n'est plus
+        // au catalogue. Sans liste, on ne filtre rien.
+        $inactives = function_exists('apCategoriesInactives') ? apCategoriesInactives() : null;
+        if (is_array($inactives) && $inactives !== []) {
+            $rows = array_values(array_filter($rows, function ($r) use ($cat, $catApi, $inactives) {
+                $pid = (int) $r['id_product'];
+                $nom = mb_strtolower(trim((string) ($catApi[$pid] ?? $cat[$pid] ?? '')));
+                return $nom === '' || !isset($inactives[$nom]);
+            }));
+        }
+
+        // Le fournisseur de chaque référence, tel que la carte des recettes
+        // le connaît (cf. fournisseursProduits) : lu ici depuis le cache,
+        // jamais construit ici — l'écran le complète en tâche de fond.
+        $fourn = function_exists('fournisseursCarte') ? fournisseursCarte() : [];
+
+        return array_map(function ($r) use ($cat, $catApi, $perteVol, $motif, $cout, $fourn, $parMag, $shopNoms) {
+            $vol  = (float) $r['volume'];
+            $prix = $vol > 0 ? round((float) $r['ca'] / $vol, 2) : null;
+            $pid  = (int) $r['id_product'];
+            // Taux de perte = jeté / (vendu + jeté) sur la période, en part
+            // (0..1). Dénominateur = ce qui a été PRODUIT et proposé, sinon un
+            // produit très jeté mais peu vendu afficherait un taux > 100 %.
+            $tp = null;
+            if (isset($perteVol[$pid])) {
+                $den = $vol + $perteVol[$pid];      // vendu (notre agrégat) + jeté
+                if ($den > 0) { $tp = round($perteVol[$pid] / $den, 4); }
+            }
+            return [
+                'id'        => (string) $pid,
+                'nom'       => ($r['nom'] !== null && $r['nom'] !== '') ? $r['nom'] : ('#' . $pid),
+                // Catégorie : celle de l'API (fiable) avant le référentiel local.
+                'categorie' => $catApi[$pid] ?? $cat[$pid] ?? 'Non catégorisé',
+                'volume'    => (int) round($vol),
+                'prix'      => $prix,
+                // « Marge nette » pèse 30 % du score. Un coût mal chiffré —
+                // au-dessus du prix comme quasi nul — y ferait plus de dégâts
+                // que son absence, qui est déjà gérée (critère neutralisé).
+                'coutUnit'  => (isset($cout[$pid]) && coutVraisemblable($cout[$pid], $prix))
+                    ? $cout[$pid] : null,
+                'tendVol'   => 1,
+                'magasins'  => (int) $r['magasins'],
+                'tauxPerte' => $tp,
+                'jete'      => isset($perteVol[$pid]) ? (int) round($perteVol[$pid]) : null,
+                'motifPerte' => $motif[$pid] ?? null,
+                'sansVente' => !empty($r['sansVente']),
+                // Le volume par magasin sur la fenêtre (source panel) : la
+                // fiche le déroule au clic. Vide en repli caisse locale.
+                'parMagasin' => isset($parMag[$pid]) ? array_values(array_map(fn ($sid) => ['sid' => $sid,
+                    'nom' => $shopNoms[$sid] ?? ('Magasin ' . $sid), 'vol' => (int) round($parMag[$pid][$sid] ?? 0)], array_keys($shopNoms))) : null,
+                // null = pas encore connu (carte en construction) ; [] = aucune
+                // recette, donc aucun fournisseur rattachable.
+                'fournisseurs' => array_key_exists($pid, $fourn) ? $fourn[$pid] : null,
+            ];
+        }, $rows);
+    } catch (PDOException $e) {
+        $rows = Db::rows(
+            'SELECT p.id, p.nom, p.categorie, s.volume, s.nb_magasins, s.prix_moyen, s.cout_unitaire,
+                    n1.volume AS volume_n1
+               FROM ceo_product p
+               JOIN ceo_product_month_sales s  ON s.product_id = p.id AND s.annee = ? AND s.mois = ?
+          LEFT JOIN ceo_product_month_sales n1 ON n1.product_id = p.id AND n1.annee = ? AND n1.mois = ?
+              WHERE p.actif = 1 ORDER BY p.id', [$annee, $mois, $annee - 1, $mois]);
+        return array_map(fn ($r) => [
+            'id' => $r['id'], 'nom' => $r['nom'], 'categorie' => $r['categorie'],
+            'volume' => (int) $r['volume'], 'prix' => (float) $r['prix_moyen'], 'coutUnit' => (float) $r['cout_unitaire'],
+            'tendVol' => $r['volume_n1'] ? round($r['volume'] / $r['volume_n1'], 4) : 1,
+            'magasins' => (int) $r['nb_magasins'],
+        ], $rows);
+    }
+}
+
+/**
+ * Sonde : existe-t-il une source de ventes PAR MAGASIN sous le niveau groupe ?
+ *
+ * Diagnostic en lecture seule. Il répond à deux questions qu'on ne peut pas
+ * trancher en raisonnant : `sold_qty` varie-t-il d'un magasin à l'autre (donc
+ * est-il propre au magasin, ou réseau ?), et les routes câblées mais jamais
+ * exploitées — margin-heatmap, pnl — portent-elles une ventilation par
+ * catégorie ? Tant qu'on ne l'a pas mesuré, toute réponse est une supposition.
+ */
+function ep_produits_analyse_sonde(): array
+{
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    $ref = setting('periodeProduits');
+    $per = (is_string($ref) && preg_match('/^\d{4}-\d{2}$/', $ref)) ? $ref : date('Y-m', strtotime('-1 month'));
+    $du = $per . '-01'; $au = date('Y-m-t', strtotime($du));
+    $pid = trim((string) ($_GET['produit'] ?? '1610004'));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'produit' => $pid,
+        'soldParMagasin' => [], 'routes' => []];
+
+    // 1. La même référence, magasin par magasin. Si `sold_qty` est identique
+    //    partout, c'est une valeur réseau et le détail par magasin n'existe pas.
+    $req = [];
+    foreach (analyseShops() as $sid) {
+        $req[$sid] = '/shops/' . $sid . '/products/waste?' . http_build_query(
+            ['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+    }
+    foreach (PanelApi::getParallele($req) as $sid => $r) {
+        $lignes = (is_array($r) && isset($r['products']) && is_array($r['products'])) ? $r['products'] : analyseListe($r);
+        foreach ($lignes as $p) {
+            if (trim((string) ($p['id_product'] ?? '')) !== $pid) { continue; }
+            $out['soldParMagasin'][(string) $sid] = [
+                'sold_qty' => $p['sold_qty'] ?? null, 'waste_qty' => $p['waste_qty'] ?? null,
+                'net_turnover' => $p['net_turnover'] ?? null,
+                'total_sold_quantity' => $p['total_sold_quantity'] ?? null];
+            break;
+        }
+    }
+    $vus = array_values(array_unique(array_map(fn($x) => (string) $x['sold_qty'], $out['soldParMagasin'])));
+    $out['verdict'] = count($out['soldParMagasin']) < 2 ? 'indéterminé (moins de deux magasins)'
+        : (count($vus) === 1 ? 'sold_qty IDENTIQUE partout → valeur RÉSEAU, pas de détail par magasin'
+                             : 'sold_qty DIFFÈRE selon le magasin → valeur PROPRE au magasin');
+
+    // 2. Les routes jamais exploitées portent-elles une ventilation utilisable ?
+    $sid = analyseShop();
+    $apercu = static function ($v) {
+        if (!is_array($v)) { return ['type' => gettype($v)]; }
+        if (array_is_list($v)) {
+            return ['liste' => count($v),
+                'clesPremier' => ($v && is_array($v[0])) ? array_keys($v[0]) : null,
+                'premier' => $v[0] ?? null];
+        }
+        return ['cles' => array_keys($v)];
+    };
+    foreach ([
+        'margin-heatmap' => '/consultant/shops/' . $sid . '/margin-heatmap?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'pnl'            => '/consultant/shops/' . $sid . '/pnl?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
+        'category-sales' => '/consultant/shops/category-sales?' . http_build_query(['shop_id' => $sid, 'date_from' => $du, 'date_to' => $au]),
+    ] as $nom => $chemin) {
+        $r = PanelApi::brut($chemin);
+        $e = ['chemin' => $chemin, 'erreur' => PanelApi::$lastError];
+        if (is_array($r)) {
+            $e['cles'] = array_keys($r);
+            foreach (['categories', 'items', 'rows', 'data', 'heatmap', 'shops', 'lines'] as $k) {
+                if (isset($r[$k])) { $e[$k] = $apercu($r[$k]); }
+            }
+            if (array_is_list($r)) { $e['racine'] = $apercu($r); }
+        }
+        $out['routes'][$nom] = $e;
+    }
+
+    // 3. Le catalogue du panel porte-t-il une IMAGE de présentation ?
+    //    La question décide de ce qu'un écran peut promettre : une fiche de
+    //    vente sans visuel n'est pas une fiche de vente. On compte, on ne
+    //    suppose pas — et on nomme les clés trouvées, pour que le rapprochement
+    //    ne soit pas deviné.
+    $prods = PanelApi::brut('/products');
+    $liste = is_array($prods) ? (array_is_list($prods) ? $prods : ($prods['products'] ?? $prods['data'] ?? [])) : [];
+    $clesImg = ['url', 'image_url', 'photo_url', 'picture', 'image', 'thumbnail', 'photo',
+        'attachment_id', 'id_attachment', 'image_id', 'media', 'images'];
+    $avec = []; $n = 0;
+    foreach ($liste as $p) {
+        if (!is_array($p)) { continue; }
+        $n++;
+        foreach ($clesImg as $k) {
+            if (!empty($p[$k])) { $avec[$k] = ($avec[$k] ?? 0) + 1; }
+        }
+    }
+    $out['catalogueImage'] = [
+        'chemin' => '/products', 'erreur' => PanelApi::$lastError,
+        'produits' => $n,
+        'clesPremier' => ($liste && is_array($liste[0] ?? null)) ? array_keys($liste[0]) : null,
+        'clesImageRemplies' => $avec,
+        'verdict' => $n === 0 ? 'catalogue injoignable'
+            : ($avec ? 'une image existe : ' . implode(', ', array_keys($avec))
+                     : 'AUCUNE image de présentation sur les ' . $n . ' produits'),
+    ];
+    return $out;
+}
+
+/* ==========================================================================
+   CENTRALE D'ACHAT
+   --------------------------------------------------------------------------
+   Le module couvre dix écrans. Quatre reposent sur des données que le cockpit
+   possède réellement — le catalogue et son coût matière, les ventes du panel,
+   les magasins, les fournisseurs. Les six autres attendent des sources qui
+   n'existent nulle part : commandes fournisseurs, commandes franchisés,
+   factures, stock, campagnes marketing, assortiments.
+
+   Ces six-là ne sont PAS remplis de données fabriquées. Un écran qui invente
+   ses chiffres ne se distingue pas d'un écran qui marche, et se découvre le
+   jour où quelqu'un s'en sert pour décider. Chacun annonce donc la source
+   qu'il attend, nommée, pour que le branchement soit une tâche et non une
+   enquête.
+   ========================================================================== */
+
+/** Réglages du moteur (commission, TVA, objectifs de négociation). */
+function caParams(): array
+{
+    // Mémorisé : le catalogue applique la commission à 711 lignes, et setting()
+    // fait un SELECT à chaque appel — sept cents requêtes pour un seul écran.
+    static $p = null;
+    if ($p !== null) { return $p; }
+    try { $v = setting('centrale'); } catch (PDOException $e) { $v = null; }
+    return $p = is_array($v) ? $v : ['commissionMarquePct' => 4.0, 'margeCentraleCiblePct' => 12.0,
+        'tvaDefautPct' => 6.0, 'objectifBaissePrixPct' => 3.0, 'objectifHausseVolPct' => 10.0];
+}
+
+/**
+ * Marge d'une référence, à l'identique du handoff :
+ *   commission = prix_vente × commission_marque_pct/100
+ *   marge_nette = (prix_vente − prix_achat) − commission
+ *   taux = marge_nette / prix_vente
+ */
+function caMarge(?float $vente, ?float $achat, float $commPct): array
+{
+    if ($vente === null || $achat === null || $vente <= 0) {
+        return ['ca' => $vente, 'commission' => null, 'brute' => null, 'nette' => null, 'taux' => null];
+    }
+    $comm = round($vente * $commPct / 100, 2);
+    $brute = round($vente - $achat, 2);
+    $nette = round($brute - $comm, 2);
+    return ['ca' => round($vente, 2), 'commission' => $comm, 'brute' => $brute,
+        'nette' => $nette, 'taux' => round($nette / $vente, 4)];
+}
+
+/** Bloc « source absente », de forme constante pour que l'écran sache l'afficher. */
+function caAttente(string $quoi, string $source): array
+{
+    return ['etat' => 'attente', 'lignes' => [],
+        'motif' => 'en attente d\'API — ' . $quoi . ' : ' . $source];
+}
+
+/** Commission de marque sur le prix de vente (taux des réglages centrale). */
+function caCommission(?float $vente): ?float
+{
+    if ($vente === null || $vente <= 0) { return null; }
+    return round($vente * (float) (caParams()['commissionMarquePct'] ?? 4.0) / 100, 3);
+}
+
+/** Marge après commission de marque — la marge que la centrale pilote. */
+function caMargeNette(?float $vente, ?float $achat): ?float
+{
+    if ($vente === null || $achat === null || $vente <= 0) { return null; }
+    return round($vente - $achat - (float) caCommission($vente), 3);
+}
+
+function caMargeNettePct(?float $vente, ?float $achat): ?float
+{
+    $n = caMargeNette($vente, $achat);
+    return ($n === null || $vente === null || $vente <= 0) ? null : round($n / $vente, 4);
+}
+
+/**
+ * Conservé pour la route /centrale/catalogue, sans entrée au rail : le
+ * catalogue vit au Référentiel produit, qui porte désormais la marge nette.
+ * Deux écrans sur les mêmes 711 références finissaient par se contredire.
+ */
+function ep_ca_catalogue(): array
+{
+    $p = caParams();
+    $out = ['etat' => 'ok', 'params' => $p, 'lignes' => [], 'source' => '/production/catalogue'];
+    $comm = (float) ($p['commissionMarquePct'] ?? 4.0);
+    $fourn = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM ceo_supplier ORDER BY id') as $f) { $fourn[] = $f['name']; }
+    } catch (PDOException $e) { /* référentiel fournisseurs absent */ }
+
+    foreach (ep_prod_catalogue() as $l) {
+        $m = caMarge($l['prix'], $l['mat'], $comm);
+        $out['lignes'][] = [
+            'ref' => $l['ref'], 'nom' => $l['nom'], 'categorie' => $l['categorie'],
+            'groupe' => $l['groupe'] ?? '', 'fournisseur' => null,
+            'prixAchat' => $l['mat'], 'prixVente' => $l['prix'],
+            'commission' => $m['commission'], 'margeBrute' => $m['brute'],
+            'margeNette' => $m['nette'], 'tauxMarge' => $m['taux'],
+            'tvaPct' => (float) ($p['tvaDefautPct'] ?? 6.0),
+            'fiable' => $l['matFiable'] ?? true];
+    }
+    $out['fournisseurs'] = $fourn;
+    // Le fournisseur n'est rattaché à aucune référence : la table le porte pour
+    // le réseau, pas pour l'article. Le dire vaut mieux qu'une colonne vide.
+    $out['avertissement'] = $fourn
+        ? 'Le rattachement référence → fournisseur n\'existe pas encore : la colonne reste vide tant qu\'une API ne le porte pas.'
+        : 'Aucun fournisseur au référentiel.';
+    return $out;
+}
+
+/** Cockpit du module : les indicateurs réseau que le panel sait rendre. */
+function ep_ca_cockpit(): array
+{
+    $per = (string) ($_GET['periode'] ?? '30j');
+    $jours = ['7j' => 7, '30j' => 30, 'trimestre' => 90, 'annee' => 365][$per] ?? 30;
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime("-$jours day"));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'etat' => 'attente',
+        'kpis' => [], 'motif' => null, 'source' => null];
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+
+    $r = PanelApi::shopsSalesKpisEntre($du, $au);
+    $out['source'] = PanelApi::$lastPath;
+    $liste = analyseListe($r);
+    if (!$liste) { $out['motif'] = PanelApi::$lastError ?: 'l\'API n\'a rien rendu sur la période'; return $out; }
+
+    $ca = 0.0; $tickets = 0.0; $n = 0;
+    foreach ($liste as $sh) {
+        $v = nombreOuNull($sh, ['ca', 'turnover', 'revenue']);
+        if ($v !== null) { $ca += $v; $n++; }
+        $t = nombreOuNull($sh, ['tickets', 'transactions', 'nb_tickets']);
+        if ($t !== null) { $tickets += $t; }
+    }
+    $out['etat'] = 'ok';
+    $out['kpis'] = [
+        ['cle' => 'ca', 'libelle' => 'Chiffre d\'affaires réseau', 'valeur' => round($ca, 2), 'unite' => '€'],
+        ['cle' => 'magasins', 'libelle' => 'Magasins mesurés', 'valeur' => $n, 'unite' => ''],
+        ['cle' => 'tickets', 'libelle' => 'Tickets', 'valeur' => $tickets ?: null, 'unite' => ''],
+        ['cle' => 'panier', 'libelle' => 'Ticket moyen', 'valeur' => $tickets > 0 ? round($ca / $tickets, 2) : null, 'unite' => '€'],
+    ];
+    // Les achats sont l'objet même de la centrale : tant qu'aucune API ne les
+    // porte, l'annoncer plutôt que de laisser croire à un cockpit complet.
+    $out['manquants'] = ['Volume d\'achat et marge centrale — aucune API de commandes fournisseurs',
+        'Litiges et réception — aucune API de facturation fournisseurs'];
+    return $out;
+}
+
+/** Ventes par magasin sur la période, base de la négociation. */
+function ep_ca_ventes(): array
+{
+    $per = (string) ($_GET['periode'] ?? '30j');
+    $jours = ['7j' => 7, '30j' => 30, 'trimestre' => 90, 'annee' => 365][$per] ?? 30;
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime("-$jours day"));
+    $out = ['periode' => $per, 'du' => $du, 'au' => $au, 'etat' => 'attente',
+        'lignes' => [], 'motif' => null, 'source' => null];
+    if (!PanelApi::configured()) { $out['motif'] = 'compte consultant non configuré'; return $out; }
+
+    $noms = analyseNoms();
+    $r = PanelApi::shopsSalesKpisEntre($du, $au);
+    $out['source'] = PanelApi::$lastPath;
+    foreach (analyseListe($r) as $sh) {
+        $id = analyseShopId($sh);
+        if ($id === '0') { continue; }
+        $out['lignes'][] = ['id' => $id, 'magasin' => $noms[$id] ?? ('Magasin ' . $id),
+            'ca' => nombreOuNull($sh, ['ca', 'turnover', 'revenue']),
+            'tickets' => nombreOuNull($sh, ['tickets', 'transactions', 'nb_tickets'])];
+    }
+    if ($out['lignes']) { $out['etat'] = 'ok'; }
+    else { $out['motif'] = PanelApi::$lastError ?: 'l\'API n\'a rien rendu sur la période'; }
+    return $out;
+}
+
+/**
+ * GET /centrale/fournisseurs/annee?annee=AAAA — un tableau par an : chaque
+ * fournisseur, mois par mois, et son total.
+ *
+ * D'OÙ VIENNENT LES CHIFFRES, et pourquoi ce ne sont pas des factures : le
+ * panel ne porte AUCUN montant sur les commandes (mesuré : GET
+ * /deliveries/{id} sans montant, aucune route de liste). Ce qui porte une
+ * valeur, ce sont les RÉQUISITIONS matière — la demande du magasin, chiffrée
+ * en estimation. C'est donc de l'achat ESTIMÉ, jamais du facturé, et l'écran
+ * doit le dire à côté du chiffre.
+ *
+ * L'ATTRIBUTION est stricte : une réquisition qui ne nomme qu'un fournisseur
+ * lui revient entière ; une réquisition qui en nomme plusieurs ne se ventile
+ * pas — la partager au prorata inventerait un chiffre. Elle va dans une ligne
+ * « à ventiler », et le total de la colonne reste juste.
+ */
+function ep_ca_fournisseurs_annee(): array
+{
+    $an = (int) ($_GET['annee'] ?? date('Y'));
+    if ($an < 2020 || $an > (int) date('Y') + 1) { $an = (int) date('Y'); }
+
+    $d = ep_ca_commandes();
+    if (($d['etat'] ?? '') !== 'ok') {
+        return ['etat' => 'attente', 'annee' => $an, 'motif' => (string) ($d['source'] ?? 'commandes indisponibles')];
+    }
+
+    $vide = array_fill(1, 12, 0.0);
+    $par = []; $aVentiler = $vide; $aVentilerN = 0;
+    // Par MAGASIN, le chiffre est exact : la réquisition dit de quel magasin
+    // elle vient, et ce qu'elle vaut. C'est la lecture qui tient debout quand
+    // celle par fournisseur ne le peut pas.
+    $parMag = [];
+    $annees = [];
+    $nReq = 0; $nSeul = 0;
+    foreach ((array) ($d['lignes'] ?? []) as $l) {
+        $debut = (string) ($l['debut'] ?? '');
+        if (strlen($debut) < 7) { continue; }
+        $anL = (int) substr($debut, 0, 4);
+        $annees[$anL] = true;
+        if ($anL !== $an) { continue; }
+        $m = (int) substr($debut, 5, 2);
+        if ($m < 1 || $m > 12) { continue; }
+        $v = (float) ($l['valeur'] ?? 0);
+        $fours = array_values(array_filter(array_map('trim', (array) ($l['fournisseurs'] ?? []))));
+        $nReq++;
+        $mag = (string) ($l['magasin'] ?? '—');
+        if (!isset($parMag[$mag])) { $parMag[$mag] = ['mois' => $vide, 'n' => 0]; }
+        $parMag[$mag]['mois'][$m] += $v;
+        $parMag[$mag]['n']++;
+        if (count($fours) === 1) {
+            $nom = $fours[0];
+            if (!isset($par[$nom])) { $par[$nom] = ['mois' => $vide, 'n' => 0]; }
+            $par[$nom]['mois'][$m] += $v;
+            $par[$nom]['n']++;
+            $nSeul++;
+        } else {
+            $aVentiler[$m] += $v;
+            $aVentilerN++;
+        }
+    }
+
+    $lignes = [];
+    foreach ($par as $nom => $x) {
+        $total = array_sum($x['mois']);
+        $lignes[] = ['fournisseur' => $nom, 'n' => $x['n'],
+            'mois' => array_map(fn ($v) => round($v, 2), array_values($x['mois'])),
+            'total' => round($total, 2)];
+    }
+    usort($lignes, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+    // Le total de chaque mois, ligne « à ventiler » comprise : c'est lui qui
+    // doit correspondre à ce que le réseau a demandé, sans quoi le tableau
+    // laisserait croire qu'une part a disparu.
+    $totMois = $vide;
+    foreach ($lignes as $l2) {
+        foreach ($l2['mois'] as $i => $v) { $totMois[$i + 1] += $v; }
+    }
+    foreach ($aVentiler as $m => $v) { $totMois[$m] += $v; }
+
+    $lignesMag = [];
+    foreach ($parMag as $nom => $x) {
+        $lignesMag[] = ['magasin' => $nom, 'n' => $x['n'],
+            'mois' => array_map(fn ($v) => round($v, 2), array_values($x['mois'])),
+            'total' => round(array_sum($x['mois']), 2)];
+    }
+    usort($lignesMag, fn ($a, $b) => $b['total'] <=> $a['total']);
+
+    krsort($annees);
+    return [
+        'etat' => 'ok', 'annee' => $an,
+        'annees' => array_values(array_map('intval', array_keys($annees))),
+        'lignes' => $lignes,
+        'aVentiler' => ['n' => $aVentilerN, 'mois' => array_map(fn ($v) => round($v, 2), array_values($aVentiler)),
+            'total' => round(array_sum($aVentiler), 2)],
+        'totaux' => ['mois' => array_map(fn ($v) => round($v, 2), array_values($totMois)),
+            'total' => round(array_sum($totMois), 2)],
+        'parMagasin' => $lignesMag,
+        'nRequisitions' => $nReq, 'nAttribuees' => $nSeul,
+        'source' => 'valeur ESTIMÉE des réquisitions matière (le panel ne porte aucun montant sur les commandes livrées)',
+        // MESURÉ : l'ERP ne retient PAS le fournisseur d'une réquisition — le
+        // champ `suppliers` est vide sur toutes, réalisées comprises. Les noms
+        // affichés ailleurs viennent des fournisseurs du magasin, pas de la
+        // commande. Il n'y a donc rien à ventiler par fournisseur, et il faut
+        // le dire au lieu d'afficher un tableau vide qu'on croirait en panne.
+        'ventilable' => $nSeul > 0,
+        'manque' => $nSeul === 0 && $nReq > 0
+            ? 'L’ERP n’enregistre pas le fournisseur d’une réquisition (champ `suppliers` vide sur toutes) : '
+              . 'aucun montant ne peut lui être attribué. Le tableau par magasin, lui, est exact.'
+            : ($aVentilerN > 0
+                ? $aVentilerN . ' réquisition(s) nomment plusieurs fournisseurs : leur montant n’est pas ventilable, il figure à part'
+                : ''),
+    ];
+}
+
+/** Fournisseurs et réglages du moteur (RFA en lecture seule, cf. handoff). */
+function ep_ca_reglages(): array
+{
+    $out = ['params' => caParams(), 'fournisseurs' => [], 'etat' => 'ok'];
+    try {
+        foreach (Db::rows('SELECT id, name, perimeter, email FROM ceo_supplier ORDER BY id') as $f) {
+            $out['fournisseurs'][] = ['id' => (string) $f['id'], 'nom' => $f['name'],
+                'perimetre' => $f['perimeter'], 'email' => $f['email'],
+                // Le taux de RFA n'est porté par aucune source : la colonne
+                // existe au handoff, la donnée non. Un zéro se lirait comme
+                // « pas de remise » là où l'on ne sait simplement pas.
+                'rfaPct' => null];
+        }
+    } catch (PDOException $e) { $out['etat'] = 'attente'; $out['motif'] = 'référentiel fournisseurs indisponible'; }
+    $out['manquants'] = ['RFA fournisseurs — aucune API ne porte le taux',
+        'Redevance centrale — idem'];
+    return $out;
+}
+
+/** Demandes de prix enregistrées (table possédée par le BO). */
+function ep_ca_demandes(): array
+{
+    try {
+        $r = Db::rows('SELECT id, fournisseur, base, du, au, campagne, total_qte, total_cible, statut, cree_le
+                       FROM ceo_ca_demande ORDER BY id DESC LIMIT 200');
+    } catch (PDOException $e) { return ['etat' => 'attente', 'lignes' => [], 'motif' => 'table indisponible']; }
+    return ['etat' => 'ok', 'lignes' => array_map(fn ($d) => [
+        'id' => (string) $d['id'], 'fournisseur' => $d['fournisseur'], 'base' => $d['base'],
+        'du' => $d['du'], 'au' => $d['au'], 'campagne' => $d['campagne'],
+        'qte' => (int) $d['total_qte'], 'cible' => (float) $d['total_cible'],
+        'statut' => $d['statut'], 'creeLe' => $d['cree_le']], $r)];
+}
+
+/**
+ * Écrans sans source : la TABLE est rendue quand même, avec ses vraies
+ * colonnes, et chacune dit le champ qu'elle attend et d'où il doit venir.
+ *
+ * Un bandeau « en attente d'API » en tête d'écran n'apprend rien à qui devra
+ * brancher : il faut ouvrir le handoff pour savoir quoi chercher. En portant
+ * le manque DANS le tableau, colonne par colonne, l'écran devient lui-même la
+ * spécification du branchement — et l'on voit du même coup si une colonne est
+ * déjà servie par une source existante.
+ */
+/**
+ * GET /centrale/stock — l'inventaire matière RÉEL de chaque magasin.
+ *
+ * Source : /shops/{id}/material-inventory (API panel), un appel par boutique
+ * en parallèle. L'alerte est un calcul local : stock courant sous le minimum
+ * journalier. L'écran n'affiche que ce qui existe à l'inventaire — une
+ * référence jamais comptée n'est pas « à zéro », elle est absente.
+ */
+function ep_ca_stock(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Stock',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+    $noms = []; $chemins = [];
+    foreach ($shops as $s) {
+        $noms[(int) $s['id']] = (string) $s['name'];
+        $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-inventory';
+    }
+    $lignes = [];
+    foreach (PanelApi::getParallele($chemins) as $sid => $inv) {
+        foreach (analyseListe(is_array($inv) ? $inv : []) as $m) {
+            if ((int) ($m['exist_in_inventory'] ?? 0) !== 1) { continue; }
+            $stock = (float) ($m['current_quantity'] ?? 0);
+            $mini  = (float) ($m['minimum_quantity_per_day'] ?? 0);
+            $lignes[] = [
+                'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'ref' => trim((string) ($m['material_name'] ?? '')),
+                'categorie' => (string) ($m['category_name'] ?? ''),
+                'stock' => $stock, 'mini' => $mini,
+                'unite' => (string) ($m['unit_name'] ?? ''),
+                'modif' => substr((string) ($m['last_modified'] ?? ''), 0, 10),
+                // En alerte : stock NÉGATIF (écart de caisse ou comptage) ou
+                // sous le minimum journalier — les deux appellent un geste.
+                'alerte' => $stock < 0 || ($mini > 0 && $stock < $mini),
+            ];
+        }
+    }
+    usort($lignes, fn ($a, $b) => [$b['alerte'], $a['magasin'], $a['categorie'], $a['ref']]
+        <=> [$a['alerte'], $b['magasin'], $b['categorie'], $b['ref']]);
+    $tronque = max(0, count($lignes) - 600);
+    return ['etat' => 'ok', 'titre' => 'Stock',
+        'source' => 'API panel — inventaire matière par magasin (/shops/{id}/material-inventory)',
+        'lignes' => array_slice($lignes, 0, 600), 'tronque' => $tronque,
+        'manquants' => [lacune('Rotation & délai de réappro',
+            'la rotation attendue et le délai de réapprovisionnement par référence',
+            'API panel — l’inventaire ne porte que le stock courant et le minimum journalier')]];
+}
+
+/**
+ * GET /centrale/commandes — les réquisitions matière des magasins.
+ *
+ * Source : /shops/{id}/material-requisitions (API panel) : période, prévision
+ * de ventes, statut et valeur estimée. C'est le vrai flux de commande des
+ * franchisés vers la centrale — PENDING attend une conversion en commande.
+ */
+function ep_ca_commandes(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Commandes franchisés',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    try {
+        $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id');
+    } catch (PDOException $e) { $shops = []; }
+    $noms = []; $chemins = [];
+    foreach ($shops as $s) {
+        $noms[(int) $s['id']] = (string) $s['name'];
+        $chemins[(int) $s['id']] = '/shops/' . (int) $s['id'] . '/material-requisitions';
+    }
+    // Le fournisseur d'une réquisition n'est enregistré NULLE PART par l'ERP
+    // (mesuré : `suppliers` vide sur toutes, réalisées comprises, réalm admin
+    // inclus). On le DÉRIVE pour les réquisitions EN ATTENTE : les besoins
+    // actuels du magasin (/list) croisés avec le mapping matière → fournisseur
+    // (catalog-mappings). Une réquisition réalisée garde « — » : son contenu
+    // n'a pas été retenu par l'ERP, inventer un nom serait pire.
+    $fournParMatiere = [];
+    $nomsFourn = []; $mailsFourn = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        $fid = (int) ($f['id'] ?? 0);
+        if ($fid > 0) {
+            $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid));
+            $mailsFourn[$fid] = trim((string) ($f['email'] ?? ''));
+        }
+    }
+    // Les relances déjà envoyées : la ligne le dit, pour ne pas relancer deux fois.
+    $relances = setting('caRelances');
+    if (!is_array($relances)) { $relances = []; }
+    $chMap = [];
+    foreach ($nomsFourn as $fid => $n2) { $chMap[$fid] = '/material-suppliers/' . $fid . '/catalog-mappings'; }
+    foreach (PanelApi::getParallele($chMap) as $fid => $maps) {
+        foreach (analyseListe(is_array($maps) ? $maps : []) as $m2) {
+            $mid = (int) ($m2['material_id'] ?? 0);
+            if ($mid > 0) { $fournParMatiere[$mid] = $nomsFourn[$fid]; }
+        }
+    }
+    // UNE COMMANDE = UN FOURNISSEUR (règle du réseau). Les besoins courants de
+    // chaque magasin se ventilent donc par fournisseur : autant de commandes à
+    // passer que de fournisseurs concernés, chacune avec son nombre de
+    // références et son montant estimé (qty_to_order × prix unitaire net).
+    $chBesoins = [];
+    foreach (array_keys($noms) as $sid2) { $chBesoins[$sid2] = '/shops/' . $sid2 . '/material-requisitions/list'; }
+    $fournParShop = []; $aCommander = [];
+    foreach (PanelApi::getParallele($chBesoins) as $sid2 => $besoins) {
+        $parFourn = [];
+        foreach (analyseListe(is_array($besoins) ? $besoins : []) as $b2) {
+            $q2 = (float) ($b2['qty_to_order'] ?? 0);
+            if ($q2 <= 0) { continue; }
+            $n2 = $fournParMatiere[(int) ($b2['id_material'] ?? 0)] ?? null;
+            if ($n2 === null) { continue; }
+            $parFourn[$n2]['refs'] = ($parFourn[$n2]['refs'] ?? 0) + 1;
+            $parFourn[$n2]['montant'] = ($parFourn[$n2]['montant'] ?? 0)
+                + $q2 * (float) ($b2['base_unit_price_net'] ?? 0);
+        }
+        $fournParShop[$sid2] = array_keys($parFourn);
+        foreach ($parFourn as $n2 => $x2) {
+            $aCommander[] = ['magasin' => $noms[$sid2] ?? ('Magasin ' . $sid2),
+                'fournisseur' => $n2, 'nbRefs' => (int) $x2['refs'],
+                'montant' => round($x2['montant'], 2)];
+        }
+    }
+    usort($aCommander, fn ($a, $b) => [$a['magasin'], -$b['montant']] <=> [$b['magasin'], -$a['montant']]);
+
+    $lignes = []; $avecFournisseur = 0;
+    foreach (PanelApi::getParallele($chemins) as $sid => $reqs) {
+        foreach (analyseListe(is_array($reqs) ? $reqs : []) as $r) {
+            $fours = [];
+            foreach ((array) ($r['suppliers'] ?? []) as $f) {
+                if (is_string($f) && $f !== '') { $fours[] = $f; continue; }
+                if (is_array($f)) {
+                    foreach (['name', 'display_name', 'label'] as $c2) {
+                        if (!empty($f[$c2]) && is_string($f[$c2])) { $fours[] = trim($f[$c2]); break; }
+                    }
+                }
+            }
+            if ($fours === [] && (string) ($r['status'] ?? '') === 'PENDING') {
+                $fours = $fournParShop[$sid] ?? [];
+            }
+            if ($fours !== []) { $avecFournisseur++; }
+            $lignes[] = [
+                'id' => (int) ($r['id'] ?? 0),
+                // L'identifiant du magasin voyage avec la ligne : sans lui, on
+                // ne peut pas notifier le franchisé qui doit valider.
+                'magasinId' => (int) $sid,
+                'magasin' => $noms[$sid] ?? ('Magasin ' . $sid),
+                'fournisseurs' => $fours,
+                'debut' => (string) ($r['beginning_of_period'] ?? ''),
+                'jours' => (int) ($r['requisition_period_days'] ?? 0),
+                'type' => (string) ($r['type_of_requisition'] ?? ''),
+                'statut' => (string) ($r['status'] ?? ''),
+                'valeur' => (float) ($r['estimated_value'] ?? 0),
+                'par' => (string) ($r['employee']['display_name'] ?? ''),
+            ];
+        }
+    }
+    usort($lignes, fn ($a, $b) => $b['debut'] <=> $a['debut']);
+    $manquants = [lacune('Lignes de la commande',
+        'le détail produit par produit d’une réquisition',
+        'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne')];
+    $manquants[] = lacune('Fournisseur des réquisitions réalisées',
+        'quel fournisseur a servi une commande passée',
+        'API panel — l’ERP n’enregistre le fournisseur sur aucune réquisition (mesuré, réalm admin compris). '
+        . 'Pour les EN ATTENTE, il est dérivé des besoins actuels croisés au mapping matière → fournisseur ; '
+        . 'l’historique, lui, est perdu côté ERP');
+    // Regroupement par fournisseur : l'écran montre chaque fournisseur avec ses
+    // 5 dernières commandes ($lignes est déjà trié par début décroissant).
+    // Plusieurs fournisseurs → « À répartir » ; aucun → « Sans fournisseur ».
+    $groupes = [];
+    foreach ($lignes as $l) {
+        $fours = (array) $l['fournisseurs'];
+        $cle = count($fours) === 1 ? (string) $fours[0] : (count($fours) > 1 ? 'À répartir' : 'Sans fournisseur');
+        if (!isset($groupes[$cle])) {
+            $groupes[$cle] = ['fournisseur' => $cle, 'enAttente' => 0, 'valeurAttente' => 0.0,
+                'total' => 0, 'commandes' => []];
+        }
+        $groupes[$cle]['total']++;
+        if ((string) $l['statut'] === 'PENDING') {
+            $groupes[$cle]['enAttente']++;
+            $groupes[$cle]['valeurAttente'] += (float) $l['valeur'];
+        }
+        if (count($groupes[$cle]['commandes']) < 5) { $groupes[$cle]['commandes'][] = $l; }
+    }
+    uksort($groupes, function ($a, $b) {
+        $rang = fn ($k) => $k === 'À répartir' ? 1 : ($k === 'Sans fournisseur' ? 2 : 0);
+        return [$rang($a), $a] <=> [$rang($b), $b];
+    });
+
+    return ['etat' => 'ok', 'titre' => 'Commandes franchisés',
+        'source' => 'API panel — réquisitions matière (/shops/{id}/material-requisitions) et besoins courants (/list × catalog-mappings)',
+        // Ce qui a déjà été rappelé au franchisé : la ligne dit « relancé le … »
+        // au lieu de laisser notifier le même magasin dix fois.
+        'relancesFranchise' => (function () { $v = setting('caRelancesFranchise');
+            return is_array($v) ? $v : []; })(),
+        'lignes' => $lignes, 'parFournisseur' => array_values($groupes),
+        'aCommander' => $aCommander, 'manquants' => $manquants];
+}
+
+/**
+ * GET /centrale/achats — le suivi fournisseurs : référentiel réel du panel.
+ *
+ * Source : /material-suppliers, complété du volume de catalogue par
+ * fournisseur. Les commandes fournisseurs, réceptions et litiges ne sont pas
+ * exposés en lecture (seuls des webhooks entrants existent) : annoncé.
+ */
+function ep_ca_achats(): array
+{
+    if (!PanelApi::configured()) {
+        return ['etat' => 'attente', 'titre' => 'Suivi fournisseurs',
+            'source' => 'API panel — compte consultant non configuré (Mon compte)', 'colonnes' => [], 'lignes' => []];
+    }
+    $fournisseurs = analyseListe(PanelApi::get('/material-suppliers') ?? []);
+    $chemins = [];
+    foreach ($fournisseurs as $f) {
+        $id = (int) ($f['id'] ?? 0);
+        if ($id > 0) { $chemins[$id] = '/material-suppliers/' . $id . '/catalog/products'; }
+    }
+    $catalogues = PanelApi::getParallele($chemins);
+    // Les pourcentages sont un RÉGLAGE du cockpit : le panel ne porte ni la
+    // marge centrale → franchisé, ni la redevance fournisseur → centrale.
+    // Saisis à l'écran (clic sur la cellule), gardés dans ceo_app_setting.
+    $pct = setting('caFournPct', []);
+    if (!is_array($pct)) { $pct = []; }
+    $lignes = [];
+    foreach ($fournisseurs as $f) {
+        $id = (int) ($f['id'] ?? 0);
+        if ($id <= 0) { continue; }
+        $cat = analyseListe(is_array($catalogues[$id] ?? null) ? $catalogues[$id] : []);
+        $actives = 0;
+        foreach ($cat as $p) { if ((int) ($p['is_active'] ?? 0) === 1) { $actives++; } }
+        $p2 = is_array($pct[(string) $id] ?? null) ? $pct[(string) $id] : [];
+        $lignes[] = [
+            'id' => $id, 'nom' => (string) ($f['name'] ?? ''),
+            'ville' => (string) ($f['city'] ?? ''),
+            'telephone' => (string) ($f['phone'] ?? ''),
+            'email' => (string) ($f['email'] ?? ''),
+            'devise' => (string) ($f['currency'] ?? ''),
+            // CENTRAL = la centrale d'achat elle-même ; le drapeau « intégré »
+            // dit si la commande part électroniquement chez ce fournisseur.
+            'type' => (string) ($f['type'] ?? ''),
+            'integre' => (int) ($f['integrated_supplier'] ?? 0) === 1,
+            'nbRefs' => count($cat), 'nbActives' => $actives,
+            'margePct' => isset($p2['marge']) ? (float) $p2['marge'] : null,
+            'redevancePct' => isset($p2['redevance']) ? (float) $p2['redevance'] : null,
+        ];
+    }
+
+    // CA du réseau, mois par mois avec le cumul de l'année : la même route de
+    // ventes fraîches, posée une fois par mois écoulé (en parallèle). C'est le
+    // chiffre d'affaires MAGASINS — l'assiette des redevances et le volume que
+    // la centrale sert.
+    $caMensuel = []; $moisN = (int) date('n'); $annee = (int) date('Y');
+    $cheminsCa = [];
+    for ($mm = 1; $mm <= $moisN; $mm++) {
+        $du = sprintf('%04d-%02d-01', $annee, $mm);
+        $au = $mm === $moisN ? date('Y-m-d') : date('Y-m-t', strtotime($du));
+        $cheminsCa[$mm] = '/consultant/shops/sales-kpis?' . http_build_query(['date_from' => $du, 'date_to' => $au]);
+    }
+    $parMois = PanelApi::getParallele($cheminsCa);
+    $cumul = 0.0;
+    for ($mm = 1; $mm <= $moisN; $mm++) {
+        $tot = 0.0; $ok = false;
+        foreach (analyseListe(is_array($parMois[$mm] ?? null) ? $parMois[$mm] : []) as $x) {
+            $v = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+            if ($v !== null) { $tot += $v; $ok = true; }
+        }
+        $cumul += $tot;
+        $caMensuel[] = ['mois' => $mm, 'annee' => $annee, 'ca' => $ok ? round($tot, 2) : null,
+            'cumul' => round($cumul, 2), 'enCours' => $mm === $moisN];
+    }
+
+    // Le suivi des commandes : 2 dernières par magasin chez chaque fournisseur.
+    try { $noms = []; foreach (Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY sort_order, id') as $s2) {
+        $noms[(int) $s2['id']] = (string) $s2['name']; } } catch (PDOException $e) { $noms = []; }
+    $suivi = caSuiviCommandes($noms);
+
+    $manquants = [];
+    if (!$suivi['groupes']) {
+        $manquants[] = lacune('Commandes fournisseurs',
+            'les 2 dernières commandes de chaque magasin et leur état',
+            'API panel — aucune route de LISTE n’est lisible (404 ORDER_NOT_FOUND en consultant et en admin) ; le suivi balaie GET /deliveries/{id}, qui n’a rien rendu sur la plage récente');
+    }
+    $manquants[] = lacune('Valeur des commandes',
+        'le montant de chaque commande fournisseur',
+        'API panel — GET /deliveries/{id} ne porte aucun montant ; à réclamer, ou une route de liste des commandes');
+    $manquants[] = lacune('Réception et litiges',
+        'quantités reçues face aux quantités commandées, et l’état des factures',
+        'API panel — la réception vit sur POST /orders/{id}/delivery ; aucune route de lecture ne la restitue');
+
+    return ['etat' => 'ok', 'titre' => 'Suivi fournisseurs',
+        'source' => 'API panel — commandes lues une par une (/deliveries/{id}, seule route accessible), référentiel fournisseurs (/material-suppliers), ventes du réseau (sales-kpis)',
+        'lignes' => $lignes, 'caMensuel' => $caMensuel, 'exercice' => $annee,
+        'suivi' => $suivi, 'manquants' => $manquants];
+}
+
+/**
+ * Les 2 dernières commandes de CHAQUE magasin, chez CHAQUE fournisseur.
+ *
+ * MESURÉ sur le serveur : aucune route de LISTE de commandes n'est lisible en
+ * réalm consultant ni admin — /shops/{id}/orders(/materials), /orders et
+ * /material-orders répondent 404 ORDER_NOT_FOUND. En revanche
+ * GET /deliveries/{idCommande} rend la commande ENTIÈRE, quel que soit son
+ * magasin et son fournisseur : identifiant, clé, dates, statut logistique,
+ * statut de traitement fournisseur et horodatages des gestes.
+ *
+ * Le suivi balaie donc la plage des identifiants récents (en parallèle) et
+ * garde ce qui répond. Le balayage coûte cher : son résultat est mémorisé
+ * dans `ceo_app_setting.caSuiviCache` et rejoué pendant SUIVI_TTL, sauf
+ * ?refresh=1. La borne haute connue vit dans `caSuiviMaxId` et monte toute
+ * seule quand de nouvelles commandes apparaissent.
+ */
+const SUIVI_TTL = 300;          // 5 min — assez court pour voir un statut changer
+const SUIVI_PROFONDEUR = 260;   // identifiants balayés vers le bas
+const SUIVI_AVANCE = 40;        // identifiants sondés au-delà du max connu
+
+function caSuiviCommandes(array $nomsMagasins): array
+{
+    $frais = empty($_GET['refresh']);
+    if ($frais) {
+        $cache = setting('caSuiviCache');
+        if (is_array($cache) && (int) ($cache['quand'] ?? 0) > time() - SUIVI_TTL) {
+            $cache['cache'] = true;
+            return $cache;
+        }
+    }
+
+    // 1. La borne haute : on sonde au-delà du dernier identifiant connu.
+    $max = (int) (setting('caSuiviMaxId') ?? 0);
+    if ($max <= 0) { $max = 300; }
+    $sonde = [];
+    for ($i = $max + 1; $i <= $max + SUIVI_AVANCE; $i++) { $sonde[$i] = '/deliveries/' . $i; }
+    foreach (PanelApi::getParallele($sonde, 8) as $id => $r) {
+        if (is_array($r) && !empty($r['id'])) { $max = max($max, (int) $id); }
+    }
+
+    // 2. Le balayage descendant.
+    $chemins = [];
+    for ($i = $max; $i > max(0, $max - SUIVI_PROFONDEUR); $i--) { $chemins[$i] = '/deliveries/' . $i; }
+    $brutes = PanelApi::getParallele($chemins, 8);
+    $cmds = [];
+    foreach ($brutes as $id => $r) {
+        if (is_array($r) && !empty($r['id'])) { $cmds[] = $r; }
+    }
+    if (!$cmds) {
+        return ['groupes' => [], 'kpis' => null, 'quand' => time(),
+            'indispo' => 'aucune commande lisible — GET /deliveries/{id} n’a rien rendu sur la plage balayée'];
+    }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caSuiviMaxId', json_encode($max)]);
+
+    // 3. Les noms : fournisseurs du référentiel, magasins de la base.
+    $nomsFourn = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers') ?? []) as $f) {
+        $fid = (int) ($f['id'] ?? 0);
+        if ($fid > 0) { $nomsFourn[$fid] = (string) ($f['name'] ?? ('Fournisseur ' . $fid)); }
+    }
+
+    $vide = static fn ($v): bool => $v === null || $v === '' || $v === 'NULL';
+    $aujourdHui = date('Y-m-d');
+
+    // Les plus récentes d'abord.
+    usort($cmds, static fn ($a, $b) => [(string) ($b['order_date'] ?? ''), (int) ($b['id'] ?? 0)]
+        <=> [(string) ($a['order_date'] ?? ''), (int) ($a['id'] ?? 0)]);
+
+    $parFourn = []; $pris = []; $aValider = [];
+    foreach ($cmds as $o) {
+        $fid = (int) ($o['id_supplier'] ?? 0);
+        $sid = (int) ($o['id_shop'] ?? 0);
+        $fourn = $nomsFourn[$fid] ?? ($fid > 0 ? 'Fournisseur ' . $fid : 'Sans fournisseur');
+        $magasin = $nomsMagasins[$sid] ?? ('Magasin ' . $sid);
+        $cle = $fourn . '|' . $magasin;
+        if (($pris[$cle] ?? 0) >= 2) { continue; }   // 2 par magasin ET par fournisseur
+        $pris[$cle] = ($pris[$cle] ?? 0) + 1;
+
+        $ff = strtoupper((string) ($o['supplier_fulfillment_status'] ?? ''));
+        $st = strtoupper((string) ($o['status'] ?? ''));
+        $prevue = !$vide($o['supplier_planned_delivery_date'] ?? null) ? (string) $o['supplier_planned_delivery_date']
+            : (!$vide($o['expected_date'] ?? null) ? (string) $o['expected_date'] : '');
+        $livre = !$vide($o['delivered_on'] ?? null) ? substr((string) $o['delivered_on'], 0, 10) : '';
+
+        $etape = 1; $bloque = false; $libelle = 'Envoyée'; $geste = '';
+        if (!$vide($o['supplier_rejected_at'] ?? null) || $ff === 'REJECTED') {
+            $bloque = true; $libelle = 'Refusée'; $geste = 'refusée le ' . substr((string) ($o['supplier_rejected_at'] ?? ''), 0, 10);
+        } elseif (!$vide($o['supplier_cancelled_at'] ?? null) || $ff === 'CANCELLED') {
+            $bloque = true; $libelle = 'Annulée'; $geste = 'annulée le ' . substr((string) ($o['supplier_cancelled_at'] ?? ''), 0, 10);
+        } elseif ($livre !== '' || $st === 'DELIVERED') {
+            $etape = 4; $libelle = 'Livrée'; $geste = $livre !== '' ? 'livrée le ' . $livre : '';
+        } elseif (!$vide($o['in_transit_sent_at'] ?? null) || $st === 'IN_TRANSIT') {
+            $etape = 3; $libelle = 'En transit'; $geste = 'expédiée le ' . substr((string) ($o['in_transit_sent_at'] ?? ''), 0, 10);
+        } elseif ($ff === 'FINALIZED' || !$vide($o['supplier_finalized_at'] ?? null)) {
+            $etape = 3; $libelle = 'Finalisée'; $geste = 'finalisée le ' . substr((string) ($o['supplier_finalized_at'] ?? ''), 0, 10);
+        } elseif ($ff === 'ACCEPTED' || !$vide($o['supplier_accepted_at'] ?? null)) {
+            $etape = 2; $libelle = 'Acceptée'; $geste = 'acceptée le ' . substr((string) ($o['supplier_accepted_at'] ?? ''), 0, 10);
+        } elseif ($ff !== '' && $ff !== 'NEW') {
+            $libelle = ucfirst(strtolower(str_replace('_', ' ', $ff)));
+        }
+
+        $retard = null;
+        if ($etape < 4 && !$bloque && $prevue !== '' && $prevue < $aujourdHui) {
+            $retard = (int) floor((strtotime($aujourdHui) - strtotime($prevue)) / 86400);
+        }
+
+        // Ce que le fournisseur n'a PAS encore accepté — sans la borne des deux
+        // par magasin, qui ne vaut que pour l'affichage : un rappel doit citer
+        // TOUTES les commandes qui attendent, pas les deux dernières.
+        if ($etape === 1 && !$bloque) {
+            $aValider[] = ['id' => (int) $o['id'],
+                'cle' => (string) ($o['order_key'] ?? ('#' . $o['id'])),
+                'fournisseur' => $fourn, 'magasin' => $magasin,
+                'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+                'livraisonPrevue' => $prevue, 'retardJours' => $retard];
+        }
+
+        $parFourn[$fourn]['magasins'][$magasin][] = [
+            'id' => (int) $o['id'],
+            'cle' => (string) ($o['order_key'] ?? ('#' . $o['id'])),
+            'date' => substr((string) ($o['order_date'] ?? ''), 0, 10),
+            'livraisonPrevue' => $prevue,
+            'etape' => $etape, 'bloque' => $bloque, 'libelle' => $libelle,
+            'geste' => $geste, 'retardJours' => $retard,
+            'source' => strtoupper((string) ($o['source_type'] ?? '')) === 'INTEGRATED' ? 'intégrée' : 'manuelle',
+            'email' => $mailsFourn[$fid] ?? '',
+            'relanceLe' => (string) ($relances[(string) $o['id']]['quand'] ?? ''),
+        ];
+    }
+
+    // 4. Mise en forme + compteurs.
+    $groupes = []; $kEnCours = 0; $kRetard = 0; $kNouv = 0; $kTotal = 0;
+    foreach ($parFourn as $nom => $g) {
+        ksort($g['magasins']);
+        $lignes = []; $enCours = 0; $retard = 0; $nouv = 0;
+        foreach ($g['magasins'] as $magasin => $liste) {
+            foreach ($liste as $i => $o) {
+                $o['magasin'] = $i === 0 ? $magasin : '';
+                $lignes[] = $o; $kTotal++;
+                if ($o['etape'] < 4 && !$o['bloque']) {
+                    $enCours++; $kEnCours++;
+                    if ($o['etape'] === 1) { $nouv++; $kNouv++; }
+                }
+                if ($o['retardJours'] !== null) { $retard++; $kRetard++; }
+            }
+        }
+        $groupes[] = ['fournisseur' => $nom, 'nbMagasins' => count($g['magasins']),
+            'nbCommandes' => count($lignes), 'enCours' => $enCours, 'retard' => $retard,
+            'sansReponse' => $nouv, 'commandes' => $lignes];
+    }
+    usort($groupes, static fn ($a, $b) => [-$a['retard'], -$a['enCours'], $a['fournisseur']]
+        <=> [-$b['retard'], -$b['enCours'], $b['fournisseur']]);
+
+    // Les commandes que le fournisseur n'a pas acceptées, toutes, triées de la
+    // plus ancienne à la plus récente : c'est la matière du rappel.
+    usort($aValider, fn ($a, $b) => [(string) $a['date'], $a['id']] <=> [(string) $b['date'], $b['id']]);
+    $out = ['groupes' => $groupes, 'aValider' => $aValider,
+        'lues' => count($cmds), 'maxId' => $max, 'quand' => time(),
+        'kpis' => ['enCours' => $kEnCours, 'retard' => $kRetard, 'aAccepter' => $kNouv,
+            'fournisseurs' => count($groupes), 'total' => $kTotal]];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['caSuiviCache', json_encode($out, JSON_UNESCAPED_UNICODE)]);
+    return $out;
+}
+
+/**
+ * GET /centrale/achats/catalogue?fournisseur=N — le catalogue d'UN
+ * fournisseur, ouvert d'un clic sur son nom dans le suivi.
+ */
+function ep_ca_achats_catalogue(): array
+{
+    $id = (int) ($_GET['fournisseur'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['error' => 'fournisseur requis']; }
+    if (!PanelApi::configured()) { return ['etat' => 'attente', 'lignes' => []]; }
+
+    // La fiche d'identité (/material-suppliers/{id}) porte ce que la liste
+    // tait : type (CENTRAL = la centrale elle-même), intégration électronique,
+    // adresse, TVA, site. Affichée en tête du catalogue — sans l'IBAN, qui n'a
+    // rien à faire à l'écran.
+    $fiche = null;
+    $f = PanelApi::get('/material-suppliers/' . $id);
+    if (is_array($f)) {
+        if (isset($f[0]) && is_array($f[0])) { $f = $f[0]; }
+        $adresse = trim(implode(' ', array_filter([
+            $f['street'] ?? '', $f['street_number'] ?? ''])));
+        $villeLigne = trim(implode(' ', array_filter([$f['zip'] ?? '', $f['city'] ?? ''])));
+        $fiche = [
+            'nom' => (string) ($f['name'] ?? ''),
+            'type' => (string) ($f['type'] ?? ''),
+            'integre' => (int) ($f['integrated_supplier'] ?? 0) === 1,
+            'adresse' => trim($adresse . ($villeLigne !== '' ? ', ' . $villeLigne : ''), ', '),
+            'pays' => (string) ($f['country_code'] ?? ''),
+            'telephone' => (string) ($f['phone'] ?? ''),
+            'email' => (string) ($f['email'] ?? ''),
+            'tva' => (string) ($f['tax_number'] ?? ''),
+            'web' => (string) ($f['website_url'] ?? ''),
+            'notes' => (string) ($f['notes'] ?? ''),
+        ];
+    }
+    $lignes = [];
+    foreach (analyseListe(PanelApi::get('/material-suppliers/' . $id . '/catalog/products') ?? []) as $p) {
+        $lignes[] = [
+            'sku' => (string) ($p['sku'] ?? ''),
+            'nom' => trim((string) ($p['name'] ?? '')),
+            'colis' => trim(((string) ($p['package_size'] ?? '')) . ' ' . ((string) ($p['package_unit'] ?? ''))),
+            'portion' => trim(((string) ($p['portion_size'] ?? '')) . ' ' . ((string) ($p['portion_unit'] ?? ''))),
+            'poidsG' => isset($p['weight_grams']) ? (int) $p['weight_grams'] : null,
+            'dlcJours' => isset($p['shelf_life_days']) ? (int) $p['shelf_life_days'] : null,
+            'tvaPct' => isset($p['vat_rate']) ? (float) $p['vat_rate'] : null,
+            'actif' => (int) ($p['is_active'] ?? 0) === 1,
+        ];
+    }
+    usort($lignes, fn ($a, $b) => [$b['actif'], $a['nom']] <=> [$a['actif'], $b['nom']]);
+    return ['etat' => 'ok', 'fournisseurId' => $id, 'fiche' => $fiche, 'lignes' => $lignes];
+}
+
+/**
+ * GET /centrale/facturation — ce que les magasins doivent et paient.
+ *
+ * Deux flux, tous deux du réalm ADMIN de l'ERP (compte « admin ERP » des
+ * Paramètres) :
+ *   · les factures de REDEVANCES émises aux magasins (/admin/royalties/
+ *     invoices) — numéro, échéance, montant, état de paiement ;
+ *   · les factures d'ABONNEMENT TFBuddy par magasin (/admin/billing/invoices,
+ *     Stripe) — le coût logiciel du réseau.
+ */
+function ep_ca_facturation(): array
+{
+    if (!ErpApi::disponible()) {
+        $m = ep_ca_manquant('facturation');
+        $m['source'] = 'Réalm admin de l’ERP — renseignez le compte « admin ERP » (Mon compte) pour lire '
+            . 'les factures de redevances et les abonnements TFBuddy.';
+        return $m;
+    }
+    $noms = [];
+    try {
+        foreach (Db::rows('SELECT id, name FROM shops') as $s) { $noms[(int) $s['id']] = (string) $s['name']; }
+    } catch (PDOException $e) { /* noms indisponibles */ }
+
+    $redevances = [];
+    $rep = ErpApi::get('/admin/royalties/invoices');
+    $liste = is_array($rep) ? ($rep['invoices'] ?? (analyseListe($rep) ?: [])) : [];
+    foreach ((array) $liste as $f) {
+        $redevances[] = [
+            'numero' => (string) ($f['invoice_number'] ?? ('#' . ($f['id'] ?? '?'))),
+            'magasin' => $noms[(int) ($f['id_shop'] ?? 0)] ?? ('Magasin ' . ($f['id_shop'] ?? '?')),
+            'emise' => (string) ($f['issue_date'] ?? ''),
+            'echeance' => (string) ($f['due_date'] ?? ''),
+            'montant' => (float) ($f['gross_amount'] ?? 0),
+            'statut' => (string) ($f['status'] ?? ''),
+            'paiement' => (string) ($f['payment_status'] ?? ''),
+            'payeLe' => $f['paid_at'] ?? null,
+            'relanceLe' => $f['last_reminder_sent_at'] ?? null,
+        ];
+    }
+    usort($redevances, fn ($a, $b) => $b['emise'] <=> $a['emise']);
+
+    $abonnements = [];
+    foreach (analyseListe(ErpApi::get('/admin/billing/invoices') ?? []) as $f) {
+        $abonnements[] = [
+            'magasin' => (string) ($f['store_name'] ?? ''),
+            'offre' => (string) ($f['package_code'] ?? ''),
+            'montant' => (float) ($f['amount_due'] ?? 0),
+            'paye' => (float) ($f['amount_paid'] ?? 0),
+            'statut' => (string) ($f['status'] ?? ''),
+            'pdf' => (string) ($f['invoice_pdf_url'] ?? ($f['invoice_pdf'] ?? '')),
+        ];
+    }
+
+    return ['etat' => 'ok', 'titre' => 'Facturation magasins',
+        'source' => 'Réalm admin ERP — factures de redevances (/admin/royalties/invoices) et abonnements TFBuddy (/admin/billing/invoices)',
+        'redevances' => $redevances, 'abonnements' => array_slice($abonnements, 0, 60),
+        'manquants' => [lacune('Factures clients B2B des magasins',
+            'les factures qu’un magasin émet à ses propres clients professionnels',
+            '/shops/{id}/invoices exige une date jour par jour — à câbler avec un sélecteur si le besoin se confirme')]];
+}
+
+function ep_ca_manquant(string $ecran): array
+{
+    $def = [
+        'campagnes' => [
+            'titre'  => 'Campagnes commerciales',
+            'source' => 'API cockpit marketing — lecture seule, ne jamais écrire depuis la centrale',
+            'colonnes' => [
+                ['col' => 'Campagne',            'champ' => 'campagnes.nom + statut',            'src' => 'API marketing'],
+                ['col' => 'Période',             'champ' => 'campagnes.periode_debut / _fin',    'src' => 'API marketing'],
+                ['col' => 'Assortiment',         'champ' => 'campagnes.assortiment_id → assortiments.produits[]', 'src' => 'référentiel assortiments'],
+                ['col' => 'Objectif volume',     'champ' => 'campagnes.objectifs_volume{magasin}', 'src' => 'API marketing'],
+                ['col' => 'Prix cible',          'champ' => 'campagnes.prix_cible_baisse_pct',   'src' => 'API marketing'],
+                ['col' => 'Remise négociée',     'champ' => 'campagnes.remise_negociee_pct',     'src' => 'API marketing'],
+                ['col' => 'Reçu / commandé',     'champ' => 'lignes_commande_fournisseur.quantite_recue / _commandee', 'src' => 'API achats'],
+                ['col' => 'Hors prix négocié',   'champ' => '|prix_unitaire − produit.prix_achat| > 0,001', 'src' => 'API achats'],
+                ['col' => 'Litige',              'champ' => 'factures_fournisseur.statut = litige', 'src' => 'API achats'],
+            ]],
+        'achats' => [
+            'titre'  => 'Suivi fournisseurs',
+            'source' => 'API achats — commandes fournisseurs, réception, litiges',
+            'colonnes' => [
+                ['col' => 'Commande',      'champ' => 'commandes_fournisseur.id + date',       'src' => 'API achats'],
+                ['col' => 'Fournisseur',   'champ' => 'commandes_fournisseur.fournisseur_id',  'src' => 'API achats',
+                 'note' => 'le référentiel fournisseurs existe déjà côté cockpit'],
+                ['col' => 'Statut',        'champ' => 'envoyée | partiellement reçue | reçue', 'src' => 'API achats'],
+                ['col' => 'Commandé',      'champ' => 'Σ lignes.quantite_commandee',           'src' => 'API achats'],
+                ['col' => 'Reçu',          'champ' => 'Σ lignes.quantite_recue',               'src' => 'API achats'],
+                ['col' => 'Écart',         'champ' => 'reçu − commandé (rouge si négatif)',    'src' => 'calcul local'],
+                ['col' => 'Montant',       'champ' => 'commandes_fournisseur.total',           'src' => 'API achats'],
+                ['col' => 'Facture',       'champ' => 'factures_fournisseur.statut',           'src' => 'API achats'],
+            ]],
+        'commandes' => [
+            'titre'  => 'Commandes franchisés',
+            'source' => 'API commandes franchisés — lecture + transition de statut',
+            'colonnes' => [
+                ['col' => 'Commande',   'champ' => 'commandes.id + date',                    'src' => 'API commandes'],
+                ['col' => 'Magasin',    'champ' => 'commandes.magasin_id',                   'src' => 'API commandes',
+                 'note' => 'les magasins sont déjà connus du cockpit'],
+                ['col' => 'Statut',     'champ' => 'nouvelle | préparée | expédiée | livrée', 'src' => 'API commandes'],
+                ['col' => 'Lignes',     'champ' => 'lignes_commande.produit_id, quantite, prix_unitaire', 'src' => 'API commandes'],
+                ['col' => 'Total',      'champ' => 'commandes.total',                        'src' => 'API commandes'],
+                ['col' => 'Marge nette', 'champ' => '(CA − achat) − commission marque',       'src' => 'calcul local',
+                 'note' => 'le coût d\'achat est déjà disponible (coût matière des recettes)'],
+            ]],
+        'stock' => [
+            'titre'  => 'Stock',
+            'source' => 'API stock — aucune source connue à ce jour, ni base ni panel',
+            'colonnes' => [
+                ['col' => 'Référence',    'champ' => 'produits.id + nom',        'src' => 'déjà disponible (catalogue)'],
+                ['col' => 'Stock actuel', 'champ' => 'produits.stock_actuel',    'src' => 'API stock'],
+                ['col' => 'Stock mini',   'champ' => 'produits.stock_min',       'src' => 'API stock'],
+                ['col' => 'Rotation',     'champ' => 'produits.rotation_attendue', 'src' => 'API stock'],
+                ['col' => 'Délai réappro', 'champ' => 'produits.delai_reappro_jours', 'src' => 'API stock'],
+                ['col' => 'Alerte',       'champ' => 'stock_actuel < stock_min → rupture', 'src' => 'calcul local'],
+            ]],
+        'facturation' => [
+            'titre'  => 'Facturation magasins',
+            'source' => 'API facturation — factures magasins, TVA par ligne, relances',
+            'colonnes' => [
+                ['col' => 'Facture',  'champ' => 'facture.id + date',                  'src' => 'API facturation'],
+                ['col' => 'Magasin',  'champ' => 'facture.magasin_id',                 'src' => 'API facturation'],
+                ['col' => 'Montant HT', 'champ' => 'Σ quantite × prix_unitaire',       'src' => 'API facturation'],
+                ['col' => 'TVA',      'champ' => 'PAR LIGNE : quantite × prix × produit.tva_pct/100', 'src' => 'API produits (tva_pct)',
+                 'note' => 'jamais de taux global ; repli sur le taux par défaut des réglages'],
+                ['col' => 'Statut',   'champ' => 'à payer | payée | litige',           'src' => 'API facturation'],
+                ['col' => 'Relance',  'champ' => 'date de dernière relance',           'src' => 'API facturation'],
+            ]],
+    ][$ecran] ?? ['titre' => $ecran, 'source' => 'source non déterminée', 'colonnes' => []];
+
+    return ['ecran' => $ecran, 'etat' => 'attente', 'titre' => $def['titre'],
+        'source' => $def['source'], 'colonnes' => $def['colonnes'], 'lignes' => []];
+}
+
+/**
+ * Lacune déclarée par un endpoint : un champ qu'il ne peut pas servir, et
+ * pourquoi.
+ *
+ * Deux causes que rien ne distinguait jusqu'ici, et que confondre coûte cher :
+ *  · `api`  — aucune source n'expose la donnée. Il faut la RÉCLAMER, et l'écran
+ *             dit à qui et sous quel nom.
+ *  · `saisie` — la source existe, elle est vide. Il n'y a rien à réclamer, il
+ *             faut REMPLIR. Envoyer quelqu'un chercher une API dans ce cas,
+ *             c'est le lancer sur une piste qui n'existe pas.
+ *
+ * L'écran affiche « manque API » dans le premier cas, « à renseigner » dans le
+ * second, avec les champs attendus nommés.
+ */
+function lacune(string $champ, string $quoi, string $source, string $type = 'api'): array
+{
+    return ['champ' => $champ, 'quoi' => $quoi, 'source' => $source, 'type' => $type];
+}
+
+
+/**
+ * Catalogue des lacunes, DÉTECTÉES à l'exécution et non listées à la main.
+ *
+ * Une liste écrite en dur périme : le jour où le panel expose enfin le food
+ * cost, l'écran continuerait de le réclamer. On mesure donc l'état réel — un
+ * champ n'est déclaré manquant que s'il l'est vraiment, sur toutes les lignes.
+ *
+ * La distinction entre « manque API » et « à renseigner » est portée ici, une
+ * fois, plutôt que devinée par chaque écran.
+ */
+function ep_lacunes(): array
+{
+    $out = [];
+
+    // --- performance magasin : ce que le P&L du panel ne porte pas
+    try {
+        $perf = ep_perf();
+        $n = count($perf);
+        if ($n > 0) {
+            $sansFc = 0; $sansVal = 0;
+            foreach ($perf as $r) {
+                if (($r['foodCostPct'] ?? null) === null) { $sansFc++; }
+                if (($r['valorisation'] ?? null) === null) { $sansVal++; }
+            }
+            if ($sansFc === $n) {
+                $out['magasins'][] = lacune('Food cost %',
+                    'le ratio matière par magasin et par mois',
+                    'API panel — mac_shop_monthly_pnl ne porte pas le poste « material » (ticket T5a du panel)');
+                $out['marge'][] = end($out['magasins']);
+            }
+            if ($sansVal === $n) {
+                $out['magasins'][] = lacune('Valorisation',
+                    'la valeur du fonds par magasin',
+                    'API panel — le ValuationService du panel la calcule sans la stocker dans le snapshot mensuel');
+            }
+        }
+    } catch (Throwable $e) { /* la perf est indisponible : rien à déclarer */ }
+
+    // --- exploitation : objectifs absents parce que le budget n'est pas saisi
+    try {
+        $b = Db::row('SELECT COUNT(*) AS n FROM ceo_shop_budget');
+        $s = Db::row('SELECT COUNT(*) AS n FROM shops WHERE active = 1');
+        $nb = (int) ($b['n'] ?? 0); $ns = (int) ($s['n'] ?? 0);
+        if ($ns > 0 && $nb < $ns) {
+            $out['exploitation'][] = lacune('Objectif / Atteinte',
+                'le budget mensuel de ' . ($ns - $nb) . ' magasin(s) sur ' . $ns,
+                'Écran « Encodage du budget » — la table existe, elle attend la saisie', 'saisie');
+        }
+    } catch (PDOException $e) { /* tables absentes */ }
+
+    // --- consultants : référentiel incomplet, pas une API manquante
+    try {
+        $c = ep_consultants();
+        $n = count($c);
+        if ($n > 0) {
+            $sans = 0;
+            foreach ($c as $r) { if (($r['tjm'] ?? null) === null && ($r['charge'] ?? null) === null) { $sans++; } }
+            if ($sans === $n) {
+                $out['parametres'][] = lacune('TJM / Charge',
+                    'le taux journalier et la charge des ' . $n . ' consultants',
+                    'Référentiel consultants — le panel ne porte pas ces champs, ils se saisissent côté cockpit', 'saisie');
+            }
+        }
+    } catch (Throwable $e) { /* consultants indisponibles */ }
+
+    // --- catalogue produit : coût matière et prix de vente incomplets
+    try {
+        $cat = ep_prod_catalogue();
+        $n = count($cat);
+        if ($n > 0) {
+            $sansMat = 0; $sansPrix = 0; $sansFour = $n;
+            foreach ($cat as $p) {
+                if (($p['mat'] ?? null) === null) { $sansMat++; }
+                if (($p['prix'] ?? null) === null) { $sansPrix++; }
+            }
+            if ($sansMat > 0) {
+                $out['catalogue'][] = lacune('Coût matière',
+                    $sansMat . ' référence(s) sur ' . $n . ' sans coût',
+                    'Recettes du panel — recipe_cost ne couvre pas toutes les références ; le reste se saisit par fiche', 'saisie');
+            }
+            if ($sansPrix > 0) {
+                $out['catalogue'][] = lacune('Prix de vente',
+                    $sansPrix . ' référence(s) sur ' . $n . ' sans prix',
+                    'Caisse du panel — portion_price absent de products/available pour ces références', 'api');
+            }
+            // Le batch : sans lui, l'assortiment ne peut pas proposer de minimum
+            // tenable, et le suivi de production n'a pas d'unité de fournée.
+            $sansBatch = 0;
+            foreach ($cat as $p) { if ((int) ($p['bmin'] ?? 0) <= 0) { $sansBatch++; } }
+            if ($sansBatch === $n) {
+                $out['assortiment'][] = lacune('Batch (fournée minimale)',
+                    'aucune des ' . $n . ' références ne porte de batch',
+                    'Fiche de production — le champ existe (ceo_prod_product.bmin), il attend la saisie. '
+                    . 'Sans lui, le minimum d\'assortiment ne peut pas être calé sur une fournée', 'saisie');
+                $out['catalogue'][] = end($out['assortiment']);
+            }
+            // Le rattachement référence → fournisseur n'existe nulle part.
+            $out['catalogue'][] = lacune('Fournisseur',
+                'le fournisseur de chacune des ' . $n . ' références',
+                'API achats — aucune source ne rattache une référence à un fournisseur');
+        }
+        // Références écartées : identifiant négatif, donc inexploitable. On dit
+        // combien, et pourquoi — une exclusion silencieuse se lit comme un trou.
+        try {
+            $f = Db::row('SELECT COUNT(*) AS n FROM product WHERE is_active = 1 AND id <= 0');
+            if ((int) ($f['n'] ?? 0) > 0) {
+                $out['catalogue'][] = lacune('Référence fantôme',
+                    (int) $f['n'] . ' référence(s) écartée(s) du catalogue',
+                    'Catalogue du panel — identifiant négatif et catégorie inexistante ; à corriger côté panel, '
+                    . 'aucun magasin ne peut tenir une référence sans identifiant');
+                $out['assortiment'][] = end($out['catalogue']);
+            }
+        } catch (PDOException $e) { /* table de caisse absente */ }
+    } catch (Throwable $e) { /* catalogue indisponible */ }
+
+    // --- assortiment : rien n'est déclaré obligatoire
+    try {
+        $c2 = Db::row('SELECT COUNT(*) AS n FROM ceo_prod_product WHERE must = 1');
+        if ((int) ($c2['n'] ?? 0) === 0) {
+            $out['assortiment'][] = lacune('Références obligatoires',
+                'aucune référence déclarée obligatoire pour le réseau',
+                'Cet écran — « Afficher tout le catalogue », puis cocher les références '
+                . 'que toute boutique doit tenir', 'saisie');
+        }
+    } catch (PDOException $e) { /* table absente */ }
+
+    // --- scoring / analyse : la vente par magasin et par référence
+    $out['produits'][] = lacune('Vente par magasin',
+        'le volume vendu d\'une référence dans UN magasin',
+        'API panel — /shops/{id}/products/waste rend un sold_qty RÉSEAU, identique dans les quatre boutiques (mesuré : 5165 partout)');
+    $out['analyse'][] = end($out['produits']);
+
+    // --- contrôle des tâches : les tâches restant à contrôler
+    try {
+        $d = Db::row('SELECT MAX(review_date) AS d FROM mac_task_review');
+        $der = (string) ($d['d'] ?? '');
+        if ($der !== '' && $der < date('Y-m-d')) {
+            $out['controle'][] = lacune('Tâches à contrôler',
+                'les tâches rendues depuis le ' . $der . ' et non encore notées',
+                'L\'écran part de mac_task_review (notes DÉJÀ posées) ; il doit partir de /consultant/shops/{id}/tasks');
+        }
+    } catch (PDOException $e) { /* table absente */ }
+
+    // Les repères se posent et se gardent ; c'est le canal RETOUR qui manque.
+    $out['controle'][] = annotationLacune();
+
+    // --- centrale d'achat. Stock, commandes franchisés et suivi fournisseurs
+    //     sont désormais servis par l'API du panel : ne restent en manque que
+    //     ce que leurs endpoints déclarent eux-mêmes, et les écrans encore
+    //     sans source.
+    $ecransSansSource = ['campagnes' => 'Campagnes commerciales'];
+    if (!ErpApi::disponible()) {
+        // Servie par le réalm admin de l'ERP dès que le compte est renseigné.
+        $ecransSansSource['facturation'] = 'Facturation magasins';
+    }
+    foreach ($ecransSansSource as $k => $lib) {
+        $m = ep_ca_manquant($k);
+        $n = 0;
+        foreach ($m['colonnes'] as $c) { if (!preg_match('/déjà|calcul local/i', (string) $c['src'])) { $n++; } }
+        $out['centrale'][] = lacune($lib, $n . ' colonne(s) sur ' . count($m['colonnes']), $m['source']);
+    }
+    // Résidus des trois écrans désormais branchés — déclarés ici sans rappeler
+    // leurs endpoints, qui font chacun un appel amont par boutique.
+    $out['centrale'][] = lacune('Commandes fournisseurs, réception, litiges',
+        'les commandes fournisseurs avec quantités commandées/reçues et l’état des factures',
+        'API panel — seuls des webhooks entrants existent, aucune route de lecture. À réclamer : GET /material-orders');
+    $out['centrale'][] = lacune('Détail d’une réquisition franchisé',
+        'les lignes produit par produit d’une commande',
+        'API panel — /material-requisitions/{id} et /document existent, à câbler sur un clic de ligne');
+    $out['centrale'][] = lacune('Rotation & délai de réappro',
+        'la rotation attendue et le délai de réapprovisionnement par référence en stock',
+        'API panel — l’inventaire ne porte que le stock courant et le minimum journalier');
+    return $out;
+}
+
+/**
+ * Sonde : que rend l'API des tâches du panel pour une journée donnée ?
+ *
+ * L'écran « Contrôle des tâches » partait de `mac_task_review`, la table des
+ * notes DÉJÀ posées : il ne pouvait donc afficher que du déjà-contrôlé, jamais
+ * le reste à contrôler. Avant de le rebrancher sur la route amont, il faut
+ * savoir ce qu'elle rend, et sous quels noms de champs — un mauvais mapping
+ * produirait une liste de tâches à contrôler qui aurait l'air juste.
+ */
+function ep_pwa_tasks_sonde(): array
+{
+    $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    $out = ['date' => $date, 'shops' => [], 'erreur' => null];
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte API non configuré']; }
+    try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY id'); }
+    catch (PDOException $e) { $shops = []; }
+    foreach ($shops as $s) {
+        $sid = (int) $s['id'];
+        $l = PanelApi::shopTasks($sid, $date);
+        $e = ['id' => $sid, 'nom' => $s['name'], 'n' => count($l), 'erreur' => PanelApi::$lastError];
+        if ($l && is_array($l[0])) {
+            $e['clesPremier'] = array_keys($l[0]);
+            $e['premier'] = $l[0];
+            // Quelles valeurs distinctes portent les champs d'état ? C'est ce
+            // qui dira comment reconnaître « rendue, en attente de contrôle ».
+            foreach (['status', 'state', 'is_done', 'done', 'completed', 'is_completed'] as $k) {
+                $vals = [];
+                foreach ($l as $t) { if (array_key_exists($k, $t)) { $vals[json_encode($t[$k])] = true; } }
+                if ($vals) { $e['valeurs'][$k] = array_keys($vals); }
+            }
+        }
+        $out['shops'][] = $e;
+    }
+    return $out;
+}
+
+/**
+ * Audit de FRAÎCHEUR : jusqu'à quand chaque source va-t-elle, et l'API va-t-elle
+ * plus loin ?
+ *
+ * La caisse en base partagée s'arrête à une date qui n'est pas aujourd'hui.
+ * Tout écran qui la lit affiche donc des ventes périmées sans le dire — et rien
+ * ne le signale, puisqu'un total de juillet reste un total plausible en août.
+ * Cet audit met les deux côte à côte : la dernière date en base, la dernière
+ * que l'API accepte de servir, et l'écart entre les deux.
+ */
+function ep_audit_fraicheur(): array
+{
+    $auj = date('Y-m-d');
+    $out = ['aujourdhui' => $auj, 'sources' => [], 'api' => [], 'ecrans' => []];
+
+    // 1) Jusqu'où va chaque table lue par les écrans ?
+    $tables = [
+        'transaction'          => ['MAX(DATE(insert_timestamp))', 'ventes de caisse (ligne à ligne)'],
+        'product_movement'     => ['MAX(DATE(created_at))', 'production et rebut déclarés'],
+        'mac_shop_monthly_pnl' => [null, 'P&L mensuel du panel'],
+        'mac_task_review'      => ['MAX(review_date)', 'avis sur les tâches'],
+    ];
+    foreach ($tables as $t => $def) {
+        $e = ['table' => $t, 'quoi' => $def[1], 'derniere' => null, 'retard' => null, 'erreur' => null];
+        try {
+            if ($t === 'mac_shop_monthly_pnl') {
+                $r = Db::row("SELECT CONCAT(MAX(year), '-', LPAD(MAX(month), 2, '0')) d FROM mac_shop_monthly_pnl");
+                $e['derniere'] = $r['d'] ?? null;
+            } else {
+                $r = Db::row("SELECT {$def[0]} d FROM {$t}");
+                $e['derniere'] = $r['d'] ?? null;
+            }
+            if ($e['derniere'] !== null && strlen((string) $e['derniere']) >= 10) {
+                $e['retard'] = (int) floor((strtotime($auj) - strtotime((string) $e['derniere'])) / 86400);
+            }
+        } catch (PDOException $ex) { $e['erreur'] = 'table absente'; }
+        $out['sources'][] = $e;
+    }
+
+    // 2) Jusqu'où l'API accepte-t-elle d'aller ? On lui demande AUJOURD'HUI.
+    if (PanelApi::configured()) {
+        $r = PanelApi::shopsSalesKpisEntre($auj, $auj);
+        $n = count(analyseListe(is_array($r) ? $r : []));
+        $ca = 0.0;
+        foreach (analyseListe(is_array($r) ? $r : []) as $sh) {
+            $v = nombreOuNull($sh, ['ca', 'turnover', 'revenue']);
+            if ($v !== null) { $ca += $v; }
+        }
+        $out['api'][] = ['route' => '/consultant/shops/sales-kpis', 'date' => $auj,
+            'magasins' => $n, 'ca' => round($ca, 2),
+            'verdict' => $n > 0 ? 'sert le jour même' : 'rien rendu pour aujourd\'hui'];
+    } else {
+        $out['api'][] = ['route' => '—', 'verdict' => 'compte consultant non configuré'];
+    }
+
+    // 3) Quels écrans en dépendent, et que devraient-ils lire ?
+    $der = null;
+    foreach ($out['sources'] as $s) { if ($s['table'] === 'transaction') { $der = $s['derniere']; } }
+    $retard = $der !== null ? (int) floor((strtotime($auj) - strtotime((string) $der)) / 86400) : null;
+    $out['ecrans'] = [
+        ['ecran' => 'Scoring des références', 'route' => '/products/scoring',
+         'lit' => 'transaction (caisse en base)', 'consequence' => 'volumes arrêtés au ' . ($der ?? '?'),
+         'remplacer' => '/shops/{id}/products/waste — sold_qty, servi jusqu\'au jour même'],
+        ['ecran' => 'Détail de perte d\'une référence', 'route' => '/products/waste',
+         'lit' => 'transaction pour le denominateur des ventes', 'consequence' => 'ventes périmées face à un rebut à jour',
+         'remplacer' => 'la même route waste porte déjà les deux'],
+        ['ecran' => 'Tableau des magasins / Marge', 'route' => '/stores/perf',
+         'lit' => 'mac_shop_monthly_pnl (snapshot mensuel)', 'consequence' => 'aucun mois en cours : le snapshot est mensuel',
+         'remplacer' => '/consultant/shops/sales-kpis entre deux dates, pour le mois courant'],
+        ['ecran' => 'P&L magasins', 'route' => '/exploitation',
+         'lit' => 'transaction, ancré sur la dernière journée encodée',
+         'consequence' => 'affiche « jour » = ' . ($der ?? '?') . ', pas aujourd\'hui',
+         'remplacer' => '/consultant/shops/sales-kpis — déjà utilisé par /exploitation/reseau'],
+    ];
+    $out['retardCaisse'] = $retard;
+    $out['resume'] = $retard === null ? 'caisse illisible'
+        : ($retard <= 1 ? 'la caisse en base est à jour' : 'la caisse en base a ' . $retard . ' jour(s) de retard sur aujourd\'hui');
+    return $out;
+}
+
+/**
+ * Proposition de note par l'IA pour une tâche photographiée.
+ *
+ * L'écran de contrôle affiche la photo prise en boutique et, quand elle existe,
+ * la fiche technique attendue. Cette route soumet les deux au modèle et rend une
+ * PROPOSITION : niveau du barème réseau, constats, commentaire. Rien n'est
+ * écrit — le consultant valide ou corrige, et c'est son geste qui note.
+ */
+function ep_ia_note(): array
+{
+    $shopId = (int) ($_GET['shop'] ?? 0);
+    $taskId = (int) ($_GET['task'] ?? 0);
+    $date   = (string) ($_GET['date'] ?? '');
+    if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        http_response_code(400);
+        return ['error' => 'shop, task et date (YYYY-MM-DD) sont requis'];
+    }
+    $out = ['shopId' => (string) $shopId, 'taskId' => (string) $taskId, 'date' => $date,
+        'etat' => 'attente', 'niveau' => null, 'nom' => null, 'commentaire' => null,
+        'constats' => [], 'confiance' => null, 'modele' => null, 'motif' => null];
+
+    if (!Anthropic::configured()) {
+        $out['motif'] = 'manque API — aucune clé Anthropic enregistrée (Paramètres → Assistance IA)';
+        return $out;
+    }
+    // La photo vient du détail : même source que l'écran, donc même image que
+    // celle que le consultant a sous les yeux. Juger une autre photo que la
+    // sienne serait le pire des malentendus.
+    $d = ep_pwa_task_detail();
+    if (empty($d['photo'])) {
+        $out['motif'] = 'aucune photo sur cette tâche — il n\'y a rien à évaluer';
+        return $out;
+    }
+    $sig = setting('signalement', []);
+    $niveaux = (is_array($sig) && !empty($sig['niveaux'])) ? $sig['niveaux'] : signalementDefaut()['niveaux'];
+
+    $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
+        . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
+        . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+    $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
+        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
+
+    $out['modele'] = $r['modele'];
+    // L'état du connecteur : une proposition rendue est un succès, un refus du
+    // modèle ou une panne réseau un échec — c'est le seul geste que le cockpit
+    // fait vers Anthropic, donc le seul qui puisse le renseigner.
+    connecteurNote('anthropic', $r['niveau'] !== null, (string) ($r['erreur'] ?? ('niveau ' . $r['niveau'])));
+    if ($r['erreur'] !== null && $r['niveau'] === null) { $out['motif'] = $r['erreur']; return $out; }
+    $out['etat'] = 'ok';
+    $out['niveau'] = $r['niveau'];
+    $out['nom'] = $r['nom'];
+    $out['commentaire'] = $r['commentaire'];
+    $out['constats'] = $r['constats'];
+    $out['confiance'] = $r['confiance'];
+    // Une confiance faible n'est pas une note : elle invite à regarder soi-même.
+    if ($r['confiance'] === 'faible') {
+        $out['avertissement'] = 'Le modèle annonce une confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même.';
+    }
+    return $out;
+}
+
+/** État de l'assistance IA pour l'écran Paramètres — jamais la clé. */
+function ep_ia_statut(): array
+{
+    return Anthropic::statut();
+}
+
+/**
+ * GET /marketing — campagnes, calendrier et types, lus dans les tables mar_*.
+ *
+ * Le module marketing autonome va disparaître : le cockpit reprend Pilotage →
+ * Calendrier / Campagnes / Types de campagne en lisant DIRECTEMENT ses tables,
+ * comme il le fait pour pla_* — il n'y a plus d'API à appeler quand le module
+ * n'existe plus. Les tables restent les mêmes : rien à migrer, l'historique
+ * des campagnes survit à la suppression du module.
+ */
+function ep_mkt(): array
+{
+    try {
+        $marques = Db::rows('SELECT id, name FROM mar_brand ORDER BY id');
+    } catch (PDOException $e) {
+        return ['indispo' => true,
+            'raison' => 'Les tables mar_* sont absentes de la base partagée : le module marketing n’a jamais été installé ici.'];
+    }
+    $statuts = array_map(fn ($s) => ['code' => $s['code'], 'nom' => $s['label'],
+        'texte' => $s['text_hex'], 'fond' => $s['bg_rgba'], 'ordre' => (int) $s['sort_order']],
+        Db::rows('SELECT * FROM mar_campaign_status ORDER BY sort_order, id'));
+
+    // Les types, avec TOUT ce que le module en connaissait : description, couleur,
+    // icône et levier lié. N'en lire qu'une partie donnait une fiche à moitié
+    // vide dès qu'un type venait de l'assistant — et la réécrivait à moitié
+    // vide au premier enregistrement.
+    //
+    // `lever_label` : le badge du type s'il en porte un, sinon le nom du levier
+    // lié. Même COALESCE que le module, pour que les deux affichent le même mot.
+    // `default_lever_code` reste lu en dernier recours : les types d'avant la
+    // liaison ne portent que ça.
+    $colLevier = mktTypeAColonne('lever_id');
+    $sqlTypes = $colLevier
+        ? 'SELECT t.*, COALESCE(t.lever_badge_label, l.label) AS lever_label, l.color_hex AS lever_color
+             FROM mar_campaign_type t LEFT JOIN mar_lever l ON l.id = t.lever_id
+            ORDER BY t.sort_order, t.id'
+        : 'SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id';
+    $compte = static fn (string $sql): string => str_replace('SELECT t.*',
+        'SELECT t.*, (SELECT COUNT(*) FROM mar_campaign c WHERE c.type_id = t.id) AS campagnes', $sql);
+    // La liste des colonnes n'est qu'une lecture d'`information_schema` : si
+    // elle se trompe, l'écran des campagnes entier tombait en 500 sur une
+    // jointure. Le repli sans levier reste lisible — badge du type d'un côté,
+    // couleur du levier en moins — et se voit tout de suite.
+    try { $lignesTypes = Db::rows($compte($sqlTypes)); }
+    catch (PDOException $e) {
+        $lignesTypes = Db::rows($compte('SELECT t.* FROM mar_campaign_type t ORDER BY t.sort_order, t.id'));
+    }
+    $types = array_map(fn ($t) => [
+        'id' => (int) $t['id'], 'code' => $t['code'], 'nom' => $t['label'],
+        'description' => $t['description'] ?? null,
+        'levier' => $t['lever_label'] ?? $t['default_lever_code'] ?? null,
+        'levierId' => isset($t['lever_id']) && $t['lever_id'] !== null ? (int) $t['lever_id'] : null,
+        'levierBadge' => $t['lever_badge_label'] ?? null,
+        'levierCouleur' => $t['lever_color'] ?? null,
+        'kpi' => $t['default_kpi_label'],
+        'couleur' => $t['color_hex'] ?? null,
+        'icone' => $t['icon_key'] ?? null, 'iconePath' => $t['icon_path'] ?? null,
+        'ordre' => (int) $t['sort_order'],
+        'actif' => (bool) $t['is_active'],
+        // Compté en base, pas sur les campagnes chargées : c'est lui qui décide
+        // si « Supprimer » a un sens, et une liste tronquée le rendrait faux.
+        'nCampagnes' => (int) ($t['campagnes'] ?? 0)],
+        $lignesTypes);
+    $nShops = [];
+    foreach (Db::rows('SELECT campaign_id, COUNT(*) n FROM mar_campaign_shop GROUP BY campaign_id') as $r) {
+        $nShops[(int) $r['campaign_id']] = (int) $r['n'];
+    }
+    $campagnes = [];
+    foreach (Db::rows('SELECT c.*, t.label AS type_label, t.color_hex AS type_color,
+                              s.label AS status_label, s.text_hex, s.bg_rgba
+                       FROM mar_campaign c
+                       LEFT JOIN mar_campaign_type t ON t.id = c.type_id
+                       LEFT JOIN mar_campaign_status s ON s.code = c.status_code
+                       ORDER BY c.starts_on IS NULL, c.starts_on DESC, c.id DESC') as $c) {
+        $tid = $c['type_id'] !== null ? (int) $c['type_id'] : null;
+        $campagnes[] = [
+            'id' => (int) $c['id'], 'nom' => (string) $c['name'],
+            'typeId' => $tid, 'type' => $c['type_label'], 'typeCouleur' => $c['type_color'],
+            'scope' => (string) $c['scope'],
+            'statut' => (string) $c['status_code'], 'statutNom' => $c['status_label'] ?? $c['status_code'],
+            'statutTexte' => $c['text_hex'] ?? '#666666', 'statutFond' => $c['bg_rgba'] ?? 'rgba(120,116,110,.12)',
+            'debut' => $c['starts_on'], 'fin' => $c['ends_on'],
+            'budget' => (float) $c['budget_amount'], 'depense' => (float) $c['spent_amount'],
+            'nBoutiques' => $nShops[(int) $c['id']] ?? 0,
+            'image' => $c['image_url'] ?: null,
+        ];
+    }
+    // Les leviers et la bibliothèque d'icônes accompagnent les types : l'écran
+    // ne redéclare ni les uns ni les autres, il affiche ce que le serveur sert.
+    $leviers = [];
+    try {
+        $leviers = array_map(fn ($l) => ['id' => (int) $l['id'], 'code' => $l['code'],
+            'nom' => $l['label'], 'couleur' => $l['color_hex']],
+            Db::rows('SELECT id, code, label, color_hex FROM mar_lever WHERE is_active = 1 ORDER BY sort_order, id'));
+    } catch (PDOException $e) { /* mar_lever absente : le choix de levier se réduit à « aucun » */ }
+
+    return ['campagnes' => $campagnes, 'types' => $types, 'statuts' => $statuts,
+        'leviers' => $leviers, 'icones' => mktIcones(),
+        'marqueId' => $marques ? (int) $marques[0]['id'] : null,
+        'marque' => $marques ? (string) $marques[0]['name'] : ''];
+}
+
+/**
+ * GET /reputation — la réputation digitale du réseau, magasin par magasin.
+ *
+ * Trois chiffres, et un seul calcul qui compte :
+ *
+ *  - la note et le nombre d'avis viennent de `mar_avis_fiche`, c'est-à-dire
+ *    de ce que Google affiche. Les cinq avis rapatriés sont un échantillon de
+ *    lecture : les moyennes ne s'en déduisent pas ;
+ *  - la moyenne réseau est PONDÉRÉE par le nombre d'avis. Une moyenne de
+ *    moyennes donnerait le même poids à un magasin qui a 12 avis et à un qui en
+ *    a 400, et flatterait le réseau ;
+ *  - `avis5Requis` répond à « combien d'avis 5 étoiles pour remonter à la
+ *    cible ». Depuis une moyenne A sur n avis, ajouter x avis à 5 donne
+ *    (A·n + 5x)/(n + x) ≥ C, soit x ≥ n(C − A)/(5 − C). On arrondit au
+ *    supérieur : un demi-avis n'existe pas.
+ *
+ * Cible dans `ceo_app_setting.reputationCible` (Paramètres), 4,5 par défaut.
+ */
+function ep_reputation(): array
+{
+    $cible = (float) setting('reputationCible', 4.5);
+    if ($cible < 1 || $cible > 5) { $cible = 4.5; }
+
+    try {
+        $agr = [];
+        foreach (Db::rows('SELECT * FROM mar_avis_fiche') as $r) { $agr[$r['shop_id']] = $r; }
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'cible' => $cible,
+            'raison' => 'Les tables de réputation sont absentes de cette base.'];
+    }
+
+    // Les magasins viennent de la table PARTAGÉE `shops` — la même autorité que
+    // `ep_stores()`. `ceo_shop` n'est qu'un miroir local rempli à la demande, et
+    // il n'a pas de colonne `city` : le lire ici cassait la requête et, même
+    // corrigée, n'aurait montré que les magasins déjà passés par l'encodage
+    // budget. Le miroir reste le repli des installations autonomes (démo).
+    try {
+        $shops = array_map(fn ($s) => ['id' => (string) $s['id'], 'name' => $s['name'],
+            'ville' => (string) ($s['city'] ?: ($s['zone'] ?: ($s['region'] ?: '')))],
+            Db::rows('SELECT id, name, city, zone, region FROM shops WHERE active = 1 ORDER BY name'));
+    } catch (PDOException $e) {
+        $shops = array_map(fn ($s) => ['id' => (string) $s['id'], 'name' => $s['name'], 'ville' => (string) $s['zone']],
+            Db::rows("SELECT id, name, zone FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name"));
+    }
+
+    $repartitions = reputationRepartitions(array_map(fn ($s2) => (string) $s2['id'], $shops));
+
+    $magasins = [];
+    $sommeNotes = 0.0; $sommeAvis = 0;
+    foreach ($shops as $s) {
+        $a = $agr[$s['id']] ?? null;
+        $note = ($a && $a['rating_avg'] !== null) ? (float) $a['rating_avg'] : null;
+        $n    = $a ? (int) $a['rating_count'] : 0;
+        if ($note !== null && $n > 0) { $sommeNotes += $note * $n; $sommeAvis += $n; }
+
+        // Les cinq derniers avis du magasin — une requête bornée par magasin
+        // plutôt qu'un balayage de toute la table à découper ensuite.
+        $derniers = array_map(fn ($v) => [
+            'auteur' => $v['author'] ?: 'Client Google',
+            'note'   => (int) $v['rating'],
+            'texte'  => $v['comment'],
+            'le'     => substr((string) $v['reviewed_at'], 0, 10),
+            // Tri-état : vrai si l'on sait que le magasin a répondu, NUL si la
+            // source ne le dit pas. L'API Places ne rend pas les réponses :
+            // afficher « Sans réponse » sur chaque avis serait une affirmation
+            // fausse, pas une information manquante.
+            'repondu' => $v['replied_at'] !== null ? true : null,
+        ], Db::rows('SELECT * FROM mar_avis WHERE shop_id = ? ORDER BY reviewed_at DESC, id DESC LIMIT 5', [$s['id']]));
+
+        $magasins[] = [
+            'id' => $s['id'], 'nom' => $s['name'], 'ville' => $s['ville'],
+            'note' => $note, 'avis' => $n,
+            'ecart' => $note !== null ? round($note - $cible, 2) : null,
+            'avis5Requis' => reputationAvis5($note, $n, $cible),
+            'repartition' => $repartitions['magasins'][(string) $s['id']] ?? null,
+            'placeId' => $a['place_id'] ?? null,
+            'url' => $a['profile_url'] ?? null,
+            'synchro' => ($a && $a['synced_at'] !== null) ? substr((string) $a['synced_at'], 0, 16) : null,
+            'derniers' => $derniers,
+        ];
+    }
+
+    $moyenne = $sommeAvis > 0 ? round($sommeNotes / $sommeAvis, 2) : null;
+    $notes = array_values(array_filter(array_column($magasins, 'note'), fn ($v) => $v !== null));
+
+    $derniereSynchro = null;
+    foreach ($agr as $r) {
+        if ($r['synced_at'] !== null && ($derniereSynchro === null || $r['synced_at'] > $derniereSynchro)) {
+            $derniereSynchro = $r['synced_at'];
+        }
+    }
+
+    return [
+        'cible' => $cible,
+        // L'état du connecteur voyage avec les données : l'écran doit pouvoir
+        // dire « aucune clé » plutôt que d'afficher un réseau vide sans raison.
+        // La dernière synchro vient de la table des connecteurs : c'est elle qui
+        // enregistre les gestes. La déduire de `synced_at` des fiches donnait la
+        // même réponse tant que tout allait bien, et une réponse fausse dès
+        // qu'une synchro échouait — les fiches gardaient leur ancienne date.
+        'connecteur' => GoogleApi::statut() + (connecteurEtat('google') ?? []) + [
+            'raccordes' => count(array_filter($agr, fn ($r) => ($r['place_id'] ?? '') !== '')),
+            'derniereSynchro' => $derniereSynchro !== null ? substr((string) $derniereSynchro, 0, 16) : null,
+        ],
+        'reseau' => [
+            'moyenne' => $moyenne,
+            'avis' => $sommeAvis,
+            'magasins' => count($magasins),
+            'notes' => count($notes),
+            'sousCible' => count(array_filter($notes, fn ($v) => $v < $cible)),
+            'avis5Requis' => reputationAvis5($moyenne, $sommeAvis, $cible),
+            // La répartition par étoiles porte sur les avis RAPATRIÉS, pas sur
+            // les `avis` de Google : l'API Places ne publie pas l'histogramme
+            // d'une fiche, seulement la moyenne et le total. Les deux chiffres
+            // voyagent donc ensemble, et l'écran dit sur quoi il compte —
+            // présenter 24 avis lus comme la répartition de 989 serait faux.
+            'repartition' => $repartitions['reseau'],
+        ],
+        'magasins' => $magasins,
+    ];
+}
+
+/**
+ * La répartition par étoiles des avis que NOUS détenons, réseau et magasins.
+ *
+ * Google ne publie pas l'histogramme d'une fiche : l'API Places rend la
+ * moyenne, le nombre total, et cinq avis. Notre table accumule ces cinq-là à
+ * chaque synchronisation — l'échantillon grossit avec le temps, mais il reste
+ * un échantillon. Le total lu part avec la répartition pour que l'écran puisse
+ * le dire.
+ *
+ * Une seule requête, groupée par magasin ET par note : le réseau est la somme
+ * des magasins, il ne se redemande pas à la base. À neuf magasins la
+ * différence est mince ; à cinquante, ce serait cinquante et un allers-retours
+ * pour un bloc décoratif.
+ *
+ * @param list<string> $shopIds les magasins affichés, pour ne pas compter ceux
+ *                              qui ont quitté le réseau
+ * @return array{reseau: array, magasins: array<string, array>}
+ */
+function reputationRepartitions(array $shopIds): array
+{
+    $vide = static fn (): array => ['lus' => 0,
+        'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => 0], [5, 4, 3, 2, 1])];
+    $out = ['reseau' => $vide(), 'magasins' => []];
+    foreach ($shopIds as $id) { $out['magasins'][$id] = $vide(); }
+    if ($shopIds === []) { return $out; }
+
+    $in = implode(',', array_fill(0, count($shopIds), '?'));
+    try {
+        $rows = Db::rows("SELECT shop_id, rating, COUNT(*) n FROM mar_avis
+                           WHERE shop_id IN ($in) GROUP BY shop_id, rating", $shopIds);
+    } catch (PDOException $e) {
+        return $out;
+    }
+
+    $parMag = []; $parReseau = [];
+    foreach ($rows as $r) {
+        $sid = (string) $r['shop_id']; $note = (int) $r['rating']; $n = (int) $r['n'];
+        $parMag[$sid][$note] = ($parMag[$sid][$note] ?? 0) + $n;
+        $parReseau[$note] = ($parReseau[$note] ?? 0) + $n;
+    }
+    $forme = static fn (array $par): array => ['lus' => array_sum($par),
+        'niveaux' => array_map(fn ($n) => ['note' => $n, 'n' => $par[$n] ?? 0], [5, 4, 3, 2, 1])];
+    $out['reseau'] = $forme($parReseau);
+    foreach ($shopIds as $id) { $out['magasins'][$id] = $forme($parMag[$id] ?? []); }
+    return $out;
+}
+
+/**
+ * Combien d'avis 5 étoiles pour atteindre la cible — null si la question n'a
+ * pas de réponse.
+ *
+ * Deux cas rendent `null` plutôt que zéro, parce que ce n'est pas la même
+ * chose : aucune note connue (rien à calculer), et une cible à 5 sur une
+ * moyenne inférieure (aucun nombre d'avis parfaits n'y suffit, la moyenne
+ * tend vers 5 sans l'atteindre).
+ */
+function reputationAvis5(?float $note, int $avis, float $cible): ?int
+{
+    if ($note === null || $avis <= 0) { return null; }
+    if ($note >= $cible) { return 0; }
+    if ($cible >= 5) { return null; }
+    return (int) ceil($avis * ($cible - $note) / (5 - $cible));
+}
+
+/* --- Budget × Campagnes ------------------------------------------------------
+ *
+ * Le budget dit ce qu'un magasin doit faire ; la campagne dit ce qu'on lui
+ * demande EN PLUS, et sur quels jours. Les deux vivaient dans deux écrans qui
+ * ne se parlaient pas : impossible de dire si un objectif de campagne était
+ * ambitieux ou déjà acquis.
+ */
+
+/** La table des objectifs par campagne ET par magasin — créée à la demande. */
+function ensureCampagneObjectifs(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS mar_campagne_objectif ('
+        . 'campagne_id INT NOT NULL,'
+        . 'shop_id VARCHAR(32) NOT NULL,'
+        . 'objectif DECIMAL(12,2) NULL,'
+        . 'maj DATETIME NULL,'
+        . 'PRIMARY KEY (campagne_id, shop_id)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * Les trois auteurs d'une annotation mensuelle, dans l'ordre où on les lit.
+ *
+ * Le franchisé d'abord : c'est lui qui a tenu le magasin ce mois-là.
+ */
+const BUDGET_NOTE_AUTEURS = ['franchise', 'consultant', 'marque'];
+
+/**
+ * Table des annotations, posée à la première lecture.
+ *
+ * Elle vit à côté de `ceo_shop_month_perf` et suit sa clé : magasin, année,
+ * mois. Rien n'y est écrit tant que personne n'a rédigé — un mois sans note
+ * n'a pas de ligne, et c'est ce qui rend le vide lisible à l'impression.
+ */
+function ensureBudgetNotes(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_shop_month_note ('
+        . 'shop_id VARCHAR(8) NOT NULL,'
+        . 'year SMALLINT NOT NULL,'
+        . 'month TINYINT NOT NULL,'
+        . 'auteur VARCHAR(12) NOT NULL,'
+        . 'texte TEXT NULL,'
+        . 'maj_par VARCHAR(120) NULL,'
+        . 'maj_le DATETIME NULL,'
+        . 'PRIMARY KEY (shop_id, year, month, auteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * GET /stores/budget-notes — les annotations d'un magasin pour un exercice.
+ *
+ * Rendues par mois puis par auteur, avec qui a écrit et quand : une note sans
+ * signature ni date ne se relit pas en février de l'année suivante.
+ */
+function ep_budget_notes(): array
+{
+    ensureBudgetNotes();
+    $shop = (string) ($_GET['shop'] ?? '');
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    // Même forme sans magasin qu'avec : l'appelant lit `mois` de la même façon.
+    if ($shop === '') {
+        return ['shop' => '', 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+            'mois' => (object) []];
+    }
+
+    $mois = [];
+    foreach (Db::rows('SELECT month, auteur, texte, maj_par, maj_le FROM ceo_shop_month_note
+                        WHERE shop_id = ? AND year = ?', [$shop, $exercice]) as $r) {
+        $texte = trim((string) ($r['texte'] ?? ''));
+        if ($texte === '') { continue; }
+        $mois[(string) (int) $r['month']][(string) $r['auteur']] = [
+            'texte' => $texte,
+            'par'   => $r['maj_par'] !== null ? (string) $r['maj_par'] : null,
+            'le'    => $r['maj_le'] !== null ? (string) $r['maj_le'] : null,
+        ];
+    }
+
+    // (object) : un mois vide doit rendre {} et non [], sinon le contrat change
+    // de forme selon le contenu — et l'appelant qui écrit `mois["6"]` reçoit
+    // un tableau JSON là où il attend un objet.
+    return ['shop' => $shop, 'exercice' => $exercice, 'auteurs' => BUDGET_NOTE_AUTEURS,
+        'mois' => (object) $mois];
+}
+
+/**
+ * Le budget d'un magasin sur une FENÊTRE de dates, au prorata des jours.
+ *
+ * Une campagne du 4 au 17 août prend 14 jours sur 31 : elle vaut 14/31 du
+ * budget d'août. Sans budget validé pour un mois, le CA théorique de l'étude
+ * prend le relais — et la source est dite, pour qu'on ne prenne pas l'un pour
+ * l'autre.
+ */
+function budgetSurFenetre(array $mois, string $du, string $au): array
+{
+    $d = new DateTimeImmutable($du); $f = new DateTimeImmutable($au);
+    $total = 0.0; $source = null; $partiel = false;
+    for ($m = 1; $m <= 12; $m++) {
+        $an = (int) $d->format('Y');
+        $debutMois = new DateTimeImmutable(sprintf('%04d-%02d-01', $an, $m));
+        $finMois = new DateTimeImmutable($debutMois->format('Y-m-t'));
+        $deb = max($d, $debutMois); $fin = min($f, $finMois);
+        if ($deb > $fin) { continue; }
+        $joursPris = (int) $deb->diff($fin)->days + 1;
+        $joursMois = (int) $finMois->format('j');
+        $cell = $mois[$m - 1] ?? ['budget' => null, 'theorique' => null];
+        $val = $cell['budget'] !== null && $cell['budget'] > 0 ? $cell['budget'] : null;
+        $src = $val !== null ? 'budget' : null;
+        if ($val === null && ($cell['theorique'] ?? null) !== null && $cell['theorique'] > 0) {
+            $val = $cell['theorique']; $src = 'theorique';
+        }
+        if ($val === null) { $partiel = true; continue; }
+        $total += $val * $joursPris / $joursMois;
+        // Une fenêtre à cheval sur deux mois peut mélanger les sources : on
+        // garde la moins sûre, c'est elle qui doit se voir.
+        $source = $source === 'theorique' || $src === 'theorique' ? 'theorique' : 'budget';
+    }
+    return ['montant' => $total > 0 ? round($total, 2) : null, 'source' => $source, 'partiel' => $partiel];
+}
+
+/** GET /marketing/budget-campagnes — le calendrier sur la courbe, et le détail. */
+function ep_budget_campagnes(): array
+{
+    ensureCampagneObjectifs();
+    $exercice = (int) ($_GET['exercice'] ?? setting('exercice', (int) date('Y')));
+    try {
+        // Le TYPE voyage avec la campagne : les bandes se rangent par type,
+        // une ligne chacun — sinon deux campagnes qui se chevauchent se
+        // marchent dessus et aucune ne se lit.
+        $camps = Db::rows('SELECT c.id, c.name, c.starts_on, c.ends_on, c.status_code, s.label AS statut,
+                                  t.label AS type_label, t.color_hex AS type_color
+                             FROM mar_campaign c LEFT JOIN mar_campaign_status s ON s.code = c.status_code
+                             LEFT JOIN mar_campaign_type t ON t.id = c.type_id
+                            WHERE (c.starts_on IS NOT NULL AND c.starts_on <= ? AND (c.ends_on IS NULL OR c.ends_on >= ?))
+                            ORDER BY c.starts_on', [$exercice . '-12-31', $exercice . '-01-01']);
+    } catch (PDOException $e) {
+        return ['indispo' => true, 'raison' => 'Les tables du module marketing (mar_*) sont absentes de cette base.'];
+    }
+    $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name');
+    $nomDe = [];
+    foreach ($shops as $sh) { $nomDe[(string) $sh['id']] = (string) $sh['name']; }
+
+    // Les douze mois, magasin par magasin : budget validé et théorique.
+    $parMag = [];
+    foreach ($shops as $sh) { $parMag[(string) $sh['id']] = array_fill(0, 12, ['budget' => null, 'theorique' => null]); }
+    foreach (Db::rows('SELECT shop_id, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE year = ?', [$exercice]) as $r) {
+        $sid = (string) $r['shop_id']; $m = (int) $r['month'];
+        if (!isset($parMag[$sid]) || $m < 1 || $m > 12) { continue; }
+        $parMag[$sid][$m - 1] = [
+            'budget' => $r['revenue_budget'] !== null ? (float) $r['revenue_budget'] : null,
+            'theorique' => $r['ca_theorique'] !== null ? (float) $r['ca_theorique'] : null,
+        ];
+    }
+    // La courbe réseau : la somme des magasins, mois par mois.
+    $reseau = [];
+    for ($i = 0; $i < 12; $i++) {
+        $b = null; $t = null;
+        foreach ($parMag as $mm) {
+            if ($mm[$i]['budget'] !== null) { $b = ($b ?? 0) + $mm[$i]['budget']; }
+            if ($mm[$i]['theorique'] !== null) { $t = ($t ?? 0) + $mm[$i]['theorique']; }
+        }
+        $reseau[] = ['budget' => $b, 'theorique' => $t];
+    }
+    // Quels mois sont couverts par au moins une campagne.
+    $couvert = array_fill(0, 12, false);
+    $liste = [];
+    foreach ($camps as $c) {
+        $du = (string) $c['starts_on']; $au = (string) ($c['ends_on'] ?: $c['starts_on']);
+        $liste[] = ['id' => (int) $c['id'], 'nom' => (string) $c['name'], 'debut' => $du, 'fin' => $au,
+            'statut' => (string) ($c['statut'] ?? $c['status_code'] ?? ''),
+            'type' => (string) ($c['type_label'] ?? 'Sans type'),
+            'typeCouleur' => (string) ($c['type_color'] ?? '')];
+        $d = new DateTimeImmutable(max($du, $exercice . '-01-01'));
+        $f = new DateTimeImmutable(min($au, $exercice . '-12-31'));
+        for ($x = $d; $x <= $f; $x = $x->modify('first day of next month')) {
+            $couvert[(int) $x->format('n') - 1] = true;
+        }
+    }
+
+    // La campagne regardée : celle demandée, sinon la plus récente commencée.
+    $choisie = (int) ($_GET['campagne'] ?? 0);
+    if ($choisie <= 0) {
+        foreach ($liste as $c) { if ($c['debut'] <= date('Y-m-d')) { $choisie = $c['id']; } }
+        if ($choisie <= 0 && $liste !== []) { $choisie = $liste[0]['id']; }
+    }
+    $camp = null;
+    foreach ($liste as $c) { if ($c['id'] === $choisie) { $camp = $c; } }
+
+    $lignes = []; $realiseDispo = false;
+    if ($camp !== null) {
+        // Le périmètre de la campagne : ses magasins, ou tout le réseau.
+        $perim = [];
+        foreach (Db::rows('SELECT shop_id FROM mar_campaign_shop WHERE campaign_id = ?', [$camp['id']]) as $r) {
+            $sid = (string) $r['shop_id'];
+            if (isset($nomDe[$sid])) { $perim[] = $sid; }
+        }
+        if ($perim === []) { $perim = array_keys($nomDe); }
+
+        $obj = [];
+        foreach (Db::rows('SELECT shop_id, objectif FROM mar_campagne_objectif WHERE campagne_id = ?', [$camp['id']]) as $r) {
+            $obj[(string) $r['shop_id']] = $r['objectif'] !== null ? (float) $r['objectif'] : null;
+        }
+        // Le réalisé : le panel, sur les jours ÉCOULÉS de la campagne. Une
+        // campagne à venir n'a pas de réalisé — et zéro n'en serait pas un.
+        $finLue = min($camp['fin'], date('Y-m-d'));
+        $ventes = [];
+        if ($camp['debut'] <= date('Y-m-d') && PanelApi::configured()) {
+            foreach (analyseListe(PanelApi::shopsSalesKpisEntre($camp['debut'], $finLue) ?? []) as $x) {
+                $id = 0;
+                foreach (['shop_id', 'id_shop', 'id'] as $k) {
+                    if (isset($x[$k]) && is_numeric($x[$k])) { $id = (int) $x[$k]; break; }
+                }
+                $ca = (float) (nombreOuNull($x, ['ca', 'turnover', 'revenue']) ?? 0);
+                if ($ca > 0) { $ventes[(string) $id] = $ca; $realiseDispo = true; }
+            }
+        }
+        // Ce que la campagne devrait RAPPORTER, magasin par magasin : le panier
+        // moyen des trois derniers mois clos × les clients par jour en plus
+        // visés × la durée. Le pourcentage d'objectif ne dit rien à personne en
+        // boutique ; des euros, si — et ils se comparent au budget encodé.
+        $effet = mktEffetAttendu($camp['id'], $camp['debut'], $camp['fin'], $perim);
+
+        foreach ($perim as $sid) {
+            $bud = budgetSurFenetre($parMag[$sid] ?? [], $camp['debut'], $camp['fin']);
+            $o = $obj[$sid] ?? null;
+            $r = $ventes[$sid] ?? null;
+            $ef = $effet['magasins'][$sid] ?? [];
+            $attendu = ($ef['base'] ?? null) !== null && ($ef['gain'] ?? null) !== null
+                ? $ef['base'] + $ef['gain'] : null;
+            $lignes[] = [
+                'shopId' => $sid, 'nom' => $nomDe[$sid] ?? $sid,
+                'budgetPeriode' => $bud['montant'], 'source' => $bud['source'],
+                // L'effet attendu et ce qui le compose — jamais un total sans
+                // ses termes : « 56 653 € » ne se discute pas, « 50 594 + 6 059 »
+                // se discute.
+                'panier' => $ef['panier'] ?? null,
+                'panierSource' => $ef['panierSource'] ?? null,
+                'clientsJour' => $ef['clientsJour'] ?? null,
+                'clientsJourPlus' => $ef['plus'] ?? null,
+                'clientsA1' => $ef['clientsA1'] ?? null,
+                'clientsA1Source' => $ef['clientsA1Source'] ?? null,
+                'clientsPrevus' => $ef['clientsPrevus'] ?? null,
+                'base' => $ef['base'] ?? null,
+                'baseSource' => $ef['baseSource'] ?? null,
+                'gain' => $ef['gain'] ?? null,
+                'attendu' => $attendu,
+                'atteinteAttendue' => $attendu !== null && $bud['montant']
+                    ? round(100 * $attendu / $bud['montant']) : null,
+                'objectif' => $o,
+                'objectifPct' => $o !== null && $bud['montant'] ? round(100 * ($o / $bud['montant'] - 1), 1) : null,
+                'realise' => $r,
+                'ecart' => $o !== null && $r !== null ? round($r - $o, 2) : null,
+                'atteinte' => $o !== null && $r !== null && $o > 0 ? round(100 * $r / $o) : null,
+            ];
+        }
+    }
+    return [
+        'exercice' => $exercice,
+        'mois' => $reseau, 'moisParMagasin' => $parMag, 'couvert' => $couvert,
+        'campagnes' => $liste, 'campagne' => $camp, 'lignes' => $lignes,
+        'effet' => $camp !== null ? ($effet['entete'] ?? null) : null,
+        'realiseJusquau' => $camp !== null ? min($camp['fin'], date('Y-m-d')) : null,
+        'realiseDispo' => $realiseDispo,
+        'magasins' => array_map(fn ($id) => ['id' => $id, 'nom' => $nomDe[$id]], array_keys($nomDe)),
+    ];
+}
+
+/* --- Écrans ouverts ---------------------------------------------------------
+ *
+ * Le journal trace les ACTIONS ; il ne disait rien des écrans ouverts. Sans
+ * cette mesure, affiner le rail de navigation revient à deviner ce qui sert.
+ * On compte donc les ouvertures — pas le temps passé, qui demanderait de
+ * suivre la fenêtre et se lit mal : un écran laissé ouvert n'est pas un écran
+ * utilisé.
+ */
+
+/** Le compteur d'ouvertures : une ligne par écran, par jour et par personne. */
+function ensureEcranVues(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_ecran_vue ('
+        . 'ecran VARCHAR(40) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'acteur VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'n INT NOT NULL DEFAULT 0,'
+        . 'PRIMARY KEY (ecran, jour, acteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** GET /ecrans/vues?jours=30 — de quoi dessiner la heatmap du rail. */
+function ep_ecran_vues(): array
+{
+    ensureEcranVues();
+    $jours = max(7, min(90, (int) ($_GET['jours'] ?? 30)));
+    $depuis = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $lignes = Db::rows('SELECT ecran, jour, SUM(n) n FROM ceo_ecran_vue WHERE jour >= ? GROUP BY ecran, jour', [$depuis]);
+    $parEcran = []; $parJour = [];
+    foreach ($lignes as $l) {
+        $e = (string) $l['ecran']; $j = substr((string) $l['jour'], 0, 10); $n = (int) $l['n'];
+        $parEcran[$e] = ($parEcran[$e] ?? 0) + $n;
+        $parJour[$e][$j] = $n;
+    }
+    arsort($parEcran);
+    $joursListe = [];
+    for ($i = $jours - 1; $i >= 0; $i--) { $joursListe[] = date('Y-m-d', strtotime('-' . $i . ' days')); }
+    $out = [];
+    foreach ($parEcran as $e => $tot) {
+        $out[] = ['ecran' => $e, 'total' => $tot,
+            'jours' => array_map(fn ($j) => (int) ($parJour[$e][$j] ?? 0), $joursListe)];
+    }
+    // Qui ouvre quoi : utile pour distinguer l'écran d'un seul utilisateur de
+    // celui que tout le monde ouvre.
+    $acteurs = [];
+    foreach (Db::rows('SELECT ecran, acteur, SUM(n) n FROM ceo_ecran_vue WHERE jour >= ? GROUP BY ecran, acteur', [$depuis]) as $l) {
+        $acteurs[(string) $l['ecran']][(string) $l['acteur']] = (int) $l['n'];
+    }
+    return ['depuis' => $depuis, 'joursListe' => $joursListe, 'ecrans' => $out, 'acteurs' => $acteurs,
+        'total' => array_sum($parEcran)];
+}
+
+/* --- Boutons & fonctions : ce qui est affiché, ce qui est cliqué -------------- */
+
+/*
+ * Compter les écrans ouverts ne suffit pas pour alléger la console. Un écran
+ * qu'on garde peut porter douze boutons dont trois servent : le retirer serait
+ * une perte, le laisser tel quel une charge. On mesure donc le bouton, et on
+ * mesure DEUX choses — combien de fois il a été AFFICHÉ, combien de fois il a
+ * été CLIQUÉ.
+ *
+ * C'est le rapport des deux qui décide, et l'un sans l'autre ne décide rien :
+ * zéro clic sur un bouton affiché deux cents fois est un bouton mort ; zéro
+ * clic sur un bouton jamais affiché ne dit rien du tout — l'écran l'annonce
+ * ainsi plutôt que de le compter pour mort.
+ *
+ * Le bouton est identifié par son ÉCRAN et son LIBELLÉ visible : c'est ce que
+ * la personne qui arbitrera lit à l'écran. Les index de gestionnaires (data-h)
+ * changent à chaque rendu et ne survivraient pas à la première modification.
+ */
+
+/** Le compteur d'usage : une ligne par bouton, par écran, par jour, par personne. */
+function ensureActionUsage(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_action_usage ('
+        . 'ecran VARCHAR(40) NOT NULL,'
+        . 'action VARCHAR(120) NOT NULL,'
+        . 'jour DATE NOT NULL,'
+        . 'acteur VARCHAR(80) NOT NULL DEFAULT \'\','
+        . 'vus INT NOT NULL DEFAULT 0,'
+        . 'clics INT NOT NULL DEFAULT 0,'
+        . 'PRIMARY KEY (ecran, action, jour, acteur)'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** GET /actions/usage?jours=30 — de quoi dessiner la heatmap des boutons. */
+function ep_actions_usage(): array
+{
+    ensureActionUsage();
+    $jours = max(7, min(90, (int) ($_GET['jours'] ?? 30)));
+    $depuis = date('Y-m-d', strtotime('-' . ($jours - 1) . ' days'));
+    $joursListe = [];
+    for ($i = $jours - 1; $i >= 0; $i--) { $joursListe[] = date('Y-m-d', strtotime('-' . $i . ' days')); }
+
+    $tot = []; $parJour = []; $dernier = [];
+    $lignes = Db::rows('SELECT ecran, action, jour, SUM(vus) vus, SUM(clics) clics
+                        FROM ceo_action_usage WHERE jour >= ? GROUP BY ecran, action, jour', [$depuis]);
+    foreach ($lignes as $l) {
+        $k = $l['ecran'] . "\n" . $l['action'];
+        $j = substr((string) $l['jour'], 0, 10);
+        $tot[$k]['vus'] = ($tot[$k]['vus'] ?? 0) + (int) $l['vus'];
+        $tot[$k]['clics'] = ($tot[$k]['clics'] ?? 0) + (int) $l['clics'];
+        $parJour[$k][$j] = (int) $l['clics'];
+        // Le dernier jour où le bouton a servi : « plus rien depuis six
+        // semaines » se décide autrement qu'« utilisé hier ».
+        if ((int) $l['clics'] > 0 && $j > ($dernier[$k] ?? '')) { $dernier[$k] = $j; }
+    }
+    // Qui clique : un bouton qu'une seule personne utilise ne se retire pas
+    // comme un bouton que personne n'utilise — celui-là, on le lui demande.
+    $acteurs = [];
+    foreach (Db::rows('SELECT ecran, action, acteur, SUM(clics) clics FROM ceo_action_usage
+                       WHERE jour >= ? AND clics > 0 GROUP BY ecran, action, acteur', [$depuis]) as $l) {
+        $q = trim((string) $l['acteur']);
+        if ($q !== '') { $acteurs[$l['ecran'] . "\n" . $l['action']][$q] = (int) $l['clics']; }
+    }
+    uasort($tot, fn ($a, $b) => ($b['clics'] <=> $a['clics']) ?: ($b['vus'] <=> $a['vus']));
+    $out = [];
+    foreach ($tot as $k => $v) {
+        [$e, $a] = explode("\n", $k, 2);
+        $out[] = ['ecran' => $e, 'action' => $a, 'clics' => $v['clics'], 'vus' => $v['vus'],
+            'dernier' => $dernier[$k] ?? null,
+            'qui' => array_keys($acteurs[$k] ?? []),
+            'jours' => array_map(fn ($j) => (int) ($parJour[$k][$j] ?? 0), $joursListe)];
+    }
+    return ['depuis' => $depuis, 'joursListe' => $joursListe, 'actions' => $out,
+        'clics' => array_sum(array_column($out, 'clics')),
+        'vus' => array_sum(array_column($out, 'vus'))];
+}
+
+/* --- Lieux autour des magasins (reste du scouting) ----------------------------
+   Le Scouting commercial — « où ouvrir » — est parti dans le CRM (Développement
+   → Étude de faisabilité, 31/10/2026), avec sa copie du code et la même base.
+   Restent ici les deux lectures dont vivent Développement commercial et
+   Prospection : les lieux autour d'un magasin, et les magasins pointés. */
+
+/**
+ * GET /scouting/demarchage?lat&lng&r — les lieux à démarcher autour d'un
+ * point (entreprises, écoles, santé, administrations, formation, funéraire,
+ * sport, hôtels, commerces en zoning), avec adresse, téléphone et taille.
+ * Même mécanique que l'étude locale : un relevé OpenStreetMap gardé 45 jours
+ * dans ceo_scouting_etude (clé préfixée), un seul relevé à la fois par point.
+ */
+function ep_scouting_demarchage(): array
+{
+    $lat = (float) ($_GET['lat'] ?? 0); $lng = (float) ($_GET['lng'] ?? 0);
+    $r = (int) ($_GET['r'] ?? 5000);
+    if ($lat < 49.4 || $lat > 51.6 || $lng < 2.3 || $lng > 6.5) { http_response_code(400); return ['error' => 'point hors de Belgique']; }
+    $r = max(1000, min(20000, $r));
+    $lat = round($lat, 3); $lng = round($lng, 3);
+    $cle = md5('dem|' . number_format($lat, 3, '.', '') . ',' . number_format($lng, 3, '.', '') . ',' . $r);
+    $row = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+    $force = !empty($_GET['force']);
+    if ($row !== null && !$force && strtotime((string) $row['fetched_at']) > time() - 45 * 86400) {
+        $d = json_decode((string) $row['payload'], true);
+        if (is_array($d)) { $d['cache'] = true; $d['releve'] = $row['fetched_at']; return $d; }
+    }
+    @set_time_limit(200);
+    @ini_set('memory_limit', '512M');
+    $verrou = 'scdem' . $cle;
+    $pris = Db::row('SELECT GET_LOCK(?, 190) AS l', [$verrou]);
+    if ($pris !== null && (int) $pris['l'] === 1 && !$force) {
+        $row2 = Db::row('SELECT fetched_at, payload FROM ceo_scouting_etude WHERE cle = ?', [$cle]);
+        if ($row2 !== null && strtotime((string) $row2['fetched_at']) > time() - 45 * 86400) {
+            $d = json_decode((string) $row2['payload'], true);
+            if (is_array($d)) { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); $d['cache'] = true; $d['releve'] = $row2['fetched_at']; return $d; }
+        }
+    }
+    try {
+        $d = ScoutingOsm::demarchage($lat, $lng, $r);
+    } finally {
+        try { Db::exec('DO RELEASE_LOCK(?)', [$verrou]); } catch (Throwable $e) { /* verrou déjà rendu */ }
+    }
+    if ($d === null) {
+        if ($row !== null) {
+            $old = json_decode((string) $row['payload'], true);
+            if (is_array($old)) { $old['cache'] = true; $old['perime'] = true; $old['releve'] = $row['fetched_at']; return $old; }
+        }
+        http_response_code(502);
+        return ['error' => 'OpenStreetMap injoignable depuis le serveur — ' . (ScoutingOsm::$lastError ?? 'sans détail')];
+    }
+    Db::exec('INSERT INTO ceo_scouting_etude (cle, lat, lng, r, fetched_at, payload) VALUES (?,?,?,?,?,?)'
+        . ' ON DUPLICATE KEY UPDATE fetched_at = VALUES(fetched_at), payload = VALUES(payload)',
+        [$cle, $lat, $lng, $r, date('Y-m-d H:i:s'), json_encode($d, JSON_UNESCAPED_UNICODE)]);
+    $d['cache'] = false; $d['releve'] = date('Y-m-d H:i:s');
+    return $d;
+}
+
+/** Le CA réel des mois clos du réseau, gardé ce temps-là (secondes). */
+const SCOUTING_RESEAU_CA_TTL = 21600;
+
+/**
+ * GET /scouting/reseau — les magasins du réseau, leur position et leur CA réel.
+ *
+ * La position vient de la fiche Google raccordée par la réputation, lue une
+ * fois puis gardée dans ceo_app_setting.scoutingReseau ; une position pointée
+ * à la main sur la carte de l'Étude de faisabilité du CRM (même réglage, même
+ * base) prime. Le CA réel : P&L mensuel du panel, douze derniers mois clos,
+ * annualisé s'il y en a moins.
+ */
+/**
+ * Ce que le Scouting du Recrutement tient sur les magasins du réseau — positions pointées sur la carte et
+ * données d'étude saisies (« Magasins du réseau ») — lu par SON API (GET …/v1/integration/recrutement/
+ * scouting-reseau, jeton de service d'erp_cles), jamais ses tables (7 nov. 2026 : portails indépendants).
+ * Gardé ici (scoutingRecrutement) : le Recrutement muet, la dernière lecture sert ; jamais lu : nos réglages
+ * d'avant (scoutingReseau / scoutingMagasins).
+ */
+function scoutingDuRecrutement(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $garde = setting('scoutingRecrutement');
+    if (is_array($garde) && (int) ($garde['le'] ?? 0) > time() - 600) {
+        return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])];
+    }
+    $d = erpLireRecrutement('scouting-reseau');
+    if (is_array($d)) {
+        $memo = ['positions' => is_array($d['positions'] ?? null) ? $d['positions'] : [], 'saisies' => is_array($d['saisies'] ?? null) ? $d['saisies'] : []];
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['scoutingRecrutement', json_encode($memo + ['le' => time()], JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* garde best-effort */ }
+        return $memo;
+    }
+    if (is_array($garde)) { return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])]; }
+    $s = setting('scoutingMagasins');
+    return $memo = ['positions' => [], 'saisies' => is_array($s) ? $s : []];
+}
+
+function ep_scouting_reseau(): array
+{
+    try {
+        // since_year : l'année d'ouverture connue du panel — le mois, lui, se
+        // saisit dans « Magasins du réseau » (Étude de faisabilité du CRM)
+        $shops = array_map(fn ($r) => $r + ['ouvertLe' => !empty($r['since_year']) ? sprintf('%04d', (int) $r['since_year']) : null],
+            Db::rows('SELECT id, name, city, zone, region, active, since_year FROM shops ORDER BY sort_order, id'));
+    } catch (PDOException $e) {
+        $shops = array_map(fn ($r) => ['id' => $r['id'], 'name' => $r['name'], 'city' => null, 'zone' => $r['zone'], 'region' => null,
+            'active' => $r['status'] === 'Ouvert' ? 1 : 0, 'ouvertLe' => !empty($r['opened_on']) ? substr((string) $r['opened_on'], 0, 7) : null],
+            Db::rows('SELECT id, name, zone, status, opened_on FROM ceo_shop ORDER BY id'));
+    }
+    $pos = setting('scoutingReseau');
+    if (!is_array($pos)) { $pos = []; }
+    // Les positions pointées à la main sur la carte : le Scouting du Recrutement, par son API
+    // (positions saisies, elles l'emportent sur les nôtres tirées des fiches Google).
+    $rec = scoutingDuRecrutement();
+    foreach ($rec['positions'] as $sid => $p) { if (is_array($p) && ($p['source'] ?? '') === 'saisie') { $pos[(string) $sid] = $p; } }
+    $fiches = [];
+    try {
+        foreach (Db::rows('SELECT shop_id, place_id FROM mar_avis_fiche') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
+    } catch (PDOException $e) { /* réputation absente : positions à la main */ }
+    $modifie = false;
+    $courant = (int) date('Y') * 12 + (int) date('n') - 1;   // le mois en cours est incomplet : exclu
+    // Le CA réel vient de la même source que l'écran P&L magasins : le P&L
+    // mensuel du panel, complété par les ventes caisse pour les mois qu'il ne
+    // porte pas encore (ep_perf). Lire la seule table P&L ne donnait que deux
+    // mois d'été, annualisés — un CA moitié trop bas.
+    // Ces mois sont clos : leur CA ne bouge plus qu'à la marge (un P&L corrigé).
+    // Le relire à chaque ouverture du scouting coûtait 18 à 33 s (ep_perf sur deux
+    // ans, au panel) — au-delà des 30 s de l'écran, qui abandonnait : plus de
+    // magasins, plus de CA réel dans le plan d'expansion (21/10/2026). Gardé six
+    // heures, et refait dès qu'un mois se clôt.
+    $memo = setting('scoutingReseauCa');
+    $cellules = is_array($memo) && ($memo['mois'] ?? '') === date('Y-m') && (int) ($memo['le'] ?? 0) > time() - SCOUTING_RESEAU_CA_TTL
+        && is_array($memo['cellules'] ?? null) ? $memo['cellules'] : null;
+    if ($cellules === null) {
+        $cellules = [];
+        $_GET['annees'] = ((int) date('Y') - 1) . ',' . date('Y');
+        try {
+            foreach (ep_perf() as $cell) {
+                if (!is_array($cell) || ($cell['ca'] ?? null) === null || (float) $cell['ca'] <= 0) { continue; }
+                if ((int) $cell['annee'] * 12 + (int) $cell['mois'] - 1 >= $courant) { continue; }
+                $cellules[(string) $cell['storeId']][] = [(int) $cell['annee'], (int) $cell['mois'], (float) $cell['ca']];
+            }
+            foreach ($cellules as &$l) { usort($l, static fn ($a, $b) => ($b[0] * 12 + $b[1]) <=> ($a[0] * 12 + $a[1])); }
+            unset($l);
+            // Rien lu (panel muet) : on ne garde pas un vide, la prochaine ouverture relit.
+            if ($cellules !== []) {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    ['scoutingReseauCa', json_encode(['mois' => date('Y-m'), 'le' => time(), 'cellules' => $cellules], JSON_UNESCAPED_UNICODE)]);
+            }
+        } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
+    }
+    $out = [];
+    $saisies = scoutingDuRecrutement()['saisies'];
+    foreach ($shops as $sh) {
+        $id = (string) $sh['id'];
+        $p = $pos[$id] ?? null;
+        if (!is_array($p) && ($fiches[$id] ?? '') !== '' && GoogleApi::configured()) {
+            $g = GoogleApi::position($fiches[$id]);
+            if ($g !== null) { $p = ['lat' => $g['lat'], 'lng' => $g['lng'], 'source' => 'google', 'le' => date('Y-m-d')]; $pos[$id] = $p; $modifie = true; }
+        }
+        $saisie = $saisies[$id] ?? null;
+        $ca = null; $mois = 0; $du = null; $au = null; $tot = 0.0;
+        foreach ($cellules[$id] ?? [] as [$y, $m, $v]) {
+            if ($mois >= 12) { break; }
+            $tot += $v; $mois++;
+            if ($au === null) { $au = sprintf('%04d-%02d', $y, $m); }
+            $du = sprintf('%04d-%02d', $y, $m);
+        }
+        if ($mois > 0) { $ca = $mois >= 12 ? $tot : $tot / $mois * 12; }
+        $out[] = [
+            'id' => $id, 'nom' => (string) $sh['name'],
+            'ville' => (string) ($sh['city'] ?: ($sh['zone'] ?: ($sh['region'] ?: ''))),
+            'ouvert' => (int) $sh['active'] === 1,
+            'lat' => is_array($p) ? (float) $p['lat'] : null, 'lng' => is_array($p) ? (float) $p['lng'] : null,
+            'position' => is_array($p) ? (string) ($p['source'] ?? 'google') : null,
+            'caAnnuel' => $ca !== null ? (int) round($ca) : null, 'mois' => $mois, 'du' => $du, 'au' => $au,
+            'annualise' => $mois > 0 && $mois < 12,
+            // les données d'étude saisies à la main (dans le CRM, PUT /scouting/magasins/{id})
+            'saisie' => is_array($saisie) ? $saisie : null,
+            // l'ouverture : « AAAA-MM » ou « AAAA » (le panel ne connaît que l'année)
+            'ouvertLe' => $sh['ouvertLe'] ?? null,
+        ];
+    }
+    if ($modifie) {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['scoutingReseau', json_encode($pos, JSON_UNESCAPED_UNICODE)]);
+    }
+    return ['magasins' => $out, 'panier' => scoutingPanierReseau(),
+        'source' => 'positions : fiche Google raccordée (réputation) ou pointée sur la carte ; CA : même source que l\'écran P&L (P&L mensuel du panel, ventes caisse pour les mois sans P&L), douze derniers mois clos, annualisé s\'il y en a moins ; panier : caisse du réseau (même source que l\'écran Exploitation), mois en cours'];
+}
+
+/**
+ * Le panier moyen du réseau — la même source que l'écran Exploitation (l'API
+ * du panel quand le compte consultant est là, sinon la caisse en base) : le
+ * mois en cours, ou la semaine s'il porte plus de tickets (début de mois).
+ * TTC après remise, par magasin et pour le réseau. La page de garde du
+ * dossier d'implantation s'en sert pour traduire un CA en clients par jour.
+ * Gardé un jour dans `ceo_app_setting.scoutingPanier`.
+ *
+ * @return array{mois: string, periode: string, jusquau: string, reseau: float, tickets: int, magasins: array<string,float>, le: string}|null
+ */
+function scoutingPanierReseau(): ?array
+{
+    try {
+        $cache = setting('scoutingPanier');
+        if (is_array($cache) && ($cache['le'] ?? '') === date('Y-m-d') && (float) ($cache['reseau'] ?? 0) > 0) { return $cache; }
+        $ex = ep_exploitation();
+        $meilleur = null;
+        foreach (['mois', 'semaine'] as $p) {
+            $c = $ex['reseau'][$p] ?? null;
+            if (is_array($c) && (int) ($c['tickets'] ?? 0) > 0 && (float) ($c['panier'] ?? 0) > 0
+                && ($meilleur === null || (int) $c['tickets'] > $meilleur['tickets'])) {
+                $meilleur = ['periode' => $p, 'tickets' => (int) $c['tickets'], 'panier' => (float) $c['panier']];
+            }
+        }
+        if ($meilleur === null) { return null; }
+        $magasins = [];
+        foreach ($ex['magasins'] ?? [] as $m) {
+            $c = is_array($m) ? ($m[$meilleur['periode']] ?? null) : null;
+            if (is_array($c) && (float) ($c['panier'] ?? 0) > 0) { $magasins[(string) ($m['shopId'] ?? '')] = round((float) $c['panier'], 2); }
+        }
+        $panier = ['mois' => (string) ($ex['mois'] ?? date('Y-m')), 'periode' => $meilleur['periode'], 'jusquau' => (string) ($ex['jour'] ?? ''),
+            'reseau' => round($meilleur['panier'], 2), 'tickets' => $meilleur['tickets'], 'magasins' => $magasins, 'le' => date('Y-m-d')];
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['scoutingPanier', json_encode($panier, JSON_UNESCAPED_UNICODE)]);
+        return $panier;
+    } catch (Throwable $e) {
+        return null;   // caisse indisponible : panier inconnu, le dossier le dit
+    }
+}
