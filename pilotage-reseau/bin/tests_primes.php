@@ -19,7 +19,9 @@ declare(strict_types=1);
  */
 
 // --- doublures ---------------------------------------------------------------------------
-$GLOBALS['REGLAGES'] = [];
+// Le personnel vu par le panel (venteEmployesPanel, gardé une heure) : Nathan (99), le franchisé de Halle
+// (franchise_role = franchisee, 07/11/2026) ; il n'a ni heure ni vente tant que la section des franchisés ne lui en donne pas.
+$GLOBALS['REGLAGES'] = ['pvEmployes' => ['v' => 2, 'quand' => time(), 'e' => [99 => ['nom' => 'Nathan', 'shop' => '4', 'franchise' => true]]]];
 // La note Google des magasins (la Réputation) : Halle à 4,6, Namur à 4,3.
 $GLOBALS['TABLES'] = ['shops' => [], 'employes' => [], 'planning' => [], 'budgets' => [],
     'reputation' => [['shop_id' => 4, 'rating_avg' => 4.6, 'rating_count' => 312], ['shop_id' => 5, 'rating_avg' => 4.3, 'rating_count' => 120]]];
@@ -850,6 +852,69 @@ $anV = primesAnnee((int) date('Y'), true);
 verifie('de bout en bout, sur la base simulée : un mois par mois de l’année jusqu’au mois en cours, gravée',
     count($anV['mois']) === (int) date('n') && end($anV['mois'])['m'] === date('Y-m') && end($anV['mois'])['enCours'] === true
     && isset($GLOBALS['REGLAGES']['primesAn' . date('Y')]), json_encode(array_column($anV['mois'], 'm')));
+
+// --- 20. les franchisés n'ont pas droit aux primes (07/11/2026) : dans les stats, jamais primés ---------------------
+echo "\nLes franchisés, sans primes\n";
+$empAvant = $GLOBALS['TABLES']['employes']; $plAvant = $GLOBALS['TABLES']['planning'];
+$GLOBALS['TABLES']['employes'] = [['id' => 1, 'id_shop' => 4, 'display_name' => 'Léa', 'name' => '', 'surname' => ''], ['id' => 2, 'id_shop' => 4, 'display_name' => 'Sofia', 'name' => '', 'surname' => ''],
+    ['id' => 3, 'id_shop' => 5, 'display_name' => 'Inès', 'name' => '', 'surname' => '']];
+$empsF = venteEmployes();
+verifie('Nathan est franchisé (le statut du panel) ; Léa non', venteEstFranchise(99) && !empty($empsF[99]['franchise']) && !venteEstFranchise(1) && empty($empsF[1]['franchise']));
+// Nathan vend le plus de tartes de Halle.
+$crF = ['e' => [99 => ['t' => 300, 'c' => 200, 'q' => ['tartes' => 80.0]], 1 => ['t' => 250, 'c' => 100, 'q' => ['tartes' => 42.0]], 2 => ['t' => 260, 'c' => 120, 'q' => ['tartes' => 30.0]]]];
+$cfgKF = ['actif' => true, 'liste' => [['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'magasin' => 50, 'reseau' => 0, 'minPieces' => 10]]];
+$clsF = concoursClassement($crF, $empsF, $cfgKF);
+verifie('une catégorie : Nathan garde ses 80 pièces, sans rang ; Léa (42) 1re de Halle sur 2', $clsF['tartes'][99]['pieces'] === 80.0 && $clsF['tartes'][99]['rangMag'] === null
+    && !empty($clsF['tartes'][99]['franchise']) && $clsF['tartes'][1]['rangMag'] === 1 && $clsF['tartes'][1]['surMag'] === 2 && $clsF['tartes'][1]['premierMag'] === 42.0, json_encode($clsF['tartes']));
+verifie('une catégorie : la récompense va à Léa, rien à Nathan', concoursPrime($clsF, 1, $cfgKF) === 50 && concoursPrime($clsF, 99, $cfgKF) === 0 && concoursTitres($clsF, 99, $cfgKF) === []);
+verifie('une catégorie : ses pièces comptent dans le total du magasin', $clsF['tartes'][1]['totalMag'] === 152.0);
+$cfgSF = $cfgKF; $cfgSF['liste'][0]['regle'] = 'seuil';
+verifie('au seuil : Nathan au-dessus, rien ; Léa et Sofia gagnent', concoursPrime($clsF, 99, $cfgSF) === 0 && concoursPrime($clsF, 1, $cfgSF) === 50 && concoursPrime($clsF, 2, $cfgSF) === 50);
+$cfgMF = ['actif' => true, 'liste' => [['cle' => 'tartes', 'lib' => 'Tartes du magasin', 'magasin' => 50, 'reseau' => 0, 'minPieces' => 0, 'regle' => 'magasin', 'objectifs' => ['4' => 100]]]];
+$clsMF = concoursClassement($crF, $empsF, $cfgMF);
+$tMF = concoursTitres($clsMF, 1, $cfgMF);
+verifie('une prime pour le magasin : l’objectif atteint avec ses pièces, la somme partagée entre les deux vendeuses, sans lui',
+    ($tMF[0]['montant'] ?? null) === 25.0 && ($tMF[0]['partage'] ?? null) === 2 && concoursTitres($clsMF, 99, $cfgMF) === [], json_encode($tMF));
+$hF = [1 => ['mois' => 80.0, 'shop' => '4'], 2 => ['mois' => 10.0, 'shop' => '4'], 99 => ['mois' => 120.0, 'shop' => '4', 'franchise' => true]];
+verifie('l’enveloppe de l’objectif et de la note Google : Léa seule (Sofia sous le minimum, Nathan franchisé)', primesPersonnesEligibles($hF, '4', 20) === 1);
+$gF = venteGagnantes([['id' => 99, 'shopId' => '4', 'classable' => true, 'score' => 300], ['id' => 3, 'shopId' => '5', 'classable' => true, 'score' => 250], ['id' => 1, 'shopId' => '4', 'classable' => true, 'score' => 200]]);
+verifie('la meilleure vendeuse : Nathan devant, la prime du réseau à Inès, celle de Halle à Léa', $gF['reseau']['id'] === 3 && array_column($gF['magasins'], 'id') === [3, 1], json_encode($gF));
+[$bZ, $pmZ] = primesSansDroit(['croisees' => ['montant' => 50, 'taux' => 61.0, 'palier' => 55.0], 'record' => ['montant' => 20, 'tranches' => 2, 'lt' => 2.8], 'meilleure' => ['montant' => 75, 'score' => 300],
+    'concours' => ['montant' => 50, 'titres' => [['cle' => 'tartes', 'lib' => 'Queen of Tartes', 'niveau' => 'magasin', 'montant' => 50]], 'liste' => [['cle' => 'tartes', 'pieces' => 80.0, 'titre' => 'magasin', 'montant' => 50]]],
+    'promos' => ['montant' => 0, 'titres' => [], 'liste' => []], 'google' => ['montant' => 25, 'note' => 4.6],
+    'cibles' => ['montant' => 20.0, 'liste' => [['cle' => 'c1', 'atteint' => true, 'montant' => 20.0, 'val' => 61.0]]], 'b2b' => ['montant' => 12.0, 'liste' => [['cle' => 'b', 'montant' => 12.0]]]],
+    ['vous' => 50.0, 'paliers' => [['pct' => 100, 'vous' => 50.0]]]);
+verifie('ses briques : chaque montant à zéro, aucun titre, ses chiffres gardés', array_sum(primesMontants($bZ, $pmZ)) == 0 && primesTitres($bZ, $pmZ) === [] && $bZ['croisees']['taux'] === 61.0
+    && $bZ['concours']['liste'][0]['pieces'] === 80.0 && $bZ['concours']['liste'][0]['titre'] === null && $bZ['cibles']['liste'][0]['val'] === 61.0 && $bZ['cibles']['liste'][0]['atteint'] === false
+    && $bZ['franchise'] === true && $pmZ['paliers'][0]['vous'] === 0.0, json_encode([$bZ, $pmZ]));
+$clF = primesClassements(1, '4', $crF, $empsF, $cfgKF, croiseesReglages());
+$idsDe = static function (array $cls, string $cle, string $niv): array { foreach ($cls as $c) { if ($c['cle'] === $cle) { return array_column($c[$niv], 'id'); } } return []; };
+verifie('les classements de l’app, les courses aux primes : sans Nathan ; Léa 1re des tartes de Halle', $idsDe($clF, 'tartes', 'magasin') === [1, 2] && !in_array(99, $idsDe($clF, 'tartes', 'reseau'), true)
+    && !in_array(99, $idsDe($clF, 'croisees', 'reseau'), true), json_encode($clF, JSON_UNESCAPED_UNICODE));
+$appAvant = $GLOBALS['REGLAGES']['ventePrimesApp'] ?? null;
+$GLOBALS['REGLAGES']['ventePrimesApp'] = ['recompense' => 50, 'liste' => [['type' => 'target', 'cle' => 'croisees', 'montant' => 50]]];
+relire();
+$clFC = primesClassements(1, '4', $crF, $empsF, ['actif' => false, 'liste' => []], ['minTickets' => 30, 'categorie' => '']);
+verifie('le classement des ventes croisées : Sofia (46 %) et Léa (40 %), sans Nathan (67 %)', $idsDe($clFC, 'croisees', 'magasin') === [2, 1], json_encode($idsDe($clFC, 'croisees', 'magasin')));
+if ($appAvant === null) { unset($GLOBALS['REGLAGES']['ventePrimesApp']); } else { $GLOBALS['REGLAGES']['ventePrimesApp'] = $appAvant; }
+relire();
+// De bout en bout, sur la base simulée : Léa et Nathan au planning de Halle.
+$GLOBALS['TABLES']['planning'] = [['id_employee' => 1, 'h' => 80, 'hf' => 60, 'fin' => date('Y-m-t')], ['id_employee' => 99, 'h' => 120, 'hf' => 90, 'fin' => date('Y-m-t')]];
+$eqF = primesEquipe('4', date('Y-m'), true);
+$vN = null; foreach ($eqF['vendeuses'] ?? [] as $v) { if ($v['id'] === 99) { $vN = $v; } }
+verifie('le tableau de l’équipe : Nathan y est, avec ses heures, marqué franchisé, rien d’acquis ni en jeu, chaque case « franchise »',
+    $vN !== null && !empty($vN['franchise']) && $vN['heures'] === 120.0 && $vN['acquis'] === 0.0 && $vN['enJeu'] === 0.0 && $vN['cases'] !== []
+    && array_values(array_unique(array_column($vN['cases'], 'motif'))) === ['franchise'] && array_values(array_unique(array_column($vN['cases'], 'etat'))) === ['vide'], json_encode($vN, JSON_UNESCAPED_UNICODE));
+verifie('chaque prime ne compte qu’une vendeuse en lice : Léa, pas Nathan', $eqF['primes'] !== [] && array_values(array_unique(array_column($eqF['primes'], 'vendeuses'))) === [1], json_encode(array_column($eqF['primes'], 'vendeuses', 'cle')));
+$fN = primesMoi(99, date('Y-m'), true, true);
+verifie('sa fiche : franchisé, 0 € acquis, 0 € en jeu, aucune carte active', ($fN['franchise'] ?? false) === true && $fN['acquis'] === 0.0 && $fN['enJeu'] === 0.0
+    && array_filter(array_column($fN['cartes'], 'actif')) === [] && array_sum(array_column($fN['cartes'], 'gain')) == 0, json_encode([$fN['acquis'] ?? null, $fN['enJeu'] ?? null]));
+$tF = primesMoisTous(date('Y-m'), true);
+$pN = null; foreach ($tF['personnes'] as $p) { if ($p['id'] === 99) { $pN = $p; } }
+$mH = null; foreach ($tF['magasins'] as $mg) { if ($mg['id'] === '4') { $mH = $mg; } }
+verifie('le mois du réseau : Nathan à 0 €, marqué franchisé ; l’enveloppe de Halle sans lui', $pN !== null && $pN['total'] === 0.0 && !empty($pN['franchise']) && $pN['heures'] === 120.0
+    && ($mH['eligibles'] ?? null) === 1 && ($mH['google']['eligibles'] ?? null) === 1, json_encode([$pN, $mH], JSON_UNESCAPED_UNICODE));
+$GLOBALS['TABLES']['employes'] = $empAvant; $GLOBALS['TABLES']['planning'] = $plAvant;
 
 // --- L'API du module (24/10/2026) : l'inventaire colle au code, l'état se lit juste -----------------------
 echo "\nL'API du module\n";

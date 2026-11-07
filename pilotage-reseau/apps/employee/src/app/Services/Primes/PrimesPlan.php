@@ -17,8 +17,8 @@ class PrimesPlan
     /** Sous ce nombre de tickets estimés d'ici la fin du mois, pas de cible « sur tes prochains tickets ». */
     private const TICKETS_MIN_FUTURS = 10;
 
-    /** Les motifs qui ne se rattrapent pas en vendant : pas de ligne dans le plan. */
-    private const SANS_PLAN = ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'heures', 'pas_classee'];
+    /** Les motifs qui ne se rattrapent pas en vendant : pas de ligne dans le plan (un franchisé n'a droit à aucune prime, 07/11/2026). */
+    private const SANS_PLAN = ['pas_compte', 'sans_vente', 'pas_objectif', 'pas_note', 'heures', 'pas_classee', 'franchise'];
 
     /**
      * Les primes du mois en cours encore à aller chercher, la plus proche d'abord (vide pour un mois clos ou à

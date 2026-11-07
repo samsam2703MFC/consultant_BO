@@ -73,6 +73,10 @@ function primesMagasinMois(int $sid, string $m, array $reg, ?float $hv, float $h
 $GLOBALS['PRO'] = [];
 function b2bTickets(int $sid, string $du, string $au): ?array { return $GLOBALS['PRO'][(string) $sid] ?? []; }
 
+/** Les franchisés (07/11/2026, venteEstFranchise de src/ventes.php) : personne, sauf dans leur section. */
+$GLOBALS['FRANCHISES'] = [];
+function venteEstFranchise(int $id): bool { return isset($GLOBALS['FRANCHISES'][$id]); }
+
 require __DIR__ . '/../src/motivation.php';
 require __DIR__ . '/../src/grands_prix.php';
 
@@ -165,6 +169,16 @@ $GLOBALS['CACHE'] = [];
 $c = gpPourVendeuse(13, '2026-01-20');
 $cV = array_values(array_filter($c, static fn ($x) => $x['id'] === 1))[0];
 verifie('Chloé sous le minimum : pas de rang, il lui manque 360 h', $cV['moi'] === null && $cV['manque'] === ['n' => 360, 'sorte' => 'heures'], json_encode([$cV['moi'], $cV['manque']]));
+
+// --- un franchisé ne court pas pour un grand prix (07/11/2026) ---------------------------------------
+echo "\nUn franchisé ne court pas\n";
+$GLOBALS['FRANCHISES'] = [12 => true];
+$GLOBALS['CACHE'] = [];
+$c = gpClassement($gp(['defi' => 'vendeuse']), '2026-10-23');
+verifie('Inès franchisée : hors de la course à la meilleure vendeuse, Léa 1re', array_column($c['liste'], 'nom') === ['Léa M.', 'Nora V.'] && $c['liste'][0]['rang'] === 1, json_encode(array_column($c['liste'], 'rang', 'nom')));
+$c = gpClassement($gp(['defi' => 'magasin']), '2026-10-23');
+verifie('le magasin de l’année garde le magasin d’un franchisé', in_array('Namur', array_column($c['liste'], 'nom'), true), json_encode(array_column($c['liste'], 'nom')));
+$GLOBALS['FRANCHISES'] = [];
 
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);

@@ -967,6 +967,17 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   format +32. Le fournisseur : Twilio, réglé dans `config/config.php › sms` (`sid`, `token`, `expediteur`) ou
   `TWILIO_SID`, `TWILIO_TOKEN`, `SMS_EXPEDITEUR` (`src/sms.php`) ; sans lui, rien ne part, l'écran et le journal
   le disent.
+- **Les franchisés, sans primes** (07/11/2026, Sam : « les franchisés n'ont pas le droit aux primes ; ils peuvent être
+  dans les stats ») : une personne dont la fiche du panel porte `franchise_role = franchisee` (`/shops/{id}/employees`,
+  gardé dans `pvEmployes` v2 ; `venteEstFranchise`) garde ses ventes, ses heures et sa mesure prime par prime, et ne
+  touche rien : chaque montant de sa fiche (`/ventes/moi`) tombe à zéro, `acquis` et `enJeu` à 0, `franchise: true`,
+  chaque carte `etat: vide`, `motif: franchise`. Il ne concourt pas : la 1re du magasin (catégorie, promo), la meilleure
+  vendeuse (`venteGagnantes`, aussi pour « Enregistrer les primes ») et les grands prix vont à la première de l'équipe ;
+  ses pièces comptent dans le total du magasin, la somme d'une prime « pour le magasin » se partage sans lui ; il n'entre
+  pas dans l'enveloppe de l'objectif ni de la note Google (`eligibles`) ; les classements de l'app (les courses aux
+  primes) ne le montrent pas. `primes-equipe` le garde dans `vendeuses[]` avec `franchise: true`, sans le compter dans
+  `primes[].vendeuses` ; `primes-mois` lui met `franchise: true` et un total de 0. Les calculs gardés d'avant (fiche,
+  équipe, mois, année, collection) se recalculent : `PRIMES_FICHE_V` 13.
 - `GET /ventes/primes-equipe?shop=&m=` (23/10/2026) : l'équipe d'un magasin face à ses primes, pour la page
   franchisé (`#/primes?shop=4`, « Où en sont tes vendeuses ») et l'onglet Primes du dashboard magasin
   (`dashboard/?shop=4&vue=primes`, à lire seulement, 30/10/2026) : `primes[] {cle, lib, type, base,

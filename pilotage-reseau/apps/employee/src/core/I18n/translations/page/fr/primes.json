@@ -139,6 +139,8 @@
   "no_record_yet": "pas encore de record",
   "no_sale_short": "aucune vente à ton nom",
   "no_sale_text": "Tes primes à toi (ventes croisées, record, classements) s’affichent dès ton premier ticket encaissé à ton nom. Le magasin et la note Google, eux, comptent déjà.",
+  "franchisee_title": "Pas de primes pour un franchisé",
+  "franchisee_text": "Les primes récompensent ton équipe. Tes ventes, tes heures et tes chiffres restent dans les statistiques ; ils ne te donnent pas de prime, et tu ne prends la place de personne dans les classements.",
   "no_sale_title": "Aucune vente à ton nom ce mois-ci",
   "no_target": "Pas d’objectif encodé pour ce mois.",
   "no_target_short": "pas d’objectif",

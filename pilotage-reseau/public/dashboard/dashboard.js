@@ -4733,7 +4733,11 @@
   const prVal = (u, v) => (v == null ? '' : u === 'pct' ? prFx(v, 1) + ' %' : u === 'lpt' ? nf(+v, 2) + ' art./ticket' : u === 'note' ? nf(+v, 1) + ' ★'
     : u === 'pcs' ? prFx(v, 1) + ' pcs' : u === 'eur' ? fE(v) : u === 'score' ? 'score ' + prFx(v, 1) : prFx(v, 1));
   const PR_MOTIFS = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
-    pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+    pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée', franchise: 'franchisé · sans prime' };
+  /* Un franchisé (07/11/2026, « les franchisés n'ont pas le droit aux primes ; ils peuvent être dans les stats ») : sa
+   * ligne reste, avec ses heures, ses tickets et sa mesure prime par prime, en gris ; il ne gagne rien et ne compte ni
+   * parmi les gagnantes ni parmi les éligibles. Le serveur le marque (`franchise: true`, cases au motif « franchise »). */
+  const PR_FRANCHISE = 'franchisé · hors primes';
   function prRecompense(p) {
     if (p.type === 'b2b') { return p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : prFx(p.taux, 1) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'); }
     return p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €';
@@ -4743,6 +4747,7 @@
     if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
     const v = prVal(p.unite, k.val);
     const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+    if (k.motif === 'franchise') { return { ton: 'vide', haut: (p.type === 'b2b' ? '' : v) || '—', bas: PR_MOTIFS.franchise }; }
     if (p.type === 'b2b') {
       const cl = k.clients ? prPl(k.clients, 'client') + ' pro' : 'aucun client pro';
       return k.gain > 0 ? { ton: 'gagne', haut: '✓ ' + prEur(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
@@ -4784,7 +4789,7 @@
     return (D.primes || []).filter(p => garde(p) && prEstEquipe(p)).map(p => {
       const ks = (D.vendeuses || []).map(v => ({ v, k: (v.cases || {})[p.cle] })).filter(x => x.k);
       const ref = (ks.find(x => x.k.val != null) || {}).k || {};
-      const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom), elig = ks.filter(x => x.k.motif !== 'heures').map(x => x.v.nom);
+      const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom), elig = ks.filter(x => x.k.motif !== 'heures' && x.k.motif !== 'franchise').map(x => x.v.nom);
       const atteint = ks.some(x => x.k.etat === 'gagne');
       const diff = ref.cible != null && ref.val != null ? Math.max(0, +ref.cible - +ref.val) : null;
       const reste = diff == null ? '' : p.unite === 'pct' ? 'encore ' + prFx(diff, 1) + ' point' + (diff > 1 ? 's' : '') : p.unite === 'note' ? 'encore ' + nf(diff, 1) + ' ★' : 'encore ' + prVal(p.unite, diff);
@@ -4842,6 +4847,7 @@
     return { cols, clos, tri, rangs };
   }
   const prSousV = v => [v.heures != null ? prFx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · ');
+  const prSousMob = v => [prSousV(v), v.franchise ? PR_FRANCHISE : ''].filter(Boolean).join(' · ');
   function prTableMois(D, garde) {
     const { cols, clos, tri, rangs } = prMoisVue(D, garde);
     const cel = k => (k.ton === 'hors' ? '<td class="pr-hors">·</td>' : `<td class="pr-c pr-${k.ton}"><div class="pr-h">${esc(k.haut)}</div>
@@ -4857,9 +4863,9 @@
         <th class="pr-petit pr-d" aria-sort="${prAria(tri, 'acquis')}">${prTriBt(tri, 'acquis', 'mois', D.enCours ? 'Acquis' : 'Gagné')}</th>
       </tr></thead>
       <tbody>${rangs.map(v => `<tr>
-        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${prSousV(v) ? `<small>${esc(prSousV(v))}</small>` : ''}</td>
+        <td class="pr-g pr-nom"><b>${esc(v.nom)}</b>${prSousV(v) ? `<small>${esc(prSousV(v))}</small>` : ''}${v.franchise ? `<small class="pr-fr">${esc(PR_FRANCHISE)}</small>` : ''}</td>
         ${cols.map(p => cel(prCase(p, (v.cases || {})[p.cle], clos))).join('')}
-        <td class="pr-tot">${v.acquis > 0 ? esc(prEur(v.acquis)) : '—'}</td></tr>`).join('')}</tbody>
+        <td class="pr-tot">${v.franchise ? '<span class="pr-fr">sans prime</span>' : v.acquis > 0 ? esc(prEur(v.acquis)) : '—'}</td></tr>`).join('')}</tbody>
     </table></div></div>
     <div class="pr-pied">✓ gagnée · <span class="pr-tete-t">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${quand ? ' · lu à ' + esc(quand) : ''}</div>`;
   }
@@ -4964,11 +4970,12 @@
     if (!(D.primes || []).filter(garde).length) { return vide('Aucune prime du magasin ce mois-là.'); }
     const V = prMoisVue(D, p => garde(p) && !prEstEquipe(p));
     const total = D.vendeuses.reduce((t, v) => t + (+v.acquis || 0), 0), nG = V.cols.reduce((t, p) => t + (+p.gagnees || 0), 0);
-    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(V.rangs.length, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
+    const nV = V.rangs.filter(v => !v.franchise).length;
+    h += `<div class="ma-v"><span class="n long">${esc(prEur(total))}</span><span class="t">${D.enCours ? 'acquis ce mois' : 'gagnés ce mois-là'}<em>${prPl(nV, 'vendeuse')} · ${nG} prime${nG > 1 ? 's' : ''} individuelle${nG > 1 ? 's' : ''} gagnée${nG > 1 ? 's' : ''}</em></span></div>`;
     h += prEquipe(D, garde, true);
     h += V.rangs.map(v => {
       const cs = V.cols.map(p => ({ p, k: prCase(p, (v.cases || {})[p.cle], V.clos) }));
-      return carte(v.id, v.nom, prSousV(v), v.acquis > 0 ? esc(prEur(v.acquis)) : '—', cs.map(x => `<i class="${x.k.ton}"></i>`).join(''),
+      return carte(v.id, v.nom, prSousMob(v), v.franchise ? '<span class="pr-fr">sans prime</span>' : v.acquis > 0 ? esc(prEur(v.acquis)) : '—', cs.map(x => `<i class="${x.k.ton}"></i>`).join(''),
         () => cs.map(({ p, k: c }) => `<div class="pr-ml pr-${c.ton}"><span class="pr-ml-l">${esc(p.lib)}<small>${esc(prRecompense(p))} · ${p.payeur === 'magasin' ? `<span class="pr-mag">${esc(prPayeur(p))}</span>` : esc(prPayeur(p))}</small></span>
           <span class="pr-ml-v">${c.ton === 'hors' ? '<span class="pr-hors">·</span>' : `<span class="pr-h">${esc(c.haut)}</span>${prBarre(c)}${c.bas ? `<span class="pr-b">${esc(c.bas)}</span>` : ''}`}</span></div>`).join(''));
     }).join('');
