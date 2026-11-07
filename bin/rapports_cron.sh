@@ -21,3 +21,7 @@ curl -fsS -m 300 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/centrale/commandes/m
 # Brand Guard : chaque jour à 7 h, lecture des pages Facebook, copie des visuels, passage de
 # l'agent et rapport de contrôle ; le lundi, la semaine en plus (l'endpoint décide de l'heure).
 curl -fsS -m 900 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/marketing/brand-guard/cron?jeton=${JETON}" >/dev/null || true
+# Benchmark concurrents : vérification de l'API Benchmark, photo des analyses par magasin,
+# rapport cougnou (prix au kilo + visibilité web) par e-mail. Le lundi à 7 h, et aussi le
+# jeudi du 1er novembre au 6 janvier (saison du cougnou) — l'endpoint décide de l'heure.
+curl -fsS -m 600 "http://127.0.0.1${ALIAS_PATH}/api/cockpit/benchmarks/cron?jeton=${JETON}" >/dev/null || true

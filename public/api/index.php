@@ -80,6 +80,7 @@ require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/benchmark.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -96,6 +97,12 @@ try {
     $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
+    if ($method === 'GET' && $path === '/benchmarks/cougnou/rapport.html') {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        header('Content-Type: text/html; charset=utf-8');
+        echo benchmarkCougnouHtml(benchmarkCougnouRapport(($_GET['web'] ?? '1') !== '0'));
+        exit;
+    }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
         if (authEnabled() && !authOk()) { http_response_code(401); exit; }
         header('Content-Type: text/html; charset=utf-8');
@@ -277,6 +284,9 @@ function route(string $method, string $path): mixed
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
+            $path === '/benchmarks/cron'               => ep_benchmark_cron(),
+            $path === '/benchmarks/verification'       => ep_benchmark_verification(),
+            $path === '/benchmarks/cougnou/rapport'    => ep_benchmark_cougnou_rapport(),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/reputation'                    => ep_reputation(),
@@ -642,6 +652,10 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/scouting/candidates') { return wr_scouting_candidate_post(); }
     if ($method === 'POST' && $path === '/scouting/dossier.pdf') { return wr_scouting_dossier_pdf(); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
+    // --- benchmark concurrents (module Benchmark de TFBuddy, src/benchmark.php)
+    if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
+    if ($method === 'POST' && $path === '/benchmarks/cougnou/semer') { return wr_benchmark_cougnou_semer(); }
+    if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
     if ($method === 'POST' && $path === '/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/newsletter/segments') { return wr_newsletter_segment_post(); }
