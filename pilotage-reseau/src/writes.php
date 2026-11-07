@@ -1104,6 +1104,17 @@ function wr_param_put(string $key): array
     // est le même à Corbais et à Halle, seul le chiffre d'affaires diffère. Il
     // s'enregistre donc une fois, ici, et non magasin par magasin.
     if ($key === 'budgetCharges') {
+        // Modèle venu du CRM (07/11/2026, src/budget_crm.php) : seul le « % validé » de chaque ligne s'enregistre ici ;
+        // rubriques, postes, libellés, % réseau et étapes se changent dans le CRM.
+        $stocke = setting('budgetCharges');
+        if (is_array($stocke) && ($stocke['source'] ?? '') === 'crm' && function_exists('bcGarderStructure')) {
+            $m = bcGarderStructure($stocke, is_array($b['valeur'] ?? null) ? $b['valeur'] : []);
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['budgetCharges', json_encode($m, JSON_UNESCAPED_UNICODE)]);
+            $n = 0; foreach ($m['categories'] as $c) { $n += count($c['lignes'] ?? []); }
+            journalAdd('CEO', 'Budget', null, '% validés du réseau enregistrés — ' . $n . ' poste(s) (structure et % réseau : CRM)');
+            return ['ok' => true, 'categories' => count($m['categories']), 'postes' => $n, 'paliers' => count($m['paliers'] ?? []), 'crm' => true];
+        }
         $cats = [];
         foreach ((array) ($b['valeur']['categories'] ?? []) as $cat) {
             if (!is_array($cat)) { continue; }

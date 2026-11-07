@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Analyse — CRM ↔ cockpit</title><link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<style>
+body{margin:0;background:var(--color-bg,#F7F4EF);font-family:var(--font-ui,'Gotham',system-ui);color:#1c1a17}
+.w{max-width:1180px;margin:0 auto;padding:22px 24px 30px}
+.k{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:#7a736a}
+h1{font:400 26px var(--font-display,'Gotham');margin:4px 0 14px}
+.card{background:#fff;border:1px solid #e6e0d8;border-radius:12px;padding:20px 22px;margin-bottom:16px}
+.t{font:400 18px var(--font-display,'Gotham')} .s{font-size:12px;color:#7a736a;margin-top:2px}
+.src{display:flex;gap:10px;align-items:center;background:rgba(141,29,44,.05);border:1px solid rgba(141,29,44,.2);border-radius:9px;padding:10px 13px;margin:14px 0;font-size:11.5px;line-height:1.5}
+.tag{font-size:10px;padding:2px 9px;border-radius:6px;background:#8D1D2C;color:#fff;white-space:nowrap}
+.tag.or{background:#B0792A}.tag.vert{background:#3f7a52}.tag.gris{background:#7a736a}
+.btn{border:1px solid #e6e0d8;background:#fff;border-radius:8px;padding:7px 13px;font-size:12px;color:#1c1a17;white-space:nowrap}
+.btn.p{background:#8D1D2C;border-color:#8D1D2C;color:#fff}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#7a736a;font-weight:400;text-align:right;padding:0 6px 8px}
+th.l{text-align:left} td{padding:7px 6px;text-align:right;white-space:nowrap;border-top:1px solid #efeae3}
+td.l{text-align:left;white-space:normal} .rub td{border-top:none;padding-top:14px;font-size:13px}
+.rub td.l{color:#1c1a17}.rub small{color:#7a736a;margin-left:8px}
+.st td{background:#FBF9F5;border-top:1px solid #e6e0d8}.st .f{font-size:11px;color:#7a736a}
+.tot td{border-top:1px solid #c9c2b8}
+.lock{display:inline-block;min-width:44px;padding:5px 8px;border-radius:7px;background:#FBF9F5;border:1px solid #efeae3;color:#5c5852}
+.in{display:inline-block;min-width:44px;padding:5px 8px;border-radius:7px;border:1px solid #d9d2c8;background:#fff}
+.o{color:#B0792A}.m{color:#7a736a}.r{color:#b3261e}.g{color:#3f7a52}
+.d{font-size:11px;color:#7a736a}
+.ec.r{background:#FBEDEC}.ec.g{background:#EEF5F0}
+.grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px}
+.opt{border:1px solid #e6e0d8;border-radius:12px;padding:16px;background:#fff}
+.opt.reco{border:2px solid #8D1D2C}
+.opt h3{font:400 16px var(--font-display,'Gotham');margin:6px 0 8px}
+.opt ul{margin:6px 0 0 16px;padding:0;font-size:12.5px;line-height:1.55}
+.pl{color:#3f7a52}.mo{color:#b3261e}
+</style></head><body><div class="w">
+<div class="k">Arbitrage · 07/11/2026</div><h1>Deux comptes de résultat pour un même réseau</h1>
+<div class="card"><div class="t">Poste par poste</div><div class="s">Vert = identique au CRM · rouge = différent. Le CRM est aligné sur le contrat (DIP v29 : marque 2 % · assistance 2 % · marketing 2,5 %).</div>
+<table style="margin-top:12px"><thead><tr><th class="l">Poste du CRM</th><th>CRM · % réseau</th><th class="l">Poste(s) du cockpit</th><th>Cockpit · % théo.</th><th>Cockpit · % validé</th></tr></thead><tbody><tr><td class='l'>Matière première<div class=d>food_cost_pct</div></td><td>38 %</td><td class='l m'>Matière première</td><td class='ec g'>38 %</td><td class='ec r'>0 %</td></tr><tr><td class='l'>Emballage<div class=d>emballage_pct</div></td><td>2 %</td><td class='l m'>Emballage</td><td class='ec g'>2 %</td><td class='ec r'>0 %</td></tr><tr><td class='l'>Loyer + charges locatives<div class=d>loyer</div></td><td>6 %</td><td class='l m'>Loyer + charges locatives</td><td class='ec r'>5 %</td><td class='ec r'>7 %</td></tr><tr><td class='l'>Énergie (eau, gaz, électricité)<div class=d>energie_pct</div></td><td>5 %</td><td class='l m'>Énergie (eau, gaz, électricité)</td><td class='ec g'>5 %</td><td class='ec g'>5 %</td></tr><tr><td class='l'>Maintenance &amp; nettoyage<div class=d>maintenance_pct</div></td><td>0,5 %</td><td class='l m'>Maintenance &amp; nettoyage</td><td class='ec g'>0,5 %</td><td class='ec r'>1 %</td></tr><tr><td class='l'>Assurances, licences, etc.<div class=d>assurances_pct</div></td><td>1 %</td><td class='l m'>Assurances, licences, etc.</td><td class='ec g'>1 %</td><td class='ec g'>1 %</td></tr><tr><td class='l'>Royalties franchise &amp; assistance<div class=d>royalties_pct</div></td><td>4 %</td><td class='l m'>Royalties franchise + Redevance assistance</td><td class='ec g'>4 %</td><td class='ec r'>3,5 %</td></tr><tr><td class='l'>Marketing national<div class=d>marketing_pct</div></td><td>2,5 %</td><td class='l m'>Marketing national / local</td><td class='ec r'>2 %</td><td class='ec r'>1,5 %</td></tr><tr><td class='l'>Amortissements / leasing<div class=d>amortissements_pct</div></td><td>7 %</td><td class='l m'>Amortissements / leasing</td><td class='ec r'>5 %</td><td class='ec r'>5 %</td></tr><tr><td class='l'>Autres (comptabilité, banque…)<div class=d>autres_pct</div></td><td>1,5 %</td><td class='l m'>Autres (comptabilité, banque)</td><td class='ec r'>2 %</td><td class='ec g'>1,5 %</td></tr><tr><td class='l'>—<div class=d>catégorie vide du cockpit</div></td><td>—</td><td class='l m'>Rémunération (0 poste)</td><td class='ec r'>0 %</td><td class='ec r'>0 %</td></tr><tr class='tot'><td class='l'>Total charges</td><td>67,5 %</td><td></td><td class='ec r'>64,5 %</td><td class='ec r'>25,5 %</td></tr></tbody></table>
+<div class="d" style="margin-top:10px">Aussi différents : les sous-totaux (CRM : Marge brute, Disponible pour rémunération, Total charges, Résultat avant impôt ; cockpit : « Marge Brutte » seule) ; les libellés (« Marketing national » / « national / local ») ; le CRM n’a qu’un % réseau, le cockpit en a deux (théorique, validé) plus le réel. Le seuil coût matière du dashboard (Budget › Paramètres, 40 %) est le même des deux côtés.</div></div>
+<div class="grid">
+<div class="opt reco"><span class="tag">Recommandée</span><h3>A · Le CRM fait foi, le cockpit lit</h3>
+<ul><li>Structure, libellés, clés et % réseau = <code>impl_pnl</code>, lus par une route d’intégration du CRM (jeton de service, comme le Scouting) — pas de lecture de table.</li>
+<li>Le cockpit garde ce qui est à lui : % validé par poste, € validé, € réel, l’écart.</li>
+<li>« Modifier dans le CRM ↗ » ; le cockpit ne crée plus de poste.</li></ul>
+<ul><li class="pl">+ une seule vérité, celle du DIP et du contrat</li><li class="pl">+ seuil matière et marge brute cohérents partout</li><li class="mo">− « + Catégorie / + poste » disparaissent du cockpit</li><li class="mo">− une route à ajouter au CRM, une reprise des % validés sur les clés</li></ul></div>
+<div class="opt"><span class="tag gris">Alternative</span><h3>B · Le cockpit fait foi, le CRM lit</h3>
+<ul><li>Le CRM lirait <code>budgetCharges</code> pour ses dossiers et le DIP.</li></ul>
+<ul><li class="mo">− le DIP, le contrat et les dossiers d’implantation (réels rattachés aux clés) dépendent du CRM</li><li class="mo">− le cockpit n’a pas de clés stables ni de poste « loyer lu du bail »</li><li class="mo">− ses redevances ne sont pas celles du contrat</li></ul></div>
+<div class="opt"><span class="tag gris">Minimum</span><h3>C · Deux saisies, écart signalé</h3>
+<ul><li>Chacun garde la sienne ; le cockpit affiche, ligne par ligne, l’écart au CRM et « ↙ Reprendre du CRM ».</li></ul>
+<ul><li class="pl">+ rien ne change de propriétaire</li><li class="mo">− deux vérités durables, à refaire à chaque changement</li></ul></div>
+</div></div></body></html>

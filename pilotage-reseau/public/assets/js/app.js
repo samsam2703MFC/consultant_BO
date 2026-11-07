@@ -3092,7 +3092,7 @@ class App {
     const depuisModele = () => {
       const l = [];
       modele.forEach(cat => (cat.lignes || []).forEach(x => l.push({
-        id: x.id || '',
+        id: x.id || '', cle: x.cle || '', special: x.special || null, hors: !!x.hors,
         categorie: cat.nom || '', poste: x.poste || '', description: x.description || '',
         gestion: x.gestion || '', pcmn: x.pcmn || '', levier: '',
         pctBudget: x.pct != null ? x.pct : 0,
@@ -3119,6 +3119,24 @@ class App {
       this.autoEnreg('chargesReseau', () => (this._chrAuto ? this._chrAuto() : true)); };
 
     common.encModeleDispo = false;
+    // Le Compte de résultat réseau du CRM fait foi (07/11/2026, src/budget_crm.php) : structure et % réseau en lecture,
+    // seul le % validé du réseau se saisit ; « ↻ Relire le CRM » relit tout de suite (sinon toutes les dix minutes).
+    const crm = ((D.budgets || [])[0] || {}).crm || null;
+    common.encCrm = crm && crm.actif ? {
+      lu: crm.lu ? this.fD(String(crm.lu).slice(0, 10)) + ' à ' + String(crm.lu).slice(11, 16) : null,
+      erreur: crm.erreur || null, modifier: crm.modifier || null, enCours: !!this.state.encCrmLecture,
+      relire: () => {
+        this.setState({ encCrmLecture: true });
+        this.api('POST', '/budget/charges/crm', {}).then(r => {
+          this.notify(r && r.ok ? (r.change ? 'Compte de résultat du CRM relu — la répartition est à jour' : 'Compte de résultat du CRM relu — rien n’a changé') : 'Le CRM n’a pas répondu — la dernière copie reste affichée');
+          return readOne('/stores/budgets?exercice=' + anEnc).then(bs => {
+            if (bs) { poseBudgets(bs); }
+            this.setState(s2 => ({ encCrmLecture: false, encDraft: Object.assign({}, s2.encDraft,
+              { [cleD]: Object.assign({}, s2.encDraft[cleD], { lignes: null, paliers: null }) }) }));
+          });
+        }).catch(() => this.setState({ encCrmLecture: false }));
+      },
+    } : null;
     common.encReseauNote = 'Ces postes et ces taux valent pour TOUT le réseau : les modifier ici les change '
       + 'pour les ' + this.open().length + ' magasins. Ce qui diffère d’un magasin à l’autre, ce sont les '
       + 'euros — le même taux appliqué à son chiffre d’affaires.';
@@ -3190,7 +3208,7 @@ class App {
       const v = val('ch' + i, c2.pctBudget), vt = val('cht' + i, c2.pctTheorique != null ? c2.pctTheorique : c2.pctBudget);
       pctTot += num(v); pctTotT += num(vt);
       const ec = num(v) - num(vt);
-      return { i, nom: c2.poste, lev: c2.levier,
+      return { i, nom: c2.poste, lev: c2.levier, special: c2.special || null, hors: !!c2.hors,
         description: c2.description || '', gestion: c2.gestion || '', pcmn: c2.pcmn || '',
         setNom: setL(i, 'poste'), setDesc: setL(i, 'description'),
         setGestion: setL(i, 'gestion'), setPcmn: setL(i, 'pcmn'),
@@ -3280,6 +3298,7 @@ class App {
     const valeursAvant = (iPal) => {
       const opts = [{ v: 'ca', nom: 'Chiffre d’affaires (100 %)' }];
       ordre.forEach(cat => opts.push({ v: 'cat:' + cat, nom: 'Total ' + cat }));
+      opts.push({ v: 'tout', nom: 'toutes les rubriques' });
       paliersSrc.slice(0, iPal).forEach(z => { if (z.nom) { opts.push({ v: 'pal:' + z.nom, nom: z.nom }); } });
       return opts;
     };
@@ -3287,6 +3306,8 @@ class App {
       if (!cle) { return 0; }
       if (cle === 'ca') { return 100; }
       if (cle.indexOf('cat:') === 0) { return (sommeCat[cle.slice(4)] || {}).pct || 0; }
+      // « toutes les rubriques » (sous-total du CRM : disponible pour rémunération = CA − tout).
+      if (cle === 'tout') { return Object.keys(sommeCat).reduce((a, k) => a + (sommeCat[k].pct || 0), 0); }
       if (cle.indexOf('pal:') === 0) {
         const k = paliersSrc.findIndex(z => z.nom === cle.slice(4));
         return (k >= 0 && k < jusqu) ? palPct(k) : 0;
@@ -3297,6 +3318,7 @@ class App {
       if (!cle) { return 0; }
       if (cle === 'ca') { return 100; }
       if (cle.indexOf('cat:') === 0) { return (sommeCat[cle.slice(4)] || {}).pctT || 0; }
+      if (cle === 'tout') { return Object.keys(sommeCat).reduce((a, k) => a + (sommeCat[k].pctT || 0), 0); }
       if (cle.indexOf('pal:') === 0) {
         const k = paliersSrc.findIndex(z => z.nom === cle.slice(4));
         return (k >= 0 && k < jusqu) ? palPctT(k) : 0;

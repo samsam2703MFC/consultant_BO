@@ -455,8 +455,8 @@
       "nl": "Premies"
      },
      "texte": {
-      "fr": "Où en sont les vendeuses : les primes du magasin (toute l’équipe gagne ensemble) et les primes individuelles.\nPour chacune : la cible, où en est chaque personne, « en tête » ou « gagnée ».\nÉligibles et « sous le minimum d’heures » : qui peut toucher la prime ce mois.\nLecture seule : les primes se posent et se règlent au cockpit.",
-      "nl": "Waar de verkoopsters staan: de winkelpremies (het hele team wint samen) en de individuele premies.\nVoor elke premie: het doel, waar elke persoon staat, « aan kop » of « gewonnen ».\nIn aanmerking en « onder het minimum aantal uren »: wie de premie deze maand kan krijgen.\nAlleen-lezen: premies worden ingesteld en uitbetaald in de cockpit."
+      "fr": "Où en sont les vendeuses : les primes du magasin (toute l’équipe gagne ensemble) et les primes individuelles.\nPour chacune : la cible, où en est chaque personne, « en tête » ou « gagnée ».\nLe franchisé reste dans le tableau avec ses chiffres, en gris : « franchisé · hors primes », et « sans prime » en total. Il n’a pas droit aux primes et ne compte ni parmi les éligibles ni parmi les vendeuses.\nÉligibles et « sous le minimum d’heures » : qui peut toucher la prime ce mois.\nLecture seule : les primes se posent et se règlent au cockpit.",
+      "nl": "Waar de verkoopsters staan: de winkelpremies (het hele team wint samen) en de individuele premies.\nVoor elke premie: het doel, waar elke persoon staat, « aan kop » of « gewonnen ».\nDe franchisenemer blijft in de tabel met zijn cijfers, in het grijs: « franchisé · hors primes », en « sans prime » als totaal. Hij heeft geen recht op premies en telt niet mee bij wie in aanmerking komt, noch bij de verkoopsters.\nIn aanmerking en « onder het minimum aantal uren »: wie de premie deze maand kan krijgen.\nAlleen-lezen: premies worden ingesteld en uitbetaald in de cockpit."
      },
      "critique": false,
      "photo": "dash-primes.jpg",

@@ -147,6 +147,7 @@ ART = {
   '27': ('Premies', [
     'Waar de verkoopsters staan: de winkelpremies (het hele team wint samen) en de individuele premies.',
     'Voor elke premie: het doel, waar elke persoon staat, « aan kop » of « gewonnen ».',
+    'De franchisenemer blijft in de tabel met zijn cijfers, in het grijs: « franchisé · hors primes », en « sans prime » als totaal. Hij heeft geen recht op premies en telt niet mee bij wie in aanmerking komt, noch bij de verkoopsters.',
     'In aanmerking en « onder het minimum aantal uren »: wie de premie deze maand kan krijgen.',
     'Alleen-lezen: premies worden ingesteld en uitbetaald in de cockpit.']),
   '28': ('Op de telefoon', [
