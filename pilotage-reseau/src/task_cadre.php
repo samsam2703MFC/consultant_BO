@@ -58,6 +58,8 @@ function tkRoute(string $method, string $path): array
     if ($method === 'GET' && preg_match('#^/task/sop/([\w-]{1,32})/controles$#', $path, $m)) { return tkSopControles($m[1]); }
     if ($method === 'GET' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkTache((int) $m[1]); }
     if ($method === 'POST' && $path === '/task/qui') { return tkQui(body()); }
+    if ($method === 'POST' && $path === '/task/qui/modifier') { return tkQuiModifier(body()); }
+    if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkChecklistModifier((int) $m[1], body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
     if ($method === 'POST' && $path === '/task/assistant/apercu') { return tkConstruire(body(), false, false); }
@@ -395,10 +397,10 @@ function tkTache(int $id): array
 function tkQui(array $b): array
 {
     $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) ($b['ids'] ?? [])), fn ($i) => $i > 0))), 0, 80);
-    if ($ids === []) { return ['qui' => (object) []]; }
-    [$nivs] = tkLireListe('/position-levels');
+    if ($ids === []) { return ['qui' => (object) [], 'choix' => tkQuiChoix()]; }
+    $choix = tkQuiChoix();
     $noms = [];
-    foreach ((array) $nivs as $l) { $n = tkNiveauNorm($l); if ($n['id'] > 0) { $noms[$n['id']] = $n; } }
+    foreach ($choix['niveaux'] as $n) { $noms[$n['id']] = $n; }
     $parTache = tkScanNiveaux($ids)['parTache'];
     $req = [];
     foreach ($ids as $id) { $req[$id] = '/tasks/' . $id . '/controllers'; }
@@ -408,19 +410,134 @@ function tkQui(array $b): array
         $fait = [];
         foreach ($parTache[$id] ?? [] as $lv) {
             $n = $noms[$lv['niveau']] ?? ['id' => $lv['niveau'], 'nom' => 'Niveau #' . $lv['niveau'], 'poste' => ''];
-            $fait[$n['id']] = ['id' => $n['id'], 'nom' => $n['nom'], 'poste' => $n['poste']];
+            $fait[$n['id']] = ['id' => $n['id'], 'nom' => $n['nom'], 'poste' => $n['poste'], 'route' => $lv['route']];
         }
         $rep = $ctrls[$id] ?? null;
         $controle = [];
         foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $c) {
             $type = tkTxt($c['controller_type'] ?? $c['type'] ?? '');
             $nom = $type === 'self' ? 'La personne qui la fait' : tkTxt($c['position_name'] ?? $c['name'] ?? ('#' . ($c['position_id'] ?? '?')));
-            $controle[] = ['type' => $type, 'nom' => $nom];
+            $controle[] = ['id' => (int) ($c['id'] ?? 0), 'type' => $type, 'positionId' => (int) ($c['position_id'] ?? 0), 'nom' => $nom];
         }
         $out[(string) $id] = ['fait' => array_values($fait), 'controle' => $controle,
             'erreur' => $rep === null ? 'contrôleurs illisibles' : null];
     }
-    return ['qui' => $out];
+    return ['qui' => $out, 'choix' => $choix];
+}
+
+/**
+ * Les choix de « qui fait » (niveaux de poste, nommés avec leur poste) et de « qui contrôle »
+ * (postes du panel, dont les postes consultants), lus une fois par requête.
+ *
+ * @return array{niveaux: list<array{id:int, nom:string, poste:string, posteId:int}>, postes: list<array{id:int, nom:string, type:string}>}
+ */
+function tkQuiChoix(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    [$pos] = tkLireListe('/positions');
+    $postes = [];
+    foreach ((array) $pos as $p) {
+        $id = (int) ($p['id'] ?? $p['position_id'] ?? 0);
+        if ($id > 0) { $postes[$id] = ['id' => $id, 'nom' => tkTxt($p['name'] ?? $p['base_name'] ?? ('Poste #' . $id)), 'type' => tkTxt($p['app_type'] ?? $p['position_app_type'] ?? '')]; }
+    }
+    [$nivs] = tkLireListe('/position-levels');
+    $niveaux = [];
+    foreach ((array) $nivs as $l) {
+        $n = tkNiveauNorm($l);
+        if ($n['id'] <= 0) { continue; }
+        if ($n['poste'] === '' && isset($postes[$n['posteId']])) { $n['poste'] = $postes[$n['posteId']]['nom']; }
+        $niveaux[] = $n;
+    }
+    usort($niveaux, fn ($a, $b) => strnatcasecmp($a['poste'] . ' ' . $a['nom'], $b['poste'] . ' ' . $b['nom']));
+    $postes = array_values($postes);
+    usort($postes, fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
+    return $memo = ['niveaux' => $niveaux, 'postes' => $postes];
+}
+
+/**
+ * POST /task/qui/modifier — change en direct qui fait / qui contrôle une tâche, une opération à la fois :
+ *   {taskId, ajouterNiveau: id}      → POST /{route}/{id}/tasks {task_id}
+ *   {taskId, retirerNiveau: id, route} → DELETE /{route}/{id}/tasks/{taskId}
+ *   {taskId, ajouterControleur: {type: self|position, positionId}} → POST /tasks/{id}/controllers
+ *   {taskId, retirerControleur: id du contrôleur} → DELETE /tasks/{id}/controllers/{id}
+ * Rend la nouvelle ligne « qui » de la tâche, relue au panel.
+ */
+function tkQuiModifier(array $b): array
+{
+    $tid = (int) ($b['taskId'] ?? 0);
+    if ($tid <= 0) { http_response_code(422); return ['error' => 'tâche attendue']; }
+    $ops = [];
+    if (!empty($b['ajouterNiveau'])) {
+        $lid = (int) $b['ajouterNiveau'];
+        // La route que le panel emploie le plus (voir tkScanNiveaux) reçoit le rattachement.
+        $fam = tkScanNiveaux([$tid])['familles'];
+        $route = ($fam['position-levels'] ?? 0) > ($fam['levels'] ?? 0) ? 'position-levels' : 'levels';
+        $ops[] = ['quoi' => 'Rattacher au niveau #' . $lid, 'methode' => 'POST', 'chemin' => '/' . $route . '/' . $lid . '/tasks', 'corps' => ['task_id' => $tid]];
+    } elseif (!empty($b['retirerNiveau'])) {
+        $lid = (int) $b['retirerNiveau'];
+        $route = ($b['route'] ?? '') === 'position-levels' ? 'position-levels' : 'levels';
+        $ops[] = ['quoi' => 'Détacher du niveau #' . $lid, 'methode' => 'DELETE', 'chemin' => '/' . $route . '/' . $lid . '/tasks/' . $tid, 'corps' => null];
+    } elseif (is_array($b['ajouterControleur'] ?? null)) {
+        $type = ($b['ajouterControleur']['type'] ?? '') === 'self' ? 'self' : 'position';
+        $corps = ['controller_type' => $type];
+        if ($type === 'position') {
+            $pid = (int) ($b['ajouterControleur']['positionId'] ?? 0);
+            if ($pid <= 0) { http_response_code(422); return ['error' => 'poste du contrôleur attendu']; }
+            $corps['position_id'] = $pid;
+        }
+        $ops[] = ['quoi' => 'Ajouter un contrôleur', 'methode' => 'POST', 'chemin' => '/tasks/' . $tid . '/controllers', 'corps' => $corps];
+    } elseif (!empty($b['retirerControleur'])) {
+        $cid = (int) $b['retirerControleur'];
+        $ops[] = ['quoi' => 'Retirer le contrôleur #' . $cid, 'methode' => 'DELETE', 'chemin' => '/tasks/' . $tid . '/controllers/' . $cid, 'corps' => null];
+    } else { http_response_code(422); return ['error' => 'rien à changer']; }
+
+    foreach ($ops as $k => $op) {
+        $r = tkReq($op['methode'], $op['chemin'], $op['corps']);
+        $ops[$k] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    }
+    $ok = !array_filter($ops, fn ($o) => !$o['ok']);
+    journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ' : ' . $ops[0]['quoi'] . ($ok ? '' : ' — refusé par le panel'));
+    if (!$ok) { http_response_code(502); return ['error' => $ops[0]['erreur'] ?? 'refusé par le panel', 'operations' => $ops]; }
+    $q = tkQui(['ids' => [$tid]]);
+    return ['ok' => true, 'operations' => $ops, 'qui' => $q['qui']];
+}
+
+/**
+ * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?} — modifie une checklist du panel.
+ * Le corps reprend les champs actuels de la checklist (le panel remet à zéro un champ absent) ; PATCH,
+ * et PUT si le panel ne connaît pas PATCH sur cette route.
+ */
+function tkChecklistModifier(int $id, array $b): array
+{
+    [$cls, $e] = tkLireListe('/operational-framework/checklists');
+    $c = null;
+    foreach ((array) $cls as $x) { if ((int) ($x['id'] ?? 0) === $id) { $c = $x; break; } }
+    if ($c === null) { http_response_code(404); return ['error' => 'checklist #' . $id . ' absente du panel' . ($e ? ' : ' . $e : '')]; }
+    $corps = ['name' => tkTxt($c['name'] ?? ''), 'description' => tkTxt($c['description'] ?? ''),
+        'workstation_id' => isset($c['workstation_id']) ? (int) $c['workstation_id'] : null,
+        'execution_time' => $c['execution_time'] ?? null];
+    if (array_key_exists('is_active', $c)) { $corps['is_active'] = $c['is_active']; }
+    if (array_key_exists('nom', $b)) {
+        $n = trim((string) $b['nom']);
+        if ($n === '') { http_response_code(422); return ['error' => 'le nom ne peut pas être vide']; }
+        $corps['name'] = $n;
+    }
+    if (array_key_exists('description', $b)) { $corps['description'] = (string) $b['description']; }
+    if (array_key_exists('posteId', $b)) { $p = (int) $b['posteId']; $corps['workstation_id'] = $p > 0 ? $p : null; }
+    if (array_key_exists('heure', $b)) {
+        $h = trim((string) $b['heure']);
+        if ($h !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h)) { http_response_code(422); return ['error' => 'heure attendue au format HH:MM']; }
+        $corps['execution_time'] = $h === '' ? null : tkHeure($h, $c['execution_time'] ?? null);
+    }
+    $op = ['quoi' => 'Modifier la checklist', 'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
+    if (!empty($b['apercu'])) { return ['id' => $id, 'operations' => [$op]]; }
+    $r = tkReq('PATCH', $op['chemin'], $corps);
+    if ($r['erreur'] !== null && in_array($r['code'], [404, 405], true)) { $op['methode'] = 'PUT'; $r = tkReq('PUT', $op['chemin'], $corps); }
+    $op += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») modifiée au panel' . ($op['ok'] ? '' : ' — refusé'));
+    if (!$op['ok']) { http_response_code(502); return ['error' => $op['erreur'], 'operations' => [$op]]; }
+    return ['id' => $id, 'ok' => true, 'operations' => [$op]];
 }
 
 /* ─────────── structure (pour l'assistant) ─────────── */

@@ -219,7 +219,7 @@
     return `<div class="tk-card"><div class="tk-ct"><div class="tk-cl-titre"><div class="tk-t15">${esc(titre)}</div>${sous ? `<div class="tk-sous">${esc(sous)}</div>` : ''}</div>
       <span class="sp"></span>
       <input class="tk-in" data-f="filtre" placeholder="Filtrer…" value="${esc(S.filtre)}" style="width:170px">
-      ${c ? `<button class="tk-btn" data-a="wzOuvrir" data-mode="existante">＋ Ajouter des tâches</button>` : ''}</div>
+      ${c ? `<button class="tk-btn" data-a="clModifier" data-id="${c.id}">✎ Modifier</button><button class="tk-btn" data-a="wzOuvrir" data-mode="existante">＋ Ajouter des tâches</button>` : ''}</div>
       ${selection}
       <div class="tk-defile"><table class="tk-tab tk-taches"><thead><tr>
         <th class="c" style="width:34px"><input type="checkbox" data-a="tous" ${tous ? 'checked' : ''} aria-label="Tout cocher" title="Tout cocher"></th>
@@ -676,7 +676,7 @@
     const L = taches().filter(t => t.actif !== false).map(t => {
       const c = cl.get(t.id); const f = String(t.frequence || '').toUpperCase(); const j = String(t.jour || '').toUpperCase();
       const js = !f || f === 'DAILY' ? PL_JOURS.map(x => x[0]) : PL_JOURS.some(x => x[0] === j) ? [j] : [];
-      return { t, js, poste: (c && c.poste) || 'Sans poste', cl: c ? c.nom : 'Dans aucune checklist' };
+      return { t, js, poste: (c && c.poste) || 'Sans poste', cl: c ? c.nom : 'Dans aucune checklist', clId: c ? c.id : null };
     });
     const rang = p => { const i = PL_ORDRE.indexOf(sansAccent(p)); return i < 0 ? (p === 'Sans poste' ? 99 : 50) : i; };
     const postes = [...new Set(L.map(x => x.poste))].sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr'));
@@ -704,12 +704,28 @@
       ${sansJour ? `<div class="tk-pied mu" style="font-size:11.5px">${sansJour} tâche${sansJour > 1 ? 's' : ''} active${sansJour > 1 ? 's' : ''} sans jour reconnu (fréquence ou jour inconnu) : pas dans le planning.</div>` : ''}</div>`;
   }
   // « Fait par » = les niveaux de poste qui portent la tâche ; « Contrôlé par » = ses contrôleurs.
+  // Modifiable en direct : × retire au panel, la liste « ＋ » ajoute (une opération, relue aussitôt).
+  const nomNiv = n => n.poste && !n.nom.includes(n.poste) ? `${n.nom} · ${n.poste}` : n.nom;
   function quiHtml(id, m) {
     const q = S.qui && S.qui[id];
-    if (!q) { return m.quiLecture ? '<span class="pl-qui"><span>Fait par</span><span class="mu">lecture…</span></span>' : ''; }
-    const fait = q.fait.length ? q.fait.map(n => esc(n.nom)).join(', ') : '<span class="wa">aucun niveau de poste</span>';
-    const ctrl = q.erreur ? '<span class="mu">illisible</span>' : q.controle.length ? q.controle.map(c => esc(c.nom)).join(', ') : '<span class="wa">personne</span>';
-    return `<span class="pl-qui"><span>Fait par</span><span>${fait}</span></span><span class="pl-qui"><span>Contrôlé par</span><span>${ctrl}</span></span>`;
+    if (!q) { return m.quiLecture ? '<div class="pl-qui"><span>Fait par</span><span class="mu">lecture…</span></div>' : ''; }
+    const ch = S.quiChoix || { niveaux: [], postes: [] };
+    const occ = m.occupe === id ? ' disabled' : '';
+    const puce = (txt, a, attrs) => `<span class="pl-puce">${esc(txt)}<button data-a="${a}" data-t="${id}" ${attrs} title="Retirer"${occ}>×</button></span>`;
+    const dejaN = new Set(q.fait.map(n => n.id));
+    const dejaP = new Set(q.controle.filter(c => c.type === 'position').map(c => c.positionId));
+    const aSelf = q.controle.some(c => c.type === 'self');
+    const ajN = `<select class="pl-aj" data-pq="niv" data-t="${id}"${occ}><option value="">＋ niveau</option>${ch.niveaux.filter(n => !dejaN.has(n.id)).map(n => `<option value="${n.id}">${esc(nomNiv(n))}</option>`).join('')}</select>`;
+    const ajC = `<select class="pl-aj" data-pq="ctl" data-t="${id}"${occ}><option value="">＋ contrôleur</option>${aSelf ? '' : '<option value="self">La personne qui la fait</option>'}${ch.postes.filter(p => !dejaP.has(p.id)).map(p => `<option value="${p.id}">${esc(p.nom)}</option>`).join('')}</select>`;
+    const fait = q.fait.map(n => puce(nomNiv(n), 'plRetNiv', `data-n="${n.id}" data-route="${esc(n.route || '')}"`)).join('') || '<span class="wa">aucun niveau</span>';
+    const ctrl = q.erreur ? '<span class="mu">illisible</span>' : q.controle.map(c => puce(c.nom, 'plRetCtl', `data-c="${c.id}"`)).join('') || '<span class="wa">personne</span>';
+    return `<div class="pl-qui"><span>Fait par</span><span class="pl-pz">${fait}${ajN}</span></div><div class="pl-qui"><span>Contrôlé par</span><span class="pl-pz">${ctrl}${q.erreur ? '' : ajC}</span></div>`;
+  }
+  async function quiChanger(m, id, corps) {
+    m.occupe = id; m.quiErr = null; rendre();
+    try { const r = await api('POST', '/task/qui/modifier', Object.assign({ taskId: id }, corps)); Object.assign(S.qui, r.qui || {}); }
+    catch (e) { m.quiErr = 'Tâche #' + id + ' : ' + e.message; }
+    m.occupe = null; if (S.modale === m) { rendre(); }
   }
   // Qui fait, qui contrôle : lu au panel pour les tâches de la zone qu'on n'a pas encore lues
   // (80 par appel, le plafond de la route).
@@ -719,7 +735,7 @@
     if (!ids.length) { return; }
     m.quiLecture = true; m.quiErr = null; rendre();
     try {
-      for (let i = 0; i < ids.length; i += 80) { const r = await api('POST', '/task/qui', { ids: ids.slice(i, i + 80) }); Object.assign(S.qui, r.qui || {}); }
+      for (let i = 0; i < ids.length; i += 80) { const r = await api('POST', '/task/qui', { ids: ids.slice(i, i + 80) }); Object.assign(S.qui, r.qui || {}); if (r.choix) { S.quiChoix = r.choix; } }
     } catch (e) { m.quiErr = e.message; }
     m.quiLecture = false; if (S.modale === m) { rendre(); }
   }
@@ -750,9 +766,10 @@
     return `<div class="tk-ct"><div><h2>${m.p ? esc(posteAff(m.p)) : 'Toutes les zones'} · ${jr ? jr[2] : ''}</h2><div class="tk-sous">${T.length} tâche${T.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} · ${esc(cls)}</div></div><button class="tk-x" data-a="fermer">×</button></div>
       <div class="pl-f"><input class="tk-in" data-pf="1" placeholder="Filtrer les tâches…" value="${esc(m.f)}"><div class="pl-seg">${sg('tout', 'Toutes', T.length)}${sg('photo', 'Photo', nPh)}${sg('oblig', 'Obligatoires', nOb)}</div>
         <div class="pl-sels">${selZone}${selCl}${liste('fait', 'Fait par', cFait)}${liste('ctrl', 'Contrôlé par', cCtrl)}</div>${m.fait || m.ctrl || m.cl ? '<button class="tk-lien" data-a="plSansQui">tout montrer</button>' : ''}</div>
-      ${m.quiErr ? `<div class="tk-err" style="margin:10px 16px 0">Qui fait / qui contrôle : lecture impossible (${esc(m.quiErr)}).</div>` : ''}
-      <ul class="pl-l">${V.map(x => `<li><button data-a="plTache" data-id="${x.t.id}"><span class="h">${esc(x.t.heure || '—')}</span><span class="n">${esc(x.t.nom)}${quiHtml(x.t.id, m)}</span><span class="i">${x.t.photo ? CAM : ''}</span><span class="c">${esc(codeCl(x.cl))}</span></button></li>`).join('') || '<li class="mu" style="padding:14px 0;font-size:12px">Aucune tâche pour ce filtre.</li>'}</ul>
-      <div class="tk-pied"><span class="mu" style="font-size:11.5px">Un clic sur une tâche l’ouvre pour la modifier.</span><span style="flex:1"></span><button class="tk-btn" data-a="fermer">Fermer</button></div>`;
+      ${m.cl && T[0] && T[0].clId ? `<div class="pl-clbar"><span class="mu">${esc(m.cl)}</span><button class="tk-btn" data-a="clModifier" data-id="${T[0].clId}">✎ Modifier la checklist</button></div>` : ''}
+      ${m.quiErr ? `<div class="tk-err" style="margin:10px 16px 0">${esc(m.quiErr)}</div>` : ''}
+      <ul class="pl-l">${V.map(x => `<li><span class="h">${esc(x.t.heure || '—')}</span><span class="n"><button class="pl-nom" data-a="plTache" data-id="${x.t.id}" title="Modifier la tâche">${esc(x.t.nom)}</button>${quiHtml(x.t.id, m)}</span><span class="i">${x.t.photo ? CAM : ''}</span><span class="c">${esc(codeCl(x.cl))}</span></li>`).join('') || '<li class="mu" style="padding:14px 0;font-size:12px">Aucune tâche pour ce filtre.</li>'}</ul>
+      <div class="tk-pied"><span class="mu" style="font-size:11.5px">Un clic sur le nom ouvre la tâche · × et ＋ changent qui fait et qui contrôle, directement dans le panel.</span><span style="flex:1"></span><button class="tk-btn" data-a="fermer">Fermer</button></div>`;
   }
 
   /* --- fenêtres ----------------------------------------------------------- */
@@ -767,6 +784,18 @@
         <div class="tk-form" style="padding:0"><label>Téléphone</label><input class="tk-in" data-m="phone" autocomplete="username" value="${esc(m.f.phone || '')}">
         <label>Mot de passe</label><input class="tk-in" type="password" data-m="password" autocomplete="current-password"></div></div>
         <div class="tk-pied"><button class="tk-btn prim" data-a="seConnecter" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Connexion…' : 'Se connecter'}</button><button class="tk-btn" data-a="fermer">Annuler</button></div>`;
+    } else if (m.type === 'clModif') {
+      const f = m.f; const postes = (S.struct && S.struct.postes) || [];
+      corps = `<div class="tk-ct"><h2>Modifier la checklist #${m.id}</h2><button class="tk-x" data-a="fermer">×</button></div>
+        <div class="tk-form">
+          <label>Nom</label><input class="tk-in large" data-m="nom" value="${esc(f.nom)}">
+          <label>Description</label><textarea class="tk-in" data-m="description" style="font-family:var(--font-ui);font-size:12px">${esc(f.description)}</textarea>
+          <label>Zone de production</label><select class="tk-in" data-m="posteId">${postes.length ? '' : `<option value="${f.posteId}">${esc(f.poste || 'lecture…')}</option>`}${postes.map(p => `<option value="${p.id}" ${String(p.id) === String(f.posteId) ? 'selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
+          <label>Heure</label><input type="time" class="tk-in" data-m="heure" value="${esc(f.heure)}">
+        </div>
+        ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
+        <div class="tk-pied"><button class="tk-btn prim" data-a="clEnregistrer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button><button class="tk-btn" data-a="fermer">Annuler</button>
+          <span class="mu" style="font-size:11.5px">Les tâches de la checklist ne changent pas.</span></div>`;
     } else if (m.type === 'planning') {
       corps = modalePlanning(m);
     } else if (m.type === 'brut') {
@@ -842,6 +871,30 @@
         return quiCharger(S.modale);
       }
       case 'plSeg': S.modale.k = el.dataset.v; return rendre();
+      case 'plRetNiv': { const m = S.modale; const q = S.qui[el.dataset.t]; const n = q && q.fait.find(x => String(x.id) === el.dataset.n);
+        if (!confirm(`Retirer « ${n ? nomNiv(n) : '#' + el.dataset.n} » de la tâche #${el.dataset.t} dans le panel ? Ce niveau ne la verra plus.`)) { return; }
+        return quiChanger(m, +el.dataset.t, { retirerNiveau: +el.dataset.n, route: el.dataset.route }); }
+      case 'plRetCtl': { const m = S.modale; const q = S.qui[el.dataset.t]; const c = q && q.controle.find(x => String(x.id) === el.dataset.c);
+        if (!confirm(`Retirer le contrôleur « ${c ? c.nom : '#' + el.dataset.c} » de la tâche #${el.dataset.t} dans le panel ?`)) { return; }
+        return quiChanger(m, +el.dataset.t, { retirerControleur: +el.dataset.c }); }
+      case 'clModifier': {
+        const c = checklist(id); if (!c) { return; }
+        const p = ((S.struct && S.struct.postes) || []).find(x => x.nom === c.poste);
+        S.modale = { type: 'clModif', id: +id, retour: S.modale && S.modale.type === 'planning' ? S.modale : null,
+          f: { nom: c.nom, description: c.description || '', heure: c.heure || '', posteId: (c.brut && c.brut.workstation_id) || (p && p.id) || '', poste: c.poste } };
+        rendre();
+        if (!S.struct) { try { S.struct = await api('GET', '/task/structure'); } catch (e) { S.struct = { sousCategories: [], postes: [], erreurs: {} }; } rendre(); }
+        return;
+      }
+      case 'clEnregistrer': {
+        const m = S.modale; m.envoi = true; m.err = null; rendre();
+        try {
+          await api('PATCH', '/task/checklists/' + m.id, { nom: m.f.nom, description: m.f.description, posteId: +m.f.posteId || 0, heure: m.f.heure });
+          S.msg = { k: 'ok', t: 'Checklist « ' + esc(m.f.nom) + ' » modifiée dans le panel.' };
+          const r = m.retour; S.modale = r; if (r) { r.cl = m.f.nom; }
+          return charger(true);
+        } catch (e) { m.err = e.message; m.envoi = false; return rendre(); }
+      }
       case 'plSansQui': S.modale.fait = ''; S.modale.ctrl = ''; S.modale.cl = ''; return rendre();
       case 'plTache': { const t = tache(id); if (!t) { return; } S.modale = { type: 'modif', id: +id, f: champsModif(t), plan: null }; return rendre(); }
       // Une checklist choisie en bas de la liste : le tableau est en haut, on y remonte.
@@ -1029,6 +1082,11 @@
   });
   $.addEventListener('change', ev => {
     const el = ev.target;
+    if (el.dataset.pq && S.modale && S.modale.type === 'planning' && el.value) {
+      const m = S.modale; const t = +el.dataset.t; const v = el.value;
+      if (el.dataset.pq === 'niv') { return quiChanger(m, t, { ajouterNiveau: +v }); }
+      return quiChanger(m, t, { ajouterControleur: v === 'self' ? { type: 'self' } : { type: 'position', positionId: +v } });
+    }
     if (el.dataset.ps && S.modale && S.modale.type === 'planning') {
       const m = S.modale; m[el.dataset.ps] = el.value;
       if (el.dataset.ps === 'p') { m.cl = ''; rendre(); return quiCharger(m); }

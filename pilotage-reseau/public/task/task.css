@@ -179,11 +179,18 @@ html.tk-emb .tk-voile{position:absolute;inset:0 0 auto 0;min-height:100%;padding
 .pl-seg button:first-child{border-left:none}.pl-seg button.on{background:var(--ink);color:#fff}
 .pl-l{list-style:none;margin:0;padding:4px 16px 10px;max-height:60vh;overflow:auto}
 .pl-l li{border-bottom:1px solid var(--tk-trait)}
-.pl-l li button{display:grid;grid-template-columns:48px minmax(0,1fr) 18px 70px;gap:10px;align-items:center;width:100%;border:none;background:none;padding:9px 0;text-align:left;font:400 12.5px var(--font-ui);color:var(--ink);cursor:pointer}
-.pl-l li button:hover .n{color:var(--accent)}
+.pl-l li{display:grid;grid-template-columns:48px minmax(0,1fr) 18px 70px;gap:10px;align-items:start;padding:10px 0;font-size:12.5px}
+.pl-nom{border:none;background:none;padding:0;text-align:left;font:400 13px var(--font-ui);color:var(--ink);cursor:pointer}
+.pl-nom:hover{color:var(--accent)}
+.pl-pz{display:flex;flex-wrap:wrap;gap:4px;align-items:center}
+.pl-puce{display:inline-flex;align-items:center;gap:2px;background:var(--tk-doux);border-radius:6px;padding:2px 2px 2px 7px;font-size:11px;color:var(--ink)}
+.pl-puce button{border:none;background:none;color:var(--muted);cursor:pointer;font-size:13px;line-height:1;padding:0 4px}
+.pl-puce button:hover{color:var(--danger)}
+.pl-aj{font:400 11px var(--font-ui);border:1px dashed var(--tk-trait2);border-radius:6px;background:#fff;color:var(--muted-2);padding:2px 4px;max-width:180px}
+.pl-clbar{display:flex;align-items:center;gap:10px;justify-content:space-between;padding:8px 16px;border-bottom:1px solid var(--tk-trait);font-size:12px}
 .pl-l .h{font-weight:700;font-variant-numeric:tabular-nums}.pl-l .i{color:var(--accent);display:inline-flex}.pl-l .c{font-size:10.5px;color:var(--muted);text-align:right}
 .pl-l .n{min-width:0}
-.pl-qui{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;font-size:11px;color:var(--muted-2);margin-top:3px;line-height:1.4}
+.pl-qui{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px;font-size:11px;color:var(--muted-2);margin-top:5px;line-height:1.4;align-items:start}
 .pl-qui>span:first-child{color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;white-space:nowrap;padding-top:1px}
 .pl-sels{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;width:100%}
 .pl-sel{width:100%;min-width:0;font-size:12px;padding:7px 9px}
