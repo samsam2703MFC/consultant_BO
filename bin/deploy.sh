@@ -625,6 +625,10 @@ nohup php "$TARGET_DIR/bin/scouting_refresh.php" >>/var/log/cockpit-scouting.log
 # (le verrou de scouting_refresh.php les sérialise de toute façon).
 nohup sh -c "sleep 900; php '$TARGET_DIR/bin/scouting_refresh.php' --zoning" >>/var/log/cockpit-scouting.log 2>&1 </dev/null &
 log "Cache OpenStreetMap du scouting : /etc/cron.d/cockpit-scouting — commerces dimanche 4 h 15, zoning d'activité dimanche 6 h 15 ; relecture des secteurs manquants lancée en arrière-plan (journal : /var/log/cockpit-scouting.log)."
+# Benchmark concurrents : les relevés du référentiel (src/data/benchmark_*.json) partent
+# dans l'ERP par le compte consultant du panel, une seule fois par relevé (--si-nouveau).
+nohup php "$TARGET_DIR/bin/benchmark.php" semer tout --appliquer --si-nouveau >>/var/log/cockpit-benchmark.log 2>&1 </dev/null &
+log "Benchmark concurrents : relevés cougnou / galette posés dans l'ERP en arrière-plan s'ils sont nouveaux (journal : /var/log/cockpit-benchmark.log)."
 
 # Le catalogue et le coût matière viennent d'être branchés sur les vraies
 # tables. Un mauvais rapprochement ne lève aucune erreur : il rend un chiffre

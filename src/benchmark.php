@@ -360,10 +360,15 @@ function benchmarkNomCle(string $n): string
  *
  * @param list<int> $magasins vide = tous
  */
-function benchmarkSemer(string $famille, bool $simuler = true, array $magasins = []): array
+function benchmarkSemer(string $famille, bool $simuler = true, array $magasins = [], bool $siNouveau = false): array
 {
     $d = benchmarkDonnees($famille);
     $releve = (string) $d['releve'];
+    $reg = setting('benchmark', []);
+    if ($siNouveau && !$simuler && is_array($reg) && ($reg['semes'][$famille] ?? '') === $releve) {
+        return ['ok' => true, 'famille' => $famille, 'simuler' => false, 'releve' => $releve, 'deja' => true,
+            'compte' => ['concurrents' => 0, 'observations' => 0, 'items' => 0, 'deja' => 0, 'erreurs' => 0], 'journal' => ["relevé $famille $releve déjà posé dans l'ERP"]];
+    }
     $tag = '[cockpit:' . $famille . ':' . $releve . ']';
     $libelle = (string) ($d['libelle'] ?? $famille);
     $produits = $d['nous']['correspondance'] ?? [];
@@ -429,6 +434,12 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
             $journal[] = "magasin $shop : « {$c['nom']} » relevé ($libelle, $releve, " . count($items) . ' item(s))';
         }
     }
+    if (!$simuler && $n['erreurs'] === 0) {
+        $reg = setting('benchmark', []);
+        if (!is_array($reg)) { $reg = []; }
+        $reg['semes'][$famille] = $releve;
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['benchmark', json_encode($reg, JSON_UNESCAPED_UNICODE)]);
+    }
     if (!$simuler && function_exists('journalAdd')) {
         journalAdd('Cockpit', 'benchmark', 'Benchmark ' . $libelle, "Relevé $libelle $releve posé : {$n['concurrents']} concurrent(s), {$n['observations']} observation(s), {$n['items']} item(s), {$n['erreurs']} erreur(s).");
     }
@@ -436,10 +447,10 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
 }
 
 /** Toutes les familles d'un coup. */
-function benchmarkSemerTout(bool $simuler = true, array $magasins = []): array
+function benchmarkSemerTout(bool $simuler = true, array $magasins = [], bool $siNouveau = false): array
 {
     $out = [];
-    foreach (BENCHMARK_FAMILLES as $f) { $out[$f] = benchmarkSemer($f, $simuler, $magasins); }
+    foreach (BENCHMARK_FAMILLES as $f) { $out[$f] = benchmarkSemer($f, $simuler, $magasins, $siNouveau); }
     return ['ok' => !array_filter($out, fn ($r) => !$r['ok']), 'familles' => $out];
 }
 
@@ -791,7 +802,7 @@ function benchmarkRoutine(bool $forcer = false, bool $envoyer = true): array
 
     // Les relevés du référentiel partent d'eux-mêmes dans l'ERP, par le même compte
     // consultant que les promotions : rejouable, une observation déjà posée n'est pas refaite.
-    $semis = BenchmarkApi::disponible() ? benchmarkSemerTout(false) : null;
+    $semis = BenchmarkApi::disponible() ? benchmarkSemerTout(false, [], true) : null;
     $verif = benchmarkVerifier(4, false);
     $snap = [];
     foreach (BenchmarkApi::magasins() as $shop => $ville) {
@@ -815,6 +826,9 @@ function benchmarkRoutine(bool $forcer = false, bool $envoyer = true): array
         $sujet = 'Benchmark ' . implode(' + ', $familles) . ' — ' . $now->format('d/m/Y') . ($verif['ok'] ? '' : ' (API Benchmark : ' . count(array_filter($verif['etapes'], fn ($x) => !$x['ok'])) . ' route(s) en échec)');
         foreach ($dest as $m) { $envois[$m] = Smtp::envoyer($m, $sujet, $html) ? 'envoye' : ('erreur : ' . (Smtp::$lastError ?? '?')); }
     }
+    // Relu : le semis vient d'y noter les relevés posés (`semes`), il ne faut pas les écraser.
+    $s = setting('benchmark', []);
+    if (!is_array($s)) { $s = []; }
     $s['dernierPassage'] = $jour;
     $s['dernierResume'] = $verif['resume'];
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['benchmark', json_encode($s, JSON_UNESCAPED_UNICODE)]);

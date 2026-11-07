@@ -6,8 +6,9 @@ declare(strict_types=1);
  * (config/config.php, comme l'application).
  *
  *   php bin/benchmark.php verifier [--shop=4] [--ecrire]   les routes Benchmark de TFBuddy, une par une
- *   php bin/benchmark.php semer cougnou|galette|tout [--appliquer] [--shop=2,4]
- *                                                           pose le relevé dans TFBuddy (simulation sans --appliquer)
+ *   php bin/benchmark.php semer cougnou|galette|tout [--appliquer] [--si-nouveau] [--shop=2,4]
+ *                                                           pose le relevé dans TFBuddy (simulation sans --appliquer ;
+ *                                                           --si-nouveau : rien si ce relevé est déjà posé)
  *   php bin/benchmark.php rapport cougnou|galette|tout [--html=fichier] [--sans-web]
  *                                                           le rapport (prix comparable + visibilité web)
  *   php bin/benchmark.php routine [--sans-mail]             la routine du lundi/jeudi, tout de suite
@@ -50,7 +51,8 @@ switch ($cmd) {
         $f = $args[1] ?? 'tout';
         $shops = $opt('shop') !== null ? array_map('intval', explode(',', (string) $opt('shop'))) : [];
         $simuler = $opt('appliquer') === null;
-        $res = $f === 'tout' ? benchmarkSemerTout($simuler, $shops)['familles'] : [$f => benchmarkSemer($f, $simuler, $shops)];
+        $nouveau = $opt('si-nouveau') !== null;
+        $res = $f === 'tout' ? benchmarkSemerTout($simuler, $shops, $nouveau)['familles'] : [$f => benchmarkSemer($f, $simuler, $shops, $nouveau)];
         $okTout = true;
         foreach ($res as $fam => $r) {
             $out("== $fam");
