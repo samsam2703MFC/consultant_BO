@@ -9253,6 +9253,14 @@ class App {
           cadre.style.height = this._ctHaut + 'px';
           return;
         }
+        // « Aller à » (le sommaire de la vue Document) : le cockpit fait défiler jusqu'à ce point du cadre.
+        if (typeof ev.data.tkVoir === 'number' && ev.data.tkVoir > 0 && cadre) {
+          const sc = document.getElementById('main-scroll');
+          const defile = sc && sc.scrollHeight > sc.clientHeight + 2;
+          const y = cadre.getBoundingClientRect().top + ev.data.tkVoir - (defile ? sc.getBoundingClientRect().top - sc.scrollTop : -window.scrollY) - 8;
+          if (defile) { sc.scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); } else { window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' }); }
+          return;
+        }
         // « Remonter » (une étape de l'assistant, la duplication) : le cockpit fait défiler jusqu'au haut du cadre.
         if (ev.data.tkVoir != null && cadre) {
           if (cadre.getBoundingClientRect().top < 0) { cadre.scrollIntoView({ behavior: 'smooth', block: 'start' }); }

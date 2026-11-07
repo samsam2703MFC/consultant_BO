@@ -91,8 +91,10 @@ public/
     dashboard.css       styles de la page
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
-  task/                 cadre des tâches du panel — page à part : checklists,
-                        tâches, assistant (checklist et tâches en 4 étapes),
+  task/                 cadre des tâches du panel — page à part : vue Document
+                        (une section par checklist, réglages en vignettes qu'un
+                        clic change, pour une tâche ou toute la checklist),
+                        tableau, planning, assistant (checklist et tâches en 4 étapes),
                         duplication (jours, heure, photo), aperçu des appels
                         avant tout envoi ; serveur : src/task_cadre.php
   formation/            module Formation — référentiel RH du panel (postes,

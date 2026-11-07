@@ -12,6 +12,10 @@
  * qui les contrôle, puis l'aperçu et la création — la checklist et la première tâche d'abord,
  * pour vérifier, puis le reste.
  *
+ * La vue DOCUMENT (par défaut) montre le cadre comme un classeur : une section par checklist, une ligne par
+ * tâche, ses réglages en vignettes qu'un clic change (voir « la vue Document »). Le Tableau d'avant et le
+ * Planning restent dans leurs onglets.
+ *
  * Lectures : ../api/cockpit/task/cadre, …/task/structure, …/task/taches/{id}. Écritures :
  * POST …/task/apercu et …/task/creer (duplication), …/task/assistant/apercu et …/creer
  * (assistant), PATCH et DELETE …/task/taches/{id}, DELETE …/task/checklists/{id}.
@@ -47,7 +51,7 @@
     cancelAnimationFrame(hauteurAttente);
     hauteurAttente = requestAnimationFrame(() => {
       let bas = document.getElementById('tk').getBoundingClientRect().bottom;
-      document.querySelectorAll('.tk-modale').forEach(m => { bas = Math.max(bas, m.getBoundingClientRect().bottom + 24); });
+      document.querySelectorAll('.tk-modale, .dc-dd').forEach(m => { bas = Math.max(bas, m.getBoundingClientRect().bottom + 24); });
       const h = Math.ceil(bas + window.scrollY) + 8;
       if (Math.abs(h - hauteurDite) < 2) { return; }
       hauteurDite = h;
@@ -58,7 +62,7 @@
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
-    if (S.vue === 'planning') { a.set('vue', 'planning'); } else if (cl) { a.set('checklist', cl); }
+    if (S.vue === 'planning') { a.set('vue', 'planning'); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
     try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
     if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
   }
@@ -69,7 +73,9 @@
     filtre: '', sel: new Set(),
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
-    vue: q.get('vue') === 'planning' ? 'planning' : 'cadre',
+    // Les vues : le Document (par défaut, 07/11/2026), le Tableau d'avant (?vue=tableau), le Planning.
+    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : 'doc',
+    dd: null,   // la liste ouverte d'une vignette du Document : {k, id, c, portee, …}
     rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
 
@@ -163,6 +169,11 @@
     }
     S.charge = false;
     rendre();
+    if (S.cadre && S.vue === 'doc') {
+      // ?checklist=ID : on descend jusqu'à sa section, une fois (le cockpit a d'abord pris la hauteur du cadre).
+      if (!S.dcVu && /^(\d{1,10}|hors)$/.test(q.get('checklist') || '')) { S.dcVu = true; setTimeout(() => dcAller(q.get('checklist')), 450); }
+      dcQuiCharger();
+    }
   }
 
   /* --- rendu -------------------------------------------------------------- */
@@ -855,6 +866,316 @@
       <div class="tk-pied"><span class="mu" style="font-size:11.5px">Un clic sur le nom ouvre la tâche · × et ＋ changent qui fait et qui contrôle, directement dans le panel.</span><span style="flex:1"></span><button class="tk-btn" data-a="fermer">Fermer</button></div>`;
   }
 
+  /* --- la vue Document (07/11/2026 : maquette F choisie, « sur les lignes de tâches, au clic sur chaque
+   * vignette, une liste pour choisir un autre paramètre disponible ») ---------------------------------------
+   * Le cadre se lit comme un classeur : une section par checklist, dans l'ordre des heures, une ligne par tâche.
+   * Chaque ligne porte ses réglages en vignettes : heure, jours, photo, obligatoire, qui la fait, qui la
+   * contrôle. Un clic sur une vignette ouvre les choix que le panel accepte. Un choix simple part au panel
+   * aussitôt ; une liste à cocher part à « Appliquer ». En bas de chaque liste : pour cette tâche, ou pour
+   * toute sa checklist. Écritures : PATCH …/task/taches (lot) et POST …/task/qui/lot.
+   */
+  const DC_COULEURS = { vente: '#8D1D2C', 'production boulangerie': '#B0792A', 'production patisserie': '#A0522D', 'production traiteur': '#3f7a52',
+    nettoyage: '#1f5f8b', administartif: '#6B4FBB', administratif: '#6B4FBB', logistique: '#5c5852' };
+  const dcCouleur = p => DC_COULEURS[sansAccent(p)] || '#8a847c';
+  /** « AC-01 · Ouverture boutique » → code AC-01, titre « Ouverture boutique ». */
+  const dcCode = nom => { const m = String(nom || '').match(/^\s*([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s+[·—–:-]\s+(.+)$/); return m ? { code: m[1], titre: m[2] } : { code: '', titre: String(nom || '') }; };
+  /** Le nom d'une tâche sans le code de sa checklist devant (« AC-01 · Allumer… » sous AC-01 → « Allumer… »). */
+  const dcSansCode = (nom, code) => { const c = dcCode(nom); return code && c.code === code ? c.titre : String(nom || ''); };
+  const dcMoment = h => !h ? 'Sans heure' : h < '07:00' ? 'Avant l’ouverture' : h < '12:00' ? 'Matin' : h < '17:00' ? 'Après-midi' : 'Soir';
+  const DC_MOMENTS = ['Avant l’ouverture', 'Matin', 'Après-midi', 'Soir', 'Sans heure'];
+  /** Les jours où la tâche revient, comme le planning les compte (DAILY : les sept). */
+  function dcJoursDe(t) {
+    const f = String(t.frequence || '').toUpperCase(); const j = String(t.jour || '').toUpperCase();
+    if (!f || f === 'DAILY') { return PL_JOURS.map(x => x[0]); }
+    return PL_JOURS.some(x => x[0] === j) ? [j] : [];
+  }
+  const dcPoints = js => `<span class="dc-pts" aria-label="${esc(PL_JOURS.filter(x => js.includes(x[0])).map(x => x[2]).join(', '))}">${PL_JOURS.map(x => `<i class="${js.includes(x[0]) ? 'on' : ''}">${x[1][0]}</i>`).join('')}</span>`;
+  const dcOrdre = () => checklists().slice().sort((a, b) => (a.heure || '99').localeCompare(b.heure || '99') || a.nom.localeCompare(b.nom, 'fr'));
+  const dcTachesDe = c => [...new Set(c.taches.map(l => l.taskId))].map(id => tache(id)).filter(Boolean);
+  const dcHors = () => { const h = new Set((S.cadre && S.cadre.horsChecklist) || []); return taches().filter(t => h.has(t.id)); };
+  /** Les tâches que touche la liste ouverte : la tâche, ou toutes celles de sa checklist. */
+  const dcCibles = d => d.portee === 'checklist' && d.c ? dcTachesDe(checklist(d.c) || { taches: [] }).map(t => t.id) : [d.id];
+  const dcCourt = s => String(s || '').replace(/\s*\(\s*Crew Chief\s*\)/i, '').replace(/^Opérateur\s+/, '').replace(' & Conformité', '');
+  const dcNomCtl = c => c.type === 'self' ? 'Auto-contrôle' : c.nom;
+
+  /* Qui fait / qui contrôle : lu au panel pour toutes les tâches du document, 200 par appel (le plafond de la route). */
+  async function dcQuiCharger() {
+    if (S.dcQui && S.dcQui.enCours) { return; }
+    S.qui = S.qui || {};
+    const ids = [...new Set(taches().map(t => t.id))].filter(i => !S.qui[i]);
+    if (!ids.length) { return; }
+    S.dcQui = { enCours: true, lu: 0, total: ids.length, err: null };
+    rendre();
+    try {
+      for (let i = 0; i < ids.length; i += 200) {
+        const r = await api('POST', '/task/qui', { ids: ids.slice(i, i + 200) });
+        Object.assign(S.qui, r.qui || {}); if (r.choix) { S.quiChoix = r.choix; }
+        S.dcQui.lu = Math.min(ids.length, i + 200);
+        if (S.vue === 'doc' && !S.dd) { rendre(); }
+      }
+    } catch (e) { S.dcQui.err = e.message; }
+    S.dcQui.enCours = false;
+    rendre();
+  }
+
+  /* --- les vignettes --- */
+  const dcFleche = '<i class="dc-car" aria-hidden="true">▾</i>';
+  function dcVignette(k, t, c) {
+    const ouvert = S.dd && S.dd.k === k && S.dd.id === t.id && S.dd.c === (c ? c.id : null);
+    const at = `data-a="ddOuvrir" data-k="${k}" data-t="${t.id}" data-c="${c ? c.id : ''}" aria-haspopup="listbox" aria-expanded="${ouvert}"`;
+    const cl = 'dc-v' + (ouvert ? ' open' : '');
+    if (k === 'heure') { return `<button class="${cl} dc-heure${t.heure ? '' : ' off'}" ${at} title="Changer l’heure">${esc(t.heure || 'sans heure')}${dcFleche}</button>`; }
+    if (k === 'jours') { const q = quandAff(t); return `<button class="${cl}" ${at} title="Changer les jours">${esc(q.charAt(0).toLowerCase() + q.slice(1))}${dcFleche}</button>`; }
+    if (k === 'photo') { return `<button class="${cl} ${t.photo ? 'ph' : 'off'}" ${at} title="Photo requise ou non">${t.photo ? CAM + ' photo' : 'sans photo'}${dcFleche}</button>`; }
+    if (k === 'oblig') { return `<button class="${cl} ${t.obligatoire ? 'ob' : 'off'}" ${at} title="Obligatoire ou facultative">${t.obligatoire ? 'obligatoire' : 'facultative'}${dcFleche}</button>`; }
+    const q = S.qui && S.qui[t.id];
+    if (k === 'fait') {
+      if (!q) { return `<span class="dc-b fait att"><b>Fait</b>…</span>`; }
+      const postes = [...new Set(q.fait.map(n => n.poste || n.nom))];
+      const tout = q.fait.map(n => nomNiv(n)).join(', ');
+      return `<button class="${cl.replace('dc-v', 'dc-b')} fait${q.fait.length ? '' : ' vide'}" ${at} title="${esc(tout ? 'Fait par : ' + tout : 'Aucun niveau : aucun employé ne voit cette tâche')}"><b>Fait</b><span class="dc-bt">${q.fait.length ? esc(dcCourt(postes[0])) : 'personne'}</span>${postes.length > 1 ? `<em>+${postes.length - 1}</em>` : ''}${dcFleche}</button>`;
+    }
+    if (!q) { return `<span class="dc-b ctrl att"><b>Contrôle</b>…</span>`; }
+    if (q.erreur) { return `<span class="dc-b ctrl att" title="${esc(q.erreur)}"><b>Contrôle</b>illisible</span>`; }
+    const tout = q.controle.map(dcNomCtl).join(', ');
+    return `<button class="${cl.replace('dc-v', 'dc-b')} ctrl${q.controle.length ? '' : ' vide'}" ${at} title="${esc(tout ? 'Contrôlé par : ' + tout : 'Personne ne contrôle cette tâche')}"><b>Contrôle</b><span class="dc-bt">${q.controle.length ? esc(dcCourt(dcNomCtl(q.controle[0]))) : 'personne'}</span>${q.controle.length > 1 ? `<em>+${q.controle.length - 1}</em>` : ''}${dcFleche}</button>`;
+  }
+  /** Sous le titre d'une checklist : qui fait, qui contrôle l'ensemble de ses tâches — un clic change toute la checklist. */
+  function dcQuiChecklist(c) {
+    const ts = dcTachesDe(c);
+    if (!ts.length) { return ''; }
+    const Q = ts.map(t => S.qui && S.qui[t.id]);
+    if (Q.some(q => !q)) { return `<div class="dc-qui"><span class="dc-b fait att"><b>Fait par</b>lecture…</span><span class="dc-b ctrl att"><b>Contrôlé par</b>lecture…</span></div>`; }
+    const parPoste = {};
+    Q.forEach(q => q.fait.forEach(n => { const p = n.poste || n.nom; (parPoste[p] = parPoste[p] || new Set()).add(n.id); }));
+    const fait = Object.entries(parPoste).map(([p, s]) => p + (s.size > 1 ? ` (${s.size} niveaux)` : '')).join(' · ');
+    const ctl = [...new Set(Q.flatMap(q => q.controle.map(dcNomCtl)))].join(' · ');
+    const ouv = k => S.dd && S.dd.k === k && S.dd.id == null && S.dd.c === c.id;
+    const at = k => `data-a="ddOuvrir" data-k="${k}" data-t="" data-c="${c.id}" aria-haspopup="listbox"`;
+    return `<div class="dc-qui"><span class="dc-ancre"><button class="dc-b fait${ouv('fait') ? ' open' : ''}${fait ? '' : ' vide'}" ${at('fait')} title="Changer qui fait toutes les tâches de la checklist"><b>Fait par</b>${esc(fait || 'personne')}${dcFleche}</button>${ouv('fait') ? dcListe() : ''}</span>
+      <span class="dc-ancre"><button class="dc-b ctrl${ouv('ctrl') ? ' open' : ''}${ctl ? '' : ' vide'}" ${at('ctrl')} title="Changer qui contrôle toutes les tâches de la checklist"><b>Contrôlé par</b>${esc(ctl || 'personne')}${dcFleche}</button>${ouv('ctrl') ? dcListe() : ''}</span></div>`;
+  }
+
+  /* --- une ligne, une section, le document --- */
+  function dcLigne(t, c, code) {
+    const cid = c ? c.id : null;
+    const liens = (((S.cadre || {}).sopLiens || {})[t.id] || []).map(y => `<a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(y.sopId)}" target="_blank" rel="noopener" title="${esc(y.titre)}">${esc(y.code || 'SOP')}${y.etape ? ' · ' + esc(y.etape) : ''}</a>`).join(' ');
+    const ici = S.dd && S.dd.id === t.id && S.dd.c === cid;
+    const flash = S.dcFlash && S.dcFlash.ids.includes(t.id) ? `<span class="dc-flash${S.dcFlash.ko ? ' ko' : ''}">${esc(S.dcFlash.t)}</span>` : '';
+    return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
+      <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${liens ? ' ' + liens : ''}${flash}</span>
+      <span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
+  }
+  function dcSection(c) {
+    const { code, titre } = dcCode(c.nom);
+    const ts = dcTachesDe(c);
+    const js = [...new Set(ts.flatMap(dcJoursDe))];
+    const nPh = ts.filter(t => t.photo).length;
+    const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection() : '';
+    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}" id="dc-${c.id}">
+      <h2 class="dc-h2">${code ? `<span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(code)}</span>` : ''}<span>${esc(titre)}</span>
+        <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button></h2>
+      <div class="dc-meta"><span>🕘 ${esc(c.heure || 'sans heure')}</span>${c.poste ? `<span><i class="dc-pd" style="background:${dcCouleur(c.poste)}"></i>${esc(posteAff(c.poste))}</span>` : ''}${ts.length ? dcPoints(js) : ''}
+        <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}</span></div>
+      ${dcQuiChecklist(c)}
+      ${c.description && c.description.trim() !== 'Array' ? `<div class="dc-desc">${esc(c.description)}</div>` : ''}${sel}
+      <div class="dc-ls">${ts.map(t => dcLigne(t, c, code)).join('') || '<div class="dc-vide">Aucune tâche dans cette checklist.</div>'}</div>
+      <button class="dc-ajout" data-a="dcAjouter" data-id="${c.id}">＋ Ajouter des tâches à cette checklist</button></section>`;
+  }
+  function docVue() {
+    const ordre = dcOrdre();
+    const hors = dcHors();
+    const groupes = DC_MOMENTS.map(m => [m, ordre.filter(c => dcMoment(c.heure) === m)]).filter(g => g[1].length);
+    const sommaire = `<nav class="tk-card dc-som" aria-label="Sommaire"><div class="tk-k dc-som-t">Sommaire · ${ordre.length} checklists</div>
+      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${c.taches.length}</em></button>`; }).join('')}`).join('')}
+      ${hors.length ? `<div class="dc-som-g">À ranger</div><button class="dc-som-i wa${S.cl === 'hors' ? ' on' : ''}" data-a="dcAller" data-id="hors">Dans aucune checklist<em>${hors.length}</em></button>` : ''}</nav>`;
+    const q = S.dcQui;
+    const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';
+    const sections = groupes.map(([m, L]) => `<div class="dc-moment">${m}</div>${L.map(dcSection).join('')}`).join('');
+    const horsHtml = hors.length ? `<div class="dc-moment">À ranger</div><section class="dc-s${S.cl === 'hors' ? ' vise' : ''}" id="dc-hors"><h2 class="dc-h2"><span>Dans aucune checklist</span></h2>
+      <div class="dc-meta"><span class="wa">${hors.length} tâche${hors.length > 1 ? 's' : ''} que les équipes ne voient dans aucune liste du jour</span></div>
+      ${hors.some(t => S.sel.has(t.id)) ? barreSelection() : ''}<div class="dc-ls">${hors.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
+    return `<div class="dc">${sommaire}<div class="tk-card dc-doc">
+      ${S.dup ? volet() : ''}
+      <h1 class="dc-h1">Le cadre du réseau</h1>
+      <div class="dc-sous">${ordre.length} checklists · ${taches().length} tâches · un clic sur une vignette pour la changer${esc(etat)}</div>
+      ${q && q.err ? `<div class="tk-err">Qui fait / qui contrôle : lecture interrompue (${esc(q.err)}). <button class="tk-lien" data-a="dcQuiRelire">Réessayer</button></div>` : ''}
+      ${sections}${horsHtml}</div></div>`;
+  }
+
+  /* --- les listes --- */
+  /** L'état de départ d'une liste à cocher : coché, décoché, ou « mixte » (une partie des tâches visées seulement). */
+  function dcEtatQui(d) {
+    const ids = dcCibles(d); const Q = ids.map(id => S.qui && S.qui[id]).filter(Boolean);
+    const n = {}; const total = Q.length;
+    Q.forEach(q => { const cles = d.k === 'fait' ? q.fait.map(x => 'n' + x.id) : q.controle.map(x => x.type === 'self' ? 'self' : 'p' + x.positionId); [...new Set(cles)].forEach(k => { n[k] = (n[k] || 0) + 1; }); });
+    const e = {}; Object.keys(n).forEach(k => { e[k] = n[k] === total ? 'on' : 'mixte'; });
+    return { e, complet: Q.length === ids.length };
+  }
+  function dcOuvrir(k, id, c, el) {
+    if (S.dd && S.dd.k === k && S.dd.id === id && S.dd.c === c) { S.dd = null; return rendre(); }
+    const d = { k, id, c, portee: id == null ? 'checklist' : 'tache', val: '', filtre: '', envoi: false, err: null };
+    if (k === 'heure') { const t = tache(id); d.val = (t && t.heure) || ((checklist(c) || {}).heure) || ''; }
+    if (k === 'fait' || k === 'ctrl') { const s = dcEtatQui(d); d.init = s.e; d.etat = Object.assign({}, s.e); }
+    S.dd = d; rendre();
+    if (k === 'heure') { const i = $.querySelector('[data-dd="heure"]'); if (i) { i.focus(); } }
+    if (k === 'fait') { const i = $.querySelector('[data-dd="filtre"]'); if (i) { i.focus(); } }
+  }
+  function dcPortee(v) {
+    const d = S.dd; if (!d || d.portee === v) { return; }
+    d.portee = v; d.err = null;
+    if (d.k === 'fait' || d.k === 'ctrl') {
+      // Les cases déjà changées restent changées ; les autres reprennent l'état des nouvelles tâches visées.
+      const avant = d.etat; const touche = Object.keys(Object.assign({}, d.etat, d.init)).filter(k => (d.etat[k] || 'off') !== (d.init[k] || 'off'));
+      const s = dcEtatQui(d); d.init = s.e; d.etat = Object.assign({}, s.e); touche.forEach(k => { d.etat[k] = avant[k] || 'off'; });
+    }
+    rendre();
+  }
+  function dcPied(d, appliquer) {
+    const c = checklist(d.c); const n = c ? dcTachesDe(c).length : 0;
+    const portee = d.id != null && c && n > 1 ? `<div class="dc-portee" role="group" aria-label="Appliquer à"><button class="${d.portee === 'tache' ? 'on' : ''}" data-a="ddPortee" data-v="tache">Cette tâche</button><button class="${d.portee === 'checklist' ? 'on' : ''}" data-a="ddPortee" data-v="checklist">Toute la checklist ${esc(dcCode(c.nom).code || '')} (${n})</button></div>` : '';
+    const err = d.err ? `<div class="dc-dd-err">${esc(d.err)}</div>` : '';
+    return `${err}${portee || appliquer ? `<div class="dc-dd-pied">${portee}${appliquer || ''}</div>` : ''}`;
+  }
+  const dcOpt = (on, lib, attrs, nb, sous) => `<button class="dc-o${on ? ' on' : ''}" role="option" aria-selected="${!!on}" ${attrs}><span class="dc-rd"></span><span>${lib}${sous ? `<small>${sous}</small>` : ''}</span>${nb != null ? `<em>${nb}</em>` : ''}</button>`;
+  function dcListe() {
+    const d = S.dd; const t = d.id != null ? tache(d.id) : null; const c = checklist(d.c);
+    const occupe = d.envoi ? ' disabled' : '';
+    const visees = dcCibles(d).map(tache).filter(Boolean);
+    const tous = (f, v) => visees.length && visees.every(x => f(x) === v);
+    const titre = d.id == null && c ? `<div class="dc-dd-s">Toutes les tâches de ${esc(dcCode(c.nom).code || c.nom)} (${visees.length})</div>` : '';
+    let corps = '';
+    if (d.k === 'heure') {
+      const nb = {}; taches().forEach(x => { if (x.heure) { nb[x.heure] = (nb[x.heure] || 0) + 1; } });
+      const top = Object.keys(nb).sort((a, b) => nb[b] - nb[a]).slice(0, 8).sort();
+      corps = `<div class="dc-dd-t">À quelle heure ?</div>${titre}
+        <div class="dc-dd-in"><input type="time" class="tk-in" data-dd="heure" value="${esc(d.val)}"${occupe}><button class="tk-btn prim" data-a="ddHeureOk"${occupe}>${d.envoi ? 'Envoi…' : 'Appliquer'}</button></div>
+        <div class="dc-dd-g">Les heures du réseau</div><div class="dc-dd-hr">${top.map(h => `<button class="${tous(x => x.heure, h) ? 'on' : ''}" data-a="ddHeure" data-v="${h}"${occupe}>${h}</button>`).join('')}</div>
+        ${c && c.heure ? `<div class="dc-dd-g">La checklist</div>${dcOpt(tous(x => x.heure, c.heure), 'L’heure de la checklist · ' + esc(c.heure), `data-a="ddHeure" data-v="${esc(c.heure)}"${occupe}`)}` : ''}${dcPied(d)}`;
+    } else if (d.k === 'jours') {
+      const nb = {}; (((S.cadre || {}).options || {}).jours || []).forEach(o => { nb[o.valeur] = o.nb; });
+      const quotidien = x => !x.jour && (!x.frequence || String(x.frequence).toUpperCase() === 'DAILY');
+      const cle = x => quotidien(x) ? '' : String(x.jour || '').toUpperCase();
+      corps = `<div class="dc-dd-t">Quels jours ?</div>${titre}<div role="listbox">
+        ${dcOpt(tous(cle, ''), 'Tous les jours', `data-a="ddJour" data-v=""${occupe}`, nb[''])}
+        ${PL_JOURS.map(([j, , fr]) => dcOpt(tous(cle, j), 'Chaque ' + fr, `data-a="ddJour" data-v="${j}"${occupe}`, nb[j] || 0)).join('')}</div>
+        ${t ? `<div class="dc-dd-sep"></div><button class="dc-o" data-a="ddPlusieurs"${occupe}><span class="dc-ic">⧉</span><span>Plusieurs jours…<small>une copie de la tâche par jour choisi : le panel ne prend qu’un jour par tâche</small></span></button>` : ''}${dcPied(d)}`;
+    } else if (d.k === 'photo' || d.k === 'oblig') {
+      const ch = d.k === 'photo' ? 'photo' : 'obligatoire';
+      corps = `<div class="dc-dd-t">${d.k === 'photo' ? 'Photo ?' : 'Obligatoire ?'}</div>${titre}<div role="listbox">
+        ${dcOpt(tous(x => !!x[ch], true), d.k === 'photo' ? CAM + ' Photo requise' : 'Obligatoire', `data-a="ddBool" data-v="1"${occupe}`, null, d.k === 'photo' ? 'l’employé ne valide pas sans photo ; elle arrive au contrôle des tâches' : '')}
+        ${dcOpt(tous(x => !!x[ch], false), d.k === 'photo' ? 'Sans photo' : 'Facultative', `data-a="ddBool" data-v="0"${occupe}`)}</div>${dcPied(d)}`;
+    } else {
+      const ch = S.quiChoix || { niveaux: [], postes: [] };
+      const pret = dcEtatQui(d).complet && (S.quiChoix || null);
+      const coche = (cle, lib, sous) => { const e = d.etat[cle] || 'off'; return `<button class="dc-o coche ${e}" role="option" aria-selected="${e === 'on'}" data-a="ddCoche" data-v="${esc(cle)}"${occupe}><span class="dc-cc">${e === 'on' ? '✓' : e === 'mixte' ? '–' : ''}</span><span>${esc(lib)}${sous ? `<small>${esc(sous)}</small>` : ''}</span></button>`; };
+      const f = sansAccent(d.filtre);
+      const ok = txt => !f || sansAccent(txt).includes(f);
+      let liste = '';
+      if (d.k === 'fait') {
+        // Les postes déjà présents d'abord, puis ceux des magasins, puis les autres.
+        const g = {}; ch.niveaux.forEach(n => { (g[n.poste || 'Autres'] = g[n.poste || 'Autres'] || []).push(n); });
+        const types = {}; ch.postes.forEach(p => { types[p.nom] = p.type; });
+        const rang = p => (g[p].some(n => (d.etat['n' + n.id] || 'off') !== 'off') ? 0 : types[p] === 'EMPLOYEE' ? 1 : 2);
+        const postes = Object.keys(g).sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr'));
+        liste = postes.map(p => { const L = g[p].filter(n => ok(p + ' ' + n.nom)); return L.length ? `<div class="dc-dd-g">${esc(p)}</div>${L.map(n => coche('n' + n.id, n.nom.replace(/\(\s+/g, '(').replace(/\s+\)/g, ')'))).join('')}` : ''; }).join('');
+      } else {
+        const grp = [['CONSULTANT', 'Consultants'], ['ADMIN', 'Direction'], ['EMPLOYEE', 'Magasin']];
+        const autres = ch.postes.filter(p => !grp.some(x => x[0] === p.type));
+        liste = (ok('auto-controle la personne qui la fait') ? coche('self', 'Auto-contrôle', 'la personne qui la fait vérifie elle-même') : '')
+          + grp.concat([['', 'Autres']]).map(([ty, lib]) => { const L = (ty ? ch.postes.filter(p => p.type === ty) : autres).filter(p => ok(p.nom)); return L.length ? `<div class="dc-dd-g">${lib}</div>${L.map(p => coche('p' + p.id, p.nom)).join('')}` : ''; }).join('');
+      }
+      const n = dcQuiOps(d).length;
+      corps = `<div class="dc-dd-t">${d.k === 'fait' ? 'Qui fait cette tâche ?' : 'Qui la contrôle ?'}</div>${titre}
+        <input class="tk-in dc-dd-f" data-dd="filtre" value="${esc(d.filtre)}" placeholder="${d.k === 'fait' ? 'Chercher un poste ou un niveau…' : 'Chercher un poste…'}" autocomplete="off">
+        <div class="dc-dd-l" role="listbox" aria-multiselectable="true">${pret ? (liste || '<div class="dc-dd-v">Rien ne correspond.</div>') : '<div class="dc-dd-v">Lecture de qui fait / qui contrôle…</div>'}</div>
+        ${dcPied(d, `<button class="tk-btn prim" data-a="ddQuiOk"${n && !d.envoi ? '' : ' disabled'}>${d.envoi ? 'Envoi…' : n ? `Appliquer (${n} changement${n > 1 ? 's' : ''})` : 'Appliquer'}</button>`)}`;
+    }
+    return `<div class="dc-dd${d.k === 'fait' || d.k === 'ctrl' ? ' large' : ''}" role="dialog" aria-label="Choisir">${corps}</div>`;
+  }
+
+  /* --- les écritures --- */
+  /** Les changements à envoyer : seules les cases que l'on a changées, tâche par tâche. */
+  function dcQuiOps(d) {
+    if (!d.etat) { return []; }
+    const cles = Object.keys(Object.assign({}, d.etat, d.init)).filter(k => (d.etat[k] || 'off') !== (d.init[k] || 'off') && (d.etat[k] || 'off') !== 'mixte');
+    const ops = [];
+    dcCibles(d).forEach(id => {
+      const q = S.qui && S.qui[id]; if (!q) { return; }
+      cles.forEach(k => {
+        const veut = d.etat[k] === 'on';
+        if (d.k === 'fait') {
+          const lid = +k.slice(1); const la = q.fait.find(n => n.id === lid);
+          if (veut && !la) { ops.push({ taskId: id, ajouterNiveau: lid }); }
+          if (!veut && la) { ops.push({ taskId: id, retirerNiveau: lid, route: la.route || '' }); }
+        } else {
+          const la = k === 'self' ? q.controle.find(x => x.type === 'self') : q.controle.find(x => x.type === 'position' && x.positionId === +k.slice(1));
+          if (veut && !la) { ops.push({ taskId: id, ajouterControleur: k === 'self' ? { type: 'self' } : { type: 'position', positionId: +k.slice(1) } }); }
+          if (!veut && la) { ops.push({ taskId: id, retirerControleur: la.id }); }
+        }
+      });
+    });
+    return ops;
+  }
+  function dcFlash(ids, txt, ko) {
+    S.dcFlash = { ids, t: txt, ko: !!ko };
+    clearTimeout(S.dcFlashT);
+    S.dcFlashT = setTimeout(() => { S.dcFlash = null; if (S.vue === 'doc') { rendre(); } }, ko ? 9000 : 2600);
+  }
+  /** La fin d'un envoi : la liste se ferme si c'est toujours elle qui est ouverte ; une erreur, si on l'a déjà
+   * quittée, s'affiche sur les lignes touchées plutôt que de se perdre. */
+  function dcFin(d, ids, okIds) {
+    if (!d.err) { if (S.dd === d) { S.dd = null; } dcFlash(okIds, '✓ enregistré'); }
+    else if (S.dd !== d) { dcFlash(ids, '✗ ' + d.err, true); }
+    rendre();
+  }
+  /** Heure, jours, photo, obligatoire : un PATCH par tâche visée, côté serveur en un seul appel. */
+  async function dcChamps(champs, lib) {
+    const d = S.dd; const ids = dcCibles(d);
+    const c = checklist(d.c);
+    if (ids.length > 1 && !confirm(`${lib} pour les ${ids.length} tâches de « ${c ? c.nom : ''} » ? Le changement part au panel de production.`)) { return; }
+    d.envoi = true; d.err = null; rendre();
+    let oks = ids;
+    try { await api('PATCH', '/task/taches', { ids, champs }); }
+    catch (e) {
+      oks = ((e.data && e.data.resultats) || []).filter(r => r.ok).map(r => r.id);
+      const ko = ((e.data && e.data.resultats) || []).filter(r => !r.ok);
+      d.err = e.message + (ko.length ? ' — ' + ko.slice(0, 3).map(r => '#' + r.id + ' : ' + r.erreur).join(' ; ') : '') + (e.status === 403 && !admin() ? ' Essayez avec un compte administrateur du panel (en haut).' : '');
+    }
+    oks.forEach(id => { const t = tache(id); if (!t) { return; }
+      if ('heure' in champs) { t.heure = champs.heure; }
+      if ('jour' in champs) { t.jour = champs.jour; }
+      if ('frequence' in champs) { t.frequence = champs.frequence; }
+      if ('photo' in champs) { t.photo = !!champs.photo; }
+      if ('obligatoire' in champs) { t.obligatoire = !!champs.obligatoire; } });
+    d.envoi = false;
+    dcFin(d, ids, oks);
+  }
+  async function dcQuiAppliquer() {
+    const d = S.dd; const ops = dcQuiOps(d);
+    if (!ops.length) { S.dd = null; return rendre(); }
+    d.envoi = true; d.err = null; rendre();
+    const ids = [...new Set(ops.map(o => o.taskId))];
+    try { const r = await api('POST', '/task/qui/lot', { ops }); Object.assign(S.qui, r.qui || {}); }
+    catch (e) {
+      if (e.data && e.data.qui) { Object.assign(S.qui, e.data.qui); }
+      d.err = e.message + (e.status === 403 && !admin() ? ' Essayez avec un compte administrateur du panel (en haut).' : '');
+      // Ce qui est passé est relu : l'état de départ suit le panel, les cases encore à envoyer restent cochées.
+      const s = dcEtatQui(d); d.init = s.e;
+    }
+    d.envoi = false;
+    dcFin(d, ids, ids);
+  }
+  /** Faire défiler jusqu'à une section — dans le cockpit, c'est lui qui défile (le cadre a la hauteur du contenu). */
+  function dcAller(id) {
+    const el = document.getElementById('dc-' + id);
+    if (!el) { return; }
+    const y = Math.round(el.getBoundingClientRect().top + window.scrollY - 12);
+    if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkVoir: Math.max(1, y) }, location.origin); } catch (e) { /* cockpit absent */ } return; }
+    window.scrollTo({ top: y, behavior: 'smooth' });
+  }
+
   /* --- fenêtres ----------------------------------------------------------- */
   function modale() {
     const m = S.modale;
@@ -916,12 +1237,12 @@
 
   function rendre() {
     const actif = document.activeElement;
-    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf'].find(x => actif.dataset[x] != null) : null;
+    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Cadre des tâches</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
+    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
     const rq = !S.wz && termesRq().length && S.cadre;
-    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -949,8 +1270,27 @@
   async function action(a, el) {
     const id = el.dataset.id;
     switch (a) {
-      case 'recharger': return charger();
-      case 'vue': S.vue = el.dataset.v; adresse(S.cl); rendre(); voirHaut(); return;
+      case 'recharger': S.qui = null; S.dd = null; return charger();
+      case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } return;
+      // La vue Document : les vignettes et leurs listes
+      case 'ddOuvrir': return dcOuvrir(el.dataset.k, el.dataset.t ? +el.dataset.t : null, el.dataset.c ? +el.dataset.c : null, el);
+      case 'ddPortee': return dcPortee(el.dataset.v);
+      case 'ddHeure': if (S.dd) { S.dd.val = el.dataset.v; return dcChamps({ heure: el.dataset.v }, 'Heure ' + el.dataset.v); } return;
+      case 'ddHeureOk': {
+        const d = S.dd; if (!d) { return; }
+        if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(d.val || '')) { d.err = 'Une heure au format HH:MM est attendue.'; return rendre(); }
+        return dcChamps({ heure: d.val }, 'Heure ' + d.val);
+      }
+      case 'ddJour': { const v = el.dataset.v; const jr = PL_JOURS.find(x => x[0] === v);
+        return dcChamps(v ? { jour: v, frequence: 'WEEKLY' } : { jour: '', frequence: 'DAILY' }, v ? 'Chaque ' + (jr ? jr[2] : v) : 'Tous les jours'); }
+      case 'ddBool': { const d = S.dd; if (!d) { return; } const oui = el.dataset.v === '1';
+        return dcChamps(d.k === 'photo' ? { photo: oui } : { obligatoire: oui }, d.k === 'photo' ? (oui ? 'Photo requise' : 'Sans photo') : (oui ? 'Obligatoire' : 'Facultative')); }
+      case 'ddCoche': { const d = S.dd; if (!d || !d.etat) { return; } const v = el.dataset.v; d.etat[v] = (d.etat[v] || 'off') === 'on' ? 'off' : 'on'; d.err = null; return rendre(); }
+      case 'ddQuiOk': return dcQuiAppliquer();
+      case 'ddPlusieurs': { const d = S.dd; if (!d || d.id == null) { return; } S.sel = new Set([d.id]); if (d.c) { S.cl = String(d.c); } S.dd = null; ouvrirDup(); rendre(); voirHaut(); return; }
+      case 'dcAller': S.cl = id; S.dd = null; adresse(id); rendre(); return dcAller(id);
+      case 'dcAjouter': S.cl = id; S.dd = null; adresse(id); return wzOuvrir('existante');
+      case 'dcQuiRelire': S.dcQui = null; return dcQuiCharger();
       case 'plCase': {
         S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout', fait: '', ctrl: '', cl: '', y: el.getBoundingClientRect().top + window.scrollY }; rendre();
         return quiCharger(S.modale);
@@ -1124,7 +1464,7 @@
       case 'rqPlus': S.rqMax += 300; return rendre();
       case 'rqTous': { const r = resultatsRq(); const L = r ? r.ts.slice(0, S.rqMax) : []; if (el.checked) { L.forEach(x => S.sel.add(x.t.id)); } else { L.forEach(x => S.sel.delete(x.t.id)); } return rendre(); }
       // Une checklist trouvée : on l'ouvre, la recherche s'efface.
-      case 'rqCl': S.rq = ''; S.vue = 'cadre'; S.cl = id; S.filtre = ''; adresse(id); rendre(); voirHaut(); return;
+      case 'rqCl': S.rq = ''; S.cl = id; S.filtre = ''; adresse(id); rendre(); if (S.vue === 'doc') { return dcAller(id); } if (S.vue === 'planning') { S.vue = 'doc'; rendre(); return dcAller(id); } voirHaut(); return;
       case 'supprimerCl': {
         const c = ((S.cadre && S.cadre.checklistsCreees) || []).find(x => x.id === +id);
         if (!confirm('Supprimer du panel la checklist « ' + (c ? c.nom : '#' + id) + ' » (#' + id + ') ? Ses tâches restent dans le panel.')) { return; }
@@ -1138,6 +1478,8 @@
 
   $.addEventListener('click', ev => {
     const el = ev.target.closest('[data-a]');
+    // Une liste de vignette ouverte se ferme d'un clic à côté (le clic garde son effet).
+    if (S.dd && !ev.target.closest('.dc-dd') && !(el && el.dataset.a === 'ddOuvrir')) { S.dd = null; if (!el) { rendre(); return; } }
     if (!el || !$.contains(el)) { return; }
     // Le voile ne ferme que sur un clic À CÔTÉ de la fenêtre, pas dans un champ de celle-ci.
     if (el.dataset.a === 'voile' && ev.target !== el) { return; }
@@ -1147,6 +1489,7 @@
   $.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.f === 'filtre') { S.filtre = el.value; return rendre(); }
+    if (el.dataset.dd && S.dd) { if (el.dataset.dd === 'filtre') { S.dd.filtre = el.value; return rendre(); } S.dd.val = el.value; S.dd.err = null; return; }
     if (el.dataset.f === 'recherche') { S.rq = el.value; S.rqMax = 150; return rendre(); }
     if (el.dataset.pf && S.modale && S.modale.type === 'planning') { S.modale.f = el.value; return rendre(); }
     if (S.wz) {
@@ -1195,6 +1538,8 @@
     }
     if (ev.key === 'Escape' && !S.modale && ev.target.dataset && ev.target.dataset.f === 'recherche' && S.rq) { S.rq = ''; rendre(); const r = $.querySelector('[data-f="recherche"]'); if (r) { r.focus(); } return; }
     if (ev.key === 'Escape' && S.modale) { S.modale = null; rendre(); }
+    if (ev.key === 'Escape' && !S.modale && S.dd) { S.dd = null; rendre(); return; }
+    if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.dd === 'heure' && S.dd) { ev.preventDefault(); action('ddHeureOk', ev.target); }
     if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.m === 'password') { action('seConnecter', ev.target); }
   });
 

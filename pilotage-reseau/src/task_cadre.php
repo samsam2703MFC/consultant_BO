@@ -59,11 +59,13 @@ function tkRoute(string $method, string $path): array
     if ($method === 'GET' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkTache((int) $m[1]); }
     if ($method === 'POST' && $path === '/task/qui') { return tkQui(body()); }
     if ($method === 'POST' && $path === '/task/qui/modifier') { return tkQuiModifier(body()); }
+    if ($method === 'POST' && $path === '/task/qui/lot') { return tkQuiLot(body()); }
     if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkChecklistModifier((int) $m[1], body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
     if ($method === 'POST' && $path === '/task/assistant/apercu') { return tkConstruire(body(), false, false); }
     if ($method === 'POST' && $path === '/task/assistant/creer') { $b = body(); return tkConstruire($b, true, !empty($b['seulementPremiere'])); }
+    if ($method === 'PATCH' && $path === '/task/taches') { return tkModifierLot(body()); }
     if ($method === 'PATCH' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkModifier((int) $m[1], body()); }
     if ($method === 'DELETE' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkSupprimer('tache', (int) $m[1]); }
     if ($method === 'DELETE' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkSupprimer('checklist', (int) $m[1]); }
@@ -388,7 +390,7 @@ function tkTache(int $id): array
 }
 
 /**
- * POST /task/qui {ids: [id de tâche]} — pour chaque tâche (80 au plus), qui la fait (les niveaux de
+ * POST /task/qui {ids: [id de tâche]} — pour chaque tâche (200 au plus), qui la fait (les niveaux de
  * poste qui la portent, nommés par /position-levels) et qui la contrôle (GET /tasks/{id}/controllers :
  * « self » = la personne qui la fait, « position » = un poste). Lecture seule : le planning l'affiche.
  *
@@ -396,7 +398,8 @@ function tkTache(int $id): array
  */
 function tkQui(array $b): array
 {
-    $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) ($b['ids'] ?? [])), fn ($i) => $i > 0))), 0, 80);
+    // 200 : tout le cadre en un appel pour la vue Document (le balayage des niveaux coûte autant pour 1 ou 200 tâches).
+    $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) ($b['ids'] ?? [])), fn ($i) => $i > 0))), 0, 200);
     if ($ids === []) { return ['qui' => (object) [], 'choix' => tkQuiChoix()]; }
     $choix = tkQuiChoix();
     $noms = [];
@@ -501,6 +504,65 @@ function tkQuiModifier(array $b): array
     if (!$ok) { http_response_code(502); return ['error' => $ops[0]['erreur'] ?? 'refusé par le panel', 'operations' => $ops]; }
     $q = tkQui(['ids' => [$tid]]);
     return ['ok' => true, 'operations' => $ops, 'qui' => $q['qui']];
+}
+
+/**
+ * POST /task/qui/lot {ops: [{taskId, ajouterNiveau | retirerNiveau + route | ajouterControleur | retirerControleur}]} —
+ * plusieurs changements de « qui fait / qui contrôle » d'un coup (vue Document : une liste cochée, appliquée à une
+ * tâche ou à toute sa checklist). La route des rattachements se choisit une fois, les tâches touchées sont relues une
+ * fois à la fin ; on continue après un refus, chaque opération dit le sien.
+ */
+function tkQuiLot(array $b): array
+{
+    $liste = array_slice(array_values(array_filter((array) ($b['ops'] ?? []), 'is_array')), 0, 400);
+    $route = null;
+    $ops = [];
+    $ids = [];
+    foreach ($liste as $x) {
+        $tid = (int) ($x['taskId'] ?? 0);
+        if ($tid <= 0) { continue; }
+        if (!empty($x['ajouterNiveau'])) {
+            if ($route === null) {
+                $fam = tkScanNiveaux([])['familles'];
+                $route = ($fam['position-levels'] ?? 0) > ($fam['levels'] ?? 0) ? 'position-levels' : 'levels';
+            }
+            $lid = (int) $x['ajouterNiveau'];
+            $op = ['quoi' => 'Rattacher au niveau #' . $lid, 'methode' => 'POST', 'chemin' => '/' . $route . '/' . $lid . '/tasks', 'corps' => ['task_id' => $tid]];
+        } elseif (!empty($x['retirerNiveau'])) {
+            $lid = (int) $x['retirerNiveau'];
+            $r = ($x['route'] ?? '') === 'position-levels' ? 'position-levels' : 'levels';
+            $op = ['quoi' => 'Détacher du niveau #' . $lid, 'methode' => 'DELETE', 'chemin' => '/' . $r . '/' . $lid . '/tasks/' . $tid, 'corps' => null];
+        } elseif (is_array($x['ajouterControleur'] ?? null)) {
+            $type = ($x['ajouterControleur']['type'] ?? '') === 'self' ? 'self' : 'position';
+            $corps = ['controller_type' => $type];
+            if ($type === 'position') {
+                $pid = (int) ($x['ajouterControleur']['positionId'] ?? 0);
+                if ($pid <= 0) { continue; }
+                $corps['position_id'] = $pid;
+            }
+            $op = ['quoi' => 'Ajouter un contrôleur', 'methode' => 'POST', 'chemin' => '/tasks/' . $tid . '/controllers', 'corps' => $corps];
+        } elseif (!empty($x['retirerControleur'])) {
+            $cid = (int) $x['retirerControleur'];
+            $op = ['quoi' => 'Retirer le contrôleur #' . $cid, 'methode' => 'DELETE', 'chemin' => '/tasks/' . $tid . '/controllers/' . $cid, 'corps' => null];
+        } else { continue; }
+        $ops[] = $op + ['taskId' => $tid];
+        $ids[$tid] = true;
+    }
+    if ($ops === []) { http_response_code(422); return ['error' => 'rien à changer']; }
+    foreach ($ops as $k => $op) {
+        $r = tkReq($op['methode'], $op['chemin'], $op['corps']);
+        $ops[$k] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    }
+    $refus = count(array_filter($ops, fn ($o) => !$o['ok']));
+    journalAdd('CEO', 'Cadre des tâches', null, count($ops) . ' changement' . (count($ops) > 1 ? 's' : '') . ' de qui fait / qui contrôle sur '
+        . count($ids) . ' tâche' . (count($ids) > 1 ? 's' : '') . ($refus ? ' — ' . $refus . ' refusé' . ($refus > 1 ? 's' : '') . ' par le panel' : ''));
+    $qui = [];
+    foreach (array_chunk(array_keys($ids), 200) as $paquet) { $qui += tkQui(['ids' => $paquet])['qui']; }
+    http_response_code($refus ? 502 : 200);
+    $premier = null;
+    foreach ($ops as $o) { if (!$o['ok']) { $premier = $o['erreur']; break; } }
+    return ['ok' => $refus === 0, 'refus' => $refus, 'operations' => $ops, 'qui' => $qui,
+        'error' => $refus ? $refus . ' changement' . ($refus > 1 ? 's' : '') . ' sur ' . count($ops) . ' refusé' . ($refus > 1 ? 's' : '') . ' par le panel' . ($premier ? ' : ' . $premier : '') : null];
 }
 
 /**
@@ -1385,9 +1447,10 @@ function tkSopControles(string $id): array
  * nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif ; `apercu: true`
  * rend les appels sans les envoyer.
  */
-function tkModifier(int $id, array $b): array
+function tkModifier(int $id, array $b, ?array $brutes = null): array
 {
-    [$brutes, $e] = tkLireListe('/tasks');
+    $e = null;
+    if ($brutes === null) { [$brutes, $e] = tkLireListe('/tasks'); }
     $m = null;
     foreach ((array) $brutes as $x) { if ((int) ($x['id'] ?? $x['task_id'] ?? 0) === $id) { $m = $x; break; } }
     if ($m === null) { http_response_code(404); return ['error' => 'tâche #' . $id . ' absente du panel' . ($e ? ' : ' . $e : '')]; }
@@ -1430,6 +1493,33 @@ function tkModifier(int $id, array $b): array
         . ($ok ? '' : ' — refusé en partie'));
     if (!$ok) { http_response_code(502); }
     return ['id' => $id, 'ok' => $ok, 'operations' => $ops];
+}
+
+/**
+ * PATCH /task/taches {ids: [id de tâche], champs: {jour?, heure?, frequence?, obligatoire?, photo?}} — les mêmes
+ * réglages sur plusieurs tâches d'un coup (vue Document, « toute la checklist »). /tasks n'est lu qu'une fois ;
+ * chaque tâche part comme un PATCH /task/taches/{id}, et on continue après un refus : chacune dit le sien.
+ */
+function tkModifierLot(array $b): array
+{
+    $ids = array_slice(array_values(array_unique(array_filter(array_map('intval', (array) ($b['ids'] ?? [])), fn ($i) => $i > 0))), 0, 200);
+    $champs = array_intersect_key(is_array($b['champs'] ?? null) ? $b['champs'] : [], array_flip(['jour', 'heure', 'frequence', 'obligatoire', 'photo']));
+    if ($ids === [] || $champs === []) { http_response_code(422); return ['error' => 'des tâches et des champs à changer sont attendus']; }
+    [$brutes, $e] = tkLireListe('/tasks');
+    if ($brutes === null) { http_response_code(502); return ['error' => 'GET /tasks : ' . ($e ?? 'pas de réponse')]; }
+    $res = [];
+    $refus = 0;
+    foreach ($ids as $id) {
+        $r = tkModifier($id, $champs, $brutes);
+        $ok = !empty($r['ok']);
+        if (!$ok) { $refus++; }
+        $err = $r['error'] ?? null;
+        foreach ((array) ($r['operations'] ?? []) as $op) { if (empty($op['ok']) && !empty($op['erreur'])) { $err = $op['erreur']; break; } }
+        $res[] = ['id' => $id, 'ok' => $ok, 'erreur' => $ok ? null : ($err ?? 'refusé par le panel')];
+    }
+    http_response_code($refus ? 502 : 200);
+    return ['ok' => $refus === 0, 'refus' => $refus, 'resultats' => $res,
+        'error' => $refus ? $refus . ' tâche' . ($refus > 1 ? 's' : '') . ' sur ' . count($ids) . ' refusée' . ($refus > 1 ? 's' : '') . ' par le panel' : null];
 }
 
 /**
