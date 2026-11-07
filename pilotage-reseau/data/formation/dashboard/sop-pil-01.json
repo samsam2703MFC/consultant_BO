@@ -1,0 +1,578 @@
+{
+ "id": "sop-pil-01",
+ "code": "SOP-PIL-01",
+ "type": "SOP",
+ "dossier": "01",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": "ouverture",
+ "duree": "10 min chaque matin · 2 × 3 min en journée · 5 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
+ "titre": {
+  "fr": "Analyser le dashboard magasin : la routine",
+  "nl": ""
+ },
+ "objectif": {
+  "fr": "Savoir chaque jour, chaque semaine et chaque mois où en est le magasin, et en tirer une action notée, chiffres à l’appui.",
+  "nl": ""
+ },
+ "pour": {
+  "fr": "Le responsable du magasin : franchisé, manager, adjoint manager ou chef de section vente (P4, P7, P8, P9, P11, P12). Formation continue FO-05.",
+  "nl": ""
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "operationnel",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente",
+   "C-PILOTAGE.Franchise"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Chaque matin, à l’ouverture — 10 min",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "1.1",
+     "titre": {
+      "fr": "Ouvrir le dashboard",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Ouvrir le dashboard du magasin sur l’onglet Opérationnel.\nToucher « ↻ Relire » pour partir de chiffres frais.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-entete.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.2",
+     "titre": {
+      "fr": "Relire la veille",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Dans la frise, toucher la case d’hier.\nNoter son % de l’objectif, son résultat (P&L court) et sa poubelle.\nUne case orange ou rouge : chercher pourquoi dans « Le duel » (clients ou panier).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-frise.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.3",
+     "titre": {
+      "fr": "Contrôles en photo",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Revenir sur aujourd’hui : tous les contrôles d’ouverture sont-ils rendus ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.4",
+     "titre": {
+      "fr": "Vitrine et prochaine cuisson",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire combien de produits vont manquer et les euros à sauver.\nReporter les « +N à cuire » sur la prochaine cuisson.\nUn produit vide alors que des clients le demandent passe en premier.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-vitrine.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.5",
+     "titre": {
+      "fr": "Stock",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Une alerte : vérifier la référence (comptage, réception, écart de caisse).\nBandeau orange « non recompté depuis N jours » : planifier un comptage dans la semaine.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-stock.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.6",
+     "titre": {
+      "fr": "L’équipe du jour",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Dans « La journée », vérifier le planning face aux heures fortes de la veille.\nUne heure creuse très chargée en personnel : l’occuper (mise en place, nettoyage, démarchage) ou ajuster le planning.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-journee.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "En journée — 11 h et 15 h, 3 min",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "2.1",
+     "titre": {
+      "fr": "Objectif comptoir",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire la projection de fin de journée face à l’objectif comptoir.\nProjection sous 90 % de l’objectif à 11 h : décider une action pour l’après-midi et la dire à l’équipe.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-objectif.jpg",
+     "video": null
+    },
+    {
+     "numero": "2.2",
+     "titre": {
+      "fr": "Clients ou panier ?",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Dans « Le duel », comparer aux mêmes heures de la semaine dernière.\nMoins de clients : vitrine pleine, porte et trottoir, offre du moment.\nPanier plus bas : rappeler la vente additionnelle (boisson, viennoiserie, formule).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-duel.jpg",
+     "video": null
+    },
+    {
+     "numero": "2.3",
+     "titre": {
+      "fr": "Heure par heure",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Regarder si la courbe d’aujourd’hui rattrape celle de la semaine dernière.\nVérifier la vitrine avant chaque cuisson (Midi, Après-midi).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heures.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le soir, à la fermeture — 5 min",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "3.1",
+     "titre": {
+      "fr": "Le résultat de la journée",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire le P&L court : chiffre d’affaires, marge brute, résultat.\nCoût matière au-dessus de son seuil (celui de Budget › Paramètres) ou main-d’œuvre au-dessus du sien : noter la cause probable.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.2",
+     "titre": {
+      "fr": "La poubelle est déclarée",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "« Invendus et poubelle » doit montrer les pièces jetées du jour.\n« Rien déclaré au panel » alors qu’on a jeté : faire saisir les invendus en caisse avant de partir.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.3",
+     "titre": {
+      "fr": "Les tâches du jour",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Vérifier qu’aucune tâche bloquante ne reste ouverte ; sinon, la confier pour demain matin.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-taches.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque lundi — la semaine écoulée, 30 min",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "4.1",
+     "titre": {
+      "fr": "Ouvrir la semaine passée",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Onglet Semaine, puis ‹ pour revenir à la semaine écoulée.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-cal-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.2",
+     "titre": {
+      "fr": "Le résultat",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Noter : CA, atteinte de l’objectif, résultat net, record.\nAtteinte sous 90 % : identifier les jours rouges dans « Le CA de chaque jour ».",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-resultat.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.3",
+     "titre": {
+      "fr": "Face au réseau",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire son rang et l’écart à la médiane sur le CA, les clients, le panier et l’atteinte.\nLe chiffre où l’on est le plus loin de la médiane devient la priorité de la semaine.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-reseau.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.4",
+     "titre": {
+      "fr": "Tâches et contrôles",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire le % de tâches faites et les jours sous 40 %.\nUn jour sous 40 % : voir avec l’équipe de ce jour-là ce qui a bloqué.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.5",
+     "titre": {
+      "fr": "Invendus",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire les pièces jetées, le coût de production et la valeur de vente perdue.\nLes trois références les plus jetées : baisser leur production ou changer leur heure de cuisson.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-invendus.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.6",
+     "titre": {
+      "fr": "Les heures et le planning",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lire l’heure la plus rentable et la moins rentable, et la journée type.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heures-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.7",
+     "titre": {
+      "fr": "Décider",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Choisir une à trois actions pour la semaine, chacune avec un chiffre à faire bouger.\nLes écrire dans le plan d’action du magasin et les annoncer au briefing d’équipe.\nLe lundi suivant, relire si le chiffre a bougé.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-douze.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le premier jour ouvré du mois — le mois clos, 1 h",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "5.1",
+     "titre": {
+      "fr": "Les six leviers",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Onglet Mois, puis ‹ pour revenir au mois clos.\nTraiter d’abord les pastilles au-delà du seuil critique (food cost, labour cost, overhead cost, trafic, récurrence, note Google).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-leviers.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.2",
+     "titre": {
+      "fr": "Le résultat du mois",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Noter : CA face au budget, atteinte, marge brute, résultat net.\nLire la rentabilité jour par jour et le profil des jours : quel jour freine le mois ?",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-rentab.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.3",
+     "titre": {
+      "fr": "Le CA de chaque jour",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Repérer les jours sous 75 % de l’objectif et chercher la cause (météo, rupture, équipe, travaux).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-cal-mois.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.4",
+     "titre": {
+      "fr": "Promotions et primes",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Promotions : garder celles dont le coefficient tient, proposer au cockpit d’arrêter les autres.\nPrimes : faire le point avec chaque vendeuse sur ce qui lui reste à faire.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-promos.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.5",
+     "titre": {
+      "fr": "Préparer la visite du consultant",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Rassembler les chiffres du mois, les actions de chaque lundi et leur effet.\nLes apporter à la visite ou au point mensuel avec le consultant.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-valeur.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque trimestre — le cap",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "6.1",
+     "titre": {
+      "fr": "Le trimestre",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Onglet Trimestre : lire l’écart au plan de développement et les clients manquants.\nÉcrire l’annotation du franchisé et suivre le rituel du trimestre avec le consultant.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-annotations.jpg",
+     "video": null
+    },
+    {
+     "numero": "6.2",
+     "titre": {
+      "fr": "L’année",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Onglet Année : lire la projection de fin d’année face à l’objectif et la heatmap des mois.\nUn écart qui se creuse deux trimestres de suite : revoir le plan avec le consultant.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heatmap.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Qui prévenir",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "7.1",
+     "titre": {
+      "fr": "Un chiffre manifestement faux",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "0 € alors que la caisse a tourné, coût matière inconnu, magasin absent du réseau : prévenir le consultant, avec une capture.\nNe pas corriger « de tête » : la correction se fait à la source (caisse, panel, cockpit).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7.2",
+     "titre": {
+      "fr": "Une dérive qui dure",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Résultat négatif trois soirs de suite, ou atteinte de la semaine sous 80 % : prévenir le consultant (business coach).\nStock négatif sur une référence : prévenir le responsable de la production et recompter.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Chaque lecture finit par une action notée ; une lecture sans action ne sert à rien.",
+   "nl": ""
+  },
+  {
+   "fr": "Le résultat du jour se lit le soir, jamais le matin.",
+   "nl": ""
+  },
+  {
+   "fr": "Les invendus doivent être déclarés en caisse chaque soir, sinon le résultat est faux.",
+   "nl": ""
+  },
+  {
+   "fr": "Le dashboard est en lecture seule : on corrige à la source, puis on relit.",
+   "nl": ""
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À 11 h, la projection de fin de journée est à 82 % de l’objectif comptoir. Que faire ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Attendre le soir pour voir",
+     "Baisser l’objectif",
+     "Décider une action pour l’après-midi (vitrine, offre, vente additionnelle) et la dire à l’équipe"
+    ],
+    "nl": []
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Le soir, « Invendus et poubelle » affiche « rien déclaré au panel » alors que l’équipe a jeté des pièces. Que faire ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Rien, ce n’est pas grave",
+     "Faire saisir les invendus en caisse avant de partir",
+     "Retirer le montant du résultat de tête"
+    ],
+    "nl": []
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le lundi, quelle est la priorité de la semaine ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Le chiffre où le magasin est le plus loin de la médiane du réseau, avec une à trois actions notées",
+     "Tous les chiffres à la fois",
+     "Le chiffre le plus haut"
+    ],
+    "nl": []
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Le résultat est négatif trois soirs de suite. Qui prévenir ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Personne",
+     "Le consultant (business coach)",
+     "Le fournisseur"
+    ],
+    "nl": []
+   },
+   "bonne": 1
+  }
+ ]
+}

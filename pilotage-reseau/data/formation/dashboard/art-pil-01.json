@@ -1,0 +1,576 @@
+{
+ "id": "art-pil-01",
+ "code": "ART-PIL-01",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "duree": "45 min de lecture, puis 30 min sur le dashboard de son magasin",
+ "titre": {
+  "fr": "Comprendre le dashboard magasin",
+  "nl": ""
+ },
+ "objectif": {
+  "fr": "Savoir lire chaque onglet du dashboard magasin : d’où vient chaque chiffre, à quoi il se compare, ce que disent les couleurs, et où regarder pour répondre à une question sur le magasin.",
+  "nl": ""
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire en pré-ouverture, dans la formation FO-05, avant la première journée.",
+  "nl": ""
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Avant de commencer",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ouvrir le dashboard",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Adresse : le cockpit › Dashboard magasin, ou le lien reçu pour son magasin (…/consulant_bo/dashboard/?shop=…).\nL’onglet qui s’ouvre d’office : Opérationnel, la journée en cours.\n« ↻ Relire » relit les chiffres ; la journée en cours se relit seule toutes les dix minutes.\nTout est en lecture seule : le dashboard montre, il n’écrit rien. On corrige à la source (caisse, panel, cockpit).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-entete.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les sept onglets",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Opérationnel : aujourd’hui, heure par heure.\nSemaine et Mois : le résultat de la période, jour par jour.\nTrimestre et Année : le cap, face au plan de développement.\nPromotions : les offres en caisse et ce qu’elles rapportent.\nPrimes : où en est chaque vendeuse, prime par prime.\nSous les onglets, la frise : une case par jour (ou par mois, par trimestre) ; ‹ et › changent de période, un toucher ouvre la case.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-frise.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Un chiffre ne se lit jamais seul",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Chaque chiffre est posé à côté d’une référence : l’objectif, le même jour de la semaine dernière, la médiane du réseau ou l’an dernier.\nBordeaux ou rouge : en retard sur la référence ou au-delà d’un seuil.\nOrange : à surveiller. Vert : en ordre. Doré : record ou objectif dépassé.\nHachuré : la journée ou la période est en cours, pas encore jugée.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-cal-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "La valeur du magasin",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "En haut à droite, en doré : ce que vaut le fonds de commerce au rythme actuel.\nLe calcul : le chiffre d’affaires des deux dernières années (730 jours, ou les jours vécus si le magasin est plus jeune), ramené à un an, divisé par 6 — deux mois de chiffre d’affaires.\nLe mois en cours est écarté : incomplet, il tirerait la valeur vers le bas.\nUn toucher sur « Valeur ▾ » ouvre le détail : la formule en toutes lettres et la valeur année par année.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-valeur.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Opérationnel — la journée",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Ta place dans le réseau",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Cinq chiffres face aux autres magasins ouverts : chiffre d’affaires, clients, panier moyen (hors clients pro), marge brute, B2B.\nLe point bordeaux, c’est toi ; les points gris, les autres ; le trait noir, la médiane.\nSous chaque chiffre : l’écart à la médiane et le chiffre du premier.\nLe rang (2e / 4) se lit en vert quand tu es premier.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-reseau.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "L’objectif comptoir du jour",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "L’objectif du jour vient du budget du mois, réparti sur les jours selon la pondération du réseau.\nBarre bordeaux : aujourd’hui à l’heure qu’il est. Barre bleue : le même jour la semaine dernière, à la même heure.\nLa partie hachurée mène à la projection de fin de journée au rythme actuel.\nLe B2B (clients pro) a sa propre carte, dessous : il ne se mélange pas au comptoir.\n« Commandes du jour » : les commandes comptoir et webshop à préparer ou à retirer.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-objectif.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Heure par heure",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "La courbe du chiffre d’affaires cumulé d’aujourd’hui, face à celle du même jour la semaine dernière.\nLe trait pointillé vertical : maintenant. La ligne de l’objectif comptoir en haut.\nBascule CA · Clients · Panier : pour voir si le retard vient du nombre de clients ou du panier.\n« Comptoir et pro séparés » ou « Combinés » : deux lectures du même chiffre.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heures.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Le duel, chiffre par chiffre",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Trois lignes : chiffre d’affaires, clients, panier moyen.\nQuatre colonnes : aujourd’hui à l’heure qu’il est ; le même jour la semaine dernière à la même heure (et l’écart en %) ; ce même jour sur toute la journée ; la référence (moyenne des six derniers mêmes jours).\nMoins de clients : c’est le trafic (vitrine, trottoir, offre). Panier plus bas : c’est la vente additionnelle.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-duel.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Le P&L court de la journée",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Chiffre d’affaires − coût matière = marge brute.\nMarge brute − invendus et poubelle − main-d’œuvre − frais généraux = résultat.\nLe seuil du coût matière est le taux matière du réseau posé au cockpit, Budget › Paramètres (catégorie Matière première & Emballage) : on le change là, le dashboard suit.\nMain-d’œuvre et frais généraux : les seuils de la Table KPI (33 % et 13,5 % du chiffre d’affaires).\nLa main-d’œuvre est celle du planning du jour ; les heures du franchisé sont indiquées à part.\nLe matin, le résultat est toujours négatif : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas encore. Il se lit le soir.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Ventes par catégorie",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Groupe › catégorie › produit : un toucher sur ▸ déplie.\nPour chaque ligne : chiffre d’affaires, part du total, marge brute, taux de marge, coefficient (prix de vente ÷ coût).\nLa couleur du taux : sous 40 %, 40–50, 50–60, 60–70, 70 % et plus en or ; gris = coût matière inconnu (recette à compléter au panel).\nAutres lectures : Treemap (le poids d’un coup d’œil), Promotions, Portions.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-categories.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "La journée",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Une frise de 4 h à 20 h : l’équipe (le planning), les cuissons du four, la vitrine, les commandes.\n« À valider » sur une cuisson : elle n’a pas encore été confirmée.\nÀ droite, les ventes au comptoir heure par heure face à la moyenne : vert au-dessus, ambre sous la moyenne, bordeaux l’heure en cours.\n« L’équipe du jour › » ouvre le détail du planning.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-journee.jpg",
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "La vitrine",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Ce qui va manquer d’ici la fermeture, au rythme des ventes, et les euros de ventes à sauver.\nTrois familles : Short life (frais du jour), Medium life, Long life.\n« +N à cuire » : ce qu’il faut lancer à la prochaine cuisson ; l’heure de la prochaine cuisson est en haut à droite.\nRouge : vide alors que des clients le demandent.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-vitrine.jpg",
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Les contrôles en photo",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Les photos des contrôles du jour (ouverture, comptoirs, étiquetage) déposées par l’équipe.\nTrois filtres : Tout, À contrôler (déposée, pas encore notée), Non rendues (pas de photo).\nUne photo s’ouvre en grand d’un toucher.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Le stock vivant",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "L’inventaire matière du magasin, relu avec la page.\nUne référence est en alerte quand son stock est négatif (écart de caisse ou de comptage) ou sous le minimum journalier.\nZéro alerte n’est une bonne nouvelle que si l’inventaire est récent : au-delà de sept jours sans comptage, le bandeau passe en orange.\n« M’avertir » : une notification sur le téléphone dès qu’une référence passe sous son minimum (page en https seulement).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-stock.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Semaine et Mois — le résultat",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "Les tâches de la période",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Faites, non faites, et les jours où moins de 40 % des tâches ont été faites.\nLe fil des jours : une case par jour — vert 80 % et plus, vert clair 40 % et plus, rose sous 40 %, rouge rien de fait.\n« détail ▾ » ouvre les tâches jour par jour ; les tâches bloquantes se lisent sur le jour.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "Le résultat de la période",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "CA de la période et objectif (budget validé), attendu à ce jour.\nAtteinte : la part de l’attendu à ce jour, et les clients manquants.\nProjection : où la période finira au rythme actuel. Reste à faire : par jour restant.\nPar jour ouvert, marge brute (et coût matière face au seuil de Budget › Paramètres), résultat net, record de la période.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-resultat.jpg",
+     "video": null
+    },
+    {
+     "numero": "17",
+     "titre": {
+      "fr": "Commandes et canaux",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Comptoir (tickets de caisse), clients pro (tickets des sociétés), click & collect (webshop retiré en boutique), livraison (webshop livré).\nPour chacun : le chiffre, la part du CA, le nombre de tickets ou de commandes, le panier.\nLe tableau des commandes : jour par jour, ce qui est à préparer et ce qui est déjà pris pour les jours à venir.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-canaux.jpg",
+     "video": null
+    },
+    {
+     "numero": "18",
+     "titre": {
+      "fr": "Invendus et poubelle",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Les pièces jetées déclarées en caisse : leur coût de production se retranche du résultat.\nValeur de vente perdue : ce qu’elles auraient rapporté au prix de vente.\nMotifs (fin de journée, casse…) et « Les saisies une par une » : l’heure, l’opérateur, la quantité.\nRien de déclaré ne veut pas dire rien de jeté : une poubelle non saisie fausse le résultat.",
+      "nl": ""
+     },
+     "critique": true,
+     "photo": "dash-invendus.jpg",
+     "video": null
+    },
+    {
+     "numero": "19",
+     "titre": {
+      "fr": "Le CA de chaque jour",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Le calendrier de la période : en grand, le chiffre d’affaires du jour.\nCouleur et jauge face à l’objectif du jour : 110 % et plus, 100–110, 90–100, 75–90, sous 75 %.\nLe trait de la jauge : 100 % de l’objectif. Hachuré : le jour en cours.\nEn Mois, à côté : le profil des jours (le jour de la semaine le plus faible).",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-cal-mois.jpg",
+     "video": null
+    },
+    {
+     "numero": "20",
+     "titre": {
+      "fr": "Douze semaines et les heures",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Les douze dernières semaines : clients, panier moyen ou articles par client, face à l’an dernier.\nLes heures : l’heure avec le plus de clients, le plus de chiffre, la plus rentable, la moins rentable.\nLa journée type : pour chaque heure, ventes, coût matière, rémunération et marge nette (vert = l’heure gagne, rouge = elle perd).\nC’est la base pour ajuster le planning et les cuissons.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heures-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "21",
+     "titre": {
+      "fr": "Les six leviers (onglet Mois)",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Trafic (clients par jour), récurrence (clients qui reviennent), expérience client (note Google), food cost, labour cost, overhead cost.\nChaque levier face à l’an dernier et au réseau ; pastille selon les seuils de la Table KPI : sous l’alerte, entre alerte et critique, au-delà.\n« L’évolution de l’année » montre chaque levier mois par mois.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-leviers.jpg",
+     "video": null
+    },
+    {
+     "numero": "22",
+     "titre": {
+      "fr": "La rentabilité jour par jour (onglet Mois)",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Le P&L du mois, puis le résultat net de chaque jour en une ligne de cases.\nUne case : un jour ; sa couleur dit s’il a gagné ou perdu de l’argent.\nLe profil des jours dit quel jour de la semaine porte le mois et lequel le freine.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-rentab.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Trimestre et Année — le cap",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "23",
+     "titre": {
+      "fr": "Le trimestre",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Les quatre trimestres de l’année face à l’objectif du plan de développement.\nLe trimestre choisi : objectif, réalisé, attendu à ce jour, écart, clients manquants, marge nette.\nLes annotations du trimestre : celles du franchisé, du consultant et de la marque, et les actions posées.\nLe rituel du trimestre : cinq étapes, à valider avec le consultant.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-annotations.jpg",
+     "video": null
+    },
+    {
+     "numero": "24",
+     "titre": {
+      "fr": "L’année",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "L’objectif de l’année (engagement du franchisé), le réalisé, l’attendu, l’écart et la projection de fin d’année.\nLa rampe à cinq ans : l’année 1, 2, 3 puis la maturité.\nTrimestre par trimestre, le trafic face à l’an dernier, puis mois par mois.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-annee.jpg",
+     "video": null
+    },
+    {
+     "numero": "25",
+     "titre": {
+      "fr": "La heatmap des mois",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Une case par mois : l’atteinte du budget, ou le CA du mois.\nRouge sous 80 %, orange 80–95 %, vert 95–105 %, doré au-delà de 105 %.\nLe tableau dessous donne, mois par mois : CA, budget, clients, panier, food cost, labour, overhead, marge nette.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-heatmap.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Promotions, Primes et téléphone",
+    "nl": ""
+   },
+   "etapes": [
+    {
+     "numero": "26",
+     "titre": {
+      "fr": "Promotions",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Lecture seule : les promotions se créent et se modifient au cockpit (Promotions › Édition).\n« Où les promotions sont utilisées » : combien de fois, au comptoir ou au webshop, sur 7 ou 30 jours.\nLe coefficient du lot : ce que rapporte la vente avec la promotion ; en rouge quand il est bas.\nDessous : les promotions actives, à venir, en brouillon, terminées.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-promos.jpg",
+     "video": null
+    },
+    {
+     "numero": "27",
+     "titre": {
+      "fr": "Primes",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Où en sont les vendeuses : les primes du magasin (toute l’équipe gagne ensemble) et les primes individuelles.\nPour chacune : la cible, où en est chaque personne, « en tête » ou « gagnée ».\nÉligibles et « sous le minimum d’heures » : qui peut toucher la prime ce mois.\nLecture seule : les primes se posent et se règlent au cockpit.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-primes.jpg",
+     "video": null
+    },
+    {
+     "numero": "28",
+     "titre": {
+      "fr": "Au téléphone",
+      "nl": ""
+     },
+     "texte": {
+      "fr": "Sous 560 px de large, la même page se lit au pouce : Opérationnel, Exploitation, Contrôle, Semaine, Primes, en bas de l’écran.\nLe chiffre de la période en grand, l’alerte des tâches bloquantes juste dessous, puis des cartes.\nLe mois, le trimestre et l’année se lisent sur ordinateur ou tablette.",
+      "nl": ""
+     },
+     "critique": false,
+     "photo": "dash-mobile.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un chiffre se lit toujours face à sa référence (objectif, même jour la semaine dernière, médiane du réseau, an dernier), jamais seul.",
+   "nl": ""
+  },
+  {
+   "fr": "Le résultat du P&L court se lit le soir : le matin, les coûts de toute la journée sont déjà posés.",
+   "nl": ""
+  },
+  {
+   "fr": "Le dashboard est en lecture seule : une erreur se corrige à la source (caisse, panel, cockpit), puis on relit.",
+   "nl": ""
+  },
+  {
+   "fr": "Zéro alerte de stock ne rassure que si l’inventaire a moins de sept jours.",
+   "nl": ""
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À 9 h, le P&L court affiche un résultat négatif. Que faut-il en conclure ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "La journée sera perdante, il faut réduire l’équipe",
+     "Rien encore : les coûts de toute la journée sont posés, le chiffre d’affaires ne l’est pas ; le résultat se lit le soir",
+     "Le dashboard est en panne"
+    ],
+    "nl": []
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Comment se calcule la valeur du magasin ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Le CA des deux dernières années ramené à un an, divisé par 6 (deux mois de chiffre d’affaires)",
+     "Le CA du mois en cours × 12",
+     "Le résultat net de l’année × 3"
+    ],
+    "nl": []
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Dans « Le duel », le panier moyen est en hausse mais le CA en baisse face à la semaine dernière. Où chercher ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "La vente additionnelle",
+     "Le coût matière",
+     "Le nombre de clients : c’est le trafic qui manque"
+    ],
+    "nl": []
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "La heatmap de l’année montre une case orange. Que veut-elle dire ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Le mois a dépassé son budget",
+     "Le mois a atteint entre 80 et 95 % de son budget",
+     "Le mois n’a pas de budget"
+    ],
+    "nl": []
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le bandeau du stock dit « inventaire non recompté depuis 12 jours » en orange. Que faire ?",
+    "nl": ""
+   },
+   "choix": {
+    "fr": [
+     "Rien, il n’y a pas d’alerte",
+     "Modifier le stock dans le dashboard",
+     "Planifier un comptage : sans inventaire récent, l’absence d’alerte ne prouve rien"
+    ],
+    "nl": []
+   },
+   "bonne": 2
+  }
+ ]
+}
