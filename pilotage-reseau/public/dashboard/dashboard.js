@@ -1016,12 +1016,20 @@
   const MA = {
     ca: p => p == null ? 'n' : (p >= 100 ? 'v' : (p >= 90 ? 'o' : 'r')),             // chiffre face à l'objectif, %
     net: p => p == null ? 'n' : (p >= 15 ? 'v' : (p >= 5 ? 'o' : 'r')),               // résultat, % des ventes
-    mat: p => p == null ? 'n' : (p <= 35 ? 'v' : (p <= 45 ? 'o' : 'r')),              // matière, % des ventes
+    // matière, % des ventes, face au seuil du réseau (Budget › Paramètres, rendu par l'API dans `seuils.food`) :
+    // vert jusqu'au seuil, orange jusqu'à dix points au-dessus. Sans seuil lu, l'ancien repère de 35 %.
+    mat: (p, s) => p == null ? 'n' : (p <= (s != null ? s : 35) ? 'v' : (p <= (s != null ? s : 35) + 10 ? 'o' : 'r')),
     mo: p => p == null ? 'n' : (p <= 20 ? 'v' : (p <= 25 ? 'o' : 'r')),               // main-d'œuvre, % des ventes
     poub: p => p == null ? 'n' : (p <= 1.5 ? 'v' : (p <= 3 ? 'o' : 'r')),             // poubelle, % du chiffre
     ctrl: (r, t) => !t ? 'n' : (r >= t ? 'v' : (r / t >= 0.8 ? 'o' : 'r')),           // contrôles rendus
     cli: (n, j7) => n == null || !j7 ? 'n' : (n >= 0.95 * j7 ? 'v' : (n >= 0.85 * j7 ? 'o' : 'r')),
   };
+  /** Le seuil matière du réseau tel que l'API le rend (Budget › Paramètres) ; null s'il n'est pas encore lu. */
+  const maSeuilMat = d => {
+    const x = (d && d.seuils) || ((S.aux['jourM|' + S.date] || {}).seuils) || null;
+    return x && x.food != null ? +x.food : null;
+  };
+  const maSeuilLib = d => { const v = maSeuilMat(d); return v != null ? 'seuil ' + fP(v) : 'seuil —'; };
   /** La poubelle du jour regardé, même depuis l'onglet Semaine (qui lit celle de la semaine). */
   function maInvJour() { const I = S.aux['inv|' + S.shop + '|' + S.date]; return I && !I.error ? I : null; }
   const maPire = L => L.includes('r') ? 'r' : (L.includes('o') ? 'o' : (L.includes('v') ? 'v' : 'n'));
@@ -1080,8 +1088,8 @@
       v: m.net != null ? fS(m.net) : '—', s: m.netPct != null ? fPS(m.netPct) + ' des ventes' + (auj ? ' · la journée continue' : '') : 'P&amp;L incomplet' });
     T.push({ k: 'Clients', court: 'les clients', pt: MA.cli(m.tickets, m.j7 && m.j7.tickets),
       v: m.tickets != null ? fN(m.tickets) + j7Delta(m) : '—', s: [m.j7 && m.j7.tickets != null ? fN(m.j7.tickets) + ' à J−7' : '', panTxt(PM)].filter(Boolean).join(' · ') });
-    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct),
-      s: 'seuil 35 %' + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
+    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct),
+      s: maSeuilLib(d) + (m.margeBrutePct != null ? ' · marge brute ' + fP(m.margeBrutePct) : '') });
     T.push({ k: 'Main-d’œuvre', court: 'la main-d’œuvre', pt: auj ? 'n' : MA.mo(m.labourPct), v: m.labourPct != null ? fP(m.labourPct) : '—',
       s: m.planningHeures ? nf(m.planningHeures, 1) + ' h au planning' : 'des ventes' });
     T.push({ k: 'Invendus', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true),
@@ -1181,7 +1189,7 @@
       apres: maBarres(J.map(j => ({ l: jl(j), v: j.ca != null && j.objectif ? 100 * j.ca / j.objectif : null, c: j.ca != null && j.objectif ? 'p' + maJourCA(j) : '' })), 120) });
     T.push({ k: 'Résultat', court: 'le résultat', pt: netSem == null ? 'n' : MA.net(realise ? 100 * netSem / realise : null),
       v: netSem != null ? fS(netSem) : '—', s: netSem != null ? (m.net == null ? 'somme des jours, main-d’œuvre répartie' : 'la semaine') + (realise ? ' · ' + fPS(100 * netSem / realise) + ' des ventes' : '') : 'P&amp;L incomplet' });
-    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct), v: fP(m.coutMatierePct), s: 'seuil 35 % · la semaine' });
+    T.push({ k: 'Matière', court: 'la matière', pt: MA.mat(m.coutMatierePct, maSeuilMat(d)), v: fP(m.coutMatierePct), s: maSeuilLib(d) + ' · la semaine' });
     T.push({ k: 'Poubelle', court: 'la poubelle', ouvre: 'invdrop', ouvert: S.invOuvert, tir: () => invCarte(true), pt: m.invendus == null ? 'n' : MA.poub(m.invendusPct),
       v: m.invendus != null ? fE(m.invendus) : '—', s: m.invendusPieces != null ? maPl(m.invendusPieces, 'pièce') + (m.invendusPct != null ? ' · ' + fP(m.invendusPct) + ' du chiffre' : '') : 'pas déclarée' });
     T.push({ k: 'Réseau', court: 'le rang', ouvre: 'rgdrop', ouvert: S.rgOuvert, tir: () => murClassement(m, d), pt: maRangPt(rc),

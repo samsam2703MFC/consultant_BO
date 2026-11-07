@@ -1987,6 +1987,58 @@ function ep_exploitation_jour(): array
     return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/jour');
 }
 
+/**
+ * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
+ * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
+ *
+ * Le coût matière vient de Budget › Paramètres (réglage `budgetCharges`, 07/11/2026) : le taux du réseau qu'on y
+ * pose est celui que le dashboard montre, pas une seconde valeur tenue ailleurs. La catégorie lue est celle que le
+ * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
+ * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
+ * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
+ * comme avant. Sans réglage ni table : 32 / 33 / 13,5. `food` y passe aussi en dernier repli.
+ */
+function seuilsCharges(): array
+{
+    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    try {
+        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
+                            WHERE code IN ('food','labour','overhead')") as $k) {
+            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
+                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+        }
+    } catch (PDOException $e) { /* seuils par défaut */ }
+    $food = seuilMatiereBudget();
+    if ($food !== null) { $seuils['food'] = $food; }
+    return $seuils;
+}
+
+/** Le taux matière du réseau posé dans Budget › Paramètres (voir seuilsCharges) ; null s'il n'y est pas. */
+function seuilMatiereBudget(): ?float
+{
+    try { $m = setting('budgetCharges'); } catch (Throwable $e) { return null; }
+    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return null; }
+    $nom = null;
+    foreach ((array) ($m['paliers'] ?? []) as $p) {
+        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
+        if (str_starts_with($d, 'cat:')) { $nom = substr($d, 4); break; }
+    }
+    $cat = null;
+    foreach ($m['categories'] as $c) {
+        $n = is_array($c) ? (string) ($c['nom'] ?? '') : '';
+        if (($nom !== null && $n === $nom) || ($nom === null && preg_match('/^mati[eè]re/iu', $n) === 1)) { $cat = $c; break; }
+    }
+    if (!is_array($cat) || !is_array($cat['lignes'] ?? null) || $cat['lignes'] === []) { return null; }
+    $budget = 0.0; $theo = 0.0;
+    foreach ($cat['lignes'] as $l) {
+        if (!is_array($l)) { continue; }
+        $budget += is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
+        $theo += is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
+    }
+    $t = $budget > 0 ? $budget : $theo;
+    return $t > 0 && $t < 100 ? round($t, 1) : null;
+}
+
 function exJourCalcul(): array
 {
     $auj  = date('Y-m-d');
@@ -1996,14 +2048,7 @@ function exJourCalcul(): array
     $refDates = jourReference($date);
     $refLibelle = 'moyenne des 6 derniers ' . jourNomSemaine($date, true);
 
-    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
-    try {
-        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('food','labour','overhead')") as $k) {
-            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
-                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
-        }
-    } catch (PDOException $e) { /* seuils par défaut */ }
+    $seuils = seuilsCharges();
 
     $out = ['date' => $date, 'aujourdhui' => $auj, 'estAujourdhui' => $estAuj,
         'seuils' => $seuils, 'magasins' => [], 'reseau' => null,

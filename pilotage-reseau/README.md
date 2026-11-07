@@ -376,6 +376,13 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   minimum. Un bouton « Essai » envoie un message de vérification tout de suite.
   Le bouton dit toujours où l'on en est : indisponible sans HTTPS, refusé si la
   permission est bloquée, « averti sur cet appareil » une fois abonné.
+- **Seuils du P&L court** (07/11/2026) : le **coût matière** se juge face au taux matière du réseau posé au
+  cockpit, **Budget › Paramètres** (réglage `budgetCharges`) — la catégorie que le palier de la marge brute
+  retranche (« Matière première & Emballage »), somme des taux budget de ses lignes, ou des taux théoriques tant
+  que le budget est à 0 (au 07/11/2026 : 38 + 2 = **40 %**). Une seule définition, `seuilsCharges()`
+  (`src/endpoints.php`), lue par le jour, la période et le téléphone (qui avait 35 % en dur). Main-d'œuvre et
+  frais généraux restent ceux de la table `kpi` ; repli 32 / 33 / 13,5. Les six leviers du Mois, eux, gardent les
+  seuils d'alerte de la Table KPI (`ceo_kpi_def`).
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.

@@ -270,14 +270,7 @@ function exPeriodeCalcul(): array
     // future n'existe pas, une semaine passée est close.
     $jusqua = min($au, $auj);
 
-    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
-    try {
-        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('food','labour','overhead')") as $k) {
-            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
-                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
-        }
-    } catch (PDOException $e) { /* seuils par défaut */ }
+    $seuils = seuilsCharges();   // endpoints.php : le coût matière vient de Budget › Paramètres
 
     $pj = pjPoids();
     $out = ['vue' => $vue, 'date' => $date, 'du' => $du, 'au' => $au, 'aujourdhui' => $auj,
