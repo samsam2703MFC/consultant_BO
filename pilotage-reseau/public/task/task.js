@@ -34,6 +34,7 @@
     filtre: '', sel: new Set(),
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
+    vue: q.get('vue') === 'planning' ? 'planning' : 'cadre',   // onglet : Cadre des tâches · Planning des tâches
   };
 
   /* --- formats ------------------------------------------------------------ */
@@ -134,7 +135,8 @@
       ${a ? '<button class="tk-btn" data-a="deconnexion">Revenir au compte du cockpit</button>' : '<button class="tk-btn" data-a="connexion">Compte administrateur…</button>'}
       <button class="tk-btn" data-a="recharger" ${S.charge ? 'disabled' : ''}>${S.charge ? 'Lecture…' : 'Relire le panel'}</button>
       ${S.wz ? '' : '<button class="tk-btn prim" data-a="wzOuvrir" data-mode="nouvelle">Assistant : checklist et tâches</button>'}</div>
-      ${S.wz ? '' : `<p class="tk-intro"><b>Assistant</b> : créer une checklist et ses tâches, ou ajouter des tâches à une checklist, en quatre étapes. <b>Dupliquer</b> : cocher des tâches et en faire des copies avec d’autres jours, une autre heure, obligatoires ou avec photo. Rien ne part au panel sans un aperçu des appels exacts.</p>`}`;
+      ${S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Cadre des tâches</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`}
+      ${S.wz || S.vue === 'planning' ? '' : `<p class="tk-intro"><b>Assistant</b> : créer une checklist et ses tâches, ou ajouter des tâches à une checklist, en quatre étapes. <b>Dupliquer</b> : cocher des tâches et en faire des copies avec d’autres jours, une autre heure, obligatoires ou avec photo. Rien ne part au panel sans un aperçu des appels exacts.</p>`}`;
   }
 
   function erreurs() {
@@ -560,6 +562,62 @@
       <div class="tk-pied">${pied}</div></div>`;
   }
 
+  /* --- planning : charge par poste et par jour ---------------------------- */
+  // Le poste d'une tâche = celui de sa (première) checklist. Une tâche quotidienne compte chaque
+  // jour ; une tâche hebdomadaire seulement le jour que le panel lui donne. Rien n'est saisi ici.
+  const PL_JOURS = [['MONDAY', 'Lun', 'lundi'], ['TUESDAY', 'Mar', 'mardi'], ['WEDNESDAY', 'Mer', 'mercredi'], ['THURSDAY', 'Jeu', 'jeudi'],
+    ['FRIDAY', 'Ven', 'vendredi'], ['SATURDAY', 'Sam', 'samedi'], ['SUNDAY', 'Dim', 'dimanche']];
+  const PL_ORDRE = ['vente', 'production boulangerie', 'production patisserie', 'production traiteur', 'nettoyage', 'logistique', 'administartif', 'administratif'];
+  const posteAff = p => ({ Administartif: 'Administratif', 'Production Patisserie': 'Production Pâtisserie' })[p] || p;
+  const CAM = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  function planDonnees() {
+    const cl = new Map();
+    checklists().forEach(c => c.taches.forEach(l => { if (!cl.has(l.taskId)) { cl.set(l.taskId, c); } }));
+    const L = taches().filter(t => t.actif !== false).map(t => {
+      const c = cl.get(t.id); const f = String(t.frequence || '').toUpperCase(); const j = String(t.jour || '').toUpperCase();
+      const js = !f || f === 'DAILY' ? PL_JOURS.map(x => x[0]) : PL_JOURS.some(x => x[0] === j) ? [j] : [];
+      return { t, js, poste: (c && c.poste) || 'Sans poste', cl: c ? c.nom : 'Dans aucune checklist' };
+    });
+    const rang = p => { const i = PL_ORDRE.indexOf(sansAccent(p)); return i < 0 ? (p === 'Sans poste' ? 99 : 50) : i; };
+    const postes = [...new Set(L.map(x => x.poste))].sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr'));
+    return { L, postes };
+  }
+  const codeCl = n => String(n).split(/ · | — | - /)[0];
+  function planning() {
+    const { L, postes } = planDonnees();
+    const cel = (p, j) => L.filter(x => x.poste === p && x.js.includes(j));
+    const mx = Math.max(1, ...postes.flatMap(p => PL_JOURS.map(([j]) => cel(p, j).length)));
+    const sansJour = L.filter(x => !x.js.length).length;
+    const lignesHtml = postes.map(p => {
+      const cases = PL_JOURS.map(([j, c]) => {
+        const T = cel(p, j); const n = T.length; const ph = T.filter(x => x.t.photo).length; const r = n / mx;
+        if (!n) { return '<td class="pl-c"><span class="mu">—</span></td>'; }
+        return `<td class="pl-c" style="background:rgba(141,29,44,${(0.08 + 0.72 * r).toFixed(2)});color:${r > 0.55 ? '#fff' : 'var(--ink)'}"><button data-a="plCase" data-p="${esc(p)}" data-j="${j}" title="${esc(posteAff(p))} · ${c} : ${n} tâche${n > 1 ? 's' : ''}"><b>${n}</b>${ph ? `<small>${CAM} ${ph}</small>` : ''}</button></td>`;
+      }).join('');
+      const tot = PL_JOURS.reduce((s, [j]) => s + cel(p, j).length, 0);
+      return `<tr><td class="pl-p">${esc(posteAff(p))}</td>${cases}<td class="pl-t">${tot}</td></tr>`;
+    }).join('');
+    const totJ = PL_JOURS.map(([j]) => `<td class="pl-t">${L.filter(x => x.js.includes(j)).length}</td>`).join('');
+    return `<div class="tk-card"><div class="tk-ct"><span class="tk-k">Charge par poste et par jour</span><span class="mu" style="font-size:11px">plus la case est foncée, plus il y a de tâches · ${CAM} photos demandées</span></div>
+      <div class="tk-defile" style="padding:8px"><table class="pl-hm"><thead><tr><th></th>${PL_JOURS.map(x => `<th>${x[1]}</th>`).join('')}<th>Semaine</th></tr></thead>
+      <tbody>${lignesHtml}<tr class="pl-tot"><td class="pl-p">Tous les postes</td>${totJ}<td class="pl-t"></td></tr></tbody></table></div>
+      ${sansJour ? `<div class="tk-pied mu" style="font-size:11.5px">${sansJour} tâche${sansJour > 1 ? 's' : ''} active${sansJour > 1 ? 's' : ''} sans jour reconnu (fréquence ou jour inconnu) : pas dans le planning.</div>` : ''}</div>`;
+  }
+  function modalePlanning(m) {
+    const { L } = planDonnees();
+    const jr = PL_JOURS.find(x => x[0] === m.j);
+    const T = L.filter(x => x.poste === m.p && x.js.includes(m.j)).sort((a, b) => String(a.t.heure || '99').localeCompare(String(b.t.heure || '99')) || a.t.nom.localeCompare(b.t.nom, 'fr'));
+    const nPh = T.filter(x => x.t.photo).length; const nOb = T.filter(x => x.t.obligatoire).length;
+    const f = sansAccent(m.f);
+    const V = T.filter(x => (m.k !== 'photo' || x.t.photo) && (m.k !== 'oblig' || x.t.obligatoire) && (!f || sansAccent(x.t.nom + ' ' + x.cl + ' ' + (x.t.heure || '')).includes(f)));
+    const cls = [...new Set(T.map(x => codeCl(x.cl)))].join(', ');
+    const sg = (k, l, n) => `<button class="${m.k === k ? 'on' : ''}" data-a="plSeg" data-v="${k}">${l} ${n}</button>`;
+    return `<div class="tk-ct"><div><h2>${esc(posteAff(m.p))} · ${jr ? jr[2] : ''}</h2><div class="tk-sous">${T.length} tâche${T.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} · ${esc(cls)}</div></div><button class="tk-x" data-a="fermer">×</button></div>
+      <div class="pl-f"><input class="tk-in" data-pf="1" placeholder="Filtrer les tâches…" value="${esc(m.f)}"><div class="pl-seg">${sg('tout', 'Toutes', T.length)}${sg('photo', 'Photo', nPh)}${sg('oblig', 'Obligatoires', nOb)}</div></div>
+      <ul class="pl-l">${V.map(x => `<li><button data-a="plTache" data-id="${x.t.id}"><span class="h">${esc(x.t.heure || '—')}</span><span class="n">${esc(x.t.nom)}</span><span class="i">${x.t.photo ? CAM : ''}</span><span class="c">${esc(codeCl(x.cl))}</span></button></li>`).join('') || '<li class="mu" style="padding:14px 0;font-size:12px">Aucune tâche pour ce filtre.</li>'}</ul>
+      <div class="tk-pied"><span class="mu" style="font-size:11.5px">Un clic sur une tâche l’ouvre pour la modifier.</span><span style="flex:1"></span><button class="tk-btn" data-a="fermer">Fermer</button></div>`;
+  }
+
   /* --- fenêtres ----------------------------------------------------------- */
   function modale() {
     const m = S.modale;
@@ -572,6 +630,8 @@
         <div class="tk-form" style="padding:0"><label>Téléphone</label><input class="tk-in" data-m="phone" autocomplete="username" value="${esc(m.f.phone || '')}">
         <label>Mot de passe</label><input class="tk-in" type="password" data-m="password" autocomplete="current-password"></div></div>
         <div class="tk-pied"><button class="tk-btn prim" data-a="seConnecter" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Connexion…' : 'Se connecter'}</button><button class="tk-btn" data-a="fermer">Annuler</button></div>`;
+    } else if (m.type === 'planning') {
+      corps = modalePlanning(m);
     } else if (m.type === 'brut') {
       const d = m.data;
       corps = `<div class="tk-ct"><h2>Donnée brute — tâche #${m.id}</h2><button class="tk-x" data-a="fermer">×</button></div><div class="tk-cb">
@@ -606,10 +666,10 @@
 
   function rendre() {
     const actif = document.activeElement;
-    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf'].find(x => actif.dataset[x] != null) : null;
+    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    $.innerHTML = enTete() + erreurs() + (S.wz ? assistant() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    $.innerHTML = enTete() + erreurs() + (S.wz ? assistant() : S.vue === 'planning' ? planning() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -637,6 +697,10 @@
     const id = el.dataset.id;
     switch (a) {
       case 'recharger': return charger();
+      case 'vue': S.vue = el.dataset.v; history.replaceState(null, '', S.vue === 'planning' ? '?vue=planning' : (S.cl ? '?checklist=' + encodeURIComponent(S.cl) : '?')); return rendre();
+      case 'plCase': S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout' }; return rendre();
+      case 'plSeg': S.modale.k = el.dataset.v; return rendre();
+      case 'plTache': { const t = tache(id); if (!t) { return; } S.modale = { type: 'modif', id: +id, f: champsModif(t), plan: null }; return rendre(); }
       case 'cl': S.cl = id; S.filtre = ''; history.replaceState(null, '', '?checklist=' + encodeURIComponent(id)); return rendre();
       case 'coche': if (el.checked) { S.sel.add(+id); } else { S.sel.delete(+id); } return rendre();
       case 'tous': { const L = lignes(); if (el.checked) { L.forEach(x => S.sel.add(x.t.id)); } else { L.forEach(x => S.sel.delete(x.t.id)); } return rendre(); }
@@ -792,6 +856,7 @@
   $.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.f === 'filtre') { S.filtre = el.value; return rendre(); }
+    if (el.dataset.pf && S.modale && S.modale.type === 'planning') { S.modale.f = el.value; return rendre(); }
     if (S.wz) {
       const w = S.wz;
       if (el.dataset.wc != null) { w.cl[el.dataset.wc] = el.value; return; }
