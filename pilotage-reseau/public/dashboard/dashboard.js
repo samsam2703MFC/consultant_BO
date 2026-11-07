@@ -5000,6 +5000,8 @@
   const BM_VIDES = new Set(['avec', 'sans', 'pour', 'aux', 'des', 'les', 'une', 'piece', 'pieces', 'ind', 'mini', 'grand', 'petit', 'nature', 'sucre']);
   /** Le mot qui porte le produit (« Cougnou - Sucre & Chocolat » → cougnou), pour retrouver les relevés sans lien. */
   function bmMotCle(nom) { return BM_NORM(nom).split(' ').find(w => w.length >= 4 && !BM_VIDES.has(w)) || BM_NORM(nom).split(' ')[0] || ''; }
+  /** Tous les mots qui comptent (« Croissant Jambon & Fromage » → croissant, jambon, fromage) : un relevé les porte tous, ou il n'est que « proche ». */
+  function bmMots(nom) { const m = BM_NORM(nom).split(' ').filter(w => w.length >= 4 && !BM_VIDES.has(w)); return m.length ? m : [bmMotCle(nom)]; }
   function bmProduits() { const P = S.aux[clePMP()]; return P && Array.isArray(P.produits) ? P.produits : []; }
   /** Le prix payé (promo comprise) ramené à la mesure : €/kg, € à notre Ø, ou € la pièce. */
   function bmValeur(r, mesure, ref) {
@@ -5016,11 +5018,11 @@
     if (S.bmF === 'produit') {
       const p = bmProduits().find(x => String(x.id) === String(S.bmP));
       if (!p) { return null; }
-      const mot = bmMotCle(p.nom), lie = r => r.monProduit != null && String(r.monProduit) === String(p.id);
-      const tous = (D.releves || []).filter(r => lie(r) || (mot && BM_NORM(r.produit).includes(mot)));
-      const ref = (D.referentiel || []).filter(r => lie(r) || (mot && BM_NORM(r.produit).includes(mot)));
+      const mot = bmMotCle(p.nom), mots = bmMots(p.nom), lie = r => r.monProduit != null && String(r.monProduit) === String(p.id);
+      const exact = r => lie(r) || mots.every(w => BM_NORM(r.produit).includes(w)), proche = r => !exact(r) && mot && BM_NORM(r.produit).includes(mot);
+      const src = (D.releves || []).some(exact) || !(D.referentiel || []).some(exact) ? (D.releves || []) : (D.referentiel || []);
       return { cle: 'produit', titre: p.nom, mesure: 'piece', unite: '€ la pièce', ref: p.prixTtc, nous: [{ nom: p.nom, prix: p.prixTtc }], tailleRef: null,
-        releves: tous.length ? tous : ref, source: tous.length ? 'api' : (ref.length ? 'referentiel' : 'api'), mot, produit: p, web: null, constats: [] };
+        releves: src.filter(exact), proches: src.filter(proche), source: src === (D.releves || []) ? 'api' : 'referentiel', mot: mots.join(' + '), produit: p, web: null, constats: [] };
     }
     const f = F[S.bmF];
     if (!f) { return null; }
@@ -5048,8 +5050,10 @@
     const L = X.releves.map(r => Object.assign({}, r, { v: bmValeur(r, X.mesure, X.tailleRef) }));
     const comp = L.filter(r => r.v != null), ref = X.ref;
     const ec = v => ref != null && v ? (ref - v) / v * 100 : null;
-    const types = ['GMS', 'Artisan', 'Chaîne'], lib = { GMS: 'supermarchés', Artisan: 'artisans', 'Chaîne': 'chaînes' };
-    const typeDe = r => types.includes(r.type) ? r.type : (/gms|super|hyper/i.test(r.type) ? 'GMS' : (/cha[iî]ne/i.test(r.type) ? 'Chaîne' : 'Artisan'));
+    const types = ['GMS', 'Artisan', 'Chaîne'], lib = { GMS: 'supermarchés', Artisan: 'artisans', 'Chaîne': 'chaînes, stations' };
+    // Les relevés du réseau n'ont souvent pas de type : l'enseigne le dit (supermarchés ; stations et chaînes).
+    const GMS_RE = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|louis delhaize|bio-planet|ah |albert heijn|jumbo/i, CH_RE = /lukoil|total|shell|\bq8\b|esso|texaco|paul\b|pain quotidien|panos|exki|starbucks|pain d.antan|fleur du pain|louise/i;
+    const typeDe = r => types.includes(r.type) ? r.type : (/gms|super|hyper/i.test(r.type) || GMS_RE.test(r.concurrent) ? 'GMS' : (/cha[iî]ne|station/i.test(r.type) || CH_RE.test(r.concurrent) ? 'Chaîne' : 'Artisan'));
     const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 0) + ' %';
     // Les tuiles
     const nous0 = (X.nous.find(x => x.reference) || X.nous[0] || {});
@@ -5065,10 +5069,11 @@
     h += `<div class="db-tuiles">${t}</div>`;
     // L'échelle
     if (comp.length && ref != null) {
-      const max = Math.ceil(Math.max(ref, ...comp.map(r => r.v)) / 5) * 5 || 5, W = 1180, x = v => 60 + v / max * (W - 80), ty = { GMS: 28, Artisan: 50, 'Chaîne': 72 };
+      const hi = Math.max(ref, ...comp.map(r => r.v)), max = hi > 10 ? Math.ceil(hi / 5) * 5 : Math.ceil(hi) || 1, W = 1180, x = v => 60 + v / max * (W - 80), ty = { GMS: 28, Artisan: 50, 'Chaîne': 72 };
       const col = { GMS: '#B8B2A8', Artisan: 'var(--prize)', 'Chaîne': 'var(--muted-2)' };
       let s = '';
-      for (let v = 0; v <= max; v += max > 40 ? 10 : 5) { s += `<line x1="${x(v)}" x2="${x(v)}" y1="16" y2="82" stroke="#e6e0d8"/><text x="${x(v)}" y="96" font-size="10" text-anchor="middle" fill="#7a736a">${v} €</text>`; }
+      const pas = max > 40 ? 10 : (max > 10 ? 5 : 1);
+      for (let v = 0; v <= max; v += pas) { s += `<line x1="${x(v)}" x2="${x(v)}" y1="16" y2="82" stroke="#e6e0d8"/><text x="${x(v)}" y="96" font-size="10" text-anchor="middle" fill="#7a736a">${v} €</text>`; }
       types.forEach(k2 => { s += `<text x="0" y="${ty[k2] + 4}" font-size="10" fill="#7a736a">${lib[k2]}</text>`; });
       comp.forEach(r => { s += `<circle cx="${x(r.v).toFixed(1)}" cy="${ty[typeDe(r)]}" r="5.5" fill="${col[typeDe(r)]}" fill-opacity=".85"><title>${esc(r.concurrent + ' — ' + r.produit + ' : ' + fU(r.v))}</title></circle>`; });
       s += `<line x1="${x(ref)}" x2="${x(ref)}" y1="10" y2="84" stroke="var(--color-primary)" stroke-width="2.5"/><rect x="${x(ref) - 36}" y="0" width="72" height="15" rx="3" fill="var(--color-primary)"/><text x="${x(ref)}" y="11" font-size="10" text-anchor="middle" fill="#fff">nous ${nf(ref, 2)} €</text>`;
@@ -5081,12 +5086,17 @@
       const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'ko' : 'ok'}">nous ${pct(e)}</span>`);
       const lien = r.lien || ((r.notes || '').match(/https?:\/\/\S+/) || [])[0];
       return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
-        <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.taille ? nf(+r.taille, 0) + ' ' + esc(r.unite) : '—'}</td>
+        <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.unite === 'piece' || !r.taille ? (r.unite === 'piece' ? '<span class="mu">à la pièce</span>' : '—') : nf(+r.taille, 0) + ' ' + esc(r.unite)}</td>
         <td class="n">${fU(r.prix)}${r.promo ? `<div class="db-mini">promo ${fU(r.promo)}</div>` : ''}</td><td class="n"><b>${r.v == null ? '—' : fU(r.v)}</b></td><td class="n">${pos}</td><td class="n">${lien ? `<a class="db-lien" href="${esc(lien)}" target="_blank" rel="noopener">source ↗</a>` : ''}</td></tr>`;
     }).join('');
     h += `<div class="db-card"><div class="ct"><span class="db-lab">${esc(X.titre)} — les concurrents du magasin</span><span class="db-mini">${L.length} relevé${L.length > 1 ? 's' : ''} · ${X.source === 'api' ? 'module Benchmark de TFBuddy' : (X.source === 'mixte' ? 'TFBuddy + relevé web du cockpit' : 'relevé web du cockpit (pas encore dans TFBuddy)')}${X.mot ? ' · rattachés à ce produit ou contenant « ' + esc(X.mot) + ' »' : ''}</span></div>
       ${L.length ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">${X.mesure === 'diametre' ? 'Ø' : 'Taille'}</th><th class="n">Prix</th><th class="n">${esc(X.unite)}</th><th class="n">Écart</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
         : `<div class="bm-vide">Aucun prix concurrent relevé pour ce produit. <button class="db-btn" data-bmform="1">+ Ajouter un relevé terrain</button></div>`}</div>`;
+    if (X.proches && X.proches.length) {
+      const pl = X.proches.slice().sort((a, b) => a.prix - b.prix).map(r => `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td><td>${esc(r.produit)}</td><td class="n">${fU(r.prix)}</td></tr>`).join('');
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Produits proches</span><span class="db-mini">${X.proches.length} relevé${X.proches.length > 1 ? 's' : ''} contenant « ${esc(bmMotCle(X.titre))} » sans être le même produit · pour information, hors médianes</span></div>
+        <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">Prix</th></tr></thead><tbody>${pl}</tbody></table></div></div>`;
+    }
     // Visibilité web et à faire (familles)
     if (X.web || X.constats.length) {
       const ctrl = X.web ? X.web.controles.map(c => `<div class="bm-l"><span class="${c.ok ? 'ok' : 'ko'} bm-st">${c.ok ? '✓ fait' : '✗ manque'}</span><span>${esc(c.libelle)}${c.detail && c.cle !== 'page' ? `<div class="db-mini">${esc(c.detail.slice(0, 90))}</div>` : ''}</span></div>`).join('') : '';
