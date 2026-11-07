@@ -5063,7 +5063,7 @@
   }
   function bmTopRelevés(p) {
     const D = S.aux[cleBM()] || {}, n = BM_NORM(p.nom), r = BM_TOP_REGLES.find(x => x[0].test(n));
-    return (D.releves || []).filter(x => x.prix > 0 && !/cougn|galette|frangipane/.test(BM_NORM(x.produit)) && !/plateau|\d+ ?pc/.test(BM_NORM(x.produit))
+    return (D.releves || []).filter(x => x.prix > 0 && !/cougn|galette|frangipane/.test(BM_NORM(x.produit)) && !/plateau/.test(BM_NORM(x.produit))
       && ((x.monProduit != null && String(x.monProduit) === String(p.pid)) || (r ? (r[1].test(BM_NORM(x.produit)) && !r[2].test(BM_NORM(x.produit))) : bmMots(p.nom).every(w => BM_NORM(x.produit).includes(w)))));
   }
   const BM_GMS = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|bio-planet|albert heijn|\bah\b|jumbo/i;
