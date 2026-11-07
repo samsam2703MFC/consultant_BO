@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/erp_cles.php';
+
 /**
  * Cockpit CEO — endpoints de lecture (GET), un par écran + référentiels.
  * Formes JSON : voir contrat-api.md. Aucune donnée métier dans le HTML :
@@ -189,8 +191,15 @@ function ep_stores(): array
     // source que le panel consultant. Repli sur `ceo_shop` si la table partagée
     // est absente (installation autonome / démo).
     try {
+        // Le code postal, si la table en a un (le nom de la colonne varie selon les versions du panel).
+        static $colCp = false;
+        if ($colCp === false) {
+            $colCp = null;
+            $cols = array_map(fn ($c) => (string) $c['Field'], Db::rows('SHOW COLUMNS FROM shops'));
+            foreach (['postal_code', 'postcode', 'zip', 'zipcode', 'zip_code', 'cp', 'code_postal'] as $c) { if (in_array($c, $cols, true)) { $colCp = $c; break; } }
+        }
         $rows = Db::rows('SELECT id, slug, name, legal_name, city, zone, region, active, kind,
-                                 is_franchise, operator, contrat, since_year, sort_order
+                                 is_franchise, operator, contrat, since_year, sort_order' . ($colCp ? ", `$colCp` AS cp" : '') . '
                           FROM shops ORDER BY sort_order, id');
         return array_map(fn ($r) => [
             'id'     => (string) $r['id'],
@@ -207,6 +216,9 @@ function ep_stores(): array
             // laisser nul ici est correct ; le déclarer manquant serait faux.
             'panier' => null,
             'pwaId'  => (int) $r['id'], // la boutique du panel EST le pwa_shop_id
+            // Pour les autres portails (Recrutement : réseau, DIP), qui ne lisent plus la table `shops`.
+            'franchise' => $r['is_franchise'] !== null ? (int) $r['is_franchise'] === 1 : null,
+            'cp'     => trim((string) ($r['cp'] ?? '')),
         ], $rows);
     } catch (PDOException $e) {
         return array_map(fn ($r) => [
@@ -1987,6 +1999,58 @@ function ep_exploitation_jour(): array
     return rcServi('exJour:' . $date, 'exJourCalcul', static fn (array $r) => rcTtl($r, $n), !empty($_GET['rafraichir']), '/exploitation/jour');
 }
 
+/**
+ * Les seuils du P&L court, en % du chiffre d'affaires : coût matière (`food`), main-d'œuvre (`labour`), frais
+ * généraux (`overhead`). Une seule définition, lue par le jour (/exploitation/jour) et par la période (resultat.php).
+ *
+ * Le coût matière vient de Budget › Paramètres (réglage `budgetCharges`, 07/11/2026) : le taux du réseau qu'on y
+ * pose est celui que le dashboard montre, pas une seconde valeur tenue ailleurs. La catégorie lue est celle que le
+ * palier de la marge brute retranche (`droite` = « cat:<nom> »), à défaut la première dont le nom commence par
+ * « Matière » ; son taux = la somme des taux « budget » de ses lignes, ou de leurs taux « théoriques » tant que le
+ * budget n'est pas posé (tout à 0). Main-d'œuvre et frais généraux : la table `kpi` (`seuil_haut`, sinon `seuil_bas`),
+ * comme avant. Sans réglage ni table : 32 / 33 / 13,5. `food` y passe aussi en dernier repli.
+ */
+function seuilsCharges(): array
+{
+    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
+    try {
+        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
+                            WHERE code IN ('food','labour','overhead')") as $k) {
+            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
+                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
+        }
+    } catch (PDOException $e) { /* seuils par défaut */ }
+    $food = seuilMatiereBudget();
+    if ($food !== null) { $seuils['food'] = $food; }
+    return $seuils;
+}
+
+/** Le taux matière du réseau posé dans Budget › Paramètres (voir seuilsCharges) ; null s'il n'y est pas. */
+function seuilMatiereBudget(): ?float
+{
+    try { $m = setting('budgetCharges'); } catch (Throwable $e) { return null; }
+    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return null; }
+    $nom = null;
+    foreach ((array) ($m['paliers'] ?? []) as $p) {
+        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
+        if (str_starts_with($d, 'cat:')) { $nom = substr($d, 4); break; }
+    }
+    $cat = null;
+    foreach ($m['categories'] as $c) {
+        $n = is_array($c) ? (string) ($c['nom'] ?? '') : '';
+        if (($nom !== null && $n === $nom) || ($nom === null && preg_match('/^mati[eè]re/iu', $n) === 1)) { $cat = $c; break; }
+    }
+    if (!is_array($cat) || !is_array($cat['lignes'] ?? null) || $cat['lignes'] === []) { return null; }
+    $budget = 0.0; $theo = 0.0;
+    foreach ($cat['lignes'] as $l) {
+        if (!is_array($l)) { continue; }
+        $budget += is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
+        $theo += is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
+    }
+    $t = $budget > 0 ? $budget : $theo;
+    return $t > 0 && $t < 100 ? round($t, 1) : null;
+}
+
 function exJourCalcul(): array
 {
     $auj  = date('Y-m-d');
@@ -1996,14 +2060,7 @@ function exJourCalcul(): array
     $refDates = jourReference($date);
     $refLibelle = 'moyenne des 6 derniers ' . jourNomSemaine($date, true);
 
-    $seuils = ['food' => 32.0, 'labour' => 33.0, 'overhead' => 13.5];
-    try {
-        foreach (Db::rows("SELECT code, seuil_bas, seuil_haut FROM kpi
-                            WHERE code IN ('food','labour','overhead')") as $k) {
-            $seuils[(string) $k['code']] = $k['seuil_haut'] !== null
-                ? (float) $k['seuil_haut'] : (float) $k['seuil_bas'];
-        }
-    } catch (PDOException $e) { /* seuils par défaut */ }
+    $seuils = seuilsCharges();
 
     $out = ['date' => $date, 'aujourdhui' => $auj, 'estAujourdhui' => $estAuj,
         'seuils' => $seuils, 'magasins' => [], 'reseau' => null,
@@ -8850,6 +8907,35 @@ const SCOUTING_RESEAU_CA_TTL = 21600;
  * base) prime. Le CA réel : P&L mensuel du panel, douze derniers mois clos,
  * annualisé s'il y en a moins.
  */
+/**
+ * Ce que le Scouting du Recrutement tient sur les magasins du réseau — positions pointées sur la carte et
+ * données d'étude saisies (« Magasins du réseau ») — lu par SON API (GET …/v1/integration/recrutement/
+ * scouting-reseau, jeton de service d'erp_cles), jamais ses tables (7 nov. 2026 : portails indépendants).
+ * Gardé ici (scoutingRecrutement) : le Recrutement muet, la dernière lecture sert ; jamais lu : nos réglages
+ * d'avant (scoutingReseau / scoutingMagasins).
+ */
+function scoutingDuRecrutement(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $garde = setting('scoutingRecrutement');
+    if (is_array($garde) && (int) ($garde['le'] ?? 0) > time() - 600) {
+        return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])];
+    }
+    $d = erpLireRecrutement('scouting-reseau');
+    if (is_array($d)) {
+        $memo = ['positions' => is_array($d['positions'] ?? null) ? $d['positions'] : [], 'saisies' => is_array($d['saisies'] ?? null) ? $d['saisies'] : []];
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['scoutingRecrutement', json_encode($memo + ['le' => time()], JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* garde best-effort */ }
+        return $memo;
+    }
+    if (is_array($garde)) { return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])]; }
+    $s = setting('scoutingMagasins');
+    return $memo = ['positions' => [], 'saisies' => is_array($s) ? $s : []];
+}
+
 function ep_scouting_reseau(): array
 {
     try {
@@ -8864,6 +8950,10 @@ function ep_scouting_reseau(): array
     }
     $pos = setting('scoutingReseau');
     if (!is_array($pos)) { $pos = []; }
+    // Les positions pointées à la main sur la carte : le Scouting du Recrutement, par son API
+    // (positions saisies, elles l'emportent sur les nôtres tirées des fiches Google).
+    $rec = scoutingDuRecrutement();
+    foreach ($rec['positions'] as $sid => $p) { if (is_array($p) && ($p['source'] ?? '') === 'saisie') { $pos[(string) $sid] = $p; } }
     $fiches = [];
     try {
         foreach (Db::rows('SELECT shop_id, place_id FROM mar_avis_fiche') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
@@ -8901,8 +8991,7 @@ function ep_scouting_reseau(): array
         } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
     }
     $out = [];
-    $saisies = setting('scoutingMagasins');
-    if (!is_array($saisies)) { $saisies = []; }
+    $saisies = scoutingDuRecrutement()['saisies'];
     foreach ($shops as $sh) {
         $id = (string) $sh['id'];
         $p = $pos[$id] ?? null;

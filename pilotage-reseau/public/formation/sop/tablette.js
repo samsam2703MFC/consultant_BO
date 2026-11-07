@@ -53,6 +53,7 @@
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
       onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel', aide: 'Comment ça marche' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
       ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles', aide: 'la tablette' }, article1: 'article',
+      reserveT: 'Réservé au franchisé et au responsable', reserve: 'réservé', pinResp: 'PIN du responsable', pinRespS: 'Ce document est réservé au franchisé et au responsable du magasin. Tape le PIN du responsable pour l’ouvrir.',
       rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues', parties: 'parties',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
       rienMoment: 'Aucune SOP pour ce moment.', aideT: 'La tablette du magasin',
@@ -81,6 +82,7 @@
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
       onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek', aide: 'Hoe werkt het' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
       ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels', aide: 'de tablet' }, article1: 'artikel',
+      reserveT: 'Voorbehouden aan de franchisenemer en de verantwoordelijke', reserve: 'voorbehouden', pinResp: 'PIN van de verantwoordelijke', pinRespS: 'Dit document is voorbehouden aan de franchisenemer en de verantwoordelijke van de winkel. Typ de PIN van de verantwoordelijke om het te openen.',
       rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen', parties: 'delen',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
       rienMoment: 'Geen SOP voor dit moment.', aideT: 'De tablet van de winkel',
@@ -105,7 +107,9 @@
     vue: 'liste', sop: null, etape: 0, vuEtapes: {}, sens: '', qi: 0, reponses: [], choix: null, resultat: null,
     pinPour: null, pin: '', valideur: null, note: '', occupe: false, erreur: null,
     onglet: ongletDuMoment(), // ouverture · journee · fermeture · aide (06/11/2026)
-    tout: false               // identifiée : false = ses postes, true = tout le magasin
+    tout: false,              // identifiée : false = ses postes, true = tout le magasin
+    acces: sessionStorage.getItem('foAcces') || null,   // le jeton du PIN du responsable (documents réservés), 4 h
+    aOuvrir: null             // le document réservé qui attend le PIN
   };
   if (!POSTES.includes(S.poste)) { S.poste = 'tous'; }
   /** L'onglet d'office : l'heure du magasin (avant 11 h : ouverture ; à partir de 17 h : fermeture ; sinon la journée). */
@@ -238,7 +242,8 @@
   /* ── La liste : trois grands onglets, Ouverture · Journée de travail · Fermeture, puis « Manuel » (les articles du
      manuel opératoire, 07/11/2026) et « Comment ça marche » ── */
   const ONGLETS = ['ouverture', 'journee', 'fermeture', 'manuel', 'aide'];
-  const ongletDe = s => s.type === 'Article' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
+  // Un document réservé (acces « responsable », 07/11/2026) se range dans Manuel, quel que soit son moment.
+  const ongletDe = s => s.type === 'Article' || s.acces === 'responsable' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
   function onglets() {
     const n = k => (S.init.sops || []).filter(s => ongletDe(s) === k && (k === 'manuel' || visible(s))).length;
     return `<div class="tb-moments" role="tablist">${ONGLETS.map(k => `<button role="tab" data-onglet="${k}" class="${S.onglet === k ? 'on' : ''}" aria-selected="${S.onglet === k}">
@@ -263,15 +268,16 @@
     const sops = (S.init.sops || []).filter(s => ongletDe(s) === S.onglet && (S.onglet === 'manuel' || visible(s)));
     // La journée se lit dans l'ordre : la journée, l'après-midi, puis ce qui se fait au besoin ; ouverture et fermeture par poste.
     const groupes = S.onglet === 'manuel'
-      ? [{ l: t().articlesT, sops: sops.slice().sort((a, b) => foDe(a).localeCompare(foDe(b), 'fr', { numeric: true }) || L(a.titre).localeCompare(L(b.titre), 'fr')) }]
+      ? [{ l: t().reserveT, res: true, sops: sops.filter(s => s.acces === 'responsable') },
+        { l: t().articlesT, sops: sops.filter(s => s.acces !== 'responsable') }].map(g => Object.assign(g, { sops: g.sops.slice().sort((a, b) => foDe(a).localeCompare(foDe(b), 'fr', { numeric: true }) || L(a.titre).localeCompare(L(b.titre), 'fr')) }))
       : S.onglet === 'journee'
       ? [['journee', t().sousJ.journee], ['apres-midi', t().sousJ['apres-midi']], ['autres', t().sousJ.autres]].map(([m, l]) => ({ l, sops: sops.filter(s => m === 'autres' ? !['journee', 'apres-midi'].includes(s.moment) : s.moment === m) }))
       : POSTES.map(p => ({ l: t().poste[p], sops: sops.filter(s => s.poste === p) })).concat([{ l: t().sansComp, sops: sops.filter(s => !POSTES.includes(s.poste)) }]);
     const corps = groupes.filter(g => g.sops.length).map(g => {
       const vus = g.sops.filter(s => st(s.id) === 'vu').length;
-      return `<div class="tb-grp"><div class="sec-t">${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
-        ${g.sops.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
-          <small>${s.type === 'Article' ? `${foDe(s) ? esc(foDe(s)) + ' · ' : ''}${s.nbEtapes} ${esc(t().parties)}` : `${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}`}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
+      return `<div class="tb-grp${g.res ? ' tb-grp--res' : ''}"><div class="sec-t">${g.res ? ICO_CAD : ''}${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
+        ${g.sops.map(s => `<button class="tb-sop${s.acces === 'responsable' ? ' res' : ''}" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${s.acces === 'responsable' && !S.acces ? ICO_CAD : ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
+          <small>${s.acces === 'responsable' ? esc(t().reserve) + ' · ' : ''}${s.type === 'Article' ? `${foDe(s) ? esc(foDe(s)) + ' · ' : ''}${s.nbEtapes} ${esc(t().parties)}` : `${s.acces === 'responsable' ? 'SOP · ' : ''}${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}`}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
     }).join('') || `<div class="vide">${esc(S.onglet === 'manuel' ? t().rienManuel : S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;
     const chips = S.moi
       ? `<div class="tb-chips"><button data-tout="0" class="${S.tout ? '' : 'on'}">${esc(t().mesPostes)}</button><button data-tout="1" class="${S.tout ? 'on' : ''}">${esc(t().toutMagasin)}</button></div>`
@@ -284,6 +290,8 @@
 </div>`;
   }
 
+  /** Le cadenas doré des documents réservés. */
+  const ICO_CAD = '<svg class="cad" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
   const ICO_TEL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
   const ICO_LISTE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
   /** Une photo d'étape : celles du dépôt (sop/photos/), celles envoyées par l'assistant de création (« u/… », servies par l'API). */
@@ -455,7 +463,7 @@
     document.documentElement.lang = S.langue;
     if (!S.etatLu) { el.innerHTML = '<div class="vide">…</div>'; return; }
     if (!S.init) { el.innerHTML = entete(false) + `<div class="vide">${esc(S.erreur || '…')}</div>`; return; }
-    const vues = { liste: vueListe, lecture: vueLecture, quiz: vueQuiz, resultat: vueResultat, vu: vueVu };
+    const vues = { liste: vueListe, lecture: vueLecture, quiz: vueQuiz, resultat: vueResultat, vu: vueVu, acces: vueAcces };
     el.innerHTML = entete(S.vue !== 'liste') + (vues[S.vue] || vueListe)();
     el.classList.toggle('tb--pas', S.vue === 'lecture');
     if (S.vue === 'lecture') {
@@ -469,11 +477,26 @@
   }
 
   async function ouvrir(id) {
+    const ligne = ((S.init && S.init.sops) || []).find(x => x.id === id);
+    // Un document réservé demande d'abord le PIN du responsable (une fois par onglet, 4 h).
+    if (ligne && ligne.acces === 'responsable' && !S.acces) { S.vue = 'acces'; S.aOuvrir = id; S.pin = ''; S.erreur = null; return rendre(); }
     try {
-      S.sop = await api('/formation/sop/tablette/sop/' + encodeURIComponent(id));
+      S.sop = await api('/formation/sop/tablette/sop/' + encodeURIComponent(id) + (S.acces ? '?acces=' + encodeURIComponent(S.acces) : ''));
       S.vue = 'lecture'; S.etape = 0; S.vuEtapes = {}; S.sommaire = false; S.aide = false; S.qi = 0; S.reponses = []; S.choix = null; S.resultat = null; S.valideur = null; S.pin = ''; S.note = ''; S.erreur = null;
       rendre(); window.scrollTo(0, 0);
-    } catch (e) { toast(e.message); }
+    } catch (e) {
+      // Jeton expiré ou refusé : on redemande le PIN.
+      if (e.status === 403 && ligne && ligne.acces === 'responsable') { S.acces = null; sessionStorage.removeItem('foAcces'); S.vue = 'acces'; S.aOuvrir = id; S.pin = ''; S.erreur = null; return rendre(); }
+      toast(e.message);
+    }
+  }
+
+  /** Le PIN du responsable, avant un document réservé : cadenas doré, pavé numérique. */
+  function vueAcces() {
+    const s = ((S.init && S.init.sops) || []).find(x => x.id === S.aOuvrir);
+    return `<div class="tb-corps"><div class="tb-acces"><div class="tb-acces__cad">${ICO_CAD}</div>
+      <h2>${esc(s ? L(s.titre) : t().reserveT)}</h2><p>${esc(t().pinRespS)}</p>
+      ${S.erreur ? `<div class="erreur">${esc(S.erreur)}</div>` : ''}${pave(t().pinResp, 'acces')}</div></div>`;
   }
 
   async function touche(k, act) {
@@ -490,6 +513,11 @@
         S.pinPour = null; S.tout = false; actif();
       } else if (act === 'vu') {
         await valider('vu');
+      } else if (act === 'acces') {
+        const r = await api('/formation/sop/tablette/acces', { pin: S.pin });
+        S.acces = r.jeton; sessionStorage.setItem('foAcces', r.jeton);
+        const id = S.aOuvrir; S.aOuvrir = null; S.pin = ''; S.occupe = false;
+        return ouvrir(id);
       }
     } catch (e) { S.erreur = e.message; }
     S.pin = ''; S.occupe = false; rendre();
@@ -536,7 +564,7 @@
     if (d.etape !== undefined) { S.sommaire = false; if (+d.etape === S.etape) { return rendre(); } return allerA(+d.etape); }
     if (d.choix !== undefined) { S.choix = +d.choix; return rendre(); }
     switch (d.a) {
-      case 'liste': S.vue = 'liste'; S.sop = null; S.erreur = null; S.sommaire = false; S.aide = false; return rendre();
+      case 'liste': S.vue = 'liste'; S.sop = null; S.aOuvrir = null; S.pin = ''; S.erreur = null; S.sommaire = false; S.aide = false; return rendre();
       case 'sortir': return sortir();
       case 'fermerTablette': return fermerAppareil();
       case 'sommaire': S.sommaire = true; return rendre();
@@ -559,7 +587,7 @@
         S.reponses[S.qi] = S.choix; S.choix = null;
         if (S.qi < S.sop.contenu.quiz.length - 1) { S.qi++; return rendre(); }
         S.occupe = true;
-        try { S.resultat = await api('/formation/sop/tablette/quiz', { jeton: S.jeton, sop: S.sop.id, reponses: S.reponses }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: S.resultat.statut }); S.vue = 'resultat'; }
+        try { S.resultat = await api('/formation/sop/tablette/quiz', { jeton: S.jeton, sop: S.sop.id, reponses: S.reponses, acces: S.acces }); S.suivi[S.sop.id] = Object.assign({}, S.suivi[S.sop.id] || {}, { statut: S.resultat.statut }); S.vue = 'resultat'; }
         catch (e) { toast(e.message); }
         S.occupe = false; return rendre();
       }

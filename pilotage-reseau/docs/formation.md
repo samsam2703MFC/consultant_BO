@@ -896,3 +896,29 @@ tous les magasins la même chose ».
 - `art-fo-32` … `art-fo-38` (ART-FO-xx) **à valider**, en français ; classés à leur formation, phase pré-ouverture,
   postes du référentiel ; sous-catégories D7.3 (FO-32, FO-34), D3.4 (FO-35, FO-36), D6.3 (FO-37), aucune pour FO-33 et
   FO-38 (pas de sous-catégorie du v25 qui leur corresponde).
+
+## SOP du dashboard magasin (07/11/2026)
+
+Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin, calé dans la bonne formation
+(pré-ouverture : compréhension, et en continue) ; un prompt de routine pour encoder les changements ».
+- **ART-PIL-01**, Article du manuel « Comprendre le dashboard magasin » (28 parties, 28 captures, quiz de 5 questions) et
+  **SOP-PIL-01** « Analyser le dashboard magasin : la routine » (28 étapes : matin, journée, soir, lundi, début de mois,
+  trimestre, « Qui prévenir » ; quiz de 4 questions ; moment Ouverture), rattachés à **FO-05** Pilotage Commercial et à
+  **D7.1** Pilotage de l'activité (compétences C-PILOTAGE.KPI, .Vente, .Franchise). Maquette validée :
+  `docs/maquettes/sop-dashboard/` (proposition, écrans, prompt de la routine `ROUTINE.md`).
+- **Source** : `data/formation/dashboard/` (les deux JSON FR et NL, `photos/dash-*.jpg` 1600 × 1200, `photos.json`,
+  `ETAT.json` = le dernier commit du dashboard pris en compte). Ils n'entrent pas par `foImporter()` : par l'API, avec
+  `tools/formation/encoder_sop.py` (photos envoyées une fois, création ou nouvelle version, classement ; simulation par
+  défaut). Captures : `tools/formation/captures_dashboard.js`. NL de travail : `tools/formation/nl_dashboard.py`.
+- **Journal** : 07/11/2026 — v1.0 des deux documents encodées et publiées, NL « à relire ».
+- **Réservés au franchisé et au responsable** (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste
+  (mot de passe) : celui du franchisé ou du responsable magasin ; pour le moment 1111 ; un petit cadenas, couleur or ») :
+  colonne `ceo_sop.acces` (`tous` | `responsable`, posée par `ensureSop()`, réglable par `PATCH /formation/sop/fiche/{id}
+  {acces}`). Sur la tablette, un document réservé se range dans l'onglet **Manuel**, en tête, sous « Réservé au
+  franchisé et au responsable » (cadenas et liseré or, `--prize`), quel que soit son moment ; l'ouvrir demande le **PIN
+  du responsable** : `POST /formation/sop/tablette/acces {pin}` rend un jeton signé de 4 h (gardé dans l'onglet), que
+  `GET /formation/sop/tablette/sop/{id}?acces=` et le quiz exigent (403 sinon). Cinq PIN faux bloquent dix minutes. Le PIN
+  est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
+  (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
+  réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
+

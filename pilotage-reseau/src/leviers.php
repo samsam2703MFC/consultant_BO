@@ -263,8 +263,7 @@ function ep_leviers_magasins(): array
     $_GET = ['annees' => ($y - 1) . ',' . $y];
     try { $cells = ep_perf(); } finally { $_GET = $garde; }
 
-    $saisies = setting('scoutingMagasins');
-    if (!is_array($saisies)) { $saisies = []; }
+    $saisies = scoutingDuRecrutement()['saisies'];   // les données d'étude du Scouting du Recrutement, par son API
     // Les magasins ouverts, dans l'ordre du panel (ep_stores : la table partagée `shops`, sinon ceo_shop).
     $mags = [];
     foreach (ep_stores() as $r) {

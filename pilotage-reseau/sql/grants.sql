@@ -43,10 +43,11 @@ GRANT SELECT ON atelierby_db.kpi              TO 'cockpit_app'@'localhost';
 GRANT SELECT ON atelierby_db.position         TO 'cockpit_app'@'localhost';
 GRANT SELECT ON atelierby_db.mac_report_share TO 'cockpit_app'@'localhost';
 
--- Tables du CRM candidat : LECTURE SEULE. Ses réglages SMTP et ses clés Meta
--- (MétaDonnée : les clés et l'accès du CRM, jamais écrits par le cockpit).
-GRANT SELECT ON atelierby_db.crm_settings     TO 'cockpit_app'@'localhost';
-GRANT SELECT ON atelierby_db.meta_connexion   TO 'cockpit_app'@'localhost';
+-- La table des clés commune à l'ERP (7 nov. 2026) : le cockpit y lit les clés
+-- communes (boîte d'envoi smtp_*, Meta meta_*, jeton de service, adresses des
+-- portails) et y écrit les siennes (pil_api_url, compte TF Buddy). Il ne lit plus
+-- aucune table du CRM (crm_settings, meta_connexion).
+GRANT SELECT, INSERT, UPDATE, DELETE ON atelierby_db.erp_cles TO 'cockpit_app'@'localhost';
 
 -- Exception : PUT /parametres/seuil-* met à jour les seuils dans `kpi`.
 -- Décommentez si vous voulez autoriser cette écriture depuis le cockpit :

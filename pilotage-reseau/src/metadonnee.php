@@ -991,35 +991,28 @@ function mdMetaRappelAuto(): string
 }
 
 /**
- * Les clés et l'accès Meta du CRM, lus dans la base partagée (atelierby_db) —
- * jamais écrits : ses réglages (`crm_settings`, Paramètres → Intégrations →
- * Formulaires Facebook / Instagram), complétés par la connexion qu'il publie
- * pour Social & Ads (`meta_connexion`). Après son « Connecter et tester », le
- * jeton gardé est celui de la Page ; avant, celui de l'utilisateur système.
- * null : pas de CRM dans cette base.
+ * Les clés et l'accès Meta communs de l'ERP, lus dans erp_cles (lignes meta_* de portail « commun », tenues
+ * par le Recrutement — Paramètres → Connexions → Meta) — jamais écrits ici, et plus aucune lecture des tables
+ * du CRM (crm_settings, meta_connexion : 7 nov. 2026, portails indépendants). Après son « Connecter et
+ * tester », le jeton gardé est celui de la Page ; sinon celui de l'utilisateur système.
+ * null : pas de table des clés dans cette base.
  */
 function mdMetaCrm(): ?array
 {
     $v = [];
-    try {
-        foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey IN ('meta_app_id', 'meta_app_secret', 'meta_page_id', 'meta_page_token')") as $r) {
-            $v[(string) $r['skey']] = trim((string) $r['svalue']);
-        }
-    } catch (Throwable $e) { return null; }
-    $p = [];
     $le = '';
     try {
-        foreach (Db::rows("SELECT cle, valeur, maj_le FROM meta_connexion WHERE cle IN ('app_id', 'app_secret', 'page_id', 'page_token', 'system_token')") as $r) {
-            $p[(string) $r['cle']] = trim((string) $r['valeur']);
+        foreach (Db::rows("SELECT cle, valeur, maj_le FROM erp_cles WHERE portail = 'commun' AND cle IN ('meta_app_id', 'meta_app_secret', 'meta_page_id', 'meta_page_token', 'meta_system_token')") as $r) {
+            $v[(string) $r['cle']] = trim((string) $r['valeur']);
             $le = max($le, (string) $r['maj_le']);
         }
-    } catch (Throwable $e) { /* connexion pas encore publiée : ses réglages suffisent */ }
+    } catch (Throwable $e) { return null; }
     $premier = static fn (string ...$x): string => (string) current(array_filter($x, static fn ($y) => $y !== '') ?: ['']);
     return [
-        'appId' => (string) preg_replace('/\D/', '', $premier($v['meta_app_id'] ?? '', $p['app_id'] ?? '')),
-        'pageId' => (string) preg_replace('/\D/', '', $premier($v['meta_page_id'] ?? '', $p['page_id'] ?? '')),
-        'secret' => $premier($v['meta_app_secret'] ?? '', $p['app_secret'] ?? ''),
-        'jeton' => $premier($v['meta_page_token'] ?? '', $p['page_token'] ?? '', $p['system_token'] ?? ''),
+        'appId' => (string) preg_replace('/\D/', '', $v['meta_app_id'] ?? ''),
+        'pageId' => (string) preg_replace('/\D/', '', $v['meta_page_id'] ?? ''),
+        'secret' => $v['meta_app_secret'] ?? '',
+        'jeton' => $premier($v['meta_page_token'] ?? '', $v['meta_system_token'] ?? ''),
         'le' => $le,
     ];
 }
@@ -1133,7 +1126,7 @@ function mdMetaConnecter(): array
         return ['ok' => $ok, 'etapes' => $etapes, 'meta' => mdMetaStatut()];
     };
     $crm = $c['source'] === 'crm';
-    if ($crm && $c['crm'] === null) { $etapes[] = ['titre' => 'Clés du CRM', 'ok' => false, 'detail' => "Pas de CRM dans cette base (crm_settings) : passez en « Clés propres »."]; return $fin(); }
+    if ($crm && $c['crm'] === null) { $etapes[] = ['titre' => 'Clés du CRM', 'ok' => false, 'detail' => "Pas de table des clés commune (erp_cles) dans cette base : passez en « Clés propres »."]; return $fin(); }
     $manque = array_keys(array_filter(['ID de la Page' => $page === '', 'jeton' => $jeton === '', "ID de l'application" => $appId === '', "clé secrète de l'application" => $secret === '']));
     if ($manque) {
         $etapes[] = ['titre' => $crm ? 'Clés du CRM' : 'Réglages', 'ok' => false, 'detail' => ($crm ? 'Absent du CRM : ' : 'À renseigner : ') . implode(', ', $manque)
@@ -2286,7 +2279,7 @@ function mdSonde(): array
     $m = [];
     $c = mdMetaCfg();
     if ($c['source'] === 'crm') {
-        $m[] = $c['crm'] === null ? ['ko', 'Clés du CRM', 'pas de CRM dans cette base (crm_settings) : passez en « Clés propres » (étape 1)']
+        $m[] = $c['crm'] === null ? ['ko', 'Clés du CRM', 'pas de table des clés commune (erp_cles) dans cette base : passez en « Clés propres » (étape 1)']
             : ['ok', 'Clés du CRM', 'lues dans sa base' . ($c['crm']['le'] !== '' ? ', publiées le ' . date('d/m/Y à H:i', (int) strtotime($c['crm']['le'])) : '') . ' — rien n’y est écrit'];
     }
     if (!mdMetaConfigure($c) || $c['appId'] === '' || $c['secret'] === '') {

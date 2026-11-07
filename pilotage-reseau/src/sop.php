@@ -57,6 +57,13 @@ const FO_PARTIES = ['preouverture', 'ouverture', 'operationnel', 'formation'];  
 const FO_JETON_S = 4 * 3600;            // un jeton de la tablette vaut 4 h
 const FO_PIN_ESSAIS = 5;                // essais de PIN manqués avant blocage…
 const FO_PIN_BLOCAGE_S = 600;           // … de 10 minutes, pour cette personne de ce magasin
+// Les documents RÉSERVÉS (07/11/2026, client : « déplacer de Ouverture à Manuel, avec accès poste (mot de passe) : celui
+// du franchisé ou du responsable magasin ; pour le moment 1111, on changera en fin de développement ») : colonne `acces`
+// de ceo_sop. Sur la tablette, un document réservé se range dans l'onglet Manuel, cadenas doré, et ne s'ouvre qu'avec le
+// PIN du responsable. Ce PIN est le réglage `foPinResponsable` (ceo_app_setting) ; tant qu'il n'est pas posé, le PIN
+// PROVISOIRE ci-dessous — à remplacer en fin de développement (le réglage, ou le PIN de la personne au panel).
+const FO_ACCES = ['tous', 'responsable'];
+const FO_PIN_RESPONSABLE_PROVISOIRE = '1111';
 const FO_EQUIPE_CACHE_S = 6 * 3600;     // les noms et rôles du panel, gardés 6 h (jamais le PIN)
 const FO_COMPETENCES_CACHE_S = 86400;   // la liste des compétences du panel, gardée un jour
 const FO_FIL_JOURS = 14;
@@ -138,6 +145,7 @@ function ensureSop(): void
         . 'PRIMARY KEY (shop_id, employee_id)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN partie VARCHAR(16) NULL AFTER poste'); } catch (PDOException $e) { /* déjà là */ }
+    try { Db::exec('ALTER TABLE ceo_sop ADD COLUMN acces VARCHAR(16) NULL AFTER moment'); } catch (PDOException $e) { /* déjà là */ }
     if ((int) (Db::row('SELECT COUNT(*) AS n FROM ceo_sop')['n'] ?? 0) === 0) { foImporter(); }
 }
 
@@ -387,7 +395,7 @@ function wr_sop_reglage(string $id): array
             $set[] = 'trad_' . $l . ' = ?'; $p[] = $b['trad'][$l]; $quoi[] = strtoupper($l) . ' ' . str_replace('_', ' ', (string) $b['trad'][$l]);
         }
     }
-    foreach (['statut' => ['publiee', 'a_valider', 'brouillon'], 'poste' => FO_POSTES] as $k => $ok) {
+    foreach (['statut' => ['publiee', 'a_valider', 'brouillon'], 'poste' => FO_POSTES, 'acces' => FO_ACCES] as $k => $ok) {
         if (!isset($b[$k])) { continue; }
         if (!in_array($b[$k], $ok, true)) { return foRefus(400, $k . ' inconnu'); }
         $set[] = $k . ' = ?'; $p[] = $b[$k]; $quoi[] = $k . ' ' . $b[$k];
@@ -522,6 +530,7 @@ function ep_sop_tablette_sop(string $id): array
 {
     $r = foSopRow($id);
     if ($r === null || $r['statut'] === 'brouillon') { return foRefus(404, 'SOP inconnue'); }
+    if (!foAccesOuvert($r, $_GET['acces'] ?? null)) { return foRefus(403, 'réservé au franchisé et au responsable du magasin : PIN attendu') + ['acces' => 'responsable']; }
     $c = foContenuVersion((string) $r['id'], (string) $r['version']);
     foreach ($c['quiz'] as &$q) { unset($q['bonne']); }
     unset($q, $c['corrections'], $c['remarques']);
@@ -553,6 +562,7 @@ function wr_sop_tablette_quiz(): array
     if ($j === null && isset($b['jeton']) && $b['jeton'] !== null && $b['jeton'] !== '') { return foRefus(401, 'jeton absent ou expiré : s’identifier à nouveau'); }
     $r = foSopRow((string) ($b['sop'] ?? ''));
     if ($r === null) { return foRefus(404, 'SOP inconnue'); }
+    if (!foAccesOuvert($r, $b['acces'] ?? null)) { return foRefus(403, 'réservé au franchisé et au responsable du magasin : PIN attendu') + ['acces' => 'responsable']; }
     if (in_array($r['statut'], ['a_valider', 'brouillon'], true)) { return foRefus(409, 'SOP à valider : lisible, sans quiz ni validation pour l’instant'); }
     if ($j === null) {
         $c = foContenuVersion((string) $r['id'], (string) $r['version']);
@@ -671,7 +681,7 @@ function sopRoute(string $method, string $path, bool $public = false): ?array
     // lire la liste, une SOP et faire le quiz en exercice ne demandent plus la session de l'appareil ; le reste (s'identifier,
     // compter une lecture, « vu faire ») la demande toujours.
     $ouvert = ($method === 'GET' && ($path === '/formation/sop/tablette/init' || str_starts_with($path, '/formation/sop/tablette/sop/')))
-        || ($method === 'POST' && $path === '/formation/sop/tablette/quiz');
+        || ($method === 'POST' && ($path === '/formation/sop/tablette/quiz' || $path === '/formation/sop/tablette/acces'));
     if (!$ouvert && str_starts_with($path, '/formation/sop/tablette/') && function_exists('tabGarde') && ($g = tabGarde()) !== null) { return $g; }
     // Une photo envoyée par l'assistant de création : publique comme celles du dépôt (la tablette et la fiche l'affichent).
     if ($method === 'GET' && preg_match('#^/formation/sop/photo/([\w.-]{1,90}\.(?:jpe?g|png|webp))$#i', $path, $m) === 1) { return ep_sop_photo($m[1]); }
@@ -682,6 +692,7 @@ function sopRoute(string $method, string $path, bool $public = false): ?array
         $method === 'POST' && $path === '/formation/sop/tablette/identifier' => wr_sop_tablette_identifier(),
         $method === 'POST' && $path === '/formation/sop/tablette/lu' => wr_sop_tablette_lu(),
         $method === 'POST' && $path === '/formation/sop/tablette/quiz' => wr_sop_tablette_quiz(),
+        $method === 'POST' && $path === '/formation/sop/tablette/acces' => wr_sop_tablette_acces(),
         $method === 'POST' && $path === '/formation/sop/tablette/vu' => wr_sop_tablette_vu(),
         $method === 'PUT' && $path === '/formation/sop/tablette/langue' => wr_sop_tablette_langue(),
         default => null,
@@ -1096,7 +1107,8 @@ function foJetonLire(mixed $j): ?array
     if (!hash_equals(hash_hmac('sha256', 'fo|' . $m[1], foSecret()), $m[2])) { return null; }
     $d = json_decode((string) base64_decode(strtr($m[1], '-_', '+/')), true);
     if (!is_array($d) || (int) ($d['x'] ?? 0) < time() || !isset($d['s'], $d['e'])) { return null; }
-    return ['s' => (string) $d['s'], 'e' => (int) $d['e'], 'n' => (string) ($d['n'] ?? '')];
+    // `r` : le rôle d'un jeton d'accès (« responsable » : documents réservés), absent d'un jeton de personne.
+    return ['s' => (string) $d['s'], 'e' => (int) $d['e'], 'n' => (string) ($d['n'] ?? ''), 'r' => isset($d['r']) ? (string) $d['r'] : null];
 }
 
 function foSecret(): string
@@ -1580,11 +1592,52 @@ function foStats(array $c): array
 }
 
 /** Une SOP telle que l'API la rend (sans son contenu). */
+/** L'accès d'un document : « responsable » (réservé, PIN du responsable sur la tablette) ou « tous ». */
+function foAcces(array $r): string { return ($r['acces'] ?? null) === 'responsable' ? 'responsable' : 'tous'; }
+
+/** Le PIN du responsable qui ouvre les documents réservés : le réglage `foPinResponsable`, sinon le PIN provisoire. */
+function foPinResponsable(): string
+{
+    $v = setting('foPinResponsable');
+    $v = is_scalar($v) ? trim((string) $v) : '';
+    return preg_match('/^\d{4,8}$/', $v) === 1 ? $v : FO_PIN_RESPONSABLE_PROVISOIRE;
+}
+
+/** Un document réservé est-il ouvert par ce jeton d'accès (rendu par POST /formation/sop/tablette/acces) ? */
+function foAccesOuvert(array $r, mixed $jeton): bool
+{
+    if (foAcces($r) !== 'responsable') { return true; }
+    $d = foJetonLire($jeton);
+    return $d !== null && ($d['r'] ?? null) === 'responsable';
+}
+
+/**
+ * POST /formation/sop/tablette/acces — {pin} : le PIN du responsable ouvre les documents réservés pour 4 h (jeton signé,
+ * gardé dans l'onglet). Cinq essais manqués bloquent dix minutes, pour toute la tablette (comme le PIN d'une personne).
+ */
+function wr_sop_tablette_acces(): array
+{
+    $b = body();
+    $pin = trim((string) ($b['pin'] ?? ''));
+    if (!preg_match('/^\d{3,8}$/', $pin)) { return foRefus(400, 'PIN attendu (chiffres)'); }
+    $cle = 'foPinResponsableEssais';
+    $e = setting($cle);
+    if (is_array($e) && (int) ($e['jusque'] ?? 0) > time()) { return foRefus(429, 'trop d’essais : réessayer dans 10 minutes'); }
+    $ok = hash_equals(foPinResponsable(), $pin);
+    $n = $ok ? 0 : (int) (is_array($e) ? ($e['n'] ?? 0) : 0) + 1;
+    try {
+        if ($ok) { Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', [$cle]); }
+        else { Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', [$cle, json_encode(['n' => $n, 'jusque' => $n >= FO_PIN_ESSAIS ? time() + FO_PIN_BLOCAGE_S : 0])]); }
+    } catch (Throwable $x) { /* */ }
+    if (!$ok) { return foRefus($n >= FO_PIN_ESSAIS ? 429 : 403, $n >= FO_PIN_ESSAIS ? 'trop d’essais : réessayer dans 10 minutes' : 'PIN incorrect'); }
+    return ['ok' => true, 'jeton' => foJeton(['s' => '*', 'e' => 0, 'r' => 'responsable'])];
+}
+
 function foSopLigne(array $r): array
 {
     return [
         'id' => (string) $r['id'], 'code' => $r['code'], 'type' => (string) $r['type'], 'dossier' => (string) $r['dossier'],
-        'poste' => (string) $r['poste'], 'moment' => $r['moment'],
+        'poste' => (string) $r['poste'], 'moment' => $r['moment'], 'acces' => foAcces($r),
         'partie' => foPartie($r), 'partieReglee' => in_array($r['partie'] ?? null, FO_PARTIES, true), 'statut' => (string) $r['statut'], 'version' => (string) $r['version'],
         'versionRevalider' => (string) $r['version_revalider'], 'langueOrigine' => (string) $r['langue_origine'],
         'trad' => ['fr' => (string) $r['trad_fr'], 'nl' => (string) $r['trad_nl']],
@@ -1666,6 +1719,8 @@ function foShopTablette(mixed $envoye = null): ?string
 function foJetonTablette(mixed $j): ?array
 {
     $d = foJetonLire($j);
+    // Un jeton d'accès aux documents réservés n'identifie personne : il ne vaut pas jeton de personne.
+    if ($d !== null && $d['r'] !== null) { return null; }
     if ($d === null || !function_exists('tabShop')) { return $d; }
     return $d['s'] === tabShop() ? $d : null;
 }
