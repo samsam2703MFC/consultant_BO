@@ -1309,3 +1309,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T07:55:10Z Primes : les franchisés n'y ont pas droit, ils restent dans les stats (dashboard, cockpit, app employé)
 2026-11-07T08:18:20Z Tablette : articles du manuel rangés par formation (« FO-32 · 10 parties »), tiroir « parties lues »
 2026-11-07T08:31:12Z Dashboard : seuil coût matière lu dans Budget › Paramètres · Tablette : documents réservés au responsable (Manuel, cadenas or, PIN) · SOP du dashboard (ART-PIL-01, SOP-PIL-01)
+2026-11-07T08:37:37Z Tablette : documents réservés — le PIN du responsable ouvre bien le document
