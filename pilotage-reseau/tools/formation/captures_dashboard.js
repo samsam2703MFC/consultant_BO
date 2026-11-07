@@ -43,7 +43,8 @@ const PLANS = [
   { nom: 'dash-annee', vue: 'annee', cibles: ['.db-tuiles', '.db-card >> nth=0'], top: true },
   { nom: 'dash-heatmap', vue: 'annee', cibles: ['.db-card:has-text("HEATMAP MENSUELLE")'] },
   { nom: 'dash-promos', vue: 'promos', cibles: ['.db-card >> nth=0'], top: true },
-  { nom: 'dash-primes', vue: 'primes', top: true },
+  // La ligne du franchisé (07/11/2026) : dans le tableau, en gris, « franchisé · hors primes ».
+  { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
 ];
 
 const W = 1200, H = 900;
