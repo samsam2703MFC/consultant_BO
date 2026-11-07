@@ -1,0 +1,680 @@
+{
+ "famille": "cougnou",
+ "libelle": "cougnou",
+ "mesure": "poids",
+ "unite": "€/kg",
+ "genere_le": "2026-11-07 11:36",
+ "releve": "2026-11-07",
+ "source": "referentiel",
+ "taille_ref": 220,
+ "taille_confirmee": false,
+ "taille_note": "Poids non publié : estimé à ~220 g d'après le coût de recette (Cougnou Nature 400 g = 1,79 € ; Cougnou Sucre = 0,98 €). À confirmer par la fiche technique (réglage benchmark.poidsCougnou).",
+ "nous": [
+  {
+   "id": 4100001,
+   "nom": "Cougnou - Sucre",
+   "prix": 2.9,
+   "reference": true,
+   "taille_retenue": 220,
+   "valeur": 13.18
+  },
+  {
+   "id": 4100002,
+   "nom": "Cougnou - Sucre & Raisin",
+   "prix": 2.9,
+   "reference": true,
+   "taille_retenue": 220,
+   "valeur": 13.18
+  },
+  {
+   "id": 4100003,
+   "nom": "Cougnou - Sucre & Chocolat",
+   "prix": 2.9,
+   "reference": true,
+   "taille_retenue": 220,
+   "valeur": 13.18
+  },
+  {
+   "id": 4100016,
+   "nom": "Cougnou - Sucre & Cannelle",
+   "prix": 2.9,
+   "reference": true,
+   "taille_retenue": 220,
+   "valeur": 13.18
+  },
+  {
+   "id": null,
+   "nom": "Cougnou 4+1 (5 pièces)",
+   "prix": 11.6,
+   "taille": 1100,
+   "taille_retenue": 1100,
+   "valeur": 10.55
+  },
+  {
+   "id": 6700139,
+   "nom": "Cougnou Nature - 400 g",
+   "prix": 0,
+   "taille": 400,
+   "taille_retenue": 400,
+   "valeur": null
+  }
+ ],
+ "ref": 13.18,
+ "concurrents": [
+  {
+   "concurrent": "Aldi",
+   "type": "GMS",
+   "produit": "Cougnou au sucre 4 pièces (400 g)",
+   "taille": 400,
+   "unite": "g",
+   "prix": 2.99,
+   "promo": null,
+   "valeur": 7.48,
+   "ecart_pct": 76.2,
+   "vu_le": "index moteur, sept. 2025",
+   "source": "https://www.aldi.be/fr/p/cougnou-au-sucre-4-pcs-4940-1-0.article.html",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Aldi",
+   "type": "GMS",
+   "produit": "Cougnou sucre et raisins 4 pièces (400 g)",
+   "taille": 400,
+   "unite": "g",
+   "prix": 2.99,
+   "promo": null,
+   "valeur": 7.48,
+   "ecart_pct": 76.2,
+   "vu_le": "index moteur, 2025",
+   "source": "https://www.aldi.be/fr/p/cougnou-au-sucre-et-aux-raisins-secs-4-pcs-4983-1-0.article.html",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Match",
+   "type": "GMS",
+   "produit": "Cougnous 4×100 g (0,94 € pièce par 4)",
+   "taille": 400,
+   "unite": "g",
+   "prix": 3.76,
+   "promo": null,
+   "valeur": 9.4,
+   "ecart_pct": 40.2,
+   "vu_le": "index moteur, non vérifié",
+   "source": "https://www.supermarche-match.be/be-fr/products/cougnous",
+   "magasins": [
+    3,
+    5
+   ]
+  },
+  {
+   "concurrent": "Colruyt (Boni)",
+   "type": "GMS",
+   "produit": "Cougnou nature Boni 500 g",
+   "taille": 500,
+   "unite": "g",
+   "prix": 4.99,
+   "promo": null,
+   "valeur": 9.98,
+   "ecart_pct": 32.1,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.colruyt.be/fr/produits/19671",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Colruyt (Boni)",
+   "type": "GMS",
+   "produit": "Cougnou sucre Boni 250 g",
+   "taille": 250,
+   "unite": "g",
+   "prix": 2.59,
+   "promo": null,
+   "valeur": 10.36,
+   "ecart_pct": 27.2,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.collectandgo.be/colruyt/fr/assortiment/boni-selection-pain-pr%C3%A9emball%C3%A9-cougnou-sucre-250g",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Cougnou nature Carrefour Extra 250 g",
+   "taille": 250,
+   "unite": "g",
+   "prix": 2.89,
+   "promo": null,
+   "valeur": 11.56,
+   "ecart_pct": 14,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.carrefour.be/fr/extra-cougnou-nature-250-g/01024052.html",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Cougnou sucre perlé Carrefour Extra 250 g",
+   "taille": 250,
+   "unite": "g",
+   "prix": 2.89,
+   "promo": null,
+   "valeur": 11.56,
+   "ecart_pct": 14,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.carrefour.be/fr/extra-cougnou-au-sucre-perle-250-g/01024055.html",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "Viennoiseries Christophe",
+   "type": "Artisan",
+   "produit": "Cougnou nature 150 g",
+   "taille": 150,
+   "unite": "g",
+   "prix": 2.2,
+   "promo": 1.95,
+   "valeur": 13,
+   "ecart_pct": 1.4,
+   "vu_le": "lu le 2026-11-07, saison 2026",
+   "source": "https://viennoiserieschristophe.be/nos-cougnous/186-cougnou-disponible-a-partir-du-2310.html",
+   "magasins": [
+    3
+   ]
+  },
+  {
+   "concurrent": "Colruyt (Boni)",
+   "type": "GMS",
+   "produit": "Cougnou beurre sucre La Lorraine 2×100 g",
+   "taille": 200,
+   "unite": "g",
+   "prix": 2.99,
+   "promo": null,
+   "valeur": 14.95,
+   "ecart_pct": -11.8,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.colruyt.be/fr/produits/23381",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "La Huche à Pain (Ronquières)",
+   "type": "Artisan",
+   "produit": "Cougnole 500 g",
+   "taille": 500,
+   "unite": "g",
+   "prix": 7.5,
+   "promo": null,
+   "valeur": 15,
+   "ecart_pct": -12.1,
+   "vu_le": "lu, non daté",
+   "source": "https://lescarrieres.be/product/cougnole-500-g/",
+   "magasins": [
+    2,
+    4
+   ]
+  },
+  {
+   "concurrent": "Viennoiseries Christophe",
+   "type": "Artisan",
+   "produit": "Cougnou 500 g (vente école Montigny-le-Tilleul)",
+   "taille": 500,
+   "unite": "g",
+   "prix": 8.5,
+   "promo": null,
+   "valeur": 17,
+   "ecart_pct": -22.5,
+   "vu_le": "lu le 2026-11-07, saison 2026",
+   "source": "https://sjb-mlt.be/ap/cougnous/",
+   "magasins": [
+    3
+   ]
+  },
+  {
+   "concurrent": "Cocoricoop / Fournil du Loup",
+   "type": "Artisan",
+   "produit": "Cougnou sucre bio 200 g",
+   "taille": 200,
+   "unite": "g",
+   "prix": 3.5,
+   "promo": null,
+   "valeur": 17.5,
+   "ecart_pct": -24.7,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://eshop.cocoricoop.be/cougnou-sucre-p1382545208852.htm",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Carrefour",
+   "type": "GMS",
+   "produit": "Cougnolle frais sucre La Lorraine 2×90 g",
+   "taille": 180,
+   "unite": "g",
+   "prix": 3.59,
+   "promo": null,
+   "valeur": 19.94,
+   "ecart_pct": -33.9,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.carrefour.be/fr/cougnolle-frais-sucre-2-x-90-g/06706023.html",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "B'YO & Circomedie (Soleilmont)",
+   "type": "Artisan",
+   "produit": "Cougnou 250 g (nature, choco, sucre, raisin)",
+   "taille": 250,
+   "unite": "g",
+   "prix": 5,
+   "promo": null,
+   "valeur": 20,
+   "ecart_pct": -34.1,
+   "vu_le": "lu, décembre 2025",
+   "source": "https://b-yo.be/atelier-boulangerie/vente-cougnou",
+   "magasins": [
+    3,
+    5
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Cougnou nature / cannelle-sucre 180 g",
+   "taille": 180,
+   "unite": "g",
+   "prix": 3.8,
+   "promo": null,
+   "valeur": 21.11,
+   "ecart_pct": -37.6,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-nature-180g",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Cougnou sucre 180 g",
+   "taille": 180,
+   "unite": "g",
+   "prix": 3.9,
+   "promo": null,
+   "valeur": 21.67,
+   "ecart_pct": -39.2,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-sucre-180g",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Kiekebich (Anderlecht)",
+   "type": "Artisan",
+   "produit": "Cougnou 180 g",
+   "taille": 180,
+   "unite": "g",
+   "prix": 3.9,
+   "promo": null,
+   "valeur": 21.67,
+   "ecart_pct": -39.2,
+   "vu_le": "lu le 2026-11-07",
+   "source": "https://kiekebich.be/product/cougnou/",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Gerlache (Ciney)",
+   "type": "Artisan",
+   "produit": "Cougnou sucre-raisins 250 g",
+   "taille": 250,
+   "unite": "g",
+   "prix": 5.5,
+   "promo": null,
+   "valeur": 22,
+   "ecart_pct": -40.1,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.bakeronline.be/be-en/gerlache/product/49585/le-cougnou-250gr-sucre-raisins",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Cougnou chocolat 180 g",
+   "taille": 180,
+   "unite": "g",
+   "prix": 4.1,
+   "promo": null,
+   "valeur": 22.78,
+   "ecart_pct": -42.1,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-chocolat-180g",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Delhaize",
+   "type": "GMS",
+   "produit": "Cougnou sucre-raisins Tradition Taste of Inspirations 125 g",
+   "taille": 125,
+   "unite": "g",
+   "prix": 2.99,
+   "promo": null,
+   "valeur": 23.92,
+   "ecart_pct": -44.9,
+   "vu_le": "index moteur, non daté (promo 2e à -50 %)",
+   "source": "https://www.delhaize.be/nl/shop",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ]
+  },
+  {
+   "concurrent": "eFarmz (Fernelmont)",
+   "type": "Artisan",
+   "produit": "Cougnou sucre bio 100 g",
+   "taille": 100,
+   "unite": "g",
+   "prix": 2.69,
+   "promo": null,
+   "valeur": 26.9,
+   "ecart_pct": -51,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://www.efarmz.be/fr/shop/boulangerie/patisseries/viennoiseries/A6072+cougnou-sucre",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "produit": "Cougnou nature 90 g",
+   "taille": 90,
+   "unite": "g",
+   "prix": 2.75,
+   "promo": null,
+   "valeur": 30.56,
+   "ecart_pct": -56.9,
+   "vu_le": "index moteur, saison 2025 probable",
+   "source": "https://paindantan.hypnotized.org/en/bakery/brioches/cougnou-nature-90g",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Le Pain Quotidien Wavre",
+   "type": "Chaîne",
+   "produit": "Cougnou sucre / raisin (poids non affiché)",
+   "taille": null,
+   "unite": "g",
+   "prix": 5.5,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "lu le 2026-11-07",
+   "source": "https://pickup.deliverect.com/click_collect/menu/order/?res=lpq-be-wavre-fr&lang=fr",
+   "magasins": [
+    2
+   ]
+  },
+  {
+   "concurrent": "Boulangerie Louise",
+   "type": "Chaîne",
+   "produit": "Cougnou petit (poids non affiché), 3+1 gratuit",
+   "taille": null,
+   "unite": "g",
+   "prix": 2.2,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "bon de commande Fêtes 2025",
+   "source": "https://boulangerielouise.be/wp-content/uploads/2025/12/Bon-de-commande-Fetes-2025.pdf",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Boulangerie Louise",
+   "type": "Chaîne",
+   "produit": "Cougnou grand (poids non affiché), 3+1 gratuit",
+   "taille": null,
+   "unite": "g",
+   "prix": 4.8,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "bon de commande Fêtes 2025",
+   "source": "https://boulangerielouise.be/wp-content/uploads/2025/12/Bon-de-commande-Fetes-2025.pdf",
+   "magasins": [
+    2,
+    3
+   ]
+  },
+  {
+   "concurrent": "Les Blés d'Or",
+   "type": "Artisan",
+   "produit": "Cougnou nature (à partir de, poids non affiché)",
+   "taille": null,
+   "unite": "g",
+   "prix": 2.8,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "index moteur, vendu du 15/11 au 31/12",
+   "source": "https://www.bakeronline.be/be-fr/les-bles-dor/product/549906/cougnou-nature",
+   "magasins": [
+    2,
+    4
+   ]
+  },
+  {
+   "concurrent": "Pâtisserie Dumont (Bouge)",
+   "type": "Artisan",
+   "produit": "Cougnou sucré (poids non affiché)",
+   "taille": null,
+   "unite": "g",
+   "prix": 2.5,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "lu, non daté",
+   "source": "https://patisseriedumont.com/product-page/cougnou-sucr%C3%A9",
+   "magasins": [
+    5
+   ]
+  },
+  {
+   "concurrent": "Bakkerij Van Dessel (Dilbeek)",
+   "type": "Artisan",
+   "produit": "Cougnou met suiker klein (poids non affiché)",
+   "taille": null,
+   "unite": "g",
+   "prix": 3.25,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "lu le 2026-11-07",
+   "source": "https://bakkerijvandessel.be/product/conjoux-met-suiker-enkel-tijdens-kerst",
+   "magasins": [
+    4
+   ]
+  },
+  {
+   "concurrent": "Bakkerij Van Dessel (Dilbeek)",
+   "type": "Artisan",
+   "produit": "Cougnou groot (poids non affiché)",
+   "taille": null,
+   "unite": "g",
+   "prix": 4.75,
+   "promo": null,
+   "valeur": null,
+   "ecart_pct": null,
+   "vu_le": "lu le 2026-11-07",
+   "source": "https://bakkerijvandessel.be/product/conjoux-groot",
+   "magasins": [
+    4
+   ]
+  }
+ ],
+ "par_type": [
+  {
+   "type": "GMS",
+   "n": 10,
+   "min": 7.48,
+   "mediane": 10.96,
+   "max": 23.92,
+   "ecart_pct": 20.3
+  },
+  {
+   "type": "Chaîne",
+   "n": 4,
+   "min": 21.11,
+   "mediane": 22.23,
+   "max": 30.56,
+   "ecart_pct": -40.7
+  },
+  {
+   "type": "Artisan",
+   "n": 8,
+   "min": 13,
+   "mediane": 18.75,
+   "max": 26.9,
+   "ecart_pct": -29.7
+  }
+ ],
+ "position": {
+  "moins_chers": 8,
+  "sur": 22,
+  "mediane": 17.25
+ },
+ "analyses_api": [],
+ "web": {
+  "score": 27,
+  "ok": 3,
+  "total": 11,
+  "controles": [
+   {
+    "cle": "page",
+    "libelle": "Page dédiée en ligne",
+    "ok": true,
+    "detail": "https://atelierby.be/gammes/gamme-noel-nouvel-an/ → HTTP 200"
+   },
+   {
+    "cle": "titre",
+    "libelle": "« cougnou » dans le titre de la page",
+    "ok": false,
+    "detail": "Gamme Noël & Nouvel An · L'Atelier By"
+   },
+   {
+    "cle": "description",
+    "libelle": "« cougnou » dans la meta description",
+    "ok": false,
+    "detail": "Offre festive et généreuse avec bûches, biscuits et pains d’épices, pour accompagner toutes les célébrations de fin d’année."
+   },
+   {
+    "cle": "texte",
+    "libelle": "Produit lisible dans le HTML servi",
+    "ok": true,
+    "detail": "10 mention(s)"
+   },
+   {
+    "cle": "prix",
+    "libelle": "Prix affiché sur la page",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "cle": "taille",
+    "libelle": "Poids affiché (g) pour comparer au kilo",
+    "ok": false,
+    "detail": "1 mention(s)"
+   },
+   {
+    "cle": "schema",
+    "libelle": "Balisage schema.org Product / Offer",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "cle": "accueil",
+    "libelle": "« cougnou » visible sur l'accueil (HTML servi)",
+    "ok": false,
+    "detail": ""
+   },
+   {
+    "cle": "sitemap",
+    "libelle": "Page dans le sitemap",
+    "ok": true,
+    "detail": ""
+   },
+   {
+    "cle": "robots",
+    "libelle": "robots.txt présent",
+    "ok": false,
+    "detail": "HTTP 404"
+   },
+   {
+    "cle": "nl",
+    "libelle": "« koekebrood » sur la version NL (Halle)",
+    "ok": false,
+    "detail": "HTTP 200 · Gamme Noël & Nouvel An · L'Atelier By"
+   }
+  ],
+  "lu_le": "2026-11-07 11:36"
+ },
+ "constats": [
+  "Fixer un prix au Cougnou Nature 400 g (affiché 0 € sur le site) : entre 5,20 € (13 €/kg, notre niveau) et 6,50 € (16 €/kg), toujours sous les artisans (15–24 €/kg au 500 g).",
+  "Publier le poids de nos cougnous : sans lui, aucune comparaison au kilo n'est possible pour le client.",
+  "Créer une page /cougnou/ (et /nl/koekebrood/ pour Halle) avec prix, poids, date limite de commande et lien de précommande ; titre et meta description de la gamme Noël centrés sur le cougnou.",
+  "Ouvrir la précommande des cougnous sur le webshop : les artisans concurrents la proposent presque tous (Bakeronline), nos cougnous n'y sont pas commandables.",
+  "Corriger les fiches Google/Yelp/Pages d'Or (nom unique « L'Atelier By – Ville », Halle au n° 22, horaires, lien du site) et rediriger les anciennes URL en 404.",
+  "Relire les prix GMS et artisans vers le 20–25 novembre (webshops de saison rouverts) : la routine du jeudi le rappelle."
+ ]
+}
