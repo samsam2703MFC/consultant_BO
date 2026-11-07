@@ -38,6 +38,7 @@ window.FormationSop = (function () {
   const D = {
     liste: null, totaux: null, dossiers: [], erreur: null, charge: false,
     fiche: {}, archive: null, comp: null, compCharge: false, fil: null, magasins: null,
+    ctl: {},   // les contrôles au panel de chaque SOP (GET /task/sop/{id}/controles), lus à l'ouverture de la fiche
     shop: '', vue: 'deux', f: { poste: '', relire: false, valider: false, sansComp: false },
     ed: null, edMeta: null, edErr: null, occupe: false, nouv: null,
     // Manuel du réseau : référentiel, correspondance, classements en cours d'édition, sous-catégorie éditée, reprise du CRM
@@ -151,8 +152,46 @@ window.FormationSop = (function () {
       `<div class="sop-deux"><section class="card">${D.vue === 'tablette' && window.FormationTablette
         // La SOP telle que la tablette la montre (07/11/2026, client : « tout doit être présenté comme les SOP, en vue tablette »).
         ? `<div class="tbx-page">${FormationTablette.cadre(s.id, { largeurMax: 620, hauteurMax: Math.max(560, innerHeight - 230) })}<span class="muted">La tablette du magasin, en portrait · balayer ou « C’est fait » pour avancer</span></div>`
-        : (etapes || '<p class="muted">Aucune étape.</p>')}</section><div>${infos}${carteClassement(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
+        : (etapes || '<p class="muted">Aucune étape.</p>')}</section><div>${infos}${carteClassement(s)}${tablette() ? '' : carteControles(s)}${eq}${crit}${quiz}${versions}${rel}</div></div>`;
     return { titre: s.titre.fr, kicker: K + ' · ' + (s.code || ''), corps, large: true };
+  }
+
+  /* ═══ Contrôles au panel (07/11/2026, proposition D) ═══
+   * Ce qui contrôle le standard au panel : les checklists dont le code est au classement, leurs tâches, les tâches
+   * reliées à une étape, et ce que les contrôles des 30 derniers jours en disent. Le bouton ouvre l'assistant du
+   * cockpit (Pilotage › Cadre des tâches) sur ce standard : une tâche de contrôle par étape critique. */
+  const COCKPIT = /^\/formation(\/|$)/.test(location.pathname) ? '/consulant_bo/' : '../';
+  function carteControles(s) {
+    const d = D.ctl[s.id];
+    const creer = `<a class="btn btn--primary btn--sm" href="${esc(COCKPIT + '#/checklists?sop=' + encodeURIComponent(s.id))}" target="_blank" rel="noopener">Créer les contrôles de ce standard ↗</a>`;
+    const tete = `<div class="rf-tete"><h2>Contrôles au panel</h2><span class="muted fm-small">tâches et checklists · 30 derniers jours</span></div>`;
+    if (!d) { return `<section class="card">${tete}${attente('Lecture des contrôles…')}</section>`; }
+    if (d.error) { return `<section class="card">${tete}<p class="error">${esc(d.error)}</p><p><button type="button" class="btn btn--sm" data-sa="ctlRelire" data-id="${esc(s.id)}">Réessayer</button> ${creer}</p></section>`; }
+    const T = d.totaux || {};
+    const fr = x => x == null ? '—' : String(x).replace('.', ',');
+    const dfr = x => x ? x.slice(8, 10) + '/' + x.slice(5, 7) : '';
+    const resume = d.taches.length
+      ? `<p>${d.taches.length} tâche${d.taches.length > 1 ? 's' : ''} contrôle${d.taches.length > 1 ? 'nt' : ''} ce standard${T.notes ? ` · <b>${T.conformite} %</b> conformes sur ${T.notes} note${T.notes > 1 ? 's' : ''}` : ' · aucune note sur 30 jours'}${T.nc ? ` · <span class="chip chip--ko">${T.nc} non-conformité${T.nc > 1 ? 's' : ''}</span>` : ''}</p>`
+      : '<p class="muted">Aucune tâche du panel ne contrôle encore ce standard.</p>';
+    const cls = (d.checklists || []).map(c => `<a class="chip chip--accent" href="${esc(COCKPIT + '#/checklists?checklist=' + c.id)}" target="_blank" rel="noopener" title="${c.nbTaches} tâche(s)${c.heure ? ' · ' + esc(c.heure) : ''}">${esc(c.nom)}</a>`).join(' ')
+      + (d.codesSansChecklist || []).map(c => ` <span class="chip chip--warn" title="Cité par le classement, pas encore au panel">${esc(c)} · à créer</span>`).join('');
+    const lignes = d.taches.map(t => {
+      const st = t.stats;
+      const qual = !st ? '<span class="chip chip--mute">pas de note</span>' : `<span class="chip ${st.nc ? (st.conformite < 80 ? 'chip--ko' : 'chip--warn') : 'chip--ok'}">${fr(st.moyenne)}/5 · ${st.notes} note${st.notes > 1 ? 's' : ''}${st.nc ? ' · ' + st.nc + ' NC' : ''}</span>`;
+      const quand = [t.jour, t.heure, t.photo ? 'photo' : '', t.obligatoire ? 'obligatoire' : ''].filter(Boolean).join(' · ');
+      const nc = st && st.dernierNc ? `<small>Dernière NC le ${esc(dfr(st.dernierNc.date))} à ${esc(st.dernierNc.magasin)} (${st.dernierNc.note}/5)${st.dernierNc.commentaire ? ' : « ' + esc(st.dernierNc.commentaire) + ' »' : ''}</small>` : '';
+      return `<div class="sop-ligne">${t.etape ? `<span class="sop-lg">${esc(t.etape)}</span>` : '<span class="sop-lg">·</span>'}<div class="sop-ligne__x">${esc(t.nom)}${t.absente ? ' <span class="chip chip--warn">absente du panel</span>' : ''}${t.actif === false ? ' <span class="chip chip--mute">en pause</span>' : ''}
+        <small>${esc([t.checklist, quand].filter(Boolean).join(' · '))}</small>${nc}</div>${qual}</div>`;
+    }).join('');
+    return `<section class="card">${tete}${resume}${cls ? `<p class="chips-ligne">${cls}</p>` : ''}${lignes}
+      ${(d.erreurs || []).length ? `<p class="muted fm-small">${d.erreurs.map(esc).join(' · ')}</p>` : ''}
+      <p style="margin-top:10px">${creer} <span class="muted fm-small">une tâche de contrôle par étape critique, relue avant d’être créée</span></p></section>`;
+  }
+  function chargerCtl(id, forcer) {
+    if (D.ctl[id] && !forcer) { return; }
+    D.ctl[id] = null;
+    C.lire('/task/sop/' + encodeURIComponent(id) + '/controles', 90000)
+      .then(d => { D.ctl[id] = d; C.rendre(true); }, er => { D.ctl[id] = { error: er.message }; C.rendre(true); });
   }
 
   /* ═══ Compétences ═══ */
@@ -1019,6 +1058,7 @@ window.FormationSop = (function () {
     if (e === 'sop' || e === 'sopred') { chargerListe(false); }
     if (e === 'sop' && a[0] && a[1] === 'editer') { chargerEditeur(a[0]); }
     else if (e === 'sop' && a[0] && D.fiche[a[0]] === undefined) { chargerFiche(a[0]); }
+    if (e === 'sop' && a[0] && a[1] !== 'editer' && D.ctl[a[0]] === undefined && !tablette()) { chargerCtl(a[0]); }
     if (e === 'sopcomp' || e === 'sopred') { chargerComp(false); }
     if (e === 'rfclasseur' || e === 'rfphase' || e === 'rfposte' || e === 'sop' || e === 'sopcomp') { chargerRef(false); }
     if (e === 'sopcomp') { chargerCor(false); }
@@ -1051,6 +1091,7 @@ window.FormationSop = (function () {
       const d = b.dataset, E = D.ed;
       if (await gesteRef(d, b)) { return; }
       switch (d.sa) {
+        case 'ctlRelire': chargerCtl(d.id, true); return C.rendre(true);
         case 'zoom': { const z = document.createElement('div'); z.className = 'sop-zoom'; z.innerHTML = `<img src="${esc(d.v)}" alt="">`; z.onclick = () => z.remove(); document.body.appendChild(z); return; }
         case 'filtre': D.f[d.k] = d.k === 'poste' ? d.v : d.v === 'true'; return C.rendre(true);
         case 'vue': D.vue = d.v; try { localStorage.setItem('fm.sop.vue', d.v); } catch (x) { /* */ } return C.rendre(true);

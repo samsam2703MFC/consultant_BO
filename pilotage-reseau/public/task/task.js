@@ -127,6 +127,10 @@
         S.cl = checklists().length ? String(checklists()[0].id) : 'tout';
         adresse(S.cl);
       }
+      // « ?sop=ID » (Formation › la fiche d'une SOP › « Créer les contrôles de ce standard ») : l'assistant
+      // s'ouvre avec la proposition du standard, une seule fois.
+      const sop = q.get('sop');
+      if (sop && !S.sopOuvert && /^[\w-]{1,32}$/.test(sop)) { S.sopOuvert = true; S.charge = false; return wzDepuisSop(sop); }
     } catch (e) {
       S.err = e.message;
       if (e.data && e.data.connexionRequise) { S.modale = { type: 'connexion', f: {} }; }
@@ -191,7 +195,7 @@
         return `<tr class="${S.sel.has(t.id) ? 'sel' : ''}${t.actif === false ? ' pause' : ''}">
           <td class="c"><input type="checkbox" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''}></td>
           ${c ? `<td class="n">${x.ordre == null ? '' : x.ordre}</td>` : ''}
-          <td>${esc(t.nom)}${t.horsListe ? ' <span class="tk-pas att">absente de /tasks</span>' : ''}${chemin ? `<small>${esc(chemin)}</small>` : ''}${x.note ? `<small>Note : ${esc(x.note)}</small>` : ''}</td>
+          <td>${esc(t.nom)}${t.horsListe ? ' <span class="tk-pas att">absente de /tasks</span>' : ''}${(((S.cadre || {}).sopLiens || {})[t.id] || []).map(x => ` <a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(x.sopId)}" target="_blank" rel="noopener" title="${esc(x.titre)}">${esc(x.code || 'SOP')}${x.etape ? ' · ' + esc(x.etape) : ''}</a>`).join('')}${chemin ? `<small>${esc(chemin)}</small>` : ''}${x.note ? `<small>Note : ${esc(x.note)}</small>` : ''}</td>
           <td>${jourAff(t.jour)}</td><td>${esc(t.heure || '—')}</td><td>${esc(t.frequence || '—')}</td>
           <td class="c">${oui(t.obligatoire)}</td><td class="c">${oui(t.photo)}</td>
           <td class="c">${t.actif == null ? '<span class="mu">?</span>' : (t.actif ? '<span class="tk-pas oui">oui</span>' : '<span class="tk-pas att">en pause</span>')}</td>
@@ -363,7 +367,7 @@
   async function wzOuvrir(mode) {
     const c = checklist(S.cl);
     S.wz = { etape: 1, cl: { mode: 'nouvelle', id: c ? String(c.id) : '', nom: '', description: '', posteId: '', heure: '', modeleId: '', extra: '' },
-      lignes: [], commun: { jours: [], heure: '', frequence: '__', obligatoire: null, photo: null }, niveaux: [], controleursDe: '', extra: '',
+      lignes: [], commun: { jours: [], heure: '', frequence: '__', obligatoire: null, photo: null, sousCategorieId: '' }, niveaux: [], controleursDe: '', extra: '',
       choix: null, plan: null, res: null, envoi: false, err: null, struct: S.struct || null };
     if (mode === 'existante' && c) { S.wz.cl.mode = 'existante'; S.wz.etape = 2; S.wz.lignes.push(wzLigneVide()); }
     if (mode === 'selection') {
@@ -377,6 +381,31 @@
       if (S.wz) { S.wz.struct = S.struct; rendre(); }
     }
   }
+
+  /** L'assistant ouvert sur la proposition d'un standard (GET /task/sop/{id}/proposition). */
+  async function wzDepuisSop(id) {
+    await wzOuvrir('nouvelle');
+    const w = S.wz;
+    w.envoi = true; rendre();
+    let p;
+    try { p = await api('GET', '/task/sop/' + encodeURIComponent(id) + '/proposition'); }
+    catch (e) { w.envoi = false; w.err = 'Proposition du standard illisible : ' + e.message; return rendre(); }
+    w.envoi = false;
+    w.sop = p.sop; w.sopAvert = p.avertissements || []; w.reference = p.reference;
+    const c = p.checklist || {};
+    if (c.mode === 'existante' && checklist(c.id)) { w.cl.mode = 'existante'; w.cl.id = String(c.id); }
+    else { w.cl.mode = 'nouvelle'; w.cl.nom = c.nom || ''; w.cl.description = c.description || ''; w.cl.posteId = c.posteId ? String(c.posteId) : ''; w.cl.heure = c.heure || ''; }
+    const sc = p.sousCategorieId ? String(p.sousCategorieId) : '';
+    w.lignes = (p.lignes || []).map(l => ({ k: ++uid, modeleId: null, nom: l.nom, description: l.description || '', sousCategorieId: sc, jours: [], unParJour: true,
+      heure: l.heure || '', frequence: freqDefaut(), obligatoire: true, photo: !!l.photo, priorite: prioDefaut(), garderNiveaux: true, garderControleurs: true,
+      sop: { id: p.sop.id, etape: l.etape }, photoRef: l.photoRef || null, section: l.section || '' }));
+    w.niveaux = (p.niveaux || []).slice();
+    w.controleursDe = p.controleursDe ? String(p.controleursDe) : '';
+    w.commun.sousCategorieId = sc;
+    rendre();
+  }
+  /** La photo de référence d'une étape de SOP, servie par le module Formation. */
+  const photoSop = ph => String(ph).startsWith('u/') ? API + '/formation/sop/photo/' + encodeURIComponent(String(ph).slice(2)) : '../formation/sop/photos/' + encodeURIComponent(ph);
 
   function wzValider(etape) {
     const w = S.wz;
@@ -410,10 +439,11 @@
     const cl = c.mode === 'nouvelle' ? { mode: 'nouvelle', nom: c.nom.trim(), description: c.description, posteId: +c.posteId || 0, heure: c.heure || '', modeleId: +c.modeleId || 0, extra: jsonOuVide(c.extra, 'Champs en plus de la checklist') }
       : (c.mode === 'existante' ? { mode: 'existante', id: +c.id } : { mode: 'aucune' });
     return { checklist: cl, niveaux: w.niveaux, controleursDe: +w.controleursDe || null, extra: jsonOuVide(w.extra, 'Champs en plus des tâches'),
+      sopId: w.sop ? w.sop.id : null,
       lignes: w.lignes.map(l => ({ modeleId: l.modeleId || null, nom: l.nom.trim(), description: l.description, sousCategorieId: +l.sousCategorieId || 0,
         jours: l.jours, unParJour: l.unParJour, heure: l.heure || '', frequence: l.frequence === '' && !l.modeleId ? null : l.frequence,
         obligatoire: l.obligatoire, photo: l.photo, priorite: l.priorite === '' || l.priorite == null ? null : +l.priorite,
-        garderNiveaux: l.garderNiveaux, garderControleurs: l.garderControleurs })) };
+        garderNiveaux: l.garderNiveaux, garderControleurs: l.garderControleurs, sop: l.sop || null })) };
   }
 
   async function wzApercu() {
@@ -491,6 +521,7 @@
           ${bascule(l.photo, `data-wl="photo" ${a}`, 'photo requise')}
           <label class="tk-ligne">Priorité <input type="number" class="tk-in" data-wl="priorite" ${a} value="${esc(l.priorite)}" style="width:64px"></label></div>
         <div class="tk-wl-l2"><input class="tk-in" data-wl="description" ${a} value="${esc(l.description)}" placeholder="Description (facultatif) : ce qu’on attend sur la photo, par exemple" style="flex:1;min-width:260px"></div>
+        ${l.sop ? `<div class="tk-wl-l2 mu" style="font-size:11px">${l.photoRef ? `<img class="tk-wl-ph" src="${esc(photoSop(l.photoRef))}" alt="" title="La photo de référence de l’étape">` : ''}<span class="tk-pas">${esc((w.sop && w.sop.code) || 'SOP')}${l.sop.etape ? ' · étape ' + esc(l.sop.etape) : ''}</span>${l.section ? ' ' + esc(l.section) : ''}</div>` : ''}
         ${m ? `<div class="tk-wl-l2 mu" style="font-size:11px">copie de « ${esc(m.nom)} » (#${m.id}) — ${bascule(l.garderNiveaux, `data-wl="garderNiveaux" ${a}`, 'garder ses niveaux de poste')} ${bascule(l.garderControleurs, `data-wl="garderControleurs" ${a}`, 'garder ses contrôleurs')}</div>` : ''}
       </div>`;
     }).join('');
@@ -506,6 +537,7 @@
         <span class="tk-ligne">${chipsJours(cm.jours, 'data-a="wzCommunJour"')}</span>
         <label class="tk-ligne">Heure <input type="time" class="tk-in" data-wcm="heure" value="${esc(cm.heure)}"></label>
         <label class="tk-ligne">Fréquence <select class="tk-in" data-wcm="frequence">${optionsFreq(cm.frequence, true)}</select></label>
+        <label class="tk-ligne">Sous-catégorie <select class="tk-in" data-wcm="sousCategorieId" style="max-width:240px">${optionsSousCat(cm.sousCategorieId).replace('— sous-catégorie —', '— ne pas changer —')}</select></label>
         <span class="tk-ligne">Obligatoire ${segW('obligatoire', cm.obligatoire)}</span><span class="tk-ligne">Photo ${segW('photo', cm.photo)}</span>
         <button class="tk-btn" data-a="wzAppliquer">Appliquer à toutes les lignes</button>
         <div class="aide" style="width:100%">Ce qui n’est pas choisi ici ne change pas. Les jours sont ceux que le panel emploie déjà (survolez pour des exemples).</div></div>
@@ -566,6 +598,8 @@
     return `<div class="tk-card tk-dup"><div class="tk-ct"><span class="tk-k">Assistant</span>
         <div class="tk-wz-etapes">${ETAPES.map((e, i) => `<button class="${w.etape === i + 1 ? 'on' : (i + 1 < w.etape ? 'fait' : '')}" data-a="wzEtape" data-e="${i + 1}" ${i + 1 < w.etape && !w.res ? '' : 'disabled'}><b>${i + 1}</b>${e}</button>`).join('')}</div>
         <button class="tk-x" data-a="wzFermer" aria-label="Fermer">×</button></div>
+      ${w.sop ? `<div class="tk-msg ok" style="margin:12px 16px 0">D’après le standard <b>${esc(w.sop.code)}</b> — ${esc(w.sop.titre)} : ${w.lignes.filter(l => l.sop).length} étape(s) critique(s) en tâches de contrôle.${w.reference ? ` Sous-catégorie, niveaux de poste et contrôleurs repris de « ${esc(w.reference.nom || '#' + w.reference.id)} »${w.reference.checklist ? ' (' + esc(w.reference.checklist) + ')' : ''}.` : ''}${(w.sopAvert || []).length ? '<br>' + w.sopAvert.map(esc).join('<br>') : ''}</div>` : ''}
+      ${w.envoi && !w.lignes.length && w.etape === 1 ? '<p class="tk-note" style="padding:12px 16px 0">Lecture du standard…</p>' : ''}
       ${w.err ? `<div class="tk-err" style="margin:12px 16px 0">${esc(w.err)}</div>` : ''}
       ${S.struct && S.struct.erreurs && Object.keys(S.struct.erreurs).length && w.etape <= 2 ? `<div class="tk-msg wa" style="margin:12px 16px 0">Structure du panel lue en partie : ${Object.entries(S.struct.erreurs).map(([k, v]) => esc(k + ' — ' + v)).join(' ; ')}</div>` : ''}
       ${[wzEtape1, wzEtape2, wzEtape3, wzEtape4][w.etape - 1]()}
@@ -749,6 +783,7 @@
           if (c.frequence !== '__') { l.frequence = c.frequence; }
           if (c.obligatoire !== null) { l.obligatoire = c.obligatoire; }
           if (c.photo !== null) { l.photo = c.photo; }
+          if (c.sousCategorieId) { l.sousCategorieId = c.sousCategorieId; }
         });
         return rendre();
       }

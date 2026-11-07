@@ -129,3 +129,7 @@ html.tk-emb body{background:var(--paper)}
 html.tk-emb #tk{max-width:none;padding:10px 12px 40px}
 html.tk-emb .tk-hd{margin-bottom:6px}
 html.tk-emb .tk-cls{max-height:calc(100vh - 110px)}
+
+/* Assistant depuis un standard : la photo de référence de l'étape */
+.tk-wl-ph{width:38px;height:38px;object-fit:cover;border-radius:6px;border:1px solid var(--tk-trait)}
+a.tk-pas{text-decoration:none}

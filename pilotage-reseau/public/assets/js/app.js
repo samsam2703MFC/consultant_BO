@@ -517,7 +517,11 @@ class App {
       return Object.assign(shop ? { peShop: shop, peSrcShop: shop } : {}, o ? { peOuvrir: o } : {});
     }
     if (id === 'apiModule') { return { apiSrc: (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('source') || '').trim() }; }
-    if (id === 'cadreTaches') { const cl = (new URLSearchParams(String(location.hash || '').split('?')[1] || '').get('checklist') || '').trim(); return /^\d{1,10}$/.test(cl) ? { ctChecklist: cl } : {}; }
+    if (id === 'cadreTaches') {
+      // « ?checklist=43 » ouvre la checklist ; « ?sop=ouv-mag » (Formation › la fiche d'une SOP) ouvre l'assistant sur ce standard.
+      const a = new URLSearchParams(String(location.hash || '').split('?')[1] || ''), cl = (a.get('checklist') || '').trim(), sop = (a.get('sop') || '').trim();
+      return Object.assign(/^\d{1,10}$/.test(cl) ? { ctChecklist: cl } : {}, /^[\w-]{1,32}$/.test(sop) ? { ctSop: sop } : {});
+    }
     if (id !== 'primesApp') { return {}; }
     const shop = App.shopDeAdresse();
     return shop ? { prSection: 'franchise', prShop: shop } : { prSection: 'marque' };
@@ -9231,7 +9235,12 @@ class App {
    */
   valsCadreTaches(common){
     const cl = this.state.ctChecklist;
-    if (!this._ctSrc) { this._ctSrc = 'task/?embed=1' + (cl ? '&checklist=' + encodeURIComponent(cl) : ''); }
+    if (!this._ctSrc) {
+      const sop = this.state.ctSop;
+      this._ctSrc = 'task/?embed=1' + (cl ? '&checklist=' + encodeURIComponent(cl) : '') + (sop ? '&sop=' + encodeURIComponent(sop) : '');
+      // Le standard ne sert qu'à l'arrivée : revenir sur l'écran ne rouvre pas l'assistant.
+      this.state.ctSop = null;
+    }
     if (!this._ctEcoute) {
       this._ctEcoute = true;
       window.addEventListener('message', ev => {
