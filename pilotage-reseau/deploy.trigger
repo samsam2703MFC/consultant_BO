@@ -1327,3 +1327,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T18:17:42Z Cadre des tâches : écran du cockpit dans Pilotage
 2026-11-07T18:41:20Z Standards et contrôles : checklist depuis une SOP, contrôles sur la fiche
 2026-11-07T19:06:57Z Dashboard Opérationnel : Heure par heure s'arrête à 20 h
+2026-11-07T19:50:28Z Cadre des tâches : lecture plus claire dans le cockpit
