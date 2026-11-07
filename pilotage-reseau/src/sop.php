@@ -1107,7 +1107,8 @@ function foJetonLire(mixed $j): ?array
     if (!hash_equals(hash_hmac('sha256', 'fo|' . $m[1], foSecret()), $m[2])) { return null; }
     $d = json_decode((string) base64_decode(strtr($m[1], '-_', '+/')), true);
     if (!is_array($d) || (int) ($d['x'] ?? 0) < time() || !isset($d['s'], $d['e'])) { return null; }
-    return ['s' => (string) $d['s'], 'e' => (int) $d['e'], 'n' => (string) ($d['n'] ?? '')];
+    // `r` : le rôle d'un jeton d'accès (« responsable » : documents réservés), absent d'un jeton de personne.
+    return ['s' => (string) $d['s'], 'e' => (int) $d['e'], 'n' => (string) ($d['n'] ?? ''), 'r' => isset($d['r']) ? (string) $d['r'] : null];
 }
 
 function foSecret(): string
@@ -1718,6 +1719,8 @@ function foShopTablette(mixed $envoye = null): ?string
 function foJetonTablette(mixed $j): ?array
 {
     $d = foJetonLire($j);
+    // Un jeton d'accès aux documents réservés n'identifie personne : il ne vaut pas jeton de personne.
+    if ($d !== null && $d['r'] !== null) { return null; }
     if ($d === null || !function_exists('tabShop')) { return $d; }
     return $d['s'] === tabShop() ? $d : null;
 }
