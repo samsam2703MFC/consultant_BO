@@ -1355,6 +1355,9 @@ class App {
         ['scoringTri', 'Scoring du trimestre', 0],
         { sub: 'Suivi journalier', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
+          // Le cadre des tâches du panel (demande du 07/11/2026) : lire les checklists et dupliquer des
+          // tâches (jours, heure, obligatoire, photo) — une application à part (task/).
+          ['ext:task/', 'Cadre des tâches ↗', 0],
           ['mktObjectifs', 'Objectifs', 0],
           ['remarquesOperateurs', 'Remarques opérateurs', 0],
           ['reputation', 'Note Google et avis', 0],

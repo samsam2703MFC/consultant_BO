@@ -193,9 +193,21 @@ final class PanelApi
         return $rang;
     }
 
+    /**
+     * Jeton IMPOSÉ par l'appelant — celui d'un compte administrateur du panel, connecté depuis
+     * l'écran /task (POST /panel/authenticate). Il remplace le compte consultant du cockpit le
+     * temps d'une requête ; il n'est jamais mis en cache ni renouvelé ici : périmé, c'est à la
+     * personne de se reconnecter, pas au cockpit de retomber sur un autre compte en silence.
+     */
+    public static ?string $jetonImpose = null;
+
     /** Jeton en cache, sinon connexion. `$force` ignore le cache (retry sur 401). */
     private static function token(bool $force = false): ?string
     {
+        if (self::$jetonImpose !== null) {
+            if ($force) { self::$lastError = 'session du panel expirée — reconnectez-vous'; return null; }
+            return self::$jetonImpose;
+        }
         if (!$force) {
             if (self::$token !== null) { return self::$token; }
             $cached = setting('panelApiToken');
@@ -279,6 +291,60 @@ final class PanelApi
             return [false, $res];
         }
         return [true, $res];
+    }
+
+    /**
+     * Requête authentifiée qui rend TOUT : le code HTTP et le corps tel que décodé, sans
+     * en retirer l'enveloppe `data`. Pour l'écran /task, qui montre la réponse du panel telle
+     * quelle — le contrat de ces routes n'est pas documenté, la réponse est la documentation.
+     *
+     * @return array{code:int, corps:mixed, erreur:?string}
+     */
+    public static function requete(string $methode, string $path, ?array $body = null, int $timeout = 20): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return ['code' => 0, 'corps' => null, 'erreur' => self::$lastError ?? 'jeton indisponible']; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok, $timeout);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok === null) { return ['code' => 401, 'corps' => $res, 'erreur' => self::$lastError]; }
+            [$code, $res] = self::http($methode, $url, $body, $tok, $timeout);
+        }
+        $err = null;
+        if ($code < 200 || $code >= 300) {
+            $det = '';
+            foreach (['description', 'message', 'detail', 'error'] as $k) {
+                if (is_array($res) && !empty($res[$k]) && is_string($res[$k])) { $det = $res[$k]; break; }
+            }
+            if ($det === '' && is_array($res) && !empty($res['errors'])) { $det = json_encode($res['errors'], JSON_UNESCAPED_UNICODE); }
+            $err = $methode . ' ' . $path . ' → HTTP ' . ($code ?: 'injoignable') . ($det !== '' ? ' : ' . mb_substr($det, 0, 400) : '');
+            self::$lastError = $err;
+        }
+        return ['code' => $code, 'corps' => $res, 'erreur' => $err];
+    }
+
+    /**
+     * Connexion d'un compte ADMINISTRATEUR du panel (POST /panel/authenticate), pour les routes
+     * du cadre opérationnel que le compte consultant du cockpit n'a peut-être pas le droit
+     * d'écrire. Le formulaire de connexion du panel admin demande le téléphone et le mot de
+     * passe ; la route rend un jeton de 30 minutes et un jeton de renouvellement. Rien n'est
+     * gardé ici : le jeton repart vers le navigateur, qui le renvoie à chaque appel.
+     *
+     * @return array{code:int, corps:mixed}
+     */
+    public static function connexionPanel(string $phone, string $password): array
+    {
+        [$code, $res] = self::http('POST', self::config()['base'] . '/panel/authenticate',
+            ['phone' => $phone, 'password' => $password]);
+        return ['code' => $code, 'corps' => $res];
+    }
+
+    /** Renouvelle un jeton admin (POST /panel/refresh {refresh_token}). */
+    public static function renouvelerPanel(string $refresh): array
+    {
+        [$code, $res] = self::http('POST', self::config()['base'] . '/panel/refresh', ['refresh_token' => $refresh]);
+        return ['code' => $code, 'corps' => $res];
     }
 
     /** Même chose qu'un POST, avec le verbe demandé (PUT, PATCH). */

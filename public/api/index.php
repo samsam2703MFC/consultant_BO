@@ -80,6 +80,7 @@ require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/task_cadre.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -192,6 +193,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'écran à part /task : le cadre des tâches du panel (lire, dupliquer, modifier).
+    if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // --- lectures (une par écran + référentiels)
     if ($method === 'GET') {
         return match (true) {

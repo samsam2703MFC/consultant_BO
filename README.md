@@ -90,6 +90,9 @@ public/
     dashboard.css       styles de la page
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
+  task/                 cadre des tâches du panel — page à part : checklists,
+                        tâches, duplication (jours, heure, photo) avec aperçu
+                        des appels ; serveur : src/task_cadre.php
 src/
   Db.php                connexion PDO
   endpoints.php         lectures (GET) — un endpoint par écran

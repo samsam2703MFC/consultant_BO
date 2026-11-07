@@ -600,6 +600,28 @@ vente (`src/primes.php`) :
 - L'app (`apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
   `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
 
+### `/task/*` — le cadre des tâches du panel (l'application `/task`)
+
+Une application à part, `/task/?checklist={id}` (rail : Franchisés › Suivi journalier › **Cadre des
+tâches ↗**). Elle lit les checklists du cadre opérationnel du panel et leurs tâches, et crée de
+nouvelles tâches en **dupliquant** des tâches existantes avec d'autres réglages (nom, jours, heure,
+fréquence, obligatoire, photo requise, checklist). Le corps de `POST /tasks` du panel n'est pas
+documenté (« contracts are not inferred ») : la copie reprend les champs du modèle tels que
+`GET /tasks` les rend (`subcategory_id`, `workstation_id`, `name`, `description`, `day_of_week`,
+`execution_time`, `frequency`, `is_mandatory`, `priority`, `requires_photo`), avec leurs types (1/0
+ou vrai/faux, `04:00` ou `04:00:00`) ; les jours et la fréquence se choisissent parmi les valeurs
+que le panel emploie déjà. `src/task_cadre.php`.
+
+| Route | Rôle |
+|---|---|
+| `GET /task/cadre` | `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
+| `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
+| `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
+| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_task_cree` et au journal. |
+| `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `PATCH /tasks/{id}/active {is_active}` pour `actif`. `apercu: true` rend les appels sans les envoyer. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_task_cree`) ; 403 sinon. |
+| `POST /task/connexion` | `{phone, password}` → `POST /panel/authenticate` : `{jeton, renouvellement, expire}`. Pour les routes que le compte consultant du cockpit n'a pas le droit d'écrire. Le jeton reste dans l'onglet (`sessionStorage`) et revient dans l'en-tête `X-Panel-Jeton` ; rien n'est gardé au serveur. `POST /task/connexion/renouveler {renouvellement}` → `POST /panel/refresh`. |
+
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 
 Une application à part, `/production/?shop=4&date=YYYY-MM-DD&page=params|plan|suivi|cloture`
