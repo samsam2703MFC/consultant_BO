@@ -17,9 +17,9 @@
  * OUVERTE ET LA MÊME POUR TOUS LES MAGASINS (06/11/2026, client : « la tablette doit être ouverte, et pour tous les
  * magasins la même chose » ; « je n'ai pas besoin du suivi pour les SOP ») : plus de PIN du magasin ni d'identification ;
  * la tablette est le mode d'emploi du travail en magasin. On lit les SOP pas à pas ; le quiz reste un exercice, corrigé
- * par le serveur sans rien enregistrer. LIRE UNE SOP = UN ASSISTANT DE TABLETTE (06/11/2026) : la frise verticale des
- * étapes à gauche, l'étape en grand (texte, photo ou vidéo à côté), deux gros boutons en bas ; balayer l'écran ou les
- * flèches du clavier passent d'une étape à l'autre. Ce qui suit (PIN du magasin, PIN de l'employé, « vu faire ») décrit l'ancien
+ * par le serveur sans rien enregistrer. LIRE UNE SOP = « UNE ÉTAPE, UNE CARTE » (maquette A, 07/11/2026) : la photo en
+ * grand, une action par ligne, la barre en segments, « Toutes les étapes » dans un tiroir, « Qui prévenir » dans
+ * l'en-tête ; deux gros boutons en bas ; balayer l'écran ou les flèches du clavier passent d'une étape à l'autre. Ce qui suit (PIN du magasin, PIN de l'employé, « vu faire ») décrit l'ancien
  * fonctionnement, dont les routes restent sur le serveur.
  *
  * Ancien : UNE SEULE TABLETTE PAR MAGASIN (lot 5 de la fusion, 06/11/2026, src/tablettes.php) : au premier lancement, le PIN DU
@@ -41,7 +41,7 @@
       quiLit: 'Qui lit ?', quiLitS: 'Choisis ton nom, puis tape ton PIN — comme pour les checklists.', pinDe: 'PIN de', anonyme: 'Personne d’identifié',
       lireSans: 'Sans identification, on peut lire, mais rien n’est compté.', changer: 'Changer de personne', sortir: 'Se déconnecter',
       vus: 'vues faire', quiz: 'quiz réussis', lues: 'lues', etapes: 'étapes', etape: 'Étape', crit: 'Point critique',
-      prec: '← Précédente', suiv: 'C’est fait · suivante →', fini: 'J’ai tout lu ✓', faites: 'étapes faites', faite: 'étape faite', restent: 'restantes',
+      prec: '← Précédente', suiv: 'C’est fait · suivante →', fini: 'J’ai tout lu ✓', faites: 'étapes faites', faite: 'étape faite', restent: 'restantes', sur: 'sur', toutesEtapes: 'Toutes les étapes', ensuite: 'Ensuite', quiPrevenir: 'Qui prévenir', fermer: 'Fermer', critCourt: 'critique',
       st: { non: 'à lire', lu: 'lue · quiz à faire', quiz: 'quiz réussi · à voir faire', vu: 'vue faire ✓', a_revoir: 'nouvelle version · à revoir' },
       aValider: 'à valider', aValiderS: 'SOP à valider : lisible, sans quiz ni validation pour l’instant.', sansComp: 'Autres SOP',
       question: 'Question', valider: 'Valider', reussi: 'Quiz réussi', rate: 'Pas encore', relire: 'Relire la SOP', recommencer: 'Recommencer le quiz',
@@ -68,7 +68,7 @@
       quiLit: 'Wie leest?', quiLitS: 'Kies je naam en tik je pincode — zoals bij de checklists.', pinDe: 'Pincode van', anonyme: 'Niet aangemeld',
       lireSans: 'Zonder aanmelding kun je lezen, maar niets wordt geteld.', changer: 'Andere persoon', sortir: 'Afmelden',
       vus: 'voorgedaan', quiz: 'quiz geslaagd', lues: 'gelezen', etapes: 'stappen', etape: 'Stap', crit: 'Kritiek punt',
-      prec: '← Vorige', suiv: 'Klaar · volgende →', fini: 'Alles gelezen ✓', faites: 'stappen klaar', faite: 'stap klaar', restent: 'te gaan',
+      prec: '← Vorige', suiv: 'Klaar · volgende →', fini: 'Alles gelezen ✓', faites: 'stappen klaar', faite: 'stap klaar', restent: 'te gaan', sur: 'van', toutesEtapes: 'Alle stappen', ensuite: 'Daarna', quiPrevenir: 'Wie verwittigen', fermer: 'Sluiten', critCourt: 'kritiek',
       st: { non: 'te lezen', lu: 'gelezen · quiz te doen', quiz: 'quiz geslaagd · voor te doen', vu: 'voorgedaan ✓', a_revoir: 'nieuwe versie · opnieuw' },
       aValider: 'te valideren', aValiderS: 'SOP te valideren: leesbaar, nog zonder quiz of validatie.', sansComp: 'Andere SOP',
       question: 'Vraag', valider: 'Bevestigen', reussi: 'Quiz geslaagd', rate: 'Nog niet', relire: 'SOP opnieuw lezen', recommencer: 'Quiz opnieuw',
@@ -218,9 +218,10 @@
   /* ── L'en-tête ── */
   function entete(retour) {
     const m = S.init && S.init.magasin ? S.init.magasin.nom : t().manuel;
-    return `<div class="tb-hd">${retour ? `<button class="tb-ret" data-a="liste">←</button>` : ''}<img src="../img/logo.png" alt="L'Atelier">
-      <div class="t">${S.sop ? esc(L(S.sop.titre)) : esc(t().titre) + ' · ' + esc(m)}<small>${esc(S.sop ? (S.sop.code || '') + ' · v' + S.sop.version : (S.poste === 'tous' ? t().poste.tous : t().poste[S.poste]))}</small></div>
-      <span class="sp"></span>
+    const aide = S.vue === 'lecture' && S.sop && sectionsAide().length;
+    return `<div class="tb-hd${S.sop ? ' tb-hd--sop' : ''}">${retour ? `<button class="tb-ret" data-a="liste" aria-label="${esc(t().retour)}">←</button>` : ''}${S.sop ? '' : `<img src="../img/logo.png" alt="L'Atelier">`}
+      <div class="t"><span class="tt">${S.sop ? esc(L(S.sop.titre)) : esc(t().titre) + ' · ' + esc(m)}</span><small>${esc(S.sop ? (S.sop.code || '') + ' · v' + S.sop.version : (S.poste === 'tous' ? t().poste.tous : t().poste[S.poste]))}</small></div>
+      <span class="sp"></span>${aide ? `<button class="tb-qui" data-a="aide">${ICO_TEL}<span>${esc(t().quiPrevenir)}</span></button>` : ''}
       <span class="tb-bascule"><button data-l="fr" class="${S.langue === 'fr' ? 'on' : ''}">FR</button><button data-l="nl" class="${S.langue === 'nl' ? 'on' : ''}">NL</button></span>
 </div>`;
   }
@@ -267,6 +268,8 @@
 </div>`;
   }
 
+  const ICO_TEL = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></svg>';
+  const ICO_LISTE = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>';
   /** Une photo d'étape : celles du dépôt (sop/photos/), celles envoyées par l'assistant de création (« u/… », servies par l'API). */
   const photoUrl = p => String(p).startsWith('u/') ? API + '/formation/sop/photo/' + encodeURIComponent(String(p).slice(2)) : 'photos/' + p;
   /** La vidéo d'une étape : YouTube ou Vimeo dans la page, sinon un lien. */
@@ -309,38 +312,61 @@
     (S.sop.contenu.sections || []).forEach((sec, si) => sec.etapes.forEach(e => out.push(Object.assign({ si, section: sec.titre }, e))));
     return out;
   }
-  /* L'assistant de tablette (06/11/2026, client : « un assistant fait pour le travail sur tablette », puis, entre une
-     frise horizontale et une verticale, « frise verticale ») : à gauche la frise des étapes rangées par section, une ligne
-     de 64 px par étape (case numérotée sur un fil, titre), l'étape affichée ramenée au centre ; à droite l'étape en grand,
-     le texte et la photo ou la vidéo à côté (dessous sur un écran étroit) ; en bas deux gros boutons. On passe d'une
-     étape à l'autre par la frise, en balayant l'écran ou par les flèches du clavier. */
+  /* Lire une SOP = « une étape, une carte » (07/11/2026, client : « l'UX ne va vraiment pas » sur la tablette en portrait,
+     quatre maquettes inspirées des outils d'instructions de travail — Dozuki, SwipeGuide —, A retenue) : UNE étape à
+     l'écran — la photo en grand en haut (4:3 ; à gauche en paysage), une action par ligne, le point critique en cadre
+     rouge, « Ensuite » qui annonce l'étape suivante ; au-dessus, la barre en segments (une par étape) et « Toutes les
+     étapes », qui ouvre le sommaire dans un tiroir (il ne prend jamais la place de l'étape) ; « Qui prévenir » dans
+     l'en-tête quand la SOP a cette section. On avance par le bouton, en balayant ou par les flèches du clavier. */
+  const RE_AIDE = /qui pr[ée]venir|en cas de doute|wie verwittigen|bij twijfel/i;
+  // Typographie : jamais un « ou un » seul en bout de ligne, ni « : » en début de ligne (espaces insécables).
+  const insec = v => String(v || '').replace(/« /g, '«\u00a0').replace(/ »/g, '\u00a0»').replace(/ ([:;?!])/g, '\u00a0$1');
+  const lignesDe = x => insec(L(x.texte)).split('\n').map(l => l.trim()).filter(Boolean);
+  const courtDe = x => { const l1 = lignesDe(x)[0] || ''; return insec(L(x.titre)) || (l1.length > 60 ? l1.slice(0, 58).replace(/\s+\S*$/, '') + '…' : l1); };
+  /** Les sections « Qui prévenir / en cas de doute » de la SOP (le panneau de l'en-tête) ; vide = pas de bouton. */
+  const sectionsAide = () => (S.sop.contenu.sections || []).filter(sec => RE_AIDE.test(L(sec.titre)));
   function vueLecture() {
     const E = etapes();
     if (!E.length) { return `<div class="vide">—</div>`; }
-    const i = Math.min(S.etape, E.length - 1), e = E[i];
-    let k = -1;
-    const frise = (S.sop.contenu.sections || []).map((sec, si) => `<div class="tb-fr-g ${si === e.si ? 'on' : ''}">
-      <div class="tb-fr-s" title="${esc(L(sec.titre))}">${esc(L(sec.titre))}</div><div class="tb-fr-p">${sec.etapes.map(x => { k++;
-        const fait = S.vuEtapes[k] && k !== i, l1 = L(x.texte).split('\n')[0], court = L(x.titre) || (l1.length > 60 ? l1.slice(0, 58).replace(/\s+\S*$/, '') + '…' : l1);
-        return `<button data-etape="${k}" class="${k === i ? 'on' : fait ? 'fait' : ''}${x.critique ? ' crit' : ''}" title="${esc(x.numero + ' · ' + court)}"
-          aria-label="${esc(t().etape + ' ' + (k + 1) + ' : ' + court)}"${k === i ? ' aria-current="step"' : ''}><i>${fait ? '✓' : esc(x.numero)}</i><span>${esc(court)}</span></button>`; }).join('')}</div></div>`).join('');
-    const titre = L(e.titre), texte = L(e.texte);
+    const i = Math.min(S.etape, E.length - 1), e = E[i], nxt = E[i + 1];
     const dernier = i === E.length - 1;
     const faites = Object.keys(S.vuEtapes).length;
+    const seg = E.length <= 40
+      ? `<div class="tb-seg">${E.map((x, k) => `<i class="${k === i ? 'on' : S.vuEtapes[k] ? 'f' : ''}"></i>`).join('')}</div>`
+      : `<div class="tb-seg tb-seg--continu"><i class="f" style="width:${Math.round(faites / E.length * 100)}%"></i></div>`;
+    const ul = `<ul class="tb-li">${lignesDe(e).map(l => `<li>${esc(l)}</li>`).join('')}</ul>`;
     const media = (e.photo ? `<img class="photo" src="${esc(photoUrl(e.photo))}" alt="" data-zoom="${esc(photoUrl(e.photo))}">` : '') + (e.video ? video(e.video) : '');
     return `<div class="tb-pas">
-      <nav class="tb-frise" aria-label="${esc(t().etapes)}">${frise}</nav>
-      <div class="tb-prog"><i style="width:${Math.round(faites / E.length * 100)}%"></i></div>
-      <section class="tb-etape${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}" data-balayage><div class="tb-etape__in">
-        <div class="tb-etape__tx"><div class="ou">${esc(t().etape)} ${i + 1} / ${E.length} · <span>${esc(L(e.section))}</span></div>
-          ${S.sop.statut === 'a_valider' ? `<div class="note">${esc(t().aValiderS)}</div>` : ''}
-          <h1>${esc(titre || ('' + e.numero))}</h1>
-          ${e.critique ? `<div class="tb-alerte">${ALERTE}<div class="tb-alerte__tx"><b>${esc(t().crit)}</b>${esc(texte)}</div></div>` : `<div class="tx">${esc(texte)}</div>`}</div>
-        ${media ? `<div class="tb-etape__media">${media}</div>` : ''}
-      </div></section>
+      <div class="tb-avance">${seg}
+        <div class="tb-ou"><span><b>${esc(t().etape)} ${i + 1}</b> ${esc(t().sur)} ${E.length} · ${esc(L(e.section))}</span>
+          <button class="tb-toutes" data-a="sommaire">${ICO_LISTE}${esc(t().toutesEtapes)}</button></div></div>
+      <main class="tb-zone" data-balayage><article class="tb-carte${media ? ' avec' : ''}${S.sens ? ' ' + S.sens : ''}">
+        ${media ? `<div class="tb-media">${media}</div>` : ''}
+        <div class="tb-txt">${S.sop.statut === 'a_valider' ? `<div class="note">${esc(t().aValiderS)}</div>` : ''}
+          <div class="tb-tete"><span class="tb-num">${esc(e.numero)}</span>${L(e.titre) ? `<h1>${esc(insec(L(e.titre)))}</h1>` : ''}</div>
+          ${e.critique ? `<div class="tb-alerte">${ALERTE}<div class="tb-alerte__tx"><b>${esc(t().crit)}</b>${ul}</div></div>` : ul}
+          ${nxt ? `<button class="tb-ensuite" data-a="suiv">${esc(t().ensuite)} · <b>${esc(nxt.numero)} ${esc(courtDe(nxt))}</b><span aria-hidden="true">›</span></button>` : ''}</div>
+      </article></main>
       <div class="tb-pied"><button class="gb" data-a="prec" ${i === 0 ? 'disabled' : ''}>${esc(t().prec)}</button>
-        <div class="av"><b>${esc(t().etape)} ${i + 1} / ${E.length}</b><small>${faites} ${esc(faites > 1 ? t().faites : t().faite)} · ${E.length - faites} ${esc(t().restent)}</small></div>
-        ${dernier ? `<button class="gb g" data-a="fini">${esc(t().fini)}</button>` : `<button class="gb p" data-a="suiv">${esc(t().suiv)}</button>`}</div></div>`;
+        ${dernier ? `<button class="gb g" data-a="fini">${esc(t().fini)}</button>` : `<button class="gb p" data-a="suiv">${esc(t().suiv)}</button>`}</div>
+      ${S.sommaire ? sommaire(E, i) : ''}${S.aide ? panneauAide() : ''}</div>`;
+  }
+  /** Le tiroir « Toutes les étapes » : les sections et leurs étapes ; un toucher va à l'étape. */
+  function sommaire(E, i) {
+    let k = -1;
+    const n = Object.keys(S.vuEtapes).length;
+    return `<button class="tb-voile" data-a="fermer" aria-label="${esc(t().fermer)}" tabindex="-1"></button><aside class="tb-tiroir" role="dialog" aria-label="${esc(t().toutesEtapes)}">
+      <div class="tb-tiroir__t"><span><b>${esc(t().toutesEtapes)}</b><small>${n} ${esc(t().sur)} ${E.length} ${esc(n > 1 ? t().faites : t().faite)}</small></span>
+        <button class="tb-ret" data-a="fermer" aria-label="${esc(t().fermer)}">✕</button></div>
+      <div class="tb-tiroir__c">${(S.sop.contenu.sections || []).map(sec => `<div class="s">${esc(L(sec.titre))}</div>${sec.etapes.map(x => { k++;
+        const fait = S.vuEtapes[k] && k !== i;
+        return `<button class="r ${k === i ? 'on' : fait ? 'f' : ''}" data-etape="${k}"><i>${fait ? '✓' : esc(x.numero)}</i><span>${esc(courtDe(x))}</span>${x.critique ? `<em>${esc(t().critCourt)}</em>` : ''}</button>`; }).join('')}`).join('')}</div></aside>`;
+  }
+  /** « Qui prévenir » : les sections de la SOP qui le disent, dans un panneau. */
+  function panneauAide() {
+    return `<button class="tb-voile" data-a="fermer" aria-label="${esc(t().fermer)}" tabindex="-1"></button><aside class="tb-tiroir tb-tiroir--aide" role="dialog" aria-label="${esc(t().quiPrevenir)}">
+      <div class="tb-tiroir__t"><b>${esc(t().quiPrevenir)}</b><button class="tb-ret" data-a="fermer" aria-label="${esc(t().fermer)}">✕</button></div>
+      <div class="tb-tiroir__c">${sectionsAide().map(sec => sec.etapes.map(x => `<div class="tb-contact"><b>${esc(L(x.titre) || '')}</b><span>${esc(lignesDe(x).join(' '))}</span></div>`).join('')).join('')}</div></aside>`;
   }
   /** Avancer (d = 1 : l'étape est faite) ou reculer d'une étape ; aller à l'étape n (la frise). */
   function pas(d) {
@@ -413,9 +439,11 @@
     el.innerHTML = entete(S.vue !== 'liste') + (vues[S.vue] || vueListe)();
     el.classList.toggle('tb--pas', S.vue === 'lecture');
     if (S.vue === 'lecture') {
-      const on = el.querySelector('.tb-frise button.on');
-      const doux = S.sens && !matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (on) { on.scrollIntoView({ block: 'center', inline: 'nearest', behavior: doux ? 'smooth' : 'auto' }); }
+      // Une nouvelle étape s'ouvre en haut de sa carte ; le sommaire s'ouvre sur l'étape affichée (sans faire défiler
+      // la page elle-même).
+      const zone = el.querySelector('.tb-zone'); if (zone && S.sens) { zone.scrollTop = 0; }
+      const c = el.querySelector('.tb-tiroir__c'), on = c && c.querySelector('.r.on');
+      if (on) { c.scrollTop = Math.max(0, on.offsetTop - c.clientHeight / 2 + on.offsetHeight / 2); }
     }
     S.sens = '';   // l'animation d'entrée ne joue qu'au changement d'étape (pas sur FR / NL)
   }
@@ -423,7 +451,7 @@
   async function ouvrir(id) {
     try {
       S.sop = await api('/formation/sop/tablette/sop/' + encodeURIComponent(id));
-      S.vue = 'lecture'; S.etape = 0; S.vuEtapes = {}; S.qi = 0; S.reponses = []; S.choix = null; S.resultat = null; S.valideur = null; S.pin = ''; S.note = ''; S.erreur = null;
+      S.vue = 'lecture'; S.etape = 0; S.vuEtapes = {}; S.sommaire = false; S.aide = false; S.qi = 0; S.reponses = []; S.choix = null; S.resultat = null; S.valideur = null; S.pin = ''; S.note = ''; S.erreur = null;
       rendre(); window.scrollTo(0, 0);
     } catch (e) { toast(e.message); }
   }
@@ -485,12 +513,15 @@
     if (d.val) { S.valideur = +d.val; S.pin = ''; S.erreur = null; return rendre(); }
     if (d.k) { return touche(d.k, d.act); }
     if (d.sop) { return ouvrir(d.sop); }
-    if (d.etape !== undefined) { return allerA(+d.etape); }
+    if (d.etape !== undefined) { S.sommaire = false; if (+d.etape === S.etape) { return rendre(); } return allerA(+d.etape); }
     if (d.choix !== undefined) { S.choix = +d.choix; return rendre(); }
     switch (d.a) {
-      case 'liste': S.vue = 'liste'; S.sop = null; S.erreur = null; return rendre();
+      case 'liste': S.vue = 'liste'; S.sop = null; S.erreur = null; S.sommaire = false; S.aide = false; return rendre();
       case 'sortir': return sortir();
       case 'fermerTablette': return fermerAppareil();
+      case 'sommaire': S.sommaire = true; return rendre();
+      case 'aide': S.aide = true; return rendre();
+      case 'fermer': S.sommaire = false; S.aide = false; return rendre();
       case 'prec': return pas(-1);
       case 'suiv': return pas(1);
       case 'fini': {
@@ -537,6 +568,8 @@
   }, { passive: true });
   document.addEventListener('keydown', ev => {
     if (S.vue !== 'lecture' || ev.target.closest('input, textarea')) { return; }
+    if (ev.key === 'Escape' && (S.sommaire || S.aide)) { S.sommaire = false; S.aide = false; return rendre(); }
+    if (S.sommaire || S.aide) { return; }
     if (ev.key === 'ArrowRight') { ev.preventDefault(); pas(1); }
     else if (ev.key === 'ArrowLeft') { ev.preventDefault(); pas(-1); }
   });

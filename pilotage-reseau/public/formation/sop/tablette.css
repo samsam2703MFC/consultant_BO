@@ -202,74 +202,102 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 .points{display:flex;gap:12px;justify-content:center;margin:6px 0 10px}
 .points span{width:16px;height:16px;border-radius:50%;border:2px solid var(--faint)}
 .points span.on{background:var(--ink);border-color:var(--ink)}
-/* ── Lire une SOP : l'assistant horizontal (06/11/2026) ─────────────────────────────────────────────
-   La page tient l'écran : en-tête, frise des étapes, l'étape (seule à défiler si elle est longue), le pied. */
-.tb.tb--pas{height:100vh;height:100dvh;min-height:0;overflow:hidden}
+/* ── Lire une SOP : « une étape, une carte » (maquette A, 07/11/2026) ─────────────────────────────────────────
+   La page tient l'écran : en-tête (une ligne), la barre en segments et « Toutes les étapes », la carte de l'étape (seule
+   à défiler si elle est longue), le pied. Cibles de 48 px au moins, 64 px pour l'action principale. */
+.tb.tb--pas{height:100vh;height:100dvh;min-height:0;overflow:hidden;position:relative}
 .tb--pas .tb-hd{position:static}
-/* La frise à gauche (380 px), l'étape à droite, le trait de progression au-dessus, le pied sur toute la largeur. */
-.tb-pas{flex:1;min-height:0;display:grid;grid-template-columns:380px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr) auto;grid-template-areas:"prog prog" "frise etape" "pied pied"}
-.tb-pas .tb-prog{grid-area:prog}
-.tb-pas .tb-etape{grid-area:etape}
-.tb-pas .tb-pied{grid-area:pied}
-/* La frise : une section = un intertitre ; une étape = une ligne de 64 px (le doigt), case numérotée sur un fil. */
-.tb-frise{grid-area:frise;display:flex;flex-direction:column;gap:18px;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;padding:18px 16px 24px;background:#fff;border-right:1px solid var(--line);scrollbar-width:thin}
-.tb-fr-g{display:flex;flex-direction:column;gap:7px}
-.tb-fr-s{font:400 11px/1.35 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:0 6px}
-.tb-fr-g.on .tb-fr-s{color:var(--accent)}
-.tb-fr-p{display:flex;flex-direction:column;gap:4px;position:relative}
-.tb-fr-p::before{content:'';position:absolute;left:31px;top:28px;bottom:28px;width:2px;background:var(--chip)}
-.tb-fr-p button{position:relative;width:100%;min-height:64px;display:flex;align-items:center;gap:14px;padding:6px 10px;border:none;border-radius:10px;background:transparent;text-align:left;font:400 15px/1.3 'Gotham',system-ui,sans-serif;color:var(--muted-2)}
-.tb-fr-p button i{position:relative;width:44px;height:44px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:14px;font-style:normal;color:var(--muted-2)}
-.tb-fr-p button span{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;flex:1;min-width:0}
-.tb-fr-p button.fait{color:var(--muted)}
-.tb-fr-p button.fait i{background:var(--green);border-color:var(--green);color:#fff;font-size:18px}
-/* L'étape affichée : la ligne teintée et la case bordeaux pleine (la sélection du système), un halo autour. */
-.tb-fr-p button.on{background:rgba(141,29,44,.08);color:var(--accent)}
-.tb-fr-p button.on i{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:700;box-shadow:0 0 0 4px rgba(141,29,44,.16)}
-/* Une étape à point critique : un point rouge sur sa case (point d'état 8 px). */
-.tb-fr-p button.crit::after{content:'';position:absolute;top:9px;left:44px;width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 1.5px #fff}
-.tb-fr-p button.on.crit::after{background:#fff;box-shadow:none}
-/* Portrait ou écran étroit : la frise passe au-dessus de l'étape (30 % de l'écran). */
-@media (max-width:980px){.tb-pas{grid-template-columns:minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr) auto;grid-template-areas:"prog" "frise" "etape" "pied"}.tb-frise{max-height:30dvh;border-right:none;border-bottom:1px solid var(--line)}}
-.tb-prog{height:4px;background:var(--chip)}
-.tb-prog i{display:block;height:100%;background:var(--accent);transition:width .2s}
-/* L'étape : le bloc (texte et photo) CENTRÉ dans l'écran de droite, en largeur et en hauteur ; une étape plus longue
-   que l'écran défile depuis le haut (marge automatique dans un flex : jamais coupée en haut). */
-.tb-etape{display:flex;min-height:0;overflow:auto;padding:28px 40px 32px;touch-action:pan-y}
-.tb-etape__in{margin:auto;width:100%;max-width:880px;display:grid;grid-template-columns:minmax(0,1fr);gap:36px;align-items:center}
-.tb-etape.avec .tb-etape__in{max-width:1360px;grid-template-columns:minmax(0,1fr) minmax(0,1.2fr)}
-.tb-etape .ou{font:400 12px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
-.tb-etape .ou span{color:var(--muted)}
-/* Le titre d'une étape : lu debout, à distance — la plus grande taille du système, et plus. */
-.tb-etape h1{font:400 40px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:12px 0 16px}
-.tb-etape .tx{font-size:24px;line-height:1.45;white-space:pre-line}
-.tb-etape__media{display:flex;flex-direction:column;align-items:center;gap:14px;min-width:0}
-/* La photo : un cadre FIXE 4:3 (le format des photos recadrées à l'import), aussi grand que l'écran le permet ; une
-   ancienne photo d'un autre format y tient entière, sur fond blanc. */
-.tb-etape__media .photo{display:block;width:min(100%, calc((100dvh - 250px) * 4 / 3));height:auto;aspect-ratio:4/3;object-fit:contain;border-radius:12px;border:1px solid var(--line);background:#fff;cursor:zoom-in}
-.tb-etape__media .tb-video{margin-top:0;max-width:none;width:100%}
-.tb-etape.de-droite{animation:tbEntreeD .22s ease-out}
-.tb-etape.de-gauche{animation:tbEntreeG .22s ease-out}
+/* En-tête d'une SOP : sans le logo, le titre sur UNE ligne (coupé s'il est long, jamais sur trois lignes). */
+.tb-hd--sop{height:68px;gap:12px;padding:0 16px}
+.tb-hd .t{min-width:0}
+.tb-hd--sop .t{flex:1}
+.tb-hd--sop .sp{display:none}
+.tb-hd .t .tt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-hd--sop .t .tt{font-size:20px}
+.tb-qui svg,.tb-toutes svg{flex:0 0 auto}
+.tb-qui{height:48px;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);font:400 15px 'Gotham',system-ui,sans-serif}
+@media (max-width:900px){.tb-qui span{display:none}.tb-qui{width:48px;padding:0;justify-content:center}}
+.tb-pas{flex:1;min-height:0;display:flex;flex-direction:column}
+/* La barre en segments (une par étape ; au-delà de 40 étapes, une barre continue) et la ligne « Étape n sur N ». */
+.tb-avance{flex:0 0 auto;background:#fff;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tb-seg{display:flex;gap:3px;height:8px}
+.tb-seg i{flex:1;border-radius:2px;background:var(--chip)}
+.tb-seg i.f{background:var(--green)}
+.tb-seg i.on{background:var(--accent)}
+.tb-seg--continu{background:var(--chip);border-radius:4px;overflow:hidden}
+.tb-seg--continu i{flex:none;border-radius:0}
+.tb-ou{display:flex;align-items:center;gap:12px;margin-top:10px}
+.tb-ou span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:15px}
+.tb-ou span b{font-weight:400;color:var(--accent)}
+.tb-toutes{height:48px;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font:400 15px 'Gotham',system-ui,sans-serif}
+/* La carte : la photo en haut (4:3, 40 % de la hauteur au plus en portrait), puis le texte ; une étape longue défile. */
+.tb-zone{flex:1;min-height:0;overflow:auto;padding:16px;touch-action:pan-y}
+.tb-carte{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:980px;margin:0 auto}
+.tb-media{background:#1c1a17;display:flex;flex-direction:column;align-items:center}
+.tb-media .photo{display:block;height:min(40vh, calc((100vw - 34px) * 3 / 4));width:auto;max-width:100%;aspect-ratio:4/3;object-fit:contain;background:#1c1a17;cursor:zoom-in}
+.tb-media .tb-video{margin:0;max-width:none;width:100%;border-radius:0}
+.tb-media .tb-video__lien{margin:12px}
+.tb-txt{padding:20px 24px 22px}
+.tb-tete{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.tb-num{min-width:56px;height:56px;flex:0 0 auto;border-radius:10px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 20px 'Gotham',system-ui,sans-serif;padding:0 8px}
+.tb-tete h1{margin:0;font:400 32px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em}
+/* Une action par ligne : 22 px, un carré pour puce (rouge dans un point critique). */
+.tb-li{margin:0;padding:0;list-style:none}
+.tb-li li{position:relative;padding:10px 0 10px 34px;font-size:22px;line-height:1.35;border-top:1px solid var(--row-line)}
+.tb-li li:first-child{border-top:none}
+.tb-li li::before{content:'';position:absolute;left:6px;top:21px;width:12px;height:12px;border-radius:3px;background:var(--ink)}
+.tb-alerte .tb-li li::before{background:var(--danger)}
+.tb-ensuite{display:flex;align-items:center;gap:8px;width:100%;margin-top:16px;min-height:52px;border:none;border-top:1px solid var(--line);background:transparent;color:var(--muted);font:400 16px 'Gotham',system-ui,sans-serif;text-align:left;padding:0}
+.tb-ensuite b{font-weight:400;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-ensuite span{margin-left:auto;font-size:24px;color:var(--muted)}
+.tb-carte.de-droite{animation:tbEntreeD .22s ease-out}
+.tb-carte.de-gauche{animation:tbEntreeG .22s ease-out}
 @keyframes tbEntreeD{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
 @keyframes tbEntreeG{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
-@media (prefers-reduced-motion:reduce){.tb-etape.de-droite,.tb-etape.de-gauche{animation:none}}
-/* Écran étroit : la photo passe sous le texte. */
-@media (max-width:1100px){.tb-etape.avec .tb-etape__in{grid-template-columns:minmax(0,1fr);max-width:880px;gap:24px}.tb-etape__media .photo{width:min(100%, calc(44dvh * 4 / 3))}}
-@media (max-width:980px){.tb-etape{padding:20px 22px 24px}.tb-etape h1{font-size:32px}}
-.tb-alerte{background:rgba(179,38,30,.07);border:1.5px solid var(--danger);border-radius:12px;padding:14px 18px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;gap:14px;align-items:flex-start;margin-bottom:16px}
+@media (prefers-reduced-motion:reduce){.tb-carte.de-droite,.tb-carte.de-gauche{animation:none}}
+/* Paysage : la photo à gauche, le texte à droite ; la carte remplit l'écran. */
+@media (orientation:landscape) and (min-width:1000px){
+  .tb-zone{display:flex}
+  .tb-carte{flex:1;max-width:none}
+  .tb-carte.avec{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  .tb-carte.avec .tb-media{justify-content:center}
+  .tb-carte.avec .tb-media .photo{width:100%;height:auto;max-height:100%}
+  .tb-carte:not(.avec) .tb-txt{max-width:980px;margin:0 auto;width:100%}
+  .tb-txt{overflow:auto}
+}
+@media (max-width:760px){.tb-tete h1{font-size:26px}.tb-li li{font-size:20px}.tb-txt{padding:16px 18px}}
+/* Le point critique : un cadre rouge, son libellé en capitales, ses lignes dedans. */
+.tb-alerte{background:rgba(179,38,30,.07);border:1.5px solid var(--danger);border-radius:12px;padding:14px 16px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;gap:12px;align-items:flex-start}
 .tb-alerte__i{flex:0 0 auto;color:var(--danger)}
-.tb-alerte__tx{white-space:pre-line;font-size:22px}
+.tb-alerte__tx{flex:1;min-width:0}
 .tb-alerte b{display:block;font:400 11px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--danger);margin-bottom:3px}
-/* Le pied : deux gros boutons (64 px), l'étape et le compte au centre. */
-.tb-pied{height:100px;flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:0 22px;padding-bottom:env(safe-area-inset-bottom);background:#fff;border-top:1px solid var(--line)}
-.tb-pied .gb{height:64px;border-radius:8px;padding:0 28px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink);border:1px solid var(--line);background:#fff;min-width:200px}
+/* Le pied : « Précédente » et l'action principale, qui prend la place. */
+.tb-pied{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 16px;padding-bottom:max(12px, env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.tb-pied .gb{height:64px;border-radius:8px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink);border:1px solid var(--line);background:#fff;flex:0 0 auto}
 .tb-pied .gb:disabled{opacity:.4;cursor:not-allowed}
-.tb-pied .gb.p{background:var(--accent);color:#fff;border-color:var(--accent);min-width:300px}
-.tb-pied .gb.g{background:var(--green);color:#fff;border-color:var(--green);min-width:300px}
-.tb-pied .av{flex:1;min-width:0;text-align:center}
-.tb-pied .av b{display:block;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink)}
-.tb-pied .av small{display:block;font-size:13px;color:var(--muted);margin-top:3px}
-@media (max-width:760px){.tb-pied .gb{min-width:0;padding:0 16px;font-size:16px}.tb-pied .gb.p,.tb-pied .gb.g{min-width:0;flex:1}.tb-pied .av{display:none}}
+.tb-pied .gb.p{background:var(--accent);color:#fff;border-color:var(--accent);flex:1;font-size:20px}
+.tb-pied .gb.g{background:var(--green);color:#fff;border-color:var(--green);flex:1;font-size:20px}
+/* Le tiroir « Toutes les étapes » et le panneau « Qui prévenir » : ils montent du bas, sur un voile. */
+.tb-voile{position:absolute;inset:0;z-index:20;background:rgba(28,26,23,.45);border:none;padding:0;cursor:default}
+.tb-tiroir{position:absolute;z-index:21;left:0;right:0;bottom:0;max-height:80%;background:#fff;border-radius:12px 12px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.12)}
+@media (orientation:landscape) and (min-width:1000px){.tb-tiroir{left:auto;top:0;bottom:0;width:480px;max-height:none;border-radius:12px 0 0 12px}}
+.tb-tiroir__t{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 14px 20px;border-bottom:1px solid var(--line)}
+.tb-tiroir__t b{font:400 20px 'Gotham',system-ui,sans-serif}
+.tb-tiroir__t small{color:var(--muted);font-size:14px;margin-left:8px}
+.tb-tiroir__c{position:relative;overflow:auto;overscroll-behavior:contain;padding:4px 12px 24px}
+.tb-tiroir .s{font:400 11px/1.35 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 8px 6px}
+.tb-tiroir .r{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;border:none;background:transparent;border-radius:10px;padding:4px 8px;text-align:left;font:400 17px/1.3 'Gotham',system-ui,sans-serif;color:var(--ink)}
+.tb-tiroir .r i{width:40px;height:40px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;color:var(--muted-2)}
+.tb-tiroir .r span{flex:1;min-width:0}
+.tb-tiroir .r em{font-style:normal;font-size:12px;color:var(--danger)}
+.tb-tiroir .r.f{color:var(--muted)}
+.tb-tiroir .r.f i{background:var(--green);border-color:var(--green);color:#fff;font-size:16px}
+.tb-tiroir .r.on{background:#F6EDEE;color:var(--accent)}
+.tb-tiroir .r.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb-contact{padding:12px 8px;border-top:1px solid var(--row-line);display:grid;gap:2px;font-size:17px}
+.tb-contact:first-child{border-top:none}
+.tb-contact b{font-weight:400;color:var(--accent)}
+.tb-contact span{color:var(--muted-2)}
 .tb-q{max-width:760px;margin:30px auto;padding:0 20px;width:100%}
 .tb-q h1{font:400 26px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:6px 0 18px}
 /* Réponses du quiz : des pastilles de choix, à la taille du doigt. */

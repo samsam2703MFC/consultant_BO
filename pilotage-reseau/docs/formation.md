@@ -830,3 +830,27 @@ tous les magasins la même chose ».
   « photo (fichier) » est remplacé par « ＋ Photo » / « ↻ Changer » et « Retirer », aperçu 4:3). La photo recadrée part
   par `POST /formation/sop/photo` (« u/… » sur l'étape), comme avant.
 
+## Lire une SOP sur la tablette : « une étape, une carte » (maquette A, 07/11/2026)
+
+- Client (capture de la tablette en portrait) : « l'UX ne va vraiment pas — refais 3-4 maquettes », « ça doit être
+  utilisable », « prends exemple sur les meilleures SOP disponibles sur internet ». Quatre maquettes
+  (`docs/maquettes/tablette-sop/` : A une étape = une carte, d'après SwipeGuide ; B guide illustré, d'après Dozuki et
+  iFixit ; C checklist par section ; D mode poste), **A retenue**. Elle REMPLACE la frise verticale du 06/11/2026.
+- `sop/tablette.js` (`vueLecture`, `sommaire`, `panneauAide`, `pas`, `allerA`) et `sop/tablette.css` :
+  · **En-tête d'une SOP** sur UNE ligne : retour, titre (coupé s'il est long, plus jamais sur trois lignes ; sans le
+  logo), « Qui prévenir » (quand la SOP a une section « Qui prévenir » ou « en cas de doute » : ses lignes dans un
+  panneau qui monte du bas), FR | NL.
+  · **Avancement** : une barre en segments (un par étape : vert fait, bordeaux affiché ; au-delà de 40 étapes une barre
+  continue), « Étape n sur N · section » et **« Toutes les étapes »**, qui ouvre le sommaire dans un TIROIR (du bas en
+  portrait, à droite en paysage) : sections, étapes faites cochées, l'étape affichée en bordeaux, « critique » ; un
+  toucher va à l'étape. Le sommaire ne prend jamais la place de l'étape.
+  · **La carte de l'étape** : la photo en grand en haut (4:3, 40 % de la hauteur au plus en portrait ; à gauche en
+  paysage), la vidéo dessous ; le numéro en pavé bordeaux et le titre (32 px ; pas de titre = le numéro seul) ; UNE
+  action par ligne (22 px, puce carrée) ; une étape critique = ses lignes dans le cadre rouge « Point critique » ;
+  « Ensuite · n titre › » annonce l'étape suivante (un toucher y va). Espaces insécables : jamais un « ou » seul en bout
+  de ligne.
+  · **Pied** : « ← Précédente » et « C'est fait · suivante → » (64 px, l'action principale prend la place) ; à la
+  dernière, « J'ai tout lu ✓ » puis le quiz. Balayer l'étape, flèches du clavier ; Échap ferme le tiroir.
+- L'ordre des étapes est celui de la SOP : les SOP rangent différemment leurs « Informations clés », « Contrôle
+  rapide » (parfois un par produit, au milieu) — rien n'est déplacé d'office.
+
