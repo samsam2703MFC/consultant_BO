@@ -13,7 +13,7 @@ lundi que décrit la SOP). Une seule ligne à régler en tête : `MODE`.
 ---
 
 ```text
-MODE = proposer
+MODE = encoder
 
 Tu tiens à jour la formation au dashboard magasin du réseau L'Atelier By. Deux documents du module Formation
 en dépendent, tous deux rattachés à la formation FO-05 (Pilotage Commercial) et à la sous-catégorie D7.1 :
@@ -104,3 +104,8 @@ autres SOP.
 2. Créer la tâche planifiée : Claude Code › Tâches planifiées, nouvelle session à chaque passage, dépôt
    `samsam2703MFC/consultant_BO`, l'environnement doit joindre `185.180.206.46` en http.
 3. Démarrer en `MODE = proposer` quelques semaines, puis passer en `encoder` une fois la qualité vérifiée.
+
+**État au 07/11/2026** : tâche planifiée « Routine SOP du dashboard magasin » (`trig_012YAG9ejFyZGd5A1EHTFVfD`), chaque
+lundi à 6 h 40 (Bruxelles), nouvelle session à chaque passage, notification sur le téléphone ; **`MODE = encoder`**
+(demande du client). Le prompt enregistré porte en plus les adresses du serveur et deux notes (seuil matière déjà
+traité en v1.1 ; documents réservés au responsable).
