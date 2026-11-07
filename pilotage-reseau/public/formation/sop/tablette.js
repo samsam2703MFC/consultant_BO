@@ -53,7 +53,7 @@
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
       onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel', aide: 'Comment ça marche' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
       ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles', aide: 'la tablette' }, article1: 'article',
-      rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →',
+      rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
       rienMoment: 'Aucune SOP pour ce moment.', aideT: 'La tablette du magasin',
       aide: [['Choisir le moment', 'Ouverture, Journée de travail ou Fermeture : les SOP du moment.'],
@@ -81,7 +81,7 @@
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
       onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek', aide: 'Hoe werkt het' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
       ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels', aide: 'de tablet' }, article1: 'artikel',
-      rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →',
+      rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
       rienMoment: 'Geen SOP voor dit moment.', aideT: 'De tablet van de winkel',
       aide: [['Het moment kiezen', 'Opening, Werkdag of Sluiting: de SOP van dat moment.'],
@@ -370,8 +370,11 @@
   function sommaire(E, i) {
     let k = -1;
     const n = Object.keys(S.vuEtapes).length;
-    return `<button class="tb-voile" data-a="fermer" aria-label="${esc(t().fermer)}" tabindex="-1"></button><aside class="tb-tiroir" role="dialog" aria-label="${esc(t().toutesEtapes)}">
-      <div class="tb-tiroir__t"><span><b>${esc(t().toutesEtapes)}</b><small>${n} ${esc(t().sur)} ${E.length} ${esc(n > 1 ? t().faites : t().faite)}</small></span>
+    // Un article se lit par parties : « Toutes les parties · 3 sur 11 parties lues ».
+    const art = S.sop.type === 'Article', titre = art ? t().toutesParties : t().toutesEtapes;
+    const fait = art ? (n > 1 ? t().lues : t().lue) : (n > 1 ? t().faites : t().faite);
+    return `<button class="tb-voile" data-a="fermer" aria-label="${esc(t().fermer)}" tabindex="-1"></button><aside class="tb-tiroir" role="dialog" aria-label="${esc(titre)}">
+      <div class="tb-tiroir__t"><span><b>${esc(titre)}</b><small>${n} ${esc(t().sur)} ${E.length} ${esc(fait)}</small></span>
         <button class="tb-ret" data-a="fermer" aria-label="${esc(t().fermer)}">✕</button></div>
       <div class="tb-tiroir__c">${(S.sop.contenu.sections || []).map(sec => `<div class="s">${esc(L(sec.titre))}</div>${sec.etapes.map(x => { k++;
         const fait = S.vuEtapes[k] && k !== i;
