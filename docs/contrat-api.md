@@ -603,23 +603,33 @@ vente (`src/primes.php`) :
 ### `/task/*` — le cadre des tâches du panel (l'application `/task`)
 
 Une application à part, `/task/?checklist={id}` (rail : Franchisés › Suivi journalier › **Cadre des
-tâches ↗**). Elle lit les checklists du cadre opérationnel du panel et leurs tâches, et crée de
-nouvelles tâches en **dupliquant** des tâches existantes avec d'autres réglages (nom, jours, heure,
-fréquence, obligatoire, photo requise, checklist). Le corps de `POST /tasks` du panel n'est pas
-documenté (« contracts are not inferred ») : la copie reprend les champs du modèle tels que
+tâches ↗**). Elle lit les checklists du cadre opérationnel du panel et leurs tâches, et crée de deux
+façons : la **duplication** rapide (cocher des tâches, changer nom, jours, heure, fréquence,
+obligatoire, photo requise, checklist) et l'**assistant** en quatre étapes (1. la checklist :
+nouvelle, existante ou aucune ; 2. ses tâches : nouvelles ou copiées de tâches existantes, avec des
+réglages communs à appliquer à toutes les lignes ; 3. qui les fait — niveaux de poste — et qui les
+contrôle ; 4. l'aperçu, puis la création). Les deux passent par le même moteur (`tkConstruire`).
+Les corps de `POST /tasks` et `POST /operational-framework/checklists` du panel ne sont pas
+documentés (« contracts are not inferred ») : une copie reprend les champs de son modèle tels que
 `GET /tasks` les rend (`subcategory_id`, `workstation_id`, `name`, `description`, `day_of_week`,
 `execution_time`, `frequency`, `is_mandatory`, `priority`, `requires_photo`), avec leurs types (1/0
-ou vrai/faux, `04:00` ou `04:00:00`) ; les jours et la fréquence se choisissent parmi les valeurs
-que le panel emploie déjà. `src/task_cadre.php`.
+ou vrai/faux, `04:00` ou `04:00:00`) ; une tâche nouvelle prend les types d'une tâche existante ;
+une checklist nouvelle envoie `name`, `description`, `workstation_id`, `execution_time` (et
+`is_active` si les checklists le portent), aux types d'une checklist existante ; les jours et la
+fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/task_cadre.php`.
 
 | Route | Rôle |
 |---|---|
 | `GET /task/cadre` | `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
 | `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
 | `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
-| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_task_cree` et au journal. |
+| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_cadre_cree` et au journal. |
+| `GET /task/structure` | pour l'assistant : `sousCategories[]` {id, nom, categorie, section, nb} (la structure du cadre — `/operational-framework/structure/sections`, `…/categories`, `…/categories/{id}/subcategories` — complétée par celles que portent les tâches) et `postes[]` {id, nom} (`/operational-framework/workstations`). |
+| `POST /task/assistant/apercu` | rien n'est envoyé. Corps : `{checklist: {mode: "nouvelle", nom, description, posteId, heure, modeleId, extra} \| {mode: "existante", id} \| {mode: "aucune"}, lignes: [{modeleId?, nom, description?, sousCategorieId?, jours[], unParJour, heure, frequence, obligatoire, photo, priorite, garderNiveaux, garderControleurs}], niveaux: [id], routeNiveaux?, controleursDe?, extra: {}}`. Une ligne sans `modeleId` exige `sousCategorieId`. Rend `checklist` {mode, id, nom, operation (la création, si nouvelle)}, `routeNiveaux` (la route de rattachement que le panel emploie le plus), `items[]` {mode: `creer` \| `ajouter` (tâche identique existante, ajoutée à la checklist) \| `rien` \| `doublon`, nom, jour, heure, modeleId, modeleNom, existe, operations[]}, `aCreer`, `aAjouter`, `avertissements[]`. Une checklist nouvelle dont le nom existe déjà est reprise, pas recréée. |
+| `POST /task/assistant/creer` | même corps (+ `seulementPremiere` : la checklist et la première tâche) : la checklist d'abord, puis chaque tâche (création, checklist, niveaux, contrôleurs) ; arrêt au premier refus. Rend aussi `creees`, `ajoutees`, `arret`. |
+| `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}`, seulement pour une checklist créée depuis cet écran ; ses tâches restent. |
 | `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `PATCH /tasks/{id}/active {is_active}` pour `actif`. `apercu: true` rend les appels sans les envoyer. |
-| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_task_cree`) ; 403 sinon. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_cadre_cree`) ; 403 sinon. |
 | `POST /task/connexion` | `{phone, password}` → `POST /panel/authenticate` : `{jeton, renouvellement, expire}`. Pour les routes que le compte consultant du cockpit n'a pas le droit d'écrire. Le jeton reste dans l'onglet (`sessionStorage`) et revient dans l'en-tête `X-Panel-Jeton` ; rien n'est gardé au serveur. `POST /task/connexion/renouveler {renouvellement}` → `POST /panel/refresh`. |
 
 ### `/production/flux/*` — l'application Production du magasin (`/production`)

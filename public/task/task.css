@@ -98,3 +98,28 @@ pre.tk-json{margin:0;padding:10px 12px;font-size:11px;line-height:1.45;white-spa
 .tk-modale .tk-ct{border-bottom:1px solid var(--tk-trait)}
 .tk-modale h2{font:400 16px var(--font-display);margin:0}
 .tk-x{margin-left:auto;border:none;background:none;font-size:20px;cursor:pointer;color:var(--muted)}
+
+/* Assistant */
+.tk-wz-etapes{display:flex;gap:4px;flex-wrap:wrap;margin-left:8px}
+.tk-wz-etapes button{display:flex;align-items:center;gap:7px;font:400 11.5px var(--font-ui);padding:5px 11px 5px 6px;border-radius:999px;border:1px solid var(--tk-trait2);background:#fff;color:var(--muted);cursor:default}
+.tk-wz-etapes button b{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;background:var(--chip);font-weight:400;font-size:10.5px;color:var(--muted-2)}
+.tk-wz-etapes button.fait{color:var(--ink);cursor:pointer}
+.tk-wz-etapes button.fait b{background:rgba(63,122,82,.15);color:var(--tk-ok)}
+.tk-wz-etapes button.on{border-color:var(--accent);color:var(--accent)}
+.tk-wz-etapes button.on b{background:var(--accent);color:#fff}
+.tk-wz-etapes button:disabled{opacity:1}
+.tk-wz-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 16px 4px}
+@media (max-width:760px){.tk-wz-modes{grid-template-columns:minmax(0,1fr)}}
+.tk-wz-mode{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--tk-trait2);border-radius:10px;background:#fff;padding:11px 13px;cursor:pointer;font:400 12px var(--font-ui);color:var(--muted)}
+.tk-wz-mode b{font-weight:400;font-size:13px;color:var(--ink)}
+.tk-wz-mode.on{border:1.5px solid var(--accent);background:rgba(141,29,44,.04)}
+.tk-wz-mode.on b{color:var(--accent)}
+.tk-wz-commun{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:12px 16px;background:var(--table-head);border-bottom:1px solid var(--tk-trait);font-size:12px}
+.tk-wz-commun .aide{font-size:10.5px;color:var(--muted)}
+.tk-wl{border:1px solid var(--tk-trait);border-radius:10px;padding:10px 12px;margin-top:10px;background:#fff}
+.tk-wl-l1,.tk-wl-l2{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.tk-wl-l2{margin-top:8px;font-size:12px}
+.tk-wl-n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--tk-doux);font-size:11px;color:var(--muted-2)}
+.tk-bas{display:inline-flex;align-items:center;gap:5px;font-size:12px;cursor:pointer;white-space:nowrap}
+.tk-choix{display:flex;gap:9px;align-items:flex-start;padding:7px 16px;border-top:1px solid var(--tk-trait);font-size:12px;cursor:pointer}
+.tk-choix small{display:block;font-size:10.5px;color:var(--muted);margin-top:1px}
