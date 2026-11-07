@@ -95,6 +95,15 @@ function tmJours(int $sid, array $jours, int $budget = TM_BUDGET): array
     return $out;
 }
 
+/** Le magasin existe-t-il ? Un identifiant inventé ne doit pas graver des journées vides. Sans table lisible, on laisse passer. */
+function tmMagasinExiste(int $sid): bool
+{
+    try {
+        if (Db::row('SELECT id FROM ceo_shop WHERE id = ?', [(string) $sid]) !== null) { return true; }
+        return Db::row('SELECT id FROM shops WHERE id = ?', [$sid]) !== null;
+    } catch (Throwable $e) { return true; }
+}
+
 /** « 15:07 » depuis des secondes. */
 function tmHm(int $s): string
 {
@@ -178,6 +187,7 @@ function ep_temps_morts(): array
     $auj = date('Y-m-d');
     $sid = (int) ($_GET['shop'] ?? 0);
     if ($sid <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!tmMagasinExiste($sid)) { http_response_code(404); return ['error' => 'magasin inconnu']; }
     $date = (string) ($_GET['date'] ?? $auj);
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || $date > $auj) { $date = $auj; }
     $seuil = (int) ($_GET['seuil'] ?? TM_SEUIL_DEFAUT);

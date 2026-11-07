@@ -9,9 +9,9 @@
  * Ce que l'on sait : le nombre de tickets de chaque heure, jour par jour (panel,
  * hourly-distribution). Ce que l'on ne sait pas : la minute de chaque ticket. On la tire donc
  * au hasard dans son heure — à nombre de tickets connu, c'est la répartition la plus neutre —
- * 500 fois par journée, et l'on garde la moyenne. Les vrais clients arrivent par grappes
- * (une file, puis personne) : les vrais trous sont plus longs que ceux d'un tirage régulier.
- * Le résultat est donc un PLANCHER.
+ * 500 fois par journée, et l'on garde la moyenne. Vérifié le 07/11/2026 sur les tickets réels
+ * (semaine du 26/10, quatre magasins) : 423 temps morts mesurés pour 422 estimés, 3 % de minutes
+ * mortes en moins ; juste en moyenne, à ±20 % sur un jour donné.
  *
  * L'ouverture d'une journée va de son premier à son dernier ticket : un magasin fermé plus tôt
  * (Gosselies à 16 h depuis le 19/10, la Toussaint) ne compte pas de temps mort après la

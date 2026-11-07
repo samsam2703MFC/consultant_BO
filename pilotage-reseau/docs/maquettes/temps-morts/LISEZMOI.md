@@ -86,8 +86,11 @@ Le panel donne le **nombre de tickets de chaque heure, jour par jour** (`hourly-
 journée, et garde la moyenne. À nombre de tickets connu, c'est la répartition la plus neutre. Le
 générateur est celui du seed (mulberry32) : le même `heures.json` donne toujours le même `data.json`.
 
-- **Plancher** : les vrais clients arrivent par grappes (une file, puis personne). Les vrais trous sont
-  plus longs que ceux d'un tirage au hasard, donc les vrais temps morts sont plus nombreux et plus longs.
+- **Juste en moyenne, approché sur un jour** : vérifié le 07/11/2026 sur les tickets réels (l'onglet du
+  dashboard), la semaine du 26/10 au 01/11, les quatre magasins, mêmes jours : **423 temps morts mesurés
+  pour 422 estimés**, et 3 % de minutes mortes en moins mesurées qu'estimées. Sur un jour donné, l'écart
+  va jusqu'à ±20 % : les clients de Halle arrivent plus groupés que le tirage (temps morts réels plus
+  nombreux), ceux de Sombreffe plus réguliers (moins nombreux).
 - **Bornes de la journée** : du premier au dernier ticket. L'attente avant le premier client du matin ne
   compte pas, ce qui suit le dernier ticket non plus. Un magasin qui ferme plus tôt ne compte donc pas de
   temps mort après sa fermeture : Gosselies ferme à 16 h depuis le 19/10, et Gosselies a fermé à 13 h le

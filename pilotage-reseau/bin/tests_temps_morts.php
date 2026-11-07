@@ -90,5 +90,8 @@ verifie('nombre moyen 2 ; minutes moyennes 52,5 → 53', $M['nb'] === 2.0 && $M[
 verifie('la part sur les minutes additionnées : 105 / 120', $M['pct'] === 87.5, json_encode($M));
 verifie('aucune journée : zéro jour', tmMoyenne([null]) === ['jours' => 0]);
 
+echo "Le magasin\n";
+verifie('un magasin inconnu ne passe pas', tmMagasinExiste(99999) === false);
+
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
