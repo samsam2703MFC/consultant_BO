@@ -1,0 +1,131 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Oferty cenowe surowców{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Oferty cenowe surowców</h3>
+            <p class="text-subtitle text-muted"><a href="{{ root }}/purchasing">Koszty surowców</a> · oferty od dostawców, porównanie z aktualną ceną</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-purch">
+    <div class="card">
+        <div class="card-header"><h4 class="card-title">Nowa oferta</h4></div>
+        <div class="card-body pt-0">
+            <form id="offerForm" class="at-purch-form">
+                <label class="at-purch-label">Surowiec <span class="text-danger">*</span>
+                    <select class="form-select" name="material_id" required>
+                        <option value="">— wybierz —</option>
+                        {% for r in materials %}
+                            <option value="{{ r.id }}" data-unit="{{ r.unit }}" data-price="{{ r.price|number_format(2, ',', '') }}" {{ r.id == preselect ? 'selected' : '' }}>{{ r.name }}{{ r.supplier ? ' (' ~ r.supplier ~ ')' : '' }}</option>
+                        {% endfor %}
+                    </select>
+                    <span class="at-sub" data-current></span>
+                </label>
+                <label class="at-purch-label">Dostawca <span class="text-danger">*</span>
+                    <select class="form-select" name="supplier_id" required>
+                        <option value="">— wybierz —</option>
+                        {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}{{ s.is_active ? '' : ' (nieaktywny)' }}</option>{% endfor %}
+                    </select>
+                </label>
+                <label class="at-purch-label">Cena za opakowanie <span class="text-danger">*</span>
+                    <span class="input-group"><input class="form-control" name="pack_price" inputmode="decimal" required><span class="input-group-text">zł</span></span>
+                </label>
+                <label class="at-purch-label">Wielkość opakowania <span class="text-danger">*</span>
+                    <span class="input-group"><input class="form-control" name="pack_size" inputmode="decimal" required><span class="input-group-text" data-unit>kg</span></span>
+                </label>
+                <label class="at-purch-label">Ważna od<input class="form-control" type="date" name="valid_from" value="{{ 'now'|date('Y-m-d') }}"></label>
+                <label class="at-purch-label">Ważna do<input class="form-control" type="date" name="valid_to"><span class="at-sub">puste = domyślna ważność</span></label>
+                <label class="at-purch-label">Min. zamówienie<input class="form-control" name="min_order_qty" inputmode="decimal"></label>
+                <label class="at-purch-label">Dostawa (dni)<input class="form-control" name="lead_time_days" inputmode="numeric"></label>
+                <label class="at-purch-label at-purch-wide">Uwagi<input class="form-control" name="notes" maxlength="500"></label>
+                <div class="at-purch-actions"><span class="at-sub" data-compare></span><button type="submit" class="btn btn-primary">Zapisz ofertę</button></div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Oferty</h4>
+            <div class="btn-group btn-group-sm">
+                <a class="btn {{ status is null ? 'btn-primary' : 'btn-outline-primary' }}" href="?">Wszystkie</a>
+                <a class="btn {{ status == 'received' ? 'btn-primary' : 'btn-outline-primary' }}" href="?status=received">Do decyzji</a>
+                <a class="btn {{ status == 'accepted' ? 'btn-primary' : 'btn-outline-primary' }}" href="?status=accepted">Przyjęte</a>
+                <a class="btn {{ status == 'rejected' ? 'btn-primary' : 'btn-outline-primary' }}" href="?status=rejected">Odrzucone</a>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            {% if offers %}
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead><tr><th>Surowiec</th><th>Dostawca</th><th class="text-end">Cena</th><th class="text-end">Obecna cena</th><th class="text-end">Różnica</th><th>Ważna</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    {% set labels = {received: 'do decyzji', accepted: 'przyjęta', rejected: 'odrzucona', expired: 'wygasła'} %}
+                    {% for o in offers %}
+                        <tr>
+                            <td><a href="{{ root }}/purchasing/materials/{{ o.id_raw_material }}">{{ o.material_name }}</a>{% if o.id_tender %}<div class="at-sub"><a href="{{ root }}/purchasing/tenders/{{ o.id_tender }}">z zapytania</a></div>{% endif %}</td>
+                            <td>{{ o.supplier_name }}</td>
+                            <td class="text-end"><strong>{{ o.display_price|number_format(2, ',', ' ') }} zł/{{ o.display_unit }}</strong><div class="at-sub">{{ o.pack_price|currency }} / {{ o.display_pack_size|number_format(2, ',', ' ') }} {{ o.display_unit }}</div></td>
+                            <td class="text-end">{{ o.display_current|number_format(2, ',', ' ') }} zł/{{ o.display_unit }}</td>
+                            <td class="text-end">{% if o.diff_pct is not null %}<span class="{{ o.diff_pct < 0 ? 'text-success' : 'text-danger' }}">{{ o.diff_pct > 0 ? '+' : '' }}{{ o.diff_pct|pct }}</span>{% endif %}</td>
+                            <td class="text-nowrap">{{ o.valid_from|date('d.m.y') }} – {{ o.valid_to ? o.valid_to|date('d.m.y') : '…' }}</td>
+                            <td><span class="badge {{ o.status == 'accepted' ? 'bg-success' : (o.status == 'received' ? 'bg-warning' : 'bg-secondary') }}">{{ labels[o.status] ?? o.status }}</span></td>
+                            <td class="text-end text-nowrap">
+                                {% if o.status == 'received' %}
+                                    <button class="btn btn-sm btn-primary" data-offer-action="apply" data-id="{{ o.id }}">Zastosuj</button>
+                                    <button class="btn btn-sm btn-outline-secondary" data-offer-action="reject" data-id="{{ o.id }}">Odrzuć</button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="at-empty">Brak ofert{{ status ? ' o tym statusie' : '' }}.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const form = document.getElementById('offerForm');
+    const material = form.material_id;
+    const refresh = () => {
+        const opt = material.selectedOptions[0];
+        const unit = opt?.dataset.unit || 'kg';
+        form.querySelector('[data-unit]').textContent = unit;
+        form.querySelector('[data-current]').textContent = opt?.dataset.price ? `Obecnie ${opt.dataset.price} zł/${unit}` : '';
+        const price = parseFloat(form.pack_price.value.replace(',', '.'));
+        const size = parseFloat(form.pack_size.value.replace(',', '.'));
+        const current = parseFloat((opt?.dataset.price || '').replace(',', '.'));
+        const compare = form.querySelector('[data-compare]');
+        if (price > 0 && size > 0) {
+            const per = price / size;
+            const diff = current > 0 ? (per - current) / current * 100 : null;
+            compare.textContent = `= ${per.toFixed(2).replace('.', ',')} zł/${unit}` + (diff === null ? '' : ` (${diff > 0 ? '+' : ''}${diff.toFixed(1).replace('.', ',')} % wobec obecnej ceny)`);
+            compare.className = 'at-sub ' + (diff !== null && diff < 0 ? 'text-success' : '');
+        } else compare.textContent = '';
+    };
+    form.addEventListener('input', refresh);
+    form.addEventListener('change', refresh);
+    refresh();
+    at.bindForm(form, '/ajax/purchasing/offers');
+    document.querySelectorAll('[data-offer-action]').forEach(b => b.addEventListener('click', () => {
+        if (b.dataset.offerAction === 'apply' && !window.confirm('Ustawić tę ofertę jako aktualną cenę surowca? Koszty receptur zostaną przeliczone.')) return;
+        at.send(`/ajax/purchasing/offers/${b.dataset.id}/${b.dataset.offerAction}`, 'POST', {}).then(res => {
+            at.notify(res.ok, res.message);
+            if (res.ok) window.setTimeout(() => window.location.reload(), 600);
+        });
+    }));
+})();
+</script>
+{% endblock %}

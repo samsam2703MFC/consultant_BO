@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Guide illustré</title>
+<!-- Maquette B (07/11/2026) — inspirée de Dozuki / iFixit : chaque étape = une grande photo 4:3 et jusqu'à trois
+     vignettes, puis des lignes courtes marquées par leur sens (● action, ⚠ critique en rouge, ⓘ repère en vert). Les
+     étapes se parcourent par leurs VIGNETTES : une pellicule en bas en portrait, le sommaire illustré à gauche en
+     paysage — on reconnaît l'étape à sa photo. -->
+<link rel="stylesheet" href="/public/formation/ds.css"><link rel="stylesheet" href="commun.css">
+<style>
+.b-corps{flex:1;min-height:0;display:flex}
+.b-plan{display:none}
+.b-main{flex:1;min-width:0;overflow:auto;padding:16px 20px 20px}
+.b-k{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.b-k b{font-weight:400;color:var(--accent)}
+.b-main h1{margin:6px 0 14px;font-weight:400;font-size:32px;line-height:1.1}
+.b-main h1 span{color:var(--accent)}
+.b-photo{display:grid;gap:10px}
+.b-photo .ph{max-height:44vh;width:auto;max-width:100%;margin:0 auto}
+.b-vign{display:flex;gap:10px;justify-content:center}
+.b-vign button{width:96px;padding:0;border:2px solid transparent;border-radius:8px;background:none;overflow:hidden}
+.b-vign button img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover}
+.b-vign button.on{border-color:var(--accent)}
+.b-lignes{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:10px}
+.b-lignes li{display:flex;gap:14px;align-items:flex-start;background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px;font-size:21px;line-height:1.35}
+.b-lignes li i{flex:0 0 auto;width:26px;height:26px;display:inline-flex;align-items:center;justify-content:center;margin-top:1px;font-style:normal}
+.b-lignes li i.a::before{content:'';width:12px;height:12px;border-radius:50%;background:var(--ink)}
+.b-lignes li.c{border-color:var(--danger);background:rgba(179,38,30,.06)}
+.b-lignes li.c i{color:var(--danger)}
+.b-lignes li.n i{color:var(--green)}
+.b-lignes li small{display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--danger);margin-bottom:2px}
+.b-lignes li.n small{color:var(--green)}
+/* Portrait : la pellicule des étapes, au-dessus du pied. */
+.b-film{position:relative;flex:0 0 auto;display:flex;gap:8px;overflow-x:auto;padding:10px 16px;background:#fff;border-top:1px solid var(--line);scrollbar-width:none}
+.b-film button{flex:0 0 auto;width:92px;padding:0;border:2px solid transparent;border-radius:8px;background:var(--chip);position:relative;overflow:hidden;color:var(--muted-2)}
+.b-film button img,.b-film button span.v{display:flex;width:100%;aspect-ratio:4/3;object-fit:cover;align-items:center;justify-content:center;font-size:20px}
+.b-film button em{position:absolute;left:4px;bottom:4px;background:rgba(28,26,23,.75);color:#fff;font-style:normal;font-size:12px;border-radius:4px;padding:1px 5px}
+.b-film button.on{border-color:var(--accent)}
+.b-film button.f::after{content:'✓';position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:var(--green);color:#fff;font-size:12px;display:flex;align-items:center;justify-content:center}
+.b-film button.on em{background:var(--accent)}
+.pd .cpt{font-size:16px;color:var(--muted);min-width:64px;text-align:center}
+/* Paysage : le sommaire illustré à gauche, la photo et les lignes côte à côte. */
+@media (orientation:landscape) and (min-width:1000px){
+  .b-film{display:none}
+  .b-plan{display:block;width:330px;flex:0 0 auto;overflow:auto;background:#fff;border-right:1px solid var(--line);padding:12px 10px 20px}
+  .b-plan .s{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:14px 8px 6px}
+  .b-plan button{display:flex;align-items:center;gap:12px;width:100%;min-height:60px;border:none;background:transparent;border-radius:10px;padding:4px 8px;text-align:left;font-size:15px;color:var(--ink)}
+  .b-plan button .t{width:68px;flex:0 0 auto;aspect-ratio:4/3;border-radius:6px;background:var(--chip);display:flex;align-items:center;justify-content:center;font-size:15px;color:var(--muted-2);overflow:hidden;position:relative}
+  .b-plan button .t img{width:100%;height:100%;object-fit:cover}
+  .b-plan button.f{color:var(--muted)}
+  .b-plan button.f .t::after{content:'✓';position:absolute;inset:0;background:rgba(63,122,82,.72);color:#fff;display:flex;align-items:center;justify-content:center;font-size:20px}
+  .b-plan button.on{background:#F6EDEE;color:var(--accent)}
+  .b-plan button.on .t{outline:2px solid var(--accent)}
+  .b-grille{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:22px;align-items:start}
+  .b-photo .ph{max-height:none;width:100%}
+  .b-lignes{margin-top:0}
+}
+</style></head>
+<body><div id="ec" class="ec"></div>
+<script src="donnees.js"></script><script src="commun.js"></script>
+<script>
+const { D, E, S, esc, ICO, entete, pied, aide, brancher } = M;
+/* Les lignes d'une étape, à la façon de Dozuki : action (●), critique (⚠, rouge), repère (ⓘ, vert). */
+function lignes(e) {
+  const repere = /^rep[eè]re$/i.test(e.t);
+  return `<ul class="b-lignes">${e.l.map(l => e.crit && !repere
+      ? `<li class="c"><i>${ICO.alerte}</i><span><small>Point critique</small>${esc(l)}</span></li>`
+      : repere ? `<li class="n"><i>${ICO.info}</i><span><small>Repère</small>${esc(l)}</span></li>`
+      : `<li><i class="a"></i><span>${esc(l)}</span></li>`).join('')}</ul>`;
+}
+const vignette = (e, k) => e.photos.length ? `<img src="img/${e.photos[0]}" alt="">` : `<span class="v">${esc(e.n)}</span>`;
+function rendre() {
+  const e = E[S.i];
+  let k = -1;
+  const plan = D.sections.map(s => `<div class="s">${esc(s.titre)}</div>${s.etapes.map(x => { k++;
+    return `<button data-i="${k}" class="${k < S.i ? 'f' : k === S.i ? 'on' : ''}"><span class="t">${x.photos.length ? `<img src="img/${x.photos[0]}" alt="">` : esc(x.n)}</span><span>${esc(x.n)} · ${esc(x.t)}</span></button>`; }).join('')}`).join('');
+  const photo = e.photos.length ? `<div class="b-photo"><img class="ph" src="img/${e.photos[S.p] || e.photos[0]}" alt="">
+      ${e.photos.length > 1 ? `<div class="b-vign">${e.photos.map((x, j) => `<button data-p="${j}" class="${j === S.p ? 'on' : ''}"><img src="img/${x}" alt=""></button>`).join('')}</div>` : ''}</div>` : '';
+  document.getElementById('ec').innerHTML = entete() + `
+    <div class="b-corps"><nav class="b-plan">${plan}</nav>
+      <main class="b-main"><div class="b-k"><b>Étape ${S.i + 1} / ${E.length}</b> · ${esc(e.section)}</div>
+        <h1><span>${esc(e.n)}</span> · ${esc(e.t)}</h1>
+        <div class="b-grille">${photo}${lignes(e)}</div></main></div>
+    <div class="b-film">${E.map((x, j) => `<button data-i="${j}" class="${j < S.i ? 'f' : j === S.i ? 'on' : ''}">${vignette(x, j)}<em>${esc(x.n)}</em></button>`).join('')}</div>
+    ${pied({ suiv: 'Étape suivante ', milieu: `<span class="cpt">${S.i + 1} / ${E.length}</span>` })}${S.aide ? aide() : ''}`;
+  // La vignette de l'étape au centre de la pellicule (sans faire défiler la page elle-même).
+  const f = document.querySelector('.b-film'), on = f && f.querySelector('.on');
+  if (on) { f.scrollLeft = on.offsetLeft - f.clientWidth / 2 + on.offsetWidth / 2; }
+}
+brancher(rendre);
+</script></body></html>

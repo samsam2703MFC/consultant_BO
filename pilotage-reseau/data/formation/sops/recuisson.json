@@ -1,0 +1,396 @@
+{
+  "id": "recuisson",
+  "code": "SOP-VEN-001",
+  "type": "SOP",
+  "dossier": "01",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR-NL",
+  "poste": "vente",
+  "moment": "apres-midi",
+  "duree": null,
+  "titre": {
+    "fr": "Recuisson d'appoint – pains et baguettes (après-midi)",
+    "nl": "Bijbakken – broden en stokbroden (namiddag)"
+  },
+  "objectif": {
+    "fr": "Maintenir une quantité suffisante de pains et de baguettes en vente pendant l'après-midi.",
+    "nl": "Tijdens de namiddag voldoende broden en stokbroden beschikbaar houden in de winkel."
+  },
+  "pour": {
+    "fr": "Vendeurs – après-midi",
+    "nl": "Verkoopmedewerkers – namiddag"
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Repères",
+        "nl": "Kerngegevens"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Quand lancer",
+            "nl": "Wanneer starten"
+          },
+          "texte": {
+            "fr": "Dès qu'il ne reste plus que 4 pains d'une même sorte ou 4 baguettes en vente.",
+            "nl": "Zodra er nog maar 4 broden van dezelfde soort of 4 stokbroden in de winkel liggen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Stock",
+            "nl": "Voorraad"
+          },
+          "texte": {
+            "fr": "Prendre les produits dans le congélateur de la cuisine ou sur le chariot placé dans le grand congélateur à l'arrière.",
+            "nl": "Neem de producten uit de diepvries in de keuken of van de kar in de grote diepvries achteraan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le vendeur qui constate que le seuil de 4 pièces est atteint.",
+            "nl": "De verkoopmedewerker die vaststelt dat de grens van 4 stuks is bereikt."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Marche à suivre – respecter cet ordre",
+        "nl": "Werkwijze – volg deze volgorde"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Contrôler le rayon",
+            "nl": "Controleer de winkelvoorraad"
+          },
+          "texte": {
+            "fr": "Lancer une recuisson dès qu'il reste 4 pièces : 4 pains d'une sorte ou 4 baguettes.",
+            "nl": "Start met bijbakken zodra er nog 4 stuks overblijven: 4 broden van één soort of 4 stokbroden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Prendre les produits au congélateur",
+            "nl": "Haal de producten uit de diepvries"
+          },
+          "texte": {
+            "fr": "Chercher le stock soit dans le congélateur de la cuisine, soit sur le chariot dans le grand congélateur à l'arrière.",
+            "nl": "Neem de voorraad uit de diepvries in de keuken of van de kar in de grote diepvries achteraan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Lancer le bon programme",
+            "nl": "Start het juiste programma"
+          },
+          "texte": {
+            "fr": "Choisir le programme correspondant au produit : GRANDS PAINS pour les pains ou BAGUETTE pour les baguettes. Appuyer sur START / STOP.",
+            "nl": "Kies het programma dat bij het product hoort: GRANDS PAINS voor broden of BAGUETTE voor stokbroden. Druk op START / STOP."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Attendre le préchauffage",
+            "nl": "Wacht tot de oven is voorverwarmd"
+          },
+          "texte": {
+            "fr": "Ne rien enfourner pendant le préchauffage. Attendre que le four indique qu'il est prêt à être chargé.",
+            "nl": "Plaats niets in de oven tijdens het voorverwarmen. Wacht tot de oven aangeeft dat hij klaar is om geladen te worden."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Enfourner la quantité prévue",
+            "nl": "Plaats de juiste hoeveelheid in de oven"
+          },
+          "texte": {
+            "fr": "Pains : 1 grille de 5 ou 6 pains pour chaque sorte nécessaire. Baguettes : 1 ou 2 grilles de 4 baguettes.",
+            "nl": "Broden: 1 rooster met 5 of 6 broden voor elke benodigde soort. Stokbroden: 1 of 2 roosters met 4 stokbroden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Attendre la fin du programme",
+            "nl": "Wacht tot het programma klaar is"
+          },
+          "texte": {
+            "fr": "Laisser le programme se terminer sans modifier le temps ni la température. Sortir les grilles lorsque le programme est fini.",
+            "nl": "Laat het programma volledig aflopen zonder de tijd of temperatuur te wijzigen. Haal de roosters uit de oven wanneer het programma klaar is."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Respecter le refroidissement",
+            "nl": "Respecteer de afkoeltijd"
+          },
+          "texte": {
+            "fr": "Pains : attendre 10 à 15 minutes avant de les couper. Ne jamais couper ni vendre un pain chaud. Baguettes : cette attente de 10 à 15 minutes ne s'applique pas.",
+            "nl": "Broden: wacht 10 tot 15 minuten voordat je ze snijdt. Snijd of verkoop nooit een warm brood. Stokbroden: deze wachttijd van 10 tot 15 minuten is niet van toepassing."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Produit – seuil de lancement – quantité à enfourner",
+        "nl": "Product – wanneer starten – hoeveelheid in de oven"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Pains",
+            "nl": "Broden"
+          },
+          "texte": {
+            "fr": "Pains — seuil de lancement : 4 pains restants d'une sorte — quantité à enfourner : 1 grille de 5 ou 6 par sorte nécessaire.",
+            "nl": "Broden — wanneer starten: nog 4 broden van één soort — hoeveelheid in de oven: 1 rooster met 5 of 6 per benodigde soort."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Baguettes",
+            "nl": "Stokbroden"
+          },
+          "texte": {
+            "fr": "Baguettes — seuil de lancement : 4 baguettes restantes — quantité à enfourner : 1 ou 2 grilles de 4.",
+            "nl": "Stokbroden — wanneer starten: nog 4 stokbroden — hoeveelheid in de oven: 1 of 2 roosters met 4."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "À ne jamais faire",
+        "nl": "Nooit doen"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Couper ou vendre un pain encore chaud. Attendre toujours 10 à 15 minutes après la sortie du four.",
+            "nl": "Een brood snijden of verkopen terwijl het nog warm is. Wacht altijd 10 tot 15 minuten nadat het uit de oven komt."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Contrôle rapide",
+        "nl": "Snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Seuil de 4 pièces atteint",
+            "nl": "Grens van 4 stuks bereikt"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Bon programme sélectionné",
+            "nl": "Juiste programma geselecteerd"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Préchauffage terminé avant enfournement",
+            "nl": "Oven volledig voorverwarmd vóór het laden"
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Bonne quantité placée sur les grilles",
+            "nl": "Juiste hoeveelheid op de roosters geplaatst"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Pains refroidis 10 à 15 min avant coupe ou vente",
+            "nl": "Broden 10 tot 15 min afgekoeld vóór snijden of verkoop"
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Lancer dès qu'il reste 4 pièces : 4 pains d'une sorte ou 4 baguettes.",
+      "nl": "Starten zodra er nog 4 stuks zijn: 4 broden van één soort of 4 stokbroden."
+    },
+    {
+      "fr": "Programme GRANDS PAINS (pains) ou BAGUETTE (baguettes) ; ne rien enfourner pendant le préchauffage.",
+      "nl": "Programma GRANDS PAINS (broden) of BAGUETTE (stokbroden); niets in de oven plaatsen tijdens het voorverwarmen."
+    },
+    {
+      "fr": "Ne jamais modifier le temps ni la température du programme.",
+      "nl": "Nooit de tijd of temperatuur van het programma wijzigen."
+    },
+    {
+      "fr": "Pains : 10 à 15 minutes de refroidissement ; ne jamais couper ni vendre un pain chaud (ne s'applique pas aux baguettes).",
+      "nl": "Broden: 10 tot 15 minuten afkoelen; nooit een warm brood snijden of verkopen (niet van toepassing op stokbroden)."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "À partir de combien de pièces restantes lance-t-on une recuisson ?",
+        "nl": "Bij hoeveel overblijvende stuks start je met bijbakken?"
+      },
+      "choix": {
+        "fr": [
+          "2",
+          "4",
+          "6"
+        ],
+        "nl": [
+          "2",
+          "4",
+          "6"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Combien de temps attendre avant de couper un pain sorti du four ?",
+        "nl": "Hoelang wacht je voordat je een brood snijdt dat uit de oven komt?"
+      },
+      "choix": {
+        "fr": [
+          "10 à 15 minutes",
+          "5 minutes",
+          "30 minutes"
+        ],
+        "nl": [
+          "10 tot 15 minuten",
+          "5 minuten",
+          "30 minuten"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Que faire pendant le préchauffage du four ?",
+        "nl": "Wat doe je terwijl de oven voorverwarmt?"
+      },
+      "choix": {
+        "fr": [
+          "Enfourner déjà les produits pour gagner du temps",
+          "Modifier le temps du programme",
+          "Ne rien enfourner et attendre que le four indique qu'il est prêt"
+        ],
+        "nl": [
+          "De producten al in de oven plaatsen om tijd te winnen",
+          "De tijd van het programma aanpassen",
+          "Niets in de oven plaatsen en wachten tot de oven aangeeft dat hij klaar is"
+        ]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Décision 7 : une seule SOP réunissant le PDF FR (texte français) et le PDF NL (texte néerlandais) ; aucun texte traduit, les deux versions sont recopiées telles quelles.",
+    "Code SOP-VEN-001 retenu (décision 7) ; le PDF NL porte le code SOP-VER-001.",
+    "Titres des sections « Repères » / « Kerngegevens » et du tableau (reprenant ses en-têtes) ajoutés ; tableau rendu en texte, une ligne par produit."
+  ],
+  "remarques": [
+    "FR et NL disent la même chose : mêmes chiffres (seuil de 4 pièces, 1 grille de 5 ou 6 pains, 1 ou 2 grilles de 4 baguettes, refroidissement 10 à 15 min), mêmes programmes (GRANDS PAINS, BAGUETTE, START / STOP), même ordre. Écarts de formulation seulement : titre FR « Recuisson d'appoint » / NL « Bijbakken » (cuisson d'appoint, sans idée de « re- ») ; étape 1 FR « Contrôler le rayon » / NL « Controleer de winkelvoorraad » ; contrôle FR « Préchauffage terminé avant enfournement » / NL « Oven volledig voorverwarmd vóór het laden » ; en-tête FR « Vendeurs – après-midi » / NL « Verkoopmedewerkers – namiddag ».",
+    "Codes différents dans les deux PDF : FR SOP-VEN-001, NL SOP-VER-001.",
+    "À ne pas confondre avec la recuisson du matin des pains de la veille (+4 min, 20 % d'humidité, même four, sans relancer de programme, catégorie pain uniquement — décision 2) : ici, les produits sortent du congélateur et passent un programme complet GRANDS PAINS ou BAGUETTE.",
+    "Le temps et la température des programmes GRANDS PAINS / BAGUETTE ne sont pas donnés dans ce document (voir la Fiche programmes).",
+    "PDF FR et NL lus via la conversion texte de Google Drive (1 page chacun, ≈ 67 Ko) ; pas de photo apparente, PDF non téléchargés pour vérification visuelle."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1VcazLFBr0MHHpiCx5OOdmZCFCWTfuIBh",
+      "pdf_nl": "1HzCfEkMrbEB-R0tMuoF8azODk0NYvOJj"
+    },
+    "lu": "pdf"
+  }
+}

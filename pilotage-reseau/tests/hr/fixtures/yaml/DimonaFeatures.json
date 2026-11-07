@@ -1,0 +1,22 @@
+{
+  "workerType": "STU",
+  "subEntityNumber": "1234567891",
+  "userEnterprise": {
+    "employerId": 480497095,
+    "address": {
+      "country": 231,
+      "street": "street",
+      "houseNumber": "houseNumber",
+      "municipality": {
+        "code": 64246,
+        "name": "name"
+      },
+      "boxNumber": "boxNumber",
+      "postCode": "postCode"
+    },
+    "jointCommissionNumber": "124",
+    "enterpriseNumber": "enterpriseNumber",
+    "name": "name"
+  },
+  "jointCommissionNumber": "124"
+}

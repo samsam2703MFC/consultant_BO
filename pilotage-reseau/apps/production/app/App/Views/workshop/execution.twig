@@ -1,0 +1,16 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Hala: tablety i czas pracy · Atelier : tablettes et heures{% endblock %}
+
+{% block content %}
+<section class="section tfb">
+    <div id="tfbExecution" class="tfb-app" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="execution" aria-live="polite">
+        <p class="text-muted">Wczytywanie… / Chargement…</p>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/workshop/execution.js?v={{ asset_v() }}"></script>
+{% endblock %}

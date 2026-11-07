@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D — Le Manuel opératoire, en FR et en NL</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<style>.feuille{padding:16px 18px;font-size:7.6px;line-height:1.4}.feuille .fh b{font-size:14px}.feuille .fh small{font-size:6.5px}.feuille .cart{font-size:7px;padding:4px 6px}.feuille h5{font-size:7px;padding:2px 5px;margin:6px 0 3px}.feuille .st{margin:2px 0;gap:5px}.feuille .st i{flex:0 0 16px}.feuille .cr{font-size:7px;padding:3px 6px}.feuille .ft{left:18px;right:18px;bottom:9px;font-size:6px}.couv b{font-size:26px}</style>
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+/* D — Le Manuel opératoire : les mêmes SOP, rangées une fois dans nos bases, assemblées en un manuel par chapitre,
+   imprimable en PDF en français et en néerlandais. Le module Manuel Opératoire du panel lit les mêmes SOP. */
+const S = FO.sops, F = FO.fiche;
+let page = 3;
+const tdm = Object.keys(FAM).map(d => `<div style="margin:10px 0 4px"><span class="fam ${FAM[d].c}">${d} · ${FAM[d].nom}</span></div>` + S.filter(s => s.dossier === d).map(s => { const p = page; page += Math.max(1, Math.ceil((s.nbEtapes || 8) / 14)); return `<div class="fil" style="padding:6px 0"><div class="x" style="display:flex;gap:10px;align-items:center"><span class="mini" style="width:118px;flex:0 0 auto;white-space:nowrap">${esc(s.code || '—')}</span><b style="font-size:12.5px;font-weight:600">${esc(s.court)}</b></div>${trad(s)}<span class="mini" style="width:56px;text-align:right">p. ${p}</span></div>`; }).join('')).join('');
+const gauche = `<div class="carte"><h3>Le Manuel opératoire<small>édition du 05/11/2026 · ${S.length} SOP · ${page - 1} pages</small></h3>
+  <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px"><span class="b p">⬇ Manuel complet FR (PDF)</span><span class="b p">⬇ Volledig handboek NL (PDF)</span><span class="b">Un chapitre…</span><span class="b">Un poste…</span></div>
+  <div class="mini">Généré depuis nos bases à chaque publication · la page de garde porte la date d’édition · une SOP dont la traduction est à relire sort avec la mention « traduction à relire » en pied de page.</div>
+  ${tdm}</div>`;
+const pageSop = (L) => {
+  const t = L === 'FR' ? { titre: 'Ouverture du magasin', sous: 'Procédure · magasin et vente', pour: 'Pour', pourV: 'Équipe de vente du matin', quand: 'Quand', quandV: '06:00 – 07:00, puis vente dès 07:00', comp: 'Compétence', compV: 'Ouvrir le magasin', ver: 'Version', crit: 'Point critique' }
+    : { titre: 'Opening van de winkel', sous: 'Procedure · winkel en verkoop', pour: 'Voor', pourV: 'Verkoopteam van de ochtend', quand: 'Wanneer', quandV: '06:00 – 07:00, verkoop vanaf 07:00', comp: 'Competentie', compV: 'De winkel openen', ver: 'Versie', crit: 'Kritiek punt' };
+  const secs = F.sections.slice(0, 2);
+  return `<div class="feuille"><div class="fh"><div><small>${L === 'FR' ? 'Manuel opératoire' : 'Handboek'} · 01</small><b>${t.titre}</b><small>${t.sous}</small></div><div style="text-align:right;white-space:nowrap"><small>WKL-001</small><br><span class="lg on">${L}</span></div></div>
+    <dl class="cart"><dt>${t.pour}</dt><dd>${t.pourV}</dd><dt>${t.quand}</dt><dd>${t.quandV}</dd><dt>${t.comp}</dt><dd>${t.compV}</dd><dt>${t.ver}</dt><dd>v5 · 05/11/2026</dd></dl>
+    ${secs.map(sec => `<h5>${esc(L === 'FR' ? sec.titre : (sec.titreNl || sec.titre))}</h5>${sec.etapes.slice(0, 3).map(e => `<div class="st"><i>${esc(e.n)}</i><span>${esc((L === 'FR' ? e.fr : e.nl).slice(0, 130))}${(L === 'FR' ? e.fr : e.nl).length > 130 ? '…' : ''}</span></div>`).join('')}`).join('')}
+    <div class="cr"><b>${t.crit} ·</b> ${L === 'FR' ? 'frigos et comptoirs réfrigérés entre +2 °C et +5 °C ; signaler toute panne.' : 'koeltogen en frigo’s tussen +2 °C en +5 °C; meld elke storing.'}</div>
+    <div class="ft"><span>SOP-WKL-001 · v5 · ${L}</span><span>${L === 'FR' ? 'page' : 'pagina'} 3</span></div></div>`;
+};
+const couv = `<div class="feuille couv" style="padding:30px"><div><small style="font:600 9px var(--font-ui);letter-spacing:.2em;text-transform:uppercase">L’Atelier · sucré · salé · à emporter</small></div>
+  <div><b>Manuel<br>opératoire</b><div style="font-size:12px;margin-top:10px;line-height:1.5">Les standards du réseau<br>${S.length} SOP · 4 chapitres · ${FO.competences.length} compétences</div></div>
+  <div><small style="font-size:10px">Édition du 05/11/2026 · Français<br>Existe aussi en néerlandais</small></div></div>`;
+const droite = `<div><div class="lab">Aperçu du PDF</div><div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px">${couv}${pageSop('FR')}${pageSop('NL')}</div>
+  <div class="mini" style="margin-top:8px">page de garde FR · la même SOP en français et en néerlandais, même mise en page, même numéro de page</div>
+  <div class="carte" style="margin-top:16px"><h3>Dans le Manuel Opératoire du panel</h3><div class="mini" style="font-size:12.5px;line-height:1.55">Le module Manuel Opératoire affiche les mêmes SOP, au même endroit du chapitre, avec le même bouton FR | NL et le même PDF. Il ne garde pas de copie : il lit les SOP rangées par le cockpit. <b>À brancher :</b> sa table <code>formation</code> (franchise_buddy_db), dont je n’ai pas la structure dans ce dépôt.</div></div></div>`;
+coque('manuel', `<div class="titre"><h1>Manuel opératoire</h1><span class="ss">les standards assemblés en un manuel, imprimable en PDF en français et en néerlandais · la même source que la tablette</span></div>
+  <div class="grille" style="grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)">${gauche}${droite}</div>`, { boutons: ['Imprimer FR', 'Afdrukken NL'], prim: 0 });
+</script></body></html>

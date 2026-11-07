@@ -1,0 +1,120 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Asystent AI · ustawienia{% endblock %}
+
+{% block head %}<link rel="stylesheet" href="{{ root }}/assets/css/dev-card.css?v={{ asset_v() }}">{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3><i class="bi bi-stars"></i> Asystent AI</h3>
+            <p class="text-subtitle text-muted">Klucz Anthropic, model i prompt karty technologicznej « Nowy produkt z filmu » (Produkt › Nowe produkty).
+                Klucz jest zaszyfrowany na serwerze i nigdy nie wraca do przeglądarki.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap"><a class="btn btn-outline-primary" href="{{ root }}/test-products/new"><i class="bi bi-stars"></i> Nowy produkt testowy</a></div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section dc" id="aiSettings">
+    <div class="dc-grid">
+        <div>
+            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">1</span>Klucz Anthropic</h4><div data-key></div></div>
+            <div class="dc-card"><h4 class="dc-h"><span class="dc-num">2</span>Prompt karty technologicznej</h4>
+                <p class="dc-hint">Instrukcje dla asystenta : przepis po polsku, porządek składników, kroki, wybór zdjęć etapów. Odczyt linku, wycinanie klatek
+                    i plik .docx robi ERP. Każdy zapis tworzy nową wersję (poprzednie zostają w historii).</p>
+                <textarea class="form-control dc-text" rows="22" data-prompt maxlength="20000"></textarea>
+                <div class="dc-nav"><button type="button" class="btn btn-outline-secondary dc-big" data-default>Przywróć domyślny</button><span class="dc-sp"></span>
+                    <span class="dc-status" data-chars></span><button type="button" class="btn btn-primary dc-big" data-save-prompt>Zapisz nową wersję</button></div>
+            </div>
+        </div>
+        <aside>
+            <div class="dc-card"><h4 class="dc-h">Model</h4><div data-models></div>
+                <p class="dc-hint">Jedna karta : opis filmu + do 40 klatek. Opus daje najlepszą jakość tłumaczenia i wyboru zdjęć ; Sonnet jest szybszy i tańszy.</p></div>
+            <div class="dc-card"><h4 class="dc-h">Wersje promptu</h4><ul class="dc-drafts" data-versions></ul></div>
+        </aside>
+    </div>
+</section>
+<script type="application/json" id="aiBoot">{{ {configured: configured, source: source, hint: hint, model: model, models: models, prompt: prompt, default_prompt: default_prompt, versions: versions, is_admin: is_admin}|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP') b-or constant('JSON_UNESCAPED_UNICODE'))|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+(function () {
+    const app = document.getElementById('aiSettings');
+    let s = JSON.parse(document.getElementById('aiBoot').textContent);
+    const esc = at.esc;
+    const ta = app.querySelector('[data-prompt]');
+    const dmy = (v) => { const m = String(v || '').match(/^(\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2})/); return m ? `${m[3]}.${m[2]}.${m[1]} ${m[4]}` : ''; };
+    const send = (url, method, data) => at.send(url, method, data).then(res => {
+        if (!res.ok) throw res;
+        s = res.data;
+        return res;
+    });
+
+    function drawKey() {
+        const box = app.querySelector('[data-key]');
+        const form = `<div class="dc-field" data-keyform ${s.configured ? 'hidden' : ''}><label class="dc-label" for="aiKey">Klucz API (konsola Anthropic → API keys)</label>
+            <div class="d-flex gap-2"><input class="form-control dc-input" id="aiKey" type="password" autocomplete="off" placeholder="sk-ant-…">
+            <button type="button" class="btn btn-primary text-nowrap" data-save-key>Zapisz i sprawdź</button></div>
+            <p class="dc-hint">Sprawdzany w Anthropic przed zapisem (bez kosztu). Zaszyfrowany w bazie, widać tylko 4 ostatnie znaki.</p><div class="dc-err" data-keymsg></div></div>`;
+        if (!s.configured) {
+            box.innerHTML = `<p class="mb-2"><span class="dc-pill w">brak klucza</span> Karta technologiczna z filmu jest wyłączona (gotową kartę .docx można wczytać).</p>
+                ${s.is_admin ? form : '<p class="text-muted mb-0">Klucz wpisuje administrator.</p>'}`;
+        } else {
+            const src = s.source === 'env' ? 'klucz z pliku .env serwera (ANTHROPIC_API_KEY) — zmiana na serwerze'
+                : `klucz …${esc(s.hint || '')} wpisany w Ustawieniach${s.is_admin ? ' · <button type="button" class="dc-link" data-change>zmień</button> · <button type="button" class="dc-link dc-danger" data-del>usuń</button>' : ''}`;
+            box.innerHTML = `<p class="mb-2"><span class="dc-pill ok">✓ włączony</span> ${src}</p>
+                ${s.is_admin ? `<button type="button" class="btn btn-outline-secondary" data-test>Sprawdź połączenie</button> <span class="dc-status" data-testmsg></span>` : ''}
+                ${s.source === 'settings' ? form : ''}`;
+        }
+        const msg = () => box.querySelector('[data-keymsg]');
+        const save = (key) => {
+            if (msg()) msg().textContent = 'Sprawdzanie klucza w Anthropic…';
+            send('/ajax/settings/ai/key', 'PUT', {key}).then(() => { at.notify(true, key ? 'Zapisano klucz.' : 'Usunięto klucz.'); drawKey(); })
+                .catch(e => { if (msg()) msg().textContent = (e.fields && e.fields.key) || e.message; else at.notify(false, e.message); });
+        };
+        box.querySelector('[data-save-key]')?.addEventListener('click', () => { const v = box.querySelector('#aiKey').value.trim(); if (v) save(v); });
+        box.querySelector('[data-change]')?.addEventListener('click', () => { box.querySelector('[data-keyform]').hidden = false; box.querySelector('#aiKey').focus(); });
+        box.querySelector('[data-del]')?.addEventListener('click', () => { if (window.confirm('Usunąć klucz Anthropic ? Karta z filmu zostanie wyłączona.')) save(''); });
+        box.querySelector('[data-test]')?.addEventListener('click', () => {
+            const out = box.querySelector('[data-testmsg]');
+            out.textContent = 'Łączenie…';
+            at.send('/ajax/settings/ai/test', 'POST', {}).then(res => { out.textContent = res.ok ? 'Połączenie OK ✓' : res.message; });
+        });
+    }
+
+    function drawModels() {
+        const box = app.querySelector('[data-models]');
+        box.innerHTML = `<div class="dc-chips">${s.models.map(m => `<label class="dc-chip"><input type="radio" name="model" value="${esc(m.code)}" ${m.code === s.model ? 'checked' : ''} ${s.is_admin ? '' : 'disabled'}>
+            <span>${esc(m.label)}</span></label>`).join('')}</div>`;
+        box.querySelectorAll('[name=model]').forEach(r => r.addEventListener('change', () => send('/ajax/settings/ai/model', 'PUT', {model: r.value})
+            .then(() => at.notify(true, 'Zapisano model.')).catch(e => at.notify(false, e.message))));
+    }
+
+    function drawPrompt() {
+        ta.value = s.prompt.body;
+        ta.readOnly = !s.is_admin;
+        app.querySelector('[data-save-prompt]').hidden = !s.is_admin;
+        app.querySelector('[data-default]').hidden = !s.is_admin;
+        const chars = () => { app.querySelector('[data-chars]').textContent = ta.value.length.toLocaleString('pl-PL') + ' znaków'; };
+        ta.oninput = chars;
+        chars();
+        app.querySelector('[data-versions]').innerHTML = s.versions.length ? s.versions.map((v, i) => `<li><span>${i === 0 ? '<b>aktualna</b> · ' : ''}${esc(dmy(v.created_at))}</span><small>${esc(v.author || '—')} · ${Number(v.chars).toLocaleString('pl-PL')} zn.</small></li>`).join('')
+            : '<li><span>Prompt domyślny (z pliku PROMPT_karta_technologiczna_z_reela)</span></li>';
+    }
+
+    app.querySelector('[data-default]').addEventListener('click', () => { ta.value = s.default_prompt; ta.dispatchEvent(new Event('input')); });
+    app.querySelector('[data-save-prompt]').addEventListener('click', (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        send('/ajax/settings/ai/prompt', 'PUT', {prompt: ta.value}).then(() => { at.notify(true, 'Zapisano nową wersję promptu.'); drawPrompt(); })
+            .catch(err => at.notify(false, (err.fields && err.fields.prompt) || err.message)).finally(() => { btn.disabled = false; });
+    });
+    drawKey();
+    drawModels();
+    drawPrompt();
+})();
+</script>
+{% endblock %}

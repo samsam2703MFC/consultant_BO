@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposition 1 — Le parcours en 4 phases</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../formation/fo.css"><link rel="stylesheet" href="fu.css">
+<script src="coque.js"></script></head><body><div class="page" id="p"></div><script>
+/* Proposition 1 : le manuel se lit dans le temps. Une phase = ce qu'on FAIT (points du guide pré-ouverture),
+   ce qu'on APPREND (blocs et formations FO, compétences bloquantes) et ce qu'on APPLIQUE (standards / SOP).
+   La phase se ferme par une « porte » (stage pratique, journée test et examen, attestation). */
+const li = (c, t, r) => `<div class="li"><span class="c">${c}</span><span>${t}</span><span class="r">${r || ''}</span></div>`;
+document.getElementById('p').innerHTML = entete('phases') + `
+<div class="prop"><span class="n">Proposition 1</span><h1>Le parcours en 4 phases</h1><span class="ss">le manuel se lit dans le temps : de J-120 à la formation continue</span></div>
+<div class="lay"><div>
+  <div class="rail">
+    <div class="on"><small>Phase 1 · J-120 → J-1</small><b>Pré-ouverture</b><div class="mini">38 points à faire · blocs 1 → 9 · 32 compétences bloquantes · 25 standards à lire</div></div>
+    <div><small>Phase 2 · J → J+6 semaines</small><b>Ouverture</b><div class="mini">5 points · bloc 10 (garant d'ouverture) · 3 compétences · 25 standards appliqués</div></div>
+    <div><small>Phase 3 · le quotidien</small><b>Opérationnel</b><div class="mini">25 standards · tablette du poste · lu, quiz, vu faire</div></div>
+    <div><small>Phase 4 · chaque année</small><b>Formation continue</b><div class="mini">bloc 11 · 10 formations · renouvellements</div></div>
+  </div>
+  <div class="col3">
+    <div class="carte"><div class="colh"><h3>À faire</h3><span class="mu">38 points · Guide pré-ouverture</span></div>
+      <div class="grp">Démarches administratives et légales · 16</div>
+      ${li('J-90', 'Inscription à la BCE (guichet d’entreprise)', '<span class="pill ok">✓ preuve</span>')}
+      ${li('J-85', 'Numéro de TVA activé', '<span class="pill ok">✓ preuve</span>')}
+      ${li('J-45', 'Enregistrement et autorisation AFSCA', '<span class="pill att">à faire</span>')}
+      <div class="grp">Recruter et former son équipe · 8</div>
+      ${li('J-60', 'Définir l’équipe : postes, profils et horaires', '<span class="pill att">en cours</span>')}
+      ${li('J-20', 'Plan de formation de chaque collaborateur', '<span class="pill">à venir</span>')}
+      <div class="grp">Commandes et stock de départ · 9</div>
+      ${li('J-61', 'Chambre froide : confirmation de commande', '<span class="pill ko">en retard</span>')}
+      ${li('J-5', 'Premier stock de matières premières', '<span class="pill">à venir</span>')}
+      <div class="mini" style="margin-top:8px">Même source que le <b>countdown</b> et l'annexe 1 du Guide pré-ouverture.</div>
+    </div>
+    <div class="carte"><div class="colh"><h3>À apprendre</h3><span class="mu">blocs 1 → 9 · formateurs</span></div>
+      ${li('Bloc 1', 'Le réseau et la franchise <small class="mu">· FO-31, 32, 35</small>', '<span class="pill ok">✓ validé</span>')}
+      ${li('Bloc 2', 'Emplacement et stratégie d’ouverture <small class="mu">· FO-33, 38</small>', '<span class="pill ok">✓ validé</span>')}
+      ${li('Bloc 3', 'Business plan et pilotage financier', '<span class="pill att">1 / 2</span>')}
+      ${li('Bloc 5', 'Recrutement et accueil', '<span class="pill">à faire</span>')}
+      ${li('Bloc 6', 'Hygiène, sécurité, allergènes <small class="mu">· 4 compétences</small>', '<span class="pill">à faire</span>')}
+      ${li('Bloc 7', 'Production technique <small class="mu">· 9 compétences, 5 pôles</small>', '<span class="pill">à faire</span>')}
+      ${li('Bloc 8', 'Vente, caisse, vitrine <small class="mu">· 8 compétences</small>', '<span class="pill">à faire</span>')}
+      ${li('Bloc 9', 'Stage pratique · magasin école', '<span class="pill">à faire</span>')}
+      <div class="mini" style="margin-top:8px">Chaque compétence dit <b>« Réussi si… »</b> et renvoie aux standards qu'elle prouve.</div>
+    </div>
+    <div class="carte"><div class="colh"><h3>À appliquer</h3><span class="mu">standards à lire avant le stage</span></div>
+      ${li('WKL-001', 'Ouverture du magasin et des comptoirs', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      ${li('WKL-002', 'Encodage des commandes clients en caisse', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      ${li('CUI-OUV', 'Ouverture du poste et premières cuissons', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      ${li('CUI-001', 'Cuisson des baguettes et des pains', '<span class="pill att">à valider</span>')}
+      ${li('CUI-ECL', 'Éclairs et choux', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      ${li('VER-002', 'Nettoyage des fours', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      ${li('WKL-004', 'Checklist de fermeture quotidienne', '<span class="lg on">FR</span> <span class="lg on">NL</span>')}
+      <div class="mini" style="margin-top:8px">Lu + quiz sur la tablette ; « vu faire » validé pendant le stage (bloc 9).</div>
+    </div>
+  </div>
+  <div class="porte"><span class="pill">Porte de phase</span><b>Journée test & examen (bloc 10) → attestation de fin de formation</b><span class="sp" style="flex:1"></span><span>l'ouverture attend : 38 points ✓ · blocs 1-9 signés · compétences bloquantes réussies</span></div>
+</div>
+<div class="aside">
+  <div class="carte"><h4>Pour qui</h4><div class="mini">Le <b>candidat franchisé</b> et son consultant : c'est le fil de son dossier, du DIP signé à l'ouverture.</div></div>
+  <div class="carte"><h4>Forces</h4><ul class="plus"><li>Colle au contrat (période de lancement art. 4.5) et au countdown.</li><li>Chaque phase a une porte claire : on sait ce qui bloque l'ouverture.</li><li>Le Guide pré-ouverture et le Guide des formations deviennent DEUX vues d'une même page.</li></ul></div>
+  <div class="carte"><h4>Limites</h4><ul class="moins"><li>Après l'ouverture, 25 SOP dans une seule colonne « Opérationnel » : peu lisible pour l'équipe.</li><li>Un standard utilisé dans plusieurs phases apparaît plusieurs fois.</li></ul></div>
+</div></div>`;
+</script></body></html>

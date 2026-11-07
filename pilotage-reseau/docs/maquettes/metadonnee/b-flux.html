@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — MétaDonnée · le flux des leads</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="md.css">
+<script src="coque.js"></script>
+</head><body><script>
+/* B — Un écran de travail : chaque lead est une ligne de bout en bout (Meta → ERP → SMS → franchisé),
+   le lead choisi se lit à droite — son fil, ce que Meta a donné et ce que l'ERP a reçu. Les réglages
+   (formulaires, mapping, SMS, cycle) vivent dans les deux autres entrées du sous-menu. */
+const kpis = `<div class="kpis">
+  <div class="kpi"><div class="k">Leads · 30 j</div><div class="v">108</div><div class="s">61 Facebook · 47 Instagram</div></div>
+  <div class="kpi"><div class="k">Dans l’ERP</div><div class="v ok">105</div><div class="s">2 à attribuer · 1 rejeté</div></div>
+  <div class="kpi"><div class="k">Vus en moins de 2 h</div><div class="v">87 %</div><div class="s">par le franchisé, après le SMS</div></div>
+  <div class="kpi"><div class="k">1er contact</div><div class="v">42 min</div><div class="s">médiane, de l’arrivée à l’appel</div></div>
+  <div class="kpi"><div class="k">Bureaux connectés</div><div class="v ok">14</div><div class="s">13 % · compte webshop, 1re commande</div></div>
+  <div class="kpi"><div class="k">En retard</div><div class="v ko">3</div><div class="s">Sombreffe 2 · Corbais 1</div></div>
+</div>`;
+
+const filtres = `<div class="filtres">
+  <span class="on">Tous <em>108</em></span><span>Pas vus <em>4</em></span><span>En retard <em>3</em></span><span>À attribuer <em>2</em></span><span>Rejetés par l’ERP <em>1</em></span><span>Contactés <em>61</em></span><span>Bureaux connectés <em>14</em></span><span>Perdus <em>9</em></span>
+  <span style="margin-left:auto">Formulaire ▾</span><span>Magasin ▾</span></div>`;
+
+// h, entreprise, contact, plateforme, formulaire, magasin, erp, sms, franchisé, depuis, suite, options
+const ligne = (h, ent, cont, p, form, mag, erp, sms, fr, dep, su, on) => `<tr${on ? ' class="on"' : ''}>
+  <td style="width:44px;font-weight:600;color:var(--color-text-muted)">${h}</td>
+  <td style="min-width:0"><div style="display:flex;gap:8px;align-items:center">${pf([p])}<div style="min-width:0"><b style="font-size:12.5px">${ent}</b><small>${cont}</small></div></div></td>
+  <td style="width:96px"><b style="font-size:12px">${mag[0]}</b><small>${mag[1] || form}</small></td>
+  <td style="width:96px">${erp ? pill(erp[0], erp[1], 92, erp[2]) : vide(92)}</td>
+  <td style="width:88px">${sms ? pill(sms[0], sms[1], 84, sms[2]) : vide(84)}</td>
+  <td style="width:112px">${fr ? pill(fr[0], fr[1], 108) : vide(108)}<small style="text-align:center">${dep}</small></td>
+  <td style="width:112px">${suite(su)}</td></tr>`;
+const g = t => `<tr class="gp"><td colspan="7">${t}</td></tr>`;
+const flux = `<div class="carte"><h3>Les leads<small>du plus récent au plus ancien</small></h3>
+<table class="mat"><thead><tr><th>Reçu</th><th>Lead</th><th>Magasin</th><th>ERP</th><th>SMS</th><th>Franchisé</th><th>Suite</th></tr></thead><tbody>
+${g('Aujourd’hui · mardi 28/10')}
+${ligne('10:24', 'Fiduciaire Delvaux &amp; associés', 'Claire Mertens · 35 pers. · lunch tous les jours', 'ig', 'Lunch au bureau', ['Gosselies', 'formulaire'], ['ok', 'L-20488'], ['ok', '✓ 10:25'], ['bl', 'pas vu'], 'depuis 4 min', 'fffc..', true)}
+${ligne('09:51', 'Clinique vétérinaire du Centre', 'Marc Dubois · 12 pers. · plateaux réunion', 'fb', '', ['Halle', 'CP 1500'], ['ok', 'L-20487'], ['ok', '✓ 09:52'], ['abr', 'vu · à rappeler'], 'vu à 10:05', 'ffffc.', false)}
+${ligne('09:12', 'Atelier 9 architectes', 'Sophie Lenoir · 18 pers. · petit-déjeuner', 'ig', '', ['Corbais', 'CP 1435'], ['ok', 'L-20486'], ['ok', '✓ 09:13'], ['ok', 'contacté'], 'en 36 min', 'fffffc', false)}
+${ligne('08:47', 'Étude notariale Coppens', 'Lise Coppens · 15 pers. · plateaux réunion', 'fb', '', ['Halle', 'CP 1500'], ['ok', 'L-20484'], ['ok', '✓ 08:48'], ['ok', 'essai jeudi'], 'en 1 h 02', 'fffffc', false)}
+${g('Hier · lundi 27/10')}
+${ligne('16:40', 'Assurances Hainaut Conseil', 'Tom Wauters · 60 pers. · lunch tous les jours', 'fb', '', ['Gosselies', 'formulaire'], ['ok', 'L-20479'], ['ok', '✓ 16:41'], ['vert', 'bureau connecté'], '1re commande 08:12', 'ffffff', false)}
+${ligne('14:02', 'Cabinet dentaire de Ligny', 'Nathalie Gérard · 8 pers. · petit-déjeuner', 'fb', '', ['Sombreffe', 'formulaire'], ['ok', 'L-20476'], ['att', 'relancé 2×', 'SMS 14:03, relances 16:03 et 08:00 · e-mail à Youssef B. à 14:02'], ['plein', 'pas vu · 20 h'], 'Youssef B. prévenu', 'fffr..', false)}
+${ligne('11:30', 'Résidence Les Tilleuls', 'Paul Henrard · 25 pers. · lunch tous les jours', 'ig', '', ['—', 'CP 1360 · hors zone'], ['att', 'à attribuer', 'Aucun magasin ne couvre 1360 Perwez'], null, null, '', 'fc....', false)}
+${ligne('10:05', 'K. Janssens', 'e-mail seul · 1 pers. · autre', 'fb', '', ['Halle', 'formulaire'], ['ko', 'rejeté · 422', 'contact.phone requis'], null, null, 'à corriger', 'fr....', false)}
+${ligne('09:30', 'Garage Ribeiro', 'Ana Ribeiro · 9 pers. · plateaux réunion', 'ig', '', ['Corbais', 'CP 1340'], ['ok', 'L-20468'], ['ok', '✓ 09:31'], ['plein', 'pas rappelé · 25 h'], 'vu à 09:50', 'ffffr.', false)}
+${g('Dimanche 26/10')}
+${ligne('19:12', 'Imprimerie Vandevelde', 'Bart Vandevelde · 22 pers. · lunch tous les jours', 'fb', '', ['Halle', 'formulaire'], ['ok', 'L-20461'], ['ok', '✓ lun. 08:00', 'Arrivé hors des heures : SMS envoyé à 8:00'], ['ok', 'bureau créé'], 'tournée Halle-Est', 'fffffc', false)}
+</tbody></table>
+<div class="mini" style="margin-top:10px;text-align:center">98 leads de plus sur 30 jours · <span class="lien">Afficher plus</span></div></div>`;
+
+const detail = `<div class="carte"><h3>Fiduciaire Delvaux &amp; associés<span class="d">${pill('bl', 'pas vu', 72)}</span></h3>
+<div class="mini" style="margin:-6px 0 12px">Claire Mertens · Office manager · 0476 12 34 56 · c.mertens@fiduciaire-delvaux.be · 6041 Gosselies</div>
+<div class="fil">
+  <div class="e"><div class="h"><span>10:24</span><b>Reçu de Meta</b></div><small>${pf(['ig'])} « Lunch au bureau — Gosselies » · campagne Lunch Charleroi oct.</small></div>
+  <div class="e"><div class="h"><span>10:24</span><b>Dans l’ERP de Gosselies</b></div><small>201 · lead L-20488 « nouveau »</small></div>
+  <div class="e"><div class="h"><span>10:25</span><b>SMS à la gérante</b></div><small>Aurélie M. · 0476 •• •• 12 · délivré (SMSAPI)</small></div>
+  <div class="e c"><div class="h"><span>10:28</span><b>Pas encore ouvert dans l’ERP</b></div><small>prochaine relecture 10:30</small></div>
+  <div class="e a"><div class="h"><span>12:24</span><b>Relance SMS si toujours pas vu</b></div></div>
+  <div class="e a" style="padding-bottom:0"><div class="h"><span>mer.</span><b>E-mail à Sam V. si pas contacté en 24 h</b></div></div>
+</div>
+<div class="lab" style="margin-top:14px">Meta → ERP</div>
+<div class="kv">
+  <span class="m">full_name · Claire Mertens</span><span class="a">→</span><span class="e"><code>contact</code> Claire / Mertens</span>
+  <span class="m">phone · +32 476 12 34 56</span><span class="a">→</span><span class="e"><code>contact.phone</code> +32476123456</span>
+  <span class="m">company · Fiduciaire Delvaux…</span><span class="a">→</span><span class="e"><code>company.name</code> ✓</span>
+  <span class="m">zip · 6041</span><span class="a">→</span><span class="e"><code>shop_id</code> Gosselies</span>
+  <span class="m">personnes · 35</span><span class="a">→</span><span class="e"><code>lead.headcount</code> 35</span>
+  <span class="m">souhait · Un lunch tous les jours</span><span class="a">→</span><span class="e"><code>lead.need</code> daily_lunch</span>
+  <span class="m">pour quand · Dès le 4 novembre</span><span class="a">→</span><span class="e"><code>lead.wanted_date</code> 04/11</span>
+  <span class="m">un mot · Nous avons 3 végétariens</span><span class="a">→</span><span class="e"><code>lead.note</code> ✓</span>
+</div>
+<div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap"><span class="btn s xs">💬 Relancer par SMS</span><span class="btn s xs">↻ Renvoyer à l’ERP</span><span class="btn xs">Ouvrir dans l’ERP ↗</span></div>
+</div>`;
+
+const cycle = `<div class="carte"><h3>Le cycle<small>toutes les 10 min · 10:20</small><span class="d lien">↻ Maintenant</span></h3>
+  <div class="journal"><span class="d">10:24</span>${pill('bl', 'webhook', 76)}<span class="t">1 lead · ERP 201 · SMS délivré</span></div>
+  <div class="journal"><span class="d">10:20</span>${pill('gr', 'relecture', 76)}<span class="t">23 leads ouverts · <b>2 changés</b> : Atelier 9 contacté, Clinique vu</span></div>
+  <div class="journal"><span class="d">10:10</span>${pill('gr', 'relecture', 76)}<span class="t">23 leads ouverts · rien de changé</span></div>
+  <div class="journal"><span class="d">10:00</span>${pill('gr', 'rattrapage', 76)}<span class="t">Meta, 3 jours, 5 formulaires · aucun lead manqué</span></div>
+  <div class="journal"><span class="d">08:00</span>${pill('att', 'relance', 76)}<span class="t">SMS · Cabinet dentaire de Ligny → Sombreffe (2e)</span></div>
+  <div class="journal"><span class="d">08:00</span>${pill('bl', 'SMS', 76)}<span class="t">Imprimerie Vandevelde → Halle (arrivé dimanche soir)</span></div>
+</div>`;
+
+coque(`<div class="titre"><h1>Leads Meta</h1><span class="ss">30 derniers jours · tous les magasins · 4 formulaires suivis</span></div>
+${kpis}${filtres}
+<div class="grille" style="grid-template-columns:minmax(0,1fr) 420px">${flux}<div class="grille">${detail}${cycle}</div></div>`,
+{ lettre: 'B — le flux des leads', enfants: [['Leads', true, 3], ['Formulaires et mapping', false, 1], ['SMS et cycle']],
+  boutons: ['⬇ Exporter', '↻ Relire Meta et l’ERP'] });
+</script></body></html>

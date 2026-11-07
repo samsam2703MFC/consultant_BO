@@ -1,0 +1,24 @@
+{# Logistyka i pakowanie : wspólny nagłówek ekranów (dzień wysyłki, przejście między ekranami, pełny ekran) ; pakowanie = tablet /tablet/packing. #}
+{% set boards = [
+    ['live', '/logistics/live', 'bi-grid-3x3-gap', 'Ekran paletyzacji'],
+    ['loading', '/logistics/loading', 'bi-truck', 'Załadunek ciężarówki'],
+] %}
+<div class="lg-top">
+    <nav class="lg-tabs" aria-label="Logistyka i pakowanie">
+        {% for b in boards %}
+            <a href="{{ root }}{{ b[1] }}?date={{ date }}" class="lg-tab {{ b[0] == board ? 'is-on' : '' }}" {{ b[0] == board ? 'aria-current="page"' : '' }}><i class="bi {{ b[2] }}"></i> {{ b[3] }}</a>
+        {% endfor %}
+    </nav>
+    <form method="get" action="{{ root }}/logistics/{{ board }}" class="lg-day">
+        <label for="lgDate" class="visually-hidden">Dzień wysyłki</label>
+        <select id="lgDate" name="date" class="form-select" onchange="this.form.submit()">
+            {% set found = false %}
+            {% for d in dates %}
+                {% if d.ship_date == date %}{% set found = true %}{% endif %}
+                <option value="{{ d.ship_date }}" {{ d.ship_date == date ? 'selected' : '' }}>{{ d.ship_date|day_pl }} · {{ d.customers|plural_pl('klient', 'klientów', 'klientów') }}</option>
+            {% endfor %}
+            {% if not found %}<option value="{{ date }}" selected>{{ date|day_pl }} · brak zamówień</option>{% endif %}
+        </select>
+        <button type="button" class="btn btn-outline-primary lg-full" data-fullscreen title="Pełny ekran (tablet)"><i class="bi bi-arrows-fullscreen"></i><span class="visually-hidden">Pełny ekran</span></button>
+    </form>
+</div>

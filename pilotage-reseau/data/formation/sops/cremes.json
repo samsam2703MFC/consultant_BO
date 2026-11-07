@@ -1,0 +1,480 @@
+{
+  "id": "cremes",
+  "code": "SOP-CUI-CRE-01",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.1",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "production",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Crème fraîche et crème pâtissière",
+    "nl": "Crème fraîche en banketbakkersroom"
+  },
+  "objectif": {
+    "fr": "Préparer la crème fraîche et la crème pâtissière, contrôler leur texture et respecter leur conservation (jour de production + 1 maximum).",
+    "nl": "Crème fraîche (opgeklopte room met suiker) en banketbakkersroom bereiden, hun textuur controleren en de bewaring respecteren (productiedag + 1 maximum)."
+  },
+  "pour": {
+    "fr": "Le cuiseur (poste préparations).",
+    "nl": "De afbakker (post bereidingen)."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Crème fraîche — rendement",
+        "nl": "Crème fraîche — opbrengst"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "1 tarte",
+            "nl": "1 taart"
+          },
+          "texte": {
+            "fr": "1 tarte — 500 g de crème entière — 250 g de sucre — conservation : jour de production + 1 maximum.",
+            "nl": "1 taart — 500 g volle room — 250 g suiker — bewaring: productiedag + 1 maximum."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème fraîche — marche à suivre · Contrôler la tenue",
+        "nl": "Crème fraîche — werkwijze · De stevigheid controleren"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Préparer le batteur",
+            "nl": "De mixer klaarmaken"
+          },
+          "texte": {
+            "fr": "Monter le fouet. Verser ensemble 500 g de crème entière et 250 g de sucre dans la cuve.",
+            "nl": "De garde op de mixer zetten. 500 g volle room en 250 g suiker samen in de kuip gieten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Battre à la vitesse 3",
+            "nl": "Kloppen op snelheid 3"
+          },
+          "texte": {
+            "fr": "Lancer le batteur pendant 4 minutes à la vitesse 3.",
+            "nl": "De mixer 4 minuten laten draaien op snelheid 3."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.3",
+          "titre": {
+            "fr": "Contrôler la texture",
+            "nl": "De textuur controleren"
+          },
+          "texte": {
+            "fr": "Lever le fouet : la crème doit tenir au fouet et ne pas retomber ou couler du récipient.",
+            "nl": "De garde optillen: de room moet aan de garde blijven hangen en mag niet terugvallen of uit de kom lopen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.4",
+          "titre": {
+            "fr": "Corriger une seule fois si nécessaire",
+            "nl": "Indien nodig één keer bijsturen"
+          },
+          "texte": {
+            "fr": "Si la crème ne tient pas, ajouter 1 minute à la vitesse 5. Ne pas répéter. Si elle reste insuffisamment ferme, arrêter et demander un avis.",
+            "nl": "Als de room niet stevig is, 1 minuut bijzetten op snelheid 5. Niet herhalen. Blijft ze onvoldoende stevig, dan stoppen en advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.5",
+          "titre": {
+            "fr": "Utiliser ou conserver",
+            "nl": "Gebruiken of bewaren"
+          },
+          "texte": {
+            "fr": "Préparer le jour de l’utilisation. Si elle n’est pas utilisée immédiatement, transférer dans un cul-de-poule, filmer sans contact, dater et ranger au frigo avec la crème liquide. Utiliser au plus tard à J+1.",
+            "nl": "Bereiden op de dag van gebruik. Als ze niet meteen gebruikt wordt, overbrengen in een mengkom, afdekken met folie zonder dat die de room raakt, dateren en in de frigo bij de vloeibare room zetten. Uiterlijk op D+1 gebruiken."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème fraîche — contrôle rapide",
+        "nl": "Crème fraîche — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "500 g de crème entière et 250 g de sucre battus avec le fouet.",
+            "nl": "500 g volle room en 250 g suiker opgeklopt met de garde."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "4 minutes à vitesse 3 ; tenue contrôlée au fouet.",
+            "nl": "4 minuten op snelheid 3; stevigheid gecontroleerd met de garde."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Si nécessaire : +1 minute à vitesse 5, une seule fois.",
+            "nl": "Indien nodig: +1 minuut op snelheid 5, slechts één keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Crème préparée le jour même ; cul-de-poule filmé sans contact, daté et rangé avec la crème liquide.",
+            "nl": "Room dezelfde dag bereid; mengkom afgedekt met folie zonder contact, gedateerd en bij de vloeibare room gezet."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème fraîche — validation autonome",
+        "nl": "Crème fraîche — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 réalisations conformes. Date : ________ · Initiales : ______",
+            "nl": "2 conforme uitvoeringen. Datum: ________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème pâtissière — lot et réglages",
+        "nl": "Banketbakkersroom — batch en instellingen"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": "Lot et réglages",
+            "nl": "Batch en instellingen"
+          },
+          "texte": {
+            "fr": "Lot : 2 poches congelées — Thermomix : 90 °C · 50 min · vitesse 1,5 — Bain-marie : source de chaleur 120 °C — Conservation : jour de production + 1 maximum.",
+            "nl": "Batch: 2 diepgevroren zakken — Thermomix: 90 °C · 50 min · snelheid 1,5 — Bain-marie: warmtebron 120 °C — Bewaring: productiedag + 1 maximum."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème pâtissière — marche à suivre · Chauffer puis refroidir",
+        "nl": "Banketbakkersroom — werkwijze · Verwarmen en daarna afkoelen"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": "Découper et charger",
+            "nl": "Versnijden en in de Thermomix doen"
+          },
+          "texte": {
+            "fr": "Prendre systématiquement 2 poches encore congelées. Découper la crème en cubes et les placer dans le Thermomix.",
+            "nl": "Altijd 2 zakken nemen die nog bevroren zijn. De room in blokjes snijden en in de Thermomix doen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": "Lancer le Thermomix",
+            "nl": "De Thermomix starten"
+          },
+          "texte": {
+            "fr": "Régler 90 °C, 50 minutes, vitesse 1,5.",
+            "nl": "Instellen op 90 °C, 50 minuten, snelheid 1,5."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": "Terminer au bain-marie",
+            "nl": "Afwerken in de bain-marie"
+          },
+          "texte": {
+            "fr": "Transférer dans un cul-de-poule. Placer au bain-marie, régler la source de chaleur à 120 °C et mélanger au fouet.",
+            "nl": "Overbrengen in een mengkom. In de bain-marie zetten, de warmtebron op 120 °C zetten en roeren met de garde."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {
+            "fr": "Contrôler et retirer",
+            "nl": "Controleren en uithalen"
+          },
+          "texte": {
+            "fr": "Lever le fouet : la crème doit retomber en blocs, sans couler en continu. Dès que cette texture est atteinte, retirer immédiatement du bain-marie.",
+            "nl": "De garde optillen: de room moet in blokken terugvallen, zonder continu te vloeien. Zodra die textuur bereikt is, meteen uit de bain-marie halen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.5",
+          "titre": {
+            "fr": "Étaler, filmer et dater",
+            "nl": "Uitspreiden, afdekken en dateren"
+          },
+          "texte": {
+            "fr": "Étaler la crème dans un grand gastro plat. Filmer au contact et dater.",
+            "nl": "De room uitspreiden in een grote, platte gastronormbak. Afdekken met folie rechtstreeks op de room en dateren."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.6",
+          "titre": {
+            "fr": "Refroidir et ranger",
+            "nl": "Afkoelen en opbergen"
+          },
+          "texte": {
+            "fr": "Placer obligatoirement 30 minutes au congélateur. Transférer ensuite dans le bas du frigo à côté du four. Utiliser au plus tard à J+1.",
+            "nl": "Verplicht 30 minuten in de diepvries zetten. Daarna onderaan in de frigo naast de oven zetten. Uiterlijk op D+1 gebruiken."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème pâtissière — contrôle rapide",
+        "nl": "Banketbakkersroom — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "2 poches congelées découpées en cubes.",
+            "nl": "2 diepgevroren zakken in blokjes gesneden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Thermomix : 90 °C · 50 minutes · vitesse 1,5 ; source de chaleur du bain-marie : 120 °C.",
+            "nl": "Thermomix: 90 °C · 50 minuten · snelheid 1,5; warmtebron van de bain-marie: 120 °C."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Texture en blocs, sans écoulement continu ; retrait immédiat du bain-marie.",
+            "nl": "Textuur in blokken, zonder continu te vloeien; meteen uit de bain-marie gehaald."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Gastro filmé au contact et daté ; 30 minutes au congélateur puis bas du frigo à côté du four.",
+            "nl": "Gastronormbak met folie op de room afgedekt en gedateerd; 30 minuten in de diepvries en daarna onderaan in de frigo naast de oven."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Crème pâtissière — validation autonome",
+        "nl": "Banketbakkersroom — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "8.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "3 réalisations conformes. Date : ________ · Initiales : ______",
+            "nl": "3 conforme uitvoeringen. Datum: ________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Conservation des deux crèmes : jour de production + 1 maximum (J+1) ; toujours filmer et dater.",
+      "nl": "Bewaring van beide roomsoorten: productiedag + 1 maximum (D+1); altijd afdekken met folie en dateren."
+    },
+    {
+      "fr": "Crème fraîche : 4 minutes à vitesse 3 ; une seule correction de +1 minute à vitesse 5, sinon arrêter et demander un avis.",
+      "nl": "Crème fraîche: 4 minuten op snelheid 3; slechts één bijsturing van +1 minuut op snelheid 5, anders stoppen en advies vragen."
+    },
+    {
+      "fr": "Crème pâtissière : Thermomix 90 °C · 50 min · vitesse 1,5 ; bain-marie 120 °C ; retirer immédiatement dès la texture en blocs.",
+      "nl": "Banketbakkersroom: Thermomix 90 °C · 50 min · snelheid 1,5; bain-marie 120 °C; meteen uithalen zodra de textuur in blokken is."
+    },
+    {
+      "fr": "Crème pâtissière : 30 minutes obligatoires au congélateur avant le bas du frigo à côté du four.",
+      "nl": "Banketbakkersroom: verplicht 30 minuten in de diepvries vóór ze onderaan in de frigo naast de oven gaat."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Combien de temps et à quelle vitesse battre la crème fraîche ?",
+        "nl": "Hoe lang en op welke snelheid klop je de crème fraîche?"
+      },
+      "choix": {
+        "fr": [
+          "4 minutes à vitesse 3",
+          "1 minute à vitesse 5",
+          "50 minutes à vitesse 1,5"
+        ],
+        "nl": [
+          "4 minuten op snelheid 3",
+          "1 minuut op snelheid 5",
+          "50 minuten op snelheid 1,5"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Que faire de la crème pâtissière une fois étalée, filmée et datée ?",
+        "nl": "Wat doe je met de banketbakkersroom nadat ze uitgespreid, afgedekt en gedateerd is?"
+      },
+      "choix": {
+        "fr": [
+          "La ranger directement au frigo",
+          "La placer obligatoirement 30 minutes au congélateur, puis dans le bas du frigo à côté du four",
+          "La laisser refroidir sur le plan de travail"
+        ],
+        "nl": [
+          "Ze meteen in de frigo zetten",
+          "Ze verplicht 30 minuten in de diepvries zetten en daarna onderaan in de frigo naast de oven",
+          "Ze op het werkblad laten afkoelen"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Jusqu’à quand peut-on utiliser ces crèmes ?",
+        "nl": "Tot wanneer mag je deze roomsoorten gebruiken?"
+      },
+      "choix": {
+        "fr": [
+          "Le jour même uniquement",
+          "Au plus tard à J+1",
+          "Jusqu’à J+3"
+        ],
+        "nl": [
+          "Enkel dezelfde dag",
+          "Uiterlijk op D+1",
+          "Tot D+3"
+        ]
+      },
+      "bonne": 1
+    }
+  ],
+  "corrections": [
+    "Aucune correction de contenu. Le document n’a pas de bloc « Objectif » : l’objectif est reformulé à partir des titres et des tableaux de rendement."
+  ],
+  "remarques": [
+    "Traduction : « crème fraîche » est gardée comme nom de produit ; il s’agit de crème entière battue avec du sucre (précisé dans l’objectif NL pour éviter la confusion avec la crème fraîche aigre).",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1_rGcomHi0fMyTTM_gn875ehBuHOIplTN",
+      "docx": "1tfIjEbQbVxo5KMhCOjX2JR7nId4e0ITp"
+    },
+    "lu": "docx"
+  }
+}

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C · Checklist par section</title>
+<!-- Maquette C (07/11/2026) — inspirée des checklists de terrain (SafetyCulture, Poka) : la SOP se lit comme une liste
+     à cocher, section par section (onglets en haut). Les étapes faites sont cochées et repliées, l'étape en cours est
+     OUVERTE dans la liste (photo, consigne, point critique) avec son propre bouton « C'est fait » ; on voit toujours ce
+     qui vient avant et après. En paysage : la même liste, l'étape ouverte en deux colonnes. -->
+<link rel="stylesheet" href="/public/formation/ds.css"><link rel="stylesheet" href="commun.css">
+<style>
+.c-onglets{flex:0 0 auto;display:flex;gap:8px;overflow-x:auto;padding:12px 16px;background:#fff;border-bottom:1px solid var(--line);scrollbar-width:none}
+.c-onglets button{flex:0 0 auto;min-height:52px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);font-size:15px;padding:6px 14px;text-align:left;display:flex;flex-direction:column;justify-content:center}
+.c-onglets button small{font-size:12px;color:var(--muted)}
+.c-onglets button.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.c-onglets button.on small{color:rgba(255,255,255,.8)}
+.c-onglets button.f small{color:var(--green)}
+.c-liste{position:relative;flex:1;min-height:0;overflow:auto;padding:12px 16px 24px}
+.c-in{max-width:1100px;margin:0 auto;display:grid;gap:8px}
+.c-r{display:flex;align-items:center;gap:14px;min-height:68px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 14px;font-size:19px;color:var(--ink);text-align:left;width:100%}
+.c-r .o{width:44px;height:44px;flex:0 0 auto;border-radius:50%;border:2px solid var(--line);display:inline-flex;align-items:center;justify-content:center;color:#fff}
+.c-r.f{color:var(--muted);background:transparent}
+.c-r.f .o{background:var(--green);border-color:var(--green)}
+.c-r .n{color:var(--muted);min-width:36px}
+.c-r .x{margin-left:auto;font-size:12px;color:var(--danger);letter-spacing:.06em;text-transform:uppercase}
+.c-ouv{background:#fff;border:2px solid var(--accent);border-radius:12px;overflow:hidden}
+.c-ouv .c-r{border:none;border-radius:0;background:#F6EDEE;color:var(--accent)}
+.c-ouv .c-r .o{border-color:var(--accent);background:#fff;color:var(--accent);font-size:15px}
+.c-ouv .c-r .n{color:var(--accent)}
+.c-det{padding:16px 18px 18px;display:grid;gap:16px}
+.c-photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px}
+.c-photos .ph{max-height:30vh;width:100%}
+.li{margin:0;padding:0;list-style:none}
+.li li{position:relative;padding:8px 0 8px 32px;font-size:21px;line-height:1.35}
+.li li::before{content:'';position:absolute;left:6px;top:18px;width:12px;height:12px;border-radius:3px;background:var(--ink)}
+.crit .li li::before{background:var(--danger)}
+.c-fait{height:64px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:20px;display:flex;align-items:center;justify-content:center;gap:10px}
+.c-pied{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:12px 16px;background:#fff;border-top:1px solid var(--line)}
+.c-pied .av{flex:1;min-width:0}
+.c-pied .av div{height:8px;border-radius:4px;background:var(--chip);overflow:hidden}
+.c-pied .av div i{display:block;height:100%;background:var(--green)}
+.c-pied .av small{display:block;margin-top:6px;color:var(--muted);font-size:14px}
+@media (orientation:landscape) and (min-width:1000px){
+  .c-det{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}
+  .c-photos{grid-row:span 2}
+  .c-photos .ph{max-height:none}
+}
+</style></head>
+<body><div id="ec" class="ec"></div>
+<script src="donnees.js"></script><script src="commun.js"></script>
+<script>
+const { D, E, S, esc, ICO, entete, lignes, aide, brancher } = M;
+function rendre() {
+  const e = E[S.i], sec = D.sections[e.si];
+  const debut = E.findIndex(x => x.si === e.si), faitesSec = S.i - debut;
+  const onglets = [`<button class="f"><span>Avant de commencer</span><small>✓ lu</small></button>`]
+    .concat(D.sections.map((s, j) => { const d0 = E.findIndex(x => x.si === j), n = s.etapes.length, f = Math.max(0, Math.min(n, S.i - d0));
+      return `<button class="${j === e.si ? 'on' : f === n ? 'f' : ''}" data-i="${d0}"><span>${j + 1} · ${esc(s.titre.split(' ').slice(0, 4).join(' '))}…</span><small>${f} / ${n} faites</small></button>`; }))
+    .concat([`<button><span>Contrôle final</span><small>${D.controle.length} points</small></button>`]).join('');
+  const rangs = sec.etapes.map((x, j) => {
+    const k = debut + j;
+    if (k === S.i) {
+      return `<div class="c-ouv"><div class="c-r"><span class="o">${esc(x.n)}</span><span>${esc(x.t)}</span>${x.crit ? '<span class="x">critique</span>' : ''}</div>
+        <div class="c-det">${x.photos.length ? `<div class="c-photos">${x.photos.map(p => `<img class="ph" src="img/${p}" alt="">`).join('')}</div>` : ''}
+          <div>${lignes(x)}</div><button class="c-fait" data-a="suiv">${ICO.check} C’est fait</button></div></div>`;
+    }
+    return `<button class="c-r ${k < S.i ? 'f' : ''}" data-i="${k}"><span class="o">${k < S.i ? ICO.check : ''}</span><span class="n">${esc(x.n)}</span><span>${esc(x.t)}</span>${x.crit && k > S.i ? '<span class="x">critique</span>' : ''}</button>`;
+  }).join('');
+  document.getElementById('ec').innerHTML = entete() + `
+    <nav class="c-onglets">${onglets}</nav>
+    <main class="c-liste"><div class="c-in">${rangs}</div></main>
+    <footer class="c-pied"><button class="bt" data-a="prec" ${S.i === 0 ? 'disabled' : ''}>${ICO.gauche}Précédente</button>
+      <div class="av"><div><i style="width:${Math.round(S.i / E.length * 100)}%"></i></div><small>${faitesSec} / ${sec.etapes.length} dans cette section · ${S.i} / ${E.length} en tout</small></div>
+      <button class="bt">Section suivante${ICO.droite}</button></footer>${S.aide ? aide() : ''}`;
+  // L'étape ouverte vient en haut de la liste, une étape faite visible au-dessus (sans faire défiler la page).
+  const l = document.querySelector('.c-liste'), o = l.querySelector('.c-ouv');
+  if (o) { l.scrollTop = Math.max(0, o.offsetTop - 84); }
+}
+brancher(rendre);
+</script></body></html>

@@ -1,0 +1,311 @@
+{
+  "id": "t-froides",
+  "code": "SOP-CUI-FRO-01",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "production",
+  "moment": "ouverture",
+  "duree": null,
+  "titre": {
+    "fr": "Tartes froides",
+    "nl": "Koude taarten"
+  },
+  "objectif": {
+    "fr": "Décongeler, décorer et présenter chaque tarte froide selon son repère, avec une finition propre et conforme.",
+    "nl": "Elke koude taart ontdooien, decoreren en presenteren volgens haar richtpunt, met een nette en correcte afwerking."
+  },
+  "pour": {
+    "fr": "Le cuiseur chargé de la production du matin.",
+    "nl": "De afbakker die instaat voor de ochtendproductie."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Informations clés", "nl": "Belangrijke informatie"},
+      "etapes": [
+        {
+          "numero": "0.1",
+          "titre": {"fr": "Quand commencer", "nl": "Wanneer beginnen"},
+          "texte": {
+            "fr": "Après lecture de la liste de production et vérification des produits déjà disponibles.",
+            "nl": "Na het lezen van de productielijst en het nakijken van de producten die al beschikbaar zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.2",
+          "titre": {"fr": "Emplacements", "nl": "Plaatsen"},
+          "texte": {
+            "fr": "Chariot à l’arrière pour le dégel ; réfrigérateur à côté du four ou frigos comptoirs après finition.",
+            "nl": "Rekwagen achteraan om te ontdooien; frigo naast de oven of toogkoelingen na de afwerking."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Sortir et décongeler les tartes froides — marche à suivre (respecter cet ordre)",
+        "nl": "De koude taarten uithalen en ontdooien — werkwijze (volg deze volgorde)"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {"fr": "Suivre la liste de production", "nl": "De productielijst volgen"},
+          "texte": {
+            "fr": "Vérifier les produits déjà disponibles. Sortir du congélateur uniquement les tartes froides prévues sur la liste.",
+            "nl": "De producten nakijken die al beschikbaar zijn. Alleen de koude taarten die op de lijst staan uit de diepvries halen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {"fr": "Placer sur le chariot à l’arrière", "nl": "Op de rekwagen achteraan zetten"},
+          "texte": {
+            "fr": "Regrouper les produits sortis du congélateur sur un chariot à l’arrière pendant le dégel.",
+            "nl": "De producten die uit de diepvries komen samen op een rekwagen achteraan zetten tijdens het ontdooien."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {"fr": "Respecter le repère du produit", "nl": "Het richtpunt van het product volgen"},
+          "texte": {
+            "fr": "Utiliser le temps et le contrôle indiqués dans le tableau.",
+            "nl": "De tijd en de controle uit de tabel gebruiken."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.1",
+          "titre": {"fr": "Repères de dégel et contrôle", "nl": "Ontdooitijden en controle"},
+          "texte": {
+            "fr": "Fromage spéculoos : ± 1 h 30 ; toucher le centre : il ne doit plus être dur.\nDuo chocolat : ± 1 h 30 ; toucher le bord : il ne doit plus être dur.\nFramboise passion : ± 1 h 30 ; toucher le bord : il ne doit plus être dur.\nCitron meringue : ± 1 h 30 ; après ce délai, le produit est considéré comme décongelé.\nMerveilleux : ± 30 min ; après ce délai, aucun contrôle tactile supplémentaire.",
+            "nl": "Fromage spéculoos: ± 1 u 30; het midden aanraken: het mag niet meer hard zijn.\nDuo chocolat: ± 1 u 30; de rand aanraken: die mag niet meer hard zijn.\nFramboise passion: ± 1 u 30; de rand aanraken: die mag niet meer hard zijn.\nCitron meringue: ± 1 u 30; na die tijd wordt het product als ontdooid beschouwd.\nMerveilleux: ± 30 min; na die tijd geen bijkomende controle door aanraken."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {"fr": "En cas de doute", "nl": "Bij twijfel"},
+          "texte": {
+            "fr": "Si un produit paraît encore trop dur ou si sa qualité paraît douteuse, le mettre de côté et demander un avis avant de le finir ou de le présenter.",
+            "nl": "Als een product nog te hard lijkt of als de kwaliteit twijfelachtig lijkt, het apart zetten en advies vragen voordat je het afwerkt of in de winkel legt."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Décorer chaque tarte froide — appliquer la finition exacte du produit",
+        "nl": "Elke koude taart decoreren — de exacte afwerking van het product toepassen"
+      },
+      "etapes": [
+        {
+          "numero": "4",
+          "titre": {"fr": "Identifier le produit et son format", "nl": "Het product en het formaat herkennen"},
+          "texte": {
+            "fr": "Vérifier le nom du produit et, lorsque nécessaire, distinguer le petit format du grand.",
+            "nl": "De naam van het product nakijken en, indien nodig, het kleine formaat van het grote onderscheiden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4.1",
+          "titre": {"fr": "Finition à réaliser par produit", "nl": "Afwerking per product"},
+          "texte": {
+            "fr": "Duo chocolat petit : aligner 2 spirelli au chocolat au lait au centre.\nDuo chocolat grand : aligner 3 spirelli au chocolat au lait au centre.\nFramboise passion petit : aligner 2 spirelli au chocolat blanc au centre.\nFramboise passion grand : aligner 3 spirelli au chocolat blanc au centre. Placer 2 framboises ensemble, juste à côté au centre.\nCitron meringue : colorer la meringue au chalumeau pour lui donner de la tenue et une couleur dorée régulière avec quelques pointes plus foncées. Placer 1 physalis au centre.\nMerveilleux : placer 1 groseille sur le dessus. Si elle n’est pas disponible, utiliser 1 demi-framboise.",
+            "nl": "Duo chocolat klein: 2 spirelli van melkchocolade op een rij in het midden leggen.\nDuo chocolat groot: 3 spirelli van melkchocolade op een rij in het midden leggen.\nFramboise passion klein: 2 spirelli van witte chocolade op een rij in het midden leggen.\nFramboise passion groot: 3 spirelli van witte chocolade op een rij in het midden leggen. 2 frambozen samen net ernaast in het midden leggen.\nCitron meringue: de meringue met de brander kleuren zodat ze stevigheid krijgt en een gelijkmatige goudbruine kleur met enkele donkerdere puntjes. 1 physalis in het midden leggen.\nMerveilleux: 1 aalbes bovenop leggen. Als er geen is, 1 halve framboos gebruiken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4.2",
+          "titre": {"fr": "Contrôle", "nl": "Controle"},
+          "texte": {
+            "fr": "La décoration est propre, centrée et conforme à la ligne du produit. Demander un avis en cas de doute visuel.",
+            "nl": "De decoratie is net, gecentreerd en in lijn met het product. Advies vragen bij visuele twijfel."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Finir le fromage spéculoos et présenter — respecter l’exception du fromage spéculoos",
+        "nl": "Fromage spéculoos afwerken en presenteren — de uitzondering voor fromage spéculoos volgen"
+      },
+      "etapes": [
+        {
+          "numero": "4.3",
+          "titre": {"fr": "Fromage spéculoos", "nl": "Fromage spéculoos"},
+          "texte": {
+            "fr": "Après décongélation, placer le gâteau au réfrigérateur sans crumble. Juste avant le comptoir, recouvrir le centre de crumble. Laisser une bordure vide d’une phalange tout autour.",
+            "nl": "Na het ontdooien de taart zonder crumble in de frigo zetten. Net voordat ze naar de toog gaat, het midden bedekken met crumble. Rondom een lege rand van één vingerkootje breed laten."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {"fr": "Ranger après la finition", "nl": "Opbergen na de afwerking"},
+          "texte": {
+            "fr": "Placer les produits terminés dans le réfrigérateur à côté du four ou directement dans les frigos comptoirs.",
+            "nl": "De afgewerkte producten in de frigo naast de oven of rechtstreeks in de toogkoelingen zetten."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {"fr": "Présenter dans la vitrine des tartes froides", "nl": "In de vitrine voor koude taarten presenteren"},
+          "texte": {
+            "fr": "Au moment prévu, placer les produits dans la vitrine. Pour le fromage spéculoos, ajouter d’abord le crumble selon le repère visuel.",
+            "nl": "Op het voorziene moment de producten in de vitrine zetten. Bij fromage spéculoos eerst de crumble toevoegen volgens het visuele richtpunt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {"fr": "Mettre de côté un produit douteux", "nl": "Een twijfelachtig product apart zetten"},
+          "texte": {
+            "fr": "Ne pas présenter le produit tant que le doute persiste. Demander l’avis du formateur ou d’une personne expérimentée.",
+            "nl": "Het product niet in de winkel leggen zolang de twijfel blijft. De opleider of een ervaren persoon om advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Validation pratique", "nl": "Praktische validatie"},
+      "etapes": [
+        {
+          "numero": "V1",
+          "titre": {"fr": "Sous observation", "nl": "Onder toezicht"},
+          "texte": {
+            "fr": "Suit le bon repère de dégel, réalise la finition exacte et choisit le bon emplacement. Suivi : date ______",
+            "nl": "Volgt het juiste ontdooirichtpunt, maakt de exacte afwerking en kiest de juiste plaats. Opvolging: datum ______"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "V2",
+          "titre": {"fr": "Autonome", "nl": "Zelfstandig"},
+          "texte": {
+            "fr": "Réalise 2 à 3 exécutions conformes sur des journées différentes, validées visuellement. Suivi : initiales ______",
+            "nl": "Voert 2 à 3 correcte uitvoeringen uit op verschillende dagen, visueel goedgekeurd. Opvolging: initialen ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Contrôle rapide", "nl": "Snelle controle"},
+      "etapes": [
+        {
+          "numero": "C1",
+          "titre": null,
+          "texte": {"fr": "Quantités conformes à la liste de production.", "nl": "Hoeveelheden volgens de productielijst."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C2",
+          "titre": null,
+          "texte": {"fr": "Produits décongelés selon leur repère propre.", "nl": "Producten ontdooid volgens hun eigen richtpunt."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C3",
+          "titre": null,
+          "texte": {"fr": "Décoration exacte, propre et centrée.", "nl": "Decoratie exact, net en gecentreerd."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C4",
+          "titre": null,
+          "texte": {"fr": "Crumble ajouté au dernier moment ; produits placés au bon endroit.", "nl": "Crumble op het laatste moment toegevoegd; producten op de juiste plaats gezet."},
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Sortir uniquement les tartes froides prévues sur la liste ; dégel sur le chariot à l’arrière.",
+      "nl": "Alleen de koude taarten uithalen die op de lijst staan; ontdooien op de rekwagen achteraan."
+    },
+    {
+      "fr": "Repères de dégel : ± 1 h 30 pour fromage spéculoos, duo chocolat, framboise passion et citron meringue ; ± 30 min pour le merveilleux ; avec le contrôle au toucher prévu.",
+      "nl": "Ontdooitijden: ± 1 u 30 voor fromage spéculoos, duo chocolat, framboise passion en citron meringue; ± 30 min voor de merveilleux; met de voorziene controle door aanraken."
+    },
+    {
+      "fr": "Produit encore trop dur ou douteux : le mettre de côté et demander un avis avant de le finir ou de le présenter.",
+      "nl": "Product dat nog te hard of twijfelachtig is: apart zetten en advies vragen voordat je het afwerkt of in de winkel legt."
+    },
+    {
+      "fr": "Après finition : réfrigérateur à côté du four ou frigos comptoirs.",
+      "nl": "Na de afwerking: frigo naast de oven of toogkoelingen."
+    },
+    {
+      "fr": "Fromage spéculoos : réfrigérateur sans crumble ; crumble ajouté juste avant le comptoir, avec une bordure vide d’une phalange.",
+      "nl": "Fromage spéculoos: zonder crumble in de frigo; crumble pas net voor de toog toevoegen, met een lege rand van één vingerkootje."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {"fr": "Combien de temps faut-il pour décongeler un merveilleux ?", "nl": "Hoelang moet een merveilleux ontdooien?"},
+      "choix": {
+        "fr": ["± 30 min", "± 1 h", "± 1 h 30"],
+        "nl": ["± 30 min", "± 1 u", "± 1 u 30"]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {"fr": "Quand ajoute-t-on le crumble sur le fromage spéculoos ?", "nl": "Wanneer komt de crumble op de fromage spéculoos?"},
+      "choix": {
+        "fr": ["Avant la décongélation", "Juste avant le comptoir, en laissant une bordure vide d’une phalange", "Avant de le mettre au réfrigérateur"],
+        "nl": ["Vóór het ontdooien", "Net voor de toog, met een lege rand van één vingerkootje", "Voordat de taart in de frigo gaat"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {"fr": "Quelle décoration pour un framboise passion grand format ?", "nl": "Welke decoratie krijgt een framboise passion groot formaat?"},
+      "choix": {
+        "fr": ["2 spirelli au chocolat au lait au centre", "1 physalis au centre", "3 spirelli au chocolat blanc au centre et 2 framboises ensemble juste à côté"],
+        "nl": ["2 spirelli van melkchocolade in het midden", "1 physalis in het midden", "3 spirelli van witte chocolade in het midden en 2 frambozen samen net ernaast"]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [],
+  "remarques": [
+    "Poste « production » selon la liste reçue, alors que l’en-tête du document indique « Cuiseur · production du matin ».",
+    "L’encadré « Fromage spéculoos » n’a pas de numéro dans le document : numéroté 4.3 ici pour garder l’ordre.",
+    "Les noms de produits (fromage spéculoos, duo chocolat, framboise passion, citron meringue, merveilleux) sont gardés tels quels en néerlandais ; seuls les formats « petit / grand » sont traduits (klein / groot)."
+  ],
+  "source": {
+    "fichiers": {"pdf": null, "docx": "1zg2picJm5bRLa1uTV73fhk3Qn-2EwT8_"},
+    "lu": "docx"
+  }
+}

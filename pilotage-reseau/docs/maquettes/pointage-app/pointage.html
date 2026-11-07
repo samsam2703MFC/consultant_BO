@@ -1,0 +1,254 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>App employé — Pointer à la caisse</title>
+<link rel="stylesheet" href="/public/employee/assets/atelier/app.css"><link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css"><link rel="stylesheet" href="/public/employee/assets/atelier/marque.css"><link rel="stylesheet" href="/public/employee/assets/atelier/primes.css">
+<!-- Maquette (01/11/2026, Sam : « rajouter dans leur application un clock in / clock out : on pousse le bouton, la
+     caméra s'ouvre pour scanner le QR code qui est sur le bouton de la caisse ; avec le listing des pointages dans le
+     profil, in / out en fonction de leur shift »). A : avant le service. B : la caméra. C : l'arrivée pointée.
+     D : pendant le service. E : Profil › Mes pointages, face au planning. F : côté caisse, le bouton et son QR. -->
+<style>
+body{margin:0;background:#d9d2c8;font-family:var(--s-police);color:var(--s-texte)}
+.planche{display:flex;flex-wrap:wrap;gap:34px 28px;justify-content:center;align-items:flex-start;padding:26px;max-width:1290px;margin:0 auto}
+.legende{width:390px;margin:0 0 8px;font:600 13px var(--s-police);color:#5b5650}
+.tel{width:390px;height:844px;background:var(--s-fond);position:relative;border-radius:28px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.emp-topbar{position:relative;z-index:20;background:rgba(242,241,238,.94);border-bottom:.5px solid var(--s-trait)}
+.emp-topbar-inner{height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 16px}
+.emp-topbar img{height:26px}
+.emp-title{margin:0;font:700 1.3rem/1.15 var(--s-police);letter-spacing:-.02em}.emp-subtitle{margin:0}
+.emp-retour{display:flex;align-items:center;gap:2px;font:400 16px var(--s-police);color:var(--s-accent);text-decoration:none;margin-right:6px}
+.emp-content{padding:14px 16px 96px}
+.emp-bottom-nav{position:absolute;left:0;right:0;bottom:0;height:72px;background:rgba(255,255,255,.96);border-top:.5px solid var(--s-trait);display:grid;grid-auto-flow:column;grid-auto-columns:1fr;z-index:30}
+.emp-bottom-item{text-decoration:none;color:var(--s-second);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.68rem;font-weight:600}
+.emp-bottom-item i{font-size:1.25rem;line-height:1}
+.emp-bottom-item.is-active{color:var(--s-accent)}
+:root{--s-orange:#B25E09;--s-orange-doux:rgba(178,94,9,.11);--s-rouge:#B3261E;--s-rouge-doux:rgba(179,38,30,.09)}
+
+/* Le service du jour et le bouton de pointage (Accueil). */
+.pt-heros{background:var(--s-carte);border-radius:18px;padding:16px 18px 18px;margin-bottom:12px}
+.pt-sur{display:flex;align-items:center;gap:7px;font:400 15px var(--s-police);color:var(--s-second)}
+.pt-sur i.pt-on{width:8px;height:8px;border-radius:50%;background:var(--s-vert);box-shadow:0 0 0 4px var(--s-vert-doux)}
+.pt-h{margin:4px 0 2px;font:600 40px/1.1 var(--s-police);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pt-sous{font:400 15px var(--s-police);color:var(--s-second)}
+.pt-sous b{color:var(--s-texte);font-weight:600}
+.pt-barre{height:8px;border-radius:4px;background:var(--s-remplir);margin:12px 0 8px;overflow:hidden}
+.pt-barre i{display:block;height:100%;background:var(--s-vert);border-radius:4px}
+.pt-bouton{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;margin-top:16px;padding:15px 0;border-radius:14px;border:0;background:var(--s-accent);color:#fff;font:600 17px var(--s-police)}
+.pt-bouton i{font-size:21px}
+.pt-bouton.pt-contour{background:none;color:var(--s-accent);box-shadow:inset 0 0 0 1.5px var(--s-accent)}
+.pt-aide{display:flex;gap:8px;margin-top:10px;font:400 12.5px/1.4 var(--s-police);color:var(--s-second)}
+.pt-aide i{font-size:14px;margin-top:1px}
+.pt-pointe{display:flex;align-items:center;gap:8px;margin-top:12px;padding-top:12px;border-top:.5px solid var(--s-trait);font:400 14px var(--s-police);color:var(--s-second)}
+.pt-pointe b{color:var(--s-texte);font-weight:600;font-variant-numeric:tabular-nums}
+.pt-ok{color:var(--s-vert);font-weight:500}
+.pt-fantome{background:var(--s-carte);border-radius:16px;padding:14px 16px;margin-bottom:10px;opacity:.55}
+.pt-fantome b{display:block;font:600 15px var(--s-police)}
+.pt-fantome span{display:block;font:400 13px var(--s-police);color:var(--s-second);margin-top:3px}
+.pt-fantome .pt-l{height:8px;border-radius:4px;background:var(--s-remplir);margin-top:10px}
+
+/* B : la caméra. */
+.cam{position:absolute;inset:0;background:radial-gradient(120% 80% at 50% 40%,#4a4642 0%,#24211f 55%,#121110 100%);color:#fff}
+.cam-ecran{position:absolute;left:52px;right:52px;top:210px;height:330px;border-radius:12px;background:linear-gradient(160deg,#3b4048,#23272d);filter:blur(1.2px);opacity:.9}
+.cam-tete{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:18px 18px}
+.cam-tete a{color:#fff;text-decoration:none;font:400 16px var(--s-police)}
+.cam-tete b{font:600 17px var(--s-police)}
+.cam-tete i{font-size:20px;width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.16);display:flex;align-items:center;justify-content:center}
+.cam-voile{position:absolute;inset:0;background:rgba(0,0,0,.45);-webkit-mask:radial-gradient(circle at 50% 41%,transparent 0) ;mask:none}
+.cam-cadre{position:absolute;left:70px;right:70px;top:226px;height:250px}
+.cam-cadre .qr{position:absolute;inset:26px;width:calc(100% - 52px);height:calc(100% - 52px);opacity:.92;border-radius:4px}
+.cam-cadre em{position:absolute;width:44px;height:44px;border:4px solid #fff}
+.cam-cadre em:nth-child(1){left:0;top:0;border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+.cam-cadre em:nth-child(2){right:0;top:0;border-left:0;border-bottom:0;border-radius:0 14px 0 0}
+.cam-cadre em:nth-child(3){left:0;bottom:0;border-right:0;border-top:0;border-radius:0 0 0 14px}
+.cam-cadre em:nth-child(4){right:0;bottom:0;border-left:0;border-top:0;border-radius:0 0 14px 0}
+.cam-ligne{position:absolute;left:24px;right:24px;top:58%;height:2px;background:#ff5b6b;box-shadow:0 0 12px 2px rgba(255,91,107,.7)}
+.cam-bas{position:absolute;left:0;right:0;bottom:0;padding:0 28px 54px;text-align:center}
+.cam-bas b{display:block;font:600 19px var(--s-police)}
+.cam-bas span{display:block;margin-top:8px;font:400 14px/1.45 var(--s-police);color:rgba(255,255,255,.75)}
+.cam-bas .lien{display:inline-block;margin-top:22px;font:500 14px var(--s-police);color:#fff;background:rgba(255,255,255,.16);padding:9px 16px;border-radius:999px}
+
+/* C : la confirmation, en feuille. */
+.pt-voile{position:absolute;inset:0;background:rgba(0,0,0,.32);z-index:40}
+.pt-feuille{position:absolute;left:0;right:0;bottom:0;z-index:41;background:var(--s-fond);border-radius:18px 18px 0 0;padding:8px 18px 34px;text-align:center;box-shadow:0 -6px 24px rgba(0,0,0,.18)}
+.pt-poignee{width:38px;height:5px;border-radius:3px;background:var(--s-tertiaire);margin:0 auto 22px}
+.pt-coche i{line-height:1;display:block}
+.pt-coche{width:76px;height:76px;margin:0 auto 14px;border-radius:50%;background:var(--s-vert);color:#fff;display:flex;align-items:center;justify-content:center;font-size:42px;box-shadow:0 0 0 10px var(--s-vert-doux)}
+.pt-feuille h2{margin:0;font:600 21px var(--s-police)}
+.pt-feuille .pt-heure{margin:4px 0 2px;font:600 46px/1.1 var(--s-police);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pt-feuille .pt-etat{font:500 15px var(--s-police);color:var(--s-vert)}
+.pt-feuille .pt-g{background:var(--s-carte);border-radius:14px;margin:20px 0 16px;text-align:left}
+.pt-feuille .pt-g div{display:flex;justify-content:space-between;padding:12px 16px;font:400 15px var(--s-police)}
+.pt-feuille .pt-g div+div{border-top:.5px solid var(--s-trait)}
+.pt-feuille .pt-g span{color:var(--s-second)}
+.pt-feuille .pt-bouton{margin-top:0}
+
+/* E : Mes pointages, jour par jour face au planning. */
+.pt-sem{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.pt-sem a{width:38px;height:38px;border-radius:50%;background:var(--s-carte);display:flex;align-items:center;justify-content:center;color:var(--s-accent)}
+.pt-sem div{text-align:center}.pt-sem b{display:block;font:600 16px var(--s-police)}.pt-sem small{font:400 12.5px var(--s-police);color:var(--s-second)}
+.pt-kpis{display:grid;grid-template-columns:repeat(3,1fr);background:var(--s-carte);border-radius:16px;margin-bottom:12px}
+.pt-kpis div{padding:11px 14px}.pt-kpis div+div{border-left:.5px solid var(--s-trait)}
+.pt-kpis b{display:block;font:600 20px/1.2 var(--s-police);font-variant-numeric:tabular-nums}
+.pt-kpis small{font:400 12px var(--s-police);color:var(--s-second)}
+.pt-kpis .pt-a b{color:var(--s-orange)}
+.pt-jours{background:var(--s-carte);border-radius:16px;overflow:hidden}
+.pt-jour{display:flex;gap:12px;padding:11px 14px 12px}
+.pt-jour+.pt-jour{border-top:.5px solid var(--s-trait)}
+.pt-jour .pt-d{flex:0 0 34px;text-align:center}
+.pt-jour .pt-d small{display:block;font:600 10.5px var(--s-police);text-transform:uppercase;color:var(--s-second)}
+.pt-jour .pt-d b{display:flex;align-items:center;justify-content:center;width:30px;height:30px;margin:1px auto 0;border-radius:50%;font:600 16px var(--s-police)}
+.pt-jour.pt-auj .pt-d small{color:var(--s-accent)}.pt-jour.pt-auj .pt-d b{background:var(--s-accent);color:#fff}
+.pt-jour .pt-c{flex:1;min-width:0}
+.pt-jour .pt-l1{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.pt-jour .pt-prevu{font:400 12.5px var(--s-police);color:var(--s-second)}
+.pt-jour .pt-tot{font:600 14px var(--s-police);font-variant-numeric:tabular-nums;white-space:nowrap}
+.pt-jour .pt-es{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.pt-es span{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border-radius:8px;background:var(--s-remplir);font:500 13px var(--s-police);font-variant-numeric:tabular-nums}
+.pt-es span i{font-size:12px}
+.pt-es .pt-v{background:var(--s-vert-doux);color:var(--s-vert)}
+.pt-es .pt-o{background:var(--s-orange-doux);color:var(--s-orange)}
+.pt-es .pt-r{background:var(--s-rouge-doux);color:var(--s-rouge)}
+.pt-axe{position:relative;height:10px;margin-top:8px;border-radius:5px;background:var(--s-remplir)}
+.pt-axe .pt-p{position:absolute;top:0;bottom:0;border-radius:5px;box-shadow:inset 0 0 0 1.5px rgba(60,60,67,.35)}
+.pt-axe .pt-r{position:absolute;top:2px;bottom:2px;border-radius:4px;background:var(--s-accent)}
+.pt-axe .pt-r.pt-enc{background:var(--s-vert)}
+.pt-jour .pt-repos{font:400 14px var(--s-police);color:var(--s-second);padding-top:6px}
+.pt-jour .pt-agir{display:inline-block;margin-top:6px;font:500 13px var(--s-police);color:var(--s-accent)}
+.pt-legende-axe{display:flex;gap:14px;margin:9px 4px 0;font:400 12px var(--s-police);color:var(--s-second)}
+.pt-legende-axe i{display:inline-block;width:18px;height:8px;border-radius:4px;vertical-align:0;margin-right:5px}
+
+/* F : la caisse. */
+.caisse{width:390px;height:844px;border-radius:28px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.18);background:#1d1f24;position:relative;font-family:var(--s-police)}
+.ca-tete{height:52px;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:#2a2d34;color:#fff;font:600 14px var(--s-police)}
+.ca-tete span{font-weight:400;color:#aab}
+.ca-grille{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:12px;opacity:.35}
+.ca-grille div{height:74px;border-radius:10px;background:#3a3e47}
+.ca-bas{position:absolute;left:0;right:0;bottom:0;padding:12px;display:flex;gap:8px;background:#2a2d34}
+.ca-bas div{flex:1;height:52px;border-radius:10px;background:#3a3e47;opacity:.45}
+.ca-bas .pt-pointer{opacity:1;flex:0 0 120px;background:#8D1D2C;color:#fff;display:flex;align-items:center;justify-content:center;gap:7px;font:600 15px var(--s-police);box-shadow:0 0 0 3px rgba(255,255,255,.75)}
+.ca-modale{position:absolute;left:26px;right:26px;top:120px;background:#fff;border-radius:20px;padding:22px 22px 20px;text-align:center;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+.ca-modale h3{margin:0;font:600 19px var(--s-police);color:#1C1C1E}
+.ca-modale p{margin:6px 0 14px;font:400 14px/1.4 var(--s-police);color:#6E6E73}
+.ca-modale .qr{width:230px;height:230px}
+.ca-modale .pt-comp{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;font:500 14px var(--s-police);color:#1C1C1E}
+.ca-modale .pt-comp i{display:block;width:120px;height:5px;border-radius:3px;background:#e6e4e0;overflow:hidden}
+.ca-modale .pt-comp i b{display:block;height:100%;width:80%;background:#8D1D2C}
+.ca-modale small{display:block;margin-top:10px;font:400 12.5px var(--s-police);color:#8e8e93}
+.ca-note{position:absolute;left:26px;right:26px;top:610px;color:#e5e5ea;font:400 13px/1.45 var(--s-police);text-align:center}
+</style></head>
+<body><div class="planche">
+
+<!-- ── A : avant le service ── -->
+<div><p class="legende">A · Accueil, avant le service : « Pointer l’arrivée »</p>
+<div class="tel" id="a">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div><h1 class="emp-title">Bonjour Camille</h1><p class="emp-subtitle">Samedi 31 octobre · Halle</p></div><img src="/public/employee/assets/atelier/logo.png" alt=""></div></div>
+<div class="emp-content">
+  <div class="pt-heros">
+    <div class="pt-sur">Ton service aujourd’hui</div>
+    <div class="pt-h">08:00 – 16:00</div>
+    <div class="pt-sous"><b>commence dans 4 min</b> · Halle</div>
+    <button class="pt-bouton"><i class="bi bi-qr-code-scan"></i>Pointer l’arrivée</button>
+    <div class="pt-aide"><i class="bi bi-info-circle"></i><span>La caméra s’ouvre : vise le QR code que montre le bouton « Pointer » de la caisse.</span></div>
+  </div>
+  <div class="pt-fantome"><b>Mes primes · octobre</b><span>41 € gagnés · ventes croisées à 34 %</span><div class="pt-l"></div></div>
+  <div class="pt-fantome"><b>Tâches à faire</b><span>3 aujourd’hui</span></div>
+  <div class="pt-fantome"><b>Hier</b><span>18 tickets · 2,6 lignes par ticket</span></div>
+</div>
+<nav class="emp-bottom-nav"><a class="emp-bottom-item is-active"><i class="bi bi-house-fill"></i>Accueil</a><a class="emp-bottom-item"><i class="bi bi-calendar3"></i>Planning</a><a class="emp-bottom-item"><i class="bi bi-trophy"></i>Primes</a><a class="emp-bottom-item"><i class="bi bi-person"></i>Profil</a></nav>
+</div></div>
+
+<!-- ── B : la caméra ── -->
+<div><p class="legende">B · La caméra s’ouvre : on vise le QR code de la caisse</p>
+<div class="tel" id="b">
+<div class="cam">
+  <div class="cam-ecran"></div>
+  <div class="cam-tete"><a>Annuler</a><b>Pointer l’arrivée</b><i class="bi bi-lightning-charge"></i></div>
+  <div class="cam-cadre"><em></em><em></em><em></em><em></em><svg viewBox="-2 -2 29 29" class="qr" shape-rendering="crispEdges"><rect x="-2" y="-2" width="29" height="29" fill="#fff"/><g fill="#111"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="8" y="0" width="1" height="1"/><rect x="11" y="0" width="1" height="1"/><rect x="13" y="0" width="1" height="1"/><rect x="14" y="0" width="1" height="1"/><rect x="16" y="0" width="1" height="1"/><rect x="18" y="0" width="1" height="1"/><rect x="19" y="0" width="1" height="1"/><rect x="20" y="0" width="1" height="1"/><rect x="21" y="0" width="1" height="1"/><rect x="22" y="0" width="1" height="1"/><rect x="23" y="0" width="1" height="1"/><rect x="24" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/><rect x="13" y="1" width="1" height="1"/><rect x="16" y="1" width="1" height="1"/><rect x="18" y="1" width="1" height="1"/><rect x="24" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="14" y="2" width="1" height="1"/><rect x="15" y="2" width="1" height="1"/><rect x="18" y="2" width="1" height="1"/><rect x="20" y="2" width="1" height="1"/><rect x="21" y="2" width="1" height="1"/><rect x="22" y="2" width="1" height="1"/><rect x="24" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="11" y="3" width="1" height="1"/><rect x="12" y="3" width="1" height="1"/><rect x="15" y="3" width="1" height="1"/><rect x="16" y="3" width="1" height="1"/><rect x="18" y="3" width="1" height="1"/><rect x="20" y="3" width="1" height="1"/><rect x="21" y="3" width="1" height="1"/><rect x="22" y="3" width="1" height="1"/><rect x="24" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="13" y="4" width="1" height="1"/><rect x="14" y="4" width="1" height="1"/><rect x="15" y="4" width="1" height="1"/><rect x="18" y="4" width="1" height="1"/><rect x="20" y="4" width="1" height="1"/><rect x="21" y="4" width="1" height="1"/><rect x="22" y="4" width="1" height="1"/><rect x="24" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="9" y="5" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="11" y="5" width="1" height="1"/><rect x="12" y="5" width="1" height="1"/><rect x="13" y="5" width="1" height="1"/><rect x="14" y="5" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="1" height="1"/><rect x="19" y="6" width="1" height="1"/><rect x="20" y="6" width="1" height="1"/><rect x="21" y="6" width="1" height="1"/><rect x="22" y="6" width="1" height="1"/><rect x="23" y="6" width="1" height="1"/><rect x="24" y="6" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="12" y="7" width="1" height="1"/><rect x="13" y="7" width="1" height="1"/><rect x="15" y="7" width="1" height="1"/><rect x="16" y="7" width="1" height="1"/><rect x="1" y="8" width="1" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="12" y="8" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="17" y="8" width="1" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="19" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="22" y="8" width="1" height="1"/><rect x="23" y="8" width="1" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="1" y="9" width="1" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="16" y="9" width="1" height="1"/><rect x="17" y="9" width="1" height="1"/><rect x="21" y="9" width="1" height="1"/><rect x="23" y="9" width="1" height="1"/><rect x="24" y="9" width="1" height="1"/><rect x="5" y="10" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="8" y="10" width="1" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="15" y="10" width="1" height="1"/><rect x="16" y="10" width="1" height="1"/><rect x="18" y="10" width="1" height="1"/><rect x="19" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="21" y="10" width="1" height="1"/><rect x="23" y="10" width="1" height="1"/><rect x="24" y="10" width="1" height="1"/><rect x="0" y="11" width="1" height="1"/><rect x="1" y="11" width="1" height="1"/><rect x="3" y="11" width="1" height="1"/><rect x="5" y="11" width="1" height="1"/><rect x="7" y="11" width="1" height="1"/><rect x="9" y="11" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="15" y="11" width="1" height="1"/><rect x="18" y="11" width="1" height="1"/><rect x="20" y="11" width="1" height="1"/><rect x="24" y="11" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="7" y="12" width="1" height="1"/><rect x="14" y="12" width="1" height="1"/><rect x="15" y="12" width="1" height="1"/><rect x="17" y="12" width="1" height="1"/><rect x="23" y="12" width="1" height="1"/><rect x="24" y="12" width="1" height="1"/><rect x="0" y="13" width="1" height="1"/><rect x="1" y="13" width="1" height="1"/><rect x="2" y="13" width="1" height="1"/><rect x="4" y="13" width="1" height="1"/><rect x="5" y="13" width="1" height="1"/><rect x="8" y="13" width="1" height="1"/><rect x="11" y="13" width="1" height="1"/><rect x="12" y="13" width="1" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="21" y="13" width="1" height="1"/><rect x="24" y="13" width="1" height="1"/><rect x="0" y="14" width="1" height="1"/><rect x="1" y="14" width="1" height="1"/><rect x="4" y="14" width="1" height="1"/><rect x="5" y="14" width="1" height="1"/><rect x="6" y="14" width="1" height="1"/><rect x="7" y="14" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="9" y="14" width="1" height="1"/><rect x="10" y="14" width="1" height="1"/><rect x="12" y="14" width="1" height="1"/><rect x="13" y="14" width="1" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="16" y="14" width="1" height="1"/><rect x="17" y="14" width="1" height="1"/><rect x="18" y="14" width="1" height="1"/><rect x="23" y="14" width="1" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="3" y="15" width="1" height="1"/><rect x="4" y="15" width="1" height="1"/><rect x="7" y="15" width="1" height="1"/><rect x="8" y="15" width="1" height="1"/><rect x="9" y="15" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="16" y="15" width="1" height="1"/><rect x="20" y="15" width="1" height="1"/><rect x="21" y="15" width="1" height="1"/><rect x="22" y="15" width="1" height="1"/><rect x="23" y="15" width="1" height="1"/><rect x="24" y="15" width="1" height="1"/><rect x="4" y="16" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="7" y="16" width="1" height="1"/><rect x="10" y="16" width="1" height="1"/><rect x="11" y="16" width="1" height="1"/><rect x="12" y="16" width="1" height="1"/><rect x="16" y="16" width="1" height="1"/><rect x="21" y="16" width="1" height="1"/><rect x="24" y="16" width="1" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="10" y="17" width="1" height="1"/><rect x="13" y="17" width="1" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="17" y="17" width="1" height="1"/><rect x="21" y="17" width="1" height="1"/><rect x="23" y="17" width="1" height="1"/><rect x="24" y="17" width="1" height="1"/><rect x="0" y="18" width="1" height="1"/><rect x="1" y="18" width="1" height="1"/><rect x="2" y="18" width="1" height="1"/><rect x="3" y="18" width="1" height="1"/><rect x="4" y="18" width="1" height="1"/><rect x="5" y="18" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="8" y="18" width="1" height="1"/><rect x="11" y="18" width="1" height="1"/><rect x="13" y="18" width="1" height="1"/><rect x="14" y="18" width="1" height="1"/><rect x="15" y="18" width="1" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="19" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/><rect x="23" y="18" width="1" height="1"/><rect x="0" y="19" width="1" height="1"/><rect x="6" y="19" width="1" height="1"/><rect x="8" y="19" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="11" y="19" width="1" height="1"/><rect x="15" y="19" width="1" height="1"/><rect x="16" y="19" width="1" height="1"/><rect x="17" y="19" width="1" height="1"/><rect x="21" y="19" width="1" height="1"/><rect x="24" y="19" width="1" height="1"/><rect x="0" y="20" width="1" height="1"/><rect x="2" y="20" width="1" height="1"/><rect x="3" y="20" width="1" height="1"/><rect x="4" y="20" width="1" height="1"/><rect x="6" y="20" width="1" height="1"/><rect x="8" y="20" width="1" height="1"/><rect x="9" y="20" width="1" height="1"/><rect x="15" y="20" width="1" height="1"/><rect x="17" y="20" width="1" height="1"/><rect x="18" y="20" width="1" height="1"/><rect x="19" y="20" width="1" height="1"/><rect x="23" y="20" width="1" height="1"/><rect x="24" y="20" width="1" height="1"/><rect x="0" y="21" width="1" height="1"/><rect x="2" y="21" width="1" height="1"/><rect x="3" y="21" width="1" height="1"/><rect x="4" y="21" width="1" height="1"/><rect x="6" y="21" width="1" height="1"/><rect x="8" y="21" width="1" height="1"/><rect x="9" y="21" width="1" height="1"/><rect x="11" y="21" width="1" height="1"/><rect x="13" y="21" width="1" height="1"/><rect x="16" y="21" width="1" height="1"/><rect x="17" y="21" width="1" height="1"/><rect x="20" y="21" width="1" height="1"/><rect x="21" y="21" width="1" height="1"/><rect x="22" y="21" width="1" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="0" y="22" width="1" height="1"/><rect x="2" y="22" width="1" height="1"/><rect x="3" y="22" width="1" height="1"/><rect x="4" y="22" width="1" height="1"/><rect x="6" y="22" width="1" height="1"/><rect x="10" y="22" width="1" height="1"/><rect x="11" y="22" width="1" height="1"/><rect x="12" y="22" width="1" height="1"/><rect x="14" y="22" width="1" height="1"/><rect x="16" y="22" width="1" height="1"/><rect x="18" y="22" width="1" height="1"/><rect x="23" y="22" width="1" height="1"/><rect x="24" y="22" width="1" height="1"/><rect x="0" y="23" width="1" height="1"/><rect x="6" y="23" width="1" height="1"/><rect x="8" y="23" width="1" height="1"/><rect x="10" y="23" width="1" height="1"/><rect x="11" y="23" width="1" height="1"/><rect x="13" y="23" width="1" height="1"/><rect x="14" y="23" width="1" height="1"/><rect x="20" y="23" width="1" height="1"/><rect x="23" y="23" width="1" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="0" y="24" width="1" height="1"/><rect x="1" y="24" width="1" height="1"/><rect x="2" y="24" width="1" height="1"/><rect x="3" y="24" width="1" height="1"/><rect x="4" y="24" width="1" height="1"/><rect x="5" y="24" width="1" height="1"/><rect x="6" y="24" width="1" height="1"/><rect x="9" y="24" width="1" height="1"/><rect x="11" y="24" width="1" height="1"/><rect x="14" y="24" width="1" height="1"/><rect x="15" y="24" width="1" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="18" y="24" width="1" height="1"/><rect x="21" y="24" width="1" height="1"/></g></svg><div class="cam-ligne"></div></div>
+  <div class="cam-bas"><b>Vise le QR code de la caisse</b><span>Sur la caisse, touche « Pointer ». Le code change toutes les 30 secondes : une photo ne sert à rien.</span><span class="lien"><i class="bi bi-keyboard"></i> La caméra ne marche pas ? Taper le code</span></div>
+</div>
+</div></div>
+
+<!-- ── C : arrivée pointée ── -->
+<div><p class="legende">C · Le code est lu : l’arrivée est pointée, face au planning</p>
+<div class="tel" id="c">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div><h1 class="emp-title">Bonjour Camille</h1><p class="emp-subtitle">Samedi 31 octobre · Halle</p></div><img src="/public/employee/assets/atelier/logo.png" alt=""></div></div>
+<div class="emp-content">
+  <div class="pt-heros"><div class="pt-sur">Ton service aujourd’hui</div><div class="pt-h">08:00 – 16:00</div><div class="pt-sous">Halle</div></div>
+  <div class="pt-fantome"><b>Mes primes · octobre</b><span>41 € gagnés</span></div>
+</div>
+<div class="pt-voile"></div>
+<div class="pt-feuille">
+  <div class="pt-poignee"></div>
+  <div class="pt-coche"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h2>Arrivée pointée</h2>
+  <div class="pt-heure">07:58</div>
+  <div class="pt-etat">à l’heure · ton service commence à 08:00</div>
+  <div class="pt-g"><div><span>Magasin</span>Halle · caisse 1</div><div><span>Service prévu</span>08:00 – 16:00</div><div><span>Départ</span>à pointer en partant</div></div>
+  <button class="pt-bouton">C’est parti</button>
+</div>
+</div></div>
+
+<!-- ── D : pendant le service ── -->
+<div><p class="legende">D · Pendant le service : « Pointer le départ »</p>
+<div class="tel" id="d">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div><h1 class="emp-title">Bonjour Camille</h1><p class="emp-subtitle">Samedi 31 octobre · Halle</p></div><img src="/public/employee/assets/atelier/logo.png" alt=""></div></div>
+<div class="emp-content">
+  <div class="pt-heros">
+    <div class="pt-sur"><i class="pt-on"></i>En service</div>
+    <div class="pt-h">08:00 – 16:00</div>
+    <div class="pt-barre"><i style="width:47%"></i></div>
+    <div class="pt-sous"><b>encore 4 h 12</b> · jusqu’à 16:00</div>
+    <div class="pt-pointe"><i class="bi bi-box-arrow-in-right"></i>Arrivée pointée à <b>07:58</b> <span class="pt-ok">à l’heure</span></div>
+    <button class="pt-bouton pt-contour"><i class="bi bi-qr-code-scan"></i>Pointer le départ</button>
+    <div class="pt-aide"><i class="bi bi-info-circle"></i><span>Le même QR code, en partant. Un départ oublié se signale dans Profil › Mes pointages.</span></div>
+  </div>
+  <div class="pt-fantome"><b>Aujourd’hui</b><span>7 tickets · 3 ventes croisées</span><div class="pt-l"></div></div>
+  <div class="pt-fantome"><b>Tâches à faire</b><span>1 restante</span></div>
+</div>
+<nav class="emp-bottom-nav"><a class="emp-bottom-item is-active"><i class="bi bi-house-fill"></i>Accueil</a><a class="emp-bottom-item"><i class="bi bi-calendar3"></i>Planning</a><a class="emp-bottom-item"><i class="bi bi-trophy"></i>Primes</a><a class="emp-bottom-item"><i class="bi bi-person"></i>Profil</a></nav>
+</div></div>
+
+<!-- ── E : Mes pointages ── -->
+<div><p class="legende">E · Profil › Mes pointages : la semaine, face au planning</p>
+<div class="tel" id="e">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div style="display:flex;align-items:center"><a class="emp-retour"><i class="bi bi-chevron-left"></i>Profil</a><div><h1 class="emp-title">Mes pointages</h1><p class="emp-subtitle">Semaine 44 · Halle</p></div></div></div></div>
+<div class="emp-content" style="padding-bottom:0">
+  <div class="pt-sem"><a><i class="bi bi-chevron-left"></i></a><div><b>26 oct. – 1 nov.</b><small>cette semaine</small></div><a><i class="bi bi-chevron-right"></i></a></div>
+  <div class="pt-kpis"><div><b>28 h 02</b><small>pointées</small></div><div><b>40 h</b><small>au planning</small></div><div class="pt-a"><b>1</b><small>à vérifier</small></div></div>
+  <div class="pt-jours">
+    <div class="pt-jour"><div class="pt-d"><small>Lun</small><b>26</b></div><div class="pt-c">
+      <div class="pt-l1"><span class="pt-prevu">prévu 07:00 – 15:00</span><span class="pt-tot">8 h 06</span></div>
+      <div class="pt-es"><span class="pt-v"><i class="bi bi-box-arrow-in-right"></i>06:58</span><span><i class="bi bi-box-arrow-right"></i>15:04</span></div>
+      <div class="pt-axe"><i class="pt-p" style="left:6.25%;width:50%"></i><i class="pt-r" style="left:6.1%;width:50.6%"></i></div></div></div>
+    <div class="pt-jour"><div class="pt-d"><small>Mar</small><b>27</b></div><div class="pt-c">
+      <div class="pt-l1"><span class="pt-prevu">prévu 12:00 – 20:00</span><span class="pt-tot">7 h 48</span></div>
+      <div class="pt-es"><span class="pt-o"><i class="bi bi-box-arrow-in-right"></i>12:14 · +14 min</span><span><i class="bi bi-box-arrow-right"></i>20:02</span></div>
+      <div class="pt-axe"><i class="pt-p" style="left:37.5%;width:50%"></i><i class="pt-r" style="left:38.96%;width:48.75%"></i></div></div></div>
+    <div class="pt-jour"><div class="pt-d"><small>Mer</small><b>28</b></div><div class="pt-c">
+      <div class="pt-l1"><span class="pt-prevu">prévu 09:00 – 17:00 · à Namur</span><span class="pt-tot">8 h 06</span></div>
+      <div class="pt-es"><span class="pt-v"><i class="bi bi-box-arrow-in-right"></i>08:55</span><span><i class="bi bi-box-arrow-right"></i>17:01</span></div>
+      <div class="pt-axe"><i class="pt-p" style="left:18.75%;width:50%"></i><i class="pt-r" style="left:18.2%;width:50.6%"></i></div></div></div>
+    <div class="pt-jour"><div class="pt-d"><small>Jeu</small><b>29</b></div><div class="pt-c"><div class="pt-repos">Repos</div></div></div>
+    <div class="pt-jour"><div class="pt-d"><small>Ven</small><b>30</b></div><div class="pt-c">
+      <div class="pt-l1"><span class="pt-prevu">prévu 07:00 – 15:00</span><span class="pt-tot" style="color:var(--s-orange)">à vérifier</span></div>
+      <div class="pt-es"><span class="pt-v"><i class="bi bi-box-arrow-in-right"></i>06:57</span><span class="pt-r"><i class="bi bi-exclamation-circle"></i>départ non pointé</span></div>
+      <a class="pt-agir">Dire mon heure de départ ›</a></div></div>
+    <div class="pt-jour pt-auj"><div class="pt-d"><small>Sam</small><b>31</b></div><div class="pt-c">
+      <div class="pt-l1"><span class="pt-prevu">prévu 08:00 – 16:00</span><span class="pt-tot">en service</span></div>
+      <div class="pt-es"><span class="pt-v"><i class="bi bi-box-arrow-in-right"></i>07:58</span><span>départ à pointer</span></div>
+      <div class="pt-axe"><i class="pt-p" style="left:12.5%;width:50%"></i><i class="pt-r pt-enc" style="left:12.4%;width:24.6%"></i></div></div></div>
+  </div>
+  <div class="pt-legende-axe"><span><i style="box-shadow:inset 0 0 0 1.5px rgba(60,60,67,.35)"></i>au planning</span><span><i style="background:var(--s-accent)"></i>pointé</span><span>journée de 6 h à 22 h</span></div>
+</div>
+<nav class="emp-bottom-nav"><a class="emp-bottom-item"><i class="bi bi-house"></i>Accueil</a><a class="emp-bottom-item"><i class="bi bi-calendar3"></i>Planning</a><a class="emp-bottom-item"><i class="bi bi-trophy"></i>Primes</a><a class="emp-bottom-item is-active"><i class="bi bi-person-fill"></i>Profil</a></nav>
+</div></div>
+
+<!-- ── F : côté caisse ── -->
+<div><p class="legende">F · Côté caisse : le bouton « Pointer » montre le QR code</p>
+<div class="caisse" id="f">
+  <div class="ca-tete">Caisse 1 · Halle <span>07:58</span></div>
+  <div class="ca-grille"><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div></div>
+  <div class="ca-modale"><h3>Pointer</h3><p>Ouvre l’app Atelier, touche « Pointer » et vise ce code.</p><svg viewBox="-2 -2 29 29" class="qr" shape-rendering="crispEdges"><rect x="-2" y="-2" width="29" height="29" fill="#fff"/><g fill="#111"><rect x="0" y="0" width="1" height="1"/><rect x="1" y="0" width="1" height="1"/><rect x="2" y="0" width="1" height="1"/><rect x="3" y="0" width="1" height="1"/><rect x="4" y="0" width="1" height="1"/><rect x="5" y="0" width="1" height="1"/><rect x="6" y="0" width="1" height="1"/><rect x="8" y="0" width="1" height="1"/><rect x="11" y="0" width="1" height="1"/><rect x="13" y="0" width="1" height="1"/><rect x="14" y="0" width="1" height="1"/><rect x="16" y="0" width="1" height="1"/><rect x="18" y="0" width="1" height="1"/><rect x="19" y="0" width="1" height="1"/><rect x="20" y="0" width="1" height="1"/><rect x="21" y="0" width="1" height="1"/><rect x="22" y="0" width="1" height="1"/><rect x="23" y="0" width="1" height="1"/><rect x="24" y="0" width="1" height="1"/><rect x="0" y="1" width="1" height="1"/><rect x="6" y="1" width="1" height="1"/><rect x="9" y="1" width="1" height="1"/><rect x="13" y="1" width="1" height="1"/><rect x="16" y="1" width="1" height="1"/><rect x="18" y="1" width="1" height="1"/><rect x="24" y="1" width="1" height="1"/><rect x="0" y="2" width="1" height="1"/><rect x="2" y="2" width="1" height="1"/><rect x="3" y="2" width="1" height="1"/><rect x="4" y="2" width="1" height="1"/><rect x="6" y="2" width="1" height="1"/><rect x="9" y="2" width="1" height="1"/><rect x="10" y="2" width="1" height="1"/><rect x="14" y="2" width="1" height="1"/><rect x="15" y="2" width="1" height="1"/><rect x="18" y="2" width="1" height="1"/><rect x="20" y="2" width="1" height="1"/><rect x="21" y="2" width="1" height="1"/><rect x="22" y="2" width="1" height="1"/><rect x="24" y="2" width="1" height="1"/><rect x="0" y="3" width="1" height="1"/><rect x="2" y="3" width="1" height="1"/><rect x="3" y="3" width="1" height="1"/><rect x="4" y="3" width="1" height="1"/><rect x="6" y="3" width="1" height="1"/><rect x="11" y="3" width="1" height="1"/><rect x="12" y="3" width="1" height="1"/><rect x="15" y="3" width="1" height="1"/><rect x="16" y="3" width="1" height="1"/><rect x="18" y="3" width="1" height="1"/><rect x="20" y="3" width="1" height="1"/><rect x="21" y="3" width="1" height="1"/><rect x="22" y="3" width="1" height="1"/><rect x="24" y="3" width="1" height="1"/><rect x="0" y="4" width="1" height="1"/><rect x="2" y="4" width="1" height="1"/><rect x="3" y="4" width="1" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="6" y="4" width="1" height="1"/><rect x="8" y="4" width="1" height="1"/><rect x="10" y="4" width="1" height="1"/><rect x="11" y="4" width="1" height="1"/><rect x="13" y="4" width="1" height="1"/><rect x="14" y="4" width="1" height="1"/><rect x="15" y="4" width="1" height="1"/><rect x="18" y="4" width="1" height="1"/><rect x="20" y="4" width="1" height="1"/><rect x="21" y="4" width="1" height="1"/><rect x="22" y="4" width="1" height="1"/><rect x="24" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="6" y="5" width="1" height="1"/><rect x="9" y="5" width="1" height="1"/><rect x="10" y="5" width="1" height="1"/><rect x="11" y="5" width="1" height="1"/><rect x="12" y="5" width="1" height="1"/><rect x="13" y="5" width="1" height="1"/><rect x="14" y="5" width="1" height="1"/><rect x="18" y="5" width="1" height="1"/><rect x="24" y="5" width="1" height="1"/><rect x="0" y="6" width="1" height="1"/><rect x="1" y="6" width="1" height="1"/><rect x="2" y="6" width="1" height="1"/><rect x="3" y="6" width="1" height="1"/><rect x="4" y="6" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/><rect x="8" y="6" width="1" height="1"/><rect x="10" y="6" width="1" height="1"/><rect x="12" y="6" width="1" height="1"/><rect x="14" y="6" width="1" height="1"/><rect x="16" y="6" width="1" height="1"/><rect x="18" y="6" width="1" height="1"/><rect x="19" y="6" width="1" height="1"/><rect x="20" y="6" width="1" height="1"/><rect x="21" y="6" width="1" height="1"/><rect x="22" y="6" width="1" height="1"/><rect x="23" y="6" width="1" height="1"/><rect x="24" y="6" width="1" height="1"/><rect x="8" y="7" width="1" height="1"/><rect x="12" y="7" width="1" height="1"/><rect x="13" y="7" width="1" height="1"/><rect x="15" y="7" width="1" height="1"/><rect x="16" y="7" width="1" height="1"/><rect x="1" y="8" width="1" height="1"/><rect x="2" y="8" width="1" height="1"/><rect x="4" y="8" width="1" height="1"/><rect x="6" y="8" width="1" height="1"/><rect x="9" y="8" width="1" height="1"/><rect x="12" y="8" width="1" height="1"/><rect x="13" y="8" width="1" height="1"/><rect x="16" y="8" width="1" height="1"/><rect x="17" y="8" width="1" height="1"/><rect x="18" y="8" width="1" height="1"/><rect x="19" y="8" width="1" height="1"/><rect x="20" y="8" width="1" height="1"/><rect x="22" y="8" width="1" height="1"/><rect x="23" y="8" width="1" height="1"/><rect x="24" y="8" width="1" height="1"/><rect x="1" y="9" width="1" height="1"/><rect x="8" y="9" width="1" height="1"/><rect x="9" y="9" width="1" height="1"/><rect x="10" y="9" width="1" height="1"/><rect x="12" y="9" width="1" height="1"/><rect x="15" y="9" width="1" height="1"/><rect x="16" y="9" width="1" height="1"/><rect x="17" y="9" width="1" height="1"/><rect x="21" y="9" width="1" height="1"/><rect x="23" y="9" width="1" height="1"/><rect x="24" y="9" width="1" height="1"/><rect x="5" y="10" width="1" height="1"/><rect x="6" y="10" width="1" height="1"/><rect x="8" y="10" width="1" height="1"/><rect x="9" y="10" width="1" height="1"/><rect x="13" y="10" width="1" height="1"/><rect x="14" y="10" width="1" height="1"/><rect x="15" y="10" width="1" height="1"/><rect x="16" y="10" width="1" height="1"/><rect x="18" y="10" width="1" height="1"/><rect x="19" y="10" width="1" height="1"/><rect x="20" y="10" width="1" height="1"/><rect x="21" y="10" width="1" height="1"/><rect x="23" y="10" width="1" height="1"/><rect x="24" y="10" width="1" height="1"/><rect x="0" y="11" width="1" height="1"/><rect x="1" y="11" width="1" height="1"/><rect x="3" y="11" width="1" height="1"/><rect x="5" y="11" width="1" height="1"/><rect x="7" y="11" width="1" height="1"/><rect x="9" y="11" width="1" height="1"/><rect x="10" y="11" width="1" height="1"/><rect x="11" y="11" width="1" height="1"/><rect x="15" y="11" width="1" height="1"/><rect x="18" y="11" width="1" height="1"/><rect x="20" y="11" width="1" height="1"/><rect x="24" y="11" width="1" height="1"/><rect x="6" y="12" width="1" height="1"/><rect x="7" y="12" width="1" height="1"/><rect x="14" y="12" width="1" height="1"/><rect x="15" y="12" width="1" height="1"/><rect x="17" y="12" width="1" height="1"/><rect x="23" y="12" width="1" height="1"/><rect x="24" y="12" width="1" height="1"/><rect x="0" y="13" width="1" height="1"/><rect x="1" y="13" width="1" height="1"/><rect x="2" y="13" width="1" height="1"/><rect x="4" y="13" width="1" height="1"/><rect x="5" y="13" width="1" height="1"/><rect x="8" y="13" width="1" height="1"/><rect x="11" y="13" width="1" height="1"/><rect x="12" y="13" width="1" height="1"/><rect x="14" y="13" width="1" height="1"/><rect x="18" y="13" width="1" height="1"/><rect x="21" y="13" width="1" height="1"/><rect x="24" y="13" width="1" height="1"/><rect x="0" y="14" width="1" height="1"/><rect x="1" y="14" width="1" height="1"/><rect x="4" y="14" width="1" height="1"/><rect x="5" y="14" width="1" height="1"/><rect x="6" y="14" width="1" height="1"/><rect x="7" y="14" width="1" height="1"/><rect x="8" y="14" width="1" height="1"/><rect x="9" y="14" width="1" height="1"/><rect x="10" y="14" width="1" height="1"/><rect x="12" y="14" width="1" height="1"/><rect x="13" y="14" width="1" height="1"/><rect x="15" y="14" width="1" height="1"/><rect x="16" y="14" width="1" height="1"/><rect x="17" y="14" width="1" height="1"/><rect x="18" y="14" width="1" height="1"/><rect x="23" y="14" width="1" height="1"/><rect x="24" y="14" width="1" height="1"/><rect x="3" y="15" width="1" height="1"/><rect x="4" y="15" width="1" height="1"/><rect x="7" y="15" width="1" height="1"/><rect x="8" y="15" width="1" height="1"/><rect x="9" y="15" width="1" height="1"/><rect x="13" y="15" width="1" height="1"/><rect x="16" y="15" width="1" height="1"/><rect x="20" y="15" width="1" height="1"/><rect x="21" y="15" width="1" height="1"/><rect x="22" y="15" width="1" height="1"/><rect x="23" y="15" width="1" height="1"/><rect x="24" y="15" width="1" height="1"/><rect x="4" y="16" width="1" height="1"/><rect x="6" y="16" width="1" height="1"/><rect x="7" y="16" width="1" height="1"/><rect x="10" y="16" width="1" height="1"/><rect x="11" y="16" width="1" height="1"/><rect x="12" y="16" width="1" height="1"/><rect x="16" y="16" width="1" height="1"/><rect x="21" y="16" width="1" height="1"/><rect x="24" y="16" width="1" height="1"/><rect x="8" y="17" width="1" height="1"/><rect x="10" y="17" width="1" height="1"/><rect x="13" y="17" width="1" height="1"/><rect x="16" y="17" width="1" height="1"/><rect x="17" y="17" width="1" height="1"/><rect x="21" y="17" width="1" height="1"/><rect x="23" y="17" width="1" height="1"/><rect x="24" y="17" width="1" height="1"/><rect x="0" y="18" width="1" height="1"/><rect x="1" y="18" width="1" height="1"/><rect x="2" y="18" width="1" height="1"/><rect x="3" y="18" width="1" height="1"/><rect x="4" y="18" width="1" height="1"/><rect x="5" y="18" width="1" height="1"/><rect x="6" y="18" width="1" height="1"/><rect x="8" y="18" width="1" height="1"/><rect x="11" y="18" width="1" height="1"/><rect x="13" y="18" width="1" height="1"/><rect x="14" y="18" width="1" height="1"/><rect x="15" y="18" width="1" height="1"/><rect x="18" y="18" width="1" height="1"/><rect x="19" y="18" width="1" height="1"/><rect x="20" y="18" width="1" height="1"/><rect x="23" y="18" width="1" height="1"/><rect x="0" y="19" width="1" height="1"/><rect x="6" y="19" width="1" height="1"/><rect x="8" y="19" width="1" height="1"/><rect x="10" y="19" width="1" height="1"/><rect x="11" y="19" width="1" height="1"/><rect x="15" y="19" width="1" height="1"/><rect x="16" y="19" width="1" height="1"/><rect x="17" y="19" width="1" height="1"/><rect x="21" y="19" width="1" height="1"/><rect x="24" y="19" width="1" height="1"/><rect x="0" y="20" width="1" height="1"/><rect x="2" y="20" width="1" height="1"/><rect x="3" y="20" width="1" height="1"/><rect x="4" y="20" width="1" height="1"/><rect x="6" y="20" width="1" height="1"/><rect x="8" y="20" width="1" height="1"/><rect x="9" y="20" width="1" height="1"/><rect x="15" y="20" width="1" height="1"/><rect x="17" y="20" width="1" height="1"/><rect x="18" y="20" width="1" height="1"/><rect x="19" y="20" width="1" height="1"/><rect x="23" y="20" width="1" height="1"/><rect x="24" y="20" width="1" height="1"/><rect x="0" y="21" width="1" height="1"/><rect x="2" y="21" width="1" height="1"/><rect x="3" y="21" width="1" height="1"/><rect x="4" y="21" width="1" height="1"/><rect x="6" y="21" width="1" height="1"/><rect x="8" y="21" width="1" height="1"/><rect x="9" y="21" width="1" height="1"/><rect x="11" y="21" width="1" height="1"/><rect x="13" y="21" width="1" height="1"/><rect x="16" y="21" width="1" height="1"/><rect x="17" y="21" width="1" height="1"/><rect x="20" y="21" width="1" height="1"/><rect x="21" y="21" width="1" height="1"/><rect x="22" y="21" width="1" height="1"/><rect x="24" y="21" width="1" height="1"/><rect x="0" y="22" width="1" height="1"/><rect x="2" y="22" width="1" height="1"/><rect x="3" y="22" width="1" height="1"/><rect x="4" y="22" width="1" height="1"/><rect x="6" y="22" width="1" height="1"/><rect x="10" y="22" width="1" height="1"/><rect x="11" y="22" width="1" height="1"/><rect x="12" y="22" width="1" height="1"/><rect x="14" y="22" width="1" height="1"/><rect x="16" y="22" width="1" height="1"/><rect x="18" y="22" width="1" height="1"/><rect x="23" y="22" width="1" height="1"/><rect x="24" y="22" width="1" height="1"/><rect x="0" y="23" width="1" height="1"/><rect x="6" y="23" width="1" height="1"/><rect x="8" y="23" width="1" height="1"/><rect x="10" y="23" width="1" height="1"/><rect x="11" y="23" width="1" height="1"/><rect x="13" y="23" width="1" height="1"/><rect x="14" y="23" width="1" height="1"/><rect x="20" y="23" width="1" height="1"/><rect x="23" y="23" width="1" height="1"/><rect x="24" y="23" width="1" height="1"/><rect x="0" y="24" width="1" height="1"/><rect x="1" y="24" width="1" height="1"/><rect x="2" y="24" width="1" height="1"/><rect x="3" y="24" width="1" height="1"/><rect x="4" y="24" width="1" height="1"/><rect x="5" y="24" width="1" height="1"/><rect x="6" y="24" width="1" height="1"/><rect x="9" y="24" width="1" height="1"/><rect x="11" y="24" width="1" height="1"/><rect x="14" y="24" width="1" height="1"/><rect x="15" y="24" width="1" height="1"/><rect x="16" y="24" width="1" height="1"/><rect x="18" y="24" width="1" height="1"/><rect x="21" y="24" width="1" height="1"/></g></svg>
+    <div class="pt-comp">nouveau code dans 24 s <i><b></b></i></div><small>Halle · caisse 1 · signé par le cockpit</small></div>
+  <div class="ca-note">Le code change toutes les 30 secondes et ne vaut que pour ce magasin : une photo envoyée à un collègue ne pointe personne.</div>
+  <div class="ca-bas"><div></div><div></div><div class="pt-pointer"><i class="bi bi-qr-code"></i>Pointer</div></div>
+</div></div>
+
+</div></body></html>

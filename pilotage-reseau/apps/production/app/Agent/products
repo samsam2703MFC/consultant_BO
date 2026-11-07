@@ -1,0 +1,60 @@
+Array
+(
+    [0] => Array
+        (
+            [id_document_wdt] => 648
+            [id_palette] => 3487
+            [id_product] => 1010210
+            [name] => Cookie Chocolat Blanc
+            [code] => 19059090
+            [quantity] => 2
+            [price_carton] => 43.69
+            [total_net] => 87.38
+            [total_tva] => 0
+            [price_brut] => 0
+            [tva_perc] => 0
+            [weight_carton] => 4.2000
+            [weight_carton_total] => 8.4000
+            [ppc] => 42
+            [price_per_piece] => 1.04
+        )
+
+    [1] => Array
+        (
+            [id_document_wdt] => 648
+            [id_palette] => 3487
+            [id_product] => 1010214
+            [name] => Cookie Chocolat Lait
+            [code] => 19059090
+            [quantity] => 2
+            [price_carton] => 43.69
+            [total_net] => 87.38
+            [total_tva] => 0
+            [price_brut] => 0
+            [tva_perc] => 0
+            [weight_carton] => 4.2000
+            [weight_carton_total] => 8.4000
+            [ppc] => 42
+            [price_per_piece] => 1.04
+        )
+
+    [2] => Array
+        (
+            [id_document_wdt] => 648
+            [id_palette] => 3487
+            [id_product] => 1010212
+            [name] => Cookie Chocolat Noir
+            [code] => 19059090
+            [quantity] => 2
+            [price_carton] => 43.69
+            [total_net] => 87.38
+            [total_tva] => 0
+            [price_brut] => 0
+            [tva_perc] => 0
+            [weight_carton] => 4.2000
+            [weight_carton_total] => 8.4000
+            [ppc] => 42
+            [price_per_piece] => 1.04
+        )
+
+)

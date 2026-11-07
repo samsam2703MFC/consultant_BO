@@ -1,0 +1,18 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Niezgodności miesiąca{% endblock %}
+
+{% block content %}
+{# Kreator « Niezgodności miesiąca » [247] (makieta 21) : App\Services\Organization\Wizards\NcReviewService — widok
+   w assets/js/purchasing/nc-review.js. Zadanie Jakości (co miesiąc) zalicza się samo po « Zatwierdź miesiąc ». #}
+<section class="section">
+    <div id="nrApp"><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="nrBoot">{{ data|json_encode|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/task-wizard.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/purchasing/nc-review.js?v={{ asset_v() }}"></script>
+{% endblock %}

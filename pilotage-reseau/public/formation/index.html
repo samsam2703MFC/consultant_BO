@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#8D1D2C" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Manuel du réseau" />
+    <title>Formation — L'Atelier by</title>
+    <!-- Chemins RELATIFS et LOCAUX au dossier : le module se sert à la racine du serveur
+         (/formation/, comme /marketing/) comme sous le cockpit (/consulant_bo/formation/).
+         L'API est à côté, sous api/cockpit (règle du .htaccess et alias Apache). -->
+    <link rel="icon" href="img/logo.png" />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <!-- Le design system (police, jetons, composants, rail, mode incorporé) d'abord ; puis les pièces du module. -->
+    <link rel="stylesheet" href="ds.css" />
+    <link rel="stylesheet" href="formation.css" />
+    <link rel="stylesheet" href="sop/sop.css" />
+    <link rel="stylesheet" href="sop/ref.css" />
+    <link rel="stylesheet" href="portail.css" />
+    <link rel="stylesheet" href="assistant-sop.css" />
+    <link rel="stylesheet" href="recadrer.css" />
+    <link rel="stylesheet" href="apercu-tablette.css" />
+  </head>
+  <body>
+    <div id="root">
+      <div class="app">
+        <main class="app__body">
+          <p class="muted">Ouverture du module…</p>
+        </main>
+      </div>
+    </div>
+    <!-- Recadrer une photo au format 4:3 avant de l’envoyer (assistant et éditeur des SOP, 06/11/2026). -->
+    <script src="recadrer.js"></script>
+    <!-- La vue tablette d’une SOP ou d’un article (la vraie tablette dans un cadre, 07/11/2026). -->
+    <script src="apercu-tablette.js"></script>
+    <script src="formation-sop.js"></script>
+    <!-- L'assistant de création des SOP (06/11/2026). -->
+    <script src="assistant-sop.js"></script>
+    <!-- Le portail de formation restructuré (06/11/2026) : ses écrans et son rail, avant formation.js qui les lit. -->
+    <script src="portail.js"></script>
+    <script src="formation.js"></script>
+  </body>
+</html>

@@ -1,0 +1,72 @@
+{# Karta « Belgia » strony Marża produktu : drabinka ceny (koszt → fabryka → cel × mnożnik → sklep → współczynnik), wnioski, ceny według sklepu. Zmienna : be (productCard). #}
+{% set r = be.row %}
+{% set beLabels = {'ok': 'Sprzedawalny', 'warn': 'Na granicy', 'bad': 'Za drogi dla franczyzy', 'none': 'Brak ceny w sklepie', 'noprice': 'Brak ceny fabrycznej'} %}
+{% set beBadges = {'ok': 'bg-success', 'warn': 'bg-warning text-dark', 'bad': 'bg-danger', 'none': 'bg-secondary', 'noprice': 'bg-secondary'} %}
+{% set mult = be.params.multiplier|number_format(2, ',', '') %}
+<div class="card mt-3 border-2" style="border-color: var(--at-primary) !important;" id="beCard">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <h5 class="mb-0"><i class="bi bi-shop me-2" style="color: var(--at-primary)"></i>Belgia : czy franczyzobiorca zarobi na tym produkcie ?</h5>
+        <span class="badge {{ beBadges[r.verdict] }} fs-6 px-3">{{ beLabels[r.verdict] }}{{ r.coef is not null ? ' · × ' ~ r.coef|number_format(2, ',', ' ') : '' }}</span>
+    </div>
+    <div class="card-body">
+        <div class="at-be-ladder">
+            <div class="at-be-step"><span>Koszt wytworzenia / szt.</span><strong>{{ be.cost_piece is not null ? be.cost_piece|number_format(2, ',', ' ') ~ ' €' : '—' }}</strong><small>koszt kartonu ÷ {{ r.ppc }} szt.</small></div>
+            <div class="at-be-step"><span>Cena fabryczna / szt.</span><strong>{{ r.piece is not null ? r.piece|number_format(2, ',', ' ') ~ ' €' : '—' }}</strong>
+                <small>{{ r.carton|number_format(2, ',', ' ') }} € / {{ r.ppc }} szt.{% if be.factory_margin is not null %} · marża fabryki {{ be.factory_margin|number_format(1, ',', ' ') }} %{% endif %}</small></div>
+            <div class="at-be-step is-target"><span>× {{ mult }} = cel w sklepie</span><strong style="color: var(--at-primary)">{{ r.target is not null ? r.target|number_format(2, ',', ' ') ~ ' €' : '—' }}</strong>
+                <small>netto{{ r.target_gross is not null ? ' · brutto ' ~ r.target_gross|number_format(2, ',', ' ') ~ ' €' : '' }}</small></div>
+            <div class="at-be-step {{ r.verdict in ['ok', 'warn', 'bad'] ? 'is-' ~ r.verdict : '' }}"><span>Cena w sklepie (BE)</span>
+                {% if r.store and r.store.net is not null %}
+                    <strong>{{ r.store.net|number_format(2, ',', ' ') }} €</strong>
+                    <small>netto · brutto {{ r.store.gross is not null ? r.store.gross|number_format(2, ',', ' ') : '—' }} € · mediana {{ r.store.shops }} skl.{% if r.store.min is not null and r.store.max is not null and r.store.min != r.store.max %} · {{ r.store.min|number_format(2, ',', ' ') }}–{{ r.store.max|number_format(2, ',', ' ') }} €{% endif %}</small>
+                {% else %}
+                    <strong>—</strong><small>{{ r.link == 'excluded' ? 'nie sprzedawany w sklepach' : (be.synced ? 'brak produktu w sklepach' : 'ceny nie pobrane') }}</small>
+                {% endif %}
+            </div>
+            <div class="at-be-step {{ r.verdict in ['ok', 'warn', 'bad'] ? 'is-' ~ r.verdict : '' }}"><span>Współczynnik</span>
+                <strong class="{{ r.verdict == 'ok' ? 'text-success' : (r.verdict == 'bad' ? 'text-danger' : '') }}">{{ r.coef is not null ? '× ' ~ r.coef|number_format(2, ',', ' ') : '—' }}</strong><small>sklep netto ÷ fabryka (cel × {{ mult }})</small></div>
+        </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-12 col-lg-5">
+                {% if r.max_factory is not null %}
+                    <div class="at-be-hint">
+                        <strong>Wniosek :</strong>
+                        {% if r.delta >= 0 %}sklep sprzedaje {{ (r.store.net - r.target)|number_format(2, ',', ' ') }} € netto powyżej celu.{% else %}sklep sprzedaje {{ (r.target - r.store.net)|number_format(2, ',', ' ') }} € netto poniżej celu.{% endif %}
+                        Cena fabryczna może wynosić maks. <strong>{{ r.max_factory|number_format(2, ',', ' ') }} €/szt.</strong> (karton <strong>{{ r.max_carton|number_format(2, ',', ' ') }} €</strong>, dziś {{ r.carton|number_format(2, ',', ' ') }} €)
+                        {% if r.delta >= 0 %}— franczyzobiorca nadal ma × {{ mult }}.{% else %}— albo cena w sklepie ≥ {{ r.target|number_format(2, ',', ' ') }} € netto{{ r.target_gross is not null ? ' (' ~ r.target_gross|number_format(2, ',', ' ') ~ ' € brutto)' : '' }}.{% endif %}
+                        {% if r.reserve %}<br><span class="text-success">Rezerwa : współczynnik ≥ × {{ be.params.reserve|number_format(2, ',', '') }} — fabryka może podnieść cenę.</span>{% endif %}
+                    </div>
+                {% endif %}
+                {% if be.below is not empty %}
+                    <div class="at-be-hint is-warn mt-2"><strong>Uwaga :</strong> {{ be.below|length }} sklep(y) poniżej celu —
+                        {% for s in be.below %}{{ s.name }} ({{ s.gross is not null ? s.gross|number_format(2, ',', ' ') ~ ' € brutto, ' : '' }}× {{ s.coef|number_format(2, ',', ' ') }}){{ not loop.last ? ', ' : '' }}{% endfor %}.
+                        Do omówienia z konsultantką : cena w kasie.</div>
+                {% endif %}
+                <p class="at-be-sub mt-2 mb-0">
+                    Produkt sklepu : {% if r.store %}<strong>{{ r.store.name }}</strong>{{ r.link == 'auto' ? ' (dopasowanie po nazwie)' : ' (powiązanie ręczne)' }}{% elseif r.link == 'excluded' %}nie sprzedawany w sklepach{% else %}nie znaleziono{% endif %}
+                    · <a href="#" data-be-link="{{ r.product_id }}" data-be-name="{{ r.name|e('html_attr') }}">{{ r.store or r.link == 'excluded' ? 'zmień' : 'powiąż' }}</a>
+                    · <a href="{{ root }}/finances/category-margin?view=be">wszystkie produkty</a>
+                </p>
+            </div>
+            <div class="col-12 col-lg-7">
+                {% if be.shops is not empty %}
+                    <table class="table table-sm align-middle mb-0 at-be-table">
+                        <thead><tr class="small text-muted"><th>Sklep (BE)</th><th class="text-end">Cena brutto</th><th class="text-end">Cena netto</th><th class="text-end">Wsp.</th><th></th></tr></thead>
+                        <tbody>
+                        {% for s in be.shops %}
+                            <tr><td>{{ s.name }}</td>
+                                <td class="text-end fw-semibold">{{ s.gross is not null ? s.gross|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
+                                <td class="text-end">{{ s.net is not null ? s.net|number_format(2, ',', ' ') ~ ' €' : '—' }}</td>
+                                <td class="text-end fw-bold {{ s.verdict == 'ok' ? 'text-success' : (s.verdict == 'bad' ? 'text-danger' : '') }}" style="{{ s.verdict == 'warn' ? 'color:#b07a00' : '' }}">{{ s.coef is not null ? '× ' ~ s.coef|number_format(2, ',', ' ') : '—' }}</td>
+                                <td><span class="badge {{ beBadges[s.verdict] }}">{{ {'ok': 'OK', 'warn': 'na granicy', 'bad': 'za drogi', 'none': '—'}[s.verdict] }}</span></td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% endif %}
+                <p class="at-be-sub mt-2 mb-0"><i class="bi bi-shop me-1"></i>API panelu — cena pratiquée w kasie{% if be.synced %}, pobrana {{ be.synced.started_at|date('d.m.Y H:i') }}{% endif %}.
+                    {% if not be.configured %}API cen w sklepach nie jest skonfigurowane{% if be.is_admin %} — <a href="{{ root }}/settings/panel-api">wpisz konto</a>{% endif %}.{% endif %}</p>
+            </div>
+        </div>
+    </div>
+</div>

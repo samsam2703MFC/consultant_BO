@@ -1,0 +1,51 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Protokoły zebrań{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Protokoły zebrań</h3>
+            <p class="text-subtitle text-muted">Zadania z formularzem : uczestnicy, śledzenie produkcji, ustalenia i działania do kolejnego zebrania</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/production/follow-up"><i class="bi bi-graph-up-arrow"></i> Śledzenie produkcji</a>
+            <a class="btn btn-outline-secondary" href="{{ root }}/my-tasks"><i class="bi bi-check2-square"></i> Moje zadania</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div class="card">
+        <div class="card-body">
+            {% if forms %}
+            <div class="table-responsive">
+                <table class="table mb-0">
+                    <thead><tr><th>Zebranie</th><th>Rodzaj</th><th>Zadanie</th><th class="text-end">Uczestnicy</th><th class="text-end">Działania</th><th>Stan</th><th></th></tr></thead>
+                    <tbody>
+                    {% for f in forms %}
+                        <tr>
+                            <td><strong>{{ f.meeting_date|date('d.m.Y') }}</strong><div class="at-sub">{{ f.meeting_date|day_pl|split(',')|first }}</div></td>
+                            <td>{{ f.label }}</td>
+                            <td>{{ f.title_pl }} <span class="at-sub">{{ f.period_key }}</span></td>
+                            <td class="text-end">{{ f.participants }}</td>
+                            <td class="text-end">{{ f.actions }}</td>
+                            <td>{% if f.status == 'final' %}<span class="badge bg-success">zakończony</span>{% else %}<span class="badge bg-warning text-dark">szkic</span>{% endif %}
+                                <div class="at-sub">{{ f.updated_by_name ?: f.created_by_name }}</div></td>
+                            <td class="text-end text-nowrap">
+                                {% if f.status == 'final' %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms/{{ f.id }}">Otwórz</a>{% endif %}
+                                <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/my-tasks/{{ f.id_occurrence }}/form">{{ f.status == 'final' ? 'Edytuj' : 'Dokończ' }}</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="at-empty mb-0">Jeszcze nie ma protokołów. Zebranie produkcyjne jest zadaniem cotygodniowym kierownika produkcji — formularz otwiera się z « Moje zadania ».</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

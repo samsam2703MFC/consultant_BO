@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=1280">
+<title>C2 — Tablette du poste : le pas à pas (NL)</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script><script src="tablette.js"></script>
+</head><body style="background:#F5F1EB"><script>
+/* C2 — Le pas à pas, lu par Tom W. en néerlandais : Ouverture du poste et premières cuissons (SOP-CUI-OUV-01, FR
+   d'origine), étape 7. L'écart tranché le 05/11 est dans le texte : la recuisson ne vaut que pour la catégorie pain.
+   Le NL de cette maquette est une traduction à relire. */
+const P = FO.pasapas, s = P.sop;
+const NL = { secs: ['Openen en eerste baksels starten', 'Broden afwerken · tot 6 u'],
+  etapes: ['Dienst starten', 'Toestellen aanzetten', 'Productie van de dag nakijken', 'Materiaal klaarzetten', 'Programma’s starten in de juiste oven', 'Gebakken producten op de dubbele kar zetten', 'Broden van gisteren afbakken', 'De kar naar de winkel brengen', 'Verder werken tijdens de bakcycli', 'Meteen reageren op de signalen', 'Verliezen ingeven vóór de opening'],
+  det: 'Laad ze na het bakken van alle grote broden meteen in dezelfde oven. Start geen nieuw programma. Kies « tijd toevoegen »: 4 min en 20 % vochtigheid.',
+  ajout: 'Alleen voor de categorie brood.',
+  crit: 'Geen nieuw programma starten: dezelfde oven, « tijd toevoegen », 4 min en 20 % vochtigheid.',
+  reperes: ['Linkeroven — broden en speciale broden — programma « grote broden »', 'Rechteroven — stokbroden en pistolets — programma « baguettes »', 'Einde van het programma = producten gebakken'],
+  appelle: 'Programma ontbreekt of is anders; oven of rijskast start niet; tekort waardoor een bestelling niet lukt.',
+  signal: 'Een einde van bakken of een rijssignaal gaat voor op een nieuwe taak.' };
+let k = 0;
+const plan = P.sections.map((sec, si) => `<div class="s">${esc(NL.secs[si])}</div>${sec.etapes.map(() => { k++; const cls = k < P.courante ? 'fait' : k === P.courante ? 'on' : ''; return `<div class="e ${cls}"><i>${k < P.courante ? '✓' : k}</i><span>${esc(NL.etapes[k - 1])}</span></div>`; }).join('')}`).join('');
+tablette(`<div class="tab-corps"><div class="tab-plan">${plan}</div>
+  <div class="tab-main"><div class="ou">Stap ${P.courante} / ${s.nbEtapes} · <span>${esc(NL.secs[1])}</span> <span class="pill" style="margin-left:8px">SOP-CUI-OUV-01 · Opening van de bakpost</span></div>
+    <div class="txt" style="font:400 40px/1.1 var(--font-display)">${esc(NL.etapes[6])}</div>
+    <div class="det" style="font-size:22px;line-height:1.45;color:#222">${esc(NL.det)} <b style="background:#E3F0E5;color:#1f5a2e;border-radius:6px;padding:0 6px">${esc(NL.ajout)}</b></div>
+    <div class="tab-alerte"><span class="ic">⚠</span><div><b>Kritiek punt</b>${esc(NL.crit)}</div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px">
+      <div class="carte" style="font-size:15px;line-height:1.5"><div class="lab">Houvast · de twee ovens</div>${NL.reperes.map(r => `<div>• ${esc(r)}</div>`).join('')}</div>
+      <div class="carte" style="font-size:15px;line-height:1.5"><div class="lab">Ik bel als</div>${esc(NL.appelle)}<div class="lab" style="margin-top:10px">Een signaal?</div>${esc(NL.signal)}</div>
+    </div>
+    <div style="flex:1"></div>
+    <div class="mini" style="font-size:12.5px">groen: aangepast op 05/11 (écart tranché : catégorie pain seulement) · FR d’origine à un geste · PDF ⋯</div>
+  </div></div>
+  <div class="tab-pied"><span class="gb">← Vorige</span><div class="av"><div class="prog"><i class="pr" style="width:${Math.round((P.courante - 1) / s.nbEtapes * 100)}%"></i></div><small>${P.courante - 1} stappen klaar · nog ${s.nbEtapes - P.courante + 1} · alles klaar om 6 u · verder waar je gestopt bent</small></div><span class="gb p">Klaar · volgende →</span></div>`,
+  { langue: 'NL', qui: 'Tom W.', sous: 'bakpost · SOP' });
+</script></body></html>

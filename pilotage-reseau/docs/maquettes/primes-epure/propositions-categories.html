@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catégories : propositions</title>
+<!-- Maquettes (16/10/2026) : quatre façons de montrer, dans le carré d'une catégorie, la quantité pour être 1re.
+     Les vrais styles de l'app (app.css, marque.css, primes.css) ; ce qui est propre à une proposition est en bas,
+     avec les variables du design system seulement. Servir depuis la racine du dépôt (python3 -m http.server). -->
+<link rel="stylesheet" href="/public/employee/assets/atelier/app.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/marque.css">
+<link rel="stylesheet" href="/public/employee/assets/atelier/primes.css">
+<style>
+  body{margin:0}
+  .page{max-width:600px;margin:0 auto;padding:6px 14px 30px}
+  .prop{padding-bottom:10px}
+  .prop-t{display:flex;align-items:baseline;gap:10px;margin:22px 4px 2px}
+  .prop-t b{font:400 26px/1 var(--font-display);color:var(--la-rubis)}
+  .prop-t h2{font:400 22px/1.1 var(--font-display);margin:0;color:var(--la-encre)}
+  .prop-d{font:500 12.5px/1.45 var(--font-ui);color:var(--la-muet);margin:4px 4px 0}
+  .prop .titre-section{margin-top:12px}
+
+  /* Le corps du carré, commun aux propositions : il prend la place de la jauge. */
+  .pq-b{flex:1 1 0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:0;margin-top:4px}
+  .pq-b .lib{display:block;font:600 clamp(8.5px,4cqw,10.5px) var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--la-muet);font-style:normal;margin-top:5px}
+
+  /* A — Le chiffre : la quantité en grand. */
+  .qn{font:400 clamp(30px,24cqw,56px)/1 var(--font-display);color:var(--la-rubis);white-space:nowrap}
+  .qn small{font:500 clamp(10px,5cqw,13px) var(--font-ui);color:var(--la-muet);margin-left:3px}
+  .qn.tete{color:var(--la-or-encre)}
+  .pq.non .qn{color:var(--la-encre)}
+
+  /* B — La course : elle et la 1re sur une même piste ; l'écart entre les deux, en hachures, porte le chiffre. */
+  .cs{width:100%;padding:0 4px}
+  .cs .qn{font-size:clamp(26px,19cqw,44px)}
+  .cs-p{position:relative;height:28px;margin-top:4px}
+  .cs-f{position:absolute;left:0;right:0;top:13px;height:6px;border-radius:var(--radius-pill);background:var(--la-gris-trait)}
+  .cs-moi{position:absolute;left:0;top:13px;height:6px;border-radius:var(--radius-pill);background:var(--la-rubis)}
+  .cs-ec{position:absolute;top:13px;height:6px;background:repeating-linear-gradient(-45deg,var(--la-rubis) 0 2px,transparent 2px 5px);opacity:.45}
+  .cs-pt{position:absolute;top:8px;width:16px;height:16px;margin-left:-8px;border-radius:50%;border:2.5px solid var(--la-blanc);box-shadow:var(--la-ombre)}
+  .cs-pt.moi{background:var(--la-rubis)}
+  .cs-pt.lui{background:var(--la-or)}
+  .cs-pt.lui.deux{background:var(--la-gris)}
+  .cs-lg{display:flex;justify-content:space-between;gap:6px;font:700 clamp(8.5px,4.2cqw,10.5px) var(--font-ui);white-space:nowrap}
+  .cs-lg .moi{color:var(--la-rubis)}
+  .cs-lg .lui{color:var(--la-muet)}
+  .pq.tete .cs-lg .moi{color:var(--la-or-encre)}
+  .pq.tete .cs-moi{background:var(--la-or)}
+  .pq.tete .cs-pt.moi{background:var(--la-or)}
+  .pq.tete .cs-ec{background:repeating-linear-gradient(-45deg,var(--la-or) 0 2px,transparent 2px 5px)}
+
+  /* C — Le podium : les trois premières du magasin, elle surlignée ; l'écart à côté de son nom. */
+  .pd{width:100%;list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+  .pd li{display:flex;align-items:center;gap:6px;padding:4px 7px;border-radius:var(--radius-md);font:500 11.5px var(--font-ui);color:var(--la-encre);min-width:0}
+  .pd .r{width:16px;flex:0 0 auto;text-align:center;font-weight:700;color:var(--la-muet)}
+  .pd .n{flex:1 1 auto;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .pd .q{font-weight:700;font-variant-numeric:tabular-nums}
+  .pd li.moi{background:var(--la-rubis);color:var(--la-blanc)}
+  .pd li.moi .r{color:var(--la-blanc)}
+  .pd li.moi.un{background:var(--la-or-doux);color:var(--la-or-encre)}
+  .pd li.moi.un .r{color:var(--la-or-encre)}
+  .pd-e{font:700 10.5px var(--font-ui);border-radius:var(--radius-pill);padding:3px 8px;margin-top:6px;background:var(--la-abricot);color:var(--la-abricot-encre)}
+  .pd-e.ok{background:var(--la-or-doux);color:var(--la-or-encre)}
+
+  /* D — Le duel : elle face à celle qu'elle doit passer (ou qui la suit) ; l'écart au milieu. */
+  .du{width:100%;display:grid;grid-template-columns:1fr auto 1fr;align-items:end;gap:2px}
+  .du-c{display:flex;flex-direction:column;align-items:center;min-width:0}
+  .du-c .v{font:400 clamp(24px,17cqw,40px)/1 var(--font-display);color:var(--la-encre)}
+  .du-c.moi .v{color:var(--la-rubis)}
+  .pq.tete .du-c.moi .v{color:var(--la-or-encre)}
+  .du-c .w{font:600 clamp(8.5px,4cqw,10px) var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--la-muet);margin-top:4px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .du-m{align-self:center;font:700 10.5px var(--font-ui);border-radius:var(--radius-pill);padding:3px 7px;background:var(--la-abricot);color:var(--la-abricot-encre);white-space:nowrap;margin-bottom:12px}
+  .du-m.ok{background:var(--la-or-doux);color:var(--la-or-encre)}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ─────────────── A — Le chiffre (ce qui est prêt) ─────────────── -->
+<section class="prop" id="prop-a">
+  <div class="prop-t"><b>A</b><h2>Le chiffre</h2></div>
+  <p class="prop-d">La quantité qui manque, en très grand. Le plus simple à lire d’un coup d’œil. C’est la version déjà prête.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 100 €</small></div>
+  <div class="pq-grille">
+    <div class="pq non">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Tartes</b>
+      <div class="pq-b"><b class="qn">10<small>pcs</small></b><i class="lib">pour être 1re</i></div>
+      <div class="pq-o">Toi <b>42 pcs</b></div>
+      <div class="pq-f"><span class="etat mu">2e / 6</span><span class="pq-c">👑 <b>Léa</b> 51</span></div>
+    </div>
+    <div class="pq tete">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Quiches</b>
+      <div class="pq-b"><b class="qn tete">+3<small>pcs</small></b><i class="lib">d’avance sur la 2e</i></div>
+      <div class="pq-o">Toi <b>27 pcs</b></div>
+      <div class="pq-f"><span class="etat or">👑 1re</span><span class="pq-c">2e <b>Sarah</b> 24</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── B — La course ─────────────── -->
+<section class="prop" id="prop-b">
+  <div class="prop-t"><b>B</b><h2>La course</h2></div>
+  <p class="prop-d">Elle et la 1re sur la même piste : on voit la distance à rattraper (ou l’avance à garder), le chiffre au-dessus.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 100 €</small></div>
+  <div class="pq-grille">
+    <div class="pq non">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Tartes</b>
+      <div class="pq-b"><div class="cs">
+        <b class="qn">10<small>pcs</small></b><i class="lib">pour passer Léa</i>
+        <!-- échelle : 0 → 51 × 1,08 ; elle 42 (76 %), Léa 51 (93 %) -->
+        <div class="cs-p">
+          <div class="cs-f"></div><div class="cs-moi" style="width:76%"></div><div class="cs-ec" style="left:76%;width:17%"></div>
+          <span class="cs-pt moi" style="left:76%"></span><span class="cs-pt lui" style="left:93%"></span>
+        </div>
+        <div class="cs-lg"><span class="moi">● Toi 42</span><span class="lui">👑 Léa 51</span></div>
+      </div></div>
+      <div class="pq-f"><span class="etat mu">2e / 6</span></div>
+    </div>
+    <div class="pq tete">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Quiches</b>
+      <div class="pq-b"><div class="cs">
+        <b class="qn tete">+3<small>pcs</small></b><i class="lib">devant Sarah</i>
+        <!-- échelle : 0 → 27 × 1,08 ; elle 27 (93 %), Sarah 24 (82 %) -->
+        <div class="cs-p">
+          <div class="cs-f"></div><div class="cs-moi" style="width:82%"></div><div class="cs-ec" style="left:82%;width:11%"></div>
+          <span class="cs-pt lui deux" style="left:82%"></span><span class="cs-pt moi" style="left:93%"></span>
+        </div>
+        <div class="cs-lg"><span class="lui">● Sarah 24</span><span class="moi">👑 Toi 27</span></div>
+      </div></div>
+      <div class="pq-f"><span class="etat or">👑 1re</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── C — Le podium ─────────────── -->
+<section class="prop" id="prop-c">
+  <div class="prop-t"><b>C</b><h2>Le podium</h2></div>
+  <p class="prop-d">Les trois premières du magasin, elle surlignée, et ce qui lui manque. Plus de contexte, chiffres plus petits.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 100 €</small></div>
+  <div class="pq-grille">
+    <div class="pq non">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Tartes</b>
+      <div class="pq-b">
+        <ol class="pd">
+          <li><span class="r">👑</span><span class="n">Léa</span><span class="q">51</span></li>
+          <li class="moi"><span class="r">2</span><span class="n">Toi</span><span class="q">42</span></li>
+          <li><span class="r">3</span><span class="n">Emma</span><span class="q">38</span></li>
+        </ol>
+        <span class="pd-e">10 pcs pour être 1re</span>
+      </div>
+    </div>
+    <div class="pq tete">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Quiches</b>
+      <div class="pq-b">
+        <ol class="pd">
+          <li class="moi un"><span class="r">👑</span><span class="n">Toi</span><span class="q">27</span></li>
+          <li><span class="r">2</span><span class="n">Sarah</span><span class="q">24</span></li>
+          <li><span class="r">3</span><span class="n">Inès</span><span class="q">19</span></li>
+        </ol>
+        <span class="pd-e ok">+3 pcs d’avance</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ─────────────── D — Le duel ─────────────── -->
+<section class="prop" id="prop-d">
+  <div class="prop-t"><b>D</b><h2>Le duel</h2></div>
+  <p class="prop-d">Elle face à celle qu’elle doit passer (ou qui la suit), deux chiffres côte à côte, l’écart au milieu.</p>
+  <div class="titre-section"><h2>Catégories</h2><small>jusqu’à 100 €</small></div>
+  <div class="pq-grille">
+    <div class="pq non">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/7a1e0c3b9f2d4e5a6b70.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Tartes</b>
+      <div class="pq-b">
+        <div class="du">
+          <div class="du-c moi"><b class="v">42</b><span class="w">Toi</span></div>
+          <span class="du-m">−9</span>
+          <div class="du-c"><b class="v">51</b><span class="w">👑 Léa</span></div>
+        </div>
+        <i class="lib">10 pcs pour la passer</i>
+      </div>
+      <div class="pq-f"><span class="etat mu">2e / 6</span></div>
+    </div>
+    <div class="pq tete">
+      <div class="pq-h"><span class="emo"><img src="demo/uploads/primes/3c9d2b81e04f6a7c5d12.svg" alt=""></span><span class="pq-m">50&nbsp;€</span></div>
+      <b class="pq-n">Queen of Quiches</b>
+      <div class="pq-b">
+        <div class="du">
+          <div class="du-c moi"><b class="v">27</b><span class="w">👑 Toi</span></div>
+          <span class="du-m ok">+3</span>
+          <div class="du-c"><b class="v">24</b><span class="w">2e Sarah</span></div>
+        </div>
+        <i class="lib">3 pcs d’avance</i>
+      </div>
+      <div class="pq-f"><span class="etat or">👑 1re</span></div>
+    </div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>

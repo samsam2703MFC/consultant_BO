@@ -1,0 +1,117 @@
+<?php
+declare(strict_types=1);
+
+namespace App\Repositories\Organization;
+
+use App\Repositories\Workshop\WorkshopRepository;
+
+/** Uprawnienia stanowisk do stron ERP (n_page_access ; stanowisko 0 = bez stanowiska) i administratorzy (rola prod_admin). */
+final class PageAccessRepository extends WorkshopRepository
+{
+    protected string $table = 'n_page_access';
+
+    /** @return array<int, list<string>> stanowisko => klucze stron */
+    public function grants(): array
+    {
+        $out = [];
+        foreach ($this->all('SELECT id_position, page_key FROM n_page_access ORDER BY id_position, page_key') as $r) {
+            $out[(int) $r['id_position']][] = $r['page_key'];
+        }
+        return $out;
+    }
+
+    /** @return list<string> */
+    public function positionGrants(int $positionId): array
+    {
+        return array_column($this->all('SELECT page_key FROM n_page_access WHERE id_position = ?', [$positionId]), 'page_key');
+    }
+
+    /** Zastępuje strony stanowiska. */
+    public function setGrants(int $positionId, array $keys, ?int $userId): void
+    {
+        $this->db->prepare('DELETE FROM n_page_access WHERE id_position = ?')->execute([$positionId]);
+        $insert = $this->db->prepare('INSERT INTO n_page_access (id_position, page_key, updated_by) VALUES (?, ?, ?)');
+        foreach ($keys as $key) $insert->execute([$positionId, $key, $userId]);
+    }
+
+    /** Stanowisko użytkownika (0 = bez stanowiska). */
+    public function userPosition(int $userId): int
+    {
+        return (int) ($this->all('SELECT id_position FROM n_user_position WHERE id_user = ?', [$userId])[0]['id_position'] ?? 0);
+    }
+
+    public function isProdAdmin(int $userId): bool
+    {
+        return (bool) $this->all("SELECT 1 FROM n_prod_user_role WHERE id_user = ? AND role_code = 'prod_admin' AND id_group IS NULL", [$userId]);
+    }
+
+    /** Czy ktokolwiek ma rolę administratora (bez tego konto « admin » zostaje administratorem — bez blokady dostępu). */
+    public function anyProdAdmin(): bool
+    {
+        return (bool) $this->all("SELECT 1 FROM n_prod_user_role WHERE role_code = 'prod_admin' AND id_group IS NULL LIMIT 1");
+    }
+
+    public function login(int $userId): ?string
+    {
+        return $this->all('SELECT login FROM user WHERE id = ?', [$userId])[0]['login'] ?? null;
+    }
+
+    public function positions(): array
+    {
+        return $this->all('SELECT id, code, name_pl, kind, active FROM n_position ORDER BY active DESC, sort_order, name_pl');
+    }
+
+    public function positionExists(int $id): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM n_position WHERE id = ?', [$id]);
+    }
+
+    /** Użytkownicy ERP ze stanowiskiem i informacją o roli administratora. */
+    public function users(): array
+    {
+        return $this->all(
+            "SELECT u.id, COALESCE(NULLIF(TRIM(u.displayed_name), ''), TRIM(CONCAT(u.name, ' ', u.surname)), u.login) AS name, u.login,
+                    COALESCE(up.id_position, 0) AS id_position,
+                    EXISTS (SELECT 1 FROM n_prod_user_role r WHERE r.id_user = u.id AND r.role_code = 'prod_admin' AND r.id_group IS NULL) AS is_admin
+             FROM user u LEFT JOIN n_user_position up ON up.id_user = u.id
+             ORDER BY name"
+        );
+    }
+
+    /** @return array<int, string> stanowisko (0 = bez stanowiska) => strona startowa */
+    public function homes(): array
+    {
+        return array_column($this->all('SELECT id_position, home_page FROM n_position_home'), 'home_page', 'id_position');
+    }
+
+    public function setHome(int $positionId, string $page, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_position_home (id_position, home_page, updated_by) VALUES (?, ?, ?)
+                            ON DUPLICATE KEY UPDATE home_page = VALUES(home_page), updated_by = VALUES(updated_by)')->execute([$positionId, $page, $userId]);
+    }
+
+    /**
+     * [253] Menu stanowisk (n_position_menu) : stanowisko => [pozycja railu => strona otwierana albo null]. Stanowisko bez
+     * wierszy nie ma własnego menu. Brak tabeli (migracja 160 jeszcze nie wykonana) = brak menu stanowisk.
+     * @return array<int, array<string, ?string>>
+     */
+    public function menus(): array
+    {
+        try {
+            $rows = $this->all('SELECT id_position, item, open_path FROM n_position_menu');
+        } catch (\PDOException $e) {
+            return [];
+        }
+        $out = [];
+        foreach ($rows as $r) $out[(int) $r['id_position']][$r['item']] = $r['open_path'] !== null && $r['open_path'] !== '' ? $r['open_path'] : null;
+        return $out;
+    }
+
+    /** Zastępuje menu stanowiska (pusta lista = brak własnego menu → całe menu). @param array<string, ?string> $items */
+    public function setMenu(int $positionId, array $items, ?int $userId): void
+    {
+        $this->db->prepare('DELETE FROM n_position_menu WHERE id_position = ?')->execute([$positionId]);
+        $insert = $this->db->prepare('INSERT INTO n_position_menu (id_position, item, open_path, updated_by) VALUES (?, ?, ?, ?)');
+        foreach ($items as $item => $open) $insert->execute([$positionId, $item, $open, $userId]);
+    }
+}

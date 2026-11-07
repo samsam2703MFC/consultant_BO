@@ -1,0 +1,44 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>B2B · E · Une question par écran</title><link rel="stylesheet" href="epure.css">
+<style>
+.q{width:440px;padding:30px 32px 26px;display:flex;flex-direction:column;min-height:560px}
+.pts{display:flex;gap:6px;align-items:center;margin-bottom:26px}
+.pts i{width:7px;height:7px;border-radius:50%;background:var(--f)}
+.pts i.on{width:20px;border-radius:4px;background:var(--a)}
+.pts i.fait{background:var(--a);opacity:.4}
+.pts span{margin-left:auto;font-size:13px;color:var(--m)}
+h2{font:600 32px/1.15 var(--titre);letter-spacing:-.02em;margin:0 0 22px}
+.seg{display:flex;background:rgba(118,118,128,.12);border-radius:10px;padding:2px;margin-bottom:34px}
+.seg span{flex:1;text-align:center;padding:8px 0;border-radius:8px;font:500 14px var(--ui);color:var(--t)}
+.seg .on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.num{display:flex;align-items:center;justify-content:center;gap:26px}
+.num b{font:600 84px/1 var(--titre);letter-spacing:-.04em;color:var(--a)}
+.num b small{font-size:40px;margin-left:4px}
+.num i{font-style:normal;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--fond);font-size:24px;color:var(--t)}
+.cap{text-align:center;color:var(--m);margin:12px 0 0}
+.liste{border-radius:14px;overflow:hidden;background:var(--fond)}
+.liste div{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:.5px solid var(--f);font-size:16px}
+.liste div:last-child{border-bottom:0}
+.liste .on{color:var(--a-f);font-weight:600}
+.liste .on span{color:var(--a)}
+.liste small{color:var(--m);font-size:13px}
+.sp{flex:1}
+.pied{display:flex;align-items:center;justify-content:space-between;margin-top:26px}
+.ex{font-size:14px;color:var(--m);margin:18px 2px 0}
+.ex b{color:var(--t)}
+</style>
+<body><div class="haut">Paramètres primes franchisé · <b>Nouvelle prime B2B</b></div>
+<div class="scene">
+  <div class="panneau q"><div class="pts"><i class="fait"></i><i class="on"></i><i></i><span>2 sur 3</span></div>
+    <h2>Combien pour la vendeuse ?</h2>
+    <div class="seg"><span class="on">% de la commande</span><span>Montant fixe</span></div>
+    <div class="num"><i>−</i><b>5<small>%</small></b><i>+</i></div>
+    <p class="cap">de chaque commande HT du client pro</p>
+    <div class="sp"></div>
+    <div class="pied"><button class="lien">Retour</button><button class="btn">Continuer</button></div></div>
+  <div class="panneau q"><div class="pts"><i class="fait"></i><i class="fait"></i><i class="on"></i><span>3 sur 3</span></div>
+    <h2>Pendant combien de temps ?</h2>
+    <div class="liste"><div>La 1re commande seulement</div><div>1 mois</div><div class="on">3 mois<span>✓</span></div><div>12 mois</div><div>Sans limite<small>tant qu’il commande</small></div></div>
+    <p class="ex">Une école à <b>400 €</b> par mois : <b>20 €</b> par commande, <b>60 €</b> en 3 mois.</p>
+    <div class="sp"></div>
+    <div class="pied"><button class="lien">Retour</button><button class="btn">Créer la prime</button></div></div>
+</div></body></html>

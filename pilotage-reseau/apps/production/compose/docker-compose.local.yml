@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  erp_app:
+    build: 
+        context: ../docker/php
+    container_name: erp
+    restart: unless-stopped
+    volumes:
+      - ../app:/var/www/html
+      - ../docker/php/custom-php.ini:/usr/local/etc/php/conf.d/99-custom.ini
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.erp.rule=Host(`slfood.local`)"
+      - "traefik.http.routers.erp.entrypoints=websecure"
+      - "traefik.http.routers.erp.tls=true"
+      - "traefik.http.services.erp.loadbalancer.server.port=80"
+      - "traefik.docker.network=traefik_network"
+    networks:
+      - traefik_network
+    extra_hosts:
+      - "host.docker.internal:172.30.144.1"
+
+networks:
+  traefik_network:
+    external: true

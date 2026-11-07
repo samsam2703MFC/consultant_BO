@@ -1,0 +1,178 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Rentowność grup : tydzień i miesiąc{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Rentowność grup : tydzień i miesiąc</h3>
+            <p class="text-subtitle text-muted mb-0">
+                Tydzień {{ week.label }} (do {{ week.to|date('d.m') }}) · {{ month.label }} (do {{ month.to|date('d.m') }}) — kliknij grupę : 12 tygodni na wykresie.
+            </p>
+        </div>
+        <a href="{{ root }}/dashboard/results" class="btn btn-sm btn-outline-primary"><i class="bi bi-bar-chart-steps"></i> Wynik i produkcja grup (miesiące)</a>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-profit at-gw">
+    {% for w in notes %}
+        <div class="alert alert-warning at-profit-warn"><i class="bi bi-exclamation-triangle"></i> {{ w }} <a href="{{ root }}/cost-calculator">Uzupełnij koszty miesięczne</a></div>
+    {% endfor %}
+    {% if no_clock %}
+        <div class="alert alert-light border small mb-3"><i class="bi bi-info-circle"></i> Godziny pochodzą z pointowania na tablecie i telefonie (wejście / wyjście) — w tym miesiącu brak pointowań, więc kolumna godzin jest pusta.</div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body">
+            {% if groups %}
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0 at-gw-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Grupa</th>
+                            <th colspan="2" class="text-center">Godziny</th>
+                            <th colspan="2" class="text-center">Produkcja</th>
+                            <th colspan="2" class="text-center">Marża</th>
+                            <th colspan="2" class="text-center">Sprzedaż</th>
+                        </tr>
+                        <tr class="at-gw-sub">
+                            {% for i in 1..4 %}<th class="text-end">Tydzień</th><th class="text-end">Miesiąc</th>{% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for g in groups %}
+                        <tr class="at-gw-row{{ g.hours_only is defined ? ' is-hours-only' : '' }}" data-gw-group="{{ loop.index0 }}" tabindex="0" aria-label="{{ g.name }} : wykres 12 tygodni">
+                            <th scope="row">
+                                <span class="at-gw-name">{% for c in g.colors|slice(0, 1) %}<span class="at-gw-dot" style="background: {{ c }}"></span>{% endfor %}{{ g.name }}</span>
+                                {% if g.cobot %}
+                                    <span class="at-gw-cobot" title="Cobot w procesie : {{ g.cobot.names|join(', ') }}{{ g.cobot.share_pct is not null ? ' — ' ~ g.cobot.share_pct|pct ~ ' czasu procesu na cobocie (produkcja 12 tygodni)' : '' }}{{ g.cobot.saved_h > 0 ? ', oszczędzone ' ~ g.cobot.saved_h|number_format(1, ',', ' ') ~ ' h pracy' : '' }}">
+                                        <i class="bi bi-robot"></i>{% if g.cobot.share_pct is not null %} {{ g.cobot.share_pct|pct }}{% endif %}
+                                    </span>
+                                {% endif %}
+                                {% if g.hours_only is defined %}<div class="small text-muted">grupa produkcyjna bez działu sprzedaży : tylko godziny</div>{% endif %}
+                            </th>
+                            {% for p in [g.week, g.month] %}<td class="text-end">{{ p.hours > 0 ? p.hours|number_format(1, ',', ' ') ~ ' h' : '—' }}</td>{% endfor %}
+                            {% for p in [g.week, g.month] %}<td class="text-end">{% if p.production %}{{ p.production|eur }}<div class="small text-muted">{{ p.cartons|number_format(0, ',', ' ') }} kart.</div>{% elseif p.cartons %}<span class="text-muted">{{ p.cartons|number_format(0, ',', ' ') }} kart.</span>{% else %}—{% endif %}</td>{% endfor %}
+                            {% for p in [g.week, g.month] %}<td class="text-end {{ p.margin is null ? '' : (p.margin < 0 ? 'at-gw-neg' : 'at-gw-pos') }}">{% if p.margin is null %}—{% else %}{{ p.margin|eur }}<div class="small">{{ p.margin_pct is null ? '' : p.margin_pct|pct }}</div>{% endif %}</td>{% endfor %}
+                            {% for p in [g.week, g.month] %}<td class="text-end">{{ p.revenue is null ? '—' : p.revenue|eur }}</td>{% endfor %}
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                    <tfoot>
+                        <tr>
+                            <th>Razem</th>
+                            {% for k in ['week', 'month'] %}<td class="text-end">{{ totals[k].hours > 0 ? totals[k].hours|number_format(1, ',', ' ') ~ ' h' : '—' }}</td>{% endfor %}
+                            {% for k in ['week', 'month'] %}<td class="text-end">{{ totals[k].production|eur }}<div class="small text-muted">{{ totals[k].cartons|number_format(0, ',', ' ') }} kart.</div></td>{% endfor %}
+                            {% for k in ['week', 'month'] %}<td class="text-end {{ totals[k].margin < 0 ? 'at-gw-neg' : 'at-gw-pos' }}">{{ totals[k].margin|eur }}<div class="small">{{ totals[k].margin_pct is null ? '' : totals[k].margin_pct|pct }}</div></td>{% endfor %}
+                            {% for k in ['week', 'month'] %}<td class="text-end">{{ totals[k].revenue|eur }}</td>{% endfor %}
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            <p class="small text-muted mt-2 mb-0">
+                Godziny : pointowanie osób grupy. Produkcja : kartony z etykietą (wejście na magazyn) × średnia cena kartonu z 6 miesięcy sprzedaży.
+                Marża : sprzedaż − surowce i opakowania (receptury) − personel − koszty działu, koszty miesięczne proporcjonalnie do dni (jak na stronie Rentowność).
+                <i class="bi bi-robot"></i> cobot w procesie grupy, % = część czasu procesu (marszruty) na cobocie.
+            </p>
+            {% else %}
+                <p class="text-muted mb-0">Brak sprzedaży, produkcji i godzin w ostatnich 12 tygodniach.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if groups %}
+    <div class="card at-gw-chart-card" id="wykres">
+        <div class="card-header d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <h4 class="card-title mb-0" data-gw-title>12 tygodni</h4>
+            <div class="btn-group btn-group-sm" role="group" aria-label="Miara wykresu">
+                <button type="button" class="btn btn-outline-primary active" data-gw-metric="margin" aria-pressed="true">Marża</button>
+                <button type="button" class="btn btn-outline-primary" data-gw-metric="revenue" aria-pressed="false">Sprzedaż</button>
+                <button type="button" class="btn btn-outline-primary" data-gw-metric="hours_pct" aria-pressed="false">% godzin</button>
+            </div>
+        </div>
+        <div class="card-body">
+            <p class="small text-muted" data-gw-help></p>
+            <div class="at-gw-chart"><canvas id="atGwChart" role="img" aria-label="Wykres 12 tygodni"></canvas></div>
+        </div>
+    </div>
+    <script type="application/json" id="atGwData">{{ {weeks: weeks|map(w => w.label), groups: groups|map(g => {name: g.name, color: g.colors|first, series: g.series})}|json_encode|raw }}</script>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const dataEl = document.getElementById('atGwData');
+    if (!dataEl) return;
+    const data = JSON.parse(dataEl.textContent);
+    const HELP = {
+        margin: 'Marża tygodnia (€, słupki) i marża % (linia) : sprzedaż − surowce − personel − koszty działu.',
+        revenue: 'Sprzedaż tygodnia (€, WDT).',
+        hours_pct: 'Udział grupy w godzinach wszystkich grup (%, słupki) wobec jej udziału w sprzedaży (%, linia) — więcej godzin niż sprzedaży = praca mniej rentowna.',
+    };
+    const eur = (v) => v === null || v === undefined ? '—' : new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 0}).format(v) + ' €';
+    const pct = (v) => v === null || v === undefined ? '—' : new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 1}).format(v) + ' %';
+    let selected = 0;
+    let metric = 'margin';
+    let chart = null;
+    const rows = document.querySelectorAll('[data-gw-group]');
+    const loadChart = () => window.Chart ? Promise.resolve() : new Promise((resolve, reject) => {
+        const tag = document.createElement('script');
+        tag.src = 'https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js';
+        tag.onload = resolve;
+        tag.onerror = reject;
+        document.head.appendChild(tag);
+    });
+    function draw() {
+        const g = data.groups[selected];
+        const color = g.color || '#8D1D2C';
+        rows.forEach(r => r.classList.toggle('is-selected', Number(r.dataset.gwGroup) === selected));
+        document.querySelector('[data-gw-title]').textContent = `${g.name} — 12 tygodni`;
+        document.querySelector('[data-gw-help]').textContent = HELP[metric];
+        const values = (k) => g.series.map(s => s[k] ?? null);
+        let datasets;
+        let scales;
+        if (metric === 'margin') {
+            const m = values('margin');
+            datasets = [
+                {type: 'bar', label: 'Marża (€)', data: m, backgroundColor: m.map(v => v !== null && v < 0 ? '#C0392B' : '#2E7D4F'), yAxisID: 'y', order: 2},
+                {type: 'line', label: 'Marża %', data: values('margin_pct'), borderColor: '#222', backgroundColor: '#222', yAxisID: 'y2', tension: .25, spanGaps: true, order: 1},
+            ];
+            scales = {y: {ticks: {callback: eur}}, y2: {position: 'right', grid: {drawOnChartArea: false}, ticks: {callback: pct}}};
+        } else if (metric === 'revenue') {
+            datasets = [{type: 'bar', label: 'Sprzedaż (€)', data: values('revenue'), backgroundColor: color}];
+            scales = {y: {beginAtZero: true, ticks: {callback: eur}}};
+        } else {
+            datasets = [
+                {type: 'bar', label: '% godzin wszystkich grup', data: values('hours_pct'), backgroundColor: color, order: 2},
+                {type: 'line', label: '% sprzedaży', data: values('revenue_pct'), borderColor: '#222', backgroundColor: '#222', tension: .25, spanGaps: true, order: 1},
+            ];
+            scales = {y: {beginAtZero: true, ticks: {callback: pct}}};
+        }
+        const tooltip = {callbacks: {label: (c) => `${c.dataset.label}: ${c.dataset.label.includes('€') ? eur(c.parsed.y) : (c.dataset.label.includes('%') ? pct(c.parsed.y) : c.parsed.y)}`,
+            footer: (items) => { const s = g.series[items[0].dataIndex]; return s.hours > 0 ? `godziny : ${new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 1}).format(s.hours)} h` : ''; }}};
+        if (chart) chart.destroy();
+        chart = new Chart(document.getElementById('atGwChart'), {
+            data: {labels: data.weeks, datasets},
+            options: {responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false}, scales,
+                plugins: {legend: {position: 'bottom', labels: {generateLabels: (c) => Chart.defaults.plugins.legend.labels.generateLabels(c)
+                    .map(l => Array.isArray(c.data.datasets[l.datasetIndex].backgroundColor) ? {...l, fillStyle: '#2E7D4F', strokeStyle: '#2E7D4F'} : l)}}, tooltip}},
+        });
+    }
+    const show = () => loadChart().then(draw).catch(() => { document.querySelector('[data-gw-help]').textContent = 'Nie udało się wczytać wykresu.'; });
+    rows.forEach(r => {
+        const pick = () => { selected = Number(r.dataset.gwGroup); show(); document.getElementById('wykres').scrollIntoView({behavior: 'smooth', block: 'nearest'}); };
+        r.addEventListener('click', pick);
+        r.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pick(); } });
+    });
+    document.querySelectorAll('[data-gw-metric]').forEach(b => b.addEventListener('click', () => {
+        metric = b.dataset.gwMetric;
+        document.querySelectorAll('[data-gw-metric]').forEach(x => { x.classList.toggle('active', x === b); x.setAttribute('aria-pressed', String(x === b)); });
+        show();
+    }));
+    show();
+})();
+</script>
+{% endblock %}
