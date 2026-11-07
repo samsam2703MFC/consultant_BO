@@ -86,7 +86,7 @@ const RF_FAMILLES_FORMATION = [
 const RF_POSTES_NL = [   // les 12 postes du v25 — NL à relire
     'P1' => 'Medewerker brood & banket', 'P2' => 'Medewerker traiteur', 'P3' => 'Medewerker verkoop',
     'P4' => 'Afdelingschef verkoop', 'P5' => 'Afdelingschef brood & banket', 'P6' => 'Afdelingschef traiteur',
-    'P7' => 'Adjunct-manager', 'P8' => 'Manager', 'P9' => 'Huurder-zaakvoerder', 'P10' => 'Kandidaat-franchisenemer',
+    'P7' => 'Adjunct-manager', 'P8' => 'Manager', 'P9' => 'Huurder-uitbater', 'P10' => 'Kandidaat-franchisenemer',
     'P11' => 'Franchisenemer', 'P12' => 'Franchisenemer met meerdere winkels',
 ];
 const RF_DOMAINES_NL = [   // NL à relire

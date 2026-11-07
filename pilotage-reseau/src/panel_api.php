@@ -36,6 +36,13 @@ final class PanelApi
             // permet de brancher le compte sans toucher au serveur.
             $s = setting('panelApi', []);
             if (!is_array($s)) { $s = []; }
+            // Le mot de passe vit dans erp_cles, la table des clés commune à l'ERP (7 nov. 2026) : le
+            // compte TF Buddy y est publié pour les autres portails (tfbuddy_base / _phone / _password).
+            if (function_exists('erpCle')) {
+                if (trim((string) ($s['password'] ?? '')) === '' && erpCle('tfbuddy_password') !== '') { $s['password'] = erpCle('tfbuddy_password'); }
+                // Un compte enregistré avant le 7 nov. 2026 : publié une fois dans les clés communes.
+                elseif (trim((string) ($s['password'] ?? '')) !== '' && erpCle('tfbuddy_password') === '') { erpPublierTfbuddy($s); }
+            }
             $c = Db::config()['panelApi'] ?? [];
             $env = static fn (string $k): string => (string) (getenv($k) ?: '');
             $val = static function (string $k, array $s, array $c, string $envKey, string $def = '') use ($env): string {

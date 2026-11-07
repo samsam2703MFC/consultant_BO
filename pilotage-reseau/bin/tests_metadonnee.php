@@ -14,19 +14,18 @@ declare(strict_types=1);
  * plan des SMS et des escalades, le texte du SMS, l'appel SMSAPI ; et le flux
  * Meta recopié du CRM : « Connecter et tester » (qui ne détourne jamais le
  * webhook du CRM), la lecture d'un lead et ses replis, les coordonnées ; les
- * clés et l'accès du CRM, lus dans sa base sans jamais y écrire.
+ * clés et l'accès Meta communs, lus dans erp_cles sans jamais y écrire.
  */
 
 // --- doublures : pas de base, pas de réglage, pas de journal ---------------------
 final class Db
 {
-    /** Les tables du CRM dans la base partagée : `crm_settings` et `meta_connexion` (null = absentes). */
+    /** La table des clés commune à l'ERP, `erp_cles` (null = absente). */
     public static function rows(string $sql, array $a = []): array
     {
-        foreach (['crm_settings' => 'CRM', 'meta_connexion' => 'PARTAGE'] as $table => $g) {
-            if (!str_contains($sql, "FROM $table")) { continue; }
-            if ($GLOBALS[$g] === null) { throw new PDOException("Table '$table' doesn't exist"); }
-            return $GLOBALS[$g];
+        if (str_contains($sql, 'FROM erp_cles')) {
+            if ($GLOBALS['CRM'] === null) { throw new PDOException("Table 'erp_cles' doesn't exist"); }
+            return $GLOBALS['CRM'];
         }
         return [];
     }
@@ -42,7 +41,6 @@ final class Db
 }
 $REGLAGES = [];
 $CRM = null;
-$PARTAGE = null;
 $ECRITS = [];
 function setting(string $k, mixed $d = null): mixed { global $REGLAGES; return $REGLAGES[$k] ?? $d; }
 function journalAdd(string $actor, string $kind, ?string $project, string $message): void {}
@@ -250,30 +248,27 @@ $r = mdMetaConnecter();
 verifie('réglages incomplets : dit ce qui manque', !$r['ok'] && str_contains($r['etapes'][0]['detail'], 'ID de la Page') && str_contains($r['etapes'][0]['detail'], 'clé secrète'));
 
 echo "Meta : les clés et l'accès du CRM\n";
-$crmReglages = static fn (string $jeton): array => [['skey' => 'meta_app_id', 'svalue' => '42'], ['skey' => 'meta_app_secret', 'svalue' => 'secret-app'],
-    ['skey' => 'meta_page_id', 'svalue' => '501'], ['skey' => 'meta_page_token', 'svalue' => $jeton]];
+$cle = static fn (string $c, string $v, string $le = '2026-10-29 08:00:00'): array => ['cle' => $c, 'valeur' => $v, 'maj_le' => $le];
+$crmReglages = static fn (string $jeton): array => [$cle('meta_app_id', '42'), $cle('meta_app_secret', 'secret-app'),
+    $cle('meta_page_id', '501'), $cle('meta_page_token', $jeton)];
 $REGLAGES = ['mdMeta' => ['appId' => '7', 'pageId' => '8', 'verify' => 'v'], 'mdMetaSecret' => 'autre', 'mdMetaJeton' => 'autre-jeton'];
 $CRM = $crmReglages('tok-page');
-$PARTAGE = [];
 $c = mdMetaCfg();
 verifie('par défaut : les clés du CRM, pas celles saisies ici', $c['source'] === 'crm' && $c['appId'] === '42' && $c['pageId'] === '501' && $c['secret'] === 'secret-app' && $c['jeton'] === 'tok-page', json_encode($c));
 $st = mdMetaStatut();
 verifie('l’écran sait d’où viennent les clés, sans jamais un secret', $st['source'] === 'crm' && $st['crm'] !== null && $st['secret'] === true && $st['jeton'] === true
     && !str_contains((string) json_encode($st), 'secret-app') && !str_contains((string) json_encode($st), 'tok-page'));
-$CRM = [['skey' => 'meta_app_id', 'svalue' => '42'], ['skey' => 'meta_page_token', 'svalue' => '']];
-$PARTAGE = [['cle' => 'app_secret', 'valeur' => 'secret-app', 'maj_le' => '2026-10-29 08:00:00'], ['cle' => 'page_id', 'valeur' => '501', 'maj_le' => '2026-10-29 08:00:00'],
-    ['cle' => 'page_token', 'valeur' => 'tok-page', 'maj_le' => '2026-10-30 09:15:00']];
+$CRM = [$cle('meta_app_id', '42'), $cle('meta_app_secret', 'secret-app'), $cle('meta_page_id', '501'), $cle('meta_page_token', ''),
+    $cle('meta_system_token', 'tok-systeme', '2026-10-30 09:15:00')];
 $c = mdMetaCfg();
-verifie('ce qui manque à ses réglages : repris de la connexion qu’il publie (meta_connexion)', $c['secret'] === 'secret-app' && $c['pageId'] === '501' && $c['jeton'] === 'tok-page' && $c['crm']['le'] === '2026-10-30 09:15:00', json_encode($c));
+verifie('pas encore de jeton de Page : celui de l’utilisateur système (erp_cles), date de la plus récente', $c['secret'] === 'secret-app' && $c['pageId'] === '501' && $c['jeton'] === 'tok-systeme' && $c['crm']['le'] === '2026-10-30 09:15:00', json_encode($c));
 $CRM = null;
-$PARTAGE = null;
 verifie('pas de CRM dans la base : rien, sans erreur', mdMetaCfg()['crm'] === null && !mdMetaConfigure());
 $r = mdMetaConnecter();
 verifie('… et « Connecter et tester » le dit', !$r['ok'] && str_contains($r['etapes'][0]['detail'], 'Clés propres'));
 
 // Le CRM n'a encore que le jeton de l'utilisateur système ; l'adresse de rappel de son application est libre.
 $CRM = $crmReglages('tok-systeme');
-$PARTAGE = [];
 $REGLAGES = ['mdMeta' => ['verify' => 'v', 'rappel' => 'https://cockpit.atelierby.be/api/cockpit/metadonnee/meta/leads']];
 $appels = [];
 $ECRITS = [];
@@ -281,7 +276,7 @@ MdMeta::$transport = $fauxGraph('');
 $r = mdMetaConnecter();
 verifie('clés du CRM : Connecter et tester passe', $r['ok'], json_encode($r['etapes'], JSON_UNESCAPED_UNICODE));
 verifie('… sans jamais prendre l’adresse de rappel de son application, même libre', !in_array('POST 42/subscriptions', $appels, true) && mdMetaMode() === 'releve');
-verifie('… sans rien écrire dans le CRM', !array_filter($ECRITS, static fn ($q) => str_contains($q, 'crm_settings') || str_contains($q, 'meta_connexion')), implode(' | ', $ECRITS));
+verifie('… sans rien écrire dans les clés communes', !array_filter($ECRITS, static fn ($q) => str_contains($q, 'erp_cles') || str_contains($q, 'crm_settings')), implode(' | ', $ECRITS));
 verifie('… le jeton de la Page tiré du sien, gardé ici et utilisé', mdMetaCfg()['jeton'] === 'tok-page' && ($REGLAGES['mdMetaJeton'] ?? '') === '');
 $CRM = $crmReglages('tok-systeme-2');
 verifie('le CRM change de jeton : le sien reprend la main', mdMetaCfg()['jeton'] === 'tok-systeme-2');

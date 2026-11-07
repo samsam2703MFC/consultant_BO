@@ -1310,3 +1310,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T08:18:20Z Tablette : articles du manuel rangés par formation (« FO-32 · 10 parties »), tiroir « parties lues »
 2026-11-07T08:31:12Z Dashboard : seuil coût matière lu dans Budget › Paramètres · Tablette : documents réservés au responsable (Manuel, cadenas or, PIN) · SOP du dashboard (ART-PIL-01, SOP-PIL-01)
 2026-11-07T08:37:37Z Tablette : documents réservés — le PIN du responsable ouvre bien le document
+2026-11-07T08:37:42Z Pilotage indépendant : clés dans erp_cles, Recrutement lu par son API
+2026-11-07T10:07:26Z Référentiel : le poste P9 s'appelle « Huurder-uitbater » en néerlandais

@@ -31,13 +31,17 @@ pour vivre avec l'ERP), le site public `landing` (`lp_`, **à décider**), et le
 1. **Une base** : celle de l'ERP. Un portail ne crée, ne modifie et ne supprime **que** ses tables
    `préfixe_`. Les tables de l'ERP sont en lecture ; celles d'un **autre portail ne sont jamais lues** :
    on passe par son API.
-2. **Réglages et secrets** : `préfixe_variable` (réglages) et `préfixe_keys` (secrets chiffrés), lus par
-   `Config::get` / `Keys::get`. **Exception décidée le 06/11/2026 : les clés des intégrations partagées**
-   (SMS, Meta / Facebook / Instagram, Google, Anthropic…) vivent dans **une seule table commune,
-   `master_variable_keys`** (valeurs chiffrées), lue par les quatre portails : une clé Meta ou Anthropic
-   n'est saisie et renouvelée qu'à un endroit. Un portail lit d'abord sa propre table, puis la table
-   commune. `master_variable_keys` part avec n'importe quel portail exporté : c'est le socle commun. Dans l'environnement : l'accès à la base, la clé maîtresse et
-   l'identité de développement, rien d'autre.
+2. **Réglages et secrets** : `préfixe_variable` (réglages) ; **toutes les clés dans `erp_cles`**, la
+   table des clés commune à l'ERP (décision du 7 nov. 2026 : « les clés sont dans une table commune pour
+   tout l'ERP ; à part les clés, tous les portails doivent être indépendants » — elle remplace les
+   `préfixe_keys` et le projet `master_variable_keys`). Une ligne par clé : `cle`, `valeur`, `secret`,
+   `indice`, `portail` (`commun` = intégration partagée — Meta, e-mail, SMS, IA, Google, TF Buddy, jeton
+   de service `erp_jeton_service`, adresses des API `rec_api_url` / `pil_api_url` ; sinon le portail
+   propriétaire `rec` / `mar` / `pil` / `frm`), `integration`, `maj_le`, `maj_par`. Un portail chiffre au
+   besoin SES lignes (Marketing : `mar.{module}.{nom}`) ; les lignes `commun` sont en clair, lues par leur
+   nom. Même définition dans les quatre portails (CREATE TABLE IF NOT EXISTS). Seules tables hors préfixe :
+   `erp_`. Dans l'environnement : l'accès à la base, la clé maîtresse et l'identité de développement, rien
+   d'autre.
 3. **Migrations** : `db/migrations/`, rejouables deux fois ; une vue n'a qu'une définition, dans un
    fichier `_vues`. Pendant une bascule de nom, une vue `ancien_nom` → `nouveau_nom` garde l'ancien
    code en vie ; elle est supprimée quand plus rien ne la lit.
@@ -53,7 +57,12 @@ pour vivre avec l'ERP), le site public `landing` (`lp_`, **à décider**), et le
 - **Écrans** : `/api/v1/{app}/{portail}/{ressource}` — `app` ∈ `admin | consultant | franchise | public
   | pwa`, portail ∈ `recrutement | marketing | pilotage | formations`. Exemple :
   `/api/v1/public/recrutement/candidatures`, `/api/v1/consultant/pilotage/visites`.
-- **Entre portails** : `/api/v1/integration/{portail}/{ressource}`, jeton de service. Exemples :
+- **Entre portails** : `/api/v1/integration/{portail}/{ressource}`, jeton de service (`erp_jeton_service`
+  d'`erp_cles`, en-tête `X-Service-Token`). En place (7 nov. 2026) : le Cockpit accepte ce jeton sur ses
+  lectures `/stores` (avec `franchise` et `cp`), `/stores/perf`, `/exploitation/pro`, `/marketing/avis`,
+  `/formation/ref`… et publie son adresse https dans `pil_api_url` ; le Recrutement sert
+  `/crm/api/v1/integration/recrutement/scouting-reseau` (positions et données d'étude des magasins, lues
+  par le Cockpit) ; Social sert `…/social/integration/formulaires`. Exemples :
   Pilotage lit les campagnes de Marketing ; Recrutement pousse un franchisé signé vers Pilotage ;
   Recrutement lit les chiffres des magasins chez Pilotage (déjà le cas, `GET /stores`) ; Social lit
   les avis et la réputation des boutiques chez Pilotage au lieu de `ceo_shop_review`.
@@ -90,7 +99,7 @@ Chaque étape est mise en ligne séparément, après accord.
 | 2d. Signage | à faire |
 | 0. Dépôt unique : le cockpit dans `pilotage-reseau/` | en cours |
 | 0b. `marketing/`, `recrutement-developpement/`, `formations/` versés dans le dépôt | à faire |
-| 0c. Table commune `master_variable_keys` | à faire |
+| 0c. Table commune des clés : `erp_cles` (remplace `master_variable_keys`) | fait le 7 nov. 2026 — Recrutement, Marketing (Social compris) et Pilotage y lisent et écrivent leurs clés ; plus aucune lecture croisée de tables (Scouting du Recrutement dans `crm_scouting_*`, réglages dans `crm_settings`, boutiques par l'API du Cockpit) |
 | 3 à 7 | à faire |
 
 ### Écart ouvert : le cockpit écrit encore dans les tables du Marketing

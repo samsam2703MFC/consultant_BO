@@ -35,16 +35,15 @@ final class Smtp
         ];
         // La config du cockpit prime quand elle est COMPLÈTE : hôte, expéditeur,
         // et le mot de passe si un utilisateur est posé. Incomplète, on retombe
-        // sur les réglages du CRM candidat (crm_settings, MÊME base partagée) —
-        // le mot de passe reste en base, il ne transite jamais par un écran.
+        // sur la boîte d'envoi COMMUNE de l'ERP (table erp_cles, lignes smtp_*,
+        // tenues par le Recrutement — 7 nov. 2026 : plus aucune lecture de
+        // crm_settings) — le mot de passe reste en base, jamais sur un écran.
         $complet = $c['hote'] !== '' && $c['expediteur'] !== ''
             && ($c['utilisateur'] === '' || $c['motDePasse'] !== '');
         if ($complet) { return $c; }
         try {
             $crm = [];
-            foreach (Db::rows("SELECT skey, svalue FROM crm_settings WHERE skey LIKE 'smtp\\_%'") as $r) {
-                $crm[(string) $r['skey']] = (string) $r['svalue'];
-            }
+            foreach (['smtp_host', 'smtp_port', 'smtp_secure', 'smtp_user', 'smtp_pass', 'smtp_from', 'smtp_from_name'] as $k) { $crm[$k] = erpCle($k); }
             if (($crm['smtp_host'] ?? '') !== '' && ($crm['smtp_from'] ?? '') !== '') {
                 $sec = strtolower($crm['smtp_secure'] ?? 'tls');
                 $nom = trim($crm['smtp_from_name'] ?? '');
@@ -58,7 +57,7 @@ final class Smtp
                     'source' => 'crm',
                 ];
             }
-        } catch (PDOException $e) { /* table du CRM absente : rien à reprendre */ }
+        } catch (Throwable $e) { /* table commune absente : rien à reprendre */ }
         return $c;
     }
 

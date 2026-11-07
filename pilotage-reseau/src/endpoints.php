@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/erp_cles.php';
+
 /**
  * Cockpit CEO — endpoints de lecture (GET), un par écran + référentiels.
  * Formes JSON : voir contrat-api.md. Aucune donnée métier dans le HTML :
@@ -189,8 +191,15 @@ function ep_stores(): array
     // source que le panel consultant. Repli sur `ceo_shop` si la table partagée
     // est absente (installation autonome / démo).
     try {
+        // Le code postal, si la table en a un (le nom de la colonne varie selon les versions du panel).
+        static $colCp = false;
+        if ($colCp === false) {
+            $colCp = null;
+            $cols = array_map(fn ($c) => (string) $c['Field'], Db::rows('SHOW COLUMNS FROM shops'));
+            foreach (['postal_code', 'postcode', 'zip', 'zipcode', 'zip_code', 'cp', 'code_postal'] as $c) { if (in_array($c, $cols, true)) { $colCp = $c; break; } }
+        }
         $rows = Db::rows('SELECT id, slug, name, legal_name, city, zone, region, active, kind,
-                                 is_franchise, operator, contrat, since_year, sort_order
+                                 is_franchise, operator, contrat, since_year, sort_order' . ($colCp ? ", `$colCp` AS cp" : '') . '
                           FROM shops ORDER BY sort_order, id');
         return array_map(fn ($r) => [
             'id'     => (string) $r['id'],
@@ -207,6 +216,9 @@ function ep_stores(): array
             // laisser nul ici est correct ; le déclarer manquant serait faux.
             'panier' => null,
             'pwaId'  => (int) $r['id'], // la boutique du panel EST le pwa_shop_id
+            // Pour les autres portails (Recrutement : réseau, DIP), qui ne lisent plus la table `shops`.
+            'franchise' => $r['is_franchise'] !== null ? (int) $r['is_franchise'] === 1 : null,
+            'cp'     => trim((string) ($r['cp'] ?? '')),
         ], $rows);
     } catch (PDOException $e) {
         return array_map(fn ($r) => [
@@ -8895,6 +8907,35 @@ const SCOUTING_RESEAU_CA_TTL = 21600;
  * base) prime. Le CA réel : P&L mensuel du panel, douze derniers mois clos,
  * annualisé s'il y en a moins.
  */
+/**
+ * Ce que le Scouting du Recrutement tient sur les magasins du réseau — positions pointées sur la carte et
+ * données d'étude saisies (« Magasins du réseau ») — lu par SON API (GET …/v1/integration/recrutement/
+ * scouting-reseau, jeton de service d'erp_cles), jamais ses tables (7 nov. 2026 : portails indépendants).
+ * Gardé ici (scoutingRecrutement) : le Recrutement muet, la dernière lecture sert ; jamais lu : nos réglages
+ * d'avant (scoutingReseau / scoutingMagasins).
+ */
+function scoutingDuRecrutement(): array
+{
+    static $memo = null;
+    if ($memo !== null) { return $memo; }
+    $garde = setting('scoutingRecrutement');
+    if (is_array($garde) && (int) ($garde['le'] ?? 0) > time() - 600) {
+        return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])];
+    }
+    $d = erpLireRecrutement('scouting-reseau');
+    if (is_array($d)) {
+        $memo = ['positions' => is_array($d['positions'] ?? null) ? $d['positions'] : [], 'saisies' => is_array($d['saisies'] ?? null) ? $d['saisies'] : []];
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['scoutingRecrutement', json_encode($memo + ['le' => time()], JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* garde best-effort */ }
+        return $memo;
+    }
+    if (is_array($garde)) { return $memo = ['positions' => (array) ($garde['positions'] ?? []), 'saisies' => (array) ($garde['saisies'] ?? [])]; }
+    $s = setting('scoutingMagasins');
+    return $memo = ['positions' => [], 'saisies' => is_array($s) ? $s : []];
+}
+
 function ep_scouting_reseau(): array
 {
     try {
@@ -8909,6 +8950,10 @@ function ep_scouting_reseau(): array
     }
     $pos = setting('scoutingReseau');
     if (!is_array($pos)) { $pos = []; }
+    // Les positions pointées à la main sur la carte : le Scouting du Recrutement, par son API
+    // (positions saisies, elles l'emportent sur les nôtres tirées des fiches Google).
+    $rec = scoutingDuRecrutement();
+    foreach ($rec['positions'] as $sid => $p) { if (is_array($p) && ($p['source'] ?? '') === 'saisie') { $pos[(string) $sid] = $p; } }
     $fiches = [];
     try {
         foreach (Db::rows('SELECT shop_id, place_id FROM mar_avis_fiche') as $r) { $fiches[(string) $r['shop_id']] = (string) $r['place_id']; }
@@ -8946,8 +8991,7 @@ function ep_scouting_reseau(): array
         } catch (Throwable $e) { /* P&L indisponible : CA réel inconnu */ }
     }
     $out = [];
-    $saisies = setting('scoutingMagasins');
-    if (!is_array($saisies)) { $saisies = []; }
+    $saisies = scoutingDuRecrutement()['saisies'];
     foreach ($shops as $sh) {
         $id = (string) $sh['id'];
         $p = $pos[$id] ?? null;

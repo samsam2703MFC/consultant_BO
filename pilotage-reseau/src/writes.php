@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require_once __DIR__ . '/erp_cles.php';
+
 /**
  * Cockpit CEO — routes d'écriture.
  * Chaque écriture journalise dans ceo_journal_entry (l'écran Journal en dépend).
@@ -239,6 +241,11 @@ function wr_pwa_compte(): array
     if ($conf['password'] === '') { $conf['password'] = (string) ($cur['password'] ?? ''); }
     if ($conf['base'] === '') { unset($conf['base']); }               // → défaut du client
 
+    // Le compte est publié dans erp_cles (clés communes de l'ERP : tfbuddy_base / _phone / _password) — le
+    // Recrutement et les autres portails s'y connectent sans lire nos réglages. Le mot de passe n'est gardé
+    // QUE là (plus dans ceo_app_setting) ; écriture impossible : il reste ici, comme avant.
+    erpPublierTfbuddy($conf);
+    if (($conf['password'] ?? '') !== '' && erpCle('tfbuddy_password') === $conf['password']) { unset($conf['password']); }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['panelApi', json_encode($conf, JSON_UNESCAPED_UNICODE)]);
     PanelApi::oublierJeton();
