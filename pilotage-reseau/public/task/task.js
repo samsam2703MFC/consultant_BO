@@ -38,18 +38,23 @@
   }
   // Intégrée, la page prend la hauteur de son contenu : le cadre du cockpit la suit, et il ne reste qu'une
   // barre de défilement, celle du cockpit (07/11/2026 : trois barres imbriquées, « attention à l'UX »).
-  if (EMBED && window.parent !== window && window.ResizeObserver) {
-    let attente = 0, derniere = 0;
-    new ResizeObserver(() => {
-      cancelAnimationFrame(attente);
-      attente = requestAnimationFrame(() => {
-        const h = Math.ceil(document.getElementById('tk').getBoundingClientRect().height) + 8;
-        if (Math.abs(h - derniere) < 2) { return; }
-        derniere = h;
-        try { window.parent.postMessage({ tkHauteur: h }, location.origin); } catch (e) { /* cockpit absent */ }
-      });
-    }).observe(document.getElementById('tk'));
+  // La hauteur dite au cockpit : le bas du contenu, ou celui d'une fenêtre ouverte s'il est plus bas — une
+  // fenêtre (Modifier, le jour du planning) est posée par-dessus, hors du flux : sans elle, le cadre restait
+  // à la hauteur du contenu et la coupait (07/11/2026).
+  let hauteurDite = 0, hauteurAttente = 0;
+  function signalerHauteur() {
+    if (!EMBED || window.parent === window) { return; }
+    cancelAnimationFrame(hauteurAttente);
+    hauteurAttente = requestAnimationFrame(() => {
+      let bas = document.getElementById('tk').getBoundingClientRect().bottom;
+      document.querySelectorAll('.tk-modale').forEach(m => { bas = Math.max(bas, m.getBoundingClientRect().bottom + 24); });
+      const h = Math.ceil(bas + window.scrollY) + 8;
+      if (Math.abs(h - hauteurDite) < 2) { return; }
+      hauteurDite = h;
+      try { window.parent.postMessage({ tkHauteur: h }, location.origin); } catch (e) { /* cockpit absent */ }
+    });
   }
+  if (EMBED && window.ResizeObserver) { new ResizeObserver(signalerHauteur).observe(document.getElementById('tk')); }
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
@@ -842,6 +847,7 @@
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
     }
+    signalerHauteur();   // une fenêtre ouverte ou fermée ne change pas la taille du contenu : on mesure à chaque rendu
   }
 
   /* --- actions ------------------------------------------------------------ */
@@ -867,7 +873,7 @@
       case 'recharger': return charger();
       case 'vue': S.vue = el.dataset.v; adresse(S.cl); rendre(); voirHaut(); return;
       case 'plCase': {
-        S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout', fait: '', ctrl: '', cl: '' }; rendre();
+        S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout', fait: '', ctrl: '', cl: '', y: el.getBoundingClientRect().top + window.scrollY }; rendre();
         return quiCharger(S.modale);
       }
       case 'plSeg': S.modale.k = el.dataset.v; return rendre();

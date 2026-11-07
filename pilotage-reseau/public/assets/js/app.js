@@ -1135,7 +1135,8 @@ class App {
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
-      cadreTaches: ['Cadre des tâches', 'Les checklists et les tâches que les magasins font chaque jour, telles que le panel les définit : les lire, en créer avec l’assistant, en dupliquer avec d’autres jours, une autre heure, obligatoires ou avec photo.'],
+      // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
+      cadreTaches: ['Cadre des tâches', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -9265,6 +9266,9 @@ class App {
       });
     }
     common.ct = { src: this._ctSrc, haut: this._ctHaut || 900 };
+    // Une surface de travail, pas une page de lecture : toute la largeur de l'écran (07/11/2026, « it's for desktop,
+    // use the whole screen ») — la classe app__body--wide du design system.
+    common.large = true;
   }
   valsTablette(common){
     const S = this.state;
