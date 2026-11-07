@@ -28,5 +28,9 @@ Pour régénérer les captures, lancer un serveur statique sur le port 8099 depu
 puis :
 
 ```
-node docs/maquettes/benchmark-concurrence/generer.js
+node pilotage-reseau/docs/maquettes/benchmark-concurrence/generer.js
 ```
+
+**Codé (07/11/2026)** : `public/dashboard/dashboard.js` (onglet `vue=concurrence`, `rendConcurrence`), avec en
+plus la recherche d'un produit du catalogue du magasin (« Aller chercher un produit… ») et le formulaire
+« + Relevé terrain ». Serveur : `GET /benchmarks/magasin?shop=`, `POST /benchmarks/releve` (`src/benchmark.php`).

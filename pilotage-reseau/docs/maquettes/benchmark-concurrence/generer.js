@@ -86,7 +86,7 @@ function page(fam) {
 
   const choix = `<div class="db-ong" style="margin-left:10px"><button class="${fam === 'cougnou' ? 'on' : ''}">Cougnou</button><button class="${fam === 'galette' ? 'on' : ''}">Galette des rois</button></div>`;
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Dashboard magasin — Concurrence</title>
-<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="/public/dashboard/dashboard.css">
+<link rel="stylesheet" href="/pilotage-reseau/public/assets/ds/global.css"><link rel="stylesheet" href="/pilotage-reseau/public/dashboard/dashboard.css">
 <style>.db-tuiles .db-tui .s b{font-weight:400}</style></head><body><div id="dash">${hd}
 <div class="db-sec">Concurrence — ${esc(R.libelle)}${choix}<small>prix comparable, position et visibilité face aux concurrents · relevé du 7/11/2026 · saison ${diam ? 'du 31/12 au 15/01' : 'du 1/11 au 6/01'}</small><span class="db-mini" style="margin-left:auto">prochain relevé : jeudi 12/11, 7 h (routine)</span></div>
 <div class="db-tuiles">${tuiles}</div>${echelle}${table}${bas}</div></body></html>`;
@@ -97,7 +97,7 @@ function page(fam) {
   const b = await chromium.launch();
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
   for (const f of ['cougnou', 'galette']) {
-    await p.goto('http://127.0.0.1:8099/docs/maquettes/benchmark-concurrence/' + f + '.html', { waitUntil: 'load' });
+    await p.goto('http://127.0.0.1:8099/pilotage-reseau/docs/maquettes/benchmark-concurrence/' + f + '.html', { waitUntil: 'load' });
     await p.waitForTimeout(600);
     await p.screenshot({ path: OUT + f + '.jpg', type: 'jpeg', quality: 86, fullPage: true });
   }

@@ -457,6 +457,7 @@ function route(string $method, string $path): mixed
             $path === '/rapports/cron'                 => ep_rapports_cron(),
             $path === '/benchmarks/cron'               => ep_benchmark_cron(),
             $path === '/benchmarks/verification'       => ep_benchmark_verification(),
+            $path === '/benchmarks/magasin'            => ep_benchmark_magasin(),
             (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
@@ -940,6 +941,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
     if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
     if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
+    if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)

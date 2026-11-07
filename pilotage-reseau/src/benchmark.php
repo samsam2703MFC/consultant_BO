@@ -271,8 +271,24 @@ function benchmarkVerifier(int $shop = 4, bool $ecrire = false): array
                 $r = BenchmarkApi::appel('PATCH', "$base/observations/$oid", ['notes' => 'témoin modifié']);
                 $relu = BenchmarkApi::observation($shop, $oid);
                 $pas('Modifier l\'observation', 'PATCH', "$base/observations/$oid", $r, ($relu['notes'] ?? '') === 'témoin modifié', 'vérifié par relecture');
+                // Sonde des unités : TFBuddy répond 201 même quand la ligne n'entre pas (inserted_id 0),
+                // il faut relire. Chaque variante est posée, relue, puis effacée.
+                $unites = [];
+                foreach (['g' => ['unit_type' => 'g', 'unit_size' => 250], 'kg' => ['unit_type' => 'kg', 'unit_size' => 0.25],
+                          'piece' => ['unit_type' => 'piece', 'unit_size' => 1], 'cm' => ['unit_type' => 'cm', 'unit_size' => 24], 'aucune' => []] as $nomU => $u) {
+                    $lib = 'Sonde unité ' . $nomU;
+                    BenchmarkApi::appel('POST', "$base/competitors/$cid/observations/$oid/items", ['name_raw' => $lib, 'price' => 1.0] + $u);
+                    foreach ((array) BenchmarkApi::items($shop, $oid) as $i) {
+                        if (($i['name_raw'] ?? '') === $lib) { $unites[$nomU] = true; BenchmarkApi::appel('DELETE', "$base/observations/$oid/items/" . (int) $i['id']); }
+                    }
+                    $unites[$nomU] = $unites[$nomU] ?? false;
+                }
+                $acc = array_keys(array_filter($unites));
+                $alertes[] = 'Unités acceptées par TFBuddy pour un item : ' . ($acc ? implode(', ', $acc) : 'aucune') . ' ; refusées : ' . (implode(', ', array_keys(array_filter($unites, fn ($v) => !$v))) ?: 'aucune') . '.';
+                if ($acc) { benchmarkReglage('unites', $acc); }
+                $uT = in_array('g', $acc, true) ? ['unit_type' => 'g', 'unit_size' => 250] : (in_array('kg', $acc, true) ? ['unit_type' => 'kg', 'unit_size' => 0.25] : (in_array('piece', $acc, true) ? ['unit_type' => 'piece', 'unit_size' => 1] : []));
                 $r = BenchmarkApi::appel('POST', "$base/competitors/$cid/observations/$oid/items",
-                    ['name_raw' => 'Cougnou témoin', 'unit_type' => 'g', 'unit_size' => 250, 'price' => 3.0, 'is_promo' => false, 'notes' => 'témoin']);
+                    ['name_raw' => 'Cougnou témoin', 'price' => 3.0, 'is_promo' => false, 'notes' => 'témoin'] + $uT);
                 $iid = (int) ($r['corps']['inserted_id'] ?? 0);
                 if ($r['ok'] && $iid <= 1) {
                     foreach ((array) BenchmarkApi::items($shop, $oid) as $i) { if (($i['name_raw'] ?? '') === 'Cougnou témoin') { $iid = (int) $i['id']; } }
@@ -302,6 +318,32 @@ function benchmarkVerifier(int $shop = 4, bool $ecrire = false): array
         ? count($etapes) . ' étape(s) passée(s)' . ($ecrire ? ', cycle d\'écriture complet et nettoyé' : ' en lecture seule')
         : count($ko) . ' étape(s) en échec sur ' . count($etapes) . ' : ' . implode(' ; ', array_map(fn ($e) => $e['etape'] . ' (' . $e['note'] . ')', array_slice($ko, 0, 3)));
     return ['ok' => $ok, 'magasin' => $shop, 'ecrire' => $ecrire, 'etapes' => $etapes, 'alertes' => $alertes, 'resume' => $resume];
+}
+
+/** Écrit une clé du réglage `benchmark` sans toucher aux autres. */
+function benchmarkReglage(string $cle, mixed $valeur): void
+{
+    $s = setting('benchmark', []);
+    if (!is_array($s)) { $s = []; }
+    $s[$cle] = $valeur;
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['benchmark', json_encode($s, JSON_UNESCAPED_UNICODE)]);
+}
+
+/**
+ * Un item tel que TFBuddy l'accepte. La sonde (vérification en écriture) retient les unités
+ * qu'il prend ; une unité refusée est convertie (g → kg) ou portée dans le libellé, pour que
+ * le poids ou le diamètre ne se perde pas : « Cougnou sucre [250 g] ».
+ */
+function benchmarkItemPourApi(array $corps): array
+{
+    $acc = (array) ((setting('benchmark', []) ?: [])['unites'] ?? ['g', 'kg', 'piece', 'cm']);
+    $u = (string) ($corps['unit_type'] ?? ''); $t = $corps['unit_size'] ?? null;
+    if ($u === '' || in_array($u, $acc, true)) { return $corps; }
+    if ($u === 'g' && in_array('kg', $acc, true) && $t !== null) { $corps['unit_type'] = 'kg'; $corps['unit_size'] = round((float) $t / 1000, 3); return $corps; }
+    if ($t !== null) { $corps['name_raw'] = trim((string) $corps['name_raw']) . ' [' . rtrim(rtrim(number_format((float) $t, 1, '.', ''), '0'), '.') . ' ' . $u . ']'; }
+    unset($corps['unit_type'], $corps['unit_size']);
+    if (in_array('piece', $acc, true)) { $corps['unit_type'] = 'piece'; $corps['unit_size'] = 1; }
+    return $corps;
 }
 
 /* =================================================================================
@@ -411,15 +453,16 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
                 if (!$id) { $n['erreurs']++; $journal[] = "magasin $shop : création de « {$c['nom']} » refusée — " . BenchmarkApi::$lastError; continue; }
                 $cid = $id; $existants[$cle] = $cid; $n['concurrents']++;
             }
-            $deja = false;
-            foreach ((array) BenchmarkApi::observations($shop, $cid) as $o) { if (str_contains((string) ($o['notes'] ?? ''), $tag)) { $deja = true; } }
-            if ($deja) { $n['deja']++; $journal[] = "magasin $shop : « {$c['nom']} » déjà relevé ($libelle, $releve)"; continue; }
-            $oid = BenchmarkApi::creerObservation($shop, $cid, ['observed_at' => $releve, 'notes' => 'Relevé web ' . $libelle . ' ' . $releve . ' ' . $tag]);
+            $oid = 0;
+            foreach ((array) BenchmarkApi::observations($shop, $cid) as $o) { if (str_contains((string) ($o['notes'] ?? ''), $tag)) { $oid = (int) $o['id']; } }
+            if ($oid > 0 && (array) BenchmarkApi::items($shop, $oid) !== []) { $n['deja']++; $journal[] = "magasin $shop : « {$c['nom']} » déjà relevé ($libelle, $releve)"; continue; }
+            // Observation posée mais vide (prix refusés à un passage précédent) : on la complète.
+            if ($oid === 0) { $oid = BenchmarkApi::creerObservation($shop, $cid, ['observed_at' => $releve, 'notes' => 'Relevé web ' . $libelle . ' ' . $releve . ' ' . $tag]);
             if ($oid !== null && $oid <= 1) {
                 foreach ((array) BenchmarkApi::observations($shop, $cid) as $o) { if (str_contains((string) ($o['notes'] ?? ''), $tag)) { $oid = (int) $o['id']; } }
             }
             if (!$oid) { $n['erreurs']++; $journal[] = "magasin $shop : observation de « {$c['nom']} » refusée — " . BenchmarkApi::$lastError; continue; }
-            $n['observations']++;
+            $n['observations']++; }
             foreach ($items as $i) {
                 $corps = array_filter([
                     'name_raw' => (string) $i['name_raw'], 'unit_type' => (string) ($i['unit_type'] ?? 'g'),
@@ -428,9 +471,13 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
                     'my_product_id' => isset($i['comparer_a'], $produits[$i['comparer_a']]) ? (int) $produits[$i['comparer_a']] : null,
                     'notes' => trim(($i['vu_le'] ?? '') . ' ' . ($i['source'] ?? '')),
                 ], fn ($v) => $v !== null && $v !== '');
-                if (BenchmarkApi::creerItem($shop, $cid, $oid, $corps) !== null) { $n['items']++; }
-                else { $n['erreurs']++; $journal[] = "magasin $shop : item « {$i['name_raw']} » refusé — " . BenchmarkApi::$lastError; }
+                $corps = benchmarkItemPourApi($corps);
+                if (BenchmarkApi::creerItem($shop, $cid, $oid, $corps) === null) { $n['erreurs']++; $journal[] = "magasin $shop : item « {$i['name_raw']} » refusé — " . BenchmarkApi::$lastError; }
             }
+            // TFBuddy répond 201 même quand la ligne n'entre pas : on compte ce qui est relu.
+            $lus = count((array) BenchmarkApi::items($shop, $oid));
+            $n['items'] += $lus;
+            if ($lus < count($items)) { $n['erreurs'] += count($items) - $lus; $journal[] = "magasin $shop : « {$c['nom']} » " . (count($items) - $lus) . ' item(s) non enregistré(s) par TFBuddy (unités acceptées : ' . implode(', ', (array) ((setting('benchmark', []) ?: [])['unites'] ?? ['?'])) . ')'; }
             $journal[] = "magasin $shop : « {$c['nom']} » relevé ($libelle, $releve, " . count($items) . ' item(s))';
         }
     }
@@ -520,6 +567,10 @@ function benchmarkItems(string $famille): array
                         // Un même concurrent national relevé pour 4 magasins ne compte qu'une fois.
                         $cle = benchmarkNomCle((string) $c['name']) . '|' . benchmarkNomCle((string) $i['name_raw']) . '|' . $i['price'];
                         if (isset($vu[$cle])) { $vu[$cle]['magasins'][] = $shop; continue; }
+                        // Taille portée dans le libellé quand TFBuddy a refusé l'unité : « … [250 g] ».
+                        if (preg_match('/\[(\d+(?:[.,]\d+)?)\s*(g|kg|cm)\]/u', (string) ($i['name_raw'] ?? ''), $mt) && !in_array((string) ($i['unit_type'] ?? ''), ['g', 'kg', 'cm'], true)) {
+                            $i['unit_type'] = $mt[2]; $i['unit_size'] = (float) str_replace(',', '.', $mt[1]);
+                        }
                         $vu[$cle] = $i + ['concurrent' => $c['name'], 'type' => $c['type'] ?? '', 'magasins' => [$shop], 'vu_le' => $o['observed_at'] ?? null];
                     }
                 }
@@ -905,4 +956,114 @@ function wr_benchmark_reglages(): array
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['benchmark', json_encode($s, JSON_UNESCAPED_UNICODE)]);
     return ['ok' => true, 'reglages' => array_diff_key($s, ['dernierResume' => 1])];
+}
+
+/* =================================================================================
+   6. L'ONGLET « CONCURRENCE » DU DASHBOARD MAGASIN
+   ================================================================================= */
+
+/**
+ * GET /benchmarks/magasin?shop=4 — tout ce que l'onglet affiche pour un magasin :
+ *  - `releves` : chaque prix concurrent relevé pour ce magasin dans TFBuddy (terrain du réseau
+ *    compris), avec le concurrent, son type, sa distance, la date ; la taille portée dans le
+ *    libellé (« [250 g] ») est relue ;
+ *  - `referentiel` : les relevés web du cockpit pour ce magasin, quand TFBuddy n'en a pas encore ;
+ *  - `familles` : cougnou et galette — motif, mesure, taille de référence, nos produits,
+ *    à faire, contrôles web (`web=0` pour s'en passer) ;
+ *  - `kpi` : l'analyse « mes produits » de TFBuddy sur 90 jours.
+ * Lente (un appel par observation) : le dashboard la demande avec `_cache=900`.
+ */
+function ep_benchmark_magasin(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'shop manquant']; }
+    $avecWeb = ($_GET['web'] ?? '1') !== '0';
+    $releves = []; $erreur = null; $concurrents = [];
+    if (BenchmarkApi::disponible()) {
+        $liste = BenchmarkApi::concurrents($shop, true);
+        if ($liste === null) { $erreur = BenchmarkApi::$lastError; }
+        foreach ((array) $liste as $c) {
+            $concurrents[] = ['id' => (int) $c['id'], 'nom' => (string) ($c['name'] ?? ''), 'type' => (string) ($c['type'] ?? ''), 'ville' => (string) ($c['city'] ?? ''),
+                'distance' => isset($c['distance_km']) ? (float) $c['distance_km'] : null, 'actif' => !isset($c['is_active']) || (bool) $c['is_active']];
+            foreach ((array) ($c['observations'] ?? []) as $o) {
+                foreach ((array) BenchmarkApi::items($shop, (int) $o['id']) as $i) {
+                    $u = (string) ($i['unit_type'] ?? ''); $t = isset($i['unit_size']) ? (float) $i['unit_size'] : null;
+                    if (preg_match('/\[(\d+(?:[.,]\d+)?)\s*(g|kg|cm)\]/u', (string) ($i['name_raw'] ?? ''), $mt) && !in_array($u, ['g', 'kg', 'cm'], true)) { $u = $mt[2]; $t = (float) str_replace(',', '.', $mt[1]); }
+                    $releves[] = ['id' => (int) $i['id'], 'observation' => (int) $o['id'], 'concurrentId' => (int) $c['id'], 'concurrent' => (string) $c['name'], 'type' => (string) ($c['type'] ?? ''),
+                        'distance' => isset($c['distance_km']) ? (float) $c['distance_km'] : null, 'produit' => trim((string) preg_replace('/\s*\[[^\]]*\]\s*$/u', '', (string) ($i['name_raw'] ?? ''))),
+                        'monProduit' => isset($i['my_product_id']) ? (int) $i['my_product_id'] : null, 'monProduitNom' => $i['my_product_name'] ?? null,
+                        'prix' => (float) ($i['price'] ?? 0), 'promo' => !empty($i['is_promo']) ? (float) ($i['promo_price'] ?? 0) : null,
+                        'unite' => $u, 'taille' => $t, 'vuLe' => substr((string) ($o['observed_at'] ?? ''), 0, 10), 'notes' => (string) ($i['notes'] ?? ''), 'source' => 'api'];
+                }
+            }
+        }
+    }
+    $familles = []; $referentiel = [];
+    foreach (BENCHMARK_FAMILLES as $f) {
+        $d = benchmarkDonnees($f);
+        $familles[$f] = ['libelle' => $d['libelle'] ?? $f, 'motif' => $d['motif'] ?? $f, 'mesure' => $d['mesure'] ?? 'poids', 'tailleRef' => benchmarkTailleRef($f),
+            'tailleConfirmee' => (bool) ($d['nous']['tailleConfirmee'] ?? false), 'nous' => $d['nous']['produits'], 'saison' => $d['saison'] ?? null,
+            'releve' => $d['releve'], 'constats' => $d['constats'] ?? [], 'web' => $avecWeb ? benchmarkVisibiliteSite($f) : null];
+        foreach ($d['concurrents'] as $c) {
+            if (!in_array($shop, array_map('intval', (array) ($c['magasins'] ?? [])), true)) { continue; }
+            foreach ((array) $c['items'] as $i) {
+                $referentiel[] = ['concurrent' => $c['nom'], 'type' => $c['type'] ?? '', 'distance' => $c['distance_km'][(string) $shop] ?? null, 'produit' => $i['name_raw'],
+                    'monProduit' => isset($i['comparer_a']) ? ($d['nous']['correspondance'][$i['comparer_a']] ?? null) : null, 'prix' => (float) $i['price'],
+                    'promo' => isset($i['promo_price']) ? (float) $i['promo_price'] : null, 'unite' => (string) ($i['unit_type'] ?? ''), 'taille' => $i['unit_size'] ?? null,
+                    'vuLe' => (string) $d['releve'], 'notes' => trim(($i['vu_le'] ?? '') . ' ' . ($i['source'] ?? '')), 'lien' => $i['source'] ?? null, 'famille' => $f, 'source' => 'referentiel'];
+            }
+        }
+    }
+    $a = BenchmarkApi::disponible() ? BenchmarkApi::analyse($shop, date('Y-m-d', strtotime('-90 days')), date('Y-m-d')) : null;
+    return ['shop' => $shop, 'lu' => date('Y-m-d H:i'), 'releves' => $releves, 'referentiel' => $referentiel, 'concurrents' => $concurrents,
+        'familles' => $familles, 'kpi' => $a['kpi'] ?? null, 'produits' => $a['products'] ?? [], 'erreur' => $erreur];
+}
+
+/**
+ * POST /benchmarks/releve — un prix vu en magasin, saisi depuis le dashboard :
+ * { shop, concurrentId? | concurrent: {nom, type?, ville?, distance?}, produitId?, nom, prix, promo?, unite?, taille?, notes? }.
+ * Le concurrent est créé s'il n'existe pas ; l'observation est celle du jour « Relevé terrain »
+ * (une par concurrent et par jour) ; l'item est relu pour confirmer qu'il est entré.
+ */
+function wr_benchmark_releve(): array
+{
+    $b = body();
+    $shop = (int) ($b['shop'] ?? 0);
+    $nom = trim((string) ($b['nom'] ?? ''));
+    $prix = (float) str_replace(',', '.', (string) ($b['prix'] ?? 0));
+    if ($shop <= 0 || $nom === '' || $prix <= 0) { http_response_code(400); return ['ok' => false, 'error' => 'magasin, produit et prix sont requis']; }
+    if (!BenchmarkApi::disponible()) { http_response_code(503); return ['ok' => false, 'error' => 'compte consultant du panel non configuré']; }
+    $cid = (int) ($b['concurrentId'] ?? 0);
+    if ($cid <= 0) {
+        $c = (array) ($b['concurrent'] ?? []);
+        $cn = trim((string) ($c['nom'] ?? ''));
+        if ($cn === '') { http_response_code(400); return ['ok' => false, 'error' => 'concurrent requis']; }
+        foreach ((array) BenchmarkApi::concurrents($shop) as $x) { if (benchmarkNomCle((string) ($x['name'] ?? '')) === benchmarkNomCle($cn)) { $cid = (int) $x['id']; } }
+        if ($cid <= 0) {
+            $cid = (int) BenchmarkApi::creerConcurrent($shop, array_filter(['name' => mb_substr($cn, 0, 120), 'type' => mb_substr((string) ($c['type'] ?? 'Artisan'), 0, 40),
+                'city' => mb_substr((string) ($c['ville'] ?? ''), 0, 80), 'distance_km' => isset($c['distance']) && $c['distance'] !== '' ? (float) $c['distance'] : null, 'is_active' => true], fn ($v) => $v !== null && $v !== ''));
+            if ($cid <= 1) { foreach ((array) BenchmarkApi::concurrents($shop) as $x) { if (benchmarkNomCle((string) ($x['name'] ?? '')) === benchmarkNomCle($cn)) { $cid = (int) $x['id']; } } }
+            if ($cid <= 1) { http_response_code(502); return ['ok' => false, 'error' => 'TFBuddy n’a pas créé le concurrent : ' . (BenchmarkApi::$lastError ?? '?')]; }
+        }
+    }
+    $jour = date('Y-m-d'); $tag = '[cockpit:terrain:' . $jour . ']'; $oid = 0;
+    foreach ((array) BenchmarkApi::observations($shop, $cid) as $o) { if (str_contains((string) ($o['notes'] ?? ''), $tag)) { $oid = (int) $o['id']; } }
+    if ($oid === 0) {
+        $oid = (int) BenchmarkApi::creerObservation($shop, $cid, ['observed_at' => $jour, 'notes' => 'Relevé terrain (dashboard magasin) ' . $tag]);
+        if ($oid <= 1) { foreach ((array) BenchmarkApi::observations($shop, $cid) as $o) { if (str_contains((string) ($o['notes'] ?? ''), $tag)) { $oid = (int) $o['id']; } } }
+        if ($oid <= 1) { http_response_code(502); return ['ok' => false, 'error' => 'TFBuddy n’a pas créé l’observation : ' . (BenchmarkApi::$lastError ?? '?')]; }
+    }
+    $u = in_array($b['unite'] ?? '', ['g', 'kg', 'cm', 'piece'], true) ? (string) $b['unite'] : '';
+    $corps = array_filter([
+        'name_raw' => mb_substr($nom, 0, 150), 'price' => $prix,
+        'promo_price' => isset($b['promo']) && (float) $b['promo'] > 0 ? (float) $b['promo'] : null, 'is_promo' => isset($b['promo']) && (float) $b['promo'] > 0,
+        'unit_type' => $u !== '' ? $u : null, 'unit_size' => $u !== '' && (float) ($b['taille'] ?? 0) > 0 ? (float) $b['taille'] : null,
+        'my_product_id' => (int) ($b['produitId'] ?? 0) > 0 ? (int) $b['produitId'] : null, 'notes' => mb_substr(trim('terrain ' . (string) ($b['notes'] ?? '')), 0, 250),
+    ], fn ($v) => $v !== null && $v !== '');
+    $avant = count((array) BenchmarkApi::items($shop, $oid));
+    BenchmarkApi::creerItem($shop, $cid, $oid, benchmarkItemPourApi($corps));
+    $apres = count((array) BenchmarkApi::items($shop, $oid));
+    if ($apres <= $avant) { http_response_code(502); return ['ok' => false, 'error' => 'TFBuddy a répondu sans enregistrer le prix (' . (BenchmarkApi::$lastError ?? 'ligne refusée') . ')']; }
+    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'benchmark', 'Relevé terrain', "Magasin $shop : $nom à " . number_format($prix, 2, ',', ' ') . ' € chez le concurrent ' . $cid . '.'); }
+    return ['ok' => true, 'concurrentId' => $cid, 'observation' => $oid];
 }

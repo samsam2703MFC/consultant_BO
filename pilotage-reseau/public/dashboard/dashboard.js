@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -37,6 +37,7 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
+    bmF: ['cougnou', 'galette', 'produit'].includes(q.get('bmf')) ? q.get('bmf') : 'cougnou', bmP: q.get('bmp') || null, bmQ: '', bmForm: null, bmMsg: null, bmEnvoi: false,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
@@ -106,7 +107,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'bm': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -136,6 +137,7 @@
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
     // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
+    if (S.vue === 'concurrence') { lireAux(cleBM(), cheminBM(), force); lireAux(clePMP(), cheminPMP(), force); rendre(); return; }
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
@@ -214,6 +216,7 @@
     if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
+    if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
     history.replaceState(null, '', u.toString());
   }
 
@@ -4982,6 +4985,174 @@
     return h + '<div class="ma-note"><i class="pr-lg gagne"></i>gagnée · <i class="pr-lg tete"></i>en tête · toucher une vendeuse pour le détail, prime par prime</div>' + fin;
   }
 
+  /* ==========================================================================
+   * Onglet « Concurrence » (07/11/2026, maquette docs/maquettes/benchmark-concurrence) : le magasin face à
+   * ses concurrents. Deux familles saisonnières (cougnou au kilo, galette des rois ramenée à notre Ø à surface
+   * égale) et n'importe quel produit, cherché dans le catalogue du magasin. Les prix viennent du module
+   * Benchmark de TFBuddy (relevés du réseau et du cockpit) :
+   *   ../api/cockpit/benchmarks/magasin?shop=            (relevés, familles, contrôles web — lent, gardé 15 min)
+   *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (nos produits, prix TTC — partagé avec Promotions)
+   *   POST ../api/cockpit/benchmarks/releve              (un prix vu en magasin, posé dans TFBuddy)
+   * ========================================================================== */
+  const cleBM = () => 'bm|' + S.shop;
+  const cheminBM = () => '/benchmarks/magasin?shop=' + encodeURIComponent(S.shop);
+  const BM_NORM = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const BM_VIDES = new Set(['avec', 'sans', 'pour', 'aux', 'des', 'les', 'une', 'piece', 'pieces', 'ind', 'mini', 'grand', 'petit', 'nature', 'sucre']);
+  /** Le mot qui porte le produit (« Cougnou - Sucre & Chocolat » → cougnou), pour retrouver les relevés sans lien. */
+  function bmMotCle(nom) { return BM_NORM(nom).split(' ').find(w => w.length >= 4 && !BM_VIDES.has(w)) || BM_NORM(nom).split(' ')[0] || ''; }
+  function bmProduits() { const P = S.aux[clePMP()]; return P && Array.isArray(P.produits) ? P.produits : []; }
+  /** Le prix payé (promo comprise) ramené à la mesure : €/kg, € à notre Ø, ou € la pièce. */
+  function bmValeur(r, mesure, ref) {
+    const p = r.promo > 0 ? r.promo : r.prix, t = +r.taille || 0;
+    if (!(p > 0)) { return null; }
+    if (mesure === 'diametre') { return r.unite === 'cm' && t > 0 && ref > 0 ? p * (ref / t) ** 2 : null; }
+    if (mesure === 'poids') { return r.unite === 'g' && t > 0 ? p / t * 1000 : (r.unite === 'kg' && t > 0 ? p / t : null); }
+    return p;
+  }
+  const bmMed = v => { const a = v.filter(x => x != null).sort((x, y) => x - y), n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : null; };
+  /** Ce que l'onglet compare : la famille choisie ou le produit cherché. */
+  function bmSujet() {
+    const D = S.aux[cleBM()] || {}, F = D.familles || {};
+    if (S.bmF === 'produit') {
+      const p = bmProduits().find(x => String(x.id) === String(S.bmP));
+      if (!p) { return null; }
+      const mot = bmMotCle(p.nom), lie = r => r.monProduit != null && String(r.monProduit) === String(p.id);
+      const tous = (D.releves || []).filter(r => lie(r) || (mot && BM_NORM(r.produit).includes(mot)));
+      const ref = (D.referentiel || []).filter(r => lie(r) || (mot && BM_NORM(r.produit).includes(mot)));
+      return { cle: 'produit', titre: p.nom, mesure: 'piece', unite: '€ la pièce', ref: p.prixTtc, nous: [{ nom: p.nom, prix: p.prixTtc }], tailleRef: null,
+        releves: tous.length ? tous : ref, source: tous.length ? 'api' : (ref.length ? 'referentiel' : 'api'), mot, produit: p, web: null, constats: [] };
+    }
+    const f = F[S.bmF];
+    if (!f) { return null; }
+    const re = new RegExp(f.motif, 'i'), api = (D.releves || []).filter(r => re.test(r.produit + ' ' + (r.monProduitNom || '')));
+    const refe = (D.referentiel || []).filter(r => r.famille === S.bmF);
+    // Les relevés web du cockpit complètent ceux de TFBuddy tant qu'ils n'y sont pas encore.
+    const vus = new Set(api.map(r => BM_NORM(r.concurrent) + '|' + BM_NORM(r.produit)));
+    const releves = api.concat(refe.filter(r => !vus.has(BM_NORM(r.concurrent) + '|' + BM_NORM(r.produit))));
+    const n0 = (f.nous || []).find(x => x.reference) || (f.nous || [])[0] || {};
+    const tRef = f.tailleRef, refV = bmValeur({ prix: n0.prix, unite: f.mesure === 'diametre' ? 'cm' : 'g', taille: n0.taille || tRef }, f.mesure, tRef);
+    return { cle: S.bmF, titre: f.libelle, mesure: f.mesure, unite: f.mesure === 'diametre' ? '€ à Ø ' + tRef + ' cm' : '€/kg', ref: refV, nous: f.nous || [], tailleRef: tRef,
+      tailleConfirmee: f.tailleConfirmee, releves, source: api.length ? (refe.length > api.length ? 'mixte' : 'api') : 'referentiel', web: f.web, constats: f.constats || [], saison: f.saison };
+  }
+  function rendConcurrence() {
+    const D = S.aux[cleBM()], k = cleBM();
+    let h = `<div class="db-sec">Concurrence<span class="db-ong bm-choix">${[['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
+      <span class="bm-cherche"><input type="search" placeholder="Aller chercher un produit…" data-bmq="1" value="${esc(S.bmQ || '')}" autocomplete="off"><span id="bm-res" class="bm-res"></span></span>
+      <small>prix comparable, position et visibilité face aux concurrents du magasin</small><button class="db-btn" data-bmform="1">+ Relevé terrain</button></div>`;
+    if (S.bmMsg) { h += `<div class="db-alerte bm-msg">${S.bmMsg}</div>`; }
+    if (S.bmForm) { h += bmFormulaire(); }
+    if (S.err[k] && !D) { return h + `<div class="db-err">Concurrence : ${esc(S.err[k])}</div>`; }
+    if (!D) { return h + squelette(3); }
+    const X = bmSujet();
+    if (!X) { return h + `<div class="db-alerte">Ce produit n’est pas dans le catalogue du magasin.</div>`; }
+    const L = X.releves.map(r => Object.assign({}, r, { v: bmValeur(r, X.mesure, X.tailleRef) }));
+    const comp = L.filter(r => r.v != null), ref = X.ref;
+    const ec = v => ref != null && v ? (ref - v) / v * 100 : null;
+    const types = ['GMS', 'Artisan', 'Chaîne'], lib = { GMS: 'supermarchés', Artisan: 'artisans', 'Chaîne': 'chaînes' };
+    const typeDe = r => types.includes(r.type) ? r.type : (/gms|super|hyper/i.test(r.type) ? 'GMS' : (/cha[iî]ne/i.test(r.type) ? 'Chaîne' : 'Artisan'));
+    const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 0) + ' %';
+    // Les tuiles
+    const nous0 = (X.nous.find(x => x.reference) || X.nous[0] || {});
+    const tui = (kk, v, s, c) => `<div class="db-tui ${c || ''}"><div class="k">${kk}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    let t = tui(X.cle === 'produit' ? 'Notre prix' : 'Notre ' + (X.cle === 'galette' ? 'galette' : 'cougnou'), fU(ref),
+      X.cle === 'produit' ? esc(X.titre) : `${fU(nous0.prix)} · ${X.mesure === 'diametre' ? 'Ø ' + X.tailleRef + ' cm' : '≈ ' + X.tailleRef + ' g' + (X.tailleConfirmee ? '' : ' <span class="wa">à confirmer</span>')} · ${esc(X.unite)}`, 'vif');
+    types.forEach(ty => { const v = comp.filter(r => typeDe(r) === ty).map(r => r.v), m = bmMed(v), e = ec(m);
+      t += tui('Médiane ' + lib[ty], m == null ? '—' : fU(m), v.length ? `${v.length} relevé${v.length > 1 ? 's' : ''} · nous <span class="${e > 0 ? 'ko' : 'ok'}">${pct(e)}</span>` : 'aucun relevé'); });
+    const moins = ref != null ? comp.filter(r => r.v < ref).length : 0;
+    t += tui('Moins chers que nous', `${moins} <small class="mu">/ ${comp.length}</small>`, comp.length ? 'relevés dont la taille est connue' : 'rien à comparer');
+    t += X.web ? tui('Visibilité web', `${X.web.ok} <small class="mu">/ ${X.web.total}</small>`, 'contrôles atelierby.be passés', X.web.ok / X.web.total >= .5 ? 'bon' : '')
+      : tui('Relevés', String(L.length), X.source === 'api' ? 'dans TFBuddy' : 'relevé web du cockpit');
+    h += `<div class="db-tuiles">${t}</div>`;
+    // L'échelle
+    if (comp.length && ref != null) {
+      const max = Math.ceil(Math.max(ref, ...comp.map(r => r.v)) / 5) * 5 || 5, W = 1180, x = v => 60 + v / max * (W - 80), ty = { GMS: 28, Artisan: 50, 'Chaîne': 72 };
+      const col = { GMS: '#B8B2A8', Artisan: 'var(--prize)', 'Chaîne': 'var(--muted-2)' };
+      let s = '';
+      for (let v = 0; v <= max; v += max > 40 ? 10 : 5) { s += `<line x1="${x(v)}" x2="${x(v)}" y1="16" y2="82" stroke="#e6e0d8"/><text x="${x(v)}" y="96" font-size="10" text-anchor="middle" fill="#7a736a">${v} €</text>`; }
+      types.forEach(k2 => { s += `<text x="0" y="${ty[k2] + 4}" font-size="10" fill="#7a736a">${lib[k2]}</text>`; });
+      comp.forEach(r => { s += `<circle cx="${x(r.v).toFixed(1)}" cy="${ty[typeDe(r)]}" r="5.5" fill="${col[typeDe(r)]}" fill-opacity=".85"><title>${esc(r.concurrent + ' — ' + r.produit + ' : ' + fU(r.v))}</title></circle>`; });
+      s += `<line x1="${x(ref)}" x2="${x(ref)}" y1="10" y2="84" stroke="var(--color-primary)" stroke-width="2.5"/><rect x="${x(ref) - 36}" y="0" width="72" height="15" rx="3" fill="var(--color-primary)"/><text x="${x(ref)}" y="11" font-size="10" text-anchor="middle" fill="#fff">nous ${nf(ref, 2)} €</text>`;
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Où nous situons-nous — ${esc(X.unite)}</span><span class="db-mini">${comp.length} relevé${comp.length > 1 ? 's' : ''} comparable${comp.length > 1 ? 's' : ''} · ${X.mesure === 'diametre' ? 'prix × (Ø ' + X.tailleRef + ' / Ø)²' : (X.mesure === 'poids' ? 'prix ÷ poids' : 'prix de la pièce, promo comprise')} · survol = le relevé</span></div>
+        <div style="padding:12px 16px 4px"><svg viewBox="0 0 ${W} 102" width="100%" style="display:block">${s}</svg></div>
+        <div class="db-leg"><span><i style="background:#B8B2A8"></i>supermarché</span><span><i style="background:var(--prize)"></i>artisan</span><span><i style="background:var(--muted-2)"></i>chaîne</span><span><i style="background:var(--color-primary)"></i>notre prix</span></div></div>`;
+    }
+    // Les relevés
+    const lignes = L.slice().sort((a, b) => (a.v ?? 1e9) - (b.v ?? 1e9)).map(r => {
+      const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'ko' : 'ok'}">nous ${pct(e)}</span>`);
+      const lien = r.lien || ((r.notes || '').match(/https?:\/\/\S+/) || [])[0];
+      return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
+        <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.taille ? nf(+r.taille, 0) + ' ' + esc(r.unite) : '—'}</td>
+        <td class="n">${fU(r.prix)}${r.promo ? `<div class="db-mini">promo ${fU(r.promo)}</div>` : ''}</td><td class="n"><b>${r.v == null ? '—' : fU(r.v)}</b></td><td class="n">${pos}</td><td class="n">${lien ? `<a class="db-lien" href="${esc(lien)}" target="_blank" rel="noopener">source ↗</a>` : ''}</td></tr>`;
+    }).join('');
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">${esc(X.titre)} — les concurrents du magasin</span><span class="db-mini">${L.length} relevé${L.length > 1 ? 's' : ''} · ${X.source === 'api' ? 'module Benchmark de TFBuddy' : (X.source === 'mixte' ? 'TFBuddy + relevé web du cockpit' : 'relevé web du cockpit (pas encore dans TFBuddy)')}${X.mot ? ' · rattachés à ce produit ou contenant « ' + esc(X.mot) + ' »' : ''}</span></div>
+      ${L.length ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">${X.mesure === 'diametre' ? 'Ø' : 'Taille'}</th><th class="n">Prix</th><th class="n">${esc(X.unite)}</th><th class="n">Écart</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
+        : `<div class="bm-vide">Aucun prix concurrent relevé pour ce produit. <button class="db-btn" data-bmform="1">+ Ajouter un relevé terrain</button></div>`}</div>`;
+    // Visibilité web et à faire (familles)
+    if (X.web || X.constats.length) {
+      const ctrl = X.web ? X.web.controles.map(c => `<div class="bm-l"><span class="${c.ok ? 'ok' : 'ko'} bm-st">${c.ok ? '✓ fait' : '✗ manque'}</span><span>${esc(c.libelle)}${c.detail && c.cle !== 'page' ? `<div class="db-mini">${esc(c.detail.slice(0, 90))}</div>` : ''}</span></div>`).join('') : '';
+      h += `<div class="bm-bas"><div class="db-card"><div class="ct"><span class="db-lab">Visibilité web — atelierby.be</span><span class="db-mini">${X.web ? 'lu le ' + esc(X.web.lu_le) : ''}</span></div>${ctrl}</div>
+        <div class="db-card"><div class="ct"><span class="db-lab">À faire</span><span class="db-mini">tiré du benchmark</span></div>${X.constats.map((c, i) => `<div class="bm-l"><span class="mu bm-st">${i + 1}</span><span>${esc(c)}</span></div>`).join('')}</div></div>`;
+    }
+    h += `<div class="db-mini bm-pied">Lu le ${esc(D.lu || '')}${D.kpi ? ' · TFBuddy : ' + (D.kpi.comparisons_count || 0) + ' comparaison(s) rattachée(s) sur 90 jours' : ''}${D.erreur ? ' · <span class="ko">' + esc(D.erreur) + '</span>' : ''}</div>`;
+    return h;
+  }
+  /** Le formulaire d'un prix vu en magasin — posé dans TFBuddy, rattaché au produit affiché. */
+  function bmFormulaire() {
+    const D = S.aux[cleBM()] || {}, F = S.bmForm, X = bmSujet() || {}, p = X.produit || null;
+    const opts = (D.concurrents || []).slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(c => `<option value="${c.id}" ${String(F.cid) === String(c.id) ? 'selected' : ''}>${esc(c.nom)}${c.ville ? ' · ' + esc(c.ville) : ''}</option>`).join('');
+    const nousOpts = (X.cle === 'produit' ? [p] : (X.nous || []).filter(n => n.id)).filter(Boolean).map(n => `<option value="${n.id}">${esc(n.nom)}</option>`).join('');
+    return `<div class="db-card bm-form"><div class="ct"><span class="db-lab">Relevé terrain — un prix vu chez un concurrent</span><span class="db-mini">posé dans le module Benchmark de TFBuddy, daté d’aujourd’hui</span><button class="db-btn" data-bmferme="1">Fermer</button></div>
+      <div class="bm-grille">
+        <label>Concurrent<select data-bmc="cid"><option value="">— nouveau concurrent —</option>${opts}</select></label>
+        <label>Nouveau : nom<input data-bmc="cnom" value="${esc(F.cnom || '')}" placeholder="Boulangerie Dupont"></label>
+        <label>Type<select data-bmc="ctype">${['Artisan', 'GMS', 'Chaîne'].map(x => `<option ${F.ctype === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Notre produit<select data-bmc="pid">${nousOpts || '<option value="">—</option>'}</select></label>
+        <label class="lg">Produit vu<input data-bmc="nom" value="${esc(F.nom || '')}" placeholder="Cougnou sucre 250 g"></label>
+        <label>Prix (€)<input data-bmc="prix" inputmode="decimal" value="${esc(F.prix || '')}"></label>
+        <label>Promo (€)<input data-bmc="promo" inputmode="decimal" value="${esc(F.promo || '')}"></label>
+        <label>Taille<input data-bmc="taille" inputmode="decimal" value="${esc(F.taille || '')}"></label>
+        <label>Unité<select data-bmc="unite">${[['g', 'g'], ['kg', 'kg'], ['cm', 'cm (Ø)'], ['piece', 'pièce']].map(u => `<option value="${u[0]}" ${F.unite === u[0] ? 'selected' : ''}>${u[1]}</option>`).join('')}</select></label>
+      </div><div class="bm-act"><button class="db-btn on" data-bmenv="1" ${S.bmEnvoi ? 'disabled' : ''}>${S.bmEnvoi ? 'Envoi…' : 'Poser le relevé'}</button></div></div>`;
+  }
+  function bmLireForm() {
+    const F = S.bmForm; if (!F) { return; }
+    $.querySelectorAll('[data-bmc]').forEach(el => { F[el.dataset.bmc] = el.value; });
+  }
+  function bmChercher(q) {
+    const box = document.getElementById('bm-res'); if (!box) { return; }
+    const n = BM_NORM(q);
+    if (n.length < 2) { box.innerHTML = ''; return; }
+    const L = bmProduits().filter(p => BM_NORM(p.nom + ' ' + (p.cat || '')).includes(n)).slice(0, 12);
+    box.innerHTML = L.length ? L.map(p => `<button data-bmp="${p.id}"><span>${esc(p.nom)}</span><small>${esc(p.cat || '')} · ${p.prixTtc != null ? fU(p.prixTtc) : 'sans prix'}</small></button>`).join('')
+      : `<div class="mu">${bmProduits().length ? 'Aucun produit du magasin ne correspond.' : 'Catalogue du magasin en lecture…'}</div>`;
+    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
+  }
+  function bmBrancher() {
+    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
+    const q = $.querySelector('[data-bmq]');
+    if (q) { q.addEventListener('input', () => { S.bmQ = q.value; bmChercher(q.value); }); q.addEventListener('focus', () => bmChercher(q.value)); q.addEventListener('blur', () => setTimeout(() => { const b = document.getElementById('bm-res'); if (b) { b.innerHTML = ''; } }, 150)); }
+    $.querySelectorAll('[data-bmform]').forEach(b => b.addEventListener('click', () => {
+      const X = bmSujet() || {}; S.bmForm = { unite: X.mesure === 'diametre' ? 'cm' : (X.mesure === 'poids' ? 'g' : 'piece'), ctype: 'Artisan', nom: X.cle === 'produit' ? X.titre : '' }; S.bmMsg = null; rendre(); }));
+    $.querySelectorAll('[data-bmferme]').forEach(b => b.addEventListener('click', () => { S.bmForm = null; rendre(); }));
+    $.querySelectorAll('[data-bmc]').forEach(el => el.addEventListener('change', bmLireForm));
+    $.querySelectorAll('[data-bmenv]').forEach(b => b.addEventListener('click', () => {
+      bmLireForm(); const F = S.bmForm || {};
+      const corps = { shop: +S.shop, nom: F.nom, prix: F.prix, promo: F.promo || null, unite: F.unite, taille: F.taille || null, produitId: F.pid ? +F.pid : (($.querySelector('[data-bmc="pid"]') || {}).value || null) };
+      if (F.cid) { corps.concurrentId = +F.cid; } else { corps.concurrent = { nom: F.cnom, type: F.ctype }; }
+      if (!corps.nom || !(+String(corps.prix).replace(',', '.') > 0) || (!F.cid && !F.cnom)) { S.bmMsg = 'Indiquez le concurrent, le produit vu et son prix.'; rendre(); return; }
+      S.bmEnvoi = true; rendre();
+      ecrire('/benchmarks/releve', corps).then(() => { S.bmForm = null; S.bmMsg = 'Relevé posé dans TFBuddy : ' + esc(corps.nom) + ' à ' + esc(String(corps.prix)) + ' €.'; lireAux(cleBM(), cheminBM() + '&rafraichir=1', true); })
+        .catch(e => { S.bmMsg = '<span class="ko">Relevé refusé : ' + esc(e.message) + '</span>'; })
+        .finally(() => { S.bmEnvoi = false; rendre(); });
+    }));
+  }
+  function bmGarder() { const a = document.activeElement; return a && a.hasAttribute && a.hasAttribute('data-bmq') ? { s: a.selectionStart } : (a && a.dataset && a.dataset.bmc ? { c: a.dataset.bmc } : null); }
+  function bmRestaurer(g) {
+    if (!g) { return; }
+    const el = g.c ? $.querySelector(`[data-bmc="${g.c}"]`) : $.querySelector('[data-bmq]');
+    if (el) { el.focus(); if (g.s != null && el.setSelectionRange) { el.setSelectionRange(g.s, g.s); bmChercher(el.value); } }
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -5024,15 +5195,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
