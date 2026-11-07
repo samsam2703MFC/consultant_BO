@@ -877,7 +877,7 @@ tous les magasins la même chose ».
   d'une SOP (« Agrandir la vue tablette »). La fiche d'une SOP a aussi « Vue tablette » dans son sélecteur (FR · NL · FR
   et NL côte à côte) : la tablette dans la page.
 - **Tablette** (`sop/tablette.js`) : `?sop=<id>` ouvre ce document tout de suite (« ← » ramène à son onglet) ; onglet
-  **« Manuel »** (avant « Comment ça marche ») = les articles, pour tous les postes (pas de filtre de poste) ; un
+  **« Manuel »** (dernier onglet ; « Comment ça marche » retiré le 07/11/2026, client : « take off ») = les articles, pour tous les postes (pas de filtre de poste) ; un
   article se lit en « Partie n sur N », « Toutes les parties » (tiroir : « n sur N parties lues »), « Lu · suivante → ».
   La liste du Manuel range les articles dans l'ordre de leur formation (`classement.formations[0]`, FO-31 → FO-38) et
   dit « FO-32 · 10 parties » sous chaque titre (le poste ne dit rien pour un article).
