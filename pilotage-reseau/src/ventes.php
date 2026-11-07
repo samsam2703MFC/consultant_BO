@@ -444,7 +444,10 @@ function venteBornes(string $m): array
     return [date('Y-m-01 00:00:00', $t), date('Y-m-01 00:00:00', strtotime('+1 month', $t))];
 }
 
-/** Le personnel de vente, id → identité. */
+/**
+ * Le personnel de vente, id → identité : {nom, shop}, et `franchise: true` pour un franchisé (07/11/2026, voir
+ * venteEstFranchise).
+ */
 function venteEmployes(): array
 {
     $out = [];
@@ -457,9 +460,25 @@ function venteEmployes(): array
     }
     // Les personnes que la table locale ne connaît pas encore (une embauche récente) viennent du
     // panel, magasin par magasin, une fois par heure : sans cela, leurs ventes resteraient « sans
-    // vendeur » et leurs primes n'existeraient pas (l'app worker, 06/10/2026).
-    foreach (venteEmployesPanel() as $id => $e) { if (!isset($out[$id])) { $out[$id] = $e; } }
+    // vendeur » et leurs primes n'existeraient pas (l'app worker, 06/10/2026). Le statut de franchisé
+    // ne vit qu'au panel : il se reporte aussi sur les personnes de la table locale.
+    foreach (venteEmployesPanel() as $id => $e) {
+        if (!isset($out[$id])) { $out[$id] = $e; }
+        elseif (!empty($e['franchise'])) { $out[$id]['franchise'] = true; }
+    }
     return $out;
+}
+
+/**
+ * Un franchisé (07/11/2026, Sam : « les franchisés n'ont pas le droit aux primes ; ils peuvent être dans les stats ») :
+ * `franchise_role` = « franchisee » sur sa fiche du panel (/shops/{id}/employees), le statut qui le sort déjà du coût
+ * du planning (hors P&L, src/endpoints.php). Il garde ses ventes, ses heures et sa place dans le classement des ventes ;
+ * il ne concourt à aucune prime (ni aux courses aux primes de l'app, ni aux grands prix) : la prime va à la première de
+ * l'équipe.
+ */
+function venteEstFranchise(int $id): bool
+{
+    return !empty(venteEmployesPanel()[$id]['franchise']);
 }
 
 /** Le personnel vu par le panel (/shops/{id}/employees), id → identité, gravé une heure. */
@@ -468,7 +487,8 @@ function venteEmployesPanel(): array
     static $memo = null;
     if ($memo !== null) { return $memo; }
     $c = function_exists('setting') ? setting('pvEmployes') : null;
-    if (is_array($c) && isset($c['e']) && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['e']; }
+    // « v » : 2 depuis que la fiche garde le statut de franchisé (07/11/2026) — une fiche d'avant se relit.
+    if (is_array($c) && isset($c['e']) && (int) ($c['v'] ?? 0) === 2 && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['e']; }
     $memo = [];
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return $memo; }
     try { $shops = Db::rows('SELECT id FROM shops WHERE active = 1'); } catch (PDOException $e) { return $memo; }
@@ -487,6 +507,8 @@ function venteEmployesPanel(): array
             $nom = trim((string) ($em['display_name'] ?? ''));
             if ($nom === '') { $nom = trim(((string) ($em['name'] ?? '')) . ' ' . ((string) ($em['surname'] ?? ''))); }
             $memo[$id] = ['nom' => $nom !== '' ? $nom : 'Employé ' . $id, 'shop' => (string) ($em['id_shop'] ?? $sid)];
+            // Un franchisé ne concourt pas aux primes (venteEstFranchise).
+            if ((string) ($em['franchise_role'] ?? '') === 'franchisee') { $memo[$id]['franchise'] = true; }
             // Le téléphone, à part (les SMS à la réussite des primes) : il ne voyage pas avec le nom.
             $tel = trim((string) ($em['phone'] ?? ($em['mobile'] ?? '')));
             if ($tel !== '') { $tels[$id] = $tel; }
@@ -495,7 +517,7 @@ function venteEmployesPanel(): array
     // Un magasin muet : on garde ce qu'on a lu, sans le graver — la prochaine lecture réessaie.
     if (!$muet && $memo !== []) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
-            ['pvEmployes', json_encode(['quand' => time(), 'e' => $memo], JSON_UNESCAPED_UNICODE)]);
+            ['pvEmployes', json_encode(['v' => 2, 'quand' => time(), 'e' => $memo], JSON_UNESCAPED_UNICODE)]);
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
             ['pvEmployesTel', json_encode(['quand' => time(), 't' => $tels])]);
     }
@@ -693,12 +715,15 @@ function ventePrimesConfig(): array
     return ['reseau' => (int) ($c['reseau'] ?? 150), 'magasin' => (int) ($c['magasin'] ?? 75)];
 }
 
-/** Les gagnantes d'un classement : la première du réseau, puis de chaque magasin. */
+/**
+ * Les gagnantes d'un classement : la première du réseau, puis de chaque magasin. Un franchisé reste classé, mais ne
+ * gagne pas : la prime va à la suivante (07/11/2026).
+ */
 function venteGagnantes(array $lignes): array
 {
     $reseau = null; $parShop = [];
     foreach ($lignes as $l) {
-        if (!$l['classable']) { continue; }
+        if (!$l['classable'] || venteEstFranchise((int) $l['id'])) { continue; }
         if ($reseau === null) { $reseau = $l; }
         if (!isset($parShop[$l['shopId']])) { $parShop[$l['shopId']] = $l; }
     }

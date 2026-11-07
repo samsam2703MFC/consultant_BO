@@ -6964,14 +6964,17 @@ class App {
       const valTxt = (u, v) => (v == null ? '' : u === 'pct' ? fx(v, 1) + ' %' : u === 'lpt' ? fr(+v, 2) + ' art./ticket' : u === 'note' ? fr(+v, 1) + ' ★'
         : u === 'pcs' ? fx(v, 1) + ' pcs' : u === 'eur' ? Math.round(v).toLocaleString('fr-BE') + ' €' : u === 'score' ? 'score ' + fx(v, 1) : fx(v, 1));
       const eurEq = v => (+v).toLocaleString('fr-BE', { minimumFractionDigits: (+v) % 1 ? 2 : 0, maximumFractionDigits: 2 }) + ' €';
+      // Un franchisé (07/11/2026, « les franchisés n'ont pas le droit aux primes ; ils peuvent être dans les stats ») : sa
+      // ligne reste avec ses chiffres, en gris, rien en jeu ; il ne compte ni parmi les éligibles ni parmi les primées.
       const motifEq = { pas_compte: 'pas encore compté', sans_vente: 'aucune vente', min_tickets: 'pas assez de tickets', heures: 'sous le min. d’heures',
-        pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée' };
+        pas_record: 'pose son 1er record', pas_objectif: 'pas d’objectif', pas_note: 'pas de note', pas_classee: 'pas encore classée', franchise: 'franchisé · sans prime' };
       const recompense = p => (p.type === 'b2b' ? (p.mode === 'fixe' ? (p.fixe || 0) + ' € · 1re commande' : tauxTxt(p.taux) + ' % · ' + (p.duree === 'premiere' ? '1re commande' : p.duree === 'sans' ? 'sans limite' : p.duree + ' mois'))
         : p.cadeau ? 'cadeau · ' + p.cadeau : (p.max ? 'jusqu’à ' : '') + p.montant + ' €');
       const caseEq = (p, k, clos) => {
         if (!k) { return { ton: 'hors', haut: '', bas: '' }; }
         const u = p.unite; const v = valTxt(u, k.val);
         const place = k.rang ? k.rang + (k.rang === 1 ? 're' : 'e') + (k.sur ? ' / ' + k.sur : '') : '';
+        if (k.motif === 'franchise') { return { ton: 'vide', haut: (p.type === 'b2b' ? '' : v) || '—', bas: motifEq.franchise }; }
         if (p.type === 'b2b') {
           const cl = k.clients ? k.clients + ' client' + (k.clients > 1 ? 's' : '') + ' pro' : 'aucun client pro';
           return k.gain > 0 ? { ton: 'gagne', haut: eurEq(k.gain), bas: cl } : { ton: 'vide', haut: '—', bas: cl };
@@ -7010,7 +7013,7 @@ class App {
         const t = { marque: { atteint: 0, jeu: 0, n: 0, gagnees: 0 }, magasin: { atteint: 0, jeu: 0, n: 0, gagnees: 0 } };
         colsTous.forEach(p => {
           const k = (v.cases || {})[p.cle];
-          if (!k) { return; }
+          if (!k || v.franchise) { return; }
           const b = t[bandeDe(p)]; const gain = +k.gain || 0;
           b.atteint += gain; b.jeu += Math.max(+p.montant || 0, gain); b.n++;
           if (k.etat === 'gagne' || (p.type === 'b2b' && gain > 0)) { b.gagnees++; }
@@ -7064,11 +7067,11 @@ class App {
         bandes: [['marque', 'Primes de la marque'], ['magasin', 'Primes du magasin']].map(([cle, lib]) => ({ cle, lib, n: nBande(cle) })).filter(b => b.n),
         // Le volet replié le dit en une ligne : le mois, ce que l'équipe a atteint face à ce qui est en jeu.
         resume: !eq || vueEq !== 'mois' || !colsTous.length ? '' : (eq.lib || '') + ' · ' + eurEq(totEq.marque.atteint + totEq.magasin.atteint) + (closEq ? ' gagnés sur ' : ' atteints sur ')
-          + eurEq(totEq.marque.jeu + totEq.magasin.jeu) + (closEq ? ' possibles' : ' en jeu') + ' · ' + totEq.primees + ' vendeuse' + (totEq.primees > 1 ? 's' : '') + ' primée' + (totEq.primees > 1 ? 's' : '') + ' sur ' + (eq.vendeuses || []).length,
+          + eurEq(totEq.marque.jeu + totEq.magasin.jeu) + (closEq ? ' possibles' : ' en jeu') + ' · ' + totEq.primees + ' vendeuse' + (totEq.primees > 1 ? 's' : '') + ' primée' + (totEq.primees > 1 ? 's' : '') + ' sur ' + (eq.vendeuses || []).filter(v => !v.franchise).length,
         // En tête du tableau, une ligne : ce que l'équipe a atteint face à ce qui est en jeu, la barre marque + magasin, et
         // chaque famille à part (31/10/2026, refaite plus sobre).
         synthese: !eq || !colsTous.length ? null : (() => {
-          const a = totEq.marque.atteint + totEq.magasin.atteint, j = totEq.marque.jeu + totEq.magasin.jeu, nV = (eq.vendeuses || []).length;
+          const a = totEq.marque.atteint + totEq.magasin.atteint, j = totEq.marque.jeu + totEq.magasin.jeu, nV = (eq.vendeuses || []).filter(v => !v.franchise).length;
           return { atteint: eurEq(a), jeu: eurEq(j), mot: closEq ? 'gagnés sur' : 'atteints sur', motJeu: closEq ? 'possibles' : 'en jeu', barre: partsBarre(totEq.marque.atteint, totEq.magasin.atteint, j),
             familles: ['marque', 'magasin'].filter(b => nBandeT(b)).map(b => ({ cle: b, lib: b === 'marque' ? 'Marque' : 'Magasin', atteint: eurEq(totEq[b].atteint), jeu: eurEq(totEq[b].jeu),
               sous: nBandeT(b) + ' prime' + (nBandeT(b) > 1 ? 's' : '') + (b === 'magasin' ? ' · à sa charge' : '') })),
@@ -7082,7 +7085,7 @@ class App {
             const ks = (eq.vendeuses || []).map(v => ({ v, k: (v.cases || {})[p.cle] })).filter(x => x.k);
             const ref = (ks.find(x => x.k.val != null) || {}).k || {};
             const atteint = ks.some(x => x.k.etat === 'gagne');
-            const elig = ks.filter(x => x.k.motif !== 'heures').map(x => x.v.nom);
+            const elig = ks.filter(x => x.k.motif !== 'heures' && x.k.motif !== 'franchise').map(x => x.v.nom);
             const hors = ks.filter(x => x.k.motif === 'heures').map(x => x.v.nom);
             const diff = ref.cible != null && ref.val != null ? Math.max(0, +ref.cible - +ref.val) : null;
             const reste = diff == null ? '' : p.unite === 'pct' ? 'encore ' + fx(diff, 1) + ' point' + (diff > 1 ? 's' : '') : p.unite === 'note' ? 'encore ' + fr(diff, 1) + ' ★' : 'encore ' + valTxt(p.unite, diff);
@@ -7103,8 +7106,8 @@ class App {
         vendeuses: eq ? rangsEq.map(v => {
           const t = cumuls.get(v);
           const part = b => (t[b].n ? eurEq(t[b].atteint) + ' ' + b : '');
-          return { nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : ''].filter(Boolean).join(' · '),
-            total: v.acquis > 0 ? eurEq(v.acquis) : '—',
+          return { nom: v.nom, sous: [v.heures != null ? fx(v.heures, 1) + ' h' : '', v.tickets ? v.tickets + ' tickets' : '', v.franchise ? 'franchisé · hors primes' : ''].filter(Boolean).join(' · '),
+            total: v.acquis > 0 ? eurEq(v.acquis) : '—', franchise: !!v.franchise,
             // Sa colonne « Cumul » : atteint / en jeu, la barre, et la part de chaque famille.
             cumul: { atteint: t.atteint > 0 ? eurEq(t.atteint) : '0 €', jeu: eurEq(t.jeu), barre: partsBarre(t.marque.atteint, t.magasin.atteint, t.jeu), rien: !t.n,
               parts: [part('marque'), part('magasin')].filter(Boolean).join(' · ') },
@@ -7573,7 +7576,8 @@ class App {
         promoM: l.promo && l.promo.montant > 0 ? eur(l.promo.montant) : '',
         // Les clients pro (la prime B2B, 23/10/2026) : combien elle en a ramené, ce qu'ils rapportent ce mois-là.
         b2b: l.b2b && l.b2b.clients ? l.b2b.clients + ' client' + (l.b2b.clients > 1 ? 's' : '') : '', b2bM: l.b2b && l.b2b.montant > 0 ? eur(l.b2b.montant) : '',
-        total: l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
+        // Un franchisé (07/11/2026) : dans la liste avec ses chiffres, sans prime.
+        total: l.franchise ? 'franchisé · sans prime' : l.total > 0 ? n2(l.total) + ' €' : '—', prime: l.total > 0,
       })),
       totaux: !pm ? null : { croisees: eur(pm.totaux.croisees), record: eur(pm.totaux.record), meilleure: eur(pm.totaux.meilleure), concours: eur(pm.totaux.concours || 0), promo: eur(pm.totaux.promo || 0), magasin: eur(pm.totaux.magasin), google: eur(pm.totaux.google || 0), cibles: eur(pm.totaux.cibles || 0), b2b: eur(pm.totaux.b2b || 0), total: n2(pm.totaux.total) + ' €', personnes: pm.totaux.personnes },
       ciblesActif: !!(pm && (pm.personnes || []).some(l => l.cibles && (l.cibles.liste || []).length)),

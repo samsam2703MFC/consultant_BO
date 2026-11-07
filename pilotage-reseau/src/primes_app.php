@@ -1471,8 +1471,11 @@ function primesAVenir(int $emp, string $m): array
             'montant' => $r['mode'] === 'fixe' ? (int) $e['montant'] : 0, 'fixe' => (int) $e['montant'], 'clients' => [], 'nouveaux' => 0] + $r);
     }
     $cartes = array_map(static fn ($c) => $c + primesAppInfosDe($c['cle']), $cartes);
-    $enJeu = (float) array_sum(array_map(static fn ($c) => $c['montant'], $cartes));
-    return ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => false, 'aVenir' => true, 'quand' => time(),
+    // Un franchisé (07/11/2026) : les primes prévues se montrent, rien n'est en jeu pour lui.
+    $fr = !empty($emps[$emp]['franchise']);
+    if ($fr) { $cartes = array_map(static fn ($c) => ['motif' => 'franchise'] + $c, $cartes); }
+    $enJeu = $fr ? 0.0 : (float) array_sum(array_map(static fn ($c) => $c['montant'], $cartes));
+    return ['v' => PRIMES_FICHE_V, 'emp' => $emp, 'm' => $m, 'lib' => primesLibMois($m), 'enCours' => false, 'aVenir' => true, 'quand' => time(), 'franchise' => $fr,
         'magasin' => ['id' => $shop, 'nom' => $nomDe[$shop] ?? ('Magasin ' . $shop)], 'cartes' => $cartes, 'classements' => [], 'collection' => [],
         'heures' => null, 'aujourdhui' => null, 'acquis' => 0.0, 'enJeu' => $enJeu, 'aPortee' => $enJeu, 'google' => null, 'montants' => [],
         'briques' => [], 'prime' => [], 'semaines12' => [], 'motif' => null];
