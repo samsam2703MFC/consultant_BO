@@ -694,10 +694,12 @@ function tkConstruire(array $spec, bool $executer, bool $seulementPremiere, ?arr
                 $ops[] = ['quoi' => 'Ajouter à la checklist « ' . $nomClAff . ' »', 'methode' => 'POST',
                     'chemin' => '/operational-framework/checklists/' . $cidRef . '/tasks', 'corps' => ['task_id' => '{nouvelle}', 'sort_order' => $ordre]];
             }
+            // Un niveau, un rattachement : /levels/{id}/tasks et /position-levels/{id}/tasks rendent la
+            // même liste (mesuré le 07/11/2026 sur le niveau 27) — rattacher par les deux doublerait le lien.
             $nivs = [];
-            foreach ($niveauxSpec as $lid) { $nivs[$route . '|' . $lid] = ['niveau' => $lid, 'route' => $route]; }
+            foreach ($niveauxSpec as $lid) { $nivs[$lid] = ['niveau' => $lid, 'route' => $route]; }
             if ($m !== null && $l['garderNiveaux']) {
-                foreach ($scan['parTache'][$l['modeleId']] ?? [] as $lv) { $nivs[$lv['route'] . '|' . $lv['niveau']] = $lv; }
+                foreach ($scan['parTache'][$l['modeleId']] ?? [] as $lv) { $nivs[$lv['niveau']] ??= ['niveau' => $lv['niveau'], 'route' => $route]; }
             }
             foreach ($nivs as $lv) {
                 $ops[] = ['quoi' => 'Rattacher au niveau de poste #' . $lv['niveau'], 'methode' => 'POST',
