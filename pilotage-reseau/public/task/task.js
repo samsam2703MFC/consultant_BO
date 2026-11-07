@@ -711,17 +711,45 @@
     const ctrl = q.erreur ? '<span class="mu">illisible</span>' : q.controle.length ? q.controle.map(c => esc(c.nom)).join(', ') : '<span class="wa">personne</span>';
     return `<span class="pl-qui"><span>Fait par</span><span>${fait}</span></span><span class="pl-qui"><span>Contrôlé par</span><span>${ctrl}</span></span>`;
   }
+  // Qui fait, qui contrôle : lu au panel pour les tâches de la zone qu'on n'a pas encore lues
+  // (80 par appel, le plafond de la route).
+  async function quiCharger(m) {
+    S.qui = S.qui || {};
+    const ids = planDonnees().L.filter(x => (!m.p || x.poste === m.p) && x.js.includes(m.j)).map(x => x.t.id).filter(i => !S.qui[i]);
+    if (!ids.length) { return; }
+    m.quiLecture = true; m.quiErr = null; rendre();
+    try {
+      for (let i = 0; i < ids.length; i += 80) { const r = await api('POST', '/task/qui', { ids: ids.slice(i, i + 80) }); Object.assign(S.qui, r.qui || {}); }
+    } catch (e) { m.quiErr = e.message; }
+    m.quiLecture = false; if (S.modale === m) { rendre(); }
+  }
   function modalePlanning(m) {
-    const { L } = planDonnees();
+    const { L, postes } = planDonnees();
     const jr = PL_JOURS.find(x => x[0] === m.j);
-    const T = L.filter(x => x.poste === m.p && x.js.includes(m.j)).sort((a, b) => String(a.t.heure || '99').localeCompare(String(b.t.heure || '99')) || a.t.nom.localeCompare(b.t.nom, 'fr'));
+    // La zone de production (poste de la checklist) et la checklist se choisissent dans la fenêtre ;
+    // '' = toutes. Les compteurs et les choix suivent la zone.
+    const duJour = L.filter(x => x.js.includes(m.j));
+    const Z = duJour.filter(x => !m.p || x.poste === m.p);
+    const T = Z.filter(x => !m.cl || x.cl === m.cl).sort((a, b) => String(a.t.heure || '99').localeCompare(String(b.t.heure || '99')) || a.t.nom.localeCompare(b.t.nom, 'fr'));
     const nPh = T.filter(x => x.t.photo).length; const nOb = T.filter(x => x.t.obligatoire).length;
     const f = sansAccent(m.f);
-    const V = T.filter(x => (m.k !== 'photo' || x.t.photo) && (m.k !== 'oblig' || x.t.obligatoire) && (!f || sansAccent(x.t.nom + ' ' + x.cl + ' ' + (x.t.heure || '')).includes(f)));
+    // Fait par / contrôlé par : les choix sont ceux des tâches de la case, lus au panel.
+    const Q = id => (S.qui && S.qui[id]) || null;
+    const choix = cle => [...new Set(T.flatMap(x => { const q = Q(x.t.id); return q ? q[cle].map(n => n.nom) : []; }))].sort((a, b) => a.localeCompare(b, 'fr'));
+    const cFait = choix('fait'); const cCtrl = choix('controle');
+    const V = T.filter(x => (m.k !== 'photo' || x.t.photo) && (m.k !== 'oblig' || x.t.obligatoire) && (!f || sansAccent(x.t.nom + ' ' + x.cl + ' ' + (x.t.heure || '')).includes(f))
+      && (!m.fait || ((Q(x.t.id) || {}).fait || []).some(n => n.nom === m.fait))
+      && (!m.ctrl || ((Q(x.t.id) || {}).controle || []).some(n => n.nom === m.ctrl)));
+    const liste = (cle, lib, L) => `<select class="tk-in pl-sel" data-ps="${cle}" ${L.length ? '' : 'disabled'}><option value="">${lib} : ${m.quiLecture ? 'lecture…' : 'tous'}</option>${L.map(v => `<option value="${esc(v)}" ${m[cle] === v ? 'selected' : ''}>${lib} : ${esc(v)}</option>`).join('')}</select>`;
     const cls = [...new Set(T.map(x => codeCl(x.cl)))].join(', ');
+    const zones = postes.filter(p => duJour.some(x => x.poste === p));
+    const nomsCl = [...new Set(Z.map(x => x.cl))].sort((a, b) => a.localeCompare(b, 'fr'));
+    const selZone = `<select class="tk-in pl-sel" data-ps="p"><option value="">Zone de production : toutes</option>${zones.map(p => `<option value="${esc(p)}" ${m.p === p ? 'selected' : ''}>Zone de production : ${esc(posteAff(p))}</option>`).join('')}</select>`;
+    const selCl = `<select class="tk-in pl-sel" data-ps="cl"><option value="">Checklist : toutes</option>${nomsCl.map(c => `<option value="${esc(c)}" ${m.cl === c ? 'selected' : ''}>Checklist : ${esc(c)}</option>`).join('')}</select>`;
     const sg = (k, l, n) => `<button class="${m.k === k ? 'on' : ''}" data-a="plSeg" data-v="${k}">${l} ${n}</button>`;
-    return `<div class="tk-ct"><div><h2>${esc(posteAff(m.p))} · ${jr ? jr[2] : ''}</h2><div class="tk-sous">${T.length} tâche${T.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} · ${esc(cls)}</div></div><button class="tk-x" data-a="fermer">×</button></div>
-      <div class="pl-f"><input class="tk-in" data-pf="1" placeholder="Filtrer les tâches…" value="${esc(m.f)}"><div class="pl-seg">${sg('tout', 'Toutes', T.length)}${sg('photo', 'Photo', nPh)}${sg('oblig', 'Obligatoires', nOb)}</div></div>
+    return `<div class="tk-ct"><div><h2>${m.p ? esc(posteAff(m.p)) : 'Toutes les zones'} · ${jr ? jr[2] : ''}</h2><div class="tk-sous">${T.length} tâche${T.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} · ${esc(cls)}</div></div><button class="tk-x" data-a="fermer">×</button></div>
+      <div class="pl-f"><input class="tk-in" data-pf="1" placeholder="Filtrer les tâches…" value="${esc(m.f)}"><div class="pl-seg">${sg('tout', 'Toutes', T.length)}${sg('photo', 'Photo', nPh)}${sg('oblig', 'Obligatoires', nOb)}</div>
+        <div class="pl-sels">${selZone}${selCl}${liste('fait', 'Fait par', cFait)}${liste('ctrl', 'Contrôlé par', cCtrl)}</div>${m.fait || m.ctrl || m.cl ? '<button class="tk-lien" data-a="plSansQui">tout montrer</button>' : ''}</div>
       ${m.quiErr ? `<div class="tk-err" style="margin:10px 16px 0">Qui fait / qui contrôle : lecture impossible (${esc(m.quiErr)}).</div>` : ''}
       <ul class="pl-l">${V.map(x => `<li><button data-a="plTache" data-id="${x.t.id}"><span class="h">${esc(x.t.heure || '—')}</span><span class="n">${esc(x.t.nom)}${quiHtml(x.t.id, m)}</span><span class="i">${x.t.photo ? CAM : ''}</span><span class="c">${esc(codeCl(x.cl))}</span></button></li>`).join('') || '<li class="mu" style="padding:14px 0;font-size:12px">Aucune tâche pour ce filtre.</li>'}</ul>
       <div class="tk-pied"><span class="mu" style="font-size:11.5px">Un clic sur une tâche l’ouvre pour la modifier.</span><span style="flex:1"></span><button class="tk-btn" data-a="fermer">Fermer</button></div>`;
@@ -810,18 +838,11 @@
       case 'recharger': return charger();
       case 'vue': S.vue = el.dataset.v; adresse(S.cl); rendre(); voirHaut(); return;
       case 'plCase': {
-        S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout' }; rendre();
-        // Qui fait, qui contrôle : lu au panel pour les tâches de la case qu'on n'a pas encore lues.
-        const m = S.modale; S.qui = S.qui || {};
-        const ids = planDonnees().L.filter(x => x.poste === m.p && x.js.includes(m.j)).map(x => x.t.id).filter(i => !S.qui[i]);
-        if (!ids.length) { return; }
-        m.quiLecture = true; rendre();
-        try { const r = await api('POST', '/task/qui', { ids }); Object.assign(S.qui, r.qui || {}); }
-        catch (e) { m.quiErr = e.message; }
-        m.quiLecture = false; if (S.modale === m) { rendre(); }
-        return;
+        S.modale = { type: 'planning', p: el.dataset.p, j: el.dataset.j, f: '', k: 'tout', fait: '', ctrl: '', cl: '' }; rendre();
+        return quiCharger(S.modale);
       }
       case 'plSeg': S.modale.k = el.dataset.v; return rendre();
+      case 'plSansQui': S.modale.fait = ''; S.modale.ctrl = ''; S.modale.cl = ''; return rendre();
       case 'plTache': { const t = tache(id); if (!t) { return; } S.modale = { type: 'modif', id: +id, f: champsModif(t), plan: null }; return rendre(); }
       // Une checklist choisie en bas de la liste : le tableau est en haut, on y remonte.
       case 'cl': S.cl = id; S.filtre = ''; adresse(id); rendre(); voirHaut(); return;
@@ -1008,6 +1029,11 @@
   });
   $.addEventListener('change', ev => {
     const el = ev.target;
+    if (el.dataset.ps && S.modale && S.modale.type === 'planning') {
+      const m = S.modale; m[el.dataset.ps] = el.value;
+      if (el.dataset.ps === 'p') { m.cl = ''; rendre(); return quiCharger(m); }
+      return rendre();
+    }
     if (el.dataset.d && S.dup && (el.tagName === 'SELECT' || el.type === 'checkbox')) { S.dup[el.dataset.d] = el.type === 'checkbox' ? el.checked : el.value; S.plan = null; rendre(); }
     if (S.wz && (el.tagName === 'SELECT' || el.type === 'checkbox') && (el.dataset.wc != null || el.dataset.wl != null || el.dataset.wg != null || el.dataset.wcm != null)) { rendre(); }
   });
