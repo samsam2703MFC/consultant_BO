@@ -939,7 +939,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/marketing/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
     // --- benchmark concurrents (module Benchmark de TFBuddy, src/benchmark.php)
     if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
-    if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
+    if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|top10|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
     if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
     if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }

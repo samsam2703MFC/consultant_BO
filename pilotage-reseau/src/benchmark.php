@@ -396,11 +396,13 @@ function benchmarkItemPourApi(array $corps): array
  *                 (la galette des rois, vendue au diamètre ou au nombre de parts).
  */
 const BENCHMARK_FAMILLES = ['cougnou', 'galette'];
+/** Référentiels qui se posent dans TFBuddy sans rapport ni routine à eux : le top 10 du réseau (prix à la pièce). */
+const BENCHMARK_RELEVES = ['top10'];
 
-function benchmarkFamille(string $f): string
+function benchmarkFamille(string $f, bool $releves = false): string
 {
     $f = strtolower(trim($f));
-    if (!in_array($f, BENCHMARK_FAMILLES, true)) { throw new InvalidArgumentException('famille inconnue : ' . $f . ' (attendu : ' . implode(', ', BENCHMARK_FAMILLES) . ')'); }
+    if (!in_array($f, BENCHMARK_FAMILLES, true) && !($releves && in_array($f, BENCHMARK_RELEVES, true))) { throw new InvalidArgumentException('famille inconnue : ' . $f . ' (attendu : ' . implode(', ', BENCHMARK_FAMILLES) . ')'); }
     return $f;
 }
 
@@ -408,7 +410,7 @@ function benchmarkFamille(string $f): string
 function benchmarkDonnees(string $famille): array
 {
     static $cache = [];
-    $famille = benchmarkFamille($famille);
+    $famille = benchmarkFamille($famille, true);
     if (!isset($cache[$famille])) {
         $d = json_decode((string) @file_get_contents(__DIR__ . '/data/benchmark_' . $famille . '.json'), true);
         if (!is_array($d)) { throw new RuntimeException("src/data/benchmark_$famille.json illisible"); }
@@ -506,8 +508,8 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
                     'name_raw' => (string) $i['name_raw'], 'unit_type' => (string) ($i['unit_type'] ?? 'g'),
                     'unit_size' => isset($i['unit_size']) ? (float) $i['unit_size'] : null, 'price' => (float) $i['price'],
                     'promo_price' => isset($i['promo_price']) ? (float) $i['promo_price'] : null, 'is_promo' => !empty($i['is_promo']),
-                    'my_product_id' => isset($i['comparer_a'], $produits[$i['comparer_a']]) ? (int) $produits[$i['comparer_a']] : null,
-                    'my_category_id' => isset($d['nous']['categorie']) ? (int) $d['nous']['categorie'] : null,
+                    'my_product_id' => isset($i['my_product_id']) ? (int) $i['my_product_id'] : (isset($i['comparer_a'], $produits[$i['comparer_a']]) ? (int) $produits[$i['comparer_a']] : null),
+                    'my_category_id' => isset($i['my_category_id']) ? (int) $i['my_category_id'] : (isset($d['nous']['categorie']) ? (int) $d['nous']['categorie'] : null),
                     'notes' => trim(($i['vu_le'] ?? '') . ' ' . ($i['source'] ?? '')),
                 ], fn ($v) => $v !== null && $v !== '');
                 $corps = benchmarkItemPourApi($corps);
@@ -954,7 +956,7 @@ function wr_benchmark_semer(string $famille): array
     $simuler = ($b['simuler'] ?? true) !== false;
     $mag = array_map('intval', (array) ($b['magasins'] ?? []));
     if ($famille === 'tout') { return benchmarkSemerTout($simuler, $mag); }
-    if (!in_array($famille, BENCHMARK_FAMILLES, true)) { http_response_code(404); return ['error' => 'famille inconnue']; }
+    if (!in_array($famille, BENCHMARK_FAMILLES, true) && !in_array($famille, BENCHMARK_RELEVES, true)) { http_response_code(404); return ['error' => 'famille inconnue']; }
     return benchmarkSemer($famille, $simuler, $mag);
 }
 
@@ -1106,3 +1108,5 @@ function wr_benchmark_releve(): array
     if (function_exists('journalAdd')) { journalAdd('Dashboard', 'benchmark', 'Relevé terrain', "Magasin $shop : $nom à " . number_format($prix, 2, ',', ' ') . ' € chez le concurrent ' . $cid . '.'); }
     return ['ok' => true, 'concurrentId' => $cid, 'observation' => $oid];
 }
+
+

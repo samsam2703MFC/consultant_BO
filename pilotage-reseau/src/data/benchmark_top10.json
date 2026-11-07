@@ -1,0 +1,75 @@
+{
+ "famille": "top10",
+ "libelle": "top 10 du réseau",
+ "mesure": "piece",
+ "motif": "",
+ "releve": "2026-11-07",
+ "note": "Top 10 des quantités vendues dans le réseau, 03/08 → 07/11/2026 (GET /analyse/produits?mois=3). Prix comparés à la pièce.",
+ "nous": {
+  "produits": [
+   {
+    "id": 1610009,
+    "nom": "Pain au Chocolat Nappé",
+    "categorie": 16100
+   },
+   {
+    "id": 1620005,
+    "nom": "Mini - Croissant",
+    "categorie": 16200
+   },
+   {
+    "id": 1620003,
+    "nom": "Mini - Chocolat",
+    "categorie": 16200
+   },
+   {
+    "id": 1610004,
+    "nom": "Pain au Chocolat",
+    "categorie": 16100
+   },
+   {
+    "id": 1610006,
+    "nom": "Croissant",
+    "categorie": 16100
+   },
+   {
+    "id": 1300012,
+    "nom": "Sandwich",
+    "categorie": 13000
+   },
+   {
+    "id": 1300003,
+    "nom": "Baguette Tradition 500 g.",
+    "categorie": 13000
+   },
+   {
+    "id": 1300001,
+    "nom": "Pistolet à l'Ancienne",
+    "categorie": 13000
+   },
+   {
+    "id": 1200003,
+    "nom": "Pain Doré",
+    "categorie": 12000
+   },
+   {
+    "id": 1200002,
+    "nom": "Pain 10 Céréales",
+    "categorie": 12000
+   }
+  ],
+  "correspondance": {
+   "1610009": 1610009,
+   "1620005": 1620005,
+   "1620003": 1620003,
+   "1610004": 1610004,
+   "1610006": 1610006,
+   "1300012": 1300012,
+   "1300003": 1300003,
+   "1300001": 1300001,
+   "1200003": 1200003,
+   "1200002": 1200002
+  }
+ },
+ "concurrents": []
+}
