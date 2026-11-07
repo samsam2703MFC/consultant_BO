@@ -128,6 +128,8 @@ require __DIR__ . '/../../src/referentiel.php';
 require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
+require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/task_cadre.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -147,6 +149,12 @@ try {
     $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
+    if ($method === 'GET' && preg_match('#^/benchmarks/(cougnou|galette)/rapport\.html$#', $path, $m)) {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        header('Content-Type: text/html; charset=utf-8');
+        echo benchmarkHtml([benchmarkRapport($m[1], ($_GET['web'] ?? '1') !== '0')]);
+        exit;
+    }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
         if (authEnabled() && !authOk()) { http_response_code(401); exit; }
         header('Content-Type: text/html; charset=utf-8');
@@ -333,6 +341,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
+    if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
@@ -448,6 +458,10 @@ function route(string $method, string $path): mixed
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
+            $path === '/benchmarks/cron'               => ep_benchmark_cron(),
+            $path === '/benchmarks/verification'       => ep_benchmark_verification(),
+            $path === '/benchmarks/magasin'            => ep_benchmark_magasin(),
+            (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/marketing/avis'                    => ep_reputation(),
@@ -926,6 +940,11 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/marketing/newsletter/reglages') { return wr_newsletter_reglages(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/tick') { return wr_newsletter_tick(); }
     if ($method === 'POST' && preg_match('#^/marketing/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
+    // --- benchmark concurrents (module Benchmark de TFBuddy, src/benchmark.php)
+    if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
+    if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|top10|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
+    if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
+    if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)

@@ -1314,3 +1314,12 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T10:07:26Z Référentiel : le poste P9 s'appelle « Huurder-uitbater » en néerlandais
 2026-11-07T10:19:07Z Budget › Paramètres : Répartition des charges = Compte de résultat réseau du CRM · pondération des jours en carte à part
 2026-11-07T11:09:33Z Référentiel : FO-54 « Gestion de trésorerie », formations ajoutées par le réseau
+2026-11-07T11:41:52Z Benchmark concurrents : cougnou et galette des rois posés dans l'ERP, routine lundi/jeudi
+2026-11-07T12:07:00Z Dashboard magasin : onglet Concurrence (recherche de produit, relevé terrain) ; benchmark : unités sondées, prix recomptés
+2026-11-07T12:13:21Z Benchmark : champs exigés par TFBuddy pour un item
+2026-11-07T12:23:25Z Concurrence : recherche de produit exacte, produits proches, type d'enseigne
+2026-11-07T12:51:25Z Concurrence : vue Top 10 réseau ; benchmark top 10 posable dans TFBuddy
+2026-11-07T13:01:03Z Concurrence Top 10 : boulangeries / supermarchés séparés
+2026-11-07T13:01:29Z Concurrence Top 10 : lots comptés à la pièce
+2026-11-07T13:57:33Z Résultat réseau : vue téléphone
+2026-11-07T17:57:21Z Cadre des tâches : page /task, assistant checklist et tâches

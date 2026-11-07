@@ -1027,6 +1027,38 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
   `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
 - Tests sans base ni réseau : `php bin/tests_primes.php`.
 
+### `/task/*` — le cadre des tâches du panel (l'application `/task`)
+
+Une application à part, `/task/?checklist={id}` (rail : Franchisés › Suivi journalier › **Cadre des
+tâches ↗**). Elle lit les checklists du cadre opérationnel du panel et leurs tâches, et crée de deux
+façons : la **duplication** rapide (cocher des tâches, changer nom, jours, heure, fréquence,
+obligatoire, photo requise, checklist) et l'**assistant** en quatre étapes (1. la checklist :
+nouvelle, existante ou aucune ; 2. ses tâches : nouvelles ou copiées de tâches existantes, avec des
+réglages communs à appliquer à toutes les lignes ; 3. qui les fait — niveaux de poste — et qui les
+contrôle ; 4. l'aperçu, puis la création). Les deux passent par le même moteur (`tkConstruire`).
+Les corps de `POST /tasks` et `POST /operational-framework/checklists` du panel ne sont pas
+documentés (« contracts are not inferred ») : une copie reprend les champs de son modèle tels que
+`GET /tasks` les rend (`subcategory_id`, `workstation_id`, `name`, `description`, `day_of_week`,
+`execution_time`, `frequency`, `is_mandatory`, `priority`, `requires_photo`), avec leurs types (1/0
+ou vrai/faux, `04:00` ou `04:00:00`) ; une tâche nouvelle prend les types d'une tâche existante ;
+une checklist nouvelle envoie `name`, `description`, `workstation_id`, `execution_time` (et
+`is_active` si les checklists le portent), aux types d'une checklist existante ; les jours et la
+fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/task_cadre.php`.
+
+| Route | Rôle |
+|---|---|
+| `GET /task/cadre` | `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
+| `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
+| `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
+| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_cadre_cree` et au journal. |
+| `GET /task/structure` | pour l'assistant : `sousCategories[]` {id, nom, categorie, section, nb} (la structure du cadre — `/operational-framework/structure/sections`, `…/categories`, `…/categories/{id}/subcategories` — complétée par celles que portent les tâches) et `postes[]` {id, nom} (`/operational-framework/workstations`). |
+| `POST /task/assistant/apercu` | rien n'est envoyé. Corps : `{checklist: {mode: "nouvelle", nom, description, posteId, heure, modeleId, extra} \| {mode: "existante", id} \| {mode: "aucune"}, lignes: [{modeleId?, nom, description?, sousCategorieId?, jours[], unParJour, heure, frequence, obligatoire, photo, priorite, garderNiveaux, garderControleurs}], niveaux: [id], routeNiveaux?, controleursDe?, extra: {}}`. Une ligne sans `modeleId` exige `sousCategorieId`. Rend `checklist` {mode, id, nom, operation (la création, si nouvelle)}, `routeNiveaux` (la route de rattachement que le panel emploie le plus), `items[]` {mode: `creer` \| `ajouter` (tâche identique existante, ajoutée à la checklist) \| `rien` \| `doublon`, nom, jour, heure, modeleId, modeleNom, existe, operations[]}, `aCreer`, `aAjouter`, `avertissements[]`. Une checklist nouvelle dont le nom existe déjà est reprise, pas recréée. |
+| `POST /task/assistant/creer` | même corps (+ `seulementPremiere` : la checklist et la première tâche) : la checklist d'abord, puis chaque tâche (création, checklist, niveaux, contrôleurs) ; arrêt au premier refus. Rend aussi `creees`, `ajoutees`, `arret`. |
+| `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}`, seulement pour une checklist créée depuis cet écran ; ses tâches restent. |
+| `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `PATCH /tasks/{id}/active {is_active}` pour `actif`. `apercu: true` rend les appels sans les envoyer. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_cadre_cree`) ; 403 sinon. |
+| `POST /task/connexion` | `{phone, password}` → `POST /panel/authenticate` : `{jeton, renouvellement, expire}`. Pour les routes que le compte consultant du cockpit n'a pas le droit d'écrire. Le jeton reste dans l'onglet (`sessionStorage`) et revient dans l'en-tête `X-Panel-Jeton` ; rien n'est gardé au serveur. `POST /task/connexion/renouveler {renouvellement}` → `POST /panel/refresh`. |
+
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 
 Une application à part, `/production/?shop=4&date=YYYY-MM-DD&page=params|plan|suivi|cloture`
@@ -5020,3 +5052,18 @@ Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.
 tous les magasins. Sans appareil ouvert, `init` rend `magasin: null`, `personnes: []` et toutes les SOP (hors brouillons).
 `quiz` sans `jeton` : corrigé, rien n'est enregistré (`exercice: true`). Une étape peut porter `video` (https). Les autres
 routes de la tablette (identifier, lu, vu, langue) gardent la session de l'appareil.
+
+## Benchmark concurrents (src/benchmark.php)
+
+Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Deux familles saisonnières, un référentiel chacune (`src/data/benchmark_<famille>.json`) : `cougnou` (comparé au kilo) et `galette` (prix ramené à notre Ø 24 cm, à surface égale). Rapports de référence : `docs/benchmarks/cougnou-2026-11.md`, `docs/benchmarks/galette-2026-11.md`.
+
+| Besoin | Route |
+|---|---|
+| Vérifier les routes Benchmark en lecture | `GET /benchmarks/verification?shop=4` → `{ ok, etapes: [{ etape, methode, route, ok, code, ms, note }], alertes, resume }` |
+| … avec un cycle d'écriture sur un concurrent témoin, supprimé ensuite | `POST /benchmarks/verification` `{ shop?, ecrire: true }` |
+| Poser un relevé dans TFBuddy (idempotent, étiquette `[cockpit:<famille>:<date>]`) | `POST /benchmarks/{cougnou\|galette\|tout}/semer` `{ simuler?: true par défaut, magasins?: [2,3,4,5] }` |
+| Rapport d'une famille (prix comparable, position, contrôles web, rang Google si clé) | `GET /benchmarks/{cougnou\|galette}/rapport` (`web=0` sans les contrôles web) ; en HTML : `GET /benchmarks/{cougnou\|galette}/rapport.html` |
+| Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
+| Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
+
+Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
