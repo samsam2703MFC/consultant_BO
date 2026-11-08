@@ -1343,3 +1343,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-08T11:38:51Z Cockpit : réglage de la revue du soir (Checklists › Revue du soir)
 2026-11-08T11:52:59Z Revue du soir : routes Cockpit et Panel modifiables, bouton Tester
 2026-11-08T12:12:23Z Dashboard magasin : revue du soir (M3, clôture H3, logo L2)
+2026-11-08T18:04:01Z Dashboard magasin : contrôles en photo, seulement les tâches à photo
