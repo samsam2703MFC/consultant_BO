@@ -5580,11 +5580,15 @@
     if (S.date < AUJ) { return 'pasfaite'; }
     return S.date === AUJ && new Date().toTimeString().slice(0, 5) >= (L.heure || '18:00') ? 'afaire' : '';
   }
+  /** Le logo de la revue du soir (maquette L2, 08/11/2026) : la planchette qu'on passe en revue, une petite lune au coin.
+   * `c` : la lune, `d` : le trait ; sur fond sombre, la lune dorée et le trait blanc. */
+  const rvLogo = (c, d) => `<svg class="rv-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="8" width="26" height="34" rx="4" fill="none" stroke="${d}" stroke-width="3.2"/><rect x="16" y="5" width="12" height="6" rx="2" fill="${d}"/><path d="M14 20l3 3 5-6M14 31l3 3 5-6" fill="none" stroke="${d}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 21h5M25 32h5" stroke="${d}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="37" r="9" fill="${c}"/><path d="M39.5 31.5a6 6 0 1 0 3 9 5 5 0 0 1-3-9z" fill="#fff"/></svg>`;
   function rvBouton(mobile) {
     const e = rvEtat();
-    if (mobile) { return `<button class="mb-ic rv-ic${e === 'afaire' || e === 'encours' ? ' pt' : ''}" data-rvouvrir="1" aria-label="revue du soir">🌙</button>`; }
+    if (mobile) { return `<button class="mb-ic rv-ic${e === 'afaire' || e === 'encours' ? ' pt' : ''}" data-rvouvrir="1" aria-label="revue du soir">${rvLogo('#8D1D2C', '#2b2622')}</button>`; }
     const lib = { faite: ' · <b class="ok">faite ✓</b>', encours: ' · <b>en cours</b>', afaire: ' · <b>à faire</b>', pasfaite: ' · <b class="mu">pas faite</b>' }[e] || '';
-    return `<button class="db-btn rv-btn${e === 'afaire' || e === 'encours' ? ' vif' : ''}" data-rvouvrir="1">🌙 Revue du soir${lib}</button>`;
+    const vif = e === 'afaire' || e === 'encours';
+    return `<button class="db-btn rv-btn${vif ? ' vif' : ''}" data-rvouvrir="1">${vif ? rvLogo('#E2B93B', '#fff') : rvLogo('#8D1D2C', '#2b2622')}Revue du soir${lib}</button>`;
   }
   async function rvOuvrir() {
     S.rv = { charge: true, i: 0, rep: { points: {}, checklists: {}, demain: '' }, par: (function () { try { return localStorage.getItem('db.rvPar') || ''; } catch (e) { return ''; } })(), autre: null, com: null, voir: false };
@@ -5709,7 +5713,7 @@
     const corps = R.charge ? '<div class="rv-bul">Je regarde la journée : les tâches, les invendus, le stock, les commandes…</div><div class="rv-att"><i></i><i></i><i></i></div>'
       : R.err ? `<div class="rv-err">La revue n’a pas pu être lue : ${esc(R.err)}</div><div class="rv-pied"><button type="button" class="rv-b" data-rvfermer="1">Fermer</button></div>` : rvEcran();
     o.innerHTML = `<div class="rv-fond" data-rvfond="1"><div class="rv-tel" role="dialog" aria-label="Revue du soir">
-      <div class="rv-hd">${retour ? '<button type="button" class="rv-x" data-rvprec="1" aria-label="précédent">‹</button>' : '<span class="rv-x"></span>'}<div><b>🌙 Revue du soir</b><span>${esc(nomShop())} · ${esc(rvJour())}</span></div><button type="button" class="rv-x" data-rvfermer="1" aria-label="fermer">✕</button></div>
+      <div class="rv-hd">${retour ? '<button type="button" class="rv-x" data-rvprec="1" aria-label="précédent">‹</button>' : '<span class="rv-x"></span>'}<div><b>${rvLogo('#8D1D2C', '#2b2622')}Revue du soir</b><span>${esc(nomShop())} · ${esc(rvJour())}</span></div><button type="button" class="rv-x" data-rvfermer="1" aria-label="fermer">✕</button></div>
       <div class="rv-sc">${corps}</div></div></div>`;
     const sc = o.querySelector('.rv-sc'); if (sc && R.basBas) { sc.scrollTop = sc.scrollHeight; R.basBas = false; }
   }

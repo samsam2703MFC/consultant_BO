@@ -2634,7 +2634,9 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 
 /* La revue du soir (08/11/2026, maquette M3) : une question à la fois, au format téléphone — plein écran au téléphone,
    une fenêtre de téléphone au milieu de l'écran au bureau. */
-.rv-btn{white-space:nowrap}.rv-btn b{font-weight:400}.rv-btn b.ok{color:#2D7A3E}
+.rv-btn{white-space:nowrap;display:inline-flex;align-items:center;gap:6px}.rv-btn .rv-logo{width:19px;height:19px}
+.mb-ic.rv-ic .rv-logo{width:21px;height:21px;display:block;margin:auto}
+.rv-hd b{display:inline-flex;align-items:center;gap:7px}.rv-hd .rv-logo{width:23px;height:23px}.rv-btn b{font-weight:400}.rv-btn b.ok{color:#2D7A3E}
 .rv-btn.vif{background:#1f1b17;color:#fff;border-color:#1f1b17}.rv-btn.vif b{color:#F2D268}.rv-btn.vif:hover{background:#2e2924}
 .mb-ic.rv-ic{position:relative;font-size:15px}.mb-ic.rv-ic.pt:after{content:'';position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:#C0182B}
 html.rv-ouvert,html.rv-ouvert body{overflow:hidden}
