@@ -129,6 +129,8 @@
   function clePerf() { return 'perf|' + annee() + '|' + S.shop; }
   function cheminPerf() { return '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee() + '&pro=' + encodeURIComponent(S.shop); }
   function charger(force) {
+    // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
+    if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
@@ -1261,7 +1263,7 @@
     if (S.vue === 'ops') {
       return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma op-mob">${rendOpsMobile()}</div></div>${mbOnglets()}`;
     }
     if (S.vue !== 'semaine' && !['exp', 'ctrl'].includes(S.mo)) { S.mo = 'exp'; }
@@ -1269,7 +1271,7 @@
     const fin = S.vue === 'semaine' ? bornesSemaine()[1] >= AUJ : S.date >= AUJ;
     let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma">`;
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += on === 'exp' ? maPageExp(m, d) : (on === 'ctrl' ? maPageCtrl() : maPageSem(m, d));
@@ -4963,7 +4965,7 @@
       : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
     let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma pr-mob">
       <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
@@ -5542,7 +5544,7 @@
     const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' });
     return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="jour précédent">‹</button><b>${esc(date)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="jour suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag()}</div></div>${mbOnglets()}`;
   }
   function tjAller(d, voir) {
@@ -5562,6 +5564,180 @@
     $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-retours'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
     $.querySelectorAll('[data-tjretour]').forEach(el => cle(el, () => { const [d, t] = el.dataset.tjretour.split('|'); if (d === S.date) { S.cqVoir = t; rendre(); } else { tjAller(d, t); } }));
   }
+
+  /* --- La revue du soir (08/11/2026, maquette M3 : une question à la fois) ------------------------------------------------
+   * L'assistant de gestion du soir : le résumé, puis une question par écran — chaque checklist pas finie (une raison en un
+   * tap), les points de gestion que leur sonde ne dit pas en ordre, les questions du soir —, un mot pour demain, la
+   * clôture. Chaque réponse s'enregistre tout de suite (on reprend où on en était). Le réglage : cockpit › Checklists ›
+   * Revue du soir. Lectures : /soir/revue (?leger=1 pour le bouton), écritures : PUT /soir/revue. */
+  const cleRVL = () => 'rvl|' + S.shop + '|' + S.date;
+  const cheminRVL = () => '/soir/revue?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&leger=1';
+  /** L'état du bouton : faite, en cours, à faire (le jour même, passé l'heure du réglage), ou rien à dire. */
+  function rvEtat() {
+    const L = S.aux[cleRVL()]; if (!L) { return ''; }
+    if (L.revue && L.revue.statut === 'cloturee') { return 'faite'; }
+    if (L.revue) { return 'encours'; }
+    if (S.date < AUJ) { return 'pasfaite'; }
+    return S.date === AUJ && new Date().toTimeString().slice(0, 5) >= (L.heure || '18:00') ? 'afaire' : '';
+  }
+  function rvBouton(mobile) {
+    const e = rvEtat();
+    if (mobile) { return `<button class="mb-ic rv-ic${e === 'afaire' || e === 'encours' ? ' pt' : ''}" data-rvouvrir="1" aria-label="revue du soir">🌙</button>`; }
+    const lib = { faite: ' · <b class="ok">faite ✓</b>', encours: ' · <b>en cours</b>', afaire: ' · <b>à faire</b>', pasfaite: ' · <b class="mu">pas faite</b>' }[e] || '';
+    return `<button class="db-btn rv-btn${e === 'afaire' || e === 'encours' ? ' vif' : ''}" data-rvouvrir="1">🌙 Revue du soir${lib}</button>`;
+  }
+  async function rvOuvrir() {
+    S.rv = { charge: true, i: 0, rep: { points: {}, checklists: {}, demain: '' }, par: (function () { try { return localStorage.getItem('db.rvPar') || ''; } catch (e) { return ''; } })(), autre: null, com: null, voir: false };
+    rvRendre();
+    try {
+      const D = await lire('/soir/revue?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date);
+      const R = S.rv; if (!R) { return; }
+      R.D = D; R.charge = false;
+      if (D.revue) { R.rep = Object.assign({ points: {}, checklists: {}, demain: '' }, D.revue.reponses || {}); R.par = D.revue.par || R.par; }
+      R.etapes = rvEtapes(D);
+      if (D.revue && D.revue.statut === 'cloturee') { R.i = R.etapes.length - 1; }
+    } catch (e) { if (S.rv) { S.rv.charge = false; S.rv.err = e.message; } }
+    rvRendre();
+  }
+  function rvFermer() { S.rv = null; rvRendre(); delete S.aux[cleRVL()]; lireAux(cleRVL(), cheminRVL(), true); }
+  /** Les écrans : le résumé, une checklist pas finie par écran, ce qui est en ordre, un point de gestion par écran, demain, la fin. */
+  function rvEtapes(D) {
+    const E = [{ k: 'intro' }];
+    ((D.checklists && D.checklists.liste) || []).forEach(c => E.push({ k: 'cl', c }));
+    const ok = D.points.filter(p => p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok');
+    if (ok.length) { E.push({ k: 'ordre', L: ok }); }
+    D.points.filter(p => !(p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok')).forEach(p => E.push({ k: 'pt', p }));
+    E.push({ k: 'demain' }, { k: 'fin' });
+    return E;
+  }
+  function rvEnregistrer(cloturer) {
+    const R = S.rv; if (!R || !R.D) { return Promise.resolve(); }
+    try { localStorage.setItem('db.rvPar', R.par || ''); } catch (e) { /* rien */ }
+    R.envoi = true;
+    return fetch(API + '/soir/revue', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify({ shop: S.shop, date: S.date, par: R.par, reponses: R.rep.points, checklists: R.rep.checklists, demain: R.rep.demain, cloturer: !!cloturer, rouvrir: !!R.rouvrir }) })
+      .then(r => r.json().then(j => { if (!r.ok) { throw new Error(j.error || ('HTTP ' + r.status)); } return j; }))
+      .then(j => { if (S.rv) { S.rv.envoi = false; S.rv.errEnr = null; S.rv.D.revue = j.revue; } })
+      .catch(e => { if (S.rv) { S.rv.envoi = false; S.rv.errEnr = e.message; rvRendre(); } });
+  }
+  const rvJour = () => { const t = new Date(S.date + 'T12:00:00'); return t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' }); };
+  const rvPill = c => c.code ? `<span class="rv-code" style="background:${(TJ_ZONES[+c.code[0]] || [0, '#5c5852'])[1]}">${esc(c.code)}</span>` : '';
+  function rvChips(L, choisi, attr, okPar) {
+    return `<div class="rv-rep">${L.map(x => { const t = typeof x === 'string' ? x : x.t, ok = typeof x === 'string' ? null : x.ok;
+      return `<button type="button" class="rv-chip${t === choisi ? (ok === false ? ' on wa' : ' on') : ''}" ${attr}="${esc(t)}">${esc(t)}</button>`; }).join('')}
+      <button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>`;
+  }
+  function rvEcran() {
+    const R = S.rv, D = R.D, e = R.etapes[R.i], C = D.checklists || { taches: 0, faites: 0, liste: [] };
+    const nQ = R.etapes.length - 2, pos = Math.min(R.i, nQ);
+    const prog = e.k === 'intro' ? '' : `<div class="rv-prog"><i style="width:${Math.round(100 * pos / nQ)}%"></i></div><div class="rv-n">${pos} / ${nQ}</div>`;
+    const com = (cle, v) => R.com === cle ? `<div class="rv-com"><textarea data-rvcom="1" rows="2" placeholder="un commentaire (facultatif)">${esc(v || '')}</textarea><button type="button" class="rv-b p" data-rvcomok="1">OK</button></div>`
+      : `<button type="button" class="rv-lien" data-rvcomouvre="${esc(cle)}">${v ? '✎ ' + esc(v) : '+ commentaire'}</button>`;
+    const autre = R.autre != null ? `<div class="rv-com"><input data-rvautretxt="1" value="${esc(R.autre)}" placeholder="votre réponse" maxlength="60"><button type="button" class="rv-b p" data-rvautreok="1">OK</button></div>` : '';
+    if (e.k === 'intro') {
+      const n = C.liste.length, g = D.points.filter(p => !(p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok')).length;
+      const qui = [...new Set([R.par, ...(C.qui || [])].filter(Boolean))];
+      const deja = Object.keys(R.rep.points).length + Object.keys(R.rep.checklists).length;
+      return `<div class="rv-bul">Bonsoir${R.par ? ' ' + esc(R.par.split(' ')[0]) : ''} 👋<br>Aujourd’hui, <b>${C.faites} tâche${C.faites > 1 ? 's' : ''} obligatoire${C.faites > 1 ? 's' : ''} sur ${C.taches}</b> ${C.faites > 1 ? 'sont faites' : 'est faite'}. On passe en revue ${n ? `<b>${n} checklist${n > 1 ? 's' : ''} pas finie${n > 1 ? 's' : ''}</b> et ` : ''}<b>${g} point${g > 1 ? 's' : ''} de gestion</b>. Environ ${Math.max(1, Math.round((n + g) / 5))} minute${n + g > 7 ? 's' : ''}.</div>
+        ${n ? `<div class="rv-cards">${C.liste.slice(0, 6).map(c => `<div class="rv-mini">${rvPill(c)}<span>${esc(c.titre)}</span><b>${c.faites}/${c.total}</b></div>`).join('')}${n > 6 ? `<div class="rv-n">+ ${n - 6} autre${n - 6 > 1 ? 's' : ''}…</div>` : ''}</div>` : ''}
+        <div class="rv-q">Qui fait la revue ?</div><div class="rv-rep">${qui.map(q => `<button type="button" class="rv-chip${q === R.par ? ' on' : ''}" data-rvpar="${esc(q)}">${esc(q)}</button>`).join('')}<button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>${autre}
+        <div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">${deja ? 'Reprendre · ' + deja + ' réponse' + (deja > 1 ? 's' : '') + ' déjà données' : 'Commencer'}</button><button type="button" class="rv-b" data-rvfermer="1">Plus tard</button></div>`;
+    }
+    if (e.k === 'cl') {
+      const c = e.c, a = R.rep.checklists[c.nom] || {}, m = c.total - c.faites;
+      return `${prog}<div class="rv-ctx">${rvPill(c)} <span>${esc(c.titre)}</span><span class="rv-n">· ${c.faites} / ${c.total}${c.heure ? ' · ' + esc(c.heure) : ''}</span></div>
+        <div class="rv-bul"><b>${m} tâche${m > 1 ? 's' : ''}</b> de « ${esc(c.titre)} » ${m > 1 ? 'ne sont pas cochées' : 'n’est pas cochée'}. Pourquoi ?
+          <button type="button" class="rv-lien" data-rvvoir="1">${R.voir ? 'cacher les tâches ▴' : 'voir les tâches ▾'}</button>${R.voir ? `<ul class="rv-ul">${c.manquent.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div>
+        ${a.r ? `<div class="rv-bul moi">${esc(a.r)}</div>` : ''}
+        ${rvChips(D.raisons, a.r, 'data-rvcl')}${autre}${com('cl:' + c.nom, a.c)}`;
+    }
+    if (e.k === 'ordre') {
+      return `${prog}<div class="rv-ctx">Gestion · vérifié automatiquement</div>
+        ${e.L.map(p => `<div class="rv-ok"><span>✓</span><div><b>${esc(p.icone || '')} ${esc(p.titre)}</b><small>${esc(p.sonde.texte)}</small></div></div>`).join('')}
+        <div class="rv-bul">Ces points sont en ordre : rien à expliquer.</div><div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">Continuer</button></div>`;
+    }
+    if (e.k === 'pt') {
+      const p = e.p, a = R.rep.points[p.id] || {}, s = p.sonde;
+      const constat = p.type === 'auto' ? (s && s.revenue ? esc(s.texte) + '.' : 'La donnée n’est pas revenue' + (s && s.texte ? ' (' + esc(s.texte) + ')' : '') + ' : je ne peux pas le vérifier.') + '<br>' : '';
+      return `${prog}<div class="rv-ctx">Gestion · ${esc(p.titre)}</div>
+        <div class="rv-bul">${esc(p.icone || '')} ${constat}${esc(p.question || p.titre)}</div>
+        ${a.r ? `<div class="rv-bul moi">${esc(a.r)}</div>` : ''}
+        ${rvChips(p.reponses, a.r, 'data-rvpt')}${autre}${com('pt:' + p.id, a.c)}`;
+    }
+    if (e.k === 'demain') {
+      return `${prog}<div class="rv-ctx">Pour demain</div><div class="rv-bul">Un mot pour l’équipe de demain ? <span class="rv-n">(facultatif)</span></div>
+        <textarea class="rv-ta" data-rvdemain="1" rows="4" placeholder="ex. « Silke seule l’après-midi : photos de 14:30 à faire à 15:00 »">${esc(R.rep.demain || '')}</textarea>
+        ${R.errEnr ? `<div class="rv-err">Pas enregistrée : ${esc(R.errEnr)}</div>` : ''}
+        <div class="rv-pied"><button type="button" class="rv-b p" data-rvcloturer="1"${R.envoi ? ' disabled' : ''}>${R.envoi ? 'Enregistrement…' : 'Clôturer la journée'}</button></div>`;
+    }
+    // La fin : ce qui a été dit, ce qui part au cockpit.
+    const rv = D.revue || {}, cl = R.rep.checklists, par = {};
+    Object.keys(cl).forEach(n => { const r = cl[n].r || '—'; (par[r] = par[r] || []).push((C.liste.find(c => c.nom === n) || { code: n }).code || n); });
+    const okAuto = D.points.filter(p => p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok');
+    const lignes = [['Tâches faites', C.faites + ' / ' + C.taches]]
+      .concat(Object.keys(par).map(r => [r, par[r].join(', ')]))
+      .concat(okAuto.map(p => [p.titre, '✓ ' + p.sonde.texte]))
+      .concat(D.points.filter(p => R.rep.points[p.id]).map(p => [p.titre, R.rep.points[p.id].r]));
+    return `${prog}<div class="rv-fin"><div class="rv-v">✓</div><b>${rv.statut === 'cloturee' ? 'Journée clôturée' : 'Revue pas encore clôturée'}</b><span class="rv-n">${rv.clotureLe ? 'à ' + esc(rv.clotureLe.slice(11, 16)) : ''}${rv.par ? ' par ' + esc(rv.par) : ''}</span></div>
+      <div class="rv-res">${lignes.map(l => `<div class="ln"><span>${esc(l[0])}</span><b>${esc(l[1])}</b></div>`).join('')}</div>
+      ${R.rep.demain ? `<div class="rv-bul">Pour demain : « ${esc(R.rep.demain)} »</div>` : ''}
+      <div class="rv-pied"><button type="button" class="rv-b p" data-rvfermer="1">Fermer</button>${rv.statut === 'cloturee' ? '<button type="button" class="rv-lien" data-rvrouvrir="1">Rouvrir la revue</button>' : ''}</div>`;
+  }
+  function rvRendre() {
+    let o = document.getElementById('rv');
+    if (!S.rv) { if (o) { o.remove(); } document.documentElement.classList.remove('rv-ouvert'); return; }
+    if (!o) { o = document.createElement('div'); o.id = 'rv'; document.body.appendChild(o); rvBrancher(o); }
+    document.documentElement.classList.add('rv-ouvert');
+    const R = S.rv, retour = R.D && R.i > 0 && R.etapes[R.i].k !== 'fin';
+    const corps = R.charge ? '<div class="rv-bul">Je regarde la journée : les tâches, les invendus, le stock, les commandes…</div><div class="rv-att"><i></i><i></i><i></i></div>'
+      : R.err ? `<div class="rv-err">La revue n’a pas pu être lue : ${esc(R.err)}</div><div class="rv-pied"><button type="button" class="rv-b" data-rvfermer="1">Fermer</button></div>` : rvEcran();
+    o.innerHTML = `<div class="rv-fond" data-rvfond="1"><div class="rv-tel" role="dialog" aria-label="Revue du soir">
+      <div class="rv-hd">${retour ? '<button type="button" class="rv-x" data-rvprec="1" aria-label="précédent">‹</button>' : '<span class="rv-x"></span>'}<div><b>🌙 Revue du soir</b><span>${esc(nomShop())} · ${esc(rvJour())}</span></div><button type="button" class="rv-x" data-rvfermer="1" aria-label="fermer">✕</button></div>
+      <div class="rv-sc">${corps}</div></div></div>`;
+    const sc = o.querySelector('.rv-sc'); if (sc && R.basBas) { sc.scrollTop = sc.scrollHeight; R.basBas = false; }
+  }
+  function rvAller(n) { const R = S.rv; R.i = Math.max(0, Math.min(R.etapes.length - 1, R.i + n)); R.autre = null; R.com = null; R.voir = false; rvRendre(); const sc = document.querySelector('#rv .rv-sc'); if (sc) { sc.scrollTop = 0; } }
+  /** Une réponse : enregistrée tout de suite, puis l'écran suivant (un temps pour voir le choix). */
+  function rvRepondre(t) {
+    const R = S.rv, e = R.etapes[R.i];
+    if (e.k === 'intro') { R.par = t; R.autre = null; return rvRendre(); }
+    if (e.k === 'cl') { R.rep.checklists[e.c.nom] = Object.assign({}, R.rep.checklists[e.c.nom], { r: t }); }
+    if (e.k === 'pt') { R.rep.points[e.p.id] = Object.assign({}, R.rep.points[e.p.id], { r: t }); }
+    R.autre = null; rvRendre(); rvEnregistrer(false);
+    setTimeout(() => { if (S.rv === R && R.etapes[R.i] === e) { rvAller(1); } }, 380);
+  }
+  function rvBrancher(o) {
+    o.addEventListener('click', ev => {
+      const R = S.rv; if (!R) { return; }
+      const b = ev.target.closest('button,[data-rvfond]'); if (!b) { return; }
+      const d = b.dataset;
+      if (d.rvfond != null) { if (ev.target === b) { rvFermer(); } return; }
+      if (d.rvfermer != null) { return rvFermer(); }
+      if (d.rvprec != null) { return rvAller(-1); }
+      if (d.rvsuivant != null) { if (R.etapes[R.i].k === 'intro') { rvEnregistrer(false); } return rvAller(1); }
+      if (d.rvpar != null || d.rvcl != null || d.rvpt != null) { return rvRepondre(d.rvpar || d.rvcl || d.rvpt); }
+      if (d.rvautre != null) { R.autre = ''; rvRendre(); const i = o.querySelector('[data-rvautretxt]'); if (i) { i.focus(); } return; }
+      if (d.rvautreok != null) { const t = String(R.autre || '').trim(); if (t) { rvRepondre(t); } return; }
+      if (d.rvvoir != null) { R.voir = !R.voir; return rvRendre(); }
+      if (d.rvcomouvre != null) { R.com = d.rvcomouvre; rvRendre(); const t = o.querySelector('[data-rvcom]'); if (t) { t.focus(); } return; }
+      if (d.rvcomok != null) { R.com = null; rvRendre(); rvEnregistrer(false); return; }
+      if (d.rvcloturer != null) { return rvEnregistrer(true).then(() => { if (S.rv && !S.rv.errEnr) { S.rv.rouvrir = false; rvAller(1); } else { rvRendre(); } }); }
+      if (d.rvrouvrir != null) { R.rouvrir = true; R.i = 1; R.D.revue.statut = 'encours'; return rvRendre(); }
+    });
+    o.addEventListener('input', ev => {
+      const R = S.rv, el = ev.target; if (!R) { return; }
+      if (el.dataset.rvautretxt != null) { R.autre = el.value; return; }
+      if (el.dataset.rvdemain != null) { R.rep.demain = el.value; return; }
+      if (el.dataset.rvcom != null) {
+        const k = R.com, sep = k.indexOf(':'), g = k.slice(0, sep) === 'cl' ? 'checklists' : 'points', id = k.slice(sep + 1);
+        R.rep[g][id] = Object.assign({}, R.rep[g][id], { c: el.value });
+      }
+    });
+    o.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.rvautretxt != null) { ev.preventDefault(); const t = String(S.rv.autre || '').trim(); if (t) { rvRepondre(t); } }
+    });
+  }
+  document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
 
   function rendre() {
     const kr = cleRes(), ks = cleSt();
@@ -5611,7 +5787,7 @@
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
-      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
+      <span style="flex:1"></span>${valoPastille()}${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
@@ -8700,6 +8876,7 @@
     });
     b2bRendre();
     cmdmRendre();
+    $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {

@@ -129,6 +129,8 @@ function rsRoute(string $method, string $path): array
     if ($method === 'PUT' && $path === '/soir/config') { return rsEnregistrer(body()); }
     if ($method === 'GET' && $path === '/soir/sonder') { return rsSonder(); }
     if ($method === 'POST' && $path === '/soir/tester') { return rsTester(body()); }
+    if ($method === 'GET' && $path === '/soir/revue') { return rsRevue(); }
+    if ($method === 'PUT' && $path === '/soir/revue') { return rsRevueEcrire(body()); }
     http_response_code(404);
     return ['error' => 'route inconnue'];
 }
@@ -333,4 +335,104 @@ function rsTester(array $b): array
         }
     }
     return $out;
+}
+
+/* --- La revue d'un soir (08/11/2026, maquette M3 : une question à la fois) -------------------------------------------
+ *   GET /soir/revue?shop=4&date=…   la journée à passer en revue : les checklists pas finies, les points de gestion
+ *                                   (les sondes déjà évaluées), les réponses déjà données (on reprend où on en était)
+ *   PUT /soir/revue                 { shop, date, par, reponses: {point: {r, c}}, checklists: {nom: {r, c}}, demain,
+ *                                     cloturer } — enregistrée à chaque réponse ; « cloturer » fige la journée
+ * Les réponses vivent dans ceo_revue_soir (une ligne par magasin et par jour). */
+function rsTable(): void
+{
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_revue_soir ('
+        . ' id_shop INT NOT NULL, jour DATE NOT NULL, par VARCHAR(120) NULL, reponses MEDIUMTEXT NULL,'
+        . ' statut VARCHAR(12) NOT NULL DEFAULT \'encours\', resume MEDIUMTEXT NULL, maj_le DATETIME NULL, cloture_le DATETIME NULL,'
+        . ' PRIMARY KEY (id_shop, jour)) DEFAULT CHARSET=utf8mb4');
+}
+
+/** Les checklists pas finies du jour, à partir des tâches obligatoires (une tâche citée par deux checklists compte dans les deux). */
+function rsChecklistsDuJour(int $shop, string $date): array
+{
+    [$d, , $err] = rsLireCockpit('/pwa/tasks?shop=' . $shop . '&date=' . $date);
+    $sh = null; foreach ((array) ($d['shops'] ?? []) as $x) { if ((int) ($x['shopId'] ?? 0) === $shop) { $sh = $x; } }
+    if ($err || !$sh) { return ['lu' => !$err && isset($d['shops']), 'taches' => 0, 'faites' => 0, 'liste' => [], 'qui' => []]; }
+    $T = array_values(array_filter((array) ($sh['taches'] ?? []), fn ($t) => ($t['obligatoire'] ?? null) !== false));
+    $faite = fn ($t) => in_array($t['statut'] ?? '', ['notee', 'aControler', 'aValider'], true) || (($t['statut'] ?? '') === 'sansPhoto' && empty($t['photoRequise']));
+    $noms = array_values(array_filter(array_map(fn ($c) => (string) ($c['nom'] ?? ''), (array) ($sh['checklists'] ?? []))));
+    usort($noms, fn ($a, $b) => mb_strlen($b) <=> mb_strlen($a));
+    $heures = []; foreach ((array) ($sh['checklists'] ?? []) as $c) { $heures[(string) ($c['nom'] ?? '')] = $c['heure'] ?? null; }
+    $G = []; $qui = [];
+    foreach ($T as $t) {
+        if (!empty($t['faitePar'])) { $qui[(string) $t['faitePar']] = true; }
+        $s = (string) ($t['checklist'] ?? '');
+        $L = array_values(array_filter($noms, fn ($n) => $n !== '' && str_contains($s, $n)));
+        if (!$L && $s !== '') { $L = array_map('trim', preg_split('/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/u', $s)); }
+        foreach ($L ?: ['Sans checklist'] as $n) { $G[$n][] = $t; }
+    }
+    $liste = [];
+    foreach ($G as $n => $L) {
+        $f = count(array_filter($L, $faite));
+        if ($f >= count($L)) { continue; }
+        $code = function_exists('ckcCodeDe') ? (ckcCodeDe($n) ?? '') : '';
+        $titre = $code !== '' ? trim(preg_replace('/^\s*' . preg_quote($code, '/') . '\s*[·—–:-]\s*/u', '', $n)) : $n;
+        $hs = array_filter(array_map(fn ($t) => $t['heure'] ?? null, $L));
+        sort($hs);
+        $liste[] = ['nom' => $n, 'code' => $code, 'titre' => $titre, 'heure' => $heures[$n] ?? ($hs[0] ?? null), 'faites' => $f, 'total' => count($L),
+            'manquent' => array_slice(array_values(array_map(fn ($t) => (string) $t['tache'], array_filter($L, fn ($t) => !$faite($t)))), 0, 40)];
+    }
+    usort($liste, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
+    return ['lu' => true, 'taches' => count($T), 'faites' => count(array_filter($T, $faite)), 'liste' => $liste, 'qui' => array_keys($qui)];
+}
+
+function rsRevueLire(int $shop, string $date): ?array
+{
+    try { rsTable(); $r = Db::row('SELECT * FROM ceo_revue_soir WHERE id_shop = ? AND jour = ?', [$shop, $date]); }
+    catch (PDOException $e) { return null; }
+    if (!$r) { return null; }
+    return ['par' => $r['par'], 'statut' => $r['statut'], 'reponses' => json_decode((string) $r['reponses'], true) ?: [],
+        'majLe' => $r['maj_le'] ? substr((string) $r['maj_le'], 0, 16) : null, 'clotureLe' => $r['cloture_le'] ? substr((string) $r['cloture_le'], 0, 16) : null];
+}
+
+function rsRevue(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0); $date = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if ($shop <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(422); return ['error' => 'shop et date (YYYY-MM-DD) sont requis']; }
+    $c = rsConfig();
+    // ?leger=1 : seulement l'heure et l'état de la revue (le bouton du dashboard), sans sonder.
+    if (!empty($_GET['leger'])) { return ['shop' => $shop, 'date' => $date, 'heure' => $c['heure'], 'revue' => rsRevueLire($shop, $date)]; }
+    $points = [];
+    foreach ($c['points'] as $p) {
+        if (empty($p['actif'])) { continue; }
+        $q = ['id' => $p['id'], 'type' => $p['type'], 'icone' => $p['icone'], 'titre' => $p['titre'], 'question' => $p['question'], 'reponses' => $p['reponses']];
+        if ($p['type'] === 'auto') { $q['sonde'] = rsEvaluer($p, $shop, $date); }
+        $points[] = $q;
+    }
+    return ['shop' => $shop, 'date' => $date, 'heure' => $c['heure'], 'raisons' => $c['raisons'],
+        'checklists' => !empty($c['checklists']) ? rsChecklistsDuJour($shop, $date) : null, 'points' => $points, 'revue' => rsRevueLire($shop, $date)];
+}
+
+function rsRevueEcrire(array $b): array
+{
+    $shop = (int) ($b['shop'] ?? 0); $date = (string) ($b['date'] ?? '');
+    if ($shop <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(422); return ['error' => 'shop et date (YYYY-MM-DD) sont requis']; }
+    $txt = fn ($v, int $n) => mb_substr(trim(preg_replace('/\s+/u', ' ', (string) $v)), 0, $n);
+    $nettoie = function ($L) use ($txt) {
+        $o = [];
+        foreach ((array) $L as $k => $v) { if (is_array($v)) { $o[$txt($k, 160)] = ['r' => $txt($v['r'] ?? '', 60), 'c' => $txt($v['c'] ?? '', 300)] + (isset($v['qui']) ? ['qui' => $txt($v['qui'], 60)] : []); } }
+        return $o;
+    };
+    $rep = ['points' => $nettoie($b['reponses'] ?? []), 'checklists' => $nettoie($b['checklists'] ?? []), 'demain' => $txt($b['demain'] ?? '', 500)];
+    $par = $txt($b['par'] ?? '', 120);
+    $avant = rsRevueLire($shop, $date);
+    if ($avant && $avant['statut'] === 'cloturee' && empty($b['rouvrir'])) { http_response_code(409); return ['error' => 'la revue de ce soir est déjà clôturée', 'revue' => $avant]; }
+    $clo = !empty($b['cloturer']);
+    rsTable();
+    Db::exec('INSERT INTO ceo_revue_soir (id_shop, jour, par, reponses, statut, maj_le, cloture_le) VALUES (?,?,?,?,?,NOW(),?)'
+        . ' ON DUPLICATE KEY UPDATE par = VALUES(par), reponses = VALUES(reponses), statut = VALUES(statut), maj_le = NOW(), cloture_le = VALUES(cloture_le)',
+        [$shop, $date, $par ?: null, json_encode($rep, JSON_UNESCAPED_UNICODE), $clo ? 'cloturee' : 'encours', $clo ? date('Y-m-d H:i:s') : null]);
+    if ($clo && function_exists('journalAdd')) {
+        journalAdd($par ?: 'magasin', 'revue', 'Revue du soir', 'Magasin ' . $shop . ' · ' . $date . ' : revue clôturée (' . count($rep['points']) . ' points, ' . count($rep['checklists']) . ' checklists expliquées)');
+    }
+    return ['ok' => true, 'revue' => rsRevueLire($shop, $date)];
 }

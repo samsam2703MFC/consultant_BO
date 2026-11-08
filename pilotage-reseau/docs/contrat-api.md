@@ -5169,3 +5169,18 @@ panel sert à vérifier que le panel répond (la route du cockpit appelle le pan
 Réponse de `/soir/sonder` : `points[] = { id, titre, sonde, cockpit, panel, revenue, etat: 'ok'|'ko'|'inconnu',
 texte, valeur, ms }`. `revenue = false` : la donnée n'est pas revenue (panel muet, route en erreur) — l'assistant
 pose alors la question au lieu d'affirmer quoi que ce soit.
+
+**La revue d'un soir, côté dashboard magasin (08/11/2026, maquette M3).** Bouton « 🌙 Revue du soir » (barre du haut
+au bureau, entête au téléphone ; « à faire » le jour même passé l'heure du réglage, « en cours », « faite ✓ »). Une
+question à la fois : le résumé et « qui fait la revue », une checklist pas finie par écran (les raisons rapides),
+les points vérifiés en ordre en un écran vert, un écran par point de gestion à expliquer ou par question, un mot pour
+demain, la clôture.
+
+    GET /soir/revue?shop=4&date=…            { heure, raisons, checklists: { taches, faites, liste[{ nom, code, titre,
+                                               heure, faites, total, manquent[] }], qui[] }, points[{ …, sonde }], revue }
+    GET /soir/revue?shop=4&date=…&leger=1    { heure, revue } — l'état du bouton, sans sonder
+    PUT /soir/revue                          { shop, date, par, reponses: { point: { r, c } }, checklists: { nom: { r, c } },
+                                               demain, cloturer, rouvrir } — enregistrée à chaque réponse ; 409 si clôturée
+
+Table `ceo_revue_soir` (id_shop, jour, par, reponses JSON, statut encours|cloturee, maj_le, cloture_le), créée à la
+première lecture. La clôture s'inscrit au journal (« Revue du soir »).
