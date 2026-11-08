@@ -7863,13 +7863,19 @@
     const rendue = x => x.e.c !== 'ko' && x.e.c !== 'mu';
     const liste = Object.values(G).filter(g => g.vus.length).sort((a, b) => (a.h ? 0 : 1) - (b.h ? 0 : 1) || a.h.localeCompare(b.h) || a.nom.localeCompare(b.nom));
     if (!liste.length) { return '<div class="db-mini" style="padding:14px 16px">Aucun contrôle dans ce filtre.</div>'; }
-    return `<div class="cqf">${liste.map(g => {
+    // Le carrousel des checklists (08/11/2026) : les cartes côte à côte sur une seule hauteur de photo ; au-dessus, le rappel
+    // de toutes les checklists du carrousel (heure, code, compte) — un clic y amène, celle à l'écran est soulignée.
+    const fiches = liste.map((g, i) => {
       const c = tjCode(g.nom), z = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852', r = g.tous.filter(rendue).length;
-      const e = r === g.tous.length ? 'ok' : (r ? 'wa' : 'ko');
-      return `<div class="cqf-r"><div class="cqf-h">${esc(g.h || '—')}</div><div class="cqf-x"><span class="cqf-d e-${e}"></span></div>
-        <div class="cqf-c"><div class="cqf-b" style="background:${z}"><span class="cqf-code">${esc(c.code || '—')}</span><b>${esc(c.titre)}</b>${g.h ? `<span class="cqf-hh">${esc(g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${e}">${e === 'ko' ? '✗' : '✓'} ${r} / ${g.tous.length}</span></div>
-          <div class="cqf-sl"><button type="button" class="cqf-fl g" data-cqfl="-1" aria-label="photos précédentes">‹</button><div class="cqf-p" data-cqfp="${esc(g.k)}">${g.vus.map(x => cqCarte(x, false)).join('')}</div><button type="button" class="cqf-fl d" data-cqfl="1" aria-label="photos suivantes">›</button></div></div></div>`; }).join('')}</div>`;
+      return { g, i, c, z, r, e: r === g.tous.length ? 'ok' : (r ? 'wa' : 'ko') };
+    });
+    return `<div class="cqk"><div class="cqk-nav">${fiches.map(f => `<button type="button" class="cqk-ch" data-cqkgo="${f.i}" style="--z:${f.z}" title="${esc(f.c.code + ' · ' + f.c.titre)}"><i class="e-${f.e}"></i>${esc(f.g.h || '—')} · <b>${esc(f.c.code || '—')}</b><span class="e-${f.e}">${f.r}/${f.g.tous.length}</span></button>`).join('')}</div>
+      <div class="cqk-rail"><button type="button" class="cqk-fl g" data-cqkpas="-1" aria-label="checklists précédentes">‹</button>
+        <div class="cqk-piste" id="cqk-piste">${fiches.map(f => `<div class="cqk-c" data-cqk="${f.i}"><div class="cqf-b" style="background:${f.z}"><span class="cqf-code">${esc(f.c.code || '—')}</span><b>${esc(f.c.titre)}</b>${f.g.h ? `<span class="cqf-hh">${esc(f.g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${f.e}">${f.e === 'ko' ? '✗' : '✓'} ${f.r} / ${f.g.tous.length}</span></div>
+          <div class="cqk-p">${f.g.vus.map(x => cqCarte(x, false)).join('')}</div></div>`).join('')}</div>
+        <button type="button" class="cqk-fl d" data-cqkpas="1" aria-label="checklists suivantes">›</button></div></div>`;
   }
+
   /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
     if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops' && S.vue !== 'taches')) { return ''; }
@@ -9041,16 +9047,23 @@
     $.querySelectorAll('.db-cql').forEach(l => l.addEventListener('click', e => { if (e.target === l) { S.cqVoir = null; rendre(); } }));
     const piste = document.getElementById('db-cqpiste');
     if (piste) { piste.addEventListener('scroll', cqFleches, { passive: true }); }
-    // Le slider des photos de chaque carte de la frise (08/11/2026) : flèches, position gardée d'un rendu à l'autre.
-    S.cqfPos = S.cqfPos || {};
-    $.querySelectorAll('[data-cqfp]').forEach(p => {
-      const sl = p.parentNode, g = sl.querySelector('.cqf-fl.g'), d = sl.querySelector('.cqf-fl.d'), k = S.date + '|' + p.dataset.cqfp;
-      const maj = () => { const deb = p.scrollWidth > p.clientWidth + 2; sl.classList.toggle('deb', deb); g.disabled = p.scrollLeft <= 2; d.disabled = p.scrollLeft + p.clientWidth >= p.scrollWidth - 2; };
-      if (S.cqfPos[k]) { p.scrollLeft = S.cqfPos[k]; }
-      p.addEventListener('scroll', () => { S.cqfPos[k] = p.scrollLeft; maj(); }, { passive: true });
-      [g, d].forEach(b => b.addEventListener('click', () => p.scrollBy({ left: +b.dataset.cqfl * Math.max(160, p.clientWidth - 120), behavior: 'smooth' })));
+    // Le carrousel des checklists des contrôles en photo (08/11/2026) : flèches, rappel cliquable, position gardée.
+    S.cqkPos = S.cqkPos || {};
+    const kp = document.getElementById('cqk-piste');
+    if (kp) {
+      const k = S.date + '|' + S.cqFiltre, nav = $.querySelectorAll('[data-cqkgo]'), g = $.querySelector('.cqk-fl.g'), d = $.querySelector('.cqk-fl.d');
+      const maj = () => {
+        g.disabled = kp.scrollLeft <= 2; d.disabled = kp.scrollLeft + kp.clientWidth >= kp.scrollWidth - 2;
+        const x0 = kp.getBoundingClientRect().left, x1 = x0 + kp.clientWidth;
+        kp.querySelectorAll('[data-cqk]').forEach(c => { const r = c.getBoundingClientRect(), vu = r.right > x0 + 40 && r.left < x1 - 40;
+          const b = $.querySelector(`[data-cqkgo="${c.dataset.cqk}"]`); if (b) { b.classList.toggle('vu', vu); } });
+      };
+      if (S.cqkPos[k]) { kp.scrollLeft = S.cqkPos[k]; }
+      kp.addEventListener('scroll', () => { S.cqkPos[k] = kp.scrollLeft; maj(); }, { passive: true });
+      [g, d].forEach(b => b.addEventListener('click', () => kp.scrollBy({ left: +b.dataset.cqkpas * Math.max(240, kp.clientWidth - 160), behavior: 'smooth' })));
+      nav.forEach(b => b.addEventListener('click', () => { const c = kp.querySelector(`[data-cqk="${b.dataset.cqkgo}"]`); if (c) { kp.scrollTo({ left: c.offsetLeft - kp.offsetLeft - 8, behavior: 'smooth' }); } }));
       maj();
-    });
+    }
     $.querySelectorAll('[data-cqpas]').forEach(b => b.addEventListener('click', () => { const p = document.getElementById('db-cqpiste'); if (p) { p.scrollBy({ left: +b.dataset.cqpas * Math.max(200, p.clientWidth - 80), behavior: 'smooth' }); } }));
     // Au téléphone, la photo se feuillette au doigt.
     $.querySelectorAll('[data-cqswipe]').forEach(z => {

@@ -2714,4 +2714,19 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .cqf-fl{display:none;position:absolute;top:50%;transform:translateY(-60%);z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--color-border-secondary);background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:20px;line-height:1;cursor:pointer;color:var(--color-text)}
 .cqf-sl.deb .cqf-fl{display:block}.cqf-fl.g{left:4px}.cqf-fl.d{right:4px}.cqf-fl:disabled{opacity:0;pointer-events:none}
 .cqf-p .db-cqc{flex:0 0 132px;min-width:0}
-.cqf-p .db-cqc .c.ko{display:none}   /* dans la frise, la checklist est déjà dans le bandeau */
+.cqf-p .db-cqc .c.ko,.cqk-p .db-cqc .c.ko{display:none}   /* la checklist est déjà dans le bandeau */
+
+/* Le carrousel des checklists (08/11/2026) : une seule hauteur de photo ; le rappel des checklists au-dessus. */
+.cqk{padding:10px 16px 12px}
+.cqk-nav{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px}
+.cqk-ch{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--color-border-tertiary);border-left:4px solid var(--z);background:#fff;border-radius:8px;padding:3px 8px;font:400 11.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer;white-space:nowrap}
+.cqk-ch b{font-weight:500;color:var(--z)}.cqk-ch i{width:8px;height:8px;border-radius:50%}.cqk-ch i.e-ok{background:#2D7A3E}.cqk-ch i.e-wa{background:#D97706}.cqk-ch i.e-ko{background:#C0182B}
+.cqk-ch span{font-variant-numeric:tabular-nums}.cqk-ch span.e-ok{color:#2D7A3E}.cqk-ch span.e-wa{color:#B45309}.cqk-ch span.e-ko{color:#C0182B}
+.cqk-ch.vu{background:var(--z);color:#fff;border-color:var(--z)}.cqk-ch.vu b,.cqk-ch.vu span{color:#fff}.cqk-ch.vu i{box-shadow:0 0 0 2px #fff}
+.cqk-rail{position:relative}
+.cqk-piste{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x proximity;scrollbar-width:none;-webkit-overflow-scrolling:touch;scroll-padding-inline:8px}.cqk-piste::-webkit-scrollbar{display:none}
+.cqk-c{flex:0 0 auto;border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;background:#faf7f2;scroll-snap-align:start;min-width:260px}
+.cqk-c .cqf-b{white-space:nowrap}
+.cqk-p{display:flex;gap:10px;padding:10px 12px 12px}.cqk-p .db-cqc{flex:0 0 132px;min-width:0}
+.cqk-fl{position:absolute;top:50%;transform:translateY(-50%);z-index:2;width:36px;height:36px;border-radius:50%;border:1px solid var(--color-border-secondary);background:rgba(255,255,255,.96);box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:21px;line-height:1;cursor:pointer;color:var(--color-text)}
+.cqk-fl.g{left:-6px}.cqk-fl.d{right:-6px}.cqk-fl:disabled{opacity:0;pointer-events:none}
