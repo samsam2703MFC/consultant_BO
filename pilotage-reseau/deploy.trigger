@@ -1348,3 +1348,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-08T18:41:42Z Contrôles en photo : slider par checklist
 2026-11-08T18:48:07Z Contrôles en photo : carrousel des checklists
 2026-11-08T18:54:23Z Cadre des tâches : suppression confirmée par le nom
+2026-11-08T19:31:28Z Contrôles en photo : obligatoire ou facultative (O4)
