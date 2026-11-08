@@ -2212,6 +2212,11 @@ pour nommer une gravité.
 - **`semaine`** : la série des sept derniers jours, renseignée **seulement** pour une journée.
   Sur une période, le compte de la période est déjà l'échelle.
 - **`indispo`** : `mac_task_review` absente. L'écran se tait alors, il n'invente pas un zéro.
+- **`retours`** (08/11/2026, seulement avec `&retours=1`) : les derniers avis du contrôleur sur la
+  fenêtre, conformes compris, les plus récents d'abord, quarante au plus —
+  `{ taskId, jour, tache, note, comment, consultant, le, nc }`. L'onglet **Tâches** du dashboard
+  magasin les montre sur trente jours (« Retours du contrôle qualité »), avec la `suite` de `nc`
+  pour dire si un écart a été repris.
 
 Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le lit dans
 `/pwa/tasks?date=<aujourd'hui>`, qu'il charge déjà.
@@ -3039,6 +3044,25 @@ commandes sont lues, et « Promotions et bundles — ce qu'elles rapportent » ;
 au téléphone, les tuiles Webshop et Offres du mur) et le cockpit, Marque &
 marketing › **Offres et canaux** (`#/offres-canaux`), sur la journée, 7 ou
 30 jours.
+
+### `/pwa/tasks` — l'heure prévue et les checklists du jour (08/11/2026)
+
+Deux champs de plus, pour l'onglet **Tâches** du dashboard magasin (rien ne change pour les autres
+lecteurs) :
+
+- **`shops[].taches[].heure`** : l'heure prévue de la tâche (`execution_time` du panel, `HH:MM`),
+  `null` si le panel ne la dit pas ;
+- **`shops[].checklists`** : les checklists du jour de la boutique, `[{ id, nom, heure }]`, lues dans
+  `/consultant/shops/{id}/checklists?date=` que l'écran appelait déjà. Une tâche se range sous
+  chaque checklist dont le nom figure dans son champ `checklist` (une tâche citée par deux
+  checklists compte dans les deux) ; le code `1.1.01` du nom donne le qui et le quand
+  (`src/checklists_codes.php`).
+
+L'onglet lit `/pwa/tasks?shop=&date=` pour chaque jour de la semaine regardée (la bande du haut),
+`/pwa/tasks/photos` pour le jour regardé (vignettes et zoom, repères du contrôleur compris) et
+`/pwa/tasks/nc?du=&au=&retours=1` sur trente jours. **Faite** : rendue, et rendue AVEC sa photo
+quand la tâche en demande une ; cochée sans la photo demandée, elle se montre à part (« cochée sans
+photo ») et ne compte pas. Les pourcentages ne comptent que les tâches obligatoires.
 
 ### `GET /pwa/tasks/photos` — les photos d'une journée, en une lecture
 

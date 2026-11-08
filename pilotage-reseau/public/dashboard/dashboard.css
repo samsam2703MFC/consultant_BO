@@ -2533,3 +2533,101 @@ body.pm-emb .pm-ok{flex-wrap:wrap}
 .tm-cases-h span{text-align:center;font-size:9.5px;letter-spacing:0}
 .tm-tuiles .db-dl{align-self:flex-start}
 .tm-leg-r{margin-left:auto;display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+
+/* Onglet Tâches (08/11/2026, maquette S1) : la semaine, les indicateurs, le guide des codes, les checklists du jour et
+   leurs tâches, les retours du contrôle qualité. */
+.tj-sem{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:2px 0 8px}
+.tj-fl{margin-left:auto;display:inline-flex;gap:6px}
+.tj-bande{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.tj-j{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:9px 12px;cursor:pointer;min-width:0}
+.tj-j:hover{border-color:var(--color-border-secondary)}
+.tj-j.on{border:2px solid var(--color-primary);padding:8px 11px}
+.tj-j.avenir{cursor:default;opacity:.55}
+.tj-j .l{font-size:11.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-j b{display:block;font:400 21px var(--font-display);margin:2px 0 0;font-variant-numeric:tabular-nums}
+.tj-j small{display:block;font-size:10.5px;color:var(--color-text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-barre{height:5px;border-radius:3px;background:var(--color-background-secondary);margin-top:7px;overflow:hidden}
+.tj-barre i{display:block;height:5px;border-radius:3px}
+.tj-kpis{grid-template-columns:repeat(4,minmax(0,1fr))}
+.tj-kpis .db-tui{min-height:112px}
+.tj-kpis .db-tui .v{font-size:27px}
+.tj-kpis [data-tjallerret]{cursor:pointer}
+.tj-guide .ct{cursor:pointer}
+.tj-repli{margin-left:auto;font-size:11px;color:var(--color-text-muted);white-space:nowrap}
+.tj-g{display:grid;grid-template-columns:1.15fr 1fr 1fr 1.6fr;gap:20px;padding:14px 16px 16px}
+.tj-g-code{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.tj-g-big{font:400 38px var(--font-display);letter-spacing:.02em;line-height:1.1}
+.tj-g-big i{font-style:normal;border-radius:8px;padding:0 6px;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.tj-g-col{display:flex;flex-direction:column;gap:5px;font-size:12.5px}
+.tj-g-col .tj-code{min-width:26px;text-align:center}
+.tj-g-txt p{margin:0 0 6px;font-size:12px;line-height:1.5;color:var(--color-text-muted)}
+.tj-code{display:inline-block;font-size:11px;color:#fff;border-radius:6px;padding:3px 8px;font-variant-numeric:tabular-nums;letter-spacing:.03em;white-space:nowrap}
+.tj-filtres{margin-left:auto;display:inline-flex;gap:6px;flex-wrap:wrap}
+.tj-f{border:1px solid transparent;border-radius:999px;padding:3px 10px;font:400 11px var(--font-ui);cursor:pointer;background:var(--color-background-secondary);color:var(--color-text-muted)}
+.tj-f.ko{background:#fbe9eb;color:#C0182B}.tj-f.wa{background:var(--prize-soft);color:var(--prize-ink)}.tj-f.ok{background:rgba(45,122,62,.12);color:#2D7A3E}
+.tj-f.on{border-color:currentColor;font-weight:500}
+.tj-cl{border-bottom:1px solid var(--color-border-tertiary)}
+.tj-cl:last-child{border-bottom:none}
+.tj-h{display:grid;grid-template-columns:76px minmax(0,1fr) minmax(200px,300px) 112px 64px;gap:14px;align-items:center;padding:10px 16px;cursor:pointer}
+.tj-h:hover{background:var(--color-background-secondary)}
+.tj-cl.open{background:#faf7f2}
+.tj-h .tj-code{text-align:center}
+.tj-nom{font-size:13.5px;min-width:0}
+.tj-nom small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:1px}
+.tj-p{display:flex;align-items:center;gap:10px;font-size:11.5px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tj-p b{font-weight:400;font-size:13.5px}
+.tj-prog{flex:1;height:8px;border-radius:4px;background:var(--color-background-secondary);overflow:hidden}
+.tj-prog i{display:block;height:8px;border-radius:4px}
+.tj-st{display:inline-block;font-size:11px;border-radius:999px;padding:2px 9px;white-space:nowrap;text-align:center}
+.tj-st.ok{background:rgba(45,122,62,.12);color:#2D7A3E}.tj-st.wa{background:var(--prize-soft);color:var(--prize-ink)}.tj-st.ko{background:#fbe9eb;color:#C0182B}.tj-st.mu{background:var(--color-background-secondary);color:var(--color-text-muted)}
+.tj-ts{padding:0 16px 12px 106px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 20px}
+.tj-t{display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--color-surface);border-radius:9px;border:1px solid var(--color-border-tertiary);min-width:0}
+.tj-t.non{background:transparent;border-style:dashed}
+.tj-t.sp{background:#fffaf0;border-color:#f0d9a8}
+.tj-ok{width:20px;height:20px;border-radius:50%;background:#2D7A3E;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;flex:0 0 20px}
+.tj-t.non .tj-ok{background:#fbe9eb;color:#C0182B}
+.tj-t.sp .tj-ok{background:#D97706}
+.tj-n{flex:1;font-size:12.5px;min-width:0}
+.tj-n small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.tj-n q,.tj-rn q{display:block;font-size:11.5px;color:var(--color-text);font-style:italic;margin-top:2px}
+.tj-n q:before,.tj-rn q:before{content:'« '}.tj-n q:after,.tj-rn q:after{content:' »'}
+.tj-cam{color:var(--color-text-muted);vertical-align:-2px}
+.tj-ph{flex:0 0 54px;width:54px;height:42px;border:none;padding:0;background:none;border-radius:7px;position:relative;cursor:pointer}
+.tj-ph .db-cqph{aspect-ratio:auto;width:54px;height:42px;border-radius:7px}
+.tj-ph em{position:absolute;right:-4px;top:-5px;background:#C0182B;color:#fff;font:400 9.5px var(--font-ui);font-style:normal;border-radius:999px;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+.tj-ph.vide{display:flex;align-items:center;justify-content:center;background:repeating-linear-gradient(135deg,#f5f0e9 0 6px,#eee8df 6px 12px);color:var(--color-text-muted);cursor:default}
+.tj-ph.rien{cursor:default}
+.tj-c{flex:0 0 auto}
+.tj-note{display:inline-flex;align-items:center;gap:6px;font-size:11px;border-radius:999px;padding:2px 9px 2px 3px;color:#fff;white-space:nowrap}
+.tj-note b{background:rgba(255,255,255,.25);border-radius:999px;width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;font-weight:400}
+.tj-rl{display:flex;flex-direction:column}
+.tj-r{display:grid;grid-template-columns:92px 132px minmax(0,1fr) auto;gap:14px;align-items:center;padding:9px 16px;border-bottom:1px solid var(--color-border-tertiary);cursor:pointer}
+.tj-r:hover{background:var(--color-background-secondary)}
+.tj-r.nc{background:#fdf4f5}
+.tj-rj{font-size:12px;color:var(--color-text-muted);white-space:nowrap}
+.tj-r .tj-note{justify-self:start}
+.tj-rn{font-size:12.5px;min-width:0}
+.tj-rn small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+/* Tablette : une colonne de tâches, le guide sur deux colonnes, la ligne de checklist sans « voir ». */
+@media (max-width:1100px){.tj-ts{grid-template-columns:minmax(0,1fr);padding-left:16px}.tj-g{grid-template-columns:1fr 1fr}.tj-h{grid-template-columns:70px minmax(0,1fr) 150px 100px}.tj-h .tj-repli{display:none}}
+@media (max-width:900px){.tj-kpis{grid-template-columns:1fr 1fr}.tj-j small{white-space:normal}.tj-r{grid-template-columns:76px minmax(0,1fr) auto}.tj-r .tj-note{grid-column:1;grid-row:2;justify-self:start}.tj-r .tj-rj{grid-row:1}.tj-r .tj-rn{grid-column:2;grid-row:1/span 2}.tj-r>.tj-st{grid-column:3;grid-row:1/span 2}}
+/* Les onglets du bureau sur une tablette : ils passent à la ligne plutôt que de se serrer ou de se cacher. */
+@media (max-width:1100px){.db-nav>.db-ong:first-child{display:flex;flex-wrap:wrap;max-width:100%}.db-nav>.db-ong:first-child button{flex:0 0 auto;padding:7px 13px}}
+/* Téléphone : six onglets en bas ; la page des tâches en une colonne. */
+.mb-tabs.mb-tabs6{grid-template-columns:repeat(6,1fr)}
+.mb-tabs.mb-tabs6 button{font-size:9.5px}
+.tj-mob{padding:10px 10px 18px}
+.tj-mob .db-sec{font-size:15px;margin:2px 0 8px}.tj-mob .db-sec small{display:none}
+.tj-mob .tj-sem .db-mini{display:none}.tj-mob .tj-sem{margin-bottom:6px}.tj-mob .tj-fl{margin-left:0;width:100%;justify-content:space-between}.tj-mob .tj-fl .db-btn{font-size:11px;padding:5px 9px}
+.tj-mob .tj-bande{gap:4px}.tj-mob .tj-j{padding:6px 5px;border-radius:9px;text-align:center}.tj-mob .tj-j.on{padding:5px 4px}
+.tj-mob .tj-j .l{font-size:9.5px}.tj-mob .tj-j b{font-size:14px}.tj-mob .tj-j small{display:none}.tj-mob .tj-j .db-sk{width:80%!important;margin:4px auto!important;height:14px!important}.tj-mob .tj-barre{margin-top:4px;height:4px}
+.tj-mob .tj-kpis{grid-template-columns:1fr 1fr;gap:8px}.tj-mob .tj-kpis .db-tui{min-height:0;padding:9px 11px}.tj-mob .tj-kpis .db-tui .v{font-size:21px}.tj-mob .tj-kpis .db-tui .k{white-space:normal}
+.tj-mob .tj-g{grid-template-columns:1fr 1fr;gap:12px;padding:12px}.tj-mob .tj-g-code,.tj-mob .tj-g-txt{grid-column:1/-1}.tj-mob .tj-g-big{font-size:30px}
+.tj-mob .db-card>.ct{padding:10px 12px}.tj-mob .db-card>.ct .db-mini{flex-basis:100%}.tj-mob .tj-filtres{margin-left:0}.tj-mob .tj-guide .ct .db-mini{display:none}
+.tj-mob .tj-h{grid-template-columns:62px minmax(0,1fr) auto;grid-template-rows:auto auto;gap:6px 10px;padding:10px 12px}
+.tj-mob .tj-h .tj-code{grid-row:1/span 2;align-self:start;font-size:10.5px;padding:3px 5px}.tj-mob .tj-h .tj-nom{grid-column:2;grid-row:1}.tj-mob .tj-h>.tj-st{grid-column:3;grid-row:1}
+.tj-mob .tj-h .tj-p{grid-column:2/span 2;grid-row:2}.tj-mob .tj-h .tj-repli{display:none}
+.tj-mob .tj-ts{grid-template-columns:minmax(0,1fr);padding:0 10px 10px}
+.tj-mob .tj-t{padding:6px 8px;gap:8px;flex-wrap:wrap}.tj-mob .tj-n{flex:1 1 140px}.tj-mob .tj-c:empty{display:none}
+.tj-mob .tj-r{grid-template-columns:auto minmax(0,1fr);gap:4px 10px;padding:9px 12px}.tj-mob .tj-r .tj-rj{grid-column:1;grid-row:1;font-size:11px;align-self:center}.tj-mob .tj-r .tj-note{grid-column:2;grid-row:1}.tj-mob .tj-r .tj-rn{grid-column:1/-1;grid-row:2}.tj-mob .tj-r>.tj-st{grid-column:1/-1;grid-row:3;justify-self:start;white-space:normal}
+.tj-mob .tj-t .tj-c:not(:empty){flex-basis:100%;padding-left:28px;margin-top:-4px}

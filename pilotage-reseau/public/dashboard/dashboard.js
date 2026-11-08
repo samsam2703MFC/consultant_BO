@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -41,6 +41,8 @@
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
+    // L'onglet Tâches (08/11/2026) : le filtre des checklists, celles dépliées, le guide (replié s'il a été replié), tous les retours.
+    tjF: 'tout', tjOuv: {}, tjRetTout: false, tjGuide: (function () { try { return localStorage.getItem('db.tjGuide') !== '0'; } catch (e) { return true; } })(),
     tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
@@ -108,7 +110,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -134,6 +136,8 @@
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
     // Les temps morts : une lecture, le jour et sa semaine (07/11/2026).
+    // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
+    if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
@@ -1279,13 +1283,15 @@
     ctrl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
     sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     prim: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>',
+    tach: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>',
   };
   /** Le menu du téléphone : Opérationnel (la journée en cours, 06/10/2026), Exploitation, Contrôle,
    * Semaine, chacun avec sa couleur, et Primes (30/10/2026). La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
     const P = maEtats();
-    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'jour' ? S.mo : ''))));
-    return `<div class="mb-tabs mb-tabs5 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine'], ['prim', 'Primes']]
+    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'jour' ? S.mo : '')))));
+    // Six onglets depuis Tâches (08/11/2026).
+    return `<div class="mb-tabs mb-tabs5 mb-tabs6 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -5348,6 +5354,215 @@
     return h;
   }
 
+  /* --- Tâches (08/11/2026, maquette S1) ---------------------------------------------------------------------------------
+   * La journée du magasin checklist par checklist : ce qui est fait ou pas, la part des tâches OBLIGATOIRES faites, et les
+   * retours du contrôle qualité (la note, les repères posés sur la photo, le commentaire, qui et quand). Lit /pwa/tasks du
+   * seul magasin pour chaque jour de la semaine (la bande du haut), les photos du jour regardé (le zoom d'Opérationnel,
+   * repères compris) et les avis du contrôleur sur trente jours (/pwa/tasks/nc?retours=1). Les codes « 1.1.01 » : la
+   * nomenclature de src/checklists_codes.php (1er chiffre : qui, 2e : quand, puis le numéro). */
+  const TJ_ZONES = { 1: ['Vente', '#8D1D2C'], 2: ['Boulangerie', '#B0792A'], 3: ['Traiteur', '#3f7a52'], 4: ['Nettoyage', '#1f5f8b'], 5: ['Gestion', '#6B4FBB'] };
+  const TJ_MOMENTS = { 1: 'Ouverture', 2: 'Journée', 3: 'Après-midi', 4: 'Fermeture', 5: 'Chaque semaine', 6: 'Chaque mois' };
+  const TJ_CAM = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  const cleTJ = d => 'tj|' + S.shop + '|' + d;
+  const cheminTJ = d => '/pwa/tasks?shop=' + encodeURIComponent(S.shop) + '&date=' + d;
+  function tjFenetreR() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() - 29); return { du: iso(t), au: S.date }; }
+  function cleTJR() { const f = tjFenetreR(); return 'nc|' + S.shop + '|ret|' + f.du + '|' + f.au; }
+  function cheminTJR() { const f = tjFenetreR(); return '/pwa/tasks/nc?shop=' + encodeURIComponent(S.shop) + '&du=' + f.du + '&au=' + f.au + '&retours=1'; }
+  /** Les sept jours, du lundi au dimanche, de la semaine regardée. */
+  function tjSemaine() { const t = new Date(bornesSemaine()[0] + 'T12:00:00'); return Array.from({ length: 7 }, (_, i) => { const x = new Date(t); x.setDate(t.getDate() + i); return iso(x); }); }
+  /** Le jour regardé d'abord (le navigateur sert les lectures dans l'ordre), ses photos, les retours, puis la semaine. */
+  function tjCharger(force) {
+    lireAux(cleTJ(S.date), cheminTJ(S.date), force);
+    lireAux(cleCQ(), cheminCQ(), force);
+    lireAux(cleTJR(), cheminTJR(), force);
+    tjSemaine().filter(d => d !== S.date && d <= AUJ).forEach(d => lireAux(cleTJ(d), cheminTJ(d), force && d === AUJ));
+  }
+  /** Faite : rendue — et, quand la tâche demande une photo, rendue AVEC la photo (la règle du 06/10/2026). Cochée sans la
+   * photo demandée, elle ne compte pas : elle se montre à part, « cochée sans photo ». */
+  const tjFaite = t => t.statut === 'notee' || t.statut === 'aControler' || t.statut === 'aValider' || (t.statut === 'sansPhoto' && !t.photoRequise);
+  const tjSansPhoto = t => t.statut === 'sansPhoto' && !!t.photoRequise;
+  const tjPct = (a, b) => b ? Math.round(100 * a / b) : null;
+  const tjCouleur = p => p == null ? 'var(--color-border-secondary)' : (p >= 90 ? '#2D7A3E' : (p >= 50 ? '#D97706' : '#C0182B'));
+  /** « 1.1.02 · Photos des comptoirs » → code, zone, moment, titre ; un ancien code (CO-01) reste lisible, zone 0. */
+  function tjCode(nom) {
+    const s = String(nom || '').trim();
+    let m = s.match(/^([0-9])\.([1-9])\.(\d{2})\s*[·—–:-]\s*(.+)$/);
+    if (m) { return { code: m[1] + '.' + m[2] + '.' + m[3], zone: +m[1], moment: +m[2], titre: m[4] }; }
+    m = s.match(/^([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s*[·—–:-]\s*(.+)$/);
+    if (m) { return { code: m[1], zone: 0, moment: 0, titre: m[2] }; }
+    return { code: '', zone: 0, moment: 0, titre: s || 'Sans checklist' };
+  }
+  /** Le niveau du barème pour une note : nom court et couleur (le barème part avec la journée). */
+  function tjNiveau(n, niveaux) {
+    const lv = (Array.isArray(niveaux) ? niveaux : []).find(x => +x.n === +n);
+    const def = { 5: ['Exemplaire', '#C9A227'], 4: ['Conforme', '#2D7A3E'], 3: ['NC mineur', '#D97706'], 2: ['NC majeur', '#C0182B'], 1: ['NC critique', '#8D1D2C'] }[n] || ['', '#5c5852'];
+    return { nom: lv && lv.nom ? String(lv.nom).replace(/^Non conforme\s*[—–-]\s*/i, 'NC ') : def[0], couleur: (lv && lv.couleur) || def[1] };
+  }
+  /** Les checklists de la journée : les tâches obligatoires rangées sous chaque checklist qui les porte (une tâche citée
+   * par deux checklists compte dans les deux), dans l'ordre des codes. */
+  function tjChecklists(d) {
+    const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
+    const conn = (sh && Array.isArray(sh.checklists) ? sh.checklists : []).filter(c => c && c.nom);
+    const noms = conn.map(c => c.nom).sort((a, b) => b.length - a.length);
+    const G = {};
+    tachesJour(d).forEach(t => {
+      const s = String(t.checklist || '');
+      let L = noms.filter(n => s.indexOf(n) >= 0);
+      if (!L.length && s) { L = s.split(/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/).map(x => x.trim()).filter(Boolean); }
+      (L.length ? [...new Set(L)] : ['']).forEach(n => { (G[n] = G[n] || []).push(t); });
+    });
+    const hNow = S.date === AUJ ? new Date().toTimeString().slice(0, 5) : null;
+    const rang = c => !c.code ? 2 : (/^\d/.test(c.code) ? 0 : 1);
+    return Object.keys(G).map(nom => {
+      const L = G[nom], c = tjCode(nom), cl = conn.find(x => x.nom === nom);
+      const hs = L.map(t => t.heure).filter(Boolean).sort();
+      const heure = (cl && cl.heure) || hs[0] || null;
+      const faites = L.filter(tjFaite).length;
+      const etat = faites >= L.length ? 'faite' : (faites ? 'partie' : (hNow && heure && heure > hNow ? 'avenir' : 'pas'));
+      return Object.assign(c, { cle: nom || '—', heure, T: L, faites, total: L.length, etat });
+    }).sort((a, b) => rang(a) - rang(b) || a.code.localeCompare(b.code) || a.titre.localeCompare(b.titre));
+  }
+  function tjBande() {
+    const J = tjSemaine(), fdC = s => { const x = new Date(s + 'T12:00:00'); return x.getDate() + ' ' + MOIS_C[x.getMonth()]; };
+    const cases = J.map(d => {
+      const t = new Date(d + 'T12:00:00'), lib = JOURS_C[t.getDay()] + ' ' + t.getDate(), sel = d === S.date;
+      if (d > AUJ) { return `<div class="tj-j avenir"><div class="l">${lib}</div><b class="mu">—</b><small>à venir</small></div>`; }
+      const D = S.aux[cleTJ(d)], at = ` data-tjjour="${d}" role="button" tabindex="0" title="ouvrir ce jour"`;
+      if (!D) { return `<div class="tj-j${sel ? ' on' : ''}"${at}><div class="l">${lib}</div>${S.err[cleTJ(d)] ? '<b class="mu">?</b><small>pas lue</small>' : '<div class="db-sk" style="height:22px;margin:6px 0 4px;width:60%"></div><small>lecture…</small>'}</div>`; }
+      const T = tachesJour(D), f = T.filter(tjFaite).length, p = tjPct(f, T.length), sp = T.filter(tjSansPhoto).length;
+      return `<div class="tj-j${sel ? ' on' : ''}"${at}><div class="l">${lib}${d === AUJ ? ' · en cours' : ''}</div><b>${p == null ? '—' : p + ' %'}</b>`
+        + `<small title="${sp ? sp + ' cochée' + (sp > 1 ? 's' : '') + ' sans la photo demandée' : ''}">${T.length ? f + ' / ' + T.length + (sp ? ' faites · ' + sp + ' sans photo' : ' obligatoires faites') : 'aucune tâche'}</small><div class="tj-barre"><i style="width:${p || 0}%;background:${tjCouleur(p)}"></i></div></div>`;
+    }).join('');
+    return `<div class="tj-sem"><span class="db-lab">Semaine du ${esc(fdC(J[0]))} au ${esc(fdC(J[6]))}</span><span class="db-mini">la part des tâches obligatoires faites, jour par jour · cliquez un jour pour l’ouvrir</span>
+      <span class="tj-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${J[6] >= AUJ ? ' disabled' : ''}>semaine d’après ›</button></span></div><div class="tj-bande">${cases}</div>`;
+  }
+  function tjGuide(CL) {
+    const ex = CL.find(c => /^\d/.test(c.code)) || { code: '1.1.02', titre: 'Photos des comptoirs', zone: 1, moment: 1 };
+    const [z, m, n] = ex.code.split('.');
+    const zc = (TJ_ZONES[+z] || ['', '#5c5852'])[1];
+    const tete = `<div class="ct" data-tjguide="1" role="button" tabindex="0"><span class="db-lab">Comment c’est organisé</span><span class="db-mini">une checklist = une liste de tâches à faire à un moment de la journée ; chaque checklist a un code à trois parties</span><span class="tj-repli">${S.tjGuide ? 'replier ▴' : 'déplier ▾'}</span></div>`;
+    if (!S.tjGuide) { return `<div class="db-card tj-guide">${tete}</div>`; }
+    return `<div class="db-card tj-guide">${tete}<div class="tj-g">
+      <div class="tj-g-code"><span class="tj-g-big"><i style="background:${zc}1f;color:${zc}">${esc(z)}</i>.<i style="background:#1f5f8b1f;color:#1f5f8b">${esc(m)}</i>.<i>${esc(n)}</i></span><span>${esc(ex.code)} · ${esc(ex.titre)}</span>
+        <span class="db-mini">${esc((TJ_ZONES[+z] || [''])[0])} · ${esc(TJ_MOMENTS[+m] || '')} · checklist n° ${esc(n)}</span></div>
+      <div class="tj-g-col"><span class="db-lab">1er chiffre · qui</span>${Object.keys(TJ_ZONES).map(k => `<div><span class="tj-code" style="background:${TJ_ZONES[k][1]}">${k}</span> ${TJ_ZONES[k][0]}</div>`).join('')}</div>
+      <div class="tj-g-col"><span class="db-lab">2e chiffre · quand</span>${Object.keys(TJ_MOMENTS).map(k => `<div><span class="tj-code" style="background:#5c5852">.${k}</span> ${TJ_MOMENTS[k]}</div>`).join('')}</div>
+      <div class="tj-g-col tj-g-txt"><span class="db-lab">Obligatoire</span><p>Une tâche obligatoire doit être faite chaque jour où elle revient. Les pourcentages de cette page ne comptent qu’elles.</p>
+        <span class="db-lab">Photo</span><p>Une tâche qui demande une photo n’est faite que si la photo est rendue : cochée sans photo, elle ne compte pas.</p>
+        <span class="db-lab">Contrôle qualité</span><p>Chaque photo rendue est notée de 1 à 5 par le contrôleur, qui peut entourer ce qui ne va pas sur la photo et laisser un commentaire. Sous 4 : non-conformité, à corriger.</p></div></div></div>`;
+  }
+  /** Le statut du contrôle d'une tâche : la note (et son niveau), « à contrôler », ou rien. */
+  function tjCtl(t, niveaux) {
+    if (t.note != null) { const n = tjNiveau(t.note, niveaux); return `<span class="tj-note" style="background:${n.couleur}" title="noté${t.valideeLe ? ' le ' + esc(fD(String(t.valideeLe).slice(0, 10))) + ' à ' + esc(hhmm(t.valideeLe)) : ''}${(t.valideePar || t.consultant) ? ' par ' + esc(t.valideePar || t.consultant) : ''}"><b>${t.note}</b>${esc(n.nom)}</span>`; }
+    if (t.statut === 'aControler' || t.statut === 'aValider') { return '<span class="tj-st mu">à contrôler</span>'; }
+    return '';
+  }
+  function tjTache(t, X, niveaux) {
+    const ok = tjFaite(t), sp = tjSansPhoto(t), x = X[String(t.taskId)];
+    const quand = v => hhmm(v) + (String(v).slice(0, 10) !== S.date ? ' (le ' + fD(String(v).slice(0, 10)) + ')' : '');
+    const qui = t.faitePar ? ' par ' + esc(t.faitePar) : '';
+    const meta = ok ? (t.faitLe ? 'faite à ' + quand(t.faitLe) + qui : 'faite' + qui)
+      : (sp ? 'cochée sans photo' + (t.faitLe ? ' à ' + quand(t.faitLe) : '') + qui : (S.date === AUJ ? 'pas encore faite' : 'pas faite') + (t.heure ? ' · prévue à ' + esc(t.heure) : ''));
+    const com = t.note != null && t.comment && !/^auto/i.test(t.comment) ? `<q>${esc(t.comment)}</q>` : '';
+    const ph = x && x.ph ? `<button type="button" class="tj-ph" data-cqvoir="${esc(t.taskId)}" title="voir la photo${x.reperes.length ? ' et les remarques du contrôleur' : ''}">${cqPhoto(x, { mini: true, heure: false, badge: false })}${x.reperes.length ? `<em>${x.reperes.length}</em>` : ''}</button>`
+      : (t.photoRequise ? `<span class="tj-ph vide" title="${ok ? 'photo pas encore lue' : 'pas de photo'}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
+    return `<div class="tj-t${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-ok">${ok ? '✓' : (sp ? '!' : '✗')}</span>
+      <span class="tj-n">${esc(t.tache)}${t.photoRequise ? ` <span class="tj-cam" title="photo demandée">${TJ_CAM}</span>` : ''}<small>${meta}</small>${com}</span>${ph}<span class="tj-c">${tjCtl(t, niveaux)}</span></div>`;
+  }
+  function tjLigne(c, X, niveaux) {
+    // La barre d'une checklist a la couleur de son état : faite, en partie, pas faite, à venir.
+    const p = tjPct(c.faites, c.total), ouv = !!S.tjOuv[c.cle], coul = { faite: '#2D7A3E', partie: '#D97706', pas: '#C0182B', avenir: 'var(--color-border-secondary)' }[c.etat];
+    const zc = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852';
+    const st = { faite: '<span class="tj-st ok">faite</span>', partie: '<span class="tj-st wa">en partie</span>', pas: `<span class="tj-st ko">${S.date === AUJ ? 'pas commencée' : 'pas faite'}</span>`, avenir: '<span class="tj-st mu">à venir</span>' }[c.etat];
+    const sous = [c.heure ? esc(c.heure) : 'sans heure', c.zone ? TJ_ZONES[c.zone][0] : (c.code ? 'ancien code' : ''), c.moment ? TJ_MOMENTS[c.moment] : ''].filter(Boolean).join(' · ');
+    const T = c.T.slice().sort((a, b) => (tjFaite(a) ? 0 : 1) - (tjFaite(b) ? 0 : 1) || String(a.heure || '').localeCompare(String(b.heure || '')) || String(a.tache).localeCompare(String(b.tache)));
+    return `<div class="tj-cl${ouv ? ' open' : ''}"><div class="tj-h" data-tjcl="${esc(c.cle)}" role="button" tabindex="0" aria-expanded="${ouv}">
+        <span class="tj-code" style="background:${zc}">${esc(c.code || '—')}</span><span class="tj-nom">${esc(c.titre)}<small>${sous}</small></span>
+        <span class="tj-p"><span class="tj-prog"><i style="width:${Math.max(p || 0, 2)}%;background:${coul}"></i></span><span><b>${c.faites}</b> / ${c.total}</span></span>${st}<span class="tj-repli">${ouv ? 'replier ▴' : 'voir ▾'}</span></div>
+      ${ouv ? `<div class="tj-ts">${T.map(t => tjTache(t, X, niveaux)).join('')}</div>` : ''}</div>`;
+  }
+  function tjRetours(R, niveaux) {
+    const k = cleTJR();
+    let h = `<div class="db-card tj-ret" id="tj-retours"><div class="ct"><span class="db-lab">Retours du contrôle qualité</span><span class="db-mini">les notes et les commentaires du contrôleur, des 30 derniers jours · cliquez une ligne pour voir la photo et ses remarques</span></div>`;
+    if (S.err[k]) { return h + `<div class="db-mini" style="padding:14px 16px">Retours : ${esc(S.err[k])}</div></div>`; }
+    if (!R) { return h + '<div style="padding:12px 16px">' + squelette(3) + '</div></div>'; }
+    const L = Array.isArray(R.retours) ? R.retours : [];
+    if (!L.length) { return h + `<div class="db-mini" style="padding:14px 16px">Aucune photo notée ces 30 derniers jours.</div></div>`; }
+    const suite = {}; (R.nc || []).forEach(n => { suite[n.taskId + '|' + n.jour] = n.suite; });
+    // Un nom que le serveur ne connaît pas (« Tâche #1207 ») se reprend des journées déjà lues.
+    const noms = {}; Object.keys(S.aux).filter(c => c.indexOf('tj|' + S.shop + '|') === 0).forEach(c => tachesJour(S.aux[c]).forEach(t => { noms[String(t.taskId)] = t.tache; }));
+    const nomDe = r => (/^Tâche #/.test(String(r.tache || '')) && noms[String(r.taskId)]) || r.tache;
+    const V = S.tjRetTout ? L : L.slice(0, 12);
+    h += `<div class="tj-rl">${V.map(r => {
+      const n = r.note != null ? tjNiveau(r.note, niveaux) : null, su = r.nc ? suite[r.taskId + '|' + r.jour] : null;
+      const rep = r.nc ? (su ? (su.conforme ? `<span class="tj-st ok">reprise le ${esc(fD(su.jour))} · ${su.note}/5</span>` : `<span class="tj-st ko">encore non conforme le ${esc(fD(su.jour))}</span>`) : '<span class="tj-st wa">reprise pas encore notée</span>') : '';
+      const t = new Date(r.jour + 'T12:00:00');
+      return `<div class="tj-r${r.nc ? ' nc' : ''}" data-tjretour="${esc(r.jour)}|${esc(r.taskId)}" role="button" tabindex="0">
+        <span class="tj-rj">${esc(JOURS_C[t.getDay()])} ${esc(fD(r.jour))}</span>${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b>${esc(n.nom)}</span>` : '<span></span>'}
+        <span class="tj-rn">${esc(nomDe(r))}${r.comment ? `<q>${esc(r.comment)}</q>` : ''}<small>${r.consultant ? 'noté par ' + esc(r.consultant) : ''}${r.le ? (r.consultant ? ' ' : 'noté ') + 'le ' + esc(fD(String(r.le).slice(0, 10))) + ' à ' + esc(hhmm(r.le)) : ''}</small></span>${rep}</div>`;
+    }).join('')}</div>`;
+    if (L.length > 12) { h += `<div style="padding:8px 16px 12px"><button type="button" class="db-btn" data-tjrettout="1">${S.tjRetTout ? 'Montrer les 12 derniers' : 'Voir les ' + L.length + ' retours'}</button></div>`; }
+    return h + '</div>';
+  }
+  function rendTachesMag() {
+    const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
+    let h = `<div class="db-sec">Tâches et checklists — ${esc(fDL(S.date))}<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`;
+    h += tjBande();
+    if (S.err[k]) { h += `<div class="db-err">Tâches : ${esc(S.err[k])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+    if (!D) { return h + (S.err[k] ? '' : squelette(6)) + tjGuide([]); }
+    if (D.api && D.api.erreur && !tachesJour(D).length) { h += `<div class="db-alerte">Le panel n’a pas répondu pour ce jour : ${esc(D.api.erreur)}</div>`; }
+    const T = tachesJour(D), CL = tjChecklists(D), niveaux = D.repartition || (R && R.niveaux) || [];
+    const f = T.filter(tjFaite).length, p = tjPct(f, T.length), sp = T.filter(tjSansPhoto).length;
+    const ph = T.filter(t => t.photoRequise), phR = ph.filter(tjFaite).length;
+    const notees = T.filter(t => t.note != null), ctl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider');
+    const dern = R && Array.isArray(R.retours) && R.retours.length ? R.retours[0] : null;
+    const ncL = R && Array.isArray(R.nc) ? R.nc : null, ncRep = ncL ? ncL.filter(n => n.suite && n.suite.conforme).length : 0;
+    const moy = notees.length ? notees.reduce((a, t) => a + t.note, 0) / notees.length : null;
+    h += `<div class="db-tuiles tj-kpis">
+      <div class="db-tui"><div class="k">Tâches obligatoires faites</div><div class="v" style="color:${tjCouleur(p)}">${p == null ? '—' : p + ' %'}</div><div class="s">${T.length ? f + ' sur ' + T.length + ' · ' + (T.length - f) + ' pas faite' + (T.length - f > 1 ? 's' : '') + (sp ? ' · ' + sp + ' cochée' + (sp > 1 ? 's' : '') + ' sans photo' : '') : 'aucune tâche obligatoire ce jour'}</div><div class="tj-barre"><i style="width:${p || 0}%;background:${tjCouleur(p)}"></i></div></div>
+      <div class="db-tui"><div class="k">Photos rendues</div><div class="v">${phR} / ${ph.length}</div><div class="s">${!ph.length ? 'aucune photo demandée' : (phR === ph.length ? 'toutes les photos sont rendues' : (ph.length - phR) + ' photo' + (ph.length - phR > 1 ? 's' : '') + ' manque' + (ph.length - phR > 1 ? 'nt' : ''))}</div><div class="tj-barre"><i style="width:${tjPct(phR, ph.length) || 0}%;background:${tjCouleur(tjPct(phR, ph.length))}"></i></div></div>
+      <div class="db-tui"><div class="k">Contrôle qualité du jour</div><div class="v">${moy != null ? nf(moy, 1) + ' / 5' : ctl.length + ' à contrôler'}</div><div class="s">${notees.length ? notees.length + ' photo' + (notees.length > 1 ? 's' : '') + ' notée' + (notees.length > 1 ? 's' : '') + (ctl.length ? ' · ' + ctl.length + ' à contrôler' : '') : (dern ? 'dernier passage du contrôleur : le ' + esc(fD(dern.jour)) + (dern.consultant ? ' (' + esc(dern.consultant) + ')' : '') : 'aucune photo notée ce jour')}</div></div>
+      <div class="db-tui${ncL && ncL.length ? '' : ' bon'}" data-tjallerret="1" role="button" tabindex="0"><div class="k">Non-conformités · 30 jours</div><div class="v">${ncL ? ncL.length : '…'}</div><div class="s">${!ncL ? 'lecture…' : (ncL.length ? ncRep + ' reprise' + (ncRep > 1 ? 's' : '') + ' depuis · voir les retours ↓' : 'aucune note sous 4 · voir les retours ↓')}</div></div></div>`;
+    h += tjGuide(CL);
+    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>` + tjRetours(R, niveaux); }
+    const n = { pas: CL.filter(c => c.etat === 'pas').length, partie: CL.filter(c => c.etat === 'partie').length, faite: CL.filter(c => c.etat === 'faite').length };
+    const F = S.tjF === 'tout' ? CL : CL.filter(c => c.etat === S.tjF);
+    const filtre = (v, lib, cls) => `<button type="button" class="tj-f ${cls}${S.tjF === v ? ' on' : ''}" data-tjf="${v}">${lib}</button>`;
+    const X = {}; (cqListe() || []).forEach(x => { X[String(x.taskId)] = x; });
+    const P = S.aux[cleCQ()];
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Les checklists du jour</span><span class="db-mini">dans l’ordre des codes · ${CL.length} checklist${CL.length > 1 ? 's' : ''} · ${T.length} tâches obligatoires${P ? '' : (S.err[cleCQ()] ? ' · photos : ' + esc(S.err[cleCQ()]) : ' · lecture des photos…')}</span>
+        <span class="tj-filtres">${filtre('tout', 'Toutes ' + CL.length, 'mu')}${filtre('pas', (S.date === AUJ ? 'Pas commencées ' : 'Pas faites ') + n.pas, 'ko')}${filtre('partie', 'En partie ' + n.partie, 'wa')}${filtre('faite', 'Faites ' + n.faite, 'ok')}</span>
+        <button type="button" class="db-btn" data-tjtout="${F.every(c => S.tjOuv[c.cle]) ? '0' : '1'}">${F.length && F.every(c => S.tjOuv[c.cle]) ? 'Tout replier' : 'Tout déplier'}</button></div>
+      ${F.length ? F.map(c => tjLigne(c, X, niveaux)).join('') : '<div class="db-mini" style="padding:14px 16px">Aucune checklist dans ce filtre.</div>'}</div>`;
+    return h + tjRetours(R, niveaux);
+  }
+  /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
+  function rendTachesMobile() {
+    const t = new Date(S.date + 'T12:00:00');
+    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' });
+    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="jour précédent">‹</button><b>${esc(date)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="jour suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
+      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag()}</div></div>${mbOnglets()}`;
+  }
+  function tjAller(d, voir) {
+    if (!d || d > AUJ) { return; }
+    S.date = d; S.heure = null; S.jourH = null; if (voir) { S.cqVoir = String(voir); }
+    urlMaj(); charger(false);
+  }
+  function tjBrancher() {
+    const cle = (el, f) => { el.addEventListener('click', f); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(e); } }); };
+    $.querySelectorAll('[data-tjjour]').forEach(el => cle(el, () => tjAller(el.dataset.tjjour)));
+    $.querySelectorAll('[data-tjcl]').forEach(el => cle(el, () => { const c = el.dataset.tjcl; S.tjOuv[c] = !S.tjOuv[c]; rendre(); }));
+    $.querySelectorAll('[data-tjf]').forEach(el => el.addEventListener('click', () => { S.tjF = el.dataset.tjf; rendre(); }));
+    $.querySelectorAll('[data-tjtout]').forEach(el => el.addEventListener('click', () => { const o = el.dataset.tjtout === '1', D = S.aux[cleTJ(S.date)];
+      tjChecklists(D).filter(c => S.tjF === 'tout' || c.etat === S.tjF).forEach(c => { S.tjOuv[c.cle] = o; }); rendre(); }));
+    $.querySelectorAll('[data-tjguide]').forEach(el => cle(el, () => { S.tjGuide = !S.tjGuide; try { localStorage.setItem('db.tjGuide', S.tjGuide ? '1' : '0'); } catch (e) { /* rien */ } rendre(); }));
+    $.querySelectorAll('[data-tjrettout]').forEach(el => el.addEventListener('click', () => { S.tjRetTout = !S.tjRetTout; rendre(); }));
+    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-retours'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+    $.querySelectorAll('[data-tjretour]').forEach(el => cle(el, () => { const [d, t] = el.dataset.tjretour.split('|'); if (d === S.date) { S.cqVoir = t; rendre(); } else { tjAller(d, t); } }));
+  }
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -5357,7 +5572,9 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
+      if (S.vue === 'taches') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); const sc2 = $.querySelector('.mb-sc'); if (sc2 && S.tjHaut !== S.date) { S.tjHaut = S.date; sc2.scrollTop = 0; } else if (sc2) { sc2.scrollTop = top; } return; }
       // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
       if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
@@ -5390,8 +5607,8 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
@@ -5399,6 +5616,7 @@
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
+    if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
@@ -7334,9 +7552,10 @@
   }
   /** La journée du magasin, chaque tâche avec sa photo et son état, triée. */
   function cqListe() {
-    const d = S.aux['taches|' + S.date];
+    // L'onglet Tâches lit le seul magasin, jour par jour ; son zoom ne feuillette que les tâches à photo (08/11/2026).
+    const d = S.vue === 'taches' ? S.aux[cleTJ(S.date)] : S.aux['taches|' + S.date];
     if (!d || d.indispo) { return null; }
-    const T = tachesJour(d);
+    const T = S.vue === 'taches' ? tachesJour(d).filter(t => t.photoRequise || t.note != null || t.statut === 'aControler') : tachesJour(d);
     const P = S.aux[cleCQ()];
     // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
     if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
@@ -7431,8 +7650,10 @@
   }
   /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
-    if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops')) { return ''; }
+    if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops' && S.vue !== 'taches')) { return ''; }
     const L = cqListe();
+    // La journée pas encore lue (un retour d'un autre jour vient d'être ouvert) : la photo s'ouvrira à la lecture.
+    if (!L) { return ''; }
     const F = L ? cqFiltrees(L) : [];
     const i = F.findIndex(x => String(x.taskId) === String(S.cqVoir));
     if (i < 0) { S.cqVoir = null; return ''; }
@@ -7479,7 +7700,7 @@
     if (p) { if (S.cqRaz || !meme) { S.cqRaz = false; p.scrollLeft = 0; } else { p.scrollLeft = g.x; } cqFleches(); }
     const ba = document.getElementById('db-cqba'), on = ba && ba.querySelector('.on');
     if (on) { ba.scrollLeft = on.offsetLeft - ba.clientWidth / 2 + on.clientWidth / 2; }
-    document.documentElement.classList.toggle('db-cq-ouvert', !!S.cqVoir && (S.vue === 'jour' || S.vue === 'ops'));
+    document.documentElement.classList.toggle('db-cq-ouvert', !!S.cqVoir && (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'taches'));
   }
   /** Flèches éteintes aux deux bouts, et le compte de ce qu'on voit. */
   function cqFleches() {
@@ -8483,7 +8704,7 @@
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
+      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
@@ -8578,7 +8799,7 @@
     $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
     $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.mo, avant = S.vue;
-      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else { S.vue = 'jour'; S.mo = k; }
+      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
@@ -8639,7 +8860,7 @@
   urlMaj();
   charger(false);
   // La journée en cours se relit toutes les dix minutes.
-  setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts') && S.date === AUJ) { charger(true); } }, 600000);
+  setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.
   setInterval(() => { if (S.vue === 'ops' && S.date === AUJ && !document.hidden) { charger(true); } }, 120000);
 })();

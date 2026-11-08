@@ -383,6 +383,7 @@ function ep_pwa_tasks(): array
         // ou DONE) dit ce qui est rendu et attend un contrôle.
         $apiNames = [];
         $apiTaches = [];        // sid|tid => tâche telle que rendue par le panel
+        $clsJour = [];          // sid => [checklist => {id, nom, heure}]
         $apiOn = PanelApi::configured();
         if ($apiOn) {
             try {
@@ -415,6 +416,12 @@ function ep_pwa_tasks(): array
             foreach (PanelApi::getParallele($req2) as $sid => $rep) {
                 foreach (PanelApi::liste(is_array($rep) ? $rep : []) as $cl) {
                     $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+                    // Les checklists du jour et leur heure (08/11/2026) : l'onglet Tâches du dashboard magasin les range.
+                    if ($cid > 0) {
+                        $hCl = (string) ($cl['execution_time'] ?? $cl['time'] ?? '');
+                        $clsJour[(int) $sid][$cid] = ['id' => $cid, 'nom' => trim((string) ($cl['name'] ?? $cl['checklist_name'] ?? '')),
+                            'heure' => preg_match('/^\d{2}:\d{2}/', $hCl) ? substr($hCl, 0, 5) : null];
+                    }
                     if ($cid > 0) {
                         $req3[$sid . '#' . $cid] = '/consultant/shops/' . $sid . '/checklists/' . $cid
                             . '/progress?date=' . urlencode($date);
@@ -491,6 +498,8 @@ function ep_pwa_tasks(): array
                 // Le drapeau du panel aussi (20/10/2026) : sans lui, le relevé gardait une tâche notée pour
                 // facultative et le mois des tâches obligatoires la perdait. null = le panel ne l'a pas dit.
                 'obligatoire' => array_key_exists('is_mandatory', $apiTaches[$sid . '|' . $tid] ?? []) ? !empty($apiTaches[$sid . '|' . $tid]['is_mandatory']) : null,
+                // L'heure prévue (08/11/2026) : l'onglet Tâches du dashboard magasin la montre.
+                'heure' => preg_match('/^\d{2}:\d{2}/', (string) ($apiTaches[$sid . '|' . $tid]['execution_time'] ?? '')) ? substr((string) $apiTaches[$sid . '|' . $tid]['execution_time'], 0, 5) : null,
             ];
             $tot['taches']++;
             if ($valide) { $tot['valides']++; } else { $tot['aValider']++; }
@@ -547,6 +556,7 @@ function ep_pwa_tasks(): array
                 'photoRequise' => !empty($t['requires_photo']),
                 'obligatoire' => !empty($t['is_mandatory']),
                 'checklist' => trim((string) ($t['checklist_name'] ?? '')) ?: null,
+                'heure' => preg_match('/^\d{2}:\d{2}/', (string) ($t['execution_time'] ?? '')) ? substr((string) $t['execution_time'], 0, 5) : null,
             ];
             $tot['taches']++;
             if ($photo) { $tot['aControler'] = ($tot['aControler'] ?? 0) + 1; $tot['aValider']++; }
@@ -590,6 +600,7 @@ function ep_pwa_tasks(): array
         $tot['notees'] = $noteN;
         $tot['nonNotees'] = $tot['taches'] - $noteN;
 
+        foreach ($clsJour as $sid => $L) { if (isset($byShop[$sid])) { $byShop[$sid]['checklists'] = array_values($L); } }
         return ['date' => $date, 'dates' => $dates, 'shops' => array_values($byShop),
             'repartition' => $repartition, 'seuil' => (int) ($sig['seuil'] ?? 4),
             'consultants' => $consultants, 'totals' => $tot, 'indispo' => false,
@@ -4494,6 +4505,22 @@ function ep_pwa_tasks_nc(): array
                     'notees' => $par[$j]['notees'] ?? 0, 'releve' => isset($par[$j])];
             }
         } catch (PDOException $e) { $out['semaine'] = []; }
+    }
+
+    // ?retours=1 (08/11/2026, onglet Tâches du dashboard magasin) : les derniers avis du contrôleur sur la période,
+    // conformes compris — la note, le commentaire, qui et quand ; les plus récents d'abord, quarante au plus.
+    if (!empty($_GET['retours'])) {
+        $avis = array_values(array_filter($rows, fn ($r) => $r['rating'] !== null || ($r['comment'] ?? '') !== ''));
+        usort($avis, fn ($a, $b) => strcmp((string) ($b['updated_at'] ?? $b['review_date']), (string) ($a['updated_at'] ?? $a['review_date'])));
+        $out['retours'] = array_map(fn ($r) => [
+            'taskId' => (string) (int) $r['id_task'], 'jour' => (string) $r['review_date'],
+            'tache' => $noms[(int) $r['id_task']] ?? ('Tâche #' . (int) $r['id_task']),
+            'note' => $r['rating'] !== null ? (int) $r['rating'] : null,
+            'comment' => ($r['comment'] !== null && $r['comment'] !== '') ? (string) $r['comment'] : null,
+            'consultant' => $r['consultant_name'] !== null ? (string) $r['consultant_name'] : null,
+            'le' => $r['updated_at'] !== null ? substr((string) $r['updated_at'], 0, 16) : null,
+            'nc' => $estNC($r),
+        ], array_slice($avis, 0, 40));
     }
 
     return $out;

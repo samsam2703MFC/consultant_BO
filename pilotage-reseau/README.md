@@ -364,6 +364,19 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   pastilles sur une ligne : il ne tient pas dans 390 px, le téléphone en montre
   la même donnée en carte (`mobNC()`).
 
+- **Onglet Tâches** (08/11/2026, maquette S1) : la journée du magasin checklist
+  par checklist, dans l'ordre des codes `1.1.01` — la semaine en bande (part des
+  tâches obligatoires faites chaque jour), quatre indicateurs (obligatoires
+  faites, photos rendues, contrôle qualité du jour, non-conformités sur trente
+  jours), le guide des codes (repliable, mémorisé), chaque checklist dépliable
+  en ses tâches (faite à quelle heure, par qui, la photo, la note et le
+  commentaire du contrôleur), et les retours du contrôle qualité des trente
+  derniers jours — un clic ouvre la photo annotée de ce jour-là dans le zoom
+  d'Opérationnel. Aussi au téléphone, en sixième onglet du bas. Lectures :
+  voir `docs/contrat-api.md`, « l'heure prévue et les checklists du jour ».
+- **Sur tablette** (561 à 1100 px), la page du bureau ; les onglets du haut
+  passent à la ligne au lieu de se serrer.
+
 - **Valeur du magasin** : sur la barre du haut, en un mot et un chiffre ; tout
   le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen
   des **18 derniers mois clos**, ramené à l'année (× 12) puis divisé par **6**
