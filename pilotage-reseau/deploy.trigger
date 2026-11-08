@@ -1337,3 +1337,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T20:40:03Z Cadre des tâches : recherche partout
 2026-11-07T20:47:17Z Temps morts : la journée en grille des minutes, magasin inconnu refusé
 2026-11-08T05:45:43Z Cadre des tâches : vue Document, réglages en vignettes cliquables
+2026-11-08T06:49:47Z Cadre des tâches : « Ranger → AC-01 ▾ » sur chaque tâche hors checklist
