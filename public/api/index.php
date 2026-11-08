@@ -80,6 +80,7 @@ require __DIR__ . '/../../src/tablette.php';
 require __DIR__ . '/../../src/tablette_objectifs.php';
 require __DIR__ . '/../../src/tablette_remarques.php';
 require __DIR__ . '/../../src/primes.php';
+require __DIR__ . '/../../src/commandes_fournisseurs.php';
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -96,6 +97,12 @@ try {
     $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
+    // L'export des commandes fournisseurs sort en CSV quand on le demande.
+    if ($method === 'GET' && $path === '/centrale/commandes-fournisseurs' && ($_GET['format'] ?? '') === 'csv') {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        ep_ca_commandes_fournisseurs_csv();
+        exit;
+    }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
         if (authEnabled() && !authOk()) { http_response_code(401); exit; }
         header('Content-Type: text/html; charset=utf-8');
@@ -389,6 +396,7 @@ function route(string $method, string $path): mixed
             $path === '/centrale/achats'               => ep_ca_achats(),
             $path === '/centrale/achats/catalogue'     => ep_ca_achats_catalogue(),
             $path === '/centrale/commandes'            => ep_ca_commandes(),
+            $path === '/centrale/commandes-fournisseurs' => ep_ca_commandes_fournisseurs(),
             $path === '/centrale/commandes/mail'       => caMailEtat(),
             $path === '/centrale/commandes/mail/courriers' => ep_ca_mail_courriers(),
             $path === '/centrale/achats/relance'       => caRelanceEtat(),

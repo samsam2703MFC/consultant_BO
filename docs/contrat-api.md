@@ -2985,3 +2985,13 @@ coefMedian, coefMin, coefMax, zones}], groupes: [{nom, n, nChiffres, coefMedian,
 triés par groupe, catégorie, nom ; les produits inactifs sont écartés sauf `inactifs=1`. `prixCible` et `prixObjectif` : le prix
 TTC de la pièce qui atteindrait la cible de sa catégorie, ou l'objectif du réseau, aux 5 centimes supérieurs. Relu à chaque
 appel. 400 sans `shop`, 503 sans API, 502 quand le panel ne rend aucun produit. `sonde=1` rend les premières lignes brutes.
+
+`GET /centrale/commandes-fournisseurs` — les commandes passées aux fournisseurs de matière première (SLFood, Bruyerre…), lues
+dans l'API du panel avec le compte consultant : `/material-suppliers` puis `/material-suppliers/{id}/orders` (toutes les pages),
+`/material-suppliers/{id}/orders/{order}` avec `detail=1`, et `/shops/{id}/orders` en plus avec `magasins=1`. Filtres :
+`fournisseur` (nom, sans casse ni espaces), `depuis` / `jusqua` (AAAA-MM-JJ). Rend `{etat, nb, parFournisseur: {nom: {nb, total}},
+commandes: [{id, numero, fournisseurId, fournisseur, magasinId, magasin, statut, date, livraisonPrevue, livree, total, nbLignes,
+lignes?: [{matiereId, matiere, sku, quantite, quantiteRecue, unite, prixUnitaire, total}]}], sources: [{route, code, erreur, nb,
+pages, champs}]}`. Le swagger ne documente ni le corps ni l'autorisation de ces routes : les champs sont lus sur des noms
+candidats, et `sources` donne le code HTTP et les champs réellement rendus par chaque appel. `format=csv` : le même contenu en
+CSV « ; » (une ligne par article avec `detail=1`). `etat: attente` sans compte consultant.
