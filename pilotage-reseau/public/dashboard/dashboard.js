@@ -7754,7 +7754,9 @@
     if (!d || d.indispo) { return null; }
     // Les contrôles en photo ne montrent que les tâches qui DEMANDENT une photo (08/11/2026, demande de Sam) — ou qui en ont
     // une, ou une note : une tâche sans photo demandée (« Alarme activée ») n'a rien à faire dans le carrousel.
-    const T = tachesJour(d).filter(t => t.photoRequise || t.photo || t.note != null || t.statut === 'aControler' || t.statut === 'notee');
+    // Les facultatives aussi (08/11/2026, maquette O4) : elles se montrent à part (cadre en pointillé, « facultative »).
+    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
+    const T = ((sh && sh.taches) || []).filter(t => t.photoRequise || t.photo || t.note != null || t.statut === 'aControler' || t.statut === 'notee');
     const P = S.aux[cleCQ()];
     // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
     if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
@@ -7819,8 +7821,10 @@
     return out.join(' · ');
   }
   function cqCarte(x, mobile) {
-    return `<button type="button" class="db-cqc" data-cqvoir="${esc(x.taskId)}">${cqPhoto(x, { court: mobile, heure: !mobile })}`
-      + `<span class="n">${esc(mobile ? cqNom(x).replace(/^(Comptoir|CQ) · /, '') : cqNom(x))}</span><span class="m">${cqMeta(x)}</span>${mobile ? '' : cqConstat(x)}</button>`;
+    // Obligatoire : un cadre plein ; facultative : un cadre en pointillé, la photo estompée, le mot (maquette O4, 08/11/2026).
+    const fac = x.obligatoire === false;
+    return `<button type="button" class="db-cqc ${fac ? 'fac' : 'obl'}" data-cqvoir="${esc(x.taskId)}">${cqPhoto(x, { court: mobile, heure: !mobile })}`
+      + `<span class="n">${esc(mobile ? cqNom(x).replace(/^(Comptoir|CQ) · /, '') : cqNom(x))}</span><span class="m">${fac ? '<i class="cq-fac">facultative</i> · ' : ''}${cqMeta(x)}</span>${mobile ? '' : cqConstat(x)}</button>`;
   }
   function rendCQ(mobile) {
     if (S.vue !== 'jour' && S.vue !== 'ops') { return ''; }
