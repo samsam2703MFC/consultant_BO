@@ -7868,7 +7868,7 @@
       const e = r === g.tous.length ? 'ok' : (r ? 'wa' : 'ko');
       return `<div class="cqf-r"><div class="cqf-h">${esc(g.h || '—')}</div><div class="cqf-x"><span class="cqf-d e-${e}"></span></div>
         <div class="cqf-c"><div class="cqf-b" style="background:${z}"><span class="cqf-code">${esc(c.code || '—')}</span><b>${esc(c.titre)}</b>${g.h ? `<span class="cqf-hh">${esc(g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${e}">${e === 'ko' ? '✗' : '✓'} ${r} / ${g.tous.length}</span></div>
-          <div class="cqf-p">${g.vus.map(x => cqCarte(x, false)).join('')}</div></div></div>`; }).join('')}</div>`;
+          <div class="cqf-sl"><button type="button" class="cqf-fl g" data-cqfl="-1" aria-label="photos précédentes">‹</button><div class="cqf-p" data-cqfp="${esc(g.k)}">${g.vus.map(x => cqCarte(x, false)).join('')}</div><button type="button" class="cqf-fl d" data-cqfl="1" aria-label="photos suivantes">›</button></div></div></div>`; }).join('')}</div>`;
   }
   /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
@@ -9041,6 +9041,16 @@
     $.querySelectorAll('.db-cql').forEach(l => l.addEventListener('click', e => { if (e.target === l) { S.cqVoir = null; rendre(); } }));
     const piste = document.getElementById('db-cqpiste');
     if (piste) { piste.addEventListener('scroll', cqFleches, { passive: true }); }
+    // Le slider des photos de chaque carte de la frise (08/11/2026) : flèches, position gardée d'un rendu à l'autre.
+    S.cqfPos = S.cqfPos || {};
+    $.querySelectorAll('[data-cqfp]').forEach(p => {
+      const sl = p.parentNode, g = sl.querySelector('.cqf-fl.g'), d = sl.querySelector('.cqf-fl.d'), k = S.date + '|' + p.dataset.cqfp;
+      const maj = () => { const deb = p.scrollWidth > p.clientWidth + 2; sl.classList.toggle('deb', deb); g.disabled = p.scrollLeft <= 2; d.disabled = p.scrollLeft + p.clientWidth >= p.scrollWidth - 2; };
+      if (S.cqfPos[k]) { p.scrollLeft = S.cqfPos[k]; }
+      p.addEventListener('scroll', () => { S.cqfPos[k] = p.scrollLeft; maj(); }, { passive: true });
+      [g, d].forEach(b => b.addEventListener('click', () => p.scrollBy({ left: +b.dataset.cqfl * Math.max(160, p.clientWidth - 120), behavior: 'smooth' })));
+      maj();
+    });
     $.querySelectorAll('[data-cqpas]').forEach(b => b.addEventListener('click', () => { const p = document.getElementById('db-cqpiste'); if (p) { p.scrollBy({ left: +b.dataset.cqpas * Math.max(200, p.clientWidth - 80), behavior: 'smooth' }); } }));
     // Au téléphone, la photo se feuillette au doigt.
     $.querySelectorAll('[data-cqswipe]').forEach(z => {

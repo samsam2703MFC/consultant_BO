@@ -2708,6 +2708,10 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .cqf-b{display:flex;align-items:center;gap:10px;color:#fff;padding:6px 12px}
 .cqf-code{font:400 18px var(--font-display);font-variant-numeric:tabular-nums}.cqf-b b{font-weight:400;font-size:14px}.cqf-hh{font-size:12px;opacity:.85}.cqf-sp{flex:1}
 .cqf-s{background:#fff;border-radius:999px;padding:2px 10px;font-size:12px;white-space:nowrap}.cqf-s.e-ok{color:#2D7A3E}.cqf-s.e-wa{color:#B45309}.cqf-s.e-ko{color:#C0182B}
-.cqf-p{display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px 12px}
+.cqf-sl{position:relative}
+.cqf-p{display:flex;flex-wrap:nowrap;gap:10px;padding:10px 12px 12px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:12px;scrollbar-width:none;-webkit-overflow-scrolling:touch}.cqf-p::-webkit-scrollbar{display:none}
+.cqf-p .db-cqc{scroll-snap-align:start}
+.cqf-fl{display:none;position:absolute;top:50%;transform:translateY(-60%);z-index:2;width:34px;height:34px;border-radius:50%;border:1px solid var(--color-border-secondary);background:rgba(255,255,255,.95);box-shadow:0 2px 8px rgba(0,0,0,.15);font-size:20px;line-height:1;cursor:pointer;color:var(--color-text)}
+.cqf-sl.deb .cqf-fl{display:block}.cqf-fl.g{left:4px}.cqf-fl.d{right:4px}.cqf-fl:disabled{opacity:0;pointer-events:none}
 .cqf-p .db-cqc{flex:0 0 132px;min-width:0}
 .cqf-p .db-cqc .c.ko{display:none}   /* dans la frise, la checklist est déjà dans le bandeau */
