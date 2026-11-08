@@ -1340,3 +1340,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-08T06:49:47Z Cadre des tâches : « Ranger → AC-01 ▾ » sur chaque tâche hors checklist
 2026-11-08T07:37:00Z Checklists : nomenclature 1.1.01 (code unique partout), onglet Checklists
 2026-11-08T08:14:18Z onglet Tâches du dashboard magasin (S1)
+2026-11-08T11:38:51Z Cockpit : réglage de la revue du soir (Checklists › Revue du soir)
