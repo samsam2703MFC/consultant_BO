@@ -664,7 +664,7 @@
   const cqNom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
   // Les photos types des rayons : un libellé réduit pour retrouver son rayon (même règle que src/rayons_photos.php).
   const rvNorm = s => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
-  const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
+  const cqCl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^(?:[0-9]\.[1-9]\.\d{2}|[A-Z]{2}-?[A-Z0-9]+)\s*[·—–-]\s*/i, '');
   const hm = v => v ? String(v).slice(11, 16) : '';
   const pcLeg = avecObj => '<div class="pc-leg"><span><i class="r"></i>cette année</span><span><i class="n"></i>N-1, mêmes jours</span>' + (avecObj ? '<span><i class="o"></i>objectif</span>' : '') + '</div>';
   // Les leviers que le consultant vérifie sur place (26/10/2026, demande de Sam) : un module de checklist comme les

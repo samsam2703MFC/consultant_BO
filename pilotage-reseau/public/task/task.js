@@ -77,7 +77,7 @@
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
-    if (S.vue === 'planning') { a.set('vue', 'planning'); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
+    if (S.vue === 'planning' || S.vue === 'checklists') { a.set('vue', S.vue); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
     try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
     if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
   }
@@ -89,7 +89,7 @@
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
     // Les vues : le Document (par défaut, 07/11/2026), le Tableau d'avant (?vue=tableau), le Planning.
-    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : 'doc',
+    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : q.get('vue') === 'checklists' ? 'checklists' : 'doc',
     dd: null,   // la liste ouverte d'une vignette du Document : {k, id, c, portee, …}
     rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
@@ -184,6 +184,7 @@
     }
     S.charge = false;
     rendre();
+    if (S.cadre && S.vue === 'checklists' && !S.nomen) { ckOuvrir(); }
     if (S.cadre && S.vue === 'doc') {
       // ?checklist=ID : on descend jusqu'à sa section, une fois (le cockpit a d'abord pris la hauteur du cadre).
       if (!S.dcVu && /^(\d{1,10}|hors)$/.test(q.get('checklist') || '')) { S.dcVu = true; setTimeout(() => dcAller(q.get('checklist')), 450); }
@@ -892,8 +893,8 @@
   const DC_COULEURS = { vente: '#8D1D2C', 'production boulangerie': '#B0792A', 'production patisserie': '#A0522D', 'production traiteur': '#3f7a52',
     nettoyage: '#1f5f8b', administartif: '#6B4FBB', administratif: '#6B4FBB', logistique: '#5c5852' };
   const dcCouleur = p => DC_COULEURS[sansAccent(p)] || '#8a847c';
-  /** « AC-01 · Ouverture boutique » → code AC-01, titre « Ouverture boutique ». */
-  const dcCode = nom => { const m = String(nom || '').match(/^\s*([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s+[·—–:-]\s+(.+)$/); return m ? { code: m[1], titre: m[2] } : { code: '', titre: String(nom || '') }; };
+  /** « 1.1.01 · Ouverture de la boutique » → code 1.1.01 (la nomenclature du 08/11/2026) ; avant elle, « AC-01 · … » → AC-01. */
+  const dcCode = nom => { const m = String(nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s+[·—–:-]\s+(.+)$/); return m ? { code: m[1], titre: m[2] } : { code: '', titre: String(nom || '') }; };
   /** Le nom d'une tâche sans le code de sa checklist devant (« AC-01 · Allumer… » sous AC-01 → « Allumer… »). */
   const dcSansCode = (nom, code) => { const c = dcCode(nom); return code && c.code === code ? c.titre : String(nom || ''); };
   const dcMoment = h => !h ? 'Sans heure' : h < '07:00' ? 'Avant l’ouverture' : h < '12:00' ? 'Matin' : h < '17:00' ? 'Après-midi' : 'Soir';
@@ -1306,6 +1307,182 @@
     window.scrollTo({ top: y, behavior: 'smooth' });
   }
 
+  /* --- l'onglet Checklists (08/11/2026, « un onglet pour la gestion des noms et des paramètres des checklists ») ---
+   * Une ligne par checklist, ses réglages du panel modifiables sur place : code et nom (le nom du panel est
+   * « CODE · Nom »), zone de production, heure, description. Les changements s'accumulent, puis partent d'un coup
+   * (PATCH …/task/checklists/{id}, un par checklist modifiée). En face de chaque checklist : ce qu'elle contient
+   * et les points d'attention (sans code, code en double, sans heure, vide…).
+   */
+  // Le code de la nomenclature (08/11/2026) : zone.moment.numéro, « 1.1.01 ». Les anciens (AC-01, CO-02…) se lisent encore.
+  const CK_CODE = /^[0-9]\.[1-9]\.\d{2}$/;
+  const CK_ANCIEN = /^[A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3}$/;
+  /** Les réglages d'une checklist tels que le panel les a, et le séparateur de son nom (« · », « — », « - »). */
+  function ckOrig(c) {
+    const m = String(c.nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})(\s+[·—–:-]\s+)(.+)$/);
+    return { code: m ? m[1] : '', sep: m ? m[2] : ' · ', titre: m ? m[3] : String(c.nom || ''), posteId: String(((c.brut || {}).workstation_id) || ''),
+      heure: c.heure || '', description: c.description || '' };
+  }
+  const ckVal = c => Object.assign(ckOrig(c), (S.ck && S.ck.edits[c.id]) || {});
+  const ckNom = v => v.code ? v.code + v.sep + v.titre.trim() : v.titre.trim();
+  /** Ce qui a changé pour une checklist : le corps de PATCH /task/checklists/{id}, ou null. */
+  function ckDiff(c) {
+    const o = ckOrig(c); const v = ckVal(c); const b = {};
+    if (ckNom(v) !== ckNom(o)) { b.nom = ckNom(v); }
+    if (v.posteId !== o.posteId) { b.posteId = +v.posteId || 0; }
+    if (v.heure !== o.heure) { b.heure = v.heure; }
+    if (v.description !== o.description) { b.description = v.description; }
+    return Object.keys(b).length ? b : null;
+  }
+  function ckAttention(c, tous) {
+    const v = ckVal(c); const a = [];
+    const ts = dcTachesDe(c);
+    if (!v.code) { a.push(['wa', 'sans code']); } else if (CK_ANCIEN.test(v.code)) { a.push(['wa', 'ancien code']); } else if (!CK_CODE.test(v.code)) { a.push(['ko', 'code non reconnu (zone.moment.numéro : 1.1.01)']); }
+    if (v.code && tous.filter(x => x.code === v.code).length > 1) { a.push(['ko', 'code en double']); }
+    if (v.titre.trim() && tous.filter(x => sansAccent(x.titre) === sansAccent(v.titre)).length > 1) { a.push(['wa', 'nom en double']); }
+    if (!v.titre.trim()) { a.push(['ko', 'nom vide']); }
+    if (!v.heure) { a.push(['wa', 'sans heure']); }
+    if (!ts.length) { a.push(['wa', 'aucune tâche']); }
+    if (v.description.trim() === 'Array') { a.push(['ko', 'description cassée (« Array »)']); }
+    if (ts.length && ts.every(t => t.actif === false)) { a.push(['wa', 'toutes ses tâches en pause']); }
+    return a;
+  }
+  function ckVue() {
+    S.ck = S.ck || { edits: {}, res: {}, filtre: '', envoi: false };
+    const k = S.ck;
+    // Dans l'ordre des codes (1.1.01, 1.1.02… 5.6.01) ; les anciens codes ensuite.
+    const cle = c => { const v = ckOrig(c); return (CK_CODE.test(v.code) ? '0' + v.code : '1' + (v.code || '~') + v.titre); };
+    const L = dcOrdre().slice().sort((a, b) => cle(a).localeCompare(cle(b), 'fr', { numeric: true }));
+    const tous = L.map(ckVal);
+    const f = sansAccent(k.filtre);
+    const vus = L.filter(c => !f || sansAccent([ckNom(ckVal(c)), c.poste, c.heure, c.description].join(' ')).includes(f));
+    const postes = (S.struct && S.struct.postes) || [];
+    const modifiees = L.filter(ckDiff);
+    const aHarmoniser = L.filter(c => { const v = ckVal(c); return v.code && v.sep !== ' · '; });
+    const n = modifiees.length;
+    const barre = n || Object.keys(k.res).length ? `<div class="ck-barre${n ? '' : ' fini'}">${n
+      ? `<b>${n} checklist${n > 1 ? 's' : ''} modifiée${n > 1 ? 's' : ''}</b><span class="mu">${esc(modifiees.slice(0, 4).map(c => ckVal(c).code || ckVal(c).titre).join(', '))}${n > 4 ? '…' : ''}</span><span class="sp"></span>
+        <button class="tk-btn ghost" data-a="ckAnnuler"${k.envoi ? ' disabled' : ''}>Annuler les changements</button><button class="tk-btn prim" data-a="ckEnregistrer"${k.envoi ? ' disabled' : ''}>${k.envoi ? 'Enregistrement…' : `Enregistrer ${n > 1 ? 'les ' + n : ''} dans le panel`}</button>`
+      : `<span>${esc(k.bilan || '')}</span>`}</div>` : '';
+    const ligne = c => {
+      const v = ckVal(c); const o = ckOrig(c); const d = ckDiff(c) || {};
+      const ts = dcTachesDe(c); const js = [...new Set(ts.flatMap(dcJoursDe))]; const ph = ts.filter(t => t.photo).length;
+      const r = k.res[c.id];
+      const ch = x => d && ((x === 'nom' && 'nom' in d) || (x in d)) ? ' mod' : '';
+      const cree = ((S.cadre && S.cadre.checklistsCreees) || []).some(x => x.id === c.id);
+      const optPostes = postes.length ? postes.map(p => `<option value="${p.id}" ${String(p.id) === String(v.posteId) ? 'selected' : ''}>${esc(posteAff(p.nom))}</option>`).join('')
+        : `<option value="${esc(v.posteId)}">${esc(posteAff(c.poste || '—'))}</option>`;
+      return `<tr class="${ckDiff(c) ? 'mod' : ''}">
+        <td><span class="ck-pd" style="background:${dcCouleur(c.poste)}"></span></td>
+        <td><input class="tk-in ck-code${v.code !== o.code ? ' mod' : ''}" data-ck="code" data-i="${c.id}" value="${esc(v.code)}" placeholder="1.1.01" spellcheck="false" aria-label="Code de ${esc(c.nom)}"></td>
+        <td><input class="tk-in ck-titre${v.titre !== o.titre || v.sep !== o.sep ? ' mod' : ''}" data-ck="titre" data-i="${c.id}" value="${esc(v.titre)}" aria-label="Nom de ${esc(c.nom)}">
+          ${ch('nom') ? `<small class="ck-avant">avant : ${esc(c.nom)}</small>` : ''}</td>
+        <td><select class="tk-in ck-poste${ch('posteId')}" data-cks="posteId" data-i="${c.id}" aria-label="Zone de production">${optPostes}</select></td>
+        <td><input type="time" class="tk-in ck-heure${ch('heure')}" data-ck="heure" data-i="${c.id}" value="${esc(v.heure)}" aria-label="Heure"></td>
+        <td><textarea class="tk-in ck-desc${ch('description')}" data-ck="description" data-i="${c.id}" rows="1" aria-label="Description">${esc(v.description)}</textarea></td>
+        <td class="ck-cont"><button class="tk-lien" data-a="dcVoir" data-id="${c.id}" title="Voir ses tâches dans le Document">${ts.length} tâche${ts.length > 1 ? 's' : ''}</button>${ph ? ` · ${CAM} ${ph}` : ''}<div>${ts.length ? dcPoints(js) : ''}</div></td>
+        <td class="ck-att">${ckAttention(c, tous).map(([cl, t]) => `<span class="ck-a ${cl}">${esc(t)}</span>`).join('')}</td>
+        <td class="ck-act">${r ? `<span class="ck-r ${r.ok ? 'ok' : 'ko'}" title="${esc(r.err || '')}">${r.ok ? '✓ enregistrée' : '✗ refusée'}</span>` : ''}
+          ${ckDiff(c) ? `<button class="tk-lien" data-a="ckRetablir" data-id="${c.id}">rétablir</button>` : ''}
+          ${cree ? `<button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}" title="Créée depuis cet écran : on peut la supprimer (ses tâches restent)">supprimer</button>` : ''}</td></tr>`;
+    };
+    return `${ckNomenclature()}<div class="tk-card ck">
+      <div class="tk-ct"><div><div class="tk-t15">Les checklists du réseau</div><div class="tk-sous">${L.length} checklists · nom, zone de production, heure et description, modifiables ici — rien ne part au panel avant « Enregistrer »</div></div>
+        <span class="sp"></span><input class="tk-in" data-f="ckFiltre" value="${esc(k.filtre)}" placeholder="Filtrer les checklists…" style="width:220px">
+        ${aHarmoniser.length ? `<button class="tk-btn" data-a="ckHarmoniser" title="Préparer « CODE · Nom » partout ; rien ne part avant « Enregistrer »">Harmoniser les noms (${aHarmoniser.length})</button>` : ''}
+        <button class="tk-btn prim" data-a="wzOuvrir" data-mode="nouvelle">＋ Nouvelle checklist</button></div>
+      ${barre}
+      <div class="tk-defile"><table class="tk-tab ck-tab"><thead><tr><th style="width:14px"></th><th style="width:118px">Code</th><th>Nom</th><th style="width:200px">Zone de production</th><th style="width:104px">Heure</th><th style="width:26%">Description</th><th style="width:120px">Contenu</th><th style="width:190px">Points d’attention</th><th style="width:110px"></th></tr></thead>
+      <tbody>${vus.map(ligne).join('') || '<tr><td colspan="9" class="mu" style="padding:16px">Aucune checklist ne correspond au filtre.</td></tr>'}</tbody></table></div>
+      <div class="tk-astuce">Le nom d’une checklist au panel est « code · nom » (1.1.01 · Ouverture de la boutique). Le code est le même dans Formation et dans les SOP, et ne se traduit pas : zone (1 vente, 2 boulangerie, 3 traiteur, 4 nettoyage, 5 gestion), moment (1 ouverture, 2 journée, 3 après-midi, 4 fermeture, 5 chaque semaine, 6 chaque mois), numéro. La zone de production est celle du panel ; ses tâches et qui les fait ne changent pas ici.</div></div>`;
+  }
+  /** Garder un champ : le code en majuscules, sans espace. */
+  function ckSaisie(id, champ, val) {
+    S.ck.edits[id] = S.ck.edits[id] || {};
+    S.ck.edits[id][champ] = champ === 'code' ? val.toUpperCase().replace(/\s+/g, '') : val;
+    const c = checklist(id); if (c && !ckDiff(c)) { delete S.ck.edits[id]; }
+    delete S.ck.res[id];
+  }
+  async function ckEnregistrer() {
+    const k = S.ck; const L = dcOrdre().filter(ckDiff);
+    if (!L.length) { return; }
+    const vides = L.filter(c => !ckVal(c).titre.trim());
+    if (vides.length) { k.bilan = ''; S.msg = { k: 'ko', t: 'Un nom de checklist ne peut pas être vide.' }; return rendre(); }
+    if (!confirm(`Modifier ${L.length} checklist${L.length > 1 ? 's' : ''} dans le panel de production ?\n\n` + L.map(c => '· ' + ckNom(ckVal(c))).join('\n'))) { return; }
+    k.envoi = true; k.res = {}; rendre();
+    let ok = 0;
+    for (const c of L) {
+      const b = ckDiff(c); const v = ckVal(c);
+      try {
+        await api('PATCH', '/task/checklists/' + c.id, b);
+        // Le cadre suit sans relecture : le nom, la zone, l'heure et la description deviennent ceux envoyés.
+        c.nom = ckNom(v); c.heure = v.heure; c.description = v.description;
+        if ('posteId' in b) { c.brut = Object.assign({}, c.brut, { workstation_id: +v.posteId || null }); const p = ((S.struct && S.struct.postes) || []).find(x => String(x.id) === String(v.posteId)); if (p) { c.poste = p.nom; } }
+        delete k.edits[c.id]; k.res[c.id] = { ok: true }; ok++;
+      } catch (e) { k.res[c.id] = { ok: false, err: e.message }; }
+      rendre();
+    }
+    k.envoi = false;
+    const ko = L.length - ok;
+    k.bilan = `${ok} checklist${ok > 1 ? 's' : ''} enregistrée${ok > 1 ? 's' : ''} dans le panel${ko ? ` · ${ko} refusée${ko > 1 ? 's' : ''} (survolez « refusée » pour la raison)` : ''}.`;
+    if (ko && !admin()) { S.msg = { k: 'wa', t: 'Le panel a refusé une partie des changements. Essayez avec un <button class="tk-lien" data-a="connexion">compte administrateur du panel</button>.' }; }
+    rendre();
+  }
+
+
+  /** L'onglet s'ouvre : les zones de production du panel (pour les listes) et le plan de la nomenclature, une fois. */
+  async function ckOuvrir() {
+    if (!S.nomen) { ckNomCharger(); }
+    if (!S.struct) { try { S.struct = await api('GET', '/task/structure'); } catch (e) { S.struct = { sousCategories: [], postes: [], erreurs: {} }; } rendre(); }
+  }
+  /* --- la nouvelle nomenclature : le plan et son application (src/checklists_codes.php) --- */
+  async function ckNomCharger() {
+    S.nomen = Object.assign(S.nomen || {}, { lecture: true, err: null }); rendre();
+    try { S.nomen.plan = await api('GET', '/task/nomenclature'); } catch (e) { S.nomen.err = e.message; }
+    S.nomen.lecture = false; rendre();
+  }
+  function ckNomenclature() {
+    const N = S.nomen || {};
+    const P = N.plan;
+    if (!P) { return `<div class="tk-card ck-nom"><div class="tk-ct"><span class="tk-k">Nouvelle nomenclature des checklists</span><span class="mu" style="font-size:11.5px">${N.err ? esc(N.err) : 'lecture du plan…'}</span></div></div>`; }
+    const t = P.totaux;
+    const res = N.res;
+    const OU = [['panel', 'Au panel : nom, heure, zone, ancien code dans la description'], ['fiche', 'Formation : les fiches des checklists (code et titre FR / NL)'], ['lien', 'Formation : les liens des SOP vers leurs checklists'], ['souscat', 'Référentiel : les checklists des sous-catégories']];
+    const pts = res ? res.points : P.points;
+    const zone = id => { const z = ((S.struct && S.struct.postes) || []).find(x => String(x.id) === String(id)); return z ? posteAff(z.nom) : '#' + id; };
+    const val = (o, k) => { const v = o[k]; return k === 'posteId' ? zone(v) : Array.isArray(v) ? (v.length ? v.join(', ') : '—') : v === '' || v == null ? '—' : String(v); };
+    const diff = p => p.changements ? Object.keys(p.changements).map(k => `<span class="ck-d"><b>${esc({ nom: 'nom', heure: 'heure', posteId: 'zone', description: 'description', code: 'code', titre_fr: 'titre FR', titre_nl: 'titre NL', checklists: 'liens' }[k] || k)}</b> ${p.avant && k in p.avant ? `<s>${esc(val(p.avant, k).slice(0, 70))}</s> → ` : ''}${esc(val(p.changements, k).slice(0, 90))}</span>`).join('') : '';
+    const etat = p => p.ok === true ? '<span class="ck-e ok">✓ fait</span>' : p.ok === false ? `<span class="ck-e ko" title="${esc(p.erreur || '')}">✗ refusé</span>` : p.etat === 'fait' ? '<span class="ck-e ok">déjà fait</span>' : p.etat === 'bloque' ? `<span class="ck-e ko">bloqué</span>` : '<span class="ck-e wa">à faire</span>';
+    const groupes = OU.map(([ou, lib]) => { const L = pts.filter(p => p.ou === ou); if (!L.length) { return ''; }
+      const nf = L.filter(p => p.etat === 'afaire' && p.ok !== true).length;
+      return `<details class="ck-g"${N.ouvert === ou ? ' open' : ''}><summary data-a="ckNomOuvrir" data-v="${ou}"><b>${esc(lib)}</b><span class="mu">${L.length} point${L.length > 1 ? 's' : ''}${nf ? ` · ${nf} à faire` : ''}</span></summary>
+        <table class="tk-tab ck-np"><tbody>${L.map(p => `<tr><td style="width:84px">${etat(p)}</td><td style="width:330px">${esc(p.quoi)}${p.pourquoi ? `<small class="ko">${esc(p.pourquoi)}</small>` : ''}${p.erreur ? `<small class="ko">${esc(p.erreur)}</small>` : ''}</td><td>${diff(p)}</td></tr>`).join('')}</tbody></table></details>`; }).join('');
+    const nb = t.afaire;
+    const zones = (P.nomenclature.zones || []).map(z => `<span><b>${z.code}</b> ${esc(z.fr)}</span>`).join('');
+    const moments = (P.nomenclature.moments || []).map(m => `<span><b>.${m.code}</b> ${esc(m.fr)}</span>`).join('');
+    return `<div class="tk-card ck-nom"><div class="tk-ct"><div><div class="tk-t15">Nouvelle nomenclature des checklists</div>
+        <div class="tk-sous">Un code « zone.moment.numéro », le même au panel, dans Formation et dans les SOP ; le nom se traduit (FR, NL, EN).</div></div><span class="sp"></span>
+        <span class="ck-tot">${t.fait ? `<span class="ck-e ok">${t.fait} fait${t.fait > 1 ? 's' : ''}</span>` : ''}${nb ? `<span class="ck-e wa">${nb} à faire</span>` : ''}${t.bloque ? `<span class="ck-e ko">${t.bloque} bloqué${t.bloque > 1 ? 's' : ''}</span>` : ''}</span>
+        <button class="tk-btn ghost" data-a="ckNomRelire"${N.envoi || N.lecture ? ' disabled' : ''}>↻ Relire</button>
+        <button class="tk-btn prim" data-a="ckNomAppliquer"${nb && !N.envoi ? '' : ' disabled'}>${N.envoi ? 'Application…' : nb ? `Appliquer les ${nb} changements` : 'Tout est appliqué'}</button></div>
+      <div class="ck-leg"><div><span class="mu">Zones</span>${zones}</div><div><span class="mu">Moments</span>${moments}</div></div>
+      ${res ? `<div class="tk-msg ${res.ok ? 'ok' : 'ko'}" style="margin:10px 16px 0">${res.ok ? `${res.faits} changement${res.faits > 1 ? 's' : ''} appliqué${res.faits > 1 ? 's' : ''}.` : esc(res.error || 'refus')}</div>` : ''}
+      ${groupes}
+      ${(P.structure || []).length ? `<div class="tk-astuce"><b style="font-weight:400;color:var(--ink)">Ensuite, au panel</b> (il faut pouvoir retirer une tâche d’une checklist) : ${P.structure.map(x => esc(x.quoi)).join(' · ')}.</div>` : ''}</div>`;
+  }
+  async function ckNomAppliquer() {
+    const N = S.nomen; const t = N.plan.totaux;
+    if (!confirm(`Appliquer la nouvelle nomenclature ?\n\n${t.afaire} changement(s) : les noms des checklists au panel de production, les codes des fiches et les liens dans Formation. Les anciens codes restent écrits « (ex …) » dans la description des checklists.`)) { return; }
+    N.envoi = true; N.res = null; rendre();
+    try { N.res = await api('POST', '/task/nomenclature/appliquer', {}); }
+    catch (e) { N.res = e.data && e.data.points ? e.data : { ok: false, error: e.message, points: N.plan.points }; }
+    N.envoi = false;
+    rendre();
+    // Les noms du panel ont changé : le cadre et le plan sont relus.
+    await charger(true);
+    try { N.plan = await api('GET', '/task/nomenclature'); } catch (e) { /* le plan reste l'ancien */ }
+    rendre();
+  }
+
   /* --- fenêtres ----------------------------------------------------------- */
   function modale() {
     const m = S.modale;
@@ -1367,12 +1544,12 @@
 
   function rendre() {
     const actif = document.activeElement;
-    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd'].find(x => actif.dataset[x] != null) : null;
+    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd', 'ck'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
+    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
     const rq = !S.wz && termesRq().length && S.cadre;
-    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -1402,7 +1579,16 @@
     const id = el.dataset.id;
     switch (a) {
       case 'recharger': S.qui = null; S.dd = null; return charger();
-      case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } return;
+      case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } if (S.vue === 'checklists') { ckOuvrir(); } return;
+      // L'onglet Checklists
+      case 'ckAnnuler': if (S.ck) { S.ck.edits = {}; S.ck.res = {}; S.ck.bilan = ''; } return rendre();
+      case 'ckRetablir': if (S.ck) { delete S.ck.edits[id]; delete S.ck.res[id]; } return rendre();
+      case 'ckEnregistrer': return ckEnregistrer();
+      case 'ckHarmoniser': dcOrdre().forEach(c => { const v = ckVal(c); if (v.code && v.sep !== ' · ') { ckSaisie(c.id, 'sep', ' · '); } }); return rendre();
+      case 'dcVoir': S.vue = 'doc'; S.cl = id; adresse(id); rendre(); dcQuiCharger(); return dcAller(id);
+      case 'ckNomRelire': S.nomen = Object.assign(S.nomen || {}, { res: null }); return ckNomCharger();
+      case 'ckNomAppliquer': return ckNomAppliquer();
+      case 'ckNomOuvrir': S.nomen.ouvert = S.nomen.ouvert === el.dataset.v ? null : el.dataset.v; return rendre();
       // La vue Document : les vignettes et leurs listes
       case 'ddOuvrir': return dcOuvrir(el.dataset.k, el.dataset.t ? +el.dataset.t : null, el.dataset.c ? +el.dataset.c : null, el);
       case 'ddPortee': return dcPortee(el.dataset.v);
@@ -1623,6 +1809,8 @@
   $.addEventListener('input', ev => {
     const el = ev.target;
     if (el.dataset.f === 'filtre') { S.filtre = el.value; return rendre(); }
+    if (el.dataset.f === 'ckFiltre' && S.ck) { S.ck.filtre = el.value; return rendre(); }
+    if (el.dataset.ck && S.ck) { ckSaisie(+el.dataset.i, el.dataset.ck, el.value); return rendre(); }
     if (el.dataset.dd && S.dd) { if (el.dataset.dd === 'filtre') { S.dd.filtre = el.value; return rendre(); } S.dd.val = el.value; S.dd.err = null; return; }
     if (el.dataset.f === 'recherche') { S.rq = el.value; S.rqMax = 150; return rendre(); }
     if (el.dataset.pf && S.modale && S.modale.type === 'planning') { S.modale.f = el.value; return rendre(); }
@@ -1650,6 +1838,7 @@
   });
   $.addEventListener('change', ev => {
     const el = ev.target;
+    if (el.dataset.cks && S.ck) { ckSaisie(+el.dataset.i, el.dataset.cks, el.value); return rendre(); }
     if (el.dataset.pq && S.modale && S.modale.type === 'planning' && el.value) {
       const m = S.modale; const t = +el.dataset.t; const v = el.value;
       if (el.dataset.pq === 'niv') { return quiChanger(m, t, { ajouterNiveau: +v }); }

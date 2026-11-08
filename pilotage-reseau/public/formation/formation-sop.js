@@ -303,7 +303,8 @@ window.FormationSop = (function () {
   const rfFo = (X, l) => l.map(c => rcode(c, (X.fo[c] || {}).fr)).join(' ');
   const rfComp = (X, l) => l.map(c => X.nd.has(c) ? rcode(c, 'Citée par le v25, absente de sa feuille des compétences', 'is-nd')
     : rcode(c, X.comp[c] ? X.comp[c].fr + (X.sansStd.has(c) ? ' — aucun standard ne la prouve encore' : '') : '', X.sansStd.has(c) ? 'is-trou' : '')).join(' ');
-  const rfChk = l => l.map(c => rcode(c)).join(' ');
+  // Les checklists : le code de la nomenclature (1.1.01), son nom au survol (08/11/2026).
+  const rfChk = l => l.map(c => rcode(c, ((D.ref && D.ref.checklistsNoms) || {})[c])).join(' ');
   const trou = t => `<span class="tag-warn">${esc(t)}</span>`;
   const rfPhases = l => l.map(p => `<span class="chip chip--neutral">${esc(PHASE_NOM[p] || p)}</span>`).join(' ');
   const rfStatut = s => ST_STD[s.statut] ? (s.statut === 'brouillon' ? `<span class="chip chip--neutral">${ST_STD[s.statut]}</span>` : trou(ST_STD[s.statut])) : '';
@@ -518,7 +519,8 @@ window.FormationSop = (function () {
         return Object.keys(fams).map(fa => `<optgroup label="${esc(fa)}">${fams[fa].filter(c => !v[k].includes(c.code)).map(c => `<option value="${esc(c.code)}">${esc(c.code)} · ${esc(c.fr)}</option>`).join('')}</optgroup>`).join('');
       }
       if (k === 'formations') { return X.R.formations.filter(f => !v[k].includes(f.code)).map(f => `<option value="${esc(f.code)}">${esc(f.code)} · ${esc(f.fr)}</option>`).join(''); }
-      return X.R.checklistsConnues.filter(c => !v[k].includes(c)).map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      const noms = X.R.checklistsNoms || {};
+      return X.R.checklistsConnues.filter(c => !v[k].includes(c)).map(c => `<option value="${esc(c)}">${esc(c)}${noms[c] ? ' · ' + esc(noms[c]) : ''}</option>`).join('');
     };
     const liste = k => {
       const sug = sc ? (sc[k] || []).filter(c => !v[k].includes(c) && (k !== 'competences' || X.comp[c])) : [];

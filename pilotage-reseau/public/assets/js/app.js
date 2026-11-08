@@ -13093,7 +13093,7 @@ class App {
       return { c: 'ko', bd: 'non rendue' };
     };
     const nom = t => String(t.tache || ('Tâche #' + t.taskId)).replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
-    const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^[A-Z]{2}-?[A-Z0-9]+\s*[—–-]\s*/i, '');
+    const cl = t => String(t.checklist || '').replace(/\.$/, '').replace(/^(?:[0-9]\.[1-9]\.\d{2}|[A-Z]{2}-?[A-Z0-9]+)\s*[·—–-]\s*/i, '');
     const L = (s.taches || []).filter(garde)
       .map(t => Object.assign({ e: etat(t), p: ph[String(t.taskId)] || null }, t))
       .sort((a, b) => (RANG[a.e.c] - RANG[b.e.c]) || String(a.faitLe || '9').localeCompare(String(b.faitLe || '9')) || nom(a).localeCompare(nom(b)));

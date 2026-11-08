@@ -54,6 +54,8 @@ function tkRoute(string $method, string $path): array
     }
     if ($method === 'GET' && $path === '/task/cadre') { return tkCadre(); }
     if ($method === 'GET' && $path === '/task/structure') { return tkStructure(); }
+    if ($method === 'GET' && $path === '/task/nomenclature') { return ckcPlan(); }
+    if ($method === 'POST' && $path === '/task/nomenclature/appliquer') { return ckcAppliquer(body()); }
     if ($method === 'GET' && preg_match('#^/task/sop/([\w-]{1,32})/proposition$#', $path, $m)) { return tkSopProposition($m[1]); }
     if ($method === 'GET' && preg_match('#^/task/sop/([\w-]{1,32})/controles$#', $path, $m)) { return tkSopControles($m[1]); }
     if ($method === 'GET' && preg_match('#^/task/taches/(\d{1,10})$#', $path, $m)) { return tkTache((int) $m[1]); }
@@ -1166,11 +1168,20 @@ function tkLierSop(int $taskId, string $sopId, ?string $etape): void
     } catch (PDOException $e) { /* le panel a la tâche : le lien n'est qu'un confort */ }
 }
 
-/** Le code en tête d'un nom de checklist : « CP-07 — Audit visuel intérieur » → CP-07, « SOP-WKL-001 — … » → SOP-WKL-001. */
+/**
+ * Le code en tête d'un nom de checklist : « 1.1.01 · Ouverture de la boutique » → 1.1.01 (la nomenclature du
+ * 08/11/2026, src/checklists_codes.php) ; avant elle, « CP-07 — Audit visuel intérieur » → CP-07, « SOP-WKL-001 — … ».
+ */
 function tkCodeDe(string $nom): ?string
 {
-    // « CP-07 », « CQ-F1 », mais aussi les codes des SOP en trois parties : « SOP-WKL-001 ».
+    if (function_exists('ckcCodeDe')) { return ckcCodeDe($nom); }
     return preg_match('/^\s*([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})(?![\w-])/u', $nom, $m) === 1 ? $m[1] : null;
+}
+/** Le même code, ancien ou nouveau : AC-01 et 1.1.01 désignent la même checklist. */
+function tkCodeCite(?string $code, array $codes): bool
+{
+    if ($code === null) { return false; }
+    return in_array($code, $codes, true) || (function_exists('ckcTraduire') && in_array(ckcTraduire($code), $codes, true));
 }
 
 /** Un texte {fr, nl} en français (repli sur le néerlandais), ou un texte simple. */
@@ -1203,6 +1214,8 @@ function tkSop(string $id): ?array
     if ($r === null) { return null; }
     $cl = function_exists('rfClassementDe') ? rfClassementDe($r) : ['checklists' => []];
     $codes = array_values(array_unique(array_filter(array_merge((array) ($cl['checklists'] ?? []), [(string) ($r['code'] ?? '')]))));
+    // Un ancien code au classement (AC-01) trouve aussi la checklist renommée (1.1.01), et l'inverse.
+    if (function_exists('ckcTraduire')) { $codes = array_values(array_unique(array_merge($codes, array_map('ckcTraduire', $codes)))); }
     return ['row' => $r, 'contenu' => foContenuVersion((string) $r['id'], (string) $r['version']), 'classement' => $cl, 'codes' => $codes];
 }
 
@@ -1253,7 +1266,7 @@ function tkSopProposition(string $id): array
     $match = null;
     foreach ($cls as $x) {
         $code = tkCodeDe(tkTxt($x['name'] ?? ''));
-        if ($code !== null && in_array($code, $S['codes'], true)) { $match = $x; break; }
+        if (tkCodeCite($code, $S['codes'])) { $match = $x; break; }
     }
 
     // L'heure de la SOP : la première citée dans les titres de ses sections.
@@ -1273,7 +1286,13 @@ function tkSopProposition(string $id): array
         $checklist = ['mode' => 'existante', 'id' => (int) ($match['id'] ?? 0), 'nom' => tkTxt($match['name'] ?? '')];
     } else {
         $codeCl = ((array) ($S['classement']['checklists'] ?? []))[0] ?? $codeSop;
-        $checklist = ['mode' => 'nouvelle', 'nom' => trim(($codeCl !== '' ? $codeCl . ' — ' : '') . (string) $r['titre_fr']),
+        // La nomenclature : « 1.1.01 · Ouverture de la boutique », le nom de la nomenclature s'il y en a un.
+        $nomCl = (string) $r['titre_fr'];
+        if (function_exists('ckcTraduire')) {
+            $codeCl = ckcTraduire($codeCl);
+            foreach (CKC_LISTE as $k) { if ($k['code'] === $codeCl) { $nomCl = $k['fr']; } }
+        }
+        $checklist = ['mode' => 'nouvelle', 'nom' => trim(($codeCl !== '' ? $codeCl . ' · ' : '') . $nomCl),
             'description' => mb_substr(trim((string) ($r['objectif_fr'] ?? '')), 0, 500), 'posteId' => $posteId, 'heure' => $heureSop ?? ''];
         if ($S['codes'] === [] || $codeCl === $codeSop) {
             $avert[] = 'Le classement de la SOP ne cite aucune checklist du Manuel : la checklist proposée porte le code de la SOP.';
@@ -1364,7 +1383,7 @@ function tkSopControles(string $id): array
     $matchs = [];
     foreach ($cls as $x) {
         $code = tkCodeDe(tkTxt($x['name'] ?? ''));
-        if ($code !== null && in_array($code, $S['codes'], true)) { $matchs[(int) ($x['id'] ?? 0)] = ['id' => (int) ($x['id'] ?? 0), 'code' => $code, 'nom' => tkTxt($x['name'] ?? ''), 'heure' => substr(tkTxt($x['execution_time'] ?? ''), 0, 5), 'nbTaches' => 0]; }
+        if (tkCodeCite($code, $S['codes'])) { $matchs[(int) ($x['id'] ?? 0)] = ['id' => (int) ($x['id'] ?? 0), 'code' => $code, 'nom' => tkTxt($x['name'] ?? ''), 'heure' => substr(tkTxt($x['execution_time'] ?? ''), 0, 5), 'nbTaches' => 0]; }
     }
     $taches = [];   // taskId => [checklist, etape]
     $req = [];

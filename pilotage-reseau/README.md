@@ -94,6 +94,8 @@ public/
   task/                 cadre des tâches du panel — page à part : vue Document
                         (une section par checklist, réglages en vignettes qu'un
                         clic change, pour une tâche ou toute la checklist),
+                        onglet Checklists (nom, zone, heure, description ; la
+                        nomenclature 1.1.01, src/checklists_codes.php),
                         tableau, planning, assistant (checklist et tâches en 4 étapes),
                         duplication (jours, heure, photo), aperçu des appels
                         avant tout envoi ; serveur : src/task_cadre.php

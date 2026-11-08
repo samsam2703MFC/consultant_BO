@@ -131,6 +131,7 @@ require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
 require __DIR__ . '/../../src/benchmark.php';
 require __DIR__ . '/../../src/task_cadre.php';
+require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');

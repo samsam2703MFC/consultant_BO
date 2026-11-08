@@ -319,3 +319,35 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-dd-pied .dc-o.coche.off .dc-cc{background:#fff}
 .dc-range{margin:2px 0 10px;padding:9px 12px;border-radius:10px;background:rgba(63,122,82,.1);color:var(--tk-ok);font-size:12.5px;line-height:1.45}
 .dc-range.ko{background:#fbe9eb;color:var(--tk-ko)}
+
+/* L'onglet Checklists (08/11/2026) : les réglages des checklists, la nouvelle nomenclature */
+.ck-tab td{vertical-align:top;padding:6px 8px}
+.ck-tab .tk-in{width:100%;font-size:12.5px;padding:6px 8px}
+.ck-tab .tk-in.mod{border-color:var(--accent);background:rgba(141,29,44,.03)}
+.ck-code{font-variant-numeric:tabular-nums;letter-spacing:.03em}
+.ck-desc{resize:vertical;min-height:32px;font-family:var(--font-ui)!important;font-size:12px!important}
+.ck-avant{display:block;font-size:10.5px;color:var(--muted);margin-top:3px}
+.ck-pd{display:inline-block;width:9px;height:9px;border-radius:50%;margin-top:11px}
+.ck-cont{font-size:11.5px;color:var(--muted-2);white-space:nowrap}.ck-cont svg{vertical-align:-1px}.ck-cont .dc-pts{margin-top:5px}
+.ck-att{line-height:1.9}
+.ck-a{display:inline-block;font-size:10.5px;border-radius:5px;padding:1px 7px;margin:0 3px 2px 0;white-space:nowrap}
+.ck-a.wa{background:var(--prize-soft);color:var(--prize-ink)}.ck-a.ko{background:#fbe9eb;color:var(--tk-ko)}
+.ck-act{white-space:nowrap;font-size:11px}.ck-act .tk-lien{margin-right:8px}
+.ck-r{display:block;font-size:11px;margin-bottom:2px}.ck-r.ok{color:var(--tk-ok)}.ck-r.ko{color:var(--tk-ko);cursor:help}
+.ck-tab tr.mod td{background:rgba(141,29,44,.025)}
+.ck-barre{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 16px;background:rgba(141,29,44,.06);border-bottom:1px solid var(--tk-trait);font-size:12.5px}
+.ck-barre b{font-weight:400;color:var(--accent)}.ck-barre.fini{background:rgba(63,122,82,.08);color:var(--tk-ok)}.ck-barre .sp{flex:1}
+.ck-nom .tk-ct{align-items:flex-start}
+.ck-tot{display:flex;gap:6px;align-items:center;margin-top:2px}
+.ck-e{display:inline-block;font-size:10.5px;border-radius:999px;padding:2px 8px;white-space:nowrap}
+.ck-e.ok{background:rgba(63,122,82,.12);color:var(--tk-ok)}.ck-e.wa{background:var(--prize-soft);color:var(--prize-ink)}.ck-e.ko{background:#fbe9eb;color:var(--tk-ko)}
+.ck-leg{display:flex;flex-direction:column;gap:5px;padding:10px 16px;border-bottom:1px solid var(--tk-trait);font-size:12px}
+.ck-leg div{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline}.ck-leg .mu{width:64px;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase}
+.ck-leg b{font-weight:400;font-variant-numeric:tabular-nums;background:var(--chip);border-radius:5px;padding:1px 6px;margin-right:3px}
+.ck-g{border-bottom:1px solid var(--tk-trait)}.ck-g:last-of-type{border-bottom:none}
+.ck-g summary{display:flex;gap:12px;align-items:baseline;padding:10px 16px;cursor:pointer;font-size:12.5px;list-style:none}
+.ck-g summary::before{content:'▸';color:var(--muted);font-size:10px}.ck-g[open] summary::before{content:'▾'}
+.ck-g summary b{font-weight:400}.ck-g summary .mu{font-size:11.5px}
+.ck-np td{font-size:12px}.ck-np small{display:block;font-size:11px;margin-top:2px}
+.ck-d{display:inline-block;margin:0 14px 2px 0;font-size:11.5px}.ck-d b{font-weight:400;color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;margin-right:4px}
+.ck-d s{color:var(--faint)}
