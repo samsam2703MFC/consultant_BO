@@ -5670,17 +5670,34 @@
         ${R.errEnr ? `<div class="rv-err">Pas enregistrée : ${esc(R.errEnr)}</div>` : ''}
         <div class="rv-pied"><button type="button" class="rv-b p" data-rvcloturer="1"${R.envoi ? ' disabled' : ''}>${R.envoi ? 'Enregistrement…' : 'Clôturer la journée'}</button></div>`;
     }
-    // La fin : ce qui a été dit, ce qui part au cockpit.
-    const rv = D.revue || {}, cl = R.rep.checklists, par = {};
-    Object.keys(cl).forEach(n => { const r = cl[n].r || '—'; (par[r] = par[r] || []).push((C.liste.find(c => c.nom === n) || { code: n }).code || n); });
-    const okAuto = D.points.filter(p => p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok');
-    const lignes = [['Tâches faites', C.faites + ' / ' + C.taches]]
-      .concat(Object.keys(par).map(r => [r, par[r].join(', ')]))
-      .concat(okAuto.map(p => [p.titre, '✓ ' + p.sonde.texte]))
-      .concat(D.points.filter(p => R.rep.points[p.id]).map(p => [p.titre, R.rep.points[p.id].r]));
-    return `${prog}<div class="rv-fin"><div class="rv-v">✓</div><b>${rv.statut === 'cloturee' ? 'Journée clôturée' : 'Revue pas encore clôturée'}</b><span class="rv-n">${rv.clotureLe ? 'à ' + esc(rv.clotureLe.slice(11, 16)) : ''}${rv.par ? ' par ' + esc(rv.par) : ''}</span></div>
-      <div class="rv-res">${lignes.map(l => `<div class="ln"><span>${esc(l[0])}</span><b>${esc(l[1])}</b></div>`).join('')}</div>
-      ${R.rep.demain ? `<div class="rv-bul">Pour demain : « ${esc(R.rep.demain)} »</div>` : ''}
+    // La fin (08/11/2026, maquette H3) : une carte par zone — l'entête à la couleur de la zone et son score, chaque
+    // checklist ✓ (faite, ou « faite, pas cochée » d'après la raison du soir) ou ✗ avec sa raison —, puis la gestion en tuiles.
+    const rv = D.revue || {}, cl = R.rep.checklists;
+    const V = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    const X = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const rond = e => `<span class="rv-rd e-${e}">${e === 'ko' ? X : V}</span>`;
+    const toutes = (C.toutes && C.toutes.length ? C.toutes : C.liste).map(c => {
+      const r = (cl[c.nom] || {}).r || '';
+      const etat = c.faites >= c.total ? 'ok' : (/fait/i.test(r) && /pas coch/i.test(r) ? 'npc' : 'ko');
+      return Object.assign({}, c, { r, etat, zone: /^\d/.test(c.code || '') ? +c.code[0] : 0 });
+    });
+    const ZN = { 1: 'Vente', 2: 'Boulangerie', 3: 'Traiteur', 4: 'Nettoyage', 5: 'Gestion', 0: 'Autres' };
+    const zc = z => (TJ_ZONES[z] || [0, '#5c5852'])[1];
+    const zones = [...new Set(toutes.map(c => c.zone))].sort((a, b) => (a || 9) - (b || 9));
+    const gp = D.points.map(p => {
+      const auto = p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok', a = (R.rep.points[p.id] || {}).r;
+      const okR = a ? (p.reponses.find(x => x.t === a) || {}).ok : false;
+      return { p, auto, txt: auto ? 'vérifié' : (a || 'pas de réponse'), etat: auto || okR ? 'ok' : 'ko' };
+    });
+    const nOk = toutes.filter(c => c.etat !== 'ko').length, gOk = gp.filter(g => g.etat === 'ok').length;
+    const sc = (v, l, cls) => `<div class="${cls || ''}"><b>${v}</b><small>${l}</small></div>`;
+    return `${prog}<div class="rv-fin"><b>${rv.statut === 'cloturee' ? 'Journée clôturée' : 'Revue pas encore clôturée'}</b><span class="rv-n">${rv.clotureLe ? 'à ' + esc(rv.clotureLe.slice(11, 16)) : ''}${rv.par ? ' par ' + esc(rv.par) : ''}</span></div>
+      <div class="rv-sc4">${sc(C.faites + ' / ' + C.taches, 'tâches faites')}${sc(nOk, 'checklists ✓', 'e-ok')}${sc(toutes.length - nOk, 'checklists ✗', toutes.length - nOk ? 'e-ko' : 'e-ok')}${sc(gOk + ' / ' + gp.length, 'gestion ✓', gOk === gp.length ? 'e-ok' : 'e-wa')}</div>
+      ${zones.map(z => { const L = toutes.filter(c => c.zone === z), ok = L.filter(c => c.etat !== 'ko').length;
+        return `<div class="rv-zc"><div class="rv-zch" style="background:${zc(z)}"><b>${ZN[z] || ZN[0]}</b><span class="rv-zs">${ok} / ${L.length}</span><span class="rv-zb"><i style="width:${Math.round(100 * ok / L.length)}%"></i></span></div>
+          ${L.map(c => `<div class="rv-cl e-${c.etat}">${rond(c.etat)}<b class="rv-cd" style="color:${zc(z)}">${esc(c.code || '—')}</b><span class="rv-ct">${esc(c.titre)}<small>${c.faites} / ${c.total} · ${c.etat === 'ok' ? 'faite' : esc(c.r || 'pas de raison')}</small></span></div>`).join('')}</div>`; }).join('')}
+      <div class="rv-sec">Gestion</div><div class="rv-tu">${gp.map(g => `<div class="rv-t e-${g.etat}">${rond(g.etat)}<b>${esc(g.p.icone || '')}</b><span>${esc(g.p.titre)}</span><small>${esc(g.txt)}</small></div>`).join('')}</div>
+      ${R.rep.demain ? `<div class="rv-dem"><span>Pour demain</span>« ${esc(R.rep.demain)} »</div>` : ''}
       <div class="rv-pied"><button type="button" class="rv-b p" data-rvfermer="1">Fermer</button>${rv.statut === 'cloturee' ? '<button type="button" class="rv-lien" data-rvrouvrir="1">Rouvrir la revue</button>' : ''}</div>`;
   }
   function rvRendre() {

@@ -356,7 +356,7 @@ function rsChecklistsDuJour(int $shop, string $date): array
 {
     [$d, , $err] = rsLireCockpit('/pwa/tasks?shop=' . $shop . '&date=' . $date);
     $sh = null; foreach ((array) ($d['shops'] ?? []) as $x) { if ((int) ($x['shopId'] ?? 0) === $shop) { $sh = $x; } }
-    if ($err || !$sh) { return ['lu' => !$err && isset($d['shops']), 'taches' => 0, 'faites' => 0, 'liste' => [], 'qui' => []]; }
+    if ($err || !$sh) { return ['lu' => !$err && isset($d['shops']), 'taches' => 0, 'faites' => 0, 'liste' => [], 'toutes' => [], 'qui' => []]; }
     $T = array_values(array_filter((array) ($sh['taches'] ?? []), fn ($t) => ($t['obligatoire'] ?? null) !== false));
     $faite = fn ($t) => in_array($t['statut'] ?? '', ['notee', 'aControler', 'aValider'], true) || (($t['statut'] ?? '') === 'sansPhoto' && empty($t['photoRequise']));
     $noms = array_values(array_filter(array_map(fn ($c) => (string) ($c['nom'] ?? ''), (array) ($sh['checklists'] ?? []))));
@@ -370,9 +370,12 @@ function rsChecklistsDuJour(int $shop, string $date): array
         if (!$L && $s !== '') { $L = array_map('trim', preg_split('/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/u', $s)); }
         foreach ($L ?: ['Sans checklist'] as $n) { $G[$n][] = $t; }
     }
-    $liste = [];
+    $liste = []; $toutes = [];
     foreach ($G as $n => $L) {
         $f = count(array_filter($L, $faite));
+        // Toutes les checklists du jour, faites comprises : l'écran de clôture les montre par zone, ✓ ou ✗.
+        $cT = function_exists('ckcCodeDe') ? (ckcCodeDe($n) ?? '') : '';
+        $toutes[] = ['nom' => $n, 'code' => $cT, 'titre' => $cT !== '' ? trim(preg_replace('/^\s*' . preg_quote($cT, '/') . '\s*[·—–:-]\s*/u', '', $n)) : $n, 'faites' => $f, 'total' => count($L)];
         if ($f >= count($L)) { continue; }
         $code = function_exists('ckcCodeDe') ? (ckcCodeDe($n) ?? '') : '';
         $titre = $code !== '' ? trim(preg_replace('/^\s*' . preg_quote($code, '/') . '\s*[·—–:-]\s*/u', '', $n)) : $n;
@@ -382,7 +385,8 @@ function rsChecklistsDuJour(int $shop, string $date): array
             'manquent' => array_slice(array_values(array_map(fn ($t) => (string) $t['tache'], array_filter($L, fn ($t) => !$faite($t)))), 0, 40)];
     }
     usort($liste, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
-    return ['lu' => true, 'taches' => count($T), 'faites' => count(array_filter($T, $faite)), 'liste' => $liste, 'qui' => array_keys($qui)];
+    usort($toutes, fn ($a, $b) => [preg_match('/^\d/', $a['code']) ? 0 : ($a['code'] !== '' ? 1 : 2), $a['code'], $a['titre']] <=> [preg_match('/^\d/', $b['code']) ? 0 : ($b['code'] !== '' ? 1 : 2), $b['code'], $b['titre']]);
+    return ['lu' => true, 'taches' => count($T), 'faites' => count(array_filter($T, $faite)), 'liste' => $liste, 'toutes' => $toutes, 'qui' => array_keys($qui)];
 }
 
 function rsRevueLire(int $shop, string $date): ?array
