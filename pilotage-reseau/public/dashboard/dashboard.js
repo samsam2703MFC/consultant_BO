@@ -7734,7 +7734,7 @@
     S.cqTente[k] = Date.now();
     lireAux(k, cheminCQ(), true);
   }
-  const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+  const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*(?:après-midi\s*)?-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
   const cqCl = c => String(c || '').replace(/\.$/, '');
   /** Ce que le franchisé doit lire d'une tâche : cinq états, pas davantage. */
   function cqEtat(t, D, seuil) {
@@ -7842,10 +7842,33 @@
     const puces = [`<button type="button" data-cqf="tout" class="${S.cqFiltre === 'tout' ? 'on' : ''}">Tout<b>${L.length}</b></button>`]
       .concat(CQ_FILTRES.filter(f => n(f[0])).map(f => `<button type="button" data-cqf="${f[0]}" class="${S.cqFiltre === f[0] ? 'on' : ''}"><i style="background:${f[2]}"></i>${f[1]}<b>${n(f[0])}</b></button>`)).join('');
     return `<div class="db-card db-cq"><div class="ct"><span class="db-lab">Les contrôles en photo — ${esc(jour)}</span><span class="db-cqf">${puces}</span><span class="db-mini">${cqResume(L)}</span></div>
-      <div class="db-cqrail"><button type="button" class="db-cqfl g" data-cqpas="-1" aria-label="précédentes">‹</button>
-        <div class="db-cqpiste" id="db-cqpiste">${F.map(x => cqCarte(x, false)).join('')}</div>
-        <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
-      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}</div></div>`;
+      ${cqFrise(F, L)}</div>`;
+  }
+  /**
+   * La frise des contrôles en photo (08/11/2026, maquettes F1 + C1B) : de haut en bas, une carte par checklist à son heure
+   * prévue — un bandeau à la couleur de la zone (code, nom, heure, ✓ / ✗ rendues sur attendues) et ses photos dessous. Une
+   * checklist qui revient à deux heures (1.1.02 : 07:00 et 14:30) fait deux cartes. Le filtre du haut s'applique aux photos ;
+   * le compte du bandeau reste celui de toute la checklist.
+   */
+  function cqFrise(F, L) {
+    const d = S.vue === 'taches' ? S.aux[cleTJ(S.date)] : S.aux['taches|' + S.date];
+    const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
+    const hCl = {}; ((sh && sh.checklists) || []).forEach(c => { if (c && c.nom) { hCl[c.nom] = c.heure || ''; } });
+    const nomDe = x => { const n = String(x.cl || '').split(/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/).map(v => v.trim()).filter(Boolean);
+      return n.find(v => /^[0-9]\.[1-9]\.\d{2}/.test(v)) || n[0] || 'Sans checklist'; };
+    const cle = x => { const n = nomDe(x); return (x.heure || hCl[n] || '') + '|' + n; };
+    const G = {};
+    L.forEach(x => { const k = cle(x); (G[k] = G[k] || { k, h: k.split('|')[0], nom: k.slice(k.indexOf('|') + 1), tous: [], vus: [] }).tous.push(x); });
+    F.forEach(x => { const g = G[cle(x)]; if (g) { g.vus.push(x); } });
+    const rendue = x => x.e.c !== 'ko' && x.e.c !== 'mu';
+    const liste = Object.values(G).filter(g => g.vus.length).sort((a, b) => (a.h ? 0 : 1) - (b.h ? 0 : 1) || a.h.localeCompare(b.h) || a.nom.localeCompare(b.nom));
+    if (!liste.length) { return '<div class="db-mini" style="padding:14px 16px">Aucun contrôle dans ce filtre.</div>'; }
+    return `<div class="cqf">${liste.map(g => {
+      const c = tjCode(g.nom), z = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852', r = g.tous.filter(rendue).length;
+      const e = r === g.tous.length ? 'ok' : (r ? 'wa' : 'ko');
+      return `<div class="cqf-r"><div class="cqf-h">${esc(g.h || '—')}</div><div class="cqf-x"><span class="cqf-d e-${e}"></span></div>
+        <div class="cqf-c"><div class="cqf-b" style="background:${z}"><span class="cqf-code">${esc(c.code || '—')}</span><b>${esc(c.titre)}</b>${g.h ? `<span class="cqf-hh">${esc(g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${e}">${e === 'ko' ? '✗' : '✓'} ${r} / ${g.tous.length}</span></div>
+          <div class="cqf-p">${g.vus.map(x => cqCarte(x, false)).join('')}</div></div></div>`; }).join('')}</div>`;
   }
   /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {

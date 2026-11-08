@@ -2695,3 +2695,19 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .rv-res .ln{display:flex;justify-content:space-between;gap:12px;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--color-border-tertiary)}.rv-res .ln:last-child{border:none}.rv-res .ln b{font-weight:400;text-align:right}
 .rv-att{display:flex;gap:6px;padding:4px 30px}.rv-att i{width:8px;height:8px;border-radius:50%;background:#c9bfb2;animation:rv-pt 1s infinite alternate}.rv-att i:nth-child(2){animation-delay:.2s}.rv-att i:nth-child(3){animation-delay:.4s}
 @keyframes rv-pt{to{opacity:.25}}
+
+/* Les contrôles en photo en frise (08/11/2026, maquettes F1 + C1B) : l'heure, la pastille sur la ligne, la carte de la checklist. */
+.cqf{padding:14px 16px 6px}
+.cqf-r{display:grid;grid-template-columns:52px 24px minmax(0,1fr);gap:0 10px}
+.cqf-h{text-align:right;padding-top:9px;font:400 17px var(--font-display);font-variant-numeric:tabular-nums}
+.cqf-x{position:relative}.cqf-x:before{content:'';position:absolute;left:11px;top:0;bottom:0;width:2px;background:#ddd3c6}
+.cqf-r:first-child .cqf-x:before{top:16px}.cqf-r:last-child .cqf-x:before{bottom:calc(100% - 16px)}
+.cqf-d{position:absolute;left:4px;top:11px;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 1.5px #ddd3c6}
+.cqf-d.e-ok{background:#2D7A3E}.cqf-d.e-wa{background:#D97706}.cqf-d.e-ko{background:#C0182B}
+.cqf-c{border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden;margin-bottom:12px;background:#faf7f2}
+.cqf-b{display:flex;align-items:center;gap:10px;color:#fff;padding:6px 12px}
+.cqf-code{font:400 18px var(--font-display);font-variant-numeric:tabular-nums}.cqf-b b{font-weight:400;font-size:14px}.cqf-hh{font-size:12px;opacity:.85}.cqf-sp{flex:1}
+.cqf-s{background:#fff;border-radius:999px;padding:2px 10px;font-size:12px;white-space:nowrap}.cqf-s.e-ok{color:#2D7A3E}.cqf-s.e-wa{color:#B45309}.cqf-s.e-ko{color:#C0182B}
+.cqf-p{display:flex;flex-wrap:wrap;gap:10px;padding:10px 12px 12px}
+.cqf-p .db-cqc{flex:0 0 132px;min-width:0}
+.cqf-p .db-cqc .c.ko{display:none}   /* dans la frise, la checklist est déjà dans le bandeau */
