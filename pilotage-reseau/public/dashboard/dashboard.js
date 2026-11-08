@@ -7749,10 +7749,12 @@
   }
   /** La journée du magasin, chaque tâche avec sa photo et son état, triée. */
   function cqListe() {
-    // L'onglet Tâches lit le seul magasin, jour par jour ; son zoom ne feuillette que les tâches à photo (08/11/2026).
+    // L'onglet Tâches lit le seul magasin, jour par jour (08/11/2026).
     const d = S.vue === 'taches' ? S.aux[cleTJ(S.date)] : S.aux['taches|' + S.date];
     if (!d || d.indispo) { return null; }
-    const T = S.vue === 'taches' ? tachesJour(d).filter(t => t.photoRequise || t.note != null || t.statut === 'aControler') : tachesJour(d);
+    // Les contrôles en photo ne montrent que les tâches qui DEMANDENT une photo (08/11/2026, demande de Sam) — ou qui en ont
+    // une, ou une note : une tâche sans photo demandée (« Alarme activée ») n'a rien à faire dans le carrousel.
+    const T = tachesJour(d).filter(t => t.photoRequise || t.photo || t.note != null || t.statut === 'aControler' || t.statut === 'notee');
     const P = S.aux[cleCQ()];
     // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
     if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
