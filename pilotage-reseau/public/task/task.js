@@ -1551,7 +1551,7 @@
   const rsCopie = v => JSON.parse(JSON.stringify(v));
   async function rsOuvrir() {
     if (S.rs && S.rs.c) { return; }
-    S.rs = { charge: true, err: null, essai: { shop: '4', date: new Date().toISOString().slice(0, 10), res: null, enCours: false, un: {} }, magasins: [], ajout: {}, raison: '' };
+    S.rs = { charge: true, err: null, test: {}, essai: { shop: '4', date: new Date().toISOString().slice(0, 10), res: null, enCours: false, un: {} }, magasins: [], ajout: {}, raison: '' };
     rendre();
     try {
       const [d, m] = await Promise.all([api('GET', '/soir/config'), api('GET', '/stores?statut=tous').catch(() => [])]);
@@ -1573,7 +1573,15 @@
   function rsPoint(p, i, n) {
     const r = S.rs, s = p.type === 'auto' ? rsSonde(p.sonde) : null, e = r.essai.un[p.id];
     const params = s ? s.params.map(d => `<label class="rs-par">${esc(d.label)} <input class="tk-in" type="number" min="${d.min}" max="${d.max}" data-rs="param" data-k="${esc(d.k)}" data-i="${i}" value="${esc(p.params && p.params[d.k] != null ? p.params[d.k] : d.defaut)}"></label>`).join('') : '';
-    const api = s ? `<div class="rs-api"><div><span class="rs-l">Cockpit</span><code>${esc(s.cockpit.replace('{shop}', '{magasin}'))}</code></div><div><span class="rs-l">Panel</span><code>${esc(s.panel.replace('{shop}', '{magasin}'))}</code></div><div class="mu">${esc(s.aide)} · lu : ${esc(s.quand)}</div></div>` : '';
+    // La route du cockpit que lit la sonde et l'appel au panel derrière : modifiables, « Tester » sur ce qui est saisi.
+    const T = r.test[i], ligneT = (lib, x) => !x ? '' : `<div class="rs-t ${x.ok ? 'ok' : 'ko'}"><b>${lib}</b> ${x.ok ? '✓' : '✗'} ${x.code != null ? 'HTTP ' + esc(x.code) : ''}${x.ms != null ? ' · ' + x.ms + ' ms' : ''}${x.erreur ? ' · ' + esc(x.erreur) : ''}${x.apercu ? `<small>${esc(x.apercu)}</small>` : ''}${x.chemin ? `<small class="mu">GET ${esc(x.chemin)}</small>` : ''}</div>`;
+    const api = s ? `<div class="rs-api">
+        <label class="rs-ch"><span class="rs-l">Cockpit</span><span class="rs-get">GET</span><input class="tk-in${p.cockpit !== s.cockpit ? ' mod' : ''}" data-rs="cockpit" data-i="${i}" value="${esc(p.cockpit || '')}" spellcheck="false" aria-label="route du cockpit">${p.cockpit !== s.cockpit ? `<button class="tk-btn mini ghost" data-a="rsChDefaut" data-v="cockpit" data-i="${i}" title="${esc(s.cockpit)}">↺</button>` : ''}</label>
+        <label class="rs-ch"><span class="rs-l">Panel</span><span class="rs-get">GET</span><input class="tk-in${(p.panel || '') !== s.panel ? ' mod' : ''}" data-rs="panel" data-i="${i}" value="${esc(p.panel || '')}" spellcheck="false" placeholder="aucun appel au panel" aria-label="appel au panel">${(p.panel || '') !== s.panel ? `<button class="tk-btn mini ghost" data-a="rsChDefaut" data-v="panel" data-i="${i}" title="${esc(s.panel || 'aucun')}">↺</button>` : ''}</label>
+        <div class="rs-ligne" style="margin:4px 0 0"><span class="mu">${esc(s.aide)} · lu : ${esc(s.quand)} · variables : {shop} {date}${s.cockpit.includes('{du}') ? ' {du}' : ''}</span><span style="flex:1"></span>
+          <button class="tk-btn mini prim" data-a="rsTester" data-i="${i}"${T && T.enCours ? ' disabled' : ''}>${T && T.enCours ? 'Test…' : 'Tester'}</button></div>
+        ${T && !T.enCours ? `<div class="rs-tests">${T.err ? `<div class="rs-t ko">✗ ${esc(T.err)}</div>` : ligneT('Cockpit', T.cockpit) + ligneT('Panel', T.panel) + (T.verdict ? `<div class="rs-res"><b class="rs-lv">Sonde</b>${rsEtat(T.verdict)}</div>` : '')}<div class="mu" style="font-size:10.5px">testé sur ${esc((r.magasins.find(m => m.id === r.essai.shop) || { nom: 'magasin ' + r.essai.shop }).nom)} le ${esc(r.essai.date.split('-').reverse().join('/'))} (choisis à droite)</div></div>` : ''}
+      </div>` : '';
     return `<div class="tk-card rs-pt${p.actif ? '' : ' off'}">
       <div class="rs-h">
         <span class="rs-ord"><button class="tk-btn mini ghost" data-a="rsMonter" data-i="${i}"${i ? '' : ' disabled'} aria-label="monter">▲</button><button class="tk-btn mini ghost" data-a="rsDescendre" data-i="${i}"${i < n - 1 ? '' : ' disabled'} aria-label="descendre">▼</button></span>
@@ -1584,7 +1592,7 @@
         <button class="tk-btn mini ghost" data-a="rsSuppr" data-i="${i}">Supprimer</button></div>
       <div class="rs-b">
         ${p.type === 'auto' ? `<div class="rs-ligne"><label class="rs-par">Sonde <select class="tk-in" data-rss="sonde" data-i="${i}">${r.sondes.map(x => `<option value="${x.cle}"${x.cle === p.sonde ? ' selected' : ''}>${esc(x.titre)}</option>`).join('')}</select></label>${params}
-          <button class="tk-btn mini" data-a="rsSonderUn" data-i="${i}"${rsModifie() ? ' title="la sonde lit le réglage ENREGISTRÉ"' : ''}>Sonder ce point</button></div>${api}${e ? `<div class="rs-res">${rsEtat(e)}</div>` : ''}` : ''}
+</div>${api}${e && !T ? `<div class="rs-res"><b class="rs-lv">Dernière sonde</b>${rsEtat(e)}</div>` : ''}` : ''}
         <label class="rs-q"><span class="rs-l">${p.type === 'auto' ? 'La question, quand ce n’est pas en ordre' : 'La question posée chaque soir'}</span>
           <textarea class="tk-in" rows="2" data-rs="question" data-i="${i}">${esc(p.question || '')}</textarea></label>
         <div class="rs-l">Les boutons de réponse <span class="mu">— cliquez « ✓ » pour qu’une réponse compte comme « en ordre »</span></div>
@@ -1597,6 +1605,7 @@
     if (!r || r.charge) { return '<div class="tk-attente">Lecture du réglage de la revue du soir…</div>'; }
     if (r.err && !r.c) { return `<div class="tk-msg ko">La revue du soir n’a pas pu être lue : ${esc(r.err)}</div>`; }
     const c = r.c, mod = rsModifie(), auto = c.points.filter(p => p.type === 'auto');
+    r.avantMod = mod;   // la barre « Enregistrer » se redessine quand cet état change pendant la saisie
     const barre = `<div class="ck-barre${mod ? '' : ' fini'}">${mod ? `<b>Réglage modifié</b><span class="mu">pas encore enregistré</span><span class="sp"></span>
         <button class="tk-btn ghost" data-a="rsAnnuler"${r.envoi ? ' disabled' : ''}>Annuler les changements</button><button class="tk-btn prim" data-a="rsEnregistrer"${r.envoi ? ' disabled' : ''}>${r.envoi ? 'Enregistrement…' : 'Enregistrer'}</button>`
       : `<span>${esc(r.bilan || (c.majLe ? 'Enregistré le ' + c.majLe.slice(8, 10) + '/' + c.majLe.slice(5, 7) + ' à ' + c.majLe.slice(11, 16) + (c.majPar ? ' par ' + c.majPar : '') : 'Réglage proposé (jamais enregistré)'))}</span><span class="sp"></span><button class="tk-btn ghost" data-a="rsDefaut">Revenir au réglage proposé</button>`}</div>`;
@@ -1645,6 +1654,13 @@
     } catch (e) { if (p) { E.un[p.id] = { err: e.message }; } else { E.err = e.message; } }
     E.enCours = false; rendre();
   }
+  async function rsTester(i) {
+    const r = S.rs, p = r.c.points[i];
+    r.test[i] = { enCours: true }; rendre();
+    try { r.test[i] = await api('POST', '/soir/tester', { point: p, shop: +r.essai.shop, date: r.essai.date }); }
+    catch (e) { r.test[i] = { err: e.message }; }
+    rendre();
+  }
   function rsAction(a, el) {
     const r = S.rs, c = r && r.c; if (!c) { return; }
     const i = el.dataset.i != null ? +el.dataset.i : null, j = el.dataset.j != null ? +el.dataset.j : null, p = i != null ? c.points[i] : null;
@@ -1654,10 +1670,11 @@
       case 'rsAnnuler': r.c = rsCopie(r.base); return rendre();
       case 'rsDefaut': r.c = Object.assign(rsCopie(r.defaut), { majLe: r.base.majLe, majPar: r.base.majPar }); return rendre();
       case 'rsSonder': return rsSonder(null);
-      case 'rsSonderUn': return rsSonder(i);
-      case 'rsMonter': if (i > 0) { c.points.splice(i - 1, 0, c.points.splice(i, 1)[0]); } return rendre();
-      case 'rsDescendre': if (i < c.points.length - 1) { c.points.splice(i + 1, 0, c.points.splice(i, 1)[0]); } return rendre();
-      case 'rsSuppr': if (confirm('Retirer « ' + p.titre + ' » de la revue du soir ?')) { c.points.splice(i, 1); } return rendre();
+      case 'rsTester': return rsTester(i);
+      case 'rsChDefaut': { const s = rsSonde(p.sonde); p[el.dataset.v] = s ? s[el.dataset.v] : ''; delete r.test[i]; return rendre(); }
+      case 'rsMonter': r.test = {}; if (i > 0) { c.points.splice(i - 1, 0, c.points.splice(i, 1)[0]); } return rendre();
+      case 'rsDescendre': r.test = {}; if (i < c.points.length - 1) { c.points.splice(i + 1, 0, c.points.splice(i, 1)[0]); } return rendre();
+      case 'rsSuppr': r.test = {}; if (confirm('Retirer « ' + p.titre + ' » de la revue du soir ?')) { c.points.splice(i, 1); } return rendre();
       case 'rsRepOk': p.reponses[j].ok = !p.reponses[j].ok; return rendre();
       case 'rsRepSuppr': p.reponses.splice(j, 1); return rendre();
       case 'rsRepAjout': { const t = String(r.ajout[i] || '').trim(); if (t) { p.reponses.push({ t, ok: false }); r.ajout[i] = ''; } return rendre(); }
@@ -1665,7 +1682,7 @@
       case 'rsRaisonAjout': { const t = r.raison.trim(); if (t && !c.raisons.includes(t)) { c.raisons.push(t); } r.raison = ''; return rendre(); }
       case 'rsAjout': {
         const auto = el.dataset.v === 'auto', s = r.sondes[0];
-        c.points.push(auto ? { id: '', actif: true, type: 'auto', sonde: s.cle, params: Object.fromEntries(s.params.map(d => [d.k, d.defaut])), icone: '🔎', titre: s.titre, question: '', reponses: [{ t: 'Fait maintenant', ok: true }, { t: 'Demain', ok: false }] }
+        c.points.push(auto ? { id: '', actif: true, type: 'auto', sonde: s.cle, params: Object.fromEntries(s.params.map(d => [d.k, d.defaut])), cockpit: s.cockpit, panel: s.panel, icone: '🔎', titre: s.titre, question: '', reponses: [{ t: 'Fait maintenant', ok: true }, { t: 'Demain', ok: false }] }
           : { id: '', actif: true, type: 'question', sonde: null, params: {}, icone: '❓', titre: 'Nouvelle question', question: '', reponses: [{ t: 'Oui', ok: true }, { t: 'Pas encore', ok: false }] });
         rendre(); const L = $.querySelectorAll('.rs-titre'); if (L.length) { L[L.length - 1].focus(); L[L.length - 1].select(); }
         return;
@@ -1712,7 +1729,7 @@
       case 'recharger': S.qui = null; S.dd = null; return charger();
       case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } if (S.vue === 'checklists') { ckOuvrir(); } if (S.vue === 'soir') { rsOuvrir(); } return;
       // L'onglet Revue du soir
-      case 'rsEnregistrer': case 'rsAnnuler': case 'rsDefaut': case 'rsSonder': case 'rsSonderUn': case 'rsMonter': case 'rsDescendre': case 'rsSuppr':
+      case 'rsEnregistrer': case 'rsAnnuler': case 'rsDefaut': case 'rsSonder': case 'rsTester': case 'rsChDefaut': case 'rsMonter': case 'rsDescendre': case 'rsSuppr':
       case 'rsRepOk': case 'rsRepSuppr': case 'rsRepAjout': case 'rsRaisonSuppr': case 'rsRaisonAjout': case 'rsAjout': return rsAction(a, el);
       // L'onglet Checklists
       case 'ckAnnuler': if (S.ck) { S.ck.edits = {}; S.ck.res = {}; S.ck.bilan = ''; } return rendre();
@@ -1975,7 +1992,7 @@
     const el = ev.target;
     if (el.dataset.cks && S.ck) { ckSaisie(+el.dataset.i, el.dataset.cks, el.value); return rendre(); }
     if (S.rs && el.dataset.rs && el.type === 'checkbox') { rsSaisie(el); return rendre(); }
-    if (S.rs && el.dataset.rss === 'sonde') { const p = S.rs.c.points[+el.dataset.i], s = rsSonde(el.value); p.sonde = el.value; p.params = Object.fromEntries(s.params.map(d => [d.k, d.defaut])); return rendre(); }
+    if (S.rs && el.dataset.rss === 'sonde') { const p = S.rs.c.points[+el.dataset.i], s = rsSonde(el.value); p.sonde = el.value; p.params = Object.fromEntries(s.params.map(d => [d.k, d.defaut])); p.cockpit = s.cockpit; p.panel = s.panel; delete S.rs.test[+el.dataset.i]; return rendre(); }
     if (S.rs && el.dataset.rse) { S.rs.essai[el.dataset.rse] = el.value; S.rs.essai.res = null; S.rs.essai.un = {}; return rendre(); }
     if (el.dataset.pq && S.modale && S.modale.type === 'planning' && el.value) {
       const m = S.modale; const t = +el.dataset.t; const v = el.value;

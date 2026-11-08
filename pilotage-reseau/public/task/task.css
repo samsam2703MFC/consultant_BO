@@ -392,3 +392,12 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .rs-el{display:flex;flex-direction:column;gap:9px}
 .rs-e{display:flex;flex-direction:column;gap:3px;padding-bottom:9px;border-bottom:1px solid var(--tk-trait)}.rs-e b{font-weight:400;font-size:13px}.rs-e .rs-et{align-self:flex-start}
 @media (max-width:1100px){.rs-g{grid-template-columns:1fr}.rs-g>div:last-child{position:static}}
+.rs-ch{display:flex;align-items:center;gap:7px;margin-bottom:5px}
+.rs-ch .rs-l{width:56px;margin:0;flex:0 0 56px}
+.rs-get{font:400 10px var(--font-ui);color:#1f5f8b;background:rgba(31,95,139,.1);border-radius:4px;padding:2px 5px}
+.rs-ch .tk-in{flex:1;font:400 12px ui-monospace,SFMono-Regular,Menlo,monospace;padding:5px 8px;color:#1f5f8b;background:#fff}
+.rs-ch .tk-in.mod{border-color:var(--accent)}
+.rs-tests{margin-top:8px;display:flex;flex-direction:column;gap:5px;border-top:1px dashed var(--tk-trait2);padding-top:8px}
+.rs-t{font-size:12px}.rs-t b{font-weight:500;display:inline-block;width:56px}.rs-t.ok{color:#2D7A3E}.rs-t.ko{color:#C0182B}
+.rs-t small{display:block;margin-left:60px;color:var(--muted-2);font-size:11px;word-break:break-all}
+.rs-lv{font-weight:500;font-size:12px;width:56px;display:inline-block}

@@ -22,31 +22,54 @@
 function rsSondes(): array
 {
     return [
-        'invendus' => ['titre' => 'Invendus encodés', 'cockpit' => 'GET /exploitation/invendus?shop={shop}&date={date}',
-            'panel' => 'GET /shops/{shop}/products/waste', 'quand' => 'le jour même',
+        'invendus' => ['titre' => 'Invendus encodés', 'cockpit' => '/exploitation/invendus?shop={shop}&date={date}',
+            'panel' => '/shops/{shop}/products/waste?date_from={date}&date_to={date}', 'quand' => 'le jour même',
             'aide' => 'En ordre quand le magasin a déclaré ses pertes du jour au panel (au moins une ligne, « rien à jeter » compris s’il est déclaré).',
             'params' => []],
-        'stock' => ['titre' => 'Stock compté', 'cockpit' => 'GET /ventes/stock?shop={shop}',
-            'panel' => 'GET /shops/{shop}/material-inventory', 'quand' => 'le dernier comptage, quel que soit le jour',
+        'stock' => ['titre' => 'Stock compté', 'cockpit' => '/ventes/stock?shop={shop}',
+            'panel' => '/shops/{shop}/material-inventory', 'quand' => 'le dernier comptage, quel que soit le jour',
             'aide' => 'En ordre quand le dernier comptage de l’inventaire matière date de moins de N jours.',
             'params' => [['k' => 'jours', 'label' => 'compté depuis au plus (jours)', 'defaut' => 7, 'min' => 1, 'max' => 60]]],
-        'commandes' => ['titre' => 'Commandes clients clôturées', 'cockpit' => 'GET /ventes/commandes?shop={shop}',
-            'panel' => 'GET /shops/{shop}/client-orders', 'quand' => 'l’état actuel',
+        'commandes' => ['titre' => 'Commandes clients clôturées', 'cockpit' => '/ventes/commandes?shop={shop}',
+            'panel' => '/shops/{shop}/client-orders', 'quand' => 'l’état actuel',
             'aide' => 'En ordre quand il ne reste pas plus de N commandes dont la date est passée et qui sont encore « en cours » au panel.',
             'params' => [['k' => 'max', 'label' => 'commandes passées encore ouvertes, au plus', 'defaut' => 0, 'min' => 0, 'max' => 100]]],
-        'photos' => ['titre' => 'Photos de contrôle rendues', 'cockpit' => 'GET /pwa/tasks?shop={shop}&date={date}',
-            'panel' => 'GET /consultant/shops/{shop}/tasks + …/checklists/{id}/progress', 'quand' => 'le jour même',
+        'photos' => ['titre' => 'Photos de contrôle rendues', 'cockpit' => '/pwa/tasks?shop={shop}&date={date}',
+            'panel' => '/consultant/shops/{shop}/tasks?date={date}', 'quand' => 'le jour même',
             'aide' => 'En ordre quand au moins N % des tâches obligatoires qui demandent une photo ont leur photo.',
             'params' => [['k' => 'min', 'label' => 'photos rendues, au moins (%)', 'defaut' => 100, 'min' => 0, 'max' => 100]]],
-        'taches' => ['titre' => 'Tâches obligatoires faites', 'cockpit' => 'GET /pwa/tasks?shop={shop}&date={date}',
-            'panel' => 'GET /consultant/shops/{shop}/tasks + …/checklists/{id}/progress', 'quand' => 'le jour même',
+        'taches' => ['titre' => 'Tâches obligatoires faites', 'cockpit' => '/pwa/tasks?shop={shop}&date={date}',
+            'panel' => '/consultant/shops/{shop}/tasks?date={date}', 'quand' => 'le jour même',
             'aide' => 'En ordre quand au moins N % des tâches obligatoires du jour sont faites (avec leur photo quand elle est demandée).',
             'params' => [['k' => 'min', 'label' => 'tâches faites, au moins (%)', 'defaut' => 80, 'min' => 0, 'max' => 100]]],
-        'nc' => ['titre' => 'Non-conformités reprises', 'cockpit' => 'GET /pwa/tasks/nc?shop={shop}&du=…&au={date}',
-            'panel' => 'aucun : les notes du contrôleur (mac_task_review, base partagée)', 'quand' => 'les N derniers jours',
+        'nc' => ['titre' => 'Non-conformités reprises', 'cockpit' => '/pwa/tasks/nc?shop={shop}&du={du}&au={date}',
+            'panel' => '', 'quand' => 'les N derniers jours',
             'aide' => 'En ordre quand chaque photo notée sous le seuil sur la période a été reprise (une note conforme après).',
             'params' => [['k' => 'jours', 'label' => 'période regardée (jours)', 'defaut' => 30, 'min' => 1, 'max' => 90]]],
     ];
+}
+
+/** Les variables d'un chemin : {shop}, {date} et {du} (le début de la période d'une sonde qui regarde N jours). */
+function rsChemin(string $tpl, int $shop, string $date, array $params = []): string
+{
+    $du = date('Y-m-d', strtotime($date . ' -' . max(0, (int) ($params['jours'] ?? 30) - 1) . ' days'));
+    return str_replace(['{shop}', '{date}', '{du}'], [(string) $shop, $date, $du], $tpl);
+}
+
+/** Un chemin saisi au cockpit : une route relative, lue en GET, sans hôte ni remontée ; jamais la revue elle-même. */
+function rsCheminValide(string $c, bool $cockpit): bool
+{
+    if ($c === '') { return !$cockpit; }
+    return (bool) preg_match('#^/[A-Za-z0-9/_\-.{}?=&%,:]*$#', $c) && !str_contains($c, '..') && !str_contains($c, '//')
+        && (!$cockpit || !str_starts_with($c, '/soir/'));
+}
+
+/** Un point complété : la route du cockpit et l'appel au panel par défaut de sa sonde quand il n'en a pas. */
+function rsNormalise(array $p): array
+{
+    $s = ($p['type'] ?? '') === 'auto' ? (rsSondes()[$p['sonde'] ?? ''] ?? null) : null;
+    if ($s) { $p['cockpit'] = (string) ($p['cockpit'] ?? '') ?: $s['cockpit']; $p['panel'] = array_key_exists('panel', $p) && $p['panel'] !== null ? (string) $p['panel'] : $s['panel']; }
+    return $p;
 }
 
 /** Le réglage par défaut : ce que montraient les maquettes M2 et M3 (08/11/2026). */
@@ -91,17 +114,21 @@ function rsDefaut(): array
 function rsConfig(): array
 {
     $c = setting('revueSoir', null);
-    return is_array($c) && !empty($c['points']) ? $c + ['majLe' => null, 'majPar' => null] : rsDefaut() + ['majLe' => null, 'majPar' => null];
+    $c = is_array($c) && !empty($c['points']) ? $c + ['majLe' => null, 'majPar' => null] : rsDefaut() + ['majLe' => null, 'majPar' => null];
+    $c['points'] = array_map('rsNormalise', $c['points']);
+    return $c;
 }
 
 function rsRoute(string $method, string $path): array
 {
     if ($method === 'GET' && $path === '/soir/config') {
         $s = rsSondes();
-        return ['config' => rsConfig(), 'defaut' => rsDefaut(), 'sondes' => array_map(fn ($k, $v) => ['cle' => $k] + $v, array_keys($s), $s)];
+        $d = rsDefaut(); $d['points'] = array_map('rsNormalise', $d['points']);
+        return ['config' => rsConfig(), 'defaut' => $d, 'sondes' => array_map(fn ($k, $v) => ['cle' => $k] + $v, array_keys($s), $s)];
     }
     if ($method === 'PUT' && $path === '/soir/config') { return rsEnregistrer(body()); }
     if ($method === 'GET' && $path === '/soir/sonder') { return rsSonder(); }
+    if ($method === 'POST' && $path === '/soir/tester') { return rsTester(body()); }
     http_response_code(404);
     return ['error' => 'route inconnue'];
 }
@@ -130,10 +157,14 @@ function rsEnregistrer(array $b): array
             if ($t !== '') { $rep[] = ['t' => $t, 'ok' => is_array($r) && !empty($r['ok'])]; }
         }
         if (!$rep) { http_response_code(422); return ['error' => '« ' . $titre . ' » : au moins un bouton de réponse est attendu']; }
+        $cockpit = $type === 'auto' ? trim((string) ($p['cockpit'] ?? '')) : null;
+        $panel = $type === 'auto' ? trim((string) ($p['panel'] ?? '')) : null;
+        if ($type === 'auto' && ($cockpit === '' || !rsCheminValide($cockpit, true))) { http_response_code(422); return ['error' => '« ' . $titre . ' » : route du cockpit invalide (une route relative lue en GET, ex. /ventes/stock?shop={shop})']; }
+        if ($type === 'auto' && !rsCheminValide($panel, false)) { http_response_code(422); return ['error' => '« ' . $titre . ' » : appel au panel invalide (ex. /shops/{shop}/material-inventory)']; }
         $id = preg_replace('/[^a-z0-9-]/', '', strtolower((string) ($p['id'] ?? ''))) ?: 'p' . substr(md5($titre . count($points)), 0, 6);
         while (isset($ids[$id])) { $id .= 'x'; }
         $ids[$id] = true;
-        $points[] = ['id' => $id, 'actif' => !empty($p['actif']), 'type' => $type, 'sonde' => $sonde, 'params' => $params,
+        $points[] = ['id' => $id, 'actif' => !empty($p['actif']), 'type' => $type, 'sonde' => $sonde, 'params' => $params, 'cockpit' => $cockpit, 'panel' => $panel,
             'icone' => $txt($p['icone'] ?? '', 4), 'titre' => $titre, 'question' => $txt($p['question'] ?? '', 240), 'reponses' => array_slice($rep, 0, 8)];
     }
     if (!$points) { http_response_code(422); return ['error' => 'aucun point : la revue du soir en demande au moins un']; }
@@ -164,72 +195,91 @@ function rsAppel(callable $f, array $get): array
     return [is_array($r) ? $r : [], (int) round(1000 * (microtime(true) - $t)), $codeR >= 400 ? $codeR : null];
 }
 
-/** Une sonde pour un magasin et un jour : la donnée est-elle revenue (`revenue`), et que dit-elle (`etat` ok | ko) ? */
-function rsEvaluer(string $sonde, array $params, int $shop, string $date): array
+/** Lit une route du cockpit dans ce processus : « /ventes/stock?shop=4 » → [réponse, ms, code d'erreur]. */
+function rsLireCockpit(string $chemin): array
 {
-    $out = ['revenue' => false, 'etat' => 'inconnu', 'texte' => '', 'valeur' => null];
+    $u = parse_url($chemin);
+    $q = []; parse_str((string) ($u['query'] ?? ''), $q);
+    $path = (string) ($u['path'] ?? '');
+    return rsAppel(static fn () => route('GET', $path), $q);
+}
+
+/** Ce qu'une réponse contient, en une ligne : un aperçu pour dire « la donnée est revenue ». */
+function rsApercu(mixed $d): string
+{
+    if (!is_array($d)) { return $d === null ? 'réponse vide' : 'réponse : ' . mb_substr((string) json_encode($d, JSON_UNESCAPED_UNICODE), 0, 80); }
+    $L = class_exists('PanelApi') ? PanelApi::liste($d) : (array_is_list($d) ? $d : []);
+    if (array_is_list($d) || ($L && count($d) <= 3)) {
+        $prem = is_array($L[0] ?? null) ? array_slice(array_keys($L[0]), 0, 6) : [];
+        return count($L) . ' élément' . (count($L) > 1 ? 's' : '') . ($prem ? ' · champs : ' . implode(', ', $prem) . (count($L[0]) > 6 ? '…' : '') : '');
+    }
+    $k = array_keys($d);
+    return 'objet · ' . implode(', ', array_slice($k, 0, 8)) . (count($k) > 8 ? '…' : '');
+}
+
+/** Un point « auto » pour un magasin et un jour : la donnée est-elle revenue (`revenue`), et que dit-elle (`etat` ok | ko) ? */
+function rsEvaluer(array $p, int $shop, string $date): array
+{
+    $p = rsNormalise($p);
+    $sonde = (string) ($p['sonde'] ?? ''); $params = (array) ($p['params'] ?? []);
+    $out = ['revenue' => false, 'etat' => 'inconnu', 'texte' => '', 'valeur' => null, 'ms' => null];
+    if (!isset(rsSondes()[$sonde])) { $out['texte'] = 'sonde inconnue'; return $out; }
+    [$d, $ms, $err] = rsLireCockpit(rsChemin((string) $p['cockpit'], $shop, $date, $params));
+    $out['ms'] = $ms;
+    $rate = fn (string $t) => $out + ['texte' => $t . ($err ? ' (HTTP ' . $err . ')' : '') . (isset($d['error']) ? ' : ' . $d['error'] : '')];
     switch ($sonde) {
         case 'invendus':
-            [$d, $ms, $err] = rsAppel('ep_exploitation_invendus', ['shop' => (string) $shop, 'date' => $date]);
-            $out['ms'] = $ms;
-            if ($err || isset($d['error']) || empty($d['lu'])) { $out['texte'] = 'le panel n’a pas répondu' . (isset($d['error']) ? ' : ' . $d['error'] : ''); break; }
+            if ($err || isset($d['error']) || empty($d['lu'])) { return $rate('le panel n’a pas répondu'); }
             $out['revenue'] = true; $out['valeur'] = (int) ($d['pieces'] ?? 0);
             if (!empty($d['declare'])) { $out['etat'] = 'ok'; $out['texte'] = 'déclarés : ' . (int) ($d['pieces'] ?? 0) . ' pièce(s) · ' . number_format((float) ($d['cout'] ?? 0), 2, ',', ' ') . ' € de coût'; }
             else { $out['etat'] = 'ko'; $out['texte'] = 'rien de déclaré au panel pour ce jour'; }
-            break;
+            return $out;
         case 'stock':
-            [$d, $ms, $err] = rsAppel('ep_ventes_stock', ['shop' => (string) $shop]);
-            $out['ms'] = $ms;
-            if ($err || !empty($d['indispo']) || isset($d['error'])) { $out['texte'] = (string) ($d['motif'] ?? $d['error'] ?? 'le panel n’a pas répondu'); break; }
+            if ($err || !empty($d['indispo']) || isset($d['error']) || !array_key_exists('dernierComptage', $d)) { return $rate((string) ($d['motif'] ?? 'l’inventaire n’a pas pu être lu')); }
             $der = (string) ($d['dernierComptage'] ?? '');
-            if ($der === '') { $out['revenue'] = true; $out['etat'] = 'ko'; $out['texte'] = 'aucun comptage connu'; break; }
-            $age = (int) floor((strtotime($date . ' 23:59:59') - strtotime($der)) / 86400);
-            $out['revenue'] = true; $out['valeur'] = $age;
+            $out['revenue'] = true;
+            if ($der === '') { $out['etat'] = 'ko'; $out['texte'] = 'aucun comptage connu'; return $out; }
+            // L'inventaire dit le DERNIER comptage : regardé sur un jour passé, il peut dater d'après ce jour-là.
+            $apres = substr($der, 0, 10) > $date;
+            $age = $apres ? 0 : (int) floor((strtotime($date . ' 23:59:59') - strtotime($der)) / 86400);
+            $out['valeur'] = $age;
             $out['etat'] = $age <= (int) ($params['jours'] ?? 7) ? 'ok' : 'ko';
-            $out['texte'] = 'dernier comptage le ' . date('d/m à H:i', strtotime($der)) . ' — il y a ' . $age . ' jour' . ($age > 1 ? 's' : '');
-            break;
+            $out['texte'] = 'dernier comptage le ' . date('d/m à H:i', strtotime($der)) . ($apres ? ' (après ce jour)' : ($age ? ' — il y a ' . $age . ' jour' . ($age > 1 ? 's' : '') : ' — ce jour-là'));
+            return $out;
         case 'commandes':
-            [$d, $ms, $err] = rsAppel('ep_ventes_commandes', ['shop' => (string) $shop]);
-            $out['ms'] = $ms;
             $C = $d['commandes'] ?? null;
-            if ($err || !is_array($C) || !isset($C['retard'])) { $out['texte'] = 'les commandes n’ont pas pu être lues'; break; }
+            if ($err || !is_array($C) || !isset($C['retard'])) { return $rate('les commandes n’ont pas pu être lues'); }
             $n = (int) $C['retard'];
             $out['revenue'] = true; $out['valeur'] = $n;
             $out['etat'] = $n <= (int) ($params['max'] ?? 0) ? 'ok' : 'ko';
             $out['texte'] = $n ? $n . ' commande' . ($n > 1 ? 's' : '') . ' passée' . ($n > 1 ? 's' : '') . ' encore « en cours » au panel' : 'aucune commande passée encore ouverte';
-            break;
+            return $out;
         case 'photos':
         case 'taches':
-            [$d, $ms, $err] = rsAppel('ep_pwa_tasks', ['shop' => (string) $shop, 'date' => $date]);
-            $out['ms'] = $ms;
             $sh = null; foreach ((array) ($d['shops'] ?? []) as $x) { if ((int) ($x['shopId'] ?? 0) === $shop) { $sh = $x; } }
-            if ($err || !empty($d['indispo']) || (!$sh && !empty($d['api']['erreur']))) { $out['texte'] = 'les tâches n’ont pas pu être lues' . (!empty($d['api']['erreur']) ? ' : ' . $d['api']['erreur'] : ''); break; }
+            if ($err || !empty($d['indispo']) || !isset($d['shops']) || (!$sh && !empty($d['api']['erreur']))) { return $rate('les tâches n’ont pas pu être lues' . (!empty($d['api']['erreur']) ? ' : ' . $d['api']['erreur'] : '')); }
             $T = array_values(array_filter((array) ($sh['taches'] ?? []), fn ($t) => ($t['obligatoire'] ?? null) !== false));
-            $faite = fn ($t) => in_array($t['statut'] ?? '', ['notee', 'aControler', 'aValider'], true) || (($t['statut'] ?? '') === 'sansPhoto' && empty($t['photoRequise']));
+            $rendue = fn ($t) => in_array($t['statut'] ?? '', ['notee', 'aControler', 'aValider'], true);
             if ($sonde === 'photos') {
                 $P = array_filter($T, fn ($t) => !empty($t['photoRequise']) || ($t['statut'] ?? '') === 'notee');
-                $f = count(array_filter($P, fn ($t) => in_array($t['statut'] ?? '', ['notee', 'aControler', 'aValider'], true))); $n = count($P);
-                $lib = 'photos rendues';
-            } else { $f = count(array_filter($T, $faite)); $n = count($T); $lib = 'tâches obligatoires faites'; }
+                $f = count(array_filter($P, $rendue)); $n = count($P); $lib = 'photos rendues';
+            } else {
+                $f = count(array_filter($T, fn ($t) => $rendue($t) || (($t['statut'] ?? '') === 'sansPhoto' && empty($t['photoRequise'])))); $n = count($T); $lib = 'tâches obligatoires faites';
+            }
             $pct = $n ? (int) round(100 * $f / $n) : 100;
             $out['revenue'] = true; $out['valeur'] = $pct;
             $out['etat'] = $pct >= (int) ($params['min'] ?? ($sonde === 'photos' ? 100 : 80)) ? 'ok' : 'ko';
             $out['texte'] = $n ? $f . ' / ' . $n . ' ' . $lib . ' (' . $pct . ' %)' : 'rien de prévu ce jour';
-            break;
+            return $out;
         case 'nc':
-            $du = date('Y-m-d', strtotime($date . ' -' . max(0, (int) ($params['jours'] ?? 30) - 1) . ' days'));
-            [$d, $ms, $err] = rsAppel('ep_pwa_tasks_nc', ['shop' => (string) $shop, 'du' => $du, 'au' => $date]);
-            $out['ms'] = $ms;
-            if ($err || !empty($d['indispo']) || isset($d['error'])) { $out['texte'] = 'les notes du contrôleur n’ont pas pu être lues'; break; }
-            $nc = (array) ($d['nc'] ?? []);
+            if ($err || !empty($d['indispo']) || isset($d['error']) || !isset($d['nc'])) { return $rate('les notes du contrôleur n’ont pas pu être lues'); }
+            $nc = (array) $d['nc'];
             $ouvertes = array_filter($nc, fn ($n) => empty($n['suite']['conforme']));
             $out['revenue'] = true; $out['valeur'] = count($ouvertes);
             $out['etat'] = $ouvertes ? 'ko' : 'ok';
             $out['texte'] = !$nc ? 'aucune non-conformité sur la période (' . (int) ($d['notees'] ?? 0) . ' photos notées)'
                 : count($nc) . ' non-conformité(s), ' . (count($nc) - count($ouvertes)) . ' reprise(s)' . ($ouvertes ? ', ' . count($ouvertes) . ' pas encore' : '');
-            break;
-        default:
-            $out['texte'] = 'sonde inconnue';
+            return $out;
     }
     return $out;
 }
@@ -240,15 +290,47 @@ function rsSonder(): array
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     if ($shop <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(422); return ['error' => 'shop et date (YYYY-MM-DD) sont requis']; }
     $seul = (string) ($_GET['point'] ?? '');
-    $S = rsSondes();
     $res = [];
     foreach (rsConfig()['points'] as $p) {
         if (($p['type'] ?? '') !== 'auto' || ($seul !== '' && $p['id'] !== $seul) || ($seul === '' && empty($p['actif']))) { continue; }
-        $s = $S[$p['sonde']] ?? null;
-        $e = $s ? rsEvaluer($p['sonde'], (array) ($p['params'] ?? []), $shop, $date) : ['revenue' => false, 'etat' => 'inconnu', 'texte' => 'sonde inconnue'];
         $res[] = ['id' => $p['id'], 'titre' => $p['titre'], 'sonde' => $p['sonde'],
-            'cockpit' => $s ? str_replace(['{shop}', '{date}'], [(string) $shop, $date], $s['cockpit']) : null,
-            'panel' => $s ? str_replace('{shop}', (string) $shop, $s['panel']) : null] + $e;
+            'cockpit' => rsChemin((string) $p['cockpit'], $shop, $date, (array) $p['params']),
+            'panel' => $p['panel'] !== '' ? rsChemin((string) $p['panel'], $shop, $date, (array) $p['params']) : null] + rsEvaluer($p, $shop, $date);
     }
     return ['shop' => $shop, 'date' => $date, 'le' => date('Y-m-d H:i:s'), 'points' => $res];
+}
+
+/**
+ * POST /soir/tester { point, shop, date } — le bouton « Tester » d'un point, sur ce qui est SAISI (même pas encore
+ * enregistré) : la route du cockpit répond-elle, l'appel au panel répond-il, et que conclut la sonde ? Lecture seule :
+ * deux GET.
+ */
+function rsTester(array $b): array
+{
+    $p = is_array($b['point'] ?? null) ? $b['point'] : [];
+    $shop = (int) ($b['shop'] ?? 0); $date = (string) ($b['date'] ?? '');
+    if ($shop <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) { http_response_code(422); return ['error' => 'shop et date (YYYY-MM-DD) sont requis']; }
+    $p['type'] = 'auto';
+    $cockpit = trim((string) ($p['cockpit'] ?? '')); $panel = trim((string) ($p['panel'] ?? ''));
+    $out = ['cockpit' => null, 'panel' => null, 'verdict' => null];
+    if (!rsCheminValide($cockpit, true) || $cockpit === '') {
+        $out['cockpit'] = ['chemin' => $cockpit, 'ok' => false, 'erreur' => 'route invalide : une route relative du cockpit, lue en GET (ex. /ventes/stock?shop={shop})'];
+    } else {
+        $ch = rsChemin($cockpit, $shop, $date, (array) ($p['params'] ?? []));
+        [$d, $ms, $err] = rsLireCockpit($ch);
+        $out['cockpit'] = ['chemin' => $ch, 'ok' => !$err && !isset($d['error']), 'code' => $err ?: 200, 'ms' => $ms,
+            'erreur' => $err || isset($d['error']) ? (string) ($d['error'] ?? 'HTTP ' . $err) : null, 'apercu' => rsApercu($d)];
+        $out['verdict'] = rsEvaluer($p, $shop, $date);
+    }
+    if ($panel !== '') {
+        if (!rsCheminValide($panel, false)) { $out['panel'] = ['chemin' => $panel, 'ok' => false, 'erreur' => 'appel invalide (ex. /shops/{shop}/material-inventory)']; }
+        elseif (!PanelApi::configured()) { $out['panel'] = ['chemin' => $panel, 'ok' => false, 'erreur' => 'compte du panel non configuré (Paramètres)']; }
+        else {
+            $ch = rsChemin($panel, $shop, $date, (array) ($p['params'] ?? []));
+            $r = PanelApi::sonde('GET', $ch, null, 20);
+            $out['panel'] = ['chemin' => $ch, 'ok' => $r['code'] >= 200 && $r['code'] < 300, 'code' => $r['code'], 'ms' => $r['ms'],
+                'erreur' => $r['code'] >= 200 && $r['code'] < 300 ? null : ($r['erreur'] ?: 'HTTP ' . $r['code']), 'apercu' => rsApercu($r['corps'])];
+        }
+    }
+    return $out;
 }

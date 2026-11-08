@@ -5159,6 +5159,13 @@ Les **sondes** (ce qu'elles lisent — route du cockpit ← appel au panel — e
 | `taches` | `/pwa/tasks?shop&date` | idem | tâches obligatoires faites ≥ `min` % (80) |
 | `nc` | `/pwa/tasks/nc?shop&du&au` | aucun (`mac_task_review`) | chaque non-conformité des `jours` (30) derniers jours reprise |
 
+Chaque point « auto » porte **sa** route du cockpit (`cockpit`) et **son** appel au panel (`panel`), modifiables au
+cockpit (variables `{shop}`, `{date}`, `{du}`), avec un bouton **Tester** : `POST /soir/tester { point, shop, date }` lit
+la route du cockpit (code, durée, aperçu de la réponse), appelle le panel (idem) et donne le verdict de la sonde — sur
+ce qui est saisi, même pas enregistré. Deux GET, rien n'est écrit. Le verdict lit la route du **cockpit** ; l'appel au
+panel sert à vérifier que le panel répond (la route du cockpit appelle le panel elle-même). Une route du cockpit doit
+être relative, lue en GET, et ne pas viser `/soir/` ; refusée à l'enregistrement sinon.
+
 Réponse de `/soir/sonder` : `points[] = { id, titre, sonde, cockpit, panel, revenue, etat: 'ok'|'ko'|'inconnu',
 texte, valeur, ms }`. `revenue = false` : la donnée n'est pas revenue (panel muet, route en erreur) — l'assistant
 pose alors la question au lieu d'affirmer quoi que ce soit.
