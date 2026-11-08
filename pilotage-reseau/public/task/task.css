@@ -351,3 +351,44 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .ck-np td{font-size:12px}.ck-np small{display:block;font-size:11px;margin-top:2px}
 .ck-d{display:inline-block;margin:0 14px 2px 0;font-size:11.5px}.ck-d b{font-weight:400;color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;margin-right:4px}
 .ck-d s{color:var(--faint)}
+
+/* L'onglet Revue du soir (08/11/2026) : le réglage de l'assistant de gestion du soir et ses sondes. */
+.rs .ck-barre{border:1px solid var(--tk-trait);border-radius:12px;margin-bottom:12px}
+.rs-b{padding:14px 16px}
+.rs-intro p{margin:0 0 10px;font-size:13px;line-height:1.55;color:var(--muted-2)}.rs-intro p b{font-weight:500;color:var(--ink)}
+.rs-g{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px;align-items:start}
+.rs-g>div:last-child{position:sticky;top:10px}
+.rs-ligne{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.rs-par{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted-2)}
+.rs-par .tk-in{width:auto;font-size:12.5px;padding:5px 8px}.rs-par input[type=number]{width:70px}
+.rs-on{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted-2);white-space:nowrap}
+.rs-l{display:block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:4px 0 6px}
+.rs-l .mu{text-transform:none;letter-spacing:0;font-size:11px}
+.rs-pt.off{opacity:.55}
+.rs-h{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--tk-trait);background:#faf7f2}
+.rs-ord{display:inline-flex;flex-direction:column}.rs-ord .tk-btn{padding:0 6px;line-height:1.1;font-size:10px}
+.rs-ico{width:44px!important;text-align:center;font-size:15px!important;padding:4px!important}
+.rs-titre{flex:1;font-size:14px!important;padding:6px 9px!important;min-width:0}
+.rs-type{font-size:10.5px;border-radius:999px;padding:3px 9px;white-space:nowrap}
+.rs-type.auto{background:rgba(31,95,139,.1);color:#1f5f8b}.rs-type.question{background:var(--prize-soft);color:var(--prize-ink)}
+.rs-api{background:#f7f4ef;border-radius:9px;padding:9px 11px;font-size:11.5px;margin-bottom:10px;display:flex;flex-direction:column;gap:3px}
+.rs-api code,.rs-e code{font-size:11px;background:#fff;border:1px solid var(--tk-trait);border-radius:5px;padding:1px 6px;color:#1f5f8b;word-break:break-all}
+.rs-api .rs-l{display:inline-block;width:62px;margin:0}
+.rs-q{display:block;margin-bottom:10px}.rs-q textarea{width:100%;resize:vertical;font:400 13px var(--font-ui)}
+.rs-reps{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.rs-rep{display:inline-flex;align-items:center;gap:4px;font-size:12px;border:1px solid var(--tk-trait2);background:#fff;border-radius:999px;padding:3px 6px 3px 4px}
+.rs-rep.ok{border-color:rgba(45,122,62,.45);background:rgba(45,122,62,.07)}
+.rs-okb{border:none;background:var(--chip,#f0ebe4);border-radius:50%;width:20px;height:20px;cursor:pointer;font-size:11px;color:var(--muted-2)}
+.rs-rep.ok .rs-okb{background:#2D7A3E;color:#fff}
+.rs-x{border:none;background:none;cursor:pointer;color:var(--muted);font-size:14px;padding:0 3px}
+.rs-add{display:inline-flex;gap:5px}.rs-add .tk-in{width:150px;font-size:12px;padding:4px 8px}
+.rs-plus{display:flex;gap:8px;margin:4px 0 20px}
+.rs-res{margin:-2px 0 10px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.rs-et{display:inline-block;font-size:11px;border-radius:999px;padding:2px 9px;white-space:nowrap}
+.rs-et.ok{background:rgba(45,122,62,.12);color:#2D7A3E}.rs-et.wa{background:var(--prize-soft);color:var(--prize-ink)}.rs-et.ko{background:#fbe9eb;color:#C0182B}.rs-et.mu{background:#f0ebe4;color:var(--muted-2)}
+.rs-tx{font-size:12px}.rs-tx small{color:var(--muted)}
+.rs-essai .tk-ct{display:flex;gap:10px;align-items:baseline;padding:12px 16px;border-bottom:1px solid var(--tk-trait)}.rs-essai .tk-ct b{font-weight:400;font-size:14px}
+.rs-essai .tk-in{font-size:12.5px;padding:5px 8px}
+.rs-el{display:flex;flex-direction:column;gap:9px}
+.rs-e{display:flex;flex-direction:column;gap:3px;padding-bottom:9px;border-bottom:1px solid var(--tk-trait)}.rs-e b{font-weight:400;font-size:13px}.rs-e .rs-et{align-self:flex-start}
+@media (max-width:1100px){.rs-g{grid-template-columns:1fr}.rs-g>div:last-child{position:static}}

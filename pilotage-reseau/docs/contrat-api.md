@@ -5133,3 +5133,32 @@ Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18
 | Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
 
 Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
+
+### La revue du soir — réglage et sondes (08/11/2026)
+
+L'assistant de gestion du soir du dashboard magasin (pas une checklist du panel : l'équipe ne le voit pas). Son
+réglage s'édite au cockpit, **Checklists › Revue du soir** (`public/task/?vue=soir`), et vit dans
+`ceo_app_setting` sous `revueSoir`. Code : `src/revue_soir.php`.
+
+    GET  /soir/config                 { config, defaut, sondes[] }
+    PUT  /soir/config                 enregistre { heure, checklists, raisons[], points[] } — journal « Revue du soir »
+    GET  /soir/sonder?shop=4&date=…   évalue les points « auto » actifs (&point=stock : un seul, actif ou non)
+
+Un **point** : `{ id, actif, type: 'auto'|'question', sonde, params, icone, titre, question, reponses: [{ t, ok }] }`.
+`ok` dit si la réponse compte comme « en ordre ». Un point `auto` ne pose sa question que si sa sonde ne dit pas
+« en ordre » ; une `question` est posée chaque soir.
+
+Les **sondes** (ce qu'elles lisent — route du cockpit ← appel au panel — et quand c'est en ordre) :
+
+| Sonde | Cockpit | Panel | En ordre quand |
+|---|---|---|---|
+| `invendus` | `/exploitation/invendus?shop&date` | `GET /shops/{id}/products/waste` | des pertes sont déclarées ce jour-là |
+| `stock` | `/ventes/stock?shop` | `GET /shops/{id}/material-inventory` | dernier comptage ≤ `jours` (7) |
+| `commandes` | `/ventes/commandes?shop` | `GET /shops/{id}/client-orders` | commandes passées encore ouvertes ≤ `max` (0) |
+| `photos` | `/pwa/tasks?shop&date` | `/consultant/shops/{id}/tasks` + `…/progress` | photos rendues ≥ `min` % (100) |
+| `taches` | `/pwa/tasks?shop&date` | idem | tâches obligatoires faites ≥ `min` % (80) |
+| `nc` | `/pwa/tasks/nc?shop&du&au` | aucun (`mac_task_review`) | chaque non-conformité des `jours` (30) derniers jours reprise |
+
+Réponse de `/soir/sonder` : `points[] = { id, titre, sonde, cockpit, panel, revenue, etat: 'ok'|'ko'|'inconnu',
+texte, valeur, ms }`. `revenue = false` : la donnée n'est pas revenue (panel muet, route en erreur) — l'assistant
+pose alors la question au lieu d'affirmer quoi que ce soit.

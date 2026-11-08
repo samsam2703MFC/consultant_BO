@@ -77,7 +77,7 @@
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
-    if (S.vue === 'planning' || S.vue === 'checklists') { a.set('vue', S.vue); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
+    if (S.vue === 'planning' || S.vue === 'checklists' || S.vue === 'soir') { a.set('vue', S.vue); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
     try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
     if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
   }
@@ -89,7 +89,7 @@
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
     // Les vues : le Document (par défaut, 07/11/2026), le Tableau d'avant (?vue=tableau), le Planning.
-    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : q.get('vue') === 'checklists' ? 'checklists' : 'doc',
+    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : q.get('vue') === 'checklists' ? 'checklists' : q.get('vue') === 'soir' ? 'soir' : 'doc',
     dd: null,   // la liste ouverte d'une vignette du Document : {k, id, c, portee, …}
     rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
@@ -185,6 +185,7 @@
     S.charge = false;
     rendre();
     if (S.cadre && S.vue === 'checklists' && !S.nomen) { ckOuvrir(); }
+    if (S.vue === 'soir') { rsOuvrir(); }
     if (S.cadre && S.vue === 'doc') {
       // ?checklist=ID : on descend jusqu'à sa section, une fois (le cockpit a d'abord pris la hauteur du cadre).
       if (!S.dcVu && /^(\d{1,10}|hors)$/.test(q.get('checklist') || '')) { S.dcVu = true; setTimeout(() => dcAller(q.get('checklist')), 450); }
@@ -1542,14 +1543,144 @@
     return `<div class="tk-voile" data-a="voile"><div class="tk-modale" role="dialog" aria-modal="true" ${y}>${corps}</div></div>`;
   }
 
+  /* --- L'onglet Revue du soir (08/11/2026) ----------------------------------------------------------------------------
+   * Le réglage de l'assistant de gestion du soir du dashboard magasin : ses points (vérifiés automatiquement par une
+   * sonde, ou posés en question), le texte et les boutons de réponse de chacun, les raisons rapides pour une checklist
+   * pas finie. Pour chaque sonde : la route du cockpit et l'appel au panel qu'elle lit, et « Sonder » pour voir, sur un
+   * magasin et un jour, si la donnée est revenue et ce qu'elle dit. Réglage : GET/PUT /soir/config ; essai : /soir/sonder. */
+  const rsCopie = v => JSON.parse(JSON.stringify(v));
+  async function rsOuvrir() {
+    if (S.rs && S.rs.c) { return; }
+    S.rs = { charge: true, err: null, essai: { shop: '4', date: new Date().toISOString().slice(0, 10), res: null, enCours: false, un: {} }, magasins: [], ajout: {}, raison: '' };
+    rendre();
+    try {
+      const [d, m] = await Promise.all([api('GET', '/soir/config'), api('GET', '/stores?statut=tous').catch(() => [])]);
+      Object.assign(S.rs, { charge: false, base: rsCopie(d.config), c: rsCopie(d.config), defaut: d.defaut, sondes: d.sondes,
+        magasins: (Array.isArray(m) ? m : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: String(s.id), nom: s.nom || s.name })) });
+    } catch (e) { S.rs.charge = false; S.rs.err = e.message; }
+    rendre();
+  }
+  const rsSonde = cle => ((S.rs && S.rs.sondes) || []).find(s => s.cle === cle) || null;
+  const rsModifie = () => { const r = S.rs; if (!r || !r.c) { return false; } const q = x => JSON.stringify({ h: x.heure, c: x.checklists, r: x.raisons, p: x.points }); return q(r.c) !== q(r.base); };
+  function rsEtat(e) {
+    if (!e) { return ''; }
+    if (e.enCours) { return '<span class="rs-et mu">sonde en cours…</span>'; }
+    if (e.err) { return `<span class="rs-et ko">erreur : ${esc(e.err)}</span>`; }
+    const cls = !e.revenue ? 'ko' : (e.etat === 'ok' ? 'ok' : 'wa');
+    const lib = !e.revenue ? '✗ donnée pas revenue' : (e.etat === 'ok' ? '✓ revenue · en ordre' : '! revenue · à expliquer');
+    return `<span class="rs-et ${cls}">${lib}</span><span class="rs-tx">${esc(e.texte || '')}${e.ms != null ? ` <small>· ${e.ms} ms</small>` : ''}</span>`;
+  }
+  function rsPoint(p, i, n) {
+    const r = S.rs, s = p.type === 'auto' ? rsSonde(p.sonde) : null, e = r.essai.un[p.id];
+    const params = s ? s.params.map(d => `<label class="rs-par">${esc(d.label)} <input class="tk-in" type="number" min="${d.min}" max="${d.max}" data-rs="param" data-k="${esc(d.k)}" data-i="${i}" value="${esc(p.params && p.params[d.k] != null ? p.params[d.k] : d.defaut)}"></label>`).join('') : '';
+    const api = s ? `<div class="rs-api"><div><span class="rs-l">Cockpit</span><code>${esc(s.cockpit.replace('{shop}', '{magasin}'))}</code></div><div><span class="rs-l">Panel</span><code>${esc(s.panel.replace('{shop}', '{magasin}'))}</code></div><div class="mu">${esc(s.aide)} · lu : ${esc(s.quand)}</div></div>` : '';
+    return `<div class="tk-card rs-pt${p.actif ? '' : ' off'}">
+      <div class="rs-h">
+        <span class="rs-ord"><button class="tk-btn mini ghost" data-a="rsMonter" data-i="${i}"${i ? '' : ' disabled'} aria-label="monter">▲</button><button class="tk-btn mini ghost" data-a="rsDescendre" data-i="${i}"${i < n - 1 ? '' : ' disabled'} aria-label="descendre">▼</button></span>
+        <label class="rs-on" title="${p.actif ? 'actif : il est passé en revue' : 'désactivé'}"><input type="checkbox" data-rs="actif" data-i="${i}"${p.actif ? ' checked' : ''}> actif</label>
+        <input class="tk-in rs-ico" data-rs="icone" data-i="${i}" value="${esc(p.icone || '')}" aria-label="icône" maxlength="4">
+        <input class="tk-in rs-titre" data-rs="titre" data-i="${i}" value="${esc(p.titre)}" aria-label="titre du point">
+        <span class="rs-type ${p.type}">${p.type === 'auto' ? 'Vérifié automatiquement' : 'Question'}</span>
+        <button class="tk-btn mini ghost" data-a="rsSuppr" data-i="${i}">Supprimer</button></div>
+      <div class="rs-b">
+        ${p.type === 'auto' ? `<div class="rs-ligne"><label class="rs-par">Sonde <select class="tk-in" data-rss="sonde" data-i="${i}">${r.sondes.map(x => `<option value="${x.cle}"${x.cle === p.sonde ? ' selected' : ''}>${esc(x.titre)}</option>`).join('')}</select></label>${params}
+          <button class="tk-btn mini" data-a="rsSonderUn" data-i="${i}"${rsModifie() ? ' title="la sonde lit le réglage ENREGISTRÉ"' : ''}>Sonder ce point</button></div>${api}${e ? `<div class="rs-res">${rsEtat(e)}</div>` : ''}` : ''}
+        <label class="rs-q"><span class="rs-l">${p.type === 'auto' ? 'La question, quand ce n’est pas en ordre' : 'La question posée chaque soir'}</span>
+          <textarea class="tk-in" rows="2" data-rs="question" data-i="${i}">${esc(p.question || '')}</textarea></label>
+        <div class="rs-l">Les boutons de réponse <span class="mu">— cliquez « ✓ » pour qu’une réponse compte comme « en ordre »</span></div>
+        <div class="rs-reps">${(p.reponses || []).map((x, j) => `<span class="rs-rep${x.ok ? ' ok' : ''}"><button class="rs-okb" data-a="rsRepOk" data-i="${i}" data-j="${j}" title="${x.ok ? 'compte comme en ordre' : 'compte comme à suivre'}">${x.ok ? '✓' : '○'}</button>${esc(x.t)}<button class="rs-x" data-a="rsRepSuppr" data-i="${i}" data-j="${j}" aria-label="retirer">×</button></span>`).join('')}
+          <span class="rs-add"><input class="tk-in" data-rs="ajout" data-i="${i}" value="${esc(r.ajout[i] || '')}" placeholder="nouvelle réponse" maxlength="40"><button class="tk-btn mini" data-a="rsRepAjout" data-i="${i}">Ajouter</button></span></div>
+      </div></div>`;
+  }
+  function rsVue() {
+    const r = S.rs;
+    if (!r || r.charge) { return '<div class="tk-attente">Lecture du réglage de la revue du soir…</div>'; }
+    if (r.err && !r.c) { return `<div class="tk-msg ko">La revue du soir n’a pas pu être lue : ${esc(r.err)}</div>`; }
+    const c = r.c, mod = rsModifie(), auto = c.points.filter(p => p.type === 'auto');
+    const barre = `<div class="ck-barre${mod ? '' : ' fini'}">${mod ? `<b>Réglage modifié</b><span class="mu">pas encore enregistré</span><span class="sp"></span>
+        <button class="tk-btn ghost" data-a="rsAnnuler"${r.envoi ? ' disabled' : ''}>Annuler les changements</button><button class="tk-btn prim" data-a="rsEnregistrer"${r.envoi ? ' disabled' : ''}>${r.envoi ? 'Enregistrement…' : 'Enregistrer'}</button>`
+      : `<span>${esc(r.bilan || (c.majLe ? 'Enregistré le ' + c.majLe.slice(8, 10) + '/' + c.majLe.slice(5, 7) + ' à ' + c.majLe.slice(11, 16) + (c.majPar ? ' par ' + c.majPar : '') : 'Réglage proposé (jamais enregistré)'))}</span><span class="sp"></span><button class="tk-btn ghost" data-a="rsDefaut">Revenir au réglage proposé</button>`}</div>`;
+    const E = r.essai;
+    const essai = `<div class="tk-card rs-essai"><div class="tk-ct"><b>Sonder un magasin</b><span class="mu">la donnée est-elle revenue ?</span></div><div class="rs-b">
+      <div class="rs-ligne"><select class="tk-in" data-rse="shop">${(r.magasins.length ? r.magasins : [{ id: '4', nom: 'Magasin 4' }]).map(m => `<option value="${esc(m.id)}"${m.id === E.shop ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select>
+        <input class="tk-in" type="date" data-rse="date" value="${esc(E.date)}"><button class="tk-btn prim" data-a="rsSonder"${E.enCours ? ' disabled' : ''}>${E.enCours ? 'Sonde en cours…' : 'Sonder'}</button></div>
+      ${mod ? '<div class="mu" style="font-size:11.5px">La sonde lit le réglage enregistré : enregistrez d’abord pour essayer vos changements.</div>' : ''}
+      ${E.err ? `<div class="tk-msg ko">${esc(E.err)}</div>` : ''}
+      ${E.res ? `<div class="rs-el">${E.res.points.map(x => `<div class="rs-e"><b>${esc(x.titre)}</b>${rsEtat(x)}<code>${esc(x.cockpit || '')}</code></div>`).join('')}<div class="mu" style="font-size:11px">sondé le ${esc(E.res.le.slice(8, 10) + '/' + E.res.le.slice(5, 7) + ' à ' + E.res.le.slice(11, 19))}</div></div>`
+        : `<div class="mu" style="font-size:12px">${auto.filter(p => p.actif).length} point${auto.length > 1 ? 's' : ''} vérifié${auto.length > 1 ? 's' : ''} automatiquement : chaque sonde lit sa route et dit si la donnée est revenue, et si elle est en ordre.</div>`}</div></div>`;
+    return `<div class="rs">${barre}
+      <div class="rs-intro tk-card"><div class="rs-b">
+        <p>La <b>revue du soir</b> est l’assistant de gestion du dashboard magasin : le soir, il passe la journée en revue avec le responsable. Il n’apparaît pas dans les checklists de l’équipe. Les points <b>vérifiés automatiquement</b> lisent une donnée (une sonde) et ne posent leur question que si ce n’est pas en ordre ; les <b>questions</b> sont posées chaque soir.</p>
+        <div class="rs-ligne"><label class="rs-par">Apparaît dans le dashboard à partir de <input class="tk-in" type="time" data-rs="heure" value="${esc(c.heure)}"></label>
+          <label class="rs-on"><input type="checkbox" data-rs="checklists"${c.checklists ? ' checked' : ''}> passer en revue les checklists pas finies du jour</label></div>
+        <div class="rs-l">Les raisons rapides pour une checklist ou une tâche pas finie</div>
+        <div class="rs-reps">${c.raisons.map((x, j) => `<span class="rs-rep">${esc(x)}<button class="rs-x" data-a="rsRaisonSuppr" data-j="${j}" aria-label="retirer">×</button></span>`).join('')}
+          <span class="rs-add"><input class="tk-in" data-rs="raison" value="${esc(r.raison)}" placeholder="nouvelle raison" maxlength="40"><button class="tk-btn mini" data-a="rsRaisonAjout">Ajouter</button></span></div></div></div>
+      <div class="rs-g"><div>${c.points.map((p, i) => rsPoint(p, i, c.points.length)).join('')}
+        <div class="rs-plus"><button class="tk-btn" data-a="rsAjout" data-v="question">+ Une question</button><button class="tk-btn" data-a="rsAjout" data-v="auto">+ Une vérification automatique</button></div></div>
+        <div>${essai}</div></div></div>`;
+  }
+  function rsSaisie(el) {
+    const r = S.rs, c = r && r.c; if (!c) { return; }
+    const k = el.dataset.rs, p = el.dataset.i != null ? c.points[+el.dataset.i] : null;
+    if (k === 'heure') { c.heure = el.value; } else if (k === 'checklists') { c.checklists = el.checked; } else if (k === 'raison') { r.raison = el.value; return; }
+    else if (k === 'ajout') { r.ajout[+el.dataset.i] = el.value; return; }
+    else if (p && k === 'actif') { p.actif = el.checked; } else if (p && k === 'param') { p.params = p.params || {}; p.params[el.dataset.k] = el.value === '' ? '' : +el.value; }
+    else if (p) { p[k] = el.value; }
+    r.bilan = '';
+  }
+  async function rsEnregistrer() {
+    const r = S.rs; r.envoi = true; rendre();
+    try { const d = await api('PUT', '/soir/config', r.c); r.base = rsCopie(d.config); r.c = rsCopie(d.config); r.bilan = 'Enregistré : ' + d.config.points.length + ' points, ' + d.config.raisons.length + ' raisons.'; S.msg = null; }
+    catch (e) { S.msg = { k: 'ko', t: 'Revue du soir non enregistrée : ' + e.message }; }
+    r.envoi = false; rendre();
+  }
+  async function rsSonder(i) {
+    const r = S.rs, E = r.essai, p = i != null ? r.c.points[i] : null;
+    if (p) { E.un[p.id] = { enCours: true }; } else { E.enCours = true; E.err = null; }
+    rendre();
+    try {
+      const d = await api('GET', '/soir/sonder?shop=' + encodeURIComponent(E.shop) + '&date=' + encodeURIComponent(E.date) + (p ? '&point=' + encodeURIComponent(p.id) : ''));
+      if (p) { E.un[p.id] = d.points[0] || { err: 'point pas encore enregistré' }; } else { E.res = d; d.points.forEach(x => { E.un[x.id] = x; }); }
+    } catch (e) { if (p) { E.un[p.id] = { err: e.message }; } else { E.err = e.message; } }
+    E.enCours = false; rendre();
+  }
+  function rsAction(a, el) {
+    const r = S.rs, c = r && r.c; if (!c) { return; }
+    const i = el.dataset.i != null ? +el.dataset.i : null, j = el.dataset.j != null ? +el.dataset.j : null, p = i != null ? c.points[i] : null;
+    r.bilan = '';
+    switch (a) {
+      case 'rsEnregistrer': return rsEnregistrer();
+      case 'rsAnnuler': r.c = rsCopie(r.base); return rendre();
+      case 'rsDefaut': r.c = Object.assign(rsCopie(r.defaut), { majLe: r.base.majLe, majPar: r.base.majPar }); return rendre();
+      case 'rsSonder': return rsSonder(null);
+      case 'rsSonderUn': return rsSonder(i);
+      case 'rsMonter': if (i > 0) { c.points.splice(i - 1, 0, c.points.splice(i, 1)[0]); } return rendre();
+      case 'rsDescendre': if (i < c.points.length - 1) { c.points.splice(i + 1, 0, c.points.splice(i, 1)[0]); } return rendre();
+      case 'rsSuppr': if (confirm('Retirer « ' + p.titre + ' » de la revue du soir ?')) { c.points.splice(i, 1); } return rendre();
+      case 'rsRepOk': p.reponses[j].ok = !p.reponses[j].ok; return rendre();
+      case 'rsRepSuppr': p.reponses.splice(j, 1); return rendre();
+      case 'rsRepAjout': { const t = String(r.ajout[i] || '').trim(); if (t) { p.reponses.push({ t, ok: false }); r.ajout[i] = ''; } return rendre(); }
+      case 'rsRaisonSuppr': c.raisons.splice(j, 1); return rendre();
+      case 'rsRaisonAjout': { const t = r.raison.trim(); if (t && !c.raisons.includes(t)) { c.raisons.push(t); } r.raison = ''; return rendre(); }
+      case 'rsAjout': {
+        const auto = el.dataset.v === 'auto', s = r.sondes[0];
+        c.points.push(auto ? { id: '', actif: true, type: 'auto', sonde: s.cle, params: Object.fromEntries(s.params.map(d => [d.k, d.defaut])), icone: '🔎', titre: s.titre, question: '', reponses: [{ t: 'Fait maintenant', ok: true }, { t: 'Demain', ok: false }] }
+          : { id: '', actif: true, type: 'question', sonde: null, params: {}, icone: '❓', titre: 'Nouvelle question', question: '', reponses: [{ t: 'Oui', ok: true }, { t: 'Pas encore', ok: false }] });
+        rendre(); const L = $.querySelectorAll('.rs-titre'); if (L.length) { L[L.length - 1].focus(); L[L.length - 1].select(); }
+        return;
+      }
+    }
+  }
+
   function rendre() {
     const actif = document.activeElement;
-    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd', 'ck'].find(x => actif.dataset[x] != null) : null;
+    const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd', 'ck', 'rs'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button></div>`;
+    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button><button class="${S.vue === 'soir' ? 'on' : ''}" data-a="vue" data-v="soir">Revue du soir</button></div>`;
     const rq = !S.wz && termesRq().length && S.cadre;
-    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : S.vue === 'soir' ? rsVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -1579,7 +1710,10 @@
     const id = el.dataset.id;
     switch (a) {
       case 'recharger': S.qui = null; S.dd = null; return charger();
-      case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } if (S.vue === 'checklists') { ckOuvrir(); } return;
+      case 'vue': S.vue = el.dataset.v; S.dd = null; adresse(S.cl); rendre(); voirHaut(); if (S.vue === 'doc') { dcQuiCharger(); } if (S.vue === 'checklists') { ckOuvrir(); } if (S.vue === 'soir') { rsOuvrir(); } return;
+      // L'onglet Revue du soir
+      case 'rsEnregistrer': case 'rsAnnuler': case 'rsDefaut': case 'rsSonder': case 'rsSonderUn': case 'rsMonter': case 'rsDescendre': case 'rsSuppr':
+      case 'rsRepOk': case 'rsRepSuppr': case 'rsRepAjout': case 'rsRaisonSuppr': case 'rsRaisonAjout': case 'rsAjout': return rsAction(a, el);
       // L'onglet Checklists
       case 'ckAnnuler': if (S.ck) { S.ck.edits = {}; S.ck.res = {}; S.ck.bilan = ''; } return rendre();
       case 'ckRetablir': if (S.ck) { delete S.ck.edits[id]; delete S.ck.res[id]; } return rendre();
@@ -1811,6 +1945,7 @@
     if (el.dataset.f === 'filtre') { S.filtre = el.value; return rendre(); }
     if (el.dataset.f === 'ckFiltre' && S.ck) { S.ck.filtre = el.value; return rendre(); }
     if (el.dataset.ck && S.ck) { ckSaisie(+el.dataset.i, el.dataset.ck, el.value); return rendre(); }
+    if (el.dataset.rs && S.rs) { rsSaisie(el); if (el.type !== 'checkbox' && el.dataset.rs !== 'ajout' && el.dataset.rs !== 'raison') { const avant = !!S.rs.avantMod, mod = rsModifie(); S.rs.avantMod = mod; if (avant !== mod) { rendre(); } } return; }
     if (el.dataset.dd && S.dd) { if (el.dataset.dd === 'filtre') { S.dd.filtre = el.value; return rendre(); } S.dd.val = el.value; S.dd.err = null; return; }
     if (el.dataset.f === 'recherche') { S.rq = el.value; S.rqMax = 150; return rendre(); }
     if (el.dataset.pf && S.modale && S.modale.type === 'planning') { S.modale.f = el.value; return rendre(); }
@@ -1839,6 +1974,9 @@
   $.addEventListener('change', ev => {
     const el = ev.target;
     if (el.dataset.cks && S.ck) { ckSaisie(+el.dataset.i, el.dataset.cks, el.value); return rendre(); }
+    if (S.rs && el.dataset.rs && el.type === 'checkbox') { rsSaisie(el); return rendre(); }
+    if (S.rs && el.dataset.rss === 'sonde') { const p = S.rs.c.points[+el.dataset.i], s = rsSonde(el.value); p.sonde = el.value; p.params = Object.fromEntries(s.params.map(d => [d.k, d.defaut])); return rendre(); }
+    if (S.rs && el.dataset.rse) { S.rs.essai[el.dataset.rse] = el.value; S.rs.essai.res = null; S.rs.essai.un = {}; return rendre(); }
     if (el.dataset.pq && S.modale && S.modale.type === 'planning' && el.value) {
       const m = S.modale; const t = +el.dataset.t; const v = el.value;
       if (el.dataset.pq === 'niv') { return quiChanger(m, t, { ajouterNiveau: +v }); }
