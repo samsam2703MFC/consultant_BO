@@ -162,7 +162,7 @@
     rendre();
     try {
       S.cadre = await api('GET', '/task/cadre');
-      S.err = null;
+      S.err = null; S.dcSugg = null; S.dcMots = null;
       // Un jeton administrateur que le panel ne reconnaît plus : on le lâche et on relit avec le
       // compte du cockpit, plutôt que de laisser l'écran vide.
       if (admin() && Object.values(S.cadre.erreurs || {}).some(v => /session du panel expirée/.test(v))) {
@@ -933,6 +933,93 @@
     rendre();
   }
 
+  /* --- ranger une tâche (08/11/2026, maquette R1 : « Ranger → AC-01 ▾ » sur chaque ligne à ranger) --- */
+  const dcMin = h => { const m = /^(\d\d):(\d\d)/.exec(h || ''); return m ? +m[1] * 60 + +m[2] : null; };
+  /** Les mots d'un nom (sans code ni accents, trois lettres au moins, sans les petits mots), gardés par tâche. */
+  const DC_VIDES = new Set(['les', 'des', 'une', 'pour', 'sur', 'par', 'dans', 'avec', 'aux', 'est', 'que', 'qui', 'son', 'ses', 'leur', 'tout', 'tous', 'chaque']);
+  function dcMots(t) {
+    S.dcMots = S.dcMots || {};
+    if (!S.dcMots[t.id]) { S.dcMots[t.id] = new Set(sansAccent(dcCode(t.nom).titre).replace(/[^a-z0-9 ]/g, ' ').split(/\s+/).filter(w => w.length >= 3 && !DC_VIDES.has(w))); }
+    return S.dcMots[t.id];
+  }
+  // Un seul mot commun ne compte presque pas entre deux noms longs (« Remplir le rayon pains » n'est pas « Photo du
+  // comptoir - Pains & Boulangerie ») ; il compte entre deux noms courts (« Cartons & poubelles », « Cartons pliés »).
+  const dcSim = (a, b) => { let n = 0; a.forEach(w => { if (b.has(w)) { n++; } }); const m = Math.max(1, Math.min(a.size, b.size)); return n >= 2 || Math.max(a.size, b.size) <= 2 ? n / m : n / (m + 2); };
+  /**
+   * Les checklists où ranger une tâche : un nom proche d'une de leurs tâches (50 %), des tâches au même moment (35 % :
+   * la plus proche à moins de 90 min, et combien à moins de 45 min), la même exigence de photo (15 %). Deux au plus.
+   * Un nom très proche (≥ 60 % des mots) d'une tâche déjà rangée : un doublon probable.
+   */
+  function dcSuggestions(t) {
+    S.dcSugg = S.dcSugg || {};
+    if (S.dcSugg[t.id]) { return S.dcSugg[t.id]; }
+    const mt = dcMots(t); const ht = dcMin(t.heure);
+    const L = checklists().map(c => {
+      const ts = dcTachesDe(c).filter(x => x.id !== t.id);
+      let nom = 0, proche = null;
+      ts.forEach(x => { const v = dcSim(mt, dcMots(x)); if (v > nom) { nom = v; proche = x; } });
+      let temps = 0;
+      if (ht != null) {
+        const ds = ts.map(x => dcMin(x.heure)).filter(v => v != null).map(v => Math.abs(v - ht));
+        if (ds.length) { temps = 0.5 * Math.max(0, 1 - Math.min(...ds) / 90) + 0.5 * Math.min(1, ds.filter(v => v <= 45).length / 4); }
+      }
+      const photo = ts.length ? ts.filter(x => !!x.photo === !!t.photo).length / ts.length : 0;
+      const why = nom >= 0.5 && proche ? 'comme « ' + dcSansCode(proche.nom, dcCode(c.nom).code) + ' »' : temps >= 0.5 ? 'même moment, ' + t.heure : '';
+      return { c, score: 0.5 * nom + 0.35 * temps + 0.15 * photo, nom, proche, why };
+    }).filter(x => x.score >= 0.25).sort((a, b) => b.score - a.score);
+    const dbl = L.filter(x => x.nom >= 0.6).sort((a, b) => b.nom - a.nom)[0];
+    return (S.dcSugg[t.id] = { top: L.slice(0, 2), dbl: dbl ? { c: dbl.c, t: dbl.proche } : null });
+  }
+  /** Ce que la tâche recevrait de la checklist : ses niveaux et ses contrôleurs qu'elle n'a pas encore. */
+  function dcQuiCible(t, c) {
+    const ts = dcTachesDe(c).filter(x => x.id !== t.id);
+    const Q = ts.map(x => S.qui && S.qui[x.id]).filter(Boolean);
+    if (!ts.length || Q.length < ts.length) { return { niveaux: [], controleurs: [], texte: '', vide: !ts.length, lecture: ts.length > 0 }; }
+    const moi = (S.qui && S.qui[t.id]) || { fait: [], controle: [] };
+    const cle = x => x.type === 'self' ? 'self' : 'p' + x.positionId;
+    const nv = new Map(); Q.forEach(q => q.fait.forEach(n => { if (!nv.has(n.id)) { nv.set(n.id, n); } }));
+    const ct = new Map(); Q.forEach(q => q.controle.forEach(x => { if (!ct.has(cle(x))) { ct.set(cle(x), x); } }));
+    const parPoste = {}; nv.forEach(n => { const p = n.poste || n.nom; parPoste[p] = (parPoste[p] || 0) + 1; });
+    const ctl = [...ct.values()].map(dcNomCtl);
+    return {
+      niveaux: [...nv.values()].filter(n => !moi.fait.some(m => m.id === n.id)).map(n => ({ id: n.id, route: n.route || '' })),
+      controleurs: [...ct.values()].filter(x => !moi.controle.some(y => cle(y) === cle(x))).map(x => x.type === 'self' ? { type: 'self' } : { type: 'position', positionId: x.positionId }),
+      texte: 'Fait par ' + (Object.entries(parPoste).map(([p, k]) => p + (k > 1 ? ` (${k} niveaux)` : '')).join(' · ') || 'personne') + ' · Contrôlé par ' + (ctl[0] || 'personne') + (ctl.length > 1 ? ' +' + (ctl.length - 1) : ''),
+      vide: false, lecture: false };
+  }
+  /** La vignette « Ranger → AC-01 ▾ » d'une tâche qui n'est dans aucune checklist. */
+  function dcRanger(t) {
+    const s = dcSuggestions(t); const c0 = s.top[0] && s.top[0].c;
+    const ouvert = S.dd && S.dd.k === 'ranger' && S.dd.id === t.id;
+    const lib = c0 ? '→ ' + esc(dcCode(c0.nom).code || dcCode(c0.nom).titre) : 'dans…';
+    return `<span class="dc-ancre dc-rg"><button class="dc-rg-v${ouvert ? ' open' : ''}" data-a="ddOuvrir" data-k="ranger" data-t="${t.id}" data-c="" aria-haspopup="listbox" aria-expanded="${ouvert}" title="${esc(c0 ? 'Ranger dans une checklist — suggestion : ' + c0.nom : 'Ranger dans une checklist')}"><b>Ranger</b>${lib}${dcFleche}</button>${ouvert ? dcListe() : ''}</span>`;
+  }
+  async function dcRangerEnvoyer() {
+    const d = S.dd; const t = d && tache(d.id); const c = d && checklist(d.cible);
+    if (!t || !c) { return; }
+    const q = d.qui ? dcQuiCible(t, c) : null;
+    const code = dcCode(c.nom).code || dcCode(c.nom).titre;
+    d.envoi = true; d.err = null; rendre();
+    let r = null;
+    try { r = await api('POST', '/task/ranger', { taskId: t.id, checklistId: c.id, reactiver: t.actif === false && !!d.reactiver, niveaux: q ? q.niveaux : [], controleurs: q ? q.controleurs : [] }); }
+    catch (e) { r = e.data || null; d.err = e.message + (e.status === 403 && !admin() ? ' Essayez avec un compte administrateur du panel (en haut).' : ''); }
+    const ops = (r && r.operations) || [];
+    const range = !!(ops[0] && ops[0].ok);
+    if (range) {
+      c.taches.push({ taskId: t.id, ordre: (r && r.ordre) || c.taches.length + 1, note: '' });
+      S.cadre.horsChecklist = (S.cadre.horsChecklist || []).filter(id => id !== t.id);
+      if (ops.some(o => /\/active$/.test(o.chemin || '') && o.ok)) { t.actif = true; }
+      if (r && r.qui) { Object.assign(S.qui = S.qui || {}, r.qui); }
+      S.dcSugg = null;
+      const fait = [ops.some(o => /\/active$/.test(o.chemin || '') && o.ok) ? 'réactivée' : '', q && q.niveaux.length ? q.niveaux.length + ' niveau' + (q.niveaux.length > 1 ? 'x' : '') : '', q && q.controleurs.length ? q.controleurs.length + ' contrôleur' + (q.controleurs.length > 1 ? 's' : '') : ''].filter(Boolean).join(', ');
+      S.dcRange = { ko: !!d.err, cid: c.id, t: `« ${t.nom} » rangée dans ${c.nom}${fait ? ' (' + fait + ')' : ''}.${d.err ? ' Attention : ' + d.err : ''}` };
+      if (S.dd === d) { S.dd = null; }
+      dcFlash([t.id], d.err ? '✓ rangée, en partie' : '✓ rangée ici', !!d.err);
+    } else if (S.dd !== d) { S.dcRange = { ko: true, cid: null, t: `« ${t.nom} » n’a pas été rangée : ${d.err || 'refus du panel'}` }; }
+    d.envoi = false;
+    rendre();
+  }
+
   /* --- les vignettes --- */
   const dcFleche = '<i class="dc-car" aria-hidden="true">▾</i>';
   function dcVignette(k, t, c) {
@@ -977,10 +1064,12 @@
     const liens = (((S.cadre || {}).sopLiens || {})[t.id] || []).map(y => `<a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(y.sopId)}" target="_blank" rel="noopener" title="${esc(y.titre)}">${esc(y.code || 'SOP')}${y.etape ? ' · ' + esc(y.etape) : ''}</a>`).join(' ');
     const ici = S.dd && S.dd.id === t.id && S.dd.c === cid;
     const flash = S.dcFlash && S.dcFlash.ids.includes(t.id) ? `<span class="dc-flash${S.dcFlash.ko ? ' ko' : ''}">${esc(S.dcFlash.t)}</span>` : '';
+    const dbl = !c ? dcSuggestions(t).dbl : null;
+    const doublon = dbl ? ` <span class="dc-dbl" title="${esc('Ressemble à « ' + dbl.t.nom + ' », déjà dans ' + dbl.c.nom)}">≈ déjà dans ${esc(dcCode(dbl.c.nom).code || dbl.c.nom)}</span>` : '';
     return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
       <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
-      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${liens ? ' ' + liens : ''}${flash}</span>
-      <span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
+      ${c ? '' : dcRanger(t)}<span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
   }
   function dcSection(c) {
     const { code, titre } = dcCode(c.nom);
@@ -1008,15 +1097,17 @@
     const q = S.dcQui;
     const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';
     const sections = groupes.map(([m, L]) => `<div class="dc-moment">${m}</div>${L.map(dcSection).join('')}`).join('');
+    const finHors = !hors.length && S.dcRange ? `<div class="dc-moment">À ranger</div><div class="dc-range${S.dcRange.ko ? ' ko' : ''}">${esc(S.dcRange.t)} Plus aucune tâche à ranger.</div>` : '';
     const horsHtml = hors.length ? `<div class="dc-moment">À ranger</div><section class="dc-s${S.cl === 'hors' ? ' vise' : ''}" id="dc-hors"><h2 class="dc-h2"><span>Dans aucune checklist</span></h2>
-      <div class="dc-meta"><span class="wa">${hors.length} tâche${hors.length > 1 ? 's' : ''} que les équipes ne voient dans aucune liste du jour</span></div>
+      <div class="dc-meta"><span class="wa">${hors.length} tâche${hors.length > 1 ? 's' : ''} que les équipes ne voient dans aucune liste du jour${hors.every(t => t.actif === false) ? ', toutes en pause' : ''} · « Ranger » les met dans une checklist</span></div>
+      ${S.dcRange ? `<div class="dc-range${S.dcRange.ko ? ' ko' : ''}">${esc(S.dcRange.t)}${S.dcRange.cid ? ` <button class="tk-lien" data-a="dcAller" data-id="${S.dcRange.cid}">voir la checklist</button>` : ''}</div>` : ''}
       ${hors.some(t => S.sel.has(t.id)) ? barreSelection() : ''}<div class="dc-ls">${hors.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
     return `<div class="dc">${sommaire}<div class="tk-card dc-doc">
       ${S.dup ? volet() : ''}
       <h1 class="dc-h1">Le cadre du réseau</h1>
       <div class="dc-sous">${ordre.length} checklists · ${taches().length} tâches · un clic sur une vignette pour la changer${esc(etat)}</div>
       ${q && q.err ? `<div class="tk-err">Qui fait / qui contrôle : lecture interrompue (${esc(q.err)}). <button class="tk-lien" data-a="dcQuiRelire">Réessayer</button></div>` : ''}
-      ${sections}${horsHtml}</div></div>`;
+      ${sections}${horsHtml}${finHors}</div></div>`;
   }
 
   /* --- les listes --- */
@@ -1033,9 +1124,10 @@
     const d = { k, id, c, portee: id == null ? 'checklist' : 'tache', val: '', filtre: '', envoi: false, err: null };
     if (k === 'heure') { const t = tache(id); d.val = (t && t.heure) || ((checklist(c) || {}).heure) || ''; }
     if (k === 'fait' || k === 'ctrl') { const s = dcEtatQui(d); d.init = s.e; d.etat = Object.assign({}, s.e); }
+    if (k === 'ranger') { const t = tache(id); const sg = t ? dcSuggestions(t).top : []; d.cible = sg[0] ? sg[0].c.id : null; d.reactiver = true; d.qui = true; }
     S.dd = d; rendre();
     if (k === 'heure') { const i = $.querySelector('[data-dd="heure"]'); if (i) { i.focus(); } }
-    if (k === 'fait') { const i = $.querySelector('[data-dd="filtre"]'); if (i) { i.focus(); } }
+    if (k === 'fait' || k === 'ranger') { const i = $.querySelector('[data-dd="filtre"]'); if (i) { i.focus(); } }
   }
   function dcPortee(v) {
     const d = S.dd; if (!d || d.portee === v) { return; }
@@ -1061,7 +1153,30 @@
     const tous = (f, v) => visees.length && visees.every(x => f(x) === v);
     const titre = d.id == null && c ? `<div class="dc-dd-s">Toutes les tâches de ${esc(dcCode(c.nom).code || c.nom)} (${visees.length})</div>` : '';
     let corps = '';
-    if (d.k === 'heure') {
+    if (d.k === 'ranger') {
+      const s = dcSuggestions(t); const f = sansAccent(d.filtre);
+      const opt = (c, why) => { const cc = dcCode(c.nom); const on = String(d.cible) === String(c.id);
+        return `<button class="dc-o dc-rg-o${on ? ' on' : ''}" role="option" aria-selected="${on}" data-a="ddCible" data-v="${c.id}"${occupe}><span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(cc.code || '—')}</span><span>${esc(cc.titre)}<small>${esc([c.heure || 'sans heure', posteAff(c.poste || ''), c.taches.length + ' tâche' + (c.taches.length > 1 ? 's' : '')].filter(Boolean).join(' · '))}</small></span>${why ? `<span class="dc-why">${esc(why)}</span>` : ''}</button>`; };
+      const sugg = f ? [] : s.top;
+      const autres = dcOrdre().filter(c => !sugg.some(x => x.c === c) && (!f || sansAccent(c.nom + ' ' + (c.poste || '')).includes(f)));
+      const max = f ? 12 : 3;
+      const cible = checklist(d.cible); const cc = cible ? dcCode(cible.nom) : null;
+      const q = cible ? dcQuiCible(t, cible) : null;
+      const coche = (k, lib, sous) => `<button class="dc-o coche ${d[k] ? 'on' : 'off'}" data-a="ddOpt" data-v="${k}"${occupe}><span class="dc-cc">${d[k] ? '✓' : ''}</span><span>${lib}<small>${esc(sous)}</small></span></button>`;
+      corps = `<div class="dc-dd-t">Ranger « ${esc(t.nom)} » dans…</div>
+        <input class="tk-in dc-dd-f" data-dd="filtre" value="${esc(d.filtre)}" placeholder="Chercher une checklist…" autocomplete="off">
+        ${s.dbl ? `<div class="dc-dd-warn">≈ Ressemble à « ${esc(s.dbl.t.nom)} », déjà dans ${esc(dcCode(s.dbl.c.nom).code || s.dbl.c.nom)} : vérifiez que ce n’est pas un doublon.</div>` : ''}
+        <div class="dc-dd-l" role="listbox">${sugg.length ? `<div class="dc-dd-g">Suggérées</div>${sugg.map(x => opt(x.c, x.why)).join('')}` : ''}
+          <div class="dc-dd-g">${f ? 'Checklists trouvées' : sugg.length ? 'Les autres checklists' : 'Les checklists'}</div>${autres.slice(0, max).map(c => opt(c)).join('') || '<div class="dc-dd-v">Aucune checklist ne correspond.</div>'}
+          ${autres.length > max ? `<div class="dc-dd-v">+ ${autres.length - max} autre${autres.length - max > 1 ? 's' : ''} : cherchez ci-dessus</div>` : ''}</div>
+        <div class="dc-dd-pied">
+          ${t.actif === false ? coche('reactiver', 'Réactiver la tâche', 'elle est en pause : sans ça, personne ne la voit') : ''}
+          ${q && (q.niveaux.length || q.controleurs.length) ? coche('qui', 'Qui fait et qui contrôle : comme ' + esc(cc.code || cc.titre), q.texte) : ''}
+          ${q && q.vide ? `<div class="dc-dd-v">${esc(cc.code || cc.titre)} n’a encore aucune tâche : après le rangement, choisissez qui fait la tâche avec sa vignette « Fait ».</div>` : ''}
+          ${q && q.lecture ? '<div class="dc-dd-v">Lecture de qui fait / qui contrôle cette checklist…</div>' : ''}
+          ${d.err ? `<div class="dc-dd-err">${esc(d.err)}</div>` : ''}
+          <button class="tk-btn prim" data-a="ddRanger"${cible && !d.envoi ? '' : ' disabled'}>${d.envoi ? 'Rangement…' : cible ? 'Ranger dans ' + esc(cc.code ? cc.code + ' · ' + cc.titre : cc.titre) : 'Choisissez une checklist'}</button></div>`;
+    } else if (d.k === 'heure') {
       const nb = {}; taches().forEach(x => { if (x.heure) { nb[x.heure] = (nb[x.heure] || 0) + 1; } });
       const top = Object.keys(nb).sort((a, b) => nb[b] - nb[a]).slice(0, 8).sort();
       corps = `<div class="dc-dd-t">À quelle heure ?</div>${titre}
@@ -1107,7 +1222,7 @@
         <div class="dc-dd-l" role="listbox" aria-multiselectable="true">${pret ? (liste || '<div class="dc-dd-v">Rien ne correspond.</div>') : '<div class="dc-dd-v">Lecture de qui fait / qui contrôle…</div>'}</div>
         ${dcPied(d, `<button class="tk-btn prim" data-a="ddQuiOk"${n && !d.envoi ? '' : ' disabled'}>${d.envoi ? 'Envoi…' : n ? `Appliquer (${n} changement${n > 1 ? 's' : ''})` : 'Appliquer'}</button>`)}`;
     }
-    return `<div class="dc-dd${d.k === 'fait' || d.k === 'ctrl' ? ' large' : ''}" role="dialog" aria-label="Choisir">${corps}</div>`;
+    return `<div class="dc-dd${d.k === 'fait' || d.k === 'ctrl' ? ' large' : d.k === 'ranger' ? ' rg' : ''}" role="dialog" aria-label="Choisir">${corps}</div>`;
   }
 
   /* --- les écritures --- */
@@ -1303,6 +1418,9 @@
         return dcChamps(d.k === 'photo' ? { photo: oui } : { obligatoire: oui }, d.k === 'photo' ? (oui ? 'Photo requise' : 'Sans photo') : (oui ? 'Obligatoire' : 'Facultative')); }
       case 'ddCoche': { const d = S.dd; if (!d || !d.etat) { return; } const v = el.dataset.v; d.etat[v] = (d.etat[v] || 'off') === 'on' ? 'off' : 'on'; d.err = null; return rendre(); }
       case 'ddQuiOk': return dcQuiAppliquer();
+      case 'ddCible': if (S.dd) { S.dd.cible = +el.dataset.v; S.dd.err = null; } return rendre();
+      case 'ddOpt': if (S.dd) { S.dd[el.dataset.v] = !S.dd[el.dataset.v]; } return rendre();
+      case 'ddRanger': return dcRangerEnvoyer();
       case 'ddPlusieurs': { const d = S.dd; if (!d || d.id == null) { return; } S.sel = new Set([d.id]); if (d.c) { S.cl = String(d.c); } S.dd = null; ouvrirDup(); rendre(); voirHaut(); return; }
       case 'dcAller': S.cl = id; S.dd = null; adresse(id); rendre(); return dcAller(id);
       case 'dcAjouter': S.cl = id; S.dd = null; adresse(id); return wzOuvrir('existante');

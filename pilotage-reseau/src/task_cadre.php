@@ -60,6 +60,7 @@ function tkRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/task/qui') { return tkQui(body()); }
     if ($method === 'POST' && $path === '/task/qui/modifier') { return tkQuiModifier(body()); }
     if ($method === 'POST' && $path === '/task/qui/lot') { return tkQuiLot(body()); }
+    if ($method === 'POST' && $path === '/task/ranger') { return tkRanger(body()); }
     if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkChecklistModifier((int) $m[1], body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
@@ -1493,6 +1494,65 @@ function tkModifier(int $id, array $b, ?array $brutes = null): array
         . ($ok ? '' : ' — refusé en partie'));
     if (!$ok) { http_response_code(502); }
     return ['id' => $id, 'ok' => $ok, 'operations' => $ops];
+}
+
+/**
+ * POST /task/ranger {taskId, checklistId, reactiver?, niveaux?: [{id, route}], controleurs?: [{type, positionId}]} —
+ * ranger une tâche dans une checklist (vue Document, « Ranger → AC-01 »), en une fois : la checklist d'abord
+ * (POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}, après sa dernière tâche), puis, si
+ * demandé, la réactiver (PATCH /tasks/{id}/active) et lui donner les niveaux et les contrôleurs choisis (ceux de la
+ * checklist, que l'écran a calculés). Sans checklist, rien d'autre ne part ; après, on continue malgré un refus.
+ */
+function tkRanger(array $b): array
+{
+    $tid = (int) ($b['taskId'] ?? 0);
+    $cid = (int) ($b['checklistId'] ?? 0);
+    if ($tid <= 0 || $cid <= 0) { http_response_code(422); return ['error' => 'une tâche et une checklist sont attendues']; }
+    [$lus, $e] = tkLireListe('/operational-framework/checklists/' . $cid . '/tasks');
+    if ($lus === null) { http_response_code(502); return ['error' => 'lecture de la checklist #' . $cid . ' impossible : ' . $e]; }
+    $ordre = 0;
+    foreach ($lus as $i => $x) {
+        if ((int) ($x['task_id'] ?? $x['id'] ?? 0) === $tid) { http_response_code(409); return ['error' => 'la tâche #' . $tid . ' est déjà dans cette checklist']; }
+        $ordre = max($ordre, (int) ($x['sort_order'] ?? $i + 1));
+    }
+    $ops = [['quoi' => 'Ajouter à la checklist #' . $cid, 'methode' => 'POST', 'chemin' => '/operational-framework/checklists/' . $cid . '/tasks', 'corps' => ['task_id' => $tid, 'sort_order' => $ordre + 1]]];
+    $r = tkReq('POST', $ops[0]['chemin'], $ops[0]['corps']);
+    $ops[0] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    if (!$ops[0]['ok']) {
+        journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ' : ajout à la checklist #' . $cid . ' refusé par le panel');
+        http_response_code(502);
+        return ['ok' => false, 'operations' => $ops, 'error' => 'le panel refuse l’ajout à la checklist : ' . $r['erreur']];
+    }
+    if (!empty($b['reactiver'])) {
+        $m = tkModifier($tid, ['actif' => true]);
+        foreach ((array) ($m['operations'] ?? []) as $op) { $ops[] = $op; }
+        if (!empty($m['error']) && empty($m['operations'])) { $ops[] = ['quoi' => 'Activer', 'methode' => 'PATCH', 'chemin' => '/tasks/' . $tid . '/active', 'corps' => null, 'ok' => false, 'code' => 0, 'erreur' => $m['error']]; }
+    }
+    foreach (array_slice((array) ($b['niveaux'] ?? []), 0, 40) as $n) {
+        $lid = (int) (is_array($n) ? ($n['id'] ?? 0) : $n);
+        if ($lid <= 0) { continue; }
+        $route = is_array($n) && ($n['route'] ?? '') === 'levels' ? 'levels' : 'position-levels';
+        $ops[] = ['quoi' => 'Rattacher au niveau #' . $lid, 'methode' => 'POST', 'chemin' => '/' . $route . '/' . $lid . '/tasks', 'corps' => ['task_id' => $tid]];
+    }
+    foreach (array_slice((array) ($b['controleurs'] ?? []), 0, 20) as $c) {
+        if (!is_array($c)) { continue; }
+        $type = ($c['type'] ?? '') === 'self' ? 'self' : 'position';
+        $corps = ['controller_type' => $type];
+        if ($type === 'position') { $pid = (int) ($c['positionId'] ?? 0); if ($pid <= 0) { continue; } $corps['position_id'] = $pid; }
+        $ops[] = ['quoi' => 'Ajouter un contrôleur', 'methode' => 'POST', 'chemin' => '/tasks/' . $tid . '/controllers', 'corps' => $corps];
+    }
+    foreach ($ops as $k => $op) {
+        if (array_key_exists('ok', $op)) { continue; }
+        $r = tkReq($op['methode'], $op['chemin'], $op['corps']);
+        $ops[$k] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    }
+    $refus = array_values(array_filter($ops, fn ($o) => !$o['ok']));
+    journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ' rangée dans la checklist #' . $cid
+        . (!empty($b['reactiver']) ? ', réactivée' : '') . (count($ops) > 1 ? ' (' . count($ops) . ' appels)' : '') . ($refus ? ' — ' . count($refus) . ' refusé(s) par le panel' : ''));
+    $q = tkQui(['ids' => [$tid]]);
+    if ($refus) { http_response_code(502); }
+    return ['ok' => !$refus, 'ordre' => $ordre + 1, 'operations' => $ops, 'qui' => $q['qui'],
+        'error' => $refus ? 'rangée, mais ' . count($refus) . ' appel' . (count($refus) > 1 ? 's' : '') . ' refusé' . (count($refus) > 1 ? 's' : '') . ' : ' . $refus[0]['quoi'] . ' — ' . $refus[0]['erreur'] : null];
 }
 
 /**
