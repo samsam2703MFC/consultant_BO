@@ -1610,6 +1610,17 @@ function tkSupprimer(string $genre, int $id): array
     ensureCadreCree();
     $r = Db::row('SELECT * FROM ceo_cadre_cree WHERE genre = ? AND panel_id = ? AND supprime_le IS NULL', [$genre, $id]);
     $quoi = $genre === 'checklist' ? 'checklist' : 'tâche';
+    // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant ») : supprimée seulement si
+    // ?confirmer= porte son NOM EXACT tel que le panel le donne — la suppression est voulue, pas un clic de travers.
+    $confirmer = trim((string) ($_GET['confirmer'] ?? ''));
+    if ($r === null && $confirmer !== '') {
+        $L = PanelApi::liste((array) (tkReq('GET', $genre === 'checklist' ? '/operational-framework/checklists' : '/tasks')['corps'] ?? []));
+        $nom = null;
+        foreach ($L as $x) { if ((int) ($x['id'] ?? 0) === $id) { $nom = trim((string) ($x['name'] ?? $x['base_name'] ?? '')); } }
+        if ($nom === null) { http_response_code(404); return ['error' => ucfirst($quoi) . ' #' . $id . ' introuvable au panel']; }
+        if ($nom !== $confirmer) { http_response_code(409); return ['error' => 'le nom ne correspond pas : le panel dit « ' . $nom . ' »']; }
+        $r = ['nom' => $nom, 'horsCockpit' => true];
+    }
     if ($r === null) {
         http_response_code(403);
         return ['error' => 'seule une ' . $quoi . ' créée depuis cet écran se supprime ici ; les autres se suppriment dans le panel'];
@@ -1621,7 +1632,7 @@ function tkSupprimer(string $genre, int $id): array
         return ['error' => $rep['erreur'], 'reponse' => $rep['corps']];
     }
     Db::exec('UPDATE ceo_cadre_cree SET supprime_le = ? WHERE genre = ? AND panel_id = ?', [date('Y-m-d H:i:s'), $genre, $id]);
-    journalAdd('CEO', 'Cadre des tâches', null, ucfirst($quoi) . ' « ' . $r['nom'] . ' » (#' . $id . ') supprimée du panel');
+    journalAdd('CEO', 'Cadre des tâches', null, ucfirst($quoi) . ' « ' . $r['nom'] . ' » (#' . $id . ') supprimée du panel' . (!empty($r['horsCockpit']) ? ' (créée dans le panel, suppression confirmée par son nom)' : ''));
     return ['ok' => true, 'id' => $id, 'reponse' => $rep['corps']];
 }
 
