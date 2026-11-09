@@ -63,6 +63,7 @@ function tkRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/task/qui/modifier') { return tkQuiModifier(body()); }
     if ($method === 'POST' && $path === '/task/qui/lot') { return tkQuiLot(body()); }
     if ($method === 'POST' && $path === '/task/ranger') { return tkRanger(body()); }
+    if ($method === 'POST' && $path === '/task/scinder') { return tkScinder(body()); }
     if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkChecklistModifier((int) $m[1], body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
@@ -1676,4 +1677,87 @@ function tkRenouveler(array $b): array
     if ($j['jeton'] === null) { http_response_code(401); return ['error' => 'session du panel expirée — reconnectez-vous']; }
     if ($j['renouvellement'] === '') { $j['renouvellement'] = $rt; }
     return ['ok' => true] + $j;
+}
+
+
+/**
+ * POST /task/scinder (09/11/2026, « 1.1.02 a trop de tâches ») : déplacer des tâches d'une checklist vers une autre —
+ * nouvelle (créée sur le modèle de la source : poste, description) ou existante.
+ *   { source, taches: [ids], vers?: id | creer?: {nom, heure}, retirer?: bool, essai?: bool }
+ * 1) la cible (créée si besoin) ; 2) chaque tâche y est ajoutée (déjà là : sautée) ; 3) si `retirer`, chaque tâche est
+ * retirée de la source. Le retrait n'a jamais servi : il est essayé sur UNE tâche, puis la source est relue — si autre
+ * chose qu'elle a bougé, ou si elle est encore là, tout s'arrête et la réponse le dit. `essai` : seulement la première tâche.
+ */
+function tkScinder(array $b): array
+{
+    $src = (int) ($b['source'] ?? 0);
+    $ids = array_values(array_unique(array_filter(array_map('intval', (array) ($b['taches'] ?? [])))));
+    if ($src <= 0 || !$ids) { http_response_code(422); return ['error' => 'source et taches[] sont requis']; }
+    $lire = function (int $cid): ?array {
+        [$L] = tkLireListe('/operational-framework/checklists/' . $cid . '/tasks');
+        if ($L === null) { return null; }
+        $o = []; foreach ($L as $x) { $t = (int) ($x['task_id'] ?? $x['id'] ?? 0); if ($t > 0) { $o[$t] = $x; } }
+        return $o;
+    };
+    $avant = $lire($src);
+    if ($avant === null) { http_response_code(502); return ['error' => 'lecture de la checklist source #' . $src . ' impossible']; }
+    $hors = array_values(array_diff($ids, array_keys($avant)));
+    if ($hors) { http_response_code(422); return ['error' => 'ces tâches ne sont pas dans la checklist #' . $src . ' : ' . implode(', ', $hors)]; }
+    $ops = [];
+    // 1) La cible
+    $vers = (int) ($b['vers'] ?? 0);
+    if ($vers <= 0) {
+        $cr = (array) ($b['creer'] ?? []); $nom = trim((string) ($cr['nom'] ?? '')); $heure = trim((string) ($cr['heure'] ?? ''));
+        if ($nom === '' || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $heure)) { http_response_code(422); return ['error' => 'creer {nom, heure HH:MM} est requis sans « vers »']; }
+        [$cls] = tkLireListe('/operational-framework/checklists');
+        $modele = null;
+        foreach ((array) $cls as $x) {
+            if ((int) ($x['id'] ?? 0) === $src) { $modele = $x; }
+            if (mb_strtolower(tkTxt($x['name'] ?? '')) === mb_strtolower($nom)) { $vers = (int) $x['id']; }
+        }
+        if ($vers <= 0) {
+            $corps = ['name' => $nom, 'description' => tkTxt($modele['description'] ?? ''), 'workstation_id' => $modele['workstation_id'] ?? null,
+                'execution_time' => tkHeure($heure, $modele['execution_time'] ?? null)];
+            if (is_array($modele) && array_key_exists('is_active', $modele)) { $corps['is_active'] = tkMemeType($modele['is_active'], true); }
+            $r = tkReq('POST', '/operational-framework/checklists', $corps);
+            $vers = tkIdRendu($r['corps']);
+            // Pas d'identifiant dans la réponse : on relit les checklists et on la retrouve par son nom.
+            if ($vers <= 0 && $r['erreur'] === null) { [$cls2] = tkLireListe('/operational-framework/checklists'); foreach ((array) $cls2 as $x) { if (mb_strtolower(tkTxt($x['name'] ?? '')) === mb_strtolower($nom)) { $vers = (int) $x['id']; } } }
+            $ops[] = ['quoi' => 'Créer la checklist « ' . $nom . ' »', 'ok' => $r['erreur'] === null && $vers > 0, 'code' => $r['code'], 'erreur' => $r['erreur'], 'id' => $vers ?: null];
+            if ($vers <= 0) { http_response_code(502); return ['error' => 'création refusée : ' . ($r['erreur'] ?? 'identifiant non rendu'), 'operations' => $ops]; }
+            journalAdd('CEO', 'Cadre des tâches', null, 'Checklist « ' . $nom . ' » (#' . $vers . ') créée au panel, sur le modèle de #' . $src);
+        } else { $ops[] = ['quoi' => 'La checklist « ' . $nom . ' » existe déjà (#' . $vers . ')', 'ok' => true]; }
+    }
+    // 2) Les tâches dans la cible
+    $dans = $lire($vers) ?? [];
+    $ordre = 0; foreach ($dans as $x) { $ordre = max($ordre, (int) ($x['sort_order'] ?? 0)); }
+    $faire = !empty($b['essai']) ? array_slice($ids, 0, 1) : $ids;
+    foreach ($faire as $t) {
+        if (isset($dans[$t])) { $ops[] = ['quoi' => 'Tâche #' . $t . ' déjà dans #' . $vers, 'ok' => true]; continue; }
+        $r = tkReq('POST', '/operational-framework/checklists/' . $vers . '/tasks', ['task_id' => $t, 'sort_order' => ++$ordre]);
+        $ops[] = ['quoi' => 'Ajouter la tâche #' . $t . ' à #' . $vers, 'ok' => $r['erreur'] === null, 'code' => $r['code'], 'erreur' => $r['erreur']];
+        if ($r['erreur'] !== null) { http_response_code(502); return ['error' => 'ajout refusé pour #' . $t, 'vers' => $vers, 'operations' => $ops]; }
+    }
+    // 3) Le retrait de la source, vérifié tâche par tâche
+    if (!empty($b['retirer'])) {
+        $reste = $avant;
+        foreach ($faire as $t) {
+            $lien = (int) ($reste[$t]['id'] ?? 0);
+            $essais = ['/operational-framework/checklists/' . $src . '/tasks/' . $t];
+            if ($lien > 0 && $lien !== $t && !isset($reste[$lien])) { $essais[] = '/operational-framework/checklists/' . $src . '/tasks/' . $lien; }
+            $fait = false;
+            foreach ($essais as $chemin) {
+                $r = tkReq('DELETE', $chemin);
+                $apres = $lire($src);
+                if ($apres === null) { http_response_code(502); return ['error' => 'relecture de la source impossible après ' . $chemin, 'operations' => $ops]; }
+                $partis = array_values(array_diff(array_keys($reste), array_keys($apres)));
+                $ops[] = ['quoi' => 'Retirer #' . $t . ' de #' . $src, 'chemin' => 'DELETE ' . $chemin, 'code' => $r['code'], 'erreur' => $r['erreur'], 'partis' => $partis, 'ok' => $partis === [$t]];
+                if ($partis === [$t]) { $reste = $apres; $fait = true; break; }
+                if ($partis !== []) { http_response_code(502); return ['error' => 'arrêt : le retrait a enlevé d\'autres tâches que #' . $t . ' (' . implode(', ', $partis) . ')', 'vers' => $vers, 'operations' => $ops]; }
+            }
+            if (!$fait) { http_response_code(502); return ['error' => 'le panel n\'a pas retiré #' . $t . ' de #' . $src . ' (aucune route essayée n\'a marché)', 'vers' => $vers, 'operations' => $ops]; }
+        }
+        journalAdd('CEO', 'Cadre des tâches', null, count($faire) . ' tâche(s) déplacée(s) de la checklist #' . $src . ' vers #' . $vers);
+    }
+    return ['ok' => true, 'vers' => $vers, 'faites' => $faire, 'operations' => $ops];
 }
