@@ -1,0 +1,231 @@
+{% extends "layouts/mobile_base.twig" %}
+{# Pointer (01/11/2026, maquette docs/maquettes/pointage-app, écrans B et C) : la caméra plein écran vise le QR code de la
+   borne du magasin ; ce qui est lu part à /pointage, le cockpit décide de l'arrivée ou du départ. « La caméra ne marche
+   pas ? » : le code à six chiffres affiché sous le QR. Avec « ?c= » (le QR lu par l'appareil photo du téléphone), le
+   pointage part sans caméra. #}
+{% set T = translations %}
+{% set active_nav = 'dashboard' %}
+{% set E = etat %}
+{% set depart = E and E.ouvert %}
+{% block title %}{{ depart ? (T.pt_departure ?? 'Pointer le départ') : (T.pt_arrival ?? 'Pointer l’arrivée') }}{% endblock %}
+{% block page_title %}{{ T.pt_title ?? 'Pointer' }}{% endblock %}
+{% block head %}
+<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">
+<style>
+  /* La caméra prend tout l'écran : ni barre du haut ni barre du bas (elles passeraient devant). */
+  .emp-bottom-nav,.emp-topbar{display:none!important}
+  .pt-cam{position:fixed;inset:0;z-index:1000;background:#121110;color:#fff;overflow:hidden}
+  .pt-cam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .pt-tete{position:absolute;top:0;left:0;right:0;z-index:3;display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top)) 18px 14px;background:linear-gradient(rgba(0,0,0,.45),transparent)}
+  .pt-tete a{color:#fff;text-decoration:none;font:400 16px var(--s-police)}
+  .pt-tete b{font:600 17px var(--s-police)}
+  .pt-tete button{width:38px;height:38px;border-radius:50%;border:0;background:rgba(255,255,255,.16);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center}
+  .pt-tete button.on{background:#fff;color:#111}
+  .pt-cadre{position:absolute;z-index:2;left:50%;top:44%;width:min(66vw,280px);height:min(66vw,280px);transform:translate(-50%,-50%);border-radius:20px;box-shadow:0 0 0 9999px rgba(0,0,0,.45)}
+  .pt-cadre em{position:absolute;width:44px;height:44px;border:4px solid #fff}
+  .pt-cadre em:nth-child(1){left:-2px;top:-2px;border-right:0;border-bottom:0;border-radius:18px 0 0 0}
+  .pt-cadre em:nth-child(2){right:-2px;top:-2px;border-left:0;border-bottom:0;border-radius:0 18px 0 0}
+  .pt-cadre em:nth-child(3){left:-2px;bottom:-2px;border-right:0;border-top:0;border-radius:0 0 0 18px}
+  .pt-cadre em:nth-child(4){right:-2px;bottom:-2px;border-left:0;border-top:0;border-radius:0 0 18px 0}
+  .pt-cadre i{position:absolute;left:18px;right:18px;top:50%;height:2px;background:#ff5b6b;box-shadow:0 0 12px 2px rgba(255,91,107,.7);animation:ptScan 2.2s ease-in-out infinite}
+  @keyframes ptScan{0%,100%{transform:translateY(-90px)}50%{transform:translateY(90px)}}
+  .pt-bas{position:absolute;z-index:3;left:0;right:0;bottom:0;padding:0 28px calc(40px + env(safe-area-inset-bottom));text-align:center;background:linear-gradient(transparent,rgba(0,0,0,.55) 30%)}
+  .pt-bas b{display:block;padding-top:40px;font:600 19px var(--s-police)}
+  .pt-bas span{display:block;margin-top:8px;font:400 14px/1.45 var(--s-police);color:rgba(255,255,255,.78)}
+  .pt-bas button{margin-top:20px;font:500 14px var(--s-police);color:#fff;background:rgba(255,255,255,.18);border:0;padding:10px 16px;border-radius:999px}
+  .pt-toast{position:absolute;z-index:4;left:20px;right:20px;top:calc(76px + env(safe-area-inset-top));padding:12px 14px;border-radius:12px;background:rgba(255,255,255,.95);color:#1C1C1E;font:500 14px/1.35 var(--s-police);text-align:center;opacity:0;transform:translateY(-8px);transition:all .2s}
+  .pt-toast.on{opacity:1;transform:none}
+  .pt-voile{position:fixed;inset:0;z-index:1001;background:rgba(0,0,0,.35);display:none}
+  .pt-feuille{position:fixed;left:0;right:0;bottom:0;z-index:1002;background:var(--s-fond);color:var(--s-texte);border-radius:18px 18px 0 0;padding:8px 18px calc(28px + env(safe-area-inset-bottom));text-align:center;box-shadow:0 -6px 24px rgba(0,0,0,.18);transform:translateY(105%);visibility:hidden;transition:transform .25s,visibility .25s}
+  .pt-feuille.on{transform:none;visibility:visible}
+  .pt-poignee{width:38px;height:5px;border-radius:3px;background:var(--s-tertiaire);margin:0 auto 20px}
+  .pt-ic{width:76px;height:76px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;background:var(--s-vert);box-shadow:0 0 0 10px var(--s-vert-doux)}
+  .pt-ic.att{background:#B25E09;box-shadow:0 0 0 10px rgba(178,94,9,.12)}
+  .pt-feuille h2{margin:0;font:600 21px var(--s-police)}
+  .pt-heure{margin:4px 0 2px;font:600 46px/1.1 var(--s-police);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .pt-etat{font:500 15px var(--s-police);color:var(--s-vert)}
+  .pt-etat.att{color:#B25E09}
+  .pt-lignes{background:var(--s-carte);border-radius:14px;margin:18px 0 16px;text-align:left}
+  .pt-lignes div{display:flex;justify-content:space-between;gap:10px;padding:12px 16px;font:400 15px var(--s-police)}
+  .pt-lignes div+div{border-top:.5px solid var(--s-trait)}
+  .pt-lignes span{color:var(--s-second)}
+  .pt-ok{display:block;width:100%;padding:15px 0;border-radius:14px;border:0;background:var(--s-accent);color:#fff;font:600 17px var(--s-police);text-decoration:none;text-align:center}
+  .pt-code input{display:block;width:100%;margin:6px 0 4px;padding:14px;border:0;border-radius:14px;background:var(--s-carte);font:600 30px var(--s-police);letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums;color:var(--s-texte);outline:none}
+  .pt-code p{margin:0 0 14px;font:400 13.5px/1.4 var(--s-police);color:var(--s-second)}
+  .pt-code .err{color:#B3261E;min-height:18px;margin:4px 0 10px}
+  .pt-lien{display:block;margin-top:12px;font:400 15px var(--s-police);color:var(--s-accent);background:none;border:0;width:100%}
+</style>
+{% endblock %}
+{% block content %}
+<div class="pt-cam" id="pt-cam" data-sens="{{ depart ? 'depart' : 'arrivee' }}">
+  <video id="pt-video" playsinline muted autoplay></video>
+  <div class="pt-tete"><a href="{{ ROOT }}/dashboard">{{ T.pt_cancel ?? 'Annuler' }}</a><b>{{ depart ? (T.pt_departure ?? 'Pointer le départ') : (T.pt_arrival ?? 'Pointer l’arrivée') }}</b><button type="button" id="pt-lampe" hidden aria-label="{{ T.pt_torch ?? 'Lampe' }}"><i class="bi bi-lightning-charge"></i></button></div>
+  <div class="pt-cadre"><em></em><em></em><em></em><em></em><i></i></div>
+  <div class="pt-toast" id="pt-toast" role="status"></div>
+  <div class="pt-bas"><b>{{ T.pt_aim ?? 'Vise le QR code de la borne du magasin' }}</b><span>{{ T.pt_aim_hint ?? 'Le code change toutes les 30 secondes : une photo ne sert à rien.' }}</span>
+    <button type="button" id="pt-taper"><i class="bi bi-keyboard"></i> {{ T.pt_type_code ?? 'La caméra ne marche pas ? Taper le code' }}</button></div>
+</div>
+<div class="pt-voile" id="pt-voile"></div>
+
+{# Le code à six chiffres #}
+<div class="pt-feuille pt-code" id="pt-code" role="dialog" aria-modal="true">
+  <div class="pt-poignee"></div>
+  <h2>{{ T.pt_code_title ?? 'Taper le code' }}</h2>
+  <p id="pt-code-aide">{{ T.pt_code_label ?? 'Les six chiffres sous le QR code de la borne.' }}</p>
+  <input id="pt-code-in" inputmode="numeric" pattern="[0-9]*" maxlength="7" autocomplete="one-time-code" placeholder="••• •••">
+  <p class="err" id="pt-code-err"></p>
+  <button type="button" class="pt-ok" id="pt-code-ok">{{ T.pt_send ?? 'Valider' }}</button>
+  <button type="button" class="pt-lien" id="pt-code-ferme">{{ T.pt_back_camera ?? 'Revenir à la caméra' }}</button>
+</div>
+
+{# Le résultat #}
+<div class="pt-feuille" id="pt-res" role="dialog" aria-modal="true">
+  <div class="pt-poignee"></div>
+  <div class="pt-ic" id="pt-res-ic"><svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path id="pt-res-trait" d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+  <h2 id="pt-res-titre"></h2>
+  <div class="pt-heure" id="pt-res-heure"></div>
+  <div class="pt-etat" id="pt-res-etat"></div>
+  <div class="pt-lignes" id="pt-res-lignes"></div>
+  <a class="pt-ok" id="pt-res-ok" href="{{ ROOT }}/dashboard"></a>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  'use strict';
+  var ROOT = {{ ROOT|json_encode|raw }};
+  var JSQR = {{ asset('assets/vendor/jsqr/jsQR.js')|json_encode|raw }};
+  var LU = {{ lu|json_encode|raw }};
+  var T = {{ {
+    arrived: T.pt_arrived ?? 'Arrivée pointée', left: T.pt_left ?? 'Départ pointé', already: T.pt_already ?? 'Déjà pointé',
+    onTime: T.pt_on_time ?? 'à l’heure', late: T.pt_late ?? '{n} min de retard', unplanned: T.pt_unplanned ?? 'hors planning',
+    starts: T.pt_shift_starts ?? 'ton service commence à {h}', shop: T.pt_shop ?? 'Magasin', planned: T.pt_planned ?? 'Service prévu',
+    departure: T.pt_departure_row ?? 'Départ', onLeaving: T.pt_to_clock_on_leaving ?? 'à pointer en partant', worked: T.pt_worked ?? 'Temps pointé',
+    arrival: T.pt_arrival_row ?? 'Arrivée', go: T.pt_go ?? 'C’est parti', bye: T.pt_bye ?? 'Bonne fin de journée', close: T.pt_close ?? 'Fermer',
+    expired: T.pt_expired ?? 'Ce code a expiré : vise celui affiché maintenant.', wrong: T.pt_wrong ?? 'Ce n’est pas le QR code de pointage du magasin.',
+    tooEarly: T.pt_too_early ?? 'Trop tôt : tu peux pointer à partir de {h}.', tooEarlyT: T.pt_too_early_title ?? 'Pas encore',
+    error: T.pt_error ?? 'Le pointage n’a pas pu être enregistré. Réessaie.', camOff: T.pt_camera_off ?? 'La caméra ne s’ouvre pas : autorise-la dans les réglages, ou tape le code.',
+    codeLen: T.pt_code_len ?? 'Le code a six chiffres.', sending: T.pt_sending ?? 'Envoi…', send: T.pt_send ?? 'Valider'
+  }|json_encode|raw }};
+  var $ = function (id) { return document.getElementById(id); };
+  var video = $('pt-video'), flux = null, piste = null, minuterie = null, occupe = false, fini = false, lire = null, parLien = !!LU;
+
+  function dur(m) { m = Math.max(0, m | 0); return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + ('0' + (m % 60)).slice(-2); }
+  function toast(t) { var e = $('pt-toast'); e.textContent = t; e.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(function () { e.classList.remove('on'); }, 3200); }
+  function feuille(id, on) { $('pt-voile').style.display = on ? 'block' : 'none'; $(id).classList.toggle('on', on); }
+  function arreter() { fini = true; clearTimeout(minuterie); if (flux) { flux.getTracks().forEach(function (t) { t.stop(); }); flux = null; } }
+
+  function resultat(d, erreur) {
+    arreter(); feuille('pt-code', false);
+    var ic = $('pt-res-ic'), etat = $('pt-res-etat'), lignes = [], ok = $('pt-res-ok');
+    ic.classList.toggle('att', !!erreur); etat.classList.remove('att');
+    $('pt-res-trait').setAttribute('d', erreur ? 'M12 7v6M12 17h.01' : 'M5 12.5l4.5 4.5L19 7.5');
+    if (erreur) {
+      $('pt-res-titre').textContent = T.tooEarlyT; $('pt-res-heure').textContent = d.a_partir_de || '';
+      etat.textContent = T.tooEarly.replace('{h}', d.a_partir_de || ''); etat.classList.add('att');
+      $('pt-res-lignes').innerHTML = ''; $('pt-res-lignes').style.display = 'none'; ok.textContent = T.close;
+      feuille('pt-res', true); return;
+    }
+    var p = d.pointage || {}, depart = d.sens === 'depart' || (d.sens === 'deja' && p.sortie);
+    $('pt-res-titre').textContent = d.sens === 'deja' ? T.already : (depart ? T.left : T.arrived);
+    $('pt-res-heure').textContent = depart ? (p.sortie || '') : (p.entree || '');
+    if (depart) { etat.textContent = T.worked + ' : ' + dur(p.duree_min); }
+    else if (p.arrivee === 'hors_planning') { etat.textContent = T.unplanned; etat.classList.add('att'); }
+    else if (p.arrivee === 'retard') { etat.textContent = T.late.replace('{n}', p.retard_min); etat.classList.add('att'); }
+    else { etat.textContent = T.onTime + (p.prevu ? ' · ' + T.starts.replace('{h}', p.prevu.debut) : ''); }
+    if (p.shop_name) { lignes.push([T.shop, p.shop_name]); }
+    lignes.push([T.planned, p.prevu ? p.prevu.debut + ' – ' + p.prevu.fin : '—']);
+    lignes.push(depart ? [T.arrival, p.entree] : [T.departure, T.onLeaving]);
+    $('pt-res-lignes').style.display = '';
+    $('pt-res-lignes').innerHTML = lignes.map(function (l) { var s = document.createElement('span'); s.textContent = l[0]; var v = document.createElement('b'); v.style.fontWeight = '400'; v.textContent = l[1]; return '<div>' + s.outerHTML + v.outerHTML + '</div>'; }).join('');
+    ok.textContent = d.sens === 'deja' ? T.close : (depart ? T.bye : T.go);
+    feuille('pt-res', true);
+  }
+
+  function envoyer(texte, depuisCode) {
+    if (occupe) { return; }
+    occupe = true;
+    if (depuisCode) { $('pt-code-ok').disabled = true; $('pt-code-ok').textContent = T.sending; }
+    fetch(ROOT + '/pointage', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' }, body: JSON.stringify({ lu: texte }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { code: r.status, d: d }; }); })
+      .then(function (x) {
+        if (depuisCode) { $('pt-code-ok').disabled = false; $('pt-code-ok').textContent = T.send; }
+        if (x.code === 200 && x.d.sens) { resultat(x.d); return; }
+        if (x.code === 422 && x.d.motif === 'trop_tot') { resultat(x.d, true); return; }
+        var msg = x.code === 422 ? (x.d.motif === 'expire' ? T.expired : T.wrong) : T.error;
+        if (depuisCode) { $('pt-code-err').textContent = msg; } else { toast(msg); }
+        // Un QR lu par l'appareil photo et déjà expiré : la caméra de l'app prend le relais.
+        if (parLien) { parLien = false; camera(); }
+        setTimeout(function () { occupe = false; }, 1500);
+      })
+      .catch(function () {
+        if (depuisCode) { $('pt-code-ok').disabled = false; $('pt-code-ok').textContent = T.send; $('pt-code-err').textContent = T.error; } else { toast(T.error); }
+        if (parLien) { parLien = false; camera(); }
+        setTimeout(function () { occupe = false; }, 1500);
+      });
+  }
+
+  // Le lecteur : BarcodeDetector (Android, Chrome), sinon jsQR (iPhone, Safari) — comme la tablette chauffeur de l'ERP.
+  function lecteur() {
+    if ('BarcodeDetector' in window) {
+      return window.BarcodeDetector.getSupportedFormats().then(function (f) {
+        if (f.indexOf('qr_code') < 0) { throw new Error('pas de QR'); }
+        var det = new window.BarcodeDetector({ formats: ['qr_code'] });
+        return function () { return det.detect(video).then(function (r) { return r.length ? r[0].rawValue : null; }); };
+      }).catch(function () { return lecteurJsQr(); });
+    }
+    return lecteurJsQr();
+  }
+  function lecteurJsQr() {
+    return new Promise(function (ok, ko) {
+      if (window.jsQR) { ok(); return; }
+      var sc = document.createElement('script'); sc.src = JSQR; sc.onload = ok; sc.onerror = ko; document.head.appendChild(sc);
+    }).then(function () {
+      var c = document.createElement('canvas'), ctx = c.getContext('2d', { willReadFrequently: true });
+      return function () {
+        if (!video.videoWidth) { return Promise.resolve(null); }
+        var k = Math.min(1, 800 / video.videoWidth);
+        c.width = Math.round(video.videoWidth * k); c.height = Math.round(video.videoHeight * k);
+        ctx.drawImage(video, 0, 0, c.width, c.height);
+        var img = ctx.getImageData(0, 0, c.width, c.height), r = window.jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        return Promise.resolve(r ? r.data : null);
+      };
+    });
+  }
+  function boucle() {
+    if (fini) { return; }
+    (occupe || !lire ? Promise.resolve(null) : lire().catch(function () { return null; })).then(function (texte) {
+      if (texte && !occupe) { envoyer(texte, false); }
+      minuterie = setTimeout(boucle, 300);
+    });
+  }
+  function camera() {
+    if (!(window.isSecureContext && navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) { ouvrirCode(T.camOff); return; }
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }).then(function (s) {
+      if (fini) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+      flux = s; video.srcObject = s; piste = s.getVideoTracks()[0];
+      try { var cap = piste.getCapabilities ? piste.getCapabilities() : {}; if (cap.torch) { $('pt-lampe').hidden = false; } } catch (e) {}
+      return lecteur().then(function (f) { lire = f; boucle(); });
+    }).catch(function () { ouvrirCode(T.camOff); });
+  }
+  function ouvrirCode(aide) { if (aide) { $('pt-code-aide').textContent = aide; } $('pt-code-err').textContent = ''; feuille('pt-code', true); setTimeout(function () { $('pt-code-in').focus(); }, 250); }
+
+  $('pt-taper').addEventListener('click', function () { ouvrirCode(); });
+  $('pt-code-ferme').addEventListener('click', function () { feuille('pt-code', false); });
+  $('pt-code-in').addEventListener('input', function () { var v = this.value.replace(/\D/g, '').slice(0, 6); this.value = v.length > 3 ? v.slice(0, 3) + ' ' + v.slice(3) : v; $('pt-code-err').textContent = ''; });
+  $('pt-code-ok').addEventListener('click', function () {
+    var v = $('pt-code-in').value.replace(/\D/g, '');
+    if (v.length !== 6) { $('pt-code-err').textContent = T.codeLen; return; }
+    envoyer(v, true);
+  });
+  $('pt-lampe').addEventListener('click', function () {
+    var on = !this.classList.contains('on'), b = this;
+    if (piste) { piste.applyConstraints({ advanced: [{ torch: on }] }).then(function () { b.classList.toggle('on', on); }).catch(function () {}); }
+  });
+  window.addEventListener('pagehide', arreter);
+
+  if (LU) { envoyer(LU, false); } else { camera(); }
+})();
+</script>
+{% endblock %}

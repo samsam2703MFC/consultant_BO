@@ -1,0 +1,345 @@
+/* La tablette du poste (Formation › Standards, SOP) — page autonome sous formation/sop/.
+   Police, graisses et couleurs : le design system du module (../ds.css, chargé avant cette feuille) —
+   Gotham 400 (fichier Medium) pour tout le texte, jetons --ink, --muted-2, --muted, --faint, --paper,
+   --chip, --line, --accent, --green, --danger, --prize… Pas de gras, pas de pilule, pas d'ombre.
+   Ce que la tablette garde à elle : la mise en page plein écran (en-tête et pied collants, plan de la SOP,
+   colonne de droite) et ses grandes cibles tactiles (44 à 60 px), faites pour un écran au poste. */
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);font-family:'Gotham',system-ui,sans-serif;color:var(--ink);font-size:13px;line-height:1.45}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,select,textarea{font-family:inherit;font-size:13px;color:inherit}
+a{color:var(--accent)}
+.fo-page{max-width:1500px;margin:0 auto;padding:20px 24px 40px}
+.fo-hd{display:flex;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 18px;flex-wrap:wrap}
+.fo-hd img{height:34px}
+.fo-hd .mod{font:400 26px/1 'Gotham',system-ui,sans-serif;padding-left:16px;border-left:1px solid var(--line)}
+.fo-hd .mod small{display:block;font:400 10px 'Gotham',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-top:4px}
+.fo-hd .sp{flex:1}
+.fo-q{background:var(--chip);border:none;border-radius:8px;padding:9px 16px;min-width:240px}
+.fo-sel{border:1px solid var(--line);border-radius:8px;padding:7px 12px;background:#fff;max-width:240px}
+/* Boutons : ceux du système (.btn), ici sous leurs anciens noms. */
+.b{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font:400 12.5px 'Gotham',system-ui,sans-serif;color:var(--ink);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;text-decoration:none}
+.b.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+.b.g{border-color:var(--green);color:var(--green)}
+.b.n{background:var(--ink);color:#fff;border-color:var(--ink)}
+.b.s{padding:5px 11px;font-size:11.5px}
+.b:disabled{opacity:.45;cursor:not-allowed}
+/* Bascule FR / NL : le sélecteur segmenté du système. */
+.bascule{display:inline-flex;gap:2px;border-radius:9px;background:var(--chip);padding:3px}
+.bascule button{border:none;background:transparent;padding:5px 12px;border-radius:7px;font:400 12px 'Gotham',system-ui,sans-serif;color:var(--muted-2)}
+.bascule button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+/* Onglets de page du système. */
+.tabs{display:flex;gap:4px;padding:16px 8px 0;border-bottom:1px solid var(--line);margin-bottom:18px;flex-wrap:wrap}
+.tabs a{margin:0 0 -1px;padding:8px 12px;font-size:13px;color:var(--muted-2);text-decoration:none;border-bottom:2px solid transparent}
+.tabs a.on{color:var(--accent);border-bottom-color:var(--accent)}
+.tabs a em{font-style:normal;background:rgba(141,29,44,.08);color:var(--accent);border-radius:6px;padding:1px 7px;font-size:11px;margin-left:6px}
+.titre{display:flex;align-items:baseline;gap:14px;margin:0 0 14px;flex-wrap:wrap}
+.titre h1{margin:0;font:400 26px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em}
+.titre .ss{color:var(--muted);font-size:12.5px}
+.lab{font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:0 0 8px}
+.carte{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.carte h3{margin:0 0 10px;font:400 21px/1.1 'Gotham',system-ui,sans-serif}
+.carte h3 small{font:400 12px 'Gotham',system-ui,sans-serif;color:var(--muted);margin-left:8px}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .k{font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.kpi .v{font:700 24px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.02em;margin:6px 0 4px}
+.kpi .v small{font:400 14px 'Gotham',system-ui,sans-serif;color:var(--muted)}
+.kpi .s{font-size:11.5px;color:var(--muted)}
+.ok{color:var(--green)}.ko{color:var(--danger)}.att{color:var(--prize-ink)}.mu{color:var(--muted)}
+.mini{font-size:11.5px;color:var(--muted);line-height:1.5}
+.grille{display:grid;gap:16px}
+.g2{grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)}
+/* Pastilles d'état : rectangles aux coins de 6 px (jamais en pilule). */
+.pill{display:inline-block;border-radius:6px;padding:2px 8px;font:400 10.5px 'Gotham',system-ui,sans-serif;background:var(--chip);color:var(--muted-2);white-space:nowrap}
+.pill.ok{background:rgba(63,122,82,.12);color:var(--green)}.pill.ko{background:var(--stop-soft);color:var(--stop)}.pill.att{background:var(--prize-soft);color:var(--prize-ink)}.pill.nv{background:var(--chip);color:var(--ink)}
+.lg{display:inline-block;border-radius:4px;padding:1px 5px;font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.06em;border:1px solid var(--line);color:var(--muted-2);background:#fff}
+.lg.on{background:var(--chip);color:var(--ink);border-color:var(--chip)}
+.lg.ar{background:var(--prize-soft);color:var(--prize-ink);border-color:var(--prize-soft)}
+.fam{display:inline-block;font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;border-radius:6px;padding:2px 6px;white-space:nowrap;background:var(--chip);color:var(--ink)}
+.f01,.f02,.f03,.f04{background:var(--chip);color:var(--ink)}
+.comp{display:inline-flex;align-items:center;gap:5px;font:400 11.5px 'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--chip);border-radius:6px;padding:2px 9px;white-space:nowrap}
+.comp::before{content:'◆';font-size:8px;color:var(--muted)}
+.comp.sans{color:var(--prize-ink);background:var(--prize-soft)}
+.comp.sans::before{color:inherit}
+/* Filtres : ceux du système (rectangle, bordeaux plein quand choisi). */
+.filtres{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.filtres button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 13px;font-size:12.5px;color:var(--muted-2)}
+.filtres button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.filtres em{font-style:normal;font:400 10.5px 'Gotham',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.filtres .sep{color:var(--faint)}
+.prog{height:6px;background:var(--chip);border-radius:4px;overflow:hidden}
+.prog i{display:block;height:100%;background:var(--green);border-radius:4px}
+.prog i.att{background:var(--prize)}.prog i.pr{background:var(--accent)}
+.vide{padding:30px;text-align:center;color:var(--muted)}
+.erreur{background:rgba(179,38,30,.07);border-left:3px solid var(--danger);border-radius:8px;padding:10px 12px;color:var(--danger);margin-bottom:14px}
+.note{background:var(--prize-soft);border-left:3px solid var(--prize);border-radius:8px;padding:10px 12px;color:var(--prize-ink);margin-bottom:14px;font-size:12px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:10px 18px;font-size:13px;z-index:50}
+.pied{margin-top:18px;font-size:11px;color:var(--muted);line-height:1.55}
+
+/* Standards */
+.famille{margin-bottom:18px}
+.famille .fh{display:flex;align-items:baseline;gap:12px;margin:0 2px 10px}
+.famille .fh h2{margin:0;font:400 21px/1.1 'Gotham',system-ui,sans-serif;text-transform:none;letter-spacing:0;color:var(--ink)}
+.famille .fh span{font-size:12px;color:var(--muted)}
+.cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.sop{background:#fff;border-radius:12px;border:1px solid var(--line);padding:12px 14px 11px;display:flex;flex-direction:column;gap:6px;min-height:150px;text-decoration:none;color:inherit}
+.sop:hover{border-color:var(--accent)}
+.sop.vl{border:2px solid var(--prize);padding:11px 13px 10px}
+.sop .tt{font-size:14px;line-height:1.25}
+.sop .ty{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.sop .ob{font-size:11.5px;color:var(--muted);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sop .pd{margin-top:auto;display:flex;gap:10px;align-items:center;font-size:11px;color:var(--muted);border-top:1px dashed var(--line);padding-top:7px}
+.sop .pd b{color:var(--ink)}
+.sop .pd .r{margin-left:auto;white-space:nowrap}
+
+/* Fiche SOP */
+.bil{display:grid;grid-template-columns:30px minmax(0,1fr) minmax(0,1fr) auto;gap:4px 14px;padding:8px 0;border-bottom:1px dashed var(--line);align-items:start}
+.bil.une{grid-template-columns:30px minmax(0,1fr) auto}
+.bil .n{width:26px;height:26px;border-radius:6px;background:var(--chip);display:inline-flex;align-items:center;justify-content:center;font:400 10.5px 'Gotham',system-ui,sans-serif}
+.bil.crit .n{background:var(--danger);color:#fff}
+.bil .tx{font-size:12.5px;line-height:1.5;white-space:pre-line}
+.bil .tx b{display:block;margin-bottom:2px}
+.bil .tx.nl{color:var(--muted-2)}
+.bil img{width:72px;height:54px;border-radius:8px;object-fit:cover;cursor:zoom-in}
+.sec-t{margin:16px 0 4px;font:400 18px/1.15 'Gotham',system-ui,sans-serif;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.sec-t small{font:400 11.5px 'Gotham',system-ui,sans-serif;color:var(--muted)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12.5px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+.crit-box{background:rgba(179,38,30,.07);border-left:3px solid var(--danger);border-radius:8px;padding:10px 12px;font-size:12.5px;line-height:1.5}
+.crit-box ul{margin:4px 0 0;padding-left:18px}
+.question{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper);margin-bottom:10px}
+.question b{display:block;font-size:13px;margin-bottom:4px}
+.question .opt{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.question .opt span{border:1px solid var(--line);background:#fff;border-radius:6px;padding:5px 11px;font-size:12px}
+.question .opt span.rec{background:rgba(141,29,44,.05);color:var(--accent);border:2px solid var(--accent);padding:4px 10px}
+.fil{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:12.5px;align-items:center}
+.fil:last-child{border-bottom:none}
+.fil .d{width:52px;flex:0 0 auto;font-size:11px;color:var(--muted)}
+.fil .x{flex:1;min-width:0}
+.fil .x small{display:block;font-size:11px;color:var(--muted)}
+
+/* Compétences */
+table.cm,table.src{width:100%;min-width:0;border-collapse:collapse}
+.cm th{font:400 10px 'Gotham',system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);background:var(--table-head);text-align:center;padding:6px 3px;border-bottom:1px solid var(--line);vertical-align:bottom;line-height:1.25;min-width:64px}
+.cm th.l,.cm td.p{text-align:left}
+.cm td{padding:5px 3px;border-top:0;border-bottom:1px solid var(--row-line);text-align:center;font-size:12px}
+.cm td.p{padding:7px 10px 7px 2px;white-space:nowrap}
+.cm td.p b{display:block;font-size:13px}
+.cm td.p small{display:block;font-size:10.5px;color:var(--muted)}
+.cp{display:inline-flex;min-width:44px;height:24px;border-radius:6px;align-items:center;justify-content:center;font:400 10.5px 'Gotham',system-ui,sans-serif;padding:0 6px}
+.cp.acquise{background:var(--green);color:#fff}.cp.en_cours{background:var(--prize-soft);color:var(--prize-ink)}.cp.a_acquerir{background:var(--chip);color:var(--muted)}.cp.a_revoir{background:#fff;color:var(--danger);border:1.5px solid var(--danger)}.cp.na{background:transparent}
+.heat{display:inline-flex;min-width:46px;height:24px;border-radius:6px;align-items:center;justify-content:center;font:400 10.5px 'Gotham',system-ui,sans-serif}
+.puce{display:inline-flex;gap:4px;flex-wrap:wrap}
+.puce label{display:inline-flex;align-items:center;gap:3px;font-size:11px;border:1px solid var(--line);border-radius:6px;padding:2px 7px;background:#fff;color:var(--muted-2);cursor:pointer}
+.puce label.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.puce input{display:none}
+
+/* Rédaction et éditeur */
+.src th{font:400 10px 'Gotham',system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--table-head);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
+.src td{padding:8px;border-top:0;border-bottom:1px solid var(--row-line);font-size:12.5px;vertical-align:top}
+.src td small{display:block;font-size:10.5px;color:var(--muted);margin-top:2px}
+.src tr.alerte td{background:var(--prize-soft)}
+.ed-sec{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:var(--paper)}
+.ed-sec>.h{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px}
+.ed-et{display:grid;grid-template-columns:56px minmax(0,1fr) minmax(0,1fr) 120px;gap:8px;padding:8px 0;border-top:1px dashed var(--line)}
+.ed-et .col{display:flex;flex-direction:column;gap:4px}
+.ed-et .act{display:flex;flex-direction:column;gap:4px;font-size:11px}
+.in{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#fff;width:100%}
+.in:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+textarea.in{min-height:64px;resize:vertical;line-height:1.45}
+.in.vide{border-color:var(--prize);background:var(--prize-soft)}
+.ed-barre{position:sticky;bottom:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
+
+/* Visionneuse de photo */
+.zoom{position:fixed;inset:0;background:rgba(24,18,20,.42);display:flex;align-items:center;justify-content:center;z-index:60;cursor:zoom-out}
+.zoom img{max-width:92vw;max-height:92vh;border-radius:12px;background:#fff}
+
+/* ── Tablette du poste (1280 × 800 et plus, cibles ≥ 48 px) ─────────────────────────────────────── */
+.tb{min-height:100vh;display:flex;flex-direction:column;background:var(--paper);font-size:15px}
+.tb-hd{height:72px;flex:0 0 auto;display:flex;align-items:center;gap:16px;padding:0 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:5}
+.tb-hd img{height:30px}
+.tb-hd .t{font:400 22px/1.05 'Gotham',system-ui,sans-serif}
+.tb-hd .t small{display:block;font:400 11px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:3px}
+.tb-hd .sp{flex:1}
+/* Bascule FR / NL : le sélecteur segmenté du système, à la taille du doigt. */
+.tb-bascule{display:inline-flex;gap:2px;border-radius:9px;background:var(--chip);padding:4px}
+.tb-bascule button{min-width:58px;height:44px;border:none;border-radius:7px;font:400 15px 'Gotham',system-ui,sans-serif;color:var(--muted-2);background:transparent}
+.tb-bascule button.on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.tb-moi{display:flex;align-items:center;gap:10px;font:400 15px 'Gotham',system-ui,sans-serif;color:var(--ink);border:none;background:transparent;padding:4px 8px;border-radius:10px}
+.tb-moi i{width:42px;height:42px;border-radius:9px;background:rgba(141,29,44,.08);color:var(--accent);display:inline-flex;align-items:center;justify-content:center;font:400 14px 'Gotham',system-ui,sans-serif;font-style:normal}
+.tb-ret{width:48px;height:48px;border-radius:8px;background:var(--chip);color:var(--ink);border:none;font-size:22px}
+.tb-corps{flex:1;display:flex;min-height:0}
+.tb-liste{flex:1;padding:20px 24px;min-width:0}
+.tb-cote{width:420px;flex:0 0 auto;background:#fff;border-left:1px solid var(--line);padding:22px 24px;display:flex;flex-direction:column;gap:12px}
+.tb-cote h2{margin:0;font:400 26px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;text-transform:none;color:var(--ink)}
+/* Postes : des filtres (bordeaux plein quand choisi), à la taille du doigt. */
+.tb-chips{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.tb-chips button{padding:10px 18px;border-radius:8px;font:400 15px 'Gotham',system-ui,sans-serif;background:#fff;color:var(--muted-2);border:1px solid var(--line);min-height:48px}
+.tb-chips button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tb-grp{margin-bottom:16px}
+.tb-grp .gt{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.tb-sop{display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:6px;border:1px solid var(--line);width:100%;text-align:left;color:var(--ink);min-height:58px}
+.tb-sop:hover{border-color:var(--accent)}
+.tb-sop .x{flex:1;min-width:0}
+.tb-sop .x b{display:block;font:400 15px 'Gotham',system-ui,sans-serif}
+.tb-sop .x small{font-size:12px;color:var(--muted)}
+.tb-sop .fl{font-size:22px;color:var(--faint)}
+.st{display:inline-flex;width:32px;height:32px;border-radius:8px;align-items:center;justify-content:center;font:400 13px 'Gotham',system-ui,sans-serif;flex:0 0 auto}
+.st.non{background:var(--chip);color:var(--faint)}.st.lu{background:var(--chip);color:var(--ink)}.st.quiz{background:var(--prize-soft);color:var(--prize-ink)}.st.vu{background:var(--green);color:#fff}.st.a_revoir{background:#fff;color:var(--danger);border:1.5px solid var(--danger)}
+.tb-pers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+/* Qui lit : des pastilles de choix (liseré bordeaux 2 px et fond teinté une fois choisie). */
+.tb-pers button{border-radius:10px;padding:10px 12px;border:1px solid rgba(34,34,34,.14);background:#fff;color:var(--ink);text-align:left;min-height:56px}
+.tb-pers button b{display:block;font-size:15px}
+.tb-pers button small{font-size:11px;color:var(--muted)}
+.tb-pers button.on{border:2px solid var(--accent);background:rgba(141,29,44,.05);padding:9px 11px}
+.pave{display:grid;grid-template-columns:repeat(3,76px);gap:10px;justify-content:center}
+.pave button{height:58px;border-radius:8px;border:none;background:var(--chip);color:var(--ink);font:400 22px 'Gotham',system-ui,sans-serif}
+.pave button.ok{background:var(--accent);color:#fff}
+.pave button:disabled{opacity:.45;cursor:not-allowed}
+.points{display:flex;gap:12px;justify-content:center;margin:6px 0 10px}
+.points span{width:16px;height:16px;border-radius:50%;border:2px solid var(--faint)}
+.points span.on{background:var(--ink);border-color:var(--ink)}
+/* ── Lire une SOP : « une étape, une carte » (maquette A, 07/11/2026) ─────────────────────────────────────────
+   La page tient l'écran : en-tête (une ligne), la barre en segments et « Toutes les étapes », la carte de l'étape (seule
+   à défiler si elle est longue), le pied. Cibles de 48 px au moins, 64 px pour l'action principale. */
+.tb.tb--pas{height:100vh;height:100dvh;min-height:0;overflow:hidden;position:relative}
+.tb--pas .tb-hd{position:static}
+/* En-tête d'une SOP : sans le logo, le titre sur UNE ligne (coupé s'il est long, jamais sur trois lignes). */
+.tb-hd--sop{height:68px;gap:12px;padding:0 16px}
+.tb-hd .t{min-width:0}
+.tb-hd--sop .t{flex:1}
+.tb-hd--sop .sp{display:none}
+.tb-hd .t .tt{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb-hd--sop .t .tt{font-size:20px}
+.tb-qui svg,.tb-toutes svg{flex:0 0 auto}
+.tb-qui{height:48px;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--muted-2);font:400 15px 'Gotham',system-ui,sans-serif}
+@media (max-width:900px){.tb-qui span{display:none}.tb-qui{width:48px;padding:0;justify-content:center}}
+.tb-pas{flex:1;min-height:0;display:flex;flex-direction:column}
+/* La barre en segments (une par étape ; au-delà de 40 étapes, une barre continue) et la ligne « Étape n sur N ». */
+.tb-avance{flex:0 0 auto;background:#fff;padding:12px 16px;border-bottom:1px solid var(--line)}
+.tb-seg{display:flex;gap:3px;height:8px}
+.tb-seg i{flex:1;border-radius:2px;background:var(--chip)}
+.tb-seg i.f{background:var(--green)}
+.tb-seg i.on{background:var(--accent)}
+.tb-seg--continu{background:var(--chip);border-radius:4px;overflow:hidden}
+.tb-seg--continu i{flex:none;border-radius:0}
+.tb-ou{display:flex;align-items:center;gap:12px;margin-top:10px}
+.tb-ou span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:15px}
+.tb-ou span b{font-weight:400;color:var(--accent)}
+.tb-toutes{height:48px;flex:0 0 auto;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--ink);font:400 15px 'Gotham',system-ui,sans-serif}
+/* La carte : la photo en haut (4:3, 40 % de la hauteur au plus en portrait), puis le texte ; une étape longue défile. */
+.tb-zone{flex:1;min-height:0;overflow:auto;padding:16px;touch-action:pan-y}
+.tb-carte{background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;max-width:980px;margin:0 auto}
+.tb-media{background:#1c1a17;display:flex;flex-direction:column;align-items:center}
+.tb-media .photo{display:block;height:min(40vh, calc((100vw - 34px) * 3 / 4));width:auto;max-width:100%;aspect-ratio:4/3;object-fit:contain;background:#1c1a17;cursor:zoom-in}
+.tb-media .tb-video{margin:0;max-width:none;width:100%;border-radius:0}
+.tb-media .tb-video__lien{margin:12px}
+.tb-txt{padding:20px 24px 22px}
+.tb-tete{display:flex;align-items:center;gap:14px;margin-bottom:14px}
+.tb-num{min-width:56px;height:56px;flex:0 0 auto;border-radius:10px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font:700 20px 'Gotham',system-ui,sans-serif;padding:0 8px}
+.tb-tete h1{margin:0;font:400 32px/1.1 'Gotham',system-ui,sans-serif;letter-spacing:-.01em}
+/* Une action par ligne : 22 px, un carré pour puce (rouge dans un point critique). */
+.tb-li{margin:0;padding:0;list-style:none}
+.tb-li li{position:relative;padding:10px 0 10px 34px;font-size:22px;line-height:1.35;border-top:1px solid var(--row-line)}
+.tb-li li:first-child{border-top:none}
+.tb-li li::before{content:'';position:absolute;left:6px;top:21px;width:12px;height:12px;border-radius:3px;background:var(--ink)}
+.tb-alerte .tb-li li::before{background:var(--danger)}
+.tb-ensuite{display:flex;align-items:center;gap:8px;width:100%;margin-top:16px;min-height:52px;border:none;border-top:1px solid var(--line);background:transparent;color:var(--muted);font:400 16px 'Gotham',system-ui,sans-serif;text-align:left;padding:0}
+.tb-ensuite b{font-weight:400;color:var(--ink);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb-ensuite span{margin-left:auto;font-size:24px;color:var(--muted)}
+.tb-carte.de-droite{animation:tbEntreeD .22s ease-out}
+.tb-carte.de-gauche{animation:tbEntreeG .22s ease-out}
+@keyframes tbEntreeD{from{opacity:0;transform:translateX(40px)}to{opacity:1;transform:none}}
+@keyframes tbEntreeG{from{opacity:0;transform:translateX(-40px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.tb-carte.de-droite,.tb-carte.de-gauche{animation:none}}
+/* Paysage : la photo à gauche, le texte à droite ; la carte remplit l'écran. */
+@media (orientation:landscape) and (min-width:1000px){
+  .tb-zone{display:flex}
+  .tb-carte{flex:1;max-width:none}
+  .tb-carte.avec{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+  .tb-carte.avec .tb-media{justify-content:center}
+  .tb-carte.avec .tb-media .photo{width:100%;height:auto;max-height:100%}
+  .tb-carte:not(.avec) .tb-txt{max-width:980px;margin:0 auto;width:100%}
+  .tb-txt{overflow:auto}
+}
+@media (max-width:760px){.tb-tete h1{font-size:26px}.tb-li li{font-size:20px}.tb-txt{padding:16px 18px}}
+/* Le point critique : un cadre rouge, son libellé en capitales, ses lignes dedans. */
+.tb-alerte{background:rgba(179,38,30,.07);border:1.5px solid var(--danger);border-radius:12px;padding:14px 16px;font-size:16px;line-height:1.45;color:var(--ink);display:flex;gap:12px;align-items:flex-start}
+.tb-alerte__i{flex:0 0 auto;color:var(--danger)}
+.tb-alerte__tx{flex:1;min-width:0}
+.tb-alerte b{display:block;font:400 11px 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--danger);margin-bottom:3px}
+/* Le pied : « Précédente » et l'action principale, qui prend la place. */
+.tb-pied{flex:0 0 auto;display:flex;align-items:center;gap:12px;padding:12px 16px;padding-bottom:max(12px, env(safe-area-inset-bottom));background:#fff;border-top:1px solid var(--line)}
+.tb-pied .gb{height:64px;border-radius:8px;padding:0 22px;display:inline-flex;align-items:center;justify-content:center;gap:10px;font:400 18px 'Gotham',system-ui,sans-serif;color:var(--ink);border:1px solid var(--line);background:#fff;flex:0 0 auto}
+.tb-pied .gb:disabled{opacity:.4;cursor:not-allowed}
+.tb-pied .gb.p{background:var(--accent);color:#fff;border-color:var(--accent);flex:1;font-size:20px}
+.tb-pied .gb.g{background:var(--green);color:#fff;border-color:var(--green);flex:1;font-size:20px}
+/* Le tiroir « Toutes les étapes » et le panneau « Qui prévenir » : ils montent du bas, sur un voile. */
+.tb-voile{position:absolute;inset:0;z-index:20;background:rgba(28,26,23,.45);border:none;padding:0;cursor:default}
+.tb-tiroir{position:absolute;z-index:21;left:0;right:0;bottom:0;max-height:80%;background:#fff;border-radius:12px 12px 0 0;display:flex;flex-direction:column;box-shadow:0 -8px 30px rgba(0,0,0,.12)}
+@media (orientation:landscape) and (min-width:1000px){.tb-tiroir{left:auto;top:0;bottom:0;width:480px;max-height:none;border-radius:12px 0 0 12px}}
+.tb-tiroir__t{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px 14px 20px;border-bottom:1px solid var(--line)}
+.tb-tiroir__t b{font:400 20px 'Gotham',system-ui,sans-serif}
+.tb-tiroir__t small{color:var(--muted);font-size:14px;margin-left:8px}
+.tb-tiroir__c{position:relative;overflow:auto;overscroll-behavior:contain;padding:4px 12px 24px}
+.tb-tiroir .s{font:400 11px/1.35 'Gotham',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:16px 8px 6px}
+.tb-tiroir .r{display:flex;align-items:center;gap:14px;width:100%;min-height:56px;border:none;background:transparent;border-radius:10px;padding:4px 8px;text-align:left;font:400 17px/1.3 'Gotham',system-ui,sans-serif;color:var(--ink)}
+.tb-tiroir .r i{width:40px;height:40px;flex:0 0 auto;border-radius:8px;border:1px solid var(--line);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:13px;color:var(--muted-2)}
+.tb-tiroir .r span{flex:1;min-width:0}
+.tb-tiroir .r em{font-style:normal;font-size:12px;color:var(--danger)}
+.tb-tiroir .r.f{color:var(--muted)}
+.tb-tiroir .r.f i{background:var(--green);border-color:var(--green);color:#fff;font-size:16px}
+.tb-tiroir .r.on{background:#F6EDEE;color:var(--accent)}
+.tb-tiroir .r.on i{background:var(--accent);border-color:var(--accent);color:#fff}
+.tb-contact{padding:12px 8px;border-top:1px solid var(--row-line);display:grid;gap:2px;font-size:17px}
+.tb-contact:first-child{border-top:none}
+.tb-contact b{font-weight:400;color:var(--accent)}
+.tb-contact span{color:var(--muted-2)}
+.tb-q{max-width:760px;margin:30px auto;padding:0 20px;width:100%}
+.tb-q h1{font:400 26px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.01em;margin:6px 0 18px}
+/* Réponses du quiz : des pastilles de choix, à la taille du doigt. */
+.tb-rep{display:block;width:100%;text-align:left;border-radius:10px;border:1px solid rgba(34,34,34,.14);background:#fff;color:var(--ink);padding:17px 19px;font:400 18px/1.35 'Gotham',system-ui,sans-serif;margin-bottom:10px;min-height:60px}
+.tb-rep.on{border:2px solid var(--accent);background:rgba(141,29,44,.05);color:var(--accent);padding:16px 18px}
+.tb-rep.faux{border:2px solid var(--danger);background:rgba(179,38,30,.07);padding:16px 18px}
+.tb-gros{display:block;width:100%;text-align:center;border-radius:8px;padding:16px;font:400 16px 'Gotham',system-ui,sans-serif;background:var(--accent);color:#fff;border:1px solid var(--accent);margin-top:10px;min-height:56px}
+.tb-gros.sec{background:#fff;color:var(--ink);border:1px solid var(--line)}
+.tb-gros.g{background:var(--green);border-color:var(--green)}
+.tb-gros:disabled{opacity:.45;cursor:not-allowed}
+.rond{width:86px;height:86px;border-radius:12px;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:44px;margin:10px auto}
+.rond.ko{background:var(--danger)}
+@media (max-width:900px){.tb-cote{width:100%;border-left:none}.tb-corps{flex-direction:column}.kpis{grid-template-columns:repeat(2,1fr)}.g2{grid-template-columns:1fr}}
+@media print{.fo-hd,.tabs,.no-print{display:none!important}body{background:#fff}}
+/* Les compteurs de la personne (vus faire, quiz, lues) : la valeur d'un chiffre clé du système (24 px, 700). */
+.tb-n{font:700 24px/1.15 'Gotham',system-ui,sans-serif;letter-spacing:-.02em}
+
+/* Trois grands onglets : Ouverture · Journée de travail · Fermeture, Manuel (06/11/2026 ; « Comment ça marche » retiré le 07/11/2026). */
+.tb-moments{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.tb-moments button{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px;min-height:76px;border-radius:12px;background:#fff;border:1px solid var(--line);color:var(--ink);text-align:left}
+.tb-moments button b{font:400 18px/1.15 'Gotham',system-ui,sans-serif}
+.tb-moments button small{font:400 12px 'Gotham',system-ui,sans-serif;color:var(--muted)}
+.tb-moments button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.tb-moments button.on b{color:var(--accent)}
+@media (max-width:900px){.tb-moments{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* La vidéo d'une étape (assistant de création, 06/11/2026). */
+.tb-video{position:relative;width:100%;max-width:720px;aspect-ratio:16/9;margin-top:14px;border-radius:12px;overflow:hidden;background:#000}
+.tb-video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.tb-video__lien{display:inline-flex;align-items:center;gap:8px;margin-top:14px;padding:12px 18px;border-radius:8px;border:1px solid var(--line);background:#fff;color:var(--accent);font-size:15px;text-decoration:none}
+
+/* Les documents RÉSERVÉS au franchisé et au responsable (07/11/2026) : cadenas et liseré dorés, dans l'onglet Manuel ;
+   le PIN du responsable les ouvre. L'or est celui du design system (--prize). */
+.tb-grp--res .sec-t{display:flex;align-items:center;gap:8px;color:var(--prize)}
+.tb-sop.res{border-color:var(--prize);box-shadow:inset 4px 0 0 var(--prize)}
+.tb-sop.res:hover{border-color:var(--prize)}
+.tb-sop.res .st{color:var(--prize);background:#F8EEDC;display:flex;align-items:center;justify-content:center}
+.tb-sop.res .x small{color:var(--prize)}
+.cad{flex:none;color:var(--prize)}
+.tb-acces{max-width:440px;margin:28px auto;background:#fff;border:1px solid var(--prize);border-radius:16px;padding:26px 24px;text-align:center}
+.tb-acces__cad{width:56px;height:56px;margin:0 auto 10px;border-radius:50%;background:#F8EEDC;display:flex;align-items:center;justify-content:center}
+.tb-acces__cad .cad{width:28px;height:28px}
+.tb-acces h2{font:400 20px 'Gotham',system-ui,sans-serif;margin:4px 0 6px;text-transform:none;letter-spacing:normal;color:var(--ink)}
+.tb-acces p{font-size:14px;line-height:1.5;color:var(--muted);margin:0 0 10px}
+.tb-acces .erreur{margin:6px 0}

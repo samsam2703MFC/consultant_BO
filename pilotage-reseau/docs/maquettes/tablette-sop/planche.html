@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Planche — lire une SOP sur la tablette</title>
+<!-- Une planche par maquette (?m=a|b|c|d) : la tablette en portrait (800 × 1110, celle du client) et en paysage
+     (1280 × 752), réduites ; la maquette elle-même tourne dans chaque cadre (cliquable). -->
+<link rel="stylesheet" href="/public/formation/ds.css">
+<style>
+body{margin:0;background:#EDE7DE;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);padding:28px 32px 32px}
+.t{display:flex;align-items:baseline;gap:14px;margin-bottom:6px}
+.t b{font-size:40px;font-weight:700;color:var(--accent)}
+.t h1{margin:0;font-weight:400;font-size:28px}
+.t span{color:var(--muted);font-size:15px}
+.p{display:flex;gap:28px;margin:12px 0 20px;font-size:15px;line-height:1.45;max-width:1500px}
+.p div{flex:1}
+.p h3{margin:0 0 4px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.p ul{margin:0;padding-left:18px}
+.p .plus li::marker{color:var(--green)}.p .moins li::marker{color:var(--danger)}
+.cadres{display:flex;gap:28px;align-items:flex-start}
+figure{margin:0}
+figcaption{font-size:13px;color:var(--muted);margin-bottom:8px;letter-spacing:.04em}
+.cad{box-sizing:content-box;border:10px solid #1c1a17;border-radius:22px;overflow:hidden;background:#1c1a17}
+.cad iframe{border:0;transform-origin:0 0;display:block}
+</style></head><body>
+<div id="pl"></div>
+<script>
+const K = 0.6;
+const M = {
+  a: { f: 'a-carte.html', t: 'Une étape = une carte', s: 'inspirée de SwipeGuide',
+    plus: ['Une seule chose à l’écran : la photo, puis une action par ligne', 'La barre en segments dit où l’on en est d’un coup d’œil', '« Ensuite » annonce l’étape suivante ; balayer pour avancer', 'Le sommaire s’ouvre dans un tiroir, il ne mange jamais la place'],
+    moins: ['La liste des étapes n’est pas visible en permanence'], extra: ['a-carte.html?feuille=1', 'Portrait · « Toutes les étapes » ouvert'] },
+  b: { f: 'b-guide.html', t: 'Guide illustré', s: 'inspiré de Dozuki et iFixit',
+    plus: ['Grande photo 4:3, jusqu’à trois par étape (vignettes)', 'Chaque ligne dit son sens : action, point critique (rouge), repère (vert)', 'On retrouve une étape à sa photo : pellicule en portrait, sommaire illustré en paysage'],
+    moins: ['Demande une bonne photo pour la plupart des étapes', 'La pellicule ajoute une bande en portrait'] },
+  c: { f: 'c-checklist.html', t: 'Checklist par section', s: 'inspirée des checklists de terrain (SafetyCulture, Poka)',
+    plus: ['La SOP se lit comme une liste à cocher, section par section (onglets)', 'L’étape en cours est ouverte DANS la liste, avec son bouton « C’est fait »', 'On voit ce qui est fait au-dessus et ce qui vient en dessous', 'Idéal pour les routines (ouverture, fermeture)'],
+    moins: ['Plus de défilement pour les étapes longues'] },
+  d: { f: 'd-poste.html', t: 'Mode poste', s: 'lecture à 1,5 m, les mains occupées',
+    plus: ['Consigne en très gros (30 px), titre de 46 px', 'Point critique en bandeau rouge, en tête', '« Ensuite » toujours affiché ; boutons géants (88 px)', 'Rien d’autre à l’écran'],
+    moins: ['Peu de contexte autour de l’étape (le sommaire n’est pas montré)'] },
+};
+const m = M[new URLSearchParams(location.search).get('m') || 'a'];
+const cadre = (src, w, h, lib) => `<figure><figcaption>${lib}</figcaption><div class="cad" style="width:${w * K}px;height:${h * K}px">
+  <iframe src="${src}" width="${w}" height="${h}" style="transform:scale(${K})"></iframe></div></figure>`;
+const lettre = Object.keys(M).find(k => M[k] === m).toUpperCase();
+document.getElementById('pl').innerHTML = `<div class="t"><b>${lettre}</b><h1>${m.t}</h1><span>${m.s} · SOP-CUI-OUV-01, étape 5.1</span></div>
+  <div class="p"><div><h3>Ce qu’elle apporte</h3><ul class="plus">${m.plus.map(x => `<li>${x}</li>`).join('')}</ul></div>
+  <div><h3>À savoir</h3><ul class="moins">${m.moins.map(x => `<li>${x}</li>`).join('')}</ul>
+  <h3 style="margin-top:12px">Commun aux quatre</h3><ul><li>En-tête sur une ligne · « Qui prévenir » à un toucher · FR | NL</li><li>Infos clés en accueil, contrôle rapide à la fin · photos 4:3 · cibles de 48 px et plus</li></ul></div></div>
+  <div class="cadres">${cadre(m.f, 800, 1110, 'Portrait · tablette du magasin')}${cadre(m.f, 1280, 752, 'Paysage')}${m.extra ? cadre(m.extra[0], 800, 1110, m.extra[1]) : ''}</div>`;
+</script></body></html>

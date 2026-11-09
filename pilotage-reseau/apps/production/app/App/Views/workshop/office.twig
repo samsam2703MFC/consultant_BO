@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#8D1D2C">
+<title>Tablet biurowy · Tablette de bureau</title>
+<link rel="stylesheet" href="{{ root }}/assets/css/kiosk.css?v={{ asset_v() }}">
+<link rel="stylesheet" href="{{ root }}/assets/css/office.css?v={{ asset_v() }}">
+<link rel="manifest" href="{{ root }}/assets/office/manifest.webmanifest" crossorigin="use-credentials">
+<link rel="icon" href="{{ root }}/assets/kiosk/icon-192.png">
+<link rel="apple-touch-icon" href="{{ root }}/assets/kiosk/apple-touch-icon.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Biuro">
+</head>
+<body>
+<main id="tfbOffice" class="kiosk office" data-root="{{ root }}" data-api-base="{{ api_base }}" aria-live="polite">
+    <p class="kiosk-muted">Wczytywanie… / Chargement…</p>
+</main>
+<script src="{{ root }}/assets/js/workshop/office.js?v={{ asset_v() }}"></script>
+</body>
+</html>

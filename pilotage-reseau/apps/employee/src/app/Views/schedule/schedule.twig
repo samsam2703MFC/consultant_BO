@@ -1,0 +1,125 @@
+{# schedule/schedule.twig — le Planning, semaine par semaine (24/10/2026, Sam : « améliore la vue du planning, ça ne ressemble
+   à rien »), en forme sobre comme Mes primes : la semaine et ses chevrons, le service en cours ou le prochain en grand,
+   le total de la semaine, puis un jour par ligne — ses heures, sa durée et sa place sur la journée. Le calcul :
+   ScheduleService::semaine. #}
+{% extends "layouts/mobile_base.twig" %}
+{% set active_nav = 'schedule' %}
+{% set T = translations %}
+{% set S = semaine %}
+
+{# Une durée en minutes : « 8 h », « 7 h 30 », « 45 min ». #}
+{% macro duree(m) %}{% if m < 60 %}{{ m }} min{% else %}{{ m // 60 }} h{% if m % 60 %} {{ '%02d'|format(m % 60) }}{% endif %}{% endif %}{% endmacro %}
+{# Un délai : en heures sous deux jours, en jours au-delà. #}
+{% macro delai(m) %}{% import _self as moi %}{% if m >= 2880 %}{{ (m / 1440)|round(0, 'floor') }} j{% else %}{{ moi.duree(m) }}{% endif %}{% endmacro %}
+{% import _self as f %}
+
+{% block title %}{{ T.schedule ?? 'Planning' }}{% endblock %}
+{% block page_title %}{{ T.schedule ?? 'Planning' }}{% endblock %}
+{% block page_subtitle %}{{ (T.week_n ?? 'Semaine {n}')|replace({'{n}': S.numero}) }}{% endblock %}
+
+{% block head %}
+<link rel="stylesheet" href="{{ asset('assets/atelier/primes.css') }}">
+<style>
+  .pl-sem .ms-l small a{color:var(--s-accent);text-decoration:none}
+  .pl-heros{padding:16px 18px 18px;display:flex;flex-direction:column;background:var(--s-carte);border-radius:16px;margin-bottom:12px}
+  .pl-heros .sb-sur{display:flex;align-items:center;gap:7px}
+  .pl-heros .sb-sur i{width:8px;height:8px;border-radius:50%;background:var(--s-vert);box-shadow:0 0 0 4px var(--s-vert-doux)}
+  .pl-quand{margin-top:2px;font:600 17px/1.3 var(--s-police);color:var(--s-texte)}
+  .pl-heures{margin:2px 0 8px;font-size:40px}
+  .pl-heros .sb-sous{margin-top:6px}
+  .pl-kpis{display:grid;grid-template-columns:repeat(3,1fr);background:var(--s-carte);border-radius:16px;margin-bottom:12px}
+  .pl-kpis div{padding:12px 14px;min-width:0}
+  .pl-kpis div+div{border-left:.5px solid var(--s-trait)}
+  .pl-kpis b{display:block;font:600 21px/1.2 var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-texte)}
+  .pl-kpis small{display:block;margin-top:1px;font:400 12.5px var(--s-police);color:var(--s-second)}
+  .pl-jours>*+*::before{left:70px}
+  .pl-jour{display:flex;align-items:flex-start;gap:14px;padding:11px 16px}
+  .pl-date{flex:0 0 40px;display:flex;flex-direction:column;align-items:center;gap:1px}
+  .pl-date small{font:600 11px var(--s-police);letter-spacing:.03em;text-transform:uppercase;color:var(--s-second)}
+  .pl-date b{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font:600 18px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-texte)}
+  .pl-jour.auj .pl-date small{color:var(--s-accent)}
+  .pl-jour.auj .pl-date b{background:var(--s-accent);color:#fff}
+  .pl-jour.passe{opacity:.55}
+  .pl-corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:12px;padding-top:15px}
+  .pl-svc .sb-l1 b{font-variant-numeric:tabular-nums}
+  .pl-duree{flex:0 0 auto;font:400 15px var(--s-police);font-variant-numeric:tabular-nums;color:var(--s-second);white-space:nowrap}
+  .pl-axe{position:relative;height:6px;margin-top:8px;border-radius:3px;background:var(--s-remplir)}
+  .pl-axe i{position:absolute;top:0;bottom:0;min-width:4px;border-radius:3px;background:var(--s-accent)}
+  .pl-jour.passe .pl-axe i{background:var(--s-second)}
+  .pl-axe em{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;border-radius:1px;background:var(--s-texte)}
+  .pl-repos{padding-top:6px;font:400 15px var(--s-police);color:var(--s-second)}
+  /* La rentabilité du service (24/10/2026, Sam) : annoncée, en gris, tant qu'elle n'est pas calculée. */
+  .pl-rent{display:flex;align-items:center;gap:6px;margin-top:7px;font:400 12.5px var(--s-police);color:#AEAEB2}
+  .pl-rent i{font-size:12px}
+  .pl-heros .pl-rent{margin-top:10px;font-size:13.5px}
+  .pl-shop{font:500 11px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:6px;padding:1px 6px;margin-left:6px;vertical-align:1px}
+</style>
+{% endblock %}
+
+{% block content %}
+
+{# ── La semaine : ‹ 20 – 26 oct. › ── #}
+{% set memeMois = S.lundi|slice(0, 7) == S.dimanche|slice(0, 7) %}
+<nav class="mois-sel pl-sem" aria-label="{{ (T.week_n ?? 'Semaine {n}')|replace({'{n}': S.numero}) }}" data-semaine="{{ S.lundi }}">
+  <a class="ms-f" href="{{ ROOT }}/schedule?semaine={{ S.prec }}" aria-label="{{ T.prev_week ?? 'Semaine précédente' }}"><i class="bi bi-chevron-left"></i></a>
+  <div class="ms-l"><b>{{ S.lundi|date('j') }}{% if not memeMois %} {{ mois(S.lundi, true) }}{% endif %} – {{ S.dimanche|date('j') }} {{ mois(S.dimanche, true) }}</b>
+    <small>{% if S.courante %}{{ T.this_week ?? 'cette semaine' }}{% else %}<a href="{{ ROOT }}/schedule">{{ T.back_this_week ?? 'revenir à cette semaine' }}</a>{% endif %}</small></div>
+  <a class="ms-f" href="{{ ROOT }}/schedule?semaine={{ S.suiv }}" aria-label="{{ T.next_week ?? 'Semaine suivante' }}"><i class="bi bi-chevron-right"></i></a>
+</nav>
+
+{# Le cockpit n'a pas répondu (31/10/2026) : le dire, plutôt qu'une semaine de « Repos » qui serait fausse. #}
+{% if S.indisponible ?? false %}
+<div class="pl-heros" data-indisponible>
+  <span class="pl-quand">{{ T.schedule_unavailable ?? 'Le planning ne se lit pas pour l’instant.' }}</span>
+  <span class="sb-sous">{{ T.schedule_unavailable_hint ?? 'Réessaie dans un moment. Ton magasin a le planning à jour.' }}</span>
+</div>
+{% else %}
+
+{# ── Le service en cours, ou le prochain, en grand ── #}
+{% set P = S.prochain %}
+{% if P %}
+{% set demain = 'now'|date_modify('+1 day')|date('Y-m-d') %}
+<div class="pl-heros" data-prochain>
+  <span class="sb-sur">{% if P.enCours %}<i></i>{{ T.on_shift ?? 'En service' }}{% else %}{{ T.next_shift ?? 'Prochain service' }}{% endif %}</span>
+  <span class="pl-quand">{% if P.date == 'now'|date('Y-m-d') %}{{ T.today ?? 'Aujourd’hui' }}{% elseif P.date == demain %}{{ T.tomorrow ?? 'Demain' }}{% else %}{{ jour(P.date, true)|capitalize }} {{ P.date|date('j') }} {{ mois(P.date, true) }}{% endif %}</span>
+  <span class="sb-chiffre pl-heures">{{ P.debut }} – {{ P.fin }}</span>
+  {% if P.enCours %}
+  <span class="sb-barre grande"><i style="width:{{ P.fait }}%"></i></span>
+  <span class="sb-sous"><b>{{ (T.left ?? 'encore {d}')|replace({'{d}': f.duree(P.reste)}) }}</b> · {{ (T.until ?? 'jusqu’à {h}')|replace({'{h}': P.fin}) }}</span>
+  {% else %}
+  <span class="sb-sous"><b>{{ f.duree(P.duree) }}</b> · {{ (T.in ?? 'dans {d}')|replace({'{d}': f.delai(P.dans)}) }}</span>
+  {% endif %}
+  <span class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</span>
+</div>
+{% endif %}
+
+{# ── La semaine en trois chiffres ── #}
+<div class="pl-kpis" data-total>
+  <div><b>{{ f.duree(S.minutes) }}</b><small>{{ T.hours ?? 'heures' }}</small></div>
+  <div><b>{{ S.nbServices }}</b><small>{{ S.nbServices == 1 ? (T.shift ?? 'service') : (T.shifts ?? 'services') }}</small></div>
+  <div><b>{{ S.repos }}</b><small>{{ T.days_off ?? 'jours de repos' }}</small></div>
+</div>
+
+{# ── Un jour par ligne ── #}
+<div class="sb-groupe pl-jours">
+  {% for j in S.jours %}
+  <div class="pl-jour{{ j.aujourdhui ? ' auj' }}{{ j.passe ? ' passe' }}" data-jour="{{ j.date }}">
+    <div class="pl-date"><small>{{ jour(j.date) }}</small><b>{{ j.date|date('j') }}</b></div>
+    <div class="pl-corps"{% if not j.services %} style="padding-top:12px"{% endif %}>
+      {% for s in j.services %}
+      <div class="pl-svc">
+        <div class="sb-l1"><b>{{ s.debut }} – {{ s.fin }}{% if s.autreShop %}<span class="pl-shop">{% if s.shopNom %}{{ (T.shift_at_shop ?? 'à {n}')|replace({'{n}': s.shopNom}) }}{% else %}{{ (T.shift_other_shop ?? 'magasin {n}')|replace({'{n}': s.shop}) }}{% endif %}</span>{% endif %}</b><span class="pl-duree">{{ f.duree(s.duree) }}</span></div>
+        <div class="pl-axe"><i style="left:{{ s.gauche }}%;width:{{ s.largeur }}%"></i>{% if loop.first and j.maintenant is not null %}<em style="left:{{ j.maintenant }}%"></em>{% endif %}</div>
+        <div class="pl-rent" data-rentabilite><i class="bi bi-graph-up-arrow"></i>{{ T.shift_profit ?? 'Rentabilité du service' }} · {{ T.coming_soon ?? 'à venir' }}</div>
+      </div>
+      {% else %}
+      <span class="pl-repos">{{ T.day_off ?? 'Repos' }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="sb-pied" style="margin:0 4px">{% if S.nbServices == 0 %}{{ T.no_shift_week ?? 'Aucun service cette semaine.' }} {% endif %}{{ (T.scale ?? 'La barre : la journée, de {a} h à {b} h.')|replace({'{a}': S.axe.de, '{b}': S.axe.a}) }}</p>
+{% endif %}
+
+{% endblock %}

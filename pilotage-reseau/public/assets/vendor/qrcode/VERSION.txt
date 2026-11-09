@@ -1,0 +1,2 @@
+qrcode-generator 1.4.4 (npm), fichier qrcode.js tel que publié — https://github.com/kazuhikoarase/qrcode-generator
+Sert au QR code de la visite (Suivi des franchisés · visites) : il ouvre le contrôle sur la tablette.

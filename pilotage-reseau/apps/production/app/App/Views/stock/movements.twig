@@ -1,0 +1,143 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Ruchy magazynowe{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-arrow-left-right"></i> Ruchy magazynowe</h3>
+            <p class="text-subtitle text-muted">Produkty gotowe w kartonach : stan na początek okresu, przyjęcia (etykiety kartonów), wydania (kartony wysłane z paletą klienta)
+                i stan na koniec. Liczone z zeskanowanych kartonów — bez drugiego wpisywania.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.sl-bar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin:0 0 14px}
+.sl-bar label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted)}
+.sl-bar .form-control,.sl-bar .form-select{min-width:150px}
+.sl-table{width:100%;border-collapse:collapse;font-size:13px}
+.sl-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;white-space:nowrap;text-align:left}
+.sl-table th.n,.sl-table td.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.sl-table td{border-bottom:1px solid var(--at-line);padding:8px 10px;vertical-align:top}
+.sl-table tfoot td{font-weight:600;border-top:2px solid var(--at-line-2)}
+.sl-sub{font-size:12px;color:var(--at-muted)}
+.sl-in{color:var(--at-success)}.sl-out{color:var(--at-danger)}
+.sl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:14px;margin-bottom:14px}
+.sl-grid .card{margin:0}
+.sl-list{margin:0;padding:0;list-style:none;font-size:13px}
+.sl-list li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--at-line)}
+.sl-list li:last-child{border-bottom:0}
+</style>
+<section class="section">
+    {% if error is defined %}<div class="at-note at-note-warn"><i class="bi bi-exclamation-triangle"></i>{{ error }} Pokazano bieżący miesiąc.</div>{% endif %}
+
+    <form class="sl-bar" method="get" action="{{ root }}/workshop/stock-movements">
+        <label>Od<input type="date" class="form-control" name="from" value="{{ from }}"></label>
+        <label>Do<input type="date" class="form-control" name="to" value="{{ to }}"></label>
+        <label>Kategoria
+            <select class="form-select" name="category">
+                <option value="">Wszystkie</option>
+                {% for c in categories %}<option value="{{ c.id }}" {{ category_id == c.id ? 'selected' }}>{{ c.name }}</option>{% endfor %}
+            </select>
+        </label>
+        <label>Produkt<input type="search" class="form-control" name="q" value="{{ query }}" placeholder="nazwa produktu"></label>
+        <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Pokaż</button>
+        <a class="btn btn-outline-secondary" href="{{ root }}/workshop/stock-movements.csv?from={{ from }}&to={{ to }}{{ category_id ? '&category=' ~ category_id }}{{ query ? '&q=' ~ query|url_encode }}"><i class="bi bi-filetype-csv"></i> CSV</a>
+    </form>
+    <div class="at-chips" style="margin:-4px 0 14px">
+        {% for p in presets %}
+            <a class="at-chip {{ p.from == from and p.to == to ? 'is-used' }}" href="{{ root }}/workshop/stock-movements?from={{ p.from }}&to={{ p.to }}{{ category_id ? '&category=' ~ category_id }}{{ query ? '&q=' ~ query|url_encode }}">{{ p.label }}</a>
+        {% endfor %}
+    </div>
+
+    <div class="at-tiles">
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam"></i> Stan {{ from|date('d.m') }}</span>
+            <span class="at-tile-value">{{ totals.opening|number_format(0, ',', ' ') }}</span><span class="at-tile-meta">kartonów · {{ totals.value_opening|pln }}</span></div>
+        <div class="at-tile at-tile-ok"><span class="at-tile-label"><i class="bi bi-box-arrow-in-down"></i> Przyjęcia</span>
+            <span class="at-tile-value">+{{ totals.produced|number_format(0, ',', ' ') }}</span><span class="at-tile-meta">kartonów z produkcji</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-truck"></i> Wydania</span>
+            <span class="at-tile-value">−{{ totals.shipped|number_format(0, ',', ' ') }}</span><span class="at-tile-meta">kartonów wysłanych</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-box-seam-fill"></i> Stan {{ to|date('d.m') }}</span>
+            <span class="at-tile-value">{{ totals.closing|number_format(0, ',', ' ') }}</span><span class="at-tile-meta">kartonów · {{ totals.value_closing|pln }}</span></div>
+        <div class="at-tile {{ expired_total ? 'at-tile-danger' }}"><span class="at-tile-label"><i class="bi bi-calendar-x"></i> Przeterminowane</span>
+            <span class="at-tile-value">{{ expired_total }}</span><span class="at-tile-meta">kartonów na magazynie po dacie</span></div>
+        <div class="at-tile {{ waiting_total ? 'at-tile-warn' }}"><span class="at-tile-label"><i class="bi bi-hourglass-split"></i> Palety czekają</span>
+            <span class="at-tile-value">{{ waiting_total }}</span><span class="at-tile-meta">kartonów na paletach po dacie dostawy</span></div>
+    </div>
+
+    {% if expired or waiting or inconsistent %}
+    <div class="sl-grid">
+        {% if expired %}
+        <div class="card"><div class="card-body">
+            <h6><i class="bi bi-calendar-x text-danger"></i> Kartony przeterminowane na magazynie</h6>
+            <ul class="sl-list">
+                {% for e in expired|slice(0, 8) %}<li><a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name ?? ('#' ~ e.id_product) }}</a>
+                    <span><strong>{{ e.n }}</strong> <span class="sl-sub">od {{ e.oldest|date('d.m.Y') }}</span></span></li>{% endfor %}
+            </ul>
+            {% if expired|length > 8 %}
+            <details><summary class="sl-sub">+ {{ (expired|length - 8)|plural_pl('produkt', 'produkty', 'produktów') }}</summary>
+                <ul class="sl-list">
+                    {% for e in expired|slice(8) %}<li><a href="{{ root }}/workshop/stock-movements/{{ e.id_product }}">{{ e.name ?? ('#' ~ e.id_product) }}</a>
+                        <span><strong>{{ e.n }}</strong> <span class="sl-sub">od {{ e.oldest|date('d.m.Y') }}</span></span></li>{% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+        </div></div>
+        {% endif %}
+        {% if waiting %}
+        <div class="card"><div class="card-body">
+            <h6><i class="bi bi-hourglass-split text-warning"></i> Palety, które miały wyjechać</h6>
+            <ul class="sl-list">
+                {% for w in waiting %}<li><span>{% if w.id_customer %}<a href="{{ root }}/clients/{{ w.id_customer }}/edit">{{ w.customer ?? ('#' ~ w.id_customer) }}</a>{% else %}bez klienta{% endif %}
+                    <span class="sl-sub">· dostawa {{ w.since|date('d.m.Y') }}</span></span>
+                    <span><strong>{{ w.n }}</strong> <span class="sl-sub">kart. · {{ w.pallets|plural_pl('paleta', 'palety', 'palet') }}</span></span></li>{% endfor %}
+            </ul>
+        </div></div>
+        {% endif %}
+        {% if inconsistent %}
+        <div class="card"><div class="card-body">
+            <h6><i class="bi bi-exclamation-triangle text-warning"></i> Daty niespójne</h6>
+            <p class="sl-sub mb-0">{{ inconsistent|plural_pl('karton wysłany', 'kartony wysłane', 'kartonów wysłanych') }} przed datą etykiety (data palety albo etykiety w tym okresie) — saldo produktu
+                może się wtedy różnić od ruchów (kolumna « Różnica »). Sprawdź datę etykiety albo palety.</p>
+        </div></div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-body table-responsive">
+            {% if rows %}
+            <table class="sl-table" data-at-table data-at-table-size="50" data-at-table-search="false">
+                <thead><tr><th>Produkt</th><th>Kategoria</th><th class="n">Stan {{ from|date('d.m') }}</th><th class="n">Przyjęcia</th><th class="n">Wydania</th>
+                    <th class="n">Stan {{ to|date('d.m') }}</th><th class="n">Zmiana</th><th class="n">Wartość {{ to|date('d.m') }}</th><th class="n" title="Stan końcowy − (stan początkowy + przyjęcia − wydania)">Różnica</th></tr></thead>
+                <tbody>
+                {% for r in rows %}
+                    <tr>
+                        <td><a href="{{ root }}/workshop/stock-movements/{{ r.id }}?from={{ from }}&to={{ to }}">{{ r.name }}</a></td>
+                        <td class="sl-sub">{{ r.category ?? '—' }}</td>
+                        <td class="n">{{ r.opening }}</td>
+                        <td class="n sl-in">{{ r.produced ? '+' ~ r.produced : '·' }}</td>
+                        <td class="n sl-out">{{ r.shipped ? '−' ~ r.shipped : '·' }}</td>
+                        <td class="n"><strong>{{ r.closing }}</strong></td>
+                        <td class="n">{{ r.delta > 0 ? '+' : (r.delta < 0 ? '−') }}{{ r.delta|abs }}</td>
+                        <td class="n">{{ r.card_cost > 0 ? r.value_closing|pln : '—' }}</td>
+                        <td class="n">{% if r.gap %}<span class="at-pill at-pill-warn">{{ r.gap > 0 ? '+' : '−' }}{{ r.gap|abs }}</span>{% else %}<span class="sl-sub">0</span>{% endif %}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+                <tfoot><tr><td colspan="2">Razem ({{ rows|length|plural_pl('produkt', 'produkty', 'produktów') }})</td>
+                    <td class="n">{{ totals.opening|number_format(0, ',', ' ') }}</td><td class="n sl-in">+{{ totals.produced|number_format(0, ',', ' ') }}</td>
+                    <td class="n sl-out">−{{ totals.shipped|number_format(0, ',', ' ') }}</td><td class="n">{{ totals.closing|number_format(0, ',', ' ') }}</td>
+                    <td class="n">{{ totals.closing - totals.opening > 0 ? '+' : (totals.closing < totals.opening ? '−') }}{{ (totals.closing - totals.opening)|abs|number_format(0, ',', ' ') }}</td>
+                    <td class="n">{{ totals.value_closing|pln }}</td><td></td></tr></tfoot>
+            </table>
+            <p class="sl-sub mt-2 mb-0">Wartość = kartony × koszt surowców kartonu z karty produktu (zł). Na magazynie = kartony w magazynie i na paletach jeszcze niewysłanych.</p>
+            {% else %}
+            <p class="at-empty">Brak ruchów kartonów w tym okresie{{ query or category_id ? ' dla wybranego filtra' }}.</p>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}

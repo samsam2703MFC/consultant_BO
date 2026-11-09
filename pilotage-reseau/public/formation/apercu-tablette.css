@@ -1,0 +1,13 @@
+/* La vue tablette (apercu-tablette.js) : la vraie tablette dans un cadre d'appareil, réduite pour tenir dans l'écran. */
+.tbx-cadre { box-sizing: content-box; border: 10px solid #1c1a17; border-radius: 22px; overflow: hidden; background: #1c1a17; margin: 0 auto; flex: 0 0 auto; }
+.tbx-cadre iframe { border: 0; display: block; transform-origin: 0 0; background: var(--paper); }
+.tbx { z-index: 60; }
+.confirm__box.tbx-box { width: auto; max-width: calc(100vw - 32px); max-height: calc(100vh - 24px); padding: 14px 18px 18px; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+.tbx-tete { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tbx-t { flex: 1; min-width: 200px; display: flex; flex-direction: column; }
+.tbx-t span { font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); }
+.tbx-t b { font-weight: 400; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 520px; }
+.tbx-corps { display: flex; justify-content: center; }
+/* Dans une page (fiche d'une SOP) : le cadre et sa légende. */
+.tbx-page { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.tbx-page .muted { font-size: 12px; }

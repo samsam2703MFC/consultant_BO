@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Mon suivi — L'Atelier by</title>
+<!-- L'ancienne page « Mon suivi » (09/10/2026) est fusionnée dans la page du franchisé (24/10/2026) : suivi/?shop=&jeton=,
+     qui reprend son volet « chaque jour » et son journal. Cette adresse reste pour les liens et les signets : avec une
+     session du cockpit, elle ouvre la page du magasin en aperçu (rien n'est envoyé ni marqué lu) ; sans session, elle
+     dit au franchisé de demander son lien personnel. -->
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<style>
+  body{margin:0;background:var(--color-background,#F6F1EC);color:var(--color-text,var(--ink));font-family:var(--font-ui)}
+  .m{max-width:560px;margin:40px auto;padding:0 16px;font-size:13px;line-height:1.55}
+  .m img{height:30px;margin-bottom:14px}.m p{margin:0 0 8px;color:var(--color-text-muted)}
+</style>
+</head>
+<body>
+<div class="m" id="m"><img src="../assets/img/logo.png" alt="L'Atelier by"><p>Ouverture de la page du franchisé…</p></div>
+<script>
+(function () {
+  'use strict';
+  var shop = new URLSearchParams(location.search).get('shop') || '';
+  var m = document.getElementById('m');
+  function demenage() {
+    m.innerHTML = '<img src="../assets/img/logo.png" alt="L\'Atelier by">'
+      + '<p>Cette page a déménagé : votre suivi s’ouvre avec le lien personnel que votre consultant vous envoie.</p>'
+      + '<p>Deze pagina is verhuisd: uw opvolging opent met de persoonlijke link die uw consultant u stuurt.</p>'
+      + '<p>This page has moved: your follow-up opens with the personal link your consultant sends you.</p>'
+      + '<p>Diese Seite ist umgezogen: Ihre Betreuung öffnet sich mit dem persönlichen Link, den Ihr Berater Ihnen sendet.</p>';
+  }
+  if (!shop) { demenage(); return; }
+  fetch('../api/cockpit/suivi/lien?shop=' + encodeURIComponent(shop), { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) { if (d && d.chemin) { location.replace('../' + d.chemin + '&apercu=1'); } else { demenage(); } }, demenage);
+})();
+</script>
+</body>
+</html>

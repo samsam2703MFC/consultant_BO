@@ -1,0 +1,142 @@
+{% extends "layouts/base.twig" %}
+
+{% macro qty(q) %}{{ q is null ? '—' : (q == q|round ? q|number_format(0, ',', ' ') : (q < 10 ? q|number_format(2, ',', ' ') : q|number_format(1, ',', ' '))) }}{% endmacro %}
+{% macro zl(v) %}{{ v|number_format(2, ',', ' ') }} zł{% endmacro %}
+{% macro signed(v) %}{% if v is null %}—{% elseif v|abs < 0.005 %}0,00 zł{% else %}{{ v > 0 ? '+' : '−' }}{{ v|abs|number_format(2, ',', ' ') }} zł{% endif %}{% endmacro %}
+{% import _self as f %}
+
+{% set base = root ~ kind_info.base ~ '/' ~ recipe.id %}
+{% set change_labels = {added: 'dodano', removed: 'usunięto', qty: 'zmiana'} %}
+{% set kind_labels = {material: 'surowiec', component: 'półprodukt / kompozycja', yield: 'wydajność', preparation: 'etapy'} %}
+
+{% block title %}Historia — {{ recipe.name }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title d-flex flex-wrap align-items-start gap-2">
+            <div class="me-auto">
+                <h3>{{ recipe.name }}</h3>
+                <p class="text-subtitle text-muted mb-0">Historia receptury · {{ kind_info.label }} · wersje « obowiązuje od » i koszt surowców miesiąc po miesiącu.
+                    Rentowność liczy każdy miesiąc według wersji obowiązującej na koniec miesiąca i cen surowców z tego czasu.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a class="btn btn-sm btn-outline-dark" href="{{ base }}/calculation"><i class="bi bi-calculator"></i> Kalkulacja</a>
+                <a class="btn btn-sm btn-outline-secondary" href="{{ base }}/edit"><i class="bi bi-pencil"></i> Edytuj recepturę</a>
+                {% if product %}
+                    <a class="btn btn-sm btn-outline-secondary" href="{{ root }}/workshop/products#/product/{{ product.id }}"><i class="bi bi-card-text"></i> Karta produktu</a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<style>
+.rh-table{width:100%;border-collapse:collapse;font-size:13px}
+.rh-table th{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;color:var(--at-muted);border-bottom:1px solid var(--at-line);padding:8px 10px;white-space:nowrap}
+.rh-table td{border-bottom:1px solid var(--at-line);padding:7px 10px;vertical-align:middle}
+.rh-table td.n,.rh-table th.n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.rh-table tr.rh-now td{font-weight:600}
+.rh-up{color:var(--at-danger,#C41E3A)}.rh-down{color:var(--at-ok,#2E7D4F)}
+.rh-version{border-left:3px solid var(--at-line-2);padding:4px 0 14px 16px;margin-left:6px;position:relative}
+.rh-version:before{content:"";position:absolute;left:-8px;top:8px;width:13px;height:13px;border-radius:50%;background:var(--at-bg,#fff);border:3px solid var(--at-primary)}
+.rh-version.is-baseline:before{border-color:var(--at-muted)}
+.rh-version h5{font-size:14px;margin:0 0 2px;display:flex;flex-wrap:wrap;gap:8px;align-items:baseline}
+.rh-meta{font-size:12px;color:var(--at-muted)}
+.rh-changes{list-style:none;padding:0;margin:6px 0 0;font-size:13px}
+.rh-changes li{padding:2px 0}
+.rh-tag{display:inline-block;font-size:10.5px;font-weight:600;border-radius:6px;padding:1px 7px;margin-right:6px;vertical-align:1px;background:var(--at-bg-2)}
+.rh-tag-added{background:#e7f4ec;color:#2E7D4F}.rh-tag-removed{background:#fde8e8;color:#b42318}.rh-tag-qty{background:#fdf1e3;color:#9a5b14}
+</style>
+<section class="section">
+    <ul class="nav nav-tabs mb-3" aria-label="Typ receptury">
+        {% for key, k in {'product': ['/recipes', 'Produkty gotowe'], 'semi': ['/semi-products', 'Półprodukty'], 'composition': ['/compositions', 'Kompozycje']} %}
+            <li class="nav-item"><a class="nav-link {{ key == kind ? 'active' }}" href="{{ root }}{{ k[0] }}">{{ k[1] }}</a></li>
+        {% endfor %}
+    </ul>
+
+    {% if not versions %}
+        <div class="alert alert-info py-2"><i class="bi bi-info-circle"></i> Ta receptura nie ma jeszcze wersji : wersja początkowa zapisuje się automatycznie w ciągu kilku minut (zadanie okresowe) albo przy pierwszej zmianie receptury.
+            Do tego czasu koszt miesięcy liczony jest według obecnego składu.</div>
+    {% elseif untracked %}
+        <div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle"></i> Obecny skład różni się od ostatniej zapisanej wersji (zmiana poza formularzem receptury). Zapisz recepturę, aby utworzyć nową wersję.</div>
+    {% endif %}
+
+    {% set dated = versions|filter(v => v.valid_from) %}
+    <div class="at-tiles">
+        <div class="at-tile at-tile-ok"><span class="at-tile-label"><i class="bi bi-calculator"></i> Koszt surowców dziś</span>
+            <strong class="at-tile-value">{{ f.zl(cost_now) }}</strong>
+            <span class="at-tile-meta">{% if kind == 'product' %}receptura na {{ f.qty(recipe.yield) }} karton{{ recipe.yield == 1 ? '' : 'y' }}{% else %}receptura na {{ f.qty(recipe.yield) }} {{ recipe.unit }}{% endif %}</span></div>
+        <div class="at-tile {{ cost_change_pct is not null and cost_change_pct > 0.5 ? 'at-tile-warn' }}"><span class="at-tile-label"><i class="bi bi-graph-up"></i> Zmiana w 12 miesięcy</span>
+            <strong class="at-tile-value">{{ cost_change_pct is null ? '—' : (cost_change_pct > 0 ? '+' : '') ~ cost_change_pct|number_format(1, ',', ' ') ~ ' %' }}</strong>
+            <span class="at-tile-meta">{{ months[0].label }} : {{ f.zl(cost_start) }}</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-arrow-left-right"></i> Skąd zmiana</span>
+            <strong class="at-tile-value">{{ f.signed(price_effect) }} <small class="text-muted">ceny</small></strong>
+            <span class="at-tile-meta">{{ f.signed(composition_effect) }} skład (zmiany receptury i składników)</span></div>
+        <div class="at-tile"><span class="at-tile-label"><i class="bi bi-clock-history"></i> Wersje</span>
+            <strong class="at-tile-value">{{ versions|length }}</strong>
+            <span class="at-tile-meta">{% if last_change %}ostatnia zmiana {{ last_change|date('d.m.Y') }}{% else %}bez zmian od początku śledzenia{% endif %}</span></div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Koszt surowców miesiąc po miesiącu</h4>
+            <p class="at-sub mb-0">Wersja obowiązująca na koniec miesiąca × ceny surowców z tego czasu (historia cen z Zakupów). Zmiana = efekt cen (ten sam skład) + efekt składu.</p></div>
+        <div class="card-body pt-0 table-responsive">
+            <table class="rh-table">
+                <thead><tr><th>Miesiąc</th><th class="n">Wersja</th><th class="n">Koszt</th><th class="n">Zmiana</th><th class="n">w tym ceny</th><th class="n">w tym skład</th></tr></thead>
+                <tbody>
+                {% for m in months %}
+                    <tr class="{{ m.current ? 'rh-now' }}">
+                        <td>{{ m.label }}{{ m.current ? ' (do dziś)' }}</td>
+                        <td class="n">{{ m.version ? 'v' ~ m.version : '—' }}</td>
+                        <td class="n">{{ f.zl(m.cost) }}</td>
+                        {% for v in [m.delta, m.price_effect, m.composition_effect] %}
+                            <td class="n {{ v is not null and v > 0.005 ? 'rh-up' : (v is not null and v < -0.005 ? 'rh-down') }}">{{ f.signed(v) }}</td>
+                        {% endfor %}
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Wersje receptury</h4>
+            <p class="at-sub mb-0">Nowa wersja powstaje przy każdej zmianie składu : edycja tej receptury albo półproduktu / kompozycji, którą zawiera.</p></div>
+        <div class="card-body pt-2">
+            {% for v in versions %}
+                <div class="rh-version {{ v.source == 'baseline' ? 'is-baseline' }}">
+                    <h5><span>v{{ v.no }}</span>
+                        <span>{{ v.valid_from ? 'obowiązuje od ' ~ v.valid_from|date('d.m.Y H:i') : 'od początku (przed śledzeniem wersji)' }}</span>
+                        {% if loop.first %}<span class="at-pill at-pill-ok">obecna</span>{% endif %}</h5>
+                    <div class="rh-meta">{{ v.source_label }}{{ v.note ? ' : ' ~ v.note }}{{ v.author ? ' · ' ~ v.author }}
+                        {% if v.cost is not null %} · koszt {{ v.source == 'baseline' ? 'przy zapisie' : 'po zmianie' }} {{ f.zl(v.cost) }}{% if v.cost_delta is not null %} ({{ f.signed(v.cost_delta) }}){% endif %}{% endif %}</div>
+                    {% if v.changes %}
+                        <ul class="rh-changes">
+                            {% for c in v.changes %}
+                                <li><span class="rh-tag rh-tag-{{ c.change|default('qty') }}">{{ change_labels[c.change|default('qty')] }}</span>
+                                    <span class="text-muted">{{ kind_labels[c.kind] }}</span> <strong>{{ c.name }}</strong> :
+                                    {% if c.kind == 'preparation' %}{{ c.before }} → {{ c.after }}
+                                    {% else %}{{ f.qty(c.before) }} → {{ f.qty(c.after) }} {{ c.unit }}{% endif %}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                    {% if v.flat_changes %}
+                        <details class="mt-1"><summary class="small">Surowce łącznie (z półproduktami) : {{ v.flat_changes|length }} {{ v.flat_changes|length == 1 ? 'zmiana' : 'zmian' }}</summary>
+                            <ul class="rh-changes">
+                                {% for c in v.flat_changes %}
+                                    <li><span class="rh-tag rh-tag-{{ c.change }}">{{ change_labels[c.change] }}</span><strong>{{ c.name }}</strong> : {{ f.qty(c.before) }} → {{ f.qty(c.after) }} {{ c.unit }}</li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    {% elseif v.source == 'baseline' or v.source == 'create' %}
+                        <p class="rh-meta mb-0 mt-1">Skład : surowce {{ v.composition.materials|default([])|length }}, półprodukty / kompozycje {{ v.composition.components|default([])|length }} ; surowce łącznie (z półproduktami) {{ v.ingredients|length }}.</p>
+                    {% endif %}
+                </div>
+            {% else %}
+                <p class="at-empty mb-0">—</p>
+            {% endfor %}
+        </div>
+    </div>
+</section>
+{% endblock %}

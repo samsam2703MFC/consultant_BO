@@ -1,0 +1,516 @@
+{
+  "id": "fin-poste",
+  "code": "SOP-CUI-FIN-01",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": "fermeture",
+  "duree": null,
+  "titre": {
+    "fr": "Fin de poste de cuisson — terminer son service",
+    "nl": "Einde van de dienst aan de bakpost"
+  },
+  "objectif": {
+    "fr": "La production est documentée et transmise. Le poste est propre, rangé et prêt à être repris sans nettoyage préalable.",
+    "nl": "De productie is gedocumenteerd en doorgegeven. De post is proper, opgeruimd en klaar om overgenomen te worden zonder eerst te moeten poetsen."
+  },
+  "pour": {
+    "fr": "Le cuiseur, en fin de poste.",
+    "nl": "De afbakker, op het einde van de dienst."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Résultat attendu",
+        "nl": "Verwacht resultaat"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "Résultat attendu",
+            "nl": "Verwacht resultaat"
+          },
+          "texte": {
+            "fr": "La production est documentée et transmise. Le poste est propre, rangé et prêt à être repris sans nettoyage préalable.",
+            "nl": "De productie is gedocumenteerd en doorgegeven. De post is proper, opgeruimd en klaar om overgenomen te worden zonder eerst te moeten poetsen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "1 · Clôturer la production",
+        "nl": "1 · De productie afsluiten"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Compléter la liste",
+            "nl": "De lijst invullen"
+          },
+          "texte": {
+            "fr": "Noter les quantités réellement produites, les écarts et la justification de toute adaptation.",
+            "nl": "De werkelijk geproduceerde hoeveelheden, de afwijkingen en de verantwoording van elke aanpassing noteren."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Transmettre les informations",
+            "nl": "De informatie doorgeven"
+          },
+          "texte": {
+            "fr": "Signaler les commandes, problèmes, produits en cours et tâches non terminées à la personne présente ou dans Shyfter, groupe « production ».",
+            "nl": "Bestellingen, problemen, producten in bewerking en onafgewerkte taken melden aan de aanwezige persoon of in Shyfter, groep « production »."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Remettre le document",
+            "nl": "Het document afgeven"
+          },
+          "texte": {
+            "fr": "Placer la liste papier complétée dans le bureau.",
+            "nl": "De ingevulde papieren lijst in het bureau leggen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "2 · Nettoyer dans cet ordre",
+        "nl": "2 · In deze volgorde poetsen"
+      },
+      "etapes": [
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Terminer les préparations",
+            "nl": "De bereidingen afwerken"
+          },
+          "texte": {
+            "fr": "Finir productions, finitions et nappages. Éteindre le bain-marie et le laisser refroidir.",
+            "nl": "Producties, afwerkingen en nappages afwerken. De bain-marie uitzetten en laten afkoelen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Vider le pistolet à dorer",
+            "nl": "Het eipistool leegmaken"
+          },
+          "texte": {
+            "fr": "Filmer, dater et réfrigérer l’œuf restant pour J+1 maximum. Démonter, laver et laisser sécher séparément les pièces.",
+            "nl": "Het overgebleven ei afdekken met folie, dateren en in de frigo zetten voor maximaal D+1. De onderdelen demonteren, afwassen en apart laten drogen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Faire la vaisselle et le matériel",
+            "nl": "De afwas en het materiaal doen"
+          },
+          "texte": {
+            "fr": "Terminer la vaisselle. Nettoyer la trancheuse, le batteur et la taque à induction.",
+            "nl": "De afwas afwerken. De snijmachine, de mixer en de inductieplaat reinigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Nettoyer le bain-marie",
+            "nl": "De bain-marie reinigen"
+          },
+          "texte": {
+            "fr": "Une fois refroidi, le nettoyer puis filmer les gastros de fondant directement sur le bain-marie.",
+            "nl": "Zodra hij afgekoeld is, hem reinigen en daarna de gastronormbakken met fondant rechtstreeks op de bain-marie afdekken met folie."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Nettoyer les surfaces",
+            "nl": "De oppervlakken reinigen"
+          },
+          "texte": {
+            "fr": "Nettoyer plans de travail, dosserets et façades des meubles blancs et inox, des pousses et des frigos.",
+            "nl": "Werkbladen, spatwanden en fronten van de witte en inox meubels, van de rijskasten en van de frigo’s reinigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "Ranger et évacuer",
+            "nl": "Opruimen en afvoeren"
+          },
+          "texte": {
+            "fr": "Ranger les ustensiles. Trier et évacuer déchets, emballages vides et restes non utilisables.",
+            "nl": "Het keukengerei opruimen. Afval, lege verpakkingen en onbruikbare resten sorteren en afvoeren."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": "Terminer par le sol",
+            "nl": "Eindigen met de vloer"
+          },
+          "texte": {
+            "fr": "Balayer entièrement le sol.",
+            "nl": "De volledige vloer vegen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Auto-contrôle · Contrôler avant de quitter — méthode",
+        "nl": "Zelfcontrole · Controleren vóór vertrek — methode"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Méthode",
+            "nl": "Methode"
+          },
+          "texte": {
+            "fr": "L’employé contrôle d’abord son travail, puis appelle le formateur. Tout oubli est corrigé avant validation.",
+            "nl": "De medewerker controleert eerst zijn eigen werk en roept daarna de opleider. Alles wat vergeten werd, wordt rechtgezet vóór de validatie."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Checklist de conformité",
+        "nl": "Conformiteitschecklist"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Liste complétée, écarts justifiés, informations transmises et document remis au bureau.",
+            "nl": "Lijst ingevuld, afwijkingen verantwoord, informatie doorgegeven en document afgegeven in het bureau."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Vaisselle terminée ; aucun élément utilisé ne reste à laver.",
+            "nl": "Afwas gedaan; geen enkel gebruikt voorwerp moet nog afgewassen worden."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Trancheuse, batteur, taque et bain-marie visuellement propres.",
+            "nl": "Snijmachine, mixer, inductieplaat en bain-marie zichtbaar proper."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Pistolet démonté, lavé et en séchage ; œuf restant filmé, daté et réfrigéré.",
+            "nl": "Eipistool gedemonteerd, afgewassen en aan het drogen; overgebleven ei afgedekt met folie, gedateerd en in de frigo."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.5",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Gastros de fondant filmés ; bain-marie éteint.",
+            "nl": "Gastronormbakken met fondant afgedekt met folie; bain-marie uitgezet."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.6",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Surfaces, dosserets et façades sans miettes, résidus ni salissures visibles.",
+            "nl": "Oppervlakken, spatwanden en fronten zonder zichtbare kruimels, resten of vuil."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.7",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Ustensiles propres et rangés ; zones de travail et de circulation dégagées.",
+            "nl": "Keukengerei proper en opgeruimd; werk- en doorgangszones vrij."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.8",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Déchets et emballages évacués ; sol sans déchets visibles.",
+            "nl": "Afval en verpakkingen afgevoerd; vloer zonder zichtbaar afval."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.9",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Poste prêt à être repris sans nettoyage préalable.",
+            "nl": "Post klaar om overgenomen te worden zonder eerst te poetsen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Dimanche et tâches périodiques",
+        "nl": "Zondag en periodieke taken"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": "Laver le sol le dimanche",
+            "nl": "De vloer schrobben op zondag"
+          },
+          "texte": {
+            "fr": "Après le balayage : laver à l’eau chaude avec savon et brosse, rincer, puis évacuer l’eau à la raclette vers les évacuations au sol.",
+            "nl": "Na het vegen: schrobben met warm water, zeep en borstel, spoelen en daarna het water met de vloertrekker naar de afvoerputjes in de vloer trekken."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": "Nettoyer le poêlon de Jelfix",
+            "nl": "Het Jelfix-pannetje reinigen"
+          },
+          "texte": {
+            "fr": "Le nettoyer complètement au minimum une fois par semaine ou plus tôt en cas de saleté importante.",
+            "nl": "Het minstens één keer per week volledig reinigen, of eerder bij sterke vervuiling."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": "Laisser les tâches attribuées à la vente",
+            "nl": "De taken van de verkoop aan de verkoop laten"
+          },
+          "texte": {
+            "fr": "Les façades, poignées et commandes extérieures des fours relèvent de la checklist et de la SOP de l’équipe de vente (nettoyage des fours après 16 h).",
+            "nl": "De fronten, handgrepen en bedieningen aan de buitenkant van de ovens horen bij de checklist en de SOP van het verkoopteam (ovens poetsen na 16 u)."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Apprentissage",
+        "nl": "Opleiding"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": "Apprentissage",
+            "nl": "Opleiding"
+          },
+          "texte": {
+            "fr": "Dès la première fois, l’employé exécute la séquence avec le formateur, tâche par tâche.",
+            "nl": "Vanaf de eerste keer voert de medewerker de reeks samen met de opleider uit, taak per taak."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Validation autonome",
+        "nl": "Validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "8.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 fins de poste complètes et conformes sur des jours différents. Réalisation 1 : ______ · Réalisation 2 : ______ · Initiales : ______",
+            "nl": "2 volledige en conforme diensteindes op verschillende dagen. Uitvoering 1: ______ · Uitvoering 2: ______ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Œuf restant du pistolet à dorer : filmé, daté et réfrigéré, J+1 maximum ; pièces du pistolet démontées, lavées et séchées séparément.",
+      "nl": "Overgebleven ei uit het eipistool: afgedekt met folie, gedateerd en in de frigo, maximaal D+1; onderdelen van het pistool gedemonteerd, afgewassen en apart gedroogd."
+    },
+    {
+      "fr": "Nettoyer dans l’ordre indiqué, en terminant par le sol ; bain-marie éteint et refroidi avant d’être nettoyé.",
+      "nl": "In de aangegeven volgorde poetsen en eindigen met de vloer; bain-marie uitgezet en afgekoeld vóór het reinigen."
+    },
+    {
+      "fr": "Le poste doit pouvoir être repris sans nettoyage préalable ; l’employé se contrôle avant d’appeler le formateur.",
+      "nl": "De post moet overgenomen kunnen worden zonder eerst te poetsen; de medewerker controleert zichzelf vóór hij de opleider roept."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Combien de temps peut-on garder l’œuf restant du pistolet à dorer ?",
+        "nl": "Hoe lang mag je het overgebleven ei uit het eipistool bewaren?"
+      },
+      "choix": {
+        "fr": [
+          "J+1 maximum, filmé, daté et réfrigéré",
+          "Jusqu’à J+3",
+          "Il doit toujours être jeté"
+        ],
+        "nl": [
+          "Maximaal D+1, afgedekt met folie, gedateerd en in de frigo",
+          "Tot D+3",
+          "Het moet altijd weggegooid worden"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Par quoi se termine le nettoyage ?",
+        "nl": "Waarmee eindigt het poetsen?"
+      },
+      "choix": {
+        "fr": [
+          "La vaisselle",
+          "Le sol, balayé entièrement",
+          "Le bain-marie"
+        ],
+        "nl": [
+          "De afwas",
+          "De vloer, volledig geveegd",
+          "De bain-marie"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Qui nettoie les façades, poignées et commandes extérieures des fours ?",
+        "nl": "Wie reinigt de fronten, handgrepen en bedieningen aan de buitenkant van de ovens?"
+      },
+      "choix": {
+        "fr": [
+          "Le cuiseur en fin de poste",
+          "L’équipe de vente, selon sa checklist et sa SOP",
+          "Le formateur"
+        ],
+        "nl": [
+          "De afbakker op het einde van de dienst",
+          "Het verkoopteam, volgens zijn checklist en SOP",
+          "De opleider"
+        ]
+      },
+      "bonne": 1
+    }
+  ],
+  "corrections": [
+    "Décision 4 : ajout de la précision « nettoyage des fours après 16 h » à l’étape qui renvoie le nettoyage extérieur des fours à l’équipe de vente.",
+    "Numérotation 1 à 10 du document conservée pour les deux blocs « Clôturer la production » et « Nettoyer dans cet ordre » ; les autres blocs sont numérotés section.étape."
+  ],
+  "remarques": [
+    "Shyfter, groupe « production » : nom du groupe gardé tel quel en NL.",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1A2cIOOYWZ_q_EUwxr4zotwHv8rEVvxys",
+      "docx": "1GOe6v5n79qGxVh3cSxeA2stHk7lAu6b6"
+    },
+    "lu": "docx"
+  }
+}

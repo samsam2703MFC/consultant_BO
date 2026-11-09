@@ -1,0 +1,718 @@
+{
+  "id": "programmes",
+  "code": "FICHE-CUI-01",
+  "type": "Fiche",
+  "dossier": "04",
+  "version": "1.1",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": null,
+  "duree": null,
+  "titre": {
+    "fr": "Programmes de cuisson et de pousse",
+    "nl": "Bak- en rijsprogramma’s"
+  },
+  "objectif": {
+    "fr": "Savoir quel programme lancer pour quel produit et comment programmer les quatre pousses : lancer les programmes enregistrés sans modifier leurs paramètres et appliquer uniquement les ajustements indiqués sur cette fiche.",
+    "nl": "Weten welk programma je voor welk product start en hoe je de vier rijskasten programmeert: de opgeslagen programma’s starten zonder hun parameters te wijzigen en enkel de aanpassingen toepassen die op deze fiche staan."
+  },
+  "pour": {
+    "fr": "Le cuiseur (poste de cuisson).",
+    "nl": "De afbakker (bakpost)."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Repères du poste de cuisson · Quel programme pour quel produit ?",
+        "nl": "Richtpunten van de bakpost · Welk programma voor welk product?"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "Règle",
+            "nl": "Regel"
+          },
+          "texte": {
+            "fr": "Lancer les programmes enregistrés sans modifier leurs paramètres. Appliquer uniquement les ajustements indiqués sur cette fiche.",
+            "nl": "De opgeslagen programma’s starten zonder hun parameters te wijzigen. Enkel de aanpassingen toepassen die op deze fiche staan."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Pains et produits levés (produit — programme / four — contrôle ou ajustement)",
+        "nl": "Broden en gerezen producten (product — programma / oven — controle of aanpassing)"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Pains et pains spéciaux",
+            "nl": "Broden en speciale broden"
+          },
+          "texte": {
+            "fr": "Pains et pains spéciaux — « grands pains » — fin du programme = produit cuit.",
+            "nl": "Broden en speciale broden — « grands pains » — einde van het programma = product gebakken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Baguettes et pistolets",
+            "nl": "Baguettes en pistolets"
+          },
+          "texte": {
+            "fr": "Baguettes et pistolets — « baguettes » — fin du programme = produit cuit.",
+            "nl": "Baguettes en pistolets — « baguettes » — einde van het programma = product gebakken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.3",
+          "titre": {
+            "fr": "Viennoiseries",
+            "nl": "Koffiekoeken"
+          },
+          "texte": {
+            "fr": "Viennoiseries — « viennoiseries » — couleur ; voir règles +1 min.",
+            "nl": "Koffiekoeken — « viennoiseries » — kleur; zie regels +1 min."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.4",
+          "titre": {
+            "fr": "Produits sandwichs",
+            "nl": "Sandwichproducten"
+          },
+          "texte": {
+            "fr": "Produits sandwichs — « sandwich » — +1 min si trop clair ; 1 fois max.",
+            "nl": "Sandwichproducten — « sandwich » — +1 min als ze te licht zijn; max. 1 keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.5",
+          "titre": {
+            "fr": "Cramiques et craquelins",
+            "nl": "Cramiques en craquelins"
+          },
+          "texte": {
+            "fr": "Cramiques et craquelins — « cramique craquelin » — test couteau ; pâte liquide : +5 min, 2 fois max.",
+            "nl": "Cramiques en craquelins — « cramique craquelin » — mestest; vloeibaar deeg: +5 min, max. 2 keer."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Tartes, salé et biscuiterie (produit — programme / réglage — contrôle ou ajustement)",
+        "nl": "Taarten, hartig en koekjes (product — programma / instelling — controle of aanpassing)"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": "Quiches / pommes parisiennes",
+            "nl": "Quiches / pommes parisiennes"
+          },
+          "texte": {
+            "fr": "Quiches / pommes parisiennes — « quiche » — en dernier ; jamais les 2 fours simultanément.",
+            "nl": "Quiches / pommes parisiennes — « quiche » — als laatste; nooit de 2 ovens tegelijk."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": "Tartes aux fruits / fonds crème",
+            "nl": "Fruittaarten / roombodems"
+          },
+          "texte": {
+            "fr": "Tartes aux fruits / fonds crème — « tartes aux fruits » — bords dorés, dessous cuit et non transparent ; +5 min, 1 fois.",
+            "nl": "Fruittaarten / roombodems — « tartes aux fruits » — randen goudbruin, onderkant gebakken en niet doorschijnend; +5 min, 1 keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": "Tarte au sucre",
+            "nl": "Suikertaart"
+          },
+          "texte": {
+            "fr": "Tarte au sucre — « tarte au sucre » — croûte bien dorée et régulière ; centre entre flan et liquide ; +7 min, 2 fois max., puis demander un avis.",
+            "nl": "Suikertaart — « tarte au sucre » — korst goed goudbruin en gelijkmatig; midden tussen flan en vloeibaar in; +7 min, max. 2 keer, daarna advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.4",
+          "titre": {
+            "fr": "Flan",
+            "nl": "Flan"
+          },
+          "texte": {
+            "fr": "Flan — 150 °C · 50 min · ventilation 1 — dessus doré ; centre ferme au toucher ; +5 min, 1 fois, puis demander un avis.",
+            "nl": "Flan — 150 °C · 50 min · ventilatie 1 — bovenkant goudbruin; midden stevig bij aanraking; +5 min, 1 keer, daarna advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.5",
+          "titre": {
+            "fr": "Riz / frangipane / fromage",
+            "nl": "Rijst / frangipane / kaas"
+          },
+          "texte": {
+            "fr": "Riz / frangipane / fromage — « Riz-Fromage » — ordre : riz → frangipane → fromage.",
+            "nl": "Rijst / frangipane / kaas — « Riz-Fromage » — volgorde: rijst → frangipane → kaas."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.6",
+          "titre": {
+            "fr": "Brownie / Brookie",
+            "nl": "Brownie / Brookie"
+          },
+          "texte": {
+            "fr": "Brownie / Brookie — « Brownie » — Brookie en haut, +4 min ; couteau légèrement humide. Liquide : +3 min puis stop.",
+            "nl": "Brownie / Brookie — « Brownie » — Brookie bovenaan, +4 min; mes licht vochtig. Vloeibaar: +3 min en dan stoppen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.7",
+          "titre": {
+            "fr": "Cookies",
+            "nl": "Cookies"
+          },
+          "texte": {
+            "fr": "Cookies — « cookie » · four de droite — 8/grille ; fin du programme = cuit.",
+            "nl": "Cookies — « cookie » · rechteroven — 8 per rooster; einde van het programma = gebakken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.8",
+          "titre": {
+            "fr": "Cakes",
+            "nl": "Cakes"
+          },
+          "texte": {
+            "fr": "Cakes — « cake grand cru » — test couteau ; pâte liquide : +3 min, 2 fois max.",
+            "nl": "Cakes — « cake grand cru » — mestest; vloeibaar deeg: +3 min, max. 2 keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.9",
+          "titre": {
+            "fr": "Sablés / fonds Plougastel",
+            "nl": "Sablés / Plougastel-bodems"
+          },
+          "texte": {
+            "fr": "Sablés / fonds Plougastel — programme sablé — 13 min · 175 °C · ventilation 4.",
+            "nl": "Sablés / Plougastel-bodems — programma sablé — 13 min · 175 °C · ventilatie 4."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.10",
+          "titre": {
+            "fr": "Choux / éclairs / financiers",
+            "nl": "Soezen / eclairs / financiers"
+          },
+          "texte": {
+            "fr": "Choux / éclairs / financiers — pas de cuisson — décongeler ; remplir et napper selon le produit.",
+            "nl": "Soezen / eclairs / financiers — niet bakken — ontdooien; vullen en nappen volgens het product."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Ajustements essentiels",
+        "nl": "Belangrijkste aanpassingen"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Pains de la veille",
+            "nl": "Broden van de vorige dag"
+          },
+          "texte": {
+            "fr": "Pains de la veille (catégorie pain uniquement) : même four après les grands pains, sans relancer de programme → « ajouter du temps » · 4 min · 20 % d’humidité.",
+            "nl": "Broden van de vorige dag (enkel de categorie brood): dezelfde oven na de grote broden, zonder opnieuw een programma te starten → « ajouter du temps » (tijd bijzetten) · 4 min · 20 % vochtigheid."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4.2",
+          "titre": {
+            "fr": "Pains au chocolat + croissants",
+            "nl": "Chocoladebroodjes + croissants"
+          },
+          "texte": {
+            "fr": "Pains au chocolat + croissants uniquement : +1 min systématiquement.",
+            "nl": "Enkel chocoladebroodjes + croissants: altijd +1 min."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4.3",
+          "titre": {
+            "fr": "Autres viennoiseries et sandwichs",
+            "nl": "Andere koffiekoeken en sandwiches"
+          },
+          "texte": {
+            "fr": "Autres viennoiseries et sandwichs : +1 min seulement si trop clairs ; 1 fois maximum.",
+            "nl": "Andere koffiekoeken en sandwiches: enkel +1 min als ze te licht zijn; maximaal 1 keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4.4",
+          "titre": {
+            "fr": "Tartes aux fruits",
+            "nl": "Fruittaarten"
+          },
+          "texte": {
+            "fr": "Tartes aux fruits : ne pas ajouter du temps uniquement à cause du nombre de grilles.",
+            "nl": "Fruittaarten: geen tijd bijzetten enkel omwille van het aantal roosters."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4.5",
+          "titre": {
+            "fr": "Arrêter et appeler",
+            "nl": "Stoppen en bellen"
+          },
+          "texte": {
+            "fr": "Programme absent ou différent, ou four qui ne démarre pas : arrêter et appeler.",
+            "nl": "Programma ontbreekt of is anders, of de oven start niet: stoppen en bellen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Programmer les quatre pousses",
+        "nl": "De vier rijskasten programmeren"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": "Règle",
+            "nl": "Regel"
+          },
+          "texte": {
+            "fr": "Programmer et lancer les quatre pousses avant de plaquer. La pousse physique 4 n’est pas le programme 4.",
+            "nl": "De vier rijskasten programmeren en starten vóór het plaatsen. Rijskast 4 (de fysieke kast) is niet programma 4."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Répartition du fond vers l’avant (pousse — semaine / prog. — week-end / prog.)",
+        "nl": "Verdeling van achteren naar voren (rijskast — week / prog. — weekend / prog.)"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": "Pousse 1",
+            "nl": "Rijskast 1"
+          },
+          "texte": {
+            "fr": "Pousse 1 — semaine : choco et beurre, programme 1 — week-end : choco, programme 2.",
+            "nl": "Rijskast 1 — week: choco en boter, programma 1 — weekend: choco, programma 2."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": "Pousse 2",
+            "nl": "Rijskast 2"
+          },
+          "texte": {
+            "fr": "Pousse 2 — semaine : sandwiches, cramique, craquelin, programme 3 — week-end : sandwiches, cramique, craquelin, programme 3.",
+            "nl": "Rijskast 2 — week: sandwiches, cramique, craquelin, programma 3 — weekend: sandwiches, cramique, craquelin, programma 3."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": "Pousse 3",
+            "nl": "Rijskast 3"
+          },
+          "texte": {
+            "fr": "Pousse 3 — semaine : autres viennoiseries, programme 1 — week-end : autres viennoiseries, programme 2.",
+            "nl": "Rijskast 3 — week: andere koffiekoeken, programma 1 — weekend: andere koffiekoeken, programma 2."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {
+            "fr": "Pousse 4",
+            "nl": "Rijskast 4"
+          },
+          "texte": {
+            "fr": "Pousse 4 — semaine : rien ou commandes viennoiseries, programme 1 — week-end : autres viennoiseries et minis, programme 2.",
+            "nl": "Rijskast 4 — week: niets of bestellingen koffiekoeken, programma 1 — weekend: andere koffiekoeken en mini’s, programma 2."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Commandes et capacités",
+        "nl": "Bestellingen en capaciteit"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": "Commandes sandwiches",
+            "nl": "Bestellingen sandwiches"
+          },
+          "texte": {
+            "fr": "Commandes sandwiches : ajouter à la pousse 2.",
+            "nl": "Bestellingen sandwiches: toevoegen aan rijskast 2."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.2",
+          "titre": {
+            "fr": "Commandes viennoiseries",
+            "nl": "Bestellingen koffiekoeken"
+          },
+          "texte": {
+            "fr": "Commandes viennoiseries : semaine → pousse 4 ; week-end → pousse de la famille.",
+            "nl": "Bestellingen koffiekoeken: week → rijskast 4; weekend → rijskast van de productfamilie."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.3",
+          "titre": {
+            "fr": "Grandes viennoiseries",
+            "nl": "Grote koffiekoeken"
+          },
+          "texte": {
+            "fr": "Grandes viennoiseries — capacité : 12 par grille — suivre la liste active.",
+            "nl": "Grote koffiekoeken — capaciteit: 12 per rooster — de actieve lijst volgen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.4",
+          "titre": {
+            "fr": "Mini-viennoiseries",
+            "nl": "Mini-koffiekoeken"
+          },
+          "texte": {
+            "fr": "Mini-viennoiseries — capacité : 20 par grille — suivre la liste active.",
+            "nl": "Mini-koffiekoeken — capaciteit: 20 per rooster — de actieve lijst volgen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.5",
+          "titre": {
+            "fr": "Sandwiches",
+            "nl": "Sandwiches"
+          },
+          "texte": {
+            "fr": "Sandwiches — capacité : 12 par grille — suivre la liste active.",
+            "nl": "Sandwiches — capaciteit: 12 per rooster — de actieve lijst volgen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Programme 4 · Pousse immédiate (utilisation — minuteur et décision)",
+        "nl": "Programma 4 · Directe rijs (gebruik — timer en beslissing)"
+      },
+      "etapes": [
+        {
+          "numero": "8.1",
+          "titre": {
+            "fr": "Fonds de tarte",
+            "nl": "Taartbodems"
+          },
+          "texte": {
+            "fr": "Fonds de tarte — 1 h 15 fixe.",
+            "nl": "Taartbodems — vast 1 u 15."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8.2",
+          "titre": {
+            "fr": "Viennoiseries — contrôle à 2 h 30",
+            "nl": "Koffiekoeken — controle na 2 u 30"
+          },
+          "texte": {
+            "fr": "Viennoiseries — contrôle à 2 h 30 — si nécessaire : +30 min.",
+            "nl": "Koffiekoeken — controle na 2 u 30 — indien nodig: +30 min."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8.3",
+          "titre": {
+            "fr": "Nouveau contrôle à 3 h",
+            "nl": "Nieuwe controle na 3 u"
+          },
+          "texte": {
+            "fr": "Nouveau contrôle à 3 h — si nécessaire : +15 min max., puis demander un avis.",
+            "nl": "Nieuwe controle na 3 u — indien nodig: max. +15 min, daarna advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8.4",
+          "titre": {
+            "fr": "Autres usages",
+            "nl": "Ander gebruik"
+          },
+          "texte": {
+            "fr": "Autres usages : 2e production du jour · commande après-midi · double production week-end.",
+            "nl": "Ander gebruik: 2e productie van de dag · bestelling voor de namiddag · dubbele productie in het weekend."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Sonneries du matin",
+        "nl": "Signalen ’s ochtends"
+      },
+      "etapes": [
+        {
+          "numero": "9.1",
+          "titre": {
+            "fr": "4 h 20 et 4 h 30",
+            "nl": "4 u 20 en 4 u 30"
+          },
+          "texte": {
+            "fr": "4 h 20 et 4 h 30 : viennoiseries.",
+            "nl": "4 u 20 en 4 u 30: koffiekoeken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9.2",
+          "titre": {
+            "fr": "5 h",
+            "nl": "5 u"
+          },
+          "texte": {
+            "fr": "5 h : sandwiches.",
+            "nl": "5 u: sandwiches."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9.3",
+          "titre": {
+            "fr": "À la sonnerie",
+            "nl": "Bij het signaal"
+          },
+          "texte": {
+            "fr": "À la sonnerie : terminer uniquement l’action courte engagée, puis traiter la pousse.",
+            "nl": "Bij het signaal: enkel de korte actie waarmee je bezig bent afwerken en daarna de rijskast verwerken."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Après remplissage",
+        "nl": "Na het vullen"
+      },
+      "etapes": [
+        {
+          "numero": "10.1",
+          "titre": {
+            "fr": "Après remplissage",
+            "nl": "Na het vullen"
+          },
+          "texte": {
+            "fr": "Après remplissage : vérifier le contenu et le programme ; corriger immédiatement toute erreur.",
+            "nl": "Na het vullen: inhoud en programma controleren; elke fout meteen corrigeren."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Lancer les programmes enregistrés sans modifier leurs paramètres ; appliquer uniquement les ajustements de cette fiche.",
+      "nl": "De opgeslagen programma’s starten zonder hun parameters te wijzigen; enkel de aanpassingen van deze fiche toepassen."
+    },
+    {
+      "fr": "Flan : centre ferme au toucher. Tarte au sucre : centre entre flan et liquide (SOP Flans et tartes au sucre v1.1).",
+      "nl": "Flan: midden stevig bij aanraking. Suikertaart: midden tussen flan en vloeibaar in (SOP Flans en suikertaarten v1.1)."
+    },
+    {
+      "fr": "Pains de la veille (catégorie pain uniquement) : même four après les grands pains, sans relancer de programme, +4 min, 20 % d’humidité.",
+      "nl": "Broden van de vorige dag (enkel de categorie brood): dezelfde oven na de grote broden, zonder opnieuw een programma te starten, +4 min, 20 % vochtigheid."
+    },
+    {
+      "fr": "Quiches en dernier ; jamais les 2 fours simultanément.",
+      "nl": "Quiches als laatste; nooit de 2 ovens tegelijk."
+    },
+    {
+      "fr": "Programme absent ou différent, ou four qui ne démarre pas : arrêter et appeler.",
+      "nl": "Programma ontbreekt of is anders, of de oven start niet: stoppen en bellen."
+    },
+    {
+      "fr": "La pousse physique 4 n’est pas le programme 4 ; après remplissage, vérifier contenu et programme et corriger immédiatement.",
+      "nl": "Rijskast 4 is niet programma 4; na het vullen inhoud en programma controleren en meteen corrigeren."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Comment doit être le centre d’un flan en fin de cuisson ?",
+        "nl": "Hoe moet het midden van een flan zijn op het einde van het bakken?"
+      },
+      "choix": {
+        "fr": [
+          "Mobile, entre flan et liquide",
+          "Ferme au toucher",
+          "Encore liquide"
+        ],
+        "nl": [
+          "Beweeglijk, tussen flan en vloeibaar in",
+          "Stevig bij aanraking",
+          "Nog vloeibaar"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Quel programme pour la pousse 2 (sandwiches, cramique, craquelin) ?",
+        "nl": "Welk programma voor rijskast 2 (sandwiches, cramique, craquelin)?"
+      },
+      "choix": {
+        "fr": [
+          "Programme 1",
+          "Programme 2",
+          "Programme 3"
+        ],
+        "nl": [
+          "Programma 1",
+          "Programma 2",
+          "Programma 3"
+        ]
+      },
+      "bonne": 2
+    },
+    {
+      "question": {
+        "fr": "Quel minuteur pour les fonds de tarte en programme 4 (pousse immédiate) ?",
+        "nl": "Welke timer voor taartbodems in programma 4 (directe rijs)?"
+      },
+      "choix": {
+        "fr": [
+          "1 h 15 fixe",
+          "2 h 30",
+          "3 h"
+        ],
+        "nl": [
+          "Vast 1 u 15",
+          "2 u 30",
+          "3 u"
+        ]
+      },
+      "bonne": 0
+    }
+  ],
+  "corrections": [
+    "Décision 3 — ligne Flan : « Dessus doré ; centre mobile, entre flan et liquide ; +5 min, 1 fois » remplacé par « dessus doré ; centre ferme au toucher ; +5 min, 1 fois, puis demander un avis » (SOP Flans v1.1 fait foi).",
+    "Décision 3 — ligne Tarte au sucre : « Dessus bien doré, fermé au toucher ; +7 min, 2 fois max. » remplacé par « croûte bien dorée et régulière ; centre entre flan et liquide ; +7 min, 2 fois max., puis demander un avis » (SOP Flans v1.1 fait foi). Les critères des deux produits étaient inversés.",
+    "Décision 2 — « Pains de la veille » : ajout de « (catégorie pain uniquement) ».",
+    "Version passée de 1.0 à 1.1."
+  ],
+  "remarques": [
+    "Code FICHE-CUI-01 attribué : le document ne porte pas de code (pied de page « L’ATELIER · CUISSON · version 1.0 »).",
+    "Tartes aux fruits : la fiche dit « +5 min, 1 fois », la SOP Tartes aux fruits dit « ajouter 5 minutes uniquement aux tartes concernées » sans limiter le nombre de prolongations — à aligner.",
+    "« Programme sablé » (sablés / fonds Plougastel) : écrit sans guillemets dans la fiche ; libellé exact du programme à confirmer.",
+    "Libellé de touche « ajouter du temps » gardé en français en NL, avec traduction entre parenthèses.",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1cSAgsuxhAfn2BlXsm6AIUpcTtY-0I-aA",
+      "docx": "1AZ89qPghTSolQFZLe-TOGZyLwXt0hSF0"
+    },
+    "lu": "docx"
+  }
+}

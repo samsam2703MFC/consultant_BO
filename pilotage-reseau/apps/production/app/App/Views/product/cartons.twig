@@ -1,0 +1,30 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kartony i palety{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-box2"></i> Kartony i palety</h3>
+            <p class="text-subtitle text-muted">Rodzaje kartonów : wymiary zewnętrzne, waga kartonu, maksymalny ładunek. Ile kartonów mieści się na palecie
+                (warstwa, warstwy do maks. wysokości) i które produkty są w danym kartonie — z kontrolą wagi i układu z ERP.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Kartony i palety [205] : katalog n_carton (karton = surowiec-opakowanie), układ palety (App\Domain\Logistics\PalletLayout),
+   produkty w kartonie (karta → PPWR → receptura). Dane : /ajax/products/cartons. #}
+<section class="section ct" id="cartonsApp" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop">
+    <div class="ct-kpis" data-kpis></div>
+    <div data-view><p class="at-empty">Ładowanie…</p></div>
+</section>
+<script type="application/json" id="cartonsBoot">{{ boot|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/pallet-views.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/product/cartons.js?v={{ asset_v() }}"></script>
+{% endblock %}

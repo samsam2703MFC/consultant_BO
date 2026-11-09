@@ -1,0 +1,78 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>B2B · C · Modèles</title><link rel="stylesheet" href="commun.css">
+<style>
+.bande{background:linear-gradient(135deg,#A8561C,#7A3A10);color:#fff;border-radius:18px;padding:18px 22px 20px;margin-bottom:16px}
+.bande h2{font:400 24px/1.1 var(--titre);margin:0}
+.bande p{margin:4px 0 14px;opacity:.85}
+.mods{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.mod{background:#fff;color:var(--texte);border-radius:14px;padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;position:relative}
+.mod .e{font-size:24px}
+.mod b{font:600 14px var(--ui)}
+.mod .f{font:700 26px/1 var(--ui);color:var(--abf-encre)}
+.mod .f small{font-size:13px;font-weight:600;color:var(--muet)}
+.mod .d{display:inline-block;align-self:flex-start;font:600 11px var(--ui);background:var(--ab-doux);color:var(--abf-encre);border-radius:999px;padding:3px 9px}
+.mod p{margin:0;color:var(--muet);font-size:12px;line-height:1.4;flex:1}
+.mod .ch{font:600 12.5px var(--ui);color:var(--abf)}
+.mod.on{box-shadow:0 0 0 3px #FAC775}
+.mod.on::after{content:"✓ choisi";position:absolute;top:12px;right:12px;font:700 10.5px var(--ui);background:var(--abf);color:#fff;border-radius:999px;padding:3px 8px}
+.mod.vide{background:rgba(255,255,255,.12);color:#fff;border:1.5px dashed rgba(255,255,255,.5);align-items:center;justify-content:center;text-align:center}
+.mod.vide b{font-size:15px}.mod.vide p{color:rgba(255,255,255,.8);flex:0}
+.bas{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:16px;align-items:start}
+.tit{display:flex;align-items:center;gap:10px;padding:14px 16px 8px}
+.tit h3{font:400 20px var(--titre);margin:0}
+.tir{padding:16px 18px}
+.tir h3{font:400 22px var(--titre);margin:0 0 2px}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0}
+.dur{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.dur .puce{padding:6px 11px;font-size:12px}
+.phr{background:var(--ab-pale);border:1px solid var(--ab-trait);border-radius:12px;padding:12px 14px;color:var(--abf-encre);font-size:13px;line-height:1.45}
+.phr b{color:var(--abf-encre)}
+.nb{font:600 11px var(--ui);color:#fff;background:var(--abf);border-radius:999px;padding:2px 7px;margin-left:6px}
+td small{display:block;color:var(--muet);font-size:11.5px}
+td:nth-child(2){white-space:nowrap}
+td{font-size:12.5px}
+</style>
+<body><div class="ecran">
+<nav class="rail">
+  <div class="logo">Cockpit</div>
+  <div class="gr">Pilotage</div>
+  <a><i>◎</i>Tableau de bord</a><a><i>↗</i>Ventes</a><a><i>⟳</i>Récurrence</a>
+  <div class="gr">ERP franchisé</div>
+  <a><i>▤</i>Marketing franchisé</a><a><i>☰</i>Targets &amp; primes</a>
+  <div class="gr">Application employé</div>
+  <a class="sous">Paramètres primes</a><a class="sous on">Paramètres primes franchisé</a><a class="sous">L’application ↗</a>
+  <div class="gr">Réglages</div>
+  <a><i>⚙</i>Paramètres</a>
+</nav>
+
+<main class="page"><div class="fil">Application employé › <b>Paramètres primes franchisé</b></div>
+<h1>Primes du magasin · Halle</h1>
+<p class="chapo">Les primes que tu poses pour ton magasin, payées par lui. Tes vendeuses les voient dans Mes primes.</p>
+<div class="bande"><h2>Nouveau · une prime B2B</h2><p>Pour donner envie d’aller chercher les écoles, les crèches, les entreprises. Choisis une formule, ajuste-la en deux clics.</p>
+  <div class="mods">
+    <div class="mod"><span class="e">🤝</span><b>Le 1er contact</b><span class="f">30 <small>€</small></span><span class="d">une fois</span><p>Par nouveau client pro, à sa 1re commande (100 € HT min.).</p><span class="ch">Choisir →</span></div>
+    <div class="mod"><span class="e">🧾</span><b>La 1re commande</b><span class="f">8 <small>%</small></span><span class="d">la 1re commande</span><p>De sa 1re commande, jusqu’à 80 €. Simple à expliquer.</p><span class="ch">Choisir →</span></div>
+    <div class="mod on"><span class="e">🏫</span><b>Le client suivi</b><span class="f">3 <small>%</small></span><span class="d">pendant 12 mois</span><p>De chaque commande pendant un an : la vendeuse soigne le client.</p><span class="ch">Ajuster ↓</span></div>
+    <div class="mod"><span class="e">🎒</span><b>La rentrée des écoles</b><span class="f">5 <small>%</small></span><span class="d">pendant 3 mois</span><p>Écoles et crèches, de septembre à novembre : le trimestre des goûters.</p><span class="ch">Choisir →</span></div>
+    <div class="mod vide"><span class="e">✚</span><b>Créer la mienne</b><p>% ou montant fixe, durée, clients, plafond.</p></div>
+  </div></div>
+<div class="bas">
+  <div class="carte" style="overflow:hidden">
+    <div class="tit"><h3>Les primes du magasin</h3><span class="mu" style="font-size:12px">5 primes · 2 B2B</span><span style="flex:1"></span><button class="bt p" style="padding:7px 14px;font-size:12px">+ Nouvelle prime</button></div>
+    <table><thead><tr><th>Active</th><th>Prime</th><th>Type</th><th>Ce qui compte</th><th>Gagne</th><th style="text-align:right">Récompense</th></tr></thead><tbody>
+      <tr><td><span class="inter off"></span></td><td><span class="tuile ab">🏫</span> <b>Le client suivi</b><span class="nb">brouillon</span></td><td><span class="typ b2b">B2B</span></td><td>nouveau client pro : écoles, crèches, assos<small>chaque commande, 12 mois · 100 € HT min.</small></td><td>la vendeuse de la 1re commande</td><td style="text-align:right"><b>3 %</b><small>jusqu’à 150 € par client</small></td></tr>
+      <tr><td><span class="inter"></span></td><td><span class="tuile ab">🤝</span> <b>Le 1er contact</b></td><td><span class="typ b2b">B2B</span></td><td>nouveau client pro : tous<small>une fois · 100 € HT min.</small></td><td>la vendeuse de la 1re commande</td><td style="text-align:right"><b>30 €</b><small>par client · 4 ce mois-ci</small></td></tr>
+      <tr><td><span class="inter"></span></td><td><span class="tuile">🥧</span> <b>Queen of Tartes</b></td><td><span class="typ cat">Catégorie</span></td><td>produits « tarte »<small>10 pcs min.</small></td><td>la 1re du magasin</td><td style="text-align:right"><b>50 €</b></td></tr>
+      <tr><td><span class="inter"></span></td><td><span class="tuile">☕</span> <b>Promo café + croissant</b></td><td><span class="typ promo">Promo</span></td><td>vendus pendant la promo</td><td>la 1re du magasin</td><td style="text-align:right"><b>50 €</b></td></tr>
+      <tr style="opacity:.55"><td><span class="inter off"></span></td><td><span class="tuile">🍰</span> <b>Queen of Quiches</b></td><td><span class="typ cat">Catégorie</span></td><td>produits « quiche »<small>8 pcs min.</small></td><td>la 1re du magasin</td><td style="text-align:right"><b>50 €</b></td></tr>
+    </tbody></table></div>
+  <div class="carte tir"><span class="lab">Ajuster le modèle</span><h3>🏫 Le client suivi</h3><span class="mu">Payée par Halle · gagnée par la vendeuse de la 1re commande</span>
+    <div class="f2"><div><span class="lab">Taux de la commande</span><span class="chp" style="font-size:18px;font-weight:700;color:var(--abf-encre)">3 <small>%</small></span></div><div><span class="lab">Plafond par client</span><span class="chp">150 <small>€</small></span></div></div>
+    <span class="lab">Pendant</span>
+    <div class="dur"><span class="puce">la 1re</span><span class="puce">1 mois</span><span class="puce">3 mois</span><span class="puce on">12 mois</span><span class="puce">sans limite</span></div>
+    <span class="lab">Clients</span>
+    <div class="dur"><span class="puce doux">🏫 Écoles</span><span class="puce doux">🧸 Crèches</span><span class="puce doux">🤝 Associations</span><span class="puce">+ ajouter</span></div>
+    <div class="phr">Dans l’app : « <b>3 % de chaque commande</b> d’un nouveau client pro, pendant 12 mois. » Une école à 400 € par mois rapporte <b>12 € par mois</b>, <b>144 € sur l’année</b>.</div>
+    <div style="display:flex;gap:8px;margin-top:14px"><button class="bt l">Plus de réglages</button><span style="flex:1"></span><button class="bt p">Activer</button></div>
+  </div>
+</div>
+</main></div></body></html>

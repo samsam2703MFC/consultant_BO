@@ -1,0 +1,720 @@
+{
+  "id": "ouv-mag",
+  "code": "SOP-WKL-001",
+  "type": "SOP",
+  "dossier": "01",
+  "version": "5",
+  "statut": null,
+  "langue_origine": "NL",
+  "poste": "vente",
+  "moment": "ouverture",
+  "duree": "06:00–07:00 (shift 06:00–14:00)",
+  "titre": {
+    "fr": "Ouverture du magasin et des comptoirs",
+    "nl": "Openingsprocedure Winkel & Toonbanken"
+  },
+  "objectif": {
+    "fr": "Ouvrir le magasin à 06:00, remplir les comptoirs avant 07:00 et garantir en continu une qualité irréprochable.",
+    "nl": "Winkel openen om 06:00 uur, toonbanken vullen voor 07:00 uur en continue topkwaliteit borgen."
+  },
+  "pour": {
+    "fr": "Personnel de vente / employés du magasin boulangerie-pâtisserie",
+    "nl": "Verkooppersoneel / Winkelmedewerkers Boulangerie-Pâtisserie"
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Sujet et contexte",
+        "nl": "Onderwerp & bedrijfscontext"
+      },
+      "etapes": [
+        {
+          "numero": "0.1",
+          "titre": {
+            "fr": "Sujet",
+            "nl": "Onderwerp"
+          },
+          "texte": {
+            "fr": "Procédure d'ouverture, mise en place des comptoirs et démarrage de la vente.",
+            "nl": "Openingsprocedure, Toonbankinrichting & Verkoop opstart"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.2",
+          "titre": {
+            "fr": "Contexte et timing",
+            "nl": "Bedrijfscontext & timing"
+          },
+          "texte": {
+            "fr": "L'équipe de vente arrive à 06:00 (le cuiseur/boulanger est déjà présent avant). L'entrée clients est ouverte dès 06:00. Entre 06:00 et 07:00, les premiers clients arrivent au compte-gouttes. Les opérations de démarrage et de remplissage se font pendant cette heure, en servant toujours immédiatement et en priorité les clients qui entrent. À 07:00, le magasin est rempli à 100 % pour le pic de vente.",
+            "nl": "Het verkooppersoneel komt aan om 06:00 uur (de cuiseur/bakker is reeds eerder aanwezig). De klanteningang wordt direct om 06:00 uur geopend. Tussen 06:00 en 07:00 uur komen de eerste klanten mondjesmaat (\"au compte-goutte\") binnen. De opstart- en vulhandelingen worden in dit uur uitgevoerd, waarbij binnenkomende klanten altijd direct en met prioriteit worden geholpen. Om 07:00 uur is de winkel 100% gevuld voor de piekverkoop."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.3",
+          "titre": {
+            "fr": "Remarque organisation",
+            "nl": "Opmerking organisatie"
+          },
+          "texte": {
+            "fr": "Entre 06:00 et 07:00, les clients arrivent au compte-gouttes. Combinez le remplissage des comptoirs avec le service immédiat et aimable de chaque client qui entre.",
+            "nl": "Tussen 06:00 en 07:00 uur komen klanten mondjesmaat binnen. Combineer het vullen van de toonbanken met het direct en vriendelijk bedienen van elke klant die binnenkomt."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 1 : arrivée, ouverture et préparation du magasin (06:00 – 07:00) — 1. Démarrage personnel et enregistrement dans les systèmes (dès 06:00)",
+        "nl": "Fase 1: Aankomst, opening & winkel klaarmaken (06:00 - 07:00) — 1. Persoonlijke opstart & Systeemregistratie (Direct om 06:00 uur)"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "Mettre son tablier (06:00)",
+            "nl": "Schort aandoen (06:00)"
+          },
+          "texte": {
+            "fr": "Dès l'arrivée, enfiler un tablier propre et sans plis. Veiller à une présentation professionnelle et hygiénique.",
+            "nl": "Trek direct bij binnenkomst een schone, strijkvrije welschort aan. Zorg voor een professionele en hygiënische uitstraling."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "1.2",
+          "titre": {
+            "fr": "Pointage (Shyfter) (06:00)",
+            "nl": "Tijdregistratie (Shyfter) (06:00)"
+          },
+          "texte": {
+            "fr": "Aller à la tablette Shyfter. Saisir son code PIN personnel et taper sur « Inklokken » (pointer l'arrivée). Il est strictement interdit de pointer pour un collègue ou sous le nom d'un collègue.",
+            "nl": "Ga naar de Shyfter-tablet. Voer je persoonlijke PIN-code in en tik op 'Inklokken'. Het is ten strengste verboden in te klokken voor of onder de naam van een collega."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "1.3",
+          "titre": {
+            "fr": "Démarrer la caisse (06:01)",
+            "nl": "Kassa opstarten (06:01)"
+          },
+          "texte": {
+            "fr": "Allumer le système de caisse et se connecter avec son propre compte/nom. Vérifier qu'il y a assez de papier pour la caisse et les tickets. Suivre pour cela l'addendum « Ouvrir la caisse » ci-dessous : code de gestion 12 et valeur d'ouverture 0 ; on ne compte pas la caisse (le monnayeur automatique gère le cash).",
+            "nl": "Zet het kassasysteem aan en log in met je eigen account/naam. Controleer of er voldoende kassa- en bonnetjespapier aanwezig is. Volg hiervoor de aanvulling 'Kassa openen' hieronder: beheercode 12 en openingswaarde 0; de kassa wordt niet geteld (de automatische monnayeur beheert het cash)."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.4",
+          "titre": {
+            "fr": "Ouvrir l'entrée clients (06:02)",
+            "nl": "Klanteningang openen (06:02)"
+          },
+          "texte": {
+            "fr": "Déverrouiller la porte d'entrée et la mettre en position ouverte. À partir de maintenant, le magasin est officiellement ouvert aux clients.",
+            "nl": "Ontgrendel de voordeur en zet deze op de openingsstand. De winkel is vanaf nu officieel geopend voor klanten."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 1 — 2. Contrôle infrastructure et logistique",
+        "nl": "Fase 1 — 2. Infrastructuur & Logistiek Controle"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Contrôler les froids et les frigos (06:03)",
+            "nl": "Koelingen & Frigo's controleren (06:03)"
+          },
+          "texte": {
+            "fr": "Passer devant tous les comptoirs réfrigérés et réfrigérateurs. Vérifier qu'ils sont sous tension et que les afficheurs indiquent la bonne température (+2 °C à +5 °C). Signaler immédiatement toute panne.",
+            "nl": "Loop langs alle koeltoog-eenheden en koelkasten. Controleer of de stroom aan staat en of de displays de correcte temperatuur aangeven (+2°C tot +5°C). Meld eventuele storingen direct."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Consulter le carnet de commandes (06:05)",
+            "nl": "Bestellingenboek raadplegen (06:05)"
+          },
+          "texte": {
+            "fr": "Consulter le carnet de commandes papier ou le module de commandes numérique pour voir quelles commandes à retirer sont prévues pour la matinée.",
+            "nl": "Bekijk het fysieke bestelboek of de digitale bestelmodule om te zien welke afgehaalde bestellingen voor de ochtend gepland staan."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 1 — 3. Remplissage des comptoirs (ordre d'exécution)",
+        "nl": "Fase 1 — 3. Vullen van de Toonbanken (Volgorde van uitvoering)"
+      },
+      "etapes": [
+        {
+          "numero": "3.0",
+          "titre": {
+            "fr": "Norme d'hygiène",
+            "nl": "Hygiënenorm"
+          },
+          "texte": {
+            "fr": "Pour manipuler des produits non emballés, toujours utiliser des gants propres ou une pince de service en inox.",
+            "nl": "Gebruik bij het hanteren van onverpakte producten altijd schone handschoenen of een RVS serveertang."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": "Viennoiseries (koffiekoeken et croissants) (06:10)",
+            "nl": "Viennoiserie (Koffiekoeken & Croissants) (06:10)"
+          },
+          "texte": {
+            "fr": "Prendre les grilles, les couvrir bien à plat du papier cuisson prévu et disposer les viennoiseries fraîches de manière ordonnée.",
+            "nl": "Neem de roosters, bedek ze strak met het voorziene bakpapier en rangschik de verse viennoiserie overzichtelijk."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": "Rayon pain (06:20)",
+            "nl": "Broodafdeling (06:20)"
+          },
+          "texte": {
+            "fr": "Remplir l'étagère à pain selon le planogramme établi. Appliquer le principe FIFO (First In, First Out : premier entré, premier sorti).",
+            "nl": "Vul het broodrek op volgens het vastgestelde schappenplan. Pas het FIFO-principe toe (First In, First Out)."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": "Comptoir tartes (06:30)",
+            "nl": "Toonbank Taarten (06:30)"
+          },
+          "texte": {
+            "fr": "Remplir le comptoir à tartes de manière soignée et attrayante. Veiller à ce que les étiquettes de prix soient correctement placées.",
+            "nl": "Vul de taartentoog netjes en aantrekkelijk aan. Zorg dat de prijskaartjes correct geplaatst zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.4",
+          "titre": {
+            "fr": "Comptoir tartissières et pâtisserie (06:40)",
+            "nl": "Toonbank Tartissières & Patisserie (06:40)"
+          },
+          "texte": {
+            "fr": "Remplir le comptoir réfrigéré. Veiller à ce que toutes les étiquettes produits et plaquettes de présentation soient bien alignées et tournées vers le client.",
+            "nl": "Vul de gekoelde toog. Zorg dat alle productetiketten en presentatiebordjes strak naar de klant gericht staan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.5",
+          "titre": {
+            "fr": "Frigo quiches (06:48)",
+            "nl": "Frigo Quiches (06:48)"
+          },
+          "texte": {
+            "fr": "Remplir complètement le frigo à quiches avec un assortiment varié.",
+            "nl": "Vul de quichekoeling volledig aan met een gevarieerd assortiment."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.6",
+          "titre": {
+            "fr": "Préparer les commandes clients (06:52)",
+            "nl": "Klantbestellingen klaarmaken (06:52)"
+          },
+          "texte": {
+            "fr": "Préparer les commandes prévues, les emballer soigneusement avec le bon de commande et les placer à l'emplacement d'enlèvement réservé.",
+            "nl": "Bereid de geplande bestellingen voor, verpak ze netjes met het bestelbonnetje en plaats ze op de gereserveerde afhaalplek."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.7",
+          "titre": {
+            "fr": "Chariot de réserve viennoiseries (06:56)",
+            "nl": "Reservekar Viennoiserie (06:56)"
+          },
+          "texte": {
+            "fr": "Placer le chariot de réserve à son emplacement fixe derrière le comptoir pour pouvoir réassortir facilement pendant toute la matinée.",
+            "nl": "Plaats de reservekar op de vaste standplaats achter de toonbank om gedurende de ochtend vlot te kunnen bijvullen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 2 : pic de vente, entretien et production (dès 07:00) — 1. Focus commercial et orientation client",
+        "nl": "Fase 2: Piekverkoop, onderhoud & productie (vanaf 07:00) — 1. Commerciële Focus & Klantgerichtheid"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "VENDRE VENDRE VENDRE (07:00)",
+            "nl": "VENDRE VENDRE VENDRE (07:00)"
+          },
+          "texte": {
+            "fr": "Dès 07:00 commence le flux intensif de clients. Le client est au centre, à 100 %. Saluer chacun avec un sourire et un contact visuel.",
+            "nl": "Vanaf 07:00 uur start de intensieve klantenstroom. De klant staat 100% centraal. Begroet iedereen met een glimlach en oogcontact."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.2",
+          "titre": {
+            "fr": "Vente active",
+            "nl": "Actieve verkoop"
+          },
+          "texte": {
+            "fr": "Proposer activement des produits complémentaires (par ex. « Vous prendrez une délicieuse quiche du jour ou un petit croissant en plus ? »).",
+            "nl": "Bied actief aanvullende producten aan (bijv. \"Wilt u er een heerlijke dagverse quiche of een extra croissantje bij?\")."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 2 — 2. Stock et continuité",
+        "nl": "Fase 2 — 2. Voorraad & Continuïteit"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Matériel d'emballage (en continu)",
+            "nl": "Verpakkingsmateriaal (continu)"
+          },
+          "texte": {
+            "fr": "Contrôler régulièrement les tiroirs de sacs à pain, boîtes à pâtisserie, papier d'emballage et ruban. Les remplir au maximum pour ne jamais être pris au dépourvu pendant le rush.",
+            "nl": "Controleer regelmatig de lades met broodzakken, gebaksdozen, inpakpapier en lint. Vul bij tot het maximale niveau zodat je tijdens de drukte nooit misgrijpt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Maintenir les comptoirs remplis",
+            "nl": "Toonbanken op peil houden"
+          },
+          "texte": {
+            "fr": "Utiliser le chariot de réserve pour combler immédiatement les vides dans le comptoir viennoiseries. Un comptoir plein vend mieux !",
+            "nl": "Gebruik de reservekar om lege plekken in de viennoiserietoog meteen aan te vullen. Een volle toog verkoopt beter!"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Phase 2 — 3. Production et hygiène",
+        "nl": "Fase 2 — 3. Productie & Hygiëne"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": "Production des Flip-Flaps (matin)",
+            "nl": "Flip-Flap Productie (ochtend)"
+          },
+          "texte": {
+            "fr": "Préparer les Flip-Flaps et/ou aider l'atelier à l'assemblage selon la fiche recette officielle.",
+            "nl": "Bereid de Flip-Flaps voor en/of ondersteun het atelier bij de assemblage volgens de officiële receptfiche."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": "Propreté du magasin (en continu)",
+            "nl": "Winkel netheid (Continu)"
+          },
+          "texte": {
+            "fr": "Garder à tout moment le magasin, les comptoirs et la trancheuse à pain parfaitement propres. Essuyer les miettes immédiatement.",
+            "nl": "Houd de winkel, toonbanken en broodsnijmachine op elk moment smetteloos schoon. Veeg kruimels meteen weg."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Les 3 règles d'or de l'équipe de vente",
+        "nl": "De 3 gouden regels voor het verkoopteam"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Règle 1 – Pas de vides",
+            "nl": "Regel 1 – Geen lege plekken"
+          },
+          "texte": {
+            "fr": "Un vide dans le comptoir, c'est réassortir immédiatement depuis le chariot de réserve ou l'atelier. Une présentation bien remplie stimule la vente.",
+            "nl": "Een lege plek in de toog betekent direct aanvullen vanaf de reservekar of uit de bakkerij. Een volle presentatie stimuleert verkoop."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Règle 2 – Pas de désordre sur le plan de travail",
+            "nl": "Regel 2 – Geen rommel op het werkvlak"
+          },
+          "texte": {
+            "fr": "Les miettes, les bouts de sacs coupés ou le papier sale sont débarrassés immédiatement. Un comptoir propre respire l'hygiène et le savoir-faire artisanal.",
+            "nl": "Kruimels, afgesneden zakken of vuil papier worden direct opgeruimd. Een propere toonbank straalt hygiëne en ambacht uit."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Règle 3 – Identification personnelle",
+            "nl": "Regel 3 – Eigen identificatie"
+          },
+          "texte": {
+            "fr": "La connexion à Shyfter ou à la caisse se fait TOUJOURS avec son propre code/nom personnel. Il est interdit d'utiliser le compte d'un collègue.",
+            "nl": "Inloggen op Shyfter of de kassa gebeurt ALTIJD met je eigen persoonlijke code/naam. Het gebruik van accounts van collega's is verboden."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Addendum à SOP-WKL-001 — Ouvrir la caisse, partie 1 : de l'écran éteint à l'écran de gestion (Beheer)",
+        "nl": "Aanvulling op SOP-WKL-001 — Kassa openen, deel 1: van uitgeschakeld scherm naar Beheer"
+      },
+      "etapes": [
+        {
+          "numero": "0",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Suivre chaque étape dans cet ordre. Ne passer à l'étape suivante que lorsque l'écran montré apparaît.",
+            "nl": "Volg elke stap in deze volgorde. Ga pas verder wanneer je het getoonde scherm ziet."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Allumer l'écran",
+            "nl": "Scherm aanzetten"
+          },
+          "texte": {
+            "fr": "À FAIRE : appuyer une fois sur le bouton marche/arrêt en bas, juste sous le coin droit de l'écran. ATTENDRE QUE : le bureau Windows bleu apparaisse.",
+            "nl": "DOEN: Druk één keer op de aan/uitknop onderaan, net onder de rechterhoek van het scherm. WACHT TOT: het blauwe Windows-bureaublad verschijnt."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-1.jpg"
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Lancer le programme de caisse",
+            "nl": "Kassaprogramma starten"
+          },
+          "texte": {
+            "fr": "À FAIRE : taper deux fois brièvement sur l'icône POS au milieu du bureau. ATTENDRE QUE : le programme de caisse soit complètement ouvert.",
+            "nl": "DOEN: Tik twee keer kort op het pictogram POS midden op het bureaublad. WACHT TOT: het kassaprogramma volledig geopend is."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-2.jpg"
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Choisir son propre nom",
+            "nl": "Kies je eigen naam"
+          },
+          "texte": {
+            "fr": "À FAIRE : taper sur le nom en haut de l'écran, puis choisir son propre nom dans la liste. CONTRÔLE : votre nom est affiché en haut.",
+            "nl": "DOEN: Tik bovenaan het scherm op de naam en kies daarna je eigen naam in de lijst. CONTROLE: jouw naam staat bovenaan."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-3.jpg"
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Ouvrir « Beheer » (gestion)",
+            "nl": "Open Beheer"
+          },
+          "texte": {
+            "fr": "À FAIRE : chercher parmi les boutons bleus et taper sur « Beheer ». ENSUITE : l'écran demande un code.",
+            "nl": "DOEN: Zoek tussen de blauwe knoppen en tik op Beheer. DAARNA: het scherm vraagt om een code."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-4.jpg"
+        },
+        {
+          "numero": "4a",
+          "titre": {
+            "fr": "Attention",
+            "nl": "Let op"
+          },
+          "texte": {
+            "fr": "Le choix personnel, c'est votre nom. Le code de gestion de l'étape suivante est le même pour tout le monde.",
+            "nl": "De persoonlijke keuze is je naam. De beheercode in de volgende stap is voor iedereen dezelfde."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Addendum à SOP-WKL-001 — Ouvrir la caisse, partie 2 : du code de gestion à la caisse prête à vendre",
+        "nl": "Aanvulling op SOP-WKL-001 — Kassa openen, deel 2: van beheercode naar verkoopsklaar"
+      },
+      "etapes": [
+        {
+          "numero": "0",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Toujours utiliser le code 12 et la valeur d'ouverture 0. On ne compte pas l'argent de la caisse : le monnayeur automatique gère le cash.",
+            "nl": "Gebruik altijd code 12 en openingswaarde 0. Het kassageld wordt niet geteld: de automatische monnayeur beheert het cash."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Saisir le code 12",
+            "nl": "Voer code 12 in"
+          },
+          "texte": {
+            "fr": "À FAIRE : taper 1 puis 2. Confirmer si l'écran le demande. CODE FIXE : toujours 12, jamais un code PIN personnel.",
+            "nl": "DOEN: Tik op 1 en daarna op 2. Bevestig indien het scherm daarom vraagt. VASTE CODE: altijd 12, nooit een persoonlijke pincode."
+          },
+          "critique": true,
+          "photo": "photos/ouv-mag-5.jpg"
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "« Dag openen/sluiten » (ouvrir/clôturer la journée)",
+            "nl": "Dag openen/sluiten"
+          },
+          "texte": {
+            "fr": "À FAIRE : dans l'écran de gestion, taper sur « Dag openen/sluiten ». ENSUITE : l'écran demande la valeur d'ouverture.",
+            "nl": "DOEN: Tik in het beheerscherm op Dag openen/sluiten. DAARNA: het scherm vraagt naar de openingswaarde."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-6.jpg"
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Saisir 0",
+            "nl": "Voer 0 in"
+          },
+          "texte": {
+            "fr": "À FAIRE : saisir 0 et confirmer. IMPORTANT : ne pas compter le fonds de caisse et ne saisir aucun montant réel.",
+            "nl": "DOEN: Vul 0 in en bevestig. BELANGRIJK: tel het fonds de caisse niet en voer geen werkelijk bedrag in."
+          },
+          "critique": true,
+          "photo": "photos/ouv-mag-7.jpg"
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Choisir à nouveau son nom",
+            "nl": "Kies opnieuw je naam"
+          },
+          "texte": {
+            "fr": "À FAIRE : taper à nouveau sur le nom en haut et choisir son propre nom. TERMINÉ : votre nom est visible et la caisse est prête pour la première vente.",
+            "nl": "DOEN: Tik opnieuw bovenaan op de naam en kies je eigen naam. KLAAR: jouw naam is zichtbaar en de kassa is klaar voor de eerste verkoop."
+          },
+          "critique": false,
+          "photo": "photos/ouv-mag-8.jpg"
+        },
+        {
+          "numero": "8a",
+          "titre": {
+            "fr": "À retenir",
+            "nl": "Onthoud"
+          },
+          "texte": {
+            "fr": "Code de gestion = 12 | Valeur d'ouverture = 0 | Ne pas compter",
+            "nl": "Beheercode = 12 | Openingswaarde = 0 | Niet tellen"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "8b",
+          "titre": {
+            "fr": "Contrôle final",
+            "nl": "Eindcontrole"
+          },
+          "texte": {
+            "fr": "Son propre nom visible en haut + écran de vente ouvert = procédure terminée.",
+            "nl": "Eigen naam zichtbaar bovenaan + verkoopscherm geopend = procedure voltooid."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Frigos et comptoirs réfrigérés entre +2 °C et +5 °C ; signaler immédiatement toute panne.",
+      "nl": "Koelingen en koeltogen tussen +2°C en +5°C; meld storingen direct."
+    },
+    {
+      "fr": "Produits non emballés : toujours avec des gants propres ou une pince de service en inox.",
+      "nl": "Onverpakte producten: altijd met schone handschoenen of een RVS serveertang."
+    },
+    {
+      "fr": "Rayon pain en FIFO (premier entré, premier sorti).",
+      "nl": "Broodafdeling volgens FIFO (First In, First Out)."
+    },
+    {
+      "fr": "Toujours se connecter avec son propre code/nom (Shyfter et caisse) ; utiliser le compte d'un collègue est interdit.",
+      "nl": "Altijd inloggen met je eigen code/naam (Shyfter en kassa); accounts van collega's gebruiken is verboden."
+    },
+    {
+      "fr": "Caisse : code de gestion 12, valeur d'ouverture 0 ; on ne compte pas la caisse (le monnayeur automatique gère le cash).",
+      "nl": "Kassa: beheercode 12, openingswaarde 0; de kassa wordt niet geteld (de automatische monnayeur beheert het cash)."
+    },
+    {
+      "fr": "Entre 06:00 et 07:00, servir en priorité chaque client qui entre ; à 07:00 le magasin est rempli à 100 %.",
+      "nl": "Tussen 06:00 en 07:00 elke binnenkomende klant met voorrang helpen; om 07:00 is de winkel 100% gevuld."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Quelle température doivent afficher les frigos et comptoirs réfrigérés ?",
+        "nl": "Welke temperatuur moeten de koelingen en koeltogen aangeven?"
+      },
+      "choix": {
+        "fr": [
+          "+2 °C à +5 °C",
+          "0 °C à +2 °C",
+          "+5 °C à +8 °C"
+        ],
+        "nl": [
+          "+2°C tot +5°C",
+          "0°C tot +2°C",
+          "+5°C tot +8°C"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Qu'est-ce qu'on saisit pour ouvrir la caisse ?",
+        "nl": "Wat voer je in om de kassa te openen?"
+      },
+      "choix": {
+        "fr": [
+          "Son code PIN personnel et le montant compté du fonds de caisse",
+          "Le code de gestion 12 et la valeur d'ouverture 0, sans compter la caisse",
+          "Le code 0 et la valeur d'ouverture 12"
+        ],
+        "nl": [
+          "Je persoonlijke pincode en het getelde bedrag van het fonds de caisse",
+          "Beheercode 12 en openingswaarde 0, zonder de kassa te tellen",
+          "Code 0 en openingswaarde 12"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Avec quel code pointe-t-on sur la tablette Shyfter ?",
+        "nl": "Met welke code klok je in op de Shyfter-tablet?"
+      },
+      "choix": {
+        "fr": [
+          "Le code d'un collègue déjà présent",
+          "Le code de gestion 12",
+          "Son propre code PIN personnel"
+        ],
+        "nl": [
+          "De code van een collega die al aanwezig is",
+          "Beheercode 12",
+          "Je eigen persoonlijke PIN-code"
+        ]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Décision 1 : le document était déjà conforme (code 12, valeur d'ouverture 0, pas de comptage). Ajout dans l'étape 1.3 d'un renvoi à l'addendum « Kassa openen » (code 12, valeur 0, on ne compte pas) et, dans l'encadré d'introduction de la partie 2, de la mention « de automatische monnayeur beheert het cash ».",
+    "Grille horaire de la page 1 (AFVINKLIJST OPENINGSWINKEL) non dupliquée : ses repères horaires (06:00 … 06:56, 07:00, Continu, Ochtend) sont reportés entre parenthèses dans le titre des étapes correspondantes ; son encadré « Opmerking organisatie » est gardé (étape 0.3).",
+    "Fautes de frappe corrigées : « broedsnijmachine » → « broodsnijmachine » (Fase 2, 3.2) ; « Continuiteit » → « Continuïteit ».",
+    "Titres des sections 2 et 3 de chaque phase préfixés par « Fase 1 — » / « Fase 2 — » pour lever l'ambiguïté (la numérotation 1.1, 2.1, 3.1… recommence dans chaque phase, comme dans le document).",
+    "Encadrés sans numéro numérotés : 0.1–0.3 (sujet, contexte, remarque organisation), 3.0 (norme d'hygiène), 0 / 4a / 0 / 8a / 8b (introductions et encadrés de l'addendum caisse) ; les 3 règles d'or sont numérotées 1 à 3."
+  ],
+  "remarques": [
+    "Les pages 1 à 3 du PDF sont des pages scannées (image pleine page) : texte transcrit depuis l'image, recoupé avec l'extraction précédente de sops.json.",
+    "Aucun numéro de version dans le document ; « 5 » vient du nom du fichier Drive (v5).",
+    "Pagination incohérente dans le PDF : « Pagina 1–3 van 4 » puis « Pagina 4 van 5 » et « 5 van 5 » (addendum caisse ajouté après coup).",
+    "Champs de la grille de la page 1 non repris comme étapes : Datum, Medewerker, Shift 06:00–14:00, Paraaf, « Handtekening medewerker na afloop dienst », « Controle Verantwoordelijke ».",
+    "Étape 2.2 : « afgehaalde bestellingen » (commandes déjà retirées) est sans doute à lire « af te halen bestellingen » (commandes à retirer) ; traduit dans ce sens en français.",
+    "Photos : les 8 photos de l'addendum sont rattachées aux étapes 1 à 8 dans l'ordre du PDF. La photo 1 montre le bureau Windows déjà allumé (résultat attendu de l'étape 1) ; la photo 2 montre l'écran de chargement du logiciel de caisse « The Franchise Buddy » ; la photo 6 est un recadrage du bouton « Dag openen/sluiten ».",
+    "Terme néerlandais choisi pour le monnayeur automatique : « automatische monnayeur » ; à harmoniser avec les autres SOP si un autre terme est retenu."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1tA4sOQJ-MKvvyZeVIGguWtKt-xCeb-ij"
+    },
+    "lu": "pdf"
+  }
+}

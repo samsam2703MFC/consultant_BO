@@ -1,0 +1,91 @@
+<!doctype html><html lang="fr"><meta charset="utf-8"><title>B2B · A · Assistant</title><link rel="stylesheet" href="commun.css">
+<style>
+.fondu{filter:blur(1.5px) saturate(.8);opacity:.55}
+.voile{position:fixed;inset:0;background:rgba(42,26,14,.42)}
+.modale{position:absolute;left:50%;top:44px;transform:translateX(-50%);width:900px;background:#fff;border-radius:20px;box-shadow:0 30px 80px rgba(40,20,5,.35);overflow:hidden}
+.mh{display:flex;align-items:center;gap:14px;padding:20px 26px 14px;border-bottom:.5px solid var(--trait)}
+.mh .tuile{width:44px;height:44px;font-size:22px;border-radius:12px;background:var(--ab-doux)}
+.mh h2{font:400 26px/1.1 var(--titre);margin:0}
+.mh small{display:block;color:var(--muet);font-size:12.5px;margin-top:2px}
+.pas{display:flex;gap:0;padding:14px 26px;background:var(--ab-pale);border-bottom:.5px solid var(--ab-trait)}
+.pas div{flex:1;display:flex;align-items:center;gap:9px;font:600 12.5px var(--ui);color:var(--muet)}
+.pas b{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:#fff;border:1px solid var(--ab-trait);font-size:12px;color:var(--muet)}
+.pas .fait b{background:var(--vert);border-color:var(--vert);color:#fff}.pas .fait{color:var(--texte)}
+.pas .ici b{background:var(--abf);border-color:var(--abf);color:#fff}.pas .ici{color:var(--abf-encre)}
+.pas div + div::before{content:"";flex:0 0 26px;height:2px;background:var(--ab-trait);margin-right:8px}
+.corps{padding:20px 26px 6px}
+.choix{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px}
+.ch{border:1.5px solid var(--trait2);border-radius:14px;padding:14px 16px;display:flex;gap:12px;align-items:flex-start}
+.ch .rd{flex:0 0 20px;height:20px;border-radius:50%;border:2px solid var(--trait2);margin-top:2px}
+.ch.on{border-color:var(--abf);background:var(--ab-pale)}
+.ch.on .rd{border:6px solid var(--abf)}
+.ch b{font:600 15px var(--ui);display:block}
+.ch p{margin:3px 0 10px;color:var(--muet)}
+.gros{font:700 30px/1 var(--ui);color:var(--abf-encre);display:inline-flex;align-items:baseline;gap:4px;border:1px solid var(--ab-trait);background:#fff;border-radius:12px;padding:8px 14px}
+.gros small{font-size:16px;color:var(--muet);font-weight:600}
+.ch:not(.on) .gros{color:var(--muet);border-color:var(--trait2)}
+.duree{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.duree .puce{padding:9px 15px;font-size:13px}
+.frise{border:1px solid var(--trait);border-radius:14px;padding:14px 16px 10px;margin-bottom:18px}
+.mois{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;position:relative}
+.mois div{text-align:center;font:500 11px var(--ui);color:var(--muet)}
+.mois .cpt{background:var(--ab-doux);border-radius:8px;color:var(--abf-encre);padding:6px 0 8px}
+.mois .cpt.prem{box-shadow:inset 0 0 0 1.5px var(--abf)}
+.mois .hors{background:var(--fond);border-radius:8px;padding:6px 0 8px;opacity:.75}
+.mois .cde{display:block;margin:6px auto 0;width:max-content;font:700 11.5px var(--ui);color:var(--abf);background:#fff;border-radius:999px;padding:2px 7px;border:1px solid var(--ab-trait)}
+.mois .hors .cde{color:var(--muet);border-color:var(--trait2)}
+.leg{display:flex;gap:16px;font-size:11.5px;color:var(--muet);margin-top:10px}
+.leg span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:3px;background:var(--ab-doux);margin-right:6px;vertical-align:-1px}
+.leg span.h::before{background:var(--fond)}
+.garde{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}
+.ex{display:flex;gap:14px;align-items:center;background:var(--abf);color:#fff;border-radius:14px;padding:14px 18px;margin-bottom:18px}
+.ex .ic{font-size:26px}
+.ex b{font-weight:700}
+.ex small{display:block;opacity:.82;font-size:12px;margin-top:2px}
+.pied{display:flex;align-items:center;gap:10px;padding:14px 26px;background:var(--fond);border-top:.5px solid var(--trait)}
+</style>
+<body><div class="ecran fondu">
+<nav class="rail">
+  <div class="logo">Cockpit</div>
+  <div class="gr">Pilotage</div>
+  <a><i>◎</i>Tableau de bord</a><a><i>↗</i>Ventes</a><a><i>⟳</i>Récurrence</a>
+  <div class="gr">ERP franchisé</div>
+  <a><i>▤</i>Marketing franchisé</a><a><i>☰</i>Targets &amp; primes</a>
+  <div class="gr">Application employé</div>
+  <a class="sous">Paramètres primes</a><a class="sous on">Paramètres primes franchisé</a><a class="sous">L’application ↗</a>
+  <div class="gr">Réglages</div>
+  <a><i>⚙</i>Paramètres</a>
+</nav>
+
+<main class="page"><div class="fil">Application employé › <b>Paramètres primes franchisé</b></div><h1>Primes du magasin · Halle</h1>
+<p class="chapo">Les primes que tu poses pour ton magasin, payées par lui. Tes vendeuses les voient dans Mes primes.</p>
+<div class="carte" style="height:560px"></div></main></div>
+<div class="voile"></div>
+<div class="modale">
+  <div class="mh"><span class="tuile">🏫</span><div><h2>Nouvelle prime B2B</h2><small>Donner envie d’aller chercher les écoles, les crèches, les entreprises… · Halle, payée par le magasin</small></div><span style="margin-left:auto;font-size:20px;color:var(--muet)">✕</span></div>
+  <div class="pas"><div class="fait"><b>✓</b>Les clients visés</div><div class="ici"><b>2</b>Ce que ça rapporte</div><div><b>3</b>Qui gagne</div><div><b>4</b>Vérifier</div></div>
+  <div class="corps">
+    <span class="lab">Comment la vendeuse est payée</span>
+    <div class="choix">
+      <div class="ch on"><span class="rd"></span><div><b>Un pourcentage de la commande</b><p>Sur le montant HT de chaque commande comptée du client pro.</p><span class="gros">5<small>%</small></span></div></div>
+      <div class="ch"><span class="rd"></span><div><b>Un montant fixe</b><p>Par nouveau client pro, à sa 1re commande comptée.</p><span class="gros">30<small>€</small></span></div></div>
+    </div>
+    <span class="lab">Sur quelles commandes</span>
+    <div class="duree"><span class="puce">La 1re seulement</span><span class="puce">1 mois</span><span class="puce on">3 mois · un trimestre</span><span class="puce">12 mois · un an</span><span class="puce">Sans limite</span><span class="puce">Autre durée…</span></div>
+    <div class="frise">
+      <div class="mois">
+        <div class="cpt prem">oct.<span class="cde">1re · 400 €</span></div><div class="cpt">nov.<span class="cde">380 €</span></div><div class="cpt">déc.<span class="cde">420 €</span></div>
+        <div class="hors">janv.<span class="cde">410 €</span></div><div class="hors">févr.<span class="cde">—</span></div><div class="hors">mars<span class="cde">450 €</span></div><div class="hors">avr.<span class="cde">400 €</span></div><div class="hors">mai<span class="cde">…</span></div>
+      </div>
+      <div class="leg"><span>comptées : 5 % pour la vendeuse, versés avec les primes du mois</span><span class="h">après 3 mois, le client reste au magasin, la prime s’arrête</span></div>
+    </div>
+    <div class="garde">
+      <div><span class="lab">Commande minimum</span><span class="chp">100 <small>€ HT</small></span></div>
+      <div><span class="lab">Plafond par client</span><span class="chp">150 <small>€ sur la durée</small></span></div>
+      <div><span class="lab">Nouveau client</span><span class="chp" style="font-size:13px">aucune commande pro <small>depuis 12 mois</small></span></div>
+    </div>
+    <div class="ex"><span class="ic">💡</span><div>L’école Jules-Ferry commande <b>400 € HT</b> par mois → <b>20 €</b> à chaque commande, pendant 3 mois : <b>60 € pour la vendeuse</b>.<small>Pour le magasin : 1 200 € de chiffre apporté, 5 % reversés.</small></div></div>
+  </div>
+  <div class="pied"><button class="bt l">← Retour</button><span style="flex:1"></span><span class="mu" style="font-size:12px">Brouillon enregistré</span><button class="bt p">Suivant : qui gagne →</button></div>
+</div>
+</body></html>

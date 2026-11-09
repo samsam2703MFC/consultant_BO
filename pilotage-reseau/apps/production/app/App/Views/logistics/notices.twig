@@ -1,0 +1,200 @@
+{% extends "layouts/base.twig" %}
+
+{% set lang_labels = {'fr': 'FR', 'nl': 'NL', 'pl': 'PL', 'en': 'EN'} %}
+{% set status_labels = {'queued': 'e-mail w kolejce', 'logged': 'SMS zapisany (bez wysyłki)', 'sent': 'wysłano', 'failed': 'błąd'} %}
+
+{% block title %}Powiadomienia klientów{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Powiadomienia klientów o dostawie</h3>
+            <p class="text-subtitle text-muted">Kierowca, pojazd, trasa, godzina i palety — e-mail albo SMS w języku klienta (karta klienta). Dzień wysyłki : {{ date|day_pl }}. Jedno powiadomienie na klienta i kanał : także automat (Dystrybucja dokumentów, « dzień przed dostawą ») nie wysyła drugi raz.</p>
+        </div>
+        <form method="get" action="{{ root }}/logistics/notices" class="at-profit-period at-logi-date">
+            <label for="noticeDate" class="visually-hidden">Dzień wysyłki</label>
+            <select id="noticeDate" name="date" class="form-select" onchange="this.form.submit()">
+                {% set found = false %}
+                {% for d in dates %}
+                    {% if d.ship_date == date %}{% set found = true %}{% endif %}
+                    <option value="{{ d.ship_date }}" {{ d.ship_date == date ? 'selected' : '' }}>{{ d.ship_date|day_pl }} · {{ d.customers|plural_pl('klient', 'klientów', 'klientów') }}</option>
+                {% endfor %}
+                {% if not found %}<option value="{{ date }}" selected>{{ date|date('d.m') }} · brak zamówień</option>{% endif %}
+            </select>
+            <a class="btn btn-outline-primary" href="{{ root }}/logistics?date={{ date }}"><i class="bi bi-truck"></i> Załadunek dnia</a>
+        </form>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    {% if not sms_delivers %}
+        <div class="alert alert-light-secondary d-flex gap-2 align-items-center">
+            <i class="bi bi-phone"></i>
+            <span>SMS : <strong>tryb zapisu</strong> — nie ma skonfigurowanego dostawcy SMS ({{ sms_provider }}), treść i numer trafiają do historii, klient nic nie dostaje. E-maile idą przez kolejkę wiadomości (zasady wysyłki serwera).</span>
+        </div>
+    {% endif %}
+
+    <div class="card">
+        <div class="card-header d-flex flex-wrap gap-2 justify-content-between align-items-center">
+            <h4 class="card-title mb-0">Klienci dnia ({{ customers|length }})</h4>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="form-check-label small"><input type="checkbox" class="form-check-input" id="noticeAll"> wszyscy</label>
+                <button type="button" class="btn btn-primary btn-sm" id="noticeSend" disabled><i class="bi bi-send"></i> Wyślij zaznaczone</button>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            {% if customers is empty %}
+                <p class="text-muted mb-0">Brak dostaw w tym dniu.</p>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0" id="noticeTable">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Klient</th>
+                            <th>Trasa · pojazd · kierowca</th>
+                            <th class="text-end">Palety / kart.</th>
+                            <th>Dostawa</th>
+                            <th>Kanał</th>
+                            <th>Ostatnio</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for c in customers %}
+                        <tr data-customer="{{ c.id }}">
+                            <td><input type="checkbox" class="form-check-input" data-pick aria-label="Wybierz {{ c.name }}"></td>
+                            <td>
+                                <div class="fw-semibold">{{ c.name }}</div>
+                                <div class="small text-muted">{{ c.town }} · <span class="badge bg-light text-dark" title="Język z karty klienta">{{ lang_labels[c.language] }}</span></div>
+                            </td>
+                            <td class="small">
+                                {% if c.tour %}<div><i class="bi bi-signpost-split"></i> {{ c.tour }}{% if c.stop %} · przystanek {{ c.stop }}/{{ c.stops }}{% endif %}</div>{% endif %}
+                                <div><i class="bi bi-truck"></i> {{ c.vehicle ?: '— brak pojazdu' }}{% if c.departure %} · wyjazd {{ c.departure }}{% endif %}</div>
+                                <div><i class="bi bi-person"></i> {{ c.driver ?: '— brak kierowcy' }}{% if c.driver_phone %} · {{ c.driver_phone }}{% endif %}</div>
+                            </td>
+                            <td class="text-end">{{ c.pallets }} / {{ c.cartons|number_format(0, ',', ' ') }}</td>
+                            <td style="min-width: 210px;">
+                                <input type="date" class="form-control form-control-sm mb-1" data-field="arrival_date" value="{{ c.arrival_date }}" aria-label="Data dostawy">
+                                <input type="text" class="form-control form-control-sm" data-field="eta" value="{{ c.eta }}" placeholder="godzina, np. 7:00–9:00" aria-label="Godzina dostawy">
+                            </td>
+                            <td class="small">
+                                <label class="d-block"><input type="checkbox" class="form-check-input" data-channel="mail" {{ c.email ? 'checked' : 'disabled' }}> E-mail <span class="text-muted">{{ c.email ?: 'brak adresu' }}</span></label>
+                                <label class="d-block"><input type="checkbox" class="form-check-input" data-channel="sms" {{ c.phone ? '' : 'disabled' }}> SMS <span class="text-muted">{{ c.phone ?: 'brak telefonu' }}</span></label>
+                                {% if c.last is not empty %}<label class="d-block text-warning-emphasis"><input type="checkbox" class="form-check-input" data-resend> wyślij ponownie <span class="text-muted">(już wysłano)</span></label>{% endif %}
+                                <button type="button" class="btn btn-link btn-sm p-0" data-toggle-preview>Podgląd</button>
+                            </td>
+                            <td class="small text-muted">
+                                {% for channel, n in c.last %}
+                                    <div>{{ channel == 'mail' ? 'E-mail' : 'SMS' }} : {{ status_labels[n.status] ?? n.status }} · {{ n.created_at|date('H:i') }}</div>
+                                {% else %}—{% endfor %}
+                            </td>
+                        </tr>
+                        <tr class="d-none" data-preview-row="{{ c.id }}">
+                            <td></td>
+                            <td colspan="6">
+                                <div class="row g-3">
+                                    <div class="col-12 col-lg-7">
+                                        <div class="small text-muted mb-1">E-mail · <span data-mail-subject>{{ c.mail.subject }}</span></div>
+                                        <pre class="small bg-light p-2 rounded mb-0" style="white-space: pre-wrap;" data-mail-body>{{ c.mail.error ?: c.mail.body }}</pre>
+                                    </div>
+                                    <div class="col-12 col-lg-5">
+                                        <div class="small text-muted mb-1">SMS · <span data-sms-length>{{ c.sms.body|length }}</span> znaków</div>
+                                        <pre class="small bg-light p-2 rounded mb-0" style="white-space: pre-wrap;" data-sms-body>{{ c.sms.error ?: c.sms.body }}</pre>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header"><h4 class="card-title mb-0">Historia powiadomień dnia</h4></div>
+        <div class="card-body pt-0">
+            {% if history is empty %}
+                <p class="text-muted mb-0">Jeszcze nic nie wysłano.</p>
+            {% else %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Godzina</th><th>Klient</th><th>Kanał</th><th>Do</th><th>Status</th><th>Kto</th></tr></thead>
+                    <tbody>
+                    {% for n in history %}
+                        <tr>
+                            <td>{{ n.created_at|date('d.m H:i') }}</td>
+                            <td>{{ n.company }}</td>
+                            <td>{{ n.channel == 'mail' ? 'E-mail' : 'SMS' }} · {{ n.language|upper }}</td>
+                            <td>{{ n.recipient }}</td>
+                            <td>{{ status_labels[n.status] ?? n.status }}{% if n.mail_status %} <span class="text-muted">({{ n.mail_status }})</span>{% endif %}{% if n.error %} <span class="text-danger">{{ n.error }}</span>{% endif %}</td>
+                            <td class="text-muted">{{ n.created_by }}</td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script>
+(() => {
+    const date = {{ date|json_encode|raw }};
+    const rows = [...document.querySelectorAll('tr[data-customer]')];
+    const sendBtn = document.getElementById('noticeSend');
+    const item = (row) => ({
+        id: Number(row.dataset.customer),
+        arrival_date: row.querySelector('[data-field=arrival_date]').value,
+        eta: row.querySelector('[data-field=eta]').value.trim(),
+        mail: row.querySelector('[data-channel=mail]').checked,
+        sms: row.querySelector('[data-channel=sms]').checked,
+        resend: !!row.querySelector('[data-resend]')?.checked,
+    });
+    const picked = () => rows.filter(r => r.querySelector('[data-pick]').checked);
+    const refresh = () => { sendBtn.disabled = !picked().some(r => r.querySelector('[data-channel=mail]').checked || r.querySelector('[data-channel=sms]').checked); };
+    rows.forEach(r => r.addEventListener('change', refresh));
+    document.getElementById('noticeAll')?.addEventListener('change', (e) => { rows.forEach(r => { r.querySelector('[data-pick]').checked = e.target.checked; }); refresh(); });
+    document.querySelectorAll('[data-toggle-preview]').forEach(b => b.addEventListener('click', () => {
+        document.querySelector(`[data-preview-row="${b.closest('tr').dataset.customer}"]`).classList.toggle('d-none');
+    }));
+
+    // Podgląd po zmianie daty lub godziny dostawy
+    let timer = null;
+    const preview = (row) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => at.send('/ajax/logistics/notices/preview', 'POST', {date, items: [item(row)]}).then(res => {
+            if (!res.ok) { at.notify(false, res.message); return; }
+            const c = (res.data || []).find(x => x.id === Number(row.dataset.customer));
+            if (!c) return;
+            const p = document.querySelector(`[data-preview-row="${c.id}"]`);
+            p.querySelector('[data-mail-subject]').textContent = c.mail.subject;
+            p.querySelector('[data-mail-body]').textContent = c.mail.error || c.mail.body;
+            p.querySelector('[data-sms-body]').textContent = c.sms.error || c.sms.body;
+            p.querySelector('[data-sms-length]').textContent = (c.sms.body || '').length;
+            p.classList.remove('d-none');
+        }), 400);
+    };
+    rows.forEach(r => r.querySelectorAll('[data-field]').forEach(f => f.addEventListener('input', () => preview(r))));
+
+    sendBtn?.addEventListener('click', () => {
+        const items = picked().map(item).filter(i => i.mail || i.sms);
+        if (!items.length) return;
+        const sms = items.filter(i => i.sms).length, mail = items.filter(i => i.mail).length;
+        if (!window.confirm(`Wysłać powiadomienia : e-mail ${mail}, SMS ${sms}?`)) return;
+        sendBtn.disabled = true;
+        at.send('/ajax/logistics/notices/send', 'POST', {date, items}).then(res => {
+            const problems = res.data?.problems || [];
+            at.notify(res.ok, [res.message, ...problems].filter(Boolean).join(' '));
+            if (res.ok) window.setTimeout(() => window.location.reload(), 900); else refresh();
+        });
+    });
+})();
+</script>
+{% endblock %}
