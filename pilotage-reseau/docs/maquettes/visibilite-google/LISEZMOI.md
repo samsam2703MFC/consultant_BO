@@ -1,6 +1,6 @@
 # Maquettes « Visibilité Google » (08/11/2026)
 
-Une entrée **Visibilité Google** sous *Marque & marketing*. Elle montre ce que la **clé Places déjà enregistrée
+Une entrée **Visibilité Google** sous *Marque & marketing* (maquettes, puis l'écran en ligne : voir plus bas). Elle montre ce que la **clé Places déjà enregistrée
 dans le cockpit** (Paramètres, réglage `google`, lue par `src/google_api.php`) permet de faire pour le
 référencement local des magasins, sans nouvelle API ni nouvelle autorisation. Elle fait suite à l'audit SEO
 du 08/11/2026 (boulangerie, sandwiches garnis, cougnous, galettes des rois).
@@ -36,25 +36,33 @@ Coût : environ 28 recherches et 4 fiches par semaine, soit 130 appels par mois.
 de facturation Google Cloud : les champs horaires, lien du site et note sont facturés au niveau supérieur
 (Enterprise) de Places.
 
-## Pour le développer (pas fait ici)
+## L'écran en ligne (09/11/2026)
 
-1. `src/google_api.php` : ajouter au masque de champs `regularOpeningHours`, `currentOpeningHours`, `primaryType`, `websiteUri`,
-   `nationalPhoneNumber`, `takeout`, `delivery` et `servesBreakfast`. Ajouter un Text Search avec `locationBias` centré sur le magasin.
-2. Le cockpit garde l'historique, chaque lundi à 6:00, comme les avis aujourd'hui. Une table `ceo_visibilite_rang` :
-   magasin, requête, semaine, rang, 20 premiers résultats.
-3. Les écarts « site / Google » se calculent avec les données structurées d'atelierby.be, relues à chaque passage.
-4. Écrans : les deux maquettes ci-dessus.
+L'écran est développé : **Marque & marketing › Visibilité Google** (`#/visibilite`).
+
+| Où | Quoi |
+|---|---|
+| `src/google_api.php` | `ficheVisibilite()`, `rechercheLocale()`, `googleFicheVisibilite()` (fonction pure) |
+| `src/visibilite_google.php` | les recherches suivies, la lecture du site, la relecture, les écarts ; `GET /visibilite`, `POST /visibilite/sync {magasinId}` |
+| `public/assets/js/visibilite-vals.js`, `visibilite-tpl.js`, `assets/css/visibilite.css` | l'écran, ses deux onglets et le badge du rail |
+| `tests/visibilite/run.php` | les fonctions pures, sur les données structurées réelles d'atelierby.be |
+
+Les écarts avec les maquettes :
+- les horaires des fêtes ne se vérifient qu'à 7 jours, car Google ne publie pas plus tôt les horaires exceptionnels ;
+- la relecture se lance à la main, magasin après magasin, avec le bouton « Relire Google maintenant ». Il n'y a pas de relecture automatique chaque lundi : pas de cron pour l'instant.
+
+Le relevé est gardé dans `ceo_app_setting.visibiliteGoogle`, sans nouvelle table. Il contient le dernier relevé de chaque magasin, plus les rangs du relevé précédent pour calculer l'évolution.
 
 ## Regénérer les captures
 
 À la racine du dépôt :
 
 ```bash
-php -S 127.0.0.1:8099 -t .
+php -S 127.0.0.1:8099 -t pilotage-reseau
 ```
 
 Puis, dans un autre terminal :
 
 ```bash
-node docs/maquettes/visibilite-google/capturer.cjs
+node pilotage-reseau/docs/maquettes/visibilite-google/capturer.cjs
 ```

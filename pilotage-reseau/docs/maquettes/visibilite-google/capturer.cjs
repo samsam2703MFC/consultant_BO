@@ -1,5 +1,5 @@
 /* Captures des maquettes « Visibilité Google ».
-   Serveur à la racine du dépôt : php -S 127.0.0.1:8099 -t .   puis : node docs/maquettes/visibilite-google/capturer.cjs */
+   Serveur : php -S 127.0.0.1:8099 -t pilotage-reseau   puis : node pilotage-reseau/docs/maquettes/visibilite-google/capturer.cjs */
 const { chromium } = require('playwright');
 const BASE = 'http://127.0.0.1:8099/docs/maquettes/visibilite-google/';
 (async () => {
