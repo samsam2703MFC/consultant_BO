@@ -178,8 +178,8 @@ function ckcPlan(): array
     foreach ($points as $p) { $n[$p['etat']]++; }
     return ['nomenclature' => ckcPublique(), 'points' => $points, 'totaux' => $n,
         'structure' => [
-            ['quoi' => 'Fusionner « CO-01 — Ouverture » dans 1.1.01 (sa tâche « Vérifier si le magasin est propre » y passe)', 'id' => 44],
-            // Faits le 08-09/11/2026 : 1.1.02 partagée (1.3.02, #63) et « Checklist Test Consultant » (#50) supprimée.
+            // Faits le 08-09/11/2026 : 1.1.02 partagée (1.3.02, #63), « Checklist Test Consultant » (#50) supprimée, et
+            // « Vérifier si le magasin est propre » passée de 1.1.03 (ex CO-01, #44) dans 1.1.01.
         ]];
 }
 
