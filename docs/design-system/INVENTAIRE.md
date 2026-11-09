@@ -221,7 +221,9 @@ hors les libellés listés ci-dessus.
 - **Hors périmètre** : `public/tablette/` (compilation du dépôt
   `pwa_sales_tablet`), `public/assistant/` (compilation de
   `tools/assistant-src`, copie ancienne du Marketing), `public/employee/` (app
-  des employés, Bootstrap / Mazer) — à aligner dans leurs sources.
+  des employés, Bootstrap / Mazer) — à aligner dans leurs sources. **La
+  police l'est déjà** pour l'assistant et l'app employés (voir § 8) ; pas
+  pour la tablette.
 
 ## 5. Checklist d'acceptation (§12)
 
@@ -340,3 +342,22 @@ Captures avant / après : `docs/design-system/captures/documents/`.
 - [x] E-mails : table 600 px, styles en ligne, un seul bouton, pied relevé, version texte.
 - [x] Aucune pilule.
 - [ ] Premier exemplaire de chaque pièce commerciale (offre, facture…) : ces pièces n'existent pas dans le BO.
+
+## 8. Police partout (09/11/2026)
+
+Contrôle du §4.1 sur tout ce que le BO sert, pas seulement le cockpit.
+
+| Partie | Avant | Après |
+|---|---|---|
+| Cockpit, pages à part, documents | conformes (§ 3, § 7) | inchangés ; vérifié dans Chromium : Gotham 400 et 700 chargées, tout le texte en Gotham |
+| Assistant de campagne (`tools/assistant-src` → `public/assistant`) | déclaration du Marketing (400 = `Gotham_Regular`, 500 = `Gotham_Medium`) **vers `/fonts/…`, adresse qui n'existe pas sur le cockpit** : l'assistant s'affichait en police système | les deux `@font-face` du §4.1, qui pointent vers `public/assets/ds/fonts` ; Vite en copie les fichiers dans `public/assistant/assets/`. Recompilé : JS identique à l'octet, seules la feuille et ses polices changent |
+| App employés (`public/employee/assets/atelier/marque.css`) | Gotham sur neuf graisses (400 = Regular, 500/600 = Medium, 700/800 = Black, 900 = Ultra, italiques, Light) ; titres et grands chiffres en **Vank** | les deux `@font-face` du §4.1, rien d'autre ; `--font-display` devient un alias de Gotham (plus de Vank dans l'interface) |
+| Tablette (`public/tablette`) | Gotham 400 = Regular, 500 = Medium, 600 = Regular, 700 = Black ; titres en Vank, accroches en Playwrite | **non touchée** : c'est la compilation du dépôt `pwa_sales_tablet`, absent d'ici ; à corriger dans sa source |
+
+Restes, hors police :
+- l'app employés garde des graisses 600 (boutons, pastilles, `h4`–`h6`, barre du
+  bas) : avec deux fichiers seulement, elles sortent en trait appuyé (700). Les
+  ramener à 400 relève du §4.3 ;
+- **à signaler** : `Gotham_Regular.otf` (le fichier des accents, 700) n'a pas le
+  glyphe « € » ; un montant en gras affiche son « € » dans la police de secours.
+  `Gotham_Medium.otf` (texte) l'a.

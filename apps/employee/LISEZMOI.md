@@ -30,8 +30,9 @@ Rien de l'app n'est exécutable depuis `assets/` ; les gabarits Twig restent hor
   (hors dépôt) ou des variables d'environnement les surchargent (`EMPLOYEE_API_BASE`,
   `EMPLOYEE_DEBUG=1` pour voir les erreurs, `DEFAULT_LANGUAGE`…).
 - **La marque** : plus de Nunito ni de bleu Mazer. `assets/atelier/app.css` est le thème Mazer teint
-  (rubis `#8D1D2C`, beige `#EAE4DC`, Gotham), `assets/atelier/marque.css` pose les polices de la
-  marque (Gotham, Vank, partagées avec le cockpit) et le style des pièces propres à l'app ; les
+  (rubis `#8D1D2C`, beige `#EAE4DC`, Gotham), `assets/atelier/marque.css` pose la police de la
+  marque (Gotham seule, les deux fichiers du design system §4.1, partagés avec le cockpit) et le
+  style des pièces propres à l'app ; les
   icônes Bootstrap restent. Les 86 Mo d'assets Mazer du zip ne sont pas repris : seuls les trois
   CSS utilisés, les icônes, les illustrations d'erreur et les icônes PWA.
 

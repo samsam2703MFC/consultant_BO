@@ -1,24 +1,20 @@
 /* L'app employés aux couleurs et à la typo de L'Atelier by (demande du 06/10/2026).
  * Chargée après app.css (le thème Mazer teint par apps/employee/marque/teinter.py) : les polices de
- * la marque, ses couleurs en variables, et le style des pièces propres à l'app (barre du haut, barre
+ * la marque (Gotham, §4.1), ses couleurs en variables, et le style des pièces propres à l'app (barre du haut, barre
  * du bas, cartes, boutons, formulaire de connexion). Les polices sont celles du cockpit, partagées. */
 
-@font-face{font-family:'Gotham';font-weight:300;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Light.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:400;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Regular.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:400;font-style:italic;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Italic.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:500;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:600;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:700;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Black.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:700;font-style:italic;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_ItalicBold.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:800;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Black.otf') format('opentype')}
-@font-face{font-family:'Gotham';font-weight:900;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/Gotham_Ultra.otf') format('opentype')}
-@font-face{font-family:'Vank';font-weight:400;font-style:normal;font-display:swap;src:url('../../../assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+/* Police — design system « L'Atelier By », §4.1 (docs/design-system/DESIGN_SYSTEM.md) : Gotham seule, deux
+ * fichiers, déclarés exactement ainsi. Les noms de fichier trompent : Gotham_Medium.otf est le trait NORMAL
+ * (tout le texte), Gotham_Regular.otf le trait APPUYÉ (les accents §4.3). 500 retombe sur 400, 600 sur 700.
+ * Aucun autre fichier Gotham (Light, Black, italiques…), aucune autre police d'interface (ni Vank). */
+@font-face{font-family:'Gotham';src:url('../../../assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:400;font-display:swap} /* texte */
+@font-face{font-family:'Gotham';src:url('../../../assets/ds/fonts/Gotham_Regular.otf') format('opentype');font-weight:700;font-display:swap} /* accents */
 
 :root{
   --la-rubis:#8D1D2C;--la-rubis-fonce:#6E1622;--la-abricot:#F2C9A0;--la-beige:#EAE4DC;--la-beige-doux:#F4EFE8;
   --la-blanc:#FFFFFF;--la-encre:#222222;--la-muet:#666666;--la-trait:rgba(34,34,34,.10);--la-trait2:rgba(34,34,34,.18);
   --la-ok:#2d7a3e;--la-att:#D97706;--la-ko:#C0182B;
-  --font-ui:'Gotham',system-ui,-apple-system,'Segoe UI',sans-serif;--font-display:'Vank','Gotham',system-ui,sans-serif;
+  --font-ui:'Gotham',system-ui,sans-serif;--font-display:'Gotham',system-ui,sans-serif; /* une seule police d'interface (§4.1) : --font-display n'est plus qu'un alias */
   --bs-body-font-family:var(--font-ui);--bs-body-color:var(--la-encre);--bs-body-bg:var(--la-beige);
   --bs-primary:var(--la-rubis);--bs-primary-rgb:141,29,44;--bs-link-color:var(--la-rubis);--bs-link-hover-color:var(--la-rubis-fonce);
   --bs-border-color:var(--la-trait2);--bs-secondary-color:var(--la-muet);
@@ -65,7 +61,7 @@ a{color:var(--la-rubis)}
 .bg-light{background:var(--la-beige-doux)!important}
 .alert{border-radius:12px;border:.5px solid var(--la-trait)}
 
-/* La barre du haut : beige translucide, le titre en Vank. */
+/* La barre du haut : beige translucide. */
 .emp-topbar{background:rgba(234,228,220,.94);border-bottom:.5px solid var(--la-trait)}
 .emp-title{font-family:var(--font-display);font-weight:400;font-size:1.35rem;letter-spacing:0}
 .emp-subtitle{font-family:var(--font-ui);color:var(--la-muet);font-size:.82rem}
@@ -92,5 +88,5 @@ a{color:var(--la-rubis)}
 .merr-title{font-family:var(--font-display);font-weight:400}
 
 /* Les styles écrits dans chaque page (dans <head>, après ces liens) gardent la main sur la graisse :
- * on repasse derrière eux, pour que les titres en Vank restent en graisse normale. */
+ * on repasse derrière eux, pour que les titres restent en graisse normale. */
 html .emp-title,html .emp-auth-title,html .merr-title{font-weight:400}

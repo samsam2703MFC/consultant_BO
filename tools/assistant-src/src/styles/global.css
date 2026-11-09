@@ -1,16 +1,13 @@
-@font-face {
-  font-family: 'Gotham';
-  src: url('/fonts/Gotham_Regular.otf') format('opentype');
-  font-weight: 400;
-  font-display: swap;
-}
-
-@font-face {
-  font-family: 'Gotham';
-  src: url('/fonts/Gotham_Medium.otf') format('opentype');
-  font-weight: 500;
-  font-display: swap;
-}
+/* Police — design system « L'Atelier By », §4.1 (docs/design-system/DESIGN_SYSTEM.md).
+   Gotham seule, deux fichiers, déclarés exactement ainsi. Les noms de fichier
+   trompent : Gotham_Medium.otf est le trait NORMAL (tout le texte),
+   Gotham_Regular.otf le trait APPUYÉ (les accents §4.3) ; 500 retombe sur 400,
+   600 sur 700. Les fichiers sont ceux du cockpit (public/assets/ds/fonts) :
+   Vite les copie dans les assets de l'assistant, qui marche ainsi quel que soit
+   son répertoire d'installation (l'ancien /fonts/… n'existait pas sur le
+   cockpit : l'assistant tombait sur la police système). */
+@font-face { font-family: 'Gotham'; src: url('../../../../public/assets/ds/fonts/Gotham_Medium.otf')  format('opentype'); font-weight: 400; font-display: swap; } /* texte */
+@font-face { font-family: 'Gotham'; src: url('../../../../public/assets/ds/fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: swap; } /* accents */
 
 :root {
   --ink: #1c1a17;
