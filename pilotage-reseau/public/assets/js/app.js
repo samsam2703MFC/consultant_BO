@@ -1351,7 +1351,10 @@ class App {
         ['ext:dashboard/', 'Dashboard magasin ↗', 0],
         // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
         // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
-        ['cadreTaches', 'Cadre des tâches', 0]]],
+        ['cadreTaches', 'Cadre des tâches', 0],
+        // Ouvertures, fermetures et reports de caisse, par magasin et par
+        // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
+        ['ext:caisse/', 'Caisse ↗', 0]]],
       // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
       // en deux volets : ce que les données disent chaque jour, sans aller sur
       // place ; ce que le consultant constate sur place. Le scoring du

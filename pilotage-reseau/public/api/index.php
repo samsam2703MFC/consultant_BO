@@ -88,6 +88,7 @@ require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
+require __DIR__ . '/../../src/caisse.php';
 require __DIR__ . '/../../src/dashboard_semaine.php';
 require __DIR__ . '/../../src/production_plan.php';
 require __DIR__ . '/../../src/production_flux.php';
@@ -570,6 +571,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/tickets'               => ep_ventes_tickets(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
+            $path === '/caisse/semaine'              => ep_caisse_semaine(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
             $path === '/ventes/commandes/sonde'      => ep_commandes_sonde(),
