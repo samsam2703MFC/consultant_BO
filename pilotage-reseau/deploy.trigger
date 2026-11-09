@@ -1363,3 +1363,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T20:31:05Z cadre des tâches : Tableau fusionné dans Document
 2026-11-09T20:33:11Z Caisse : vue Reports, le registre du mois jour après jour ; export du jour de bord relu
 2026-11-09T20:45:30Z changer de checklist : une tâche par appel
+2026-11-09T20:46:46Z Caisse, Reports : les ruptures du mois une à une, cause probable et à qui demander
