@@ -134,3 +134,24 @@ table.tk thead th { position: sticky; top: 0; background: var(--table-head); fon
 table.tk td { padding: 6px 12px; border-top: 1px solid var(--row-line); font-variant-numeric: tabular-nums; }
 table.tk .num { text-align: right; }
 table.tk td.neg { color: var(--stop); }
+
+/* le registre des reports */
+table.rp { min-width: 1100px; font-size: 12px; }
+table.rp th, table.rp td { padding: 6px 8px; }
+table.rp th:first-child, table.rp td:first-child { width: 78px; }
+table.rp .rp-g th { text-transform: none; letter-spacing: 0; font-size: 12px; color: var(--ink); text-align: center; }
+table.rp .rp-g th small { color: var(--muted); font-size: 10.5px; }
+table.rp .cs { border-left: 1px solid var(--line); }
+table.rp tr.rp-l { cursor: pointer; }
+table.rp tr.rp-l:hover td { background: var(--table-head); }
+table.rp tr.rp-l.stop td:first-child { box-shadow: inset 3px 0 0 var(--stop); }
+table.rp tr.rp-l.warn td:first-child { box-shadow: inset 3px 0 0 var(--prize); }
+table.rp .rp-j small { display: inline; margin-left: 6px; font-size: 10px; color: var(--faint); }
+table.rp td small { display: block; font-size: 10.5px; color: var(--muted); }
+table.rp td.x, table.rp td .x { color: var(--stop); font-weight: 700; }
+table.rp td.z { color: var(--prize-ink); }
+table.rp .rp-f i { display: inline-block; width: 16px; height: 16px; line-height: 16px; text-align: center; border-radius: 4px; font-style: normal; font-size: 10px; margin-right: 6px; vertical-align: 1px; }
+table.rp .rp-f i.ok { background: rgba(63,122,82,.12); color: var(--green); }
+table.rp .rp-f i.ko { background: var(--stop-soft); color: var(--stop); }
+table.rp .rp-f i.vi { background: var(--prize-soft); color: var(--prize-ink); }
+table.rp tbody tr:has(.rp-j small) td { border-top: 1px solid var(--line); }

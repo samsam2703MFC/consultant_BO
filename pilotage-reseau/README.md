@@ -449,8 +449,8 @@ Une page à part, `public/caisse/?shop=2&date=2026-11-04` (entrée de rail
 « Caisse ↗ »), pour vérifier jour par jour et sur la semaine ce que chaque
 caisse a fait : qui l'a ouverte et fermée, le fond du matin, le total déclaré,
 ce qui est laissé pour le lendemain. On choisit le magasin, la semaine
-(‹ ›, ou une date), et la vue Semaine ou Jour ; l'adresse se partage telle
-quelle.
+(‹ ›, ou une date), et la vue Semaine, Jour ou Reports ; l'adresse se partage
+telle quelle.
 
 - **La semaine** : la chaîne des reports, une rangée par caisse. Entre deux
   jours, ✓ si le fond du matin suit ce qui a été laissé la veille, ✗ sinon.
@@ -463,6 +463,13 @@ quelle.
   par caisse, tableau heure / caisse / vendeuse / montant / dans le tiroir,
   contrôle contre l'export comptable — `GET /caisse/jour`), le compte des
   espèces et les moyens de paiement.
+- **Les reports** (`?vue=reports&mois=2026-11`) : le registre du mois, jour
+  après jour, sans coupure au dimanche. Pour chaque caisse : laissé la veille,
+  fond du matin (✓ suit, ≈ virgule oubliée, ✗ rompu), déclaré, laissé le soir
+  (et le montant corrigé quand la virgule se lit le lendemain) ; pour le
+  magasin : espèces, versements, sorti du tiroir sans trace et son cumul. Le
+  mois se lit semaine par semaine (`/caisse/semaine`), une à la fois. Un clic
+  sur une ligne ouvre la journée.
 - **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
   seul — services de caisse (`daily-shifts`) et export comptable du jour.
   Contrat complet et règles de contrôle dans `docs/contrat-api.md`.

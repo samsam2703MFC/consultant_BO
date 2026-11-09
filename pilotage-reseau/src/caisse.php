@@ -167,11 +167,18 @@ function ep_caisse_semaine(): array
     }
 
     // 1) Ce qui est déjà gardé.
-    $parJour = []; $lire = [];
+    $parJour = []; $lire = []; $anciens = [];
     foreach ($jours as $j) {
         if ($j > $auj) { $parJour[$j] = ['s' => [], 'c' => null, 'futur' => true]; continue; }
-        $g = $relire ? null : setting('caisseJ:' . $shop . ':' . $j);
-        if (is_array($g) && isset($g['s']) && $j <= $clos) { $parJour[$j] = $g; continue; }
+        $g0 = setting('caisseJ:' . $shop . ':' . $j);
+        $g = $relire ? null : $g0;
+        // Un jour gardé depuis une semaine voisine (le dimanche d'avant, le lundi
+        // d'après) l'a été SANS son export comptable, qui ne servait pas là-bas :
+        // dans SA semaine, il faut le relire.
+        $sansExport = $j >= $du && $j <= $au && is_array($g) && ($g['c'] ?? null) === null;
+        if (is_array($g) && isset($g['s']) && $j <= $clos && !$sansExport) { $parJour[$j] = $g; continue; }
+        // Même en relecture forcée : l'export déjà gardé d'un jour de bord reste.
+        $anciens[$j] = is_array($g0) ? $g0 : null;
         $lire[] = $j;
     }
 
@@ -206,7 +213,8 @@ function ep_caisse_semaine(): array
                 }
                 $svc[] = $x;
             }
-            $c = ($j >= $du && $j <= $au) ? caisseComptable($rc['c' . $j] ?? null) : null;
+            // Hors de la semaine, l'export n'est pas relu : celui déjà gardé reste.
+            $c = ($j >= $du && $j <= $au) ? caisseComptable($rc['c' . $j] ?? null) : ($anciens[$j]['c'] ?? null);
             $parJour[$j] = ['s' => $svc, 'c' => $c, 'le' => date('Y-m-d H:i')];
             // Une journée close se garde — si tout a été lu, caisses comprises.
             $complet = ($j < $du || $j > $au || $c !== null) && !array_filter($svc, static fn ($x) => $x['caisse'] === null);
