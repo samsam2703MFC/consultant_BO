@@ -96,17 +96,25 @@ sortent en tête, les plus creuses d'abord.
 
 Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.
 
-**Deux sources**, parce qu'aucune n'est complète à elle seule :
+**Le panel d'abord, sur toute la fenêtre** (depuis le 09/11/2026) :
+`/consultant/shops/sales-kpis` bornée au mois, un appel par mois pour tout le
+réseau (`vmPanelMois()`). Les mois clos depuis plus de trois mois sont gravés
+dans `ceo_app_setting.vmPanel` et relus une fois par mois au plus ; les trois
+derniers mois clos se relisent à chaque appel. Au plus douze lectures neuves
+par appel : la première ouverture remplit le gros de la fenêtre, les suivantes
+complètent.
+
+Les copies ne servent plus que de **repli**, pour un mois que le panel n'a pas
+servi :
 
 | source | ce qu'elle a | ce qui lui manque |
 |---|---|---|
-| `mac_shop_monthly_pnl` (P&L du panel) | les mois clos jusqu'au dernier | aucune ligne en 2025 |
-| `transaction` (ventes de caisse) | 2025 | s'arrête au 14 juillet 2026 |
+| `mac_shop_monthly_pnl` (copie du P&L) | les mois clos jusqu'au dernier | aucune ligne en 2025, en retard sur les mois récents |
+| `transaction` (copie de la caisse) | 2025 | s'arrête au 14 juillet 2026 |
 
-Le P&L fait foi quand il a le mois — c'est un chiffre arrêté ; la caisse comble
-le reste. Chaque mois dit d'où il vient (`source`), et `tickets` / `jours`
-viennent toujours de la caisse quand elle a le mois, même si le CA vient du
-P&L.
+Chaque mois dit d'où il vient (`source` : `panel`, `pnl` ou `caisse`).
+`tickets` vient du panel quand il le donne, sinon de la caisse ; `jours` vient
+toujours de la caisse.
 
 Paramètres : `shop` (requis), `mois` (1 à 60, 24 par défaut).
 
@@ -118,10 +126,10 @@ bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même, `ca`
 {
   "shop": "4",
   "du": "2024-09", "au": "2026-08",
-  "source": "P&L mensuel du panel quand il a le mois (7), ventes de caisse sinon (0) — mois en cours exclu",
+  "source": "route vivante du panel (23 mois), copie du P&L quand le panel n’a pas le mois (0), ventes de caisse sinon (0) — mois en cours exclu",
   "mois": [
     { "mois": "2024-09", "ca": null, "source": null, "tickets": 0, "jours": 0 },
-    { "mois": "2026-02", "ca": 6506.85, "source": "pnl", "tickets": 612, "jours": 7 }
+    { "mois": "2026-02", "ca": 6506.85, "source": "panel", "tickets": 612, "jours": 7 }
   ]
 }
 ```
@@ -3211,6 +3219,22 @@ Où elle s'affiche :
 - **Cockpit, Contrôles qualité du mois** : la modale de notation d'une photo
   de comptoir met la photo type à côté de la photo rendue, et « Attendu » en
   tête de la colonne de notation.
+
+**Le contreseing de la direction part chez TFBuddy** (depuis le 09/11/2026).
+`POST /pwa/tasks/validate` appelle d'abord
+`POST /consultant/shops/{shop}/task-reviews/{review}/validate { validated }`,
+puis met à jour le miroir `mac_task_review`. `POST /pwa/tasks/review` fait de
+même quand c'est la direction qui note : elle contresigne d'office. Le
+consultant en visite (`role: consultant`) ne contresigne pas.
+L'identifiant de l'avis n'est pas rendu par `POST …/task-reviews` : il se lit
+dans l'avancement de la checklist (`tacheRevueIdTfb()`). Comme son nom de champ
+n'est pas documenté, plusieurs écritures sont acceptées : `review_id`,
+`review.id`, `reviews[]`…
+Les deux réponses portent l'état de la transmission : `tfbuddy` pour
+`validate`, `tfbuddyValidation` pour `review`, avec `{ ok, reviewId?, motif? }`.
+Si l'identifiant n'est pas trouvé, `motif` liste les champs que portait la
+ligne d'avancement. L'écran Contrôle dit « validé dans le cockpit, pas chez
+TFBuddy » au lieu de laisser croire à une validation faite à la source.
 
 ### Qui fait autorité sur quoi
 

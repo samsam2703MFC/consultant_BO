@@ -293,3 +293,42 @@ Le cockpit a déjà ses sondes. Elles passent par le compte consultant configur�
   mais **n'est pas routée** dans `public/api/index.php`. La brancher ouvrirait un
   relais vers n'importe quelle route de l'API (employés, clients compris) : à
   restreindre comme la sonde des invendus avant de l'exposer.
+
+---
+
+## 8. Ce qui a été basculé le 09/11/2026 (priorité : le dashboard en vue Jour)
+
+**Ce que la vue Jour lit, et d'où.** Le résultat du jour (`/exploitation/jour`)
+passait déjà par l'API : daily-summary, planning `?date=`, margin-heatmap,
+category-sales, `/pnl`. Le seul repli local qui reste est le planning
+synchronisé, quand le panel ne sert pas un magasin. Les autres lectures de la
+vue Jour sur les copies figées étaient :
+
+| Lecture de la vue Jour | Avant | Maintenant |
+|---|---|---|
+| **Valeur du magasin** (`/ventes/mensuel`, barre du haut, toutes les vues) | Panel sur les 3 derniers mois clos seulement, puis la copie du P&L (en retard) et la caisse locale (gelée au 14/07). Chaque mois qui sortait du créneau de trois mois retombait sur une copie fausse. | **Panel sur les 30 mois** (`sales-kpis` par mois, tout le réseau par appel). Gravé une fois clos depuis plus de trois mois, 12 lectures neuves au plus par appel. Copies en repli seulement, et chaque mois dit sa source. |
+| Notes de tâches et non-conformités (`/pwa/tasks`, `/pwa/tasks/nc`) | Miroir `mac_task_review` | **Inchangé** : les champs d'avis de l'avancement ne sont pas documentés (famille 4, à sonder). |
+| Livraisons fournisseur (mobile, `/ventes/commandes`) | Copie `material_order` | **Inchangé** : aucune route de lecture (404 mesuré, § 4). |
+
+**Les deux écritures (§ 2) :**
+
+- **Contreseing d'un avis** (`/pwa/tasks/validate`, et `/pwa/tasks/review`
+  quand la direction note) : il part chez TFBuddy (`…/task-reviews/{id}/validate`)
+  avant le miroir. La réponse et le journal disent s'il a été transmis, et
+  sinon pourquoi. **Reste à vérifier au premier usage réel** : que
+  l'identifiant de l'avis se trouve bien dans l'avancement. Si ce n'est pas le
+  cas, le motif liste les champs lus.
+- **Retrait d'une référence** (`/produits/actif`) : l'écriture part chez
+  TFBuddy (`PATCH /products/{id} { is_active }`), avec lecture avant et
+  relecture après, et une alerte si la fiche a changé de nom. La copie ne suit
+  qu'ensuite. Le garde-fou « vendue sur 12 mois » lit maintenant le panel depuis
+  le gel de la caisse locale, et refuse tout si un magasin ne répond pas.
+  **Aucun écran n'appelle cette route aujourd'hui** : le risque était réel,
+  mais dormant.
+
+**Noms de paramètres** (`panel_api.php`) :
+
+- `from`/`to` passent en premier sur `/pnl/monthly`, `/pnl/daily` et
+  `/monthly-sales`, avant les anciens essais, qui restent en repli.
+- Les routes documentées passent avant les alias absents du swagger
+  (`/product-category-groups`, `/shops/{id}/statistics/sales/kpis`).

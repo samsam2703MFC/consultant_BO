@@ -729,21 +729,124 @@ function ep_prod_utilisation_jamais_pdf(): array
 }
 
 /**
+ * Les références vendues entre deux dates, d'après le PANEL : la ligne
+ * `sold_qty` de /shops/{id}/products/waste, magasin par magasin. Sert de
+ * garde-fou depuis le gel de la caisse locale (14/07/2026) — sans lui, une
+ * référence vendue depuis juillet passait pour dormante.
+ *
+ * `sold_qty` a été mesuré RÉSEAU (la même valeur dans chaque magasin) : peu
+ * importe ici, on ne retient que « vendue quelque part ». Tous les magasins
+ * actifs doivent répondre : une vérification partielle n'en est pas une.
+ *
+ * @return array{ok: bool, vendus: array<int, float>, motif: ?string}
+ */
+function prodVendusPanel(string $du, string $au): array
+{
+    try { $shops = array_map(static fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1')); }
+    catch (PDOException $e) { return ['ok' => false, 'vendus' => [], 'motif' => 'liste des magasins illisible']; }
+    if ($shops === []) { return ['ok' => false, 'vendus' => [], 'motif' => 'aucun magasin actif']; }
+    $q = http_build_query(['from' => $du, 'date_from' => $du, 'to' => $au, 'date_to' => $au]);
+    $chemins = [];
+    foreach ($shops as $sid) { $chemins[$sid] = '/shops/' . $sid . '/products/waste?' . $q; }
+    $vendus = []; $muets = [];
+    // Trois de front : douze appels concurrents sur cette route en laissaient neuf sans réponse.
+    foreach (PanelApi::getParallele($chemins, 3) as $sid => $r) {
+        if (!is_array($r)) { $muets[] = (int) $sid; continue; }
+        $lignes = isset($r['products']) && is_array($r['products']) ? $r['products'] : PanelApi::liste($r);
+        foreach ($lignes as $l) {
+            $pid = (int) ($l['id_product'] ?? $l['product_id'] ?? 0);
+            $qv = (float) ($l['sold_qty'] ?? 0);
+            if ($pid > 0 && $qv > 0) { $vendus[$pid] = max($vendus[$pid] ?? 0.0, $qv); }
+        }
+    }
+    $muets = array_values(array_unique($muets));
+    if ($muets !== []) {
+        return ['ok' => false, 'vendus' => $vendus,
+            'motif' => 'ventes illisibles au panel pour ' . count($muets) . ' magasin(s) (#' . implode(', #', $muets) . ')'];
+    }
+    return ['ok' => true, 'vendus' => $vendus, 'motif' => null];
+}
+
+/**
+ * Retirer ou remettre UNE référence au catalogue TFBuddy :
+ * PATCH /products/{id} { is_active }. Le compte admin de l'ERP d'abord (le
+ * catalogue est l'affaire du franchiseur), le compte consultant ensuite.
+ *
+ * Le contrat de la route n'est pas documenté au swagger (09/11/2026). D'où
+ * une écriture encadrée : la fiche est LUE avant (état et nom), le corps ne
+ * porte QUE `is_active`, et la fiche est RELUE après. Le geste ne compte que
+ * si la relecture montre le nouvel état ; un nom qui aurait changé entre les
+ * deux lectures est signalé en clair — c'est le signe d'une route qui
+ * remplace la fiche au lieu de la compléter.
+ *
+ * @return array{ok: bool, deja?: bool, canal?: string, motif?: string, alerte?: string}
+ */
+function prodActifTfb(int $pid, bool $actif): array
+{
+    $canaux = [];
+    if (ErpApi::disponible()) { $canaux['ERP admin'] = 'erp'; }
+    if (PanelApi::configured()) { $canaux['panel consultant'] = 'panel'; }
+    $motifs = [];
+    foreach ($canaux as $nom => $c) {
+        $lire = static fn () => $c === 'erp' ? ErpApi::get('/products/' . $pid) : PanelApi::get('/products/' . $pid);
+        $avant = $lire();
+        if (!is_array($avant)) { $motifs[] = $nom . ' : fiche illisible (' . (($c === 'erp' ? ErpApi::$lastError : PanelApi::$lastError) ?? 'sans réponse') . ')'; continue; }
+        $avant = $avant['product'] ?? $avant;
+        if (array_key_exists('is_active', $avant) && (bool) (int) $avant['is_active'] === $actif) {
+            return ['ok' => true, 'deja' => true, 'canal' => $nom];
+        }
+        $corps = ['is_active' => $actif ? 1 : 0];
+        if ($c === 'erp') {
+            $w = ErpApi::ecrire('PATCH', '/products/' . $pid, $corps);
+            $ok = $w['erreur'] === null; $err = $w['erreur'];
+        } else {
+            [$ok] = PanelApi::envoi('PATCH', '/products/' . $pid, $corps);
+            $err = PanelApi::$lastError;
+        }
+        if (!$ok) { $motifs[] = $nom . ' : ' . ($err ?? 'écriture refusée'); continue; }
+        $apres = $lire();
+        $apres = is_array($apres) ? ($apres['product'] ?? $apres) : null;
+        if (!is_array($apres) || !array_key_exists('is_active', $apres)) {
+            return ['ok' => false, 'canal' => $nom, 'motif' => 'écriture acceptée, mais la relecture ne dit pas l’état — à vérifier dans TFBuddy'];
+        }
+        if ((bool) (int) $apres['is_active'] !== $actif) {
+            return ['ok' => false, 'canal' => $nom, 'motif' => 'écriture acceptée, mais la fiche relue garde l’ancien état'];
+        }
+        $alerte = null;
+        if (isset($avant['name']) && (string) ($apres['name'] ?? '') !== (string) $avant['name']) {
+            $alerte = 'le nom de la fiche a changé pendant l’écriture (« ' . $avant['name'] . ' » → « ' . ($apres['name'] ?? '') . ' ») : vérifier la fiche dans TFBuddy';
+        }
+        return ['ok' => true, 'canal' => $nom] + ($alerte !== null ? ['alerte' => $alerte] : []);
+    }
+    return ['ok' => false, 'motif' => $motifs !== [] ? implode(' ; ', $motifs) : 'aucun compte API configuré'];
+}
+
+/**
  * POST /produits/actif — retirer (ou remettre) des références du catalogue.
  *
- * ÉCRITURE SUR UNE TABLE DU PANEL. C'est la seule du cockpit, et elle est
- * volontairement étroite : un seul champ, `product.is_active`, celui-là même
- * que le catalogue lit déjà (`WHERE is_active = 1`). Jamais de DELETE — les
- * lignes de ticket pointent sur `product.id`, et supprimer la référence
- * rendrait six mois d'historique illisibles, en changeant après coup des
- * chiffres déjà lus.
+ * LE CATALOGUE VIT CHEZ TFBUDDY. L'écriture part donc à la source
+ * (`prodActifTfb()`, PATCH /products/{id}) ; la copie locale (`product`) ne
+ * suit qu'une fois la source relue. Auparavant le cockpit n'écrivait que dans
+ * sa copie : le catalogue TFBuddy ne bougeait pas. Sans aucun compte API
+ * (installation autonome), la copie reste la seule table, et c'est elle qu'on
+ * écrit — en le disant.
+ *
+ * Un seul champ, `is_active`. Jamais de DELETE — les lignes de ticket
+ * pointent sur `product.id`, et supprimer la référence rendrait l'historique
+ * illisible.
  *
  * Trois garde-fous :
  *  - une référence VENDUE sur les douze derniers mois est refusée, pas
- *    désactivée : la liste vient d'une analyse, une analyse peut se tromper de
- *    ligne, et une référence qui tourne ne se retire pas par mégarde ;
- *  - chaque référence passe au journal, nommée, avec son motif ;
+ *    désactivée. Les ventes se lisent dans la copie de la caisse jusqu'à son
+ *    gel, puis au PANEL depuis le gel (`prodVendusPanel()`) : sans ce second
+ *    temps, une référence vendue depuis juillet passait pour dormante. Si le
+ *    panel ne répond pas pour tous les magasins, rien n'est modifié ;
+ *  - chaque référence passe au journal, nommée, avec son motif et l'endroit
+ *    où elle a été écrite ;
  *  - le geste s'annule par le même appel (`actif: true`).
+ *
+ * Avec un compte API, 40 références au plus par appel : chacune coûte trois
+ * appels (lecture, écriture, relecture).
  *
  * Body : {refs: ["6700048", …], actif: false, motif: "…"}
  */
@@ -754,8 +857,10 @@ function wr_prod_actif(): array
     if (!is_array($refs) || $refs === []) {
         http_response_code(422); return ['error' => 'aucune référence fournie'];
     }
-    if (count($refs) > 400) {
-        http_response_code(422); return ['error' => 'trop de références en une fois (400 au plus)'];
+    $api = ErpApi::disponible() || PanelApi::configured();
+    $plafond = $api ? 40 : 400;
+    if (count($refs) > $plafond) {
+        http_response_code(422); return ['error' => 'trop de références en une fois (' . $plafond . ' au plus)'];
     }
     $actif = !empty($b['actif']);
     $motif = mb_substr(trim((string) ($b['motif'] ?? '')), 0, 200);
@@ -769,28 +874,48 @@ function wr_prod_actif(): array
     // Ce qui s'est vendu sur douze mois : le garde-fou.
     $vendus = [];
     if (!$actif) {
+        $douze = date('Y-m-d', strtotime('-12 months'));
+        // 1) la copie de la caisse, jusqu'à son gel
+        $copieLue = false; $gel = null;
         $ct = utilColonnes('transaction', UTIL_COLS_TICKET);
         $cl = utilColonnes('transaction_product', UTIL_COLS_LIGNE);
-        if ($ct === null || $cl === null) {
-            http_response_code(503);
-            return ['error' => 'impossible de vérifier les ventes récentes : la caisse n’expose pas ses lignes de ticket. Rien n’a été modifié.'];
+        if ($ct !== null && $cl !== null) {
+            try {
+                $sql = sprintf(
+                    'SELECT l.`%s` AS produit, SUM(l.`%s`) AS q
+                       FROM `transaction_product` l JOIN `transaction` t ON t.`%s` = l.`%s`
+                      WHERE t.`%s` >= ? GROUP BY produit',
+                    $cl['produit'], $cl['quantite'], $ct['id'], $cl['ticket'], $ct['date']);
+                foreach (Db::rows($sql, [$douze . ' 00:00:00']) as $r) {
+                    if ((float) $r['q'] > 0) { $vendus[(int) $r['produit']] = (float) $r['q']; }
+                }
+                $gel = Db::rows(sprintf('SELECT MAX(`%s`) AS d FROM `transaction`', $ct['date']))[0]['d'] ?? null;
+                $copieLue = true;
+            } catch (PDOException $e) { /* copie illisible : le panel seul, s'il est là */ }
         }
-        try {
-            $sql = sprintf(
-                'SELECT l.`%s` AS produit, SUM(l.`%s`) AS q
-                   FROM `transaction_product` l JOIN `transaction` t ON t.`%s` = l.`%s`
-                  WHERE t.`%s` >= ? GROUP BY produit',
-                $cl['produit'], $cl['quantite'], $ct['id'], $cl['ticket'], $ct['date']);
-            foreach (Db::rows($sql, [date('Y-m-d', strtotime('-12 months')) . ' 00:00:00']) as $r) {
-                if ((float) $r['q'] > 0) { $vendus[(int) $r['produit']] = (float) $r['q']; }
+        // 2) le panel, depuis le gel (ou sur douze mois sans copie)
+        if (PanelApi::configured()) {
+            $du = $gel !== null ? max($douze, substr((string) $gel, 0, 10)) : $douze;
+            $pv = prodVendusPanel($du, date('Y-m-d'));
+            if (!$pv['ok']) {
+                http_response_code(503);
+                return ['error' => 'impossible de vérifier les ventes depuis le ' . date('d/m/Y', strtotime($du))
+                    . ' : ' . $pv['motif'] . '. Rien n’a été modifié.'];
             }
-        } catch (PDOException $e) {
+            foreach ($pv['vendus'] as $pid => $q) { $vendus[$pid] = max($vendus[$pid] ?? 0.0, $q); }
+        } elseif ($api) {
+            // Le catalogue sera écrit chez TFBuddy, mais les ventes depuis le
+            // gel de la caisse locale ne se lisent qu'au panel : la copie seule
+            // laisserait passer une référence vendue depuis juillet.
             http_response_code(503);
-            return ['error' => 'lecture des ventes impossible — rien n’a été modifié'];
+            return ['error' => 'les ventes récentes se lisent au panel, dont le compte consultant n’est pas configuré. Rien n’a été modifié.'];
+        } elseif (!$copieLue) {
+            http_response_code(503);
+            return ['error' => 'impossible de vérifier les ventes récentes : ni la caisse locale ni le panel ne répondent. Rien n’a été modifié.'];
         }
     }
 
-    $faits = []; $refuses = []; $inconnues = []; $inchangees = [];
+    $faits = []; $refuses = []; $inconnues = []; $inchangees = []; $echecs = []; $alertes = [];
     foreach ($refs as $r) {
         $ref = trim((string) $r);
         if ($ref === '') { continue; }
@@ -801,30 +926,45 @@ function wr_prod_actif(): array
             $refuses[] = ['ref' => $ref, 'nom' => $c['nom'], 'unites' => round($vendus[$pid], 1)];
             continue;
         }
-        try {
-            // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
-            // était déjà celle-là — c'est exactement « rien à faire ici ».
-            if (Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]) === 0) {
-                $inchangees[] = $ref; continue;
+        $ou = 'copie locale seulement (aucun compte API)';
+        if ($api) {
+            $tfb = prodActifTfb($pid, $actif);
+            if (!$tfb['ok']) { $echecs[] = ['ref' => $ref, 'nom' => $c['nom'], 'motif' => $tfb['motif'] ?? 'refusé']; continue; }
+            if (!empty($tfb['alerte'])) { $alertes[] = ['ref' => $ref, 'nom' => $c['nom'], 'alerte' => $tfb['alerte']]; }
+            // La copie suit la source ; elle peut manquer, la source a déjà la main.
+            try { Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]); } catch (PDOException $e) { /* sans copie */ }
+            if (!empty($tfb['deja'])) { $inchangees[] = $ref; continue; }
+            $ou = 'TFBuddy (' . $tfb['canal'] . ')';
+        } else {
+            try {
+                // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
+                // était déjà celle-là — c'est exactement « rien à faire ici ».
+                if (Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]) === 0) {
+                    $inchangees[] = $ref; continue;
+                }
+            } catch (PDOException $e) {
+                http_response_code(503);
+                return ['error' => 'écriture refusée par la base : ' . $e->getMessage(),
+                    'faits' => count($faits), 'refuses' => $refuses];
             }
-        } catch (PDOException $e) {
-            http_response_code(503);
-            return ['error' => 'écriture refusée par la base : ' . $e->getMessage(),
-                'faits' => count($faits), 'refuses' => $refuses];
         }
         journalAdd('CEO', 'Produit', $c['nom'],
             ($actif ? 'Remise au catalogue' : 'Retirée du catalogue (is_active = 0)')
-            . ' — réf. ' . $ref . ($motif !== '' ? ' — ' . $motif : ''));
-        $faits[] = ['ref' => $ref, 'nom' => $c['nom']];
+            . ' — réf. ' . $ref . ' — ' . $ou . ($motif !== '' ? ' — ' . $motif : ''));
+        $faits[] = ['ref' => $ref, 'nom' => $c['nom'], 'ou' => $ou];
     }
 
     return ['ok' => true, 'actif' => $actif, 'motif' => $motif,
         'faits' => $faits, 'refuses' => $refuses,
         'inconnues' => $inconnues, 'inchangees' => $inchangees,
+        'echecs' => $echecs, 'alertes' => $alertes,
         'resume' => count($faits) . ($actif ? ' remise(s) au catalogue' : ' retirée(s) du catalogue')
+            . ($api ? ' TFBuddy' : ' (copie locale : aucun compte API)')
             . (count($refuses) ? ', ' . count($refuses) . ' refusée(s) car vendue(s) sur 12 mois' : '')
+            . (count($echecs) ? ', ' . count($echecs) . ' refusée(s) par TFBuddy' : '')
             . (count($inconnues) ? ', ' . count($inconnues) . ' référence(s) inconnue(s)' : '')
-            . (count($inchangees) ? ', ' . count($inchangees) . ' déjà dans cet état' : '')];
+            . (count($inchangees) ? ', ' . count($inchangees) . ' déjà dans cet état' : '')
+            . (count($alertes) ? ' — ' . count($alertes) . ' alerte(s) à vérifier' : '')];
 }
 
 /**
