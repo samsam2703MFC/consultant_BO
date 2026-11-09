@@ -1362,3 +1362,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T20:26:41Z document : changer une tâche de checklist
 2026-11-09T20:31:05Z cadre des tâches : Tableau fusionné dans Document
 2026-11-09T20:33:11Z Caisse : vue Reports, le registre du mois jour après jour ; export du jour de bord relu
+2026-11-09T20:45:30Z changer de checklist : une tâche par appel
