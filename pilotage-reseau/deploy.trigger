@@ -1354,3 +1354,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T19:21:52Z Caisse : ouvertures, fermetures et reports par magasin et par semaine ; valeur du magasin lue au panel ; contreseing des avis chez TFBuddy
 2026-11-09T19:25:18Z Cadre des tâches : déplacer des tâches vers une checklist
 2026-11-09T19:35:09Z Caisse : virgule oubliée lue au service suivant, compte des espèces corrigé
+2026-11-09T19:38:48Z Cadre des tâches : tâches en pause à part ; nomenclature 1.3.02
