@@ -238,7 +238,12 @@ function vtFicheClient(mixed $r): array
         if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } }
         elseif (!is_array($v)) { $f[(string) $k] = $v; }
     }
-    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'cles' => array_keys($f)];
+    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'remise' => null, 'cles' => array_keys($f)];
+    // La remise personnelle du client (`personal_discount_percent`, 09/11/2026) : le panel la déduit à la facture d'un
+    // paiement différé, pas dans le ticket (vpFiltreTva). Null quand la fiche ne la porte pas.
+    foreach ($f as $k => $v) {
+        if (preg_match('/(^|\.)personal_discount_percent$/', (string) $k) && is_numeric($v)) { $out['remise'] = max(0.0, min(100.0, (float) $v)); break; }
+    }
     // Un nom de société sur la fiche : oui ou non, jamais le nom.
     foreach ($f as $k => $v) { if (preg_match('/(^|\.)company_name$/', (string) $k) && is_string($v) && trim($v) !== '') { $out['societe'] = true; break; } }
     foreach ($f as $k => $v) {

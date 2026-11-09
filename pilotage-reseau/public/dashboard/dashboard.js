@@ -2116,7 +2116,7 @@
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
         <div><div class="k">Sociétés</div><div class="v">${fN(J.societes)}</div><div class="s">servie${J.societes > 1 ? 's' : ''} ${auj ? 'aujourd’hui' : 'ce jour'}</div></div>
       </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`) : J ? `<div class="db-obj-t4 db-pro-kpi">
-        <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
+        <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(proR(J))}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
         <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} · ${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
         <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
@@ -2124,7 +2124,7 @@
     // L'heure et le montant seulement : le panel range sous « société » des noms de personnes (demande du 03/10/2026).
     const tickets = J && Array.isArray(J.liste) ? J.liste : [];
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
-      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
+      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montantApresRemise != null ? t.montantApresRemise : t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
     if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}`; }
     if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}</div>`; }
@@ -2133,7 +2133,7 @@
     // chiffres et les tickets du jour.
     const ouvert = !!S.proOuvert;
     const resume = J ? (J.ticketsPro
-      ? `<b class="pro">${fE(J.caPro)}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
+      ? `<b class="pro">${fE(proR(J))}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
       : `aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} · comptoir ${fE(J.ca)}`) : 'tickets du jour non lus';
     const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
@@ -2193,7 +2193,7 @@
     if (!P) { return murC('Clients pro', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
     const J = P.jour, M = P.mois || {};
     if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
-    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
+    return murC('Clients pro', J.ticketsPro ? fK(proR(J)) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
@@ -2762,8 +2762,10 @@
     // Le comptoir et le B2B (23/10/2026, Sam : « le B2B fausse la vue ») : l'objectif du jour se partage selon la part B2B
     // habituelle (les quatre derniers mêmes jours lus) ; sans elle, tout l'objectif reste au comptoir.
     const caPro = m && m.caPro != null ? +m.caPro : null, part = m && m.partProHabituelle != null ? +m.partProHabituelle : null;
+    // La jauge B2B montre la remise personnelle des différés déduite (09/11/2026) ; le comptoir reste la caisse moins `caPro`.
+    const caProR = caPro == null ? null : proR(m);
     const objB = obj && part != null ? obj * part / 100 : null, objC = obj ? obj - (objB || 0) : null;
-    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, part, objB, objC };
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, caProR, part, objB, objC };
   }
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
@@ -2843,8 +2845,8 @@
   /** La jauge du B2B : aujourd'hui et J−7 au même moment, à sa propre échelle, face à sa part de l'objectif du jour. */
   function opDuelPro(D, B) {
     const { JD, m } = D, j7 = B.j7, estAuj = !!(JD && JD.estAujourdhui);
-    const ca = B.caPro || 0, n = +m.ticketsPro || 0, objB = B.objB;
-    const p7 = j7 && j7.caPro != null ? +j7.caPro : null, p7j = j7 && j7.caProJour != null ? +j7.caProJour : null;
+    const ca = (B.caProR != null ? B.caProR : B.caPro) || 0, n = +m.ticketsPro || 0, objB = B.objB;
+    const p7 = j7 && j7.caPro != null ? +proR(j7) : null, p7j = j7 && j7.caProJour != null ? +proR(j7, 'caProJour') : null;
     // Un magasin sans B2B (rien aujourd'hui, ni à J−7, ni d'habitude) : pas de seconde jauge.
     if (!ca && !p7j && !objB) { return ''; }
     const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
@@ -2874,6 +2876,9 @@
    * rapproché de la caisse. Au téléphone une feuille plein écran, au bureau la modale du dashboard. Sans bord coloré. */
   const isoMoins = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() - n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
   const plu = (n, m) => fN(n) + ' ' + m + (Math.round(n) > 1 ? 's' : '');
+  /** Le CA B2B à montrer (09/11/2026) : remise personnelle des tickets différés déduite (`…ApresRemise`) quand le serveur
+   *  la donne, sinon le CA pro en caisse. Le comptoir se calcule toujours avec le CA pro en caisse (`caPro`). */
+  const proR = (o, k) => o && o[(k || 'caPro') + 'ApresRemise'] != null ? +o[(k || 'caPro') + 'ApresRemise'] : (o ? o[k || 'caPro'] : null);
   const bmRemise = c => c.statut === 'remise' || c.statut === 'livrée';
   /** La ligne « Commandes du jour » : lue dans /exploitation/canaux (déjà chargé par l'onglet) ; rien sans commande. */
   function opCmdLigne(D) {
@@ -2925,14 +2930,16 @@
     const J = D.jour || {}, T = Array.isArray(D.tickets) ? D.tickets : [], st = D.sansTva || {};
     const tag = t => t.differe ? '<span class="bm-tg d">différé</span>' : (t.facture ? '<span class="bm-tg f">facturé</span>' : '<span class="bm-tg">comptoir</span>');
     const k4 = `<div class="bm-in"><div class="bm-k4">
-      <div><div class="k">CA B2B</div><div class="v">${fU(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du CA du jour' : '—'}</div></div>
+      <div><div class="k">CA B2B</div><div class="v">${fU(proR(J))}</div><div class="s">${J.part != null ? fP(J.part) + ' du CA du jour' : '—'}</div></div>
       <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">${plu(J.societes || 0, 'société')} · sur ${fN(J.tickets)}</div></div>
       <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'comptoir ' + fU(J.panierComptoir) : ''}</div></div>
       <div><div class="k">À facturer</div><div class="v">${fU(J.aFacturer)}</div><div class="s">${J.differes && J.differes.n ? '+ ' + plu(J.differes.n, 'différé') + ' ' + fU(J.differes.ca) : plu(J.factures || 0, 'ticket') + ' facturé' + ((J.factures || 0) > 1 ? 's' : '')}</div></div></div></div>`;
-    const horsTva = st.tickets ? `<div class="bm-in bm-note">${plu(st.tickets, 'ticket')} marqué${st.tickets > 1 ? 's' : ''} pro sans TVA valide (${fU(st.ca)}) : compté${st.tickets > 1 ? 's' : ''} au comptoir.</div>` : '';
+    const horsTva = (st.tickets ? `<div class="bm-in bm-note">${plu(st.tickets, 'ticket')} marqué${st.tickets > 1 ? 's' : ''} pro sans TVA valide (${fU(st.ca)}) : compté${st.tickets > 1 ? 's' : ''} au comptoir.</div>` : '')
+      // La remise personnelle des différés (09/11/2026) : la caisse l'ignore, la facture la déduit.
+      + (D.remise && D.remise.tickets ? `<div class="bm-in bm-note">${plu(D.remise.tickets, 'ticket')} en paiement différé : la remise du client (${fU(D.remise.ca)}) n’est pas dans la caisse, elle se déduit à la facture. Les montants la retirent déjà.</div>` : '');
     if (!T.length) { return k4 + `<div class="bm-in bm-msg">Aucun ticket pro ${B.j === AUJ ? 'aujourd’hui' : 'ce jour'}.</div>` + horsTva; }
     const lignes = T.map((t, i) => { const o = !!B.ouv[i];
-      return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-b2bt="${i}" role="button" tabindex="0"><span class="h">${esc(t.heure)}</span><span class="q"><b>${esc(t.societe || 'compte sans nom au panel')}</b><small>${t.articles != null ? plu(t.articles, 'article') : 'articles non lus'}</small></span><span class="m">${fU(t.montant)}${tag(t)}</span><span class="c">${o ? '▴' : '▾'}</span></div>
+      return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-b2bt="${i}" role="button" tabindex="0"><span class="h">${esc(t.heure)}</span><span class="q"><b>${esc(t.societe || 'compte sans nom au panel')}</b><small>${t.articles != null ? plu(t.articles, 'article') : 'articles non lus'}${t.remisePct ? ' · ' + fU(t.montant) + ' en caisse, remise ' + nf(t.remisePct, t.remisePct % 1 ? 1 : 0) + ' % à la facture' : ''}</small></span><span class="m">${fU(t.montantApresRemise != null ? t.montantApresRemise : t.montant)}${tag(t)}</span><span class="c">${o ? '▴' : '▾'}</span></div>
         ${o ? `<div class="art">${t.lignes && t.lignes.length ? bmLignes(t.lignes) : '<div class="bm-note">Le panel n’a pas rendu les articles de ce ticket.</div>'}</div>` : ''}</div>`; }).join('');
     const C = Array.isArray(D.categories) ? D.categories : [], mx = C.length ? Math.max(...C.map(c => +c.ca || 0), 1) : 1;
     const cats = C.length ? `<div class="bm-in"><div class="bm-lab">Ce qu’ils ont acheté</div><div class="bm-bars">${C.map(c => `<div class="b"><span>${esc(c.cat)}</span><span class="tr"><i style="width:${(100 * (+c.ca || 0) / mx).toFixed(1)}%"></i></span><span class="n">${fU(c.ca)}</span></div>`).join('')}</div></div>` : '';
@@ -3012,7 +3019,12 @@
       && (m.heuresPro.length > 0 || h7.some(x => +x.pro > 0) || +m.partProHabituelle > 0);   // un magasin sans B2B : pas de bascule
     const sep = proOk && S.opPro !== 'combi';
     const proA = new Map(((m && m.heuresPro) || []).map(x => [+x.h, x]));
-    const vPro = (x, a) => a ? (mode === 'tk' ? (proA.get(+x.h) || {}).n || 0 : (proA.get(+x.h) || {}).ca || 0) : (mode === 'tk' ? +x.proN || 0 : +x.pro || 0);
+    // `r` : la courbe B2B, remise personnelle des différés déduite (09/11/2026) ; sans `r`, le pro en caisse que le comptoir retranche.
+    const vPro = (x, a, r) => {
+      if (mode === 'tk') { return a ? (proA.get(+x.h) || {}).n || 0 : +x.proN || 0; }
+      if (a) { const p = proA.get(+x.h) || {}; return r && p.caApresRemise != null ? +p.caApresRemise : +p.ca || 0; }
+      return r && x.proApresRemise != null ? +x.proApresRemise : +x.pro || 0;
+    };
     const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
     const bascule = aTk ? `<span class="op-crbtog" role="tablist">${[['ca', 'CA'], ['tk', 'Clients'], ['pan', 'Panier']].map(([k, t]) => `<button type="button" class="${mode === k ? 'on' : ''}" data-opcrb="${k}">${t}</button>`).join('')}</span>` : '';
     const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
@@ -3026,9 +3038,9 @@
     // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
     const L = sep
       ? [[cumul(h7, null, x => (+x[champ] || 0) - vPro(x, false)), 'l7', 'p7', jn, 't7', false],
-         [cumul(h7, null, x => vPro(x, false)), 'l7p', 'p7p', '', '', true],
+         [cumul(h7, null, x => vPro(x, false, true)), 'l7p', 'p7p', '', '', true],
          [cumul(hA, lim, x => (+x[champ] || 0) - vPro(x, true)), 'la', 'pa', auj, 'ta', false],
-         [cumul(hA, lim, x => vPro(x, true)), 'lap', 'pap', '', '', true]]
+         [cumul(hA, lim, x => vPro(x, true, true)), 'lap', 'pap', '', '', true]]
       : [[cumul(h7, null, x => +x[champ] || 0), 'l7', 'p7', jn, 't7', false], [cumul(hA, lim, x => +x[champ] || 0), 'la', 'pa', auj, 'ta', false]];
     if (L.some(c => !c[0].length)) { return ''; }
     const fins = L.map(c => c[0][c[0].length - 1].v);

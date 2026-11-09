@@ -1712,17 +1712,22 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
     // Le pro (B2B) de J−7 (23/10/2026, jauges comptoir et B2B) : les tickets pro gravés du jour, au même moment et sur la
     // journée, et heure par heure. Null quand le jour n'est pas lu : la jauge comptoir le dit.
     $moment = $estAuj ? sprintf('%02d:%02d', $hNow, (int) date('i')) : null;
-    $pro = ['caPro' => null, 'ticketsPro' => null, 'caProJour' => null, 'ticketsProJour' => null];
+    $pro = ['caPro' => null, 'ticketsPro' => null, 'caProJour' => null, 'ticketsProJour' => null, 'caProApresRemise' => null, 'caProApresRemiseJour' => null];
     $b7 = function_exists('vpLu') ? vpLu($sid, $j7) : null;
     if ($b7 !== null) {
-        $cp = 0.0; $np = 0; $cpJ = 0.0; $npJ = 0; $parH = [];
+        // `pro` : en caisse (le comptoir en est le reste) ; `…ApresRemise` : remise personnelle des différés déduite (vpNet).
+        $cp = 0.0; $np = 0; $cpJ = 0.0; $npJ = 0; $cpR = 0.0; $cpRJ = 0.0; $parH = [];
         foreach ((array) $b7['t'] as $t) {
-            $m = (float) $t[2]; $cpJ += $m; $npJ++;
-            $hh = (int) substr((string) $t[0], 0, 2); $parH[$hh] = ($parH[$hh] ?? [0.0, 0]); $parH[$hh][0] += $m; $parH[$hh][1]++;
-            if ($moment === null || (string) $t[0] <= $moment) { $cp += $m; $np++; }
+            $m = (float) $t[2]; $mR = (float) ($t[5] ?? $t[2]); $cpJ += $m; $cpRJ += $mR; $npJ++;
+            $hh = (int) substr((string) $t[0], 0, 2); $parH[$hh] = ($parH[$hh] ?? [0.0, 0, 0.0]); $parH[$hh][0] += $m; $parH[$hh][1]++; $parH[$hh][2] += $mR;
+            if ($moment === null || (string) $t[0] <= $moment) { $cp += $m; $cpR += $mR; $np++; }
         }
-        $pro = ['caPro' => round($cp, 2), 'ticketsPro' => $np, 'caProJour' => round($cpJ, 2), 'ticketsProJour' => $npJ];
-        foreach ($heures as $i => $l) { $heures[$i]['pro'] = round($parH[$l['h']][0] ?? 0.0, 2); $heures[$i]['proN'] = $parH[$l['h']][1] ?? 0; }
+        $pro = ['caPro' => round($cp, 2), 'ticketsPro' => $np, 'caProJour' => round($cpJ, 2), 'ticketsProJour' => $npJ,
+            'caProApresRemise' => round($cpR, 2), 'caProApresRemiseJour' => round($cpRJ, 2)];
+        foreach ($heures as $i => $l) {
+            $heures[$i]['pro'] = round($parH[$l['h']][0] ?? 0.0, 2); $heures[$i]['proN'] = $parH[$l['h']][1] ?? 0;
+            if (isset($parH[$l['h']]) && abs($parH[$l['h']][2] - $parH[$l['h']][0]) > 0.004) { $heures[$i]['proApresRemise'] = round($parH[$l['h']][2], 2); }
+        }
     }
     // J−7 hors clients pro (21/10/2026) : ses tickets pro gravés (vpLu, TVA valide) se retirent du CA et des clients, au
     // même moment heure par heure (le `h` du relevé pro, l'heure en cours au prorata comme le reste), et sur la journée.
@@ -1752,13 +1757,19 @@ function exJ7(int $sid, string $date, bool $estAuj): ?array
 
 /**
  * Le pro (B2B) d'une journée heure par heure : [{h, ca, n}] depuis le relevé des tickets pro (vpDuListe, `h`). Null sans
- * relevé.
+ * relevé. `ca` est en caisse (le comptoir de l'heure en est le reste) ; une heure dont un ticket différé porte la remise
+ * personnelle de son client (vpFiltreTva, 09/11/2026) a aussi `caApresRemise`, ce que la courbe B2B dessine.
  */
 function exHeuresPro(?array $b): ?array
 {
     if ($b === null) { return null; }
     $out = [];
-    foreach ((array) ($b['h'] ?? []) as $h => $v) { $out[] = ['h' => (int) $h, 'ca' => round((float) ($v[0] ?? 0), 2), 'n' => (int) ($v[1] ?? 0)]; }
+    foreach ((array) ($b['h'] ?? []) as $h => $v) { $out[(int) $h] = ['h' => (int) $h, 'ca' => round((float) ($v[0] ?? 0), 2), 'n' => (int) ($v[1] ?? 0)]; }
+    foreach ((array) ($b['t'] ?? []) as $t) {
+        $hh = (int) substr((string) ($t[0] ?? ''), 0, 2);
+        if (!isset($t[5]) || !isset($out[$hh])) { continue; }
+        $out[$hh]['caApresRemise'] = round(($out[$hh]['caApresRemise'] ?? $out[$hh]['ca']) - ((float) $t[2] - (float) $t[5]), 2);
+    }
     usort($out, static fn ($a, $b) => $a['h'] <=> $b['h']);
     return $out;
 }
@@ -1775,7 +1786,8 @@ function exPartProHabituelle(int $sid, string $date): array
         $b = function_exists('vpLu') ? vpLu($sid, date('Y-m-d', strtotime($date . ' -' . (7 * $k) . ' day'))) : null;
         if ($b === null || (float) ($b['ca'] ?? 0) <= 0) { continue; }
         $ca += (float) $b['ca']; $n++;
-        foreach ((array) $b['t'] as $t) { $pro += (float) $t[2]; }
+        // Le B2B remise personnelle des différés déduite (09/11/2026), comme la jauge qu'il partage.
+        foreach ((array) $b['t'] as $t) { $pro += (float) ($t[5] ?? $t[2]); }
     }
     return ['part' => $ca > 0 ? round(100 * $pro / $ca, 1) : null, 'jours' => $n];
 }

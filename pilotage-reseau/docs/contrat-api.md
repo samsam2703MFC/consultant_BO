@@ -683,10 +683,25 @@ des tickets du jour (un appel, qui grave aussi le pro du jour), puis chaque tick
 `vpDet:{shop}:{date}`.
 
     { shop, date,
-      tickets: [ { heure, societe | null, compte, montant, facture, differe, articles, lignes: [ { nom, cat, q, pu, total } ] | null } ],
-      jour: { ca, tickets, caPro, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
+      tickets: [ { heure, societe | null, compte, montant, montantApresRemise, remisePct | null, facture, differe, articles,
+                   lignes: [ { nom, cat, q, pu, total } ] | null } ],
+      jour: { ca, tickets, caPro, caProApresRemise, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
       categories: [ { cat, ca } ],   ce que les sociétés achètent, du plus gros au plus petit
-      sansTva: { tickets, ca }, lus, cache? }
+      sansTva: { tickets, ca }, remise: { tickets, ca }, lus, cache? }
+
+**La remise personnelle des tickets différés (09/11/2026, Natan à Halle : « elle s'affiche dans b2b avec le montant hors
+réduction »).** Un ticket pro en paiement différé est gravé en caisse sans la remise personnelle du client
+(`personal_discount_percent` de sa fiche) : le panel la déduit à la facture (`generate-deferral`,
+`include_personal_discount` ; `personal_discount_value` par ligne dans `/transactions/deferral/invoice-pending`). Le B2B
+montre ce que le client paiera : `montantApresRemise` = montant × (1 − remise), `caProApresRemise`, et `part`,
+`panierPro`, `aFacturer`, `differes.ca` sur ce montant ; `montant` et `caPro` restent ceux de la caisse, et le comptoir
+(`panierComptoir`) se calcule toujours avec eux. La remise se lit sur la même fiche que la TVA, gardée avec elle dans
+`vpTva:{shop}` ([tva, lu le, remise]) ; un verdict gardé avant le 09/11 se relit une fois. Une fiche sans le champ, ou
+illisible : rien n'est déduit. Même règle dans le relevé pro (`vpFiltreTva` : [5] = montant remise déduite, `remise`) et
+partout où il se lit : `vpSplit` et `/exploitation/pro` (`caProApresRemise`, `remisePro`, `liste[].montantApresRemise`),
+`exJ7` (`caProApresRemise`, `caProApresRemiseJour`, `heures[].proApresRemise`), `heuresPro[].caApresRemise`, la part B2B
+habituelle. La jauge B2B, sa courbe et la fiche « Clients pro » montrent le montant remise déduite ; la jauge du
+comptoir est inchangée.
 
 La feuille montre le jour regardé et le même jour la semaine d'avant, un onglet chacun (Sam, 06/11/2026 au soir : « 5
 vendredis » est retiré, `&vue=semaines` avec lui ; les onglets ne portent plus de montant).
