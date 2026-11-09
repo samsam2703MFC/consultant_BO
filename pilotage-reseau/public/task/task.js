@@ -653,7 +653,8 @@
     if (c.mode === 'nouvelle') {
       const postes = (S.wz.struct || {}).postes || [];
       corps = `<div class="tk-form">
-        <label>Nom <span class="ko">*</span></label><div><input class="tk-in large" data-wc="nom" value="${esc(c.nom)}" placeholder="CQ-03 — Contrôle qualité de l’après-midi"><div class="aide">Comme les autres : un code, puis ce qu’elle contrôle.</div></div>
+        <label>Code</label><div>${ckPicker((String(c.nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2})/) || [])[1] || '', 'wz')}</div>
+        <label>Nom <span class="ko">*</span></label><div><input class="tk-in large" data-wc="nom" value="${esc(c.nom)}" placeholder="1.3.01 · Contrôle qualité de l’après-midi"><div class="aide">Le code se met tout seul quand vous choisissez qui et quand ; écrivez ensuite ce qu’elle contrôle.</div></div>
         <label>Description</label><input class="tk-in large" data-wc="description" value="${esc(c.description)}" placeholder="Ce que l’équipe doit faire, en une phrase">
         <label>Poste de travail</label><select class="tk-in" data-wc="posteId"><option value="">${postes.length || !S.wz.struct ? 'aucun' : 'aucun poste lu'}</option>${postes.map(p => `<option value="${p.id}"${String(c.posteId) === String(p.id) ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
         <label>Heure</label><div><input type="time" class="tk-in" data-wc="heure" value="${esc(c.heure)}"><div class="aide">L’heure de la checklist ; chaque tâche garde la sienne (proposée par défaut à l’étape suivante).</div></div>
@@ -1379,7 +1380,7 @@
         : `<option value="${esc(v.posteId)}">${esc(posteAff(c.poste || '—'))}</option>`;
       return `<tr class="${ckDiff(c) ? 'mod' : ''}">
         <td><span class="ck-pd" style="background:${dcCouleur(c.poste)}"></span></td>
-        <td><input class="tk-in ck-code${v.code !== o.code ? ' mod' : ''}" data-ck="code" data-i="${c.id}" value="${esc(v.code)}" placeholder="1.1.01" spellcheck="false" aria-label="Code de ${esc(c.nom)}"></td>
+        <td><button type="button" class="ck-codeb${v.code !== o.code ? ' mod' : ''}${k.cp === c.id ? ' open' : ''}" data-a="ckCodeOuvrir" data-id="${c.id}" style="--z:${CK_CODE.test(v.code) ? ckZc(v.code[0]) : '#5c5852'}" aria-label="Code de ${esc(c.nom)} : changer">${esc(v.code || 'code')} ▾</button></td>
         <td><input class="tk-in ck-titre${v.titre !== o.titre || v.sep !== o.sep ? ' mod' : ''}" data-ck="titre" data-i="${c.id}" value="${esc(v.titre)}" aria-label="Nom de ${esc(c.nom)}">
           ${ch('nom') ? `<small class="ck-avant">avant : ${esc(c.nom)}</small>` : ''}</td>
         <td><select class="tk-in ck-poste${ch('posteId')}" data-cks="posteId" data-i="${c.id}" aria-label="Zone de production">${optPostes}</select></td>
@@ -1389,7 +1390,7 @@
         <td class="ck-att">${ckAttention(c, tous).map(([cl, t]) => `<span class="ck-a ${cl}">${esc(t)}</span>`).join('')}</td>
         <td class="ck-act">${r ? `<span class="ck-r ${r.ok ? 'ok' : 'ko'}" title="${esc(r.err || '')}">${r.ok ? '✓ enregistrée' : '✗ refusée'}</span>` : ''}
           ${ckDiff(c) ? `<button class="tk-lien" data-a="ckRetablir" data-id="${c.id}">rétablir</button>` : ''}
-          ${cree ? `<button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}" title="Créée depuis cet écran : on peut la supprimer (ses tâches restent)">supprimer</button>` : ''}</td></tr>`;
+          ${cree ? `<button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}" title="Créée depuis cet écran : on peut la supprimer (ses tâches restent)">supprimer</button>` : ''}</td></tr>${k.cp === c.id ? `<tr class="ckp-tr"><td></td><td colspan="8">${ckPicker(v.code, c.id)}<div class="ckp-man">ou à la main : <input class="tk-in ck-code" data-ck="code" data-i="${c.id}" value="${esc(v.code)}" placeholder="1.1.01" spellcheck="false" aria-label="Code à la main"></div></td></tr>` : ''}`;
     };
     return `${ckNomenclature()}<div class="tk-card ck">
       <div class="tk-ct"><div><div class="tk-t15">Les checklists du réseau</div><div class="tk-sous">${L.length} checklists · nom, zone de production, heure et description, modifiables ici — rien ne part au panel avant « Enregistrer »</div></div>
@@ -1402,6 +1403,46 @@
       <div class="tk-astuce">Le nom d’une checklist au panel est « code · nom » (1.1.01 · Ouverture de la boutique). Le code est le même dans Formation et dans les SOP, et ne se traduit pas : zone (1 vente, 2 boulangerie, 3 traiteur, 4 nettoyage, 5 gestion), moment (1 ouverture, 2 journée, 3 après-midi, 4 fermeture, 5 chaque semaine, 6 chaque mois), numéro. La zone de production est celle du panel ; ses tâches et qui les fait ne changent pas ici.</div></div>`;
   }
   /** Garder un champ : le code en majuscules, sans espace. */
+  /* --- Le code d'une checklist en boutons (09/11/2026, demande de Sam) ----------------------------------------------
+   * « zone.moment.numéro » : la zone (qui) et le moment (quand) se choisissent en boutons, le numéro est le premier libre
+   * de ce couple (01, 02…) — gardé si la checklist reste dans le même couple. Sert à l'onglet Checklists et à l'assistant. */
+  const CK_ZONES = [[1, 'Vente', '#8D1D2C'], [2, 'Boulangerie', '#B0792A'], [3, 'Traiteur', '#3f7a52'], [4, 'Nettoyage', '#1f5f8b'], [5, 'Gestion', '#6B4FBB'], [0, 'Libre', '#5c5852']];
+  const CK_MOMENTS = [[1, 'Ouverture'], [2, 'Journée'], [3, 'Après-midi'], [4, 'Fermeture'], [5, 'Chaque semaine'], [6, 'Chaque mois']];
+  const ckZc = z => (CK_ZONES.find(x => x[0] === +z) || [0, '', '#5c5852'])[2];
+  /** Les codes déjà pris (modifications en cours comprises), sauf celui de la checklist `sauf`. */
+  function ckPris(sauf) {
+    const P = new Set(checklists().filter(c => String(c.id) !== String(sauf)).map(c => (S.ck ? ckVal(c) : ckOrig(c)).code).filter(Boolean));
+    if (S.wz && S.wz.cl && sauf !== 'wz') { const m = String(S.wz.cl.nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2})/); if (m) { P.add(m[1]); } }
+    return P;
+  }
+  /** Le code pour une zone et un moment : le numéro actuel s'il reste dans le même couple, sinon le premier libre. */
+  function ckCodePour(z, m, actuel, sauf) {
+    const a = String(actuel || '').match(/^([0-9])\.([1-9])\.(\d{2})$/);
+    if (a && +a[1] === +z && +a[2] === +m) { return actuel; }
+    const P = ckPris(sauf);
+    for (let n = 1; n < 100; n++) { const c = z + '.' + m + '.' + String(n).padStart(2, '0'); if (!P.has(c)) { return c; } }
+    return z + '.' + m + '.99';
+  }
+  /** Les boutons : `cible` = l'id de la checklist, ou 'wz' pour l'assistant. */
+  function ckPicker(code, cible) {
+    const a = String(code || '').match(/^([0-9])\.([1-9])\.(\d{2})$/), z = a ? +a[1] : null, m = a ? +a[2] : null;
+    return `<div class="ckp"><div class="ckp-r"><span class="ckp-l">Qui<small>1er chiffre</small></span>${CK_ZONES.map(([v, l, c]) => `<button type="button" class="ckp-b${v === z ? ' on' : ''}" style="--z:${c}" data-a="ckCode" data-i="${cible}" data-z="${v}"><b>${v}</b>${l}</button>`).join('')}</div>
+      <div class="ckp-r"><span class="ckp-l">Quand<small>2e chiffre</small></span>${CK_MOMENTS.map(([v, l]) => `<button type="button" class="ckp-b m${v === m ? ' on' : ''}" data-a="ckCode" data-i="${cible}" data-m="${v}"><b>.${v}</b>${l}</button>`).join('')}</div>
+      <div class="ckp-res">Code : ${code ? `<span class="ckp-code" style="background:${ckZc(z)}">${esc(code)}</span>` : '<span class="mu">choisissez qui et quand</span>'}<span class="mu">· le numéro (${a ? esc(a[3]) : '01, 02…'}) est le premier libre pour cette zone et ce moment</span></div></div>`;
+  }
+  /** Un clic sur une zone ou un moment : le nouveau code de la checklist (ou de l'assistant). */
+  function ckCodeClic(el) {
+    const cible = el.dataset.i, wz = cible === 'wz';
+    const cur = wz ? ((String(S.wz.cl.nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2})/) || [])[1] || '') : ckVal(checklist(cible)).code;
+    const a = String(cur).match(/^([0-9])\.([1-9])\.(\d{2})$/);
+    let z = a ? +a[1] : null, m = a ? +a[2] : null;
+    if (el.dataset.z != null) { z = +el.dataset.z; } if (el.dataset.m != null) { m = +el.dataset.m; }
+    if (z == null) { z = 1; } if (m == null) { m = 1; }
+    const code = ckCodePour(z, m, a ? cur : '', cible);
+    if (wz) { const t = String(S.wz.cl.nom || '').replace(/^\s*([0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s*[·—–:-]?\s*/, ''); S.wz.cl.nom = code + ' · ' + t; S.wz.err = null; }
+    else { ckSaisie(+cible, 'code', code); if (ckVal(checklist(cible)).sep !== ' · ') { ckSaisie(+cible, 'sep', ' · '); } }
+    rendre();
+  }
   function ckSaisie(id, champ, val) {
     S.ck.edits[id] = S.ck.edits[id] || {};
     S.ck.edits[id][champ] = champ === 'code' ? val.toUpperCase().replace(/\s+/g, '') : val;
@@ -1470,7 +1511,9 @@
         <span class="ck-tot">${t.fait ? `<span class="ck-e ok">${t.fait} fait${t.fait > 1 ? 's' : ''}</span>` : ''}${nb ? `<span class="ck-e wa">${nb} à faire</span>` : ''}${t.bloque ? `<span class="ck-e ko">${t.bloque} bloqué${t.bloque > 1 ? 's' : ''}</span>` : ''}</span>
         <button class="tk-btn ghost" data-a="ckNomRelire"${N.envoi || N.lecture ? ' disabled' : ''}>↻ Relire</button>
         <button class="tk-btn prim" data-a="ckNomAppliquer"${nb && !N.envoi ? '' : ' disabled'}>${N.envoi ? 'Application…' : nb ? `Appliquer les ${nb} changements` : 'Tout est appliqué'}</button></div>
-      <div class="ck-leg"><div><span class="mu">Zones</span>${zones}</div><div><span class="mu">Moments</span>${moments}</div></div>
+      <div class="ck-leg"><div class="ck-leg-ex"><span class="mu">Le code</span><span class="ck-leg-big"><i style="color:#8D1D2C">1</i>.<i style="color:#1f5f8b">3</i>.<i>02</i></span><span>= <b>1</b> qui (la zone) · <b>3</b> quand (le moment) · <b>02</b> le numéro, donné automatiquement · « 1.3.02 · Photos des comptoirs (après-midi) »</span></div>
+        <div><span class="mu">Qui</span>${CK_ZONES.map(([v, l, c]) => `<span><b style="background:${c};color:#fff">${v}</b> ${l}</span>`).join('')}</div><div><span class="mu">Quand</span>${moments}</div>
+        <div class="mu" style="width:auto;text-transform:none;letter-spacing:0">Pour changer le code d’une checklist : cliquez son code dans le tableau ci-dessous, puis choisissez qui et quand.</div></div>
       ${res ? `<div class="tk-msg ${res.ok ? 'ok' : 'ko'}" style="margin:10px 16px 0">${res.ok ? `${res.faits} changement${res.faits > 1 ? 's' : ''} appliqué${res.faits > 1 ? 's' : ''}.` : esc(res.error || 'refus')}</div>` : ''}
       ${groupes}
       ${(P.structure || []).length ? `<div class="tk-astuce"><b style="font-weight:400;color:var(--ink)">Ensuite, au panel</b> (il faut pouvoir retirer une tâche d’une checklist) : ${P.structure.map(x => esc(x.quoi)).join(' · ')}.</div>` : ''}</div>`;
@@ -1873,6 +1916,8 @@
         if (S.wz.lignes.length && !S.wz.res && !confirm('Fermer l’assistant ? Ce qui a été saisi sera perdu.')) { return; }
         S.wz = null; return rendre();
       case 'wzMode': S.wz.cl.mode = el.dataset.v; S.wz.err = null; return rendre();
+      case 'ckCode': return ckCodeClic(el);
+      case 'ckCodeOuvrir': S.ck.cp = S.ck.cp === +id ? null : +id; return rendre();
       case 'wzEtape': S.wz.etape = +el.dataset.e; S.wz.err = null; S.wz.plan = null; return rendre();
       case 'wzPrecedent': S.wz.etape = Math.max(1, S.wz.etape - 1); S.wz.err = null; S.wz.plan = null; return rendre();
       case 'wzSuivant': {

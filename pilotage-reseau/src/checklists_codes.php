@@ -130,9 +130,9 @@ function ckcPlan(): array
             if ((int) ($c['workstation_id'] ?? 0) !== $pid) { $b['posteId'] = $pid; }
         }
         $desc = tkTxt($c['description'] ?? '');
-        $anc = array_values(array_filter($x['ex'], fn ($k) => !str_starts_with($k, 'CHK-')));
-        // Sans ancien code (une checklist née avec la nomenclature, 1.3.02), rien à ajouter à la description.
-        if ($anc && !str_contains($desc, '(ex ')) { $b['description'] = trim(($desc === 'Array' ? '' : $desc) . ' (ex ' . implode(', ', $anc) . ')'); }
+        // Plus de « (ex AC-…) » ajouté à la description (09/11/2026, demande de Sam : les anciens codes AC-xx sont retirés
+        // des noms et des descriptions). L'ancien code reste connu ici (`ex`), pour traduire un vieux lien.
+        if ($desc === 'Array') { $b['description'] = ''; }
         $avant = ['nom' => $nom, 'heure' => $heure, 'posteId' => (int) ($c['workstation_id'] ?? 0), 'description' => $desc];
         $points[] = $p + ($b ? ['etat' => 'afaire', 'changements' => $b, 'avant' => $avant] : ['etat' => 'fait']);
     }
@@ -179,8 +179,7 @@ function ckcPlan(): array
     return ['nomenclature' => ckcPublique(), 'points' => $points, 'totaux' => $n,
         'structure' => [
             ['quoi' => 'Fusionner « CO-01 — Ouverture » dans 1.1.01 (sa tâche « Vérifier si le magasin est propre » y passe)', 'id' => 44],
-            ['quoi' => 'Partager 1.1.02 : les 18 photos de 14:30 (samedi, dimanche) dans une nouvelle 1.3.02 · Photos des comptoirs l’après-midi (week-end) ; 1.1.02 devient « Photos des comptoirs à l’ouverture »', 'id' => 43],
-            ['quoi' => 'Supprimer « Checklist Test Consultant »', 'id' => 50],
+            // Faits le 08-09/11/2026 : 1.1.02 partagée (1.3.02, #63) et « Checklist Test Consultant » (#50) supprimée.
         ]];
 }
 
