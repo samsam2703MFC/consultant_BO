@@ -355,6 +355,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
             $path === '/caisse/semaine'              => ep_caisse_semaine(),
+            $path === '/caisse/jour'                 => ep_caisse_jour(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
             $path === '/ventes/commandes/sonde'      => ep_commandes_sonde(),

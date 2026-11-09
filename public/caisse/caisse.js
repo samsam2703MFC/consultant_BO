@@ -47,6 +47,7 @@
     vue: q.get('vue') === 'jour' ? 'jour' : 'semaine',
     jour: estDate(q.get('jour')) ? q.get('jour') : null,
     stores: null, D: null, err: null, enCours: false, cache: {},
+    T: {}, Tcours: {}, Terr: {},   // les tickets en espèces d'une journée, par « magasin|jour »
   };
 
   function lire(path) {
@@ -348,9 +349,90 @@
     return `<section class="card"><h3>${esc(c.nom)} ${x.pts.length ? `<span class="${g}" style="margin-left:6px">${x.pts.length} point${x.pts.length > 1 ? 's' : ''}</span>` : '<span class="tag-ok" style="margin-left:6px">rien à signaler</span>'}</h3>
       <p class="sous">caisse ${c.id} · ${x.l.length} service${x.l.length > 1 ? 's' : ''} ce jour-là</p><div class="fiche">${L.join('')}</div></section>`;
   }
+  /* --- les espèces, ticket par ticket (GET /caisse/jour) ------------------------------ */
+  const COUL = ['#B03048', '#1B6FA8', '#3f7a52', '#B0792A'];
+  function lireJour() {
+    const k = S.shop + '|' + S.jour;
+    if (!S.jour || S.jour > AUJ || S.T[k] || S.Tcours[k] || S.Terr[k]) { return; }
+    S.Tcours[k] = true;
+    const relire = S.Trelire; S.Trelire = false;
+    lire('/caisse/jour?shop=' + encodeURIComponent(S.shop) + '&date=' + S.jour + (relire ? '&rafraichir=1' : ''))
+      .then(d => { S.T[k] = d; })
+      .catch(e => { S.Terr[k] = e.message; })
+      .finally(() => { delete S.Tcours[k]; if (S.vue === 'jour') { rendre(); } });
+  }
+  const hDe = ts => { const h = String(ts).slice(11, 19); return (+h.slice(0, 2)) + (+h.slice(3, 5)) / 60 + (+h.slice(6, 8)) / 3600; };
+  /* La courbe du tiroir : une ligne en escalier par caisse, du fond d'ouverture à la dernière vente. */
+  function courbeTiroir(series, h0, h1, ymax) {
+    const W = 1000, H = 190, ml = 52, mr = 12, mt = 10, mb = 22;
+    const x = h => ml + (W - ml - mr) * (Math.min(h1, Math.max(h0, h)) - h0) / (h1 - h0);
+    const y = v => mt + (H - mt - mb) * (1 - (v / (ymax || 1)));
+    const gx = [];
+    for (let h = Math.ceil(h0); h <= Math.floor(h1); h += 2) { gx.push(`<line x1="${x(h)}" y1="${mt}" x2="${x(h)}" y2="${H - mb}" stroke="#e6e0d8" stroke-dasharray="3 3"/><text x="${x(h)}" y="${H - 6}" text-anchor="middle" font-size="11" fill="#7a736a">${String(h).padStart(2, '0')}h</text>`); }
+    const pas = ymax > 2000 ? 1000 : ymax > 800 ? 200 : ymax > 300 ? 100 : 50;
+    const gy = [];
+    for (let v = 0; v <= ymax; v += pas) { gy.push(`<line x1="${ml}" y1="${y(v)}" x2="${W - mr}" y2="${y(v)}" stroke="#e6e0d8"/><text x="${ml - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="#7a736a">${nf(v, 0)} €</text>`); }
+    const lignes = series.map(s => {
+      let d = `M${x(s.debut)},${y(s.fond)}`, v = s.fond;
+      s.pts.forEach(p => { d += ` H${x(p.h)} V${y(p.v)}`; v = p.v; });
+      d += ` H${x(s.fin)}`;
+      const pts = s.pts.map(p => `<circle cx="${x(p.h)}" cy="${y(p.v)}" r="2.4" fill="${s.coul}"><title>${esc(p.titre)}</title></circle>`).join('');
+      return `<path d="${d}" fill="none" stroke="${s.coul}" stroke-width="2"/>${pts}`;
+    }).join('');
+    return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Les espèces dans le tiroir au fil de la journée">${gy.join('')}${gx.join('')}${lignes}</svg>`;
+  }
+  function especesTickets(j) {
+    const k = S.shop + '|' + j, T = S.T[k];
+    const tete = `<h3>Les espèces, ticket par ticket</h3>`;
+    if (S.Terr[k]) { return `<section class="card blk">${tete}<div class="ca-msg err">${esc(S.Terr[k])}</div></section>`; }
+    if (!T) { return `<section class="card blk">${tete}<p class="sous">Lecture des tickets du jour chez TFBuddy…</p></section>`; }
+    const E = T.especes || {};
+    const calage = { exact: 'calé au centime sur l’export comptable', 'approché': 'calé à 2 % près sur l’export comptable', appris: 'repris de la correspondance apprise', introuvable: 'introuvable' }[E.calage] || E.calage;
+    if (E.type == null) {
+      return `<section class="card blk">${tete}<div class="ca-msg warn">Le mode de paiement « espèces » n’a pas pu être identifié ce jour-là : aucun total de tickets ne correspond à la ligne « Espèce » de l’export comptable${E.totalExport != null ? ' (' + esc(eur(E.totalExport)) + ')' : ''}.</div>
+        <p class="src">Totaux par type de paiement : ${(T.paiements || []).map(p => `type ${p.id} · ${p.n} ticket${p.n > 1 ? 's' : ''} · ${esc(eur(p.total))}${p.nom ? ' (' + esc(p.nom) + ')' : ''}`).join(' ; ')}.</p></section>`;
+    }
+    // Le tiroir de chaque caisse : son fond d'ouverture, puis chaque ticket en espèces.
+    const series = [], cumul = {};
+    let h0 = 6, h1 = 19, ymax = 0;
+    S.D.caisses.forEach((c, i) => {
+      const x = jourCaisse(c.id, j);
+      const tks = T.tickets.filter(t => t.caisse === c.id);
+      if (!x && !tks.length) { return; }
+      const fond = x ? (x.prem.fond || 0) : 0;
+      const debut = x && x.prem.ouv ? hDe(x.prem.ouv) : (tks.length ? hDe(tks[0].heure) : 6);
+      const finS = x && x.dernierJour.ferm && x.dernierJour.ferm.slice(0, 10) === j ? hDe(x.dernierJour.ferm) : null;
+      let v = fond;
+      const pts = tks.map(t => { v += t.montant; cumul[t.id] = v; return { h: hDe(t.heure), v, titre: t.heure.slice(11, 16) + ' · ' + (t.vendeuse || '') + ' · ' + eur(t.montant) + ' → ' + eur(v) }; });
+      const fin = finS != null ? finS : (pts.length ? pts[pts.length - 1].h : debut);
+      h0 = Math.min(h0, Math.floor(debut)); h1 = Math.max(h1, Math.ceil(fin));
+      ymax = Math.max(ymax, fond, ...pts.map(p => p.v));
+      series.push({ id: c.id, nom: c.nom, coul: COUL[i % COUL.length], fond, debut, fin, pts, total: v - fond, n: tks.length });
+    });
+    ymax = Math.ceil((ymax || 50) * 1.1);
+    // Par vendeuse : combien de tickets en espèces, et pour combien.
+    const parV = {};
+    T.tickets.forEach(t => { const n = t.vendeuse || '—'; parV[n] = parV[n] || { n: 0, m: 0 }; parV[n].n++; parV[n].m += t.montant; });
+    const vend = Object.entries(parV).sort((a, b) => b[1].m - a[1].m);
+    const concorde = E.ecart != null && Math.abs(E.ecart) < 0.01;
+    const ctrl = E.totalExport == null ? '<span class="tag-warn">export comptable illisible : total non contrôlé</span>'
+      : (concorde ? `<span class="tag-ok">✓ concorde avec l’export comptable (${esc(eur(E.totalExport))})</span>` : `<span class="tag-stop">écart de ${esc(eur(E.ecart))} avec l’export comptable (${esc(eur(E.totalExport))})</span>`);
+    const caisseCoul = id => (series.find(s => s.id === id) || {}).coul || '#7a736a';
+    return `<section class="card blk">${tete}
+      <p class="sous">${E.n} ticket${E.n > 1 ? 's' : ''} payé${E.n > 1 ? 's' : ''} en espèces sur ${T.nTickets} · ${esc(eur(E.totalTickets))} ${ctrl} · type de paiement ${esc(String(E.type))}, ${esc(calage)}.</p>
+      ${E.n ? `${courbeTiroir(series, h0, h1, ymax)}
+      <div class="tk-leg">${series.map(s => `<span><i style="background:${s.coul}"></i>${esc(s.nom)} : fond ${esc(eur(s.fond))} → ${esc(eur(s.fond + s.total))} attendus <small>(${s.n} ticket${s.n > 1 ? 's' : ''}, + ${esc(eur(s.total))})</small></span>`).join('')}</div>
+      <div class="tk-v">${vend.map(([n, x]) => `<span class="chip chip--neutral">${esc(n)} · ${x.n} · ${esc(eur(x.m))}</span>`).join('')}</div>
+      <div class="tk-scroll"><table class="tk"><thead><tr><th>Heure</th><th>Caisse</th><th>Vendeuse</th><th>Ticket</th><th class="num">Montant</th><th class="num">Dans le tiroir</th></tr></thead><tbody>
+        ${T.tickets.map(t => `<tr><td>${esc(t.heure.slice(11, 19))}</td><td><i class="pt" style="background:${caisseCoul(t.caisse)}"></i>${esc(t.caisseNom || '—')}</td><td>${esc(t.vendeuse || '—')}</td><td class="nul">#${t.id}${t.pro ? ' <span class="tag-warn">pro</span>' : ''}${t.corrige ? ' <span class="tag-warn">corrigé</span>' : ''}</td><td class="num${t.montant < 0 ? ' neg' : ''}">${esc(eur(t.montant))}</td><td class="num">${cumul[t.id] != null ? esc(eur(cumul[t.id])) : '—'}</td></tr>`).join('')}
+      </tbody></table></div>
+      <p class="src">« Dans le tiroir » : le fond d’ouverture de la caisse plus les espèces encaissées jusqu’à ce ticket. Les retraits, que TFBuddy ne relit pas, n’y sont pas.</p>` : '<p class="muted">Aucun ticket payé en espèces ce jour-là.</p>'}
+    </section>`;
+  }
   function vueJour() {
     const D = S.D, j = S.jour;
     if (j > AUJ) { return `<div class="ca-msg">Ce jour n’est pas encore passé.</div>`; }
+    lireJour();   // les tickets en espèces : lus à part, la journée s'affiche sans les attendre
     const m = jourMagasin(j), cf = m.cf;
     const pts = tousLesPoints().filter(p => p.j === j);
     const nav = `<div class="jnav">${D.jours.map(x => { const n = tousLesPoints().filter(p => p.j === x).length;
@@ -365,6 +447,7 @@
       : `<div class="alerte ok"><span>✓</span><div><b>Rien à signaler ce ${esc(jl(j))}</b> — fonds, fermetures et reports se suivent.</div></div>`}
     <section class="card blk"><h3>Les services de la journée</h3><p class="sous">Une barre par service ouvert sur la caisse. Hachuré : un service ouvert après la fermeture du magasin.</p>${timeline(j)}</section>
     <div class="cols">${D.caisses.map(c => ficheCaisse(c, j)).join('')}</div>
+    ${especesTickets(j)}
     <div class="cols">
       <section class="card"><h3>Les espèces, du fond du matin au fond du soir</h3><p class="sous">Le magasin, toutes les caisses ensemble.</p>
         ${cf ? `<div class="wf">
@@ -412,7 +495,7 @@
     const a = b.dataset.act;
     if (a === 'vue') { S.vue = b.dataset.v; if (S.vue === 'jour') { caleJour(); } url(); rendre(); }
     else if (a === 'ouvrir') { S.vue = 'jour'; S.jour = b.dataset.j; url(); rendre(); window.scrollTo(0, 0); }
-    else if (a === 'relire') { charger(true); }
+    else if (a === 'relire') { const k = S.shop + '|' + S.jour; delete S.T[k]; delete S.Terr[k]; S.Trelire = S.vue === 'jour'; charger(true); }
     else if (a === 'pas') {
       const n = +b.dataset.n;
       if (S.vue === 'jour' && S.jour) {

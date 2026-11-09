@@ -121,3 +121,16 @@ table.mg tr.sep td { padding: 4px 10px; font-size: 10px; letter-spacing: .14em; 
 .mp tr.tot td { background: var(--total-line); padding-left: 6px; padding-right: 6px; }
 .bar { display: inline-block; height: 8px; border-radius: 2px; background: var(--chart-real); vertical-align: middle; margin-right: 6px; }
 .bar.es { background: var(--chart-goal); }
+
+/* les espèces, ticket par ticket */
+.tk-leg { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; margin: 6px 0 10px; }
+.tk-leg i, .tk .pt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; }
+.tk-leg small { color: var(--muted); }
+.tk-v { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.tk-scroll { max-height: 460px; overflow-y: auto; border: 1px solid var(--line); border-radius: 12px; }
+table.tk { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+table.tk thead th { position: sticky; top: 0; background: var(--table-head); font-weight: 400; font-size: 10.5px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--muted); text-align: left; padding: 8px 12px; }
+table.tk td { padding: 6px 12px; border-top: 1px solid var(--row-line); font-variant-numeric: tabular-nums; }
+table.tk .num { text-align: right; }
+table.tk td.neg { color: var(--stop); }
