@@ -309,7 +309,11 @@ function tkCadre(): array
         'sopLiens' => $sopLiens ?: (object) [],
         'checklists' => $checklists,
         'taches' => array_values($taches),
-        'horsChecklist' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']])))),
+        // Le panel ne liste pas les tâches EN PAUSE dans leurs checklists (09/11/2026 : « Ranger » rendait 409 « déjà dans
+        // cette checklist » pour des tâches que l'écran disait hors checklist). Hors checklist = une tâche active absente de
+        // toutes les listes ; une tâche en pause absente va dans `enPause` : sa checklist est inconnue, pas absente.
+        'horsChecklist' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']]) && ($t['actif'] ?? null) !== false))),
+        'enPause' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']]) && ($t['actif'] ?? null) === false))),
         'niveaux' => array_values(array_filter(array_map('tkNiveauNorm', $nivs), fn ($l) => $l['id'] > 0)),
         'options' => ['jours' => tkValeurs($taches, 'day_of_week'), 'frequences' => tkValeurs($taches, 'frequency')],
         'creees' => $creees,

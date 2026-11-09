@@ -1104,12 +1104,17 @@
       <div class="dc-meta"><span class="wa">${hors.length} tâche${hors.length > 1 ? 's' : ''} que les équipes ne voient dans aucune liste du jour${hors.every(t => t.actif === false) ? ', toutes en pause' : ''} · « Ranger » les met dans une checklist</span></div>
       ${S.dcRange ? `<div class="dc-range${S.dcRange.ko ? ' ko' : ''}">${esc(S.dcRange.t)}${S.dcRange.cid ? ` <button class="tk-lien" data-a="dcAller" data-id="${S.dcRange.cid}">voir la checklist</button>` : ''}</div>` : ''}
       ${hors.some(t => S.sel.has(t.id)) ? barreSelection() : ''}<div class="dc-ls">${hors.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
+    // Les tâches en pause que le panel ne range dans aucune liste (09/11/2026) : leur checklist est inconnue, pas absente.
+    const pz = new Set((S.cadre && S.cadre.enPause) || []), pause = taches().filter(t => pz.has(t.id));
+    const pauseHtml = pause.length ? `<div class="dc-moment">En pause</div><section class="dc-s" id="dc-pause"><h2 class="dc-h2"><span>En pause · checklist inconnue</span></h2>
+      <div class="dc-meta"><span class="mu">${pause.length} tâche${pause.length > 1 ? 's' : ''} en pause : le panel ne les montre dans aucune checklist tant qu’elles sont en pause : leur checklist est inconnue. « Ranger » répond « déjà dans cette checklist » quand elle y est déjà.</span></div>
+      <div class="dc-ls">${pause.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
     return `<div class="dc">${sommaire}<div class="tk-card dc-doc">
       ${S.dup ? volet() : ''}
       <h1 class="dc-h1">Le cadre du réseau</h1>
       <div class="dc-sous">${ordre.length} checklists · ${taches().length} tâches · un clic sur une vignette pour la changer${esc(etat)}</div>
       ${q && q.err ? `<div class="tk-err">Qui fait / qui contrôle : lecture interrompue (${esc(q.err)}). <button class="tk-lien" data-a="dcQuiRelire">Réessayer</button></div>` : ''}
-      ${sections}${horsHtml}${finHors}</div></div>`;
+      ${sections}${horsHtml}${finHors}${pauseHtml}</div></div>`;
   }
 
   /* --- les listes --- */
