@@ -77,7 +77,7 @@
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
-    if (S.vue === 'planning' || S.vue === 'checklists' || S.vue === 'soir') { a.set('vue', S.vue); } else { if (S.vue === 'cadre') { a.set('vue', 'tableau'); } if (cl) { a.set('checklist', cl); } }
+    if (S.vue === 'planning' || S.vue === 'checklists' || S.vue === 'soir') { a.set('vue', S.vue); } else { if (cl) { a.set('checklist', cl); } }
     try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
     if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
   }
@@ -88,8 +88,8 @@
     filtre: '', sel: new Set(),
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
-    // Les vues : le Document (par défaut, 07/11/2026), le Tableau d'avant (?vue=tableau), le Planning.
-    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'tableau' ? 'cadre' : q.get('vue') === 'checklists' ? 'checklists' : q.get('vue') === 'soir' ? 'soir' : 'doc',
+    // Les vues : le Document (par défaut, 07/11/2026 ; le Tableau d'avant y est fusionné le 09/11/2026, ?vue=tableau l'ouvre), le Planning.
+    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'checklists' ? 'checklists' : q.get('vue') === 'soir' ? 'soir' : 'doc',
     dd: null,   // la liste ouverte d'une vignette du Document : {k, id, c, portee, …}
     rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
@@ -488,6 +488,8 @@
    * ligne (07/11/2026 : 110 tâches listées sous chaque checklist faisaient une page de 5 000 px) ; ouvert, il
    * ne montre que ce qui touche la checklist affichée, par paquets de 40, « toute la liste » à la demande.
    */
+  /** En bas du Document (09/11/2026, Tableau fusionné) : tout ce qui a été créé depuis cet écran, avec Supprimer. */
+  function dcCreees() { const a = S.creesTout; S.creesTout = true; S.dcCreeesRendu = true; const h = creees(); S.creesTout = a; S.dcCreeesRendu = false; return h ? `<div class="dc-creees">${h}</div>` : ''; }
   function creees() {
     const L = (S.cadre && S.cadre.creees) || [];
     const C = (S.cadre && S.cadre.checklistsCreees) || [];
@@ -501,7 +503,7 @@
     const resume = [L.length ? pl(L.length, 'tâche') : '', C.length ? pl(C.length, 'checklist') : ''].filter(Boolean).join(' · ')
       + (c && (Lv.length || Cv.length) && !S.creesTout ? ` — dont ${pl(Lv.length + Cv.length, 'élément')} pour cette checklist` : '');
     const tete = `<div class="tk-ct"><span class="tk-k">Créé depuis cet écran</span><span class="mu" style="font-size:11.5px">${esc(resume)}</span><span class="sp"></span>
-      ${S.creesOuvert && c ? `<button class="tk-lien" data-a="creesTout">${S.creesTout ? 'cette checklist seulement' : 'toute la liste'}</button>` : ''}
+      ${S.creesOuvert && c && !S.dcCreeesRendu ? `<button class="tk-lien" data-a="creesTout">${S.creesTout ? 'cette checklist seulement' : 'toute la liste'}</button>` : ''}
       <button class="tk-btn mini" data-a="creesOuvrir">${S.creesOuvert ? 'Masquer' : 'Afficher'}</button></div>`;
     if (!S.creesOuvert) { return `<div class="tk-card">${tete}</div>`; }
     if (!Lv.length && !Cv.length) { return `<div class="tk-card">${tete}<div class="tk-astuce">Rien n’a été créé ici pour cette checklist.</div></div>`; }
@@ -1162,7 +1164,7 @@
       <h1 class="dc-h1">Le cadre du réseau</h1>
       <div class="dc-sous">${ordre.length} checklists · ${taches().length} tâches · un clic sur une vignette pour la changer${esc(etat)}</div>
       ${q && q.err ? `<div class="tk-err">Qui fait / qui contrôle : lecture interrompue (${esc(q.err)}). <button class="tk-lien" data-a="dcQuiRelire">Réessayer</button></div>` : ''}
-      ${sections}${horsHtml}${finHors}${pauseHtml}</div></div>`;
+      ${sections}${horsHtml}${finHors}${pauseHtml}</div></div>${dcCreees()}`;
   }
 
   /* --- les listes --- */
@@ -1650,7 +1652,7 @@
         </div>
         ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
         ${m.plan ? `<div class="tk-cb" style="padding-top:0"><div class="tk-k" style="margin-bottom:4px">${m.plan.fait ? 'Résultat' : 'Ce qui partira au panel'}</div>${appels(m.plan.operations, !!m.plan.fait)}</div>` : ''}
-        <div class="tk-pied"><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
+        <div class="tk-pied"><button class="tk-btn ghost" data-a="brut" data-id="${m.id}" title="Ce que le panel renvoie pour cette tâche : niveaux, contrôleurs, champs bruts">Détails du panel</button><span class="sp"></span><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
           ${m.plan && !m.plan.fait ? `<button class="tk-btn prim" data-a="modifEnvoyer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button>` : ''}
           <button class="tk-btn" data-a="fermer">${m.plan && m.plan.fait ? 'Fermer' : 'Annuler'}</button></div>`;
     }
@@ -1810,7 +1812,7 @@
     const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd', 'ck', 'rs'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'cadre' ? 'on' : ''}" data-a="vue" data-v="cadre">Tableau</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button><button class="${S.vue === 'soir' ? 'on' : ''}" data-a="vue" data-v="soir">Revue du soir</button></div>`;
+    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button><button class="${S.vue === 'soir' ? 'on' : ''}" data-a="vue" data-v="soir">Revue du soir</button></div>`;
     const rq = !S.wz && termesRq().length && S.cadre;
     $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : S.vue === 'soir' ? rsVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
