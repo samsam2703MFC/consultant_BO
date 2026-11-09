@@ -459,7 +459,10 @@ quelle.
   que la semaine dit.
 - **Le jour** : les services sur une frise de 04 h au lendemain 08 h, la fiche
   de chaque caisse (report de la veille → ouverture → fermeture → laissé →
-  ouverture du lendemain), le compte des espèces et les moyens de paiement.
+  ouverture du lendemain), **les espèces ticket par ticket** (courbe du tiroir
+  par caisse, tableau heure / caisse / vendeuse / montant / dans le tiroir,
+  contrôle contre l'export comptable — `GET /caisse/jour`), le compte des
+  espèces et les moyens de paiement.
 - **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
   seul — services de caisse (`daily-shifts`) et export comptable du jour.
   Contrat complet et règles de contrôle dans `docs/contrat-api.md`.

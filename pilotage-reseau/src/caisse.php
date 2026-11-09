@@ -259,3 +259,190 @@ function ep_caisse_semaine(): array
         ],
     ];
 }
+
+/**
+ * Le nom de chaque vendeuse d'un magasin : [id => nom affiché]. Mémo d'un jour.
+ * ATTENTION : GET /shops/{id}/employees rend aussi les secrets de chacun
+ * (hachage du mot de passe, jeton, code PIN). On n'en garde QUE l'identifiant
+ * et le nom affiché ; rien d'autre n'est conservé ni renvoyé.
+ */
+function caisseVendeuses(int $shop, bool $relire = false): array
+{
+    $cle = 'caisseEmp:' . $shop;
+    $m = setting($cle);
+    if (!$relire && is_array($m) && (string) ($m['le'] ?? '') === date('Y-m-d') && isset($m['n'])) {
+        $out = [];
+        foreach ((array) $m['n'] as $id => $nom) { $out[(int) $id] = (string) $nom; }
+        return $out;
+    }
+    $r = PanelApi::get('/shops/' . $shop . '/employees');
+    $out = [];
+    foreach (PanelApi::liste(is_array($r) ? $r : []) as $e) {
+        if (!is_array($e) || (int) ($e['id'] ?? 0) <= 0) { continue; }
+        $nom = trim((string) ($e['display_name'] ?? ''));
+        if ($nom === '') {
+            $nom = trim((string) ($e['name'] ?? '') . ' ' . mb_substr(trim((string) ($e['surname'] ?? '')), 0, 1) . (trim((string) ($e['surname'] ?? '')) !== '' ? '.' : ''));
+        }
+        $out[(int) $e['id']] = $nom !== '' ? $nom : 'Vendeuse ' . (int) $e['id'];
+    }
+    if ($out !== []) {
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                [$cle, json_encode(['le' => date('Y-m-d'), 'n' => $out], JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* sans mémo : relu la prochaine fois */ }
+    }
+    return $out;
+}
+
+/**
+ * Quel `id_payment_type` est quel moyen de paiement ? TFBuddy ne le dit nulle
+ * part : ni le ticket, ni une route. On le CALE sur l'export comptable du même
+ * jour, qui, lui, nomme ses moyens (« Espèce », « Bancontact »…) : le total des
+ * tickets d'un type doit égaler le montant d'un moyen.
+ *
+ * Deux sommes par type sont essayées — tous les tickets, puis sans les tickets
+ * à facturer ou en paiement différé, que l'export peut écarter. Un rapprochement
+ * à 1 € près est « exact » et s'apprend (`ceo_app_setting.caissePaiements`, la
+ * correspondance vaut pour tout le réseau) ; à 2 % près, « approché ». Un jour
+ * sans rapprochement retombe sur ce qui a été appris.
+ *
+ * @param array<int, array{n: int, total: float, totalCaisse: float}> $parType
+ * @return array{noms: array<int, string>, calage: array<int, string>}
+ */
+function caisseCalePaiements(array $parType, ?array $comptable): array
+{
+    $appris = setting('caissePaiements', []);
+    $appris = is_array($appris) ? $appris : [];
+    $noms = []; $calage = []; $pris = [];
+    foreach ((array) ($comptable['moyens'] ?? []) as $m) {
+        $v = (float) ($m['montant'] ?? 0);
+        if ($v <= 0) { continue; }
+        $meilleur = null; $ecart = INF;
+        foreach ($parType as $id => $s) {
+            if (isset($pris[$id])) { continue; }
+            foreach ([$s['total'], $s['totalCaisse']] as $tot) {
+                $e = abs($tot - $v);
+                if ($e < $ecart) { $ecart = $e; $meilleur = (int) $id; }
+            }
+        }
+        if ($meilleur === null) { continue; }
+        if ($ecart <= 1.0) {
+            $noms[$meilleur] = (string) $m['nom']; $calage[$meilleur] = 'exact'; $pris[$meilleur] = true;
+            $appris[(string) $meilleur] = (string) $m['nom'];
+        } elseif ($ecart <= 0.02 * $v) {
+            $noms[$meilleur] = (string) $m['nom']; $calage[$meilleur] = 'approché'; $pris[$meilleur] = true;
+        }
+    }
+    foreach ($parType as $id => $s) {
+        if (!isset($noms[$id]) && isset($appris[(string) $id])) { $noms[$id] = (string) $appris[(string) $id]; $calage[$id] = 'appris'; }
+    }
+    try {
+        if ($appris !== setting('caissePaiements', [])) {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['caissePaiements', json_encode($appris, JSON_UNESCAPED_UNICODE)]);
+        }
+    } catch (Throwable $e) { /* sans mémo : recalé la prochaine fois */ }
+    return ['noms' => $noms, 'calage' => $calage];
+}
+
+/**
+ * GET /caisse/jour?shop=2&date=2026-11-08[&rafraichir=1]
+ *
+ * Les tickets EN ESPÈCES d'une journée, un par un : l'heure, la caisse, la
+ * vendeuse, le montant. Source : la liste des tickets du jour,
+ * GET /shops/{id}/transactions?date= (un appel, tous les tickets), dont chaque
+ * ligne porte `id_device` et `id_payment_type`. Le type « espèces » est calé
+ * sur l'export comptable du jour (`caisseCalePaiements()`), et la réponse dit
+ * comment : exact, approché, appris ou introuvable.
+ *
+ * Une journée close se garde (`caisseT:{shop}:{jour}`, les seuls tickets en
+ * espèces et les totaux par type) ; aujourd'hui et hier se relisent.
+ */
+function ep_caisse_jour(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    if ($shop <= 0) { http_response_code(400); return ['error' => 'paramètre shop requis']; }
+    if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte consultant de l’API TFBuddy non configuré (Mon compte)']; }
+    $jour = (string) ($_GET['date'] ?? date('Y-m-d'));
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour) || strtotime($jour) === false) { http_response_code(400); return ['error' => 'date invalide (YYYY-MM-DD)']; }
+    if ($jour > date('Y-m-d')) { http_response_code(422); return ['error' => 'ce jour n’est pas encore passé']; }
+    $relire = !empty($_GET['rafraichir']);
+    $clos = $jour <= date('Y-m-d', strtotime('-2 days'));
+    $cle = 'caisseT:' . $shop . ':' . $jour;
+
+    $g = $relire ? null : setting($cle);
+    if (!(is_array($g) && isset($g['tickets']) && $clos)) {
+        // L'export comptable du jour : celui que la semaine a déjà gardé, sinon relu.
+        $sem = setting('caisseJ:' . $shop . ':' . $jour);
+        $comptable = is_array($sem) && is_array($sem['c'] ?? null) ? $sem['c'] : null;
+        $chemins = ['t' => '/shops/' . $shop . '/transactions?date=' . $jour];
+        $r = PanelApi::getParallele($chemins, 2);
+        if ($comptable === null) {
+            $rc = PanelApi::getParallele(['c' => '/shops/' . $shop . '/reports/sales/daily/cash-flow/csv?date=' . $jour], 1, 25, true);
+            $comptable = caisseComptable($rc['c'] ?? null);
+        }
+        $liste = $r['t'] ?? null;
+        if (!is_array($liste)) {
+            http_response_code(502);
+            return ['error' => 'liste des tickets du jour illisible chez TFBuddy' . (PanelApi::$lastError ? ' : ' . PanelApi::$lastError : '')];
+        }
+        $parType = []; $tickets = [];
+        foreach (PanelApi::liste($liste) as $t) {
+            if (!is_array($t)) { continue; }
+            $type = isset($t['id_payment_type']) && is_numeric($t['id_payment_type']) ? (int) $t['id_payment_type'] : -1;
+            $m = caisseNombre($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? null) ?? 0.0;
+            $aFacturer = !empty($t['will_be_invoiced']) || !empty($t['deferral_payment']);
+            $parType[$type] = $parType[$type] ?? ['n' => 0, 'total' => 0.0, 'totalCaisse' => 0.0];
+            $parType[$type]['n']++;
+            $parType[$type]['total'] += $m;
+            if (!$aFacturer) { $parType[$type]['totalCaisse'] += $m; }
+            $tickets[] = ['id' => (int) ($t['id'] ?? 0), 'type' => $type, 'heure' => (string) ($t['insert_timestamp'] ?? ''),
+                'caisse' => isset($t['id_device']) && is_numeric($t['id_device']) ? (int) $t['id_device'] : null,
+                'employe' => isset($t['id_employee']) && is_numeric($t['id_employee']) ? (int) $t['id_employee'] : null,
+                'montant' => $m, 'facture' => $aFacturer, 'pro' => !empty($t['is_client_b2b']),
+                'corrige' => !empty($t['has_corrections'])];
+        }
+        foreach ($parType as &$s) { $s['total'] = round($s['total'], 2); $s['totalCaisse'] = round($s['totalCaisse'], 2); }
+        unset($s);
+        $cal = caisseCalePaiements($parType, $comptable);
+        // Le type « espèces » : celui calé sur la ligne « Espèce » de l'export.
+        $typeEsp = null;
+        foreach ($cal['noms'] as $id => $nom) { if (preg_match('/esp[eè]ce/iu', $nom)) { $typeEsp = (int) $id; break; } }
+        $esp = array_values(array_filter($tickets, static fn ($t) => $typeEsp !== null && $t['type'] === $typeEsp));
+        usort($esp, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
+        $paiements = [];
+        foreach ($parType as $id => $s) {
+            $paiements[] = ['id' => (int) $id, 'nom' => $cal['noms'][$id] ?? null, 'calage' => $cal['calage'][$id] ?? 'introuvable',
+                'n' => $s['n'], 'total' => $s['total']];
+        }
+        usort($paiements, static fn ($a, $b) => $b['total'] <=> $a['total']);
+        $totEsp = round(array_sum(array_column($esp, 'montant')), 2);
+        $g = [
+            'tickets'   => $esp,
+            'paiements' => $paiements,
+            'especes'   => ['type' => $typeEsp, 'calage' => $typeEsp !== null ? ($cal['calage'][$typeEsp] ?? 'introuvable') : 'introuvable',
+                'n' => count($esp), 'totalTickets' => $totEsp, 'totalExport' => $comptable['especes'] ?? null,
+                'ecart' => isset($comptable['especes']) ? round($totEsp - (float) $comptable['especes'], 2) : null],
+            'nTickets'  => count($tickets),
+            'le'        => date('Y-m-d H:i'),
+        ];
+        if ($clos && $typeEsp !== null) {
+            try {
+                Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                    [$cle, json_encode($g, JSON_UNESCAPED_UNICODE)]);
+            } catch (Throwable $e) { /* sans mémo : relu la prochaine fois */ }
+        }
+    }
+
+    // Les noms : vendeuses et caisses, résolus à la lecture (ils changent sans que la journée change).
+    $vend = caisseVendeuses($shop, $relire);
+    $caisses = caisseNoms($shop, $relire);
+    foreach ($g['tickets'] as &$t) {
+        $t['vendeuse'] = $t['employe'] !== null ? ($vend[$t['employe']] ?? ('#' . $t['employe'])) : null;
+        $t['caisseNom'] = $t['caisse'] !== null ? ($caisses[$t['caisse']] ?? ('Caisse ' . $t['caisse'])) : null;
+    }
+    unset($t);
+    return ['shop' => $shop, 'jour' => $jour] + $g + [
+        'source' => 'TFBuddy · GET /shops/{id}/transactions?date= ; type « espèces » calé sur l’export comptable du jour',
+    ];
+}

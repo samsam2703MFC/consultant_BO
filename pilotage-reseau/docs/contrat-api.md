@@ -155,6 +155,47 @@ lit au service suivant) ; non calculable si un laissé est impossible ou si une
 caisse est encore ouverte. Les retraits n'entrent pas
 dans le compte : TFBuddy ne les relit pas.
 
+## `GET /caisse/jour`
+
+Les tickets **payés en espèces** d'une journée, un par un. Sert la carte « Les
+espèces, ticket par ticket » de la vue Jour de la page Caisse.
+
+Paramètres : `shop` (requis), `date` (requis, un jour passé ou aujourd'hui),
+`rafraichir=1`.
+
+Source : la liste des tickets du jour, `GET /shops/{id}/transactions?date=`
+(un appel, tous les tickets). Chaque ticket porte `id_device` (la caisse),
+`id_employee`, `id_payment_type`, le montant et l'heure. **TFBuddy ne dit nulle
+part quel `id_payment_type` est l'espèce** : le type est calé chaque jour sur
+l'export comptable du même jour, en comparant le total des tickets de chaque
+type au montant de chaque moyen nommé (« Espèce », « Bancontact »…).
+- Rapprochement à 1 € près : `exact`, et la correspondance s'apprend pour tout
+  le réseau (`ceo_app_setting.caissePaiements`).
+- À 2 % près : `approché`.
+- Sinon, ce qui a été appris : `appris`.
+- Sinon : `introuvable`.
+
+Les noms des vendeuses viennent de `GET /shops/{id}/employees`, dont on ne garde
+**que l'identifiant et le nom affiché** : la route rend aussi les secrets de
+chaque employé.
+
+```json
+{
+  "shop": 2, "jour": "2026-11-08", "nTickets": 863,
+  "especes": { "type": 1, "calage": "exact", "n": 25, "totalTickets": 200.7, "totalExport": 200.7, "ecart": 0 },
+  "paiements": [ { "id": 2, "nom": "Bancontact", "calage": "exact", "n": 700, "total": 6262.77 } ],
+  "tickets": [ { "id": 460900, "heure": "2026-11-08 06:02:10", "caisse": 9, "caisseNom": "Traiteur",
+    "employe": 17, "vendeuse": "…", "montant": 4.0, "pro": false, "facture": false, "corrige": false } ],
+  "le": "2026-11-09 19:50"
+}
+```
+
+Une journée close (avant-hier ou plus ancienne) se garde
+(`caisseT:{shop}:{jour}`) : seuls les tickets en espèces et les totaux par type
+sont conservés. La page trace, par caisse, ce qu'il y a dans le tiroir au fil de
+la journée : le fond d'ouverture, plus chaque ticket en espèces. Les retraits,
+que TFBuddy ne relit pas, n'y sont pas.
+
 ## `GET /ventes/mensuel`
 
 Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.
