@@ -130,6 +130,7 @@ require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
 require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
@@ -471,6 +472,7 @@ function route(string $method, string $path): mixed
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/marketing/avis'                    => ep_reputation(),
+            $path === '/visibilite'                        => ep_visibilite(),
             $path === '/marketing/avis/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
             // Le module Marketing (/marketing) : tous les canaux en une lecture.
@@ -884,6 +886,7 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
+    if ($method === 'POST' && $path === '/visibilite/sync') { return wr_visibilite_sync(); }
     if ($method === 'PUT' && preg_match('#^/marketing/avis/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
