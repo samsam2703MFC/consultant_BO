@@ -1356,3 +1356,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T19:35:09Z Caisse : virgule oubliée lue au service suivant, compte des espèces corrigé
 2026-11-09T19:38:48Z Cadre des tâches : tâches en pause à part ; nomenclature 1.3.02
 2026-11-09T19:42:10Z Nomenclature : pas de « (ex ) » vide
+2026-11-09T19:49:50Z Caisse, vue Jour : les espèces ticket par ticket (courbe du tiroir, vendeuses, contrôle export)
