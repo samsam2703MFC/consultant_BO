@@ -1360,3 +1360,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T20:10:24Z checklists : code en boutons (zone, moment)
 2026-11-09T20:13:13Z checklists : boutons de code en rectangles arrondis
 2026-11-09T20:26:41Z document : changer une tâche de checklist
+2026-11-09T20:31:05Z cadre des tâches : Tableau fusionné dans Document
