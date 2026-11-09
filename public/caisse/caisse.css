@@ -155,3 +155,19 @@ table.rp .rp-f i.ok { background: rgba(63,122,82,.12); color: var(--green); }
 table.rp .rp-f i.ko { background: var(--stop-soft); color: var(--stop); }
 table.rp .rp-f i.vi { background: var(--prize-soft); color: var(--prize-ink); }
 table.rp tbody tr:has(.rp-j small) td { border-top: 1px solid var(--line); }
+
+/* les ruptures, une à une */
+.rp-outils { display: flex; align-items: center; gap: 14px; margin: 0 0 10px; font-size: 12.5px; }
+.rp-res { display: grid; grid-template-columns: 1fr 1.4fr; gap: 16px; margin: 0 0 12px; }
+.rp-res .section-label { margin: 0 0 6px; }
+table.rp-r { min-width: 1100px; font-size: 12.5px; table-layout: auto; }
+table.rp-r th, table.rp-r td { text-align: left; vertical-align: top; padding: 8px 10px; }
+table.rp-r th:first-child, table.rp-r td:first-child { width: 70px; }
+table.rp-r td small { display: block; font-size: 10.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+table.rp-r td b { font-weight: 400; color: var(--ink); font-variant-numeric: tabular-nums; }
+table.rp-r td.x { color: var(--stop); white-space: nowrap; }
+table.rp-r td.pl { color: var(--prize-ink); white-space: nowrap; }
+table.rp-r td .tag-warn, table.rp-r td .tag-stop { margin-right: 4px; }
+table.rp-r td:last-child { white-space: nowrap; }
+.rp-motif { font-size: 13px; line-height: 1.5; margin: 0 0 12px; padding: 10px 14px; border-radius: 12px; background: var(--prize-soft); color: var(--prize-ink); }
+.rp-motif b { font-weight: 700; }

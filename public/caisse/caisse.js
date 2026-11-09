@@ -530,12 +530,101 @@
    * ≈ virgule oubliée, ✗ rompu), le total déclaré et ce qui est laissé le soir ;
    * pour le magasin, les espèces, les versements et ce qui sort du tiroir sans
    * trace, avec son cumul. */
+  /* Les ruptures du mois, une à une : le soir (ce qui a été laissé, à quelle heure,
+   * par qui), le matin (le fond, à quelle heure, par qui), l'écart, la cause
+   * probable et à qui poser la question. La cause se lit dans les deux montants :
+   * c'est une piste, pas un verdict — le tiroir, lui, n'est pas dans TFBuddy. */
+  const CAUSES = {
+    apparu:     { nom: 'Fond apparu au matin', ordre: 0 },
+    disparu:    { nom: 'Fond laissé, absent au matin', ordre: 1 },
+    ecart:      { nom: 'Écart de comptage', ordre: 2 },
+    impossible: { nom: 'Laissé impossible la veille', ordre: 3 },
+    nuit:       { nom: 'Caisse rouverte la nuit', ordre: 4 },
+  };
+  function rupturesDuMois() {
+    const D = S.D, out = [];
+    D.caisses.forEach(c => D.jours.forEach(j => {
+      const x = jourCaisse(c.id, j);
+      if (!x || !x.pts.some(p => p.k === 'rupture')) { return; }
+      const veille = svc(c.id, ajoute(j, -1));
+      const s0 = veille[veille.length - 1], s1 = x.prem;
+      const laisse = s0.laisse, fond = s1.fond, ecart = Math.round((fond - laisse) * 100) / 100;
+      const soir = (s0.parFerm || '—') + ' (fermeture du ' + jcm(s0.jour) + ' à ' + hm(s0.ferm) + ')';
+      const matin = (s1.parOuv || '—') + ' (ouverture à ' + hm(s1.ouv) + ')';
+      let cause, question, demander;
+      if (estNuit(s0)) {
+        cause = 'nuit';
+        question = 'La caisse a été rouverte à ' + hm(s0.ouv) + ' la veille et refermée le matin avec ' + eur(laisse) + ' laissés : qui l’a rouverte, et pourquoi ?';
+        demander = [s0.parOuv + ' (réouverture de ' + hm(s0.ouv) + ')', matin];
+      } else if (laisse > ABERRANT) {
+        cause = 'impossible';
+        question = 'Le soir, ' + eur(laisse) + ' ont été déclarés laissés : quel était le vrai montant ?';
+        demander = [soir];
+      } else if (laisse === 0 && fond > 0) {
+        cause = 'apparu';
+        question = 'Le fond de ' + eur(fond) + ' est-il resté dans le tiroir la nuit (la fermeture n’a pas déclaré le laissé), ou a-t-il été remis le matin ?';
+        demander = [soir, matin];
+      } else if (laisse > 0 && fond === 0) {
+        cause = 'disparu';
+        question = 'Les ' + eur(laisse) + ' laissés le soir étaient-ils dans le tiroir le matin (l’ouverture n’a pas saisi le fond), ou ont-ils été retirés pendant la nuit ?';
+        demander = [matin, soir];
+      } else {
+        cause = 'ecart';
+        question = 'Le soir ' + eur(laisse) + ', le matin ' + eur(fond) + ' : d’où vient l’écart de ' + eur(ecart) + ' ?';
+        demander = [soir, matin];
+      }
+      out.push({ j, c, s0, s1, laisse, fond, ecart, cause, question, demander });
+    }));
+    // Dans l'ordre des jours, toutes caisses mêlées : c'est l'ordre d'une enquête.
+    const rang = Object.fromEntries(D.caisses.map((c, i) => [c.id, i]));
+    return out.sort((a, b) => a.j.localeCompare(b.j) || rang[a.c.id] - rang[b.c.id]);
+  }
+  function blocRuptures(R) {
+    if (!R.length) { return `<section class="card blk"><h3>Les ruptures du mois</h3><p class="muted">Aucune : chaque matin, le fond suit ce qui a été laissé la veille.</p></section>`; }
+    const parCause = {};
+    R.forEach(r => { parCause[r.cause] = (parCause[r.cause] || 0) + 1; });
+    // Qui revient le plus : au soir (fermeture) et au matin (ouverture).
+    const pers = {};
+    R.forEach(r => {
+      const f = r.s0.parFerm || '—', o = r.s1.parOuv || '—';
+      pers[f] = pers[f] || { soir: 0, matin: 0 }; pers[f].soir++;
+      pers[o] = pers[o] || { soir: 0, matin: 0 }; pers[o].matin++;
+    });
+    const qui = Object.entries(pers).sort((a, b) => (b[1].soir + b[1].matin) - (a[1].soir + a[1].matin));
+    const ecartNet = R.reduce((a, r) => a + (r.cause === 'impossible' ? 0 : r.ecart), 0);
+    // Ce qui revient : la même cause, la même fermeture, la même ouverture.
+    const motifs = {};
+    R.forEach(r => { const k = r.cause + '|' + (r.s0.parFerm || '—') + '|' + (r.s1.parOuv || '—'); motifs[k] = (motifs[k] || 0) + 1; });
+    const [mk, mn] = Object.entries(motifs).sort((a, b) => b[1] - a[1])[0] || ['', 0];
+    const [mc, mf, mo] = mk.split('|');
+    const revient = mn >= 3 ? `<p class="rp-motif">Ce qui revient le plus : <b>${esc(CAUSES[mc].nom.toLowerCase())}</b>, fermeture par <b>${esc(mf)}</b> puis ouverture par <b>${esc(mo)}</b> — <b>${mn} fois</b> sur ${R.length}.${mc === 'apparu' ? ' Le fond reste vraisemblablement dans le tiroir la nuit sans être déclaré comme laissé à la fermeture.' : (mc === 'disparu' ? ' Le fond laissé n’est vraisemblablement pas saisi à l’ouverture.' : '')}</p>` : '';
+    return `<section class="card blk"><h3>Les ruptures du mois, une à une</h3>
+      <p class="sous">${R.length} rupture${R.length > 1 ? 's' : ''} : le fond du matin ne suit pas ce qui a été laissé la veille. La cause est une piste lue dans les deux montants, pas un verdict : seul le tiroir le dit. Écart cumulé : ${esc(eur(ecartNet))} (un fond apparu compte en plus, un fond disparu en moins).</p>
+      ${revient}
+      <div class="rp-res">
+        <div><div class="section-label">Par cause</div><div class="tk-v">${Object.keys(parCause).sort((a, b) => CAUSES[a].ordre - CAUSES[b].ordre).map(k => `<span class="chip chip--neutral">${esc(CAUSES[k].nom)} · ${parCause[k]}</span>`).join('')}</div></div>
+        <div><div class="section-label">Qui revient le plus</div><div class="tk-v">${qui.slice(0, 8).map(([n, v]) => `<span class="chip chip--neutral">${esc(n)} · ${v.soir ? v.soir + ' fermeture' + (v.soir > 1 ? 's' : '') : ''}${v.soir && v.matin ? ', ' : ''}${v.matin ? v.matin + ' ouverture' + (v.matin > 1 ? 's' : '') : ''}</span>`).join('')}</div></div>
+      </div>
+      <div class="ch-scroll"><table class="mg rp-r">
+        <thead><tr><th>Jour</th><th>Caisse</th><th>Le soir · laissé</th><th>Le matin · fond</th><th>Écart</th><th>Cause probable · question</th><th></th></tr></thead>
+        <tbody>${R.map(r => `<tr>
+          <td><b>${jc(r.j)}</b></td>
+          <td>${esc(r.c.nom)}</td>
+          <td><b>${esc(eur(r.laisse))}</b><small>${esc(jc(r.s0.jour))} ${hm(r.s0.ferm)} · ${esc(r.s0.parFerm || '—')}</small></td>
+          <td><b>${esc(eur(r.fond))}</b><small>${hm(r.s1.ouv)} · ${esc(r.s1.parOuv || '—')}</small></td>
+          <td class="${r.ecart > 0 ? 'pl' : 'x'}">${r.cause === 'impossible' ? '<span class="nul">—</span>' : (r.ecart > 0 ? '+ ' : '− ') + esc(eur(Math.abs(r.ecart)))}</td>
+          <td><span class="tag-${r.cause === 'ecart' || r.cause === 'impossible' ? 'stop' : 'warn'}">${esc(CAUSES[r.cause].nom)}</span> ${esc(r.question)}<small>À demander : ${r.demander.map(esc).join(' ; ')}</small></td>
+          <td><button class="lien" data-act="ouvrir" data-j="${r.j}">ouvrir le jour ›</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div></section>`;
+  }
   function vueReports() {
     const D = S.D;
     if (!D.caisses.length) { return `<div class="ca-msg">Aucun service de caisse sur ce mois pour ce magasin.</div>`; }
     const jours = D.jours;
     let cumul = 0, nCalc = 0;
-    const lignes = jours.map(j => {
+    const nAVoir = jours.filter(j => tousLesPoints().some(p => p.j === j)).length;
+    const lignes = jours.filter(j => !S.rpFiltre || tousLesPoints().some(p => p.j === j)).map(j => {
       const m = jourMagasin(j);
       const pts = tousLesPoints().filter(p => p.j === j);
       if (m.sorties != null) { cumul += m.sorties; nCalc++; }
@@ -575,6 +664,7 @@
       <div class="kpi ${cumul > 0 ? 'stop' : 'ok'}"><div class="kpi__value">${eur(cumul)}</div><div class="kpi__label">Sorti du tiroir sans trace</div><div class="kpi__note">${nCalc} jour${nCalc > 1 ? 's' : ''} calculable${nCalc > 1 ? 's' : ''} sur ${jours.length}</div></div>
       <div class="kpi ${PTS.length ? 'warn' : 'ok'}"><div class="kpi__value">${PTS.length}</div><div class="kpi__label">Points à vérifier</div><div class="kpi__note">${n('final0')} fermetures à 0 · ${n('nuit') + n('reouv')} réouvertures</div></div>
     </div>
+    <div class="rp-outils"><button class="filter${S.rpFiltre ? ' is-on' : ''}" data-act="rpFiltre">Seulement les jours à vérifier · ${nAVoir}</button><a class="lien" href="#ruptures">Les ruptures, une à une ↓</a></div>
     <section class="card blk mg-card"><div class="ch-scroll"><table class="mg rp">
       <thead>
         <tr class="rp-g"><th></th>${D.caisses.map(c => `<th colspan="4" class="cs">${esc(c.nom)} <small>caisse ${c.id}</small></th>`).join('')}<th colspan="5" class="cs">Le magasin</th></tr>
@@ -582,7 +672,8 @@
       </thead>
       <tbody>${lignes}</tbody>
     </table></div></section>
-    <p class="src">Une ligne par jour, du 1er au ${jours.length ? jc(jours[jours.length - 1]) : '—'}. ✓ le fond du matin suit ce qui a été laissé la veille ; ≈ il le suit une fois la virgule remise ; ✗ la chaîne est rompue. « → » sous un laissé : le montant corrigé, lu à l’ouverture suivante. Un clic sur une ligne ouvre la journée.</p>`;
+    <p class="src">Une ligne par jour, du 1er au ${jours.length ? jc(jours[jours.length - 1]) : '—'}. ✓ le fond du matin suit ce qui a été laissé la veille ; ≈ il le suit une fois la virgule remise ; ✗ la chaîne est rompue. « → » sous un laissé : le montant corrigé, lu à l’ouverture suivante. Un clic sur une ligne ouvre la journée.</p>
+    <div id="ruptures">${blocRuptures(rupturesDuMois())}</div>`;
   }
   function rendre() {
     let corps;
@@ -616,6 +707,7 @@
       if (S.vue === 'reports') { S.vue = 'jour'; S.jour = j; S.date = j; charger(false); window.scrollTo(0, 0); return; }
       S.vue = 'jour'; S.jour = j; url(); rendre(); window.scrollTo(0, 0);
     }
+    else if (a === 'rpFiltre') { S.rpFiltre = !S.rpFiltre; rendre(); }
     else if (a === 'relire') { const k = S.shop + '|' + S.jour; delete S.T[k]; delete S.Terr[k]; S.Trelire = S.vue === 'jour'; charger(true); }
     else if (a === 'pas') {
       const n = +b.dataset.n;

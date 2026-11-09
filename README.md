@@ -293,7 +293,16 @@ telle quelle.
   (et le montant corrigé quand la virgule se lit le lendemain) ; pour le
   magasin : espèces, versements, sorti du tiroir sans trace et son cumul. Le
   mois se lit semaine par semaine (`/caisse/semaine`), une à la fois. Un clic
-  sur une ligne ouvre la journée.
+  sur une ligne ouvre la journée. Un filtre ne garde que les jours à vérifier.
+- **Les ruptures, une à une** (sous le registre) : pour chaque report rompu, le
+  soir (laissé, heure, qui a fermé) et le matin (fond, heure, qui a ouvert),
+  l'écart, la cause probable — fond apparu au matin, fond laissé mais absent au
+  matin, écart de comptage, laissé impossible, caisse rouverte la nuit — la
+  question à poser et à qui. En tête : le décompte par cause, qui revient le
+  plus, et le cas le plus fréquent (même cause, même fermeture, même ouverture).
+  Mesuré à Corbais en octobre : 18 des 33 ruptures sont la même — fermeture
+  sans laissé déclaré, ouverture avec 12 € au fond, par les deux mêmes
+  personnes.
 - **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
   seul — services de caisse (`daily-shifts`) et export comptable du jour.
   Contrat complet et règles de contrôle dans `docs/contrat-api.md`.
