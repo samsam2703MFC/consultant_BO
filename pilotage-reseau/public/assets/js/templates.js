@@ -15,6 +15,7 @@ import { tplVerifMatieres } from './verification-matieres-tpl.js';
 import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
+import { tplVisibilite } from './visibilite-tpl.js';
 
 /* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
    une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
@@ -56,7 +57,7 @@ const ICO_ECRAN = {
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
   verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
   catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
-  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds',
+  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
   'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles',
@@ -190,6 +191,7 @@ export function render(c, x){
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
+      ${c.isVisib ? tplVisibilite(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
       ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
       ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
