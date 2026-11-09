@@ -133,6 +133,13 @@ dans la semaine, et l'ouverture qui suit le dernier soir. Une journée close
 }
 ```
 
+Un jour gardé depuis une semaine voisine (le dimanche d'avant, le lundi d'après)
+l'est sans son export comptable ; dans sa propre semaine, il est relu, et une
+relecture en bord de semaine ne remplace jamais un export déjà gardé.
+
+La vue **Reports** de la page (le registre du mois) n'a pas de route à elle :
+elle lit les semaines du mois une à une sur cette route et les assemble.
+
 Les caisses viennent dans l'ordre du total déclaré de la semaine (la plus
 grosse d'abord). `versements` / `depots` à `null` : rien de saisi ce jour-là.
 

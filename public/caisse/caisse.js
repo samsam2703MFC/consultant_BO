@@ -44,7 +44,8 @@
   const S = {
     shop: q.get('shop') || memo('caisse.shop') || '',
     date: estDate(q.get('date')) ? q.get('date') : AUJ,
-    vue: q.get('vue') === 'jour' ? 'jour' : 'semaine',
+    vue: ['jour', 'reports'].includes(q.get('vue')) ? q.get('vue') : 'semaine',
+    mois: /^\d{4}-\d{2}$/.test(q.get('mois') || '') ? q.get('mois') : (estDate(q.get('date')) ? q.get('date') : AUJ).slice(0, 7),
     jour: estDate(q.get('jour')) ? q.get('jour') : null,
     stores: null, D: null, err: null, enCours: false, cache: {},
     T: {}, Tcours: {}, Terr: {},   // les tickets en espèces d'une journée, par « magasin|jour »
@@ -57,19 +58,63 @@
   function url() {
     const p = new URLSearchParams();
     if (S.shop) { p.set('shop', S.shop); }
+    if (S.vue === 'reports') { p.set('vue', 'reports'); p.set('mois', S.mois); history.replaceState(null, '', '?' + p.toString()); return; }
     p.set('date', lundi(S.date));
     if (S.vue === 'jour') { p.set('vue', 'jour'); if (S.jour) { p.set('jour', S.jour); } }
     history.replaceState(null, '', '?' + p.toString());
   }
+  /* Le mois : ses semaines, lues une à une (TFBuddy n'aime pas les rafales ; les
+   * journées closes sont gardées côté serveur, une semaine déjà vue revient vite),
+   * puis assemblées en un registre continu, sans coupure au dimanche. */
+  const finMois = m => { const d = new Date(Date.UTC(+m.slice(0, 4), +m.slice(5, 7), 0)); return iso(d); };
+  function semainesDuMois(m) {
+    const out = [];
+    for (let l = lundi(m + '-01'); l <= finMois(m) && l <= AUJ; l = ajoute(l, 7)) { out.push(l); }
+    return out;
+  }
+  function fusionMois(m, sems) {
+    const jours = [];
+    for (let j = m + '-01'; j <= finMois(m) && j <= AUJ; j = ajoute(j, 1)) { jours.push(j); }
+    const vus = {}, services = [], comptable = {}, caisses = [], lacunes = [];
+    sems.forEach(d => {
+      d.services.forEach(s => { if (!vus[s.id]) { vus[s.id] = true; services.push(s); } });
+      Object.assign(comptable, d.comptable || {});
+      d.caisses.forEach(c => { if (!caisses.some(x => x.id === c.id)) { caisses.push(c); } });
+      (d.lacunes || []).forEach(l => { if (l.jour.slice(0, 7) === m) { lacunes.push(l); } });
+    });
+    return { shop: sems[0].shop, mois: m, du: m + '-01', au: finMois(m), jours, caisses, services, comptable, lacunes,
+      lu: sems[sems.length - 1].lu, sources: sems[0].sources };
+  }
+  async function chargerMois(relire) {
+    const m = S.mois, shop = S.shop, cleM = shop + '|M' + m;
+    url();
+    if (!relire && S.cache[cleM]) { S.D = S.cache[cleM]; S.err = null; rendre(); return; }
+    const sems = semainesDuMois(m);
+    if (!sems.length) { S.D = null; S.err = 'Ce mois n’a pas encore commencé.'; rendre(); return; }
+    S.enCours = true; S.err = null; S.D = null; S.prog = '0/' + sems.length; rendre();
+    try {
+      const lues = [];
+      for (const l of sems) {
+        const cle = shop + '|' + l;
+        let d = !relire && S.cache[cle];
+        if (!d) { d = await lire('/caisse/semaine?shop=' + encodeURIComponent(shop) + '&date=' + l + (relire ? '&rafraichir=1' : '')); S.cache[cle] = d; }
+        if (S.mois !== m || S.shop !== shop || S.vue !== 'reports') { return; }   // l'écran a changé entre-temps
+        lues.push(d); S.prog = lues.length + '/' + sems.length; rendre();
+      }
+      S.D = fusionMois(m, lues); S.cache[cleM] = S.D;
+    } catch (e) { S.err = e.message; S.D = null; }
+    finally { if (S.mois === m && S.shop === shop) { S.enCours = false; rendre(); } }
+  }
   function charger(relire) {
     if (!S.shop) { rendre(); return; }
+    if (S.vue === 'reports') { chargerMois(relire); return; }
     const du = lundi(S.date), cle = S.shop + '|' + du;
     url();
     if (!relire && S.cache[cle]) { S.D = S.cache[cle]; S.err = null; caleJour(); rendre(); return; }
     S.enCours = true; S.err = null; rendre();
     lire('/caisse/semaine?shop=' + encodeURIComponent(S.shop) + '&date=' + du + (relire ? '&rafraichir=1' : ''))
       .then(d => {
-        if (lundi(S.date) !== du || S.shop !== String(d.shop && d.shop.id)) { return; }   // une réponse arrivée trop tard
+        if (S.vue === 'reports' || lundi(S.date) !== du || S.shop !== String(d.shop && d.shop.id)) { return; }   // une réponse arrivée trop tard
         S.cache[cle] = d; S.D = d; caleJour();
       })
       .catch(e => { S.err = e.message; S.D = null; })
@@ -164,16 +209,20 @@
   function barre() {
     const st = S.stores || [];
     const nomShop = (st.find(s => String(s.id) === String(S.shop)) || {}).nom || (S.D && S.D.shop.nom) || '';
-    const per = S.vue === 'jour' && S.jour ? jl(S.jour) + ' ' + S.jour.slice(0, 4) : semLib(lundi(S.date));
+    const per = S.vue === 'reports' ? MOIS[+S.mois.slice(5, 7) - 1] + ' ' + S.mois.slice(0, 4)
+      : (S.vue === 'jour' && S.jour ? jl(S.jour) + ' ' + S.jour.slice(0, 4) : semLib(lundi(S.date)));
+    const pasT = S.vue === 'jour' ? 'Jour' : (S.vue === 'reports' ? 'Mois' : 'Semaine');
     return `<header class="topbar ca-tb">
       <div><p class="topbar__kicker"><a href="../">Cockpit</a> · Exploitation${nomShop ? ' · ' + esc(nomShop) : ''}</p><h1>Caisse</h1></div>
       <div class="ca-ctl">
         <select data-act="shop" aria-label="Magasin">${S.shop ? '' : '<option value="">Choisir un magasin…</option>'}${st.map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
-        <div class="seg" role="tablist"><button data-act="vue" data-v="semaine" class="${S.vue === 'semaine' ? 'is-on' : ''}">Semaine</button><button data-act="vue" data-v="jour" class="${S.vue === 'jour' ? 'is-on' : ''}">Jour</button></div>
-        <button class="btn btn--sm btn--icon" data-act="pas" data-n="-1" aria-label="Précédent" title="${S.vue === 'jour' ? 'Jour précédent' : 'Semaine précédente'}">‹</button>
+        <div class="seg" role="tablist"><button data-act="vue" data-v="semaine" class="${S.vue === 'semaine' ? 'is-on' : ''}">Semaine</button><button data-act="vue" data-v="jour" class="${S.vue === 'jour' ? 'is-on' : ''}">Jour</button><button data-act="vue" data-v="reports" class="${S.vue === 'reports' ? 'is-on' : ''}">Reports</button></div>
+        <button class="btn btn--sm btn--icon" data-act="pas" data-n="-1" aria-label="Précédent" title="${pasT} précédent${pasT === 'Semaine' ? 'e' : ''}">‹</button>
         <span class="per">${esc(per)}</span>
-        <button class="btn btn--sm btn--icon" data-act="pas" data-n="1" aria-label="Suivant" title="${S.vue === 'jour' ? 'Jour suivant' : 'Semaine suivante'}">›</button>
-        <input type="date" data-act="date" value="${esc(S.vue === 'jour' && S.jour ? S.jour : S.date)}" max="${AUJ}" aria-label="Aller à une date">
+        <button class="btn btn--sm btn--icon" data-act="pas" data-n="1" aria-label="Suivant" title="${pasT} suivant${pasT === 'Semaine' ? 'e' : ''}">›</button>
+        ${S.vue === 'reports'
+          ? `<input type="month" data-act="mois" value="${esc(S.mois)}" max="${AUJ.slice(0, 7)}" aria-label="Aller à un mois">`
+          : `<input type="date" data-act="date" value="${esc(S.vue === 'jour' && S.jour ? S.jour : S.date)}" max="${AUJ}" aria-label="Aller à une date">`}
         <button class="btn btn--sm" data-act="relire" title="Relire TFBuddy, journées closes comprises">↻ Relire</button>
       </div>
     </header>`;
@@ -475,17 +524,79 @@
   }
 
   /* --- rendu et gestes ------------------------------------------------------------------ */
+  /* ================================ LES REPORTS ======================================
+   * Le registre du mois, jour après jour, sans coupure au dimanche : pour chaque
+   * caisse, ce qui a été laissé la veille, le fond du matin et son lien (✓ suit,
+   * ≈ virgule oubliée, ✗ rompu), le total déclaré et ce qui est laissé le soir ;
+   * pour le magasin, les espèces, les versements et ce qui sort du tiroir sans
+   * trace, avec son cumul. */
+  function vueReports() {
+    const D = S.D;
+    if (!D.caisses.length) { return `<div class="ca-msg">Aucun service de caisse sur ce mois pour ce magasin.</div>`; }
+    const jours = D.jours;
+    let cumul = 0, nCalc = 0;
+    const lignes = jours.map(j => {
+      const m = jourMagasin(j);
+      const pts = tousLesPoints().filter(p => p.j === j);
+      if (m.sorties != null) { cumul += m.sorties; nCalc++; }
+      const cel = D.caisses.map(c => {
+        const x = jourCaisse(c.id, j);
+        if (!x) { return `<td class="cs"><span class="nul">—</span></td><td></td><td></td><td></td>`; }
+        const rupt = x.pts.some(p => p.k === 'rupture');
+        const lien = x.report == null ? '' : (rupt ? '<i class="ko" title="report rompu">✗</i>' : (x.virgule ? '<i class="vi" title="virgule oubliée la veille">≈</i>' : '<i class="ok" title="le fond suit">✓</i>'));
+        const decl = x.journee.reduce((a, s) => a + (s.final || 0), 0);
+        const d = x.dernierJour, k = causeLaisse(x.dernier);
+        const laisse = x.enCours ? '<span class="tag-warn">en cours</span>'
+          : `<span class="${d.laisse > ABERRANT ? 'x' : ''}">${eur(x.dernier.laisse)}</span>${k && k.corrige != null ? `<small>→ ${eur(k.corrige)}</small>` : ''}`;
+        return `<td class="cs">${eur(x.report)}</td><td class="rp-f${rupt ? ' x' : ''}">${lien}${eur(x.prem.fond)}</td><td class="${decl === 0 && d.ferme ? 'z' : ''}">${d.ferme || decl ? eur(decl) : '—'}</td><td>${laisse}</td>`;
+      }).join('');
+      const g = pts.some(p => p.g === 'stop') ? 'stop' : (pts.length ? 'warn' : '');
+      return `<tr class="rp-l ${g}" data-act="ouvrir" data-j="${j}" title="Ouvrir le ${esc(jl(j))}">
+        <td class="rp-j"><b>${jc(j)}</b>${dt(j).getUTCDay() === 1 ? '<small>sem.</small>' : ''}</td>${cel}
+        <td class="cs">${m.cf ? eur(m.especes) : '<span class="tag-warn">illisible</span>'}</td>
+        <td>${m.versements ? eur(m.versements) : '<span class="nul">—</span>'}</td>
+        <td class="${m.sorties > 0 ? 'x' : ''}">${m.sorties == null ? '<span class="nul">n.c.</span>' : eur(m.sorties)}</td>
+        <td>${m.sorties == null ? '' : eur(cumul)}</td>
+        <td class="rp-p">${pts.length ? `<span class="tag-${g}" title="${esc(pts.map(p => p.nom + ' — ' + p.t).join('\n'))}">${pts.length}</span>` : ''}</td>
+      </tr>`;
+    }).join('');
+    const PTS = tousLesPoints();
+    const n = k => PTS.filter(p => p.k === k).length;
+    const nVir = PTS.filter(p => p.k === 'aberrant' && p.corrige != null).length;
+    const SEM = jours.map(jourMagasin);
+    const esp = SEM.reduce((a, x) => a + (x.especes || 0), 0), vers = SEM.reduce((a, x) => a + (x.versements || 0), 0);
+    const liens = D.caisses.reduce((a, c) => a + jours.filter(j => { const x = jourCaisse(c.id, j); return x && x.report != null; }).length, 0);
+    const suivis = D.caisses.reduce((a, c) => a + jours.filter(j => { const x = jourCaisse(c.id, j); return x && x.report != null && !x.pts.some(p => p.k === 'rupture'); }).length, 0);
+    return `
+    <div class="kpi-row">
+      <div class="kpi ${n('rupture') ? 'stop' : 'ok'}"><div class="kpi__value">${suivis}<small>/ ${liens}</small></div><div class="kpi__label">Reports qui suivent</div><div class="kpi__note">${n('rupture')} rompu${n('rupture') > 1 ? 's' : ''}${nVir ? ' · ' + nVir + ' virgule' + (nVir > 1 ? 's' : '') + ' oubliée' + (nVir > 1 ? 's' : '') : ''}</div></div>
+      <div class="kpi"><div class="kpi__value">${eur(esp)}</div><div class="kpi__label">Espèces encaissées</div><div class="kpi__note">${jours.length} jour${jours.length > 1 ? 's' : ''} · export comptable</div></div>
+      <div class="kpi ${vers ? 'ok' : 'stop'}"><div class="kpi__value">${eur(vers)}</div><div class="kpi__label">Versements · dépôts</div><div class="kpi__note">${vers ? 'enregistrés dans l’export' : 'aucun enregistré sur le mois'}</div></div>
+      <div class="kpi ${cumul > 0 ? 'stop' : 'ok'}"><div class="kpi__value">${eur(cumul)}</div><div class="kpi__label">Sorti du tiroir sans trace</div><div class="kpi__note">${nCalc} jour${nCalc > 1 ? 's' : ''} calculable${nCalc > 1 ? 's' : ''} sur ${jours.length}</div></div>
+      <div class="kpi ${PTS.length ? 'warn' : 'ok'}"><div class="kpi__value">${PTS.length}</div><div class="kpi__label">Points à vérifier</div><div class="kpi__note">${n('final0')} fermetures à 0 · ${n('nuit') + n('reouv')} réouvertures</div></div>
+    </div>
+    <section class="card blk mg-card"><div class="ch-scroll"><table class="mg rp">
+      <thead>
+        <tr class="rp-g"><th></th>${D.caisses.map(c => `<th colspan="4" class="cs">${esc(c.nom)} <small>caisse ${c.id}</small></th>`).join('')}<th colspan="5" class="cs">Le magasin</th></tr>
+        <tr><th>Jour</th>${D.caisses.map(() => '<th class="cs">Laissé la veille</th><th>Fond du matin</th><th>Déclaré</th><th>Laissé le soir</th>').join('')}<th class="cs">Espèces</th><th>Versements</th><th>Sorti sans trace</th><th>Cumul</th><th>Points</th></tr>
+      </thead>
+      <tbody>${lignes}</tbody>
+    </table></div></section>
+    <p class="src">Une ligne par jour, du 1er au ${jours.length ? jc(jours[jours.length - 1]) : '—'}. ✓ le fond du matin suit ce qui a été laissé la veille ; ≈ il le suit une fois la virgule remise ; ✗ la chaîne est rompue. « → » sous un laissé : le montant corrigé, lu à l’ouverture suivante. Un clic sur une ligne ouvre la journée.</p>`;
+  }
   function rendre() {
     let corps;
     if (S.err) { corps = `<div class="ca-msg err">${esc(S.err)}</div>`; }
     else if (!S.shop) { corps = `<div class="ca-msg">Choisissez un magasin.</div>`; }
-    else if (S.enCours && !S.D) { corps = `<div class="ca-msg">Lecture de TFBuddy… La première lecture d’une semaine prend quelques secondes ; les journées closes sont ensuite gardées.</div>`; }
+    else if (S.enCours && !S.D) { corps = S.vue === 'reports'
+      ? `<div class="ca-msg">Lecture du mois chez TFBuddy, semaine par semaine : ${esc(S.prog || '')}… Une semaine jamais ouverte prend quelques secondes ; les journées closes sont ensuite gardées.</div>`
+      : `<div class="ca-msg">Lecture de TFBuddy… La première lecture d’une semaine prend quelques secondes ; les journées closes sont ensuite gardées.</div>`; }
     else if (!S.D) { corps = ''; }
     else {
       const lac = (S.D.lacunes || []).filter(l => l.jour <= AUJ);
       corps = (S.enCours ? `<div class="ca-msg">Lecture de TFBuddy…</div>` : '')
         + (lac.length ? `<div class="ca-msg warn">Lecture incomplète : ${lac.map(l => esc(jc(l.jour) + ' — ' + l.quoi)).join(' · ')}. <button class="lien" data-act="relire">Relire</button></div>` : '')
-        + (S.vue === 'jour' ? vueJour() : vueSemaine());
+        + (S.vue === 'jour' ? vueJour() : (S.vue === 'reports' ? vueReports() : vueSemaine()));
     }
     $.innerHTML = barre() + `<main class="ca-body">${corps}</main>`;
   }
@@ -493,12 +604,27 @@
     const b = e.target.closest('[data-act]');
     if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') { return; }
     const a = b.dataset.act;
-    if (a === 'vue') { S.vue = b.dataset.v; if (S.vue === 'jour') { caleJour(); } url(); rendre(); }
-    else if (a === 'ouvrir') { S.vue = 'jour'; S.jour = b.dataset.j; url(); rendre(); window.scrollTo(0, 0); }
+    if (a === 'vue') {
+      const avant = S.vue; S.vue = b.dataset.v;
+      if (S.vue === 'reports') { if (avant !== 'reports') { S.mois = (avant === 'jour' && S.jour ? S.jour : S.date).slice(0, 7); } charger(false); return; }
+      // Sortir des reports : le jeu chargé est le mois, il faut la semaine.
+      if (avant === 'reports') { if (S.vue === 'jour' && (!S.jour || S.jour.slice(0, 7) !== S.mois)) { S.jour = null; } S.date = S.jour || (S.mois + '-01' <= AUJ ? S.mois + '-01' : AUJ); charger(false); return; }
+      if (S.vue === 'jour') { caleJour(); } url(); rendre();
+    }
+    else if (a === 'ouvrir') {
+      const j = b.dataset.j;
+      if (S.vue === 'reports') { S.vue = 'jour'; S.jour = j; S.date = j; charger(false); window.scrollTo(0, 0); return; }
+      S.vue = 'jour'; S.jour = j; url(); rendre(); window.scrollTo(0, 0);
+    }
     else if (a === 'relire') { const k = S.shop + '|' + S.jour; delete S.T[k]; delete S.Terr[k]; S.Trelire = S.vue === 'jour'; charger(true); }
     else if (a === 'pas') {
       const n = +b.dataset.n;
-      if (S.vue === 'jour' && S.jour) {
+      if (S.vue === 'reports') {
+        const d = new Date(Date.UTC(+S.mois.slice(0, 4), +S.mois.slice(5, 7) - 1 + n, 1));
+        const m = iso(d).slice(0, 7);
+        if (m > AUJ.slice(0, 7)) { return; }
+        S.mois = m; charger(false);
+      } else if (S.vue === 'jour' && S.jour) {
         const j = ajoute(S.jour, n);
         if (j > AUJ) { return; }
         S.jour = j;
@@ -511,6 +637,7 @@
   $.addEventListener('change', e => {
     const t = e.target;
     if (t.dataset.act === 'shop') { S.shop = t.value; memo('caisse.shop', S.shop); S.D = null; charger(false); }
+    else if (t.dataset.act === 'mois' && /^\d{4}-\d{2}$/.test(t.value) && t.value <= AUJ.slice(0, 7)) { S.mois = t.value; charger(false); }
     else if (t.dataset.act === 'date' && estDate(t.value)) {
       S.date = t.value; if (S.vue === 'jour') { S.jour = t.value; } else { S.jour = null; }
       charger(false);
