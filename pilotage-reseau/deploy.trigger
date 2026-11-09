@@ -1350,3 +1350,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-08T18:54:23Z Cadre des tâches : suppression confirmée par le nom
 2026-11-08T19:31:28Z Contrôles en photo : obligatoire ou facultative (O4)
 2026-11-09T12:41:06Z Visibilité Google : fiches et rang local, Marque & marketing
+2026-11-09T14:48:11Z Paiement différé : commande retirée, B2B remise client déduite
