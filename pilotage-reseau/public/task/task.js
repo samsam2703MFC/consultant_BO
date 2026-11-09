@@ -1471,7 +1471,7 @@
         <td class="ck-att">${ckAttention(c, tous).map(([cl, t]) => `<span class="ck-a ${cl}">${esc(t)}</span>`).join('')}</td>
         <td class="ck-act">${r ? `<span class="ck-r ${r.ok ? 'ok' : 'ko'}" title="${esc(r.err || '')}">${r.ok ? '✓ enregistrée' : '✗ refusée'}</span>` : ''}
           ${ckDiff(c) ? `<button class="tk-lien" data-a="ckRetablir" data-id="${c.id}">rétablir</button>` : ''}
-          ${cree ? `<button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}" title="Créée depuis cet écran : on peut la supprimer (ses tâches restent)">supprimer</button>` : ''}</td></tr>${k.cp === c.id ? `<tr class="ckp-tr"><td></td><td colspan="8">${ckPicker(v.code, c.id)}<div class="ckp-man">ou à la main : <input class="tk-in ck-code" data-ck="code" data-i="${c.id}" value="${esc(v.code)}" placeholder="1.1.01" spellcheck="false" aria-label="Code à la main"></div></td></tr>` : ''}`;
+          <button class="tk-lien ko" data-a="supprimerCl" data-id="${c.id}" title="Supprimer cette checklist du panel (ses tâches restent dans le panel)">supprimer</button></td></tr>${k.cp === c.id ? `<tr class="ckp-tr"><td></td><td colspan="8">${ckPicker(v.code, c.id)}<div class="ckp-man">ou à la main : <input class="tk-in ck-code" data-ck="code" data-i="${c.id}" value="${esc(v.code)}" placeholder="1.1.01" spellcheck="false" aria-label="Code à la main"></div></td></tr>` : ''}`;
     };
     return `${ckNomenclature()}<div class="tk-card ck">
       <div class="tk-ct"><div><div class="tk-t15">Les checklists du réseau</div><div class="tk-sous">${L.length} checklists · nom, zone de production, heure et description, modifiables ici — rien ne part au panel avant « Enregistrer »</div></div>
@@ -1635,7 +1635,7 @@
           <label>Heure</label><input type="time" class="tk-in" data-m="heure" value="${esc(f.heure)}">
         </div>
         ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
-        <div class="tk-pied"><button class="tk-btn prim" data-a="clEnregistrer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button><button class="tk-btn" data-a="fermer">Annuler</button>
+        <div class="tk-pied"><button class="tk-btn ghost danger" data-a="supprimerCl" data-id="${m.id}">Supprimer la checklist…</button><span class="sp"></span><button class="tk-btn prim" data-a="clEnregistrer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button><button class="tk-btn" data-a="fermer">Annuler</button>
           <span class="mu" style="font-size:11.5px">Les tâches de la checklist ne changent pas.</span></div>`;
     } else if (m.type === 'planning') {
       corps = modalePlanning(m);
@@ -2069,9 +2069,15 @@
       // Une checklist trouvée : on l'ouvre, la recherche s'efface.
       case 'rqCl': S.rq = ''; S.cl = id; S.filtre = ''; adresse(id); rendre(); if (S.vue === 'doc') { return dcAller(id); } if (S.vue === 'planning') { S.vue = 'doc'; rendre(); return dcAller(id); } voirHaut(); return;
       case 'supprimerCl': {
-        const c = ((S.cadre && S.cadre.checklistsCreees) || []).find(x => x.id === +id);
-        if (!confirm('Supprimer du panel la checklist « ' + (c ? c.nom : '#' + id) + ' » (#' + id + ') ? Ses tâches restent dans le panel.')) { return; }
-        try { await api('DELETE', '/task/checklists/' + id); S.msg = { k: 'ok', t: 'Checklist #' + esc(id) + ' supprimée du panel.' }; }
+        // Toute checklist se supprime (09/11/2026, « rajouter la possibilité d'effacer une checklist ») : celles créées
+        // dans le panel partent avec leur nom exact (?confirmer=), que le serveur compare à celui du panel.
+        const cc = ((S.cadre && S.cadre.checklistsCreees) || []).find(x => x.id === +id);
+        const cl = checklist(id);
+        const nomPanel = cl ? String((cl.brut && (cl.brut.name || cl.brut.base_name)) || cl.nom).trim() : (cc ? cc.nom : '');
+        const nb = cl ? dcTachesDe(cl).length : 0;
+        if (!confirm('Supprimer du panel la checklist « ' + (nomPanel || '#' + id) + ' » ?\n\n' + (nb ? (nb > 1 ? 'Ses ' + nb + ' tâches restent' : 'Sa tâche reste') + ' dans le panel, mais dans aucune checklist : les équipes ne la' + (nb > 1 ? 's' : '') + ' verront plus (vous pourrez les ranger ailleurs, section « Dans aucune checklist »).' : 'Elle n’a aucune tâche.') + '\n\nOn ne peut pas annuler.')) { return; }
+        if (S.modale && S.modale.type === 'clModif') { S.modale = null; }
+        try { await api('DELETE', '/task/checklists/' + id + (cc || !nomPanel ? '' : '?confirmer=' + encodeURIComponent(nomPanel))); S.msg = { k: 'ok', t: 'Checklist « ' + esc(nomPanel || '#' + id) + ' » supprimée du panel.' }; }
         catch (e) { S.msg = { k: 'ko', t: 'Suppression refusée : ' + esc(e.message) }; }
         return charger(true);
       }
