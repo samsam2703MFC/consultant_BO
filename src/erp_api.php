@@ -206,4 +206,32 @@ final class ErpApi
         }
         return $res['data'] ?? $res;
     }
+
+    /**
+     * Écriture authentifiée (PATCH, PUT, POST, DELETE). Renvoie [ok, corps].
+     * Même reconnexion unique sur 401 que `get()`, même lecture du motif.
+     */
+    public static function envoi(string $methode, string $path, array $body): array
+    {
+        $tok = self::token();
+        if ($tok === null) { return [false, null]; }
+        $url = self::config()['base'] . $path;
+        [$code, $res] = self::http($methode, $url, $body, $tok);
+        if ($code === 401) {
+            $tok = self::token(true);
+            if ($tok === null) { return [false, null]; }
+            [$code, $res] = self::http($methode, $url, $body, $tok);
+        }
+        if ($code < 200 || $code >= 300) {
+            $det = '';
+            foreach (['description', 'message', 'detail', 'error'] as $k) {
+                if (!empty($res[$k]) && is_string($res[$k])) { $det = $res[$k]; break; }
+            }
+            if ($det === '' && !empty($res['errors'])) { $det = (string) json_encode($res['errors'], JSON_UNESCAPED_UNICODE); }
+            self::$lastError = $methode . ' ' . $path . ' → HTTP ' . $code
+                . ($det !== '' ? ' : ' . substr($det, 0, 300) : '');
+            return [false, $res];
+        }
+        return [true, $res];
+    }
 }

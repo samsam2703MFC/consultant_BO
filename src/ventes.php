@@ -221,12 +221,101 @@ function ep_ventes_clients_sonde(): array
 }
 
 /**
+ * Le CA et les tickets de CHAQUE magasin, mois par mois, lus sur la route
+ * vivante du panel : `/consultant/shops/sales-kpis` bornée au mois. Un appel
+ * sert tout le réseau d'un coup.
+ *
+ * Un mois clos depuis plus de trois mois ne bouge plus : il est gravé dans
+ * `ceo_app_setting.vmPanel` et relu une fois par mois au plus (une correction
+ * tardive de caisse finit par passer). Les trois derniers mois clos, eux, se
+ * relisent à chaque appel : c'est là que la copie du P&L était en retard
+ * (mesuré le 16/09). Au plus `$max` lectures neuves par appel : la première
+ * ouverture remplit le gros de la fenêtre, les suivantes complètent, et
+ * l'écran n'attend jamais trente appels d'affilée.
+ *
+ * Un mois que le panel n'a pas servi est simplement absent : l'appelant
+ * retombe alors sur ses copies, et le dit.
+ *
+ * @param  list<string> $moisListe mois clos « YYYY-MM »
+ * @return array<string, array<int, array{ca: float, tickets: ?int}>> mois => [magasin => …]
+ */
+function vmPanelMois(array $moisListe, int $max = 12): array
+{
+    if ($moisListe === [] || !PanelApi::configured()) { return []; }
+    $grave = setting('vmPanel', []);
+    if (!is_array($grave)) { $grave = []; }
+    $recents = [];
+    $fin = new DateTimeImmutable(date('Y-m-01'));
+    for ($i = 1; $i <= 3; $i++) { $recents[$fin->modify('-' . $i . ' month')->format('Y-m')] = true; }
+    $relire = date('Y-m-d', strtotime('-30 days'));
+
+    $out = []; $chemins = [];
+    // Les plus récents d'abord : ce sont eux qui comptent le plus et qui
+    // changent encore — la fenêtre ancienne se remplit au fil des ouvertures.
+    $liste = array_values(array_unique($moisListe));
+    rsort($liste);
+    foreach ($liste as $m) {
+        $g = $grave[$m] ?? null;
+        $frais = is_array($g) && isset($g['par']) && (string) ($g['le'] ?? '') >= $relire;
+        if (!isset($recents[$m]) && $frais) {
+            foreach ((array) $g['par'] as $sid => $v) { $out[$m][(int) $sid] = $v; }
+            continue;
+        }
+        if (count($chemins) >= $max) {
+            // Hors quota : une gravure ancienne vaut mieux que rien.
+            if (is_array($g) && isset($g['par'])) { foreach ((array) $g['par'] as $sid => $v) { $out[$m][(int) $sid] = $v; } }
+            continue;
+        }
+        $d = new DateTimeImmutable($m . '-01');
+        $chemins[$m] = '/consultant/shops/sales-kpis?'
+            . http_build_query(['date_from' => $d->format('Y-m-01'), 'date_to' => $d->format('Y-m-t')]);
+    }
+    if ($chemins === []) { return $out; }
+
+    $change = false;
+    foreach (PanelApi::getParallele($chemins, 4) as $m => $r) {
+        $m = (string) $m;
+        $lignes = analyseListe(is_array($r) ? $r : []);
+        if ($lignes === []) {
+            // Rien de lisible : la gravure précédente, s'il y en a une.
+            $g = $grave[$m] ?? null;
+            if (is_array($g) && isset($g['par'])) { foreach ((array) $g['par'] as $sid => $v) { $out[$m][(int) $sid] = $v; } }
+            continue;
+        }
+        $par = [];
+        foreach ($lignes as $x) {
+            if (!is_array($x)) { continue; }
+            $id = 0;
+            foreach (['shop_id', 'id_shop', 'id'] as $c2) {
+                if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
+            }
+            $ca = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
+            if ($id <= 0 || $ca === null || $ca <= 0) { continue; }
+            $tk = nombreOuNull($x, ['tickets', 'receipts', 'transactions']);
+            $par[$id] = ['ca' => round($ca, 2), 'tickets' => $tk !== null ? (int) $tk : null];
+        }
+        if ($par !== []) { $out[$m] = $par; }
+        // La réponse est lisible : on la grave, même sans chiffre pour un
+        // magasin — un mois d'avant son ouverture n'a pas à être redemandé.
+        $grave[$m] = ['le' => date('Y-m-d'), 'par' => $par];
+        $change = true;
+    }
+    if ($change) {
+        try {
+            Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+                ['vmPanel', json_encode($grave, JSON_UNESCAPED_UNICODE)]);
+        } catch (Throwable $e) { /* sans gravure : relu la prochaine fois */ }
+    }
+    return $out;
+}
+
+/**
  * GET /ventes/mensuel?shop=4&mois=24 — le CA mois par mois d'un magasin.
  *
- * TROIS sources, parce qu'aucune n'est complète à elle seule :
- *  - `/consultant/shops/sales-kpis`, la route vivante du panel : elle sert le
- *    jour même, mais un appel par mois — on ne l'interroge donc que sur les
- *    trois derniers mois clos, et elle y fait foi ;
+ * Le PANEL d'abord, sur TOUTE la fenêtre (`vmPanelMois()`) : depuis le gel de
+ * la caisse locale (14/07/2026), toute fenêtre glissante se vidait mois après
+ * mois de ses chiffres vivants. Les copies ne servent plus que de repli, pour
+ * un mois que le panel n'a pas (encore) servi :
  *  - `mac_shop_monthly_pnl`, la copie du P&L mensuel : elle porte l'histoire,
  *    mais n'a aucune ligne en 2025 et se dégrade sur les mois récents ;
  *  - `transaction`, les ventes de caisse : elles couvrent 2025, mais s'arrêtent
@@ -279,37 +368,25 @@ function ep_ventes_mensuel(): array
         }
     } catch (Throwable $e) { /* pas de P&L : la caisse seule */ }
 
-    // 3) les DERNIERS mois, lus en direct sur le panel.
+    // 3) le PANEL, sur toute la fenêtre — il fait foi partout où il répond.
     //
     // La copie du P&L est partielle sur les mois récents : mesuré le
     // 16 septembre 2026, elle porte un août 2026 à 28 812 € pour Corbais là
     // où la route vivante en annonce 142 901 — et à 9 911 € pour Gosselies
-    // contre 49 085. Juillet, lui, concorde à l'euro près. La copie n'est
-    // donc pas fausse, elle est en retard : sur les trois derniers mois clos,
-    // c'est le panel qui fait foi.
+    // contre 49 085. La caisse locale, elle, s'arrête au 14 juillet 2026.
+    // Lire le panel sur les seuls trois derniers mois laissait donc chaque
+    // mois qui sortait de ce créneau retomber sur une copie fausse.
     //
-    // (`/consultant/shops/monthly-sales` ne répond pas — mesuré. On interroge
-    // donc `sales-kpis` mois par mois, trois appels menés de front.)
-    $vivant = [];
-    if (PanelApi::configured()) {
-        $chemins = [];
-        for ($i = 1; $i <= 3; $i++) {
-            $m = $finExclu->modify('-' . $i . ' month');
-            if ($m < $debut) { break; }
-            $chemins[$m->format('Y-m')] = '/consultant/shops/sales-kpis?'
-                . http_build_query(['date_from' => $m->format('Y-m-01'), 'date_to' => $m->format('Y-m-t')]);
-        }
-        foreach (PanelApi::getParallele($chemins, 3) as $k => $r) {
-            foreach (analyseListe(is_array($r) ? $r : []) as $x) {
-                $id = 0;
-                foreach (['shop_id', 'id_shop', 'id'] as $c2) {
-                    if (isset($x[$c2]) && is_numeric($x[$c2])) { $id = (int) $x[$c2]; break; }
-                }
-                if ($id !== $shop) { continue; }
-                $ca = nombreOuNull($x, ['ca', 'turnover', 'revenue']);
-                if ($ca !== null && (float) $ca > 0) { $vivant[(string) $k] = round((float) $ca, 2); }
-            }
-        }
+    // (`/consultant/shops/monthly-sales` ne répondait pas avec date_from /
+    // date_to ; le swagger lui donne `from` / `to`. En attendant de le
+    // sonder, on reste sur `sales-kpis`, dont la forme est connue.)
+    $vivant = []; $ticketsVivants = [];
+    $tous = [];
+    for ($i = 0; $i < $n; $i++) { $tous[] = $debut->modify('+' . $i . ' month')->format('Y-m'); }
+    foreach (vmPanelMois($tous) as $k => $par) {
+        if (!isset($par[$shop])) { continue; }
+        $vivant[(string) $k] = (float) ($par[$shop]['ca'] ?? 0);
+        if (($par[$shop]['tickets'] ?? null) !== null) { $ticketsVivants[(string) $k] = (int) $par[$shop]['tickets']; }
     }
 
     $mois = []; $nPnl = 0; $nCaisse = 0; $nVivant = 0;
@@ -319,7 +396,7 @@ function ep_ventes_mensuel(): array
         if (isset($vivant[$k])) {
             $nVivant++;
             $mois[] = ['mois' => $k, 'ca' => $vivant[$k], 'source' => 'panel',
-                'tickets' => $c['tickets'], 'jours' => $c['jours']];
+                'tickets' => $ticketsVivants[$k] ?? $c['tickets'], 'jours' => $c['jours']];
         } elseif (isset($pnl[$k])) {
             $nPnl++;
             $mois[] = ['mois' => $k, 'ca' => $pnl[$k], 'source' => 'pnl',
@@ -369,7 +446,7 @@ function ep_ventes_mensuel(): array
         'du'     => $debut->format('Y-m'),
         'au'     => $finExclu->modify('-1 month')->format('Y-m'),
         'ouverture' => $premiere === null ? null : substr((string) $premiere, 0, 10),
-        'source' => 'route vivante du panel sur les derniers mois clos (' . $nVivant . '), copie du P&L quand elle a le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
+        'source' => 'route vivante du panel (' . $nVivant . ' mois), copie du P&L quand le panel n’a pas le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
         'mois'   => $mois,
     ];
 }

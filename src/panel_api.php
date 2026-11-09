@@ -423,6 +423,18 @@ final class PanelApi
     }
 
     /**
+     * Le contreseing de la direction sur un avis — documenté au swagger :
+     * POST /consultant/shops/{shop}/task-reviews/{review}/validate { validated }
+     * → { success, admin_validated_at, admin_validated_by_user_id, admin_validated_by_name }.
+     * Rend [ok, corps].
+     */
+    public static function validerRevue(int $shopId, int $reviewId, bool $valide): array
+    {
+        return self::post('/consultant/shops/' . $shopId . '/task-reviews/' . $reviewId . '/validate',
+            ['validated' => $valide]);
+    }
+
+    /**
      * Pertes (casse / invendus jetés) d'une boutique, par produit.
      *   GET /shops/{shop}/products/waste          — toutes les références
      *   GET /shops/{shop}/products/{prod}/waste   — une seule
@@ -565,7 +577,9 @@ final class PanelApi
     /** Groupes de catégories du réseau. */
     public static function productCategoryGroups(): array
     {
-        return self::premierNonVide(['/product/category-groups', '/product-category-groups']);
+        // La route documentée d'abord : l'alias sans tiret n'existe pas au
+        // swagger (09/11/2026) et coûtait un 404 à chaque lecture.
+        return self::premierNonVide(['/product-category-groups', '/product/category-groups']);
     }
 
     /**
@@ -628,9 +642,11 @@ final class PanelApi
     public static function salesKpis(int $shopId, string $periode, string $date): ?array
     {
         $q = self::q($periode, $date);
+        // La route documentée d'abord : la variante /consultant/… n'existe pas
+        // au swagger (09/11/2026) et coûtait un 404 à chaque lecture.
         return self::premierObjet([
-            '/consultant/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
             '/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
+            '/consultant/shops/' . $shopId . '/statistics/sales/kpis?' . $q,
         ]);
     }
 
@@ -688,6 +704,19 @@ final class PanelApi
             // « maximum 24 months » : la borne se compte en MOIS. Des dates
             // complètes, même alignées sur le mois, restent refusées — on
             // essaie donc l'identifiant de mois, puis l'année et le mois.
+            //
+            // Le swagger (09/11/2026) nomme les bornes de cette route `from` et
+            // `to` — aucun des essais ci-dessous ne les envoyait, ce qui peut
+            // suffire à expliquer le « Invalid monthly P&L range ». Elles
+            // passent donc en premier, au mois puis en dates pleines.
+            $chemins[] = $base . '/monthly?' . http_build_query([
+                'from' => date('Y-m', strtotime($date)),
+                'to'   => date('Y-m', strtotime($date)),
+            ]);
+            $chemins[] = $base . '/monthly?' . http_build_query([
+                'from' => date('Y-m-01', strtotime($date)),
+                'to'   => date('Y-m-t', strtotime($date)),
+            ]);
             $chemins[] = $base . '/monthly?' . http_build_query([
                 'date_from' => date('Y-m', strtotime($date)),
                 'date_to'   => date('Y-m', strtotime($date)),
@@ -700,6 +729,8 @@ final class PanelApi
                 'date_to'   => date('Y-m-t', strtotime($date)),
             ]);
         } elseif ($periode === 'jour') {
+            // `from` / `to` : les noms du swagger pour /pnl/daily.
+            $chemins[] = $base . '/daily?' . http_build_query(['from' => $date, 'to' => $date]);
             $chemins[] = $base . '/daily?' . http_build_query(['date_from' => $date, 'date_to' => $date]);
         }
         $chemins[] = $base . '?' . self::q($periode, $date);
@@ -731,7 +762,10 @@ final class PanelApi
         // On aligne donc sur le premier et le dernier jour du mois.
         $d1 = date('Y-m-01', strtotime($du));
         $d2 = date('Y-m-t', strtotime($au));
+        // `from` / `to` : les noms du swagger (09/11/2026). Les essais en
+        // date_from / date_to « ne répondaient pas » — mesuré.
         return self::premierObjet([
+            '/consultant/shops/monthly-sales?' . http_build_query(['from' => $d1, 'to' => $d2]),
             '/consultant/shops/monthly-sales?' . http_build_query(['date_from' => $d1, 'date_to' => $d2]),
             '/consultant/shops/monthly-sales?' . http_build_query(['date_from' => $du, 'date_to' => $au]),
         ]);

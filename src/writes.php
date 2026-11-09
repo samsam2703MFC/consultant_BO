@@ -160,11 +160,97 @@ function wr_project_delete(string $id): array
 }
 
 /**
+ * L'identifiant TFBuddy d'un avis, celui qu'attend
+ * POST /consultant/shops/{shop}/task-reviews/{review}/validate.
+ *
+ * `POST …/task-reviews` ne le rend pas (`{ saved: true }`) et le miroir local
+ * ne le garde pas : on le cherche dans l'avancement de la checklist, le flux
+ * qui porte les champs d'avis. Le nom du champ n'est pas documenté au swagger
+ * (09/11/2026) : on accepte les écritures usuelles, à plat ou dans un
+ * sous-objet d'avis. Quand rien ne correspond, `cles` dit ce que la ligne
+ * portait — de quoi nommer le bon champ au premier essai réel.
+ *
+ * @return array{id: ?int, cles: list<string>}
+ */
+function tacheRevueIdTfb(int $shopId, int $taskId, string $date, ?int $checklistId = null): array
+{
+    $cids = [];
+    if ($checklistId !== null && $checklistId > 0) { $cids[] = $checklistId; }
+    else {
+        foreach (PanelApi::shopChecklists($shopId, $date) as $cl) {
+            $cid = (int) ($cl['id'] ?? $cl['checklist_id'] ?? 0);
+            if ($cid > 0) { $cids[] = $cid; }
+        }
+    }
+    $cles = [];
+    foreach ($cids as $cid) {
+        foreach (PanelApi::checklistProgress($shopId, $cid, $date) as $pr) {
+            if (!is_array($pr) || (int) ($pr['task_id'] ?? $pr['id'] ?? 0) !== $taskId) { continue; }
+            $id = revueIdDans($pr);
+            if ($id !== null) { return ['id' => $id, 'cles' => array_keys($pr)]; }
+            $cles = array_keys($pr);
+        }
+    }
+    return ['id' => null, 'cles' => array_map('strval', $cles)];
+}
+
+/** L'identifiant d'avis porté par une ligne d'avancement, ou null. */
+function revueIdDans(array $pr): ?int
+{
+    foreach (['review_id', 'task_review_id', 'id_review', 'reviewId', 'id_task_review'] as $k) {
+        if (isset($pr[$k]) && is_numeric($pr[$k]) && (int) $pr[$k] > 0) { return (int) $pr[$k]; }
+    }
+    foreach (['review', 'task_review', 'last_review', 'latest_review', 'consultant_review'] as $k) {
+        if (isset($pr[$k]['id']) && is_numeric($pr[$k]['id']) && (int) $pr[$k]['id'] > 0) { return (int) $pr[$k]['id']; }
+    }
+    foreach (['reviews', 'task_reviews'] as $k) {
+        if (isset($pr[$k]) && is_array($pr[$k]) && $pr[$k] !== [] && array_is_list($pr[$k])) {
+            $der = $pr[$k][count($pr[$k]) - 1];
+            if (is_array($der) && isset($der['id']) && is_numeric($der['id']) && (int) $der['id'] > 0) { return (int) $der['id']; }
+        }
+    }
+    return null;
+}
+
+/**
+ * Porter le contreseing de la direction chez TFBuddy. Rend toujours un état
+ * lisible — `ok`, et sinon le `motif` — que l'appelant renvoie à l'écran :
+ * une validation restée dans le cockpit ne doit pas passer pour transmise.
+ *
+ * @return array{ok: bool, motif?: string, reviewId?: int, le?: ?string, par?: ?string}
+ */
+function tacheValiderTfb(int $shopId, int $taskId, string $date, bool $valide, ?int $checklistId = null): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'motif' => 'compte consultant de l’API non configuré']; }
+    $r = tacheRevueIdTfb($shopId, $taskId, $date, $checklistId);
+    if ($r['id'] === null) {
+        return ['ok' => false, 'motif' => 'identifiant de l’avis introuvable dans l’avancement de la checklist'
+            . ($r['cles'] !== [] ? ' (champs lus : ' . implode(', ', array_slice($r['cles'], 0, 25)) . ')' : ' (tâche absente de l’avancement)')];
+    }
+    PanelApi::$lastError = null;
+    [$ok, $res] = PanelApi::validerRevue($shopId, $r['id'], $valide);
+    if (!$ok) { return ['ok' => false, 'reviewId' => $r['id'], 'motif' => PanelApi::$lastError ?? 'refusé par TFBuddy']; }
+    $res = is_array($res) ? ($res['data'] ?? $res) : [];
+    return ['ok' => true, 'reviewId' => $r['id'],
+        'le' => isset($res['admin_validated_at']) ? (string) $res['admin_validated_at'] : null,
+        'par' => isset($res['admin_validated_by_name']) ? (string) $res['admin_validated_by_name'] : null];
+}
+
+/** Ce que le journal dit d'une transmission à TFBuddy. */
+function tacheTfbJournal(array $tfb): string
+{
+    return !empty($tfb['ok']) ? ' — transmis à TFBuddy' : ' — non transmis à TFBuddy : ' . ($tfb['motif'] ?? 'motif inconnu');
+}
+
+/**
  * POST /pwa/tasks/validate — l'Owner (CEO) valide ou retire un avis consultant.
  *
- * Écrit la validation dans la table partagée du panel `mac_task_review` (mêmes
- * colonnes que setOwnerValidation côté panel). Ne CRÉE jamais de ligne : on ne
- * valide que ce qui a été évalué — 0 ligne touchée ⇒ aucun avis à valider.
+ * D'abord chez TFBuddy (`tacheValiderTfb()`, la route documentée
+ * …/task-reviews/{id}/validate), puis dans la table partagée du panel
+ * `mac_task_review` (mêmes colonnes que setOwnerValidation côté panel). Ne
+ * CRÉE jamais de ligne : on ne valide que ce qui a été évalué. Erreur
+ * seulement si NI TFBuddy NI la table n'ont pris la validation. La réponse
+ * porte `tfbuddy` { ok, reviewId?, motif? }.
  * L'identité de l'Owner est l'utilisateur du cockpit (réglage `utilisateur`).
  */
 function wr_pwa_task_validate(): array
@@ -197,6 +283,19 @@ function wr_pwa_task_validate(): array
     $u = setting('utilisateur', []);
     $ownerName = is_array($u) && !empty($u['nom']) ? mb_substr((string) $u['nom'], 0, 190) : 'CEO';
 
+    // TFBuddy d'abord : c'est là que le contreseing doit vivre. La checklist
+    // de l'avis, quand le miroir la connaît, épargne un appel.
+    $cid = null;
+    try {
+        $m = Db::row('SELECT id_checklist FROM mac_task_review WHERE id_shop = ? AND id_task = ? AND review_date = ?',
+            [$shopId, $taskId, $date]);
+        $cid = $m !== null && ($m['id_checklist'] ?? null) !== null ? (int) $m['id_checklist'] : null;
+    } catch (PDOException $e) { /* miroir illisible : on cherchera la checklist */ }
+    if (!empty($b['checklistId'])) { $cid = (int) $b['checklistId']; }
+    $tfb = tacheValiderTfb($shopId, $taskId, $date, $on, $cid);
+
+    // Puis le miroir, que les écrans du cockpit lisent encore.
+    $n = 0;
     try {
         $n = Db::exec(
             'UPDATE mac_task_review SET owner_validated_at = ?, id_owner = ?, owner_name = ?, updated_at = ?'
@@ -204,16 +303,19 @@ function wr_pwa_task_validate(): array
             [$on ? date('Y-m-d H:i:s') : null, $on ? 0 : null, $on ? $ownerName : null, date('Y-m-d H:i:s'), $shopId, $taskId, $date]
         );
     } catch (PDOException $e) {
-        http_response_code(503);
-        return ['error' => 'table des avis (mac_task_review) indisponible'];
+        if (empty($tfb['ok'])) {
+            http_response_code(503);
+            return ['error' => 'table des avis (mac_task_review) indisponible', 'tfbuddy' => $tfb];
+        }
     }
-    if ($n === 0) {
+    if ($n === 0 && empty($tfb['ok'])) {
         http_response_code(422);
-        return ['error' => 'aucun avis consultant à valider pour cette tâche à cette date'];
+        return ['error' => 'aucun avis consultant à valider pour cette tâche à cette date', 'tfbuddy' => $tfb];
     }
     journalAdd('CEO', 'Validation', null, ($on ? 'Avis validé' : 'Validation retirée')
-        . ' — boutique #' . $shopId . ', tâche #' . $taskId . ' (' . $date . ')');
-    return ['ok' => true, 'validated' => $on, 'by' => $on ? $ownerName : null, 'at' => $on ? date('Y-m-d H:i:s') : null];
+        . ' — boutique #' . $shopId . ', tâche #' . $taskId . ' (' . $date . ')' . tacheTfbJournal($tfb));
+    return ['ok' => true, 'validated' => $on, 'by' => $on ? $ownerName : null, 'at' => $on ? date('Y-m-d H:i:s') : null,
+        'tfbuddy' => $tfb];
 }
 
 /**
@@ -428,10 +530,17 @@ function wr_pwa_task_review(): array
         }
     } catch (PDOException $e) { /* miroir best-effort : l'API a déjà la note */ }
 
+    // La direction qui note contresigne d'office (colonnes owner_* ci-dessus) :
+    // le contreseing part aussi chez TFBuddy, sans quoi le miroir dirait
+    // « validé » là où la source dirait « en attente ». Un échec ne défait
+    // pas la note — elle est déjà chez TFBuddy — il est seulement dit.
+    $tfb = $consultant ? null
+        : tacheValiderTfb($shopId, $taskId, $date, true, !empty($payload['checklist_id']) ? (int) $payload['checklist_id'] : null);
+
     journalAdd($consultant ? $auteur : 'CEO', 'Notation', null, 'Tâche #' . $taskId . ' (boutique #' . $shopId . ', ' . $date . ') notée '
         . $note . '/5 — ' . ($accepte ? 'conforme' : 'non conforme') . ($comment !== '' ? ' : ' . $comment : '')
-        . ($consultant ? ' (visite)' : ''));
-    return ['ok' => true, 'note' => $note, 'accepte' => $accepte];
+        . ($consultant ? ' (visite)' : '') . ($tfb !== null ? ' ; contreseing' . tacheTfbJournal($tfb) : ''));
+    return ['ok' => true, 'note' => $note, 'accepte' => $accepte] + ($tfb !== null ? ['tfbuddyValidation' => $tfb] : []);
 }
 
 /**

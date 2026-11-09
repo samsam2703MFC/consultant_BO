@@ -13123,7 +13123,14 @@ class App {
     }); });
     if (pt.totals){ const n = (pt.shops || []).reduce((a, sh) => a + sh.taches.filter(t => t.valide).length, 0);
       pt.totals.valides = n; pt.totals.aValider = (pt.totals.taches || 0) - n; }
-    this.api('POST', '/pwa/tasks/validate', { shopId, taskId, date, validated: on });
+    // Le serveur porte le contreseing chez TFBuddy puis dans le miroir. S'il
+    // n'a pas pu le transmettre, l'écran le dit : une validation restée dans
+    // le cockpit ne doit pas passer pour faite à la source.
+    this.api('POST', '/pwa/tasks/validate', { shopId, taskId, date, validated: on }).then(r => {
+      if (r && r.ok !== false && r.tfbuddy && r.tfbuddy.ok === false) {
+        this.notify((on ? 'Avis validé' : 'Validation retirée') + ' dans le cockpit, pas chez TFBuddy — ' + (r.tfbuddy.motif || 'motif inconnu'));
+      }
+    });
     this.log('Validation', null, (on ? 'Avis validé' : 'Validation retirée') + ' — boutique ' + shopId + ', tâche ' + taskId + ' (' + date + ')');
     this.setState({});
     this.notify(on ? 'Avis validé' : 'Validation retirée');
