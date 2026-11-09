@@ -1498,6 +1498,14 @@ function tkModifier(int $id, array $b, ?array $brutes = null): array
     if (array_key_exists('photo', $b)) { $corps['requires_photo'] = tkMemeType($m['requires_photo'] ?? null, (bool) $b['photo']); }
     if (array_key_exists('priorite', $b) && is_numeric($b['priorite'])) { $corps['priority'] = (int) $b['priorite']; }
 
+    // Le panel remplace le planning et les exigences d'une tâche à chaque PATCH (09/11/2026 : un nom ou une description
+    // seuls ont remis à zéro jour, fréquence, heure, obligatoire, photo et priorité de 54 tâches). On renvoie donc
+    // toujours les valeurs actuelles de ces six champs, sauf celles que l'on change.
+    if ($corps) {
+        foreach (['day_of_week', 'frequency', 'execution_time', 'is_mandatory', 'requires_photo', 'priority'] as $k) {
+            if (!array_key_exists($k, $corps) && array_key_exists($k, $m)) { $corps[$k] = $m[$k]; }
+        }
+    }
     $ops = [];
     if ($corps) { $ops[] = ['quoi' => 'Modifier la tâche', 'methode' => 'PATCH', 'chemin' => '/tasks/' . $id, 'corps' => $corps]; }
     if (array_key_exists('actif', $b)) {
