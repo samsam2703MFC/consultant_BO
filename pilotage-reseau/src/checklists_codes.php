@@ -130,8 +130,9 @@ function ckcPlan(): array
             if ((int) ($c['workstation_id'] ?? 0) !== $pid) { $b['posteId'] = $pid; }
         }
         $desc = tkTxt($c['description'] ?? '');
-        $ex = '(ex ' . implode(', ', array_values(array_filter($x['ex'], fn ($k) => !str_starts_with($k, 'CHK-')))) . ')';
-        if (!str_contains($desc, '(ex ')) { $b['description'] = trim(($desc === 'Array' ? '' : $desc) . ' ' . $ex); }
+        $anc = array_values(array_filter($x['ex'], fn ($k) => !str_starts_with($k, 'CHK-')));
+        // Sans ancien code (une checklist née avec la nomenclature, 1.3.02), rien à ajouter à la description.
+        if ($anc && !str_contains($desc, '(ex ')) { $b['description'] = trim(($desc === 'Array' ? '' : $desc) . ' (ex ' . implode(', ', $anc) . ')'); }
         $avant = ['nom' => $nom, 'heure' => $heure, 'posteId' => (int) ($c['workstation_id'] ?? 0), 'description' => $desc];
         $points[] = $p + ($b ? ['etat' => 'afaire', 'changements' => $b, 'avant' => $avant] : ['etat' => 'fait']);
     }
