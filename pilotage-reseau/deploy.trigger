@@ -1358,3 +1358,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T19:42:10Z Nomenclature : pas de « (ex ) » vide
 2026-11-09T19:49:50Z Caisse, vue Jour : les espèces ticket par ticket (courbe du tiroir, vendeuses, contrôle export)
 2026-11-09T20:10:24Z checklists : code en boutons (zone, moment)
+2026-11-09T20:13:13Z checklists : boutons de code en rectangles arrondis
