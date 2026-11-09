@@ -92,6 +92,67 @@ sortent en tête, les plus creuses d'abord.
 }
 ```
 
+## `GET /caisse/semaine`
+
+Ouvertures, fermetures et reports de caisse d'un magasin, sur une semaine.
+Sert la page **Caisse** (`public/caisse/`, entrée de rail « Caisse ↗ »).
+
+Paramètres : `shop` (requis), `date` (n'importe quel jour ; la semaine va du
+lundi au dimanche qui le contiennent), `rafraichir=1` (relit tout).
+
+Sources, TFBuddy seul, avec le compte consultant :
+
+| Donnée | Route TFBuddy |
+|---|---|
+| Services du jour : ouverture, fermeture, employés, `initial_cash` → `fond`, `final_cash` → `final` (total déclaré), `left_cash_for_next_day` → `laisse`, `is_closed` → `ferme` | `GET /shops/{id}/owner/daily-shifts?date=` |
+| Caisse de chaque service (`caisse`) | `GET /daily-shifts/{id}` → `id_device` |
+| Nom des caisses — **seuls l'identifiant et le nom sont gardés**, la route rend aussi les secrets de la caisse | `GET /shops/{id}/devices` |
+| Recette, moyens de paiement, espèces, versements, dépôts | `GET /shops/{id}/reports/sales/daily/cash-flow/csv?date=` (export comptable, CSV) |
+| Retraits | **aucune route de lecture** |
+
+Les services vont du dimanche d'avant au lundi d'après : le report qui entre
+dans la semaine, et l'ouverture qui suit le dernier soir. Une journée close
+(avant-hier ou plus ancienne) se lit une fois et se garde
+(`ceo_app_setting`, `caisseJ:{shop}:{jour}`) ; aujourd'hui et hier se relisent.
+
+```json
+{
+  "shop": { "id": 2, "nom": "Corbais" },
+  "du": "2026-11-02", "au": "2026-11-08",
+  "jours": ["2026-11-02", "…", "2026-11-08"],
+  "caisses": [ { "id": 11, "nom": "Boulangerie" }, { "id": 9, "nom": "Traiteur" } ],
+  "services": [ { "id": 3422, "jour": "2026-11-08", "caisse": 11,
+    "ouv": "2026-11-08 05:44:12", "ferm": "2026-11-08 18:01:30",
+    "fond": 12.0, "final": 5474.69, "laisse": 547469.0,
+    "parOuv": "…", "parFerm": "…", "ferme": true } ],
+  "comptable": { "2026-11-08": { "recette": 6645.97, "especes": 200.7, "versements": null, "depots": null,
+    "moyens": [ { "nom": "Bancontact", "compte": "580010", "montant": 6262.77 } ] } },
+  "lacunes": [ { "jour": "2026-11-09", "quoi": "export comptable illisible" } ],
+  "lu": "2026-11-09T19:00:00+01:00",
+  "sources": { "services": "…", "comptable": "…", "retraits": "…" }
+}
+```
+
+Les caisses viennent dans l'ordre du total déclaré de la semaine (la plus
+grosse d'abord). `versements` / `depots` à `null` : rien de saisi ce jour-là.
+
+Les **règles de contrôle** se calculent dans la page (`jourCaisse()`,
+`jourMagasin()` de `public/caisse/caisse.js`), une seule définition :
+
+| Point | Règle | Gravité |
+|---|---|---|
+| Report rompu | fond du premier service du jour ≠ laissé du dernier service de la veille, même caisse | à corriger |
+| Montant impossible | laissé > 1 000 € (« 100 × le total déclaré » quand c'est le cas) | à corriger |
+| Service jamais fermé | non fermé, avant hier | à corriger |
+| Fermeture sans montant | fermé avec un total déclaré à 0 | à vérifier |
+| Fermée puis rouverte | deux services de jour sur la même caisse | à vérifier |
+| Rouverte après la fermeture | ouvert après 17 h, refermé le lendemain | à vérifier |
+
+« Sorti du tiroir sans trace » = fonds d'ouverture + espèces encaissées −
+versements − dépôts − laissé pour demain ; non calculable si un laissé est
+impossible ou si une caisse est encore ouverte. Les retraits n'entrent pas
+dans le compte : TFBuddy ne les relit pas.
+
 ## `GET /ventes/mensuel`
 
 Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.

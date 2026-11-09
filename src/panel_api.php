@@ -134,8 +134,9 @@ final class PanelApi
      *
      * `$timeout` : secondes accordées à chaque requête (25 par défaut) — un
      * appelant tenu par un budget de temps (le book de la tablette) le réduit.
+     * `$texte` : rendre le corps brut au lieu du JSON décodé (exports CSV).
      */
-    public static function getParallele(array $paths, int $front = 4, int $timeout = 25): array
+    public static function getParallele(array $paths, int $front = 4, int $timeout = 25, bool $texte = false): array
     {
         if (!$paths) { return []; }
         $tok = self::token();
@@ -175,10 +176,13 @@ final class PanelApi
                 curl_multi_remove_handle($multi, $ch);
                 curl_close($ch);
                 $actifs--;
-                $res = is_string($raw) ? json_decode($raw, true) : null;
+                $res = !$texte && is_string($raw) ? json_decode($raw, true) : null;
                 if ($code < 200 || $code >= 300) {
                     self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code;
                     $out[$k] = null;
+                } elseif ($texte) {
+                    // `$texte` : le corps tel quel (un export CSV), pas du JSON.
+                    $out[$k] = is_string($raw) ? $raw : null;
                 } else {
                     $out[$k] = $res['data'] ?? $res;
                 }

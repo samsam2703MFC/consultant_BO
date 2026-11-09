@@ -1,5 +1,9 @@
 # Caisse : ouvertures, fermetures et reports
 
+> **En service** : la page `public/caisse/` (entrée de rail « Caisse ↗ ») fait
+> la même chose sur les données vivantes, avec le choix du magasin et de la
+> semaine. Ces pages restent la trace de la maquette.
+
 Maquettes pour la demande : *reconstituer l'ouverture et la fermeture de caisse
 avec les mouvements d'espèces, vérifier jour par jour et les reports sur une
 semaine*. Deux écrans, une entrée de rail **Exploitation › Caisse**, un

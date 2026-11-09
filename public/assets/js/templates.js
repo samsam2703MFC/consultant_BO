@@ -40,7 +40,7 @@ const ICO = {
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds',
   ficheFranchise: 'crm', scoringTri: 'avis', 'Suivi journalier': 'controle', 'Suivi de terrain': 'adresse',
   analysemag: 'analyse', budget: 'fonds', creux: 'cal', invendus: 'form', plan: 'perf', scouting: 'recherche',
   catalogue: 'bundles', produits: 'analyse', anaprod: 'adresse', analyse: 'bilan',

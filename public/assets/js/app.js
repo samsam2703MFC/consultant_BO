@@ -1343,7 +1343,10 @@ class App {
         ['performance', 'Performance', 0],
         // La page la plus regardée du réseau n'avait pas d'entrée : on
         // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
-        ['ext:dashboard/', 'Dashboard magasin ↗', 0]]],
+        ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        // Ouvertures, fermetures et reports de caisse, par magasin et par
+        // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
+        ['ext:caisse/', 'Caisse ↗', 0]]],
       // Tout ce qui évalue et suit le franchisé, réuni (demande du 09/10/2026),
       // en deux volets : ce que les données disent chaque jour, sans aller sur
       // place ; ce que le consultant constate sur place. Le scoring du

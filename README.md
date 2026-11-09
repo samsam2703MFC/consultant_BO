@@ -267,6 +267,30 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.
 
+## Caisse : ouvertures, fermetures et reports
+
+Une page à part, `public/caisse/?shop=2&date=2026-11-04` (entrée de rail
+« Caisse ↗ »), pour vérifier jour par jour et sur la semaine ce que chaque
+caisse a fait : qui l'a ouverte et fermée, le fond du matin, le total déclaré,
+ce qui est laissé pour le lendemain. On choisit le magasin, la semaine
+(‹ ›, ou une date), et la vue Semaine ou Jour ; l'adresse se partage telle
+quelle.
+
+- **La semaine** : la chaîne des reports, une rangée par caisse. Entre deux
+  jours, ✓ si le fond du matin suit ce qui a été laissé la veille, ✗ sinon.
+  Puis le magasin jour par jour (recette, moyens de paiement, compte des
+  espèces jusqu'à « sorti du tiroir sans trace »), les points à vérifier et ce
+  que la semaine dit.
+- **Le jour** : les services sur une frise de 04 h au lendemain 08 h, la fiche
+  de chaque caisse (report de la veille → ouverture → fermeture → laissé →
+  ouverture du lendemain), le compte des espèces et les moyens de paiement.
+- **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
+  seul — services de caisse (`daily-shifts`) et export comptable du jour.
+  Contrat complet et règles de contrôle dans `docs/contrat-api.md`.
+- **Ce que TFBuddy ne donne pas** : les retraits (ils s'enregistrent, aucune
+  route ne les relit) et le comptage réel du tiroir — `final_cash` suit la
+  recette (89 à 96 % mesurés), pas les espèces (7 %).
+
 ## Tablette des vendeuses (Book vendeuses)
 
 L'application de comptoir des vendeuses — gamme, photos, prix, saisons,
