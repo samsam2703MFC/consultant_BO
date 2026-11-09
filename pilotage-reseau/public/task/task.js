@@ -1046,29 +1046,41 @@
   }
   async function dcDeplacerEnvoyer() {
     const d = S.dd; const src = d && checklist(d.c); const c = d && checklist(d.cible);
-    if (!src || !c || !d.ids.length) { return; }
-    d.envoi = true; d.err = null; rendre();
-    let r = null;
-    try { r = await api('POST', '/task/scinder', { source: src.id, taches: d.ids, vers: c.id, retirer: !d.copier }); }
-    catch (e) { r = e.data || null; d.err = e.message + (e.status === 403 && !admin() ? ' Essayez avec un compte administrateur du panel (en haut).' : ''); }
-    const noms = d.ids.map(id => (tache(id) || {}).nom).filter(Boolean);
-    const quoi = d.ids.length > 1 ? d.ids.length + ' tâches' : '« ' + (noms[0] || 'la tâche') + ' »';
-    const vers = dcCode(c.nom).code || c.nom;
-    if (r && r.ok) {
-      let ordre = Math.max(0, ...c.taches.map(l => +l.ordre || 0));
-      d.ids.forEach(id => { if (!c.taches.some(l => l.taskId === id)) { c.taches.push({ taskId: id, ordre: ++ordre, note: '' }); } });
-      if (!d.copier) { src.taches = src.taches.filter(l => !d.ids.includes(l.taskId)); }
-      d.ids.forEach(id => S.sel.delete(id));
-      S.dcSugg = null; S.dd = null;
-      S.dcRange = null;
-      dcFlash(d.ids, (d.copier ? '✓ copiée' : '✓ arrivée') + ' ici', false);
-      S.msg = { k: 'ok', t: `${esc(quoi)} ${d.copier ? 'copiée' + (d.ids.length > 1 ? 's' : '') + ' dans' : 'déplacée' + (d.ids.length > 1 ? 's' : '') + ' de ' + esc(dcCode(src.nom).code || src.nom) + ' vers'} ${esc(vers)}. <button class="tk-lien" data-a="dcAller" data-id="${c.id}">voir ${esc(vers)}</button>` };
-      d.envoi = false; rendre(); return;
+    if (!src || !c || !d.ids.length || d.envoi) { return; }
+    // Une tâche par appel (09/11/2026, « ça ne fonctionne pas ») : chaque déplacement est court (ajout, retrait, relecture),
+    // l'écran montre où il en est, et un refus dit quelle tâche, sans perdre celles déjà parties.
+    d.envoi = true; d.err = null; d.fait = 0; rendre();
+    const sc = dcCode(src.nom).code || src.nom, vers = dcCode(c.nom).code || c.nom;
+    const faites = [];
+    for (const id of d.ids) {
+      try {
+        const r = await api('POST', '/task/scinder', { source: src.id, taches: [id], vers: c.id, retirer: !d.copier });
+        if (!r || !r.ok) { throw Object.assign(new Error((r && r.error) || 'refus du panel'), { data: r }); }
+        faites.push(id); d.fait = faites.length;
+        let ordre = Math.max(0, ...c.taches.map(l => +l.ordre || 0));
+        if (!c.taches.some(l => l.taskId === id)) { c.taches.push({ taskId: id, ordre: ordre + 1, note: '' }); }
+        if (!d.copier) { src.taches = src.taches.filter(l => l.taskId !== id); }
+        S.sel.delete(id);
+        if (S.dd === d) { rendre(); }
+      } catch (e) {
+        const t = tache(id);
+        d.err = '« ' + ((t && t.nom) || '#' + id) + ' » : ' + e.message + (e.status === 401 || e.status === 403 ? (admin() ? ' — la session administrateur du panel a peut-être expiré : reconnectez-vous (en haut).' : ' — essayez avec un compte administrateur du panel (en haut).') : '');
+        break;
+      }
     }
-    // Refus : ce qui est fait au panel est relu, la liste reste ouverte avec la raison.
     d.envoi = false;
-    if (!d.err) { d.err = (r && r.error) || 'refus du panel'; }
-    if (r && r.vers) { d.err += ' — certaines tâches sont peut-être déjà dans ' + vers + ' : la page est relue.'; await charger(true); S.msg = { k: 'wa', t: esc(quoi) + ' vers ' + esc(vers) + ' : ' + esc(d.err) }; return; }
+    const n = faites.length, tout = n === d.ids.length;
+    const quoi = n > 1 ? n + ' tâches' : n === 1 ? '« ' + ((tache(faites[0]) || {}).nom || 'la tâche') + ' »' : '';
+    const ok = n ? `${esc(quoi)} ${d.copier ? 'copiée' + (n > 1 ? 's' : '') + ' dans' : 'déplacée' + (n > 1 ? 's' : '') + ' de ' + esc(sc) + ' vers'} ${esc(vers)}.` : '';
+    S.dcSugg = null;
+    if (n) { dcFlash(faites, (d.copier ? '✓ copiée' : '✓ arrivée') + ' ici', !tout); }
+    if (tout) {
+      S.dd = null;
+      S.msg = { k: 'ok', t: `${ok} <button class="tk-lien" data-a="dcAller" data-id="${c.id}">voir ${esc(vers)}</button>` };
+    } else {
+      d.ids = d.ids.filter(id => !faites.includes(id));
+      S.msg = { k: 'ko', t: (ok ? ok + ' ' : '') + 'Arrêt : ' + esc(d.err) };
+    }
     rendre();
   }
 
@@ -1229,7 +1241,7 @@
           <button class="dc-o coche ${d.copier ? 'on' : 'off'}" data-a="ddOpt" data-v="copier"${occupe}><span class="dc-cc">${d.copier ? '✓' : ''}</span><span>La garder aussi dans ${esc(sc)}<small>copier au lieu de déplacer : la tâche sera dans les deux checklists</small></span></button>
           <div class="dc-dd-v">L’heure, les jours et qui fait / qui contrôle ne changent pas : leurs vignettes, après.</div>
           ${d.err ? `<div class="dc-dd-err">${esc(d.err)}</div>` : ''}
-          <button class="tk-btn prim" data-a="ddDeplacer"${cible && !d.envoi ? '' : ' disabled'}>${d.envoi ? (d.copier ? 'Copie…' : 'Déplacement…') : cible ? (d.copier ? 'Copier dans ' : 'Déplacer dans ') + esc(cc.code ? cc.code + ' · ' + cc.titre : cc.titre) : 'Choisissez une checklist'}</button></div>`;
+          <button class="tk-btn prim" data-a="ddDeplacer"${cible && !d.envoi ? '' : ' disabled'}>${d.envoi ? (d.copier ? 'Copie' : 'Déplacement') + (d.ids.length > 1 ? ` ${(d.fait || 0) + 1} / ${d.ids.length}` : '') + '…' : cible ? (d.copier ? 'Copier dans ' : 'Déplacer dans ') + esc(cc.code ? cc.code + ' · ' + cc.titre : cc.titre) : 'Choisissez une checklist'}</button></div>`;
     } else if (d.k === 'ranger') {
       const s = dcSuggestions(t); const f = sansAccent(d.filtre);
       const opt = (c, why) => { const cc = dcCode(c.nom); const on = String(d.cible) === String(c.id);
