@@ -77,7 +77,7 @@
   function adresse(cl) {
     const a = new URLSearchParams();
     if (EMBED) { a.set('embed', '1'); }
-    if (S.vue === 'planning' || S.vue === 'checklists' || S.vue === 'soir') { a.set('vue', S.vue); } else { if (cl) { a.set('checklist', cl); } }
+    if (S.vue === 'planning' || S.vue === 'checklists' || S.vue === 'soir' || S.vue === 'temps') { a.set('vue', S.vue); } else { if (cl) { a.set('checklist', cl); } }
     try { history.replaceState(null, '', '?' + a.toString()); } catch (e) { /* l'adresse reste l'ancienne */ }
     if (EMBED && window.parent !== window) { try { window.parent.postMessage({ tkChecklist: cl }, location.origin); } catch (e) { /* cockpit absent */ } }
   }
@@ -89,7 +89,7 @@
     dup: null, plan: null, res: null, envoi: false,
     modale: null, msg: null,
     // Les vues : le Document (par défaut, 07/11/2026 ; le Tableau d'avant y est fusionné le 09/11/2026, ?vue=tableau l'ouvre), le Planning.
-    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'checklists' ? 'checklists' : q.get('vue') === 'soir' ? 'soir' : 'doc',
+    vue: q.get('vue') === 'planning' ? 'planning' : q.get('vue') === 'checklists' ? 'checklists' : q.get('vue') === 'soir' ? 'soir' : q.get('vue') === 'temps' ? 'temps' : 'doc',
     dd: null,   // la liste ouverte d'une vignette du Document : {k, id, c, portee, …}
     rq: q.get('q') || '', rqMax: 150,   // la recherche partout (tâches et checklists), et combien de tâches on en montre   // onglet : Cadre des tâches · Planning des tâches
   };
@@ -935,7 +935,7 @@
         const r = await api('POST', '/task/qui', { ids: ids.slice(i, i + 200) });
         Object.assign(S.qui, r.qui || {}); if (r.choix) { S.quiChoix = r.choix; }
         S.dcQui.lu = Math.min(ids.length, i + 200);
-        if (S.vue === 'doc' && !S.dd) { rendre(); }
+        if ((S.vue === 'doc' && !S.dd) || (S.vue === 'temps' && !tlDrag)) { rendre(); }
       }
     } catch (e) { S.dcQui.err = e.message; }
     S.dcQui.enCours = false;
@@ -1819,14 +1819,163 @@
     }
   }
 
+  /* --- la ligne du temps (09/11/2026, maquettes T1 + D3 + H2) --------------------------------------------------------
+   * Une ligne par zone (ou par fonction : qui fait), une case par demi-heure, le nombre de tâches du jour choisi.
+   * Un clic sur une case déplie ses tâches sous la ligne ; chaque tâche a une piste de 6 h où l'on glisse son heure
+   * (par 15 min), la charge de la zone en fond. Rien ne part au panel avant « Enregistrer » (PATCH /task/taches/{id}). */
+  const TL_PAS = 30, TL_CRAN = 15;
+  const tlFmt = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const TL_FONCTIONS = ['#8D1D2C', '#B0792A', '#3f7a52', '#1f5f8b', '#6B4FBB', '#A0522D', '#5c5852', '#2f6f6a', '#9a3b6b', '#55708f'];
+  function tlEtat() {
+    if (!S.tl) { S.tl = { jour: PL_JOURS[(new Date().getDay() + 6) % 7][0], par: 'zone', sel: null, mod: {}, envoi: false, err: null }; }
+    return S.tl;
+  }
+  /** L'heure d'une tâche dans la ligne du temps : la modifiée (pas encore enregistrée), sinon la sienne, sinon celle de sa checklist. */
+  function tlHeure(x) { const T = tlEtat(); return T.mod[x.t.id] != null ? T.mod[x.t.id] : dcMin(x.t.heure || x.clHeure || ''); }
+  function tlDonnees() {
+    const T = tlEtat();
+    const { L } = planDonnees();
+    const parCl = new Map(); checklists().forEach(c => c.taches.forEach(l => { if (!parCl.has(l.taskId)) { parCl.set(l.taskId, c); } }));
+    const E = L.filter(x => x.js.includes(T.jour)).map(x => Object.assign({}, x, { clHeure: (parCl.get(x.t.id) || {}).heure || '', code: dcCode(x.cl).code }));
+    const avec = E.filter(x => tlHeure(x) != null), sans = E.length - avec.length;
+    // Les lignes : la zone de la checklist, ou les fonctions qui font la tâche (une tâche compte dans chacune).
+    let cles, de;
+    if (T.par === 'zone') {
+      de = x => [x.poste];
+      const rang = p => { const i = PL_ORDRE.indexOf(sansAccent(p)); return i < 0 ? (p === 'Sans poste' ? 99 : 50) : i; };
+      cles = [...new Set(avec.map(x => x.poste))].sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr'));
+    } else {
+      de = x => { const q = S.qui && S.qui[x.t.id]; if (!q) { return ['lecture…']; } const f = [...new Set(q.fait.map(n => n.poste || n.nom))]; return f.length ? f : ['Personne']; };
+      const nb = {}; avec.forEach(x => de(x).forEach(f => { nb[f] = (nb[f] || 0) + 1; }));
+      cles = Object.keys(nb).sort((a, b) => (a === 'Personne') - (b === 'Personne') || nb[b] - nb[a] || a.localeCompare(b, 'fr'));
+    }
+    const couleur = k => T.par === 'zone' ? dcCouleur(k) : k === 'Personne' || k === 'lecture…' ? '#8a847c' : TL_FONCTIONS[cles.indexOf(k) % TL_FONCTIONS.length];
+    const mins = avec.map(tlHeure);
+    const de0 = Math.min(6 * 60, ...mins.map(m => Math.floor(m / TL_PAS) * TL_PAS)), a0 = Math.max(19 * 60, ...mins.map(m => Math.floor(m / TL_PAS) * TL_PAS));
+    const SL = []; for (let s = de0; s <= a0; s += TL_PAS) { SL.push(s); }
+    const cell = {}; avec.forEach(x => { const s = Math.floor(tlHeure(x) / TL_PAS) * TL_PAS; de(x).forEach(k => { (cell[k + '|' + s] = cell[k + '|' + s] || []).push(x); }); });
+    return { E, avec, sans, cles, cell, SL, couleur, de };
+  }
+  const tlRgba = (hex, a) => { const h = hex.replace('#', ''); return `rgba(${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)},${a.toFixed(2)})`; };
+  function tempsVue() {
+    const T = tlEtat();
+    if (T.par === 'fonction' && !(S.dcQui && S.dcQui.enCours) && taches().some(t => !(S.qui && S.qui[t.id]))) { setTimeout(dcQuiCharger, 0); }
+    const D = tlDonnees();
+    const tot = s => D.avec.filter(x => Math.floor(tlHeure(x) / TL_PAS) * TL_PAS === s).length;
+    const mx = Math.max(1, ...Object.values(D.cell).map(v => v.length)), mxt = Math.max(1, ...D.SL.map(tot));
+    const pic = D.SL.reduce((a, s) => tot(s) > tot(a) ? s : a, D.SL[0]);
+    const jourFrT = (PL_JOURS.find(j => j[0] === T.jour) || [])[2] || '';
+    const nMod = Object.keys(T.mod).length;
+    const jours = PL_JOURS.map(([j, c]) => `<button class="tl-j${T.jour === j ? ' on' : ''}" data-a="tlJour" data-v="${j}">${c}</button>`).join('');
+    const tete = `<div class="tl-bar"><div><div class="tl-t">Ligne du temps · ${esc(jourFrT)}</div><div class="tl-s">${D.avec.length} tâche${D.avec.length > 1 ? 's' : ''} avec une heure, par tranche de 30 minutes${D.sans ? ` · ${D.sans} sans heure` : ''}</div></div><span class="sp"></span>
+      <div class="tl-seg"><button class="${T.par === 'zone' ? 'on' : ''}" data-a="tlPar" data-v="zone">Par zone</button><button class="${T.par === 'fonction' ? 'on' : ''}" data-a="tlPar" data-v="fonction">Par fonction (qui fait)</button></div><div class="tl-js">${jours}</div></div>`;
+    const lecture = T.par === 'fonction' && S.dcQui && S.dcQui.enCours ? `<div class="tk-astuce">Lecture de qui fait chaque tâche… ${S.dcQui.lu} / ${S.dcQui.total}</div>` : '';
+    let h = `<table class="tl-g"><thead><tr><th class="p"></th>${D.SL.map(s => `<th class="${s === pic ? 'pk' : ''}">${s % 60 ? '<i>:30</i>' : tlFmt(s)}</th>`).join('')}<th class="tt">Total</th></tr></thead><tbody>`;
+    D.cles.forEach(k => {
+      const c = D.couleur(k);
+      h += `<tr><td class="p"><i style="background:${c}"></i>${esc(T.par === 'zone' ? posteAff(k) : k)}</td>`;
+      D.SL.forEach(s => {
+        const L = D.cell[k + '|' + s] || [];
+        const on = T.sel && T.sel.k === k && T.sel.s === s;
+        if (!L.length) { h += `<td class="c${on ? ' sel' : ''}"></td>`; return; }
+        const r = L.length / mx, mod = L.some(x => T.mod[x.t.id] != null);
+        const codes = [...new Set(L.map(x => x.code).filter(Boolean))].join(', ');
+        h += `<td class="c${on ? ' sel' : ''}"><button data-a="tlCase" data-k="${esc(k)}" data-s="${s}" title="${esc((T.par === 'zone' ? posteAff(k) : k) + ' · ' + tlFmt(s) + '–' + tlFmt(s + TL_PAS) + ' : ' + L.length + ' tâche' + (L.length > 1 ? 's' : '') + (codes ? ' (' + codes + ')' : ''))}" style="background:${tlRgba(c, 0.18 + 0.82 * r)};color:${r > 0.45 ? '#fff' : 'var(--ink)'}">${L.length}${mod ? '<sup>•</sup>' : ''}</button></td>`;
+      });
+      h += `<td class="tt">${D.SL.reduce((n, s) => n + (D.cell[k + '|' + s] || []).length, 0)}</td></tr>`;
+      if (T.sel && T.sel.k === k) { h += `<tr class="tl-dep"><td colspan="${D.SL.length + 2}">${tlDetail(D, k, T.sel.s, c)}</td></tr>`; }
+    });
+    h += `<tr class="tot"><td class="p">${T.par === 'zone' ? 'Toutes les zones' : 'Toutes les tâches'}</td>${D.SL.map(s => `<td class="c"><span class="bt" style="height:${(4 + 30 * tot(s) / mxt).toFixed(0)}px"></span><em>${tot(s) || ''}</em></td>`).join('')}<td class="tt">${D.avec.length}</td></tr></tbody></table>`;
+    const leg = `<div class="tl-leg">Pic : <b>${tlFmt(pic)}–${tlFmt(pic + TL_PAS)}</b> · ${tot(pic)} tâche${tot(pic) > 1 ? 's' : ''} à faire en même temps · un clic sur une case ouvre ses tâches${nMod ? ` · <b>${nMod} heure${nMod > 1 ? 's' : ''} changée${nMod > 1 ? 's' : ''}, pas encore enregistrée${nMod > 1 ? 's' : ''}</b> (•)` : ''}</div>`;
+    return `<div class="tl">${tete}${lecture}<div class="tk-card tl-card"><div class="tl-defile">${h}</div>${leg}</div></div>`;
+  }
+  /** Les tâches d'une case, dépliées sous sa ligne : une piste de 6 h par tâche, le rond se glisse. */
+  function tlDetail(D, k, s, c) {
+    const T = tlEtat();
+    const L = (D.cell[k + '|' + s] || []).slice().sort((a, b) => tlHeure(a) - tlHeure(b) || a.t.nom.localeCompare(b.t.nom, 'fr'));
+    // Les tâches parties de cette case pendant les changements restent visibles : on les retrouve par leur heure d'origine.
+    const parties = D.avec.filter(x => T.mod[x.t.id] != null && D.de(x).includes(k) && Math.floor(dcMin(x.t.heure || x.clHeure) / TL_PAS) * TL_PAS === s && !L.includes(x));
+    const toutes = L.concat(parties);
+    const a = Math.max(0, s - 4 * 60), b = Math.min(24 * 60, a + 6 * 60);
+    const nMod = Object.keys(T.mod).length;
+    const charge = {}; D.avec.forEach(x => { if (D.de(x).includes(k)) { const m = Math.floor(tlHeure(x) / TL_PAS) * TL_PAS; charge[m] = (charge[m] || 0) + 1; } });
+    const mxc = Math.max(1, ...Object.values(charge));
+    const pos = m => ((m - a) / (b - a) * 100).toFixed(2) + '%';
+    const fond = []; for (let m = a; m < b; m += TL_PAS) { if (charge[m]) { fond.push(`<span class="hb" style="left:${pos(m)};width:calc(${(TL_PAS / (b - a) * 100).toFixed(2)}% - 2px);height:${(3 + 28 * charge[m] / mxc).toFixed(0)}px" title="${tlFmt(m)} : ${charge[m]}"></span>`); } }
+    const graduations = []; for (let m = Math.ceil(a / 60) * 60; m <= b; m += 60) { graduations.push(`<span class="gr" style="left:${pos(m)}">${tlFmt(m)}</span>`); }
+    const lignes = toutes.map(x => {
+      const av = dcMin(x.t.heure || x.clHeure), ap = tlHeure(x), mod = T.mod[x.t.id] != null && T.mod[x.t.id] !== av;
+      const quand = quandAff(x.t);
+      return `<div class="tl-l${mod ? ' mod' : ''}"><div class="tl-n">${x.t.photo ? CAM + ' ' : ''}<button class="tk-lien-n" data-a="modifier" data-id="${x.t.id}" title="Modifier la tâche #${x.t.id}">${esc(x.t.nom)}</button>
+          <small>${esc([x.code, quand.charAt(0).toLowerCase() + quand.slice(1)].filter(Boolean).join(' · '))}${x.t.heure ? '' : ' · heure de la checklist'}${mod ? ` · <b>${tlFmt(av)} → ${tlFmt(ap)}</b> <button class="tk-lien" data-a="tlRetour" data-id="${x.t.id}">rétablir</button>` : ''}</small></div>
+        <div class="tl-trk" data-trk="${x.t.id}" data-a0="${a}" data-b0="${b}">${fond.join('')}${graduations.join('')}<span class="ln"></span>${mod ? `<span class="kn fant" style="left:${pos(av)}"></span>` : ''}
+          <span class="kn${mod ? ' mod' : ''}" style="left:${pos(Math.min(b, Math.max(a, ap)))}" tabindex="0" role="slider" aria-valuetext="${tlFmt(ap)}" aria-label="Heure de ${esc(x.t.nom)}" data-kn="${x.t.id}"><i>${tlFmt(ap)}</i></span></div></div>`;
+    }).join('');
+    return `<div class="tl-d" style="border-left-color:${c}"><div class="tl-dt"><b>${esc(T.par === 'zone' ? posteAff(k) : k)} · ${tlFmt(s)} – ${tlFmt(s + TL_PAS)}</b><span class="mu">${L.length} tâche${L.length > 1 ? 's' : ''} · glissez le rond sur la journée (par ${TL_CRAN} min, ou ← → au clavier) ; en gris, la charge de la ligne</span><span class="sp"></span>
+        <span class="mu">tout déplacer :</span><button class="tk-btn mini" data-a="tlTout" data-v="-30">− 30 min</button><button class="tk-btn mini" data-a="tlTout" data-v="30">+ 30 min</button><button class="tk-x" data-a="tlFermer" title="Fermer">×</button></div>
+      <div class="tl-ls">${lignes || '<div class="mu">Plus aucune tâche ici.</div>'}</div>
+      ${T.err ? `<div class="tk-err" style="margin:0 14px 10px">${esc(T.err)}</div>` : ''}
+      <div class="tl-dp"><span class="sp"></span>${nMod ? `<span class="tl-chg">${nMod} changement${nMod > 1 ? 's' : ''}</span>` : '<span class="mu">aucun changement</span>'}<button class="tk-btn" data-a="tlAnnuler"${nMod && !T.envoi ? '' : ' disabled'}>Annuler</button><button class="tk-btn prim" data-a="tlEnregistrer"${nMod && !T.envoi ? '' : ' disabled'}>${T.envoi ? 'Envoi…' : 'Enregistrer au panel'}</button></div></div>`;
+  }
+  /** Une nouvelle heure pour une tâche (minutes), sans tout redessiner pendant le glisser. */
+  function tlPoser(id, m, redessiner) {
+    const T = tlEtat(); const t = tache(id); if (!t) { return; }
+    const c = checklists().find(x => x.taches.some(l => l.taskId === id));
+    const av = dcMin(t.heure || (c && c.heure) || '');
+    m = Math.max(0, Math.min(23 * 60 + 45, m));
+    if (m === av) { delete T.mod[id]; } else { T.mod[id] = m; }
+    if (redessiner) { rendre(); return; }
+    const kn = $.querySelector(`[data-kn="${id}"]`); const trk = kn && kn.parentElement;
+    if (trk) { const a = +trk.dataset.a0, b = +trk.dataset.b0; kn.style.left = ((Math.min(b, Math.max(a, m)) - a) / (b - a) * 100).toFixed(2) + '%'; kn.querySelector('i').textContent = tlFmt(m); kn.classList.toggle('mod', m !== av); }
+  }
+  async function tlEnregistrer() {
+    const T = tlEtat(); const ids = Object.keys(T.mod).map(Number);
+    if (!ids.length || T.envoi) { return; }
+    T.envoi = true; T.err = null; rendre();
+    const faits = [];
+    for (const id of ids) {
+      try { await api('PATCH', '/task/taches/' + id, { heure: tlFmt(T.mod[id]) }); const t = tache(id); if (t) { t.heure = tlFmt(T.mod[id]); } faits.push(id); delete T.mod[id]; }
+      catch (e) { const t = tache(id); T.err = '« ' + ((t && t.nom) || '#' + id) + ' » : ' + e.message; break; }
+    }
+    T.envoi = false;
+    S.msg = faits.length ? { k: T.err ? 'wa' : 'ok', t: `${faits.length} heure${faits.length > 1 ? 's' : ''} enregistrée${faits.length > 1 ? 's' : ''} au panel.${T.err ? ' Arrêt : ' + esc(T.err) : ''}` } : { k: 'ko', t: 'Rien n’a été enregistré : ' + esc(T.err || 'refus du panel') };
+    rendre();
+  }
+  // Le glisser : un appui sur la piste pose le rond là, puis il suit le doigt ou la souris (par crans de 15 min).
+  let tlDrag = null;
+  function tlMinute(trk, x) {
+    const r = trk.getBoundingClientRect(); const a = +trk.dataset.a0, b = +trk.dataset.b0;
+    const f = Math.max(0, Math.min(1, (x - r.left) / r.width));
+    return Math.round((a + f * (b - a)) / TL_CRAN) * TL_CRAN;
+  }
+  $.addEventListener('pointerdown', ev => {
+    const trk = ev.target.closest('[data-trk]'); if (!trk || S.vue !== 'temps') { return; }
+    ev.preventDefault();
+    tlDrag = { id: +trk.dataset.trk, trk };
+    try { trk.setPointerCapture(ev.pointerId); } catch (e) { /* ancien navigateur */ }
+    tlPoser(tlDrag.id, tlMinute(trk, ev.clientX), false);
+  });
+  $.addEventListener('pointermove', ev => { if (tlDrag) { tlPoser(tlDrag.id, tlMinute(tlDrag.trk, ev.clientX), false); } });
+  const tlLacher = () => { if (tlDrag) { tlDrag = null; rendre(); } };
+  $.addEventListener('pointerup', tlLacher); $.addEventListener('pointercancel', tlLacher);
+  $.addEventListener('keydown', ev => {
+    const kn = ev.target.closest && ev.target.closest('[data-kn]'); if (!kn || (ev.key !== 'ArrowLeft' && ev.key !== 'ArrowRight')) { return; }
+    ev.preventDefault();
+    const id = +kn.dataset.kn; const t = tache(id); const T = tlEtat();
+    const c = checklists().find(x => x.taches.some(l => l.taskId === id));
+    const cur = T.mod[id] != null ? T.mod[id] : dcMin(t.heure || (c && c.heure) || '');
+    tlPoser(id, cur + (ev.key === 'ArrowLeft' ? -TL_CRAN : TL_CRAN), true);
+    const k2 = $.querySelector(`[data-kn="${id}"]`); if (k2) { k2.focus(); }
+  });
+
   function rendre() {
     const actif = document.activeElement;
     const k = actif && actif.dataset ? ['d', 'f', 'm', 'wc', 'wl', 'wg', 'wcm', 'wf', 'pf', 'dd', 'ck', 'rs'].find(x => actif.dataset[x] != null) : null;
     const garde = k ? { sel: `[data-${k}="${actif.dataset[k]}"]` + (actif.dataset.i != null ? `[data-i="${actif.dataset.i}"]` : ''), s: actif.selectionStart } : null;
     if (!S.cadre && S.charge) { $.innerHTML = enTete() + '<div class="tk-attente">Lecture du cadre des tâches du panel…</div>' + modale(); return; }
-    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button><button class="${S.vue === 'soir' ? 'on' : ''}" data-a="vue" data-v="soir">Revue du soir</button></div>`;
+    const ong = S.wz ? '' : `<div class="tk-ong"><button class="${S.vue === 'doc' ? 'on' : ''}" data-a="vue" data-v="doc">Document</button><button class="${S.vue === 'checklists' ? 'on' : ''}" data-a="vue" data-v="checklists">Checklists</button><button class="${S.vue === 'planning' ? 'on' : ''}" data-a="vue" data-v="planning">Planning des tâches</button><button class="${S.vue === 'temps' ? 'on' : ''}" data-a="vue" data-v="temps">Ligne du temps</button><button class="${S.vue === 'soir' ? 'on' : ''}" data-a="vue" data-v="soir">Revue du soir</button></div>`;
     const rq = !S.wz && termesRq().length && S.cadre;
-    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : S.vue === 'soir' ? rsVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
+    $.innerHTML = enTete() + (rq ? '' : ong) + erreurs() + (S.wz ? assistant() : rq ? `${S.dup ? volet() : ''}${ecranRecherche()}` : S.vue === 'planning' ? planning() : S.vue === 'temps' ? tempsVue() : S.vue === 'doc' ? docVue() : S.vue === 'checklists' ? ckVue() : S.vue === 'soir' ? rsVue() : `<div class="tk-grille"><div>${cote()}</div><div>${S.dup ? volet() : ''}${tableau()}${creees()}</div></div>`) + modale();
     if (garde) {
       const el = $.querySelector(garde.sel);
       if (el) { el.focus(); try { if (garde.s != null && el.setSelectionRange) { el.setSelectionRange(garde.s, garde.s); } } catch (e) { /* champ sans curseur */ } }
@@ -1888,6 +2037,14 @@
       case 'ddOpt': if (S.dd) { S.dd[el.dataset.v] = !S.dd[el.dataset.v]; } return rendre();
       case 'ddRanger': return dcRangerEnvoyer();
       case 'ddDeplacer': return dcDeplacerEnvoyer();
+      case 'tlJour': tlEtat().jour = el.dataset.v; tlEtat().sel = null; return rendre();
+      case 'tlPar': tlEtat().par = el.dataset.v; tlEtat().sel = null; return rendre();
+      case 'tlCase': { const T = tlEtat(); const k = el.dataset.k, s = +el.dataset.s; T.sel = T.sel && T.sel.k === k && T.sel.s === s ? null : { k, s }; T.err = null; return rendre(); }
+      case 'tlFermer': tlEtat().sel = null; return rendre();
+      case 'tlRetour': delete tlEtat().mod[+id]; return rendre();
+      case 'tlAnnuler': tlEtat().mod = {}; tlEtat().err = null; return rendre();
+      case 'tlEnregistrer': return tlEnregistrer();
+      case 'tlTout': { const T = tlEtat(); if (!T.sel) { return; } const D = tlDonnees(); (D.cell[T.sel.k + '|' + T.sel.s] || []).forEach(x => tlPoser(x.t.id, tlHeure(x) + +el.dataset.v, false)); T.sel = { k: T.sel.k, s: T.sel.s + +el.dataset.v }; return rendre(); }
       case 'ddPlusieurs': { const d = S.dd; if (!d || d.id == null) { return; } S.sel = new Set([d.id]); if (d.c) { S.cl = String(d.c); } S.dd = null; ouvrirDup(); rendre(); voirHaut(); return; }
       case 'dcAller': S.cl = id; S.dd = null; adresse(id); rendre(); return dcAller(id);
       case 'dcAjouter': S.cl = id; S.dd = null; adresse(id); return wzOuvrir('existante');
