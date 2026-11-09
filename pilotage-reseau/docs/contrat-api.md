@@ -141,16 +141,18 @@ Les **règles de contrôle** se calculent dans la page (`jourCaisse()`,
 
 | Point | Règle | Gravité |
 |---|---|---|
-| Report rompu | fond du premier service du jour ≠ laissé du dernier service de la veille, même caisse | à corriger |
-| Montant impossible | laissé > 1 000 € (« 100 × le total déclaré » quand c'est le cas) | à corriger |
+| Report rompu | fond du premier service du jour ≠ laissé du dernier service de la veille, même caisse — sauf si le laissé vaut 100 × ce fond (virgule oubliée la veille : lien « ≈ », rien de compté deux fois) | à corriger |
+| Virgule oubliée | laissé > 1 000 € et = 100 × le fond du service suivant (15 566 → 155,66 €) : le compte des espèces prend le montant corrigé | à corriger |
+| Montant impossible | laissé > 1 000 € sans correction possible (« 100 × le total déclaré » quand c'est le cas) | à corriger |
 | Service jamais fermé | non fermé, avant hier | à corriger |
 | Fermeture sans montant | fermé avec un total déclaré à 0 | à vérifier |
 | Fermée puis rouverte | deux services de jour sur la même caisse | à vérifier |
 | Rouverte après la fermeture | ouvert après 17 h, refermé le lendemain | à vérifier |
 
 « Sorti du tiroir sans trace » = fonds d'ouverture + espèces encaissées −
-versements − dépôts − laissé pour demain ; non calculable si un laissé est
-impossible ou si une caisse est encore ouverte. Les retraits n'entrent pas
+versements − dépôts − laissé pour demain (corrigé quand la virgule oubliée se
+lit au service suivant) ; non calculable si un laissé est impossible ou si une
+caisse est encore ouverte. Les retraits n'entrent pas
 dans le compte : TFBuddy ne les relit pas.
 
 ## `GET /ventes/mensuel`

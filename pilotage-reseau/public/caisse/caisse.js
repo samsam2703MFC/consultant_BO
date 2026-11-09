@@ -88,6 +88,26 @@
   const ABERRANT = 1000;   // un « laissé » au-delà de 1 000 € n'est pas un fond de caisse
   const svc = (c, j) => S.D.services.filter(s => s.caisse === c && s.jour === j).sort((a, b) => String(a.ouv).localeCompare(String(b.ouv)));
   const estNuit = s => s.ouv && s.ouv.slice(11, 13) >= '17' && s.ferm && s.ferm.slice(0, 10) > s.jour;
+  /* « a » vaut-il 100 × « b » ? La virgule oubliée à la saisie : 155,66 € tapés 15566. */
+  const x100 = (a, b) => a != null && b != null && b > 0 && Math.abs(a - b * 100) < 0.5;
+  /* Le service qui suit `s` sur la même caisse : le suivant du jour, sinon le premier du lendemain. */
+  function suivant(s) {
+    const l = svc(s.caisse, s.jour), i = l.indexOf(s);
+    return i >= 0 && i < l.length - 1 ? l[i + 1] : (svc(s.caisse, ajoute(s.jour, 1))[0] || null);
+  }
+  /* Un « laissé » au-delà d'un fond possible : ce qu'il était sans doute. `corrige` est le montant
+   * réel quand le service suivant l'a ouvert (virgule remise) ; sinon null, et le laissé reste impossible. */
+  function causeLaisse(s) {
+    if (s.laisse == null || s.laisse <= ABERRANT) { return null; }
+    const n = suivant(s);
+    if (n && x100(s.laisse, n.fond)) {
+      return { corrige: n.fond, t: 'Laissé ' + eur(s.laisse) + ' : virgule oubliée — ' + (n.jour === s.jour ? 'le service suivant' : 'le lendemain') + ' ouvre à ' + eur(n.fond) };
+    }
+    if (x100(s.laisse, s.final)) { return { corrige: null, t: 'Laissé ' + eur(s.laisse) + ' = 100 × le total déclaré : virgule oubliée ?' }; }
+    return { corrige: null, t: 'Laissé ' + eur(s.laisse) + ' : montant impossible' };
+  }
+  /* Le laissé tel qu'il compte : saisi, ou corrigé quand la virgule oubliée se lit au service suivant. */
+  const laisseReel = s => { const k = causeLaisse(s); return k ? k.corrige : s.laisse; };
   function jourCaisse(c, j) {
     const l = svc(c, j);
     if (!l.length) { return null; }
@@ -96,8 +116,11 @@
     const dernierJour = journee[journee.length - 1] || prem, dernier = l[l.length - 1];
     const veille = svc(c, ajoute(j, -1));
     const report = veille.length ? veille[veille.length - 1].laisse : null;
+    // La veille a laissé 100 × ce fond : ce n'est pas une rupture, c'est la virgule
+    // oubliée la veille au soir — déjà comptée là-bas, une seule fois.
+    const virgule = report != null && prem.fond != null && x100(report, prem.fond);
     const pts = [];
-    if (report != null && prem.fond != null && prem.fond !== report) {
+    if (report != null && prem.fond != null && prem.fond !== report && !virgule) {
       pts.push({ g: 'stop', k: 'rupture', t: 'Report rompu : ' + eur(report) + ' laissés, ' + eur(prem.fond) + ' au fond' });
     }
     if (journee.length > 1) {
@@ -106,28 +129,28 @@
     }
     if (journee.some(s => s.ferme && s.final === 0)) { pts.push({ g: 'warn', k: 'final0', t: 'Fermeture sans montant (0,00 € déclaré)' }); }
     l.forEach(s => {
-      if (s.laisse != null && s.laisse > ABERRANT) {
-        const x100 = s.final != null && Math.abs(s.laisse - s.final * 100) < 0.5;
-        pts.push({ g: 'stop', k: 'aberrant', t: 'Laissé ' + eur(s.laisse) + (x100 ? ' = 100 × le total déclaré : virgule oubliée ?' : ' : montant impossible') });
-      }
+      const k = causeLaisse(s);
+      if (k) { pts.push({ g: 'stop', k: 'aberrant', t: k.t, corrige: k.corrige }); }
     });
     nuit.forEach(s => pts.push({ g: 'warn', k: 'nuit', t: 'Rouverte à ' + hm(s.ouv) + ' après la fermeture, refermée le ' + jcm(s.ferm.slice(0, 10)) + ' à ' + hm(s.ferm) }));
     const ouverts = l.filter(s => !s.ferme);
     if (ouverts.length && j < ajoute(AUJ, -1)) { pts.push({ g: 'stop', k: 'ouvert', t: 'Service jamais fermé' }); }
-    return { l, prem, journee, nuit, dernierJour, dernier, report, pts, enCours: ouverts.length > 0 && j >= ajoute(AUJ, -1) };
+    return { l, prem, journee, nuit, dernierJour, dernier, report, virgule, pts, enCours: ouverts.length > 0 && j >= ajoute(AUJ, -1) };
   }
   function jourMagasin(j) {
     const cf = (S.D.comptable || {})[j] || null;
     const caisses = S.D.caisses.map(c => jourCaisse(c.id, j)).filter(Boolean);
     const fonds = caisses.reduce((a, x) => a + (x.prem.fond || 0), 0);
-    const laisse = caisses.reduce((a, x) => a + (x.dernier.laisse || 0), 0);
+    const laisse = caisses.reduce((a, x) => a + (laisseReel(x.dernier) || 0), 0);
     const declare = caisses.reduce((a, x) => a + x.l.reduce((b, s) => b + (s.final || 0), 0), 0);
-    const aberrant = caisses.some(x => x.pts.some(p => p.k === 'aberrant'));
+    // Impossible = un laissé aberrant que le service suivant ne permet pas de corriger.
+    const aberrant = caisses.some(x => x.l.some(s => { const k = causeLaisse(s); return k && k.corrige == null; }));
+    const corrige = caisses.some(x => x.l.some(s => { const k = causeLaisse(s); return k && k.corrige != null; }));
     const enCours = caisses.some(x => x.enCours);
     const versements = cf ? (cf.versements || 0) + (cf.depots || 0) : null;
     const especes = cf ? cf.especes : null;
     const sorties = aberrant || enCours || especes == null || !caisses.length ? null : fonds + especes - laisse - versements;
-    return { j, cf, recette: cf ? cf.recette : null, especes, versements, fonds, laisse, declare, sorties, aberrant, enCours, caisses };
+    return { j, cf, recette: cf ? cf.recette : null, especes, versements, fonds, laisse, declare, sorties, aberrant, corrige, enCours, caisses };
   }
   function tousLesPoints() {
     const out = [];
@@ -162,7 +185,9 @@
     if (!x) { return `<div class="jr vide"><div class="jr__hd">${jc(j)}</div><div class="jr__p">aucun service</div></div>`; }
     const g = x.pts.some(p => p.g === 'stop') ? 'stop' : (x.pts.length ? 'warn' : '');
     const rupt = x.pts.find(p => p.k === 'rupture');
-    const lk = x.report == null ? '' : `<div class="lk" title="Laissé la veille : ${esc(eur(x.report))} · fond d’ouverture : ${esc(eur(x.prem.fond))}"><i class="${rupt ? 'ko' : 'ok'}">${rupt ? '✗' : '✓'}</i></div>`;
+    const lk = x.report == null ? '' : (x.virgule
+      ? `<div class="lk" title="Laissé la veille : ${esc(eur(x.report))} = 100 × ce fond de ${esc(eur(x.prem.fond))} — virgule oubliée la veille, la chaîne suit"><i class="vi">≈</i></div>`
+      : `<div class="lk" title="Laissé la veille : ${esc(eur(x.report))} · fond d’ouverture : ${esc(eur(x.prem.fond))}"><i class="${rupt ? 'ko' : 'ok'}">${rupt ? '✗' : '✓'}</i></div>`);
     const decl = x.journee.reduce((a, s) => a + (s.final || 0), 0);
     const d = x.dernierJour;
     return `<button class="jr ${g}" data-act="ouvrir" data-j="${j}" title="Ouvrir le ${esc(jl(j))}">${lk}
@@ -202,7 +227,7 @@
     <tr><td>+ Espèces encaissées</td>${td(x => eur(x.especes))}<td class="sem">${eur(tot(x => x.especes))}</td></tr>
     <tr><td>− Retraits<small>enregistrés à la caisse, illisibles par l’API</small></td>${td(() => '<span class="nul">non lisibles</span>')}<td class="sem"><span class="nul">—</span></td></tr>
     <tr><td>− Versements · dépôts</td>${td(x => x.versements ? eur(x.versements) : '<span class="nul">aucun</span>')}<td class="sem">${eur(tot(x => x.versements))}</td></tr>
-    <tr><td>− Laissé pour demain</td>${td(x => x.aberrant ? '<span class="tag-stop">impossible</span>' : (x.enCours ? '<span class="tag-warn">en cours</span>' : eur(x.laisse)))}<td class="sem"><span class="nul">—</span></td></tr>
+    <tr><td>− Laissé pour demain</td>${td(x => x.aberrant ? '<span class="tag-stop">impossible</span>' : (x.enCours ? '<span class="tag-warn">en cours</span>' : eur(x.laisse) + (x.corrige ? '<br><small class="nul">virgule remise</small>' : '')))}<td class="sem"><span class="nul">—</span></td></tr>
     <tr class="cle"><td>= Sorti du tiroir sans trace<small>ni versement ni retrait enregistré</small></td>${td(x => x.sorties == null ? '<span class="tag-stop">non calculable</span>' : eur(x.sorties))}<td class="sem">${eur(tot(x => x.sorties))}<br><small class="nul">${nCalc} j. calculables</small></td></tr>
     <tr class="sep"><td colspan="9">Ce que les équipes déclarent à la fermeture</td></tr>
     <tr><td>Total déclaré<small>final_cash, toutes les caisses</small></td>${td(x => !x.caisses.length ? '<span class="nul">—</span>' : (x.declare === 0 ? '<span class="tag-warn">0,00 €</span>' : eur(x.declare)))}<td class="sem">${eur(tot(x => x.declare))}</td></tr>
@@ -227,7 +252,9 @@
         ? `<b>Les espèces partent sans trace</b> : ${eur(sorties)} sortis des tiroirs sur ${calc.length} jour${calc.length > 1 ? 's' : ''}, sans un versement ni un dépôt enregistré.`
         : `<b>${eur(vers)} de versements enregistrés</b> ; ${eur(sorties)} restent sortis des tiroirs sans trace sur ${calc.length} jour${calc.length > 1 ? 's' : ''}.`);
     }
-    if (n('aberrant')) { l.push(`<b>${n('aberrant')} montant${n('aberrant') > 1 ? 's' : ''} laissé${n('aberrant') > 1 ? 's' : ''} impossible${n('aberrant') > 1 ? 's' : ''}</b> — ${[...new Set(PTS.filter(p => p.k === 'aberrant').map(p => jc(p.j)))].join(', ')}.`); }
+    const vir = PTS.filter(p => p.k === 'aberrant' && p.corrige != null), imp = PTS.filter(p => p.k === 'aberrant' && p.corrige == null);
+    if (vir.length) { l.push(`<b>${vir.length} montant${vir.length > 1 ? 's' : ''} laissé${vir.length > 1 ? 's' : ''} tapé${vir.length > 1 ? 's' : ''} sans virgule</b> : le service suivant ouvre au centième près (15 566 → 155,66 €). La chaîne suit une fois la virgule remise ; c'est la saisie du soir qui est à reprendre.`); }
+    if (imp.length) { l.push(`<b>${imp.length} montant${imp.length > 1 ? 's' : ''} laissé${imp.length > 1 ? 's' : ''} impossible${imp.length > 1 ? 's' : ''}</b> — ${[...new Set(imp.map(p => jc(p.j)))].join(', ')}.`); }
     if (n('nuit') || n('reouv')) { l.push(`<b>${n('nuit') + n('reouv')} caisse${n('nuit') + n('reouv') > 1 ? 's' : ''} fermée${n('nuit') + n('reouv') > 1 ? 's' : ''} puis rouverte${n('nuit') + n('reouv') > 1 ? 's' : ''}</b>, dont ${n('nuit')} après la fermeture du magasin.`); }
     if (n('ouvert')) { l.push(`<b>${n('ouvert')} service${n('ouvert') > 1 ? 's' : ''} jamais fermé${n('ouvert') > 1 ? 's' : ''}.</b>`); }
     return l.length ? `<ul class="cst">${l.map(x => `<li>${x}</li>`).join('')}</ul>` : '<p class="muted">Rien à signaler sur cette semaine.</p>';
@@ -242,6 +269,7 @@
     const passes = D.jours.filter(j => j <= AUJ).length;
     const nStop = PTS.filter(p => p.g === 'stop').length;
     const n = k => PTS.filter(p => p.k === k).length;
+    const nVir = PTS.filter(p => p.k === 'aberrant' && p.corrige != null).length, nImp = n('aberrant') - nVir;
     if (!D.caisses.length) {
       return `<div class="ca-msg">Aucun service de caisse ouvert sur cette semaine pour ce magasin.</div>`;
     }
@@ -251,7 +279,7 @@
       <div class="kpi"><div class="kpi__value">${eur(especes)}${recette ? `<small>${nf(100 * especes / recette, 1)} %</small>` : ''}</div><div class="kpi__label">Espèces encaissées</div><div class="kpi__note">le reste en carte et titres-repas</div></div>
       <div class="kpi ${vers ? 'ok' : 'stop'}"><div class="kpi__value">${eur(vers)}</div><div class="kpi__label">Versements · dépôts</div><div class="kpi__note">${vers ? 'enregistrés dans l’export' : 'aucun enregistré'}</div></div>
       <div class="kpi ${sorties > 0 ? 'stop' : 'ok'}"><div class="kpi__value">${eur(sorties)}</div><div class="kpi__label">Sorti du tiroir sans trace</div><div class="kpi__note">${calc.length} jour${calc.length > 1 ? 's' : ''} calculable${calc.length > 1 ? 's' : ''} sur ${passes}</div></div>
-      <div class="kpi ${PTS.length ? 'warn' : 'ok'}"><div class="kpi__value">${PTS.length}${nStop ? `<small>dont ${nStop} à corriger</small>` : ''}</div><div class="kpi__label">Points à vérifier</div><div class="kpi__note">${n('rupture')} reports rompus · ${n('final0')} fermetures à 0 · ${n('aberrant')} montants impossibles</div></div>
+      <div class="kpi ${PTS.length ? 'warn' : 'ok'}"><div class="kpi__value">${PTS.length}${nStop ? `<small>dont ${nStop} à corriger</small>` : ''}</div><div class="kpi__label">Points à vérifier</div><div class="kpi__note">${n('rupture')} reports rompus · ${n('final0')} fermetures à 0${nVir ? ' · ' + nVir + ' virgule' + (nVir > 1 ? 's' : '') + ' oubliée' + (nVir > 1 ? 's' : '') : ''}${nImp ? ' · ' + nImp + ' montant' + (nImp > 1 ? 's' : '') + ' impossible' + (nImp > 1 ? 's' : '') : ''}</div></div>
     </div>
     <section class="blk">
       <div class="blk__hd"><h2>La chaîne des reports, caisse par caisse</h2>
@@ -296,7 +324,8 @@
       const nuit = estNuit(s);
       L.push(`<span class="h">${hm(s.ouv)}</span><span>${nuit ? '<span class="tag-warn">Rouverte après la fermeture</span> ' : ''}Ouverture · ${esc(s.parOuv)}</span><span class="m${i === 0 && rupt ? ' x' : ''}">fond ${eur(s.fond)}</span>`);
       if (i === 0 && x.report != null) {
-        L.push(`<span class="note">${rupt ? `<span class="tag-stop">${esc(rupt.t)}</span>` : '<span class="tag-ok">✓ suit le laissé de la veille</span>'}</span>`);
+        L.push(`<span class="note">${rupt ? `<span class="tag-stop">${esc(rupt.t)}</span>`
+          : (x.virgule ? `<span class="tag-warn">≈ suit le laissé de la veille, virgule remise (${esc(eur(x.report))} → ${esc(eur(x.prem.fond))})</span>` : '<span class="tag-ok">✓ suit le laissé de la veille</span>')}</span>`);
       }
       if (!s.ferme) {
         L.push(`<span class="h"></span><span>Pas encore fermée</span><span class="m">${j < ajoute(AUJ, -1) ? '<span class="tag-stop">jamais fermée</span>' : '<span class="tag-warn">en cours</span>'}</span>`);
@@ -304,16 +333,16 @@
       }
       L.push(`<span class="h">${hm(s.ferm)}${s.ferm && s.ferm.slice(0, 10) > j ? ' <small>' + jc(s.ferm.slice(0, 10)) + '</small>' : ''}</span><span>Fermeture · ${esc(s.parFerm)} — total déclaré</span><span class="m${s.final === 0 ? ' z' : ''}">${eur(s.final)}</span>`);
       L.push(`<span class="h"></span><span>Laissé pour le lendemain</span><span class="m${s.laisse > ABERRANT ? ' x' : ''}">${eur(s.laisse)}</span>`);
-      if (s.laisse > ABERRANT) {
-        const x100 = s.final != null && Math.abs(s.laisse - s.final * 100) < 0.5;
-        L.push(`<span class="note"><span class="tag-stop">${x100 ? '100 × le total déclaré : virgule oubliée ?' : 'Montant impossible pour un fond de caisse.'} Attendu : le fond${x.prem.fond ? ', ' + esc(eur(x.prem.fond)) : ''}.</span></span>`);
+      const k = causeLaisse(s);
+      if (k) {
+        L.push(`<span class="note"><span class="tag-stop">${esc(k.t)}${k.corrige == null ? '. Attendu : le fond' + (x.prem.fond ? ', ' + esc(eur(x.prem.fond)) : '') + '.' : '.'}</span></span>`);
       }
       if (nuit) { L.push(`<span class="note"><span class="tag-warn">Ouverte ${hm(s.ouv)} → ${hm(s.ferm)} le lendemain, fond ${esc(eur(s.fond))}, ${s.final ? esc(eur(s.final)) + ' déclarés' : 'rien déclaré'} : qui, et pourquoi ?</span></span>`); }
     });
     if (lend) {
-      const ok = lend.fond === x.dernier.laisse;
-      L.push(`<span class="h">${jcm(lend.jour)}</span><span>Ouverture du lendemain · ${esc(lend.parOuv)}</span><span class="m${ok ? '' : ' x'}">fond ${eur(lend.fond)}</span>`);
-      L.push(`<span class="note">${ok ? '<span class="tag-ok">✓ suit</span>' : `<span class="tag-stop">Ne suit pas le laissé (${esc(eur(x.dernier.laisse))})</span>`}</span>`);
+      const ok = lend.fond === x.dernier.laisse, vi = !ok && x100(x.dernier.laisse, lend.fond);
+      L.push(`<span class="h">${jcm(lend.jour)}</span><span>Ouverture du lendemain · ${esc(lend.parOuv)}</span><span class="m${ok || vi ? '' : ' x'}">fond ${eur(lend.fond)}</span>`);
+      L.push(`<span class="note">${ok ? '<span class="tag-ok">✓ suit</span>' : (vi ? '<span class="tag-warn">≈ suit, une fois la virgule remise</span>' : `<span class="tag-stop">Ne suit pas le laissé (${esc(eur(x.dernier.laisse))})</span>`)}</span>`);
     }
     const g = x.pts.some(p => p.g === 'stop') ? 'tag-stop' : 'tag-warn';
     return `<section class="card"><h3>${esc(c.nom)} ${x.pts.length ? `<span class="${g}" style="margin-left:6px">${x.pts.length} point${x.pts.length > 1 ? 's' : ''}</span>` : '<span class="tag-ok" style="margin-left:6px">rien à signaler</span>'}</h3>
@@ -344,7 +373,8 @@
           <span class="op">−</span><span>Retraits<span class="s">enregistrés à la caisse, illisibles par l’API TFBuddy</span></span><span class="m na">non lisibles</span>
           <span class="op">−</span><span>Versements espèces · dépôts</span><span class="m${m.versements ? '' : ' na'}">${m.versements ? eur(m.versements) : 'aucun'}</span>
           <span class="op r">=</span><span class="r eg">Attendu dans les tiroirs au soir</span><span class="m r eg">${eur(m.fonds + (m.especes || 0) - (m.versements || 0))}</span>
-          <span class="op"></span><span>Laissé pour le lendemain, déclaré</span><span class="m${m.aberrant ? ' x' : ''}">${m.enCours ? '<span class="tag-warn">en cours</span>' : eur(laisseTot)}</span>
+          <span class="op"></span><span>Laissé pour le lendemain, déclaré</span><span class="m${m.aberrant || m.corrige ? ' x' : ''}">${m.enCours ? '<span class="tag-warn">en cours</span>' : eur(laisseTot)}</span>
+          ${m.corrige && !m.aberrant && !m.enCours ? `<span class="op"></span><span>… virgule remise<span class="s">le montant qui a réellement ouvert le service suivant</span></span><span class="m">${eur(m.laisse)}</span>` : ''}
           <span class="op"></span><span>${m.sorties == null
             ? `<span class="tag-stop">Écart non calculable</span><span class="s">${m.enCours ? 'une caisse est encore ouverte.' : (m.aberrant ? 'un « laissé » est une saisie impossible.' : 'données incomplètes.')} Sans comptage réel du tiroir, la journée ne se boucle pas.</span>`
             : `Sorti du tiroir sans trace<span class="s">ni versement ni retrait enregistré</span>`}</span><span class="m${m.sorties > 0 ? ' x' : ''}">${m.sorties == null ? '' : eur(m.sorties)}</span>
