@@ -2887,7 +2887,8 @@
     const C = L.filter(c => c.canal === 'compt'), W = L.length - C.length, tot = L.reduce((a, c) => a + (+c.montant || 0), 0);
     const maint = S.date < AUJ ? '24:00' : (D.now == null ? '24:00' : opHM(D.now));
     // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée.
-    const v = L.filter(c => bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint).length;
+    // Une commande réglée en paiement différé (09/11/2026) est retirée : rien à vérifier.
+    const v = L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length;
     return `<div class="op-cmdl" data-cmdm="1" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
   }
   /** Garder le défilement d'une feuille quand elle se redessine (une lecture qui arrive, le relu des deux minutes). */
@@ -2954,6 +2955,8 @@
   // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
   const CMD_ETAT = {
     caisse: ['Encaissées en caisse', '#6f8f72', 'dans les tickets du jour', ['ok', 'en caisse']],
+    // Réglée en paiement différé (09/11/2026) : retirée, son ticket différé est dans la caisse du jour, la facture suit.
+    differe: ['En paiement différé', '#a88d62', 'retirées, facturées au client plus tard', ['ok', 'différé']],
     avant: ['Encaissées un autre jour', '#a9bcab', 'payées à la commande', ['ok', 'payée avant']],
     ligne: ['Webshop hors caisse', '#1f5f8b', 'payées en ligne : en plus des tickets', ['w', 'en ligne']],
     attente: ['Pas retirées', '#d9a520', 'heure de retrait passée, pas encaissées', ['d', 'pas retirée']],
@@ -2979,14 +2982,16 @@
       const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0), tot = somme(L);
       const par = Object.keys(CMD_ETAT).map(k => [k, L.filter(c => c.etat === k)]).filter(x => x[1].length);
       const bar = par.map(([k, X]) => `<i style="width:${(tot > 0 ? 100 * somme(X) / tot : 0).toFixed(2)}%;background:${CMD_ETAT[k][1]}"></i>`).join('');
-      const quand = (k, X) => k === 'avant' ? ' · ' + [...new Set(X.map(c => c.ticket && c.ticket.date ? fD(c.ticket.date) : '?'))].join(', ') : (['attente', 'avenir', 'sans'].includes(k) ? ' · ' + X.map(c => esc(c.heure)).join(', ') : '');
+      const quand = (k, X) => k === 'avant' ? ' · ' + [...new Set(X.map(c => c.ticket && c.ticket.date ? fD(c.ticket.date) : '?'))].join(', ') : (['differe', 'attente', 'avenir', 'sans'].includes(k) ? ' · ' + X.map(c => esc(c.heure)).join(', ') : '');
       const rap = par.map(([k, X]) => `<div class="r"><i class="d" style="background:${CMD_ETAT[k][1]}"></i><span><b>${CMD_ETAT[k][0]}</b><small>${CMD_ETAT[k][2]}${quand(k, X)}</small></span><span class="n">${fU(somme(X))}<small>${X.length}</small></span></div>`).join('');
-      const dansCa = somme(L.filter(c => c.etat === 'caisse' || c.etat === 'ligne'));
+      const dansCa = somme(L.filter(c => c.etat === 'caisse' || c.etat === 'differe' || c.etat === 'ligne'));
       const eq = `<div class="eq"><b>${fU(dansCa)} dans le CA du jour</b>${M.f === 'tous' && D.caisseJour ? ' · caisse du jour ' + fU(D.caisseJour) : ''}</div>`;
-      const ligne = c => { const i = tout.indexOf(c), o = !!M.ouv[i], T = CMD_ETAT[c.etat] || CMD_ETAT.avenir, ouvrable = (c.lignes && c.lignes.length) || c.etat === 'sans';
+      const ligne = c => { const i = tout.indexOf(c), o = !!M.ouv[i], T = CMD_ETAT[c.etat] || CMD_ETAT.avenir, ouvrable = (c.lignes && c.lignes.length) || c.etat === 'sans' || c.montantCaisse != null;
         const lib = c.canal === 'compt' ? (c.articles != null ? plu(c.articles, 'article') : 'Précommande') : CMD_CANAL[c.canal] + (c.articles != null ? ' · ' + plu(c.articles, 'article') : '');
-        const sous = esc(c.statut) + (c.ticket && c.ticket.heure ? ' · ticket ' + (c.ticket.date && c.ticket.date !== D.date ? fD(c.ticket.date) + ' ' : '') + esc(c.ticket.heure) : '');
-        const det = c.etat === 'sans' ? `<div class="bm-alerte">Remise au panel, aucun ticket caisse lié.${c.candidat ? ` Un ticket de ${fU(c.candidat.montant)} à ${esc(c.candidat.heure)}, sans commande : la même vente ?` : ' Aucun ticket du même montant dans l’heure.'}</div>` : '';
+        // Une commande réglée en paiement différé : le ticket du client ce jour-là, que le panel ne lie pas à la commande.
+        const sous = (c.etat === 'differe' ? 'retirée' : esc(c.statut)) + (c.ticket && c.ticket.heure ? ' · ticket ' + (c.ticket.differe ? 'différé ' : '') + (c.ticket.date && c.ticket.date !== D.date ? fD(c.ticket.date) + ' ' : '') + esc(c.ticket.heure) : '');
+        const det = c.etat === 'sans' ? `<div class="bm-alerte">Remise au panel, aucun ticket caisse lié.${c.candidat ? ` Un ticket de ${fU(c.candidat.montant)} à ${esc(c.candidat.heure)}, sans commande : la même vente ?` : ' Aucun ticket du même montant dans l’heure.'}</div>` : (c.etat === 'differe' && c.montantCaisse != null
+          ? `<div class="bm-note">Ticket différé de ${fU(c.montantCaisse)} en caisse : la remise du client n’y est pas, elle se déduit à la facture.</div>` : '');
         return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r"${ouvrable ? ` data-cmdt="${i}" role="button" tabindex="0"` : ''}><span class="h">${esc(c.heure)}</span><span class="q"><b>${lib}</b><small>${sous}</small></span><span class="m">${fU(c.montant)}<span class="bm-tg ${T[3][0]}">${T[3][1]}</span></span><span class="c">${ouvrable ? (o ? '▴' : '▾') : ''}</span></div>
           ${o ? `<div class="art">${c.lignes && c.lignes.length ? bmLignes(c.lignes) : ''}${det}</div>` : ''}</div>`; };
       const sec = (t, X, s) => X.length ? `<div class="bm-sec"><b>${t}</b><span>${s}</span></div><div class="bm-liste">${X.map(ligne).join('')}</div>` : '';
@@ -3411,7 +3416,7 @@
     frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
     frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
     frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
-    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
+    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;

@@ -2729,6 +2729,7 @@ détail en modale, comptoir et webshop. Les commandes dont le retrait (ou la liv
 | `etat` | | |
 |---|---|---|
 | `caisse` | encaissée en caisse ce jour-là | ticket du jour : déjà dans les tickets |
+| `differe` | réglée en paiement différé (09/11/2026) | le ticket différé du même client ce jour-là : dans les tickets, facturée plus tard |
 | `avant` | encaissée en caisse un autre jour | payée à la commande : dans le CA de ce jour-là |
 | `ligne` | webshop remise ou livrée sans ticket caisse | payée en ligne : s'ajoute aux tickets (la règle de `/canaux`) |
 | `attente` | pas remise, l'heure de retrait passée | pas retirée, pas encaissée |
@@ -2741,14 +2742,28 @@ Pour une commande `sans`, le ticket du jour sans commande, du même montant, le 
 heure au plus) est proposé (`candidat`) : la même vente, encaissée sans lien ? Rien de nominatif ne sort.
 
     { shop, date, maintenant: "18:38" | null,
-      commandes: [ { heure, canal: compt|cc|liv, statut, montant, etat, articles, ticket: { date, heure } | null,
-                     lignes: [ { nom, cat, q, pu, total } ] | null, candidat?: { heure, montant } } ],
+      commandes: [ { heure, canal: compt|cc|liv, statut, montant, etat, articles, ticket: { date, heure, differe? } | null,
+                     lignes: [ { nom, cat, q, pu, total } ] | null, candidat?: { heure, montant }, montantCaisse? } ],
       total: { n, ca }, comptoir: { n, ca }, webshop: { n, ca, cc: { n, ca }, liv: { n, ca } },
-      etats: { caisse|avant|ligne|attente|avenir|sans: { n, ca } },
-      dansCa,        caisse + ligne : ce que les commandes apportent au CA du jour
+      etats: { caisse|differe|avant|ligne|attente|avenir|sans: { n, ca } },
+      dansCa,        caisse + differe + ligne : ce que les commandes apportent au CA du jour
       caisseJour,    les tickets du jour (heures gravées), null s'ils ne sont pas lus
       lus }          commandes dont le ticket a été lu
     { shop, date, indispo: true, motif }   le panel ne rend pas les commandes
+
+**Le paiement différé (09/11/2026, Natan à Halle : « la commande en paiement différé reste en pas retiré »).** Un
+client pro emporte sa commande, la caisse fait un ticket en paiement différé (`deferral_payment`) qu'une facture réglera
+plus tard ; le panel ne pose pas ce ticket sur la commande (`id_transaction` vide, statut inchangé) : elle restait
+`attente`. Une commande du jour sans ticket lié (`attente`, `avenir`, `sans`) dont le client est connu (`id_client`)
+se rapproche d'un ticket différé du jour sans commande (`coApparierDifferes`) : le même bon de commande (`po_hash`)
+d'abord quand les deux le portent, sinon le même client, le ticket le plus proche de l'heure de retrait ; un ticket ne
+règle qu'une commande. Elle passe `differe`, ses articles se lisent dans le ticket, et `montantCaisse` dit le montant
+du ticket quand il diffère de la commande : le ticket différé est en caisse **sans** la remise personnelle du client,
+que le panel déduit à la facture (`generate-deferral`, `include_personal_discount`). La commande garde son montant.
+Un ticket pro réglé au comptoir ne règle pas une commande non liée. `coCommandes` garde pour cela `cli` (`id_client`)
+et `po` (`po_hash`) ; sa clé de mémo devient `coCmd3:`. La ligne « Commandes du jour » de l'onglet Opérationnel
+(`/exploitation/canaux`, `liste[].differe`) fait le même rapprochement sur le relevé pro gravé du jour (sans appel) :
+une commande réglée en différé n'est plus « à vérifier », ni « à préparer ».
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
