@@ -452,3 +452,11 @@ tr.ckp-tr td{background:#faf7f2;border-top:none}
 .tl-trk .kn.mod,.tl-trk .kn.mod i{background:var(--accent)}.tl-trk .kn.fant{background:none;border:2px dashed #8a847c;box-shadow:none;pointer-events:none}.tl-trk .kn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .tl-dp{display:flex;align-items:center;gap:6px;padding:10px 14px;border-top:1px solid #f0e9df;background:#faf7f2;border-radius:0 0 10px 10px}.tl-chg{color:var(--accent);font-size:12px;margin-right:6px}.tl-dp .sp,.tl-dt .sp,.tl-bar .sp{flex:1}
 @media (max-width:900px){.tl-l{flex-wrap:wrap}.tl-trk{flex-basis:100%}}
+
+/* Document : filtre par zone et par fonction (10/11/2026) */
+.dc-filtres{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin:4px 0 14px;padding:8px 10px;background:#faf7f2;border-radius:10px}
+.dc-fl{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-right:3px}
+.dc-fz{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--tk-trait2);background:#fff;border-radius:8px;padding:4px 9px;font:400 12px var(--font-ui);color:var(--ink);cursor:pointer}
+.dc-fz i{width:8px;height:8px;border-radius:2px;display:inline-block}.dc-fz em{font-style:normal;font-size:10.5px;color:var(--muted)}
+.dc-fz.on{background:#2b2622;border-color:#2b2622;color:#fff}.dc-fz.on em{color:rgba(255,255,255,.7)}
+.dc-fsel{width:auto;max-width:260px;font-size:12px;padding:4px 8px}

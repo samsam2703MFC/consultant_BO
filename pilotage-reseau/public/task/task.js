@@ -1135,9 +1135,26 @@
       <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
       ${c ? '' : dcRanger(t)}<span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
   }
+  /* --- filtre par poste (10/11/2026, « dans Document, un filtre par poste ») : la zone de la checklist, et la fonction
+   * qui fait la tâche (« Fait par »). Les deux se combinent ; une checklist sans tâche visible disparaît. --- */
+  const dcFctOk = t => { if (!S.dcFct) { return true; } const q = S.qui && S.qui[t.id]; return !!q && q.fait.some(n => (n.poste || n.nom) === S.dcFct); };
+  const dcTachesVues = c => dcTachesDe(c).filter(dcFctOk);
+  const dcFiltre = () => !!(S.dcZone || S.dcFct);
+  function dcFiltres() {
+    const zones = {}; checklists().forEach(c => { const p = c.poste || 'Sans poste'; zones[p] = (zones[p] || 0) + dcTachesVues(c).length; });
+    const rang = p => { const i = PL_ORDRE.indexOf(sansAccent(p)); return i < 0 ? (p === 'Sans poste' ? 99 : 50) : i; };
+    const Z = Object.keys(zones).sort((a, b) => rang(a) - rang(b) || a.localeCompare(b, 'fr'));
+    const fct = {}; taches().forEach(t => { const q = S.qui && S.qui[t.id]; if (q) { [...new Set(q.fait.map(n => n.poste || n.nom))].forEach(f => { fct[f] = (fct[f] || 0) + 1; }); } });
+    const F = Object.keys(fct).sort((a, b) => fct[b] - fct[a] || a.localeCompare(b, 'fr'));
+    const lecture = S.dcQui && S.dcQui.enCours;
+    const chip = (v, lib, n, coul) => `<button class="dc-fz${(S.dcZone || '') === v ? ' on' : ''}" data-a="dcZone" data-v="${esc(v)}">${coul ? `<i style="background:${coul}"></i>` : ''}${esc(lib)}${n != null ? `<em>${n}</em>` : ''}</button>`;
+    return `<div class="dc-filtres"><span class="dc-fl">Zone</span>${chip('', 'Toutes')}${Z.map(z => chip(z, posteAff(z), zones[z], dcCouleur(z))).join('')}
+      <span class="dc-fl" style="margin-left:10px">Fait par</span><select class="tk-in dc-fsel" data-dcf="fct"${lecture && !F.length ? ' disabled' : ''}><option value="">${lecture && !F.length ? 'lecture…' : 'tous les postes'}</option>${F.map(f => `<option value="${esc(f)}"${S.dcFct === f ? ' selected' : ''}>${esc(f)} (${fct[f]})</option>`).join('')}</select>
+      ${dcFiltre() ? '<button class="tk-lien" data-a="dcFiltreRaz">tout montrer</button>' : ''}</div>`;
+  }
   function dcSection(c) {
     const { code, titre } = dcCode(c.nom);
-    const ts = dcTachesDe(c);
+    const ts = dcTachesVues(c);
     const js = [...new Set(ts.flatMap(dcJoursDe))];
     const nPh = ts.filter(t => t.photo).length;
     const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection(c) : '';
@@ -1152,11 +1169,11 @@
       <button class="dc-ajout" data-a="dcAjouter" data-id="${c.id}">＋ Ajouter des tâches à cette checklist</button></section>`;
   }
   function docVue() {
-    const ordre = dcOrdre();
-    const hors = dcHors();
+    const ordre = dcOrdre().filter(c => (!S.dcZone || (c.poste || 'Sans poste') === S.dcZone) && (!S.dcFct || dcTachesVues(c).length));
+    const hors = S.dcZone ? [] : dcHors().filter(dcFctOk);
     const groupes = DC_MOMENTS.map(m => [m, ordre.filter(c => dcMoment(c.heure) === m)]).filter(g => g[1].length);
     const sommaire = `<nav class="tk-card dc-som" aria-label="Sommaire"><div class="tk-k dc-som-t">Sommaire · ${ordre.length} checklists</div>
-      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${c.taches.length}</em></button>`; }).join('')}`).join('')}
+      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
       ${hors.length ? `<div class="dc-som-g">À ranger</div><button class="dc-som-i wa${S.cl === 'hors' ? ' on' : ''}" data-a="dcAller" data-id="hors">Dans aucune checklist<em>${hors.length}</em></button>` : ''}</nav>`;
     const q = S.dcQui;
     const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';
@@ -1167,14 +1184,15 @@
       ${S.dcRange ? `<div class="dc-range${S.dcRange.ko ? ' ko' : ''}">${esc(S.dcRange.t)}${S.dcRange.cid ? ` <button class="tk-lien" data-a="dcAller" data-id="${S.dcRange.cid}">voir la checklist</button>` : ''}</div>` : ''}
       ${hors.some(t => S.sel.has(t.id)) ? barreSelection() : ''}<div class="dc-ls">${hors.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
     // Les tâches en pause que le panel ne range dans aucune liste (09/11/2026) : leur checklist est inconnue, pas absente.
-    const pz = new Set((S.cadre && S.cadre.enPause) || []), pause = taches().filter(t => pz.has(t.id));
+    const pz = new Set((S.cadre && S.cadre.enPause) || []), pause = S.dcZone ? [] : taches().filter(t => pz.has(t.id) && dcFctOk(t));
     const pauseHtml = pause.length ? `<div class="dc-moment">En pause</div><section class="dc-s" id="dc-pause"><h2 class="dc-h2"><span>En pause · checklist inconnue</span></h2>
       <div class="dc-meta"><span class="mu">${pause.length} tâche${pause.length > 1 ? 's' : ''} en pause : le panel ne les montre dans aucune checklist tant qu’elles sont en pause : leur checklist est inconnue. « Ranger » répond « déjà dans cette checklist » quand elle y est déjà.</span></div>
       <div class="dc-ls">${pause.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
     return `<div class="dc">${sommaire}<div class="tk-card dc-doc">
       ${S.dup ? volet() : ''}
       <h1 class="dc-h1">Le cadre du réseau</h1>
-      <div class="dc-sous">${ordre.length} checklists · ${taches().length} tâches · un clic sur une vignette pour la changer${esc(etat)}</div>
+      <div class="dc-sous">${ordre.length} checklists · ${dcFiltre() ? ordre.reduce((n, c) => n + dcTachesVues(c).length, 0) + ' tâches affichées sur ' + taches().length : taches().length + ' tâches'} · un clic sur une vignette pour la changer${esc(etat)}</div>
+      ${dcFiltres()}
       ${q && q.err ? `<div class="tk-err">Qui fait / qui contrôle : lecture interrompue (${esc(q.err)}). <button class="tk-lien" data-a="dcQuiRelire">Réessayer</button></div>` : ''}
       ${sections}${horsHtml}${finHors}${pauseHtml}</div></div>${dcCreees()}`;
   }
@@ -2037,6 +2055,8 @@
       case 'ddOpt': if (S.dd) { S.dd[el.dataset.v] = !S.dd[el.dataset.v]; } return rendre();
       case 'ddRanger': return dcRangerEnvoyer();
       case 'ddDeplacer': return dcDeplacerEnvoyer();
+      case 'dcZone': S.dcZone = el.dataset.v || null; S.dd = null; return rendre();
+      case 'dcFiltreRaz': S.dcZone = null; S.dcFct = null; S.dd = null; return rendre();
       case 'tlJour': tlEtat().jour = el.dataset.v; tlEtat().sel = null; return rendre();
       case 'tlPar': tlEtat().par = el.dataset.v; tlEtat().sel = null; return rendre();
       case 'tlCase': { const T = tlEtat(); const k = el.dataset.k, s = +el.dataset.s; T.sel = T.sel && T.sel.k === k && T.sel.s === s ? null : { k, s }; T.err = null; return rendre(); }
@@ -2284,6 +2304,7 @@
     }
   });
   $.addEventListener('change', ev => {
+    if (ev.target.dataset && ev.target.dataset.dcf === 'fct') { S.dcFct = ev.target.value || null; S.dd = null; return rendre(); }
     const el = ev.target;
     if (el.dataset.cks && S.ck) { ckSaisie(+el.dataset.i, el.dataset.cks, el.value); return rendre(); }
     if (S.rs && el.dataset.rs && el.type === 'checkbox') { rsSaisie(el); return rendre(); }
