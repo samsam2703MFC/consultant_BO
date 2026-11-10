@@ -662,7 +662,7 @@
         <label>Code</label><div>${ckPicker((String(c.nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2})/) || [])[1] || '', 'wz')}</div>
         <label>Nom <span class="ko">*</span></label><div><input class="tk-in large" data-wc="nom" value="${esc(c.nom)}" placeholder="1.3.01 · Contrôle qualité de l’après-midi"><div class="aide">Le code se met tout seul quand vous choisissez qui et quand ; écrivez ensuite ce qu’elle contrôle.</div></div>
         <label>Description</label><input class="tk-in large" data-wc="description" value="${esc(c.description)}" placeholder="Ce que l’équipe doit faire, en une phrase">
-        <label>Poste de travail</label><select class="tk-in" data-wc="posteId"><option value="">${postes.length || !S.wz.struct ? 'aucun' : 'aucun poste lu'}</option>${postes.map(p => `<option value="${p.id}"${String(c.posteId) === String(p.id) ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
+        <label>Poste de travail</label><select class="tk-in" data-wc="posteId"><option value="">${postes.length || !S.wz.struct ? 'aucun' : 'aucun poste lu'}</option>${postes.map(p => `<option value="${p.id}"${String(c.posteId) === String(p.id) ? ' selected' : ''}>${esc(posteAff(p.nom))}</option>`).join('')}</select>
         <label>Heure</label><div><input type="time" class="tk-in" data-wc="heure" value="${esc(c.heure)}"><div class="aide">L’heure de la checklist ; chaque tâche garde la sienne (proposée par défaut à l’étape suivante).</div></div>
         <label>Avancé</label><div><details${c.modeleId || c.extra ? ' open' : ''}><summary class="tk-lien" style="text-decoration:none">Forme des champs et champs en plus</summary>
           <div class="tk-ligne" style="margin-top:8px;font-size:12px">Reprendre la forme de <select class="tk-in" data-wc="modeleId"><option value="">la première checklist</option>${checklists().map(x => `<option value="${x.id}"${String(c.modeleId) === String(x.id) ? ' selected' : ''}>${esc(x.nom)}</option>`).join('')}</select></div>
@@ -785,8 +785,9 @@
   // jour ; une tâche hebdomadaire seulement le jour que le panel lui donne. Rien n'est saisi ici.
   const PL_JOURS = [['MONDAY', 'Lun', 'lundi'], ['TUESDAY', 'Mar', 'mardi'], ['WEDNESDAY', 'Mer', 'mercredi'], ['THURSDAY', 'Jeu', 'jeudi'],
     ['FRIDAY', 'Ven', 'vendredi'], ['SATURDAY', 'Sam', 'samedi'], ['SUNDAY', 'Dim', 'dimanche']];
-  const PL_ORDRE = ['vente', 'production boulangerie', 'production patisserie', 'production traiteur', 'nettoyage', 'logistique', 'administartif', 'administratif'];
-  const posteAff = p => ({ Administartif: 'Administratif', 'Production Patisserie': 'Production Pâtisserie' })[p] || p;
+  const PL_ORDRE = ['vente', 'production boulangerie', 'production patisserie', 'production traiteur', 'nettoyage', 'logistique', 'administartif', 'administratif', 'responsable'];
+  // « Administartif » (le nom du poste au panel) s'affiche « Responsable » (10/11/2026, demande du client).
+  const posteAff = p => ({ Administartif: 'Responsable', Administratif: 'Responsable', 'Production Patisserie': 'Production Pâtisserie' })[p] || p;
   const CAM = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
   function planDonnees() {
     const cl = new Map();
@@ -899,7 +900,7 @@
    * toute sa checklist. Écritures : PATCH …/task/taches (lot) et POST …/task/qui/lot.
    */
   const DC_COULEURS = { vente: '#8D1D2C', 'production boulangerie': '#B0792A', 'production patisserie': '#A0522D', 'production traiteur': '#3f7a52',
-    nettoyage: '#1f5f8b', administartif: '#6B4FBB', administratif: '#6B4FBB', logistique: '#5c5852' };
+    nettoyage: '#1f5f8b', administartif: '#6B4FBB', administratif: '#6B4FBB', responsable: '#6B4FBB', logistique: '#5c5852' };
   const dcCouleur = p => DC_COULEURS[sansAccent(p)] || '#8a847c';
   /** « 1.1.01 · Ouverture de la boutique » → code 1.1.01 (la nomenclature du 08/11/2026) ; avant elle, « AC-01 · … » → AC-01. */
   const dcCode = nom => { const m = String(nom || '').match(/^\s*([0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s+[·—–:-]\s+(.+)$/); return m ? { code: m[1], titre: m[2] } : { code: '', titre: String(nom || '') }; };
@@ -1649,7 +1650,7 @@
         <div class="tk-form">
           <label>Nom</label><input class="tk-in large" data-m="nom" value="${esc(f.nom)}">
           <label>Description</label><textarea class="tk-in" data-m="description" style="font-family:var(--font-ui);font-size:12px">${esc(f.description)}</textarea>
-          <label>Zone de production</label><select class="tk-in" data-m="posteId">${postes.length ? '' : `<option value="${f.posteId}">${esc(f.poste || 'lecture…')}</option>`}${postes.map(p => `<option value="${p.id}" ${String(p.id) === String(f.posteId) ? 'selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
+          <label>Zone de production</label><select class="tk-in" data-m="posteId">${postes.length ? '' : `<option value="${f.posteId}">${esc(posteAff(f.poste || '') || 'lecture…')}</option>`}${postes.map(p => `<option value="${p.id}" ${String(p.id) === String(f.posteId) ? 'selected' : ''}>${esc(posteAff(p.nom))}</option>`).join('')}</select>
           <label>Heure</label><input type="time" class="tk-in" data-m="heure" value="${esc(f.heure)}">
         </div>
         ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
