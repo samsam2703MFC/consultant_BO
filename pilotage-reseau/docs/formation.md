@@ -939,69 +939,69 @@ pré-ouverture, P9 à P12 obligatoire, contrôleur consultant finance, famille �
 
 ## Codes des SOP et des articles au format des checklists (10/11/2026)
 
-Client : « SOP et dashboard doivent être sur le même format que les checklists » ; choix : toutes les SOP et tous les
-articles, avec le type devant. Le code d'un document suit la nomenclature des checklists (`src/checklists_codes.php`) :
-**qui · quand · numéro**, précédé de son type — `SOP 2.1.01`, `ART 5.0.02`, `MEMO 2.0.01`, `FICHE 2.0.01`. Qui : 1 Vente,
-2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion. Quand : .1 Ouverture, .2 Journée (et « au besoin »), .3 Après-midi,
-.4 Fermeture ; **.0 sans moment** (articles, mémos, fiches). Une SOP liée à une checklist de sa zone en prend le code (SOP
-1.1.01 va avec la checklist 1.1.01) ; les autres prennent le premier numéro libre de leur zone et de leur moment qui
-n'est pas celui d'une checklist. Les fiches de type Checklist gardent leur code nu (1.1.01). Seul le champ `code` change
-(`PATCH /formation/sop/fiche/{id} {code}`, journalisé) : les identifiants, adresses, versions et validations restent.
-Les sources (`data/formation/sops/*.json`, `data/formation/dashboard/*.json`) portent les nouveaux codes ; les maquettes et
-`REPRISE.md` gardent les anciens (historique).
+Client : « SOP et dashboard doivent être sur le même format que les checklists », puis « dans les SOP, le préfixe 0 ;
+adapter partout ». Tous les documents du module (SOP, mémo, fiche, articles) ont un code **0 · quand · numéro**, sans
+préfixe : la **zone 0** leur est réservée (elle n'est plus proposée aux checklists dans le Cadre des tâches). Quand :
+.1 Ouverture, .2 Journée (et « au besoin »), .3 Après-midi, .4 Fermeture, **.0 sans moment** (articles, mémo, fiche).
+Dans un même moment, les SOP d'abord, rangées par leur zone de métier (Vente, Boulangerie, Traiteur, Nettoyage,
+Gestion), puis le mémo, la fiche et les articles. Les fiches de type Checklist gardent le code de leur checklist (1.1.01).
+Seul le champ `code` change (`PATCH /formation/sop/fiche/{id} {code}`, journalisé) : identifiants, adresses, versions et
+validations restent. Les légendes du Cadre des tâches et du dashboard magasin (« Comment c'est organisé ») disent « 0 :
+SOP et manuel » ; les articles 0.0.14 et 0.0.15 aussi (v1.1 et v1.4). Sources : `data/formation/sops/*.json`,
+`data/formation/dashboard/`, `data/formation/checklists/` ; maquettes et `REPRISE.md` gardent les anciens codes.
 
-| Nouveau | Ancien | Document |
+| Code | Ancien | Document |
 |---|---|---|
-| SOP 1.1.01 | SOP-WKL-001 | Ouverture du magasin et des comptoirs |
-| SOP 1.2.03 | SOP-WKL-002 | Encodage des commandes clients en caisse |
-| SOP 1.3.01 | SOP-VEN-001 | Recuisson d'appoint – pains et baguettes (après-midi) |
-| SOP 1.3.03 | SOP-VER-TGTG | Gestion des paniers Too Good To Go |
-| SOP 1.4.01 | SOP-WKL-003 | Procédure de fermeture – de la dernière préparation au coffre à clés |
-| SOP 2.1.01 | SOP-CUI-OUV-01 | Ouverture du poste et premières cuissons |
-| SOP 2.1.02 | SOP-CUI-FRO-01 | Tartes froides |
-| SOP 2.1.03 | SOP-CUI-ECL-01 | Éclairs et choux |
-| SOP 2.1.04 | SOP-CUI-NAP-01 | Fondants et nappage |
-| SOP 2.1.05 | SOP-CUI-VIE-01 | Viennoiseries et sandwiches |
-| SOP 2.2.02 | SOP-CUI-CRE-01 | Crème fraîche et crème pâtissière |
-| SOP 2.2.03 | SOP-CUI-FLA-01 | Flans et tartes au sucre |
-| SOP 2.2.04 | SOP-CUI-TFR-01 | Tartes aux fruits |
-| SOP 2.2.05 | SOP-CUI-001 | Cuisson des baguettes et des pains |
-| SOP 2.2.06 | SOP-CUI-BIS-01 | Cookies, cakes et financiers |
-| SOP 2.2.07 | SOP-CUI-TAR-01 | Tartes classiques et Brookie |
-| SOP 2.2.08 | SOP-CUI-CRA-01 | Cramiques et craquelins |
-| SOP 2.2.09 | SOP-CUI-POU-01 | Plaquage et programmation des pousses |
-| SOP 2.4.01 | SOP-CUI-FIN-01 | Fin de poste de cuisson — terminer son service |
-| SOP 3.1.01 | SOP-CUI-QUI-01 | Quiches et pommes parisiennes |
-| SOP 4.4.01 | SOP-VER-002 | Nettoyage des fours |
-| SOP 5.2.01 | SOP-PIL-01 | Analyser le dashboard magasin : la routine |
-| ART 1.0.01 | ART-FO-04 | Merchandising & expérience client : les standards de la boutique |
-| ART 1.0.02 | ART-FO-16 | Allergènes & règlement FIC : informer le client sans faute |
-| ART 1.0.03 | ART-FO-18 | Gérer un client mécontent : écouter, apaiser, régler |
-| ART 1.0.04 | ART-FO-20 | Vitrine & merchandising visuel au quotidien |
-| ART 1.0.05 | ART-FO-43 | Communication locale & réseaux sociaux du franchisé |
-| ART 1.0.06 | ART-FO-45 | Animation commerciale & saisons |
-| ART 1.0.07 | ART-FO-46 | Click & Collect et livraison : préparer et remettre une commande |
-| ART 1.0.08 | ART-FO-47 | Webshop : tenir le catalogue et le stock digital à jour |
-| ART 1.0.09 | ART-FO-48 | E-commerce omnicanal : piloter les canaux digitaux |
-| ART 2.0.01 | ART-FO-26 | Réception des marchandises et ProdAtelier |
-| ART 4.0.01 | ART-FO-02 | HACCP & Hygiène : la sécurité alimentaire au quotidien |
-| ART 5.0.01 | ART-CHK-01 | Les checklists du magasin : la structure |
-| ART 5.0.02 | ART-PIL-01 | Comprendre le dashboard magasin |
-| ART 5.0.03 | ART-FO-06 | Animation d’équipe et RH |
-| ART 5.0.04 | ART-FO-25 | Inventaire et gestion des stocks |
-| ART 5.0.05 | ART-FO-29 | Recruter son équipe |
-| ART 5.0.06 | ART-FO-30 | Accueillir un nouveau collaborateur |
-| ART 5.0.07 | ART-ID-01 | Identité & ADN L’Atelier By |
-| ART 5.0.08 | ART-FO-32 | Modèle de franchise & cadre contractuel |
-| ART 5.0.09 | ART-FO-33 | Étude de marché & emplacement |
-| ART 5.0.10 | ART-FO-34 | Bouclage financier & business plan |
-| ART 5.0.11 | ART-FO-35 | Manuel Opératoire : lecture intégrale |
-| ART 5.0.12 | ART-FO-36 | Outils Franchise Buddy & écosystème IT |
-| ART 5.0.13 | ART-FO-37 | Stage immersif en boutique pilote |
-| ART 5.0.14 | ART-FO-38 | Stratégie d’ouverture, de J-90 à J |
-| ART 5.0.15 | ART-FO-41 | Gestion financière avancée |
-| ART 5.0.16 | ART-FO-49 | Gérant de plusieurs boutiques : gouvernance et pilotage |
-| ART 5.0.17 | ART-FO-50 | Reporting consolidé et arbitrage entre boutiques |
-| ART 5.0.18 | ART-FO-54 | Gestion de trésorerie |
-| FICHE 2.0.01 | FICHE-CUI-01 | Programmes de cuisson et de pousse |
-| MEMO 2.0.01 | MEMO-CUI-01 | Organisation quotidienne du poste de cuisson |
+| 0.0.01 | MEMO-CUI-01 | Organisation quotidienne du poste de cuisson |
+| 0.0.02 | FICHE-CUI-01 | Programmes de cuisson et de pousse |
+| 0.0.03 | ART-FO-04 | Merchandising & expérience client : les standards de la boutique |
+| 0.0.04 | ART-FO-16 | Allergènes & règlement FIC : informer le client sans faute |
+| 0.0.05 | ART-FO-18 | Gérer un client mécontent : écouter, apaiser, régler |
+| 0.0.06 | ART-FO-20 | Vitrine & merchandising visuel au quotidien |
+| 0.0.07 | ART-FO-43 | Communication locale & réseaux sociaux du franchisé |
+| 0.0.08 | ART-FO-45 | Animation commerciale & saisons |
+| 0.0.09 | ART-FO-46 | Click & Collect et livraison : préparer et remettre une commande |
+| 0.0.10 | ART-FO-47 | Webshop : tenir le catalogue et le stock digital à jour |
+| 0.0.11 | ART-FO-48 | E-commerce omnicanal : piloter les canaux digitaux |
+| 0.0.12 | ART-FO-26 | Réception des marchandises et ProdAtelier |
+| 0.0.13 | ART-FO-02 | HACCP & Hygiène : la sécurité alimentaire au quotidien |
+| 0.0.14 | ART-CHK-01 | Les checklists du magasin : la structure |
+| 0.0.15 | ART-PIL-01 | Comprendre le dashboard magasin |
+| 0.0.16 | ART-FO-06 | Animation d’équipe et RH |
+| 0.0.17 | ART-FO-25 | Inventaire et gestion des stocks |
+| 0.0.18 | ART-FO-29 | Recruter son équipe |
+| 0.0.19 | ART-FO-30 | Accueillir un nouveau collaborateur |
+| 0.0.20 | ART-ID-01 | Identité & ADN L’Atelier By |
+| 0.0.21 | ART-FO-32 | Modèle de franchise & cadre contractuel |
+| 0.0.22 | ART-FO-33 | Étude de marché & emplacement |
+| 0.0.23 | ART-FO-34 | Bouclage financier & business plan |
+| 0.0.24 | ART-FO-35 | Manuel Opératoire : lecture intégrale |
+| 0.0.25 | ART-FO-36 | Outils Franchise Buddy & écosystème IT |
+| 0.0.26 | ART-FO-37 | Stage immersif en boutique pilote |
+| 0.0.27 | ART-FO-38 | Stratégie d’ouverture, de J-90 à J |
+| 0.0.28 | ART-FO-41 | Gestion financière avancée |
+| 0.0.29 | ART-FO-49 | Gérant de plusieurs boutiques : gouvernance et pilotage |
+| 0.0.30 | ART-FO-50 | Reporting consolidé et arbitrage entre boutiques |
+| 0.0.31 | ART-FO-54 | Gestion de trésorerie |
+| 0.1.01 | SOP-WKL-001 | Ouverture du magasin et des comptoirs |
+| 0.1.02 | SOP-CUI-OUV-01 | Ouverture du poste et premières cuissons |
+| 0.1.03 | SOP-CUI-FRO-01 | Tartes froides |
+| 0.1.04 | SOP-CUI-ECL-01 | Éclairs et choux |
+| 0.1.05 | SOP-CUI-NAP-01 | Fondants et nappage |
+| 0.1.06 | SOP-CUI-VIE-01 | Viennoiseries et sandwiches |
+| 0.1.07 | SOP-CUI-QUI-01 | Quiches et pommes parisiennes |
+| 0.2.01 | SOP-WKL-002 | Encodage des commandes clients en caisse |
+| 0.2.02 | SOP-CUI-CRE-01 | Crème fraîche et crème pâtissière |
+| 0.2.03 | SOP-CUI-FLA-01 | Flans et tartes au sucre |
+| 0.2.04 | SOP-CUI-TFR-01 | Tartes aux fruits |
+| 0.2.05 | SOP-CUI-001 | Cuisson des baguettes et des pains |
+| 0.2.06 | SOP-CUI-BIS-01 | Cookies, cakes et financiers |
+| 0.2.07 | SOP-CUI-TAR-01 | Tartes classiques et Brookie |
+| 0.2.08 | SOP-CUI-CRA-01 | Cramiques et craquelins |
+| 0.2.09 | SOP-CUI-POU-01 | Plaquage et programmation des pousses |
+| 0.2.10 | SOP-PIL-01 | Analyser le dashboard magasin : la routine |
+| 0.3.01 | SOP-VEN-001 | Recuisson d'appoint – pains et baguettes (après-midi) |
+| 0.3.02 | SOP-VER-TGTG | Gestion des paniers Too Good To Go |
+| 0.4.01 | SOP-WKL-003 | Procédure de fermeture – de la dernière préparation au coffre à clés |
+| 0.4.02 | SOP-CUI-FIN-01 | Fin de poste de cuisson — terminer son service |
+| 0.4.03 | SOP-VER-002 | Nettoyage des fours |

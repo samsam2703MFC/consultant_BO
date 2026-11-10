@@ -1506,7 +1506,8 @@
   /* --- Le code d'une checklist en boutons (09/11/2026, demande de Sam) ----------------------------------------------
    * « zone.moment.numéro » : la zone (qui) et le moment (quand) se choisissent en boutons, le numéro est le premier libre
    * de ce couple (01, 02…) — gardé si la checklist reste dans le même couple. Sert à l'onglet Checklists et à l'assistant. */
-  const CK_ZONES = [[1, 'Vente', '#8D1D2C'], [2, 'Boulangerie', '#B0792A'], [3, 'Traiteur', '#3f7a52'], [4, 'Nettoyage', '#1f5f8b'], [5, 'Gestion', '#6B4FBB'], [0, 'Libre', '#5c5852']];
+  const CK_ZONES = [[1, 'Vente', '#8D1D2C'], [2, 'Boulangerie', '#B0792A'], [3, 'Traiteur', '#3f7a52'], [4, 'Nettoyage', '#1f5f8b'], [5, 'Gestion', '#6B4FBB']];
+  // La zone 0 est celle des SOP et du manuel (10/11/2026 : « dans les SOP, le préfixe 0 ») : une checklist ne la prend plus.
   const CK_MOMENTS = [[1, 'Ouverture'], [2, 'Journée'], [3, 'Après-midi'], [4, 'Fermeture'], [5, 'Chaque semaine'], [6, 'Chaque mois']];
   const ckZc = z => (CK_ZONES.find(x => x[0] === +z) || [0, '', '#5c5852'])[2];
   /** Les codes déjà pris (modifications en cours comprises), sauf celui de la checklist `sauf`. */
@@ -1612,7 +1613,7 @@
         <button class="tk-btn ghost" data-a="ckNomRelire"${N.envoi || N.lecture ? ' disabled' : ''}>↻ Relire</button>
         <button class="tk-btn prim" data-a="ckNomAppliquer"${nb && !N.envoi ? '' : ' disabled'}>${N.envoi ? 'Application…' : nb ? `Appliquer les ${nb} changements` : 'Tout est appliqué'}</button></div>
       <div class="ck-leg"><div class="ck-leg-ex"><span class="mu">Le code</span><span class="ck-leg-big"><i style="color:#8D1D2C">1</i>.<i style="color:#1f5f8b">3</i>.<i>02</i></span><span>= <b>1</b> qui (la zone) · <b>3</b> quand (le moment) · <b>02</b> le numéro, donné automatiquement · « 1.3.02 · Photos des comptoirs (après-midi) »</span></div>
-        <div><span class="mu">Qui</span>${CK_ZONES.map(([v, l, c]) => `<span><b style="background:${c};color:#fff">${v}</b> ${l}</span>`).join('')}</div><div><span class="mu">Quand</span>${moments}</div>
+        <div><span class="mu">Qui</span>${CK_ZONES.map(([v, l, c]) => `<span><b style="background:${c};color:#fff">${v}</b> ${l}</span>`).join('')}<span><b style="background:#5c5852;color:#fff">0</b> SOP et manuel (0.1.01 : la 1re SOP de l’ouverture ; 0.0.xx : un article)</span></div><div><span class="mu">Quand</span>${moments}</div>
         <div class="mu" style="width:auto;text-transform:none;letter-spacing:0">Pour changer le code d’une checklist : cliquez son code dans le tableau ci-dessous, puis choisissez qui et quand.</div></div>
       ${res ? `<div class="tk-msg ${res.ok ? 'ok' : 'ko'}" style="margin:10px 16px 0">${res.ok ? `${res.faits} changement${res.faits > 1 ? 's' : ''} appliqué${res.faits > 1 ? 's' : ''}.` : esc(res.error || 'refus')}</div>` : ''}
       ${groupes}

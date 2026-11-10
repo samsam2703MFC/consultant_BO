@@ -5464,7 +5464,7 @@
     return `<div class="db-card tj-guide">${tete}<div class="tj-g">
       <div class="tj-g-code"><span class="tj-g-big"><i style="background:${zc}1f;color:${zc}">${esc(z)}</i>.<i style="background:#1f5f8b1f;color:#1f5f8b">${esc(m)}</i>.<i>${esc(n)}</i></span><span>${esc(ex.code)} · ${esc(ex.titre)}</span>
         <span class="db-mini">${esc((TJ_ZONES[+z] || [''])[0])} · ${esc(TJ_MOMENTS[+m] || '')} · checklist n° ${esc(n)}</span></div>
-      <div class="tj-g-col"><span class="db-lab">1er chiffre · qui</span>${Object.keys(TJ_ZONES).map(k => `<div><span class="tj-code" style="background:${TJ_ZONES[k][1]}">${k}</span> ${TJ_ZONES[k][0]}</div>`).join('')}</div>
+      <div class="tj-g-col"><span class="db-lab">1er chiffre · qui</span>${Object.keys(TJ_ZONES).filter(k => +k > 0).map(k => `<div><span class="tj-code" style="background:${TJ_ZONES[k][1]}">${k}</span> ${TJ_ZONES[k][0]}</div>`).join('')}<div><span class="tj-code" style="background:#5c5852">0</span> SOP et manuel</div></div>
       <div class="tj-g-col"><span class="db-lab">2e chiffre · quand</span>${Object.keys(TJ_MOMENTS).map(k => `<div><span class="tj-code" style="background:#5c5852">.${k}</span> ${TJ_MOMENTS[k]}</div>`).join('')}</div>
       <div class="tj-g-col tj-g-txt"><span class="db-lab">Obligatoire</span><p>Une tâche obligatoire doit être faite chaque jour où elle revient. Les pourcentages de cette page ne comptent qu’elles.</p>
         <span class="db-lab">Photo</span><p>Une tâche qui demande une photo n’est faite que si la photo est rendue : cochée sans photo, elle ne compte pas.</p>
