@@ -1,0 +1,512 @@
+{
+  "id": "t-fruits",
+  "code": "0.2.04",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "production",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Tartes aux fruits",
+    "nl": "Fruittaarten"
+  },
+  "objectif": {
+    "fr": "Cuire les tartes aux fruits prévues et vérifier que le bord et le dessous sont cuits, puis appliquer le Jelfix sur les tartes refroidies sans abîmer les fruits ou les amandes.",
+    "nl": "De geplande fruittaarten bakken en controleren of de rand en de onderkant gebakken zijn, en daarna de Jelfix op de afgekoelde taarten aanbrengen zonder het fruit of de amandelen te beschadigen."
+  },
+  "pour": {
+    "fr": "Le cuiseur chargé de la production du jour (cuiseur · tartes).",
+    "nl": "De afbakker die instaat voor de productie van de dag (afbakker · taarten)."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Cuire les tartes aux fruits — repères (cuisson et contrôle)",
+        "nl": "Fruittaarten bakken — richtpunten (bakken en controle)"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "Objectif",
+            "nl": "Doel"
+          },
+          "texte": {
+            "fr": "Cuire les tartes aux fruits prévues et vérifier que le bord et le dessous sont cuits.",
+            "nl": "De geplande fruittaarten bakken en controleren of de rand en de onderkant gebakken zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.2",
+          "titre": {
+            "fr": "Quand commencer",
+            "nl": "Wanneer beginnen"
+          },
+          "texte": {
+            "fr": "Selon la liste de production active et l’ordre de la journée.",
+            "nl": "Volgens de actieve productielijst en de volgorde van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le cuiseur chargé de la production du jour.",
+            "nl": "De afbakker die instaat voor de productie van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.4",
+          "titre": {
+            "fr": "Point critique",
+            "nl": "Kritiek punt"
+          },
+          "texte": {
+            "fr": "Aucun ajout de temps automatique. Ajouter 5 minutes uniquement aux tartes dont le dessous est insuffisamment cuit.",
+            "nl": "Nooit automatisch tijd bijzetten. Enkel bij de taarten waarvan de onderkant onvoldoende gebakken is 5 minuten bijzetten."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Marche à suivre · Contrôler avant de sortir",
+        "nl": "Werkwijze · Controleren vóór het uithalen"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Lire la liste et préparer les tartes",
+            "nl": "De lijst lezen en de taarten klaarzetten"
+          },
+          "texte": {
+            "fr": "Sortir uniquement les tartes aux fruits prévues. Ne pas remplacer la liste par une quantité habituelle.",
+            "nl": "Enkel de geplande fruittaarten uithalen. De lijst niet vervangen door een gebruikelijke hoeveelheid."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Lancer « tartes aux fruits »",
+            "nl": "Programma « tartes aux fruits » starten"
+          },
+          "texte": {
+            "fr": "Utiliser le libellé exact. Au premier usage, montrer ou annoncer le choix au formateur si la sélection des programmes n’est pas encore validée.",
+            "nl": "De exacte programmanaam gebruiken. Bij het eerste gebruik de keuze tonen of melden aan de opleider als de programmakeuze nog niet gevalideerd is."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.3",
+          "titre": {
+            "fr": "Contrôler le bord et le dessous",
+            "nl": "De rand en de onderkant controleren"
+          },
+          "texte": {
+            "fr": "À la fin du programme, vérifier que les bords sont dorés. Soulever la tarte : le dessous doit être cuit et non transparent comme une pâte crue.",
+            "nl": "Op het einde van het programma controleren of de randen goudbruin zijn. De taart optillen: de onderkant moet gebakken zijn en niet doorschijnend zoals rauw deeg."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.4",
+          "titre": {
+            "fr": "Prolonger seulement les tartes insuffisamment cuites",
+            "nl": "Enkel de onvoldoende gebakken taarten langer bakken"
+          },
+          "texte": {
+            "fr": "Si le dessous n’est pas cuit, ajouter 5 minutes uniquement aux tartes concernées. Les tartes souvent concernées sont pommes amandes et fraise rhubarbe.",
+            "nl": "Als de onderkant niet gebakken is, enkel bij de betrokken taarten 5 minuten bijzetten. Het gaat vaak om de taarten appel-amandel en aardbei-rabarber."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2.5",
+          "titre": {
+            "fr": "Refroidir",
+            "nl": "Laten afkoelen"
+          },
+          "texte": {
+            "fr": "Placer les tartes sur un chariot. Une légère tiédeur est acceptable.",
+            "nl": "De taarten op een kar zetten. Licht lauw is aanvaardbaar."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Contrôle rapide — cuisson",
+        "nl": "Snelle controle — bakken"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Liste active suivie ; programme « tartes aux fruits » utilisé.",
+            "nl": "Actieve lijst gevolgd; programma « tartes aux fruits » gebruikt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Bords dorés ; dessous cuit et non transparent.",
+            "nl": "Randen goudbruin; onderkant gebakken en niet doorschijnend."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "+5 minutes uniquement pour les tartes dont le dessous est insuffisamment cuit.",
+            "nl": "+5 minuten enkel voor de taarten waarvan de onderkant onvoldoende gebakken is."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Tartes posées sur chariot ; légère tiédeur acceptable.",
+            "nl": "Taarten op een kar gezet; licht lauw is aanvaardbaar."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Abricoter et présenter les tartes aux fruits — repères (finition)",
+        "nl": "Fruittaarten abrikoteren en presenteren — richtpunten (afwerking)"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Objectif",
+            "nl": "Doel"
+          },
+          "texte": {
+            "fr": "Appliquer le Jelfix sur les tartes refroidies sans abîmer les fruits ou les amandes.",
+            "nl": "De Jelfix op de afgekoelde taarten aanbrengen zonder het fruit of de amandelen te beschadigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4.2",
+          "titre": {
+            "fr": "Quand commencer",
+            "nl": "Wanneer beginnen"
+          },
+          "texte": {
+            "fr": "Selon la liste de production active et l’ordre de la journée.",
+            "nl": "Volgens de actieve productielijst en de volgorde van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4.3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le cuiseur chargé de la production du jour.",
+            "nl": "De afbakker die instaat voor de productie van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4.4",
+          "titre": {
+            "fr": "Point critique",
+            "nl": "Kritiek punt"
+          },
+          "texte": {
+            "fr": "Abricotage avant présentation : 80 °C ; 100 °C si la tarte contient des fraises.",
+            "nl": "Abrikoteren vóór het presenteren: 80 °C; 100 °C als de taart aardbeien bevat."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Abricotage · Appliquer en tapotant",
+        "nl": "Abrikoteren · Deppend aanbrengen"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": "Choisir le mode de refroidissement",
+            "nl": "De manier van afkoelen kiezen"
+          },
+          "texte": {
+            "fr": "Pour une commande urgente : placer 30 minutes au congélateur derrière, puis transférer au frigo. Sans urgence : laisser refroidir sur le chariot à côté du four, puis présenter en magasin.",
+            "nl": "Voor een dringende bestelling: 30 minuten in de diepvries achteraan zetten en daarna naar de frigo overbrengen. Zonder haast: laten afkoelen op de kar naast de oven en daarna in de winkel presenteren."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.2",
+          "titre": {
+            "fr": "Chauffer le Jelfix",
+            "nl": "De Jelfix opwarmen"
+          },
+          "texte": {
+            "fr": "Remplir le poêlon de Jelfix. Poser sur la taque à induction et chauffer à 80 °C ; utiliser 100 °C si la tarte contient des fraises. Attendre que le Jelfix soit bien liquide.",
+            "nl": "Het pannetje vullen met Jelfix. Op de inductieplaat zetten en opwarmen tot 80 °C; 100 °C gebruiken als de taart aardbeien bevat. Wachten tot de Jelfix goed vloeibaar is."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "5.3",
+          "titre": {
+            "fr": "Abricoter la tarte",
+            "nl": "De taart abrikoteren"
+          },
+          "texte": {
+            "fr": "Appliquer le Jelfix en tapotant, pas en l’étalant, pour ne pas abîmer les fruits ou les amandes. Terminer par la croûte.",
+            "nl": "De Jelfix deppend aanbrengen, niet uitstrijken, om het fruit of de amandelen niet te beschadigen. Eindigen met de korst."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.4",
+          "titre": {
+            "fr": "Présenter",
+            "nl": "Presenteren"
+          },
+          "texte": {
+            "fr": "Vérifier visuellement que le nappage est propre et régulier. Présenter la tarte une fois froide, selon le mode de refroidissement choisi. Après usage du Jelfix, attendre qu’il refroidisse, filmer, dater et ranger dans l’étagère de réserve du Jelfix. Durée d’utilisation : indéterminée selon la consigne actuelle.",
+            "nl": "Visueel controleren of de nappage proper en gelijkmatig is. De taart pas presenteren als ze koud is, volgens de gekozen manier van afkoelen. Na gebruik de Jelfix laten afkoelen, afdekken met folie, dateren en in het reserverek van de Jelfix zetten. Gebruiksduur: onbepaald volgens de huidige richtlijn."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Contrôle rapide — abricotage",
+        "nl": "Snelle controle — abrikoteren"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Commande urgente : 30 minutes au congélateur derrière puis frigo ; sinon chariot à côté du four.",
+            "nl": "Dringende bestelling: 30 minuten in de diepvries achteraan, daarna frigo; anders op de kar naast de oven."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Jelfix liquide ; 80 °C, ou 100 °C pour les fraises.",
+            "nl": "Jelfix vloeibaar; 80 °C, of 100 °C voor aardbeien."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Application en tapotant ; fruits, amandes et croûte non abîmés.",
+            "nl": "Deppend aangebracht; fruit, amandelen en korst niet beschadigd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Nappage propre et régulier ; tarte froide avant présentation.",
+            "nl": "Nappage proper en gelijkmatig; taart koud vóór het presenteren."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Validation autonome",
+        "nl": "Validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 à 3 réalisations conformes sur des journées différentes. Date : __________ · Initiales : ______",
+            "nl": "2 tot 3 conforme uitvoeringen op verschillende dagen. Datum: __________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Aucun ajout de temps automatique : +5 minutes uniquement aux tartes dont le dessous est insuffisamment cuit.",
+      "nl": "Nooit automatisch tijd bijzetten: +5 minuten enkel bij de taarten waarvan de onderkant onvoldoende gebakken is."
+    },
+    {
+      "fr": "Contrôle de cuisson : bords dorés ; dessous cuit et non transparent comme une pâte crue.",
+      "nl": "Bakcontrole: randen goudbruin; onderkant gebakken en niet doorschijnend zoals rauw deeg."
+    },
+    {
+      "fr": "Abricotage avant présentation : Jelfix à 80 °C ; 100 °C si la tarte contient des fraises.",
+      "nl": "Abrikoteren vóór het presenteren: Jelfix op 80 °C; 100 °C als de taart aardbeien bevat."
+    },
+    {
+      "fr": "Commande urgente : 30 minutes au congélateur derrière, puis frigo.",
+      "nl": "Dringende bestelling: 30 minuten in de diepvries achteraan, daarna in de frigo."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Le dessous d’une tarte aux fruits n’est pas cuit à la fin du programme. Que faire ?",
+        "nl": "De onderkant van een fruittaart is niet gebakken op het einde van het programma. Wat doe je?"
+      },
+      "choix": {
+        "fr": [
+          "Ajouter 5 minutes uniquement à cette tarte",
+          "Ajouter 5 minutes à toutes les tartes du four",
+          "Relancer le programme complet"
+        ],
+        "nl": [
+          "Enkel bij die taart 5 minuten bijzetten",
+          "Bij alle taarten in de oven 5 minuten bijzetten",
+          "Het volledige programma opnieuw starten"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "À quelle température chauffer le Jelfix pour une tarte qui contient des fraises ?",
+        "nl": "Tot welke temperatuur warm je de Jelfix op voor een taart met aardbeien?"
+      },
+      "choix": {
+        "fr": [
+          "80 °C",
+          "100 °C",
+          "120 °C"
+        ],
+        "nl": [
+          "80 °C",
+          "100 °C",
+          "120 °C"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Comment appliquer le Jelfix ?",
+        "nl": "Hoe breng je de Jelfix aan?"
+      },
+      "choix": {
+        "fr": [
+          "En l’étalant, en commençant par la croûte",
+          "En tapotant, et en terminant par la croûte",
+          "En le versant directement sur les fruits"
+        ],
+        "nl": [
+          "Uitstrijken, te beginnen bij de korst",
+          "Deppend, en eindigen met de korst",
+          "Rechtstreeks over het fruit gieten"
+        ]
+      },
+      "bonne": 1
+    }
+  ],
+  "corrections": [
+    "Aucune correction de contenu. Titre ramené à « Tartes aux fruits » (sans « SOP — … — FR — v1.0 ») ; en-têtes et pieds de page répétés non repris."
+  ],
+  "remarques": [
+    "Jelfix après usage : « Durée d’utilisation : indéterminée selon la consigne actuelle » — durée de conservation à fixer.",
+    "La Fiche « Programmes de cuisson » indique « +5 min, 1 fois » pour les tartes aux fruits ; cette SOP ne limite pas explicitement le nombre de prolongations — à confirmer.",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1vzX-N7WWopeKTeJGeVcQszNnR5iKpJIs",
+      "docx": "1lxJ8-9vD37_ULMAcg3rA1tx8JV5DpJ_w"
+    },
+    "lu": "docx"
+  }
+}

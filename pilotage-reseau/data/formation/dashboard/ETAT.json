@@ -1,0 +1,14 @@
+{
+ "dashboardCommit": "85d41cdbdea72c8a37094cc1cd1426aebf2aa422",
+ "dashboardCommitLe": "2026-11-07T08:16:49+00:00",
+ "capturesLe": "2026-11-07",
+ "capturesMagasin": "4",
+ "encode": true,
+ "note": "07/11/2026 : v1.0 encodées, réservées au responsable ; v1.1 captures au seuil matière de Budget › Paramètres ; article v1.2 : Primes, le franchisé reste dans le tableau, hors primes (commit 9d063d16). NL à relire.",
+ "encodeLe": "2026-11-07",
+ "versions": {
+  "art-pil-01": "1.2",
+  "sop-pil-01": "1.1"
+ },
+ "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)"
+}

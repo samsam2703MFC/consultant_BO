@@ -1,0 +1,492 @@
+/* ==========================================================================
+   L'Atelier By — design system commun (feuille unique du BO consultant)
+   Référence : docs/design-system/DESIGN_SYSTEM.md (relevé du module Marketing,
+   état du 06/11/2026). Les valeurs ci-dessous en sont COPIÉES, pas
+   interprétées : une valeur change là-bas, elle change ici dans le même commit.
+
+   Ordre : polices (§4.1) · jetons (§3) · alias des anciens jetons · base ·
+   typographie (§4, §7.2) · composants (§7) · rail et coquille (§6, §8) ·
+   mode incorporé (§9) · leviers of_tag · classes historiques encore servies.
+   ========================================================================== */
+
+
+/* --------------------------------------------------------------------------
+   Polices — §4.1. ATTENTION aux noms de fichier, ils trompent :
+   Gotham_Medium.otf est le trait NORMAL du système (le texte),
+   Gotham_Regular.otf le trait APPUYÉ (les accents de la liste fermée §4.3).
+   500 et 600 sont interdits : 500 retombe sur 400, 600 sur 700.
+   -------------------------------------------------------------------------- */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Medium.otf')  format('opentype'); font-weight: 400; font-display: swap; } /* texte */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: swap; } /* accents */
+
+/* Polices DE CONTENU (documents de campagne, aperçus de supports publiés —
+   §4.1 dernier alinéa, §13.2). Jamais pour l'interface. */
+@font-face {
+  font-family: 'Vank';
+  src: url('fonts/GC_Vank.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+  unicode-range: U+0020-007E;
+}
+@font-face {
+  font-family: 'Playwrite DEVA';
+  src: url('fonts/PlaywriteDEVA-Regular.ttf') format('truetype');
+  font-weight: 400; font-style: normal; font-display: swap;
+}
+
+
+/* ==========================================================================
+   1. JETONS — §3, copiés tels quels
+   ========================================================================== */
+:root {
+  /* Texte */
+  --ink: #1c1a17;        /* texte principal, titres, valeurs */
+  --muted-2: #5c5852;    /* texte secondaire « actif » : libellés de boutons, entrées du rail, onglets au repos */
+  --muted: #7a736a;      /* texte secondaire : aides, légendes, en-têtes de tableau, kicker */
+  --faint: #B8B2A8;      /* libellés en capitales de groupe, champ désactivé */
+
+  /* Surfaces et filets */
+  --paper: #faf7f2;      /* fond de l'application ; survol discret */
+  --table-head: #FBF9F5; /* en-tête de tableau, survol de ligne, bandeau de KPI */
+  --total-line: #F8F4EE; /* ligne de total */
+  --chip: #EDE7DE;       /* pastille neutre, piste d'interrupteur, fond de sélecteur segmenté */
+  --line: #e6e0d8;       /* TOUTES les bordures */
+  --row-line: rgba(34, 34, 34, 0.06); /* séparation entre lignes de tableau */
+
+  /* Marque */
+  --accent: #8D1D2C;     /* bordeaux : action principale, sélection, focus ; survol : #6f1622 */
+
+  /* États */
+  --danger: #b3261e;     /* erreur, action destructrice */
+  --green: #3f7a52;      /* réussite, « mesuré », valide */
+  --prize: #B0792A;      /* or : attention, interrupteur allumé, prime */
+  --prize-soft: #F6E7CE; /* fond d'avertissement */
+  --prize-ink: #7A5207;  /* texte d'avertissement */
+  --stop: #A32014;       /* arrêt : uniquement une valeur devenue négative (marge…) */
+  --stop-soft: #F7E0DC;  /* fond de l'arrêt */
+
+  /* Réservées à l'identification — jamais pour un texte courant ni un fond de bloc */
+  --mc-fb: #1877F2;
+  --mc-ig: #D6286F;
+  --mc-meta: #0866FF;
+  --mc-gg: #1E8E3E;
+  --mc-nl: #6B4FBB;
+  --chart-real: #B03048;
+  --chart-prev: #EBD3D8;
+  --chart-goal: #1B6FA8;
+  --chart-goal-soft: #DEEAF3;
+
+  color-scheme: light;
+  font-family: 'Gotham', system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+
+  /* --- Alias des anciens jetons du BO -----------------------------------
+     Les gabarits du cockpit (≈ 6 000 styles en ligne) lisent encore ces
+     noms. Chacun pointe sur le jeton du MÊME RÔLE (§10.1), pas sur la teinte
+     la plus proche. Table complète : docs/design-system/INVENTAIRE.md. */
+  --color-primary:            var(--accent);
+  --color-secondary:          var(--prize-soft);   /* ancien Abricot : n'existe plus à l'écran */
+  --color-bg:                 var(--paper);
+  --color-surface:            #fff;
+  --color-text:               var(--ink);
+  --color-text-muted:         var(--muted);
+  --color-text-primary:       var(--ink);
+  --color-text-secondary:     var(--muted);
+  --color-background-secondary: var(--table-head); /* fonds secondaires, bandeaux, survols */
+  --color-border-secondary:   var(--line);         /* §3 : --line pour TOUTES les bordures */
+  --color-border-tertiary:    var(--line);
+  --color-linked:             var(--prize-soft);
+  --color-collect:            var(--accent);
+  --color-on-abricot:         var(--prize-ink);
+  --color-collection-border:  var(--prize);
+  --color-collection-fill:    var(--prize-soft);
+  --color-collection-icon:    var(--prize-ink);
+  --color-popup:              #78554B;   /* Pop-Up — couleur d'identification de marque */
+  --color-ink:                var(--ink);
+  --color-success:            var(--green);
+
+  --font-display:             'Gotham', system-ui, sans-serif;  /* l'interface n'a qu'une police (§4.1) */
+  --font-ui:                  'Gotham', system-ui, sans-serif;
+  --font-accent:              'Gotham', system-ui, sans-serif;
+  --font-content-display:     'Vank', 'Gotham';                 /* contenu de campagne seulement */
+  --font-content-script:      'Playwrite DEVA', 'Gotham';
+
+  --font-size-page-title:     26px;
+  --font-size-section-title:  15px;
+  --font-size-navbar-brand:   13px;
+  --font-size-body:           13px;
+  --font-size-label:          12.5px;
+  --font-size-small:          11px;
+  --font-size-button:         13px;
+  --font-size-price:          13px;
+  --font-size-admin-label:    10.5px;
+  --line-height-display:      1.15;
+  --line-height-section:      normal;
+  --line-height-body:         1.5;
+  --tracking-nav:             0.06em;
+  --tracking-admin:           0.08em;
+  --weight-regular:           400;
+  --weight-medium:            400;   /* 500 interdit (§4.1) */
+
+  --grid-cols-desktop:        6;
+  --grid-cols-tablet:         3;
+  --grid-cols-mobile:         2;
+  --grid-gap:                 12px;
+
+  --radius-sm:                6px;
+  --radius-md:                8px;
+  --radius-lg:                12px;
+  --radius-pill:              6px;   /* aucune pilule (§2, §5) : l'ancien nom rend un rectangle */
+
+  --spacing-xs:               4px;
+  --spacing-sm:               8px;
+  --spacing-md:               16px;
+  --spacing-lg:               24px;
+  --spacing-xl:               32px;
+
+  /* --- PACKAGING — accents de variété (étiquettes et couvercles seulement).
+     Jamais à l'écran comme couleur d'interface. -------------------------- */
+  --pkg-fraise: #8D1D2C; --pkg-framboise: #A61E4D; --pkg-groseille: #C41E3A; --pkg-cerise: #7B1424;
+  --pkg-mure: #4A1E3C; --pkg-myrtille: #3B3468; --pkg-cassis: #2E1A47;
+  --pkg-abricot: #E8964B; --pkg-peche: #F4A97F; --pkg-mirabelle: #E8B84B; --pkg-orange-amere: #D97B29; --pkg-coing: #D9A441;
+  --pkg-rhubarbe: #C96A6E; --pkg-figue: #6E3B5C; --pkg-prune: #5C3A6E; --pkg-poire: #C8C87A; --pkg-pomme: #A8C47A;
+  --pkg-miel-acacia: #F5DFA8; --pkg-miel-colza: #EFD9A0; --pkg-miel-toutes-fleurs: #E3B155; --pkg-miel-tilleul: #DCC26B;
+  --pkg-miel-lavande: #E8C97F; --pkg-miel-lavande-accent: #9A8FBF; --pkg-miel-chataignier: #9C6B2F;
+  --pkg-miel-foret: #6B4A26; --pkg-miel-sarrasin: #5C3D22;
+
+  /* --- LEVIERS (of_tag) — couleurs d'identification des axes du réseau.
+     Source de vérité of_tag.color ; l'UI lit ces variables. -------------- */
+  --lev-trafic:        #6366f1;   /* id 4 · TRAFIC */
+  --lev-recurrence:    #ec4899;   /* id 3 · RECURRENCE */
+  --lev-xp:            #f59e0b;   /* id 2 · XP — Expérience Client */
+  --lev-food-cost:     #10b981;   /* id 5 · FOOD_COST */
+  --lev-labour-cost:   #8b5cf6;   /* id 6 · LABOUR_COST */
+  --lev-overhead-cost: #8b5cf6;   /* id 7 · OVERHEAD_COST */
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+
+
+/* ==========================================================================
+   2. BASE
+   ========================================================================== */
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Gotham', system-ui, sans-serif;
+  font-size: 13px;           /* texte courant (§4.2) */
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+/* Les contrôles natifs prennent la police de l'interface. */
+input, textarea, select, button, optgroup, option { font-family: inherit; }
+
+/* Pas de gras (§4.3) : les titres, en-têtes de tableau et mots « mis en
+   valeur » sont en trait normal ; la hiérarchie vient de la taille, de la
+   couleur et de l'espace. Un accent de la liste fermée pose 700 lui-même. */
+h1, h2, h3, h4, h5, h6, th, b, strong { font-weight: 400; }
+
+/* Focus clavier visible partout — contour bordeaux 2 px (§7.4, §7.5, §12). */
+a:focus-visible, button:focus-visible, [role="button"]:focus-visible, summary:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px;
+}
+input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+input:disabled, select:disabled, textarea:disabled { color: var(--faint); cursor: not-allowed; }
+
+
+/* ==========================================================================
+   3. TYPOGRAPHIE — §4.2, §7.2
+   ========================================================================== */
+.screen-subtitle { font-size: 21px; font-weight: 400; color: var(--ink); margin: 4px 0 14px; }
+.section-label { margin: 1.5rem 0 0; font-size: 0.72rem; font-weight: 400; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--muted); }
+.section-label__aside { float: right; font-size: 11.5px; font-weight: 400; text-transform: none;
+  letter-spacing: normal; color: var(--muted); }
+.block-title { font-size: 0.95rem; font-weight: 400; margin: 0 0 0.5rem; text-transform: uppercase;
+  letter-spacing: 0.06em; color: var(--muted); }          /* = h2 de bloc du Marketing (§7.2) */
+.muted { color: var(--muted); margin: 0; }
+.error { color: var(--danger); margin: 0.5rem 0 0; }
+.num { text-align: right; }
+
+/* Classes historiques (scouting) ramenées au système */
+.t-page-title { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); }
+.t-section-title { font-size: 15px; font-weight: 400; color: var(--ink); }
+.t-label { font-size: 12.5px; font-weight: 400; color: var(--muted); }
+.t-small { font-size: 11px; font-weight: 400; }
+.t-admin-label { font-size: 10.5px; font-weight: 400; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+
+
+/* ==========================================================================
+   4. COMPOSANTS — §7 (CSS exact)
+   ========================================================================== */
+
+/* 7.1 Barre supérieure et titre de page */
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 18px 24px; border-bottom: 1px solid var(--line); background: #fff; }
+.topbar__kicker { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); margin: 0 0 4px; }
+.topbar h1 { font-size: 26px; font-weight: 400; letter-spacing: -0.01em; margin: 0; }
+.topbar__actions { display: flex; align-items: center; gap: 10px; }
+
+/* 7.3 Carte */
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 1.25rem; }
+.card ul:not([class]) { margin: 0; padding-left: 1.1rem; font-size: 0.9rem; line-height: 1.7; }
+
+/* 7.4 Boutons — un seul système */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; margin: 0; padding: 7px 16px;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink);
+  font: 400 13px/1.2 'Gotham', system-ui, sans-serif;
+  text-decoration: none; white-space: nowrap; cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn:hover:not(:disabled) { border-color: var(--muted-2); }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.is-busy { opacity: 0.6; cursor: progress; }
+
+.btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn--primary:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+
+.btn--ghost { background: transparent; border-color: transparent; color: var(--muted-2); }
+.btn--ghost:hover:not(:disabled) { border-color: transparent; color: var(--ink); text-decoration: underline; }
+
+.btn--danger { background: transparent; border-color: transparent; color: var(--muted-2); }
+.btn--danger:hover:not(:disabled) { border-color: transparent; background: rgba(179, 38, 30, 0.07); color: var(--danger); }
+
+.btn--sm { min-height: 30px; padding: 5px 11px; font-size: 12px; }
+.btn--icon { flex: none; width: 28px; min-height: 28px; height: 28px; padding: 0; font-size: 12px; }
+
+.linklike { padding: 2px 4px; font-size: 12px; color: var(--muted-2); background: none; border: 0;
+  border-radius: 6px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.linklike:hover { color: var(--accent); }
+
+/* 7.5 Champs — appliqués aux champs marqués .input ou rangés dans .field / .toolbar / .ds-form :
+   les gabarits du cockpit posent encore leurs mesures en ligne. */
+.input, .ds-form input, .ds-form select, .ds-form textarea { font: inherit; padding: 0.6rem 0.7rem; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--ink); }
+.input:disabled { background: transparent; color: var(--faint); border-color: var(--line); cursor: not-allowed; }
+.field { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); }
+.field input, .field select { padding: 5px 9px; font-size: 12.5px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink); }
+.field-label { display: block; font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 10px; }
+.toolbar input[type=search] { flex: 1 1 260px; min-width: 200px; height: 36px; padding: 0 12px;
+  border: 1px solid var(--line); border-radius: 8px; font: 13px 'Gotham', system-ui, sans-serif; }
+.toolbar select { height: 36px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font: 13px 'Gotham', system-ui, sans-serif; }
+
+/* 7.6 Choisir : filtres, pastilles de choix, sélecteur segmenté */
+.filter { margin: 0; padding: 6px 13px; font-size: 12.5px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; color: var(--muted-2); cursor: pointer; }
+.filter.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+.choice-pill { margin: 0; background: #fff; border: 1px solid rgba(34, 34, 34, 0.14); border-radius: 10px;
+  padding: 9px 16px; font-size: 12.5px; font-weight: 400; color: var(--muted-2); cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s; }
+.choice-pill.is-on { border: 2px solid var(--accent); background: rgba(141, 29, 44, 0.05);
+  color: var(--accent); padding: 8px 15px; }
+
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip); }
+.seg button { margin: 0; padding: 6px 11px; border: 0; border-radius: 7px; background: transparent;
+  color: var(--muted-2); font: 400 12.5px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.seg button.is-on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+/* 7.7 Onglets de page */
+.page-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 16px; border-bottom: 1px solid var(--line); }
+.page-tabs__tab { margin: 0 0 -1px; padding: 8px 12px; border: none; border-bottom: 2px solid transparent;
+  border-radius: 0; background: none; color: var(--muted-2); font: inherit; font-size: 13px;
+  font-weight: 400; cursor: pointer; display: inline-flex; align-items: center; gap: 7px; }
+.page-tabs__tab:hover { color: var(--ink); }
+.page-tabs__tab.is-on { color: var(--accent); border-bottom-color: var(--accent); }
+/* Compteur d'un onglet : un nombre, sans pastille pleine (même forme que le compteur du rail, §8.3). */
+.page-tabs__count { font-size: 11px; color: var(--accent); }
+
+/* 7.8 Tableaux — sur un tableau marqué .ds-table ou rangé dans .table-card */
+.table-card { margin-top: 1rem; }
+.table-scroll { overflow-x: auto; }
+.table-card table, table.ds-table { width: 100%; min-width: 820px; border-collapse: collapse; font-size: 13px; }
+.table-card thead th, table.ds-table thead th { text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--muted); background: var(--table-head); padding: 10px 14px; }
+.table-card tbody td, table.ds-table tbody td { padding: 13px 14px; border-top: 1px solid var(--row-line); }
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--table-head); }
+.table-card .sub, table.ds-table .sub, .cell-sub { display: block; margin-top: 2px; font-size: 10.5px; font-weight: 400; color: var(--muted); }
+.total-row td { background: var(--total-line); }
+
+/* 7.9 Pastilles d'état, badges, étiquettes — rectangles, jamais en pilule */
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: 6px;
+  font-size: 11.5px; white-space: nowrap; }
+.chip--neutral { background: var(--chip); color: var(--ink); }
+.chip--ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.chip--draft { background: var(--chip); color: var(--muted-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; }
+
+.badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 6px;
+  font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; font-weight: 400; }
+.badge--ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+
+.tag-warn, .tag-stop { display: inline-flex; align-items: center; font-size: 11px; font-weight: 400;
+  padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+.tag-warn { background: var(--prize-soft); color: var(--prize-ink); }
+.tag-stop { background: var(--stop-soft); color: var(--stop); }
+
+/* 7.10 Chiffres clés */
+.kpi-row { display: flex; flex-wrap: wrap; padding: 4px 0; }
+.kpi { flex: 1; min-width: 176px; padding: 13px 18px; border-left: 3px solid var(--line); }
+.kpi__value { font-size: 24px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; }
+.kpi__label { font-size: 10.5px; font-weight: 400; letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--faint); margin-top: 5px; }
+.kpi__note { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+/* 7.11 Interrupteur, fenêtre de confirmation */
+.switch { display: flex; align-items: center; gap: 12px; width: 100%; margin: 0; padding: 13px 16px;
+  text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); cursor: pointer; }
+.switch__track { flex: 0 0 auto; position: relative; width: 38px; height: 22px; border-radius: 999px;
+  background: var(--chip); transition: background 0.15s ease; }
+.switch__track::after { content: ''; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px;
+  border-radius: 999px; background: #fff; box-shadow: 0 1px 2px rgba(28, 26, 23, 0.25); transition: transform 0.15s ease; }
+.switch.is-on .switch__track { background: var(--prize); }
+.switch.is-on .switch__track::after { transform: translateX(16px); }
+.switch__label { font-size: 14px; font-weight: 400; }
+.switch__hint { font-size: 12.5px; color: var(--muted); }
+
+.confirm { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+  padding: 24px; background: rgba(24, 18, 20, 0.42); }
+.confirm__box { width: min(460px, 100%); padding: 22px 24px; }
+.confirm__box h3 { margin: 0 0 8px; font-size: 16px; font-weight: 400; }
+.confirm__actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px; }
+.confirm__danger { color: #fff; background: var(--danger); border-color: var(--danger); }
+
+/* 7.12 Icônes : SVG linéaires 16 × 16, trait 1.7, couleur du texte */
+.ico { width: 16px; height: 16px; flex: 0 0 16px; fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round; }
+
+
+/* ==========================================================================
+   5. COQUILLE ET RAIL — §6, §8
+   ========================================================================== */
+.workspace { display: flex; height: 100vh; overflow: hidden; }
+.workspace__main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.app__body { flex: 1; overflow-y: auto; padding: 22px 24px 40px; }
+.app__body > * { max-width: 1180px; }          /* largeur de lecture */
+.app__body--wide > * { max-width: none; }      /* surface de travail */
+
+.sidebar { flex: 0 0 246px; width: 246px; background: #fff; border-right: 1px solid var(--line); overflow-y: auto; padding-bottom: 24px; }
+
+.sidebar__head { padding: 20px 16px 8px; }
+.sidebar__logo { height: 26px; display: block; }
+.sidebar__kicker { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+  font-weight: 400; margin-top: 9px; }
+
+.sidebar__back { padding: 6px 12px 4px; }
+.sidebar__back a { display: flex; align-items: center; gap: 9px; background: var(--paper); border-radius: 10px;
+  padding: 11px 13px; font-size: 13px; color: var(--muted-2); text-decoration: none; }
+
+.sidebar__brand { margin: 10px 12px 0; padding: 8px 10px; font-size: 13px; font-weight: 400; color: var(--ink);
+  background: var(--table-head); border-radius: 9px; }
+
+.sidebar__groups { padding: 2px 12px 0; }
+.sidebar__group { margin-top: 18px; }
+.sidebar__group-label { font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+  font-weight: 400; padding: 0 10px 8px; }
+
+.sidebar__action { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 2px 12px 8px;
+  padding: 9px 12px; border-radius: 8px; background: var(--accent); color: #fff; font-weight: 400;
+  font-size: 13px; text-decoration: none; }
+.sidebar__action:hover, .sidebar__action.is-active { background: #6f1622; color: #fff; }
+
+.sidebar__item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 9px;
+  font-size: 13px; font-weight: 400; color: var(--muted-2); text-decoration: none; transition: all 0.15s; }
+.sidebar__item:hover { background: var(--paper); }
+.sidebar__item.is-active { background: rgba(141, 29, 44, 0.08); color: var(--accent); font-weight: 700; }  /* le seul gras du rail */
+
+.sidebar__item:focus-visible, .sidebar__back a:focus-visible, .sidebar__action:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.sidebar__account { display: grid; gap: 4px; margin: 18px 16px 0; padding: 10px 12px; border: 1px solid var(--line);
+  border-radius: 10px; font-size: 12px; }
+.sidebar__account.is-dev { border-color: rgba(141, 29, 44, 0.45); background: rgba(141, 29, 44, 0.04); }
+.sidebar__account-who { color: var(--ink); font-weight: 400; }
+.sidebar__account.is-dev .sidebar__account-who { color: var(--accent); }
+
+/* --- Ajouts propres au BO (signalés dans le compte rendu) ----------------- */
+/* Les entrées sont des <button> : on efface l'aspect natif. */
+button.sidebar__item { width: 100%; border: 0; background: transparent; font-family: inherit; text-align: left; cursor: pointer; }
+button.sidebar__item:hover { background: var(--paper); }
+button.sidebar__item.is-active { background: rgba(141, 29, 44, 0.08); }
+.sidebar__item-label { flex: 1; min-width: 0; }
+/* Compteur (§8.3) : un nombre en 11 px bordeaux poussé à droite, sans pastille pleine. */
+.sidebar__count { margin-left: auto; font-size: 11px; color: var(--accent); font-weight: 400; }
+/* Sous-menu repliable : l'entrée parente porte un chevron, les enfants sont décalés. */
+.sidebar__chevron { width: 16px; flex: 0 0 16px; display: inline-flex; justify-content: center; color: var(--faint); font-size: 10px; }
+.sidebar__item--child { padding-left: 35px; }
+/* Recherche globale du cockpit, sous l'en-tête. */
+.sidebar__search { padding: 8px 12px 0; position: relative; }
+.sidebar__search input { width: 100%; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; color: var(--ink); font: 13px 'Gotham', system-ui, sans-serif; }
+.sidebar__search-clear { position: absolute; right: 18px; top: 50%; margin-top: 4px; transform: translateY(-50%); }
+.sidebar__results { position: absolute; left: 12px; right: 12px; top: 50px; z-index: 40; max-height: 62vh; overflow-y: auto;
+  background: #fff; border: 1px solid var(--line); border-radius: 10px; }
+.sidebar__results-group { padding: 9px 12px 4px; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); border-top: 1px solid var(--line); }
+.sidebar__results-group:first-child { border-top: 0; }
+.sidebar__result { display: block; width: 100%; text-align: left; border: 0; background: transparent; cursor: pointer; padding: 6px 12px; font-family: inherit; }
+.sidebar__result:hover { background: var(--paper); }
+.sidebar__result-t { font-size: 12.5px; color: var(--ink); }
+.sidebar__result-m { font-size: 10.5px; color: var(--accent); }
+.sidebar__result-d { font-size: 10.5px; color: var(--muted); }
+.sidebar__note { padding: 14px 13px; font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+.sidebar__account-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.sidebar__account-role { color: var(--muted); font-size: 11.5px; }
+.sidebar__account button.sidebar__account-open { display: grid; gap: 2px; border: 0; background: transparent; padding: 0; text-align: left; font: inherit; cursor: pointer; min-width: 0; }
+.sidebar__version { font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+
+/* ==========================================================================
+   6. MODE INCORPORÉ — §9
+   La page ouverte dans le cadre du Marketing (?embed=1 dans un iframe) :
+   pas de second rail, sa barre supérieure en haut, même fond et même police.
+   ========================================================================== */
+.is-embedded .sidebar { display: none; }
+.is-embedded .workspace { height: 100vh; }
+
+
+/* ==========================================================================
+   7. LEVIERS (of_tag) — badge · point · regroupement
+   La couleur vient de --levc, posée par [data-lev] ou depuis of_tag.color.
+   ========================================================================== */
+[data-lev="trafic"]        { --levc: var(--lev-trafic); }
+[data-lev="recurrence"]    { --levc: var(--lev-recurrence); }
+[data-lev="xp"]            { --levc: var(--lev-xp); }
+[data-lev="food-cost"]     { --levc: var(--lev-food-cost); }
+[data-lev="labour-cost"]   { --levc: var(--lev-labour-cost); }
+[data-lev="overhead-cost"] { --levc: var(--lev-overhead-cost); }
+
+.levier-badge { display: inline-flex; align-items: center; gap: 6px; border-radius: 6px; padding: 4px 10px 4px 8px;
+  font-size: 11.5px; font-weight: 400; line-height: 1; white-space: nowrap;
+  color: var(--ink); background: var(--chip); }
+.levier-badge--solid { color: #fff; background: var(--levc); }
+.levier-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; background: var(--levc); display: inline-block; }
+.levier-badge .levier-dot { width: 8px; height: 8px; }
+.levier-item { border-left: 3px solid var(--levc); padding-left: 16px; }
+.levier-progress { height: 6px; border-radius: 6px; background: var(--chip); overflow: hidden; }
+.levier-progress__fill { height: 100%; border-radius: 6px; background: var(--levc); }
+
+
+/* ==========================================================================
+   8. CLASSES HISTORIQUES encore servies (scouting) — ramenées au §7.4
+   ========================================================================== */
+.btn-primary { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--accent); color: #fff; border: 1px solid var(--accent); border-radius: 8px;
+  padding: 7px 16px; font: 400 13px/1.2 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.btn-primary:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+.btn-primary--block { width: 100%; margin-top: 12px; }
+.btn-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: #fff; color: var(--ink); border: 1px solid var(--line); border-radius: 8px;
+  padding: 7px 16px; font: 400 13px/1.2 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.btn-secondary:hover:not(:disabled) { border-color: var(--muted-2); }
+.icon-circle { flex: none; width: 28px; height: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted-2);
+  font: 400 12px 'Gotham', system-ui, sans-serif; cursor: pointer; }
+.icon-circle:hover { border-color: var(--muted-2); }

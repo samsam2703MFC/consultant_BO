@@ -1,0 +1,80 @@
+/* Module Formation › Standards (SOP) — pièces propres aux SOP, sur les jetons du design system (ds.css :
+   --ink, --muted-2, --muted, --faint, --line, --row-line, --paper, --chip, --accent, --green, --danger,
+   --prize, --prize-soft, --prize-ink). Chargé après ds.css et formation.css. Graisse 400, coins 4 à 12 px,
+   aucune ombre. */
+.sop-tags{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+/* Langue d'une SOP : FR / NL relue (neutre), à relire (avertissement, comme .tag-warn). */
+.sop-lg{display:inline-block;border-radius:4px;padding:1px 6px;font-size:11px;letter-spacing:.04em;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.sop-lg.is-on{background:var(--chip);color:var(--ink);border-color:var(--chip)}
+.sop-lg.is-ar{background:var(--prize-soft);color:var(--prize-ink);border-color:var(--prize-soft)}
+/* Compétence du panel rattachée : pastille neutre ; sans compétence : avertissement. */
+.sop-comp{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--ink);background:var(--chip);border-radius:6px;padding:2px 9px}
+.sop-comp::before{content:'◆';font-size:8px;color:var(--muted)}
+.sop-comp.is-sans{color:var(--prize-ink);background:var(--prize-soft)}
+.sop-comp.is-sans::before{color:inherit}
+.sop-cartes{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px;list-style:none;padding:0;margin:8px 0 18px}
+.sop-carte{display:flex;flex-direction:column;gap:7px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;text-decoration:none;color:inherit;height:100%}
+.sop-carte:hover{border-color:var(--accent)}
+.sop-carte:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+/* SOP à valider : liseré or 2 px, le padding perd 1 px (rien ne bouge). */
+.sop-carte.is-av{border:2px solid var(--prize);padding:11px 13px}
+.sop-carte strong{font-size:15px;line-height:1.25}
+.sop-carte .sop-ob{font-size:13px;color:var(--muted);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sop-carte .sop-pied{margin-top:auto;display:flex;gap:10px;font-size:12px;color:var(--muted);border-top:1px dashed var(--line);padding-top:7px}
+.sop-carte .sop-pied b{color:var(--ink)}
+.sop-carte .sop-pied .sop-code{margin-left:auto;white-space:nowrap}
+.sop-deux{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px;align-items:start}
+.sop-bil{display:grid;grid-template-columns:34px minmax(0,1fr) minmax(0,1fr) auto;gap:4px 16px;padding:9px 0;border-bottom:1px dashed var(--line);align-items:start}
+.sop-bil.is-une{grid-template-columns:34px minmax(0,1fr) auto}
+.sop-bil__n{width:28px;height:28px;border-radius:6px;background:var(--chip);display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+.sop-bil.is-crit .sop-bil__n{background:var(--danger);color:#fff}
+.sop-bil__tx{font-size:14px;line-height:1.55;white-space:pre-line}
+.sop-bil__tx b{display:block;margin-bottom:2px}
+.sop-bil__tx.is-nl{color:var(--muted-2)}
+.sop-bil img{width:78px;height:58px;border-radius:8px;object-fit:cover;cursor:zoom-in}
+.sop-sec{margin:18px 0 4px;font-size:15px;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.sop-sec small{font-size:13px;color:var(--muted)}
+.sop-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:0}
+.sop-dl dt{color:var(--muted)}
+.sop-dl dd{margin:0}
+/* Point critique : filet gauche et fond du rouge d'alerte. */
+.sop-crit{background:rgba(179,38,30,.07);border-left:3px solid var(--danger);border-radius:8px;padding:10px 12px;font-size:14px}
+.sop-crit ul{margin:4px 0 0;padding-left:18px}
+.sop-q{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--paper);margin-bottom:10px}
+.sop-q b{display:block;margin-bottom:4px}
+.sop-q .chips{margin-top:6px}
+.sop-ligne{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--row-line);font-size:14px}
+.sop-ligne:last-child{border-bottom:none}
+.sop-ligne__x{flex:1;min-width:0}
+.sop-ligne__x small{display:block;color:var(--muted);font-size:12px}
+.sop-ligne__d{width:52px;flex:0 0 auto;font-size:12px;color:var(--muted)}
+/* Statut d'une compétence (acquise, en cours, à acquérir, à revoir) : une pastille rectangulaire. */
+.sop-cp{display:inline-flex;min-width:46px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-size:12px;padding:0 6px}
+.sop-cp.acquise{background:var(--green);color:#fff}
+.sop-cp.en_cours{background:var(--prize-soft);color:var(--prize-ink)}
+.sop-cp.a_acquerir{background:var(--chip);color:var(--muted)}
+.sop-cp.a_revoir{background:#fff;color:var(--danger);border:1.5px solid var(--danger)}
+.sop-heat{display:inline-flex;min-width:48px;height:26px;border-radius:6px;align-items:center;justify-content:center;font-size:12px}
+.sop-mat th{text-align:center;vertical-align:bottom;min-width:70px}
+.sop-mat td{text-align:center}
+.sop-mat td:first-child,.sop-mat th:first-child{text-align:left}
+.sop-puces{display:inline-flex;gap:4px;flex-wrap:wrap}
+/* Choix d'un poste : un filtre (bordeaux plein quand choisi). */
+.sop-puces label{display:inline-flex;align-items:center;font-size:12px;border:1px solid var(--line);border-radius:6px;padding:2px 8px;background:#fff;color:var(--muted-2);cursor:pointer}
+.sop-puces label.is-on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.sop-puces input{display:none}
+.sop-in{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:#fff;width:100%;font:inherit;font-size:14px}
+textarea.sop-in{min-height:66px;resize:vertical;line-height:1.45}
+.sop-in.is-vide{border-color:var(--prize);background:var(--prize-soft)}
+.sop-ed-sec{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px;background:var(--paper)}
+.sop-ed-sec__h{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:8px}
+.sop-ed-et{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) 130px;gap:8px;padding:8px 0;border-top:1px dashed var(--line)}
+.sop-ed-et__c{display:flex;flex-direction:column;gap:4px}
+/* La photo d'une étape dans l'éditeur : au format de la tablette (4:3), recadrée à l'import (recadrer.js). */
+.sop-ed-photo{width:100%;aspect-ratio:4/3;object-fit:contain;border-radius:6px;border:1px solid var(--line);background:#fff}
+.sop-ed-photo__act{display:flex;gap:6px;flex-wrap:wrap}
+.sop-ed-barre{position:sticky;bottom:0;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 16px;display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px}
+.sop-zoom{position:fixed;inset:0;background:rgba(24,18,20,.42);display:flex;align-items:center;justify-content:center;z-index:80;cursor:zoom-out}
+.sop-zoom img{max-width:92vw;max-height:92vh;border-radius:12px;background:#fff}
+.sop-toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;border-radius:8px;padding:10px 18px;font-size:13px;z-index:90}
+@media (max-width:1000px){.sop-deux{grid-template-columns:1fr}.sop-bil{grid-template-columns:34px minmax(0,1fr) auto}.sop-bil__tx.is-nl{grid-column:2}}

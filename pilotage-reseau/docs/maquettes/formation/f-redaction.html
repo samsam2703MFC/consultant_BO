@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>F — Rédaction et versions</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script>
+</head><body><script>
+/* F — Rédaction et versions : nos bases sont la source. Les 25 SOP ont été reprises du Drive le 05/11 (les originaux
+   restent en archive) ; chacune existe en FR et en NL, la traduction est relue ; les 7 écarts entre SOP sont tranchés
+   et reportés ; une modification se fait ici, dans les deux langues, et se publie en nouvelle version. */
+const S = FO.sops, D = FO.decisions;
+const TR = t => t === 'original' ? '<span class="pill">origine</span>' : t === 'relue' ? '<span class="pill ok">relue</span>' : '<span class="pill att">à relire</span>';
+const etat = s => s.statut ? '<span class="pill att">À valider · lisible</span>' : s.revoir ? '<span class="pill ko">v' + esc(s.version) + ' · à revoir</span>' : D.some(d => d.touche.includes(s.id)) ? '<span class="pill ok">publiée · écart reporté</span>' : '<span class="pill ok">publiée</span>';
+const lignes = S.map(s => `<tr class="${s.statut ? 'alerte' : s.revoir ? 'nouv' : ''}">
+  <td><span class="fam ${FAM[s.dossier].c}">${s.dossier}</span></td>
+  <td><b>${esc(s.court)}</b><small>${esc(s.code || '')}${s.comp ? ' · ' + esc(s.comp) : ''}</small></td>
+  <td>${TR(s.trad.FR)}</td><td>${TR(s.trad.NL)}</td><td><span class="lg on">v${esc(s.version)}</span></td>
+  <td>${s.nbEtapes}</td><td>${etat(s)}</td></tr>`).join('');
+const table = `<div class="carte"><h3>Les SOP dans nos bases<small>${S.length} SOP · FR et NL · reprises du Drive le 05/11/2026</small></h3>
+  <table class="src"><thead><tr><th></th><th>SOP</th><th>FR</th><th>NL</th><th>Version</th><th>Étapes</th><th>État</th></tr></thead><tbody>${lignes}</tbody></table></div>`;
+const ecarts = `<div class="carte" style="margin-bottom:16px;border:1.5px solid #2d7a3e"><h3>Écarts tranchés le 05/11<small>reportés dans les SOP touchées, FR et NL</small></h3>
+  ${D.map((d, i) => `<div class="dec2"><span class="ic ${d.par === 'proposé' ? 'pr' : ''}">${i + 1}</span><div style="flex:1"><b>${esc(d.t)}</b><small>${esc(d.d)}</small><div class="tch">${d.touche.map(id => { const x = S.find(y => y.id === id); return x ? `<span class="pill">${esc(x.court)}</span>` : ''; }).join('')}</div></div>${d.par === 'proposé' ? '<span class="pill att" style="align-self:flex-start">proposé · à confirmer</span>' : '<span class="pill ok" style="align-self:flex-start">tranché par toi</span>'}</div>`).join('')}</div>`;
+const edit = `<div class="carte" style="margin-bottom:16px"><h3>Modifier une étape<small>Ouverture du poste et premières cuissons · SOP-CUI-OUV-01 · étape 7</small></h3>
+  <div class="deux-l"><div><div class="lab">Français <span class="pill">origine</span></div><div class="t">Cuire les pains de la veille</div><div class="x">Après la cuisson de tous les grands pains, les charger directement dans le même four. Ne pas relancer de programme. Sélectionner « ajouter du temps » : 4 min et 20 % d’humidité. <ins>Uniquement la catégorie pain.</ins></div></div>
+    <div><div class="lab">Nederlands <span class="pill ok">relue</span></div><div class="t">Broden van gisteren afbakken</div><div class="x">Laad ze na het bakken van alle grote broden meteen in dezelfde oven. Start geen nieuw programma. Kies « tijd toevoegen »: 4 min en 20 % vochtigheid. <ins>Alleen voor de categorie brood.</ins></div></div></div>
+  <div style="display:flex;gap:16px;align-items:center;margin-top:12px;flex-wrap:wrap;font-size:12.5px">
+    <span class="radio" style="display:inline-flex;gap:6px;align-items:center"><b style="width:14px;height:14px;border-radius:50%;border:4px solid var(--color-primary);display:inline-block"></b>Précision : ceux qui l’ont validée restent validés</span>
+    <span class="radio" style="display:inline-flex;gap:6px;align-items:center"><b style="width:14px;height:14px;border-radius:50%;border:1.5px solid #bbb;display:inline-block"></b>Le geste change : ils repassent en « à revoir »</span>
+    <span class="b p" style="margin-left:auto">Publier la v1.2</span></div>
+  <div class="mini" style="margin-top:8px">Une modification se fait dans les deux langues avant publication : la langue non modifiée passe « à relire ». La v1.1 reste en archive, consultable.</div></div>`;
+const reprise = `<div class="carte" style="margin-bottom:16px"><h3>La reprise du Drive</h3><div class="mini" style="font-size:12.5px;line-height:1.6">
+  <b>05/11 :</b> 44 fichiers → ${S.length} SOP rangées dans nos bases (sections, étapes, points critiques, quiz, photos). PDF et DOCX d’origine gardés en pièce jointe d’archive.<br>
+  <b>Depuis :</b> le Drive n’est plus la source. On modifie ici ; le PDF, la tablette et le Manuel opératoire suivent.<br>
+  <b>Langues :</b> chaque SOP traduite dans l’autre langue à la reprise. ${S.filter(s => s.trad.FR === 'à relire' || s.trad.NL === 'à relire').length} traductions à relire — <b>relecteurs à désigner</b> (un néerlandophone, un francophone).</div>
+  <div style="display:flex;gap:8px;margin-top:10px"><span class="b s">Désigner les relecteurs</span><span class="b s">Archive du Drive ↗</span></div></div>`;
+coque('redaction', `<div class="titre"><h1>Rédaction et versions</h1><span class="ss">nos bases sont la source · chaque SOP en FR et en NL · une modification se publie en nouvelle version</span></div>
+  <div class="grille g2"><div>${table}</div><div>${ecarts}${edit}${reprise}</div></div>`, { boutons: ['Nouvelle SOP', 'Publier'], prim: 0 });
+</script></body></html>

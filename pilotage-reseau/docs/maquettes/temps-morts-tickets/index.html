@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Temps morts : trois façons de montrer les tickets</title>
+<!-- Dashboard magasin › Temps morts › « La journée minute par minute ». Trois autres façons de montrer
+     les tickets que les petits traits noirs de la version en ligne :
+       ?v=1  la grille des minutes : un carré par minute, foncé s'il y a eu un ticket
+       ?v=2  le rythme par 5 minutes : un histogramme de la journée, les temps morts en fond
+       ?v=3  le fil de la journée : un point par ticket sur deux lignes, chaque temps mort avec sa durée
+     Chiffres réels : Sombreffe, vendredi 6 novembre 2026, 159 tickets (data.json, lu sur
+     /exploitation/temps-morts). -->
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<style>
+  body{background:var(--color-bg);margin:0;padding:18px 24px;font-family:var(--font-ui);color:var(--color-text);font-size:13px}
+  #ecran{max-width:1392px;margin:0 auto}
+  .prop{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin:0 0 6px}
+  .tete{display:flex;align-items:baseline;gap:12px;margin:0 0 12px}
+  .tete .t{font-size:16px}.tete .s{font-size:11.5px;color:var(--color-text-muted)}
+  .resume{display:flex;gap:18px;font-size:12px;color:var(--color-text-muted);margin:0 0 12px}
+  .resume b{font-weight:400;color:var(--color-text);font-size:14px}
+  .leg{display:flex;align-items:center;gap:16px;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);padding:8px 16px 14px}
+  .leg i{display:inline-block;vertical-align:-2px;margin-right:6px}
+  .pct{font-size:11.5px;text-align:center;border-radius:6px;padding:3px 0;font-variant-numeric:tabular-nums}
+  .n{font-size:10.5px;color:var(--color-text-muted);white-space:nowrap}
+  .hr{font-size:11.5px;color:var(--color-text-muted);text-align:right;font-variant-numeric:tabular-nums}
+  /* v1 : la grille des minutes */
+  .g-l{display:grid;grid-template-columns:44px minmax(0,1fr) 62px 96px;gap:10px;align-items:center;margin-bottom:5px}
+  .g-min{display:grid;grid-template-columns:repeat(60,minmax(0,1fr));gap:2px}
+  .g-min span{height:18px;border-radius:3px;background:#F3EEE7;font-size:9.5px;color:#fff;display:flex;align-items:center;justify-content:center;font-variant-numeric:tabular-nums}
+  .g-min span.tk{background:#2b2723}
+  .g-min span.tk2{background:#2b2723}
+  .g-min span.mort{background:#E9B9C3}
+  .g-min span.hors{background:repeating-linear-gradient(135deg,#fff 0 3px,#F3EEE7 3px 6px)}
+  .g-min span.q{margin-left:0}
+  .g-ax{display:grid;grid-template-columns:repeat(60,minmax(0,1fr));gap:2px;font-size:9.5px;color:var(--color-text-muted)}
+  .g-ax span{white-space:nowrap}
+  .ech{width:14px;height:14px;border-radius:3px}
+  /* v2 et v3 */
+  svg text{font-family:var(--font-ui)}
+  .corps{padding:12px 16px 4px}
+  .lecture{padding:0 16px 12px;font-size:12px;color:var(--color-text-muted)}
+  .lecture b{font-weight:400;color:var(--color-text)}
+</style>
+</head>
+<body>
+<div id="ecran"></div>
+<script>
+const V = new URLSearchParams(location.search).get('v') || '1';
+const RAMPE = [[10, '#F7EDEF', '#1c1a17'], [25, '#EFD3D9', '#1c1a17'], [40, '#E2AAB5', '#1c1a17'], [55, '#CF7488', '#1c1a17'], [70, '#B03048', '#fff'], [101, '#7C1C30', '#fff']];
+const teinte = p => { const t = RAMPE.find(r => p < r[0]) || RAMPE[5]; return `background:${t[1]};color:${t[2]}`; };
+const hm = s => String(Math.floor(s / 3600)).padStart(2, '0') + ':' + String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+const fMin = m => { const r = Math.round(m); return r < 60 ? r + ' min' : Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0'); };
+const ROSE = '#E9B9C3', ROSE_F = '#B03048', ENCRE = '#2b2723';
+
+fetch('data.json').then(r => r.json()).then(D => {
+  const J = D.jour, T = J.ticks, TR = J.trous, deb = T[0], fin = T[T.length - 1];
+  const h0 = Math.floor(deb / 3600), h1 = Math.floor(fin / 3600);
+  const titres = { 1: 'La grille des minutes', 2: 'Le rythme de la journée', 3: 'Le fil de la journée' };
+  const aides = { 1: 'un carré = une minute · foncé : au moins un ticket dans la minute (le chiffre : plusieurs) · rose : la minute tombe dans un temps mort',
+    2: 'une barre = les tickets de 5 minutes · en rose derrière : les temps morts de 10 min ou plus',
+    3: 'un point = un ticket (empilés quand ils tombent dans la même minute) · sous la ligne : chaque temps mort et sa durée' };
+  let h = `<p class="prop">Maquette ${V} / 3 — Dashboard magasin › Temps morts › la journée</p>
+    <div class="tete"><span class="t">Temps morts — vendredi 6 novembre 2026</span><span class="s">Sombreffe · un temps mort : 10 minutes ou plus sans un seul ticket</span></div>
+    <div class="resume"><span><b>${J.nb}</b> temps morts</span><span><b>${fMin(J.mort)}</b> sans client</span><span><b>${Math.round(J.pct)} %</b> de l’ouverture</span><span><b>${J.tickets}</b> tickets, de ${J.debut} à ${J.fin}</span></div>
+    <div class="db-card"><div class="ct"><span class="db-lab">${titres[V]}</span><span class="db-mini">${aides[V]}</span></div>`;
+
+  /* ---------- v1 : un carré par minute ------------------------------------------------- */
+  if (V === '1') {
+    const parMin = {}; T.forEach(s => { const m = Math.floor(s / 60); parMin[m] = (parMin[m] || 0) + 1; });
+    const mort = m => TR.some(([a, b]) => m * 60 + 30 > a && m * 60 + 30 < b);
+    h += `<div class="corps"><div class="g-l"><span></span><div class="g-ax">${Array.from({ length: 60 }, (_, i) => `<span>${i % 15 === 0 ? String(i).padStart(2, '0') : ''}</span>`).join('')}</div><span class="n" style="text-align:center">sans client</span><span class="n">tickets</span></div>`;
+    for (let x = h0; x <= h1; x++) {
+      const H = J.heures[x] || {};
+      let c = '';
+      for (let i = 0; i < 60; i++) {
+        const m = x * 60 + i, n = parMin[m] || 0, s = m * 60;
+        const cls = s + 59 < deb || s > fin ? 'hors' : (n ? 'tk' : (mort(m) ? 'mort' : ''));
+        c += `<span class="${cls}" title="${hm(s)}${n ? ' · ' + n + ' ticket' + (n > 1 ? 's' : '') : (cls === 'mort' ? ' · temps mort' : '')}">${n > 1 ? n : ''}</span>`;
+      }
+      h += `<div class="g-l"><span class="hr">${x} h</span><div class="g-min">${c}</div><span class="pct" style="${H.pct == null ? '' : teinte(H.pct)}">${H.pct == null ? '—' : Math.round(H.pct) + ' %'}</span><span class="n">${H.tk || 0} ticket${(H.tk || 0) > 1 ? 's' : ''}</span></div>`;
+    }
+    h += `</div><div class="leg"><span><i class="ech" style="background:${ENCRE}"></i>un ticket dans la minute</span><span><i class="ech" style="background:${ENCRE};color:#fff;font-size:9px;font-style:normal;display:inline-flex;align-items:center;justify-content:center">3</i>trois tickets dans la même minute</span><span><i class="ech" style="background:${ROSE}"></i>minute dans un temps mort</span><span><i class="ech" style="background:#F3EEE7"></i>minute calme, moins de 10 min sans ticket</span><span><i class="ech" style="background:repeating-linear-gradient(135deg,#fff 0 3px,#F3EEE7 3px 6px)"></i>avant le premier, après le dernier ticket</span></div>`;
+  }
+
+  /* ---------- v2 : un histogramme de la journée, par 5 minutes ------------------------- */
+  if (V === '2') {
+    const pas = 300, s0 = h0 * 3600, s1 = (h1 + 1) * 3600, n = (s1 - s0) / pas;
+    const cpt = Array(n).fill(0); T.forEach(s => { cpt[Math.floor((s - s0) / pas)]++; });
+    const W = 1330, H = 250, g = 40, d = 26, b = 34, L = W - g - 10, Hh = H - d - b;
+    const x = s => g + L * (s - s0) / (s1 - s0), mx = Math.max(...cpt), y = v => d + Hh - Hh * v / mx;
+    let s = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Tickets par tranche de 5 minutes">`;
+    // Les temps morts en fond, avec leur durée quand elle tient.
+    TR.forEach(([a, z]) => { s += `<rect x="${x(a)}" y="${d}" width="${x(z) - x(a)}" height="${Hh}" fill="${ROSE}" opacity=".55"><title>${hm(a)} → ${hm(z)} · ${fMin((z - a) / 60)} sans ticket</title></rect>`;
+      if (x(z) - x(a) > 34) { s += `<text x="${(x(a) + x(z)) / 2}" y="${d - 8}" text-anchor="middle" font-size="10" fill="${ROSE_F}">${Math.round((z - a) / 60)} min</text>`; } });
+    // Avant le premier et après le dernier ticket.
+    s += `<defs><pattern id="hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#fff"/><rect width="3" height="6" fill="#F3EEE7"/></pattern></defs>`;
+    s += `<rect x="${x(s0)}" y="${d}" width="${x(deb) - x(s0)}" height="${Hh}" fill="url(#hach)"/><rect x="${x(fin)}" y="${d}" width="${x(s1) - x(fin)}" height="${Hh}" fill="url(#hach)"/>`;
+    // Les graduations : chaque heure, et l'échelle des tickets.
+    for (let v = 0; v <= mx; v += 2) { s += `<line x1="${g}" x2="${W - 10}" y1="${y(v)}" y2="${y(v)}" stroke="#000" stroke-opacity="${v ? .06 : .25}"/><text x="${g - 8}" y="${y(v) + 3.5}" text-anchor="end" font-size="10" fill="#7a736a">${v}</text>`; }
+    for (let hh = h0; hh <= h1 + 1; hh++) { s += `<line x1="${x(hh * 3600)}" x2="${x(hh * 3600)}" y1="${d}" y2="${d + Hh + 5}" stroke="#000" stroke-opacity=".12"/><text x="${x(hh * 3600)}" y="${H - 12}" text-anchor="middle" font-size="11" fill="#7a736a">${hh} h</text>`; }
+    // Les barres : une par tranche de 5 minutes.
+    const lb = L / n;
+    cpt.forEach((v, i) => { if (!v) { return; } const a = s0 + i * pas; s += `<rect x="${x(a) + 1}" y="${y(v)}" width="${lb - 2}" height="${d + Hh - y(v)}" rx="2" fill="${ENCRE}"><title>${hm(a)} – ${hm(a + pas)} · ${v} ticket${v > 1 ? 's' : ''}</title></rect>`; });
+    const pic = cpt.indexOf(mx), aPic = s0 + pic * pas;
+    s += `<text x="${x(aPic) + lb / 2}" y="${y(mx) - 5}" text-anchor="middle" font-size="10.5" fill="#1c1a17">${mx}</text>`;
+    s += `<text x="${g - 34}" y="${d + Hh / 2}" font-size="10" fill="#7a736a" transform="rotate(-90 ${g - 30} ${d + Hh / 2})" text-anchor="middle">tickets</text></svg>`;
+    h += `<div class="corps">${s}</div>
+      <div class="lecture">Le plus fort : <b>${mx} tickets entre ${hm(aPic)} et ${hm(aPic + pas)}</b>. Les trous se voient d’un coup : une plage rose, aucune barre — avec sa durée au-dessus.</div>
+      <div class="leg"><span><i class="ech" style="background:${ENCRE};width:10px;height:14px"></i>tickets de 5 minutes</span><span><i class="ech" style="background:${ROSE};opacity:.8"></i>temps mort, sa durée au-dessus</span><span><i class="ech" style="background:repeating-linear-gradient(135deg,#fff 0 3px,#F3EEE7 3px 6px)"></i>avant le premier, après le dernier ticket</span></div>`;
+  }
+
+  /* ---------- v3 : le fil de la journée, deux lignes ------------------------------------- */
+  if (V === '3') {
+    const mi = 12 * 3600, lignes = [[h0 * 3600, mi, 'Matin'], [mi, (h1 + 1) * 3600, 'Après-midi']];
+    const W = 1330, g = 90, L = W - g - 14, PH = 120;
+    let s = `<svg viewBox="0 0 ${W} ${PH * 2 + 10}" width="100%" role="img" aria-label="Les tickets de la journée et les temps morts">`;
+    lignes.forEach(([a0, a1, nom], k) => {
+      const oy = k * PH, base = oy + 64, x = t => g + L * (t - a0) / (a1 - a0);
+      s += `<text x="0" y="${base + 4}" font-size="12" fill="#1c1a17">${nom}</text>`;
+      // L'axe et les heures.
+      s += `<line x1="${x(Math.max(a0, deb))}" x2="${x(Math.min(a1, fin))}" y1="${base}" y2="${base}" stroke="#1c1a17" stroke-opacity=".35"/>`;
+      for (let t = a0; t <= a1; t += 3600) { s += `<line x1="${x(t)}" x2="${x(t)}" y1="${base - 3}" y2="${base + 3}" stroke="#1c1a17" stroke-opacity=".35"/><text x="${x(t)}" y="${base + 50}" text-anchor="middle" font-size="11" fill="#7a736a">${t / 3600} h</text>`; }
+      // Les temps morts : une accolade rose sous la ligne, sa durée dessous.
+      TR.forEach(([a, z]) => { if (z <= a0 || a >= a1) { return; } const xa = x(Math.max(a, a0)), xz = x(Math.min(z, a1)), w = xz - xa, mn = Math.round((z - a) / 60);
+        s += `<rect x="${xa}" y="${base + 8}" width="${w}" height="12" rx="3" fill="${mn >= 30 ? ROSE_F : ROSE}"><title>${hm(a)} → ${hm(z)} · ${fMin((z - a) / 60)} sans ticket</title></rect>`;
+        s += `<text x="${(xa + xz) / 2}" y="${base + 33}" text-anchor="middle" font-size="${w > 40 ? 10.5 : 9.5}" fill="${mn >= 30 ? ROSE_F : '#9a5a66'}">${w > 40 ? mn + ' min' : mn}</text>`; });
+      // Un point par ticket, empilés dans la même minute.
+      const pile = {};
+      T.forEach(t => { if (t < a0 || t >= a1) { return; } const m = Math.floor(t / 60); const r = pile[m] = (pile[m] || 0) + 1;
+        s += `<circle cx="${x(m * 60 + 30)}" cy="${base - 7 - (r - 1) * 9}" r="3.6" fill="${ENCRE}"><title>${hm(t)}</title></circle>`; });
+    });
+    s += `</svg>`;
+    const longs = [...TR].sort((p, q) => (q[1] - q[0]) - (p[1] - p[0])).slice(0, 3);
+    h += `<div class="corps">${s}</div>
+      <div class="lecture">Les trois plus longs : ${longs.map(([a, z]) => `<b>${Math.round((z - a) / 60)} min</b> de ${hm(a)} à ${hm(z)}`).join(' · ')}. Un temps mort de 30 min ou plus est en rose foncé.</div>
+      <div class="leg"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${ENCRE}"></i>un ticket (empilés : la même minute)</span><span><i class="ech" style="background:${ROSE};height:10px"></i>temps mort de 10 à 29 min</span><span><i class="ech" style="background:${ROSE_F};height:10px"></i>30 min ou plus</span></div>`;
+  }
+  h += `</div><p class="prop" style="margin-top:10px">Sombreffe, vendredi 6 novembre 2026 · tickets réels lus sur /exploitation/temps-morts</p>`;
+  document.getElementById('ecran').innerHTML = h;
+  document.body.dataset.pret = '1';
+});
+</script>
+</body>
+</html>

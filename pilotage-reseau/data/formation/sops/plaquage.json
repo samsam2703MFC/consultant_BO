@@ -1,0 +1,270 @@
+{
+  "id": "plaquage",
+  "code": "0.2.09",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": null,
+  "duree": null,
+  "titre": {
+    "fr": "Plaquage et programmation des pousses",
+    "nl": "Uitleggen en programmeren van de rijskasten"
+  },
+  "objectif": {
+    "fr": "Suivre la liste active et laisser chaque famille dans la pousse correspondant à son programme.",
+    "nl": "De actieve lijst volgen en elke productfamilie in de rijskast laten die bij haar programma hoort."
+  },
+  "pour": {
+    "fr": "Le cuiseur, pour la préparation de la production du lendemain.",
+    "nl": "De afbakker, voor de voorbereiding van de productie van de volgende dag."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "1 · Avant de plaquer", "nl": "1 · Vóór het uitleggen"},
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {"fr": "Lire la liste active", "nl": "De actieve lijst lezen"},
+          "texte": {
+            "fr": "Relever les familles, les quantités et les commandes. Disposer par grille : 12 grandes viennoiseries, 20 minis ou 12 sandwiches. Ces capacités ne fixent pas la quantité du jour.",
+            "nl": "De productfamilies, de hoeveelheden en de bestellingen noteren. Per rooster leggen: 12 grote koffiekoeken, 20 mini’s of 12 sandwiches. Deze capaciteiten bepalen niet de hoeveelheid van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {"fr": "Identifier les quatre pousses", "nl": "De vier rijskasten herkennen"},
+          "texte": {
+            "fr": "Les lire toujours de la pousse la plus au fond vers la plus proche. La pousse physique 4 n’est pas le programme 4.",
+            "nl": "Ze altijd lezen van de achterste rijskast naar de dichtstbijzijnde. Fysieke rijskast 4 is niet programma 4."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {"fr": "Programmer les quatre pousses", "nl": "De vier rijskasten programmeren"},
+          "texte": {
+            "fr": "Sélectionner le programme correspondant au contenu prévu et lancer les quatre programmes ensemble avant de commencer le moindre plaquage.",
+            "nl": "Het programma kiezen dat overeenkomt met de geplande inhoud en de vier programma’s samen starten voordat je ook maar iets begint uit te leggen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "2 · Répartir les produits du lendemain", "nl": "2 · De producten voor de volgende dag verdelen"},
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {"fr": "Répartition par pousse (semaine / week-end)", "nl": "Verdeling per rijskast (week / weekend)"},
+          "texte": {
+            "fr": "Pousse 1 (fond) : semaine, choco et beurre · P1 ; week-end, choco · P2.\nPousse 2 : semaine, sandwiches, cramique, craquelin · P3 ; week-end, sandwiches, cramique, craquelin · P3.\nPousse 3 : semaine, autres viennoiseries · P1 ; week-end, autres viennoiseries · P2.\nPousse 4 (avant) : semaine, rien ou commandes viennoiseries · P1 ; week-end, autres viennoiseries et minis · P2.",
+            "nl": "Rijskast 1 (achteraan): week, choco en boter · P1; weekend, choco · P2.\nRijskast 2: week, sandwiches, cramique, craquelin · P3; weekend, sandwiches, cramique, craquelin · P3.\nRijskast 3: week, andere koffiekoeken · P1; weekend, andere koffiekoeken · P2.\nRijskast 4 (vooraan): week, niets of bestellingen koffiekoeken · P1; weekend, andere koffiekoeken en mini’s · P2."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {"fr": "Ajouter les commandes", "nl": "De bestellingen toevoegen"},
+          "texte": {
+            "fr": "Sandwiches : pousse 2. Viennoiseries : pousse 4 en semaine ; avec leur famille le week-end.",
+            "nl": "Sandwiches: rijskast 2. Koffiekoeken: rijskast 4 in de week; in het weekend bij hun productfamilie."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {"fr": "Charger les rails dans le bon ordre", "nl": "De rails in de juiste volgorde vullen"},
+          "texte": {
+            "fr": "Dans chaque pousse, remplir d’abord une ligne sur deux. Si nécessaire, combler ensuite les lignes libres en partant du haut puis en descendant.",
+            "nl": "In elke rijskast eerst om de andere rij vullen. Indien nodig daarna de vrije rijen opvullen, van boven naar beneden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {"fr": "Contrôler avant de quitter", "nl": "Controleren voor je weggaat"},
+          "texte": {
+            "fr": "Une fois toutes les pousses remplies, vérifier visuellement ou oralement la correspondance famille–programme. Changer immédiatement tout programme incorrect.",
+            "nl": "Zodra alle rijskasten gevuld zijn, visueel of mondeling nagaan of productfamilie en programma overeenkomen. Een fout programma meteen aanpassen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Pousse immédiate — utiliser le programme 4 et traiter les sonneries",
+        "nl": "Onmiddellijk rijzen — programma 4 gebruiken en de signalen opvolgen"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {"fr": "Repère essentiel", "nl": "Belangrijk richtpunt"},
+          "texte": {
+            "fr": "Programme 4 = pousse immédiate. Il ne programme pas une heure future et ne désigne pas la quatrième pousse physique.",
+            "nl": "Programma 4 = onmiddellijk rijzen. Het programmeert geen later tijdstip en verwijst niet naar de vierde fysieke rijskast."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {"fr": "Programme 4 · lancer un minuteur séparé", "nl": "Programma 4 · een aparte timer zetten"},
+          "texte": {
+            "fr": "Fonds de tarte : minuteur 1 h 15 fixe ; sortir à la fin du minuteur.\nViennoiseries du jour : minuteur 2 h 30 minimum ; contrôler visuellement la taille et la texture.\nPas prêtes à 2 h 30 : + 30 min ; contrôler à nouveau à 3 h.\nPas prêtes à 3 h : + 15 min maximum ; à 3 h 15, arrêter d’ajouter du temps et demander un avis.",
+            "nl": "Taartbodems: timer vast op 1 u 15; uithalen als de timer afloopt.\nKoffiekoeken van de dag: timer minimum 2 u 30; grootte en textuur visueel controleren.\nNiet klaar na 2 u 30: + 30 min; opnieuw controleren na 3 u.\nNiet klaar na 3 u: maximum + 15 min; na 3 u 15 geen tijd meer toevoegen en advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {"fr": "Utiliser le programme 4 pour", "nl": "Programma 4 gebruiken voor"},
+          "texte": {
+            "fr": "Utiliser pour : fonds de tarte ; deuxième batch de viennoiseries le jour même ; commande de l’après-midi ; double production le week-end.",
+            "nl": "Gebruiken voor: taartbodems; tweede batch koffiekoeken op dezelfde dag; bestelling voor de namiddag; dubbele productie in het weekend."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {"fr": "Sonneries du matin", "nl": "Signalen ’s ochtends"},
+          "texte": {
+            "fr": "4 h 20 et 4 h 30, viennoiseries : terminer seulement l’action courte engagée, puis traiter la pousse.\n5 h, sandwiches : terminer seulement l’action courte engagée, puis traiter la pousse.",
+            "nl": "4.20 u en 4.30 u, koffiekoeken: alleen de korte handeling waarmee je bezig bent afwerken, daarna de rijskast afhandelen.\n5 u, sandwiches: alleen de korte handeling waarmee je bezig bent afwerken, daarna de rijskast afhandelen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.5",
+          "titre": {"fr": "Marge de manœuvre", "nl": "Speling"},
+          "texte": {
+            "fr": "Après la sonnerie, une pousse sans action passe automatiquement en mode froid et laisse environ 30 minutes de marge. Cette marge ne remplace pas le traitement prioritaire de la pousse.",
+            "nl": "Na het signaal schakelt een rijskast waaraan niets gebeurt automatisch over op koelstand, wat ongeveer 30 minuten speling geeft. Die speling vervangt niet dat de rijskast met voorrang moet worden afgehandeld."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Contrôle rapide", "nl": "Snelle controle"},
+      "etapes": [
+        {
+          "numero": "C1",
+          "titre": null,
+          "texte": {"fr": "Liste active et commandes lues avant le plaquage.", "nl": "Actieve lijst en bestellingen gelezen vóór het uitleggen."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C2",
+          "titre": null,
+          "texte": {"fr": "Quatre programmes lancés ensemble avant la première grille.", "nl": "Vier programma’s samen gestart vóór het eerste rooster."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C3",
+          "titre": null,
+          "texte": {"fr": "Une ligne sur deux d’abord ; complément du haut vers le bas.", "nl": "Eerst om de andere rij; aanvullen van boven naar beneden."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C4",
+          "titre": null,
+          "texte": {"fr": "Contenu, programme et minuteur éventuel contrôlés.", "nl": "Inhoud, programma en eventuele timer gecontroleerd."},
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Validation terrain", "nl": "Validatie op de werkvloer"},
+      "etapes": [
+        {
+          "numero": "V1",
+          "titre": {"fr": "Validation terrain", "nl": "Validatie op de werkvloer"},
+          "texte": {
+            "fr": "Le formateur montre une grille complète par famille. L’employé en réalise une sous observation, puis poursuit après contrôle. Famille absente : « Non pratiqué ce jour ». Date : ______ Initiales : ______",
+            "nl": "De opleider toont één volledig rooster per productfamilie. De medewerker maakt er een onder toezicht en gaat verder na controle. Productfamilie niet aanwezig: “Vandaag niet geoefend”. Datum: ______ Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Lancer les quatre programmes ensemble avant de commencer le moindre plaquage.",
+      "nl": "De vier programma’s samen starten voordat je ook maar iets begint uit te leggen."
+    },
+    {
+      "fr": "La pousse physique 4 n’est pas le programme 4 ; programme 4 = pousse immédiate, sans heure future.",
+      "nl": "Fysieke rijskast 4 is niet programma 4; programma 4 = onmiddellijk rijzen, zonder later tijdstip."
+    },
+    {
+      "fr": "Respecter la répartition famille–programme de la semaine et du week-end, et la vérifier avant de quitter ; corriger immédiatement tout programme incorrect.",
+      "nl": "De verdeling productfamilie–programma voor de week en het weekend respecteren en nakijken voor je weggaat; een fout programma meteen aanpassen."
+    },
+    {
+      "fr": "Programme 4 avec minuteur séparé : fonds de tarte 1 h 15 fixe ; viennoiseries 2 h 30 minimum, + 30 min puis + 15 min maximum ; à 3 h 15, arrêter et demander un avis.",
+      "nl": "Programma 4 met aparte timer: taartbodems vast 1 u 15; koffiekoeken minimum 2 u 30, + 30 min en daarna maximum + 15 min; na 3 u 15 stoppen en advies vragen."
+    },
+    {
+      "fr": "Sonneries de 4 h 20, 4 h 30 et 5 h : traiter la pousse en priorité ; la marge d’environ 30 minutes du mode froid ne remplace pas ce traitement.",
+      "nl": "Signalen van 4.20 u, 4.30 u en 5 u: de rijskast met voorrang afhandelen; de speling van ongeveer 30 minuten in koelstand vervangt dat niet."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {"fr": "Que signifie le programme 4 ?", "nl": "Wat betekent programma 4?"},
+      "choix": {
+        "fr": ["La quatrième pousse physique, la plus proche", "La pousse immédiate, sans heure future", "Le programme du week-end"],
+        "nl": ["De vierde fysieke rijskast, de dichtstbijzijnde", "Onmiddellijk rijzen, zonder later tijdstip", "Het weekendprogramma"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {"fr": "Quand lance-t-on les quatre programmes des pousses ?", "nl": "Wanneer start je de vier programma’s van de rijskasten?"},
+      "choix": {
+        "fr": ["Ensemble, avant de commencer le moindre plaquage", "Une pousse à la fois, dès qu’elle est remplie", "Après le contrôle final"],
+        "nl": ["Samen, voordat je ook maar iets begint uit te leggen", "Eén rijskast per keer, zodra die gevuld is", "Na de eindcontrole"]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {"fr": "Dans quelle pousse et avec quel programme place-t-on les sandwiches ?", "nl": "In welke rijskast en met welk programma zet je de sandwiches?"},
+      "choix": {
+        "fr": ["Pousse 1, P1", "Pousse 4, P2", "Pousse 2, P3"],
+        "nl": ["Rijskast 1, P1", "Rijskast 4, P2", "Rijskast 2, P3"]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [],
+  "remarques": [
+    "Moment de la journée non précisé (« préparation du lendemain ») : champ moment laissé à null.",
+    "P1, P2, P3 désignent les programmes de pousse ; « choco et beurre » est gardé tel quel (vraisemblablement pains au chocolat et croissants au beurre, à confirmer).",
+    "Dans le tableau du programme 4, « 2 h 30 », « 3 h » et « 3 h 15 » sont des durées écoulées depuis le lancement, pas des heures de l’horloge : rendu par « na 3 u » en néerlandais."
+  ],
+  "source": {
+    "fichiers": {"pdf": null, "docx": "1uc9-zlB86vdK3J_4AwrhNwzwLPSoWZKL"},
+    "lu": "docx"
+  }
+}

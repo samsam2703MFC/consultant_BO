@@ -1,0 +1,481 @@
+{
+  "id": "flans",
+  "code": "0.2.03",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.1",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "production",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Flans et tartes au sucre",
+    "nl": "Flans en suikertaarten"
+  },
+  "objectif": {
+    "fr": "Préparer et cuire les flans et les tartes au sucre en respectant l’ordre des étapes, les quantités et les critères de cuisson.",
+    "nl": "Flans en suikertaarten bereiden en bakken met respect voor de volgorde van de stappen, de hoeveelheden en de bakcriteria."
+  },
+  "pour": {
+    "fr": "Le cuiseur (poste tartes).",
+    "nl": "De afbakker (post taarten)."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Flan — rendement",
+        "nl": "Flan — opbrengst"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "1 flan",
+            "nl": "1 flan"
+          },
+          "texte": {
+            "fr": "1 flan — 10 œufs — 625 ml de lait — 250 g de sucre.",
+            "nl": "1 flan — 10 eieren — 625 ml melk — 250 g suiker."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.2",
+          "titre": {
+            "fr": "2 flans",
+            "nl": "2 flans"
+          },
+          "texte": {
+            "fr": "2 flans — 20 œufs — 1,25 L de lait — 500 g de sucre.",
+            "nl": "2 flans — 20 eieren — 1,25 l melk — 500 g suiker."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Flan — marche à suivre · Respecter cet ordre",
+        "nl": "Flan — werkwijze · Deze volgorde respecteren"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Lire la liste et préparer le mélange",
+            "nl": "De lijst lezen en het mengsel bereiden"
+          },
+          "texte": {
+            "fr": "Suivre la quantité demandée sur la liste de production. Battre les œufs et le sucre au batteur, vitesse 3. Faire frémir le lait, puis l’ajouter petit à petit jusqu’à obtenir une belle mousse.",
+            "nl": "De hoeveelheid volgen die op de productielijst gevraagd wordt. De eieren en de suiker met de mixer kloppen op snelheid 3. De melk tegen de kook brengen en ze daarna beetje bij beetje toevoegen tot er een mooi schuim ontstaat."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Laisser séparer dans les pichets",
+            "nl": "Laten scheiden in de kannen"
+          },
+          "texte": {
+            "fr": "Répartir également la préparation : 1 pichet par flan. Attendre que la mousse et le liquide se séparent et qu’il y ait au moins 1 L de liquide par pichet.",
+            "nl": "Het mengsel gelijk verdelen: 1 kan per flan. Wachten tot het schuim en de vloeistof van elkaar scheiden en er minstens 1 l vloeistof per kan is."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.3",
+          "titre": {
+            "fr": "Préparer chaque fond",
+            "nl": "Elke bodem klaarmaken"
+          },
+          "texte": {
+            "fr": "Utiliser le fond de pâte grasse tel quel. Déposer la mousse à la louche jusqu’aux trois quarts. Placer 1 flan au centre de chaque grille.",
+            "nl": "De bodem van vetdeeg (pâte grasse) gebruiken zoals hij is. Het schuim er met de pollepel in scheppen tot op driekwart. 1 flan in het midden van elk rooster zetten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.4",
+          "titre": {
+            "fr": "Finir le remplissage dans le four",
+            "nl": "Het vullen in de oven afwerken"
+          },
+          "texte": {
+            "fr": "Placer les grilles dans le four disponible. Remplir à ras bord avec le liquide nécessaire, sans débordement ; la mousse dépasse légèrement. Vider le reste dans l’évier.",
+            "nl": "De roosters in de vrije oven zetten. Tot aan de rand vullen met de nodige vloeistof, zonder dat het overloopt; het schuim komt er licht bovenuit. De rest in de gootsteen gieten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.5",
+          "titre": {
+            "fr": "Cuire, contrôler et présenter",
+            "nl": "Bakken, controleren en presenteren"
+          },
+          "texte": {
+            "fr": "Régler manuellement 150 °C, 50 minutes, ventilation 1. Le dessus doit être doré et le centre ferme au toucher. Sinon : +5 minutes une fois, puis demander un avis. Refroidir sur le chariot ; urgence : 30 minutes au congélateur puis frigo. Présenter froid au comptoir frigo, sans finition.",
+            "nl": "Manueel instellen op 150 °C, 50 minuten, ventilatie 1. De bovenkant moet goudbruin zijn en het midden stevig bij aanraking. Zo niet: één keer +5 minuten, daarna advies vragen. Laten afkoelen op de kar; bij dringendheid: 30 minuten in de diepvries en daarna in de frigo. Koud presenteren in de koeltoog, zonder afwerking."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Flan — contrôle rapide",
+        "nl": "Flan — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Quantité de la liste et recette 1 ou 2 flans respectées.",
+            "nl": "Hoeveelheid van de lijst en recept voor 1 of 2 flans gerespecteerd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Mousse aux 3/4 ; au moins 1 L de liquide disponible par flan ; aucun débordement.",
+            "nl": "Schuim tot op 3/4; minstens 1 l vloeistof beschikbaar per flan; niets overgelopen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "150 °C · 50 min · ventilation 1 ; dessus doré et centre ferme au toucher.",
+            "nl": "150 °C · 50 min · ventilatie 1; bovenkant goudbruin en midden stevig bij aanraking."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "3.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Flan froid, présenté tel quel dans le comptoir frigo.",
+            "nl": "Flan koud, zonder afwerking gepresenteerd in de koeltoog."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Flan — validation autonome",
+        "nl": "Flan — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 réalisations conformes. Date : ________ · Initiales : ______",
+            "nl": "2 conforme uitvoeringen. Datum: ________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Tarte au sucre — rendement",
+        "nl": "Suikertaart — opbrengst"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": "1 tarte",
+            "nl": "1 taart"
+          },
+          "texte": {
+            "fr": "1 tarte — 3 œufs — 500 ml de crème — 400 g de sucre au total.",
+            "nl": "1 taart — 3 eieren — 500 ml room — 400 g suiker in totaal."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.2",
+          "titre": {
+            "fr": "2 tartes",
+            "nl": "2 taarten"
+          },
+          "texte": {
+            "fr": "2 tartes — 6 œufs — 1 L de crème — 800 g de sucre au total.",
+            "nl": "2 taarten — 6 eieren — 1 l room — 800 g suiker in totaal."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Tarte au sucre — marche à suivre · Respecter cet ordre",
+        "nl": "Suikertaart — werkwijze · Deze volgorde respecteren"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": "Pousser, dorer et piquer les fonds",
+            "nl": "De bodems laten rijzen, met ei bestrijken en prikken"
+          },
+          "texte": {
+            "fr": "Suivre la liste. Mettre les mêmes fonds que les tartes aux fruits en pousse avec eux : programme instantané, minuteur 1 h 15. À la sortie, dorer à l’œuf liquide, piquer au pique-vite et centrer 1 tarte par grille.",
+            "nl": "De lijst volgen. Dezelfde bodems gebruiken als voor de fruittaarten en ze samen met die bodems in de rijskast zetten: direct programma (programme instantané), timer 1 u 15. Bij het uithalen met vloeibaar ei bestrijken, prikken met de prikroller en 1 taart per rooster centreren."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": "Préparer et répartir le sucre",
+            "nl": "De suiker klaarmaken en verdelen"
+          },
+          "texte": {
+            "fr": "Battre manuellement au fouet les œufs, la crème et 200 g de sucre par tarte. Déposer séparément 200 g de sucre dans chaque fond. Total : 400 g de sucre par tarte.",
+            "nl": "De eieren, de room en 200 g suiker per taart met de hand opkloppen met de garde. Apart 200 g suiker in elke bodem strooien. Totaal: 400 g suiker per taart."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": "Mouiller, mélanger et remplir dans le four",
+            "nl": "Bevochtigen, mengen en in de oven vullen"
+          },
+          "texte": {
+            "fr": "Verser assez de mélange pour que le sucre du fond ne soit plus visible, puis mélanger à la fourchette. Placer les grilles dans le four disponible et compléter jusqu’à 0,5 cm sous le bord. Vider le reste dans l’évier. Lancer « tarte au sucre ».",
+            "nl": "Genoeg mengsel gieten zodat de suiker op de bodem niet meer zichtbaar is en daarna mengen met een vork. De roosters in de vrije oven zetten en bijvullen tot 0,5 cm onder de rand. De rest in de gootsteen gieten. Het programma « tarte au sucre » starten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {
+            "fr": "Contrôler, prolonger et présenter",
+            "nl": "Controleren, langer bakken en presenteren"
+          },
+          "texte": {
+            "fr": "Bouger légèrement la tarte : belle croûte bien dorée et régulière, centre entre flan et liquide. Sinon : +7 minutes, recontrôler, maximum 2 fois, puis demander un avis. Refroidir sur le chariot ; légère tiédeur acceptable. Présenter avec les tartes aux fruits, sans finition.",
+            "nl": "De taart lichtjes bewegen: mooie, goed goudbruine en gelijkmatige korst, midden tussen flan en vloeibaar in. Zo niet: +7 minuten, opnieuw controleren, maximaal 2 keer, daarna advies vragen. Laten afkoelen op de kar; licht lauw is aanvaardbaar. Samen met de fruittaarten presenteren, zonder afwerking."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Tarte au sucre — contrôle rapide",
+        "nl": "Suikertaart — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Fond poussé 1 h 15, doré, piqué et centré : 1 tarte par grille.",
+            "nl": "Bodem 1 u 15 gerezen, met ei bestreken, geprikt en gecentreerd: 1 taart per rooster."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Par tarte : 200 g de sucre dans le fond et 200 g dans le mélange.",
+            "nl": "Per taart: 200 g suiker op de bodem en 200 g in het mengsel."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Remplissage à 0,5 cm du bord ; programme « tarte au sucre » utilisé.",
+            "nl": "Gevuld tot 0,5 cm van de rand; programma « tarte au sucre » gebruikt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Croûte dorée et régulière ; centre entre flan et liquide.",
+            "nl": "Korst goudbruin en gelijkmatig; midden tussen flan en vloeibaar in."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Tarte au sucre — validation autonome",
+        "nl": "Suikertaart — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "8.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 réalisations conformes. Date : ________ · Initiales : ______",
+            "nl": "2 conforme uitvoeringen. Datum: ________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Flan : réglage manuel 150 °C · 50 min · ventilation 1 ; dessus doré et centre ferme au toucher ; sinon +5 minutes une fois, puis demander un avis.",
+      "nl": "Flan: manueel 150 °C · 50 min · ventilatie 1; bovenkant goudbruin en midden stevig bij aanraking; zo niet één keer +5 minuten, daarna advies vragen."
+    },
+    {
+      "fr": "Tarte au sucre : croûte bien dorée et régulière, centre entre flan et liquide ; sinon +7 minutes, maximum 2 fois, puis demander un avis.",
+      "nl": "Suikertaart: goed goudbruine en gelijkmatige korst, midden tussen flan en vloeibaar in; zo niet +7 minuten, maximaal 2 keer, daarna advies vragen."
+    },
+    {
+      "fr": "Flan urgent : 30 minutes au congélateur puis frigo ; présenter froid au comptoir frigo.",
+      "nl": "Dringende flan: 30 minuten in de diepvries en daarna in de frigo; koud presenteren in de koeltoog."
+    },
+    {
+      "fr": "Remplissage sans débordement (flan) ; jusqu’à 0,5 cm sous le bord (tarte au sucre).",
+      "nl": "Vullen zonder overlopen (flan); tot 0,5 cm onder de rand (suikertaart)."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Quels réglages pour cuire un flan ?",
+        "nl": "Welke instellingen gebruik je om een flan te bakken?"
+      },
+      "choix": {
+        "fr": [
+          "150 °C · 50 min · ventilation 1",
+          "180 °C · 40 min · ventilation 3",
+          "Le programme « tarte au sucre »"
+        ],
+        "nl": [
+          "150 °C · 50 min · ventilatie 1",
+          "180 °C · 40 min · ventilatie 3",
+          "Het programma « tarte au sucre »"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Comment doit être le centre d’une tarte au sucre en fin de cuisson ?",
+        "nl": "Hoe moet het midden van een suikertaart zijn op het einde van het bakken?"
+      },
+      "choix": {
+        "fr": [
+          "Ferme au toucher",
+          "Entre flan et liquide",
+          "Complètement liquide"
+        ],
+        "nl": [
+          "Stevig bij aanraking",
+          "Tussen flan en vloeibaar in",
+          "Volledig vloeibaar"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Combien de sucre au total pour une tarte au sucre ?",
+        "nl": "Hoeveel suiker in totaal voor één suikertaart?"
+      },
+      "choix": {
+        "fr": [
+          "200 g",
+          "400 g",
+          "800 g"
+        ],
+        "nl": [
+          "200 g",
+          "400 g",
+          "800 g"
+        ]
+      },
+      "bonne": 1
+    }
+  ],
+  "corrections": [
+    "Aucune correction de contenu : cette SOP v1.1 fait foi pour les critères flan / tarte au sucre (décision 3) et a servi de référence pour corriger la Fiche « Programmes de cuisson et de pousse ».",
+    "Le document n’a pas de bloc « Objectif » : l’objectif est reformulé à partir des titres « Préparer et cuire les flans » / « Préparer et cuire les tartes au sucre »."
+  ],
+  "remarques": [
+    "« Programme instantané, minuteur 1 h 15 » pour les fonds correspond au « Programme 4 · pousse immédiate — fonds de tarte 1 h 15 fixe » de la Fiche programmes (cohérent).",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1tqEHzGXbs9hBX37PX31xKqz8_XaKjXgA",
+      "docx": "1L3_VWHRLs59MrA00NWDDFNyZrNukpfMd"
+    },
+    "lu": "docx"
+  }
+}

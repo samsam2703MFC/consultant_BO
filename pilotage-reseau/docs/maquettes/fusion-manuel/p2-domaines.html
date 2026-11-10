@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Proposition 2 — Le classeur par domaine</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="../formation/fo.css"><link rel="stylesheet" href="fu.css">
+<script src="coque.js"></script></head><body><div class="page" id="p"></div><script>
+/* Proposition 2 : le classeur du référentiel v25 du client — 8 domaines D1–D8 et leurs 36 sous-catégories. Dans
+   chaque sous-catégorie, la même chaîne pour tout le réseau : standard (SOP) → formation (FO) → compétence (C-…) →
+   checklist de contrôle (AC / CP / CL). La phase devient une étiquette. Compteurs réels du 06/11/2026 :
+   standards = les 25 SOP rangées, FO / compétences / checklists = référentiel v25, points = Guide pré-ouverture. */
+const D = [
+  ['D1', 'Identité & Culture', 4, 0, 2, 2, 0, 0], ['D2', 'Image & Design', 3, 0, 3, 3, 7, 0],
+  ['D3', 'Communication', 5, 0, 8, 10, 7, 0], ['D4', 'Expérience Client', 3, 0, 3, 5, 5, 0],
+  ['D5', 'Opérations & Production', 5, 23, 10, 11, 14, 16], ['D6', 'Ressources Humaines', 4, 0, 3, 6, 5, 12],
+  ['D7', 'Gestion & Finance', 6, 1, 5, 8, 11, 3], ['D8', 'Conformité & Qualité', 6, 1, 3, 5, 13, 7]];
+const dom = ([k, n, sc, s, f, c, chk, p]) => `<div class="dom ${k === 'D5' ? 'on' : ''}"><span class="k">${k} · ${sc} sous-catégories</span><b>${n}</b>
+  <div class="cpt" style="grid-template-columns:repeat(5,1fr)"><span>${s}<small>SOP</small></span><span>${f}<small>FO</small></span><span>${c}<small>comp.</small></span><span>${chk}<small>chk</small></span><span>${p}<small>points</small></span></div></div>`;
+const SC = [
+  ['Organisation du PDV', ['CHK-WKL-005 Moments calmes <span class="dbl">local Halle</span>'], 'FO-24 · FO-01', 'C-PLAN.Planning · C-PLAN.Ouverture', 'AC-22', '5 · journée test, soft opening, ouverture', ['ouv', 'op']],
+  ['Ouverture & Fermeture', ['SOP-WKL-001 Ouverture du magasin', 'SOP-WKL-003 Fermeture · CHK-WKL-004', 'SOP-CUI-OUV-01 · SOP-CUI-FIN-01', '<span class="dbl">doublon</span> AC-01…03 du CRM'], 'FO-01', 'C-PLAN.Ouverture · C-PLAN.Fermeture', 'AC-01 · AC-02 · AC-03', '—', ['pre', 'op']],
+  ['Production', ['16 SOP : baguettes et pains, viennoiseries, éclairs, flans v1.1, tartes, quiches, programmes four…'], 'FO-07 · FO-08 · FO-09 · FO-12', 'C-PROD.Pain · Pâtisserie · Viennoiserie · Cuisson', 'AC-08 · 09 · 18 · 21 · 30 · CP-25 · 26', '—', ['pre', 'op', 'con']],
+  ['Stocks & Approvisionnement', ['SOP-VER-TGTG Paniers Too Good To Go'], 'FO-25 · FO-26 · FO-27', 'C-STOCK.Inventaire · Réception · Casse', 'AC-10 · AC-15', '9 · commandes et stock de départ', ['pre', 'ouv', 'op']],
+  ['Équipements', ['<span class="mu">aucun standard — à écrire</span>'], 'FO-02', 'C-TRANS.Sécurité', 'AC-11', '2 · énergie, déchets', ['pre', 'op']]];
+const sc = ([n, s, f, c, k, p, phs]) => `<tr><td><b>${n}</b></td><td>${s.map(x => `<div>${x}</div>`).join('')}</td><td><span class="code">${f}</span></td>
+  <td>${c}</td><td><span class="code">${k}</span></td><td>${p}</td><td>${phs.map(ph).join(' ')}</td></tr>`;
+const CH = [
+  ['SOP-CUI-001', 'Cuisson des baguettes et des pains', 'à valider', 'FO-07 · FO-12', 'C-PROD.Pain', 'Pétrissage, pousse contrôlée, façonnage, cuisson', 'AC-08'],
+  ['SOP-CUI-VIE-01', 'Viennoiseries et sandwiches', '', 'FO-09', 'C-PROD.Viennoiserie', 'Tourage, beurrage, couques signature', 'AC-08'],
+  ['SOP-CUI-ECL-01', 'Éclairs et choux', '', 'FO-08', 'C-PROD.Pâtisserie', 'Crèmes, montage, glaçages, finitions', 'AC-08'],
+  ['SOP-CUI-FLA-01', 'Flans et tartes au sucre (v1.1)', '', 'FO-08', 'C-PROD.Pâtisserie', 'Crèmes, montage, glaçages, finitions', 'AC-08'],
+  ['FICHE-CUI-01', 'Programmes de cuisson et de pousse', 'référence', 'FO-12', 'C-PROD.Cuisson', 'Vagues, programmes four, T° et durée', 'AC-09']];
+const ch = ([code, t, et, fo, c, r, k]) => `<tr><td><span class="code">${code}</span> ${t}${et ? ` <span class="pill att">${et}</span>` : ''}<small><span class="lg on">FR</span> <span class="lg on">NL</span> · étapes, photos, points critiques, quiz</small></td>
+  <td class="fl">→</td><td><span class="code">${fo}</span></td><td class="fl">→</td><td><span class="code">${c}</span><small>réussi si : ${r}</small></td><td class="fl">→</td><td><span class="code">${k}</span><small>consultant 1×/mois · Marque 1×/trimestre</small></td></tr>`;
+document.getElementById('p').innerHTML = entete('domaines') + `
+<div class="prop"><span class="n">Proposition 2</span><h1>Le classeur par domaine</h1><span class="ss">les 8 domaines du référentiel v25 · une même chaîne partout : standard → formation → compétence → contrôle</span></div>
+<div class="lay"><div>
+  <div class="doms" style="grid-template-columns:repeat(4,minmax(0,1fr))">${D.map(dom).join('')}</div>
+  <div class="carte">
+    <div class="titre" style="margin-bottom:8px"><h1 style="font-size:24px">D5 · Opérations & Production</h1><span class="ss">5 sous-catégories · 23 SOP · 10 formations · 11 compétences · 14 checklists · 16 points de pré-ouverture</span></div>
+    <table class="chaine"><thead><tr><th>Sous-catégorie</th><th>Standards (comment faire)</th><th>Formations</th><th>Compétences</th><th>Checklists</th><th>Points pré-ouverture</th><th>Phases</th></tr></thead>
+      <tbody>${SC.map(sc).join('')}</tbody></table>
+  </div>
+  <div class="carte" style="margin-top:14px">
+    <h3>Production · la chaîne de chaque standard</h3>
+    <table class="chaine"><thead><tr><th>Standard</th><th></th><th>Formation</th><th></th><th>Compétence</th><th></th><th>Contrôle</th></tr></thead><tbody>${CH.map(ch).join('')}</tbody></table>
+    <div class="mini" style="margin-top:8px">+ 11 autres SOP · des <b class="att">compétences sans standard</b> se voient tout de suite, par exemple C-TRAITEUR.Froid, C-BARISTA.Espresso, C-SALADE.Composition.</div>
+  </div>
+</div>
+<div class="aside">
+  <div class="carte"><h4>Pour qui</h4><div class="mini">Le <b>franchiseur</b> qui tient les standards, le consultant qui contrôle, le franchisé qui cherche « comment on fait ».</div></div>
+  <div class="carte"><h4>Forces</h4><ul class="plus"><li>Reprend la structure que le client a déjà validée (v25 : D1–D8, FO, C-…, AC/CP).</li><li>Une place par objet, un code par objet : identique dans tout le réseau.</li><li>Les trous et doublons se voient (AC-01 du CRM = SOP-WKL-001 du Cockpit).</li></ul></div>
+  <div class="carte"><h4>Limites</h4><ul class="moins"><li>Le candidat n'y voit pas son calendrier.</li><li>L'équipe en magasin ne pense pas en « domaines » mais en postes.</li></ul></div>
+  <div class="carte verdict"><h4>Recommandée comme structure</h4><div class="mini">Le classeur v25 est la <b>colonne vertébrale</b> ; « par phase » (candidat) et « par poste » (équipe) en sont deux lectures calculées, jamais saisies.</div></div>
+</div></div>`;
+</script></body></html>

@@ -1,0 +1,19 @@
+{
+  "source": "Formations ajoutées par le réseau, hors de l'Excel du référentiel v25 (referentiel_v25.json reste tel que l'outil l'a généré). Même forme que les formations du v25 ; pcV25() les ajoute à la suite.",
+  "formations": [
+    {
+      "code": "FO-54",
+      "nom": "Gestion de trésorerie",
+      "priorites": ["OVERHEAD-COST"],
+      "frequence": "Ad hoc",
+      "sousCategorie": "Onboarding franchisé",
+      "sections": "Administratif",
+      "controleur": "Consultant Finance",
+      "executant": "Candidat franchisé",
+      "procedure": null,
+      "nbEvaluations": 0,
+      "attendu": {"P9": "O", "P10": "O", "P11": "O", "P12": "O"},
+      "ajoutee": "2026-11-07 (client : « une formation de pré-ouverture : Gestion de trésorerie »)"
+    }
+  ]
+}

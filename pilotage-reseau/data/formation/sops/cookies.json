@@ -1,0 +1,703 @@
+{
+  "id": "cookies",
+  "code": "0.2.06",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "production",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Cookies, cakes et financiers",
+    "nl": "Cookies, cakes en financiers"
+  },
+  "objectif": {
+    "fr": "Cuire les cookies prévus en respectant leur disposition, cuire les cakes et valider leur cuisson avec le test du couteau, décongeler les financiers sans cuisson, puis présenter ces produits une fois froids.",
+    "nl": "De geplande cookies bakken met respect voor hun schikking, de cakes bakken en hun gaarheid valideren met de mestest, de financiers ontdooien zonder ze te bakken, en deze producten presenteren zodra ze koud zijn."
+  },
+  "pour": {
+    "fr": "Le cuiseur chargé de la production du jour (cuiseur · production du jour).",
+    "nl": "De afbakker die instaat voor de productie van de dag (afbakker · productie van de dag)."
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Cookies — repères",
+        "nl": "Cookies — richtpunten"
+      },
+      "etapes": [
+        {
+          "numero": "1.1",
+          "titre": {
+            "fr": "Objectif",
+            "nl": "Doel"
+          },
+          "texte": {
+            "fr": "Cuire les cookies prévus, respecter leur disposition et les présenter une fois froids.",
+            "nl": "De geplande cookies bakken, hun schikking respecteren en ze presenteren zodra ze koud zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.2",
+          "titre": {
+            "fr": "Quand commencer",
+            "nl": "Wanneer beginnen"
+          },
+          "texte": {
+            "fr": "Selon la liste de production active et l’ordre de la journée.",
+            "nl": "Volgens de actieve productielijst en de volgorde van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le cuiseur chargé de la production du jour.",
+            "nl": "De afbakker die instaat voor de productie van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1.4",
+          "titre": {
+            "fr": "Point critique",
+            "nl": "Kritiek punt"
+          },
+          "texte": {
+            "fr": "Utiliser le four de droite et le programme exact « cookie ».",
+            "nl": "De rechteroven en het exacte programma « cookie » gebruiken."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cookies — marche à suivre · Respecter la disposition",
+        "nl": "Cookies — werkwijze · De schikking respecteren"
+      },
+      "etapes": [
+        {
+          "numero": "2.1",
+          "titre": {
+            "fr": "Lire la liste et préparer les grilles",
+            "nl": "De lijst lezen en de roosters klaarmaken"
+          },
+          "texte": {
+            "fr": "Préparer uniquement les cookies prévus. Recouvrir chaque grille de papier sulfurisé.",
+            "nl": "Enkel de geplande cookies klaarmaken. Elk rooster bedekken met bakpapier."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.2",
+          "titre": {
+            "fr": "Disposer 8 cookies par grille",
+            "nl": "8 cookies per rooster schikken"
+          },
+          "texte": {
+            "fr": "Former deux lignes extérieures de 3 cookies et placer 2 cookies au milieu, en décalé.",
+            "nl": "Twee buitenste rijen van 3 cookies vormen en 2 cookies verspringend in het midden leggen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.3",
+          "titre": {
+            "fr": "Lancer « cookie » dans le four de droite",
+            "nl": "« cookie » starten in de rechteroven"
+          },
+          "texte": {
+            "fr": "Utiliser le libellé exact. Au premier usage, montrer ou annoncer le choix au formateur si la sélection des programmes n’est pas encore validée.",
+            "nl": "De exacte programmanaam gebruiken. Bij het eerste gebruik de keuze tonen of melden aan de opleider als de programmakeuze nog niet gevalideerd is."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.4",
+          "titre": {
+            "fr": "Sortir à la fin du programme",
+            "nl": "Uithalen op het einde van het programma"
+          },
+          "texte": {
+            "fr": "La fin du programme suffit : aucun contrôle de cuisson supplémentaire n’est demandé. Placer les cookies sur un chariot et attendre qu’ils soient froids.",
+            "nl": "Het einde van het programma volstaat: er is geen extra bakcontrole nodig. De cookies op een kar zetten en wachten tot ze koud zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2.5",
+          "titre": {
+            "fr": "Présenter les cookies",
+            "nl": "De cookies presenteren"
+          },
+          "texte": {
+            "fr": "Recouvrir une grille de papier à tarte. Ranger les cookies froids par sorte, en lignes et en quinconce, puis placer la grille à côté de la caisse.",
+            "nl": "Een rooster bedekken met taartpapier. De koude cookies per soort schikken, in rijen en verspringend, en het rooster daarna naast de kassa zetten."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cookies — contrôle rapide",
+        "nl": "Cookies — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "3.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Liste active suivie ; papier sulfurisé posé ; 8 cookies par grille en disposition 3 + 3 + 2 décalés.",
+            "nl": "Actieve lijst gevolgd; bakpapier gelegd; 8 cookies per rooster in schikking 3 + 3 + 2 verspringend."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Programme « cookie » lancé dans le four de droite ; sortie à la fin du programme.",
+            "nl": "Programma « cookie » gestart in de rechteroven; uitgehaald op het einde van het programma."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Cookies froids, rangés par sorte sur papier à tarte et placés à côté de la caisse.",
+            "nl": "Cookies koud, per soort geschikt op taartpapier en naast de kassa gezet."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cookies — validation autonome",
+        "nl": "Cookies — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "4.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 à 3 réalisations conformes sur des journées différentes. Date : __________ · Initiales : ______",
+            "nl": "2 tot 3 conforme uitvoeringen op verschillende dagen. Datum: __________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cakes — repères",
+        "nl": "Cakes — richtpunten"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {
+            "fr": "Objectif",
+            "nl": "Doel"
+          },
+          "texte": {
+            "fr": "Cuire les cakes prévus et valider leur cuisson avec le test du couteau.",
+            "nl": "De geplande cakes bakken en hun gaarheid valideren met de mestest."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.2",
+          "titre": {
+            "fr": "Quand commencer",
+            "nl": "Wanneer beginnen"
+          },
+          "texte": {
+            "fr": "Selon la liste de production active et l’ordre de la journée.",
+            "nl": "Volgens de actieve productielijst en de volgorde van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le cuiseur chargé de la production du jour.",
+            "nl": "De afbakker die instaat voor de productie van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5.4",
+          "titre": {
+            "fr": "Point critique",
+            "nl": "Kritiek punt"
+          },
+          "texte": {
+            "fr": "Cake liquide : +3 minutes, au maximum 2 fois, puis demander un avis.",
+            "nl": "Vloeibare cake: +3 minuten, maximaal 2 keer, daarna advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cakes · Contrôler avant de prolonger",
+        "nl": "Cakes · Controleren vóór je langer bakt"
+      },
+      "etapes": [
+        {
+          "numero": "6.1",
+          "titre": {
+            "fr": "Lire la liste, charger et lancer",
+            "nl": "De lijst lezen, laden en starten"
+          },
+          "texte": {
+            "fr": "Préparer uniquement les cakes prévus. Disposer 5 cakes par grille, à l’horizontale et en décalé. Lancer « cake grand cru » et annoncer le choix au formateur au premier usage si nécessaire.",
+            "nl": "Enkel de geplande cakes klaarmaken. 5 cakes per rooster schikken, horizontaal en verspringend. « cake grand cru » starten en bij het eerste gebruik de keuze indien nodig melden aan de opleider."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.2",
+          "titre": {
+            "fr": "Faire le test du couteau",
+            "nl": "De mestest doen"
+          },
+          "texte": {
+            "fr": "À la fin du programme, piquer un cake. De légères traces non liquides sont acceptables : la chaleur intérieure poursuit légèrement la cuisson.",
+            "nl": "Op het einde van het programma in een cake prikken. Lichte, niet-vloeibare sporen zijn aanvaardbaar: de warmte binnenin bakt nog licht verder."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.3",
+          "titre": {
+            "fr": "Prolonger seulement si la pâte est liquide",
+            "nl": "Enkel langer bakken als het deeg vloeibaar is"
+          },
+          "texte": {
+            "fr": "Ajouter 3 minutes, puis refaire le test. Répéter au maximum une seconde fois. Si la pâte reste liquide après ces 2 prolongations, demander un avis.",
+            "nl": "3 minuten bijzetten en de test opnieuw doen. Maximaal één tweede keer herhalen. Blijft het deeg vloeibaar na die 2 verlengingen, dan advies vragen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6.4",
+          "titre": {
+            "fr": "Refroidir et présenter",
+            "nl": "Laten afkoelen en presenteren"
+          },
+          "texte": {
+            "fr": "Placer les cakes sur un chariot. Attendre qu’ils soient froids, puis les présenter dans la vitrine des tartes froides.",
+            "nl": "De cakes op een kar zetten. Wachten tot ze koud zijn en ze daarna presenteren in de vitrine van de koude taarten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6.5",
+          "titre": {
+            "fr": "J’arrête et je demande un avis",
+            "nl": "Ik stop en ik vraag advies"
+          },
+          "texte": {
+            "fr": "Programme absent ou différent ; four qui ne démarre pas ; cake encore liquide après 2 prolongations de 3 minutes.",
+            "nl": "Programma ontbreekt of is anders; oven start niet; cake nog vloeibaar na 2 verlengingen van 3 minuten."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cakes — contrôle rapide",
+        "nl": "Cakes — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "7.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Liste active suivie ; 5 cakes par grille, à l’horizontale et en décalé.",
+            "nl": "Actieve lijst gevolgd; 5 cakes per rooster, horizontaal en verspringend."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Programme « cake grand cru » ; test du couteau effectué à la fin du programme.",
+            "nl": "Programma « cake grand cru »; mestest gedaan op het einde van het programma."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Traces non liquides acceptées ; pâte liquide = +3 minutes, maximum 2 fois, puis avis.",
+            "nl": "Niet-vloeibare sporen aanvaard; vloeibaar deeg = +3 minuten, maximaal 2 keer, daarna advies."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "7.4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Cakes refroidis sur chariot et présentés froids dans la vitrine des tartes froides.",
+            "nl": "Cakes afgekoeld op de kar en koud gepresenteerd in de vitrine van de koude taarten."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cakes — validation autonome",
+        "nl": "Cakes — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "8.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 à 3 réalisations conformes sur des journées différentes. Date : __________ · Initiales : ______",
+            "nl": "2 tot 3 conforme uitvoeringen op verschillende dagen. Datum: __________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Financiers — repères (sans cuisson)",
+        "nl": "Financiers — richtpunten (zonder bakken)"
+      },
+      "etapes": [
+        {
+          "numero": "9.1",
+          "titre": {
+            "fr": "Objectif",
+            "nl": "Doel"
+          },
+          "texte": {
+            "fr": "Décongeler les financiers prévus et les présenter froids lorsqu’ils ne sont plus durs.",
+            "nl": "De geplande financiers ontdooien en ze koud presenteren zodra ze niet meer hard zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9.2",
+          "titre": {
+            "fr": "Quand commencer",
+            "nl": "Wanneer beginnen"
+          },
+          "texte": {
+            "fr": "Selon la liste de production active et l’ordre de la journée.",
+            "nl": "Volgens de actieve productielijst en de volgorde van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9.3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le cuiseur chargé de la production du jour.",
+            "nl": "De afbakker die instaat voor de productie van de dag."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9.4",
+          "titre": {
+            "fr": "Point critique",
+            "nl": "Kritiek punt"
+          },
+          "texte": {
+            "fr": "Ne lancer aucun programme de cuisson pour les financiers.",
+            "nl": "Geen enkel bakprogramma starten voor de financiers."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Financiers — marche à suivre · Aucune cuisson",
+        "nl": "Financiers — werkwijze · Niet bakken"
+      },
+      "etapes": [
+        {
+          "numero": "10.1",
+          "titre": {
+            "fr": "Suivre la liste de production",
+            "nl": "De productielijst volgen"
+          },
+          "texte": {
+            "fr": "Sortir uniquement les financiers prévus. Ne lancer aucun programme de cuisson.",
+            "nl": "Enkel de geplande financiers uithalen. Geen enkel bakprogramma starten."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "10.2",
+          "titre": {
+            "fr": "Décongeler et contrôler au toucher",
+            "nl": "Ontdooien en controleren door aanraking"
+          },
+          "texte": {
+            "fr": "Placer les financiers sur les assiettes blanches de présentation à l’arrière, sur un chariot. Attendre qu’ils ne soient plus durs.",
+            "nl": "De financiers achteraan op de witte presentatieborden leggen, op een kar. Wachten tot ze niet meer hard zijn."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "10.3",
+          "titre": {
+            "fr": "Présenter froid",
+            "nl": "Koud presenteren"
+          },
+          "texte": {
+            "fr": "Placer les financiers froids dans la vitrine des tartes froides.",
+            "nl": "De koude financiers in de vitrine van de koude taarten zetten."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Financiers — contrôle rapide",
+        "nl": "Financiers — snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "11.1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Quantité conforme à la liste active ; aucune cuisson lancée.",
+            "nl": "Hoeveelheid volgens de actieve lijst; niets gebakken."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "11.2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Financiers disposés sur les assiettes blanches à l’arrière, sur un chariot.",
+            "nl": "Financiers achteraan op de witte borden gelegd, op een kar."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "11.3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Contrôle au toucher conforme : produits non durs, froids et placés dans la vitrine des tartes froides.",
+            "nl": "Controle door aanraking in orde: producten niet hard, koud en in de vitrine van de koude taarten gezet."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Financiers — validation autonome",
+        "nl": "Financiers — validatie zelfstandig werken"
+      },
+      "etapes": [
+        {
+          "numero": "12.1",
+          "titre": {
+            "fr": "Validation autonome",
+            "nl": "Validatie zelfstandig werken"
+          },
+          "texte": {
+            "fr": "2 à 3 réalisations conformes sur des journées différentes. Date : __________ · Initiales : ______",
+            "nl": "2 tot 3 conforme uitvoeringen op verschillende dagen. Datum: __________ · Initialen: ______"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Cookies : four de droite et programme exact « cookie » ; 8 cookies par grille (3 + 3 + 2 décalés) ; la fin du programme suffit.",
+      "nl": "Cookies: rechteroven en exact programma « cookie »; 8 cookies per rooster (3 + 3 + 2 verspringend); het einde van het programma volstaat."
+    },
+    {
+      "fr": "Cakes : test du couteau ; pâte liquide = +3 minutes, au maximum 2 fois, puis demander un avis.",
+      "nl": "Cakes: mestest; vloeibaar deeg = +3 minuten, maximaal 2 keer, daarna advies vragen."
+    },
+    {
+      "fr": "Financiers : aucun programme de cuisson ; décongeler et présenter froids quand ils ne sont plus durs.",
+      "nl": "Financiers: geen enkel bakprogramma; ontdooien en koud presenteren zodra ze niet meer hard zijn."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Combien de cookies par grille et dans quelle disposition ?",
+        "nl": "Hoeveel cookies per rooster en in welke schikking?"
+      },
+      "choix": {
+        "fr": [
+          "8 : deux lignes extérieures de 3 et 2 au milieu en décalé",
+          "12 : trois lignes de 4",
+          "5 : à l’horizontale et en décalé"
+        ],
+        "nl": [
+          "8: twee buitenste rijen van 3 en 2 verspringend in het midden",
+          "12: drie rijen van 4",
+          "5: horizontaal en verspringend"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Le cake est encore liquide au test du couteau. Que faire ?",
+        "nl": "De cake is nog vloeibaar bij de mestest. Wat doe je?"
+      },
+      "choix": {
+        "fr": [
+          "+5 minutes une seule fois",
+          "+3 minutes puis refaire le test, au maximum 2 fois, puis demander un avis",
+          "Le sortir quand même : la chaleur intérieure termine la cuisson"
+        ],
+        "nl": [
+          "Eén keer +5 minuten",
+          "+3 minuten en de test opnieuw doen, maximaal 2 keer, daarna advies vragen",
+          "Hem toch uithalen: de warmte binnenin bakt hem verder gaar"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Quel programme de cuisson pour les financiers ?",
+        "nl": "Welk bakprogramma gebruik je voor de financiers?"
+      },
+      "choix": {
+        "fr": [
+          "« cake grand cru »",
+          "« cookie »",
+          "Aucun : on les décongèle seulement"
+        ],
+        "nl": [
+          "« cake grand cru »",
+          "« cookie »",
+          "Geen: ze worden enkel ontdooid"
+        ]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Aucune correction de contenu."
+  ],
+  "remarques": [
+    "Financiers : aucune durée de décongélation indiquée (contrôle au toucher uniquement).",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1v0UbqUhmRrudOjfR-KnL8k5GyPgg_i6v",
+      "docx": "1ksOFDxRHeO_RmYlmw4vm66Qmmsrgfpl8"
+    },
+    "lu": "docx"
+  }
+}

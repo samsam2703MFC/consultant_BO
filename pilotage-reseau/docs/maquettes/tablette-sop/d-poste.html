@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>D · Mode poste</title>
+<!-- Maquette D (07/11/2026) — « mode poste », pensée pour la tablette posée sur le plan de travail et lue à 1,5 m, les
+     mains dans la pâte : la consigne en TRÈS gros (30 px), le point critique en bandeau rouge en tête, la photo ensuite,
+     « Ensuite » annonce l'étape suivante ; deux boutons géants (88 px), toucher la moitié droite de l'écran ou
+     balayer = étape suivante. Rien d'autre à l'écran. -->
+<link rel="stylesheet" href="/public/formation/ds.css"><link rel="stylesheet" href="commun.css">
+<style>
+.d-prog{flex:0 0 auto;display:flex;align-items:center;gap:14px;padding:12px 18px;background:#fff}
+.d-prog .barre{flex:1;height:12px;border-radius:6px;background:var(--chip);overflow:hidden}
+.d-prog .barre i{display:block;height:100%;background:var(--accent)}
+.d-prog b{font-weight:400;font-size:22px}
+.d-prog b small{font-size:15px;color:var(--muted)}
+.d-zone{flex:1;min-height:0;overflow:auto;display:flex}
+.d-in{margin:auto;width:100%;max-width:1200px;padding:18px 24px 24px;display:grid;gap:18px}
+.d-band{display:flex;align-items:center;gap:12px;background:var(--danger);color:#fff;border-radius:12px;padding:12px 18px;font-size:18px;letter-spacing:.04em}
+.d-band svg{flex:0 0 auto}
+.d-num{font-size:22px;color:var(--accent);letter-spacing:.06em}
+.d-in h1{margin:2px 0 0;font-weight:400;font-size:46px;line-height:1.05}
+.d-l{list-style:none;margin:0;padding:0;display:grid;gap:14px}
+.d-l li{display:flex;gap:16px;align-items:flex-start;font-size:30px;line-height:1.25}
+.d-l li::before{content:'';flex:0 0 auto;width:18px;height:18px;margin-top:9px;border-radius:4px;background:var(--ink)}
+.d-l.c li::before{background:var(--danger)}
+.d-photos{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:12px}
+.d-photos .ph{max-height:30vh;width:100%}
+.d-ens{flex:0 0 auto;display:flex;align-items:center;gap:14px;width:100%;min-height:64px;padding:8px 18px;border:none;border-top:1px solid var(--line);background:var(--table-head);text-align:left;font-size:20px;color:var(--ink)}
+.d-ens small{font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.d-ens svg{margin-left:auto;color:var(--muted)}
+.pd.d .bt{height:88px;font-size:24px}
+.pd.d .bt:first-child{width:96px;padding:0}
+.pd.d .bt:first-child .bt-l{display:none}
+.d-g{display:grid;gap:18px}
+/* Paysage : la consigne à gauche, les photos à droite (côte à côte s'il y en a deux). */
+@media (orientation:landscape) and (min-width:1000px){
+  .d-in{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);align-items:center;column-gap:32px}
+  .d-photos .ph{max-height:none}
+  .d-l li{font-size:28px}
+}
+</style></head>
+<body><div id="ec" class="ec"></div>
+<script src="donnees.js"></script><script src="commun.js"></script>
+<script>
+const { D, E, S, esc, ICO, entete, pied, aide, brancher } = M;
+function rendre() {
+  const e = E[S.i], nxt = E[S.i + 1];
+  document.getElementById('ec').innerHTML = entete() + `
+    <div class="d-prog"><div class="barre"><i style="width:${Math.round((S.i + 1) / E.length * 100)}%"></i></div><b>${S.i + 1} <small>/ ${E.length}</small></b></div>
+    <main class="d-zone" data-a="suivZone"><div class="d-in">
+      <div class="d-g">${e.crit ? `<div class="d-band">${ICO.alerte}POINT CRITIQUE · à respecter exactement</div>` : ''}
+      <div class="d-tete"><div class="d-num">ÉTAPE ${esc(e.n)}</div><h1>${esc(e.t)}</h1></div>
+      <ul class="d-l ${e.crit ? 'c' : ''}">${e.l.map(l => `<li>${esc(l)}</li>`).join('')}</ul></div>
+      ${e.photos.length ? `<div class="d-photos">${e.photos.map(p => `<img class="ph" src="img/${p}" alt="">`).join('')}</div>` : ''}
+    </div></main>
+    ${nxt ? `<button class="d-ens" data-a="suiv"><small>Ensuite</small><span>${esc(nxt.n)} · ${esc(nxt.t)}</span>${ICO.droite}</button>` : ''}
+    ${pied({ cls: 'd' })}${S.aide ? aide() : ''}`;
+}
+brancher(rendre);
+</script></body></html>
