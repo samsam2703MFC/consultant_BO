@@ -44,7 +44,9 @@
   "formations": [
    "FO-05"
   ],
-  "checklists": []
+  "checklists": [
+   "5.2.01"
+  ]
  },
  "sections": [
   {
