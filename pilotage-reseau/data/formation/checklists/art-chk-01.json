@@ -1,6 +1,6 @@
 {
  "id": "art-chk-01",
- "code": "ART 5.0.01",
+ "code": "0.0.14",
  "type": "Article",
  "dossier": "04",
  "version": "1.0",
@@ -78,8 +78,8 @@
       "nl": "De code: wie, wanneer, nummer"
      },
      "texte": {
-      "fr": "Chaque checklist a un code à trois parties, par exemple 1.1.01 · Ouverture de la boutique.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLes deux derniers chiffres : le numéro, qui sépare les checklists du même qui et du même quand (1.1.01, 1.1.02…).\nLe même code partout : dans l’application du magasin, le dashboard, le manuel et les SOP.",
-      "nl": "Elke checklist heeft een code in drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nDe laatste twee cijfers: het nummer, dat de checklists met hetzelfde wie en hetzelfde wanneer onderscheidt (1.1.01, 1.1.02…).\nOveral dezelfde code: in de app van de winkel, het dashboard, het handboek en de SOP’s."
+      "fr": "Chaque checklist a un code à trois parties, par exemple 1.1.01 · Ouverture de la boutique.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n0 : les SOP et le manuel ; 0.1.01 est la 1re SOP de l’ouverture, 0.0.xx un article (sans moment).\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLes deux derniers chiffres : le numéro, qui sépare les checklists du même qui et du même quand (1.1.01, 1.1.02…).\nLe même code partout : dans l’application du magasin, le dashboard et le manuel.",
+      "nl": "Elke checklist heeft een code in drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n0: de SOP’s en het handboek; 0.1.01 is de 1e SOP van de opening, 0.0.xx een artikel (zonder moment).\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nDe laatste twee cijfers: het nummer, dat de checklists met hetzelfde wie en hetzelfde wanneer onderscheidt (1.1.01, 1.1.02…).\nOveral dezelfde code: in de app van de winkel, het dashboard en het handboek."
      },
      "critique": false,
      "photo": "chk-organisation.jpg",

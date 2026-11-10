@@ -1,6 +1,6 @@
 {
  "id": "art-pil-01",
- "code": "ART 5.0.02",
+ "code": "0.0.15",
  "type": "Article",
  "dossier": "04",
  "version": "1.0",
@@ -285,8 +285,8 @@
       "nl": "Hoe het georganiseerd is"
      },
      "texte": {
-      "fr": "Une checklist : une liste de tâches à faire à un moment de la journée.\nSon code a trois parties, par exemple 1.1.01 · Ouverture de la boutique : qui · quand · numéro.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLe numéro sépare les checklists du même qui et du même quand.\nObligatoire : la tâche doit être faite chaque jour où elle revient.\nPhoto : une tâche qui demande une photo n’est faite que si la photo est rendue ; cochée sans photo, elle ne compte pas.\nContrôle qualité : chaque photo rendue est notée de 1 à 5 par le contrôleur ; sous 4, c’est une non-conformité, à corriger.",
-      "nl": "Een checklist: een lijst taken die op een moment van de dag gedaan moeten worden.\nDe code heeft drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel: wie · wanneer · nummer.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nHet nummer onderscheidt de checklists met hetzelfde wie en hetzelfde wanneer.\nVerplicht: de taak moet gedaan worden op elke dag dat ze terugkomt.\nFoto: een taak die een foto vraagt is pas gedaan als de foto ingediend is; aangevinkt zonder foto telt ze niet.\nKwaliteitscontrole: elke ingediende foto krijgt van de controleur een score van 1 tot 5; onder 4 is het een non-conformiteit, te corrigeren."
+      "fr": "Une checklist : une liste de tâches à faire à un moment de la journée.\nSon code a trois parties, par exemple 1.1.01 · Ouverture de la boutique : qui · quand · numéro.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n0 : les SOP et le manuel ; 0.1.01 est la 1re SOP de l’ouverture, 0.0.xx un article (sans moment).\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLe numéro sépare les checklists du même qui et du même quand.\nObligatoire : la tâche doit être faite chaque jour où elle revient.\nPhoto : une tâche qui demande une photo n’est faite que si la photo est rendue ; cochée sans photo, elle ne compte pas.\nContrôle qualité : chaque photo rendue est notée de 1 à 5 par le contrôleur ; sous 4, c’est une non-conformité, à corriger.",
+      "nl": "Een checklist: een lijst taken die op een moment van de dag gedaan moeten worden.\nDe code heeft drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel: wie · wanneer · nummer.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n0: de SOP’s en het handboek; 0.1.01 is de 1e SOP van de opening, 0.0.xx een artikel (zonder moment).\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nHet nummer onderscheidt de checklists met hetzelfde wie en hetzelfde wanneer.\nVerplicht: de taak moet gedaan worden op elke dag dat ze terugkomt.\nFoto: een taak die een foto vraagt is pas gedaan als de foto ingediend is; aangevinkt zonder foto telt ze niet.\nKwaliteitscontrole: elke ingediende foto krijgt van de controleur een score van 1 tot 5; onder 4 is het een non-conformiteit, te corrigeren."
      },
      "critique": false,
      "photo": "dash-organisation.jpg",
