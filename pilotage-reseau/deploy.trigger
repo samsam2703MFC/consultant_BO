@@ -1368,3 +1368,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-09T21:16:23Z cadre des tâches : ligne du temps
 2026-11-09T21:22:50Z tâches : planning conservé au PATCH
 2026-11-10T05:19:58Z document : filtre par zone et par poste
+2026-11-10T05:25:53Z cadre des tâches : Responsable
