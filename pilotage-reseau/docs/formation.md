@@ -926,6 +926,19 @@ Client : « un SOP complet pour l'analyse et l'utilisation du dashboard magasin,
   est le réglage `foPinResponsable` ; tant qu'il n'est pas posé, **1111, provisoire, à changer en fin de développement**
   (`FO_PIN_RESPONSABLE_PROVISOIRE`). Le portail (fiche, éditeur, PDF) n'est pas concerné. ART-PIL-01 et SOP-PIL-01 sont
   réservés (`"acces": "responsable"` dans leur fichier ; `encoder_sop.py` pose l'accès).
+- **10/11/2026 — v1.3 des deux documents** (commits du dashboard du 07/11 après `85d41cdb` au 09/11, `3fbd5c7d`) :
+  article (35 parties) — « Les onglets » (dix onglets, la revue du soir), « Ouvrir le dashboard » (seuls la revue du
+  soir et le relevé terrain enregistrent), Heure par heure (jusqu'à 20 h), Contrôles en photo (par checklist, carrousel,
+  obligatoire / facultative), Commandes et canaux (pro en paiement différé, remise déduite), téléphone (Tâches) ; sections
+  nouvelles « Tâches — les checklists du jour » (5 parties) et « Concurrence et Temps morts » (2) ; quiz de 7 questions.
+  SOP (30 étapes) — 1.3, 3.3, **3.4 « La revue du soir » (nouvelle, encodée sur accord du client)**, 4.4, 4.6 ; soir 10 min ;
+  quiz de 5 questions ; classement : la checklist 5.2.01 gardée (posée au serveur par la nomenclature). Captures nouvelles :
+  dash-onglet-taches, -organisation, -checklists-jour, -retours, -revue, -concurrence, -temps-morts ; refaites : dash-entete,
+  -frise, -heures, -controles, -mobile. NL à relire.
+- **10/11/2026 — ART-CHK-01 « Les checklists du magasin : la structure »** (client : « un article dans le manuel opératoire
+  avec l'explication des structures des checklists ») : source `data/formation/checklists/` (9 parties, 3 questions,
+  photos du Document du cockpit — `tools/formation/captures_checklists.js` — et du dashboard), créé en v1.0 « à valider »,
+  accès à tous, classé D5.1, FO-01, pré-ouverture, postes P1 à P12 (à confirmer).
 
 
 ## Formations ajoutées par le réseau, hors de l'Excel v25 (07/11/2026)

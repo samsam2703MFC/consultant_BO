@@ -1,14 +1,14 @@
 {
- "dashboardCommit": "85d41cdbdea72c8a37094cc1cd1426aebf2aa422",
- "dashboardCommitLe": "2026-11-07T08:16:49+00:00",
- "capturesLe": "2026-11-07",
+ "dashboardCommit": "3fbd5c7df722775832379a0adff0c4babdb1cefb",
+ "dashboardCommitLe": "2026-11-09T14:41:16+00:00",
+ "capturesLe": "2026-11-10",
  "capturesMagasin": "4",
  "encode": true,
- "note": "07/11/2026 : v1.0 encodées, réservées au responsable ; v1.1 captures au seuil matière de Budget › Paramètres ; article v1.2 : Primes, le franchisé reste dans le tableau, hors primes (commit 9d063d16). NL à relire. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, capture dash-charges).",
- "encodeLe": "2026-11-07",
+ "note": "07/11/2026 : v1.0 encodées, réservées au responsable ; v1.1 captures au seuil matière de Budget › Paramètres ; article v1.2 : Primes, le franchisé reste dans le tableau, hors primes (commit 9d063d16). NL à relire. SOP v1.2 : étape 5.5 « Les charges face au modèle » (Budget › Paramètres › Répartition des charges, capture dash-charges). 10/11/2026 : v1.3 des deux documents (commits du 07/11 au 09/11) : onglets Tâches, Concurrence, Temps morts, revue du soir (SOP 3.4, encodée sur accord du client : geste nouveau), contrôles en photo par checklist, Heure par heure jusqu'à 20 h, pro en paiement différé remise déduite, téléphone ; captures du 09/11 prises le 10/11. NL à relire. Nouvel article ART-CHK-01 (data/formation/checklists/), v1.0 à valider.",
+ "encodeLe": "2026-11-10",
  "versions": {
-  "art-pil-01": "1.2",
-  "sop-pil-01": "1.2"
+  "art-pil-01": "1.3",
+  "sop-pil-01": "1.3"
  },
  "acces": "responsable (07/11/2026 : Manuel, cadenas or, PIN du responsable, 1111 provisoire)"
 }
