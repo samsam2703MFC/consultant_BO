@@ -208,3 +208,27 @@ a.pt-fo:hover span:last-child { color: var(--accent); }
 .pt-pas li span { font-size: 12.5px; color: var(--muted-2); line-height: 1.45; }
 @media (max-width: 1280px) { .pt-phases--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) { .pt-phases--4 { grid-template-columns: minmax(0, 1fr); } .pt-c-mom { flex-basis: 110px; } }
+
+/* Accueil (10/11/2026, maquette A3) : la différence entre formation, manuel, SOP et checklist, noir sur blanc. */
+.ac-phrase { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 14px 18px; font-size: 15px; line-height: 1.5; margin-bottom: 14px; }
+.ac-phrase b { font-weight: 400; }
+.ac-tab { padding: 0; overflow: hidden; }
+.ac-tab table { border-collapse: collapse; width: 100%; table-layout: fixed; font-size: 13px; line-height: 1.45; }
+.ac-tab .ac-c0 { width: 13%; }
+.ac-tab thead th { text-align: left; vertical-align: top; padding: 16px 14px 12px; border-bottom: 3px solid var(--c, var(--line)); font-weight: 400; text-transform: none; letter-spacing: 0; font-size: 13px; color: var(--ink); background: #fff; }
+.ac-ic { display: flex; width: 38px; height: 38px; border-radius: 11px; align-items: center; justify-content: center; margin-bottom: 8px;
+  background: color-mix(in srgb, var(--c) 12%, #fff); color: var(--c); }
+.ac-mot { display: block; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--c); }
+.ac-tab thead .ac-nom { display: block; font: 400 19px var(--font-display); color: var(--ink); text-decoration: none; }
+.ac-nom:hover { color: var(--c); text-decoration: underline; text-underline-offset: 3px; }
+.ac-tab thead small { display: block; text-transform: none; letter-spacing: 0; font-size: 11px; color: var(--muted); margin-top: 2px; }
+.ac-tab tbody th { text-align: left; vertical-align: top; font-weight: 400; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); padding: 11px 14px; }
+.ac-tab td { padding: 11px 14px; vertical-align: top; border-top: 1px solid var(--row-line, rgba(34,34,34,.06)); }
+.ac-tab tbody th { border-top: 1px solid var(--row-line, rgba(34,34,34,.06)); }
+.ac-tab tbody tr:nth-child(even) td, .ac-tab tbody tr:nth-child(even) th { background: #fdfbf8; }
+.ac-tab .ac-quoi td { font-size: 14px; }
+.ac-tab .ac-code td { font-variant-numeric: tabular-nums; }
+.ac-tab .ac-ex td, .ac-tab .ac-ex th { background: var(--paper) !important; }
+.ac-ex { color: var(--ink); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; cursor: pointer; }
+.ac-ex:hover { color: var(--accent); }
+@media (max-width: 900px) { .ac-tab { overflow-x: auto; } .ac-tab table { min-width: 860px; } }

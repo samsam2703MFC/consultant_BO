@@ -1010,3 +1010,15 @@ rend `code`.
 | 0.4.01 | SOP-WKL-003 | Procédure de fermeture – de la dernière préparation au coffre à clés |
 | 0.4.02 | SOP-CUI-FIN-01 | Fin de poste de cuisson — terminer son service |
 | 0.4.03 | SOP-VER-002 | Nettoyage des fours |
+
+## Accueil du portail : formation, manuel, SOP, checklist (10/11/2026)
+
+Client : « en première page, une mise en page que tout le monde comprend pour différencier les formations, le manuel
+opératoire et les SOP (noir sur blanc : pour qui, comment et pourquoi) » ; maquette A3 choisie (le tableau comparatif).
+`#/accueil` (`ecranAccueil`, `portail.js`) devient la page par défaut et la première entrée du menu Formation : une phrase
+(« la formation apprend le métier, le manuel explique pourquoi, la SOP montre comment faire, la checklist vérifie chaque
+jour que c'est fait »), puis un tableau Formations · Manuel opératoire · SOP · Checklists × c'est quoi, pour qui, quand,
+où, comment, pourquoi, comment c'est validé, le code, un exemple. Les nombres sont lus (formations du référentiel ; articles
+et SOP de `GET /formation/sop/liste`) ; chaque en-tête mène à son écran (la checklist : le Cadre des tâches, onglet
+Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.0.14 et la SOP 0.1.01).
+

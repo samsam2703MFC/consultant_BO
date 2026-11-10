@@ -449,6 +449,72 @@
       e => { P.sopsErr = e.message; P.sopsCharge = false; C.rendre(true); });
   }
 
+
+  /* ── Accueil (10/11/2026, maquette A3) ────────────────────────────────────
+   * Client : « en première page, une mise en page que tout le monde comprend pour différencier les formations, le
+   * manuel opératoire et les SOP (noir sur blanc : pour qui, comment et pourquoi) ». Une phrase, puis un tableau :
+   * Formations · Manuel opératoire · SOP · Checklists × c'est quoi, pour qui, quand, où, comment, pourquoi, validé,
+   * code, exemple. Les nombres sont lus (référentiel, liste des SOP) ; les exemples ouvrent leur document. */
+  const AC_ICO = {
+    fo: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5',
+    man: 'M2 4h7a3 3 0 0 1 3 3v14a2 2 0 0 0-2-2H2zM22 4h-7a3 3 0 0 0-3 3v14a2 2 0 0 1 2-2h8z',
+    sop: 'M7 2.5h10a2 2 0 0 1 2 2v15a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-15a2 2 0 0 1 2-2zM9 8h6M9 12h6M9 16h3',
+    chk: 'M4 6l2 2 3-3M4 13l2 2 3-3M4 20l2 2 3-3M12 7h8M12 14h8M12 21h8',
+  };
+  const AC_LIGNES = [['quoi', 'C’est quoi ?'], ['qui', 'Pour qui ?'], ['quand', 'Quand ?'], ['ou', 'Où ?'], ['comment', 'Comment ?'],
+    ['pourquoi', 'Pourquoi ?'], ['valide', 'Comment c’est validé ?'], ['code', 'Le code'], ['ex', 'Exemple']];
+  function ecranAccueil() {
+    const R = P.ref, L = P.sops;
+    const nb = (n, un, plus) => n == null ? '' : n + ' ' + (n > 1 ? plus : un);
+    const nT = t => L ? L.filter(x => x.type === t).length : null;
+    const COLS = [
+      { k: 'fo', nom: 'Formations', mot: 'Apprendre', coul: '#8D1D2C', n: nb(R ? (R.formations || []).length : null, 'formation', 'formations'), lien: '#/rfformations',
+        quoi: 'Un parcours pour acquérir les compétences d’un poste.',
+        qui: 'Chaque poste, de l’opérateur au franchisé : chaque formation dit pour quel poste elle est obligatoire ou recommandée.',
+        quand: 'À une phase : avant l’ouverture, pendant les 6 semaines de lancement, puis en formation continue (recyclages).',
+        ou: 'Ce portail, menu Formation : Formations, Postes, Compétences.',
+        comment: 'Un formateur ou le business coach la donne ; elle renvoie aux articles du manuel et aux SOP à lire et à faire.',
+        pourquoi: 'Pour que chacun sache faire son métier selon les standards du réseau.',
+        valide: 'Quand ses compétences sont acquises, elles sont cochées au panel pour la personne.',
+        code: 'FO-01, FO-02…', ex: ['FO-01 · Vendeur (initiale + recyclage)', 'href="#/rfformations/pre/FO-01"'] },
+      { k: 'man', nom: 'Manuel opératoire', mot: 'Comprendre', coul: '#B0792A', n: nb(nT('Article'), 'article', 'articles'), lien: '#/rfclasseur',
+        quoi: 'Les articles qui expliquent le pourquoi : la marque, les règles du réseau, les outils, les chiffres.',
+        qui: 'Toute l’équipe ; certains articles sont réservés au franchisé et au responsable (cadenas or, PIN).',
+        quand: 'Avant la première journée, puis à relire quand une règle change (nouvelle version).',
+        ou: 'La tablette du magasin, onglet Manuel ; le portail, fiche de chaque formation.',
+        comment: 'Il se lit partie par partie (« Partie 3 sur 9 »), avec une photo par partie et parfois un petit quiz.',
+        pourquoi: 'Pour comprendre avant d’agir : on applique mieux une règle dont on connaît la raison.',
+        valide: '« n sur N parties lues » ; le quiz, s’il y en a un.',
+        code: '0.0.01, 0.0.02… (0 : le manuel, .0 : sans moment)', ex: ['0.0.14 · Les checklists du magasin : la structure', 'data-tbx="art-chk-01" data-tbx-titre="Les checklists du magasin : la structure"'] },
+      { k: 'sop', nom: 'SOP', mot: 'Faire', coul: '#3f7a52', n: nb(nT('SOP'), 'SOP', 'SOP'), lien: '#/operationnel/ouverture',
+        quoi: 'Le geste exact, étape par étape : comment on fait, ici, chez L’Atelier By.',
+        qui: 'La personne du poste concerné (vente, cuisson, production, nettoyage).',
+        quand: 'Au moment du geste : à l’ouverture (0.1), en journée (0.2), l’après-midi (0.3), à la fermeture (0.4).',
+        ou: 'La tablette du poste, onglets Ouverture, Journée de travail, Fermeture ; en FR et en NL.',
+        comment: 'Une étape à la fois, avec sa photo ; les points critiques en rouge ; un quiz à la fin.',
+        pourquoi: 'Pour que le geste soit le même dans chaque magasin, quel que soit celui qui le fait.',
+        valide: 'Le responsable l’a « vu faire » et valide avec son PIN ; toutes les SOP d’une compétence vues → compétence cochée au panel.',
+        code: '0.1.01 (0 : SOP · 1 : ouverture · 01 : numéro)', ex: ['0.1.01 · Ouverture du magasin et des comptoirs', 'data-tbx="ouv-mag" data-tbx-titre="Ouverture du magasin et des comptoirs"'] },
+      { k: 'chk', nom: 'Checklists', mot: 'Vérifier', coul: '#1f5f8b', n: '', lien: '../task/?vue=checklists',
+        quoi: 'La liste des tâches à cocher chaque jour, à heure fixe.',
+        qui: 'L’équipe du magasin, selon son poste (« Fait par ») ; le contrôleur note les photos.',
+        quand: 'Chaque jour, ou chaque semaine, ou chaque mois, à l’heure de la checklist.',
+        ou: 'L’application du magasin ; le suivi dans le dashboard magasin, onglet Tâches.',
+        comment: 'On coche chaque tâche ; une tâche à photo n’est faite que si la photo est rendue.',
+        pourquoi: 'Pour vérifier chaque jour que la SOP a bien été appliquée.',
+        valide: 'Les photos sont notées de 1 à 5 ; sous 4, c’est une non-conformité à corriger.',
+        code: '1.1.01 (1 : qui, de 1 Vente à 5 Gestion · 1 : quand · 01 : numéro)', ex: ['1.1.01 · Ouverture de la boutique', 'href="#/sop/chk-ac-01"'] },
+    ];
+    const ic = x => `<span class="ac-ic" style="--c:${x.coul}"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${AC_ICO[x.k]}"/></svg></span>`;
+    const tete = COLS.map(x => `<th style="--c:${x.coul}">${ic(x)}<span class="ac-mot">${esc(x.mot)}</span><a class="ac-nom" href="${x.lien}"${x.k === 'chk' ? ' target="_blank" rel="noopener"' : ''}>${esc(x.nom)}</a><small>${esc(x.n)}</small></th>`).join('');
+    const lignes = AC_LIGNES.map(([k, l]) => `<tr class="ac-${k}"><th scope="row">${esc(l)}</th>${COLS.map(x => k === 'ex'
+      ? `<td><a class="ac-ex" ${x.ex[1]}>${esc(x.ex[0])}</a></td>` : `<td>${esc(x[k])}</td>`).join('')}</tr>`).join('');
+    const h = `<div class="ac-phrase">En une phrase : la <b style="color:#8D1D2C">formation</b> apprend le métier, le <b style="color:#B0792A">manuel</b> explique pourquoi,
+      la <b style="color:#3f7a52">SOP</b> montre comment faire, la <b style="color:#1f5f8b">checklist</b> vérifie chaque jour que c’est fait.</div>
+      <div class="card ac-tab"><table><colgroup><col class="ac-c0"><col><col><col><col></colgroup><thead><tr><th></th>${tete}</tr></thead><tbody>${lignes}</tbody></table></div>`;
+    return { titre: 'Bienvenue', kicker: 'Formation, manuel, SOP, checklist : la différence, noir sur blanc', corps: h, large: true };
+  }
+
   /* ── Réglages › Données du panel ──────────────────────────────────────── */
 
   function ecranDonnees() {
@@ -537,7 +603,7 @@
 
   // #/tablettes (la gestion des PIN par magasin) mène à « La tablette » : elle est ouverte et la même pour tous (06/11/2026).
   const versTablette = () => { setTimeout(() => { if (C.S.route.ecran === 'tablettes') { location.replace('#/operationnel/tablette'); } }, 0); return { titre: 'La tablette', kicker: 'Opérationnel', corps: '<p class="muted">…</p>' }; };
-  const ECRANS = { rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees, operationnel: ecranOperationnel, tablettes: versTablette };
+  const ECRANS = { accueil: ecranAccueil, rfformations: ecranFormations, rfmetiers: ecranPostes, rfcompetences: ecranCompetences, rfdonnees: ecranDonnees, operationnel: ecranOperationnel, tablettes: versTablette };
   Object.keys(ECRANS).forEach(k => { FS.ecrans[k] = ECRANS[k]; });
   Object.assign(FS.icones, {
     rfformations: 'M22 10L12 5 2 10l10 5 10-5zM6 12v5c3 2 9 2 12 0v-5',
@@ -548,6 +614,7 @@
     'operationnel/fermeture': 'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z',
     'operationnel/tablette': 'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM11 18h2',
   });
+  FS.icones.accueil = 'M3 11l9-8 9 8M5 10v10h5v-6h4v6h5V10';
   FS.icones.rfdonnees = 'M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6';
   const initAvant = FS.init, apresAvant = FS.apres;
   FS.init = function (ctx, root) { initAvant.call(FS, ctx, root); C = ctx; brancher(root); };
@@ -555,7 +622,8 @@
     apresAvant.call(FS, e, a);
     if (e === 'rfformations' || e === 'rfmetiers' || e === 'rfcompetences') { charger(false); }
     if (e === 'rfcompetences' && a[0] && a[0] !== 'produit') { chargerCor(false); }   // la fiche d'une compétence règle sa correspondance
-    if (e === 'operationnel') { chargerSops(false); }
+    if (e === 'operationnel' || e === 'accueil') { chargerSops(false); }
+    if (e === 'accueil') { charger(false); }
   };
 
   /**
@@ -563,13 +631,13 @@
    * écrans où elle reste allumée]. Les écrans d'avant restent à leur adresse, rangés sous Réglages › Données du panel.
    */
   window.FormationPortail = {
-    defaut: 'rfformations',
+    defaut: 'accueil',
     relire: () => charger(true),
-    titres: { rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
+    titres: { accueil: 'Accueil', rfformations: 'Formations', rfmetiers: 'Postes', rfcompetences: 'Compétences', rfdonnees: 'Données du panel', operationnel: 'Opérationnel', sopnouvelle: 'Nouvelle SOP' },
     // Deux menus (06/11/2026, client : « tout ce qui est formation reste dans Formation, tout ce qui est opérationnel, et les
     // deux menus du rail »). Une entrée = [écran, libellé, écrans où elle reste allumée, sous-adresse facultative].
     rail: [
-      ['Formation', [['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
+      ['Formation', [['accueil', 'Accueil', []], ['rfformations', 'Formations', ['rfpre']], ['rfmetiers', 'Postes', []], ['rfcompetences', 'Compétences', ['rfform', 'sopcomp']],
         ['rfdonnees', 'Données du panel', ['tableau', 'postes', 'competences', 'formations', 'procedures', 'ressources', 'produit', 'api']]], false],
       ['Opérationnel', [['operationnel', 'Ouverture', [], 'ouverture'], ['operationnel', 'Journée de travail', [], 'journee'], ['operationnel', 'Fermeture', [], 'fermeture'],
         ['operationnel', 'La tablette', [], 'tablette'],
