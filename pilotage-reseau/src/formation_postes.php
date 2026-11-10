@@ -19,8 +19,22 @@ function pcV25(): array
         $f = __DIR__ . '/data/referentiel_v25.json';
         $v = is_file($f) ? (json_decode((string) file_get_contents($f), true) ?: []) : [];
         $v += ['postes' => [], 'formations' => [], 'plans' => [], 'competences' => []];
+        // Les formations ajoutées par le réseau (src/data/formations_reseau.json), à la suite de celles de l'Excel.
+        $v['formations'] = array_merge($v['formations'], pcFormationsReseau(array_column($v['formations'], 'code')));
     }
     return $v;
+}
+
+/** Les formations ajoutées par le réseau hors de l'Excel v25 ; un code déjà dans le v25 est ignoré. */
+function pcFormationsReseau(array $dejaLa = [], ?string $fichier = null): array
+{
+    $j = json_decode((string) @file_get_contents($fichier ?? __DIR__ . '/data/formations_reseau.json'), true);
+    $out = [];
+    foreach (is_array($j['formations'] ?? null) ? $j['formations'] : [] as $f) {
+        $c = (string) ($f['code'] ?? '');
+        if (preg_match('/^FO-\d{2,3}$/', $c) && !in_array($c, $dejaLa, true) && trim((string) ($f['nom'] ?? '')) !== '') { $out[] = $f; $dejaLa[] = $c; }
+    }
+    return $out;
 }
 
 /** Les critères d'admission du cockpit, par code v25 (src/data/admission.json). */

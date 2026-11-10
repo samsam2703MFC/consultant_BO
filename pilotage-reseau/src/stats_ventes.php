@@ -238,7 +238,12 @@ function vtFicheClient(mixed $r): array
         if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } }
         elseif (!is_array($v)) { $f[(string) $k] = $v; }
     }
-    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'cles' => array_keys($f)];
+    $out = ['lue' => true, 'tva' => false, 'valide' => null, 'pays' => null, 'pro' => null, 'societe' => false, 'remise' => null, 'cles' => array_keys($f)];
+    // La remise personnelle du client (`personal_discount_percent`, 09/11/2026) : le panel la déduit à la facture d'un
+    // paiement différé, pas dans le ticket (vpFiltreTva). Null quand la fiche ne la porte pas.
+    foreach ($f as $k => $v) {
+        if (preg_match('/(^|\.)personal_discount_percent$/', (string) $k) && is_numeric($v)) { $out['remise'] = max(0.0, min(100.0, (float) $v)); break; }
+    }
     // Un nom de société sur la fiche : oui ou non, jamais le nom.
     foreach ($f as $k => $v) { if (preg_match('/(^|\.)company_name$/', (string) $k) && is_string($v) && trim($v) !== '') { $out['societe'] = true; break; } }
     foreach ($f as $k => $v) {
@@ -773,6 +778,8 @@ function svProduitsJour(int $sid, string $j, int &$cout, int $budget, bool $deta
     $grave = ['quand' => time(), 'n' => count($ids), 'p' => $p, 'pb' => (object) $pb, 'pbc' => (object) $pbc, 'pbv' => $pbv, 'd' => (object) $der, 'ids' => $ids, 'sp' => $sp, 'r' => $rm];
     if (function_exists('vpDuListe')) { $grave['b'] = vpDuListe($liste); }
     svGrave($cle, $grave);
+    // La liste du jour porte l'heure de chaque ticket : les temps morts la gardent, sans appel de plus.
+    if (function_exists('tmGraveListe')) { tmGraveListe($sid, $j, $liste); }
     return $p;
 }
 
@@ -1630,6 +1637,8 @@ function svCron(): string
     if (function_exists('vpMoisson')) { try { $vp = vpMoisson(); $pro = $vp['ok'] ? ' · pro : ' . $vp['joursFaits'] . ' jour(s) complétés, ' . $vp['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro = ' · pro : échec'; } }
     // Et la part pro produit par produit, que les rotations du comptoir retirent.
     try { $pb = svB2bMoisson(); $pro .= $pb['ok'] ? ' · produits pro : ' . $pb['joursFaits'] . ' jour(s) complétés, ' . $pb['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · produits pro : échec'; }
+    // Les heures des tickets des huit dernières semaines, pour l'onglet Temps morts du dashboard.
+    if (function_exists('tmMoisson')) { try { $tm = tmMoisson(); $pro .= $tm['ok'] ? ' · temps morts : ' . $tm['joursFaits'] . ' jour(s) gravés, ' . $tm['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · temps morts : échec'; } }
     // Le personnel et les frais de chaque jour de l'année (11/10/2026) : le tableau « mois par mois » et le P&L des mois passés.
     if (function_exists('resCoutsMoisson')) { try { $rc = resCoutsMoisson(); $pro .= $rc['ok'] ? ' · coûts du panel : ' . $rc['lectures'] . ' jour(s) lus, ' . $rc['joursRestants'] . ' restants' : ''; } catch (Throwable $e) { $pro .= ' · coûts du panel : échec'; } }
     return ($r['ok'] ? ($r['joursFaits'] . ' jour(s) moissonnés, ' . $r['etat']) : ('échec : ' . ($r['motif'] ?? '?'))) . $pro;

@@ -8,8 +8,8 @@
  *
  * TROIS GRANDS ONGLETS (06/11/2026, client : « la tablette doit être orientée opérationnel, donc les SOP : Ouverture ·
  * Journée de travail · Fermeture ; c'est le mode d'emploi pour la tablette ») : chaque onglet montre les SOP de son
- * moment (journée = journée, après-midi, puis « au besoin » pour une SOP sans moment) ; « Comment ça marche » explique la
- * tablette. L'onglet d'office suit l'heure (avant 11 h : ouverture ; à partir de 17 h : fermeture). Identifiée, la personne
+ * moment (journée = journée, après-midi, puis « au besoin » pour une SOP sans moment) ; l'onglet « Manuel » porte les
+ * articles (« Comment ça marche » retiré le 07/11/2026, client : « take off »). L'onglet d'office suit l'heure (avant 11 h : ouverture ; à partir de 17 h : fermeture). Identifiée, la personne
  * voit d'abord SES SOP (« Mes postes » : un de ses postes v25, sinon son poste de tablette) et leur état (à lire, lu,
  * quiz, vu faire) ; « Tout le magasin » montre les autres. Les anciens onglets « Ma journée » / « Toutes les SOP » sont
  * remplacés.
@@ -51,16 +51,12 @@
       faux: 'À revoir', okLu: 'Lecture enregistrée', erreurCharge: 'Impossible de charger les SOP', pasDeQuiz: 'Cette SOP n’a pas de quiz.',
       journee: 'Ma journée', toutes: 'Toutes les SOP', sesPostes: 'Mes postes', rienJournee: 'Aucun standard n’est encore rangé pour tes postes.',
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
-      onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel', aide: 'Comment ça marche' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
-      ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles', aide: 'la tablette' }, article1: 'article',
+      onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
+      ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles' }, article1: 'article',
       reserveT: 'Réservé au franchisé et au responsable', reserve: 'réservé', pinResp: 'PIN du responsable', pinRespS: 'Ce document est réservé au franchisé et au responsable du magasin. Tape le PIN du responsable pour l’ouvrir.',
       rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues', parties: 'parties',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
-      rienMoment: 'Aucune SOP pour ce moment.', aideT: 'La tablette du magasin',
-      aide: [['Choisir le moment', 'Ouverture, Journée de travail ou Fermeture : les SOP du moment.'],
-        ['Choisir ton poste', 'Vente, Production, Cuisson ou Nettoyage — ou toutes.'],
-        ['Suivre la SOP pas à pas', 'Les étapes une par une, avec les photos, les vidéos et les points critiques.'],
-        ['Faire le quiz', 'À la fin, quelques questions pour vérifier : c’est un exercice, rien n’est enregistré.']],
+      rienMoment: 'Aucune SOP pour ce moment.',
       etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel',
       mag: { titre: 'Tablette du magasin', pin: 'PIN du magasin', aide: 'Les 6 chiffres donnés par le consultant, une seule fois sur cette tablette.', magasin: 'Magasin',
         ouvrir: 'Ouvrir', effacer: 'Effacer', ouverture: 'Ouverture…', fermer: 'Fermer la tablette', fermerQ: 'Fermer la tablette ? Il faudra retaper le PIN du magasin.',
@@ -80,16 +76,12 @@
       faux: 'Opnieuw bekijken', okLu: 'Lezing bewaard', erreurCharge: 'De SOP konden niet geladen worden', pasDeQuiz: 'Deze SOP heeft geen quiz.',
       journee: 'Mijn dag', toutes: 'Alle SOP', sesPostes: 'Mijn posten', rienJournee: 'Er staat nog geen standaard voor jouw posten.',
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
-      onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek', aide: 'Hoe werkt het' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
-      ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels', aide: 'de tablet' }, article1: 'artikel',
+      onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
+      ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels' }, article1: 'artikel',
       reserveT: 'Voorbehouden aan de franchisenemer en de verantwoordelijke', reserve: 'voorbehouden', pinResp: 'PIN van de verantwoordelijke', pinRespS: 'Dit document is voorbehouden aan de franchisenemer en de verantwoordelijke van de winkel. Typ de PIN van de verantwoordelijke om het te openen.',
       rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen', parties: 'delen',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
-      rienMoment: 'Geen SOP voor dit moment.', aideT: 'De tablet van de winkel',
-      aide: [['Het moment kiezen', 'Opening, Werkdag of Sluiting: de SOP van dat moment.'],
-        ['Je post kiezen', 'Verkoop, Productie, Bakken of Schoonmaak — of alle.'],
-        ['De SOP stap voor stap volgen', 'De stappen één voor één, met de foto’s, de video’s en de kritieke punten.'],
-        ['De quiz doen', 'Op het einde enkele vragen om na te gaan: een oefening, er wordt niets bewaard.']],
+      rienMoment: 'Geen SOP voor dit moment.',
       etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel',
       mag: { titre: 'Tablet van de winkel', pin: 'Pincode van de winkel', aide: 'De 6 cijfers van de consultant, één keer op deze tablet.', magasin: 'Winkel',
         ouvrir: 'Openen', effacer: 'Wissen', ouverture: 'Bezig met openen…', fermer: 'Tablet afsluiten', fermerQ: 'Tablet afsluiten? De pincode van de winkel moet dan opnieuw ingetikt worden.',
@@ -240,14 +232,14 @@
   }
 
   /* ── La liste : trois grands onglets, Ouverture · Journée de travail · Fermeture, puis « Manuel » (les articles du
-     manuel opératoire, 07/11/2026) et « Comment ça marche » ── */
-  const ONGLETS = ['ouverture', 'journee', 'fermeture', 'manuel', 'aide'];
+     manuel opératoire, 07/11/2026) ── */
+  const ONGLETS = ['ouverture', 'journee', 'fermeture', 'manuel'];
   // Un document réservé (acces « responsable », 07/11/2026) se range dans Manuel, quel que soit son moment.
   const ongletDe = s => s.type === 'Article' || s.acces === 'responsable' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
   function onglets() {
     const n = k => (S.init.sops || []).filter(s => ongletDe(s) === k && (k === 'manuel' || visible(s))).length;
     return `<div class="tb-moments" role="tablist">${ONGLETS.map(k => `<button role="tab" data-onglet="${k}" class="${S.onglet === k ? 'on' : ''}" aria-selected="${S.onglet === k}">
-      <b>${esc(t().onglets[k])}</b><small>${k === 'aide' ? esc(t().ongletsS[k]) : n(k) + (k === 'manuel' ? ' ' + (n(k) === 1 ? t().article1 : t().ongletsS[k]) : ' SOP · ' + t().ongletsS[k])}</small></button>`).join('')}</div>`;
+      <b>${esc(t().onglets[k])}</b><small>${n(k) + (k === 'manuel' ? ' ' + (n(k) === 1 ? t().article1 : t().ongletsS[k]) : ' SOP · ' + t().ongletsS[k])}</small></button>`).join('')}</div>`;
   }
   /** Un standard est de la journée de la personne : un de ses postes v25 est celui du standard (sinon l'ancien poste). */
   function pourMoi(s) {
@@ -261,7 +253,6 @@
   const foDe = s => ((s.classement || {}).formations || [])[0] || '';
   function vueListe() {
     if (!ONGLETS.includes(S.onglet)) { S.onglet = ongletDuMoment(); }
-    if (S.onglet === 'aide') { return `<div class="tb-corps"><div class="tb-liste">${onglets()}${vueAide()}</div></div>`; }
     const st = id => (S.suivi[id] || {}).statut || 'non';
     const ic = { non: '·', lu: 'L', quiz: 'Q', vu: '✓', a_revoir: '!' };
     // Les articles du manuel valent pour tout le monde : ils ne dépendent pas du poste choisi.
@@ -284,10 +275,6 @@
       : `<div class="tb-chips">${['tous'].concat(POSTES).map(p => `<button data-poste="${p}" class="${S.poste === p ? 'on' : ''}">${esc(t().poste[p])}</button>`).join('')}</div>`;
     // Les articles du manuel valent pour tous les postes : pas de filtre de poste sous l'onglet « Manuel ».
     return `<div class="tb-corps"><div class="tb-liste">${onglets()}${S.onglet === 'manuel' ? '' : chips}${corps}</div></div>`;
-  }
-  function vueAide() {
-    return `<div class="tb-aide"><div class="sec-t">${esc(t().aideT)}</div><ol>${t().aide.map(([a, b]) => `<li><b>${esc(a)}</b><span>${esc(b)}</span></li>`).join('')}</ol>
-</div>`;
   }
 
   /** Le cadenas doré des documents réservés. */

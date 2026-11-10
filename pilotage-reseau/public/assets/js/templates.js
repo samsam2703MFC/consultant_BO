@@ -15,6 +15,7 @@ import { tplVerifMatieres } from './verification-matieres-tpl.js';
 import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
+import { tplVisibilite } from './visibilite-tpl.js';
 
 /* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
    une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
@@ -50,13 +51,13 @@ const ICO = {
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle',
   ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
   verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
   catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
-  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds',
+  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
   'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles',
@@ -163,7 +164,7 @@ export function render(c, x){
         ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" class="btn btn--sm">${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
       </div>
     </header>
-  <main id="main-scroll" class="app__body">
+  <main id="main-scroll" class="app__body${c.large ? ' app__body--wide' : ''}">
     <div class="shell-page">
       ${c.screenSub ? `<p class="shell-sub page-intro">${esc(c.screenSub)}</p>` : ''}
 
@@ -190,6 +191,7 @@ export function render(c, x){
       ${c.isFonds ? tplFonds(c, x) : ''}
       ${c.isMktTypes ? tplMktTypes(c, x) : ''}
       ${c.isReput ? tplReputation(c, x) : ''}
+      ${c.isVisib ? tplVisibilite(c, x) : ''}
       ${c.isRJour ? tplResultat(c, x) : ''}
       ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
       ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
@@ -198,6 +200,7 @@ export function render(c, x){
       ${c.isEncodage ? tplEncodage(c, x) : ''}
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
+      ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
@@ -7867,6 +7870,15 @@ function tplManque(c, x){
  * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
  * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
  * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+/* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
+ * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
+ * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+function tplCadreTaches(c, x){
+  const { esc } = x;
+  // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.
+  // « Ouvrir seul ↗ » vit dans la page elle-même, à côté de « Relire ».
+  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;min-height:calc(100vh - 110px);border:none;background:transparent;display:block"></iframe></div>`;
+}
 /* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
 /* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
    l'ancre, qu'app.js lui rend après chaque rendu. */

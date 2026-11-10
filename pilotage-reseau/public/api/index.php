@@ -61,6 +61,7 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
+require __DIR__ . '/../../src/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
 require __DIR__ . '/../../src/assortiment.php';
@@ -87,6 +88,7 @@ require __DIR__ . '/../../src/ventes.php';
 require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
+require __DIR__ . '/../../src/caisse.php';
 require __DIR__ . '/../../src/dashboard_semaine.php';
 require __DIR__ . '/../../src/production_plan.php';
 require __DIR__ . '/../../src/production_flux.php';
@@ -128,6 +130,11 @@ require __DIR__ . '/../../src/referentiel.php';
 require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
+require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
+require __DIR__ . '/../../src/task_cadre.php';
+require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
+require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -147,6 +154,12 @@ try {
     $tInstall = microtime(true);
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
+    if ($method === 'GET' && preg_match('#^/benchmarks/(cougnou|galette)/rapport\.html$#', $path, $m)) {
+        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        header('Content-Type: text/html; charset=utf-8');
+        echo benchmarkHtml([benchmarkRapport($m[1], ($_GET['web'] ?? '1') !== '0')]);
+        exit;
+    }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
         if (authEnabled() && !authOk()) { http_response_code(401); exit; }
         header('Content-Type: text/html; charset=utf-8');
@@ -333,6 +346,10 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
+    if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
+    // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
+    if (str_starts_with($path, '/soir/')) { return rsRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
@@ -389,6 +406,7 @@ function route(string $method, string $path): mixed
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
+            $path === '/exploitation/temps-morts'      => ep_temps_morts(),
             // Les feuilles du dashboard (06/11/2026) : le B2B d'un jour, ticket par ticket ; les commandes du jour, rapprochées.
             $path === '/exploitation/pro/detail'       => ep_exploitation_pro_detail(),
             $path === '/exploitation/commandes/detail' => ep_exploitation_commandes_detail(),
@@ -448,9 +466,14 @@ function route(string $method, string $path): mixed
             $path === '/analyse/prix-volume'           => ep_prix_volume(),
             $path === '/dossier.pdf'                  => ep_dossier_pdf(),
             $path === '/rapports/cron'                 => ep_rapports_cron(),
+            $path === '/benchmarks/cron'               => ep_benchmark_cron(),
+            $path === '/benchmarks/verification'       => ep_benchmark_verification(),
+            $path === '/benchmarks/magasin'            => ep_benchmark_magasin(),
+            (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
             $path === '/marketing/avis'                    => ep_reputation(),
+            $path === '/visibilite'                        => ep_visibilite(),
             $path === '/marketing/avis/recherche'          => ep_reputation_recherche(),
             $path === '/marketing'                     => ep_mkt(),
             // Le module Marketing (/marketing) : tous les canaux en une lecture.
@@ -548,6 +571,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
             $path === '/ventes/tickets'               => ep_ventes_tickets(),
             $path === '/ventes/mensuel'              => ep_ventes_mensuel(),
+            $path === '/caisse/semaine'              => ep_caisse_semaine(),
+            $path === '/caisse/jour'                 => ep_caisse_jour(),
             $path === '/ventes/stock'                => ep_ventes_stock(),
             $path === '/ventes/commandes'            => ep_ventes_commandes(),
             $path === '/ventes/commandes/sonde'      => ep_commandes_sonde(),
@@ -864,6 +889,7 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
+    if ($method === 'POST' && $path === '/visibilite/sync') { return wr_visibilite_sync(); }
     if ($method === 'PUT' && preg_match('#^/marketing/avis/([\w-]+)/fiche$#', $path, $m)) { return wr_reputation_fiche($m[1]); }
     if ($method === 'PUT' && $path === '/parametres/google-cle') { return wr_google_compte(); }
     if ($method === 'POST' && preg_match('#^/marketing/campagne/(\d+)/note$#', $path, $m)) { return wr_mkt_brief_envoyer((int) $m[1]); }
@@ -926,6 +952,11 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/marketing/newsletter/reglages') { return wr_newsletter_reglages(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/tick') { return wr_newsletter_tick(); }
     if ($method === 'POST' && preg_match('#^/marketing/newsletter/vouchers/([A-Za-z0-9]{4,12})/utiliser$#', $path, $m)) { return wr_newsletter_voucher_utiliser($m[1]); }
+    // --- benchmark concurrents (module Benchmark de TFBuddy, src/benchmark.php)
+    if ($method === 'POST' && $path === '/benchmarks/verification') { return wr_benchmark_verification(); }
+    if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|top10|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
+    if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
+    if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)

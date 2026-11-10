@@ -46,6 +46,11 @@ final class GoogleApi
     // les photos du lieu (celles de la fiche — Google ne rend pas les photos
     // jointes à un avis).
     private const CHAMPS_FICHE = 'id,displayName,formattedAddress,rating,userRatingCount,googleMapsUri,reviews,photos,businessStatus';
+    // Visibilité Google (09/11/2026) : ce que la fiche d'un magasin affiche, pour la comparer au
+    // site — horaires (habituels et exceptionnels des 7 prochains jours), catégorie, lien, téléphone,
+    // photos, options. Pas les avis : la réputation les lit déjà.
+    private const CHAMPS_VISIBILITE = 'id,displayName,formattedAddress,location,primaryType,primaryTypeDisplayName,regularOpeningHours,currentOpeningHours,websiteUri,nationalPhoneNumber,rating,userRatingCount,businessStatus,googleMapsUri,photos,takeout,delivery,servesBreakfast';
+    private const CHAMPS_RANG = 'places.id,places.displayName,places.rating,places.userRatingCount,places.primaryTypeDisplayName';
 
     public static function config(): array
     {
@@ -204,6 +209,63 @@ final class GoogleApi
         return null;
     }
 
+    /**
+     * La fiche d'un magasin du réseau telle que Google l'affiche (Visibilité Google). Lecture directe,
+     * puis la recherche textuelle si Google refuse la lecture directe (403/404) — seule la fiche au même
+     * identifiant est retenue. Forme : googleFicheVisibilite().
+     */
+    public static function ficheVisibilite(string $placeId, string $texte, ?array $pos = null): ?array
+    {
+        if ($placeId === '') { self::$lastError = 'identifiant de fiche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        [$code, $json] = self::http('GET', self::BASE . '/places/' . rawurlencode($placeId)
+            . '?languageCode=' . rawurlencode($c['langue']) . '&regionCode=BE', self::CHAMPS_VISIBILITE, $c['cle'], null);
+        if ($code === 200 && is_array($json)) { return googleFicheVisibilite($json); }
+        $refus = self::erreur($code, $json);
+        if (!in_array($code, [403, 404], true) || trim($texte) === '') { self::$lastError = $refus; return null; }
+        $champs = implode(',', array_map(fn($x) => 'places.' . $x, explode(',', self::CHAMPS_VISIBILITE)));
+        $corps = ['textQuery' => trim($texte), 'languageCode' => $c['langue'], 'regionCode' => 'BE', 'maxResultCount' => 10];
+        if ($pos !== null) { $corps['locationBias'] = ['circle' => ['center' => ['latitude' => $pos['lat'], 'longitude' => $pos['lng']], 'radius' => 2000.0]]; }
+        [$code2, $json2] = self::http('POST', self::BASE . '/places:searchText', $champs, $c['cle'], $corps);
+        if ($code2 !== 200 || !is_array($json2)) { self::$lastError = $refus . ' · recherche : ' . self::erreur($code2, $json2); return null; }
+        foreach ((array) ($json2['places'] ?? []) as $p) {
+            if (is_array($p) && (string) ($p['id'] ?? '') === $placeId) { return googleFicheVisibilite($p); }
+        }
+        self::$lastError = $refus . ' · fiche absente de la recherche';
+        return null;
+    }
+
+    /**
+     * Une recherche telle qu'un client la lance autour du magasin : jusqu'à 20 résultats, dans l'ordre
+     * de Google, biaisés vers la position du magasin (rayon en mètres). Proche du classement de Google
+     * Maps, sans être celui que voit un client donné (sa position, son historique).
+     */
+    public static function rechercheLocale(string $texte, ?array $pos, string $langue, int $rayon = 5000): ?array
+    {
+        $texte = trim($texte);
+        if ($texte === '') { self::$lastError = 'recherche vide'; return null; }
+        $c = self::config();
+        if ($c['cle'] === '') { self::$lastError = 'clé Google absente'; return null; }
+        $corps = ['textQuery' => $texte, 'languageCode' => $langue !== '' ? $langue : $c['langue'], 'regionCode' => 'BE', 'maxResultCount' => 20];
+        if ($pos !== null) {
+            $corps['locationBias'] = ['circle' => ['center' => ['latitude' => $pos['lat'], 'longitude' => $pos['lng']],
+                'radius' => (float) max(500, min(50000, $rayon))]];
+        }
+        [$code, $json] = self::http('POST', self::BASE . '/places:searchText', self::CHAMPS_RANG, $c['cle'], $corps);
+        if ($code !== 200 || !is_array($json)) { self::$lastError = self::erreur($code, $json); return null; }
+        $out = [];
+        foreach ((array) ($json['places'] ?? []) as $p) {
+            $id = trim((string) ($p['id'] ?? ''));
+            if ($id === '') { continue; }
+            $out[] = ['placeId' => $id, 'nom' => $p['displayName']['text'] ?? $id,
+                'note' => isset($p['rating']) ? round((float) $p['rating'], 1) : null,
+                'avis' => (int) ($p['userRatingCount'] ?? 0),
+                'type' => (string) ($p['primaryTypeDisplayName']['text'] ?? '')];
+        }
+        return $out;
+    }
+
     private static function ficheDepuis(array $json): array
     {
         $d = googleLieuNormalise($json);
@@ -358,4 +420,56 @@ function googleCandidats(array $json): array
         ];
     }
     return $out;
+}
+
+/**
+ * La fiche d'un magasin ramenée à ce que l'écran Visibilité Google compare (09/11/2026).
+ *
+ * Fonction pure : elle porte la forme de la réponse Google (Places API New). Les horaires sont
+ * ramenés à sept chaînes, du lundi au dimanche (« 06:30–18:30 », plusieurs plages séparées par
+ * « , », « » = fermé), la forme commune avec les horaires lus sur le site.
+ */
+function googleFicheVisibilite(array $json): array
+{
+    $jours = ['', '', '', '', '', '', ''];
+    $h = static fn (array $p) => sprintf('%02d:%02d', (int) ($p['hour'] ?? 0), (int) ($p['minute'] ?? 0));
+    $periodes = (array) (($json['regularOpeningHours'] ?? [])['periods'] ?? []);
+    $connus = $periodes !== [];
+    foreach ($periodes as $p) {
+        if (!isset($p['open']['day'])) { continue; }
+        $j = ((int) $p['open']['day'] + 6) % 7;            // Google : 0 = dimanche ; ici 0 = lundi
+        $plage = isset($p['close']) ? $h($p['open']) . '–' . $h($p['close']) : '24 h/24';
+        $jours[$j] = $jours[$j] === '' ? $plage : $jours[$j] . ', ' . $plage;
+    }
+    // Les horaires exceptionnels : Google ne les publie que pour les sept prochains jours.
+    $speciaux = [];
+    foreach ((array) (($json['currentOpeningHours'] ?? [])['specialDays'] ?? []) as $s) {
+        $d = (array) ($s['date'] ?? []);
+        if (!isset($d['year'], $d['month'], $d['day'])) { continue; }
+        $speciaux[] = sprintf('%04d-%02d-%02d', (int) $d['year'], (int) $d['month'], (int) $d['day']);
+    }
+    return [
+        'placeId' => (string) ($json['id'] ?? ''),
+        'nom' => $json['displayName']['text'] ?? null,
+        'adresse' => $json['formattedAddress'] ?? null,
+        'position' => isset($json['location']['latitude'])
+            ? ['lat' => (float) $json['location']['latitude'], 'lng' => (float) $json['location']['longitude']] : null,
+        'type' => (string) ($json['primaryType'] ?? ''),
+        'typeLibelle' => (string) ($json['primaryTypeDisplayName']['text'] ?? ''),
+        'horaires' => $connus ? $jours : null,
+        'horairesTexte' => array_values(array_map('strval', (array) (($json['regularOpeningHours'] ?? [])['weekdayDescriptions'] ?? []))),
+        'speciaux' => $speciaux,
+        'site' => (string) ($json['websiteUri'] ?? ''),
+        'telephone' => (string) ($json['nationalPhoneNumber'] ?? ''),
+        'note' => isset($json['rating']) ? round((float) $json['rating'], 1) : null,
+        'avis' => (int) ($json['userRatingCount'] ?? 0),
+        'statut' => (string) ($json['businessStatus'] ?? ''),
+        'url' => (string) ($json['googleMapsUri'] ?? ''),
+        // Google rend au plus dix photos : 10 se lit « dix et plus ».
+        'photos' => count((array) ($json['photos'] ?? [])),
+        'options' => array_values(array_filter([
+            !empty($json['takeout']) ? 'À emporter' : null,
+            !empty($json['delivery']) ? 'Livraison' : null,
+            !empty($json['servesBreakfast']) ? 'Petit-déjeuner' : null])),
+    ];
 }

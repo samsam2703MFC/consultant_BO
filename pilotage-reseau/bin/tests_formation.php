@@ -135,7 +135,14 @@ verifie('dix vidéos au plus', count(mnVideos(array_map(static fn ($i) => 'https
 verifie('rien de lisible : liste vide', mnVideos('https://vimeo.com/1') === [] && mnVideos(null) === []);
 $defFo = mnFormationsDefaut(__DIR__ . '/../src/data/manuel_formations.json');
 $v25Fo = array_column(json_decode((string) file_get_contents(__DIR__ . '/../src/data/referentiel_v25.json'), true)['formations'], 'code');
+// Plus celles que le réseau ajoute hors de l'Excel (src/data/formations_reseau.json).
+$v25Fo = array_merge($v25Fo, array_column(json_decode((string) file_get_contents(__DIR__ . '/../src/data/formations_reseau.json'), true)['formations'], 'code'));
 verifie('formations : chacune des ' . count($v25Fo) . ' formations du référentiel a sa partie par défaut, et rien d’autre', array_keys($defFo) === $v25Fo || (count($defFo) === count($v25Fo) && !array_diff($v25Fo, array_keys($defFo))), json_encode(array_diff($v25Fo, array_keys($defFo))));
+$tmp = tempnam(sys_get_temp_dir(), 'fores');
+file_put_contents($tmp, json_encode(['formations' => [['code' => 'FO-54', 'nom' => 'Trésorerie'], ['code' => 'FO-01', 'nom' => 'Doublon'], ['code' => 'X-1', 'nom' => 'Mauvais code'], ['code' => 'FO-55', 'nom' => ' ']]]));
+verifie('formations du réseau : ajoutées après le v25, sans doublon ni code invalide ni nom vide', array_column(pcFormationsReseau(['FO-01'], $tmp), 'code') === ['FO-54']);
+unlink($tmp);
+verifie('formations du réseau : FO-54 « Gestion de trésorerie » dans le référentiel chargé', in_array('FO-54', array_column(pcV25()['formations'], 'code'), true));
 $parPartie = array_count_values($defFo);
 verifie('formations : les quatre parties sont garnies', count($parPartie) === 4 && min($parPartie) >= 1, json_encode($parPartie));
 verifie('formations : celles du candidat franchisé avant l’ouverture, la stratégie d’ouverture à l’ouverture', $defFo['FO-31'] === 'preouverture' && $defFo['FO-37'] === 'preouverture' && $defFo['FO-38'] === 'ouverture' && $defFo['FO-01'] === 'operationnel' && $defFo['FO-39'] === 'formation');

@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -37,9 +37,13 @@
     a4: null, a4Vise: false,
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
+    bmF: ['top', 'cougnou', 'galette', 'produit'].includes(q.get('bmf')) ? q.get('bmf') : 'top', bmP: q.get('bmp') || null, bmQ: '', bmForm: null, bmMsg: null, bmEnvoi: false,
     pmF: 'actives', pmSorte: 'tout', pmQ: '', pmW: null, pmMsg: null, pmC: null, pmCanJ: 30, pmCanM: 'n',
     prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
-    pushEtat: 'inconnu', pushMotif: '', pushOccupe: false };
+    pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
+    // L'onglet Tâches (08/11/2026) : le filtre des checklists, celles dépliées, le guide (replié s'il a été replié), tous les retours.
+    tjF: 'tout', tjOuv: {}, tjRetTout: false, tjGuide: (function () { try { return localStorage.getItem('db.tjGuide') !== '0'; } catch (e) { return true; } })(),
+    tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
   const $ = document.getElementById('dash');
 
@@ -106,7 +110,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -125,17 +129,24 @@
   function clePerf() { return 'perf|' + annee() + '|' + S.shop; }
   function cheminPerf() { return '/stores/perf?granularite=mois&annees=' + (annee() - 1) + ',' + annee() + '&pro=' + encodeURIComponent(S.shop); }
   function charger(force) {
+    // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
+    if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
     if (S.vue === 'production') { lireAux(clePP(), cheminPP(), force); rendre(); return; }
+    // Les temps morts : une lecture, le jour et sa semaine (07/11/2026).
+    // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
+    if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
+    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
     // Et où elles s'appliquent : comptoir, click & collect, livraison (18/10/2026).
     // Le panel est relu à chaque ouverture de l'onglet (21/10/2026, Sam) : voir pmRelire().
+    if (S.vue === 'concurrence') { lireAux(cleBM(), cheminBM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux('bmTop', '/analyse/produits?mois=3', force); rendre(); return; }
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee' || S.vue === 'trimestre') {
@@ -214,6 +225,7 @@
     if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
+    if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
     history.replaceState(null, '', u.toString());
   }
 
@@ -1251,7 +1263,7 @@
     if (S.vue === 'ops') {
       return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma op-mob">${rendOpsMobile()}</div></div>${mbOnglets()}`;
     }
     if (S.vue !== 'semaine' && !['exp', 'ctrl'].includes(S.mo)) { S.mo = 'exp'; }
@@ -1259,7 +1271,7 @@
     const fin = S.vue === 'semaine' ? bornesSemaine()[1] >= AUJ : S.date >= AUJ;
     let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="précédent">‹</button><b>${esc(maDate())}</b><button type="button" class="ma-pas" data-pas="1" aria-label="suivant"${fin ? ' disabled' : ''}>›</button></div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma">`;
     if (S.err[cleRes()]) { h += `<div class="db-err">${esc(S.err[cleRes()])}</div>`; }
     h += on === 'exp' ? maPageExp(m, d) : (on === 'ctrl' ? maPageCtrl() : maPageSem(m, d));
@@ -1273,13 +1285,15 @@
     ctrl: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"/><circle cx="12" cy="13" r="3.6"/></svg>',
     sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     prim: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>',
+    tach: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>',
   };
   /** Le menu du téléphone : Opérationnel (la journée en cours, 06/10/2026), Exploitation, Contrôle,
    * Semaine, chacun avec sa couleur, et Primes (30/10/2026). La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
     const P = maEtats();
-    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'jour' ? S.mo : ''))));
-    return `<div class="mb-tabs mb-tabs5 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['sem', 'Semaine'], ['prim', 'Primes']]
+    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'jour' ? S.mo : '')))));
+    // Six onglets depuis Tâches (08/11/2026).
+    return `<div class="mb-tabs mb-tabs5 mb-tabs6 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -2102,7 +2116,7 @@
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
         <div><div class="k">Sociétés</div><div class="v">${fN(J.societes)}</div><div class="s">servie${J.societes > 1 ? 's' : ''} ${auj ? 'aujourd’hui' : 'ce jour'}</div></div>
       </div>` : `<div class="db-mini" style="padding:10px 16px 0">Les tickets de ce jour ne sont pas lus.</div>`) : J ? `<div class="db-obj-t4 db-pro-kpi">
-        <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
+        <div><div class="k">CA pro ${auj ? 'du jour' : 'ce jour'}</div><div class="v pro">${fE(proR(J))}</div><div class="s">${J.part != null ? fP(J.part) + ' du jour · ' : ''}comptoir ${fE(J.ca - J.caPro)}</div></div>
         <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">sur ${fN(J.tickets)} · ${J.societes} société${J.societes > 1 ? 's' : ''}</div></div>
         <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'contre ' + fU(J.panierComptoir) + ' au comptoir' : ''}</div></div>
         <div><div class="k">À facturer</div><div class="v">${fE(J.aFacturer)}</div><div class="s">${J.differes} en paiement différé · ${J.ticketsPro - J.differes} réglé${J.ticketsPro - J.differes > 1 ? 's' : ''} au comptoir</div></div>
@@ -2110,7 +2124,7 @@
     // L'heure et le montant seulement : le panel range sous « société » des noms de personnes (demande du 03/10/2026).
     const tickets = J && Array.isArray(J.liste) ? J.liste : [];
     const gauche = `<div><span class="db-lab">Les tickets pro ${auj ? 'du jour' : 'de ce jour'}</span>
-      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
+      ${tickets.length ? `<table class="db-pro-tab"><thead><tr><th>Heure</th><th class="n">Montant</th><th class="r"></th></tr></thead><tbody>${tickets.slice(0, mobile ? 8 : 14).map(t => `<tr><td class="mu">${esc(t.heure)}</td><td class="n">${fU(t.montantApresRemise != null ? t.montantApresRemise : t.montant)}</td><td class="r">${t.differe ? '<span class="db-pro-tag d">différé</span>' : (t.facture ? '<span class="db-pro-tag f">facturé</span>' : '<span class="db-pro-tag">comptoir</span>')}</td></tr>`).join('')}${tickets.length > (mobile ? 8 : 14) ? `<tr><td colspan="3" class="mu">… et ${tickets.length - (mobile ? 8 : 14)} ${tickets.length - (mobile ? 8 : 14) > 1 ? 'autres' : 'autre'}</td></tr>` : ''}</tbody></table>` : `<div class="db-mini" style="margin-top:6px">Aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'}.</div>`}</div>`;
     // Le détail ne répète pas la définition ni la part sur 30 jours (en tête du bloc) : seulement les jours non lus.
     if (detail) { return `${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}`; }
     if (mobile) { return `<div class="db-pro mob"><div class="db-notej-t" style="padding:4px 4px 0">Clients pro — B2B<small>${esc(sous)}</small></div>${kpi}<div class="db-pro-corps un">${gauche}</div>${nonTva}</div>`; }
@@ -2119,7 +2133,7 @@
     // chiffres et les tickets du jour.
     const ouvert = !!S.proOuvert;
     const resume = J ? (J.ticketsPro
-      ? `<b class="pro">${fE(J.caPro)}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
+      ? `<b class="pro">${fE(proR(J))}</b> ${auj ? 'aujourd’hui' : 'ce jour'}${J.part != null ? ' · ' + fP(J.part) + ' du CA' : ''} · ${fN(J.ticketsPro)} client${J.ticketsPro > 1 ? 's' : ''} pro · comptoir ${fE(J.ca - J.caPro)}${J.aFacturer ? ' · à facturer ' + fE(J.aFacturer) : ''}`
       : `aucun ticket pro ${auj ? 'aujourd’hui' : 'ce jour'} · comptoir ${fE(J.ca)}`) : 'tickets du jour non lus';
     const mois = '';
     return `<div class="db-card db-pro${J && J.ticketsPro ? ' on' : ''}${ouvert ? ' ouv' : ''}"><div class="ct" data-prodrop="1" style="cursor:pointer" title="${esc(sous)}"><span class="db-lab">Clients pro — B2B</span><span class="db-mini">${resume}${esc(mois)}</span>
@@ -2179,7 +2193,7 @@
     if (!P) { return murC('Clients pro', '…', S.err[cle] ? esc(S.err[cle]) : 'lecture des tickets…'); }
     const J = P.jour, M = P.mois || {};
     if (!J) { return murC('Clients pro', '—', 'tickets du jour non lus' + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, '', 'prodrop'); }
-    return murC('Clients pro', J.ticketsPro ? fK(J.caPro) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
+    return murC('Clients pro', J.ticketsPro ? fK(proR(J)) : '0', (J.ticketsPro ? fN(J.ticketsPro) + ' client' + (J.ticketsPro > 1 ? 's' : '') + ' · ' + fP(J.part) + ' du jour · à facturer ' + fK(J.aFacturer) : 'aucun ticket pro ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour')) + `<span class="dr"> · ${S.proOuvert ? 'replier ▴' : 'détail ▾'}</span>`, J.ticketsPro ? 'pro' : '', 'prodrop');
   }
 
   /* --- la note du jour : ce qui explique la journée, relu la même semaine l'an d'après --- */
@@ -2332,6 +2346,9 @@
    * (une semaine et plus) — chacun avec le niveau actuel de marchandises. La durée de vie vient du
    * suivi (`vie`), réglée dans /production. */
   const OP_VIES = ['S', 'M', 'L'];
+  // La courbe « Heure par heure » s'arrête à 20 h (07/11/2026, Sam : « 20 h 21 h 22 h 23 h 24 h, retire ») : les heures du
+  // soir, vides, n'étiraient que l'axe. Une vente tardive reste comptée : le cumul la rabat sur la dernière heure, 19 – 20 h.
+  const OP_H_FIN = 20;
   const OP_VIE_NOM = { S: 'Short life', M: 'Medium life', L: 'Long life' };
   const OP_VIE_SOUS = { S: 'vendu le jour même', M: 'se garde 2 à 3 jours', L: 'se garde une semaine et plus' };
   const OP_VIE_JOURS = 3;   // le stock d'un long life se lit face à trois jours de vente, comme au suivi
@@ -2745,8 +2762,10 @@
     // Le comptoir et le B2B (23/10/2026, Sam : « le B2B fausse la vue ») : l'objectif du jour se partage selon la part B2B
     // habituelle (les quatre derniers mêmes jours lus) ; sans elle, tout l'objectif reste au comptoir.
     const caPro = m && m.caPro != null ? +m.caPro : null, part = m && m.partProHabituelle != null ? +m.partProHabituelle : null;
+    // La jauge B2B montre la remise personnelle des différés déduite (09/11/2026) ; le comptoir reste la caisse moins `caPro`.
+    const caProR = caPro == null ? null : proR(m);
     const objB = obj && part != null ? obj * part / 100 : null, objC = obj ? obj - (objB || 0) : null;
-    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, part, objB, objC };
+    return { j7, obj, proj, dCa, dTk, dPan, dProj, panA, pan7, pan7J, panBase, mb7, mb7Pct, mbPct, dMb, jourNom, lblB, moment: j7 && j7.moment ? j7.moment : null, caPro, caProR, part, objB, objC };
   }
   const JOURS_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
   /** La carte du duel : deux pistes sur la même échelle (l'objectif), le curseur du temps, le verdict. */
@@ -2826,8 +2845,8 @@
   /** La jauge du B2B : aujourd'hui et J−7 au même moment, à sa propre échelle, face à sa part de l'objectif du jour. */
   function opDuelPro(D, B) {
     const { JD, m } = D, j7 = B.j7, estAuj = !!(JD && JD.estAujourdhui);
-    const ca = B.caPro || 0, n = +m.ticketsPro || 0, objB = B.objB;
-    const p7 = j7 && j7.caPro != null ? +j7.caPro : null, p7j = j7 && j7.caProJour != null ? +j7.caProJour : null;
+    const ca = (B.caProR != null ? B.caProR : B.caPro) || 0, n = +m.ticketsPro || 0, objB = B.objB;
+    const p7 = j7 && j7.caPro != null ? +proR(j7) : null, p7j = j7 && j7.caProJour != null ? +proR(j7, 'caProJour') : null;
     // Un magasin sans B2B (rien aujourd'hui, ni à J−7, ni d'habitude) : pas de seconde jauge.
     if (!ca && !p7j && !objB) { return ''; }
     const echelle = Math.max(objB || 0, ca, p7j || 0, 1) * 1.08, pct = v => Math.max(0, Math.min(100, 100 * (v || 0) / echelle)), pO = objB ? pct(objB) : null;
@@ -2857,6 +2876,9 @@
    * rapproché de la caisse. Au téléphone une feuille plein écran, au bureau la modale du dashboard. Sans bord coloré. */
   const isoMoins = (d, n) => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() - n); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0') + '-' + String(t.getDate()).padStart(2, '0'); };
   const plu = (n, m) => fN(n) + ' ' + m + (Math.round(n) > 1 ? 's' : '');
+  /** Le CA B2B à montrer (09/11/2026) : remise personnelle des tickets différés déduite (`…ApresRemise`) quand le serveur
+   *  la donne, sinon le CA pro en caisse. Le comptoir se calcule toujours avec le CA pro en caisse (`caPro`). */
+  const proR = (o, k) => o && o[(k || 'caPro') + 'ApresRemise'] != null ? +o[(k || 'caPro') + 'ApresRemise'] : (o ? o[k || 'caPro'] : null);
   const bmRemise = c => c.statut === 'remise' || c.statut === 'livrée';
   /** La ligne « Commandes du jour » : lue dans /exploitation/canaux (déjà chargé par l'onglet) ; rien sans commande. */
   function opCmdLigne(D) {
@@ -2865,7 +2887,8 @@
     const C = L.filter(c => c.canal === 'compt'), W = L.length - C.length, tot = L.reduce((a, c) => a + (+c.montant || 0), 0);
     const maint = S.date < AUJ ? '24:00' : (D.now == null ? '24:00' : opHM(D.now));
     // À vérifier : une précommande remise sans ticket caisse, ou une commande pas remise dont l'heure est passée.
-    const v = L.filter(c => bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint).length;
+    // Une commande réglée en paiement différé (09/11/2026) est retirée : rien à vérifier.
+    const v = L.filter(c => !c.differe && (bmRemise(c) ? c.canal === 'compt' && c.encaissee === false : String(c.heure || '') < maint)).length;
     return `<div class="op-cmdl" data-cmdm="1" role="button" tabindex="0"><div class="t"><b>Commandes du jour</b><small>comptoir ${C.length} · webshop ${W}${v ? ` · <em>${v} à vérifier</em>` : ''}</small></div><span class="v">${fU(tot)}</span><span class="ch">›</span></div>`;
   }
   /** Garder le défilement d'une feuille quand elle se redessine (une lecture qui arrive, le relu des deux minutes). */
@@ -2908,14 +2931,16 @@
     const J = D.jour || {}, T = Array.isArray(D.tickets) ? D.tickets : [], st = D.sansTva || {};
     const tag = t => t.differe ? '<span class="bm-tg d">différé</span>' : (t.facture ? '<span class="bm-tg f">facturé</span>' : '<span class="bm-tg">comptoir</span>');
     const k4 = `<div class="bm-in"><div class="bm-k4">
-      <div><div class="k">CA B2B</div><div class="v">${fU(J.caPro)}</div><div class="s">${J.part != null ? fP(J.part) + ' du CA du jour' : '—'}</div></div>
+      <div><div class="k">CA B2B</div><div class="v">${fU(proR(J))}</div><div class="s">${J.part != null ? fP(J.part) + ' du CA du jour' : '—'}</div></div>
       <div><div class="k">Tickets pro</div><div class="v">${fN(J.ticketsPro)}</div><div class="s">${plu(J.societes || 0, 'société')} · sur ${fN(J.tickets)}</div></div>
       <div><div class="k">Panier pro</div><div class="v">${J.panierPro != null ? fU(J.panierPro) : '—'}</div><div class="s">${J.panierComptoir != null ? 'comptoir ' + fU(J.panierComptoir) : ''}</div></div>
       <div><div class="k">À facturer</div><div class="v">${fU(J.aFacturer)}</div><div class="s">${J.differes && J.differes.n ? '+ ' + plu(J.differes.n, 'différé') + ' ' + fU(J.differes.ca) : plu(J.factures || 0, 'ticket') + ' facturé' + ((J.factures || 0) > 1 ? 's' : '')}</div></div></div></div>`;
-    const horsTva = st.tickets ? `<div class="bm-in bm-note">${plu(st.tickets, 'ticket')} marqué${st.tickets > 1 ? 's' : ''} pro sans TVA valide (${fU(st.ca)}) : compté${st.tickets > 1 ? 's' : ''} au comptoir.</div>` : '';
+    const horsTva = (st.tickets ? `<div class="bm-in bm-note">${plu(st.tickets, 'ticket')} marqué${st.tickets > 1 ? 's' : ''} pro sans TVA valide (${fU(st.ca)}) : compté${st.tickets > 1 ? 's' : ''} au comptoir.</div>` : '')
+      // La remise personnelle des différés (09/11/2026) : la caisse l'ignore, la facture la déduit.
+      + (D.remise && D.remise.tickets ? `<div class="bm-in bm-note">${plu(D.remise.tickets, 'ticket')} en paiement différé : la remise du client (${fU(D.remise.ca)}) n’est pas dans la caisse, elle se déduit à la facture. Les montants la retirent déjà.</div>` : '');
     if (!T.length) { return k4 + `<div class="bm-in bm-msg">Aucun ticket pro ${B.j === AUJ ? 'aujourd’hui' : 'ce jour'}.</div>` + horsTva; }
     const lignes = T.map((t, i) => { const o = !!B.ouv[i];
-      return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-b2bt="${i}" role="button" tabindex="0"><span class="h">${esc(t.heure)}</span><span class="q"><b>${esc(t.societe || 'compte sans nom au panel')}</b><small>${t.articles != null ? plu(t.articles, 'article') : 'articles non lus'}</small></span><span class="m">${fU(t.montant)}${tag(t)}</span><span class="c">${o ? '▴' : '▾'}</span></div>
+      return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r" data-b2bt="${i}" role="button" tabindex="0"><span class="h">${esc(t.heure)}</span><span class="q"><b>${esc(t.societe || 'compte sans nom au panel')}</b><small>${t.articles != null ? plu(t.articles, 'article') : 'articles non lus'}${t.remisePct ? ' · ' + fU(t.montant) + ' en caisse, remise ' + nf(t.remisePct, t.remisePct % 1 ? 1 : 0) + ' % à la facture' : ''}</small></span><span class="m">${fU(t.montantApresRemise != null ? t.montantApresRemise : t.montant)}${tag(t)}</span><span class="c">${o ? '▴' : '▾'}</span></div>
         ${o ? `<div class="art">${t.lignes && t.lignes.length ? bmLignes(t.lignes) : '<div class="bm-note">Le panel n’a pas rendu les articles de ce ticket.</div>'}</div>` : ''}</div>`; }).join('');
     const C = Array.isArray(D.categories) ? D.categories : [], mx = C.length ? Math.max(...C.map(c => +c.ca || 0), 1) : 1;
     const cats = C.length ? `<div class="bm-in"><div class="bm-lab">Ce qu’ils ont acheté</div><div class="bm-bars">${C.map(c => `<div class="b"><span>${esc(c.cat)}</span><span class="tr"><i style="width:${(100 * (+c.ca || 0) / mx).toFixed(1)}%"></i></span><span class="n">${fU(c.ca)}</span></div>`).join('')}</div></div>` : '';
@@ -2930,6 +2955,8 @@
   // L'état de chaque commande face à la caisse du jour : libellé, couleur du repère, étiquette de la ligne.
   const CMD_ETAT = {
     caisse: ['Encaissées en caisse', '#6f8f72', 'dans les tickets du jour', ['ok', 'en caisse']],
+    // Réglée en paiement différé (09/11/2026) : retirée, son ticket différé est dans la caisse du jour, la facture suit.
+    differe: ['En paiement différé', '#a88d62', 'retirées, facturées au client plus tard', ['ok', 'différé']],
     avant: ['Encaissées un autre jour', '#a9bcab', 'payées à la commande', ['ok', 'payée avant']],
     ligne: ['Webshop hors caisse', '#1f5f8b', 'payées en ligne : en plus des tickets', ['w', 'en ligne']],
     attente: ['Pas retirées', '#d9a520', 'heure de retrait passée, pas encaissées', ['d', 'pas retirée']],
@@ -2955,14 +2982,16 @@
       const somme = X => X.reduce((a, c) => a + (+c.montant || 0), 0), tot = somme(L);
       const par = Object.keys(CMD_ETAT).map(k => [k, L.filter(c => c.etat === k)]).filter(x => x[1].length);
       const bar = par.map(([k, X]) => `<i style="width:${(tot > 0 ? 100 * somme(X) / tot : 0).toFixed(2)}%;background:${CMD_ETAT[k][1]}"></i>`).join('');
-      const quand = (k, X) => k === 'avant' ? ' · ' + [...new Set(X.map(c => c.ticket && c.ticket.date ? fD(c.ticket.date) : '?'))].join(', ') : (['attente', 'avenir', 'sans'].includes(k) ? ' · ' + X.map(c => esc(c.heure)).join(', ') : '');
+      const quand = (k, X) => k === 'avant' ? ' · ' + [...new Set(X.map(c => c.ticket && c.ticket.date ? fD(c.ticket.date) : '?'))].join(', ') : (['differe', 'attente', 'avenir', 'sans'].includes(k) ? ' · ' + X.map(c => esc(c.heure)).join(', ') : '');
       const rap = par.map(([k, X]) => `<div class="r"><i class="d" style="background:${CMD_ETAT[k][1]}"></i><span><b>${CMD_ETAT[k][0]}</b><small>${CMD_ETAT[k][2]}${quand(k, X)}</small></span><span class="n">${fU(somme(X))}<small>${X.length}</small></span></div>`).join('');
-      const dansCa = somme(L.filter(c => c.etat === 'caisse' || c.etat === 'ligne'));
+      const dansCa = somme(L.filter(c => c.etat === 'caisse' || c.etat === 'differe' || c.etat === 'ligne'));
       const eq = `<div class="eq"><b>${fU(dansCa)} dans le CA du jour</b>${M.f === 'tous' && D.caisseJour ? ' · caisse du jour ' + fU(D.caisseJour) : ''}</div>`;
-      const ligne = c => { const i = tout.indexOf(c), o = !!M.ouv[i], T = CMD_ETAT[c.etat] || CMD_ETAT.avenir, ouvrable = (c.lignes && c.lignes.length) || c.etat === 'sans';
+      const ligne = c => { const i = tout.indexOf(c), o = !!M.ouv[i], T = CMD_ETAT[c.etat] || CMD_ETAT.avenir, ouvrable = (c.lignes && c.lignes.length) || c.etat === 'sans' || c.montantCaisse != null;
         const lib = c.canal === 'compt' ? (c.articles != null ? plu(c.articles, 'article') : 'Précommande') : CMD_CANAL[c.canal] + (c.articles != null ? ' · ' + plu(c.articles, 'article') : '');
-        const sous = esc(c.statut) + (c.ticket && c.ticket.heure ? ' · ticket ' + (c.ticket.date && c.ticket.date !== D.date ? fD(c.ticket.date) + ' ' : '') + esc(c.ticket.heure) : '');
-        const det = c.etat === 'sans' ? `<div class="bm-alerte">Remise au panel, aucun ticket caisse lié.${c.candidat ? ` Un ticket de ${fU(c.candidat.montant)} à ${esc(c.candidat.heure)}, sans commande : la même vente ?` : ' Aucun ticket du même montant dans l’heure.'}</div>` : '';
+        // Une commande réglée en paiement différé : le ticket du client ce jour-là, que le panel ne lie pas à la commande.
+        const sous = (c.etat === 'differe' ? 'retirée' : esc(c.statut)) + (c.ticket && c.ticket.heure ? ' · ticket ' + (c.ticket.differe ? 'différé ' : '') + (c.ticket.date && c.ticket.date !== D.date ? fD(c.ticket.date) + ' ' : '') + esc(c.ticket.heure) : '');
+        const det = c.etat === 'sans' ? `<div class="bm-alerte">Remise au panel, aucun ticket caisse lié.${c.candidat ? ` Un ticket de ${fU(c.candidat.montant)} à ${esc(c.candidat.heure)}, sans commande : la même vente ?` : ' Aucun ticket du même montant dans l’heure.'}</div>` : (c.etat === 'differe' && c.montantCaisse != null
+          ? `<div class="bm-note">Ticket différé de ${fU(c.montantCaisse)} en caisse : la remise du client n’y est pas, elle se déduit à la facture.</div>` : '');
         return `<div class="bm-li${o ? ' ouv' : ''}"><div class="r"${ouvrable ? ` data-cmdt="${i}" role="button" tabindex="0"` : ''}><span class="h">${esc(c.heure)}</span><span class="q"><b>${lib}</b><small>${sous}</small></span><span class="m">${fU(c.montant)}<span class="bm-tg ${T[3][0]}">${T[3][1]}</span></span><span class="c">${ouvrable ? (o ? '▴' : '▾') : ''}</span></div>
           ${o ? `<div class="art">${c.lignes && c.lignes.length ? bmLignes(c.lignes) : ''}${det}</div>` : ''}</div>`; };
       const sec = (t, X, s) => X.length ? `<div class="bm-sec"><b>${t}</b><span>${s}</span></div><div class="bm-liste">${X.map(ligne).join('')}</div>` : '';
@@ -2995,7 +3024,12 @@
       && (m.heuresPro.length > 0 || h7.some(x => +x.pro > 0) || +m.partProHabituelle > 0);   // un magasin sans B2B : pas de bascule
     const sep = proOk && S.opPro !== 'combi';
     const proA = new Map(((m && m.heuresPro) || []).map(x => [+x.h, x]));
-    const vPro = (x, a) => a ? (mode === 'tk' ? (proA.get(+x.h) || {}).n || 0 : (proA.get(+x.h) || {}).ca || 0) : (mode === 'tk' ? +x.proN || 0 : +x.pro || 0);
+    // `r` : la courbe B2B, remise personnelle des différés déduite (09/11/2026) ; sans `r`, le pro en caisse que le comptoir retranche.
+    const vPro = (x, a, r) => {
+      if (mode === 'tk') { return a ? (proA.get(+x.h) || {}).n || 0 : +x.proN || 0; }
+      if (a) { const p = proA.get(+x.h) || {}; return r && p.caApresRemise != null ? +p.caApresRemise : +p.ca || 0; }
+      return r && x.proApresRemise != null ? +x.proApresRemise : +x.pro || 0;
+    };
     const hNow = now == null ? 24 : Math.floor(now / 60), frac = now == null ? 0 : (now % 60) / 60;
     const bascule = aTk ? `<span class="op-crbtog" role="tablist">${[['ca', 'CA'], ['tk', 'Clients'], ['pan', 'Panier']].map(([k, t]) => `<button type="button" class="${mode === k ? 'on' : ''}" data-opcrb="${k}">${t}</button>`).join('')}</span>` : '';
     const basculePro = proOk ? `<span class="op-crbtog" role="tablist"><button type="button" class="${sep ? 'on' : ''}" data-oppro="sep">Comptoir et pro séparés</button><button type="button" class="${sep ? '' : 'on'}" data-oppro="combi">Combinés</button></span>` : '';
@@ -3004,18 +3038,19 @@
     const cible = mode === 'tk' ? (m && m.refTickets ? m.refTickets : null) : (sep ? B.objC : B.obj);
     const cibleLib = cible == null ? '' : (mode === 'tk' ? 'référence ' + fN(Math.round(cible)) + ' clients' : (sep ? 'objectif comptoir ' : 'objectif ') + fE(cible));
     const cibleB = sep && mode === 'ca' && B.objB ? B.objB : null;
-    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); out.push({ h: x.h, v: c }); }); return out; };
+    const cumul = (hs, limite, val) => { let c = 0; const out = []; hs.slice().sort((a, b) => a.h - b.h).forEach(x => { if (limite != null && x.h > limite) { return; } c += Math.max(0, val(x)); const h = Math.min(+x.h, OP_H_FIN - 1), der = out[out.length - 1]; if (der && der.h === h) { der.v = c; } else { out.push({ h, v: c }); } }); return out; };
     const lim = fin ? null : hNow, jn = esc(B.jourNom) + ' dernier', auj = fin ? 'cette journée' : 'aujourd’hui';
     // Les courbes : [points, classe de la ligne, classe du point, étiquette de fin (ou ''), classe de l'étiquette, en paliers].
     const L = sep
       ? [[cumul(h7, null, x => (+x[champ] || 0) - vPro(x, false)), 'l7', 'p7', jn, 't7', false],
-         [cumul(h7, null, x => vPro(x, false)), 'l7p', 'p7p', '', '', true],
+         [cumul(h7, null, x => vPro(x, false, true)), 'l7p', 'p7p', '', '', true],
          [cumul(hA, lim, x => (+x[champ] || 0) - vPro(x, true)), 'la', 'pa', auj, 'ta', false],
-         [cumul(hA, lim, x => vPro(x, true)), 'lap', 'pap', '', '', true]]
+         [cumul(hA, lim, x => vPro(x, true, true)), 'lap', 'pap', '', '', true]]
       : [[cumul(h7, null, x => +x[champ] || 0), 'l7', 'p7', jn, 't7', false], [cumul(hA, lim, x => +x[champ] || 0), 'la', 'pa', auj, 'ta', false]];
     if (L.some(c => !c[0].length)) { return ''; }
     const fins = L.map(c => c[0][c[0].length - 1].v);
-    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1));
+    const h0 = Math.min(6, ...L.map(c => c[0][0].h)), h1 = Math.min(OP_H_FIN, Math.max(19, ...L.map(c => c[0][c[0].length - 1].h + 1)));
+    const nowVu = !fin && now != null && hNow + frac < h1;   // passé 20 h, le trait « maintenant » sortirait du graphique
     const mx = Math.max(cible || 0, cibleB || 0, ...fins, 1) * (cible && cible >= Math.max(...fins) ? 1 : 1.08);
     const axe = v => mode === 'tk' ? fN(Math.round(v)) : fN(Math.round(v / 10) * 10);
     const dessine = (W, Hh, pas, cls) => {
@@ -3035,11 +3070,14 @@
       const cA = L[sep ? 2 : 1][0], c7 = L[0][0], lastA = cA[cA.length - 1], last7 = c7[c7.length - 1];
       // L'heure qu'il est : en haut de son trait, sauf quand l'étiquette de fin de J−7 est à côté (fin de journée),
       // alors en bas ; au téléphone, toujours en bas et les valeurs de fin passent dans la légende.
-      if (!fin && now != null) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
+      if (nowVu) { const v7now = (c7.find(q => q.h === hNow) || last7).v; const bas = tel || hNow + frac > h1 - 2.5 || lastA.v / mx > 0.8 || v7now / mx > 0.8; g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${bas ? Y1 - 6 : Y0 + 12}" class="nowt">${opHM(now)}</text>`; }
       L.forEach(c => { const p = c[0][c[0].length - 1]; g += `<circle cx="${x(p.h + 1).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="4" class="${c[2]}"/>`; });
       if (!tel) {
-        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + 18).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
-        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) - 10).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
+        // Les deux fins sont voisines depuis que l'axe s'arrête à 20 h : l'étiquette de la courbe la plus haute au-dessus
+        // de son point, l'autre dessous — elles ne se chevauchent plus.
+        const aDessus = lastA.v > last7.v;
+        g += `<text x="${(x(lastA.h + 1) - 8).toFixed(1)}" y="${(y(lastA.v) + (aDessus ? -10 : 18)).toFixed(1)}" text-anchor="end" class="ta">${L[sep ? 2 : 1][3]} ${fmtV(lastA.v)}</text>`;
+        g += `<text x="${(x(last7.h + 1) - 8).toFixed(1)}" y="${(y(last7.v) + (aDessus ? 18 : -10)).toFixed(1)}" text-anchor="end" class="t7">${L[0][3]} ${fmtV(last7.v)}</text>`;
       }
       return g + '</svg>';
     };
@@ -3048,7 +3086,7 @@
       : [['la', auj, fins[1]], ['l7', jn + ' (' + fD(j7.date) + ')', fins[0]]];
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${basculePro}${bascule}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg">${leg.map(([c, t, v]) => `<span><i class="${c}"></i>${t}<b class="tv"> ${fmtV(v)}</b></span>`).join('')}${nowVu ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /**
    * Le panier moyen heure par heure (01/11/2026, Sam : « l'évolution du panier moyen par rapport aux heures ») : le CA de
@@ -3064,13 +3102,15 @@
       const ca = Math.max(0, (+x.ca || 0) - (sep ? +pr.ca || 0 : 0)), n = Math.max(0, (+x.tickets || 0) - (sep ? +pr.n || 0 : 0));
       return { h: +x.h, ca, n, v: n > 0 ? ca / n : null };
     });
-    const PA = par(hA, true, fin ? null : hNow), P7 = par(h7, false, null);
+    const PAt = par(hA, true, fin ? null : hNow), P7t = par(h7, false, null);
+    const PA = PAt.filter(p => p.h < OP_H_FIN), P7 = P7t.filter(p => p.h < OP_H_FIN);
     const vA = PA.filter(p => p.v != null), v7 = P7.filter(p => p.v != null);
     if (!vA.length || !v7.length) { return ''; }
     const moyDe = L => { const n = L.reduce((s, p) => s + p.n, 0); return n ? L.reduce((s, p) => s + p.ca, 0) / n : null; };
-    const panA = moyDe(PA), pan7 = moyDe(P7), de7 = new Map(P7.map(p => [p.h, p]));
+    const panA = moyDe(PAt), pan7 = moyDe(P7t), de7 = new Map(P7.map(p => [p.h, p]));
     const SEUIL = 5, enCours = p => !fin && now != null && p.h === hNow, leger = p => p.n < SEUIL || enCours(p);
-    const h0 = Math.min(6, PA[0].h, P7[0].h), h1 = Math.max(19, PA[PA.length - 1].h + 1, P7[P7.length - 1].h + 1);
+    const h0 = Math.min(6, PA[0].h, P7[0].h), h1 = Math.min(OP_H_FIN, Math.max(19, PA[PA.length - 1].h + 1, P7[P7.length - 1].h + 1));
+    const nowVu = !fin && now != null && hNow + frac < h1;
     const haut = Math.max(...vA.map(p => p.v), ...v7.map(p => p.v), panA || 0, pan7 || 0);
     const pasE = haut > 40 ? 10 : 5, mx = Math.ceil(haut * 1.12 / pasE) * pasE, nMx = Math.max(1, ...PA.map(p => p.n));
     const auj = fin ? 'cette journée' : 'aujourd’hui', jn = esc(B.jourNom) + ' dernier', cpt = sep ? ' · comptoir' : '';
@@ -3102,7 +3142,7 @@
       }
       for (let hh = h0; hh <= h1; hh += pas) { g += `<text x="${x(hh).toFixed(1)}" y="${Hh - 8}" text-anchor="middle" class="ax">${hh} h</text>`; }
       g += `<path d="${chemin(P7)}" class="l7"/><path d="${chemin(PA)}" class="la"/>`;
-      if (!fin && now != null) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 10}" class="nowt">${opHM(now)}</text>`; }
+      if (nowVu) { g += `<line x1="${x(hNow + frac).toFixed(1)}" x2="${x(hNow + frac).toFixed(1)}" y1="${Y0}" y2="${Y1}" class="now"/><text x="${(x(hNow + frac) + 5).toFixed(1)}" y="${Y0 + 10}" class="nowt">${opHM(now)}</text>`; }
       v7.forEach(p => { g += `<circle cx="${x(p.h + 0.5).toFixed(1)}" cy="${y(p.v).toFixed(1)}" r="3" class="${p.n < SEUIL ? 'p7l' : 'p7'}"><title>${jn} · ${p.h} – ${p.h + 1} h · panier ${fV(p.v)} · ${fN(p.n)} client${p.n > 1 ? 's' : ''}</title></circle>`; });
       vA.forEach(p => {
         const q = de7.get(p.h), lg = leger(p);
@@ -3117,7 +3157,7 @@
     const pic = pleins.length > 1 ? `<span class="db-mini op-pk">le plus haut <b>${pleins[0].h} h · ${fV(pleins[0].v)}</b> · le plus bas <b>${pleins[pleins.length - 1].h} h · ${fV(pleins[pleins.length - 1].v)}</b></span>` : '';
     return `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">Heure par heure</span>${entete}${pic}</div>
       <div class="op-crb-w">${dessine(1100, 220, 1, '')}${dessine(380, 230, 2, 'tel')}</div>
-      <div class="op-dleg"><span><i class="la"></i>${auj}${cpt}</span><span><i class="pmj"></i>panier ${fin ? 'de la journée' : 'du jour'} <b>${fV(panA)}</b></span><span><i class="l7"></i>${jn} (${fD(j7.date)})${cpt} · panier de la journée <b>${fV(pan7)}</b></span><span><i class="cl"></i>clients de l’heure</span>${vA.some(leger) || v7.some(p => p.n < SEUIL) ? `<span><i class="pal"></i>moins de ${SEUIL} clients${fin ? '' : ' ou heure en cours'}</span>` : ''}${!fin && now != null ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
+      <div class="op-dleg"><span><i class="la"></i>${auj}${cpt}</span><span><i class="pmj"></i>panier ${fin ? 'de la journée' : 'du jour'} <b>${fV(panA)}</b></span><span><i class="l7"></i>${jn} (${fD(j7.date)})${cpt} · panier de la journée <b>${fV(pan7)}</b></span><span><i class="cl"></i>clients de l’heure</span>${vA.some(leger) || v7.some(p => p.n < SEUIL) ? `<span><i class="pal"></i>moins de ${SEUIL} clients${fin ? '' : ' ou heure en cours'}</span>` : ''}${nowVu ? '<span><i class="now"></i>maintenant</span>' : ''}</div></div>`;
   }
   /** Le duel, chiffre par chiffre : aujourd'hui, J−7 à la même heure, l'écart, la journée de J−7, la référence. */
   function opDuelTable(D, opt) {
@@ -3376,7 +3416,7 @@
     frise += ligneF('Équipe' + (m && m.planningHeures ? `<small>${nf(m.planningHeures, 1)} h</small>` : ''), Math.max(22, 4 + 15 * planning.length), planning.length ? planning.map((p, i) => `<b class="eq${now != null && !(opMin(p.debut) <= now && now < opMin(p.fin)) ? ' hors' : ''}${S.eqOuvert && S.eqSel === (p.nom || '') ? ' choisi' : ''}" data-eqsel="${esc(p.nom || '')}" title="${esc(p.nom || '')} : ses ventes, ses heures, son coût" style="left:${x(opMin(p.debut))};width:${w(opMin(p.debut), opMin(p.fin))};top:${3 + 15 * i}px">${esc(p.debut)}–${esc(p.fin)} · ${esc(p.nom || (p.postes || []).join(', '))}</b>`).join('') : `<span class="vide">${m ? 'pas de planning lu' : 'lecture…'}</span>`);
     frise += ligneF('Four', 22, cuissons.map(c => `<b class="fo${now != null && opMin(c.four) > now ? ' av' : ''}" style="left:${x(opMin(c.four))};width:${w(opMin(c.four), opMin(c.four) + 45)}"></b><span class="lbl" style="left:calc(${x(opMin(c.four) + 50)})">${esc(c.nom)} ${esc(c.four)}${c.valide || (now != null && opMin(c.four) > now) ? '' : ' · à valider'}</span>`).join(''));
     frise += ligneF('Vitrine', 22, cuissons.map(c => `<b class="vi" style="left:${x(opMin(c.de))};width:${w(opMin(c.de), opMin(c.a))}">${fN(c.pieces)} p.</b>`).join(''));
-    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
+    frise += ligneF('Commandes', 22, listeC.map(l => `<b class="cmd" style="left:${x(opMin(l.heure))}" title="${esc(l.heure)} · ${esc(l.statut || '')}"></b>`).join('') + `<span class="lbl" style="right:8px;color:var(--muted)">${listeC.length ? listeC.length + ' commande' + (listeC.length > 1 ? 's' : '') + ' aujourd’hui · ' + listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length + ' retirée' + (listeC.filter(l => l.differe || /remis|retir/i.test(l.statut || '')).length > 1 ? 's' : '') : (CA ? 'pas de commande aujourd’hui' : 'lecture…')}</span>`);
     frise += `<div class="op-ax"><span></span><div class="ax">${[4, 6, 8, 10, 12, 14, 16, 18, 20].map(hh => `<span style="left:${x(hh * 60)}">${hh} h</span>`).join('')}</div></div>`;
     const heures = opHeures(D);
     h += `<div class="db-card op-bloc"><div class="ct"><span class="op-h2">La journée</span>${planning.length ? `<button type="button" class="eq-ouvre${S.eqOuvert ? ' on' : ''}" data-eqouvre>L’équipe du jour ${S.eqOuvert ? '▴' : '›'}</button>` : ''}</div><div class="op-jr"><div class="op-frise">${frise}</div><div class="op-hr">${heures}</div></div></div>`;
@@ -4942,7 +4982,7 @@
       : pas('data-prm', -1, m > PR_M_DEBUT, 'mois précédent') + `<b>${esc(prLibMois(m))}${m === mMax ? ' · en cours' : ''}</b>` + pas('data-prm', 1, m < mMax, 'mois suivant');
     let h = `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
       <div><div class="t">${esc(nomShop())}</div><div class="d ma-d">${per}</div></div>
-      <span class="sp"></span><button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
       <div class="mb-sc"><div class="ma pr-mob">
       <div class="pr-mob-f"><div class="db-ong db-ong-p">${[['mois', 'Mois'], ['annee', 'Année']].map(o => `<button data-prvue="${o[0]}" class="${(an ? 'annee' : 'mois') === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
         <div class="db-ong db-ong-p">${[['toutes', 'Toutes'], ['magasin', 'Du magasin']].map(o => `<button data-prf="${o[0]}" class="${filtre === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div></div>`;
@@ -4982,6 +5022,761 @@
     return h + '<div class="ma-note"><i class="pr-lg gagne"></i>gagnée · <i class="pr-lg tete"></i>en tête · toucher une vendeuse pour le détail, prime par prime</div>' + fin;
   }
 
+  /* ==========================================================================
+   * Onglet « Concurrence » (07/11/2026, maquette docs/maquettes/benchmark-concurrence) : le magasin face à
+   * ses concurrents. Deux familles saisonnières (cougnou au kilo, galette des rois ramenée à notre Ø à surface
+   * égale) et n'importe quel produit, cherché dans le catalogue du magasin. Les prix viennent du module
+   * Benchmark de TFBuddy (relevés du réseau et du cockpit) :
+   *   ../api/cockpit/benchmarks/magasin?shop=            (relevés, familles, contrôles web — lent, gardé 15 min)
+   *   ../api/cockpit/exploitation/promos-magasin/produits?shop= (nos produits, prix TTC — partagé avec Promotions)
+   *   POST ../api/cockpit/benchmarks/releve              (un prix vu en magasin, posé dans TFBuddy)
+   * ========================================================================== */
+  const cleBM = () => 'bm|' + S.shop;
+  const cheminBM = () => '/benchmarks/magasin?shop=' + encodeURIComponent(S.shop);
+  const BM_NORM = s => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const BM_VIDES = new Set(['avec', 'sans', 'pour', 'aux', 'des', 'les', 'une', 'piece', 'pieces', 'ind', 'mini', 'grand', 'petit', 'nature', 'sucre']);
+  /** Le mot qui porte le produit (« Cougnou - Sucre & Chocolat » → cougnou), pour retrouver les relevés sans lien. */
+  function bmMotCle(nom) { return BM_NORM(nom).split(' ').find(w => w.length >= 4 && !BM_VIDES.has(w)) || BM_NORM(nom).split(' ')[0] || ''; }
+  /** Tous les mots qui comptent (« Croissant Jambon & Fromage » → croissant, jambon, fromage) : un relevé les porte tous, ou il n'est que « proche ». */
+  function bmMots(nom) { const m = BM_NORM(nom).split(' ').filter(w => w.length >= 4 && !BM_VIDES.has(w)); return m.length ? m : [bmMotCle(nom)]; }
+  function bmProduits() { const P = S.aux[clePMP()]; return P && Array.isArray(P.produits) ? P.produits : []; }
+  /** Le prix payé (promo comprise) ramené à la mesure : €/kg, € à notre Ø, ou € la pièce. */
+  function bmValeur(r, mesure, ref) {
+    const p = r.promo > 0 ? r.promo : r.prix, t = +r.taille || 0;
+    if (!(p > 0)) { return null; }
+    if (mesure === 'diametre') { return r.unite === 'cm' && t > 0 && ref > 0 ? p * (ref / t) ** 2 : null; }
+    if (mesure === 'poids') { return r.unite === 'g' && t > 0 ? p / t * 1000 : (r.unite === 'kg' && t > 0 ? p / t : null); }
+    return p;
+  }
+  const bmMed = v => { const a = v.filter(x => x != null).sort((x, y) => x - y), n = a.length; return n ? (n % 2 ? a[(n - 1) / 2] : (a[n / 2 - 1] + a[n / 2]) / 2) : null; };
+  /** Ce que l'onglet compare : la famille choisie ou le produit cherché. */
+  function bmSujet() {
+    const D = S.aux[cleBM()] || {}, F = D.familles || {};
+    if (S.bmF === 'produit') {
+      const p = bmProduits().find(x => String(x.id) === String(S.bmP));
+      if (!p) { return null; }
+      const mot = bmMotCle(p.nom), mots = bmMots(p.nom), lie = r => r.monProduit != null && String(r.monProduit) === String(p.id);
+      const regle = BM_TOP_REGLES.find(x => x[0].test(BM_NORM(p.nom)));
+      const exact = r => lie(r) || (regle ? regle[1].test(BM_NORM(r.produit)) && !regle[2].test(BM_NORM(r.produit)) : mots.every(w => BM_NORM(r.produit).includes(w))), proche = r => !exact(r) && mot && BM_NORM(r.produit).includes(mot);
+      const src = (D.releves || []).some(exact) || !(D.referentiel || []).some(exact) ? (D.releves || []) : (D.referentiel || []);
+      return { cle: 'produit', titre: p.nom, mesure: 'piece', unite: '€ la pièce', ref: p.prixTtc, nous: [{ nom: p.nom, prix: p.prixTtc }], tailleRef: null,
+        releves: src.filter(exact), proches: src.filter(proche), source: src === (D.releves || []) ? 'api' : 'referentiel', mot: mots.join(' + '), produit: p, web: null, constats: [] };
+    }
+    const f = F[S.bmF];
+    if (!f) { return null; }
+    const re = new RegExp(f.motif, 'i'), api = (D.releves || []).filter(r => re.test(r.produit + ' ' + (r.monProduitNom || '')));
+    const refe = (D.referentiel || []).filter(r => r.famille === S.bmF);
+    // Les relevés web du cockpit complètent ceux de TFBuddy tant qu'ils n'y sont pas encore.
+    const vus = new Set(api.map(r => BM_NORM(r.concurrent) + '|' + BM_NORM(r.produit)));
+    const releves = api.concat(refe.filter(r => !vus.has(BM_NORM(r.concurrent) + '|' + BM_NORM(r.produit))));
+    const n0 = (f.nous || []).find(x => x.reference) || (f.nous || [])[0] || {};
+    const tRef = f.tailleRef, refV = bmValeur({ prix: n0.prix, unite: f.mesure === 'diametre' ? 'cm' : 'g', taille: n0.taille || tRef }, f.mesure, tRef);
+    return { cle: S.bmF, titre: f.libelle, mesure: f.mesure, unite: f.mesure === 'diametre' ? '€ à Ø ' + tRef + ' cm' : '€/kg', ref: refV, nous: f.nous || [], tailleRef: tRef,
+      tailleConfirmee: f.tailleConfirmee, releves, source: api.length ? (refe.length > api.length ? 'mixte' : 'api') : 'referentiel', web: f.web, constats: f.constats || [], saison: f.saison };
+  }
+  /**
+   * Le top 10 du réseau (quantités vendues, 4 magasins, 3 derniers mois — /analyse/produits) face aux concurrents
+   * de CE magasin. Les relevés de terrain du réseau portent des noms courts (« chocolat », « sandw », « nappes ») :
+   * chaque produit a ses motifs, et ce qui les contredit (un sandwich garni n'est pas un petit pain).
+   */
+  const BM_TOP_REGLES = [
+    [/pain au chocolat nappe|chocolat nappe/, /nappe|double|dubbel|glace/, /mini/],
+    [/mini.*croissant/, /mini croissant/, /jambon|amande/],
+    [/mini.*chocolat/, /mini (pain au )?chocolat|mini couque/, /nappe/],
+    [/pain au chocolat|chocolatine/, /^(pain au )?chocolat$|pain au chocolat|chocoladekoek|chocolatine/, /nappe|mini|double|dubbel|amande|croissant/],
+    [/^croissant$/, /^croissant( beurre| nature)?$/, /mini|jambon|amande|creme|fromage/],
+    [/^sandwich$/, /^sandw(ich)?( mou| nature| blanc| wit)?$|^petit pain|^pain sandwich$|^zachte sandwich/, /garni|plateau/],
+    [/baguette/, /baguette/, /garni|poulet|jambon|mini|sandwich|plateau|demie|demi/],
+    [/pistolet/, /pistolet/, /garni|jambon|fromage|mini/],
+    [/pain dore|pain blanc/, /pain (dore|blanc)|wit brood|witbrood|carre blanc|pain de mie/, /mini|sandwich/],
+    [/cereale/, /cereal|granen|multigrain/, /mini|sandwich|couque/],
+    [/demi gris|pain gris/, /demi gris|pain gris|grijs/, /mini/],
+    [/couque au beurre/, /couque au beurre|boterkoek/, /mini/],
+  ];
+  function bmTopListe() {
+    const A = S.aux.bmTop;
+    if (!A || !Array.isArray(A.produits)) { return null; }
+    return A.produits.slice().sort((a, b) => (b.total || 0) - (a.total || 0)).slice(0, 10);
+  }
+  function bmTopRelevés(p) {
+    const D = S.aux[cleBM()] || {}, n = BM_NORM(p.nom), r = BM_TOP_REGLES.find(x => x[0].test(n));
+    return (D.releves || []).filter(x => x.prix > 0 && !/cougn|galette|frangipane/.test(BM_NORM(x.produit)) && !/plateau/.test(BM_NORM(x.produit))
+      && ((x.monProduit != null && String(x.monProduit) === String(p.pid)) || (r ? (r[1].test(BM_NORM(x.produit)) && !r[2].test(BM_NORM(x.produit))) : bmMots(p.nom).every(w => BM_NORM(x.produit).includes(w)))));
+  }
+  const BM_GMS = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|bio-planet|albert heijn|\bah\b|jumbo/i;
+  const bmEstGms = r => /gms|super|hyper/i.test(r.type || '') || BM_GMS.test(r.concurrent || '');
+  function rendTop10() {
+    const A = S.aux.bmTop, T = bmTopListe(), Pm = bmProduits();
+    if (S.err.bmTop && !A) { return `<div class="db-err">Ventes du réseau : ${esc(S.err.bmTop)}</div>`; }
+    if (!T || !S.aux[cleBM()]) { return squelette(3); }
+    const prix = id => { const x = Pm.find(q => String(q.id) === String(id)); return x ? x.prixTtc : null; };
+    let nAu = 0, nSous = 0, nSur = 0;
+    const lignes = T.map((p, i) => {
+      const Rt = bmTopRelevés(p), pp = r => r.promo > 0 ? r.promo : r.prix;
+      // Le verdict se lit face aux boulangeries (artisans, chaînes, stations) ; les supermarchés ont leur colonne.
+      const R = Rt.filter(r => !bmEstGms(r)), v = R.map(pp), m = bmMed(v), nous = prix(p.pid), mg = bmMed(Rt.filter(bmEstGms).map(pp));
+      const e = nous != null && m ? (nous - m) / m * 100 : null;
+      const verdict = e == null ? '<span class="mu">pas de relevé</span>' : (e > 5 ? '<span class="ko">au-dessus</span>' : (e < -5 ? '<span class="ok">en dessous</span>' : '<span class="mu">au prix du marché</span>'));
+      if (e != null) { if (e > 5) { nSur++; } else if (e < -5) { nSous++; } else { nAu++; } }
+      const mi = v.length ? Math.min(...v) : null, ma = v.length ? Math.max(...v) : null;
+      const W = 150, x = val => ma > mi ? 6 + (val - mi) / (ma - mi) * (W - 12) : W / 2;
+      const bar = v.length && nous != null ? `<svg width="${W}" height="18" viewBox="0 0 ${W} 18"><line x1="6" x2="${W - 6}" y1="9" y2="9" stroke="#e6e0d8" stroke-width="4" stroke-linecap="round"/>${v.map(val => `<circle cx="${x(val).toFixed(1)}" cy="9" r="3" fill="#B8B2A8"/>`).join('')}<line x1="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" x2="${Math.max(3, Math.min(W - 3, x(nous))).toFixed(1)}" y1="1" y2="17" stroke="var(--color-primary)" stroke-width="2.5"/></svg>` : '';
+      return `<tr data-bmtop="${p.pid}" class="bm-cl"><td class="n mu">${i + 1}</td><td>${esc(p.nom)}<div class="db-mini">${esc(p.cat || '')} · ${nf(p.total || 0, 0)} vendus · ${fE(p.ca)}</div></td>
+        <td class="n"><b>${fU(nous)}</b></td><td class="n">${fU(m)}</td><td class="n mu">${fU(mg)}</td><td class="n">${v.length ? fU(mi) + ' – ' + fU(ma) : '—'}</td><td>${bar}</td><td class="n">${v.length}${Rt.length > v.length ? ` <span class="mu">+ ${Rt.length - v.length}</span>` : ''}</td><td class="n">${e == null ? '—' : `<span class="${e > 5 ? 'ko' : (e < -5 ? 'ok' : 'mu')}">${(e > 0 ? '+' : e < 0 ? '−' : '') + nf(Math.abs(e), 0)} %</span>`}</td><td>${verdict}</td></tr>`;
+    }).join('');
+    const per = A.bornes && A.bornes.length ? fD(A.bornes[0][0]) + '/' + A.bornes[0][0].slice(2, 4) + ' → ' + fD(A.bornes[A.bornes.length - 1][1]) + '/' + A.bornes[A.bornes.length - 1][1].slice(2, 4) : '3 mois';
+    const tui = (k, v, s2, c) => `<div class="db-tui ${c || ''}"><div class="k">${k}</div><div class="v">${v}</div><div class="s">${s2}</div></div>`;
+    let h = `<div class="db-tuiles">${tui('Top 10 réseau', nf(T.reduce((a, p) => a + (p.total || 0), 0), 0), 'pièces vendues · 4 magasins · ' + per, 'vif')}${tui('Au prix du marché', String(nAu), 'à ± 5 % de la médiane des boulangeries')}${tui('Au-dessus', String(nSur), 'plus de 5 % au-dessus de la médiane', nSur ? '' : 'bon')}${tui('En dessous', String(nSous), 'plus de 5 % sous la médiane')}${tui('Relevés', String(T.reduce((a, p) => a + bmTopRelevés(p).length, 0)), 'prix concurrents de ce magasin dans TFBuddy')}${tui('Sans relevé', String(T.filter(p => !bmTopRelevés(p).length).length), 'produits à relever sur le terrain')}</div>`;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Nos 10 produits les plus vendus face aux concurrents du magasin</span><span class="db-mini">prix à la pièce, promo comprise · position et verdict face aux boulangeries (artisans, chaînes, stations), hors supermarchés · relevés : boulangeries + supermarchés · cliquer une ligne pour le détail</span></div>
+      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th class="n">#</th><th>Produit</th><th class="n">Nous</th><th class="n">Médiane boulangeries</th><th class="n">Médiane supermarchés</th><th class="n">Fourchette</th><th>Position</th><th class="n">Relevés</th><th class="n">Écart</th><th>Verdict</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+    return h;
+  }
+  function rendConcurrence() {
+    const D = S.aux[cleBM()], k = cleBM();
+    let h = `<div class="db-sec">Concurrence<span class="db-ong bm-choix">${[['top', 'Top 10 réseau'], ['cougnou', 'Cougnou'], ['galette', 'Galette des rois']].map(o => `<button data-bmf="${o[0]}" class="${S.bmF === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}${S.bmF === 'produit' && S.bmP ? `<button class="on">${esc((bmProduits().find(x => String(x.id) === String(S.bmP)) || {}).nom || 'Produit')}</button>` : ''}</span>
+      <span class="bm-cherche"><input type="search" placeholder="Aller chercher un produit…" data-bmq="1" value="${esc(S.bmQ || '')}" autocomplete="off"><span id="bm-res" class="bm-res"></span></span>
+      <small>prix comparable, position et visibilité face aux concurrents du magasin</small><button class="db-btn" data-bmform="1">+ Relevé terrain</button></div>`;
+    if (S.bmMsg) { h += `<div class="db-alerte bm-msg">${S.bmMsg}</div>`; }
+    if (S.bmForm) { h += bmFormulaire(); }
+    if (S.err[k] && !D) { return h + `<div class="db-err">Concurrence : ${esc(S.err[k])}</div>`; }
+    if (S.bmF === 'top') { return h + rendTop10(); }
+    if (!D) { return h + squelette(3); }
+    const X = bmSujet();
+    if (!X) { return h + `<div class="db-alerte">Ce produit n’est pas dans le catalogue du magasin.</div>`; }
+    const L = X.releves.map(r => Object.assign({}, r, { v: bmValeur(r, X.mesure, X.tailleRef) }));
+    const comp = L.filter(r => r.v != null), ref = X.ref;
+    const ec = v => ref != null && v ? (ref - v) / v * 100 : null;
+    const types = ['GMS', 'Artisan', 'Chaîne'], lib = { GMS: 'supermarchés', Artisan: 'artisans', 'Chaîne': 'chaînes, stations' };
+    // Les relevés du réseau n'ont souvent pas de type : l'enseigne le dit (supermarchés ; stations et chaînes).
+    const GMS_RE = /delhaize|carrefour|colruyt|aldi|lidl|intermarch|\bmatch\b|\bspar\b|okay|cora|proxy|louis delhaize|bio-planet|ah |albert heijn|jumbo/i, CH_RE = /lukoil|total|shell|\bq8\b|esso|texaco|paul\b|pain quotidien|panos|exki|starbucks|pain d.antan|fleur du pain|louise/i;
+    const typeDe = r => types.includes(r.type) ? r.type : (/gms|super|hyper/i.test(r.type) || GMS_RE.test(r.concurrent) ? 'GMS' : (/cha[iî]ne|station/i.test(r.type) || CH_RE.test(r.concurrent) ? 'Chaîne' : 'Artisan'));
+    const pct = v => v == null ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + nf(Math.abs(v), 0) + ' %';
+    // Les tuiles
+    const nous0 = (X.nous.find(x => x.reference) || X.nous[0] || {});
+    const tui = (kk, v, s, c) => `<div class="db-tui ${c || ''}"><div class="k">${kk}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+    let t = tui(X.cle === 'produit' ? 'Notre prix' : 'Notre ' + (X.cle === 'galette' ? 'galette' : 'cougnou'), fU(ref),
+      X.cle === 'produit' ? esc(X.titre) : `${fU(nous0.prix)} · ${X.mesure === 'diametre' ? 'Ø ' + X.tailleRef + ' cm' : '≈ ' + X.tailleRef + ' g' + (X.tailleConfirmee ? '' : ' <span class="wa">à confirmer</span>')} · ${esc(X.unite)}`, 'vif');
+    types.forEach(ty => { const v = comp.filter(r => typeDe(r) === ty).map(r => r.v), m = bmMed(v), e = ec(m);
+      t += tui('Médiane ' + lib[ty], m == null ? '—' : fU(m), v.length ? `${v.length} relevé${v.length > 1 ? 's' : ''} · nous <span class="${e > 0 ? 'ko' : 'ok'}">${pct(e)}</span>` : 'aucun relevé'); });
+    const moins = ref != null ? comp.filter(r => r.v < ref).length : 0;
+    t += tui('Moins chers que nous', `${moins} <small class="mu">/ ${comp.length}</small>`, comp.length ? 'relevés dont la taille est connue' : 'rien à comparer');
+    t += X.web ? tui('Visibilité web', `${X.web.ok} <small class="mu">/ ${X.web.total}</small>`, 'contrôles atelierby.be passés', X.web.ok / X.web.total >= .5 ? 'bon' : '')
+      : tui('Relevés', String(L.length), X.source === 'api' ? 'dans TFBuddy' : 'relevé web du cockpit');
+    h += `<div class="db-tuiles">${t}</div>`;
+    // L'échelle
+    if (comp.length && ref != null) {
+      const hi = Math.max(ref, ...comp.map(r => r.v)), max = hi > 10 ? Math.ceil(hi / 5) * 5 : Math.ceil(hi) || 1, W = 1180, x = v => 60 + v / max * (W - 80), ty = { GMS: 28, Artisan: 50, 'Chaîne': 72 };
+      const col = { GMS: '#B8B2A8', Artisan: 'var(--prize)', 'Chaîne': 'var(--muted-2)' };
+      let s = '';
+      const pas = max > 40 ? 10 : (max > 10 ? 5 : 1);
+      for (let v = 0; v <= max; v += pas) { s += `<line x1="${x(v)}" x2="${x(v)}" y1="16" y2="82" stroke="#e6e0d8"/><text x="${x(v)}" y="96" font-size="10" text-anchor="middle" fill="#7a736a">${v} €</text>`; }
+      types.forEach(k2 => { s += `<text x="0" y="${ty[k2] + 4}" font-size="10" fill="#7a736a">${lib[k2]}</text>`; });
+      comp.forEach(r => { s += `<circle cx="${x(r.v).toFixed(1)}" cy="${ty[typeDe(r)]}" r="5.5" fill="${col[typeDe(r)]}" fill-opacity=".85"><title>${esc(r.concurrent + ' — ' + r.produit + ' : ' + fU(r.v))}</title></circle>`; });
+      s += `<line x1="${x(ref)}" x2="${x(ref)}" y1="10" y2="84" stroke="var(--color-primary)" stroke-width="2.5"/><rect x="${x(ref) - 36}" y="0" width="72" height="15" rx="3" fill="var(--color-primary)"/><text x="${x(ref)}" y="11" font-size="10" text-anchor="middle" fill="#fff">nous ${nf(ref, 2)} €</text>`;
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Où nous situons-nous — ${esc(X.unite)}</span><span class="db-mini">${comp.length} relevé${comp.length > 1 ? 's' : ''} comparable${comp.length > 1 ? 's' : ''} · ${X.mesure === 'diametre' ? 'prix × (Ø ' + X.tailleRef + ' / Ø)²' : (X.mesure === 'poids' ? 'prix ÷ poids' : 'prix de la pièce, promo comprise')} · survol = le relevé</span></div>
+        <div style="padding:12px 16px 4px"><svg viewBox="0 0 ${W} 102" width="100%" style="display:block">${s}</svg></div>
+        <div class="db-leg"><span><i style="background:#B8B2A8"></i>supermarché</span><span><i style="background:var(--prize)"></i>artisan</span><span><i style="background:var(--muted-2)"></i>chaîne</span><span><i style="background:var(--color-primary)"></i>notre prix</span></div></div>`;
+    }
+    // Les relevés
+    const lignes = L.slice().sort((a, b) => (a.v ?? 1e9) - (b.v ?? 1e9)).map(r => {
+      const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'ko' : 'ok'}">nous ${pct(e)}</span>`);
+      const lien = r.lien || ((r.notes || '').match(/https?:\/\/\S+/) || [])[0];
+      return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
+        <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.unite === 'piece' || !r.taille ? (r.unite === 'piece' ? '<span class="mu">à la pièce</span>' : '—') : nf(+r.taille, 0) + ' ' + esc(r.unite)}</td>
+        <td class="n">${fU(r.prix)}${r.promo ? `<div class="db-mini">promo ${fU(r.promo)}</div>` : ''}</td><td class="n"><b>${r.v == null ? '—' : fU(r.v)}</b></td><td class="n">${pos}</td><td class="n">${lien ? `<a class="db-lien" href="${esc(lien)}" target="_blank" rel="noopener">source ↗</a>` : ''}</td></tr>`;
+    }).join('');
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">${esc(X.titre)} — les concurrents du magasin</span><span class="db-mini">${L.length} relevé${L.length > 1 ? 's' : ''} · ${X.source === 'api' ? 'module Benchmark de TFBuddy' : (X.source === 'mixte' ? 'TFBuddy + relevé web du cockpit' : 'relevé web du cockpit (pas encore dans TFBuddy)')}${X.mot ? ' · rattachés à ce produit ou contenant « ' + esc(X.mot) + ' »' : ''}</span></div>
+      ${L.length ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">${X.mesure === 'diametre' ? 'Ø' : 'Taille'}</th><th class="n">Prix</th><th class="n">${esc(X.unite)}</th><th class="n">Écart</th><th></th></tr></thead><tbody>${lignes}</tbody></table></div>`
+        : `<div class="bm-vide">Aucun prix concurrent relevé pour ce produit. <button class="db-btn" data-bmform="1">+ Ajouter un relevé terrain</button></div>`}</div>`;
+    if (X.proches && X.proches.length) {
+      const pl = X.proches.slice().sort((a, b) => a.prix - b.prix).map(r => `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td><td>${esc(r.produit)}</td><td class="n">${fU(r.prix)}</td></tr>`).join('');
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">Produits proches</span><span class="db-mini">${X.proches.length} relevé${X.proches.length > 1 ? 's' : ''} contenant « ${esc(bmMotCle(X.titre))} » sans être le même produit · pour information, hors médianes</span></div>
+        <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Produit</th><th class="n">Prix</th></tr></thead><tbody>${pl}</tbody></table></div></div>`;
+    }
+    // Visibilité web et à faire (familles)
+    if (X.web || X.constats.length) {
+      const ctrl = X.web ? X.web.controles.map(c => `<div class="bm-l"><span class="${c.ok ? 'ok' : 'ko'} bm-st">${c.ok ? '✓ fait' : '✗ manque'}</span><span>${esc(c.libelle)}${c.detail && c.cle !== 'page' ? `<div class="db-mini">${esc(c.detail.slice(0, 90))}</div>` : ''}</span></div>`).join('') : '';
+      h += `<div class="bm-bas"><div class="db-card"><div class="ct"><span class="db-lab">Visibilité web — atelierby.be</span><span class="db-mini">${X.web ? 'lu le ' + esc(X.web.lu_le) : ''}</span></div>${ctrl}</div>
+        <div class="db-card"><div class="ct"><span class="db-lab">À faire</span><span class="db-mini">tiré du benchmark</span></div>${X.constats.map((c, i) => `<div class="bm-l"><span class="mu bm-st">${i + 1}</span><span>${esc(c)}</span></div>`).join('')}</div></div>`;
+    }
+    h += `<div class="db-mini bm-pied">Lu le ${esc(D.lu || '')}${D.kpi ? ' · TFBuddy : ' + (D.kpi.comparisons_count || 0) + ' comparaison(s) rattachée(s) sur 90 jours' : ''}${D.erreur ? ' · <span class="ko">' + esc(D.erreur) + '</span>' : ''}</div>`;
+    return h;
+  }
+  /** Le formulaire d'un prix vu en magasin — posé dans TFBuddy, rattaché au produit affiché. */
+  function bmFormulaire() {
+    const D = S.aux[cleBM()] || {}, F = S.bmForm, X = bmSujet() || {}, p = X.produit || null;
+    const opts = (D.concurrents || []).slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(c => `<option value="${c.id}" ${String(F.cid) === String(c.id) ? 'selected' : ''}>${esc(c.nom)}${c.ville ? ' · ' + esc(c.ville) : ''}</option>`).join('');
+    const nousOpts = (X.cle === 'produit' ? [p] : (X.nous || []).filter(n => n.id)).filter(Boolean).map(n => `<option value="${n.id}">${esc(n.nom)}</option>`).join('');
+    return `<div class="db-card bm-form"><div class="ct"><span class="db-lab">Relevé terrain — un prix vu chez un concurrent</span><span class="db-mini">posé dans le module Benchmark de TFBuddy, daté d’aujourd’hui</span><button class="db-btn" data-bmferme="1">Fermer</button></div>
+      <div class="bm-grille">
+        <label>Concurrent<select data-bmc="cid"><option value="">— nouveau concurrent —</option>${opts}</select></label>
+        <label>Nouveau : nom<input data-bmc="cnom" value="${esc(F.cnom || '')}" placeholder="Boulangerie Dupont"></label>
+        <label>Type<select data-bmc="ctype">${['Artisan', 'GMS', 'Chaîne'].map(x => `<option ${F.ctype === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
+        <label>Notre produit<select data-bmc="pid">${nousOpts || '<option value="">—</option>'}</select></label>
+        <label class="lg">Produit vu<input data-bmc="nom" value="${esc(F.nom || '')}" placeholder="Cougnou sucre 250 g"></label>
+        <label>Prix (€)<input data-bmc="prix" inputmode="decimal" value="${esc(F.prix || '')}"></label>
+        <label>Promo (€)<input data-bmc="promo" inputmode="decimal" value="${esc(F.promo || '')}"></label>
+        <label>Taille<input data-bmc="taille" inputmode="decimal" value="${esc(F.taille || '')}"></label>
+        <label>Unité<select data-bmc="unite">${[['g', 'g'], ['kg', 'kg'], ['cm', 'cm (Ø)'], ['piece', 'pièce']].map(u => `<option value="${u[0]}" ${F.unite === u[0] ? 'selected' : ''}>${u[1]}</option>`).join('')}</select></label>
+      </div><div class="bm-act"><button class="db-btn on" data-bmenv="1" ${S.bmEnvoi ? 'disabled' : ''}>${S.bmEnvoi ? 'Envoi…' : 'Poser le relevé'}</button></div></div>`;
+  }
+  function bmLireForm() {
+    const F = S.bmForm; if (!F) { return; }
+    $.querySelectorAll('[data-bmc]').forEach(el => { F[el.dataset.bmc] = el.value; });
+  }
+  function bmChercher(q) {
+    const box = document.getElementById('bm-res'); if (!box) { return; }
+    const n = BM_NORM(q);
+    if (n.length < 2) { box.innerHTML = ''; return; }
+    const L = bmProduits().filter(p => BM_NORM(p.nom + ' ' + (p.cat || '')).includes(n)).slice(0, 12);
+    box.innerHTML = L.length ? L.map(p => `<button data-bmp="${p.id}"><span>${esc(p.nom)}</span><small>${esc(p.cat || '')} · ${p.prixTtc != null ? fU(p.prixTtc) : 'sans prix'}</small></button>`).join('')
+      : `<div class="mu">${bmProduits().length ? 'Aucun produit du magasin ne correspond.' : 'Catalogue du magasin en lecture…'}</div>`;
+    box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
+  }
+  function bmBrancher() {
+    $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
+    $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
+    const q = $.querySelector('[data-bmq]');
+    if (q) { q.addEventListener('input', () => { S.bmQ = q.value; bmChercher(q.value); }); q.addEventListener('focus', () => bmChercher(q.value)); q.addEventListener('blur', () => setTimeout(() => { const b = document.getElementById('bm-res'); if (b) { b.innerHTML = ''; } }, 150)); }
+    $.querySelectorAll('[data-bmform]').forEach(b => b.addEventListener('click', () => {
+      const X = bmSujet() || {}; S.bmForm = { unite: X.mesure === 'diametre' ? 'cm' : (X.mesure === 'poids' ? 'g' : 'piece'), ctype: 'Artisan', nom: X.cle === 'produit' ? X.titre : '' }; S.bmMsg = null; rendre(); }));
+    $.querySelectorAll('[data-bmferme]').forEach(b => b.addEventListener('click', () => { S.bmForm = null; rendre(); }));
+    $.querySelectorAll('[data-bmc]').forEach(el => el.addEventListener('change', bmLireForm));
+    $.querySelectorAll('[data-bmenv]').forEach(b => b.addEventListener('click', () => {
+      bmLireForm(); const F = S.bmForm || {};
+      const corps = { shop: +S.shop, nom: F.nom, prix: F.prix, promo: F.promo || null, unite: F.unite, taille: F.taille || null, produitId: F.pid ? +F.pid : (($.querySelector('[data-bmc="pid"]') || {}).value || null) };
+      if (F.cid) { corps.concurrentId = +F.cid; } else { corps.concurrent = { nom: F.cnom, type: F.ctype }; }
+      if (!corps.nom || !(+String(corps.prix).replace(',', '.') > 0) || (!F.cid && !F.cnom)) { S.bmMsg = 'Indiquez le concurrent, le produit vu et son prix.'; rendre(); return; }
+      S.bmEnvoi = true; rendre();
+      ecrire('/benchmarks/releve', corps).then(() => { S.bmForm = null; S.bmMsg = 'Relevé posé dans TFBuddy : ' + esc(corps.nom) + ' à ' + esc(String(corps.prix)) + ' €.'; lireAux(cleBM(), cheminBM() + '&rafraichir=1', true); })
+        .catch(e => { S.bmMsg = '<span class="ko">Relevé refusé : ' + esc(e.message) + '</span>'; })
+        .finally(() => { S.bmEnvoi = false; rendre(); });
+    }));
+  }
+  function bmGarder() { const a = document.activeElement; return a && a.hasAttribute && a.hasAttribute('data-bmq') ? { s: a.selectionStart } : (a && a.dataset && a.dataset.bmc ? { c: a.dataset.bmc } : null); }
+  function bmRestaurer(g) {
+    if (!g) { return; }
+    const el = g.c ? $.querySelector(`[data-bmc="${g.c}"]`) : $.querySelector('[data-bmq]');
+    if (el) { el.focus(); if (g.s != null && el.setSelectionRange) { el.setSelectionRange(g.s, g.s); bmChercher(el.value); } }
+  }
+
+  /* --- Temps morts (07/11/2026) ---------------------------------------------------------------
+   * L'onglet « Temps morts » du bureau : un trou d'au moins N minutes entre deux tickets qui se
+   * suivent, entre le premier et le dernier ticket du jour. Le jour regardé minute par minute, puis
+   * sa semaine du lundi au dimanche, jour par jour. Une lecture : /exploitation/temps-morts, qui
+   * mesure sur l'heure de chaque ticket (rien n'est estimé). Le seuil (5, 10, 15 min) se garde. */
+  const TM_SEUILS = [5, 10, 15];
+  // La part de l'heure sans client : une seule teinte, du clair au foncé (maquette docs/maquettes/temps-morts).
+  const TM_RAMPE = [[10, '#F7EDEF', 'var(--color-text)', '< 10'], [25, '#EFD3D9', 'var(--color-text)', '10–25'], [40, '#E2AAB5', 'var(--color-text)', '25–40'],
+    [55, '#CF7488', 'var(--color-text)', '40–55'], [70, '#B03048', '#fff', '55–70'], [101, '#7C1C30', '#fff', '≥ 70']];
+  const tmTeinte = p => TM_RAMPE.find(r => p < r[0]) || TM_RAMPE[TM_RAMPE.length - 1];
+  const tmStyle = p => { const t = tmTeinte(p); return `background:${t[1]};color:${t[2]}`; };
+  const fMin = m => { if (m == null) { return '—'; } const r = Math.round(m); return r < 60 ? r + ' min' : Math.floor(r / 60) + ' h ' + String(r % 60).padStart(2, '0'); };
+  const tmHm = s => String(Math.floor(s / 3600)).padStart(2, '0') + ':' + String(Math.floor(s % 3600 / 60)).padStart(2, '0');
+  const JOUR_L = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+  function cleTM() { return 'tm|' + S.shop + '|' + S.date + '|' + S.tmSeuil; }
+  function cheminTM() { return '/exploitation/temps-morts?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&seuil=' + S.tmSeuil; }
+
+  /** L'écart avec une référence, moins étant mieux : vert quand on fait moins de temps mort. */
+  function tmEcart(v, ref, lib, fmt) {
+    if (v == null || ref == null) { return ''; }
+    const d = v - ref, sens = Math.abs(d) < (fmt === 'pct' ? 1 : 0.5) ? 'eq' : (d < 0 ? 'up' : 'dn');
+    if (sens === 'eq') { return `<span class="db-dl eq">comme ${lib.replace(/^vs /, 'l’').replace('l’sem.', 'la sem.')}</span>`; }
+    const txt = fmt === 'pct' ? nf(Math.abs(d), 0) + ' pt' : (fmt === 'min' ? fMin(Math.abs(d)) : nf(Math.abs(d), 1));
+    return `<span class="db-dl ${sens}">${d >= 0 ? '+ ' : '− '}${txt} ${lib}</span>`;
+  }
+
+  /**
+   * La journée en grille des minutes (choisie le 07/11/2026, maquette docs/maquettes/temps-morts-tickets) :
+   * une ligne par heure, un carré par minute. Foncé : au moins un ticket dans la minute (le chiffre quand il
+   * y en a plusieurs) ; rose : la minute tombe dans un temps mort ; clair : minute calme ; hachuré : avant le
+   * premier ou après le dernier ticket du jour.
+   */
+  function tmFrise(J) {
+    const t = J.ticks || [], tr = J.trous || [], deb = t[0], fin = t[t.length - 1];
+    const h0 = Math.floor(deb / 3600), h1 = Math.floor(fin / 3600);
+    const parMin = {}; t.forEach(s => { const m = Math.floor(s / 60); parMin[m] = (parMin[m] || 0) + 1; });
+    // Le temps mort d'une minute : celui qui couvre son milieu.
+    const trouDe = m => tr.find(([u, v]) => m * 60 + 30 > u && m * 60 + 30 < v);
+    let h = '';
+    for (let x = h0; x <= h1; x++) {
+      const H = (J.heures || {})[x] || {};
+      let c = '';
+      for (let i = 0; i < 60; i++) {
+        const m = x * 60 + i, s = m * 60, n = parMin[m] || 0;
+        if (s + 59 < deb || s > fin) { c += `<i class="hors" title="${tmHm(s)} · avant le premier ou après le dernier ticket"></i>`; continue; }
+        if (n) { c += `<i class="tk" title="${tmHm(s)} · ${n} ticket${n > 1 ? 's' : ''}">${n > 1 ? n : ''}</i>`; continue; }
+        const tm = trouDe(m);
+        c += tm ? `<i class="mort" title="${tmHm(s)} · temps mort de ${tmHm(tm[0])} à ${tmHm(tm[1])}, ${fMin((tm[1] - tm[0]) / 60)}"></i>` : `<i title="${tmHm(s)}"></i>`;
+      }
+      const p = H.pct;
+      h += `<div class="tm-l"><span class="tm-hr">${x} h</span><div class="tm-min">${c}</div>
+        <span class="tm-pct"${p == null ? '' : ` style="${tmStyle(p)}"`} title="${H.ouvert != null ? fN(H.mort) + ' min sans client sur ' + fN(H.ouvert) + ' min ouvertes · ' + (H.tk || 0) + ' ticket' + (H.tk > 1 ? 's' : '') : ''}">${p == null ? '—' : fN(p) + ' %'}</span>
+        <span class="tm-n mu">${H.tk || 0} ticket${H.tk > 1 ? 's' : ''}${H.nb ? ' · ' + H.nb + ' tm' : ''}</span></div>`;
+    }
+    const ax = Array.from({ length: 60 }, (_, i) => `<span>${i % 15 === 0 ? String(i).padStart(2, '0') : ''}</span>`).join('');
+    return `<div class="tm-frise"><div class="tm-l tm-ax"><span class="tm-hr"></span><div class="tm-min-ax">${ax}</div><span class="tm-pct mu">sans client</span><span class="tm-n mu">tickets · temps morts</span></div>${h}</div>`;
+  }
+
+  function tmLegende() {
+    return `<div class="tm-leg"><span class="tm-leg-i"><i class="tm-ech tk"></i>un ticket dans la minute</span><span class="tm-leg-i"><i class="tm-ech tk">3</i>trois tickets dans la même minute</span>
+      <span class="tm-leg-i"><i class="tm-ech mort"></i>minute dans un temps mort</span><span class="tm-leg-i"><i class="tm-ech"></i>minute calme, moins de ${S.tmSeuil} min sans ticket</span><span class="tm-leg-i"><i class="tm-ech hors"></i>avant le premier, après le dernier ticket</span>
+      <span class="tm-leg-r">part de l’heure sans client <span class="tm-rampe">${TM_RAMPE.map(r => `<i style="background:${r[1]};color:${r[2]}">${r[3]}</i>`).join('')}</span> %</span></div>`;
+  }
+
+  function rendTempsMorts() {
+    const cle = cleTM(), D = S.aux[cle];
+    const dj = new Date(S.date + 'T12:00:00'), nomJ = JOUR_L[dj.getDay()];
+    let h = `<div class="db-sec">Temps morts — ${esc(fDL(S.date))}<small>un temps mort : ${S.tmSeuil} minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée</small>
+      <span class="tm-seuil"><span class="db-lab">Temps mort dès</span><span class="db-ong">${TM_SEUILS.map(s => `<button type="button" data-tmseuil="${s}" class="${s === S.tmSeuil ? 'on' : ''}">${s} min</button>`).join('')}</span></span></div>`;
+    if (S.err[cle]) { h += `<div class="db-err">Temps morts : ${esc(S.err[cle])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+    if (!D) { return h + (S.err[cle] ? '' : squelette(6)); }
+    if (D.manquants) { h += `<div class="db-alerte">${D.manquants} journée${D.manquants > 1 ? 's' : ''} pas encore lue${D.manquants > 1 ? 's' : ''} au panel : les chiffres se complètent à la relecture. <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+
+    // Le jour.
+    const J = D.jour, Hb = D.habitude || {}, enCours = J && J.etat === 'encours';
+    if (!J) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Les tickets de ce jour n’ont pas pu être lus au panel. <button class="db-btn" data-recharger="1">↻ Relire</button></div></div>`; }
+    else if (J.ferme) { h += `<div class="db-card"><div class="db-mini" style="padding:16px">Magasin fermé ce jour-là : ${J.tickets ? J.tickets + ' ticket' + (J.tickets > 1 ? 's' : '') + ', pas de journée' : 'aucun ticket'}.</div></div>`; }
+    else {
+      const hab = Hb.jours ? `${nomJ}s d’avant` : '';
+      h += `<div class="db-tuiles tm-tuiles">
+        ${`<div class="db-tui"><div class="k">Temps morts${enCours ? ' · en cours' : ''}</div><div class="v">${J.nb}</div><div class="s">${Hb.jours ? 'habitude : ' + nf(Hb.nb, 1) + ' les ' + Hb.jours + ' ' + hab : 'pas d’habitude lue'}</div>${enCours ? '' : tmEcart(J.nb, Hb.nb, 'vs habitude')}</div>`}
+        <div class="db-tui"><div class="k">Sans client</div><div class="v">${fMin(J.mort)}</div><div class="s">sur ${fMin(J.ouvert)}, de ${esc(J.debut)} à ${esc(J.fin)}</div>${enCours ? '' : tmEcart(J.mort, Hb.mort, 'vs habitude', 'min')}</div>
+        <div class="db-tui"><div class="k">Part de l’ouverture</div><div class="v">${fP0(J.pct)}</div><div class="s">${Hb.jours ? 'habitude : ' + fP0(Hb.pct) : ''}</div>${enCours ? '' : tmEcart(J.pct, Hb.pct, 'vs habitude', 'pct')}</div>
+        <div class="db-tui"><div class="k">Le plus long trou</div><div class="v">${fMin(J.plusLong.min)}</div><div class="s">de ${esc(J.plusLong.de)} à ${esc(J.plusLong.a)}</div></div>
+        <div class="db-tui"><div class="k">Tickets</div><div class="v">${fN(J.tickets)}</div><div class="s">${J.isoles ? J.isoles + ' isolé' + (J.isoles > 1 ? 's' : '') + ' en bord de journée, écarté' + (J.isoles > 1 ? 's' : '') + (J.ecartes && J.ecartes.length ? ' (' + J.ecartes.map(tmHm).join(', ') + ')' : '') : 'tous comptés, comptoir et pro'}</div></div></div>`;
+      h += `<div class="db-card"><div class="ct"><span class="db-lab">La journée minute par minute</span><span class="db-mini">un carré = une minute · ${J.nb} temps mort${J.nb > 1 ? 's' : ''} de ${S.tmSeuil} min ou plus · survolez un carré pour son heure</span></div>${tmFrise(J)}${tmLegende()}</div>`;
+    }
+
+    // La semaine, du lundi au dimanche.
+    const W = D.semaine, M = W.moyenne || {}, P = (D.semainePrecedente || {}).moyenne || {};
+    const hs = [...new Set(W.jours.flatMap(j => Object.keys(j.heures || {}).map(Number)))].sort((a, b) => a - b);
+    const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
+    const ligne = j => {
+      const d = new Date(j.date + 'T12:00:00'), lib = JOUR_L[d.getDay()].slice(0, 3) + '. ' + fD(j.date), sel = j.date === S.date;
+      const attr = j.etat === 'avenir' ? '' : ` class="hv${sel ? ' sel' : ''}" data-tmjour="${j.date}"`;
+      if (j.etat === 'avenir' || j.etat === 'nonlu' || j.etat === 'ferme') {
+        const t = { avenir: 'à venir', nonlu: 'pas encore lu au panel', ferme: 'fermé' }[j.etat];
+        return `<tr${attr}${j.etat === 'avenir' ? ' style="opacity:.55"' : ''}><td>${lib}</td><td colspan="${6 + (hs.length ? 1 : 0)}" class="mu" style="text-align:left">${t}</td></tr>`;
+      }
+      const cells = hs.map(x => { const H = (j.heures || {})[x]; return H && H.pct != null && H.ouvert > 0 ? `<i style="${tmStyle(H.pct)}" title="${x} h · ${fN(H.pct)} % sans client · ${H.tk} tickets"></i>` : '<i class="vide"></i>'; }).join('');
+      return `<tr${attr}><td>${lib}${j.etat === 'encours' ? ' <span class="mu">· en cours</span>' : ''}</td><td><b>${j.nb}</b></td><td>${fMin(j.mort)}</td><td><span class="tm-pastille" style="${tmStyle(j.pct)}">${fP0(j.pct)}</span></td><td>${fMin(j.plusLong.min)} <span class="mu">${esc(j.plusLong.de)}</span></td><td>${fN(j.tickets)}</td><td class="mu">${esc(j.debut)} – ${esc(j.fin)}</td>${hs.length ? `<td><div class="tm-cases" style="grid-template-columns:repeat(${hs.length},1fr)">${cells}</div></td>` : ''}</tr>`;
+    };
+    const moy = (lib, X, cmp) => X.jours ? `<tr class="tot"><td>${lib} <span class="mu">· ${X.jours} jour${X.jours > 1 ? 's' : ''}</span></td><td><b>${nf(X.nb, 1)}</b>${cmp ? ' ' + tmEcart(X.nb, cmp.nb, 'vs sem. d’avant') : ''}</td><td>${fMin(X.mort)}</td><td><span class="tm-pastille" style="${tmStyle(X.pct)}">${fP0(X.pct)}</span></td><td>${fMin(X.plusLong)} <span class="mu">au plus</span></td><td>${fN(X.tickets)}</td><td class="mu">${fMin(X.ouvert)} ouvert</td>${hs.length ? '<td></td>' : ''}</tr>` : `<tr class="tot"><td>${lib}</td><td colspan="${6 + (hs.length ? 1 : 0)}" class="mu" style="text-align:left">aucune journée close lue</td></tr>`;
+    const finSem = W.au >= AUJ;
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">La semaine du ${esc(fdC(W.du))} au ${esc(fdC(W.au))}</span>
+        <span class="db-mini">par jour : nombre de temps morts, temps sans client, part de l’ouverture · cliquez un jour pour le lire ci-dessus</span>
+        <span class="tm-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${finSem ? ' disabled' : ''}>semaine d’après ›</button></span></div>
+      <div style="overflow-x:auto"><table class="db-t tm-sem"><thead><tr><th>Jour</th><th>Temps morts</th><th>Sans client</th><th>Part de l’ouverture</th><th>Plus long trou</th><th>Tickets</th><th>Premier – dernier</th>${hs.length ? `<th><div class="tm-cases-h" style="grid-template-columns:repeat(${hs.length},1fr)">${hs.map(x => `<span>${x} h</span>`).join('')}</div></th>` : ''}</tr></thead>
+      <tbody>${W.jours.map(ligne).join('')}${moy('Moyenne par jour', M, P.jours ? P : null)}${moy('Semaine d’avant', P)}</tbody></table></div>
+      <div class="db-mini" style="padding:10px 16px 12px">Mesuré sur l’heure de chaque ticket (liste des tickets du panel) : tous les tickets comptent, comptoir et pro. L’attente avant le premier client et ce qui suit le dernier ticket ne comptent pas ; un ticket isolé à ${D.isole || 45} min ou plus du suivant en début ou en fin de journée est écarté. Les moyennes ne prennent que les journées closes. Habitude : les ${(Hb.dates || []).length || 4} mêmes jours de semaine d’avant.</div></div>`;
+    return h;
+  }
+
+  /* --- Tâches (08/11/2026, maquette S1) ---------------------------------------------------------------------------------
+   * La journée du magasin checklist par checklist : ce qui est fait ou pas, la part des tâches OBLIGATOIRES faites, et les
+   * retours du contrôle qualité (la note, les repères posés sur la photo, le commentaire, qui et quand). Lit /pwa/tasks du
+   * seul magasin pour chaque jour de la semaine (la bande du haut), les photos du jour regardé (le zoom d'Opérationnel,
+   * repères compris) et les avis du contrôleur sur trente jours (/pwa/tasks/nc?retours=1). Les codes « 1.1.01 » : la
+   * nomenclature de src/checklists_codes.php (1er chiffre : qui, 2e : quand, puis le numéro). */
+  const TJ_ZONES = { 1: ['Vente', '#8D1D2C'], 2: ['Boulangerie', '#B0792A'], 3: ['Traiteur', '#3f7a52'], 4: ['Nettoyage', '#1f5f8b'], 5: ['Gestion', '#6B4FBB'] };
+  const TJ_MOMENTS = { 1: 'Ouverture', 2: 'Journée', 3: 'Après-midi', 4: 'Fermeture', 5: 'Chaque semaine', 6: 'Chaque mois' };
+  const TJ_CAM = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
+  const cleTJ = d => 'tj|' + S.shop + '|' + d;
+  const cheminTJ = d => '/pwa/tasks?shop=' + encodeURIComponent(S.shop) + '&date=' + d;
+  function tjFenetreR() { const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() - 29); return { du: iso(t), au: S.date }; }
+  function cleTJR() { const f = tjFenetreR(); return 'nc|' + S.shop + '|ret|' + f.du + '|' + f.au; }
+  function cheminTJR() { const f = tjFenetreR(); return '/pwa/tasks/nc?shop=' + encodeURIComponent(S.shop) + '&du=' + f.du + '&au=' + f.au + '&retours=1'; }
+  /** Les sept jours, du lundi au dimanche, de la semaine regardée. */
+  function tjSemaine() { const t = new Date(bornesSemaine()[0] + 'T12:00:00'); return Array.from({ length: 7 }, (_, i) => { const x = new Date(t); x.setDate(t.getDate() + i); return iso(x); }); }
+  /** Le jour regardé d'abord (le navigateur sert les lectures dans l'ordre), ses photos, les retours, puis la semaine. */
+  function tjCharger(force) {
+    lireAux(cleTJ(S.date), cheminTJ(S.date), force);
+    lireAux(cleCQ(), cheminCQ(), force);
+    lireAux(cleTJR(), cheminTJR(), force);
+    tjSemaine().filter(d => d !== S.date && d <= AUJ).forEach(d => lireAux(cleTJ(d), cheminTJ(d), force && d === AUJ));
+  }
+  /** Faite : rendue — et, quand la tâche demande une photo, rendue AVEC la photo (la règle du 06/10/2026). Cochée sans la
+   * photo demandée, elle ne compte pas : elle se montre à part, « cochée sans photo ». */
+  const tjFaite = t => t.statut === 'notee' || t.statut === 'aControler' || t.statut === 'aValider' || (t.statut === 'sansPhoto' && !t.photoRequise);
+  const tjSansPhoto = t => t.statut === 'sansPhoto' && !!t.photoRequise;
+  const tjPct = (a, b) => b ? Math.round(100 * a / b) : null;
+  const tjCouleur = p => p == null ? 'var(--color-border-secondary)' : (p >= 90 ? '#2D7A3E' : (p >= 50 ? '#D97706' : '#C0182B'));
+  /** « 1.1.02 · Photos des comptoirs » → code, zone, moment, titre ; un ancien code (CO-01) reste lisible, zone 0. */
+  function tjCode(nom) {
+    const s = String(nom || '').trim();
+    let m = s.match(/^([0-9])\.([1-9])\.(\d{2})\s*[·—–:-]\s*(.+)$/);
+    if (m) { return { code: m[1] + '.' + m[2] + '.' + m[3], zone: +m[1], moment: +m[2], titre: m[4] }; }
+    m = s.match(/^([A-Z]{2,5}(?:-[A-Z0-9]{1,6}){1,3})\s*[·—–:-]\s*(.+)$/);
+    if (m) { return { code: m[1], zone: 0, moment: 0, titre: m[2] }; }
+    return { code: '', zone: 0, moment: 0, titre: s || 'Sans checklist' };
+  }
+  /** Le niveau du barème pour une note : nom court et couleur (le barème part avec la journée). */
+  function tjNiveau(n, niveaux) {
+    const lv = (Array.isArray(niveaux) ? niveaux : []).find(x => +x.n === +n);
+    const def = { 5: ['Exemplaire', '#C9A227'], 4: ['Conforme', '#2D7A3E'], 3: ['NC mineur', '#D97706'], 2: ['NC majeur', '#C0182B'], 1: ['NC critique', '#8D1D2C'] }[n] || ['', '#5c5852'];
+    return { nom: lv && lv.nom ? String(lv.nom).replace(/^Non conforme\s*[—–-]\s*/i, 'NC ') : def[0], couleur: (lv && lv.couleur) || def[1] };
+  }
+  /** Les checklists de la journée : les tâches obligatoires rangées sous chaque checklist qui les porte (une tâche citée
+   * par deux checklists compte dans les deux), dans l'ordre des codes. */
+  function tjChecklists(d) {
+    const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
+    const conn = (sh && Array.isArray(sh.checklists) ? sh.checklists : []).filter(c => c && c.nom);
+    const noms = conn.map(c => c.nom).sort((a, b) => b.length - a.length);
+    const G = {};
+    tachesJour(d).forEach(t => {
+      const s = String(t.checklist || '');
+      let L = noms.filter(n => s.indexOf(n) >= 0);
+      if (!L.length && s) { L = s.split(/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/).map(x => x.trim()).filter(Boolean); }
+      (L.length ? [...new Set(L)] : ['']).forEach(n => { (G[n] = G[n] || []).push(t); });
+    });
+    const hNow = S.date === AUJ ? new Date().toTimeString().slice(0, 5) : null;
+    const rang = c => !c.code ? 2 : (/^\d/.test(c.code) ? 0 : 1);
+    return Object.keys(G).map(nom => {
+      const L = G[nom], c = tjCode(nom), cl = conn.find(x => x.nom === nom);
+      const hs = L.map(t => t.heure).filter(Boolean).sort();
+      const heure = (cl && cl.heure) || hs[0] || null;
+      const faites = L.filter(tjFaite).length;
+      const etat = faites >= L.length ? 'faite' : (faites ? 'partie' : (hNow && heure && heure > hNow ? 'avenir' : 'pas'));
+      return Object.assign(c, { cle: nom || '—', heure, T: L, faites, total: L.length, etat });
+    }).sort((a, b) => rang(a) - rang(b) || a.code.localeCompare(b.code) || a.titre.localeCompare(b.titre));
+  }
+  function tjBande() {
+    const J = tjSemaine(), fdC = s => { const x = new Date(s + 'T12:00:00'); return x.getDate() + ' ' + MOIS_C[x.getMonth()]; };
+    const cases = J.map(d => {
+      const t = new Date(d + 'T12:00:00'), lib = JOURS_C[t.getDay()] + ' ' + t.getDate(), sel = d === S.date;
+      if (d > AUJ) { return `<div class="tj-j avenir"><div class="l">${lib}</div><b class="mu">—</b><small>à venir</small></div>`; }
+      const D = S.aux[cleTJ(d)], at = ` data-tjjour="${d}" role="button" tabindex="0" title="ouvrir ce jour"`;
+      if (!D) { return `<div class="tj-j${sel ? ' on' : ''}"${at}><div class="l">${lib}</div>${S.err[cleTJ(d)] ? '<b class="mu">?</b><small>pas lue</small>' : '<div class="db-sk" style="height:22px;margin:6px 0 4px;width:60%"></div><small>lecture…</small>'}</div>`; }
+      const T = tachesJour(D), f = T.filter(tjFaite).length, p = tjPct(f, T.length), sp = T.filter(tjSansPhoto).length;
+      return `<div class="tj-j${sel ? ' on' : ''}"${at}><div class="l">${lib}${d === AUJ ? ' · en cours' : ''}</div><b>${p == null ? '—' : p + ' %'}</b>`
+        + `<small title="${sp ? sp + ' cochée' + (sp > 1 ? 's' : '') + ' sans la photo demandée' : ''}">${T.length ? f + ' / ' + T.length + (sp ? ' faites · ' + sp + ' sans photo' : ' obligatoires faites') : 'aucune tâche'}</small><div class="tj-barre"><i style="width:${p || 0}%;background:${tjCouleur(p)}"></i></div></div>`;
+    }).join('');
+    return `<div class="tj-sem"><span class="db-lab">Semaine du ${esc(fdC(J[0]))} au ${esc(fdC(J[6]))}</span><span class="db-mini">la part des tâches obligatoires faites, jour par jour · cliquez un jour pour l’ouvrir</span>
+      <span class="tj-fl"><button type="button" class="db-btn" data-frsem="-1">‹ semaine d’avant</button><button type="button" class="db-btn" data-frsem="1"${J[6] >= AUJ ? ' disabled' : ''}>semaine d’après ›</button></span></div><div class="tj-bande">${cases}</div>`;
+  }
+  function tjGuide(CL) {
+    const ex = CL.find(c => /^\d/.test(c.code)) || { code: '1.1.02', titre: 'Photos des comptoirs', zone: 1, moment: 1 };
+    const [z, m, n] = ex.code.split('.');
+    const zc = (TJ_ZONES[+z] || ['', '#5c5852'])[1];
+    const tete = `<div class="ct" data-tjguide="1" role="button" tabindex="0"><span class="db-lab">Comment c’est organisé</span><span class="db-mini">une checklist = une liste de tâches à faire à un moment de la journée ; chaque checklist a un code à trois parties</span><span class="tj-repli">${S.tjGuide ? 'replier ▴' : 'déplier ▾'}</span></div>`;
+    if (!S.tjGuide) { return `<div class="db-card tj-guide">${tete}</div>`; }
+    return `<div class="db-card tj-guide">${tete}<div class="tj-g">
+      <div class="tj-g-code"><span class="tj-g-big"><i style="background:${zc}1f;color:${zc}">${esc(z)}</i>.<i style="background:#1f5f8b1f;color:#1f5f8b">${esc(m)}</i>.<i>${esc(n)}</i></span><span>${esc(ex.code)} · ${esc(ex.titre)}</span>
+        <span class="db-mini">${esc((TJ_ZONES[+z] || [''])[0])} · ${esc(TJ_MOMENTS[+m] || '')} · checklist n° ${esc(n)}</span></div>
+      <div class="tj-g-col"><span class="db-lab">1er chiffre · qui</span>${Object.keys(TJ_ZONES).map(k => `<div><span class="tj-code" style="background:${TJ_ZONES[k][1]}">${k}</span> ${TJ_ZONES[k][0]}</div>`).join('')}</div>
+      <div class="tj-g-col"><span class="db-lab">2e chiffre · quand</span>${Object.keys(TJ_MOMENTS).map(k => `<div><span class="tj-code" style="background:#5c5852">.${k}</span> ${TJ_MOMENTS[k]}</div>`).join('')}</div>
+      <div class="tj-g-col tj-g-txt"><span class="db-lab">Obligatoire</span><p>Une tâche obligatoire doit être faite chaque jour où elle revient. Les pourcentages de cette page ne comptent qu’elles.</p>
+        <span class="db-lab">Photo</span><p>Une tâche qui demande une photo n’est faite que si la photo est rendue : cochée sans photo, elle ne compte pas.</p>
+        <span class="db-lab">Contrôle qualité</span><p>Chaque photo rendue est notée de 1 à 5 par le contrôleur, qui peut entourer ce qui ne va pas sur la photo et laisser un commentaire. Sous 4 : non-conformité, à corriger.</p></div></div></div>`;
+  }
+  /** Le statut du contrôle d'une tâche : la note (et son niveau), « à contrôler », ou rien. */
+  function tjCtl(t, niveaux) {
+    if (t.note != null) { const n = tjNiveau(t.note, niveaux); return `<span class="tj-note" style="background:${n.couleur}" title="noté${t.valideeLe ? ' le ' + esc(fD(String(t.valideeLe).slice(0, 10))) + ' à ' + esc(hhmm(t.valideeLe)) : ''}${(t.valideePar || t.consultant) ? ' par ' + esc(t.valideePar || t.consultant) : ''}"><b>${t.note}</b>${esc(n.nom)}</span>`; }
+    if (t.statut === 'aControler' || t.statut === 'aValider') { return '<span class="tj-st mu">à contrôler</span>'; }
+    return '';
+  }
+  function tjTache(t, X, niveaux) {
+    const ok = tjFaite(t), sp = tjSansPhoto(t), x = X[String(t.taskId)];
+    const quand = v => hhmm(v) + (String(v).slice(0, 10) !== S.date ? ' (le ' + fD(String(v).slice(0, 10)) + ')' : '');
+    const qui = t.faitePar ? ' par ' + esc(t.faitePar) : '';
+    const meta = ok ? (t.faitLe ? 'faite à ' + quand(t.faitLe) + qui : 'faite' + qui)
+      : (sp ? 'cochée sans photo' + (t.faitLe ? ' à ' + quand(t.faitLe) : '') + qui : (S.date === AUJ ? 'pas encore faite' : 'pas faite') + (t.heure ? ' · prévue à ' + esc(t.heure) : ''));
+    const com = t.note != null && t.comment && !/^auto/i.test(t.comment) ? `<q>${esc(t.comment)}</q>` : '';
+    const ph = x && x.ph ? `<button type="button" class="tj-ph" data-cqvoir="${esc(t.taskId)}" title="voir la photo${x.reperes.length ? ' et les remarques du contrôleur' : ''}">${cqPhoto(x, { mini: true, heure: false, badge: false })}${x.reperes.length ? `<em>${x.reperes.length}</em>` : ''}</button>`
+      : (t.photoRequise ? `<span class="tj-ph vide" title="${ok ? 'photo pas encore lue' : 'pas de photo'}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
+    return `<div class="tj-t${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-ok">${ok ? '✓' : (sp ? '!' : '✗')}</span>
+      <span class="tj-n">${esc(t.tache)}${t.photoRequise ? ` <span class="tj-cam" title="photo demandée">${TJ_CAM}</span>` : ''}<small>${meta}</small>${com}</span>${ph}<span class="tj-c">${tjCtl(t, niveaux)}</span></div>`;
+  }
+  function tjLigne(c, X, niveaux) {
+    // La barre d'une checklist a la couleur de son état : faite, en partie, pas faite, à venir.
+    const p = tjPct(c.faites, c.total), ouv = !!S.tjOuv[c.cle], coul = { faite: '#2D7A3E', partie: '#D97706', pas: '#C0182B', avenir: 'var(--color-border-secondary)' }[c.etat];
+    const zc = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852';
+    const st = { faite: '<span class="tj-st ok">faite</span>', partie: '<span class="tj-st wa">en partie</span>', pas: `<span class="tj-st ko">${S.date === AUJ ? 'pas commencée' : 'pas faite'}</span>`, avenir: '<span class="tj-st mu">à venir</span>' }[c.etat];
+    const sous = [c.heure ? esc(c.heure) : 'sans heure', c.zone ? TJ_ZONES[c.zone][0] : (c.code ? 'ancien code' : ''), c.moment ? TJ_MOMENTS[c.moment] : ''].filter(Boolean).join(' · ');
+    const T = c.T.slice().sort((a, b) => (tjFaite(a) ? 0 : 1) - (tjFaite(b) ? 0 : 1) || String(a.heure || '').localeCompare(String(b.heure || '')) || String(a.tache).localeCompare(String(b.tache)));
+    return `<div class="tj-cl${ouv ? ' open' : ''}"><div class="tj-h" data-tjcl="${esc(c.cle)}" role="button" tabindex="0" aria-expanded="${ouv}">
+        <span class="tj-code" style="background:${zc}">${esc(c.code || '—')}</span><span class="tj-nom">${esc(c.titre)}<small>${sous}</small></span>
+        <span class="tj-p"><span class="tj-prog"><i style="width:${Math.max(p || 0, 2)}%;background:${coul}"></i></span><span><b>${c.faites}</b> / ${c.total}</span></span>${st}<span class="tj-repli">${ouv ? 'replier ▴' : 'voir ▾'}</span></div>
+      ${ouv ? `<div class="tj-ts">${T.map(t => tjTache(t, X, niveaux)).join('')}</div>` : ''}</div>`;
+  }
+  function tjRetours(R, niveaux) {
+    const k = cleTJR();
+    let h = `<div class="db-card tj-ret" id="tj-retours"><div class="ct"><span class="db-lab">Retours du contrôle qualité</span><span class="db-mini">les notes et les commentaires du contrôleur, des 30 derniers jours · cliquez une ligne pour voir la photo et ses remarques</span></div>`;
+    if (S.err[k]) { return h + `<div class="db-mini" style="padding:14px 16px">Retours : ${esc(S.err[k])}</div></div>`; }
+    if (!R) { return h + '<div style="padding:12px 16px">' + squelette(3) + '</div></div>'; }
+    const L = Array.isArray(R.retours) ? R.retours : [];
+    if (!L.length) { return h + `<div class="db-mini" style="padding:14px 16px">Aucune photo notée ces 30 derniers jours.</div></div>`; }
+    const suite = {}; (R.nc || []).forEach(n => { suite[n.taskId + '|' + n.jour] = n.suite; });
+    // Un nom que le serveur ne connaît pas (« Tâche #1207 ») se reprend des journées déjà lues.
+    const noms = {}; Object.keys(S.aux).filter(c => c.indexOf('tj|' + S.shop + '|') === 0).forEach(c => tachesJour(S.aux[c]).forEach(t => { noms[String(t.taskId)] = t.tache; }));
+    const nomDe = r => (/^Tâche #/.test(String(r.tache || '')) && noms[String(r.taskId)]) || r.tache;
+    const V = S.tjRetTout ? L : L.slice(0, 12);
+    h += `<div class="tj-rl">${V.map(r => {
+      const n = r.note != null ? tjNiveau(r.note, niveaux) : null, su = r.nc ? suite[r.taskId + '|' + r.jour] : null;
+      const rep = r.nc ? (su ? (su.conforme ? `<span class="tj-st ok">reprise le ${esc(fD(su.jour))} · ${su.note}/5</span>` : `<span class="tj-st ko">encore non conforme le ${esc(fD(su.jour))}</span>`) : '<span class="tj-st wa">reprise pas encore notée</span>') : '';
+      const t = new Date(r.jour + 'T12:00:00');
+      return `<div class="tj-r${r.nc ? ' nc' : ''}" data-tjretour="${esc(r.jour)}|${esc(r.taskId)}" role="button" tabindex="0">
+        <span class="tj-rj">${esc(JOURS_C[t.getDay()])} ${esc(fD(r.jour))}</span>${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b>${esc(n.nom)}</span>` : '<span></span>'}
+        <span class="tj-rn">${esc(nomDe(r))}${r.comment ? `<q>${esc(r.comment)}</q>` : ''}<small>${r.consultant ? 'noté par ' + esc(r.consultant) : ''}${r.le ? (r.consultant ? ' ' : 'noté ') + 'le ' + esc(fD(String(r.le).slice(0, 10))) + ' à ' + esc(hhmm(r.le)) : ''}</small></span>${rep}</div>`;
+    }).join('')}</div>`;
+    if (L.length > 12) { h += `<div style="padding:8px 16px 12px"><button type="button" class="db-btn" data-tjrettout="1">${S.tjRetTout ? 'Montrer les 12 derniers' : 'Voir les ' + L.length + ' retours'}</button></div>`; }
+    return h + '</div>';
+  }
+  function rendTachesMag() {
+    const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
+    let h = `<div class="db-sec">Tâches et checklists — ${esc(fDL(S.date))}<small>ce qui a été fait ou pas, checklist par checklist, et ce qu’en dit le contrôle qualité</small></div>`;
+    h += tjBande();
+    if (S.err[k]) { h += `<div class="db-err">Tâches : ${esc(S.err[k])} <button class="db-btn" data-recharger="1">↻ Relire</button></div>`; }
+    if (!D) { return h + (S.err[k] ? '' : squelette(6)) + tjGuide([]); }
+    if (D.api && D.api.erreur && !tachesJour(D).length) { h += `<div class="db-alerte">Le panel n’a pas répondu pour ce jour : ${esc(D.api.erreur)}</div>`; }
+    const T = tachesJour(D), CL = tjChecklists(D), niveaux = D.repartition || (R && R.niveaux) || [];
+    const f = T.filter(tjFaite).length, p = tjPct(f, T.length), sp = T.filter(tjSansPhoto).length;
+    const ph = T.filter(t => t.photoRequise), phR = ph.filter(tjFaite).length;
+    const notees = T.filter(t => t.note != null), ctl = T.filter(t => t.statut === 'aControler' || t.statut === 'aValider');
+    const dern = R && Array.isArray(R.retours) && R.retours.length ? R.retours[0] : null;
+    const ncL = R && Array.isArray(R.nc) ? R.nc : null, ncRep = ncL ? ncL.filter(n => n.suite && n.suite.conforme).length : 0;
+    const moy = notees.length ? notees.reduce((a, t) => a + t.note, 0) / notees.length : null;
+    h += `<div class="db-tuiles tj-kpis">
+      <div class="db-tui"><div class="k">Tâches obligatoires faites</div><div class="v" style="color:${tjCouleur(p)}">${p == null ? '—' : p + ' %'}</div><div class="s">${T.length ? f + ' sur ' + T.length + ' · ' + (T.length - f) + ' pas faite' + (T.length - f > 1 ? 's' : '') + (sp ? ' · ' + sp + ' cochée' + (sp > 1 ? 's' : '') + ' sans photo' : '') : 'aucune tâche obligatoire ce jour'}</div><div class="tj-barre"><i style="width:${p || 0}%;background:${tjCouleur(p)}"></i></div></div>
+      <div class="db-tui"><div class="k">Photos rendues</div><div class="v">${phR} / ${ph.length}</div><div class="s">${!ph.length ? 'aucune photo demandée' : (phR === ph.length ? 'toutes les photos sont rendues' : (ph.length - phR) + ' photo' + (ph.length - phR > 1 ? 's' : '') + ' manque' + (ph.length - phR > 1 ? 'nt' : ''))}</div><div class="tj-barre"><i style="width:${tjPct(phR, ph.length) || 0}%;background:${tjCouleur(tjPct(phR, ph.length))}"></i></div></div>
+      <div class="db-tui"><div class="k">Contrôle qualité du jour</div><div class="v">${moy != null ? nf(moy, 1) + ' / 5' : ctl.length + ' à contrôler'}</div><div class="s">${notees.length ? notees.length + ' photo' + (notees.length > 1 ? 's' : '') + ' notée' + (notees.length > 1 ? 's' : '') + (ctl.length ? ' · ' + ctl.length + ' à contrôler' : '') : (dern ? 'dernier passage du contrôleur : le ' + esc(fD(dern.jour)) + (dern.consultant ? ' (' + esc(dern.consultant) + ')' : '') : 'aucune photo notée ce jour')}</div></div>
+      <div class="db-tui${ncL && ncL.length ? '' : ' bon'}" data-tjallerret="1" role="button" tabindex="0"><div class="k">Non-conformités · 30 jours</div><div class="v">${ncL ? ncL.length : '…'}</div><div class="s">${!ncL ? 'lecture…' : (ncL.length ? ncRep + ' reprise' + (ncRep > 1 ? 's' : '') + ' depuis · voir les retours ↓' : 'aucune note sous 4 · voir les retours ↓')}</div></div></div>`;
+    h += tjGuide(CL);
+    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>` + tjRetours(R, niveaux); }
+    const n = { pas: CL.filter(c => c.etat === 'pas').length, partie: CL.filter(c => c.etat === 'partie').length, faite: CL.filter(c => c.etat === 'faite').length };
+    const F = S.tjF === 'tout' ? CL : CL.filter(c => c.etat === S.tjF);
+    const filtre = (v, lib, cls) => `<button type="button" class="tj-f ${cls}${S.tjF === v ? ' on' : ''}" data-tjf="${v}">${lib}</button>`;
+    const X = {}; (cqListe() || []).forEach(x => { X[String(x.taskId)] = x; });
+    const P = S.aux[cleCQ()];
+    h += `<div class="db-card"><div class="ct"><span class="db-lab">Les checklists du jour</span><span class="db-mini">dans l’ordre des codes · ${CL.length} checklist${CL.length > 1 ? 's' : ''} · ${T.length} tâches obligatoires${P ? '' : (S.err[cleCQ()] ? ' · photos : ' + esc(S.err[cleCQ()]) : ' · lecture des photos…')}</span>
+        <span class="tj-filtres">${filtre('tout', 'Toutes ' + CL.length, 'mu')}${filtre('pas', (S.date === AUJ ? 'Pas commencées ' : 'Pas faites ') + n.pas, 'ko')}${filtre('partie', 'En partie ' + n.partie, 'wa')}${filtre('faite', 'Faites ' + n.faite, 'ok')}</span>
+        <button type="button" class="db-btn" data-tjtout="${F.every(c => S.tjOuv[c.cle]) ? '0' : '1'}">${F.length && F.every(c => S.tjOuv[c.cle]) ? 'Tout replier' : 'Tout déplier'}</button></div>
+      ${F.length ? F.map(c => tjLigne(c, X, niveaux)).join('') : '<div class="db-mini" style="padding:14px 16px">Aucune checklist dans ce filtre.</div>'}</div>`;
+    return h + tjRetours(R, niveaux);
+  }
+  /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
+  function rendTachesMobile() {
+    const t = new Date(S.date + 'T12:00:00');
+    const date = (S.date === AUJ ? 'aujourd’hui · ' : '') + t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' });
+    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d ma-d"><button type="button" class="ma-pas" data-pas="-1" aria-label="jour précédent">‹</button><b>${esc(date)}</b><button type="button" class="ma-pas" data-pas="1" aria-label="jour suivant"${S.date >= AUJ ? ' disabled' : ''}>›</button></div></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma tj-mob">${rendTachesMag()}</div></div>${mbOnglets()}`;
+  }
+  function tjAller(d, voir) {
+    if (!d || d > AUJ) { return; }
+    S.date = d; S.heure = null; S.jourH = null; if (voir) { S.cqVoir = String(voir); }
+    urlMaj(); charger(false);
+  }
+  function tjBrancher() {
+    const cle = (el, f) => { el.addEventListener('click', f); el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); f(e); } }); };
+    $.querySelectorAll('[data-tjjour]').forEach(el => cle(el, () => tjAller(el.dataset.tjjour)));
+    $.querySelectorAll('[data-tjcl]').forEach(el => cle(el, () => { const c = el.dataset.tjcl; S.tjOuv[c] = !S.tjOuv[c]; rendre(); }));
+    $.querySelectorAll('[data-tjf]').forEach(el => el.addEventListener('click', () => { S.tjF = el.dataset.tjf; rendre(); }));
+    $.querySelectorAll('[data-tjtout]').forEach(el => el.addEventListener('click', () => { const o = el.dataset.tjtout === '1', D = S.aux[cleTJ(S.date)];
+      tjChecklists(D).filter(c => S.tjF === 'tout' || c.etat === S.tjF).forEach(c => { S.tjOuv[c.cle] = o; }); rendre(); }));
+    $.querySelectorAll('[data-tjguide]').forEach(el => cle(el, () => { S.tjGuide = !S.tjGuide; try { localStorage.setItem('db.tjGuide', S.tjGuide ? '1' : '0'); } catch (e) { /* rien */ } rendre(); }));
+    $.querySelectorAll('[data-tjrettout]').forEach(el => el.addEventListener('click', () => { S.tjRetTout = !S.tjRetTout; rendre(); }));
+    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-retours'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+    $.querySelectorAll('[data-tjretour]').forEach(el => cle(el, () => { const [d, t] = el.dataset.tjretour.split('|'); if (d === S.date) { S.cqVoir = t; rendre(); } else { tjAller(d, t); } }));
+  }
+
+  /* --- La revue du soir (08/11/2026, maquette M3 : une question à la fois) ------------------------------------------------
+   * L'assistant de gestion du soir : le résumé, puis une question par écran — chaque checklist pas finie (une raison en un
+   * tap), les points de gestion que leur sonde ne dit pas en ordre, les questions du soir —, un mot pour demain, la
+   * clôture. Chaque réponse s'enregistre tout de suite (on reprend où on en était). Le réglage : cockpit › Checklists ›
+   * Revue du soir. Lectures : /soir/revue (?leger=1 pour le bouton), écritures : PUT /soir/revue. */
+  const cleRVL = () => 'rvl|' + S.shop + '|' + S.date;
+  const cheminRVL = () => '/soir/revue?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&leger=1';
+  /** L'état du bouton : faite, en cours, à faire (le jour même, passé l'heure du réglage), ou rien à dire. */
+  function rvEtat() {
+    const L = S.aux[cleRVL()]; if (!L) { return ''; }
+    if (L.revue && L.revue.statut === 'cloturee') { return 'faite'; }
+    if (L.revue) { return 'encours'; }
+    if (S.date < AUJ) { return 'pasfaite'; }
+    return S.date === AUJ && new Date().toTimeString().slice(0, 5) >= (L.heure || '18:00') ? 'afaire' : '';
+  }
+  /** Le logo de la revue du soir (maquette L2, 08/11/2026) : la planchette qu'on passe en revue, une petite lune au coin.
+   * `c` : la lune, `d` : le trait ; sur fond sombre, la lune dorée et le trait blanc. */
+  const rvLogo = (c, d) => `<svg class="rv-logo" viewBox="0 0 48 48" aria-hidden="true"><rect x="9" y="8" width="26" height="34" rx="4" fill="none" stroke="${d}" stroke-width="3.2"/><rect x="16" y="5" width="12" height="6" rx="2" fill="${d}"/><path d="M14 20l3 3 5-6M14 31l3 3 5-6" fill="none" stroke="${d}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><path d="M25 21h5M25 32h5" stroke="${d}" stroke-width="3" stroke-linecap="round"/><circle cx="37" cy="37" r="9" fill="${c}"/><path d="M39.5 31.5a6 6 0 1 0 3 9 5 5 0 0 1-3-9z" fill="#fff"/></svg>`;
+  function rvBouton(mobile) {
+    const e = rvEtat();
+    if (mobile) { return `<button class="mb-ic rv-ic${e === 'afaire' || e === 'encours' ? ' pt' : ''}" data-rvouvrir="1" aria-label="revue du soir">${rvLogo('#8D1D2C', '#2b2622')}</button>`; }
+    const lib = { faite: ' · <b class="ok">faite ✓</b>', encours: ' · <b>en cours</b>', afaire: ' · <b>à faire</b>', pasfaite: ' · <b class="mu">pas faite</b>' }[e] || '';
+    const vif = e === 'afaire' || e === 'encours';
+    return `<button class="db-btn rv-btn${vif ? ' vif' : ''}" data-rvouvrir="1">${vif ? rvLogo('#E2B93B', '#fff') : rvLogo('#8D1D2C', '#2b2622')}Revue du soir${lib}</button>`;
+  }
+  async function rvOuvrir() {
+    S.rv = { charge: true, i: 0, rep: { points: {}, checklists: {}, demain: '' }, par: (function () { try { return localStorage.getItem('db.rvPar') || ''; } catch (e) { return ''; } })(), autre: null, com: null, voir: false };
+    rvRendre();
+    try {
+      const D = await lire('/soir/revue?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date);
+      const R = S.rv; if (!R) { return; }
+      R.D = D; R.charge = false;
+      if (D.revue) { R.rep = Object.assign({ points: {}, checklists: {}, demain: '' }, D.revue.reponses || {}); R.par = D.revue.par || R.par; }
+      R.etapes = rvEtapes(D);
+      if (D.revue && D.revue.statut === 'cloturee') { R.i = R.etapes.length - 1; }
+    } catch (e) { if (S.rv) { S.rv.charge = false; S.rv.err = e.message; } }
+    rvRendre();
+  }
+  function rvFermer() { S.rv = null; rvRendre(); delete S.aux[cleRVL()]; lireAux(cleRVL(), cheminRVL(), true); }
+  /** Les écrans : le résumé, une checklist pas finie par écran, ce qui est en ordre, un point de gestion par écran, demain, la fin. */
+  function rvEtapes(D) {
+    const E = [{ k: 'intro' }];
+    ((D.checklists && D.checklists.liste) || []).forEach(c => E.push({ k: 'cl', c }));
+    const ok = D.points.filter(p => p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok');
+    if (ok.length) { E.push({ k: 'ordre', L: ok }); }
+    D.points.filter(p => !(p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok')).forEach(p => E.push({ k: 'pt', p }));
+    E.push({ k: 'demain' }, { k: 'fin' });
+    return E;
+  }
+  function rvEnregistrer(cloturer) {
+    const R = S.rv; if (!R || !R.D) { return Promise.resolve(); }
+    try { localStorage.setItem('db.rvPar', R.par || ''); } catch (e) { /* rien */ }
+    R.envoi = true;
+    return fetch(API + '/soir/revue', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin',
+      body: JSON.stringify({ shop: S.shop, date: S.date, par: R.par, reponses: R.rep.points, checklists: R.rep.checklists, demain: R.rep.demain, cloturer: !!cloturer, rouvrir: !!R.rouvrir }) })
+      .then(r => r.json().then(j => { if (!r.ok) { throw new Error(j.error || ('HTTP ' + r.status)); } return j; }))
+      .then(j => { if (S.rv) { S.rv.envoi = false; S.rv.errEnr = null; S.rv.D.revue = j.revue; } })
+      .catch(e => { if (S.rv) { S.rv.envoi = false; S.rv.errEnr = e.message; rvRendre(); } });
+  }
+  const rvJour = () => { const t = new Date(S.date + 'T12:00:00'); return t.toLocaleDateString('fr-BE', { weekday: 'short', day: 'numeric', month: 'short' }); };
+  const rvPill = c => c.code ? `<span class="rv-code" style="background:${(TJ_ZONES[+c.code[0]] || [0, '#5c5852'])[1]}">${esc(c.code)}</span>` : '';
+  function rvChips(L, choisi, attr, okPar) {
+    return `<div class="rv-rep">${L.map(x => { const t = typeof x === 'string' ? x : x.t, ok = typeof x === 'string' ? null : x.ok;
+      return `<button type="button" class="rv-chip${t === choisi ? (ok === false ? ' on wa' : ' on') : ''}" ${attr}="${esc(t)}">${esc(t)}</button>`; }).join('')}
+      <button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>`;
+  }
+  function rvEcran() {
+    const R = S.rv, D = R.D, e = R.etapes[R.i], C = D.checklists || { taches: 0, faites: 0, liste: [] };
+    const nQ = R.etapes.length - 2, pos = Math.min(R.i, nQ);
+    const prog = e.k === 'intro' ? '' : `<div class="rv-prog"><i style="width:${Math.round(100 * pos / nQ)}%"></i></div><div class="rv-n">${pos} / ${nQ}</div>`;
+    const com = (cle, v) => R.com === cle ? `<div class="rv-com"><textarea data-rvcom="1" rows="2" placeholder="un commentaire (facultatif)">${esc(v || '')}</textarea><button type="button" class="rv-b p" data-rvcomok="1">OK</button></div>`
+      : `<button type="button" class="rv-lien" data-rvcomouvre="${esc(cle)}">${v ? '✎ ' + esc(v) : '+ commentaire'}</button>`;
+    const autre = R.autre != null ? `<div class="rv-com"><input data-rvautretxt="1" value="${esc(R.autre)}" placeholder="votre réponse" maxlength="60"><button type="button" class="rv-b p" data-rvautreok="1">OK</button></div>` : '';
+    if (e.k === 'intro') {
+      const n = C.liste.length, g = D.points.filter(p => !(p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok')).length;
+      const qui = [...new Set([R.par, ...(C.qui || [])].filter(Boolean))];
+      const deja = Object.keys(R.rep.points).length + Object.keys(R.rep.checklists).length;
+      return `<div class="rv-bul">Bonsoir${R.par ? ' ' + esc(R.par.split(' ')[0]) : ''} 👋<br>Aujourd’hui, <b>${C.faites} tâche${C.faites > 1 ? 's' : ''} obligatoire${C.faites > 1 ? 's' : ''} sur ${C.taches}</b> ${C.faites > 1 ? 'sont faites' : 'est faite'}. On passe en revue ${n ? `<b>${n} checklist${n > 1 ? 's' : ''} pas finie${n > 1 ? 's' : ''}</b> et ` : ''}<b>${g} point${g > 1 ? 's' : ''} de gestion</b>. Environ ${Math.max(1, Math.round((n + g) / 5))} minute${n + g > 7 ? 's' : ''}.</div>
+        ${n ? `<div class="rv-cards">${C.liste.slice(0, 6).map(c => `<div class="rv-mini">${rvPill(c)}<span>${esc(c.titre)}</span><b>${c.faites}/${c.total}</b></div>`).join('')}${n > 6 ? `<div class="rv-n">+ ${n - 6} autre${n - 6 > 1 ? 's' : ''}…</div>` : ''}</div>` : ''}
+        <div class="rv-q">Qui fait la revue ?</div><div class="rv-rep">${qui.map(q => `<button type="button" class="rv-chip${q === R.par ? ' on' : ''}" data-rvpar="${esc(q)}">${esc(q)}</button>`).join('')}<button type="button" class="rv-chip plus" data-rvautre="1">Autre…</button></div>${autre}
+        <div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">${deja ? 'Reprendre · ' + deja + ' réponse' + (deja > 1 ? 's' : '') + ' déjà données' : 'Commencer'}</button><button type="button" class="rv-b" data-rvfermer="1">Plus tard</button></div>`;
+    }
+    if (e.k === 'cl') {
+      const c = e.c, a = R.rep.checklists[c.nom] || {}, m = c.total - c.faites;
+      return `${prog}<div class="rv-ctx">${rvPill(c)} <span>${esc(c.titre)}</span><span class="rv-n">· ${c.faites} / ${c.total}${c.heure ? ' · ' + esc(c.heure) : ''}</span></div>
+        <div class="rv-bul"><b>${m} tâche${m > 1 ? 's' : ''}</b> de « ${esc(c.titre)} » ${m > 1 ? 'ne sont pas cochées' : 'n’est pas cochée'}. Pourquoi ?
+          <button type="button" class="rv-lien" data-rvvoir="1">${R.voir ? 'cacher les tâches ▴' : 'voir les tâches ▾'}</button>${R.voir ? `<ul class="rv-ul">${c.manquent.map(t => `<li>${esc(t)}</li>`).join('')}</ul>` : ''}</div>
+        ${a.r ? `<div class="rv-bul moi">${esc(a.r)}</div>` : ''}
+        ${rvChips(D.raisons, a.r, 'data-rvcl')}${autre}${com('cl:' + c.nom, a.c)}`;
+    }
+    if (e.k === 'ordre') {
+      return `${prog}<div class="rv-ctx">Gestion · vérifié automatiquement</div>
+        ${e.L.map(p => `<div class="rv-ok"><span>✓</span><div><b>${esc(p.icone || '')} ${esc(p.titre)}</b><small>${esc(p.sonde.texte)}</small></div></div>`).join('')}
+        <div class="rv-bul">Ces points sont en ordre : rien à expliquer.</div><div class="rv-pied"><button type="button" class="rv-b p" data-rvsuivant="1">Continuer</button></div>`;
+    }
+    if (e.k === 'pt') {
+      const p = e.p, a = R.rep.points[p.id] || {}, s = p.sonde;
+      const constat = p.type === 'auto' ? (s && s.revenue ? esc(s.texte) + '.' : 'La donnée n’est pas revenue' + (s && s.texte ? ' (' + esc(s.texte) + ')' : '') + ' : je ne peux pas le vérifier.') + '<br>' : '';
+      return `${prog}<div class="rv-ctx">Gestion · ${esc(p.titre)}</div>
+        <div class="rv-bul">${esc(p.icone || '')} ${constat}${esc(p.question || p.titre)}</div>
+        ${a.r ? `<div class="rv-bul moi">${esc(a.r)}</div>` : ''}
+        ${rvChips(p.reponses, a.r, 'data-rvpt')}${autre}${com('pt:' + p.id, a.c)}`;
+    }
+    if (e.k === 'demain') {
+      return `${prog}<div class="rv-ctx">Pour demain</div><div class="rv-bul">Un mot pour l’équipe de demain ? <span class="rv-n">(facultatif)</span></div>
+        <textarea class="rv-ta" data-rvdemain="1" rows="4" placeholder="ex. « Silke seule l’après-midi : photos de 14:30 à faire à 15:00 »">${esc(R.rep.demain || '')}</textarea>
+        ${R.errEnr ? `<div class="rv-err">Pas enregistrée : ${esc(R.errEnr)}</div>` : ''}
+        <div class="rv-pied"><button type="button" class="rv-b p" data-rvcloturer="1"${R.envoi ? ' disabled' : ''}>${R.envoi ? 'Enregistrement…' : 'Clôturer la journée'}</button></div>`;
+    }
+    // La fin (08/11/2026, maquette H3) : une carte par zone — l'entête à la couleur de la zone et son score, chaque
+    // checklist ✓ (faite, ou « faite, pas cochée » d'après la raison du soir) ou ✗ avec sa raison —, puis la gestion en tuiles.
+    const rv = D.revue || {}, cl = R.rep.checklists;
+    const V = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    const X = '<svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+    const rond = e => `<span class="rv-rd e-${e}">${e === 'ko' ? X : V}</span>`;
+    const toutes = (C.toutes && C.toutes.length ? C.toutes : C.liste).map(c => {
+      const r = (cl[c.nom] || {}).r || '';
+      const etat = c.faites >= c.total ? 'ok' : (/fait/i.test(r) && /pas coch/i.test(r) ? 'npc' : 'ko');
+      return Object.assign({}, c, { r, etat, zone: /^\d/.test(c.code || '') ? +c.code[0] : 0 });
+    });
+    const ZN = { 1: 'Vente', 2: 'Boulangerie', 3: 'Traiteur', 4: 'Nettoyage', 5: 'Gestion', 0: 'Autres' };
+    const zc = z => (TJ_ZONES[z] || [0, '#5c5852'])[1];
+    const zones = [...new Set(toutes.map(c => c.zone))].sort((a, b) => (a || 9) - (b || 9));
+    const gp = D.points.map(p => {
+      const auto = p.type === 'auto' && p.sonde && p.sonde.revenue && p.sonde.etat === 'ok', a = (R.rep.points[p.id] || {}).r;
+      const okR = a ? (p.reponses.find(x => x.t === a) || {}).ok : false;
+      return { p, auto, txt: auto ? 'vérifié' : (a || 'pas de réponse'), etat: auto || okR ? 'ok' : 'ko' };
+    });
+    const nOk = toutes.filter(c => c.etat !== 'ko').length, gOk = gp.filter(g => g.etat === 'ok').length;
+    const sc = (v, l, cls) => `<div class="${cls || ''}"><b>${v}</b><small>${l}</small></div>`;
+    return `${prog}<div class="rv-fin"><b>${rv.statut === 'cloturee' ? 'Journée clôturée' : 'Revue pas encore clôturée'}</b><span class="rv-n">${rv.clotureLe ? 'à ' + esc(rv.clotureLe.slice(11, 16)) : ''}${rv.par ? ' par ' + esc(rv.par) : ''}</span></div>
+      <div class="rv-sc4">${sc(C.faites + ' / ' + C.taches, 'tâches faites')}${sc(nOk, 'checklists ✓', 'e-ok')}${sc(toutes.length - nOk, 'checklists ✗', toutes.length - nOk ? 'e-ko' : 'e-ok')}${sc(gOk + ' / ' + gp.length, 'gestion ✓', gOk === gp.length ? 'e-ok' : 'e-wa')}</div>
+      ${zones.map(z => { const L = toutes.filter(c => c.zone === z), ok = L.filter(c => c.etat !== 'ko').length;
+        return `<div class="rv-zc"><div class="rv-zch" style="background:${zc(z)}"><b>${ZN[z] || ZN[0]}</b><span class="rv-zs">${ok} / ${L.length}</span><span class="rv-zb"><i style="width:${Math.round(100 * ok / L.length)}%"></i></span></div>
+          ${L.map(c => `<div class="rv-cl e-${c.etat}">${rond(c.etat)}<b class="rv-cd" style="color:${zc(z)}">${esc(c.code || '—')}</b><span class="rv-ct">${esc(c.titre)}<small>${c.faites} / ${c.total} · ${c.etat === 'ok' ? 'faite' : esc(c.r || 'pas de raison')}</small></span></div>`).join('')}</div>`; }).join('')}
+      <div class="rv-sec">Gestion</div><div class="rv-tu">${gp.map(g => `<div class="rv-t e-${g.etat}">${rond(g.etat)}<b>${esc(g.p.icone || '')}</b><span>${esc(g.p.titre)}</span><small>${esc(g.txt)}</small></div>`).join('')}</div>
+      ${R.rep.demain ? `<div class="rv-dem"><span>Pour demain</span>« ${esc(R.rep.demain)} »</div>` : ''}
+      <div class="rv-pied"><button type="button" class="rv-b p" data-rvfermer="1">Fermer</button>${rv.statut === 'cloturee' ? '<button type="button" class="rv-lien" data-rvrouvrir="1">Rouvrir la revue</button>' : ''}</div>`;
+  }
+  function rvRendre() {
+    let o = document.getElementById('rv');
+    if (!S.rv) { if (o) { o.remove(); } document.documentElement.classList.remove('rv-ouvert'); return; }
+    if (!o) { o = document.createElement('div'); o.id = 'rv'; document.body.appendChild(o); rvBrancher(o); }
+    document.documentElement.classList.add('rv-ouvert');
+    const R = S.rv, retour = R.D && R.i > 0 && R.etapes[R.i].k !== 'fin';
+    const corps = R.charge ? '<div class="rv-bul">Je regarde la journée : les tâches, les invendus, le stock, les commandes…</div><div class="rv-att"><i></i><i></i><i></i></div>'
+      : R.err ? `<div class="rv-err">La revue n’a pas pu être lue : ${esc(R.err)}</div><div class="rv-pied"><button type="button" class="rv-b" data-rvfermer="1">Fermer</button></div>` : rvEcran();
+    o.innerHTML = `<div class="rv-fond" data-rvfond="1"><div class="rv-tel" role="dialog" aria-label="Revue du soir">
+      <div class="rv-hd">${retour ? '<button type="button" class="rv-x" data-rvprec="1" aria-label="précédent">‹</button>' : '<span class="rv-x"></span>'}<div><b>${rvLogo('#8D1D2C', '#2b2622')}Revue du soir</b><span>${esc(nomShop())} · ${esc(rvJour())}</span></div><button type="button" class="rv-x" data-rvfermer="1" aria-label="fermer">✕</button></div>
+      <div class="rv-sc">${corps}</div></div></div>`;
+    const sc = o.querySelector('.rv-sc'); if (sc && R.basBas) { sc.scrollTop = sc.scrollHeight; R.basBas = false; }
+  }
+  function rvAller(n) { const R = S.rv; R.i = Math.max(0, Math.min(R.etapes.length - 1, R.i + n)); R.autre = null; R.com = null; R.voir = false; rvRendre(); const sc = document.querySelector('#rv .rv-sc'); if (sc) { sc.scrollTop = 0; } }
+  /** Une réponse : enregistrée tout de suite, puis l'écran suivant (un temps pour voir le choix). */
+  function rvRepondre(t) {
+    const R = S.rv, e = R.etapes[R.i];
+    if (e.k === 'intro') { R.par = t; R.autre = null; return rvRendre(); }
+    if (e.k === 'cl') { R.rep.checklists[e.c.nom] = Object.assign({}, R.rep.checklists[e.c.nom], { r: t }); }
+    if (e.k === 'pt') { R.rep.points[e.p.id] = Object.assign({}, R.rep.points[e.p.id], { r: t }); }
+    R.autre = null; rvRendre(); rvEnregistrer(false);
+    setTimeout(() => { if (S.rv === R && R.etapes[R.i] === e) { rvAller(1); } }, 380);
+  }
+  function rvBrancher(o) {
+    o.addEventListener('click', ev => {
+      const R = S.rv; if (!R) { return; }
+      const b = ev.target.closest('button,[data-rvfond]'); if (!b) { return; }
+      const d = b.dataset;
+      if (d.rvfond != null) { if (ev.target === b) { rvFermer(); } return; }
+      if (d.rvfermer != null) { return rvFermer(); }
+      if (d.rvprec != null) { return rvAller(-1); }
+      if (d.rvsuivant != null) { if (R.etapes[R.i].k === 'intro') { rvEnregistrer(false); } return rvAller(1); }
+      if (d.rvpar != null || d.rvcl != null || d.rvpt != null) { return rvRepondre(d.rvpar || d.rvcl || d.rvpt); }
+      if (d.rvautre != null) { R.autre = ''; rvRendre(); const i = o.querySelector('[data-rvautretxt]'); if (i) { i.focus(); } return; }
+      if (d.rvautreok != null) { const t = String(R.autre || '').trim(); if (t) { rvRepondre(t); } return; }
+      if (d.rvvoir != null) { R.voir = !R.voir; return rvRendre(); }
+      if (d.rvcomouvre != null) { R.com = d.rvcomouvre; rvRendre(); const t = o.querySelector('[data-rvcom]'); if (t) { t.focus(); } return; }
+      if (d.rvcomok != null) { R.com = null; rvRendre(); rvEnregistrer(false); return; }
+      if (d.rvcloturer != null) { return rvEnregistrer(true).then(() => { if (S.rv && !S.rv.errEnr) { S.rv.rouvrir = false; rvAller(1); } else { rvRendre(); } }); }
+      if (d.rvrouvrir != null) { R.rouvrir = true; R.i = 1; R.D.revue.statut = 'encours'; return rvRendre(); }
+    });
+    o.addEventListener('input', ev => {
+      const R = S.rv, el = ev.target; if (!R) { return; }
+      if (el.dataset.rvautretxt != null) { R.autre = el.value; return; }
+      if (el.dataset.rvdemain != null) { R.rep.demain = el.value; return; }
+      if (el.dataset.rvcom != null) {
+        const k = R.com, sep = k.indexOf(':'), g = k.slice(0, sep) === 'cl' ? 'checklists' : 'points', id = k.slice(sep + 1);
+        R.rep[g][id] = Object.assign({}, R.rep[g][id], { c: el.value });
+      }
+    });
+    o.addEventListener('keydown', ev => {
+      if (ev.key === 'Enter' && ev.target.dataset && ev.target.dataset.rvautretxt != null) { ev.preventDefault(); const t = String(S.rv.autre || '').trim(); if (t) { rvRepondre(t); } }
+    });
+  }
+  document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
+
   function rendre() {
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
@@ -4991,7 +5786,9 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
+      if (S.vue === 'taches') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); const sc2 = $.querySelector('.mb-sc'); if (sc2 && S.tjHaut !== S.date) { S.tjHaut = S.date; sc2.scrollTop = 0; } else if (sc2) { sc2.scrollTop = top; } return; }
       // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
       if (S.vue === 'primes') { const a = $.querySelector('.pr-mob'), sc = a ? a.closest('.mb-sc') : null, top = sc ? sc.scrollTop : 0; $.innerHTML = rendPrimesMobile(); $.classList.add('mob'); brancher(); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } return; }
       if (S.vue === 'actions' || S.vue === 'campagne') { $.innerHTML = rendActions(true); $.classList.add('mob'); brancher(); monterActions(); cqRestaurer(null); return; }
@@ -5024,15 +5821,18 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
-      <span style="flex:1"></span>${valoPastille()}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <span style="flex:1"></span>${valoPastille()}${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
+    if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
+    if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
+    if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
@@ -6951,7 +7751,7 @@
     S.cqTente[k] = Date.now();
     lireAux(k, cheminCQ(), true);
   }
-  const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+  const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*(?:après-midi\s*)?-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
   const cqCl = c => String(c || '').replace(/\.$/, '');
   /** Ce que le franchisé doit lire d'une tâche : cinq états, pas davantage. */
   function cqEtat(t, D, seuil) {
@@ -6966,9 +7766,14 @@
   }
   /** La journée du magasin, chaque tâche avec sa photo et son état, triée. */
   function cqListe() {
-    const d = S.aux['taches|' + S.date];
+    // L'onglet Tâches lit le seul magasin, jour par jour (08/11/2026).
+    const d = S.vue === 'taches' ? S.aux[cleTJ(S.date)] : S.aux['taches|' + S.date];
     if (!d || d.indispo) { return null; }
-    const T = tachesJour(d);
+    // Les contrôles en photo ne montrent que les tâches qui DEMANDENT une photo (08/11/2026, demande de Sam) — ou qui en ont
+    // une, ou une note : une tâche sans photo demandée (« Alarme activée ») n'a rien à faire dans le carrousel.
+    // Les facultatives aussi (08/11/2026, maquette O4) : elles se montrent à part (cadre en pointillé, « facultative »).
+    const sh = (d.shops || []).find(x => String(x.shopId) === String(S.shop));
+    const T = ((sh && sh.taches) || []).filter(t => t.photoRequise || t.photo || t.note != null || t.statut === 'aControler' || t.statut === 'notee');
     const P = S.aux[cleCQ()];
     // L'URL signée vieillit : au-delà de quinze minutes, on la renouvelle.
     if (P && Date.now() - (S.auxLu[cleCQ()] || 0) > CQ_PERIME) { cqRelire(); }
@@ -7033,8 +7838,10 @@
     return out.join(' · ');
   }
   function cqCarte(x, mobile) {
-    return `<button type="button" class="db-cqc" data-cqvoir="${esc(x.taskId)}">${cqPhoto(x, { court: mobile, heure: !mobile })}`
-      + `<span class="n">${esc(mobile ? cqNom(x).replace(/^(Comptoir|CQ) · /, '') : cqNom(x))}</span><span class="m">${cqMeta(x)}</span>${mobile ? '' : cqConstat(x)}</button>`;
+    // Obligatoire : un cadre plein ; facultative : un cadre en pointillé, la photo estompée, le mot (maquette O4, 08/11/2026).
+    const fac = x.obligatoire === false;
+    return `<button type="button" class="db-cqc ${fac ? 'fac' : 'obl'}" data-cqvoir="${esc(x.taskId)}">${cqPhoto(x, { court: mobile, heure: !mobile })}`
+      + `<span class="n">${esc(mobile ? cqNom(x).replace(/^(Comptoir|CQ) · /, '') : cqNom(x))}</span><span class="m">${fac ? '<i class="cq-fac">facultative</i> · ' : ''}${cqMeta(x)}</span>${mobile ? '' : cqConstat(x)}</button>`;
   }
   function rendCQ(mobile) {
     if (S.vue !== 'jour' && S.vue !== 'ops') { return ''; }
@@ -7056,15 +7863,46 @@
     const puces = [`<button type="button" data-cqf="tout" class="${S.cqFiltre === 'tout' ? 'on' : ''}">Tout<b>${L.length}</b></button>`]
       .concat(CQ_FILTRES.filter(f => n(f[0])).map(f => `<button type="button" data-cqf="${f[0]}" class="${S.cqFiltre === f[0] ? 'on' : ''}"><i style="background:${f[2]}"></i>${f[1]}<b>${n(f[0])}</b></button>`)).join('');
     return `<div class="db-card db-cq"><div class="ct"><span class="db-lab">Les contrôles en photo — ${esc(jour)}</span><span class="db-cqf">${puces}</span><span class="db-mini">${cqResume(L)}</span></div>
-      <div class="db-cqrail"><button type="button" class="db-cqfl g" data-cqpas="-1" aria-label="précédentes">‹</button>
-        <div class="db-cqpiste" id="db-cqpiste">${F.map(x => cqCarte(x, false)).join('')}</div>
-        <button type="button" class="db-cqfl d" data-cqpas="1" aria-label="suivantes">›</button></div>
-      <div class="db-cqpied" id="db-cqpied">${F.length} contrôle${F.length > 1 ? 's' : ''}</div></div>`;
+      ${cqFrise(F, L)}</div>`;
   }
+  /**
+   * La frise des contrôles en photo (08/11/2026, maquettes F1 + C1B) : de haut en bas, une carte par checklist à son heure
+   * prévue — un bandeau à la couleur de la zone (code, nom, heure, ✓ / ✗ rendues sur attendues) et ses photos dessous. Une
+   * checklist qui revient à deux heures (1.1.02 : 07:00 et 14:30) fait deux cartes. Le filtre du haut s'applique aux photos ;
+   * le compte du bandeau reste celui de toute la checklist.
+   */
+  function cqFrise(F, L) {
+    const d = S.vue === 'taches' ? S.aux[cleTJ(S.date)] : S.aux['taches|' + S.date];
+    const sh = d ? (d.shops || []).find(x => String(x.shopId) === String(S.shop)) : null;
+    const hCl = {}; ((sh && sh.checklists) || []).forEach(c => { if (c && c.nom) { hCl[c.nom] = c.heure || ''; } });
+    const nomDe = x => { const n = String(x.cl || '').split(/,\s*(?=[0-9]\.[1-9]\.\d{2}|[A-Z]{2,5}-)/).map(v => v.trim()).filter(Boolean);
+      return n.find(v => /^[0-9]\.[1-9]\.\d{2}/.test(v)) || n[0] || 'Sans checklist'; };
+    const cle = x => { const n = nomDe(x); return (x.heure || hCl[n] || '') + '|' + n; };
+    const G = {};
+    L.forEach(x => { const k = cle(x); (G[k] = G[k] || { k, h: k.split('|')[0], nom: k.slice(k.indexOf('|') + 1), tous: [], vus: [] }).tous.push(x); });
+    F.forEach(x => { const g = G[cle(x)]; if (g) { g.vus.push(x); } });
+    const rendue = x => x.e.c !== 'ko' && x.e.c !== 'mu';
+    const liste = Object.values(G).filter(g => g.vus.length).sort((a, b) => (a.h ? 0 : 1) - (b.h ? 0 : 1) || a.h.localeCompare(b.h) || a.nom.localeCompare(b.nom));
+    if (!liste.length) { return '<div class="db-mini" style="padding:14px 16px">Aucun contrôle dans ce filtre.</div>'; }
+    // Le carrousel des checklists (08/11/2026) : les cartes côte à côte sur une seule hauteur de photo ; au-dessus, le rappel
+    // de toutes les checklists du carrousel (heure, code, compte) — un clic y amène, celle à l'écran est soulignée.
+    const fiches = liste.map((g, i) => {
+      const c = tjCode(g.nom), z = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852', r = g.tous.filter(rendue).length;
+      return { g, i, c, z, r, e: r === g.tous.length ? 'ok' : (r ? 'wa' : 'ko') };
+    });
+    return `<div class="cqk"><div class="cqk-nav">${fiches.map(f => `<button type="button" class="cqk-ch" data-cqkgo="${f.i}" style="--z:${f.z}" title="${esc(f.c.code + ' · ' + f.c.titre)}"><i class="e-${f.e}"></i>${esc(f.g.h || '—')} · <b>${esc(f.c.code || '—')}</b><span class="e-${f.e}">${f.r}/${f.g.tous.length}</span></button>`).join('')}</div>
+      <div class="cqk-rail"><button type="button" class="cqk-fl g" data-cqkpas="-1" aria-label="checklists précédentes">‹</button>
+        <div class="cqk-piste" id="cqk-piste">${fiches.map(f => `<div class="cqk-c" data-cqk="${f.i}"><div class="cqf-b" style="background:${f.z}"><span class="cqf-code">${esc(f.c.code || '—')}</span><b>${esc(f.c.titre)}</b>${f.g.h ? `<span class="cqf-hh">${esc(f.g.h)}</span>` : ''}<span class="cqf-sp"></span><span class="cqf-s e-${f.e}">${f.e === 'ko' ? '✗' : '✓'} ${f.r} / ${f.g.tous.length}</span></div>
+          <div class="cqk-p">${f.g.vus.map(x => cqCarte(x, false)).join('')}</div></div>`).join('')}</div>
+        <button type="button" class="cqk-fl d" data-cqkpas="1" aria-label="checklists suivantes">›</button></div></div>`;
+  }
+
   /** La photo en grand : repères, constat ; ‹ › et Échap. */
   function cqLoupe(mobile) {
-    if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops')) { return ''; }
+    if (!S.cqVoir || (S.vue !== 'jour' && S.vue !== 'ops' && S.vue !== 'taches')) { return ''; }
     const L = cqListe();
+    // La journée pas encore lue (un retour d'un autre jour vient d'être ouvert) : la photo s'ouvrira à la lecture.
+    if (!L) { return ''; }
     const F = L ? cqFiltrees(L) : [];
     const i = F.findIndex(x => String(x.taskId) === String(S.cqVoir));
     if (i < 0) { S.cqVoir = null; return ''; }
@@ -7111,7 +7949,7 @@
     if (p) { if (S.cqRaz || !meme) { S.cqRaz = false; p.scrollLeft = 0; } else { p.scrollLeft = g.x; } cqFleches(); }
     const ba = document.getElementById('db-cqba'), on = ba && ba.querySelector('.on');
     if (on) { ba.scrollLeft = on.offsetLeft - ba.clientWidth / 2 + on.clientWidth / 2; }
-    document.documentElement.classList.toggle('db-cq-ouvert', !!S.cqVoir && (S.vue === 'jour' || S.vue === 'ops'));
+    document.documentElement.classList.toggle('db-cq-ouvert', !!S.cqVoir && (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'taches'));
   }
   /** Flèches éteintes aux deux bouts, et le compte de ce qu'on voit. */
   function cqFleches() {
@@ -8111,11 +8949,12 @@
     });
     b2bRendre();
     cmdmRendre();
+    $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
+      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
       const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
@@ -8129,6 +8968,8 @@
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    $.querySelectorAll('[data-tmseuil]').forEach(b => b.addEventListener('click', () => { S.tmSeuil = +b.dataset.tmseuil; try { localStorage.setItem('db.tmSeuil', String(S.tmSeuil)); } catch (e) { /* navigation privée */ } charger(false); }));
+    $.querySelectorAll('[data-tmjour]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.tmjour; if (!d || d > AUJ || d === S.date) { return; } S.date = d; urlMaj(); charger(false); }));
     // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
     $.querySelectorAll('[data-prf]').forEach(b => b.addEventListener('click', () => { S.prFiltre = b.dataset.prf; rendre(); }));
     $.querySelectorAll('[data-prvue]').forEach(b => b.addEventListener('click', () => { S.prVue = b.dataset.prvue; charger(false); }));
@@ -8208,7 +9049,7 @@
     $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
     $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.mo, avant = S.vue;
-      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else { S.vue = 'jour'; S.mo = k; }
+      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));
@@ -8227,6 +9068,23 @@
     $.querySelectorAll('.db-cql').forEach(l => l.addEventListener('click', e => { if (e.target === l) { S.cqVoir = null; rendre(); } }));
     const piste = document.getElementById('db-cqpiste');
     if (piste) { piste.addEventListener('scroll', cqFleches, { passive: true }); }
+    // Le carrousel des checklists des contrôles en photo (08/11/2026) : flèches, rappel cliquable, position gardée.
+    S.cqkPos = S.cqkPos || {};
+    const kp = document.getElementById('cqk-piste');
+    if (kp) {
+      const k = S.date + '|' + S.cqFiltre, nav = $.querySelectorAll('[data-cqkgo]'), g = $.querySelector('.cqk-fl.g'), d = $.querySelector('.cqk-fl.d');
+      const maj = () => {
+        g.disabled = kp.scrollLeft <= 2; d.disabled = kp.scrollLeft + kp.clientWidth >= kp.scrollWidth - 2;
+        const x0 = kp.getBoundingClientRect().left, x1 = x0 + kp.clientWidth;
+        kp.querySelectorAll('[data-cqk]').forEach(c => { const r = c.getBoundingClientRect(), vu = r.right > x0 + 40 && r.left < x1 - 40;
+          const b = $.querySelector(`[data-cqkgo="${c.dataset.cqk}"]`); if (b) { b.classList.toggle('vu', vu); } });
+      };
+      if (S.cqkPos[k]) { kp.scrollLeft = S.cqkPos[k]; }
+      kp.addEventListener('scroll', () => { S.cqkPos[k] = kp.scrollLeft; maj(); }, { passive: true });
+      [g, d].forEach(b => b.addEventListener('click', () => kp.scrollBy({ left: +b.dataset.cqkpas * Math.max(240, kp.clientWidth - 160), behavior: 'smooth' })));
+      nav.forEach(b => b.addEventListener('click', () => { const c = kp.querySelector(`[data-cqk="${b.dataset.cqkgo}"]`); if (c) { kp.scrollTo({ left: c.offsetLeft - kp.offsetLeft - 8, behavior: 'smooth' }); } }));
+      maj();
+    }
     $.querySelectorAll('[data-cqpas]').forEach(b => b.addEventListener('click', () => { const p = document.getElementById('db-cqpiste'); if (p) { p.scrollBy({ left: +b.dataset.cqpas * Math.max(200, p.clientWidth - 80), behavior: 'smooth' }); } }));
     // Au téléphone, la photo se feuillette au doigt.
     $.querySelectorAll('[data-cqswipe]').forEach(z => {
@@ -8269,7 +9127,7 @@
   urlMaj();
   charger(false);
   // La journée en cours se relit toutes les dix minutes.
-  setInterval(() => { if (S.vue === 'jour' && S.date === AUJ) { charger(true); } }, 600000);
+  setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.
   setInterval(() => { if (S.vue === 'ops' && S.date === AUJ && !document.hidden) { charger(true); } }, 120000);
 })();

@@ -1313,3 +1313,57 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-07T08:37:42Z Pilotage indépendant : clés dans erp_cles, Recrutement lu par son API
 2026-11-07T10:07:26Z Référentiel : le poste P9 s'appelle « Huurder-uitbater » en néerlandais
 2026-11-07T10:19:07Z Budget › Paramètres : Répartition des charges = Compte de résultat réseau du CRM · pondération des jours en carte à part
+2026-11-07T11:09:33Z Référentiel : FO-54 « Gestion de trésorerie », formations ajoutées par le réseau
+2026-11-07T11:41:52Z Benchmark concurrents : cougnou et galette des rois posés dans l'ERP, routine lundi/jeudi
+2026-11-07T12:07:00Z Dashboard magasin : onglet Concurrence (recherche de produit, relevé terrain) ; benchmark : unités sondées, prix recomptés
+2026-11-07T12:13:21Z Benchmark : champs exigés par TFBuddy pour un item
+2026-11-07T12:23:25Z Concurrence : recherche de produit exacte, produits proches, type d'enseigne
+2026-11-07T12:51:25Z Concurrence : vue Top 10 réseau ; benchmark top 10 posable dans TFBuddy
+2026-11-07T13:01:03Z Concurrence Top 10 : boulangeries / supermarchés séparés
+2026-11-07T13:01:29Z Concurrence Top 10 : lots comptés à la pièce
+2026-11-07T13:57:33Z Résultat réseau : vue téléphone
+2026-11-07T17:57:21Z Cadre des tâches : page /task, assistant checklist et tâches
+2026-11-07T18:11:57Z Tablette : retrait de « Comment ça marche »
+2026-11-07T18:17:42Z Cadre des tâches : écran du cockpit dans Pilotage
+2026-11-07T18:41:20Z Standards et contrôles : checklist depuis une SOP, contrôles sur la fiche
+2026-11-07T19:06:57Z Dashboard Opérationnel : Heure par heure s'arrête à 20 h
+2026-11-07T19:50:28Z Cadre des tâches : lecture plus claire dans le cockpit
+2026-11-07T20:04:14Z Cadre des tâches : créé depuis cet écran replié
+2026-11-07T20:05:57Z Cadre des tâches : assistant restauré
+2026-11-07T20:07:51Z Planning des tâches : qui fait, qui contrôle, filtres
+2026-11-07T20:14:24Z Planning des tâches : qui fait / qui contrôle en direct, modifier une checklist
+2026-11-07T20:25:42Z Cadre des tâches : plein écran, fenêtres jamais coupées
+2026-11-07T20:28:32Z Temps morts : onglet du dashboard magasin, le jour et sa semaine
+2026-11-07T20:40:03Z Cadre des tâches : recherche partout
+2026-11-07T20:47:17Z Temps morts : la journée en grille des minutes, magasin inconnu refusé
+2026-11-08T05:45:43Z Cadre des tâches : vue Document, réglages en vignettes cliquables
+2026-11-08T06:49:47Z Cadre des tâches : « Ranger → AC-01 ▾ » sur chaque tâche hors checklist
+2026-11-08T07:37:00Z Checklists : nomenclature 1.1.01 (code unique partout), onglet Checklists
+2026-11-08T08:14:18Z onglet Tâches du dashboard magasin (S1)
+2026-11-08T11:38:51Z Cockpit : réglage de la revue du soir (Checklists › Revue du soir)
+2026-11-08T11:52:59Z Revue du soir : routes Cockpit et Panel modifiables, bouton Tester
+2026-11-08T12:12:23Z Dashboard magasin : revue du soir (M3, clôture H3, logo L2)
+2026-11-08T18:04:01Z Dashboard magasin : contrôles en photo, seulement les tâches à photo
+2026-11-08T18:32:08Z Dashboard magasin : contrôles en photo en frise (F1 + C1B)
+2026-11-08T18:41:42Z Contrôles en photo : slider par checklist
+2026-11-08T18:48:07Z Contrôles en photo : carrousel des checklists
+2026-11-08T18:54:23Z Cadre des tâches : suppression confirmée par le nom
+2026-11-08T19:31:28Z Contrôles en photo : obligatoire ou facultative (O4)
+2026-11-09T12:41:06Z Visibilité Google : fiches et rang local, Marque & marketing
+2026-11-09T14:48:11Z Paiement différé : commande retirée, B2B remise client déduite
+2026-11-09T19:21:52Z Caisse : ouvertures, fermetures et reports par magasin et par semaine ; valeur du magasin lue au panel ; contreseing des avis chez TFBuddy
+2026-11-09T19:25:18Z Cadre des tâches : déplacer des tâches vers une checklist
+2026-11-09T19:35:09Z Caisse : virgule oubliée lue au service suivant, compte des espèces corrigé
+2026-11-09T19:38:48Z Cadre des tâches : tâches en pause à part ; nomenclature 1.3.02
+2026-11-09T19:42:10Z Nomenclature : pas de « (ex ) » vide
+2026-11-09T19:49:50Z Caisse, vue Jour : les espèces ticket par ticket (courbe du tiroir, vendeuses, contrôle export)
+2026-11-09T20:10:24Z checklists : code en boutons (zone, moment)
+2026-11-09T20:13:13Z checklists : boutons de code en rectangles arrondis
+2026-11-09T20:26:41Z document : changer une tâche de checklist
+2026-11-09T20:31:05Z cadre des tâches : Tableau fusionné dans Document
+2026-11-09T20:33:11Z Caisse : vue Reports, le registre du mois jour après jour ; export du jour de bord relu
+2026-11-09T20:45:30Z changer de checklist : une tâche par appel
+2026-11-09T20:46:46Z Caisse, Reports : les ruptures du mois une à une, cause probable et à qui demander
+2026-11-09T20:58:17Z checklists : supprimer une checklist
+2026-11-09T21:16:23Z cadre des tâches : ligne du temps
+2026-11-09T21:22:50Z tâches : planning conservé au PATCH

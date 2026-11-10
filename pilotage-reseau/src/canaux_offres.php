@@ -65,7 +65,9 @@ function coStatut(array $c, string $canal): string
 function coCommandes(int $sid, string $depuis): ?array
 {
     // `coCmd2` (18/10/2026) : la ligne porte la transaction de caisse (`tx`), pour ranger les tickets du webshop.
-    $cle = 'coCmd2:' . $sid . ':' . $depuis;
+    // `coCmd3` (09/11/2026) : et le client (`cli`) et le bon de commande (`po`), pour retrouver le ticket d'une commande
+    // réglée en paiement différé, que le panel ne lie pas (coApparierDifferes).
+    $cle = 'coCmd3:' . $sid . ':' . $depuis;
     $memo = setting($cle);
     if (is_array($memo) && isset($memo['le'], $memo['v']) && (time() - (int) $memo['le']) < CO_CACHE_MIN * 60) { return $memo['v']; }
     if (!PanelApi::configured()) { return null; }
@@ -87,7 +89,8 @@ function coCommandes(int $sid, string $depuis): ?array
             $articles = $aQte ? round($q, 1) : (float) count($prods);
         }
         $out[] = ['quand' => substr($quand, 0, 16), 'canal' => $canal, 'montant' => round((float) ($c['total_value'] ?? 0), 2),
-            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0, 'tx' => (int) ($c['id_transaction'] ?? 0)];
+            'articles' => $articles, 'statut' => $statut, 'encaissee' => (int) ($c['id_transaction'] ?? 0) > 0, 'tx' => (int) ($c['id_transaction'] ?? 0),
+            'cli' => (int) ($c['id_client'] ?? 0), 'po' => trim((string) ($c['po_hash'] ?? ''))];
     }
     usort($out, static fn ($a, $b) => strcmp($a['quand'], $b['quand']));
     try {
@@ -95,6 +98,67 @@ function coCommandes(int $sid, string $depuis): ?array
             [$cle, json_encode(['le' => time(), 'v' => $out], JSON_UNESCAPED_UNICODE)]);
     } catch (Throwable $e) { /* sans mémo */ }
     return $out;
+}
+
+/**
+ * Les commandes réglées en paiement différé (09/11/2026, Natan à Halle : « la commande en paiement différé reste en pas
+ * retirée ») : le client pro emporte sa commande, la caisse fait un ticket différé (`deferral_payment`) qu'une facture
+ * réglera plus tard, et le panel ne pose pas ce ticket sur la commande (`id_transaction` vide) — la commande restait
+ * « pas retirée ». On la rapproche du ticket différé du même client, le même jour.
+ *
+ * $cmds : [i => ['cli' => id_client, 'po' => po_hash, 'heure' => 'HH:MM']], les commandes du jour sans ticket lié ;
+ * $tickets : [k => ['cli' => id_client, 'po' => po_hash, 'heure' => 'HH:MM']], les tickets différés du jour libres.
+ * Retour : [i => k]. Le bon de commande (`po_hash`) d'abord, quand la commande et le ticket le portent ; sinon le même
+ * client, le ticket le plus proche de l'heure de retrait. Un ticket ne règle qu'une commande ; sans client, rien.
+ */
+function coApparierDifferes(array $cmds, array $tickets): array
+{
+    $min = static fn (string $h): int => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
+    $pris = []; $out = [];
+    foreach ($cmds as $i => $c) {
+        if ((string) ($c['po'] ?? '') === '') { continue; }
+        foreach ($tickets as $k => $t) {
+            if (isset($pris[$k]) || (string) ($t['po'] ?? '') !== (string) $c['po']) { continue; }
+            if ((int) ($c['cli'] ?? 0) > 0 && (int) ($t['cli'] ?? 0) > 0 && (int) $c['cli'] !== (int) $t['cli']) { continue; }
+            $out[$i] = $k; $pris[$k] = true; break;
+        }
+    }
+    $reste = array_diff_key($cmds, $out);
+    uasort($reste, static fn ($a, $b) => strcmp((string) ($a['heure'] ?? ''), (string) ($b['heure'] ?? '')));
+    foreach ($reste as $i => $c) {
+        $cli = (int) ($c['cli'] ?? 0);
+        if ($cli <= 0) { continue; }
+        $best = null;
+        foreach ($tickets as $k => $t) {
+            if (isset($pris[$k]) || (int) ($t['cli'] ?? 0) !== $cli) { continue; }
+            $d = abs($min((string) ($t['heure'] ?? '00:00')) - $min((string) ($c['heure'] ?? '00:00')));
+            if ($best === null || $d < $best[0]) { $best = [$d, $k]; }
+        }
+        if ($best !== null) { $out[$i] = $best[1]; $pris[$best[1]] = true; }
+    }
+    return $out;
+}
+
+/**
+ * Les commandes d'un jour réglées en paiement différé, d'après le relevé pro gravé du jour (vpDuListe : [heure, clé de
+ * compte, montant, facturé, différé]) — sans appel au panel : [indice de la commande dans $cmds => true]. Seules les
+ * commandes du jour sans ticket lié s'y rapprochent (coApparierDifferes) ; un relevé pas encore gravé : rien.
+ */
+function coDifferesDuReleve(int $sid, string $date, array $cmds): array
+{
+    $r = function_exists('setting') ? setting('svP' . $sid . ':' . $date) : null;
+    $T = is_array($r) && is_array($r['b']['t'] ?? null) ? $r['b']['t'] : [];
+    $tickets = [];
+    foreach ($T as $k => $t) {
+        if ((int) ($t[4] ?? 0) === 1 && preg_match('/^c(\d+)$/', (string) ($t[1] ?? ''), $m)) { $tickets[$k] = ['cli' => (int) $m[1], 'po' => '', 'heure' => (string) $t[0]]; }
+    }
+    if ($tickets === []) { return []; }
+    $cand = [];
+    foreach ($cmds as $i => $c) {
+        if (substr((string) ($c['quand'] ?? ''), 0, 10) !== $date || (int) ($c['tx'] ?? 0) > 0 || (int) ($c['cli'] ?? 0) <= 0) { continue; }
+        $cand[$i] = ['cli' => (int) $c['cli'], 'po' => '', 'heure' => substr((string) $c['quand'], 11, 5)];
+    }
+    return array_fill_keys(array_keys(coApparierDifferes($cand, $tickets)), true);
 }
 
 /** La caisse d'un magasin jour par jour (CA, tickets) sur une liste de jours, depuis les heures gravées. */
@@ -173,13 +237,16 @@ function ep_exploitation_canaux(): array
         $mJ = coMagasin($shop, [$date], $cmds);
         $demain = date('Y-m-d', strtotime($date . ' +1 day'));
         $liste = []; $aPreparer = 0; $dem = ['n' => 0, 'ca' => 0.0];
+        // Les commandes du jour réglées en paiement différé (09/11/2026) : retirées, pas « à vérifier ».
+        $differes = coDifferesDuReleve($shop, $date, (array) $cmds);
         // La liste du jour porte TOUTES les commandes, précommandes au comptoir comprises : c'est
         // ce que le magasin doit préparer. Le split, lui, ne compte que le webshop.
-        foreach ((array) $cmds as $c) {
+        foreach ((array) $cmds as $iC => $c) {
             $j = substr($c['quand'], 0, 10);
             if ($j === $date) {
-                $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'encaissee' => $c['encaissee']];
-                if (in_array($c['statut'], ['à préparer', 'en préparation'], true)) { $aPreparer++; }
+                $liste[] = ['heure' => substr($c['quand'], 11, 5), 'canal' => $c['canal'], 'articles' => $c['articles'], 'montant' => $c['montant'], 'statut' => $c['statut'], 'encaissee' => $c['encaissee'],
+                    'differe' => isset($differes[$iC])];
+                if (!isset($differes[$iC]) && in_array($c['statut'], ['à préparer', 'en préparation'], true)) { $aPreparer++; }
             } elseif ($j === $demain) { $dem['n']++; $dem['ca'] += $c['montant']; }
         }
         $nWeb = count(array_filter($liste, static fn ($c) => $c['canal'] !== 'compt'));
@@ -605,6 +672,8 @@ function ep_bundles_sonde(): array
  *   caisse   encaissée en caisse ce jour-là (`id_transaction`, ticket du jour) : déjà dans les tickets ;
  *   avant    encaissée en caisse un autre jour (payée à la commande) : dans le CA de ce jour-là ;
  *   ligne    webshop remise ou livrée sans ticket caisse : payée en ligne, elle s'ajoute aux tickets (règle de /canaux) ;
+ *   differe  réglée en paiement différé (09/11/2026) : le ticket différé du même client ce jour-là, que le panel ne
+ *            lie pas à la commande (coApparierDifferes) ; dans les tickets du jour, facturée plus tard ;
  *   attente  pas remise, l'heure de retrait passée : pas retirée, pas encaissée ;
  *   avenir   pas remise, l'heure de retrait à venir ;
  *   sans     précommande au comptoir remise au panel sans ticket caisse lié : à vérifier.
@@ -652,16 +721,49 @@ function ep_exploitation_commandes_detail(): array
         $out[] = ['heure' => $heure, 'canal' => $c['canal'], 'statut' => $c['statut'], 'montant' => (float) $c['montant'], 'etat' => $etat,
             'articles' => $art === null ? null : round((float) $art, 1), 'ticket' => $ticket, 'lignes' => $lignes];
     }
-    // Pour une commande remise sans ticket : le ticket du jour qui pourrait être le sien.
-    if ($sansN > 0 && $date <= $auj && PanelApi::configured()) {
+    // Les commandes sans ticket lié d'un client connu : réglées en paiement différé ? (coApparierDifferes, 09/11/2026)
+    $aRapprocher = [];
+    foreach ($out as $i => $o) {
+        if (in_array($o['etat'], ['attente', 'avenir', 'sans'], true) && (int) ($jour[$i]['cli'] ?? 0) > 0) {
+            $aRapprocher[$i] = ['cli' => (int) $jour[$i]['cli'], 'po' => (string) ($jour[$i]['po'] ?? ''), 'heure' => $o['heure']];
+        }
+    }
+    // Les tickets du jour que rien ne lie encore à une commande : une liste, un appel.
+    $libresT = [];
+    if (($sansN > 0 || $aRapprocher !== []) && $date <= $auj && PanelApi::configured()) {
         $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
         $lies = array_flip(array_map('intval', array_keys($chemins)));
-        $libres = [];
         foreach (analyseListe(is_array($liste) ? $liste : []) as $x) {
             $id = (int) ($x['id'] ?? 0);
             if ($id <= 0 || isset($lies[$id])) { continue; }
-            $libres[] = ['id' => $id, 'heure' => substr((string) ($x['insert_timestamp'] ?? ''), 11, 5), 'montant' => round((float) ($x['total_gross_amount_after_discount'] ?? $x['total_value_after_discount'] ?? 0), 2)];
+            $libresT[$id] = ['id' => $id, 'heure' => substr((string) ($x['insert_timestamp'] ?? ''), 11, 5), 'montant' => round((float) ($x['total_gross_amount_after_discount'] ?? $x['total_value_after_discount'] ?? 0), 2),
+                'cli' => (int) ($x['id_client'] ?? 0), 'po' => trim((string) ($x['po_hash'] ?? '')), 'differe' => !empty($x['deferral_payment'])];
         }
+    }
+    $difs = array_filter($libresT, static fn ($t) => $t['differe'] && $t['heure'] !== '');
+    $paires = $aRapprocher !== [] && $difs !== [] ? coApparierDifferes($aRapprocher, $difs) : [];
+    if ($paires !== []) {
+        // Le ticket différé est en caisse sans la remise personnelle du client (déduite à la facture) : la commande garde
+        // son montant, celui de la caisse se montre à côté quand il diffère. Ses articles se lisent dans le ticket.
+        $ch2 = [];
+        foreach ($paires as $id) { $ch2[$id] = '/transactions/' . $id . '?include=products'; }
+        $res2 = PanelApi::getParallele($ch2, 8);
+        foreach ($paires as $i => $id) {
+            $t = $libresT[$id]; unset($libresT[$id]);
+            if ($out[$i]['etat'] === 'sans') { $sansN--; }
+            $out[$i]['etat'] = 'differe';
+            $out[$i]['ticket'] = ['date' => $date, 'heure' => $t['heure'], 'differe' => true];
+            if (abs($t['montant'] - $out[$i]['montant']) > 0.005) { $out[$i]['montantCaisse'] = $t['montant']; }
+            $lignes = function_exists('vpLignesTicket') ? vpLignesTicket($res2[$id] ?? null, $catDe) : null;
+            if ($lignes !== null) {
+                $out[$i]['lignes'] = $lignes;
+                $out[$i]['articles'] = round(array_sum(array_map(static fn ($l) => (float) ($l['q'] ?? 0), $lignes)), 1);
+            }
+        }
+    }
+    // Pour une commande remise sans ticket : le ticket du jour qui pourrait être le sien.
+    if ($sansN > 0 && $libresT !== []) {
+        $libres = array_values($libresT);
         $pris = [];
         $min = static fn (string $h) => (int) substr($h, 0, 2) * 60 + (int) substr($h, 3, 2);
         foreach ($out as &$o) {
@@ -680,11 +782,11 @@ function ep_exploitation_commandes_detail(): array
     $somme = static function (array $L): array { return ['n' => count($L), 'ca' => round(array_sum(array_column($L, 'montant')), 2)]; };
     $par = static fn (string $k, string $v) => array_values(array_filter($out, static fn ($o) => $o[$k] === $v));
     $etats = [];
-    foreach (['caisse', 'avant', 'ligne', 'attente', 'avenir', 'sans'] as $e) { $etats[$e] = $somme($par('etat', $e)); }
+    foreach (['caisse', 'differe', 'avant', 'ligne', 'attente', 'avenir', 'sans'] as $e) { $etats[$e] = $somme($par('etat', $e)); }
     $web = array_values(array_filter($out, static fn ($o) => $o['canal'] !== 'compt'));
     $caisse = coCaisse($sid, [$date])[$date] ?? null;
     return ['shop' => $sid, 'date' => $date, 'maintenant' => $date === $auj ? date('H:i') : null, 'commandes' => $out,
         'total' => $somme($out), 'comptoir' => $somme($par('canal', 'compt')), 'webshop' => $somme($web) + ['cc' => $somme($par('canal', 'cc')), 'liv' => $somme($par('canal', 'liv'))],
-        'etats' => $etats, 'dansCa' => round($etats['caisse']['ca'] + $etats['ligne']['ca'], 2), 'caisseJour' => $caisse ? $caisse['ca'] : null,
+        'etats' => $etats, 'dansCa' => round($etats['caisse']['ca'] + $etats['differe']['ca'] + $etats['ligne']['ca'], 2), 'caisseJour' => $caisse ? $caisse['ca'] : null,
         'lus' => count(array_filter($out, static fn ($o) => $o['lignes'] !== null))];
 }

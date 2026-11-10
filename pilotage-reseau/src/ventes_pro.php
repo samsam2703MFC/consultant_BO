@@ -53,6 +53,26 @@ function vpCleCompte(array $x): string
  */
 function vpTvaValides(int $sid, array $cles): array
 {
+    return array_map(static fn (array $x) => $x['tva'], vpFichesPro($sid, $cles));
+}
+
+/**
+ * La remise personnelle des clients pro d'un magasin (09/11/2026) : [clé de compte => pourcentage | null], lue sur la
+ * même fiche et gardée dans le même `vpTva:{shop}` que la TVA (vpFichesPro). Null : pas de fiche, fiche illisible, ou
+ * fiche sans `personal_discount_percent`.
+ */
+function vpRemisesPerso(int $sid, array $cles): array
+{
+    return array_map(static fn (array $x) => $x['remise'], vpFichesPro($sid, $cles, true));
+}
+
+/**
+ * Ce que la fiche d'un client pro dit au cockpit : [clé => ['tva' => true | false | null, 'remise' => float | null]].
+ * Le verdict se garde dans `vpTva:{shop}` sous [tva 0|1, lu le, remise] ; un verdict gardé avant le 09/11/2026 n'a pas
+ * de remise : `$remise` demandée, sa fiche se relit une fois (un appel par client, en parallèle).
+ */
+function vpFichesPro(int $sid, array $cles, bool $remise = false): array
+{
     static $memo = [], $lu = [];
     $out = []; $manque = [];
     // Le verdict gardé, lu une fois par magasin et par requête (le Résultat le demande jour par jour).
@@ -63,24 +83,32 @@ function vpTvaValides(int $sid, array $cles): array
     }
     $c = $lu[$sid];
     foreach (array_unique(array_map('strval', $cles)) as $k) {
-        if (!preg_match('/^c(\d+)$/', $k, $m)) { $out[$k] = false; continue; }
-        if (array_key_exists($sid . $k, $memo)) { $out[$k] = $memo[$sid . $k]; continue; }
+        if (!preg_match('/^c(\d+)$/', $k, $m)) { $out[$k] = ['tva' => false, 'remise' => null]; continue; }
+        $y = $memo[$sid . $k] ?? null;
+        if ($y !== null && (!$remise || $y['rl'])) { $out[$k] = ['tva' => $y['tva'], 'remise' => $y['remise']]; continue; }
         $x = $c[$k] ?? null;
-        if (is_array($x) && (int) ($x[1] ?? 0) > time() - ((int) $x[0] === 1 ? VP_TTL_TVA_OK : VP_TTL_TVA_KO)) { $out[$k] = $memo[$sid . $k] = (int) $x[0] === 1; continue; }
+        if (is_array($x) && (int) ($x[1] ?? 0) > time() - ((int) $x[0] === 1 ? VP_TTL_TVA_OK : VP_TTL_TVA_KO) && (!$remise || array_key_exists(2, $x))) {
+            $r = array_key_exists(2, $x) && is_numeric($x[2]) ? (float) $x[2] : null;
+            $memo[$sid . $k] = ['tva' => (int) $x[0] === 1, 'remise' => $r, 'rl' => array_key_exists(2, $x)];
+            $out[$k] = ['tva' => (int) $x[0] === 1, 'remise' => $r];
+            continue;
+        }
         $manque[$k] = $m[1];
     }
     if ($manque === []) { return $out; }
-    if (!function_exists('vtFicheClient') || !class_exists('PanelApi') || !PanelApi::configured()) { foreach ($manque as $k => $id) { $out[$k] = null; } return $out; }
+    if (!function_exists('vtFicheClient') || !class_exists('PanelApi') || !PanelApi::configured()) { foreach ($manque as $k => $id) { $out[$k] = ['tva' => null, 'remise' => null]; } return $out; }
     $chemins = [];
     foreach ($manque as $k => $id) { $chemins[$k] = '/shops/' . $sid . '/clients/' . rawurlencode((string) $id); }
     $res = PanelApi::getParallele($chemins, 6);
     $neuf = false;
     foreach ($manque as $k => $id) {
         $f = vtFicheClient($res[$k] ?? null);
-        if (empty($f['lue'])) { $out[$k] = null; continue; }
+        if (empty($f['lue'])) { $out[$k] = ['tva' => null, 'remise' => null]; continue; }
         $ok = !empty($f['tva']) && ($f['valide'] ?? null) !== false;
-        $out[$k] = $memo[$sid . $k] = $ok;
-        $c[$k] = [$ok ? 1 : 0, time()]; $neuf = true;
+        $r = isset($f['remise']) && is_numeric($f['remise']) ? (float) $f['remise'] : null;
+        $memo[$sid . $k] = ['tva' => $ok, 'remise' => $r, 'rl' => true];
+        $out[$k] = ['tva' => $ok, 'remise' => $r];
+        $c[$k] = [$ok ? 1 : 0, time(), $r]; $neuf = true;
     }
     if ($neuf && function_exists('svGrave')) { $lu[$sid] = $c; svGrave('vpTva:' . $sid, $c); }
     return $out;
@@ -90,10 +118,17 @@ function vpTvaValides(int $sid, array $cles): array
  * Le pro d'un jour gravé (`b`), réduit aux tickets dont le client a une TVA valide : `t` et `h` recomptés, `sansTva`
  * dit ce qui est parti au comptoir (tickets, CA). Le gravé garde l'avis brut du panel : une fiche complétée plus tard
  * fait revenir ses tickets au pro, jours passés compris.
+ *
+ * La remise personnelle d'un client pro (09/11/2026, Natan à Halle : « elle s'affiche dans b2b avec le montant hors
+ * réduction ») : un ticket en paiement différé est gravé en caisse sans elle — le panel la déduit à la facture
+ * (`generate-deferral`, `include_personal_discount`, `personal_discount_value` par ligne). Le ticket garde son montant
+ * de caisse en [2], tout ce qui retranche le pro de la caisse (comptoir, paniers, canaux) le lit ; son montant remise
+ * déduite (ce que le client paiera) s'ajoute en [5], le B2B le montre (vpNet). `remise` : combien de tickets, combien.
  */
 function vpFiltreTva(int $sid, ?array $b): ?array
 {
-    if ($b === null || empty($b['t']) || !is_array($b['t'])) { return $b === null ? null : $b + ['sansTva' => ['tickets' => 0, 'ca' => 0.0]]; }
+    $sansRemise = ['tickets' => 0, 'ca' => 0.0];
+    if ($b === null || empty($b['t']) || !is_array($b['t'])) { return $b === null ? null : $b + ['sansTva' => ['tickets' => 0, 'ca' => 0.0], 'remise' => $sansRemise]; }
     $ok = vpTvaValides($sid, array_map(static fn ($t) => (string) ($t[1] ?? ''), $b['t']));
     $t2 = []; $h = []; $nEx = 0; $caEx = 0.0;
     foreach ($b['t'] as $t) {
@@ -104,7 +139,29 @@ function vpFiltreTva(int $sid, ?array $b): ?array
         $h[$hh][0] += (float) $t[2]; $h[$hh][1]++;
     }
     foreach ($h as $k => $v) { $h[$k] = [round($v[0], 2), $v[1]]; }
-    return ['t' => $t2, 'h' => $h, 'sansTva' => ['tickets' => $nEx, 'ca' => round($caEx, 2)]] + $b;
+    // Les tickets différés : la remise personnelle de leur client, lue sur sa fiche (une fois, gardée avec la TVA).
+    $dif = [];
+    foreach ($t2 as $t) { if ((int) ($t[4] ?? 0) === 1 && (string) ($t[1] ?? '') !== '') { $dif[] = (string) $t[1]; } }
+    $rem = $dif !== [] && function_exists('vpRemisesPerso') ? vpRemisesPerso($sid, $dif) : [];
+    $R = $sansRemise;
+    foreach ($t2 as $i => $t) {
+        $p = (int) ($t[4] ?? 0) === 1 ? ($rem[(string) ($t[1] ?? '')] ?? null) : null;
+        if ($p === null || $p <= 0) { continue; }
+        $net = round((float) $t[2] * (1 - $p / 100), 2);
+        $t2[$i][5] = $net;
+        $R['tickets']++; $R['ca'] += (float) $t[2] - $net;
+    }
+    $R['ca'] = round($R['ca'], 2);
+    return ['t' => $t2, 'h' => $h, 'sansTva' => ['tickets' => $nEx, 'ca' => round($caEx, 2)], 'remise' => $R] + $b;
+}
+
+/**
+ * Le montant B2B d'un ticket pro du relevé (vpFiltreTva) : remise personnelle déduite s'il est en paiement différé
+ * ([5]), sinon son montant de caisse ([2]). Le comptoir, lui, se calcule toujours avec le montant de caisse.
+ */
+function vpNet(array $t): float
+{
+    return (float) ($t[5] ?? $t[2]);
 }
 
 /** Le pro d'une liste de tickets du panel : total du jour, tickets pro (heure, clé de compte, montant, facturé, différé), par heure. */
@@ -169,6 +226,8 @@ function vpGraveListe(int $sid, string $j, array $liste): array
     $c = is_array($c) ? $c : ['quand' => time()];
     $c['b'] = $b;
     svGrave($cle, $c);
+    // La même liste porte l'heure de chaque ticket : les temps morts la gardent, sans appel de plus.
+    if (function_exists('tmGraveListe')) { tmGraveListe($sid, $j, $liste); }
     // La même liste relève les clients PWA du jour (Récurrence) : pas d'appel de plus.
     if (function_exists('rpGraveListe')) { try { rpGraveListe($sid, $j, $liste); } catch (Throwable $e) { /* le cron la relira */ } }
     return vpFiltreTva($sid, $b);
@@ -177,15 +236,17 @@ function vpGraveListe(int $sid, string $j, array $liste): array
 /** Le split d'une journée pour un tableau : CA et tickets pro, le reste au comptoir (sur le CA de la ligne). */
 function vpSplit(?array $b, float $ca, int $tickets): array
 {
-    if ($b === null) { return ['caPro' => null, 'ticketsPro' => null, 'caComptoir' => null, 'ticketsComptoir' => null, 'partPro' => null]; }
-    $caPro = 0.0;
-    foreach ($b['t'] as $t) { $caPro += (float) $t[2]; }
+    if ($b === null) { return ['caPro' => null, 'caProApresRemise' => null, 'ticketsPro' => null, 'caComptoir' => null, 'ticketsComptoir' => null, 'partPro' => null]; }
+    // `caPro` : les tickets pro tels qu'en caisse (le comptoir en est le reste) ; `caProApresRemise` : la remise
+    // personnelle des tickets différés déduite (vpFiltreTva, 09/11/2026), ce que la jauge B2B montre.
+    $caPro = 0.0; $caProR = 0.0;
+    foreach ($b['t'] as $t) { $caPro += (float) $t[2]; $caProR += vpNet($t); }
     $nPro = count($b['t']);
     $caC = max(0.0, $ca - $caPro); $nC = max(0, $tickets - $nPro);
-    return ['caPro' => round($caPro, 2), 'ticketsPro' => $nPro,
+    return ['caPro' => round($caPro, 2), 'caProApresRemise' => round($caProR, 2), 'remisePro' => round($caPro - $caProR, 2), 'ticketsPro' => $nPro,
         'caComptoir' => round($caC, 2), 'ticketsComptoir' => $nC,
-        'partPro' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null,
-        'panierPro' => $nPro > 0 ? round($caPro / $nPro, 2) : null,
+        'partPro' => $ca > 0 ? round(100 * $caProR / $ca, 1) : null,
+        'panierPro' => $nPro > 0 ? round($caProR / $nPro, 2) : null,
         'panierComptoir' => $nC > 0 ? round($caC / $nC, 2) : null];
 }
 
@@ -283,18 +344,19 @@ function vpJoursLus(array $sids, array $jours, int $budget = 30): array
 /** Les tickets pro d'un jour, mis en forme pour l'écran : l'heure et le montant, jamais le nom du compte. */
 function vpTickets(array $b): array
 {
-    return array_map(static fn ($t) => ['heure' => (string) $t[0], 'montant' => (float) $t[2], 'facture' => (int) $t[3] === 1, 'differe' => (int) $t[4] === 1], $b['t']);
+    return array_map(static fn ($t) => ['heure' => (string) $t[0], 'montant' => (float) $t[2], 'montantApresRemise' => vpNet($t), 'facture' => (int) $t[3] === 1, 'differe' => (int) $t[4] === 1], $b['t']);
 }
 
 /** Les chiffres d'un jour : total, pro, comptoir, à facturer. */
 function vpBilanJour(array $b): array
 {
-    $caPro = 0.0; $aFacturer = 0.0; $differes = 0; $societes = [];
-    foreach ($b['t'] as $t) { $caPro += (float) $t[2]; if ((int) $t[3] === 1) { $aFacturer += (float) $t[2]; } if ((int) $t[4] === 1) { $differes++; } if ($t[1] !== '') { $societes[$t[1]] = true; } }
+    $caPro = 0.0; $caProR = 0.0; $aFacturer = 0.0; $differes = 0; $societes = [];
+    // À facturer : remise personnelle déduite, comme la facture (vpNet) ; le comptoir reste la caisse moins le pro en caisse.
+    foreach ($b['t'] as $t) { $caPro += (float) $t[2]; $caProR += vpNet($t); if ((int) $t[3] === 1) { $aFacturer += vpNet($t); } if ((int) $t[4] === 1) { $differes++; } if ($t[1] !== '') { $societes[$t[1]] = true; } }
     $n = (int) $b['n']; $nPro = count($b['t']); $ca = (float) $b['ca'];
-    return ['ca' => round($ca, 2), 'tickets' => $n, 'caPro' => round($caPro, 2), 'ticketsPro' => $nPro, 'societes' => count($societes),
-        'panierPro' => $nPro > 0 ? round($caPro / $nPro, 2) : null, 'panierComptoir' => $n - $nPro > 0 ? round(($ca - $caPro) / ($n - $nPro), 2) : null,
-        'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'aFacturer' => round($aFacturer, 2), 'differes' => $differes];
+    return ['ca' => round($ca, 2), 'tickets' => $n, 'caPro' => round($caPro, 2), 'caProApresRemise' => round($caProR, 2), 'remisePro' => round($caPro - $caProR, 2), 'ticketsPro' => $nPro, 'societes' => count($societes),
+        'panierPro' => $nPro > 0 ? round($caProR / $nPro, 2) : null, 'panierComptoir' => $n - $nPro > 0 ? round(($ca - $caPro) / ($n - $nPro), 2) : null,
+        'part' => $ca > 0 ? round(100 * $caProR / $ca, 1) : null, 'aFacturer' => round($aFacturer, 2), 'differes' => $differes];
 }
 
 /**
@@ -313,8 +375,8 @@ function ep_exploitation_pro(): array
     @set_time_limit(60);
     $appels = 0;
     $bJ = vpJour($sid, $date, true, $appels, 2);
-    $jour = $bJ === null ? null : vpBilanJour($bJ) + ['heures' => (object) $bJ['h'], 'liste' => vpTickets($bJ), 'sansTva' => $bJ['sansTva'] ?? null];
-    $serie = []; $comptes = []; $caPro = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0; $sansCle = 0; $nSansTva = 0; $caSansTva = 0.0;
+    $jour = $bJ === null ? null : vpBilanJour($bJ) + ['heures' => (object) $bJ['h'], 'liste' => vpTickets($bJ), 'sansTva' => $bJ['sansTva'] ?? null, 'remise' => $bJ['remise'] ?? null];
+    $serie = []; $comptes = []; $caPro = 0.0; $caProR = 0.0; $ca = 0.0; $tkPro = 0; $tk = 0; $lus = 0; $manquants = 0; $sansCle = 0; $nSansTva = 0; $caSansTva = 0.0;
     for ($i = VP_JOURS - 1; $i >= 0; $i--) {
         $j = date('Y-m-d', strtotime($date . ' -' . $i . ' days'));
         if (defined('SV_DEBUT') && $j < SV_DEBUT) { continue; }
@@ -323,16 +385,16 @@ function ep_exploitation_pro(): array
         if ((int) $b['n'] === 0) { $serie[] = ['j' => $j, 'ca' => 0, 'caPro' => 0, 'ferme' => true]; continue; }
         $lus++;
         $nSansTva += (int) ($b['sansTva']['tickets'] ?? 0); $caSansTva += (float) ($b['sansTva']['ca'] ?? 0);
-        $cp = 0.0;
+        $cp = 0.0; $cpR = 0.0;
         foreach ($b['t'] as $t) {
-            $cp += (float) $t[2];
+            $cp += (float) $t[2]; $cpR += vpNet($t);
             if ((string) $t[1] !== '') { $comptes[(string) $t[1]] = true; } else { $sansCle++; }
         }
-        $serie[] = ['j' => $j, 'ca' => round((float) $b['ca'], 2), 'caPro' => round($cp, 2), 'tickets' => (int) $b['n'], 'ticketsPro' => count($b['t'])];
-        $caPro += $cp; $ca += (float) $b['ca']; $tkPro += count($b['t']); $tk += (int) $b['n'];
+        $serie[] = ['j' => $j, 'ca' => round((float) $b['ca'], 2), 'caPro' => round($cp, 2), 'caProApresRemise' => round($cpR, 2), 'tickets' => (int) $b['n'], 'ticketsPro' => count($b['t'])];
+        $caPro += $cp; $caProR += $cpR; $ca += (float) $b['ca']; $tkPro += count($b['t']); $tk += (int) $b['n'];
     }
     return ['shop' => $sid, 'date' => $date, 'jour' => $jour,
-        'mois' => ['du' => $serie[0]['j'] ?? $date, 'au' => $date, 'jours' => $lus, 'manquants' => $manquants, 'caPro' => round($caPro, 2), 'ca' => round($ca, 2),
+        'mois' => ['du' => $serie[0]['j'] ?? $date, 'au' => $date, 'jours' => $lus, 'manquants' => $manquants, 'caPro' => round($caPro, 2), 'caProApresRemise' => round($caProR, 2), 'ca' => round($ca, 2),
             'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'ticketsPro' => $tkPro, 'tickets' => $tk, 'panierPro' => $tkPro > 0 ? round($caPro / $tkPro, 2) : null,
             'societes' => count($comptes), 'ticketsSansCompte' => $sansCle],
         'serie' => $serie, 'appels' => $appels,
@@ -481,34 +543,41 @@ function ep_exploitation_pro_detail(): array
         $garde[] = $t;
     }
     $noms = vpNoms($sid, array_column($garde, 'cle'));
+    // Les tickets différés : la remise personnelle du client se déduit à la facture, pas en caisse (vpFiltreTva). Le
+    // ticket montre ce qu'il paiera ; son montant de caisse reste à côté, et sert au panier du comptoir.
+    $rem = vpRemisesPerso($sid, array_column(array_filter($garde, static fn ($t) => $t['differe'] && $t['cle'] !== ''), 'cle'));
     $catDe = function_exists('svCategories') ? svCategories() : [];
     $chemins = [];
     foreach ($garde as $t) { if ($t['id'] > 0) { $chemins[$t['id']] = '/transactions/' . $t['id'] . '?include=products'; } }
     $res = $chemins ? PanelApi::getParallele($chemins, 8) : [];
-    $tickets = []; $cats = []; $societes = []; $caPro = 0.0; $aF = 0.0; $nF = 0; $dif = ['n' => 0, 'ca' => 0.0];
+    $tickets = []; $cats = []; $societes = []; $caPro = 0.0; $caProR = 0.0; $aF = 0.0; $nF = 0; $dif = ['n' => 0, 'ca' => 0.0]; $R = ['tickets' => 0, 'ca' => 0.0];
     foreach ($garde as $t) {
+        $p = $t['differe'] ? ($rem[$t['cle']] ?? null) : null;
+        $net = $p !== null && $p > 0 ? round($t['montant'] * (1 - $p / 100), 2) : $t['montant'];
+        if ($net !== $t['montant']) { $R['tickets']++; $R['ca'] += $t['montant'] - $net; }
         $lignes = vpLignesTicket($res[$t['id']] ?? null, $catDe);
         $art = $lignes === null ? null : array_sum(array_map(static fn ($l) => (float) ($l['q'] ?? 0), $lignes));
         foreach ((array) $lignes as $l) { $c = $l['cat'] !== '' ? $l['cat'] : 'Autres'; $cats[$c] = ($cats[$c] ?? 0.0) + (float) ($l['total'] ?? 0); }
         $nom = $noms[$t['cle']] ?? ($t['nom'] !== '' ? $t['nom'] : '');
         $tickets[] = ['heure' => $t['heure'], 'societe' => $nom !== '' ? $nom : null, 'compte' => $t['cle'] !== '' ? $t['cle'] : null,
-            'montant' => $t['montant'], 'facture' => $t['facture'], 'differe' => $t['differe'],
+            'montant' => $t['montant'], 'montantApresRemise' => $net, 'remisePct' => $net !== $t['montant'] ? $p : null, 'facture' => $t['facture'], 'differe' => $t['differe'],
             'articles' => $art === null ? null : round($art, 1), 'lignes' => $lignes];
-        $caPro += $t['montant'];
-        if ($t['facture']) { $aF += $t['montant']; $nF++; }
-        if ($t['differe']) { $dif['n']++; $dif['ca'] += $t['montant']; }
+        $caPro += $t['montant']; $caProR += $net;
+        if ($t['facture']) { $aF += $net; $nF++; }
+        if ($t['differe']) { $dif['n']++; $dif['ca'] += $net; }
         $societes[$t['cle'] !== '' ? $t['cle'] : 'x' . $t['id']] = true;
     }
     usort($tickets, static fn ($a, $b) => strcmp($a['heure'], $b['heure']));
     arsort($cats);
     $nPro = count($tickets);
     $v = $vide + ['tickets' => $tickets,
-        'jour' => ['ca' => round($ca, 2), 'tickets' => $n, 'caPro' => round($caPro, 2), 'ticketsPro' => $nPro, 'societes' => count($societes),
-            'part' => $ca > 0 ? round(100 * $caPro / $ca, 1) : null, 'panierPro' => $nPro ? round($caPro / $nPro, 2) : null,
+        'jour' => ['ca' => round($ca, 2), 'tickets' => $n, 'caPro' => round($caPro, 2), 'caProApresRemise' => round($caProR, 2), 'ticketsPro' => $nPro, 'societes' => count($societes),
+            'part' => $ca > 0 ? round(100 * $caProR / $ca, 1) : null, 'panierPro' => $nPro ? round($caProR / $nPro, 2) : null,
             'panierComptoir' => $n - $nPro > 0 ? round(($ca - $caPro) / ($n - $nPro), 2) : null,
             'aFacturer' => round($aF, 2), 'factures' => $nF, 'differes' => ['n' => $dif['n'], 'ca' => round($dif['ca'], 2)]],
         'categories' => array_map(static fn ($c, $x) => ['cat' => $c, 'ca' => round($x, 2)], array_keys($cats), array_values($cats)),
-        'sansTva' => ['tickets' => $sansTva['tickets'], 'ca' => round($sansTva['ca'], 2)], 'lus' => count(array_filter($tickets, static fn ($t) => $t['lignes'] !== null))];
+        'sansTva' => ['tickets' => $sansTva['tickets'], 'ca' => round($sansTva['ca'], 2)], 'remise' => ['tickets' => $R['tickets'], 'ca' => round($R['ca'], 2)],
+        'lus' => count(array_filter($tickets, static fn ($t) => $t['lignes'] !== null))];
     try { svGrave($cle, ['le' => time(), 'v' => $v]); } catch (Throwable $e) { /* sans mémo */ }
     return $v;
 }

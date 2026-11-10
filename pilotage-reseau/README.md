@@ -91,6 +91,14 @@ public/
     dashboard.css       styles de la page
   tablette/             tablette des vendeuses « Book vendeuses » — application
                         compilée (dépôt pwa_sales_tablet), copiée telle quelle
+  task/                 cadre des tâches du panel — page à part : vue Document
+                        (une section par checklist, réglages en vignettes qu'un
+                        clic change, pour une tâche ou toute la checklist),
+                        onglet Checklists (nom, zone, heure, description ; la
+                        nomenclature 1.1.01, src/checklists_codes.php),
+                        tableau, planning, assistant (checklist et tâches en 4 étapes),
+                        duplication (jours, heure, photo), aperçu des appels
+                        avant tout envoi ; serveur : src/task_cadre.php
   formation/            module Formation — référentiel RH du panel (postes,
                         sous-postes, compétences, formations, procédures),
                         manuel opératoire en ligne (tablette), doc des routes
@@ -356,6 +364,19 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
   pastilles sur une ligne : il ne tient pas dans 390 px, le téléphone en montre
   la même donnée en carte (`mobNC()`).
 
+- **Onglet Tâches** (08/11/2026, maquette S1) : la journée du magasin checklist
+  par checklist, dans l'ordre des codes `1.1.01` — la semaine en bande (part des
+  tâches obligatoires faites chaque jour), quatre indicateurs (obligatoires
+  faites, photos rendues, contrôle qualité du jour, non-conformités sur trente
+  jours), le guide des codes (repliable, mémorisé), chaque checklist dépliable
+  en ses tâches (faite à quelle heure, par qui, la photo, la note et le
+  commentaire du contrôleur), et les retours du contrôle qualité des trente
+  derniers jours — un clic ouvre la photo annotée de ce jour-là dans le zoom
+  d'Opérationnel. Aussi au téléphone, en sixième onglet du bas. Lectures :
+  voir `docs/contrat-api.md`, « l'heure prévue et les checklists du jour ».
+- **Sur tablette** (561 à 1100 px), la page du bureau ; les onglets du haut
+  passent à la ligne au lieu de se serrer.
+
 - **Valeur du magasin** : sur la barre du haut, en un mot et un chiffre ; tout
   le détail attend dans le tiroir qu'on déplie. Le calcul : le CA mensuel moyen
   des **18 derniers mois clos**, ramené à l'année (× 12) puis divisé par **6**
@@ -402,6 +423,68 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 - **Non-conformités** : les tâches notées sous le seuil, la veille en vue Jour,
   la période en Semaine et en Mois. **Lecture seule** — le dashboard n'écrit
   rien sur les tâches.
+- **Temps morts** (onglet du bureau, `?vue=morts`) : le comptoir sans client,
+  **mesuré ticket par ticket**. Un temps mort est un trou d'au moins 10 minutes
+  (5 ou 15 au choix, gardé dans le navigateur) entre deux tickets qui se
+  suivent, entre le premier et le dernier ticket du jour. Le jour regardé : le
+  nombre de temps morts, le temps sans client, sa part de l'ouverture, le plus
+  long trou, face à l'habitude (les 4 mêmes jours de semaine d'avant), puis la
+  journée minute par minute — un trait par ticket, chaque temps mort en plage
+  teintée, la part de chaque heure sans client. Dessous, la semaine du lundi au
+  dimanche, jour par jour, sa moyenne et la semaine d'avant ; un clic sur un
+  jour le lit au-dessus. Source : la **liste des tickets** du panel
+  (`/shops/{id}/transactions?date=`), qui porte l'heure de chaque ticket — une
+  liste par jour, complète (159 tickets dans la liste de Sombreffe le 06/11,
+  159 dans `hourly-distribution`). Les heures se gravent (`tmT{shop}:{date}`)
+  partout où le BO lit déjà cette liste, à la demande et au cron horaire
+  (`tmMoisson`, huit semaines en arrière, 40 listes par battement). Un ticket
+  isolé à 45 minutes ou plus du suivant en début ou en fin de journée (un pro
+  encodé à 5 h, une correction à 21 h) est écarté. Pas au téléphone. Lecture :
+  `GET /exploitation/temps-morts` ; tests : `php bin/tests_temps_morts.php` ;
+  maquette et calcul réseau : `docs/maquettes/temps-morts/`.
+
+## Caisse : ouvertures, fermetures et reports
+
+Une page à part, `public/caisse/?shop=2&date=2026-11-04` (entrée de rail
+« Caisse ↗ »), pour vérifier jour par jour et sur la semaine ce que chaque
+caisse a fait : qui l'a ouverte et fermée, le fond du matin, le total déclaré,
+ce qui est laissé pour le lendemain. On choisit le magasin, la semaine
+(‹ ›, ou une date), et la vue Semaine, Jour ou Reports ; l'adresse se partage
+telle quelle.
+
+- **La semaine** : la chaîne des reports, une rangée par caisse. Entre deux
+  jours, ✓ si le fond du matin suit ce qui a été laissé la veille, ✗ sinon.
+  Puis le magasin jour par jour (recette, moyens de paiement, compte des
+  espèces jusqu'à « sorti du tiroir sans trace »), les points à vérifier et ce
+  que la semaine dit.
+- **Le jour** : les services sur une frise de 04 h au lendemain 08 h, la fiche
+  de chaque caisse (report de la veille → ouverture → fermeture → laissé →
+  ouverture du lendemain), **les espèces ticket par ticket** (courbe du tiroir
+  par caisse, tableau heure / caisse / vendeuse / montant / dans le tiroir,
+  contrôle contre l'export comptable — `GET /caisse/jour`), le compte des
+  espèces et les moyens de paiement.
+- **Les reports** (`?vue=reports&mois=2026-11`) : le registre du mois, jour
+  après jour, sans coupure au dimanche. Pour chaque caisse : laissé la veille,
+  fond du matin (✓ suit, ≈ virgule oubliée, ✗ rompu), déclaré, laissé le soir
+  (et le montant corrigé quand la virgule se lit le lendemain) ; pour le
+  magasin : espèces, versements, sorti du tiroir sans trace et son cumul. Le
+  mois se lit semaine par semaine (`/caisse/semaine`), une à la fois. Un clic
+  sur une ligne ouvre la journée. Un filtre ne garde que les jours à vérifier.
+- **Les ruptures, une à une** (sous le registre) : pour chaque report rompu, le
+  soir (laissé, heure, qui a fermé) et le matin (fond, heure, qui a ouvert),
+  l'écart, la cause probable — fond apparu au matin, fond laissé mais absent au
+  matin, écart de comptage, laissé impossible, caisse rouverte la nuit — la
+  question à poser et à qui. En tête : le décompte par cause, qui revient le
+  plus, et le cas le plus fréquent (même cause, même fermeture, même ouverture).
+  Mesuré à Corbais en octobre : 18 des 33 ruptures sont la même — fermeture
+  sans laissé déclaré, ouverture avec 12 € au fond, par les deux mêmes
+  personnes.
+- **Données** : `GET /api/cockpit/caisse/semaine` (`src/caisse.php`), TFBuddy
+  seul — services de caisse (`daily-shifts`) et export comptable du jour.
+  Contrat complet et règles de contrôle dans `docs/contrat-api.md`.
+- **Ce que TFBuddy ne donne pas** : les retraits (ils s'enregistrent, aucune
+  route ne les relit) et le comptage réel du tiroir — `final_cash` suit la
+  recette (89 à 96 % mesurés), pas les espèces (7 %).
 
 ## Tablette des vendeuses (Book vendeuses)
 

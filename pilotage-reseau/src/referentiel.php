@@ -70,11 +70,13 @@ const RF_FORMATIONS_PHASES_2026_11 = [
     'FO-36' => ['pre'], 'FO-37' => ['pre'], 'FO-38' => ['pre'], 'FO-39' => ['con'], 'FO-40' => ['con'], 'FO-41' => ['con'],
     'FO-42' => ['con'], 'FO-43' => ['ouv', 'con'], 'FO-44' => ['con'], 'FO-45' => ['ouv', 'con'], 'FO-46' => ['pre'], 'FO-47' => ['pre'],
     'FO-48' => ['con'], 'FO-49' => ['con'], 'FO-50' => ['con'], 'FO-51' => ['pre'], 'FO-52' => ['pre'], 'FO-53' => ['pre'],
+    // Ajoutée par le réseau (src/data/formations_reseau.json, 07/11/2026).
+    'FO-54' => ['pre'],
 ];
 /** Les familles des formations (regroupement de lecture du portail). NL à relire. */
 const RF_FAMILLES_FORMATION = [
     'franchise' => ['fr' => 'Franchise & gestion', 'nl' => 'Franchise & beheer',
-        'fo' => ['FO-31', 'FO-32', 'FO-33', 'FO-34', 'FO-35', 'FO-36', 'FO-37', 'FO-38', 'FO-40', 'FO-42', 'FO-47', 'FO-48', 'FO-49', 'FO-50']],
+        'fo' => ['FO-31', 'FO-32', 'FO-33', 'FO-34', 'FO-35', 'FO-36', 'FO-37', 'FO-38', 'FO-40', 'FO-42', 'FO-47', 'FO-48', 'FO-49', 'FO-50', 'FO-54']],
     'production' => ['fr' => 'Production', 'nl' => 'Productie', 'fo' => ['FO-03', 'FO-07', 'FO-08', 'FO-09', 'FO-12']],
     'vente' => ['fr' => 'Vente & développement commercial', 'nl' => 'Verkoop & commerciële ontwikkeling',
         'fo' => ['FO-01', 'FO-04', 'FO-11', 'FO-13', 'FO-14', 'FO-15', 'FO-17', 'FO-18', 'FO-19', 'FO-20', 'FO-43', 'FO-45']],
@@ -110,20 +112,20 @@ const RF_SOUSCATS_NL = [   // NL à relire
 
 /**
  * Le classement initial des 25 SOP (contrat de la fusion, 06/11/2026) : sous-catégorie, phases, postes,
- * compétences, formations, checklists. Posé UNE fois (drapeau RF_DRAPEAU_CLASSEMENT), seulement sur les SOP qui
+ * compétences, formations, checklists (aux codes de la nomenclature du 08/11/2026, src/checklists_codes.php). Posé UNE fois (drapeau RF_DRAPEAU_CLASSEMENT), seulement sur les SOP qui
  * n'ont pas encore de sous-catégorie ; modifiable ensuite dans le Cockpit.
  */
 const RF_PRE_OP = ['preouverture', 'operationnel'];
 const RF_OP = ['operationnel'];
 const RF_CLASSEMENT_2026_11 = [
-    'ouv-mag' => ['D5.2', RF_PRE_OP, ['P3', 'P4', 'P8'], ['C-PLAN.Ouverture'], ['FO-01'], ['AC-01']],
-    'fermeture' => ['D5.2', RF_PRE_OP, ['P3', 'P4', 'P8'], ['C-PLAN.Fermeture'], ['FO-01'], ['AC-02', 'AC-03']],
-    'ferm-quot' => ['D5.2', RF_OP, ['P3', 'P4'], ['C-PLAN.Fermeture'], ['FO-01'], ['AC-02']],
-    'ouv-poste' => ['D5.2', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], ['AC-01']],
-    'fin-poste' => ['D5.2', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], ['AC-02']],
-    'calmes' => ['D5.1', RF_OP, ['P3', 'P4'], ['C-PLAN.Planning'], ['FO-24'], []],
+    'ouv-mag' => ['D5.2', RF_PRE_OP, ['P3', 'P4', 'P8'], ['C-PLAN.Ouverture'], ['FO-01'], ['1.1.01', '1.1.02']],
+    'fermeture' => ['D5.2', RF_PRE_OP, ['P3', 'P4', 'P8'], ['C-PLAN.Fermeture'], ['FO-01'], ['1.4.01', '3.4.01']],
+    'ferm-quot' => ['D5.2', RF_OP, ['P3', 'P4'], ['C-PLAN.Fermeture'], ['FO-01'], ['1.4.01']],
+    'ouv-poste' => ['D5.2', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], ['2.1.01']],
+    'fin-poste' => ['D5.2', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], ['2.4.01']],
+    'calmes' => ['D5.1', RF_OP, ['P3', 'P4'], ['C-PLAN.Planning'], ['FO-24'], ['1.2.02']],
     'caisse' => ['D7.2', RF_PRE_OP, ['P3', 'P4'], ['C-VENTE.Caisse'], ['FO-14', 'FO-01'], []],
-    'recuisson' => ['D5.3', RF_OP, ['P3'], ['C-PROD.Cuisson'], ['FO-12'], []],
+    'recuisson' => ['D5.3', RF_OP, ['P3'], ['C-PROD.Cuisson'], ['FO-12'], ['1.3.01']],
     'tgtg' => ['D5.4', RF_OP, ['P3', 'P4'], ['C-STOCK.Casse'], ['FO-27'], []],
     'fours' => ['D8.1', RF_OP, ['P1', 'P3', 'P5'], ['C-TRANS.HACCP'], ['FO-02'], []],
     'baguettes' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pain', 'C-PROD.Cuisson'], ['FO-07', 'FO-12'], []],
@@ -133,13 +135,13 @@ const RF_CLASSEMENT_2026_11 = [
     'plaquage' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], []],
     'programmes' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Cuisson'], ['FO-12'], []],
     'cookies' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
-    'cremes' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
-    'eclairs' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
-    'flans' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
+    'cremes' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], ['2.2.02']],
+    'eclairs' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], ['2.2.02']],
+    'flans' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], ['2.2.02']],
     'fondants' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
     't-class' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
-    't-froides' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
-    't-fruits' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], []],
+    't-froides' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], ['2.2.02']],
+    't-fruits' => ['D5.3', RF_PRE_OP, ['P1', 'P5'], ['C-PROD.Pâtisserie'], ['FO-08'], ['2.2.02']],
     'quiches' => ['D5.3', RF_PRE_OP, ['P1', 'P2'], ['C-TRAITEUR.Chaud'], ['FO-10'], []],
 ];
 const RF_DRAPEAU_CLASSEMENT = 'rfClassement_2026_11';
@@ -237,7 +239,7 @@ function rfSemer(): void
             Db::exec('INSERT IGNORE INTO ceo_ref_souscat (cle, domaine, rang, fr, nl, nl_relu, description, competences, formations, checklists, maj_le, maj_par)
                       VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?, ?)',
                 [$cle, $code, $k + 1, (string) $s['nom'], RF_SOUSCATS_NL[$cle] ?? '', (string) ($s['description'] ?? '') ?: null,
-                    rfJsonEcrire($s['competences'] ?? []), rfJsonEcrire($s['formations'] ?? []), rfJsonEcrire($s['checklists'] ?? []), $now, 'Référentiel v25']);
+                    rfJsonEcrire($s['competences'] ?? []), rfJsonEcrire($s['formations'] ?? []), rfJsonEcrire(function_exists('ckcTraduire') ? array_values(array_unique(array_map('ckcTraduire', $s['checklists'] ?? []))) : ($s['checklists'] ?? [])), $now, 'Référentiel v25']);
         }
     }
 }
@@ -291,6 +293,8 @@ function rfChecklistsV25(): array
     if ($l === null) {
         $l = [];
         foreach (rfV25()['manuel'] as $d) { foreach ($d['sousCategories'] ?? [] as $s) { foreach ($s['checklists'] ?? [] as $x) { $l[(string) $x] = true; } } }
+        // La nomenclature du 08/11/2026 : ses codes (1.1.01…) remplacent les anciens qu'elle reprend (AC-01…).
+        if (function_exists('ckcCodes')) { foreach (CKC_ANCIENS as $ancien => $n) { unset($l[$ancien]); } foreach (ckcCodes() as $c) { $l[$c] = true; } }
         $l = array_keys($l);
         sort($l, SORT_NATURAL);
     }
@@ -454,6 +458,8 @@ function ep_rf_ref(): array
     ];
     if ($detail) {
         $out['checklistsConnues'] = rfChecklistsV25();
+        // Les noms de la nomenclature, pour les listes (« 1.1.01 · Ouverture de la boutique »).
+        $out['checklistsNoms'] = function_exists('ckcPublique') ? array_column(ckcPublique()['checklists'], 'fr', 'code') : (object) [];
         $out['competencesNonDecrites'] = rfCompetencesNonDecrites();
     }
     // Les deux guides (src/referentiel_guides.php) : preouverture, blocs, poles — ajoutés, rien n'est retiré.
@@ -593,6 +599,8 @@ function wr_rf_standard(string $id): array
         elseif (Db::row('SELECT cle FROM ceo_ref_souscat WHERE cle = ?', [$sc]) === null) { $ko['souscat'] = [mb_substr($sc, 0, 20)]; }
         else { $set[] = 'souscat = ?'; $p[] = $sc; $quoi[] = 'sous-catégorie ' . $sc; }
     }
+    // Un ancien code de checklist (AC-01) devient celui de la nomenclature (1.1.01).
+    if (is_array($b['checklists'] ?? null) && function_exists('ckcTraduire')) { $b['checklists'] = array_map(fn ($x) => is_scalar($x) ? ckcTraduire((string) $x) : $x, $b['checklists']); }
     foreach (RF_LISTES as $k) {
         if (!array_key_exists($k, $b)) { continue; }
         if (!is_array($b[$k])) { $ko[$k] = ['liste attendue']; continue; }

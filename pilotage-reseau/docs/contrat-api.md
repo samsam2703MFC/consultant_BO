@@ -92,21 +92,140 @@ sortent en tête, les plus creuses d'abord.
 }
 ```
 
+## `GET /caisse/semaine`
+
+Ouvertures, fermetures et reports de caisse d'un magasin, sur une semaine.
+Sert la page **Caisse** (`public/caisse/`, entrée de rail « Caisse ↗ »).
+
+Paramètres : `shop` (requis), `date` (n'importe quel jour ; la semaine va du
+lundi au dimanche qui le contiennent), `rafraichir=1` (relit tout).
+
+Sources, TFBuddy seul, avec le compte consultant :
+
+| Donnée | Route TFBuddy |
+|---|---|
+| Services du jour : ouverture, fermeture, employés, `initial_cash` → `fond`, `final_cash` → `final` (total déclaré), `left_cash_for_next_day` → `laisse`, `is_closed` → `ferme` | `GET /shops/{id}/owner/daily-shifts?date=` |
+| Caisse de chaque service (`caisse`) | `GET /daily-shifts/{id}` → `id_device` |
+| Nom des caisses — **seuls l'identifiant et le nom sont gardés**, la route rend aussi les secrets de la caisse | `GET /shops/{id}/devices` |
+| Recette, moyens de paiement, espèces, versements, dépôts | `GET /shops/{id}/reports/sales/daily/cash-flow/csv?date=` (export comptable, CSV) |
+| Retraits | **aucune route de lecture** |
+
+Les services vont du dimanche d'avant au lundi d'après : le report qui entre
+dans la semaine, et l'ouverture qui suit le dernier soir. Une journée close
+(avant-hier ou plus ancienne) se lit une fois et se garde
+(`ceo_app_setting`, `caisseJ:{shop}:{jour}`) ; aujourd'hui et hier se relisent.
+
+```json
+{
+  "shop": { "id": 2, "nom": "Corbais" },
+  "du": "2026-11-02", "au": "2026-11-08",
+  "jours": ["2026-11-02", "…", "2026-11-08"],
+  "caisses": [ { "id": 11, "nom": "Boulangerie" }, { "id": 9, "nom": "Traiteur" } ],
+  "services": [ { "id": 3422, "jour": "2026-11-08", "caisse": 11,
+    "ouv": "2026-11-08 05:44:12", "ferm": "2026-11-08 18:01:30",
+    "fond": 12.0, "final": 5474.69, "laisse": 547469.0,
+    "parOuv": "…", "parFerm": "…", "ferme": true } ],
+  "comptable": { "2026-11-08": { "recette": 6645.97, "especes": 200.7, "versements": null, "depots": null,
+    "moyens": [ { "nom": "Bancontact", "compte": "580010", "montant": 6262.77 } ] } },
+  "lacunes": [ { "jour": "2026-11-09", "quoi": "export comptable illisible" } ],
+  "lu": "2026-11-09T19:00:00+01:00",
+  "sources": { "services": "…", "comptable": "…", "retraits": "…" }
+}
+```
+
+Un jour gardé depuis une semaine voisine (le dimanche d'avant, le lundi d'après)
+l'est sans son export comptable ; dans sa propre semaine, il est relu, et une
+relecture en bord de semaine ne remplace jamais un export déjà gardé.
+
+La vue **Reports** de la page (le registre du mois) n'a pas de route à elle :
+elle lit les semaines du mois une à une sur cette route et les assemble.
+
+Les caisses viennent dans l'ordre du total déclaré de la semaine (la plus
+grosse d'abord). `versements` / `depots` à `null` : rien de saisi ce jour-là.
+
+Les **règles de contrôle** se calculent dans la page (`jourCaisse()`,
+`jourMagasin()` de `public/caisse/caisse.js`), une seule définition :
+
+| Point | Règle | Gravité |
+|---|---|---|
+| Report rompu | fond du premier service du jour ≠ laissé du dernier service de la veille, même caisse — sauf si le laissé vaut 100 × ce fond (virgule oubliée la veille : lien « ≈ », rien de compté deux fois) | à corriger |
+| Virgule oubliée | laissé > 1 000 € et = 100 × le fond du service suivant (15 566 → 155,66 €) : le compte des espèces prend le montant corrigé | à corriger |
+| Montant impossible | laissé > 1 000 € sans correction possible (« 100 × le total déclaré » quand c'est le cas) | à corriger |
+| Service jamais fermé | non fermé, avant hier | à corriger |
+| Fermeture sans montant | fermé avec un total déclaré à 0 | à vérifier |
+| Fermée puis rouverte | deux services de jour sur la même caisse | à vérifier |
+| Rouverte après la fermeture | ouvert après 17 h, refermé le lendemain | à vérifier |
+
+« Sorti du tiroir sans trace » = fonds d'ouverture + espèces encaissées −
+versements − dépôts − laissé pour demain (corrigé quand la virgule oubliée se
+lit au service suivant) ; non calculable si un laissé est impossible ou si une
+caisse est encore ouverte. Les retraits n'entrent pas
+dans le compte : TFBuddy ne les relit pas.
+
+## `GET /caisse/jour`
+
+Les tickets **payés en espèces** d'une journée, un par un. Sert la carte « Les
+espèces, ticket par ticket » de la vue Jour de la page Caisse.
+
+Paramètres : `shop` (requis), `date` (requis, un jour passé ou aujourd'hui),
+`rafraichir=1`.
+
+Source : la liste des tickets du jour, `GET /shops/{id}/transactions?date=`
+(un appel, tous les tickets). Chaque ticket porte `id_device` (la caisse),
+`id_employee`, `id_payment_type`, le montant et l'heure. **TFBuddy ne dit nulle
+part quel `id_payment_type` est l'espèce** : le type est calé chaque jour sur
+l'export comptable du même jour, en comparant le total des tickets de chaque
+type au montant de chaque moyen nommé (« Espèce », « Bancontact »…).
+- Rapprochement à 1 € près : `exact`, et la correspondance s'apprend pour tout
+  le réseau (`ceo_app_setting.caissePaiements`).
+- À 2 % près : `approché`.
+- Sinon, ce qui a été appris : `appris`.
+- Sinon : `introuvable`.
+
+Les noms des vendeuses viennent de `GET /shops/{id}/employees`, dont on ne garde
+**que l'identifiant et le nom affiché** : la route rend aussi les secrets de
+chaque employé.
+
+```json
+{
+  "shop": 2, "jour": "2026-11-08", "nTickets": 863,
+  "especes": { "type": 1, "calage": "exact", "n": 25, "totalTickets": 200.7, "totalExport": 200.7, "ecart": 0 },
+  "paiements": [ { "id": 2, "nom": "Bancontact", "calage": "exact", "n": 700, "total": 6262.77 } ],
+  "tickets": [ { "id": 460900, "heure": "2026-11-08 06:02:10", "caisse": 9, "caisseNom": "Traiteur",
+    "employe": 17, "vendeuse": "…", "montant": 4.0, "pro": false, "facture": false, "corrige": false } ],
+  "le": "2026-11-09 19:50"
+}
+```
+
+Une journée close (avant-hier ou plus ancienne) se garde
+(`caisseT:{shop}:{jour}`) : seuls les tickets en espèces et les totaux par type
+sont conservés. La page trace, par caisse, ce qu'il y a dans le tiroir au fil de
+la journée : le fond d'ouverture, plus chaque ticket en espèces. Les retraits,
+que TFBuddy ne relit pas, n'y sont pas.
+
 ## `GET /ventes/mensuel`
 
 Le CA mois par mois d'un magasin. Sert la **valeur du magasin** du dashboard.
 
-**Deux sources**, parce qu'aucune n'est complète à elle seule :
+**Le panel d'abord, sur toute la fenêtre** (depuis le 09/11/2026) :
+`/consultant/shops/sales-kpis` bornée au mois, un appel par mois pour tout le
+réseau (`vmPanelMois()`). Les mois clos depuis plus de trois mois sont gravés
+dans `ceo_app_setting.vmPanel` et relus une fois par mois au plus ; les trois
+derniers mois clos se relisent à chaque appel. Au plus douze lectures neuves
+par appel : la première ouverture remplit le gros de la fenêtre, les suivantes
+complètent.
+
+Les copies ne servent plus que de **repli**, pour un mois que le panel n'a pas
+servi :
 
 | source | ce qu'elle a | ce qui lui manque |
 |---|---|---|
-| `mac_shop_monthly_pnl` (P&L du panel) | les mois clos jusqu'au dernier | aucune ligne en 2025 |
-| `transaction` (ventes de caisse) | 2025 | s'arrête au 14 juillet 2026 |
+| `mac_shop_monthly_pnl` (copie du P&L) | les mois clos jusqu'au dernier | aucune ligne en 2025, en retard sur les mois récents |
+| `transaction` (copie de la caisse) | 2025 | s'arrête au 14 juillet 2026 |
 
-Le P&L fait foi quand il a le mois — c'est un chiffre arrêté ; la caisse comble
-le reste. Chaque mois dit d'où il vient (`source`), et `tickets` / `jours`
-viennent toujours de la caisse quand elle a le mois, même si le CA vient du
-P&L.
+Chaque mois dit d'où il vient (`source` : `panel`, `pnl` ou `caisse`).
+`tickets` vient du panel quand il le donne, sinon de la caisse ; `jours` vient
+toujours de la caisse.
 
 Paramètres : `shop` (requis), `mois` (1 à 60, 24 par défaut).
 
@@ -118,10 +237,10 @@ bas jusqu'à son dernier jour. Les mois sans rien sont rendus quand même, `ca`
 {
   "shop": "4",
   "du": "2024-09", "au": "2026-08",
-  "source": "P&L mensuel du panel quand il a le mois (7), ventes de caisse sinon (0) — mois en cours exclu",
+  "source": "route vivante du panel (23 mois), copie du P&L quand le panel n’a pas le mois (0), ventes de caisse sinon (0) — mois en cours exclu",
   "mois": [
     { "mois": "2024-09", "ca": null, "source": null, "tickets": 0, "jours": 0 },
-    { "mois": "2026-02", "ca": 6506.85, "source": "pnl", "tickets": 612, "jours": 7 }
+    { "mois": "2026-02", "ca": 6506.85, "source": "panel", "tickets": 612, "jours": 7 }
   ]
 }
 ```
@@ -583,6 +702,37 @@ référence calculée). `PUT /promo/{id}` change `statut`, `note`, `cible`, `can
 ceJour, effet, creneau } ] }`, les promotions en cours dont la période couvre la date ; `ceJour` dit si ce jour de
 semaine est un jour du créneau.
 
+### `/exploitation/temps-morts` — les temps morts du dashboard magasin
+
+`GET /exploitation/temps-morts?shop=5&date=2026-10-30&seuil=10` — l'onglet « Temps morts » du dashboard. Un temps mort :
+un trou d'au moins `seuil` minutes (5, 10 ou 15 ; 10 par défaut) entre deux tickets qui se suivent, entre le premier et
+le dernier ticket du jour. Mesuré sur l'heure de chaque ticket (`insert_timestamp` de la liste
+`/shops/{id}/transactions?date=`) ; tous les tickets comptent, comptoir et pro. Un ticket à `isole` minutes ou plus du
+suivant en début ou en fin de journée est écarté (`isoles`, `ecartes` en secondes depuis minuit). Les heures des tickets
+se gravent sous `tmT{shop}:{date}` (`{ q, t: [secondes…], pro }`) : une journée close ne se relit plus, la journée en
+cours toutes les dix minutes ; 24 listes au plus lues par appel, `manquants` dit ce qui reste.
+
+```json
+{ "shop": 5, "date": "2026-10-30", "seuil": 10, "seuils": [5, 10, 15], "isole": 45,
+  "jour": { "date": "2026-10-30", "etat": "lu", "ferme": false, "tickets": 126, "isoles": 2, "debut": "07:03", "fin": "17:50",
+            "ouvert": 648, "nb": 18, "mort": 307, "pct": 47.5, "plusLong": { "min": 37.2, "de": "15:04", "a": "15:41" },
+            "heures": { "7": { "ouvert": 57.0, "mort": 33.6, "pct": 59.0, "nb": 2, "tk": 15 } },
+            "ticks": [25380, 25740], "trous": [[25380, 26100]], "ecartes": [18600, 68018] },
+  "habitude": { "dates": ["2026-10-23", "2026-10-16", "2026-10-09", "2026-10-02"], "jours": 4, "nb": 21.0, "mort": 339,
+                "ouvert": 719, "tickets": 137, "pct": 47.1, "plusLong": 37.5 },
+  "semaine": { "du": "2026-10-26", "au": "2026-11-01",
+               "jours": [ { "date": "2026-10-26", "etat": "lu", "nb": 18, "mort": 284, "pct": 45.3, "…": "…" },
+                          { "date": "2026-11-08", "etat": "avenir" } ],
+               "moyenne": { "jours": 7, "nb": 16.1, "mort": 271, "ouvert": 621, "tickets": 134, "pct": 43.7, "plusLong": 37.2 } },
+  "semainePrecedente": { "du": "2026-10-19", "au": "2026-10-25", "moyenne": { "jours": 7, "nb": 18.3, "…": "…" } },
+  "manquants": 0, "source": "…" }
+```
+
+`etat` d'un jour : `lu`, `encours` (aujourd'hui), `ferme` (moins de deux tickets), `nonlu` (le panel n'a pas répondu),
+`avenir`. Minutes : `ouvert`, `mort` ; `pct` = minutes mortes ÷ minutes entre le premier et le dernier ticket ; par heure,
+`nb` compte les trous qui y commencent et `tk` les tickets. Les moyennes (`habitude`, `semaine.moyenne`,
+`semainePrecedente`) ne prennent que les journées closes ; `plusLong` y est le plus long trou de la période.
+
 ### `/exploitation/pro` — les clients pro (B2B) du dashboard magasin
 
 `GET /exploitation/pro?shop=5&date=2026-09-29` — ce que les tickets du panel disent des ventes aux sociétés. Un ticket
@@ -652,10 +802,25 @@ des tickets du jour (un appel, qui grave aussi le pro du jour), puis chaque tick
 `vpDet:{shop}:{date}`.
 
     { shop, date,
-      tickets: [ { heure, societe | null, compte, montant, facture, differe, articles, lignes: [ { nom, cat, q, pu, total } ] | null } ],
-      jour: { ca, tickets, caPro, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
+      tickets: [ { heure, societe | null, compte, montant, montantApresRemise, remisePct | null, facture, differe, articles,
+                   lignes: [ { nom, cat, q, pu, total } ] | null } ],
+      jour: { ca, tickets, caPro, caProApresRemise, ticketsPro, societes, part, panierPro, panierComptoir, aFacturer, factures, differes: { n, ca } },
       categories: [ { cat, ca } ],   ce que les sociétés achètent, du plus gros au plus petit
-      sansTva: { tickets, ca }, lus, cache? }
+      sansTva: { tickets, ca }, remise: { tickets, ca }, lus, cache? }
+
+**La remise personnelle des tickets différés (09/11/2026, Natan à Halle : « elle s'affiche dans b2b avec le montant hors
+réduction »).** Un ticket pro en paiement différé est gravé en caisse sans la remise personnelle du client
+(`personal_discount_percent` de sa fiche) : le panel la déduit à la facture (`generate-deferral`,
+`include_personal_discount` ; `personal_discount_value` par ligne dans `/transactions/deferral/invoice-pending`). Le B2B
+montre ce que le client paiera : `montantApresRemise` = montant × (1 − remise), `caProApresRemise`, et `part`,
+`panierPro`, `aFacturer`, `differes.ca` sur ce montant ; `montant` et `caPro` restent ceux de la caisse, et le comptoir
+(`panierComptoir`) se calcule toujours avec eux. La remise se lit sur la même fiche que la TVA, gardée avec elle dans
+`vpTva:{shop}` ([tva, lu le, remise]) ; un verdict gardé avant le 09/11 se relit une fois. Une fiche sans le champ, ou
+illisible : rien n'est déduit. Même règle dans le relevé pro (`vpFiltreTva` : [5] = montant remise déduite, `remise`) et
+partout où il se lit : `vpSplit` et `/exploitation/pro` (`caProApresRemise`, `remisePro`, `liste[].montantApresRemise`),
+`exJ7` (`caProApresRemise`, `caProApresRemiseJour`, `heures[].proApresRemise`), `heuresPro[].caApresRemise`, la part B2B
+habituelle. La jauge B2B, sa courbe et la fiche « Clients pro » montrent le montant remise déduite ; la jauge du
+comptoir est inchangée.
 
 La feuille montre le jour regardé et le même jour la semaine d'avant, un onglet chacun (Sam, 06/11/2026 au soir : « 5
 vendredis » est retiré, `&vue=semaines` avec lui ; les onglets ne portent plus de montant).
@@ -1026,6 +1191,47 @@ est dans un menu déroulant. Plus de texte d'explication. Code : `src/primes.php
 - L'app (`apps/employee`, route `/primes`, `PrimesService`) appelle le cockpit à
   `COCKPIT_API_URL` (déduit de son adresse, sinon `EMPLOYEE_COCKPIT_API`) avec le jeton de la session.
 - Tests sans base ni réseau : `php bin/tests_primes.php`.
+
+### `/task/*` — le cadre des tâches du panel (l'application `/task`)
+
+Une application à part, `/task/?checklist={id}` (rail : Franchisés › Suivi journalier › **Cadre des
+tâches ↗**). Elle lit les checklists du cadre opérationnel du panel et leurs tâches, et crée de deux
+façons : la **duplication** rapide (cocher des tâches, changer nom, jours, heure, fréquence,
+obligatoire, photo requise, checklist) et l'**assistant** en quatre étapes (1. la checklist :
+nouvelle, existante ou aucune ; 2. ses tâches : nouvelles ou copiées de tâches existantes, avec des
+réglages communs à appliquer à toutes les lignes ; 3. qui les fait — niveaux de poste — et qui les
+contrôle ; 4. l'aperçu, puis la création). Les deux passent par le même moteur (`tkConstruire`).
+Les corps de `POST /tasks` et `POST /operational-framework/checklists` du panel ne sont pas
+documentés (« contracts are not inferred ») : une copie reprend les champs de son modèle tels que
+`GET /tasks` les rend (`subcategory_id`, `workstation_id`, `name`, `description`, `day_of_week`,
+`execution_time`, `frequency`, `is_mandatory`, `priority`, `requires_photo`), avec leurs types (1/0
+ou vrai/faux, `04:00` ou `04:00:00`) ; une tâche nouvelle prend les types d'une tâche existante ;
+une checklist nouvelle envoie `name`, `description`, `workstation_id`, `execution_time` (et
+`is_active` si les checklists le portent), aux types d'une checklist existante ; les jours et la
+fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/task_cadre.php`.
+
+| Route | Rôle |
+|---|---|
+| `GET /task/cadre` | `sopLiens` {taskId: [{sopId, code, titre, etape}]} (les tâches reliées à une étape de standard) ; `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
+| `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
+| `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
+| `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_cadre_cree` et au journal. |
+| `GET /task/structure` | pour l'assistant : `sousCategories[]` {id, nom, categorie, section, nb} (la structure du cadre — `/operational-framework/structure/sections`, `…/categories`, `…/categories/{id}/subcategories` — complétée par celles que portent les tâches) et `postes[]` {id, nom} (`/operational-framework/workstations`). |
+| `POST /task/assistant/apercu` | rien n'est envoyé. Corps : `{checklist: {mode: "nouvelle", nom, description, posteId, heure, modeleId, extra} \| {mode: "existante", id} \| {mode: "aucune"}, lignes: [{modeleId?, nom, description?, sousCategorieId?, jours[], unParJour, heure, frequence, obligatoire, photo, priorite, garderNiveaux, garderControleurs}], niveaux: [id], routeNiveaux?, controleursDe?, extra: {}}`. Une ligne sans `modeleId` exige `sousCategorieId`. Rend `checklist` {mode, id, nom, operation (la création, si nouvelle)}, `routeNiveaux` (la route de rattachement que le panel emploie le plus), `items[]` {mode: `creer` \| `ajouter` (tâche identique existante, ajoutée à la checklist) \| `rien` \| `doublon`, nom, jour, heure, modeleId, modeleNom, existe, operations[]}, `aCreer`, `aAjouter`, `avertissements[]`. Une checklist nouvelle dont le nom existe déjà est reprise, pas recréée. |
+| `POST /task/assistant/creer` | même corps (+ `seulementPremiere` : la checklist et la première tâche) : la checklist d'abord, puis chaque tâche (création, checklist, niveaux, contrôleurs) ; arrêt au premier refus. Rend aussi `creees`, `ajoutees`, `arret`. |
+| `GET /task/sop/{id}/proposition` | **checklist depuis un standard** (Formation › fiche SOP › « Créer les contrôles de ce standard », qui ouvre `#/checklists?sop={id}`) : rien n'est écrit. `sop` {id, code, titre, poste, moment, objectif, version, codesChecklists} ; `checklist` : la checklist du panel dont le code (en tête de nom, « CP-07 — … ») est au classement de la SOP, sinon une nouvelle « code — titre » avec l'objectif, le poste de travail (par le nom du poste de la SOP) et la première heure citée par ses sections ; `lignes[]` : une par étape **critique** (repli : les points critiques) {nom (titre de l'étape, sans son heure), description (texte + « (Standard …, étape …) »), etape, section, photo (l'étape a une photo de référence), photoRef, heure (celle de l'étape, sinon de sa phase)} ; `reference` {id, nom, checklist} : la tâche dont viennent `sousCategorieId`, `niveaux` et `controleursDe` (la première de la checklist, ou d'une checklist du même poste de travail, sinon de la première checklist qui porte des tâches — signalé) ; `avertissements[]`. L'assistant s'ouvre avec ces lignes ; chaque ligne porte `sop: {id, etape}` et le corps `sopId` : à la création, le lien tâche ↔ étape entre dans `ceo_sop_tache`, et le code d'une checklist nouvelle dans le classement de la SOP. |
+| `GET /task/sop/{id}/controles` | **les contrôles d'un standard** (la carte « Contrôles au panel » de la fiche SOP) : `checklists[]` {id, code, nom, heure, nbTaches} dont le code est au classement (ou est celui de la SOP) ; `codesSansChecklist[]` (cités, pas encore au panel) ; `taches[]` {id, nom, jour, heure, frequence, photo, obligatoire, actif, absente, checklist, checklistId, etape, stats {notes, moyenne, nc, conformite, derniere, dernierNc {date, shopId, magasin, note, commentaire}}} — les tâches de ces checklists et celles reliées à une étape (`ceo_sop_tache`), avec les avis des 30 derniers jours (`mac_task_review`, non-conformité = note sous le seuil `signalement`) ; `totaux` {taches, notes, conformes, nc, conformite} ; `seuil`, `depuis`, `erreurs[]`. |
+| `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}`, seulement pour une checklist créée depuis cet écran ; ses tâches restent. |
+| `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `PATCH /tasks/{id}/active {is_active}` pour `actif`. `apercu: true` rend les appels sans les envoyer. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_cadre_cree`) ; 403 sinon. |
+| `PATCH /task/taches` | **le même réglage sur plusieurs tâches** (vue Document, « toute la checklist ») : `{ids: [taskId] (200 au plus), champs: {jour?, heure?, frequence?, obligatoire?, photo?}}`. `/tasks` est lu une fois, puis chaque tâche part comme `PATCH /task/taches/{id}` ; on continue après un refus. Rend `ok`, `refus`, `resultats[]` {id, ok, erreur} (HTTP 502 et `error` s'il y a un refus). |
+| `POST /task/qui` | `{ids: [taskId]}` (200 au plus) : pour chaque tâche, `fait[]` {id, nom, poste, route} (les niveaux de poste qui la portent) et `controle[]` {id, type: self\|position, positionId, nom} (`GET /tasks/{id}/controllers`) ; `choix` {niveaux[] {id, nom, poste, posteId}, postes[] {id, nom, type}} (`/position-levels`, `/positions`). Lecture seule. |
+| `POST /task/qui/modifier` | une opération : `{taskId, ajouterNiveau}` → `POST /{route}/{niveau}/tasks {task_id}` (la route que le panel emploie le plus) ; `{taskId, retirerNiveau, route}` → `DELETE /{route}/{niveau}/tasks/{taskId}` ; `{taskId, ajouterControleur: {type: self\|position, positionId}}` → `POST /tasks/{id}/controllers {controller_type, position_id}` ; `{taskId, retirerControleur}` → `DELETE /tasks/{id}/controllers/{id}`. Rend la ligne `qui` relue. |
+| `GET /task/nomenclature` | **la nomenclature des checklists** (08/11/2026, `src/checklists_codes.php`) : un code « zone.moment.numéro » (1.1.01), le même au panel (« 1.1.01 · Ouverture de la boutique »), dans Formation (le code de la fiche) et dans les SOP (leur classement) ; le nom se traduit (fr, nl, en). Rend `nomenclature` {zones[], moments[], checklists[] {code, fr, nl, en, ex[], panel}}, `points[]` {ou: panel\|fiche\|lien\|souscat, code, id, quoi, etat: fait\|afaire\|bloque, pourquoi?, changements?, avant?}, `totaux`, `structure[]` (fusion, partage, suppression : à faire au panel). Lecture seule. |
+| `POST /task/nomenclature/appliquer` | `{apercu?}` : exécute les points « à faire » — `PATCH /task/checklists/{id}` au panel (nom, heure, zone, « (ex …) » ajouté à la description), le code et le titre des fiches de Formation (une nouvelle version « précision » quand la fiche en a une), les liens des SOP (`ceo_sop.checklists`) et des sous-catégories (`ceo_ref_souscat.checklists`). Idempotent ; un refus n'arrête pas les autres points. Formation accepte désormais les codes de la nomenclature et traduit un ancien code (AC-01 → 1.1.01). |
+| `POST /task/ranger` | **ranger une tâche dans une checklist** (vue Document, « Ranger → AC-01 ▾ » sur une tâche qui n'est dans aucune checklist) : `{taskId, checklistId, reactiver?, niveaux?: [{id, route}], controleurs?: [{type: self\|position, positionId}]}`. `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après sa dernière tâche ; 409 si elle y est déjà) ; s'il passe, `PATCH /tasks/{id}/active` si `reactiver`, puis un rattachement par niveau et un `POST /tasks/{id}/controllers` par contrôleur (ceux de la checklist que la tâche n'a pas, calculés par l'écran). Rend `ok`, `ordre`, `operations[]`, `qui` (HTTP 502 et `error` s'il y a un refus). |
+| `POST /task/qui/lot` | **plusieurs** de ces opérations d'un coup (vue Document : une liste cochée, pour une tâche ou toute sa checklist) : `{ops: [{taskId, …}]}` (400 au plus). La route des rattachements se choisit une fois, les tâches touchées sont relues une fois à la fin ; on continue après un refus. Rend `ok`, `refus`, `operations[]` (chacune avec `taskId`, `ok`, `code`, `erreur`), `qui` (HTTP 502 et `error` s'il y a un refus). |
+| `POST /task/connexion` | `{phone, password}` → `POST /panel/authenticate` : `{jeton, renouvellement, expire}`. Pour les routes que le compte consultant du cockpit n'a pas le droit d'écrire. Le jeton reste dans l'onglet (`sessionStorage`) et revient dans l'en-tête `X-Panel-Jeton` ; rien n'est gardé au serveur. `POST /task/connexion/renouveler {renouvellement}` → `POST /panel/refresh`. |
 
 ### `/production/flux/*` — l'application Production du magasin (`/production`)
 
@@ -2140,6 +2346,11 @@ pour nommer une gravité.
 - **`semaine`** : la série des sept derniers jours, renseignée **seulement** pour une journée.
   Sur une période, le compte de la période est déjà l'échelle.
 - **`indispo`** : `mac_task_review` absente. L'écran se tait alors, il n'invente pas un zéro.
+- **`retours`** (08/11/2026, seulement avec `&retours=1`) : les derniers avis du contrôleur sur la
+  fenêtre, conformes compris, les plus récents d'abord, quarante au plus —
+  `{ taskId, jour, tache, note, comment, consultant, le, nc }`. L'onglet **Tâches** du dashboard
+  magasin les montre sur trente jours (« Retours du contrôle qualité »), avec la `suite` de `nc`
+  pour dire si un écart a été repris.
 
 Ce que la MÊME tâche est devenue depuis ne vient PAS d'ici : le dashboard le lit dans
 `/pwa/tasks?date=<aujourd'hui>`, qu'il charge déjà.
@@ -2637,6 +2848,7 @@ détail en modale, comptoir et webshop. Les commandes dont le retrait (ou la liv
 | `etat` | | |
 |---|---|---|
 | `caisse` | encaissée en caisse ce jour-là | ticket du jour : déjà dans les tickets |
+| `differe` | réglée en paiement différé (09/11/2026) | le ticket différé du même client ce jour-là : dans les tickets, facturée plus tard |
 | `avant` | encaissée en caisse un autre jour | payée à la commande : dans le CA de ce jour-là |
 | `ligne` | webshop remise ou livrée sans ticket caisse | payée en ligne : s'ajoute aux tickets (la règle de `/canaux`) |
 | `attente` | pas remise, l'heure de retrait passée | pas retirée, pas encaissée |
@@ -2649,14 +2861,28 @@ Pour une commande `sans`, le ticket du jour sans commande, du même montant, le 
 heure au plus) est proposé (`candidat`) : la même vente, encaissée sans lien ? Rien de nominatif ne sort.
 
     { shop, date, maintenant: "18:38" | null,
-      commandes: [ { heure, canal: compt|cc|liv, statut, montant, etat, articles, ticket: { date, heure } | null,
-                     lignes: [ { nom, cat, q, pu, total } ] | null, candidat?: { heure, montant } } ],
+      commandes: [ { heure, canal: compt|cc|liv, statut, montant, etat, articles, ticket: { date, heure, differe? } | null,
+                     lignes: [ { nom, cat, q, pu, total } ] | null, candidat?: { heure, montant }, montantCaisse? } ],
       total: { n, ca }, comptoir: { n, ca }, webshop: { n, ca, cc: { n, ca }, liv: { n, ca } },
-      etats: { caisse|avant|ligne|attente|avenir|sans: { n, ca } },
-      dansCa,        caisse + ligne : ce que les commandes apportent au CA du jour
+      etats: { caisse|differe|avant|ligne|attente|avenir|sans: { n, ca } },
+      dansCa,        caisse + differe + ligne : ce que les commandes apportent au CA du jour
       caisseJour,    les tickets du jour (heures gravées), null s'ils ne sont pas lus
       lus }          commandes dont le ticket a été lu
     { shop, date, indispo: true, motif }   le panel ne rend pas les commandes
+
+**Le paiement différé (09/11/2026, Natan à Halle : « la commande en paiement différé reste en pas retiré »).** Un
+client pro emporte sa commande, la caisse fait un ticket en paiement différé (`deferral_payment`) qu'une facture réglera
+plus tard ; le panel ne pose pas ce ticket sur la commande (`id_transaction` vide, statut inchangé) : elle restait
+`attente`. Une commande du jour sans ticket lié (`attente`, `avenir`, `sans`) dont le client est connu (`id_client`)
+se rapproche d'un ticket différé du jour sans commande (`coApparierDifferes`) : le même bon de commande (`po_hash`)
+d'abord quand les deux le portent, sinon le même client, le ticket le plus proche de l'heure de retrait ; un ticket ne
+règle qu'une commande. Elle passe `differe`, ses articles se lisent dans le ticket, et `montantCaisse` dit le montant
+du ticket quand il diffère de la commande : le ticket différé est en caisse **sans** la remise personnelle du client,
+que le panel déduit à la facture (`generate-deferral`, `include_personal_discount`). La commande garde son montant.
+Un ticket pro réglé au comptoir ne règle pas une commande non liée. `coCommandes` garde pour cela `cli` (`id_client`)
+et `po` (`po_hash`) ; sa clé de mémo devient `coCmd3:`. La ligne « Commandes du jour » de l'onglet Opérationnel
+(`/exploitation/canaux`, `liste[].differe`) fait le même rapprochement sur le relevé pro gravé du jour (sans appel) :
+une commande réglée en différé n'est plus « à vérifier », ni « à préparer ».
 
 ### `GET /exploitation/canaux-mois` — chaque canal mois par mois, et le cumul du mois face au mois d'avant (17/10/2026)
 
@@ -2968,6 +3194,25 @@ au téléphone, les tuiles Webshop et Offres du mur) et le cockpit, Marque &
 marketing › **Offres et canaux** (`#/offres-canaux`), sur la journée, 7 ou
 30 jours.
 
+### `/pwa/tasks` — l'heure prévue et les checklists du jour (08/11/2026)
+
+Deux champs de plus, pour l'onglet **Tâches** du dashboard magasin (rien ne change pour les autres
+lecteurs) :
+
+- **`shops[].taches[].heure`** : l'heure prévue de la tâche (`execution_time` du panel, `HH:MM`),
+  `null` si le panel ne la dit pas ;
+- **`shops[].checklists`** : les checklists du jour de la boutique, `[{ id, nom, heure }]`, lues dans
+  `/consultant/shops/{id}/checklists?date=` que l'écran appelait déjà. Une tâche se range sous
+  chaque checklist dont le nom figure dans son champ `checklist` (une tâche citée par deux
+  checklists compte dans les deux) ; le code `1.1.01` du nom donne le qui et le quand
+  (`src/checklists_codes.php`).
+
+L'onglet lit `/pwa/tasks?shop=&date=` pour chaque jour de la semaine regardée (la bande du haut),
+`/pwa/tasks/photos` pour le jour regardé (vignettes et zoom, repères du contrôleur compris) et
+`/pwa/tasks/nc?du=&au=&retours=1` sur trente jours. **Faite** : rendue, et rendue AVEC sa photo
+quand la tâche en demande une ; cochée sans la photo demandée, elle se montre à part (« cochée sans
+photo ») et ne compte pas. Les pourcentages ne comptent que les tâches obligatoires.
+
 ### `GET /pwa/tasks/photos` — les photos d'une journée, en une lecture
 
     ?shop=3&date=2026-09-24
@@ -3085,6 +3330,22 @@ Où elle s'affiche :
 - **Cockpit, Contrôles qualité du mois** : la modale de notation d'une photo
   de comptoir met la photo type à côté de la photo rendue, et « Attendu » en
   tête de la colonne de notation.
+
+**Le contreseing de la direction part chez TFBuddy** (depuis le 09/11/2026).
+`POST /pwa/tasks/validate` appelle d'abord
+`POST /consultant/shops/{shop}/task-reviews/{review}/validate { validated }`,
+puis met à jour le miroir `mac_task_review`. `POST /pwa/tasks/review` fait de
+même quand c'est la direction qui note : elle contresigne d'office. Le
+consultant en visite (`role: consultant`) ne contresigne pas.
+L'identifiant de l'avis n'est pas rendu par `POST …/task-reviews` : il se lit
+dans l'avancement de la checklist (`tacheRevueIdTfb()`). Comme son nom de champ
+n'est pas documenté, plusieurs écritures sont acceptées : `review_id`,
+`review.id`, `reviews[]`…
+Les deux réponses portent l'état de la transmission : `tfbuddy` pour
+`validate`, `tfbuddyValidation` pour `review`, avec `{ ok, reviewId?, motif? }`.
+Si l'identifiant n'est pas trouvé, `motif` liste les champs que portait la
+ligne d'avancement. L'écran Contrôle dit « validé dans le cockpit, pas chez
+TFBuddy » au lieu de laisser croire à une validation faite à la source.
 
 ### Qui fait autorité sur quoi
 
@@ -4699,6 +4960,8 @@ réseau. Les pastilles : vert sous l'alerte, orange entre alerte et critique, ro
 
 **23/10/2026 — Dashboard Opérationnel : les quatre vignettes du bas retirées.** Demande de Sam : « Commandes clients » (en retard, à venir, demain), « Hier » (non-conformités, photos notées), « Poubelle » et « Promotions » ne s'affichent plus sous les contrôles en photo (`opMinis` et les styles `.op-mini*` supprimés). Les lectures restent (les commandes nourrissent la frise de La journée ; la poubelle, le P&L).
 
+**07/11/2026 — Dashboard Opérationnel : « Heure par heure » s'arrête à 20 h.** Demande de Sam : « 20 h 21 h 22 h 23 h 24 h, retire ». La courbe (CA, Clients, Panier) allait jusqu'à 24 h dès qu'une des deux journées portait une heure du soir, même vide. L'axe s'arrête désormais à 20 h (`OP_H_FIN`). Une vente plus tardive reste comptée : en CA et en Clients, le cumul la rabat sur la dernière heure (19 – 20 h), le total de la journée ne change pas ; en Panier, les heures du soir ne se dessinent plus, mais le panier de la journée les compte. Passé 20 h, le trait « maintenant » n'est plus tracé. Les étiquettes de fin : celle de la courbe la plus haute au-dessus de son point, l'autre dessous.
+
 **23/10/2026 — Console : la page Marketing (« Aujourd'hui », `#/marketing`) et son entrée du rail retirées.** Demande de Sam. Partent le hub (ses portes, ses chiffres par canal, sa liste « à faire »), sa lecture de `GET /marketing/hub` côté console (`mhCharge`, `valsMktHub`, `tplMktHub`) et l'adresse `#/marketing` (elle ouvre l'accueil). « Marketing ↗ », l'application /marketing/, reste dans le rail quand elle y est. Les onglets de campagne de la console (Campagnes, Budget × Campagnes, Objectifs produits, Mesure) restent à leur adresse (`#/campagnes`…), sous le titre « Campagnes », sans entrée dans le rail. L'API `/marketing/hub` reste.
 
 **23/10/2026 — Console : les onglets de campagne retirés.** Demande de Sam (« garde Marketing ↗, retire les onglets de campagne »). Partent de la console : Campagnes (liste et calendrier, la note de campagne, le formulaire, `#/campagnes`, `#/calendrier`), Budget × Campagnes (`#/budget-campagnes`) et Mesure (`#/mesure-campagnes`) — leurs écrans, leurs lectures côté console et leurs gabarits ; ces adresses ouvrent l'accueil. Restent : « Marketing ↗ » (l'application /marketing/) dans le rail ; Objectifs produits (`#/objectifs-produits`), qui garde son entrée « Objectifs » du rail (Franchisés › Suivi journalier et opérations) et le lien de la fiche franchisé ; Types de campagne dans Paramètres. Les API `/marketing…` côté serveur restent, comme l'assistant de campagne (/assistant/).
@@ -5020,3 +5283,69 @@ Côté app : `GET|POST /pointage` (la caméra : BarcodeDetector, sinon jsQR 1.4.
 tous les magasins. Sans appareil ouvert, `init` rend `magasin: null`, `personnes: []` et toutes les SOP (hors brouillons).
 `quiz` sans `jeton` : corrigé, rien n'est enregistré (`exercice: true`). Une étape peut porter `video` (https). Les autres
 routes de la tablette (identifier, lu, vu, langue) gardent la session de l'appareil.
+
+## Benchmark concurrents (src/benchmark.php)
+
+Client du module Benchmark de TFBuddy (`/api/v1/shops/{shopId}/benchmarks/*`, 18 opérations, jeton consultant du panel). Deux familles saisonnières, un référentiel chacune (`src/data/benchmark_<famille>.json`) : `cougnou` (comparé au kilo) et `galette` (prix ramené à notre Ø 24 cm, à surface égale). Rapports de référence : `docs/benchmarks/cougnou-2026-11.md`, `docs/benchmarks/galette-2026-11.md`.
+
+| Besoin | Route |
+|---|---|
+| Vérifier les routes Benchmark en lecture | `GET /benchmarks/verification?shop=4` → `{ ok, etapes: [{ etape, methode, route, ok, code, ms, note }], alertes, resume }` |
+| … avec un cycle d'écriture sur un concurrent témoin, supprimé ensuite | `POST /benchmarks/verification` `{ shop?, ecrire: true }` |
+| Poser un relevé dans TFBuddy (idempotent, étiquette `[cockpit:<famille>:<date>]`) | `POST /benchmarks/{cougnou\|galette\|tout}/semer` `{ simuler?: true par défaut, magasins?: [2,3,4,5] }` |
+| Rapport d'une famille (prix comparable, position, contrôles web, rang Google si clé) | `GET /benchmarks/{cougnou\|galette}/rapport` (`web=0` sans les contrôles web) ; en HTML : `GET /benchmarks/{cougnou\|galette}/rapport.html` |
+| Routine (lundi 7 h, toutes les familles ; jeudi 7 h, celles en saison : cougnou 1/11–6/1, galette 1/12–20/1) | `GET /benchmarks/cron?jeton=…` (jeton des rapports ; `forcer=1`), appelée par `bin/rapports_cron.sh` |
+| Destinataires, poids de notre cougnou, magasins | `PUT /benchmarks/reglages` `{ destinataires?: string[], taille?: { cougnou: g, galette: cm }, magasins?: { id: nom } }` → réglage `benchmark` |
+
+Table : `ceo_benchmark_snapshot (pris_le, shop_id, sujet ∈ analyse|cougnou|galette, contenu JSON)`. Ligne de commande : `php bin/benchmark.php verifier|semer|rapport|routine`. Tests hors ligne : `php bin/tests_benchmark.php`.
+
+### La revue du soir — réglage et sondes (08/11/2026)
+
+L'assistant de gestion du soir du dashboard magasin (pas une checklist du panel : l'équipe ne le voit pas). Son
+réglage s'édite au cockpit, **Checklists › Revue du soir** (`public/task/?vue=soir`), et vit dans
+`ceo_app_setting` sous `revueSoir`. Code : `src/revue_soir.php`.
+
+    GET  /soir/config                 { config, defaut, sondes[] }
+    PUT  /soir/config                 enregistre { heure, checklists, raisons[], points[] } — journal « Revue du soir »
+    GET  /soir/sonder?shop=4&date=…   évalue les points « auto » actifs (&point=stock : un seul, actif ou non)
+
+Un **point** : `{ id, actif, type: 'auto'|'question', sonde, params, icone, titre, question, reponses: [{ t, ok }] }`.
+`ok` dit si la réponse compte comme « en ordre ». Un point `auto` ne pose sa question que si sa sonde ne dit pas
+« en ordre » ; une `question` est posée chaque soir.
+
+Les **sondes** (ce qu'elles lisent — route du cockpit ← appel au panel — et quand c'est en ordre) :
+
+| Sonde | Cockpit | Panel | En ordre quand |
+|---|---|---|---|
+| `invendus` | `/exploitation/invendus?shop&date` | `GET /shops/{id}/products/waste` | des pertes sont déclarées ce jour-là |
+| `stock` | `/ventes/stock?shop` | `GET /shops/{id}/material-inventory` | dernier comptage ≤ `jours` (7) |
+| `commandes` | `/ventes/commandes?shop` | `GET /shops/{id}/client-orders` | commandes passées encore ouvertes ≤ `max` (0) |
+| `photos` | `/pwa/tasks?shop&date` | `/consultant/shops/{id}/tasks` + `…/progress` | photos rendues ≥ `min` % (100) |
+| `taches` | `/pwa/tasks?shop&date` | idem | tâches obligatoires faites ≥ `min` % (80) |
+| `nc` | `/pwa/tasks/nc?shop&du&au` | aucun (`mac_task_review`) | chaque non-conformité des `jours` (30) derniers jours reprise |
+
+Chaque point « auto » porte **sa** route du cockpit (`cockpit`) et **son** appel au panel (`panel`), modifiables au
+cockpit (variables `{shop}`, `{date}`, `{du}`), avec un bouton **Tester** : `POST /soir/tester { point, shop, date }` lit
+la route du cockpit (code, durée, aperçu de la réponse), appelle le panel (idem) et donne le verdict de la sonde — sur
+ce qui est saisi, même pas enregistré. Deux GET, rien n'est écrit. Le verdict lit la route du **cockpit** ; l'appel au
+panel sert à vérifier que le panel répond (la route du cockpit appelle le panel elle-même). Une route du cockpit doit
+être relative, lue en GET, et ne pas viser `/soir/` ; refusée à l'enregistrement sinon.
+
+Réponse de `/soir/sonder` : `points[] = { id, titre, sonde, cockpit, panel, revenue, etat: 'ok'|'ko'|'inconnu',
+texte, valeur, ms }`. `revenue = false` : la donnée n'est pas revenue (panel muet, route en erreur) — l'assistant
+pose alors la question au lieu d'affirmer quoi que ce soit.
+
+**La revue d'un soir, côté dashboard magasin (08/11/2026, maquette M3).** Bouton « 🌙 Revue du soir » (barre du haut
+au bureau, entête au téléphone ; « à faire » le jour même passé l'heure du réglage, « en cours », « faite ✓ »). Une
+question à la fois : le résumé et « qui fait la revue », une checklist pas finie par écran (les raisons rapides),
+les points vérifiés en ordre en un écran vert, un écran par point de gestion à expliquer ou par question, un mot pour
+demain, la clôture.
+
+    GET /soir/revue?shop=4&date=…            { heure, raisons, checklists: { taches, faites, liste[{ nom, code, titre,
+                                               heure, faites, total, manquent[] }], qui[] }, points[{ …, sonde }], revue }
+    GET /soir/revue?shop=4&date=…&leger=1    { heure, revue } — l'état du bouton, sans sonder
+    PUT /soir/revue                          { shop, date, par, reponses: { point: { r, c } }, checklists: { nom: { r, c } },
+                                               demain, cloturer, rouvrir } — enregistrée à chaque réponse ; 409 si clôturée
+
+Table `ceo_revue_soir` (id_shop, jour, par, reponses JSON, statut encours|cloturee, maj_le, cloture_le), créée à la
+première lecture. La clôture s'inscrit au journal (« Revue du soir »).
