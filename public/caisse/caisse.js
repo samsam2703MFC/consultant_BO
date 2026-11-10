@@ -1,8 +1,11 @@
-/* La caisse — ouvertures, fermetures et reports, par magasin et par semaine.
+/* La caisse de Gosselies — ouvertures, fermetures et reports, par semaine.
  *
- *   caisse/?shop=2&date=2026-11-04[&vue=jour&jour=2026-11-08]
+ *   caisse/?date=2026-11-04[&vue=jour&jour=2026-11-08]
  *
- * Une seule lecture : GET ../api/cockpit/caisse/semaine?shop=&date= (src/caisse.php),
+ * Un seul magasin suivi : Gosselies (demande du 10/11/2026). Pas de choix de
+ * magasin ; un ancien lien `?shop=…` ouvre Gosselies.
+ *
+ * Une seule lecture : GET ../api/cockpit/caisse/semaine?shop=3&date= (src/caisse.php),
  * qui rend les services de caisse TFBuddy du dimanche d'avant au lundi d'après,
  * le nom des caisses et l'export comptable de chaque jour. Tout le reste —
  * reports, points à vérifier, compte des espèces — se calcule ICI, dans
@@ -40,14 +43,14 @@
   const pct = (a, b) => b ? Math.round(100 * a / b) : null;
 
   /* --- état --------------------------------------------------------------------- */
-  const memo = (k, v) => { try { if (v === undefined) { return localStorage.getItem(k); } localStorage.setItem(k, v); } catch (e) { return null; } return null; };
+  const SHOP = '3', NOM_SHOP = 'Gosselies';   // le seul magasin suivi (= CAISSE_SHOP de src/caisse.php)
   const S = {
-    shop: q.get('shop') || memo('caisse.shop') || '',
+    shop: SHOP,
     date: estDate(q.get('date')) ? q.get('date') : AUJ,
     vue: ['jour', 'reports'].includes(q.get('vue')) ? q.get('vue') : 'semaine',
     mois: /^\d{4}-\d{2}$/.test(q.get('mois') || '') ? q.get('mois') : (estDate(q.get('date')) ? q.get('date') : AUJ).slice(0, 7),
     jour: estDate(q.get('jour')) ? q.get('jour') : null,
-    stores: null, D: null, err: null, enCours: false, cache: {},
+    D: null, err: null, enCours: false, cache: {},
     T: {}, Tcours: {}, Terr: {},   // les tickets en espèces d'une journée, par « magasin|jour »
   };
 
@@ -57,7 +60,6 @@
   }
   function url() {
     const p = new URLSearchParams();
-    if (S.shop) { p.set('shop', S.shop); }
     if (S.vue === 'reports') { p.set('vue', 'reports'); p.set('mois', S.mois); history.replaceState(null, '', '?' + p.toString()); return; }
     p.set('date', lundi(S.date));
     if (S.vue === 'jour') { p.set('vue', 'jour'); if (S.jour) { p.set('jour', S.jour); } }
@@ -106,7 +108,6 @@
     finally { if (S.mois === m && S.shop === shop) { S.enCours = false; rendre(); } }
   }
   function charger(relire) {
-    if (!S.shop) { rendre(); return; }
     if (S.vue === 'reports') { chargerMois(relire); return; }
     const du = lundi(S.date), cle = S.shop + '|' + du;
     url();
@@ -207,15 +208,13 @@
 
   /* --- barre supérieure ------------------------------------------------------------ */
   function barre() {
-    const st = S.stores || [];
-    const nomShop = (st.find(s => String(s.id) === String(S.shop)) || {}).nom || (S.D && S.D.shop.nom) || '';
+    const nomShop = (S.D && S.D.shop.nom) || NOM_SHOP;
     const per = S.vue === 'reports' ? MOIS[+S.mois.slice(5, 7) - 1] + ' ' + S.mois.slice(0, 4)
       : (S.vue === 'jour' && S.jour ? jl(S.jour) + ' ' + S.jour.slice(0, 4) : semLib(lundi(S.date)));
     const pasT = S.vue === 'jour' ? 'Jour' : (S.vue === 'reports' ? 'Mois' : 'Semaine');
     return `<header class="topbar ca-tb">
-      <div><p class="topbar__kicker"><a href="../">Cockpit</a> · Exploitation${nomShop ? ' · ' + esc(nomShop) : ''}</p><h1>Caisse</h1></div>
+      <div><p class="topbar__kicker"><a href="../">Cockpit</a> · Exploitation · ${esc(nomShop)}</p><h1>Caisse · ${esc(NOM_SHOP)}</h1></div>
       <div class="ca-ctl">
-        <select data-act="shop" aria-label="Magasin">${S.shop ? '' : '<option value="">Choisir un magasin…</option>'}${st.map(s => `<option value="${esc(s.id)}"${String(s.id) === String(S.shop) ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select>
         <div class="seg" role="tablist"><button data-act="vue" data-v="semaine" class="${S.vue === 'semaine' ? 'is-on' : ''}">Semaine</button><button data-act="vue" data-v="jour" class="${S.vue === 'jour' ? 'is-on' : ''}">Jour</button><button data-act="vue" data-v="reports" class="${S.vue === 'reports' ? 'is-on' : ''}">Reports</button></div>
         <button class="btn btn--sm btn--icon" data-act="pas" data-n="-1" aria-label="Précédent" title="${pasT} précédent${pasT === 'Semaine' ? 'e' : ''}">‹</button>
         <span class="per">${esc(per)}</span>
@@ -678,7 +677,6 @@
   function rendre() {
     let corps;
     if (S.err) { corps = `<div class="ca-msg err">${esc(S.err)}</div>`; }
-    else if (!S.shop) { corps = `<div class="ca-msg">Choisissez un magasin.</div>`; }
     else if (S.enCours && !S.D) { corps = S.vue === 'reports'
       ? `<div class="ca-msg">Lecture du mois chez TFBuddy, semaine par semaine : ${esc(S.prog || '')}… Une semaine jamais ouverte prend quelques secondes ; les journées closes sont ensuite gardées.</div>`
       : `<div class="ca-msg">Lecture de TFBuddy… La première lecture d’une semaine prend quelques secondes ; les journées closes sont ensuite gardées.</div>`; }
@@ -728,21 +726,14 @@
   });
   $.addEventListener('change', e => {
     const t = e.target;
-    if (t.dataset.act === 'shop') { S.shop = t.value; memo('caisse.shop', S.shop); S.D = null; charger(false); }
-    else if (t.dataset.act === 'mois' && /^\d{4}-\d{2}$/.test(t.value) && t.value <= AUJ.slice(0, 7)) { S.mois = t.value; charger(false); }
+    if (t.dataset.act === 'mois' && /^\d{4}-\d{2}$/.test(t.value) && t.value <= AUJ.slice(0, 7)) { S.mois = t.value; charger(false); }
     else if (t.dataset.act === 'date' && estDate(t.value)) {
       S.date = t.value; if (S.vue === 'jour') { S.jour = t.value; } else { S.jour = null; }
       charger(false);
     }
   });
 
-  /* --- démarrage : les magasins, puis la semaine ------------------------------------------ */
+  /* --- démarrage : Gosselies, la semaine (ou le mois) demandée ----------------------------- */
   rendre();
-  lire('/stores?statut=tous')
-    .then(l => {
-      S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: String(s.id), nom: s.nom || s.name || ('#' + s.id) }));
-      if (!S.shop && S.stores.length) { S.shop = S.stores[0].id; }
-    })
-    .catch(() => { S.stores = []; })
-    .finally(() => charger(false));
+  charger(false);
 })();

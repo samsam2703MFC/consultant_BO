@@ -7,7 +7,7 @@ body { background: var(--paper); }
 .ca-tb .topbar__kicker a { color: var(--muted); text-decoration: none; }
 .ca-tb .topbar__kicker a:hover { color: var(--accent); }
 .ca-ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.ca-ctl select, .ca-ctl input[type=date] { font: 400 12.5px 'Gotham', system-ui, sans-serif; border: 1px solid var(--line);
+.ca-ctl input[type=date], .ca-ctl input[type=month] { font: 400 12.5px 'Gotham', system-ui, sans-serif; border: 1px solid var(--line);
   border-radius: 8px; padding: 7px 10px; background: #fff; color: var(--ink); }
 .ca-ctl .per { font-size: 13px; color: var(--ink); padding: 0 4px; min-width: 170px; text-align: center; white-space: nowrap; }
 .ca-body { padding: 22px 24px 40px; max-width: 1480px; }

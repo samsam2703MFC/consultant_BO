@@ -94,11 +94,16 @@ sortent en tête, les plus creuses d'abord.
 
 ## `GET /caisse/semaine`
 
-Ouvertures, fermetures et reports de caisse d'un magasin, sur une semaine.
+Ouvertures, fermetures et reports de caisse de **Gosselies**, sur une semaine.
 Sert la page **Caisse** (`public/caisse/`, entrée de rail « Caisse ↗ »).
 
-Paramètres : `shop` (requis), `date` (n'importe quel jour ; la semaine va du
-lundi au dimanche qui le contiennent), `rafraichir=1` (relit tout).
+Un seul magasin suivi : Gosselies, id 3 (demande du 10/11/2026, « pas besoin des
+autres magasins » ; `CAISSE_SHOP` dans `src/caisse.php`).
+
+Paramètres : `shop` (facultatif, 3 ; tout autre magasin → **422** « la caisse ne
+suit que Gosselies », sans rien lire chez TFBuddy), `date` (n'importe quel jour ;
+la semaine va du lundi au dimanche qui le contiennent), `rafraichir=1` (relit
+tout).
 
 Sources, TFBuddy seul, avec le compte consultant :
 
@@ -117,7 +122,7 @@ dans la semaine, et l'ouverture qui suit le dernier soir. Une journée close
 
 ```json
 {
-  "shop": { "id": 2, "nom": "Corbais" },
+  "shop": { "id": 3, "nom": "Atelier by Max & Sandra - Gosselies" },
   "du": "2026-11-02", "au": "2026-11-08",
   "jours": ["2026-11-02", "…", "2026-11-08"],
   "caisses": [ { "id": 11, "nom": "Boulangerie" }, { "id": 9, "nom": "Traiteur" } ],
@@ -167,8 +172,8 @@ dans le compte : TFBuddy ne les relit pas.
 Les tickets **payés en espèces** d'une journée, un par un. Sert la carte « Les
 espèces, ticket par ticket » de la vue Jour de la page Caisse.
 
-Paramètres : `shop` (requis), `date` (requis, un jour passé ou aujourd'hui),
-`rafraichir=1`.
+Paramètres : `shop` (facultatif, Gosselies seul, comme `/caisse/semaine`),
+`date` (requis, un jour passé ou aujourd'hui), `rafraichir=1`.
 
 Source : la liste des tickets du jour, `GET /shops/{id}/transactions?date=`
 (un appel, tous les tickets). Chaque ticket porte `id_device` (la caisse),
@@ -188,7 +193,7 @@ chaque employé.
 
 ```json
 {
-  "shop": 2, "jour": "2026-11-08", "nTickets": 863,
+  "shop": 3, "jour": "2026-11-08", "nTickets": 863,
   "especes": { "type": 1, "calage": "exact", "n": 25, "totalTickets": 200.7, "totalExport": 200.7, "ecart": 0 },
   "paiements": [ { "id": 2, "nom": "Bancontact", "calage": "exact", "n": 700, "total": 6262.77 } ],
   "tickets": [ { "id": 460900, "heure": "2026-11-08 06:02:10", "caisse": 9, "caisseNom": "Traiteur",

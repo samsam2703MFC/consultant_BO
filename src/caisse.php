@@ -2,9 +2,13 @@
 declare(strict_types=1);
 
 /**
- * LA CAISSE — ouvertures, fermetures et reports, magasin par magasin, semaine
- * par semaine. Lecture seule, TFBuddy seul : rien n'est recopié en base, sauf
- * le mémo des journées closes (une journée passée ne bouge plus).
+ * LA CAISSE — ouvertures, fermetures et reports de GOSSELIES, semaine par
+ * semaine. Lecture seule, TFBuddy seul : rien n'est recopié en base, sauf le
+ * mémo des journées closes (une journée passée ne bouge plus).
+ *
+ * Un seul magasin suivi : Gosselies (demande du 10/11/2026 : « on ne prend que
+ * Gosselies, pas besoin des autres magasins »). `shop` est facultatif ; un
+ * autre magasin est refusé (422) avant toute lecture chez TFBuddy.
  *
  * Ce que TFBuddy rend, mesuré le 09/11/2026 avec le compte consultant :
  *  · les services d'un jour : GET /shops/{id}/owner/daily-shifts?date= —
@@ -28,6 +32,18 @@ declare(strict_types=1);
  * Les règles de contrôle (report rompu, montant impossible…) vivent dans la
  * page (public/caisse/caisse.js) : une seule définition, là où elle se lit.
  */
+
+/** Le seul magasin dont on suit la caisse : Gosselies (id TFBuddy 3). */
+const CAISSE_SHOP = 3;
+
+/** Le magasin demandé : Gosselies si `shop` est absent, null (et 422) pour un autre. */
+function caisseShop(): ?int
+{
+    $v = trim((string) ($_GET['shop'] ?? ''));
+    $shop = $v === '' ? CAISSE_SHOP : (int) $v;
+    if ($shop !== CAISSE_SHOP) { http_response_code(422); return null; }
+    return $shop;
+}
 
 /** Le lundi de la semaine d'une date « YYYY-MM-DD ». */
 function caisseLundi(string $d): string
@@ -137,9 +153,9 @@ function caisseComptable(?string $csv): ?array
 }
 
 /**
- * GET /caisse/semaine?shop=2&date=2026-11-04[&rafraichir=1]
+ * GET /caisse/semaine?date=2026-11-04[&shop=3][&rafraichir=1]
  *
- * La semaine (lundi → dimanche) qui contient `date`, pour un magasin : les
+ * La semaine (lundi → dimanche) qui contient `date`, à Gosselies : les
  * services de caisse du dimanche d'avant au lundi d'après (le report qui entre
  * dans la semaine, et l'ouverture qui suit le dernier soir), le nom des
  * caisses, et l'export comptable de chacun des sept jours.
@@ -150,8 +166,8 @@ function caisseComptable(?string $csv): ?array
  */
 function ep_caisse_semaine(): array
 {
-    $shop = (int) ($_GET['shop'] ?? 0);
-    if ($shop <= 0) { http_response_code(400); return ['error' => 'paramètre shop requis']; }
+    $shop = caisseShop();
+    if ($shop === null) { return ['error' => 'la caisse ne suit que Gosselies (magasin ' . CAISSE_SHOP . ')']; }
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte consultant de l’API TFBuddy non configuré (Mon compte)']; }
     $date = (string) ($_GET['date'] ?? date('Y-m-d'));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date) || strtotime($date) === false) { $date = date('Y-m-d'); }
@@ -354,7 +370,7 @@ function caisseCalePaiements(array $parType, ?array $comptable): array
 }
 
 /**
- * GET /caisse/jour?shop=2&date=2026-11-08[&rafraichir=1]
+ * GET /caisse/jour?date=2026-11-08[&shop=3][&rafraichir=1]
  *
  * Les tickets EN ESPÈCES d'une journée, un par un : l'heure, la caisse, la
  * vendeuse, le montant. Source : la liste des tickets du jour,
@@ -368,8 +384,8 @@ function caisseCalePaiements(array $parType, ?array $comptable): array
  */
 function ep_caisse_jour(): array
 {
-    $shop = (int) ($_GET['shop'] ?? 0);
-    if ($shop <= 0) { http_response_code(400); return ['error' => 'paramètre shop requis']; }
+    $shop = caisseShop();
+    if ($shop === null) { return ['error' => 'la caisse ne suit que Gosselies (magasin ' . CAISSE_SHOP . ')']; }
     if (!PanelApi::configured()) { http_response_code(503); return ['error' => 'compte consultant de l’API TFBuddy non configuré (Mon compte)']; }
     $jour = (string) ($_GET['date'] ?? date('Y-m-d'));
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $jour) || strtotime($jour) === false) { http_response_code(400); return ['error' => 'date invalide (YYYY-MM-DD)']; }

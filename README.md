@@ -269,10 +269,11 @@ vues (jour, semaine, mois, trimestre, année), un objet d'état `S`, un couple
 
 ## Caisse : ouvertures, fermetures et reports
 
-Une page à part, `public/caisse/?shop=2&date=2026-11-04` (entrée de rail
-« Caisse ↗ »), pour vérifier jour par jour et sur la semaine ce que chaque
+Une page à part, `public/caisse/?date=2026-11-04` (entrée de rail
+« Caisse ↗ »), pour **Gosselies seulement** (10/11/2026 : les autres magasins
+ne sont pas suivis), pour vérifier jour par jour et sur la semaine ce que chaque
 caisse a fait : qui l'a ouverte et fermée, le fond du matin, le total déclaré,
-ce qui est laissé pour le lendemain. On choisit le magasin, la semaine
+ce qui est laissé pour le lendemain. On choisit la semaine
 (‹ ›, ou une date), et la vue Semaine, Jour ou Reports ; l'adresse se partage
 telle quelle.
 
