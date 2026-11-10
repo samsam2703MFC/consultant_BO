@@ -312,7 +312,7 @@
           <td class="act"><button class="tk-btn mini" data-a="modifier" data-id="${t.id}">Modifier</button><button class="tk-btn mini ghost" data-a="brut" data-id="${t.id}">Détails</button></td></tr>`;
       }).join('')}</tbody></table></div>
       ${r.ts.length > vus.length ? `<div class="tk-astuce"><button class="tk-lien" data-a="rqPlus">Afficher les ${r.ts.length - vus.length} autres</button></div>` : ''}</div>` : '';
-    const vide = n ? '' : `<div class="tk-card"><div class="tk-astuce" style="border-top:none">Aucune tâche ni checklist ne contient tous ces mots. Essayez un seul mot, une sous-catégorie, un n° de tâche ou un code (AC-01, SOP-WKL-001).</div></div>`;
+    const vide = n ? '' : `<div class="tk-card"><div class="tk-astuce" style="border-top:none">Aucune tâche ni checklist ne contient tous ces mots. Essayez un seul mot, une sous-catégorie, un n° de tâche ou un code (1.1.01, SOP 1.1.01).</div></div>`;
     return `<div class="tk-rq">${tete}${cls}${ts}${vide}</div>`;
   }
 
