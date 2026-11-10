@@ -50,6 +50,17 @@ const PLANS = [
   { nom: 'dash-primes', vue: 'primes', cibles: ['tr:has(.pr-fr)'], avecAvant: true },
   // Le cockpit, Budget › Paramètres › Répartition des charges (07/11/2026) : % réseau du CRM, % validé, écart.
   { nom: 'dash-charges', cockpit: '#/budget/parametres', cibles: ['[data-screen="budgetparam"] > div:has(:text-is("Répartition des charges"))'], defile: true },
+  // L'onglet Tâches (08/11/2026) : la semaine et les quatre tuiles, la structure des codes, les checklists du jour, les retours.
+  { nom: 'dash-onglet-taches', vue: 'taches', cibles: ['.tj-sem', '.db-tuiles.tj-kpis'] },
+  { nom: 'dash-organisation', vue: 'taches', cibles: ['.db-card.tj-guide'] },
+  { nom: 'dash-checklists-jour', vue: 'taches', cibles: ['.db-card:has(.tj-f)'] },
+  { nom: 'dash-retours', vue: 'taches', cibles: ['.db-card.tj-ret'] },
+  // La revue du soir (08/11/2026) : le bouton de l'en-tête ouvre l'assistant, son premier écran (rien n'est écrit avant « Commencer »).
+  { nom: 'dash-revue', vue: 'ops', cibles: ['#rv .rv-tel'], defile: true, avant: async p => { await p.locator('button:has-text("Revue du soir")').first().click(); await p.waitForTimeout(5000); } },
+  // Concurrence (07/11/2026) : le Top 10 réseau face aux concurrents du magasin ; la lecture prend du temps.
+  { nom: 'dash-concurrence', vue: 'concurrence', cibles: ['.db-card:has(.bm-tab)'], top: true, avant: async p => { await p.locator('.bm-tab').first().waitFor({ timeout: 90000 }).catch(() => {}); await p.waitForTimeout(1500); } },
+  // Temps morts (07/11/2026) : la journée minute par minute.
+  { nom: 'dash-temps-morts', vue: 'morts', cibles: ['.db-card:has(.tm-frise)'], top: true },
 ];
 
 const W = 1200, H = 900;

@@ -21,16 +21,17 @@ async function brancher(ctx) {
   await ctx.route(/\/formation\/sop\/photos\/(dash-[\w-]+\.jpg)$/, r => r.fulfill({ path: path.join(PH, r.request().url().match(/(dash-[\w-]+\.jpg)$/)[1]), contentType: 'image/jpeg' }));
   await ctx.route(/\/api\/cockpit\/formation\/ref(\?.*)?$/, async r => {
     const res = await r.fetch(); const j = await res.json();
-    j.standards = (j.standards || []).concat(DOCS.map(standard));
+    j.standards = (j.standards || []).filter(x => !DOCS.some(d => d.id === x.id)).concat(DOCS.map(standard));
     r.fulfill({ response: res, json: j });
   });
   await ctx.route(/\/api\/cockpit\/formation\/sop\/tablette\/init/, async r => {
     const res = await r.fetch(); const j = await res.json();
-    j.sops = (j.sops || []).concat(DOCS.map(ligne));
+    // Les documents du serveur (réservés au responsable, PIN) cèdent la place à ceux du dépôt, lus sans PIN dans la maquette.
+    j.sops = (j.sops || []).filter(x => !DOCS.some(d => d.id === x.id)).concat(DOCS.map(d => ({ ...ligne(d), acces: 'tous' })));
     r.fulfill({ response: res, json: j });
   });
   for (const d of DOCS) {
-    await ctx.route(new RegExp('/api/cockpit/formation/sop/tablette/sop/' + d.id + '(\\?.*)?$'), r => r.fulfill({ json: { ...ligne(d), contenu: contenu(d) } }));
+    await ctx.route(new RegExp('/api/cockpit/formation/sop/tablette/sop/' + d.id + '(\\?.*)?$'), r => r.fulfill({ json: { ...ligne(d), acces: 'tous', contenu: contenu(d) } }));
     await ctx.route(new RegExp('/api/cockpit/formation/sop/fiche/' + d.id + '(\\?.*)?$'), r => r.fulfill({ json: { ...ligne(d), contenu: { ...contenu(d), quiz: d.quiz },
       versions: [{ version: d.version, note: 'Maquette', publieLe: now, publiePar: 'Maquette', revalider: false }], source: null } }));
   }
@@ -76,10 +77,14 @@ const pause = ms => new Promise(r => setTimeout(r, ms));
   };
   await tab('art-pil-01', 0, '10-tablette-article-partie-1');
   await tab('art-pil-01', 8, '11-tablette-article-pl-critique');
-  await tab('art-pil-01', 20, '12-tablette-article-six-leviers');
+  await tab('art-pil-01', 25, '12-tablette-article-six-leviers');
   await tab('art-pil-01', 3, '13-tablette-article-sommaire', () => q.locator('button:visible', { hasText: 'Toutes les parties' }).first().click());
   await tab('sop-pil-01', 3, '20-tablette-sop-vitrine-critique');
-  await tab('sop-pil-01', 15, '21-tablette-sop-lundi-decider');
+  await tab('sop-pil-01', 16, '21-tablette-sop-lundi-decider');
+  // 10/11/2026 : l'onglet Tâches, la structure des codes et la revue du soir (article), la revue du soir (SOP, 3.4).
+  await tab('art-pil-01', 15, '14-tablette-article-organisation');
+  await tab('art-pil-01', 18, '15-tablette-article-revue-du-soir');
+  await tab('sop-pil-01', 12, '24-tablette-sop-revue-du-soir');
   await tab('sop-pil-01', 0, '22-tablette-sop-qui-prevenir', () => q.locator('button:visible', { hasText: 'Qui prévenir' }).first().click());
   await tab('sop-pil-01', 0, '23-tablette-sop-sommaire', () => q.locator('button:visible', { hasText: 'Toutes les étapes' }).first().click());
   // L'accueil de la tablette : l'onglet Ouverture et l'onglet Manuel.
