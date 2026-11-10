@@ -1371,3 +1371,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-10T05:25:53Z cadre des tâches : Responsable
 2026-11-10T06:52:07Z codes : zone 0 pour les SOP et le manuel
 2026-11-10T07:16:49Z formation : code donné à la création
+2026-11-10T07:48:18Z formation : accueil du portail
