@@ -1,0 +1,274 @@
+{
+ "id": "art-chk-01",
+ "code": "ART-CHK-01",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Les checklists du magasin : la structure",
+  "nl": "De checklists van de winkel: de structuur"
+ },
+ "objectif": {
+  "fr": "Savoir ce qu’est une checklist, lire son code, comprendre ce qui rend une tâche faite (obligatoire, photo, contrôle qualité) et où se suit le travail du jour.",
+  "nl": "Weten wat een checklist is, de code ervan lezen, begrijpen wanneer een taak gedaan is (verplicht, foto, kwaliteitscontrole) en waar het werk van de dag opgevolgd wordt."
+ },
+ "pour": {
+  "fr": "Toute l’équipe du magasin, de la production à la vente, et ceux qui la dirigent. À lire avant la première journée.",
+  "nl": "Het hele winkelteam, van productie tot verkoop, en wie het leidt. Te lezen vóór de eerste dag."
+ },
+ "classement": {
+  "souscat": "D5.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P1",
+   "P2",
+   "P3",
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PLAN.Ouverture",
+   "C-PLAN.Fermeture"
+  ],
+  "formations": [
+   "FO-01"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Une checklist, des tâches",
+    "nl": "Een checklist, taken"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Une checklist",
+      "nl": "Een checklist"
+     },
+     "texte": {
+      "fr": "Une checklist : une liste de tâches à faire à un moment de la journée (l’ouverture, la journée, la fermeture…).\nElle a une heure, une zone de production (Vente, Boulangerie, Traiteur, Nettoyage, Responsable) et ses tâches.\nLes mêmes checklists valent pour tout le réseau : chaque magasin fait les mêmes, aux mêmes heures.",
+      "nl": "Een checklist: een lijst taken die op een moment van de dag gedaan moeten worden (de opening, de dag, de sluiting…).\nZe heeft een uur, een productiezone (Verkoop, Bakkerij, Traiteur, Schoonmaak, Verantwoordelijke) en haar taken.\nDezelfde checklists gelden voor het hele netwerk: elke winkel doet dezelfde, op dezelfde uren."
+     },
+     "critique": false,
+     "photo": "chk-organisation.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le code : qui, quand, numéro",
+      "nl": "De code: wie, wanneer, nummer"
+     },
+     "texte": {
+      "fr": "Chaque checklist a un code à trois parties, par exemple 1.1.01 · Ouverture de la boutique.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLes deux derniers chiffres : le numéro, qui sépare les checklists du même qui et du même quand (1.1.01, 1.1.02…).\nLe même code partout : dans l’application du magasin, le dashboard, le manuel et les SOP.",
+      "nl": "Elke checklist heeft een code in drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nDe laatste twee cijfers: het nummer, dat de checklists met hetzelfde wie en hetzelfde wanneer onderscheidt (1.1.01, 1.1.02…).\nOveral dezelfde code: in de app van de winkel, het dashboard, het handboek en de SOP’s."
+     },
+     "critique": false,
+     "photo": "chk-organisation.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Une tâche",
+      "nl": "Een taak"
+     },
+     "texte": {
+      "fr": "Une tâche : une seule chose à faire et à cocher, par exemple « Allumer les équipements ».\nSon heure : celle de la tâche, sinon celle de sa checklist.\nSes jours : tous les jours, ou un seul jour de la semaine (chaque lundi…) ; les jours d’une checklist sont ceux de ses tâches (L M M J V S D).\nDeux exigences : obligatoire ou facultative, avec ou sans photo.\nUne tâche en pause n’est montrée dans aucune liste du jour.",
+      "nl": "Een taak: één ding om te doen en aan te vinken, bijvoorbeeld « De toestellen aanzetten ».\nHet uur: dat van de taak, anders dat van haar checklist.\nDe dagen: elke dag, of één dag van de week (elke maandag…); de dagen van een checklist zijn die van haar taken (M D W D V Z Z).\nTwee vereisten: verplicht of facultatief, met of zonder foto.\nEen gepauzeerde taak verschijnt in geen enkele lijst van de dag."
+     },
+     "critique": false,
+     "photo": "chk-taches.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le fonctionnement",
+    "nl": "De werking"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Qui fait, qui contrôle",
+      "nl": "Wie doet het, wie controleert"
+     },
+     "texte": {
+      "fr": "« Fait par » : les postes qui voient la tâche et la font (Opérateur Vente, Franchisé…) ; un employé ne voit que les tâches de son poste.\n« Contrôlé par » : qui vérifie le travail, un poste (Contrôleur Qualité & Conformité…) ou l’auto-contrôle.\nUne tâche sans « Fait par » n’est vue par personne.",
+      "nl": "« Gedaan door »: de functies die de taak zien en doen (Verkoopmedewerker, Franchisenemer…); een medewerker ziet alleen de taken van zijn functie.\n« Gecontroleerd door »: wie het werk nakijkt, een functie (Controleur Kwaliteit & Conformiteit…) of de zelfcontrole.\nEen taak zonder « Gedaan door » wordt door niemand gezien."
+     },
+     "critique": false,
+     "photo": "chk-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Obligatoire et photo",
+      "nl": "Verplicht en foto"
+     },
+     "texte": {
+      "fr": "Obligatoire : la tâche doit être faite chaque jour où elle revient ; seules les tâches obligatoires comptent dans les pourcentages.\nFacultative : elle se fait si on peut ; elle se montre à part (cadre en pointillé dans les contrôles en photo).\nPhoto : une tâche qui demande une photo n’est faite que si la photo est rendue ; cochée sans photo, elle ne compte pas.",
+      "nl": "Verplicht: de taak moet gedaan worden op elke dag dat ze terugkomt; alleen de verplichte taken tellen mee in de percentages.\nFacultatief: ze wordt gedaan als het kan; ze wordt apart getoond (stippelrand bij de controles met foto).\nFoto: een taak die een foto vraagt is pas gedaan als de foto ingediend is; aangevinkt zonder foto telt ze niet."
+     },
+     "critique": true,
+     "photo": "chk-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le contrôle qualité",
+      "nl": "De kwaliteitscontrole"
+     },
+     "texte": {
+      "fr": "Chaque photo rendue est notée de 1 à 5 par le contrôleur ; il peut entourer ce qui ne va pas et laisser un commentaire.\nSous 4 : une non-conformité, à corriger.\nLes notes et les commentaires des 30 derniers jours se relisent dans le dashboard magasin, onglet Tâches.",
+      "nl": "Elke ingediende foto krijgt van de controleur een score van 1 tot 5; hij kan omcirkelen wat niet klopt en een opmerking achterlaten.\nOnder 4: een non-conformiteit, te corrigeren.\nDe scores en opmerkingen van de laatste 30 dagen lees je terug in het winkeldashboard, tabblad Taken."
+     },
+     "critique": false,
+     "photo": "chk-retours.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le suivi",
+    "nl": "De opvolging"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Dans le dashboard magasin",
+      "nl": "In het winkeldashboard"
+     },
+     "texte": {
+      "fr": "Onglet Tâches : les checklists du jour, dans l’ordre des codes, avec la barre des tâches obligatoires faites (par exemple 6 / 6).\nFaite en vert, en partie en orange, pas faite en rose.\nEn haut, la semaine jour par jour et quatre tuiles : tâches obligatoires faites, photos rendues, contrôle qualité du jour, non-conformités des 30 jours.",
+      "nl": "Tabblad Taken: de checklists van de dag, in de volgorde van de codes, met de balk van de uitgevoerde verplichte taken (bijvoorbeeld 6 / 6).\nGedaan in het groen, gedeeltelijk in het oranje, niet gedaan in het roze.\nBovenaan de week dag per dag en vier tegels: uitgevoerde verplichte taken, ingediende foto’s, kwaliteitscontrole van de dag, non-conformiteiten van 30 dagen."
+     },
+     "critique": false,
+     "photo": "chk-checklists-jour.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Les contrôles en photo",
+      "nl": "De controles met foto"
+     },
+     "texte": {
+      "fr": "Onglet Opérationnel : les photos du jour, une carte par checklist, dans l’ordre des heures.\nEn haut, une pastille par checklist dit combien de photos sont rendues (par exemple 0/1).\nUne photo manquante se voit tout de suite : « pas encore rendue ».",
+      "nl": "Tabblad Operationeel: de foto’s van de dag, één kaart per checklist, in de volgorde van de uren.\nBovenaan zegt een bolletje per checklist hoeveel foto’s ingediend zijn (bijvoorbeeld 0/1).\nEen ontbrekende foto zie je meteen: « nog niet ingediend »."
+     },
+     "critique": false,
+     "photo": "chk-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "La revue du soir",
+      "nl": "De avondronde"
+     },
+     "texte": {
+      "fr": "Le soir, le responsable ouvre « Revue du soir » dans le dashboard : une question à la fois.\nPour chaque checklist pas finie, il donne la raison d’un bouton (pas eu le temps, manque de personnel, oublié…).\nPuis les points de gestion (invendus, stock, commandes, caisse, demain) ; la revue clôturée se relit le lendemain.",
+      "nl": "’s Avonds opent de verantwoordelijke « Avondronde » in het dashboard: één vraag tegelijk.\nVoor elke checklist die niet af is, geeft hij de reden met een knop (geen tijd gehad, personeelstekort, vergeten…).\nDaarna de beheerpunten (onverkocht, voorraad, bestellingen, kassa, morgen); de afgesloten ronde lees je de volgende dag terug."
+     },
+     "critique": false,
+     "photo": "chk-revue.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Une tâche à photo sans photo n’est pas faite, même cochée.",
+   "nl": "Een taak met foto zonder foto is niet gedaan, ook al is ze aangevinkt."
+  },
+  {
+   "fr": "Seules les tâches obligatoires comptent dans les pourcentages du jour.",
+   "nl": "Alleen de verplichte taken tellen mee in de percentages van de dag."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Que dit le code 3.4.01 ?",
+    "nl": "Wat zegt de code 3.4.01?"
+   },
+   "choix": {
+    "fr": [
+     "Traiteur, à la fermeture, checklist n° 01",
+     "La 3e checklist de la 4e semaine",
+     "Vente, chaque mois, 1 tâche"
+    ],
+    "nl": [
+     "Traiteur, bij de sluiting, checklist nr. 01",
+     "De 3e checklist van de 4e week",
+     "Verkoop, elke maand, 1 taak"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Une tâche obligatoire qui demande une photo est cochée, sans photo. Est-elle faite ?",
+    "nl": "Een verplichte taak die een foto vraagt is aangevinkt, zonder foto. Is ze gedaan?"
+   },
+   "choix": {
+    "fr": [
+     "Oui, elle est cochée",
+     "Non : sans photo rendue, elle ne compte pas",
+     "Oui, si le contrôleur passe plus tard"
+    ],
+    "nl": [
+     "Ja, ze is aangevinkt",
+     "Nee: zonder ingediende foto telt ze niet",
+     "Ja, als de controleur later langskomt"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le contrôleur donne 3 sur 5 à une photo. Qu’est-ce que cela veut dire ?",
+    "nl": "De controleur geeft 3 op 5 aan een foto. Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "C’est conforme",
+     "La photo est floue",
+     "C’est une non-conformité, à corriger"
+    ],
+    "nl": [
+     "Het is conform",
+     "De foto is wazig",
+     "Het is een non-conformiteit, te corrigeren"
+    ]
+   },
+   "bonne": 2
+  }
+ ]
+}
