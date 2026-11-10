@@ -9,7 +9,7 @@
  "poste": "vente",
  "moment": null,
  "acces": "responsable",
- "duree": "45 min de lecture, puis 30 min sur le dashboard de son magasin",
+ "duree": "1 h de lecture, puis 30 min sur le dashboard de son magasin",
  "titre": {
   "fr": "Comprendre le dashboard magasin",
   "nl": "Het winkeldashboard begrijpen"
@@ -59,8 +59,8 @@
       "nl": "Het dashboard openen"
      },
      "texte": {
-      "fr": "Adresse : le cockpit › Dashboard magasin, ou le lien reçu pour son magasin (…/consulant_bo/dashboard/?shop=…).\nL’onglet qui s’ouvre d’office : Opérationnel, la journée en cours.\n« ↻ Relire » relit les chiffres ; la journée en cours se relit seule toutes les dix minutes.\nTout est en lecture seule : le dashboard montre, il n’écrit rien. On corrige à la source (caisse, panel, cockpit).",
-      "nl": "Adres: de cockpit › Winkeldashboard, of de link die je voor je winkel kreeg (…/consulant_bo/dashboard/?shop=…).\nHet tabblad dat standaard opent: Operationeel, de lopende dag.\n« ↻ Herlezen » leest de cijfers opnieuw; de lopende dag wordt elke tien minuten vanzelf herlezen.\nAlles is alleen-lezen: het dashboard toont, het schrijft niets. Je corrigeert aan de bron (kassa, panel, cockpit)."
+      "fr": "Adresse : le cockpit › Dashboard magasin, ou le lien reçu pour son magasin (…/consulant_bo/dashboard/?shop=…).\nL’onglet qui s’ouvre d’office : Opérationnel, la journée en cours.\n« ↻ Relire » relit les chiffres ; la journée en cours se relit seule toutes les dix minutes.\nLe dashboard ne corrige aucun chiffre : on corrige à la source (caisse, panel, cockpit). Seuls la revue du soir et le relevé terrain de la Concurrence y enregistrent quelque chose.",
+      "nl": "Adres: de cockpit › Winkeldashboard, of de link die je voor je winkel kreeg (…/consulant_bo/dashboard/?shop=…).\nHet tabblad dat standaard opent: Operationeel, de lopende dag.\n« ↻ Herlezen » leest de cijfers opnieuw; de lopende dag wordt elke tien minuten vanzelf herlezen.\nHet dashboard corrigeert geen enkel cijfer: je corrigeert aan de bron (kassa, panel, cockpit). Alleen de avondronde en de terreinopname van Concurrentie bewaren er iets."
      },
      "critique": false,
      "photo": "dash-entete.jpg",
@@ -69,12 +69,12 @@
     {
      "numero": "2",
      "titre": {
-      "fr": "Les sept onglets",
-      "nl": "De zeven tabbladen"
+      "fr": "Les onglets",
+      "nl": "De tabbladen"
      },
      "texte": {
-      "fr": "Opérationnel : aujourd’hui, heure par heure.\nSemaine et Mois : le résultat de la période, jour par jour.\nTrimestre et Année : le cap, face au plan de développement.\nPromotions : les offres en caisse et ce qu’elles rapportent.\nPrimes : où en est chaque vendeuse, prime par prime.\nSous les onglets, la frise : une case par jour (ou par mois, par trimestre) ; ‹ et › changent de période, un toucher ouvre la case.",
-      "nl": "Operationeel: vandaag, uur per uur.\nWeek en Maand: het resultaat van de periode, dag per dag.\nKwartaal en Jaar: de koers, tegenover het ontwikkelingsplan.\nPromoties: de acties in de kassa en wat ze opbrengen.\nPremies: waar elke verkoopster staat, premie per premie.\nOnder de tabbladen de tijdlijn: één vak per dag (of per maand, per kwartaal); ‹ en › wisselen van periode, een tik opent het vak."
+      "fr": "Opérationnel : aujourd’hui, heure par heure.\nTâches : les checklists du jour, faites ou non, et ce qu’en dit le contrôle qualité.\nSemaine et Mois : le résultat de la période, jour par jour.\nTrimestre et Année : le cap, face au plan de développement.\nPromotions : les offres en caisse et ce qu’elles rapportent.\nPrimes : où en est chaque vendeuse, prime par prime.\nConcurrence : nos prix face à ceux relevés autour du magasin.\nTemps morts : les minutes sans client, entre le premier et le dernier ticket.\nSous les onglets, la frise : une case par jour (ou par mois, par trimestre) ; ‹ et › changent de période, un toucher ouvre la case.\nEn tête, « Revue du soir » ouvre la revue de fin de journée (partie « La revue du soir »).",
+      "nl": "Operationeel: vandaag, uur per uur.\nTaken: de checklists van de dag, gedaan of niet, en wat de kwaliteitscontrole ervan zegt.\nWeek en Maand: het resultaat van de periode, dag per dag.\nKwartaal en Jaar: de koers, tegenover het ontwikkelingsplan.\nPromoties: de acties in de kassa en wat ze opbrengen.\nPremies: waar elke verkoopster staat, premie per premie.\nConcurrentie: onze prijzen tegenover die rond de winkel opgenomen.\nDode tijd: de minuten zonder klant, tussen het eerste en het laatste ticket.\nOnder de tabbladen de tijdlijn: één vak per dag (of per maand, per kwartaal); ‹ en › wisselen van periode, een tik opent het vak.\nBovenaan opent « Avondronde » de ronde van het einde van de dag (deel « De avondronde »)."
      },
      "critique": false,
      "photo": "dash-frise.jpg",
@@ -151,8 +151,8 @@
       "nl": "Uur per uur"
      },
      "texte": {
-      "fr": "La courbe du chiffre d’affaires cumulé d’aujourd’hui, face à celle du même jour la semaine dernière.\nLe trait pointillé vertical : maintenant. La ligne de l’objectif comptoir en haut.\nBascule CA · Clients · Panier : pour voir si le retard vient du nombre de clients ou du panier.\n« Comptoir et pro séparés » ou « Combinés » : deux lectures du même chiffre.",
-      "nl": "De curve van de gecumuleerde omzet van vandaag, tegenover die van dezelfde dag vorige week.\nDe verticale stippellijn: nu. De lijn van de toonbankdoelstelling bovenaan.\nSchakelaar Omzet · Klanten · Ticket: om te zien of de achterstand van het aantal klanten of van het ticket komt.\n« Toonbank en zakelijk apart » of « Samen »: twee lezingen van hetzelfde cijfer."
+      "fr": "La courbe du chiffre d’affaires cumulé d’aujourd’hui, face à celle du même jour la semaine dernière.\nLe trait pointillé vertical : maintenant. La ligne de l’objectif comptoir en haut.\nBascule CA · Clients · Panier : pour voir si le retard vient du nombre de clients ou du panier.\n« Comptoir et pro séparés » ou « Combinés » : deux lectures du même chiffre.\nLa courbe s’arrête à 20 h ; une vente plus tardive compte dans la dernière heure, 19 – 20 h.",
+      "nl": "De curve van de gecumuleerde omzet van vandaag, tegenover die van dezelfde dag vorige week.\nDe verticale stippellijn: nu. De lijn van de toonbankdoelstelling bovenaan.\nSchakelaar Omzet · Klanten · Ticket: om te zien of de achterstand van het aantal klanten of van het ticket komt.\n« Toonbank en zakelijk apart » of « Samen »: twee lezingen van hetzelfde cijfer.\nDe curve stopt om 20 u; een latere verkoop telt mee in het laatste uur, 19 – 20 u."
      },
      "critique": false,
      "photo": "dash-heures.jpg",
@@ -235,8 +235,8 @@
       "nl": "De controles met foto"
      },
      "texte": {
-      "fr": "Les photos des contrôles du jour (ouverture, comptoirs, étiquetage) déposées par l’équipe.\nTrois filtres : Tout, À contrôler (déposée, pas encore notée), Non rendues (pas de photo).\nUne photo s’ouvre en grand d’un toucher.",
-      "nl": "De foto’s van de controles van de dag (opening, toonbanken, etikettering) die het team heeft opgeladen.\nDrie filters: Alles, Te controleren (opgeladen, nog niet beoordeeld), Niet ingediend (geen foto).\nEen foto opent groot met één tik."
+      "fr": "Seules les tâches du jour qui demandent une photo, rangées par checklist.\nEn haut, une pastille par checklist : son heure, son code et les photos rendues (par exemple 0/1) ; un toucher amène sa carte.\nUne carte par checklist, dans l’ordre des heures, sur une seule hauteur de photo ; › fait défiler les cartes.\nObligatoire : un cadre plein. Facultative : un cadre en pointillé, la photo estompée et le mot « facultative ».\nLes filtres (Écarts, À contrôler, Conformes, Non rendues, Sans photo) n’apparaissent que lorsqu’ils ont des photos ; « Tout » les remet toutes.\nUne photo s’ouvre en grand d’un toucher.",
+      "nl": "Alleen de taken van de dag die een foto vragen, geordend per checklist.\nBovenaan één bolletje per checklist: het uur, de code en de ingediende foto’s (bijvoorbeeld 0/1); een tik brengt je naar de kaart.\nEén kaart per checklist, in de volgorde van de uren, op één fotohoogte; › schuift de kaarten door.\nVerplicht: een volle rand. Facultatief: een stippelrand, de foto vervaagd en het woord « facultatief ».\nDe filters (Afwijkingen, Te controleren, Conform, Niet ingediend, Zonder foto) verschijnen alleen als ze foto’s hebben; « Alles » toont ze weer allemaal.\nEen tik opent een foto in het groot."
      },
      "critique": false,
      "photo": "dash-controles.jpg",
@@ -260,12 +260,90 @@
   },
   {
    "titre": {
+    "fr": "Tâches — les checklists du jour",
+    "nl": "Taken — de checklists van de dag"
+   },
+   "etapes": [
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "L’onglet Tâches",
+      "nl": "Het tabblad Taken"
+     },
+     "texte": {
+      "fr": "En haut, la semaine : une case par jour, la part des tâches obligatoires faites ; un toucher ouvre le jour.\nQuatre tuiles : tâches obligatoires faites, photos rendues, contrôle qualité du jour (photos à contrôler, dernier passage du contrôleur), non-conformités des 30 derniers jours.\nSeules les tâches obligatoires comptent dans les pourcentages de l’onglet.",
+      "nl": "Bovenaan de week: één vak per dag, het aandeel uitgevoerde verplichte taken; een tik opent de dag.\nVier tegels: uitgevoerde verplichte taken, ingediende foto’s, kwaliteitscontrole van de dag (te controleren foto’s, laatste passage van de controleur), non-conformiteiten van de laatste 30 dagen.\nAlleen de verplichte taken tellen mee in de percentages van het tabblad."
+     },
+     "critique": false,
+     "photo": "dash-onglet-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "Comment c’est organisé",
+      "nl": "Hoe het georganiseerd is"
+     },
+     "texte": {
+      "fr": "Une checklist : une liste de tâches à faire à un moment de la journée.\nSon code a trois parties, par exemple 1.1.01 · Ouverture de la boutique : qui · quand · numéro.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois.\nLe numéro sépare les checklists du même qui et du même quand.\nObligatoire : la tâche doit être faite chaque jour où elle revient.\nPhoto : une tâche qui demande une photo n’est faite que si la photo est rendue ; cochée sans photo, elle ne compte pas.\nContrôle qualité : chaque photo rendue est notée de 1 à 5 par le contrôleur ; sous 4, c’est une non-conformité, à corriger.",
+      "nl": "Een checklist: een lijst taken die op een moment van de dag gedaan moeten worden.\nDe code heeft drie delen, bijvoorbeeld 1.1.01 · Opening van de winkel: wie · wanneer · nummer.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand.\nHet nummer onderscheidt de checklists met hetzelfde wie en hetzelfde wanneer.\nVerplicht: de taak moet gedaan worden op elke dag dat ze terugkomt.\nFoto: een taak die een foto vraagt is pas gedaan als de foto ingediend is; aangevinkt zonder foto telt ze niet.\nKwaliteitscontrole: elke ingediende foto krijgt van de controleur een score van 1 tot 5; onder 4 is het een non-conformiteit, te corrigeren."
+     },
+     "critique": false,
+     "photo": "dash-organisation.jpg",
+     "video": null
+    },
+    {
+     "numero": "17",
+     "titre": {
+      "fr": "Les checklists du jour",
+      "nl": "De checklists van de dag"
+     },
+     "texte": {
+      "fr": "Dans l’ordre des codes ; pour chacune : son heure, sa zone, son moment et la barre des tâches obligatoires faites (par exemple 6 / 6).\nFaite en vert, en partie en orange, pas faite en rose.\nLes filtres Toutes, Pas faites, En partie, Faites ; « voir ▾ » ouvre ses tâches, « Tout déplier » les ouvre toutes.",
+      "nl": "In de volgorde van de codes; voor elke checklist: het uur, de zone, het moment en de balk van de uitgevoerde verplichte taken (bijvoorbeeld 6 / 6).\nGedaan in het groen, gedeeltelijk in het oranje, niet gedaan in het roze.\nDe filters Alle, Niet gedaan, Gedeeltelijk, Gedaan; « bekijken ▾ » opent de taken, « Alles openklappen » opent ze allemaal."
+     },
+     "critique": false,
+     "photo": "dash-checklists-jour.jpg",
+     "video": null
+    },
+    {
+     "numero": "18",
+     "titre": {
+      "fr": "Les retours du contrôle qualité",
+      "nl": "De feedback van de kwaliteitscontrole"
+     },
+     "texte": {
+      "fr": "Les notes et les commentaires du contrôleur des 30 derniers jours, le plus récent en haut.\nUne ligne : le jour, la note (4 · Conforme…), la tâche, qui l’a notée et quand ; un toucher ouvre la photo et ses remarques.\nUne note sous 4 est une non-conformité : elle compte dans la tuile des 30 jours tant qu’elle n’est pas reprise.",
+      "nl": "De scores en de opmerkingen van de controleur van de laatste 30 dagen, de recentste bovenaan.\nEén regel: de dag, de score (4 · Conform…), de taak, wie ze scoorde en wanneer; een tik opent de foto en de opmerkingen.\nEen score onder 4 is een non-conformiteit: ze telt mee in de tegel van 30 dagen zolang ze niet hersteld is."
+     },
+     "critique": false,
+     "photo": "dash-retours.jpg",
+     "video": null
+    },
+    {
+     "numero": "19",
+     "titre": {
+      "fr": "La revue du soir",
+      "nl": "De avondronde"
+     },
+     "texte": {
+      "fr": "En tête, « Revue du soir » (« pas faite » ou « faite ») ouvre un assistant de fin de journée : une question à la fois.\n« Qui fait la revue ? » : on choisit son nom, puis « Commencer ».\nD’abord les checklists pas finies : pour chacune, un bouton donne la raison (fait pas coché, pas eu le temps, manque de personnel, oublié…).\nPuis les points de gestion : certains se vérifient seuls (invendus déclarés, stock compté, commandes clôturées, photos rendues, non-conformités reprises), les autres se répondent (feedback à l’équipe, caisse, commande fournisseurs, demain prêt).\nLa fin : une carte par zone, ✓ ou ✗ ; la revue clôturée se relit le lendemain.\nLes points et les boutons se règlent au cockpit (Cadre des tâches › Revue du soir).",
+      "nl": "Bovenaan opent « Avondronde » (« niet gedaan » of « gedaan ») een assistent voor het einde van de dag: één vraag tegelijk.\n« Wie doet de ronde? »: je kiest je naam, daarna « Beginnen ».\nEerst de checklists die niet af zijn: voor elke checklist geeft een knop de reden (gedaan niet aangevinkt, geen tijd gehad, personeelstekort, vergeten…).\nDaarna de beheerpunten: sommige worden vanzelf gecontroleerd (onverkocht aangegeven, voorraad geteld, bestellingen afgesloten, foto’s ingediend, non-conformiteiten hersteld), de andere beantwoord je (feedback aan het team, kassa, leveranciersbestelling, morgen klaar).\nHet einde: één kaart per zone, ✓ of ✗; de afgesloten ronde lees je de volgende dag terug.\nDe punten en de knoppen worden in de cockpit ingesteld (Takenkader › Avondronde)."
+     },
+     "critique": false,
+     "photo": "dash-revue.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
     "fr": "Semaine et Mois — le résultat",
     "nl": "Week en Maand — het resultaat"
    },
    "etapes": [
     {
-     "numero": "15",
+     "numero": "20",
      "titre": {
       "fr": "Les tâches de la période",
       "nl": "De taken van de periode"
@@ -279,7 +357,7 @@
      "video": null
     },
     {
-     "numero": "16",
+     "numero": "21",
      "titre": {
       "fr": "Le résultat de la période",
       "nl": "Het resultaat van de periode"
@@ -293,21 +371,21 @@
      "video": null
     },
     {
-     "numero": "17",
+     "numero": "22",
      "titre": {
       "fr": "Commandes et canaux",
       "nl": "Bestellingen en kanalen"
      },
      "texte": {
-      "fr": "Comptoir (tickets de caisse), clients pro (tickets des sociétés), click & collect (webshop retiré en boutique), livraison (webshop livré).\nPour chacun : le chiffre, la part du CA, le nombre de tickets ou de commandes, le panier.\nLe tableau des commandes : jour par jour, ce qui est à préparer et ce qui est déjà pris pour les jours à venir.",
-      "nl": "Toonbank (kassatickets), zakelijke klanten (tickets van bedrijven), click & collect (webshop afgehaald in de winkel), levering (webshop geleverd).\nVoor elk: het cijfer, het aandeel in de omzet, het aantal tickets of bestellingen, het ticket.\nDe tabel van de bestellingen: dag per dag, wat klaar te maken is en wat al genomen is voor de komende dagen."
+      "fr": "Comptoir (tickets de caisse), clients pro (tickets des sociétés), click & collect (webshop retiré en boutique), livraison (webshop livré).\nPour chacun : le chiffre, la part du CA, le nombre de tickets ou de commandes, le panier.\nLe tableau des commandes : jour par jour, ce qui est à préparer et ce qui est déjà pris pour les jours à venir.\nClients pro : un ticket en paiement différé compte remise personnelle du client déduite, le montant que la facture réglera.",
+      "nl": "Toonbank (kassatickets), zakelijke klanten (tickets van bedrijven), click & collect (webshop afgehaald in de winkel), levering (webshop geleverd).\nVoor elk: het cijfer, het aandeel in de omzet, het aantal tickets of bestellingen, het ticket.\nDe tabel van de bestellingen: dag per dag, wat klaar te maken is en wat al genomen is voor de komende dagen.\nZakelijke klanten: een ticket met uitgestelde betaling telt met de persoonlijke korting van de klant afgetrokken, het bedrag dat de factuur zal vereffenen."
      },
      "critique": false,
      "photo": "dash-canaux.jpg",
      "video": null
     },
     {
-     "numero": "18",
+     "numero": "23",
      "titre": {
       "fr": "Invendus et poubelle",
       "nl": "Onverkocht en afval"
@@ -321,7 +399,7 @@
      "video": null
     },
     {
-     "numero": "19",
+     "numero": "24",
      "titre": {
       "fr": "Le CA de chaque jour",
       "nl": "De omzet van elke dag"
@@ -335,7 +413,7 @@
      "video": null
     },
     {
-     "numero": "20",
+     "numero": "25",
      "titre": {
       "fr": "Douze semaines et les heures",
       "nl": "Twaalf weken en de uren"
@@ -349,7 +427,7 @@
      "video": null
     },
     {
-     "numero": "21",
+     "numero": "26",
      "titre": {
       "fr": "Les six leviers (onglet Mois)",
       "nl": "De zes hefbomen (tabblad Maand)"
@@ -363,7 +441,7 @@
      "video": null
     },
     {
-     "numero": "22",
+     "numero": "27",
      "titre": {
       "fr": "La rentabilité jour par jour (onglet Mois)",
       "nl": "De rendabiliteit dag per dag (tabblad Maand)"
@@ -385,7 +463,7 @@
    },
    "etapes": [
     {
-     "numero": "23",
+     "numero": "28",
      "titre": {
       "fr": "Le trimestre",
       "nl": "Het kwartaal"
@@ -399,7 +477,7 @@
      "video": null
     },
     {
-     "numero": "24",
+     "numero": "29",
      "titre": {
       "fr": "L’année",
       "nl": "Het jaar"
@@ -413,7 +491,7 @@
      "video": null
     },
     {
-     "numero": "25",
+     "numero": "30",
      "titre": {
       "fr": "La heatmap des mois",
       "nl": "De heatmap van de maanden"
@@ -430,12 +508,48 @@
   },
   {
    "titre": {
+    "fr": "Concurrence et Temps morts — le marché et le comptoir",
+    "nl": "Concurrentie en Dode tijd — de markt en de toonbank"
+   },
+   "etapes": [
+    {
+     "numero": "31",
+     "titre": {
+      "fr": "Concurrence",
+      "nl": "Concurrentie"
+     },
+     "texte": {
+      "fr": "« Top 10 réseau » : nos dix produits les plus vendus du réseau, face aux prix relevés autour du magasin.\nPour chacun : notre prix à la pièce (promo comprise), la médiane des boulangeries, celle des supermarchés, la fourchette, la position, les relevés et l’écart.\nLe verdict se fait face aux boulangeries (artisans, chaînes, stations), hors supermarchés : au prix du marché à ± 5 % de la médiane, au-dessus ou en dessous au-delà.\nUn produit vendu par lot (« 8 pc ») compte à son prix à la pièce.\n« Aller chercher un produit… » et les produits à côté du Top 10 ouvrent un autre produit ; « + Relevé terrain » ajoute un prix vu chez un concurrent.",
+      "nl": "« Top 10 netwerk »: onze tien best verkochte producten van het netwerk, tegenover de prijzen opgenomen rond de winkel.\nVoor elk product: onze prijs per stuk (promo inbegrepen), de mediaan van de bakkerijen, die van de supermarkten, de vork, de positie, de opnames en het verschil.\nHet oordeel valt tegenover de bakkerijen (ambachtelijk, ketens, tankstations), zonder supermarkten: aan de marktprijs binnen ± 5 % van de mediaan, erboven of eronder daarbuiten.\nEen product dat per lot verkocht wordt (« 8 st ») telt aan zijn prijs per stuk.\n« Een product opzoeken… » en de producten naast de Top 10 openen een ander product; « + Terreinopname » voegt een prijs toe die bij een concurrent gezien werd."
+     },
+     "critique": false,
+     "photo": "dash-concurrence.jpg",
+     "video": null
+    },
+    {
+     "numero": "32",
+     "titre": {
+      "fr": "Temps morts",
+      "nl": "Dode tijd"
+     },
+     "texte": {
+      "fr": "Un temps mort : 10 minutes ou plus sans un seul ticket, entre le premier et le dernier ticket de la journée ; 5 min, 10 min ou 15 min changent ce seuil.\nLes tuiles : les temps morts, le temps sans client, la part de l’ouverture, le plus long trou et les tickets, face à l’habitude (les 4 mêmes jours de semaine d’avant).\nLa journée minute par minute : un carré par minute ; foncé s’il y a eu un ticket (le chiffre quand il y en a plusieurs), rose dans un temps mort, hachuré avant le premier et après le dernier ticket.\nÀ droite de chaque heure : la part de l’heure sans client, le nombre de tickets et de temps morts.\nEn bas, la semaine jour par jour ; un toucher sur un jour le lit au-dessus.\nTous les tickets comptent, comptoir et pro ; un ticket isolé à 45 min ou plus du suivant, en début ou en fin de journée, est écarté.",
+      "nl": "Een dode tijd: 10 minuten of meer zonder één enkel ticket, tussen het eerste en het laatste ticket van de dag; 5 min, 10 min of 15 min wijzigen die drempel.\nDe tegels: de dode tijden, de tijd zonder klant, het aandeel van de openingstijd, het langste gat en de tickets, tegenover de gewoonte (de 4 zelfde weekdagen ervoor).\nDe dag minuut per minuut: één vakje per minuut; donker als er een ticket was (het cijfer als het er meerdere zijn), roze in een dode tijd, gearceerd vóór het eerste en na het laatste ticket.\nRechts van elk uur: het aandeel van het uur zonder klant, het aantal tickets en dode tijden.\nOnderaan de week dag per dag; een tik op een dag toont hem hierboven.\nAlle tickets tellen, toonbank en zakelijk; een geïsoleerd ticket op 45 min of meer van het volgende, aan het begin of het einde van de dag, wordt weggelaten."
+     },
+     "critique": false,
+     "photo": "dash-temps-morts.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
     "fr": "Promotions, Primes et téléphone",
     "nl": "Promoties, Premies en telefoon"
    },
    "etapes": [
     {
-     "numero": "26",
+     "numero": "33",
      "titre": {
       "fr": "Promotions",
       "nl": "Promoties"
@@ -449,7 +563,7 @@
      "video": null
     },
     {
-     "numero": "27",
+     "numero": "34",
      "titre": {
       "fr": "Primes",
       "nl": "Premies"
@@ -463,14 +577,14 @@
      "video": null
     },
     {
-     "numero": "28",
+     "numero": "35",
      "titre": {
       "fr": "Au téléphone",
       "nl": "Op de telefoon"
      },
      "texte": {
-      "fr": "Sous 560 px de large, la même page se lit au pouce : Opérationnel, Exploitation, Contrôle, Semaine, Primes, en bas de l’écran.\nLe chiffre de la période en grand, l’alerte des tâches bloquantes juste dessous, puis des cartes.\nLe mois, le trimestre et l’année se lisent sur ordinateur ou tablette.",
-      "nl": "Onder 560 px breed lees je dezelfde pagina met de duim: Operationeel, Exploitatie, Controle, Week, Premies, onderaan het scherm.\nHet cijfer van de periode groot, het alarm van de blokkerende taken er net onder, daarna kaarten.\nDe maand, het kwartaal en het jaar lees je op een computer of tablet."
+      "fr": "Sous 560 px de large, la même page se lit au pouce : Opérationnel, Exploitation, Contrôle, Tâches, Semaine, Primes, en bas de l’écran.\nLe chiffre de la période en grand, l’alerte des tâches bloquantes juste dessous, puis des cartes.\nLe mois, le trimestre et l’année se lisent sur ordinateur ou tablette.",
+      "nl": "Onder 560 px breed lees je dezelfde pagina met de duim: Operationeel, Exploitatie, Controle, Taken, Week, Premies, onderaan het scherm.\nHet cijfer van de periode groot, het alarm van de blokkerende taken er net onder, daarna kaarten.\nDe maand, het kwartaal en het jaar lees je op een computer of tablet."
      },
      "critique": false,
      "photo": "dash-mobile.jpg",
@@ -589,6 +703,44 @@
      "Niets, er is geen alarm",
      "De voorraad in het dashboard aanpassen",
      "Een telling plannen: zonder recente inventaris bewijst het ontbreken van alarmen niets"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Que dit le code de la checklist 2.4.01 ?",
+    "nl": "Wat zegt de code van checklist 2.4.01?"
+   },
+   "choix": {
+    "fr": [
+     "Boulangerie, à la fermeture, checklist n° 01",
+     "La 2e checklist de la 4e semaine",
+     "Vente, en journée, 1 tâche sur 4"
+    ],
+    "nl": [
+     "Bakkerij, bij de sluiting, checklist nr. 01",
+     "De 2e checklist van de 4e week",
+     "Verkoop, overdag, 1 taak op 4"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Une tâche qui demande une photo est cochée, mais la photo n’est pas rendue. Compte-t-elle comme faite ?",
+    "nl": "Een taak die een foto vraagt is aangevinkt, maar de foto is niet ingediend. Telt ze als gedaan?"
+   },
+   "choix": {
+    "fr": [
+     "Oui, elle est cochée",
+     "Seulement si elle est obligatoire",
+     "Non : une tâche à photo n’est faite que si la photo est rendue"
+    ],
+    "nl": [
+     "Ja, ze is aangevinkt",
+     "Alleen als ze verplicht is",
+     "Nee: een taak met foto is pas gedaan als de foto ingediend is"
     ]
    },
    "bonne": 2

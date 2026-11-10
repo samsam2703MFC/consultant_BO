@@ -9,7 +9,7 @@
  "poste": "vente",
  "moment": "ouverture",
  "acces": "responsable",
- "duree": "10 min chaque matin · 2 × 3 min en journée · 5 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
+ "duree": "10 min chaque matin · 2 × 3 min en journée · 10 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
  "titre": {
   "fr": "Analyser le dashboard magasin : la routine",
   "nl": "Het winkeldashboard analyseren: de routine"
@@ -88,8 +88,8 @@
       "nl": "Controles met foto"
      },
      "texte": {
-      "fr": "Revenir sur aujourd’hui : tous les contrôles d’ouverture sont-ils rendus ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
-      "nl": "Terug naar vandaag: zijn alle openingscontroles ingediend?\n« Niet ingediend »: de foto nu laten opladen.\n« Te controleren »: ze bekijken en ter plaatse corrigeren wat niet klopt."
+      "fr": "Revenir sur aujourd’hui : les pastilles des checklists d’ouverture sont-elles complètes (par exemple 1/1) ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
+      "nl": "Terug naar vandaag: zijn de bolletjes van de openingschecklists volledig (bijvoorbeeld 1/1)?\n« Niet ingediend »: de foto nu laten opladen.\n« Te controleren »: ze bekijken en ter plaatse corrigeren wat niet klopt."
      },
      "critique": false,
      "photo": "dash-controles.jpg",
@@ -191,8 +191,8 @@
   },
   {
    "titre": {
-    "fr": "Le soir, à la fermeture — 5 min",
-    "nl": "’s Avonds, bij de sluiting — 5 min"
+    "fr": "Le soir, à la fermeture — 10 min",
+    "nl": "’s Avonds, bij de sluiting — 10 min"
    },
    "etapes": [
     {
@@ -230,11 +230,25 @@
       "nl": "De taken van de dag"
      },
      "texte": {
-      "fr": "Vérifier qu’aucune tâche bloquante ne reste ouverte ; sinon, la confier pour demain matin.",
-      "nl": "Nakijken dat er geen blokkerende taak openstaat; anders ze voor morgenvroeg toevertrouwen."
+      "fr": "Onglet Tâches : les checklists du jour encore « pas faite » ou « en partie ».\nUne tâche obligatoire qui reste ouverte : la faire avant de partir, ou la confier pour demain matin.",
+      "nl": "Tabblad Taken: de checklists van de dag die nog « niet gedaan » of « gedeeltelijk » zijn.\nEen verplichte taak die openblijft: ze doen vóór je vertrekt, of ze toevertrouwen voor morgenochtend."
      },
      "critique": false,
-     "photo": "dash-taches.jpg",
+     "photo": "dash-checklists-jour.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.4",
+     "titre": {
+      "fr": "La revue du soir",
+      "nl": "De avondronde"
+     },
+     "texte": {
+      "fr": "Toucher « Revue du soir » en tête du dashboard, choisir son nom, « Commencer ».\nPour chaque checklist pas finie : donner la raison d’un bouton.\nRépondre aux points de gestion ; un point en ✗ se règle avant de partir ou se note pour demain.\nAller jusqu’à l’écran de fin : la revue est clôturée, « Revue du soir · faite ».",
+      "nl": "« Avondronde » bovenaan het dashboard aantikken, je naam kiezen, « Beginnen ».\nVoor elke checklist die niet af is: de reden geven met een knop.\nDe beheerpunten beantwoorden; een punt in ✗ wordt vóór vertrek geregeld of voor morgen genoteerd.\nDoorgaan tot het eindscherm: de ronde is afgesloten, « Avondronde · gedaan »."
+     },
+     "critique": false,
+     "photo": "dash-revue.jpg",
      "video": null
     }
    ]
@@ -294,11 +308,11 @@
       "nl": "Taken en controles"
      },
      "texte": {
-      "fr": "Lire le % de tâches faites et les jours sous 40 %.\nUn jour sous 40 % : voir avec l’équipe de ce jour-là ce qui a bloqué.",
-      "nl": "Het % uitgevoerde taken en de dagen onder 40 % lezen.\nEen dag onder 40 %: met het team van die dag bekijken wat blokkeerde."
+      "fr": "Onglet Tâches, semaine passée : la part des tâches obligatoires faites, jour par jour ; onglet Semaine : les jours sous 40 %.\nUn jour bas : voir avec l’équipe de ce jour-là ce qui a bloqué (les raisons données dans la revue du soir).\nRetours du contrôle qualité : chaque note sous 4 est-elle reprise ?",
+      "nl": "Tabblad Taken, vorige week: het aandeel uitgevoerde verplichte taken, dag per dag; tabblad Week: de dagen onder 40 %.\nEen lage dag: met het team van die dag bekijken wat blokkeerde (de redenen gegeven in de avondronde).\nFeedback van de kwaliteitscontrole: is elke score onder 4 hersteld?"
      },
      "critique": false,
-     "photo": "dash-taches.jpg",
+     "photo": "dash-onglet-taches.jpg",
      "video": null
     },
     {
@@ -322,8 +336,8 @@
       "nl": "De uren en de planning"
      },
      "texte": {
-      "fr": "Lire l’heure la plus rentable et la moins rentable, et la journée type.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.",
-      "nl": "Het meest en het minst rendabele uur lezen, en de typedag.\nEen uur in het rood (negatieve nettomarge) meerdere dagen: de planning van de volgende week bijsturen."
+      "fr": "Lire l’heure la plus rentable et la moins rentable, et la journée type.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.\nOnglet Temps morts, jour par jour : les heures souvent sans client sont celles où le planning peut s’alléger.",
+      "nl": "Het meest en het minst rendabele uur lezen, en de typedag.\nEen uur in het rood (negatieve nettomarge) meerdere dagen: de planning van de volgende week bijsturen.\nTabblad Dode tijd, dag per dag: de uren die vaak zonder klant zijn, zijn die waar de planning lichter kan."
      },
      "critique": false,
      "photo": "dash-heures-semaine.jpg",
@@ -524,8 +538,8 @@
    "nl": "Het onverkochte moet elke avond in de kassa aangegeven worden, anders is het resultaat fout."
   },
   {
-   "fr": "Le dashboard est en lecture seule : on corrige à la source, puis on relit.",
-   "nl": "Het dashboard is alleen-lezen: je corrigeert aan de bron, daarna herlees je."
+   "fr": "Le dashboard ne corrige aucun chiffre : on corrige à la source (caisse, panel, cockpit), puis on relit.",
+   "nl": "Het dashboard corrigeert geen enkel cijfer: je corrigeert aan de bron (kassa, panel, cockpit), daarna herlees je."
   }
  ],
  "quiz": [
@@ -604,6 +618,25 @@
     ]
    },
    "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "À la fermeture, la revue du soir montre 1.4.01 « en partie ». Que faire ?",
+    "nl": "Bij de sluiting toont de avondronde 1.4.01 « gedeeltelijk ». Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Fermer la revue sans répondre",
+     "Cocher les tâches à la place de l’équipe",
+     "Donner la raison d’un bouton, puis régler ce qui manque ou le confier pour demain"
+    ],
+    "nl": [
+     "De ronde sluiten zonder te antwoorden",
+     "De taken aanvinken in plaats van het team",
+     "De reden geven met een knop, daarna regelen wat ontbreekt of het voor morgen toevertrouwen"
+    ]
+   },
+   "bonne": 2
   }
  ]
 }
