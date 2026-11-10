@@ -1373,3 +1373,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-10T07:16:49Z formation : code donné à la création
 2026-11-10T07:48:18Z formation : accueil du portail
 2026-11-10T08:06:35Z [257] ERP production : facture KSeF dans la fenêtre « nouveau prix à valider »
+2026-11-10T08:14:11Z [257] ERP production : en-tête collant de la facture KSeF
