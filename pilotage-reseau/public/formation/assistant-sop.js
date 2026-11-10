@@ -108,7 +108,15 @@
         : `<div class="as-bloc"><h3>Le moment</h3><p class="muted fm-small">L’onglet de la tablette où la SOP sera rangée.</p><div class="as-pills">${MOMENTS.map(([v, l]) => pill('moment', v, l, A.moment === v)).join('')}</div></div>`}
       <div class="as-bloc"><h3>Le poste</h3><div class="as-pills">${POSTES.map(([v, l]) => pill('poste', v, l, A.poste === v)).join('')}</div></div>
       <div class="as-deux"><label class="as-champ"><span>Famille</span><select class="fm-select" data-asch="dossier">${R.dossiers.map(d => `<option value="${esc(d.id)}"${A.dossier === d.id ? ' selected' : ''}>${esc(d.id + ' · ' + ((d.nom && d.nom.fr) || ''))}</option>`).join('')}</select></label>
-        ${champ('code', 'Code', 'ex. SOP-WKL-006', { aide: 'Facultatif : il sert aussi d’identifiant.' })}</div>`;
+        ${A.type === 'Checklist' ? champ('code', 'Code de la checklist', 'ex. 1.1.01', { aide: 'Le code de la checklist que la fiche décrit.' }) : `<label class="as-champ"><span>Code</span><span class="as-code">${esc(codeAuto())}</span><small>Donné à la création : 0 (SOP et manuel) · le moment · le prochain numéro libre.</small></label>`}</div>`;
+  }
+  /** Le code que la création donnera (10/11/2026) : 0 · moment (.0 pour un article, un mémo, une fiche) · premier numéro libre.
+   *  L'aperçu se lit dans le référentiel ; le serveur le recalcule à la création (foCodeAuto). */
+  function codeAuto() {
+    const m = ['Article', 'Mémo', 'Fiche'].includes(A.type) ? 0 : ({ ouverture: 1, journee: 2, 'apres-midi': 3, fermeture: 4 }[A.moment] || 2);
+    const pris = new Set(((R.ref && R.ref.standards) || []).map(x => String(x.code || '')).filter(c => c.startsWith('0.' + m + '.')).map(c => +c.slice(4)));
+    let n = 1; while (pris.has(n)) { n++; }
+    return '0.' + m + '.' + String(n).padStart(2, '0');
   }
   function vueSujet() {
     const comp = R.ref.competences || [], fos = R.ref.formations || [];
@@ -214,7 +222,7 @@
       const bonne = Math.max(0, choix.indexOf(String(q.choix[q.bonne] || '').trim()));
       return { question: bi(q.question), choix: { fr: choix, nl: [] }, bonne };
     });
-    const corps = { code: A.code.trim() || null, dossier: A.dossier, type: A.type, poste: A.poste, moment: art() ? null : (A.moment || null),
+    const corps = { code: A.type === 'Checklist' ? (A.code.trim() || null) : null, dossier: A.dossier, type: A.type, poste: A.poste, moment: art() ? null : (A.moment || null),
       titre: { fr: A.titreFr.trim(), nl: A.titreNl.trim() }, objectif: bi(A.objectifFr),
       contenu: { pour: bi(A.pourFr), duree: A.duree.trim() || null, sections: [{ titre: art() ? { fr: 'Article', nl: 'Artikel' } : { fr: 'Marche à suivre', nl: 'Werkwijze' }, etapes }],
         points_critiques: A.points.map(p => p.trim()).filter(Boolean).map(bi), quiz } };

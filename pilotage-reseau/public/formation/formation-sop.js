@@ -208,7 +208,7 @@ window.FormationSop = (function () {
     h += `<div class="filters"><div class="filters__row"><input class="fm-search" type="search" placeholder="Rechercher…" data-input="sopq" value="${esc(C.S.f.sopq || '')}"><a class="btn btn--primary" href="#/sopnouvelle" style="margin-left:auto">＋ Nouvelle SOP (assistant)</a><button type="button" class="btn${N ? ' is-on' : ''}" data-sa="nouv" title="Une SOP vide, à rédiger ensuite dans l’éditeur">Création rapide</button></div></div>`;
     if (N) {
       h += `<section class="card"><h2>Nouvelle SOP</h2><div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px">
-        <input class="sop-in" placeholder="Code (ex. SOP-CUI-XYZ-01)" data-sin="nouv.code" value="${esc(N.code)}">
+        <input class="sop-in" placeholder="Code : donné à la création (0.moment.n°) ; une checklist : son code" data-sin="nouv.code" value="${esc(N.code)}">
         <select class="fm-select" data-sch="nouv.dossier">${D.dossiers.map(d => `<option value="${d.id}" ${N.dossier === d.id ? 'selected' : ''}>${d.id} · ${esc(d.nom.fr)}</option>`).join('')}</select>
         <select class="fm-select" data-sch="nouv.type">${['SOP', 'Checklist', 'Mémo', 'Fiche', 'Article'].map(x => `<option value="${x}" ${N.type === x ? 'selected' : ''}>${x === 'Article' ? 'Article du manuel' : x}</option>`).join('')}</select>
         <select class="fm-select" data-sch="nouv.poste">${POSTES.map(x => `<option value="${x}" ${N.poste === x ? 'selected' : ''}>${POSTE_NOM[x]}</option>`).join('')}</select>

@@ -69,3 +69,4 @@
 @media (max-width: 1280px) { .as-lay { grid-template-columns: 200px minmax(0, 1fr); } .as-apercu { grid-column: 1 / -1; position: static; max-height: none; } }
 @media (max-width: 760px) { .as-lay { grid-template-columns: minmax(0, 1fr); } .as-rail { position: static; flex-direction: row; overflow-x: auto; } .as-deux { grid-template-columns: 1fr; } }
 .as-fin__t { font-size: 22px; line-height: 1.25; margin: 0 0 6px; }
+.as-code { font: 400 18px var(--font-display, inherit); letter-spacing: .03em; color: var(--ink, #2b2622); font-variant-numeric: tabular-nums; }

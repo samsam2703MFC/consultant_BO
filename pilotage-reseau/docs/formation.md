@@ -950,6 +950,11 @@ validations restent. Les légendes du Cadre des tâches et du dashboard magasin 
 SOP et manuel » ; les articles 0.0.14 et 0.0.15 aussi (v1.1 et v1.4). Sources : `data/formation/sops/*.json`,
 `data/formation/dashboard/`, `data/formation/checklists/` ; maquettes et `REPRISE.md` gardent les anciens codes.
 
+**Code donné à la création** (10/11/2026, client : « la création le donne seule ») : `POST /formation/sop/fiche` sans code, ou
+avec un code hors format, reçoit `foCodeAuto()` — 0 · le moment · le premier numéro libre de ce moment ; une fiche de
+type Checklist garde le code tapé. L'assistant montre ce code à l'étape 1 (il suit le type et le moment) ; la réponse
+rend `code`.
+
 | Code | Ancien | Document |
 |---|---|---|
 | 0.0.01 | MEMO-CUI-01 | Organisation quotidienne du poste de cuisson |

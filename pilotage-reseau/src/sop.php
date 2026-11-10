@@ -421,13 +421,34 @@ function wr_sop_reglage(string $id): array
     return ['ok' => true, 'sop' => foSopLigne(foSopRow($id) ?? $r)];
 }
 
+/**
+ * Le code d'un nouveau document (10/11/2026, « la création le donne seule ») : zone 0 (SOP et manuel) · le moment
+ * (.1 ouverture, .2 journée et « au besoin », .3 après-midi, .4 fermeture ; .0 pour un article, un mémo, une fiche)
+ * · le premier numéro libre de ce moment parmi les documents du module. Une checklist garde le code de sa checklist.
+ */
+function foCodeAuto(string $type, ?string $moment): string
+{
+    $m = in_array($type, ['Article', 'Mémo', 'Fiche'], true) ? 0 : (['ouverture' => 1, 'journee' => 2, 'apres-midi' => 3, 'fermeture' => 4][$moment ?? ''] ?? 2);
+    $pris = [];
+    foreach (Db::rows('SELECT code FROM ceo_sop WHERE code LIKE ?', ['0.' . $m . '.%']) as $r) {
+        if (preg_match('/^0\.' . $m . '\.(\d{2})$/', (string) $r['code'], $x) === 1) { $pris[(int) $x[1]] = true; }
+    }
+    for ($n = 1; isset($pris[$n]); $n++) { }
+    return sprintf('0.%d.%02d', $m, $n);
+}
+
 /** POST /formation/sops — une nouvelle SOP : {code, dossier, type, poste, titre: {fr, nl}} → version 1.0, à valider. */
 function wr_sop_creer(): array
 {
     $b = body();
     $titre = foBi($b['titre'] ?? null);
     if ($titre['fr'] === '' && $titre['nl'] === '') { return foRefus(400, 'titre attendu'); }
-    $base = foId(sopSlug((string) ($b['code'] ?? '') ?: ($titre['fr'] ?: $titre['nl'])));
+    // Sans code, ou avec un code hors format : la création le donne (foCodeAuto) ; l'identifiant vient alors du titre.
+    $codeDonne = trim((string) ($b['code'] ?? ''));
+    $type = foType($b['type'] ?? 'SOP');
+    $momentCode = isset($b['moment']) && is_string($b['moment']) ? $b['moment'] : null;
+    if ($type === 'Checklist' ? $codeDonne === '' : preg_match('/^0\.[0-4]\.\d{2}$/', $codeDonne) !== 1) { $b['code'] = $type === 'Checklist' ? null : foCodeAuto($type, $momentCode); $codeDonne = ''; }
+    $base = foId(sopSlug($codeDonne ?: ($titre['fr'] ?: $titre['nl'])));
     if ($base === null) { return foRefus(400, 'identifiant impossible à former'); }
     $id = $base;
     for ($i = 2; foSopRow($id) !== null; $i++) { $id = substr($base, 0, 28) . '-' . $i; }
@@ -459,7 +480,7 @@ function wr_sop_creer(): array
         [$id, '1.0', foJson($c), $avec ? 'Création (assistant)' : 'Création', $now, $par]);
     try { journalAdd($par, 'Formation', $titre['fr'] ?: $titre['nl'], ($avec ? 'Nouvelle SOP créée avec l’assistant, ' . $st['etapes'] . ' étape(s)' : 'Nouvelle SOP créée') . ' (à valider)'); } catch (Throwable $e) { /* */ }
     http_response_code(201);
-    return ['ok' => true, 'id' => $id];
+    return ['ok' => true, 'id' => $id, 'code' => $b['code'] ?? null];
 }
 
 /** PUT /formation/equipe/{shop}/{emp} — {postes: [...], valideur: bool, langue: fr|nl} pour une personne du magasin. */
