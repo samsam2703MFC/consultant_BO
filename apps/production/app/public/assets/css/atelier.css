@@ -2130,6 +2130,31 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 .tfb-pu-choice input[value=accept]:checked + span { color: #9a1730; }
 .tfb-pu-choice input:focus-visible + span { outline: 3px solid #1c6ed6; outline-offset: 1px; }
 @media (max-width: 640px) { .tfb-pu-item { grid-template-columns: 1fr; } .tfb-pu-choice { grid-column: 1; grid-row: auto; } }
+/* [257] Faktura źródłowa w oknie « Nowa cena surowca do zatwierdzenia » : nagłówek, pozycje, pozycja z podwyżką podświetlona. */
+.tfb-pu-src { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.tfb-pu-inv { margin: 0 0 14px; border: 1px solid #e6e0d8; border-radius: 12px; background: #fff; overflow: hidden; }
+.tfb-pu-inv-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px 18px; margin: 0; padding: 14px 16px; background: #FBF9F5; border-bottom: 1px solid #e6e0d8; }
+.tfb-pu-inv-head dt { font-size: 10.5px; font-weight: 400; letter-spacing: .06em; text-transform: uppercase; color: #7a736a; margin: 0 0 2px; }
+.tfb-pu-inv-head dd { margin: 0; font-size: 13px; color: #1c1a17; }
+.tfb-pu-inv-head dd span { display: block; font-size: 11.5px; color: #7a736a; }
+.tfb-pu-inv-ksef { font-variant-numeric: tabular-nums; word-break: break-all; }
+.tfb-pu-inv .table-responsive { max-height: 360px; overflow-y: auto; }
+.tfb-pu-inv-table { font-size: 12.5px; }
+.tfb-pu-inv-table thead th { position: sticky; top: 0; z-index: 1; background: #FBF9F5; }
+.tfb-pu-inv-table td { vertical-align: top; }
+.tfb-pu-inv-table tfoot td { position: sticky; bottom: 0; z-index: 1; background: #F8F4EE; color: #1c1a17; }
+.tfb-pu-inv-table tfoot td:last-child { white-space: nowrap; }
+.tfb-pu-inv-table tr.is-up > td { background: rgba(141, 29, 44, .05); }
+.tfb-pu-inv-table tr.is-up > td:first-child { box-shadow: inset 3px 0 0 #8D1D2C; }
+.tfb-pu-inv-table tr.is-flash > td { animation: tfb-pu-flash 1.6s ease; }
+@keyframes tfb-pu-flash { 0%, 40% { background: rgba(141, 29, 44, .16); } 100% { background: rgba(141, 29, 44, .05); } }
+.tfb-pu-inv-sub { display: block; margin-top: 2px; font-size: 11px; color: #7a736a; }
+.tfb-pu-inv-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-top: 1px solid #e6e0d8; }
+.tfb-pu-inv-foot .btn-link { margin-left: auto; }
+.tfb-pu-goto { align-self: flex-start; margin-top: 2px; padding: 0; border: 0; background: none; color: #5c5852; font-size: 12px; text-align: left; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.tfb-pu-goto:hover { color: #8D1D2C; }
+.tfb-pu-goto:focus-visible { outline: 2px solid #8D1D2C; outline-offset: 2px; border-radius: 4px; }
+.tfb-pu .tag-warn { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; background: #F6E7CE; color: #7A5207; font-size: 11px; white-space: nowrap; }
 
 /* --- Finanse : « Faktury i koszty » (3 kroki) i « Koszty usług miesiąca » (makiety 3 i 4) --- */
 .tfb-fin-month { display: flex; align-items: center; gap: 10px; padding: 12px 16px; margin-bottom: 16px; border: 1px solid var(--at-line); border-left: 3px solid var(--at-abricot);

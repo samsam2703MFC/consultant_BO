@@ -1571,6 +1571,22 @@ Produkcja › Zespół pour une entrée du menu Administracja, « Płace i premi
   la direction (`prod.manager.read`) garde les indicateurs, avec un lien « Karta A4 (widok kierownika) ».
 - Tests : `tests/rail_menu_test.php`, `tests/manager_card_test.php`.
 
+### « Nowa cena surowca do zatwierdzenia » : voir la facture KSeF de la ligne — 257 (sans migration)
+
+La fenêtre de validation d'une hausse de prix (`public/assets/js/workshop/invoice-price-up.js`, commune à Zaopatrzenie
+et à Finanse › Faktury i koszty) affiche la facture d'origine sans quitter la décision :
+
+- bouton « Pokaż fakturę KSeF » (« Pokaż fakturę » pour un PDF ou un scan) : en-tête (vendeur, NIP, numéro, date,
+  numéro KSeF), toutes les lignes de la facture (n°, libellé fournisseur, code, quantité, unité, prix HT, HT, TVA),
+  total HT / TTC ; les lignes de la matière en hausse sont surlignées avec « → notre matière · nowa cena do
+  zatwierdzenia » ;
+- sous chaque matière, « na fakturze : poz. N « libellé » » ouvre la facture et fait clignoter la ligne ;
+- « Pobierz XML KSeF » télécharge le fichier conservé à l'import (`GET /supply/invoices/{id}/file`, droit
+  `prod.supply.read`) ; « Otwórz fakturę w Zaopatrzeniu » (nouvel onglet) sauf si l'on est déjà sur cette facture.
+
+Aucune donnée nouvelle : tout vient de `GET /supply/invoices/{id}` (lignes `n_inv_line`, en-tête `n_inv`) déjà
+chargé par la fenêtre. Libellés `pu.show_invoice*`, `pu.from_line`, `pu.inv.*` (pl, fr) dans `supply.json`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
