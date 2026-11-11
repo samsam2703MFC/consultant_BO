@@ -31,14 +31,34 @@ class OrderCollectorService
         $this->collectAll($franchiseeClients, 'order_collector', $limit);
     }
 
-    public function runManualCollector(int $limit = 50)
+    /**
+     * [261] « Pobierz zamówienia » : bilan réel du passage, boutique par boutique — sans lui, le bouton annonçait un
+     * succès alors qu'aucune boutique n'avait d'adresse ni de clé (rien n'était récupéré).
+     * @return array{shops:int, not_configured:int, unreachable:int, answered:int, imported:int, failed:int}
+     */
+    public function runManualCollector(int $limit = 50): array
     {
         $franchiseeClients = $this->clientRepository->getFranchisee();
         if (empty($franchiseeClients)) {
             throw new CustomException("MISSING_FRANCHISE", 'errors', 500);
         }
+        $this->report = ['shops' => count($franchiseeClients), 'not_configured' => 0, 'unreachable' => 0, 'answered' => 0, 'imported' => 0, 'failed' => 0];
         $this->collectAll($franchiseeClients, 'order_manual_collector', $limit);
-        return true;
+        return $this->report;
+    }
+
+    /** Bilan du dernier passage (runManualCollector). */
+    private array $report = ['shops' => 0, 'not_configured' => 0, 'unreachable' => 0, 'answered' => 0, 'imported' => 0, 'failed' => 0];
+
+    /** Phrase du bilan pour l'écran Zamówienia (polonais, comme l'interface). */
+    public static function reportMessage(array $r): string
+    {
+        $parts = ['Sklepy : ' . $r['shops'] . '.'];
+        if ($r['answered'] > 0) $parts[] = 'Odpowiedziały : ' . $r['answered'] . ', nowe zamówienia : ' . $r['imported'] . ($r['failed'] ? ', odrzucone : ' . $r['failed'] : '') . '.';
+        if ($r['not_configured'] > 0) $parts[] = 'Bez adresu lub klucza sklepu w karcie klienta : ' . $r['not_configured'] . ' — nic nie pobrano z tych sklepów.';
+        if ($r['unreachable'] > 0) $parts[] = 'Nie odpowiadają : ' . $r['unreachable'] . '.';
+        $parts[] = 'Szczegóły : Stan wysyłek › Sklepy.';
+        return implode(' ', $parts);
     }
 
     /**
@@ -63,6 +83,7 @@ class OrderCollectorService
             if ($config !== null) {
                 error_log(date('Y-m-d H:i:s') . '[' . $tag . '] ' . $config[0] . ' for client id=' . $clientId);
                 $this->issues->record('config', $shopUid, $clientId, null, $config[1]);
+                $this->report['not_configured']++;
                 continue;
             }
 
@@ -71,6 +92,7 @@ class OrderCollectorService
             } catch (\Throwable $e) {
                 error_log(date('Y-m-d H:i:s') . '[' . $tag . '] collect error for ' . $shopUid . ': ' . $e->getMessage());
                 $this->issues->record('pull', $shopUid, $clientId, null, 'Błąd pobierania zamówień : ' . $e->getMessage());
+                $this->report['unreachable']++;
             }
         }
     }
@@ -104,10 +126,12 @@ class OrderCollectorService
         if ($curlErr || $code < 200 || $code >= 300) {
             error_log(date('Y-m-d H:i:s') . '[order_collector] pull failed code=' . $code . ' err=' . $curlErr . ' url=' . $pullUrl);
             $this->issues->record('pull', $shopUid, $clientId, null, 'Sklep nie odpowiada na pobieranie zamówień : ' . ($curlErr ?: 'HTTP ' . $code));
+            $this->report['unreachable']++;
             return false;
         }
         // La boutique répond : ses erreurs de configuration et de récupération sont réglées.
         $this->issues->close(['config', 'pull'], $shopUid);
+        $this->report['answered']++;
 
         $resp = json_decode($body, true) ?: [];
         $items = $resp['items'] ?? [];
@@ -161,6 +185,9 @@ class OrderCollectorService
                 continue;
             }
         }
+
+        $this->report['imported'] += count(array_unique($doneKeys));
+        $this->report['failed'] += count(array_unique($failKeys));
 
         // 5) ACK (DONE)
         if ($doneKeys) {

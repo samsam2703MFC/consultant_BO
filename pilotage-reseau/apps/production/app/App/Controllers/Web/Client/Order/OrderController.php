@@ -382,8 +382,14 @@ class OrderController extends BaseController
     public function ajaxGetOrdersFromFranchise()
     {
 
-        $result = $this->orderCollectorService->runManualCollector();
-        return $this->handleAjaxResponse($result, 'Zamówienie zaktualizowane', 'Nie udało się zaktualizować zamówienia');
+        try {
+            $report = $this->orderCollectorService->runManualCollector();
+        } catch (\App\Exceptions\CustomException $e) {
+            return $this->json(['message' => $e->getMessage() === 'MISSING_FRANCHISE' ? 'Brak klientów franczyzowych (sklepów) w ERP.' : $e->getMessage()], 500);
+        }
+        // [261] Bilan réel : sans boutique configurée ni réponse, ce n'est pas un succès.
+        $ok = $report['answered'] > 0;
+        return $this->json(['message' => \App\Services\Client\Order\OrderCollectorService::reportMessage($report), 'report' => $report], $ok ? 200 : 502);
     }
 
     public function ajaxGetPickingList()
