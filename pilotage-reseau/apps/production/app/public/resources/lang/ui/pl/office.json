@@ -57,5 +57,11 @@
   "hero_all": "Znajdź swoje nazwisko i dotknij go",
   "all_groups": "Wszyscy",
   "groups": "Grupy",
-  "to_production": "Tablet produkcji ›"
+  "to_production": "Tablet produkcji ›",
+  "comp_title": "Dzień wolny za nadgodziny",
+  "comp_text": "Odbieram {hours} nadgodzin jako dzień wolny : {day}.",
+  "comp_help": "Kierownik produkcji zaproponował dzień wolny za nadgodziny. Podpisz palcem w ramce, żeby go potwierdzić.",
+  "comp_sign": "Podpisuję",
+  "comp_later": "Nie teraz",
+  "comp_done": "Dzień wolny podpisany."
 }

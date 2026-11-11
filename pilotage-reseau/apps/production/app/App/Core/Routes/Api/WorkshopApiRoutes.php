@@ -261,6 +261,8 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/operations/{id:\d+}/pause', ExecutionController::class, 'pause', 'kiosk_employee'],
             ['POST', '/kiosk/operations/{id:\d+}/finish', ExecutionController::class, 'finish', 'kiosk_employee'],
             ['POST', '/kiosk/signatures', ExecutionController::class, 'sign', 'kiosk_employee'],
+            // [262] Dzień wolny za nadgodziny : podpis przy odbiciu (tablet biurowy, PIN).
+            ['POST', '/kiosk/comps/{id:\d+}/sign', ExecutionController::class, 'signComp', 'kiosk_employee'],
             ['GET', '/kiosk/week', ExecutionController::class, 'week', 'kiosk'],
             // Przyjęcie dostawy na tablecie (karta « Dostawy surowców » zespołu) : bez cen.
             ['GET', '/kiosk/deliveries/{id:\d+}', ExecutionController::class, 'delivery', 'kiosk_employee'],
@@ -337,6 +339,7 @@ final class WorkshopApiRoutes
             ['GET', '/kiosk/phone/me', ExecutionController::class, 'phoneMe', 'phone'],
             ['POST', '/kiosk/phone/clock', ExecutionController::class, 'clock', 'phone'],
             ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
+            ['POST', '/kiosk/phone/comps/{id:\d+}/sign', ExecutionController::class, 'signComp', 'phone'],
             ['DELETE', '/kiosk/employees/{id:\d+}/phones', ExecutionController::class, 'revokePhones', 'prod.employees.write'],
             // Pytania przy wejściu / wyjściu (« OK, zatwierdzam »)
             ['GET', '/kiosk/clock-questions', ExecutionController::class, 'clockQuestions', 'prod.employees.write'],

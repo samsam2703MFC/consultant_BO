@@ -33,6 +33,8 @@ final class PageAccess
         'supplier_prices' => ['Ceny surowców i dostawcy', 'Zakupy', ['/materials/prices', '/material-suppliers'], false],
         'ksef_purchases' => ['Faktury zakupowe KSeF (pobieranie) i archiwum dostaw', 'Zakupy', ['/settings/ksef/purchase-invoices', '/purchases'], false],
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
+        // [262] Czas pracy : zatwierdzanie odbić dnia (zadanie nr 1 kierownika produkcji), miesiąc i karty A4, urlopy, nadgodziny.
+        'time' => ['Czas pracy (zatwierdzanie odbić dnia, powody nadgodzin i nieobecności, miesiąc i karta A4, urlopy i dni wolne, nadgodziny i dni wolne za nie)', 'Produkcja', ['/time'], false],
         // [256] Płace (koszt pracodawcy, minimum, % premii) : decyduje administrator, nie kierownik produkcji.
         'budget' => ['Płace : budżet personelu (koszt pracodawcy, minimum, % premii)', 'Administracja', ['/staff'], true],
         // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.
@@ -69,7 +71,7 @@ final class PageAccess
     ];
 
     /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */
-    public const HOME_PAGES = ['/today' => 'Dzisiaj', '/dashboard' => 'Rentowność', '/finances/invoices' => 'Faktury i koszty'];
+    public const HOME_PAGES = ['/today' => 'Dzisiaj', '/dashboard' => 'Rentowność', '/finances/invoices' => 'Faktury i koszty', '/time' => 'Czas pracy'];
 
     /** @var (callable(string): bool)|null sprawdzenie ścieżki dla zalogowanego użytkownika (null = wszystko widoczne) */
     public static $checker = null;

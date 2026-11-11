@@ -36,7 +36,24 @@ final class ExecutionService
         private AuditTrail $audit,
         private SignatureStorage $storage,
         private ClockQuestionService $questions,
+        private \App\Repositories\Workshop\TimeRepository $time,
     ) {
+    }
+
+    /**
+     * [262] Dni wolne za nadgodziny zaproponowane przez kierownika, do podpisu osoby przy odbiciu (tablet biurowy po PIN-ie,
+     * telefon po zeskanowaniu kodu QR) — podpis : TimeService::signComp.
+     */
+    private function compDays(int $employeeId): array
+    {
+        $days = [1 => 'poniedziałek', 'wtorek', 'środa', 'czwartek', 'piątek', 'sobota', 'niedziela'];
+        try {
+            return array_map(fn($c) => ['id' => (int) $c['id'], 'day' => $c['day'], 'minutes' => (int) $c['minutes'],
+                'hours' => intdiv((int) $c['minutes'], 60) . ':' . str_pad((string) ((int) $c['minutes'] % 60), 2, '0', STR_PAD_LEFT),
+                'weekday' => $days[(int) date('N', strtotime($c['day']))]], $this->time->comps($employeeId, 'proposed'));
+        } catch (\PDOException) {
+            return []; // migracja 161 jeszcze nie wykonana
+        }
     }
 
     public function me(ApiContext $context, ?int $now = null): array
@@ -54,6 +71,7 @@ final class ExecutionService
             'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
             'operations' => $this->operations($context, $now),
             'working_on' => array_map(fn($l) => (int) $l['id_operation'], $this->repo->openLogsOfEmployee((int) $context->employeeId)),
+            'comp_days' => $this->compDays((int) $context->employeeId),
         ];
     }
 
@@ -70,6 +88,7 @@ final class ExecutionService
             'signature_on_clock_out' => $this->signatureRequired('out'),
             'signature' => $this->signatureRules(),
             'questions' => $this->questions->forKiosk($context->translator->lang() === 'fr'),
+            'comp_days' => $this->compDays((int) $context->employeeId),
         ];
     }
 
@@ -233,7 +252,8 @@ final class ExecutionService
         return ['id' => $id, 'purpose' => $purpose, 'ref' => $ref, 'sha256' => $hash];
     }
 
-    private function decodePng(mixed $image, string $field = 'image'): string
+    /** Podpis z tabletu (data URL PNG) → bajty PNG ; także dzień wolny za nadgodziny [262]. */
+    public static function decodePng(mixed $image, string $field = 'image'): string
     {
         $error = fn(string $code) => ApiException::validation([['field' => $field, 'code' => $code, 'params' => ['max_kb' => intdiv(self::MAX_SIGNATURE_BYTES, 1000)]]]);
         if (!is_string($image) || !preg_match('#^data:image/png;base64,([A-Za-z0-9+/=]+)$#', $image, $m)) throw $error('INVALID_IMAGE');

@@ -217,6 +217,39 @@
         el.querySelector('[data-back]').addEventListener('click', () => renderClock());
     }
 
+    // [262] Dzień wolny za nadgodziny (Czas pracy › Nadgodziny) : podpis palcem na telefonie ; « Nie teraz » — przy następnym odbiciu.
+    function renderComp(comps, done, error) {
+        const c = comps[0];
+        const day = new Date(c.day + 'T12:00:00').toLocaleDateString(lang === 'fr' ? 'fr-FR' : 'pl-PL', {weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'});
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-confirm">
+                <p class="kiosk-status">${esc(done)}</p>
+                <h2>${esc(t('comp_title'))}${comps.length > 1 ? ` (${comps.length})` : ''}</h2>
+                <p class="kiosk-status"><b>${esc(t('comp_text', {hours: c.hours, day}))}</b></p>
+                <p class="kiosk-muted">${esc(t('comp_help'))}</p>
+                <div class="kiosk-confirm-sign"><canvas class="kiosk-sign" data-pad width="700" height="320" aria-label="${esc(t('signature'))}"></canvas>
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big is-ok" data-comp-sign disabled>${esc(t('comp_sign'))}</button>
+                <button type="button" class="kiosk-btn is-small" data-comp-later>${esc(t('comp_later'))}</button>
+            </section>`;
+        const ok = el.querySelector('[data-comp-sign]');
+        const pad = signaturePad(el.querySelector('[data-pad]'), () => { ok.disabled = pad.empty(); });
+        el.querySelector('[data-clear]').addEventListener('click', () => { pad.clear(); ok.disabled = true; });
+        el.querySelector('[data-comp-later]').addEventListener('click', () => message(done));
+        ok.addEventListener('click', async () => {
+            ok.disabled = true;
+            try {
+                await api('POST', `/kiosk/phone/comps/${c.id}/sign`, {image: pad.image()});
+                comps.shift();
+                if (comps.length) return renderComp(comps, done);
+                message(done + ' ' + t('comp_done'));
+            } catch (err) {
+                ok.disabled = false;
+                el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message;
+            }
+        });
+    }
+
     // Ramka podpisu palcem (biały PNG) : empty() — nic nie narysowano, image() — data URL.
     function signaturePad(canvas, onDraw) {
         const ctx = canvas.getContext('2d');
@@ -242,7 +275,11 @@
             const r = await api('POST', '/kiosk/phone/clock', {direction, client_uuid: pending.uuid, answers, ...(signature ? {signature} : {})});
             pending = null;
             if (navigator.vibrate) navigator.vibrate(80);
-            message(direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)}));
+            const done = direction === 'in' ? t('welcome') : t('bye', {hours: fmt(r.clock.hours)});
+            // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
+            const me = await api('GET', '/kiosk/phone/me').catch(() => null);
+            if (me && me.comp_days && me.comp_days.length) return renderComp(me.comp_days.slice(), done);
+            message(done);
         } catch (err) {
             button.disabled = false;
             if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }

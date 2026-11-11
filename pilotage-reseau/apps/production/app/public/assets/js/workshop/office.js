@@ -333,6 +333,8 @@
             try {
                 const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), signature: pad.image()}, token);
                 const at = String((direction === 'out' ? r.clock.clock_out : r.clock.clock_in) || '').slice(11, 16);
+                // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
+                if (me.comp_days && me.comp_days.length) return renderComp(p, token, me.comp_days.slice(), {direction, at});
                 renderDone(p, {direction, at});
             } catch (err) {
                 // Sesja PIN wygasła (kiosk.employee_token_ttl_s) : PIN jeszcze raz ; pytania zmienione : aktualny ekran.
@@ -341,6 +343,45 @@
                     const fresh = await api('GET', '/kiosk/me', undefined, token).catch(() => null);
                     if (fresh) return renderConfirm(p, token, fresh, direction, err.message);
                 }
+                ok.disabled = false;
+                el.querySelector('[data-error]').textContent = err.offline ? t('offline') : err.message;
+            }
+        });
+        idle(IDLE_MS * 2);
+    }
+
+    // [262] Dzień wolny za nadgodziny : osoba podpisuje palcem dzień zaproponowany przez kierownika produkcji (Czas pracy ›
+    // Nadgodziny) ; podpis z datą i SHA-256 jak przy odbiciu, dzień trafia do kalendarza, bank nadgodzin maleje. « Nie teraz » :
+    // propozycja czeka do następnego odbicia (albo podpis w ERP przy kierowniku).
+    function renderComp(p, token, comps, done, error) {
+        clearTimers();
+        const c = comps[0];
+        const day = longDate(new Date(c.day + 'T12:00:00'));
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-confirm office-confirm office-comp">
+                <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
+                    <span class="office-action is-comp">${esc(t('comp_title'))}${comps.length > 1 ? ` (${comps.length})` : ''}</span></div></div>
+                <p class="office-comp-text">${esc(t('comp_text', {hours: c.hours, day}))}</p>
+                <p class="kiosk-muted">${esc(t('comp_help'))}</p>
+                <div class="kiosk-confirm-sign"><canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
+                    <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big is-ok" data-comp-sign>${esc(t('comp_sign'))}</button>
+                <button type="button" class="kiosk-btn is-small" data-comp-later>${esc(t('comp_later'))}</button>
+            </section>`;
+        const ok = el.querySelector('[data-comp-sign]');
+        const pad = signaturePad(el.querySelector('[data-pad]'), () => { ok.disabled = pad.empty(); });
+        ok.disabled = true;
+        el.querySelector('[data-clear]').addEventListener('click', () => { pad.clear(); ok.disabled = true; });
+        el.querySelector('[data-comp-later]').addEventListener('click', () => renderDone(p, done));
+        ok.addEventListener('click', async () => {
+            ok.disabled = true;
+            try {
+                await api('POST', `/kiosk/comps/${c.id}/sign`, {image: pad.image()}, token);
+                comps.shift();
+                if (comps.length) return renderComp(p, token, comps, done);
+                renderDone(p, Object.assign({}, done, {comp: true}));
+            } catch (err) {
+                if (err.code === 'EMPLOYEE_SESSION_EXPIRED' || err.code === 'EMPLOYEE_UNAUTHENTICATED') return renderDone(p, done);
                 ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.offline ? t('offline') : err.message;
             }
@@ -386,6 +427,7 @@
                 <div class="office-done-mark" aria-hidden="true">✓</div>
                 <h2>${esc(t(out ? 'bye' : 'hello', {name: p.name}))}</h2>
                 <p class="office-done-text">${esc(t(out ? 'done_out' : 'done_in', {time: s.at}))}</p>
+                ${s.comp ? `<p class="office-done-text">${esc(t('comp_done'))}</p>` : ''}
                 <p class="kiosk-muted">${esc(t('done_back'))}</p>
                 <div class="kiosk-row"><button type="button" class="kiosk-btn is-primary" data-home>${esc(t('ok'))}</button></div></section>`;
         if (navigator.vibrate) navigator.vibrate(80);

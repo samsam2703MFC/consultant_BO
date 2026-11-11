@@ -804,5 +804,11 @@
   "kc_reason_other": "Autre motif",
   "kc_comp_REFUND": "Remboursement",
   "kc_comp_REPLACEMENT": "Remplacement",
-  "kc_comp_CREDIT": "Note de crédit"
+  "kc_comp_CREDIT": "Note de crédit",
+  "comp_title": "Jour de récupération",
+  "comp_text": "Je récupère {hours} d’heures supplémentaires en jour de congé : {day}.",
+  "comp_help": "Le responsable de production a proposé un jour de récupération. Signez du doigt dans le cadre pour le confirmer.",
+  "comp_sign": "Je signe",
+  "comp_later": "Pas maintenant",
+  "comp_done": "Jour de récupération signé."
 }

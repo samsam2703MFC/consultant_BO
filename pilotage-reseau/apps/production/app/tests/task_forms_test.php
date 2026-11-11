@@ -38,6 +38,9 @@ $userId = (int) $pdo->query('SELECT MIN(id) FROM user')->fetchColumn();
 $otherUser = (int) $pdo->query("SELECT MAX(id) FROM user")->fetchColumn();
 $userPosition = $pdo->query("SELECT * FROM n_user_position WHERE id_user = {$userId}")->fetch(PDO::FETCH_ASSOC) ?: null;
 $meetingTask = $pdo->query("SELECT * FROM n_position_task WHERE form_code = 'production_meeting' ORDER BY id LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+// [262] Zadania kierownika produkcji wstrzymane (migracja 162) : zebranie aktywne na czas testu, stan przywrócony w finally.
+$meetingActive = (int) $meetingTask['active'];
+$pdo->exec('UPDATE n_position_task SET active = 1 WHERE id = ' . (int) $meetingTask['id']);
 $slotBackup = [];
 $slotKeys = null;
 // Occurrences déjà présentes (ouvertes par « Moje zadania ») : état rétabli après le test.
@@ -149,6 +152,7 @@ try {
 
     echo "task_forms_test: OK\n";
 } finally {
+    $pdo->exec('UPDATE n_position_task SET active = ' . $meetingActive . ' WHERE id = ' . (int) $meetingTask['id']);
     $pdo->exec("DELETE FROM n_task_action WHERE id > {$max['n_task_action']}");
     $pdo->exec("DELETE FROM n_task_form WHERE id > {$max['n_task_form']}");
     $pdo->exec("DELETE FROM n_task_occurrence WHERE id > {$max['n_task_occurrence']}");

@@ -57,5 +57,11 @@
   "hero_all": "Trouvez votre nom et touchez-le",
   "all_groups": "Tous",
   "groups": "Groupes",
-  "to_production": "Tablette de production ›"
+  "to_production": "Tablette de production ›",
+  "comp_title": "Jour de récupération",
+  "comp_text": "Je récupère {hours} d’heures supplémentaires en jour de congé : {day}.",
+  "comp_help": "Le responsable de production a proposé un jour de récupération. Signez du doigt dans le cadre pour le confirmer.",
+  "comp_sign": "Je signe",
+  "comp_later": "Pas maintenant",
+  "comp_done": "Jour de récupération signé."
 }

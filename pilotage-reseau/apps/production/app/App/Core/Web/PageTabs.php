@@ -78,6 +78,15 @@ final class PageTabs
         'team' => ['label' => 'Zespół', 'section' => 'Produkcja', 'icon' => 'bi-person-badge', 'tabs' => [
             ['/production-employees', 'Pracownicy produkcji', 'bi-person-badge'],
         ]],
+        // [262] Czas pracy : zatwierdzenie dnia (makieta 1), miesiąc i karty A4 (2), urlopy i dni wolne (3), nadgodziny (4) ;
+        // tablet biurowy (odbicia, podpis dnia wolnego) otwierany w nowej karcie.
+        'time' => ['label' => 'Czas pracy', 'section' => 'Produkcja', 'icon' => 'bi-clock-history', 'tabs' => [
+            ['/time', 'Dzień', 'bi-calendar-check', true],
+            ['/time/month', 'Miesiąc', 'bi-calendar3'],
+            ['/time/leave', 'Urlopy i dni wolne', 'bi-calendar-heart'],
+            ['/time/overtime', 'Nadgodziny', 'bi-hourglass-split'],
+            ['/tablet/office', 'Otwórz tablet biurowy', 'bi-box-arrow-up-right', false, 'blank'],
+        ]],
         // Tablety : zarządzanie (tablety, PIN, czas pracy), zatwierdzenia produkcji, zamówienia między grupami ;
         // przyciski otwierają tablety w nowej karcie.
         'tablets' => ['label' => 'Tablety', 'section' => 'Produkcja', 'icon' => 'bi-tablet', 'tabs' => [

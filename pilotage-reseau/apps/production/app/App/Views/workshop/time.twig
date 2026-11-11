@@ -1,0 +1,28 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Czas pracy</h3>
+            <p class="text-subtitle text-muted mb-0">Odbicia z tabletu biurowego : codziennie sprawdź wejścia i wyjścia, wybierz powód każdej nadgodziny i nieobecności, zatwierdź dzień.
+                Plan {{ (data.rules.day_plan // 60) }} h dziennie i {{ (data.rules.week_plan // 60) }} h w tygodniu ; nadgodziny odbierane jako dzień wolny w ciągu {{ data.rules.recovery_months }} mies., z podpisem pracownika.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [262] Czas pracy (makiety 1–5, 11.11.2026) : App\Services\Workshop\Time\TimeService ; zakładki = PageTabs « time ».
+   Dzień : zatwierdzenie odbić (zadanie nr 1 kierownika produkcji) ; Miesiąc : wszyscy × dni, karty A4 (PDF, logo SL Food) ;
+   Urlopy i dni wolne : kalendarz zespołu ; Nadgodziny : bank, odbiór w 3 miesiące, dzień wolny podpisany przez pracownika. #}
+<section class="section tm" id="timeApp" data-root="{{ root }}" data-tab="{{ tab }}" data-admin="{{ is_admin ? 1 : 0 }}">
+    <div data-tm-body><p class="at-empty">Ładowanie…</p></div>
+</section>
+<dialog class="tm-dialog" data-tm-dialog aria-labelledby="tmDialogTitle"><form method="dialog" data-tm-form></form></dialog>
+<script type="application/json" id="timeBoot">{{ data|json_encode(constant('JSON_UNESCAPED_UNICODE') b-or constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP'))|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/workshop/time.js?v={{ asset_v() }}"></script>
+{% endblock %}

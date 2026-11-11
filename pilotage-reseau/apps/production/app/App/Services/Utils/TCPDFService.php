@@ -50,7 +50,9 @@ class TCPDFService extends TCPDF
 
     /**
      * Nowy dokument : marginesy, grupa stron, pierwsza strona.
-     * $opts : orientation (P|L), ref (numer dokumentu), company (linia stopki), lang (drugi język etykiet).
+     * $opts : orientation (P|L), ref (numer dokumentu), company (linia stopki), lang (drugi język etykiet),
+     * producer_only (true : samo logo SL Food, bez « producent zatwierdzony przez » i logo L'Atelier — dokumenty
+     * pracodawcy, np. karta czasu pracy [262]).
      */
     public function brandPage(string $title, array $opts = []): void
     {
@@ -65,6 +67,7 @@ class TCPDFService extends TCPDF
             'ref' => (string) ($opts['ref'] ?? ''),
             'company' => (string) (($opts['company'] ?? '') !== '' ? $opts['company'] : self::DEFAULT_COMPANY),
             'lang' => DocumentLabels::lang($opts['lang'] ?? 'pl'),
+            'producer_only' => !empty($opts['producer_only']),
         ];
         $this->pageBrand[$this->getPage()] = $this->brandActive;
         $this->SetTextColorArray(self::INK);
@@ -134,6 +137,7 @@ class TCPDFService extends TCPDF
             $this->Image(self::PRODUCER_LOGO, $x, $y, 0, $height, 'JPG');
             $logoW = $this->getImageRBX() - $x;
         }
+        if (!empty($this->brandActive['producer_only'])) return $y + $height;
         $dx = $x + $logoW + 3;
         $this->SetDrawColorArray(self::LINE);
         $this->SetLineWidth(0.3);
@@ -567,7 +571,7 @@ class TCPDFService extends TCPDF
         $lm = $this->original_lMargin;
         $w = $this->getPageWidth() - $lm - $this->original_rMargin;
         if (is_file(self::PRODUCER_LOGO)) $this->Image(self::PRODUCER_LOGO, $lm, 5, 0, 8, 'JPG');
-        if (is_file(self::NETWORK_LOGO)) $this->Image(self::NETWORK_LOGO, $lm + 10, 7, 26, 0, 'JPG');
+        if (is_file(self::NETWORK_LOGO) && empty($doc['producer_only'])) $this->Image(self::NETWORK_LOGO, $lm + 10, 7, 26, 0, 'JPG');
         $this->SetFont('dejavusans', '', 7.5);
         $this->SetTextColorArray(self::MUTED);
         $this->SetXY($lm + 40, 7);

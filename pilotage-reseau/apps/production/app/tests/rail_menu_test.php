@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /*
- * [253] Menu ERP bez dubli (makiety 25–26) : 26 pozycji ([256] Kierownik produkcji w Administracji), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
+ * [253] Menu ERP bez dubli (makiety 25–26) : 27 pozycji ([256] Kierownik produkcji w Administracji, [262] Czas pracy), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
  * wszystkie dawne linki railu mają pozycję, menu stanowiska (kolejność, strona otwierana), sesja administratora
  * « jako stanowisko », stanowisko bez menu = całe menu — reguły bez bazy + baza jednorazowa.
  *
@@ -20,14 +20,17 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 26 && Rail::count() === 26, 'menu wspólne : 26 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji)');
+expectRail(count(Rail::ITEMS) === 27 && Rail::count() === 27, 'menu wspólne : 27 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy)');
+expectRail(Rail::itemFor('/time/month') === 'time' && Rail::itemFor('/time') === 'time' && \App\Core\Web\PageAccess::keyFor('/time/overtime') === 'time', '[262] Czas pracy : pozycja railu i prawo « time »');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
     expectRail(isset(Rail::ITEMS[$group]) || isset(Rail::GROUP_PARENT[$group]), "grupa zakładek {$group} należy do pozycji railu");
 }
-// Bez dubli : każda zakładka (strona) tylko w jednej grupie.
+// Bez dubli : każda zakładka (strona) tylko w jednej grupie. Linki « Otwórz tablet… » (nowa karta, poza grupą — PageTabs::forPath
+// je pomija) mogą być w kilku grupach : [262] tablet biurowy w Tablety i w Czas pracy.
 $seen = [];
 foreach (PageTabs::GROUPS as $group => $g) foreach ($g['tabs'] as $t) {
+    if (($t[4] ?? '') === 'blank') continue;
     expectRail(!isset($seen[$t[0]]), "strona {$t[0]} w dwóch grupach ({$group}, " . ($seen[$t[0]] ?? '') . ')');
     $seen[$t[0]] = $group;
 }
@@ -161,8 +164,8 @@ try {
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 26,
-        'macierz : stanowiska biurowe + bez stanowiska × 26 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 27,
+        'macierz : stanowiska biurowe + bez stanowiska × 27 pozycji');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];

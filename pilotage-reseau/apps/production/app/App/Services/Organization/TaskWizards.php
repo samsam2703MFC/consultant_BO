@@ -41,6 +41,8 @@ final class TaskWizards
         'nc_reviewed' => ['Niezgodności miesiąca', '/purchasing/nc-review', 'każda niezgodność ma działanie', 3],
         'material_costs_reviewed' => ['Koszty surowców', '/purchasing/cost-review', 'decyzje miesiąca zapisane', 3],
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
+        // [262] Czas pracy : zadanie nr 1 kierownika produkcji — odbicia dnia sprawdzone, powody wybrane, dzień zatwierdzony.
+        'time_day_validated' => ['Czas pracy dnia', '/time', 'dzień zatwierdzony (odbicia, powody nadgodzin i nieobecności)', 1],
     ];
 
     /** Stanowisko pracowni → grupa produkcji (dzień grupy na tablecie). */
@@ -70,6 +72,7 @@ final class TaskWizards
         'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (kreator, krok 3)',
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (kreator kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (kreator)',
+        'time_day_validated' => 'gdy dzień jest zatwierdzony w Czasie pracy (odbicia, powody nadgodzin i nieobecności)',
     ];
 
     private const MONTH_STEPS = ['cartons' => 'Kartony', 'staff' => 'Personel', 'media' => 'Media', 'fixed' => 'Koszty stałe i logistyka',
@@ -189,6 +192,9 @@ final class TaskWizards
                 break;
             case 'tomorrow_sent':
                 if ($r = $this->repo->wizardDone($code, $day, date('Y-m-d', strtotime($day . ' +1 day')))) $out = ['done' => true, 'summary' => $r['summary']] + $out;
+                break;
+            case 'time_day_validated':
+                if ($r = $this->repo->timeDay($day)) $out = ['done' => true, 'summary' => 'zatwierdzony ' . $hm($r['validated_at']) . ($r['summary'] ? ' · ' . $r['summary'] : '')] + $out;
                 break;
             case 'nc_reviewed':
             case 'material_costs_reviewed':

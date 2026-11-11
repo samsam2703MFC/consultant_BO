@@ -125,6 +125,8 @@ final class OpenApiExecution
             'POST /kiosk/operations/{id:\d+}/pause' => ['tag' => 'kiosk', 'id' => 'pauseOperation', 'summary' => 'Pauza / Pause', 'response' => 'KioskOperation', 'errors' => [401, 403, 404, 409]],
             'POST /kiosk/operations/{id:\d+}/finish' => ['tag' => 'kiosk', 'id' => 'finishOperation', 'summary' => 'Zakończ z ilościami / Terminer avec les quantités', 'body' => 'FinishInput', 'response' => 'KioskOperation', 'errors' => [400, 401, 403, 404, 409, 422],
                 'description' => "Le temps réel d'une opération de travail devient une mesure de chronométrage de l'étape (P2)."],
+            'POST /kiosk/comps/{id:\d+}/sign' => ['tag' => 'kiosk', 'id' => 'signCompDay', 'summary' => 'Podpis dnia wolnego za nadgodziny (PIN, tablet biurowy) / Signature du jour de récupération',
+                'body' => 'SignatureInput', 'response' => 'Signature', 'ok' => 201, 'errors' => [401, 403, 404, 409, 422]],
             'POST /kiosk/signatures' => ['tag' => 'kiosk', 'id' => 'sign', 'summary' => 'Podpis odręczny / Signature manuscrite', 'body' => 'SignatureInput', 'response' => 'Signature', 'ok' => 201, 'errors' => [400, 401, 422],
                 'description' => 'PNG en data URL (300 Ko max) ; condensé SHA-256 conservé pour l\'intégrité ; stockage en base ou bucket privé.'],
             'GET /kiosk/week' => ['tag' => 'kiosk', 'id' => 'kioskWeek', 'summary' => 'Plan tygodnia zespołu tabletu / Plan de la semaine de l\'équipe de la tablette', 'response' => 'TeamSheet', 'errors' => [401, 409, 422],
@@ -219,6 +221,8 @@ final class OpenApiExecution
                 'description' => 'QR personnel (tablette de bureau) : refusé (403 QR_OTHER_PERSON) si le téléphone est enregistré au nom d\'une autre personne.'],
             'POST /kiosk/phone/clock' => ['tag' => 'phone', 'id' => 'phoneClock', 'summary' => 'Wejście / wyjście telefonem / Entrée / sortie au téléphone', 'body' => 'ClockInput', 'response' => 'ClockResult', 'errors' => [400, 401, 403, 409, 422],
                 'description' => 'Comme POST /kiosk/clock ; la tablette du QR est enregistrée comme lieu du pointage. QR personnel : seulement le téléphone de la personne du QR.'],
+            'POST /kiosk/phone/comps/{id:\d+}/sign' => ['tag' => 'phone', 'id' => 'phoneSignCompDay', 'summary' => 'Podpis dnia wolnego za nadgodziny na telefonie / Signature du jour de récupération au téléphone',
+                'body' => 'SignatureInput', 'response' => 'Signature', 'ok' => 201, 'errors' => [401, 403, 404, 409, 422]],
             'POST /kiosk/phone/signatures' => ['tag' => 'phone', 'id' => 'phoneSign', 'summary' => 'Podpis palcem na telefonie / Signature au doigt sur le téléphone', 'body' => 'SignatureInput', 'response' => 'Signature', 'ok' => 201, 'errors' => [400, 401, 422]],
         ];
     }

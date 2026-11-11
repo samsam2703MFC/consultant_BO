@@ -148,6 +148,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return $this->all('SELECT summary, done_at FROM n_wizard_done WHERE code = ? AND day >= ? AND day < ? ORDER BY day DESC LIMIT 1', [$code, $from, $to])[0] ?? null;
     }
 
+    /** [262] Dzień zatwierdzony w Czasie pracy. */
+    public function timeDay(string $day): ?array
+    {
+        return $this->all('SELECT validated_at, summary FROM n_time_day WHERE day = ?', [$day])[0] ?? null;
+    }
+
     public function paymentsRecorded(string $day): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_proforma_payment WHERE recorded_at >= ? AND recorded_at < DATE_ADD(?, INTERVAL 1 DAY)', [$day, $day])[0]['n'] ?? 0);

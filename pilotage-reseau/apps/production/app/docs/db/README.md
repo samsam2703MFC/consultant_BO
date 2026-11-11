@@ -1613,6 +1613,41 @@ leur fiche client (copie de test isolée) ; rien n'était récupéré, mais le b
 ont répondu, commandes importées, refusées) ; la page l'affiche, en erreur (502) si aucune boutique n'a répondu.
 Chaque cas reste dans Stan wysyłek › Sklepy. Test : `tests/order_collect_report_test.php`.
 
+### Czas pracy (pointages) : validation du jour, mois A4, congés, heures sup. récupérées — 262 (migrations 161, 162)
+
+Décisions du 11/11/2026 (maquettes 1–5 validées) : plan de 8 h par jour ouvré (lundi–vendredi hors fériés PL), 40 h par
+semaine ; heure supplémentaire = temps pointé au-delà du plan du jour quand le dépassement passe la tolérance (15 min),
+le week-end et un férié tout est heure sup., plus ce qui dépasse 40 h dans la semaine ISO (compté sur le dernier jour
+travaillé). Un pointage compte pour le jour de son entrée. Récupération en jour de congé supplémentaire au plus tard
+3 mois après, proposée par le kierownik et signée par la personne ; 26 jours de congé par an, dont 4 « na żądanie ».
+
+- Tables (161) : `n_time_day` (jour validé : qui, quand, résumé), `n_time_note` (motif d'un surplus ou d'une absence,
+  par personne et jour), `n_time_absence` (calendrier : urlop, na żądanie, L4, wolne za nadgodziny, autre ; minutes pour
+  un jour de récupération partiel), `n_time_comp` (jour de récupération : proposé → signé / annulé, signature),
+  `n_time_leave` (droit annuel par personne, sinon `time.leave_days`), `n_time_month` (mois clos). Signature
+  `n_prod_signature.purpose = 'comp_day'` (ref = `n_time_comp.id`). Paramètres `time.day_plan_min` (480),
+  `time.week_plan_min` (2400), `time.tolerance_min` (15), `time.recovery_months` (3), `time.leave_days` (26),
+  `time.company_name` (SL Food, pied de page de la fiche). Les pointages restent dans `n_prod_clock`.
+- Service : `App\Services\Workshop\Time\TimeService` (grille personne × jour, statuts, validation, banque FIFO,
+  jours de récupération, calendrier, soldes, mois), dépôt `TimeRepository`, fiche `TimeSheetPdf` (A4, logo SL Food seul :
+  option `producer_only` de `TCPDFService::brandPage`).
+- Jour validé seulement si tous les pointages sont fermés, chaque heure sup. a un motif (liste), chaque absence un jour
+  ouvré une entrée de calendrier ou un motif (urlop / na żądanie / L4 choisis dans le jour → calendrier). Une correction
+  de pointage (toujours avec motif, au journal `n_prod_audit_log`) ou une entrée de calendrier sur un jour validé le
+  rouvre. Seuls les jours validés alimentent la banque d'heures sup. ; un mois clos ne se modifie plus (réouverture :
+  administrateur).
+- Jour de récupération : signé à l'écran du kierownik ou à la tablette de bureau juste après le pointage (PIN :
+  `POST /kiosk/comps/{id}/sign`, téléphone : `POST /kiosk/phone/comps/{id}/sign` ; `/kiosk/me` et `/kiosk/phone/me`
+  rendent `comp_days`). La signature crée l'absence « wn » (le plan du jour baisse des minutes récupérées).
+- Écrans : `/time` (Dzień), `/time/month` (Miesiąc, `/time/sheet.pdf?month=&employee=`), `/time/leave`,
+  `/time/overtime` ; enregistrements `/ajax/time/*` (droit « time »). Menu : Produkcja › Czas pracy (compteur : jours
+  avec pointages non validés sur 31 jours), lien « Otwórz tablet biurowy ».
+- Kierownik produkcji (162, demande du 11/11/2026 « seulement les pointages, petit à petit je lui donne du travail ») :
+  menu = Czas pracy, accès aux pages = Czas pracy, page d'accueil `/time`, ses tâches en pause sauf la nouvelle tâche
+  n° 1 « Czas pracy dnia » (quotidienne, cochée par la validation : `TaskWizards::time_day_validated`). Rendre le travail :
+  Administracja › Uprawnienia i menu et Zadania stanowisk.
+- Test : `tests/time_tracking_test.php` (base jetable).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

@@ -27,6 +27,7 @@ class DashboardController extends BaseController
         private ManagerService $manager,
         private AuthRepository $auth,
         private UserMailRepository $mail,
+        private \App\Repositories\Workshop\TimeRepository $time,
         private GroupWeekProfitService $groupWeeks,
     ) {}
 
@@ -99,7 +100,8 @@ class DashboardController extends BaseController
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */
     public function ajaxCounters()
     {
-        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'queue' => $this->queueBadge(), 'profit' => $this->profitBadge()]);
+        return $this->json($this->today->counters() + ['mail' => $this->userId() ? $this->mail->unread($this->userId()) : 0, 'queue' => $this->queueBadge(), 'profit' => $this->profitBadge(),
+            'time' => $this->timeBadge()]);
     }
 
     public function saveTargets()
@@ -184,6 +186,17 @@ class DashboardController extends BaseController
             session_write_close();
         }
         return $data;
+    }
+
+    /** [262] Czas pracy : dni z odbiciami z ostatnich 31 dni (przed dzisiaj) do zatwierdzenia — dla tych, którzy widzą stronę. */
+    private function timeBadge(): int
+    {
+        if (!$this->userId() || !\App\Core\Web\PageAccess::visible('/time')) return 0;
+        try {
+            return $this->time->daysToValidate(date('Y-m-d', strtotime('-31 days')), date('Y-m-d'));
+        } catch (\Throwable) {
+            return 0;
+        }
     }
 
     private function userId(): ?int

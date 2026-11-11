@@ -46,6 +46,10 @@ $maxOccurrence = (int) $pdo->query('SELECT COALESCE(MAX(id), 0) FROM n_task_occu
 $savedOccurrences = $pdo->query('SELECT id, status, done_by, done_at, note FROM n_task_occurrence')->fetchAll(PDO::FETCH_ASSOC);
 $userId = (int) $pdo->query('SELECT MIN(id) FROM user')->fetchColumn();
 $userPosition = $pdo->query("SELECT * FROM n_user_position WHERE id_user = {$userId}")->fetch(PDO::FETCH_ASSOC) ?: null;
+// [262] Zadania kierownika produkcji wstrzymane (migracja 162, tylko Czas pracy) : na czas testu aktywne, potem stan przywrócony.
+$taskActive = $pdo->query('SELECT id, active FROM n_position_task')->fetchAll(PDO::FETCH_KEY_PAIR);
+$pdo->exec("UPDATE n_position_task t JOIN n_position p ON p.id = t.id_position SET t.active = 1
+    WHERE p.code = 'KIEROWNIK_PRODUKCJI' AND t.link_path IN ('/workshop/buy', '/workshop/supply#tab=invoices&inv=wizard', '/finances/price-wizard', '/finances/price-wizard#step=2', '/purchasing/cost-review', '/purchasing/supplier-review')");
 $supplierIds = [];
 $tenderId = null;
 
@@ -173,6 +177,8 @@ try {
 
     echo "purchasing_test: OK\n";
 } finally {
+    $restoreActive = $pdo->prepare('UPDATE n_position_task SET active = ? WHERE id = ?');
+    foreach ($taskActive as $tid => $act) $restoreActive->execute([$act, $tid]);
     // Przywrócenie : ceny, historia, koszty receptur, dane testowe, wiadomości w kolejce.
     $pdo->prepare('UPDATE raw_material SET price_per_unit = ?, id_current_supplier = ?, package_size_in_base_unit = ? WHERE id = ?')
         ->execute([$material['price_per_unit'], $material['id_current_supplier'], $material['package_size_in_base_unit'], $materialId]);

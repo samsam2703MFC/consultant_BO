@@ -34,6 +34,7 @@ final class ExecutionController
         private KioskAuthService $kiosk,
         private ExecutionService $execution,
         private TimesheetService $timesheets,
+        private \App\Services\Workshop\Time\TimeService $time,
         private KpiService $kpis,
         private OutputService $outputs,
         private QualityService $quality,
@@ -118,6 +119,17 @@ final class ExecutionController
     public function pause(ApiRequest $request): ApiResult { return new ApiResult($this->execution->pause($request->id(), $request->context)); }
     public function finish(ApiRequest $request): ApiResult { return new ApiResult($this->execution->finish($request->id(), $request->body(), $request->context)); }
     public function sign(ApiRequest $request): ApiResult { return new ApiResult($this->execution->sign($request->body(), $request->context), 201); }
+
+    /** [262] Dzień wolny za nadgodziny : podpis osoby zidentyfikowanej (PIN na tablecie biurowym albo telefon). */
+    public function signComp(ApiRequest $request): ApiResult
+    {
+        try {
+            return new ApiResult($this->time->signComp($request->id(), $request->body()['image'] ?? null, (int) $request->context->employeeId, $request->context->deviceId, null), 201);
+        } catch (\App\Exceptions\CustomException $e) {
+            $status = in_array((int) $e->getCode(), [403, 404, 409], true) ? (int) $e->getCode() : 422;
+            throw new ApiException('COMP_DAY_REFUSED', $status, [], ['detail' => $e->getMessage()]);
+        }
+    }
 
     /** Plan tygodnia zespołu tabletu (bez identyfikacji osoby : tablet stoi przy zespole). */
     public function week(ApiRequest $request): ApiResult

@@ -804,5 +804,11 @@
   "kc_reason_other": "Inny powód",
   "kc_comp_REFUND": "Zwrot pieniędzy",
   "kc_comp_REPLACEMENT": "Wymiana produktu",
-  "kc_comp_CREDIT": "Nota kredytowa"
+  "kc_comp_CREDIT": "Nota kredytowa",
+  "comp_title": "Dzień wolny za nadgodziny",
+  "comp_text": "Odbieram {hours} nadgodzin jako dzień wolny : {day}.",
+  "comp_help": "Kierownik produkcji zaproponował dzień wolny za nadgodziny. Podpisz palcem w ramce, żeby go potwierdzić.",
+  "comp_sign": "Podpisuję",
+  "comp_later": "Nie teraz",
+  "comp_done": "Dzień wolny podpisany."
 }

@@ -109,6 +109,7 @@
     "DEVICE_NOT_DRIVER": "Cette tablette n’est pas une tablette chauffeur — changez son mode dans la gestion des tablettes.",
     "QR_OTHER_PERSON": "Ce QR code est pour : {name}. Ce téléphone est enregistré au nom d’une autre personne — scannez le code avec votre téléphone.",
     "DEVICE_NOT_OFFICE": "Une tablette chauffeur n’ouvre pas l’écran de bureau — changez son type en « Tablette de bureau » dans la gestion des tablettes.",
+    "COMP_DAY_REFUSED": "Jour de récupération : {detail}",
     "DEV_TRIAL_NOT_ALLOWED": "À l’étape « {stage} », on ne fait plus d’essai — le produit est lancé au bureau.",
     "DEV_RECIPE_NOT_READY": "La recette se valide après un second test réussi (étape actuelle : « {stage} »).",
     "DEV_RECIPE_MISSING": "Le produit n’a pas encore de recette dans l’ERP — le bureau doit la choisir avant la validation.",
