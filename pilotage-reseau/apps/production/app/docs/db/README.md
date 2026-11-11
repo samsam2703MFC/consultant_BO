@@ -1741,6 +1741,15 @@ formulaire et test de connexion que l'utilisateur, mot de passe chiffré, jamais
 « Wstrzymaj » / « Wznów ». Routes `/ajax/mail/admin/users…` (GET liste et état, PUT réglages et `policy`, DELETE, POST
 test), refusées sans droit d'administrateur. Test : `tests/mail_admin_test.php`.
 
+### Kierownik produkcji : pointages du jour et clôture du mois — 273
+
+Demande du 11/11/2026. Migration 169 (`n_position_task`, `n_position_sheet`, poste KIEROWNIK_PRODUKCJI) :
+- chaque jour : « Weryfikacja odbić dnia » (tâche de la migration 162, intitulé précisé) — validée seule quand le jour
+  est validé dans Czas pracy (`time_day_validated`) ;
+- chaque mois : « Czas pracy miesiąca » (30 min, échéance 3e jour ouvré, `/time/month`) — validée seule quand le mois
+  précédent est clôturé dans Czas pracy › Miesiąc (`n_time_month`, `TaskWizards::time_month_closed`) ;
+- fiche de poste : responsabilité « Czas pracy zespołu : jour (chaque jour), mois (chaque mois) » ajoutée en tête.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

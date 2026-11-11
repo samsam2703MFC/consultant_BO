@@ -154,6 +154,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return $this->all('SELECT validated_at, summary FROM n_time_day WHERE day = ?', [$day])[0] ?? null;
     }
 
+    /** [273] Miesiąc czasu pracy zamknięty (Czas pracy › Miesiąc). */
+    public function timeMonth(string $month): ?array
+    {
+        return $this->all('SELECT closed_at FROM n_time_month WHERE month = ?', [$month])[0] ?? null;
+    }
+
     public function paymentsRecorded(string $day): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_proforma_payment WHERE recorded_at >= ? AND recorded_at < DATE_ADD(?, INTERVAL 1 DAY)', [$day, $day])[0]['n'] ?? 0);

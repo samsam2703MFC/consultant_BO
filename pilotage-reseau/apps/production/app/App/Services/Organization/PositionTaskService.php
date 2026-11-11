@@ -94,6 +94,7 @@ final class PositionTaskService
         '/purchasing/cost-review' => 'material_costs_reviewed',
         '/production/yield-review' => 'yield_reviewed',
         '/time' => 'time_day_validated',
+        '/time/month' => 'time_month_closed',
     ];
 
     /** Kolor kategorii na kartach tygodnia (pasek z lewej). */
