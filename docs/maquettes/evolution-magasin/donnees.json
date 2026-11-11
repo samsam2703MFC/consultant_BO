@@ -1,0 +1,5645 @@
+{
+"lu": "2026-11-11",
+"source": "panel (margin-heatmap, par jour) via /ventes/reseau?vue=annee et /ventes/semaines?vue=semaine&n=12",
+"magasins": [
+{
+"id": "2",
+"nom": "Atelier by Berlo - Corbais",
+"mois": [
+{
+"mois": "2024-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 145,
+"ca": 1753.73,
+"jours": 4,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2024-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 9745,
+"ca": 147177.3,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2024-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 9413,
+"ca": 154086.55,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2024-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9721,
+"ca": 161894.89,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2024-11",
+"lab": "nov.",
+"enCours": false,
+"joursServis": 30,
+"clients": 9717,
+"ca": 165068.87,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2024-12",
+"lab": "déc.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9975,
+"ca": 185813.15,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-01",
+"lab": "janv.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9458,
+"ca": 164660.86,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 8401,
+"ca": 141117.69,
+"jours": 28,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 8670,
+"ca": 141792,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 8816,
+"ca": 151039.26,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 9122,
+"ca": 148802.03,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 8971,
+"ca": 149486.72,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 8362,
+"ca": 128298.94,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 145,
+"ca": 1753.73,
+"jours": 4
+},
+"n1Mois": {
+"clients": 145,
+"ca": 1753.73,
+"jours": 4
+}
+},
+{
+"mois": "2025-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 9137,
+"ca": 140188.14,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9745,
+"ca": 147177.3,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9745,
+"ca": 147177.3,
+"jours": 31
+}
+},
+{
+"mois": "2025-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 9030,
+"ca": 150525.14,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 9413,
+"ca": 154086.55,
+"jours": 30
+},
+"n1Mois": {
+"clients": 9413,
+"ca": 154086.55,
+"jours": 30
+}
+},
+{
+"mois": "2025-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 8323,
+"ca": 152034.01,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9721,
+"ca": 161894.89,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9721,
+"ca": 161894.89,
+"jours": 31
+}
+},
+{
+"mois": "2025-11",
+"lab": "nov.",
+"enCours": false,
+"joursServis": 30,
+"clients": 8737,
+"ca": 154748.32,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 9717,
+"ca": 165068.87,
+"jours": 30
+},
+"n1Mois": {
+"clients": 9717,
+"ca": 165068.87,
+"jours": 30
+}
+},
+{
+"mois": "2025-12",
+"lab": "déc.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9771,
+"ca": 181061.57,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9975,
+"ca": 185813.15,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9975,
+"ca": 185813.15,
+"jours": 31
+}
+},
+{
+"mois": "2026-01",
+"lab": "janv.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9325,
+"ca": 167353.4,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9458,
+"ca": 164660.86,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9458,
+"ca": 164660.86,
+"jours": 31
+}
+},
+{
+"mois": "2026-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 7813,
+"ca": 135682.17,
+"jours": 28,
+"source": "panel",
+"n1": {
+"clients": 8401,
+"ca": 141117.69,
+"jours": 28
+},
+"n1Mois": {
+"clients": 8401,
+"ca": 141117.69,
+"jours": 28
+}
+},
+{
+"mois": "2026-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 8601,
+"ca": 155719.22,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 8670,
+"ca": 141792,
+"jours": 31
+},
+"n1Mois": {
+"clients": 8670,
+"ca": 141792,
+"jours": 31
+}
+},
+{
+"mois": "2026-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 8387,
+"ca": 159863.3,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 8816,
+"ca": 151039.26,
+"jours": 30
+},
+"n1Mois": {
+"clients": 8816,
+"ca": 151039.26,
+"jours": 30
+}
+},
+{
+"mois": "2026-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 8587,
+"ca": 154258.69,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9122,
+"ca": 148802.03,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9122,
+"ca": 148802.03,
+"jours": 31
+}
+},
+{
+"mois": "2026-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 8543,
+"ca": 159310.46,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 8971,
+"ca": 149486.72,
+"jours": 30
+},
+"n1Mois": {
+"clients": 8971,
+"ca": 149486.72,
+"jours": 30
+}
+},
+{
+"mois": "2026-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 8056,
+"ca": 129022.07,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 8362,
+"ca": 128298.94,
+"jours": 31
+},
+"n1Mois": {
+"clients": 8362,
+"ca": 128298.94,
+"jours": 31
+}
+},
+{
+"mois": "2026-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 8449,
+"ca": 142900.9,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 9137,
+"ca": 140188.14,
+"jours": 31
+},
+"n1Mois": {
+"clients": 9137,
+"ca": 140188.14,
+"jours": 31
+}
+},
+{
+"mois": "2026-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 8096,
+"ca": 142530.81,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 9030,
+"ca": 150525.14,
+"jours": 30
+},
+"n1Mois": {
+"clients": 9030,
+"ca": 150525.14,
+"jours": 30
+}
+},
+{
+"mois": "2026-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 9158,
+"ca": 154811.27,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 8323,
+"ca": 152034.01,
+"jours": 31
+},
+"n1Mois": {
+"clients": 8323,
+"ca": 152034.01,
+"jours": 31
+}
+},
+{
+"mois": "2026-11",
+"lab": "nov.",
+"enCours": true,
+"joursServis": 11,
+"clients": 3357,
+"ca": 60402.31,
+"jours": 11,
+"source": "panel",
+"n1": {
+"clients": 3007,
+"ca": 54469.01,
+"jours": 11
+},
+"n1Mois": {
+"clients": 8737,
+"ca": 154748.32,
+"jours": 30
+}
+}
+],
+"semaines": [
+{
+"du": "2024-07-15",
+"au": "2024-07-21",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 1,
+"ca": 66,
+"jours": 1,
+"n1": null
+},
+{
+"du": "2024-07-22",
+"au": "2024-07-28",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 27,
+"ca": 601.79,
+"jours": 3,
+"n1": null
+},
+{
+"du": "2024-07-29",
+"au": "2024-08-04",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 1395,
+"ca": 18741.99,
+"jours": 5,
+"n1": null
+},
+{
+"du": "2024-08-05",
+"au": "2024-08-11",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 2055,
+"ca": 27195.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-08-12",
+"au": "2024-08-18",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 2054,
+"ca": 30458.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-08-19",
+"au": "2024-08-25",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 2427,
+"ca": 38151.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-08-26",
+"au": "2024-09-01",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 2280,
+"ca": 40650.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-09-02",
+"au": "2024-09-08",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 2223,
+"ca": 33824.95,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-09-09",
+"au": "2024-09-15",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 2171,
+"ca": 35739.45,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-09-16",
+"au": "2024-09-22",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 2113,
+"ca": 35534,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-09-23",
+"au": "2024-09-29",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 2190,
+"ca": 37542.05,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-09-30",
+"au": "2024-10-06",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 2282,
+"ca": 37576.4,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-10-07",
+"au": "2024-10-13",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 2146,
+"ca": 35009,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-10-14",
+"au": "2024-10-20",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 2223,
+"ca": 42119.99,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-10-21",
+"au": "2024-10-27",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 2241,
+"ca": 33502.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-10-28",
+"au": "2024-11-03",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 2163,
+"ca": 35453.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-11-04",
+"au": "2024-11-10",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 2270,
+"ca": 36667.45,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-11-11",
+"au": "2024-11-17",
+"lab": "S46",
+"enCours": false,
+"joursServis": 7,
+"clients": 2348,
+"ca": 41358.86,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-11-18",
+"au": "2024-11-24",
+"lab": "S47",
+"enCours": false,
+"joursServis": 7,
+"clients": 2182,
+"ca": 37372.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-11-25",
+"au": "2024-12-01",
+"lab": "S48",
+"enCours": false,
+"joursServis": 7,
+"clients": 2289,
+"ca": 39248.41,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-12-02",
+"au": "2024-12-08",
+"lab": "S49",
+"enCours": false,
+"joursServis": 7,
+"clients": 2342,
+"ca": 43018.04,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-12-09",
+"au": "2024-12-15",
+"lab": "S50",
+"enCours": false,
+"joursServis": 7,
+"clients": 2276,
+"ca": 40117.62,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-12-16",
+"au": "2024-12-22",
+"lab": "S51",
+"enCours": false,
+"joursServis": 7,
+"clients": 2288,
+"ca": 46934.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-12-23",
+"au": "2024-12-29",
+"lab": "S52",
+"enCours": false,
+"joursServis": 7,
+"clients": 2078,
+"ca": 37209.6,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2024-12-30",
+"au": "2025-01-05",
+"lab": "S1",
+"enCours": false,
+"joursServis": 7,
+"clients": 2511,
+"ca": 47862.08,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-06",
+"au": "2025-01-12",
+"lab": "S2",
+"enCours": false,
+"joursServis": 7,
+"clients": 2222,
+"ca": 42706.11,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-13",
+"au": "2025-01-19",
+"lab": "S3",
+"enCours": false,
+"joursServis": 7,
+"clients": 2058,
+"ca": 34466.73,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-20",
+"au": "2025-01-26",
+"lab": "S4",
+"enCours": false,
+"joursServis": 7,
+"clients": 1949,
+"ca": 31392.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-27",
+"au": "2025-02-02",
+"lab": "S5",
+"enCours": false,
+"joursServis": 7,
+"clients": 1938,
+"ca": 31406.78,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-03",
+"au": "2025-02-09",
+"lab": "S6",
+"enCours": false,
+"joursServis": 7,
+"clients": 2102,
+"ca": 35225.24,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-10",
+"au": "2025-02-16",
+"lab": "S7",
+"enCours": false,
+"joursServis": 7,
+"clients": 2070,
+"ca": 35404.86,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-17",
+"au": "2025-02-23",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 2082,
+"ca": 34578.28,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-24",
+"au": "2025-03-02",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 2183,
+"ca": 35708.56,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-03",
+"au": "2025-03-09",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 1842,
+"ca": 29752.58,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-10",
+"au": "2025-03-16",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 2000,
+"ca": 33207.02,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-17",
+"au": "2025-03-23",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 1940,
+"ca": 30895.75,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-24",
+"au": "2025-03-30",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 1994,
+"ca": 32471.52,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-31",
+"au": "2025-04-06",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 2053,
+"ca": 36440.79,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-07",
+"au": "2025-04-13",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 2054,
+"ca": 36159.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-14",
+"au": "2025-04-20",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 2144,
+"ca": 36515.02,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-21",
+"au": "2025-04-27",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 1994,
+"ca": 34060.69,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-28",
+"au": "2025-05-04",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 1865,
+"ca": 29282.54,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-05",
+"au": "2025-05-11",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 2144,
+"ca": 35805.28,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-12",
+"au": "2025-05-18",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 2132,
+"ca": 34609.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-19",
+"au": "2025-05-25",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 2094,
+"ca": 34676.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-26",
+"au": "2025-06-01",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 2061,
+"ca": 32278.33,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-02",
+"au": "2025-06-08",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 2168,
+"ca": 40240.56,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-09",
+"au": "2025-06-15",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 2020,
+"ca": 33453.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-16",
+"au": "2025-06-22",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 2088,
+"ca": 31537.49,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-23",
+"au": "2025-06-29",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 2067,
+"ca": 34288.43,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-30",
+"au": "2025-07-06",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 2047,
+"ca": 33402.95,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-07",
+"au": "2025-07-13",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 1921,
+"ca": 28896.68,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-14",
+"au": "2025-07-20",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 1768,
+"ca": 26752.5,
+"jours": 7,
+"n1": {
+"clients": 1,
+"ca": 66,
+"jours": 1
+}
+},
+{
+"du": "2025-07-21",
+"au": "2025-07-27",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 1734,
+"ca": 27674.28,
+"jours": 7,
+"n1": {
+"clients": 27,
+"ca": 601.79,
+"jours": 3
+}
+},
+{
+"du": "2025-07-28",
+"au": "2025-08-03",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 2070,
+"ca": 29201.06,
+"jours": 7,
+"n1": {
+"clients": 1395,
+"ca": 18741.99,
+"jours": 5
+}
+},
+{
+"du": "2025-08-04",
+"au": "2025-08-10",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 2061,
+"ca": 29880.08,
+"jours": 7,
+"n1": {
+"clients": 2055,
+"ca": 27195.25,
+"jours": 7
+}
+},
+{
+"du": "2025-08-11",
+"au": "2025-08-17",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 1916,
+"ca": 28141.92,
+"jours": 7,
+"n1": {
+"clients": 2054,
+"ca": 30458.85,
+"jours": 7
+}
+},
+{
+"du": "2025-08-18",
+"au": "2025-08-24",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 2097,
+"ca": 31919.82,
+"jours": 7,
+"n1": {
+"clients": 2427,
+"ca": 38151.15,
+"jours": 7
+}
+},
+{
+"du": "2025-08-25",
+"au": "2025-08-31",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 2201,
+"ca": 36856.2,
+"jours": 7,
+"n1": {
+"clients": 2280,
+"ca": 40650.2,
+"jours": 7
+}
+},
+{
+"du": "2025-09-01",
+"au": "2025-09-07",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 2116,
+"ca": 35205.09,
+"jours": 7,
+"n1": {
+"clients": 2223,
+"ca": 33824.95,
+"jours": 7
+}
+},
+{
+"du": "2025-09-08",
+"au": "2025-09-14",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 2068,
+"ca": 34458.1,
+"jours": 7,
+"n1": {
+"clients": 2171,
+"ca": 35739.45,
+"jours": 7
+}
+},
+{
+"du": "2025-09-15",
+"au": "2025-09-21",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 2074,
+"ca": 35351.8,
+"jours": 7,
+"n1": {
+"clients": 2113,
+"ca": 35534,
+"jours": 7
+}
+},
+{
+"du": "2025-09-22",
+"au": "2025-09-28",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 2135,
+"ca": 36997.58,
+"jours": 7,
+"n1": {
+"clients": 2190,
+"ca": 37542.05,
+"jours": 7
+}
+},
+{
+"du": "2025-09-29",
+"au": "2025-10-05",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 1978,
+"ca": 36950.37,
+"jours": 7,
+"n1": {
+"clients": 2282,
+"ca": 37576.4,
+"jours": 7
+}
+},
+{
+"du": "2025-10-06",
+"au": "2025-10-12",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 1815,
+"ca": 32907,
+"jours": 7,
+"n1": {
+"clients": 2146,
+"ca": 35009,
+"jours": 7
+}
+},
+{
+"du": "2025-10-13",
+"au": "2025-10-19",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 1869,
+"ca": 34689.9,
+"jours": 7,
+"n1": {
+"clients": 2223,
+"ca": 42119.99,
+"jours": 7
+}
+},
+{
+"du": "2025-10-20",
+"au": "2025-10-26",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 2069,
+"ca": 34607.98,
+"jours": 7,
+"n1": {
+"clients": 2241,
+"ca": 33502.65,
+"jours": 7
+}
+},
+{
+"du": "2025-10-27",
+"au": "2025-11-02",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 1722,
+"ca": 33283.17,
+"jours": 7,
+"n1": {
+"clients": 2163,
+"ca": 35453.55,
+"jours": 7
+}
+},
+{
+"du": "2025-11-03",
+"au": "2025-11-09",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1923,
+"ca": 31585.28,
+"jours": 7,
+"n1": {
+"clients": 2270,
+"ca": 36667.45,
+"jours": 7
+}
+},
+{
+"du": "2025-11-10",
+"au": "2025-11-16",
+"lab": "S46",
+"enCours": false,
+"joursServis": 7,
+"clients": 2099,
+"ca": 37251.75,
+"jours": 7,
+"n1": {
+"clients": 2348,
+"ca": 41358.86,
+"jours": 7
+}
+},
+{
+"du": "2025-11-17",
+"au": "2025-11-23",
+"lab": "S47",
+"enCours": false,
+"joursServis": 7,
+"clients": 2097,
+"ca": 39115.01,
+"jours": 7,
+"n1": {
+"clients": 2182,
+"ca": 37372.25,
+"jours": 7
+}
+},
+{
+"du": "2025-11-24",
+"au": "2025-11-30",
+"lab": "S48",
+"enCours": false,
+"joursServis": 7,
+"clients": 2125,
+"ca": 34904.44,
+"jours": 7,
+"n1": {
+"clients": 2289,
+"ca": 39248.41,
+"jours": 7
+}
+},
+{
+"du": "2025-12-01",
+"au": "2025-12-07",
+"lab": "S49",
+"enCours": false,
+"joursServis": 7,
+"clients": 2216,
+"ca": 40467.65,
+"jours": 7,
+"n1": {
+"clients": 2342,
+"ca": 43018.04,
+"jours": 7
+}
+},
+{
+"du": "2025-12-08",
+"au": "2025-12-14",
+"lab": "S50",
+"enCours": false,
+"joursServis": 7,
+"clients": 2196,
+"ca": 42564.11,
+"jours": 7,
+"n1": {
+"clients": 2276,
+"ca": 40117.62,
+"jours": 7
+}
+},
+{
+"du": "2025-12-15",
+"au": "2025-12-21",
+"lab": "S51",
+"enCours": false,
+"joursServis": 7,
+"clients": 2295,
+"ca": 40616.64,
+"jours": 7,
+"n1": {
+"clients": 2288,
+"ca": 46934.9,
+"jours": 7
+}
+},
+{
+"du": "2025-12-22",
+"au": "2025-12-28",
+"lab": "S52",
+"enCours": false,
+"joursServis": 7,
+"clients": 2104,
+"ca": 37913.19,
+"jours": 7,
+"n1": {
+"clients": 2078,
+"ca": 37209.6,
+"jours": 7
+}
+},
+{
+"du": "2025-12-29",
+"au": "2026-01-04",
+"lab": "S1",
+"enCours": false,
+"joursServis": 7,
+"clients": 2275,
+"ca": 45911.71,
+"jours": 7,
+"n1": {
+"clients": 2511,
+"ca": 47862.08,
+"jours": 7
+}
+},
+{
+"du": "2026-01-05",
+"au": "2026-01-11",
+"lab": "S2",
+"enCours": false,
+"joursServis": 7,
+"clients": 2226,
+"ca": 44828.6,
+"jours": 7,
+"n1": {
+"clients": 2222,
+"ca": 42706.11,
+"jours": 7
+}
+},
+{
+"du": "2026-01-12",
+"au": "2026-01-18",
+"lab": "S3",
+"enCours": false,
+"joursServis": 7,
+"clients": 2088,
+"ca": 35278.25,
+"jours": 7,
+"n1": {
+"clients": 2058,
+"ca": 34466.73,
+"jours": 7
+}
+},
+{
+"du": "2026-01-19",
+"au": "2026-01-25",
+"lab": "S4",
+"enCours": false,
+"joursServis": 7,
+"clients": 1935,
+"ca": 30352.96,
+"jours": 7,
+"n1": {
+"clients": 1949,
+"ca": 31392.55,
+"jours": 7
+}
+},
+{
+"du": "2026-01-26",
+"au": "2026-02-01",
+"lab": "S5",
+"enCours": false,
+"joursServis": 7,
+"clients": 2059,
+"ca": 35972.19,
+"jours": 7,
+"n1": {
+"clients": 1938,
+"ca": 31406.78,
+"jours": 7
+}
+},
+{
+"du": "2026-02-02",
+"au": "2026-02-08",
+"lab": "S6",
+"enCours": false,
+"joursServis": 7,
+"clients": 1965,
+"ca": 35323.4,
+"jours": 7,
+"n1": {
+"clients": 2102,
+"ca": 35225.24,
+"jours": 7
+}
+},
+{
+"du": "2026-02-09",
+"au": "2026-02-15",
+"lab": "S7",
+"enCours": false,
+"joursServis": 7,
+"clients": 2019,
+"ca": 34806.78,
+"jours": 7,
+"n1": {
+"clients": 2070,
+"ca": 35404.86,
+"jours": 7
+}
+},
+{
+"du": "2026-02-16",
+"au": "2026-02-22",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 2037,
+"ca": 34694.42,
+"jours": 7,
+"n1": {
+"clients": 2082,
+"ca": 34578.28,
+"jours": 7
+}
+},
+{
+"du": "2026-02-23",
+"au": "2026-03-01",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 1784,
+"ca": 30851.06,
+"jours": 7,
+"n1": {
+"clients": 2183,
+"ca": 35708.56,
+"jours": 7
+}
+},
+{
+"du": "2026-03-02",
+"au": "2026-03-08",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 1923,
+"ca": 33952.99,
+"jours": 7,
+"n1": {
+"clients": 1842,
+"ca": 29752.58,
+"jours": 7
+}
+},
+{
+"du": "2026-03-09",
+"au": "2026-03-15",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 1972,
+"ca": 34902.97,
+"jours": 7,
+"n1": {
+"clients": 2000,
+"ca": 33207.02,
+"jours": 7
+}
+},
+{
+"du": "2026-03-16",
+"au": "2026-03-22",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 1990,
+"ca": 33220.39,
+"jours": 7,
+"n1": {
+"clients": 1940,
+"ca": 30895.75,
+"jours": 7
+}
+},
+{
+"du": "2026-03-23",
+"au": "2026-03-29",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 1893,
+"ca": 38640.9,
+"jours": 7,
+"n1": {
+"clients": 1994,
+"ca": 32471.52,
+"jours": 7
+}
+},
+{
+"du": "2026-03-30",
+"au": "2026-04-05",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 1918,
+"ca": 38349.33,
+"jours": 7,
+"n1": {
+"clients": 2053,
+"ca": 36440.79,
+"jours": 7
+}
+},
+{
+"du": "2026-04-06",
+"au": "2026-04-12",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 1960,
+"ca": 39562.67,
+"jours": 7,
+"n1": {
+"clients": 2054,
+"ca": 36159.2,
+"jours": 7
+}
+},
+{
+"du": "2026-04-13",
+"au": "2026-04-19",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 2029,
+"ca": 37797.67,
+"jours": 7,
+"n1": {
+"clients": 2144,
+"ca": 36515.02,
+"jours": 7
+}
+},
+{
+"du": "2026-04-20",
+"au": "2026-04-26",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 1906,
+"ca": 36189.73,
+"jours": 7,
+"n1": {
+"clients": 1994,
+"ca": 34060.69,
+"jours": 7
+}
+},
+{
+"du": "2026-04-27",
+"au": "2026-05-03",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 1861,
+"ca": 31508.63,
+"jours": 7,
+"n1": {
+"clients": 1865,
+"ca": 29282.54,
+"jours": 7
+}
+},
+{
+"du": "2026-05-04",
+"au": "2026-05-10",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 2076,
+"ca": 36621.46,
+"jours": 7,
+"n1": {
+"clients": 2144,
+"ca": 35805.28,
+"jours": 7
+}
+},
+{
+"du": "2026-05-11",
+"au": "2026-05-17",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 1905,
+"ca": 33689.69,
+"jours": 7,
+"n1": {
+"clients": 2132,
+"ca": 34609.8,
+"jours": 7
+}
+},
+{
+"du": "2026-05-18",
+"au": "2026-05-24",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 1965,
+"ca": 36835.46,
+"jours": 7,
+"n1": {
+"clients": 2094,
+"ca": 34676.9,
+"jours": 7
+}
+},
+{
+"du": "2026-05-25",
+"au": "2026-05-31",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 1887,
+"ca": 33085.5,
+"jours": 7,
+"n1": {
+"clients": 2061,
+"ca": 32278.33,
+"jours": 7
+}
+},
+{
+"du": "2026-06-01",
+"au": "2026-06-07",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 2092,
+"ca": 37178.22,
+"jours": 7,
+"n1": {
+"clients": 2168,
+"ca": 40240.56,
+"jours": 7
+}
+},
+{
+"du": "2026-06-08",
+"au": "2026-06-14",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 2209,
+"ca": 42845.37,
+"jours": 7,
+"n1": {
+"clients": 2020,
+"ca": 33453.15,
+"jours": 7
+}
+},
+{
+"du": "2026-06-15",
+"au": "2026-06-21",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 1753,
+"ca": 33429.56,
+"jours": 7,
+"n1": {
+"clients": 2088,
+"ca": 31537.49,
+"jours": 7
+}
+},
+{
+"du": "2026-06-22",
+"au": "2026-06-28",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 1806,
+"ca": 33037.24,
+"jours": 7,
+"n1": {
+"clients": 2067,
+"ca": 34288.43,
+"jours": 7
+}
+},
+{
+"du": "2026-06-29",
+"au": "2026-07-05",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 2097,
+"ca": 38295.79,
+"jours": 7,
+"n1": {
+"clients": 2047,
+"ca": 33402.95,
+"jours": 7
+}
+},
+{
+"du": "2026-07-06",
+"au": "2026-07-12",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 1681,
+"ca": 26194.09,
+"jours": 7,
+"n1": {
+"clients": 1921,
+"ca": 28896.68,
+"jours": 7
+}
+},
+{
+"du": "2026-07-13",
+"au": "2026-07-19",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 1746,
+"ca": 27531.84,
+"jours": 7,
+"n1": {
+"clients": 1768,
+"ca": 26752.5,
+"jours": 7
+}
+},
+{
+"du": "2026-07-20",
+"au": "2026-07-26",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 1879,
+"ca": 30630.42,
+"jours": 7,
+"n1": {
+"clients": 1734,
+"ca": 27674.28,
+"jours": 7
+}
+},
+{
+"du": "2026-07-27",
+"au": "2026-08-02",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 1894,
+"ca": 29825.88,
+"jours": 7,
+"n1": {
+"clients": 2070,
+"ca": 29201.06,
+"jours": 7
+}
+},
+{
+"du": "2026-08-03",
+"au": "2026-08-09",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 1854,
+"ca": 27906.72,
+"jours": 7,
+"n1": {
+"clients": 2061,
+"ca": 29880.08,
+"jours": 7
+}
+},
+{
+"du": "2026-08-10",
+"au": "2026-08-16",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 1785,
+"ca": 30474.25,
+"jours": 7,
+"n1": {
+"clients": 1916,
+"ca": 28141.92,
+"jours": 7
+}
+},
+{
+"du": "2026-08-17",
+"au": "2026-08-23",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 1995,
+"ca": 34017.15,
+"jours": 7,
+"n1": {
+"clients": 2097,
+"ca": 31919.82,
+"jours": 7
+}
+},
+{
+"du": "2026-08-24",
+"au": "2026-08-30",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 1979,
+"ca": 36101.65,
+"jours": 7,
+"n1": {
+"clients": 2201,
+"ca": 36856.2,
+"jours": 7
+}
+},
+{
+"du": "2026-08-31",
+"au": "2026-09-06",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 1872,
+"ca": 31075.15,
+"jours": 7,
+"n1": {
+"clients": 2116,
+"ca": 35205.09,
+"jours": 7
+}
+},
+{
+"du": "2026-09-07",
+"au": "2026-09-13",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 1889,
+"ca": 32466.12,
+"jours": 7,
+"n1": {
+"clients": 2068,
+"ca": 34458.1,
+"jours": 7
+}
+},
+{
+"du": "2026-09-14",
+"au": "2026-09-20",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 1893,
+"ca": 36742.59,
+"jours": 7,
+"n1": {
+"clients": 2074,
+"ca": 35351.8,
+"jours": 7
+}
+},
+{
+"du": "2026-09-21",
+"au": "2026-09-27",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 1904,
+"ca": 32994.51,
+"jours": 7,
+"n1": {
+"clients": 2135,
+"ca": 36997.58,
+"jours": 7
+}
+},
+{
+"du": "2026-09-28",
+"au": "2026-10-04",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 2107,
+"ca": 37964.76,
+"jours": 7,
+"n1": {
+"clients": 1978,
+"ca": 36950.37,
+"jours": 7
+}
+},
+{
+"du": "2026-10-05",
+"au": "2026-10-11",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 1992,
+"ca": 33534.31,
+"jours": 7,
+"n1": {
+"clients": 1815,
+"ca": 32907,
+"jours": 7
+}
+},
+{
+"du": "2026-10-12",
+"au": "2026-10-18",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 2038,
+"ca": 34534.66,
+"jours": 7,
+"n1": {
+"clients": 1869,
+"ca": 34689.9,
+"jours": 7
+}
+},
+{
+"du": "2026-10-19",
+"au": "2026-10-25",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 2166,
+"ca": 35083.51,
+"jours": 7,
+"n1": {
+"clients": 2069,
+"ca": 34607.98,
+"jours": 7
+}
+},
+{
+"du": "2026-10-26",
+"au": "2026-11-01",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 1994,
+"ca": 33356.54,
+"jours": 7,
+"n1": {
+"clients": 1722,
+"ca": 33283.17,
+"jours": 7
+}
+},
+{
+"du": "2026-11-02",
+"au": "2026-11-08",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 2121,
+"ca": 37185.41,
+"jours": 7,
+"n1": {
+"clients": 1923,
+"ca": 31585.28,
+"jours": 7
+}
+},
+{
+"du": "2026-11-09",
+"au": "2026-11-15",
+"lab": "S46",
+"enCours": true,
+"joursServis": 3,
+"clients": 913,
+"ca": 16572.08,
+"jours": 3,
+"n1": {
+"clients": 928,
+"ca": 15353.99,
+"jours": 3
+}
+}
+]
+},
+{
+"id": "3",
+"nom": "Atelier by Max & Sandra - Gosselies",
+"mois": [
+{
+"mois": "2025-01",
+"lab": "janv.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4208,
+"ca": 60711.89,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 3511,
+"ca": 46776.66,
+"jours": 28,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 3667,
+"ca": 53726.91,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 3443,
+"ca": 52027.18,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 3699,
+"ca": 55943.75,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 3667,
+"ca": 52028.05,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 2500,
+"ca": 32900.15,
+"jours": 24,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 3464,
+"ca": 45645.65,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 3906,
+"ca": 63036.25,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4074,
+"ca": 52702.65,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-11",
+"lab": "nov.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4435,
+"ca": 66115.62,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-12",
+"lab": "déc.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4683,
+"ca": 75737.2,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-01",
+"lab": "janv.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4336,
+"ca": 68791,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4208,
+"ca": 60711.89,
+"jours": 31
+},
+"n1Mois": {
+"clients": 4208,
+"ca": 60711.89,
+"jours": 31
+}
+},
+{
+"mois": "2026-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 3653,
+"ca": 49632.55,
+"jours": 28,
+"source": "panel",
+"n1": {
+"clients": 3511,
+"ca": 46776.66,
+"jours": 28
+},
+"n1Mois": {
+"clients": 3511,
+"ca": 46776.66,
+"jours": 28
+}
+},
+{
+"mois": "2026-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 4229,
+"ca": 56382.5,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 3667,
+"ca": 53726.91,
+"jours": 31
+},
+"n1Mois": {
+"clients": 3667,
+"ca": 53726.91,
+"jours": 31
+}
+},
+{
+"mois": "2026-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4099,
+"ca": 57877.85,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 3443,
+"ca": 52027.18,
+"jours": 30
+},
+"n1Mois": {
+"clients": 3443,
+"ca": 52027.18,
+"jours": 30
+}
+},
+{
+"mois": "2026-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 4027,
+"ca": 59471.8,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 3699,
+"ca": 55943.75,
+"jours": 31
+},
+"n1Mois": {
+"clients": 3699,
+"ca": 55943.75,
+"jours": 31
+}
+},
+{
+"mois": "2026-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 4021,
+"ca": 51911.33,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 3667,
+"ca": 52028.05,
+"jours": 30
+},
+"n1Mois": {
+"clients": 3667,
+"ca": 52028.05,
+"jours": 30
+}
+},
+{
+"mois": "2026-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 3693,
+"ca": 45564.84,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 2500,
+"ca": 32900.15,
+"jours": 24
+},
+"n1Mois": {
+"clients": 2500,
+"ca": 32900.15,
+"jours": 24
+}
+},
+{
+"mois": "2026-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 3856,
+"ca": 49084.85,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 3464,
+"ca": 45645.65,
+"jours": 31
+},
+"n1Mois": {
+"clients": 3464,
+"ca": 45645.65,
+"jours": 31
+}
+},
+{
+"mois": "2026-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 3866,
+"ca": 52020,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 3906,
+"ca": 63036.25,
+"jours": 30
+},
+"n1Mois": {
+"clients": 3906,
+"ca": 63036.25,
+"jours": 30
+}
+},
+{
+"mois": "2026-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4178,
+"ca": 61090.6,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4074,
+"ca": 52702.65,
+"jours": 31
+},
+"n1Mois": {
+"clients": 4074,
+"ca": 52702.65,
+"jours": 31
+}
+},
+{
+"mois": "2026-11",
+"lab": "nov.",
+"enCours": true,
+"joursServis": 11,
+"clients": 1581,
+"ca": 25359.55,
+"jours": 11,
+"source": "panel",
+"n1": {
+"clients": 1558,
+"ca": 23137.47,
+"jours": 11
+},
+"n1Mois": {
+"clients": 4435,
+"ca": 66115.62,
+"jours": 30
+}
+}
+],
+"semaines": [
+{
+"du": "2024-12-30",
+"au": "2025-01-05",
+"lab": "S1",
+"enCours": false,
+"joursServis": 7,
+"clients": 804,
+"ca": 13478.5,
+"jours": 5,
+"n1": null
+},
+{
+"du": "2025-01-06",
+"au": "2025-01-12",
+"lab": "S2",
+"enCours": false,
+"joursServis": 7,
+"clients": 992,
+"ca": 14845.39,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-13",
+"au": "2025-01-19",
+"lab": "S3",
+"enCours": false,
+"joursServis": 7,
+"clients": 948,
+"ca": 12342.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-20",
+"au": "2025-01-26",
+"lab": "S4",
+"enCours": false,
+"joursServis": 7,
+"clients": 873,
+"ca": 12714.35,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-01-27",
+"au": "2025-02-02",
+"lab": "S5",
+"enCours": false,
+"joursServis": 7,
+"clients": 848,
+"ca": 10842.6,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-03",
+"au": "2025-02-09",
+"lab": "S6",
+"enCours": false,
+"joursServis": 7,
+"clients": 905,
+"ca": 12114.18,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-10",
+"au": "2025-02-16",
+"lab": "S7",
+"enCours": false,
+"joursServis": 7,
+"clients": 916,
+"ca": 12914.23,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-17",
+"au": "2025-02-23",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 842,
+"ca": 11124.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-02-24",
+"au": "2025-03-02",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 837,
+"ca": 11153.24,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-03",
+"au": "2025-03-09",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 752,
+"ca": 9565.13,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-10",
+"au": "2025-03-16",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 913,
+"ca": 13073.94,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-17",
+"au": "2025-03-23",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 919,
+"ca": 12481.03,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-24",
+"au": "2025-03-30",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 735,
+"ca": 13051.17,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-03-31",
+"au": "2025-04-06",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 687,
+"ca": 9475.24,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-07",
+"au": "2025-04-13",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 796,
+"ca": 12733.74,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-14",
+"au": "2025-04-20",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 895,
+"ca": 15246.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-21",
+"au": "2025-04-27",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 819,
+"ca": 11841.3,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-04-28",
+"au": "2025-05-04",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 788,
+"ca": 10896.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-05",
+"au": "2025-05-11",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 813,
+"ca": 13614.05,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-12",
+"au": "2025-05-18",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 859,
+"ca": 13481.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-19",
+"au": "2025-05-25",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 827,
+"ca": 11974,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-26",
+"au": "2025-06-01",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 888,
+"ca": 12436.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-02",
+"au": "2025-06-08",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 959,
+"ca": 15563.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-09",
+"au": "2025-06-15",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 842,
+"ca": 10671.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-16",
+"au": "2025-06-22",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 887,
+"ca": 11246.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-23",
+"au": "2025-06-29",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 850,
+"ca": 12257,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-30",
+"au": "2025-07-06",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 1,
+"ca": 75.8,
+"jours": 1,
+"n1": null
+},
+{
+"du": "2025-07-07",
+"au": "2025-07-13",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 623,
+"ca": 8310.6,
+"jours": 6,
+"n1": null
+},
+{
+"du": "2025-07-14",
+"au": "2025-07-20",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 757,
+"ca": 10311.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-21",
+"au": "2025-07-27",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 698,
+"ca": 9621.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-28",
+"au": "2025-08-03",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 768,
+"ca": 9642.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-04",
+"au": "2025-08-10",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 753,
+"ca": 10445.05,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-11",
+"au": "2025-08-17",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 710,
+"ca": 8767.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-18",
+"au": "2025-08-24",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 802,
+"ca": 10808.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-25",
+"au": "2025-08-31",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 853,
+"ca": 10638.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-01",
+"au": "2025-09-07",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 840,
+"ca": 11817.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-08",
+"au": "2025-09-14",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 915,
+"ca": 10599.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-15",
+"au": "2025-09-21",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 925,
+"ca": 12564.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-22",
+"au": "2025-09-28",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 972,
+"ca": 25042.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-29",
+"au": "2025-10-05",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 931,
+"ca": 12011.35,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-06",
+"au": "2025-10-12",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 939,
+"ca": 12994.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-13",
+"au": "2025-10-19",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 902,
+"ca": 11876,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-20",
+"au": "2025-10-26",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 895,
+"ca": 10589.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-27",
+"au": "2025-11-02",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 926,
+"ca": 12364.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-03",
+"au": "2025-11-09",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1041,
+"ca": 15288.57,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-10",
+"au": "2025-11-16",
+"lab": "S46",
+"enCours": false,
+"joursServis": 7,
+"clients": 971,
+"ca": 14020.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-17",
+"au": "2025-11-23",
+"lab": "S47",
+"enCours": false,
+"joursServis": 7,
+"clients": 1008,
+"ca": 15261.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-24",
+"au": "2025-11-30",
+"lab": "S48",
+"enCours": false,
+"joursServis": 7,
+"clients": 1150,
+"ca": 17424.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-01",
+"au": "2025-12-07",
+"lab": "S49",
+"enCours": false,
+"joursServis": 7,
+"clients": 1086,
+"ca": 15905.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-08",
+"au": "2025-12-14",
+"lab": "S50",
+"enCours": false,
+"joursServis": 7,
+"clients": 1017,
+"ca": 15624,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-15",
+"au": "2025-12-21",
+"lab": "S51",
+"enCours": false,
+"joursServis": 7,
+"clients": 1073,
+"ca": 18120.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-22",
+"au": "2025-12-28",
+"lab": "S52",
+"enCours": false,
+"joursServis": 7,
+"clients": 1050,
+"ca": 17475.3,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-29",
+"au": "2026-01-04",
+"lab": "S1",
+"enCours": false,
+"joursServis": 7,
+"clients": 1051,
+"ca": 19164.65,
+"jours": 7,
+"n1": {
+"clients": 804,
+"ca": 13478.5,
+"jours": 5
+}
+},
+{
+"du": "2026-01-05",
+"au": "2026-01-11",
+"lab": "S2",
+"enCours": false,
+"joursServis": 7,
+"clients": 1063,
+"ca": 22107.75,
+"jours": 7,
+"n1": {
+"clients": 992,
+"ca": 14845.39,
+"jours": 7
+}
+},
+{
+"du": "2026-01-12",
+"au": "2026-01-18",
+"lab": "S3",
+"enCours": false,
+"joursServis": 7,
+"clients": 957,
+"ca": 12590.25,
+"jours": 7,
+"n1": {
+"clients": 948,
+"ca": 12342.15,
+"jours": 7
+}
+},
+{
+"du": "2026-01-19",
+"au": "2026-01-25",
+"lab": "S4",
+"enCours": false,
+"joursServis": 7,
+"clients": 934,
+"ca": 12819.6,
+"jours": 7,
+"n1": {
+"clients": 873,
+"ca": 12714.35,
+"jours": 7
+}
+},
+{
+"du": "2026-01-26",
+"au": "2026-02-01",
+"lab": "S5",
+"enCours": false,
+"joursServis": 7,
+"clients": 935,
+"ca": 12862.05,
+"jours": 7,
+"n1": {
+"clients": 848,
+"ca": 10842.6,
+"jours": 7
+}
+},
+{
+"du": "2026-02-02",
+"au": "2026-02-08",
+"lab": "S6",
+"enCours": false,
+"joursServis": 7,
+"clients": 901,
+"ca": 13283.25,
+"jours": 7,
+"n1": {
+"clients": 905,
+"ca": 12114.18,
+"jours": 7
+}
+},
+{
+"du": "2026-02-09",
+"au": "2026-02-15",
+"lab": "S7",
+"enCours": false,
+"joursServis": 7,
+"clients": 973,
+"ca": 13259.1,
+"jours": 7,
+"n1": {
+"clients": 916,
+"ca": 12914.23,
+"jours": 7
+}
+},
+{
+"du": "2026-02-16",
+"au": "2026-02-22",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 858,
+"ca": 11098.2,
+"jours": 7,
+"n1": {
+"clients": 842,
+"ca": 11124.2,
+"jours": 7
+}
+},
+{
+"du": "2026-02-23",
+"au": "2026-03-01",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 914,
+"ca": 12055.1,
+"jours": 7,
+"n1": {
+"clients": 837,
+"ca": 11153.24,
+"jours": 7
+}
+},
+{
+"du": "2026-03-02",
+"au": "2026-03-08",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 946,
+"ca": 12764.15,
+"jours": 7,
+"n1": {
+"clients": 752,
+"ca": 9565.13,
+"jours": 7
+}
+},
+{
+"du": "2026-03-09",
+"au": "2026-03-15",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 991,
+"ca": 14005.7,
+"jours": 7,
+"n1": {
+"clients": 913,
+"ca": 13073.94,
+"jours": 7
+}
+},
+{
+"du": "2026-03-16",
+"au": "2026-03-22",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 938,
+"ca": 11990.55,
+"jours": 7,
+"n1": {
+"clients": 919,
+"ca": 12481.03,
+"jours": 7
+}
+},
+{
+"du": "2026-03-23",
+"au": "2026-03-29",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 959,
+"ca": 12523.4,
+"jours": 7,
+"n1": {
+"clients": 735,
+"ca": 13051.17,
+"jours": 7
+}
+},
+{
+"du": "2026-03-30",
+"au": "2026-04-05",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 970,
+"ca": 14149.4,
+"jours": 7,
+"n1": {
+"clients": 687,
+"ca": 9475.24,
+"jours": 7
+}
+},
+{
+"du": "2026-04-06",
+"au": "2026-04-12",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 894,
+"ca": 12742.65,
+"jours": 7,
+"n1": {
+"clients": 796,
+"ca": 12733.74,
+"jours": 7
+}
+},
+{
+"du": "2026-04-13",
+"au": "2026-04-19",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 1000,
+"ca": 14084.8,
+"jours": 7,
+"n1": {
+"clients": 895,
+"ca": 15246.55,
+"jours": 7
+}
+},
+{
+"du": "2026-04-20",
+"au": "2026-04-26",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 980,
+"ca": 13027.15,
+"jours": 7,
+"n1": {
+"clients": 819,
+"ca": 11841.3,
+"jours": 7
+}
+},
+{
+"du": "2026-04-27",
+"au": "2026-05-03",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 874,
+"ca": 12491.75,
+"jours": 7,
+"n1": {
+"clients": 788,
+"ca": 10896.25,
+"jours": 7
+}
+},
+{
+"du": "2026-05-04",
+"au": "2026-05-10",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 950,
+"ca": 14252.05,
+"jours": 7,
+"n1": {
+"clients": 813,
+"ca": 13614.05,
+"jours": 7
+}
+},
+{
+"du": "2026-05-11",
+"au": "2026-05-17",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 907,
+"ca": 13010.75,
+"jours": 7,
+"n1": {
+"clients": 859,
+"ca": 13481.9,
+"jours": 7
+}
+},
+{
+"du": "2026-05-18",
+"au": "2026-05-24",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 927,
+"ca": 14011.95,
+"jours": 7,
+"n1": {
+"clients": 827,
+"ca": 11974,
+"jours": 7
+}
+},
+{
+"du": "2026-05-25",
+"au": "2026-05-31",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 879,
+"ca": 12473.25,
+"jours": 7,
+"n1": {
+"clients": 888,
+"ca": 12436.55,
+"jours": 7
+}
+},
+{
+"du": "2026-06-01",
+"au": "2026-06-07",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 986,
+"ca": 13128.6,
+"jours": 7,
+"n1": {
+"clients": 959,
+"ca": 15563.9,
+"jours": 7
+}
+},
+{
+"du": "2026-06-08",
+"au": "2026-06-14",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 1043,
+"ca": 13735.7,
+"jours": 7,
+"n1": {
+"clients": 842,
+"ca": 10671.15,
+"jours": 7
+}
+},
+{
+"du": "2026-06-15",
+"au": "2026-06-21",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 880,
+"ca": 11100.28,
+"jours": 7,
+"n1": {
+"clients": 887,
+"ca": 11246.9,
+"jours": 7
+}
+},
+{
+"du": "2026-06-22",
+"au": "2026-06-28",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 843,
+"ca": 11366.95,
+"jours": 7,
+"n1": {
+"clients": 850,
+"ca": 12257,
+"jours": 7
+}
+},
+{
+"du": "2026-06-29",
+"au": "2026-07-05",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 911,
+"ca": 11315.6,
+"jours": 7,
+"n1": {
+"clients": 1,
+"ca": 75.8,
+"jours": 1
+}
+},
+{
+"du": "2026-07-06",
+"au": "2026-07-12",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 841,
+"ca": 10670.35,
+"jours": 7,
+"n1": {
+"clients": 623,
+"ca": 8310.6,
+"jours": 6
+}
+},
+{
+"du": "2026-07-13",
+"au": "2026-07-19",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 839,
+"ca": 9760.55,
+"jours": 7,
+"n1": {
+"clients": 757,
+"ca": 10311.25,
+"jours": 7
+}
+},
+{
+"du": "2026-07-20",
+"au": "2026-07-26",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 771,
+"ca": 9991.5,
+"jours": 7,
+"n1": {
+"clients": 698,
+"ca": 9621.65,
+"jours": 7
+}
+},
+{
+"du": "2026-07-27",
+"au": "2026-08-02",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 850,
+"ca": 10228.04,
+"jours": 7,
+"n1": {
+"clients": 768,
+"ca": 9642.8,
+"jours": 7
+}
+},
+{
+"du": "2026-08-03",
+"au": "2026-08-09",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 809,
+"ca": 10733.7,
+"jours": 7,
+"n1": {
+"clients": 753,
+"ca": 10445.05,
+"jours": 7
+}
+},
+{
+"du": "2026-08-10",
+"au": "2026-08-16",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 858,
+"ca": 10854.35,
+"jours": 7,
+"n1": {
+"clients": 710,
+"ca": 8767.65,
+"jours": 7
+}
+},
+{
+"du": "2026-08-17",
+"au": "2026-08-23",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 916,
+"ca": 11374.95,
+"jours": 7,
+"n1": {
+"clients": 802,
+"ca": 10808.65,
+"jours": 7
+}
+},
+{
+"du": "2026-08-24",
+"au": "2026-08-30",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 909,
+"ca": 10942.75,
+"jours": 7,
+"n1": {
+"clients": 853,
+"ca": 10638.15,
+"jours": 7
+}
+},
+{
+"du": "2026-08-31",
+"au": "2026-09-06",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 898,
+"ca": 11399.65,
+"jours": 7,
+"n1": {
+"clients": 840,
+"ca": 11817.55,
+"jours": 7
+}
+},
+{
+"du": "2026-09-07",
+"au": "2026-09-13",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 895,
+"ca": 12459.8,
+"jours": 7,
+"n1": {
+"clients": 915,
+"ca": 10599.15,
+"jours": 7
+}
+},
+{
+"du": "2026-09-14",
+"au": "2026-09-20",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 877,
+"ca": 11810.95,
+"jours": 7,
+"n1": {
+"clients": 925,
+"ca": 12564.55,
+"jours": 7
+}
+},
+{
+"du": "2026-09-21",
+"au": "2026-09-27",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 916,
+"ca": 12964.85,
+"jours": 7,
+"n1": {
+"clients": 972,
+"ca": 25042.55,
+"jours": 7
+}
+},
+{
+"du": "2026-09-28",
+"au": "2026-10-04",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 955,
+"ca": 12626.6,
+"jours": 7,
+"n1": {
+"clients": 931,
+"ca": 12011.35,
+"jours": 7
+}
+},
+{
+"du": "2026-10-05",
+"au": "2026-10-11",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 969,
+"ca": 13786.05,
+"jours": 7,
+"n1": {
+"clients": 939,
+"ca": 12994.9,
+"jours": 7
+}
+},
+{
+"du": "2026-10-12",
+"au": "2026-10-18",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 935,
+"ca": 14590.95,
+"jours": 7,
+"n1": {
+"clients": 902,
+"ca": 11876,
+"jours": 7
+}
+},
+{
+"du": "2026-10-19",
+"au": "2026-10-25",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 921,
+"ca": 13572,
+"jours": 7,
+"n1": {
+"clients": 895,
+"ca": 10589.2,
+"jours": 7
+}
+},
+{
+"du": "2026-10-26",
+"au": "2026-11-01",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 897,
+"ca": 12904.35,
+"jours": 7,
+"n1": {
+"clients": 926,
+"ca": 12364.25,
+"jours": 7
+}
+},
+{
+"du": "2026-11-02",
+"au": "2026-11-08",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1098,
+"ca": 18614.2,
+"jours": 7,
+"n1": {
+"clients": 1041,
+"ca": 15288.57,
+"jours": 7
+}
+},
+{
+"du": "2026-11-09",
+"au": "2026-11-15",
+"lab": "S46",
+"enCours": true,
+"joursServis": 3,
+"clients": 378,
+"ca": 5098.45,
+"jours": 3,
+"n1": {
+"clients": 384,
+"ca": 5751.7,
+"jours": 3
+}
+}
+]
+},
+{
+"id": "5",
+"nom": "Atelier by Harmonie - Sombreffe",
+"mois": [
+{
+"mois": "2025-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 495,
+"ca": 4664.75,
+"jours": 6,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 4668,
+"ca": 53979.29,
+"jours": 29,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 4686,
+"ca": 55060.7,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4269,
+"ca": 49577.5,
+"jours": 27,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 4815,
+"ca": 57613.1,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4298,
+"ca": 48262.3,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4590,
+"ca": 51098,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-11",
+"lab": "nov.",
+"enCours": false,
+"joursServis": 30,
+"clients": 5051,
+"ca": 59100.45,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2025-12",
+"lab": "déc.",
+"enCours": false,
+"joursServis": 31,
+"clients": 5224,
+"ca": 62373.22,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-01",
+"lab": "janv.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4574,
+"ca": 56279.27,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 3986,
+"ca": 43794.79,
+"jours": 28,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 4525,
+"ca": 49987.27,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4635,
+"ca": 51570.45,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 495,
+"ca": 4664.75,
+"jours": 6
+},
+"n1Mois": {
+"clients": 495,
+"ca": 4664.75,
+"jours": 6
+}
+},
+{
+"mois": "2026-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 4186,
+"ca": 50096.35,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4668,
+"ca": 53979.29,
+"jours": 29
+},
+"n1Mois": {
+"clients": 4668,
+"ca": 53979.29,
+"jours": 29
+}
+},
+{
+"mois": "2026-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 4453,
+"ca": 56811.15,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 4686,
+"ca": 55060.7,
+"jours": 30
+},
+"n1Mois": {
+"clients": 4686,
+"ca": 55060.7,
+"jours": 30
+}
+},
+{
+"mois": "2026-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4189,
+"ca": 45161.1,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4269,
+"ca": 49577.5,
+"jours": 27
+},
+"n1Mois": {
+"clients": 4269,
+"ca": 49577.5,
+"jours": 27
+}
+},
+{
+"mois": "2026-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 4333,
+"ca": 47874.4,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4815,
+"ca": 57613.1,
+"jours": 31
+},
+"n1Mois": {
+"clients": 4815,
+"ca": 57613.1,
+"jours": 31
+}
+},
+{
+"mois": "2026-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4394,
+"ca": 55747.1,
+"jours": 30,
+"source": "panel",
+"n1": {
+"clients": 4298,
+"ca": 48262.3,
+"jours": 30
+},
+"n1Mois": {
+"clients": 4298,
+"ca": 48262.3,
+"jours": 30
+}
+},
+{
+"mois": "2026-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4442,
+"ca": 57503.65,
+"jours": 31,
+"source": "panel",
+"n1": {
+"clients": 4590,
+"ca": 51098,
+"jours": 31
+},
+"n1Mois": {
+"clients": 4590,
+"ca": 51098,
+"jours": 31
+}
+},
+{
+"mois": "2026-11",
+"lab": "nov.",
+"enCours": true,
+"joursServis": 11,
+"clients": 1746,
+"ca": 23818.82,
+"jours": 11,
+"source": "panel",
+"n1": {
+"clients": 1820,
+"ca": 22043.9,
+"jours": 11
+},
+"n1Mois": {
+"clients": 5051,
+"ca": 59100.45,
+"jours": 30
+}
+}
+],
+"semaines": [
+{
+"du": "2025-04-21",
+"au": "2025-04-27",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 282,
+"ca": 3047.25,
+"jours": 3,
+"n1": null
+},
+{
+"du": "2025-04-28",
+"au": "2025-05-04",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 550,
+"ca": 5799.79,
+"jours": 5,
+"n1": null
+},
+{
+"du": "2025-05-05",
+"au": "2025-05-11",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 1121,
+"ca": 13112.35,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-12",
+"au": "2025-05-18",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 1061,
+"ca": 12102.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-19",
+"au": "2025-05-25",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 1133,
+"ca": 13231.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-05-26",
+"au": "2025-06-01",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 1202,
+"ca": 13735.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-02",
+"au": "2025-06-08",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 1144,
+"ca": 13803.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-09",
+"au": "2025-06-15",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 1135,
+"ca": 13447.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-16",
+"au": "2025-06-22",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 1052,
+"ca": 12343.6,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-23",
+"au": "2025-06-29",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 1029,
+"ca": 11548.4,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-06-30",
+"au": "2025-07-06",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 1018,
+"ca": 12135.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-07",
+"au": "2025-07-13",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 1231,
+"ca": 14112.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-14",
+"au": "2025-07-20",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 1243,
+"ca": 14769.1,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-07-21",
+"au": "2025-07-27",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 375,
+"ca": 4095,
+"jours": 3,
+"n1": null
+},
+{
+"du": "2025-07-28",
+"au": "2025-08-03",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 1002,
+"ca": 11841.1,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-04",
+"au": "2025-08-10",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 1138,
+"ca": 12729.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-11",
+"au": "2025-08-17",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 1045,
+"ca": 12809.4,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-18",
+"au": "2025-08-24",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 1112,
+"ca": 12458,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-08-25",
+"au": "2025-08-31",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 1060,
+"ca": 13771.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-01",
+"au": "2025-09-07",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 953,
+"ca": 10972.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-08",
+"au": "2025-09-14",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 1021,
+"ca": 11389.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-15",
+"au": "2025-09-21",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 1021,
+"ca": 11689.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-22",
+"au": "2025-09-28",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 1023,
+"ca": 11537.1,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-09-29",
+"au": "2025-10-05",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 1074,
+"ca": 11527.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-06",
+"au": "2025-10-12",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 1074,
+"ca": 11942.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-13",
+"au": "2025-10-19",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 1051,
+"ca": 11737,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-20",
+"au": "2025-10-26",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 1000,
+"ca": 11792.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-10-27",
+"au": "2025-11-02",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 996,
+"ca": 11020.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-03",
+"au": "2025-11-09",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1159,
+"ca": 13326.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-10",
+"au": "2025-11-16",
+"lab": "S46",
+"enCours": false,
+"joursServis": 7,
+"clients": 1213,
+"ca": 14771.1,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-17",
+"au": "2025-11-23",
+"lab": "S47",
+"enCours": false,
+"joursServis": 7,
+"clients": 1166,
+"ca": 13943.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-11-24",
+"au": "2025-11-30",
+"lab": "S48",
+"enCours": false,
+"joursServis": 7,
+"clients": 1188,
+"ca": 12809.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-01",
+"au": "2025-12-07",
+"lab": "S49",
+"enCours": false,
+"joursServis": 7,
+"clients": 1218,
+"ca": 14329.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-08",
+"au": "2025-12-14",
+"lab": "S50",
+"enCours": false,
+"joursServis": 7,
+"clients": 1150,
+"ca": 12401,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-15",
+"au": "2025-12-21",
+"lab": "S51",
+"enCours": false,
+"joursServis": 7,
+"clients": 1188,
+"ca": 12914.52,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-22",
+"au": "2025-12-28",
+"lab": "S52",
+"enCours": false,
+"joursServis": 7,
+"clients": 1162,
+"ca": 16184.3,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2025-12-29",
+"au": "2026-01-04",
+"lab": "S1",
+"enCours": false,
+"joursServis": 7,
+"clients": 1199,
+"ca": 18488,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-01-05",
+"au": "2026-01-11",
+"lab": "S2",
+"enCours": false,
+"joursServis": 7,
+"clients": 1004,
+"ca": 14655.42,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-01-12",
+"au": "2026-01-18",
+"lab": "S3",
+"enCours": false,
+"joursServis": 7,
+"clients": 1003,
+"ca": 10667.1,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-01-19",
+"au": "2026-01-25",
+"lab": "S4",
+"enCours": false,
+"joursServis": 7,
+"clients": 1036,
+"ca": 10787.65,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-01-26",
+"au": "2026-02-01",
+"lab": "S5",
+"enCours": false,
+"joursServis": 7,
+"clients": 939,
+"ca": 9576.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-02-02",
+"au": "2026-02-08",
+"lab": "S6",
+"enCours": false,
+"joursServis": 7,
+"clients": 978,
+"ca": 10275.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-02-09",
+"au": "2026-02-15",
+"lab": "S7",
+"enCours": false,
+"joursServis": 7,
+"clients": 1065,
+"ca": 13253.79,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-02-16",
+"au": "2026-02-22",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 993,
+"ca": 10096.25,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-02-23",
+"au": "2026-03-01",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 991,
+"ca": 10840.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-02",
+"au": "2026-03-08",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 1040,
+"ca": 11669.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-09",
+"au": "2026-03-15",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 1018,
+"ca": 11436.87,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-16",
+"au": "2026-03-22",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 976,
+"ca": 10828.45,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-23",
+"au": "2026-03-29",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 1079,
+"ca": 11720.05,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-30",
+"au": "2026-04-05",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 1054,
+"ca": 11975.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-06",
+"au": "2026-04-12",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 1049,
+"ca": 12230.75,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-13",
+"au": "2026-04-19",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 1114,
+"ca": 12446.95,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-20",
+"au": "2026-04-26",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 1134,
+"ca": 11876,
+"jours": 7,
+"n1": {
+"clients": 282,
+"ca": 3047.25,
+"jours": 3
+}
+},
+{
+"du": "2026-04-27",
+"au": "2026-05-03",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 950,
+"ca": 10352.7,
+"jours": 7,
+"n1": {
+"clients": 550,
+"ca": 5799.79,
+"jours": 5
+}
+},
+{
+"du": "2026-05-04",
+"au": "2026-05-10",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 1057,
+"ca": 12662.1,
+"jours": 7,
+"n1": {
+"clients": 1121,
+"ca": 13112.35,
+"jours": 7
+}
+},
+{
+"du": "2026-05-11",
+"au": "2026-05-17",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 1033,
+"ca": 12098.5,
+"jours": 7,
+"n1": {
+"clients": 1061,
+"ca": 12102.5,
+"jours": 7
+}
+},
+{
+"du": "2026-05-18",
+"au": "2026-05-24",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 963,
+"ca": 10969.8,
+"jours": 7,
+"n1": {
+"clients": 1133,
+"ca": 13231.85,
+"jours": 7
+}
+},
+{
+"du": "2026-05-25",
+"au": "2026-05-31",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 737,
+"ca": 9363.8,
+"jours": 7,
+"n1": {
+"clients": 1202,
+"ca": 13735.8,
+"jours": 7
+}
+},
+{
+"du": "2026-06-01",
+"au": "2026-06-07",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 1115,
+"ca": 12642.05,
+"jours": 7,
+"n1": {
+"clients": 1144,
+"ca": 13803.7,
+"jours": 7
+}
+},
+{
+"du": "2026-06-08",
+"au": "2026-06-14",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 1132,
+"ca": 14669.45,
+"jours": 7,
+"n1": {
+"clients": 1135,
+"ca": 13447.5,
+"jours": 7
+}
+},
+{
+"du": "2026-06-15",
+"au": "2026-06-21",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 975,
+"ca": 13142.35,
+"jours": 7,
+"n1": {
+"clients": 1052,
+"ca": 12343.6,
+"jours": 7
+}
+},
+{
+"du": "2026-06-22",
+"au": "2026-06-28",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 939,
+"ca": 12934.7,
+"jours": 7,
+"n1": {
+"clients": 1029,
+"ca": 11548.4,
+"jours": 7
+}
+},
+{
+"du": "2026-06-29",
+"au": "2026-07-05",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 1011,
+"ca": 12020.05,
+"jours": 7,
+"n1": {
+"clients": 1018,
+"ca": 12135.7,
+"jours": 7
+}
+},
+{
+"du": "2026-07-06",
+"au": "2026-07-12",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 865,
+"ca": 8872.35,
+"jours": 7,
+"n1": {
+"clients": 1231,
+"ca": 14112.9,
+"jours": 7
+}
+},
+{
+"du": "2026-07-13",
+"au": "2026-07-19",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 988,
+"ca": 9900.05,
+"jours": 7,
+"n1": {
+"clients": 1243,
+"ca": 14769.1,
+"jours": 7
+}
+},
+{
+"du": "2026-07-20",
+"au": "2026-07-26",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 1018,
+"ca": 11477.05,
+"jours": 7,
+"n1": {
+"clients": 375,
+"ca": 4095,
+"jours": 3
+}
+},
+{
+"du": "2026-07-27",
+"au": "2026-08-02",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 912,
+"ca": 9792.4,
+"jours": 7,
+"n1": {
+"clients": 1002,
+"ca": 11841.1,
+"jours": 7
+}
+},
+{
+"du": "2026-08-03",
+"au": "2026-08-09",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 925,
+"ca": 10039.45,
+"jours": 7,
+"n1": {
+"clients": 1138,
+"ca": 12729.9,
+"jours": 7
+}
+},
+{
+"du": "2026-08-10",
+"au": "2026-08-16",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 940,
+"ca": 10247.2,
+"jours": 7,
+"n1": {
+"clients": 1045,
+"ca": 12809.4,
+"jours": 7
+}
+},
+{
+"du": "2026-08-17",
+"au": "2026-08-23",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 1008,
+"ca": 10864.65,
+"jours": 7,
+"n1": {
+"clients": 1112,
+"ca": 12458,
+"jours": 7
+}
+},
+{
+"du": "2026-08-24",
+"au": "2026-08-30",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 1000,
+"ca": 11685.2,
+"jours": 7,
+"n1": {
+"clients": 1060,
+"ca": 13771.5,
+"jours": 7
+}
+},
+{
+"du": "2026-08-31",
+"au": "2026-09-06",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 999,
+"ca": 11646.8,
+"jours": 7,
+"n1": {
+"clients": 953,
+"ca": 10972.5,
+"jours": 7
+}
+},
+{
+"du": "2026-09-07",
+"au": "2026-09-13",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 1071,
+"ca": 12066.55,
+"jours": 7,
+"n1": {
+"clients": 1021,
+"ca": 11389.9,
+"jours": 7
+}
+},
+{
+"du": "2026-09-14",
+"au": "2026-09-20",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 1000,
+"ca": 12785.75,
+"jours": 7,
+"n1": {
+"clients": 1021,
+"ca": 11689.8,
+"jours": 7
+}
+},
+{
+"du": "2026-09-21",
+"au": "2026-09-27",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 1023,
+"ca": 14104.5,
+"jours": 7,
+"n1": {
+"clients": 1023,
+"ca": 11537.1,
+"jours": 7
+}
+},
+{
+"du": "2026-09-28",
+"au": "2026-10-04",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 1036,
+"ca": 14235.55,
+"jours": 7,
+"n1": {
+"clients": 1074,
+"ca": 11527.5,
+"jours": 7
+}
+},
+{
+"du": "2026-10-05",
+"au": "2026-10-11",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 1040,
+"ca": 14077.9,
+"jours": 7,
+"n1": {
+"clients": 1074,
+"ca": 11942.7,
+"jours": 7
+}
+},
+{
+"du": "2026-10-12",
+"au": "2026-10-18",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 1059,
+"ca": 15010.2,
+"jours": 7,
+"n1": {
+"clients": 1051,
+"ca": 11737,
+"jours": 7
+}
+},
+{
+"du": "2026-10-19",
+"au": "2026-10-25",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 941,
+"ca": 11768.95,
+"jours": 7,
+"n1": {
+"clients": 1000,
+"ca": 11792.2,
+"jours": 7
+}
+},
+{
+"du": "2026-10-26",
+"au": "2026-11-01",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 936,
+"ca": 11054.35,
+"jours": 7,
+"n1": {
+"clients": 996,
+"ca": 11020.5,
+"jours": 7
+}
+},
+{
+"du": "2026-11-02",
+"au": "2026-11-08",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1149,
+"ca": 16795.62,
+"jours": 7,
+"n1": {
+"clients": 1159,
+"ca": 13326.9,
+"jours": 7
+}
+},
+{
+"du": "2026-11-09",
+"au": "2026-11-15",
+"lab": "S46",
+"enCours": true,
+"joursServis": 3,
+"clients": 475,
+"ca": 5083.1,
+"jours": 3,
+"n1": {
+"clients": 504,
+"ca": 6260.9,
+"jours": 3
+}
+}
+]
+},
+{
+"id": "4",
+"nom": "Atelier by - Halle",
+"mois": [
+{
+"mois": "2026-02",
+"lab": "févr.",
+"enCours": false,
+"joursServis": 28,
+"clients": 612,
+"ca": 6506.85,
+"jours": 7,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-03",
+"lab": "mars",
+"enCours": false,
+"joursServis": 30,
+"clients": 4341,
+"ca": 48767.34,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-04",
+"lab": "avr.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4486,
+"ca": 55831.57,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-05",
+"lab": "mai",
+"enCours": false,
+"joursServis": 31,
+"clients": 4756,
+"ca": 60278.02,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-06",
+"lab": "juin",
+"enCours": false,
+"joursServis": 30,
+"clients": 3811,
+"ca": 46950.55,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-07",
+"lab": "juil.",
+"enCours": false,
+"joursServis": 31,
+"clients": 3776,
+"ca": 46239.03,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-08",
+"lab": "août",
+"enCours": false,
+"joursServis": 31,
+"clients": 4323,
+"ca": 52350.95,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-09",
+"lab": "sept.",
+"enCours": false,
+"joursServis": 30,
+"clients": 4156,
+"ca": 50849.75,
+"jours": 30,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-10",
+"lab": "oct.",
+"enCours": false,
+"joursServis": 31,
+"clients": 4712,
+"ca": 58895.11,
+"jours": 31,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+},
+{
+"mois": "2026-11",
+"lab": "nov.",
+"enCours": true,
+"joursServis": 11,
+"clients": 1803,
+"ca": 24343.94,
+"jours": 11,
+"source": "panel",
+"n1": null,
+"n1Mois": null
+}
+],
+"semaines": [
+{
+"du": "2026-02-16",
+"au": "2026-02-22",
+"lab": "S8",
+"enCours": false,
+"joursServis": 7,
+"clients": 1,
+"ca": 0.8,
+"jours": 1,
+"n1": null
+},
+{
+"du": "2026-02-23",
+"au": "2026-03-01",
+"lab": "S9",
+"enCours": false,
+"joursServis": 7,
+"clients": 811,
+"ca": 9263.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-02",
+"au": "2026-03-08",
+"lab": "S10",
+"enCours": false,
+"joursServis": 7,
+"clients": 970,
+"ca": 10508.75,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-09",
+"au": "2026-03-15",
+"lab": "S11",
+"enCours": false,
+"joursServis": 7,
+"clients": 876,
+"ca": 9778.94,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-16",
+"au": "2026-03-22",
+"lab": "S12",
+"enCours": false,
+"joursServis": 7,
+"clients": 1015,
+"ca": 11553.14,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-23",
+"au": "2026-03-29",
+"lab": "S13",
+"enCours": false,
+"joursServis": 7,
+"clients": 1017,
+"ca": 11745.67,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-03-30",
+"au": "2026-04-05",
+"lab": "S14",
+"enCours": false,
+"joursServis": 7,
+"clients": 1075,
+"ca": 14014.49,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-06",
+"au": "2026-04-12",
+"lab": "S15",
+"enCours": false,
+"joursServis": 7,
+"clients": 1018,
+"ca": 13667.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-13",
+"au": "2026-04-19",
+"lab": "S16",
+"enCours": false,
+"joursServis": 7,
+"clients": 1096,
+"ca": 12496.13,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-20",
+"au": "2026-04-26",
+"lab": "S17",
+"enCours": false,
+"joursServis": 7,
+"clients": 1031,
+"ca": 12644.91,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-04-27",
+"au": "2026-05-03",
+"lab": "S18",
+"enCours": false,
+"joursServis": 7,
+"clients": 1130,
+"ca": 13708.71,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-05-04",
+"au": "2026-05-10",
+"lab": "S19",
+"enCours": false,
+"joursServis": 7,
+"clients": 1144,
+"ca": 14226.27,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-05-11",
+"au": "2026-05-17",
+"lab": "S20",
+"enCours": false,
+"joursServis": 7,
+"clients": 1116,
+"ca": 14853.47,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-05-18",
+"au": "2026-05-24",
+"lab": "S21",
+"enCours": false,
+"joursServis": 7,
+"clients": 880,
+"ca": 10669.46,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-05-25",
+"au": "2026-05-31",
+"lab": "S22",
+"enCours": false,
+"joursServis": 7,
+"clients": 1015,
+"ca": 12251.39,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-06-01",
+"au": "2026-06-07",
+"lab": "S23",
+"enCours": false,
+"joursServis": 7,
+"clients": 1007,
+"ca": 12350.41,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-06-08",
+"au": "2026-06-14",
+"lab": "S24",
+"enCours": false,
+"joursServis": 7,
+"clients": 1020,
+"ca": 13118.85,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-06-15",
+"au": "2026-06-21",
+"lab": "S25",
+"enCours": false,
+"joursServis": 7,
+"clients": 830,
+"ca": 9746.3,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-06-22",
+"au": "2026-06-28",
+"lab": "S26",
+"enCours": false,
+"joursServis": 7,
+"clients": 711,
+"ca": 8996.54,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-06-29",
+"au": "2026-07-05",
+"lab": "S27",
+"enCours": false,
+"joursServis": 7,
+"clients": 958,
+"ca": 11619.6,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-07-06",
+"au": "2026-07-12",
+"lab": "S28",
+"enCours": false,
+"joursServis": 7,
+"clients": 867,
+"ca": 10831.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-07-13",
+"au": "2026-07-19",
+"lab": "S29",
+"enCours": false,
+"joursServis": 7,
+"clients": 921,
+"ca": 10700.8,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-07-20",
+"au": "2026-07-26",
+"lab": "S30",
+"enCours": false,
+"joursServis": 7,
+"clients": 713,
+"ca": 9292.15,
+"jours": 6,
+"n1": null
+},
+{
+"du": "2026-07-27",
+"au": "2026-08-02",
+"lab": "S31",
+"enCours": false,
+"joursServis": 7,
+"clients": 898,
+"ca": 11035.88,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-08-03",
+"au": "2026-08-09",
+"lab": "S32",
+"enCours": false,
+"joursServis": 7,
+"clients": 994,
+"ca": 11709.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-08-10",
+"au": "2026-08-16",
+"lab": "S33",
+"enCours": false,
+"joursServis": 7,
+"clients": 931,
+"ca": 11259.5,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-08-17",
+"au": "2026-08-23",
+"lab": "S34",
+"enCours": false,
+"joursServis": 7,
+"clients": 1042,
+"ca": 12400.55,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-08-24",
+"au": "2026-08-30",
+"lab": "S35",
+"enCours": false,
+"joursServis": 7,
+"clients": 913,
+"ca": 11320.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-08-31",
+"au": "2026-09-06",
+"lab": "S36",
+"enCours": false,
+"joursServis": 7,
+"clients": 921,
+"ca": 11530.15,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-09-07",
+"au": "2026-09-13",
+"lab": "S37",
+"enCours": false,
+"joursServis": 7,
+"clients": 994,
+"ca": 12077.9,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-09-14",
+"au": "2026-09-20",
+"lab": "S38",
+"enCours": false,
+"joursServis": 7,
+"clients": 998,
+"ca": 12591.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-09-21",
+"au": "2026-09-27",
+"lab": "S39",
+"enCours": false,
+"joursServis": 7,
+"clients": 993,
+"ca": 11908.45,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-09-28",
+"au": "2026-10-04",
+"lab": "S40",
+"enCours": false,
+"joursServis": 7,
+"clients": 995,
+"ca": 12864.2,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-10-05",
+"au": "2026-10-11",
+"lab": "S41",
+"enCours": false,
+"joursServis": 7,
+"clients": 1069,
+"ca": 13030.75,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-10-12",
+"au": "2026-10-18",
+"lab": "S42",
+"enCours": false,
+"joursServis": 7,
+"clients": 1017,
+"ca": 13620.05,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-10-19",
+"au": "2026-10-25",
+"lab": "S43",
+"enCours": false,
+"joursServis": 7,
+"clients": 1132,
+"ca": 12921.56,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-10-26",
+"au": "2026-11-01",
+"lab": "S44",
+"enCours": false,
+"joursServis": 7,
+"clients": 1058,
+"ca": 13693,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-11-02",
+"au": "2026-11-08",
+"lab": "S45",
+"enCours": false,
+"joursServis": 7,
+"clients": 1086,
+"ca": 14254.7,
+"jours": 7,
+"n1": null
+},
+{
+"du": "2026-11-09",
+"au": "2026-11-15",
+"lab": "S46",
+"enCours": true,
+"joursServis": 3,
+"clients": 513,
+"ca": 6754.64,
+"jours": 3,
+"n1": null
+}
+]
+}
+]
+}

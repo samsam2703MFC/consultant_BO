@@ -4613,7 +4613,7 @@ function tplResultat(c, x){
       <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
       <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:400;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
     </div>` : ''}
-    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : (c.rjOnglet === 'reseau' ? tplResultatReseau(c, x) : tplResultatPeriode(c, x))}
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x) : (c.rjOnglet === 'reseau' ? tplResultatReseau(c, x) : (c.rjOnglet === 'evolution' ? tplResultatEvolution(c, x) : tplResultatPeriode(c, x)))}
   </div>`;
 }
 
@@ -4734,6 +4734,66 @@ function tplResultatReseau(c, x){
         ${ecart(g.ecartCur, 'Qui fait l’écart — ' + g.ecartCurLab + ', clients gagnés ou perdus face au N-1', 'magasins comparables')}
         ${ecart(g.ecartTot, 'Qui fait l’écart — ' + g.ecartTotLab, 'magasins comparables')}
       </div>`;
+  }
+  return `<div class="rr" style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">${tete}${corps}</div>`;
+}
+
+/* --- Évolution magasin : un graphique par magasin, depuis sa première vente --- */
+function svgEvolution(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  return `<svg viewBox="0 0 ${S.W} ${S.H}" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    ${S.avant ? `<rect x="${S.avant.x}" y="${S.avant.y}" width="${S.avant.w}" height="${S.avant.h}" fill="rgba(34,34,34,.035)"/>${S.avant.t ? `<text x="${S.avant.tx}" y="${S.avant.ty}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${esc(S.avant.t)}</text>` : ''}` : ''}
+    ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.W - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,${t.base ? '.16' : '.07'})"/><text x="${S.ml - 8}" y="${(+t.y + 3.5).toFixed(1)}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(t.t)}</text>`).join('')}
+    ${S.seps.map(s => `${s.trait ? `<line x1="${s.x}" x2="${s.x}" y1="${s.y1}" y2="${s.y2}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>` : ''}<text x="${s.xt}" y="${S.mt - 7}" font-size="11" font-weight="600" fill="#1c1a17" style="${ft}">${esc(s.t)}</text>`).join('')}
+    ${S.aires.map(a => `<polygon points="${a.pts}" fill="${a.pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`).join('')}
+    ${S.segs1.map(p => `<polyline points="${p}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`).join('')}
+    ${S.segs.map(p => `<polyline points="${p}" fill="none" stroke="#8D1D2C" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
+    ${S.cour ? `<polyline points="${S.cour}" fill="none" stroke="#8D1D2C" stroke-width="2" stroke-dasharray="3 3"/>` : ''}
+    ${S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>${esc(p.titre)}</title></circle>`).join('')}
+    ${S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="${p.vide ? 3.6 : 3.2}" fill="${p.vide ? '#fff' : '#8D1D2C'}" stroke="#8D1D2C" stroke-width="${p.vide ? 1.6 : 0}"><title>${esc(p.titre)}</title></circle>`).join('')}
+    ${S.labels.map(l => `<text x="${l.x}" y="${l.y}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">${esc(l.t)}</text>`).join('')}
+    ${S.notes.map(l => `<text x="${l.x}" y="${l.y}" font-size="9.5" text-anchor="${l.mid ? 'middle' : 'start'}" fill="#7a736a" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">${esc(l.t)}</text>`).join('')}
+    ${S.cats.map(c => `${c.lab ? `<text x="${c.x}" y="${S.hb}" font-size="10" font-weight="${c.cur ? 600 : 400}" text-anchor="middle" fill="${c.cur ? '#8D1D2C' : '#3b3731'}" style="${ft}">${esc(c.lab)}</text>` : ''}${c.chip ? `<text x="${c.x}" y="${S.hc}" font-size="9.5" font-weight="600" text-anchor="middle" fill="${c.chipCoul}" style="${ft}">${esc(c.chip)}</text>` : ''}`).join('')}
+    ${S.avecChips ? `<text x="${S.ml - 8}" y="${S.hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>` : ''}
+  </svg>`;
+}
+function tplResultatEvolution(c, x){
+  const { esc } = x;
+  const g = c.ev || {};
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const seg = L => `<div class="rr-ong">${(L || []).map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const tete = `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:var(--font-display);font-size:18px">Évolution magasin</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(g.sousTitre || '')}</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${seg(g.quois)}${seg(g.modes)}</span></div>`;
+  let corps;
+  if (g.chargement) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins au panel, mois par mois depuis leur première vente — une fois, puis gardée…</div>`; }
+  else if (g.erreur) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)} <button ${x.A(g.relire)} style="margin-left:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:3px 10px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Relire</button></div>`; }
+  else if (g.vide) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Aucune vente lue, ni au panel ni dans la copie de caisse.</div>`; }
+  else {
+    const legTrait = (coul, dash, w) => `<svg width="20" height="9" style="vertical-align:-1px;margin-right:4px" aria-hidden="true"><line x1="0" x2="20" y1="4.5" y2="4.5" stroke="${coul}" stroke-width="${w || 2}"${dash ? ` stroke-dasharray="${dash}"` : ''}/></svg>`;
+    const carte = m => `
+      <div class="rm-bloc ev-mag">
+        <div class="ev-tete"><b>${esc(m.nom)}</b><span>${m.faits.map(esc).join(' · ')}</span></div>
+        <div class="rm-card"><div class="rm-s6"><div>${svgEvolution(m.svg, esc)}
+          <div class="rm-leg">
+            <span><i style="background:#8D1D2C;border-radius:50%"></i>${esc(g.unite)}</span>
+            <span>${m.avecN1 ? legTrait('#B8B2A8', '4 3') : ''}${esc(m.n1Txt)}</span>
+            ${m.avecN1 ? `<span><i style="background:rgba(63,122,82,.35)"></i><i style="background:rgba(163,32,20,.3);margin-left:-2px"></i>gagné / perdu face au N-1</span>` : ''}
+            ${m.ouverture ? `<span><i style="background:#fff;border:1.6px solid #8D1D2C;border-radius:50%;width:6px;height:6px"></i>mois d’ouverture, incomplet : hors courbe</span>` : ''}
+            ${g.mode === 'jour' ? `<span>${legTrait('#8D1D2C', '3 3')}le mois en cours (cercle vide), à ses jours vendus</span>` : ''}
+            ${m.etoile ? `<span>* le N-1 a eu des jours fermés — « Par jour ouvert » les neutralise</span>` : ''}
+          </div></div>
+          <div class="rm-s6t ev-t4">${m.tuiles.map(t => `<div class="t ${t.cls || ''}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${t.s || ''}</div></div>`).join('')}</div>
+        </div></div>
+      </div>`;
+    const pill = (t, coul) => t ? `<span class="rr-pill" style="background:${coul}">${esc(t)}</span>` : '—';
+    const table = `<div class="rm-bloc"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>Année par année</span><span style="font-weight:400;text-transform:none;letter-spacing:0">les écarts ne comptent que les mois qui ont un N-1 — à périmètre comparable${g.mode === 'jour' ? ' · par jour ouvert' : ''}</span></div><div class="rm-card">
+      <table class="rr-tb ev-an"><tr><th>Magasin</th><th>Année</th><th>${esc(g.colClients)}</th><th>vs N-1</th><th>${esc(g.colCa)}</th><th>vs N-1</th><th>Panier</th><th>vs N-1</th><th>Jours vendus</th><th>Comparé sur</th></tr>
+      ${g.annees.map(a => `<tr class="${a.premier ? 'ev-prem' : ''}"><td>${esc(a.mag)}</td><td><b style="font-weight:400">${esc(a.an)}</b> <span style="color:var(--color-text-muted)">${esc(a.per)}</span></td><td>${esc(a.clients)}</td><td>${a.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(a.ec, a.ecCoul)}</td><td>${esc(a.ca)}</td><td>${a.sansN1 ? '' : pill(a.eca, a.ecaCoul)}</td><td>${esc(a.panier)}</td><td>${a.sansN1 ? '' : pill(a.ep, a.epCoul)}</td><td>${esc(a.jours)}</td><td style="color:var(--color-text-muted)">${esc(a.cmp || '—')}</td></tr>`).join('')}
+      </table></div></div>`;
+    corps = `<div style="${cap};font-size:10px;margin:-6px 0 -6px;text-transform:none;letter-spacing:0">${esc(g.chipTxt)}</div>
+      ${g.magasins.map(carte).join('')}
+      ${table}
+      <div style="font-size:10.5px;color:var(--color-text-muted)">Source : ${esc(g.source)}.</div>`;
   }
   return `<div class="rr" style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">${tete}${corps}</div>`;
 }
