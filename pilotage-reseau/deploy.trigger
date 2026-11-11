@@ -1380,4 +1380,5 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-11T20:13:11Z Planogramme › Structure de gamme : standard 80 % du CA (6 max), saisons et périodes (4 max), désactiver sous 3 % de la catégorie
 2026-11-11T20:19:39Z Résultat › Évolution magasin : « Par jour ouvert » par défaut, tableau trimestre par trimestre
 2026-11-11T20:36:57Z Planogramme › Structure de gamme : les pièces par saison et une décision par référence à désactiver (saison, période, standard)
+2026-11-11T20:40:06Z Planogramme › Structure de gamme : Désactiver et Obligatoire en interrupteurs, la saison en liste
 2026-11-11T20:36:49Z Dashboard magasin › Produits : est-ce que ça se développe ? une tuile par catégorie, les produits au clic (prix, quantité, marge)
