@@ -127,7 +127,7 @@ function ep_ventes_clients_sonde(): array
         return null;
     };
     // Les tables autour du client : colonnes et volume.
-    foreach (['customer', 'client', 'company', 'client_department', 'serving_method', 'payment_type', 'invoice', 'client_order', 'ws_orders', 'ws_office_delivery_sites'] as $t) {
+    foreach (['customer', 'client', 'company', 'client_department', 'serving_method', 'payment_type', 'invoice', 'client_order'] as $t) {
         try {
             $c = $cols($t);
             if ($c === []) { continue; }
@@ -188,7 +188,6 @@ function ep_ventes_clients_sonde(): array
     // Les commandes au comptoir et la boutique en ligne : part des clients B2B.
     try {
         $out['commandes'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ co.id_shop shop, COUNT(*) n, SUM(c.is_b2b = 1) b2b, MAX(co.pick_up_datetime) derniere FROM client_order co LEFT JOIN client c ON c.id = co.id_client GROUP BY co.id_shop ORDER BY co.id_shop');
-        $out['webshop'] = Db::rows('SELECT /*+ MAX_EXECUTION_TIME(6000) */ shop_id shop, mode, COUNT(*) n, MAX(delivery_date) derniere FROM ws_orders GROUP BY shop_id, mode ORDER BY shop_id, mode');
     } catch (Throwable $e) { $out['erreurs'][] = 'commandes : ' . $e->getMessage(); }
     // Par magasin : combien de tickets portent un client, une société, une facture, un paiement différé.
     try {
