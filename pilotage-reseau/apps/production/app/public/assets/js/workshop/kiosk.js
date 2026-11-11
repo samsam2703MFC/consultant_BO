@@ -795,17 +795,17 @@
     function validateClock(me, direction, button) {
         const questions = me.questions?.[direction] || [];
         const sign = !!me.signature?.[direction];
-        if (questions.length || sign) renderQuestions(questions, direction, null, sign);
+        if (questions.length || sign) renderQuestions(questions, direction, null, sign, me.questions?.catalog);
         else clockTap(button, direction, [], null);
     }
 
     // Ekran zatwierdzenia : dotknięcie potwierdza punkt, podpis palcem w ramce, « OK, zatwierdzam » gdy obowiązkowe
     // punkty są potwierdzone i podpis złożony — bez podpisu nie ma wejścia ani wyjścia.
-    function renderQuestions(questions, direction, error, sign) {
+    function renderQuestions(questions, direction, error, sign, catalog) {
         resetIdle();
         // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
         let refresh = () => {};
-        const cq = window.TfbClockQuestions(questions, {t, esc, onChange: () => { resetIdle(); refresh(); }});
+        const cq = window.TfbClockQuestions(questions, {t, esc, catalog: catalog || [], onChange: () => { resetIdle(); refresh(); }});
         el.innerHTML = personHeader() + `<section class="kiosk-card kiosk-confirm">
                 <h2>${icon(direction === 'in' ? 'log-in' : 'log-out')} ${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
                 ${cq.html}
@@ -858,7 +858,7 @@
             // Pytania albo podpis zmienione w międzyczasie : aktualny ekran zatwierdzenia z komunikatem.
             if (err.code === 'CLOCK_QUESTIONS_REQUIRED' || err.fields?.includes('signature')) {
                 const me = await api('GET', '/kiosk/me', undefined, true).catch(() => null);
-                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction]);
+                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction], me.questions?.catalog);
             }
             toast(err.offline ? t('offline_retry') : err.message, true);
         }

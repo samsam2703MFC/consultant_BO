@@ -7,7 +7,7 @@ namespace App\Repositories\Workshop;
 final class ClockQuestionRepository extends WorkshopRepository
 {
     protected string $table = 'n_clock_question';
-    protected array $writable = ['text_pl', 'text_fr', 'direction', 'kind', 'info_pl', 'info_fr', 'required', 'active', 'sort_order', 'updated_by'];
+    protected array $writable = ['text_pl', 'text_fr', 'direction', 'kind', 'picker', 'info_pl', 'info_fr', 'required', 'active', 'sort_order', 'updated_by'];
 
     public function list(): array
     {
@@ -30,12 +30,42 @@ final class ClockQuestionRepository extends WorkshopRepository
         return (int) ($this->all('SELECT COALESCE(MAX(sort_order), 0) + 10 AS n FROM n_clock_question')[0]['n'] ?? 10);
     }
 
-    /** @param list<array{id:int, text:string, answer:bool, note?:?string}> $answers */
+    /** @param list<array{id:int, text:string, answer:bool, note?:?string, goods?:list<array>}> $answers */
     public function saveAnswers(int $clockId, string $direction, array $answers): void
     {
         $stmt = $this->db->prepare('INSERT INTO n_clock_answer (id_clock, direction, id_question, question, answer, note) VALUES (?, ?, ?, ?, ?, ?)
                                     ON DUPLICATE KEY UPDATE answer = VALUES(answer), note = VALUES(note)');
-        foreach ($answers as $a) $stmt->execute([$clockId, $direction, $a['id'], mb_substr($a['text'], 0, 200), (int) $a['answer'], $a['note'] ?? null]);
+        foreach ($answers as $a) {
+            $stmt->execute([$clockId, $direction, $a['id'], mb_substr($a['text'], 0, 200), (int) $a['answer'], isset($a['note']) ? mb_substr((string) $a['note'], 0, 600) : null]);
+            if (array_key_exists('goods', $a)) $this->saveGoods($clockId, (int) $a['id'], $a['goods']);
+        }
+    }
+
+    /**
+     * [264] Produits actifs par catégorie, pour le choix rapide « catégorie → produit → quantité » (question yes_no, picker products).
+     * @return list<array{id:int, name:string, category_id:int, category:string}>
+     */
+    public function goodsCatalog(): array
+    {
+        return $this->all('SELECT fp.id, fp.name, cp.id AS category_id, cp.name AS category
+            FROM final_product fp JOIN category_product cp ON cp.id = fp.id_category
+            WHERE fp.active = 1 ORDER BY cp.name, fp.name, fp.id');
+    }
+
+    /** @return array<int, string> produit => nom (actif ou non : le nom est figé avec la réponse) */
+    public function productNames(array $ids): array
+    {
+        $ids = array_values(array_unique(array_filter(array_map('intval', $ids))));
+        if (!$ids) return [];
+        return array_column($this->all('SELECT id, name FROM final_product WHERE id IN (' . implode(',', $ids) . ')'), 'name', 'id');
+    }
+
+    /** @param list<array{id_final_product:?int, product:string, quantity:float|int, from_waste:bool}> $lines */
+    public function saveGoods(int $clockId, int $questionId, array $lines): void
+    {
+        $this->db->prepare('DELETE FROM n_clock_goods WHERE id_clock = ? AND id_question = ?')->execute([$clockId, $questionId]);
+        $stmt = $this->db->prepare('INSERT INTO n_clock_goods (id_clock, id_question, id_final_product, product, quantity, from_waste) VALUES (?, ?, ?, ?, ?, ?)');
+        foreach ($lines as $l) $stmt->execute([$clockId, $questionId, $l['id_final_product'], mb_substr($l['product'], 0, 255), $l['quantity'], (int) $l['from_waste']]);
     }
 
     /** @return array<int, list<array>> pointage => réponses */

@@ -246,7 +246,10 @@
         const body = el.querySelector('[data-body]');
         const dirOptions = (v) => ['in', 'out', 'both'].map(d => `<option value="${d}" ${d === v ? 'selected' : ''}>${esc(t('q.dir.' + d))}</option>`).join('');
         // [263] Rodzaj : punkt do potwierdzenia albo pytanie Tak / Nie (« Tak » → co) ; (i) informacja pokazywana na tablecie.
-        const kindOptions = (v) => ['confirm', 'yes_no'].map(k => `<option value="${k}" ${k === (v || 'confirm') ? 'selected' : ''}>${esc(t('q.kind.' + k))}</option>`).join('');
+        // [264] « Tak / Nie + wybór produktów » = yes_no z szybkim wyborem kategoria → produkt → liczba sztuk (picker products).
+        const kindOf = (q) => q.kind === 'yes_no' ? (q.picker === 'products' ? 'yes_no_products' : 'yes_no') : 'confirm';
+        const kindFields = (v) => ({kind: v === 'confirm' ? 'confirm' : 'yes_no', picker: v === 'yes_no_products' ? 'products' : 'text'});
+        const kindOptions = (v) => ['confirm', 'yes_no', 'yes_no_products'].map(k => `<option value="${k}" ${k === (v || 'confirm') ? 'selected' : ''}>${esc(t('q.kind.' + k))}</option>`).join('');
         body.innerHTML = `<div class="card"><div class="card-body pt-3">
             <div class="table-responsive"><table class="table table-sm align-middle tfb-exec-questions">
             <thead><tr><th style="width:90px">${esc(t('q.order'))}</th><th>${esc(t('q.text_pl'))}</th><th>${esc(t('q.text_fr'))}</th><th>${esc(t('q.direction'))}</th>
@@ -258,7 +261,7 @@
                 <td><textarea class="form-control form-control-sm" style="min-width:180px" rows="2" name="text_fr" data-field="text_fr" maxlength="200">${esc(q.text_fr || '')}</textarea>
                     <textarea class="form-control form-control-sm mt-1" rows="2" name="info_fr" data-field="info_fr" maxlength="1000" placeholder="${esc(t('q.info'))}">${esc(q.info_fr || '')}</textarea></td>
                 <td><select class="form-select form-select-sm" style="min-width:140px" name="direction" data-field="direction">${dirOptions(q.direction)}</select>
-                    <select class="form-select form-select-sm mt-1" style="min-width:140px" name="kind" data-field="kind" aria-label="${esc(t('q.kind'))}">${kindOptions(q.kind)}</select></td>
+                    <select class="form-select form-select-sm mt-1" style="min-width:140px" name="kind" data-field="kind" aria-label="${esc(t('q.kind'))}">${kindOptions(kindOf(q))}</select></td>
                 <td class="text-nowrap small"><label class="d-block"><input type="checkbox" class="form-check-input me-1" name="required" ${q.required ? 'checked' : ''}>${esc(t('q.required'))}</label>
                     <label class="d-block mt-1"><input type="checkbox" class="form-check-input me-1" name="active" ${q.active ? 'checked' : ''}>${esc(t('q.active'))}</label></td>
                 <td class="text-end"><div class="d-flex flex-column align-items-end gap-1"><button type="button" class="btn btn-sm btn-primary" data-save>${esc(t('save'))}</button>
@@ -277,7 +280,7 @@
             e.preventDefault();
             const f = e.target;
             try {
-                await api.post('/kiosk/clock-questions', {text_pl: f.text_pl.value.trim(), text_fr: f.text_fr.value.trim() || null, direction: f.direction.value, kind: f.kind.value, required: f.required.checked});
+                await api.post('/kiosk/clock-questions', {text_pl: f.text_pl.value.trim(), text_fr: f.text_fr.value.trim() || null, direction: f.direction.value, ...kindFields(f.kind.value), required: f.required.checked});
                 ui.notify(true, t('saved'));
                 questions();
             } catch (err) { fail(err, f); }
@@ -291,7 +294,7 @@
                 } else if (e.target.closest('[data-save]')) {
                     const v = (n) => row.querySelector(`[name=${n}]`);
                     await api.patch(`/kiosk/clock-questions/${id}`, {sort_order: Number(v('sort_order').value) || 0, text_pl: v('text_pl').value.trim(),
-                        text_fr: v('text_fr').value.trim() || null, direction: v('direction').value, kind: v('kind').value,
+                        text_fr: v('text_fr').value.trim() || null, direction: v('direction').value, ...kindFields(v('kind').value),
                         info_pl: v('info_pl').value.trim() || null, info_fr: v('info_fr').value.trim() || null, required: v('required').checked, active: v('active').checked});
                 } else return;
                 ui.notify(true, t('saved'));

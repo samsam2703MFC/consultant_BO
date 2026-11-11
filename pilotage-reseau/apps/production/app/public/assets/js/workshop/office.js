@@ -302,7 +302,7 @@
         const questions = (me.questions && me.questions[direction]) || [];
         // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
         let refresh = () => {};
-        const cq = window.TfbClockQuestions(questions, {t, esc, onChange: () => refresh()});
+        const cq = window.TfbClockQuestions(questions, {t, esc, catalog: (me.questions && me.questions.catalog) || [], onChange: () => refresh()});
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-confirm office-confirm">
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
                     <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</span></div></div>

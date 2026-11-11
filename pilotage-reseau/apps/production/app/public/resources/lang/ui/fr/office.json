@@ -68,5 +68,16 @@
   "yn_no": "Non",
   "yn_info": "Information",
   "yn_detail": "Quoi ? En quelques mots — les rebuts doivent être encodés",
-  "yn_detail_ph": "ex. 2 tartes de rebut"
+  "yn_detail_ph": "ex. 2 tartes de rebut",
+  "gp_help": "Que reprenez-vous ? Choisissez la catégorie, puis le produit et le nombre de pièces.",
+  "gp_categories": "Catégories de produits",
+  "gp_other": "Autre…",
+  "gp_other_label": "Ce qui n'est pas dans la liste (matière première…) — en quelques mots",
+  "gp_other_ph": "ex. 1 kg de farine",
+  "gp_pieces": "pcs",
+  "gp_waste": "Pris dans les rebuts",
+  "gp_waste_tag": "rebuts",
+  "gp_add": "Ajouter",
+  "gp_cancel": "Annuler",
+  "gp_remove": "Retirer"
 }

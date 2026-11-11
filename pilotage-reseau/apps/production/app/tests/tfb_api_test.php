@@ -813,7 +813,8 @@ check($s === 200 && $oq['data']['text_fr'] === 'Question de test' && $oq['data']
 [$s, $me] = $kiosk('GET', '/kiosk/me', null, $device, $emp);
 $qIn = $me['data']['questions']['in'];
 check($qIn[0]['id'] === $optId && !$qIn[0]['required'] && count($me['data']['questions']['out']) >= 2 && !isset($qIn[0]['text_fr']), 'tablet: questions of clock in and out, in the screen language');
-$yes = fn(array $qs, ?int $no = null) => array_map(fn($q) => ['question_id' => $q['id'], 'yes' => $q['id'] !== $no], $qs);
+// Points à confirmer : « oui » ; question Tak / Nie (marchandise à la sortie [263]) : « Nie », réponse valable sans précision.
+$yes = fn(array $qs, ?int $no = null) => array_map(fn($q) => ['question_id' => $q['id'], 'yes' => $q['id'] !== $no && ($q['kind'] ?? 'confirm') !== 'yes_no'], $qs);
 $img = imagecreatetruecolor(300, 120);
 imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
 imageline($img, 10, 100, 290, 20, imagecolorallocate($img, 0, 0, 0));

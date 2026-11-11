@@ -130,5 +130,6 @@
   "q.kind": "Rodzaj",
   "q.kind.confirm": "Potwierdzenie (✓)",
   "q.kind.yes_no": "Tak / Nie (« Tak » → co)",
+  "q.kind.yes_no_products": "Tak / Nie + wybór produktów (kategoria → produkt → sztuki)",
   "q.info": "(i) informacja na tablecie — opcjonalnie"
 }

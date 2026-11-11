@@ -171,7 +171,7 @@
             const direction = e.currentTarget.dataset.clockTap;
             const questions = me.questions?.[direction] || [];
             const sign = !!me.signature?.[direction];
-            if (questions.length || sign) renderQuestions(questions, direction, null, sign);
+            if (questions.length || sign) renderQuestions(questions, direction, null, sign, me.questions?.catalog);
             else clockTap(e.currentTarget, direction, [], null);
         });
     }
@@ -185,10 +185,10 @@
 
     // Ekran zatwierdzenia : dotknięcie potwierdza punkt, podpis palcem w ramce ; « OK, zatwierdzam » gdy obowiązkowe
     // punkty są potwierdzone i podpis złożony.
-    function renderQuestions(questions, direction, error, sign) {
+    function renderQuestions(questions, direction, error, sign, catalog) {
         // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
         let refresh = () => {};
-        const cq = window.TfbClockQuestions(questions, {t, esc, onChange: () => refresh()});
+        const cq = window.TfbClockQuestions(questions, {t, esc, catalog: catalog || [], onChange: () => refresh()});
         el.innerHTML = header() + `<section class="kiosk-card kiosk-confirm">
                 <h2>${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
                 ${cq.html}
@@ -280,7 +280,7 @@
             // Pytania albo podpis zmienione w międzyczasie : aktualny ekran z komunikatem.
             if (err.code === 'CLOCK_QUESTIONS_REQUIRED' || err.fields?.includes('signature')) {
                 const me = await api('GET', '/kiosk/phone/me').catch(() => null);
-                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction]);
+                if (me) return renderQuestions(me.questions?.[direction] || [], direction, err.message, !!me.signature?.[direction], me.questions?.catalog);
             }
             message(err.message, true);
         }
