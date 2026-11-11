@@ -16,6 +16,7 @@ import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 import { tplVisibilite } from './visibilite-tpl.js';
+import { tplStructure } from './structure-gamme-tpl.js';
 
 /* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
    une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
@@ -180,7 +181,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
         </div>`).join('')}
       </div>` : ''}
-      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
+      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isStruct ? tplStructure(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}

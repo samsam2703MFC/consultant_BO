@@ -21,6 +21,8 @@ import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './pr
 import { valsVisibilite, visibiliteBadge } from './visibilite-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
+// Structure de gamme (11/11/2026) : le standard, les saisons, ce qui sort — un onglet du Planogramme, à côté de l'assortiment.
+import { valsStructure } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -359,7 +361,7 @@ class App {
       cadreTaches: 'checklists',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', visibilite: 'visibilite', budget: 'budget', encodage: 'budget/encodage',
-      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment',
+      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
       planogramme: 'planogramme', analyse: 'analyse',
       anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
       manque: 'catalogue/manque',
@@ -1131,6 +1133,7 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie. Ce qui est retenu devient l’assortiment obligatoire.'],
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
       promoEdition: ['Édition', 'Le formulaire du dashboard magasin, avec le magasin à choisir — ou tous les magasins : une promotion « X achetés + Y » s’écrit au panel, réservée au magasin ou pour tout le réseau, sans validation.'],
       apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
@@ -1190,7 +1193,9 @@ class App {
       // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
-        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
+        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]],
+          // La structure de gamme (11/11/2026) : ce que l'assortiment devrait être, calculé sur les ventes de douze mois.
+          ['structure', 'Structure de gamme', titles.structure[1]]]] };
     // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
     const ecranOnglet = S.screen;
     const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
@@ -1420,7 +1425,7 @@ class App {
       ['Produits', [
         ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
           ['anaprod', 'manque', 'prixvolume', 'analyse']],
-        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
+        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']]]],
       // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
       // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
       // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
@@ -1517,9 +1522,9 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
@@ -1893,6 +1898,7 @@ class App {
     // Le Catalogue (18/10/2026) : la liste et sa fiche, avec les gestes du scoring (seuils, PDF, revue, détail du score).
     if (common.isCat) { this.valsProduits(common); this.catCharge(); this.valsCatalogue(common); }
     if (common.isAsso) this.valsAssortiment(common);
+    if (common.isStruct) valsStructure(this, common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
     // n'aurait aucun emplacement à proposer.
