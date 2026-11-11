@@ -117,7 +117,7 @@ function decider(app, p, val){
       d.reglage = Object.assign({}, d.reglage, { decisions: dec });
     }
     app._sgMemo = null;
-    message(app, p.nom + ' : ' + (val ? motDecision(val) : 'retour à la proposition'));
+    message(app, p.nom + ' : ' + (val ? motDecision(val) : p.propose === 'desactiver' ? 'à désactiver (la proposition)' : 'retour à la proposition'));
   });
 }
 
@@ -132,10 +132,27 @@ function motDecision(d){
   const [t, k] = String(d).split(':');
   return (t === 'saison' ? 'gardée en saison ' + (SA[k] || {}).nom : 'gardée pour ' + (PE[k] || {}).nom);
 }
-/** Les choix de la liste déroulante, dans l'ordre : garder en standard ou hors standard, puis une saison, puis une période. */
-const CHOIX = [['standard', 'Garder en standard'], ['garder', 'Garder hors standard']]
-  .concat(SAISONS.map(s => ['saison:' + s.id, 'Saison : ' + s.nom.toLowerCase()]))
-  .concat(PERIODES.map(e => ['periode:' + e.id, 'Période : ' + e.nom]));
+/** L'état d'une référence vu par ses trois commandes : l'interrupteur « Désactiver », l'interrupteur
+ *  « Obligatoire » et la liste des saisons ('' = toute l'année, sinon une saison ou une période). */
+function etatDecision(p){
+  const obligatoire = ['standard', 'saison', 'periode'].includes(p.statut);
+  // La saison affichée : celle où la référence est retenue ; sinon celle que suggère sa courbe — sa saison
+  // la plus forte, sa période — pour qu'allumer « Obligatoire » tombe d'emblée au bon endroit.
+  let saison = '';
+  if (p.statut === 'saison') { saison = (p.retenue || [])[0] || ''; }
+  else if (p.statut === 'periode') { saison = p.periode || ''; }
+  else if (p.nature === 'periode') { saison = p.periode || ''; }
+  else if (p.nature === 'saison' && p.parSaison) { saison = (p.saisons || []).slice().sort((a, b) => p.parSaison[b] - p.parSaison[a])[0] || ''; }
+  return { desactiver: p.statut === 'desactiver', desactivable: p.propose === 'desactiver' && !!p.actif, obligatoire, saison };
+}
+/** La décision qui donne un état voulu ; '' quand c'est déjà la proposition (rien à retenir). */
+function decisionPour(p, obligatoire, saison){
+  const d = !obligatoire ? 'garder' : !saison ? 'standard' : (SA[saison] ? 'saison:' : 'periode:') + saison;
+  const prop = p.propose === 'standard' ? 'standard'
+    : p.propose === 'saison' && (p.proposeRetenue || []).length === 1 ? 'saison:' + p.proposeRetenue[0]
+    : p.propose === 'periode' && p.proposePeriode ? 'periode:' + p.proposePeriode : null;
+  return d === prop ? '' : d;
+}
 
 function desactiver(app){
   const m = calcul(app); if (!m) { return; }
@@ -266,6 +283,17 @@ export function valsStructure(app, c){
   g.ouvrir = cat => () => app.setState({ sgVue: '1', sgCat: cat });
   g.fermerCat = () => app.setState({ sgCat: null });
   g.decider = p => e => decider(app, p, e.target.value);
+  // Les trois commandes d'une ligne : elles se traduisent en une seule décision, enregistrée pour le réseau.
+  g.etat = etatDecision;
+  g.basculerDesactiver = p => () => {
+    const e = etatDecision(p); if (!e.desactivable) { return; }
+    decider(app, p, e.desactiver ? 'garder' : '');
+  };
+  g.basculerObligatoire = p => () => {
+    const e = etatDecision(p); if (!p.actif) { return; }
+    decider(app, p, decisionPour(p, !e.obligatoire, e.saison));
+  };
+  g.choisirSaison = p => ev => { if (p.actif) { decider(app, p, decisionPour(p, true, ev.target.value)); } };
   const fusion = (d.produits || []).filter(p => (p.anciens || []).length).length;
   const dbl = R.produits.filter(p => p.actif && p.doublon);
   const musts = R.produits.filter(p => p.actif && p.must && p.nature !== 'hors');
@@ -277,7 +305,7 @@ export function valsStructure(app, c){
     if (!C) { g.vue = '1'; } else { g.cat = C; }
   }
   // Vue 4 : la liste à désactiver, cochée par défaut.
-  g.choix = CHOIX; g.motDecision = motDecision;
+  g.motDecision = motDecision;
   g.deplierTout = () => app.setState({ sgDeplie: S.sgDeplie === '*' ? '' : '*' });
   g.deplie = S.sgDeplie === undefined ? null : S.sgDeplie;
   g.deplier = cat => () => app.setState({ sgDeplie: S.sgDeplie === cat ? '' : cat });

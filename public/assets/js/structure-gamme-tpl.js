@@ -23,17 +23,21 @@ function statut(g, p){
   return `<span class="sg-st sg-st--${cls}">${t}</span>`;
 }
 
-/** La décision d'une référence : suivre la proposition (désactiver, le plus souvent), la garder en standard ou
- *  hors standard, ou la garder dans une saison ou une période choisie. La même liste partout. */
-function choixDecision(g, p, x){
+/** Les trois commandes d'une ligne : « Désactiver » et « Obligatoire » en interrupteurs, la saison en liste.
+ *  Désactiver n'existe que pour une référence proposée sous le seuil ; une référence désactivée n'a ni
+ *  obligatoire ni saison ; la saison ne compte que si la référence est obligatoire. */
+function interrupteur(on, actif, fn, titre, x){
+  return `<button type="button" class="sg-tog${on ? ' is-on' : ''}" role="switch" aria-checked="${on}" ${actif ? x.A(fn) : 'disabled'} title="${x.esc(titre)}"><span class="sg-tog__piste"></span><span class="sg-tog__mot">${on ? 'Oui' : 'Non'}</span></button>`;
+}
+function commandes(g, p, x){
   const { esc } = x;
-  if (!p.actif) { return '<span class="muted" style="font-size:11.5px">inactive</span>'; }
-  const o = (v, l) => `<option value="${v}"${(p.decide || '') === v ? ' selected' : ''}>${esc(l)}</option>`;
-  const prop = p.propose === 'desactiver' ? 'Désactiver (proposé)' : 'Proposition : ' + g.mot(p, p.propose, true).toLowerCase();
-  return `<select class="sg-choix${p.decide ? ' chg' : ''}" ${x.C(g.decider(p))} aria-label="Décision pour ${esc(p.nom)}">${o('', prop)}
-    <optgroup label="Garder">${o('standard', 'Garder en standard')}${o('garder', 'Garder hors standard')}</optgroup>
-    <optgroup label="Garder en saison">${g.R.saisons.map(s => o('saison:' + s.id, s.nom + ' (' + s.lib + ')')).join('')}</optgroup>
-    <optgroup label="Garder pour une période">${g.R.periodes.map(e => o('periode:' + e.id, e.nom)).join('')}</optgroup></select>`;
+  if (!p.actif) { return `<td colspan="3" class="muted" style="font-size:11.5px">inactive au catalogue${p.statut === 'periode' ? ' — à réactiver pour ' + esc(g.PE[p.periode].nom) : ''}</td>`; }
+  const e = g.etat(p);
+  const o = (v, l) => `<option value="${v}"${e.saison === v ? ' selected' : ''}>${esc(l)}</option>`;
+  return `<td>${interrupteur(e.desactiver, e.desactivable, g.basculerDesactiver(p), e.desactivable ? (e.desactiver ? 'Garder au catalogue' : 'Désactiver (la proposition)') : 'Au-dessus du seuil : le retrait n’est pas proposé', x)}</td>
+    <td>${interrupteur(e.obligatoire, !e.desactiver, g.basculerObligatoire(p), e.desactiver ? 'Une référence désactivée n’est pas obligatoire' : (e.obligatoire ? 'Ne plus la rendre obligatoire' : 'La rendre obligatoire'), x)}</td>
+    <td><select class="sg-choix${p.decide ? ' chg' : ''}" ${e.desactiver || !e.obligatoire ? 'disabled' : x.C(g.choisirSaison(p))} aria-label="Saison de ${esc(p.nom)}">
+      ${o('', 'Toute l’année')}<optgroup label="Saisons">${g.R.saisons.map(s => o(s.id, s.nom)).join('')}</optgroup><optgroup label="Périodes">${g.R.periodes.map(z => o(z.id, z.nom)).join('')}</optgroup></select></td>`;
 }
 
 /** Les pièces vendues par saison, la plus forte en évidence. */
@@ -161,7 +165,7 @@ function vue2(g, x){
       <td class="num">${p.mg != null ? eur(p.mg) : '<span class="muted">—</span>'}</td>
       <td>${p.decide ? `<span class="sg-mini">proposé : ${esc(g.mot(p, p.propose, true))}</span><br>` : ''}${statut(g, p)}</td>
       <td>${a && a.statut !== p.statut ? `<span class="sg-mini warn">${esc(g.mot(a, a.statut))}</span>` : '<span class="muted" style="font-size:11.5px">idem</span>'}</td>
-      <td>${choixDecision(g, p, x)}</td></tr>`;
+      ${commandes(g, p, x)}</tr>`;
   }).join('');
   return `
     <div class="sg-barre"><button class="linklike" style="padding:0" ${x.A(g.fermerCat)}>‹ Toutes les catégories</button></div>
@@ -181,7 +185,7 @@ function vue2(g, x){
     </div>
     ${off.length && C.ca && caOff / C.ca > 0.15 ? `<div class="sg-encart"><span><span class="sg-fort">À trancher pour cette catégorie.</span> Avec ${nVendues} références vendues, la part moyenne d’une référence est de ${pc(1 / nVendues, 1)} : la règle des ${g.vx(r.seuil)} en sort ${off.length}, qui font ensemble ${pc(caOff / C.ca)} du CA de la catégorie. Les garder hors standard ou les retirer, c’est la décision.</span></div>` : ''}
     <section class="card table-card sg-table"><div class="table-scroll"><table>
-      <thead><tr><th class="num">#</th><th>Référence</th><th>12 mois</th><th class="num">CA 12 mois</th><th class="num">Part</th><th class="num">Cumul</th><th class="num">Marge nette</th><th>Statut</th><th>Selon ${g.autreBase}</th><th>Décision</th></tr></thead>
+      <thead><tr><th class="num">#</th><th>Référence</th><th>12 mois</th><th class="num">CA 12 mois</th><th class="num">Part</th><th class="num">Cumul</th><th class="num">Marge nette</th><th>Statut</th><th>Selon ${g.autreBase}</th><th>Désactiver</th><th>Obligatoire</th><th>Saison</th></tr></thead>
       <tbody>${lignes}</tbody></table></div></section>
     <p class="sg-note">Part : le CA de la référence sur les mois où elle se vend, rapporté à celui de la catégorie sur les mêmes mois. Cumul : parmi les références vendues toute l’année, dans l’ordre ${g.baseCourt}. Sous ${g.plancher} pièces en 12 mois, une référence n’est pas lue mois par mois : sa part est un plafond. Une décision s’enregistre pour le réseau et passe au journal.</p>`;
 }
@@ -243,7 +247,7 @@ function vue4(g, x){
   R.groupes.forEach(gr => {
     const cs = gr.cats.filter(C => C.refs.some(p => p.actif && p.propose === 'desactiver'));
     if (!cs.length) { return; }
-    lignes += `<tr class="sg-grp"><td colspan="9">${esc(gr.grp)}</td></tr>`;
+    lignes += `<tr class="sg-grp"><td colspan="10">${esc(gr.grp)}</td></tr>`;
     cs.forEach(C => {
       const l = C.refs.filter(p => p.actif && p.propose === 'desactiver').sort((a, b) => (b.caPer || 0) - (a.caPer || 0));
       const sortent = l.filter(p => p.statut === 'desactiver'), gardees = l.length - sortent.length;
@@ -253,7 +257,7 @@ function vue4(g, x){
         <td class="sg-nom">${esc(C.cat)}<span class="sub">${ouv ? pl(C.actives, 'référence active', 'références actives') : esc(l.slice(0, 4).map(p => p.nom).join(', ')) + (l.length > 4 ? '…' : '')}</span></td>
         <td></td><td colspan="4"></td>
         <td class="num">${eur(ca)}<span class="sub">${C.ca ? pc(ca / C.ca) + ' de la catégorie' : ''}</span></td>
-        <td>${sortent.length} à désactiver${gardees ? `<span class="sub">${gardees} gardée${gardees > 1 ? 's' : ''}</span>` : ''}</td>
+        <td colspan="2">${sortent.length} à désactiver${gardees ? `<span class="sub">${gardees} gardée${gardees > 1 ? 's' : ''}</span>` : ''}</td>
         <td class="sg-chev">${ouv ? '⌄' : '›'}</td></tr>`;
       if (ouv) {
         lignes += l.map(p => `<tr class="${p.statut === 'desactiver' ? '' : 'sg-gardee'}">
@@ -261,7 +265,7 @@ function vue4(g, x){
           <td>${spark(g, p, esc)}</td>
           ${saisonsQte(g, p)}
           <td class="num">${p.u ? eur(p.caPer) : '<span class="muted">≤ ' + eur(g.plancher * (p.prix || 0)) + '</span>'}<span class="sub">${p.part != null ? pc(pt(g, p.part), 1) : '≤ ' + pc(p.partMax, 1)} de la catégorie</span></td>
-          <td colspan="2">${choixDecision(g, p, x)}</td></tr>`).join('');
+          ${commandes(g, p, x)}</tr>`).join('');
       }
     });
   });
@@ -275,10 +279,10 @@ function vue4(g, x){
       ${kpi('Obligatoires aujourd’hui', nb(g.offMusts), 'sortent aussi de l’assortiment')}
     </div>
     <div class="sg-encart"><span><span class="sg-fort">Le retrait du catalogue a un garde-fou.</span> « Retirer du catalogue » refuse toute référence vendue sur les douze derniers mois. Ici, pour ce seul motif — moins de ${g.vx(g.regles.seuil)} de sa catégorie —, il l’accepte : le serveur relit les ventes, recalcule la part de chaque référence et refuse celles qui pèsent le seuil ou plus, les nouveautés et ce qui n’est pas un produit. Une ligne de journal par référence ; « Remettre au catalogue » défait le geste.</span></div>
-    <div class="sg-barre"><span class="sg-note">Pour chaque référence : ce qu’elle vend par saison, et sa décision. « Désactiver » suit la proposition ; « Garder » la sort de la liste et s’enregistre pour le réseau.</span><span class="sg-sp"></span><button class="linklike" ${x.A(g.deplierTout)}>${tout ? 'Tout replier' : 'Tout déplier'}</button></div>
+    <div class="sg-barre"><span class="sg-note">Pour chaque référence : ce qu’elle vend par saison. « Désactiver » éteint, elle reste au catalogue ; « Obligatoire » allumé, elle entre dans l’assortiment pour la saison choisie. Chaque geste s’enregistre pour le réseau.</span><span class="sg-sp"></span><button class="linklike" ${x.A(g.deplierTout)}>${tout ? 'Tout replier' : 'Tout déplier'}</button></div>
     <section class="card table-card sg-table sg-t4"><div class="table-scroll"><table>
-      <thead><tr><th>Catégorie · référence</th><th>12 mois</th>${R.saisons.map(s => `<th class="num" title="${esc(s.lib)}">${esc(s.nom)}</th>`).join('')}<th class="num">CA 12 mois</th><th colspan="2">Décision</th></tr></thead>
-      <tbody>${lignes || '<tr><td colspan="9" class="muted">Aucune référence sous le seuil.</td></tr>'}</tbody></table></div></section>
+      <thead><tr><th>Catégorie · référence</th><th>12 mois</th>${R.saisons.map(s => `<th class="num" title="${esc(s.lib)}">${esc(s.nom)}</th>`).join('')}<th class="num">CA 12 mois</th><th>Désactiver</th><th>Obligatoire</th><th>Saison</th></tr></thead>
+      <tbody>${lignes || '<tr><td colspan="10" class="muted">Aucune référence sous le seuil.</td></tr>'}</tbody></table></div></section>
     <p class="sg-note">Pièces vendues par saison, tous magasins, sur les douze mois lus (${esc(g.mois[0] || '')} – ${esc(g.mois[g.mois.length - 1] || '')}, le dernier en cours) : hiver = décembre à février, printemps = mars à mai, été = juin à août, automne = septembre à novembre. Une référence de saison est comparée à sa catégorie pendant sa saison, pas sur l’année ; les nouveautés de moins de six mois ne sont jamais dans cette liste.</p>`;
 }
 
