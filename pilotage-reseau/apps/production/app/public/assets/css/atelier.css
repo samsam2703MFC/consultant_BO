@@ -1413,7 +1413,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 
 /* Tydzień produkcji : wysyłka (najpierw) / magazyn (dni magazynowe) */
 .tfb-week-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
-.tfb-week-kpi.is-direct { border-left: 4px solid var(--at-primary, #8D1D2C); }
+.tfb-week-kpi.is-direct { border-left: 4px solid var(--at-primary); }
 .tfb-week-kpi.is-stock { border-left: 4px dashed #2E7D4F; }
 .tfb-week-daykind { font-weight: 400; font-size: 11px; color: var(--at-muted); }
 .tfb-week-dayhead.is-stock-day { background: color-mix(in srgb, #2E7D4F 8%, transparent); border-radius: 6px 6px 0 0; }
@@ -1534,13 +1534,13 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* Kierownik produkcji : karta stanowiska, raporty (FR + PL), audyt kompetencji ; druk = dokument zakładki po francusku, potem po polsku. */
 .tfb-mgr-tabs { margin: .5rem 0 1rem; flex-wrap: wrap; }
 .tfb-mgr-doc h2 { font-size: 1.5rem; margin: .25rem 0; }
-.tfb-mgr-doc h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-doc h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; color: var(--at-primary); }
 .tfb-mgr-doc h5 { font-size: .95rem; margin: .75rem 0 .35rem; display: flex; justify-content: space-between; gap: 1rem; }
 .tfb-mgr-doc-head { border-bottom: 1px solid var(--at-line, #ddd); padding-bottom: .5rem; margin-bottom: .75rem; }
 .tfb-mgr-chars { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
 .tfb-mgr-chars dt { font-weight: 600; }
 .tfb-mgr-chars dd { margin: 0; }
-.tfb-mgr-hours { font-weight: 600; white-space: nowrap; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-hours { font-weight: 600; white-space: nowrap; color: var(--at-primary); }
 .tfb-mgr-mission ul { margin-bottom: .5rem; }
 .tfb-mgr-sep { margin: 2rem 0; border-top: 3px double var(--at-line, #ccc); }
 .tfb-mgr-table td, .tfb-mgr-table th { vertical-align: top; }
@@ -3665,6 +3665,19 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 /* Okno */
 .tm-dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--at-line); border-radius: 12px; padding: 0; box-shadow: 0 20px 60px rgba(24, 18, 20, .25); }
 .tm-dialog::backdrop { background: rgba(24, 18, 20, .42); }
+/* [266] E-maile pracowników : szersze okno z przewijaną listą ; przyciski karty w wierszu miesiąca. */
+.tm-dialog.tm-dialog-wide { width: min(760px, calc(100vw - 32px)); }
+.tm-contacts { max-height: min(56vh, 520px); overflow: auto; border: 1px solid var(--at-line); border-radius: 8px; }
+.tm-contacts table { margin: 0; }
+.tm-contacts thead th { position: sticky; top: 0; background: var(--at-surface, #fff); z-index: 1; }
+.tm-contacts td { vertical-align: middle; }
+.tm-contacts td:first-child { white-space: nowrap; }
+.tm-contacts td:first-child .tm-sub { display: block; }
+.tm-contacts .tm-sent { font-size: 12.5px; color: var(--at-muted); white-space: nowrap; }
+.tm-acts { white-space: nowrap; }
+.tm-nomail { padding-inline: 4px; font-size: 12px; }
+.tm-mail-ok { color: var(--at-success); }
+.tm-mail-err { color: var(--at-danger); }
 .tm-dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 6px; }
 .tm-dialog-head h4 { margin: 0; font-size: 1.05rem; }
 .tm-dialog-body { display: grid; gap: 10px; padding: 6px 20px; }

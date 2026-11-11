@@ -22,6 +22,10 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/time/clocks', ['controller' => $c, 'method' => 'addClock']);
     $r->addRoute('POST', '/ajax/time/months/{month:\d{4}-\d{2}}/close', ['controller' => $c, 'method' => 'closeMonth']);
     $r->addRoute('DELETE', '/ajax/time/months/{month:\d{4}-\d{2}}/close', ['controller' => $c, 'method' => 'reopenMonth']);
+    // [266] Adresy e-mail pracowników (zaszyfrowane) i karta miesiąca e-mailem.
+    $r->addRoute('GET', '/ajax/time/contacts', ['controller' => $c, 'method' => 'contacts']);
+    $r->addRoute('PUT', '/ajax/time/contacts', ['controller' => $c, 'method' => 'saveContacts']);
+    $r->addRoute('POST', '/ajax/time/months/{month:\d{4}-\d{2}}/mail', ['controller' => $c, 'method' => 'mailSheets']);
     $r->addRoute('POST', '/ajax/time/absences', ['controller' => $c, 'method' => 'addAbsence']);
     $r->addRoute('DELETE', '/ajax/time/absences/{id:\d+}', ['controller' => $c, 'method' => 'deleteAbsence']);
     $r->addRoute('PUT', '/ajax/time/leave/{id:\d+}', ['controller' => $c, 'method' => 'saveLeaveRight']);

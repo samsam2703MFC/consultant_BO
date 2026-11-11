@@ -13,7 +13,12 @@ declare(strict_types=1);
  *   - congés : 26 jours, « na żądanie » 4 par an, chevauchement refusé, droit par personne, alerte 2 absents d'un groupe ;
  *   - mois : matrice, clôture refusée (mois en cours, jours non validés), mois clos = plus de modification ;
  *   - fiche A4 PDF (logo SL Food), tâche n° 1 cochée par la validation, compteur du menu, tablette (/kiosk/me → comp_days) ;
- *   - [263] migration 163 : question de sortie « marchandise » Tak / Nie avec (i), « Tak » → quoi (obligatoire), visible au jour.
+ *   - [263] migration 163 : question de sortie « marchandise » Tak / Nie avec (i), « Tak » → quoi (obligatoire), visible au jour ;
+ *   - [264] migration 165 : choix rapide catégorie → produit → pièces (catalogue des produits actifs, lignes additionnées,
+ *     « z braków », « Inne », produit inconnu ou quantité hors 1–999 refusés), lignes gardées (n_clock_goods), résumé au jour ;
+ *   - [265] karta : colonnes « Dzień » et « Data » séparées ;
+ *   - [266] migration 164 : adresse e-mail du salarié chiffrée (jamais en clair en base), adresse invalide refusée, karta du
+ *     mois mise en file d'envoi avec le PDF en pièce jointe (aucun envoi réel), personnes sans adresse listées, envoi noté.
  *
  *   php tests/time_tracking_test.php
  *
@@ -25,9 +30,11 @@ require_once __DIR__ . '/../public/vendor/autoload.php';
 use App\Core\Api\Workshop\ApiContext;
 use App\Core\Api\Workshop\ApiException;
 use App\Core\Api\Workshop\Translator;
+use App\Core\Api\Workshop\WorkshopConfig;
 use App\Exceptions\CustomException;
 use App\Services\Workshop\Migration\MigrationRunner;
 use App\Services\Workshop\Time\TimeService;
+use App\Services\Workshop\Time\TimeSheetMailService;
 
 function expectTm(bool $condition, string $message): void
 {
@@ -59,7 +66,7 @@ $pdo->exec("CREATE DATABASE {$testDb} CHARACTER SET utf8mb4 COLLATE utf8mb4_gene
 try {
     $tables = $pdo->query("SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA = " . $pdo->quote($source) . " AND TABLE_TYPE = 'BASE TABLE'")->fetchAll(PDO::FETCH_COLUMN);
     foreach ($tables as $t) {
-        if (str_starts_with($t, 'n_time_')) continue; // recréées par la migration 161
+        if (str_starts_with($t, 'n_time_') || $t === 'n_clock_goods') continue; // recréées par les migrations 161, 164 et 165
         $pdo->exec("CREATE TABLE {$testDb}.`{$t}` LIKE {$source}.`{$t}`");
     }
     $pdo->exec("USE {$testDb}");
@@ -67,6 +74,12 @@ try {
     $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
     // État avant 161 : signature sans « comp_day ».
     $pdo->exec("ALTER TABLE n_prod_signature MODIFY COLUMN purpose ENUM('clock_in','clock_out','timesheet_month','operation') NOT NULL");
+
+    // État avant 165 : pas de choix de produits (colonne picker), note courte.
+    if ((int) $pdo->query("SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_clock_question' AND COLUMN_NAME = 'picker'")->fetchColumn() === 1) {
+        $pdo->exec('ALTER TABLE n_clock_question DROP COLUMN picker');
+    }
+    $pdo->exec('ALTER TABLE n_clock_answer MODIFY COLUMN note VARCHAR(255) NULL');
 
     // --- Postes, tâches, comptes (avant 162)
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, phone, permission, login, password) VALUES
@@ -108,7 +121,14 @@ try {
     $now = strtotime('2026-11-12 18:00:00');
     $build = function () use ($pdo) {
         $b = new DI\ContainerBuilder();
-        $b->addDefinitions([PDO::class => $pdo]);
+        // Aucun envoi réel : le transport SMTP du test refuse tout appel (les messages restent dans la file).
+        $b->addDefinitions([PDO::class => $pdo, WorkshopConfig::class => new WorkshopConfig(['PRODUCTION_JWT_SECRET' => str_repeat('t', 48)]),
+            App\Services\Communication\SmtpTransport::class => new class implements App\Services\Communication\SmtpTransport {
+                public function send(array $account, string $to, string $subject, string $body, string $messageId, array $attachments = [], ?string $footer = null): string
+                {
+                    throw new RuntimeException('Aucun e-mail ne part pendant les tests.');
+                }
+            }]);
         return $b->build();
     };
     $c = $build();
@@ -270,6 +290,80 @@ try {
     $sheetRow = $c->get(\App\Services\Workshop\Execution\TimesheetService::class)->month(11, '2026-11', $now)['days'];
     $friRow = array_values(array_filter($sheetRow, fn($d) => $d['id'] === $friday))[0];
     expectTm(($friRow['answers']['out']['declared'] ?? []) === ['2 tarty z braków'] && $friRow['answers']['out']['no'] === [], 'timesheet: declaration, not an unconfirmed point');
+
+    // --- [264] Choix rapide des produits repris : migration 165 (rejouée deux fois), catalogue, lignes, résumé
+    $m165 = (string) file_get_contents(__DIR__ . '/../migrations/tfb/165_clock_goods_picker.sql');
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements($m165) as $sql) $pdo->exec($sql);
+    expectTm($pdo->query("SELECT picker FROM n_clock_question WHERE id = {$gid}")->fetchColumn() === 'products'
+        && $count("SELECT COUNT(*) FROM n_clock_question WHERE picker = 'products'") === 1
+        && $count("SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_clock_answer' AND COLUMN_NAME = 'note'") === 600
+        && $count("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_clock_goods'") === 1,
+        'migration 165: goods question picks products, longer note, n_clock_goods');
+    $pdo->exec("INSERT INTO category_product (id, name) VALUES (530, 'Tartes 28'), (820, 'Quiches')");
+    $pdo->exec("INSERT INTO final_product (id, name, id_category, active) VALUES (1, 'Tarte pommes', 530, 1), (2, 'Tarte poires', 530, 1), (3, 'Quiche lorraine', 820, 1), (4, 'Ancienne quiche', 820, 0)");
+    $kiosk = $cq->forKiosk(false);
+    $goodsQ = array_values(array_filter($kiosk['out'], fn($q) => $q['kind'] === 'yes_no'))[0];
+    expectTm($goodsQ['picker'] === 'products' && array_column($kiosk['catalog'], 'name') === ['Quiches', 'Tartes 28']
+        && array_column($kiosk['catalog'][0]['products'], 'name') === ['Quiche lorraine'] && array_column($kiosk['catalog'][1]['products'], 'id') === [2, 1],
+        'tablet: catalogue by category (alphabetical), active products only');
+    expectTm(!array_key_exists('catalog', array_filter($cq->forKiosk(false), fn($v, $k) => $k === 'in', ARRAY_FILTER_USE_BOTH)) && $kiosk['in'] !== null, 'catalogue sent once, next to the questions');
+    expectTm(refusal(fn() => $cq->check('out', [['question_id' => $gid, 'yes' => true]], false)) === 'CLOCK_QUESTIONS_REQUIRED', '« Tak » without a product: refused');
+    expectTm(refusal(fn() => $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 999, 'quantity' => 1]]]], false)) === 'VALIDATION_FAILED', 'unknown product refused');
+    expectTm(refusal(fn() => $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 1, 'quantity' => 0]]]], false)) === 'VALIDATION_FAILED'
+        && refusal(fn() => $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 1, 'quantity' => 1000]]]], false)) === 'VALIDATION_FAILED', 'quantity outside 1–999 refused');
+    $picked = $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => '1 kg mąki',
+        'items' => [['product_id' => 1, 'quantity' => 2], ['product_id' => 3, 'quantity' => 1, 'waste' => true], ['product_id' => 1, 'quantity' => 1]]]], false);
+    expectTm($picked[0]['note'] === '3 × Tarte pommes · 1 × Quiche lorraine (braki) · inne : 1 kg mąki' && count($picked[0]['goods']) === 3, 'lines summed per product, « braki », « inne » — ' . $picked[0]['note']);
+    $thursday = (int) $pdo->query("SELECT id FROM n_prod_clock WHERE id_employee = 11 AND clock_in = '2026-11-05 06:00:00'")->fetchColumn();
+    $cq->save($thursday, 'out', $picked);
+    expectTm($count("SELECT COUNT(*) FROM n_clock_goods WHERE id_clock = {$thursday}") === 3
+        && $count("SELECT quantity FROM n_clock_goods WHERE id_clock = {$thursday} AND id_final_product = 1") === 3
+        && $count("SELECT from_waste FROM n_clock_goods WHERE id_clock = {$thursday} AND id_final_product = 3") === 1
+        && $pdo->query("SELECT product FROM n_clock_goods WHERE id_clock = {$thursday} AND id_final_product IS NULL")->fetchColumn() === '1 kg mąki', 'goods lines kept with the clock-out');
+    $thu = array_column($time->day('2026-11-05', $now)['people'], null, 'employee_id');
+    expectTm($thu[11]['took'] === '3 × Tarte pommes · 1 × Quiche lorraine (braki) · inne : 1 kg mąki', 'Czas pracy › Dzień shows the picked products');
+    $cq->save($thursday, 'out', $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 2, 'quantity' => 4]]]], false));
+    expectTm($count("SELECT COUNT(*) FROM n_clock_goods WHERE id_clock = {$thursday}") === 1 && $pdo->query("SELECT note FROM n_clock_answer WHERE id_clock = {$thursday}")->fetchColumn() === '4 × Tarte poires', 'same clock answered again: lines replaced');
+    $only = $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => 'karton po jajkach']], false);
+    expectTm($only[0]['note'] === 'inne : karton po jajkach' && $only[0]['goods'][0]['id_final_product'] === null, '« Inne » alone is enough');
+    $none = $cq->check('out', [['question_id' => $gid, 'yes' => false, 'items' => [['product_id' => 1, 'quantity' => 2]]]], false);
+    expectTm($none[0]['answer'] === false && $none[0]['note'] === null && $none[0]['goods'] === [], '« Nie » keeps no line');
+    $admin = new ApiContext('test', new Translator('pl'), 1, [], ['prod.employees.write' => true]);
+    $plain = $cq->create(['text_pl' => 'Czy był wypadek ?', 'direction' => 'out', 'kind' => 'yes_no', 'required' => false], $admin);
+    expectTm($plain['picker'] === 'text' && $cq->update($plain['id'], ['picker' => 'products'], $admin)['picker'] === 'products', 'admin: picker saved with the question');
+    $cq->delete($plain['id']);
+
+    // --- [265] Karta : jour et date dans deux colonnes
+    $src = (string) file_get_contents(__DIR__ . '/../App/Services/Workshop/Time/TimeSheetPdf.php');
+    expectTm(str_contains($src, "['label' => 'Dzień', 'w' => 0.7]") && str_contains($src, "['label' => 'Data'") && str_contains($src, "\$d['dow'], date('d.m.Y'"), 'A4 sheet: « Dzień » and « Data » columns');
+
+    // --- [266] E-mail du salarié (chiffré) et karta du mois par e-mail (file d'envoi, aucun envoi réel)
+    $m164 = (string) file_get_contents(__DIR__ . '/../migrations/tfb/164_time_sheet_mail.sql');
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements($m164) as $sql) $pdo->exec($sql);
+    expectTm($count("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME IN ('n_time_contact', 'n_time_sheet_mail')") === 2, 'migration 164 (replayed twice): contact and sheet mail tables');
+    $mail = $c->get(TimeSheetMailService::class);
+    expectTm(str_starts_with(refusal(fn() => $mail->setEmail(11, 'adam-at-example', 3)), '422') && str_starts_with(refusal(fn() => $mail->setEmail(999, 'x@example.invalid', 3)), '404'), 'invalid address and unknown person refused');
+    expectTm(str_contains(refusal(fn() => $mail->send('2026-11', null, 3, $now)), 'brak adresu e-mail'), 'nobody has an address: nothing sent');
+    $saved = $mail->setEmail(11, ' Adam.Testowy@Example.INVALID ', 3);
+    $enc = (string) $pdo->query('SELECT email_enc FROM n_time_contact WHERE id_employee = 11')->fetchColumn();
+    expectTm($saved['email'] === 'adam.testowy@example.invalid' && str_starts_with($enc, 's1:') && !str_contains($enc, '@') && !str_contains(strtolower($enc), 'adam'), 'address kept encrypted, never in clear');
+    expectTm(!str_contains((string) $pdo->query("SELECT GROUP_CONCAT(COALESCE(after_json, '')) FROM n_prod_audit_log WHERE entity = 'n_time_contact'")->fetchColumn(), 'example.invalid'), 'journal: the fact, not the address');
+    $contacts = array_column($mail->contacts('2026-11'), null, 'employee_id');
+    expectTm($contacts[11]['email'] === 'adam.testowy@example.invalid' && $contacts[12]['email'] === null && $contacts[11]['sent'] === null && count($contacts) === 3, 'contacts: every active person, decrypted address');
+    expectTm(str_starts_with(refusal(fn() => $mail->send('2027-01', null, 3, $now)), '422') && str_starts_with(refusal(fn() => $mail->send('2026-11', [999], 3, $now)), '422'), 'future month and person without activity refused');
+    $sent = $mail->send('2026-11', null, 3, $now);
+    expectTm($sent['queued'] === 1 && $sent['missing'] === ['Basia Testowa', 'Cezary Testowy'], 'one sheet queued, people without address listed');
+    $msg = $pdo->query("SELECT * FROM communication_message WHERE message_type = 'time_sheet'")->fetchAll();
+    expectTm(count($msg) === 1 && $msg[0]['recipient_email'] === 'adam.testowy@example.invalid' && $msg[0]['status'] === 'queued' && $msg[0]['subject_text'] === 'Karta czasu pracy — listopad 2026'
+        && str_contains($msg[0]['body_text'], 'Dzień dobry Adam') && $msg[0]['created_by'] === 'time_sheet:3', 'message queued for the worker (delivery mode decides, nothing sent here)');
+    $att = $pdo->query('SELECT filename, mime_type, LEFT(content, 4) AS head FROM communication_message_attachment WHERE id_message = ' . (int) $msg[0]['id'])->fetch();
+    expectTm($att['filename'] === 'KARTA_CZASU_PRACY_2026-11_Adam_Testowy.pdf' && $att['mime_type'] === 'application/pdf' && $att['head'] === '%PDF', 'PDF sheet attached');
+    $summary = $mail->summary('2026-11');
+    expectTm($summary[11]['email'] === true && $summary[11]['sent']['status'] === 'queued' && !isset($summary[12]) && $mail->summary('2026-10')[11]['sent'] === null, 'month summary: sent state per person, no address in it');
+    $mail->send('2026-11', [11], 3, $now);
+    expectTm($count("SELECT COUNT(*) FROM n_time_sheet_mail WHERE id_employee = 11 AND month = '2026-11'") === 2, 'sending again is noted');
+    $mail->setEmail(11, '', 3);
+    expectTm($count('SELECT COUNT(*) FROM n_time_contact') === 0 && $mail->summary('2026-11')[11]['email'] === false, 'empty address = removed');
 
     echo "time_tracking_test: OK\n";
 } finally {

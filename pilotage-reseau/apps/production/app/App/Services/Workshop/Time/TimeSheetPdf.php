@@ -50,7 +50,7 @@ final class TimeSheetPdf
         foreach ($s['rows'] as $d) {
             $weekend = !$d['workday'] && $d['worked'] === 0;
             $rows[] = [
-                $d['dow'] . ' ' . date('d.m', strtotime($d['date'])),
+                $d['dow'], date('d.m.Y', strtotime($d['date'])),
                 $d['in'], $d['out'],
                 $d['worked'] > 0 ? TimeService::hm($d['worked']) : ($weekend ? '—' : ''),
                 $hm($d['overtime']),
@@ -59,15 +59,17 @@ final class TimeSheetPdf
             ];
         }
         $t = $s['totals'];
-        $rows[] = ['_total' => ['Razem', '', '', TimeService::hm($t['worked']), $hm($t['overtime']),
+        $rows[] = ['_total' => ['Razem', '', '', '', TimeService::hm($t['worked']), $hm($t['overtime']),
             sprintf('urlop %d d · L4 %d d · wolne za nadgodziny %d d%s', $t['leave'], $t['l4'], $t['wn'], $t['wn'] ? ' (' . TimeService::hm($t['wn_minutes']) . ')' : ''), '']];
         $pdf->brandTable([
-            ['label' => 'Dzień', 'w' => 1.25],
-            ['label' => 'Wejście', 'w' => 0.85, 'align' => 'C'],
-            ['label' => 'Wyjście', 'w' => 0.85, 'align' => 'C'],
-            ['label' => 'Godziny', 'w' => 0.9, 'align' => 'R'],
+            // [265] Jour et date dans deux colonnes alignées (le jour à gauche, la date complète à côté).
+            ['label' => 'Dzień', 'w' => 0.7],
+            ['label' => 'Data', 'w' => 0.95, 'align' => 'C'],
+            ['label' => 'Wejście', 'w' => 0.8, 'align' => 'C'],
+            ['label' => 'Wyjście', 'w' => 0.8, 'align' => 'C'],
+            ['label' => 'Godziny', 'w' => 0.85, 'align' => 'R'],
             ['label' => 'Nadgodziny', 'w' => 1.0, 'align' => 'R'],
-            ['label' => 'Powód / nieobecność', 'w' => 3.6],
+            ['label' => 'Powód / nieobecność', 'w' => 3.35],
             ['label' => 'Zatwierdził', 'w' => 1.05],
         ], $rows, ['font' => 7.5, 'head_font' => 7, 'min_h' => 5]);
 

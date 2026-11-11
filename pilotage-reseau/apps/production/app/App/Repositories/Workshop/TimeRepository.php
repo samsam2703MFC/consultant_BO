@@ -180,6 +180,44 @@ final class TimeRepository extends WorkshopRepository
         )->execute([$employeeId, $days, $userId]);
     }
 
+    // --- [266] Adresses e-mail (chiffrées) et karty envoyées -----------------------------------------------
+
+    /** @return array<int, string> salarié => adresse chiffrée */
+    public function contacts(): array
+    {
+        return array_column($this->all('SELECT id_employee, email_enc FROM n_time_contact'), 'email_enc', 'id_employee');
+    }
+
+    public function setContact(int $employeeId, string $emailEnc, ?int $userId): void
+    {
+        $this->db->prepare(
+            'INSERT INTO n_time_contact (id_employee, email_enc, updated_by) VALUES (?, ?, ?)
+             ON DUPLICATE KEY UPDATE email_enc = VALUES(email_enc), updated_by = VALUES(updated_by)'
+        )->execute([$employeeId, $emailEnc, $userId]);
+    }
+
+    public function deleteContact(int $employeeId): void
+    {
+        $this->db->prepare('DELETE FROM n_time_contact WHERE id_employee = ?')->execute([$employeeId]);
+    }
+
+    public function insertSheetMail(int $employeeId, string $month, int $messageId, ?int $userId): void
+    {
+        $this->db->prepare('INSERT INTO n_time_sheet_mail (id_employee, month, id_message, sent_by) VALUES (?, ?, ?, ?)')->execute([$employeeId, $month, $messageId, $userId]);
+    }
+
+    /** Dernier envoi de la karta du mois par salarié, avec le statut du message dans la file. @return array<int, array> */
+    public function sheetMails(string $month): array
+    {
+        $out = [];
+        foreach ($this->all(
+            'SELECT m.id_employee, m.created_at, cm.status, cm.sent_at FROM n_time_sheet_mail m
+             LEFT JOIN communication_message cm ON cm.id = m.id_message WHERE m.month = ? ORDER BY m.id',
+            [$month]
+        ) as $r) $out[(int) $r['id_employee']] = $r;
+        return $out;
+    }
+
     // --- Jours de récupération --------------------------------------------------------------------------
 
     /** Jours de récupération non annulés (une personne ou toutes). */

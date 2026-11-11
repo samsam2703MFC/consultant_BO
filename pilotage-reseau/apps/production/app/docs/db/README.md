@@ -1659,6 +1659,34 @@ tablette de groupe, téléphone) ; `ClockQuestionService::check` refuse la sorti
 La déclaration apparaît dans Czas pracy › Dzień (« zabiera : … ») et sur la fiche des heures (pas comme point non
 confirmé). Gestion : Tablety › Pytania (rodzaj, (i)). Test : `tests/time_tracking_test.php`.
 
+### Sortie « marchandise » : choix rapide des produits — 264 (migration 165)
+
+Demande du 11/11/2026 (« un système rapide de sélection des produits : catégories, produits, pavé »). Question `yes_no`
+avec `n_clock_question.picker` = `products` (sinon `text`, comme en 263) : réponse « Tak » → catégorie → produit →
+nombre de pièces au pavé numérique (1 par défaut), plusieurs lignes, « z braków » par ligne (pris dans les rebuts),
+« Inne » = texte court pour ce qui n'est pas un produit. Le catalogue (produits actifs par catégorie) arrive avec les
+questions (`questions.catalog`, seulement si une question le demande). Réponse : `answers[].items` =
+`[{product_id, quantity 1–999, waste}]` (+ `note` pour « Inne ») ; produit inconnu ou quantité hors limites → 422 ;
+« Tak » sans ligne ni note → `CLOCK_QUESTIONS_REQUIRED`. Lignes gardées dans `n_clock_goods` (pointage, question,
+produit, nom figé, pièces, `from_waste` ; même produit choisi deux fois = additionné), résumé lisible dans
+`n_clock_answer.note` (600 caractères) → Czas pracy › Dzień. Gestion : Tablety › Pytania, rodzaj « Tak / Nie + wybór
+produktów ». Écran commun `clock-questions.js` (tablette de bureau, tablette de groupe, téléphone).
+
+### Karta czasu pracy : jour et date — 265
+
+La fiche A4 a deux colonnes alignées, « Dzień » (pon., wt.…) et « Data » (jj.mm.aaaa), au lieu d'une seule.
+
+### Karta czasu pracy par e-mail — 266 (migration 164)
+
+Demande du 11/11/2026. `n_time_contact` : adresse e-mail du salarié, **chiffrée** (`email_enc`, AES-256-GCM,
+`StaffContactCipher`, clé dérivée de `PRODUCTION_JWT_SECRET`) — jamais en clair en base ni au journal. Encodage dans
+Czas pracy › Miesiąc › « E-maile pracowników » (tout le personnel actif, tout ou rien si une adresse est invalide).
+« Wyślij karty e-mailem » (tous ceux qui ont une adresse) ou l'enveloppe d'une ligne : la karta du mois (PDF) part en
+pièce jointe par la file commune (`communication_message`, type `time_sheet`, donc à travers `MAIL_DELIVERY_MODE`) ;
+chaque envoi est noté dans `n_time_sheet_mail` (salarié, mois, message) et son état (en file / envoyé / erreur) est
+montré sur la ligne. Service `TimeSheetMailService` ; routes `GET|PUT /ajax/time/contacts`,
+`POST /ajax/time/months/{mois}/mail` (droit « time »). Test : `tests/time_tracking_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
