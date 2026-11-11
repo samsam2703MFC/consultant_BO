@@ -2073,6 +2073,75 @@ magasins, une marque de leur couleur sous l'axe. Le tableau surligne les cases e
 face aux autres jours de la série (sans promotion, sans le jour en cours), en %, et ce que les
 autres magasins ont fait ces mêmes jours ; l'écart net en points retire la tendance du réseau.
 
+### `GET /analyse/developpement/magasin` — l'onglet Produits du dashboard magasin : est-ce que ça se développe ? (11/11/2026)
+
+    GET /analyse/developpement/magasin?shop=4
+
+Demande du 11/11/2026, maquette **I « les tuiles »** retenue (`docs/maquettes/onglet-produits-simple/`). L'onglet
+**Produits** du dashboard magasin (après Année) répond à une question : le magasin, chaque catégorie, chaque produit
+se développe-t-il ? Une seule comparaison, en chiffre d'affaires : **les 6 dernières semaines closes face aux 6
+d'avant**.
+
+```json
+{ "shop": 4, "magasin": "Atelier by - Halle",
+  "semaines": { "tranches": ["S34", "…", "S46"], "bornes": [["2026-08-17", "2026-08-23"], "…"], "jours": [7, "…", 3],
+                "muettes": [], "complet": true },
+  "regle": { "avant": [0, 5], "apres": [6, 11], "seuil": 8, "peu": 24 },
+  "total": { "v": [12400.55, "…"], "q": [4140, "…"], "evo": { "avant": 11971.49, "apres": 13397.38, "qAvant": 4251, "qApres": 4847,
+             "pct": 11.9, "verdict": "monte", "depuis": null } },
+  "groupes": [ { "nom": "Viennoiserie", "n": 21, "v": ["…"], "q": ["…"], "evo": { "pct": 14.7, "verdict": "monte", "…": "…" } } ],
+  "produits": [ { "id": 1610006, "nom": "Croissant", "cat": "Viennoiserie Ind.", "groupe": "Viennoiserie", "v": ["…"], "q": ["…"],
+                  "evo": { "…": "…" }, "prix": 1.8, "prixEncaisse": 1.78, "marge": 59.7, "margeSemaine": 416.1, "margeMotif": null } ] }
+```
+
+- **`semaines`** : les 12 semaines closes et la semaine en cours (lundi → dimanche, la dernière coupée à
+  aujourd'hui). Ce sont les mêmes tranches gravées que la fiche d'un produit ou d'une catégorie
+  (`/shops/{id}/statistics/sales/product-category-groups`, lues une fois closes). `muettes` liste les semaines que le
+  panel n'a pas rendues ; `complet` est faux si l'une d'elles fait partie des 12 comparées.
+- **`evo`** (du total, de chaque catégorie, de chaque produit) : chiffre et pièces **par semaine**, avant et après ;
+  l'écart `pct` ; le `verdict` :
+  - `monte` à partir de + 8 %, `baisse` à partir de − 8 %, `stable` entre les deux ;
+  - `nouveau` si les 6 semaines d'avant pèsent moins de 15 % des 6 dernières, ou si les 3 premières sont vides et
+    qu'elles en pèsent moins de la moitié ;
+  - `arrete` si les 6 dernières pèsent moins de 15 % des 6 d'avant, ou s'il n'y a eu aucune vente sur les 3 dernières
+    semaines ;
+  - `peu` sous 24 pièces sur les 12 semaines.
+  `depuis` donne la première semaine vraiment vendue d'un nouveau, ou la dernière vente d'un arrêté.
+- **`groupes`** : les catégories de « Ventes par catégorie », c'est-à-dire la première partie du groupe du catalogue
+  (« Autres » sans groupe). Elles sont classées du plus gros chiffre sur 12 semaines au plus petit, avec `n` produits
+  vendus ; une catégorie sans chiffre est écartée.
+- **`produits`** : chaque produit vendu, classé au chiffre. Le catalogue du magasin (`products/available`) donne :
+  - `prix`, le prix de vente TTC de la pièce entière ;
+  - `marge`, la marge brute au coût de la recette du jour, (prix HT − coût) ÷ prix HT ;
+  - `margeSemaine`, la marge par pièce × les pièces par semaine des 6 dernières semaines.
+
+  Une recette qui coûte plus que le prix, ou moins de 5 % de celui-ci, n'est pas crue : `marge` est null et
+  `margeMotif` vaut « recette à vérifier ». `prixEncaisse` est le prix moyen encaissé sur les 6 dernières semaines.
+- Les catégories et les produits portent `v` (chiffre) et `q` (pièces) pour les 13 tranches.
+- Lecture seule ; aucun autre magasin n'est lu. Elle répond 400 sans `shop` et `indispo` sans compte panel. Le
+  dashboard la demande avec `_cache=900`.
+- Test du calcul, sur les ventes réelles de Halle : `php tests/developpement/run.php`.
+
+**L'écran.** Il commence par une phrase (« ▲ + 12 %, le magasin se développe : 13 397 € par semaine contre
+11 971 € »), puis les 13 semaines en colonnes : les 6 d'avant en clair, les 6 dernières en foncé, l'en cours
+hachurée. Vient ensuite une tuile par catégorie : verte si elle monte, ocre si elle baisse, avec la flèche, le chiffre
+par semaine, le nombre de produits et les petites colonnes. Un clic sur une tuile ouvre la fenêtre de la catégorie :
+sa flèche, ses semaines, ses produits (prix, pièces par semaine, évolution, 12 semaines ; les 12 premiers, puis tous).
+Un clic sur un produit le déplie :
+- le prix de vente ;
+- la quantité par semaine, avant → maintenant ;
+- la marge, en % et en € par semaine ;
+- ses pièces de chaque semaine ;
+- le bouton « Fiche complète », qui ouvre la fiche existante (12 semaines, prix face au réseau, recette).
+
+Échap ou la croix ferme la fenêtre. Au téléphone, l'adresse `?vue=produits` retombe sur le jour, comme les autres
+onglets du bureau.
+
+Limite connue : en S40, la caisse a renommé les tartes (« Tartes » → « Tartes – Ø 28 cm », noms néerlandais remplacés
+par des noms français). Dans la catégorie Tartes, les anciennes références paraissent donc « arrêtées » et les
+nouvelles « nouvelles ». Le total de la catégorie, lui, est juste. Pour les relier, il faudrait une table de
+correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`).
+
 ### `/analyse/produits/magasin` — la fiche d'un produit dans le dashboard d'un magasin
 
     GET /analyse/produits/magasin?pid=3210004&shop=4&mois=1|3|12

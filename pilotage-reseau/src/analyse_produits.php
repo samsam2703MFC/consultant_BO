@@ -463,6 +463,144 @@ function ep_analyse_categorie_magasin(): array
 }
 
 /**
+ * GET /analyse/developpement/magasin?shop=4 — l'onglet Produits du dashboard magasin (11/11/2026, maquette I « les
+ * tuiles », docs/maquettes/onglet-produits-simple) : est-ce que le magasin, chaque catégorie, chaque produit se
+ * développe ? Une seule comparaison, en chiffre d'affaires : les 6 dernières semaines closes face aux 6 d'avant.
+ *
+ *   semaines  les 12 semaines closes et l'en cours (mêmes tranches gravées que la fiche d'un produit ou d'une
+ *             catégorie : /shops/{id}/statistics/sales/product-category-groups, lues une fois closes) ;
+ *   magasin   le chiffre et les pièces de chaque semaine, et leur évolution (evo) ;
+ *   groupes   chaque catégorie (le groupe du catalogue, comme « Ventes par catégorie »), du plus gros chiffre sur
+ *             12 semaines au plus petit, avec le nombre de produits vendus ;
+ *   produits  chaque produit vendu, sa catégorie, ses semaines, son évolution, et du catalogue du magasin
+ *             (products/available) son prix de vente TTC et sa marge brute au coût de la recette du jour.
+ *
+ * L'évolution : `verdict` monte (≥ + 8 %), baisse (≤ − 8 %), stable entre les deux ; `nouveau` ou `arrete` quand
+ * l'une des deux périodes est presque vide (ou plus aucune vente depuis 3 semaines) ; `peu` sous 24 pièces en
+ * 12 semaines. Aucun autre magasin n'est lu. Lecture seule ; le dashboard la demande avec `_cache=900`.
+ */
+function ep_analyse_developpement_magasin(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop requis']; }
+    if (!PanelApi::configured()) { return ['indispo' => true, 'motif' => 'compte panel non configuré (Mon compte)']; }
+    $tranches = array_slice(apTranches(3), -13);
+    $lu = apTranches2(array_map(static fn ($t) => [$sid, $t[0], $t[1]], $tranches));
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    $nom = function_exists('magasinConnu') ? magasinConnu((string) $sid) : null;
+    return ['shop' => $sid, 'magasin' => $nom] + adCalculer($tranches, $lu, $sid, $catDe, $grpDe, adPrixCatalogue($sid));
+}
+
+/** La règle de l'onglet Produits : les semaines comparées (index dans les 13 tranches) et le seuil, en %. */
+const AD_AVANT = [0, 5];
+const AD_APRES = [6, 11];
+const AD_SEUIL = 8.0;
+const AD_PEU = 24;
+
+/**
+ * Le calcul de l'onglet, sans lecture : $tranches [du, au, libellé] × 13, $lu « sid:du » → pid → [nom, cat, pièces,
+ * CA] (apTranches2), $catDe pid → catégorie, $grpDe catégorie → groupe, $prix pid → [ttc, ht, cout] (adPrixCatalogue).
+ */
+function adCalculer(array $tranches, array $lu, int $sid, array $catDe, array $grpDe, array $prix): array
+{
+    $n = count($tranches);
+    $lib = array_map(static fn ($t) => (string) $t[2], $tranches);
+    $groupe = static fn (string $c): string => explode(' · ', (string) ($grpDe[$c] ?? 'Autres'))[0];
+    $P = []; $muettes = [];
+    foreach ($tranches as $i => [$du]) {
+        $p = $lu[$sid . ':' . $du] ?? null;
+        if (!is_array($p)) { $muettes[] = $i; continue; }
+        foreach ($p as $pid => $x) {
+            $pid = (int) $pid;
+            if (!isset($P[$pid])) {
+                $c = (string) ($catDe[$pid] ?? ($x[1] ?? ''));
+                $P[$pid] = ['id' => $pid, 'nom' => (string) ($x[0] ?? ('Produit ' . $pid)), 'cat' => $c, 'groupe' => $groupe($c), 'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0)];
+            }
+            $P[$pid]['v'][$i] += (float) ($x[3] ?? 0); $P[$pid]['q'][$i] += (float) ($x[2] ?? 0);
+        }
+    }
+    $P = array_filter($P, static fn ($x) => array_sum($x['v']) > 0 || array_sum($x['q']) > 0);
+    $arrondi = static fn (array $x): array => ['v' => array_map(static fn ($v) => round($v, 2), $x['v']), 'q' => array_map(static fn ($v) => round($v, 1), $x['q'])];
+    $produits = []; $G = []; $tot = ['v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0)];
+    foreach ($P as $pid => $x) {
+        if (!isset($G[$x['groupe']])) { $G[$x['groupe']] = ['nom' => $x['groupe'], 'n' => 0, 'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0)]; }
+        $G[$x['groupe']]['n']++;
+        for ($i = 0; $i < $n; $i++) { $G[$x['groupe']]['v'][$i] += $x['v'][$i]; $G[$x['groupe']]['q'][$i] += $x['q'][$i]; $tot['v'][$i] += $x['v'][$i]; $tot['q'][$i] += $x['q'][$i]; }
+        $evo = adEvolution($x['v'], $x['q'], $lib);
+        // Le prix de vente et la marge brute du catalogue : (prix HT − coût de la recette) ÷ prix HT. Une recette qui
+        // coûte plus que le prix, ou moins de 5 % de celui-ci, n'est pas crue (la règle de vraisemblance du P&L).
+        $c = $prix[$pid] ?? null; $marge = null; $margeSem = null; $motif = null;
+        if ($c !== null && $c['ht'] !== null && $c['cout'] !== null) {
+            if ($c['cout'] >= $c['ht'] || $c['cout'] < 0.05 * $c['ht']) { $motif = 'recette à vérifier'; }
+            else { $marge = round(100 * ($c['ht'] - $c['cout']) / $c['ht'], 1); $margeSem = round($evo['qApres'] * ($c['ht'] - $c['cout']), 2); }
+        } elseif ($c !== null && $c['ht'] !== null) { $motif = 'coût de la recette manquant'; }
+        $produits[] = ['id' => $pid, 'nom' => $x['nom'], 'cat' => $x['cat'], 'groupe' => $x['groupe']] + $arrondi($x)
+            + ['evo' => $evo, 'prix' => $c !== null && $c['ttc'] !== null ? round($c['ttc'], 2) : null,
+                'prixEncaisse' => array_sum($x['q']) > 0 ? round(array_sum(array_slice($x['v'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1)) / max(0.0001, array_sum(array_slice($x['q'], AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1))), 2) : null,
+                'marge' => $marge, 'margeSemaine' => $margeSem, 'margeMotif' => $motif];
+    }
+    $somme12 = static fn (array $a): float => array_sum(array_slice($a, 0, AD_APRES[1] + 1));
+    usort($produits, static fn ($a, $b) => $somme12($b['v']) <=> $somme12($a['v']));
+    $groupes = [];
+    // Une catégorie sans chiffre sur les 13 semaines (articles offerts, « Sans catégorie » vide) ne fait pas de tuile.
+    foreach ($G as $g) { if (array_sum($g['v']) <= 0) { continue; } $groupes[] = ['nom' => $g['nom'], 'n' => $g['n']] + $arrondi($g) + ['evo' => adEvolution($g['v'], $g['q'], $lib)]; }
+    usort($groupes, static fn ($a, $b) => $somme12($b['v']) <=> $somme12($a['v']));
+    $jours = array_map(static fn ($t) => (int) round((strtotime($t[1] . ' 12:00:00') - strtotime($t[0] . ' 12:00:00')) / 86400) + 1, $tranches);
+    return ['semaines' => ['tranches' => $lib, 'bornes' => array_map(static fn ($t) => [$t[0], $t[1]], $tranches), 'jours' => $jours,
+            'muettes' => $muettes, 'complet' => array_filter($muettes, static fn ($i) => $i <= AD_APRES[1]) === []],
+        'regle' => ['avant' => AD_AVANT, 'apres' => AD_APRES, 'seuil' => AD_SEUIL, 'peu' => AD_PEU],
+        'total' => $arrondi($tot) + ['evo' => adEvolution($tot['v'], $tot['q'], $lib)],
+        'groupes' => $groupes, 'produits' => $produits];
+}
+
+/** L'évolution d'une série : par semaine avant et après, l'écart en %, le verdict. */
+function adEvolution(array $v, array $q, array $lib): array
+{
+    $s = static fn (array $a, array $b): float => array_sum(array_slice($a, $b[0], $b[1] - $b[0] + 1));
+    $nA = AD_AVANT[1] - AD_AVANT[0] + 1; $nP = AD_APRES[1] - AD_APRES[0] + 1;
+    $av = $s($v, AD_AVANT); $ap = $s($v, AD_APRES); $qA = $s($q, AD_AVANT); $qP = $s($q, AD_APRES);
+    $pct = $av > 0 ? round(100 * ($ap / $av - 1), 1) : null;
+    $depuis = null;
+    $vide3 = static function (array $a, int $de) { for ($i = $de; $i < $de + 3; $i++) { if (($a[$i] ?? 0) > 0) { return false; } } return true; };
+    if ($ap > 0 && ($av < 0.15 * $ap || ($vide3($v, AD_AVANT[0]) && $av < 0.5 * $ap))) {
+        $verdict = 'nouveau';
+        for ($i = AD_AVANT[0]; $i <= AD_APRES[1]; $i++) { if ($v[$i] >= 0.25 * $ap / $nP) { $depuis = $lib[$i] ?? null; break; } }
+    } elseif ($av > 0 && ($ap < 0.15 * $av || $vide3($v, AD_APRES[1] - 2))) {
+        $verdict = 'arrete';
+        for ($i = AD_APRES[1]; $i >= AD_AVANT[0]; $i--) { if ($v[$i] > 0) { $depuis = $lib[$i] ?? null; break; } }
+    } elseif ($qA + $qP < AD_PEU) { $verdict = 'peu'; }
+    elseif ($pct !== null && $pct >= AD_SEUIL) { $verdict = 'monte'; }
+    elseif ($pct !== null && $pct <= -AD_SEUIL) { $verdict = 'baisse'; }
+    else { $verdict = 'stable'; }
+    return ['avant' => round($av / $nA, 2), 'apres' => round($ap / $nP, 2), 'qAvant' => round($qA / $nA, 1), 'qApres' => round($qP / $nP, 1),
+        'pct' => $pct, 'verdict' => $verdict, 'depuis' => $depuis];
+}
+
+/**
+ * Le prix de vente et le coût de recette de chaque produit au catalogue du magasin (products/available, la lecture de
+ * l'onglet Recette & marge) : pid → [ttc, ht, cout], le prix de la pièce entière (un divisible porte celui de sa portion).
+ */
+function adPrixCatalogue(int $sid): array
+{
+    try { $lignes = PanelApi::produitsDisponibles($sid); } catch (Throwable $e) { return []; }
+    $num = static function (array $x, array $cles): ?float { foreach ($cles as $k) { if (isset($x[$k]) && is_numeric($x[$k])) { return (float) $x[$k]; } } return null; };
+    $out = [];
+    foreach ($lignes as $l) {
+        if (!is_array($l)) { continue; }
+        $pid = (int) ($num($l, ['id', 'product_id', 'id_product']) ?? 0);
+        if ($pid <= 0) { continue; }
+        $t = $num($l, ['portion_size']);
+        $part = (int) ($l['is_divisible'] ?? 0) === 1 && $t !== null && $t > 0 && $t <= 1 ? $t : 1.0;
+        $ttc = $num($l, ['portion_price_gross', 'portion_price']); $ht = $num($l, ['portion_price_net']); $tva = $num($l, ['tax_value_percent', 'tax_val_perc']);
+        if (($ht === null || $ht <= 0) && $ttc !== null && $ttc > 0 && $tva !== null) { $ht = $ttc / (1 + $tva / 100); }
+        $cout = $num($l, ['recipe_cost_net']);
+        $out[$pid] = ['ttc' => $ttc !== null && $ttc > 0 ? $ttc / $part : null, 'ht' => $ht !== null && $ht > 0 ? $ht / $part : null, 'cout' => $cout !== null && $cout > 0 ? $cout : null];
+    }
+    return $out;
+}
+
+/**
  * GET /analyse/categories/journee?shop=4&niveau=groupe&nom=Tartes&date=2026-10-10
  *
  * La journée de vente d'une catégorie ou d'un groupe (10/10/2026) : de 6 h à 18 h, heure par heure, le

@@ -1,0 +1,73 @@
+/* Maquettes « l'onglet Produits, en simple » : par-dessus global.css, dashboard.css et po.css. */
+:root{--sp-avant:#EBD3D8;--sp-apres:#B03048;--sp-up:#3f7a52;--sp-up-soft:#EEF5F0;--sp-dn:#7A5207;--sp-dn-soft:#FBF1E2;--sp-st:#5c5852}
+.sp-c{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:14px}
+.sp-c>.hd{padding:16px 20px 0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sp-c>.hd h2{margin:0;font:400 17px var(--font-ui);text-transform:none;letter-spacing:-.01em;color:var(--ink)}
+.sp-c>.hd .aide{font-size:12px;color:var(--muted);margin-left:auto}
+.sp-c>.in{padding:14px 20px 18px}
+.rep{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
+.rep .fl{font:700 34px/1 var(--font-ui);letter-spacing:-.02em}
+.rep .txt{font-size:15px;color:var(--ink)}
+.rep .sous{font-size:13px;color:var(--muted-2);width:100%;margin-top:2px}
+.up{color:var(--sp-up)}.dn{color:var(--sp-dn)}.st{color:var(--sp-st)}
+.evo{display:inline-flex;align-items:center;gap:5px;font:700 14px var(--font-ui);white-space:nowrap;font-variant-numeric:tabular-nums}
+.evo small{font:400 11.5px var(--font-ui);color:var(--muted)}
+.evo.nouv{font:400 11px var(--font-ui);color:var(--sp-up);border:1px solid rgba(63,122,82,.45);border-radius:5px;padding:2px 7px}
+.leg-s{display:flex;gap:18px;font-size:12px;color:var(--muted-2);margin-top:6px}
+.leg-s i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.gr text{font-family:var(--font-ui)}
+/* H : la liste */
+.liste{width:100%;border-collapse:collapse;font-size:14px}
+.liste td{padding:12px 20px;border-top:1px solid var(--row-line);vertical-align:middle;font-variant-numeric:tabular-nums}
+.liste td.n{width:34%}
+.liste td.n small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.liste td.r{text-align:right;white-space:nowrap}
+.liste td.v{color:var(--ink)}
+.liste td.v small{color:var(--muted);font-size:12px}
+.liste td.go{width:30px;color:var(--muted);text-align:right;font-size:16px}
+.liste tr.hov td{background:#FBF6F4}
+.liste tr.hov td.n{color:var(--accent)}
+.liste tr.hov td.go{color:var(--accent)}
+/* I : les tuiles */
+.tuil{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ti{border-radius:12px;padding:14px 16px;border:1px solid var(--line);background:#fff;min-width:0;position:relative}
+.ti.up{background:var(--sp-up-soft);border-color:rgba(63,122,82,.25)}
+.ti.dn{background:var(--sp-dn-soft);border-color:rgba(176,121,42,.3)}
+.ti .n{font-size:15px;color:var(--ink);padding-right:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ti .big{font:700 26px/1.1 var(--font-ui);letter-spacing:-.02em;margin-top:8px}
+.ti .s{font-size:12px;color:var(--muted-2);margin-top:3px}
+.ti .go{position:absolute;right:14px;top:13px;color:var(--muted);font-size:15px}
+.ti.hov{outline:2px solid var(--accent);outline-offset:-1px}
+.ti.hov .go{color:var(--accent)}
+/* J : ça monte, ça baisse */
+.mb2{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start}
+.col h3{margin:0 0 4px;font:700 15px var(--font-ui);display:flex;align-items:center;gap:8px}
+.col .it{display:flex;align-items:center;gap:14px;padding:11px 0;border-top:1px solid var(--row-line);font-size:14px}
+.col .it .n{flex:1;min-width:0}
+.col .it .n small{display:block;font-size:11.5px;color:var(--muted);margin-top:2px}
+.col .it .go{color:var(--muted);font-size:16px}
+.col .it.hov .n{color:var(--accent)}.col .it.hov .go{color:var(--accent)}
+.stables{font-size:13px;color:var(--muted-2);padding:12px 20px;border-top:1px solid var(--line)}
+/* La modale */
+.modale{width:1040px}
+.m-hd h1{font-size:26px}
+.m-rep{display:flex;align-items:baseline;gap:12px;margin-top:6px;flex-wrap:wrap}
+.prods{width:100%;border-collapse:collapse;font-size:13.5px}
+.prods th{font:400 10.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 12px;border-bottom:1px solid var(--line)}
+.prods th:first-child,.prods td:first-child{text-align:left}
+.prods td{padding:10px 12px;border-bottom:1px solid var(--row-line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.prods td .fl{display:inline-block;width:16px;color:var(--muted);font-size:11px}
+.prods tr.ouv td{background:rgba(141,29,44,.05);border-bottom-color:transparent}
+.prods tr.ouv td:first-child{color:var(--accent)}
+.plus2{font-size:12.5px;color:var(--muted-2);padding:12px;text-align:center}
+/* Le déroulant d'un produit */
+.dds{display:grid;grid-template-columns:repeat(3,minmax(0,170px)) minmax(0,1fr) auto;gap:0;align-items:stretch;border:1px solid rgba(141,29,44,.35);border-radius:12px;margin:2px 4px 14px 28px;background:#fff;overflow:hidden;white-space:normal;text-align:left}
+.dds>div{padding:14px 16px;min-width:0}
+.dds>div+div{border-left:1px solid var(--line)}
+.dds .k{font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dds .v{font:700 24px/1.15 var(--font-ui);letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums;color:var(--ink)}
+.dds .v small{font:400 12px var(--font-ui);letter-spacing:0;color:var(--muted)}
+.dds .s{font-size:12px;color:var(--muted-2);margin-top:4px;line-height:1.45}
+.dds .lien{display:flex;align-items:flex-end;padding-bottom:16px}
+.dds .lien span{border:1px solid var(--accent);color:var(--accent);border-radius:8px;padding:6px 11px;font-size:12px;white-space:nowrap}
+.note-s{font-size:11px;color:var(--muted);line-height:1.5;margin-top:8px}

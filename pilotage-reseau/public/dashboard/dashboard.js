@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -110,7 +110,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -140,6 +140,8 @@
     // Les temps morts : une lecture, le jour et sa semaine (07/11/2026).
     // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
     if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
+    // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
+    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
@@ -5277,6 +5279,123 @@
   function cleTM() { return 'tm|' + S.shop + '|' + S.date + '|' + S.tmSeuil; }
   function cheminTM() { return '/exploitation/temps-morts?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&seuil=' + S.tmSeuil; }
 
+  /* L'onglet Produits (11/11/2026, maquette I « les tuiles », docs/maquettes/onglet-produits-simple) : est-ce que ça se
+   * développe ? Le chiffre de chaque semaine du magasin, puis une tuile par catégorie, verte si elle monte, ocre si elle
+   * baisse. Un clic ouvre la catégorie (son graphique, ses produits) ; un clic sur un produit le déplie : prix de vente,
+   * quantité par semaine avant et maintenant, marge. Les 6 dernières semaines closes face aux 6 d'avant, en chiffre.
+   * Une lecture : /analyse/developpement/magasin (le verdict s'y calcule, l'écran ne fait que le dire). */
+  function clePD() { return 'pd|' + S.shop; }
+  function cheminPD() { return '/analyse/developpement/magasin?shop=' + encodeURIComponent(S.shop); }
+  const PD_CL = { monte: 'up', nouveau: 'up', baisse: 'dn' };
+  const pdSigne = p => (Math.round(p) > 0 ? '+' : (Math.round(p) < 0 ? '−' : '')) + nf(Math.abs(Math.round(p)), 0) + ' %';
+  const pdPrix = n => nf(n, 2) + ' €';
+  const pdJour = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
+  /** La flèche et l'écart (en petit pour « stable »), ou le mot : nouveau, arrêté, trop peu vendu. */
+  function pdEvo(e) {
+    if (e.verdict === 'monte') { return `<span class="pd-evo up">▲ ${pdSigne(e.pct)}</span>`; }
+    if (e.verdict === 'baisse') { return `<span class="pd-evo dn">▼ ${pdSigne(e.pct)}</span>`; }
+    if (e.verdict === 'stable') { return `<span class="pd-evo st">= stable <small>${pdSigne(e.pct)}</small></span>`; }
+    if (e.verdict === 'nouveau') { return `<span class="pd-mot up">nouveau${e.depuis ? ' · ' + esc(e.depuis) : ''}</span>`; }
+    if (e.verdict === 'arrete') { return `<span class="pd-mot">arrêté${e.depuis ? ' · ' + esc(e.depuis) : ''}</span>`; }
+    return '<span class="pd-mot">trop peu vendu</span>';
+  }
+  /** La grande valeur d'une tuile : « ▲ +15 % », « = +1 % », ou le mot. */
+  function pdGros(e) {
+    if (e.verdict === 'monte') { return '▲ ' + pdSigne(e.pct); }
+    if (e.verdict === 'baisse') { return '▼ ' + pdSigne(e.pct); }
+    if (e.verdict === 'stable') { return '= ' + pdSigne(e.pct); }
+    return { nouveau: 'nouveau', arrete: 'arrêté' }[e.verdict] || 'peu vendu';
+  }
+  /** Les 13 semaines en colonnes : les 6 d'avant en clair, les 6 dernières en foncé, la semaine en cours hachurée. */
+  function pdBarres(D, vals, o) {
+    const { w = 1000, h = 200, etiq = true, unite = '€' } = o || {};
+    const n = vals.length, enC = n - 1, tr = D.semaines.tranches, bo = D.semaines.bornes;
+    const max = Math.max(1, ...vals.slice(0, enC), vals[enC] || 0) * 1.06;
+    const mt = etiq ? 20 : 2, mb = etiq ? 34 : 2, slot = w / n, bw = Math.min(60, slot * 0.62);
+    const y = v => mt + (h - mt - mb) * (1 - Math.min(1, Math.max(0, v) / max));
+    const fv = v => unite === '€' ? (v >= 1000 ? nf(v / 1000, 1) + ' k€' : fE(v)) : fN(v);
+    const dC = s => s.slice(8, 10) + '/' + s.slice(5, 7);
+    let g = '<defs><pattern id="pd-hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#F4E4E7"/><line x1="0" y1="0" x2="0" y2="6" stroke="#B03048" stroke-width="2.4"/></pattern></defs>';
+    vals.forEach((v, i) => {
+      const cx = slot * (i + 0.5), x = cx - bw / 2, top = y(v), hh = y(0) - top, r = Math.min(4, hh);
+      const fill = i === enC ? 'url(#pd-hach)' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)');
+      const titre = tr[i] + ' (' + dC(bo[i][0]) + ' → ' + dC(bo[i][1]) + ') · ' + (unite === '€' ? fE(v) : fN(v) + ' pièces') + (i === enC ? ' · en cours, ' + D.semaines.jours[i] + ' j' : '');
+      if (hh > 0.4) { g += `<path d="M${x.toFixed(1)},${y(0).toFixed(1)} v${(-hh + r).toFixed(1)} q0,${-r} ${r},${-r} h${(bw - 2 * r).toFixed(1)} q${r},0 ${r},${r} v${(hh - r).toFixed(1)} z" fill="${fill}"><title>${esc(titre)}</title></path>`; }
+      if (etiq) { g += `<text x="${cx.toFixed(1)}" y="${(top - 6).toFixed(1)}" text-anchor="middle" class="v${i === enC ? ' ec' : ''}">${fv(v)}</text><text x="${cx.toFixed(1)}" y="${h - 18}" text-anchor="middle" class="s${i === enC ? ' ec' : ''}">${esc(tr[i])}</text><text x="${cx.toFixed(1)}" y="${h - 5}" text-anchor="middle" class="d">${i === enC ? 'en cours' : dC(bo[i][0])}</text>`; }
+    });
+    g += `<line x1="0" x2="${w}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="var(--color-border-tertiary)"/>`;
+    return `<svg class="pd-gr" viewBox="0 0 ${w} ${h}" role="img" aria-label="Chaque semaine : les 6 d’avant, les 6 dernières, la semaine en cours">${g}</svg>`;
+  }
+  /** Les mêmes 13 semaines en petit, pour une tuile ou une ligne. */
+  function pdMini(D, vals, w, h) {
+    const n = vals.length, enC = n - 1, max = Math.max(1, ...vals.slice(0, enC)), bw = (w - 2 * (n - 1)) / n;
+    return `<svg class="pd-mini" viewBox="0 0 ${w} ${h}" aria-hidden="true">${vals.map((v, i) => { const hh = Math.max(v > 0 ? 1.5 : 0, (h - 1) * Math.min(1, v / max));
+      return `<rect x="${(i * (bw + 2)).toFixed(1)}" y="${(h - hh).toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" rx="1.5" fill="${i === enC ? '#F4E4E7' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)')}"/>`; }).join('')}</svg>`;
+  }
+  const pdLegende = D => `<div class="pd-leg"><span><i class="av"></i>les 6 semaines d’avant</span><span><i class="ap"></i>les 6 dernières semaines</span><span><i class="ec"></i>${esc(D.semaines.tranches[D.semaines.tranches.length - 1])}, en cours</span></div>`;
+  function rendProduits() {
+    const cle = clePD(), D = S.aux[cle];
+    if (!D) { return S.err[cle] ? `<div class="db-err">Produits : ${esc(S.err[cle])}</div>` : '<div class="db-attente">Lecture des 12 dernières semaines…</div>'; }
+    if (D.indispo || D.error) { return `<div class="db-alerte">Produits : ${esc(D.motif || D.error)}</div>`; }
+    const T = D.total, e = T.evo, R = D.regle, bo = D.semaines.bornes, per = (a, b) => pdJour(bo[a][0]) + ' → ' + pdJour(bo[b][1]);
+    const mot = { monte: 'se développe', baisse: 'recule', stable: 'est stable', nouveau: 'démarre', arrete: 'ne vend plus', peu: 'vend trop peu pour juger' }[e.verdict];
+    const k = PD_CL[e.verdict] || 'st';
+    let h = `<div class="pd-quand">Les 6 dernières semaines (${per(R.apres[0], R.apres[1])}) comparées aux 6 d’avant (${per(R.avant[0], R.avant[1])}).</div>`;
+    if (!D.semaines.complet) { h += `<div class="db-alerte">Le panel n’a pas rendu ${D.semaines.muettes.map(i => esc(D.semaines.tranches[i])).join(', ')} : les comparaisons sont partielles.</div>`; }
+    h += `<div class="pd-c"><div class="pd-hd"><h2>Le magasin</h2><span class="pd-aide">le chiffre de chaque semaine</span></div><div class="pd-in">
+      <div class="pd-rep"><span class="pd-gros ${k}">${pdGros(e)}</span><span class="pd-phr">Le magasin ${mot}.</span>
+      <span class="pd-sous">${fE(e.apres)} par semaine sur les 6 dernières semaines, contre ${fE(e.avant)} avant.</span></div>
+      ${pdBarres(D, T.v, { w: 1350, h: 210 })}${pdLegende(D)}</div></div>`;
+    h += `<div class="pd-c"><div class="pd-hd"><h2>Vos catégories</h2><span class="pd-aide">cliquez une catégorie pour voir ses produits</span></div><div class="pd-in"><div class="pd-tuiles">`
+      + D.groupes.map(g => { const c = PD_CL[g.evo.verdict] || '';
+        return `<button type="button" class="pd-ti ${c}" data-pdg="${esc(g.nom)}"><span class="pd-go" aria-hidden="true">›</span><span class="n">${esc(g.nom)}</span><span class="big ${c || 'st'}">${pdGros(g.evo)}</span><span class="s">${fE(g.evo.apres)} par semaine · ${g.n} produit${g.n > 1 ? 's' : ''}</span>${pdMini(D, g.v, 270, 34)}</button>`; }).join('')
+      + '</div></div></div>';
+    h += `<div class="pd-note">${esc(D.magasin || nomShop())} · ventes du panel, semaine par semaine. ▲ plus de ${nf(R.seuil, 0)} % de chiffre sur les 6 dernières semaines face aux 6 d’avant, ▼ ${nf(R.seuil, 0)} % de moins, = entre les deux.</div>`;
+    return h;
+  }
+  /** La ligne dépliée d'un produit : prix de vente, quantité par semaine (avant → maintenant), marge, ses semaines. */
+  function pdDeroule(D, p) {
+    const e = p.evo, dq = e.qAvant > 0 ? 100 * (e.qApres / e.qAvant - 1) : null;
+    const k = dq == null ? 'st' : (dq >= D.regle.seuil ? 'up' : (dq <= -D.regle.seuil ? 'dn' : 'st'));
+    const prix = p.prix != null ? p.prix : p.prixEncaisse;
+    const ecart = p.prix != null && p.prixEncaisse != null && Math.abs(p.prixEncaisse / p.prix - 1) >= 0.01;
+    return `<tr class="pd-dd"><td colspan="5"><div class="pd-ddb">
+      <div><div class="k">Prix de vente</div><div class="v">${prix != null ? pdPrix(prix) : '—'}</div><div class="s">${ecart ? 'encaissé en moyenne ' + pdPrix(p.prixEncaisse) : (p.prix != null ? 'la pièce, TTC' : 'prix moyen encaissé')}</div></div>
+      <div><div class="k">Quantité</div><div class="v">${nf(e.qApres, 0)} <small>par semaine</small></div><div class="s">avant : ${nf(e.qAvant, 0)}${dq != null ? ` · <span class="pd-evo ${k}">${k === 'up' ? '▲' : (k === 'dn' ? '▼' : '=')} ${pdSigne(dq)}</span>` : ''}</div></div>
+      <div><div class="k">Marge</div>${p.marge != null ? `<div class="v">${nf(p.marge, 0)} %</div><div class="s">${fE(p.margeSemaine)} par semaine</div>` : `<div class="v">—</div><div class="s">${esc(p.margeMotif || 'coût de la recette inconnu')}</div>`}</div>
+      <div class="gr"><div class="k">Pièces vendues, chaque semaine</div>${pdBarres(D, p.q, { w: 420, h: 90, etiq: false, unite: 'p' })}</div>
+      <div class="li"><button type="button" class="pd-fiche" data-fprod="${esc(p.id)}" data-fnom="${esc(p.nom)}" data-fq="" data-fv="" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}">Fiche complète ↗</button></div>
+    </div></td></tr>`;
+  }
+  function pdOuvrir(nom) { S.pd = { g: nom, ouvert: null, tous: false, retour: document.activeElement }; pdRendre(); }
+  function pdFermer() { const r = S.pd && S.pd.retour; S.pd = null; pdRendre(); if (r && r.focus) { try { r.focus(); } catch (e) { /* la tuile a été redessinée */ } } }
+  /** La fenêtre d'une catégorie : sa flèche, ses semaines, ses produits (les 12 premiers au chiffre, puis tous). */
+  function pdRendre() {
+    let box = document.getElementById('db-pd');
+    const D = S.aux[clePD()], g = S.pd && D && S.vue === 'produits' ? (D.groupes || []).find(x => x.nom === S.pd.g) : null;
+    if (!g) { S.pd = null; if (box) { box.innerHTML = ''; } if (!S.fiche && !S.stk && !S.invModale) { document.documentElement.classList.remove('db-fiche-ouverte'); } return; }
+    if (!box) { box = document.createElement('div'); box.id = 'db-pd'; document.body.appendChild(box); }
+    document.documentElement.classList.add('db-fiche-ouverte');
+    const prods = (D.produits || []).filter(p => p.groupe === g.nom), vus = S.pd.tous ? prods : prods.slice(0, 12);
+    const ligne = p => { const o = String(p.id) === String(S.pd.ouvert);
+      return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièces</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
+    box.innerHTML = `<div class="fi-voile" data-pdfermer="1"></div><div class="fi-modale pd-modale" role="dialog" aria-modal="true" aria-label="${esc(g.nom)}">
+      <div class="fi-hd"><div class="t"><h2>${esc(g.nom)}</h2><div class="pd-mrep">${pdEvo(g.evo)}<span>${fE(g.evo.apres)} par semaine sur les 6 dernières semaines, contre ${fE(g.evo.avant)} avant.</span></div></div><button type="button" class="fi-x" data-pdfermer="1" aria-label="Fermer">✕</button></div>
+      <div class="fi-bd">${pdBarres(D, g.v, { w: 940, h: 180 })}${pdLegende(D)}
+        <div class="pd-msec">Ses produits <span>cliquez un produit : prix, quantité, marge</span></div>
+        <table class="pd-prods"><thead><tr><th>Produit</th><th>Prix</th><th>Par semaine</th><th>Évolution</th><th>12 semaines</th></tr></thead><tbody>${vus.map(ligne).join('')}</tbody></table>
+        ${prods.length > vus.length ? `<button type="button" class="pd-plus" data-pdtous="1">▾ les ${prods.length - vus.length} autres produits</button>` : ''}</div></div>`;
+    box.querySelectorAll('[data-pdfermer]').forEach(b => b.addEventListener('click', pdFermer));
+    box.querySelectorAll('[data-pdp]').forEach(b => {
+      const basculer = () => { S.pd.ouvert = String(S.pd.ouvert) === b.dataset.pdp ? null : b.dataset.pdp; pdRendre(); const r = document.querySelector('#db-pd [data-pdp="' + b.dataset.pdp + '"]'); if (r) { r.focus(); } };
+      b.addEventListener('click', basculer);
+      b.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); basculer(); } });
+    });
+    box.querySelectorAll('[data-pdtous]').forEach(b => b.addEventListener('click', () => { S.pd.tous = true; pdRendre(); }));
+    // La fiche complète du produit (12 semaines, prix face au réseau, recette) : la fenêtre de la catégorie se ferme.
+    box.querySelectorAll('[data-fprod]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); S.pd = null; pdRendre(); ficheOuvrir(b); }));
+  }
+
   /** L'écart avec une référence, moins étant mieux : vert quand on fait moins de temps mort. */
   function tmEcart(v, ref, lib, fmt) {
     if (v == null || ref == null) { return ''; }
@@ -5821,15 +5940,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
+    if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
@@ -9107,7 +9227,7 @@
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
-  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } });
+  document.addEventListener('keydown', e => { if (S.fiche && e.key === 'Escape') { ficheFermer(); } else if (S.invModale && e.key === 'Escape') { invModaleFermer(); } else if (S.stk && e.key === 'Escape') { stkFermer(); } else if (S.pmC && e.key === 'Escape') { pmCoefFermer(); } else if (S.pd && e.key === 'Escape') { pdFermer(); } });
   document.addEventListener('keydown', e => {
     if (!S.cqVoir) { return; }
     if (e.key === 'Escape') { S.cqVoir = null; rendre(); }
