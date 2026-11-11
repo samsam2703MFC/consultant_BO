@@ -1,6 +1,6 @@
 # L'onglet Produits, en simple : est-ce que ça se développe ?
 
-**Statut : à choisir.** 3e version (11/11/2026, « ça doit être plus simple »). Remplace E, F, G
+**Statut : I « les tuiles » retenue le 11/11/2026, et codée** : onglet Produits de `public/dashboard/`, route `GET /analyse/developpement/magasin` (voir `docs/contrat-api.md`). Captures de la version codée : `code-onglet.jpg`, `code-categorie.jpg`, `code-produit.jpg`. 3e version (11/11/2026, « ça doit être plus simple »). Remplace E, F, G
 (`../onglet-produits-developpement/`) et A à D (`../onglet-produits/`).
 
 Une question, une comparaison, un graphique :
