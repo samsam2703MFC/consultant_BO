@@ -8,6 +8,7 @@ import { load, write, readOne, API_BASE, authStatus, authSubmit, authLogout, api
 import { render as tplRender, tplPsImpression } from './templates.js';
 import { valsGC, valsFF, valsRO } from './franchises-vals.js';
 import { Scouting } from './scouting.js';
+import { valsStructure } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -271,7 +272,7 @@ class App {
       taches: 'taches-consultants', resultatJour: 'resultat', exploitation: 'pl-magasins',
       performance: 'performance', magasins: 'magasins', heatmap: 'heatmap', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', budget: 'budget', encodage: 'budget-encodage',
-      budgetparam: 'budget-parametres', plan: 'plan-developpement', catalogue: 'catalogue', assortiment: 'assortiment',
+      budgetparam: 'budget-parametres', plan: 'plan-developpement', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
       planogramme: 'planogramme', produits: 'scoring', seuil: 'sous-seuil', analyse: 'analyse',
       usage: 'usage-catalogue', anaprod: 'analyse-produits', prixvolume: 'prix-volume',
       manque: 'manque-a-gagner',
@@ -953,6 +954,7 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue produit', 'Les références du réseau avec leur prix, leur coût matière et leurs DEUX marges : brute, puis nette après commission de marque — celle que pilote la centrale d\u2019achat. Filtrez, puis ouvrez une référence pour compléter sa fiche de production.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie.'],
       mktCalendrier: ['Calendrier marketing', 'Les campagnes posées sur l\u2019année : qui occupe quel mois, à quel statut. Repris du module marketing — les données vivent dans les mêmes tables.'],
       mktCampagnes: ['Campagnes', 'Les campagnes du réseau : type, période, budget, statut. Créées et corrigées ici — le module marketing autonome disparaît.'],
       demarchage: ['Développement commercial', 'La liste de démarchage du magasin : les lieux qui rassemblent du monde autour de lui — entreprises, écoles, santé, administrations, formation, funéraire, sport, hôtels, commerces en zoning — relevés dans OpenStreetMap. On coche, on date la visite, on note le retour ; une annotation part au CRM marketing.'],
@@ -1000,8 +1002,8 @@ class App {
         [['analysemag', 'Leviers'], ['ventes', 'Équipe & ventes'], ['croisements', 'Panier · croisements'], ['reputation', 'Réputation']]],
       budget: ['Budget', 'Le budget du réseau : ce qui est tenu mois par mois, ce qui s’encode, et les règles qui le calculent.',
         [['budget', 'Suivi'], ['encodage', 'Encodage'], ['budgetparam', 'Paramètres']]],
-      catalogue: ['Catalogue', 'Une seule liste, trois lectures : la fiche et ses deux marges, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
-        [['catalogue', 'Fiches'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
+      catalogue: ['Catalogue', 'Une seule liste, quatre lectures : la fiche et ses deux marges, la structure de la gamme — ce qui se vend toute l’année, par saison, et ce qui sort —, ce qui est obligatoire en boutique, et où ça se place au comptoir.',
+        [['catalogue', 'Fiches'], ['structure', 'Structure de gamme'], ['assortiment', 'Assortiment obligatoire'], ['planogramme', 'Comptoir']]],
       produits: ['Gamme · scoring', 'Volume, marge nette, taux de perte et présence au comptoir : un score par référence pour arbitrer la gamme. Les boutons Garder / Modifier / Effacer filtrent la liste ; « Sous seuil » sort la liste à arbitrer d’un coup.',
         [['produits', 'Scoring'], ['seuil', 'Sous seuil']]],
       anaprod: ['Où ça se vend', 'Chaque référence face à chaque magasin. Par référence : la jauge de chaque magasin face à la moyenne réseau. Par magasin : ce qu’il vend du catalogue et ce qui lui manque. En euros : ce que chaque absence lui coûte. Prix × volume : le prix que chaque magasin encaisse, face à ce qu’il vend.',
@@ -1384,7 +1386,7 @@ class App {
       // par magasin, en euros), et comment il évolue. Les anciens écrans
       // restent à leur adresse : l'entrée qui les couvre s'allume pour eux.
       ['Produits', [
-        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'planogramme']],
+        ['catalogue', 'Catalogue', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['structure', 'assortiment', 'planogramme']],
         ['produits', 'Gamme · scoring', (this._pdDcs || {}).effacer || 0, ['seuil']],
         ['anaprod', 'Où ça se vend', 0, ['usage', 'manque', 'prixvolume']],
         ['analyse', 'Dans le temps', 0]]],
@@ -1462,9 +1464,9 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO'].forEach(k => common[k] = false);
+    ['isPerf', 'isBudget', 'isEncodage', 'isMagasins', 'isHeatmap', 'isObjectifs', 'isMarge', 'isProjets', 'isReporting', 'isJournal', 'isParams', 'isTaches', 'isProduits', 'isScouting', 'isSuivi', 'isControle', 'isScoring', 'isExploit', 'isCat', 'isAsso', 'isPlano', 'isProd', 'isAnalyse', 'isCentrale', 'isDiag', 'isSeuil', 'isFonds', 'isMktCal', 'isMktCamp', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isBxc', 'isMktObj', 'isCreux', 'isScoringTri', 'isMesure', 'isUsage', 'isUsageC', 'isManque', 'isAnm', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isPlan', 'isDemarchage', 'isNewsletter', 'isNewsletterShop', 'isProspection', 'isProspectionMobile', 'isTablette', 'isPosts', 'isBrandGuard', 'isInvendus', 'isGP', 'isGC', 'isFF', 'isRO', 'isStruct'].forEach(k => common[k] = false);
     const key = { posts: 'isPosts', brandGuard: 'isBrandGuard', offres: 'isOffres', invendus: 'isInvendus', gestionConsultant: 'isGC', ficheFranchise: 'isFF', remarquesOperateurs: 'isRO', productionPlan: 'isGP', productionSuivi: 'isGP', productionParams: 'isGP', productionCloture: 'isGP', productionFours: 'isGP', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', taches: 'isTaches', magasins: 'isMagasins', heatmap: 'isHeatmap', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', projets: 'isProjets', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scouting: 'isScouting', scoring: 'isScoring', exploitation: 'isExploit', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', production: 'isProd', fonds: 'isFonds',
       mktCalendrier: 'isMktCal', mktCampagnes: 'isMktCamp', mktTypes: 'isMktTypes', bxcampagnes: 'isBxc', mktObjectifs: 'isMktObj', creux: 'isCreux', scoringTri: 'isScoringTri', mesure: 'isMesure', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', analysemag: 'isAnm', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', plan: 'isPlan', demarchage: 'isDemarchage', newsletter: 'isNewsletter', newsletterShop: 'isNewsletterShop', prospection: 'isProspection', prospectionMobile: 'isProspectionMobile', tablette: 'isTablette' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
@@ -1817,6 +1819,7 @@ class App {
     // --- référentiel produit (partie franchiseur)
     if (common.isCat || common.isAsso) this.valsReferentiel(common);
     if (common.isAsso) this.valsAssortiment(common);
+    if (common.isStruct) valsStructure(this, common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
     // n'aurait aucun emplacement à proposer.

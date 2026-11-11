@@ -19,8 +19,9 @@ Ce que le script fait des données, et rien d'autre :
     avec de nouveaux identifiants : sans cette fusion, l'ancienne paraît arrêtée et la nouvelle
     paraît lancée en octobre ;
   - les doublons : deux références ACTIVES du même groupe au même nom sont signalées, pas fusionnées.
-Les règles de la structure (80 %, 6, 4, 5 %) ne sont PAS ici : elles vivent dans structure.js,
-pour qu'on puisse les régler dans la maquette.
+Les règles de la structure (80 %, 6, 4, 3 %) ne sont PAS ici : elles vivent dans le moteur du cockpit,
+public/assets/js/structure-regles.js. Le cockpit assemble les mêmes données côté serveur
+(src/structure_gamme.php, GET /produits/structure) ; ce script sert la maquette hors ligne.
 """
 import difflib, json, os, re, sys, unicodedata, urllib.request
 from datetime import date

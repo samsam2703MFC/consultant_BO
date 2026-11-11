@@ -116,7 +116,8 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `/referentiels/project-templates`, `/stores`, `/stores/perf`,
 `/stores/budgets`, `/targets`, `/consultants`, `/fournisseurs`, `/projects`,
 `/projects/crm`, `/people`, `/reporting`, `/journal`, `/products/scoring`,
-`/pwa/reports`, `/pwa/tasks/nc`, `/referentiels/facebook-regles`, `/facebook/posts`.
+`/pwa/reports`, `/pwa/tasks/nc`, `/referentiels/facebook-regles`, `/facebook/posts`,
+`/produits/structure`.
 
 Écritures : `POST /projects`, `PATCH /projects/{id}`,
 `POST /projects/{id}/tasks`, `PATCH /projects/{id}/tasks/{taskId}`,
@@ -125,10 +126,43 @@ Base : `/api/cockpit`. Lectures (GET) : `/meta`, `/referentiels/leviers`,
 `POST /reporting/reports/{id}/send`, `PATCH /reporting/alerts/{id}`,
 `PUT /parametres/{key}`, `POST /journal`, `POST /facebook/posts`,
 `POST /facebook/posts/{id}/controle`, `PATCH /facebook/posts/{id}`,
-`PATCH /facebook/posts/{id}/ecarts/{ecartId}`.
+`PATCH /facebook/posts/{id}/ecarts/{ecartId}`, `PUT /produits/structure`,
+`POST /produits/structure/desactiver`, `POST /produits/structure/appliquer`.
 
 Chaque écriture produit une ligne dans `ceo_journal_entry` (écran Journal).
 Détail complet, exemples JSON et DDL : `docs/contrat-api.md`.
+
+## Structure de gamme
+
+**Catalogue › Structure de gamme** (décidée le 11/11/2026) range chaque référence, par catégorie du
+panel, sur les ventes réseau de douze mois :
+
+- **standard** : vendue toute l'année, parmi celles qui font **80 %** du CA (ou de la marge nette)
+  de sa catégorie, **6** au plus ;
+- **saisons** (hiver, printemps, été, automne) et **périodes** (Noël, Nouvel An, Pâques) : la même
+  règle sur les mois de la saison, **4** au plus ;
+- **à désactiver** : moins de **3 %** du CA de sa catégorie, sur les mois où elle se vend ;
+  une nouveauté de moins de six mois est observée, jamais retirée.
+
+Les quatre nombres et la base (CA ou marge) sont des **variables du réseau** (`ceo_app_setting`,
+clé `structureGamme`) : la ligne de règles les modifie, **Rafraîchir** relit les ventes et recalcule,
+**Enregistrer ces règles** les garde pour tous. Une décision par référence (garder en standard,
+garder hors standard) passe par-dessus la proposition. Le calcul vit dans
+`public/assets/js/structure-regles.js`, que la maquette `docs/maquettes/structure-gamme` utilise aussi ;
+`src/structure_gamme.php` assemble les données (ventes 12 mois, catalogue, coûts, changements
+d'identifiant — les tartes Ø 28 cm d'octobre 2026 — et doublons).
+
+Deux gestes, confirmés et journalisés référence par référence :
+
+- **Désactiver** : le retrait du catalogue refuse d'ordinaire toute référence vendue sur douze mois ;
+  pour ce motif seul, il l'accepte, après que le serveur a relu les ventes et recalculé la part de
+  chaque référence (refus au seuil ou au-dessus, des nouveautés, de ce qui n'est pas un produit). Une
+  obligatoire retirée sort de l'assortiment. « Remettre au catalogue » défait le geste.
+- **Appliquer à l'assortiment** : le standard devient obligatoire toute l'année, une référence de
+  saison ou de période l'est pendant la gamme du panel qui la porte (Hivernale, Printanière, Estivale,
+  Automnale, Noël & Nouvel An, Épiphanie, Pascale). Même écriture que `PUT /production/obligatoire/{ref}`.
+
+Tests : `php bin/tests.php` (section « Structure de gamme »).
 
 ## Contrôle des posts Facebook
 

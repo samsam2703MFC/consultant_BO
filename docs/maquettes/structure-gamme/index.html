@@ -14,7 +14,8 @@
      &max=6    plafond du standard par catégorie             &sai=4   plafond par saison ou période
      &seuil=3  sous ce % de sa catégorie, une référence est à désactiver
      &cat=…    la catégorie ouverte (écran 2) ou dépliée (écran 4)
-     Données réelles (donnees.js, lues en GET par extraire.py) ; règles dans structure.js. -->
+     Données réelles (donnees.js, lues en GET par extraire.py) ; règles : le moteur du cockpit,
+     public/assets/js/structure-regles.js (l'écran implémenté s'en sert aussi). -->
 <link rel="stylesheet" href="../../../public/assets/ds/global.css">
 <link rel="stylesheet" href="../../../public/assets/css/app.css">
 <style>
@@ -123,10 +124,10 @@
 </div>
 <script src="rail.js"></script>
 <script src="donnees.js"></script>
-<script src="structure.js"></script>
-<script>
+<script type="module">
+import * as Structure from '../../../public/assets/js/structure-regles.js';
 (function () {
-  const D = window.SG, S = window.Structure;
+  const D = window.SG, S = Structure;
 
   /* Les variables de la structure. Une valeur par défaut, une borne, et l'adresse pour s'en souvenir :
      une capture se refait à l'identique avec ?seuil=3&max=6… — la ligne de règles les modifie,

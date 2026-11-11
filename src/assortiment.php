@@ -394,31 +394,46 @@ function ep_prod_saisons(): array
  */
 function wr_prod_obligatoire(string $ref): array
 {
-    aoEnsure();
     $b = body();
+    $r = aoEcrireObligatoire($ref, !empty($b['must']), array_key_exists('saison', $b) ? $b['saison'] : 'garder',
+        $b['qmin'] ?? null, (string) ($b['nom'] ?? ''));
+    if (isset($r['code'])) { http_response_code($r['code']); unset($r['code']); }
+    return $r;
+}
+
+/**
+ * L'écriture de l'obligatoire — une seule, pour la fiche, l'assortiment et la structure de gamme.
+ *
+ * @param mixed  $saison 'garder' : la saison en place ; null ou '' : toute l'année ; un id de gamme du panel
+ * @param mixed  $qmin   null : le minimum en place ; sinon un nombre de 0 à 9 999
+ * @param string $motif  ajouté à la ligne de journal (« — structure de gamme »)
+ * @return array la réponse de la route ; « code » porte le statut HTTP d'un refus
+ */
+function aoEcrireObligatoire(string $ref, bool $must, mixed $saison, mixed $qmin, string $nomRepli = '', string $motif = ''): array
+{
+    aoEnsure();
     $ref = trim($ref);
-    if ($ref === '' || !preg_match('/^[\w-]{1,24}$/', $ref)) { http_response_code(400); return ['error' => 'référence requise']; }
-    $must = !empty($b['must']);
+    if ($ref === '' || !preg_match('/^[\w-]{1,24}$/', $ref)) { return ['error' => 'référence requise', 'code' => 400]; }
     $ancien = null;
     try { $ancien = Db::row('SELECT qmin, saison_id FROM ceo_prod_product WHERE ref = ?', [$ref]); } catch (Throwable $e) { /* table absente */ }
-    $saison = null;
-    if ($must && !array_key_exists('saison', $b)) {
+    $sid = null;
+    if ($must && $saison === 'garder') {
         // Sans clé « saison » (une quantité seule), la saison en place est gardée.
-        $saison = $ancien !== null && $ancien['saison_id'] !== null ? (int) $ancien['saison_id'] : null;
-    } elseif ($must && $b['saison'] !== null && $b['saison'] !== '') {
-        if (!is_numeric($b['saison'])) { http_response_code(422); return ['error' => 'saison inconnue']; }
-        $saison = (int) $b['saison'];
-        $g = aoGammesBrutes()[$saison] ?? null;
-        if ($g === null || !$g['active']) { http_response_code(422); return ['error' => 'saison inconnue du panel']; }
+        $sid = $ancien !== null && $ancien['saison_id'] !== null ? (int) $ancien['saison_id'] : null;
+    } elseif ($must && $saison !== null && $saison !== '') {
+        if (!is_numeric($saison)) { return ['error' => 'saison inconnue', 'code' => 422]; }
+        $sid = (int) $saison;
+        $g = aoGammesBrutes()[$sid] ?? null;
+        if ($g === null || !$g['active']) { return ['error' => 'saison inconnue du panel', 'code' => 422]; }
         $fen = aoFenetre($g, date('Y-m-d'));
-        if ($fen !== null && !empty($fen['passee'])) { http_response_code(422); return ['error' => 'cette gamme est terminée et ne rouvrira pas']; }
-        if ($g['permanente']) { $saison = null; }   // « Standard » = toute l'année
+        if ($fen !== null && !empty($fen['passee'])) { return ['error' => 'cette gamme est terminée et ne rouvrira pas', 'code' => 422]; }
+        if ($g['permanente']) { $sid = null; }   // « Standard » = toute l'année
     }
-    $qmin = 0;
+    $q = 0;
     if ($must) {
-        $q = $b['qmin'] ?? ($ancien['qmin'] ?? 0);
-        if (!is_numeric($q) || (float) $q < 0 || (float) $q > 9999) { http_response_code(422); return ['error' => 'quantité minimale : un nombre entre 0 et 9 999']; }
-        $qmin = (int) round((float) $q);
+        $q = $qmin ?? ($ancien['qmin'] ?? 0);
+        if (!is_numeric($q) || (float) $q < 0 || (float) $q > 9999) { return ['error' => 'quantité minimale : un nombre entre 0 et 9 999', 'code' => 422]; }
+        $q = (int) round((float) $q);
     }
 
     // Intitulé et catégorie depuis le catalogue, comme la fiche : la ligne doit se relire sans la base partagée.
@@ -427,18 +442,18 @@ function wr_prod_obligatoire(string $ref): array
         $p = Db::rows('SELECT p.name, c.name AS cat FROM product p LEFT JOIN product_category c ON c.id = p.id_category WHERE p.id = ?', [(int) $ref]);
         if ($p) { $nom = trim((string) $p[0]['name']); $cat = (string) ($p[0]['cat'] ?? ''); }
     } catch (Throwable $e) { /* catalogue indisponible */ }
-    if ($nom === '') { $nom = trim((string) ($b['nom'] ?? $ref)); }
+    if ($nom === '') { $nom = trim($nomRepli !== '' ? $nomRepli : $ref); }
 
     Db::exec('INSERT INTO ceo_prod_product (ref, nom, categorie, pwa_id, must, qmin, saison_id, actif) VALUES (?,?,?,?,?,?,?,1)
               ON DUPLICATE KEY UPDATE must = VALUES(must), qmin = VALUES(qmin), saison_id = VALUES(saison_id)',
-        [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null, $must ? 1 : 0, $qmin, $saison]);
+        [$ref, mb_substr($nom, 0, 160), mb_substr($cat, 0, 60), ctype_digit($ref) ? (int) $ref : null, $must ? 1 : 0, $q, $sid]);
 
     $gammes = aoGammesBrutes();
-    $g = $saison !== null ? ($gammes[$saison] ?? null) : null;
+    $g = $sid !== null ? ($gammes[$sid] ?? null) : null;
     $quand = !$must ? 'retirée de l’assortiment obligatoire'
-        : ($g !== null ? 'obligatoire pendant ' . $g['nom'] : 'obligatoire toute l’année') . ($qmin > 0 ? ' — minimum ' . $qmin : '');
-    journalAdd('CEO', 'Assortiment obligatoire', $nom, $quand);
+        : ($g !== null ? 'obligatoire pendant ' . $g['nom'] : 'obligatoire toute l’année') . ($q > 0 ? ' — minimum ' . $q : '');
+    journalAdd('CEO', 'Assortiment obligatoire', $nom, $quand . $motif);
     $jour = date('Y-m-d');
-    return ['ok' => true, 'ref' => $ref, 'must' => $must, 'qmin' => $qmin, 'saison' => $saison,
-        'exigible' => aoExigible($must, $saison, $jour, $gammes), 'saisonFenetre' => $g !== null ? aoFenetre($g, $jour) : null];
+    return ['ok' => true, 'ref' => $ref, 'must' => $must, 'qmin' => $q, 'saison' => $sid,
+        'exigible' => aoExigible($must, $sid, $jour, $gammes), 'saisonFenetre' => $g !== null ? aoFenetre($g, $jour) : null];
 }
