@@ -426,7 +426,7 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-bell-more { padding: 10px 14px; border-top: 1px solid var(--at-line); }
 /* [268] Pilne powiadomienia pod paskiem : jedna wąska linia, bez czerwonych ramek ; lista po rozwinięciu. */
 .at-urgent-strip { margin: 0 0 6px; font-size: 12.5px; line-height: 1.35; color: var(--at-muted); }
-.at-urgent-dot { flex: 0 0 7px; width: 7px; height: 7px; border-radius: 50%; background: var(--at-danger); }
+.at-urgent-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 2px; background: var(--at-danger); }
 .at-urgent-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 4px 2px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .at-urgent-toggle:focus-visible, .at-urgent-read:focus-visible, .at-urgent-go:focus-visible { outline: 2px solid var(--at-primary); outline-offset: 2px; border-radius: 4px; }
 .at-urgent-count { flex: none; font-weight: 600; color: var(--at-danger); }
