@@ -1391,3 +1391,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-11T21:18:44Z [269] panier Czas pracy + [272] tablette bureau épurée
 2026-11-11T21:26:41Z [270] Poczta Kierownik produkcji (réglages et arrêt par l'administrateur)
 2026-11-11T21:36:08Z [273] tâches Czas pracy du Kierownik (jour + mois)
+2026-11-11T21:58:49Z [271] rail HR
