@@ -23,6 +23,26 @@ function statut(g, p){
   return `<span class="sg-st sg-st--${cls}">${t}</span>`;
 }
 
+/** La décision d'une référence : suivre la proposition (désactiver, le plus souvent), la garder en standard ou
+ *  hors standard, ou la garder dans une saison ou une période choisie. La même liste partout. */
+function choixDecision(g, p, x){
+  const { esc } = x;
+  if (!p.actif) { return '<span class="muted" style="font-size:11.5px">inactive</span>'; }
+  const o = (v, l) => `<option value="${v}"${(p.decide || '') === v ? ' selected' : ''}>${esc(l)}</option>`;
+  const prop = p.propose === 'desactiver' ? 'Désactiver (proposé)' : 'Proposition : ' + g.mot(p, p.propose, true).toLowerCase();
+  return `<select class="sg-choix${p.decide ? ' chg' : ''}" ${x.C(g.decider(p))} aria-label="Décision pour ${esc(p.nom)}">${o('', prop)}
+    <optgroup label="Garder">${o('standard', 'Garder en standard')}${o('garder', 'Garder hors standard')}</optgroup>
+    <optgroup label="Garder en saison">${g.R.saisons.map(s => o('saison:' + s.id, s.nom + ' (' + s.lib + ')')).join('')}</optgroup>
+    <optgroup label="Garder pour une période">${g.R.periodes.map(e => o('periode:' + e.id, e.nom)).join('')}</optgroup></select>`;
+}
+
+/** Les pièces vendues par saison, la plus forte en évidence. */
+function saisonsQte(g, p){
+  if (!p.parSaison) { return g.R.saisons.map(() => '<td class="num muted">—</td>').join(''); }
+  const max = Math.max(...Object.values(p.parSaison));
+  return g.R.saisons.map(s => { const v = p.parSaison[s.id]; return `<td class="num"><span class="${v && v === max ? 'sg-fort-sai' : v ? '' : 'muted'}">${v ? nb(v) : '0'}</span></td>`; }).join('');
+}
+
 /** Une part sous le seuil ne s'arrondit jamais au seuil : 2,98 % s'écrit 2,9 %, pas 3,0 %. */
 const pt = (g, x) => x == null ? null : (x < g.regles.seuil / 100 ? Math.floor(x * 1000) / 1000 : x);
 
@@ -131,7 +151,6 @@ function vue2(g, x){
     if (!p.actif) { notes.push('inactive au catalogue'); }
     if (p.nature === 'saison') { notes.push('saison : ' + p.saisons.map(s => g.SA[s].nom.toLowerCase()).join(' et ')); }
     if (p.mgEst) { notes.push('marge estimée (coût absent)'); }
-    const opt = (v, l) => `<option value="${v}"${(p.decide || '') === v ? ' selected' : ''}>${l}</option>`;
     return `<tr>
       <td class="num muted">${p.rang && p.nature === 'permanent' ? p.rang : ''}</td>
       <td class="sg-nom">${esc(p.nom)}${notes.length ? '<span class="sub">' + notes.join(' · ') + '</span>' : ''}</td>
@@ -140,9 +159,9 @@ function vue2(g, x){
       <td class="num">${p.part != null ? pc(pt(g, p.part), 1) : p.recente ? '<span class="muted">—</span>' : '<span class="muted">≤ ' + pc(Math.min(p.partMax, 1), 1) + '</span>'}</td>
       <td class="num muted">${p.nature === 'permanent' ? pc(p.cum) : ''}</td>
       <td class="num">${p.mg != null ? eur(p.mg) : '<span class="muted">—</span>'}</td>
-      <td>${p.decide ? `<span class="sg-mini">proposé : ${esc(g.mot(p, p.propose))}</span><br>` : ''}${statut(g, p)}</td>
+      <td>${p.decide ? `<span class="sg-mini">proposé : ${esc(g.mot(p, p.propose, true))}</span><br>` : ''}${statut(g, p)}</td>
       <td>${a && a.statut !== p.statut ? `<span class="sg-mini warn">${esc(g.mot(a, a.statut))}</span>` : '<span class="muted" style="font-size:11.5px">idem</span>'}</td>
-      <td>${p.actif ? `<select class="sg-choix${p.decide ? ' chg' : ''}" ${x.C(g.decider(p))}>${opt('', 'Suivre la proposition')}${opt('standard', 'Garder en standard')}${opt('garder', 'Garder hors standard')}</select>` : '<span class="muted" style="font-size:11.5px">—</span>'}</td></tr>`;
+      <td>${choixDecision(g, p, x)}</td></tr>`;
   }).join('');
   return `
     <div class="sg-barre"><button class="linklike" style="padding:0" ${x.A(g.fermerCat)}>‹ Toutes les catégories</button></div>
@@ -211,48 +230,56 @@ function vue3(g, x){
     <p class="sg-note">Les ventes sont lues par mois, sur un an : Noël et Nouvel An se séparent par le mois du pic (décembre ou janvier) — les galettes tombent au Nouvel An, les bûches et cougnous à Noël, Saint-Nicolas avec Noël. Une référence de saison sous ${g.vx(g.regles.seuil)} de sa catégorie pendant la saison n’est pas retenue.</p>`;
 }
 
-/* --- 4. À désactiver ------------------------------------------------------------------------ */
+/* --- 4. À désactiver ------------------------------------------------------------------------
+ * Les références proposées sous le seuil, catégorie par catégorie. Chaque ligne dit ce qu'elle vend dans
+ * chaque saison, et se décide à la liste : désactiver (la proposition), ou la garder — en standard, hors
+ * standard, dans une saison ou une période. Une référence gardée reste dans la liste, sa décision affichée. */
 function vue4(g, x){
   const { esc } = x;
-  const R = g.R, T = g.T, r = g.regles, off = g.aDesactiver;
-  const tous = R.produits.filter(p => p.actif && p.statut === 'desactiver');
+  const R = g.R, T = g.T, off = g.aDesactiver;
+  const proposees = R.produits.filter(p => p.actif && p.propose === 'desactiver');
+  const tout = g.deplie === '*';
   let lignes = '';
   R.groupes.forEach(gr => {
-    const cs = gr.cats.filter(C => C.desactiver.some(p => p.actif));
+    const cs = gr.cats.filter(C => C.refs.some(p => p.actif && p.propose === 'desactiver'));
     if (!cs.length) { return; }
-    lignes += `<tr class="sg-grp"><td colspan="6">${esc(gr.grp)}</td></tr>`;
+    lignes += `<tr class="sg-grp"><td colspan="9">${esc(gr.grp)}</td></tr>`;
     cs.forEach(C => {
-      const l = C.desactiver.filter(p => p.actif), coch = l.filter(p => !g.exclus[p.id]), ca = coch.reduce((s, p) => s + (p.caPer || 0), 0);
-      const ouv = g.deplie === C.cat;
-      lignes += `<tr class="${ouv ? 'sg-sel' : ''}">
-        <td><button class="sg-ck${coch.length === l.length ? ' on' : coch.length ? ' mi' : ''}" ${x.A(g.basculerCat(C))} aria-label="Tout cocher">${coch.length ? '✓' : ''}</button></td>
-        <td class="sg-nom row-link" ${x.A(g.deplier(C.cat))}>${esc(C.cat)}<span class="sub">${ouv ? '' : esc(l.slice(0, 5).map(p => p.nom).join(', ')) + (l.length > 5 ? '…' : '')}</span></td>
-        <td class="num">${coch.length}${coch.length !== l.length ? ' / ' + l.length : ''}<span class="sub">sur ${C.actives} actives</span></td>
+      const l = C.refs.filter(p => p.actif && p.propose === 'desactiver').sort((a, b) => (b.caPer || 0) - (a.caPer || 0));
+      const sortent = l.filter(p => p.statut === 'desactiver'), gardees = l.length - sortent.length;
+      const ca = sortent.reduce((s, p) => s + (p.caPer || 0), 0);
+      const ouv = tout || g.deplie === C.cat;
+      lignes += `<tr class="row-link${ouv ? ' sg-sel' : ''}" ${x.A(g.deplier(C.cat))}>
+        <td class="sg-nom">${esc(C.cat)}<span class="sub">${ouv ? pl(C.actives, 'référence active', 'références actives') : esc(l.slice(0, 4).map(p => p.nom).join(', ')) + (l.length > 4 ? '…' : '')}</span></td>
+        <td></td><td colspan="4"></td>
         <td class="num">${eur(ca)}<span class="sub">${C.ca ? pc(ca / C.ca) + ' de la catégorie' : ''}</span></td>
-        <td class="num">${coch.filter(p => p.u).length}</td>
-        <td class="sg-chev row-link" ${x.A(g.deplier(C.cat))}>${ouv ? '⌄' : '›'}</td></tr>`;
+        <td>${sortent.length} à désactiver${gardees ? `<span class="sub">${gardees} gardée${gardees > 1 ? 's' : ''}</span>` : ''}</td>
+        <td class="sg-chev">${ouv ? '⌄' : '›'}</td></tr>`;
       if (ouv) {
-        lignes += l.map(p => `<tr><td style="padding-left:24px"><button class="sg-ck${g.exclus[p.id] ? '' : ' on'}" ${x.A(g.basculer(p.id))} aria-label="Cocher">${g.exclus[p.id] ? '' : '✓'}</button></td>
+        lignes += l.map(p => `<tr class="${p.statut === 'desactiver' ? '' : 'sg-gardee'}">
           <td class="sg-nom" style="padding-left:24px">${esc(p.nom)}<span class="sub">${p.u ? vie(g, p) : 'moins de ' + g.plancher + ' pièces en 12 mois'}${p.must ? ' · obligatoire aujourd’hui' : ''}</span></td>
           <td>${spark(g, p, esc)}</td>
+          ${saisonsQte(g, p)}
           <td class="num">${p.u ? eur(p.caPer) : '<span class="muted">≤ ' + eur(g.plancher * (p.prix || 0)) + '</span>'}<span class="sub">${p.part != null ? pc(pt(g, p.part), 1) : '≤ ' + pc(p.partMax, 1)} de la catégorie</span></td>
-          <td class="num">${p.u ? nb(p.u.reduce((s, v) => s + v, 0)) + '<span class="sub">pièces</span>' : '—'}</td><td></td></tr>`).join('');
+          <td colspan="2">${choixDecision(g, p, x)}</td></tr>`).join('');
       }
     });
   });
+  const nGardees = proposees.length - off.length;
   return `
     <div class="kpi-row sg-kpis">
-      ${kpi('À désactiver', nb(off.length), (off.length !== tous.length ? 'cochées, sur ' + tous.length + ' proposées' : 'sur ' + T.structure + ' références structurées'))}
+      ${kpi('À désactiver', nb(off.length), nGardees ? 'sur ' + proposees.length + ' proposées · ' + nGardees + ' gardée' + (nGardees > 1 ? 's' : '') : 'sur ' + T.structure + ' références structurées')}
       ${kpi('Leur chiffre d’affaires', keur(g.offCa), pc(g.offCa / T.caStructure) + ' du CA des catégories, sur leurs mois de vente')}
       ${kpi('Encore vendues', nb(g.offVendues), 'au-dessus de ' + g.plancher + ' pièces en 12 mois')}
       ${kpi('Sous le plancher', nb(off.length - g.offVendues), 'moins de ' + g.plancher + ' pièces en 12 mois')}
       ${kpi('Obligatoires aujourd’hui', nb(g.offMusts), 'sortent aussi de l’assortiment')}
     </div>
-    <div class="sg-encart"><span><span class="sg-fort">Le retrait du catalogue a un garde-fou.</span> « Retirer du catalogue » refuse toute référence vendue sur les douze derniers mois. Ici, pour ce seul motif — moins de ${g.vx(r.seuil)} de sa catégorie —, il l’accepte : le serveur relit les ventes, recalcule la part de chaque référence et refuse celles qui pèsent le seuil ou plus, les nouveautés et ce qui n’est pas un produit. Une ligne de journal par référence ; « Remettre au catalogue » défait le geste.</span></div>
-    <section class="card table-card sg-table"><div class="table-scroll"><table>
-      <thead><tr><th style="width:34px"></th><th>Catégorie · référence</th><th class="num">Références</th><th class="num">CA 12 mois</th><th class="num">Encore vendues</th><th></th></tr></thead>
-      <tbody>${lignes || '<tr><td colspan="6" class="muted">Aucune référence sous le seuil.</td></tr>'}</tbody></table></div></section>
-    <p class="sg-note">Une référence de saison est comparée à sa catégorie pendant sa saison, pas sur l’année : une croûte aux fraises n’est pas jugée en décembre. Les nouveautés de moins de six mois ne sont jamais dans cette liste. Décocher une référence la garde au catalogue ; pour la sortir aussi de la proposition, « Garder hors standard » dans sa catégorie.</p>`;
+    <div class="sg-encart"><span><span class="sg-fort">Le retrait du catalogue a un garde-fou.</span> « Retirer du catalogue » refuse toute référence vendue sur les douze derniers mois. Ici, pour ce seul motif — moins de ${g.vx(g.regles.seuil)} de sa catégorie —, il l’accepte : le serveur relit les ventes, recalcule la part de chaque référence et refuse celles qui pèsent le seuil ou plus, les nouveautés et ce qui n’est pas un produit. Une ligne de journal par référence ; « Remettre au catalogue » défait le geste.</span></div>
+    <div class="sg-barre"><span class="sg-note">Pour chaque référence : ce qu’elle vend par saison, et sa décision. « Désactiver » suit la proposition ; « Garder » la sort de la liste et s’enregistre pour le réseau.</span><span class="sg-sp"></span><button class="linklike" ${x.A(g.deplierTout)}>${tout ? 'Tout replier' : 'Tout déplier'}</button></div>
+    <section class="card table-card sg-table sg-t4"><div class="table-scroll"><table>
+      <thead><tr><th>Catégorie · référence</th><th>12 mois</th>${R.saisons.map(s => `<th class="num" title="${esc(s.lib)}">${esc(s.nom)}</th>`).join('')}<th class="num">CA 12 mois</th><th colspan="2">Décision</th></tr></thead>
+      <tbody>${lignes || '<tr><td colspan="9" class="muted">Aucune référence sous le seuil.</td></tr>'}</tbody></table></div></section>
+    <p class="sg-note">Pièces vendues par saison, tous magasins, sur les douze mois lus (${esc(g.mois[0] || '')} – ${esc(g.mois[g.mois.length - 1] || '')}, le dernier en cours) : hiver = décembre à février, printemps = mars à mai, été = juin à août, automne = septembre à novembre. Une référence de saison est comparée à sa catégorie pendant sa saison, pas sur l’année ; les nouveautés de moins de six mois ne sont jamais dans cette liste.</p>`;
 }
 
 /** Ce que la courbe dit en une ligne. */
