@@ -264,7 +264,7 @@
       if (s.err && !s.lieux) return `<div class="pr-err">Prospection : ${esc(s.err)}</div>`;
       if (!s.reseau) return `<div class="pr-attente">Lecture du magasin…</div>`;
       if (!this.shop()) return `<div class="pr-alerte">Choisissez un magasin.</div>`;
-      if (!m) return `<div class="pr-alerte">Ce magasin n'a pas de position : pointez-le sur la carte dans Scouting (Magasins du réseau).</div>`;
+      if (!m) return `<div class="pr-alerte">Ce magasin n'a pas de position : pointez-le sur la carte de l'Étude de faisabilité, dans le CRM (Développement → Étude de faisabilité, Magasins du réseau).</div>`;
       if (!s.lieux || s.lieux.shop !== this.shop()) return `<div class="pr-attente">Relevé des lieux autour du magasin dans OpenStreetMap — une minute la première fois…</div>`;
       return '';
     }
