@@ -396,6 +396,10 @@ function modaleG(c) {
   </div>`;
 }
 
+/* ---------- Ce que réutilise onglet-produits-simple/generer.js ---------- */
+module.exports = { P, R, W, N, IE, IC, AV, AP, s6, sem, dCourt, dLong, nf, fN, fE, fP, fS, fSE, fSP, esc, somme, ARTS, CATS, GRPS, TOT, cat, grp, art, entete, motifs, seg, clV, NOUV, RATTACHES };
+
+if (require.main === module) {
 /* ---------- Écriture ---------- */
 const ecrire = (f, s) => fs.writeFileSync(path.join(D, f), s);
 const T = 'Onglet Produits, le développement — maquette ';
@@ -420,3 +424,4 @@ console.log('écrit : e, f, g (+ modales) et planche · magasin', fSP(TOT.dVp, 1
   '· rattachés', RATTACHES.length, '· ouvert E', E_OUV_P);
 console.log('montent', MONTENT.slice(0, 9).map(a => a.nom + ' ' + fSE(a.dV) + ' ' + fSP(a.dVp) + ' rés ' + fSP(a.dRp)).join(' | '));
 console.log('baissent', BAISSENT.slice(0, 12).map(a => a.nom + ' ' + fSE(a.dV) + ' ' + fSP(a.dVp) + ' rés ' + fSP(a.dRp)).join(' | '));
+}

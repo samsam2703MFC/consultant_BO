@@ -1,6 +1,6 @@
 # L'onglet Produits, 2e version : est-ce que la catégorie, le produit se développe ?
 
-**Statut : à choisir.** Remplace l'angle des maquettes A à D (`../onglet-produits/`).
+**Statut : remplacée par la version simple** (`../onglet-produits-simple/`, maquettes H, I, J). Le code reste ; la version simple en réutilise les calculs.
 
 Précision du 11/11/2026 sur la demande : l'idée de l'onglet est de savoir **s'il y a un
 développement** dans une catégorie, dans un produit. L'onglet répond donc d'abord par un verdict :
