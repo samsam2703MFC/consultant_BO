@@ -363,6 +363,8 @@ echo "Structure de gamme\n";
 verifie('le nom se normalise : accents, pluriel, ordre des mots', sgNorme('Frangipane & Poires') === sgNorme('Poire & Frangipane') && sgNorme('Pâté') === sgNorme('pate'));
 verifie('les règles restent dans leurs bornes', sgBorne('seuil', '2,5') === 2.5 && sgBorne('seuil', 99) === 20.0 && sgBorne('max', 0) === 1 && sgBorne('std', 'x') === 80.0);
 verifie('par défaut, désactiver sous 3 %', sgReglage()['regles']['seuil'] === 3.0);
+verifie('une décision : standard, hors standard, une saison ou une période — rien d’autre', sgDecisionValide('saison:ete') && sgDecisionValide('periode:noel') && sgDecisionValide('garder') && !sgDecisionValide('saison:noel') && !sgDecisionValide('desactiver') && !sgDecisionValide(3));
+verifie('la décision se dit en mots au journal', sgDecisionMot('saison:ete') === 'gardée en saison Été' && sgDecisionMot('periode:paques') === 'gardée pour Pâques');
 $mois = ['Déc', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov'];
 $serie = fn (array $u) => ['1' => $u];
 $ap = ['tranches' => $mois, 'bornes' => [], 'jours' => [], 'magasins' => [['nom' => 'A']], 'produits' => [
