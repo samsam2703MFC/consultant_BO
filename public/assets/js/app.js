@@ -9973,10 +9973,11 @@ class App {
    */
   evVals(){
     const S = this.state, D = this.D.rev;
-    const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'jour' ? 'jour' : 'total';
+    // Par jour ouvert par défaut (demande du 11/11/2026) : la lecture qui neutralise les fermetures.
+    const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'total' ? 'total' : 'jour';
     const out = { quoi, mode, chargement: !D, erreur: D && D.erreur ? D.erreur : '',
       quois: [['clients', 'Trafic clients'], ['ca', 'Chiffre d’affaires']].map(o => ({ nom: o[1], on: o[0] === quoi, go: () => this.setState({ evQuoi: o[0] }) })),
-      modes: [['total', 'Total'], ['jour', 'Par jour ouvert']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
+      modes: [['jour', 'Par jour ouvert'], ['total', 'Total']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
       relire: () => this.evCharge(true) };
     if (!D || D.erreur) { return out; }
     if (!D.magasins.length) { out.vide = true; return out; }
