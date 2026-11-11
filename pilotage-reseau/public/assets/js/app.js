@@ -1911,7 +1911,7 @@ class App {
     if (common.isRJour) {
       this.valsResultatOnglets(common);
       if (common.rjOnglet === 'jour') { this.rjCharge(false); this.valsResultatJour(common); }
-      else if (!App.RJ_TEMPS_LONG.includes(common.rjOnglet)) { this.rpCharge(false); this.valsResultatPeriode(common); }
+      else if (!App.RJ_TEMPS_LONG.includes(common.rjOnglet) && common.rjOnglet !== 'evolution') { this.rpCharge(false); this.valsResultatPeriode(common); }
       // Sous le tableau des magasins : le réseau, produit par produit (04/11/2026).
       common.rn = ['jour', 'semaine', 'mois'].includes(common.rjOnglet) ? this.rnVals(common.rjOnglet) : null;
       // Le sélecteur d'horizon de la trajectoire change d'onglet : 1 an, c'est l'Année.
@@ -9491,10 +9491,12 @@ class App {
     const pret = { jour: !!(D.rjour || {})[this.rjCle()],
       semaine: !!(D.rper || {})[this.rpCle('semaine')], mois: !!(D.rper || {})[this.rpCle('mois')] };
     pret.reseau = !!((D.rres || {})[this.rrCle()]);
+    pret.evolution = !!(D.rev && !D.rev.erreur);
     if (on === 'reseau') { this.rrCharge(false); common.rr = this.rrVals(); }
     // Lus au chargement (/stores/perf, budgets, cibles) — ou relus quand le chargement les a manqués.
     pret.annee = pret.horizons = pret.marge = this.perfAssure() !== 'lecture';
-    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Trafic clients']].map(o => ({
+    if (on === 'evolution') { this.evCharge(false); common.ev = this.evVals(); }
+    common.rjOnglets = [['jour', 'Jour'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['horizons', '3 et 5 ans'], ['marge', 'Marge & coûts'], ['reseau', 'Trafic clients'], ['evolution', 'Évolution magasin']].map(o => ({
       cle: o[0], nom: o[1], on: on === o[0], etat: pret[o[0]] ? 'pret' : 'lecture',
       go: () => this.setState({ rjOnglet: o[0], rpSel: null }) }));
     // Le fil de progression : une lecture = un tiers. Le chrono tourne tant
@@ -10001,6 +10003,231 @@ class App {
     return out;
   }
   rrCourt(nom){ const m = String(nom || '').match(/-\s*([^-]+)$/); return m ? m[1].trim() : String(nom || ''); }
+  /* --- Évolution magasin : chaque magasin depuis sa première vente, face au N-1 ---
+   * Une lecture pour tout le réseau (/ventes/evolution), gardée le temps de la
+   * page : les mois clos ne bougent plus, seul le mois en cours avance. */
+  evCharge(force){
+    if (this._evEnCours || (this.D.rev && !force)) { return; }
+    this._evEnCours = true;
+    readOne('/ventes/evolution').then(d => {
+      this.D.rev = (d && Array.isArray(d.magasins)) ? d : { erreur: (d && d.error) || 'La lecture de /ventes/evolution a échoué — voir Diagnostic API.' };
+    }).catch(e => { this.D.rev = { erreur: (e && e.message) || 'lecture impossible' }; })
+      .finally(() => { this._evEnCours = false; this.setState({}); });
+  }
+  /**
+   * Les valeurs de l'onglet : un graphique par magasin — le trafic clients ou
+   * le chiffre d'affaires (l'onglet choisi), en total ou par jour ouvert.
+   *
+   * Trois règles, les mêmes partout :
+   *  - le mois d'OUVERTURE (moins de 75 % des jours vendus) n'est pas sur la
+   *    courbe : un cercle vide, avec ses jours ; un N-1 qui tombe dessus n'est
+   *    pas tracé ;
+   *  - le mois EN COURS n'est pas sur la courbe en total (onze jours face à un
+   *    mois plein font une chute qui n'existe pas) : il a sa tuile, comparé aux
+   *    mêmes jours du N-1. Par jour ouvert, il se compare : il prend sa place,
+   *    en pointillé ;
+   *  - PAR JOUR OUVERT, chaque mois est divisé par ses jours de vente, le N-1
+   *    par les siens : une fermeture ne passe plus pour une chute ou une
+   *    hausse.
+   */
+  evVals(){
+    const S = this.state, D = this.D.rev;
+    const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'jour' ? 'jour' : 'total';
+    const out = { quoi, mode, chargement: !D, erreur: D && D.erreur ? D.erreur : '',
+      quois: [['clients', 'Trafic clients'], ['ca', 'Chiffre d’affaires']].map(o => ({ nom: o[1], on: o[0] === quoi, go: () => this.setState({ evQuoi: o[0] }) })),
+      modes: [['total', 'Total'], ['jour', 'Par jour ouvert']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
+      relire: () => this.evCharge(true) };
+    if (!D || D.erreur) { return out; }
+    if (!D.magasins.length) { out.vide = true; return out; }
+    const MC = ['', 'janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+    const ML = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+    const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
+    const fK = n => Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2).replace('.', ',') + ' M€' : (Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fI(n) + ' €');
+    const fE2 = n => n.toFixed(2).replace('.', ',') + ' €';
+    const pc = (a, b) => b ? 100 * (a - b) / b : null;
+    const sg = v => v == null ? '—' : (v >= 0.5 ? '+' : (v <= -0.5 ? '−' : '±')) + Math.abs(Math.round(v)) + ' %';
+    const col = v => v == null ? '#B8B2A8' : (v >= 3 ? '#3f7a52' : (v <= -3 ? '#A32014' : '#7A5207'));
+    const parJour = mode === 'jour';
+    // Le format d'une valeur de l'onglet : un total ou une moyenne par jour vendu.
+    const fmt = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : fK) : fI;
+    const fAxe = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : (n => Math.round(n / 1000) + ' k€')) : fI;
+    const unite = quoi === 'ca' ? (parJour ? 'CA par jour ouvert' : 'CA du mois') : (parJour ? 'clients par jour ouvert' : 'clients du mois (tickets)');
+    const g = x => quoi === 'ca' ? x.ca : x.clients;
+    const prep = x => {
+      const ref = x.enCours ? x.joursServis : x.joursMois;
+      const partiel = !x.enCours && x.jours < 0.75 * x.joursMois;
+      const n1Partiel = !!(x.n1 && x.n1.jours < 0.75 * ref);
+      return Object.assign({}, x, { partiel, n1Ok: !!(x.n1 && !n1Partiel && !partiel),
+        n1Court: !!(x.n1 && !n1Partiel && !partiel && x.n1.jours < x.jours - 2) });
+    };
+    // La valeur d'un mois et de son N-1 dans la lecture choisie ; la somme d'une liste de mois, idem.
+    const v = x => parJour ? (x.jours ? g(x) / x.jours : null) : g(x);
+    const v1 = x => !x.n1Ok ? null : (parJour ? (x.n1.jours ? (quoi === 'ca' ? x.n1.ca : x.n1.clients) / x.n1.jours : null) : (quoi === 'ca' ? x.n1.ca : x.n1.clients));
+    const somme = (L, f) => { const a = L.reduce((t, x) => t + f(x), 0); return a; };
+    const ecartListe = L => {
+      if (!L.length || L.some(x => !x.n1Ok)) { return null; }
+      const n = somme(L, g), n1 = somme(L, x => quoi === 'ca' ? x.n1.ca : x.n1.clients);
+      if (!parJour) { return { e: pc(n, n1), n, n1 }; }
+      const j = somme(L, x => x.jours), j1 = somme(L, x => x.n1.jours);
+      return { e: pc(n / j, n1 / j1), n: n / j, n1: n1 / j1 };
+    };
+    const lab = x => MC[x.mo] + ' ' + String(x.an).slice(2);
+    // UN axe pour tous les graphiques : du premier mois vendu du réseau au mois
+    // en cours (exclu en total, où il n'est pas sur la courbe). Les années
+    // tombent au même endroit d'un magasin à l'autre ; un magasin ouvert plus
+    // tard a une bande vide avant sa première vente.
+    const fin = String(D.aujourdhui || '').slice(0, 7), axe = [];
+    for (let k = D.du || D.magasins.map(m => m.premier).sort()[0]; k && k <= fin && axe.length < 240;) {
+      axe.push(k); const y = +k.slice(0, 4), mo = +k.slice(5, 7);
+      k = mo === 12 ? (y + 1) + '-01' : y + '-' + String(mo + 1).padStart(2, '0');
+    }
+    const axeG = parJour ? axe : axe.filter(k => k !== fin);
+    out.magasins = D.magasins.map(m => {
+      const M = m.mois.map(prep);
+      const clos = M.filter(x => !x.enCours && !x.partiel);
+      const cur = M.find(x => x.enCours) || null;
+      const prem = M[0];
+      const premN1 = M.find(x => x.n1Ok) || null;
+      const nom = this.rrCourt(m.nom);
+      // Les tuiles de droite.
+      const d12 = clos.slice(-12), avec12 = d12.filter(x => x.n1Ok);
+      const e12 = ecartListe(avec12);
+      const t3 = clos.slice(-3), e3 = t3.length === 3 ? ecartListe(t3) : null;
+      const avecN1 = clos.filter(x => x.n1Ok), dessus = avecN1.filter(x => v(x) >= v1(x));
+      const tuiles = [
+        e12 ? { k: (avec12.length === 12 ? '12 mois' : avec12.length + ' mois') + ' vs N-1', v: sg(e12.e), s: fmt(e12.n) + ' contre ' + fmt(e12.n1) + (parJour ? ' par jour' : '') + ' · ' + lab(avec12[0]) + ' → ' + lab(avec12[avec12.length - 1]), cls: e12.e >= 0 ? 'good' : 'bad' }
+          : { k: 'Vs N-1', v: '—', s: 'pas encore de N-1 — il arrive en ' + ML[prem.mo] + ' ' + (prem.an + 1) },
+        e3 ? { k: '3 derniers mois vs N-1', v: sg(e3.e), s: MC[t3[0].mo] + ' → ' + MC[t3[2].mo] + ' : ' + fmt(e3.n) + ' contre ' + fmt(e3.n1), cls: e3.e >= 0 ? 'good' : 'bad' }
+          : (() => { const a = clos.slice(-3), b = clos.slice(-6, -3); const va = parJour ? somme(a, g) / Math.max(1, somme(a, x => x.jours)) : somme(a, g), vb = parJour ? somme(b, g) / Math.max(1, somme(b, x => x.jours)) : somme(b, g);
+            return { k: '3 derniers mois', v: a.length ? fmt(va) : '—', s: b.length === 3 ? '<b style="color:' + col(pc(va, vb)) + '">' + sg(pc(va, vb)) + '</b> face aux 3 d’avant' : '' }; })(),
+        avecN1.length ? { k: 'Mois au-dessus du N-1', v: dessus.length + ' / ' + avecN1.length, s: dessus.length ? (dessus.length > 4 ? '… ' : '') + dessus.slice(-4).map(lab).join(', ') : 'aucun', cls: dessus.length * 2 >= avecN1.length ? 'good' : 'bad' }
+          : { k: 'Mois au-dessus du N-1', v: '—', s: 'pas encore de N-1' },
+        cur ? (() => { const e = cur.n1Ok ? pc(v(cur), v1(cur)) : null;
+          return { k: MC[cur.mo] + ' en cours · ' + cur.jours + ' j', v: fmt(v(cur)),
+            s: e == null ? (cur.n1 ? 'N-1 incomplet' : 'pas de N-1 : premier ' + ML[cur.mo]) : '<b style="color:' + col(e) + '">' + sg(e) + '</b> face aux mêmes ' + cur.joursServis + ' jours de ' + ML[cur.mo] + ' ' + (cur.an - 1) + ' (' + fmt(v1(cur)) + ')',
+            cls: e == null ? '' : (e >= 0 ? 'good' : 'bad') }; })()
+          : { k: 'Mois en cours', v: '—', s: 'pas de vente lue ce mois-ci' }
+      ];
+      const best = clos.length ? clos.reduce((a, b) => v(b) > v(a) ? b : a) : null;
+      const totC = somme(M, x => x.clients), totCa = somme(M, x => x.ca), totJ = somme(M, x => x.jours);
+      const faits = [
+        'depuis ' + ML[prem.mo] + ' ' + prem.an + (prem.partiel ? ' (premières ventes, ' + prem.jours + ' j)' : ''),
+        clos.length + ' mois pleins',
+        parJour ? fI(totC / Math.max(1, totJ)) + ' clients par jour ouvert' : fI(totC) + ' clients',
+        parJour ? fI(totCa / Math.max(1, totJ)) + ' € par jour ouvert' : fK(totCa) + ' de CA',
+        'panier ' + fE2(totCa / Math.max(1, totC)),
+        best ? 'meilleur mois : ' + ML[best.mo] + ' ' + best.an + ' (' + fmt(v(best)) + ')' : ''
+      ].filter(Boolean);
+      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC);
+      return { id: m.id, nom, nomLong: m.nom, faits, tuiles, svg,
+        avecN1: !!premN1, n1Txt: premN1 ? 'N-1 : le même mois un an plus tôt (pointillé), dès ' + ML[premN1.mo] + ' ' + premN1.an
+          : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1),
+        ouverture: M.some(x => x.partiel), etoile: !parJour && M.some(x => x.n1Court) };
+    });
+    out.unite = unite;
+    out.chipTxt = 'sous chaque mois : l’écart au N-1, en %' + (parJour ? ' — par jour ouvert : le mois ÷ ses jours de vente, le N-1 ÷ les siens' : '');
+    // L'année par année : à périmètre comparable (les mois qui ont un N-1).
+    out.annees = [];
+    D.magasins.forEach(m => {
+      const M = m.mois.map(prep);
+      [...new Set(M.map(x => x.an))].forEach((an, i) => {
+        const ms = M.filter(x => x.an === an), cmp = ms.filter(x => x.n1Ok);
+        const c = somme(ms, x => x.clients), ca = somme(ms, x => x.ca), j = somme(ms, x => x.jours);
+        const cC = somme(cmp, x => x.clients), caC = somme(cmp, x => x.ca), jC = somme(cmp, x => x.jours);
+        const c1 = somme(cmp, x => x.n1.clients), ca1 = somme(cmp, x => x.n1.ca), j1 = somme(cmp, x => x.n1.jours);
+        const ec = c1 ? (parJour ? pc(cC / jC, c1 / j1) : pc(cC, c1)) : null, eca = ca1 ? (parJour ? pc(caC / jC, ca1 / j1) : pc(caC, ca1)) : null;
+        const ep = c1 ? pc(caC / cC, ca1 / c1) : null;
+        const cur = ms.find(x => x.enCours);
+        out.annees.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, an: String(an),
+          per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]),
+          clients: parJour ? fI(c / Math.max(1, j)) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
+          ec: ec == null ? '' : sg(ec), ecCoul: col(ec), eca: eca == null ? '' : sg(eca), ecaCoul: col(eca), ep: ep == null ? '' : sg(ep), epCoul: col(ep),
+          sansN1: !cmp.length, cmp: cmp.length ? cmp.length + ' mois : ' + MC[cmp[0].mo] + ' → ' + (cmp[cmp.length - 1].enCours ? cmp[cmp.length - 1].jours + ' ' : '') + MC[cmp[cmp.length - 1].mo] : '' });
+      });
+    });
+    out.colClients = parJour ? 'Clients / jour' : 'Clients';
+    out.colCa = parJour ? 'CA / jour' : 'CA';
+    out.sousTitre = D.magasins.length + ' magasin' + (D.magasins.length > 1 ? 's' : '') + ' · depuis ' + ML[+D.du.slice(5, 7)] + ' ' + D.du.slice(0, 4) + ' · mois par mois, face au N-1';
+    out.source = D.source || '';
+    return out;
+  }
+  /**
+   * Le graphique d'un magasin, en repère 880 × 262 : la courbe du mois (trait
+   * plein), le N-1 (pointillé), le gagné / perdu entre les deux, l'écart en %
+   * sous chaque mois. L'abscisse est l'axe COMMUN (`axe`, des 'AAAA-MM') :
+   * le même repère pour tous les magasins, marges comprises — les années
+   * s'alignent d'un graphique à l'autre. Rend la géométrie ; le dessin est
+   * dans svgEvolution.
+   */
+  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC){
+    const W = 880, H = 262, ml = 54, mr = 18, mt = 26, mb = 42;  // marges fixes : même tracé partout
+    const parMois = {}; M.forEach(x => { parMois[x.mois] = x; });
+    const L = axe.map(k => parMois[k] || { vide: true, mois: k, an: +k.slice(0, 4), mo: +k.slice(5, 7) });
+    const N = L.length;
+    if (!N || L.every(x => x.vide)) { return null; }
+    const pas = (W - ml - mr) / N;
+    const avecChips = L.some(x => x.n1Ok) && pas >= 22;
+    const n = L.map(x => x.vide ? null : v(x)), n1 = L.map(x => x.vide ? null : v1(x));
+    const surCourbe = L.map(x => !x.partiel);
+    const vals = [];
+    L.forEach((x, i) => { if (surCourbe[i] && n[i] != null) { vals.push(n[i]); } if (n1[i] != null) { vals.push(n1[i]); } });
+    if (!vals.length) { L.forEach((x, i) => { if (n[i] != null) { vals.push(n[i]); } }); }
+    const vmin = Math.min(...vals), vmax = Math.max(...vals), et = (vmax - vmin) || Math.abs(vmax) || 1;
+    let lo = Math.max(0, vmin - et * 0.25), hi = vmax + et * 0.18;
+    const r = (hi - lo) / 4, p10 = Math.pow(10, Math.floor(Math.log10(r))), st = [1, 2, 2.5, 5, 10].map(k => k * p10).find(k => k >= r);
+    lo = Math.floor(lo / st) * st; hi = Math.ceil(hi / st) * st;
+    const X = i => ml + (i + 0.5) * pas;
+    const Y = val => mt + (hi - Math.max(lo, val)) / (hi - lo || 1) * (H - mt - mb);
+    const f1 = x => x.toFixed(1);
+    const out = { W, H, ml, mr, mt, hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
+    for (let y = lo; y <= hi + 1e-6; y += st) { out.grad.push({ y: f1(Y(y)), t: fAxe(y), base: y === lo }); }
+    // Avant la première vente du magasin : une bande vide, dite comme telle.
+    const iPrem = L.findIndex(x => !x.vide);
+    if (iPrem > 0) { const w = iPrem * pas; out.avant = { x: ml, w: f1(w), y: mt - 2, h: f1(H - mb - mt + 2), tx: f1(ml + w / 2), ty: f1((mt + H - mb) / 2), t: w >= 110 ? 'pas encore ouvert' : '' }; }
+    L.forEach((x, i) => { if (i === 0 || x.mo === 1) { const xs = i === 0 ? ml : (X(i - 1) + X(i)) / 2; out.seps.push({ x: f1(xs), xt: f1(xs + 5), t: String(x.an), trait: i > 0, y1: mt - 14, y2: f1(H - mb) }); } });
+    // Le gagné / perdu entre les deux courbes, coupé là où elles se croisent.
+    const okN = i => surCourbe[i] && n[i] != null && !(L[i].enCours && !parJour);
+    for (let i = 0; i < N - 1; i++) {
+      if (!okN(i) || !okN(i + 1) || n1[i] == null || n1[i + 1] == null) { continue; }
+      const d0 = n[i] - n1[i], d1 = n[i + 1] - n1[i + 1];
+      const poly = (x0, x1, a0, a1, b0, b1, pos) => ({ pts: [f1(x0) + ',' + f1(Y(a0)), f1(x1) + ',' + f1(Y(a1)), f1(x1) + ',' + f1(Y(b1)), f1(x0) + ',' + f1(Y(b0))].join(' '), pos });
+      if (d0 * d1 >= 0) { out.aires.push(poly(X(i), X(i + 1), n[i], n[i + 1], n1[i], n1[i + 1], d0 + d1 >= 0)); }
+      else {
+        const t = d0 / (d0 - d1), xm = X(i) + t * pas, vm = n[i] + t * (n[i + 1] - n[i]);
+        out.aires.push(poly(X(i), xm, n[i], vm, n1[i], vm, d0 >= 0), poly(xm, X(i + 1), vm, n[i + 1], vm, n1[i + 1], d1 >= 0));
+      }
+    }
+    // Les courbes, coupées là où il manque un point ; le mois en cours (par jour) en pointillé.
+    const coupe = (arr, ok) => { const segs = []; let s = []; arr.forEach((val, i) => { if (ok(i)) { s.push(f1(X(i)) + ',' + f1(Y(val))); } else { if (s.length > 1) { segs.push(s.join(' ')); } s = []; } }); if (s.length > 1) { segs.push(s.join(' ')); } return segs; };
+    out.segs1 = coupe(n1, i => n1[i] != null);
+    out.segs = coupe(n, i => okN(i) && !L[i].enCours);
+    const ic = L.findIndex(x => x.enCours);
+    if (ic > 0 && okN(ic) && okN(ic - 1)) { out.cour = f1(X(ic - 1)) + ',' + f1(Y(n[ic - 1])) + ' ' + f1(X(ic)) + ',' + f1(Y(n[ic])); }
+    const titre = x => MC[x.mo] + ' ' + x.an;
+    L.forEach((x, i) => {
+      if (n1[i] != null) { out.pts1.push({ x: f1(X(i)), y: f1(Y(n1[i])), titre: titre(x) + ' · N-1 : ' + fmt(n1[i]) + (parJour ? ' par jour (' + x.n1.jours + ' j)' : '') }); }
+      if (n[i] == null) { return; }
+      const vide = x.partiel || x.enCours;
+      out.pts.push({ x: f1(X(i)), y: f1(Y(n[i])), vide, titre: titre(x) + ' · ' + fmt(n[i]) + (parJour ? ' par jour (' + x.jours + ' j vendus)' : '') + (x.n1Ok ? ' · N-1 : ' + fmt(n1[i]) : '') });
+      if (x.partiel) { out.notes.push({ x: f1(X(i) + 7), y: f1(Y(n[i]) - 6), t: fmt(n[i]) + ' · ' + x.jours + ' j' }); }
+    });
+    // Les valeurs écrites : le plus haut, le plus bas, le dernier mois plein.
+    const idx = L.map((x, i) => i).filter(i => okN(i) && !L[i].enCours);
+    if (idx.length) {
+      const mx = idx.reduce((a, b) => n[b] > n[a] ? b : a), mn = idx.reduce((a, b) => n[b] < n[a] ? b : a);
+      [...new Set([mx, mn, idx[idx.length - 1]])].forEach(i => { const dessous = n1[i] != null ? n[i] < n1[i] : i === mn;
+        out.labels.push({ x: f1(X(i)), y: f1(Y(n[i]) + (dessous ? 15 : -8)), t: fmt(n[i]) }); });
+    }
+    const pasLab = pas >= 24 ? 1 : (pas >= 13 ? 2 : 3);
+    L.forEach((x, i) => {
+      const e = x.n1Ok && n[i] != null && n1[i] ? 100 * (n[i] - n1[i]) / n1[i] : null;
+      out.cats.push({ x: f1(X(i)), lab: (i % pasLab === 0 || x.mo === 1) ? MC[x.mo] : '', cur: !!x.enCours,
+        chip: avecChips && e != null ? (e >= 0.5 ? '+' : (e <= -0.5 ? '−' : '')) + Math.abs(Math.round(e)) + (x.n1Court && !parJour ? '*' : '') : '',
+        chipCoul: e == null ? '' : (e >= 3 ? '#3f7a52' : (e <= -3 ? '#A32014' : '#7A5207')) });
+    });
+    out.avecChips = avecChips;
+    return out;
+  }
   rpCle(vue){ return (vue || this.state.rjOnglet || 'semaine') + '|' + (this.state.rpDate || ''); }
   /** La période lue une fois puis gardée — même règle que la journée : on ne
    *  vide pas le cache avant la réponse, l'ancienne étendue reste lisible. */
