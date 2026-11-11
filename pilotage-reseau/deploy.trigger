@@ -1374,3 +1374,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-10T07:48:18Z formation : accueil du portail
 2026-11-10T08:06:35Z [257] ERP production : facture KSeF dans la fenêtre « nouveau prix à valider »
 2026-11-10T08:14:11Z [257] ERP production : en-tête collant de la facture KSeF
+2026-11-11T19:12:37Z [259-261] ERP production : pracownicy + budżet, bilan Pobierz zamówienia, premie brutto brutto
