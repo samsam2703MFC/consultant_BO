@@ -16,13 +16,14 @@ Ce qui est codé :
   `tplResultatEvolution` et `svgEvolution` dans `templates.js`) : par magasin, la ligne des faits
   (depuis, mois pleins, clients, CA, panier, meilleur mois), le graphique (N plein, N-1 pointillé,
   gagné / perdu, écart sous chaque mois) et quatre tuiles (12 mois vs N-1, 3 derniers mois vs
-  N-1, mois au-dessus du N-1, mois en cours à jours égaux) ; en bas, l'année par année de tous
-  les magasins.
+  N-1, mois au-dessus du N-1, mois en cours à jours égaux) ; en bas, le **trimestre par
+  trimestre** de tous les magasins (à la place de l'année par année, demandé le 11/11) : chaque
+  trimestre face au même trimestre un an plus tôt, à périmètre comparable.
 - **Un axe commun à tous les graphiques** (demandé le 11/11) : du premier mois vendu du réseau
   au mois en cours, le même repère pour chaque magasin — les années tombent au même endroit d'un
   graphique à l'autre. Un magasin ouvert plus tard a une bande grise « pas encore ouvert » avant
   sa première vente.
-- **Par jour ouvert** : chaque mois ÷ ses jours vendus, le N-1 ÷ les siens. Le mois en cours entre
+- **Par jour ouvert**, la lecture par défaut (demandé le 11/11) : chaque mois ÷ ses jours vendus, le N-1 ÷ les siens. Le mois en cours entre
   alors sur la courbe (cercle vide, trait pointillé) : à jours vendus, il se compare. Gosselies,
   juillet 2026 : +48 % en total (le N-1 a fermé une semaine), +14 % par jour ouvert.
 

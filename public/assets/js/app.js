@@ -10068,23 +10068,30 @@ class App {
     });
     out.unite = unite;
     out.chipTxt = 'sous chaque mois : l’écart au N-1, en %' + (parJour ? ' — par jour ouvert : le mois ÷ ses jours de vente, le N-1 ÷ les siens' : '');
-    // L'année par année : à périmètre comparable (les mois qui ont un N-1).
-    out.annees = [];
+    // Trimestre par trimestre (demande du 11/11/2026, à la place de l'année par
+    // année) : chaque trimestre face au même trimestre un an plus tôt, à
+    // périmètre comparable — seuls les mois qui ont un N-1 comptent dans l'écart.
+    out.trimestres = [];
     D.magasins.forEach(m => {
       const M = m.mois.map(prep);
-      [...new Set(M.map(x => x.an))].forEach((an, i) => {
-        const ms = M.filter(x => x.an === an), cmp = ms.filter(x => x.n1Ok);
+      const tri = x => x.an * 10 + Math.ceil(x.mo / 3);
+      [...new Set(M.map(tri))].forEach((t, i) => {
+        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok);
         const c = somme(ms, x => x.clients), ca = somme(ms, x => x.ca), j = somme(ms, x => x.jours);
         const cC = somme(cmp, x => x.clients), caC = somme(cmp, x => x.ca), jC = somme(cmp, x => x.jours);
         const c1 = somme(cmp, x => x.n1.clients), ca1 = somme(cmp, x => x.n1.ca), j1 = somme(cmp, x => x.n1.jours);
         const ec = c1 ? (parJour ? pc(cC / jC, c1 / j1) : pc(cC, c1)) : null, eca = ca1 ? (parJour ? pc(caC / jC, ca1 / j1) : pc(caC, ca1)) : null;
         const ep = c1 ? pc(caC / cC, ca1 / c1) : null;
         const cur = ms.find(x => x.enCours);
-        out.annees.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, an: String(an),
-          per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]),
+        const dernier = cmp[cmp.length - 1];
+        out.trimestres.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, nouvelAn: i > 0 && t % 10 === 1, enCours: !!cur,
+          lab: 'T' + (t % 10) + ' ' + Math.floor(t / 10),
+          per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]) + (ms.some(x => x.partiel) ? ' · ouverture' : ''),
           clients: parJour ? fI(c / Math.max(1, j)) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
           ec: ec == null ? '' : sg(ec), ecCoul: col(ec), eca: eca == null ? '' : sg(eca), ecaCoul: col(eca), ep: ep == null ? '' : sg(ep), epCoul: col(ep),
-          sansN1: !cmp.length, cmp: cmp.length ? cmp.length + ' mois : ' + MC[cmp[0].mo] + ' → ' + (cmp[cmp.length - 1].enCours ? cmp[cmp.length - 1].jours + ' ' : '') + MC[cmp[cmp.length - 1].mo] : '' });
+          sansN1: !cmp.length,
+          cmp: !cmp.length ? '' : (cmp.length === ms.length ? 'tout le trimestre' + (cur ? ' à date' : '')
+            : cmp.length + ' mois : ' + MC[cmp[0].mo] + (cmp.length > 1 ? ' → ' + (dernier.enCours ? dernier.jours + ' ' : '') + MC[dernier.mo] : '')) });
       });
     });
     out.colClients = parJour ? 'Clients / jour' : 'Clients';
