@@ -1,0 +1,25 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}HR{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>HR</h3>
+            <p class="text-subtitle text-muted mb-0">Wszyscy pracownicy : kontakt, staż, umowa, emerytura, dokumenty i notatki. Dane osobowe są zaszyfrowane w bazie,
+                widoczne dla administratora, kierownika produkcji i administracji ; każde otwarcie danych jest zapisywane.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [271] HR (makiety 36–38, 11.11.2026) : App\Services\Hr\HrService ; zakładki = PageTabs « hr ». #}
+<section class="section tm hr" id="hrApp" data-root="{{ root }}" data-tab="{{ tab }}" data-admin="{{ is_admin ? 1 : 0 }}">
+    <div data-hr-body><p class="at-empty">Ładowanie…</p></div>
+</section>
+<dialog class="tm-dialog hr-dialog" data-hr-dialog aria-labelledby="hrDialogTitle"><div data-hr-card></div></dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/hr.js?v={{ asset_v() }}"></script>
+{% endblock %}

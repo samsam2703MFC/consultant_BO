@@ -1,0 +1,258 @@
+/*
+ * [271] HR (makiety 36–38) : Pracownicy (tabela, filtry, karta pracownika), Dokumenty, Notatki miesiąca, Ustawienia HR.
+ * Karta : dane i zatrudnienie (zapis), dokumenty (PDF, zdjęcie, DOCX — zaszyfrowane na serwerze), notatki
+ * (prywatna = autor i administrator, publiczna = też kierownik produkcji i administracja, « do administratora » = dzwonek).
+ */
+(function () {
+    'use strict';
+    const app = document.getElementById('hrApp');
+    if (!app) return;
+    const root = (app.dataset.root || '').replace(/\/$/, '');
+    const tab = app.dataset.tab;
+    const admin = app.dataset.admin === '1';
+    const body = app.querySelector('[data-hr-body]');
+    const dialog = document.querySelector('[data-hr-dialog]');
+    const card = dialog.querySelector('[data-hr-card]');
+    let data = null;
+    let filter = 'all';
+    let q = '';
+
+    const esc = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+    const d = (v) => v ? v.slice(8, 10) + '.' + v.slice(5, 7) + '.' + v.slice(0, 4) : '';
+    const size = (n) => n > 1048576 ? (n / 1048576).toFixed(1).replace('.', ',') + ' MB' : Math.max(1, Math.round(n / 1024)) + ' kB';
+    const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
+    const missing = '<span class="hr-miss">brak</span>';
+
+    async function api(method, path, payload) {
+        const r = await fetch(root + path, {method, credentials: 'same-origin', headers: {'Accept': 'application/json', 'Content-Type': 'application/json'},
+            body: payload === undefined ? undefined : JSON.stringify(payload)});
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) { const e = new Error(j.message || ('Błąd ' + r.status)); e.fields = (j.errors && j.errors.fields) || j.fields || null; throw e; }
+        return j.data !== undefined ? j.data : j;
+    }
+
+    // ================================ Pracownicy (makieta 36) ================================
+    async function people() {
+        data = await api('GET', '/ajax/hr/people');
+        const k = data.kpi;
+        const groups = [...new Set(data.people.filter(p => p.active && p.group).map(p => p.group))];
+        body.innerHTML = `<div class="tm-kpis">
+                <div class="tm-kpi"><small>Pracownicy aktywni</small><b>${k.active}</b><span>${k.groups} grup</span></div>
+                <div class="tm-kpi"><small>Średni staż</small><b>${k.avg_seniority == null ? '—' : esc(span(k.avg_seniority))}</b><span>${k.max_seniority == null ? 'brak dat zatrudnienia' : 'najdłużej ' + esc(span(k.max_seniority))}</span></div>
+                <div class="tm-kpi"><small>Umowy kończące się ≤ 90 dni</small><b>${k.contracts_ending}</b><span>przypomnienie ${data.rules.alert_days} dni wcześniej</span></div>
+                <div class="tm-kpi"><small>Emerytura ≤ 2 lata</small><b>${k.retire_soon}</b><span>wiek ${data.rules.retire_k} K / ${data.rules.retire_m} M</span></div></div>
+            <div class="tm-bar hr-bar"><input type="search" class="form-control form-control-sm hr-search" placeholder="Szukaj : nazwisko, e-mail, telefon…" data-q value="${esc(q)}">
+                <div class="hr-chips">${[['all', 'Wszyscy'], ...groups.map(g => ['g:' + g, g]), ['missing', 'Brak danych (' + k.missing + ')'], ['contract', 'Umowa się kończy'], ['retire', 'Emerytura ≤ 2 lata'], ['inactive', 'Nieaktywni']]
+                    .map(([v, l]) => `<button type="button" class="hr-chip ${filter === v ? 'is-on' : ''}" data-filter="${esc(v)}">${esc(l)}</button>`).join('')}</div>
+                <span class="tm-spacer"></span><span class="hr-lock"><i class="bi bi-lock"></i> dane osobowe</span>
+                ${admin ? '<button type="button" class="btn btn-light btn-sm" data-csv><i class="bi bi-filetype-csv"></i> CSV</button>' : ''}</div>
+            <div class="table-responsive at-card hr-card"><table class="table tm-table hr-table"><thead><tr><th>Pracownik</th><th>E-mail</th><th class="text-end">Telefon</th>
+                <th class="text-end">Zatrudniony · staż</th><th>Umowa</th><th class="text-end">Emerytura (rok, wiek)</th><th class="text-end">Dokumenty</th><th class="text-end">Notatki (mies.)</th></tr></thead>
+                <tbody data-rows></tbody></table></div>
+            <p class="hr-note">Klik w wiersz → karta pracownika. « brak » = do uzupełnienia. E-mail ten sam co w Czas pracy › E-maile pracowników.
+                Emerytura : data urodzenia + wiek emerytalny (${data.rules.retire_k} kobiety / ${data.rules.retire_m} mężczyźni, Ustawienia HR).</p>`;
+        rows();
+        body.querySelector('[data-q]').addEventListener('input', (e) => { q = e.target.value; rows(); });
+        body.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.filter; body.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('is-on', x === b)); rows(); }));
+        const csv = body.querySelector('[data-csv]');
+        if (csv) csv.addEventListener('click', exportCsv);
+        const want = Number(new URLSearchParams(location.search).get('employee'));
+        if (want) openCard(want);
+    }
+
+    function span(m) { const y = Math.floor(m / 12); return (y ? y + ' l. ' : '') + (m % 12) + ' m.'; }
+
+    function visible() {
+        const f = fold(q.trim());
+        return data.people.filter(p => {
+            if (filter === 'inactive' ? p.active : !p.active) return false;
+            if (filter.startsWith('g:') && p.group !== filter.slice(2)) return false;
+            if (filter === 'missing' && !p.missing) return false;
+            if (filter === 'contract' && !p.contract_soon) return false;
+            if (filter === 'retire' && !p.retire_soon) return false;
+            return !f || [p.name, p.email, p.phone, p.group, p.position].some(v => fold(v).includes(f));
+        });
+    }
+
+    function rows() {
+        const list = visible();
+        body.querySelector('[data-rows]').innerHTML = list.length ? list.map(p => `<tr data-id="${p.id}" class="hr-row">
+                <td><b>${esc(p.name)}</b><div class="tm-sub">${esc([p.group, p.position].filter(Boolean).join(' · '))}</div></td>
+                <td>${p.email ? esc(p.email) : missing}</td><td class="text-end tm-num">${p.phone ? esc(p.phone) : missing}</td>
+                <td class="text-end tm-num">${p.hire_date ? d(p.hire_date) + `<div class="tm-sub">${esc(p.seniority)}</div>` : missing}</td>
+                <td>${p.contract_label ? esc(p.contract_label) + (p.contract_end ? ' do ' + d(p.contract_end) : '') : '—'}${p.contract_soon ? ' <span class="tm-tag tm-tag-warn">kończy się</span>' : ''}</td>
+                <td class="text-end tm-num">${p.retire ? p.retire.year + ' (' + p.retire.age + ')' + (p.retire_soon ? ` <span class="tm-tag tm-tag-warn">${p.retire.months_left <= 12 ? 'za ≤ 1 rok' : 'za ≤ 2 lata'}</span>` : '') : '—'}</td>
+                <td class="text-end tm-num">${p.documents}</td><td class="text-end tm-num">${p.notes_month}</td></tr>`).join('')
+            : '<tr><td colspan="8" class="at-empty">Nikt nie pasuje.</td></tr>';
+        body.querySelectorAll('[data-id]').forEach(tr => tr.addEventListener('click', () => openCard(Number(tr.dataset.id))));
+    }
+
+    function exportCsv() {
+        const head = ['Pracownik', 'Grupa', 'E-mail', 'Telefon', 'Zatrudniony', 'Staż', 'Umowa', 'Koniec umowy', 'Emerytura', 'Dokumenty'];
+        const lines = [head].concat(visible().map(p => [p.name, p.group || '', p.email || '', p.phone || '', p.hire_date || '', p.seniority || '', p.contract_label || '', p.contract_end || '',
+            p.retire ? p.retire.date : '', p.documents]));
+        const csv = lines.map(l => l.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(';')).join('\r\n');
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob(['﻿' + csv], {type: 'text/csv;charset=utf-8'}));
+        a.download = 'hr-pracownicy.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    }
+
+    // ================================ Karta pracownika (makieta 37) ================================
+    async function openCard(id) {
+        card.innerHTML = '<p class="at-empty p-4">Ładowanie…</p>';
+        if (!dialog.open) dialog.showModal();
+        let c;
+        try { c = await api('GET', '/ajax/hr/people/' + id); } catch (e) { card.innerHTML = `<p class="tm-dialog-error p-4">${esc(e.message)}</p>`; return; }
+        const p = c.person;
+        const kinds = data ? data.kinds : {umowa: 'Umowa', aneks: 'Aneks', badania: 'Badania lekarskie', notatka: 'Notatka', inne: 'Inne'};
+        const contracts = data ? data.contracts : {};
+        const opt = (o, cur) => Object.entries(o).map(([k, l]) => `<option value="${k}" ${k === cur ? 'selected' : ''}>${esc(l)}</option>`).join('');
+        const f = (label, name, value, type) => `<label class="hr-f"><span>${label}</span><input class="form-control form-control-sm" name="${name}" type="${type || 'text'}" value="${esc(value || '')}"></label>`;
+        card.innerHTML = `<header class="tm-dialog-head"><h4 id="hrDialogTitle">${esc(p.name)} <span class="tm-tag ${p.active ? 'tm-tag-ok' : ''}">${p.active ? 'aktywny' : 'nieaktywny'}</span></h4>
+                <button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
+            <div class="tm-dialog-body hr-grid"><div>
+                <form class="hr-sec" data-form><h5>Dane i zatrudnienie</h5><p class="tm-sub">${esc([p.group, p.position].filter(Boolean).join(' · '))}${p.seniority ? ' · staż ' + esc(p.seniority) : ''}${p.retire ? ' · emerytura ' + d(p.retire.date) : ''}</p>
+                    <div class="hr-fields">${f('E-mail', 'email', p.email, 'email')}${f('Telefon', 'phone', p.phone, 'tel')}${f('Data urodzenia', 'birth_date', p.birth_date, 'date')}
+                    <label class="hr-f"><span>Płeć (wiek emerytalny)</span><select class="form-select form-select-sm" name="gender"><option value="">—</option>${opt({K: 'kobieta', M: 'mężczyzna'}, p.gender)}</select></label>
+                    ${f('Zatrudniony od', 'hire_date', p.hire_date, 'date')}
+                    <label class="hr-f"><span>Umowa</span><select class="form-select form-select-sm" name="contract_type"><option value="">—</option>${opt(contracts, p.contract_type)}</select></label>
+                    ${f('Koniec umowy', 'contract_end', p.contract_end, 'date')}${f('Wymiar', 'work_time', p.work_time)}${f('Badania lekarskie do', 'medical_until', p.medical_until, 'date')}
+                    ${f('Kontakt w nagłych wypadkach', 'emergency', p.emergency)}</div>
+                    <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div></form>
+                <div class="hr-sec"><h5>Dokumenty (${c.documents.length})</h5>
+                    <table class="table tm-table hr-docs"><tbody>${c.documents.map(x => `<tr><td><span class="tm-tag">${esc(x.kind_label)}</span> <a href="${root}/hr/document/${x.id}?inline=1" target="_blank" rel="noopener">${esc(x.title)}</a>
+                        <div class="tm-sub">${esc(x.filename)} · ${size(x.size)}${x.by ? ' · ' + esc(x.by) : ''}</div></td><td class="text-end tm-num">${d(x.date)}</td>
+                        <td class="text-end"><a class="btn btn-light btn-sm" href="${root}/hr/document/${x.id}">Pobierz</a>${x.can_delete ? ` <button type="button" class="btn btn-link btn-sm text-danger" data-del-doc="${x.id}">Usuń</button>` : ''}</td></tr>`).join('')
+                        || '<tr><td class="at-empty">Brak dokumentów.</td></tr>'}</tbody></table>
+                    <form class="hr-upload" data-upload><select class="form-select form-select-sm" name="kind" required><option value="">Rodzaj…</option>${opt(kinds, '')}</select>
+                        <input class="form-control form-control-sm" type="date" name="doc_date" aria-label="Data dokumentu">
+                        <input class="form-control form-control-sm" type="file" name="file" accept="application/pdf,image/jpeg,image/png,.docx" required>
+                        <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-upload"></i> Dodaj</button><span class="hr-msg" data-upmsg></span></form>
+                    <p class="tm-sub">PDF, zdjęcie albo DOCX, do 8 MB — plik jest zaszyfrowany na serwerze.</p></div>
+            </div><div class="hr-sec"><h5>Notatki</h5>
+                <form class="hr-compose" data-note><textarea class="form-control" name="body" rows="3" maxlength="2000" placeholder="Nowa notatka…" required></textarea>
+                    <div class="hr-compose-bar"><span class="hr-seg"><button type="button" class="is-on" data-vis="private">Prywatna</button><button type="button" data-vis="public">Publiczna</button></span>
+                    <label class="tm-sub"><input type="checkbox" class="form-check-input" name="to_admin"> Wyślij do administratora</label><span class="tm-spacer"></span>
+                    <button type="submit" class="btn btn-primary btn-sm">Dodaj</button></div><span class="hr-msg" data-notemsg></span></form>
+                <div class="hr-notes">${c.notes.map(n => noteHtml(n)).join('') || '<p class="at-empty">Brak notatek.</p>'}</div>
+                <p class="tm-sub"><b>Publiczna</b> : widzi ją kierownik produkcji i administracja (i trafia do podsumowania miesiąca). <b>Prywatna</b> : tylko autor i administrator.
+                    <b>Do administratora</b> : od razu w dzwonku administratora.</p></div></div>`;
+        card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+        const form = card.querySelector('[data-form]');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const msg = card.querySelector('[data-msg]');
+            form.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
+            const payload = Object.fromEntries(['email', 'phone', 'birth_date', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency'].map(k => [k, form[k].value]));
+            try { await api('PUT', '/ajax/hr/people/' + id, payload); msg.textContent = 'Zapisano.'; refresh(); }
+            catch (x) { msg.textContent = x.message; Object.keys(x.fields || {}).forEach(k => { if (form[k]) { form[k].classList.add('is-invalid'); form[k].title = x.fields[k]; } }); }
+        });
+        let vis = 'private';
+        card.querySelectorAll('[data-vis]').forEach(b => b.addEventListener('click', () => { vis = b.dataset.vis; card.querySelectorAll('[data-vis]').forEach(x => x.classList.toggle('is-on', x === b)); }));
+        card.querySelector('[data-note]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f2 = e.target;
+            try { await api('POST', '/ajax/hr/people/' + id + '/notes', {body: f2.body.value, visibility: vis, to_admin: f2.to_admin.checked}); openCard(id); refresh(); }
+            catch (x) { card.querySelector('[data-notemsg]').textContent = x.message; }
+        });
+        card.querySelector('[data-upload]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f3 = e.target;
+            const file = f3.file.files[0];
+            const msg = card.querySelector('[data-upmsg]');
+            if (!file) return;
+            if (file.size > 8 * 1024 * 1024) { msg.textContent = 'Plik większy niż 8 MB.'; return; }
+            msg.textContent = 'Wysyłanie…';
+            try {
+                const b64 = await new Promise((ok, ko) => { const r = new FileReader(); r.onload = () => ok(String(r.result).split(',')[1] || ''); r.onerror = ko; r.readAsDataURL(file); });
+                await api('POST', '/ajax/hr/people/' + id + '/documents', {kind: f3.kind.value, doc_date: f3.doc_date.value, filename: file.name, title: file.name.replace(/\.[^.]+$/, ''), content_base64: b64});
+                openCard(id); refresh();
+            } catch (x) { msg.textContent = x.message; }
+        });
+        card.querySelectorAll('[data-del-doc]').forEach(b => b.addEventListener('click', async () => {
+            if (!confirm('Usunąć dokument ?')) return;
+            try { await api('DELETE', '/ajax/hr/documents/' + b.dataset.delDoc); openCard(id); refresh(); } catch (x) { alert(x.message); }
+        }));
+        card.querySelectorAll('[data-del-note]').forEach(b => b.addEventListener('click', async () => {
+            if (!confirm('Usunąć notatkę ?')) return;
+            try { await api('DELETE', '/ajax/hr/notes/' + b.dataset.delNote); openCard(id); refresh(); } catch (x) { alert(x.message); }
+        }));
+    }
+
+    function noteHtml(n, withName) {
+        return `<div class="hr-n"><div class="hr-n-meta">${withName ? `<b>${esc(n.name)}</b> · ` : ''}${d(n.at.slice(0, 10))} ${n.at.slice(11, 16)}${n.by ? ' · ' + esc(n.by) : ''}
+                <span class="tm-tag ${n.visibility === 'public' ? 'tm-tag-ok' : ''}">${n.visibility === 'public' ? 'publiczna' : 'prywatna'}</span>${n.to_admin ? '<span class="tm-tag tm-tag-warn">do administratora</span>' : ''}
+                ${n.can_delete ? `<button type="button" class="btn btn-link btn-sm text-danger hr-n-del" data-del-note="${n.id}">Usuń</button>` : ''}</div><div class="hr-n-body">${esc(n.body)}</div></div>`;
+    }
+
+    function refresh() { if (tab === 'people') people().catch(() => {}); }
+
+    // ================================ Dokumenty ================================
+    async function documents() {
+        const r = await api('GET', '/ajax/hr/documents');
+        let kind = '';
+        const draw = () => {
+            const list = r.documents.filter(x => !kind || x.kind === kind);
+            body.querySelector('[data-rows]').innerHTML = list.map(x => `<tr><td><a href="#" data-open="${x.employee_id}">${esc(x.name)}</a></td><td><span class="tm-tag">${esc(x.kind_label)}</span></td>
+                <td><a href="${root}/hr/document/${x.id}?inline=1" target="_blank" rel="noopener">${esc(x.title)}</a><div class="tm-sub">${esc(x.filename)} · ${size(x.size)}</div></td>
+                <td class="text-end tm-num">${d(x.date)}</td></tr>`).join('') || '<tr><td colspan="4" class="at-empty">Brak dokumentów.</td></tr>';
+            body.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openCard(Number(a.dataset.open)); }));
+        };
+        body.innerHTML = `<div class="tm-bar"><div class="hr-chips">${[['', 'Wszystkie'], ...Object.entries(r.kinds)].map(([k, l]) => `<button type="button" class="hr-chip ${k === '' ? 'is-on' : ''}" data-kind="${k}">${esc(l)}</button>`).join('')}</div></div>
+            <div class="table-responsive at-card hr-card"><table class="table tm-table"><thead><tr><th>Pracownik</th><th>Rodzaj</th><th>Dokument</th><th class="text-end">Data</th></tr></thead><tbody data-rows></tbody></table></div>
+            <p class="hr-note">Nowy dokument : w karcie pracownika (zakładka Pracownicy → wiersz → Dokumenty).</p>`;
+        body.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => { kind = b.dataset.kind; body.querySelectorAll('[data-kind]').forEach(x => x.classList.toggle('is-on', x === b)); draw(); }));
+        draw();
+    }
+
+    // ================================ Notatki miesiąca (makieta 38) ================================
+    async function notes(month) {
+        month = month || new Date().toISOString().slice(0, 7);
+        const r = await api('GET', '/ajax/hr/notes?month=' + month);
+        const shift = (m, k) => { const [y, mo] = m.split('-').map(Number); const t = new Date(y, mo - 1 + k, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); };
+        const c = r.counts;
+        body.innerHTML = `<div class="tm-bar"><div class="tm-nav"><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, -1)}">‹</button>
+                <b class="hr-month">${esc(r.month_label)}</b><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, 1)}">›</button></div><span class="tm-spacer"></span>
+                ${r.summary ? `<span class="tm-sub">podsumowanie wysłane ${d(r.summary.sent_at.slice(0, 10))} ${r.summary.sent_at.slice(11, 16)}${r.summary.auto ? ' (automatycznie)' : ''}</span>` : '<span class="tm-sub">podsumowanie : ostatniego dnia miesiąca o 18:00, e-mailem do administratora</span>'}
+                ${admin ? '<button type="button" class="btn btn-primary btn-sm" data-send>Wyślij podsumowanie teraz</button>' : ''}</div>
+            <div class="tm-kpis"><div class="tm-kpi"><small>Notatki w miesiącu</small><b>${c.all}</b><span>${c.people} os.</span></div><div class="tm-kpi"><small>Publiczne</small><b>${c.public}</b></div>
+                <div class="tm-kpi"><small>Prywatne</small><b>${c.private}</b><span>${admin ? 'wszystkie' : 'tylko Twoje'}</span></div><div class="tm-kpi"><small>Do administratora</small><b>${c.to_admin}</b></div></div>
+            <div class="at-card hr-card hr-month-list">${r.people.map(p => `<section class="hr-person"><h5><a href="#" data-open="${p.id}">${esc(p.name)}</a> <span class="tm-sub">${esc(p.group || '')}</span></h5>
+                ${p.notes.map(n => noteHtml(n)).join('')}</section>`).join('') || '<p class="at-empty p-3">Brak notatek w tym miesiącu.</p>'}</div>
+            <p class="hr-note" data-sendmsg></p>`;
+        body.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => notes(b.dataset.m)));
+        body.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openCard(Number(a.dataset.open)); }));
+        body.querySelectorAll('[data-del-note]').forEach(b => b.addEventListener('click', async () => {
+            if (!confirm('Usunąć notatkę ?')) return;
+            try { await api('DELETE', '/ajax/hr/notes/' + b.dataset.delNote); notes(month); } catch (x) { alert(x.message); }
+        }));
+        const send = body.querySelector('[data-send]');
+        if (send) send.addEventListener('click', async () => {
+            send.disabled = true;
+            try { const x = await api('POST', '/ajax/hr/notes/summary', {month}); body.querySelector('[data-sendmsg]').textContent = x.message; }
+            catch (x) { body.querySelector('[data-sendmsg]').textContent = x.message; send.disabled = false; }
+        });
+    }
+
+    // ================================ Ustawienia HR ================================
+    async function settings() {
+        const r = await api('GET', '/ajax/hr/rules');
+        const f = (label, name, v, unit) => `<label class="hr-f"><span>${label}</span><span class="hr-unit"><input class="form-control form-control-sm" type="number" name="${name}" value="${v}" ${admin ? '' : 'disabled'}> ${unit}</span></label>`;
+        body.innerHTML = `<form class="at-card hr-card hr-sec hr-settings" data-rules><h5>Ustawienia HR</h5><div class="hr-fields">
+                ${f('Wiek emerytalny — kobiety', 'retire_k', r.retire_k, 'lat')}${f('Wiek emerytalny — mężczyźni', 'retire_m', r.retire_m, 'lat')}
+                ${f('Przypomnienie przed końcem umowy i badań', 'alert_days', r.alert_days, 'dni')}</div>
+                ${admin ? '<div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div>' : '<p class="tm-sub">Ustawienia zmienia administrator.</p>'}
+                <p class="tm-sub">Podsumowanie notatek : ostatniego dnia miesiąca o 18:00, e-mailem do administratora (kto, ile notatek ; treść tylko w ERP).</p></form>`;
+        const form = body.querySelector('[data-rules]');
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            try { await api('PUT', '/ajax/hr/rules', {retire_k: form.retire_k.value, retire_m: form.retire_m.value, alert_days: form.alert_days.value}); form.querySelector('[data-msg]').textContent = 'Zapisano.'; }
+            catch (x) { form.querySelector('[data-msg]').textContent = x.message; }
+        });
+    }
+
+    dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
+    ({people, documents, notes, settings}[tab] || people)().catch(e => { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
+})();

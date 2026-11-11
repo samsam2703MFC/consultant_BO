@@ -392,6 +392,8 @@ if [[ -f "$IMPORT_OK" ]]; then
 10 6 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 # Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/task_cron.php >> /var/log/production-erp-mail.log 2>&1
+# HR : bilan des notes du mois à l'administrateur, le dernier jour du mois après 18 h (une fois)
+5 18 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

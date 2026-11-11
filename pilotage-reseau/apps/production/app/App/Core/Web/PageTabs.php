@@ -81,6 +81,13 @@ final class PageTabs
         ]],
         // [262] Czas pracy : zatwierdzenie dnia (makieta 1), miesiąc i karty A4 (2), urlopy i dni wolne (3), nadgodziny (4) ;
         // tablet biurowy (odbicia, podpis dnia wolnego) otwierany w nowej karcie.
+        // [271] HR (makiety 36–38).
+        'hr' => ['label' => 'HR', 'section' => 'Produkcja', 'icon' => 'bi-person-vcard', 'tabs' => [
+            ['/hr', 'Pracownicy', 'bi-people', true],
+            ['/hr/documents', 'Dokumenty', 'bi-folder2'],
+            ['/hr/notes', 'Notatki miesiąca', 'bi-journal-text'],
+            ['/hr/settings', 'Ustawienia HR', 'bi-sliders'],
+        ]],
         'time' => ['label' => 'Czas pracy', 'section' => 'Produkcja', 'icon' => 'bi-clock-history', 'tabs' => [
             ['/time', 'Dzień', 'bi-calendar-check', true],
             ['/time/month', 'Miesiąc', 'bi-calendar3'],

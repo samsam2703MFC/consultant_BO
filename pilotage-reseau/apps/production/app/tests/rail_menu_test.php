@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /*
- * [253] Menu ERP bez dubli (makiety 25–26) : 27 pozycji ([256] Kierownik produkcji w Administracji, [262] Czas pracy), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
+ * [253] Menu ERP bez dubli (makiety 25–26) : 28 pozycji ([256] Kierownik produkcji w Administracji, [262] Czas pracy, [271] HR), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
  * wszystkie dawne linki railu mają pozycję, menu stanowiska (kolejność, strona otwierana), sesja administratora
  * « jako stanowisko », stanowisko bez menu = całe menu — reguły bez bazy + baza jednorazowa.
  *
@@ -20,7 +20,7 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 27 && Rail::count() === 27, 'menu wspólne : 27 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy)');
+expectRail(count(Rail::ITEMS) === 28 && Rail::count() === 28, 'menu wspólne : 28 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR)');
 expectRail(Rail::itemFor('/time/month') === 'time' && Rail::itemFor('/time') === 'time' && \App\Core\Web\PageAccess::keyFor('/time/overtime') === 'time', '[262] Czas pracy : pozycja railu i prawo « time »');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
@@ -164,8 +164,8 @@ try {
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 27,
-        'macierz : stanowiska biurowe + bez stanowiska × 27 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 28,
+        'macierz : stanowiska biurowe + bez stanowiska × 28 pozycji');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];

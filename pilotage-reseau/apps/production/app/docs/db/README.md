@@ -1750,6 +1750,22 @@ Demande du 11/11/2026. Migration 169 (`n_position_task`, `n_position_sheet`, pos
   précédent est clôturé dans Czas pracy › Miesiąc (`n_time_month`, `TaskWizards::time_month_closed`) ;
 - fiche de poste : responsabilité « Czas pracy zespołu : jour (chaque jour), mois (chaque mois) » ajoutée en tête.
 
+### Rail « HR » : employés, documents, notes — 271
+
+Demande du 11/11/2026 (maquettes 36–38). Migration 170 :
+- `n_hr_employee` (une ligne par `n_prod_employee`) : téléphone, date de naissance et contact d'urgence **chiffrés**
+  (`App\Services\Hr\HrCipher`, AES-256-GCM, clé dérivée du secret du serveur), sexe (âge de la retraite), date
+  d'embauche, contrat (type, fin), temps de travail, visite médicale ; l'e-mail reste dans `n_time_contact` (Czas pracy) ;
+- `n_hr_document` : contrat, avenant, visite médicale, note, autre — PDF, JPG, PNG ou DOCX jusqu'à 8 Mo, contenu chiffré ;
+- `n_hr_note` : texte chiffré, `public` (Kierownik produkcji et finances) ou `private` (auteur et administrateur),
+  `to_admin` (cloche de l'administrateur, sans le texte) ;
+- `n_hr_log` : chaque lecture et écriture (liste, fiche, document, note, bilan) ; `n_hr_summary` : bilans envoyés ;
+- paramètres `hr.retire_age_k` 60, `hr.retire_age_m` 65, `hr.alert_days` 30 ; droit et menu « hr » pour
+  KIEROWNIK_PRODUKCJI et ADMINISTRACJA (menu seulement aux postes qui ont un menu propre).
+Pages `/hr` (Pracownicy), `/hr/documents`, `/hr/notes` (Notatki miesiąca), `/hr/settings` ; téléchargement
+`/hr/document/{id}`. Bilan du mois : `Bin/hr_month_summary.php` (cron 18:05, envoi le dernier jour, une fois) et bouton
+de l'administrateur — l'e-mail ne contient que qui et combien, le texte reste dans l'ERP. Test : `tests/hr_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

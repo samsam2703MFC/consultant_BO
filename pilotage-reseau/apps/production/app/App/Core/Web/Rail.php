@@ -30,6 +30,7 @@ final class Rail
         'team' => ['Zespół', 'bi-person-badge', 'Produkcja', '/production-employees', ['/staff'], null],
         // [262] Czas pracy (moduł Pointages) : dzień do zatwierdzenia, miesiąc, urlopy, nadgodziny ; licznik = dni do zatwierdzenia.
         'time' => ['Czas pracy', 'bi-clock-history', 'Produkcja', '/time', [], 'time'],
+        'hr' => ['HR', 'bi-person-vcard', 'Produkcja', '/hr', [], null],
         'tablets' => ['Tablety', 'bi-tablet', 'Produkcja', '/workshop/execution', ['/workshop/timesheet'], null],
         'purchasing' => ['Zakupy', 'bi-cart3', 'Zakupy', '/workshop/buy', ['/settings/ksef/purchase-invoices', '/purchases'], null],
         'materials' => ['Surowce i ceny', 'bi-basket', 'Zakupy', '/purchasing', ['/material-categories', '/materials'], null],
