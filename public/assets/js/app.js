@@ -1414,6 +1414,14 @@ class App {
         // La gestion de production du franchisé (demande du 03/10/2026) : un sous-menu à elle,
         // par magasin et par jour — le plan, le suivi avant chaque cuisson, les paramètres.
         { sub: 'Gestion de production', children: [['productionParams', '1 · Paramètres', 0], ['productionPlan', '2 · Plan de production', 0], ['productionSuivi', '3 · Validation et suivi', 0], ['productionCloture', '4 · Clôture', 0], ['productionFours', '5 · Fours', 0]] }]],
+      // Le module Formation (demande du 31/10/2026) : une application à part (formation/), au
+      // design du module marketing — le référentiel RH du panel (postes, niveaux, compétences,
+      // formations, procédures) et le manuel opératoire en ligne, ouvert en mode tablette.
+      ['Formation', [
+        ['ext:formation/', 'Module Formation ↗', 0],
+        ['ext:formation/?tablette=1#/manuel', 'Manuel opératoire ↗', 0],
+        // Le parcours de chacun vers le poste visé (31/10/2026) : ici pour l'instant, il passera dans l'application employé.
+        ['ext:formation/parcours/', 'Parcours compétences ↗', 0]]],
       ['Contrôle', [
         ['posts', 'Contrôle posts Facebook', this.fbAttente().length]]],
       ['Administration', [
