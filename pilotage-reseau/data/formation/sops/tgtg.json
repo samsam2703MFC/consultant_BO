@@ -1,0 +1,435 @@
+{
+  "id": "tgtg",
+  "code": "0.3.02",
+  "type": "SOP",
+  "dossier": "01",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "NL",
+  "poste": "vente",
+  "moment": "apres-midi",
+  "duree": "17:00–18:00 (retrait 17:30–18:00)",
+  "titre": {
+    "fr": "Gestion des paniers Too Good To Go",
+    "nl": "Too Good To Go-mandjes beheren"
+  },
+  "objectif": {
+    "fr": "Vendre les invendus du jour sous forme de paniers mixtes, les enregistrer correctement et les remettre au client.",
+    "nl": "De overschotten van vandaag als gemengde mandjes verkopen, correct registreren en aan de klant meegeven."
+  },
+  "pour": {
+    "fr": "Vendeurs (personnel de vente) — tous les jours à partir de 17 h",
+    "nl": "Verkoopmedewerkers — dagelijks vanaf 17.00 uur"
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Horaire et valeur",
+        "nl": "Timing en waarde"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Début et retrait",
+            "nl": "Start en afhalen"
+          },
+          "texte": {
+            "fr": "DÉBUT 17 h 00 — RETRAIT 17 h 30 – 18 h 00",
+            "nl": "START 17.00 uur — AFHALEN 17.30–18.00 uur"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Valeur",
+            "nl": "Waarde"
+          },
+          "texte": {
+            "fr": "VALEUR 15–20 € par panier. Utiliser les prix normaux du magasin.",
+            "nl": "WAARDE € 15–20 per mandje. Gebruik de gewone winkelprijzen."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Marche à suivre – respecter cet ordre",
+        "nl": "Werkwijze – volg deze volgorde"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Contrôler les invendus à 17 h",
+            "nl": "Controleer de overschotten om 17.00 uur"
+          },
+          "texte": {
+            "fr": "Passer en revue tous les produits qui ne peuvent pas être conservés jusqu'au lendemain : baguettes, pistolets, sandwiches, viennoiseries et tous les produits à la crème. Y ajouter les tartes, cookies et cakes signalés par l'équipe du matin.",
+            "nl": "Bekijk alle producten die niet tot morgen bewaard kunnen worden: stokbroden, pistolets, sandwiches, viennoiserie en alle producten met crème. Voeg de taarten, cookies en cakes toe die de ochtendploeg heeft doorgegeven."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Déterminer combien de paniers proposer",
+            "nl": "Bepaal hoeveel mandjes je kunt aanbieden"
+          },
+          "texte": {
+            "fr": "Estimer la valeur des produits disponibles aux prix normaux du magasin. Ne proposer que le nombre de paniers que l'on peut remplir avec un assortiment de produits d'une valeur de 15–20 € par panier.",
+            "nl": "Schat de waarde van de beschikbare producten aan de gewone winkelprijzen. Bied alleen het aantal mandjes aan dat je met een mix van producten ter waarde van € 15–20 per mandje kunt vullen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Mettre les paniers en vente sur la tablette",
+            "nl": "Zet de mandjes te koop op de tablet"
+          },
+          "texte": {
+            "fr": "Ouvrir Too Good To Go. Sous « Baked goods », choisir « Start selling ». Régler le nombre avec + / −, choisir « Today » et vérifier « Start » 17:30 et « End » 18:00. Taper sur « Save ». Vérifier « Selling now », le nombre de paniers et l'heure de retrait. Voir les photos de la page 2.",
+            "nl": "Open Too Good To Go. Kies bij “Baked goods” voor “Start selling”. Stel het aantal in met + / −, kies “Today” en controleer “Start” 17:30 en “End” 18:00. Tik op “Save”. Controleer “Selling now”, het aantal mandjes en de afhaaltijd. Zie de foto’s op pagina 2."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Surveiller les ventes sur la tablette",
+            "nl": "Houd de verkopen op de tablet in het oog"
+          },
+          "texte": {
+            "fr": "Vérifier si des paniers ont été achetés. Sur la carte « Baked goods », on voit combien de paniers ont été vendus, par exemple « 0 out of 4 sold ».",
+            "nl": "Controleer of er mandjes gekocht zijn. Op de kaart “Baked goods” zie je hoeveel mandjes verkocht zijn, bijvoorbeeld “0 out of 4 sold”."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Préparer chaque panier vendu avant l'arrivée du client",
+            "nl": "Bereid elke verkochte mandje vóór de komst van de klant"
+          },
+          "texte": {
+            "fr": "Composer un assortiment avec les produits disponibles et vérifier la valeur totale au prix du magasin : 15–20 €. Enregistrer immédiatement les produits choisis et leurs quantités comme pertes sur la caisse, selon la procédure de fermeture : « Productie » → « Afvalregistratie » → choisir les produits et les quantités → « Over datum » → « Bevestigen ». Vérifier le produit, la quantité et le motif. Ne pas réenregistrer les mêmes produits à la fermeture.",
+            "nl": "Maak een mix van de beschikbare producten en controleer de totale winkelwaarde: € 15–20. Registreer de gekozen producten en hun aantallen meteen als verlies op de kassa, volgens de sluitingsprocedure: Productie → Afvalregistratie → producten en aantallen kiezen → Over datum → Bevestigen. Controleer product, aantal en reden. Registreer dezelfde producten niet opnieuw bij de sluiting."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Faire confirmer le retrait par le client et lui remettre le panier",
+            "nl": "Laat de klant de afhaling bevestigen en geef de mandje mee"
+          },
+          "texte": {
+            "fr": "Demander au client de valider son panier dans sa propre app Too Good To Go. Vérifier la confirmation, puis remettre les produits préparés.",
+            "nl": "Laat de klant zijn mandje op zijn eigen Too Good To Go-app valideren. Controleer de bevestiging en geef daarna de klaargemaakte producten mee."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cas particuliers",
+        "nl": "Bijzondere gevallen"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Pas assez de produits pour un panier vendu",
+            "nl": "Onvoldoende producten voor een verkochte mandje"
+          },
+          "texte": {
+            "fr": "Annuler le panier via l'app. Si l'annulation est impossible, demander de l'aide au responsable.",
+            "nl": "Annuleer de mandje via de app. Kan je de annulering niet uitvoeren, vraag hulp aan de verantwoordelijke."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Le client ne vient pas chercher son panier",
+            "nl": "Klant komt niet afhalen"
+          },
+          "texte": {
+            "fr": "Après 18 h, le membre du personnel peut emporter les produits ou les jeter. Les produits sont déjà enregistrés comme pertes.",
+            "nl": "Na 18.00 uur mag de medewerker de producten zelf meenemen of ze weggooien. De producten zijn al als verlies geregistreerd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Pas d'information sur les tartes, cookies ou cakes",
+            "nl": "Geen informatie over taarten, cookies of cakes"
+          },
+          "texte": {
+            "fr": "Demander à l'équipe du matin quels produits doivent partir aujourd'hui avant de les compter dans l'offre.",
+            "nl": "Vraag de ochtendploeg welke producten vandaag weg moeten vóór je ze in het aanbod meetelt."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Contrôle rapide",
+        "nl": "Snelle controle"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Nombre de paniers et heure de retrait vérifiés.",
+            "nl": "Aantal en afhaaltijd gecontroleerd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "15–20 € par panier vendu.",
+            "nl": "€ 15–20 per verkochte mandje."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Produits enregistrés une seule fois comme pertes.",
+            "nl": "Producten één keer als verlies geregistreerd."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Le client valide avant la remise.",
+            "nl": "Klant valideert vóór afgifte."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Mettre les paniers en vente dans l'app — aide visuelle",
+        "nl": "Mandjes in de app te koop zetten — visuele hulp"
+      },
+      "etapes": [
+        {
+          "numero": "0",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Suivre les étapes ci-dessous sur la tablette du magasin. Les quantités sur les photos sont des exemples ; indiquer le nombre disponible aujourd'hui.",
+            "nl": "Volg de stappen hieronder op de winkeltablet. De aantallen op de foto’s zijn voorbeelden; vul het aantal in dat vandaag beschikbaar is."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Ouvrir Too Good To Go",
+            "nl": "Open Too Good To Go"
+          },
+          "texte": {
+            "fr": "Taper sur l'icône vert foncé avec le logo blanc, en bas de l'écran d'accueil.",
+            "nl": "Tik op het donkergroene pictogram met het witte logo onderaan het startscherm."
+          },
+          "critique": false,
+          "photo": "photos/tgtg-1.jpg"
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Choisir « Start selling »",
+            "nl": "Kies Start selling"
+          },
+          "texte": {
+            "fr": "Ouvrir « Home ». Chercher « Baked goods » et taper sur « Start selling ».",
+            "nl": "Open “Home”. Zoek “Baked goods” en tik op “Start selling”."
+          },
+          "critique": false,
+          "photo": "photos/tgtg-2.jpg"
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Régler et enregistrer",
+            "nl": "Stel in en bewaar"
+          },
+          "texte": {
+            "fr": "Régler le nombre de paniers. Choisir « Today », vérifier 17:30–18:00 et taper sur « Save ».",
+            "nl": "Stel het aantal mandjes in. Kies “Today”, controleer 17:30–18:00 en tik op “Save”."
+          },
+          "critique": false,
+          "photo": "photos/tgtg-3.jpg"
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Vérifier la vente",
+            "nl": "Controleer de verkoop"
+          },
+          "texte": {
+            "fr": "Vérifier « Selling now », le nombre de paniers proposés et vendus, et 17:30–18:00.",
+            "nl": "Controleer “Selling now”, het aangeboden en verkochte aantal en 17:30–18:00."
+          },
+          "critique": false,
+          "photo": "photos/tgtg-4.jpg"
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Valeur et prix client",
+            "nl": "Waarde en klantprijs"
+          },
+          "texte": {
+            "fr": "15–20 €, c'est la valeur du contenu aux prix normaux du magasin. Les 4,99 € visibles sur la photo sont le prix payé par le client dans l'app.",
+            "nl": "€ 15–20 is de waarde van de inhoud aan de gewone winkelprijzen. De € 4,99 op de foto is de klantprijs in de app."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Mise en vente à 17 h ; retrait réglé sur « Today », 17:30–18:00.",
+      "nl": "Te koop zetten om 17.00 uur; afhaling ingesteld op “Today”, 17:30–18:00."
+    },
+    {
+      "fr": "Chaque panier vaut 15–20 € aux prix normaux du magasin (les 4,99 € sont le prix client dans l'app).",
+      "nl": "Elk mandje is € 15–20 waard aan de gewone winkelprijzen (de € 4,99 is de klantprijs in de app)."
+    },
+    {
+      "fr": "Enregistrer les produits comme pertes une seule fois, dès la préparation du panier ; ne pas les réenregistrer à la fermeture.",
+      "nl": "Producten één keer als verlies registreren, meteen bij het klaarmaken van het mandje; niet opnieuw registreren bij de sluiting."
+    },
+    {
+      "fr": "Le client valide le panier dans sa propre app avant la remise des produits.",
+      "nl": "De klant valideert het mandje op zijn eigen app vóór de afgifte van de producten."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Quelle valeur doit avoir le contenu d'un panier Too Good To Go ?",
+        "nl": "Hoeveel moet de inhoud van een Too Good To Go-mandje waard zijn?"
+      },
+      "choix": {
+        "fr": [
+          "4,99 € aux prix du magasin",
+          "15–20 € aux prix normaux du magasin",
+          "Environ 10 €"
+        ],
+        "nl": [
+          "€ 4,99 aan winkelprijzen",
+          "€ 15–20 aan de gewone winkelprijzen",
+          "Ongeveer € 10"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Quelle plage de retrait règle-t-on dans l'app ?",
+        "nl": "Welke afhaaltijd stel je in de app in?"
+      },
+      "choix": {
+        "fr": [
+          "17:30–18:00",
+          "17:00–17:30",
+          "18:00–18:30"
+        ],
+        "nl": [
+          "17:30–18:00",
+          "17:00–17:30",
+          "18:00–18:30"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Quand enregistre-t-on les produits du panier comme pertes sur la caisse ?",
+        "nl": "Wanneer registreer je de producten van het mandje als verlies op de kassa?"
+      },
+      "choix": {
+        "fr": [
+          "À la fermeture, avec les autres invendus",
+          "On ne les enregistre pas",
+          "Tout de suite, en préparant le panier, une seule fois"
+        ],
+        "nl": [
+          "Bij de sluiting, samen met de andere overschotten",
+          "Je registreert ze niet",
+          "Meteen bij het klaarmaken van het mandje, één keer"
+        ]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Aucune modification du texte néerlandais (aucune décision du brief ne s'applique à cette SOP).",
+    "Encadrés sans numéro numérotés : horaire/valeur 1–2, cas particuliers 1–3, contrôle rapide 1–4, aide visuelle 0 (consigne) puis 1–4 (photos) et 5 (note sur le prix) ; titres « Start en afhalen », « Waarde », « Waarde en klantprijs » ajoutés car l'encadré n'en a pas."
+  ],
+  "remarques": [
+    "DOCX (≈ 40 Mo) non téléchargé : son texte a été lu via la conversion texte de Google Drive et il est identique au PDF ; les 4 photos viennent du PDF (page 2).",
+    "Les 4 photos sont des photos de la tablette (pas des captures d'écran) ; extraites en entier alors que le PDF les affiche recadrées (photo 1 : écran d'accueil de la tablette, l'icône Too Good To Go est dans la barre du bas).",
+    "Fautes de genre dans l'original, laissées telles quelles : « de mandje », « elke verkochte mandje », « geef de mandje mee », « annuleer de mandje » → correct : « het mandje », « elk verkocht mandje ». À corriger lors de la prochaine révision.",
+    "Étape 3 : « Zie de foto’s op pagina 2 » renvoie à la section « Mandjes in de app te koop zetten — visuele hulp ».",
+    "La checklist de fermeture / Fermeture v1.3 mentionne des « photos Too Good To Go de 17 h » (décision 5) qui ne figurent pas dans cette SOP : à aligner.",
+    "« Klant komt niet afhalen » : le personnel peut emporter les produits après 18 h — règle à confirmer par la direction si elle doit figurer telle quelle dans la formation."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1xMpXPLbGk9V6fqHYvWMXmphkS3l8Ba2M",
+      "docx": "1aGNKpWxSYcKK2PuLyJf58eiyQB7kJT6f"
+    },
+    "lu": "docx"
+  }
+}

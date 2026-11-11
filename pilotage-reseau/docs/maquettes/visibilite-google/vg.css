@@ -1,0 +1,80 @@
+/* Maquettes « Visibilité Google » — ce qui n'est pas déjà dans le design system (global.css). */
+
+/* Capture pleine page : la coque de l'application défile dans .app__body ; ici, la page entière défile. */
+.workspace { height: auto; min-height: 100vh; overflow: visible; }
+.workspace .shell-rail { position: relative; height: auto; min-height: 100vh; align-self: stretch; overflow: visible; }
+.app__body { overflow: visible; }
+
+.vg-grille { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
+.vg-pile > * + * { margin-top: 16px; }
+.vg-bandeau { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin-bottom: 16px;
+  background: #fff; border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; color: var(--muted-2); }
+.vg-bandeau .sp { flex: 1; }
+.vg-kpis { margin-bottom: 16px; background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.vg-kpis .kpi:first-child { border-left-color: var(--accent); }
+
+/* Tableau des fiches : une ligne par donnée, une colonne par magasin. */
+.vg-fiches table { min-width: 0; table-layout: fixed; }
+.vg-fiches th:first-child, .vg-fiches td:first-child { width: 150px; color: var(--muted); font-size: 12px; }
+.vg-fiches thead th .sub { text-transform: none; letter-spacing: 0; }
+.vg-fiches td { vertical-align: top; font-size: 12.5px; line-height: 1.4; }
+.vg-fiches td .tag-warn, .vg-fiches td .chip { display: flex; width: fit-content; margin-top: 6px; }
+.vg-fiches .h { white-space: nowrap; }
+.vg-bas { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 16px; align-items: start; margin-top: 16px; }
+.vg-liste.deux { columns: 2; column-gap: 28px; }
+.vg-liste.deux li { break-inside: avoid; }
+.vg-liste.deux li:first-child { padding-top: 11px; border-top: 1px solid var(--row-line); }
+.vg-fiches td .site { display: block; margin-top: 4px; font-size: 11px; color: var(--muted); }
+
+.vg-h { margin: 0 0 12px; font-size: 15px; font-weight: 400; }
+.vg-h small { display: block; margin-top: 3px; font-size: 12px; color: var(--muted); }
+
+.vg-liste { margin: 0; padding: 0; list-style: none; }
+.vg-liste li { display: grid; grid-template-columns: 22px 1fr; gap: 4px 8px; padding: 11px 0; border-top: 1px solid var(--row-line); font-size: 12.5px; line-height: 1.45; }
+.vg-liste li:first-child { border-top: 0; padding-top: 2px; }
+.vg-liste .n { color: var(--faint); font-size: 12px; }
+.vg-liste .q { color: var(--muted); font-size: 11.5px; }
+.vg-liste .a { grid-column: 2; display: flex; gap: 8px; margin-top: 4px; }
+
+.vg-note { font-size: 12px; line-height: 1.5; color: var(--muted); margin: 0; }
+.vg-note + .vg-note { margin-top: 8px; }
+.vg-ligne { display: flex; justify-content: space-between; gap: 10px; padding: 7px 0; border-top: 1px solid var(--row-line); font-size: 12.5px; }
+.vg-ligne:first-of-type { border-top: 0; }
+.vg-ligne span:last-child { color: var(--muted-2); text-align: right; }
+
+/* Rang local : la matrice requêtes × magasins. */
+.vg-outils { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; }
+.vg-outils .sp { flex: 1; }
+.vg-rang table { min-width: 0; table-layout: fixed; }
+.vg-rang th:first-child, .vg-rang td:first-child { width: 205px; }
+.vg-rang td { padding: 10px 12px; vertical-align: middle; }
+.vg-rang tr.theme td { padding: 14px 12px 6px; background: none; border-top: 1px solid var(--line);
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.vg-rang tbody tr:first-child.theme td { border-top: 0; }
+.vg-rang .req { font-size: 12.5px; }
+.vg-rang .req .sub { text-transform: none; }
+.rg { display: inline-block; min-width: 64px; line-height: 1.3; padding: 5px 9px; border-radius: 6px; font-size: 12.5px; }
+.rg sup { font-size: 9px; }
+.rg.top { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.rg.mid { background: var(--chip); color: var(--ink); }
+.rg.bas { background: var(--prize-soft); color: var(--prize-ink); }
+.rg.abs { background: transparent; border: 1px dashed rgba(34, 34, 34, 0.2); color: var(--muted); }
+.rg.sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ev { margin-left: 6px; font-size: 11px; }
+.ev.up { color: var(--green); }
+.ev.down { color: var(--prize-ink); }
+.vg-leg { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 12px; font-size: 11.5px; color: var(--muted); }
+.vg-leg > span { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Détail d'une requête : la liste que Google renvoie. */
+.vg-res { margin: 0; padding: 0; list-style: none; counter-reset: r; }
+.vg-res li { display: grid; grid-template-columns: 22px 1fr auto; gap: 2px 8px; align-items: baseline; padding: 8px 0; border-top: 1px solid var(--row-line); font-size: 12.5px; }
+.vg-res li:first-child { border-top: 0; }
+.vg-res li .p { color: var(--faint); font-size: 12px; }
+.vg-res li .s { grid-column: 2 / 4; font-size: 11px; color: var(--muted); }
+.vg-res li .m { font-size: 11.5px; color: var(--muted-2); white-space: nowrap; }
+.vg-res li.nous { margin: 0 -10px; padding: 8px 10px; background: rgba(141, 29, 44, 0.05); border-radius: 8px; border-top-color: transparent; }
+.vg-res li.nous .p, .vg-res li.nous .t { color: var(--accent); }
+.vg-res li.nous + li { border-top-color: transparent; }
+
+.vg-pied { margin: 24px 0 0; max-width: 980px; font-size: 11px; line-height: 1.5; color: var(--muted); }

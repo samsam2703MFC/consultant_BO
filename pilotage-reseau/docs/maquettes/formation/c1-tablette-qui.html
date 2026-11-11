@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=1280">
+<title>C1 — Tablette du poste : les SOP du poste, qui lit ?</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script><script src="tablette.js"></script>
+</head><body style="background:#F5F1EB"><script>
+/* C1 — L'onglet SOP de l'app Cuisine : les SOP du poste rangées par compétence, et « Qui lit ? » : son nom (l'équipe
+   du jour, d'après le planning), puis son PIN. Ensuite chacun voit où il en est, compétence par compétence. */
+const C = FO.competences.filter(c => c.poste === 'cuisson'), M = FO.halle.matrice.tw;
+const ST = { va: ['va', '✓', 'vu faire'], qz: ['qz', 'Q', 'quiz réussi · à voir faire'], lu: ['lu', 'L', 'lue · quiz à faire'], no: ['no', '·', 'à lire'], rv: ['rv', '!', 'à revoir'], na: ['no', '·', 'pas encore dans ton parcours'] };
+const liste = C.map(c => { const cp = FO.compPers.tw[c.id];
+  return `<div style="margin-bottom:14px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:6px"><span class="comp" style="font-size:12px;padding:4px 11px">${esc(c.nom)}</span>${cp.st === 'acq' ? '<span class="pill ok">acquise</span>' : cp.st === 'na' ? '' : `<span class="pill att">${cp.v} / ${cp.n} vues faire</span>`}</div>
+  ${c.sops.map(id => { const s = FO.sops.find(x => x.id === id), st = ST[M[id] || 'na'];
+    return `<div style="display:flex;align-items:center;gap:12px;background:#fff;border-radius:12px;padding:10px 14px;margin-bottom:6px;border:.5px solid var(--color-border-tertiary)"><span class="c ${st[0]}" style="width:30px;height:30px;font-size:13px">${st[1]}</span><div style="flex:1"><div style="font:600 15px var(--font-ui)">${esc(s.court)}${s.statut ? ' <span class="pill att">à valider</span>' : ''}</div><div class="mini" style="font-size:12px">${s.nbEtapes} étapes · ${st[2]}</div></div><span style="font-size:22px;color:#bbb">›</span></div>`; }).join('')}</div>`; }).join('');
+const equipe = [['Karim A.', '04:00 – 12:00'], ['Tom W.', '12:00 – 20:00 · samedi 04:00'], ['Mila R.', '06:00 – 14:00'], ['Elke V.', 'responsable · 06:00 – 14:00']];
+const qui = `<div style="width:420px;flex:0 0 auto;background:#fff;border-left:.5px solid var(--color-border-tertiary);padding:22px 26px;display:flex;flex-direction:column">
+  <div style="font:400 26px/1.1 var(--font-display)">Qui lit ?</div><div class="mini" style="font-size:13px;margin:4px 0 14px">l’équipe du jour, d’après le planning · comme pour les checklists</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">${equipe.map(e => `<span style="border-radius:12px;padding:10px 12px;border:${e[0] === 'Tom W.' ? '2px solid var(--color-primary);background:#FDF4F5' : '.5px solid var(--color-border-secondary)'}"><b style="display:block;font-size:15px">${e[0]}</b><small class="mu" style="font-size:11px">${e[1]}</small></span>`).join('')}</div>
+  <div class="lab" style="text-align:center">PIN de Tom W.</div>${pave(2)}
+  <div class="mini" style="margin-top:auto;font-size:12px">La langue se choisit d’un geste (FR | NL) ; la tablette s’en souvient pour Tom. Sans identification, on peut lire, mais rien n’est compté.</div></div>`;
+tablette(`<div class="tab-corps"><div style="flex:1;padding:20px 26px;overflow:hidden">
+  <div style="display:flex;gap:8px;margin-bottom:16px">${['Cuisson', 'Production', 'Nettoyage', 'Toutes'].map((p, i) => `<span style="padding:10px 18px;border-radius:12px;font:600 15px var(--font-ui);${i === 0 ? 'background:#222;color:#fff' : 'background:#fff;border:.5px solid var(--color-border-secondary)'}">${p}</span>`).join('')}<span class="sp" style="flex:1"></span><span class="mini" style="align-self:center;font-size:12.5px">les SOP du poste · rangées par compétence</span></div>
+  ${liste}</div>${qui}</div>`, { qui: null, sous: 'poste de cuisson' });
+</script></body></html>

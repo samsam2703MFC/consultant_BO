@@ -1,0 +1,285 @@
+<?php
+
+namespace App\Controllers\Web\Client;
+
+use App\Core\Web\BaseController;
+use App\Services\Client\ClientCreationService;
+use App\Services\Client\ClientSalesSummaryService;
+use App\Services\Client\ClientSpaceService;
+use App\Services\Client\ClientService;
+use App\Services\Client\FranchiseNetwork\IntegrationOnboardingTokenService;
+use App\Services\Client\Integration\ClientIntegrationService;
+use App\Services\Finances\ProfitabilityService;
+use App\Services\Logistics\CustomerDeliveryInfoService;
+use App\Services\Logistics\LogisticsService;
+use App\Services\Utils\CountryService;
+use DateTime;
+use Symfony\Component\HttpFoundation\Request;
+
+class ClientController extends BaseController
+{
+    private ClientService $clientService;
+    private CountryService $countryService;
+    private ProfitabilityService $profitabilityService;
+    private IntegrationOnboardingTokenService $integrationOnboardingTokenService;
+    private ClientIntegrationService $clientIntegrationService;
+    private ClientSalesSummaryService $clientSalesSummaryService;
+
+    public function __construct(
+        ClientService        $clientService,
+        CountryService       $countryService,
+        ProfitabilityService $profitabilityService,
+        IntegrationOnboardingTokenService $integrationOnboardingTokenService,
+        ClientIntegrationService $clientIntegrationService,
+        ClientSalesSummaryService $clientSalesSummaryService,
+        private ClientSpaceService $clientSpaceService,
+        private CustomerDeliveryInfoService $deliveryInfo,
+        private ClientCreationService $creation,
+        private LogisticsService $logistics
+    )
+    {
+        $this->clientService = $clientService;
+        $this->countryService = $countryService;
+        $this->profitabilityService = $profitabilityService;
+        $this->integrationOnboardingTokenService = $integrationOnboardingTokenService;
+        $this->clientIntegrationService = $clientIntegrationService;
+        $this->clientSalesSummaryService = $clientSalesSummaryService;
+    }
+
+    public function overview()
+    {
+        $type = $_GET['type'] ?? ''; // jeśli nie ma, to pusty string
+
+        if ($type === 'inactive') {
+            $data['table_title'] = "Nieaktywni klienci";
+            $data['rows'] = $this->clientService->getInactive();
+        } else if ($type === 'franchisee') {
+            $data['table_title'] = "Franczyzobiorcy";
+            $data['rows'] = $this->clientService->getFranchisee();
+        } else if ($type === 'active') {
+            $data['table_title'] = "Aktywni klienci";
+            $data['rows'] = $this->clientService->getActive();
+        } else {
+            $data['table_title'] = "Wszyscy klienci";
+            $data['rows'] = $this->clientService->getAll();
+        }
+
+        $data['space_enabled'] = array_flip($this->clientSpaceService->enabledCustomerIds());
+        $this->view("client/client/overview", $data);
+    }
+
+    /**
+     * Kreator klienta (audyt 2, lot C) : firma i VAT → kontakt i język → cennik → dostawa (trasa, instrukcje) →
+     * dokumenty → opcje klienta → podsumowanie ; po zapisie karta klienta (nigdy lista) z tym, co zostało do uzupełnienia.
+     */
+    public function newClient()
+    {
+        $data['countries'] = $this->countryService->getAll();
+        $data['rows'] = $this->clientService->getAll();
+        $data['tours'] = array_values(array_filter($this->logistics->tours()['tours'], fn($t) => $t['active']));
+        $data['space'] = $this->clientSpaceService->settings(0);
+
+        if ($_SERVER['REQUEST_METHOD'] == "POST") {
+            $this->errors = $this->clientService->validate($_POST);
+
+            if (empty($this->errors)) {
+                $this->handleAction(function () {
+                    $id = (int) $this->clientService->insert($_POST);
+                    $author = user('displayed_name') ?: user('login') ?: null;
+                    $_SESSION['client_created'] = ['id' => $id, 'problems' => $this->creation->complete($id, $_POST, $author)];
+                    header('Location: ' . ROOT . '/clients/' . $id . '/edit');
+                    exit;
+                }, default: false);
+            }
+        }
+        $this->view("client/client/new", $data);
+    }
+
+    public function editClient($id)
+    {
+        $data['row'] = $this->clientService->getById($id);
+        // Prosto z kreatora : komunikat « utworzono » i lista tego, czego brakuje (raz).
+        if (($_SESSION['client_created']['id'] ?? null) === (int) $id) {
+            $data['created'] = $_SESSION['client_created'];
+            unset($_SESSION['client_created']);
+        }
+        $data['countries'] = $this->countryService->getAll();
+        $data['space'] = $this->clientSpaceService->settings((int) $id);
+        $data['delivery_info'] = $data['row'] ? $this->deliveryInfo->get((int) $id) : null;
+
+        if ($_SERVER['REQUEST_METHOD'] == "POST") {
+            $newData = $_POST;
+
+            $this->errors = $this->clientService->validate($newData);
+            // Opcje « Strona klienta » (n_customer_space) : sprawdzone przed zapisem klienta.
+            try {
+                if (empty($this->errors)) $this->clientSpaceService->saveSettings((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
+                // Instrukcje dostawy dla kierowcy (zaszyfrowane) : tylko gdy formularz je zawiera.
+                if (empty($this->errors) && array_key_exists('delivery_procedure', $newData)) $this->deliveryInfo->save((int) $id, $newData, user('displayed_name') ?: user('login') ?: null);
+            } catch (\App\Exceptions\CustomException $e) {
+                $this->errors[] = $e->getMessage();
+            }
+
+            if (empty($this->errors)) {
+                $this->handleAction(function () use ($id, $newData, $data) {
+
+                    //generate franchisee code if type is franchisee and code is null
+                    if ($data['row']['type'] == 1 && is_null($data['row']['franchisee_code'])) {
+                        $newData['franchisee_code'] = $this->clientService->generateFranchiseeCode($data['row']['company']);
+                    }
+
+                    $this->clientService->update($id, $newData);
+                    header('Location: ' . ROOT . '/clients');
+                    exit;
+                }, default: false);
+            }
+        }
+        $this->view("client/client/edit", $data);
+    }
+
+    public function deleteClient($id)
+    {
+        $data['row'] = $this->clientService->getById($id);
+
+        if ($_SERVER['REQUEST_METHOD'] == "POST") {
+            $result = $this->handleAction(function () use ($id) {
+                $this->clientService->delete($id);
+                header('Location: ' . ROOT . '/clients');
+                exit;
+            }, default: false);
+            $this->errors[] = $result['error'] ?? 'Nie udało się usunąć klienta.';
+        }
+
+        $this->view("client/client/delete", $data);
+    }
+
+    public function ajaxUpdateClient($id)
+    {
+        $request = Request::createFromGlobals();
+        $data = $this->getJson($request);
+
+        if (empty($data)) {
+            return $this->json(['message' => 'Brak danych wejściowych'], 400);
+        }
+
+        $result = $this->clientService->update($id, $data);
+
+        return $this->handleAjaxResponse($result, 'Klient zaktualizowany', 'Nie udało się zaktualizować klienta');
+    }
+
+    public function ajaxViesLookup()
+    {
+        $request = Request::createFromGlobals();
+        $data = $this->getJson($request);
+        $vat = is_string($data['vat'] ?? null) ? $data['vat'] : '';
+
+        if (trim($vat) === '') {
+            return $this->json(['ok' => false, 'message' => 'Wprowadź numer VAT.', 'code' => 422], 422);
+        }
+
+        $result = $this->clientService->lookupVies($vat);
+        return $this->json($result, $result['code']);
+    }
+
+    public function profitability($id)
+    {
+        // Miesiąc do wyboru (domyślnie ostatni zamknięty) ; sprzedaż i koszt jak w Analizie sprzedaży
+        $month = (string)($_GET['month'] ?? '');
+        if (!preg_match('/^\d{4}-(0[1-9]|1[0-2])$/', $month)) {
+            $month = (new DateTime('first day of last month'))->format('Y-m');
+        }
+        $data['month'] = $month;
+        $data['last_month_year'] = (new DateTime($month . '-01'))->format('m-Y');
+
+        $data['customer'] = $this->clientService->getById($id);
+
+        $products = $this->profitabilityService->getSoldProductListByCustomerInMonth((int)$id, $month);
+        $data['products_grouped_by_category'] = [];
+
+        foreach ($products as $product) {
+            if (!isset($data['products_grouped_by_category'][$product['id_category']])) {
+                $data['products_grouped_by_category'][$product['id_category']]['id'] = $product['id_category'];
+                $data['products_grouped_by_category'][$product['id_category']]['name'] = $product['category_name'];
+                $data['products_grouped_by_category'][$product['id_category']]['total_earn'] = 0;
+                $data['products_grouped_by_category'][$product['id_category']]['total_cost'] = 0;
+                $data['products_grouped_by_category'][$product['id_category']]['products'] = [];
+            }
+
+            array_push($data['products_grouped_by_category'][$product['id_category']]['products'], $product);
+
+            $data['products_grouped_by_category'][$product['id_category']]['total_earn'] += $product['earned_value_pln'];
+            $data['products_grouped_by_category'][$product['id_category']]['total_cost'] += $product['total_raw_cost'];
+        }
+
+        $this->view("client/client/profitability", $data);
+    }
+
+    public function ajaxGenerateIntegrationInvitationCodeForFranchiseClient($id)
+    {
+        $resp = $this->integrationOnboardingTokenService->getForClient($id);
+
+        if (!$resp) {
+            return $this->json(['message' => 'Brak danych dla tej wartości'], 404);
+        }
+
+        return $this->json(['token' => $resp]);
+    }
+
+    public function ajaxActivateIntegration($id)
+    {
+        $request = Request::createFromGlobals();
+        $data = $this->getJson($request);
+
+        if (empty($data)) {
+            return $this->json(['message' => 'Brak danych wejściowych'], 400);
+        }
+
+        $resp = $this->handleAction(function () use ($id, $data) {
+            return $this->clientIntegrationService->activateIntegration($id, $data['link']);
+        }, default: false);
+
+        return $this->json($resp, $resp['code']);
+    }
+
+
+
+    public function exportSalesSummaryPdf($id)
+    {
+        $dateFrom = $_GET['date_from'] ?? date('Y-m-d', strtotime('-3 months'));
+        $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
+        $sort     = $this->clientSalesSummaryService->normalizeSort($_GET['sort'] ?? null);
+
+        $export = $this->clientSalesSummaryService->buildPdf((int)$id, $dateFrom, $dateTo, $sort);
+
+        return new \Symfony\Component\HttpFoundation\Response(
+            $export['content'],
+            200,
+            [
+                'Content-Type'        => 'application/pdf',
+                'Content-Disposition' => 'attachment; filename="' . $export['filename'] . '"',
+                'Content-Length'      => strlen($export['content']),
+            ]
+        );
+    }
+
+    public function exportSalesSummaryXls($id)
+    {
+        $dateFrom = $_GET['date_from'] ?? date('Y-m-d', strtotime('-3 months'));
+        $dateTo   = $_GET['date_to']   ?? date('Y-m-d');
+        $sort     = $this->clientSalesSummaryService->normalizeSort($_GET['sort'] ?? null);
+
+        $export = $this->clientSalesSummaryService->buildCsv((int)$id, $dateFrom, $dateTo, $sort);
+
+        return new \Symfony\Component\HttpFoundation\Response(
+            $export['content'],
+            200,
+            [
+                'Content-Type'        => 'text/csv; charset=UTF-8',
+                'Content-Disposition' => 'attachment; filename="' . $export['filename'] . '"',
+                'Content-Length'      => strlen($export['content']),
+            ]
+        );
+    }
+
+}
+

@@ -1,0 +1,82 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Moja karta stanowiska{% endblock %}
+
+{% block content %}
+{# [256] Karta stanowiska A4 (makieta 35) : misje i zadania, godziny w miesiącu, cele. Bez wyników, premii, wynagrodzenia. #}
+<section class="section pcard-wrap">
+    {% if card %}
+    <div class="pcard-actions">
+        {% if is_admin %}<span class="at-sub">Podgląd administratora : karta osoby na stanowisku.</span>{% endif %}
+        <button type="button" class="btn btn-primary" data-print-card><i class="bi bi-printer"></i> Drukuj A4</button>
+    </div>
+    {% set colors = {production: '#8a1c2b', development: '#b5545f', purchasing: '#c98a5a', staffing: '#8c7a6b', logistics: '#5f6f7a', haccp: '#9aa58a'} %}
+    <article class="pcard-sheet" lang="pl">
+        <header class="pcard-top">
+            <div>
+                <div class="pcard-brand">L'Atelier By · Karta stanowiska</div>
+                <h1 class="pcard-title">{{ card.position }}</h1>
+            </div>
+            <div class="pcard-meta">
+                <b>{{ card.holder ?: '—' }}</b><br>
+                {{ card.working_time }}{% if card.monthly_hours %} · {{ card.monthly_hours|number_format(0, ',', ' ') }} h / mies.{% endif %}<br>
+                Podlega : {{ card.reports_to }} · rok {{ card.year }}
+            </div>
+        </header>
+        <p class="pcard-mission">{{ card.mission }}</p>
+
+        <h2 class="pcard-h">Moje misje, godziny i cele</h2>
+        <table class="pcard-table">
+            <thead><tr><th class="pcard-c1">Misja i zadania</th><th class="pcard-c2 pcard-num">Godziny / mies.</th><th>Cele</th></tr></thead>
+            <tbody>
+            {% for m in card.missions %}
+                <tr>
+                    <td><b><span class="pcard-chip" style="background:{{ colors[m.code] }}"></span>{{ m.name }}</b>
+                        <ul>{% for t in m.tasks %}<li>{{ t }}</li>{% endfor %}</ul></td>
+                    <td class="pcard-num">
+                        {% if m.hours is not null %}<b>{{ m.hours|number_format(0, ',', ' ') }} h</b>
+                        <span class="pcard-sub">{{ (m.share * 100)|number_format(0, ',', ' ') }} % czasu</span>
+                        <div class="pcard-mini"><i style="width:{{ (m.share * 100)|round(1) }}%;background:{{ colors[m.code] }}"></i></div>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{% for g in m.goals %}<div class="pcard-goal"><span>{{ g.name }}</span>{% if g.target %}<b>{{ g.target }}</b>{% else %}<i>{{ card.missing }}</i>{% endif %}</div>{% endfor %}</td>
+                </tr>
+            {% endfor %}
+                <tr class="pcard-total">
+                    <td><b>Razem</b></td>
+                    <td class="pcard-num"><b>{{ card.hours_total|number_format(0, ',', ' ') }} h</b><span class="pcard-sub">100 %</span></td>
+                    <td><span class="pcard-sub">{{ card.goals_set }} z {{ card.goals_count }} celów ustalonych{% if card.hours_default %} · godziny : propozycja{% endif %}</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <footer class="pcard-foot">
+            <div class="pcard-sign"><div>Pracownik : data i podpis</div><div>CEO : data i podpis</div></div>
+            <div class="pcard-note"><span>{% if card.validated_at %}Cele zatwierdzone {{ card.validated_at|date('d.m.Y') }}{% else %}Cele jeszcze niezatwierdzone{% endif %} · liczby z ERP</span><span>1 / 1</span></div>
+        </footer>
+    </article>
+    {% else %}
+    <div class="card"><div class="card-body">
+        <p class="at-empty mb-0"><i class="bi bi-person-vcard"></i> Brak karty stanowiska do pokazania : karta jest tylko dla osoby na stanowisku kierownika produkcji (plan roku {{ "now"|date('Y') }}).</p>
+    </div></div>
+    {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// [256] Karta zawsze na jednej stronie A4 : czcionka zmniejszana, aż cała treść (z podpisami) zmieści się w 297 mm.
+(function () {
+    const sheet = document.querySelector('.pcard-sheet');
+    if (!sheet) return;
+    const fit = () => {
+        let fs = 11.5;
+        sheet.style.setProperty('--pcard-fs', fs + 'px');
+        while (sheet.scrollHeight > sheet.clientHeight + 1 && fs > 7) { fs -= 0.25; sheet.style.setProperty('--pcard-fs', fs + 'px'); }
+    };
+    fit();
+    document.fonts?.ready.then(fit);
+    document.querySelector('[data-print-card]')?.addEventListener('click', () => window.print());
+})();
+</script>
+{% endblock %}

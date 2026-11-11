@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B — Visibilité Google · Rang local</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="/public/assets/css/app.css"><link rel="stylesheet" href="vg.css">
+<script src="rail.js"></script><script src="coque.js"></script>
+</head><body><script>
+// Rang de la fiche du magasin dans les 20 résultats de la recherche, lancée depuis le magasin.
+// [requête FR, requête NL (Halle), [Corbais, Gosselies, Sombreffe, Halle]] ; chaque cellule : [rang ou 0 = hors des 20, évolution sur 7 jours]
+const THEMES = [
+  ['Boulangerie', [
+    ['boulangerie {ville}', 'bakkerij Halle', [[2, 1], [5, 0], [1, 0], [4, 2]]],
+    ['boulangerie ouverte dimanche {ville}', 'bakkerij zondag open Halle', [[1, 0], [3, -1], [2, 0], [6, 0]]]]],
+  ['Sandwiches garnis', [
+    ['sandwich {ville}', 'broodjes Halle', [[3, 0], [9, -2], [2, 1], [11, 0]]],
+    ['sandwicherie {ville}', 'broodjeszaak Halle', [[6, 1], [14, 0], [4, 0], [0, 0]]]]],
+  ['Cougnous', [
+    ['cougnou {ville}', 'kerstbrood Halle', [[8, 4], [7, 2], [5, 0], [0, 0]]],
+    ['commander cougnou {ville}', 'kerstbrood bestellen Halle', [[12, 3], [0, 0], [9, 1], [0, 0]]]]],
+  ['Galettes des rois', [
+    ['galette des rois {ville}', 'driekoningentaart Halle', [[10, 0], [13, 0], [6, 0], [0, 0]]]]]
+];
+const SEL = { theme: 2, req: 0, mag: 1 }; // cougnou Gosselies
+
+const cell = (c, sel) => {
+  const [r, ev] = c;
+  const cls = r === 0 ? 'abs' : r <= 3 ? 'top' : r <= 10 ? 'mid' : 'bas';
+  const lib = r === 0 ? 'hors des 20' : (r === 1 ? '1<sup>er</sup>' : r + '<sup>e</sup>');
+  const e = r && ev ? `<span class="ev ${ev > 0 ? 'up' : 'down'}">${ev > 0 ? '▲ ' + ev : '▼ ' + (-ev)}</span>` : '';
+  return `<span class="rg ${cls}${sel ? ' sel' : ''}">${lib}</span>${e}`;
+};
+let n = 0, top3 = 0, hors = 0, horsNl = 0, gain = 0, perte = 0;
+const tete = VG.magasins.map(m => `<th>${m.ville}${m.langue === 'nl' ? '<span class="sub">en néerlandais</span>' : ''}</th>`).join('');
+const lignes = THEMES.map(([theme, reqs], ti) => `<tr class="theme"><td colspan="5">${theme}</td></tr>` + reqs.map(([fr, nl, cs], ri) => `
+  <tr><td class="req">${fr.replace('{ville}', '<span style="color:var(--muted)">{ville}</span>')}<span class="sub">Halle : ${nl}</span></td>
+  ${cs.map((c, mi) => { n++; if (c[0] && c[0] <= 3) top3++; if (!c[0]) { hors++; if (mi === 3) horsNl++; } if (c[0] && c[1] > 0) gain += c[1]; if (c[0] && c[1] < 0) perte -= c[1]; return `<td>${cell(c, ti === SEL.theme && ri === SEL.req && mi === SEL.mag)}</td>`; }).join('')}</tr>`).join('')).join('');
+
+const resultats = [
+  ['Concurrent A', 'boulangerie · 0,6 km', '4,6 · 312 avis'],
+  ['Concurrent B', 'boulangerie-pâtisserie · 2,1 km', '4,4 · 1 024 avis'],
+  ['Concurrent C', 'boulangerie, chaîne · 1,4 km', '4,1 · 486 avis'],
+  ['Concurrent D', 'boulangerie · 3,2 km', '4,7 · 158 avis'],
+  ['Concurrent E', 'supermarché · 1,1 km', '3,9 · 2 210 avis'],
+  ['Concurrent F', 'boulangerie · 2,8 km', '4,5 · 203 avis'],
+  ['Boulangerie Max &amp; Sandra', 'boulangerie · votre magasin, nom à corriger', '4,5 · 96 avis', 1],
+  ['Concurrent G', 'pâtisserie · 4,0 km', '4,6 · 74 avis']
+];
+const res = resultats.map((r, i) => `<li class="${r[3] ? 'nous' : ''}"><span class="p">${i + 1}</span><span class="t">${r[0]}</span><span class="m">${r[2]}</span><span class="s">${r[1]}</span></li>`).join('');
+
+coque({
+  onglet: 'rang',
+  actions: `<button class="btn">Exporter</button><button class="btn btn--primary">Relire Google maintenant</button>`,
+  intro: 'À quelle place sort chaque magasin quand on cherche ses produits autour de lui. La recherche est lancée chaque lundi depuis le magasin, comme un client du quartier.',
+  corps: `
+  <div class="vg-outils">
+    <div class="seg"><button class="is-on">Cette semaine</button><button>4 semaines</button><button>Saison</button></div>
+    <button class="filter is-on">Tous les thèmes</button><button class="filter">Boulangerie</button><button class="filter">Sandwiches garnis</button><button class="filter">Cougnous</button><button class="filter">Galettes des rois</button>
+    <span class="sp"></span><span class="field">Semaine du 09/11/2026 · rayon 5 km</span>
+  </div>
+  <div class="kpi-row vg-kpis">
+    <div class="kpi"><div class="kpi__value">${top3} / ${n}</div><div class="kpi__label">Dans les 3 premiers</div><div class="kpi__note">ce que Google Maps montre sans défiler</div></div>
+    <div class="kpi"><div class="kpi__value">${hors}</div><div class="kpi__label">Hors des 20</div><div class="kpi__note">dont ${horsNl} à Halle, en néerlandais</div></div>
+    <div class="kpi"><div class="kpi__value">5<sup style="font-size:13px">e</sup></div><div class="kpi__label">Meilleur rang cougnou</div><div class="kpi__note">Sombreffe · en saison jusqu’au 15/01</div></div>
+    <div class="kpi"><div class="kpi__value">+ ${gain}</div><div class="kpi__label">Places gagnées en 7 jours</div><div class="kpi__note">${perte} places perdues</div></div>
+  </div>
+  <div class="vg-grille">
+    <section class="card table-card vg-rang" style="margin-top:0;padding:0 0 14px;overflow:hidden">
+      <table><thead><tr><th>Recherche</th>${tete}</tr></thead><tbody>${lignes}</tbody></table>
+      <div class="vg-leg" style="padding:0 14px">
+        <span><span class="rg top">1<sup>er</sup>–3<sup>e</sup></span>visible sans défiler</span>
+        <span><span class="rg mid">4<sup>e</sup>–10<sup>e</sup></span>premier écran de la liste</span>
+        <span><span class="rg bas">11<sup>e</sup>–20<sup>e</sup></span>à travailler</span>
+        <span><span class="rg abs">hors des 20</span>invisible</span>
+        <span><span class="ev up">▲ 2</span>gagné sur 7 jours</span>
+      </div>
+    </section>
+    <div class="vg-pile">
+      <section class="card"><h3 class="vg-h">cougnou Gosselies<small>7<sup>e</sup> sur 20 · ▲ 2 sur 7 jours · depuis Rue du Pircha 202</small></h3>
+        <ol class="vg-res">${res}</ol>
+      </section>
+      <section class="card"><h3 class="vg-h">Ce qui le ferait monter</h3>
+        <ul class="vg-liste">
+          <li><span class="n">1</span><div>Le mot « cougnou » n’est ni sur la fiche (produits, posts) ni sur la page liée du site.</div></li>
+          <li><span class="n">2</span><div>96 avis, contre 312 pour le premier : demander un avis en caisse.</div></li>
+          <li><span class="n">3</span><div>La fiche renvoie au webshop, pas à une page de la boutique.</div></li>
+        </ul>
+      </section>
+      <section class="card"><h3 class="vg-h">Comment ce rang est mesuré</h3>
+        <p class="vg-note">Recherche Google Places depuis la position du magasin, 20 résultats, en français (en néerlandais à Halle), chaque lundi à 6:00.</p>
+        <p class="vg-note">C’est proche du classement de Google Maps, sans être exactement ce que voit un client : son résultat dépend de l’endroit où il est et de son historique.</p>
+        <div style="margin-top:10px">
+          <div class="vg-ligne"><span>Recherches par semaine</span><span>28</span></div>
+          <div class="vg-ligne"><span>Fiches relues par semaine</span><span>4</span></div>
+          <div class="vg-ligne"><span>Appels par mois</span><span>environ 130</span></div>
+        </div>
+      </section>
+    </div>
+  </div>`
+});
+</script></body></html>

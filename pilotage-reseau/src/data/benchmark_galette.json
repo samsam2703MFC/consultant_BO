@@ -1,0 +1,509 @@
+{
+ "famille": "galette",
+ "libelle": "galette des rois",
+ "mesure": "diametre",
+ "motif": "galette|driekoningen|frangipane",
+ "saison": {
+  "du": "1201",
+  "au": "0120"
+ },
+ "releve": "2026-11-07",
+ "site": {
+  "url": "https://atelierby.be",
+  "page": "/galette-des-rois.html",
+  "pageNl": "/nl/driekoningentaart/",
+  "motCle": "galette",
+  "motCleNl": "driekoningentaart",
+  "motifTaille": "\\d{2}\\s*cm\\b",
+  "libelleTaille": "Diamètre ou nombre de parts affiché",
+  "minTaille": 1
+ },
+ "requetesGoogle": [
+  "galette des rois {ville}",
+  "boulangerie {ville}"
+ ],
+ "requetesGoogleNl": [
+  "driekoningentaart {ville}"
+ ],
+ "nous": {
+  "tailleRef": 24,
+  "tailleConfirmee": true,
+  "tailleNote": "Ø 24 cm (confirmé). Prix : 24,90 € du 31/12, 19,90 € en précommande webshop jusqu'au 30/12 (atelierby.be) ; le panel de Halle affichait encore 20,50 € le 9/10/2026.",
+  "correspondance": {
+   "galette24": 4100013
+  },
+  "produits": [
+   {
+    "id": 4100013,
+    "nom": "Galette frangipane Ø 24 cm",
+    "prix": 24.9,
+    "reference": true,
+    "taille": 24
+   },
+   {
+    "id": 4100013,
+    "nom": "Galette frangipane Ø 24 cm, précommande jusqu'au 30/12",
+    "prix": 19.9,
+    "taille": 24
+   }
+  ],
+  "boutiques": [
+   {
+    "id": 2,
+    "ville": "Corbais"
+   },
+   {
+    "id": 3,
+    "ville": "Gosselies"
+   },
+   {
+    "id": 5,
+    "ville": "Sombreffe"
+   },
+   {
+    "id": 4,
+    "ville": "Halle",
+    "nl": true
+   }
+  ],
+  "categorie": 41000
+ },
+ "concurrents": [
+  {
+   "nom": "Aldi",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.aldi.be",
+   "items": [
+    {
+     "name_raw": "Galette frangipane (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 4.99,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+     "vu_le": "janv. 2026 (test DH)"
+    }
+   ]
+  },
+  {
+   "nom": "Lidl",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.lidl.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 5.99,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+     "vu_le": "janv. 2026 (test DH)"
+    }
+   ]
+  },
+  {
+   "nom": "Intermarché",
+   "type": "GMS",
+   "magasins": [
+    3,
+    5
+   ],
+   "ville": {
+    "*": "régional"
+   },
+   "site": "https://www.intermarche.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 5.99,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+     "vu_le": "janv. 2026 (test DH)"
+    }
+   ]
+  },
+  {
+   "nom": "Colruyt (Boni)",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.colruyt.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 5.99,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+     "vu_le": "janv. 2026 (test DH)"
+    },
+    {
+     "name_raw": "Pasquier frangipane 400 g (promo 1–12 janv.)",
+     "unit_type": "g",
+     "unit_size": 400,
+     "price": 5.5,
+     "comparer_a": "galette24",
+     "source": "https://www.colruyt.be/nl/producten/9173",
+     "vu_le": "janv. 2026, index moteur"
+    }
+   ]
+  },
+  {
+   "nom": "Carrefour",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.carrefour.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 6.99,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/conso/consommation/2026/01/04/le-grand-test-des-marques-commence-2026-avec-la-galette-des-rois-la-reference-qui-gagnait-chaque-annee-a-perdu-sa-couronne-comparatif-LBKFIX35PFCAJIFMFVUBST6XGA/",
+     "vu_le": "janv. 2026 (test DH)"
+    },
+    {
+     "name_raw": "Driekoningsgebak frangipane 6 portions (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 4.69,
+     "comparer_a": "galette24",
+     "source": "https://www.carrefour.be/nl/driekoningentaart",
+     "vu_le": "janv. 2026, index moteur"
+    },
+    {
+     "name_raw": "Driekoningentaart frangipane 400 g",
+     "unit_type": "g",
+     "unit_size": 400,
+     "price": 6.99,
+     "comparer_a": "galette24",
+     "source": "https://www.carrefour.be/nl/driekoningentaart",
+     "vu_le": "janv. 2026, index moteur"
+    }
+   ]
+  },
+  {
+   "nom": "Delhaize",
+   "type": "GMS",
+   "magasins": [
+    2,
+    3,
+    4,
+    5
+   ],
+   "ville": {
+    "*": "national"
+   },
+   "site": "https://www.delhaize.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois frangipane 6P (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 8.69,
+     "comparer_a": "galette24",
+     "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+     "vu_le": "janv. 2026 (communiqué)"
+    },
+    {
+     "name_raw": "Galette pommes-frangipane 6P (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 9.99,
+     "comparer_a": "galette24",
+     "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+     "vu_le": "janv. 2026 (communiqué)"
+    },
+    {
+     "name_raw": "Galette Pasquier frangipane 6P (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 6.89,
+     "comparer_a": "galette24",
+     "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+     "vu_le": "janv. 2026 (communiqué)"
+    },
+    {
+     "name_raw": "Galette Taste of Inspirations (taille non précisée)",
+     "unit_type": "pièce",
+     "price": 12.59,
+     "comparer_a": "galette24",
+     "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+     "vu_le": "janv. 2026 (communiqué)"
+    },
+    {
+     "name_raw": "Galette cuite en magasin (taille non précisée)",
+     "unit_type": "pièce",
+     "price": 12.99,
+     "comparer_a": "galette24",
+     "source": "https://press.delhaize.be/delhaize-prevoit-plus-de-190000-galettes-des-rois-cette-annee",
+     "vu_le": "janv. 2026 (communiqué)"
+    }
+   ]
+  },
+  {
+   "nom": "Maison Dandoy",
+   "type": "Chaîne",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Bruxelles"
+   },
+   "site": "https://www.maisondandoy.com",
+   "note": "catalogue entreprises, 30,19 € HTVA",
+   "items": [
+    {
+     "name_raw": "Galette aux amandes 6/8 p, Ø 28 cm",
+     "unit_type": "cm",
+     "unit_size": 28,
+     "price": 32.0,
+     "comparer_a": "galette24",
+     "source": "https://d16n391k7whr4.cloudfront.net/images/DAN_CORPO_CATALOGUE_FIN_ANNEE_25-2-1_compressed.pdf",
+     "vu_le": "fin d'année 2025"
+    }
+   ]
+  },
+  {
+   "nom": "Le Pain d'Antan",
+   "type": "Chaîne",
+   "magasins": [
+    2,
+    3
+   ],
+   "ville": {
+    "2": "Wavre",
+    "3": "Gosselies"
+   },
+   "distance_km": {
+    "2": 8,
+    "3": 3
+   },
+   "site": "https://lepaindantan.be",
+   "items": [
+    {
+     "name_raw": "Galette des rois (4 p, Ø 18 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 18,
+     "price": 23.0,
+     "comparer_a": "galette24",
+     "source": "https://lepaindantan.be/en/our-news/artisanal-galettes-des-rois-discover-our-creations-from-3-january-onwards-307",
+     "vu_le": "janv. 2026 probable, index moteur"
+    },
+    {
+     "name_raw": "Galette des rois (8 p, Ø 25 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 25,
+     "price": 29.0,
+     "comparer_a": "galette24",
+     "source": "https://lepaindantan.be/en/our-news/artisanal-galettes-des-rois-discover-our-creations-from-3-january-onwards-307",
+     "vu_le": "janv. 2026 probable, index moteur"
+    }
+   ]
+  },
+  {
+   "nom": "Boulengier (Saint-Gilles)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Saint-Gilles"
+   },
+   "site": "https://www.dhnet.be",
+   "note": "meilleure galette de Bruxelles 2025 (DH)",
+   "items": [
+    {
+     "name_raw": "Galette frangipane (4 p, Ø 18 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 18,
+     "price": 21.0,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/regions/bruxelles/2025/01/04/ne-pas-avoir-peur-de-mettre-du-beurre-voici-les-secrets-dune-bonne-galette-des-rois-par-la-boulangerie-qui-fait-la-meilleure-de-bruxelles-37OBQOLTEZGHTJ47LEUP6APABQ/",
+     "vu_le": "janv. 2025"
+    },
+    {
+     "name_raw": "Galette frangipane (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 29.0,
+     "comparer_a": "galette24",
+     "source": "https://www.dhnet.be/regions/bruxelles/2025/01/04/ne-pas-avoir-peur-de-mettre-du-beurre-voici-les-secrets-dune-bonne-galette-des-rois-par-la-boulangerie-qui-fait-la-meilleure-de-bruxelles-37OBQOLTEZGHTJ47LEUP6APABQ/",
+     "vu_le": "janv. 2025"
+    }
+   ]
+  },
+  {
+   "nom": "Bakkerij Van Dessel (Dilbeek)",
+   "type": "Artisan",
+   "magasins": [
+    4
+   ],
+   "ville": {
+    "4": "Dilbeek"
+   },
+   "distance_km": {
+    "4": 15
+   },
+   "site": "https://bakkerijvandessel.be",
+   "note": "webshop",
+   "items": [
+    {
+     "name_raw": "Driekoningentaart appel (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 21.0,
+     "comparer_a": "galette24",
+     "source": "https://www.bakkerijvandessel.be/product/driekoningentaart-appel",
+     "vu_le": "page janv. 2025, toujours en ligne"
+    }
+   ]
+  },
+  {
+   "nom": "Paysans-Artisans (Le pain de François)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Namur"
+   },
+   "site": "https://eshop.paysans-artisans.be",
+   "note": "commande la veille",
+   "items": [
+    {
+     "name_raw": "Galette frangipane 6/8 p, Ø 24 cm",
+     "unit_type": "cm",
+     "unit_size": 24,
+     "price": 24.33,
+     "comparer_a": "galette24",
+     "source": "https://eshop.paysans-artisans.be/galette-des-rois-frangipane-6-8-pers-p1382545081163.htm",
+     "vu_le": "lu le 2026-11-07"
+    }
+   ]
+  },
+  {
+   "nom": "Boulangerie Lefevre (Marche)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Marche-en-Famenne"
+   },
+   "site": "https://www.patisserie-lefevre.be",
+   "note": "livraison gratuite en Belgique",
+   "items": [
+    {
+     "name_raw": "Galette des rois 600 g, Ø 22 cm",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 19.9,
+     "comparer_a": "galette24",
+     "source": "https://www.patisserie-lefevre.be/galette-des-rois/",
+     "vu_le": "lu, saison non précisée"
+    }
+   ]
+  },
+  {
+   "nom": "Chacolathé (Andenne)",
+   "type": "Artisan",
+   "magasins": [
+    5
+   ],
+   "ville": {
+    "5": "Andenne"
+   },
+   "site": "https://chacolathe.be",
+   "items": [
+    {
+     "name_raw": "Petite galette 4–6 p (6 p, Ø 22 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 22,
+     "price": 22.0,
+     "comparer_a": "galette24",
+     "source": "https://chacolathe.be/2025/12/27/galette-des-rois-2026/",
+     "vu_le": "janv. 2026"
+    },
+    {
+     "name_raw": "Grande galette 8–12 p (8 p, Ø 25 cm estimé)",
+     "unit_type": "cm",
+     "unit_size": 25,
+     "price": 32.0,
+     "comparer_a": "galette24",
+     "source": "https://chacolathe.be/2025/12/27/galette-des-rois-2026/",
+     "vu_le": "janv. 2026"
+    }
+   ]
+  },
+  {
+   "nom": "eFarmz",
+   "type": "Artisan",
+   "magasins": [
+    2,
+    4
+   ],
+   "ville": {
+    "*": "e-shop"
+   },
+   "site": "https://www.efarmz.be",
+   "note": "bio",
+   "items": [
+    {
+     "name_raw": "Galette des rois bio 6–8 parts, 500 g",
+     "unit_type": "g",
+     "unit_size": 500,
+     "price": 23.0,
+     "comparer_a": "galette24",
+     "source": "https://www.efarmz.be/fr/shop/boulangerie/patisseries/brioches/A6107+galette-des-rois",
+     "vu_le": "janv. 2026, index moteur"
+    }
+   ]
+  }
+ ],
+ "constats": [
+  "Garder 24,90 € : à surface égale (Ø 24 cm), c'est le prix des artisans et chaînes qui donnent un vrai diamètre (Paysans-Artisans 24,33 €, Dandoy 23,51 €, Lefevre 23,68 €), et nettement sous les pâtissiers bruxellois (Boulengier ≈ 34–37 €, Pain d'Antan 8 p ≈ 27 €).",
+  "Mettre en avant la précommande à 19,90 € : aucun concurrent relevé n'offre de remise pour réserver tôt. C'est notre argument face aux supermarchés (6 à 12 € à Ø 24).",
+  "Afficher le diamètre (24 cm) et le nombre de parts (8) sur la page Galette et le webshop : les concurrents comparent au nombre de personnes.",
+  "Aligner le prix du panel (20,50 € à Halle) sur 24,90 € / 19,90 € avant l'ouverture des précommandes.",
+  "Ajouter « galette des rois » + nom des villes dans le titre de la page, et un balisage Product/Offer avec les deux prix et les dates.",
+  "Relever à nouveau les prix vers le 3 janvier : la plupart des concurrents publient les leurs pour l'Épiphanie (la routine du jeudi le rappelle)."
+ ]
+}

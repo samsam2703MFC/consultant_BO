@@ -1,0 +1,365 @@
+{% extends "layouts/base.twig" %}
+{#
+  [254] Analiza sprzedaży (makiety 32 + 34) : jedno zdanie « lepiej czy gorzej niż rok temu », przyciski działów
+  (sprzedaż, zmiana, marża działu z Wyniku grup, odznaki), miesiące obok tych samych miesięcy rok wcześniej (jedna oś,
+  od zera), 5 produktów w górę i 5 w dół, tabela wszystkich produktów schowana pod przyciskiem.
+#}
+
+{% macro k(v, sign) %}{% apply spaceless %}
+    {% set s = sign ? (v >= 0 ? '+' : '−') : (v < 0 ? '−' : '') %}
+    {% if v|abs < 1000 %}{{ s }}{{ v|abs|number_format(0, ',', ' ') }} €{% else %}{{ s }}{{ (v|abs / 1000)|number_format(0, ',', ' ') }} tys. €{% endif %}
+{% endapply %}{% endmacro %}
+{% macro pct(p) %}{{ p is null ? '—' : (p >= 0 ? '+' : '−') ~ (p|abs)|number_format(0, ',', ' ') ~ ' %' }}{% endmacro %}
+{% macro mpct(p) %}{{ p is null ? '—' : (p < 0 ? '−' : '') ~ (p|abs)|number_format(0, ',', ' ') ~ ' %' }}{% endmacro %}
+
+{% block title %}Analiza sprzedaży{% endblock %}
+
+{% block head %}
+    <link rel="stylesheet" href="{{ root }}/assets/css/sales-analytics.css">
+{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Analiza sprzedaży</h3>
+            <p class="text-subtitle text-muted">Czy sprzedajemy więcej niż rok temu — cała firma i każdy dział (dokumenty WDT)</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{% import _self as f %}
+{% set base = root ~ '/finances/sales-analytics' %}
+{% set clientQ = customer_id ? '&customer_id=' ~ customer_id : '' %}
+{% set periodQ = 'date_from=' ~ date_from ~ '&date_to=' ~ date_to %}
+<section class="section sa">
+
+    {# ── Okres i klient ───────────────────────────────────────────── #}
+    <div class="sa-bar">
+        {% set known = presets|filter(p => p.from == date_from and p.to == date_to)|length > 0 %}
+        {% for p in presets %}
+            {% set active = date_from == p.from and date_to == p.to %}
+            <a class="sa-chip{{ active ? ' on' : '' }}" href="{{ base }}?date_from={{ p.from }}&date_to={{ p.to }}{{ clientQ }}{{ section_id ? '&section_id=' ~ section_id : '' }}" title="{{ p.title }}">{{ p.label }}</a>
+        {% endfor %}
+        <details class="sa-other"{{ known ? '' : ' open' }}>
+            <summary class="sa-chip{{ known ? '' : ' on' }}"><i class="bi bi-calendar3 me-2"></i>Inny okres</summary>
+            <form method="get" action="{{ base }}" class="sa-other-form">
+                <input type="month" class="form-control" name="date_from" value="{{ date_from }}" aria-label="Miesiąc od">
+                <span class="text-muted">→</span>
+                <input type="month" class="form-control" name="date_to" value="{{ date_to }}" aria-label="Miesiąc do">
+                {% if customer_id %}<input type="hidden" name="customer_id" value="{{ customer_id }}">{% endif %}
+                {% if section_id %}<input type="hidden" name="section_id" value="{{ section_id }}">{% endif %}
+                <button class="sa-btn" type="submit">Pokaż</button>
+            </form>
+        </details>
+        <span class="sa-spacer"></span>
+        <form method="get" action="{{ base }}" class="d-flex align-items-center gap-2">
+            <input type="hidden" name="date_from" value="{{ date_from }}">
+            <input type="hidden" name="date_to" value="{{ date_to }}">
+            {% if section_id %}<input type="hidden" name="section_id" value="{{ section_id }}">{% endif %}
+            <label class="text-muted small" for="customerSelect">Klient</label>
+            <select class="form-select sa-select" id="customerSelect" name="customer_id" onchange="this.form.submit()">
+                <option value="0">Wszyscy klienci</option>
+                {% for c in customers %}
+                    <option value="{{ c.id }}"{{ customer_id == c.id ? ' selected' : '' }}>{{ c.company }}</option>
+                {% endfor %}
+            </select>
+        </form>
+    </div>
+
+    {% if page.empty %}
+        <div class="sa-card sa-pad text-muted">Ten okres jeszcze się nie zaczął — wybierz inny.</div>
+    {% else %}
+    {% set t = page.total %}
+    {% set secs = page.sections %}
+    {% set sel = page.selected %}
+
+    {# ── Przyciski działów (makieta 32) ───────────────────────────── #}
+    {% if secs.items|length > 0 %}
+    <nav class="sa-secs" aria-label="Działy">
+        {% set allOn = not section_id %}
+        <a class="sa-sec{{ allOn ? ' on' : '' }}" href="{{ base }}?{{ periodQ }}{{ clientQ }}"{{ allOn ? ' aria-current="page"' : '' }}>
+            <h6>Cała firma</h6>
+            <div class="v">{{ f.k(secs.company_value) }}</div>
+            <div class="r"><span>vs rok temu</span>{% if secs.company_change is null %}<span class="sa-pill none">—</span>{% else %}<span class="sa-pill {{ secs.company_change >= 0 ? 'up' : 'down' }}">{{ f.pct(secs.company_change) }}</span>{% endif %}</div>
+            <div class="r"><span>Marża działów</span>{% if secs.company_margin is null %}<span class="text-muted">—</span>{% else %}<b class="sa-m-{{ secs.company_level }}"><span class="sa-dot"></span>{{ f.mpct(secs.company_margin) }}</b>{% endif %}</div>
+            <div class="sa-badges"></div>
+        </a>
+        {% for s in secs.items %}
+            {% set on = section_id == s.id %}
+            <a class="sa-sec{{ on ? ' on' : '' }}" href="{{ base }}?{{ periodQ }}{{ clientQ }}&section_id={{ s.id }}"{{ on ? ' aria-current="page"' : '' }}>
+                <h6>{{ s.name }}</h6>
+                <div class="v">{{ f.k(s.value) }}</div>
+                <div class="r"><span>vs rok temu</span>{% if s.change is null %}<span class="sa-pill new">nowy</span>{% else %}<span class="sa-pill {{ s.change >= 0 ? 'up' : 'down' }}">{{ f.pct(s.change) }}</span>{% endif %}</div>
+                <div class="r"><span>Marża</span>{% if s.margin_pct is null %}<span class="text-muted" title="Marża działu tylko dla wszystkich klientów (personel nie dzieli się na klientów)">—</span>{% else %}<b class="sa-m-{{ s.margin_level }}" title="Po samych surowcach : {{ f.mpct(s.gross_pct) }}"><span class="sa-dot"></span>{{ f.mpct(s.margin_pct) }}</b>{% endif %}</div>
+                <div class="sa-badges">
+                    {% if 'sales' in s.badges %}<span class="sa-badge sales"><i class="bi bi-trophy-fill"></i> Najwięcej sprzedaje</span>{% endif %}
+                    {% if 'growth' in s.badges %}<span class="sa-badge growth"><i class="bi bi-graph-up-arrow"></i> Najszybciej rośnie</span>{% endif %}
+                    {% if 'margin' in s.badges %}<span class="sa-badge margin"><i class="bi bi-cash-coin"></i> Najlepsza marża</span>{% endif %}
+                    {% if 'loss' in s.badges %}<span class="sa-badge loss"><i class="bi bi-exclamation-triangle-fill"></i> Traci</span>{% endif %}
+                </div>
+            </a>
+        {% endfor %}
+    </nav>
+    {% endif %}
+
+    {# ── Werdykt ──────────────────────────────────────────────────── #}
+    {% set who = sel ? sel.name ~ ' sprzedaje' : (customer_id ? 'Ten klient kupuje' : 'Sprzedajemy') %}
+    {% set ch = t.change %}
+    <div class="sa-card sa-verdict">
+        <div class="ic{{ ch is null ? ' none' : (ch < 0 ? ' down' : '') }}"><i class="bi bi-{{ ch is null ? 'dash-lg' : (ch < 0 ? 'arrow-down-right' : 'arrow-up-right') }}"></i></div>
+        <div>
+            {% if ch is null %}
+                <h2>{{ t.value > 0 ? 'Rok wcześniej brak sprzedaży — nie ma z czym porównać' : 'Brak sprzedaży w tym okresie' }}</h2>
+            {% elseif ch|abs < 1 %}
+                <h2>{{ who }} tyle samo co rok temu : <span class="text-muted">{{ f.pct(ch) }}</span></h2>
+            {% else %}
+                <h2>{{ who }} {{ ch >= 0 ? 'więcej' : 'mniej' }} niż rok temu : <span class="{{ ch >= 0 ? 'up' : 'down' }}">{{ f.pct(ch) }}</span></h2>
+            {% endif %}
+            <p>{{ page.label|capitalize }} : <b>{{ t.value|eur }}</b> · ten sam okres rok wcześniej {{ t.prev|eur }} · czyli <b class="{{ t.diff >= 0 ? 'up' : 'down' }}">{{ f.k(t.diff, true) }}</b></p>
+            {% if sel and sel.margin_pct is not null %}
+                {% set m = sel.margin_pct %}
+                <p class="mt-1">
+                    {% if m >= sel.margin_target %}
+                        <b class="sa-m-ok"><i class="bi bi-check-circle-fill"></i> Zostaje {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }} osiągnięty.
+                    {% elseif m >= 0 %}
+                        <b class="sa-m-{{ sel.margin_level }}">Zostaje {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }}, brakuje {{ (sel.margin_target - m)|number_format(0, ',', ' ') }} pkt.
+                    {% else %}
+                        <b class="sa-m-bad"><i class="bi bi-exclamation-triangle-fill"></i> Dział traci : {{ f.mpct(m) }} sprzedaży ({{ f.k(sel.margin_eur) }})</b> — cel {{ f.mpct(sel.margin_target) }}.
+                    {% endif %}
+                    Po samych surowcach : {{ f.mpct(sel.gross_pct) }}.
+                </p>
+            {% endif %}
+        </div>
+        <div class="fig"><b>{{ f.k(t.value) }}</b><small>{{ page.label }}</small></div>
+    </div>
+
+    {# ── Wybrany dział : miejsce wśród działów (makieta 34) ───────── #}
+    {% if sel and sel.rank_sales is defined %}
+        <div class="sa-strip">
+            <i class="bi bi-bar-chart-steps text-primary"></i>
+            <span>Wśród {{ secs.count }} działów : <b>{{ sel.rank_sales }}. miejsce w sprzedaży</b>{% if sel.rank_margin %} · <b>{{ sel.rank_margin }}. miejsce w marży</b>{% endif %}{% if sel.fastest %} · <b>{{ f.pct(sel.change) }}</b> — najszybszy wzrost ze wszystkich działów{% endif %}</span>
+            <span class="sa-spacer"></span>
+            <a class="sa-btn" href="#products" data-open-products>Produkty działu ({{ page.products|length }})</a>
+            <a class="sa-btn" href="{{ root }}/dashboard/results">Wynik grupy w Rentowności</a>
+        </div>
+    {% endif %}
+
+    {# ── Miesiąc po miesiącu ─────────────────────────────────────── #}
+    {% set top = page.axis.top %}
+    <div class="sa-card sa-pad mb-3">
+        <div class="sa-h">
+            <h5>{{ sel ? sel.name ~ ' miesiąc' : 'Miesiąc' }} po miesiącu</h5>
+            <span>każdy miesiąc obok tego samego miesiąca rok wcześniej</span>
+            <div class="sa-legend"><span><i style="background: var(--at-primary)"></i>Teraz</span><span><i style="background: #d9d2ca"></i>Rok wcześniej</span>{% if page.bounds.partial %}<span><i style="background: var(--at-warning)"></i>Miesiąc w toku</span>{% endif %}</div>
+        </div>
+        <div class="sa-chart">
+            <div class="sa-axis">
+                {% for v in page.axis.ticks %}<span style="bottom: {{ (v / top * 100)|round(2) }}%">{{ v == 0 ? '0' : f.k(v) }}</span>{% endfor %}
+            </div>
+            <div class="sa-plot">
+                <div class="sa-grid">{% for v in page.axis.ticks %}<i style="bottom: {{ (v / top * 100)|round(2) }}%"></i>{% endfor %}</div>
+                <div class="sa-cols">
+                    {% for m in page.months %}
+                        <div class="sa-col" title="{{ m.label }} {{ m.year }} : {{ m.value|eur }} · rok wcześniej : {{ m.prev|eur }}{{ m.partial ? ' · miesiąc w toku (do dziś)' : '' }}">
+                            <div class="sa-bars">
+                                <i class="prev" style="height: {{ (m.prev / top * 100)|round(2) }}%"></i>
+                                <i class="cur{{ m.partial ? ' partial' : '' }}" style="height: {{ (m.value / top * 100)|round(2) }}%"></i>
+                            </div>
+                            <div class="m">{{ m.label }}<small>{{ loop.first or m.ym ends with '-01' ? m.year : '' }}</small></div>
+                            {% if m.change is null %}
+                                <div class="p text-muted">{{ m.value > 0 ? 'nowe' : '—' }}</div>
+                            {% else %}
+                                <div class="p {{ m.change >= 0 ? 'up' : 'down' }}">{{ f.pct(m.change) }}</div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% if page.alert %}
+            {% set a = page.alert %}
+            <div class="sa-alert">
+                <i class="bi bi-exclamation-triangle-fill"></i>
+                <div><b>{{ a.name|capitalize }} {{ a.year }} : {{ f.k(a.value) }} zamiast {{ f.k(a.prev) }} rok wcześniej ({{ f.pct(a.change) }}).</b> Czy wszystkie WDT z tego miesiąca są już wystawione ?</div>
+                <span class="sa-spacer"></span>
+                <a class="sa-btn" href="{{ root }}/shipments?type=wdt">Lista WDT</a>
+            </div>
+        {% endif %}
+    </div>
+
+    {# ── Co sprzedaje się lepiej / gorzej ─────────────────────────── #}
+    <div class="sa-two">
+        {% for side in ['up', 'down'] %}
+            {% set list = page.movers[side] %}
+            <div class="sa-card sa-pad">
+                <div class="sa-h">
+                    {% if side == 'up' %}
+                        <h5 class="up"><i class="bi bi-arrow-up-right"></i> Co sprzedaje się lepiej</h5><span>największe wzrosty w €</span>
+                    {% else %}
+                        <h5 class="down"><i class="bi bi-arrow-down-right"></i> Co sprzedaje się gorzej</h5><span>największe spadki w €</span>
+                    {% endif %}
+                </div>
+                {% for p in list %}
+                    <div class="sa-mover product-row" data-product-id="{{ p.product_id }}" data-product-name="{{ p.name }}" role="button" tabindex="0">
+                        <div class="n">{{ p.name }}{% if p.new %} <span class="sa-pill new">nowy</span>{% endif %}
+                            <small>{{ p.section }} · rok wcześniej {{ f.k(p.prev) }} → teraz {{ f.k(p.value) }}</small></div>
+                        <div class="sa-track"><i style="width: {{ p.bar|round(1) }}%; background: {{ side == 'up' ? 'var(--at-success)' : '#b3261e' }}"></i></div>
+                        <div class="num {{ side }} fw-bold">{{ f.k(p.diff, true) }}</div>
+                    </div>
+                {% else %}
+                    <div class="sa-empty">{{ side == 'up' ? 'Żaden produkt nie sprzedaje się lepiej niż rok temu.' : 'Żaden produkt nie sprzedaje się gorzej niż rok temu.' }}</div>
+                {% endfor %}
+            </div>
+        {% endfor %}
+    </div>
+
+    {# ── Wszystkie produkty (pod przyciskiem) ─────────────────────── #}
+    <details class="sa-card sa-all mb-3" id="products">
+        <summary><i class="bi bi-list-ul"></i> {{ sel ? 'Produkty działu ' ~ sel.name : 'Wszystkie produkty' }} ({{ page.products|length }}) — tabela z wyszukiwarką</summary>
+        <div class="sa-pad pb-2">
+            <div class="input-group mb-2" style="max-width: 420px">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" class="form-control" id="productSearch" placeholder="Szukaj produktu…" autocomplete="off">
+            </div>
+            <div class="small text-muted mb-2">Kliknij produkt : jego sprzedaż miesiąc po miesiącu.</div>
+        </div>
+        <div class="table-responsive">
+            <table class="sa-table" id="productsTable">
+                <thead><tr>
+                    <th class="num">#</th><th>Produkt</th><th style="width: 22%">Udział</th>
+                    <th class="num">Teraz</th><th class="num">Rok wcześniej</th><th class="num">Zmiana</th><th class="num">Kartony</th>
+                </tr></thead>
+                <tbody>
+                {% for p in page.products %}
+                    <tr class="product-row" data-product-id="{{ p.product_id }}" data-product-name="{{ p.name }}">
+                        <td class="num text-muted">{{ loop.index }}</td>
+                        <td><span class="fw-semibold">{{ p.name }}</span><small>{{ p.section }}{{ p.category ? ' · ' ~ p.category : '' }}</small></td>
+                        <td><div class="sa-track"><i style="width: {{ p.share|round(1) }}%; background: var(--at-primary)"></i></div></td>
+                        <td class="num fw-bold">{{ p.value|eur }}</td>
+                        <td class="num text-muted">{{ p.prev > 0 ? p.prev|eur : '—' }}</td>
+                        <td class="num">{% if p.new %}<span class="sa-pill new">nowy</span>{% else %}<span class="sa-pill {{ p.change >= 0 ? 'up' : 'down' }}">{{ f.pct(p.change) }}</span>{% endif %}</td>
+                        <td class="num">{{ p.cartons|number_format(0, ',', ' ') }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            <div id="productSearchNoResults" class="text-center text-muted py-3 d-none">Brak produktów dla tej frazy.</div>
+        </div>
+    </details>
+
+    <div class="sa-note">
+        <b>Marża</b> = co zostaje działowi ze sprzedaży po surowcach, zespole i mediach (jak w Rentowność › Wynik grup), w tym samym okresie.
+        <span class="sa-m-ok"><span class="sa-dot"></span>≥ cel</span> ·
+        <span class="sa-m-mid"><span class="sa-dot"></span>{{ margin_low|number_format(0) }} % – cel</span> ·
+        <span class="sa-m-bad"><span class="sa-dot"></span>poniżej {{ margin_low|number_format(0) }} %</span>.
+        Bieżący miesiąc liczony do dziś i porównany z tymi samymi dniami rok wcześniej.
+        {% for w in secs.warnings %}<div class="mt-1"><i class="bi bi-info-circle"></i> {{ w }}</div>{% endfor %}
+    </div>
+    {% endif %}
+
+    {# ── Okno : sprzedaż produktu miesiąc po miesiącu ─────────────── #}
+    <div class="modal fade" id="trendModal" tabindex="-1" aria-labelledby="trendModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="trendModalLabel">Sprzedaż produktu</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Zamknij"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="trendModalSpinner" class="text-center py-5 d-none">
+                        <div class="spinner-border text-primary" role="status"></div>
+                        <div class="mt-2 text-muted">Ładowanie danych…</div>
+                    </div>
+                    <div id="trendModalContent">
+                        <div class="d-flex flex-wrap gap-4 mb-3" id="trendKpiRow"></div>
+                        <canvas id="trendChart" style="max-height: 380px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script>
+const ROOT = "{{ root }}";
+const DATE_FROM = "{{ date_from }}";
+const DATE_TO = "{{ date_to }}";
+const CUSTOMER_ID = {{ customer_id|json_encode|raw }};
+let trendChartInstance = null;
+
+// Produkt → okno ze sprzedażą miesiąc po miesiącu (jedna oś : €).
+document.querySelectorAll('.product-row').forEach(function (row) {
+    const open = function () { openTrendModal(row.dataset.productId, row.dataset.productName); };
+    row.addEventListener('click', open);
+    row.addEventListener('keydown', function (e) { if (e.key === 'Enter') open(); });
+});
+
+function openTrendModal(productId, productName) {
+    document.getElementById('trendModalLabel').textContent = productName + ' — sprzedaż miesiąc po miesiącu';
+    document.getElementById('trendModalSpinner').classList.remove('d-none');
+    document.getElementById('trendModalContent').classList.add('d-none');
+    new bootstrap.Modal(document.getElementById('trendModal')).show();
+
+    const url = ROOT + '/ajax/finances/sales-analytics/product-trend'
+        + '?product_id=' + encodeURIComponent(productId)
+        + '&date_from=' + DATE_FROM
+        + '&date_to=' + DATE_TO
+        + '&customer_id=' + encodeURIComponent(CUSTOMER_ID);
+    fetch(url)
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (!res.ok) throw new Error(res.error || 'Błąd serwera');
+            renderTrend(res.data);
+        })
+        .catch(function (err) {
+            document.getElementById('trendModalSpinner').classList.add('d-none');
+            const box = document.getElementById('trendModalContent');
+            box.textContent = 'Błąd : ' + err.message;
+            box.classList.remove('d-none');
+        });
+}
+
+function renderTrend(data) {
+    document.getElementById('trendModalSpinner').classList.add('d-none');
+    document.getElementById('trendModalContent').classList.remove('d-none');
+    const eur = function (v) { return Math.round(v).toLocaleString('pl-PL') + ' €'; };
+    const total = data.values.reduce(function (a, b) { return a + b; }, 0);
+    const cartons = data.quantities.reduce(function (a, b) { return a + b; }, 0);
+    const kpi = function (label, value) { return '<div><div class="text-muted small">' + label + '</div><div class="fs-5 fw-bold">' + value + '</div></div>'; };
+    document.getElementById('trendKpiRow').innerHTML = kpi('Razem', eur(total))
+        + kpi('Średnio na miesiąc', eur(data.values.length ? total / data.values.length : 0))
+        + kpi('Kartony', cartons.toLocaleString('pl-PL'));
+    if (trendChartInstance) trendChartInstance.destroy();
+    trendChartInstance = new Chart(document.getElementById('trendChart'), {
+        type: 'bar',
+        data: { labels: data.labels, datasets: [{ label: 'Sprzedaż (€)', data: data.values, backgroundColor: '#8D1D2C', borderRadius: 4 }] },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false }, tooltip: { callbacks: { label: function (c) { return eur(c.parsed.y); } } } },
+            scales: { y: { beginAtZero: true, ticks: { callback: function (v) { return eur(v); } } } }
+        }
+    });
+}
+
+// Wszystkie produkty : wyszukiwarka ; « Produkty działu » otwiera tabelę.
+(function () {
+    const input = document.getElementById('productSearch');
+    const none = document.getElementById('productSearchNoResults');
+    if (input) input.addEventListener('input', function () {
+        const phrase = input.value.trim().toLowerCase();
+        let visible = 0;
+        document.querySelectorAll('#productsTable tbody .product-row').forEach(function (row) {
+            const show = !phrase || (row.dataset.productName || '').toLowerCase().includes(phrase);
+            row.style.display = show ? '' : 'none';
+            if (show) visible++;
+        });
+        none.classList.toggle('d-none', visible > 0 || !phrase);
+    });
+    document.querySelectorAll('[data-open-products]').forEach(function (a) {
+        a.addEventListener('click', function () { document.getElementById('products').open = true; });
+    });
+})();
+</script>
+{% endblock %}

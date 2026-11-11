@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=1280">
+<title>C3 — Tablette du poste : quiz réussi, la responsable valide « vu faire »</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="fo.css">
+<script src="donnees.js"></script><script src="coque.js"></script><script src="tablette.js"></script>
+</head><body style="background:#F5F1EB"><script>
+/* C3 — Fin de la SOP sur la tablette : le quiz est réussi ; la responsable du magasin, qui a vu faire, valide avec
+   son PIN. C'était la dernière SOP de la compétence « Ouvrir le poste de cuisson » : Tom W. l'acquiert. */
+const s = FO.sops.find(x => x.id === 'ouv-poste'), c = FO.competences.find(x => x.id === s.compId);
+const q = s.quiz;
+const gauche = `<div style="flex:1;padding:24px 30px;display:flex;flex-direction:column;gap:14px">
+  <div style="display:flex;align-items:center;gap:16px"><div style="width:64px;height:64px;border-radius:50%;background:#2d7a3e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:32px">✓</div>
+    <div><div style="font:400 30px/1.05 var(--font-display)">Quiz réussi · 3 / 3</div><div class="mini" style="font-size:14px">Tom W. · ${esc(s.court)} · ${esc(s.code)}</div></div></div>
+  <div class="carte">${q.map((x, i) => `<div style="display:flex;gap:10px;padding:7px 0;border-bottom:.5px dashed var(--color-border-tertiary);font-size:14px"><span class="c va" style="width:24px;height:24px">✓</span><div><b>${esc(x.q)}</b><div class="mu" style="font-size:13px">${esc(x.choix[x.ok])}</div></div></div>`).join('')}</div>
+  <div class="carte"><div class="lab">La compétence</div><div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><span class="comp" style="font-size:13px;padding:5px 12px">${esc(c.nom)}</span><span class="pill ok">acquise à la validation</span></div>
+    ${c.sops.map(id => { const x = FO.sops.find(y => y.id === id), st = id === 'ouv-poste' ? 'qz' : FO.halle.matrice.tw[id]; return `<div style="display:flex;align-items:center;gap:10px;padding:5px 0;font-size:14px"><span class="c ${st === 'va' ? 'va' : 'qz'}" style="width:24px;height:24px">${st === 'va' ? '✓' : 'Q'}</span>${esc(x.court)}<span class="mu" style="font-size:12px;margin-left:auto">${st === 'va' ? 'vue faire' : 'à valider maintenant'}</span></div>`; }).join('')}</div></div>`;
+const droite = `<div style="width:440px;flex:0 0 auto;background:#fff;border-left:.5px solid var(--color-border-tertiary);padding:22px 26px;display:flex;flex-direction:column">
+  <div style="font:400 26px/1.1 var(--font-display)">Vu faire</div><div class="mini" style="font-size:13px;margin:4px 0 14px">la responsable du magasin a vu Tom faire l’ouverture du poste, sur place</div>
+  <div style="border-radius:12px;padding:10px 12px;border:2px solid var(--color-primary);background:#FDF4F5;margin-bottom:12px"><b style="display:block;font-size:15px">Elke V.</b><small class="mu">responsable magasin · seule à pouvoir valider</small></div>
+  <div class="lab" style="text-align:center">PIN d’Elke V.</div>${pave(4)}
+  <div class="mini" style="margin-top:auto;font-size:12px">« Pas encore » renvoie la SOP dans le parcours de Tom, avec une note. Le quiz seul ne suffit pas : la compétence est acquise quand la responsable a vu faire chaque SOP.</div></div>`;
+tablette(`<div class="tab-corps">${gauche}${droite}</div>
+  <div class="tab-pied" style="padding-left:22px"><span class="gb">Pas encore</span><div class="av"><small style="font-size:14px">Tom W. acquiert <b>${esc(c.nom)}</b> · visible dans le cockpit (Compétences) et sur la fiche technique des produits qui la demandent</small></div><span class="gb p">✓ Vu faire</span></div>`,
+  { langue: 'FR', qui: 'Elke V.', sous: 'poste de cuisson' });
+</script></body></html>

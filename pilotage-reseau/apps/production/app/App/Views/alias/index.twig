@@ -1,0 +1,58 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ translations.aliases_management_panel|default(translations.aliases) }}{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <h3>{{ translations.aliases_manage }}</h3>
+        <p class="text-subtitle text-muted">{{ translations.aliases_manage_subtitle }}</p>
+    </div>
+{% endblock %}
+
+{% block content %}
+
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        {{ translations.allergen_aliases|default(translations.material_aliases) }}
+                    </h4>
+                </div>
+                <div class="card-content">
+                    <div class="card-body px-3 py-4-5">
+                        <div class="row">
+                            <div class="col-12">
+                                <table class="table">
+                                    <thead>
+                                    <tr>
+                                        <th style="width: 75%">{{ translations.name }}</th>
+                                        <th style="width: 25%"></th>
+                                    </tr>
+                                    </thead>
+                                    <tbody>
+                                    <tr>
+                                        <td>{{ translations.materials }}</td>
+                                        <td>
+                                            <a href="{{ root }}/materials/aliases"
+                                               class="btn btn-sm btn-outline-primary">{{ translations.edit }}</a>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>{{ translations.allergens }}</td>
+                                        <td>
+                                            <a href="{{ root }}/allergens/aliases"
+                                               class="btn btn-sm btn-outline-primary">{{ translations.edit }}</a>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

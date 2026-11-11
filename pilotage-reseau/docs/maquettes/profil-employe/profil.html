@@ -1,0 +1,197 @@
+<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>App employé — Mon profil à compléter</title>
+<link rel="stylesheet" href="/public/employee/assets/atelier/app.css"><link rel="stylesheet" href="/public/employee/assets/bootstrap-icons/bootstrap-icons.css"><link rel="stylesheet" href="/public/employee/assets/atelier/marque.css"><link rel="stylesheet" href="/public/employee/assets/atelier/primes.css">
+<!-- Maquette (30/10/2026, Sam : « dans le profil de l'application employé, refaire la partie profil pour que l'employé
+     puisse encoder toutes ses données »). Quatre groupes retenus : identité et coordonnées, contact d'urgence, données
+     de paie, tenue et disponibilités. A : le profil, ce qui manque en tête. B : une fiche ouverte, la paie. -->
+<style>
+body{margin:0;background:#d9d2c8;font-family:var(--font-ui);color:var(--la-encre)}
+.planche{display:flex;gap:28px;justify-content:center;align-items:flex-start;padding:24px}
+.legende{width:390px;margin:0 0 8px;font:600 13px var(--s-police);color:#5b5650}
+.tel{width:390px;min-height:844px;background:var(--s-fond);position:relative;border-radius:28px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.18)}
+.emp-topbar{position:sticky;top:0;z-index:20;background:rgba(242,241,238,.94);backdrop-filter:blur(10px);border-bottom:.5px solid var(--s-trait)}
+.emp-topbar-inner{height:56px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:0 16px}
+.emp-title{font-family:var(--font-display);font-weight:400;font-size:1.35rem;margin:0}
+.emp-subtitle{font-size:.78rem;color:var(--s-second);margin:0}
+.emp-topbar img{height:26px}
+.emp-content{padding:14px 16px 96px}
+.emp-bottom-nav{position:absolute;left:0;right:0;bottom:0;height:72px;background:rgba(255,255,255,.96);border-top:.5px solid var(--s-trait);display:grid;grid-auto-flow:column;grid-auto-columns:1fr}
+.emp-bottom-item{text-decoration:none;color:var(--s-second);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-size:.68rem;font-weight:600}
+.emp-bottom-item i{font-size:1.25rem;line-height:1}
+.emp-bottom-item.is-active{color:var(--s-accent)}
+
+/* La carte du haut : qui, où, et ce qui manque. */
+.pf-heros{background:var(--s-carte);border-radius:18px;padding:16px;margin-bottom:18px}
+.pf-qui{display:flex;align-items:center;gap:14px}
+.pf-av{width:60px;height:60px;border-radius:50%;background:var(--s-accent);color:#fff;display:flex;align-items:center;justify-content:center;font:600 22px var(--s-police);position:relative;flex:0 0 auto}
+.pf-av i{position:absolute;right:-2px;bottom:-2px;width:22px;height:22px;border-radius:50%;background:#fff;color:var(--s-accent);font-size:12px;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+.pf-nom{font:600 20px/1.2 var(--s-police);color:var(--s-texte)}
+.pf-ou{font:400 14px var(--s-police);color:var(--s-second);margin-top:2px}
+.pf-comp{margin-top:14px}
+.pf-comp .l{display:flex;justify-content:space-between;font:600 13px var(--s-police);color:var(--s-texte)}
+.pf-comp .l span{color:var(--s-second);font-weight:400}
+.pf-comp .bar{height:6px;border-radius:3px;background:var(--s-remplir);margin-top:7px;overflow:hidden}
+.pf-comp .bar i{display:block;height:100%;background:var(--s-accent);border-radius:3px}
+.pf-manque{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.pf-manque a{font:500 12.5px var(--s-police);color:var(--s-accent);background:var(--s-accent-doux);border-radius:999px;padding:4px 10px;text-decoration:none}
+
+/* Une section, puis ses lignes : libellé à gauche, valeur à droite, chevron. */
+.pf-sec{display:flex;align-items:baseline;justify-content:space-between;margin:0 4px 7px;font:600 13px var(--s-police);letter-spacing:.02em;text-transform:uppercase;color:var(--s-second)}
+.pf-sec small{text-transform:none;letter-spacing:0;font-weight:400;display:flex;align-items:center;gap:4px}
+.pf-g{background:var(--s-carte);border-radius:16px;overflow:hidden;margin-bottom:8px}
+.pf-l{position:relative;display:flex;align-items:center;gap:12px;min-height:46px;padding:11px 34px 11px 16px;color:inherit;text-decoration:none}
+.pf-l+.pf-l::before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.pf-l::after{content:'';position:absolute;right:17px;top:50%;width:7px;height:7px;margin-top:-4px;border-right:2px solid var(--s-tertiaire);border-bottom:2px solid var(--s-tertiaire);transform:rotate(-45deg)}
+.pf-l.fixe{padding-right:16px}.pf-l.fixe::after{display:none}
+.pf-k{flex:0 0 auto;font:400 16px var(--s-police);color:var(--s-texte)}
+.pf-v{flex:1;min-width:0;text-align:right;font:400 16px var(--s-police);color:var(--s-second);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pf-v.manque{color:var(--s-accent)}
+.pf-v.manque::before{content:'';display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--s-accent);margin-right:7px;vertical-align:1px}
+.pf-v.multi{white-space:normal;line-height:1.3}
+.pf-note{margin:0 16px 18px;font:400 12.5px/1.4 var(--s-police);color:var(--s-second)}
+.pf-note i{margin-right:4px}
+
+/* Tenue : la taille de chaque pièce. Disponibilités : sept jours, matin et après-midi. */
+.pf-taille{display:flex;gap:6px}
+.pf-taille span{min-width:34px;text-align:center;padding:5px 0;border-radius:8px;background:var(--s-remplir);font:500 13px var(--s-police);color:var(--s-texte)}
+.pf-taille span.on{background:var(--s-accent);color:#fff}
+.pf-dispo{padding:12px 16px 14px}
+.pf-dispo .j{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;text-align:center}
+.pf-dispo .j b{font:600 11px var(--s-police);color:var(--s-second);text-transform:uppercase;letter-spacing:.03em}
+.pf-dispo .j i{display:block;height:22px;border-radius:7px;background:var(--s-remplir);font:500 10.5px/22px var(--s-police);font-style:normal;color:var(--s-second)}
+.pf-dispo .j i.on{background:var(--s-vert-doux);color:var(--s-vert)}
+.pf-dispo .lg{display:flex;justify-content:space-between;margin-top:8px;font:400 12px var(--s-police);color:var(--s-second)}
+
+/* B : la fiche ouverte, en feuille par-dessus le profil. */
+.fx-voile{position:absolute;inset:0;background:rgba(0,0,0,.28)}
+.fx{position:absolute;left:0;right:0;bottom:0;top:52px;background:var(--s-fond);border-radius:16px 16px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);overflow:hidden}
+.fx-poignee{width:38px;height:5px;border-radius:3px;background:var(--s-tertiaire);margin:7px auto 0}
+.fx-tete{display:flex;align-items:center;justify-content:space-between;padding:10px 16px 14px}
+.fx-tete a{font:400 16px var(--s-police);color:var(--s-accent);text-decoration:none}
+.fx-tete a.ok{font-weight:600}
+.fx-tete b{font:600 17px var(--s-police);color:var(--s-texte)}
+.fx-corps{padding:0 16px}
+.fx-champ{position:relative;padding:9px 16px 10px}
+.fx-champ+.fx-champ::before{content:'';position:absolute;left:16px;right:0;top:0;border-top:.5px solid var(--s-trait)}
+.fx-champ label{display:block;font:400 12.5px var(--s-police);color:var(--s-second)}
+.fx-champ .in{font:400 17px var(--s-police);color:var(--s-texte);margin-top:2px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.fx-champ .in.vide{color:var(--s-tertiaire)}
+.fx-champ .ok{font:500 12.5px var(--s-police);color:var(--s-vert);white-space:nowrap}
+.fx-champ .cur{display:inline-block;width:2px;height:20px;background:var(--s-accent);margin-left:1px;vertical-align:-4px}
+.fx-seg{display:flex;background:var(--s-remplir);border-radius:9px;padding:2px;margin-top:6px}
+.fx-seg span{flex:1;text-align:center;padding:6px 0;border-radius:7px;font:500 13.5px var(--s-police);color:var(--s-texte)}
+.fx-seg span.on{background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.12);font-weight:600}
+.fx-photo{display:flex;align-items:center;gap:12px;padding:12px 16px}
+.fx-photo i{width:44px;height:32px;border-radius:6px;background:var(--s-remplir);display:flex;align-items:center;justify-content:center;color:var(--s-second);font-size:16px}
+.fx-photo span{font:400 15px var(--s-police);color:var(--s-accent)}
+.fx-photo small{display:block;font:400 12.5px var(--s-police);color:var(--s-second)}
+</style></head>
+<body><div class="planche">
+
+<!-- ── A : le profil ── -->
+<div><p class="legende">A · Mon profil — ce qui manque en tête, chaque ligne s’ouvre</p>
+<div class="tel" id="a">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div><h1 class="emp-title">Mon profil</h1><p class="emp-subtitle">Halle · depuis mars 2025</p></div><img src="/public/employee/assets/atelier/logo.png" alt=""></div></div>
+<div class="emp-content">
+
+  <div class="pf-heros">
+    <div class="pf-qui"><div class="pf-av">CD<i class="bi bi-camera-fill"></i></div>
+      <div><div class="pf-nom">Camille Dupont</div><div class="pf-ou">Vendeuse · Halle</div></div></div>
+    <div class="pf-comp"><div class="l">Profil complet à 72 % <span>3 à compléter</span></div><div class="bar"><i style="width:72%"></i></div>
+      <div class="pf-manque"><a>IBAN</a><a>Contact d’urgence</a><a>Taille de veste</a></div></div>
+  </div>
+
+  <div class="pf-sec">Identité</div>
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">Prénom</span><span class="pf-v">Camille</span></a>
+    <a class="pf-l"><span class="pf-k">Nom</span><span class="pf-v">Dupont</span></a>
+    <a class="pf-l"><span class="pf-k">Naissance</span><span class="pf-v">14 mai 2004</span></a>
+    <a class="pf-l"><span class="pf-k">Nationalité</span><span class="pf-v">Belge</span></a>
+  </div>
+  <p class="pf-note">Ton prénom et ton nom viennent de ton compte ; une correction part au magasin.</p>
+
+  <div class="pf-sec">Coordonnées</div>
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">Téléphone</span><span class="pf-v">+32 470 12 34 56</span></a>
+    <a class="pf-l"><span class="pf-k">E-mail</span><span class="pf-v">camille.dupont@mail.be</span></a>
+    <a class="pf-l"><span class="pf-k">Adresse</span><span class="pf-v multi">Rue de la Gare 12<br>1500 Halle</span></a>
+  </div>
+  <div style="height:10px"></div>
+
+  <div class="pf-sec">En cas d’urgence</div>
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">Personne à prévenir</span><span class="pf-v manque">À compléter</span></a>
+  </div>
+  <p class="pf-note">Son nom, son lien avec toi et son téléphone. Seul ton magasin le voit.</p>
+
+  <div class="pf-sec">Paie <small><i class="bi bi-lock-fill"></i> privé</small></div>
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">Statut</span><span class="pf-v">Étudiante</span></a>
+    <a class="pf-l"><span class="pf-k">N° national</span><span class="pf-v">04.05.14-•••.••</span></a>
+    <a class="pf-l"><span class="pf-k">IBAN</span><span class="pf-v manque">À compléter</span></a>
+  </div>
+  <p class="pf-note"><i class="bi bi-shield-lock"></i>Visible par toi, ton franchisé et la marque seulement. Gardé chiffré.</p>
+
+  <div class="pf-sec">Tenue</div>
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">T-shirt</span><span class="pf-v"><span class="pf-taille" style="justify-content:flex-end"><span>S</span><span class="on">M</span><span>L</span></span></span></a>
+    <a class="pf-l"><span class="pf-k">Veste</span><span class="pf-v manque">À compléter</span></a>
+    <a class="pf-l"><span class="pf-k">Chaussures</span><span class="pf-v">38</span></a>
+  </div>
+  <div style="height:10px"></div>
+
+  <div class="pf-sec">Disponibilités <small>modifiable</small></div>
+  <div class="pf-g">
+    <div class="pf-dispo">
+      <div class="j"><b>Lu</b><b>Ma</b><b>Me</b><b>Je</b><b>Ve</b><b>Sa</b><b>Di</b></div>
+      <div class="j" style="margin-top:6px"><i>matin</i><i>matin</i><i class="on">matin</i><i>matin</i><i>matin</i><i class="on">matin</i><i class="on">matin</i></div>
+      <div class="j" style="margin-top:5px"><i>a-m</i><i>a-m</i><i class="on">a-m</i><i>a-m</i><i class="on">a-m</i><i class="on">a-m</i><i>a-m</i></div>
+      <div class="lg"><span>Vert : je peux travailler</span><span>Cours lu–ve en journée</span></div>
+    </div>
+  </div>
+  <div style="height:10px"></div>
+
+  <div class="pf-sec">Mon travail</div>
+  <div class="pf-g">
+    <div class="pf-l fixe"><span class="pf-k">Magasin</span><span class="pf-v">Halle</span></div>
+    <a class="pf-l"><span class="pf-k">Postes</span><span class="pf-v">Vente, caisse</span></a>
+    <a class="pf-l"><span class="pf-k">Compétences</span><span class="pf-v">14</span></a>
+  </div>
+  <div style="height:10px"></div>
+
+  <div class="pf-g">
+    <a class="pf-l"><span class="pf-k">Langue de l’app</span><span class="pf-v">Français</span></a>
+    <a class="pf-l fixe"><span class="pf-k" style="color:var(--s-accent)">Se déconnecter</span></a>
+  </div>
+</div>
+<nav class="emp-bottom-nav"><a class="emp-bottom-item"><i class="bi bi-house"></i><span>Accueil</span></a><a class="emp-bottom-item"><i class="bi bi-calendar3"></i><span>Planning</span></a><a class="emp-bottom-item"><i class="bi bi-trophy"></i><span>Primes</span></a><a class="emp-bottom-item is-active"><i class="bi bi-person"></i><span>Profil</span></a></nav>
+</div></div>
+
+<!-- ── B : une fiche ouverte, la paie ── -->
+<div><p class="legende">B · Une fiche ouverte : la paie (contrôlée en tapant)</p>
+<div class="tel" id="b">
+<div class="emp-topbar"><div class="emp-topbar-inner"><div><h1 class="emp-title">Mon profil</h1><p class="emp-subtitle">Halle · depuis mars 2025</p></div><img src="/public/employee/assets/atelier/logo.png" alt=""></div></div>
+<div class="fx-voile"></div>
+<div class="fx">
+  <div class="fx-poignee"></div>
+  <div class="fx-tete"><a>Annuler</a><b>Paie</b><a class="ok">Enregistrer</a></div>
+  <div class="fx-corps">
+    <div class="pf-g">
+      <div class="fx-champ"><label>Statut</label>
+        <div class="fx-seg"><span>Employée</span><span class="on">Étudiante</span><span>Flexi-job</span></div></div>
+      <div class="fx-champ"><label>Numéro national (au dos de ta carte d’identité)</label>
+        <div class="in">04.05.14-123.45 <span class="ok"><i class="bi bi-check-circle-fill"></i> valide</span></div></div>
+      <div class="fx-champ"><label>IBAN</label>
+        <div class="in"><span>BE68 5390 0754 7<span class="cur"></span></span></div></div>
+      <div class="fx-champ"><label>Titulaire du compte</label>
+        <div class="in">Camille Dupont</div></div>
+    </div>
+    <p class="pf-note" style="margin:0 4px 16px">L’IBAN belge a 16 caractères : il en manque 3.</p>
+    <div class="pf-g">
+      <div class="fx-photo"><i class="bi bi-person-vcard"></i><div><span>Ajouter la carte d’identité</span><small>Recto et verso, pour ton contrat</small></div></div>
+    </div>
+    <p class="pf-note" style="margin:0 4px"><i class="bi bi-shield-lock"></i>Visible par toi, ton franchisé et la marque seulement. Le numéro national et l’IBAN sont gardés chiffrés ; ailleurs, ils s’affichent masqués.</p>
+  </div>
+</div>
+</div></div>
+
+</div></body></html>

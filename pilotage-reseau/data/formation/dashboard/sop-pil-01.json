@@ -1,0 +1,595 @@
+{
+ "id": "sop-pil-01",
+ "code": "0.2.10",
+ "type": "SOP",
+ "dossier": "01",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": "ouverture",
+ "acces": "responsable",
+ "duree": "10 min chaque matin · 2 × 3 min en journée · 5 min le soir · 30 min le lundi · 1 h le premier jour ouvré du mois",
+ "titre": {
+  "fr": "Analyser le dashboard magasin : la routine",
+  "nl": "Het winkeldashboard analyseren: de routine"
+ },
+ "objectif": {
+  "fr": "Savoir chaque jour, chaque semaine et chaque mois où en est le magasin, et en tirer une action notée, chiffres à l’appui.",
+  "nl": "Elke dag, elke week en elke maand weten waar de winkel staat, en daar een genoteerde actie uit halen, met cijfers als bewijs."
+ },
+ "pour": {
+  "fr": "Le responsable du magasin : franchisé, manager, adjoint manager ou chef de section vente (P4, P7, P8, P9, P11, P12). Formation continue FO-05.",
+  "nl": "De verantwoordelijke van de winkel: franchisenemer, manager, adjunct-manager of afdelingschef verkoop (P4, P7, P8, P9, P11, P12). Permanente vorming FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "operationnel",
+   "formation"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente",
+   "C-PILOTAGE.Franchise"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Chaque matin, à l’ouverture — 10 min",
+    "nl": "Elke ochtend, bij de opening — 10 min"
+   },
+   "etapes": [
+    {
+     "numero": "1.1",
+     "titre": {
+      "fr": "Ouvrir le dashboard",
+      "nl": "Het dashboard openen"
+     },
+     "texte": {
+      "fr": "Ouvrir le dashboard du magasin sur l’onglet Opérationnel.\nToucher « ↻ Relire » pour partir de chiffres frais.",
+      "nl": "Het dashboard van de winkel openen op het tabblad Operationeel.\nOp « ↻ Herlezen » tikken om met verse cijfers te starten."
+     },
+     "critique": false,
+     "photo": "dash-entete.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.2",
+     "titre": {
+      "fr": "Relire la veille",
+      "nl": "De vorige dag herlezen"
+     },
+     "texte": {
+      "fr": "Dans la frise, toucher la case d’hier.\nNoter son % de l’objectif, son résultat (P&L court) et sa poubelle.\nUne case orange ou rouge : chercher pourquoi dans « Le duel » (clients ou panier).",
+      "nl": "In de tijdlijn op het vak van gisteren tikken.\nHet % van de doelstelling, het resultaat (korte W&V) en het afval noteren.\nEen oranje of rood vak: in « Het duel » zoeken waarom (klanten of ticket)."
+     },
+     "critique": false,
+     "photo": "dash-frise.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.3",
+     "titre": {
+      "fr": "Contrôles en photo",
+      "nl": "Controles met foto"
+     },
+     "texte": {
+      "fr": "Revenir sur aujourd’hui : tous les contrôles d’ouverture sont-ils rendus ?\n« Non rendues » : faire déposer la photo maintenant.\n« À contrôler » : les regarder et corriger sur place ce qui ne va pas.",
+      "nl": "Terug naar vandaag: zijn alle openingscontroles ingediend?\n« Niet ingediend »: de foto nu laten opladen.\n« Te controleren »: ze bekijken en ter plaatse corrigeren wat niet klopt."
+     },
+     "critique": false,
+     "photo": "dash-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.4",
+     "titre": {
+      "fr": "Vitrine et prochaine cuisson",
+      "nl": "Etalage en volgende bakbeurt"
+     },
+     "texte": {
+      "fr": "Lire combien de produits vont manquer et les euros à sauver.\nReporter les « +N à cuire » sur la prochaine cuisson.\nUn produit vide alors que des clients le demandent passe en premier.",
+      "nl": "Lezen hoeveel producten zullen ontbreken en hoeveel euro te redden is.\nDe « +N te bakken » overnemen in de volgende bakbeurt.\nEen product dat leeg is terwijl klanten ernaar vragen, gaat eerst."
+     },
+     "critique": true,
+     "photo": "dash-vitrine.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.5",
+     "titre": {
+      "fr": "Stock",
+      "nl": "Voorraad"
+     },
+     "texte": {
+      "fr": "Une alerte : vérifier la référence (comptage, réception, écart de caisse).\nBandeau orange « non recompté depuis N jours » : planifier un comptage dans la semaine.",
+      "nl": "Een alarm: de referentie nakijken (telling, ontvangst, kassaverschil).\nOranje balk « niet herteld sinds N dagen »: deze week een telling plannen."
+     },
+     "critique": false,
+     "photo": "dash-stock.jpg",
+     "video": null
+    },
+    {
+     "numero": "1.6",
+     "titre": {
+      "fr": "L’équipe du jour",
+      "nl": "Het team van de dag"
+     },
+     "texte": {
+      "fr": "Dans « La journée », vérifier le planning face aux heures fortes de la veille.\nUne heure creuse très chargée en personnel : l’occuper (mise en place, nettoyage, démarchage) ou ajuster le planning.",
+      "nl": "In « De dag » de planning nakijken tegenover de drukke uren van gisteren.\nEen rustig uur met veel personeel: het invullen (mise-en-place, poetsen, prospectie) of de planning bijsturen."
+     },
+     "critique": false,
+     "photo": "dash-journee.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "En journée — 11 h et 15 h, 3 min",
+    "nl": "Overdag — 11 u en 15 u, 3 min"
+   },
+   "etapes": [
+    {
+     "numero": "2.1",
+     "titre": {
+      "fr": "Objectif comptoir",
+      "nl": "Toonbankdoelstelling"
+     },
+     "texte": {
+      "fr": "Lire la projection de fin de journée face à l’objectif comptoir.\nProjection sous 90 % de l’objectif à 11 h : décider une action pour l’après-midi et la dire à l’équipe.",
+      "nl": "De projectie voor het einde van de dag lezen tegenover de toonbankdoelstelling.\nProjectie onder 90 % van de doelstelling om 11 u: een actie voor de namiddag beslissen en aan het team zeggen."
+     },
+     "critique": false,
+     "photo": "dash-objectif.jpg",
+     "video": null
+    },
+    {
+     "numero": "2.2",
+     "titre": {
+      "fr": "Clients ou panier ?",
+      "nl": "Klanten of ticket?"
+     },
+     "texte": {
+      "fr": "Dans « Le duel », comparer aux mêmes heures de la semaine dernière.\nMoins de clients : vitrine pleine, porte et trottoir, offre du moment.\nPanier plus bas : rappeler la vente additionnelle (boisson, viennoiserie, formule).",
+      "nl": "In « Het duel » vergelijken met dezelfde uren van vorige week.\nMinder klanten: volle etalage, deur en stoep, aanbod van het moment.\nLager ticket: aan de bijverkoop herinneren (drank, viennoiserie, formule)."
+     },
+     "critique": false,
+     "photo": "dash-duel.jpg",
+     "video": null
+    },
+    {
+     "numero": "2.3",
+     "titre": {
+      "fr": "Heure par heure",
+      "nl": "Uur per uur"
+     },
+     "texte": {
+      "fr": "Regarder si la courbe d’aujourd’hui rattrape celle de la semaine dernière.\nVérifier la vitrine avant chaque cuisson (Midi, Après-midi).",
+      "nl": "Kijken of de curve van vandaag die van vorige week inhaalt.\nDe etalage nakijken vóór elke bakbeurt (Middag, Namiddag)."
+     },
+     "critique": false,
+     "photo": "dash-heures.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le soir, à la fermeture — 5 min",
+    "nl": "’s Avonds, bij de sluiting — 5 min"
+   },
+   "etapes": [
+    {
+     "numero": "3.1",
+     "titre": {
+      "fr": "Le résultat de la journée",
+      "nl": "Het resultaat van de dag"
+     },
+     "texte": {
+      "fr": "Lire le P&L court : chiffre d’affaires, marge brute, résultat.\nCoût matière au-dessus de son seuil (celui de Budget › Paramètres) ou main-d’œuvre au-dessus du sien : noter la cause probable.",
+      "nl": "De korte W&V lezen: omzet, brutomarge, resultaat.\nGrondstofkost boven zijn drempel (die van Budget › Parameters) of personeelskost boven de zijne: de waarschijnlijke oorzaak noteren."
+     },
+     "critique": false,
+     "photo": "dash-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.2",
+     "titre": {
+      "fr": "La poubelle est déclarée",
+      "nl": "Het afval is aangegeven"
+     },
+     "texte": {
+      "fr": "« Invendus et poubelle » doit montrer les pièces jetées du jour.\n« Rien déclaré au panel » alors qu’on a jeté : faire saisir les invendus en caisse avant de partir.",
+      "nl": "« Onverkocht en afval » moet de weggegooide stuks van de dag tonen.\n« Niets aangegeven in het panel » terwijl er weggegooid is: het onverkochte in de kassa laten ingeven vóór vertrek."
+     },
+     "critique": true,
+     "photo": "dash-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "3.3",
+     "titre": {
+      "fr": "Les tâches du jour",
+      "nl": "De taken van de dag"
+     },
+     "texte": {
+      "fr": "Vérifier qu’aucune tâche bloquante ne reste ouverte ; sinon, la confier pour demain matin.",
+      "nl": "Nakijken dat er geen blokkerende taak openstaat; anders ze voor morgenvroeg toevertrouwen."
+     },
+     "critique": false,
+     "photo": "dash-taches.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque lundi — la semaine écoulée, 30 min",
+    "nl": "Elke maandag — de afgelopen week, 30 min"
+   },
+   "etapes": [
+    {
+     "numero": "4.1",
+     "titre": {
+      "fr": "Ouvrir la semaine passée",
+      "nl": "De voorbije week openen"
+     },
+     "texte": {
+      "fr": "Onglet Semaine, puis ‹ pour revenir à la semaine écoulée.",
+      "nl": "Tabblad Week, daarna ‹ om naar de afgelopen week terug te gaan."
+     },
+     "critique": false,
+     "photo": "dash-cal-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.2",
+     "titre": {
+      "fr": "Le résultat",
+      "nl": "Het resultaat"
+     },
+     "texte": {
+      "fr": "Noter : CA, atteinte de l’objectif, résultat net, record.\nAtteinte sous 90 % : identifier les jours rouges dans « Le CA de chaque jour ».",
+      "nl": "Noteren: omzet, bereikte doelstelling, nettoresultaat, record.\nBereikt onder 90 %: de rode dagen opzoeken in « De omzet van elke dag »."
+     },
+     "critique": false,
+     "photo": "dash-resultat.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.3",
+     "titre": {
+      "fr": "Face au réseau",
+      "nl": "Tegenover het netwerk"
+     },
+     "texte": {
+      "fr": "Lire son rang et l’écart à la médiane sur le CA, les clients, le panier et l’atteinte.\nLe chiffre où l’on est le plus loin de la médiane devient la priorité de la semaine.",
+      "nl": "De rang en het verschil met de mediaan lezen voor omzet, klanten, ticket en bereikte doelstelling.\nHet cijfer waar je het verst van de mediaan zit, wordt de prioriteit van de week."
+     },
+     "critique": false,
+     "photo": "dash-reseau.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.4",
+     "titre": {
+      "fr": "Tâches et contrôles",
+      "nl": "Taken en controles"
+     },
+     "texte": {
+      "fr": "Lire le % de tâches faites et les jours sous 40 %.\nUn jour sous 40 % : voir avec l’équipe de ce jour-là ce qui a bloqué.",
+      "nl": "Het % uitgevoerde taken en de dagen onder 40 % lezen.\nEen dag onder 40 %: met het team van die dag bekijken wat blokkeerde."
+     },
+     "critique": false,
+     "photo": "dash-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.5",
+     "titre": {
+      "fr": "Invendus",
+      "nl": "Onverkocht"
+     },
+     "texte": {
+      "fr": "Lire les pièces jetées, le coût de production et la valeur de vente perdue.\nLes trois références les plus jetées : baisser leur production ou changer leur heure de cuisson.",
+      "nl": "De weggegooide stuks, de productiekost en de verloren verkoopwaarde lezen.\nDe drie meest weggegooide referenties: hun productie verlagen of hun bakuur veranderen."
+     },
+     "critique": false,
+     "photo": "dash-invendus.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.6",
+     "titre": {
+      "fr": "Les heures et le planning",
+      "nl": "De uren en de planning"
+     },
+     "texte": {
+      "fr": "Lire l’heure la plus rentable et la moins rentable, et la journée type.\nUne heure en rouge (marge nette négative) plusieurs jours : ajuster le planning de la semaine suivante.",
+      "nl": "Het meest en het minst rendabele uur lezen, en de typedag.\nEen uur in het rood (negatieve nettomarge) meerdere dagen: de planning van de volgende week bijsturen."
+     },
+     "critique": false,
+     "photo": "dash-heures-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "4.7",
+     "titre": {
+      "fr": "Décider",
+      "nl": "Beslissen"
+     },
+     "texte": {
+      "fr": "Choisir une à trois actions pour la semaine, chacune avec un chiffre à faire bouger.\nLes écrire dans le plan d’action du magasin et les annoncer au briefing d’équipe.\nLe lundi suivant, relire si le chiffre a bougé.",
+      "nl": "Eén tot drie acties voor de week kiezen, elk met een cijfer dat moet bewegen.\nZe in het actieplan van de winkel schrijven en ze op de teambriefing aankondigen.\nDe maandag erna nalezen of het cijfer bewogen heeft."
+     },
+     "critique": true,
+     "photo": "dash-douze.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le premier jour ouvré du mois — le mois clos, 1 h",
+    "nl": "De eerste werkdag van de maand — de afgesloten maand, 1 u"
+   },
+   "etapes": [
+    {
+     "numero": "5.1",
+     "titre": {
+      "fr": "Les six leviers",
+      "nl": "De zes hefbomen"
+     },
+     "texte": {
+      "fr": "Onglet Mois, puis ‹ pour revenir au mois clos.\nTraiter d’abord les pastilles au-delà du seuil critique (food cost, labour cost, overhead cost, trafic, récurrence, note Google).",
+      "nl": "Tabblad Maand, daarna ‹ om naar de afgesloten maand terug te gaan.\nEerst de bolletjes boven de kritieke drempel behandelen (food cost, labour cost, overhead cost, traffic, terugkeer, Google-score)."
+     },
+     "critique": false,
+     "photo": "dash-leviers.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.2",
+     "titre": {
+      "fr": "Le résultat du mois",
+      "nl": "Het resultaat van de maand"
+     },
+     "texte": {
+      "fr": "Noter : CA face au budget, atteinte, marge brute, résultat net.\nLire la rentabilité jour par jour et le profil des jours : quel jour freine le mois ?",
+      "nl": "Noteren: omzet tegenover het budget, bereikt, brutomarge, nettoresultaat.\nDe rendabiliteit dag per dag en het profiel van de dagen lezen: welke dag remt de maand af?"
+     },
+     "critique": false,
+     "photo": "dash-rentab.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.3",
+     "titre": {
+      "fr": "Le CA de chaque jour",
+      "nl": "De omzet van elke dag"
+     },
+     "texte": {
+      "fr": "Repérer les jours sous 75 % de l’objectif et chercher la cause (météo, rupture, équipe, travaux).",
+      "nl": "De dagen onder 75 % van de doelstelling opzoeken en de oorzaak zoeken (weer, breuk in de voorraad, team, werken)."
+     },
+     "critique": false,
+     "photo": "dash-cal-mois.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.4",
+     "titre": {
+      "fr": "Promotions et primes",
+      "nl": "Promoties en premies"
+     },
+     "texte": {
+      "fr": "Promotions : garder celles dont le coefficient tient, proposer au cockpit d’arrêter les autres.\nPrimes : faire le point avec chaque vendeuse sur ce qui lui reste à faire.",
+      "nl": "Promoties: die houden waarvan de coëfficiënt standhoudt, de cockpit voorstellen de andere te stoppen.\nPremies: met elke verkoopster overlopen wat haar nog te doen staat."
+     },
+     "critique": false,
+     "photo": "dash-promos.jpg",
+     "video": null
+    },
+    {
+     "numero": "5.5",
+     "titre": {
+      "fr": "Préparer la visite du consultant",
+      "nl": "Het bezoek van de consultant voorbereiden"
+     },
+     "texte": {
+      "fr": "Rassembler les chiffres du mois, les actions de chaque lundi et leur effet.\nLes apporter à la visite ou au point mensuel avec le consultant.",
+      "nl": "De cijfers van de maand verzamelen, de acties van elke maandag en hun effect.\nZe meebrengen naar het bezoek of het maandelijkse overleg met de consultant."
+     },
+     "critique": false,
+     "photo": "dash-valeur.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque trimestre — le cap",
+    "nl": "Elk kwartaal — de koers"
+   },
+   "etapes": [
+    {
+     "numero": "6.1",
+     "titre": {
+      "fr": "Le trimestre",
+      "nl": "Het kwartaal"
+     },
+     "texte": {
+      "fr": "Onglet Trimestre : lire l’écart au plan de développement et les clients manquants.\nÉcrire l’annotation du franchisé et suivre le rituel du trimestre avec le consultant.",
+      "nl": "Tabblad Kwartaal: het verschil met het ontwikkelingsplan en de ontbrekende klanten lezen.\nDe notitie van de franchisenemer schrijven en het kwartaalritueel met de consultant volgen."
+     },
+     "critique": false,
+     "photo": "dash-annotations.jpg",
+     "video": null
+    },
+    {
+     "numero": "6.2",
+     "titre": {
+      "fr": "L’année",
+      "nl": "Het jaar"
+     },
+     "texte": {
+      "fr": "Onglet Année : lire la projection de fin d’année face à l’objectif et la heatmap des mois.\nUn écart qui se creuse deux trimestres de suite : revoir le plan avec le consultant.",
+      "nl": "Tabblad Jaar: de projectie voor het einde van het jaar tegenover de doelstelling en de heatmap van de maanden lezen.\nEen verschil dat twee kwartalen na elkaar groter wordt: het plan met de consultant herzien."
+     },
+     "critique": false,
+     "photo": "dash-heatmap.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Qui prévenir",
+    "nl": "Wie verwittigen"
+   },
+   "etapes": [
+    {
+     "numero": "7.1",
+     "titre": {
+      "fr": "Un chiffre manifestement faux",
+      "nl": "Een cijfer dat duidelijk fout is"
+     },
+     "texte": {
+      "fr": "0 € alors que la caisse a tourné, coût matière inconnu, magasin absent du réseau : prévenir le consultant, avec une capture.\nNe pas corriger « de tête » : la correction se fait à la source (caisse, panel, cockpit).",
+      "nl": "0 € terwijl de kassa gedraaid heeft, grondstofkost onbekend, winkel afwezig in het netwerk: de consultant verwittigen, met een schermafbeelding.\nNiet « uit het hoofd » corrigeren: de correctie gebeurt aan de bron (kassa, panel, cockpit)."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7.2",
+     "titre": {
+      "fr": "Une dérive qui dure",
+      "nl": "Een afwijking die aanhoudt"
+     },
+     "texte": {
+      "fr": "Résultat négatif trois soirs de suite, ou atteinte de la semaine sous 80 % : prévenir le consultant (business coach).\nStock négatif sur une référence : prévenir le responsable de la production et recompter.",
+      "nl": "Negatief resultaat drie avonden na elkaar, of bereikte doelstelling van de week onder 80 %: de consultant (business coach) verwittigen.\nNegatieve voorraad op een referentie: de verantwoordelijke van de productie verwittigen en opnieuw tellen."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Chaque lecture finit par une action notée ; une lecture sans action ne sert à rien.",
+   "nl": "Elke lezing eindigt met een genoteerde actie; een lezing zonder actie dient nergens toe."
+  },
+  {
+   "fr": "Le résultat du jour se lit le soir, jamais le matin.",
+   "nl": "Het resultaat van de dag lees je ’s avonds, nooit ’s ochtends."
+  },
+  {
+   "fr": "Les invendus doivent être déclarés en caisse chaque soir, sinon le résultat est faux.",
+   "nl": "Het onverkochte moet elke avond in de kassa aangegeven worden, anders is het resultaat fout."
+  },
+  {
+   "fr": "Le dashboard est en lecture seule : on corrige à la source, puis on relit.",
+   "nl": "Het dashboard is alleen-lezen: je corrigeert aan de bron, daarna herlees je."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À 11 h, la projection de fin de journée est à 82 % de l’objectif comptoir. Que faire ?",
+    "nl": "Om 11 u staat de projectie voor het einde van de dag op 82 % van de toonbankdoelstelling. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Attendre le soir pour voir",
+     "Baisser l’objectif",
+     "Décider une action pour l’après-midi (vitrine, offre, vente additionnelle) et la dire à l’équipe"
+    ],
+    "nl": [
+     "Wachten tot ’s avonds om te zien",
+     "De doelstelling verlagen",
+     "Een actie voor de namiddag beslissen (etalage, aanbod, bijverkoop) en ze aan het team zeggen"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Le soir, « Invendus et poubelle » affiche « rien déclaré au panel » alors que l’équipe a jeté des pièces. Que faire ?",
+    "nl": "’s Avonds toont « Onverkocht en afval » « niets aangegeven in het panel » terwijl het team stuks heeft weggegooid. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, ce n’est pas grave",
+     "Faire saisir les invendus en caisse avant de partir",
+     "Retirer le montant du résultat de tête"
+    ],
+    "nl": [
+     "Niets, het is niet erg",
+     "Het onverkochte in de kassa laten ingeven vóór vertrek",
+     "Het bedrag uit het hoofd van het resultaat aftrekken"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le lundi, quelle est la priorité de la semaine ?",
+    "nl": "Wat is op maandag de prioriteit van de week?"
+   },
+   "choix": {
+    "fr": [
+     "Le chiffre où le magasin est le plus loin de la médiane du réseau, avec une à trois actions notées",
+     "Tous les chiffres à la fois",
+     "Le chiffre le plus haut"
+    ],
+    "nl": [
+     "Het cijfer waar de winkel het verst van de mediaan van het netwerk zit, met één tot drie genoteerde acties",
+     "Alle cijfers tegelijk",
+     "Het hoogste cijfer"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Le résultat est négatif trois soirs de suite. Qui prévenir ?",
+    "nl": "Het resultaat is drie avonden na elkaar negatief. Wie verwittig je?"
+   },
+   "choix": {
+    "fr": [
+     "Personne",
+     "Le consultant (business coach)",
+     "Le fournisseur"
+    ],
+    "nl": [
+     "Niemand",
+     "De consultant (business coach)",
+     "De leverancier"
+    ]
+   },
+   "bonne": 1
+  }
+ ]
+}

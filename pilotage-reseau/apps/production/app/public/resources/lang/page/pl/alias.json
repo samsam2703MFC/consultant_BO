@@ -1,0 +1,36 @@
+{
+  "material_aliases": "Aliasy materiałów",
+  "allergen_aliases": "Aliasy alergenów",
+  "aliases_manage": "Zarządzanie aliasami",
+  "aliases_manage_subtitle": "Wybierz język i edytuj aliasy materiałów.",
+  "type_of_alias": "Typ aliasu",
+  "default_aliases": "Domyślne aliasy",
+  "client_friendly_aliases_for_product_labels": "Aliasy przyjazne dla klienta (na etykiety produktowe)",
+  "alias_type_label": "Typ aliasu",
+  "language_label": "Język",
+  "default": "Domyślny",
+  "product_label": "Etykieta produktowa",
+
+  "select_language": "Wybierz język",
+  "select_alias_type": "Wybierz typ aliasu",
+  "french": "Francuski",
+  "english": "Angielski",
+  "polish": "Polski",
+  "dutch": "Niderlandzki",
+  "load": "Wczytaj",
+
+  "name": "Nazwa",
+  "alias": "Alias",
+  "edit": "Edytuj",
+  "save": "Zapisz",
+  "no_aliases": "Brak aliasów",
+  "back": "Wróć",
+
+  "select_valid_language": "Wybierz poprawny język",
+  "select_valid_alias_type": "Wybierz poprawny typ aliasu",
+  "save_was_successful": "Zapis powiódł się",
+  "error_saving_alias": "Błąd podczas zapisywania aliasu",
+  "aliases_management_panel" : "Panel zarządzania aliasami",
+  "materials": "Surowce",
+  "allergens": "Alergeny"
+}

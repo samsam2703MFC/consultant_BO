@@ -1,0 +1,35 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zatwierdzenia produkcji{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Zatwierdzenia produkcji</h3>
+            <p class="text-subtitle text-muted mb-0">Produkcja dnia zatwierdzona przez zespoły na tabletach : linie (zrobione, strata ze zdjęciami, powód braku). Po zatwierdzeniu tablet tylko czyta — poprawki tutaj (kierownik produkcji).</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div id="productionDays" class="pd-wrap" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop">
+        <div class="card pd-days"><div class="card-body">
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                <h5 class="m-0">Dni z tabletów</h5>
+                <select class="form-select form-select-sm" id="pdRange" style="width:auto" aria-label="Okres">
+                    <option value="7">7 dni</option><option value="14" selected>14 dni</option><option value="31">31 dni</option><option value="92">3 miesiące</option>
+                </select>
+            </div>
+            <div id="pdList"><p class="text-muted mb-0">Wczytywanie…</p></div>
+        </div></div>
+        <div class="card pd-detail"><div class="card-body" id="pdDetail"><p class="text-muted mb-0">Wybierz dzień po lewej.</p></div></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script src="{{ root }}/assets/js/pages/production-days.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A — Visibilité Google · Fiches Google</title>
+<link rel="stylesheet" href="/public/assets/ds/global.css"><link rel="stylesheet" href="/public/assets/css/app.css"><link rel="stylesheet" href="vg.css">
+<script src="rail.js"></script><script src="coque.js"></script>
+</head><body><script>
+const W = t => `<span class="tag-warn">${t}</span>`;
+const OK = t => `<span class="chip chip--ok">${t}</span>`;
+const N = t => `<span class="chip chip--neutral">${t}</span>`;
+// Une ligne par donnée de la fiche ; les « site » sont les données structurées réelles d'atelierby.be (08/11/2026).
+const lignes = [
+  ['Nom sur Google', [
+    'Atelier by Berlo',
+    'Boulangerie Max &amp; Sandra' + W('enseigne : Atelier by Max &amp; Sandra'),
+    'Atelier by Harmonie',
+    'L’Atelier By Halle']],
+  ['Catégorie principale', [
+    'Boulangerie', 'Boulangerie',
+    'Pâtisserie' + W('Boulangerie attendue'),
+    'Bakkerij']],
+  ['Horaires habituels', [
+    '<span class="h">lun. → dim.</span> <span class="h">6:30–18:30</span><span class="site">site : lun. → dim. <span class="h">6:30–18:30</span></span>' + OK('identiques'),
+    '<span class="h">lun. → dim.</span> <span class="h">7:00–18:30</span><span class="site">site : dimanche seul, <span class="h">8:00–15:00</span></span>' + W('le site contredit Google'),
+    '<span class="h">lun. → sam.</span> <span class="h">6:30–18:30</span>, dim. <span class="h">7:00–13:00</span><span class="site">site : aucun horaire</span>' + W('absent du site'),
+    '<span class="h">mar. → dim.</span> <span class="h">7:00–18:00</span><span class="site">site : aucun horaire</span>' + W('absent du site')]],
+  ['Horaires des fêtes<span class="sub">24, 25, 31 déc. · 1er janv.</span>', [
+    '24 et 31 déc. jusqu’à 16:00, 25 déc. et 1er janv. fermé' + OK('saisis'),
+    'non saisis' + W('à saisir avant le 15/12'),
+    'non saisis' + W('à saisir avant le 15/12'),
+    'non saisis' + W('à saisir avant le 15/12')]],
+  ['Lien du site', [
+    'atelierby.be (accueil)' + N('page boutique à créer'),
+    'webshop.atelierby.be/?shop=3' + N('page boutique à créer'),
+    'aucun' + W('lien manquant'),
+    'atelierby.be/nl/' + N('page boutique à créer')]],
+  ['Téléphone', [
+    '010 65 83 83' + OK('= site'), '071 21 80 01' + OK('= site'), '071 19 58 62' + OK('= site'), '02 779 97 64' + OK('= site')]],
+  ['Note · avis', ['4,7 · 214 avis', '4,5 · 96 avis', '4,8 · 41 avis', '4,3 · 58 avis']],
+  ['Photos', ['10 et plus', '10 et plus', '4' + W('moins de 10'), '7']],
+  ['Options', ['À emporter · petit-déjeuner', 'À emporter · livraison', 'À emporter', 'À emporter · petit-déjeuner']],
+  ['Statut', ['Ouvert', 'Ouvert', 'Ouvert', 'Ouvert']]
+];
+const tete = VG.magasins.map(m => `<th>${m.ville}<span class="sub">${m.nom}</span></th>`).join('');
+const corpsTable = lignes.map(l => `<tr><td>${l[0]}</td>${l[1].map(v => `<td>${v}</td>`).join('')}</tr>`).join('');
+
+const aCorriger = [
+  ['Gosselies · horaires', 'Le site publie « dimanche seul, <span class="h">8:00–15:00</span> » dans ses données structurées, Google affiche 7 jours sur 7. Google lit les deux : corriger les horaires de la boutique dans le CMS du site.', 'Ouvrir le CMS'],
+  ['Gosselies, Sombreffe, Halle · horaires des fêtes', 'Non saisis sur la fiche. Saison cougnous en cours, galettes dès le 31/12 : à saisir avant le 15/12.', 'Ouvrir la fiche Google'],
+  ['Sombreffe · lien du site', 'La fiche ne renvoie nulle part : aucun clic vers le site ni vers la commande.', 'Ouvrir la fiche Google'],
+  ['Sombreffe · catégorie', '« Pâtisserie » en catégorie principale : la fiche sort moins sur « boulangerie Sombreffe ».', 'Ouvrir la fiche Google'],
+  ['Sombreffe, Halle · horaires du site', 'Le site n’en publie aucun pour ces deux boutiques.', 'Ouvrir le CMS'],
+  ['Gosselies · nom', 'Google affiche l’ancien nom « Boulangerie Max &amp; Sandra ». Le nom doit être celui de l’enseigne.', 'Ouvrir la fiche Google'],
+  ['Les 4 fiches · page boutique', 'Les liens mènent à l’accueil ou au webshop : aucune page ne relie une boutique à sa ville.', 'Voir l’audit']
+];
+const liste = aCorriger.map((c, i) => `<li><span class="n">${i + 1}</span><div><div>${c[0]}</div><div class="q">${c[1]}</div></div>
+  <div class="a"><button class="linklike">${c[2]}</button></div></li>`).join('');
+
+coque({
+  onglet: 'fiches',
+  actions: `<button class="btn">Exporter</button><button class="btn btn--primary">Relire Google maintenant</button>`,
+  intro: 'Ce que Google affiche de chaque magasin, à côté de ce que le site du réseau publie. Un écart entre les deux fait perdre des places sur Google Maps : les horaires d’abord.',
+  corps: `
+  <div class="vg-bandeau"><span class="chip chip--neutral">Saison cougnous</span><span>du 1er novembre au 15 janvier · galettes des rois à partir du 31 décembre</span><span class="sp"></span><span>Lu le 08/11/2026 à 06:00 · prochaine lecture lundi 16/11</span></div>
+  <div class="kpi-row vg-kpis">
+    <div class="kpi"><div class="kpi__value">7</div><div class="kpi__label">À corriger</div><div class="kpi__note">dont 1 contradiction site / Google</div></div>
+    <div class="kpi"><div class="kpi__value">4 / 4</div><div class="kpi__label">Fiches trouvées</div><div class="kpi__note">associées dans Note Google et avis</div></div>
+    <div class="kpi"><div class="kpi__value">1 / 4</div><div class="kpi__label">Horaires des fêtes saisis</div><div class="kpi__note">Corbais seulement</div></div>
+    <div class="kpi"><div class="kpi__value">4,6</div><div class="kpi__label">Note moyenne</div><div class="kpi__note">409 avis sur les 4 fiches</div></div>
+  </div>
+  <section class="card table-card vg-fiches" style="margin-top:0;padding:0;overflow:hidden">
+    <table><thead><tr><th>Donnée de la fiche</th>${tete}</tr></thead><tbody>${corpsTable}</tbody></table>
+  </section>
+  <div class="vg-bas">
+    <section class="card"><h3 class="vg-h">À corriger, du plus urgent au moins urgent<small>7 écarts sur 4 fiches</small></h3><ul class="vg-liste deux">${liste}</ul></section>
+    <section class="card"><h3 class="vg-h">Ce que le cockpit ne fait pas</h3>
+      <p class="vg-note">Il lit et compare, il n’écrit pas : une fiche se corrige sur Google, un horaire du site dans le CMS.</p>
+      <p class="vg-note">Écrire depuis le cockpit (horaires, posts, réponses aux avis) demande l’API Business Profile : connexion du compte propriétaire des fiches et accès validé par Google.</p>
+    </section>
+  </div>`
+});
+</script></body></html>

@@ -1,0 +1,8406 @@
+/* Cockpit CEO — gabarits HTML.
+ * Traduction fidèle du template du prototype Design Component (Cockpit CEO.dc.html) :
+ * mêmes styles inline, mêmes structures ; {{ x }} → ${c.x}, sc-for → map, sc-if → ternaire.
+ * x = { A: onClick, C: onChange, I: onInput, DS: dragstart, DP: drop, EN: mouseenter, esc }.
+ */
+
+import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplSvSources } from './suivi-tpl.js';
+import { tplFF, tplCQM } from './franchises-tpl.js';
+import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
+import { tplFidelite } from './fidelite-tpl.js';
+import { tplVerification } from './verification-tpl.js';
+import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
+import { tplVerifEvol } from './verification-evol-tpl.js';
+import { tplVerifMatieres } from './verification-matieres-tpl.js';
+import { tplVerifCa } from './verification-ca-tpl.js';
+import { tplVerifMouvements } from './verification-mouvements-tpl.js';
+import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
+import { tplVisibilite } from './visibilite-tpl.js';
+import { tplStructure } from './structure-gamme-tpl.js';
+
+/* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
+   une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
+   notion au catalogue garde la place de l'icône, pour que les libellés
+   s'alignent. */
+const ICO = {
+  board: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+  cal: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  calEd: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01',
+  camp: 'M3 11l14-7v16L3 13zM7 14v5',
+  offres: 'M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0',
+  bundles: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
+  ecran: 'M3 4h18v12H3zM8 20h8M12 16v4',
+  agences: 'M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18',
+  analyse: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+  crm: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
+  fonds: 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5',
+  creer: 'M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z',
+  controle: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+  liens: 'M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7',
+  perf: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+  form: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
+  bilan: 'M3 3v18h18M7 15l4-4 3 3 5-6',
+  avis: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+  messages: 'M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z',
+  recherche: 'M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2',
+  cadenas: 'M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2',
+  adresse: 'M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  droits: 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6',
+  journal: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
+  modeles: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
+  retour: 'M19 12H5M12 19l-7-7 7-7'
+};
+/* Écran → notion du catalogue. */
+const ICO_ECRAN = {
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle',
+  ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
+  ventes: 'analyse', invendus: 'form',
+  verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
+  verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
+  catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
+  promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
+  'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
+  primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
+  'ext:formation/': 'modeles', 'ext:formation/#/rfclasseur': 'modeles',
+  parametres: 'cadenas', journal: 'journal'
+};
+function railIco(key){
+  const d = ICO[ICO_ECRAN[key]];
+  return d ? `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"/></svg>` : '<span class="ico" aria-hidden="true"></span>';
+}
+/* Les onglets d'un écran regroupé : une même question, plusieurs lectures
+   (onglets de page, §7.7). Un compteur se lit comme un nombre, sans pastille. */
+function tplOngletsEcran(c, x){
+  const { esc } = x;
+  return `<div class="page-tabs no-print" role="tablist">
+    ${c.ongletsEcran.map(o => `<button ${x.A(o.go)} role="tab" aria-selected="${o.on ? 'true' : 'false'}" class="page-tabs__tab${o.on ? ' is-on' : ''}">${esc(o.nom)}${o.badge ? `<span class="page-tabs__count">${o.badge}</span>` : ''}</button>`).join('')}
+  </div>`;
+}
+/* Entrée du rail (§8) : feuille, ou sous-menu repliable (parent + enfants
+   décalés). Le compteur se range à droite, en chiffre bordeaux. */
+function navBtn(n, x){
+  const { esc } = x;
+  const compte = b => b ? `<span class="sidebar__count">${b}</span>` : '';
+  const cur = on => on ? ' is-active" aria-current="page' : '';
+  if (n.type === 'sub') {
+    return `
+      <button ${x.A(n.toggle)} class="sidebar__item${cur(n.on)}" aria-expanded="${n.open ? 'true' : 'false'}">
+        ${railIco(n.label)}<span class="sidebar__item-label">${esc(n.label)}</span>
+        ${compte(n.badge)}<span class="sidebar__chevron" aria-hidden="true">${n.open ? '▾' : '▸'}</span>
+      </button>
+      ${n.open ? (n.children || []).map(k => `
+        <button ${x.A(k.go)} class="sidebar__item sidebar__item--child${cur(k.on)}">
+          <span class="sidebar__item-label">${esc(k.label)}</span>
+          ${compte(k.badge)}
+        </button>`).join('') : ''}`;
+  }
+  return `
+    <button ${x.A(n.go)} class="sidebar__item${cur(n.on)}">
+      ${railIco(n.id)}<span class="sidebar__item-label">${esc(n.label)}</span>
+      ${compte(n.badge)}
+    </button>`;
+}
+
+export function render(c, x){
+  const { esc } = x;
+  if (c.gate) return tplGate(c.gate, x);
+  return `
+<div class="shell workspace${c.railOuvert ? ' rail-ouvert' : ''}" data-ecran="${esc(c.ecran || '')}">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="${c.brandLogo}" alt="${esc(c.brandNom) || 'L’Atelier By'}">
+      ${c.brandSub ? `<div class="sidebar__kicker">${esc(c.brandSub)}</div>` : ''}
+    </div>
+    ${c.erpUrl ? `<div class="sidebar__back"><a href="${esc(c.erpUrl)}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICO.retour}"/></svg>Retour à l’ERP</a></div>` : ''}
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="${esc(c.gq)}" ${x.I(c.gSet)} placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      ${c.gVider ? `<button ${x.A(c.gVider)} title="Effacer" class="btn btn--ghost btn--icon sidebar__search-clear" aria-label="Effacer">✕</button>` : ''}
+      ${c.gOuvert ? `<div data-scroll="railq" class="sidebar__results">
+        ${c.gRien
+          ? `<div class="sidebar__note">Rien de ce nom.${c.gAttente ? ' Le ' + esc(c.gAttente) + ' est encore en lecture — réessayez dans un instant.' : ''}</div>`
+          : c.gGroupes.map(g => `
+            <div class="sidebar__results-group">${esc(g.nom)}</div>
+            ${g.lignes.map(l => `<button ${x.A(l.aller)} class="sidebar__result">
+              <div class="sidebar__result-t">${esc(l.titre)}${l.marque ? ` <span class="sidebar__result-m">${esc(l.marque)}</span>` : ''}</div>
+              ${l.detail ? `<div class="sidebar__result-d">${esc(l.detail)}</div>` : ''}
+            </button>`).join('')}`).join('')}
+        ${c.gTrop ? `<div class="sidebar__results-group">${c.gTrop} résultat(s) de plus — précisez la recherche.</div>` : ''}
+      </div>` : ''}
+    </div>
+
+    <div class="sidebar__groups">
+      ${(c.nav || []).map(g => `
+        <div class="sidebar__group">
+          ${g.titre ? `<div class="sidebar__group-label">${esc(g.titre)}</div>` : ''}
+          ${g.items.map(n => navBtn(n, x)).join('')}
+        </div>`).join('')}
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button ${x.A(c.userOpen)} title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who">${esc(c.userNom)}</span>
+          <span class="sidebar__account-role">${esc(c.userRole)}${c.paEtatCourt ? ' · ' + esc(c.paEtatCourt) : ''}</span>
+        </button>
+        ${c.canLogout ? `<button ${x.A(c.logout)} title="Se déconnecter" class="linklike">Quitter</button>` : ''}
+      </div>
+      ${c.build ? `<span class="sidebar__version" title="Version en ligne — si elle est plus ancienne que la livraison, le navigateur sert une version en cache (Ctrl+Maj+R)">v${esc(c.build)}</span>` : ''}
+    </div>
+  </nav>
+  ${c.railOuvert ? `<div class="shell-voile" ${x.A(c.railBascule)}></div>` : ''}
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">${esc(c.screenKicker || 'Vue Réseau')}</p>
+        <h1>${esc(c.screenTitle)}</h1>
+      </div>
+      <div class="topbar__actions">
+        ${c.metaDate ? `<span class="muted" style="font-size:12px">${esc(c.metaDate)}</span>` : ''}
+        ${c.metaPeriode ? `<span class="chip chip--neutral">${esc(c.metaPeriode)}</span>` : ''}
+        ${(c.lacunes && c.lacunes.length) ? `<button ${x.A(c.lacToggle)} title="${c.lacOuvert ? 'Replier' : 'Ce que cet écran ne peut pas afficher, et pourquoi'}" class="btn btn--sm">${c.lacunes.length} limite${c.lacunes.length > 1 ? 's' : ''} API ${c.lacOuvert ? '▴' : '▾'}</button>` : ''}
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body${c.large ? ' app__body--wide' : ''}">
+    <div class="shell-page">
+      ${c.screenSub ? `<p class="shell-sub page-intro">${esc(c.screenSub)}</p>` : ''}
+
+      ${c.ready ? `
+      ${c.ongletsEcran ? tplOngletsEcran(c, x) : ''}
+      ${(c.lacunes && c.lacunes.length && c.lacOuvert) ? `<div class="no-print" style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px;margin-bottom:14px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Ce que cet écran ne peut pas afficher</div>
+        ${c.lacunes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:4px 0;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:400;padding:2px 8px;border-radius:8px;white-space:nowrap;${l.api
+            ? 'background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)'
+            : 'background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary)'}">${esc(l.etiquette)}</span>
+          <span style="font-size:12.5px;font-weight:400">${esc(l.champ)}</span>
+          <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
+        </div>`).join('')}
+      </div>` : ''}
+      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isStruct ? tplStructure(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
+      ${c.isAnalyse ? tplAnalyse(c, x) : ''}
+      ${c.isAnaprod ? tplAnaprod(c, x) : ''}
+      ${c.isDiag ? tplDiagnostic(c, x) : ''}
+      ${c.isManque ? tplManque(c, x) : ''}
+      ${c.isPxv ? tplPxv(c, x) : ''}
+      ${c.isVentes ? tplVentes(c, x) : ''}
+      ${c.isCrois ? tplCrois(c, x) : ''}
+      ${c.isFonds ? tplFonds(c, x) : ''}
+      ${c.isMktTypes ? tplMktTypes(c, x) : ''}
+      ${c.isReput ? tplReputation(c, x) : ''}
+      ${c.isVisib ? tplVisibilite(c, x) : ''}
+      ${c.isRJour ? tplResultat(c, x) : ''}
+      ${c.isMagasins && !c.isRJour ? tplMagasins(c, x) : ''}
+      ${c.isObjectifs && !c.isRJour ? tplObjectifs(c, x) : ''}
+      ${c.isBudget ? tplBudget(c, x) : ''}
+      ${c.isMarge && !c.isRJour ? tplMarge(c, x) : ''}
+      ${c.isEncodage ? tplEncodage(c, x) : ''}
+      ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
+      ${c.isTablette ? tplTablette(c, x) : ''}
+      ${c.isCadreT ? tplCadreTaches(c, x) : ''}
+      ${c.isFid ? tplFidelite(c, x) : ''}
+      ${c.isMD ? tplMetaDonnee(c, x) : ''}
+      ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
+      ${c.isApiModule ? tplApiModule(c, x) : ''}
+      ${c.isPointages ? tplPointages(c, x) : ''}
+      ${c.isPromoTab ? tplPromoTableau(c, x) : ''}${c.isPromoEd ? tplPromoEdition(c, x) : ''}
+      ${c.isMktObj ? tplMktObj(c, x) : ''}
+      ${c.isScoringTri ? tplScoringTri(c, x) : ''}
+      ${c.isCltMyst ? tplCltMyst(c, x) : ''}
+      ${c.isControle ? tplControle(c, x) : ''}
+      ${c.isSuiviM ? tplSuiviM(c, x) : ''}
+      ${c.isKpiT ? tplKpiT(c, x) : ''}
+      ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
+      ${c.isInvendus ? tplInvendus(c, x) : ''}
+      ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
+      ${c.isInventaires ? tplInventaires(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}
+      ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
+      ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
+      ${c.isReporting ? tplReporting(c, x) : ''}
+      ${c.isSuivi ? tplSuivi(c, x) : ''}
+      ${c.isJournal ? tplJournal(c, x) : ''}
+      ${c.isParams ? tplParams(c, x) : ''}
+      ${c.isUsageC ? tplUsageConsole(c, x) : ''}
+      ${c.isScoring ? tplScoring(c, x) : ''}
+      ` : `<div style="padding:60px 0;color:var(--color-text-muted);font-size:13px">Chargement des données du réseau…</div>`}
+    </div>
+  </main>
+  </div>
+
+  ${c.rel ? tplRelance(c, x) : ''}
+  ${c.repPrev ? tplRepPrev(c, x) : ''}
+  ${c.eqRep ? tplEqRep(c, x) : ''}
+  ${c.pdWaste ? tplPerteMagasins(c, x) : ''}
+  ${c.pdDet ? tplScoringDetail(c, x) : ''}
+  ${c.userPanel ? tplUserPanel(c, x) : ''}
+  ${c.ctrlDet ? tplCtrlDetail(c, x) : ''}
+  ${c.ctrlZoom ? tplCtrlZoom(c, x) : ''}
+  ${c.anDetail ? tplAnalyseDetail(c, x) : ''}
+  ${c.nt ? tplWizardTache(c, x) : ''}
+
+  ${c.toast ? `<div style="position:fixed;bottom:24px;right:24px;z-index:100;background:var(--ink);color:#fff;border-radius:10px;padding:12px 18px;font-size:13px;animation:toastIn 200ms ease;max-width:420px">${esc(c.toast)}</div>` : ''}
+</div>`;
+}
+
+/* --- Écran de connexion / premier lancement ---------------------------------- */
+function tplGate(g, x){
+  const { esc } = x;
+  const logo = (typeof location !== 'undefined' ? location.pathname.replace(/[^/]*$/, '') : '') + 'assets/img/logo.png';
+  return `
+<div style="display:flex;align-items:center;justify-content:center;height:100vh;background:var(--color-bg);font-family:var(--font-ui);color:var(--color-text)">
+  <form ${x.SB(g.submit)} style="width:380px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:34px 36px 30px;animation:toastIn 220ms ease">
+    <img src="${logo}" alt="L’Atelier" style="width:190px;max-width:100%;height:auto;display:block">
+    <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-top:8px">Pilotage Réseau</div>
+    <div style="font-family:var(--font-display);font-size:18px;margin-top:22px">${esc(g.titre)}</div>
+    <div style="font-size:12.5px;color:var(--color-text-muted);line-height:1.55;margin-top:5px;text-wrap:pretty">${esc(g.sub)}</div>
+    <label style="display:block;font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:18px 0 6px">Mot de passe</label>
+    <input id="gate-pass" type="password" autocomplete="${g.mode === 'setup' ? 'new-password' : 'current-password'}" autofocus
+      style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;padding:11px 13px;font-family:var(--font-ui);font-size:14px;background:var(--color-background-secondary);color:var(--color-text)">
+    ${g.err ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px;font-weight:400">${esc(g.err)}</div>` : ''}
+    <button type="submit" class="hv-fade" style="width:100%;margin-top:16px;border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:400;padding:12px 0;border-radius:8px">${esc(g.bouton)}</button>
+  </form>
+</div>`;
+}
+
+/* --- helpers locaux -------------------------------------------------------- */
+const TH = 'text-align:left;font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:1px solid var(--color-border-tertiary)';
+const TH2 = 'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px;border-bottom:1px solid var(--color-border-tertiary)';
+const selCss = 'font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text)';
+
+function opts(list, val, getV, getN){
+  return list.map(o => {
+    const v = getV ? getV(o) : o, n = getN ? getN(o) : o;
+    return `<option value="${String(v).replace(/"/g, '&quot;')}"${String(v) === String(val) ? ' selected' : ''}>${n}</option>`;
+  }).join('');
+}
+
+/* --- Tableau des magasins --------------------------------------------------- */
+
+
+/* La modale d'un jour de la heatmap de rentabilité : l'addition ligne à
+   ligne, comme dans la PWA consultant — CA, coût matière, marge brute, labour
+   et overhead répartis par jour d'ouverture, résultat net. */
+function tplExploitRentModal(d, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.45);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(460px,92vw);max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:12px;z-index:81;padding:22px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:4px">
+      <div>
+        <div style="font-size:16px;font-weight:400;color:var(--color-primary)">${esc(d.titre)}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(d.magasin)}${d.sous ? ' · ' + esc(d.sous) : ''}</div>
+      </div>
+      <button ${x.A(d.close)} aria-label="Fermer" style="border:none;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text);width:28px;height:28px;border-radius:50%;font-size:14px;line-height:1">×</button>
+    </div>
+    <div style="margin-top:12px">
+      ${d.lignes.map(l => `
+        <div style="display:flex;align-items:baseline;gap:10px;padding:9px 8px;border-bottom:1px solid var(--color-border-tertiary);${l.fort ? 'background:var(--color-background-secondary);border-radius:8px;border-bottom:none;margin:2px 0' : ''}">
+          <span style="width:14px;flex:none;color:var(--color-text-muted)">${esc(l.op)}</span>
+          <span style="flex:1;${l.fort ? 'font-weight:400' : ''}">${esc(l.lib)}${l.pct ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-text-muted)">(${esc(l.pct)})</span>` : ''}</span>
+          <span style="font-weight:${l.fort ? '600' : '500'};white-space:nowrap;font-variant-numeric:tabular-nums;${l.col ? 'color:' + l.col : ''}">${esc(l.v)}</span>
+        </div>`).join('')}
+    </div>
+    ${d.motif ? `<div style="margin-top:10px;font-size:11.5px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:7px 10px;border-radius:8px">${esc(d.motif)}</div>` : ''}
+    <div style="margin-top:10px;font-size:11px;color:var(--color-text-muted)">${esc(d.note)}</div>
+  </div>`;
+}
+
+/* Catalogue / assortiment / planogramme — une seule liste, trois lectures.
+   Les colonnes changent avec l'écran ; les filtres, eux, sont partagés :
+   travailler sur un sous-ensemble puis changer d'onglet est le geste normal. */
+/* Le Catalogue (18/10/2026, maquette « A + D ») : quatre questions en tête, une liste, une fiche. Les questions filtrent
+   la liste ; un clic sur une ligne ouvre la fiche à droite (Magasins, Marges, Dans le temps, Fiche) ; la fiche de
+   production, le détail du score et la perte par magasin restent les fenêtres d'avant. */
+function tplCatalogue(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const mu = 'color:var(--color-text-muted)';
+  const col = { ok: '#3f7a52', ko: '#A61E1E', am: '#7A5207', a: '#7A5207', mu: 'var(--color-text-muted)' };
+  const chip = { ok: 'background:rgba(63, 122, 82, .12);color:var(--green)', a: 'background:var(--prize-soft);color:var(--prize-ink)', ko: 'background:rgba(141,29,44,.10);color:var(--accent)' };
+  const TH = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:9px 10px;border-bottom:1px solid var(--color-border-secondary);text-align:left;white-space:nowrap';
+  const TD = 'padding:8px 10px;border-bottom:1px solid var(--color-border-tertiary);vertical-align:middle;font-size:12.5px';
+  const n = 'text-align:right;white-space:nowrap';
+  const pill = on => `border:1px solid ${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${on ? '#fff' : 'var(--color-text)'};border-radius:8px;padding:6px 12px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap`;
+  const inp = 'border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 13px;background:var(--color-surface);font-family:var(--font-ui);font-size:12.5px;color:var(--color-text)';
+  if (c.catVide) { return `<div style="${carte};padding:18px">Le catalogue est vide : rien n’a été lu au panel.</div>${c.refEdit ? tplRefEdit(c, x) : ''}`; }
+  const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px">${(c.catTuiles || []).map(t => `
+    <button ${x.A(t.choisir)} style="${carte};text-align:left;padding:13px 15px;cursor:pointer;font-family:var(--font-ui);${t.on ? 'border:1.5px solid var(--color-primary);' : ''}">
+      <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;${mu}">${esc(t.q)}</div>
+      <div style="font-family:var(--font-display);font-size:24px;line-height:1.15;margin:3px 0;color:${col[t.cls] || 'var(--color-text)'}">${esc(t.v)}</div>
+      <div style="font-size:11.5px;${mu};line-height:1.35">${esc(t.s)}</div></button>`).join('')}</div>`;
+  const outils = `<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+      <input type="search" placeholder="Chercher une référence…" value="${esc(c.catQ)}" ${x.I(c.catPoserQ)} style="${inp};width:200px">
+      <select ${x.C(c.catPoserCat)} style="${inp}">${(c.catCats || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
+      <select ${x.C(c.catPoserSaison)} style="${inp}">${(c.catSaisons || []).map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.lib)}</option>`).join('')}</select>
+      <span style="display:inline-flex;gap:4px">${(c.catFenetres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.nom)}</button>`).join('')}</span>
+      ${c.catFiltre ? `<button ${x.A(c.catReinit)} style="${pill(false)}" title="Recherche, catégorie, saison, question et tri remis à zéro">↺ Réinitialiser</button>` : ''}
+      <span style="font-size:11.5px;${mu}">${esc(c.catCompte)}</span><span style="flex:1"></span>
+      <span style="display:inline-flex;gap:8px;align-items:center;flex-wrap:nowrap">
+      <span style="font-size:12px;${mu};white-space:nowrap" title="Les seuils de décision du score, enregistrés pour tout le réseau">Garder &gt; <input type="number" min="0" max="100" value="${esc(c.catSeuilGarder)}" ${x.C(c.pdSetSeuil('garder'))} style="${inp};width:62px;padding:5px 8px"> · Modifier ≥ <input type="number" min="0" max="100" value="${esc(c.catSeuilModifier)}" ${x.C(c.pdSetSeuil('modifier'))} style="${inp};width:62px;padding:5px 8px"></span>
+      <button ${x.A(c.catPareto)} style="${pill(false)}" title="Les références qui font 80 % du chiffre, le 20/80 de chaque catégorie, l’assortiment proposé par saison, le prix et le volume de chaque magasin">⎙ PDF 20/80</button>
+      <button ${x.A(c.pdPdf)} style="${pill(false)}" title="Toutes les références, leur score et leur décision">⎙ PDF d’arbitrage</button>
+      ${c.pdCatChoisie ? `<button ${x.A(c.pdPdfCategorie)} style="${pill(false)}" title="La catégorie choisie, volume par magasin compris">⎙ PDF de la catégorie</button>` : ''}
+      <button ${x.A(c.catExporter)} style="${pill(false)}">Exporter</button></span></div>`;
+  const L = c.catLignes || [];
+  const tableau = `<div style="${carte};overflow:auto;flex:1;min-width:0"><table style="width:100%;border-collapse:collapse">
+    <thead><tr>${(c.catCols || []).map(h => `<th style="${TH};${h.num ? n : ''};${h.k === 'oblig' ? 'text-align:center' : ''}" title="${esc(h.titre)}"><button ${x.A(h.trier)} style="border:none;background:none;padding:0;cursor:pointer;font:inherit;letter-spacing:inherit;text-transform:inherit;color:${h.on ? 'var(--color-primary)' : 'inherit'};white-space:nowrap">${esc(h.lib)} <span style="font-size:10px;opacity:${h.on ? 1 : 0.45}">${h.fleche}</span></button></th>`).join('')}</tr></thead>
+    <tbody>${L.map(l => `<tr ${x.A(l.ouvrir)} style="cursor:pointer;${l.on ? 'background:#f7ecec' : ''}">
+      <td style="${TD};min-width:170px"><b>${esc(l.nom)}</b>${l.sous ? `<div style="font-size:11px;${mu}">${esc(l.sous)}</div>` : ''}</td>
+      <td style="${TD};font-size:12px">${l.saison ? esc(l.saison) + (l.saisonSeule ? `<div style="font-size:10px;${mu}">seulement en saison</div>` : '') : `<span style="${mu}">—</span>`}</td>
+      <td style="${TD};${n}">${esc(l.prix)}</td><td style="${TD};${n};color:${col[l.mnCls] || 'inherit'}">${esc(l.mn)}</td><td style="${TD};${n}">${esc(l.vol)}</td><td style="${TD};${n}">${esc(l.part)}</td><td style="${TD};${n}">${esc(l.rang)}</td><td style="${TD};${n}">${esc(l.rangCat)}${l.rangCatNom ? `<div style="font-size:10.5px;${mu}">${esc(l.rangCatNom)}</div>` : ''}</td>
+      <td style="${TD};${n};font-weight:400;color:${col[l.scoreCls] || 'inherit'}">${esc(l.score)}</td><td style="${TD};${n}">${esc(l.mags)}</td>
+      <td style="${TD};${n};color:${col[l.tendCls] || 'inherit'}">${esc(l.tend)}</td>${c.catColExtra ? `<td style="${TD};${n}">${esc(l.extra)}</td>` : ''}
+      <td style="${TD}">${l.dec ? `<span style="display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:400;${chip[l.decCls] || ''}">${esc(l.dec)}</span>` : ''}</td>
+      <td style="${TD};text-align:center">${l.oblig == null ? `<span style="${mu}">—</span>` : `<button ${x.A(l.basculerOblig)} role="switch" aria-checked="${l.oblig}" aria-label="Obligatoire" title="${l.oblig ? (l.obligSaison ? 'Obligatoire pendant une saison — un clic la retire' : 'Obligatoire — un clic la retire') : 'Un clic la rend obligatoire, toute l’année'}" style="width:38px;height:22px;border-radius:6px;border:none;cursor:pointer;position:relative;vertical-align:middle;background:${l.oblig ? '#3f7a52' : 'rgba(0,0,0,.18)'}"><i style="position:absolute;top:3px;${l.oblig ? 'left:19px' : 'left:3px'};width:16px;height:16px;border-radius:50%;background:#fff;"></i></button>${l.obligSaison ? `<div style="font-size:10px;${mu}">saison</div>` : ''}`}</td></tr>`).join('')
+      || `<tr><td colspan="${(c.catCols || []).length}" style="${TD};${mu}">Aucune référence ne répond à ce filtre.</td></tr>`}</tbody></table>
+    ${c.catTronque ? `<div style="padding:9px 12px;font-size:11.5px;${mu}">… et ${c.catTronque} autres : affinez la recherche ou la catégorie.</div>` : ''}</div>`;
+  const f = c.catFiche;
+  const lien = (fn, t) => fn ? `<button ${x.A(fn)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;text-align:left">${esc(t)}</button>` : '';
+  const kv = l => `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--color-border-tertiary);font-size:12.5px"><span style="${mu}">${esc(l.k)}</span><b style="text-align:right">${esc(l.v)}</b></div>`;
+  let corps = '';
+  if (f && f.onglet === 'magasins') {
+    corps = `${(f.magasins || []).map(m => `<div style="display:grid;grid-template-columns:86px minmax(0,1fr) 58px;gap:8px;align-items:center;padding:6px 0;border-top:1px solid var(--color-border-tertiary)">
+        <b style="font-size:12px">${esc(m.nom)}</b>
+        <div><div style="height:6px;border-radius:8px;background:var(--color-background-secondary);position:relative;overflow:hidden"><i style="position:absolute;left:0;top:0;bottom:0;width:${m.w}%;border-radius:8px;background:${col[m.barCls] || '#B8B2A8'}"></i></div>
+          <div style="font-size:10.5px;${mu};margin-top:2px">${esc([m.vol, m.prix].filter(Boolean).join(' · '))}${m.manque ? ` · <span style="color:#A61E1E">manque ${esc(m.manque)}</span>` : ''}</div></div>
+        <span style="text-align:right;font-size:12px;font-weight:400;color:${col[m.barCls] || 'inherit'}">${esc(m.ecart)}</span></div>`).join('') || `<div style="font-size:12px;${mu}">Pas de vente par magasin sur la période.</div>`}
+      <div style="font-size:11px;${mu};margin-top:8px">${esc(f.magasinsNote)}</div>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px">${lien(f.versVie, 'La courbe jour par jour et l’effet des promotions ›')}${lien(f.versPrix, 'Le prix magasin par magasin, face au volume ›')}</div>`;
+  } else if (f && f.onglet === 'marges') {
+    corps = `${(f.lignesMarge || []).map(kv).join('')}
+      ${f.perte ? `<div style="display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px solid var(--color-border-tertiary);font-size:12.5px"><span style="${mu}">Taux de perte</span><span><b>${esc(f.perte)}</b> ${lien(f.versPerte, 'par magasin ›')}</span></div>` : ''}
+      ${(f.criteres || []).length ? `<div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;${mu};margin:14px 0 6px">Ce qui fait le score</div>
+        ${f.criteres.map(k => `<div style="display:grid;grid-template-columns:minmax(0,1fr) 90px;gap:8px;align-items:center;padding:4px 0"><div><div style="font-size:12px">${esc(k.nom)} <span style="${mu};font-size:11px">· poids ${esc(k.poids)}</span></div>
+          <div style="height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:3px;overflow:hidden"><i style="display:block;height:100%;width:${k.w}%;background:#2F5D8A"></i></div></div><span style="text-align:right;font-size:12px;${k.mu ? mu : 'font-weight:400'}">${esc(k.note)}</span></div>`).join('')}` : ''}`;
+  } else if (f && f.onglet === 'temps') {
+    corps = `${f.courbe ? `<svg viewBox="0 0 330 90" style="width:100%;height:110px;display:block"><polyline points="${f.courbe}" fill="none" stroke="#8D1D2C" stroke-width="2"/></svg>
+        <div style="display:flex;justify-content:space-between;font-size:10.5px;${mu}"><span>${esc(f.courbeDe)}</span><span>max ${esc(f.courbeMax)}</span><span>${esc(f.courbeA)}</span></div>` : `<div style="font-size:12px;${mu}">Pas de série lue pour cette référence.</div>`}
+      <div style="font-size:12.5px;margin-top:10px"><b>Tendance</b> : ${esc(f.tendance)}</div>
+      <div style="margin-top:10px">${lien(f.versAnalyse, 'Groupes et catégories, magasin par magasin, face à l’an dernier ›')}</div>`;
+  } else if (f) {
+    corps = f.prod ? f.prod.map(kv).join('') + `<div style="font-size:11px;${mu};margin-top:8px">L’assortiment obligatoire se règle dans Comptoir · planogramme.</div>` : `<div style="font-size:12px;${mu}">Pas de fiche au catalogue pour cette référence.</div>`;
+  }
+  const fiche = f ? `<aside style="${carte};width:390px;flex:0 0 auto;align-self:flex-start;position:sticky;top:12px;">
+    <div style="padding:14px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+      <div style="display:flex;gap:8px;align-items:center"><b style="font-size:15px">${esc(f.nom)}</b>${f.dec ? `<span style="padding:3px 10px;border-radius:8px;font-size:11px;font-weight:400;${chip[f.decCls] || ''}">${esc(f.dec)}</span>` : ''}<span style="flex:1"></span>
+        <button ${x.A(f.fermer)} aria-label="fermer" style="border:none;background:none;cursor:pointer;font-size:16px;${mu}">✕</button></div>
+      <div style="font-size:12px;${mu};margin-top:2px">${esc(f.sous)}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:9px">
+        ${f.revue ? `<span title="La revue franchiseur : un clic sur l’étoile posée la retire" style="white-space:nowrap">${f.revue.map(e => `<button ${x.A(e.poser)} style="border:none;background:none;padding:0 1px;cursor:pointer;font-size:15px;color:${e.pleine ? '#B0792A' : '#e6e0d8'}">★</button>`).join('')}</span>` : ''}
+        ${f.obligatoire != null ? `<label style="font-size:12px;display:inline-flex;gap:5px;align-items:center;cursor:pointer" title="Imposée en boutique (l’assortiment obligatoire) et gardée au score, quoi qu’en disent la marge et le score"><input type="checkbox" ${f.obligatoire ? 'checked' : ''} ${x.C(f.basculerObligatoire)}> Obligatoire</label>` : ''}
+        ${lien(f.detailScore, 'Score en détail · projets · arrêt ›')}${lien(f.ouvrirProduction, 'Fiche de production ›')}${lien(f.comptoir, 'Au comptoir ›')}</div></div>
+    <div style="padding:12px 16px 16px"><div style="display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;gap:2px;margin-bottom:10px">${f.onglets.map(o => `<button ${x.A(o.choisir)} style="border:none;border-radius:8px;padding:6px 10px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;white-space:nowrap;background:${o.on ? 'var(--color-primary)' : 'transparent'};color:${o.on ? '#fff' : 'var(--color-text)'}">${esc(o.nom)}</button>`).join('')}</div>
+      ${corps}</div></aside>` : '';
+  return `<div data-screen="catalogue">${tuiles}${c.catLienVue ? `<div style="margin:-6px 0 10px">${lien(c.catLienVue.go, c.catLienVue.txt)}</div>` : ''}${outils}<div style="display:flex;gap:14px;align-items:flex-start">${tableau}${fiche}</div>
+    <div style="font-size:11.5px;${mu};margin-top:10px">${esc(c.catPeriode)} · le score et la décision sont ceux du réseau (volume, marge, perte, comptoir, revue) ; une question filtre la liste, un second clic la retire.</div>
+    ${c.refEdit ? tplRefEdit(c, x) : ''}</div>`;
+}
+
+
+/* Édition d'une référence. Deux formulaires selon l'écran d'où l'on vient :
+   poser une référence au comptoir et chiffrer sa production sont deux gestes
+   distincts, les mélanger allongerait la saisie sans servir personne. */
+function tplRefEdit(c, x){
+  const { esc } = x;
+  const e = c.refEdit;
+  const L = 'font-size:11px;color:var(--color-text-muted);display:block;margin-bottom:3px';
+  const IN = 'font-family:var(--font-ui);font-size:13px;padding:7px 9px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);width:100%';
+  const champ = (k, lbl, ph) => `<div><label style="${L}">${esc(lbl)}</label>
+    <input id="ref-ch-${k}" value="${esc(String(e.champs[k] == null ? '' : e.champs[k]))}" ${x.I(e.set(k))} placeholder="${esc(ph || '')}" style="${IN}"></div>`;
+  return `
+  <div style="position:fixed;inset:0;background:rgba(20,16,14,.42);display:flex;align-items:center;justify-content:center;padding:24px;z-index:60">
+    <div style="background:var(--color-surface);border-radius:12px;padding:22px;width:100%;max-width:${e.mode === 'plano' ? '460px' : '620px'};max-height:88vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:16px">
+        <div>
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.2">${esc(e.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(e.ref)} · ${e.mode === 'plano' ? 'emplacement au comptoir' : 'fiche de production'}</div>
+        </div>
+        <button ${x.A(e.close)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:18px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      ${e.mode === 'plano' ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          ${champ('zone', 'Zone', 'Vitrine chaude')}
+          ${champ('meuble', 'Meuble', 'M1')}
+          ${champ('niveau', 'Niveau', 'Haut')}
+          ${champ('slot', 'Emplacement', '3')}
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Vider la zone retire la référence du planogramme.</div>
+      ` : `
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 13px;background:var(--color-background-secondary);border-radius:9px;margin-bottom:14px">
+          <input type="checkbox" ${e.champs.must ? 'checked' : ''} ${x.C(e.set('must'))} style="width:16px;height:16px;accent-color:var(--color-primary)">
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:400">Référence obligatoire</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(e.saisonTxt || 'toute boutique doit la proposer en permanence')}</div>
+          </div>
+          <div style="width:110px">${champ('qmin', 'Quantité min.', '0')}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px">
+          ${champ('prix', 'Prix de vente (€)', '')}
+          ${champ('mat', 'Coût matière (€)', '')}
+          ${champ('dlv', 'DLV (heures)', '')}
+          ${champ('prep', 'Préparation (min)', '')}
+          ${champ('cuisson', 'Cuisson (min)', '')}
+          ${champ('fin', 'Finition (min)', '')}
+          ${champ('bmin', 'Batch minimum', '')}
+          ${champ('bmult', 'Multiple de batch', '')}
+          ${champ('four', 'Four', '')}
+        </div>
+        <div style="margin-top:12px">${champ('profil', 'Profil de vente', 'matin, week-end…')}</div>
+      `}
+      ${e.err ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary);background:rgba(141, 29, 44, 0.08);border-radius:8px;padding:8px 11px">${esc(e.err)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:18px">
+        <button ${x.A(e.close)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);cursor:pointer;font-family:var(--font-ui);font-size:13px;padding:8px 16px;border-radius:9px">Annuler</button>
+        <button ${x.A(e.save)} style="border:none;background:var(--color-primary);color:#fff;cursor:pointer;font-family:var(--font-ui);font-size:13px;font-weight:400;padding:8px 18px;border-radius:9px;opacity:${e.busy ? '.6' : '1'}">${e.busy ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Analyse dans le temps. La série coûte un appel par point : rien ne part
+   avant une sélection explicite, et le nombre de points est annoncé. */
+function tplAnaprod(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const mini = cells => `<span style="display:inline-flex;align-items:flex-end;gap:1.5px;height:20px">${cells.map(v => `<i style="width:4px;background:${v.top ? 'var(--color-primary)' : '#C68E95'};height:${v.w}px;border-radius:1px"></i>`).join('')}</span>`;
+
+  const entete = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="${cap}">Produits × magasins</div>
+        <div style="font-family:var(--font-display);font-size:16px;margin-top:2px">Où chaque référence se vend</div>
+      </div>
+      <input value="${esc(c.apQVal || '')}" placeholder="Filtrer les références…" ${x.C(c.apPoserQ)} style="width:210px;font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:1px solid var(--color-border-secondary);background:var(--color-surface)">
+      <select ${x.C(c.apPoserCat)} style="font-family:var(--font-ui);font-size:12px;padding:8px 10px;border-radius:9px;border:1px solid var(--color-border-secondary);background:var(--color-surface)">
+        ${(c.apCats || []).map(o2 => `<option value="${esc(o2.v)}" ${o2.on ? 'selected' : ''}>${esc(o2.lib)}</option>`).join('')}
+      </select>
+      ${(c.apMoisChoix || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+    </div>`;
+
+  if (c.apChargement) {
+    return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}
+        <div style="padding:30px 0 16px;font-size:13px;color:var(--color-text-muted)">Lecture des ventes produit chez le panel — le premier chargement d’une période grave ses tranches, les suivants sont instantanés…</div>
+      </div></div>`;
+  }
+  if (c.apIndispo) {
+    return `<div data-screen="anaprod" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.apIndispo)}</div>`;
+  }
+
+  const th = 'font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:7px 9px;border-bottom:1px solid var(--color-border-secondary)';
+  const td = 'padding:7px 9px;border-bottom:1px solid var(--color-border-tertiary)';
+
+  if (c.apFiche) {
+    const F = c.apFiche;
+    // Les choix de la fiche : un magasin seul face au réseau, courbe ou tableau, total ou moyenne par jour.
+    const seg = (liste) => `<span style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">${liste.map(o2 => `<button ${x.A(o2.choisir)} style="border:0;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;background:${o2.on ? 'var(--color-primary)' : 'var(--color-surface)'};color:${o2.on ? '#fff' : 'var(--color-text-muted)'}">${esc(o2.lib)}</button>`).join('')}</span>`;
+    const puce = k => k.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${k.coul};margin-right:5px;vertical-align:-1px"></i>` : '';
+    const thT = 'font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);font-weight:400;padding:6px 7px;border-bottom:1px solid var(--color-border-secondary);text-align:right;white-space:nowrap';
+    const tdT = 'padding:6px 7px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;white-space:nowrap;' + num;
+    const hM = F.marques && F.marques.length ? 8 + 6 * (F.rangsMarques || 1) : 0;
+    const courbe = F.chargement ? `<div style="padding:34px 0 26px;font-size:12.5px;color:var(--color-text-muted)">${esc(F.chargement)}</div>` : `
+        <div style="overflow-x:auto;margin-top:10px">
+        <svg width="${F.w}" height="${F.h + 32 + hM}" style="display:block"><g transform="translate(0,10)">
+          ${(F.bandes || []).map(b2 => `<rect x="${b2.x}" y="0" width="${b2.w}" height="${F.h}" fill="#F2C14E" opacity=".18"><title>${esc(b2.t)}</title></rect>`).join('')}
+          ${F.ticks.map(t2 => `<line x1="${F.x0}" y1="${t2.y}" x2="${F.w}" y2="${t2.y}" stroke="var(--color-border-tertiary)" stroke-width="1"/><text x="${F.x0 - 6}" y="${(+t2.y + 3).toFixed(1)}" font-size="9" text-anchor="end" fill="var(--color-text-muted)">${esc(t2.t)}</text>`).join('')}
+          <line x1="${F.x0}" y1="${F.h}" x2="${F.w}" y2="${F.h}" stroke="var(--color-border-secondary)" stroke-width="1"/>
+          ${F.courbes.map(cb => cb.segs.map(sg => `<polyline points="${sg}" fill="none" stroke="${cb.coul}" stroke-width="${cb.ep}" ${cb.dash ? `stroke-dasharray="${cb.dash}"` : ''}/>`).join('')).join('')}
+          ${F.courbes.map(cb => cb.points.map(pt => `<circle cx="${pt.x}" cy="${pt.y}" r="${pt.voir ? 2.6 : 5}" fill="${pt.voir ? cb.coul : 'transparent'}"><title>${esc(pt.t)}</title></circle>`).join('')).join('')}
+          ${F.labels.map(l2 => `<text x="${l2.x}" y="${F.h + 16}" font-size="9"${l2.anc ? ` text-anchor="${l2.anc}"` : ''} fill="var(--color-text-muted)">${esc(l2.t)}</text>`).join('')}
+          ${(F.marques || []).map(m2 => `<rect x="${m2.x}" y="${m2.y}" width="8" height="4" rx="1.5" fill="${m2.coul}"><title>${esc(m2.t)}</title></rect>`).join('')}
+        </g></svg></div>
+        <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--color-text-muted);margin-top:6px">
+          ${F.legende.map(l2 => `<span><i style="display:inline-block;width:16px;height:0;border-top:${l2.epais ? '3px' : '2px'} ${l2.dash ? 'dashed' : 'solid'} ${l2.coul};vertical-align:3px"></i> ${esc(l2.nom)}</span>`).join('')}
+          ${(F.bandes && F.bandes.length) || (F.marques && F.marques.length) ? `<span><i style="display:inline-block;width:12px;height:10px;background:#F2C14E;opacity:.45;vertical-align:-1px;border-radius:2px"></i> jour de promotion (jours creux)${F.marques && F.marques.length && !(F.bandes && F.bandes.length) ? ', une marque par magasin sous l’axe' : ''}</span>` : ''}
+        </div>`;
+    const tableau = F.chargement ? courbe : `
+        <div style="overflow-x:auto;margin-top:10px;border:1px solid var(--color-border-tertiary);border-radius:10px">
+        <table style="border-collapse:collapse;font-size:11.5px;min-width:100%">
+          <tr><th style="${thT};text-align:left;position:sticky;left:0;background:var(--color-surface);z-index:1">Magasin</th><th style="${thT};border-right:1px solid var(--color-border-secondary)">${esc(F.tTotal)}</th>${F.tEntetes.map(h2 => `<th style="${thT}" title="${esc(h2.titre)}">${esc(h2.t)}</th>`).join('')}</tr>
+          ${F.tLignes.map(l2 => l2.ecart
+            ? `<tr><td style="${tdT};text-align:left;position:sticky;left:0;background:var(--color-background-secondary);font-size:10.5px;color:var(--color-text-muted)">${esc(l2.nom)}</td><td style="${tdT};font-weight:400;border-right:1px solid var(--color-border-secondary);color:${l2.total.vide ? 'var(--color-text-muted)' : (l2.total.pos ? '#3f7a52' : '#A32014')}">${esc(l2.total.t)}</td>${l2.cells.map(c2 => `<td style="${tdT};font-size:10.5px;font-weight:400;color:${c2.vide ? 'var(--color-text-muted)' : (c2.pos ? '#3f7a52' : '#A32014')}">${esc(c2.t)}</td>`).join('')}</tr>`
+            : `<tr${l2.gras ? ' style="background:rgba(141, 29, 44, 0.05)"' : ''}><td style="${tdT};text-align:left;position:sticky;left:0;background:${l2.gras ? '#F9F4F5' : 'var(--color-surface)'};font-weight:${l2.gras ? 700 : 600}">${puce(l2)}${esc(l2.nom)}</td><td style="${tdT};font-weight:400;border-right:1px solid var(--color-border-secondary)">${esc(l2.total)}</td>${l2.cells.map(v => typeof v === 'object' && v ? `<td style="${tdT};background:#FBEFCF" title="${esc(v.titre || '')}">${esc(v.t)}</td>` : `<td style="${tdT}${l2.gras ? ';font-weight:400' : ''}">${esc(v)}</td>`).join('')}</tr>`).join('')}
+        </table></div>`;
+    return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1200px">
+      <div style="${carte};padding:16px 18px">${entete}</div>
+      <div style="${carte};padding:17px 19px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+          <div>
+            <button ${x.A(F.fermer)} style="${pill(false)};margin-bottom:8px">← Retour à la grille</button>
+            <div style="font-family:var(--font-display);font-size:18px">${esc(F.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(F.cat)}${F.adEnCours ? ' · lecture de l’an dernier…' : ''}</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${F.perChoix ? seg(F.perChoix) : ''}${seg(F.vueChoix)}${F.jourChoix ? seg(F.jourChoix) : ''}</div>
+        </div>
+        ${F.joursChips ? `<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:12px">
+          ${F.joursChips.map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+          <span style="flex:1"></span>${seg(F.nChoix)}</div>` : ''}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">
+          ${F.isoChoix.map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${o2.coul ? `<i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${o2.coul};margin-right:5px;vertical-align:0;${o2.on ? '' : ''}"></i>` : ''}${esc(o2.nom)}</button>`).join('')}
+        </div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">${esc(F.note)}</div>
+        ${F.enTableau ? tableau : courbe}
+        ${F.evals && F.evals.length ? `<div style="margin-top:14px;border-top:1px solid var(--color-border-tertiary);padding-top:10px">
+          <div style="${cap};margin-bottom:6px">L’effet des promotions sur cette référence</div>
+          ${F.evals.map(e2 => `<div style="display:flex;gap:10px;align-items:baseline;padding:5px 0;font-size:11.5px;border-bottom:1px solid var(--color-border-tertiary)">
+            <i style="width:9px;height:9px;border-radius:2px;background:${e2.coul};flex:none;align-self:center"></i>
+            <div style="flex:1"><b>${esc(e2.mag)}</b> · « ${esc(e2.nom)} » <span style="color:var(--color-text-muted)">${esc(e2.heures)}${e2.surProduit ? ' · sur ce produit' : ' · promotion du magasin'}</span>
+              <div style="color:var(--color-text-muted);font-size:10.5px">${esc(e2.txt)}${e2.contexte ? ' · ' + esc(e2.contexte) : ''}</div></div>
+            <b style="font-family:var(--font-display);font-size:16px;${num};color:${e2.effet ? (e2.pos ? '#3f7a52' : '#A32014') : 'var(--color-text-muted)'}">${esc(e2.effet || '—')}</b>
+          </div>`).join('')}
+        </div>` : ''}
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px">
+        ${(F.cartes || []).map(k2 => `
+        <div ${x.A(k2.isoler)} title="${k2.on ? 'revoir tous les magasins' : 'voir ce magasin seul face à la moyenne réseau'}" class="hv-bg" style="${carte};padding:12px 14px;cursor:pointer${k2.alerte ? ';background:#FDF3F0;border-color:#E8C0B5' : ''}${k2.on ? ';' + k2.coul : ''}">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:12.5px">${esc(k2.nom)}</b><i style="width:10px;height:10px;border-radius:3px;background:${k2.coul}"></i></div>
+          <div style="font-family:var(--font-display);font-size:21px;margin-top:4px;${num}">${esc(k2.tot)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);${num}">${esc(k2.parJour)}</div>
+          <div style="font-size:11px;font-weight:400;color:${k2.evolPos ? '#3f7a52' : '#A32014'};${num}">${esc(k2.evol)}</div>
+          <div style="font-size:10px;margin-top:5px;color:${k2.alerte ? '#A32014' : 'var(--color-text-muted)'};font-weight:${k2.alerte ? '700' : '400'}">${esc(k2.etat)}</div>
+          <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(k2.part)}</div>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  return `<div data-screen="anaprod" style="display:flex;flex-direction:column;gap:14px;max-width:1280px">
+    <div style="${carte};padding:16px 18px">${entete}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Chaque case : la jauge du magasin face à son attendu <b>à taille égale</b> (pondéré par le CA du magasin), le % amorti par le volume de la référence — une petite référence ne crie pas plus fort qu'une grosse — <span style="color:var(--green);font-weight:400">vert à droite</span> au-dessus, <span style="color:var(--stop);font-weight:400">rouge à gauche</span> en dessous, le delta en % (la barre plafonne &agrave; 100 %) · case grise = jamais vendu ici · cliquez une référence pour sa fiche de vie${c.apMuets ? ` · ${c.apMuets} tranche(s) sans réponse du panel` : ''}</div>
+    </div>
+    <div style="${carte};padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <tr><th style="${th};text-align:left;padding-left:18px">Référence</th><th style="${th};text-align:center">Réseau (moy.)</th>
+          ${(c.apEntetes || []).map(m2 => `<th style="${th};text-align:center">${esc(m2)}</th>`).join('')}
+          <th style="${th};text-align:right">Pièces</th></tr>
+        ${(c.apLignes || []).map(l => `
+        <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer">
+          <td style="${td};padding-left:18px"><span style="font-weight:400">${esc(l.nom)}</span><div style="font-size:10px;color:var(--color-text-muted)">${esc(l.cat)}</div></td>
+          <td style="${td};text-align:center;${num};color:var(--color-text-muted)">${esc(l.reseauMoy)} pcs</td>
+          ${l.cells.map(c2 => c2.jamais
+            ? `<td style="${td};text-align:center;background:var(--color-background-secondary)"><span style="font-size:10px;color:var(--color-text-muted)">jamais vendu</span></td>`
+            : `<td style="${td};text-align:center${c2.dort ? ';background:#FDF3F0' : ''}" title="${esc(c2.titre)}">
+                 <div style="position:relative;width:110px;height:10px;margin:0 auto;background:var(--color-background-secondary);border-radius:8px">
+                   <i style="position:absolute;left:calc(50% - 1px);top:-2px;height:14px;width:2px;background:var(--color-border-secondary)"></i>
+                   <i style="position:absolute;top:1px;height:8px;border-radius:8px;${c2.pos
+                     ? `left:50%;width:${c2.w}%;background:var(--green)`
+                     : `right:50%;width:${c2.w}%;background:var(--stop)`}"></i>
+                 </div>
+                 <div style="font-size:10px;font-weight:400;margin-top:2px;${num};color:${c2.pos ? '#3f7a52' : '#A32014'}">${esc(c2.delta)}</div>
+                 ${c2.dort ? `<div style="font-size:10px;color:var(--stop);font-weight:400">${esc(c2.dort)}</div>` : ''}</td>`).join('')}
+          <td style="${td};text-align:right;${num};font-weight:400">${esc(l.total)}</td>
+        </tr>`).join('')}
+      </table></div>
+      ${c.apNbFiltre > c.apNbMontre ? `<div style="padding:10px 18px;font-size:11px;color:var(--color-text-muted)">${c.apNbMontre} références montrées sur ${c.apNbFiltre} — affinez par catégorie ou par le filtre.</div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* Prix × volume — Produits › Catalogue (Où ça se vend jusqu'au 18/10/2026). La grille référence × magasin
+   (le prix encaissé teinté face au réseau, les pièces, le volume à taille
+   égale), et la fiche d'une référence : le nuage prix contre volume. */
+function tplPxv(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer;white-space:nowrap`;
+  const champ = 'font-family:var(--font-ui);font-size:12px;padding:8px 12px;border-radius:9px;border:1px solid var(--color-border-secondary);background:var(--color-surface)';
+  const entete = `
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+      <div style="flex:1;min-width:220px">
+        <div style="${cap}">Prix × volume${c.pxvPeriode ? ' · ' + esc(c.pxvPeriode) : ''}</div>
+        <div style="font-family:var(--font-display);font-size:16px;margin-top:2px">Le prix encaissé par chaque magasin, face à ce qu’il vend</div>
+      </div>
+      <input id="pxv-q" value="${esc(c.pxvQVal || '')}" placeholder="Filtrer les références…" ${x.I(c.pxvPoserQ)} style="width:210px;${champ}">
+      <select ${x.C(c.pxvPoserCat)} style="${champ};padding:8px 10px">
+        ${(c.pxvCats || []).map(o2 => `<option value="${esc(o2.v)}" ${o2.on ? 'selected' : ''}>${esc(o2.lib)}</option>`).join('')}
+      </select>
+      ${(c.pxvMoisChoix || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.lib)}</button>`).join('')}
+    </div>`;
+  if (c.pxvChargement) {
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}
+        <div style="padding:30px 0 16px;font-size:13px;color:var(--color-text-muted)">Lecture des ventes de chaque magasin chez le panel — un mois clos se lit une fois puis reste gravé, les suivants sont instantanés…</div></div></div>`;
+  }
+  if (c.pxvIndispo) {
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px"><div style="${carte};padding:16px 18px">${entete}
+      <div style="padding:18px 0 6px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.pxvIndispo)}</div></div></div>`;
+  }
+  const prix = (txt, t, peu) => `<span class="pxv-px${t ? ' ' + t : ''}${peu ? ' peu' : ''}">${esc(txt)}</span>`;
+  const rel = (txt, t) => txt ? `<span class="pxv-rel${t ? ' ' + t : ''}">${esc(txt)}</span>` : '';
+
+  if (c.pxvFiche) {
+    const F = c.pxvFiche;
+    const svg = `<svg viewBox="0 0 ${F.w} ${F.h}" width="${F.w}" height="${F.h}" class="pxv-nuage" role="img" aria-label="${esc(F.nom)} : prix encaissé contre volume, par magasin">
+      ${F.gy.map(g => `<line x1="${F.gl}" x2="${F.gr}" y1="${g.y}" y2="${g.y}" class="gr"/><text x="${F.gl - 8}" y="${+g.y + 4}" class="ax" text-anchor="end">${esc(g.t)}</text>`).join('')}
+      ${F.gx.map(g => `<text x="${g.x}" y="${F.gb + 18}" class="ax" text-anchor="middle">${esc(g.t)}</text>`).join('')}
+      <text x="${F.gl}" y="${F.gt - 10}" class="ax t">pièces pour 10 000 € de chiffre du magasin</text>
+      <text x="${F.gr}" y="${F.h - 6}" class="ax t" text-anchor="end">prix encaissé →</text>
+      <line x1="${F.medX}" x2="${F.medX}" y1="${F.gt}" y2="${F.gb}" class="med"/><text x="${+F.medX + 6}" y="${F.gt + 12}" class="ax">prix réseau ${esc(F.med)}</text>
+      ${F.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="12" fill="transparent"><title>${esc(p.titre)}</title></circle><circle cx="${p.x}" cy="${p.y}" r="8" fill="${p.coul}" stroke="#fff" stroke-width="2" pointer-events="none"/>
+        <text x="${p.lx}" y="${p.ly}" class="lab">${esc(p.nom)} <tspan class="mu">${esc(p.det)}</tspan></text>`).join('')}
+    </svg>`;
+    return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+      <div style="${carte};padding:16px 18px">${entete}</div>
+      <div class="pxv-fiche">
+        <div style="${carte};padding:12px 0 6px" class="pxv-liste">
+          <div style="${cap};padding:0 14px">Là où les prix diffèrent le plus</div>
+          <div style="font-size:11px;color:var(--color-text-muted);padding:2px 14px 6px">écart de prix × chiffre du réseau</div>
+          ${F.liste.map(l => `<button ${x.A(l.ouvrir)} class="pxv-li${l.on ? ' on' : ''}"><b>${esc(l.nom)}</b><span>${esc(l.plage)}</span>
+            <span class="pts">${l.pts.map(p => `<i style="left:${p.g}%;background:${p.coul}" title="${esc(p.nom)} ${esc(p.prix)}"></i>`).join('')}</span></button>`).join('')}
+        </div>
+        <div style="${carte};padding:16px 18px;min-width:0">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap">
+            <div><button ${x.A(F.fermer)} style="${pill(false)};margin-bottom:8px">← Retour à la grille</button>
+              <div style="font-family:var(--font-display);font-size:21px">${esc(F.nom)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(F.cat)} · ${esc(F.periode)} · ${esc(F.ca)} dans le réseau · prix réseau ${esc(F.med)}</div></div>
+            <div class="pxv-leg">${F.legende.map(l => `<span><i style="background:${l.coul}"></i>${esc(l.nom)}</span>`).join('')}</div>
+          </div>
+          <div style="overflow-x:auto;margin-top:8px">${svg}</div>
+          <div class="pxv-lecture">${esc(F.phrase)} <span>Le nuage montre ce qui va ensemble, pas ce qui le cause : l’emplacement, la clientèle ou la fraîcheur pèsent aussi.</span></div>
+          <div style="overflow-x:auto"><table class="pxv-t petit"><thead><tr><th class="g">Magasin</th><th>Prix encaissé</th><th>Face au réseau</th><th>Pièces</th><th>Pour 10 000 €</th><th>Face aux autres</th><th>Chiffre</th><th>Au prix réseau<small>à volume constant</small></th></tr></thead>
+          <tbody>${F.lignes.map(l => `<tr><td class="g"><i class="pt" style="background:${l.coul}"></i>${esc(l.nom)}</td><td>${prix(l.prix, l.teinte, l.peu)}</td><td>${esc(l.ec)}</td><td>${esc(l.q)}</td>
+            <td>${esc(l.v10k)}</td><td>${rel(l.rel, l.relTon)}</td><td>${esc(l.ca)}</td><td class="${l.align ? l.alignTon : ''}">${l.align ? esc(l.align) : '<span class="mu">au prix réseau</span>'}</td></tr>`).join('')}</tbody></table></div>
+        </div>
+      </div></div>`;
+  }
+
+  return `<div data-screen="prixvolume" style="display:flex;flex-direction:column;gap:14px">
+    <div style="${carte};padding:16px 18px">${entete}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:12px">${(c.pxvFiltres || []).map(f => `<button ${x.A(f.choisir)} style="${pill(f.on)}">${esc(f.lib)} <b style="margin-left:3px">${f.n}</b></button>`).join('')}</div>
+    </div>
+    <div class="pxv-tuiles">${(c.pxvTuiles || []).map(t => `<div class="pxv-tuile${t.ton ? ' ' + t.ton : ''}"><div style="${cap}">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    <div style="${carte};padding:0;overflow:hidden">
+      <div style="overflow-x:auto"><table class="pxv-t">
+        <thead><tr><th class="g">Référence</th><th>Prix réseau<small>médiane</small></th>
+          ${(c.pxvMags || []).map(m => `<th class="mag"><i style="background:${m.coul}"></i>${esc(m.court)}</th>`).join('')}<th>Écart<small>max − min</small></th></tr></thead>
+        <tbody>${(c.pxvLignes || []).map(l => `<tr ${x.A(l.ouvrir)} class="hv-bg">
+          <td class="g"><b>${esc(l.nom)}</b><div class="mu">${esc(l.cat)} · ${esc(l.ca)}</div></td><td>${esc(l.med)}</td>
+          ${l.cells.map(k => k.vide ? '<td class="mag vide">—<div class="q">pas vendue</div></td>'
+            : `<td class="mag" title="${esc(k.titre)}">${prix(k.prix, k.teinte, k.peu)}<div class="q">${esc(k.vol)} ${rel(k.rel, k.relTon)}</div></td>`).join('')}
+          <td class="${l.fort ? 'fort' : (l.egal ? 'mu' : '')}">${esc(l.ecart)}</td></tr>`).join('')}
+        ${!(c.pxvLignes || []).length ? `<tr><td colspan="${(c.pxvMags || []).length + 3}" class="g mu" style="padding:18px">Aucune référence pour ce filtre.</td></tr>` : ''}</tbody>
+      </table></div>
+      <div class="pxv-pied"><span><span class="pxv-px bas">bleu</span> 5 % ou plus sous le prix réseau · <span class="pxv-px haut">abricot</span> 5 % ou plus au-dessus · <span class="pxv-px peu">grisé</span> moins de 5 pièces, hors du prix réseau · <span class="pxv-rel plus">▲</span> <span class="pxv-rel moins">▼</span> volume à taille égale (pièces pour 10 000 € de chiffre du magasin) face aux autres magasins</span>
+        <span>Prix encaissé = chiffre ÷ pièces, remises comprises · ${c.pxvNbMontre} référence(s) sur ${c.pxvNb}, classées par chiffre réseau${c.pxvNb > c.pxvNbMontre ? ' — affinez par catégorie ou par le filtre' : ''} · un clic ouvre le nuage prix contre volume${c.pxvMuets ? ` · ${c.pxvMuets} tranche(s) sans réponse du panel` : ''}</span></div>
+    </div>
+  </div>`;
+}
+
+function tplAnalyse(c, x){
+  const { esc } = x;
+  const SEL = 'font-family:var(--font-ui);font-size:13px;padding:8px 10px;border-radius:9px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:240px;flex:1';
+  const CARD = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const g = c.anGraphe;
+  return `
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+    <pattern id="anhach" width="5" height="5" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <rect width="5" height="5" fill="#C68E95"/><line x1="0" y1="0" x2="0" y2="5" stroke="var(--color-primary)" stroke-width="2"/>
+    </pattern>
+  </defs></svg>
+
+  <div style="${CARD};margin-bottom:14px;display:flex;flex-direction:column;gap:12px">
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anTypeBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anGranBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>
+      ${c.anVueDispo ? `<div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+        ${c.anVueBtns.map(b => `<button ${x.A(b.go)} style="${b.st}">${esc(b.label)}</button>`).join('')}
+      </div>` : ''}
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <input id="an-search" type="search" value="${esc(c.anFiltre)}" ${x.I(c.anFiltrer)}
+        placeholder="${c.anType === 'produit' ? 'Rechercher une référence…' : 'Rechercher…'}"
+        style="${SEL};min-width:200px;flex:0 1 240px">
+      <select ${x.C(c.anChoisir)} style="${SEL}"${c.anOptChargement ? ' disabled' : ''}>
+        <option value="">${c.anOptChargement ? 'Lecture des libellés de l’API…'
+          : c.anType === 'produit' ? 'Choisir une référence…' : 'Choisir une catégorie…'}</option>
+        ${c.anListe
+          .map(p => `<option value="${esc(p.id)}"${p.id === c.anCle ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}
+      </select>
+      ${c.anPlafond ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${c.anPlafond} points — reconstitués mois par mois depuis l’API</span>` : ''}
+    </div>
+    ${c.anOptErreur
+      ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 10px;border-radius:8px">${esc(c.anOptErreur)}</div>`
+      : `<div style="font-size:11.5px;color:var(--color-text-muted)">${
+          c.anType === 'produit'
+            ? `${c.anProduits.length} référence${c.anProduits.length > 1 ? 's' : ''}, les plus vendues d’abord`
+            : c.anType === 'souscategorie'
+            ? `${c.anSousCategories.length} catégorie${c.anSousCategories.length > 1 ? 's' : ''} — en volume, le CA n’étant ventilé que par groupe`
+            : `${c.anCategories.length} groupe${c.anCategories.length > 1 ? 's' : ''} — la ventilation du chiffre d’affaires de l’API`
+        }${c.anOptPeriode ? ` · relevé sur ${esc(c.anOptPeriode)}` : ''}${
+          c.anFiltre ? ` · <strong style="font-weight:400">${c.anListe.length} sur ${c.anListeTotal}</strong> pour « ${esc(c.anFiltre)} »` : ''
+        }</div>`}
+  </div>
+
+  ${c.anVide ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Choisissez ${c.anType === 'produit' ? 'une référence' : 'une catégorie'} pour construire la série.</div>`
+   : c.anChargement ? `<div style="padding:44px 0;color:var(--color-text-muted);font-size:13px">Construction de la série — interrogation de l’API mois par mois…</div>`
+   : !g ? `<div style="padding:34px 0;color:var(--color-text-muted);font-size:13px">${esc(c.anMotif || 'aucune donnée')}</div>`
+   : `
+  <div style="${CARD}">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:6px">
+      <div>
+        <div style="font-size:13px;font-weight:400">${esc(c.anLibelle || c.anCle)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${
+          c.anVue === 'magasin' && c.anParMagasinMesure
+            ? esc(c.anParMagasinMesure) + ' par magasin'
+            : esc(c.anMesure)} · ${esc(c.anSource)}</div>
+      </div>
+      ${g.evolution ? `<div style="text-align:right">
+        <div style="font-family:var(--font-display);font-size:21px;line-height:1;color:${g.evolution.col}">${esc(g.evolution.txt)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">du premier au dernier point clos</div></div>` : ''}
+    </div>
+    ${c.anLignes ? (c.anLignes.vide
+      ? `<div style="padding:30px 0;color:var(--color-text-muted);font-size:12.5px">${esc(c.anLignes.vide)}</div>`
+      : `<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+        <div style="display:flex;gap:3px;background:var(--color-background-secondary);padding:3px;border-radius:10px">
+          ${c.anBaseBtns.map(o => `<button ${x.A(o.go)} style="${o.st}">${esc(o.label)}</button>`).join('')}
+        </div>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${c.anBase100
+          ? 'Chaque courbe repart de 100 : seules les formes se comparent. Qui suit le réseau colle à la ligne pointillée, quelle que soit sa taille.'
+          : 'Valeurs absolues — la taille des boutiques domine la lecture.'}${
+          c.anLignes.exclu ? ' · période en cours exclue, un mois entamé n’est pas comparable' : ''}</span>
+      </div>
+      <svg viewBox="0 0 ${c.anLignes.W} ${c.anLignes.H}" style="width:100%;height:auto;display:block">
+      ${c.anLignes.ticks.map(t => `<line x1="40" x2="${c.anLignes.PD}" y1="${t.y}" y2="${t.y}" stroke="${t.ref ? 'rgba(34,34,34,0.32)' : 'rgba(34,34,34,0.08)'}" stroke-width="${t.ref ? 1.2 : 0.8}"/>
+        <text x="34" y="${t.y + 4}" text-anchor="end" font-size="10.5" fill="var(--color-text-muted)" ${t.ref ? 'font-weight="500"' : ''}>${esc(t.t)}</text>`).join('')}
+      ${c.anLignes.reseau ? `<path d="${c.anLignes.reseau.d}" fill="none" stroke="var(--color-text)" stroke-width="2.5" stroke-dasharray="7 5" stroke-linejoin="round" opacity="0.6"/>
+        ${c.anLignes.reseau.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4" fill="var(--color-surface)" stroke="var(--color-text)" stroke-width="1.8" opacity="0.75"><title>${esc(q.t)}</title></circle>`).join('')}
+        <line x1="${c.anLignes.reseau.fin.xd + 5}" y1="${c.anLignes.reseau.fin.y}" x2="${c.anLignes.PD + 34}" y2="${c.anLignes.reseau.fin.ly}" stroke="var(--color-text)" stroke-width="0.9" opacity="0.35"/>
+        <text x="${c.anLignes.PD + 40}" y="${c.anLignes.reseau.fin.ly + 4}" font-size="11.5" fill="var(--color-text-muted)" font-style="italic">réseau</text>` : ''}
+      ${c.anLignes.series.map(s => `<path d="${s.d}" fill="none" stroke="${s.col}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+        ${s.pts.map(q => `<circle cx="${q.x}" cy="${q.y}" r="4.5" fill="${s.col}" stroke="var(--color-surface)" stroke-width="2"><title>${esc(q.t)}</title></circle>`).join('')}
+        ${s.fin ? `<line x1="${s.fin.xd + 5}" y1="${s.fin.y}" x2="${c.anLignes.PD + 34}" y2="${s.fin.ly}" stroke="${s.col}" stroke-width="0.9" opacity="0.45"/>
+          <circle cx="${c.anLignes.PD + 38}" cy="${s.fin.ly}" r="3.5" fill="${s.col}"/>
+          <text x="${c.anLignes.PD + 45}" y="${s.fin.ly + 4}" font-size="11.5" fill="var(--color-text)">${esc(s.court)}</text>` : ''}`).join('')}
+      ${c.anLignes.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="11.5" fill="var(--color-text-muted)">${esc(l.t)}</text>`).join('')}
+    </svg>
+    <div style="display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px">
+      ${c.anLignes.series.map(s => `<span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:${s.col};flex:none"></span>${esc(s.nom)}</span>`).join('')}
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:16px;height:0;border-top:2px dashed var(--color-text);opacity:0.6;flex:none"></span>Moyenne réseau</span>
+    </div>
+    <div style="overflow-x:auto;margin-top:16px">
+    <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:620px">
+      <thead><tr>
+        <th style="text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Magasin</th>
+        ${c.anLignes.entetes.map(h => `<th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;padding:0 8px 6px;color:var(--color-text-muted)">${esc(h.t)}</th>`).join('')}
+        <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 14px 6px">Évolution</th>
+        <th style="text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Suit le réseau ?</th>
+      </tr></thead>
+      <tbody>
+        ${c.anLignes.series.map(s => `<tr>
+          <td style="padding:6px 0;border-top:1px solid var(--color-border-tertiary);white-space:nowrap">
+            <span style="display:inline-block;width:9px;height:9px;border-radius:3px;background:${s.col};margin-right:7px"></span>${esc(s.court)}</td>
+          ${s.cells.map(q => `<td style="padding:6px 8px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(q.v)}</td>`).join('')}
+          <td style="padding:6px 14px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(s.evo)}</td>
+          <td style="padding:6px 0;border-top:1px solid var(--color-border-tertiary);white-space:nowrap;color:${s.vCol};font-weight:400">${esc(s.verdict)}
+            <span style="font-weight:400;color:var(--color-text-muted)"> ${esc(s.phaseTxt)}</span></td>
+        </tr>`).join('')}
+        ${c.anLignes.reseau ? `<tr>
+          <td style="padding:6px 0;border-top:1px solid var(--color-border-secondary);white-space:nowrap;font-style:italic;color:var(--color-text-muted)">
+            <span style="display:inline-block;width:14px;border-top:2px dashed var(--color-text);opacity:0.55;margin-right:5px;vertical-align:middle"></span>Moyenne réseau</td>
+          ${c.anLignes.reseau.cells.map(q => `<td style="padding:6px 8px;border-top:1px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);white-space:nowrap">${esc(q.v)}</td>`).join('')}
+          <td style="padding:6px 14px;border-top:1px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted);font-style:italic">${esc(c.anLignes.reseau.evo)}</td>
+          <td style="padding:6px 0;border-top:1px solid var(--color-border-secondary);font-size:11px;color:var(--color-text-muted);font-style:italic">référence · ${c.anLignes.nClos} période${c.anLignes.nClos > 1 ? 's' : ''} close${c.anLignes.nClos > 1 ? 's' : ''}</td>
+        </tr>` : ''}
+      </tbody>
+    </table></div>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Écart à la courbe réseau, en points d’indice — la distance que l’œil voit entre la courbe et la pointillée. Le verdict retient le PLUS GRAND écart, pas la moyenne : moyenner dilue un décrochage d’un mois sur toute la période, et c’est justement ce décrochage sur lequel on peut agir. Jusqu’à 8 points : suit le réseau. De 8 à 20 : écart ponctuel, le mois est nommé. Au-delà : trajectoire propre. La colonne « évolution » ne compare, elle, que le premier et le dernier point.</div>`)
+    : `<svg viewBox="0 0 ${g.W} ${g.H}" style="width:100%;height:auto;display:block">
+      ${g.grille.map(l => `<line x1="0" x2="${l.w}" y1="${l.y}" y2="${l.y}" stroke="rgba(34,34,34,0.09)" stroke-width="0.8"/>`).join('')}
+      ${g.barres.map(b => `<rect x="${b.x}" y="${b.y}" width="${b.w}" height="${b.h}" rx="2" fill="${b.fill}"><title>${esc(b.t || '')}</title></rect>`).join('')}
+      ${g.valeurs.map(v => `<text x="${v.x}" y="${v.y}" text-anchor="middle" font-size="10" fill="var(--color-text-muted)">${esc(v.t)}</text>`).join('')}
+      ${g.labels.map(l => `<text x="${l.x}" y="${l.y}" text-anchor="middle" font-size="10.5" fill="${l.c}">${esc(l.t)}</text>`).join('')}
+    </svg>
+    ${g.n1 ? `<div style="display:flex;gap:14px;margin-top:8px">
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:var(--color-primary);flex:none"></span>Exercice en cours</span>
+      <span style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)">
+        <span style="width:10px;height:10px;border-radius:3px;background:var(--color-secondary);flex:none"></span>N-1, même étendue</span>
+    </div>` : ''}`}
+    ${c.anParMagasinMotif && c.anVue === 'magasin' ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 10px;border-radius:8px;margin-top:10px">${esc(c.anParMagasinMotif)}</div>` : ''}
+    ${c.anMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 10px;border-radius:8px;margin-top:8px">${esc(c.anMotif)}</div>` : ''}
+    <div style="font-size:11.5px;font-weight:400;color:var(--color-text);margin-top:22px;padding-top:14px;border-top:1px solid var(--color-border-tertiary)">Total réseau, comparé à l’an dernier</div>
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px">
+      <thead><tr>
+        <th style="text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Période</th>
+        <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">${c.anType === 'categorie' ? 'CA' : 'Vendu'}</th>
+        <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">N-1</th>
+        <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px">Écart</th>
+        <th style="text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 6px">Lecture</th>
+      </tr></thead>
+      <tbody>${g.lignes.map(l => `<tr ${x.A(l.ouvrir)} title="Voir le détail par magasin sur cette période" style="cursor:pointer">
+        <td style="padding:6px 0;border-top:1px solid var(--color-border-tertiary)"><span style="text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${esc(l.libelle)}</span>${l.enCours ? ' <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>' : ''}</td>
+        <td style="padding:6px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
+        <td style="padding:6px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
+        <td style="padding:6px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;color:${l.deltaCol}">${esc(l.delta)}</td>
+        <td style="padding:6px 0;border-top:1px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted)">${esc(l.motif)}</td>
+      </tr>`).join('')}</tbody>
+    </table>
+  </div>`}`;
+}
+
+function tplMagasins(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="magasins" style="display:flex;flex-direction:column;gap:16px">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--color-border-tertiary)">
+        <div style="font-size:13px;font-weight:400">Performance par magasin — ${c.storeHdrPeriode}</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:12px;color:var(--color-text-muted)">Zone</span>
+          <select ${x.C(c.setZoneF)} style="${selCss}">${opts(c.zoneOptions, c.zoneF)}</select>
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1080px">
+          <thead><tr>
+            ${c.storeCols.map(col => `<th ${x.A(col.sort)} style="${col.st}">${esc(col.label)}${col.arrow}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${c.storeRows.map(r => `
+              <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+                <td style="padding:10px 14px"><div style="font-weight:400">${esc(r.nom)}</div><div style="font-size:11px;color:var(--color-text-muted)">${esc(r.code)} · ${esc(r.fr)}</div></td>
+                <td style="padding:10px 12px;text-align:right;white-space:nowrap">${r.marge}</td>
+                <td style="padding:10px 12px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${r.margeN1}</td>
+                <td style="padding:10px 12px;text-align:right"><span style="${r.margeVarSt}">${r.margeVar}</span></td>
+                <td style="padding:10px 12px;text-align:right;white-space:nowrap">${r.val}<div style="font-size:10.5px;color:var(--color-text-muted)">cible ${r.valT}</div></td>
+                <td style="padding:10px 12px;text-align:center"><span style="${r.valPctSt}">${r.valPct}</span></td>
+                <td style="padding:10px 12px;text-align:right;white-space:nowrap">${r.ca}<div style="font-size:10.5px;color:var(--color-text-muted)">cible ${r.caT}</div></td>
+                <td style="padding:10px 12px;text-align:center"><span style="${r.caPctSt}">${r.caPct}</span></td>
+                <td style="padding:10px 12px;text-align:right;white-space:nowrap">${r.tickets}<div style="${r.tickEvoSt}">${r.tickEvo}</div></td>
+                <td style="padding:10px 14px;text-align:right;white-space:nowrap">${r.panier}<div style="${r.panEvoSt}">${r.panEvo}</div></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    ${c.mgAn.chargement ? `<div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12.5px;color:var(--color-text-muted)">Lecture de l’API du panel (année en cours, mois par mois)…</div>`
+      : (c.mgAn.indispo ? `<div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.mgAn.indispo)}</div>` : `
+    ${c.mgAn.tables.map(t => `
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--color-border-tertiary)">
+        <span style="font-size:13px;font-weight:400">${esc(t.titre)} — ${esc(c.mgAn.annee)}, mois par mois</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted);margin-left:8px">${esc(t.sous)}</span>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:${190 + c.mgAn.moisLabels.length * 74}px">
+          <thead><tr>
+            <th style="${TH}">Magasin</th>
+            ${c.mgAn.moisLabels.map(mL => `<th style="text-align:right;${TH2}">${esc(mL)}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${t.rows.map(r => `
+              <tr style="border-bottom:1px solid var(--color-border-tertiary)${r.reseau ? ';border-top:1.5px solid var(--color-border-secondary)' : ''}">
+                <td style="padding:9px 14px;font-weight:${r.reseau ? '600' : '500'};white-space:nowrap">${esc(r.nom)}</td>
+                ${r.cells.map(v => `<td style="padding:9px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;${r.reseau ? 'font-weight:400;' : ''}${v.st}">${esc(v.t)}</td>`).join('')}
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`).join('')}
+    <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.mgAn.source)}</div>`)}
+  </div>`;
+}
+
+/** Le corps de la heatmap : douze mois sous le tableau de Résultat › Mois. */
+function tplHeatmapCorps(c, x){
+  const { esc } = x;
+  const cell = cc => `<div ${x.EN(cc.enter)} ${x.A(cc.clic)} style="${cc.st};cursor:pointer">${cc.txt}</div>`;
+  return `
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+        <button ${x.A(c.hmMetricCa)} style="${c.hmBtnCaSt}">CA du mois</button>
+        <button ${x.A(c.hmMetricPct)} style="${c.hmBtnPctSt}">% d'atteinte de l'objectif</button>
+      </div>
+      <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+        <button ${x.A(c.hmY25)} style="${c.hmBtn25St}">${c.hmYearPrev}</button>
+        <button ${x.A(c.hmY26)} style="${c.hmBtn26St}">${c.hmYearCur}</button>
+      </div>
+      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.hmNote)}</span>
+    </div>
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px;overflow-x:auto">
+      <div style="display:grid;grid-template-columns:190px repeat(12,minmax(56px,1fr));gap:3px;min-width:940px">
+        <div></div>
+        ${c.hmMois.map(m => `<div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);text-align:center;padding:4px 0">${m}</div>`).join('')}
+        ${c.hmRows.map(r => `
+          <div style="font-size:12px;font-weight:400;display:flex;align-items:center;padding-right:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.nom)}</div>
+          ${r.cells.map(cell).join('')}`).join('')}
+        <div style="font-size:12px;font-weight:400;display:flex;align-items:center;border-top:2px solid var(--color-border-secondary);padding-top:6px;margin-top:3px">Réseau</div>
+        ${c.hmReseau.map(cell).join('')}
+      </div>
+      <div style="margin-top:14px;min-height:20px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.hmDetail)} <span style="opacity:.7">— cliquez une case pour le détail.</span></div>
+    </div>
+    ${c.hmDet ? tplHeatDetail(c.hmDet, x) : ''}`;
+}
+
+/* Le détail d'une case de la heatmap : les trois séries côte à côte — budget
+   validé, CA théorique de l'étude, réel encaissé — puis l'écart et l'atteinte
+   contre celle des deux qui fait référence ce mois-là. */
+function tplHeatDetail(d, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.45);z-index:80"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(420px,92vw);max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:12px;z-index:81;padding:22px 24px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+      <div>
+        <div style="font-size:16px;font-weight:400;color:var(--color-primary)">${esc(d.titre)}</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(d.magasin)}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(d.sous)}</div>
+      </div>
+      <button ${x.A(d.close)} aria-label="Fermer" style="border:none;cursor:pointer;background:var(--color-background-secondary);color:var(--color-text);width:28px;height:28px;border-radius:50%;font-size:14px;line-height:1">×</button>
+    </div>
+    <div style="margin-top:16px;display:flex;flex-direction:column;gap:9px">
+      ${d.lignes.map(l => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--color-border-tertiary);padding-bottom:7px">
+          <span style="font-size:12.5px">${esc(l.l)}${l.aide ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.aide)}</div>` : ''}</span>
+          <span style="font-size:14px;font-weight:400;white-space:nowrap">${esc(l.v)}</span>
+        </div>`).join('')}
+    </div>
+    <div style="margin-top:14px;display:flex;gap:10px">
+      <div style="flex:1;background:var(--color-background-secondary);border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Écart à l'objectif</div>
+        <div style="${d.ecartSt};font-size:16px;margin-top:2px">${esc(d.ecart)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted)">objectif retenu ${esc(d.cibleTxt)}</div>
+      </div>
+      <div style="flex:1;background:var(--color-background-secondary);border-radius:10px;padding:10px 12px">
+        <div style="font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">Atteinte</div>
+        <div style="${d.attSt};font-size:16px;margin-top:2px">${esc(d.att)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted)">couleur de la case</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Objectifs de CA -------------------------------------------------------- */
+function tplObjectifs(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="objectifs" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;align-self:flex-start">
+      <button ${x.A(c.hz1)} style="${c.hz1St}">${c.hzLabel1}</button>
+      <button ${x.A(c.hz3)} style="${c.hz3St}">${c.hzLabel3}</button>
+      <button ${x.A(c.hz5)} style="${c.hz5St}">${c.hzLabel5}</button>
+    </div>
+    ${c.perfMsg ? `<div style="${c.perfMsgSt}"><span style="flex:1">${esc(c.perfMsg)}</span>${c.perfRelire ? `<button ${x.A(c.perfRelire)} style="border:1px solid currentColor;background:#fff;color:inherit;border-radius:7px;padding:6px 12px;font-size:12px;font-weight:400;cursor:pointer;font-family:var(--font-ui)">Relire</button>` : ''}</div>` : ''}
+    ${c.isH1 ? `
+      <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+        <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau ${c.objExo}</div>
+          <div style="font-size:26px;font-weight:700;margin-top:6px">${c.objCible}</div>
+          ${c.objCibleSrc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(c.objCibleSrc)}</div>` : ''}
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">${esc(c.objReelLib)}</span><span style="font-weight:400">${c.objReel}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Cible au prorata</span><span>${c.objProrata}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Taux d'atteinte</span><span style="${c.objAttSt}">${c.objAtt}</span></div>
+            ${c.objPartTxt ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:-4px">${esc(c.objPartTxt)}</div>` : ''}
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Projection fin ${c.objExo}</span><span style="font-weight:400">${c.objProj}</span></div>
+          </div>
+          <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12px;color:var(--color-text-muted)">${esc(c.objNote)}</div>
+          <div style="border-top:1px solid var(--color-border-tertiary);margin-top:12px;padding-top:12px">
+            <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);margin-bottom:8px">Cumul des budgets magasins</div>
+            <div style="display:flex;flex-direction:column;gap:7px;font-size:13px">
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">${esc(c.cumLabel)}</span><span style="font-weight:400">${c.cumBudget}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">${esc(c.cumReelLabel)}</span><span style="font-weight:400">${c.cumReel}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Écart cumulé vs budget</span><span style="${c.cumEcartSt}">${c.cumEcart}</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins sous budget</span><span style="font-weight:400">${c.cumSous}</span></div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:13px;font-weight:400">Trajectoire cumulée ${c.objExo} — réel vs cible</div>
+            <div style="display:flex;gap:14px;font-size:11px;color:var(--color-text-muted)">
+              <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:var(--accent);display:inline-block"></span>Réel</span>
+              <span style="display:inline-flex;align-items:center;gap:5px"><span style="width:14px;height:2px;background:var(--prize);display:inline-block"></span>Cible</span>
+            </div>
+          </div>
+          <svg width="100%" height="220" viewBox="0 0 660 220" preserveAspectRatio="none" style="margin-top:10px">
+            <line x1="20" y1="195" x2="640" y2="195" stroke="rgba(34,34,34,0.15)" stroke-width="1"></line>
+            <polyline points="${c.trajCible}" fill="none" stroke="#B0792A" stroke-width="2" stroke-dasharray="5 4"></polyline>
+            <polyline points="${c.trajReel}" fill="none" stroke="#8D1D2C" stroke-width="2.5"></polyline>
+          </svg>
+          <div style="display:grid;grid-template-columns:repeat(12,1fr);font-size:10px;color:var(--color-text-muted);padding:0 8px">
+            ${c.hmMois.map(m => `<span style="text-align:center">${m}</span>`).join('')}
+          </div>
+        </div>
+      </div>
+      ${c.clAn ? tplClientsAnnee(c.clAn, x) : ''}
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+          <thead><tr>
+            <th style="${TH}">Magasin</th>
+            <th style="text-align:right;${TH2}">Cible ${c.objExo}</th>
+            <th style="text-align:right;${TH2}">${esc(c.objReelLib)}</th>
+            <th style="text-align:right;${TH2}">Cible prorata</th>
+            <th style="text-align:center;${TH2}">Écart</th>
+            <th style="text-align:center;${TH2}">Atteinte</th>
+            ${c.clAn ? `<th style="text-align:right;${TH2}">${esc(c.clAn.colTitre)}</th>` : ''}
+            <th style="text-align:right;${TH2.replace('padding:12px', 'padding:12px 14px')}">Suivi budget</th>
+          </tr></thead>
+          <tbody>
+            ${c.objRows.map(r => `
+              <tr ${c.clAn ? x.A(r.clSel) : ''} class="${c.clAn ? 'clan-cl' + (r.clOn ? ' clan-sel' : '') : ''}" style="border-bottom:1px solid var(--color-border-tertiary)"${c.clAn ? ` title="${esc(r.clOn ? 'Revenir au réseau dans le graphique des clients' : 'Voir ce magasin dans le graphique des clients')}"` : ''}>
+                <td style="padding:10px 14px;font-weight:400">${esc(r.nom)}</td>
+                <td style="padding:10px 12px;text-align:right">${r.cible}${r.source ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(r.source)}</div>` : ''}</td>
+                <td style="padding:10px 12px;text-align:right">${r.reel}</td>
+                <td style="padding:10px 12px;text-align:right;color:var(--color-text-muted)">${r.prorata}</td>
+                <td style="padding:10px 12px;text-align:center;white-space:nowrap"><span style="${r.ecartSt}">${r.ecart}</span></td>
+                <td style="padding:10px 12px;text-align:center"><span style="${r.attSt}">${r.att}</span></td>
+                ${c.clAn ? `<td style="padding:10px 12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums">${r.clients === undefined ? '<span style="color:var(--color-text-muted)">…</span>' : tplClientsCellule(r.clients, esc)}</td>` : ''}
+                <td style="padding:10px 14px;text-align:right"><button ${x.A(r.goBudget)} style="border:none;background:none;color:var(--color-primary);font-size:12px;font-weight:400;cursor:pointer;font-family:var(--font-ui);white-space:nowrap">Ouvrir →</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : ''}
+    ${c.isH35 ? `
+      <div style="display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start">
+        <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Cible réseau ${c.hzAn}</div>
+          <div style="font-size:26px;font-weight:700;margin-top:6px">${c.hzCible}</div>
+          ${c.hzCibleSrc ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(c.hzCibleSrc)}</div>` : ''}
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px;font-size:13px">
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Run-rate annuel actuel</span><span style="font-weight:400">${c.hzRunrate}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Écart à combler</span><span style="color:var(--color-primary);font-weight:400">${c.hzGap}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Ouvertures prévues d'ici ${c.hzAn}</span><span style="font-weight:400">${c.hzOuv}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Contribution des ouvertures</span><span style="font-weight:400">${c.hzContrib}</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Croissance à périmètre constant</span><span>${c.hzLfl}</span></div>
+          </div>
+        </div>
+        <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+          <div style="font-size:13px;font-weight:400;margin-bottom:14px">Décomposition de la trajectoire</div>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            ${c.hzBars.map(b => `
+              <div>
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span>${esc(b.label)}</span><span style="font-weight:400">${b.val}</span></div>
+                <div style="height:16px;border-radius:5px;background:var(--color-background-secondary);overflow:hidden"><div style="${b.st}"></div></div>
+              </div>`).join('')}
+          </div>
+          <div style="border-top:1px solid var(--color-border-tertiary);margin-top:16px;padding-top:12px;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">${esc(c.hzNote)}</div>
+        </div>
+      </div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+          <div>
+            <div style="font-size:13px;font-weight:400">Objectif ${c.hzAn}, magasin par magasin — d’après les études de marché</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted)">Potentiel à maturité × montée en régime (année 1, 2, 3, puis 100 %), telle qu’encodée dans Paramètres du budget. Le réseau = la somme des magasins ouverts + les ouvertures prévues.</div>
+          </div>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 7px">Magasin</th>
+            <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px">Potentiel à maturité</th>
+            ${c.hzAnnees.map(a => `<th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;padding:0 10px 7px;color:${a.cible ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(a.an)}${a.cible ? ' · objectif' : ''}</th>`).join('')}
+            <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 7px;border-left:1px solid var(--color-border-secondary)">Run-rate ${c.objExo}</th>
+            <th style="text-align:right;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 0 7px">Croissance requise</th>
+          </tr></thead>
+          <tbody>
+            ${c.hzRows.map(r => r.sansEtude ? `
+            <tr>
+              <td style="padding:8px 0;border-top:1px solid var(--color-border-tertiary);font-weight:400">${esc(r.nom)}</td>
+              <td colspan="${c.hzAnnees.length + 1}" style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-text-muted)">étude de marché non encodée — <button ${x.A(r.goEtude)} style="border:none;background:none;padding:0;color:var(--color-primary);font-family:var(--font-ui);font-size:11.5px;cursor:pointer;text-decoration:underline">l’encoder dans Paramètres du budget</button></td>
+              <td style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;border-left:1px solid var(--color-border-secondary)">${esc(r.run)}</td>
+              <td style="padding:8px 0;border-top:1px solid var(--color-border-tertiary)"></td>
+            </tr>` : `
+            <tr>
+              <td style="padding:8px 0;border-top:1px solid var(--color-border-tertiary)"><div style="font-weight:400">${esc(r.nom)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.anEx)} en ${c.objExo}</div></td>
+              <td style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums">${esc(r.potentiel)}</td>
+              ${r.annees.map(a => `<td title="${esc(a.anX)} · ${esc(a.coef)} du potentiel" style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;${a.cible ? 'font-weight:400;color:var(--color-primary);background:rgba(141,29,44,0.05)' : 'color:var(--color-text-muted)'}">${esc(a.ca)}<div style="font-size:10px;font-weight:400;color:var(--color-text-muted)">${esc(a.coef)}</div></td>`).join('')}
+              <td style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;border-left:1px solid var(--color-border-secondary)">${esc(r.run)}</td>
+              <td style="padding:8px 0;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;${r.croissanceSt}">${esc(r.croissance)}</td>
+            </tr>`).join('')}
+            <tr style="background:var(--color-background-secondary)">
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:400">Magasins ouverts</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary)"></td>
+              <td colspan="${c.hzAnnees.length}" style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:400">${esc(c.hzSommeObj)} en ${c.hzAn}</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:400;border-left:1px solid var(--color-border-secondary)">${esc(c.hzSommeRun)}</td>
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary)"></td>
+            </tr>
+            <tr>
+              <td style="padding:7px 0;color:var(--color-text-muted)">+ ${esc(c.hzOuv)} prévu(s) d’ici ${c.hzAn}</td>
+              <td></td><td colspan="${c.hzAnnees.length}" style="padding:7px 10px;text-align:right;color:var(--color-text-muted)">${esc(c.hzOuvContrib)}</td><td style="border-left:1px solid var(--color-border-secondary)"></td><td></td>
+            </tr>
+            <tr style="background:var(--color-background-secondary)">
+              <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:400">= Réseau ${c.hzAn}</td>
+              <td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary)"></td>
+              <td colspan="${c.hzAnnees.length}" style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-weight:400;color:var(--color-primary)">${esc(c.hzTotal)}</td>
+              <td colspan="2" style="padding:9px 0 9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-size:11.5px;border-left:1px solid var(--color-border-secondary)">${c.hzCibleEncodee ? `cible encodée ${esc(c.hzCibleEncodee)} · <span style="${c.hzEcartCibleSt}">${esc(c.hzEcartCible)}</span>` : `<span style="color:var(--color-text-muted)">aucune cible réseau encodée</span>`}</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>
+        ${c.hzSans ? `<div style="font-size:11.5px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:7px 10px;border-radius:8px;margin-top:10px">${c.hzSans} magasin(s) sans étude de marché : leur objectif manque au total du réseau.</div>` : ''}
+      </div>` : ''}
+  </div>`;
+}
+
+/* --- Suivi budget magasin --------------------------------------------------- */
+function tplBudget(c, x){
+  const { esc } = x;
+  const thB = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="budget">
+   <div class="no-print" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
+        <select ${x.C(c.setBStore)} style="font-size:13px;font-weight:400;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+          ${opts(c.bStoreOpts, c.bStore, o => o.id, o => esc(o.nom))}
+        </select>
+        <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.bMeta)}</span>
+      </div>
+      <div style="display:flex;gap:28px;text-align:right">
+        <div><div style="${thB}">Budget validé ${c.bExercice}</div><div style="font-size:15px;font-weight:400;margin-top:2px">${c.bBudgetAn}</div></div>
+        <div><div style="${thB}">Mois encodés</div><div style="font-size:15px;font-weight:400;margin-top:2px">${c.bEncodes}</div></div>
+        <div><div style="${thB}">Dernier encodage</div><div style="font-size:15px;font-weight:400;margin-top:2px">${c.bDernier}</div></div>
+        <button ${x.A(c.bImprOuvrir)} class="hv-line" title="Imprimer l’exercice — vous choisissez ce qui part sur le papier"
+          style="align-self:flex-end;display:inline-flex;align-items:center;gap:7px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:7px 13px;font-size:12.5px;font-weight:400;cursor:pointer;white-space:nowrap">
+          <span style="font-size:13px">⎙</span>Imprimer l’exercice
+        </button>
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px;min-width:0">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:24px;margin-bottom:16px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Chiffre d'affaires — budget contre réel</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">${esc(c.bScopeNom)} · budget encodé une fois par le consultant, réel encodé chaque mois par le franchisé</div>
+        </div>
+        <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+          <button ${x.A(c.bScopeShop)} style="${c.bScopeShopSt}">Ce magasin</button>
+          <button ${x.A(c.bScopeRes)} style="${c.bScopeResSt}">Réseau</button>
+        </div>
+        <div style="display:flex;align-items:center;gap:18px;font-size:11.5px;color:var(--color-text-muted)">
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--line)"></span>Budget validé</span>
+          <span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--color-primary)"></span>Réel encodé</span>
+          ${c.bHasTheoChart ? `<span style="display:inline-flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:2px;background:var(--pkg-abricot)"></span>CA théorique (étude de marché)</span>` : ''}
+        </div>
+      </div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:960px">
+          <tr>
+            <td style="width:150px;border-bottom:1px solid var(--color-border-secondary)"></td>
+            ${c.bBars.map(b => `
+              <td style="height:150px;vertical-align:bottom;border-bottom:1px solid var(--color-border-secondary)">
+                <div style="display:flex;gap:4px;align-items:end;justify-content:center">
+                  ${b.hasTheo ? `<div style="${b.theoSt}"></div>` : ''}
+                  <div style="${b.budSt}"></div><div style="${b.reelSt}"></div>
+                </div>
+              </td>`).join('')}
+            <td style="border-bottom:1px solid var(--color-border-secondary)"></td>
+          </tr>
+          <tr>
+            <td style="width:150px;padding:8px 10px 8px 0;${thB}">Mois</td>
+            ${c.bMoisCols.map(m => `<td style="text-align:right;${thB};padding:8px 6px;white-space:nowrap;${m.st}">${m.nom}</td>`).join('')}
+            <td style="text-align:right;${thB};padding:8px 6px;white-space:nowrap;padding-left:14px;border-left:1px solid var(--color-border-tertiary)">Total</td>
+          </tr>
+          ${c.bHasTheoChart ? `
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:var(--pkg-abricot)"></span>CA théorique</span></td>
+            ${c.bLigneTheo.map(v => `<td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${v}</td>`).join('')}
+            <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;padding-left:14px;border-left:1px solid var(--color-border-tertiary);color:var(--pkg-abricot)">${c.bTotTheo}</td>
+          </tr>` : ''}
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:var(--line)"></span>Budget validé</span></td>
+            ${c.bLigneBud.map(v => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">${v}</td>`).join('')}
+            <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;padding-left:14px;border-left:1px solid var(--color-border-tertiary)">${c.bTotBud}</td>
+          </tr>
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400"><span style="display:inline-flex;align-items:center;gap:7px"><span style="width:8px;height:8px;border-radius:2px;background:var(--color-primary)"></span>Réel encodé</span></td>
+            ${c.bLigneReel.map(v => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">${v}</td>`).join('')}
+            <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;padding-left:14px;border-left:1px solid var(--color-border-tertiary)">${c.bTotReel}</td>
+          </tr>
+          ${!c.bNoteVue ? '' : `
+          <!-- Une pastille par voix, sous chaque mois : le tableau dit ce qui
+               s'est passé, l'annotation dit pourquoi. Le clic ouvre le mois. -->
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400">Annotations
+              <div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted);line-height:1.35">franchisé · consultant · marque</div></td>
+            ${c.bNoteCols.map(m => `<td style="padding:9px 6px;text-align:right;white-space:nowrap">
+              <button ${x.A(m.ouvrir)} class="hv-bg" title="${esc(m.titre)}" style="border:none;background:none;cursor:pointer;padding:5px 6px;border-radius:6px;display:inline-flex;gap:3px;align-items:center">
+                ${m.points.map(p => `<span title="${esc(p.titre)}" style="${p.st}"></span>`).join('')}
+              </button></td>`).join('')}
+            <td style="padding:9px 6px 9px 14px;border-left:1px solid var(--color-border-tertiary)"></td>
+          </tr>`}
+          <!-- Replié par défaut : le total et la marge sont ce qu'on vient lire ;
+               le détail des groupes s'ouvre quand on cherche d'où vient un
+               écart. -->
+          <tr><td colspan="14" style="padding:18px 0 8px">
+            <button ${x.A(c.bChToggle)} style="display:inline-flex;align-items:center;gap:8px;border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">
+              <span style="display:inline-block;width:11px;transition:transform 120ms ease;transform:rotate(${c.bChOuvert ? '90' : '0'}deg)">▸</span>
+              Groupes de frais encodés — montant, % du CA réel dessous
+              <span style="text-transform:none;letter-spacing:0;font-weight:400">(${c.bChRows.length} poste${c.bChRows.length > 1 ? 's' : ''}${c.bChOuvert ? '' : ' — replié'})</span>
+            </button>
+            <div style="font-size:11px;color:var(--color-text-muted);text-transform:none;letter-spacing:0;font-weight:400;margin-top:4px;line-height:1.45">${esc(c.bChSource())}</div>
+          </td></tr>
+          ${!c.bChOuvert ? '' : c.bChRows.map(ch => `
+            <tr style="border-top:1px solid var(--color-border-tertiary)">
+              <td style="padding:9px 10px 9px 0"><span style="display:inline-flex;align-items:center;gap:8px"><span class="levier-dot" data-lev="${ch.lev}"></span>${esc(ch.nom)}</span></td>
+              ${ch.cells.map(v => `<td style="${v.st}">${v.txt}<div style="font-size:11px;color:var(--color-text-muted)">${v.pct}</div></td>`).join('')}
+              <td style="padding:9px 6px 9px 14px;text-align:right;white-space:nowrap;font-weight:400;border-left:1px solid var(--color-border-tertiary)">${ch.tot}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${ch.totPct}</div></td>
+            </tr>`).join('')}
+          <tr style="border-top:1px solid var(--color-border-secondary)">
+            <td style="padding:10px 10px 10px 0;font-weight:400">Total frais encodés</td>
+            ${c.bChTotRow.map(v => `<td style="${v.st}">${v.txt}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${v.pct}</div></td>`).join('')}
+            <td style="padding:10px 6px 10px 14px;text-align:right;white-space:nowrap;font-weight:400;border-left:1px solid var(--color-border-tertiary)">${c.bChTotAll}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${c.bChTotAllPct}</div></td>
+          </tr>
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:10px 10px 10px 0;font-weight:400">Marge après frais</td>
+            ${c.bMargeRow.map(v => `<td style="${v.st}">${v.txt}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${v.pct}</div></td>`).join('')}
+            <td style="padding:10px 6px 10px 14px;text-align:right;white-space:nowrap;font-weight:400;border-left:1px solid var(--color-border-tertiary)">${c.bMargeTot}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${c.bMargeTotPct}</div></td>
+          </tr>
+          <tr><td colspan="14" style="padding:18px 0 8px;font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)">Écarts</td></tr>
+          <tr style="border-top:1px solid var(--color-border-secondary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400">Réel − budget</td>
+            ${c.bLigneEc.map(v => `<td style="${v.st}">${v.txt}<div style="${v.pctSt}">${v.pct}</div></td>`).join('')}
+            <td style="${c.bTotEcPair.st}">${c.bTotEcPair.txt}<div style="${c.bTotEcPair.pctSt}">${c.bTotEcPair.pct}</div></td>
+          </tr>
+          ${c.bHasTheoChart ? `
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400">Réel − théorique</td>
+            ${c.bEcTheo.map(v => `<td style="${v.st}">${v.txt}<div style="${v.pctSt}">${v.pct}</div></td>`).join('')}
+            <td style="${c.bTotEcTheo.st}">${c.bTotEcTheo.txt}<div style="${c.bTotEcTheo.pctSt}">${c.bTotEcTheo.pct}</div></td>
+          </tr>
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 10px 9px 0;font-weight:400">Budget − théorique</td>
+            ${c.bEcBudTheo.map(v => `<td style="${v.st}">${v.txt}<div style="${v.pctSt}">${v.pct}</div></td>`).join('')}
+            <td style="${c.bTotEcBudTheo.st}">${c.bTotEcBudTheo.txt}<div style="${c.bTotEcBudTheo.pctSt}">${c.bTotEcBudTheo.pct}</div></td>
+          </tr>` : ''}
+        </table>
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px;min-width:0">
+      <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Écarts et manque à gagner par magasin</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px;margin-bottom:14px">Cumul janv. → ${c.bCumMois} ${c.bExercice} · cliquez une ligne pour charger le magasin ci-dessus</div>
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:880px">
+          <thead><tr>
+            <th style="text-align:left;${thB};padding:0 10px 9px 0">Magasin</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Réel</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Budget</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Réel − budget</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Réel / théorique</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Théorique</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px">Réel − théorique</th>
+            <th style="text-align:right;${thB};padding:0 6px 9px 14px;border-left:1px solid var(--color-border-tertiary);width:150px">Manque à gagner</th>
+          </tr></thead>
+          <tbody>
+            ${c.bParMag.map(m => `
+              <tr ${x.A(m.select)} class="hv-bg" style="${m.rowSt}">
+                <td style="padding:9px 10px 9px 0;cursor:pointer">
+                  <div style="font-weight:400">${esc(m.nom)}</div>
+                  <div style="font-size:11px;color:var(--color-text-muted);margin-top:1px">${esc(m.zone)}</div>
+                </td>
+                <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400">${m.reel}</td>
+                <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${m.budget}</td>
+                <td style="${m.ecBSt}">${m.ecB}<div style="font-size:11px;font-weight:400">${m.ecBP}</div></td>
+                <td style="${m.realSt}">${m.real}</td>
+                <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${m.theo}</td>
+                <td style="${m.ecTSt}">${m.ecT}<div style="font-size:11px;font-weight:400">${m.ecTP}</div></td>
+                <td style="${m.mqSt}">${m.mq}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${m.mqPct}</div><span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:4px"><span style="${m.barSt}"></span></span></td>
+              </tr>`).join('')}
+            <tr style="border-top:1px solid var(--color-border-secondary)">
+              <td style="padding:10px 10px 10px 0;font-weight:400">Réseau</td>
+              <td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:400">${c.bResReel}</td>
+              <td style="padding:10px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${c.bResBud}</td>
+              <td style="${c.bMagTotEcSt}">${c.bMagTotEc}<div style="font-size:11px;font-weight:400">${c.bMagTotEcP}</div></td>
+              <td style="${c.bResRealSt}">${c.bResReal}</td>
+              <td style="padding:10px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${c.bResTheo}</td>
+              <td style="${c.bMagTotEcTSt}">${c.bMagTotEcT}<div style="font-size:11px;font-weight:400">${c.bMagTotEcTP}</div></td>
+              <td style="padding:10px 6px 10px 14px;text-align:right;white-space:nowrap;font-weight:400;border-left:1px solid var(--color-border-tertiary);color:var(--pkg-abricot)">${c.bMagTotMq}<div style="font-size:11px;font-weight:400;color:var(--color-text-muted)">${c.bMagTotMqPct}</div></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="border-top:1px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px;font-size:11.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.bMagNote)}</div>
+    </div>
+
+    ${c.bNotesErr ? `<div style="background:var(--prize-soft);border:1px solid var(--prize-soft);color:var(--color-on-abricot);border-radius:10px;padding:11px 14px;font-size:12.5px;display:flex;gap:12px;align-items:baseline;justify-content:space-between">
+      <span>${esc(c.bNotesErr)}</span>
+      <button ${x.A(c.bNotesErrFermer)} class="hv-line" style="border:1px solid var(--prize-soft);background:transparent;color:inherit;border-radius:7px;padding:4px 11px;font-size:11.5px;cursor:pointer;white-space:nowrap">Réessayer</button></div>` : ''}
+    ${c.bNoteOuvert ? tplBudgetNote(c, x) : ''}
+    ${c.bImprOuvert ? tplBudgetImprModale(c, x) : ''}
+   </div>
+   ${tplBudgetDoc(c, x)}
+  </div>`;
+}
+
+/* --- Le mois annoté : trois voix, une par intervenant -------------------------
+   Un écart de −24 % en juin ne se lit pas pareil selon qui parle. Les trois
+   champs sont côte à côte pour qu'on voie la version du franchisé À CÔTÉ de
+   celle du consultant, pas à sa place. */
+function tplBudgetNote(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div ${x.A(c.bNoteFermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div data-scroll="bnote" style="pointer-events:auto;background:var(--color-surface);border-radius:12px;width:820px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Annotation du mois</div>
+          <div style="font-size:16px;font-weight:400;margin-top:3px">${esc(c.bNoteTitre)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(c.bNoteSous)}</div>
+        </div>
+        <button ${x.A(c.bNoteFermer)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:16px">
+        ${c.bNoteChamps.map(f => `<label style="display:block">
+          <span style="${lbl};display:flex;align-items:center"><span style="${f.pastille}"></span>${esc(f.label)}</span>
+          <textarea id="bnote-${f.cle}" rows="7" ${x.I(f.set)} placeholder="Ce qui explique le mois — événement, météo, travaux, campagne, effectif…"
+            style="width:100%;box-sizing:border-box;margin-top:6px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-size:12.5px;line-height:1.5;font-family:var(--font-ui);color:var(--color-text);background:var(--color-background-secondary);resize:vertical">${esc(f.val)}</textarea>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px;min-height:14px">${esc(f.signe)}</div>
+        </label>`).join('')}
+      </div>
+      ${c.bNoteErr ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary)">${esc(c.bNoteErr)}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:16px">
+        <span style="font-size:11px;color:var(--color-text-muted)">Vider un champ efface l’annotation de cette voix.</span>
+        <span style="display:flex;gap:9px">
+          <button ${x.A(c.bNoteFermer)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 15px;font-size:12.5px;cursor:pointer">Annuler</button>
+          <button ${x.A(c.bNoteSave)} class="hv-fade" ${c.bNoteBusy ? 'disabled' : ''} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 17px;font-size:12.5px;font-weight:400;cursor:${c.bNoteBusy ? 'default' : 'pointer'};opacity:${c.bNoteBusy ? '0.6' : '1'}">${esc(c.bNoteSaveTxt)}</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Ce qui part sur le papier ------------------------------------------------
+   Trois cases, et le document suit : une case décochée RETIRE la colonne, elle
+   ne la laisse pas vide. Un tableau à colonnes blanches se lit comme une
+   donnée manquante — ce n'en est pas une, c'est un choix d'impression. */
+function tplBudgetImprModale(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div ${x.A(c.bImprFermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:12px;width:470px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px 20px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Imprimer</div>
+          <div style="font-size:16px;font-weight:400;margin-top:3px">${esc(c.bImprTitre)}</div>
+        </div>
+        <button ${x.A(c.bImprFermer)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:15px">
+        ${c.bImprCases.map(k => `<div ${x.A(k.bascule)} style="${k.labelSt}">
+          <span style="${k.st}"><span style="color:#fff;font-size:11px;line-height:1">${k.coche}</span></span>
+          <span style="min-width:0">
+            <span style="display:block;font-size:13px;font-weight:400">${esc(k.titre)}</span>
+            <span style="display:block;font-size:11.5px;color:var(--color-text-muted);line-height:1.45;margin-top:2px">${esc(k.aide)}</span>
+          </span>
+        </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:17px">
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(c.bImprPages)}</span>
+        <span style="display:flex;gap:9px">
+          <button ${x.A(c.bImprFermer)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 15px;font-size:12.5px;cursor:pointer">Annuler</button>
+          <button ${x.A(c.bImprimer)} class="hv-fade" style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:8px 17px;font-size:12.5px;font-weight:400;cursor:pointer">Imprimer</button>
+        </span>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Le document ---------------------------------------------------------------
+   Absent de l'écran (`.impr-doc` est `display:none`), il n'existe qu'au papier.
+   Page 1 : le tableau de l'exercice, réduit aux lignes cochées. Page 2 : le
+   cahier des douze mois, une carte par mois, les trois voix dedans. */
+function tplBudgetDoc(c, x){
+  const { esc } = x;
+  const th = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted);padding:0 4px 5px;text-align:right';
+  const td = 'padding:5px 4px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums';
+  const lib = 'padding:5px 8px 5px 0;text-align:left;font-weight:400;white-space:nowrap';
+  return `
+  <div class="impr-doc">
+    <div class="impr-page">
+      <div class="impr-tete">
+        <div>
+          <div class="impr-titre">${esc(c.bImprTitre)}</div>
+          <div class="impr-sous">${esc(c.bImprSous)}</div>
+        </div>
+        <div class="impr-date">${esc(c.bImprDate)}</div>
+      </div>
+      <table class="impr-tbl">
+        <tr>
+          <th style="${th};text-align:left">Mois</th>
+          ${c.bMoisCols.map(m => `<th style="${th}">${esc(m.nom)}</th>`).join('')}
+          <th style="${th};border-left:1px solid var(--faint);padding-left:8px">Total</th>
+        </tr>
+        ${!c.bImprTheo ? '' : `<tr>
+          <td style="${lib};color:var(--prize)">CA théorique</td>
+          ${c.bLigneTheo.map(v => `<td style="${td};color:var(--prize)">${v}</td>`).join('')}
+          <td style="${td};color:var(--prize);border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotTheo}</td>
+        </tr>`}
+        ${!c.bImprBud ? '' : `<tr>
+          <td style="${lib}">Budget validé</td>
+          ${c.bLigneBud.map(v => `<td style="${td}">${v}</td>`).join('')}
+          <td style="${td};border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotBud}</td>
+        </tr>`}
+        <tr>
+          <td style="${lib};color:var(--accent)">Réel encodé</td>
+          ${c.bLigneReel.map(v => `<td style="${td};color:var(--accent)">${v}</td>`).join('')}
+          <td style="${td};color:var(--accent);border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotReel}</td>
+        </tr>
+        ${!c.bImprBud ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Réel − budget</td>
+          ${c.bLigneEc.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotEcPair.txt}<span class="impr-pct">${c.bTotEcPair.pct}</span></td>
+        </tr>`}
+        ${!c.bImprTheo ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Réel − théorique</td>
+          ${c.bEcTheo.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotEcTheo.txt}<span class="impr-pct">${c.bTotEcTheo.pct}</span></td>
+        </tr>`}
+        ${!(c.bImprTheo && c.bImprBud) ? '' : `<tr class="impr-ec">
+          <td style="${lib}">Budget − théorique</td>
+          ${c.bEcBudTheo.map(v => `<td style="${td}">${v.txt}<span class="impr-pct">${v.pct}</span></td>`).join('')}
+          <td style="${td};border-left:1px solid var(--faint);padding-left:8px;font-weight:400">${c.bTotEcBudTheo.txt}<span class="impr-pct">${c.bTotEcBudTheo.pct}</span></td>
+        </tr>`}
+      </table>
+      <div class="impr-pied">Budget validé encodé une fois par le consultant · réel encodé chaque mois par le franchisé${c.bImprTheo ? ' · CA théorique issu de l’étude de marché' : ''}</div>
+    </div>
+    ${!c.bImprNotes ? '' : `<div class="impr-page impr-saut">
+      <div class="impr-tete">
+        <div>
+          <div class="impr-titre">Annotations ${c.bExercice} — ${esc(c.bImprMag)}</div>
+          <div class="impr-sous">${esc(c.bImprSous)} · ce que chaque mois a eu de particulier, par le franchisé, le consultant et la marque</div>
+        </div>
+        <div class="impr-date">${esc(c.bImprDate)}</div>
+      </div>
+      <div class="impr-cahier">
+        ${c.bImprCahier.map(m => `<div class="impr-mois">
+          <div class="impr-mois-t"><span>${esc(m.nom)}</span><span class="impr-mois-c">${esc(m.chiffres)}</span></div>
+          ${m.voix.length ? m.voix.map(v => `<div class="impr-voix">
+            <span style="${v.barre}"></span>
+            <span><b>${esc(v.label)}</b> — ${esc(v.texte)}</span>
+          </div>`).join('') : `<div class="impr-vide">${esc(m.vide)}</div>`}
+        </div>`).join('')}
+      </div>
+    </div>`}
+  </div>`;
+}
+
+/* --- Marge & coûts ---------------------------------------------------------- */
+/* La carte des ratios est partagée : elle s'affiche sur « Marge & coûts » et,
+   à la demande, sur « P&L magasins » — même calcul, même rendu, un seul code. */
+function tplRatiosCouts(c, x){
+  const { esc } = x;
+  return `
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:400">Ratios de coûts par magasin — ${c.mgHdrPeriode} · où se gagne / se perd la marge</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="${TH}">Magasin</th>
+          <th style="text-align:right;${TH2}">Marge nette</th>
+          <th style="text-align:right;${TH2}">vs N-1</th>
+          <th style="text-align:center;${TH2}">Food Cost</th>
+          <th style="text-align:center;${TH2}">Labour Cost</th>
+          <th style="text-align:center;${TH2}">Overhead</th>
+          <th style="text-align:right;${TH2};white-space:nowrap">CA/ETP<div style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-muted);margin-top:2px">min ${c.mgSeuilEtp}</div></th>
+          <th style="${TH}">Statut</th>
+        </tr></thead>
+        <tbody>
+          ${c.mgRows.map(r => `
+            <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+              <td style="padding:10px 14px;font-weight:400">${esc(r.nom)}</td>
+              <td style="padding:10px 12px;text-align:right;font-weight:400">${r.marge}</td>
+              <td style="padding:10px 12px;text-align:right"><span style="${r.varSt}">${r.var}</span></td>
+              <td style="padding:10px 12px;text-align:center"><span style="${r.foodSt}">${r.food}</span></td>
+              <td style="padding:10px 12px;text-align:center"><span style="${r.labourSt}">${r.labour}</span></td>
+              <td style="padding:10px 12px;text-align:center"><span style="${r.ovSt}">${r.ov}</span></td>
+              <td style="padding:10px 12px;text-align:right;white-space:nowrap"><span style="${r.caEtpSt}">${r.caEtp}</span><div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">${r.etp}</div></td>
+              <td style="padding:10px 14px;font-size:12px;color:var(--color-text-muted)">${esc(r.statut)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function tplMarge(c, x){
+  return `
+  <div data-screen="marge" style="display:flex;flex-direction:column;gap:16px">
+    ${tplMargeTrimestres(c, x)}
+    ${tplRatiosCouts(c, x)}
+  </div>`;
+}
+
+/* Les ratios par trimestre : un ratio à la fois, une ligne par magasin sur
+   le graphique, le seuil en pointillé — et le tableau des mêmes valeurs, avec
+   le pas d'un trimestre à l'autre. */
+function tplMargeTrimestres(c, x){
+  const { esc } = x;
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const sv = c.mgtSvg;
+  const pill = r => `<button ${x.A(r.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:400;padding:6px 14px;border-radius:8px;${r.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(r.nom)}</button>`;
+  return `
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="font-size:13px;font-weight:400">${esc(c.mgtNom)} par trimestre, magasin par magasin${c.mgtSeuil ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-text-muted)">· ${esc(c.mgtSeuil)}</span>` : ''}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted)">L’évolution sur les trimestres des deux exercices, et le pas d’un trimestre à l’autre.</div>
+        </div>
+        <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.mgtRatios.map(pill).join('')}</div>
+      </div>
+      ${c.mgtVide ? `<div style="padding:18px 0;font-size:12.5px;color:var(--color-text-muted)">Aucun trimestre avec un P&L mensuel encodé.</div>` : `
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) 190px;gap:16px;align-items:start">
+        <svg viewBox="0 0 ${sv.w} ${sv.h}" style="width:100%;height:auto;display:block;font-family:var(--font-ui)">
+          ${sv.ticks.map(t => `<line x1="44" x2="${sv.w - 16}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,0.08)" stroke-width="1"/><text x="40" y="${t.y}" text-anchor="end" dominant-baseline="middle" font-size="10" fill="#8a8378">${esc(t.label)}</text>`).join('')}
+          ${sv.zero ? `<line x1="${sv.zero.x1}" x2="${sv.zero.x2}" y1="${sv.zero.y}" y2="${sv.zero.y}" stroke="rgba(34,34,34,0.35)" stroke-width="1"/>` : ''}
+          ${sv.seuil ? `<line x1="${sv.seuil.x1}" x2="${sv.seuil.x2}" y1="${sv.seuil.y}" y2="${sv.seuil.y}" stroke="#8D1D2C" stroke-width="1.2" stroke-dasharray="5 4"/><text x="${sv.seuil.x2}" y="${sv.seuil.y - 4}" text-anchor="end" font-size="10" fill="#8D1D2C">seuil ${esc(sv.seuil.label)}</text>` : ''}
+          ${sv.lignes.map(l => `${l.pts ? `<polyline points="${l.pts}" fill="none" stroke="${l.coul}" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>` : ''}
+            ${l.points.map(p2 => `<circle cx="${p2.x}" cy="${p2.y}" r="3.6" fill="${l.coul}" stroke="#fff" stroke-width="1.4"><title>${esc(p2.titre)}</title></circle>`).join('')}`).join('')}
+          ${sv.axes.map(a => `<text x="${a.x}" y="${a.y}" text-anchor="middle" font-size="10.5" fill="#6b655c">${esc(a.label)}</text>`).join('')}
+        </svg>
+        <div style="display:flex;flex-direction:column;gap:7px;padding-top:6px">
+          ${c.mgtLignes.map(l => `<div style="display:flex;align-items:center;gap:8px;font-size:12px"><i style="display:inline-block;width:14px;height:3px;border-radius:2px;background:${l.coul}"></i><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span></div>`).join('')}
+          ${c.mgtSeuil ? `<div style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--color-text-muted)"><i style="display:inline-block;width:14px;height:0;border-top:1.5px dashed var(--accent)"></i>${esc(c.mgtSeuil)}</div>` : ''}
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="text-align:left;padding:0 0 7px;${cap}">Magasin</th>
+          ${c.mgtTrimestres.map(t => `<th style="text-align:right;padding:0 10px 7px;${cap}">${esc(t.label)}${t.encours ? '<div style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0">en cours</div>' : ''}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${c.mgtLignes.map(l => `
+          <tr>
+            <td style="padding:8px 0;border-top:1px solid var(--color-border-tertiary);font-weight:400"><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${l.coul};vertical-align:-1px;margin-right:7px"></i>${esc(l.nom)}</td>
+            ${l.cells.map(ce => `<td style="padding:8px 10px;border-top:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap"><span style="${ce.st}">${esc(ce.txt)}</span>${ce.delta ? `<span style="font-size:10px;margin-left:5px;${ce.deltaSt}">${esc(ce.delta)}</span>` : ''}${ce.partiel ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(ce.partiel)}</div>` : ''}</td>`).join('')}
+          </tr>`).join('')}
+          <tr style="background:var(--color-background-secondary)">
+            <td style="padding:9px 0;border-top:1px solid var(--color-border-secondary);font-weight:400">Réseau</td>
+            ${c.mgtReseau.cells.map(ce => `<td style="padding:9px 10px;border-top:1px solid var(--color-border-secondary);text-align:right;font-variant-numeric:tabular-nums"><span style="${ce.st}">${esc(ce.txt)}</span></td>`).join('')}
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5">${esc(c.mgtNote)}</div>`}
+    </div>`;
+}
+
+/* --- Encodage du budget ------------------------------------------------------ */
+function tplEncodage(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="encodage" style="display:flex;flex-direction:column;gap:16px;max-width:1180px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
+      <select ${x.C(c.setEncStore)} style="font-size:13px;font-weight:400;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+        ${opts(c.encStoreOpts, c.encStore, o => o.id, o => esc(o.nom))}
+      </select>
+      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.encMeta)}</span>
+      <span style="margin-left:auto;display:flex;align-items:center;gap:8px">
+        <span style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Exercice</span>
+        <select ${x.C(c.setEncExo)} style="font-size:13px;font-weight:400;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+          ${c.encExoOpts.map(o => `<option value="${o.v}"${o.v === c.encExoSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </span>
+    </div>
+    ${c.encChargement ? `<div style="font-size:12px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:9px;padding:9px 13px">Lecture de l'exercice ${esc(c.encExercice)}…</div>` : ''}
+    ${c.encChargement ? '' : `
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px">
+      <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Chiffre d'affaires, mois par mois</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 16px">Deux séries à encoder : le CA théorique de l'étude de marché et le CA validé avec le franchisé. Montants en euros, hors TVA.</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:12px">
+        ${c.encMois.map(m => `
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="${lbl}">${m.nom}</span>
+            <label style="display:flex;flex-direction:column;gap:3px">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--pkg-abricot);font-weight:400"><span style="width:7px;height:7px;border-radius:2px;background:var(--pkg-abricot)"></span>Théorique</span>
+              <input type="number" value="${m.theo}" ${x.C(m.setTheo)} style="${c.encInputSt}" />
+            </label>
+            <label style="display:flex;flex-direction:column;gap:3px">
+              <span style="display:inline-flex;align-items:center;gap:5px;font-size:10px;color:var(--color-text-muted);font-weight:400"><span style="width:7px;height:7px;border-radius:2px;background:var(--line)"></span>Validé</span>
+              <input type="number" value="${m.valeur}" ${x.C(m.set)} style="${c.encInputSt}" />
+            </label>
+          </div>`).join('')}
+      </div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:24px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);margin-top:16px;padding-top:13px">
+        <div><div style="${lbl.replace('0.06em', '0.08em')};color:var(--pkg-abricot)">Total théorique</div><div style="font-size:22px;font-weight:700;margin-top:3px;color:var(--pkg-abricot)">${c.encTheoTot}</div></div>
+        <div><div style="${lbl.replace('0.06em', '0.08em')}">Total validé</div><div style="font-size:22px;font-weight:700;margin-top:3px">${c.encCaTot}</div></div>
+        <div style="text-align:right"><div style="${lbl.replace('0.06em', '0.08em')}">Validé − théorique</div><div style="${c.encTheoDeltaSt};margin-top:3px">${c.encTheoDelta}</div></div>
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px">
+      <!-- Les charges s'encodent CHAQUE MOIS : le modèle au-dessus dit ce qui
+           est attendu, ce bloc-ci garde ce qui est réellement sorti. C'est lui
+           que le suivi compare au budget. -->
+      <div style="border-top:1px solid var(--color-border-tertiary);margin-top:16px;padding-top:15px">
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
+          <div>
+            <div style="font-family:var(--font-display);font-size:16px;line-height:1.3">Charges encodées du mois</div>
+            <div style="font-size:12px;color:var(--color-text-muted);margin-top:2px">Ce qui est réellement sorti, poste par poste et magasin par magasin. Une case laissée vide n’est pas un zéro : elle reste « non encodée ».</div>
+          </div>
+          <div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap">
+            <select ${x.C(c.setEncChMois)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px">
+              ${c.encChMoisOpts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+            </select>
+            <span style="font-size:11.5px;color:var(--color-text-muted);margin-right:8px">${esc(c.encChAuto || '')}</span>
+            <button ${x.A(c.encChSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Enregistrer les charges du mois</button>
+          </div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin:9px 0 12px">${esc(c.encChNSaisis)}${c.encChSansId ? ' · <span style="color:var(--color-primary);font-weight:400">enregistrez d’abord le modèle réseau pour attacher les postes</span>' : ''}</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;min-width:${320 + (c.encChMagasins || []).length * 190}px;border-collapse:collapse;font-size:12.5px">
+          <thead><tr>
+            <th style="text-align:left;${lbl};padding:0 10px 9px 0">Poste</th>
+            <th style="text-align:right;${lbl};padding:0 10px 9px;width:70px">Taux</th>
+            ${(c.encChMagasins || []).map(m2 => `<th style="text-align:right;${lbl};padding:0 6px 9px;min-width:150px">
+              ${esc(m2.nom)}<div style="font-weight:400;text-transform:none;letter-spacing:0;color:var(--color-text-muted);margin-top:2px">CA ${esc(m2.ca)}</div></th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${c.encChLignes.map(l => `<tr style="border-top:1px solid var(--color-border-tertiary)">
+              <td style="padding:8px 10px 8px 0"><span style="font-weight:400">${esc(l.nom)}</span>${l.categorie ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.categorie)}</div>` : ''}</td>
+              <td style="padding:8px 10px;text-align:right;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${esc(String(l.pct))} %${l.pctSrc ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.pctSrc)}</div>` : ''}</td>
+              ${l.cells.map(k2 => `<td style="padding:5px 6px;vertical-align:top">
+                <input value="${esc(String(k2.valeur))}" ${x.C(k2.set)} inputmode="decimal" placeholder="non encodé" style="${c.encInputSt}">
+                <div style="font-size:10px;color:var(--color-text-muted);text-align:right;margin-top:3px">attendu ${esc(k2.attendu)}${k2.ecart ? ` · <span style="color:${k2.ecartCol};font-weight:400">${esc(k2.ecart)}</span>` : ''}</div>
+              </td>`).join('')}
+            </tr>`).join('')}
+            <tr style="border-top:1px solid var(--color-border-secondary)">
+              <td style="padding:10px 10px 10px 0;font-weight:400">Total du mois</td>
+              <td style="padding:10px;text-align:right;color:var(--color-text-muted);white-space:nowrap;font-size:11px">attendu<br>${esc(c.encChTotAttendu)}</td>
+              ${(c.encChTotaux || []).map(t2 => `<td style="padding:10px 6px;text-align:right;white-space:nowrap;font-weight:400">${esc(t2.total)}<div style="font-size:10.5px;font-weight:400;color:var(--color-text-muted)">${esc(t2.pct)}${t2.partiel ? ' · ' + esc(t2.partiel) : ''}</div></td>`).join('')}
+            </tr>
+          </tbody>
+        </table>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:14px">
+        <div style="display:flex;gap:32px;flex-wrap:wrap">
+          <div>
+            <div style="${lbl.replace('0.06em', '0.08em')};color:var(--pkg-abricot)">Marge théorique</div>
+            <div style="font-size:24px;font-weight:700;line-height:1.1;margin-top:4px;color:var(--pkg-abricot)">${c.encMargeT}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">${c.encMargePctT}</div>
+          </div>
+          <div>
+            <div style="${lbl.replace('0.06em', '0.08em')}">Marge budgétée</div>
+            <div style="${c.encMargeSt};margin-top:4px">${c.encMarge}</div>
+            <div style="font-size:12px;color:var(--color-text-muted);margin-top:3px">${c.encMargePct}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button ${x.A(c.encReset)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;color:var(--color-text);padding:9px 16px;border-radius:8px">Réinitialiser</button>
+          <button ${x.A(c.encSave)} style="border:none;background:var(--color-primary);cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;color:#fff;padding:9px 20px;border-radius:8px">Enregistrer le budget</button>
+          <!-- L'état de l'enregistrement AUTOMATIQUE : chaque saisie part en
+               base après une pause de frappe, le bouton ne sert plus qu'à
+               confirmer et à laisser une ligne de journal. -->
+          ${c.encAutoEtat ? `<span style="${c.encAutoSt};margin-left:10px">${esc(c.encAutoEtat)}</span>` : ''}
+        </div>
+      </div>
+      ${c.encAlerte ? `<div style="margin-top:12px;padding:10px 13px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px;font-weight:400">${esc(c.encAlerte)}</div>` : ''}
+      <div style="font-size:11.5px;line-height:1.5;color:var(--color-text-muted);margin-top:12px;text-wrap:pretty">${esc(c.encNote)}</div>
+    </div>
+    `}
+  </div>`;
+}
+
+/* Scoring du trimestre : quatre postes de cinq points par magasin, le classement
+   en étoiles, les règles, l'encodage du client mystère, le rapport A4 et son envoi. */
+/** Les étoiles du scoring : le fond gris, le plein à la proportion de la note. */
+const sqSt = (pct, na, cls) => `<span class="sq-st ${cls || ''}${na ? ' na' : ''}"><span>★★★★★</span><span class="fg" style="width:${(pct || 0).toFixed(1)}%">★★★★★</span></span>`;
+
+/* Les règles du scoring et l’envoi du rapport A4 : sous le classement, ici comme dans la fiche (B2). */
+export function tplSqCartes(c, x){
+  const { esc } = x;
+  return `
+    <div class="cx-deux" style="grid-template-columns:minmax(0,1.6fr) minmax(0,1fr)">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Les règles — quatre postes, cinq points chacun, 20 en tout · un poste sans donnée vaut 0</span><span class="mko-mini">un trimestre se clôture le 1er jour du suivant</span></div>
+        <div class="mko-corps"><div class="sq-regles">${c.sqPostes.map(p => `<div><div class="k">Poste ${p.n}</div><div class="t">${esc(p.nom)}</div><div class="r">${esc(p.regle)}</div></div>`).join('')}</div></div></div>
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">L’envoi — le rapport A4 aux magasins</span></div>
+        <div class="mko-corps" style="font-size:12.5px">
+          ${c.sqEnvoi ? `<div>Chaque magasin reçoit <b>le classement du réseau et sa page</b>, avec son rapport client mystère s’il est joint. Les adresses réseau (${c.sqEnvoi.copies}) reçoivent le document complet.</div>
+          <div class="cx-puces" style="margin-top:8px">${c.sqEnvoi.carnet.map(m => `<span class="cx-pu${m.n ? ' on' : ''}" title="adresses du carnet">${esc(m.nom)} · ${m.n ? m.n + ' adresse' + (m.n > 1 ? 's' : '') : 'sans adresse'}</span>`).join('')}</div>
+          <div class="mko-mu" style="margin-top:8px">${c.sqEnvoi.smtp ? 'Le carnet d’adresses se règle dans Reporting, ligne « Scoring du trimestre ». Envoi automatique le 1er jour du trimestre suivant à 8 h.' : 'SMTP non configuré (Paramètres) : le rapport se télécharge, il ne part pas par mail.'}</div>
+          <div class="cx-ligne" style="margin-top:10px"><input id="sq-essai" class="mko-inp" style="width:220px" placeholder="adresse d’essai" value="${esc(c.sqEssai)}" ${x.C(c.setSqEssai)}><button ${x.A(c.sqEnvoyerEssai)} class="mko-pied-btn" ${c.sqBusy || !c.sqEnvoi.smtp || !c.sqEssai ? 'disabled' : ''}>Envoyer un essai (le 1er magasin)</button></div>` : '<div class="mko-mu">Le reporting n’est pas installé ici : le rapport se télécharge, il ne part pas par mail.</div>'}
+          ${c.sqBilan ? `<div class="sq-bilan${c.sqBilan.ko ? ' ko' : ''}"><b>${esc(c.sqBilan.txt)}</b>${c.sqBilan.lignes && c.sqBilan.lignes.length ? '<br>' + c.sqBilan.lignes.map(esc).join('<br>') : ''}</div>` : ''}
+        </div></div>
+    </div>`;
+}
+
+/* Le client mystère : l’encodage d’un rapport, et les trimestres du magasin (B2 : aussi dans la fiche). */
+export function tplSqMsp(c, x){
+  const { esc } = x, st = sqSt;
+  const F = c.sqMsp;
+  return `
+    <div class="cx-deux" style="grid-template-columns:minmax(0,1fr) 420px">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le rapport reçu</span><span class="mko-mini">un rapport par magasin et par trimestre · réencoder remplace</span></div>
+        <div class="mko-corps">
+          <div class="cx-ligne" style="margin-bottom:12px"><div><label class="mko-lab" style="display:block;margin-bottom:4px">Magasin</label><select class="mko-sel" ${x.C(F.setShop)}>${F.shops.map(s => `<option value="${esc(s.id)}"${s.on ? ' selected' : ''}>${esc(s.nom)}</option>`).join('')}</select></div><div><label class="mko-lab" style="display:block;margin-bottom:4px">Trimestre</label><select class="mko-sel" ${x.C(F.setTri)}>${F.tris.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select></div></div>
+          <label class="mko-lab" style="display:block;margin-bottom:6px">La note reçue</label>
+          <div class="sq-conv"><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">obtenu</div><input id="sq-obtenu" class="mko-inp sq-gros" value="${esc(F.obtenu)}" ${x.I(F.setObtenu)} inputmode="decimal"></div><div class="fl">/</div><div><div class="mko-mu" style="font-size:11px;margin-bottom:4px">maximum du barème</div><input id="sq-max" class="mko-inp sq-gros" value="${esc(F.maximum)}" ${x.I(F.setMaximum)} inputmode="decimal"></div>
+            <div class="res"><div class="v">${esc(F.sur5)}<small> / 5</small></div>${st(F.pct, F.sur5 === '—', 'gd')}<div class="mko-mu">${esc(F.calcul)}</div></div></div>
+          <div class="cx-deux" style="margin-top:12px;grid-template-columns:1fr 1fr">
+            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Rubriques du rapport — facultatif</label><div class="sq-rub">${F.rubriques.map((r, i) => `<input id="sq-rk${i}" class="mko-inp" value="${esc(r.k)}" ${x.I(r.setK)} placeholder="rubrique"><input id="sq-rv${i}" class="mko-inp" value="${esc(r.v)}" ${x.I(r.setV)} placeholder="17 / 20">`).join('')}</div><button ${x.A(F.addRub)} class="mko-pied-btn" style="margin-top:6px">+ rubrique</button></div>
+            <div><label class="mko-lab" style="display:block;margin-bottom:6px">Le rapport en PDF</label><label class="sq-drop"><b>${F.fichierNom ? esc(F.fichierNom) : 'Choisir le PDF'}</b>${F.fichierNom ? 'prêt à joindre · 8 Mo au plus' : '8 Mo au plus · il reste joint au trimestre et part avec le rapport A4'}<input type="file" accept="application/pdf,.pdf" ${x.C(F.setFichier)} style="display:none"></label>
+              ${F.fichierActuel ? `<div class="sq-fichier"><span class="ic">PDF</span><span><b>${esc(F.fichierActuelNom)}</b><br><span class="mko-mu">déjà joint${F.le ? ' · déposé le ' + esc(F.le) : ''}</span></span><a class="sq-lien" style="margin-left:auto" href="${esc(F.fichierActuel)}" target="_blank" rel="noopener">ouvrir</a></div>` : ''}</div>
+          </div>
+          <label class="mko-lab" style="display:block;margin:12px 0 4px">Commentaire pour le franchisé</label><textarea id="sq-com" rows="2" class="cx-ta" ${x.I(F.setCommentaire)}>${esc(F.commentaire)}</textarea>
+          <div class="cx-ligne" style="margin-top:10px"><input id="sq-par" class="mko-inp" style="width:160px" placeholder="encodé par" value="${esc(F.par)}" ${x.I(F.setPar)}><button ${x.A(F.enreg)} class="cx-btn prim" ${F.busy ? 'disabled' : ''}>${F.busy ? 'Enregistrement…' : 'Enregistrer'}</button>${F.suppr ? `<button ${x.A(F.suppr)} class="mko-pied-btn" style="color:var(--stop)">Effacer le trimestre</button>` : ''}<span class="mko-mu">${esc(F.etat)}</span></div>
+        </div></div>
+      <div class="mko-carte" style="margin:0"><div class="mko-ct"><span class="mko-lab">${esc(F.shopCourt)} — les trimestres</span></div>
+        <div class="mko-corps" style="padding-top:8px">${F.histChargement ? '<div class="mko-mu">Lecture…</div>' : (F.hist.length ? `<table class="mko-tab sq-hist"><thead><tr><th>Trimestre</th><th class="n">Reçu</th><th class="n">Sur 5</th><th>PDF</th></tr></thead><tbody>${F.hist.map(h => `<tr><td>${esc(h.tri)}</td><td class="n">${esc(h.recu)}</td><td class="n"><b>${esc(h.sur5)}</b> ${st(h.pct, false, 'sm')}</td><td>${h.fichier ? `<a class="sq-lien" href="${esc(h.fichier)}" target="_blank" rel="noopener">ouvrir</a>` : '<span class="mko-mu">—</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="mko-mu">Aucun rapport encodé pour ce magasin.</div>')}
+          <div style="margin-top:14px"><span class="mko-lab">Où ça arrive ensuite</span><ul style="margin:6px 0 0;padding-left:18px;font-size:12px;color:var(--color-text-muted)"><li>le classement, poste « Client mystère », dès l’enregistrement ;</li><li>le rapport A4 du trimestre : la note et le commentaire, le PDF en pièce jointe.</li></ul></div></div></div>
+    </div>`;
+}
+
+/* Paramètres › Client mystère : l'encodage du rapport reçu (le poste Client mystère du scoring). */
+function tplCltMyst(c, x){
+  const { esc } = x;
+  const corps = c.sqIndispo ? `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`
+    : (c.sqMsp ? tplSqMsp(c, x) : '<div class="mko-mu" style="padding:20px 0">Lecture du scoring…</div>');
+  return `<div data-screen="client-mystere" class="mko">${corps}</div>`;
+}
+
+function tplScoringTri(c, x){
+  const { esc } = x;
+  const st = sqSt;
+  const entete = `
+    <div class="mko-hd">
+      <div class="cx-vues">${c.sqVues.map(v => `<button ${x.A(v.choisir)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div>
+      <span class="mko-mu" style="margin-left:auto">Trimestre</span>
+      <select ${x.C(c.setSqTrimestre)} class="mko-sel">${c.sqTrimestres.map(t => `<option value="${esc(t.cle)}"${t.on ? ' selected' : ''}>${esc(t.lib)}</option>`).join('')}</select>
+      ${c.sqVue === 'tableau' && c.sqTri ? `<a class="mko-pied-btn" href="${esc(c.sqRapportHref)}" target="_blank" rel="noopener">Rapport A4</a><a class="mko-pied-btn" href="${esc(c.sqPdfHref)}" target="_blank" rel="noopener">PDF</a><button ${x.A(c.sqEnvoyer)} class="cx-btn prim" ${c.sqBusy || !c.sqEnvoi || !c.sqEnvoi.smtp ? 'disabled' : ''}>${c.sqBusy ? 'Envoi…' : 'Envoyer aux magasins'}</button>` : ''}
+    </div>`;
+  let corps = '';
+  if (c.sqIndispo) { corps = `<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.sqIndispo)}</div>`; }
+  else if (c.sqChargement || !c.sqTri) { corps = `<div class="mko-mu" style="padding:20px 0">Lecture des quatre postes…</div>`; }
+  else if (c.sqVue === 'tableau') {
+    corps = `
+    <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le classement — ${esc(c.sqTri.lib)}${c.sqTri.enCours ? ' · en cours, au ' + esc(c.sqTri.arrete) : ''}</span><span class="mko-mini">${esc(c.sqSources)}</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab sq-tab"><thead><tr><th style="width:36px"></th><th>Magasin</th><th>Note du trimestre<small>points sur 20 · étoiles = la note sur 5</small></th>${c.sqPostes.map(p => `<th>${esc(p.nom)}<small>/ 5</small></th>`).join('')}</tr></thead><tbody>
+        ${c.sqLignes.map(l => `<tr class="${l.top ? 'top' : ''}"><td><span class="sq-rang${l.top ? ' or' : ''}">${l.rang}</span></td><td class="nom">${esc(l.court)}<small>${esc(l.fr || l.nom)}</small></td>
+          <td><div class="sq-glob"><div class="n">${esc(l.total)}<small> / ${l.sur}</small></div><div>${st(l.pct, l.na, 'gd')}<div style="margin-top:3px"><span class="sq-delta ${l.deltaCls}">${esc(l.delta)}</span>${l.manque ? ` · <span class="att">${l.manque} poste${l.manque > 1 ? 's' : ''} sans donnée, compté${l.manque > 1 ? 's' : ''} 0</span>` : ''}</div></div></div></td>
+          ${l.postes.map(p => `<td><div class="sq-poste">${st(p.pct, p.na, 'sm')}<div class="p">${esc(p.v)}${p.na ? '' : '<small> / 5</small>'}</div><div class="d">${esc(p.d)}${p.alerte ? ` · <b class="ko">${esc(p.alerte)}</b>` : ''}${p.encoder ? ` · <button ${x.A(p.encoder)} class="sq-lien">${p.na ? 'encoder' : 'modifier'}</button>` : ''}${p.fichier ? ` · <a class="sq-lien" href="${esc(p.fichier)}" target="_blank" rel="noopener">PDF</a>` : ''}</div></div></td>`).join('')}</tr>`).join('')}
+      </tbody></table></div>
+      <div class="mko-corps mko-mu" style="padding-top:8px">${c.sqReseau ? `Réseau : <b>${esc(c.sqReseau.sur20)} / 20</b> en moyenne sur ${c.sqReseau.magasins} magasins · ${esc(c.sqReseau.etoiles)} ★ · ${c.sqReseau.complets} noté${c.sqReseau.complets > 1 ? 's' : ''} sur les quatre postes` : ''} · un poste sans donnée compte 0, et le tableau nomme ce qui manque.</div></div>
+    ${tplSqCartes(c, x)}`;
+  } else {
+    corps = tplSqMsp(c, x);
+  }
+  return `<div data-screen="scoring" class="mko">${entete}${corps}</div>`;
+}
+
+/* Les objectifs produits d'une campagne : le multiselect, l'objectif en pièces
+   par magasin avec ses clients du mois en regard, et la jauge de chacun. */
+function tplMktObj(c, x){
+  const { esc } = x;
+  const entete = `
+    <div class="mko-hd">
+      <span class="mko-mu">Campagne</span>
+      <select ${x.C(c.setMkoCamp)} class="mko-sel">${(c.mkoCampOpts || []).map(o => `<option value="${o.v}"${o.v === c.mkoCampSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      ${c.mkoChargement ? '<span class="mko-mu">Lecture des tickets gravés…</span>' : ''}
+      ${c.mkoRecalcul ? '<span class="mko-mu" style="color:var(--color-primary)">Relecture…</span>' : ''}
+      <span class="mko-mu" style="margin-left:auto">${esc(c.mkoEtat || '')}</span>
+    </div>`;
+  if (c.mkoVide) { return `<div data-screen="mktobj" class="mko">${entete}<div class="mko-carte" style="padding:20px 22px;font-size:13px;color:var(--color-text-muted)">${esc(c.mkoVide)}</div></div>`; }
+  if (c.mkoChargement || !c.mkoNom) { return `<div data-screen="mktobj" class="mko">${entete}</div>`; }
+  const R = c.mkoReseau, K = c.mkoCourbe;
+  const jauge = (pct, attendu, vert) => `<div class="mko-jg"><i class="${vert ? 'ok' : ''}" style="width:${Math.max(0, Math.min(100, pct || 0)).toFixed(1)}%"></i>${attendu != null ? `<b style="left:${Math.max(0, Math.min(100, attendu)).toFixed(1)}%" title="attendu à ce jour ${Math.round(attendu)} %"></b>` : ''}</div>`;
+  return `
+  <div data-screen="mktobj" class="mko">
+    ${entete}
+    <div class="mko-titre"><div><div class="t">${esc(c.mkoNom)}</div><div class="s">${esc(c.mkoPeriode)}${c.mkoStatut ? ' · ' + esc(c.mkoStatut) : ''} · en pièces · lu au ${esc(c.mkoDate)}</div></div></div>
+
+    <div class="mko-carte">
+      <div class="mko-ct"><span class="mko-lab">Les produits de la campagne</span><span class="mko-mini">tout ce qui est coché compte dans le même objectif · catalogue de caisse, volumes du dernier mois clos sur le réseau</span></div>
+      <div class="mko-corps">
+        <div class="mko-puces">
+          ${c.mkoProduits.map(p => `<span class="mko-puce" title="${esc(p.categorie)}">${esc(p.nom)}<button ${x.A(p.retirer)} title="Retirer de la campagne">✕</button></span>`).join('')}
+          ${c.mkoNProduits ? `<span class="mko-puce off">${c.mkoNProduits} produit${c.mkoNProduits > 1 ? 's' : ''}</span>` : '<span class="mko-mu">Aucun produit encore — cherchez-en un ci-dessous : sans produit, pas de jauge.</span>'}
+        </div>
+        <div class="mko-ms">
+          <input id="mko-q" ${x.I(c.setMkoQ)} value="${esc(c.mkoQ)}" placeholder="Chercher un produit du catalogue : pomme, spéculoos, baguette…" class="mko-inp" autocomplete="off">
+          ${c.mkoRecherche ? '<div class="mko-liste"><div class="mko-pied"><span>Recherche…</span></div></div>' : ''}
+          ${c.mkoResultats && c.mkoResultats.length ? `<div class="mko-liste">
+            ${c.mkoResultats.map(g => `<div class="mko-grp">${esc(g.cat)}</div>${g.produits.map(p => `<div class="mko-it${p.on ? ' on' : ''}" ${x.A(p.basculer)}><span class="cb">${p.on ? '✓' : ''}</span><span>${esc(p.nom)}</span><span class="q">${esc(p.volume)}</span></div>`).join('')}`).join('')}
+            <div class="mko-pied"><span>cliquer pour ajouter ou retirer · enregistré aussitôt</span><button ${x.A(c.mkoFermer)}>Fermer</button></div></div>` : ''}
+          ${c.mkoResVide ? `<div class="mko-liste"><div class="mko-pied"><span>Rien au catalogue pour « ${esc(c.mkoQ)} ».</span><button ${x.A(c.mkoFermer)}>Fermer</button></div></div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <div class="mko-tuiles">
+      <div class="mko-tui ${R.etatCls}"><div class="k">Réseau</div><div class="v">${esc(R.vendu)}${R.objectif ? ` <small>/ ${esc(R.objectif)}</small>` : ''}</div><div class="s">${R.pct ? esc(R.pct) + ' · ' : ''}${esc(R.etat || (R.objectif ? '' : 'aucun objectif posé'))}</div></div>
+      <div class="mko-tui"><div class="k">${c.mkoEstAujourdhui ? 'Aujourd’hui' : 'Ce jour'}</div><div class="v">${esc(R.ceJour)}</div><div class="s">pièces sur le réseau</div></div>
+      <div class="mko-tui"><div class="k">Rythme</div><div class="v">${esc(R.rythme)}</div><div class="s">${R.objectif ? 'il faut ' + esc(R.ilFaut) + ' d’ici la fin' : 'moyenne des 7 derniers jours ouverts'}</div></div>
+      <div class="mko-tui ${R.objectif ? (R.projOk ? 'ok' : 'ko') : ''}"><div class="k">Projection</div><div class="v">${esc(R.projection)}</div><div class="s">${R.projPct ? esc(R.projPct) + ' de l’objectif au rythme actuel' : 'au rythme actuel'}</div></div>
+      <div class="mko-tui ${R.enRetard ? 'ko' : ''}"><div class="k">En retard</div><div class="v">${R.enRetard}</div><div class="s">magasin${R.enRetard > 1 ? 's' : ''} sous l’attendu${R.attendu ? ' (' + esc(R.attendu) + ')' : ''}</div></div>
+    </div>
+
+    <div class="mko-carte">
+      <div class="mko-ct"><span class="mko-lab">L’objectif par magasin — ${esc(c.mkoPeriode)}</span><span class="mko-mini">clients / mois : le dernier mois clos, pour poser un ordre de grandeur · barre : vendu sur objectif, repère noir : attendu à ce jour · un magasin sans objectif ne voit pas la jauge</span></div>
+      <div style="overflow-x:auto"><table class="mko-tab">
+        <thead><tr><th>Magasin</th><th class="n">Clients / mois</th><th class="n">Objectif (pièces)</th><th class="n">Par jour ouvert</th><th class="n">Vendu</th><th style="min-width:180px">Jauge</th><th class="n">${c.mkoEstAujourdhui ? 'Aujourd’hui' : 'Ce jour'} · rythme</th><th class="n">Il faut · projection</th><th>État</th></tr></thead>
+        <tbody>
+          ${c.mkoMagasins.map(m => `<tr>
+            <td class="nom">${esc(m.nom)}<small>${esc(m.joursOuverts)}${m.horsPerimetre ? (m.joursOuverts ? ' · ' : '') + 'hors périmètre déclaré de la campagne' : ''}</small></td>
+            <td class="n mu">${esc(m.clients)}<small>${esc(m.clientsNote)}</small></td>
+            <td class="n"><input type="number" min="0" step="1" value="${esc(String(m.objectif))}" ${x.C(m.setObjectif)} placeholder="—" class="mko-cible">${m.ratio ? `<small>${esc(m.ratio)}</small>` : ''}</td>
+            <td class="n">${esc(m.parJour)}</td>
+            <td class="n"><b>${esc(m.vendu)}</b>${m.pct ? `<small>${esc(m.pct)}</small>` : ''}</td>
+            <td>${c.mkoSansProduits ? '' : jauge(m.barre, m.attendu, m.vert)}${m.aSuivre ? '<small class="mko-mu">tickets en cours de lecture</small>' : ''}</td>
+            <td class="n">${esc(m.ceJour)}<small>${esc(m.rythme)}</small></td>
+            <td class="n"><b class="${m.etatCls}">${esc(m.ilFaut)}</b><small>projection ${esc(m.projection)}</small></td>
+            <td>${m.etat ? `<span class="mko-etat ${m.etatCls}">${esc(m.etat)}</span>` : ''}</td>
+          </tr>`).join('')}
+          <tr class="tot"><td>Réseau</td><td class="n mu">${esc(c.mkoTotClients)}</td><td class="n">${esc(c.mkoTotObjectif)}</td><td></td><td class="n">${esc(c.mkoTotVendu)}</td><td>${R.objectif ? jauge(parseFloat(R.pct) || 0, R.attendu ? parseFloat(R.attendu) : null, R.etatCls === 'ok') : ''}</td><td class="n">${esc(R.ceJour)}<small>${esc(R.rythme)}</small></td><td class="n"><b>${esc(R.ilFaut)}</b><small>projection ${esc(R.projection)}</small></td><td></td></tr>
+        </tbody></table></div>
+      <div class="mko-note">Chaque saisie part en base après une pause de frappe ; le dashboard du magasin affiche la jauge aussitôt. Les ventes sont les tickets de caisse gravés jour par jour (${c.mkoTicketsLus ? c.mkoTicketsLus + ' tickets relus pour cette page' : 'rien à relire'})${R.aSuivre ? ' — la journée en cours se complète à la prochaine lecture' : ''}.</div>
+    </div>
+
+    <div class="mko-cols">
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par produit — réseau</span><span class="mko-mini">vendus depuis le début</span></div>
+        <div class="mko-corps" style="padding-top:6px">${R.parProduit.length ? R.parProduit.map(p => `<div class="mko-pp"><span>${esc(p.nom)}</span><span class="n">${esc(p.q)}</span><span class="q">${esc(p.part)}</span><div class="mko-jg mini"><i style="width:${p.larg}%;background:var(--faint)"></i></div></div>`).join('') : '<div class="mko-mu">Aucune vente lue encore.</div>'}</div></div>
+      <div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Le cumul, jour par jour</span><span class="mko-mini">trait pointillé : la droite de l’objectif</span></div>
+        <div class="mko-corps" style="padding:10px 12px 6px">${K ? `<svg class="mko-courbe" viewBox="0 0 ${K.W} ${K.H}">
+          ${K.obj ? `<line x1="${K.obj.x1}" y1="${K.obj.y1}" x2="${K.obj.x2}" y2="${K.obj.y2}" stroke="#1c1a17" stroke-width="1.5" stroke-dasharray="4 4"/><text x="${K.obj.x2}" y="${K.obj.y2 - 6}" text-anchor="end" font-size="10" fill="#1c1a17">${esc(K.obj.txt)}</text>` : ''}
+          <line x1="${K.base.x1}" y1="${K.base.y}" x2="${K.base.x2}" y2="${K.base.y}" stroke="#e6e0d8" stroke-width="1"/>
+          <polyline points="${K.points}" fill="none" stroke="#8D1D2C" stroke-width="3" stroke-linejoin="round"/>
+          ${K.dernier ? `<circle cx="${K.dernier.x}" cy="${K.dernier.y}" r="4" fill="#8D1D2C"/><text x="${K.dernier.x + 8}" y="${K.dernier.y + 4}" font-size="11" font-weight="600" fill="#8D1D2C">${esc(K.dernier.txt)}</text>` : ''}
+          ${K.labels.map(l => `<text x="${l.x}" y="${K.H2}" font-size="9.5" text-anchor="middle" fill="#6b6259">${esc(l.txt)}</text>`).join('')}
+        </svg>` : '<div class="mko-mu">La courbe apparaît avec les premières ventes et un objectif.</div>'}</div></div>
+    </div>
+  </div>`;
+}
+
+/* Les réglages du budget : ce qui se décide une fois par an (l'étude de
+   marché d'un magasin) ou une fois pour tout le réseau (les taux de charges).
+   Séparé de l'encodage, qui lui se fait chaque mois. */
+function tplBudgetParam(c, x){
+  // `esc` vit dans les aides passées au gabarit : l'oublier ici faisait échouer
+  // le rendu, et l'écran précédent restait affiché — l'erreur était invisible.
+  const { esc } = x;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+  const opts = (arr, sel, v, t) => arr.map(o => `<option value="${v(o)}"${String(v(o)) === String(sel) ? ' selected' : ''}>${t(o)}</option>`).join('');
+  return `
+  <div data-screen="budgetparam" style="display:flex;flex-direction:column;gap:16px;max-width:1180px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:12px;color:var(--color-text-muted)">Magasin</span>
+      <select ${x.C(c.setEncStore)} style="font-size:13px;font-weight:400;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+        ${opts(c.encStoreOpts, c.encStore, o => o.id, o => esc(o.nom))}
+      </select>
+      <span style="font-size:12px;color:var(--color-text-muted)">${esc(c.encMeta)}</span>
+      <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">L'étude appartient au magasin ; les taux de charges valent pour tout le réseau.</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-top:3px solid var(--pkg-abricot);border-radius:12px;padding:20px 22px">
+        <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Étude de marché</div>
+        <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 16px">Potentiel à maturité, montée en régime et saisonnalité. Enregistrer écrit le CA théorique de l'exercice <em>et</em> des trois suivants, mois par mois.</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:14px">
+          <label style="display:flex;flex-direction:column;gap:5px">
+            <span style="${lbl}">Potentiel à maturité (€)</span>
+            <input type="number" value="${c.encTheoBase}" ${x.C(c.setEncTheoBase)} style="${c.encInputSt}" />
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px">
+            <span style="${lbl}">Année d'exploitation</span>
+            <select ${x.C(c.setEncAnnee)} style="${c.encInputSt};text-align:left">${opts(c.encAnneeOpts, c.encAnnee, o => o.v, o => o.nom)}</select>
+          </label>
+          ${c.encRamp.map(r => `
+            <label style="display:flex;flex-direction:column;gap:5px">
+              <span style="${lbl}">${r.k} (% du potentiel)</span>
+              <input type="number" step="1" value="${r.valeur}" ${x.C(r.set)} style="${c.encInputSt}" />
+            </label>`).join('')}
+        </div>
+        <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);padding-top:12px;margin-bottom:10px">
+          <div>
+            <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+              <span style="${lbl.replace('0.06em', '0.08em')};color:var(--pkg-abricot)">CA théorique de l'exercice</span>
+              <select ${x.C(c.setEncProj)} style="font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:4px 8px;background:var(--color-surface);color:var(--color-text)">
+                ${c.encProjOpts.map(o => `<option value="${o.v}"${o.v === c.encProjSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+              </select>
+            </div>
+            <div style="font-size:22px;font-weight:700;margin-top:3px;color:var(--pkg-abricot)">${c.encTheoExercice}</div>
+            <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.encCoef)}</div>
+          </div>
+          <button ${x.A(c.encLisser)} class="hv-apr" style="border:1px solid var(--pkg-abricot);background:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:400;color:var(--pkg-abricot);padding:8px 15px;border-radius:8px">Lisser sur les 12 mois</button>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+          ${c.encProjLignes.map(l => `
+            <div style="flex:1;min-width:132px;border:${l.choisi ? '1.5px solid var(--pkg-abricot)' : '1px solid var(--color-border-tertiary)'};border-radius:10px;padding:8px 11px;background:${l.choisi ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
+              <div style="font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(l.exercice)}${l.courant ? ' · en cours' : ''}</div>
+              <div style="font-size:14px;font-weight:400;margin-top:2px">${esc(l.ca)}</div>
+              <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:1px">${esc(l.annee)} — ${esc(l.coef)}</div>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-bottom:14px">${esc(c.encProjNote)}</div>
+        <div style="${lbl};margin-bottom:8px">Variation par mois (% du CA annuel)</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(84px,1fr));gap:9px">
+          ${c.encSais.map(s => `
+            <label style="display:flex;flex-direction:column;gap:4px">
+              <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">${s.nom}</span>
+              <input type="number" step="0.1" value="${s.valeur}" ${x.C(s.set)} style="${c.encInputSt};font-size:12px;padding:6px 7px" />
+              <span style="font-size:10px;color:var(--color-text-muted);text-align:right">${s.montant}</span>
+            </label>`).join('')}
+        </div>
+        <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin:11px 0 8px">
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encRampNote)}</span>
+          <span style="${c.encSaisTotSt}">Total ${c.encSaisTot}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+          <span style="flex:1;min-width:240px;font-size:11px;color:${c.encSaisSource === 'magasin' ? 'var(--color-text-muted)' : '#7A5207'}">${esc(c.encSaisSourceTxt)}</span>
+          <button ${x.A(c.encSaisReseauSave)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">En faire la courbe du réseau</button>
+          <button ${x.A(c.encSaisPousser)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:6px 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer" title="${esc(c.encSaisAutres)}">Appliquer aux autres magasins</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px">
+          <label style="display:flex;flex-direction:column;gap:5px">
+            <span style="${lbl}">Date de l'étude</span>
+            <input type="date" value="${c.encEtudeDate}" ${x.C(c.setEncEtudeDate)} style="${c.encInputSt}" />
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px">
+            <span style="${lbl}">Ménages en zone</span>
+            <input type="number" value="${c.encMenages}" ${x.C(c.setEncMenages)} style="${c.encInputSt}" />
+          </label>
+          <label style="display:flex;flex-direction:column;gap:5px;grid-column:1 / -1">
+            <span style="${lbl}">Source</span>
+            <input type="text" value="${esc(c.encEtudeSrc)}" ${x.C(c.setEncEtudeSrc)} style="${c.encInputSt};text-align:left" />
+          </label>
+        </div>
+        <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:13px">
+          <div style="${lbl};margin-bottom:9px">Annexe — document de l'étude</div>
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <label class="hv-apr-line" style="display:inline-flex;align-items:center;gap:8px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;cursor:pointer;font-size:12px;font-weight:400">
+              Joindre un fichier
+              <input type="file" accept=".pdf,.xlsx,.xls,.docx,.csv" ${x.C(c.encAnxPick)} style="display:none" />
+            </label>
+            <div style="min-width:0;flex:1">
+              ${c.encHasAnx ? `
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+                  <span style="display:inline-flex;align-items:center;gap:8px;background:var(--color-background-secondary);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:400">${esc(c.encAnxNom)}</span>
+                  <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encAnxMeta)}</span>
+                  <button ${x.A(c.encAnxDel)} style="border:none;background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:400;color:var(--color-primary);padding:0">Retirer</button>
+                </div>` : ''}
+            </div>
+          </div>
+          <label style="display:flex;flex-direction:column;gap:5px;margin-top:11px;max-width:520px">
+            <span style="${lbl}">Ou lien vers le document (Drive, SharePoint…)</span>
+            <input type="url" value="${esc(c.encAnxUrl)}" ${x.C(c.setEncAnxUrl)} placeholder="https://" style="${c.encInputSt};text-align:left" />
+          </label>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;border-top:1px solid var(--color-border-tertiary);margin-top:16px;padding-top:14px">
+          <div style="flex:1;min-width:260px;font-size:11.5px;color:var(--color-text-muted)">
+            Chaque saisie part déjà en base ; ce bouton l'écrit avec sa ligne de journal et pose le théorique des trois exercices suivants.
+            ${c.encProjFait ? `<div style="margin-top:4px;color:var(--pkg-abricot);font-weight:400">Théorique écrit — ${esc(c.encProjFait)}</div>` : ''}
+          </div>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.encEtudeEtat || '')}</span>
+          <button ${x.A(c.encEtudeSave)} style="border:none;background:var(--pkg-abricot);color:#fff;border-radius:8px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Enregistrer l'étude et projeter</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px 22px">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:14px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Répartition des charges</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">${c.encCrm ? 'Le Compte de résultat réseau du CRM fait foi : rubriques, postes et % réseau viennent de lui. Ici, le % validé du réseau et les euros — de quoi voir si le franchisé reste dans les clous.' : 'Un taux par poste, lu en euros sur trois bases : le CA théorique de l’étude, le CA validé avec le franchisé, et le CA réel déjà encaissé. Catégories, libellés et comptes se saisissent ici.'}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          ${c.encCrm ? `<button ${x.A(c.encCrm.relire)} ${c.encCrm.enCours ? 'disabled' : ''} title="Relire le Compte de résultat réseau du CRM" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.encCrm.enCours ? 'Lecture…' : '↻ Relire le CRM'}</button>
+          ${c.encCrm.modifier ? `<a href="${esc(c.encCrm.modifier)}" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-size:12px;text-decoration:none">Modifier dans le CRM ↗</a>` : ''}` : `<button ${x.A(c.encCatAdd)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Catégorie</button>`}
+          <span style="font-size:11.5px;color:var(--color-text-muted);margin-right:8px">${esc(c.encChargesAuto || '')}</span>
+          <button ${x.A(c.encChargesSave)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.encCrm ? 'Enregistrer le % validé' : 'Enregistrer pour le réseau'}</button>
+        </div>
+      </div>
+      ${c.encCrm ? `<div style="display:flex;gap:9px;align-items:flex-start;background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:9px;padding:10px 13px;margin:11px 0 0">
+        <span style="font-size:10px;font-weight:400;padding:2px 9px;border-radius:6px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">CRM</span>
+        <div style="font-size:11.5px;line-height:1.5">Compte de résultat réseau du CRM (référentiel d’implantation) — ${c.encCrm.lu ? 'lu le ' + esc(c.encCrm.lu) : 'pas encore lu'}. Rubriques, postes, libellés, % réseau et sous-totaux sont ceux du DIP, du contrat et des dossiers d’implantation : ils se changent dans le CRM. Écart = % validé − % réseau : en bordeaux, au-dessus du modèle.
+          ${c.encCrm.erreur ? `<div style="color:var(--color-primary);margin-top:3px">⚠ ${esc(c.encCrm.erreur)} La dernière copie lue reste affichée.</div>` : ''}</div>
+      </div>` : ''}
+      <!-- Les taux sont communs : le dire à l'endroit où on les modifie évite
+           de croire qu'on ajuste seulement le magasin qu'on regarde. -->
+      <div style="display:flex;gap:9px;align-items:flex-start;background:rgba(141,29,44,0.05);border:1px solid rgba(141,29,44,0.2);border-radius:9px;padding:10px 13px;margin:11px 0 12px">
+        <span style="font-size:10px;font-weight:400;padding:2px 9px;border-radius:8px;background:var(--color-primary);color:#fff;white-space:nowrap;flex:0 0 auto">réseau</span>
+        <div style="font-size:11.5px;line-height:1.5">${esc(c.encReseauNote)}${c.encChargesModifie ? ' <span style="font-weight:400;color:var(--color-primary)">Modifications non enregistrées.</span>' : ''}</div>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:0 0 14px">${esc(c.encReelNote)}</div>
+      ${c.encChargesVide ? `<div style="border:1px dashed var(--color-border-secondary);border-radius:10px;padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted);line-height:1.6">Aucun poste de charge dans le modèle réseau. Ajoutez une catégorie pour commencer — ce que vous saisirez vaudra pour tous les magasins.</div>` : `
+      <div style="overflow-x:auto">
+      <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="text-align:left;${lbl};padding:0 10px 9px 0">Poste</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:170px">Description</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:180px">Gestion</th>
+          <th style="text-align:left;${lbl};padding:0 6px 9px;width:96px" title="Plan comptable minimum normalisé">PCMN</th>
+          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:92px"${c.encCrm ? ' title="% du Compte de résultat réseau du CRM"' : ''}>${c.encCrm ? '% réseau · CRM' : '% théo.'}</th>
+          <th style="text-align:right;${lbl};color:var(--pkg-abricot);padding:0 6px 9px;width:120px">€ théorique</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:92px">% validé</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:120px">€ validé</th>
+          <th style="text-align:right;${lbl};padding:0 6px 9px;width:120px" title="Le même taux appliqué au CA réellement encaissé">€ réel</th>
+          <th style="text-align:right;${lbl};padding:0 0 9px 6px;width:96px">Écart</th>
+        </tr></thead>
+        <tbody>
+          ${c.encCats.map(cat => c.encCrm ? tplEncCatCrm(cat, c, x) : `
+            <!-- L'ordre des catégories EST la lecture du compte de résultat :
+                 il se change ici, à la souris ou aux flèches. Une catégorie
+                 emporte ses postes et les étapes qui s'y rattachent. -->
+            <tr draggable="true" ${x.DS(cat.prendre)} ${x.DP(cat.deposer)}><td colspan="10" style="padding:14px 0 6px;cursor:grab">
+              <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+                <span title="Glissez pour réordonner" style="color:var(--color-text-muted);font-size:12px;line-height:1;letter-spacing:1px">⠿</span>
+                <button ${x.A(cat.monter)} title="Remonter cette catégorie" style="border:1px solid var(--color-border-tertiary);background:transparent;color:${cat.monter ? 'var(--color-text-muted)' : 'var(--color-border-tertiary)'};border-radius:6px;width:22px;height:22px;font-size:11px;cursor:${cat.monter ? 'pointer' : 'not-allowed'};padding:0;line-height:1">↑</button>
+                <button ${x.A(cat.descendre)} title="Descendre cette catégorie" style="border:1px solid var(--color-border-tertiary);background:transparent;color:${cat.descendre ? 'var(--color-text-muted)' : 'var(--color-border-tertiary)'};border-radius:6px;width:22px;height:22px;font-size:11px;cursor:${cat.descendre ? 'pointer' : 'not-allowed'};padding:0;line-height:1">↓</button>
+                <input value="${esc(cat.nom)}" ${x.C(cat.renommer)} style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:2px 0;min-width:180px">
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA · ${esc(cat.totalE)}</span>
+                <button ${x.A(cat.ajouter)} style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer">+ poste</button>
+                <button ${x.A(cat.ajouterPalier)} title="Poser un résultat intermédiaire après cette catégorie — marge brute, marge sur coûts fixes…" style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer">+ étape</button>
+              </div>
+            </td></tr>
+            ${cat.lignes.map(ch => `
+            <tr style="border-top:1px solid var(--color-border-tertiary)">
+              <td style="padding:7px 10px 7px 0">
+                <span style="display:inline-flex;align-items:center;gap:8px;width:100%"><span class="levier-dot" data-lev="${ch.lev}"></span>
+                <input value="${esc(ch.nom)}" title="${esc(ch.nom)}" ${x.C(ch.setNom)} placeholder="Libellé du poste" style="flex:1;min-width:0;border:1px solid transparent;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;padding:5px 6px;border-radius:6px">
+                <button ${x.A(ch.monter)} title="Remonter ce poste dans sa catégorie" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:10px;cursor:pointer;padding:0 1px;line-height:1">↑</button>
+                <button ${x.A(ch.descendre)} title="Descendre ce poste dans sa catégorie" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:10px;cursor:pointer;padding:0 1px;line-height:1">↓</button>
+                <button ${x.A(ch.retirer)} title="Retirer ce poste" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button></span>
+              </td>
+              <td style="padding:5px 6px"><input value="${esc(ch.description)}" title="${esc(ch.description)}" ${x.C(ch.setDesc)} placeholder="—" style="width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.gestion)}" title="${esc(ch.gestion)}" ${x.C(ch.setGestion)} placeholder="—" style="width:100%;box-sizing:border-box;border:1px solid transparent;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px"></td>
+              <td style="padding:5px 6px"><input value="${esc(ch.pcmn)}" ${x.C(ch.setPcmn)} placeholder="—" title="Compte du plan comptable" style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;padding:5px 6px;border-radius:6px;font-variant-numeric:tabular-nums"></td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeurT}" ${x.C(ch.setT)} style="${c.encInputSt}" /></td>
+              <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${ch.montantT}</td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
+              <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400">${ch.montant}</td>
+              <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${ch.montantR}</td>
+              <td style="${ch.ecartSt}">${ch.ecart}</td>
+            </tr>`).join('')}
+            ${cat.paliers.map(p2 => tplEncPalier(p2, x)).join('')}`).join('')}
+          ${(c.encPaliersOrphelins || []).length ? `<tr><td colspan="10" style="padding:12px 0 4px;font-size:11px;color:var(--color-text-muted)">Étapes sans catégorie d’ancrage — replacez-les ou retirez-les :</td></tr>
+            ${c.encPaliersOrphelins.map(p2 => tplEncPalier(p2, x)).join('')}` : ''}
+          <tr style="border-top:1px solid var(--color-border-secondary)">
+            <td colspan="4" style="padding:11px 10px 11px 0;font-weight:400">Total charges</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:400;color:var(--pkg-abricot)">${c.encPctTotT}</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:400;color:var(--pkg-abricot)">${c.encChTotT}</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:400">${c.encPctTot}</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:400">${c.encChTot}</td>
+            <td style="padding:11px 6px;text-align:right;white-space:nowrap;font-weight:400;color:var(--color-text-muted)" title="Charges au taux validé, appliquées au CA réellement encaissé">${c.encChTotR}</td>
+            <td style="padding:11px 0 11px 6px"></td>
+          </tr>
+        </tbody>
+      </table>
+      </div>`}
+    </div>
+    <!-- Pondération des jours : sa propre carte (07/11/2026), hors de « Répartition des charges » —
+         elle répartit le CA du mois sur les jours, elle ne touche pas aux taux de charges. -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-top:3px solid var(--color-primary);border-radius:12px;padding:20px 22px">
+      <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <div style="font-family:var(--font-display);font-size:18px;line-height:1.3">Pondération des jours</div>
+          <div style="font-size:12px;color:var(--color-text-muted);margin:2px 0 0">Part de chaque jour de la semaine dans le chiffre d'affaires, calculée sur l'historique réel du réseau. Elle répartit le budget mensuel en objectifs du jour et de la semaine — identique pour tous les magasins.</div>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button ${x.A(c.pjRecalculer)} ${c.pjEtat === 'chargement' ? 'disabled' : ''} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;padding:8px 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">${c.pjEtat === 'chargement' ? 'Calcul en cours…' : 'Recalculer'}</button>
+          ${c.pjAdoptable ? `<button ${x.A(c.pjAdopter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:9px 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Adopter cette pondération</button>` : ''}
+        </div>
+      </div>
+      ${c.pjMotif ? `<div style="margin-top:14px;font-size:12.5px;color:var(--color-text-muted);padding:10px 12px;border:0.5px dashed var(--color-border-secondary);border-radius:8px">${esc(c.pjMotif)}</div>` : ''}
+      ${c.pjFaible ? `<div style="margin-top:14px;font-size:12px;color:var(--pkg-abricot);padding:8px 12px;border:1px solid var(--pkg-abricot);border-radius:8px">Couverture faible : une partie des jours-magasins manque dans l'historique. La forme de la semaine reste indicative — à adopter en connaissance de cause.</div>` : ''}
+      ${c.pjLignes.length ? `
+      <div style="overflow-x:auto;margin-top:14px">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="${lbl}">
+          <th style="text-align:left;padding:6px 10px 8px 0;font-weight:400">Jour</th>
+          <th style="text-align:right;padding:6px 6px 8px;font-weight:400">Poids proposé</th>
+          <th style="text-align:left;padding:6px 6px 8px;font-weight:400;width:32%"></th>
+          <th style="text-align:right;padding:6px 6px 8px;font-weight:400" title="CA moyen par magasin et par occurrence de ce jour">CA moyen / jour</th>
+          <th style="text-align:right;padding:6px 6px 8px;font-weight:400" title="Nombre de jours-magasins servis pour ce jour de la semaine">Occurrences</th>
+          <th style="text-align:right;padding:6px 6px 8px;font-weight:400">Actuel</th>
+          <th style="text-align:right;padding:6px 0 8px 6px;font-weight:400">Écart</th>
+        </tr></thead>
+        <tbody>
+          ${c.pjLignes.map(l => `
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:8px 10px 8px 0;font-weight:400">${esc(l.nom)}</td>
+            <td style="padding:8px 6px;text-align:right;white-space:nowrap;font-weight:400">${l.poids}</td>
+            <td style="padding:8px 6px"><div style="height:8px;border-radius:4px;background:var(--color-primary);opacity:.85;width:${l.barre}%"></div></td>
+            <td style="padding:8px 6px;text-align:right;white-space:nowrap">${l.moyenne}</td>
+            <td style="padding:8px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${l.occ}</td>
+            <td style="padding:8px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${l.actuel || '—'}</td>
+            <td style="padding:8px 0 8px 6px;text-align:right;white-space:nowrap;color:${l.ecartCol}">${l.ecart || '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+      <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:var(--color-text-muted)">
+        <span>${esc(c.pjBase)}</span>
+        <span>${c.pjAdopteLe ? 'Pondération en vigueur adoptée le ' + esc(c.pjAdopteLe) : 'Aucune pondération adoptée : les objectifs du jour et de la semaine ne se calculent pas encore.'}</span>
+      </div>` : (c.pjRien && !c.pjMotif ? '' : (c.pjLignes.length ? '' : `<div style="margin-top:12px;font-size:11px;color:var(--color-text-muted)">${c.pjAdopteLe ? 'Pondération en vigueur adoptée le ' + esc(c.pjAdopteLe) : 'Aucune pondération adoptée pour l’instant.'}</div>`))}
+    </div>
+    </div>
+  </div>`;
+}
+
+
+
+
+/* --- Contrôle des tâches (checklists consultants du panel) -------------------- */
+function tplControle(c, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const dateSel = c.ctrlDates && c.ctrlDates.length
+    ? `<select ${x.C(c.setCtrlDate)} style="${selCss};font-family:var(--font-ui)">${c.ctrlDates.map(d => `<option value="${d.val}"${d.sel ? ' selected' : ''}>${esc(d.label)}</option>`).join('')}</select>`
+    : `<span style="font-size:12.5px;font-weight:400">${esc(c.ctrlDateLabel)}</span>`;
+  return `
+  <div data-screen="controle" style="display:flex;flex-direction:column;gap:16px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px">
+      ${c.ctrlKpis.map(k => `
+        <div style="${card};padding:16px 18px">
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k.k)}</div>
+          <div style="font-size:26px;font-weight:700;margin-top:6px;line-height:1.1">${esc(k.v)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(k.s)}</div>
+        </div>`).join('')}
+    </div>
+    ${c.ctrlRepVide ? '' : `
+    <div style="${card};padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:400">Répartition des avis par niveau de conformité</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.ctrlNotees)} notée(s)${c.ctrlNonNotees !== '0' ? ' · ' + esc(c.ctrlNonNotees) + ' sans note' : ''}</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px">
+        <div>
+          <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.07em;color:var(--green);margin-bottom:8px">Conforme</div>
+          ${c.ctrlRepConf.map(r => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="${r.dotSt}"></span>
+                <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
+                <span style="font-size:12.5px;font-weight:400;white-space:nowrap">${esc(r.txt)}</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.07em;color:var(--accent);margin-bottom:8px">Non conforme</div>
+          ${c.ctrlRepNc.map(r => `
+            <div style="margin-bottom:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="${r.dotSt}"></span>
+                <span style="font-size:12.5px;flex:1">${esc(r.nom)}</span>
+                <span style="font-size:12.5px;font-weight:400;white-space:nowrap">${esc(r.txt)}</span>
+              </div>
+              <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:5px"><span style="${r.barSt}"></span></span>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`}
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Journée</span>
+      ${dateSel}
+      <select ${x.C(c.setCtrlShop)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlShopOptions, c.ctrlShop)}</select>
+      <select ${x.C(c.setCtrlOnly)} style="${selCss};font-family:var(--font-ui)">${opts(c.ctrlOnlyOptions, c.ctrlOnly, o => o.val, o => o.nom)}</select>
+      <span class="cq-vue"><button type="button" ${x.A(c.ctrlVuePhotos)} class="${c.ctrlVue === 'photos' ? 'on' : ''}">▦ Photos</button><button type="button" ${x.A(c.ctrlVueListe)} class="${c.ctrlVue === 'liste' ? 'on' : ''}">☰ Liste</button></span>
+    </div>
+    ${c.rv ? tplRayonsPhotos(c.rv, x, card) : ''}
+    ${c.ctrlApiOff ? `
+      <div style="background:var(--prize-soft);border:1px solid rgba(193,122,42,0.35);border-radius:10px;padding:12px 16px;font-size:12.5px;line-height:1.55">
+        <span style="font-weight:400">Compte consultant non configuré.</span> Les noms de tâches et les photos viennent de l’API du panel : renseignez le téléphone et le mot de passe du compte dans <span style="font-weight:400">Paramètres → Compte consultant (API panel)</span>. En attendant, les tâches s’affichent par leur identifiant et la notation est indisponible.${c.ctrlApiErr ? `<div style="margin-top:6px;color:var(--prize-ink)">${esc(c.ctrlApiErr)}</div>` : ''}
+      </div>` : ''}
+    ${c.ctrlIndispo ? `
+      <div style="${card};padding:28px 22px;text-align:center">
+        <div style="font-size:14px;font-weight:400">Aucun avis consultant à contrôler pour l’instant</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:8px;line-height:1.6;max-width:620px;margin-left:auto;margin-right:auto">Les tâches et checklists sont évaluées par les consultants dans le panel ; leurs avis apparaissent ici dès qu’ils sont enregistrés (table partagée <code>mac_task_review</code>). Le détail vivant des checklists du jour reste dans le panel.</div>
+      </div>` : (c.ctrlEmpty ? `
+      <div style="${card};padding:24px;text-align:center;font-size:13px;color:var(--color-text-muted)">Aucune tâche ne correspond à ce filtre pour cette journée.</div>` : `
+      <div style="display:flex;flex-direction:column;gap:14px">
+        ${c.ctrlShops.map(s => c.ctrlVue === 'photos' ? tplCtrlPhotos(s, c, x, card) : `
+          <div style="${card};overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div style="font-size:13px;font-weight:400">${esc(s.shop)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted)">${s.nValid} / ${s.nTaches} notée(s) — donc validée(s)</div>
+            </div>
+            <div style="overflow-x:auto">
+            <table style="width:100%;min-width:920px;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="${TH}">Tâche</th>
+                <th style="text-align:center;${TH2};width:78px">Note</th>
+                <th style="text-align:left;${TH2};width:120px">Conformité</th>
+                <th style="text-align:left;${TH2};width:150px">Consultant</th>
+                <th style="text-align:left;${TH2}">Commentaire</th>
+                <th style="text-align:right;${TH};width:200px">Validation (note posée)</th>
+              </tr></thead>
+              <tbody>
+                ${s.taches.map(t => `
+                  <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+                    <td style="padding:10px 14px"><button ${x.A(t.open)} title="Voir la photo et noter" style="border:none;background:none;padding:0;text-align:left;font-family:var(--font-ui);font-size:12.5px;font-weight:400;color:var(--color-text);cursor:pointer;text-decoration:underline;text-decoration-color:var(--color-border-secondary);text-underline-offset:3px">${esc(t.tache)}</button></td>
+                    <td style="padding:10px 12px;text-align:center;white-space:nowrap;${t.noteSt}">${esc(t.note)}</td>
+                    <td style="padding:10px 12px;${t.accSt}">${esc(t.acc)}</td>
+                    <td style="padding:10px 12px;color:var(--color-text)">${esc(t.consultant)}</td>
+                    <td style="padding:10px 12px;color:var(--color-text-muted);text-wrap:pretty">${t.hasComment ? esc(t.comment) : '<span style="opacity:0.6"></span>'}</td>
+                    <td style="padding:10px 14px;text-align:right;white-space:nowrap">
+                      <div style="display:flex;align-items:center;justify-content:flex-end;gap:10px">
+                        <span style="display:inline-block;text-align:right;line-height:1.35">
+                          <span style="font-size:11px;color:${t.valide ? '#3f7a52' : 'var(--color-text-muted)'}">${esc(t.valideMeta)}</span>
+                          ${t.faitMeta ? `<br><span style="font-size:10.5px;color:var(--color-text-muted)">${esc(t.faitMeta)}</span>` : ''}
+                        </span>
+                        <button ${x.A(t.toggle)} style="${t.btnSt}">${esc(t.btnLabel)}</button>
+                      </div>
+                    </td>
+                  </tr>`).join('')}
+              </tbody>
+            </table>
+            </div>
+          </div>`).join('')}
+      </div>`)}
+    ${c.ctrlConsultants && c.ctrlConsultants.length ? `
+      <div style="${card};overflow:hidden">
+        <div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);font-size:13px;font-weight:400">Activité d’évaluation par consultant — journée du ${esc(c.ctrlDateLabel)}</div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;min-width:560px;border-collapse:collapse;font-size:12.5px">
+          <thead><tr>
+            <th style="${TH}">Consultant</th>
+            <th style="text-align:right;${TH2}">Avis</th>
+            <th style="text-align:right;${TH2}">Note moyenne</th>
+            <th style="text-align:right;${TH2}">Refus</th>
+            <th style="text-align:right;${TH};width:110px">Validés</th>
+          </tr></thead>
+          <tbody>
+            ${c.ctrlConsultants.map(cc => `
+              <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+                <td style="padding:10px 14px;font-weight:400">${esc(cc.nom)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.avis)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.noteMoy)}</td>
+                <td style="padding:10px 12px;text-align:right">${esc(cc.refuses)}</td>
+                <td style="padding:10px 14px;text-align:right">${esc(cc.valides)}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+        </div>
+      </div>` : ''}
+  </div>`;
+}
+
+/* Les photos types des rayons : le back office du comptoir attendu. Repliée,
+   une ligne dit combien sont posées ; dépliée, une tuile par rayon — la photo,
+   le fichier à choisir, la consigne — puis l'ajout d'un rayon. */
+function tplRayonsPhotos(r, x, card){
+  const { esc } = x;
+  const lab = 'font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const btn = 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:6px;padding:5px 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer';
+  const etat = r.chargement ? 'lecture…' : r.indispo ? 'indisponibles — l’API ne répond pas' : r.poses + ' / ' + r.total + ' posée' + (r.poses > 1 ? 's' : '');
+  return `
+    <div data-rv="1" style="${card};overflow:hidden">
+      <button ${x.A(r.basculer)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:13px 18px;display:flex;align-items:center;gap:12px;color:var(--color-text)">
+        <span style="font-size:13px;font-weight:400">Photos types des rayons</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(etat)} — le comptoir tel qu’il doit être, en face de chaque « Photo du comptoir »</span>
+        <span style="margin-left:auto;font-size:11.5px;font-weight:400;color:var(--color-primary)">${r.ouvert ? 'Replier ▴' : 'Gérer ▾'}</span>
+      </button>
+      ${r.ouvert && !r.chargement && !r.indispo ? `
+      <div style="border-top:1px solid var(--color-border-tertiary);padding:14px 18px 16px">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:14px">
+          ${r.lignes.map(l => `
+            <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+              ${l.photo
+                ? `<a href="${esc(l.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand" style="display:block"><img src="${esc(l.photo)}" alt="Photo type ${esc(l.nom)}" loading="lazy" style="width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>`
+                : `<label style="aspect-ratio:3/4;border-radius:10px;border:1px dashed var(--color-border-secondary);background:repeating-linear-gradient(135deg,#f5f0e9 0 8px,#eee8df 8px 16px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;padding:10px;font-size:11.5px;color:var(--color-text-muted);cursor:pointer"><b style="font-size:21px;opacity:.55"></b>Pas encore de photo type<span style="font-weight:400;color:var(--color-primary)">${l.busy ? 'Envoi…' : 'Choisir une photo'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(l.fichier)} hidden></label>`}
+              <div style="display:flex;align-items:baseline;gap:6px">
+                <span style="font-size:13px;font-weight:400;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</span>
+                ${l.photo ? `<label style="font-size:11px;color:var(--color-primary);cursor:pointer;white-space:nowrap">${l.busy ? 'envoi…' : 'remplacer'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(l.fichier)} hidden></label>` : ''}
+                ${l.retirerPhoto ? `<button ${x.A(l.retirerPhoto)} title="Retirer la photo type" style="border:none;background:none;padding:0;font-family:var(--font-ui);font-size:11px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">retirer</button>` : ''}
+              </div>
+              <textarea ${x.C(l.setConsigne)} rows="2" maxlength="600" placeholder="Ce que la photo doit montrer (facultatif)" style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 8px;font-family:var(--font-ui);font-size:11.5px;line-height:1.45;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(l.consigne)}</textarea>
+              ${l.meta || l.vus ? `<div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.4">${esc([l.meta, l.vus].filter(Boolean).join(' · '))}</div>` : ''}
+              ${l.supprimer ? `<button ${x.A(l.supprimer)} style="align-self:flex-start;border:none;background:none;padding:0;font-family:var(--font-ui);font-size:10.5px;color:var(--accent);cursor:pointer;text-decoration:underline">retirer ce rayon</button>` : ''}
+            </div>`).join('')}
+        </div>
+        ${r.inconnus.length ? `<div style="margin-top:14px;padding:10px 12px;border-radius:9px;background:rgba(193,122,42,0.08);font-size:12px;line-height:1.55">
+          <span style="font-weight:400">Vus aujourd’hui dans le panel, sans rayon ici :</span>
+          ${r.inconnus.map(i => `<span style="display:inline-flex;align-items:center;gap:6px;margin:3px 8px 0 0">« ${esc(i.nom)} »<button ${x.A(i.ajouter)} style="${btn};padding:2px 9px;font-size:11px">Ajouter</button></span>`).join('')}
+        </div>` : ''}
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:14px">
+          <span style="${lab}">Ajouter un rayon</span>
+          <input value="${esc(r.nouveau)}" ${x.I(r.setNouveau)} placeholder="Nom écrit après « Photo du comptoir - »" style="flex:1;min-width:220px;max-width:360px;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 10px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+          <button ${x.A(r.ajouter)} style="${btn}">Ajouter</button>
+        </div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">Un rayon est le nom que le panel écrit après « Photo du comptoir - ». Sa photo type s’affiche en face de la photo rendue : sur les cartes et dans le volet de notation ci-dessous, et dans le contrôle guidé des visites (application consultant). Photo réduite à 1600 px avant l’envoi.</div>
+      </div>` : ''}
+    </div>`;
+}
+
+/* Une boutique en photos : l'en-tête avec ses filtres, le rail, le pied. Les
+   cartes sont celles du dashboard magasin (controles-photo.css) ; un clic ouvre
+   le volet de notation. */
+function tplCtrlPhotos(s, c, x, card){
+  const { esc } = x; const q = s.cq || { puces: [], cartes: [], resume: '', pied: '', vide: '' };
+  // La photo type du rayon, à côté de la photo rendue : le comptoir attendu en face du comptoir rendu.
+  const ty = t => t.type ? `<span class="db-cqph type"><img src="${esc(t.type)}" alt="Photo type" loading="lazy"><em class="lb">Photo type</em></span>` : '';
+  const photo = t => {
+    if (!t.photo) {
+      if (t.attente) { return '<span class="db-cqph att"></span>'; }
+      return `<span class="db-cqph vide ${t.e}"><b>${t.e === 'ko' ? '✗' : '—'}</b>${esc(t.videTxt)}</span>`;
+    }
+    return `<span class="db-cqph"><img src="${esc(t.photo)}" alt="" loading="lazy">${t.reperes.map(r => `<i style="${esc(r.st)}"></i>`).join('')}${t.heure ? `<em class="h">${esc(t.heure)}</em>` : ''}<em class="cqbd ${t.e}">${esc(t.badge)}</em></span>`;
+  };
+  // La carte : la photo et son texte ouvrent le volet ; dessous, la note
+  // rapide (4, 5 — sans commentaire) et « Noter… » pour le volet.
+  const actes = t => {
+    if (t.envoi) { return '<div class="cq-acts"><span class="cq-envoi">envoi de la note…</span></div>'; }
+    const rapides = (t.rapides || []).map(r => `<button type="button" ${x.A(r.pick)} class="cq-rapide" style="--c:${esc(r.coul)}" title="${esc(r.nom)} — note rapide, sans commentaire">${r.n}</button>`).join('');
+    if (!rapides && !t.bouton) { return ''; }
+    return `<div class="cq-acts">${rapides}${t.bouton ? `<button type="button" ${x.A(t.open)} class="cq-noter${t.e === 'ctl' ? '' : ' re'}" title="Voir la photo en grand, poser des repères, commenter">${esc(t.bouton)}</button>` : ''}</div>`;
+  };
+  const carte = t => `<div class="db-cqc${t.type ? ' duo' : ''}"><button type="button" ${x.A(t.open)} class="cq-ouvrir" title="Voir la photo et noter">${t.type ? `<span class="db-cqduo">${photo(t)}${ty(t)}</span>` : photo(t)}<span class="n">${esc(t.nom)}</span><span class="m">${esc(t.meta)}</span>${t.constat ? `<span class="c ${t.e}">${esc(t.constat)}</span>` : ''}</button>${actes(t)}</div>`;
+  return `
+          <div style="${card};overflow:hidden">
+            <div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+              <div style="font-size:13px;font-weight:400">${esc(s.shop)}</div>
+              <span class="db-cqf">${q.puces.map(f => `<button type="button" ${x.A(f.pick)} class="${f.on ? 'on' : ''}">${f.coul ? `<i style="background:${f.coul}"></i>` : ''}${esc(f.nom)}<b>${f.nb}</b></button>`).join('')}</span>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto;text-align:right">${esc(q.resume)}</div>
+            </div>
+            ${q.sansPhoto ? `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.sansPhotoTxt)}</div>`
+            : q.cartes.length ? `<div class="db-cqrail"><button type="button" class="db-cqfl g" ${x.A(q.gauche)} aria-label="précédentes">‹</button><div class="db-cqpiste">${q.cartes.map(carte).join('')}</div><button type="button" class="db-cqfl d" ${x.A(q.droite)} aria-label="suivantes">›</button></div><div class="db-cqpied">${esc(q.pied)}</div>`
+            : `<div style="padding:14px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(q.vide)}</div>`}
+          </div>`;
+}
+
+/* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
+   détail d'une cellule cliquée — les tâches les moins faites d'abord, puis la
+   grille jour par jour (vert fait, bordeaux pas fait, pointillé pas attendue). */
+/* L'écran « Table KPI » : l'encodage (catégorie, source endpoint, test en
+   direct) et les valeurs collectées — le magasin de valeurs du réseau. */
+function tplKpiT(c, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const TH10 = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)';
+  const inp = 'font-family:var(--font-ui);font-size:12.5px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 11px;background:var(--color-surface);color:var(--color-text)';
+  const src = 'font-family:ui-monospace,Menlo,monospace;font-size:10.5px;background:var(--color-background-secondary);border-radius:5px;padding:2px 7px';
+  const cranPill = cr => cr ? `<span style="display:inline-block;min-width:22px;text-align:center;border-radius:6px;padding:1px 5px;font-size:10px;font-weight:400;${cr.st};margin-left:5px">${esc(cr.lib)}</span>` : '';
+  if (c.ktChargement) { return `<div data-screen="table-kpi"><div style="${card};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Table KPI — lecture…</div></div>`; }
+  const F = c.ktForm;
+  const fiche = !F.ouvert ? '' : `
+  <div style="${card};padding:16px 18px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline">
+      <div style="font-size:13px;font-weight:400">Nouveau KPI — la fiche d'encodage</div>
+      <span ${x.A(F.fermer)} style="cursor:pointer;font-size:11.5px;color:var(--color-text-muted);text-decoration:underline">fermer</span>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+      <label style="${TH10}">Nom<br><input value="${esc(F.nom)}" ${x.C(F.setNom)} placeholder="Productivité CA / ETP / m²" style="${inp};min-width:230px;margin-top:4px"></label>
+      <label style="${TH10}">Catégorie<br><input value="${esc(F.categorie)}" ${x.C(F.setCategorie)} list="ktCats" placeholder="Ventes" style="${inp};width:140px;margin-top:4px"><datalist id="ktCats">${F.categories.map(cg => `<option value="${esc(cg)}">`).join('')}</datalist></label>
+      <label style="${TH10}">Sous-catégorie<br><input value="${esc(F.sousCategorie)}" ${x.C(F.setSousCategorie)} placeholder="Productivité" style="${inp};width:140px;margin-top:4px"></label>
+      <label style="${TH10}">Unité<br><select ${x.C(F.setUnite)} style="${inp};margin-top:4px">${['€','%','n','€/m²','min','★'].map(u => `<option${u === F.unite ? ' selected' : ''}>${u}</option>`).join('')}</select></label>
+      <label style="${TH10}">Maille<br><select ${x.C(F.setGrain)} style="${inp};margin-top:4px"><option value="jour"${F.grain === 'jour' ? ' selected' : ''}>par jour</option><option value="mois"${F.grain === 'mois' ? ' selected' : ''}>par mois</option></select></label>
+      <label style="${TH10}">Type de source<br><select ${x.C(F.setType)} style="${inp};margin-top:4px;border-color:var(--color-primary)">${F.types.map(t => `<option value="${t.val}"${t.sel ? ' selected' : ''}>${esc(t.nom)}</option>`).join('')}</select></label>
+    </div>
+    ${F.type === 'compose' ? `
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+      <label style="${TH10}">Donnée A<br><select ${x.C(F.setA)} style="${inp};min-width:190px;margin-top:4px"><option value="">choisir…</option>${F.operandes.map(o => `<option value="${esc(o.val)}"${o.val === F.a ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></label>
+      <select ${x.C(F.setOp1)} style="${inp};width:56px;text-align:center;font-size:15px">${F.ops.map(o => `<option value="${esc(o.val)}"${o.val === F.op1 ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      <label style="${TH10}">Donnée B<br><select ${x.C(F.setB)} style="${inp};min-width:190px;margin-top:4px"><option value="">choisir…</option>${F.operandes.map(o => `<option value="${esc(o.val)}"${o.val === F.b ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></label>
+      <select ${x.C(F.setOp2)} style="${inp};width:56px;text-align:center;font-size:15px">${F.ops.map(o => `<option value="${esc(o.val)}"${o.val === F.op2 ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      <label style="${TH10}">Donnée C — facultative<br><select ${x.C(F.setC)} style="${inp};min-width:190px;margin-top:4px"><option value="">aucune</option>${F.operandes.map(o => `<option value="${esc(o.val)}"${o.val === F.c ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></label>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">Les opérandes sont les KPI déjà encodés et les attributs de la fiche magasin. La ligne réseau applique la même formule aux valeurs réseau — les ratios sont pondérés juste (CA ÷ tickets = le vrai panier réseau).</div>` : `
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;align-items:flex-end">
+      <label style="${TH10}">Réseau =<br><select ${x.C(F.setAgregat)} style="${inp};margin-top:4px"><option value="somme"${F.agregat === 'somme' ? ' selected' : ''}>somme des magasins</option><option value="moyenne"${F.agregat === 'moyenne' ? ' selected' : ''}>moyenne des magasins</option></select></label>
+      <label style="${TH10}">Source — endpoint de l'application<br>
+        <select ${x.C(F.setEndpoint)} style="${inp};min-width:340px;margin-top:4px">
+          <option value="">choisir…</option>
+          ${F.endpoints.map(e => `<option value="${esc(e.val)}"${e.sel ? ' selected' : ''}>${esc(e.nom)}</option>`).join('')}
+        </select></label>
+      <button ${x.A(F.tester)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(F.testerTxt)}</button>
+      ${F.listes.length ? `<label style="${TH10}">Liste<br><select ${x.C(F.setListe)} style="${inp};margin-top:4px">${F.listes.map(l => `<option value="${esc(l.val)}"${l.sel ? ' selected' : ''}>${esc(l.val)}[]</option>`).join('')}</select></label>` : ''}
+      ${F.champs.length ? `<label style="${TH10}">Champ à lire<br><select ${x.C(F.setChamp)} style="${inp};margin-top:4px"><option value="">choisir…</option>${F.champs.map(ch => `<option value="${esc(ch.val)}"${ch.sel ? ' selected' : ''}>${esc(ch.val)}</option>`).join('')}</select></label>` : ''}
+    </div>
+    ${F.sondeErreur ? `<div style="font-size:12px;color:var(--accent);margin-top:10px">${esc(F.sondeErreur)}</div>` : ''}
+    ${F.apercu.length ? `<div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:9px 13px;margin-top:10px;background:rgba(63, 122, 82, 0.05);font-size:12px">
+      <b style="color:var(--green)">test réussi</b> — valeurs lues à l'instant : ${F.apercu.map(a2 => `${esc(a2.nom)} <b>${esc(a2.val)}</b>`).join(' · ')}</div>` : ''}`}
+    <div style="margin-top:12px">
+      <span style="${TH10}">Échelle de valeur — 4 bornes croissantes (facultatif) : −− sous la 1re, ++ dès la 4e</span>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:6px;flex-wrap:wrap">
+        <span style="display:inline-block;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:400;background:rgba(141,29,44,0.75);color:#fff">−−</span>
+        <input value="${esc(F.e1)}" ${x.C(F.setE1)} placeholder="90" style="${inp};width:80px;text-align:center">
+        <span style="display:inline-block;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:400;background:rgba(217,119,6,0.45)">−</span>
+        <input value="${esc(F.e2)}" ${x.C(F.setE2)} placeholder="110" style="${inp};width:80px;text-align:center">
+        <span style="display:inline-block;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:400;background:rgba(34,34,34,0.08)">=</span>
+        <input value="${esc(F.e3)}" ${x.C(F.setE3)} placeholder="130" style="${inp};width:80px;text-align:center">
+        <span style="display:inline-block;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:400;background:rgba(63, 122, 82, 0.45)">+</span>
+        <input value="${esc(F.e4)}" ${x.C(F.setE4)} placeholder="150" style="${inp};width:80px;text-align:center">
+        <span style="display:inline-block;border-radius:6px;padding:4px 9px;font-size:11px;font-weight:400;background:var(--green);color:#fff">++</span>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px;align-items:center">
+      <button ${x.A(F.enregistrer)} style="border:none;border-radius:8px;padding:9px 18px;background:${F.pret ? 'var(--color-primary)' : 'var(--color-border-secondary)'};color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${F.pret ? 'pointer' : 'default'}">${esc(F.enregistrerTxt)}</button>
+      <span style="font-size:11px;color:var(--color-text-muted)">Dès l'enregistrement : collecte au prochain battement du cron, historique au fil des jours, repris dans le bloc « Table KPI » des rapports.</span>
+    </div>
+  </div>`;
+  const FI = c.ktFiche;
+  const ficheMag = `
+  <div style="${card};padding:16px 18px">
+    <div style="font-size:13px;font-weight:400">Fiche magasin — les données statiques</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Saisies une fois (m², places assises…), utilisables comme opérandes des KPI composés — elles apparaissent dans les listes sous « … (fiche) ».</div>
+    <div style="overflow-x:auto;margin-top:12px">
+      <table style="border-collapse:collapse;font-size:12px">
+        <tr><th style="text-align:left;${TH10};padding:5px 10px 5px 0">Magasin</th>
+        ${FI.attrs.map(a => `<th style="text-align:right;${TH10};padding:5px 10px">${esc(a.libelle)} <span ${x.A(a.retirer)} style="cursor:pointer;color:var(--color-primary)">✕</span></th>`).join('')}
+        </tr>
+        ${FI.magasins.map(m => `
+        <tr style="border-top:1px solid var(--color-border-tertiary)">
+          <td style="padding:7px 10px 7px 0;font-weight:400">${esc(m.nom)}</td>
+          ${FI.attrs.map(a => `<td style="padding:5px 10px;text-align:right"><input value="${esc(FI.val(m.id, a.cle))}" data-ktf="${esc(m.id)}|${esc(a.cle)}" style="${inp};width:90px;text-align:right;padding:6px 8px"></td>`).join('')}
+        </tr>`).join('')}
+      </table>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:12px;align-items:center;flex-wrap:wrap">
+      <input id="kt-attr-neuf" placeholder="Nouvel attribut — ex. Surface de vente (m²)" style="${inp};min-width:260px">
+      <button ${x.A(FI.ajouter)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">+ Ajouter</button>
+      <button ${x.A(FI.enregistrer)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${esc(FI.enregistrerTxt)}</button>
+    </div>
+  </div>`;
+  return `
+  <div data-screen="table-kpi" style="display:flex;flex-direction:column;gap:16px">
+    <div style="${card};padding:16px 18px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-size:13px;font-weight:400">Les KPI encodés — par catégorie</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Chaque KPI déclare sa source (un endpoint, ou une formule sur d'autres KPI) ; le cron le collecte chaque heure et range les valeurs par magasin + réseau. Les rapports lisent cette table telle quelle (bloc « Table KPI »).</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button ${x.A(c.ktCollecte)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">${esc(c.ktCollecteTxt)}</button>
+          <button ${x.A(F.ouvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Nouveau KPI</button>
+        </div>
+      </div>
+      ${c.ktVide ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucun KPI encodé — « + Nouveau KPI » pour commencer.</div>` : ''}
+      ${c.ktGroupes.map(g => `
+      <div style="margin-top:14px">
+        <div style="font-size:12.5px;font-weight:400;border-bottom:1.5px solid var(--color-border-secondary);padding-bottom:4px">${esc(g.nom)}</div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:880px;font-size:12px;font-variant-numeric:tabular-nums">
+          <tr><th style="text-align:left;${TH10};padding:6px 8px 5px 0">KPI</th><th style="text-align:right;${TH10};padding:6px 8px">Réseau</th><th style="text-align:left;${TH10};padding:6px 8px">Quand</th><th style="text-align:left;${TH10};padding:6px 8px">Historique</th><th style="text-align:left;${TH10};padding:6px 8px">Par magasin</th><th style="text-align:left;${TH10};padding:6px 8px">Source</th><th></th></tr>
+          ${g.kpis.map(k => `
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:8px 8px 8px 0"><b>${esc(k.nom)}</b>${k.sousCat ? ` <span style="font-size:10px;color:var(--color-text-muted)">${esc(k.sousCat)}</span>` : ''}<br><span style="font-size:10px;color:var(--color-text-muted)">${esc(k.grain)} · ${esc(k.agregat)}</span></td>
+            <td style="padding:8px;text-align:right;white-space:nowrap"><b style="font-size:13px">${esc(k.valeur)}</b>${cranPill(k.cranReseau)}</td>
+            <td style="padding:8px;color:var(--color-text-muted)">${esc(k.quand)}<br><span style="font-size:10px">${esc(k.maj)}</span></td>
+            <td style="padding:8px"><span style="display:inline-flex;align-items:flex-end;gap:2px;height:20px">${k.spark.map((pt, i2) => `<i style="display:inline-block;width:6px;height:${pt.h}px;border-radius:2px 2px 0 0;background:${i2 === k.spark.length - 1 ? 'var(--color-primary)' : '#e6e0d8'}"></i>`).join('')}</span></td>
+            <td style="padding:8px;font-size:11px">${k.parMagasin.map(m => `${esc(m.nom)} <b>${esc(m.val)}</b>${cranPill(m.cran)}`).join(' · ')}</td>
+            <td style="padding:8px"><span style="${src}">${esc(k.sourceTxt)}</span><br><span style="${src};margin-top:3px;display:inline-block">${esc(k.champTxt)}</span></td>
+            <td style="padding:8px;text-align:right"><span ${x.A(k.suppr)} style="cursor:pointer;color:var(--color-text-muted);font-size:11px">retirer</span></td>
+          </tr>`).join('')}
+        </table></div>
+      </div>`).join('')}
+    </div>
+    ${fiche}
+    ${ficheMag}
+  </div>`;
+}
+
+/* L'écran « Suivi mensuel » : la heatmap seule, sur sa propre page. */
+function tplSuiviM(c, x){
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  return `
+  <div data-screen="suivi-mensuel" style="display:flex;flex-direction:column;gap:16px">
+    ${tplCtrlHeat(c, x, card)}
+  </div>`;
+}
+
+function tplCtrlHeat(c, x, card){
+  const { esc } = x;
+  const TH10 = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)';
+  const leg = `
+    <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;font-size:11px;color:var(--color-text-muted);margin-top:12px">
+      <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.06em">Part des t\u00e2ches faites</span>
+      ${[['rgba(141,29,44,0.75)', '&lt; 60 %'], ['rgba(217,119,6,0.45)', '60\u201370 %'], ['rgba(201,162,39,0.40)', '70\u201380 %'], ['rgba(63, 122, 82, 0.45)', '80\u201390 %'], ['#3f7a52', '&#8805; 90 %']]
+        .map(([cl, tx]) => `<span><i style="display:inline-block;width:13px;height:13px;border-radius:3px;background:${cl};margin-right:5px;vertical-align:-2px"></i>${tx}</span>`).join('')}
+      <span style="margin-left:auto">${esc(c.hmNote)}</span>
+      ${c.hmCompleter ? `<button ${x.A(c.hmCompleter)} style="border:none;border-radius:8px;padding:6px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">${esc(c.hmCompleterTxt)}</button>` : ''}
+    </div>`;
+  const det = !c.hmDetail ? '' : c.hmDetail.chargement
+    ? `<div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--color-text-muted)">Lecture du d\u00e9tail\u2026</div>`
+    : c.hmDetail.erreur
+    ? `<div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px;font-size:12.5px;color:var(--accent)">${esc(c.hmDetail.erreur)}</div>`
+    : c.hmDetail.jour ? `
+    <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:400">${esc(c.hmDetail.titre)} <span style="font-weight:400;color:var(--color-text-muted);font-size:11.5px">jour cliqu\u00e9</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-size:12px">${esc(c.hmDetail.resume)}</span>
+          <span ${x.A(c.hmDetail.fermer)} style="cursor:pointer;font-size:11.5px;color:var(--color-text-muted);text-decoration:underline">fermer</span>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:10px">
+        <div>
+          <div style="${TH10};margin-bottom:6px;color:var(--accent)">Pas faites (${c.hmDetail.pasFaites.length})</div>
+          ${c.hmDetail.pasFaites.length ? c.hmDetail.pasFaites.map(t => `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--color-border-tertiary)"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--accent);opacity:.8;margin-right:8px"></i>${esc(t)}</div>`).join('') : `<div style="font-size:12px;color:var(--color-text-muted)">aucune \u2014 tout est fait ce jour-l\u00e0</div>`}
+        </div>
+        <div>
+          <div style="${TH10};margin-bottom:6px;color:var(--green)">Faites (${c.hmDetail.faitesListe.length})</div>
+          ${c.hmDetail.faitesListe.length ? c.hmDetail.faitesListe.map(t => `<div style="font-size:12px;padding:5px 0;border-bottom:1px solid var(--color-border-tertiary)"><i style="display:inline-block;width:9px;height:9px;border-radius:3px;background:var(--green);opacity:.85;margin-right:8px"></i>${esc(t)}</div>`).join('') : `<div style="font-size:12px;color:var(--color-text-muted)">aucune</div>`}
+        </div>
+      </div>
+    </div>` : `
+    <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:12px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:400">${esc(c.hmDetail.titre)} <span style="font-weight:400;color:var(--color-text-muted);font-size:11.5px">cellule cliqu\u00e9e</span></div>
+        <div style="display:flex;align-items:baseline;gap:12px">
+          <span style="font-size:12px">${esc(c.hmDetail.resume)}</span>
+          <span ${x.A(c.hmDetail.fermer)} style="cursor:pointer;font-size:11.5px;color:var(--color-text-muted);text-decoration:underline">fermer</span>
+        </div>
+      </div>
+      <div style="overflow-x:auto;margin-top:10px">
+        <table style="border-collapse:collapse;font-size:12px;min-width:720px">
+          <tr>
+            <th style="text-align:left;${TH10};padding:5px 8px 5px 0">T\u00e2che \u2014 les moins faites d\u2019abord</th>
+            <th style="text-align:right;${TH10};padding:5px 8px">Att.</th>
+            <th style="text-align:right;${TH10};padding:5px 8px">Faites</th>
+            <th style="text-align:right;${TH10};padding:5px 10px 5px 8px">Part</th>
+            <th style="text-align:left;padding:5px 0 5px 6px">
+              <span style="display:inline-flex;gap:2px">${c.hmDetail.joursLibs.map(j => `<i style="width:16px;text-align:center;font-size:10px;font-style:normal;color:${j.we ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:${j.we ? '600' : '400'}">${esc(j.n)}</i>`).join('')}</span>
+            </th>
+          </tr>
+          ${c.hmDetail.taches.map(t => `
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:6px 8px 6px 0;max-width:280px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.nom)}">${esc(t.nom)}</td>
+            <td style="padding:6px 8px;text-align:right;color:var(--color-text-muted)">${esc(t.attendues)}</td>
+            <td style="padding:6px 8px;text-align:right">${esc(t.faites)}</td>
+            <td style="padding:6px 10px 6px 8px;text-align:right;${t.partSt}">${esc(t.partTxt)}</td>
+            <td style="padding:6px 0 6px 6px">
+              <span style="display:inline-flex;gap:2px">${t.cases.map(cs => `<i title="${esc(cs.titre)}" style="display:inline-block;width:16px;height:16px;border-radius:4px;${cs.st}"></i>`).join('')}</span>
+            </td>
+          </tr>`).join('')}
+        </table>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">Chaque case est un jour du mois : vert = faite, bordeaux = pas faite, pointill\u00e9 = pas attendue ce jour-l\u00e0.</div>
+    </div>`;
+  const corpsMois = c.hmjChargement
+    ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Lecture du cache\u2026</div>`
+    : c.hmjVide
+    ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucune journ\u00e9e relev\u00e9e sur ce mois \u2014 le relev\u00e9 avance heure par heure (ou tout de suite avec \u00ab\u00a0Compl\u00e9ter maintenant\u00a0\u00bb).</div>${leg}`
+    : `
+    <div style="overflow-x:auto;margin-top:12px">
+      <table style="border-collapse:separate;border-spacing:2px;font-variant-numeric:tabular-nums">
+        <tr>
+          <th style="text-align:left;${TH10};padding:2px 6px">Magasin</th>
+          ${c.hmjJours.map(j => `<th style="width:${c.hmjTaille}px;min-width:${c.hmjTaille}px;font-size:10px;font-weight:${j.we ? '600' : '400'};color:${j.we ? 'var(--color-primary)' : 'var(--color-text-muted)'};padding:2px 0;text-align:center;white-space:nowrap">${esc(j.n)}</th>`).join('')}
+          <th style="${TH10};padding:2px 8px;text-align:center">${esc(c.hmjTotLabel)}</th>
+        </tr>
+        ${c.hmjLignes.map(l => `
+        <tr>
+          <td style="font-size:12.5px;font-weight:400;white-space:nowrap;padding:0 10px 0 6px">${esc(l.shop)}</td>
+          ${l.cells.map(cc => `<td ${x.A(cc.clic)} title="${esc(cc.titre)}" style="${cc.st}">${esc(cc.txt)}</td>`).join('')}
+          <td ${x.A(l.totClic)} title="ouvrir le d\u00e9tail du mois, t\u00e2che par t\u00e2che" style="${l.totSt}">
+            <div style="font-size:11.5px;font-weight:400">${esc(l.totTxt)}</div>
+            <div style="font-size:10px;color:var(--color-text-muted)">${esc(l.totSous)}</div>
+          </td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">Chaque colonne est un jour du mois (les week-ends en bordeaux, les jours non relev\u00e9s en pointill\u00e9). Cliquez un jour pour ses t\u00e2ches, la derni\u00e8re colonne pour la grille compl\u00e8te du mois.</div>
+    ${leg}`;
+  const corpsAnnee = c.hmChargement
+    ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Lecture du cache\u2026</div>`
+    : c.hmVide
+    ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:12px">Aucune journ\u00e9e encore relev\u00e9e \u2014 le relev\u00e9 d\u00e9marre au prochain passage du cron (chaque heure), ou tout de suite avec le bouton ci-dessous.</div>${leg}`
+    : `
+    <div style="overflow-x:auto;margin-top:12px">
+      <table style="border-collapse:separate;border-spacing:3px;width:100%;min-width:920px;font-variant-numeric:tabular-nums">
+        <tr>
+          <th style="text-align:left;${TH10};padding:2px 6px">Magasin</th>
+          ${c.hmMois.map(mLib => `<th style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.03em;color:var(--color-text-muted);padding:2px 1px;text-align:center">${esc(mLib)}</th>`).join('')}
+          <th style="${TH10};padding:2px 1px;text-align:center">12 mois</th>
+        </tr>
+        ${c.hmLignes.map(l => `
+        <tr>
+          <td style="font-size:12.5px;font-weight:400;white-space:nowrap;padding:0 10px 0 6px">${esc(l.shop)}</td>
+          ${l.cells.map(cc => `
+          <td ${x.A(cc.clic)} title="${esc(cc.titre)}" style="${cc.st}">
+            <div style="font-size:12px;font-weight:400">${esc(cc.txt)}</div>
+            <div style="font-size:10px;opacity:.85;margin-top:1px">${esc(cc.sous)}${cc.partiel ? ' *' : ''}</div>
+          </td>`).join('')}
+          <td style="${l.totSt}">
+            <div style="font-size:12px;font-weight:400">${esc(l.totTxt)}</div>
+            <div style="font-size:10px;color:var(--color-text-muted);margin-top:1px">${esc(l.totSous)}</div>
+          </td>
+        </tr>`).join('')}
+      </table>
+    </div>
+    ${leg}
+    <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">* mois partiellement relev\u00e9 \u2014 le pourcentage ne porte que sur les journ\u00e9es d\u00e9j\u00e0 relev\u00e9es.</div>`;
+  return `
+  <div style="${card};padding:16px 18px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:400">Suivi mensuel \u2014 faites / pas faites${c.hmVue === 'jours' ? ' \u00b7 ' + esc(c.hmMoisTitre) : ' \u00b7 12 mois glissants'}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;max-width:720px">Faite = rendue dans le panel ce jour-l\u00e0 (not\u00e9e, photographi\u00e9e ou au statut fait) \u00b7 Pas faite = attendue et rest\u00e9e sans rendu. La note des contr\u00f4les est une autre affaire \u2014 ici on mesure si le travail est fait.</div>
+      </div>
+      <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+        ${c.hmToggle.map(t => `<span ${x.A(t.clic)} style="padding:7px 15px;font-size:12px;font-weight:400;cursor:pointer;${t.on ? 'background:var(--color-primary);color:#fff' : 'color:var(--color-text-muted)'}">${esc(t.txt)}</span>`).join('')}
+      </div>
+    </div>
+    ${c.hmVue === 'jours' ? corpsMois : corpsAnnee}
+    ${det}
+  </div>`;
+}
+
+/* --- Fonds & Royalties : lu chez le module marketing -------------------------
+   Le cockpit ne recopie pas le grand livre : il le lit là où il est tenu. Deux
+   soldes pour le même fonds, et c'est celui qui a tort qu'on regarderait. */
+/* --- Scoring · le détail d'une référence, et ses deux suites -----------------
+   Le score décomposé critère par critère (avec les poids des réglages), puis
+   les deux gestes qu'un mauvais score appelle : envoyer la référence aux
+   projets avec l'adaptation demandée, ou programmer son arrêt et l'annoncer. */
+function tplScoringDetail(c, x){
+  const { esc } = x;
+  const d = c.pdDet;
+  const lbl = 'font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted)';
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)';
+  return `
+  <div ${x.A(d.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:12px;width:760px;max-width:100%;max-height:100%;overflow-y:auto;padding:18px 22px" data-scroll="pddet">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="${lbl}">Détail du score — ${esc(d.periode)}</div>
+          <div style="font-size:16px;font-weight:400;margin-top:3px">${esc(d.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(d.ref)} · ${esc(d.cat)}${d.finLe ? ` · <span style="color:var(--color-primary);font-weight:400">fin programmée le ${esc(d.finLe)}</span>` : ''}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="text-align:right"><div style="font-size:26px;font-weight:700;line-height:1;color:${d.col}">${esc(d.score)}</div>
+            <span style="display:inline-block;margin-top:4px;padding:2px 10px;border-radius:8px;font-size:11px;font-weight:400;background:${d.fond};color:${d.col}">${esc(d.verdict)}</span></div>
+          <button ${x.A(d.fermer)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <div style="margin-top:14px">
+        ${d.criteres.map(cr => `<div style="display:flex;align-items:center;gap:11px;padding:7px 0;border-top:1px solid var(--color-border-tertiary)">
+          <span style="width:190px;font-size:12.5px">${esc(cr.nom)} <span style="color:var(--color-text-muted);font-size:10.5px">· poids ${esc(cr.poids)}</span></span>
+          <div style="flex:1;height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${cr.barre}%;background:${cr.col}"></i></div>
+          <span style="width:66px;text-align:right;font-size:12px;font-weight:400;${cr.absent ? 'color:var(--color-text-muted);font-weight:400' : ''}">${esc(cr.note)}</span>
+          <span style="width:170px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(cr.brut)}</span>
+        </div>`).join('')}
+      </div>
+
+      <!-- Le volume par magasin sur la fenêtre affichée. -->
+      ${d.parMagasin.length ? `
+      <div style="border:1px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px;margin-top:16px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font-size:13px;font-weight:400">Volume par magasin</span><span style="font-size:11px;color:var(--color-text-muted)">${esc(d.periode)} · ${esc(d.parMagasinTotal)} pièces au total</span></div>
+        ${d.parMagasin.map(m => `<div style="display:flex;align-items:center;gap:11px;padding:6px 0;border-top:1px solid var(--color-border-tertiary)">
+          <span style="width:230px;font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(m.nom)}</span>
+          <div style="flex:1;height:8px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden"><i style="display:block;height:100%;border-radius:8px;width:${m.barre}%;background:var(--accent)"></i></div>
+          <span style="width:70px;text-align:right;font-size:12px;font-weight:400;font-variant-numeric:tabular-nums">${esc(m.vol)}</span>
+          <span style="width:46px;text-align:right;font-size:11px;color:var(--color-text-muted)">${esc(m.part)}</span>
+        </div>`).join('')}
+      </div>` : ''}
+      <!-- CA réseau et marge brute par période : sortis de la ligne du
+           tableau, ils vivent ici — mois affiché, trimestre, année dernière. -->
+      <div style="border:1px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px;margin-top:16px">
+        <div style="font-size:13px;font-weight:400">Ce que la référence a rapporté</div>
+        ${d.perChargement ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Lecture de la caisse…</div>` : ''}
+        ${d.perIndispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Ventes par période indisponibles (tables de caisse injoignables).</div>` : ''}
+        ${!d.perChargement && !d.perIndispo ? `
+        <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12.5px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 0 6px">Période</th>
+            <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 0 6px">Volume</th>
+            <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 0 6px">CA réseau</th>
+            <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 0 6px">Marge brute</th>
+          </tr></thead>
+          <tbody>${d.periodes.map(f => `<tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:6px 0">${esc(f.label)}</td>
+            <td style="padding:6px 0;text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(f.volume)}</td>
+            <td style="padding:6px 0;text-align:right;font-variant-numeric:tabular-nums;font-weight:400">${esc(f.ca)}</td>
+            <td style="padding:6px 0;text-align:right;font-variant-numeric:tabular-nums;font-weight:400">${esc(f.marge)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">Marge brute = CA − volume × coût matière. Sans coût connu, la marge reste vide.</div>` : ''}
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr;gap:12px;margin-top:16px">
+        <div style="border:1px solid var(--color-border-secondary);border-radius:11px;padding:13px 15px">
+          <div style="font-size:13px;font-weight:400">⏹ Arrêter le produit</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin:3px 0 10px;line-height:1.45">Programme la fin de la référence et l’annonce au réseau — bandeau au Catalogue et à l’Assortiment.</div>
+          <input type="date" value="${esc(d.finDate)}" ${x.C(d.setFinDate)} style="${inp};margin-bottom:8px">
+          <input id="pdd-fin" value="${esc(d.finTexte)}" ${x.I(d.setFinTexte)} placeholder="Note au réseau — ex. remplacé par… dès octobre" style="${inp};margin-bottom:10px">
+          <button ${x.A(d.arreter)} style="border:none;background:var(--muted);color:#fff;border-radius:8px;height:32px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Programmer l’arrêt et informer</button>
+          ${d.annulerFin ? `<button ${x.A(d.annulerFin)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:8px;height:32px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;margin-left:7px">Annuler l’arrêt</button>` : ''}
+          ${d.finNote ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:8px">Note actuelle : ${esc(d.finNote)}</div>` : ''}
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Encodage · une étape intermédiaire du compte de résultat ----------------
+   « Marge brute = CA − coût matière ». L'étape ne porte aucun montant propre :
+   elle nomme une soustraction entre deux valeurs déjà présentes, et se
+   recalcule d'elle-même quand un taux bouge. */
+/* Répartition des charges en mode CRM (07/11/2026) : la catégorie, ses postes et ses étapes en LECTURE — le Compte de
+   résultat réseau du CRM fait foi — ; seul le « % validé » du réseau se saisit. */
+function tplEncCatCrm(cat, c, x){
+  const { esc } = x;
+  const td = 'padding:7px 6px;text-align:right;white-space:nowrap';
+  const verrou = v => `<span title="% réseau du CRM" style="display:inline-block;min-width:44px;padding:5px 8px;border-radius:7px;background:var(--color-surface-2,#FBF9F5);border:1px solid var(--color-border-tertiary);color:var(--color-text-muted);text-align:right">${esc(String(v).replace('.', ','))}</span>`;
+  return `
+            <tr><td colspan="10" style="padding:14px 0 6px">
+              <div style="display:flex;align-items:baseline;gap:9px;flex-wrap:wrap">
+                <span style="font-size:13px">${esc(cat.nom)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(cat.total)} du CA validé · ${esc(cat.totalE)}</span>
+              </div>
+            </td></tr>
+            ${cat.lignes.map(ch => `
+            <tr style="border-top:1px solid var(--color-border-tertiary)">
+              <td style="padding:7px 10px 7px 0"><span style="display:inline-flex;align-items:center;gap:8px"><span class="levier-dot" data-lev="${ch.lev}"></span>${esc(ch.nom)}</span>${ch.special === 'loyer' ? '<div style="font-size:10.5px;color:var(--color-text-muted)">lu du bail du dossier, au CRM</div>' : ''}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.description) || '—'}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.gestion) || '—'}</td>
+              <td style="padding:7px 6px;font-size:12px;color:var(--color-text-muted)">${esc(ch.pcmn) || '—'}</td>
+              <td style="${td}">${ch.hors ? '<span style="font-size:11px;color:var(--color-text-muted)">hors CRM</span>' : verrou(ch.valeurT)}</td>
+              <td style="${td};color:var(--pkg-abricot)">${ch.montantT}</td>
+              <td style="padding:5px 6px"><input type="number" step="0.1" value="${ch.valeur}" ${x.C(ch.set)} style="${c.encInputSt}" /></td>
+              <td style="${td};font-weight:400">${ch.montant}</td>
+              <td style="${td};color:var(--color-text-muted)">${ch.montantR}</td>
+              <td style="${ch.ecartSt}">${ch.ecart}</td>
+            </tr>`).join('')}
+            ${cat.paliers.map(p2 => `
+            <tr style="border-top:1px solid var(--color-border-secondary);background:rgba(141,29,44,0.035)">
+              <td colspan="4" style="padding:9px 10px 9px 0"><span style="font-size:12.5px">= ${esc(p2.nom)}</span><div style="font-size:11px;color:var(--color-text-muted)">${esc(p2.formule)}</div></td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:var(--pkg-abricot)">${esc(p2.pctT)}</td>
+              <td style="${td};padding:9px 6px;color:var(--pkg-abricot)">${esc(p2.montantT)}</td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:${p2.col}">${esc(p2.pct)}</td>
+              <td style="${td};padding:9px 6px;font-weight:400;color:${p2.col}">${esc(p2.montant)}</td>
+              <td style="${td};padding:9px 6px;color:var(--color-text-muted)">${esc(p2.montantR)}</td>
+              <td style="padding:9px 0 9px 6px"></td>
+            </tr>`).join('')}`;
+}
+
+function tplEncPalier(p, x){
+  const { esc } = x;
+  const sel = (opts, set) => `<select ${x.C(set)} style="border:1px solid var(--color-border-tertiary);background:var(--color-surface);color:var(--color-text);border-radius:6px;height:26px;padding:0 6px;font-family:var(--font-ui);font-size:11px;max-width:190px">
+    ${opts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <tr style="border-top:1px solid var(--color-border-secondary);background:rgba(141,29,44,0.035)">
+    <td colspan="4" style="padding:9px 10px 9px 0">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">=</span>
+        <input value="${esc(p.nom)}" ${x.C(p.setNom)} placeholder="Nom de l’étape" style="border:none;border-bottom:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:2px 0;min-width:130px;flex:0 1 auto">
+        <button ${x.A(p.retirer)} title="Retirer cette étape" style="flex:0 0 auto;border:none;background:none;color:var(--color-text-muted);font-size:11px;cursor:pointer;padding:0 2px">✕</button>
+        ${sel(p.gauche, p.setGauche)}
+        <span style="font-size:12px;color:var(--color-text-muted)">−</span>
+        ${sel(p.droite, p.setDroite)}
+      </div>
+    </td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;color:var(--pkg-abricot)">${esc(p.pctT)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--pkg-abricot)">${esc(p.montantT)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;color:${p.col}">${esc(p.pct)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;font-weight:400;color:${p.col}">${esc(p.montant)}</td>
+    <td style="padding:9px 6px;text-align:right;white-space:nowrap;color:var(--color-text-muted)">${esc(p.montantR)}</td>
+    <td style="padding:9px 0 9px 6px"></td>
+  </tr>`;
+}
+
+/* --- Campagnes marketing · les trois écrans repris du module ----------------- */
+
+/** Le bandeau commun quand les tables mar_* manquent ou chargent. */
+function tplMktGarde(c){
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  if (c.mkChargement) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des campagnes…</div>`; }
+  if (c.mkIndispo) { return `<div data-screen="mkt" style="${carte};padding:22px;font-size:12.5px;line-height:1.6"><span style="font-size:10px;font-weight:400;padding:2px 9px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">indisponible</span><div style="margin-top:8px">${c.mkRaison}</div></div>`; }
+  return '';
+}
+
+function tplMktTypes(c, x){
+  const { esc } = x;
+  const garde = tplMktGarde(c);
+  if (garde) { return garde; }
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:400;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 7px';
+  const svg = (path, taille, couleur) => `<svg viewBox="0 0 24 24" width="${taille}" height="${taille}" fill="none" stroke="${couleur}" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="${path}"/></svg>`;
+  const f = c.mkTypeForm;
+  return `
+  <div data-screen="mkttypes" style="display:flex;flex-direction:column;gap:14px">
+    <div style="${carte};padding:15px 17px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px">
+        <span style="font-size:13px;font-weight:400">Types de campagne</span>
+        <button ${x.A(c.mkTypeNouveau)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:31px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Nouveau type</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Chaque type ouvre la première étape de l’assistant : sa carte y porte son icône, sa couleur et son levier. L’ordre ci-dessous est celui de la grille. Un type porté par des campagnes ne se supprime pas — il se désactive, et l’historique garde son étiquette.</div>
+
+      ${f ? `
+      <div style="border:1px solid var(--color-primary);border-radius:10px;padding:14px 16px;margin-bottom:14px">
+        <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:12px">
+          <span style="font-size:13px;font-weight:400">${esc(f.titre)}</span>
+          ${f.edition ? `<span style="font-size:11px;color:var(--color-text-muted)">code <i style="font-style:normal;font-family:var(--font-mono,monospace)">${esc(f.code)}</i> — non modifiable</span>` : ''}
+        </div>
+        ${f.err ? `<div style="margin-bottom:10px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px;font-weight:400">${esc(f.err)}</div>` : ''}
+        <div style="display:grid;grid-template-columns:2fr 120px;gap:12px">
+          <div><span style="${k}">Nom</span><input id="mkt-nom" value="${esc(f.nom)}" ${x.I(f.setNom)} placeholder="Fêtes, Ouverture, Fidélité…" style="${inp}"></div>
+          <div><span style="${k}">Couleur</span><input type="color" value="${esc(f.couleur)}" ${x.C(f.setCouleur)} style="${inp};padding:3px 5px"></div>
+        </div>
+        <div style="margin-top:11px"><span style="${k}">Description</span>
+          <textarea id="mkt-desc" rows="2" ${x.I(f.setDescription)} placeholder="Ce que ce type recouvre, pour celui qui crée la campagne." style="${inp};height:auto;padding:8px 10px;line-height:1.5;resize:vertical">${esc(f.description)}</textarea>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(f.nbCar)}</div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:11px">
+          <div><span style="${k}">Levier</span>
+            <select ${x.C(f.setLevier)} style="${inp}">${opts(f.leviers, f.levierId, o => o.val, o => esc(o.nom))}</select>
+          </div>
+          <div><span style="${k}">Badge levier</span><input id="mkt-badge" value="${esc(f.badge)}" ${x.I(f.setBadge)} placeholder="Affiché à la place du levier" style="${inp}"></div>
+          <div><span style="${k}">KPI attendu</span><input id="mkt-kpi" value="${esc(f.kpi)}" ${x.I(f.setKpi)} placeholder="Nouveaux clients, tickets/jour" style="${inp}"></div>
+        </div>
+        <div style="margin-top:12px">
+          <span style="${k}">Icône — ${esc(f.iconeNom)}</span>
+          <div style="display:flex;flex-wrap:wrap;gap:6px">
+            ${f.icones.map(ic => `<button ${x.A(ic.choisir)} title="${esc(ic.nom)}" style="${ic.st}">${svg(ic.path, 19, ic.choisi ? 'var(--color-primary)' : 'var(--color-text-muted)')}</button>`).join('')}
+          </div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+          <button ${x.A(f.fermer)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Annuler</button>
+          <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">${f.edition ? 'Enregistrer' : 'Créer le type'}</button>
+        </div>
+      </div>` : ''}
+
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
+        <thead><tr>
+          <th style="${th};padding-left:0">Type</th>
+          <th style="${th}">Levier</th>
+          <th style="${th}">KPI attendu</th>
+          <th style="${th};text-align:right">Campagnes</th>
+          <th style="${th};padding-right:0"></th>
+        </tr></thead>
+        <tbody>${c.mkTypes.map(t => `<tr style="border-top:1px solid var(--color-border-tertiary);${t.actif ? '' : 'opacity:.5'}">
+          <td style="padding:8px 8px 8px 0">
+            <div style="display:flex;align-items:center;gap:9px">
+              <span style="width:26px;height:26px;border-radius:8px;flex:0 0 auto;display:flex;align-items:center;justify-content:center;background:${t.couleur}1f">
+                ${t.iconePath ? svg(t.iconePath, 15, t.couleur) : `<i style="width:9px;height:9px;border-radius:3px;background:${t.couleur}"></i>`}
+              </span>
+              <span style="min-width:0">
+                <span style="font-size:12.5px;font-weight:400;display:block">${esc(t.nom)}</span>
+                ${t.description ? `<span style="font-size:11px;color:var(--color-text-muted);display:block;line-height:1.35;text-wrap:pretty">${esc(t.description)}</span>` : ''}
+              </span>
+            </div>
+          </td>
+          <td style="padding:8px">${t.levier ? `<span style="${t.levierSt}">${esc(t.levier)}</span>` : `<span style="font-size:11.5px;color:var(--color-text-muted)"></span>`}</td>
+          <td style="padding:8px;font-size:11.5px;color:var(--color-text-muted)">${esc(t.kpi)}</td>
+          <td style="padding:8px;text-align:right;font-size:12px;color:var(--color-text-muted)">${t.nCampagnes || ''}</td>
+          <td style="padding:8px 0;text-align:right;white-space:nowrap">
+            <button ${x.A(t.monter)} title="Monter" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.premier ? 'default' : 'pointer'};padding:0 3px;${t.premier ? 'opacity:.3' : ''}">▲</button>
+            <button ${x.A(t.descendre)} title="Descendre" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:${t.dernier ? 'default' : 'pointer'};padding:0 3px;${t.dernier ? 'opacity:.3' : ''}">▼</button>
+            <button ${x.A(t.editer)} style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;margin-left:6px">Modifier</button>
+            <button ${x.A(t.basculer)} style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;padding:2px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;margin-left:3px">${t.actif ? 'Désactiver' : 'Réactiver'}</button>
+            <button ${x.A(t.supprimer)} title="Supprimer" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:3px">✕</button>
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>
+    </div>
+  </div>`;
+}
+
+/* --- Réputation digitale · ce que Google dit de chaque magasin ----------------
+   Un bandeau réseau, puis une carte par magasin, les plus mal notés d'abord :
+   c'est là que la décision se prend. Chaque carte porte son propre effort — le
+   chiffre réseau ne se distribue pas, il donne l'ordre de grandeur. */
+/* Résultat du jour — le réseau en une table, le magasin en un clic.
+   La table donne la journée de tout le monde ; ouvrir une ligne déplie
+   dessous la cascade du magasin, sa ventilation par catégorie et la place du
+   jour dans son mois. Sans sélection, la page garde les petites ventilations :
+   elles montrent où cliquer. */
+
+/** Performance : un seul écran, trois onglets — le mois clos, l'année, la marge. */
+/** Résultat : un seul écran, trois étendues — Jour, Semaine, Mois. */
+/* Le petit feu d'artifice d'une ligne qui a passé son objectif, et la pluie de
+ * papiers quand c'est tout le réseau. Les deux sont décoratifs — `aria-hidden`
+ * et sans pointeur : le chiffre reste la vraie nouvelle, le reste se remarque
+ * sans se lire. */
+const eclat = (px, cls) => `<svg class="${cls}" viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true" focusable="false">
+  <g stroke="#B0792A" stroke-width="2.4" stroke-linecap="round">
+    <path d="M12 1.6v4.8M12 17.6v4.8M1.6 12h4.8M17.6 12h4.8"/>
+    <path d="M4.8 4.8l3 3M16.2 16.2l3 3M19.2 4.8l-3 3M7.8 16.2l-3 3" opacity=".75"/>
+  </g><circle cx="12" cy="12" r="2.8" fill="#A32014"/></svg>`;
+/* Un dessin plutôt qu'un emoji : 🎆 tombe en carré bleu dès que la police
+ * système n'a pas la couleur, et à douze pixels il ne ressemble à rien. */
+const feuLigne = `<span class="rj-feu" title="Objectif atteint">${eclat(13, '')}</span>`;
+function confettisReseau(){
+  const coul = ['#A32014', '#3f7a52', '#B0792A', '#7A5207', '#78554B', '#faf7f2'];
+  let h = '';
+  // Positions stables d'un rendu à l'autre : un générateur à graine fixe, sinon
+  // les papiers sautent à chaque redessin de l'écran.
+  let g = 7;
+  const al = () => { g = (g * 16807) % 2147483647; return g / 2147483647; };
+  for (let i = 0; i < 60; i++) {
+    const a = al(), b = al(), c2 = al();
+    h += `<i style="left:${(a * 100).toFixed(1)}%;width:${(5 + b * 5).toFixed(1)}px;height:${(9 + b * 9).toFixed(1)}px;background:${coul[i % coul.length]};animation-duration:${(3.4 + c2 * 2.6).toFixed(2)}s;animation-delay:${(-c2 * 6).toFixed(2)}s;--r:${(a * 900 - 450).toFixed(0)}deg"></i>`;
+  }
+  return `<div class="rj-confi" aria-hidden="true">${h}</div>`;
+}
+
+/* La part du CA pro dans le CA total, en pastille sous le montant : vert / orange / rouge selon la règle des 40 % de la
+ * semaine ou du mois (`proNiv` ok | att | ko), gris sur une journée (`jour`, part indicative). L'infobulle dit la règle. */
+function tplProPastille(l, esc){
+  if (!l || l.proPart == null || !l.proPartTxt) { return ''; }
+  const coul = { ok: 'background:rgba(63, 122, 82, 0.12);color:var(--green)', att: 'background:#fbecd8;color:#8a4e05', ko: 'background:#f8e0e3;color:#8c1020' }[l.proNiv]
+    || 'background:var(--color-background-secondary);color:var(--color-text-muted)';
+  return `<div style="margin-top:3px"><span title="${esc(l.proRegle || '')}" style="display:inline-block;font-size:10px;font-weight:400;line-height:1.5;padding:0 7px;border-radius:8px;white-space:nowrap;${coul}">${esc(l.proPartTxt)}</span></div>`;
+}
+function tplResultat(c, x){
+  const { esc } = x;
+  // Chaque onglet dit où en est sa lecture : anneau qui tourne, puis coche.
+  const ong = o => `<button ${x.A(o.go)} class="${o.on ? 'rj-on' : ''}" style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:7px 18px;border-radius:8px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${o.etat === 'lecture' ? '<i class="rj-ring"></i>' : '<i class="rj-ok">✓</i>'}${esc(o.nom)}</button>`;
+  // Tout le réseau au-dessus de son objectif : la nouvelle mérite mieux qu'une
+  // colonne verte. L'onglet ouvert décide — la journée et la période ne se
+  // gagnent pas ensemble.
+  const tous = c.rjOnglet === 'jour' ? c.rjTous : c.rpTous;
+  return `
+  <div data-screen="resultat" style="display:flex;flex-direction:column;gap:14px">
+    ${tous ? confettisReseau() : ''}
+    ${tous ? `<div class="rj-tous">${eclat(17, 'rj-feu')}Tous les magasins ont passé leur objectif ${esc(c.rjOnglet === 'jour' ? 'du jour' : (c.rjOnglet === 'mois' ? 'du mois' : 'de la semaine'))}.</div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap">
+      <div></div>
+      <div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px">${c.rjOnglets.map(ong).join('')}</div>
+    </div>
+    ${c.rjChargeEnCours ? `
+    <div style="margin:-6px 0 -4px">
+      <div class="rj-prog"><i style="width:${Math.max(4, c.rjChargePct)}%"></i></div>
+      <div style="display:flex;align-items:center;gap:10px;font-size:11px;color:var(--color-text-muted);margin-top:5px"><i class="rj-ring"></i><span style="font-weight:400;color:var(--color-text)">Lecture du panel</span><span>${esc(c.rjChargeTxt)}</span><span style="margin-left:auto;font-variant-numeric:tabular-nums">${esc(c.rjChargeSec)}</span></div>
+    </div>` : ''}
+    ${c.rjOnglet === 'jour' ? tplResultatJour(c, x)
+      : c.rjOnglet === 'reseau' ? tplResultatReseau(c, x)
+      : (c.rjOnglet === 'annee' || c.rjOnglet === 'horizons') ? tplObjectifs(c, x)
+      : c.rjOnglet === 'marge' ? tplMarge(c, x)
+      : c.rjOnglet === 'evolution' ? tplResultatEvolution(c, x)
+      : tplResultatPeriode(c, x) + (c.rjOnglet === 'mois' && c.isMagasins ? `
+    <div style="display:flex;align-items:center;gap:12px;margin-top:10px">
+      <div style="font-family:var(--font-display);font-size:24px">Le dernier mois clos</div>
+      <span style="flex:1;height:0.5px;background:var(--color-border-secondary)"></span>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">marge, valeur et CA face aux cibles, puis douze mois de clients et de panier</span>
+    </div>
+    ${tplMagasins(c, x)}` : '')}
+    ${c.rn ? tplResultatReseauProduits(c, x) : ''}
+  </div>`;
+}
+
+/**
+ * Sous le tableau des magasins (04/11/2026) : le réseau en trois cartes — les ventes par produit de tous les magasins
+ * (produits, catégories, portions ; une ligne s'ouvre sur le détail magasin par magasin), les promotions et bundles
+ * (les offres en lignes, les magasins en colonnes), et les produits vendus sans coût, magasin par magasin.
+ */
+function tplResultatReseauProduits(c, x){
+  const { esc } = x, r = c.rn;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const bord = 'border-top:1px solid var(--color-border-tertiary)';
+  const th = (t, droite, w) => `<th style="text-align:${droite ? 'right' : 'left'};padding:0 9px 7px;${cap};white-space:nowrap${w ? ';width:' + w : ''}">${t}</th>`;
+  const mu = '<span style="color:var(--color-text-muted)">—</span>';
+  const attente = txt => `<div style="display:flex;align-items:center;font-size:12px;color:var(--color-text-muted);padding:14px 0 4px"><i class="rj-ring"></i>${esc(txt)}</div>`;
+  const tete = (titre, sous, droite) => `<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+      <div><div style="${cap}">${esc(titre)}</div>${sous ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(sous)}</div>` : ''}</div>${droite || ''}</div>`;
+  const kpis = L => `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:13px">${L.map(k => `<div style="background:var(--color-background-secondary);border-radius:9px;padding:10px 12px">
+      <div style="${cap}">${esc(k[0])}</div><div style="font-family:var(--font-display);font-size:21px;line-height:1.15;margin-top:3px;${num}">${esc(k[1])}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px;line-height:1.4">${esc(k[2])}</div></div>`).join('')}</div>`;
+  const seg = (L, petit) => `<div style="display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:6px">${L.map(o => `<button ${x.A(o.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:${petit ? 11 : 12}px;font-weight:400;padding:${petit ? '5px 11px' : '6px 14px'};border-radius:6px;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}</div>`;
+
+  // 1 · Les ventes par produit.
+  const P = r.prod;
+  let prod;
+  if (r.prodErreur) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + `<div style="font-size:12px;color:var(--accent)">${esc(r.prodErreur)}</div>`; }
+  else if (!P) { prod = tete('Ventes par produit — tout le réseau', r.perLib) + attente('Lecture des tickets du réseau, magasin par magasin…'); }
+  else {
+    const droite = `<div style="display:flex;align-items:flex-start;gap:22px">
+        <div style="text-align:right"><div style="${cap}">${esc(P.caLib)}</div><div style="font-family:var(--font-display);font-size:22px;line-height:1.1;${num}">${esc(P.ca)}</div></div>
+        <div style="text-align:right"><div style="${cap}">Marge brute</div><div style="font-family:var(--font-display);font-size:22px;line-height:1.1;color:${P.tauxCoul};${num}">${esc(P.tauxReseau)}</div><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(P.tauxSous)}</div></div>
+        <button ${x.A(r.relire)} title="Relire les ventes du réseau" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">${r.relecture ? '<i class="rj-ring" style="margin:0"></i>' : '⟳'}</button>
+      </div>`;
+    const barre = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+        ${seg(P.vues)}
+        <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">trier par</span>${seg(P.tris, true)}
+        <input id="rn-q" value="${esc(P.qBrut)}" ${x.I(P.setQ)} placeholder="Chercher un produit, une catégorie…" style="margin-left:auto;font-family:var(--font-ui);font-size:12px;padding:7px 11px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);min-width:230px">
+      </div>`;
+    const cel = (v, st) => `<td style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${st ? ';' + st : ''}">${v}</td>`;
+    // L'étoile : le produit fait partie des 20 % de produits qui font le plus de chiffre dans le réseau.
+    const etoile = t => `<svg viewBox="0 0 24 24" width="11" height="11" role="img" aria-label="${esc(t)}" style="flex:none;vertical-align:-1px"><title>${esc(t)}</title><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="var(--color-text)"/></svg>`;
+    const sousTitre = t => `<tr style="background:var(--color-background-secondary)"><td></td><td colspan="9" style="padding:7px 9px 2px 21px;${bord};font-size:10px;font-weight:400;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)">${esc(t)}</td></tr>`;
+    const det = l => (l.det.length && l.detMag.length ? sousTitre('Par format') : '') + detL(l.det) + (l.detMag.length ? sousTitre('Par magasin') + detL(l.detMag) : '');
+    const detL = L => L.map(d => `<tr style="background:var(--color-background-secondary);font-size:11.5px">
+        <td></td><td style="padding:5px 9px;${bord}"><span style="padding-left:12px;${d.reste ? 'color:var(--color-text-muted)' : ''}">${esc(d.nom)}</span>${d.sous ? ` <span style="font-size:10px;color:var(--prize)">${esc(d.sous)}</span>` : ''}</td>
+        <td style="${bord}"></td>${cel(esc(d.pieces))}${cel(esc(d.prix), 'color:var(--color-text-muted)')}${cel(esc(d.ca), 'font-weight:400')}${cel(esc(d.part), 'color:var(--color-text-muted)')}
+        ${cel(esc(d.marge), d.marge === '?' ? 'color:var(--color-text-muted)' : '')}${cel(esc(d.taux), 'color:' + (d.tauxCoul || 'inherit'))}<td style="${bord}"></td></tr>`).join('');
+    // La jauge des secteurs : des blocs proportionnels séparés de 2 px, la part écrite dans le bloc quand elle tient,
+    // le nom au survol et dans la légende. Un clic sur un secteur filtre le tableau.
+    const J = P.jauges;
+    const barreJ = (blocs, haut, clic) => `<div style="display:flex;gap:2px;height:${haut}px;width:100%">${blocs.map(b => `<div ${clic && b.go ? x.A(b.go) : ''} title="${esc(b.titre)}" style="flex:0 0 calc(${b.w}% - 2px);min-width:2px;border-radius:4px;background:${b.coul};${b.eteint ? 'opacity:.28;' : ''}${b.on ? '' + b.coul + ';' : ''}display:flex;align-items:center;overflow:visible;cursor:${clic && b.go ? 'pointer' : 'default'}">${b.lib ? `<span style="padding:0 7px;font-size:10.5px;font-weight:400;color:${b.encre};white-space:nowrap;${num}">${esc(b.lib)}</span>` : ''}</div>`).join('')}</div>`;
+    const legJ = L => `<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">${L.map(g => `<span style="display:inline-flex;align-items:center;gap:5px;${g.on ? 'color:var(--color-text);font-weight:400' : ''}"><i style="width:9px;height:9px;border-radius:2px;background:${g.coul}"></i>${esc(g.nom)}</span>`).join('')}</div>`;
+    const jauges = `<div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:12px 14px;margin-bottom:12px;background:var(--color-surface)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
+          <div style="font-size:12px;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${J.fil.map((f, i) => `${i ? '<span style="color:var(--color-text-muted)">›</span>' : ''}${f.go ? `<button ${x.A(f.go)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;color:var(--color-primary)">${esc(f.nom)}</button>` : `<b style="font-weight:400">${f.coul ? `<i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${f.coul};margin-right:5px;vertical-align:0"></i>` : ''}${esc(f.nom)}</b>`}`).join('')}${J.effacer ? ` <button ${x.A(J.effacer)} title="Revenir à tout le réseau" style="border:none;background:none;cursor:pointer;color:var(--color-text-muted);font-size:13px;padding:0 3px">×</button>` : ''}</div>
+          <span style="margin-left:auto;font-size:11px;color:var(--color-text-muted)">ventes</span>${seg(J.canaux, true)}
+          <span style="font-size:11px;color:var(--color-text-muted);margin-left:6px">mesurer en</span>${seg(J.mesures, true)}
+        </div>
+        ${J.canalInfo ? `<div style="font-size:11px;color:var(--color-text-muted);margin:-4px 0 4px">${esc(J.canalInfo)}</div>` : ''}
+        ${J.lignes.map(g => `<div style="display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:start;margin-top:9px">
+            <div style="padding-top:5px"><div style="${cap}">${esc(g.lib)}</div>${g.sous ? `<div style="font-size:10px;color:var(--color-text-muted);margin-top:2px">${esc(g.sous)}</div>` : ''}</div>
+            <div>${g.j.vide ? '<div style="font-size:11px;color:var(--color-text-muted);padding-top:5px">rien de vendu</div>' : barreJ(g.j.blocs, 28, true) + legJ(g.j.legende)}</div>
+          </div>`).join('')}
+      </div>`;
+    const corps = P.vide ? `<div style="padding:16px 0 6px;font-size:12px;color:var(--color-text-muted)">${esc(P.vide)}</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <tr>${th('#', false, '26px')}${th(esc(P.entNom))}${th('Magasins', true)}${th('Pièces', true)}${th('Prix moyen', true)}${th('CA', true)}${th('Part', true)}${th('Marge brute', true)}${th('Taux', true)}${th('Coef', true)}</tr>
+        ${P.rows.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg" style="cursor:pointer;${l.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+            <td style="padding:8px 9px;${bord};font-size:11px;color:var(--color-text-muted);${num}">${l.rang}</td>
+            <td style="padding:8px 9px;${bord};min-width:240px">
+              <div style="display:flex;align-items:center;gap:6px"><span style="font-size:10px;color:var(--color-text-muted)">${l.ouvert ? '▾' : '▸'}</span><i title="secteur" style="flex:none;width:8px;height:8px;border-radius:2px;background:${l.coul}"></i><span style="font-weight:400">${esc(l.nom)}</span>${l.etoile && P.top ? etoile(P.top.titre) : ''}${l.portion ? '<span style="font-size:10px;font-weight:400;padding:0 6px;border-radius:6px;background:var(--prize-soft);color:#8a4e05">en portions</span>' : ''}</div>
+              <div style="font-size:10px;color:var(--color-text-muted);padding-left:29px">${esc(l.cat)}${l.etoiles && P.top ? ' · ' + etoile(P.top.titre) + ' ' + l.etoiles + ' produit' + (l.etoiles > 1 ? 's' : '') : ''}${l.formats ? ' · <span style="color:var(--color-text)">' + esc(l.formats) + '</span>' : ''}${l.sans ? ` · <b style="color:var(--prize);font-weight:400">${esc(l.sans)}</b>` : ''}</div>
+              <div style="height:3px;border-radius:6px;background:var(--color-background-secondary);margin:4px 0 0 29px;max-width:260px;overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul};opacity:.8"></i></div>
+            </td>
+            <td title="${esc(l.nMagTitre)}" style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.nMag)}</td>
+            <td${l.piecesTitre ? ` title="${esc(l.piecesTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}">${esc(l.pieces)}${l.piecesSous ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.piecesSous)}</div>` : ''}</td><td${l.prixTitre ? ` title="${esc(l.prixTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num};color:var(--color-text-muted)">${esc(l.prix) || mu}</td>${cel(esc(l.ca), 'font-weight:400')}${cel(esc(l.part), 'color:var(--color-text-muted)')}
+            <td${l.margeTitre ? ` title="${esc(l.margeTitre)}"` : ''} style="padding:8px 9px;${bord};text-align:right;white-space:nowrap;${num}${l.marge === '?' ? ';color:var(--color-text-muted)' : ''}">${esc(l.marge)}</td>
+            ${cel(esc(l.taux), 'font-weight:400;color:' + l.tauxCoul)}${cel(esc(l.coef), 'color:var(--color-text-muted)')}
+          </tr>${l.ouvert ? det(l) : ''}`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+          <td style="padding:9px;border-top:1px solid var(--color-border-secondary);font-weight:400">${esc(P.total.lib)} <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(P.total.sous)}</span></td>
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.pieces), 'border-top:1px solid var(--color-border-secondary);font-weight:400')}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.ca), 'border-top:1px solid var(--color-border-secondary);font-weight:400')}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(esc(P.total.marge), 'border-top:1px solid var(--color-border-secondary);font-weight:400')}${cel(esc(P.total.taux), 'border-top:1px solid var(--color-border-secondary);font-weight:400;color:' + P.total.tauxCoul)}<td style="border-top:1px solid var(--color-border-secondary)"></td>
+        </tr>
+      </table></div>
+      ${P.plus || P.moins ? `<div style="text-align:center;margin-top:10px">${P.plus ? `<button ${x.A(P.plus.go)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.plus.txt)} ▾</button>` : ''}${P.moins ? `<button ${x.A(P.moins.go)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:6px 16px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(P.moins.txt)} ▴</button>` : ''}</div>` : ''}`;
+    const legTop = P.top ? `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-muted);margin:-2px 0 8px">${etoile(P.top.titre)}<span>${esc(P.top.txt)}</span></div>` : '';
+    prod = tete('Ventes par produit — tout le réseau', P.sousTitre, droite) + jauges + barre + legTop + corps
+      + (P.lecture ? `<div style="font-size:11px;color:#8a4e05;background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 9px;border-radius:7px;margin-top:10px;line-height:1.45">${esc(P.lecture)}</div>` : '')
+      + `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(P.note)}</div>`;
+  }
+
+  // 2 · Les promotions et les bundles.
+  const O = r.off;
+  let off;
+  const offLib = 'Promotions et bundles — ce qu’elles rapportent dans le réseau';
+  if (r.offErreur) { off = tete(offLib, r.perLib) + `<div style="font-size:12px;color:var(--accent)">${esc(r.offErreur)}</div>`; }
+  else if (!O) { off = tete(offLib, r.perLib) + attente('Lecture des bundles et des promotions, magasin par magasin…'); }
+  else {
+    const td = `padding:8px 9px;${bord};font-size:12.5px`;
+    const cell = v => v.txt ? `<span class="co-cell ${v.verdict}" title="${esc(v.titre || '')}"><b>${v.txt}</b>${v.sous ? `<small>${v.sous}</small>` : ''}</span>` : mu;
+    off = tete(offLib, r.perLib + ' · bundles = produits de la catégorie « Bundle & Promotion » du panel · promotions = celles posées par le cockpit sur les jours creux · référence : les 4 semaines d’avant') + kpis(O.kpi)
+      + (O.vide ? `<div style="font-size:12px;color:var(--color-text-muted);padding:4px 0">${esc(O.vide)}</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:820px">
+        <tr>${th('Offre')}${th('Canaux')}${th('Depuis')}${O.cols.map(s => th(esc(s.nom), true)).join('')}${th('Réseau', true)}${th('Marge', true)}${th('Verdict')}</tr>
+        ${O.lignes.map(l => `<tr>
+          <td style="${td};min-width:200px"><span class="co-type ${l.type === 'bundle' ? 'b' : 'p'}">${l.typeLib}</span><b style="font-weight:400">${esc(l.nom)}</b><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.regle)}</div></td>
+          <td style="${td}">${l.canaux.map(k => `<span class="co-mode ${k.cls}">${esc(k.lib)}</span>`).join(' ')}</td>
+          <td style="${td};color:var(--color-text-muted);${num}">${esc(l.depuis)}</td>
+          ${l.cells.map(v => `<td style="${td};text-align:right;white-space:nowrap;${num}">${cell(v)}</td>`).join('')}
+          <td style="${td};text-align:right;font-weight:400;white-space:nowrap;${num}">${l.total}${l.totalSous ? `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:400">${l.totalSous}</div>` : ''}</td>
+          <td style="${td};text-align:right;font-weight:400;${num};color:${l.margeCoul || 'var(--color-text-muted)'}">${l.marge || '—'}</td>
+          <td style="${td}">${l.verdicts.map(v => `<span class="co-verdict ${v.cls}">${esc(v.lib)}${O.multi ? ' × ' + v.n : ''}</span>`).join(' ')}</td>
+        </tr>`).join('')}
+      </table></div>`)
+      + `<div class="co-leg"><span>pièces vendues ${esc(O.colLib)} (CA pour une promotion) · la pastille est le verdict du magasin, face à sa propre référence</span><span><span class="co-verdict ok">Garder</span> ≥ +8 % ou marge tenue</span><span><span class="co-verdict att">Ajuster</span> entre −3 % et +8 %, ou marge sous 50 %</span><span><span class="co-verdict ko">Arrêter</span> sous −3 %</span><span><span class="co-verdict tot">Trop tôt</span> moins de 5 jours lus</span></div>`;
+  }
+
+  // 3 · Les produits sans coût, magasin par magasin.
+  const SC = P ? r.sc : null;
+  let sc;
+  const scLib = 'Produits sans coût — magasin par magasin';
+  if (r.prodErreur) { sc = tete(scLib, r.perLib) + `<div style="font-size:12px;color:var(--accent)">${esc(r.prodErreur)}</div>`; }
+  else if (!SC) { sc = tete(scLib, r.perLib) + attente('Lecture des tickets et des recettes…'); }
+  else {
+    const droite = SC.toutTxt ? `<button ${x.A(SC.tout)} style="border:none;background:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;color:var(--color-primary);font-weight:400">${esc(SC.toutTxt)}</button>` : '';
+    sc = tete(scLib, r.perLib + ' · les produits vendus sans coût de recette, à chiffrer dans le panel', droite) + kpis(SC.kpi)
+      + (SC.frequents ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin:-3px 0 10px">${esc(SC.frequents)}</div>` : '')
+      + `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:620px">
+        <tr>${th('Magasin')}${th('Produits sans coût')}${th('Ventes concernées', true)}${th('Part', true)}</tr>
+        ${SC.mags.map(m => `<tr ${m.ouvrir ? x.A(m.ouvrir) + ' class="hv-bg"' : ''} style="${m.ouvrir ? 'cursor:pointer;' : ''}${m.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+            <td style="padding:8px 9px;${bord};font-weight:400;white-space:nowrap"><span style="display:inline-block;width:12px;font-size:10px;color:var(--color-text-muted)">${m.chevron}</span>${esc(m.nom)}</td>
+            <td style="padding:8px 9px;${bord}"><span style="font-size:11px;font-weight:400;padding:2px 9px;border-radius:6px;${m.ok ? 'background:rgba(63, 122, 82, 0.12);color:var(--green)' : (m.lu ? 'background:var(--prize-soft);color:#8a4e05' : 'background:var(--color-background-secondary);color:var(--color-text-muted)')}">${esc(m.etat)}</span></td>
+            <td style="padding:8px 9px;${bord};text-align:right;${num};font-weight:400">${esc(m.ca) || mu}</td>
+            <td style="padding:8px 9px;${bord};text-align:right;${num};color:var(--color-text-muted)">${esc(m.part)}</td>
+          </tr>${m.ouvert ? `<tr><td colspan="4" style="padding:4px 9px 12px 30px;background:var(--color-background-secondary)">
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              <tr>${th('Produit')}${th('Catégorie')}${th('Qté', true)}${th('CA', true)}</tr>
+              ${m.produits.map(p => `<tr><td style="padding:5px 9px;${bord}">${esc(p.nom)}${p.ailleurs ? ` <span style="font-size:10px;color:var(--color-text-muted)">· ${esc(p.ailleurs)}</span>` : ''}</td><td style="padding:5px 9px;${bord};color:var(--color-text-muted)">${esc(p.cat)}</td><td style="padding:5px 9px;${bord};text-align:right;${num}">${esc(p.q)}</td><td style="padding:5px 9px;${bord};text-align:right;${num}">${esc(p.v)}</td></tr>`).join('')}
+            </table></td></tr>` : ''}`).join('')}
+      </table></div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(SC.note)}</div>`;
+  }
+
+  return `
+    <div class="rn-net" style="${carte};padding:17px 19px">${prod}</div>
+    <div class="rn-net" style="${carte};padding:17px 19px">${off}</div>
+    <div class="rn-net" style="${carte};padding:17px 19px">${sc}</div>`;
+}
+
+/**
+ * Le SQUELETTE d'un onglet pendant sa lecture : la forme finale, en gris qui
+ * reflète. La page ne saute pas quand les chiffres arrivent.
+ */
+function tplResultatSquelette(vue){
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const sk = (w, h, extra) => `<span class="rj-sk" style="width:${w};height:${h}px;${extra || ''}"></span>`;
+  const rang = (w, h) => `<div style="display:grid;grid-template-columns:1.6fr repeat(9,1fr);gap:14px;padding:12px 10px;border-top:1px solid var(--color-border-tertiary);align-items:center">
+      ${sk(w, h)}${Array.from({ length: 9 }, () => sk('100%', h)).join('')}</div>`;
+  const tuile = (a, b2) => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">${sk(a, 9)}${sk('60%', 22, 'margin:8px 0 6px')}${sk(b2, 8)}</div>`;
+  const hauteurs = [100, 60, 75, 85, 100, 40, 55];
+  return `
+    <div style="${carte};padding:17px 19px" aria-busy="true">
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px">${sk('31px', 31, 'border-radius:8px')}${sk('230px', 15)}${sk('31px', 31, 'border-radius:8px')}${sk('96px', 31, 'border-radius:8px')}${sk('260px', 9, 'margin-left:8px')}</div>
+      ${vue === 'jour' ? '' : `
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(240px,1.4fr);gap:10px;margin-bottom:14px">
+        ${tuile('55%', '80%')}${tuile('35%', '70%')}${tuile('30%', '60%')}${tuile('50%', '65%')}
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">${sk('70%', 9)}
+          <div style="display:flex;gap:5px;align-items:flex-end;height:44px;margin-top:8px">${hauteurs.map(h => sk('auto', 0, 'flex:1;height:' + h + '%')).join('')}</div></div>
+      </div>`}
+      ${rang('60px', 8)}${rang('150px', 11)}${rang('190px', 11)}${rang('120px', 11)}${rang('170px', 11)}
+      <div style="background:var(--color-background-secondary);border-radius:0 0 8px 8px">${rang('70px', 13)}</div>
+    </div>`;
+}
+
+/** La semaine ou le mois, face à l'objectif et au compte de résultat. */
+/* --- Le mois d'un magasin : huit chiffres, le calendrier, cascade, profil, heures, périodes --- */
+function tplResultatMois(c, d, x){
+  const { esc } = x;
+  const M = d.mois;
+  const bord = 'border-bottom:1px solid var(--color-border-tertiary)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const bloc = (titre, corps) => `<div class="rm-bloc"><div style="${cap};margin-bottom:8px">${esc(titre)}</div><div class="rm-card">${corps}</div></div>`;
+  const nbCol = 10 + (c.rpMois ? 1 : 0);
+  return `
+    <tr><td colspan="${nbCol}" style="padding:4px 10px 18px;background:var(--color-background-secondary);border-top:1px solid var(--color-border-tertiary)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:6px 0 12px">
+        <div style="display:flex;align-items:baseline;gap:12px"><span style="font-family:var(--font-display);font-size:16px">${esc(d.nom)}</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(M.sousTitre)}</span></div>
+        <button ${x.A(d.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      <div class="rm-kp">${M.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+      ${bloc((M.semaine ? 'La semaine' : 'Le calendrier du mois') + ' — CA, atteinte de l’objectif du jour, clients', `
+        <div class="rm-cal">${['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(n => `<div class="h">${n}</div>`).join('')}
+          ${M.cases.map(k => k.vide ? '<div class="d vide"></div>' : k.ferme ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>fermé</b></div>` : k.futur ? `<div class="d fut"><span class="n">${esc(k.court)}</span><b>—</b>${k.obj ? `<small>objectif ${esc(k.obj)}</small>` : ''}</div>`
+            : `<div class="d${k.clair ? ' clair' : ''}${k.auj ? ' auj' : ''}" style="background:${k.fond}"><span class="n">${esc(k.court)}</span><b>${esc(k.ca)}</b><small>${esc(k.att)}</small><small>${esc(k.cli)}</small></div>`).join('')}
+        </div>
+        <div class="rm-leg"><span><i style="background:var(--green)"></i>≥ 110 % de l’objectif du jour</span><span><i style="background:#6aa84f"></i>100 – 110 %</span><span><i style="background:var(--prize-soft)"></i>90 – 100 %</span><span><i style="background:#F5B26B"></i>75 – 90 %</span><span><i style="background:#F08A2C"></i>&lt; 75 %</span><span>· clients : réels, puis l’écart à l’objectif du jour au panier moyen</span></div>`)}
+      <div class="rm-3${M.profil ? '' : ' deux'}">
+        ${bloc(M.semaine ? 'La cascade de la semaine' : 'La cascade du mois', `<table style="width:100%;border-collapse:collapse;font-size:12.5px">${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:400' : ''}">
+              <td style="padding:6px 0;${bord};width:120px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+              <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;background:${l.coul}"></i></span></td>
+              <td style="padding:6px 0;${bord};text-align:right;${num};width:82px">${esc(l.v)}</td>
+              <td style="padding:6px 0 6px 10px;${bord};text-align:right;${num};width:54px;color:${l.coul}">${esc(l.p)}</td></tr>`).join('')}</table>${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
+        ${!M.profil ? '' : bloc('Le profil des jours — moyenne par jour de la semaine', `${M.profil.map(p => `<div class="rm-bar"><span class="l">${esc(p.nom)}</span><span class="b"><i style="width:${p.w}%;background:${p.ok ? '#8D1D2C' : '#B8B2A8'}"></i>${p.wo != null ? `<em style="left:${p.wo}%"></em>` : ''}</span><span class="v">${esc(p.ca)}</span><span class="c" style="color:${p.ok == null ? 'var(--color-text-muted)' : (p.ok ? '#3f7a52' : '#A32014')}">${esc(p.att)}</span></div>`).join('')}
+          <div class="rm-leg" style="margin-top:6px"><span>le trait noir = objectif du jour${M.pireJour ? ' · le ' + esc(M.pireJour) + ' est le point faible du mois' : ''}</span></div>`)}
+        ${bloc('Les heures — CA moyen par jour ouvert', M.heures.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des heures…</div>` : (M.heures.barres.length ? `
+          <div class="rm-hb">${M.heures.barres.map(b => `<i class="${b.cls}" style="height:${b.w}%" title="${esc(b.titre)}"><span>${b.h}h</span></i>`).join('')}</div>
+          <div class="rm-leg" style="margin-top:18px;flex-direction:column;gap:4px;align-items:flex-start"><span><i style="background:var(--accent)"></i>le plus de CA : ${esc(M.heures.ca)}</span><span><i style="background:#F08A2C"></i>le plus de clients : ${esc(M.heures.cli)}</span></div>` : `<div style="font-size:12px;color:var(--color-text-muted)">Aucune heure lue sur le mois.</div>`))}
+      </div>
+      ${d.semaines ? tplSemaines(d.semaines, x) : ''}
+      ${d.periodes ? tplPeriodes(d.periodes, x) : ''}
+    </td></tr>`;
+}
+
+/** La courbe des clients, N sur N-1 — partagée par le drop d'un magasin, le réseau et les mini-courbes. */
+function svgCourbe(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  const m = S.mini;
+  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMidYMid meet" class="${m ? 'rm-s6m' : 'rm-s6c'}">
+      ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.Wd - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,.10)"/>`).join('')}
+      ${(S.bande || []).map(b => `<polygon points="${b.p}" fill="${b.up ? '#2E6DB4' : '#C0632B'}" fill-opacity="${m ? 0.18 : 0.14}"/>`).join('')}
+      ${S.pts1.length > 1 ? `<polyline points="${S.pts1.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="${m ? 4 : 2}" stroke-dasharray="${m ? '8 6' : '5 4'}"/>` : ''}
+      ${S.pts.length > 1 ? `<polyline points="${S.pts.map(p => p.x + ',' + p.y).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="${m ? 5 : 2.5}"/>` : ''}
+      ${m ? '' : S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="3.5" fill="#fff" stroke="#B8B2A8" stroke-width="2"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="10" text-anchor="middle" fill="#7a736a" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${m ? '' : S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="4" fill="#8D1D2C"/><text x="${p.x}" y="${(+p.y + p.dy).toFixed(1)}" font-size="11" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft}">${esc(p.v)}</text>`).join('')}
+      ${S.labels.map(l => `<text x="${l.x}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="${l.cur ? '#8D1D2C' : '#1c1a17'}" style="${ft}">${esc(l.t)}</text>`).join('')}
+    </svg>`;
+}
+/** Les barres jumelles de l'année : chaque mois de N à côté du même mois de N-1. */
+function svgBarres(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  return `<svg viewBox="0 0 ${S.Wd} ${S.Hh}" preserveAspectRatio="xMinYMin meet" class="rm-s6c">
+    ${S.cols.map(c => c.futur ? `<rect x="${c.x}" y="${(+c.y0 - 22).toFixed(1)}" width="${c.w2}" height="22" fill="none" stroke="rgba(34,34,34,.18)" stroke-dasharray="3 3" rx="3"/>`
+      : `<g><title>${esc(c.titre)}</title>${c.h1 ? `<rect x="${c.x}" y="${c.y1}" width="${c.bw}" height="${c.h1}" fill="#e6e0d8" rx="3"/>` : ''}${c.h ? `<rect x="${c.x2}" y="${c.y}" width="${c.bw}" height="${c.h}" fill="${c.cur ? '#c56a76' : '#8D1D2C'}" rx="3"/>` : ''}${c.eco ? `<text x="${c.xl}" y="${c.ye}" font-size="10" font-weight="600" text-anchor="middle" fill="${c.coul}" style="${ft}">${esc(c.eco)}</text>` : ''}</g>`).join('')}
+    ${S.cols.map(c => `<text x="${c.xl}" y="${S.hb}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#1c1a17" style="${ft}">${esc(c.lab)}</text>`).join('')}
+  </svg>`;
+}
+
+/* --- Trafic clients (ex-Analyse réseau) : les clients du réseau face au N-1, la carte des écarts, magasin par magasin --- */
+function tplResultatReseau(c, x){
+  const { esc } = x;
+  const g = c.rr || {};
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const bloc = (titre, corps, sous, style) => `<div class="rm-bloc" style="${style || ''}"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>${esc(titre)}</span>${sous ? `<span style="font-weight:400;text-transform:none;letter-spacing:0">${esc(sous)}</span>` : ''}</div><div class="rm-card">${corps}</div></div>`;
+  const ong = `<div class="rr-ong">${(g.onglets || []).map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const tete = `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:var(--font-display);font-size:18px">Trafic clients</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(g.sousTitre || '')}</span><span style="margin-left:auto">${ong}</span></div>`;
+  let corps;
+  if (g.chargement) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Lecture du réseau au panel — une fois par étendue, puis gardé…</div>`; }
+  else if (g.erreur) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)}</div>`; }
+  else {
+    const pill = (t, coul) => t ? `<span class="rr-pill" style="background:${coul}">${esc(t)}</span>` : '';
+    const ecart = (E, titre, sous) => bloc(titre, E.vide ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun magasin comparable.</div>` : `${E.rows.map(r => `<div class="rr-wf"><span>${esc(r.nom)}</span><span class="b"><span class="z"></span><i style="${r.pos ? 'left:50%' : 'right:50%'};width:${r.w}%;background:${r.pos ? '#2E6DB4' : '#C0632B'}"></i></span><b>${esc(r.txt)} clients</b></div>`).join('')}<div class="rr-wf tot"><b>Réseau</b><span></span><b>${esc(E.tot)} clients</b></div>`, sous, 'margin-top:0');
+    corps = `
+      <div class="rm-kp sept">${g.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+      ${bloc(g.annee ? 'Le réseau — clients, mois par mois, face à l’an dernier' : 'Le réseau' + (g.comparables ? ' à magasins comparables' : '') + ' — clients, ' + (g.vue === 'semaine' ? g.nPer + ' semaines' : g.nPer + ' mois') + ' face au N-1', `<div class="rm-s6"><div>${g.annee ? svgBarres(g.svg, esc) : svgCourbe(g.svg, esc)}
+          <div class="rm-leg" style="margin-top:2px"><span><i style="background:var(--accent);border-radius:${g.annee ? '2px' : '50%'}"></i>${g.annee ? 'clients du réseau' : (g.comparables ? 'clients · magasins qui ont un N-1' : 'clients du réseau')}</span>${g.annee || !g.avecN1 ? '' : `<span><i style="background:#2E6DB4;opacity:.45;border-radius:2px"></i>au-dessus du N-1</span><span><i style="background:#C0632B;opacity:.45;border-radius:2px"></i>en dessous</span>`}${g.avecN1 ? `<span><i style="background:var(--faint);border-radius:${g.annee ? '2px' : '50%'}"></i>N-1, magasins comparables${g.annee ? ' · le chiffre au-dessus = écart à périmètre comparable' : ' (pointillé)'}</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>
+          ${g.chips.length ? `<div class="rm-s6ch" style="grid-template-columns:repeat(${Math.min(6, g.chips.length)},minmax(0,1fr))">${g.chips.map(ch => `<div class="ch" title="${esc(ch.titre)}"><span><b>${esc(ch.lab)}</b><span>${esc(ch.dates)}</span></span>${g.avecN1 ? `<em style="background:${ch.coul}">${esc(ch.eco)}</em>` : `<em class="sans">${esc(ch.cli)}</em>`}</div>`).join('')}</div>` : ''}
+        </div><div class="rm-s6t">${g.tuiles3.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div></div>`, g.source, 'margin-top:0')}
+      ${(() => { const K = g.carte; if (!K) { return ''; }
+        const td = (k, gras) => `<td class="c" style="background:${k.fond};color:${k.encre}${gras ? ';font-weight:400' : ''}"${k.titre ? ` title="${esc(k.titre)}"` : ''}>${esc(k.txt)}</td>`;
+        const ech = `<span class="rr-ech">− 12 % ou pire${K.echelle.map(f => `<i style="background:${f}"></i>`).join('')}+ 12 % ou mieux</span>`;
+        const M = g.magCourbe;
+        return bloc('Chaque magasin, chaque ' + K.unite + ', face au N-1', `<table class="rr-carte"><tr><th class="l">Magasin</th>${K.cols.map(c => `<th>${esc(c.lab)}${c.dates ? `<small>${esc(c.dates)}</small>` : ''}${c.enCours ? '<small>en cours</small>' : ''}</th>`).join('')}<th>Étendue</th></tr>
+          <tr class="res"><td class="l"><b>${esc(K.reseau.nom)}</b><small>${esc(K.reseau.clients)}</small></td>${K.reseau.cases.map(k => td(k, true)).join('')}${td(K.reseau.total, true)}</tr>
+          ${K.lignes.map(l => `<tr ${x.A(l.ouvrir)} class="${l.on ? 'on' : ''}" title="Un clic ouvre sa courbe"><td class="l"><b>${esc(l.nom)}</b><small>${esc(l.clients)}</small></td>${l.cases.map(k => td(k)).join('')}${td(l.total, true)}</tr>`).join('')}</table>
+          <div class="rm-leg" style="margin-top:8px;justify-content:space-between"><span>Bleu : plus de clients que la même ${K.unite === 'semaine' ? 'semaine' : 'période'} un an plus tôt · orange : moins · « — » : pas de N-1. Un clic sur un magasin ouvre sa courbe.</span>${ech}</div>
+          ${M ? `<div class="rm-card" style="margin-top:12px"><div style="display:flex;align-items:baseline;gap:10px;margin-bottom:6px"><b style="font-size:14px">${esc(M.nom)} — clients face au N-1</b><span style="font-size:12px;color:var(--color-text-muted)">${esc(M.e)}</span><button ${x.A(M.fermer)} style="margin-left:auto;border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;width:26px;height:26px;cursor:pointer;color:var(--color-text-muted)" aria-label="Fermer la courbe">×</button></div>${M.annee ? svgBarres(M.svg, esc) : svgCourbe(M.svg, esc)}</div>` : ''}`, '', 'margin-top:0'); })()}
+      ${bloc('Magasin par magasin — celui qui décroche le plus en tête', `<table class="rr-tb"><tr><th>Magasin</th><th>Clients</th><th>N-1</th><th>Écart</th><th>${esc(g.curLab)}</th><th>vs N-1</th><th>CA</th><th>Part du réseau</th><th>Tendance N / N-1</th></tr>
+        ${g.lignes.map(l => `<tr><td><span class="rg">${l.rang}</span>${esc(l.nom)}</td><td>${esc(l.clients)}</td><td>${esc(l.n1)}</td><td>${l.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(l.eco, l.coul)}</td><td>${esc(l.cur)}</td><td>${l.ecoCur ? pill(l.ecoCur, l.coulCur) : '—'}</td><td>${esc(l.ca)}</td><td>${esc(l.part)}</td><td class="mini">${svgCourbe(l.mini, esc)}</td></tr>`).join('')}
+        <tr class="tot"><td>Réseau</td><td>${esc(g.totalLigne.clients)}</td><td>${esc(g.totalLigne.n1)}</td><td>${pill(g.totalLigne.eco, g.totalLigne.coul)}</td><td>${esc(g.totalLigne.cur)}</td><td>${pill(g.totalLigne.ecoCur, g.totalLigne.coulCur)}</td><td>${esc(g.totalLigne.ca)}</td><td>100 %</td><td></td></tr></table>`)}
+      <div class="rm-3 deux">
+        ${ecart(g.ecartCur, 'Qui fait l’écart — ' + g.ecartCurLab + ', clients gagnés ou perdus face au N-1', 'magasins comparables')}
+        ${ecart(g.ecartTot, 'Qui fait l’écart — ' + g.ecartTotLab, 'magasins comparables')}
+      </div>`;
+  }
+  return `<div class="rr" style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">${tete}${corps}</div>`;
+}
+
+/* --- Évolution magasin : un graphique par magasin, depuis sa première vente --- */
+function svgEvolution(S, esc){
+  if (!S) { return ''; }
+  const ft = 'font-family:var(--font-ui)';
+  return `<svg viewBox="0 0 ${S.W} ${S.H}" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    ${S.avant ? `<rect x="${S.avant.x}" y="${S.avant.y}" width="${S.avant.w}" height="${S.avant.h}" fill="rgba(34,34,34,.035)"/>${S.avant.t ? `<text x="${S.avant.tx}" y="${S.avant.ty}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${esc(S.avant.t)}</text>` : ''}` : ''}
+    ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.W - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,${t.base ? '.16' : '.07'})"/><text x="${S.ml - 8}" y="${(+t.y + 3.5).toFixed(1)}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(t.t)}</text>`).join('')}
+    ${S.seps.map(s => `${s.trait ? `<line x1="${s.x}" x2="${s.x}" y1="${s.y1}" y2="${s.y2}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>` : ''}<text x="${s.xt}" y="${S.mt - 7}" font-size="11" font-weight="600" fill="#1c1a17" style="${ft}">${esc(s.t)}</text>`).join('')}
+    ${S.aires.map(a => `<polygon points="${a.pts}" fill="${a.pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`).join('')}
+    ${S.segs1.map(p => `<polyline points="${p}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`).join('')}
+    ${S.segs.map(p => `<polyline points="${p}" fill="none" stroke="#8D1D2C" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`).join('')}
+    ${S.cour ? `<polyline points="${S.cour}" fill="none" stroke="#8D1D2C" stroke-width="2" stroke-dasharray="3 3"/>` : ''}
+    ${S.pts1.map(p => `<circle cx="${p.x}" cy="${p.y}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"><title>${esc(p.titre)}</title></circle>`).join('')}
+    ${S.pts.map(p => `<circle cx="${p.x}" cy="${p.y}" r="${p.vide ? 3.6 : 3.2}" fill="${p.vide ? '#fff' : '#8D1D2C'}" stroke="#8D1D2C" stroke-width="${p.vide ? 1.6 : 0}"><title>${esc(p.titre)}</title></circle>`).join('')}
+    ${S.labels.map(l => `<text x="${l.x}" y="${l.y}" font-size="10.5" font-weight="600" text-anchor="middle" fill="#8D1D2C" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">${esc(l.t)}</text>`).join('')}
+    ${S.notes.map(l => `<text x="${l.x}" y="${l.y}" font-size="9.5" text-anchor="${l.mid ? 'middle' : 'start'}" fill="#7a736a" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">${esc(l.t)}</text>`).join('')}
+    ${S.cats.map(c => `${c.lab ? `<text x="${c.x}" y="${S.hb}" font-size="10" font-weight="${c.cur ? 600 : 400}" text-anchor="middle" fill="${c.cur ? '#8D1D2C' : '#3b3731'}" style="${ft}">${esc(c.lab)}</text>` : ''}${c.chip ? `<text x="${c.x}" y="${S.hc}" font-size="9.5" font-weight="600" text-anchor="middle" fill="${c.chipCoul}" style="${ft}">${esc(c.chip)}</text>` : ''}`).join('')}
+    ${S.avecChips ? `<text x="${S.ml - 8}" y="${S.hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>` : ''}
+  </svg>`;
+}
+function tplResultatEvolution(c, x){
+  const { esc } = x;
+  const g = c.ev || {};
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const seg = L => `<div class="rr-ong">${(L || []).map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const tete = `<div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><span style="font-family:var(--font-display);font-size:18px">Évolution magasin</span><span style="font-size:11.5px;color:var(--color-text-muted)">${esc(g.sousTitre || '')}</span><span style="margin-left:auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap">${seg(g.quois)}${seg(g.modes)}</span></div>`;
+  let corps;
+  if (g.chargement) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Lecture des magasins au panel, mois par mois depuis leur première vente — une fois, puis gardée…</div>`; }
+  else if (g.erreur) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)} <button ${x.A(g.relire)} style="margin-left:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:3px 10px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Relire</button></div>`; }
+  else if (g.vide) { corps = `<div class="rm-card" style="font-size:12px;color:var(--color-text-muted)">Aucune vente lue, ni au panel ni dans la copie de caisse.</div>`; }
+  else {
+    const legTrait = (coul, dash, w) => `<svg width="20" height="9" style="vertical-align:-1px;margin-right:4px" aria-hidden="true"><line x1="0" x2="20" y1="4.5" y2="4.5" stroke="${coul}" stroke-width="${w || 2}"${dash ? ` stroke-dasharray="${dash}"` : ''}/></svg>`;
+    const carte = m => `
+      <div class="rm-bloc ev-mag">
+        <div class="ev-tete"><b>${esc(m.nom)}</b><span>${m.faits.map(esc).join(' · ')}</span></div>
+        <div class="rm-card"><div class="rm-s6"><div>${svgEvolution(m.svg, esc)}
+          <div class="rm-leg">
+            <span><i style="background:#8D1D2C;border-radius:50%"></i>${esc(g.unite)}</span>
+            <span>${m.avecN1 ? legTrait('#B8B2A8', '4 3') : ''}${esc(m.n1Txt)}</span>
+            ${m.avecN1 ? `<span><i style="background:rgba(63,122,82,.35)"></i><i style="background:rgba(163,32,20,.3);margin-left:-2px"></i>gagné / perdu face au N-1</span>` : ''}
+            ${m.ouverture ? `<span><i style="background:#fff;border:1.6px solid #8D1D2C;border-radius:50%;width:6px;height:6px"></i>mois d’ouverture, incomplet : hors courbe</span>` : ''}
+            ${g.mode === 'jour' ? `<span>${legTrait('#8D1D2C', '3 3')}le mois en cours (cercle vide), à ses jours vendus</span>` : ''}
+            ${m.etoile ? `<span>* le N-1 a eu des jours fermés — « Par jour ouvert » les neutralise</span>` : ''}
+          </div></div>
+          <div class="rm-s6t ev-t4">${m.tuiles.map(t => `<div class="t ${t.cls || ''}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${t.s || ''}</div></div>`).join('')}</div>
+        </div></div>
+      </div>`;
+    const pill = (t, coul) => t ? `<span class="rr-pill" style="background:${coul}">${esc(t)}</span>` : '—';
+    const table = `<div class="rm-bloc"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>Année par année</span><span style="font-weight:400;text-transform:none;letter-spacing:0">les écarts ne comptent que les mois qui ont un N-1 — à périmètre comparable${g.mode === 'jour' ? ' · par jour ouvert' : ''}</span></div><div class="rm-card">
+      <table class="rr-tb ev-an"><tr><th>Magasin</th><th>Année</th><th>${esc(g.colClients)}</th><th>vs N-1</th><th>${esc(g.colCa)}</th><th>vs N-1</th><th>Panier</th><th>vs N-1</th><th>Jours vendus</th><th>Comparé sur</th></tr>
+      ${g.annees.map(a => `<tr class="${a.premier ? 'ev-prem' : ''}"><td>${esc(a.mag)}</td><td><b style="font-weight:400">${esc(a.an)}</b> <span style="color:var(--color-text-muted)">${esc(a.per)}</span></td><td>${esc(a.clients)}</td><td>${a.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(a.ec, a.ecCoul)}</td><td>${esc(a.ca)}</td><td>${a.sansN1 ? '' : pill(a.eca, a.ecaCoul)}</td><td>${esc(a.panier)}</td><td>${a.sansN1 ? '' : pill(a.ep, a.epCoul)}</td><td>${esc(a.jours)}</td><td style="color:var(--color-text-muted)">${esc(a.cmp || '—')}</td></tr>`).join('')}
+      </table></div></div>`;
+    corps = `<div style="${cap};font-size:10px;margin:-6px 0 -6px;text-transform:none;letter-spacing:0">${esc(g.chipTxt)}</div>
+      ${g.magasins.map(carte).join('')}
+      ${table}
+      <div style="font-size:10.5px;color:var(--color-text-muted)">Source : ${esc(g.source)}.</div>`;
+  }
+  return `<div class="rr" style="background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:14px 16px 18px;display:flex;flex-direction:column;gap:14px">${tete}${corps}</div>`;
+}
+
+/* --- Les six dernières semaines, face au N-1 (drop d'un magasin, semaine) --- */
+function tplSemaines(g, x){
+  const { esc } = x;
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  let corps;
+  if (g.chargement) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des six semaines…</div>`; }
+  else if (g.erreur) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">${esc(g.erreur)}</div>`; }
+  else if (g.vide) { corps = `<div style="font-size:12px;color:var(--color-text-muted)">Aucune semaine lue pour ce magasin.</div>`; }
+  else {
+    const svg = svgCourbe(g.svg, esc);
+    corps = `<div class="rm-s6">
+      <div>${svg}
+        <div class="rm-leg" style="margin-top:2px"><span><i style="background:var(--accent);border-radius:50%"></i>clients de la semaine</span>${g.avecN1 ? `<span><i style="background:var(--faint);border-radius:50%"></i>même semaine en N-1 (pointillé)</span>` : `<span>${esc(g.n1Motif)}</span>`}</div>
+        <div class="rm-s6ch">${g.chips.map(c => `<div class="ch" title="${esc(c.titre)}"><span><b>${esc(c.lab)}</b> <span style="color:var(--color-text-muted)">${esc(c.dates)}</span></span>${g.avecN1 ? `<em style="background:${c.coul}">${esc(c.eco)}</em>` : `<em class="sans">${esc(c.cli)}</em>`}</div>`).join('')}</div>
+      </div>
+      <div class="rm-s6t">${g.tuiles.map(t => `<div class="t ${t.cls}"><div class="k">${esc(t.k)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    </div>`;
+  }
+  return `<div class="rm-bloc" style="margin-top:14px"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>${esc(g.titre)}</span>${g.sousTitre ? `<span style="font-weight:400;text-transform:none;letter-spacing:0">${esc(g.sousTitre)}</span>` : ''}</div><div class="rm-card">${corps}</div></div>`;
+}
+
+/* --- Les périodes de la semaine — matin, midi, après-midi (drop d'un magasin) --- */
+function tplPeriodes(g, x){
+  const { esc } = x;
+  const cap = 'font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:var(--color-text-muted)';
+  const cell = k => k.vide ? `<div class="c vide"><b>—</b><div class="kv"><span>aucune vente</span><span></span></div></div>`
+    : `<div class="c ${k.cls}"${k.fond ? ` style="background:${k.fond}"` : ''}>${k.rang ? `<em>${k.rang}</em>` : ''}<b>${esc(k.ca)}</b><div class="kv">${k.part ? `<span>${g.partLib || 'semaine'}</span><span>${k.part}</span>` : ''}<span title="marge nette et sa part des ventes">marge</span><span><span class="${k.netCls}">${esc(k.net)}</span> <span class="pc">${esc(k.netPct)}</span></span><span>clients</span><span>${esc(k.clients)}</span></div></div>`;
+  return `
+    <div style="margin-top:18px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px">
+        <span style="${cap}">Les périodes — matin, midi, après-midi</span>
+        ${g.chargement || g.erreur ? '' : `<div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;margin-left:4px">
+          ${g.cols.map(c => `<button ${x.A(c.go)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11px;font-weight:400;padding:4px 11px;${c.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">${c.nom}</button>`).join('')}
+        </div>`}
+        <span style="font-size:11px;color:var(--color-text-muted);margin-left:auto;text-align:right">${g.chargement ? 'Lecture des heures ' + (g.mois ? 'du mois' : 'de la semaine') + '…' : (g.erreur ? esc(g.erreur) : esc(g.resume))}</span>
+      </div>
+      ${g.chargement || g.erreur ? '' : `
+      <div class="rp-per" style="grid-template-columns:104px repeat(${g.jours.length},minmax(0,1fr)) 150px">
+        <div></div>${g.jours.map(j => `<div class="hd">${esc(j.nom)}<small>${esc(j.date)}</small></div>`).join('')}<div class="hd">${g.totLib || 'Semaine'}</div>
+        ${g.lignes.map(l => `<div class="r">${esc(l.nom)}<small>${esc(l.heures)}</small></div>${l.cases.map(cell).join('')}`).join('')}
+        <div class="r">${g.mois ? 'Semaine' : 'Journée'}</div>${g.journee.map(cell).join('')}
+      </div>
+      <div class="rp-perleg">${g.legende.map(e => `<span><i style="background:${e.fond}"></i>${esc(e.lib)}</span>`).join('')}<span>· le rang dans la case : la place de la période dans ${g.mois ? 'sa semaine' : 'sa journée'}, au CA · les ventes d’avant 6 h comptent dans le matin, celles d’après 19 h dans l’après-midi</span></div>`}
+    </div>`;
+}
+
+/** Les six leviers, magasin par magasin — Résultat › Mois (21/10/2026). Les valeurs viennent de valsLeviers(). */
+function tplLeviers(L, x){
+  const { esc } = x;
+  if (L.chargement) { return `<div class="lv-card"><div class="lv-hd"><b>Les six leviers</b></div><div class="lv-vide">Lecture des six leviers…</div></div>`; }
+  if (L.erreur) { return `<div class="lv-card"><div class="lv-hd"><b>Les six leviers</b></div><div class="lv-vide">${esc(L.erreur)}</div></div>`; }
+  const pa = n => n ? `<i class="lv-p ${esc(n)}"></i>` : '';
+  const cas = k => `<td><div class="v${k.mu ? ' mu' : ''}">${esc(k.v)}${pa(k.pas)}</div>`
+    + (k.n1 ? `<div class="n1">${esc(k.n1)}</div>` : '')
+    + (k.puce ? `<span class="lv-c ${esc(k.puce.ton)}">${esc(k.puce.txt)}</span>` : '')
+    + (k.tags || []).map(t => `<span class="lv-tag">${esc(t)}</span>`).join('')
+    + (k.alertes || []).map(t => `<span class="lv-al">${esc(t)}</span>`).join('') + '</td>';
+  const ligne = (l, res) => `<tr${res ? ' class="res"' : ''}><td><b>${esc(l.nom)}</b><span>${esc(l.sous)}</span></td>${l.cases.map(cas).join('')}</tr>`;
+  return `<div class="lv-card">
+    <div class="lv-hd"><b>${esc(L.titre)}</b><span>${esc(L.sousTitre)}</span>
+      <div class="lv-seg">${L.onglets.map(o => `<button ${o.off ? 'disabled title="le cumul commence avec le premier mois clos"' : x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div></div>
+    <div class="lv-defil"><table class="lv-t">
+      <tr><th>Magasin</th>${L.colonnes.map(c => `<th><u style="background:${esc(c.couleur)}${c.vide ? ';opacity:.45' : ''}"></u>${esc(c.nom)}<small>${esc(c.mesure)}</small></th>`).join('')}</tr>
+      ${L.lignes.map(l => ligne(l, false)).join('')}${ligne(L.reseau, true)}
+    </table></div>
+    <div class="lv-leg"><span><b>Pastille</b> — seuils de la <button ${x.A(L.seuilsKpi)} style="border:none;background:none;padding:0;font:inherit;color:inherit;text-decoration:underline;cursor:pointer">Table KPI</button> :${pa('v')}sous l’alerte${pa('o')}entre alerte et critique${pa('r')}au-delà</span>
+      <span><b>Écart</b> — vert : mieux qu’en ${esc(L.anneeN1)} (plus de clients, meilleure note, coût plus bas)</span></div>
+    ${L.notes.length ? `<ul class="lv-not">${L.notes.map(n => `<li><b>${esc(n.lead)}</b> ${esc(n.txt)}</li>`).join('')}</ul>` : ''}
+  </div>`;
+}
+
+function tplResultatPeriode(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  const bord = 'border-top:1px solid var(--color-border-tertiary)';
+  if (c.rpChargement) { return tplResultatSquelette(c.rpMois ? 'mois' : 'semaine'); }
+  if (c.rpErreur) {
+    return `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rpErreurTxt)}</div>`;
+  }
+  const cel = (v, coul, sous, fort, titre) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:400' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  const sep = 'border-left:1px solid var(--color-border-secondary)';
+  const nbCol = 12 + (c.rpMois ? 1 : 0);
+  const cel2 = (v, coul, s1, s2, titre, pastille) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 7px;${bord};text-align:right;white-space:nowrap;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${pastille || ''}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(s2)}</div>` : ''}</td>`;
+  const proPastille = l => tplProPastille(l, esc);
+  const rang = l => `
+    <tr ${l.ouvrir ? x.A(l.ouvrir) : ''} class="${l.reseau ? '' : 'hv-bg'}" style="${l.st}">
+      <td style="padding:9px 7px;${l.reseau ? 'border-top:1px solid var(--color-border-secondary)' : bord}">
+        <div style="font-weight:400;white-space:nowrap" title="${esc(l.nom)}">${l.chevron ? `<span style="font-size:10px;color:var(--color-text-muted);margin-right:5px">${l.chevron}</span>` : ''}${esc(l.nomCourt || l.nom)}${l.atteint ? feuLigne : ''}</div>
+        ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:${l.reseau ? 0 : 14}px">${esc(l.sousTitre)}</div>` : ''}
+      </td>
+      ${l.ouvert ? cel(l.objectif, '', '', false, l.objectifTitre) + cel(l.realise, '', '', true)
+          + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre, proPastille(l))
+          + cel(l.attendu, 'var(--color-text-muted)')
+          + cel(l.ecart, l.ecartCol, '', true) + cel(l.clients, l.clientsCol, l.clientsSous, true, l.clientsTitre)
+          + (c.rpMois ? cel(l.mois.ecart, l.mois.ecartCol, l.mois.n1 ? 'N-1 ' + l.mois.n1 : '', false, 'même période un an plus tôt — source API') : '')
+          + `<td style="padding:9px 7px;${bord};text-align:right;${num};color:${l.fcCol};${sep}">${esc(l.fc)}</td>`
+          + cel(l.lab, l.labCol) + cel(l.oh, l.ohCol)
+          + cel(l.net, l.netCol, l.netPct, true, l.netTitre)
+        : `<td colspan="${nbCol - 1}" style="padding:9px 7px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">${esc(l.sousTitre || 'aucun chiffre')}</td>`}
+    </tr>`;
+  const bloc = (titre, corps) => `<div><div style="${cap};margin-bottom:8px">${esc(titre)}</div>${corps}</div>`;
+  const kv = (l, v, coul, fort) => `<div style="display:flex;justify-content:space-between;gap:12px;padding:5px 0;${bord};font-size:12.5px${fort ? ';font-weight:400' : ''}"><span>${esc(l)}</span><span style="${num};white-space:nowrap${coul ? ';color:' + coul : ''}">${esc(v)}</span></div>`;
+  const d = c.rpDetail;
+  const detail = !d ? '' : (d.mois ? tplResultatMois(c, d, x) : `
+    <tr><td colspan="${nbCol}" style="padding:4px 10px 18px;background:var(--color-background-secondary);border-top:1px solid var(--color-border-tertiary)">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin:6px 0 12px">
+        <div style="font-family:var(--font-display);font-size:16px">${esc(d.nom)}</div>
+        <button ${x.A(d.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px 34px">
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${d.manque ? bloc('Ce qu’il manque, et en quoi', `
+            <div style="border:1px solid ${d.manque.titreCol};border-radius:9px;padding:8px 12px 4px;background:var(--color-surface)">
+              <div style="font-size:10.5px;font-weight:400;letter-spacing:.05em;text-transform:uppercase;color:${d.manque.titreCol};margin-bottom:4px">${esc(d.manque.titre)}</div>
+              ${kv(d.manque.ecartLib, d.manque.ecart, d.manque.ecartCol)}
+              ${kv(d.manque.panierLib || 'Panier moyen du magasin', d.manque.panier)}
+              ${kv('Clients manquants', d.manque.clients, d.manque.clientsCol, true)}
+            </div>`) : `<div style="font-size:12px;color:var(--color-text-muted)">Pas d’objectif pour ce magasin sur cette période : budget non encodé, ou pondération des jours non adoptée.</div>`}
+          ${d.tenir ? bloc('Pour tenir l’objectif', `
+            <div style="border:1px solid var(--color-border-secondary);border-radius:9px;padding:4px 12px;background:var(--color-surface)">
+              ${kv(d.tenir.resteLib, d.tenir.reste, '', true)}
+              ${d.tenir.clos ? '' : kv('Ce que la pondération prévoyait', d.tenir.prevu + (d.tenir.prevuPct ? ' · ' + d.tenir.prevuPct : ''))}
+              ${d.tenir.clos ? '' : kv('Effort supplémentaire', d.tenir.effort + (d.tenir.effortClients ? ' · ' + d.tenir.effortClients : ''), d.tenir.effortCol, true)}
+            </div>`) : ''}
+          ${bloc('Le jour par jour du magasin', `
+            <table style="width:100%;border-collapse:collapse;font-size:12px">
+              ${d.jours.map(j => `<tr style="${j.auj ? 'font-weight:400' : ''}">
+                <td style="padding:4px 0;${bord};width:80px">${esc(j.court)}</td>
+                <td style="padding:4px 0;${bord};text-align:right;${num}">${esc(j.ca)}${j.obj ? ` <span style="color:var(--color-text-muted);font-weight:400">/ ${esc(j.obj)}</span>` : ''}</td>
+                <td style="padding:4px 0 4px 10px;${bord};text-align:right;${num};width:70px;color:${j.col}">${j.clients ? esc(j.clients) + ' cli' : ''}</td>
+              </tr>`).join('')}
+            </table>`)}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          ${bloc('La cascade ' + (c.rpSemaine ? 'de la semaine' : 'du mois'), `
+            <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              ${d.cascade.map(l => `<tr style="${l.fort ? 'font-weight:400' : ''}">
+                <td style="padding:6px 0;${bord};width:140px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+                <td style="padding:6px 8px;${bord}"><span style="display:block;height:8px;border-radius:8px;background:var(--color-surface);overflow:hidden"><i style="display:block;height:100%;width:${l.w}%;border-radius:8px;background:${l.coul}"></i></span></td>
+                <td style="padding:6px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
+                <td style="padding:6px 0 6px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
+              </tr>`).join('')}
+            </table>
+            ${d.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(d.motifNet)}</div>` : ''}`)}
+          ${d.rentab ? bloc('Le résultat net, jour par jour' + (d.rentab.total ? ' — ' + d.rentab.total : ''), d.rentab.chargement
+            ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la rentabilité…</div>`
+            : (d.rentab.motif ? `<div style="font-size:12px;color:var(--color-text-muted)">${esc(d.rentab.motif)}</div>` : `
+            <div style="display:flex;gap:4px;flex-wrap:wrap">
+              ${d.rentab.chips.map(ch => ch.go ? `
+                <button ${x.A(ch.go)} title="${esc(ch.title)}" style="border:none;cursor:pointer;font-family:var(--font-ui);border-radius:8px;text-align:center;min-width:34px;padding:5px 3px;${ch.st}">
+                  <span style="display:block;font-size:10px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:10px;font-weight:400;margin-top:1px">${esc(ch.pct)}</span>
+                </button>` : `
+                <span title="${esc(ch.title)}" style="display:inline-block;border-radius:8px;text-align:center;min-width:34px;padding:5px 3px;${ch.st}">
+                  <span style="display:block;font-size:10px;letter-spacing:0.04em;opacity:0.85">${esc(ch.lib)}</span>
+                  <span style="display:block;font-size:10px;margin-top:1px">${esc(ch.pct)}</span>
+                </span>`).join('')}
+            </div>
+            <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:10.5px;color:var(--color-text-muted)">
+              ${d.rentab.legende.map(g => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:3px;vertical-align:-1px;${g.st}"></i> ${esc(g.lib)}</span>`).join('')}
+              <span style="margin-left:auto">cliquez un jour pour l’addition</span>
+            </div>`)) : ''}
+          ${bloc('Le mois de ce magasin', d.moisMag.etat === 'chargement' ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du mois…</div>` : `
+            <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px">
+              ${[['CA du mois', d.moisMag.ca, ''], ['N-1', d.moisMag.n1, 'var(--color-text-muted)'], ['Écart', d.moisMag.ecart, d.moisMag.ecartCol], ['Tickets', d.moisMag.tickets, ''], ['Panier', d.moisMag.panier, '']].map(k => `
+              <div style="background:var(--color-surface);border-radius:8px;padding:8px 10px">
+                <div style="${cap}">${esc(k[0])}</div>
+                <div style="font-family:var(--font-display);font-size:16px;margin-top:3px;${num}${k[2] ? ';color:' + k[2] : ''}">${esc(k[1] || '—')}</div>
+              </div>`).join('')}
+            </div>
+            <div style="font-size:10px;color:var(--color-text-muted);margin-top:6px">${esc(d.moisMag.periode)} — source API, du 1er du mois à aujourd’hui.</div>`)}
+        </div>
+      </div>
+      ${d.periodes ? tplPeriodes(d.periodes, x) : ''}
+    </td></tr>`);
+  const lignes = c.rpLignes.map(l => rang(l) + (l.actif ? detail : '')).join('');
+  return `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+          <button ${x.A(c.rpPrec)} title="Période précédente" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
+          <span style="font-family:var(--font-display);font-size:16px">${esc(c.rpTitre)}</span>
+          <button ${x.A(c.rpSuiv)} title="Période suivante" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rpSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rpSuiv ? '1' : '.35'}">▸</button>
+          ${c.rpAuj ? `<button ${x.A(c.rpAuj)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">${esc(c.rpAujTxt)}</button>` : ''}
+          <button ${x.A(c.rpRefresh)} title="Relire la période" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted)">⟳</button>
+          ${c.rpMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpMaj)}</span>` : ''}
+          <span style="font-size:11.5px;color:var(--color-text-muted);margin-left:6px">${esc(c.rpSousTitre)}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px">
+          ${c.rpPjTxt ? `<span style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rpPjTxt)}</span>` : ''}
+          <button ${x.A(c.rpRegler)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:29px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Régler la pondération des jours</button>
+          ${c.rpPdfHref ? `<a href="${esc(c.rpPdfHref)}" target="_blank" rel="noopener" title="Une page réseau, puis une page par magasin : budget, écart en clients, compte de résultat, jour par jour" style="display:inline-flex;align-items:center;height:29px;padding:0 14px;border-radius:8px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:11.5px;font-weight:400;text-decoration:none">PDF du mois</a>` : ''}
+        </div>
+      </div>
+      ${c.rpPjMotif ? `<div style="font-size:12px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:8px 12px;border-radius:8px;margin-bottom:12px">${esc(c.rpPjMotif)}</div>` : ''}
+
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(150px,1fr)) minmax(240px,1.4fr);gap:10px;margin-bottom:14px">
+        ${c.rpTuiles.map(t => `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">
+          <div style="${cap}">${esc(t.l)}</div>
+          <div style="font-family:var(--font-display);font-size:22px;line-height:1.1;margin-top:4px;color:${t.col};${num}">${esc(t.v)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(t.s)}</div>
+        </div>`).join('')}
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 13px">
+          <div style="${cap}">Jour par jour <span style="text-transform:none;letter-spacing:0;font-weight:400">— réalisé plein, objectif en creux</span></div>
+          <div style="display:flex;align-items:flex-end;gap:${c.rpMois ? 2 : 5}px;height:44px;margin-top:8px">
+            ${c.rpJours.map(j => `<div title="${esc(j.titre)}" style="flex:1;position:relative;height:100%;${j.auj ? 'outline:1.5px solid var(--color-text);outline-offset:1px;border-radius:3px' : ''}">
+              <i style="position:absolute;left:0;right:0;bottom:0;height:${j.hObj}%;border:1px solid var(--color-border-secondary);border-bottom:none;border-radius:3px 3px 0 0;background:var(--color-surface)"></i>
+              <i style="position:absolute;left:0;right:0;bottom:0;height:${j.hCa}%;background:${j.coul};border-radius:3px 3px 0 0;opacity:.9"></i>
+            </div>`).join('')}
+          </div>
+          ${c.rpSemaine ? `<div style="display:flex;gap:5px;margin-top:4px;font-size:10px;color:var(--color-text-muted)">${c.rpJours.map(j => `<span style="flex:1;text-align:center;white-space:nowrap;overflow:hidden">${esc(j.court)}</span>`).join('')}</div>` : ''}
+        </div>
+      </div>
+
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;min-width:1120px">
+        <tr>
+          <th colspan="8" style="text-align:left;padding:0 10px 4px;${cap};font-size:10px">Face à l’objectif ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
+          <th colspan="${c.rpMois ? 5 : 4}" style="text-align:left;padding:0 10px 4px;${cap};font-size:10px;${sep}">Le compte de résultat ${c.rpSemaine ? 'de la semaine' : 'du mois'}</th>
+        </tr>
+        <tr>
+          ${c.rpEntetes.map((e, i) => `<th style="text-align:${i === 0 ? 'left' : 'right'};padding:0 7px 7px;${cap}">${esc(e)}</th>`).join('')}
+          ${c.rpMois ? `<th style="text-align:right;padding:0 7px 7px;${cap}">vs N-1</th>` : ''}
+          <th style="text-align:right;padding:0 7px 7px;${cap};${sep}">Coût matière</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Main-d’œuvre</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Frais généraux</th>
+          <th style="text-align:right;padding:0 7px 7px;${cap}">Résultat</th>
+        </tr>
+        ${lignes}
+        ${c.rpReseau ? rang(c.rpReseau) : ''}
+      </table>
+      </div>
+      ${c.rpNote || c.rpInvite ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rpNote)}${c.rpInvite ? ' ' + esc(c.rpInvite) : ''}</div>` : ''}
+    </div>
+
+    ${c.rpRentab && c.exRentDet ? tplExploitRentModal(c.exRentDet, x) : ''}
+    ${c.rpMois && c.lev ? tplLeviers(c.lev, x) : ''}
+    ${c.rpMois ? `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:12px">
+        <div>
+          <div style="${cap}">Heatmap mensuelle</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Une ligne par magasin, une colonne par mois : la même chose que le tableau ci-dessus, sur douze mois.</div>
+        </div>
+      </div>
+      ${tplHeatmapCorps(c, x)}
+    </div>` : ''}`;
+}
+
+function tplResultatJour(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  const num = 'font-variant-numeric:tabular-nums';
+  if (c.rjChargement) { return `<div data-screen="resultatJour">${tplResultatSquelette('jour')}</div>`; }
+  if (c.rjErreur) {
+    return `<div data-screen="resultatJour" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">${esc(c.rjErreurTxt)}</div>`;
+  }
+  // L'ordre se lit comme on pilote : le chiffre, sa référence, sa cible,
+  // puis l'activité qui l'explique (tickets → panier → produits par client),
+  // et la ligne finale. Marge, main-d'œuvre et frais vivent dans le détail
+  // qu'on ouvre — comme le coût matière avant eux.
+  const ent = ['Magasin', 'Ventes par heure', 'CA du jour', c.rjRefEntete, 'CA comptoir', 'CA pro', 'Objectif du jour', 'Clients manquants', 'Tickets', 'Panier',
+    'Produits / client', 'Résultat'];
+  const bord = 'border-top:1px solid var(--color-border-tertiary)';
+  // Une cellule du split comptoir / pro : le CA, puis sa part et ses clients, puis le panier.
+  // Les montants ne passent pas à la ligne : « 3 394 / € » ne se lit plus d'un trait.
+  const cel2 = (v, coul, s1, s2, titre, pastille) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;white-space:nowrap;${num}${coul ? ';color:' + coul : ''}">${esc(v)}${pastille || ''}${s1 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s1)}</div>` : ''}${s2 ? `<div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(s2)}</div>` : ''}</td>`;
+  const proPastille = l => tplProPastille(l, esc);
+  // Une cellule chiffrée : la valeur, et sous elle son poids dans le CA.
+  const cel = (v, coul, sous, fort, titre, sousCoul) => `<td${titre ? ` title="${esc(titre)}"` : ''} style="padding:9px 10px;${bord};text-align:right;white-space:nowrap;${num}${fort ? ';font-weight:400' : ''}${coul ? ';color:' + coul : ''}">${esc(v)}${sous ? `<div style="font-size:10px;color:${sousCoul || 'var(--color-text-muted)'};font-weight:400">${esc(sous)}</div>` : ''}</td>`;
+  // Le (i) d'une notion qui a besoin d'être expliquée : au survol, la phrase
+  // entière — la place manque dans un en-tête de colonne.
+  const aide = txt => txt ? ` <span title="${esc(txt)}" style="display:inline-flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;border:1px solid var(--color-border-secondary);color:var(--color-text-muted);font-size:10px;font-style:italic;font-weight:400;cursor:help;vertical-align:1px">i</span>` : '';
+  const treemap = (tuiles, hauteur) => `
+    <div style="position:relative;width:100%;height:${hauteur}px">
+      ${tuiles.map(t => `<div style="${t.st}">
+        ${t.gros ? `<div style="font-size:12px;font-weight:400;line-height:1.15">${esc(t.nom)}</div>
+          <div style="font-family:var(--font-display);font-size:14px;margin-top:3px;${num}">${esc(t.ca)}</div>
+          <div style="font-size:10.5px;opacity:.92;${num}">${esc(t.part)} du CA${t.delta ? ' · ' + esc(t.delta) + ' vs réf.' : ''}</div>`
+        : (t.moyen ? `<div style="font-size:10.5px;font-weight:400;line-height:1.1">${esc(t.nom)}</div>
+          <div style="font-size:10px;opacity:.92;white-space:nowrap;${num}">${esc(t.part)}${t.delta ? ' · ' + esc(t.delta) : ''}</div>`
+        : (t.minuscule ? '' : `<div style="font-size:10px;line-height:1.05;opacity:.95">${esc(t.nom)}</div>`))}
+      </div>`).join('')}
+    </div>`;
+  const echelle = `<div style="display:flex;gap:11px;flex-wrap:wrap;margin-top:7px;font-size:10px;color:var(--color-text-muted)">
+      ${c.rjEchelle.map(e => `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${e.coul};vertical-align:-1px"></i> ${esc(e.label)}</span>`).join('')}
+    </div>`;
+
+  return `
+  <div data-screen="resultatJour" style="display:flex;flex-direction:column;gap:14px">
+
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;margin-bottom:11px">
+        <div>
+          <div style="${cap}">Résultat du jour, magasin par magasin</div>
+          <div style="font-family:var(--font-display);font-size:16px;margin-top:3px">${esc(c.rjDateTxt)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.rjSeuilsTxt)}${aide(c.rjSeuilsAide)}</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:22px">
+          <div style="display:flex;align-items:center;gap:7px">
+            <button ${x.A(c.rjPrec)} title="Jour précédent" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text)">◂</button>
+            <button ${x.A(c.rjSuiv)} title="Jour suivant" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;width:31px;font-size:13px;cursor:${c.rjSuiv ? 'pointer' : 'default'};color:var(--color-text);opacity:${c.rjSuiv ? '1' : '.35'}">▸</button>
+            <button ${x.A(c.rjRefresh)} title="Relire la journée" class="hv-bg" style="border:1px solid var(--color-border-secondary);background:transparent;border-radius:8px;height:31px;width:31px;font-size:13px;cursor:pointer;color:var(--color-text-muted);margin-left:4px">⟳</button>
+            ${c.rjMaj ? `<span style="font-size:10.5px;color:var(--color-text-muted);margin-left:2px">${esc(c.rjMaj)}</span>` : ''}
+            ${c.rjAuj ? `<button ${x.A(c.rjAuj)} class="hv-line" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Aujourd’hui</button>` : ''}
+          </div>
+          <div style="text-align:right">
+            <div style="${cap}">CA réseau</div>
+            <div style="font-family:var(--font-display);font-size:24px;line-height:1.1;${num}">${esc(c.rjReseau.ca)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(c.rjReseau.tickets)} tickets · panier ${esc(c.rjReseau.panier)}</div>
+          </div>
+          <div style="text-align:right">
+            <div style="${cap}">Résultat réseau</div>
+            <div style="font-family:var(--font-display);font-size:24px;line-height:1.1;color:${c.rjReseau.netCoul};${num}">${esc(c.rjReseau.net)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);${num}">${esc(c.rjReseau.netPct)} du CA</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="overflow-x:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:1040px">
+        <tr>${ent.map((e, i) => `<th style="text-align:${i <= 1 ? 'left' : 'right'};padding:0 10px 7px;${cap}">${esc(e)}${i === 3 ? aide(c.rjRefAide) : ''}</th>`).join('')}<th style="width:34px;padding:0 0 7px"></th></tr>
+        <!-- La ligne ouvre le dashboard du magasin (nouvel onglet) ; le ▸ devant
+             le nom déplie ici son compte de résultat, la mini-courbe ses heures.
+             La délégation prend le data-h le plus proche : ni l'un ni l'autre
+             ne déclenche la ligne. -->
+        ${c.rjLignes.map(l => `
+          <tr ${x.A(l.ouvrir)} class="hv-bg rj-ligne" title="${esc(l.dashTitre)}" style="${l.st}">
+            <td style="padding:9px 10px;${bord}">
+              <div style="font-weight:400;white-space:nowrap" title="${esc(l.nom)}"><button ${x.A(l.deplier)} class="rj-chev" title="${esc(l.deplierTitre)}">${l.chevron}</button><span class="rj-nom">${esc(l.nomCourt || l.nom)}</span>${l.atteint ? feuLigne : ''}</div>
+              ${l.sousTitre ? `<div style="font-size:10px;color:var(--color-text-muted);padding-left:27px">${esc(l.sousTitre)}</div>` : ''}
+            </td>
+            <td style="padding:6px 10px;${bord};vertical-align:middle">${l.heures
+              ? `<div ${l.voirHeures ? x.A(l.voirHeures) : ''} class="rj-heures" title="Voir le CA heure par heure" style="display:flex;align-items:flex-end;gap:2px;height:26px;min-width:130px;max-width:190px;cursor:${l.voirHeures ? 'pointer' : 'default'}">${l.heures.map(h2 => `<div title="${esc(h2.t)}" style="flex:1;background:${h2.top ? 'var(--color-primary)' : '#C68E95'};border-radius:2px;height:${h2.w}px"></div>`).join('')}</div>`
+              : `<span style="font-size:10px;color:var(--color-text-muted)">—</span>`}</td>
+            ${l.ouvert
+              ? cel(l.ca, '', '', true) + cel(l.delta, l.deltaCoul, '', false, l.deltaTitre)
+                + cel2(l.caCpt, '', l.caCptSous, l.caCptSous2, l.proTitre) + cel2(l.caPro, l.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', l.caProSous, l.caProSous2, l.proTitre, proPastille(l))
+                + cel(l.fc, l.fcCoul, l.fcPct, false, l.fcTitre)
+                + cel(l.manque, l.manqueCoul, l.manqueSous, true, l.manqueTitre)
+                + cel(l.tickets, '', l.ticketsDelta, false, '', l.ticketsCoul) + cel(l.panier, '', '', false)
+                + cel(l.ppc, '', '', false)
+                + cel(l.net, l.netCoul, l.netPct, true)
+              : `<td colspan="10" style="padding:9px 10px;${bord};text-align:right;font-size:11.5px;color:var(--color-text-muted)">aucun chiffre pour cette journée</td>`}
+            <td style="padding:9px 4px 9px 2px;${bord};text-align:center"><span class="rj-go">›</span></td>
+          </tr>`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="padding:10px;border-top:1px solid var(--color-border-secondary);font-weight:400">Réseau
+            <span style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(c.rjReseau.magasins)} magasin(s) ouvert(s)</span></td>
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+          ${cel(c.rjReseau.ca, '', '', true)}${cel(c.rjReseau.delta, c.rjReseau.deltaCoul, '', false, c.rjReseau.deltaTitre)}
+          ${cel2(c.rjReseau.caCpt, '', c.rjReseau.caCptSous, c.rjReseau.caCptSous2, c.rjReseau.proTitre)}${cel2(c.rjReseau.caPro, c.rjReseau.caPro === '—' ? 'var(--color-text-muted)' : '#1f5f8b', c.rjReseau.caProSous, c.rjReseau.caProSous2, c.rjReseau.proTitre, proPastille(c.rjReseau))}
+          ${cel(c.rjReseau.fc, c.rjReseau.fcCoul, c.rjReseau.fcPct, false, c.rjReseau.fcTitre)}
+          ${cel(c.rjReseau.manque, c.rjReseau.manqueCoul, '', true, 'somme des clients manquants de chaque magasin')}
+          ${cel(c.rjReseau.tickets, '', '', false)}${cel(c.rjReseau.panier, '', '', false)}
+          ${cel(c.rjReseau.ppc, '', '', false)}
+          ${cel(c.rjReseau.net, c.rjReseau.netCoul, c.rjReseau.netPct, true)}
+          <td style="border-top:1px solid var(--color-border-secondary)"></td>
+        </tr>
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.5;text-wrap:pretty">${esc(c.rjNote)}</div>
+    </div>
+
+    <!-- Le classement des tâches du jour : lu chez le panel, qui compte aussi
+         les sautées, les échecs, les obligatoires manquées et la clôture de
+         journée — quatre choses que le cockpit ne savait pas dire. -->
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap">
+        <div>
+          <div style="${cap}">Tâches du jour — classement réseau</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Demandées, faites, sautées, en échec — et les journées closes.</div>
+        </div>
+        ${c.rjClReseau ? `<div style="text-align:right">
+          <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:${c.rjClReseau.col};${num}">${esc(c.rjClReseau.taux)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjClReseau.detail)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjClReseau.clos)}</div>
+        </div>` : ''}
+      </div>
+      ${c.rjClIndispo
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${esc(c.rjClIndispo)}</div>`
+        : (c.rjClChargement
+          ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture du classement…</div>`
+          : `<div style="display:flex;flex-direction:column;gap:8px;margin-top:13px">
+              ${c.rjClLignes.map(l => `
+                <div style="display:flex;align-items:center;gap:11px">
+                  <span style="width:15px;flex:none;font-size:11px;color:var(--color-text-muted);text-align:right">${l.rang}</span>
+                  <span style="width:230px;flex:none;font-size:12.5px;font-weight:400;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(l.nom)}</span>
+                  <span style="flex:1;min-width:90px;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.barre}%;border-radius:8px;background:${l.tauxCol}"></i></span>
+                  <span style="width:58px;flex:none;text-align:right;font-size:12.5px;font-weight:400;color:${l.tauxCol};${num}">${esc(l.taux)}</span>
+                  <span style="width:190px;flex:none;font-size:11px;color:var(--color-text-muted);${num}">${esc(l.detail)}</span>
+                  <span style="flex:none;display:flex;gap:6px">
+                    ${l.manque ? `<span style="font-size:10px;font-weight:400;padding:2px 8px;border-radius:8px;background:rgba(141, 29, 44, 0.08);color:var(--color-primary)">${esc(l.manque)}</span>` : ''}
+                    ${l.clos ? `<span style="font-size:10px;padding:2px 8px;border-radius:8px;background:rgba(63, 122, 82, 0.12);color:var(--green)">${esc(l.clos)}</span>` : ''}
+                  </span>
+                </div>`).join('')}
+            </div>`)}
+    </div>
+
+    ${c.rjDetail ? `
+    <div style="${carte};padding:17px 19px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div>
+          <div style="${cap}">Compte de résultat du jour</div>
+          <div style="font-family:var(--font-display);font-size:18px;margin-top:3px">${esc(c.rjDetail.nom)}</div>
+        </div>
+        <div style="display:flex;align-items:flex-start;gap:14px">
+          <div style="text-align:right">
+            <div style="font-family:var(--font-display);font-size:26px;line-height:1;${num}">${esc(c.rjDetail.ca)}</div>
+            <div style="font-size:11.5px;color:${c.rjDetail.deltaCoul};${num}">${c.rjDetail.delta ? esc(c.rjDetail.delta) + ' ' : ''}${esc(c.rjDetail.deltaTxt)}${aide(c.rjDetail.refAide)}</div>
+          </div>
+          <button ${x.A(c.rjDetail.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+        </div>
+      </div>
+
+      ${c.rjDetail.objectif ? `
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 13px;border-radius:10px;background:var(--color-background-secondary);flex-wrap:wrap">
+        <span style="${cap}">Objectif du jour</span>
+        <span style="font-size:14px;font-weight:400;${num}">${esc(c.rjDetail.objectif.montant)}</span>
+        <span style="position:relative;flex:1;min-width:120px;height:10px;border-radius:8px;background:var(--color-surface);overflow:hidden">
+          ${c.rjDetail.objectif.proj ? `<i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.proj.w}%;border-radius:8px;background:var(--prize);opacity:.45"></i>` : ''}
+          <i style="position:absolute;left:0;top:0;height:100%;width:${c.rjDetail.objectif.w}%;border-radius:8px;background:${c.rjDetail.objectif.coul}"></i></span>
+        <span style="font-size:14px;font-weight:400;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.pct)}</span>
+        <span style="font-size:11.5px;color:${c.rjDetail.objectif.coul};${num}">${esc(c.rjDetail.objectif.ecart)}</span>
+        ${c.rjDetail.objectif.proj ? `<span style="width:100%;font-size:11.5px;font-weight:400;color:var(--prize-ink)">
+          Projection fin de journée : ${esc(c.rjDetail.objectif.proj.montant)}${c.rjDetail.objectif.proj.pct ? ' — ' + esc(c.rjDetail.objectif.proj.pct) + ' de l’objectif' : ''}
+          <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(c.rjDetail.objectif.proj.detail)}</span>
+          ${c.rjDetail.objectif.proj.rythme ? `<span style="font-weight:400;color:var(--color-text-muted)"> · ${esc(c.rjDetail.objectif.proj.rythme)}</span>` : ''}
+        </span>` : (c.rjDetail.projMotif ? `<span style="width:100%;font-size:11px;color:var(--color-text-muted)">Pas de projection : ${esc(c.rjDetail.projMotif)}.</span>` : '')}
+        <span style="font-size:10.5px;color:var(--color-text-muted);width:100%">${esc(c.rjDetail.objectif.source)} · ${esc(c.rjDetail.objectif.base)}</span>
+      </div>` : ''}
+
+      ${c.rjDetail.semaine ? (sm => `
+      <div data-rjsem="1" style="margin-top:12px">
+        <div style="${cap};margin-bottom:6px">Résultat de la semaine en cours <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${esc(sm.titre)}</span></div>
+        <div style="display:flex;align-items:stretch;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;align-items:stretch;gap:6px;flex:1;min-width:460px">
+            ${sm.cases.map(k => `<div title="${esc(k.titre)}" style="flex:1;min-width:0;border-radius:8px;padding:6px 8px;background:${k.fond};${k.bord};${num}">
+                <div style="font-size:10px;color:${k.auj ? 'var(--color-text)' : 'var(--color-text-muted)'};font-weight:${k.auj ? 700 : 500}">${esc(k.jour)}</div>
+                <div style="font-size:12.5px;font-weight:400;margin-top:2px;color:${k.valCoul};white-space:nowrap">${esc(k.val)}</div>
+                <div style="font-size:10px;color:var(--color-text-muted);white-space:nowrap">${esc(k.sous)}</div>
+              </div>`).join('')}
+          </div>
+          <div title="${esc(sm.sem.titre)}" style="border-radius:8px;padding:7px 12px;background:${sm.sem.fond};color:#fff;${num};min-width:150px;display:flex;flex-direction:column;justify-content:center">
+            <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;opacity:.85">${esc(sm.sem.k)}</div>
+            <div style="font-size:15px;font-weight:400;line-height:1.15;white-space:nowrap">${esc(sm.sem.v)}</div>
+            <div style="font-size:10px;opacity:.92;white-space:nowrap">${esc(sm.sem.s)}</div>
+          </div>
+        </div>
+      </div>`)(c.rjDetail.semaine) : ''}
+
+      ${c.rjDetail.planning ? `
+      <div style="margin-top:13px;padding:12px 13px;border-radius:10px;background:var(--color-background-secondary)">
+        <div style="${cap};margin-bottom:8px">Le planning du jour, par personne</div>
+        <table style="width:100%;border-collapse:separate;border-spacing:0 5px;font-size:12px">
+          ${c.rjDetail.planning.lignes.map(p => `
+          <tr>
+            <td style="padding:0 10px 0 0;white-space:nowrap;width:170px"><span style="font-weight:400">${esc(p.nom)}</span>${p.franchise ? ` <span style="font-size:10px;color:var(--prize);border:1px solid var(--prize-soft);border-radius:8px;padding:0 6px;vertical-align:1px">franchisé</span>` : ''}
+              <div style="font-size:10px;color:var(--color-text-muted);${num}">${esc(p.creneau)} · ${esc(p.h)} h${p.tauxTxt ? ` · ${esc(p.tauxTxt)}` : ''}</div></td>
+            <td style="padding:0"><div style="position:relative;height:22px;background:var(--color-surface);border-radius:6px">
+              <div style="position:absolute;left:${p.g}%;width:${p.w}%;top:0;height:22px;background:var(--prize-soft);border:1px solid #D9B489;border-radius:6px"></div></div></td>
+            <td style="padding:0 0 0 12px;text-align:right;white-space:nowrap;${num};width:130px">${p.ca
+              ? `<span style="font-weight:400">${esc(p.ca)}</span><div style="font-size:10px;color:var(--color-text-muted)">${esc(p.caH)} attribués</div>`
+              : `<span style="font-size:10px;color:var(--color-text-muted)">sans vente lisible</span>`}${p.coutTxt
+              ? `<div style="font-size:10px;color:${p.coutZero ? '#B0792A' : 'var(--color-text-muted)'}">${esc(p.coutTxt)}</div>` : ''}</td>
+          </tr>`).join('')}
+        </table>
+        <div style="font-size:10px;color:var(--color-text-muted);margin-top:4px">${esc(c.rjDetail.planning.note)}</div>
+      </div>` : ''}
+
+      <div style="display:grid;grid-template-columns:1.02fr 1fr;gap:22px;margin-top:13px">
+        <div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            ${c.rjDetail.cascade.map(l => `
+              <tr style="${l.fort ? 'font-weight:400' : ''}">
+                <td style="padding:7px 0;${bord};width:150px">${esc(l.l)}${l.seuil ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">${esc(l.seuil)}</div>` : ''}</td>
+                <td style="padding:7px 8px;${bord}">
+                  <span style="display:block;height:8px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+                    <i style="display:block;height:100%;width:${l.w}%;border-radius:8px;background:${l.coul}"></i></span></td>
+                <td style="padding:7px 0;${bord};text-align:right;${num};width:96px">${esc(l.v)}</td>
+                <td style="padding:7px 0 7px 12px;${bord};text-align:right;${num};width:64px;color:${l.coul}">${esc(l.p)}</td>
+                <td style="padding:7px 0 7px 10px;${bord};text-align:right;${num};width:74px;font-weight:400;font-size:11px;color:${l.dCoul || 'var(--color-text-muted)'}">${esc(l.d)}</td>
+              </tr>`).join('')}
+          </table>
+          ${c.rjDetail.motifNet ? `<div style="font-size:11px;color:var(--color-on-abricot);background:var(--prize-soft);border:1px solid var(--prize-soft);padding:6px 9px;border-radius:7px;margin-top:9px;line-height:1.45">${esc(c.rjDetail.motifNet)}</div>` : ''}
+          <div style="margin-top:10px;font-size:10.5px;color:var(--color-text-muted);background:var(--color-background-secondary);border-radius:8px;padding:8px 10px;line-height:1.5;text-wrap:pretty">${esc(c.rjDetail.note)}</div>
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px">
+            <div style="${cap}">Ventes par catégorie</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(c.rjDetail.catsLegende)}${aide(c.rjDetail.refAide)}</div>
+          </div>
+          ${c.rjDetail.sansCat
+            ? `<div style="padding:26px 0;font-size:12px;color:var(--color-text-muted)">Le panel ne rend pas de ventilation par catégorie pour cette journée.</div>`
+            : `<div style="margin-top:9px">${treemap(c.rjDetail.tuiles, 300)}</div>${echelle}`}
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.35fr 1fr;gap:22px;margin-top:16px;border-top:1px solid var(--color-border-tertiary);padding-top:14px">
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+          ${c.rjDetail.kpis.map(k => `<div style="background:var(--color-background-secondary);border-radius:9px;padding:10px 12px">
+            <div style="${cap}">${esc(k.l)}</div>
+            <div style="font-family:var(--font-display);font-size:21px;line-height:1.1;margin-top:3px;${num}">${esc(k.v)}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(k.s)}</div>
+          </div>`).join('')}
+        </div>
+        <div>
+          <div style="${cap};margin-bottom:7px">Le jour dans le mois</div>
+          ${c.rjDetail.serieVide
+            ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucun jour ouvert ce mois-ci.</div>`
+            : `<div style="display:flex;gap:3px;align-items:center">
+              ${c.rjDetail.serie.map(j => `<div title="${esc(j.titre)}" style="flex:1;display:flex;flex-direction:column;height:64px;justify-content:center">
+                <div style="height:29px;display:flex;align-items:flex-end"><i style="display:block;width:100%;height:${j.hautHaut}px;background:${j.coul};border-radius:3px 3px 0 0;${j.contour}"></i></div>
+                <div style="height:1px;background:var(--color-border-secondary)"></div>
+                <div style="height:29px"><i style="display:block;width:100%;height:${j.hautBas}px;background:${j.coul};border-radius:0 0 3px 3px;${j.contour}"></i></div>
+              </div>`).join('')}
+            </div>
+            <div style="display:flex;justify-content:space-between;gap:10px;font-size:10px;color:var(--color-text-muted);margin-top:4px">
+              <span>${esc(c.rjDetail.serieDebut)}</span><span style="text-align:center;text-wrap:pretty">${esc(c.rjDetail.serieTxt)}</span><span>${esc(c.rjDetail.serieFin)}</span>
+            </div>`}
+        </div>
+      </div>
+    </div>` : (c.rjInvite ? `
+    <div style="font-size:11.5px;color:var(--color-text-muted);padding:2px 2px 0;text-wrap:pretty">${esc(c.rjInvite)}</div>` : '')}
+
+    ${c.rjHeures ? `
+    <!-- La modale du CA heure par heure : le voile ferme, la carte non (son
+         data-h vide capte le clic avant le voile). -->
+    <div ${x.A(c.rjHeures.fermer)} style="position:fixed;inset:0;background:rgba(34,30,26,.45);z-index:120;display:flex;align-items:center;justify-content:center;padding:20px">
+      <div ${x.A(c.rjHeures.rien)} style="${carte};width:420px;max-width:94vw;max-height:86vh;overflow:auto;padding:17px 19px;cursor:default;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px">
+          <div>
+            <div style="${cap}">Ventes par heure</div>
+            <div style="font-family:var(--font-display);font-size:18px;margin-top:3px">${esc(c.rjHeures.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted)">${esc(c.rjHeures.date)}</div>
+          </div>
+          <button ${x.A(c.rjHeures.fermer)} title="Fermer" style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;line-height:1;padding:2px 6px">×</button>
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-top:11px">
+          ${c.rjHeures.lignes.map(h2 => `
+          <tr>
+            <td style="padding:5px 0;width:74px;white-space:nowrap;${num};color:${h2.top ? 'var(--color-primary)' : 'var(--color-text)'};font-weight:${h2.top ? '700' : '400'}">${esc(h2.h)}</td>
+            <td style="padding:5px 8px"><span style="display:block;height:9px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+              <i style="display:block;height:100%;width:${h2.w}%;border-radius:8px;background:${h2.top ? 'var(--color-primary)' : '#C68E95'}"></i></span></td>
+            <td style="padding:5px 0;width:76px;text-align:right;${num};font-weight:${h2.top ? '700' : '500'}">${esc(h2.ca)}</td>
+            <td style="padding:5px 0 5px 10px;width:52px;text-align:right;${num};font-size:10.5px;color:var(--color-text-muted)">${esc(h2.part)}</td>
+          </tr>`).join('')}
+          <tr>
+            <td style="padding:8px 0 0;border-top:1px solid var(--color-border-secondary);font-weight:400">Total</td>
+            <td style="padding:8px 8px 0;border-top:1px solid var(--color-border-secondary);font-size:10.5px;color:var(--color-text-muted)">${esc(c.rjHeures.tickets)}</td>
+            <td style="padding:8px 0 0;border-top:1px solid var(--color-border-secondary);text-align:right;${num};font-weight:400">${esc(c.rjHeures.total)}</td>
+            <td style="padding:8px 0 0 10px;border-top:1px solid var(--color-border-secondary)"></td>
+          </tr>
+        </table>
+      </div>
+    </div>` : ''}
+
+  </div>`;
+}
+
+function tplReputation(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const cap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)';
+  if (c.repChargement) {
+    return `<div data-screen="reputation" style="padding:40px 0;font-size:13px;color:var(--color-text-muted)">Lecture des avis…</div>`;
+  }
+  if (c.repErreur) {
+    return `<div data-screen="reputation" style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.repErreurTxt)}</div>`;
+  }
+  const etoiles = (list) => list.map(e => `<span style="${e.st}">★</span>`).join('');
+  // Les cinq jauges, dessinées à l'identique pour le réseau et pour un magasin :
+  // on compare les deux d'un coup d'œil, ce qui suppose la même échelle et la
+  // même mise en page. `note` sert de repère à gauche, la part à droite.
+  const jauges = (j, compact) => !j ? '' : `
+    <div style="margin-top:${compact ? '10' : '12'}px">
+      ${j.barres.map(b2 => `
+        <div style="display:flex;align-items:center;gap:7px;margin-bottom:3px">
+          <span style="width:26px;text-align:right;font-size:11px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.note}<i style="${b2.etoileSt};font-style:normal">★</i></span>
+          <span style="flex:1;min-width:0;height:7px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden">
+            <span style="display:block;${b2.jaugeSt}"></span>
+          </span>
+          <span style="width:34px;text-align:right;font-size:11px;font-variant-numeric:tabular-nums">${b2.n}</span>
+          <span style="width:34px;text-align:right;font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums">${b2.pct}</span>
+        </div>`).join('')}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.4;text-wrap:pretty">${esc(j.echantillon)}</div>
+    </div>`;
+  return `
+  <div data-screen="reputation" style="display:flex;flex-direction:column;gap:16px">
+
+    <div style="${carte};padding:18px 20px;display:grid;grid-template-columns:auto 1fr auto;gap:26px;align-items:center">
+      <div>
+        <div style="${cap};margin-bottom:6px">Moyenne réseau</div>
+        <div style="display:flex;align-items:flex-end;gap:10px">
+          <span style="${c.repMoyenneSt}">${c.repMoyenne}</span>
+          <span style="display:inline-flex;gap:1px;padding-bottom:3px">${etoiles(c.repEtoilesReseau)}</span>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px">${esc(c.repAvis)}</div>
+        <!-- Répartition par étoiles : cinq jauges, la plus longue étant la plus
+             fréquente. Les pourcentages portent sur les avis LUS, et la ligne
+             sous les jauges le dit — pas sur le total de la fiche Google. -->
+        <div style="min-width:230px">${jauges({ barres: c.repBarres, echantillon: c.repEchantillon }, false)}</div>
+      </div>
+      <div style="border-left:1px solid var(--color-border-tertiary);padding-left:26px">
+        <div style="${cap};margin-bottom:6px">Cible ${c.repCible}</div>
+        <div style="font-size:13px;font-weight:400">${esc(c.repSousCibleTxt)}</div>
+        <div style="font-size:12.5px;margin-top:7px;font-weight:${c.repEffortFort ? '500' : '400'};color:${c.repEffortFort ? '#8D1D2C' : 'var(--color-text-muted)'}">${esc(c.repEffort)}</div>
+      </div>
+      <div style="text-align:right;min-width:210px">
+        <div style="${cap};margin-bottom:6px">Connecteur Google</div>
+        ${c.repConfigure
+          ? `<div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${c.repRaccordes} fiche${c.repRaccordes > 1 ? 's' : ''} raccordée${c.repRaccordes > 1 ? 's' : ''}<br>${esc(c.repSynchroTxt)}</div>
+             <button ${x.A(c.repSync)} class="hv-fade" style="margin-top:8px;border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:29px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer;${c.repBusy ? 'opacity:.6;cursor:default' : ''}">${c.repBusy ? 'Synchronisation…' : 'Synchroniser'}</button>`
+          : `<div style="font-size:11.5px;color:var(--accent);font-weight:400;line-height:1.5">Aucune clé Google</div>
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.45">Renseignez-la dans Paramètres pour rapatrier les notes et les avis.</div>`}
+      </div>
+    </div>
+
+    ${c.repVide ? `<div style="${carte};padding:18px;font-size:12.5px;color:var(--color-text-muted);text-wrap:pretty">
+      Aucun avis n’est encore remonté. Les notes et les avis viennent des fiches Google des magasins ; le raccordement des fiches n’est pas branché — les tables restent vides jusque-là.
+    </div>` : ''}
+
+    <!-- Toutes les tuiles à la même taille. Un alignement sur le début laissait
+         chaque carte se dimensionner sur ses avis : deux magasins côte à côte
+         n'avaient ni la même hauteur, ni leurs jauges à la même ligne, et l'œil
+         ne pouvait plus les comparer sans les relire. Des rangées d'une même
+         fraction les alignent aussi entre elles ; le blanc qui reste en bas
+         d'une carte courte coûte moins que la comparaison qu'on perdait.
+         (Pas d'accent grave dans ce commentaire : on est dans un littéral de
+         gabarit, il refermerait la chaîne.) -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:stretch;grid-auto-rows:1fr">
+      ${c.repMagasins.map(m => `
+        <div style="${carte};padding:15px 17px;display:flex;flex-direction:column">
+          <div style="display:flex;align-items:flex-start;gap:12px">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="font-size:13px;font-weight:400">${esc(m.nom)}</span>
+                <span style="${m.badgeSt}">${esc(m.badge)}</span>
+              </div>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">
+                ${esc(m.avis)}${m.synchro ? ' · ' + esc(m.synchro) : ''}
+                ${m.hasUrl ? ` · <a href="${esc(m.url)}" target="_blank" rel="noopener" style="color:var(--color-primary);text-decoration:none">fiche Google ↗</a>` : ''}
+                ${m.raccorde ? ` · <button ${x.A(m.detacher)} class="hv-line" style="border:none;background:none;padding:0;color:var(--color-text-muted);font-family:var(--font-ui);font-size:11.5px;cursor:pointer">détacher</button>` : ''}
+              </div>
+            </div>
+            <div style="text-align:right;flex:0 0 auto">
+              <div style="${m.noteSt}">${m.note}</div>
+              <div style="display:inline-flex;gap:1px;margin-top:3px">${etoiles(m.etoiles)}</div>
+            </div>
+          </div>
+
+          <div style="${m.effortSt}">${esc(m.effort)}</div>
+
+          ${m.jauges && !m.jauges.vide ? jauges(m.jauges, true) : ''}
+
+          ${!m.raccorde ? `
+            <button ${x.A(m.ouvrirRech)} style="margin-top:9px;border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-primary);border-radius:8px;height:28px;padding:0 13px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Raccorder la fiche Google</button>` : ''}
+
+          ${m.rechOuverte && c.repRech ? `
+            <div style="margin-top:10px;border:1px solid var(--color-primary);border-radius:10px;padding:11px 13px">
+              <div style="${cap};margin-bottom:7px">Chercher la fiche</div>
+              <div style="display:flex;gap:7px">
+                <input id="rep-q" value="${esc(c.repRech.q)}" ${x.I(c.repRech.setQ)} placeholder="Nom du magasin et ville" style="flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:30px;padding:0 10px;font-family:var(--font-ui);font-size:12px">
+                <button ${x.A(c.repRech.chercher)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer;${c.repRech.busy ? 'opacity:.6;cursor:default' : ''}">${c.repRech.busy ? '…' : 'Chercher'}</button>
+                <button ${x.A(c.repRech.fermer)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:30px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer">Fermer</button>
+              </div>
+              ${c.repRech.err ? `<div style="margin-top:8px;padding:7px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:11.5px;font-weight:400">${esc(c.repRech.err)}</div>` : ''}
+              ${c.repRech.aucun ? `<div style="margin-top:8px;font-size:11.5px;color:var(--color-text-muted)">Aucune fiche trouvée pour cette recherche.</div>` : ''}
+              ${c.repRech.candidats.map(k => `
+                <div ${x.A(k.choisir)} class="hv-bg" style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--color-border-tertiary);cursor:pointer">
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;font-weight:400">${esc(k.nom)}</div>
+                    <div style="font-size:11px;color:var(--color-text-muted)">${esc(k.adresse)}</div>
+                  </div>
+                  <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap">${esc(k.note)}</span>
+                </div>`).join('')}
+            </div>` : ''}
+
+          <div style="${cap};margin:14px 0 2px">5 derniers avis</div>
+          ${m.vide ? `<div style="font-size:11.5px;color:var(--color-text-muted);padding:7px 0">Aucun avis rapatrié pour ce magasin.</div>` : ''}
+          ${m.derniers.map(a => `
+            <div style="padding:8px 0;border-top:1px solid var(--color-border-tertiary)">
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+                <span style="display:inline-flex;gap:1px">${etoiles(a.etoiles)}</span>
+                <span style="font-size:11.5px;font-weight:400">${esc(a.auteur)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${a.le}</span>
+                ${a.repondu ? `<span style="${a.reponduSt};margin-left:auto">${a.reponduTxt}</span>` : ''}
+              </div>
+              <div style="${a.texteSt};margin-top:3px">${esc(a.texte)}</div>
+            </div>`).join('')}
+        </div>`).join('')}
+    </div>
+  </div>`;
+}
+
+/* --- Fonds · écrire une ligne du grand livre ---------------------------------
+   La saisie tient dans une carte, pas dans une modale : on la remplit en
+   regardant le grand livre qui est juste dessous, et on voit tout de suite si
+   la ligne qu'on écrit existe déjà. */
+function tplFondsForm(c, x){
+  const { esc } = x;
+  const f = c.foForm;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-primary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:400;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const sel = (nom, val, opts, vide) => `<select ${x.C(f.set(nom))} style="${inp}">
+    <option value=""${val ? '' : ' selected'}>${esc(vide)}</option>
+    ${opts.map(o => `<option value="${esc(o.id)}"${String(val) === String(o.id) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <div style="${carte};padding:15px 17px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:400">${esc(f.titre)}</span>
+      <button ${x.A(f.fermer)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px">
+      ${f.sensBtns.map(b => `<button ${x.A(b.pick)} style="border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`).join('')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
+      <div style="grid-column:span 2"><span style="${k}">Libellé</span>
+        <input id="fo-lib" value="${esc(f.champs.libelle)}" ${x.I(f.set('libelle'))} placeholder="Ce que cette ligne finance ou apporte" style="${inp}"></div>
+      <div><span style="${k}">Date</span>
+        <input id="fo-date" type="date" value="${esc(f.champs.date)}" ${x.C(f.set('date'))} style="${inp}"></div>
+      <div><span style="${k}">Montant</span>
+        <input id="fo-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
+      <div><span style="${k}">Nature</span>
+        <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+      ${f.investBascule ? `<div style="grid-column:span 2"><button ${x.A(f.investBascule)} style="display:inline-flex;align-items:center;gap:8px;border-radius:8px;height:31px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;${f.invest ? 'border:1px solid var(--prize-soft);background:var(--prize-soft);color:var(--color-on-abricot)' : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+        <span style="width:13px;height:13px;border-radius:4px;border:1.5px solid ${f.invest ? 'var(--color-on-abricot)' : 'var(--color-border-secondary)'};display:inline-flex;align-items:center;justify-content:center;font-size:10px;line-height:1">${f.invest ? '✓' : ''}</span>
+        Investissement — équipe plutôt qu’il ne consomme</button>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Le grand livre le badge et le sous-totalise par mois et par an.</div></div>` : ''}
+      <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
+      <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
+      <div><span style="${k}">Campagne</span>${sel('campagne', f.champs.campagne, c.foCampagnesOpts || [], 'aucune')}</div>
+      <div style="grid-column:span 2"><span style="${k}">Fournisseur</span>
+        <input id="fo-four" list="fo-fournisseurs" value="${esc(f.champs.fournisseur)}" ${x.I(f.set('fournisseur'))} placeholder="choisissez ou tapez un nouveau nom" style="${inp}">
+        <datalist id="fo-fournisseurs">${(c.foFournisseurs || []).map(n => `<option value="${esc(n)}"></option>`).join('')}</datalist>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:4px">Repris de la centrale d’achat ; un nom inconnu y est ajouté à l’enregistrement.</div></div>
+      <div style="grid-column:span 2"><span style="${k}">Pièce</span>
+        <input id="fo-piece" value="${esc(f.champs.piece)}" ${x.I(f.set('piece'))} placeholder="n° de facture, bon de commande…" style="${inp}"></div>
+    </div>
+    ${f.avert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:11px;line-height:1.45">${esc(f.avert)}</div>` : ''}
+    ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
+      <button ${x.A(f.fermer)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Enregistrement…' : (f.id ? 'Corriger l’écriture' : 'Enregistrer au fonds')}</button>
+    </div>
+  </div>`;
+}
+
+/* --- Fonds · un frais qui revient -------------------------------------------- */
+function tplFondsRecForm(c, x){
+  const { esc } = x;
+  const f = c.foRecForm;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-secondary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:400;display:block;margin-bottom:4px';
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:33px;padding:0 10px;font-family:var(--font-ui);font-size:12.5px';
+  const puce = b => `<button ${x.A(b.pick)} style="border-radius:8px;height:30px;padding:0 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer;${b.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">${esc(b.nom)}</button>`;
+  const sel = (nom, val, opts, vide) => `<select ${x.C(f.set(nom))} style="${inp}">
+    <option value=""${val ? '' : ' selected'}>${esc(vide)}</option>
+    ${opts.map(o => `<option value="${esc(o.id)}"${String(val) === String(o.id) ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+  </select>`;
+  return `
+  <div style="${carte};padding:15px 17px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px">
+      <span style="font-size:13px;font-weight:400">Un frais qui revient</span>
+      <button ${x.A(f.fermer)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:26px;height:26px;font-size:13px;cursor:pointer">✕</button>
+    </div>
+    <div style="display:flex;gap:7px;flex-wrap:wrap;margin-bottom:12px;align-items:center">
+      ${f.sensBtns.map(puce).join('')}
+      <span style="width:1px;height:22px;background:var(--color-border-tertiary);margin:4px 3px"></span>
+      ${f.rythmes.map(puce).join('')}
+      ${f.estSemaines ? `<span style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--color-text-muted)">N =
+        <input id="fr-sem" type="number" min="1" max="52" value="${esc(f.semaines)}" ${x.I(f.setSemaines)} style="width:56px;text-align:center;border:1px solid var(--color-border-secondary);border-radius:8px;height:30px;font-family:var(--font-ui);font-size:12.5px;background:var(--color-surface);color:var(--color-text)"> semaines</span>` : ''}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px 13px">
+      <div style="grid-column:span 2"><span style="${k}">Libellé</span>
+        <input id="fr-lib" value="${esc(f.champs.libelle)}" ${x.I(f.set('libelle'))} placeholder="Abonnement, honoraires, redevance…" style="${inp}"></div>
+      <div><span style="${k}">Montant d’une échéance</span>
+        <input id="fr-mnt" value="${esc(f.champs.montant)}" ${x.I(f.set('montant'))} inputmode="decimal" placeholder="0,00" style="${inp};text-align:right;font-variant-numeric:tabular-nums"></div>
+      <div><span style="${k}">Nature</span>
+        <select ${x.C(f.set('source'))} style="${inp}">${(c.foSources || []).map(o => `<option value="${esc(o)}"${f.champs.source === o ? ' selected' : ''}>${esc(o)}</option>`).join('')}</select></div>
+      <div><span style="${k}">Première échéance</span>
+        <input id="fr-deb" type="date" value="${esc(f.champs.debut)}" ${x.C(f.set('debut'))} style="${inp}"></div>
+      <div><span style="${k}">Dernière échéance</span>
+        <input id="fr-fin" type="date" value="${esc(f.champs.fin)}" ${x.C(f.set('fin'))} style="${inp}"></div>
+      <div><span style="${k}">Levier développé</span>${sel('levier', f.champs.levier, c.foLeviersOpts || [], 'aucun')}</div>
+      <div><span style="${k}">Boutique</span>${sel('magasin', f.champs.magasin, c.foMagasinsOpts || [], 'tout le réseau')}</div>
+    </div>
+    ${f.apercu ? `<div style="background:var(--color-background-secondary);border-radius:10px;padding:11px 14px;margin-top:12px">
+      <div style="font-size:12px;font-weight:400;color:var(--color-primary)">${f.apercu.n} échéance(s) seront écrites au fonds${f.apercu.total ? ' — ' + esc(f.apercu.total) + ' au total' : ''}${f.apercu.previsionModule ? ' (prévision — le module arrête les dates)' : ''}</div>
+      <div style="margin-top:6px">${f.apercu.dates.map(d2 => `<span style="display:inline-block;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:7px;padding:2px 9px;margin:2px 4px 0 0;font-size:11px;font-variant-numeric:tabular-nums">${esc(d2)}</span>`).join('')}${f.apercu.tronque ? `<span style="font-size:11px;color:var(--color-text-muted)"> … et ${f.apercu.tronque} de plus</span>` : ''}</div>
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Ces écritures comptent au budget du fonds dès l’enregistrement — les mois futurs se lisent au grand livre comme des sorties déjà engagées.</div>
+    </div>` : ''}
+    <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un frais récurrent est borné : les échéances sont écrites au grand livre dès l’enregistrement, du début à la fin. Sans fin, il ne se budgète pas.${f.estSemaines ? ' En semaines, les échéances s’écrivent comme des mouvements datés : elles se corrigent ensuite ligne à ligne.' : ''}</div>
+    ${f.err ? `<div style="margin-top:11px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px;line-height:1.45">${esc(f.err)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:14px">
+      <button ${x.A(f.fermer)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:34px;padding:0 16px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Annuler</button>
+      <button ${x.A(f.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 20px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${f.busy ? 'wait' : 'pointer'};opacity:${f.busy ? '.6' : '1'}">${f.busy ? 'Écriture…' : 'Écrire les échéances'}</button>
+    </div>
+  </div>`;
+}
+
+function tplFonds(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const k = 'font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:400';
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 10px 7px';
+  const td = 'padding:8px 10px;border-top:1px solid var(--color-border-tertiary);font-size:12.5px';
+  const num = 'text-align:right;font-variant-numeric:tabular-nums';
+  if (c.foChargement) {
+    return `<div data-screen="fonds" style="${carte};padding:22px;font-size:12.5px;color:var(--color-text-muted)">Lecture du fonds…</div>`;
+  }
+  return `
+  <div data-screen="fonds" style="display:flex;flex-direction:column;gap:14px">
+    ${(c.foErreurs || []).length ? `<div style="${carte};padding:13px 16px;background:var(--prize-soft);border-color:var(--prize-soft)">
+      <div style="font-size:12.5px;font-weight:400;color:var(--color-on-abricot)">Le module marketing n\u2019a pas tout rendu</div>
+      ${c.foErreurs.map(e => `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:4px;line-height:1.45">${esc(e)}</div>`).join('')}
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      ${(c.foTuiles || []).map(t => `<div style="${carte};padding:15px 17px">
+        <div style="${k}">${esc(t.k)}</div>
+        <div style="font-size:24px;font-weight:700;line-height:1.05;margin-top:3px${t.col ? ';color:' + t.col : ''}">${esc(t.v)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:5px;line-height:1.4">${esc(t.aide)}</div>
+      </div>`).join('')}
+    </div>
+
+    <!-- Tout se tient depuis le pilotage réseau : plus besoin d'ouvrir l'autre
+         application pour écrire une ligne. Le module marketing reste le seul à
+         TENIR le grand livre — le cockpit adresse ses routes, il ne recopie
+         rien. -->
+    <div style="${carte};padding:13px 17px;display:flex;align-items:center;gap:9px;flex-wrap:wrap">
+      <span style="font-size:13px;font-weight:400;margin-right:4px">Écrire au fonds</span>
+      <button ${x.A(() => c.foNouveau('IN'))} class="btn btn--sm">+ Alimentation</button>
+      <button ${x.A(() => c.foNouveau('OUT'))} class="btn btn--sm">+ Dépense</button>
+      <button ${x.A(c.foRecNouveau)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:9px;height:33px;padding:0 14px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Frais récurrent</button>
+      <div style="flex:1"></div>
+      <span style="font-size:11px;color:var(--color-text-muted)">Les écritures partent dans le module qui tient le fonds ; elles y sont visibles aussitôt.</span>
+    </div>
+
+    ${c.foForm ? tplFondsForm(c, x) : ''}
+    ${c.foRecForm ? tplFondsRecForm(c, x) : ''}
+
+    <div style="${carte};overflow:hidden">
+      <div style="padding:13px 17px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:400">Frais récurrents</span>
+        <span style="font-size:11px;color:var(--color-text-muted)">Un modèle, autant d’échéances écrites d’un coup</span>
+      </div>
+      ${c.foRecVide ? `<div style="padding:16px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun frais récurrent déclaré.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
+        <thead><tr>
+          <th style="${th};padding-left:17px">Frais</th><th style="${th}">Rythme</th>
+          <th style="${th}">Période</th><th style="${th}">Imputation</th>
+          <th style="${th};${num}">Échéance</th><th style="${th};padding-right:17px"></th>
+        </tr></thead>
+        <tbody>${c.foRecurrences.map(r => `<tr>
+          <td style="${td};padding-left:17px"><span style="font-weight:400">${esc(r.libelle)}</span><div style="font-size:10.5px;color:${r.col}">${esc(r.sens)}</div></td>
+          <td style="${td};color:var(--color-text-muted)">${esc(r.rythme)}</td>
+          <td style="${td};color:var(--color-text-muted);white-space:nowrap">${esc(r.periode)}</td>
+          <td style="${td};color:var(--color-text-muted)">${esc(r.magasin)}</td>
+          <td style="${td};${num};font-weight:400">${esc(r.montant)}</td>
+          <td style="${td};padding-right:17px;text-align:right"><button ${x.A(r.supprimer)} title="Supprimer ce frais et ses échéances" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px">✕</button></td>
+        </tr>`).join('')}</tbody>
+      </table></div>`}
+    </div>
+
+    <div style="${carte};padding:14px 17px 16px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:11px">
+        <span style="font-size:13px;font-weight:400">Par levier — où part l’argent du fonds</span>
+        <span style="font-size:10.5px;color:var(--color-text-muted)">${c.foLevActifs} / ${c.foLevNb} portent une dépense</span>
+      </div>
+      ${(c.foLeviers || []).length ? `<div style="display:grid;grid-template-columns:repeat(${c.foLevNb},minmax(0,1fr));gap:9px">
+        ${c.foLeviers.map(l => `<div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:11px 12px;border-top:2.5px solid ${l.couleur};${l.inactif ? 'opacity:.55' : ''}">
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="width:8px;height:8px;border-radius:2px;background:${l.couleur};flex:0 0 auto"></span>
+            <span style="font-size:11px;font-weight:400;line-height:1.2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(l.nom)}">${esc(l.nom)}</span>
+          </div>
+          <div style="font-size:16px;font-weight:400;font-variant-numeric:tabular-nums;margin-top:6px;line-height:1.1">${esc(l.depense)}</div>
+          <div style="height:4px;border-radius:8px;background:var(--color-border-tertiary);overflow:hidden;margin-top:6px"><i style="display:block;height:100%;border-radius:8px;width:${l.barre.toFixed(1)}%;background:${l.couleur}"></i></div>
+          <div style="font-size:10px;color:var(--color-text-muted);margin-top:5px;line-height:1.35">${esc(l.part || 'aucune dépense')}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">ROI ${esc(l.roi)}</div>
+        </div>`).join('')}
+      </div>` : `<div style="font-size:12px;color:var(--color-text-muted)">Aucun levier renseigné.</div>`}
+      <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">Un levier sans dépense n’a pas de retour à montrer — c’est une absence, pas un zéro.${c.foLevOrphelines ? ' ' + esc(c.foLevOrphelines) : ''}</div>
+    </div>
+
+    ${(c.foFournTotaux || []).length ? `<div style="${carte}">
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:9px">
+        <span style="font-size:13px;font-weight:400">Par fournisseur — ce que le fonds leur a payé</span>
+        <span style="font-size:11px;color:var(--color-text-muted)">cliquez un fournisseur pour ses écritures</span>
+      </div>
+      ${c.foFournTotaux.map(fo => `
+        <div ${x.A(fo.ouvrir)} style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;padding:8px 10px;border-radius:8px;cursor:pointer;${fo.ouvert ? 'background:var(--color-background-secondary)' : ''}">
+          <span style="font-size:10px;color:var(--color-text-muted);width:9px">${fo.ouvert ? '▾' : '▸'}</span>
+          <span style="font-size:12.5px;font-weight:400">${esc(fo.nom)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted)">${fo.n} écriture(s)</span>
+          <span style="flex:1"></span>
+          ${fo.invest ? `<span style="font-size:11px;font-weight:400;color:var(--color-on-abricot);font-variant-numeric:tabular-nums">${esc(fo.invest)}</span>` : ''}
+          ${fo.revenu ? `<span style="font-size:11px;font-weight:400;color:var(--green);font-variant-numeric:tabular-nums">${esc(fo.revenu)}</span>` : ''}
+          <span style="font-size:12.5px;font-weight:400;color:var(--color-primary);font-variant-numeric:tabular-nums">− ${esc(fo.paye)}</span>
+        </div>
+        ${fo.ouvert ? fo.mvts.map(m => `
+          <div style="display:flex;align-items:baseline;gap:10px;padding:4px 10px 4px 31px;font-size:11.5px">
+            <span style="color:var(--color-text-muted);white-space:nowrap">${esc(m.date)}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(m.libelle)}${m.invest ? ` <span style="display:inline-block;font-size:10px;font-weight:400;padding:0 6px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">investissement</span>` : ''}</span>
+            <span style="color:${m.col};font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap">${esc(m.montant)}</span>
+          </div>`).join('') : ''}`).join('')}
+      ${c.foFournSans ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:9px;line-height:1.45">${esc(c.foFournSans)}</div>` : ''}
+    </div>` : ''}
+
+    <div style="display:grid;grid-template-columns:1fr;gap:12px;align-items:start">
+      <div style="${carte};overflow:hidden">
+        <div style="padding:13px 17px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:13px;font-weight:400">Grand livre du fonds</span>
+          ${(c.foOrdreBtns || []).length && !c.foVide ? `<span style="display:inline-flex;border:1px solid rgba(34,34,34,0.14);border-radius:8px;overflow:hidden">
+            ${c.foOrdreBtns.map(o => `<button ${x.A(o.go)} title="Ordre des mois" style="border:none;padding:5px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;${o.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}
+          </span>` : ''}
+          <span style="flex:1"></span>
+          <span style="font-size:11px;color:var(--color-text-muted)">Un bloc par mois — entrées, sorties, solde · cliquez une ligne pour la corriger</span>
+        </div>
+        ${(c.foMoisBadges || []).length > 1 ? `<div style="padding:9px 17px;border-bottom:1px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          ${c.foMoisBadges.map(m => `<button ${x.A(m.go)} title="${m.on ? 'Revoir tous les mois' : 'Ne montrer que ' + esc(m.nom)}" style="border-radius:8px;padding:3px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;${m.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)'}">${esc(m.nom)}</button>`).join('')}
+        </div>` : ''}
+        ${(c.foAnnees || []).length ? `<div style="padding:8px 17px;border-bottom:1px solid var(--color-border-tertiary);display:flex;gap:18px;flex-wrap:wrap;background:var(--color-background-secondary)">
+          ${c.foAnnees.map(a => `<span style="font-size:11px;font-variant-numeric:tabular-nums"><b style="font-weight:400">${esc(a.an)}</b>
+            <span style="color:var(--green);font-weight:400">${esc(a.entrees)}</span>
+            <span style="color:var(--color-primary);font-weight:400">${esc(a.sorties)}</span>
+            ${a.invest ? `<span style="color:var(--color-on-abricot);font-weight:400">· ${esc(a.invest)}</span>` : ''}</span>`).join('')}
+        </div>` : ''}
+        ${c.foVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun mouvement enregistré.</div>` : `
+        <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:620px">
+          <thead><tr>
+            <th style="${th};padding-left:17px">Date</th>
+            <th style="${th}">Mouvement</th>
+            <th style="${th}">Levier</th>
+            <th style="${th}">Réseau / boutique</th>
+            <th style="${th};${num}">Montant</th>
+            <th style="${th};padding-right:17px"></th>
+          </tr></thead>
+          <tbody>${(c.foMoisGroupes || []).map(g => `
+            <tr><td colspan="6" style="padding:11px 17px;background:var(--color-background-secondary);border-top:1px solid var(--color-border-tertiary)">
+              <div style="display:flex;align-items:baseline;gap:14px;flex-wrap:wrap">
+                <span style="font-size:12.5px;font-weight:400">${esc(g.nom)}</span>
+                <span style="font-size:11px;font-weight:400;color:var(--green);font-variant-numeric:tabular-nums">Entrées ${esc(g.totEntrees)}</span>
+                <span style="font-size:11px;font-weight:400;color:var(--color-primary);font-variant-numeric:tabular-nums">Sorties ${esc(g.totSorties)}</span>
+                ${g.totInvest ? `<span style="font-size:11px;font-weight:400;color:var(--color-on-abricot);font-variant-numeric:tabular-nums">${esc(g.totInvest)}</span>` : ''}
+                <span style="flex:1"></span>
+                <span style="font-size:11px;color:var(--color-text-muted)">Solde en fin de mois&nbsp;: <b style="color:${g.soldeCol};font-variant-numeric:tabular-nums">${esc(g.solde)}</b></span>
+              </div>
+            </td></tr>
+            ${g.entrees.concat(g.sorties).map(l => `<tr>
+            <td style="${td};padding-left:17px;white-space:nowrap;color:var(--color-text-muted)">${esc(l.date)}</td>
+            <td style="${td}"><span style="font-weight:400">${esc(l.libelle)}</span>${l.invest ? ` <span style="display:inline-block;font-size:10px;font-weight:400;padding:1px 7px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft);vertical-align:1px">investissement</span>` : ''}<div style="font-size:10.5px;color:${l.col}">${esc(l.sens)}${l.source ? ` <span style="color:var(--color-text-muted)">· ${esc(l.source)}</span>` : ''}</div></td>
+            <td style="${td}">${l.levier
+              ? `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:400;padding:1px 8px;border-radius:8px;background:${l.levierCol}1f;border:1px solid ${l.levierCol};color:var(--color-text)"><span style="width:7px;height:7px;border-radius:2px;background:${l.levierCol}"></span>${esc(l.levier)}</span>`
+              : (l.sens === 'sortie' ? `<span style="font-size:11px;color:var(--color-on-abricot)">aucun levier</span>` : '')}</td>
+            <td style="${td};font-size:11.5px">${l.reseau
+              ? `<span style="font-weight:400">Tout le réseau</span>`
+              : `<span style="font-weight:400">${esc(l.magasin)}</span>`}${l.campagne ? `<div style="color:var(--color-text-muted)">${esc(l.campagne)}</div>` : ''}${l.fournisseur ? `<div style="color:var(--color-text-muted)">${esc(l.fournisseur)}</div>` : ''}</td>
+            <td style="${td};${num};color:${l.col};font-weight:400">${esc(l.montant)}</td>
+            <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+              ${l.editer ? `<button ${x.A(l.editer)} title="Corriger cette écriture" style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:7px;padding:3px 9px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer">Corriger</button>` : ''}
+              ${l.supprimer ? `<button ${x.A(l.supprimer)} title="Supprimer cette écriture" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;margin-left:4px">✕</button>` : ''}
+              ${!l.editer && !l.supprimer ? `<span style="font-size:10.5px;color:var(--color-text-muted)">frais récurrent</span>` : ''}
+            </td>
+          </tr>`).join('')}`).join('')}</tbody>
+        </table></div>
+        ${c.foTronque ? `<div style="padding:9px 17px;font-size:11px;color:var(--color-text-muted);border-top:1px solid var(--color-border-tertiary)">${c.foTronque} mouvement(s) sur des mois plus anciens — le détail complet est dans le module marketing.</div>` : ''}`}
+      </div>
+    </div>
+
+    <div style="${carte};overflow:hidden">
+      <div style="padding:13px 17px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:11px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:400">Redevances par client</span>
+        <!-- La période se choisit ici : l'API recalcule CA, taux et dû pour
+             le mois demandé — borné au mois courant, un CA qui n'existe pas
+             encore ne se facture pas. -->
+        ${c.foMoisChoisi ? `<input id="fo-roy-mois" type="month" value="${esc(c.foMoisChoisi)}" max="${esc(c.foMoisMax)}" ${x.C(c.foMoisSet)} title="Période des redevances" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:29px;padding:0 9px;font-family:var(--font-ui);font-size:12px">` : ''}
+        <div style="flex:1"></div>
+        ${c.foRoyEcrire ? `<button ${x.A(c.foRoyEcrire)} title="Une écriture par client — seule la redevance marketing part au fonds ; aperçu avant écriture" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:8px;height:27px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Tout insérer au grand livre</button>` : ''}
+      </div>
+      ${!c.foRoyPlan ? '' : `<div style="padding:13px 17px;border-bottom:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <div style="font-size:12.5px;font-weight:400">Redevances marketing ${esc(c.foRoyPlan.mois)} — ce qui partirait au fonds</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px;line-height:1.45">Seule la sorte Marketing alimente le fonds : les redevances Marque et Assistance restent des revenus de la marque, hors grand livre.</div>
+        ${c.foRoyPlan.busy ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:7px">Calcul en cours…</div>` : `
+        ${c.foRoyPlan.err ? `<div style="font-size:11.5px;color:var(--color-primary);margin-top:7px">${esc(c.foRoyPlan.err)}</div>` : `
+        <table style="width:100%;border-collapse:collapse;margin-top:9px">
+          <tbody>${c.foRoyPlan.lignes.map(l => `<tr>
+            <td style="padding:4px 0;font-size:12px">${esc(l.magasin)}</td>
+            <td style="padding:4px 0;font-size:12px;color:var(--color-text-muted)">${esc(l.sorte)}${l.taux ? ' · ' + esc(l.taux) : ''}</td>
+            <td style="padding:4px 0;font-size:12px;text-align:right;font-variant-numeric:tabular-nums">${esc(l.montant)}</td>
+            <td style="padding:4px 0 4px 9px;font-size:10.5px;color:var(--color-text-muted);text-align:right;white-space:nowrap">${l.deja ? 'déjà écrite' : 'à écrire'}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:11px">
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${c.foRoyPlan.vide ? 'Tout est déjà écrit pour ce mois.' : `À écrire : <b style="color:var(--color-text)">${esc(c.foRoyPlan.total)}</b>${c.foRoyPlan.nDeja ? ' · ' + c.foRoyPlan.nDeja + ' ligne(s) déjà en place' : ''}`}</span>
+          <span style="display:flex;gap:8px">
+            <button ${x.A(c.foRoyPlan.fermer)} style="border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted);border-radius:8px;height:30px;padding:0 14px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Annuler</button>
+            ${c.foRoyPlan.vide ? '' : `<button ${x.A(c.foRoyPlan.confirmer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:30px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Confirmer l’écriture</button>`}
+          </span>
+        </div>`}`}
+      </div>`}
+      ${c.foRoyaltiesVide ? `<div style="padding:22px 17px;font-size:12.5px;color:var(--color-text-muted)">Aucun client.</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:${640 + (c.foRoyTypes || []).length * 110}px">
+        <thead><tr>
+          <th style="${th};padding-left:17px">Client</th>
+          <th style="${th};${num}">CA ${esc(c.foMois)}</th>
+          ${(c.foRoyTypes || []).map(t => `<th style="${th};${num}">${esc(t.nom)}${t.auFonds ? `<div style="font-size:10px;letter-spacing:.04em;color:var(--green)">→ fonds</div>` : ''}</th>`).join('')}
+          <th style="${th};${num}">Dû total</th>
+          <th style="${th};padding-right:17px;text-align:right">Grand livre</th>
+        </tr></thead>
+        <tbody>${c.foRoyalties.map(r => `<tr>
+          <td style="${td};padding-left:17px"><span style="font-weight:400">${esc(r.nom)}</span>${r.ville ? `<div style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.ville)}</div>` : ''}</td>
+          <td style="${td};${num}">${esc(r.ca)}${r.manque ? `<div style="font-size:10px;color:var(--color-on-abricot);font-weight:400">${esc(r.manque)}</div>` : ''}</td>
+          ${(r.cellules || []).map(cell => `<td style="${td};${num}"><span style="font-size:11px;color:var(--color-text-muted)">${esc(cell.taux)}</span>${cell.montant ? `<div style="font-weight:400">${esc(cell.montant)}</div>` : ''}</td>`).join('')}
+          <td style="${td};${num};font-weight:400">${esc(r.du)}</td>
+          <td style="${td};padding-right:17px;text-align:right;white-space:nowrap">
+            ${r.inserer ? `<button ${x.A(r.inserer)} title="Insérer la redevance marketing de ce client au grand livre — le libellé porte la sorte et le montant" style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);border-radius:7px;padding:4px 10px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer">Insérer au grand livre</button>` : ''}
+            ${r.ecrit ? `<span style="font-size:10.5px;color:var(--green);font-weight:400">✓ ${esc(r.ecrit)}</span>` : ''}
+            ${!r.inserer && !r.ecrit ? `<span style="font-size:10.5px;color:var(--color-text-muted)"></span>` : ''}
+          </td>
+        </tr>`).join('')}</tbody>
+      </table></div>`}
+      ${c.foRoySource ? `<div style="padding:9px 17px;border-top:1px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoySource)}</div>` : ''}
+      ${c.foRoyNote ? `<div style="padding:9px 17px;border-top:1px solid var(--color-border-tertiary);font-size:11px;color:var(--color-text-muted);line-height:1.5">${esc(c.foRoyNote)}</div>` : ''}
+      ${c.foErp ? `<div style="padding:10px 17px;border-top:1px solid var(--color-border-tertiary);font-size:11.5px;color:var(--color-on-abricot);line-height:1.5">Reprise ERP : ${esc(c.foErp)}</div>` : ''}
+      <!-- Ce que le cockpit ne peut pas encore piloter, dit à l'endroit où on
+           le cherche — et pourquoi, avec les routes exactes. -->
+      ${(c.foManque || []).map(m => `<div style="padding:13px 17px;border-top:1px solid var(--color-border-tertiary);display:flex;gap:9px;align-items:flex-start">
+        <span style="font-size:10px;font-weight:400;padding:2px 9px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft);white-space:nowrap;flex:0 0 auto">manque API</span>
+        <div><div style="font-size:12.5px;font-weight:400">${esc(m.champ)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5">${esc(m.quoi)}</div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(m.source)}</div></div>
+      </div>`).join('')}
+    </div>
+
+    <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">Lu et écrit en direct sur ${esc(c.foSource || 'le module marketing')} (${esc(c.foBase)}). Le cockpit n\u2019en garde aucune copie : le fonds se tient à un seul endroit, et les écritures s\u2019y font — depuis cet écran.</div>
+  </div>`;
+}
+
+/* --- Tâches consultants ------------------------------------------------------ */
+/* Styles du dépli de validation, nommés une fois plutôt que recopiés six. */
+const dkv = 'display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:14px;row-gap:7px';
+const dk = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);white-space:nowrap;padding-top:2px';
+const dv = 'font-size:12px;line-height:1.45;text-wrap:pretty';
+const dcap = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)';
+const dsel = 'width:100%;font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)';
+
+/* --- Paramètres — Brand Guard : la charte et les pages Facebook -------------- */
+/* Invendus et poubelle (Magasins) : le réseau, magasin par magasin, et les produits les plus jetés. */
+function tplInvendus(c, x){
+  const { esc } = x, o = c.iv;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const TH = 'text-align:left;font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:12px 14px;border-bottom:1px solid var(--color-border-tertiary)';
+  const td = 'padding:10px 14px;border-top:1px solid var(--color-border-tertiary);font-size:12.5px';
+  const mu = '<span style="color:var(--color-text-muted);font-weight:400">—</span>';
+  const onglets = `<div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap"><div style="display:inline-flex;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:3px;gap:2px">${o.periodes.map(p => `<button ${x.A(p.choisir)} style="font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:8px 16px;border-radius:8px;border:none;cursor:pointer;background:${p.on ? 'var(--color-text)' : 'transparent'};color:${p.on ? '#fff' : 'var(--color-text)'}">${esc(p.nom)}</button>`).join('')}</div>
+    <span style="font-size:12px;color:var(--color-text-muted)">${o.periode === 'jour' ? esc(o.date) : 'du ' + esc(o.du) + ' au ' + esc(o.au)}${o.chargement ? ' · lecture…' : ''}</span>
+    <button ${x.A(o.rafraichir)} style="margin-left:auto;font-family:var(--font-ui);font-size:12px;padding:6px 12px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);cursor:pointer">Relire</button></div>`;
+  if (o.chargement) { return `<div data-screen="invendus-poubelle">${onglets}<div style="${card};padding:24px;font-size:12.5px;color:var(--color-text-muted)">Lecture de la poubelle du panel, magasin par magasin…</div></div>`; }
+  if (o.indispo) { return `<div data-screen="invendus-poubelle">${onglets}<div style="${card};padding:24px;font-size:12.5px;color:var(--accent)">${esc(o.indispo)}</div></div>`; }
+  const kpis = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px;margin-bottom:16px">${o.kpi.map((k, i) => `<div style="${card};padding:16px 18px"><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">${esc(k[0])}</div><div style="font-size:26px;font-weight:700;margin-top:6px;line-height:1.1;${i === 0 ? 'color:var(--stop)' : ''}">${esc(k[1])}</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.4">${esc(k[2])}</div></div>`).join('')}</div>`;
+  const tag = m => `<span class="iv-tag ${m.cls}">${esc(m.lib)}${m.pieces ? ' <b>' + m.pieces + '</b>' : ''}</span>`;
+  const etat = m => `<span class="iv-etat ${m.etat}">${esc(m.etatLib)}</span>`;
+  const mags = `<div style="${card};overflow:hidden;margin-bottom:16px"><div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="font-size:13px;font-weight:400">La poubelle, magasin par magasin</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto">coût de production net des pièces jetées ${esc(o.libPer)} · part = coût ÷ CA du magasin</div></div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:760px"><thead><tr><th style="${TH}">Magasin</th><th style="${TH}">Déclaration</th><th style="${TH};width:24%">Part du jeté du réseau</th><th style="${TH};text-align:right">Pièces</th><th style="${TH};text-align:right">Coût de production</th><th style="${TH};text-align:right;white-space:nowrap">% du CA</th><th style="${TH};text-align:right;white-space:nowrap">Valeur perdue</th><th style="${TH}">Motifs</th></tr></thead><tbody>
+    ${o.mags.map(m => `<tr><td style="${td};font-weight:400">${esc(m.nom)}${m.note ? `<div style="font-size:10.5px;color:var(--color-text-muted);font-weight:400">${esc(m.note)}</div>` : ''}</td><td style="${td}">${etat(m)}</td><td style="${td}">${m.etat === 'declare' ? `<div class="iv-bar"><i style="width:${m.w}%"></i></div>` : ''}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums">${m.pieces || mu}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums;font-weight:400;color:${m.etat === 'declare' ? '#A32014' : 'inherit'}">${m.cout || mu}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${m.part || mu}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap">${m.caPerdu || mu}</td><td style="${td}">${m.motifs.map(tag).join(' ') || mu}</td></tr>`).join('')}
+    ${o.reseau ? `<tr><td style="${td};font-weight:400;border-top:1px solid var(--color-border-secondary)">Réseau</td><td style="${td};border-top:1px solid var(--color-border-secondary);font-size:11.5px;color:var(--color-text-muted)">${o.reseau.declarent} sur ${o.reseau.magasins}</td><td style="${td};border-top:1px solid var(--color-border-secondary)"></td><td style="${td};text-align:right;font-weight:400;border-top:1px solid var(--color-border-secondary)">${o.reseau.pieces}</td><td style="${td};text-align:right;font-weight:400;border-top:1px solid var(--color-border-secondary);color:var(--stop)">${o.reseau.cout}</td><td style="${td};text-align:right;font-weight:400;border-top:1px solid var(--color-border-secondary)">${o.reseau.part}</td><td style="${td};text-align:right;font-weight:400;border-top:1px solid var(--color-border-secondary)">${o.reseau.caPerdu}</td><td style="${td};border-top:1px solid var(--color-border-secondary)">${o.motifs.map(tag).join(' ')}</td></tr>` : ''}
+    </tbody></table></div><div class="iv-leg">${o.vide ? `<span>${esc(o.vide)}</span>` : ''}<span style="margin-left:auto">source : /shops/{id}/products/waste du panel · un magasin « rien déclaré » n’encode pas sa poubelle en caisse</span></div></div>`;
+  const prods = `<div style="${card};overflow:hidden"><div style="padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div style="font-size:13px;font-weight:400">Les produits les plus jetés du réseau</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-left:auto">du plus coûteux au moins coûteux ${esc(o.libPer)} · survoler le nombre de magasins pour le détail</div></div>
+    ${o.prodsVide ? `<div style="padding:18px;font-size:12.5px;color:var(--color-text-muted)">${esc(o.prodsVide)}</div>` : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:720px"><thead><tr><th style="${TH}">Produit</th><th style="${TH}">Motif</th><th style="${TH};text-align:right">Magasins</th><th style="${TH};text-align:right">Pièces</th><th style="${TH};text-align:right">Coût de production</th><th style="${TH};text-align:right">Valeur perdue</th></tr></thead><tbody>
+    ${o.prods.map(p => `<tr><td style="${td}"><b>${esc(p.nom)}</b>${p.categorie ? `<div style="font-size:11px;color:var(--color-text-muted)">${esc(p.categorie)}</div>` : ''}</td><td style="${td}"><span class="iv-tag ${p.cls}">${esc(p.motifLib)}</span></td><td style="${td};text-align:right" title="${esc(p.titre)}">${p.magasins}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums">${p.pieces}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums;font-weight:400">${p.cout}</td><td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${p.caPerdu}</td></tr>`).join('')}
+    </tbody></table></div>`}
+    <div class="iv-leg"><span>${esc(o.report)}</span></div></div>`;
+  return `<div data-screen="invendus-poubelle">${onglets}${kpis}${mags}${prods}</div>`;
+}
+function tplInventaires(c, x){
+  const { esc } = x, o = c.inv;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const sel = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:260px';
+  const barre = `<div style="${card};padding:12px 16px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+    <label class="in-lab">Magasin <select ${x.C(o.setShop)} style="${sel}">${o.magasins.map(m => `<option value="${esc(m.id)}" ${m.on ? 'selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+    ${o.options.length ? `<label class="in-lab">Du <select ${x.C(o.setDe)} style="${sel}">${o.optionsDe.map(p => `<option value="${esc(p.id)}" ${p.id === o.de ? 'selected' : ''}>${esc(p.lib)}</option>`).join('') || '<option value="">—</option>'}</select></label>
+    <label class="in-lab">au <select ${x.C(o.setA)} style="${sel}">${o.options.map(p => `<option value="${esc(p.id)}" ${p.id === o.a ? 'selected' : ''}>${esc(p.lib)}</option>`).join('')}</select></label>
+    <div class="in-seg">${o.raccourcis.map(r => `<button ${x.A(r.choisir)} class="${r.on ? 'on' : ''}">${esc(r.lib)}</button>`).join('')}</div>` : ''}
+    ${o.recalculer ? `<button ${x.A(o.recalculer)} class="in-btn" style="margin-left:auto">Recalculer</button>` : ''}
+  </div>
+  <div class="in-src">${esc(o.releve)}${o.finCopie ? ' · copie du panel jusqu’au ' + esc(o.finCopie) : ''}</div>`;
+  const alertes = o.alertes.map(([k, t]) => `<div class="in-alerte ${k}">${esc(t)}</div>`).join('');
+  if (o.chargement) { return `<div data-screen="inventaires">${barre}<div style="${card};padding:24px;font-size:12.5px;color:var(--color-text-muted)">Lecture des inventaires du magasin…</div></div>`; }
+  if (o.indispo) { return `<div data-screen="inventaires">${barre}<div style="${card};padding:24px;font-size:12.5px;color:var(--accent)">${esc(o.indispo)}</div></div>`; }
+  if (!o.de || !o.a) { return `<div data-screen="inventaires">${barre}${alertes}<div style="${card};padding:24px;font-size:12.5px;color:var(--color-text-muted)">Il faut deux inventaires pour comparer : ce magasin n’en a pas encore deux de la même source.</div></div>`; }
+  if (o.calcul || o.erreur || !o.justesse) {
+    return `<div data-screen="inventaires">${barre}${alertes}<div style="${card};padding:24px;font-size:12.5px;color:${o.erreur ? '#8D1D2C' : 'var(--color-text-muted)'}">${o.erreur ? esc('Calcul impossible : ' + o.erreur) : 'Calcul de l’écart : comptages, livraisons, tickets et poubelle de la période, ramenés aux matières par les recettes… (jusqu’à une minute sur douze semaines)'}</div>${histo()}</div>`;
+  }
+  function histo(){
+    if (!o.histo.length) { return ''; }
+    return `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">La justesse sur quatre semaines glissantes <span>une barre par inventaire : la part de ce qui est sorti du stock pendant les quatre semaines qui le précèdent que la caisse et la poubelle expliquent · la ligne marque 95 % · cliquer une barre pour l’ouvrir</span></div>
+      <div class="in-histo">${o.histo.map(h => `<button ${x.A(h.choisir)} class="in-hb ${h.cls}${h.on ? ' on' : ''}" title="${esc(h.titre)}"><span class="v">${esc(h.val)}</span><i style="height:${h.h}%"></i><span class="d">${esc(h.lib)}</span></button>`).join('')}<div class="in-cent"></div></div></div>`;
+  }
+  const J = o.justesse;
+  const tete = `<div class="in-tete">
+    <div style="${card};padding:18px 20px" class="in-big ${J.cls}"><div class="k">Justesse des ventes</div><div class="v">${esc(J.val)}</div><div class="s">${esc(J.sous)}</div><div class="p">${esc(o.periode)}</div></div>
+    <div class="in-kpis">${o.kpi.map(k => `<div style="${card};padding:14px 16px"><div class="k">${esc(k[0])}</div><div class="v ${k[2]}">${esc(k[1])}</div><div class="s">${esc(k[3])}</div></div>`).join('')}</div></div>
+    <div class="in-bilan" style="${card}">${o.bilan.map((b, i) => `<div class="${i === 3 ? 'eq' : ''}"><span>${esc(b[0])}</span><b>${esc(b[1])}</b></div>`).join('')}</div>`;
+  const S = o.suite;
+  const mouvements = S && S.jours.length ? `<div style="${card};padding:14px 18px;margin-top:12px"><div class="in-t">Les mouvements, jour par jour <span>valeur d’achat des matières · <i class="lg l"></i>livré <i class="lg v"></i>vendu (recettes) <i class="lg j"></i>jeté · échelle ${esc(S.max)}</span></div>
+    <div class="in-jours">${S.jours.map(d => `<div class="in-j" title="${esc(d.titre)}"><div class="b"><i class="l" style="height:${d.hL}%"></i><span class="pile"><i class="j" style="height:${d.hJ}%"></i><i class="v" style="height:${d.hV}%"></i></span></div><div class="d">${esc(d.lib)}</div></div>`).join('')}</div></div>` : '';
+  const TH = 'text-align:right;font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:10px 10px;border-bottom:1px solid var(--color-border-tertiary);white-space:nowrap';
+  const td = 'padding:9px 10px;border-top:1px solid var(--color-border-tertiary);font-size:12.5px;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap';
+  const table = `<div style="${card};overflow:hidden;margin-top:12px"><div style="padding:12px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="font-size:13px;font-weight:400">Matière par matière</div><div class="in-chips">${o.filtres.map(f => `<button ${x.A(f.choisir)} class="${f.on ? 'on' : ''}">${esc(f.lib)} <b>${f.n}</b></button>`).join('')}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-left:auto">début + livré − fin = sorti · sorti − vendu − jeté = écart · cliquer une ligne pour ses mouvements</div></div>
+    ${o.lignes.length ? `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:980px"><thead><tr><th style="${TH};text-align:left">Matière</th><th style="${TH}">Début</th><th style="${TH}">Livré</th><th style="${TH}">Fin</th><th style="${TH}">Sorti</th><th style="${TH}">Vendu</th><th style="${TH}">Jeté</th><th style="${TH}">Écart</th><th style="${TH}">Écart €</th><th style="${TH}">Justesse</th></tr></thead><tbody>
+    ${o.lignes.map(m => `<tr ${x.A(m.basculer)} class="in-row${m.ouvert ? ' on' : ''}"><td style="${td};text-align:left;white-space:normal"><b>${esc(m.nom)}</b> <span class="in-st ${m.stCls}">${esc(m.statut)}</span><div style="font-size:10.5px;color:var(--color-text-muted)">${esc(m.categorie)} · ${esc(m.prix)}</div></td><td style="${td}">${esc(m.debut)}</td><td style="${td};color:#1f5f8b">${esc(m.entrees)}</td><td style="${td}">${esc(m.fin)}</td><td style="${td};font-weight:400">${esc(m.sorties)}</td><td style="${td};color:var(--green)">${esc(m.ventes)}</td><td style="${td};color:#9a5a00">${esc(m.poubelle)}</td><td style="${td};font-weight:400" class="${m.ecCls}">${esc(m.ecart)}</td><td style="${td};font-weight:400" class="${m.ecCls}">${esc(m.ecartE)}</td><td style="${td}">${esc(m.justesse)}</td></tr>
+      ${m.ouvert ? `<tr class="in-det"><td colspan="10"><div class="in-det-g"><div><div class="in-dt">Lecture</div><div style="font-size:12.5px;line-height:1.5">${esc(m.lecture)}</div></div>
+        <div><div class="in-dt">Mouvements du stock</div>${m.mouvements.length ? m.mouvements.map(v => `<div class="in-mv"><span>${esc(v.quand)}</span><span>${esc(v.quoi)}</span><b>${esc(v.q)}</b></div>`).join('') : '<div class="in-vide">aucun mouvement enregistré entre les deux comptages</div>'}</div>
+        <div><div class="in-dt">Vendu par produit (recettes)</div>${m.produits.length ? m.produits.map(p => `<div class="in-mv"><span>${esc(p.nom)}</span><b>${esc(p.q)}</b></div>`).join('') : '<div class="in-vide">aucune vente ne consomme cette matière</div>'}</div></div></td></tr>` : ''}`).join('')}
+    </tbody></table></div>` : `<div style="padding:18px;font-size:12.5px;color:var(--color-text-muted)">Aucune matière dans ce filtre.</div>`}
+    <div class="in-leg"><span>* début lu dans le solde du panel : la matière n’était pas comptée au premier inventaire</span><span style="margin-left:auto">${o.nLignes} matières suivies</span></div></div>`;
+  const qual = `<div class="in-pied"><div style="${card};padding:14px 18px"><div class="in-t">Ce que valent les inventaires de la période</div>${o.qualite.map(q => `<div class="in-q ${q.cls}"><b>${esc(q.periode)}</b><span>${esc(q.note)}</span></div>`).join('') || '<div class="in-vide">—</div>'}</div>
+    <div style="${card};padding:14px 18px"><div class="in-t">Vendus sans recette <span>ils ne consomment aucune matière au panel</span></div>${o.sansRecette.length ? o.sansRecette.map(p => `<div class="in-mv"><span>${esc(p.nom)}</span><span>${esc(p.q)} pièces</span><b>${esc(p.ca)}</b></div>`).join('') : '<div class="in-vide">tous les produits vendus ont une recette</div>'}</div></div>
+    <div class="in-methode">${esc(o.methode || '')}</div>`;
+  return `<div data-screen="inventaires">${barre}${alertes}${tete}${mouvements}${histo()}${table}${qual}</div>`;
+}
+function tplBrandGuard(c, x){
+  const { esc } = x;
+  const th = 'text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px 0';
+  const P = c.bgp, G = c.bgPages;
+  return `
+  <div data-screen="brand-guard" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:400">La charte de marque</div>
+        <span style="font-size:11px;color:var(--color-text-muted)">version ${esc(P.version)} · ${P.nActives} règle${P.nActives > 1 ? 's' : ''} active${P.nActives > 1 ? 's' : ''} sur ${P.n}</span>
+        ${P.modifie ? `<span style="font-size:10.5px;font-weight:400;border-radius:8px;padding:2px 9px;background:var(--prize-soft);color:var(--prize)">modifications non enregistrées</span>` : ''}
+        <span style="flex:1"></span>
+        ${P.modifie ? `<button ${x.A(P.annuler)} style="${P.btnS}">Annuler</button>` : ''}
+        <button ${x.A(P.enregistrer)} style="${P.btnP}${P.modifie ? '' : ';opacity:0.45'}">Enregistrer la charte</button>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:4px 0 14px;line-height:1.45;text-wrap:pretty">Le contrôle des posts relit ces règles telles quelles, texte et visuels. Une règle <b>bloquante</b> arrête un post ; une <b>majeure</b> le renvoie à corriger ; une <b>mineure</b> est signalée. Chaque enregistrement fait une nouvelle version, et chaque verdict garde la sienne.</div>
+      ${P.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la charte…</div>` : P.erreur ? `<div style="font-size:12px;color:var(--accent)">${esc(P.erreur)}</div>` : `
+      <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;margin-bottom:12px">
+        ${P.familles.map(f => `<button ${x.A(f.go)} style="${P.famBtn(f.on)}">${esc(f.nom)}</button>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};width:150px">Famille</th>
+          <th style="${th};width:220px">Règle</th>
+          <th style="${th}">Ce que le contrôleur vérifie</th>
+          <th style="${th};width:110px">Gravité</th>
+          <th style="${th};width:80px">État</th>
+          <th style="padding:0 0 8px 8px;width:24px"></th>
+        </tr></thead>
+        <tbody>
+          ${P.regles.map(r => `<tr style="${r.rowSt}">
+            <td style="padding:8px 8px 8px 0"><input value="${esc(r.famille)}" ${x.C(r.set('famille'))} list="bg-familles" style="${P.rowInput}" /></td>
+            <td style="padding:8px 8px"><input value="${esc(r.libelle)}" ${x.C(r.set('libelle'))} placeholder="Libellé court" style="${P.rowInput};font-weight:400" /><div style="font-size:10px;color:var(--color-text-muted);margin-top:3px">${esc(r.code)}</div></td>
+            <td style="padding:8px 8px"><textarea ${x.C(r.set('description'))} rows="3" placeholder="Une phrase que le contrôleur peut appliquer : ce qui est attendu, ce qui ne passe pas." style="${P.rowInput};resize:vertical;line-height:1.45;min-height:58px;field-sizing:content">${esc(r.description)}</textarea></td>
+            <td style="padding:8px 8px"><select ${x.C(r.set('gravite'))} style="${r.gravSt}">${P.gravites.map(g => `<option value="${g.val}" ${g.val === r.gravite ? 'selected' : ''}>${g.nom}</option>`).join('')}</select></td>
+            <td style="padding:8px 8px"><button ${x.A(r.toggle)} style="${r.actifSt}">${r.actifTxt}</button></td>
+            <td style="padding:8px 0 8px 8px;text-align:right"><button ${x.A(r.retirer)} title="Retirer de la charte" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <datalist id="bg-familles">${P.familles.filter(f => f.val !== 'toutes').map(f => `<option value="${esc(f.nom)}"></option>`).join('')}</datalist>
+      <div style="margin-top:10px"><button ${x.A(P.ajouter)} style="${P.btnS}">+ Ajouter une règle</button></div>`}
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <div style="font-size:13px;font-weight:400">La page Facebook de chaque magasin</div>
+        ${G.modifie ? `<span style="font-size:10.5px;font-weight:400;border-radius:8px;padding:2px 9px;background:var(--prize-soft);color:var(--prize)">modifications non enregistrées</span>` : ''}
+        <span style="flex:1"></span>
+        ${G.modifie ? `<button ${x.A(G.annuler)} style="${P.btnS}">Annuler</button>` : ''}
+        <button ${x.A(() => G.enregistrer(false))} style="${P.btnS}">Enregistrer</button>
+        <button ${x.A(() => G.enregistrer(true))} style="${P.btnP}${G.metaOk ? '' : ';opacity:0.45'}" title="${G.metaOk ? 'Chaque URL devient un identifiant de page' : 'Demande le token Meta sur le serveur'}">Enregistrer et résoudre</button>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin:4px 0 14px;line-height:1.45;text-wrap:pretty">L’adresse de la page, telle qu’elle s’ouvre dans un navigateur. « Résoudre » la transforme en identifiant Meta ; ensuite, chaque post publié sur cette page est contrôlé, et signalé s’il n’est pas passé par l’application.</div>
+      <div style="display:flex;align-items:center;gap:8px;font-size:11.5px;margin-bottom:12px;color:${G.metaOk ? '#3f7a52' : 'var(--color-text-muted)'}"><span style="width:7px;height:7px;border-radius:6px;background:${G.metaOk ? '#3f7a52' : '#B0792A'}"></span>${esc(G.metaTxt)}</div>
+      ${G.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des pages…</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:760px">
+        <thead><tr>
+          <th style="${th};width:190px">Magasin</th>
+          <th style="${th};width:200px">Franchisé / exploitant</th>
+          <th style="${th}">Adresse de la page Facebook</th>
+          <th style="${th};width:110px">Connexion</th>
+        </tr></thead>
+        <tbody>
+          ${G.lignes.map(l => `<tr style="border-top:1px solid var(--color-border-tertiary);vertical-align:top">
+            <td style="padding:9px 8px 9px 0;font-weight:400">${esc(l.boutique)}</td>
+            <td style="padding:9px 8px"><input value="${esc(l.franchise)}" ${x.C(l.setFranchise)} placeholder="—" style="${G.rowInput}" /></td>
+            <td style="padding:9px 8px"><input value="${esc(l.url)}" ${x.C(l.setUrl)} placeholder="${l.placeholder}" style="${G.rowInput}${l.modifie ? ';border-color:var(--prize)' : ''}" />${l.detail ? `<div style="font-size:10.5px;color:${l.etat === 'Erreur' ? '#A32014' : 'var(--color-text-muted)'};margin-top:3px;overflow-wrap:anywhere">${esc(l.detail)}</div>` : ''}</td>
+            <td style="padding:11px 8px"><span style="${l.etatSt}">${l.etat}</span></td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="display:grid;grid-template-columns:minmax(0,420px);gap:6px;margin-top:16px">
+        <label style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted)">Adresse des alertes et du rapport du lundi</label>
+        <input value="${esc(G.mailAlerte)}" ${x.C(G.setMail)} placeholder="ceo@latelierby.be" style="${G.rowInput}" />
+        <div style="font-size:11px;color:var(--color-text-muted)">Un post sauvage y part dans la minute ; le rapport de la semaine, le lundi à 7 h.</div>
+      </div>`}
+    </div>
+  </div>`;
+}
+
+/* --- Reporting --------------------------------------------------------------- */
+/* L'envoi ponctuel du CA net d'un mois, tous les magasins (22/10/2026) : en tête du Reporting. */
+function tplCaNet(c, x){
+  const { esc } = x, n = c.caNet;
+  if (!n) { return ''; }
+  const bord = 'border-bottom:1px solid var(--color-border-tertiary)';
+  const th = (t, g) => `<th style="text-align:${g ? 'left' : 'right'};font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);font-weight:400;padding:6px 10px;${bord}">${t}</th>`;
+  const td = (t, b, g) => `<td style="text-align:${g ? 'left' : 'right'};padding:7px 10px;font-size:12.5px;${bord};white-space:nowrap${b ? ';font-weight:400' : ''}">${t}</td>`;
+  const corps = n.erreur ? `<div style="color:var(--accent);font-size:12.5px">${esc(n.erreur)}</div>`
+    : n.chargement ? `<div style="color:var(--color-text-muted);font-size:12.5px">Lecture du mois au panel…</div>`
+    : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:520px"><thead><tr>${th('Magasin', true)}${th('CA net (HTVA)')}${th('TVA')}${th('CA TTC')}${th('Tickets')}</tr></thead><tbody>
+      ${n.lignes.map(l => `<tr>${td(esc(l.nom) + (l.lu ? ` <small style="color:var(--color-text-muted);font-weight:400">${esc(l.lu)}</small>` : ''), false, true)}${td(esc(l.net), true)}${td(esc(l.tva))}${td(esc(l.brut))}${td(esc(l.tickets))}</tr>`).join('')}
+      ${n.reseau ? `<tr>${td('Réseau', true, true)}${td(esc(n.reseau.net), true)}${td(esc(n.reseau.tva))}${td(esc(n.reseau.brut))}${td(esc(n.reseau.tickets))}</tr>` : ''}
+      </tbody></table></div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(n.etat)}${n.sansAdresse ? ' · Aucune adresse connue du cockpit : ajoutez un destinataire à un rapport ci-dessous.' : ''}${n.smtp ? '' : ' · SMTP non configuré (Paramètres).'}</div>`;
+  return `<div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+    <div style="padding:14px 18px;${bord};display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:240px"><div style="font-size:13px;font-weight:400">Envoi ponctuel — le CA net d’un mois, tous les magasins</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Hors TVA : le montant TTC après remise moins la TVA, ticket par ticket (caisse du panel), clients pro compris.</div></div>
+      <select class="mko-sel" ${x.C(n.setMois)} aria-label="Mois">${n.moisOpts.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>
+      ${n.adresses.length ? `<select class="mko-sel" ${x.C(n.setA)} aria-label="Destinataire">${n.adresses.map(o => `<option value="${esc(o.v)}"${o.on ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select>` : ''}
+      <button ${x.A(n.envoyer)} class="cx-btn prim" ${n.pret ? '' : 'disabled'}>${n.envoi ? 'Envoi…' : 'Envoyer par e-mail'}</button>
+    </div>
+    <div style="padding:10px 18px 14px">${corps}
+      ${n.msg ? `<div style="margin-top:8px;font-size:12.5px;padding:8px 10px;border-radius:8px;${n.msg.ok ? 'background:#EAF3EC;color:#2d6a3a' : 'background:#FBEFE7;color:#8A3F14'}">${esc(n.msg.txt)}</div>` : ''}
+    </div></div>`;
+}
+
+function tplReporting(c, x){
+  const { esc } = x;
+  return `
+  <!-- Un panneau par ligne : à deux colonnes, le rapport et sa colonne de 340 px
+       se lisaient en zigzag, et la liste des rapports — le contenu principal —
+       se retrouvait comprimée par un panneau secondaire. -->
+  <div data-screen="reporting" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+    ${tplCaNet(c, x)}
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:260px">
+          <div style="font-size:13px;font-weight:400">Générateur de rapports — par levier, à seuils</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Un bloc ne s'imprime que si son seuil est franchi ; un rapport sans matière n'est pas envoyé. Envoi automatique : une ligne crontab horaire sur ${c.rapGen.cronUrl ? `<code>${esc(c.rapGen.cronUrl)}</code>` : `l'URL de cron (se génère au premier chargement)`}.</div>
+        </div>
+        ${c.rapComposeOn
+          ? `<button ${x.A(c.rapComposeFermer)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">← Retour à la liste</button>`
+          : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Nouveau rapport</button>`}
+      </div>
+      ${c.rapComposeOn ? `
+      <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Partir d'un modèle</span>
+          <select ${x.C(c.rapCompo.chargerModele)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-surface);color:var(--color-text)">
+            ${c.rapCompo.modeles.map(mo => `<option value="${mo.id}">${esc(mo.nom)}</option>`).join('')}
+          </select>
+          <span style="margin-left:auto;font-size:12px;font-weight:400">${esc(c.rapCompo.recap)}</span>
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:400;margin-bottom:6px">1 · Les KPI <span style="font-weight:400;color:var(--color-text-muted);font-size:11px">— « Complet » = le tableau tel qu'à l'écran · « Dépassements » = seulement les seuils franchis</span></div>
+          ${c.rapCompo.groupes.map(g => `
+            <div style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:9px 0 5px"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${g.couleur};margin-right:6px"></i>${esc(g.nom)}</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:6px">
+              ${g.items.map(it => `
+                <div style="display:flex;align-items:center;gap:8px;border:${it.on ? '1.5px solid var(--color-primary)' : '1px solid var(--color-border-tertiary)'};border-radius:9px;padding:7px 10px;background:${it.on ? 'var(--color-background-secondary)' : 'var(--color-surface)'}">
+                  <span ${x.A(it.toggle)} style="width:15px;height:15px;border-radius:4px;flex:none;cursor:pointer;border:1.5px solid ${it.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${it.on ? 'var(--color-primary)' : 'transparent'};color:#fff;font-size:10px;line-height:14px;text-align:center">${it.on ? '✓' : ''}</span>
+                  <span ${x.A(it.toggle)} style="flex:1;font-size:12px;font-weight:400;cursor:pointer">${esc(it.nom)}</span>
+                  ${it.on ? `<span style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:10px;font-weight:400">
+                    <button ${x.A(it.setModeComplet)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode === 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Complet</button>
+                    <button ${x.A(it.setModeDep)} style="border:none;cursor:pointer;padding:2px 7px;font-family:var(--font-ui);${it.mode !== 'complet' ? 'background:var(--color-text);color:var(--color-surface)' : 'background:transparent;color:var(--color-text-muted)'}">Dépass.</button>
+                  </span>` : ''}
+                </div>`).join('')}
+            </div>`).join('')}
+        </div>
+        <div>
+          <div style="font-size:12.5px;font-weight:400;margin-bottom:6px">2 · Les magasins</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <span ${x.A(c.rapCompo.toutLeReseau)} style="display:inline-block;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:400;cursor:pointer;${c.rapCompo.tous ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:1px solid var(--color-border-secondary)'}">Tout le réseau</span>
+            ${c.rapCompo.magasins.map(mg => `<span ${x.A(mg.toggle)} style="display:inline-block;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:400;cursor:pointer;${mg.on ? 'border:1.5px solid var(--color-primary);background:var(--color-background-secondary)' : 'border:1px solid var(--color-border-secondary)'}">${esc(mg.nom)}</span>`).join('')}
+          </div>
+        </div>
+        ${c.rapCompo.plan.length ? `
+        <div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px">
+            <span style="font-size:12.5px;font-weight:400">3 · L'ordre et les pages</span>
+            <span style="font-size:11px;color:var(--color-text-muted)">Les blocs sortent dans cet ordre ; sans saut, ils s'enchaînent et remplissent la feuille.</span>
+            <span style="margin-left:auto;display:flex;gap:6px">
+              <button ${x.A(c.rapCompo.pageParLevier)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Une page par levier</button>
+              <button ${x.A(c.rapCompo.sansSaut)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Aucun saut</button>
+              <button ${x.A(c.rapCompo.ordreParLevier)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:5px 13px;background:var(--color-surface);color:var(--color-text-muted);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Ordre du cockpit</button>
+            </span>
+          </div>
+          ${c.rapCompo.plan.map(pl => `
+            ${pl.saut ? `<div style="display:flex;align-items:center;gap:9px;margin:9px 2px"><span style="flex:1;border-top:1px dashed var(--color-border-secondary)"></span><span style="font-size:10px;font-weight:400;letter-spacing:0.09em;text-transform:uppercase;color:var(--color-text-muted)">saut de page${pl.force ? ' — imposé' : ''}</span><span style="flex:1;border-top:1px dashed var(--color-border-secondary)"></span></div>` : ''}
+            <div style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-border-tertiary);border-radius:10px;padding:7px 11px;margin-bottom:5px;background:var(--color-background-secondary)">
+              <span style="display:flex;flex-direction:column;gap:1px">
+                <span ${x.A(pl.monter)} style="font-size:10px;line-height:9px;cursor:${pl.monter ? 'pointer' : 'default'};color:${pl.monter ? 'var(--color-text-muted)' : 'var(--color-border-secondary)'}">▲</span>
+                <span ${x.A(pl.descendre)} style="font-size:10px;line-height:9px;cursor:${pl.descendre ? 'pointer' : 'default'};color:${pl.descendre ? 'var(--color-text-muted)' : 'var(--color-border-secondary)'}">▼</span>
+              </span>
+              <span style="font-size:10px;font-weight:400;color:var(--color-text-muted);background:var(--color-surface);border-radius:6px;padding:3px 7px;min-width:34px;text-align:center">P. ${pl.page}</span>
+              <i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${pl.couleur};flex:none"></i>
+              <span style="flex:1;font-size:12px;font-weight:400">${esc(pl.nom)}</span>
+              <span style="font-size:10px;font-weight:400;color:var(--color-text-muted);border:1px solid var(--color-border-secondary);border-radius:8px;padding:2px 8px">${esc(pl.mode)}</span>
+              ${pl.premier ? '<span style="font-size:10px;color:var(--color-text-muted);padding:3px 10px">1ʳᵉ page</span>'
+                : pl.force ? '<span style="font-size:10px;font-weight:400;color:var(--color-text-muted);border:0.5px dashed var(--color-border-secondary);border-radius:8px;padding:3px 10px" title="Ce bloc ouvre toujours une page">saut imposé</span>'
+                : `<button ${x.A(pl.basculerSaut)} style="border:${pl.saut ? 'none' : '1px solid var(--color-border-secondary)'};border-radius:8px;padding:4px 11px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;${pl.saut ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);color:var(--color-text-muted)'}">saut de page${pl.saut ? ' ✓' : ''}</button>`}
+            </div>`).join('')}
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px">« P. 2 » est l'intention : un bloc plus long que la feuille déborde sur la suivante. Le bilan des tâches et les photos ouvrent toujours leur page, et restent l'un derrière l'autre.</div>
+        </div>` : ''}
+        <div>
+          <div style="font-size:12.5px;font-weight:400;margin-bottom:8px">4 · Quand l'envoyer</div>
+          <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Heure d'envoi</span>
+            <select ${x.C(c.rapCompo.setHeure)} style="font-size:13px;font-weight:400;border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 12px;background:var(--color-surface);color:var(--color-text)">${Array.from({ length: 24 }, (_, h4) => `<option value="${h4}"${String(c.rapCompo.heure) === String(h4) ? ' selected' : ''}>${String(h4).padStart(2, '0')} h 00</option>`).join('')}</select>
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);margin-left:8px">Jours de semaine</span>
+            <span style="display:flex;gap:5px;flex-wrap:wrap">
+              ${c.rapCompo.dows.map(d6 => `<span ${x.A(d6.toggle)} style="display:inline-block;width:44px;text-align:center;border-radius:8px;padding:7px 0;font-size:11px;font-weight:400;cursor:pointer;${d6.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:1px solid var(--color-border-secondary);color:var(--color-text-muted)'}">${esc(d6.nom)}</span>`).join('')}
+            </span>
+          </div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:flex-start">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:96px;padding-top:6px">Jours du mois</span>
+            <span style="display:grid;grid-template-columns:repeat(16,27px);gap:3px">
+              ${c.rapCompo.doms.map(d6 => `<span ${x.A(d6.toggle)} style="display:inline-block;text-align:center;border-radius:6px;padding:4px 0;font-size:10px;font-weight:400;cursor:pointer;${d6.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:1px solid var(--color-border-secondary);color:var(--color-text-muted)'}">${esc(d6.nom)}</span>`).join('')}
+            </span>
+          </div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px">Aucun jour coché = rapport à la demande. La fenêtre de données se choisit en 5 · Générer (« Période observée ») ; par défaut elle suit la cadence : quotidien → la veille · hebdo → la semaine passée · mensuel → le mois passé.</div>
+        </div>
+        <div style="background:var(--color-background-secondary);border-radius:10px;padding:13px 15px">
+          <div style="font-size:12.5px;font-weight:400;margin-bottom:8px">5 · Générer, envoyer, ou enregistrer${c.rapCompo.edit ? ` <span style="font-weight:400;color:var(--color-primary)">— modification de « ${esc(c.rapCompo.editNom)} »</span>` : ''}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px">
+            <button ${x.A(c.rapCompo.apercu)} style="border:none;border-radius:8px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer;${c.rapCompo.busy ? 'opacity:.6' : ''}">${c.rapCompo.busy ? 'En cours…' : 'Générer l’aperçu →'}</button>
+            <button ${x.A(c.rapCompo.envoyer)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Envoyer par email</button>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+            <input value="${esc(c.rapCompo.nom)}" ${x.C(c.rapCompo.setNom)} placeholder="Nom du rapport" style="flex:2;min-width:180px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <input value="${esc(c.rapCompo.poste)}" ${x.C(c.rapCompo.setPoste)} list="rap-postes" placeholder="Poste destinataire (profils du panel + réseau)" style="flex:2;min-width:220px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <datalist id="rap-postes">${c.rapCompo.postes.map(po => `<option value="${esc(po)}"></option>`).join('')}</datalist>
+          </div>
+          <!-- La fenêtre OBSERVÉE : c'est elle qui décide si un seuil est
+               franchi. « Cadence » garde le comportement d'avant. -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-primary);width:110px">Période observée</span>
+            <span style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:400">
+              ${c.rapCompo.periodes.map(pe => `<button ${x.A(pe.choisir)} title="${esc(pe.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${pe.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(pe.nom)}</button>`).join('')}
+            </span>
+            ${c.rapCompo.perLibre ? `
+              <span style="display:inline-flex;gap:6px;align-items:center;white-space:nowrap">
+                <input type="date" value="${esc(c.rapCompo.perDu.val)}" ${x.I(c.rapCompo.perDu.set)} style="font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
+                <span style="font-size:11.5px;color:var(--color-text-muted)">→</span>
+                <input type="date" value="${esc(c.rapCompo.perAu.val)}" ${x.I(c.rapCompo.perAu.set)} style="font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text)">
+              </span>`
+              : `<span style="font-size:10.5px;color:var(--color-text-muted)">c'est cette fenêtre qui décide si un seuil est franchi</span>`}
+          </div>
+          <!-- Le repère de comparaison des KPI chiffrés : A-1 neutralise la
+               saison, M-1 et S-1 servent à suivre une action récente. -->
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Comparer à</span>
+            <span style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:400">
+              ${c.rapCompo.comparaisons.map(cp => `<button ${x.A(cp.choisir)} title="${esc(cp.aide)}" style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${cp.on ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">${esc(cp.code)}</button>`).join('')}
+            </span>
+            <span style="font-size:10.5px;color:var(--color-text-muted)">${esc((c.rapCompo.comparaisons.find(cp => cp.on) || {}).aide || '')} — pour le passage clients et le ticket moyen</span>
+          </div>
+          <!-- Les deux fenêtres résolues, juste avant de générer : lire un
+               rapport sans savoir sur quoi il porte n'apprend rien. -->
+          <div style="font-size:11.5px;background:var(--color-background-secondary);border-radius:8px;padding:9px 12px;margin-bottom:10px">
+            <b>${esc(c.rapCompo.fenetre)}</b> · ${esc(c.rapCompo.recapMags)}
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:9px">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Mode d'envoi</span>
+            <span style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;font-size:11.5px;font-weight:400">
+              <button ${x.A(c.rapCompo.envoiGroupe)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'groupe' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Groupé</button>
+              <button ${x.A(c.rapCompo.envoiParMagasin)} style="border:none;cursor:pointer;padding:6px 13px;font-family:var(--font-ui);${c.rapCompo.envoiMode === 'par-magasin' ? 'background:var(--color-primary);color:#fff' : 'background:transparent;color:var(--color-text-muted)'}">Un email par magasin</button>
+            </span>
+            ${c.rapCompo.envoiMode === 'par-magasin' ? `<span style="font-size:10.5px;color:var(--color-text-muted)">chaque magasin reçoit SA version ; sans matière ou sans adresse, il ne reçoit rien</span>` : ''}
+          </div>
+          ${c.rapCompo.envoiMode === 'par-magasin' ? `
+          <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:9px">
+            ${c.rapCompo.carnet.map(cm => `
+              <div style="display:flex;gap:8px;align-items:center">
+                <span style="width:220px;flex:none;font-size:11.5px;font-weight:400">${esc(cm.nom)}</span>
+                <input value="${esc(cm.val)}" ${x.C(cm.set)} placeholder="emails du franchisé (virgules)" style="flex:1;font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 8px;background:var(--color-surface);color:var(--color-text)">
+              </div>`).join('')}
+          </div>` : ''}
+          ${c.rapCompo.annuaire.length ? `
+          <div style="display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:7px">
+            <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);width:110px">Annuaire</span>
+            ${c.rapCompo.annuaire.map(a2 => `<span ${x.A(a2.toggle)} title="${esc(a2.email)}${a2.poste ? ' · ' + esc(a2.poste) : ''}" style="display:inline-block;border-radius:8px;padding:4px 11px;font-size:11px;font-weight:400;cursor:pointer;${a2.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-surface);border:1px solid var(--color-border-secondary);color:var(--color-text)'}">${esc(a2.nom)}</span>`).join('')}
+          </div>` : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <input value="${esc(c.rapCompo.dest)}" ${x.C(c.rapCompo.setDest)} placeholder="${c.rapCompo.envoiMode === 'par-magasin' ? 'destinataires réseau — la version complète (consultant)' : 'destinataires (emails, virgules — ou cliquez l’annuaire)'}" style="flex:1;min-width:240px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <button ${x.A(c.rapCompo.enregistrer)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.rapCompo.edit ? 'Enregistrer les modifications' : 'Enregistrer comme rapport récurrent'}</button>
+          </div>
+        </div>
+      </div>` : `
+      ${c.rapGen.chargement ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Lecture des rapports…</div>`
+        : (c.rapGen.indispo ? `<div style="padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">${esc(c.rapGen.indispo)}</div>` : `
+      <div style="display:flex;flex-direction:column">
+        ${c.rapGen.lignes.map(r => `
+          <div style="display:flex;flex-direction:column;gap:8px;padding:13px 18px;border-bottom:1px solid var(--color-border-tertiary)">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+              <span style="font-size:13px;font-weight:400">${esc(r.nom)}</span>
+              <span style="font-size:11px;color:var(--color-text-muted)">${esc(r.poste)} · ${esc(r.freq)}</span>
+              <span ${x.A(r.toggleActif)} style="${r.actifSt}">${r.actifTxt}</span>
+              <span style="margin-left:auto;font-size:11.5px;color:var(--color-text-muted);white-space:nowrap">${esc(r.dernier)}</span>
+              ${r.dernierStatut ? `<span style="${r.dernierSt}">${esc(r.dernierStatut)}</span>` : ''}
+              ${r.ouvrirUrl ? `<a href="${r.ouvrirUrl}" target="_blank" rel="noopener" style="font-size:11.5px;font-weight:400;color:var(--color-primary)">Ouvrir</a>` : ''}
+              <button ${x.A(r.gen)} style="border:1px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">${esc(r.genTxt)}</button>
+              <button ${x.A(r.env)} class="btn btn--sm">Envoyer</button>
+              <button ${x.A(r.modifier)} title="Recharger ce rapport dans le compositeur" style="border:1px solid var(--color-border-secondary);border-radius:7px;padding:6px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Modifier</button>
+              <button ${x.A(r.suppr)} title="Supprimer ce rapport" style="border:none;background:none;color:var(--color-text-muted);font-size:14px;cursor:pointer;padding:2px 4px">✕</button>
+            </div>
+            ${r.resume ? `<div style="font-size:11.5px;color:var(--color-text-muted)">${esc(r.resume)}</div>` : ''}
+            <div style="display:flex;gap:5px;flex-wrap:wrap">
+              ${r.blocs.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:10.5px;border:1px solid var(--color-border-tertiary);border-radius:8px;padding:2px 8px;color:var(--color-text-muted)"><i style="width:7px;height:7px;border-radius:2px;background:${b.c};display:inline-block"></i>${esc(b.nom)}</span>`).join('')}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">À</span>
+              <input value="${esc(r.destTxt)}" ${x.I(r.setDest)} placeholder="emails séparés par des virgules" style="flex:1;min-width:240px;font-size:11.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 8px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui)">
+              <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(r.destAuto || '')}</span>
+              <button ${x.A(r.saveDest)} style="border:1px solid var(--color-border-secondary);border-radius:7px;padding:5px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Enregistrer</button>
+            </div>
+          </div>`).join('')}
+      </div>
+      ${c.rapGen.runs.length ? `
+      <div style="padding:12px 18px">
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Dernières générations</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:12px">
+          <select ${x.C(c.rapGen.setRun)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:7px;padding:6px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:100%">
+            ${c.rapGen.runOptions.map(o => `<option value="${esc(o.v)}"${o.sel ? ' selected' : ''}>${esc(o.label)}</option>`).join('')}
+          </select>
+          ${c.rapGen.runSel ? `
+            <span style="${c.rapGen.runSel.st}">${esc(c.rapGen.runSel.statut)}</span>
+            ${c.rapGen.runSel.resume ? `<span style="color:var(--color-text-muted)">${esc(c.rapGen.runSel.resume)}</span>` : ''}
+            <a href="${c.rapGen.runSel.url}" target="_blank" rel="noopener" style="margin-left:auto;font-size:11.5px;font-weight:400;color:var(--color-primary);white-space:nowrap">Ouvrir cette génération</a>` : ''}
+        </div>
+      </div>` : ''}`)}`}
+    </div>
+  </div>`;
+}
+
+/* --- Journal ------------------------------------------------------------------ */
+/* --- Suivi des tâches --------------------------------------------------------- */
+/**
+ * Ce qui a été validé sur la période, et les signalements à traiter.
+ *
+ * Trois blocs, dans l'ordre où l'on décide : les chiffres, qui dit s'il y a un
+ * problème ; la répartition et les intervenants, qui disent où ; les
+ * signalements, qui se traitent sur place.
+ */
+function tplSuivi(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const titre = 'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.07em;color:var(--color-text-muted)';
+  return `
+  <div data-screen="suivi" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      ${c.suOnglets.map(o => `<button ${x.A(o.go)} style="${o.st}">${o.nom}</button>`).join('')}
+      <span style="flex:1"></span>
+    </div>
+
+    ${c.suChargement ? `<div style="${carte};padding:18px;font-size:12px;color:var(--color-text-muted)">Lecture du suivi…</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px">
+        ${c.suTuiles.map(t => `
+          <div style="${carte};padding:13px 15px">
+            <div style="${titre};margin-bottom:5px">${esc(t.k)}</div>
+            <div style="${t.vSt}">${esc(t.v)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);margin-top:2px">${esc(t.s)}</div>
+          </div>`).join('')}
+      </div>
+
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;align-items:start">
+        <div style="${carte};padding:14px 16px">
+          <div style="${titre};margin-bottom:11px">Répartition des notes</div>
+          ${c.suBarres.map(b => `
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+              <span style="${b.libSt};width:170px;flex:0 0 auto">${esc(b.nom)}</span>
+              <span style="flex:1;min-width:0;background:var(--color-background-secondary);border-radius:8px;height:7px">
+                <span style="display:block;${b.barSt}"></span></span>
+              <span style="font-size:11.5px;color:var(--color-text-muted);width:44px;text-align:right;flex:0 0 auto">${b.n} · ${b.pct}%</span>
+            </div>`).join('')}
+        </div>
+
+        <div style="${carte};padding:14px 16px">
+          <div style="${titre};margin-bottom:11px">Par intervenant</div>
+          ${c.suGens.length === 0 ? `<div style="font-size:12px;color:var(--color-text-muted)">Aucune validation sur la période.</div>` : `
+          <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;column-gap:14px;row-gap:8px;align-items:center">
+            <span style="font-size:10px;color:var(--color-text-muted)"></span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Validées</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Moyenne</span>
+            <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted)">Ouverts</span>
+            ${c.suGens.map(g => `
+              <span style="font-size:12.5px;min-width:0">${esc(g.nom)}</span>
+              <span style="font-size:12px;text-align:right">${g.validees}</span>
+              <span style="${g.moySt};text-align:right">${g.moyenne}</span>
+              <span style="${g.ouvSt};text-align:right">${g.ouverts}</span>`).join('')}
+          </div>`}
+        </div>
+      </div>
+
+      <div style="${carte};overflow:hidden">
+        <div style="display:flex;align-items:center;gap:9px;padding:11px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="${titre}">Signalements</span>
+          <span style="font-size:11px;color:var(--color-text-muted)">les ouverts d'abord, quelle que soit leur date</span>
+        </div>
+        ${c.suSignalements.length === 0 ? `<div style="padding:18px;font-size:12px;color:var(--color-text-muted)">Aucun signalement — rien à traiter.</div>` : ''}
+        ${c.suSignalements.map(g => `
+          <div style="${g.rowSt}">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:13px;font-weight:400;line-height:1.3">${esc(g.tache)}</div>
+              <div style="display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px">
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.qui)} · ${esc(g.projet)}</span>
+                <span style="${g.lvlSt}"><i style="${g.lvlNumSt};font-style:normal">${g.lvlNum}</i>${esc(g.lvlTxt)}</span>
+                <span style="font-size:10.5px;font-weight:400;padding:2px 7px;border-radius:8px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary)">${esc(g.quoi)}</span>
+                <span style="${g.etatSt}">${esc(g.etat)}</span>
+                <span style="font-size:11px;color:var(--color-text-muted)">${esc(g.age)}</span>
+              </div>
+              ${g.aCommentaire ? `<div style="font-size:11.5px;line-height:1.45;color:var(--color-text-muted);margin-top:6px;white-space:pre-line">${esc(g.commentaire)}</div>` : ''}
+            </div>
+            <div style="flex:0 0 300px;display:flex;flex-direction:column;gap:6px">
+              ${g.ouvert ? `
+                <textarea ${x.C(g.majNote)} rows="2" placeholder="Ce qui a été fait — obligatoire pour clore"
+                  style="width:100%;border:1px solid var(--color-border-secondary);border-radius:7px;padding:6px 8px;font-size:11.5px;font-family:var(--font-ui);color:var(--color-text);resize:vertical;box-sizing:border-box">${esc(g.note)}</textarea>
+                <div style="display:flex;gap:6px">
+                  <button ${x.A(g.vu)} style="flex:0 0 auto;border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Marquer vu</button>
+                  <button ${x.A(g.traiter)} class="btn btn--sm">Traiter</button>
+                </div>`
+              : `<button ${x.A(g.rouvrir)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer">Rouvrir</button>`}
+            </div>
+          </div>`).join('')}
+      </div>
+
+      <div style="font-size:12px;color:var(--color-text-muted)">Voir n'est pas régler : « Marquer vu » dit qu'on a lu, « Traiter » ferme et demande ce qui a été fait. Tout passe au journal.</div>
+    `}
+  </div>`;
+}
+
+/* Usage de la console — l'écran d'arbitrage : ce qui sert, ce qui ne sert pas.
+ *
+ * L'ordre des cartes est l'ordre de la décision. Le VERDICT d'abord (ce qui n'a
+ * jamais servi sur la fenêtre), parce que c'est lui qu'on vient chercher ; les
+ * heatmaps ensuite, pour vérifier avant de retirer ; les familles du rail en
+ * dernier, pour voir où deux écrans peuvent n'en faire qu'un.
+ */
+function tplUsageConsole(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px';
+  const titre = 'font-family:var(--font-display);font-size:16px;line-height:1.3';
+  const sub = 'font-size:11.5px;color:var(--color-text-muted);margin-top:2px';
+  const th = 'text-align:left;font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 8px 6px 0';
+  const jourCols = c.ucJoursCols.map(j => `<th style="padding:0 1px 6px;font-size:10px;font-weight:400;color:var(--color-text-muted);text-align:center">${j.montre ? esc(j.court) : ''}</th>`).join('');
+  const cellules = l => l.cases.map(k => `<td style="padding:2px 1px" title="${esc(k.jour)} — ${k.n}"><i style="${k.st}"></i></td>`).join('');
+  return `
+  <div data-screen="usageConsole" style="display:flex;flex-direction:column;gap:14px">
+
+    <div style="${carte}">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="${titre}">Ce qui sert, ce qui ne sert pas</div>
+          <div style="${sub}">Deux mesures, la même fenêtre : les écrans OUVERTS, et les boutons AFFICHÉS puis CLIQUÉS. Un bouton affiché deux cents fois et jamais cliqué peut partir ; un bouton jamais affiché n’est pas mort, il est inconnu — et c’est dit.</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:2px;background:var(--color-background-secondary);border-radius:8px;padding:2px">
+            ${c.ucJoursOpts.map(o => `<button ${x.A(o.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:${o.on ? '600' : '400'};padding:6px 12px;border-radius:7px;background:${o.on ? 'var(--color-surface)' : 'transparent'};color:${o.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}
+          </div>
+          <button ${x.A(c.ucRecharge)} title="Relire la mesure" style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 12px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;cursor:pointer">Relire</button>
+          <button ${x.A(c.ucExport)} title="Exporter la liste en CSV" style="border:none;border-radius:8px;padding:7px 13px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Exporter (CSV)</button>
+        </div>
+      </div>
+      ${c.ucErr ? `<div style="margin-top:12px;font-size:12px;color:var(--color-primary);background:rgba(141,29,44,0.06);border-radius:8px;padding:9px 12px">${esc(c.ucErr)}</div>` : ''}
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture de la mesure…</div>'
+        : (c.ucResume ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">${esc(c.ucResume)}${c.ucDepuis ? ' · depuis le ' + esc(c.ucDepuis) : ''}</div>` : '')}
+    </div>
+
+    <!-- LE VERDICT. Les deux listes ne se valent pas et ne se lisent pas
+         pareil : celle des écrans est complète (le rail les connaît tous),
+         celle des boutons ne porte que ce qui a été vu au moins une fois. -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px">
+      <div style="${carte}">
+        <div style="${titre}">Écrans jamais ouverts</div>
+        <div style="${sub}">${c.ucEcransLu ? `${c.ucEcransMortsN} sur ${c.ucEcransN} écrans du rail, sur ${c.ucJours} jours. Cette liste est complète : le rail connaît tous ses écrans.` : 'Le compteur d’ouvertures n’a pas répondu — rien ne peut être conclu.'}</div>
+        ${c.ucEcransMortsN ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          ${c.ucEcransMorts.map(e => `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--color-border-tertiary)">
+            <span style="font-size:12.5px">${esc(e.nom)}</span>
+            <span style="font-size:10.5px;color:var(--color-text-muted);white-space:nowrap">${esc(e.famille)}</span>
+          </div>`).join('')}
+        </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (!c.ucEcransLu ? 'Mesure non lue.' : (c.ucEcransVide ? 'Aucune ouverture enregistrée sur la période — la mesure ne dit encore rien.' : 'Tous les écrans du rail ont été ouverts au moins une fois.'))}</div>`}
+      </div>
+
+      <div style="${carte}">
+        <div style="${titre}">Boutons jamais cliqués</div>
+        <div style="${sub}">${c.ucBoutonsLu ? `${c.ucBoutonsMortsN} bouton(s) affichés au moins une fois et jamais cliqués, du plus vu au moins vu.` : 'Le compteur de boutons n’a pas répondu — rien ne peut être conclu.'}</div>
+        ${c.ucBoutonsMortsN ? `<div style="margin-top:12px;display:flex;flex-direction:column;gap:6px">
+          ${c.ucBoutonsMorts.map(b => `<div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--color-border-tertiary)">
+            <span style="font-size:12.5px">${esc(b.action)}<span style="font-size:10.5px;color:var(--color-text-muted)"> — ${esc(b.ecran)}</span></span>
+            <span style="font-size:11px;color:var(--color-text-muted);white-space:nowrap">vu ${b.vus}×</span>
+          </div>`).join('')}
+          ${c.ucBoutonsMortsReste ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">+ ${c.ucBoutonsMortsReste} autre(s) — la liste complète est dans l’export.</div>` : ''}
+        </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (!c.ucBoutonsLu ? 'Mesure non lue.' : 'Aucun bouton mort : tout ce qui a été affiché a été cliqué au moins une fois.')}</div>`}
+        ${c.ucInconnus ? `<div style="font-size:10.5px;color:var(--color-text-muted);margin-top:10px;line-height:1.45">${esc(c.ucRailNote)}<br>${esc(c.ucInconnus)}</div>` : ''}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="${titre}">Écrans ouverts — ${c.ucJours} derniers jours</div>
+      <div style="${sub}">Une ligne par écran, une case par jour. Le rail se juge ici : ce qui est pâle sur toute la ligne ne mérite pas une entrée à lui seul.</div>
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture…</div>' : ((c.ucEcransVide || !c.ucEcransLu)
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucEcransLu ? 'Aucune ouverture enregistrée sur la période.' : 'Mesure non lue — le compteur d’ouvertures n’a pas répondu.'}</div>`
+        : `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Écran</th>
+            <th style="${th};text-align:right;width:80px">Ouvertures</th>
+            ${jourCols}
+          </tr></thead>
+          <tbody>
+            ${c.ucEcrans.map(l => `<tr${l.horsTop ? ' style="background:var(--color-background-secondary)"' : ''}>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.qui ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:400;font-variant-numeric:tabular-nums">${l.total}</td>
+              ${cellules(l)}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${c.ucEcransReste ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">Top 12 affiché · ${c.ucEcransReste} autre(s) écran(s) ouvert(s) sur la période</span>
+        <select ${x.C(c.setUcEcranAutre)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.ucEcransAutres.map(o => `<option value="${esc(o.v)}"${o.v === c.ucEcransAutreSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </div>` : ''}`)}
+    </div>
+
+    <div style="${carte}">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="${titre}">Boutons & fonctions — ${esc(c.ucSelNom || (c.ucBoutonsLu ? 'aucun écran mesuré' : 'mesure non lue'))}</div>
+          <div style="${sub}">« Vu » = le bouton était à l’écran lors d’une ouverture. « Par affich. » = nombre de clics pour un affichage — il peut dépasser 1, on clique parfois plusieurs fois sans changer d’écran. Les lignes grises n’ont jamais été cliquées.</div>
+        </div>
+        ${c.ucSelOpts.length ? `<select ${x.C(c.setUcSel)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 10px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.ucSelOpts.map(o => `<option value="${esc(o.v)}"${o.v === c.ucSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>` : ''}
+      </div>
+      ${c.ucChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture…</div>' : ((c.ucActionsVide || !c.ucBoutonsLu)
+        ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucBoutonsLu ? 'Aucun clic mesuré pour l’instant — la mesure des boutons commence à cette livraison.' : 'Mesure non lue — le compteur de boutons n’a pas répondu.'}</div>`
+        : `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Bouton</th>
+            <th style="${th};text-align:right;width:60px">Vu</th>
+            <th style="${th};text-align:right;width:60px">Clics</th>
+            <th style="${th};text-align:right;width:74px">Par affich.</th>
+            <th style="${th};text-align:right;width:70px">Dernier</th>
+            ${jourCols}
+          </tr></thead>
+          <tbody>
+            ${c.ucActions.map(l => `<tr${l.mort ? ' style="background:var(--color-background-secondary);color:var(--color-text-muted)"' : ''}>
+              <td style="padding:3px 8px 3px 0">${esc(l.action)}${l.qui ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${l.vus}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:400;font-variant-numeric:tabular-nums">${l.clics}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.taux)}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-variant-numeric:tabular-nums">${esc(l.dernier)}</td>
+              ${cellules(l)}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`)}
+    </div>
+
+    <div style="${carte}">
+      <div style="${titre}">Par famille du rail — où fusionner</div>
+      <div style="${sub}">Deux écrans peu ouverts sous la même entrée sont les candidats naturels à la fusion. Rangé par poids mort, puis par ouvertures.</div>
+      ${c.ucFamilles.length ? `<div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th}">Famille</th>
+            <th style="${th};text-align:right;width:80px">Écrans</th>
+            <th style="${th};text-align:right;width:90px">Ouverts</th>
+            <th style="${th};text-align:right;width:100px">Ouvertures</th>
+            <th style="${th}">Jamais ouverts</th>
+          </tr></thead>
+          <tbody>
+            ${c.ucFamilles.map(f => `<tr>
+              <td style="padding:5px 8px 5px 0;white-space:nowrap">${esc(f.titre)}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-variant-numeric:tabular-nums">${f.n}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-variant-numeric:tabular-nums">${f.ouverts}</td>
+              <td style="padding:5px 10px 5px 0;text-align:right;font-weight:400;font-variant-numeric:tabular-nums">${f.total}</td>
+              <td style="padding:5px 0;font-size:11.5px;color:var(--color-text-muted)">${esc(f.morts) || '—'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>` : `<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">${c.ucChargement ? 'Lecture…' : (c.ucEcransLu ? 'Aucune ouverture enregistrée sur la période.' : 'Mesure non lue — le compteur d’ouvertures n’a pas répondu.')}</div>`}
+    </div>
+  </div>`;
+}
+
+function tplJournal(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="journal" style="display:flex;flex-direction:column;gap:14px">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px 18px">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <div>
+          <div style="font-family:var(--font-display);font-size:16px;line-height:1.3">Écrans ouverts — 30 derniers jours</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">Nombre d'ouvertures, écran par écran et jour par jour. De quoi voir ce qui sert vraiment, et alléger le rail de ce qui ne sert pas.</div>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.vuesTotal || '')}</div>
+      </div>
+      ${c.vuesChargement ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Lecture des ouvertures…</div>' : (c.vuesVide
+        ? '<div style="font-size:12px;color:var(--color-text-muted);margin-top:12px">Aucune ouverture enregistrée pour l’instant — la mesure commence à cette livraison.</div>'
+        : `
+      <div style="overflow-x:auto;margin-top:12px">
+        <table style="width:100%;min-width:820px;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="text-align:left;font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 8px 6px 0">Écran</th>
+            <th style="text-align:right;font-size:10px;font-weight:400;letter-spacing:0.06em;text-transform:uppercase;color:var(--color-text-muted);padding:0 10px 6px 0;width:70px">Ouvertures</th>
+            ${c.vuesJours.map((j, i) => `<th style="padding:0 1px 6px;font-size:10px;font-weight:400;color:var(--color-text-muted);text-align:center">${i % 5 === 0 ? esc(j.court) : ''}</th>`).join('')}
+          </tr></thead>
+          <tbody>
+            ${c.vuesLignes.map(l => `<tr${l.horsTop ? ' style="background:var(--color-background-secondary)"' : ''}>
+              <td style="padding:3px 8px 3px 0;white-space:nowrap">${esc(l.nom)}${l.horsTop ? ' <span style="font-size:10px;font-weight:400;padding:1px 6px;border-radius:8px;background:var(--color-surface);color:var(--color-text-muted)">hors top 5</span>' : ''}${l.qui ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(l.qui)}</div>` : ''}</td>
+              <td style="padding:3px 10px 3px 0;text-align:right;font-weight:400;font-variant-numeric:tabular-nums">${l.total}</td>
+              ${l.cases.map(k2 => `<td style="padding:2px 1px" title="${esc(k2.jour)} — ${k2.n} ouverture(s)"><i style="${k2.st}"></i></td>`).join('')}
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+      ${c.vuesReste ? `<div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+        <span style="font-size:11px;color:var(--color-text-muted)">Top 5 affiché · ${c.vuesReste} autre${c.vuesReste > 1 ? 's' : ''} écran${c.vuesReste > 1 ? 's' : ''} ouvert${c.vuesReste > 1 ? 's' : ''} sur la période</span>
+        <select ${x.C(c.setVuesAutre)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 9px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);max-width:340px">
+          ${c.vuesAutres.map(o => `<option value="${esc(o.v)}"${o.v === c.vuesAutreSel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}
+        </select>
+      </div>` : ''}
+      ${c.vuesJamais ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:10px">Jamais ouverts sur la période : ${esc(c.vuesJamais)}</div>` : ''}`)}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <select ${x.C(c.setLogPeriode)} style="${selCss}">${opts(c.logPeriodes, c.logPeriode)}</select>
+      <select ${x.C(c.setLogQui)} style="${selCss}">${opts(c.logQuis, c.logQui)}</select>
+      <select ${x.C(c.setLogType)} style="${selCss}">${opts(c.logTypes, c.logType)}</select>
+      <select ${x.C(c.setLogProjet)} style="${selCss}">${opts(c.logProjets, c.logProjet)}</select>
+      <input type="text" id="log-search" placeholder="Rechercher (projet, tâche, magasin…)" value="${esc(c.logQ)}" ${x.I(c.setLogQ)} style="flex:1;max-width:340px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
+      <span style="margin-left:auto;display:flex;align-items:center;gap:10px">
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.logCompte || '')}</span>
+        <button ${x.A(c.exportCsv)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Exporter CSV</button>
+      </span>
+    </div>
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="${TH};white-space:nowrap">Horodatage</th>
+          <th style="${TH2};text-align:left">Auteur</th>
+          <th style="${TH2};text-align:left">Type</th>
+          <th style="${TH2};text-align:left">Projet</th>
+          <th style="${TH};text-align:left">Événement</th>
+        </tr></thead>
+        <tbody>
+          ${c.logRows.map(l => `
+            <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+              <td style="padding:9px 14px;white-space:nowrap;color:var(--color-text-muted)">${l.ts}</td>
+              <td style="padding:9px 12px;font-weight:400;white-space:nowrap">${esc(l.qui)}</td>
+              <td style="padding:9px 12px"><span style="${l.typeSt}">${esc(l.type)}</span></td>
+              <td style="padding:9px 12px;color:var(--color-text-muted)">${esc(l.projet)}</td>
+              <td style="padding:9px 14px;line-height:1.45">${esc(l.msg)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      <!-- Les cinq derniers d'abord ; le reste s'ouvre d'un clic. -->
+      ${c.logPlier ? `<div style="padding:10px 14px;border-top:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.logPlier)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.logTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.logReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.logTout ? 'Journal complet affiché' : '5 derniers événements'}</span>
+      </div>` : ''}
+    </div>
+
+    <!-- Les e-mails partis du cockpit : rapports et commandes fournisseur,
+         dans un seul tableau — « ce mail est-il parti ? » se répondait
+         jusqu'ici dans deux écrans différents. -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;overflow:hidden">
+      <div style="padding:13px 14px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:400">E-mails envoyés — rapports et commandes fournisseur</span>
+        <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.mailsCompte || '')}</span>
+      </div>
+      ${c.mailsChargement ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Lecture des envois…</div>`
+        : c.mailsIndispo ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-on-abricot)">Les envois n’ont pas pu être lus — l’API n’a pas répondu.</div>`
+        : c.mailsVide ? `<div style="padding:16px 14px;font-size:12.5px;color:var(--color-text-muted)">Aucun envoi tracé pour l’instant.</div>` : `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr>
+          <th style="${TH};white-space:nowrap">Horodatage</th>
+          <th style="${TH2};text-align:left">Source</th>
+          <th style="${TH2};text-align:left">Objet</th>
+          <th style="${TH2};text-align:left">Destinataire</th>
+          <th style="${TH2};text-align:left">État</th>
+          <th style="${TH};text-align:left">Détail</th>
+        </tr></thead>
+        <tbody>
+          ${c.mailsRows.map(m => `
+            <tr style="border-bottom:1px solid var(--color-border-tertiary)">
+              <td style="padding:9px 14px;white-space:nowrap;color:var(--color-text-muted)">${esc(m.ts)}</td>
+              <td style="padding:9px 12px"><span style="${m.srcSt}">${esc(m.source)}</span></td>
+              <td style="padding:9px 12px;font-weight:400">${esc(m.objet)}</td>
+              <td style="padding:9px 12px;color:var(--color-text-muted)">${esc(m.dest)}</td>
+              <td style="padding:9px 12px"><span style="${m.etatSt}">${esc(m.etat)}</span></td>
+              <td style="padding:9px 14px;line-height:1.45;color:var(--color-text-muted)">${esc(m.detail)}</td>
+            </tr>`).join('')}
+        </tbody>
+      </table>
+      ${c.mailsPlier ? `<div style="padding:10px 14px;border-top:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:10px">
+        <button ${x.A(c.mailsPlier)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:6px 13px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${c.mailsTout ? 'Ne montrer que les 5 derniers' : 'Afficher les ' + c.mailsReste + ' plus anciens'}</button>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.mailsTout ? 'Tous les envois affichés' : '5 derniers envois'}</span>
+      </div>` : ''}`}
+    </div>
+  </div>`;
+}
+
+/* --- Paramètres --------------------------------------------------------------- */
+function tplParams(c, x){
+  const { esc } = x;
+  const inputCss = 'display:block;width:100%;box-sizing:border-box;margin-top:5px;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)';
+  const rowInput = 'width:100%;box-sizing:border-box;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:6px 9px;background:var(--color-background-secondary);color:var(--color-text)';
+  return `
+  <div data-screen="parametres" style="display:grid;grid-template-columns:1fr;gap:16px;align-items:start">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Les 6 leviers de gestion</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">Couleurs = source de vérité of_tag.color du design system. Marge = Vente − Coût.</div>
+      <div style="display:grid;grid-template-columns:186px 94px minmax(0,1fr);align-items:center;column-gap:0;row-gap:0">
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding-bottom:8px;padding-right:16px">Levier</div>
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding-bottom:8px;padding-right:16px">Type</div>
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding-bottom:8px">Ce que le levier recouvre</div>
+        ${c.paramLeviers.map(l => `
+          <div style="padding:10px 16px 10px 0;border-top:1px solid var(--color-border-tertiary)"><span class="levier-badge" data-lev="${l.slug}"><span class="levier-dot"></span>${esc(l.nom)}</span></div>
+          <div style="padding:10px 16px 10px 0;border-top:1px solid var(--color-border-tertiary);font-size:12px;color:var(--color-text-muted)">${l.type}</div>
+          <div style="padding:10px 0;border-top:1px solid var(--color-border-tertiary);font-size:12px;color:var(--color-text-muted);line-height:1.45;text-wrap:pretty">${esc(l.desc)}</div>`).join('')}
+      </div>
+    </div>
+    ${!c.prmAgences ? '' : `
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Agences</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">Le réseau travaille avec plusieurs agences : chacune porte son nom, son adresse et son logo. La note de campagne signe celle que la campagne désigne sur un de ses canaux ; à défaut, celle marquée « par défaut ».</div>
+      ${c.prmAgences.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture du référentiel…</div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:720px">
+        <thead><tr>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px 0">Agence</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px">Adresse e-mail</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px">Site</th>
+          <th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px">Logo</th>
+          <th style="text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:0 8px 8px">Campagnes</th>
+          <th style="padding:0 0 8px 8px"></th>
+        </tr></thead>
+        <tbody>
+          ${c.prmAgences.lignes.map(a => `<tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:7px 8px 7px 0"><input value="${esc(a.nom)}" ${x.C(a.setNom)} style="${rowInput}" />${a.defaut ? `<div style="font-size:10px;color:var(--color-primary);margin-top:3px">par défaut</div>` : `<button ${x.A(a.parDefaut)} style="border:none;background:none;padding:0;margin-top:3px;font-size:10px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">définir par défaut</button>`}</td>
+            <td style="padding:7px 8px"><input value="${esc(a.email)}" ${x.C(a.setEmail)} placeholder="contact@agence.be" style="${rowInput}" /></td>
+            <td style="padding:7px 8px"><input value="${esc(a.site)}" ${x.C(a.setSite)} placeholder="agence.be" style="${rowInput}" /></td>
+            <td style="padding:7px 8px">${a.logo ? `<img src="${esc(a.logo)}" alt="" style="height:24px;border-radius:3px;vertical-align:middle" />` : ''}<label style="display:inline-block;margin-left:${a.logo ? '8px' : '0'};font-size:11.5px;color:var(--color-primary);cursor:pointer;text-decoration:underline">${a.logo ? 'changer' : 'choisir'}<input type="file" accept="image/*" ${x.C(a.setLogo)} style="display:none" /></label></td>
+            <td style="padding:7px 8px;text-align:right;color:var(--color-text-muted)">${a.campagnes || ''}</td>
+            <td style="padding:7px 0 7px 8px;text-align:right"><button ${x.A(a.retirer)} title="Retirer du référentiel" style="border:none;background:none;color:var(--color-text-muted);font-size:12px;cursor:pointer">✕</button></td>
+          </tr>`).join('')}
+          <tr style="border-top:1px solid var(--color-border-tertiary)">
+            <td style="padding:9px 8px 9px 0"><input value="${esc(c.prmAgences.nom)}" ${x.C(c.prmAgences.setNom)} placeholder="Nouvelle agence" style="${rowInput}" /></td>
+            <td style="padding:9px 8px"><input value="${esc(c.prmAgences.email)}" ${x.C(c.prmAgences.setEmail)} placeholder="contact@agence.be" style="${rowInput}" /></td>
+            <td colspan="3"></td>
+            <td style="padding:9px 0 9px 8px;text-align:right"><button ${x.A(c.prmAgences.ajouter)} style="border:none;background:var(--color-primary);color:#fff;border-radius:7px;padding:6px 13px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:${c.prmAgences.ajouter ? 'pointer' : 'not-allowed'};opacity:${c.prmAgences.ajouter ? '1' : '.5'}">Ajouter</button></td>
+          </tr>
+        </tbody>
+      </table></div>
+      ${c.prmAgences.err ? `<div style="font-size:11.5px;color:var(--accent);margin-top:8px">${esc(c.prmAgences.err)}</div>` : ''}`}
+    </div>`}
+    ${!c.prmNote ? '' : `
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Notes de campagne — expéditeur</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px">L’adresse d’où partent les notes aux franchisés. Le nom, le logo et l’adresse des agences se règlent dans le tableau ci-dessus.</div>
+      ${c.prmNote.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des réglages…</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;align-items:end">
+        <label style="font-size:12px;color:var(--color-text-muted)">Expéditeur des notes<input value="${esc(c.prmNote.expediteur)}" ${x.C(c.prmNote.setExpediteur)} style="${inputCss}" /></label>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:var(--color-text-muted)">${c.prmNote.nCarnet} adresse${c.prmNote.nCarnet > 1 ? 's' : ''} de franchisé au carnet</span>
+        <button ${x.A(c.prmNote.enregistrer)} class="btn btn--sm">Enregistrer</button>
+      </div>
+      ${c.prmNote.err ? `<div style="font-size:11.5px;color:var(--accent);margin-top:8px">${esc(c.prmNote.err)}</div>` : ''}`}
+    </div>`}
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Seuils &amp; cibles</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Ce qui déclenche les alertes des écrans et des rapports.</div></div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:12px">Seuils d'alerte de coûts</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Food Cost max (%)
+            <input type="number" value="${c.sFoodVal}" ${x.C(c.setSFood)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Labour Cost max (%)
+            <input type="number" value="${c.sLabourVal}" ${x.C(c.setSLabour)} style="${inputCss}">
+          </label>
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Appliqués aux alertes du module Marge &amp; coûts.</div>
+      </div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:12px">Réputation digitale</div>
+        <label style="font-size:12px;color:var(--color-text-muted)">Note Google visée (sur 5)
+          <input type="number" min="1" max="5" step="0.1" value="${c.repCibleVal}" ${x.C(c.setRepCible)} style="${inputCss}">
+        </label>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px">Sert de cible à l’écran Réputation digitale : un magasin sous cette note affiche le nombre d’avis 5★ qu’il lui faudrait pour y revenir.</div>
+        <div style="border-top:1px solid var(--color-border-tertiary);margin:14px 0 12px"></div>
+        <label style="font-size:12px;color:var(--color-text-muted)">Clé API Google (Places API)
+          <input type="password" autocomplete="off" placeholder="${c.gCleDefinie ? 'Clé enregistrée — saisir pour la remplacer' : 'AIza…'}" ${x.C(c.setGCle)} style="${inputCss}">
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+          <span style="font-size:11.5px;color:${c.gCleDefinie ? '#3f7a52' : 'var(--color-text-muted)'};font-weight:400">${c.gCleDefinie ? 'Clé en place · ' + esc(c.gEmpreinte) : 'Aucune clé'}</span>
+          ${c.gCleDefinie ? `<button ${x.A(c.gEffacer)} style="border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text);border-radius:8px;height:26px;padding:0 11px;font-family:var(--font-ui);font-size:11px;cursor:pointer">Effacer</button>` : ''}
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">La clé ne quitte pas le serveur : l’écran n’en reçoit qu’une empreinte. Elle sert à la réputation des magasins ; l’Étude de faisabilité du CRM la reprend quand elle n’a pas sa propre clé. Activez « Places API (New) » sur le projet Google et restreignez la clé à cette API.</div>
+      </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Courriers &amp; notifications</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Tout ce qui part du cockpit : la machine d’envoi, les modèles de messages, et le journal de ce qui est parti.</div></div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+          <div style="font-size:13px;font-weight:400">Envoi des rapports — machine SMTP</div>
+          <span style="${c.sm.etatSt}">${esc(c.sm.etatTxt)}</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 110px 130px;gap:12px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Hôte SMTP
+            <input value="${esc(c.sm.hote)}" ${x.C(c.sm.setHote)} placeholder="smtp.gmail.com" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Port
+            <input type="number" value="${esc(c.sm.port)}" ${x.C(c.sm.setPort)} style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Sécurité
+            <select ${x.C(c.sm.setSecurite)} style="${inputCss}">
+              ${['tls', 'ssl', 'aucune'].map(v => `<option value="${v}"${c.sm.securite === v ? ' selected' : ''}>${v === 'tls' ? 'STARTTLS (587)' : v === 'ssl' ? 'SSL (465)' : 'Aucune'}</option>`).join('')}
+            </select>
+          </label>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+          <label style="font-size:12px;color:var(--color-text-muted)">Utilisateur
+            <input value="${esc(c.sm.utilisateur)}" ${x.C(c.sm.setUtilisateur)} autocomplete="off" placeholder="compte@atelierby.be" style="${inputCss}">
+          </label>
+          <label style="font-size:12px;color:var(--color-text-muted)">Mot de passe
+            <input type="password" ${x.C(c.sm.setMdp)} autocomplete="new-password" placeholder="${c.sm.mdpDefini ? 'En place — saisir pour remplacer' : 'mot de passe ou mot de passe d’application'}" style="${inputCss}">
+          </label>
+        </div>
+        <label style="display:block;font-size:12px;color:var(--color-text-muted);margin-top:10px">Expéditeur
+          <input value="${esc(c.sm.expediteur)}" ${x.C(c.sm.setExpediteur)} placeholder="Cockpit L’Atelier By &lt;rapports@atelierby.be&gt;" style="${inputCss}">
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap">
+          <button ${x.A(c.sm.save)} class="btn btn--sm">${c.sm.busy ? 'En cours…' : 'Enregistrer'}</button>
+          <input value="${esc(c.sm.testA)}" ${x.C(c.sm.setTestA)} placeholder="adresse de test" style="flex:1;min-width:180px;box-sizing:border-box;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 10px;background:var(--color-surface);color:var(--color-text)">
+          <button ${x.A(c.sm.test)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 14px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Envoyer un test</button>
+        </div>
+        ${c.sm.msg ? `<div style="${c.sm.msgSt}">${esc(c.sm.msg)}</div>` : ''}
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:10px;text-wrap:pretty">Le mot de passe ne quitte pas le serveur (ceo_app_setting.smtp) — l’écran ne le relit jamais. Sans SMTP configuré, l’envoi des rapports retombe sur mail() du serveur. Gmail : créez un « mot de passe d’application », hôte smtp.gmail.com, port 587, STARTTLS.</div>
+      </div>
+      <div style="margin:8px 0 -4px"><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text)">Référentiels</div><div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Les tables qui pilotent les écrans : KPI, modèles, gabarits.</div></div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:4px">Catalogue des KPI</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px;text-wrap:pretty">Le référentiel qui pilote les écrans et les rapports : un seuil changé ici s’applique partout au prochain calcul. « Alerte » déclenche la ligne dans les rapports, « Critique » la marque en rouge vif.</div>
+        ${c.kpiCat.chargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Lecture du référentiel…</div>` : `
+        <div style="display:flex;flex-direction:column">
+          ${c.kpiCat.lignes.map(k => `
+            <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--color-border-tertiary);flex-wrap:wrap">
+              <div style="flex:1;min-width:230px">
+                <span style="font-size:12.5px;font-weight:400"><i style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${k.levCoul};margin-right:6px;vertical-align:0"></i>${esc(k.nom)}</span>
+                <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:2px">${esc(k.type)} · ${esc(k.levNom)}</div>
+              </div>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Alerte
+                <input value="${esc(k.alerte)}" ${x.C(k.setAlerte)} style="display:block;width:74px;box-sizing:border-box;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);text-align:right">
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Critique
+                <input value="${esc(k.critique)}" ${x.C(k.setCritique)} style="display:block;width:74px;box-sizing:border-box;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text);text-align:right">
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Mauvais
+                <select ${x.C(k.setSens)} style="display:block;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text)">
+                  <option value="haut"${k.sens === 'haut' ? ' selected' : ''}>au-dessus</option>
+                  <option value="bas"${k.sens === 'bas' ? ' selected' : ''}>en dessous</option>
+                </select>
+              </label>
+              <label style="font-size:10px;color:var(--color-text-muted);text-transform:uppercase;letter-spacing:0.05em">Sortie
+                <select ${x.C(k.setSortie)} style="display:block;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:5px 7px;background:var(--color-surface);color:var(--color-text)">
+                  ${c.kpiCat.sorties.map(so => `<option value="${so.val}"${k.sortie === so.val ? ' selected' : ''}>${esc(so.nom)}</option>`).join('')}
+                </select>
+              </label>
+              <span ${x.A(k.toggle)} style="${k.actifSt}">${k.actifTxt}</span>
+              ${k.supprimable ? `<button ${x.A(k.suppr)} title="Supprimer ce KPI dérivé" style="border:none;background:none;color:var(--color-text-muted);font-size:13px;cursor:pointer;padding:2px 4px">✕</button>` : `<span style="width:21px"></span>`}
+            </div>`).join('')}
+        </div>
+        <div style="margin-top:14px;padding:13px 15px;background:var(--color-background-secondary);border-radius:10px">
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:9px">Nouveau KPI — une formule sur les mesures du mois</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <input value="${esc(c.kpiCat.d.nom)}" ${x.C(c.kpiCat.set.nom)} placeholder="Nom du KPI" style="flex:2;min-width:170px;font-size:12.5px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 9px;background:var(--color-surface);color:var(--color-text)">
+            <select ${x.C(c.kpiCat.set.num)} style="flex:1;min-width:150px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.mesures.map(mm => `<option value="${mm.val}"${c.kpiCat.d.num === mm.val ? ' selected' : ''}>${esc(mm.nom)}</option>`).join('')}</select>
+            <span style="font-size:14px;color:var(--color-text-muted);padding-bottom:7px">÷</span>
+            <select ${x.C(c.kpiCat.set.den)} style="flex:1;min-width:150px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.mesures.map(mm => `<option value="${mm.val}"${c.kpiCat.d.den === mm.val ? ' selected' : ''}>${esc(mm.nom)}</option>`).join('')}</select>
+            <select ${x.C(c.kpiCat.set.echelle)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              <option value="unite"${c.kpiCat.d.echelle === 'unite' ? ' selected' : ''}>unité</option>
+              <option value="eur"${c.kpiCat.d.echelle === 'eur' ? ' selected' : ''}>€</option>
+              <option value="pct"${c.kpiCat.d.echelle === 'pct' ? ' selected' : ''}>× 100 (%)</option>
+            </select>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-top:8px">
+            <select ${x.C(c.kpiCat.set.levier)} style="flex:1;min-width:140px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">${c.kpiCat.leviers.map(lv => `<option value="${lv.val}"${c.kpiCat.d.levier === lv.val ? ' selected' : ''}>${esc(lv.nom)}</option>`).join('')}</select>
+            <input value="${esc(c.kpiCat.d.alerte)}" ${x.C(c.kpiCat.set.alerte)} placeholder="Seuil alerte" style="width:96px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text);text-align:right">
+            <input value="${esc(c.kpiCat.d.critique)}" ${x.C(c.kpiCat.set.critique)} placeholder="Critique" style="width:82px;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text);text-align:right">
+            <select ${x.C(c.kpiCat.set.sens)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              <option value="bas"${c.kpiCat.d.sens === 'bas' ? ' selected' : ''}>mauvais en dessous</option>
+              <option value="haut"${c.kpiCat.d.sens === 'haut' ? ' selected' : ''}>mauvais au-dessus</option>
+            </select>
+            <select ${x.C(c.kpiCat.set.sortie)} style="font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:7px 8px;background:var(--color-surface);color:var(--color-text)">
+              ${c.kpiCat.sorties.map(so => `<option value="${so.val}"${c.kpiCat.d.sortie === so.val ? ' selected' : ''}>Sortie : ${esc(so.nom)}</option>`).join('')}
+            </select>
+            <button ${x.A(c.kpiCat.creer)} class="btn btn--sm">Créer le KPI</button>
+          </div>
+          <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px;text-wrap:pretty">Évalué par magasin sur le mois en cours, dès le prochain rapport (bloc « KPI personnalisés »). Un KPI qui exige une nouvelle source API reste un ajout de code — sa fiche portera « source à câbler ».</div>
+        </div>`}
+      </div>
+      <!-- Cadence dynamique des contrôles : retirée de l'écran pour le moment — le backend (src/cadence.php, /cadence) reste en place, le bloc se restaure depuis l'historique git. -->
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:12px">Modèles d'email de relance</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          ${c.paramTpls.map(t => `
+            <div>
+              <div style="font-size:12.5px;font-weight:400">${esc(t.nom)}</div>
+              <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 6px">Sujet : ${esc(t.sujet)}</div>
+              <textarea ${x.C(t.set)} rows="3" style="width:100%;box-sizing:border-box;font-size:12px;border:1px solid var(--color-border-secondary);border-radius:6px;padding:8px 10px;background:var(--color-background-secondary);color:var(--color-text);resize:vertical;line-height:1.5">${esc(t.corps)}</textarea>
+            </div>`).join('')}
+        </div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">Variables : {destinataire} {tache} {projet} {echeance} {zone}</div>
+      </div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:12px">Général</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Année de référence des objectifs</span><span style="font-weight:400">${c.paramExo || ''}</span></div>
+        </div>
+      </div>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+        <div style="font-size:13px;font-weight:400;margin-bottom:12px">Réseau</div>
+        <div style="display:flex;flex-direction:column;gap:9px;font-size:12.5px">
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Intervenants</span><span style="font-weight:400">${esc(c.paramIntervenants)}</span></div>
+          <div style="display:flex;justify-content:space-between"><span style="color:var(--color-text-muted)">Magasins / zones d'implantation</span><span style="font-weight:400">${esc(c.paramMagasins)}</span></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Relance email ------------------------------------------------------------ */
+function tplRelance(c, x){
+  const { esc } = x;
+  return `
+  <div ${x.A(c.relClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:560px;background:var(--color-surface);border-radius:12px;z-index:81;padding:24px 26px">
+    <div style="font-family:var(--font-display);font-size:21px">Relance par email</div>
+    <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px">À : <span style="font-weight:400;color:var(--color-text)">${esc(c.rel.to)}</span> — ${esc(c.rel.email)}</div>
+    <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:16px 0 5px">Sujet</div>
+    <input type="text" value="${esc(c.rel.sujet)}" ${x.C(c.relSujet)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+    <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin:12px 0 5px">Message</div>
+    <textarea ${x.C(c.relCorps)} rows="9" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(c.rel.corps)}</textarea>
+    <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+      <button ${x.A(c.relClose)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:13px;font-weight:400;cursor:pointer">Annuler</button>
+      <button ${x.A(c.relSend)} style="border:none;border-radius:8px;padding:9px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:13px;font-weight:400;cursor:pointer">Envoyer la relance</button>
+    </div>
+  </div>`;
+}
+
+/* --- Aperçu PDF / Générateur HTML --------------------------------------------- */
+function tplRepPrev(c, x){
+  const { esc } = x;
+  const rp = c.repPrev;
+  return `
+  <div ${x.A(c.repPrevClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.45);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div data-scroll="modale-large" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:min(880px,94vw);max-height:90vh;overflow-y:auto;background:var(--color-background-secondary);border-radius:12px;z-index:81;padding:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div style="font-size:13px;font-weight:400">${esc(rp.nom)}</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <div style="display:inline-flex;border:1px solid var(--color-border-secondary);border-radius:8px;overflow:hidden">
+          <button ${x.A(c.repPrevTabPdf)} style="${rp.tabPdfSt}">Aperçu PDF</button>
+          <button ${x.A(c.repPrevTabCode)} style="${rp.tabCodeSt}">Générateur HTML</button>
+        </div>
+        <button ${x.A(c.repPrevClose)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;padding:4px">✕</button>
+      </div>
+    </div>
+    <code style="display:block;font-size:10.5px;color:var(--color-text-muted);background:var(--color-surface);border-radius:6px;padding:6px 10px;margin-bottom:14px;overflow-wrap:break-word">${esc(rp.url)}</code>
+    ${rp.isCode ? `
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:10px">Code du rapport généré depuis les postes cochés. Variables : <code style="font-size:10.5px">{periode}</code> <code style="font-size:10.5px">{dest}</code> <code style="font-size:10.5px">{cc}</code> <code style="font-size:10.5px">{date_generation}</code> — remplacées à la génération.</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Structure — rapport.html</span>
+          <button ${x.A(rp.copyHtml)} style="border:1px solid var(--color-border-secondary);border-radius:7px;padding:4px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Copier</button>
+        </div>
+        <textarea readonly spellcheck="false" style="width:100%;box-sizing:border-box;height:480px;font-family:ui-monospace,monospace;font-size:10.5px;line-height:1.55;border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;white-space:pre">${esc(rp.htmlCode)}</textarea>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Mise en forme — rapport.css</span>
+          <button ${x.A(rp.copyCss)} style="border:1px solid var(--color-border-secondary);border-radius:7px;padding:4px 10px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:11px;font-weight:400;cursor:pointer">Copier</button>
+        </div>
+        <textarea readonly spellcheck="false" style="width:100%;box-sizing:border-box;height:480px;font-family:ui-monospace,monospace;font-size:10.5px;line-height:1.55;border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;white-space:pre">${esc(rp.cssCode)}</textarea>
+      </div>
+    </div>` : ''}
+    ${rp.isPdf ? `
+    <div style="background:#fff;border-radius:4px;padding:36px 40px;min-height:780px;max-width:580px;margin:0 auto">
+      <div style="display:flex;align-items:baseline;justify-content:space-between;border-bottom:1.5px solid var(--ink);padding-bottom:12px">
+        <img src="${c.brandLogo}" alt="L’Atelier" style="width:120px;height:auto;display:block">
+
+        <div style="font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em">Rapport automatique · ${rp.periodeLabel}</div>
+      </div>
+      <div style="font-family:var(--font-display);font-size:24px;margin-top:20px">${esc(rp.nom)}</div>
+      <div style="font-size:11.5px;color:var(--muted);margin-top:4px">À : ${esc(rp.to)}${esc(rp.ccTxt)} · Fréquence : ${rp.freq}</div>
+      <div style="display:flex;flex-direction:column;gap:18px;margin-top:24px">
+        ${rp.sections.map(s => `
+          <div>
+            <div style="display:flex;align-items:baseline;gap:8px;border-bottom:1px solid var(--line);padding-bottom:5px">
+              <span style="font-size:10px;font-weight:400;color:var(--accent)">${s.tag}</span>
+              <span style="font-size:13px;font-weight:400">${esc(s.label)}</span>
+            </div>
+            <div style="font-size:11px;color:var(--muted-2);margin-top:6px;line-height:1.5">${esc(s.desc)}</div>
+            <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px">
+              <div style="height:38px;background:var(--chip);border-radius:3px"></div>
+              <div style="height:38px;background:var(--chip);border-radius:3px"></div>
+              <div style="height:38px;background:var(--chip);border-radius:3px"></div>
+              <div style="height:38px;background:var(--chip);border-radius:3px"></div>
+            </div>
+          </div>`).join('')}
+      </div>
+      <div style="border-top:1px solid var(--line);margin-top:28px;padding-top:8px;font-size:10px;color:var(--faint);display:flex;justify-content:space-between">
+        <span>Généré automatiquement le ${rp.dateGenLabel} — cockpit L'Atelier by</span><span>1 / 1</span>
+      </div>
+    </div>` : ''}
+  </div>`;
+}
+
+/* --- Rapport consultant -------------------------------------------------------- */
+function tplEqRep(c, x){
+  const { esc } = x;
+  const q = c.eqRep;
+  return `
+  <div ${x.A(c.eqClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div data-scroll="modale-detail" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:680px;max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:12px;z-index:81;padding:26px 28px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+      <div>
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Rapport consultant</div>
+        <div style="font-family:var(--font-display);font-size:22px;margin-top:2px">${esc(q.nom)}</div>
+        <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:2px">${esc(q.role)} · ${esc(q.email)} · TJM ${q.tjm}</div>
+      </div>
+      <button ${x.A(c.eqClose)} style="border:none;background:transparent;cursor:pointer;color:var(--color-text-muted);font-size:16px;padding:4px">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px">
+      <div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px">
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Fiabilité</div>
+        <div style="font-size:21px;font-weight:700;margin-top:4px;color:${q.fiabCl}">${q.fiab}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">${esc(q.fiabSub)}</div>
+      </div>
+      <div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px">
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Visites magasin</div>
+        <div style="font-size:21px;font-weight:700;margin-top:4px">${q.nVisites}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">${q.nSites} magasin(s) · 8 dern. semaines</div>
+      </div>
+      <div style="background:var(--color-background-secondary);border-radius:10px;padding:12px 14px">
+        <div style="font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Checklist tâches</div>
+        <div style="font-size:21px;font-weight:700;margin-top:4px">${q.nDone}/${q.nTaches}</div>
+        <div style="font-size:11px;color:var(--color-text-muted)">livrées · ${q.nLate} en retard</div>
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Visites en magasin — où et quand</div>
+      <div style="display:flex;flex-direction:column">
+        ${q.visites.map(v => `
+          <div style="display:grid;grid-template-columns:74px 210px 1fr;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-border-tertiary);font-size:12.5px;align-items:baseline">
+            <span style="color:var(--color-text-muted);white-space:nowrap">${v.date}</span>
+            <span style="font-weight:400">${esc(v.store)}</span>
+            <span style="color:var(--color-text-muted)">${esc(v.objet)}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div style="margin-top:20px">
+      <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Checklist — tâches &amp; livraisons</div>
+      <div style="display:flex;flex-direction:column">
+        ${q.taches.map(t => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--color-border-tertiary)">
+            <span style="${t.dotSt}">${t.dot}</span>
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12.5px;font-weight:400">${esc(t.nom)}</div>
+              <div style="font-size:11px;color:var(--color-text-muted)">${esc(t.projet)} · échéance ${t.due}</div>
+            </div>
+            <span style="${t.stSt}">${t.st}</span>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Assistant « Nouvelle tâche » ----------------------------------------------- */
+function tplWizardTache(c, x){
+  const { esc } = x;
+  const lbl = 'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px';
+  const inp = 'width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;padding:10px 12px;font-family:var(--font-ui);font-size:13px;background:var(--color-background-secondary);color:var(--color-text)';
+  return `
+  <div ${x.A(c.ntClose)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div data-scroll="modale-note" style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:760px;max-height:88vh;overflow-y:auto;background:var(--color-surface);border-radius:12px;z-index:81;padding:26px 28px">
+    <div style="font-family:var(--font-display);font-size:21px">Nouvelle tâche</div>
+    <div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px">${esc(c.ntStepSub)}</div>
+    <div style="display:flex;align-items:center;gap:0;margin:20px 0 22px">
+      ${c.ntSteps.map(s => `
+        <button ${x.A(s.go)} style="${s.btnSt}">
+          <span style="${s.dotSt}">${s.num}</span>
+          <span style="${s.labSt}">${s.label}</span>
+        </button>
+        ${s.sep ? `<span style="${s.sepSt}"></span>` : ''}`).join('')}
+    </div>
+
+    ${c.ntS1 ? `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div>
+        <div style="${lbl}">Projet de rattachement</div>
+        <select ${x.C(c.ntProjet)} style="${inp}">${opts(c.ntProjets, c.nt.projet, o => o.val, o => esc(o.nom))}</select>
+      </div>
+      <div>
+        <div style="${lbl}">Intitulé de la tâche</div>
+        <input value="${esc(c.nt.nom)}" ${x.C(c.ntNom)} placeholder="Ex. Audit plannings — magasins Flandre" style="${inp}">
+      </div>
+      <div>
+        <div style="${lbl}">Magasin concerné — optionnel</div>
+        <select ${x.C(c.ntMagasin)} style="${inp}">${opts(c.ntMagasins, c.nt.magasin, o => o.val, o => esc(o.nom))}</select>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:5px">Laissez « Aucun — tâche réseau » si la tâche ne porte pas sur un point de vente précis.</div>
+      </div>
+      <div style="background:var(--color-background-secondary);border-radius:10px;padding:14px 16px">
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">Objectif du projet</div>
+        <div style="font-size:12.5px;line-height:1.5;margin-top:5px">${esc(c.ntObjectif)}</div>
+      </div>
+    </div>` : ''}
+
+    ${c.ntS2 ? `
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div>
+          <div style="${lbl}">Responsable</div>
+          <select ${x.C(c.ntWho)} style="${inp}">${opts(c.npOwners, c.nt.who, o => o.val, o => esc(o.nom))}</select>
+        </div>
+        <div>
+          <div style="${lbl}">Échéance</div>
+          <input type="date" value="${c.nt.due}" ${x.C(c.ntDue)} style="${inp.replace('padding:10px 12px', 'padding:9px 12px')}">
+        </div>
+      </div>
+      <div>
+        <div style="${lbl}">Colonne de départ</div>
+        <div style="display:flex;gap:8px">
+          ${c.ntCols.map(col => `<button ${x.A(col.pick)} style="${col.st}">${col.nom}</button>`).join('')}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted)">${esc(c.ntCharge)}</div>
+    </div>` : ''}
+
+    ${c.ntS3 ? `
+    <div style="background:var(--color-background-secondary);border-radius:10px;padding:16px 18px">
+      <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:10px">Récapitulatif</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:14px">
+        ${c.ntRecap.map(r => `
+          <div>
+            <div style="font-size:10.5px;color:var(--color-text-muted)">${r.k}</div>
+            <div style="font-size:12.5px;font-weight:400;margin-top:3px;line-height:1.35">${esc(r.v)}</div>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--color-border-tertiary)">
+      <button ${x.A(c.ntClose)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:9px 0;color:var(--color-text-muted)">Annuler</button>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:12px;color:${c.ntWarnCol}">${c.ntWarn}</span>
+        ${c.ntCanPrev ? `<button ${x.A(c.ntPrev)} style="border:1px solid var(--color-border-secondary);background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:9px 18px;border-radius:8px;color:var(--color-text)">Précédent</button>` : ''}
+        ${c.ntCanNext ? `<button ${x.A(c.ntNext)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:9px 20px;border-radius:8px">Suivant</button>` : ''}
+        ${c.ntS3 ? `<button ${x.A(c.ntCreate)} class="hv-fade" style="border:none;cursor:pointer;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;padding:9px 20px;border-radius:8px">Créer la tâche</button>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Détail d'une tâche checklist : photo de réalisation + notation --------- */
+function tplCtrlDetail(c, x){
+  const { esc } = x;
+  const d = c.ctrlDet;
+  return `
+  <div ${x.A(d.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:60;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:560px;background:var(--color-surface);z-index:61;overflow-y:auto;animation:panelIn 200ms ease">
+    <div style="padding:24px 28px 60px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Tâche checklist${d.checklist ? ' — ' + esc(d.checklist) : ''}</div>
+          <h2 style="font-family:var(--font-display);font-size:22px;font-weight:400;margin:4px 0 0;line-height:1.2">${esc(d.nom)}</h2>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:4px">${esc(d.date)}${d.statut ? ' · ' + esc(d.statut) : ''}${d.obligatoire ? ' · ' + esc(d.obligatoire) : ''}</div>
+        </div>
+        <button ${x.A(d.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+        <div>
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
+          ${d.photo
+            ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block">
+                <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;padding:3px 9px;border-radius:8px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
+               ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
+               <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
+            : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
+        </div>
+        <div>
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
+          ${d.photoRef
+            ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>`
+            : d.rayon && d.rayon.photo
+            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo type du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
+               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo type'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            : d.rayon
+            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo type pour ce rayon.</span><span style="font-weight:400;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo type'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
+        </div>
+      </div>
+      ${d.rayon && d.rayon.consigne ? `<div style="font-size:12px;margin-top:8px;line-height:1.5"><span style="font-weight:400">Attendu :</span> ${esc(d.rayon.consigne)}</div>` : ''}
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">${d.rayon
+        ? 'Une photo de comptoir se juge contre la photo type de son rayon, posée dans « Photos types des rayons » en haut de l\u2019écran — la même s\u2019affiche dans le contrôle guidé des visites.'
+        : 'Un contrôle qualité se juge par comparaison : la photo produit (products/available \u2192 recipes/{id_recipe}, le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »'}</div>
+
+      <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>
+      <div style="font-size:13px;font-weight:400">${esc(d.avisTxt)}</div>
+      ${d.avisComment ? `<div style="font-size:12.5px;color:var(--color-text-muted);margin-top:4px;line-height:1.5">${esc(d.avisComment)}</div>` : ''}
+
+      <!-- Assistance IA : une PROPOSITION, jamais une note. Elle pré-remplit,
+           le consultant valide — c'est son geste qui engage le réseau. -->
+      ${d.photo ? `<div style="margin:20px 0 0;padding:12px 14px;border:1px solid var(--color-border-tertiary);border-radius:10px;background:var(--color-background-secondary)">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};flex:1;min-width:150px">Assistance à la notation</div>
+          ${d.iaDispo
+            ? `<button ${x.A(d.iaGo)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);border-radius:8px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:${d.iaBusy ? 'wait' : 'pointer'};opacity:${d.iaBusy ? '0.6' : '1'};color:var(--color-text)">${d.iaBusy ? 'Analyse de la photo…' : (d.iaFait ? 'Réanalyser' : 'Proposer une évaluation')}</button>`
+            : `<span style="font-size:11px;font-weight:400;padding:2px 8px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">manque API</span>`}
+        </div>
+        ${!d.iaDispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.5">Aucune clé Anthropic enregistrée. Paramètres → Assistance IA. La clé reste sur le serveur ; le navigateur ne reçoit que la proposition.</div>` : ''}
+        ${d.iaMotif ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaMotif)}</div>` : ''}
+        ${d.iaNom ? `<div style="margin-top:9px">
+          <div style="font-size:12.5px"><span style="font-weight:400">Proposition : ${esc(d.iaNom)}</span>${d.iaConfiance ? `<span style="color:var(--color-text-muted)"> · confiance ${esc(d.iaConfiance)}</span>` : ''}${d.iaModele ? `<span style="color:var(--color-text-muted)"> · ${esc(d.iaModele)}</span>` : ''}</div>
+          ${(d.iaConstats || []).length ? `<ul style="margin:6px 0 0;padding-left:17px;font-size:12px;color:var(--color-text-muted);line-height:1.55">${d.iaConstats.map(k => `<li>${esc(k)}</li>`).join('')}</ul>` : ''}
+          ${d.iaAvert ? `<div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:7px;line-height:1.5">${esc(d.iaAvert)}</div>` : ''}
+          <div style="display:flex;gap:9px;margin-top:10px;flex-wrap:wrap">
+            <button ${x.A(d.iaAppliquer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;padding:7px 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Reprendre cette proposition</button>
+            <span style="font-size:11px;color:var(--color-text-muted);align-self:center">rien n’est enregistré tant que vous n’envoyez pas la note</span>
+          </div>
+        </div>` : ''}
+      </div>` : ''}
+
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:22px 0 8px">
+        <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'}">Votre évaluation</div>
+        ${d.verdict ? `<span style="${d.verdictSt}">${esc(d.verdict)}</span>` : ''}
+      </div>
+      ${d.niveauDeduit ? `<div style="display:flex;gap:8px;align-items:flex-start;margin:2px 0 9px;font-size:11.5px;line-height:1.5;color:var(--color-text-muted)">
+        <span style="width:9px;height:9px;border-radius:2px;background:${d.niveauDeduitCol};flex:0 0 auto;margin-top:4px"></span>
+        <div>Déduit des repères : <span style="font-weight:400;color:var(--color-text)">${esc(d.niveauDeduit)}</span> — le plus sévère l’emporte. Choisissez un niveau pour le remplacer.</div>
+      </div>` : ''}
+      ${d.niveaux.map(lv => `
+        <button ${x.A(lv.pick)} style="${lv.st}">
+          <span style="${lv.dotSt}"></span>
+          <span style="flex:1">${esc(lv.nom)}${lv.deduit ? ' <span style="font-weight:400;font-size:11px;color:var(--color-text-muted)">— déduit</span>' : ''}</span>
+          ${lv.aide ? `<span style="font-size:11px;color:var(--color-text-muted);font-weight:400">${esc(lv.aide)}</span>` : ''}
+        </button>`).join('')}
+      <textarea ${x.C(d.setComment)} rows="4" placeholder="${d.commentRequis ? 'Commentaire obligatoire pour une non-conformité' : 'Commentaire (facultatif)'}" style="width:100%;box-sizing:border-box;margin-top:10px;font-size:13px;border:1px solid ${d.commentRequis && !d.comment ? '#8D1D2C' : 'var(--color-border-secondary)'};border-radius:8px;padding:10px 12px;background:var(--color-surface);color:var(--color-text);resize:vertical;line-height:1.55">${esc(d.comment)}</textarea>
+      ${d.erreur ? `<div style="margin-top:10px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px">${esc(d.erreur)}</div>` : ''}
+      <!-- Note au consultant : un geste occasionnel, replié par défaut. -->
+      <div style="border-top:1px solid var(--color-border-tertiary);margin-top:14px;padding-top:11px">
+        <button ${x.A(d.cn.basculer)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:400;color:var(--color-primary)">
+          ${d.cn.ouvert ? '− Note au consultant' : '+ Ajouter une note au consultant'}</button>
+        ${d.cn.ouvert ? `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px">
+          <div><div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Consultant</div>
+            <select ${x.C(d.cn.setQui)} style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+              ${d.cn.consultants.map(o => `<option value="${esc(o.id)}"${o.id === d.cn.qui ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+          <div><div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Type de note</div>
+            <select ${x.C(d.cn.setType)} style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+              ${d.cn.types.map(t => `<option${t === d.cn.type ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></div>
+        </div>
+        <textarea id="cn-note" ${x.I(d.cn.setTexte)} rows="3" placeholder="Ce que le consultant doit reprendre, rappeler ou savoir" style="width:100%;box-sizing:border-box;margin-top:9px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-family:var(--font-ui);font-size:12px;line-height:1.5;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(d.cn.texte)}</textarea>
+        <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:9px">
+          ${d.cn.commeBtns.map(b2 => `<button ${x.A(b2.pick)} style="border-radius:8px;height:29px;padding:0 12px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer;${b2.on ? 'border:none;background:var(--color-primary);color:#fff' : 'border:1px solid var(--color-border-secondary);background:transparent;color:var(--color-text-muted)'}">${esc(b2.nom)}</button>`).join('')}
+          ${d.cn.comme === 'tache' ? `<span style="font-size:10.5px;color:var(--color-text-muted)">échéance</span>
+            <input type="date" value="${esc(d.cn.due)}" ${x.C(d.cn.setDue)} style="border:1px solid var(--color-border-secondary);border-radius:8px;height:30px;padding:0 8px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">` : ''}
+          <div style="flex:1"></div>
+          <button ${x.A(d.cn.envoyer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:31px;padding:0 15px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:${d.cn.busy ? 'wait' : 'pointer'}">${d.cn.busy ? 'Envoi…' : 'Envoyer'}</button>
+        </div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">Envoyée comme tâche, la note vit dans le projet « Suivi consultants » et suit le circuit normal — échéance, relance, validation. L’API du panel n’expose pas de dépôt de tâche consultant (manque API) : la tâche vit dans le cockpit.</div>
+        ` : ''}
+      </div>
+
+      <!-- Réclamation fournisseur : le défaut vient du produit, pas du geste. -->
+      <div style="border-top:1px solid var(--color-border-tertiary);margin-top:12px;padding-top:11px">
+        <button ${x.A(d.rc.basculer)} style="border:none;background:none;padding:0;cursor:pointer;font-family:var(--font-ui);font-size:12px;font-weight:400;color:var(--color-primary)">
+          ${d.rc.ouvert ? '− Réclamation fournisseur' : '+ Ouvrir une réclamation fournisseur'}</button>
+        ${d.rc.fait ? `<span style="margin-left:9px;font-size:11px;font-weight:400;padding:2px 9px;border-radius:8px;background:rgba(63, 122, 82, 0.12);color:var(--green)">déposée${typeof d.rc.fait === 'number' ? ' #' + d.rc.fait : ''}</span>` : ''}
+        ${d.rc.ouvert ? `
+          ${d.rc.chargement ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">Lecture du catalogue fournisseur…</div>`
+            : (d.rc.indispo ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:9px">${esc(d.rc.indispo)}</div>` : `
+          <div style="margin-top:10px">
+            <div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Référence en cause</div>
+            <input value="${esc(d.rc.q)}" ${x.I(d.rc.setQ)} placeholder="Chercher une référence ou un SKU…" style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)">
+            ${d.rc.trouvees.length ? `<div style="display:flex;flex-direction:column;gap:2px;margin-top:5px;max-height:140px;overflow-y:auto">
+              ${d.rc.trouvees.map(m => `<button ${x.A(m.choisir)} style="text-align:left;border:none;background:var(--color-background-secondary);border-radius:7px;padding:6px 9px;cursor:pointer;font-family:var(--font-ui);font-size:11.5px">${esc(m.nom)} <span style="color:var(--color-text-muted)">· ${esc(m.sku)}</span></button>`).join('')}
+            </div>` : ''}
+            ${d.rc.matiere ? `<div style="font-size:11.5px;margin-top:6px;color:var(--green);font-weight:400">✓ ${esc(d.rc.matiere)}</div>` : ''}
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px">
+            <div><div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Livraison</div>
+              <select ${x.C(d.rc.setLivraison)} style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">
+                ${d.rc.livraisons.map(o => `<option value="${esc(o.v)}"${o.v === d.rc.livraison ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+            <div><div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Motif</div>
+              <select ${x.C(d.rc.setMotif)} style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:11.5px;background:var(--color-surface);color:var(--color-text)">
+                ${d.rc.motifs.map(o => `<option value="${esc(o.v)}"${o.v === d.rc.motif ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</select></div>
+          </div>
+          <div style="display:flex;gap:9px;align-items:flex-end;margin-top:9px;flex-wrap:wrap">
+            <div style="width:120px"><div style="font-size:10px;font-weight:400;letter-spacing:.08em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:4px">Quantité</div>
+              <input type="number" min="0" step="1" value="${esc(d.rc.quantite)}" ${x.I(d.rc.setQuantite)} style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;height:32px;padding:0 9px;font-family:var(--font-ui);font-size:12px;background:var(--color-surface);color:var(--color-text)"></div>
+            <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:9px;padding:3px;gap:2px">
+              ${d.rc.actions.map(a2 => `<button ${x.A(a2.choisir)} style="border:none;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;font-weight:${a2.on ? '600' : '400'};padding:5px 11px;border-radius:7px;background:${a2.on ? 'var(--color-surface)' : 'transparent'};color:${a2.on ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${esc(a2.nom)}</button>`).join('')}
+            </span>
+            ${d.rc.valeur ? `<span style="font-size:11.5px;color:var(--color-text-muted)">valeur réclamée : <b style="color:var(--color-text)">${esc(d.rc.valeur)}</b></span>` : ''}
+          </div>
+          <textarea ${x.I(d.rc.setTexte)} rows="3" placeholder="Ce que la boutique constate" style="width:100%;box-sizing:border-box;margin-top:9px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 10px;font-family:var(--font-ui);font-size:12px;line-height:1.5;background:var(--color-surface);color:var(--color-text);resize:vertical">${esc(d.rc.texte)}</textarea>
+          ${d.rc.err ? `<div style="margin-top:8px;padding:8px 11px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:11.5px">${esc(d.rc.err)}</div>` : ''}
+          <div style="display:flex;align-items:center;gap:9px;margin-top:10px;flex-wrap:wrap">
+            <span style="font-size:10.5px;color:var(--color-text-muted);flex:1;min-width:220px;line-height:1.45">${esc(d.rc.note)}</span>
+            <button ${x.A(d.rc.envoyer)} style="border:none;background:${d.rc.peut ? 'var(--color-primary)' : '#c9beb4'};color:#fff;border-radius:8px;height:31px;padding:0 16px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:${d.rc.busy ? 'wait' : 'pointer'}">${d.rc.busy ? 'Envoi…' : 'Déposer la réclamation'}</button>
+          </div>
+          <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:7px;line-height:1.45">La réclamation part chez le fournisseur et apparaît dans Suivi fournisseurs. Les repères posés sur la photo sont recopiés dans le texte — la pièce jointe, elle, attend l'identifiant que l'API ne rend pas encore.</div>
+          `)}` : ''}
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px">
+        <button ${x.A(d.close)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Fermer</button>
+        ${d.peutNoter ? `<button ${x.A(d.send)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${d.envoi ? 'wait' : 'pointer'};opacity:${d.envoi ? '0.6' : '1'}">${d.envoi ? 'Envoi…' : 'Envoyer la note'}</button>` : ''}
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:10px;line-height:1.5">La note part sur l\u2019API du panel (source de v\u00e9rit\u00e9) et est recopi\u00e9e dans le journal des avis.</div>
+    </div>
+  </div>`;
+}
+
+/* --- Détail d'une période d'analyse ------------------------------------------
+   Deux lectures : tous les magasins sur la période choisie, puis un magasin
+   choisi sur toutes les périodes. La question « est-ce un accident ou une
+   tendance » ne se répond pas sur un point isolé. */
+function tplAnalyseDetail(c, x){
+  const { esc } = x;
+  const a = c.anDetail;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const th = 'text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 10px 6px';
+  const td = 'padding:7px 10px;border-top:1px solid var(--color-border-tertiary)';
+  const nav = dispo => 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);'
+    + 'border-radius:8px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:12px;font-weight:400;'
+    + (dispo ? 'cursor:pointer' : 'cursor:not-allowed;opacity:0.4');
+  return `
+  <div ${x.A(a.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.5);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:12px;width:820px;max-width:100%;max-height:100%;display:flex;flex-direction:column;overflow:hidden">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 19px;border-bottom:1px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">${esc(a.titre)} · ${esc(a.mesure)}</div>
+          <div style="font-size:16px;font-weight:400;margin-top:3px">${esc(a.periode)}${a.enCours ? ` <span style="font-size:11.5px;font-weight:400;color:var(--color-primary)">période en cours</span>` : ''}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(a.bornes)}</div>
+        </div>
+        <div style="display:flex;gap:7px;align-items:center;flex:0 0 auto">
+          <button ${x.A(a.prec)} title="Période précédente" style="${nav(!!a.prec)}">←</button>
+          <button ${x.A(a.suiv)} title="Période suivante" style="${nav(!!a.suiv)}">→</button>
+          <button ${x.A(a.close)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer">✕</button>
+        </div>
+      </div>
+
+      <div style="padding:15px 19px;overflow-y:auto" data-scroll="andet">
+        <div style="display:flex;gap:26px;flex-wrap:wrap;padding-bottom:13px;border-bottom:1px solid var(--color-border-tertiary)">
+          <div><div style="${lbl}">Réseau</div><div style="font-size:21px;font-weight:700;margin-top:2px">${esc(a.reseau)}</div></div>
+          <div><div style="${lbl}">N-1</div><div style="font-size:21px;font-weight:400;margin-top:2px;color:var(--color-text-muted)">${esc(a.reseauN1)}</div></div>
+          <div><div style="${lbl}">Écart</div><div style="font-size:21px;font-weight:700;margin-top:2px;color:${a.deltaCol}">${esc(a.delta)}</div></div>
+        </div>
+
+        <div style="${lbl};margin:15px 0 7px">Par magasin — cliquez pour suivre un magasin sur toutes les périodes</div>
+        ${a.magsVide
+          ? `<div style="font-size:12px;color:var(--color-text-muted);line-height:1.55">Aucune ventilation par magasin sur cette période.</div>`
+          : `<table style="width:100%;border-collapse:collapse;font-size:12.5px">
+              <thead><tr>
+                <th style="${th};padding-left:0">Magasin</th>
+                <th style="${th};text-align:right">Valeur</th>
+                <th style="${th};text-align:right">Part</th>
+                <th style="${th};text-align:right">N-1</th>
+                <th style="${th};text-align:right;padding-right:0">Écart</th>
+              </tr></thead>
+              <tbody>${a.mags.map(m => `<tr ${x.A(m.choisir)} title="Suivre ${esc(m.nom)}" style="cursor:pointer;${m.on ? 'background:rgba(141,29,44,0.05)' : ''}">
+                <td style="${td};padding-left:0">
+                  <span style="font-weight:400">${esc(m.nom)}</span>
+                  <div style="height:4px;border-radius:8px;background:var(--color-border-tertiary);margin-top:4px;max-width:220px"><i style="display:block;height:100%;border-radius:8px;width:${m.partPct.toFixed(1)}%;background:${m.on ? 'var(--color-primary)' : 'var(--color-secondary)'}"></i></div>
+                </td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(m.valeur)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(m.part)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(m.n1)}</td>
+                <td style="${td};text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:${m.deltaCol}">${esc(m.delta)}${m.sansN1 ? `<div style="font-size:10px;color:var(--color-text-muted);font-weight:400">pas de N-1</div>` : ''}</td>
+              </tr>`).join('')}</tbody>
+            </table>`}
+        ${a.ecartTotal ? `<div style="font-size:11px;color:var(--color-on-abricot);margin-top:9px;line-height:1.5">${esc(a.ecartTotal)}</div>` : ''}
+
+        ${a.serie ? `<div style="margin-top:20px;padding-top:15px;border-top:1px solid var(--color-border-tertiary)">
+          <div style="${lbl};margin-bottom:7px">${esc(a.serie.nom)} — toutes les périodes</div>
+          <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+            <thead><tr>
+              <th style="${th};padding-left:0">Période</th>
+              <th style="${th};text-align:right">Valeur</th>
+              <th style="${th};text-align:right">N-1</th>
+              <th style="${th};text-align:right;padding-right:0">Écart</th>
+            </tr></thead>
+            <tbody>${a.serie.lignes.map(l => `<tr style="${l.courant ? 'background:rgba(141,29,44,0.04)' : ''}">
+              <td style="${td};padding-left:0">${esc(l.libelle)}${l.enCours ? ` <span style="font-size:10.5px;color:var(--color-primary)">en cours</span>` : ''}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums">${esc(l.valeur)}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.n1)}</td>
+              <td style="${td};text-align:right;font-variant-numeric:tabular-nums;padding-right:0;color:${l.deltaCol}">${esc(l.delta)}</td>
+            </tr>`).join('')}</tbody>
+          </table>
+          ${a.serie.note ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">${esc(a.serie.note)}</div>` : ''}
+        </div>` : ''}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Photo agrandie et ANNOTABLE : cadres numérotés + liste des remarques ----
+   On glisse sur la zone, le cadre se pose avec son numéro et sa gravité, et la
+   remarque s'écrit à droite. La couleur vient du barème de conformité déjà
+   partagé (mineur / majeur / critique) : elle dit la gravité, elle ne décore
+   pas. L'épaisseur du trait la redit — deux rouges voisins ne se distinguent
+   pas sur une photo sombre. */
+function tplCtrlZoom(c, x){
+  const { esc } = x;
+  const z = c.ctrlZoom;
+  const lbl = 'font-size:10.5px;font-weight:400;text-transform:uppercase;letter-spacing:0.09em;color:var(--color-text-muted)';
+  const tool = (on, dispo) => 'display:inline-flex;align-items:center;gap:6px;border-radius:9px;height:33px;padding:0 12px;'
+    + 'font-family:var(--font-ui);font-size:12px;font-weight:400;white-space:nowrap;'
+    + (dispo === false ? 'cursor:not-allowed;opacity:0.45;' : 'cursor:pointer;')
+    + (on ? 'border:none;background:var(--color-primary);color:#fff'
+          : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)');
+  return `
+  <div ${x.A(z.close)} style="position:fixed;inset:0;background:rgba(20,16,14,0.66);z-index:80;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:center;justify-content:center;padding:22px;pointer-events:none">
+    <div style="pointer-events:auto;background:var(--color-surface);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;max-width:100%;max-height:100%">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:14px 18px;border-bottom:1px solid var(--color-border-tertiary)">
+        <div>
+          <div style="${lbl}">Repères sur la photo</div>
+          <div style="font-size:16px;font-weight:400;margin-top:3px">${esc(z.nom)}</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(z.sous)}</div>
+        </div>
+        <button ${x.A(z.close)} style="border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted);border-radius:8px;width:28px;height:28px;font-size:14px;cursor:pointer;flex:0 0 auto">✕</button>
+      </div>
+
+      <div style="display:flex;min-height:0">
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0">
+          <div style="background:#141110;padding:14px;display:flex;align-items:center;justify-content:center;gap:12px;min-height:0">
+            <!-- data-zsurf : la surface de tracé. Les cadres sont positionnés en
+                 POURCENTAGE d'elle, jamais en pixels — la photo peut être
+                 affichée à n'importe quelle taille. -->
+            <div ${x.PD(z.down)} data-zsurf style="position:relative;display:inline-block;line-height:0;touch-action:none;cursor:${z.imgErr ? 'not-allowed' : 'crosshair'};flex:0 1 auto;${z.imgErr ? 'min-width:380px;min-height:280px;background:#211c1a;border-radius:8px' : ''}">
+              <img data-zimg src="${z.photo}" alt="Photo de réalisation" style="display:block;max-width:100%;max-height:70vh;border-radius:2px${z.imgErr ? ';display:none' : ''}">
+              ${z.imgErr ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center">
+                <span style="font-size:11px;font-weight:400;padding:2px 9px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">photo indisponible</span>
+                <div style="font-size:12px;color:var(--faint);line-height:1.55;max-width:320px">${esc(z.imgErrTxt)}</div>
+              </div>` : ''}
+              ${z.cadres.map(k => `<div ${x.A(k.pick)} data-zbox style="${k.boxSt}">
+                <span style="${k.badgeSt}">${k.n}</span>
+                <span style="${k.xSt}">✕</span>
+              </div>`).join('')}
+            </div>
+            ${z.compare ? `<div style="flex:0 1 auto;align-self:stretch;display:flex;flex-direction:column;gap:6px;min-width:240px;max-width:46%">
+              <div style="${lbl};color:var(--faint)">Référence attendue${z.produit ? ' — ' + esc(z.produit) : ''}</div>
+              ${z.refManque
+                ? `<div style="flex:1;background:#211c1a;border-radius:8px;padding:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:7px">
+                    <span style="font-size:11px;font-weight:400;padding:2px 9px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft)">manque API</span>
+                    <div style="font-size:12px;color:var(--faint);line-height:1.55;max-width:290px">${esc(z.refTxt)}</div>
+                    <div style="font-size:11px;color:#8f857e;line-height:1.5;max-width:290px">${esc(z.refBesoin)}</div>
+                  </div>`
+                : `<img src="${z.photoRef}" alt="Photo de référence" style="display:block;max-width:100%;max-height:70vh;border-radius:2px">`}
+            </div>` : ''}
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;padding:10px 13px;background:var(--color-background-secondary);border-top:1px solid var(--color-border-tertiary);flex-wrap:wrap">
+            <span style="${lbl}">Gravité du prochain repère</span>
+            ${z.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:6px;border-radius:8px;height:29px;padding:0 11px;font-family:var(--font-ui);font-size:11.5px;font-weight:400;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text-muted)'}">
+              <span style="width:10px;height:10px;border-radius:3px;background:${lv.couleur};flex:0 0 auto"></span>${esc(lv.nom)}</button>`).join('')}
+            <div style="width:1px;height:22px;background:var(--color-border-tertiary);margin:0 3px"></div>
+            <button ${x.A(z.compareGo)} style="${tool(z.compare, true)}">◫ Comparer</button>
+            <button ${x.A(z.undo)} style="${tool(false, !!z.undo)}">↶ Retirer le dernier</button>
+            <button ${x.A(z.clear)} style="${tool(false, !!z.clear)}">Tout effacer</button>
+            <div style="flex:1"></div>
+            <span style="font-size:11px;color:var(--color-text-muted)">Glissez sur la zone — le numéro s’ajoute tout seul</span>
+          </div>
+        </div>
+
+        <div style="width:310px;flex:0 0 310px;border-left:1px solid var(--color-border-tertiary);display:flex;flex-direction:column;overflow-y:auto" data-scroll="zrep">
+          <div style="padding:11px 13px 8px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <span style="${lbl}">Repères</span>
+            <span style="font-size:11px;color:var(--color-text-muted)">${z.n}</span>
+          </div>
+          ${z.bilan.length ? `<div style="padding:9px 13px;border-bottom:1px solid var(--color-border-tertiary);display:flex;gap:6px;flex-wrap:wrap">
+            ${z.bilan.map(b => `<span style="display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:400;padding:3px 9px;border-radius:8px;background:${b.couleur}1f;color:var(--color-text)">
+              <span style="width:8px;height:8px;border-radius:2px;background:${b.couleur}"></span>${b.n} ${esc(b.nom.toLowerCase())}</span>`).join('')}
+          </div>` : ''}
+          ${z.n === 0
+            ? `<div style="padding:22px 15px;font-size:12px;color:var(--color-text-muted);line-height:1.6">Aucun repère. Glissez un cadre sur la zone à reprendre : il prend le numéro suivant et sa remarque s’écrit ici.</div>`
+            : z.lignes.map(l => `<div ${x.A(l.pick)} style="${l.rowSt}">
+                <span style="${l.pastilleSt}">${l.n}</span>
+                <div style="flex:1;min-width:0">
+                  ${l.actif
+                    ? `<textarea id="zrep-txt" ${x.I(l.setTxt)} rows="3" placeholder="Ce qui est à reprendre, en une phrase" style="width:100%;box-sizing:border-box;border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 9px;font-family:var(--font-ui);font-size:11.5px;line-height:1.45;color:var(--color-text);background:var(--color-surface);resize:vertical">${esc(l.txt)}</textarea>
+                      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
+                        ${l.niveaux.map(lv => `<button ${x.A(lv.pick)} title="${esc(lv.nom)}" style="display:inline-flex;align-items:center;gap:4px;border-radius:8px;padding:3px 8px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;cursor:pointer;${lv.on ? 'border:1px solid ' + lv.couleur + ';background:' + lv.couleur + '1f;color:var(--color-text)' : 'border:1px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-muted)'}">
+                          <span style="width:8px;height:8px;border-radius:2px;background:${lv.couleur}"></span>${esc(lv.nom)}</button>`).join('')}
+                      </div>`
+                    : `<div style="font-size:11.5px;line-height:1.45;${l.vide ? 'color:var(--color-text-muted);font-style:italic' : ''}">${l.vide ? 'Sans remarque — cliquez pour l’écrire' : esc(l.txt)}</div>
+                       <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:3px">${esc(l.niveauNom)}</div>`}
+                </div>
+                <button ${x.A(l.del)} title="Supprimer ce repère" style="border:none;background:transparent;color:var(--color-text-muted);font-size:12px;cursor:pointer;padding:0 2px;flex:0 0 auto">✕</button>
+              </div>`).join('')}
+
+          <div style="padding:12px 13px;border-top:1px solid var(--color-border-tertiary);margin-top:auto">
+            <!-- Le report dans le commentaire n'est plus un bouton : il se fait
+                 à l'enregistrement, et la modale se referme dans la foulée. Un
+                 avis partait sinon avec des repères que la boutique ne recevait
+                 pas — la photo annotée, elle, reste dans le cockpit. -->
+            <div style="font-size:11px;color:var(--color-text)">${z.reporte ? esc(String(z.reporte)) + ' repère(s) commenté(s) partiront dans le commentaire de l’avis.' : 'Aucun repère commenté : le commentaire de l’avis restera inchangé.'}</div>
+            <div style="font-size:10.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.5">${esc(z.envoiBesoin)}</div>
+            <div style="display:flex;gap:8px;margin-top:11px">
+              <button ${x.A(z.save)} style="border:none;background:var(--color-primary);color:#fff;border-radius:9px;height:34px;padding:0 15px;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:${z.busy ? 'wait' : 'pointer'};opacity:${z.busy ? '0.6' : '1'};flex:1">${z.busy ? 'Enregistrement…' : (z.saved ? 'Enregistré ✓' : 'Enregistrer les repères')}</button>
+              <button ${x.A(z.close)} style="${tool(false, true)}">Fermer</button>
+            </div>
+            <!-- La confirmation et l'échec s'écrivent ICI, sous les boutons : le
+                 bandeau de notification de l'application se pose en bas à droite
+                 de l'écran, donc sur ce panneau, et recouvrait la réponse. -->
+            ${z.err ? `<div style="margin-top:9px;padding:8px 10px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:11.5px;line-height:1.45">${esc(z.err)}</div>` : ''}
+            ${!z.err && z.saved && z.savedTxt ? `<div style="margin-top:9px;font-size:11.5px;color:var(--green)">${esc(z.savedTxt)}</div>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* --- Panneau utilisateur : mon identité + le compte consultant (API panel) --- */
+function tplUserPanel(c, x){
+  const { esc } = x;
+  const u = c.userPanel;
+  const sec = 'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
+  return `
+  <div ${x.A(u.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.35);z-index:70;animation:fadeIn 160ms ease"></div>
+  <div style="position:fixed;top:0;right:0;bottom:0;width:520px;background:var(--color-surface);z-index:71;overflow-y:auto;animation:panelIn 200ms ease">
+    <div style="padding:24px 28px 60px">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="width:42px;height:42px;border-radius:50%;background:var(--color-primary);color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:400">${esc(u.initiales || '')}</div>
+          <div>
+            <div style="${sec}">Mon compte</div>
+            <h2 style="font-family:var(--font-display);font-size:21px;font-weight:400;margin:2px 0 0;line-height:1.2">${esc(u.nom || 'Sans nom')}</h2>
+          </div>
+        </div>
+        <button ${x.A(u.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">\u2715</button>
+      </div>
+
+      <div style="${sec};margin:24px 0 8px">Identité affichée</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:10px;line-height:1.5">C\u2019est ce nom qui appara\u00eet comme relecteur sur les t\u00e2ches que vous notez.</div>
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px">
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Nom</div>
+          <input type="text" value="${esc(u.nom)}" ${x.C(u.setNom)} placeholder="Pr\u00e9nom Nom" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Initiales</div>
+          <input type="text" value="${esc(u.initiales)}" ${x.C(u.setInit)} maxlength="3" placeholder="AB" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">R\u00f4le</div>
+        ${u.aRoles
+          ? `<select ${x.C(u.setRole)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">${u.roles.map(r => `<option value="${esc(r)}"${r === u.role ? ' selected' : ''}>${esc(r)}</option>`).join('')}${u.roles.indexOf(u.role) < 0 && u.role ? `<option value="${esc(u.role)}" selected>${esc(u.role)}</option>` : ''}</select>
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">R\u00f4les lus dans la base partag\u00e9e (atelierby_db).</div>`
+          : `<input type="text" value="${esc(u.role)}" ${x.C(u.setRole)} placeholder="CEO \u00b7 admin" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+             <div style="font-size:11px;color:var(--color-text-muted);margin-top:4px">Aucun r\u00e9f\u00e9rentiel de r\u00f4les dans la base partag\u00e9e : saisie libre.</div>`}
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-top:12px">
+        <button ${x.A(u.saveIdent)} style="border:none;border-radius:8px;padding:8px 18px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Enregistrer mon identit\u00e9</button>
+      </div>
+      ${u.identMsg ? `<div style="${u.identMsgSt}">${esc(u.identMsg)}</div>` : ''}
+
+      <div style="border-top:1px solid var(--color-border-tertiary);margin:26px 0 0"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px">
+        <div style="${sec}">Compte consultant (API panel)</div>
+        <span style="${c.paEtatSt}">${esc(c.paEtat)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">Les noms des t\u00e2ches, les photos de r\u00e9alisation et l\u2019envoi des notes passent par l\u2019API du panel consultant. Renseignez le compte que le cockpit utilise pour s\u2019y connecter \u2014 m\u00eame t\u00e9l\u00e9phone et mot de passe que dans le panel. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">T\u00e9l\u00e9phone du compte</div>
+          <input type="text" value="${esc(c.paPhone)}" ${x.C(c.setPaPhone)} placeholder="+32\u2026" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
+          <input type="password" value="${esc(c.paPass)}" ${x.C(c.setPaPass)} placeholder="${esc(c.paPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d\u2019URL de l\u2019API (vide = valeur par d\u00e9faut)</div>
+        <input type="text" value="${esc(c.paBase)}" ${x.C(c.setPaBase)} placeholder="https://\u2026/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+      </div>
+      ${c.paMsg ? `<div style="${c.paMsgSt}">${esc(c.paMsg)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button ${x.A(c.paTest)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${c.paBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.paSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${c.paBusy ? 'wait' : 'pointer'};opacity:${c.paBusy ? '0.6' : '1'}">${c.paBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+      </div>
+
+      <div style="border-top:1px solid var(--color-border-tertiary);margin:26px 0 0"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:22px">
+        <div style="${sec}">Compte admin ERP (API TFBuddy)</div>
+        <span style="${c.erEtatSt}">${esc(c.erEtat)}</span>
+      </div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-top:8px;line-height:1.55;text-wrap:pretty">La reprise du catalogue de l\u2019assistant de campagne (gammes saisonni\u00e8res, alias de noms, liens produit \u2194 gamme) passe par l\u2019API de l\u2019ERP d\u00e8s que ce compte est renseign\u00e9 \u2014 m\u00eames identifiants que l\u2019admin TFBuddy. C\u2019est aussi lui qui lit les promotions du panel pour les primes de l\u2019app worker (elles ne sont que dans l\u2019API admin). Sans compte, la reprise retombe sur la lecture des tables. Le mot de passe n\u2019est jamais r\u00e9affich\u00e9 ; le laisser vide conserve celui d\u00e9j\u00e0 enregistr\u00e9.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">T\u00e9l\u00e9phone du compte</div>
+          <input type="text" value="${esc(c.erPhone)}" ${x.C(c.setErPhone)} placeholder="+32\u2026" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Mot de passe</div>
+          <input type="password" value="${esc(c.erPass)}" ${x.C(c.setErPass)} placeholder="${esc(c.erPassPlaceholder)}" autocomplete="new-password" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+        </div>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:5px">Base d\u2019URL de l\u2019API (vide = valeur par d\u00e9faut)</div>
+        <input type="text" value="${esc(c.erBase)}" ${x.C(c.setErBase)} placeholder="https://atelierby.tfbuddy.com/api/v1" style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+      </div>
+      ${c.erMsg ? `<div style="${c.erMsgSt}">${esc(c.erMsg)}</div>` : ''}
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:14px">
+        <button ${x.A(c.erTest)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 16px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${c.erBusy ? 'wait' : 'pointer'}">Tester la connexion</button>
+        <button ${x.A(c.erSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${c.erBusy ? 'wait' : 'pointer'};opacity:${c.erBusy ? '0.6' : '1'}">${c.erBusy ? 'Enregistrement\u2026' : 'Enregistrer le compte'}</button>
+      </div>
+
+      ${u.canLogout ? `<div style="border-top:1px solid var(--color-border-tertiary);margin-top:26px;padding-top:16px;display:flex;justify-content:flex-end">
+        <button ${x.A(u.logout)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 16px;background:transparent;color:var(--color-text-muted);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">Se d\u00e9connecter</button>
+      </div>` : ''}
+    </div>
+  </div>`;
+}
+
+/* --- Réglages du scoring produits (sous-menu Paramètres) --------------------- */
+function tplScoring(c, x){
+  const { esc } = x;
+  return `
+  <div data-screen="scoring" style="display:flex;flex-direction:column;gap:16px;max-width:900px">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Pondération des critères</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le score sur 100 est la moyenne pondérée de quatre notes. Les poids sont relatifs : leur somme n\u2019a pas besoin de faire 100, la part effective est recalculée. Un critère sans donnée est EXCLU du calcul et le score est repondéré sur les autres — il n\u2019est jamais pénalisé par une donnée manquante.</div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        ${c.scCriteres.map(cr => `
+          <div style="display:grid;grid-template-columns:1fr 110px 70px;gap:12px;align-items:center">
+            <div>
+              <div style="font-size:13px;font-weight:400">${esc(cr.nom)}</div>
+              <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(cr.aide)}</div>
+            </div>
+            <input type="number" min="0" step="5" value="${esc(cr.val)}" ${x.C(cr.set)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)">
+            <div style="font-size:13px;font-weight:400;text-align:right">${esc(cr.part)}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Échelle de la marge nette</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">Le taux de marge est converti en note sur une échelle ABSOLUE, définie par deux bornes : linéaire entre elles, plafonnée au-delà. Une note absolue ne bouge pas quand un AUTRE produit change — contrairement à une note relative à la gamme.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px">
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Marge basse (%)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMBas)}" ${x.C(c.setScMBas)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">vaut (points)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMBasNote)}" ${x.C(c.setScMBasNote)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Marge haute (%)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMHaut)}" ${x.C(c.setScMHaut)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">vaut (points)</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMHautNote)}" ${x.C(c.setScMHautNote)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:8px">${esc(c.scMargeApercu)}</div>
+    </div>
+
+    <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:20px">
+      <div style="font-size:13px;font-weight:400;margin-bottom:4px">Seuils d’arbitrage (score sur 100)</div>
+      <div style="font-size:12px;color:var(--color-text-muted);margin-bottom:14px;line-height:1.55;text-wrap:pretty">La décision de l’écran Scoring et du PDF d’arbitrage : garder au-dessus du seuil haut, effacer sous le seuil bas, modifier entre les deux. Les mêmes valeurs se règlent aussi directement sur l’écran Scoring.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:18px">
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:var(--green)">&gt; Garder</div><input type="number" min="0" max="100" step="1" value="${esc(c.scGarder)}" ${x.C(c.setScGarder)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;color:var(--prize)">≥ Modifier · en dessous : effacer</div><input type="number" min="0" max="100" step="1" value="${esc(c.scModifier)}" ${x.C(c.setScModifier)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
+      <div style="font-size:13px;font-weight:400;margin-bottom:14px">Seuils de verdict (score sur 100)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px;color:var(--green)">\u2265 Moteur de gamme</div><input type="number" min="0" max="100" step="1" value="${esc(c.scMoteur)}" ${x.C(c.setScMoteur)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+        <div><div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px;color:var(--accent)">&lt; \u00c0 arbitrer</div><input type="number" min="0" max="100" step="1" value="${esc(c.scConforter)}" ${x.C(c.setScConforter)} style="width:100%;box-sizing:border-box;font-size:13px;border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 12px;background:var(--color-surface);color:var(--color-text)"></div>
+      </div>
+    </div>
+
+    ${c.scAlerte ? `<div style="padding:11px 14px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12.5px;font-weight:400">${esc(c.scAlerte)}</div>` : ''}
+    ${c.scMsg ? `<div style="${c.scMsgSt}">${esc(c.scMsg)}</div>` : ''}
+    <div style="display:flex;justify-content:flex-end;gap:10px">
+      <button ${x.A(c.scReset)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Annuler</button>
+      <span style="font-size:11.5px;color:var(--color-text-muted);align-self:center">${esc(c.scAuto || '')}</span>
+      <button ${x.A(c.scSave)} style="border:none;border-radius:8px;padding:9px 20px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Enregistrer</button>
+    </div>
+  </div>`;
+}
+
+/* --- Perte d'une référence, magasin par magasin ------------------------------ */
+function tplPerteMagasins(c, x){
+  const { esc } = x;
+  const w = c.pdWaste;
+  return `
+  <div ${x.A(w.close)} style="position:fixed;inset:0;background:rgba(34,34,34,0.4);z-index:80;animation:fadeIn 140ms ease"></div>
+  <div style="position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);width:660px;max-height:86vh;overflow-y:auto;background:var(--color-surface);border-radius:12px;z-index:81;padding:24px 26px">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:14px">
+      <div>
+        <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)">Taux de perte par magasin</div>
+        <div style="font-family:var(--font-display);font-size:21px;margin-top:3px">${esc(w.nom)}</div>
+        ${w.periode ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">${esc(w.periode)}</div>` : ''}
+      </div>
+      <button ${x.A(w.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">\u2715</button>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:12px;margin-top:16px;padding:12px 14px;background:var(--color-background-secondary);border-radius:10px">
+      <div style="font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted)">R\u00e9seau</div>
+      <div style="font-size:21px;font-weight:700">${esc(w.reseauTaux)}</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted)">${esc(w.reseauDetail)}</div>
+    </div>
+    ${w.chargement ? `<div style="padding:24px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Lecture des pertes magasin par magasin\u2026</div>` : ''}
+    ${w.erreur ? `<div style="margin-top:12px;padding:9px 12px;border-radius:8px;background:rgba(141,29,44,0.08);color:var(--accent);font-size:12px">${esc(w.erreur)}</div>` : ''}
+    ${(!w.chargement && w.vide) ? `<div style="padding:20px;text-align:center;font-size:12.5px;color:var(--color-text-muted)">Aucune perte enregistr\u00e9e sur cette r\u00e9f\u00e9rence pour la p\u00e9riode.</div>` : ''}
+    ${(!w.chargement && !w.vide) ? `
+    <div style="display:flex;flex-direction:column;gap:2px;margin-top:14px">
+      ${w.rows.map(r => `
+        <div style="padding:10px 2px;border-bottom:1px solid var(--color-border-tertiary)">
+          <div style="display:flex;align-items:baseline;justify-content:space-between;gap:10px">
+            <span style="font-size:13px;font-weight:400">${esc(r.magasin)}</span>
+            <span style="${r.tauxSt};font-size:14px">${esc(r.taux)}</span>
+          </div>
+          <span style="display:block;height:5px;border-radius:8px;background:var(--color-background-secondary);margin-top:6px"><span style="${r.barSt}"></span></span>
+          <div style="display:flex;justify-content:space-between;gap:10px;margin-top:4px;font-size:11.5px;color:var(--color-text-muted)">
+            <span>${esc(r.detail)}${r.motif ? ' \u00b7 ' + esc(r.motif) : ''}</span>
+            ${r.caPerdu ? `<span>${esc(r.caPerdu)} perdu</span>` : ''}
+          </div>
+        </div>`).join('')}
+    </div>
+    ${w.note ? `<div style="font-size:11.5px;color:var(--color-text-muted);margin-top:12px;line-height:1.5;text-wrap:pretty">${esc(w.note)}</div>` : ''}` : ''}
+    <div style="display:flex;justify-content:flex-end;margin-top:16px">
+      <button ${x.A(w.close)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:9px 18px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:pointer">Fermer</button>
+    </div>
+  </div>`;
+}
+
+
+
+/**
+ * Diagnostic API — ce qui manque, et ce qui est lent.
+ *
+ * Les deux se corrigent au même endroit : l'API amont. Réunis sur une page,
+ * ils forment la demande à porter — quelles données réclamer, et quelles routes
+ * faire accélérer, avec les durées mesurées à l'appui. « C'est lent » ne fait
+ * bouger personne ; « /exploitation/magasin, 6,4 s au pire, 4 appels dont 2 en
+ * série » se traite.
+ */
+function tplDiagnostic(c, x){
+  const { esc } = x;
+  const CARD = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:16px';
+  const TH = 'text-align:left;font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding:0 12px 8px 0;white-space:nowrap';
+  const TD = 'padding:8px 12px 8px 0;border-top:1px solid var(--color-border-tertiary);font-size:12.5px';
+  const MANQUE = 'font-size:11px;font-weight:400;padding:2px 8px;border-radius:8px;background:var(--prize-soft);color:var(--color-on-abricot);border:1px solid var(--prize-soft);white-space:nowrap';
+  const SAISIE = 'font-size:11px;font-weight:400;padding:2px 8px;border-radius:8px;background:var(--color-background-secondary);color:var(--color-text-muted);border:1px solid var(--color-border-tertiary);white-space:nowrap';
+  const MONO = 'font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px';
+
+  return `
+  <!-- Les quatre systèmes extérieurs dont le cockpit dépend. L'état vient de
+       ceo_connecteur, écrite sur les GESTES (synchronisation, test de compte,
+       appel au modèle) ; « configuré » est demandé au client à chaque lecture,
+       pour qu'une clé retirée se voie sans attendre un appel. -->
+  <div style="${CARD};margin-bottom:16px">
+    <div style="font-size:13px;font-weight:400">Connecteurs</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5;text-wrap:pretty">
+      Les systèmes dont dépendent les écrans. « Dernier succès » date le dernier geste qui a abouti — il survit à un échec, pour distinguer une panne d'une configuration jamais faite.
+    </div>
+    ${c.coChargement ? `<div style="font-size:12px;color:var(--color-text-muted);padding:12px 0 2px">Lecture de l'état…</div>` : `
+    <div style="overflow-x:auto;margin-top:10px"><table style="width:100%;border-collapse:collapse;min-width:640px">
+      <thead><tr>
+        <th style="${TH}">Connecteur</th>
+        <th style="${TH}">État</th>
+        <th style="${TH}">Dernier succès</th>
+        <th style="${TH}">Dernier appel</th>
+        <th style="${TH};text-align:right">Passages</th>
+        <th style="${TH};text-align:right">Vérifier</th>
+      </tr></thead>
+      <tbody>${c.coLignes.map(l => `
+        <tr>
+          <td style="${TD}">
+            <div style="font-size:12.5px;font-weight:400">${esc(l.nom)}</div>
+            <div style="font-size:11px;color:var(--color-text-muted);line-height:1.35">${esc(l.quoi)}</div>
+            ${l.detail ? `<div style="${l.detailSt};margin-top:3px">${esc(l.detail)}</div>` : ''}
+          </td>
+          <td style="${TD}"><span style="${l.etatSt}">${esc(l.etat)}</span></td>
+          <td style="${TD};white-space:nowrap">${esc(l.succes)}</td>
+          <td style="${TD};white-space:nowrap;color:var(--color-text-muted)">${esc(l.appel)}</td>
+          <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.passages)}</td>
+          <td style="${TD};text-align:right;white-space:nowrap">
+            <button ${x.A(l.tester)} title="Un vrai appel, maintenant" style="font-family:var(--font-ui);font-size:11px;font-weight:400;padding:4px 11px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);cursor:pointer"${l.essai && l.essai.encours ? ' disabled' : ''}>${l.essai && l.essai.encours ? 'appel…' : '↻ Tester'}</button>
+            ${l.essai && !l.essai.encours ? `<div style="font-size:10.5px;line-height:1.35;margin-top:4px;max-width:230px;text-wrap:pretty;color:${l.essai.ok ? '#3f7a52' : '#8D1D2C'}">${l.essai.ok ? '✓' : '✗'} ${esc(l.essai.message)}${l.essai.ms != null && l.essai.appele ? ` · ${l.essai.ms} ms` : ''}</div>` : ''}
+          </td>
+        </tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>
+
+  <!-- D'où vient ce que chaque écran affiche. Lue dans le code chaque nuit :
+       une liste tenue à la main mentirait dès la semaine suivante. -->
+  <div style="${CARD};margin-bottom:16px">
+    <div style="font-family:var(--font-display);font-size:15px">Ce qui vient de la base, ce qui vient d'une API</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5;text-wrap:pretty">
+      ${c.cartePret ? `Les ${esc(String(c.carteTotal))} lectures de l'API du cockpit, classées par ce qu'elles interrogent vraiment — lue dans le code, ${esc(c.carteJours)}. Ce qui ne tient qu'à la base continue de s'afficher quand le panel tombe.`
+        : (c.carteChargement ? 'Lecture de la carte…' : esc(c.carteMotif || 'carte indisponible'))}
+    </div>
+    ${c.cartePret ? `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px">
+      ${c.carteCompte.map(k => `
+      <div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:10px 12px">
+        <div style="font-family:var(--font-display);font-size:24px;line-height:1;color:${k.coul}">${esc(String(k.n))}</div>
+        <div style="font-size:11.5px;font-weight:400;margin-top:3px">${esc(k.nom)}</div>
+        <div style="font-size:10.5px;color:var(--color-text-muted);line-height:1.35;margin-top:1px">${esc(k.quoi)} · ${esc(String(k.part))} %</div>
+      </div>`).join('')}
+    </div>
+    <div style="font-size:11.5px;font-weight:400;margin:14px 0 4px">Les plus grosses lectures qui passent par une API</div>
+    <div style="font-size:11px;color:var(--color-text-muted);line-height:1.5;margin-bottom:6px;text-wrap:pretty">C'est là que se joue ce qu'on gagnerait à passer en base : les plus longues, donc les plus lentes à rendre, et celles qui tombent avec l'API.</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr><th style="${TH}">Lecture</th><th style="${TH}">Route</th><th style="${TH}">Source</th><th style="${TH};text-align:right">Lignes</th></tr></thead>
+      <tbody>${c.carteLourdes.map(l => `
+        <tr><td style="${TD}"><div style="font-size:12px;font-weight:400">${esc(l.fonction)}</div>
+          <div style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.fichier)}</div></td>
+        <td style="${TD};font-size:11.5px;color:var(--color-text-muted)">${esc(l.route)}</td>
+        <td style="${TD};font-size:11.5px">${esc(l.sources)}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${esc(l.lignes)}</td></tr>`).join('')}</tbody>
+    </table></div>` : ''}
+  </div>
+
+  <!-- Nettoyage du module marketing : la liste exacte AVANT le geste, et le
+       geste ne part que sur confirmation. Un DROP ne se rejoue pas. -->
+  ${c.marNet && !c.marNet.chargement && !c.marNet.indispo ? `
+  <div style="${CARD};margin-bottom:16px;border:1px solid ${c.marNet.tombe.length ? 'rgba(141,29,44,0.4)' : 'var(--color-border-tertiary)'}">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap">
+      <div>
+        <div style="font-size:13px;font-weight:400">Nettoyage du module marketing</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.5">
+          Gardées : ${c.marNet.garde.length} table(s) — campagnes (mar_campaign*), fonds &amp; redevances (mar_fund*, mar_royalt*), référentiels (mar_brand, mar_shop, mar_lever).
+          ${c.marNet.dejaFait ? ' Déjà fait : ' + esc(c.marNet.dejaFait) + '.' : ''}
+        </div>
+      </div>
+      ${c.marNet.executer ? `<button ${x.A(c.marNet.executer)} style="border:none;background:var(--color-primary);color:#fff;border-radius:8px;height:34px;padding:0 17px;font-family:var(--font-ui);font-size:12.5px;font-weight:400;cursor:${c.marNet.busy ? 'wait' : 'pointer'}">${c.marNet.busy ? 'Suppression…' : 'Supprimer ' + c.marNet.tombe.length + ' table(s) inutilisée(s)'}</button>`
+        : `<span style="font-size:12px;color:var(--green);font-weight:400">Rien à supprimer — la base ne porte que le nécessaire.</span>`}
+    </div>
+    ${c.marNet.tombe.length ? `<div style="margin-top:10px;font-size:11px;color:var(--color-text-muted);line-height:1.6">Tomberaient : ${c.marNet.tombe.map(t => `<span style="display:inline-block;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:6px;padding:1px 7px;margin:1px 3px 1px 0;font-family:ui-monospace,Menlo,monospace;font-size:10.5px">${esc(t.nom)}${t.lignes ? ' · ' + t.lignes + ' l.' : ''}</span>`).join('')}</div>` : ''}
+  </div>` : ''}
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px">
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">À réclamer à l’API</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:var(--color-on-abricot)">${c.diagNbApi || 0}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">donnée(s) qu’aucune source n’expose</div>
+    </div>
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">À renseigner</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1">${c.diagNbSaisie || 0}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">la source existe, elle est vide</div>
+    </div>
+    <div style="${CARD}">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:6px">Appels &gt; ${esc(c.diagSeuil)} s</div>
+      <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:${(c.diagLentes || []).length ? 'var(--color-primary)' : '#3f7a52'}">${(c.diagLentes || []).length}</div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">route(s) lente(s) sur ${c.diagTotal || 0} appel(s)</div>
+    </div>
+  </div>
+
+  <div style="${CARD};margin-bottom:16px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+      <div style="font-size:13px;font-weight:400">Routes dépassant ${esc(c.diagSeuil)} secondes</div>
+      ${(c.diagLentes || []).length ? `<button ${x.A(c.diagRaz)} style="border:none;background:transparent;cursor:pointer;font-family:var(--font-ui);font-size:11.5px;color:var(--color-text-muted)" class="hv-line">réinitialiser la mesure</button>` : ''}
+    </div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">Mesuré depuis l’ouverture de l’application, sur les appels réellement effectués. Un appel en erreur est retenu quelle que soit sa durée.</div>
+    ${!(c.diagLentes || []).length
+      ? `<div style="font-size:12.5px;color:var(--green)">Aucun appel au-delà de ${esc(c.diagSeuil)} s sur les ${c.diagTotal || 0} mesurés. Ouvrez les écrans lourds (Analyse dans le temps, Catalogue, P&amp;L d’un magasin) puis revenez ici.</div>`
+      : `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:600px">
+      <thead><tr>
+        <th style="${TH}">Route</th>
+        <th style="${TH};text-align:right">Appels</th>
+        <th style="${TH};text-align:right">Moyenne</th>
+        <th style="${TH};text-align:right">Pire</th>
+        <th style="${TH}">État</th>
+      </tr></thead>
+      <tbody>${c.diagLentes.map(l => `<tr>
+        <td style="${TD};${MONO}">${esc(l.path)}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums">${l.n}</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums;color:var(--color-text-muted)">${esc(l.moy)} ms</td>
+        <td style="${TD};text-align:right;font-variant-numeric:tabular-nums;font-weight:400;color:${l.col}">${esc(l.max)} ms</td>
+        <td style="${TD}">${l.ko ? `<span style="${MANQUE}">${l.ko} en erreur</span>` : '<span style="font-size:11.5px;color:var(--color-text-muted)">répond</span>'}</td>
+      </tr>`).join('')}</tbody></table></div>`}
+  </div>
+
+  ${(c.frSources || []).length ? `<div style="${CARD};margin-bottom:16px">
+    <div style="font-size:13px;font-weight:400;margin-bottom:4px">Fraîcheur des sources</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:12px">Une source en retard ne provoque aucune erreur : elle rend un total d’hier qui reste plausible aujourd’hui. ${esc(c.frResume)} (référence : ${esc(c.frAuj)}).</div>
+    <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;min-width:560px">
+      <thead><tr><th style="${TH}">Source</th><th style="${TH}">Contenu</th><th style="${TH}">Dernière donnée</th><th style="${TH};text-align:right">Retard</th></tr></thead>
+      <tbody>${c.frSources.map(f => `<tr>
+        <td style="${TD};${MONO}">${esc(f.table)}</td>
+        <td style="${TD};color:var(--color-text-muted)">${esc(f.quoi)}</td>
+        <td style="${TD};font-variant-numeric:tabular-nums">${esc(f.derniere)}</td>
+        <td style="${TD};text-align:right;font-weight:400;color:${f.col}">${esc(f.retard)}</td>
+      </tr>`).join('')}
+      ${(c.frApi || []).map(a => `<tr>
+        <td style="${TD};${MONO};border-top:1px solid var(--color-border-secondary)">${esc(a.route)}</td>
+        <td style="${TD};color:var(--color-text-muted);border-top:1px solid var(--color-border-secondary)">API amont · ${esc(a.detail)}</td>
+        <td colspan="2" style="${TD};border-top:1px solid var(--color-border-secondary);color:${a.ok ? '#3f7a52' : 'var(--color-primary)'};font-weight:400">${esc(a.verdict)}</td>
+      </tr>`).join('')}</tbody></table></div>
+    ${(c.frEcrans || []).length ? `<div style="margin-top:14px">
+      <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);margin-bottom:8px">Écrans alimentés par la base plutôt que par l’API</div>
+      ${c.frEcrans.map(e => `<div style="padding:7px 0;border-top:1px solid var(--color-border-tertiary)">
+        <div style="font-size:12.5px;font-weight:400">${esc(e.ecran)} <span style="${MONO};font-weight:400;color:var(--color-text-muted)">${esc(e.route)}</span></div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:2px">lit ${esc(e.lit)} — ${esc(e.consequence)}</div>
+        <div style="font-size:11.5px;color:var(--color-on-abricot);margin-top:2px">→ ${esc(e.remplacer)}</div>
+      </div>`).join('')}
+    </div>` : ''}
+  </div>` : ''}
+
+  <div style="${CARD}">
+    <div style="font-size:13px;font-weight:400;margin-bottom:4px">Ce que le cockpit ne peut pas afficher</div>
+    <div style="font-size:11.5px;color:var(--color-text-muted);margin-bottom:14px">Détecté sur l’état réel des données, écran par écran. « manque API » : personne ne l’expose, il faut le réclamer. « à renseigner » : la source existe et attend d’être remplie.</div>
+    ${c.diagChargement ? `<div style="font-size:12.5px;color:var(--color-text-muted)">Analyse en cours…</div>`
+      : !(c.diagGroupes || []).length ? `<div style="font-size:12.5px;color:var(--green)">Aucune lacune détectée.</div>`
+      : c.diagGroupes.map(g => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;text-transform:uppercase;letter-spacing:0.06em;color:var(--color-text-muted);padding-bottom:6px;border-bottom:1px solid var(--color-border-tertiary)">${esc(g.ecran)}</div>
+        ${g.lignes.map(l => `<div style="display:flex;gap:9px;align-items:baseline;padding:7px 0;flex-wrap:wrap;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="${l.api ? MANQUE : SAISIE}">${esc(l.etiquette)}</span>
+          <span style="font-size:12.5px;font-weight:400;min-width:130px">${esc(l.champ)}</span>
+          <span style="font-size:12px;color:var(--color-text-muted);flex:1;min-width:220px">${esc(l.quoi)}<div style="margin-top:2px">${esc(l.source)}</div></span>
+        </div>`).join('')}
+      </div>`).join('')}
+  </div>`;
+}
+
+
+/**
+ * Manque à gagner — ce que l'assortiment absent coûte, en euros.
+ *
+ * Une seule mesure, trois façons de la lire : le tableau magasins × mois, le
+ * dépliant qui l'ouvre référence par référence, et le classement réseau des
+ * références. Le basculement se fait sur les mêmes données déjà chargées —
+ * rien n'est relu, et les trois lectures ne peuvent donc pas diverger.
+ */
+/**
+ * Analyse magasin — un wizard en quatre étapes.
+ *
+ * Le wizard n'est pas un formulaire : rien ne s'y saisit. C'est un ORDRE DE
+ * LECTURE — la synthèse, puis chaque levier, puis le plan — pour qu'un
+ * entretien franchisé suive toujours le même fil. Les étapes restent
+ * cliquables directement : on revient sur un chiffre sans refaire le tour.
+ */
+/**
+ * Target de vente & classement — le personnel, au CA par heure prestée.
+ *
+ * Le podium des primes d'abord, puis le tableau ; la fiche d'une personne
+ * s'ouvre en dépliant sous sa ligne. Les non-classables (sous le seuil
+ * d'heures, ou sans vente à leur nom) restent VISIBLES, grisés, avec leur
+ * motif : les sortir du tableau ferait croire qu'ils n'ont pas travaillé.
+ */
+/**
+ * Croisements — l'attache entre deux familles, au choix.
+ *
+ * L'ordre A × B est écrit en toutes lettres au-dessus des sélecteurs : le
+ * croisement est asymétrique, et un écran qui laisse deviner l'ordre produit
+ * des conclusions inversées.
+ */
+function tplCrois(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:400';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:10px;border-bottom:1px solid var(--color-border-tertiary)';
+  const td = 'padding:9px 10px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 10px;border-radius:9px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);max-width:280px';
+  const spark = vals => {
+    const max = Math.max(1, ...vals.filter(v => v != null));
+    return `<span style="display:inline-flex;align-items:flex-end;gap:2px;height:20px;vertical-align:middle">${vals.map((v, i) =>
+      `<i style="width:6px;border-radius:2px 2px 0 0;height:${v == null ? 2 : Math.max(2, Math.round(18 * v / max))}px;background:${i === vals.length - 1 ? 'var(--color-primary)' : '#D6CBBA'}"></i>`).join('')}</span>`;
+  };
+  const selecteur = (titre, f, avecTous) => `
+    <div>
+      <span style="${lbl}">${esc(titre)}</span><br>
+      <select ${x.C(f.choisir)} style="${SEL};margin-top:6px">
+        <option value="">— choisir —</option>
+        ${avecTous ? `<option value="t:tous" ${f.val === 't:tous' ? 'selected' : ''}>★ Tous les tickets — tout produit</option>` : ''}
+        <optgroup label="Groupes">${f.groupes.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+        <optgroup label="Catégories">${f.categories.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+        <optgroup label="Produits">${f.produits.map(o2 => `<option value="${esc(o2.v)}" ${f.val === o2.v ? 'selected' : ''}>${esc(o2.nom)}</option>`).join('')}</optgroup>
+      </select>
+    </div>`;
+
+  if (c.crChargementOpt) {
+    return `<div data-screen="croisements"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture du catalogue…</div></div>`;
+  }
+  if (c.crOptIndispo) {
+    return `<div data-screen="croisements"><div style="${carte};padding:20px 22px;font-size:12.5px">Le catalogue n’a pas pu être lu.</div></div>`;
+  }
+
+  const detail = (dt, feuille) => !dt ? '' : (dt.feuille = feuille, '') || `
+    <tr><td colspan="${c.crEntetes.length + (c.crTarget != null ? 6 : 5)}" style="padding:0;background:var(--table-head);border-top:1px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        ${dt.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture des tickets du magasin…</div>`
+        : dt.err ? `<div style="font-size:12px;color:var(--accent)">${esc(dt.err)}</div>` : `
+        <div style="display:flex;align-items:baseline;gap:12px;margin-bottom:8px">
+          <span style="${lbl}">Vendeuse par vendeuse — ${esc(c.crMoisDetail)}</span>
+          <span style="flex:1"></span>
+          ${dt.feuille ? `<a href="${esc(dt.feuille)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:400;color:var(--color-primary);text-decoration:none;border:1px solid var(--color-primary);border-radius:8px;padding:4px 11px">↓ Feuille de ce magasin</a>` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="${th};text-align:left">Vendeur·se</th><th style="${th}">Tickets A</th>
+            <th style="${th}">Avec B</th><th style="${th}">Taux</th><th style="${th}">Manqués</th><th style="${th}">À la clé / mois</th></tr></thead>
+          <tbody>${dt.lignes.map(l => `<tr>
+            <td style="${td};text-align:left;font-weight:400">${esc(l.nom)}</td>
+            <td style="${td}">${l.ff}</td><td style="${td}">${l.avec}</td>
+            <td style="${td};font-weight:400;color:${l.col}">${esc(l.taux)}</td>
+            <td style="${td}">${l.manques}</td>
+            <td style="${td};font-weight:400;color:var(--color-primary)">${esc(l.eur)}</td>
+          </tr>`).join('')}</tbody>
+        </table>
+        ${dt.petits ? `<div style="font-size:11px;color:var(--color-text-muted);padding-top:8px">${esc(dt.petits)}</div>` : ''}
+        ${dt.sans ? `<div style="font-size:11px;color:var(--color-text-muted);padding-top:3px">${esc(dt.sans)}</div>` : ''}`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="croisements" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    <div style="${carte};padding:16px 18px">
+      <div style="display:flex;gap:16px;align-items:flex-end;flex-wrap:wrap">
+        ${selecteur('A — sur les tickets contenant…', c.crSelA, true)}
+        <span style="font-family:var(--font-display);font-size:18px;color:var(--color-text-muted);padding-bottom:8px">×</span>
+        ${selecteur('B — combien contiennent aussi…', c.crSelB, false)}
+        <span style="flex:1"></span>
+        ${c.crDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="width:10px"></span>
+        ${(c.crDayparts || []).map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        ${!c.crTargetChamp ? '' : `
+        <label style="display:inline-flex;align-items:center;gap:6px;font-size:11.5px;color:var(--color-text-muted)" title="${c.crTargetChamp.enregistre ? 'La target du combo — écrite dès la sortie du champ' : 'La target partira avec l’enregistrement du combo'}">
+          Target
+          <input type="number" min="1" max="100" step="0.5" value="${esc(c.crTargetChamp.val)}" ${x.C(c.crTargetChamp.poser)}
+            placeholder="—" style="width:64px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text);text-align:right"> %
+        </label>`}
+        ${c.crEnregistrer && !c.crDejaEnregistre ? `<button ${x.A(c.crEnregistrer)} style="${pill(true)}">Enregistrer ce combo</button>`
+          : c.crDejaEnregistre ? `<span style="font-size:11.5px;color:var(--green);font-weight:400">✓ combo enregistré — sa puce est ci-dessous</span>` : ''}
+      </div>
+      ${!c.crCombos.length ? '' : `
+      <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <span style="${lbl};margin-right:2px">Combos enregistrés</span>
+        ${!c.crRapportHref ? '' : `<a href="${esc(c.crRapportHref)}" target="_blank" rel="noreferrer" style="font-size:11px;font-weight:400;color:var(--color-primary);text-decoration:none;border:1px solid var(--color-primary);border-radius:8px;padding:4px 11px;order:99;margin-left:auto">↓ Rapport de tous les combos — réseau + par magasin</a>`}
+        ${c.crCombos.map(cb => `
+        <span style="display:inline-flex;align-items:center;gap:7px;background:${cb.on ? 'rgba(141,29,44,.06)' : '#FBF9F5'};border:1px solid ${cb.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};border-radius:8px;padding:5px 6px 5px 13px;font-size:12px;font-weight:400;${cb.on ? 'color:var(--color-primary)' : ''}">
+          <span ${x.A(cb.choisir)} style="cursor:pointer">${esc(cb.nom)}${cb.surnom ? ` <i style="font-style:normal;color:var(--color-text-muted);font-weight:400;font-size:10.5px">${esc(cb.surnom)}</i>` : ''}</span>
+          <span ${x.A(cb.cibler)} title="Poser ou changer la target d’attache" style="cursor:pointer;font-size:10.5px;color:${cb.target ? '#7A5207' : 'var(--color-text-muted)'}">Objectif${cb.target ? ' ' + esc(cb.target) : ''}</span>
+          <button ${x.A(cb.retirer)} title="Retirer ce combo — l’historique en cache est gardé" style="border:none;background:none;color:var(--color-text-muted);cursor:pointer;font-size:11px;padding:0 4px">✕</button>
+        </span>`).join('')}
+      </div>`}
+    </div>
+
+    ${c.crRien ? `<div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Choisissez une famille A et une famille B — ou cliquez un combo enregistré.</div>`
+    : c.crChargement ? `<div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des tickets — les mois déjà en cache ne se relisent pas…</div>`
+    : c.crMotif ? `<div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.crMotif)}</div>` : `
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">${esc(c.crTitre)} — taux d’attache, mois par mois</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.crSousTitre)}</div>
+        </div>
+        <span style="flex:1"></span>
+        <a href="${esc(c.crPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:400;color:var(--color-primary);text-decoration:none;border:1px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Feuille PDF</a>
+      </div>
+      <div style="overflow-x:auto;padding-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Périmètre</th>
+          ${c.crEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th};text-align:left;padding-left:20px">Tendance</th>
+          ${c.crTarget != null ? `<th style="${th}" title="écart au target du dernier mois complet">Δ target</th>` : ''}
+          <th style="${th}">Tickets A</th><th style="${th};padding-right:18px">Laissé au comptoir</th>
+        </tr></thead>
+        <tbody>
+          <tr style="background:var(--table-head);font-weight:400">
+            <td style="${td};text-align:left;padding-left:18px">RÉSEAU</td>
+            ${c.crReseau.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
+            <td style="${td};text-align:left;padding-left:20px">${spark(c.crReseau.spark)}</td>
+            ${c.crTarget != null ? `<td style="${td};font-weight:400;color:${c.crReseau.delta ? c.crReseau.delta.col : 'var(--color-text-muted)'}">${c.crReseau.delta ? esc(c.crReseau.delta.txt) : ''}</td>` : ''}
+            <td style="${td}">${esc(c.crReseau.ff)}</td>
+            <td style="${td};padding-right:18px;color:var(--color-primary)">${esc(c.crReseau.eur)}</td>
+          </tr>
+          ${c.crLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:var(--table-head)' : ''}">
+            <td style="${td};text-align:left;padding-left:18px;font-weight:400"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
+            ${l.cases.map(x2 => `<td style="${td};${x2.st}">${esc(x2.v)}</td>`).join('')}
+            <td style="${td};text-align:left;padding-left:20px">${spark(l.spark)}</td>
+            ${c.crTarget != null ? `<td style="${td};font-weight:400;color:${l.delta ? l.delta.col : 'var(--color-text-muted)'}">${l.delta ? esc(l.delta.txt) : ''}</td>` : ''}
+            <td style="${td}">${esc(l.ff)}</td>
+            <td style="${td};padding-right:18px;font-weight:400;color:${l.col}">${esc(l.eur)}</td>
+          </tr>
+          ${l.ouvert ? detail(c.crDetail, l.feuille) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Le croisement est <b>asymétrique</b>, et c’est voulu : « tickets A avec B » n’est pas « tickets B avec A ».
+        Le mois marqué * est en cours : il se recalcule à chaque lecture, les mois révolus sont en cache.
+        « Tickets A » et « laissé au comptoir » portent sur le dernier mois complet — manqués × prix moyen de B réellement encaissé, un plafond de geste, pas une promesse.
+        Les euros ne s’additionnent pas d’un combo à l’autre : un même ticket peut manquer deux combos.
+        Vert ≥ 25 % · ambre 15-25 % · bordeaux &lt; 15 %.
+      </div>
+    </div>`}
+  </div>`;
+}
+
+/* L'assistant « Nouvelle prime promotion » (16/10/2026), dans Marketing franchisé → Primes de l'app worker : quatre étapes, les produits
+   choisis par une barre de recherche (catégories, sous-catégories, produits) ou une promotion de l'API du panel. */
+/* La fenêtre de réglage d'une prime qui n'est pas une promo (16/10/2026) : un target, une catégorie, Bats ton record, la
+   meilleure vendeuse — ses réglages, qui paie, son icône ; même cadre que l'assistant. */
+function tplPrEdit(E, x){
+  const esc = x.esc;
+  const B = (on, prim) => `border:1px solid ${prim ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${prim ? 'var(--color-primary)' : on ? 'var(--color-text)' : 'var(--color-surface)'};color:${prim || on ? '#fff' : 'var(--color-text)'};border-radius:var(--radius-pill);padding:8px 16px;font:400 13px var(--font-ui);cursor:pointer`;
+  const lab = 'display:block;font:400 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px';
+  const chp = 'border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:9px 12px;font:400 13px var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const mu = 'color:var(--color-text-muted)';
+  const champ = f => f.sorte === 'case'
+    ? `<label style="display:flex;align-items:center;gap:8px;font:400 13px var(--font-ui);padding-top:20px;cursor:pointer"><input type="checkbox" ${f.coche ? 'checked' : ''} ${x.C(f.poser)}> ${esc(f.lib)}</label>`
+    : `<div${f.large ? ' style="grid-column:1/-1"' : ''}><span style="${lab}">${esc(f.lib)}</span>${f.sorte === 'choix'
+      ? `<select ${x.C(f.poser)} id="pre-${esc(f.cle)}" style="${chp};width:100%">${f.options.map(([v, t]) => `<option value="${esc(v)}"${v === f.valeur ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select>`
+      : f.sorte === 'date' ? `<input id="pre-${esc(f.cle)}" type="date" value="${esc(f.valeur)}" ${x.C(f.poser)} style="${chp}">`
+      : `<input id="pre-${esc(f.cle)}" ${f.sorte === 'nombre' ? `type="number" step="${f.pas || 1}"` : ''} value="${esc(f.valeur)}" placeholder="${esc(f.indice || '')}"${f.max ? ` maxlength="${f.max}"` : ''} ${x.I(f.poser)} style="${chp};width:${f.sorte === 'nombre' ? '110px' : '100%'};box-sizing:border-box"> ${f.unite ? `<span style="${mu}">${esc(f.unite)}</span>` : ''}`}</div>`;
+  return `
+  <div ${x.A(E.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(E.titre)}" data-pr-edit style="pointer-events:auto;width:100%;max-width:640px;background:var(--color-surface);border-radius:var(--radius-lg);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 22px 12px;border-bottom:1px solid var(--color-border-tertiary)"><div style="font:400 24px/1.1 var(--font-display)">${esc(E.titre)}</div><button ${x.A(E.fermer)} aria-label="Fermer" style="margin-left:auto;border:0;background:none;font-size:21px;${mu};cursor:pointer">✕</button></div>
+      <div style="padding:18px 22px 10px">
+        ${E.champs.length ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px">${E.champs.map(champ).join('')}</div>` : ''}
+        ${E.note ? `<div style="font-size:12px;${mu};margin-top:10px">${esc(E.note)}</div>` : ''}
+        ${(E.conditions || []).length ? `<div data-pre-conditions style="margin-top:16px"><span style="${lab}">Conditions pour toucher la prime</span>
+          ${E.conditions.map(k => `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 12px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-bottom:6px;${k.on ? '' : 'background:var(--color-background-secondary)'}">
+            <label style="display:flex;align-items:center;gap:8px;font:400 13px var(--font-ui);cursor:pointer;flex:1;min-width:200px"><input type="checkbox" data-pre-condition="${esc(k.cle)}" ${k.on ? 'checked' : ''} ${x.C(k.basculer)}> ${esc(k.lib)}</label>
+            ${k.on ? `<span><input id="pre-${esc(k.cle)}" type="number" step="${k.pas || 1}" min="1" value="${esc(k.valeur)}" ${x.I(k.poser)} style="${chp};width:90px"> <span style="${mu}">${esc(k.unite)}</span></span>` : `<span style="font-size:12px;${mu}">sans condition</span>`}
+          </div>`).join('')}</div>` : ''}
+        <div style="margin-top:16px"><span style="${lab}">Payée par</span>${E.payeurFixe ? `<b style="font-size:13px">${esc(E.payeurFixe)}</b>` : ''}${E.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}${E.payeur === 'sponsor' ? `<input id="pre-sponsor" value="${esc(E.sponsor)}" ${x.I(E.poserSponsor)} placeholder="nom du sponsor" style="${chp};margin-left:6px;width:200px">` : ''}</div>
+        <span style="${lab};margin-top:16px">Icône dans l’app</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">${E.emojis.map(o => `<button ${x.A(o.choisir)} style="width:38px;height:38px;border-radius:10px;font-size:21px;line-height:1;cursor:pointer;border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${o.on ? '#FBF3EE' : 'var(--color-surface)'}">${esc(o.em)}</button>`).join('')}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin:10px 0 6px">
+          <label style="${B(false)};display:inline-flex;align-items:center;gap:6px">Une photo → icône<input type="file" accept="image/*" ${x.C(E.poserPhoto)} style="display:none"></label>
+          ${E.icone ? `<img src="${esc(E.icone)}" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;border:1px solid var(--color-border-secondary)"><button ${x.A(E.retirerIcone)} style="border:0;background:none;${mu};cursor:pointer;font-size:12px">retirer</button>` : `<span style="font-size:12px;${mu}">l’emoji par défaut</span>`}
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        ${E.supprimer ? `<button ${x.A(E.supprimer)} style="border:0;background:none;color:var(--color-primary);font:400 12.5px var(--font-ui);cursor:pointer">Supprimer</button>` : ''}
+        <span style="flex:1"></span>
+        <button ${x.A(E.fermer)} style="${B(false)}">Annuler</button>
+        <button ${x.A(E.enregistrer)} data-pre-enregistrer style="${B(false, true)}${E.ok && !E.envoi ? '' : ';opacity:.4;cursor:not-allowed'}">${E.envoi ? 'Enregistrement…' : 'Enregistrer'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function tplPrWiz(W, x){
+  const esc = x.esc;
+  const B = (on, prim) => `border:1px solid ${prim ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${prim ? 'var(--color-primary)' : on ? 'var(--color-text)' : 'var(--color-surface)'};color:${prim || on ? '#fff' : 'var(--color-text)'};border-radius:var(--radius-pill);padding:8px 16px;font:400 13px var(--font-ui);cursor:pointer`;
+  const lab = 'display:block;font:400 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);margin-bottom:6px';
+  const chp = 'border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:9px 12px;font:400 13px var(--font-ui);background:var(--color-surface);color:var(--color-text)';
+  const q = 'font:400 13px var(--font-ui);margin:0 0 10px';
+  const mu = 'color:var(--color-text-muted)';
+  const morceaux = it => it.morceaux.map(m => m.m ? `<mark style="background:#FCE7A6;padding:0 1px;border-radius:2px">${esc(m.t)}</mark>` : esc(m.t)).join('');
+  const ligne = it => `<div ${x.A(it.basculer)} style="display:flex;align-items:center;gap:10px;padding:8px 14px;font-size:13px;border-top:1px solid var(--color-border-tertiary);cursor:pointer;${it.pris ? 'background:#FBF3EE' : ''}">
+      <div style="flex:1;min-width:0">${morceaux(it)}${it.sous ? `<small style="display:block;font-size:11.5px;${mu}">${it.t === 'categorie' ? 'dans ' : ''}${esc(it.sous)}</small>` : ''}</div>
+      ${it.t !== 'produit' ? `<span style="font-size:12px;${mu}">${it.n} produit${it.n > 1 ? 's' : ''}</span>` : ''}
+      <span style="width:24px;height:24px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;border:1px solid ${it.pris ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${it.pris ? 'background:var(--color-primary);color:#fff' : ''};font-weight:400">${it.pris ? '✓' : '+'}</span></div>`;
+  const grp = (titre, l) => l.length ? `<div style="font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;${mu};padding:9px 14px 4px;background:var(--color-background-secondary)">${titre}</div>${l.map(ligne).join('')}` : '';
+  let corps = '';
+  // La sorte de prime (16/10/2026) : promotion ou catégorie, en tête de l'étape 1 d'une prime neuve de la marque.
+  const sortes = W.sortes ? `<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">${W.sortes.map(o => `<div ${x.A(o.choisir)} data-prw-sorte style="border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${o.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-lg);padding:11px 14px;cursor:pointer;display:flex;gap:10px;align-items:flex-start"><span style="font-size:21px">${o.e}</span><span><b style="display:block;font-size:14px">${esc(o.nom)}</b><span style="font-size:12.5px;line-height:1.4;${mu}">${esc(o.txt)}</span></span></div>`).join('')}</div>` : '';
+  if (W.etape === 1 && W.categorie) {
+    corps = sortes + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:400">Ceux dont le nom contient ce mot, tous les mois.</span></p>
+      <input id="prw-motif" value="${esc(W.motif)}" ${x.I(W.poserMotif)} placeholder="tarte, quiche, cookie…" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px;font:400 14px var(--font-ui)">
+      ${W.motifErr ? `<div style="padding:10px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.motifErr)}</div>`
+        : W.chargement ? `<div style="padding:10px 2px;font-size:12.5px;${mu}">Lecture du catalogue…</div>`
+        : W.motif.trim() ? `<div style="font-size:12.5px;margin:10px 2px 6px"><b>${W.motifN} produit${W.motifN > 1 ? 's' : ''}</b> <span style="${mu}">dans le catalogue</span></div>
+          ${W.motifN ? `<div style="border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);max-height:240px;overflow-y:auto">${W.motifEx.map(pr => `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 14px;border-top:1px solid var(--color-border-tertiary);font-size:13px"><span>${esc(pr.nom)}</span><small style="${mu}">${esc(pr.cat)}</small></div>`).join('')}${W.motifN > W.motifEx.length ? `<div style="padding:7px 14px;font-size:12px;${mu};border-top:1px solid var(--color-border-tertiary)">et ${W.motifN - W.motifEx.length} autre(s)</div>` : ''}</div>` : `<div style="font-size:12.5px;${mu}">Aucun produit ne contient ce mot.</div>`}`
+        : ''}`;
+  } else if (W.etape === 1) {
+    const onglets = `<div style="display:inline-flex;background:var(--color-background-secondary);border-radius:var(--radius-pill);padding:3px;margin-bottom:14px">${W.onglets.map(o => `<button ${x.A(o.choisir)} style="border:0;padding:7px 14px;border-radius:var(--radius-pill);font:400 12.5px var(--font-ui);cursor:pointer;${o.on ? 'background:var(--color-surface);color:var(--color-text);' : 'background:transparent;color:var(--color-text-muted)'}">${esc(o.nom)}</button>`).join('')}</div>`;
+    if (W.onglet === 'panel') {
+      corps = sortes + onglets + `<p style="${q}">Partir d’une promotion du panel <span style="${mu};font-weight:400">— ses produits, ses dates et ses magasins sont repris.</span></p>`
+        + (W.apiErreur ? `<div style="font-size:12.5px;line-height:1.45;background:var(--prize-soft);border:1px solid var(--prize-soft);color:var(--color-on-abricot);border-radius:var(--radius-md);padding:10px 12px">${esc(W.apiErreur)}</div>`
+        : !W.apiListe.length ? `<div style="font-size:12.5px;${mu}">Aucune promotion du panel avec des produits.</div>`
+        : `<div style="border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);overflow:hidden">${W.apiListe.map(p => `<div ${x.A(p.choisir)} style="display:flex;gap:10px;align-items:center;padding:10px 14px;border-top:1px solid var(--color-border-tertiary);cursor:pointer;${p.pris ? 'background:#FBF3EE' : ''}"><div style="flex:1"><b>${esc(p.nom)}</b><small style="display:block;font-size:11.5px;${mu}">${esc(p.sorte)} · ${esc(p.dates)} · ${esc(p.magasins)}</small></div><span style="font-weight:400;color:${p.pris ? 'var(--color-primary)' : 'var(--color-text-muted)'}">${p.pris ? '✓ choisie' : 'choisir'}</span></div>`).join('')}</div>`);
+    } else {
+      corps = sortes + onglets + `<p style="${q}">Quels produits comptent ? <span style="${mu};font-weight:400">Une catégorie, une sous-catégorie ou des produits : tout ce qui est ajouté compte.</span></p>
+        <div style="position:relative"><span style="position:absolute;left:12px;top:10px;${mu}"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"/></svg></span>
+          <input id="prw-q" value="${esc(W.q)}" ${x.I(W.poserQ)} placeholder="Rechercher une catégorie, une sous-catégorie ou un produit…" autocomplete="off" style="width:100%;box-sizing:border-box;border:1.5px solid var(--color-text);border-radius:var(--radius-md);padding:11px 14px 11px 38px;font:400 14px var(--font-ui)"></div>
+        ${W.chargement ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Lecture du catalogue…</div>` : W.catMotif ? `<div style="padding:12px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.catMotif)}</div>`
+          : W.vide ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Rien ne correspond à « ${esc(W.q)} ».</div>`
+          : `<div style="border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);margin-top:6px;max-height:320px;overflow-y:auto" data-scroll="prw-res">${grp(W.parcourir ? 'Catégories — ou tapez un nom' : 'Catégories', W.res.groupes)}${grp('Sous-catégories', W.res.categories)}${grp('Produits', W.res.produits)}</div>`}
+        ${W.sel.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:12px">${W.sel.map(z => `<span style="display:inline-flex;align-items:center;gap:6px;background:var(--color-background-secondary);border:1px solid var(--color-border-secondary);border-radius:var(--radius-pill);padding:5px 6px 5px 10px;font-size:12.5px"><span style="font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;${mu}">${esc(z.type)}</span> ${esc(z.lib)}${z.n ? ' · ' + esc(z.n) : ''}<button ${x.A(z.retirer)} title="Retirer" style="width:18px;height:18px;border:0;border-radius:50%;background:var(--color-surface);font-size:11px;${mu};cursor:pointer">✕</button></span>`).join('')}</div>` : ''}`;
+    }
+  } else if (W.etape === 2 && W.categorie) {
+    // La période d'une catégorie (16/10/2026) : tous les mois, ou entre deux dates ; elle compte dans chaque mois touché.
+    corps = `<p style="${q}">Quand ?</p><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${W.cPers.map(o => `<button ${x.A(o.choisir)} data-prw-cper style="${B(o.on)}">${esc(o.nom)}</button>`).join('')}</div>
+      ${W.cPer === 'dates' ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px"><span style="${lab};margin:0">du</span><input id="prw-cdu" type="date" value="${esc(W.cdu)}" ${x.C(W.poserCdu)} style="${chp}"><span style="${lab};margin:0">au</span><input id="prw-cau" type="date" value="${esc(W.cau)}" ${x.C(W.poserCau)} style="${chp}"><span style="font-size:12.5px;${mu}">l’une des deux peut rester vide</span></div>${W.catDatesOk ? '' : `<div style="font-size:12.5px;color:var(--color-primary);margin-bottom:10px">Une date au moins, et la fin après le début.</div>`}` : ''}
+      <div style="font-size:13px;line-height:1.55">Elle compte <b>chaque mois</b> que sa période touche, du 1er au dernier jour, dans <b>tous les magasins</b> ; l’app la montre dans chacun de ces mois. L’interrupteur du tableau l’éteint.</div>`;
+  } else if (W.etape === 2) {
+    corps = `<p style="${q}">Quand ?</p>` + (W.apiDates ? `<div style="font-size:13px">${W.du || W.au ? `Les dates de la promotion du panel : <b>${esc(W.du || '…')}</b> → <b>${esc(W.au || '…')}</b>` : 'La promotion du panel n’a pas de dates : la prime compte tant qu’elle tourne.'}</div>`
+      : `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">${W.periodes.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)}">${esc(o.nom)}</button>`).join('')}</div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="${lab};margin:0">du</span><input id="prw-du" type="date" value="${esc(W.du)}" ${x.C(W.poserDu)} style="${chp}"><span style="${lab};margin:0">au</span><input id="prw-au" type="date" value="${esc(W.au)}" ${x.C(W.poserAu)} style="${chp}"><span style="font-size:12.5px;${mu}">les pièces se comptent sur ces dates seulement</span></div>`)
+      + (W.fam ? `<p style="${q};margin-top:22px">Pour quel magasin ? <span style="${mu};font-weight:400">— la prime d’un franchisé est pour son magasin, et lui seul.</span></p>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${W.magsUn.map(m => `<div ${x.A(m.choisir)} data-prw-mag style="display:flex;align-items:center;gap:10px;border:1.5px solid ${m.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${m.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-md);padding:10px 12px;font-size:13px;cursor:pointer"><span style="width:18px;height:18px;border-radius:50%;border:1.5px solid ${m.on ? 'var(--color-primary)' : 'var(--color-text)'};display:inline-flex;align-items:center;justify-content:center">${m.on ? '<span style="width:9px;height:9px;border-radius:50%;background:var(--color-primary)"></span>' : ''}</span>${esc(m.nom)}</div>`).join('')}</div>`
+      : `<p style="${q};margin-top:22px">Dans quels magasins ?</p>` + (W.apiDates ? `<div style="font-size:13px">Ceux de la promotion du panel.</div>`
+      : `<div style="display:flex;gap:8px;margin-bottom:10px"><button ${x.A(W.tousMags)} style="${B(W.magsMode === 'tous')}">Tous</button><button ${x.A(W.choisirMags)} style="${B(W.magsMode === 'choix')}">Choisir</button></div>
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">${W.mags.map(m => `<div ${x.A(m.basculer)} style="display:flex;align-items:center;gap:10px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);padding:10px 12px;font-size:13px;cursor:pointer"><span style="width:18px;height:18px;border-radius:4px;border:1.5px solid var(--color-text);display:inline-flex;align-items:center;justify-content:center;font-size:12px;${m.on ? 'background:var(--color-text);color:#fff' : ''}">${m.on ? '✓' : ''}</span>${esc(m.nom)}</div>`).join('')}</div>`));
+  } else if (W.etape === 3) {
+    // Le tableau par magasin (16/10/2026) : l'an dernier, l'objectif (+ x %), les vendeuses, l'objectif de chacune.
+    const thT = 'font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:8px 10px;text-align:right;border-bottom:1px solid var(--color-border-secondary)';
+    const tdT = 'padding:7px 10px;text-align:right;font-variant-numeric:tabular-nums;border-bottom:1px solid var(--color-border-tertiary)';
+    const tableau = W.refChargement ? `<div style="padding:12px 2px;font-size:12.5px;${mu}">Lecture des ventes de l’an dernier…</div>`
+      : W.refMotif ? `<div style="padding:12px 2px;font-size:12.5px;color:var(--color-primary)">${esc(W.refMotif)}</div>`
+      : `<div style="border:1px solid var(--color-border-secondary);border-radius:var(--radius-md);overflow:hidden" data-prw-tableau><table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr><th style="${thT};text-align:left">Magasin</th><th style="${thT}">L’an dernier<small style="display:block;font-weight:400;text-transform:none;letter-spacing:0">${esc(W.refPeriode)}</small></th>
+          ${W.surObj ? `<th style="${thT}">Objectif<small style="display:block;font-weight:400;text-transform:none;letter-spacing:0">${esc(W.pct || '0')} % de plus</small></th>` : ''}
+          ${W.colVend ? `<th style="${thT}">Vendeuses<small style="display:block;font-weight:400;text-transform:none;letter-spacing:0">moyenne</small></th>
+          <th style="${thT}">${W.surObj ? 'Par vendeuse' : 'Par vendeuse<small style="display:block;font-weight:400;text-transform:none;letter-spacing:0">l’an dernier</small>'}</th>` : ''}</tr></thead>
+        <tbody>${W.tableau.map(t => `<tr>
+          <td style="${tdT};text-align:left;font-weight:400">${esc(t.nom)}</td>
+          <td style="${tdT}">${esc(t.n1)}${t.source === 'recent' ? `<small style="display:block;font-size:11px;${mu}">${esc(t.recent)} au rythme récent</small>` : ''}</td>
+          ${W.surObj ? `<td style="${tdT}"><input type="number" min="1" step="1" value="${esc(t.obj)}" ${x.I(t.poserObj)} id="prw-obj-${esc(t.id)}" placeholder="à saisir" style="${chp};width:84px;text-align:right;padding:6px 8px${t.objTouche ? ';border-color:var(--color-primary)' : ''}${t.obj ? '' : ';border-style:dashed'}"> <span style="${mu}">pcs</span></td>` : ''}
+          ${W.colVend ? `<td style="${tdT}">${esc(t.vend)}</td>
+          <td style="${tdT};font-weight:${W.surObj ? 700 : 500}">${W.surObj ? (t.parVend ? esc(t.parVend) + ' pcs' : '—') : esc(t.parVendN1)}</td>` : ''}</tr>`).join('')}</tbody></table></div>
+        ${W.refRecent ? `<div style="font-size:11.5px;${mu};margin-top:6px">Sans ventes l’an dernier : le rythme des 4 dernières semaines, ramené à la période.</div>` : ''}`;
+    corps = `<p style="${q}">Qui gagne ?</p><div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-bottom:16px">${W.regles.map(r => `<div ${x.A(r.choisir)} data-prw-regle style="border:1.5px solid ${r.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};${r.on ? 'background:#FBF3EE;' : ''}border-radius:var(--radius-lg);padding:12px 14px;cursor:pointer"><span style="font-size:21px">${r.e}</span><b style="display:block;font-size:14px;margin:4px 0 3px">${esc(r.nom)}</b><p style="margin:0;font-size:12.5px;line-height:1.4;${mu}">${esc(r.txt)}</p></div>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 10px"><b style="font:400 13px var(--font-ui)">Les ventes des produits choisis, magasin par magasin</b>
+        ${W.surObj ? `<span style="flex:1"></span><span style="${lab};margin:0">Objectif : l’an dernier +</span><input id="prw-pct" type="number" step="1" value="${esc(W.pct)}" ${x.I(W.poserPct)} style="${chp};width:70px;text-align:right;padding:6px 8px"> <span style="${mu}">%</span>${W.objTouches ? `<button ${x.A(W.effacerObj)} style="border:0;background:none;${mu};cursor:pointer;font-size:12px;text-decoration:underline">recalculer tout</button>` : ''}` : ''}</div>
+      ${tableau}
+      <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 18px;margin-top:16px">
+        ${W.surObj ? '' : `<div><span style="${lab}">${W.regle === 'seuil' ? 'Le seuil à atteindre' : 'Minimum de pièces pour être classée'}</span><input id="prw-min" type="number" min="0" step="1" value="${esc(W.minPieces)}" ${x.I(W.poserMin)} style="${chp};width:90px"> <span style="${mu}">pcs</span></div>`}
+        <div style="grid-column:1 / -1"><span style="${lab}">Ce qu’on gagne</span><div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${W.gains.map(o => `<button ${x.A(o.choisir)} data-prw-gain style="${B(o.on)}">${o.e} ${esc(o.nom)}</button>`).join('')}
+          ${W.estCadeau ? `<input id="prw-cadeau" value="${esc(W.cadeauNom)}" ${x.I(W.poserCadeauNom)} maxlength="80" placeholder="voucher Fnac, week-end à Paris, trottinette…" style="${chp};flex:1;min-width:220px"><input id="prw-cadeau-val" type="number" min="0" step="5" value="${esc(W.cadeauValeur)}" ${x.I(W.poserCadeauValeur)} placeholder="valeur" style="${chp};width:90px"> <span style="${mu}">€ (facultatif)</span>`
+            : `<input id="prw-montant" type="number" min="0" step="5" value="${esc(W.montant)}" ${x.I(W.poserMontant)} style="${chp};width:90px"> <span style="${mu}">€ ${W.regle === 'magasin' ? 'par magasin, partagés entre ses vendeuses' : W.surObj || W.regle === 'seuil' ? 'par vendeuse' : W.fam ? 'à la 1re' : 'par magasin'}</span>`}</div></div>
+        <div style="grid-column:1 / -1"><span style="${lab}">Offerte par</span>${W.fam ? `<div style="font-size:13px;padding-top:4px"><b>Le magasin</b> <span style="${mu}">— c’est la prime du franchisé</span></div>` : ''}${W.payeurs.map(o => `<button ${x.A(o.choisir)} style="${B(o.on)};margin-right:6px">${esc(o.nom)}</button>`).join('')}
+          ${!W.fam && W.payeur === 'sponsor' ? `<div data-prw-sponsor style="display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:center;margin-top:12px;padding:12px;border:1px solid var(--color-border-secondary);border-radius:var(--radius-md)">
+            <label title="Déposer le logo du sponsor" style="grid-row:span 3;width:74px;height:74px;border-radius:12px;border:1px dashed var(--color-border-secondary);display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:pointer;background:var(--color-background-secondary)">${W.logo ? `<img src="${esc(W.logo)}" alt="" style="max-width:66px;max-height:66px;object-fit:contain">` : `<span style="font-size:11px;${mu};text-align:center;line-height:1.3">logo<br>＋</span>`}<input type="file" accept="image/*" ${x.C(W.poserLogo)} data-prw-logo style="display:none"></label>
+            <input id="prw-sponsor" value="${esc(W.sponsor)}" ${x.I(W.poserSponsor)} placeholder="nom du sponsor" style="${chp}">
+            <input id="prw-site" value="${esc(W.sponsorSite)}" ${x.I(W.poserSponsorSite)} placeholder="site web — lavazza.be" style="${chp}">
+            <input id="prw-sponsor-txt" value="${esc(W.sponsorTexte)}" ${x.I(W.poserSponsorTexte)} maxlength="160" placeholder="une ligne sur le sponsor" style="${chp}">
+            ${W.logo ? `<button ${x.A(W.retirerLogo)} style="grid-column:1;border:0;background:none;${mu};cursor:pointer;font-size:11.5px">retirer le logo</button>` : ''}</div>` : ''}</div>
+      </div>`;
+  } else {
+    corps = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start">
+      <div><span style="${lab}">Nom dans l’app</span><input id="prw-nom" value="${esc(W.nom)}" ${x.I(W.poserNom)} maxlength="60" style="${chp};width:100%;box-sizing:border-box;margin-bottom:12px">
+        <span style="${lab}">Une ligne de description</span><input id="prw-desc" value="${esc(W.description)}" ${x.I(W.poserDescription)} maxlength="160" placeholder="ce que la vendeuse doit savoir en un coup d’œil" style="${chp};width:100%;box-sizing:border-box;margin-bottom:14px">
+        <div style="font-size:13px;line-height:1.5">${W.resume.map(([k, v]) => `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:.5px dashed var(--color-border-secondary)"><span style="${mu}">${esc(k)}</span><span style="font-weight:400;text-align:right">${esc(v)}</span></div>`).join('')}</div>
+        <span style="${lab};margin-top:16px">Icône dans l’app</span>
+        <div style="display:flex;flex-wrap:wrap;gap:6px" data-prw-emojis>${W.emojis.map(o => `<button ${x.A(o.choisir)} title="${esc(o.em)}" style="width:38px;height:38px;border-radius:10px;font-size:21px;line-height:1;cursor:pointer;border:1.5px solid ${o.on ? 'var(--color-primary)' : 'var(--color-border-secondary)'};background:${o.on ? '#FBF3EE' : 'var(--color-surface)'}">${esc(o.em)}</button>`).join('')}</div>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:10px">
+          <label style="${B(W.iconeSorte === 'photo')};display:inline-flex;align-items:center;gap:6px">Une photo → icône<input type="file" accept="image/*" ${x.C(W.poserPhoto)} data-prw-photo style="display:none"></label>
+          ${W.icone ? `<img src="${esc(W.icone)}" alt="" style="width:38px;height:38px;border-radius:10px;object-fit:cover;border:1px solid var(--color-border-secondary)"><button ${x.A(W.retirerIcone)} style="border:0;background:none;${mu};cursor:pointer;font-size:12px">retirer</button>` : `<span style="font-size:12px;${mu}">sans choix : </span>`}
+        </div>
+        <div style="font-size:12px;${mu};margin-top:6px">La photo est recadrée au carré, réduite et arrondie. L’icône se change ensuite sur la ligne de la prime.</div></div>
+      <div><span style="${lab}">Aperçu dans l’app</span><div style="background:var(--chip);border-radius:var(--radius-lg);padding:14px">
+        <div style="background:#fff;border-radius:12px;padding:11px 14px 10px;">
+          <div style="display:flex;align-items:center;gap:9px"><span style="width:30px;height:30px;border-radius:8px;background:var(--total-line);display:flex;align-items:center;justify-content:center;overflow:hidden">${W.icone ? `<img src="${esc(W.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : '🏷️'}</span><b style="flex:1;font:400 14px var(--font-ui)">${esc(W.nom)}</b><span style="font:400 21px/1 var(--font-display);color:var(--ink)">0<small style="font:400 12px var(--font-ui);color:var(--muted);margin-left:3px">pcs</small></span></div>
+          <div style="position:relative;height:10px;margin-top:30px;border-radius:8px;background:var(--chip)"><span style="position:absolute;left:75%;top:-6px;bottom:-6px;width:3px;margin-left:-1.5px;border-radius:2px;background:var(--ink)"></span><span style="position:absolute;left:75%;bottom:calc(100% + 7px);transform:translateX(-50%);font:400 11px var(--font-ui);padding:3px 8px;border-radius:6px;background:var(--ink);color:#fff;white-space:nowrap">${W.estCadeau ? '' + esc(W.cadeauNom || 'cadeau') : esc(W.montant || '0') + ' €'}</span></div>
+          ${W.description ? `<div style="font:400 11.5px var(--font-ui);color:var(--muted-2);margin-top:8px">${esc(W.description)}</div>` : ''}
+          <div style="display:flex;justify-content:space-between;font:400 11px var(--font-ui);color:var(--muted);margin-top:8px"><span>${W.regle === 'magasin' ? 'le magasin : 0 pcs' : W.regle === 'vendeuse' ? 'encore ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'encore ' + esc(W.minPieces || '0') + ' pcs' : 'la 1re du magasin gagne'}</span><span>${W.surObj ? 'objectif ' + esc(W.objPreview || '…') + ' pcs' : W.regle === 'seuil' ? 'objectif ' + esc(W.minPieces || '0') + ' pcs' : ''}</span></div></div></div>
+        <p style="font-size:12px;${mu};margin:8px 2px 0">Elle apparaît dans Mes primes pendant sa période, avec son classement.</p></div></div>`;
+  }
+  const info = W.etape === 1 && W.categorie ? `<b>${W.motifN} produit${W.motifN > 1 ? 's' : ''}</b> compté${W.motifN > 1 ? 's' : ''}` : W.etape === 1 ? (W.api ? `<b>${esc(W.api.nom)}</b> · promotion du panel` : `<b>${W.compte} produit${W.compte > 1 ? 's' : ''}</b> compté${W.compte > 1 ? 's' : ''}`)
+    : W.etape === 3 ? `<b>${esc(W.plafond)}</b>` : esc(W.resume[1][1] + ' · ' + W.resume[2][1]);
+  return `
+  <div ${x.A(W.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none" data-scroll="prw">
+    <div role="dialog" aria-modal="true" aria-label="${esc(W.titre)}" style="pointer-events:auto;width:100%;max-width:760px;background:var(--color-surface);border-radius:var(--radius-lg);overflow:hidden" data-pr-wiz="${W.etape}">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 22px 12px"><div style="font:400 24px/1.1 var(--font-display)">${esc(W.titre)}</div><button ${x.A(W.fermer)} aria-label="Fermer" style="margin-left:auto;border:0;background:none;font-size:21px;${mu};cursor:pointer">✕</button></div>
+      <div style="display:flex;gap:6px;padding:0 22px 14px;border-bottom:1px solid var(--color-border-tertiary)">${W.pas.map(p => `<span ${p.aller ? x.A(p.aller) : ''} style="flex:1;display:flex;align-items:center;gap:8px;font:400 12px var(--font-ui);padding:8px 10px;border-radius:var(--radius-md);${p.on ? 'background:var(--color-primary);color:#fff' : 'background:var(--color-background-secondary);color:' + (p.fait ? 'var(--color-text)' : 'var(--color-text-muted)')};${p.aller ? 'cursor:pointer' : ''}"><b style="width:22px;height:22px;flex:none;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:11px;${p.on ? 'background:#fff;color:var(--color-primary)' : p.fait ? 'background:var(--color-text);color:#fff' : 'background:var(--color-surface);border:1px solid var(--color-border-secondary)'}">${p.fait ? '✓' : p.n}</b>${esc(p.nom)}</span>`).join('')}</div>
+      <div style="padding:18px 22px 10px;min-height:300px">${corps}</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:14px 22px;border-top:1px solid var(--color-border-tertiary);background:var(--color-background-secondary)">
+        <span style="font-size:12.5px;${mu}">${info}</span>
+        <span style="flex:1"></span>
+        ${W.supprimer ? `<button ${x.A(W.supprimer)} data-prw-supprimer style="border:0;background:none;color:var(--color-primary);font:400 12.5px var(--font-ui);cursor:pointer;margin-right:4px">Supprimer</button>` : ''}
+        ${W.etape === 1 ? `<button ${x.A(W.fermer)} style="${B(false)}">Annuler</button>` : `<button ${x.A(W.precedent)} style="${B(false)}">‹ Retour</button>`}
+        ${W.etape < 4 ? `<button ${x.A(W.suivant)} style="${B(false, true)}${W.ok ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-suivant>Suivant ›</button>`
+          : `<button ${x.A(W.creer)} style="${B(false, true)}${W.ok && !W.envoi ? '' : ';opacity:.4;cursor:not-allowed'}" data-prw-creer>${W.envoi ? (W.edit ? 'Enregistrement…' : 'Création…') : (W.edit ? 'Enregistrer' : 'Créer la prime')}</button>`}
+      </div>
+    </div>
+  </div>`;
+}
+
+/* Les primes de l'app worker (16/10/2026) : sorties d'Équipe & ventes → Paramètres, un écran à elles sous ERP franchisé
+   → Marketing franchisé. Les primes de la marque et des sponsors, celles des franchisés, les promotions du panel, les
+   moyennes par magasin ; l'assistant « Nouvelle prime » par-dessus. */
+/* Les promotions des magasins (17/10/2026) — Analyse magasin › Promotions : les « X achetés + Y » écrites dans le
+ * dashboard des magasins, lues au panel (18/10/2026, plus de copie au cockpit). Lecture seule. */
+/* L'API du module (24/10/2026) : les sources du module des primes et de l'application employé, qui appelle qui, puis
+   chaque route — méthode, chemin, ce qu'elle fait, ses pages, ce que le cockpit en garde, ce qu'elle répond à l'instant.
+   Maquette : docs/maquettes/api-module. */
+/* Les pointages (01/11/2026) : un magasin, une semaine ; les départs déclarés à valider ; les bornes. */
+function tplPointages(c, x){
+  const { esc } = x;
+  const P = c.pt;
+  if (!P) { return ''; }
+  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
+  const muet = 'var(--color-text-muted)';
+  const filet = '1px solid var(--color-border-tertiary)';
+  const carte = 'background:var(--color-surface);border-radius:12px';
+  const btS = `border:0;border-radius:6px;padding:7px 14px;font:400 13px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer`;
+  const btP = `border:0;border-radius:6px;padding:7px 14px;font:400 13px ${sf};background:var(--color-primary);color:#fff;cursor:pointer`;
+  const pastille = (t, coul, fond) => `<span style="display:inline-block;padding:2px 8px;border-radius:7px;font:400 12.5px ${sf};font-variant-numeric:tabular-nums;color:${coul};background:${fond}">${esc(t)}</span>`;
+  const VERT = ['#3f7a52', 'rgba(63, 122, 82, .12)'], ORANGE = ['#A35F00', '#F6E7CE'], ROUGE = ['#b3261e', 'rgba(179,38,30,.09)'], GRIS = ['var(--color-text)', 'var(--color-background-secondary)'];
+  const arrivee = l => l.arrivee === 'retard' ? pastille(l.entree + ' · +' + l.retard + ' min', ...ORANGE) : l.arrivee === 'hors_planning' ? pastille(l.entree, ...GRIS) : pastille(l.entree, ...VERT);
+  const depart = l => l.etat === 'fait' ? pastille(l.sortie, ...GRIS) : l.etat === 'en_service' ? pastille('en service', ...VERT)
+    : l.etat === 'a_valider' ? pastille(l.sortie + ' · déclaré', ...ORANGE) : pastille('non pointé', ...ROUGE);
+  const barre = `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px">
+      <div style="display:flex;gap:4px;flex-wrap:wrap">${P.magasins.map(m => `<button ${x.A(m.aller)} style="${m.on ? btP : btS}" data-pt-magasin="${esc(m.nom)}">${esc(m.nom)}</button>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:6px;margin-left:auto">
+        <button ${x.A(P.prec)} style="${btS}" aria-label="Semaine précédente">‹</button>
+        <span style="font:400 14px ${sf};min-width:120px;text-align:center">${esc(P.semaine)}</span>
+        <button ${x.A(P.suiv)} style="${btS}" aria-label="Semaine suivante">›</button>
+        ${P.courante ? '' : `<button ${x.A(P.cetteSemaine)} style="${btS}">Cette semaine</button>`}
+        <button ${x.A(P.relire)} style="${btS}">Relire</button></div></div>`;
+  const msg = P.msg ? `<div style="margin-top:10px;font:400 13px ${sf};color:var(--color-primary)">${esc(P.msg)}</div>` : '';
+  if (P.chargement) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Lecture des pointages…</div></section>`; }
+  if (P.motif) { return `<section data-pt>${barre}<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${esc(P.motif)} <button ${x.A(P.relire)} style="${btS}">Relire</button></div></section>`; }
+  const tuiles = `<div style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));${carte};margin-top:14px">${P.tuiles.map((t, i) => `<div style="padding:12px 16px;${i ? `border-left:${filet}` : ''}">
+      <div style="font:700 22px/1.2 ${sf};font-variant-numeric:tabular-nums">${esc(t.v)}</div><div style="font:400 12.5px ${sf};color:${muet}">${esc(t.lib)}</div></div>`).join('')}</div>`;
+  const th = t => `<th style="text-align:left;padding:9px 12px;font:400 11px ${sf};letter-spacing:.04em;text-transform:uppercase;color:${muet};white-space:nowrap">${t}</th>`;
+  const td = (h, s) => `<td style="padding:10px 12px;border-top:${filet};font:400 13px ${sf};vertical-align:middle;${s || ''}">${h}</td>`;
+  const tableau = P.lignes.length ? `<div style="${carte};margin-top:14px;overflow-x:auto"><table style="width:100%;border-collapse:collapse">
+      <thead><tr>${th('Jour')}${th('Vendeuse')}${th('Prévu')}${th('Arrivée')}${th('Départ')}${th('Durée')}${th('')}</tr></thead>
+      <tbody>${P.lignes.map(l => `<tr data-pt-ligne="${esc(String(l.id))}" data-pt-etat="${esc(l.etat)}">${td(esc(l.jour), 'white-space:nowrap')}${td(`<b style="font-weight:400">${esc(l.nom)}</b>`)}
+        ${td(esc(l.prevu), `color:${muet};white-space:nowrap`)}${td(arrivee(l))}${td(depart(l))}${td(esc(l.duree), 'font-variant-numeric:tabular-nums;white-space:nowrap')}
+        ${td(l.valider ? `<div style="display:flex;gap:6px;justify-content:flex-end"><button ${x.A(l.valider)} style="${btP}" data-pt-valider>Valider</button><button ${x.A(l.refuser)} style="${btS}" data-pt-refuser>Refuser</button></div>` : '')}</tr>`).join('')}</tbody></table></div>`
+    : `<div style="${carte};margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">Personne n’a pointé dans ce magasin cette semaine.</div>`;
+  const lien = P.lien ? `<div style="margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--color-background-secondary)" data-pt-lien>
+      <div style="font:400 13px ${sf}">${P.lien.cle ? 'La clé de la caisse — à mettre dans la configuration de la caisse' : 'Le lien de la borne — ouvrez-le sur la tablette du magasin'}</div>
+      <div style="margin-top:6px;font:400 12.5px ui-monospace,Menlo,monospace;word-break:break-all;user-select:all">${esc(P.lien.cle || P.lien.url)}</div>
+      ${P.lien.cle ? `<div style="margin-top:6px;font:400 12px ${sf};color:${muet}">Adresse de l’API : <span style="font-family:ui-monospace,Menlo,monospace;user-select:all">${esc(P.lien.api)}</span> — routes GET /pointage/borne?b=&lt;clé&gt; et POST /pointage/borne/pointer.</div>` : ''}
+      <div style="display:flex;gap:8px;margin-top:10px"><button ${x.A(P.lien.copier)} style="${btP}">Copier</button>${P.lien.url ? `<a href="${esc(P.lien.url)}" target="_blank" rel="noopener" style="${btS};text-decoration:none">Ouvrir ↗</a>` : ''}<button ${x.A(P.lien.fermer)} style="${btS}">Fermer</button></div>
+      <div style="margin-top:8px;font:400 12px ${sf};color:${muet}">${P.lien.cle ? 'Elle ne s’affiche qu’une fois. Ne la mettez jamais dans une adresse visible : avec elle, la caisse pointe une personne au PIN.' : 'Il ne s’affiche qu’une fois : gardez-le, ou créez-en un autre et retirez celui-ci.'}</div></div>` : '';
+  const bornes = `<div style="${carte};margin-top:18px;padding:16px 18px" data-pt-bornes>
+      <div style="display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap"><div style="flex:1;min-width:260px">
+        <div style="font:400 15px ${sf}">Borne de pointage</div>
+        <div style="margin-top:3px;font:400 13px/1.45 ${sf};color:${muet}">Une page qui montre le QR code du magasin ; il change toutes les 30 secondes et ne vaut que pour ce magasin. Ouvrez son lien sur la tablette du comptoir et laissez-la allumée.</div></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">${P.creerBorne ? `<button ${x.A(P.creerBorne)} style="${btP}" data-pt-creer>Créer un lien de borne</button>` : ''}${P.creerCaisse ? `<button ${x.A(P.creerCaisse)} style="${btS}" data-pt-caisse>Clé pour la caisse</button>` : ''}</div></div>
+      ${lien}
+      ${P.bornes.length ? `<div style="margin-top:12px">${P.bornes.map((b, i) => `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;${i ? `border-top:${filet}` : `border-top:${filet}`}">
+        <span style="font:400 14px ${sf}">${esc(b.nom)}</span><span style="font:400 12.5px ${sf};color:${muet}">${esc(b.sorte)} · créée ${esc(b.cree)} · ${esc(b.vue)}</span>
+        <button ${x.A(b.retirer)} style="${btS};margin-left:auto">Retirer</button></div>`).join('')}</div>`
+      : `<div style="margin-top:10px;font:400 13px ${sf};color:${muet}">Pas encore de borne pour ce magasin.</div>`}</div>`;
+  return `<section data-pt>${barre}${msg}${tuiles}${tableau}${bornes}</section>`;
+}
+
+function tplApiModule(c, x){
+  const { esc } = x;
+  const A = c.am;
+  const pastille = n => `<i class="am-pt am-${esc(n)}"></i>`;
+  const tuiles = A.tuiles.length ? `<div class="am-tuiles">${A.tuiles.map(t => `
+    <button class="am-carte am-tuile${t.on ? ' on' : ''}" ${x.A(t.aller)} data-am-source="${esc(t.cle)}">
+      <b>${t.n}<small>${esc(t.unite)}</small></b>
+      <span>${esc(t.nom)}</span>
+      <em>${esc(t.resume)}</em>
+      <span class="am-bilan am-${esc(t.etat)}">${pastille(t.etat)}${esc(t.bilan)}</span>
+    </button>`).join('')}</div>` : '';
+  const nd = (nom, sous, cle) => `<div class="am-nd">${cle ? pastille(A.etats[cle] || 'neutre') : ''}<div>${esc(nom)}<small>${esc(sous)}</small></div></div>`;
+  const flux = `<section class="am-carte am-flux">
+    <h2>Qui appelle qui</h2>
+    <div class="am-grille">
+      <div class="am-col">${nd('Page admin', 'les primes de la marque et des sponsors')}${nd('Page franchisé', 'les primes d’un magasin, son équipe')}${nd('Application employé', 'Mes primes, Accueil, Statistiques, Planning')}</div>
+      <div class="am-fl">→</div>
+      <div class="am-nd am-coeur">${pastille(A.etats.cockpit || 'neutre')}<div>Cockpit<small><code>…/api/cockpit</code></small><small>calcule chaque prime, garde les calculs de 10 min à 1 jour</small></div></div>
+      <div class="am-fl">→</div>
+      <div class="am-col">${nd('Panel tfbuddy', 'compte consultant · ventes par vendeuse, tickets, catégories', 'panel')}${nd('ERP admin', 'compte admin · les promotions', 'erp')}${nd('Base partagée', 'planning, clients pro, note Google, réglages', 'base')}${nd('Twilio', 'le SMS, si config.php › sms est réglé', 'sms')}</div>
+    </div>
+    <p class="am-direct"><i></i>L’application parle aussi au panel en direct, avec le jeton de la personne : connexion, planning, tâches, photos.</p>
+  </section>`;
+  const barre = `<div class="am-barre">
+    <div class="am-segm">${A.pages.map(p => `<button class="${p.on ? 'on' : ''}" ${x.A(p.aller)}>${esc(p.nom)}</button>`).join('')}</div>
+    <div class="am-droite">
+      ${A.filtre ? `<button class="am-lien" ${x.A(A.toutVoir)}>${esc(A.filtre)} seulement · tout voir</button>` : ''}
+      <input id="am-q" type="search" value="${esc(A.q)}" ${x.I(A.poserQ)} placeholder="Chercher une route…" autocomplete="off">
+    </div>
+  </div>`;
+  const ligne = r => `<tr data-am-route>
+    <td class="am-m"><span class="am-mt am-${r.m === 'GET' || r.m === 'LIT' ? 'get' : 'post'}">${esc(r.m)}</span></td>
+    <td class="am-r"><code>${esc(r.r)}</code><span>${esc(r.dit)}</span></td>
+    <td class="am-p">${r.pages.map(p => `<span class="am-pg am-pg-${esc(p.cle)}">${esc(p.nom)}</span>`).join('')}</td>
+    <td class="am-g">${esc(r.garde || '')}</td>
+    <td class="am-e am-${esc(r.niveau)}" data-am-etat="${esc(r.niveau)}">${pastille(r.niveau)}<span>${esc(r.texte)}</span></td>
+  </tr>`;
+  const sources = A.sources.map(s => `<section class="am-carte am-src" data-am-src="${esc(s.cle)}">
+    <div class="am-h"><div><h2>${pastille(s.etat)}${esc(s.nom)}</h2><p><code>${esc(s.hote)}</code> · ${esc(s.dit)}</p></div><span>${esc(s.compte)}</span></div>
+    ${s.note ? `<p class="am-note">${esc(s.note)}</p>` : ''}
+    ${s.groupes.map(g => `<div class="am-grp">${esc(g.nom)}</div><table><colgroup><col class="am-cm"><col><col class="am-cp"><col class="am-cg"><col class="am-ce"></colgroup><tbody>${g.routes.map(ligne).join('')}</tbody></table>`).join('')}
+  </section>`).join('');
+  const tete = `<div class="am-tete"><span>${A.resonde ? 'Nouvelle sonde en cours…' : esc(A.quand)}</span>
+    <button class="am-bt" ${x.A(A.retester)} ${A.chargement || A.resonde ? 'disabled' : ''}>Retester</button></div>`;
+  if (A.chargement) {
+    return `<div data-screen="apiModule" class="am">${tete}<div class="am-carte am-attente">Les sources sont sondées : le panel, l’ERP, la base, Twilio. Quelques secondes…</div></div>`;
+  }
+  if (A.echec) {
+    return `<div data-screen="apiModule" class="am">${tete}<div class="am-carte am-attente">L’état n’a pas pu être lu (GET /ventes/primes-api). Retester ?</div></div>`;
+  }
+  return `<div data-screen="apiModule" class="am">${tete}${tuiles}${flux}${barre}${A.vide ? '<div class="am-carte am-attente">Aucune route ne correspond.</div>' : sources}</div>`;
+}
+
+/* La prime B2B en une phrase (23/10/2026, l'option D des maquettes docs/maquettes/primes-b2b) : « Pour chaque nouveau client
+   pro, la vendeuse touche 5 % de chaque commande pendant 3 mois. » Les mots en couleur se touchent pour changer ; un
+   exemple chiffré dessous ; le plafond, la commande minimum, le nom et les dates dans « plus de réglages ». */
+function tplPrB2b(B, x){
+  const esc = x.esc;
+  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
+  const ac = 'var(--color-collection-border)';
+  const muet = 'var(--color-text-muted)';
+  const tok = 'color:' + ac + ';border-bottom:2px dotted ' + ac + ';padding:0 1px';
+  // Un mot qui se touche : le texte, et un choix invisible posé dessus.
+  const choix = (texte, options, val, fn) => `<span style="position:relative;display:inline-block;${tok};cursor:pointer">${esc(texte)}<select ${x.C(fn)} style="position:absolute;inset:0;opacity:0;cursor:pointer;font:inherit;width:100%">${options.map(([v, t]) => `<option value="${esc(v)}"${String(v) === String(val) ? ' selected' : ''}>${esc(t)}</option>`).join('')}</select></span>`;
+  const chp = `width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:10px 12px;font:400 14px ${sf};background:var(--color-background-secondary);color:var(--color-text)`;
+  const lab = `display:block;font:400 12px ${sf};color:${muet};margin-bottom:6px`;
+  const champ = (lib, id, val, fn, type, indice) => `<label><span style="${lab}">${esc(lib)}</span><input id="${id}" type="${type}" value="${esc(val)}" placeholder="${esc(indice || '')}" ${x.I(fn)} style="${chp}"></label>`;
+  return `
+  <div ${x.A(B.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.32);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:70px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(B.titre)}" data-pr-b2b style="pointer-events:auto;width:100%;max-width:820px;background:var(--color-surface);border-radius:12px;padding:36px 48px 30px;font-family:${sf};color:var(--color-text)">
+      <div style="display:flex;align-items:center;gap:8px;font:400 13px ${sf};color:${muet}">
+        <span>${esc(B.titre)}</span>${B.magasins ? ` · ${choix(B.magasinNom || 'choisir le magasin', [['', 'choisir le magasin']].concat(B.magasins), B.shop, B.poserShop)}` : B.magasinNom ? ' · ' + esc(B.magasinNom) : ''}
+        <span style="flex:1"></span><button ${x.A(B.fermer)} aria-label="Fermer" style="border:0;background:none;font-size:18px;color:${muet};cursor:pointer">✕</button>
+      </div>
+      <div data-b2b-phrase style="font:400 26px/1.5 ${sf};letter-spacing:-.015em;margin:18px 0 28px">
+        Pour chaque nouveau client pro, la vendeuse touche
+        <input id="b2b-valeur" type="text" inputmode="decimal" value="${esc(B.valeur)}" ${x.I(B.poserValeur)} aria-label="${B.mode === 'fixe' ? 'Montant' : 'Pourcentage'}" style="width:${Math.max(1, String(B.valeur).length) + 0.4}ch;border:0;${tok};background:transparent;font:inherit;text-align:right;outline:none">&nbsp;${choix(B.mode === 'fixe' ? '€' : '%', [['pct', '% de la commande'], ['fixe', '€ — un montant fixe']], B.mode, B.poserMode)}
+        ${B.mode === 'fixe' ? 'à sa 1re commande' : choix(B.dureeTxt, B.durees, B.duree, B.poserDuree)}.
+      </div>
+      <div style="height:1px;background:var(--color-border-tertiary)"></div>
+      <p data-b2b-exemple style="font:400 16px/1.5 ${sf};color:${muet};margin:20px 0 6px">${B.exemple}</p>
+      <p style="font:400 13px/1.5 ${sf};color:${muet};margin:0">Un nouveau client pro : marqué pro au panel, avec une TVA valide, sans commande pro depuis 12 mois. La prime va à la vendeuse qui encaisse sa 1re commande. Montants HT.</p>
+      ${B.plus ? `<div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px 16px;margin-top:22px">
+        ${champ('Nom dans l’app', 'b2b-lib', B.lib, B.poserLib, 'text', 'Ramène un client pro')}
+        ${champ('Plafond par client (€, vide : aucun)', 'b2b-plafond', B.plafond, B.poserPlafond, 'number', 'aucun')}
+        ${champ('Commande minimum (€ HT)', 'b2b-min', B.min, B.poserMin, 'number', 'aucune')}
+        ${champ('Pour les clients ramenés dès le', 'b2b-du', B.du, B.poserDu, 'date')}
+        ${champ('Jusqu’au (vide : sans fin)', 'b2b-au', B.au, B.poserAu, 'date')}
+      </div>` : ''}
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:28px">
+        <button ${x.A(B.basculerPlus)} style="border:0;background:none;padding:0;font:400 14px ${sf};color:${ac};cursor:pointer">${B.plus ? 'Moins de réglages' : 'Plafond, commande minimum, nom, dates…'}</button>
+        <span style="flex:1"></span>
+        ${B.supprimer ? `<button ${x.A(B.supprimer)} style="border:0;background:none;font:400 14px ${sf};color:var(--color-primary);cursor:pointer">Supprimer</button>` : ''}
+        <button ${x.A(B.fermer)} style="border:0;border-radius:6px;padding:11px 20px;font:400 14px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Annuler</button>
+        <button ${x.A(B.enregistrer)} data-b2b-enregistrer style="border:0;border-radius:6px;padding:11px 22px;font:400 14px ${sf};background:${ac};color:var(--color-surface);cursor:pointer;${B.ok && !B.envoi ? '' : 'opacity:.45;pointer-events:none'}">${B.envoi ? 'Enregistrement…' : B.edit ? 'Enregistrer' : 'Créer la prime'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/**
+ * Les grands prix de l'année (23/10/2026) : la vitrine de la maquette B — une carte par grand prix : la photo du lot ou
+ * son emoji sur un fond teinté, qui l'offre, la valeur, le défi, le top 3, la saison — et les chiffres de la saison.
+ * Page admin : ceux de la marque, puis ceux des franchisés ; page franchisé : ceux de la marque à lire, puis les siens.
+ */
+function tplPrGrandsPrix(G, x){
+  const esc = x.esc;
+  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
+  const muet = 'var(--color-text-muted)';
+  const filet = '1px solid var(--color-border-tertiary)';
+  const btP = `border:0;border-radius:6px;padding:9px 17px;font:400 13px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer`;
+  // Le fond de chaque défi : les couleurs du design system, adoucies.
+  const mix = (v, p) => `color-mix(in srgb, var(${v}) ${p}%, var(--color-surface))`;
+  const fond = { vendeuse: [mix('--color-secondary', 30), mix('--color-secondary', 60)], b2b: [mix('--color-collection-fill', 70), mix('--color-collection-border', 45)],
+    ticket: [mix('--color-popup', 12), mix('--color-popup', 28)], croisees: [mix('--color-secondary', 18), mix('--color-collection-fill', 80)],
+    progression: [mix('--color-primary', 10), mix('--color-primary', 24)], magasin: [mix('--color-primary', 16), mix('--color-secondary', 45)] };
+  const rangC = ['', 'var(--color-secondary)', muet, 'var(--color-collection-icon)'];
+  const chip = t => `<span style="font:400 10px ${sf};letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:6px;background:var(--color-surface);color:var(--color-text);max-width:70%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(t)}</span>`;
+  const carte = k => {
+    const [a, b] = fond[k.defi] || fond.vendeuse;
+    return `<article data-gp="${esc(k.id)}" style="background:var(--color-surface);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;min-width:0${k.actif ? '' : ';opacity:.6'}">
+      <div style="position:relative;height:150px;background:linear-gradient(135deg,${a},${b});display:flex;align-items:center;justify-content:center">
+        ${k.photo ? `<img src="${esc(k.photo)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<span style="font-size:26px;line-height:1">${k.emo}</span>`}
+        <div style="position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px">
+          ${chip(k.offert)}<b style="font:400 14px ${sf};padding:5px 11px;border-radius:6px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.valeurTxt)}</b>
+        </div>
+        ${k.shopNom && !k.lecture ? `<span style="position:absolute;left:12px;bottom:12px">${chip(k.shopNom)}</span>` : ''}
+      </div>
+      <div style="padding:16px 18px 6px;flex:1;display:flex;flex-direction:column">
+        <div style="font:400 18px/1.25 ${sf};letter-spacing:-.01em;color:var(--color-text)">${esc(k.titre)}</div>
+        ${k.lot ? `<div style="font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc(k.lot)}</div>` : ''}
+        <div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:6px"><b style="color:var(--color-text);font-weight:400">${esc(k.defiLib)}</b> · ${esc(k.regle)}${k.seuil ? ' · ' + esc(k.seuil) : ''}${k.site ? ` · <a href="${esc(k.site)}" target="_blank" rel="noopener" style="color:${muet}">site du sponsor ↗</a>` : ''}</div>
+        <div style="border-top:${filet};margin-top:12px;padding-top:6px;flex:1">
+          ${k.gagnant ? `<div style="font:400 12px ${sf};color:var(--color-primary);margin:6px 0 2px">Gagné par ${esc(k.gagnant.nom)}${k.gagnant.sous ? ' · ' + esc(k.gagnant.sous) : ''}</div>` : ''}
+          ${k.top.length ? k.top.map(t => `<div data-gp-rang="${t.rang}" style="display:flex;align-items:center;gap:10px;padding:7px 0">
+            <b style="width:12px;font:400 15px ${sf};color:${rangC[t.rang] || muet}">${t.rang}</b>
+            <span style="width:26px;height:26px;border-radius:50%;flex:none;display:inline-flex;align-items:center;justify-content:center;font:400 10px ${sf};background:var(--color-background-secondary);color:var(--color-text)">${esc(t.ini)}</span>
+            <span style="flex:1;min-width:0;font:400 13px ${sf};color:${muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.detail || '')}"><b style="font-weight:400;color:var(--color-text)">${esc(t.nom)}</b>${t.sous ? ' · ' + esc(t.sous) : ''}</span>
+            <b style="font:400 14px ${sf};font-variant-numeric:tabular-nums;color:${t.rang === 1 ? 'var(--color-primary)' : 'var(--color-text)'};white-space:nowrap">${esc(t.txt)}</b></div>`).join('')
+          : `<div style="font:400 13px/1.45 ${sf};color:${muet};padding:10px 0">${esc(k.vide)}</div>`}
+          ${k.ici ? `<div data-gp-ici style="font:400 12.5px/1.4 ${sf};color:var(--color-text);background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;margin:6px 0 4px">Dans ce magasin : <b>${esc(k.ici.nom)}</b>, ${esc(String(k.ici.rang))}${k.ici.rang === 1 ? 're' : 'e'} du réseau · ${esc(k.ici.txt)}</div>`
+            : k.iciVide ? `<div data-gp-ici style="font:400 12.5px/1.4 ${sf};color:${muet};background:var(--color-background-secondary);border-radius:10px;padding:8px 10px;margin:6px 0 4px">Personne de ce magasin n’est encore classé.</div>` : ''}
+        </div>
+        ${k.etat === 'en_cours' ? `<div style="height:4px;border-radius:2px;background:var(--color-background-secondary);margin-top:8px;overflow:hidden"><div style="height:100%;width:${Math.round(100 * k.part)}%;background:var(--color-primary)"></div></div>` : ''}
+        <div style="display:flex;align-items:center;gap:10px;padding:10px 0 12px;font:400 12px ${sf};color:${muet}">
+          <span style="flex:1;min-width:0">${esc(k.etatTxt)}${k.pied ? ' · ' + esc(k.pied) : ''}</span>
+          ${k.basculer ? `<label title="${k.actif ? 'Actif — décocher pour l’éteindre' : 'Éteint — cocher pour l’activer'}" style="display:inline-flex;align-items:center;gap:5px;cursor:pointer"><input type="checkbox" ${k.actif ? 'checked' : ''} ${x.C(k.basculer)} data-gp-actif> actif</label>` : ''}
+          ${k.modifier ? `<button ${x.A(k.modifier)} data-gp-modifier style="border:0;background:none;padding:0;font:400 12.5px ${sf};color:var(--color-text);cursor:pointer">Modifier ›</button>` : ''}
+        </div>
+      </div>
+    </article>`;
+  };
+  const grille = ls => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;margin-top:14px">${ls.map(carte).join('')}</div>`;
+  const vide = t => `<div style="background:var(--color-surface);border-radius:12px;margin-top:14px;padding:22px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
+  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:4px 4px 2px">
+      <div style="flex:1;min-width:280px"><div style="font:700 26px/1.15 ${sf};letter-spacing:-.02em;color:var(--color-text)">${titre}</div><div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:5px;max-width:760px">${sous}</div></div>${droite || ''}</div>`;
+  if (G.chargement) { return vide('Lecture des grands prix…'); }
+  if (G.motif) { return vide(esc(G.motif)); }
+  const bouton = `<button ${x.A(G.nouveau)} style="${btP}" data-gp-nouveau>+ Nouveau grand prix</button>`;
+  const kpis = `<div data-gp-kpis style="background:var(--color-surface);border-radius:12px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-top:14px">${G.kpis.map((k, i) => `<div style="padding:13px 18px;${i ? `border-left:${filet};` : ''}min-width:0">
+      <div style="font:400 12.5px ${sf};color:${muet}">${esc(k.lib)}</div><div style="font:700 21px/1.25 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;color:var(--color-text)">${esc(k.v)}</div>
+      ${k.sous ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(k.sous)}</div>` : ''}</div>`).join('')}</div>`;
+  const marque = G.franchise
+    ? `<section data-gp-section="reseau">${tete('Grands prix de la marque', 'Offerts par la marque et ses sponsors à tout le réseau, à lire : la marque les règle. La ligne grise dit la mieux classée du magasin.')}
+        ${G.reseau.length ? grille(G.reseau.map(k => Object.assign({ lecture: true }, k))) : vide('Aucun grand prix de la marque pour l’instant.')}</section>`
+    : `<section data-gp-section="reseau">${tete('Grands prix de l’année · ' + esc(String(G.annee)), 'De gros lots offerts par la marque ou un sponsor — « Refaire ta terrasse » —, joués sur toute l’année entre les vendeuses du réseau. Le classement se calcule avec les chiffres des primes du mois.', bouton)}
+        ${kpis}
+        ${G.reseau.length ? grille(G.reseau) : vide('Aucun grand prix pour l’instant : posez le premier — la meilleure vendeuse, le plus gros apport B2B, le plus gros ticket…')}</section>`;
+  const siens = G.franchise
+    ? `<section data-gp-section="magasin">${tete(esc(G.magasinTitre) + (G.shopNom ? ' · ' + esc(G.shopNom) : ''), 'Posés par le magasin pour ses seules vendeuses, offerts par lui ou par un sponsor du quartier.', bouton)}
+        ${kpis}
+        ${G.magasin.length ? grille(G.magasin) : vide('Aucun grand prix du magasin pour l’instant.')}</section>`
+    : (G.magasin.length ? `<section data-gp-section="magasin">${tete(esc(G.magasinTitre), 'Ceux qu’un franchisé pose pour ses vendeuses. Ils se créent sur la page du magasin (Page franchisé).')}${grille(G.magasin)}</section>` : '');
+  return `<div data-gp-vitrine style="display:flex;flex-direction:column;gap:26px">${G.franchise ? siens + marque : marque + siens}</div>`;
+}
+
+/** La création d'un grand prix (23/10/2026, maquette D) : 1 · le défi, 2 · le prix, 3 · qui l'offre, qui peut gagner, la saison. */
+function tplPrGpForm(F, x){
+  const esc = x.esc;
+  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
+  const muet = 'var(--color-text-muted)';
+  const chp = `width:100%;box-sizing:border-box;border:0;border-radius:10px;padding:10px 12px;font:400 14px ${sf};background:var(--color-background-secondary);color:var(--color-text)`;
+  const lab = `display:block;font:400 12px ${sf};color:${muet};margin:12px 0 6px`;
+  const etape = t => `<div style="font:400 11px ${sf};letter-spacing:.08em;text-transform:uppercase;color:${muet};margin-bottom:10px">${t}</div>`;
+  const seg = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(o => `<button ${x.A(o.choisir)} style="border:0;border-radius:8px;padding:7px 13px;font:${o.on ? 600 : 500} 13px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? '' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const champ = (lib, id, val, fn, type, indice, attr) => `<label><span style="${lab}">${lib}</span><input id="${id}" type="${type || 'text'}" value="${esc(val)}" placeholder="${esc(indice || '')}" ${x.I(fn)} ${attr || ''} style="${chp}"></label>`;
+  return `
+  <div ${x.A(F.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.32);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:50px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(F.titre)}" data-gp-form style="pointer-events:auto;width:100%;max-width:1120px;background:var(--color-surface);border-radius:12px;padding:28px 32px 24px;font-family:${sf};color:var(--color-text)">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <div style="font:700 24px/1.2 ${sf};letter-spacing:-.015em">${esc(F.titre)}</div>
+        <span style="font:400 13px ${sf};color:${muet}">trois questions, comme pour une prime du mois</span>
+        <span style="flex:1"></span><button ${x.A(F.fermer)} aria-label="Fermer" style="border:0;background:none;font-size:18px;color:${muet};cursor:pointer">✕</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:26px;margin-top:20px">
+        <div data-gp-etape="defi">${etape('1 · Le défi')}
+          <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px">${F.defis.map(d => `<button ${x.A(d.choisir)} data-gp-defi style="text-align:left;border-radius:12px;padding:12px 13px;cursor:pointer;font-family:${sf};color:var(--color-text);background:${d.on ? 'color-mix(in srgb, var(--color-primary) 6%, var(--color-surface))' : 'var(--color-surface)'};border:${d.on ? '2px solid var(--color-primary)' : '1px solid var(--color-border-secondary)'}">
+            <span style="display:block;font-size:21px;line-height:1">${d.emo}</span><b style="display:block;font:400 14px/1.3 ${sf};margin-top:6px">${esc(d.lib)}</b><span style="display:block;font:400 12px/1.35 ${sf};color:${muet};margin-top:2px">${esc(d.regle)}</span></button>`).join('')}</div>
+        </div>
+        <div data-gp-etape="prix">${etape('2 · Le prix')}
+          <label data-gp-photo style="display:flex;align-items:center;justify-content:center;height:150px;border-radius:12px;border:1px dashed var(--color-border-secondary);background:var(--color-background-secondary);overflow:hidden;cursor:pointer;position:relative">
+            ${F.photo ? `<img src="${esc(F.photo)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : `<span style="font:400 13px ${sf};color:${muet}">${F.envoiPhoto ? 'Envoi de la photo…' : 'Déposer une photo du prix (facultatif)'}</span>`}
+            <input type="file" accept="image/png,image/jpeg,image/webp" ${x.C(F.poserPhoto)} style="display:none"></label>
+          ${F.photo ? `<button ${x.A(F.retirerPhoto)} style="border:0;background:none;padding:6px 0 0;font:400 12.5px ${sf};color:${muet};cursor:pointer">Retirer la photo</button>` : ''}
+          ${champ('Intitulé', 'gp-titre', F.intitule, F.poserTitre, 'text', 'Refaire ta terrasse', 'maxlength="120"')}
+          ${champ('Ce qu’on gagne (une ligne)', 'gp-lot', F.lot, F.poserLot, 'text', 'Le bois, la pose et un salon de jardin', 'maxlength="255"')}
+          ${champ('Valeur (€)', 'gp-valeur', F.valeur, F.poserValeur, 'number', '5000', 'min="0" step="50"')}
+        </div>
+        <div data-gp-etape="offert">${etape('3 · Offert par')}
+          ${seg(F.payeurs)}
+          ${F.sponsor ? champ('Sponsor', 'gp-sponsor', F.nomSponsor, F.poserSponsor, 'text', 'Jardins & Terrasses Lemaire', 'maxlength="120"') + champ('Son site (facultatif)', 'gp-site', F.site, F.poserSite, 'text', 'www.…', 'maxlength="190"') : ''}
+          <span style="${lab}">Qui peut gagner</span><div style="${chp};background:transparent;padding:0;font-weight:400;color:${muet}">${esc(F.qui)}</div>
+          ${F.seuilSorte ? champ(esc(F.seuilLib), 'gp-seuil', F.seuil, F.poserSeuil, 'number', F.seuilDefaut, 'min="0" step="10"') : ''}
+          <span style="${lab}">Saison</span>${seg(F.saisons)}
+          ${F.saisonAnnee ? `<select id="gp-annee" ${x.C(F.poserAnnee)} style="${chp};margin-top:8px">${F.annees.map(a => `<option value="${esc(a.v)}"${a.on ? ' selected' : ''}>${esc(a.v)} — du 1er janvier au 31 décembre</option>`).join('')}</select>`
+            : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">${champ('Du mois', 'gp-du', F.du, F.poserDu, 'month')}${champ('Au mois', 'gp-au', F.au, F.poserAu, 'month')}</div>`}
+          <div style="font:400 12.5px/1.4 ${sf};color:${muet};margin-top:8px">${esc(F.resume)}</div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:1px solid var(--color-border-tertiary)">
+        <span style="font:400 13px ${sf};color:${muet}">${F.manque ? 'Il manque ' + esc(F.manque) + '.' : ''}</span>
+        <span style="flex:1"></span>
+        ${F.supprimer ? `<button ${x.A(F.supprimer)} style="border:0;background:none;font:400 14px ${sf};color:var(--color-primary);cursor:pointer">Retirer</button>` : ''}
+        <button ${x.A(F.fermer)} style="border:0;border-radius:6px;padding:11px 20px;font:400 14px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Annuler</button>
+        <button ${x.A(F.enregistrer)} data-gp-enregistrer style="border:0;border-radius:6px;padding:11px 22px;font:400 14px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer;${F.manque || F.envoi ? 'opacity:.45;pointer-events:none' : ''}">${F.envoi ? 'Enregistrement…' : F.edit ? 'Enregistrer' : 'Publier le grand prix'}</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function tplPrimesApp(c, x){
+  const { esc } = x;
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:inherit;font-size:11.5px;cursor:pointer`;
+  const carte2 = 'background:var(--color-surface);border-radius:12px';
+  const lbl2 = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)';
+  const inp = w => `width:${w}px;font-family:inherit;font-size:12.5px;padding:5px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right`;
+  const th2 = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:8px 9px;border-bottom:1px solid var(--color-border-secondary);text-align:right;vertical-align:bottom';
+  const td2 = 'padding:8px 9px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;vertical-align:middle';
+  const sm = 'display:block;font-weight:400;letter-spacing:0;text-transform:none;font-size:10px';
+  const bt = f => `border:0;background:${f ? 'var(--color-primary)' : 'var(--color-background-secondary)'};color:${f ? 'var(--color-surface)' : 'var(--color-text)'};border-radius:var(--radius-md);padding:var(--spacing-sm) 14px;font-family:inherit;font-size:12.5px;font-weight:400;cursor:pointer`;
+  // Les couleurs viennent toutes du design system (assets/ds/global.css) : pas de valeur en dur.
+  const typC = { target: 'background:var(--color-background-secondary);color:var(--color-text)', categorie: 'background:var(--color-collection-fill);color:var(--color-collection-icon)',
+    promo: 'background:var(--color-secondary);color:var(--color-on-abricot)', classement: 'background:var(--color-popup);color:var(--color-surface)' };
+  const typ = (t, lib) => `<span style="display:inline-block;font-size:10px;font-weight:400;letter-spacing:var(--tracking-admin);text-transform:uppercase;padding:2px 7px;border-radius:var(--radius-pill);${typC[t] || ''}">${esc(lib)}</span>`;
+  const alerte = 'background:var(--color-collection-fill);border:1px solid var(--color-collection-border);color:var(--color-collection-icon);border-radius:var(--radius-md)';
+  // L'icône d'une prime : la tuile du design system, l'icône déposée sinon l'emoji ; un clic dépose une icône.
+  const tuile = l => `<label title="Déposer une icône — PNG, SVG, WebP ou JPEG, 1 Mo au plus" data-pr-icone style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);border:0.5px ${l.icone ? 'solid' : 'dashed'} var(--color-border-secondary);overflow:hidden;cursor:pointer;vertical-align:middle">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}<input type="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" ${x.C(l.poserIcone)} style="display:none"></label>${l.icone ? `<button ${x.A(l.retirerIcone)} title="Retirer l’icône (l’emoji revient)" style="border:0;background:transparent;color:var(--color-text-muted);cursor:pointer;font-size:10px;padding:0 var(--spacing-xs);vertical-align:top">✕</button>` : ''}`;
+  const nomPrime = (l, nom) => `<span style="display:inline-flex;align-items:center;gap:var(--spacing-sm)">${tuile(l)}${nom}</span>`;
+  const P = c.prApp, PR = c.prPromos, MY = c.prMoy;
+  // Deux entrées du rail (23/10/2026) : la page admin (la marque, les primes de tous les franchisés, les promotions, les
+  // moyennes) ; la page franchisé, celle d'UN magasin (#/primes?shop=3), plus bas (tplPrimesMagasin).
+  const voir = () => '';
+  // Qui paie la prime : la marque, le magasin ou un sponsor (son nom).
+  // Une prime de la marque est payée par la marque ou un sponsor ; celle d'un franchisé, par son magasin (16/10/2026).
+  const payeur = l => l.famille === 'magasin' ? `<b>${esc(l.shopNom)}</b><span style="${sm};color:var(--color-text-muted)">payée par le magasin</span>` : `<select ${x.C(l.poserPayeur)} style="${inp(96)};text-align:left">${[['marque', 'Marque'], ['sponsor', 'Sponsor']].map(([v, t]) => `<option value="${v}"${l.payeur === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.payeur === 'sponsor' ? `<br><input value="${esc(l.sponsor)}" placeholder="nom du sponsor" ${x.C(l.poserSponsor)} style="${inp(110)};text-align:left;margin-top:4px">` : ''}`;
+  const champs = l => l.champs === 'croisees'
+    ? `tickets à 2 articles ou plus avec <select ${x.C(l.poserCategorie)} style="${inp(170)};text-align:left">${l.categories.map(k => `<option value="${esc(k)}"${k === l.categorie ? ' selected' : ''}>${esc(k || 'toutes catégories')}</option>`).join('')}</select><br>taux ≥ cible du magasin, défaut <input type="number" min="0" max="100" step="0.5" value="${esc(l.cibleDefaut)}" ${x.C(l.poserCibleDefaut)} style="${inp(56)}"> % · <input type="number" min="0" max="1000" step="5" value="${esc(l.minTickets)}" ${x.C(l.poserMinTickets)} style="${inp(52)}"> tickets min.${l.nCibles ? `<span style="${sm};color:var(--color-text-muted)">${l.nCibles} magasin(s) avec sa cible, plus bas</span>` : ''}`
+    : l.champs === 'google'
+    ? `note Google du magasin ≥ <input type="number" min="1" max="5" step="0.1" value="${esc(l.seuil)}" ${x.C(l.poserSeuil)} style="${inp(56)}"> ★ · <input type="number" min="0" max="200" step="1" value="${esc(l.heuresMin)}" ${x.C(l.poser('heuresMin', true))} style="${inp(50)}"> h min.`
+    : l.champs === 'objectif'
+    ? `CA ≥ <input type="number" min="50" max="200" step="1" value="${esc(l.pct)}" ${x.C(l.poser('pct', true))} style="${inp(56)}"> % de l’objectif · <input type="number" min="0" max="200" step="1" value="${esc(l.heuresMin)}" ${x.C(l.poser('heuresMin', true))} style="${inp(50)}"> h min.`
+    : l.champs === 'categorie'
+    ? `produits <input value="${esc(l.motif)}" placeholder="tarte" ${x.C(l.poser('motif', false))} style="${inp(110)};text-align:left;font-family:ui-monospace,monospace"> · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(52)}"> pcs min.`
+    : l.champs === 'promo'
+    ? `vendus pendant la promo · <select ${x.C(l.poserRegle)} style="${inp(150)};text-align:left">${l.regles.map(([v, t]) => `<option value="${v}"${l.regle === v ? ' selected' : ''}>${t}</option>`).join('')}</select>${l.surObjectif ? `<span style="${sm};margin-top:3px;color:var(--color-text)">objectifs : ${esc(l.objectifsTxt)}</span>` : ` · <input type="number" min="0" step="1" value="${esc(l.minPieces)}" ${x.C(l.poser('minPieces', true))} style="${inp(48)}"> ${l.regle === 'seuil' ? 'pcs (seuil)' : 'min.'}`}<span style="${sm};color:var(--color-text-muted)">${esc(l.promoNom)} · ${esc(l.promoSorte)} · ${esc(l.promoDates)} · ${esc(l.promoMags)} · ${esc(l.promoSource)}${l.promoVide ? ' · <b style="color:var(--color-primary)">produit introuvable</b>' : ''}</span>`
+    : esc(l.texte || '');
+  // Le tableau ne s'édite plus (16/10/2026) : l'interrupteur actif / éteint, et « Modifier » qui rouvre l'assistant.
+  const tuileFixe = l => `<span style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;flex:none;border-radius:var(--radius-md);background:var(--color-background-secondary);overflow:hidden">${l.icone ? `<img src="${esc(l.icone)}" alt="" style="width:24px;height:24px;object-fit:contain">` : `<span style="font-size:16px;line-height:1">${l.emo}</span>`}</span>`;
+  // La forme sobre, façon Réglages d'iPhone (23/10/2026, demande : « un beau tableau, simple, design, minimaliste type
+  // Apple ») : la police du système, des listes groupées blanches sur le fond, une ligne par prime — l'interrupteur, le nom,
+  // ce qui compte en gris, la récompense à droite ; toucher la ligne la modifie. Les primes se rangent par sorte.
+  const sf = "'Gotham',system-ui,sans-serif"; // police de l'interface (design system §4.1)
+  const filet = '1px solid var(--color-border-tertiary)';
+  const muet = 'var(--color-text-muted)';
+  const groupeSt = 'background:var(--color-surface);border-radius:12px;overflow:hidden';
+  const titreG = `font:400 11.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};padding:20px 18px 8px`;
+  const btP = `border:0;border-radius:6px;padding:9px 17px;font:400 13px ${sf};background:var(--color-primary);color:var(--color-surface);cursor:pointer`;
+  const btS = `border:0;border-radius:6px;padding:9px 17px;font:400 13px ${sf};background:var(--color-surface);color:var(--color-text);cursor:pointer`;
+  const btB2b = `border:0;border-radius:6px;padding:9px 17px;font:400 13px ${sf};background:var(--color-secondary);color:var(--color-on-abricot);cursor:pointer`;
+  const interIos = (on, fn, titre, attr) => `<label title="${esc(titre)}" ${attr || ''} style="position:relative;display:inline-block;width:42px;height:25px;cursor:pointer;flex:none"><input type="checkbox" ${on ? 'checked' : ''} ${x.C(fn)} style="position:absolute;opacity:0;width:0;height:0"><span style="position:absolute;inset:0;border-radius:12px;background:${on ? 'var(--color-primary)' : 'var(--color-border-secondary)'}"></span><span style="position:absolute;top:2px;left:${on ? 19 : 2}px;width:21px;height:21px;border-radius:50%;background:var(--color-surface);"></span></label>`;
+  // Sur un écran large (23/10/2026, « optimiser pour desktop ») : une ligne par prime en colonnes alignées — la prime, ce
+  // qui compte, qui gagne, le réseau, la récompense, qui paie (`.prl-*`, assets/css/app.css) ; plus étroit, la liste en
+  // trois lignes. Les colonnes se lisent sous un en-tête par groupe (`.prl-ent`, écran large seulement).
+  // Le corps d'une ligne : l'icône, le nom, ce qui compte, qui gagne, la moyenne, la récompense et qui paie.
+  const corpsP = l => `
+        ${tuileFixe(l)}
+        <span class="prl-txt">
+          <span class="prl-nom"><b style="font:400 15px/1.3 ${sf}">${esc(l.lib)}</b>${l.etatPeriode ? `<span data-pr-periode style="font:400 10px ${sf};letter-spacing:.04em;text-transform:uppercase;padding:2px 7px;border-radius:6px;background:var(--color-background-secondary);color:${muet}">${esc(l.etatPeriode)}</span>` : ''}</span>
+          <span class="prl-regle" style="font:400 13px/1.4 ${sf};color:${muet}">${esc(l.texte || '')}${l.periodeTxt ? ' · ' + esc(l.periodeTxt) : ''}${l.surObjectif ? ' · objectifs : ' + esc(l.objectifsTxt) : ''}${l.objectifTxt ? ' · ' + esc(l.objectifTxt) : ''}${l.promoVide ? ` · <b style="color:var(--color-primary)">produit introuvable</b>` : ''}</span>
+          <span class="prl-meta" style="font:400 12px/1.4 ${sf};color:${muet}"><span class="prl-qui">${esc(l.qui || '')}${l.peutClasser && l.classement ? ' · classement dans l’app' : ''}</span><span class="prl-res">${esc(l.moyenne || '')}</span></span>
+        </span>
+        <span class="prl-droite">
+          <b class="prl-mt" style="font:400 15px/1.3 ${sf};font-variant-numeric:tabular-nums">${esc(l.externe ? l.montant : (l.montantTxt || ''))}</b>
+          <span class="prl-pay" style="font:400 12px/1.35 ${sf};color:${muet}">${esc(l.externe ? 'réglé dans Targets & primes' : (l.payeurTxt || ''))}</span>
+        </span>`;
+  const ligneP = (l, i) => `<div data-pr-prime="${esc(l.type)}" class="prl" style="${i ? `border-top:${filet};` : ''}${l.externe || l.actif ? '' : 'opacity:.5'}">
+      ${l.externe ? `<span style="width:42px;text-align:center;color:var(--color-border-secondary);flex:none">—</span>` : interIos(l.actif, l.basculer, l.actif ? 'Active — toucher pour l’éteindre' : 'Éteinte — toucher pour l’activer', 'data-pr-actif')}
+      <button ${x.A(l.modifier)} data-pr-modifier class="prl-b" style="font-family:${sf};color:var(--color-text)">
+        ${corpsP(l)}
+        <span aria-hidden="true" class="prl-chev" style="color:var(--color-border-secondary);font:400 22px/1 ${sf}">›</span>
+      </button></div>`;
+  const enteteP = (moyLib, lire) => `<div class="prl prl-ent" aria-hidden="true">${lire ? '' : '<span style="width:42px;flex:none"></span>'}<div class="prl-b" style="font:400 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}">
+      <span></span><span>Prime</span><span>Ce qui compte</span><span>Qui gagne</span><span>${esc(moyLib || 'Réseau')}</span><span class="prl-mt">Récompense</span><span>Payée par</span><span></span></div></div>`;
+  // La même ligne, à lire seulement (23/10/2026) : une prime de la marque sur la page d'un magasin.
+  const ligneLire = (l, i) => `<div data-pr-prime="${esc(l.type)}" data-pr-lire class="prl prl-lire" style="${i ? `border-top:${filet};` : ''}">
+      <div class="prl-b" style="font-family:${sf};color:var(--color-text)">
+        ${corpsP(l)}
+        <span class="prl-chev"></span>
+      </div></div>`;
+  // Les sortes, dans l'ordre : les targets (Bats ton record et la meilleure vendeuse avec eux), les catégories, les promos,
+  // les clients pro (la prime B2B, 23/10/2026).
+  const SORTES = [['target', 'Targets', t => t === 'target' || t === 'classement'], ['categorie', 'Catégories', t => t === 'categorie'],
+    ['promo', 'Promos', t => t === 'promo'], ['b2b', 'Clients pro · B2B', t => t === 'b2b']];
+  const groupes = (ls, ligne, moyLib) => SORTES.map(([cle, titre, de]) => { const g = ls.filter(l => de(l.type));
+    return g.length ? `<div data-pr-groupe="${cle}"><div style="${titreG}">${esc(titre)}<span style="font-weight:400;letter-spacing:0;text-transform:none;margin-left:6px">${g.length}</span></div><div style="${groupeSt}">${enteteP(moyLib, ligne === ligneLire)}${g.map(ligne || ligneP).join('')}</div></div>` : ''; }).join('');
+  const tete = (titre, sous, droite) => `<div style="display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;padding:0 4px">
+      <div style="flex:1;min-width:280px"><div style="font:700 22px/1.2 ${sf};letter-spacing:-.018em;color:var(--color-text)">${titre}</div>${sous ? `<div style="font:400 13px/1.45 ${sf};color:${muet};margin-top:3px;max-width:760px">${sous}</div>` : ''}</div>${droite || ''}</div>`;
+  const vide = t => `<div style="${groupeSt};margin-top:12px;padding:16px 18px;font:400 14px ${sf};color:${muet}">${t}</div>`;
+  // La page franchisé (23/10/2026, Sam : « le panneau de contrôle des primes pour son magasin ») : UN magasin, celui de
+  // l'adresse (#/primes?shop=3), dans la même forme sobre. Les primes de la marque et des sponsors qui y
+  // tournent, à lire ; les siennes, à poser avec les données du magasin ; ses chiffres ; les promotions du panel.
+  const segm = ls => `<div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${ls.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:400 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>`;
+  // Le choix du mois (24/10/2026, « un month picker ») : ‹ octobre 2026 ›, et au toucher du mois la grille des douze mois
+  // de l'année, l'année d'un geste ; les mois à venir sont grisés. L'année seule : ‹ 2026 ›.
+  const flecheBt = (fn, sens) => `<button ${fn ? x.A(fn) : 'disabled'} aria-label="${sens < 0 ? 'Précédent' : 'Suivant'}" style="border:0;border-radius:8px;width:30px;height:30px;font:400 16px/1 ${sf};cursor:${fn ? 'pointer' : 'default'};background:transparent;color:${fn ? 'var(--color-text)' : 'var(--color-border-secondary)'}">${sens < 0 ? '‹' : '›'}</button>`;
+  const pastille = `display:inline-flex;align-items:center;gap:0;background:var(--color-border-tertiary);border-radius:10px;padding:2px`;
+  const pickerMoisT = P => `<div data-pr-mois style="position:relative;${pastille}">
+      ${flecheBt(P.prec, -1)}
+      <button ${x.A(P.ouvrir)} data-pr-mois-ouvrir aria-expanded="${P.ouvert}" style="border:0;border-radius:8px;padding:6px 12px;min-width:148px;font:400 12.5px ${sf};cursor:pointer;background:var(--color-surface);color:var(--color-text);">${esc(P.lib)}${P.enCours ? `<span style="font-weight:400;color:${muet}"> · en cours</span>` : ''}</button>
+      ${flecheBt(P.suiv, 1)}
+      ${P.ouvert ? `<div data-pr-mois-grille style="position:absolute;top:calc(100% + 8px);right:0;z-index:30;width:276px;background:var(--color-surface);border-radius:12px;padding:10px 12px 12px">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0 0 6px">${flecheBt(P.anPrec, -1)}<b style="font:400 14px ${sf}">${P.an}</b>${flecheBt(P.anSuiv, 1)}</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">${P.grille.map(g => `<button ${g.choisir ? x.A(g.choisir) : 'disabled'} style="border:0;border-radius:9px;padding:9px 0;font:${g.on ? 600 : 500} 13px ${sf};cursor:${g.choisir ? 'pointer' : 'default'};background:${g.on ? 'var(--color-primary)' : 'transparent'};color:${g.on ? 'var(--color-surface)' : g.choisir ? 'var(--color-text)' : 'var(--color-border-secondary)'};${g.enCours && !g.on ? 'box-shadow:inset 0 0 0 1px var(--color-primary);' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+        <div style="display:flex;justify-content:flex-end;padding-top:8px"><button ${x.A(P.fermer)} style="border:0;background:none;font:400 12.5px ${sf};color:${muet};cursor:pointer">Fermer</button></div>
+      </div>` : ''}
+    </div>`;
+  const stepperT = P => `<div data-pr-an style="${pastille}">${flecheBt(P.prec, -1)}<span style="border-radius:8px;padding:6px 14px;font:400 12.5px ${sf};background:var(--color-surface);">${esc(P.lib)}${P.enCours ? `<span style="font-weight:400;color:${muet}"> · en cours</span>` : ''}</span>${flecheBt(P.suiv, 1)}</div>`;
+  // L'année des primes (24/10/2026) : une ligne par vendeuse (ou par magasin), une colonne par prime gagnée — le montant de
+  // l'année, et combien de mois ; l'en-tête trie, la première colonne reste en place.
+  const tableAn = (A, nomCol, dansCarte) => {
+    const g = 'position:sticky;left:0;z-index:1;background:var(--color-surface)';
+    const bt = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
+    const fl = t => (t.fleche ? `<span data-an-fleche style="color:var(--color-primary);font-weight:400;margin-left:4px">${t.fleche}</span>` : '');
+    const petit = `font:400 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}`;
+    // La page d'un magasin (31/10/2026) : les colonnes sous leur famille — la marque, le magasin —, un filet entre les deux,
+    // et le total juste après le nom avec la part de chacune. Sans familles (la page du réseau) : le total en bout de ligne.
+    const BD = A.bandes && A.bandes.length ? A.bandes : null;
+    const FC = { marque: ['var(--color-primary)', 'var(--color-primary)'], magasin: ['var(--color-collection-border)', 'var(--color-on-abricot)'] };
+    const entreeA = p => (BD && p.debut && A.cols[0] !== p ? 'border-left:1px solid var(--color-border-secondary);padding-left:18px;' : '');
+    const thTotal = rs => `<th${rs ? ' rowspan="2"' : ''} aria-sort="${A.triTotal.aria}" style="text-align:${BD ? 'left' : 'right'};padding:${BD ? '16px 18px 10px 14px' : '14px 16px 10px'};vertical-align:bottom;${petit};white-space:nowrap${BD ? ';border-right:1px solid var(--color-border-secondary)' : ''}"><button ${x.A(A.triTotal.trier)} data-an-tri="total" style="${bt}">Total${fl(A.triTotal)}</button></th>`;
+    const tdTotal = r => (BD ? `<td data-an-total style="padding:12px 18px 12px 14px;border-top:${filet};border-right:1px solid var(--color-border-secondary);vertical-align:top;white-space:nowrap"><div style="font:400 14px/1.3 ${sf};font-variant-numeric:tabular-nums">${esc(r.total)}</div>${r.parts ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:3px">${esc(r.parts)}</div>` : ''}</td>`
+      : `<td style="padding:11px 16px;border-top:${filet};text-align:right;vertical-align:top;font:400 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(r.total)}</td>`);
+    const thCol = p => `<th data-an-prime="${esc(p.cle)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:${BD ? '10px' : '14px'} 12px 10px;vertical-align:bottom;min-width:112px;${entreeA(p)}${BD ? `border-bottom:${filet};` : ''}"><button ${x.A(p.tri.trier)} data-an-tri="${esc(p.cle)}" style="${bt}">
+            <div style="font:400 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fl(p.tri)}</div>
+            ${BD ? '' : `<div style="font:400 11.5px/1.35 ${sf};color:${p.duMagasin ? 'var(--color-on-abricot)' : muet};margin-top:3px;white-space:nowrap">${esc(p.payeur)}</div>`}
+            <div style="font:${BD ? 400 : 600} 11.5px/1.35 ${sf};color:${BD ? muet : '#3f7a52'};margin-top:${BD ? 3 : 2}px;white-space:nowrap">${esc(p.somme)}</div></button></th>`;
+    const thNom = rs => `<th${rs ? ' rowspan="2"' : ''} aria-sort="${A.triNom.aria}" style="${g};${rs ? 'z-index:2;' : ''}text-align:left;padding:${BD ? '16px 16px 10px 20px' : '14px 16px 10px'};${petit};min-width:160px;vertical-align:bottom"><button ${x.A(A.triNom.trier)} data-an-tri="nom" style="${bt}">${esc(nomCol)}${fl(A.triNom)}</button></th>`;
+    const tete2 = BD
+      ? `<tr data-an-bandes>${thNom(true)}${thTotal(true)}${BD.map((b, i) => `<th colspan="${b.n}" data-an-bande-tete="${esc(b.cle)}" style="text-align:left;padding:16px 12px 8px;${i ? 'border-left:1px solid var(--color-border-secondary);padding-left:18px;' : ''}border-bottom:2px solid ${FC[b.cle][0]};white-space:nowrap;vertical-align:bottom"><span style="font:400 12.5px/1.2 ${sf};color:${FC[b.cle][1]}">${esc(b.lib)}</span><span style="font:400 12.5px ${sf};color:${muet}"> · ${b.n}</span></th>`).join('')}</tr><tr>${A.cols.map(thCol).join('')}</tr>`
+      : `<tr>${thNom(false)}${A.cols.map(thCol).join('')}${thTotal(false)}</tr>`;
+    const tab = `<div style="overflow-x:auto${dansCarte ? `;border-top:${filet}` : ''}">
+      <table data-an style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
+        <thead>${tete2}</thead>
+        <tbody>${A.lignes.map(r => `<tr data-an-ligne>
+          <td style="${g};padding:${BD ? '12px 16px 12px 20px' : '11px 16px'};border-top:${filet};vertical-align:top"><div style="font:400 14px/1.3 ${sf};white-space:nowrap">${esc(r.nom)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(r.sous)}</div></td>
+          ${BD ? tdTotal(r) : ''}
+          ${r.cases.map((k, i) => { const p = A.cols[i] || {}; return !k ? `<td style="padding:11px 12px;border-top:${filet};color:var(--color-border-secondary);${entreeA(p)}">·</td>` : `<td style="padding:11px 12px;border-top:${filet};vertical-align:top;${entreeA(p)}">
+            <div style="font:400 13px/1.3 ${sf};color:var(--green);font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div><div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div></td>`; }).join('')}
+          ${BD ? '' : tdTotal(r)}</tr>`).join('')}</tbody>
+      </table></div>`;
+    return dansCarte ? tab : `<div style="${groupeSt};margin-top:12px">${tab}</div>`;
+  };
+  // Les mois du réseau en barres fines : ce qui a été gagné chaque mois.
+  const barresAn = ls => (ls.length ? `<div data-an-barres style="${groupeSt};margin-top:12px;padding:14px 18px 10px;display:flex;align-items:flex-end;gap:10px;height:96px">${ls.map(b => `<div title="${esc(b.titre)}" style="flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;height:100%;justify-content:flex-end">
+      <div style="width:100%;max-width:34px;height:${Math.max(2, b.h)}%;border-radius:5px 5px 2px 2px;background:${b.enCours ? 'var(--color-secondary)' : 'var(--color-primary)'};opacity:${b.h ? 1 : .25}"></div>
+      <span style="font:400 11px ${sf};color:${muet}">${esc(b.lib)}</span></div>`).join('')}</div>` : '');
+  const FR = c.prFr;
+  // La page d'un magasin, refaite sobre (31/10/2026, Sam : « c'est moche, il faut retravailler ») : la forme Apple du
+  // reste du module — du blanc, des filets, une seule couleur par famille, posée sur des traits fins et des pastilles,
+  // jamais en aplat. « + Créer une nouvelle prime » vit sur la ligne des onglets, au-dessus de tout.
+  const FAM = { marque: { c: 'var(--color-primary)', t: 'var(--color-primary)', lib: 'marque' }, magasin: { c: 'var(--color-collection-border)', t: 'var(--color-on-abricot)', lib: 'magasin' } };
+  const pointF = b => `<span aria-hidden="true" style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${FAM[b].c};margin-right:6px;vertical-align:0"></span>`;
+  // Une barre en deux couleurs : la marque, puis le magasin, sur tout ce qui est en jeu.
+  const barre2 = (B, w, h) => `<div aria-hidden="true" style="display:flex;height:${h}px;border-radius:${h}px;background:var(--color-border-tertiary);overflow:hidden;max-width:${w}px">${B.m > 0 ? `<i style="display:block;width:${B.m}%;background:${FAM.marque.c}"></i>` : ''}${B.g > 0 ? `<i style="display:block;width:${B.g}%;background:${FAM.magasin.c}"></i>` : ''}</div>`;
+  const chevron = ouvert => `<span aria-hidden="true" style="display:inline-block;flex:none;font:400 21px/1 ${sf};color:var(--color-border-secondary);transform:rotate(${ouvert ? 90 : 0}deg);transition:transform .15s">›</span>`;
+  const frPage = () => {
+    const shopId = `<span data-pr-shop="${esc(FR.id)}" style="font:400 12.5px ${sf};padding:6px 13px;border-radius:6px;background:var(--color-surface);color:var(--color-text);font-variant-numeric:tabular-nums">shop ${esc(FR.id)}</span>`;
+    const entete = `<section data-pr="fr-tete">${tete(esc(FR.nom || 'Magasin ' + FR.id), '', shopId)}</section>`;
+    if (!FR.connu) {
+      return entete + `<section data-pr="fr-inconnu"><div style="${groupeSt};padding:18px">
+        <div style="font:400 14px ${sf};color:var(--color-primary)">Aucun magasin « ${esc(FR.id)} » dans le panel.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">${FR.magasins.map(m => `<button ${x.A(m.aller)} style="${btS};background:var(--color-background-secondary);font-weight:400">${esc(m.nom)} · shop ${esc(m.id)}</button>`).join('')}</div></div></section>`;
+    }
+    // L'avancement des vendeuses : une carte blanche — le titre (il replie la carte), la ligne de l'équipe, le tableau.
+    const EQ = FR.equipe;
+    const VE = FR.volets.equipe;
+    const tonCouleur = { gagne: '#3f7a52', tete: 'var(--color-primary)', route: 'var(--color-text)', perdu: muet, vide: muet, hors: muet };
+    const petitEnt = `font:400 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet}`;
+    const btTri = 'border:0;background:none;padding:0;margin:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;text-align:inherit;cursor:pointer;display:block;width:100%';
+    const fleche = t => (t.fleche ? `<span data-eq-fleche style="color:var(--color-primary);font-weight:400;margin-left:4px">${t.fleche}</span>` : '');
+    // L'entrée d'une famille : un filet et de l'air, rien de plus.
+    const entree = debut => (debut ? `border-left:1px solid var(--color-border-secondary);padding-left:18px;` : '');
+    const caseEq = k => k.ton === 'hors' ? `<td data-eq-case="hors" data-eq-bande="${esc(k.bande || '')}" style="padding:12px;border-top:${filet};${entree(k.debut)}color:var(--color-border-secondary)">·</td>`
+      : `<td data-eq-case="${esc(k.ton)}" data-eq-bande="${esc(k.bande || '')}" style="padding:12px;border-top:${filet};${entree(k.debut)}vertical-align:top;min-width:108px">
+        <div style="font:${k.ton === 'vide' ? 400 : 600} 13.5px/1.3 ${sf};color:${tonCouleur[k.ton] || 'var(--color-text)'};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(k.haut)}</div>
+        ${k.niveau != null && k.ton !== 'gagne' && k.ton !== 'tete' ? `<div style="height:3px;border-radius:2px;background:var(--color-border-tertiary);margin:7px 0 5px;max-width:104px;overflow:hidden"><div style="height:100%;width:${Math.max(3, Math.min(100, k.niveau))}%;background:${k.ton === 'perdu' ? 'var(--color-border-secondary)' : (FAM[k.bande] || FAM.marque).c}"></div></div>` : ''}
+        ${k.bas ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(k.bas)}</div>` : ''}</td>`;
+    const colGauche = 'position:sticky;left:0;z-index:1;background:var(--color-surface)';
+    const thFam = (b, i) => `<th colspan="${b.n}" data-eq-bande-tete="${esc(b.cle)}" style="text-align:left;padding:16px 12px 8px;${i ? 'border-left:1px solid var(--color-border-secondary);padding-left:18px;' : ''}border-bottom:2px solid ${FAM[b.cle].c};white-space:nowrap;vertical-align:bottom">
+          <span style="font:400 12.5px/1.2 ${sf};color:${FAM[b.cle].t}">${esc(b.lib)}</span><span style="font:400 12.5px ${sf};color:${muet}"> · ${b.n}</span></th>`;
+    const cumulTd = v => `<td data-eq-cumul class="eq-cumul" style="padding:12px 18px 12px 14px;border-top:${filet};vertical-align:top;min-width:170px;border-right:1px solid var(--color-border-secondary)">
+          ${v.cumul.rien ? `<div style="font:400 13px/1.3 ${sf};color:${muet}">—</div>` : `<div style="font:400 14px/1.3 ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(v.cumul.atteint)}<span style="font-weight:400;color:${muet}"> / ${esc(v.cumul.jeu)}</span></div>
+          <div style="margin:7px 0 5px">${barre2(v.cumul.barre, 140, 4)}</div>
+          ${v.cumul.parts ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.cumul.parts)}</div>` : ''}`}</td>`;
+    const tableEq = () => `<div style="overflow-x:auto;border-top:${filet}">
+      <table data-eq style="border-collapse:separate;border-spacing:0;min-width:100%;font-family:${sf}">
+        <thead><tr data-eq-bandes>
+          <th rowspan="2" class="eq-nom" aria-sort="${EQ.triNom.aria}" style="${colGauche};z-index:2;text-align:left;padding:16px 16px 10px 20px;${petitEnt};min-width:150px;vertical-align:bottom"><button ${x.A(EQ.triNom.trier)} data-eq-tri="nom" title="Trier par nom" style="${btTri}">Vendeuse${fleche(EQ.triNom)}</button></th>
+          <th rowspan="2" class="eq-cumul" aria-sort="${EQ.triAcquis.aria}" style="text-align:left;padding:16px 18px 10px 14px;vertical-align:bottom;border-right:1px solid var(--color-border-secondary)"><button ${x.A(EQ.triAcquis.trier)} data-eq-tri="acquis" title="Trier sur ce qui est atteint" style="${btTri}">
+            <div style="${petitEnt}">Cumul${fleche(EQ.triAcquis)}</div>
+            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:5px;white-space:nowrap">${EQ.enCours ? 'atteint / en jeu' : 'gagné / possible'}</div></button></th>
+          ${EQ.bandes.map(thFam).join('')}
+        </tr><tr>
+          ${EQ.primes.map(p => `<th data-eq-prime="${esc(p.cle)}" data-eq-bande="${esc(p.bande)}" aria-sort="${p.tri.aria}" style="text-align:left;padding:10px 12px 10px;${entree(p.debut)}vertical-align:bottom;min-width:108px;border-bottom:${filet}"><button ${x.A(p.tri.trier)} data-eq-tri="${esc(p.cle)}" title="${esc(p.compteLong)} — trier sur cette prime" style="${btTri}">
+            <div style="font:400 13px/1.25 ${sf};color:var(--color-text);max-width:150px">${esc(p.lib)}${fleche(p.tri)}</div>
+            <div style="font:400 12px/1.35 ${sf};color:${muet};margin-top:3px;white-space:nowrap">${esc(p.recompense)}${p.sponsor ? ' · ' + esc(p.sponsor) : ''}${p.equipe ? ' · <span data-eq-equipe>équipe</span>' : ''}</div>
+            <div style="font:400 11.5px/1.35 ${sf};color:${muet};margin-top:1px;white-space:nowrap">✓ ${esc(p.compte)}</div></button></th>`).join('')}
+        </tr></thead>
+        <tbody>${EQ.vendeuses.map(v => `<tr data-eq-vendeuse>
+          <td class="eq-nom" title="${esc(v.nom)}" style="${colGauche};padding:12px 16px 12px 20px;border-top:${filet};vertical-align:top"><div style="font:400 14px/1.3 ${sf};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(v.nom)}</div>${v.sous ? `<div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${esc(v.sous)}</div>` : ''}</td>
+          ${cumulTd(v)}
+          ${v.cases.map(caseEq).join('')}</tr>`).join('')}</tbody>
+      </table></div>
+      <div style="font:400 12px/1.5 ${sf};color:${muet};padding:11px 20px 14px;border-top:${filet}">${pointF('marque')}la marque et ses sponsors · ${pointF('magasin')}le magasin · ✓ gagnée · <span style="color:var(--color-primary)">en tête</span> : 1re du magasin pour l’instant · la barre : le chemin vers l’objectif · un clic sur un en-tête trie${EQ.quand ? ' · lu à ' + esc(EQ.quand) : ''}</div>`;
+    // La ligne de l'équipe : le total, sa barre marque + magasin, puis chaque famille et les vendeuses primées.
+    const SY = EQ.synthese;
+    const stat = (lib, haut, sur, sous, attr) => `<div ${attr || ''} style="min-width:118px"><div style="font:400 12.5px/1.2 ${sf};color:${muet};white-space:nowrap">${lib}</div>
+        <div style="font:400 18px/1.3 ${sf};font-variant-numeric:tabular-nums;margin-top:4px;white-space:nowrap">${haut}${sur ? `<span style="font:400 13px ${sf};color:${muet}"> / ${sur}</span>` : ''}</div>
+        <div style="font:400 11.5px/1.35 ${sf};color:${muet};white-space:nowrap">${sous}</div></div>`;
+    const synthese = () => (!SY ? '' : `<div data-eq-synthese style="display:flex;align-items:flex-end;gap:14px 36px;flex-wrap:wrap;padding:4px 20px 20px">
+        <div style="flex:1 1 320px;min-width:260px">
+          <div style="white-space:nowrap"><span data-eq-total style="font:700 26px/1.1 ${sf};letter-spacing:-.02em;font-variant-numeric:tabular-nums">${esc(SY.atteint)}</span><span style="font:400 14px ${sf};color:${muet}"> ${esc(SY.mot)} ${esc(SY.jeu)} ${esc(SY.motJeu)}</span></div>
+          <div style="margin-top:12px">${barre2(SY.barre, 560, 6)}</div>
+        </div>
+        <div style="display:flex;gap:14px 36px;flex-wrap:wrap">${SY.familles.map(f => stat(pointF(f.cle) + esc(f.lib), esc(f.atteint), esc(f.jeu), esc(f.sous), `data-eq-famille="${esc(f.cle)}"`)).join('')}
+        ${stat('Primées', esc(SY.primees), '', esc(SY.primeesLib))}</div>
+      </div>`);
+    const videIn = t => `<div style="padding:6px 20px 22px;font:400 14px/1.45 ${sf};color:${muet}">${t}</div>`;
+    // « Le magasin, ensemble » (31/10/2026, comme le dashboard magasin) : la frise des primes d'équipe au-dessus du tableau —
+    // un anneau par prime (la couleur de sa famille, vert une fois atteinte), ce que chacune touche, ce qu'il reste.
+    const anneau = (niveau, ok, perdu, b, centre, sousC) => { const C = 2 * Math.PI * 25, n = Math.max(0, Math.min(100, niveau || 0));
+      return `<span style="position:relative;flex:none;width:62px;height:62px"><svg viewBox="0 0 62 62" width="62" height="62" aria-hidden="true" style="transform:rotate(-90deg)"><circle cx="31" cy="31" r="25" fill="none" stroke="var(--color-border-tertiary)" stroke-width="6"/>${n > 0 ? `<circle cx="31" cy="31" r="25" fill="none" stroke="${ok ? '#3f7a52' : perdu ? 'var(--color-border-secondary)' : (FAM[b] || FAM.marque).c}" stroke-width="6" stroke-linecap="round" stroke-dasharray="${(C * n / 100).toFixed(1)} ${C.toFixed(1)}"/>` : ''}</svg>
+        <span style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05"><b style="font:400 12.5px ${sf};font-variant-numeric:tabular-nums;white-space:nowrap">${esc(centre)}</b>${sousC ? `<small style="font:400 10px ${sf};color:${muet}">${esc(sousC)}</small>` : ''}</span></span>`; };
+    const frise = (F, an) => (!F ? '' : `<div data-eq-frise style="padding:0 20px 18px">
+        <div style="display:flex;align-items:flex-end;gap:6px 16px;flex-wrap:wrap;padding-top:14px;border-top:${filet}">
+          <span style="flex:1 1 260px;min-width:0"><b style="display:block;font:400 14px/1.3 ${sf}">Le magasin, ensemble</b><span style="display:block;font:400 12.5px/1.4 ${sf};color:${muet};margin-top:1px">${esc(F.sous)}</span></span>
+          <span style="text-align:right;white-space:nowrap"><b style="font:400 16px ${sf};color:var(--green);font-variant-numeric:tabular-nums">${esc(an ? F.total : F.chacune)}</b><span style="display:block;font:400 11.5px ${sf};color:${muet}">${esc(an ? F.totalSous : 'chacune si tout est atteint · ' + F.pot + ' pour l’équipe')}</span></span>
+        </div>
+        <div data-eq-frise-anneaux style="display:flex;gap:10px;overflow-x:auto;margin-top:12px;padding-bottom:2px">${F.items.map(it => `<div data-eq-frise-prime="${esc(it.cle)}" style="flex:0 0 auto;min-width:250px;display:flex;align-items:center;gap:13px;padding:11px 16px 11px 12px;border-radius:12px;background:var(--color-background-secondary)">
+            ${an ? anneau(it.niveau, false, false, it.bande, it.centre, it.centreSous) : anneau(it.niveau, it.atteint, it.perdu, it.bande, it.val, it.proj ? 'proj.' : '')}
+            <span style="min-width:0"><b style="display:block;font:400 13px/1.3 ${sf}">${pointF(it.bande)}${esc(it.lib)}</b>
+              <span style="display:block;font:400 12px/1.4 ${sf};color:${muet};white-space:nowrap">${esc(an ? it.l1 : [it.cible, it.chacune].filter(Boolean).join(' · '))}</span>
+              <span style="display:block;font:${!an && it.atteint ? 600 : 400} 12px/1.4 ${sf};color:${!an && it.atteint ? '#3f7a52' : muet};white-space:nowrap">${esc(an ? it.l2 : it.etat)}</span></span>
+          </div>`).join('')}</div>
+        ${!an && (F.elig.length || F.hors.length) ? `<div style="display:flex;flex-wrap:wrap;gap:5px;align-items:center;margin-top:11px">
+          <span style="font:400 10px ${sf};letter-spacing:.06em;text-transform:uppercase;color:${muet};margin-right:4px">Éligibles · ${F.elig.length}</span>${F.elig.map(n => `<span style="font:400 11.5px ${sf};padding:3px 9px;border-radius:6px;background:#eaf3ec;color:#245f31">${esc(n)}</span>`).join('')}
+          ${F.hors.length ? `<span style="font:400 10px ${sf};letter-spacing:.06em;text-transform:uppercase;color:${muet};margin:0 4px 0 10px">Sous le min. d’heures · ${F.hors.length}</span>${F.hors.map(n => `<span style="font:400 11.5px ${sf};padding:3px 9px;border-radius:6px;background:var(--color-background-secondary);color:${muet}">${esc(n)}</span>`).join('')}` : ''}
+        </div>` : ''}
+      </div>`);
+    const controlesEq = `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(EQ.filtres)}${segm(EQ.vues)}${EQ.vue === 'annee' ? stepperT(EQ.annee.picker) : pickerMoisT(EQ.picker)}</div>`;
+    const corpsEq = EQ.vue === 'annee'
+      ? (EQ.annee.chargement ? videIn('Calcul de l’année, mois par mois…') : EQ.annee.motif ? videIn(esc(EQ.annee.motif)) : !EQ.annee.lignes.length ? videIn('Aucune prime gagnée dans ce magasin cette année-là' + (EQ.filtres[1].on ? ' parmi celles du magasin.' : '.'))
+        : frise(EQ.annee.frise, true) + (EQ.annee.cols.length ? tableAn(EQ.annee, 'Vendeuse', true) : '') + `<div style="font:400 12px/1.5 ${sf};color:${muet};padding:11px 20px 14px;border-top:${filet}">${pointF('marque')}la marque et ses sponsors · ${pointF('magasin')}le magasin · le montant gagné sur l’année et le nombre de mois · ✓ cadeau : une prime sans euros · un clic sur un en-tête trie</div>`)
+      : EQ.chargement ? videIn('Lecture de l’équipe…') : EQ.motif ? videIn(esc(EQ.motif)) : !EQ.vendeuses.length ? videIn('Personne au planning ni en caisse dans ce magasin ce mois-là.')
+        : !EQ.primes.length && !EQ.frise ? videIn('Aucune prime du magasin ce mois-là.') : synthese() + frise(EQ.frise, false) + (EQ.primes.length ? tableEq() : '');
+    const resumeEq = !VE.ouvert && EQ.resume ? EQ.resume : EQ.vue === 'annee' ? (EQ.annee.periode ? EQ.annee.periode + ' · ' + EQ.annee.total + ' gagnés' : 'L’année du magasin, prime par prime.') : 'Ce que chacune voit dans Mes primes, la marque et le magasin à part.';
+    const equipe = `<section data-pr="fr-equipe" data-pr-volet="equipe" data-ouvert="${VE.ouvert ? 1 : 0}" style="${groupeSt};overflow:visible">
+      <div style="display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:18px 20px ${VE.ouvert ? 14 : 18}px">
+        <button ${x.A(VE.basculer)} data-pr-volet-bascule="equipe" aria-expanded="${VE.ouvert}" style="flex:1 1 300px;min-width:0;border:0;background:none;padding:0;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+          <span style="display:flex;align-items:center;gap:10px"><span style="font:700 21px/1.2 ${sf};letter-spacing:-.015em">Où en sont tes vendeuses</span>${chevron(VE.ouvert)}</span>
+          <span data-pr-volet-resume style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc(resumeEq)}</span>
+        </button>
+        ${VE.ouvert ? controlesEq : ''}
+      </div>
+      ${VE.ouvert ? corpsEq : ''}
+    </section>`;
+    // Le reste de la page (31/10/2026, Sam : « tout ceci en toggle (paramètres), dans des tableaux compréhensibles et
+    // visuels ») : un seul volet « Paramètres », replié ; ouvert, ses quatre parties se suivent, chacune en tableau, sans
+    // volet dans le volet. Une partie : son titre, ce qu'elle contient, ses boutons, son tableau.
+    const item = (cle, titre, resume, droite, corps) => ({ cle, titre, resume, droite, corps });
+    const partie = it => `<section data-pr="fr-${it.cle}" class="prl-mag" style="margin-top:24px">
+        <div style="display:flex;align-items:flex-end;gap:10px 16px;flex-wrap:wrap;padding:0 4px">
+          <span style="flex:1 1 300px;min-width:0"><span style="display:block;font:400 16px/1.25 ${sf};letter-spacing:-.01em">${it.titre}</span><span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:2px">${esc(it.resume)}</span></span>
+          ${it.droite || ''}
+        </div>
+        ${it.corps}
+      </section>`;
+    const btRelire = fn => `<button ${x.A(fn)} style="border:0;border-radius:6px;padding:6px 13px;font:400 12.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer">Relire</button>`;
+    const marque = item('marque', pointF('marque') + 'Primes de la marque et des sponsors', FR.resumes.marque, '',
+      !FR.marque.length ? vide('Aucune prime de la marque ni des sponsors ne tourne dans ce magasin pour l’instant.') : groupes(FR.marque, ligneLire, 'Ce magasin'));
+    const siennes = item('magasin', pointF('magasin') + 'Les primes du magasin', FR.resumes.magasin, '',
+      FR.siennes.length ? groupes(FR.siennes, null, 'Ce magasin') : vide('Aucune prime du magasin pour l’instant : « + Créer une nouvelle prime », en haut de la page.'));
+    // Les chiffres du magasin (31/10/2026, « en tuiles, sans volet, juste visibles ») : une tuile par mesure — la valeur
+    // du magasin, l'écart au réseau (▲ au-dessus, ▼ en dessous), la valeur du réseau.
+    const tuileC = t => `<div data-pr-tuile style="background:var(--color-background-secondary);border-radius:12px;padding:12px 14px 11px;min-width:0">
+        <div style="font:400 12.5px/1.3 ${sf};color:${muet};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${esc(t.lib)}">${esc(t.lib)}</div>
+        <div style="display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:5px"><span style="font:700 22px/1.15 ${sf};font-variant-numeric:tabular-nums">${esc(t.v)}</span>
+          ${t.ecart ? `<span style="font:400 11.5px ${sf};padding:2px 7px;border-radius:6px;white-space:nowrap;${t.ecart.sens > 0 ? 'background:#eaf3ec;color:#245f31' : t.ecart.sens < 0 ? 'background:#f6e6e8;color:var(--color-primary)' : `background:var(--color-surface);color:${muet}`}">${t.ecart.sens > 0 ? '▲ ' : t.ecart.sens < 0 ? '▼ ' : '= '}${esc(t.ecart.txt)}</span>` : ''}</div>
+        ${t.reseau || t.sous ? `<div style="font:400 11.5px/1.4 ${sf};color:${muet};margin-top:4px">${esc([t.reseau, t.sous].filter(Boolean).join(' · '))}</div>` : ''}
+      </div>`;
+    const tuilesC = ls => `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:10px">${ls.map(tuileC).join('')}</div>`;
+    const sousT = t => `<div style="font:400 11px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};margin:18px 0 9px">${esc(t)}</div>`;
+    const chiffres = `<section data-pr="fr-donnees" style="${groupeSt}">
+      <div style="display:flex;align-items:center;gap:12px 18px;flex-wrap:wrap;padding:18px 20px 14px">
+        <span style="flex:1 1 300px;min-width:0"><span style="display:block;font:700 21px/1.2 ${sf};letter-spacing:-.015em">Les chiffres du magasin</span><span style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc((FR.periode ? FR.periode + ' · ' : '') + 'par mois, face au réseau')}</span></span>
+        <div style="display:inline-flex;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px">${FR.ns.map(k => `<button ${x.A(k.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:400 12.5px ${sf};cursor:pointer;background:${k.on ? 'var(--color-surface)' : 'transparent'};color:${k.on ? 'var(--color-text)' : muet};box-shadow:${k.on ? '0 1px 2px rgba(0,0,0,.08)' : 'none'}">${esc(k.nom)}</button>`).join('')}</div>
+      </div>
+      <div style="padding:0 20px 20px">${FR.moyChargement ? `<div style="font:400 14px ${sf};color:${muet}">Calcul des moyennes…</div>` : FR.moyMotif ? `<div style="font:400 14px ${sf};color:${muet}">${esc(FR.moyMotif)}</div>`
+        : tuilesC(FR.donnees)
+          + (FR.pieces.length ? sousT('Pièces par vendeuse et par mois') + tuilesC(FR.pieces.map(t => ({ lib: t.lib, v: t.v, reseau: t.reseau ? 'réseau ' + t.reseau : '', ecart: t.ecart }))) : '')
+          + (FR.promosVend.length ? sousT('Promotions en cours · pièces par vendeuse') + tuilesC(FR.promosVend.map(t => ({ lib: t.lib, v: t.v, sous: t.du ? 'dès le ' + t.du : '', reseau: t.reseau ? 'réseau ' + t.reseau : '', ecart: t.ecart }))) : '')}</div>
+    </section>`;
+    // Les promotions du panel qui tournent ici : une prime du magasin en un geste.
+    const PF = FR.promos;
+    const thP = (t, droite) => `<th style="text-align:${droite ? 'right' : 'left'};padding:12px 14px 9px;font:400 10.5px/1 ${sf};letter-spacing:.05em;text-transform:uppercase;color:${muet};border-bottom:${filet};white-space:nowrap">${t}</th>`;
+    const tdP = (i, st) => `<td style="padding:11px 14px;vertical-align:top;${i ? `border-top:${filet};` : ''}${st || ''}">`;
+    const statutP = p => (p.statutMag ? `<span style="font:400 12px ${sf};padding:3px 9px;border-radius:6px;white-space:nowrap;${p.statutMag === 'prime du magasin' ? 'background:#eaf3ec;color:#245f31' : `background:var(--color-background-secondary);color:${muet}`}">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>`
+      : p.ajouter ? `<button ${x.A(p.ajouter)} data-pr-promo-mag style="border:0;border-radius:6px;padding:6px 12px;font:400 12.5px ${sf};background:var(--color-background-secondary);color:var(--color-text);cursor:pointer;white-space:nowrap">+ Prime du magasin</button>` : '');
+    const tabPromos = `<div style="${groupeSt};margin-top:12px;overflow-x:auto"><table data-pr-promos style="border-collapse:separate;border-spacing:0;width:100%;font-family:${sf}">
+        <thead><tr>${thP('Promotion')}${thP('Sorte')}${thP('Dates')}${thP('Portée')}${thP('Produits')}${thP('Prime', true)}</tr></thead>
+        <tbody>${PF.liste.map((p, i) => `<tr>
+          ${tdP(i)}<b style="font:400 14px/1.3 ${sf}">${esc(p.nom)}</b>${p.marque ? `<span style="display:block;font:400 11.5px/1.35 ${sf};color:${muet}">${esc(p.marque)}</span>` : ''}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${muet};white-space:nowrap`)}${esc(p.sorte)}${p.prix ? ' · ' + esc(p.prix) : ''}</td>
+          ${tdP(i, `font:400 13px ${sf};white-space:nowrap;font-variant-numeric:tabular-nums`)}${esc(p.dates)}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${muet}`)}${esc(p.portee)}</td>
+          ${tdP(i, `font:400 13px ${sf};color:${p.comptable ? muet : 'var(--color-primary)'}`)}${esc(p.produits)}</td>
+          ${tdP(i, 'text-align:right')}${statutP(p)}</td></tr>`).join('')}</tbody></table></div>`;
+    const promosIci = item('promos', 'Promotions du panel dans ce magasin', FR.resumes.promos, btRelire(PF.relire),
+      PF.chargement ? vide('Lecture des promotions…') : PF.motif ? vide(esc(PF.motif)) : !PF.liste.length ? vide('Aucune promotion du panel ne tourne dans ce magasin.') : tabPromos);
+    // Les fiches à imprimer et l'affiche à envoyer (31/10/2026) : trois PDF du cockpit, ouverts dans un onglet (le
+    // lecteur du navigateur imprime) ; l'affiche part par mail à chaque personne cochée, séparément.
+    const IM = FR.imprimer;
+    const ligneFiche = (f, i) => `<div data-pr-fiche="${esc(f.cle)}" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:13px 18px;${i ? `border-top:${filet};` : ''}">
+        <span aria-hidden="true" style="flex:none;width:30px;height:38px;border-radius:5px;background:var(--color-background-secondary);border:1px solid var(--color-border-secondary);display:flex;align-items:flex-end;justify-content:center;padding-bottom:5px;font:400 10px ${sf};color:var(--color-primary);letter-spacing:.04em">PDF</span>
+        <span style="flex:1 1 240px;min-width:0"><b style="display:block;font:400 14px/1.3 ${sf}">${esc(f.lib)}</b><span style="display:block;font:400 12.5px/1.4 ${sf};color:${muet};margin-top:2px">${esc(f.sous)}</span></span>
+        <a href="${esc(f.url)}" target="_blank" rel="noopener" data-pr-fiche-ouvrir style="border-radius:6px;padding:8px 15px;font:400 13px ${sf};background:var(--color-background-secondary);color:var(--color-text);text-decoration:none;white-space:nowrap">Ouvrir et imprimer ↗</a>
+      </div>`;
+    const ligneIn = t => `<div style="padding:12px 18px 16px;border-top:${filet};font:400 13px/1.45 ${sf};color:${muet}">${t}</div>`;
+    const envoiAff = `<div data-pr-envoi style="${groupeSt};margin-top:12px">
+      <div style="display:flex;align-items:center;gap:12px 16px;flex-wrap:wrap;padding:15px 18px 13px">
+        <span style="flex:1 1 260px;min-width:0"><b style="display:block;font:400 15px/1.3 ${sf}">Envoyer l’affiche à l’équipe</b><span style="display:block;font:400 12.5px/1.4 ${sf};color:${muet};margin-top:2px">Par mail, à chacune séparément : l’affiche en pièce jointe et le lien direct vers l’app.</span></span>
+        ${segm(IM.langues)}
+      </div>
+      ${IM.chargement ? ligneIn('Lecture de l’équipe…') : IM.motif ? ligneIn(esc(IM.motif)) : !IM.personnes.length ? ligneIn('Personne dans ce magasin pour l’instant.') : `
+      <div style="border-top:${filet}">${IM.personnes.map((pe, i) => `<label data-pr-envoi-personne="${esc(String(pe.emp))}" style="display:flex;align-items:center;gap:12px;padding:10px 18px;${i ? `border-top:${filet};` : ''}cursor:${pe.basculer ? 'pointer' : 'default'}">
+          <input type="checkbox" ${pe.on ? 'checked' : ''} ${pe.basculer ? x.C(pe.basculer) : 'disabled'} style="width:17px;height:17px;flex:none;accent-color:var(--color-primary)">
+          <span style="flex:1;min-width:0;font:${pe.sans ? 400 : 500} 14px/1.3 ${sf};color:${pe.sans ? muet : 'var(--color-text)'}">${esc(pe.nom)}</span>
+          <span style="flex:none;font:400 12.5px ${sf};color:${muet}">${pe.sans ? 'sans adresse — à compléter dans « Mon profil »' : esc(pe.email)}</span></label>`).join('')}</div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:13px 18px;border-top:${filet}">
+        <span style="flex:1 1 240px;font:400 12.5px/1.4 ${sf};color:${IM.smtp ? muet : 'var(--color-primary)'}">${!IM.smtp ? 'Le courrier n’est pas réglé (Paramètres › SMTP) : l’envoi est impossible pour l’instant.' : IM.sansN ? IM.sansN + ' personne' + (IM.sansN > 1 ? 's' : '') + ' sans adresse : imprimez-leur l’affiche.' : 'Toute l’équipe a une adresse.'}</span>
+        <button ${IM.envoyer ? x.A(IM.envoyer) : 'disabled'} data-pr-envoi-envoyer style="${btP};${IM.envoyer ? '' : 'opacity:.45;cursor:default;'}">${IM.busy ? 'Envoi…' : 'Envoyer à ' + IM.n + ' personne' + (IM.n > 1 ? 's' : '')}</button>
+      </div>
+      ${IM.res ? `<div data-pr-envoi-res style="padding:0 18px 15px;font:400 13px/1.45 ${sf};color:${IM.res.ko ? 'var(--color-primary)' : '#3f7a52'}">${esc(IM.res.txt)}</div>` : ''}`}
+    </div>`;
+    const imprimer = item('imprimer', 'Fiches à imprimer et à envoyer', FR.resumes.imprimer, '',
+      `<div style="${groupeSt};margin-top:12px">${IM.fiches.map(ligneFiche).join('')}</div>${envoiAff}`);
+    // L'ordre (31/10/2026) : les chiffres du magasin tout en haut (toujours visibles, Sam : « mets les chiffres du magasin
+    // tout en haut »), l'avancement des vendeuses (replié à l'ouverture, son total en une ligne), puis « Paramètres » (replié) — les primes du magasin, les fiches à imprimer et à envoyer, la marque, les promotions du
+    // panel. Les fiches de l'équipe (« Mon profil ») ont quitté la page le même jour, à la demande de Sam.
+    const VP = FR.volets.parametres;
+    const parametres = `<section data-pr-volet="parametres" data-ouvert="${VP.ouvert ? 1 : 0}">
+      <div style="${groupeSt};display:flex;align-items:center;gap:12px;padding:0 20px 0 0">
+        <button ${x.A(VP.basculer)} data-pr-volet-bascule="parametres" aria-expanded="${VP.ouvert}" style="flex:1;min-width:0;border:0;background:none;padding:17px 0 17px 20px;text-align:left;cursor:pointer;font-family:${sf};color:var(--color-text)">
+          <span style="display:block;font:400 18px/1.2 ${sf};letter-spacing:-.012em">Paramètres</span>
+          <span data-pr-volet-resume style="display:block;font:400 13px/1.4 ${sf};color:${muet};margin-top:3px">${esc(FR.resumes.parametres)}</span>
+        </button>
+        <button ${x.A(VP.basculer)} aria-label="${VP.ouvert ? 'Replier' : 'Déplier'}" tabindex="-1" style="flex:none;border:0;background:none;padding:6px 2px;cursor:pointer">${chevron(VP.ouvert)}</button>
+      </div>
+      ${VP.ouvert ? [siennes, imprimer, marque, promosIci].map(partie).join('') : ''}
+    </section>`;
+    return `<div style="display:flex;flex-direction:column;gap:22px">${chiffres}${equipe}${parametres}</div>`;
+  };
+
+  return `
+<div data-screen="primesApp" style="display:flex;flex-direction:column;gap:34px;max-width:1560px;font-family:${sf}">
+  ${c.prOnglets && !c.prChargement && !c.prMotif ? `<div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><div data-pr-onglets style="display:inline-flex;align-self:flex-start;gap:2px;background:var(--color-border-tertiary);border-radius:12px;padding:3px">${c.prOnglets.map(o => `<button ${x.A(o.choisir)} data-pr-onglet="${o.nouveau ? 'gp' : 'mois'}" style="border:0;border-radius:9px;padding:8px 15px;font:${o.on ? 600 : 500} 13.5px ${sf};background:${o.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${o.on ? '' : ''}">${esc(o.nom)}</button>`).join('')}</div>${FR && FR.connu && FR.nouvelle && !c.prGp ? `<span style="flex:1"></span><button ${x.A(FR.nouvelle)} data-pr-creer style="${btP};padding:10px 20px;font-size:14px">+ Créer une nouvelle prime</button>` : ''}</div>` : ''}
+  ${c.prChargement ? `<div style="${groupeSt};padding:18px;color:${muet}">Lecture des paramètres…</div>` : c.prMotif ? `<div style="${groupeSt};padding:18px;color:var(--color-primary)">${esc(c.prMotif)}</div>` : c.prGp ? tplPrGrandsPrix(c.prGp, x) : FR ? frPage() : `
+  ${P.annee ? `<section data-pr="annee">
+    ${tete('L’année des primes', P.annee.periode ? esc(P.annee.periode) + ' · ' + esc(P.annee.total) + ' gagnés dans le réseau' : 'Le réseau, prime par prime.',
+      `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${segm(P.annee.vues)}${stepperT(P.annee.picker)}</div>`)}
+    ${P.annee.chargement ? vide('Calcul de l’année, mois par mois…') : P.annee.motif ? vide(esc(P.annee.motif)) : !P.annee.lignes.length ? vide('Aucune prime gagnée cette année-là.')
+      : barresAn(P.annee.barres) + tableAn(P.annee, P.annee.vues[0].on ? 'Magasin' : 'Vendeuse')}
+  </section>` : ''}
+
+  <section data-pr="app"${voir('app')}>
+    ${tete('Primes de la marque', 'Posées par la marque, payées par elle ou par un sponsor. Chaque franchisé les voit ; ses vendeuses les retrouvent dans Mes primes.',
+      `<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;font:400 13px ${sf};color:var(--color-text)">
+        <span style="display:inline-flex;align-items:center;gap:9px" title="Un SMS à la vendeuse quand ses primes du mois sont enregistrées">${interIos(P.sms, P.poserSms, 'SMS à la réussite')} SMS à la réussite${P.sms && !P.smsConfigure ? ` <span style="font-size:11px;${alerte};padding:2px 7px">fournisseur à régler : config.php › sms</span>` : ''}</span>
+        <button ${x.A(P.nouvelle)} style="${btP}" data-pr-nouvelle>+ Nouvelle prime</button>
+        <button ${x.A(P.nouvelleB2b)} style="${btB2b}" data-pr-nouvelle-b2b>+ Prime B2B</button>
+        <label style="display:inline-flex;align-items:center;gap:8px">Récompense par défaut <input type="number" min="0" max="5000" step="5" value="${esc(P.recompense)}" ${x.C(P.poserRecompense)} style="width:64px;font:400 13px ${sf};padding:6px 8px;border-radius:9px;border:0;background:var(--color-surface);text-align:right"> €</label>
+      </div>`)}
+    ${groupes(P.lignes)}
+    ${P.modifie ? `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:16px 4px 0"><span style="flex:1"></span><span style="font:400 12.5px ${sf};color:${muet}">SMS ou récompense par défaut changés</span><button ${x.A(P.enregistrer)} style="${btP}" data-pr-enregistrer="app">Enregistrer</button></div>` : ''}
+  </section>
+
+  <section data-pr="magasins"${voir('magasins')}>
+    ${tete('Primes des franchisés', 'Posées par un franchisé pour son seul magasin, payées par lui ; seules ses vendeuses les voient.',
+      `<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+        <button ${x.A(P.nouvelleMag)} style="${btP}" data-pr-nouvelle-mag>+ Nouvelle prime du magasin${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+        <button ${x.A(P.nouvelleB2bMag)} style="${btB2b}" data-pr-nouvelle-b2b-mag>+ Prime B2B${P.magFiltreNom ? ' · ' + esc(P.magFiltreNom) : ''}</button>
+      </div>`)}
+    ${`<div style="display:inline-flex;flex-wrap:wrap;gap:2px;background:var(--color-border-tertiary);border-radius:10px;padding:2px;margin:14px 0 0 4px">${P.magsFiltre.map(m => `<button ${x.A(m.choisir)} style="border:0;border-radius:8px;padding:6px 12px;font:${m.on ? 600 : 500} 12.5px ${sf};background:${m.on ? 'var(--color-surface)' : 'transparent'};color:var(--color-text);cursor:pointer;${m.on ? '' : ''}">${esc(m.nom)}${m.n ? ` <span style="color:${muet};font-weight:400">${m.n}</span>` : ''}</button>`).join('')}</div>`}
+    ${P.lignesMag.length ? groupes(P.lignesMag) : vide(P.magFiltreNom ? 'Aucune prime pour ' + esc(P.magFiltreNom) + ' pour l’instant : il la pose depuis sa page (Page franchisé), ou posez-la ici avec « + Nouvelle prime du magasin ».'
+      : 'Aucun franchisé n’a encore posé de prime. Chacun la pose depuis la page de son magasin (Page franchisé, #/primes?shop=…) ; vous pouvez aussi la poser ici pour lui.')}
+  </section>
+
+  <div style="${carte2};overflow:hidden" data-pr="promos"${voir('promos')}>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
+      <div style="font:700 22px/1.2 ${sf};letter-spacing:-.015em">Promotions du panel</div>
+      <span style="font-size:11.5px;color:var(--color-text-muted)">celles du réseau, et celles d’un seul magasin (un franchisé)</span>
+      <span style="flex:1"></span>
+      ${PR.erreur ? `<span style="font-size:11.5px;${alerte};padding:5px 10px">${esc(PR.erreur)}</span>` : ''}
+      <button ${x.A(PR.relire)} style="${bt(false)}">Relire</button>
+    </div>
+    ${PR.chargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Lecture des promotions…</div>` : PR.motif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(PR.motif)}</div>` : !PR.liste.length ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Aucune promotion active.</div>` : `
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
+      <thead><tr><th style="${th2};text-align:left">Promotion</th><th style="${th2};text-align:left">Sorte</th><th style="${th2}">Prix</th><th style="${th2};text-align:left">Dates</th><th style="${th2};text-align:left">Magasins</th><th style="${th2};text-align:left">Ce qui se compte</th><th style="${th2};text-align:center">Prime de la marque</th><th style="${th2};text-align:center">Prime du magasin</th></tr></thead>
+      <tbody>${PR.liste.map(p => `<tr>
+        <td style="${td2};text-align:left"><b>${esc(p.nom)}</b> <span style="color:var(--color-text-muted);font-size:10.5px">${esc(p.source)}</span></td>
+        <td style="${td2};text-align:left">${typ('promo', p.sorte)}</td>
+        <td style="${td2}">${esc(p.prix)}</td>
+        <td style="${td2};text-align:left">${esc(p.dates)}</td>
+        <td style="${td2};text-align:left;color:var(--color-text-muted);white-space:normal">${esc(p.magasins)}</td>
+        <td style="${td2};text-align:left;color:${p.comptable ? 'var(--color-text-muted)' : 'var(--color-primary)'}">${esc(p.produits)}</td>
+        <td style="${td2};text-align:center">${p.statut ? `<span style="color:${p.statut === 'prime active' ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:400">${p.statut === 'prime active' ? '✓ ' : ''}${esc(p.statut)}</span>` : p.ajouter ? `<button ${x.A(p.ajouter)} style="${bt(false)};padding:5px 11px">+ prime</button>` : ''}</td>
+        <td style="${td2};text-align:center">${p.statutMag ? `<span style="color:${p.statutMag === 'prime du magasin' ? 'var(--color-primary)' : 'var(--color-text-muted)'};font-weight:400">${p.statutMag === 'prime du magasin' ? '✓ ' : ''}${esc(p.statutMag)}</span>` : p.ajouterMag ? `<button ${x.A(p.ajouterMag)} style="${bt(false)};padding:5px 11px" data-pr-promo-mag>+ prime du magasin</button>` : `<span style="color:var(--color-text-muted)">${p.portee === 'réseau' ? 'réseau' : ''}</span>`}</td></tr>`).join('')}</tbody>
+    </table></div>`}
+  </div>
+
+  <div style="${carte2};overflow:hidden" data-pr="moyennes"${voir('moyennes')}>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:14px 16px 6px">
+      <div style="font:700 22px/1.2 ${sf};letter-spacing:-.015em">Moyennes par magasin</div>
+      ${MY.periode ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(MY.periode)} · par mois</span>` : ''}
+      <span style="flex:1"></span>
+      ${MY.ns.map(k => `<button ${x.A(k.choisir)} style="${pill(k.on)}">${esc(k.nom)}</button>`).join('')}
+    </div>
+    ${MY.chargement ? `<div style="padding:10px 16px 16px;color:var(--color-text-muted);font-size:12.5px">Calcul des moyennes…</div>` : MY.motif ? `<div style="padding:10px 16px 16px;color:var(--color-primary);font-size:12.5px">${esc(MY.motif)}</div>` : `
+    <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;font-size:12.5px">
+      <thead><tr><th style="${th2};text-align:left">Magasin</th><th style="${th2}">Vendeuses</th><th style="${th2}">Tickets<span style="${sm}">par mois</span></th><th style="${th2}">Tickets<span style="${sm}">par vendeuse</span></th>
+        <th style="${th2}">Ticket moyen</th><th style="${th2}">Lignes<span style="${sm}">par ticket</span></th><th style="${th2}">Ventes croisées${MY.croiseesCat ? `<span style="${sm}">${esc(MY.croiseesCat)}</span>` : ''}</th><th style="${th2}">Objectif<span style="${sm}">atteint</span></th>
+        ${MY.cats.map(k => `<th style="${th2}">${esc(k)}<span style="${sm}">pcs par vendeuse</span></th>`).join('')}
+        ${MY.promos.map(k => `<th style="${th2}">${esc(k.lib)}<span style="${sm}">par vend.${k.du ? ', dès le ' + esc(k.du) : ''}</span></th>`).join('')}
+        <th style="${th2};border-left:1px solid var(--color-border-tertiary)">Cible<span style="${sm}">ventes croisées</span></th><th style="${th2}">Proposée<span style="${sm}">moyenne + ${esc(MY.ecart)} pts</span></th></tr></thead>
+      <tbody>${MY.lignes.map(l => `<tr>
+        <td style="${td2};text-align:left;font-weight:400">${esc(l.nom)}</td><td style="${td2}">${esc(l.vendeuses)}</td><td style="${td2}">${esc(l.tickets)}</td><td style="${td2}">${esc(l.ticketsVendeuse)}</td>
+        <td style="${td2}">${esc(l.ticketMoyen)}</td><td style="${td2}">${esc(l.lignes)}</td><td style="${td2}">${esc(l.croisees)}</td><td style="${td2}">${esc(l.atteinte)}</td>
+        ${l.pieces.map(v => `<td style="${td2}">${esc(v)}</td>`).join('')}${l.promos.map(v => `<td style="${td2}">${esc(v)}</td>`).join('')}
+        <td style="${td2};border-left:1px solid var(--color-border-tertiary)"><input type="number" min="0" max="100" step="0.5" value="${esc(l.cible)}" placeholder="${esc(l.defaut)}" ${x.C(l.poserCible)} style="${inp(58)}${l.cible ? '' : ';border-style:dashed'}"> %</td>
+        <td style="${td2};color:var(--color-text-muted)">${esc(l.proposee)}</td></tr>`).join('')}
+        ${MY.reseau ? `<tr style="background:var(--color-background-secondary);font-weight:400"><td style="${td2};text-align:left">Réseau</td><td style="${td2}">${esc(MY.reseau.vendeuses)}</td><td style="${td2}">${esc(MY.reseau.tickets)}</td><td style="${td2}">${esc(MY.reseau.ticketsVendeuse)}</td>
+        <td style="${td2}">${esc(MY.reseau.ticketMoyen)}</td><td style="${td2}">${esc(MY.reseau.lignes)}</td><td style="${td2}">${esc(MY.reseau.croisees)}</td><td style="${td2}">${esc(MY.reseau.atteinte)}</td>
+        ${MY.reseau.pieces.map(v => `<td style="${td2}">${esc(v)}</td>`).join('')}${MY.reseau.promos.map(v => `<td style="${td2}">${esc(v)}</td>`).join('')}
+        <td style="${td2};border-left:1px solid var(--color-border-tertiary);color:var(--color-text-muted);font-weight:400">défaut</td><td style="${td2}"></td></tr>` : ''}</tbody>
+    </table></div>`}
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:12px 16px;background:var(--color-background-secondary)">
+      <span style="font-size:12.5px;font-weight:400;color:var(--color-text-muted)">Caler chaque cible sur la moyenne du magasin +</span>
+      <input type="number" min="0" max="20" step="0.5" value="${esc(MY.ecart)}" ${x.C(MY.poserEcart)} style="${inp(52)}"> <span style="font-size:12.5px;color:var(--color-text-muted)">pts</span>
+      <button ${x.A(MY.appliquer)} style="${bt(false)}">Appliquer</button>
+      <span style="flex:1"></span>
+      <button ${x.A(MY.csv)} style="${bt(false)}">Exporter CSV</button>
+      <button ${x.A(MY.enregistrer)} style="${bt(true)}${MY.modifie ? '' : ';opacity:.55'}" data-pr-enregistrer="cibles">Enregistrer les cibles</button>
+    </div>
+  </div>`}
+  ${c.prWiz ? tplPrWiz(c.prWiz, x) : ''}
+  ${c.prEdit ? tplPrEdit(c.prEdit, x) : ''}
+  ${c.prChoix ? tplPrChoix(c.prChoix, x) : ''}
+  ${c.prB2b ? tplPrB2b(c.prB2b, x) : ''}
+  ${c.prGp && c.prGp.form ? tplPrGpForm(c.prGp.form, x) : ''}
+</div>`;
+}
+
+/** Le choix de la sorte d'une prime du magasin (23/10/2026) : promotion, catégorie, ventes croisées, objectif CA, note Google, clients pro. */
+function tplPrChoix(C, x){
+  const esc = x.esc;
+  const mu = 'color:var(--color-text-muted)';
+  return `
+  <div ${x.A(C.fermer)} style="position:fixed;inset:0;background:rgba(20,16,14,.45);z-index:80"></div>
+  <div style="position:fixed;inset:0;z-index:81;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;pointer-events:none">
+    <div role="dialog" aria-modal="true" aria-label="${esc(C.titre)}" data-pr-choix style="pointer-events:auto;width:100%;max-width:640px;background:var(--color-surface);border-radius:var(--radius-lg);overflow:hidden">
+      <div style="display:flex;align-items:center;gap:12px;padding:18px 22px 12px;border-bottom:1px solid var(--color-border-tertiary)"><div style="font:400 24px/1.1 var(--font-display)">${esc(C.titre)}</div><button ${x.A(C.fermer)} aria-label="Fermer" style="margin-left:auto;border:0;background:none;font-size:21px;${mu};cursor:pointer">✕</button></div>
+      <div style="padding:16px 22px 20px;display:grid;gap:8px">
+        <div style="font-size:12.5px;${mu};margin-bottom:4px">Quel déclencheur ? Chaque réglage se fait à l’étape suivante : la mesure, le seuil, la condition, la récompense ou un cadeau, la période.</div>
+        ${C.options.map(o => `<button ${o.choisir ? x.A(o.choisir) : 'disabled'} data-pr-sorte="${esc(o.nom)}" style="display:flex;gap:14px;align-items:flex-start;text-align:left;padding:13px 15px;border-radius:var(--radius-md);border:1px solid var(--color-border-secondary);background:var(--color-surface);cursor:${o.choisir ? 'pointer' : 'not-allowed'};opacity:${o.choisir ? 1 : 0.5};font-family:var(--font-ui)">
+          <span style="font-size:24px;line-height:1">${esc(o.e)}</span><span><b style="display:block;font-size:14px">${esc(o.nom)}</b><span style="font-size:12px;${mu};line-height:1.45">${esc(o.plein ? 'Déjà six primes de cette sorte pour le magasin.' : o.txt)}</span></span></button>`).join('')}
+      </div>
+    </div>
+  </div>`;
+}
+
+function tplVentes(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:400';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:10px;border-bottom:1px solid var(--color-border-tertiary)';
+  const td = 'padding:9px 10px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const primeOr = `background:#FFF7E0;border:1px solid var(--prize-soft);color:var(--prize-ink);border-radius:8px;padding:2px 10px;font-size:10.5px;font-weight:400;white-space:nowrap`;
+  const primeR = `background:var(--color-primary);color:#fff;border-radius:8px;padding:2px 10px;font-size:10.5px;font-weight:400;white-space:nowrap`;
+  const avatar = ini => `<span style="display:inline-flex;width:24px;height:24px;border-radius:50%;background:#EFE3D5;color:var(--prize-ink);align-items:center;justify-content:center;font-size:10px;font-weight:400;margin-right:8px;vertical-align:middle">${esc(ini)}</span>`;
+
+  const filtres = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
+        ${c.tvMoisPills.map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${(c.tvShops || []).map(m => `<button ${x.A(m.choisir)} style="${pill(m.on)}">${esc(m.nom)}</button>`).join('')}
+      </div>`;
+
+  const onglets = `
+    <div style="display:flex;gap:6px;align-items:center">
+      ${(c.tvOnglets || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.nom)}</button>`).join('')}
+    </div>`;
+
+  if (c.tvChargement) {
+    return `<div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px">${onglets}<div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Lecture des tickets et du planning…</div></div>`;
+  }
+  if (c.tvMotif) {
+    return `<div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px">${onglets}<div style="${carte}">${filtres}<div style="padding:0 22px 20px;font-size:12.5px">${esc(c.tvMotif)}</div></div></div>`;
+  }
+
+  const fiche = f => !f ? '' : `
+    <tr><td colspan="13" style="padding:0;background:var(--table-head);border-top:1px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        ${f.chargement ? `<div style="font-size:12px;color:var(--color-text-muted)">Lecture de la fiche…</div>`
+        : f.err ? `<div style="font-size:12px;color:var(--accent)">${esc(f.err)}</div>` : `
+        <div style="${lbl};margin-bottom:8px">${esc(f.nom)} — ${esc(f.magasin)} · six mois</div>
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr><th style="${th};text-align:left">Mois</th><th style="${th}">Heures</th><th style="${th}">CA</th>
+            <th style="${th}">CA / heure</th><th style="${th}">Score</th><th style="${th}">Rang réseau</th><th style="${th}">Panier</th>
+            <th style="${th}">Lignes / ticket</th><th style="${th};text-align:left;padding-left:16px">Prime</th></tr></thead>
+          <tbody>${f.mois.map(m => `<tr>
+            <td style="${td};text-align:left;font-weight:400">${esc(m.lib)}</td>
+            <td style="${td}">${esc(m.heures)}</td><td style="${td}">${esc(m.ca)}</td>
+            <td style="${td}">${esc(m.caHeure)}</td>
+            <td style="${td};font-weight:400;color:var(--color-primary)">${esc(m.score)}</td>
+            <td style="${td};font-weight:400">${esc(m.rang)}</td>
+            <td style="${td}">${esc(m.panier)}</td><td style="${td}">${esc(m.lignesTicket)}</td>
+            <td style="${td};text-align:left;padding-left:16px">${m.prime ? `<span style="${primeOr}">${esc(m.prime)}</span>` : ''}</td>
+          </tr>`).join('')}</tbody>
+        </table>`}
+      </div>
+    </td></tr>`;
+
+  if (c.tvOnglet === 'targets') {
+    const SIM = c.cxSim;
+    const R = c.cxReglages || {};
+    const thS = 'font-size:10px;font-weight:400;text-transform:uppercase;letter-spacing:0.05em;color:var(--color-text-muted);padding:7px 9px;border-bottom:1px solid var(--color-border-secondary);text-align:right';
+    const tdS = 'padding:8px 9px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+    return `
+  <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    <div style="display:flex;gap:6px;align-items:center">${(c.tvOnglets || []).map(o2 => `<button ${x.A(o2.choisir)} style="${pill(o2.on)}">${esc(o2.nom)}</button>`).join('')}
+      <span style="flex:1"></span>
+      <a href="${esc(c.cxPdfEquipe || '')}" target="_blank" style="${pill(false)};text-decoration:none">PDF équipes — le mode d'emploi</a>
+    </div>
+
+    <div style="${carte};padding:16px 18px">
+      <div style="display:flex;gap:22px;align-items:center;flex-wrap:wrap">
+        <div style="flex:1;min-width:320px">
+          <div style="${lbl}">1 · Primes au score — la meilleure vendeuse</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Score = CA ÷ (heures + 20) × coefficient de créneau. Chaque mois révolu — la meilleure du réseau ne cumule pas la prime magasin.</div>
+        </div>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Réseau
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.reseau)}" ${x.C(c.tvPrimesCfg.poser('reseau'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Magasin
+          <input type="number" min="1" step="5" value="${esc(c.tvPrimesCfg.magasin)}" ${x.C(c.tvPrimesCfg.poser('magasin'))} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+      </div>
+    </div>
+
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">2 · Bats ton record — la règle, pour chacune</div>
+      <div style="font-size:12px;margin:5px 0 12px;max-width:960px">
+        <b>Comment ça marche, en une phrase.</b> Chacune a une barre : sa meilleure moyenne de lignes par ticket des 12 derniers mois — son record. Le 1er dixième au-dessus pose son nouveau record ; <b>à partir du 2e</b>, chaque dixième gagne le montant ci-dessous, en bons payés par la marque.<br>
+        <span style="color:var(--color-text-muted)">Un record de plus d'un an expire (la barre reste à portée) · payés jusqu'au plafond de dixièmes ci-dessous · 30 tickets minimum dans le mois.</span></div>
+      <div style="display:flex;gap:26px;align-items:center;flex-wrap:wrap">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Par dixième (dès le 2e au-dessus du record)
+          <input type="number" min="0" step="10" value="${esc(R.eurDixieme || '')}" ${x.C(R.poserEurDixieme)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Dixièmes payés max / mois
+          <input type="number" min="1" max="10" step="1" value="${esc(R.maxDixiemes || '')}" ${x.C(R.poserMaxDixiemes)} style="width:56px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"></label>
+      </div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:8px">Le plafond de dixièmes protège le budget : au-delà, le nouveau record se pose quand même et le compteur repart le mois suivant. Ces primes s'ajoutent à celles du score. Personne ne règle de cible : la barre de chacun se pose toute seule, sur son propre record.</div>
+    </div>
+
+    ${!SIM ? `<div style="${carte};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Le simulateur attend un mois de ventes servi par la caisse.</div>` : `
+    <div style="${carte};padding:16px 18px">
+      <div style="${lbl}">3 · Le compte — et si chacune battait son record de 0,2 ?</div>
+      <div style="font-size:11.5px;color:var(--color-text-muted);margin:3px 0 10px">Sur les chiffres de ${esc(SIM.moisLib)}. Les deux variables s'enregistrent.</div>
+      <div style="display:flex;gap:18px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Valeur d'une ligne
+          <input value="${esc(SIM.valeurLigne)}" ${x.C(SIM.poserValeur)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right"> €</label>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(SIM.valeurNote)}</span>
+        <label style="display:inline-flex;align-items:center;gap:8px;font-size:12.5px">Marge récupérée
+          <input value="${esc(SIM.marge)}" ${x.C(SIM.poserMarge)} style="width:72px;font-family:var(--font-ui);font-size:12.5px;padding:6px 8px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);text-align:right;width:56px"> %</label>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px;margin-bottom:14px">
+        ${SIM.etages.map(et => `
+        <div style="border:${et.premier ? '1.5px solid var(--color-primary)' : '1px solid var(--color-border-secondary)'};border-radius:10px;padding:10px 13px${et.premier ? ';background:rgba(141,29,44,0.03)' : ''}">
+          <div style="font-size:12px;font-weight:400">${esc(et.nom)}</div>
+          <div style="display:flex;gap:14px;margin-top:6px;flex-wrap:wrap">
+            <div><div style="${lbl}">CA en plus / mois</div><div style="font-weight:400;color:var(--green)">${esc(et.ca)}</div></div>
+            <div><div style="${lbl}">Primes max</div><div style="font-weight:400;color:var(--color-primary)">${esc(et.bud)}</div></div>
+            <div><div style="${lbl}">Net</div><div style="font-weight:400">${esc(et.net)}</div></div>
+          </div>
+        </div>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="border-collapse:collapse;width:100%;min-width:760px;font-size:12px">
+        <tr><th style="${thS};text-align:left">Magasin</th><th style="${thS}">Moyenne</th><th style="${thS}">Vendeuses</th><th style="${thS}">Tickets/mois</th><th style="${thS}">CA en plus</th><th style="${thS}">Primes (1 tranche chacune)</th><th style="${thS}">Coût / CA</th></tr>
+        ${SIM.compte.lignes.map(l => `
+        <tr>
+          <td style="${tdS};text-align:left;font-weight:400">${esc(l.nom)}</td>
+          <td style="${tdS}">${esc(l.moyenne)}</td>
+          <td style="${tdS}">${esc(l.vendeuses)}</td>
+          <td style="${tdS}">${esc(l.tickets)}</td>
+          <td style="${tdS};font-weight:400;color:var(--green)">${esc(l.ca)}</td>
+          <td style="${tdS}">${esc(l.primes)}</td>
+          <td style="${tdS};color:var(--color-text-muted)">${esc(l.cout)}</td>
+        </tr>`).join('')}
+        <tr style="background:var(--color-background-secondary)">
+          <td style="${tdS};text-align:left;font-weight:400">RÉSEAU / mois</td><td style="${tdS}"></td><td style="${tdS}"></td><td style="${tdS}"></td>
+          <td style="${tdS};font-family:var(--font-display);font-size:16px;color:var(--green)">${esc(SIM.compte.totCa)}</td>
+          <td style="${tdS};font-weight:400;color:var(--color-primary)">${esc(SIM.compte.totPrimes)}</td>
+          <td style="${tdS}"></td>
+        </tr>
+        <tr>
+          <td style="${tdS};text-align:left;font-weight:400">Net pour vous (marge ${esc(SIM.marge)} %)</td>
+          <td style="${tdS}" colspan="6"><span style="font-family:var(--font-display);font-size:18px;color:var(--ink)">${esc(SIM.compte.totNet)}</span></td>
+          <td style="${tdS};color:var(--color-text-muted)">${esc(SIM.compte.totCout)}</td>
+        </tr>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">« Primes max » = une tranche pour le magasin ET chaque vendeuse classable (le 1er dixième ne paie pas) — le pire cas pour votre budget. Chaque réglage s'enregistre à la sortie du champ et passe au journal ; les résultats sont dans l'onglet Résultats.</div>
+    </div>`}
+  </div>`;
+  }
+
+  return `
+  <div data-screen="ventes" style="display:flex;flex-direction:column;gap:14px;max-width:1380px">
+    ${onglets}
+    ${!c.tvPodium.length ? '' : `
+    <div style="display:grid;grid-template-columns:1.35fr repeat(${Math.max(1, c.tvPodium.length - 1)}, 1fr);gap:12px">
+      ${c.tvPodium.map((p, i) => `
+      <div style="${carte};padding:14px 16px${i === 0 ? ';border-color:var(--color-primary)' : ''}">
+        <span style="${lbl}${i === 0 ? ';color:var(--color-primary)' : ''}">${esc(p.titre)}</span>
+        <div style="font-family:var(--font-display);font-size:${i === 0 ? 20 : 16}px;font-weight:400;margin:5px 0 3px">${esc(p.nom)}
+          <span style="${p.reseau && i === 0 ? primeR : primeOr};margin-left:6px">${esc(p.prime)}</span></div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);line-height:1.5">${esc(p.sub)}</div>
+      </div>`).join('')}
+    </div>`}
+
+    ${!(c.tvTops || []).length ? '' : `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
+      ${c.tvTops.map(t => `
+      <div style="${carte};padding:14px 16px">
+        <div style="${lbl}">${esc(t.titre)}</div>
+        <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px">${esc(t.note)}</div>
+        ${t.lignes.map(l => `
+        <div style="display:flex;align-items:baseline;gap:8px;padding:4.5px 0;border-bottom:1px solid var(--color-border-tertiary);font-size:12px">
+          <span style="width:16px;color:var(--color-text-muted)">${l.rang}</span>
+          <span style="font-weight:400">${esc(l.nom)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.magasin)}</span>
+          <span style="flex:1"></span>
+          <span style="font-weight:400;font-variant-numeric:tabular-nums${l.rang === 1 ? ';color:var(--color-primary)' : ''}">${esc(l.val)}</span>
+          <span style="font-size:10.5px;color:var(--color-text-muted);font-variant-numeric:tabular-nums;white-space:nowrap">${esc(l.sub)}</span>
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>`}
+
+    ${!c.tvPrimesMois ? '' : `
+    <div style="${carte};padding:14px 16px" data-tv="primes-mois">
+      <div style="display:flex;gap:12px;align-items:baseline;flex-wrap:wrap">
+        <div style="${lbl}">Les primes de ${esc(c.tvPrimesMois.lib)}, telles que l'app worker les montre</div>
+        <span style="font-size:11px;color:var(--color-text-muted)">${esc(c.tvPrimesMois.note)}</span>
+        ${c.tvPrimesMois.parPayeur ? `<span style="font-size:11.5px;font-weight:400">Payé par : ${esc(c.tvPrimesMois.parPayeur)}</span>` : ''}
+        <span style="flex:1"></span>
+        <span style="font-size:11.5px;color:${c.tvPrimesMois.enregistre ? '#3f7a52' : 'var(--color-text-muted)'}">${esc(c.tvPrimesMois.enregistre || (c.tvPrimesMois.enCours ? 'Mois en cours : une projection, rien ne se paie.' : 'À enregistrer avec le bouton ci-dessous.'))}</span>
+      </div>
+      ${c.tvPrimesMois.chargement ? `<div style="font-size:12px;color:var(--color-text-muted);margin-top:8px">Calcul en cours…</div>` : c.tvPrimesMois.motif ? `<div style="font-size:12px;color:var(--stop);margin-top:8px">${esc(c.tvPrimesMois.motif)}</div>` : `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:10px 0 12px">
+        ${c.tvPrimesMois.magasins.map(m => `
+        <div style="border:1px solid var(--color-border-tertiary);border-radius:10px;padding:9px 12px">
+          <div style="font-size:12px;font-weight:400">${esc(m.nom)} <span style="font-weight:400;color:var(--color-text-muted)">· ${esc(m.cible)}</span></div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">objectif ${esc(m.objectif)} · atteint <b style="color:var(--color-text)">${esc(m.atteinte)}</b></div>
+          <div style="font-size:11.5px;margin-top:3px">objectif ${esc(m.palier)} → <b>${esc(m.equipe)}</b> <span style="color:var(--color-text-muted)">pour ${esc(m.heures)}</span></div>
+          ${m.google ? `<div style="font-size:11px;color:var(--color-text-muted);margin-top:3px">${esc(m.google)}</div>` : ''}
+        </div>`).join('')}
+      </div>
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left">Vendeur·se</th><th style="${th};text-align:left">Magasin</th><th style="${th}">Heures</th>
+          <th style="${th}">Ventes croisées</th><th style="${th}">€</th><th style="${th}" title="lignes par ticket / record 12 mois">Record</th><th style="${th}">€</th>
+          <th style="${th}">Meilleure</th>${c.tvPrimesMois.concoursActif ? `<th style="${th}" title="pièces vendues · rang dans le magasin">${esc(c.tvPrimesMois.concoursLib)}</th><th style="${th}">€</th>` : ''}${c.tvPrimesMois.promosActif ? `<th style="${th}" title="pièces vendues sur les dates de la promo · 1re du magasin">${esc(c.tvPrimesMois.promosLib)}</th><th style="${th}">€</th>` : ''}<th style="${th}">Objectif magasin</th><th style="${th}" title="la note Google du magasin à son seuil ou mieux : la récompense pour chacune au planning">Note Google</th>${c.tvPrimesMois.ciblesActif ? `<th style="${th}" title="les targets posés par le magasin, payés par lui">Targets du magasin</th><th style="${th}">€</th>` : ''}${c.tvPrimesMois.b2bActif ? `<th style="${th}" title="les nouveaux clients pro qu’elle a ramenés : ce qu’ils rapportent ce mois-là">Clients pro</th><th style="${th}">€</th>` : ''}<th style="${th}">Total</th>
+        </tr></thead>
+        <tbody>
+          ${c.tvPrimesMois.personnes.map(l => `
+          <tr style="${l.prime ? '' : 'color:var(--muted)'}">
+            <td style="${td};text-align:left;font-weight:400">${esc(l.nom)}</td><td style="${td};text-align:left">${esc(l.magasin)}</td><td style="${td}">${esc(l.heures)}</td>
+            <td style="${td}">${esc(l.croisees)}</td><td style="${td};font-weight:400">${esc(l.croiseesM)}</td><td style="${td}">${esc(l.record)}</td><td style="${td};font-weight:400">${esc(l.recordM)}</td>
+            <td style="${td};font-weight:400">${esc(l.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}">${esc(l.concours)}</td><td style="${td};font-weight:400">${esc(l.concoursM)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}">${esc(l.promo)}</td><td style="${td};font-weight:400">${esc(l.promoM)}</td>` : ''}<td style="${td};font-weight:400">${esc(l.magasinM)}</td><td style="${td};font-weight:400">${esc(l.googleM)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}">${esc(l.cibles)}</td><td style="${td};font-weight:400">${esc(l.ciblesM)}</td>` : ''}${c.tvPrimesMois.b2bActif ? `<td style="${td}">${esc(l.b2b)}</td><td style="${td};font-weight:400">${esc(l.b2bM)}</td>` : ''}<td style="${td};font-weight:400;color:var(--color-primary)">${esc(l.total)}</td>
+          </tr>`).join('')}
+          ${!c.tvPrimesMois.totaux ? '' : `
+          <tr style="background:var(--color-background-secondary)">
+            <td style="${td};text-align:left;font-weight:400">Total · ${c.tvPrimesMois.totaux.personnes} personne(s) primée(s)</td><td style="${td}"></td><td style="${td}"></td>
+            <td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.croisees)}</td><td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.record)}</td>
+            <td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.meilleure)}</td>${c.tvPrimesMois.concoursActif ? `<td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.concours)}</td>` : ''}${c.tvPrimesMois.promosActif ? `<td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.promo)}</td>` : ''}<td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.magasin)}</td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.google)}</td>${c.tvPrimesMois.ciblesActif ? `<td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.cibles)}</td>` : ''}${c.tvPrimesMois.b2bActif ? `<td style="${td}"></td><td style="${td};font-weight:400">${esc(c.tvPrimesMois.totaux.b2b)}</td>` : ''}<td style="${td};font-weight:400;color:var(--color-primary)">${esc(c.tvPrimesMois.totaux.total)}</td>
+          </tr>`}
+        </tbody>
+      </table></div>`}
+    </div>`}
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">Le personnel de vente, classé au CA/h pondéré par les heures</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">Cliquez une personne pour ses six derniers mois.</div>
+        </div>
+        <span style="flex:1"></span>
+        ${c.tvPrime.fait
+          ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.tvPrime.txt)}</span>`
+          : `<button ${x.A(c.tvPrime.agir)} style="${pill(true)}">${esc(c.tvPrime.txt)}</button>`}
+        <a href="${esc(c.tvPdfHref)}" target="_blank" rel="noreferrer" style="font-size:11.5px;font-weight:400;color:var(--color-primary);text-decoration:none;border:1px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Rapport PDF</a>
+        <a href="${esc(c.tvAfficheHref)}" target="_blank" rel="noreferrer" title="Une page par magasin, à épingler en réserve : le système de primes du mois et les montants à gagner" style="font-size:11.5px;font-weight:400;color:var(--color-primary);text-decoration:none;border:1px solid var(--color-primary);border-radius:8px;padding:5px 13px">↓ Affiche primes</a>
+      </div>
+      ${filtres}
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:980px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">#</th>
+          <th style="${th};text-align:left">Vendeur·se</th>
+          <th style="${th};text-align:left">Magasin</th>
+          <th style="${th}">Heures</th><th style="${th}">CA</th><th style="${th}">CA / heure</th>
+          <th style="${th}">Coef. h</th><th style="${th}" title="coefficient de créneau">Coef. crén.</th><th style="${th}">Score</th>
+          <th style="${th};text-align:left;padding-left:18px"></th>
+          <th style="${th}">Panier</th><th style="${th}">Lignes / ticket</th><th style="${th};padding-right:18px">Tickets</th>
+        </tr></thead>
+        <tbody>
+          ${c.tvLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouverte ? ';background:var(--table-head)' : ''}${l.classable ? '' : ';color:var(--muted)'}">
+            <td style="${td};text-align:left;padding-left:18px;color:var(--color-text-muted)">${l.rang != null ? l.rang : ''}</td>
+            <td style="${td};text-align:left;font-weight:400">${avatar(l.ini)}${esc(l.nom)}
+              ${l.primeReseau ? ` <span style="${primeR}">réseau</span>` : l.primeMagasin ? ` <span style="${primeOr}">${esc(l.magasin)}</span>` : ''}
+              ${l.classable ? '' : `<span style="font-size:10.5px;color:var(--muted)"> · ${esc(l.motif)}</span>`}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(l.magasin)}</td>
+            <td style="${td}">${esc(l.heures)}</td>
+            <td style="${td}">${esc(l.ca)}</td>
+            <td style="${td}">${esc(l.caHeure)}</td>
+            <td style="${td};color:var(--color-text-muted)">${esc(l.coef)}</td>
+            <td style="${td};color:var(--color-text-muted)" title="${esc(l.creneauTitre)}">${esc(l.coefCreneau)}</td>
+            <td style="${td};font-weight:400${l.classable ? ';color:var(--color-primary)' : ''}">${esc(l.score)}</td>
+            <td style="${td};text-align:left;padding-left:18px"><span style="position:relative;display:inline-block;height:8px;border-radius:8px;background:rgba(34,34,34,.06);width:96px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${l.barre}%;background:${l.classable ? 'var(--color-primary)' : '#CFC7BA'};border-radius:8px"></i></span></td>
+            <td style="${td}">${esc(l.panier)}</td>
+            <td style="${td};font-weight:400">${esc(l.lignesTicket)}</td>
+            <td style="${td};padding-right:18px">${esc(l.tickets)}</td>
+          </tr>
+          ${l.ouverte ? fiche(c.tvFiche) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Le classement se fait au <b>CA/h pondéré</b> : CA/heure × coefficient d’heures, où coefficient = heures ÷ (heures + 20).
+        Au plus d’heures prestées, au plus le coefficient approche 1 — la régularité pèse, et cinq bonnes heures ne battent plus un mois entier.
+        S’y multiplie le <b>coefficient de créneau</b> (borné 0,80 – 1,30) : vendre l’après-midi ou en semaine est plus dur que le samedi matin — survolez la colonne pour voir la part d’après-midi et de week-end de chacun. Le CA/heure réel reste affiché.
+        ${!c.tvCreneaux ? '' : '<br>' + esc(c.tvCreneaux)}
+        Le classement est ouvert à toutes les heures prestées${c.tvSeuil > 0 ? ` dès ${c.tvSeuil} h au planning` : ''} — sans heure au planning ou sans vente à son nom : montré·e, jamais classé·e ni primé·e. Panier = CA ÷ tickets · vente complémentaire = lignes par ticket.
+        La meilleure du réseau ne cumule pas la prime magasin. Les primes s’enregistrent d’un clic et passent au journal.
+        ${!c.tvSansVendeur ? '' : '<br>' + esc(c.tvSansVendeur)}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0;display:flex;gap:14px;align-items:baseline;flex-wrap:wrap">
+        <div>
+          <div style="${lbl}">La prime de vente complémentaire — target évolutive par magasin</div>
+          <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${esc(c.cxPhrase || '')} Ces primes <b>s’ajoutent</b> à celles de la meilleure vendeuse — réglages dans l’onglet Targets &amp; primes.</div>
+        </div>
+        <span style="flex:1"></span>
+        ${!c.cxPrime ? '' : c.cxPrime.fait
+          ? `<span style="font-size:11.5px;color:var(--color-text-muted)">${esc(c.cxPrime.txt)}</span>`
+          : `<button ${x.A(c.cxPrime.agir)} style="${pill(true)}">${esc(c.cxPrime.txt)}</button>`}
+      </div>
+      ${c.cxChargement ? `<div style="padding:14px 18px 16px;font-size:12px;color:var(--color-text-muted)">Lecture des six mois…</div>`
+      : c.cxMotif ? `<div style="padding:14px 18px 16px;font-size:12px">${esc(c.cxMotif)}</div>` : `
+      <div style="overflow-x:auto;padding-top:8px"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:860px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
+          ${(c.cxEntetes || []).map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+        </tr></thead>
+        <tbody>
+          ${(c.cxLignes || []).map(l => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:400">${esc(l.nom)}</td>
+            ${l.cells.map(c2 => `<td style="${td}" title="${esc(c2.noms)}">${c2.vide ? '<span style="color:var(--faint)"></span>'
+              : `<span style="font-weight:400">${esc(c2.moyenne)}</span>
+                 <div style="font-size:10px;margin-top:2px;color:${c2.nb > 0 ? '#3f7a52' : 'var(--color-text-muted)'}">${c2.nb > 0 ? '✓ ' + c2.nb + ' record(s) battu(s) · ' + c2.eur + ' €' : 'aucun record battu'}</div>`}</td>`).join('')}
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        Chaque cellule : la moyenne du magasin, et les vendeuses qui battent leur propre record (survolez pour les noms et les primes). Les primes s’enregistrent une fois le mois fini et passent au journal.
+      </div>`}
+    </div>
+  </div>`;
+}
+
+function tplManque(c, x){
+  const { esc } = x;
+  const carte = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  const lbl = 'font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted);font-weight:400';
+  const th = 'text-align:right;font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-text-muted);font-weight:400;padding:10px;border-bottom:1px solid var(--color-border-tertiary)';
+  const td = 'padding:10px;border-bottom:1px solid var(--color-border-tertiary);text-align:right;font-variant-numeric:tabular-nums';
+  const pill = f => `border:1px solid ${f ? 'var(--color-primary)' : 'var(--color-border-tertiary)'};background:${f ? 'var(--color-primary)' : 'var(--color-surface)'};color:${f ? '#fff' : 'var(--color-text-muted)'};border-radius:8px;padding:5px 13px;font-family:var(--font-ui);font-size:11.5px;cursor:pointer`;
+  const jauge = (p, col) => `<span style="position:relative;display:inline-block;height:8px;border-radius:8px;background:rgba(34,34,34,.06);width:120px;vertical-align:middle;overflow:hidden"><i style="position:absolute;left:0;top:0;height:8px;width:${p}%;background:${col};border-radius:8px"></i></span>`;
+
+  if (c.mqChargement) {
+    return `<div data-screen="manque"><div style="${carte};padding:20px 22px;font-size:12.5px;color:var(--color-text-muted)">Calcul du manque à gagner…</div></div>`;
+  }
+  if (c.mqMotif) {
+    return `<div data-screen="manque"><div style="${carte};padding:20px 22px;font-size:12.5px">${esc(c.mqMotif)}</div></div>`;
+  }
+
+  const detail = d => `
+    <tr><td colspan="${c.mqEntetes.length + 4}" style="padding:0;background:var(--table-head);border-top:1px solid var(--color-border-tertiary)">
+      <div style="padding:14px 18px 16px">
+        <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:4px">
+          <span style="${lbl}">${esc(d.titre)}</span>
+          <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(d.sousTitre)}</span>
+          <span style="flex:1"></span>
+          <span style="font-size:11.5px;color:var(--green)">Rattraper la moitié : <b>${esc(d.gain)}</b> — ${esc(d.gainMois)} par mois</span>
+        </div>
+        ${d.vide ? `<div style="font-size:12px;color:var(--color-text-muted);padding:8px 0">Aucune référence en défaut : ce magasin vend tout ce que les autres vendent.</div>` : `
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead><tr>
+            <th style="${th};text-align:left">Référence</th>
+            <th style="${th};text-align:left">Sous-catégorie</th>
+            <th style="${th}">Vendue par</th><th style="${th}">Volume / mois</th>
+            <th style="${th}">Prix encaissé</th><th style="${th}">Manque</th>
+          </tr></thead>
+          <tbody>
+            ${d.refs.map(r => `<tr>
+              <td style="${td};text-align:left;font-weight:400">${esc(r.nom)}</td>
+              <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.cat)}</td>
+              <td style="${td};color:var(--color-text-muted)">${esc(r.vendeurs)}</td>
+              <td style="${td}">${esc(r.unitesMois)}</td>
+              <td style="${td};color:var(--color-text-muted)">${esc(r.prix)}</td>
+              <td style="${td};font-weight:400;color:var(--color-primary)">${esc(r.total)}</td>
+            </tr>`).join('')}
+            ${!d.resteN ? '' : `<tr><td colspan="6" style="${td};text-align:left;color:var(--color-text-muted)">+ ${d.resteN} autres références — ${esc(d.resteEur)}</td></tr>`}
+          </tbody>
+        </table>
+        <div style="font-size:11px;color:var(--color-text-muted);padding:10px 0 0;line-height:1.55">Une ligne se traite de deux façons : la mettre en production, ou la sortir de l’assortiment en le disant. Pas la laisser sans décision.</div>`}
+      </div>
+    </td></tr>`;
+
+  return `
+  <div data-screen="manque" style="display:flex;flex-direction:column;gap:14px;max-width:1360px">
+    <div style="${carte}">
+      <div style="display:flex;gap:26px;flex-wrap:wrap;padding:16px 18px">
+        ${c.mqKpis.map(k => `<div><span style="${lbl}">${esc(k.lbl)}</span>
+          <b style="display:block;font-size:21px;font-weight:700;margin-top:2px${k.accent ? ';color:var(--color-primary)' : ''}">${esc(k.v)}</b>
+          <span style="font-size:11px;color:var(--color-text-muted)">${esc(k.sub)}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div style="${carte}">
+      <div style="padding:16px 18px 0">
+        <div style="${lbl}">${c.mqVue === 'references' ? 'Ce que le réseau laisse sur la table' : 'Manque à gagner par magasin et par mois'}</div>
+        <div style="font-size:11.5px;color:var(--color-text-muted);margin-top:3px">${c.mqVue === 'references'
+          ? 'Absente chez presque tout le réseau : c’est une question de gamme. Absente chez un seul : une question de magasin.'
+          : 'Cliquez un magasin pour voir les références qui composent son manque.'}</div>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;padding:12px 18px 14px;align-items:center">
+        ${c.mqVues.map(v => `<button ${x.A(v.choisir)} style="${pill(v.on)}">${esc(v.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${c.mqDurees.map(t => `<button ${x.A(t.choisir)} style="${pill(t.on)}">${esc(t.nom)}</button>`).join('')}
+        <span style="width:12px"></span>
+        ${c.mqUnites.map(u => `<button ${x.A(u.choisir)} style="${pill(u.on)}">${esc(u.nom)}</button>`).join('')}
+      </div>
+
+      ${c.mqVue === 'references' ? `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:820px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Référence</th>
+          <th style="${th};text-align:left">Groupe</th>
+          <th style="${th};text-align:left">Absente chez</th>
+          <th style="${th}">Manque réseau</th><th style="${th};padding-right:18px"></th>
+        </tr></thead>
+        <tbody>
+          ${c.mqRefs.map(r => `<tr>
+            <td style="${td};text-align:left;padding-left:18px;font-weight:400">${esc(r.nom)}</td>
+            <td style="${td};text-align:left;color:var(--color-text-muted)">${esc(r.groupe)}</td>
+            <td style="${td};text-align:left">${esc(r.absente)}</td>
+            <td style="${td};font-weight:400;color:${r.col}">${esc(r.total)}</td>
+            <td style="${td};padding-right:18px">${jauge(r.barre, r.col)}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        ${c.mqRefs.length} références affichées sur ${c.mqRefsN} en défaut quelque part dans le réseau.
+        ${!c.mqGammes ? '' : '<br>' + esc(c.mqGammes)}<br>${esc(c.mqSource)}
+      </div>` : `
+      <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px">
+        <thead><tr>
+          <th style="${th};text-align:left;padding-left:18px">Magasin</th>
+          ${c.mqEntetes.map(m => `<th style="${th}">${esc(m)}</th>`).join('')}
+          <th style="${th}">Sur la période</th><th style="${th}">% du CA</th><th style="${th};padding-right:18px">Réf.</th>
+        </tr></thead>
+        <tbody>
+          ${c.mqLignes.map(l => `
+          <tr ${x.A(l.basculer)} style="cursor:pointer${l.ouvert ? ';background:var(--table-head)' : ''}">
+            <td style="${td};text-align:left;padding-left:18px;font-weight:400" title="${esc(l.complet)}"><span style="color:var(--color-text-muted);font-size:11px">${l.ouvert ? '▾' : '▸'}</span> ${esc(l.nom)}</td>
+            ${l.mois.map(m => `<td style="${td};${m.st}">${esc(m.v)}${m.sub ? `<div style="font-size:10px;color:var(--color-text-muted)">${esc(m.sub)}</div>` : ''}</td>`).join('')}
+            <td style="${td}"><span style="display:inline-flex;align-items:center;gap:8px;justify-content:flex-end">${jauge(l.barre, 'var(--color-primary)')}<b style="color:var(--color-primary)">${esc(l.total)}</b></span></td>
+            <td style="${td};${l.fort ? 'color:var(--color-primary);font-weight:400' : 'color:var(--color-text-muted)'}">${esc(l.part)}</td>
+            <td style="${td};padding-right:18px"><span style="font-size:10.5px;font-weight:400;padding:2px 9px;border-radius:8px;background:rgba(141,29,44,.10);color:var(--color-primary)">${l.refs}</span></td>
+          </tr>
+          ${l.ouvert ? detail(l.detail) : ''}`).join('')}
+        </tbody>
+      </table></div>
+      <div style="font-size:11px;color:var(--color-text-muted);padding:12px 18px 16px;line-height:1.55">
+        <b>Comment le chiffre est fait.</b> Une référence n’entre au calcul que si <b>au moins deux magasins</b> l’ont vendue ce mois-là — vendue par un seul, c’est une spécialité, pas un manque.
+        Le volume retenu est la <b>médiane</b> des vendeurs par jour d’ouverture, multipliée par les jours d’ouverture du magasin et par le <b>rapport de sa fréquentation</b> à la leur : un petit magasin ne se voit pas attribuer le potentiel d’un grand.
+        Le prix est celui <b>réellement encaissé</b> chez les vendeurs, remises comprises. Le mois que la caisse n’a pas encore chargé reste vide plutôt que compté à zéro.
+        <br><b>C’est une estimation à assortiment comparable, pas une promesse de chiffre d’affaires.</b>
+        ${!c.mqGammes ? '' : '<br>' + esc(c.mqGammes)}<br>${esc(c.mqSource)}
+      </div>`}
+    </div>
+  </div>`;
+}
+
+
+
+
+/* --- Tablette vendeuses : le lien de chaque magasin, l'état des données, un aperçu ---
+ * L'aperçu vient en dernier, hors de la grille du haut : la fusion du rendu
+ * compare les nœuds par position, et ce qui bouge au-dessus (la progression des
+ * photos, une relecture) ne doit pas recréer l'iframe — elle se rechargerait. */
+/* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
+ * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
+ * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+function tplCadreTaches(c, x){
+  const { esc } = x;
+  // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.
+  // « Ouvrir seul ↗ » vit dans la page elle-même, à côté de « Relire ».
+  return `<div data-screen="cadreTaches"><iframe data-ct src="${esc(c.ct.src)}" title="Cadre des tâches" scrolling="no" style="width:100%;height:${c.ct.haut}px;min-height:calc(100vh - 110px);border:none;background:transparent;display:block"></iframe></div>`;
+}
+/* --- MétaDonnée : les quatre écrans du sous-menu ------------------------------ */
+/* Le module (metadonnee.js) tient son propre DOM : le gabarit ne pose que
+   l'ancre, qu'app.js lui rend après chaque rendu. */
+function tplMetaDonnee(){
+  return `<div data-screen="metadonnee"><div id="metadonnee-root" style="min-height:400px"></div></div>`;
+}
+
+function tplTablette(c, x){
+  const { esc } = x;
+  const T = c.tb;
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const seg = l => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const E = T.etat;
+  const off = (b) => b ? ' disabled style="opacity:.55;cursor:default"' : '';
+
+  let donnees;
+  if (T.demo) {
+    donnees = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, l’état des données n’est pas lisible. La tablette affiche alors ses données d’exemple.</div>`;
+  } else if (T.chargement) {
+    donnees = `<div style="${mu}">Lecture du book de la tablette…</div>`;
+  } else if (!E) {
+    donnees = `<div class="ps-note">${T.erreur === 'sans réponse'
+        ? 'Le service /tablette/book ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/book rend une réponse inattendue (' + esc(T.erreur) + ').'} La tablette affiche alors ses données d’exemple.</div>
+      <div><button class="ps-btn" ${x.A(T.reessayer)}${off(!!T.relecture)}>${T.relecture ? 'Lecture…' : 'Réessayer'}</button></div>`;
+  } else {
+    donnees = `
+      <div style="display:flex;align-items:baseline;justify-content:space-between;gap:6px 12px;flex-wrap:wrap">
+        <div style="font-size:13px"><span style="font-weight:400">Généré le ${esc(E.genere)}</span>${E.age ? ` <span style="color:var(--color-text-muted)">· ${esc(E.age)}</span>` : ''}</div>
+        <span style="${mu};font-size:11.5px">${esc(E.details)}</span>
+      </div>
+      ${T.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(T.erreur)}) : l’état affiché est le précédent.</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+        ${E.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v"${t.alerte ? ' style="color:var(--prize-ink)"' : ''}>${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}
+      </div>
+      ${E.sources.length ? `<div style="${mu};font-size:11.5px">${E.sources.map(s => `<div><span style="color:var(--color-text);font-weight:400">${esc(s.nom)}</span> — ${esc(s.txt)}</div>`).join('')}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <button class="ps-btn" ${x.A(T.regenerer)}${off(!!T.relecture)} title="Recalculer le book au serveur (il est sinon gardé six heures)">${T.relecture === 'regenere' ? 'Régénération…' : (T.relecture ? 'Lecture…' : 'Régénérer')}</button>
+        <button class="ps-btn${T.photosEnCours ? '' : ' p'}" ${x.A(T.photos)}>${T.photosEnCours ? 'Arrêter la récupération' : 'Récupérer les photos manquantes'}</button>
+      </div>
+      ${T.photosTxt ? `<div style="display:flex;flex-direction:column;gap:6px">
+        ${T.photosPct != null ? `<div style="height:6px;border-radius:8px;background:var(--color-background-secondary);overflow:hidden"><div style="height:100%;width:${T.photosPct}%;background:${T.photosKo ? '#B0792A' : 'var(--color-primary)'};transition:width .3s"></div></div>` : ''}
+        <div style="${mu};${T.photosKo ? 'color:var(--prize-ink)' : ''}">${esc(T.photosTxt)}</div>
+      </div>` : ''}`;
+  }
+
+  return `
+  <div data-screen="tablette" style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,440px),1fr));gap:14px;align-items:start">
+      <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+        <div class="ps-cap">Le lien de la tablette</div>
+        <div style="${mu}">Une application à part, faite pour la tablette du comptoir : la gamme et ses photos, les prix, les saisons, les allergènes, la vente additionnelle — en français et en néerlandais. Chaque magasin a son lien ; la tablette retient son magasin, et l’application installée se rouvre sans le lien.</div>
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+          <span class="ps-cap">Magasin</span>
+          <select ${x.C(T.setMagasin)} style="${SEL}" aria-label="Magasin">${T.magasins.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}<option value=""${T.reseauOn ? ' selected' : ''}>Tout le réseau (sans magasin)</option></select>
+          ${seg(T.langues)}
+          <button class="ps-tog${T.prix ? ' on' : ''}" ${x.A(T.basculerPrix)}><i></i>Prix affichés</button>
+        </div>
+        ${T.sansMagasin ? `<div style="${mu}">Aucun magasin ouvert n’est lu : le lien mène à la tablette sans magasin, avec les données de tout le réseau.</div>` : ''}
+        <input readonly value="${esc(T.lien)}" ${x.A(T.selectionner)} aria-label="Lien de la tablette" style="width:100%;font:12px var(--font-ui);padding:8px 10px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-background-secondary);color:var(--color-text)">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="ps-btn p" ${x.A(T.copier)}>Copier le lien</button>
+          <a class="ps-btn" href="${esc(T.lien)}" target="_blank" rel="noopener">Ouvrir dans un onglet ↗</a>
+        </div>
+        ${T.https
+          ? `<div style="${mu}">Lien https : la tablette peut s’installer sur l’écran d’accueil et fonctionner sans réseau.</div>`
+          : `<div class="ps-note"><b style="font-weight:400">Hors ligne et installation : https seulement.</b> Le serveur ne sert aujourd’hui que http : ce lien fonctionne en ligne, mais la tablette ne peut ni s’installer sur l’écran d’accueil ni fonctionner sans réseau.</div>`}
+      </div>
+      <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+        <div class="ps-cap">Les données reçues du BO · ${esc(T.nom)}</div>
+        ${donnees}
+      </div>
+    </div>
+    ${tplTbObjectifs(T, x)}
+    ${tplTbRemarques(T, x)}
+    <div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">Aperçu · ${esc(T.nom)}${T.nl ? ' · NL' : ''}${T.prix ? '' : ' · sans prix'}</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          ${seg(T.orients)}
+          <button class="ps-btn" ${x.A(T.recharger)} title="Recharger la tablette">↻ Recharger</button>
+          <span style="${mu};font-size:11px;font-variant-numeric:tabular-nums">${T.w} × ${T.h} · ${esc(T.echTxt)}</span>
+        </div>
+      </div>
+      <div style="${T.installee
+        ? `box-sizing:content-box;width:${T.sw}px;height:${T.sh}px;border:${T.bord}px solid #222;border-radius:12px;overflow:hidden;background:var(--color-bg);margin:0 auto;`
+        : 'border:1.5px dashed var(--color-border-secondary);border-radius:12px;padding:28px 24px;text-align:center'}">
+        ${T.installee
+          ? `<iframe id="tb-apercu" src="${esc(T.apercu)}" title="Tablette vendeuses — aperçu" style="width:${T.w}px;height:${T.h}px;border:none;display:block;transform:scale(${T.ech});transform-origin:0 0"></iframe>`
+          : `<div style="${mu}">${T.installee === false
+            ? 'La tablette n’est pas installée sur ce serveur : le dossier tablette/ ne répond pas. Elle s’y copie compilée depuis le dépôt pwa_sales_tablet — puis « Recharger ».'
+            : 'Vérification de la tablette…'}</div>`}
+      </div>
+      <div style="${mu};font-size:11.5px">L’aperçu est la tablette en ligne, à la même adresse que le cockpit : les mêmes données qu’en magasin, à l’échelle de l’écran.</div>
+    </div>
+  </div>`;
+}
+
+/* Les objectifs de l'accueil de la tablette (CA, articles par ticket) et la
+ * saisie de l'objectif d'articles par ticket du magasin : une seule carte,
+ * toujours rendue, pour la même raison que celle des remarques. */
+function tplTbObjectifs(T, x){
+  const { esc } = x;
+  const O = T.obj;
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const SEL = 'font-family:var(--font-ui);font-size:12.5px;padding:7px 9px;border-radius:8px;border:1px solid var(--color-border-secondary);background:var(--color-surface);color:var(--color-text)';
+  const off = b => b ? ' disabled style="opacity:.55;cursor:default"' : '';
+  const filet = 'padding-top:12px;border-top:1px solid var(--color-border-tertiary)';
+  let corps;
+  if (O.demo) {
+    corps = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, les objectifs de la tablette ne sont pas lisibles.</div>`;
+  } else if (O.chargement) {
+    corps = `<div style="${mu}">Calcul en cours… Le serveur lit le réseau au panel : une quinzaine de secondes au plus quand rien n’est gardé.</div>`;
+  } else if (!O.tuiles) {
+    corps = `<div class="ps-note">${O.erreur === 'sans réponse'
+        ? 'Le service /tablette/objectifs ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/objectifs rend une réponse inattendue (' + esc(O.erreur) + ').'} Réessayez avec « Relire ».</div>`;
+  } else {
+    corps = `
+      <div style="${mu};font-size:11.5px">${esc(O.periodes)}${O.relecture ? ` · <b style="font-weight:400;color:var(--color-text)">${O.relecture === 'recalcul' ? 'Recalcul en cours…' : 'Lecture…'}</b>` : ''}</div>
+      ${O.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(O.erreur)}) : les chiffres affichés sont les précédents.</div>` : ''}
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:8px">
+        ${O.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v"${t.alerte ? ' style="color:var(--prize-ink)"' : ''}>${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}
+      </div>
+      ${O.sources.length ? `<div style="${mu};font-size:11.5px">${O.sources.map(s => `<div><span style="color:var(--color-text);font-weight:400">${esc(s.nom)}</span> — ${esc(s.txt)}</div>`).join('')}</div>` : ''}`;
+  }
+  let saisie = '';
+  if (!O.demo) {
+    saisie = O.magasin
+      ? `<div style="display:flex;flex-direction:column;gap:8px;${filet}">
+        <div style="display:flex;align-items:baseline;gap:6px 12px;flex-wrap:wrap"><span class="ps-cap">Objectif articles par ticket</span><span style="font-size:13px">Actuel : <b style="font-weight:400">${esc(O.cibleTxt)}</b></span></div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <input type="number" step="0.1" min="1" max="10" inputmode="decimal" value="${esc(O.saisie)}" ${x.I(O.setSaisie)} aria-label="Objectif articles par ticket" placeholder="ex. 2,3" style="${SEL};width:100px"${O.envoi ? ' disabled' : ''}>
+          <button class="ps-btn p" ${x.A(O.enregistrer)}${off(O.envoi)}>Enregistrer</button>
+          ${O.cible != null ? `<button class="ps-btn" ${x.A(O.retirer)}${off(O.envoi)}>Retirer</button>` : ''}
+          ${O.msg ? `<span style="${mu}${O.ko ? ';color:var(--prize-ink)' : ''}">${esc(O.msg)}</span>` : ''}
+        </div>
+        <div style="${mu};font-size:11.5px">Entre 1 et 10, dès ce mois, pour ce magasin — c’est la target cross-selling de Ventes › primes, le même réglage.${O.repere ? ' ' + esc(O.repere) : ''}</div>
+      </div>`
+      : `<div style="${mu};${filet}">Les objectifs d’articles par ticket se posent magasin par magasin : choisissez un magasin pour le modifier.</div>`;
+  }
+  return `<div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">Objectifs de la tablette · ${esc(T.nom)}</div>
+        ${O.demo ? '' : `<button class="ps-btn" ${x.A(O.relire)}${off(O.chargement || !!O.relecture)}>${O.relecture === 'relit' ? 'Lecture…' : 'Relire'}</button>`}
+      </div>
+      <div style="${mu}">Ce que l’accueil de la tablette montre aux vendeuses : le chiffre d’affaires et les articles par ticket de la semaine et du mois, face à leur objectif.</div>
+      ${corps}
+      ${saisie}
+    </div>`;
+}
+
+/* Les remarques des clients saisies sur la tablette : une seule carte, toujours
+ * rendue (l'aperçu qui la suit garde ainsi sa position pour la fusion). */
+function tplTbRemarques(T, x){
+  const { esc } = x;
+  const Q = T.rq;
+  const mu = 'font-size:12px;color:var(--color-text-muted);line-height:1.55';
+  const pl = (n, mot) => n + ' ' + mot + (n > 1 ? 's' : '');
+  let corps;
+  if (Q.demo) {
+    corps = `<div class="ps-note">Mode démonstration : l’API du cockpit ne répond pas, les remarques des clients ne sont pas lisibles.</div>`;
+  } else if (Q.chargement) {
+    corps = `<div style="${mu}">Lecture des remarques…</div>`;
+  } else if (!Q.lignes) {
+    corps = `<div class="ps-note">${Q.erreur === 'sans réponse'
+        ? 'Le service /tablette/remarques ne répond pas : pas encore en ligne, ou en erreur au serveur.'
+        : 'Le service /tablette/remarques rend une réponse inattendue (' + esc(Q.erreur) + ').'} Réessayez avec « Relire ».</div>`;
+  } else if (!Q.lignes.length) {
+    corps = `<div style="${mu}">Aucune remarque sur les 30 derniers jours.</div>`;
+  } else {
+    corps = `${Q.erreur ? `<div class="ps-note">La dernière lecture a échoué (${esc(Q.erreur)}) : la liste affichée est la précédente.</div>` : ''}
+      <div style="max-height:560px;overflow:auto">${Q.lignes.map((l, i) => `
+        <div style="display:flex;align-items:flex-start;gap:12px;padding:10px 0;${i ? 'border-top:1px solid var(--color-border-tertiary)' : ''}">
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span class="ao-pill ${l.cls}">${esc(l.type)}</span><span style="${mu};font-size:11.5px">${esc(l.date)}${Q.reseau ? ' · ' + esc(l.magasin) : ''}${l.nl ? ' · NL' : ''}</span></div>
+            <div style="font-size:13px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere;color:var(${l.traitee ? '--color-text-muted' : '--color-text'})">${esc(l.texte)}</div>
+          </div>
+          <button class="ps-tog${l.traitee ? ' on' : ''}" ${x.A(l.basculer)}${l.attente ? ' disabled' : ''} style="flex:none;margin-top:3px" title="${l.traitee ? 'Remettre à traiter' : 'Marquer comme traitée'}"><i></i>Traitée</button>
+        </div>`).join('')}
+      </div>
+      ${Q.tronque ? `<div style="${mu};font-size:11.5px">Les ${Q.lignes.length} plus récentes sur ${Q.total}.</div>` : ''}`;
+  }
+  const titre = 'Remarques des clients · ' + T.nom + (Q.lignes ? ' · ' + (Q.nonTraitees ? pl(Q.nonTraitees, 'non traitée') : 'tout est traité') : '');
+  return `<div class="ps-carte" style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
+        <div class="ps-cap">${esc(titre)}</div>
+        ${Q.demo ? '' : `<button class="ps-btn" ${x.A(Q.relire)}${Q.relecture || Q.chargement ? ' disabled style="opacity:.55;cursor:default"' : ''}>${Q.relecture ? 'Lecture…' : 'Relire'}</button>`}
+      </div>
+      <div style="${mu}">Ce que les vendeuses notent au comptoir sur la tablette, les 30 derniers jours, les plus récentes d’abord.</div>
+      ${corps}
+    </div>`;
+}
+
+/* ============================================================================
+   Planogramme standard — un comptoir pour tout le réseau (maquettes validées
+   docs/maquettes/planogramme-standard). La face en deux parties qui ne coupent
+   aucune zone, le sélecteur de produits à droite, le tableau par section, la
+   vue de dessus à l'échelle, et les rotations.
+   ========================================================================== */
+function psPhoto(v, cls, attrs, esc){
+  if (!v) { return ''; }
+  return v.img
+    ? `<div class="ps-ph ${cls || ''}" ${attrs || ''}><img src="${esc(v.img)}" alt="" style="${v.style}" loading="lazy" draggable="false"></div>`
+    : `<div class="ps-ph ${cls || ''}" ${attrs || ''} style="background:${v.fond}">${esc(v.ini)}</div>`;
+}
+function tplPsFace(P, x, imp){
+  const { esc } = x;
+  return `<div class="ps-carte ps-face-c"><div class="ps-cap" style="margin-bottom:7px">${esc(P.titre)}</div><div class="ps-face">
+    <div class="ps-row"><div class="ps-hd"></div>${P.bandes.map(b => `<div class="ps-band" style="width:${b.w}px;background:${b.fond};color:${b.encre};border:1px solid ${b.bord ? 'var(--color-border-secondary)' : 'transparent'}">${imp ? `<b>${esc(b.nom)}</b>` : `<input value="${esc(b.nom)}" placeholder="${esc(b.defaut)}" title="Nom de la zone — vide : ${esc(b.defaut)}" ${x.C(b.renommer)} style="color:${b.encre}">`}<span>${esc(b.len)}</span></div>`).join('')}</div>
+    ${P.lignes.map(l => `<div class="ps-row"><div class="ps-hd" style="height:${l.h}px"><b>${esc(l.nom)}</b><span>${esc(l.sub)}</span></div>${l.cellules.map(c => {
+      if (c.caisse) { return `<div class="ps-caisse" style="width:${c.w}px;height:${l.h}px">Caisse</div>`; }
+      if (c.hach) { return `<div class="ps-cell ps-hach" style="height:${l.h}px"></div>`; }
+      return `<div class="ps-cell ${c.cls}" style="height:${l.h}px">${c.slots.map(s => s.vide
+        ? `<div class="ps-slot${s.sel ? ' sel' : ''}" ${x.A(s.clic)} ${x.DP(s.deposer)} title="${esc(s.titre)}"><div class="ps-vide">${imp ? '' : esc(s.libreTxt)}</div></div>`
+        : `<div class="ps-slot${s.sel ? ' sel' : ''}${s.hl ? ' hl' : ''}" ${x.A(s.clic)} ${x.DP(s.deposer)} ${s.prendre ? 'draggable="true" ' + x.DS(s.prendre) : ''} title="${esc(s.titre)}">
+            <span class="ps-qt${s.sansQ ? ' manque' : ''}">${s.sansQ ? 'Qté ?' : '×' + esc(String(s.qte).replace('.', ','))}</span>${psPhoto(s.v, '', 'data-psphoto="1"', esc)}${s.bande ? `<div class="ps-bande">${s.bande.map(b => `<i style="background:${b.fond}" title="${esc(b.t)}"></i>`).join('')}</div>` : ''}<div class="ps-nm">${esc(s.nom)}</div></div>`).join('')}</div>`;
+    }).join('')}</div>`).join('')}
+    <div class="ps-row" style="margin-top:2px"><div class="ps-hd" style="font-size:10px;color:var(--color-text-muted)">Section</div>${P.regle.map(r => `<div class="ps-regle" style="width:${r.w}px">${esc(r.t)}</div>`).join('')}</div>
+  </div></div>`;
+}
+function tplPsTableau(c, x, imp){
+  const { esc } = x;
+  return `<div class="ps-carte ps-tab-c"><table class="ps-tab"><thead><tr>${['Section', 'Zone', 'Étage 3', 'Étage 2', 'Étage 1 arrière', 'Étage 1 avant', 'Total'].map((h, i) => `<th${i === 6 ? ' class="n"' : ''}>${h}</th>`).join('')}</tr></thead><tbody>
+    ${c.psTableau.map(r => `<tr><td class="s">${r.s}</td><td class="z"><i style="background:${r.pastille}"></i>${esc(r.zone)}</td>
+      ${r.caisse ? '<td colspan="4" class="mu">caisse — pas d’étage au-dessus</td>' : r.cellules.map(cl => cl.off ? '<td class="mu">—</td>' : (cl.vide ? '<td class="mu">libre</td>'
+        : `<td>${cl.occ.map(o => `<span class="ps-tc"><span class="nm">${esc(o.nom)}${o.journee ? '' : ` <span class="ps-tags">${o.tags.map(t => `<i class="${t.on ? 'on' : ''}" title="${esc(t.titre)}">${esc(t.t)}</i>`).join('')}</span>`}</span>${imp ? `<b>${o.qte ? '×' + esc(o.qte) : 'Qté ?'}</b>` : `<input id="${o.id}" type="text" inputmode="decimal" value="${esc(o.qte)}" placeholder="Qté" ${x.C(o.setQte)} class="${o.qte ? '' : 'manque'}">`}</span>`).join('')}</td>`)).join('')}
+      <td class="n">${esc(r.total)}</td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+function tplPsDessus(c, x){
+  const { esc } = x;
+  return `<div class="ps-carte ps-dessus-c"><div class="ps-cap" style="text-align:center">Côté vendeur</div><div class="ps-dessus">
+    ${c.psDessus.map(r => `<div class="ps-row"><div class="ps-hd" style="font-size:10px;color:var(--color-text-muted)">${esc(r.nom)}</div>${r.segs.map(z => `<div class="ps-ds" style="width:${z.w}px;height:${r.h}px;background:${z.fond};color:${z.encre};border:1px solid ${z.bord ? 'var(--color-border-secondary)' : 'transparent'}">
+      ${z.grille ? `<div class="ps-grille">${Array.from({ length: z.n }, () => '<i></i>').join('')}</div>` : ''}${z.nom ? `<span style="background:${z.fond}">${esc(z.nom)}</span>` : ''}</div>`).join('')}</div>`).join('')}
+    </div><div class="ps-cap" style="text-align:center">Côté client</div>
+    <div class="ps-row"><div class="ps-hd"></div>${c.psDessusEchelle.map(z => `<div class="ps-regle" style="width:${z.w}px">${esc(z.t)}</div>`).join('')}</div></div>`;
+}
+function tplPsPicker(c, x){
+  const { esc } = x;
+  const P = c.psPicker;
+  return `<div class="ps-pick ps-carte">
+    <div style="display:flex;justify-content:space-between;align-items:baseline"><h3>Produits</h3><span class="mu" style="font-size:10.5px">${P.n} au catalogue · API</span></div>
+    <input id="ps-q" class="ps-srch" value="${esc(P.q)}" placeholder="Rechercher un produit, une référence…" ${x.I(P.setQ)}>
+    <div class="ps-chips">${P.groupes.map(g => `<button ${x.A(g.go)} class="${g.on ? 'on' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+    <button class="ps-tog${P.libres ? ' on' : ''}" ${x.A(P.basculer)}><i></i>Pas encore au comptoir · classés par ventes</button>
+    <div class="ps-liste">${P.chargement ? '<div class="mu" style="font-size:12px;padding:8px 0">Lecture du catalogue…</div>' : (P.lignes.length ? P.lignes.map(l => `<div class="ps-pl" draggable="true" ${x.DS(l.prendre)} title="Glissez « ${esc(l.nom)} » sur un emplacement">
+      ${psPhoto(l.v, 'pt', '', esc)}<div class="t"><b>${esc(l.nom)}</b><span>${esc(l.groupe)}${l.groupe ? ' · ' : ''}${esc(l.vendus)}${l.place ? ' · <em>' + esc(l.place) + '</em>' : ''}</span></div>${l.poser ? `<button class="a" ${x.A(l.poser)}>+ poser</button>` : '<span class="a">⠿</span>'}</div>`).join('') : '<div class="mu" style="font-size:12px;padding:8px 0">Aucun produit ne correspond.</div>')}</div>
+    <div class="mu" style="font-size:10.5px;line-height:1.45;border-top:1px solid var(--color-border-tertiary);padding-top:8px">Glissez un produit sur un emplacement, ou cliquez un emplacement pour chercher. Un emplacement se glisse sur un autre pour le déplacer. La photo vient de la recette du panel ; double-clic sur une photo pour la recadrer (1:1).</div>
+  </div>`;
+}
+function tplPsFiche(c, x){
+  const { esc } = x;
+  const F = c.psFiche;
+  const tagsH = t => `<span class="ps-tags">${t.map(g => `<i class="${g.on ? 'on' : ''}" title="${esc(g.titre)}">${esc(g.t)}</i>`).join('')}</span>`;
+  return `<div class="ps-fond" ${x.A(F.fermer)}></div><div class="ps-fiche">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><div><div class="ps-cap">Emplacement</div><h3>${esc(F.titre)}</h3></div><button class="ps-x" ${x.A(F.fermer)} title="Fermer">×</button></div>
+    ${F.occupants.length ? F.occupants.map(o => `<div class="ps-occ">
+      <div class="ps-fp">${psPhoto(o.v, 'pf', '', esc)}<div style="flex:1;min-width:0"><b>${esc(o.nom)}</b><div class="mu" style="font-size:11px">${tagsH(o.tags)} ${esc(o.momentTxt)} · réf. ${esc(o.ref)}${o.du ? ' · depuis le ' + esc(o.du) : ''}</div></div></div>
+      <label class="ps-lab">Quantité quand l’emplacement est plein <input id="${o.id}" type="text" inputmode="decimal" value="${esc(o.qte)}" placeholder="ex. 24" ${x.C(o.setQte)}></label>
+      <div class="ps-actions">${o.etendre ? `<button class="ps-btn p" ${x.A(o.etendre)} title="Le même produit sur les trois moments">Toute la journée</button>` : ''}
+        <label class="ps-btn">Photo…<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(o.fichier)} hidden></label>
+        ${o.recadrer ? `<button class="ps-btn" ${x.A(o.recadrer)}>Recadrer</button>` : ''}${o.retirerPhoto ? `<button class="ps-btn" ${x.A(o.retirerPhoto)}>Photo du panel</button>` : ''}
+        <button class="ps-btn ko" ${x.A(o.retirer)}>Retirer</button></div></div>`).join('') : '<div class="mu" style="font-size:12px;margin:4px 0">Emplacement libre.</div>'}
+    <div class="ps-poser"><div class="ps-cap">Poser un produit — ${esc(F.choixTxt)}</div>
+      <div class="ps-chips">${F.choix.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+      <input id="ps-fsearch" class="ps-srch" value="${esc(F.q)}" placeholder="nom, référence, catégorie…" ${x.I(F.setQ)}>
+      <div>${F.resultats.map(r => `<button class="ps-res" ${x.A(r.choisir)}><b>${esc(r.nom)}</b><span>${esc(r.detail)}</span></button>`).join('')}</div></div>
+  </div>`;
+}
+function tplPsCrop(c, x){
+  const { esc } = x;
+  const C = c.psCrop;
+  return `<div class="ps-fond" ${x.A(C.fermer)}></div><div class="ps-fiche ps-cropm">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><div class="ps-cap">Recadrer (1:1)</div><h3>${esc(C.nom)}</h3></div><button class="ps-x" ${x.A(C.fermer)} title="Fermer (Échap)">×</button></div>
+    <div class="ps-cadre" data-pscadre="1" ${x.PD(C.pd)}>${C.img ? `<img src="${esc(C.img)}" alt="" style="${C.style}" draggable="false">` : ''}</div>
+    <div class="ps-zoom"><button class="ps-btn" ${x.A(C.moins)}>−</button><input id="ps-zoom" type="range" min="1" max="4" step="0.05" value="${C.s}" ${x.I(C.zoom)}><button class="ps-btn" ${x.A(C.plus)}>+</button></div>
+    <div class="mu" style="font-size:11px;margin:6px 0 10px">Glissez l’image pour la déplacer, le curseur pour zoomer.</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end"><button class="ps-btn" ${x.A(C.fermer)}>Annuler</button><button class="ps-btn p" ${x.A(C.enreg)}>Enregistrer</button></div>
+  </div>`;
+}
+function tplPsRot(c, x){
+  const { esc } = x;
+  const R = c.psRot;
+  const seg = (l) => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  const ech = `<div class="ps-ech"><span>Rotations par jour</span>${R.echelle.map(e => `<span><i style="background:${e.fond}"></i>${esc(e.t)}</span>`).join('')}</div>`;
+  let h = `<div class="ps-rbar">${seg(R.magasins)}${seg(R.periodes)}<button class="ps-tog${R.simuler.on ? ' on' : ''}" ${x.A(R.simuler.go)} title="Appliquer le plan actuel à tous les jours de la période"><i></i>Simuler avec le plan actuel</button><span class="mu" style="margin-left:auto;font-size:12px">${esc(R.periodeTxt || '')}</span></div>`;
+  if (R.chargement) { return h + '<div class="ps-carte mu">Lecture des ventes, produit par produit…</div>'; }
+  if (R.erreur) { return h + '<div class="ps-carte mu">Les rotations ne répondent pas.</div>'; }
+  if (R.simulation) { h += `<div class="ps-note">Simulation : le plan actuel appliqué à toute la période${R.simuler.on ? '' : ' — il n’était pas encore en vigueur ces jours-là'}. Les rotations « réelles » se lisent à partir du jour où le plan est posé.</div>`; }
+  if (R.sansQ) { h += `<div class="ps-note">${R.sansQ} emplacement(s) sans quantité : ils ne comptent pas dans les rotations. Réglez-les dans le tableau par section.</div>`; }
+  if (R.vide) { return h + `<div class="ps-carte mu">${esc(R.vide)}</div>`; }
+  if (R.un) {
+    h += `<div class="ps-tuiles">${R.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="s">${esc(t[2])}</div></div>`).join('')}</div>`;
+    if (R.attente) { h += `<div class="ps-note">${esc(R.attente)}</div>`; }
+    h += `<div class="ps-carte"><h3 class="ps-h">La carte des rotations <small>chaque emplacement, moyenne par jour ouvert</small></h3><div class="ps-rcarte">
+      <div class="ps-row"><div class="ps-hd"></div>${R.bandes.map(b => `<div class="ps-band s" style="width:${b.w}px;background:${b.fond};color:${b.encre};border:1px solid ${b.bord ? 'var(--color-border-secondary)' : 'transparent'}">${esc(b.nom)}</div>`).join('')}</div>
+      ${R.carte.map(l => `<div class="ps-row"><div class="ps-hd" style="font-size:10.5px;color:var(--color-text-muted)">${esc(l.nom)}</div>${l.cases.map(k => k.caisse ? `<div class="ps-rc" style="background:var(--color-text);color:#fff;font-size:10px">${esc(k.t)}</div>` : (k.hach ? '<div class="ps-rc ps-hach"></div>' : (k.vide ? '<div class="ps-rc vide">vide</div>' : `<div class="ps-rc" style="background:${k.fond};color:${k.encre}" title="${esc(k.titre)}">${esc(k.t)}</div>`))).join('')}</div>`).join('')}
+      <div class="ps-row"><div class="ps-hd" style="font-size:10.5px;color:var(--color-text-muted)">Section</div>${Array.from({ length: 25 }, (_, i) => `<div class="ps-rc n">${i + 1}</div>`).join('')}</div>
+      </div><div style="margin-top:10px">${ech}</div></div>`;
+    h += `<div class="ps-carte"><h3 class="ps-h">Section par section, jour par jour <small>rotation = unités vendues au comptoir ÷ quantité que la section contient</small></h3>
+      <table class="ps-rt"><tr><th class="l">Section</th><th class="l">Produits de la section</th><th>Qté</th>${R.jours.map(j => `<th>${esc(j.t)}</th>`).join('')}<th>Moy.</th></tr>
+      ${R.lignes.map(l => l.zone ? `<tr class="z"><td colspan="${R.jours.length + 4}"><i style="background:${l.fond}"></i>${esc(l.nom)}</td></tr>`
+        : `<tr><td class="l h">${esc(l.s)}</td><td class="pr" title="${esc(l.produits)}">${esc(l.produits)}</td><td class="mu">${esc(l.cap)}</td>${l.cases.map(k => `<td style="background:${k.fond};color:${k.encre}"${k.titre ? ` title="${esc(k.titre)}"` : ''}>${esc(k.t)}</td>`).join('')}<td class="h" style="background:${l.mf};color:${l.mc}">${esc(l.moy)}</td></tr>`).join('')}
+      </table><div class="ps-formule"><b>Rotation d’une section, un jour</b> = les unités vendues au comptoir ce jour-là des produits posés sur la section ÷ la somme de leurs quantités au plan. <b>1</b> = la section s’est vidée une fois. Les ventes aux clients pro ne passent pas par le comptoir : elles sont retirées. Un produit posé sur deux emplacements partage ses ventes au prorata des quantités. Les jours fermés ne comptent pas.</div></div>`;
+    return h;
+  }
+  h += `<div class="ps-carte"><h3 class="ps-h">Magasin par magasin, section par section <small>cliquez une case pour son détail</small></h3>${ech}
+    <table class="ps-rt" style="margin-top:8px"><tr><th class="l" rowspan="2">Magasin</th>${R.zones.map(z => `<th colspan="${z.n}" class="zb" style="background:${z.fond};color:${z.encre};border:1px solid ${z.bord ? 'var(--color-border-secondary)' : 'transparent'}">${esc(z.nom)}</th>`).join('')}<th rowspan="2">Comptoir</th><th rowspan="2">Hors<br>comptoir</th></tr>
+    <tr>${R.secs.map(s => `<th>${esc(s)}</th>`).join('')}</tr>
+    ${R.matrice.map(m => `<tr><td class="l h">${esc(m.nom)}</td>${m.cases.map(k => `<td class="clic${k.on ? ' sel' : ''}" style="background:${k.fond};color:${k.encre}" ${x.A(k.go)}>${esc(k.t)}</td>`).join('')}<td class="h" style="background:${m.cf[0]};color:${m.cf[1]}">${esc(m.comptoir)}</td><td class="mu">${esc(m.hors)}</td></tr>`).join('')}
+    <tr><td class="l h">Réseau</td>${R.reseau.cases.map(k => `<td style="background:${k.fond};color:${k.encre};font-weight:400">${esc(k.t)}</td>`).join('')}<td class="h">${esc(R.reseau.comptoir)}</td><td></td></tr></table></div>`;
+  if (R.detail) {
+    const D = R.detail;
+    h += `<div class="ps-carte"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px"><h3 class="ps-h">${esc(D.titre)} <small>${esc(D.sous)}</small></h3><button class="ps-x" ${x.A(D.fermer)} title="Fermer">×</button></div>
+      <div class="ps-det"><div>${D.lignes.map(l => `<div class="ps-sl">${psPhoto(l.v, 'pd', '', esc)}<div><b>${esc(l.nom)}</b><div class="k">${esc(l.niveau)}</div></div>
+        <div><div class="k">Qté au plan</div><div class="v">${esc(l.qte)}</div></div><div><div class="k">Vendus / jour</div><div class="v">${esc(l.vendus)}</div></div>
+        <div><div class="k">Rotation</div><div class="v" style="color:${l.r >= 2 ? '#6f1622' : (l.r != null && l.r < 0.25 ? '#7A5207' : 'var(--color-text)')}">${esc(l.rot)}</div></div>
+        <div class="ps-bars">${l.barres.map(b => `<i style="height:${b.h}px;background:${b.fond}"></i>`).join('')}</div></div>`).join('')}</div>
+      <div><div class="ps-cap" style="margin-bottom:8px">Ce que la section dit</div><div class="ps-ins">${D.notes.map(n => `<div class="${n.cls}">${esc(n.txt)}</div>`).join('')}<div class="mu" style="font-size:11px">Les autres magasins : ${esc(D.autres)}.</div></div></div></div></div>`;
+  }
+  return h;
+}
+function tplPlanoStd(c, x){
+  const { esc } = x;
+  if (c.psChargement) { return `<div class="ps-carte mu">Lecture du comptoir standard…</div>`; }
+  if (c.psErreur) { return `<div class="ps-carte mu">Le plan du comptoir ne répond pas. Réessayez dans un instant.</div>`; }
+  const E = c.psEntete;
+  let h = `<div data-screen="planogramme" class="ps">
+    <div class="ps-ent"><div><div class="ps-cap">Catalogue · Planogramme</div><h1>Comptoir standard</h1>
+      <div class="mu" style="font-size:12.5px;margin-top:3px">Le même plan pour tous les magasins · 25 sections × 30 cm = 7,50 m · Étage 1 : 60 cm (arrière / avant) · Étage 2 : 20 cm · Étage 3 top picking : 10 cm</div></div>
+      <div class="ps-ent-d"><span class="mu" style="font-size:12px">${E.remplis} / ${E.total} emplacements remplis${esc(E.modif)}${E.sansQ ? ` · <b class="ko">${E.sansQ} sans quantité</b>` : ''}</span>
+        <a class="ps-btn" href="${esc(E.tablette)}" target="_blank" rel="noopener" title="Le montage en magasin, sur tablette">Tablette</a>
+        <button class="ps-btn p" ${x.A(E.imprimer)}>Imprimer A4</button><button class="ps-btn" ${x.A(E.vider)}>Vider</button></div></div>
+    <div class="ps-bar"><div class="ps-ongl">${c.psOnglets.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>
+      ${c.psVue === 'plan' ? `<div class="ps-mom"><span class="ps-cap">Moment</span><div class="ps-seg">${c.psMoments.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div><span class="mu" style="font-size:11px">${esc(c.psMomentTxt)}</span></div>` : ''}
+      ${c.psVue === 'plan' ? `<div class="ps-leg">${c.psLegende.map(l => `<span><i style="background:${l[0]}"></i><b>${esc(l[1])}</b> <span class="mu">${esc(l[2])}</span></span>`).join('')}<span><i class="ps-hach"></i><b>Pas d’étage 2–3</b></span></div>` : ''}</div>`;
+  if (c.psVue === 'plan') {
+    h += `<div class="ps-plan"><div class="ps-faces">${c.psParties.map(P => tplPsFace(P, x, false)).join('')}</div>${tplPsPicker(c, x)}</div>`;
+  } else if (c.psVue === 'tableau') {
+    h += `<div class="ps-intro mu">Produit et quantité par emplacement — la quantité est ce que l’emplacement contient plein ; c’est elle qui fait les rotations.</div>${tplPsTableau(c, x, false)}`;
+  } else if (c.psVue === 'dessus') {
+    h += `<div class="ps-intro mu">Longueur 7,50 m · profondeurs à l’échelle · étage 1 en carrés de 30 × 30 cm.</div>${tplPsDessus(c, x)}`;
+  } else if (c.psVue === 'proposition') {
+    h += tplPsProp(c, x);
+  } else {
+    h += tplPsRot(c, x);
+  }
+  h += `</div>`;
+  if (c.psFiche) { h += tplPsFiche(c, x); }
+  if (c.psCrop) { h += tplPsCrop(c, x); }
+  return h;
+}
+/** La page imprimée (A4 paysage) : la face, le tableau, la vue de dessus — sans champs ni boutons. */
+export function tplPsImpression(c, x){
+  return `<div class="ps ps-imp">${c.psParties.map(P => tplPsFace(P, x, true)).join('')}<div class="pb"></div>${tplPsTableau(c, x, true)}<div class="pb"></div>${tplPsDessus(c, x)}</div>`;
+}
+
+/* --- Assortiment obligatoire : la liste (toute l'année, saisons), les saisons, la liste de recherche --- */
+function tplAoPop(P, x){
+  const { esc } = x;
+  return `<div class="ao-pop"><b class="tt">${esc(P.titre)}</b>
+    ${P.options.map(o => `<button class="ao-radio${o.on ? ' on' : ''}" ${x.A(o.go)}><i></i><span><b>${esc(o.txt)}</b><small>${esc(o.sous)}</small></span></button>`).join('')}
+    ${P.autres ? `<select class="ao-sel" ${x.C(P.autreSet)}>${P.autres.map(a => `<option value="${esc(a.id)}">${esc(a.nom)}</option>`).join('')}</select>` : ''}
+    <label class="ao-qrow">Qté minimum en magasin <input id="ao-pop-q" type="text" inputmode="numeric" value="${esc(P.q)}" ${x.I(P.setQ)}> <span class="mu">${esc(P.batch)}</span></label>
+    <div class="ao-note">${esc(P.note)}</div>
+    <div class="ao-pbtns">${P.retirer ? `<button class="ps-btn ko" ${x.A(P.retirer)}>Retirer</button>` : ''}<span style="flex:1"></span><button class="ps-btn" ${x.A(P.annuler)}>Annuler</button><button class="ps-btn p" ${x.A(P.valider)}>${esc(P.validerTxt)}</button></div></div>`;
+}
+function tplAoRecherche(c, x){
+  const { esc } = x;
+  const R = c.aoRecherche;
+  return `<div class="ps-pick ps-carte ao-pick"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h3 class="ao-h2">Liste de recherche</h3><span class="mu" style="font-size:10.5px;white-space:nowrap">${R.n} au catalogue · API</span></div>
+    ${R.cible ? `<div class="ao-cible">Ajouter à <b>${esc(R.cible)}</b> — ou toute l’année</div>` : ''}
+    <input id="ao-q" class="ps-srch" value="${esc(R.q)}" placeholder="Produit, référence, saison…" ${x.I(R.setQ)}>
+    <div class="ps-chips">${R.chips.map(g => `<button ${x.A(g.go)} class="${g.on ? 'on' : ''}">${esc(g.nom)}</button>`).join('')}</div>
+    <button class="ps-tog${R.libres ? ' on' : ''}" ${x.A(R.basculer)}><i></i><span>Pas encore obligatoires · classés par ventes 30 j</span></button>
+    <div class="ps-liste">${R.chargement ? '<div class="mu" style="font-size:12px;padding:8px 0">Lecture du catalogue…</div>' : (R.lignes.length ? R.lignes.map(l => `<div class="ao-pl${l.sel ? ' sel' : ''}">
+      <div class="ps-ph pt" style="background:${l.v.fond}">${l.v.img ? `<img src="${esc(l.v.img)}" alt="" style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">` : esc(l.v.ini)}</div>
+      <div class="t"><b title="${esc(l.nom)}">${esc(l.nom)}</b><span>${esc(l.sous)}</span>${l.tags.length ? `<div class="ao-tags">${l.tags.map(t => `<i style="border-color:${t.coul};color:${t.coul}">${esc(t.txt)}</i>`).join('')}</div>` : ''}</div>
+      ${l.deja ? `<button class="ao-deja" ${x.A(l.ajouter)} title="Modifier">${esc(l.deja)}</button>` : `<button class="ao-add" ${x.A(l.ajouter)}>+ ajouter</button>`}</div>${l.pop ? tplAoPop(l.pop, x) : ''}`).join('') : '<div class="mu" style="font-size:12px;padding:8px 0">Aucun produit ne correspond.</div>')}</div>
+    <div class="ao-note">« + ajouter » rend le produit obligatoire : toute l’année, ou seulement pendant sa saison (gamme du panel). Tapez « noël », « automnale »… pour lister une saison.</div></div>`;
+}
+function tplAssortiment(c, x){
+  const { esc } = x;
+  if (c.refVide) { return `<div class="ps-carte mu">Catalogue indisponible — l’API et la base partagée n’ont rien rendu.</div>`; }
+  let h = `<div class="ao" data-screen="assortiment">
+    <div class="ao-barre"><div class="ps-seg">${c.aoVues.map(v => `<button ${x.A(v.go)} class="${v.on ? 'on' : ''}">${esc(v.nom)}</button>`).join('')}</div><span class="mu" style="font-size:12px">${esc(c.aoIntro)}</span></div>`;
+  if ((c.refFins || []).length) {
+    h += `<div class="ao-fins"><b>Fins de gamme annoncées</b>${c.refFins.map(f2 => `<div>${esc(f2.nom)} <span class="mu">(${esc(f2.ref)})</span> — fin le <b class="ko">${esc(f2.date)}</b>${f2.note ? ` · <span class="mu">${esc(f2.note)}</span>` : ''}</div>`).join('')}</div>`;
+  }
+  if (c.aoErreur) { h += `<div class="ps-note">Les saisons du panel ne répondent pas : les obligatoires restent affichées, sans leurs fenêtres. <button class="ps-btn" ${x.A(c.aoReessayer)}>Réessayer</button></div>`; }
+  if (c.aoVue === 'liste') {
+    h += `<div class="ps-tuiles ao-tuiles">${c.aoTuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t.cap)}</div><div class="v">${esc(t.v)}</div><div class="s">${esc(t.s)}</div></div>`).join('')}</div>
+    <div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:6px 8px 10px"><table class="ao-t"><thead><tr><th>Référence</th><th>Quand</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th><th></th></tr></thead><tbody>
+      <tr class="sec"><td colspan="6">Exigées aujourd’hui — ${c.aoExigibles}</td></tr>
+      ${c.aoSections.map(S => `<tr class="sec${S.avenir ? ' av' : ''}"><td colspan="6">${esc(S.titre)} <span class="mu">${esc(S.sous)}</span></td></tr>
+        ${S.lignes.length ? S.lignes.map(l => `<tr class="${l.avenir ? 'avenir' : ''}">
+          <td class="nom"><button class="hv-line" ${x.A(l.ouvrir)}>${esc(l.nom)}</button><span>${esc(l.sous)}</span></td>
+          <td><button class="ao-pill ${l.quand.cls}" ${x.A(l.changer)} title="Toute l’année ou pendant une saison">${esc(l.quand.txt)}</button></td>
+          <td class="n"><input id="${esc(l.qId)}" class="ao-qi" type="text" inputmode="numeric" value="${esc(l.qmin)}" ${x.C(l.qminSet)}>${l.batchTxt ? `<button class="ao-batch" ${x.A(l.qminBatch)} title="Reprendre la fournée minimale de la fiche">${esc(l.batchTxt)}</button>` : ''}${l.sousBatch ? '<div class="ko" style="font-size:10px">sous le batch</div>' : ''}</td>
+          <td class="n${l.v30Mu ? ' mu' : ''}">${esc(l.v30)}</td>
+          <td class="pl2">${l.place ? `<span>${esc(l.place)}</span>` : '<span class="mu">pas de place au comptoir</span>'} <button class="ao-pill ${l.place ? 'lig' : 'ko'}" ${x.A(l.planoGo)}>${esc(l.planoBtn)}</button></td>
+          <td class="n"><button class="ao-x" ${x.A(l.retirer)} title="Retirer de l’assortiment">×</button></td></tr>${l.pop ? `<tr class="ao-poprow"><td colspan="6">${tplAoPop(l.pop, x)}</td></tr>` : ''}`).join('') : `<tr><td colspan="6" class="mu" style="font-size:12px">Aucune — ajoutez-en depuis la liste de recherche.</td></tr>`}`).join('')}
+    </tbody></table></div>${tplAoRecherche(c, x)}</div>`;
+  } else if (c.aoErreur) {
+    h += '';
+  } else if (c.aoChargement) {
+    h += `<div class="ps-carte mu">Lecture des gammes saisonnières du panel…</div>`;
+  } else {
+    const F = c.aoFrise;
+    h += `<div class="ps-carte"><div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:6px"><h2 class="ao-h2">L’année des saisons <small>${esc(F.sousTitre)} · gammes du panel, récurrentes chaque année</small></h2><span class="ao-pill ko">aujourd’hui ${esc(F.aujTxt)}</span></div>
+      <div class="ao-frise"><div class="h">Saison</div><div class="h"><div class="ao-mois">${F.mois.map(m => `<span style="left:${m.l}%">${esc(m.t)}</span>`).join('')}</div></div><div class="h n">Produits</div><div class="h n">Obligatoires</div><div class="h">État</div>
+      ${F.lignes.map(l => `<div class="c lab${l.sel ? ' sel' : ''}" ${x.A(l.go)}><b>${esc(l.nom)}</b><span>${esc(l.dates)}${l.alerte ? ' <em class="tag-warn" style="font-style:normal" title="' + esc(l.alerte) + '">alerte</em>' : ''}</span></div>
+        <div class="c${l.sel ? ' sel' : ''}" ${x.A(l.go)}><div class="ao-piste">${F.mois.map(m => `<i class="m" style="left:${m.l}%"></i>`).join('')}${l.barres.map(b => `<i class="b" style="left:${b.l}%;width:${b.w}%;background:${b.coul}"></i>`).join('')}<i class="auj" style="left:${F.auj}%"></i></div></div>
+        <div class="c n${l.sel ? ' sel' : ''}" ${x.A(l.go)}>${l.nonLus ? '<span class="mu" style="font-size:10.5px">non lus</span>' : esc(l.produits)}</div>
+        <div class="c n${l.sel ? ' sel' : ''}" ${x.A(l.go)} style="font-weight:400">${l.obligatoires || '<span class="mu" style="font-weight:400">—</span>'}</div>
+        <div class="c${l.sel ? ' sel' : ''}" ${x.A(l.go)}><span class="ao-pill ${l.etat.cls}">${esc(l.etat.txt)}</span></div>`).join('')}</div>
+      ${c.aoAlertes.length ? `<div class="ps-note" style="margin-top:10px">À vérifier au panel : ${c.aoAlertes.map(esc).join(' · ')}</div>` : ''}</div>`;
+    const D = c.aoDetail;
+    if (D) {
+      h += `<div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:12px 8px 10px"><div class="ao-barre" style="padding:0 8px 8px"><div><div class="ps-cap">Saison choisie</div><h2 class="ao-h2" style="color:${D.coul}">${esc(D.titre)} <small>${esc(D.sous)}</small></h2></div>
+        <button class="ps-btn" ${x.A(D.toutCocher)} ${D.toutEnCours ? 'disabled' : ''}>${D.toutEnCours ? 'En cours…' : 'Tout cocher'}</button></div>
+        <table class="ao-t"><thead><tr><th style="width:26px"></th><th>Produit</th><th>Obligatoire</th><th class="n">Qté min.</th><th class="n">Vendus 30 j</th><th>Emplacement au comptoir</th></tr></thead><tbody>
+        ${D.lignes.length ? D.lignes.map(l => `<tr><td>${l.basculer ? `<button class="ao-cb${l.on ? ' on' : ''}" ${x.A(l.basculer)} title="${l.on ? 'Retirer de la saison' : 'Obligatoire pendant la saison'}">${l.on ? '✓' : ''}</button>` : '<span class="ao-cb on dis">✓</span>'}</td>
+          <td class="nom"><b>${esc(l.nom)}</b><span>${esc(l.sous)}${l.horsGamme ? ' · hors gamme' : ''}</span></td>
+          <td>${l.etat ? `<span class="ao-pill ${l.etat.cls}">${esc(l.etat.txt)}</span>` : '<span class="mu">non</span>'}</td>
+          <td class="n">${l.on ? `<input id="${esc(l.qId)}" class="ao-qi" type="text" inputmode="numeric" value="${esc(l.q)}" ${x.C(l.qSet)}>` : ''}</td>
+          <td class="n mu">${esc(l.v30)}</td>
+          <td class="pl2">${l.place ? esc(l.place) : (l.on ? `<span class="mu">pas de place</span> <button class="ao-pill ko" ${x.A(l.planoGo)}>Attribuer</button>` : '<span class="mu">—</span>')}</td></tr>`).join('') : '<tr><td colspan="6" class="mu">Aucun produit connu dans cette gamme.</td></tr>'}
+        </tbody></table><div class="ao-note" style="padding:8px 8px 0">${esc(D.note)}</div></div>${tplAoRecherche(c, x)}</div>`;
+    }
+  }
+  h += `</div>`;
+  if (c.refEdit) { h += tplRefEdit(c, x); }
+  return h;
+}
+
+/* La proposition du plan d'après les ventes moyennes, moment par moment. */
+function tplPsProp(c, x){
+  const { esc } = x;
+  const P = c.pp;
+  const seg = l => `<div class="ps-seg">${l.map(o => `<button ${x.A(o.go)} class="${o.on ? 'on' : ''}">${esc(o.nom)}</button>`).join('')}</div>`;
+  let h = `<div class="ps-rbar"><span class="ps-cap">Ventes</span>${seg(P.fenetres)}<span class="ps-cap">Rotation visée par moment</span>${seg(P.rotations)}${seg(P.filtres)}<span class="mu" style="margin-left:auto;font-size:12px">${esc(P.periodeTxt || '')}</span></div>`;
+  if (P.chargement) { return h + '<div class="ps-carte mu">Calcul des ventes moyennes, moment par moment…</div>'; }
+  if (P.erreur) { return h + `<div class="ps-carte mu">${esc(P.erreur)}</div>`; }
+  h += `<div class="ps-intro mu">${esc(P.regle)}</div>`;
+  P.notes.forEach(n => { h += `<div class="ps-note">${esc(n)}</div>`; });
+  h += `<div class="ps-tuiles">${P.tuiles.map(t => `<div class="ps-tuile"><div class="ps-cap">${esc(t[0])}</div><div class="v">${esc(t[1])}</div><div class="s">${esc(t[2])}</div></div>`).join('')}</div>`;
+  const occ = (l, vide) => l.length ? l.map(o => `<div class="pp-o"><b>${esc(o.nom)}</b> <span class="pp-q">${esc(o.q)}</span>${o.tags.length ? ` <span class="ps-tags">${o.tags.map(t => `<i class="${t.on ? 'on' : ''}" title="${esc(t.titre)}">${esc(t.t)}</i>`).join('')}</span>` : ''}${o.badges.map(b => ` <span class="pp-b">${esc(b)}</span>`).join('')}${o.ventes ? `<div class="mu" style="font-size:10.5px">vendus / magasin / jour : ${esc(o.ventes)}</div>` : ''}</div>`).join('') : `<span class="mu">${vide}</span>`;
+  h += `<div class="ao-grille"><div class="ao-gauche ps-carte" style="padding:6px 8px 10px">
+    <div class="ao-barre" style="padding:6px 8px"><span class="mu" style="font-size:12px">${P.nCoches} emplacement(s) coché(s)</span><span style="display:flex;gap:6px"><button class="ps-btn" ${x.A(P.toutCocher)}>Tout cocher</button><button class="ps-btn" ${x.A(P.toutDecocher)}>Tout décocher</button>
+      <button class="ps-btn p" ${x.A(P.appliquer)} ${P.applique || !P.nCoches ? 'disabled' : ''}>${P.applique ? 'Application…' : 'Appliquer les ' + P.nCoches + ' emplacement(s)'}</button></span></div>
+    <table class="ao-t"><thead><tr><th style="width:26px"></th><th>Emplacement</th><th>Aujourd’hui</th><th>Proposé</th><th>État</th></tr></thead><tbody>
+    ${P.lignes.length ? P.lignes.map(l => l.zone ? `<tr class="sec"><td colspan="5">${esc(l.zone)}</td></tr>` : `<tr>
+      <td>${l.dis ? '<span class="ao-cb dis"></span>' : `<button class="ao-cb${l.on ? ' on' : ''}" ${x.A(l.basculer)} title="Appliquer cet emplacement">${l.on ? '✓' : ''}</button>`}</td>
+      <td class="nom"><b>${esc(l.titre)}</b><span>${esc(l.famille)}</span></td>
+      <td>${occ(l.actuel, 'libre')}</td><td>${occ(l.propose, 'libéré — aucune vente dans sa famille')}</td>
+      <td><span class="ao-pill ${l.etat[0]}">${esc(l.etat[1])}</span></td></tr>`).join('') : '<tr><td colspan="5" class="mu">Rien à changer : le plan suit déjà les ventes.</td></tr>'}
+    </tbody></table></div>
+    <div class="ps-pick ps-carte ao-pick">${P.listes.map(L => `<div><h3 class="ao-h2" style="font-size:16px">${esc(L.titre)} <small>${L.n}</small></h3>${L.l.length ? L.l.slice(0, 12).map(i => `<div class="pp-li"><b>${esc(i.nom)}</b><span>${esc(i.sous)}</span></div>`).join('') : '<div class="mu" style="font-size:11.5px">aucun</div>'}</div>`).join('')}</div></div>`;
+  return h;
+}

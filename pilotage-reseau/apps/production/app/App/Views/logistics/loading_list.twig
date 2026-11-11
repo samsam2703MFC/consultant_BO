@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Lista załadunku {{ truck ? truck.label : '' }} {{ day.date|date('d.m.Y') }}</title>
+<style>
+    :root { --text: #222; --muted: #666; --line: #ccc; }
+    body { font-family: Arial, Helvetica, sans-serif; color: var(--text); background: #fff; margin: 24px; font-size: 13px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .meta { color: var(--muted); margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 18px; }
+    th, td { border: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+    th { background: #f2f2f2; }
+    .num { text-align: right; white-space: nowrap; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 36px; }
+    .sign div { border-top: 1px solid var(--text); padding-top: 4px; color: var(--muted); }
+    .actions { margin-bottom: 16px; }
+    @media print { .actions { display: none; } body { margin: 10mm; } }
+</style>
+</head>
+<body>
+{% if truck %}
+    <div class="actions"><button type="button" onclick="window.print()">Drukuj</button></div>
+    <h1>Lista załadunku — {{ truck.label }}</h1>
+    <div class="meta">{{ day.date|day_pl }} · {{ truck.carrier }}{{ truck.driver ? ' · kierowca ' ~ truck.driver : '' }} · wyjazd {{ truck.departure }}, załadunek od {{ truck.loading_from }}
+        · {{ truck.pallets }}{{ truck.places ? ' / ' ~ truck.places : '' }} palet · {{ truck.weight_kg|number_format(0, ',', ' ') }} kg</div>
+    <p>Kolejność załadunku: najpierw ostatni rozładunek (odwrotnie do trasy).</p>
+    <table>
+        <thead><tr><th>#</th><th>Klient</th><th>Produkty (kartony)</th><th class="num">Palety</th><th class="num">Waga</th><th>Załadowano</th></tr></thead>
+        <tbody>
+        {% for cid in truck.customers|reverse %}
+            {% set c = day.by_id[cid] %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td><strong>{{ c.name }}</strong><br>{{ c.town }}{{ c.country ? ', ' ~ c.country : '' }}{% if c.stop %}<br>rozładunek nr {{ c.stop }}{% endif %}</td>
+                <td>{% for p in c.products %}{{ p.name }} — {{ p.cartons|number_format(0, ',', ' ') }}{% if not loop.last %}<br>{% endif %}{% endfor %}</td>
+                <td class="num">{{ c.pallets }}<br><small>{{ c.full_pallets }} + {{ c.mixed_pallets }}{{ (c.stack_pallets ?? 0) ? ' + ' ~ c.stack_pallets ~ ' warstw.' : '' }}</small></td>
+                <td class="num">{{ c.weight_kg|number_format(0, ',', ' ') }} kg</td>
+                <td>☐</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <div class="sign"><div>Magazyn (podpis)</div><div>Kierowca (podpis)</div></div>
+{% else %}
+    <p>Nie znaleziono pojazdu na ten dzień.</p>
+{% endif %}
+</body>
+</html>

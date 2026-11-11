@@ -1,0 +1,14 @@
+{
+  "address": {
+    "country": 231,
+    "street": "street",
+    "houseNumber": "houseNumber",
+    "municipality": {
+      "code": 64246,
+      "name": "name"
+    },
+    "boxNumber": "boxNumber",
+    "postCode": "postCode"
+  },
+  "name": "name"
+}

@@ -1,0 +1,16 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Ekran paletyzacji {{ date|date('d.m.Y') }}{% endblock %}
+
+{% block content %}
+<section class="section lg-board" data-board="live">
+    {% include 'logistics/_board.twig' with {board: 'live'} %}
+    <div id="lgBoard" data-board="live" data-date="{{ date }}" aria-live="polite"><p class="text-muted">Wczytywanie…</p></div>
+    <script type="application/json" id="lgState">{{ state|json_encode(constant('JSON_HEX_TAG') b-or constant('JSON_HEX_AMP'))|raw }}</script>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/logistics/board.js?v={{ asset_v() }}"></script>
+{% endblock %}

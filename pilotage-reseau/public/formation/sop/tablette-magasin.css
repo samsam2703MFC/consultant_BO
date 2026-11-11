@@ -1,0 +1,91 @@
+/* La tablette du magasin — l'écran du PIN DU MAGASIN (lot 5 de la fusion, 06/11/2026 ; src/tablettes.php).
+   Une feuille à part : tablette.css garde le reste de la tablette. Valeurs du design system
+   (docs/design-system/DESIGN_SYSTEM.md) : papier, filets #e6e0d8, bordeaux pour l'action et la sélection, graisse 400,
+   rectangles aux coins arrondis (jamais de pilule), aucune ombre. Les jetons sont repris avec leur valeur de repli :
+   la page s'affiche juste même avant que tablette.css ne les déclare. Cibles de 64 px au doigt. */
+
+.tbm {
+  min-height: 100vh; min-height: 100dvh;
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 24px) 24px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  background: var(--paper, #faf7f2);
+  color: var(--ink, #1c1a17);
+  font-weight: 400;
+}
+.tbm-carte {
+  width: min(440px, 100%);
+  display: flex; flex-direction: column; align-items: stretch; gap: 14px;
+  padding: 26px 28px 22px;
+  background: #fff;
+  border: 1px solid var(--line, #e6e0d8);
+  border-radius: 12px;
+  text-align: center;
+}
+.tbm-haut { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tbm-logo { height: 34px; width: auto; display: block; }
+.tbm-carte > .tbm-logo { margin: 0 auto 4px; }
+
+/* FR | NL : sélecteur segmenté du système */
+.tbm-lg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip, #EDE7DE); }
+.tbm-lg button {
+  margin: 0; min-width: 44px; min-height: 36px; padding: 6px 11px;
+  border: 0; border-radius: 7px; background: transparent;
+  color: var(--muted-2, #5c5852); font-weight: 400; font-size: 13px; line-height: 1; font-family: inherit; cursor: pointer;
+}
+.tbm-lg button.is-on { background: #fff; color: var(--ink, #1c1a17); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+.tbm-titre { margin: 6px 0 0; font-size: 26px; font-weight: 400 !important; letter-spacing: -0.01em; line-height: 1.15; }
+.tbm-mag { margin: 0; font-size: 15px; color: var(--ink, #1c1a17); }
+.tbm-mag span {
+  display: block; margin-bottom: 3px;
+  font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #7a736a);
+}
+.tbm-lab { margin: 8px 0 0; font-size: 11.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted, #7a736a); }
+
+/* Les six cases : un chiffre tapé = un point, la case à remplir est soulignée de bordeaux */
+.tbm-cases { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.tbm-case {
+  height: 58px; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line, #e6e0d8); border-radius: 10px; background: #fff;
+  font-size: 26px; line-height: 1; color: var(--ink, #1c1a17);
+}
+.tbm-case.is-on { background: var(--table-head, #FBF9F5); }
+.tbm-case.is-ici { border: 2px solid var(--accent, #8D1D2C); }
+
+.tbm-err { min-height: 18px; margin: 0; font-size: 13px; color: var(--danger, #b3261e); }
+
+/* Le pavé : 3 × 4 touches de 64 px */
+.tbm-pave { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.tbm-t {
+  min-height: 64px; margin: 0; padding: 0;
+  border: 1px solid var(--line, #e6e0d8); border-radius: 12px; background: #fff;
+  color: var(--ink, #1c1a17); font-weight: 400; font-size: 24px; line-height: 1; font-family: inherit; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; touch-action: manipulation;
+}
+.tbm-t:active:not(:disabled) { background: var(--table-head, #FBF9F5); }
+.tbm-t.is-sec { color: var(--muted-2, #5c5852); font-size: 20px; }
+.tbm-t.is-ok { background: var(--accent, #8D1D2C); border-color: var(--accent, #8D1D2C); color: #fff; font-size: 16px; }
+.tbm-t.is-ok:hover:not(:disabled) { background: #6f1622; border-color: #6f1622; }
+.tbm-t:disabled { opacity: 0.45; cursor: not-allowed; }
+.tbm-t:focus-visible, .tbm-lg button:focus-visible, .tbm-fermer:focus-visible { outline: 2px solid var(--accent, #8D1D2C); outline-offset: 2px; }
+
+.tbm-aide { margin: 2px 0 0; font-size: 12px; line-height: 1.45; color: var(--muted, #7a736a); }
+
+/* « Fermer la tablette » : discret, rouge au survol seulement (bouton destructeur du système) */
+.tbm-fermer {
+  align-self: center; margin: 10px 0 0; min-height: 36px; padding: 7px 14px;
+  border: 1px solid transparent; border-radius: 8px; background: transparent;
+  color: var(--muted-2, #5c5852); font-weight: 400; font-size: 13px; line-height: 1.2; font-family: inherit; cursor: pointer;
+}
+.tbm-fermer:hover { background: rgba(179, 38, 30, 0.07); color: var(--danger, #b3261e); }
+
+/* Le lien demandait un autre magasin que celui de la tablette */
+.tbm-note {
+  margin: 12px auto 0; max-width: 1200px; padding: 8px 12px;
+  border-radius: 8px; background: var(--prize-soft, #F6E7CE); color: var(--prize-ink, #7A5207); font-size: 13px;
+}
+
+@media (max-height: 720px) {
+  .tbm-case { height: 50px; }
+  .tbm-t { min-height: 54px; }
+}
