@@ -1159,6 +1159,11 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{
 .sg-ck.on { background: var(--accent); border-color: var(--accent); }
 .sg-ck.mi { background: rgba(141, 29, 44, .45); border-color: var(--accent); }
 .sg-liste { margin: 6px 0 10px; padding-left: 1.1rem; font-size: 13px; line-height: 1.6; color: var(--muted-2); }
+.sg-fort-sai { display: inline-block; padding: 1px 6px; border-radius: 4px; background: var(--chip); color: var(--ink); }
+.sg-table tr.sg-gardee td { background: var(--table-head); }
+.sg-table tr.sg-gardee td .sg-nom, .sg-table tr.sg-gardee .sg-nom { color: var(--muted-2); }
+.sg-t4 th.num { min-width: 64px; }
+.sg-choix optgroup { font-style: normal; color: var(--muted); }
 .sg-coche { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; color: var(--ink); cursor: pointer; }
 .sg-coche input { margin-top: 3px; }
 .sg-coche .sub { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }

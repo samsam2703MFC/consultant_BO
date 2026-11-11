@@ -14,8 +14,9 @@
  *   retiree     déjà inactive au catalogue et sans saison : ne compte plus ;
  *   garder      décidé à la main : gardée au catalogue, hors standard et hors obligatoire.
  *
- * Les décisions (opts.decisions, { id: 'standard' | 'garder' }) passent après la proposition : la
- * proposition reste lisible (p.propose), le statut final est p.statut.
+ * Les décisions (opts.decisions, { id: 'standard' | 'garder' | 'saison:ete' | 'periode:noel' … }) passent
+ * après la proposition : la proposition reste lisible (p.propose, p.proposeRetenue, p.proposePeriode), le
+ * statut final est p.statut. Chaque référence lue porte ses pièces par saison (p.parSaison).
  *
  * Le profil d'une référence est sa part du volume réseau, mois par mois, ramenée à 100 % sur l'année :
  * un magasin qui ouvre (Halle en février) ou un mois en cours (novembre) ne déforme pas la saison.
@@ -63,6 +64,8 @@ export function structurer(D, opts) {
     p.profil = pr.map(x => Math.round(x * 1000) / 1000);
     const M = m => pr[idx(m)] || 0;
     const pieces = somme(p.u);
+    // Les pièces vendues par saison, sur les mois lus (le mois en cours compte ce qu'il a vendu).
+    p.parSaison = Object.fromEntries(SAISONS.map(s => [s.id, somme(s.mois.map(idx).filter(i => i >= 0).map(i => p.u[i]))]));
     p.pu = pieces ? p.ca / pieces : 0;                          // prix encaissé moyen
     p.mu = (p.mg != null && pieces) ? p.mg / pieces : null;     // marge par pièce
     const max = Math.max(...p.u);
@@ -186,17 +189,24 @@ export function structurer(D, opts) {
       p.statut = p.part < R.seuil ? 'desactiver' : 'arbitrer';
     });
     // Les décisions prises à la main, par-dessus la proposition.
+    // Garder en standard, hors standard, ou dans une saison ou une période choisie.
     const dec = R.decisions || {};
     C.refs.forEach(p => {
       p.propose = p.statut;
-      const d = dec[p.id];
+      p.proposeRetenue = p.retenue ? p.retenue.slice() : null;
+      p.proposePeriode = p.statut === 'periode' ? p.periode : null;
+      const d = String(dec[p.id] || '');
+      const sa = /^saison:(\w+)$/.exec(d), pe = /^periode:(\w+)$/.exec(d);
       if (d === 'standard' || d === 'garder') { p.decide = d; p.statut = d; }
+      else if (sa && SAISONS.some(x => x.id === sa[1])) { p.decide = d; p.statut = 'saison'; p.retenue = [sa[1]]; }
+      else if (pe && PERIODES.some(x => x.id === pe[1])) { p.decide = d; p.statut = 'periode'; p.periode = pe[1]; }
     });
     C.std = C.refs.filter(p => p.statut === 'standard').sort((a, b) => (b.val || 0) - (a.val || 0));
     C.couverture = totPerm ? somme(C.std.map(p => p.val || 0)) / totPerm : null;
     C.plafonne = C.std.length >= R.stdMax && C.couverture < R.stdPart;
-    SAISONS.forEach(s => { C.saisons[s.id] = C.saisons[s.id].filter(p => p.statut === 'saison'); });
-    PERIODES.forEach(e => { C.periodes[e.id] = C.periodes[e.id].filter(p => p.statut === 'periode'); });
+    const parCa = (a, b) => (b.caPer || 0) - (a.caPer || 0);
+    SAISONS.forEach(s => { C.saisons[s.id] = C.refs.filter(p => p.statut === 'saison' && (p.retenue || []).includes(s.id)).sort(parCa); });
+    PERIODES.forEach(e => { C.periodes[e.id] = C.refs.filter(p => p.statut === 'periode' && p.periode === e.id).sort(parCa); });
     ['desactiver', 'arbitrer', 'observation', 'garder'].forEach(s => {
       C[s] = C.refs.filter(p => p.statut === s).sort((a, b) => (b.caPer || 0) - (a.caPer || 0));
     });

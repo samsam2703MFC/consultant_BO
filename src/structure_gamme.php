@@ -32,7 +32,21 @@ const SG_REGLES = ['base' => 'ca', 'std' => 80, 'max' => 6, 'sai' => 4, 'seuil' 
 const SG_BORNES = ['std' => [50, 100], 'max' => [1, 20], 'sai' => [1, 10], 'seuil' => [0, 20]];
 /** Ce qui n'est pas un produit à structurer : B2B, bundles et paniers, extras facturés. */
 const SG_HORS_GRP = ['B. 2 B.', 'Bundle & Promotion'];
-const SG_DECISIONS = ['standard', 'garder'];
+/** Les décisions par référence : garder en standard, hors standard, ou dans une saison ou une période choisie. */
+const SG_DECISION_RE = '/^(standard|garder|saison:(hiver|printemps|ete|automne)|periode:(noel|nouvelan|paques))$/';
+const SG_NOMS = ['hiver' => 'Hiver', 'printemps' => 'Printemps', 'ete' => 'Été', 'automne' => 'Automne',
+    'noel' => 'Noël', 'nouvelan' => 'Nouvel An', 'paques' => 'Pâques'];
+
+function sgDecisionValide(mixed $d): bool { return is_string($d) && preg_match(SG_DECISION_RE, $d) === 1; }
+
+/** Une décision dite en mots, pour le journal. */
+function sgDecisionMot(string $d): string
+{
+    if ($d === 'standard') { return 'gardée en standard'; }
+    if ($d === 'garder') { return 'gardée hors standard'; }
+    [$t, $k] = explode(':', $d) + [1 => ''];
+    return ($t === 'saison' ? 'gardée en saison ' : 'gardée pour ') . (SG_NOMS[$k] ?? $k);
+}
 
 /** Une règle ramenée dans ses bornes. */
 function sgBorne(string $k, mixed $v): int|float
@@ -53,7 +67,7 @@ function sgReglage(): array
     $r['base'] = ($r['base'] ?? 'ca') === 'mg' ? 'mg' : 'ca';
     $dec = [];
     foreach ((array) ($v['decisions'] ?? []) as $id => $d) {
-        if (in_array($d, SG_DECISIONS, true) && preg_match('/^\d{1,12}$/', (string) $id)) { $dec[(string) $id] = $d; }
+        if (sgDecisionValide($d) && preg_match('/^\d{1,12}$/', (string) $id)) { $dec[(string) $id] = $d; }
     }
     return ['regles' => $r, 'decisions' => $dec, 'le' => $v['le'] ?? null];
 }
@@ -251,7 +265,7 @@ function ep_produits_structure(): array
 }
 
 /**
- * PUT /produits/structure — { regles?: {base, std, max, sai, seuil}, decisions?: {id: 'standard'|'garder'|null} }
+ * PUT /produits/structure — { regles?: {base, std, max, sai, seuil}, decisions?: {id: 'standard'|'garder'|'saison:ete'|'periode:noel'|null} }
  * Les règles valent pour tout le réseau ; une décision, pour une référence. Chaque changement au journal.
  */
 function wr_produits_structure(): array
@@ -277,9 +291,9 @@ function wr_produits_structure(): array
         $nom = mb_substr(trim((string) ($noms[$id] ?? ('réf. ' . $id))), 0, 120);
         if ($d === null || $d === '' || $d === 'auto') {
             if (isset($dec[$id])) { unset($dec[$id]); $msgs[] = $nom . ' : retour à la proposition'; }
-        } elseif (in_array($d, SG_DECISIONS, true) && ($dec[$id] ?? null) !== $d) {
+        } elseif (sgDecisionValide($d) && ($dec[$id] ?? null) !== $d) {
             $dec[$id] = $d;
-            $msgs[] = $nom . ' : ' . ($d === 'standard' ? 'gardée en standard' : 'gardée hors standard');
+            $msgs[] = $nom . ' : ' . sgDecisionMot($d);
         }
     }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',

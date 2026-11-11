@@ -117,24 +117,54 @@ function decider(app, p, val){
       d.reglage = Object.assign({}, d.reglage, { decisions: dec });
     }
     app._sgMemo = null;
-    message(app, p.nom + ' : ' + (val === 'standard' ? 'gardée en standard' : val === 'garder' ? 'gardée hors standard' : 'retour à la proposition'));
+    message(app, p.nom + ' : ' + (val ? motDecision(val) : 'retour à la proposition'));
   });
 }
 
 /** Les références à retirer, cochées dans la liste « À désactiver ». */
-function aDesactiver(m, exclus){ return m.R.produits.filter(p => p.actif && p.statut === 'desactiver' && !exclus[p.id]); }
+/** Les références à retirer : proposées sous le seuil, et non gardées par une décision. */
+function aDesactiver(m){ return m.R.produits.filter(p => p.actif && p.statut === 'desactiver'); }
+
+/** Une décision dite en mots — la même liste que la liste déroulante, et que le journal du serveur. */
+function motDecision(d){
+  if (d === 'standard') { return 'gardée en standard'; }
+  if (d === 'garder') { return 'gardée hors standard'; }
+  const [t, k] = String(d).split(':');
+  return (t === 'saison' ? 'gardée en saison ' + (SA[k] || {}).nom : 'gardée pour ' + (PE[k] || {}).nom);
+}
+/** Les choix de la liste déroulante, dans l'ordre : garder en standard ou hors standard, puis une saison, puis une période. */
+const CHOIX = [['standard', 'Garder en standard'], ['garder', 'Garder hors standard']]
+  .concat(SAISONS.map(s => ['saison:' + s.id, 'Saison : ' + s.nom.toLowerCase()]))
+  .concat(PERIODES.map(e => ['periode:' + e.id, 'Période : ' + e.nom]));
 
 function desactiver(app){
   const m = calcul(app); if (!m) { return; }
-  const l = aDesactiver(m, app.state.sgExclus || {});
-  app.setState({ sgBusy: true });
-  app.api('POST', '/produits/structure/desactiver', { ids: l.map(p => p.id), confirmer: true }).then(res => {
-    app.setState({ sgBusy: false, sgConfirm: null });
-    if (!res || res.ok === false) { return; }
-    app.setState({ sgResultat: { quoi: 'desactiver', resume: res.resume, refuses: res.refuses || [] }, sgExclus: {} });
+  const ids = aDesactiver(m).map(p => p.id);
+  // Par lots de 40 : la version livrée écrit chaque retrait dans TFBuddy et le relit, et n'en accepte pas
+  // plus par appel (comme « Retirer du catalogue ») ; ici, sans TFBuddy, les lots ne changent rien.
+  const lots = []; for (let i = 0; i < ids.length; i += 40) { lots.push(ids.slice(i, i + 40)); }
+  const bilan = { faits: 0, refuses: [], echecs: [], alertes: [], inchangees: 0 };
+  app.setState({ sgBusy: true, sgProgres: '0 / ' + ids.length });
+  const suivant = k => {
+    if (k >= lots.length) { fin(); return; }
+    app.api('POST', '/produits/structure/desactiver', { ids: lots[k], confirmer: true }).then(res => {
+      if (!res || res.ok === false) { fin(res && res.error); return; }
+      bilan.faits += (res.faits || []).length; bilan.inchangees += (res.inchangees || []).length;
+      bilan.refuses.push(...(res.refuses || [])); bilan.echecs.push(...(res.echecs || [])); bilan.alertes.push(...(res.alertes || []));
+      app.setState({ sgProgres: Math.min(ids.length, (k + 1) * 40) + ' / ' + ids.length });
+      suivant(k + 1);
+    });
+  };
+  const fin = err => {
+    const resume = bilan.faits + ' retirée(s) du catalogue' + (bilan.refuses.length ? ', ' + bilan.refuses.length + ' refusée(s)' : '')
+      + (bilan.echecs.length ? ', ' + bilan.echecs.length + ' refusée(s) par TFBuddy' : '') + (bilan.inchangees ? ', ' + bilan.inchangees + ' déjà inactive(s)' : '')
+      + (bilan.alertes.length ? ' — ' + bilan.alertes.length + ' alerte(s) à vérifier' : '') + (err ? ' — arrêté : ' + err : '');
+    app.setState({ sgBusy: false, sgProgres: null, sgConfirm: null,
+      sgResultat: { quoi: 'desactiver', resume, refuses: [...bilan.refuses, ...bilan.echecs, ...bilan.alertes.map(a => ({ nom: a.nom, motif: a.alerte }))] } });
     app.D.prodCatalogue = null;   // le catalogue a changé : la fiche et l'assortiment le relisent
     sgCharge(app, true);
-  });
+  };
+  suivant(0);
 }
 
 /** Ce que « Appliquer à l'assortiment » enverra : standard, saisons et périodes, et les obligatoires qui sortent. */
@@ -172,11 +202,11 @@ function appliquer(app){
 }
 
 function exporter(m){
-  const l = [['Groupe', 'Catégorie', 'Référence', 'Nom', 'Statut', 'Proposition', 'Décision', 'Part de la catégorie (%)', 'CA 12 mois (€)', 'Marge nette 12 mois (€)', 'Saison ou période', 'Obligatoire aujourd’hui', 'Active']];
+  const l = [['Groupe', 'Catégorie', 'Référence', 'Nom', 'Statut', 'Proposition', 'Décision', 'Part de la catégorie (%)', 'CA 12 mois (€)', 'Marge nette 12 mois (€)', 'Saison ou période', 'Obligatoire aujourd’hui', 'Active'].concat(SAISONS.map(x => 'Pièces ' + x.nom.toLowerCase()))];
   m.R.produits.filter(p => p.nature !== 'retiree').forEach(p => {
-    l.push([p.grp, p.cat, p.ref || p.id, p.nom, mot(p, p.statut), mot(p, p.propose || p.statut), p.decide ? (p.decide === 'standard' ? 'gardée en standard' : 'gardée hors standard') : '',
+    l.push([p.grp, p.cat, p.ref || p.id, p.nom, mot(p, p.statut), mot(p, p.propose || p.statut, true), p.decide ? motDecision(p.decide) : '',
       p.part != null ? (p.part * 100).toFixed(2).replace('.', ',') : '', p.u ? Math.round(p.ca) : '', p.mg != null ? Math.round(p.mg) : '',
-      p.retenue ? p.retenue.map(s => SA[s].nom).join(' + ') : p.periode ? PE[p.periode].nom : '', p.must ? 'oui' : '', p.actif ? 'oui' : 'non']);
+      p.retenue ? p.retenue.map(s => SA[s].nom).join(' + ') : p.periode ? PE[p.periode].nom : '', p.must ? 'oui' : '', p.actif ? 'oui' : 'non'].concat(SAISONS.map(x => p.parSaison ? p.parSaison[x.id] : '')));
   });
   const csv = l.map(r => r.map(c => /[;"\n]/.test(String(c)) ? '"' + String(c).replace(/"/g, '""') + '"' : c).join(';')).join('\n');
   const a = document.createElement('a');
@@ -185,9 +215,10 @@ function exporter(m){
   document.body.appendChild(a); a.click(); a.remove();
 }
 
-/** Le statut en un mot. */
-function mot(p, s){
-  return ({ standard: 'Standard', saison: p.retenue ? p.retenue.map(x => SA[x].nom).join(' · ') : 'Saison', periode: p.periode ? PE[p.periode].nom : 'Période',
+/** Le statut en un mot ; « prop » : celui de la proposition, avant décision (sa saison, sa période d'origine). */
+function mot(p, s, prop){
+  const ret = prop && p.decide ? p.proposeRetenue : p.retenue, per = prop && p.decide ? p.proposePeriode : p.periode;
+  return ({ standard: 'Standard', saison: ret ? ret.map(x => SA[x].nom).join(' · ') : 'Saison', periode: per ? PE[per].nom : 'Période',
     desactiver: 'À désactiver', arbitrer: 'À arbitrer', observation: 'En observation', garder: 'Gardée hors standard', hors: 'Hors structure' })[s] || '—';
 }
 
@@ -246,17 +277,11 @@ export function valsStructure(app, c){
     if (!C) { g.vue = '1'; } else { g.cat = C; }
   }
   // Vue 4 : la liste à désactiver, cochée par défaut.
-  const exclus = S.sgExclus || {};
-  g.exclus = exclus;
-  g.basculer = id => () => app.setState({ sgExclus: Object.assign({}, exclus, { [id]: !exclus[id] }) });
-  g.basculerCat = C => () => {
-    const l = C.desactiver.filter(p => p.actif), tous = l.every(p => !exclus[p.id]);
-    const e = Object.assign({}, exclus); l.forEach(p => { e[p.id] = tous; });
-    app.setState({ sgExclus: e });
-  };
+  g.choix = CHOIX; g.motDecision = motDecision;
+  g.deplierTout = () => app.setState({ sgDeplie: S.sgDeplie === '*' ? '' : '*' });
   g.deplie = S.sgDeplie === undefined ? null : S.sgDeplie;
   g.deplier = cat => () => app.setState({ sgDeplie: S.sgDeplie === cat ? '' : cat });
-  const off = aDesactiver(m, exclus);
+  const off = aDesactiver(m);
   g.aDesactiver = off;
   g.offCa = somme(off.map(p => p.caPer || 0));
   g.offVendues = off.filter(p => p.u).length;
@@ -264,6 +289,7 @@ export function valsStructure(app, c){
 
   // Les confirmations.
   g.confirm = S.sgConfirm || null;
+  g.progres = S.sgProgres || null;
   g.demanderDesactiver = off.length ? () => app.setState({ sgConfirm: 'desactiver' }) : null;
   g.demanderAppliquer = () => app.setState({ sgConfirm: 'appliquer' });
   g.annuler = () => app.setState({ sgConfirm: null });
