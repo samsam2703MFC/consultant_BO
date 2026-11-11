@@ -1071,3 +1071,94 @@ html[data-tablette] .shell[data-ecran="ficheFranchise"] .ffa-bas{display:grid;gr
 html[data-tablette] .shell[data-ecran="ficheFranchise"] [data-screen="fiche-franchise"] .mko-carte{border-radius:12px}
 html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes{margin-top:18px}
 html[data-tablette] .shell[data-ecran="ficheFranchise"] .ff-etapes .cx-btn.prim{flex:1;justify-content:center;max-width:none}
+
+/* --- Catalogue › Structure de gamme (structure-gamme.js, structure-gamme-tpl.js) ----------------
+   Design system commun : rectangles 4–8 px, pas de gras hors chiffres clés, un état dit par un mot.
+   Préfixe sg- : l'application a déjà une « .jauge » animée, une « .mois », etc. */
+.sg { display: flex; flex-direction: column; gap: 14px; }
+.sg-barre { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.sg-sp { flex: 1; }
+.sg-regle { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--muted); }
+.sg-barre.sg-regles { gap: 8px; }
+.sg-champ { width: 46px; padding: 5px 7px; font: 12.5px 'Gotham', system-ui, sans-serif; text-align: right; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); }
+.sg-champ:focus-visible, .sg-choix:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.sg-champ.chg, .sg-choix.chg { border-color: var(--accent); outline: 1px solid var(--accent); }
+.sg-src { font-size: 11.5px; color: var(--muted); }
+.sg-ok { color: var(--green); }
+.sg-vide { padding: 16px 18px; color: var(--muted); }
+.sg .kpi-row.sg-kpis { background: #fff; border: 1px solid var(--line); border-radius: 12px; }
+.sg .kpi { min-width: 150px; }
+.sg-petit { font-size: 13px; font-weight: 400; color: var(--muted); margin-left: 5px; letter-spacing: 0; }
+.sg-note { font-size: 12px; color: var(--muted); line-height: 1.5; margin: 0; }
+.sg-fort { color: var(--ink); }
+.sg-encart { display: flex; gap: 10px; align-items: flex-start; font-size: 12.5px; line-height: 1.5; padding: 11px 14px; border-radius: 10px; background: var(--prize-soft); color: var(--prize-ink); }
+.sg-encart--neutre { background: #fff; border: 1px solid var(--line); color: var(--muted-2); }
+.sg-table { margin-top: 0; padding: 0; }
+.sg-table table { min-width: 0; font-size: 12.5px; }
+.sg-table thead th { white-space: nowrap; padding: 9px 10px; }
+.sg-table tbody td { padding: 9px 10px; vertical-align: middle; }
+.sg-table td.num, .sg-table th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sg-table tr.sg-grp td { background: var(--total-line); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 8px 10px; }
+.sg-table tr.sg-grp td.num { letter-spacing: 0; text-transform: none; }
+.sg-table tr.sg-sel td { background: rgba(141, 29, 44, .05); }
+.sg-nom { line-height: 1.35; }
+.sg-nom .sub { max-width: 380px; }
+.sg-chev { color: var(--faint); text-align: right; }
+.sg h2 { font-size: .95rem; font-weight: 400; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 .5rem; line-height: 1.3; }
+.sg-st { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 6px; font-size: 11.5px; white-space: nowrap; }
+.sg-st--std { background: rgba(63, 122, 82, .12); color: var(--green); }
+.sg-st--sai { background: var(--chip); color: var(--ink); }
+.sg-st--off { background: #fff; border: 1px solid var(--line); color: var(--muted-2); }
+.sg-st--arb { background: var(--prize-soft); color: var(--prize-ink); }
+.sg-st--obs { background: var(--chip); color: var(--muted-2); }
+.sg-st--hors { color: var(--faint); }
+.sg-mini { display: inline-flex; align-items: center; padding: 1px 6px; border-radius: 4px; font-size: 10.5px; background: var(--chip); color: var(--muted-2); white-space: nowrap; }
+.sg-mini.warn { background: var(--prize-soft); color: var(--prize-ink); }
+.sg-lien { color: var(--accent); }
+.sg-couv { position: relative; width: 86px; height: 6px; border-radius: 3px; background: var(--chip); display: inline-block; vertical-align: middle; }
+.sg-couv i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--chart-real); }
+.sg-couv b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--chart-goal); }
+.sg-cases, .sg-cases-tete { display: inline-flex; gap: 3px; }
+.sg-cases span { width: 33px; height: 22px; border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; background: var(--table-head); color: var(--faint); border: 1px solid var(--line); }
+.sg-cases span.on { background: var(--chip); color: var(--ink); border-color: transparent; }
+.sg-cases-tete span { width: 33px; text-align: center; letter-spacing: 0; font-size: 9.5px; }
+.sg-deux { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 14px; align-items: stretch; }
+.sg-pile { display: flex; flex-direction: column; gap: 10px; }
+.sg-carte { padding: 12px 14px; }
+.sg-carte .kpi__label { margin: 0 0 4px; }
+.sg-seg100 { position: relative; display: flex; gap: 2px; height: 28px; margin: 30px 0 8px; }
+.sg-seg100 i { display: block; height: 100%; background: var(--chart-prev); min-width: 1px; }
+.sg-seg100 i:first-child { border-radius: 4px 0 0 4px; }
+.sg-seg100 i:last-of-type { border-radius: 0 4px 4px 0; }
+.sg-seg100 i.std { background: var(--chart-real); }
+.sg-seg100 .rep { position: absolute; top: -8px; bottom: -8px; width: 2px; background: var(--chart-goal); }
+.sg-seg100 .rep span { position: absolute; top: -17px; left: 50%; transform: translateX(-50%); font-size: 11px; color: var(--chart-goal); white-space: nowrap; }
+.sg-seg100 .lab { position: absolute; top: -19px; left: 0; font-size: 11px; color: var(--muted); white-space: nowrap; }
+.sg-legende { display: flex; gap: 16px; font-size: 11.5px; color: var(--muted-2); flex-wrap: wrap; }
+.sg-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.sg-legende i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.sg-choix { padding: 4px 8px; font: 12px 'Gotham', system-ui, sans-serif; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--ink); min-width: 170px; }
+.sg-frise { display: grid; grid-template-columns: 170px 1fr 230px; column-gap: 14px; align-items: center; }
+.sg-frise .h { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); padding: 6px 0; border-bottom: 1px solid var(--line); }
+.sg-frise .c { padding: 7px 0; border-bottom: 1px solid var(--row-line); font-size: 12.5px; min-height: 24px; display: flex; align-items: center; gap: 8px; }
+.sg-piste { position: relative; height: 20px; flex: 1; }
+.sg-piste .m { position: absolute; top: -7px; bottom: -7px; border-left: 1px dashed var(--line); }
+.sg-piste .b { position: absolute; top: 3px; height: 14px; border-radius: 4px; background: var(--chip); }
+.sg-piste .b.per { background: var(--chart-prev); }
+.sg-piste .auj { position: absolute; top: -9px; bottom: -9px; width: 2px; background: var(--accent); z-index: 2; }
+.sg-mois { position: relative; height: 16px; flex: 1; }
+.sg-mois span { position: absolute; font-size: 10.5px; color: var(--muted); transform: translateX(3px); }
+.sg-mat table { table-layout: fixed; }
+.sg-mat th:first-child { width: 150px; }
+.sg-mat td { vertical-align: top; }
+.sg-mat td.cel { font-size: 11.5px; line-height: 1.45; }
+.sg-mat td.cel div { margin-bottom: 3px; }
+.sg-mat td.vide { color: var(--faint); }
+.sg-mat th.per, .sg-mat td.per { background: rgba(235, 211, 216, .18); }
+.sg-ck { width: 16px; height: 16px; padding: 0; border: 1px solid var(--muted-2); border-radius: 3px; display: inline-flex; align-items: center; justify-content: center; font-size: 10px; color: #fff; background: #fff; cursor: pointer; vertical-align: middle; }
+.sg-ck.on { background: var(--accent); border-color: var(--accent); }
+.sg-ck.mi { background: rgba(141, 29, 44, .45); border-color: var(--accent); }
+.sg-liste { margin: 6px 0 10px; padding-left: 1.1rem; font-size: 13px; line-height: 1.6; color: var(--muted-2); }
+.sg-coche { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; color: var(--ink); cursor: pointer; }
+.sg-coche input { margin-top: 3px; }
+.sg-coche .sub { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }

@@ -804,7 +804,7 @@ function wr_prod_actif(): array
         try {
             // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
             // était déjà celle-là — c'est exactement « rien à faire ici ».
-            if (Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]) === 0) {
+            if (prodActifPoser($pid, $actif) === 0) {
                 $inchangees[] = $ref; continue;
             }
         } catch (PDOException $e) {
@@ -825,6 +825,16 @@ function wr_prod_actif(): array
             . (count($refuses) ? ', ' . count($refuses) . ' refusée(s) car vendue(s) sur 12 mois' : '')
             . (count($inconnues) ? ', ' . count($inconnues) . ' référence(s) inconnue(s)' : '')
             . (count($inchangees) ? ', ' . count($inchangees) . ' déjà dans cet état' : '')];
+}
+
+/**
+ * Le seul geste du cockpit sur la table produit du panel : un booléen, jamais une suppression.
+ * Partagé par « Retirer du catalogue » (POST /produits/actif) et la structure de gamme.
+ * Rend le nombre de lignes changées — 0 : la référence était déjà dans cet état.
+ */
+function prodActifPoser(int $pid, bool $actif): int
+{
+    return Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]);
 }
 
 /**
