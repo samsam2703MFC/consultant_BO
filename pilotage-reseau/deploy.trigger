@@ -1382,3 +1382,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-11T20:36:57Z Planogramme › Structure de gamme : les pièces par saison et une décision par référence à désactiver (saison, période, standard)
 2026-11-11T20:40:06Z Planogramme › Structure de gamme : Désactiver et Obligatoire en interrupteurs, la saison en liste
 2026-11-11T20:47:12Z ERP production : [264] choix rapide des produits repris, [265] [266] karta (jour / date, e-mails, envoi), [268] notifications discrètes
+2026-11-11T20:51:48Z Déblocage : verrou de déploiement renommé (run #2032 figé chez GitHub), tout ce qui attendait part en ligne
