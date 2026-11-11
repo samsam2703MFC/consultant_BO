@@ -1695,6 +1695,22 @@ titre, « +N »), qui se déplie en liste compacte (« Przejdź », ✓ = lu) ; 
 actions. État replié / déplié gardé pour la session du navigateur. `assets/js/notifications.js`, styles `.at-urgent-*`
 (`atelier.css`). La cloche ne change pas.
 
+### Koszty i premie (session Kierownik produkcji) — 267 (migration 166)
+
+Demande du 11/11/2026. Onglet « Koszty i premie » de Czas pracy (`/time/costs`, droit `team_costs`, donné au Kierownik
+produkcji par la migration ; l'administrateur peut le retirer dans Uprawnienia i menu). Lecture seule :
+- par groupe et par personne : coût employeur du mois (`production_employee.cost`), ventes du groupe (état à ce jour et
+  prévision au rythme actuel), ventes par personne, chiffre d'affaires manquant pour l'objectif de coût du personnel
+  (Rentowność) ; une personne de deux groupes compte une fois dans le total ;
+- primes : palier atteint, ce qui manque jusqu'au palier suivant, prime par personne (présence) et par groupe — mêmes
+  calculs que l'onglet « Premia » des tablettes (`TeamBonusService::nextStep`, `persons`) ;
+- prime du Kierownik : `manager.sales_bonus_pct` % du chiffre d'affaires général du mois (0,3 %, chaque mois) ; pas de
+  prime trimestrielle (`manager.quarterly_bonus` = 0 : le calcul trimestriel du module Kierownik est affiché pour
+  information, sans versement).
+Option de l'administrateur (Premie zespołów) : `manager.show_bonuses` — sans elle, aucune prime ne sort du serveur pour
+le Kierownik (les coûts restent). Le taux se règle au même endroit (0 à 5 %). Service `App\Services\Staff\TeamCostsService`,
+route `GET /ajax/time/costs`. Test : `tests/team_costs_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

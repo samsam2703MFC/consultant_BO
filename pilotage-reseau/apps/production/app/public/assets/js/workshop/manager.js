@@ -385,6 +385,7 @@
         return `<article class="tfb-mgr-doc" lang="${lang}">
             <header class="tfb-mgr-doc-head"><div class="small text-muted">${esc(T('bonus.doc_title'))} · ${esc(T('job.position'))} · ${esc(T('lang_name'))}</div>
                 <h2>${esc(T('bonus.title', {period: b.period}))}</h2><div class="small text-muted">${esc(T('report.period', {from: b.from, to: b.to, extracted: b.extracted_at}))}</div></header>
+            ${b.enabled === false ? `<div class="alert alert-warning py-2">${esc(T('bonus.disabled', {pct: String(b.monthly_pct).replace('.', ',')}))}</div>` : ''}
             <h4>${esc(T('bonus.haccp'))}</h4>
             ${b.haccp.blocked ? `<div class="alert alert-danger py-2"><strong>${esc(T('bonus.haccp_blocked'))}</strong><ul class="mb-0">${b.sections.flatMap(s => s.haccp_blocking).filter((x, i, all) => all.findIndex(y => y.event_id === x.event_id) === i)
                 .map(a => `<li>${esc(alertText(lang, {level: 'haccp', ...a}))}</li>`).join('')}</ul></div>` : `<p class="text-success">${esc(T('bonus.haccp_ok'))}</p>`}

@@ -3687,6 +3687,21 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 /* Okno */
 .tm-dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--at-line); border-radius: 12px; padding: 0; box-shadow: 0 20px 60px rgba(24, 18, 20, .25); }
 .tm-dialog::backdrop { background: rgba(24, 18, 20, .42); }
+/* [267] Koszty i premie : grupy rozwijane do osób ; znaczniki = prostokąty z zaokrąglonymi rogami (bez okrągłych znaczków). */
+.tm-costs td, .tm-costs th { vertical-align: middle; }
+.tm-costs .tm-sub { display: block; }
+.tm-grp td { background: #FDFCFA; }
+.tm-grp-btn { display: inline-flex; align-items: center; gap: 8px; border: 0; background: none; padding: 2px 0; font: inherit; color: inherit; cursor: pointer; }
+.tm-grp-btn .bi { font-size: 11px; color: var(--at-muted); }
+.tm-grp-btn:focus-visible { outline: 2px solid var(--at-primary); outline-offset: 2px; border-radius: 4px; }
+.tm-dot { flex: none; width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.tm-per td { color: #444; font-size: 12.5px; }
+.tm-per td:first-child { padding-left: 30px; }
+.tm-tag { display: inline-block; padding: 2px 9px; border-radius: 6px; font-size: 11.5px; font-weight: 600; white-space: nowrap; }
+.tm-tag-ok { background: rgba(46, 125, 79, .12); color: var(--at-success); }
+.tm-tag-warn { background: rgba(193, 122, 42, .14); color: #9a5d17; }
+.tm-kpi.tm-kpi-me { border-color: var(--at-primary); border-left-color: var(--at-primary); background: var(--at-primary-soft); }
+.tm-kpi.tm-kpi-me b { color: var(--at-primary); }
 /* [266] E-maile pracowników : szersze okno z przewijaną listą ; przyciski karty w wierszu miesiąca. */
 .tm-dialog.tm-dialog-wide { width: min(760px, calc(100vw - 32px)); }
 .tm-contacts { max-height: min(56vh, 520px); overflow: auto; border: 1px solid var(--at-line); border-radius: 8px; }

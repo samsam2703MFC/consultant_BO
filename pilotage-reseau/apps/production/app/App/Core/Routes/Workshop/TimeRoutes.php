@@ -10,6 +10,9 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/time/leave', ['controller' => $c, 'method' => 'leave']);
     $r->addRoute('GET', '/time/overtime', ['controller' => $c, 'method' => 'overtime']);
     $r->addRoute('GET', '/time/sheet.pdf', ['controller' => $c, 'method' => 'sheetPdf']);
+    // [267] Koszty i premie (do odczytu, prawo « team_costs »).
+    $r->addRoute('GET', '/time/costs', ['controller' => $c, 'method' => 'costs']);
+    $r->addRoute('GET', '/ajax/time/costs', ['controller' => $c, 'method' => 'costsData']);
 
     $r->addRoute('GET', '/ajax/time/day', ['controller' => $c, 'method' => 'dayData']);
     $r->addRoute('GET', '/ajax/time/month', ['controller' => $c, 'method' => 'monthData']);

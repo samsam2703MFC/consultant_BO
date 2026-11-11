@@ -6,8 +6,12 @@
     <div class="page-heading">
         <div class="page-title">
             <h3>Czas pracy</h3>
+            {% if tab == 'costs' %}
+            <p class="text-subtitle text-muted mb-0">Koszty i premie zespołu — do odczytu : koszt pracodawcy grup i osób, sprzedaż, próg i premia, brakująca sprzedaż do celu.</p>
+            {% else %}
             <p class="text-subtitle text-muted mb-0">Odbicia z tabletu biurowego : codziennie sprawdź wejścia i wyjścia, wybierz powód każdej nadgodziny i nieobecności, zatwierdź dzień.
                 Plan {{ (data.rules.day_plan // 60) }} h dziennie i {{ (data.rules.week_plan // 60) }} h w tygodniu ; nadgodziny odbierane jako dzień wolny w ciągu {{ data.rules.recovery_months }} mies., z podpisem pracownika.</p>
+            {% endif %}
         </div>
     </div>
 {% endblock %}

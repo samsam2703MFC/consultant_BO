@@ -6,7 +6,8 @@
  *   Miesiąc    : wszyscy × dni (godziny, nadgodziny, U / L4 / WN, ?), sumy, bank, karty A4 (PDF), zamknięcie miesiąca ;
  *                [266] e-maile pracowników i karta miesiąca e-mailem (PDF w załączniku, kolejka wysyłki) ;
  *   Urlopy     : kalendarz zespołu (paski), pozostały urlop (26 dni), dodaj / usuń wpis, wymiar urlopu osoby ;
- *   Nadgodziny : bank (FIFO, odbiór w 3 miesiące), dzień wolny : propozycja → podpis pracownika (tu albo tablet biurowy).
+ *   Nadgodziny : bank (FIFO, odbiór w 3 miesiące), dzień wolny : propozycja → podpis pracownika (tu albo tablet biurowy) ;
+ *   Koszty i premie [267] : do odczytu — koszt pracodawcy grup i osób, progi i premie, brakująca sprzedaż, premia kierownika.
  */
 (function () {
     'use strict';
@@ -63,7 +64,7 @@
 
     async function refresh() {
         const url = tab === 'day' ? `/ajax/time/day?date=${D.day}` : tab === 'month' ? `/ajax/time/month?month=${D.month}`
-            : tab === 'leave' ? `/ajax/time/leave?from=${D.from}&days=${D.days.length}` : '/ajax/time/overtime';
+            : tab === 'leave' ? `/ajax/time/leave?from=${D.from}&days=${D.days.length}` : tab === 'costs' ? '/ajax/time/costs' : '/ajax/time/overtime';
         D = (await call('GET', url)).data;
     }
 
@@ -494,8 +495,55 @@
     }
 
     // =====================================================================================================
+    // =====================================================================================================
+    // [267] Koszty i premie (makieta 35) — do odczytu : koszt pracodawcy grup i osób, próg i premia, brakująca sprzedaż,
+    // premia kierownika produkcji (% sprzedaży firmy w miesiącu). Premie tylko, gdy administrator je pokazuje.
+    // =====================================================================================================
+    const zl = (n) => n === null || n === undefined ? '—' : `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')} zł`;
+    const pct = (n) => n === null || n === undefined ? '—' : `${String(Math.round(n * 10) / 10).replace('.', ',')} %`;
+    const openGroups = new Set();
+    function renderCosts() {
+        const c = D.company;
+        const B = D.show_bonuses;
+        const cols = B ? 7 : 5;
+        const rows = D.groups.map(g => {
+            const open = openGroups.has(g.id);
+            const tier = !B ? '' : g.tier ? `<span class="tm-tag tm-tag-ok">próg ${g.tier.index} · ${zl(g.tier.from)}</span>`
+                : g.below_min ? `<span class="tm-tag tm-tag-warn">poniżej minimum ${zl(D.min)}</span>` : '<span class="tm-sub">—</span>';
+            const next = !B ? '' : g.next ? `<b class="${g.tier ? '' : 'tm-late'}">${zl(g.next.missing)}</b>${g.tier ? ' (następny próg)' : ''}` : (g.tier ? 'najwyższy próg' : '');
+            const head = `<tr class="tm-grp" data-group="${g.id}"><td><button type="button" class="tm-grp-btn" data-toggle-group="${g.id}" aria-expanded="${open}">
+                    <i class="tm-dot" style="background:${esc(g.color || '#999')}"></i><b>${esc(g.name)}</b><i class="bi bi-chevron-${open ? 'down' : 'right'}" aria-hidden="true"></i></button></td>
+                <td class="text-end tm-num">${g.people}</td><td class="text-end tm-num"><b>${zl(g.cost)}</b></td>
+                <td class="text-end tm-num">${zl(g.revenue_projection)}<span class="tm-sub">dziś : ${zl(g.revenue)} · na osobę : ${zl(g.per_person_projection)}</span></td>
+                <td class="text-end tm-num">${g.missing_target ? `<span class="tm-late">${zl(g.missing_target)}</span>` : g.missing_target === 0 ? '<span class="tm-tag tm-tag-ok">cel osiągnięty</span>' : '—'}${g.staff_target !== null ? `<span class="tm-sub">cel ${pct(g.staff_target)} kosztu personelu</span>` : ''}</td>
+                ${B ? `<td>${tier}<span class="tm-sub">${g.next ? 'do progu brakuje : ' : ''}${next}</span></td><td class="text-end tm-num"><b>${zl(g.bonus_person)}</b><span class="tm-sub">grupa : ${zl(g.bonus_group)}</span></td>` : ''}</tr>`;
+            const people = !open ? '' : g.persons.map(p => `<tr class="tm-per"><td>${esc(p.name)}</td><td></td><td class="text-end tm-num">${zl(p.cost)}</td>
+                <td colspan="2"><span class="tm-sub">${g.group_days ? `obecność ${p.days} / ${g.group_days} dni` : 'brak odbić w tym miesiącu'}</span></td>
+                ${B ? `<td></td><td class="text-end tm-num">${zl(p.bonus)}</td>` : ''}</tr>`).join('');
+            return head + people;
+        }).join('');
+        body.innerHTML = `<div class="tm-bar"><span class="tm-date"><span>${esc(D.label)}</span></span>
+                <span class="tm-prev">stan na dziś (${D.day}. dzień z ${D.days}) i prognoza w obecnym tempie · tylko do odczytu : płace i progi ustala administrator</span></div>
+            <div class="tm-kpis">
+                <div class="tm-kpi"><small>Sprzedaż firmy</small><b>${zl(c.revenue)}</b><span>prognoza miesiąca : ${zl(c.projection)}</span></div>
+                <div class="tm-kpi"><small>Koszt personelu / mies.</small><b>${zl(c.staff)}</b><span>${c.staff_pct !== null ? `${pct(c.staff_pct)} prognozy sprzedaży · ` : ''}cel ${pct(c.staff_target)}</span></div>
+                <div class="tm-kpi ${c.missing ? 'is-danger' : 'is-ok'}"><small>Brakuje sprzedaży do celu</small><b>${zl(c.missing)}</b><span>żeby koszt personelu = ${pct(c.staff_target)} sprzedaży</span></div>
+                ${B && D.manager ? `<div class="tm-kpi tm-kpi-me"><small>Twoja premia · ${String(D.manager.pct).replace('.', ',')} % sprzedaży firmy</small><b>${zl(D.manager.projection)}</b><span>prognoza miesiąca ; stan na dziś : ${zl(D.manager.now)}</span></div>` : ''}
+            </div>
+            <div class="tm-card tm-scroll"><table class="table tm-table tm-costs"><thead><tr><th>Grupa / osoba</th><th class="text-end">Osoby</th><th class="text-end">Koszt pracodawcy / mies.</th>
+                <th class="text-end">Sprzedaż grupy (prognoza)</th><th class="text-end">Brakuje sprzedaży do celu</th>
+                ${B ? '<th>Próg premii</th><th class="text-end">Premia / osobę</th>' : ''}</tr></thead>
+                <tbody>${rows || `<tr><td colspan="${cols}" class="at-empty">Brak grup.</td></tr>`}</tbody>
+                <tfoot><tr><td>Razem</td><td class="text-end tm-num">${D.totals.people}</td><td class="text-end tm-num">${zl(D.totals.cost)}</td>
+                    <td class="text-end tm-num">${zl(c.projection)}</td><td class="text-end tm-num">${zl(c.missing)}</td>
+                    ${B ? `<td></td><td class="text-end tm-num">${zl(D.totals.bonus)}</td>` : ''}</tr></tfoot></table></div>
+            <p class="tm-note">Koszt pracodawcy = miesięczny koszt osoby z karty płac. « Brakuje sprzedaży do celu » = ile sprzedaży grupy brakuje, żeby jej koszt personelu nie przekraczał celu (strona Rentowność).
+                ${B ? `Premia osoby = premia progu × dni obecności ÷ dni pracy grupy (odbicia z tabletu biurowego) ; « Brakuje do progu » = sprzedaż grupy potrzebna do końca miesiąca (${D.remaining_days} dni roboczych), żeby osiągnąć próg.` : 'Premie pokazuje administrator (Premie zespołów › Kierownik produkcji).'}</p>
+            ${(D.warnings || []).map(w => `<p class="tm-note">${esc(w)}</p>`).join('')}`;
+    }
+
     function render() {
-        ({day: renderDay, month: renderMonth, leave: renderLeave, overtime: renderOvertime})[tab]();
+        ({day: renderDay, month: renderMonth, leave: renderLeave, overtime: renderOvertime, costs: renderCosts})[tab]();
     }
 
     body.addEventListener('change', (e) => {
@@ -526,6 +574,7 @@
             if (await confirmBox(`Zamknąć ${D.label} ? Po zamknięciu nie można zmieniać odbić, powodów ani urlopów tego miesiąca. Karty A4 do podpisu : « Drukuj wszystkich (PDF) ».`)) act(b, 'POST', `/ajax/time/months/${D.month}/close`);
             return;
         }
+        if (b.matches('[data-toggle-group]')) { const id = Number(b.dataset.toggleGroup); if (openGroups.has(id)) openGroups.delete(id); else openGroups.add(id); render(); return; }
         if (b.matches('[data-contacts]')) { contactsDialog(b.dataset.contacts || null); return; }
         if (b.matches('[data-mail-all]')) { mailSheets(b, null); return; }
         if (b.matches('[data-mail-one]')) { mailSheets(b, [Number(b.dataset.mailOne)]); return; }

@@ -7,6 +7,7 @@ use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Organization\PageAccessService;
+use App\Services\Staff\TeamCostsService;
 use App\Services\Workshop\Time\TimeService;
 use App\Services\Workshop\Time\TimeSheetMailService;
 use App\Services\Workshop\Time\TimeSheetPdf;
@@ -21,7 +22,8 @@ final class TimeController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail)
+    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail,
+        private TeamCostsService $teamCosts)
     {
     }
 
@@ -50,6 +52,22 @@ final class TimeController extends BaseController
         $this->page('overtime', $this->time->overtime());
     }
 
+    /** [267] Koszty i premie : do odczytu (prawo « team_costs » — bramka uprawnień App). */
+    public function costs()
+    {
+        $this->page('costs', $this->teamCosts->view($this->seesAllBonuses()) + ['rules' => $this->time->rules()]);
+    }
+
+    public function costsData()
+    {
+        try {
+            if (!$this->access->canSee($this->userId(), '/time/costs')) throw new CustomException('Brak dostępu do kosztów i premii.', 'errors', 403);
+            return $this->json(['data' => $this->teamCosts->view($this->seesAllBonuses())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Karta A4 : ?employee=ID (jedna osoba) albo bez — wszyscy z miesiąca. */
     public function sheetPdf()
     {
@@ -75,7 +93,7 @@ final class TimeController extends BaseController
     {
         $this->view('workshop/time', [
             'tab' => $tab, 'data' => $data, 'is_admin' => $this->access->isAdmin($this->userId()),
-            'page_title' => ['day' => 'Czas pracy — dzień', 'month' => 'Czas pracy — miesiąc', 'leave' => 'Urlopy i dni wolne', 'overtime' => 'Nadgodziny'][$tab],
+            'page_title' => ['day' => 'Czas pracy — dzień', 'month' => 'Czas pracy — miesiąc', 'leave' => 'Urlopy i dni wolne', 'overtime' => 'Nadgodziny', 'costs' => 'Koszty i premie'][$tab],
         ]);
     }
 
@@ -276,6 +294,12 @@ final class TimeController extends BaseController
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    /** [267] Administrator widzi premie zawsze ; w sesji « jako stanowisko » — tak jak to stanowisko (podgląd). */
+    private function seesAllBonuses(): bool
+    {
+        return $this->access->isAdmin($this->userId()) && $this->access->viewPosition($this->userId()) === null;
     }
 
     private function monthWithMail(string $month): array

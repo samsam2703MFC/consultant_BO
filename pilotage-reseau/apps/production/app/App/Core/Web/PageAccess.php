@@ -35,6 +35,9 @@ final class PageAccess
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
         // [262] Czas pracy : zatwierdzanie odbić dnia (zadanie nr 1 kierownika produkcji), miesiąc i karty A4, urlopy, nadgodziny.
         'time' => ['Czas pracy (zatwierdzanie odbić dnia, powody nadgodzin i nieobecności, miesiąc i karta A4, urlopy i dni wolne, nadgodziny i dni wolne za nie)', 'Produkcja', ['/time'], false],
+        // [267] Koszty i premie (zakładka Czas pracy, do odczytu) : koszt pracodawcy grup i osób, progi i premie, brakująca
+        // sprzedaż, premia kierownika produkcji. Osobne prawo : administrator przyznaje je stanowisku (kierownik produkcji).
+        'team_costs' => ['Czas pracy › Koszty i premie (do odczytu : koszt pracodawcy grup i osób, premie, brakująca sprzedaż)', 'Produkcja', ['/time/costs'], false],
         // [256] Płace (koszt pracodawcy, minimum, % premii) : decyduje administrator, nie kierownik produkcji.
         'budget' => ['Płace : budżet personelu (koszt pracodawcy, minimum, % premii)', 'Administracja', ['/staff'], true],
         // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.

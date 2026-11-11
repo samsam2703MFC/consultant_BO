@@ -85,6 +85,7 @@ final class PageTabs
             ['/time/month', 'Miesiąc', 'bi-calendar3'],
             ['/time/leave', 'Urlopy i dni wolne', 'bi-calendar-heart'],
             ['/time/overtime', 'Nadgodziny', 'bi-hourglass-split'],
+            ['/time/costs', 'Koszty i premie', 'bi-cash-coin'],
             ['/tablet/office', 'Otwórz tablet biurowy', 'bi-box-arrow-up-right', false, 'blank'],
         ]],
         // Tablety : zarządzanie (tablety, PIN, czas pracy), zatwierdzenia produkcji, zamówienia między grupami ;

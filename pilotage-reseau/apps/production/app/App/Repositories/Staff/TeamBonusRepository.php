@@ -44,6 +44,13 @@ final class TeamBonusRepository extends WorkshopRepository
         $this->db->prepare('UPDATE n_prod_group SET bonus_visible = ? WHERE id = ?')->execute([(int) $visible, $groupId]);
     }
 
+    /** [267] Koszt pracodawcy (zł / miesiąc) aktywnych osób : profil produkcji (n_prod_employee.id) => koszt. */
+    public function employerCosts(): array
+    {
+        return array_map('floatval', array_column($this->all('SELECT e.id, pe.cost FROM n_prod_employee e
+            JOIN production_employee pe ON pe.id = e.id_production_employee WHERE e.active = 1'), 'cost', 'id'));
+    }
+
     /**
      * Osoby grupy (aktywne) i ich dni z odbiciem w [from, to] ; group_days = dni, w których ktokolwiek z grupy się odbił.
      * @return array{people:list<array{id:int, name:string, days:int}>, group_days:int}

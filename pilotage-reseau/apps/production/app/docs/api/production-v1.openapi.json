@@ -31937,6 +31937,14 @@
             "ManagerBonus": {
                 "type": "object",
                 "properties": {
+                    "enabled": {
+                        "type": "boolean",
+                        "description": "false : prime trimestrielle désactivée (manager.quarterly_bonus), calcul affiché à titre d'information"
+                    },
+                    "monthly_pct": {
+                        "type": "number",
+                        "description": "Prime mensuelle du Kierownik : % du chiffre d'affaires général (manager.sales_bonus_pct)"
+                    },
                     "period": {
                         "type": "string"
                     },
