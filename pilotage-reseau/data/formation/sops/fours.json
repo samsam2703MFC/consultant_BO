@@ -1,0 +1,136 @@
+{
+  "id": "fours",
+  "code": "0.4.03",
+  "type": "SOP",
+  "dossier": "03",
+  "version": "1.1",
+  "statut": null,
+  "langue_origine": "NL",
+  "poste": "nettoyage",
+  "moment": "fermeture",
+  "duree": "Programme RAPIDE : durée affichée 00:34 (MIND.Maps ONE) ou 00:22 (MIND.Maps PLUS)",
+  "titre": {"fr": "Nettoyage des fours", "nl": "Ovens reinigen"},
+  "objectif": {
+    "fr": "Laisser les fours propres et éteints en fin de journée.",
+    "nl": "De ovens aan het einde van de dag schoon en uitgeschakeld achterlaten."
+  },
+  "pour": {
+    "fr": "Vendeurs et vendeuses – la personne de la vente qui nettoie les fours en fin de journée, après 16 h.",
+    "nl": "Verkoopmedewerkers – de verkoopmedewerker die de ovens aan het einde van de dag reinigt, na 16.00 uur."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Cadre", "nl": "Kader"},
+      "etapes": [
+        {"numero": "1",
+         "titre": {"fr": "Quand commencer", "nl": "Wanneer starten"},
+         "texte": {"fr": "Après 16 h.", "nl": "Na 16.00 uur."},
+         "critique": true, "photo": null},
+        {"numero": "2",
+         "titre": {"fr": "Responsable", "nl": "Verantwoordelijke"},
+         "texte": {"fr": "La vendeuse ou le vendeur qui nettoie les fours en fin de journée.", "nl": "De verkoopmedewerker die de ovens aan het einde van de dag reinigt."},
+         "critique": false, "photo": null},
+        {"numero": "3",
+         "titre": {"fr": "Programme", "nl": "Programma"},
+         "texte": {"fr": "Utilisez le programme RAPIDE sur les deux fours. La durée affichée diffère selon l'interface.", "nl": "Gebruik op beide ovens het programma RAPIDE. De weergegeven duur verschilt per interface."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Mode opératoire – suivez cet ordre", "nl": "Werkwijze – volg deze volgorde"},
+      "etapes": [
+        {"numero": "1",
+         "titre": {"fr": "Commencer après 16 h", "nl": "Start na 16.00 uur"},
+         "texte": {"fr": "Faites le nettoyage après 16 h.", "nl": "Voer de reiniging uit na 16.00 uur."},
+         "critique": true, "photo": null},
+        {"numero": "2",
+         "titre": {"fr": "Lancer RAPIDE sur la bonne interface", "nl": "Start RAPIDE op de juiste interface"},
+         "texte": {"fr": "Regardez quel écran d'accueil s'affiche sur le four et suivez le chemin correspondant ci-dessous.", "nl": "Kijk welk beginscherm op de oven staat en volg de overeenkomstige route hieronder."},
+         "critique": false, "photo": null},
+        {"numero": "2.1",
+         "titre": {"fr": "Interface MIND.Maps ONE", "nl": "Interface MIND.Maps ONE"},
+         "texte": {"fr": "MIND.Maps ONE — chemin à l'écran : icône de nettoyage rouge en bas à gauche > RAPIDE > DÉMARRER — durée affichée : 00:34.", "nl": "MIND.Maps ONE — route op het scherm: rode reinigingsicoon linksonder > RAPIDE > DÉMARRER — weergegeven duur: 00:34."},
+         "critique": false, "photo": null},
+        {"numero": "2.2",
+         "titre": {"fr": "Interface MIND.Maps PLUS", "nl": "Interface MIND.Maps PLUS"},
+         "texte": {"fr": "MIND.Maps PLUS — chemin à l'écran : ROTOR.KLEAN en bas à gauche > RAPIDE > bouton rond START/STOP — durée affichée : 00:22.", "nl": "MIND.Maps PLUS — route op het scherm: ROTOR.KLEAN linksonder > RAPIDE > ronde knop START/STOP — weergegeven duur: 00:22."},
+         "critique": false, "photo": null},
+        {"numero": "3",
+         "titre": {"fr": "Attendre que le programme soit complètement terminé", "nl": "Wacht tot het programma volledig klaar is"},
+         "texte": {"fr": "Laissez le programme aller jusqu'au bout. Ne commencez pas à nettoyer à la main et n'éteignez pas le four tant que le programme est en cours.", "nl": "Laat het programma volledig aflopen. Begin niet met handmatig reinigen en schakel de oven niet uit zolang het programma nog bezig is."},
+         "critique": true, "photo": null},
+        {"numero": "4",
+         "titre": {"fr": "Contrôler et nettoyer l'intérieur", "nl": "Controleer en reinig de binnenkant"},
+         "texte": {"fr": "Ouvrez le four une fois le programme terminé. Contrôlez l'intérieur et enlevez les éventuelles traces restantes.", "nl": "Open de oven nadat het programma klaar is. Controleer de binnenkant en verwijder eventuele achtergebleven sporen."},
+         "critique": false, "photo": null},
+        {"numero": "5",
+         "titre": {"fr": "Nettoyer l'avant du four", "nl": "Reinig de voorkant van de oven"},
+         "texte": {"fr": "Nettoyez l'avant du four et enlevez les traces visibles.", "nl": "Maak de voorkant van de oven schoon en verwijder zichtbare sporen."},
+         "critique": false, "photo": null},
+        {"numero": "6",
+         "titre": {"fr": "Éteindre le four", "nl": "Schakel de oven uit"},
+         "texte": {"fr": "Appuyez sur le petit bouton rond gris en bas à droite pour éteindre le four.", "nl": "Druk op de kleine ronde grijze knop rechtsonder om de oven uit te schakelen."},
+         "critique": false, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "À ne jamais faire", "nl": "Nooit doen"},
+      "etapes": [
+        {"numero": "1",
+         "titre": {"fr": "Jamais pendant le programme", "nl": "Nooit tijdens het programma"},
+         "texte": {"fr": "Nettoyer le four à la main ou l'éteindre pendant que le programme de nettoyage est encore en cours.", "nl": "De oven handmatig reinigen of uitschakelen terwijl het reinigingsprogramma nog bezig is."},
+         "critique": true, "photo": null}
+      ]
+    },
+    {
+      "titre": {"fr": "Contrôle rapide", "nl": "Snelle controle"},
+      "etapes": [
+        {"numero": "1", "titre": null,
+         "texte": {"fr": "RAPIDE lancé via la bonne interface.", "nl": "RAPIDE gestart via de juiste interface."},
+         "critique": false, "photo": null},
+        {"numero": "2", "titre": null,
+         "texte": {"fr": "Programme de nettoyage complètement terminé.", "nl": "Reinigingsprogramma volledig afgelopen."},
+         "critique": true, "photo": null},
+        {"numero": "3", "titre": null,
+         "texte": {"fr": "Intérieur contrôlé et traces restantes enlevées.", "nl": "Binnenkant gecontroleerd en resterende sporen verwijderd."},
+         "critique": false, "photo": null},
+        {"numero": "4", "titre": null,
+         "texte": {"fr": "Avant du four propre.", "nl": "Voorkant van de oven schoon."},
+         "critique": false, "photo": null},
+        {"numero": "5", "titre": null,
+         "texte": {"fr": "Four éteint avec le bouton gris en bas à droite.", "nl": "Oven uitgeschakeld met de grijze knop rechtsonder."},
+         "critique": false, "photo": null}
+      ]
+    }
+  ],
+  "points_critiques": [
+    {"fr": "Le nettoyage des fours se fait après 16 h.", "nl": "De ovens worden na 16.00 uur gereinigd."},
+    {"fr": "Programme RAPIDE sur les deux fours, via le chemin de la bonne interface (MIND.Maps ONE ou MIND.Maps PLUS).", "nl": "Programma RAPIDE op beide ovens, via de route van de juiste interface (MIND.Maps ONE of MIND.Maps PLUS)."},
+    {"fr": "Jamais nettoyer à la main ni éteindre le four tant que le programme de nettoyage est en cours.", "nl": "Nooit handmatig reinigen of de oven uitschakelen zolang het reinigingsprogramma nog bezig is."},
+    {"fr": "Le four s'éteint avec le petit bouton rond gris en bas à droite, une fois le programme terminé.", "nl": "De oven wordt uitgeschakeld met de kleine ronde grijze knop rechtsonder, nadat het programma klaar is."}
+  ],
+  "quiz": [
+    {"question": {"fr": "À partir de quand nettoie-t-on les fours ?", "nl": "Vanaf wanneer worden de ovens gereinigd?"},
+     "choix": {"fr": ["Après 16 h", "Au plus tard à 14 h 30", "Avant l'ouverture du magasin"], "nl": ["Na 16.00 uur", "Uiterlijk om 14.30 uur", "Vóór de opening van de winkel"]},
+     "bonne": 0},
+    {"question": {"fr": "Quel programme utilise-t-on sur les deux fours ?", "nl": "Welk programma gebruik je op beide ovens?"},
+     "choix": {"fr": ["DÉMARRER", "RAPIDE", "ROTOR.KLEAN"], "nl": ["DÉMARRER", "RAPIDE", "ROTOR.KLEAN"]},
+     "bonne": 1},
+    {"question": {"fr": "Quand peut-on éteindre le four ?", "nl": "Wanneer mag je de oven uitschakelen?"},
+     "choix": {"fr": ["Dès que le programme est lancé, pour gagner du temps", "Pendant le programme, si l'intérieur paraît propre", "Une fois le programme complètement terminé, avec le petit bouton rond gris en bas à droite"], "nl": ["Zodra het programma gestart is, om tijd te winnen", "Tijdens het programma, als de binnenkant er proper uitziet", "Nadat het programma volledig afgelopen is, met de kleine ronde grijze knop rechtsonder"]},
+     "bonne": 2}
+  ],
+  "corrections": [
+    "Décision 4 (nettoyage des fours après 16 h) : aucune modification nécessaire, le document indique déjà « na 16.00 uur » (en-tête, « Wanneer starten » et étape 1).",
+    "Traduction française complète réalisée à partir du néerlandais ; le tableau des interfaces est rendu en deux sous-étapes 2.1 et 2.2 de l'étape 2 ; l'encadré « Nooit doen » est rendu comme une section à part.",
+    "Retour à la ligne parasite de l'encadré « Nooit doen » (« ... nog bezig / is. ») recollé."
+  ],
+  "remarques": [
+    "Les durées affichées (00:34 et 00:22) sont recopiées telles quelles : le document ne précise pas s'il s'agit d'heures:minutes ou de minutes:secondes.",
+    "Le document ne dit pas quel four porte quelle interface (MIND.Maps ONE ou PLUS) : le choix se fait d'après l'écran d'accueil.",
+    "Le document s'adresse aux vendeurs (« Verkoopmedewerkers ») ; le poste « nettoyage » est celui donné dans la liste de répartition.",
+    "La SOP Fermeture v1.3 (phase 3.2) ne nomme pas le programme RAPIDE : la présente SOP le précise.",
+    "Aucune photo dans le PDF (pdfimages : 0 image)."
+  ],
+  "source": {"fichiers": {"pdf": "169w8buaCNW9oM5uhyGpQQfItXgWw_3N3"}, "lu": "pdf"}
+}

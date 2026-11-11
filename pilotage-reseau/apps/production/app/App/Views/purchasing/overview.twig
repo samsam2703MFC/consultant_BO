@@ -1,0 +1,137 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Koszty surowców{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Koszty surowców</h3>
+            <p class="text-subtitle text-muted">Zużycie z zamówień ostatnich {{ months }} mies. × aktualna cena · gdzie szukać oszczędności</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/purchasing/offers"><i class="bi bi-tags"></i> Oferty</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/purchasing/tenders"><i class="bi bi-envelope"></i> Zapytania ofertowe</a>
+            <a class="btn btn-outline-primary" href="{{ root }}/purchasing/nc"><i class="bi bi-exclamation-octagon"></i> Niezgodności</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-purch">
+    <div class="at-tiles">
+        <div class="at-tile">
+            <span class="at-tile-label"><i class="bi bi-basket"></i> Wydatki na surowce / rok</span>
+            <strong class="at-tile-value">{{ totals.spend|currency(0) }}</strong>
+            <span class="at-tile-meta">{{ rows|filter(r => r.spend > 0)|length }} surowców w użyciu</span>
+        </div>
+        <a class="at-tile {{ totals.saving > 0 ? 'at-tile-ok' : '' }}" href="?filter=offer">
+            <span class="at-tile-label"><i class="bi bi-wallet2"></i> Możliwa oszczędność</span>
+            <strong class="at-tile-value">{{ totals.saving|currency(0) }}</strong>
+            <span class="at-tile-meta">z ważnych ofert tańszych niż obecna cena · {{ totals.with_offer }} surowców z ofertą</span>
+        </a>
+        <a class="at-tile {{ totals.alerts ? 'at-tile-danger' : 'at-tile-ok' }}" href="?filter=alert">
+            <span class="at-tile-label"><i class="bi bi-graph-up"></i> Podwyżki ≥ {{ alert_pct|number_format(0) }} %</span>
+            <strong class="at-tile-value">{{ totals.alerts }}</strong>
+            <span class="at-tile-meta">surowców droższych niż {{ months }} mies. temu</span>
+        </a>
+        <a class="at-tile" href="{{ root }}/purchasing/tenders">
+            <span class="at-tile-label"><i class="bi bi-envelope"></i> Zapytanie ofertowe</span>
+            <strong class="at-tile-value">Zapytaj dostawców</strong>
+            <span class="at-tile-meta">wybierz surowce z listy poniżej i wyślij e-mail</span>
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h4 class="card-title mb-0">Surowce według wydatków</h4>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+                <div class="btn-group btn-group-sm" role="group" aria-label="Filtr">
+                    <a class="btn {{ filter == '' ? 'btn-primary' : 'btn-outline-primary' }}" href="?">Wszystkie</a>
+                    <a class="btn {{ filter == 'alert' ? 'btn-primary' : 'btn-outline-primary' }}" href="?filter=alert">Podwyżki</a>
+                    <a class="btn {{ filter == 'offer' ? 'btn-primary' : 'btn-outline-primary' }}" href="?filter=offer">Z ofertą</a>
+                </div>
+                <input type="search" class="form-control form-control-sm" id="materialSearch" placeholder="Szukaj surowca…" style="max-width: 220px">
+                <button type="button" class="btn btn-sm btn-primary" id="tenderSelected" disabled><i class="bi bi-envelope"></i> Zapytanie dla zaznaczonych (<span>0</span>)</button>
+            </div>
+        </div>
+        <div class="card-body pt-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0 at-purch-table">
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Surowiec</th>
+                            <th>Dostawca</th>
+                            <th class="text-end">Cena</th>
+                            <th class="text-end">Zmiana {{ months }} mies.</th>
+                            <th class="text-end">Zużycie / rok</th>
+                            <th class="text-end">Wydatki / rok</th>
+                            <th class="text-end">Udział</th>
+                            <th class="text-end">Najlepsza oferta</th>
+                            <th class="text-end">Oszczędność</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% set cumulative = 0 %}
+                    {% for r in rows %}
+                        {% set cumulative = cumulative + r.spend %}
+                        {% if (filter == '' and (r.spend > 0 or r.best_offer)) or (filter == 'alert' and r.alert) or (filter == 'offer' and r.best_offer) %}
+                        <tr data-name="{{ (r.name ~ ' ' ~ r.name_fr ~ ' ' ~ r.supplier)|lower }}">
+                            <td><input type="checkbox" class="form-check-input" value="{{ r.id }}" aria-label="Zaznacz {{ r.name }}"></td>
+                            <td>
+                                <a href="{{ root }}/purchasing/materials/{{ r.id }}"><strong>{{ r.name }}</strong></a>
+                                <div class="at-sub">{{ r.category }}{{ r.is_packaging ? ' · opakowanie' : '' }}</div>
+                            </td>
+                            <td>{{ r.supplier ?: '—' }}{% if r.supplier_nc %} <span class="badge bg-warning" title="Niezgodności dostawcy w okresie">NC {{ r.supplier_nc }}</span>{% endif %}</td>
+                            <td class="text-end">{{ r.price|number_format(2, ',', ' ') }} zł/{{ r.unit }}</td>
+                            <td class="text-end">
+                                {% if r.change_pct is not null %}
+                                    <span class="{{ r.alert ? 'text-danger fw-semibold' : (r.change_pct < 0 ? 'text-success' : '') }}">{{ r.change_pct > 0 ? '+' : '' }}{{ r.change_pct|pct }}</span>
+                                {% else %}<span class="at-sub">—</span>{% endif %}
+                            </td>
+                            <td class="text-end">{{ r.qty|number_format(0, ',', ' ') }} {{ r.unit }}</td>
+                            <td class="text-end"><strong>{{ r.spend|currency(0) }}</strong></td>
+                            <td class="text-end at-sub">{{ totals.spend > 0 ? (r.spend / totals.spend * 100)|pct : '—' }}</td>
+                            <td class="text-end">
+                                {% if r.best_offer %}
+                                    {{ r.best_offer.price|number_format(2, ',', ' ') }} zł/{{ r.unit }}
+                                    <div class="at-sub">{{ r.best_offer.supplier }}</div>
+                                {% else %}<a class="at-sub" href="{{ root }}/purchasing/offers?material={{ r.id }}">dodaj ofertę</a>{% endif %}
+                            </td>
+                            <td class="text-end">{% if r.saving > 0 %}<strong class="text-success">{{ r.saving|currency(0) }}</strong>{% else %}<span class="at-sub">—</span>{% endif %}</td>
+                        </tr>
+                        {% endif %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-profit-note">Zużycie: kartony zamówione w ostatnich {{ months }} miesiącach × ilość surowca w recepturze kartonu. Zmiana ceny: aktualna cena wobec ceny sprzed {{ months }} miesięcy (historia cen). Okres i próg podwyżki są parametrami (purchasing.consumption_months, purchasing.price_alert_pct).</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const search = document.getElementById('materialSearch');
+    const rows = [...document.querySelectorAll('.at-purch-table tbody tr')];
+    search.addEventListener('input', () => {
+        const q = search.value.trim().toLowerCase();
+        rows.forEach(tr => tr.hidden = q !== '' && !tr.dataset.name.includes(q));
+    });
+    const button = document.getElementById('tenderSelected');
+    const boxes = [...document.querySelectorAll('.at-purch-table input[type=checkbox]')];
+    const update = () => {
+        const n = boxes.filter(b => b.checked).length;
+        button.querySelector('span').textContent = n;
+        button.disabled = n === 0;
+    };
+    boxes.forEach(b => b.addEventListener('change', update));
+    button.addEventListener('click', () => {
+        const ids = boxes.filter(b => b.checked).map(b => b.value).join(',');
+        window.location.href = {{ root|json_encode|raw }} + '/purchasing/tenders?materials=' + ids;
+    });
+})();
+</script>
+{% endblock %}

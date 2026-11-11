@@ -1,0 +1,949 @@
+{
+    "source": "Recopié du CRM (atelier-espace-candidat, app/crm/api/lib) le 06/11/2026 par tools/formation/guides_depuis_crm.php",
+    "poles": {
+        "fr": [
+            "Finition",
+            "Respect de la fiche technique",
+            "Rapidité",
+            "Propreté",
+            "Organisation"
+        ],
+        "nl": [
+            "Afwerking",
+            "Naleving van de technische fiche",
+            "Snelheid",
+            "Netheid",
+            "Organisatie"
+        ],
+        "repere": 4
+    },
+    "blocs": [
+        {
+            "n": 1,
+            "fr": "Le réseau et la franchise",
+            "nl": "Het netwerk en de franchise",
+            "role": "Franchiseur",
+            "role_nl": "Franchisegever",
+            "fo": "FO-31, FO-32, FO-35",
+            "heures": 6,
+            "items": [
+                {
+                    "id": "FO-31",
+                    "fr": "Identité et ADN de L’Atelier By",
+                    "nl": "Identiteit en DNA van L’Atelier By",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-31",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Explique en ses mots l’histoire, les valeurs et la promesse client de la marque, et cite les cinq produits signature.",
+                    "critere_prop_nl": "Legt in eigen woorden de geschiedenis, de waarden en de klantbelofte van het merk uit en noemt de vijf signatuurproducten.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "FO-32",
+                    "fr": "Modèle de franchise et cadre contractuel",
+                    "nl": "Franchisemodel en contractueel kader",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-32",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Répond sans erreur à dix questions sur ses obligations et celles du Franchiseur (redevances, contrôles, approvisionnement, non-concurrence).",
+                    "critere_prop_nl": "Beantwoordt zonder fouten tien vragen over zijn verplichtingen en die van de Franchisegever (vergoedingen, controles, bevoorrading, niet-concurrentie).",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "FO-35",
+                    "fr": "Manuel opératoire : lecture intégrale et cas pratiques",
+                    "nl": "Operationeel handboek: volledige lezing en praktijkgevallen",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-35",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "A lu le manuel opératoire en entier et retrouve en moins de deux minutes la procédure demandée sur trois cas pratiques.",
+                    "critere_prop_nl": "Heeft het operationeel handboek volledig gelezen en vindt in minder dan twee minuten de gevraagde procedure terug bij drie praktijkgevallen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 2,
+            "fr": "Emplacement et stratégie d’ouverture",
+            "nl": "Vestigingsplaats en openingsstrategie",
+            "role": "Consultant développement",
+            "role_nl": "Ontwikkelingsconsultant",
+            "fo": "FO-33, FO-38",
+            "heures": 4,
+            "items": [
+                {
+                    "id": "FO-33",
+                    "fr": "Étude de marché et emplacement",
+                    "nl": "Marktstudie en vestigingsplaats",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-33",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Lit l’étude de marché de son emplacement : sa zone de chalandise, ses concurrents directs et le CA potentiel retenu.",
+                    "critere_prop_nl": "Leest de marktstudie van zijn vestigingsplaats: zijn verzorgingsgebied, zijn rechtstreekse concurrenten en de vooropgestelde potentiële omzet.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "FO-38",
+                    "fr": "Stratégie d’ouverture, de J-90 à J",
+                    "nl": "Openingsstrategie, van D-90 tot D",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-38",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Présente son rétro-planning de J-90 à J, avec pour chaque étape qui la fait et à quelle date.",
+                    "critere_prop_nl": "Stelt zijn retroplanning van D-90 tot D voor, met voor elke stap wie ze uitvoert en tegen welke datum.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 3,
+            "fr": "Business plan et pilotage financier",
+            "nl": "Businessplan en financiële sturing",
+            "role": "Consultant finance",
+            "role_nl": "Financieel consultant",
+            "fo": "FO-34",
+            "heures": 8,
+            "items": [
+                {
+                    "id": "C-PILOTAGE.KPI",
+                    "fr": "Lecture du tableau de bord",
+                    "nl": "Lezen van het dashboard",
+                    "dfr": "Chiffre d’affaires, ticket, marge, part des formules, indicateurs hebdomadaires et mensuels : décider à partir des données.",
+                    "dnl": "Omzet, ticket, marge, aandeel van de formules, wekelijkse en maandelijkse indicatoren: beslissen op basis van gegevens.",
+                    "fo": "FO-05",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Commente seul le tableau de bord d’une semaine réelle : CA, ticket moyen, marge, part des formules, et en tire une action.",
+                    "critere_prop_nl": "Bespreekt zelfstandig het dashboard van een echte week: omzet, gemiddeld ticket, marge, aandeel van de formules, en leidt er een actie uit af.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "C-PILOTAGE.Franchise",
+                    "fr": "Pilotage de la franchise",
+                    "nl": "Sturing van de franchise",
+                    "dfr": "Reporting au Franchiseur, redevances, tableau de bord TF Buddy, compte de résultat mensuel, comparaison au réseau.",
+                    "dnl": "Rapportering aan de Franchisegever, vergoedingen, dashboard in TF Buddy, maandelijkse resultatenrekening, vergelijking met het netwerk.",
+                    "fo": "FO-05",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Établit le reporting mensuel au Franchiseur et calcule ses redevances sans erreur sur un mois d’exemple.",
+                    "critere_prop_nl": "Stelt de maandelijkse rapportering aan de Franchisegever op en berekent zonder fouten zijn vergoedingen voor een voorbeeldmaand.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 4,
+            "fr": "Outils numériques",
+            "nl": "Digitale tools",
+            "role": "Consultant digital",
+            "role_nl": "Digitaal consultant",
+            "fo": "FO-36",
+            "heures": 6,
+            "items": [
+                {
+                    "id": "FO-36",
+                    "fr": "Outils numériques : TF Buddy et écosystème informatique",
+                    "nl": "Digitale tools: TF Buddy en IT-omgeving",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-36",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Se connecte à TF Buddy, à la caisse et au webshop, et y fait seul les opérations du jour (commande, planning, clôture).",
+                    "critere_prop_nl": "Meldt zich aan op TF Buddy, de kassa en de webshop en voert er zelfstandig de dagelijkse handelingen uit (bestelling, planning, afsluiting).",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 5,
+            "fr": "Recrutement et accueil",
+            "nl": "Rekrutering en onthaal",
+            "role": "Consultant RH",
+            "role_nl": "HR-consultant",
+            "fo": "FO-29, FO-30",
+            "heures": 6,
+            "items": [
+                {
+                    "id": "C-RH.Recrutement",
+                    "fr": "Recrutement et sourcing",
+                    "nl": "Rekrutering en sourcing",
+                    "dfr": "Recherche de candidats, entretiens, sélection sur les compétences, intégration, marque employeur.",
+                    "dnl": "Kandidaten zoeken, gesprekken, selectie op competenties, integratie, werkgeversmerk.",
+                    "fo": "FO-29",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Rédige une offre d’emploi conforme et mène un entretien structuré avec la grille de compétences du réseau.",
+                    "critere_prop_nl": "Stelt een correcte vacature op en voert een gestructureerd gesprek met de competentieschaal van het netwerk.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "C-RH.Onboarding",
+                    "fr": "Accueil d’un nouveau collaborateur",
+                    "nl": "Onthaal van een nieuwe medewerker",
+                    "dfr": "Contrat, cinq premiers jours, parcours à 30, 60 et 90 jours, évaluation de la période d’essai.",
+                    "dnl": "Contract, eerste vijf dagen, traject na 30, 60 en 90 dagen, evaluatie van de proefperiode.",
+                    "fo": "FO-30",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": false,
+                    "critere_prop_fr": "Présente le parcours d’accueil d’un collaborateur : les cinq premiers jours et les points à 30, 60 et 90 jours.",
+                    "critere_prop_nl": "Stelt het onthaaltraject van een medewerker voor: de eerste vijf dagen en de momenten na 30, 60 en 90 dagen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 6,
+            "fr": "Hygiène, sécurité, allergènes",
+            "nl": "Hygiëne, veiligheid, allergenen",
+            "role": "Responsable qualité",
+            "role_nl": "Kwaliteitsverantwoordelijke",
+            "fo": "FO-02, FO-16",
+            "heures": 10,
+            "items": [
+                {
+                    "id": "C-TRANS.HACCP",
+                    "fr": "HACCP et hygiène",
+                    "nl": "HACCP en hygiëne",
+                    "dfr": "5M, températures, 14 allergènes, lavage des mains, fiches HACCP ; formation obligatoire chaque année.",
+                    "dnl": "5M, temperaturen, 14 allergenen, handen wassen, HACCP-fiches; jaarlijks verplichte opleiding.",
+                    "fo": "FO-02",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Fait le contrôle HACCP du matin sans aide : températures relevées et notées, 14 allergènes cités, lavage des mains conforme.",
+                    "critere_prop_nl": "Voert de HACCP-controle van de ochtend zonder hulp uit: temperaturen gemeten en genoteerd, 14 allergenen opgesomd, correct handen wassen.",
+                    "renouvellement": 12,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-TRANS.FIFO-DLC",
+                    "fr": "Premier entré, premier sorti et dates limites",
+                    "nl": "First in, first out en houdbaarheidsdata",
+                    "dfr": "Produits les plus anciens devant, contrôle continu des dates limites, retrait immédiat d’un produit dépassé.",
+                    "dnl": "Oudste producten vooraan, voortdurende controle van de houdbaarheidsdata, verlopen producten onmiddellijk verwijderen.",
+                    "fo": "FO-02",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Sur une vitrine et une chambre froide réelles : rangement premier entré premier sorti, aucun produit dont la date est dépassée.",
+                    "critere_prop_nl": "In een echte toonbank en koelcel: opgeslagen volgens first in, first out, geen enkel product met een verlopen datum.",
+                    "renouvellement": 12,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-TRANS.Sécurité",
+                    "fr": "Sécurité au travail",
+                    "nl": "Veiligheid op het werk",
+                    "dfr": "Équipements de protection, gestes et postures, équipements à risque (four, trancheuse), procédures en cas d’incident.",
+                    "dnl": "Beschermingsmiddelen, houding en bewegingen, risicovolle toestellen (oven, snijmachine), procedures bij een incident.",
+                    "fo": "FO-02",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Utilise four et trancheuse avec les protections, et décrit la conduite à tenir en cas de brûlure, de coupure et d’incendie.",
+                    "critere_prop_nl": "Gebruikt oven en snijmachine met de beschermingen en beschrijft wat te doen bij een brandwonde, een snijwonde en brand.",
+                    "renouvellement": 24,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-TRANS.Conformité",
+                    "fr": "Conformité réglementaire",
+                    "nl": "Naleving van de regelgeving",
+                    "dfr": "Affichages obligatoires, allergènes (FIC), étiquetage, droits et devoirs de l’employeur.",
+                    "dnl": "Verplichte aanplakking, allergenen (FIC), etikettering, rechten en plichten van de werkgever.",
+                    "fo": "FO-16",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Vérifie en boutique les affichages obligatoires et l’étiquetage des allergènes : rien ne manque.",
+                    "critere_prop_nl": "Controleert in de winkel de verplichte aanplakking en de etikettering van de allergenen: er ontbreekt niets.",
+                    "renouvellement": 24,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 7,
+            "fr": "Production technique",
+            "nl": "Technische productie",
+            "role": "Formateur métier",
+            "role_nl": "Vakopleider",
+            "fo": "FO-03, FO-07, FO-08, FO-09, FO-12",
+            "heures": 48,
+            "items": [
+                {
+                    "id": "C-PROD.Pain",
+                    "fr": "Pain et boulangerie technique",
+                    "nl": "Brood en technische bakkerij",
+                    "dfr": "Pétrissage, hydratation, pousse contrôlée, façonnage, cuisson de la gamme signature.",
+                    "dnl": "Kneden, hydratatie, gecontroleerde rijs, vormen, bakken van het signatuurassortiment.",
+                    "fo": "FO-07",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Trois fournées de la gamme signature sans défaut : poids à plus ou moins 3 %, façonnage régulier, cuisson à cœur.",
+                    "critere_prop_nl": "Drie bakken van het signatuurassortiment zonder fouten: gewicht op 3 % na, gelijkmatig gevormd, doorbakken.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "C-PROD.Viennoiserie",
+                    "fr": "Viennoiserie et feuilletage",
+                    "nl": "Viennoiserie en bladerdeeg",
+                    "dfr": "Tourage, détrempe, beurrage, croissants et couques signature.",
+                    "dnl": "Toeren, basisdeeg, boter inslaan, signatuurcroissants en -koeken.",
+                    "fo": "FO-09",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Tourage réussi : feuilletage visible à la coupe, croissants et couques au poids de la fiche, sans beurre qui perce.",
+                    "critere_prop_nl": "Geslaagd toeren: gelaagdheid zichtbaar bij het snijden, croissants en koeken op het gewicht van de fiche, geen boter die doorlekt.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "C-PROD.Pâtisserie",
+                    "fr": "Pâtisserie technique",
+                    "nl": "Technische patisserie",
+                    "dfr": "Crèmes, ganaches, montage, glaçages, finitions de la gamme signature.",
+                    "dnl": "Crèmes, ganaches, opbouw, glazuren, afwerking van het signatuurassortiment.",
+                    "fo": "FO-08",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Réalise seul trois pâtisseries de la gamme signature conformes à la fiche technique (montage, glaçage, finition).",
+                    "critere_prop_nl": "Maakt zelfstandig drie gebakjes van het signatuurassortiment volgens de technische fiche (opbouw, glazuur, afwerking).",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "C-PROD.Cuisson",
+                    "fr": "Cuisson et gestion du four",
+                    "nl": "Bakken en ovenbeheer",
+                    "dfr": "Vagues de cuisson, programmes du four, température et durée, défournement, lecture du produit cuit.",
+                    "dnl": "Bakgolven, ovenprogramma’s, temperatuur en duur, uit de oven halen, beoordeling van het gebakken product.",
+                    "fo": "FO-12",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Choisit le bon programme du four du premier coup sur les familles de produits, sans fournée perdue sur la journée.",
+                    "critere_prop_nl": "Kiest meteen het juiste ovenprogramma voor de productfamilies, zonder verloren bak op de dag.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "C-TRAITEUR.Froid",
+                    "fr": "Traiteur froid",
+                    "nl": "Koude traiteur",
+                    "dfr": "Sandwichs, salades, plats froids selon les recettes et les standards de la marque.",
+                    "dnl": "Broodjes, salades, koude gerechten volgens de recepten en normen van het merk.",
+                    "fo": "FO-10",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Prépare le traiteur froid du jour selon les fiches, dans les temps, aux bonnes températures de conservation.",
+                    "critere_prop_nl": "Bereidt de koude traiteur van de dag volgens de fiches, op tijd en op de juiste bewaartemperaturen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "C-TRAITEUR.Chaud",
+                    "fr": "Traiteur chaud",
+                    "nl": "Warme traiteur",
+                    "dfr": "Cuisson des plats chauds, dressage, températures de service, organisation du poste chaud.",
+                    "dnl": "Bereiden van warme gerechten, presentatie, serveertemperaturen, organisatie van de warme post.",
+                    "fo": "FO-10",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Sert un plat chaud à plus de 63 °C, dressé comme sur la fiche, et tient le poste chaud pendant un service.",
+                    "critere_prop_nl": "Serveert een warm gerecht op meer dan 63 °C, gepresenteerd zoals op de fiche, en houdt de warme post tijdens een service.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "C-BARISTA.Espresso",
+                    "fr": "Extraction de l’espresso",
+                    "nl": "Extractie van de espresso",
+                    "dfr": "Mouture, tassage, temps d’extraction, température de l’eau : un espresso conforme.",
+                    "dnl": "Maling, aandrukken, extractietijd, watertemperatuur: een conforme espresso.",
+                    "fo": "FO-11",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Cinq espressos de suite conformes : dose, temps d’extraction et volume de la fiche barista, crème homogène.",
+                    "critere_prop_nl": "Vijf espresso’s na elkaar conform: dosis, extractietijd en volume van de baristafiche, gelijkmatige crema.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-SANDWICH.Préparation",
+                    "fr": "Sandwicherie et formules",
+                    "nl": "Broodjeszaak en formules",
+                    "dfr": "Choix du pain, préparation des garnitures, assemblage propre, formules du midi (sandwich, boisson, dessert), conservation en vitrine et rotation.",
+                    "dnl": "Keuze van het brood, bereiding van het beleg, nette samenstelling, middagformules (broodje, drank, dessert), bewaring in de toonbank en rotatie.",
+                    "fo": "FO-51",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Monte un sandwich en moins de 90 secondes selon la fiche, et la vitrine du midi est complète à l’heure prévue.",
+                    "critere_prop_nl": "Maakt een broodje in minder dan 90 seconden volgens de fiche, en de middagtoonbank is volledig op het voorziene uur.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-SALADE.Composition",
+                    "fr": "Salades et bowls signature",
+                    "nl": "Signatuursalades en -bowls",
+                    "dfr": "Recettes signature, sauces et assaisonnements, présentation en vitrine et à la commande, emballage à emporter compatible avec la livraison.",
+                    "dnl": "Signatuurrecepten, sauzen en kruiding, presentatie in de toonbank en op bestelling, afhaalverpakking geschikt voor levering.",
+                    "fo": "FO-52",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Prépare trois salades ou bowls signature conformes (grammages, sauce, présentation) et prêts à emporter.",
+                    "critere_prop_nl": "Bereidt drie signatuursalades of -bowls conform (gewichten, saus, presentatie), klaar om mee te nemen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 8,
+            "fr": "Vente, caisse, vitrine",
+            "nl": "Verkoop, kassa, etalage",
+            "role": "Business coach",
+            "role_nl": "Businesscoach",
+            "fo": "FO-01, FO-14, FO-20",
+            "heures": 24,
+            "items": [
+                {
+                    "id": "C-VENTE.Accueil",
+                    "fr": "Accueil client en moins de 3 secondes",
+                    "nl": "Klantonthaal binnen 3 seconden",
+                    "dfr": "Regard, sourire et bonjour en moins de 3 secondes à chaque entrée d’un client.",
+                    "dnl": "Oogcontact, glimlach en goedendag binnen 3 seconden bij elke klant die binnenkomt.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Sur une heure de service observée : chaque client est salué (regard, sourire, bonjour) en moins de trois secondes.",
+                    "critere_prop_nl": "Tijdens een geobserveerd uur service: elke klant wordt binnen drie seconden begroet (oogcontact, glimlach, goedendag).",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-VENTE.Conseil",
+                    "fr": "Conseil produit",
+                    "nl": "Productadvies",
+                    "dfr": "Orienter le client, expliquer la gamme, raconter le produit, recommander ce qui lui convient.",
+                    "dnl": "De klant begeleiden, het assortiment uitleggen, het verhaal van het product vertellen, aanraden wat bij hem past.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Présente la gamme et conseille un produit adapté à trois demandes différentes de clients.",
+                    "critere_prop_nl": "Stelt het assortiment voor en raadt een passend product aan bij drie verschillende klantvragen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-VENTE.Upselling",
+                    "fr": "Vente additionnelle et complémentaire",
+                    "nl": "Bijverkoop en kruisverkoop",
+                    "dfr": "Une proposition complémentaire au moins par client (boisson et pâtisserie, formule).",
+                    "dnl": "Minstens één aanvullend voorstel per klant (drank en gebak, formule).",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Fait au moins une proposition complémentaire par client sur une heure de service observée.",
+                    "critere_prop_nl": "Doet minstens één aanvullend voorstel per klant tijdens een geobserveerd uur service.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-VENTE.Caisse",
+                    "fr": "Encaissement et caisse",
+                    "nl": "Afrekenen en kassa",
+                    "dfr": "Ticket remis, écart de caisse inférieur à 0,5 %, moyens de paiement, clôture journalière.",
+                    "dnl": "Kassaticket overhandigd, kassaverschil onder 0,5 %, betaalmiddelen, dagafsluiting.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Tient la caisse un service complet : ticket remis à chaque client, écart de caisse inférieur à 0,5 %, clôture juste.",
+                    "critere_prop_nl": "Houdt de kassa tijdens een volledige service: kassaticket aan elke klant, kassaverschil onder 0,5 %, juiste afsluiting.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-VENTE.Fidélité",
+                    "fr": "Fidélisation et application de fidélité",
+                    "nl": "Klantenbinding en getrouwheidsapp",
+                    "dfr": "Inscription à l’application, activation du programme, identification par NFC ou QR, panier ambassadeur.",
+                    "dnl": "Inschrijving in de app, activering van het programma, identificatie via NFC of QR, ambassadeursmand.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Inscrit un client à l’application de fidélité et l’identifie à la caisse (NFC ou QR) sans aide.",
+                    "critere_prop_nl": "Schrijft een klant in op de getrouwheidsapp en identificeert hem aan de kassa (NFC of QR) zonder hulp.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur",
+                        "etudiant"
+                    ]
+                },
+                {
+                    "id": "C-VENTE.Vitrine",
+                    "fr": "Vitrine et merchandising visuel",
+                    "nl": "Etalage en visuele merchandising",
+                    "dfr": "Montage du matin, réassort, étiquetage selon la charte, photos des produits, propreté.",
+                    "dnl": "Opbouw ’s ochtends, aanvulling, etikettering volgens de huisstijl, productfoto’s, netheid.",
+                    "fo": "FO-20",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Monte la vitrine du matin selon le planogramme, étiquettes conformes à la charte, en moins de 30 minutes.",
+                    "critere_prop_nl": "Bouwt de ochtendtoonbank op volgens het planogram, etiketten volgens de huisstijl, in minder dan 30 minuten.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "C-PLAN.Ouverture",
+                    "fr": "Ouverture de la boutique",
+                    "nl": "Opening van de winkel",
+                    "dfr": "Équipements, contrôle HACCP du matin, vitrine, propreté, briefing de cinq minutes.",
+                    "dnl": "Toestellen, HACCP-controle ’s ochtends, toonbank, netheid, briefing van vijf minuten.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Ouvre la boutique seul : appareils, contrôle HACCP, vitrine et briefing faits, boutique prête à l’heure d’ouverture.",
+                    "critere_prop_nl": "Opent de winkel zelfstandig: toestellen, HACCP-controle, toonbank en briefing gedaan, winkel klaar op het openingsuur.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "C-PLAN.Fermeture",
+                    "fr": "Fermeture de la boutique",
+                    "nl": "Sluiting van de winkel",
+                    "dfr": "Inventaire, comptage de la caisse, nettoyage en profondeur, mise en sécurité.",
+                    "dnl": "Inventaris, telling van de kassa, grondige schoonmaak, beveiliging.",
+                    "fo": "FO-01",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Ferme la boutique seul : caisse comptée et clôturée, inventaire des invendus, nettoyage et mise en sécurité faits.",
+                    "critere_prop_nl": "Sluit de winkel zelfstandig: kassa geteld en afgesloten, inventaris van onverkochte producten, schoonmaak en beveiliging gedaan.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 9,
+            "fr": "Stage pratique",
+            "nl": "Praktijkstage",
+            "role": "Magasin école du réseau",
+            "role_nl": "Opleidingswinkel van het netwerk",
+            "fo": "FO-37",
+            "heures": 60,
+            "items": [
+                {
+                    "id": "FO-37",
+                    "fr": "Stage pratique dans un magasin école (4 à 6 semaines)",
+                    "nl": "Praktijkstage in een opleidingswinkel (4 tot 6 weken)",
+                    "dfr": "Formation suivie",
+                    "dnl": "Opleiding gevolgd",
+                    "fo": "FO-37",
+                    "phase": "pre",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Tient seul chaque poste du magasin école pendant une journée complète, attesté par le responsable du magasin école.",
+                    "critere_prop_nl": "Houdt zelfstandig elke post van de opleidingswinkel gedurende een volledige dag, bevestigd door de verantwoordelijke van de opleidingswinkel.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 10,
+            "fr": "Mise en route de la boutique",
+            "nl": "Opstart van de winkel",
+            "role": "Garant d’ouverture (article 4.5 du Contrat)",
+            "role_nl": "Openingsbegeleider (artikel 4.5 van de Overeenkomst)",
+            "fo": "FO-24, FO-27",
+            "heures": 12,
+            "items": [
+                {
+                    "id": "C-PLAN.Planning",
+                    "fr": "Planification des équipes",
+                    "nl": "Planning van de teams",
+                    "dfr": "Prévision de la fréquentation, dimensionnement de l’équipe, respect du droit du travail, planning dans TF Buddy.",
+                    "dnl": "Prognose van de drukte, bemanning van het team, naleving van het arbeidsrecht, planning in TF Buddy.",
+                    "fo": "FO-24",
+                    "phase": "ouv",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Établit le planning d’une semaine dans TF Buddy, dimensionné sur la fréquentation et conforme au droit du travail.",
+                    "critere_prop_nl": "Stelt de planning van een week op in TF Buddy, afgestemd op de drukte en conform het arbeidsrecht.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "C-STOCK.Casse",
+                    "fr": "Gestion de la casse et des invendus",
+                    "nl": "Beheer van breuk en onverkochte producten",
+                    "dfr": "Pesée, traçabilité dans TF Buddy, analyse des causes, plan de réduction, valorisation des invendus.",
+                    "dnl": "Wegen, traceerbaarheid in TF Buddy, oorzakenanalyse, reductieplan, valorisatie van onverkochte producten.",
+                    "fo": "FO-27",
+                    "phase": "ouv",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Pèse et enregistre la casse du jour dans TF Buddy et propose une action pour la réduire.",
+                    "critere_prop_nl": "Weegt en registreert de breuk van de dag in TF Buddy en stelt een actie voor om ze te verminderen.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "C-STOCK.Inventaire",
+                    "fr": "Inventaire et gestion des stocks",
+                    "nl": "Inventaris en voorraadbeheer",
+                    "dfr": "Procédure hebdomadaire, valorisation, écarts, rotations, alertes dans TF Buddy.",
+                    "dnl": "Wekelijkse procedure, waardering, afwijkingen, rotatie, waarschuwingen in TF Buddy.",
+                    "fo": "FO-25",
+                    "phase": "ouv",
+                    "bloq": true,
+                    "poles": true,
+                    "critere_prop_fr": "Fait l’inventaire de la semaine seul ; l’écart avec la valeur théorique est expliqué.",
+                    "critere_prop_nl": "Maakt zelfstandig de inventaris van de week; het verschil met de theoretische waarde wordt verklaard.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                }
+            ]
+        },
+        {
+            "n": 11,
+            "fr": "Formation continue",
+            "nl": "Permanente opleiding",
+            "role": "Business coach (avec les consultants RH, marketing et finance)",
+            "role_nl": "Businesscoach (met de HR-, marketing- en financieel consultants)",
+            "fo": "FO-06, FO-18, FO-29, FO-43, FO-45, FO-13, FO-19, FO-24, FO-05, FO-41",
+            "heures": 0,
+            "items": [
+                {
+                    "id": "FO-06",
+                    "fr": "Animation d’équipe et RH (franchisé, responsable)",
+                    "nl": "Teamleiding en HR (franchisenemer, verantwoordelijke)",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-06",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Anime un briefing d’équipe et mène un entretien annuel avec la grille du réseau.",
+                    "critere_prop_nl": "Leidt een teambriefing en voert een jaarlijks gesprek met de schaal van het netwerk.",
+                    "renouvellement": 12,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "FO-18",
+                    "fr": "Gestion des conflits avec les clients",
+                    "nl": "Omgaan met conflicten met klanten",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-18",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Gère un cas de client mécontent en jeu de rôle : écoute, solution, client qui repart satisfait.",
+                    "critere_prop_nl": "Behandelt een ontevreden klant in een rollenspel: luisteren, oplossing, klant die tevreden vertrekt.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "FO-29",
+                    "fr": "Recrutement et sourcing",
+                    "nl": "Rekrutering en sourcing",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-29",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Mène un recrutement complet en boutique, de l’offre à l’intégration.",
+                    "critere_prop_nl": "Voert een volledige rekrutering in de winkel, van de vacature tot de integratie.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "FO-43",
+                    "fr": "Communication locale et réseaux sociaux",
+                    "nl": "Lokale communicatie en sociale media",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-43",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Publie un mois de communication locale conforme à la charte et en commente les résultats.",
+                    "critere_prop_nl": "Publiceert een maand lokale communicatie volgens de huisstijl en bespreekt de resultaten.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant"
+                    ]
+                },
+                {
+                    "id": "FO-45",
+                    "fr": "Animation commerciale et saisons",
+                    "nl": "Commerciële animatie en seizoenen",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-45",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Met en place une animation de saison dans les temps et en mesure l’effet sur le CA.",
+                    "critere_prop_nl": "Zet tijdig een seizoensactie op en meet het effect ervan op de omzet.",
+                    "renouvellement": 12,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "FO-13",
+                    "fr": "Vente conseil approfondie",
+                    "nl": "Verdiepte adviesverkoop",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-13",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Sur une heure observée, conseille et vend un produit à forte valeur à au moins trois clients.",
+                    "critere_prop_nl": "Adviseert en verkoopt tijdens een geobserveerd uur een product met hoge waarde aan minstens drie klanten.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "FO-19",
+                    "fr": "Vente additionnelle et complémentaire",
+                    "nl": "Bijverkoop en kruisverkoop",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-19",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Le ticket moyen de son équipe progresse sur le mois qui suit la formation.",
+                    "critere_prop_nl": "Het gemiddeld ticket van zijn team stijgt in de maand na de opleiding.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "vendeur"
+                    ]
+                },
+                {
+                    "id": "FO-24",
+                    "fr": "Planification et gestion des plannings",
+                    "nl": "Planning en roosterbeheer",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-24",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Le planning du mois tient le ratio heures / CA fixé par le réseau.",
+                    "critere_prop_nl": "De planning van de maand respecteert de verhouding uren / omzet die het netwerk vastlegt.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "FO-05",
+                    "fr": "Pilotage commercial (franchisé, responsable)",
+                    "nl": "Commerciële sturing (franchisenemer, verantwoordelijke)",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-05",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Présente au consultant le bilan du trimestre et un plan d’action chiffré.",
+                    "critere_prop_nl": "Stelt de consulent de balans van het kwartaal en een becijferd actieplan voor.",
+                    "renouvellement": 12,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                },
+                {
+                    "id": "FO-41",
+                    "fr": "Gestion financière avancée",
+                    "nl": "Geavanceerd financieel beheer",
+                    "dfr": "Formation continue",
+                    "dnl": "Permanente opleiding",
+                    "fo": "FO-41",
+                    "phase": "con",
+                    "bloq": false,
+                    "poles": false,
+                    "critere_prop_fr": "Lit son compte de résultat avec son comptable et explique les écarts avec le budget.",
+                    "critere_prop_nl": "Leest zijn resultatenrekening met zijn boekhouder en verklaart de verschillen met het budget.",
+                    "renouvellement": 0,
+                    "profils": [
+                        "gerant",
+                        "multi"
+                    ]
+                }
+            ]
+        }
+    ]
+}

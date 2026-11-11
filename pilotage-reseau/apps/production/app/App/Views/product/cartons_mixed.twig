@@ -1,0 +1,31 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Paleta mieszana{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3><i class="bi bi-box2"></i> Kartony i palety — paleta mieszana</h3>
+            <p class="text-subtitle text-muted">Resztki zamówienia klienta na dzień wysyłki w jednej palecie : pełne warstwy kilku produktów jedna na drugiej
+                (cięższa warstwa na dole, mniejsze kartony wyżej). Zatwierdzona paleta liczy się w dniu wysyłki jako jedna.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# Paleta mieszana [215] (makieta 214) : App\Services\Logistics\MixedPalletService ; dane /ajax/products/cartons/mixed. #}
+<section class="section mx-wrap" id="mixedApp" data-root="{{ root }}">
+    <div class="mx-bar">
+        <a class="mx-btn" href="{{ root }}/products/cartons"><i class="bi bi-arrow-left" aria-hidden="true"></i> Kartony i palety</a>
+        <label class="mx-field">Dzień wysyłki <select class="form-select" data-mx-date aria-label="Dzień wysyłki"></select></label>
+        <label class="mx-field">Klient <select class="form-select" data-mx-customer aria-label="Klient"></select></label>
+    </div>
+    <div data-mx-editor></div>
+    <div data-mx-proposals></div>
+</section>
+<script type="application/json" id="mixedBoot">{{ boot|raw }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/product/mixed-pallet.js?v={{ asset_v() }}"></script>
+{% endblock %}

@@ -1,0 +1,17 @@
+{
+  "name": "Manuel du réseau — L'Atelier by",
+  "short_name": "Manuel",
+  "description": "Le Manuel du réseau en lecture : standards (SOP) par domaine, par phase et par poste, formations et compétences.",
+  "start_url": "./?tablette=1#/rfclasseur",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#faf7f2",
+  "theme_color": "#8D1D2C",
+  "lang": "fr",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

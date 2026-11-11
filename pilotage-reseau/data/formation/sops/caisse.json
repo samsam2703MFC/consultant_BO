@@ -1,0 +1,574 @@
+{
+  "id": "caisse",
+  "code": "0.2.01",
+  "type": "SOP",
+  "dossier": "01",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "NL",
+  "poste": "vente",
+  "moment": "journee",
+  "duree": null,
+  "titre": {
+    "fr": "Encodage des commandes clients en caisse",
+    "nl": "Bestelling encoderen in de kassa"
+  },
+  "objectif": {
+    "fr": "Enregistrer dans une seule commande les bons articles, les bonnes quantités, l'heure de retrait, les remarques et le statut de paiement.",
+    "nl": "De juiste artikelen, aantallen, afhaaltijd, opmerkingen en betalingsstatus in één bestelling vastleggen."
+  },
+  "pour": {
+    "fr": "Vendeurs (personnel de vente)",
+    "nl": "Verkoopmedewerkers"
+  },
+  "sections": [
+    {
+      "titre": {
+        "fr": "Généralités",
+        "nl": "Algemeen"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Sujet",
+            "nl": "Onderwerp"
+          },
+          "texte": {
+            "fr": "Enregistrer, planifier et sauvegarder correctement une commande client.",
+            "nl": "Een klantbestelling correct registreren, plannen en bewaren."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Quand",
+            "nl": "Wanneer"
+          },
+          "texte": {
+            "fr": "Pour chaque précommande à retirer plus tard.",
+            "nl": "Bij elke voorafbestelling voor een latere afhaling."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Responsable",
+            "nl": "Verantwoordelijke"
+          },
+          "texte": {
+            "fr": "Le membre du personnel connecté à la caisse sous son propre nom.",
+            "nl": "De medewerker die met zijn/haar eigen naam op de kassa is aangemeld."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Marche à suivre – respecter cet ordre",
+        "nl": "Werkwijze – volg deze volgorde"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Partir de l'écran de vente",
+            "nl": "Start op het verkoopscherm"
+          },
+          "texte": {
+            "fr": "Vérifier en haut de l'écran que son propre nom/compte est actif et qu'aucune commande d'un client précédent n'est encore ouverte. Fermer ou corriger un ancien panier avant de commencer.",
+            "nl": "Controleer bovenaan dat je eigen naam/account actief is en dat er geen bestelling van een vorige klant openstaat. Sluit of corrigeer een oude mand vóór je begint."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Ouvrir « Bestelling » et sélectionner le client",
+            "nl": "Open Bestelling en selecteer de klant"
+          },
+          "texte": {
+            "fr": "Taper en haut à gauche sur « Bestelling » (commande). Demander au client : « Avez-vous déjà commandé chez nous ? » A. Oui : taper sur « Weergeven » (afficher), rechercher le client et sélectionner la bonne fiche client. B. Non : taper sur « Nieuwe B2C klant » (nouveau client B2C) pour un particulier. Taper sur « Nieuwe B2B klant » (nouveau client B2B) lorsque la commande est pour une entreprise avec un numéro de TVA et que le client souhaite une facture. Remplir complètement les données demandées et les enregistrer.",
+            "nl": "Tik linksboven op Bestelling. Vraag de klant: Heeft u al eerder bij ons besteld? A. Ja: tik op Weergeven, zoek de klant op en selecteer het juiste klantprofiel. B. Nee: tik op Nieuwe B2C klant voor een particulier. Tik op Nieuwe B2B klant wanneer de bestelling voor een onderneming met btw-nummer is en de klant een factuur wenst. Vul de gevraagde gegevens volledig in en sla ze op."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Ajouter les articles",
+            "nl": "Voeg de artikelen toe"
+          },
+          "texte": {
+            "fr": "Choisir à droite le bon groupe de produits et taper au centre sur l'article souhaité. Utiliser le bouton +1 ou la fonction de quantité disponible pour saisir le bon nombre. Répéter pour tous les produits.",
+            "nl": "Kies rechts de juiste productgroep en tik in het midden op het gewenste artikel. Gebruik de knop +1 of de beschikbare hoeveelheidsfunctie om het juiste aantal in te voeren. Herhaal dit voor alle producten."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Vérifier le panier de commande",
+            "nl": "Controleer de bestelmand"
+          },
+          "texte": {
+            "fr": "Vérifier à gauche chaque article, la quantité et le montant total. Corriger toute erreur avant de continuer. Vérifier aussi les variantes, formats ou goûts lorsque l'écran propose ces options.",
+            "nl": "Controleer links elk artikel, het aantal en het totaalbedrag. Corrigeer een fout vóór je verdergaat. Controleer ook varianten, formaten of smaken wanneer het scherm die opties toont."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Ouvrir le récapitulatif de commande",
+            "nl": "Open het besteloverzicht"
+          },
+          "texte": {
+            "fr": "Taper en bas à gauche sur « Overzicht » (récapitulatif). Choisir la fonction commande ou retrait ultérieur lorsque le système le demande.",
+            "nl": "Tik onderaan links op Overzicht. Kies de functie voor een bestelling of latere afhaling wanneer het systeem daarom vraagt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Fixer la date et l'heure de retrait",
+            "nl": "Leg datum en uur van afhaling vast"
+          },
+          "texte": {
+            "fr": "Sélectionner dans le calendrier la bonne date de retrait et régler l'heure de retrait. Vérifier soigneusement les deux et taper sur « Bevestigen » (confirmer).",
+            "nl": "Selecteer in de kalender de correcte afhaaldatum en stel het afhaaluur in. Controleer beide gegevens zorgvuldig en tik op Bevestigen."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": "Compléter les données client et les remarques",
+            "nl": "Vul klantgegevens en opmerkingen in"
+          },
+          "texte": {
+            "fr": "Remplir les données client et de retrait demandées. Dans « Opmerking » (remarque), n'indiquer que des informations claires et exécutables pour la production ou l'emballage. Taper sur « Opslaan » (enregistrer) pour sauvegarder chaque saisie.",
+            "nl": "Vul de gevraagde klant- en afhaalgegevens in. Noteer bij Opmerking alleen duidelijke, uitvoerbare informatie voor productie of verpakking. Tik op Opslaan om elke invoer te bewaren."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": "Enregistrer un paiement ou un acompte, le cas échéant",
+            "nl": "Registreer een betaling of voorschot indien van toepassing"
+          },
+          "texte": {
+            "fr": "Choisir le bon mode de paiement. Utiliser « Contant in kassa » (espèces en caisse) pour l'argent liquide réellement présent dans le tiroir-caisse ; n'utiliser « Contant niet in kassa » (espèces hors caisse) ou « Waardebonnen » (bons de valeur) que selon l'accord interne. Saisir le montant, taper sur « Toevoegen » (ajouter) et confirmer par « Ja » (oui) lorsque l'écran demande si les lignes saisies peuvent être utilisées.",
+            "nl": "Kies de juiste betaalwijze. Gebruik Contant in kassa voor cash die werkelijk in de kassalade ligt; gebruik Contant niet in kassa of Waardebonnen alleen volgens de interne afspraak. Voer het bedrag in, tik op Toevoegen en bevestig met Ja wanneer de vraag verschijnt of de ingevoerde lijnen gebruikt mogen worden."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": "Faire le contrôle final",
+            "nl": "Voer de eindcontrole uit"
+          },
+          "texte": {
+            "fr": "Vérifier que la commande peut être retrouvée avec le bon client, la bonne date et la bonne heure de retrait, les articles, les remarques, le total et le statut de paiement. Imprimer ou conserver le bon de commande selon la procédure interne.",
+            "nl": "Controleer dat de bestelling terug te vinden is met de juiste klant, afhaaldatum, afhaaluur, artikelen, opmerkingen, totaal en betalingsstatus. Print of bewaar de bestelbon volgens de interne werkwijze."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Contrôle rapide pour chaque commande",
+        "nl": "Snelcheck voor elke bestelling"
+      },
+      "etapes": [
+        {
+          "numero": "0",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Utiliser cette page comme carte de contrôle à la caisse. La commande n'est prête que lorsque tout est coché.",
+            "nl": "Gebruik deze pagina als controlekaart aan de kassa. Bestelling is pas klaar als alles is aangevinkt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Son propre nom/compte visible",
+            "nl": "Eigen naam/account zichtbaar"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Commande ouverte et bon client existant sélectionné",
+            "nl": "Bestelling geopend en juiste bestaande klant geselecteerd"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Nouveau client correctement créé en B2C ou B2B ; numéro de TVA et données de facturation vérifiés le cas échéant",
+            "nl": "Nieuwe klant correct als B2C of B2B aangemaakt; btw- en facturatiegegevens gecontroleerd indien van toepassing"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Bonne date de retrait et heure de retrait correcte",
+            "nl": "Juiste afhaaldatum en correct afhaaluur"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Tous les articles, variantes et quantités vérifiés",
+            "nl": "Alle artikelen, varianten en aantallen gecontroleerd"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "La remarque est claire et exécutable",
+            "nl": "Opmerking is duidelijk en uitvoerbaar"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Montant total vérifié",
+            "nl": "Totaalbedrag gecontroleerd"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Paiement/acompte correctement enregistré ou clairement indiqué comme restant dû",
+            "nl": "Betaling/voorschot correct geregistreerd of duidelijk openstaand"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Commande visible dans le récapitulatif",
+            "nl": "Bestelling zichtbaar in het overzicht"
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "10",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Bon de commande imprimé/conservé selon l'accord interne",
+            "nl": "Bestelbon geprint/bewaard volgens interne afspraak"
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Stop en cas de doute",
+        "nl": "Stop bij onduidelijkheid"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Ne pas deviner un produit, une heure de retrait, un nom de client ou un statut de paiement. Demander confirmation au client avant d'enregistrer définitivement la commande.",
+            "nl": "Raad niet naar een product, afhaaluur, klantnaam of betalingsstatus. Vraag de klant om bevestiging vóór je de bestelling definitief opslaat."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Erreurs fréquentes et correction",
+        "nl": "Veelgemaakte fouten en correctie"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": "Mauvais client choisi",
+            "nl": "Verkeerde klant gekozen"
+          },
+          "texte": {
+            "fr": "S'arrêter avant d'enregistrer et sélectionner la bonne fiche client via « Weergeven ». Ne pas créer de fiche client en double.",
+            "nl": "Stop vóór het opslaan en selecteer via Weergeven het juiste klantprofiel. Maak geen dubbel klantprofiel aan."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {
+            "fr": "Mauvaise date ou heure",
+            "nl": "Verkeerde datum of tijd"
+          },
+          "texte": {
+            "fr": "Revenir au récapitulatif et corriger les données de retrait avant que le bon ne soit transmis.",
+            "nl": "Ga terug naar het overzicht en pas de afhaalgegevens aan vóór de bon wordt doorgegeven."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {
+            "fr": "Article ou quantité erroné",
+            "nl": "Artikel of aantal fout"
+          },
+          "texte": {
+            "fr": "Corriger le panier de commande et revérifier le total.",
+            "nl": "Corrigeer de bestelmand en controleer het totaal opnieuw."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {
+            "fr": "Remarque trop vague",
+            "nl": "Opmerking te vaag"
+          },
+          "texte": {
+            "fr": "Réécrire concrètement : produit, modification souhaitée et emballage/retrait concerné.",
+            "nl": "Herschrijf concreet: product, gewenste aanpassing en relevante verpakking/afhaling."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {
+            "fr": "Paiement mal enregistré",
+            "nl": "Betaling verkeerd geboekt"
+          },
+          "texte": {
+            "fr": "Ne pas créer une deuxième ligne au hasard. S'arrêter et le signaler immédiatement au responsable.",
+            "nl": "Maak geen tweede willekeurige lijn. Stop en meld dit onmiddellijk aan de verantwoordelijke."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {
+            "fr": "Commande non visible",
+            "nl": "Bestelling niet zichtbaar"
+          },
+          "texte": {
+            "fr": "Enregistrer à nouveau correctement ; ne pas créer de commande en double sans avoir d'abord vérifié le récapitulatif.",
+            "nl": "Sla opnieuw correct op; maak geen dubbele bestelling zonder eerst het overzicht te controleren."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Règle d'or",
+        "nl": "Gouden regel"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {
+            "fr": null,
+            "nl": null
+          },
+          "texte": {
+            "fr": "Une commande n'est correcte que lorsqu'un collègue peut la produire, la préparer et la remettre au bon client au bon moment, sans explication supplémentaire.",
+            "nl": "Een bestelling is pas correct wanneer een collega ze zonder extra uitleg kan produceren, klaarzetten en meegeven aan de juiste klant op het juiste moment."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Toujours travailler sous son propre nom/compte et vérifier qu'aucune commande précédente n'est restée ouverte.",
+      "nl": "Altijd op je eigen naam/account werken en controleren dat er geen vorige bestelling openstaat."
+    },
+    {
+      "fr": "Vérifier soigneusement la date et l'heure de retrait avant de confirmer.",
+      "nl": "Afhaaldatum en afhaaluur zorgvuldig controleren vóór je bevestigt."
+    },
+    {
+      "fr": "En cas de doute (produit, heure de retrait, nom du client, paiement) : ne pas deviner, demander confirmation au client.",
+      "nl": "Bij twijfel (product, afhaaluur, klantnaam, betaling): niet raden, de klant om bevestiging vragen."
+    },
+    {
+      "fr": "Paiement mal enregistré : pas de deuxième ligne au hasard, prévenir immédiatement le responsable.",
+      "nl": "Betaling verkeerd geboekt: geen tweede willekeurige lijn, onmiddellijk de verantwoordelijke verwittigen."
+    },
+    {
+      "fr": "Pas de fiche client ni de commande en double.",
+      "nl": "Geen dubbel klantprofiel en geen dubbele bestelling."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {
+        "fr": "Quel bouton utiliser pour une entreprise avec un numéro de TVA qui souhaite une facture ?",
+        "nl": "Welke knop gebruik je voor een onderneming met btw-nummer die een factuur wenst?"
+      },
+      "choix": {
+        "fr": [
+          "Nieuwe B2B klant",
+          "Nieuwe B2C klant",
+          "Overzicht"
+        ],
+        "nl": [
+          "Nieuwe B2B klant",
+          "Nieuwe B2C klant",
+          "Overzicht"
+        ]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {
+        "fr": "Un paiement a été mal enregistré. Que faire ?",
+        "nl": "Een betaling is verkeerd geboekt. Wat doe je?"
+      },
+      "choix": {
+        "fr": [
+          "Ajouter une deuxième ligne pour corriger",
+          "S'arrêter et le signaler immédiatement au responsable",
+          "Supprimer la commande et en créer une nouvelle"
+        ],
+        "nl": [
+          "Een tweede lijn toevoegen om te corrigeren",
+          "Stoppen en het onmiddellijk melden aan de verantwoordelijke",
+          "De bestelling wissen en een nieuwe aanmaken"
+        ]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {
+        "fr": "Le client n'est pas sûr de l'heure de retrait. Que faire ?",
+        "nl": "De klant is niet zeker van het afhaaluur. Wat doe je?"
+      },
+      "choix": {
+        "fr": [
+          "Mettre une heure standard",
+          "Deviner l'heure la plus probable",
+          "Lui demander de confirmer avant d'enregistrer définitivement la commande"
+        ],
+        "nl": [
+          "Een standaarduur invullen",
+          "Het meest waarschijnlijke uur raden",
+          "De klant om bevestiging vragen vóór je de bestelling definitief opslaat"
+        ]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [
+    "Aucune modification du texte néerlandais. Décision 1 sans objet ici (cette SOP ne parle pas du comptage de la caisse).",
+    "Encadrés sans numéro numérotés : généralités 1–3, contrôle rapide 0 (consigne) et 1–10, erreurs fréquentes 1–6 ; noms des boutons de caisse gardés en néerlandais (traduction entre parenthèses en français)."
+  ],
+  "remarques": [
+    "Étape 8 : « Contant in kassa voor cash die werkelijk in de kassalade ligt » — avec le monnayeur automatique (décision 1), le cash ne va plus dans un tiroir-caisse classique ; formulation à confirmer.",
+    "L'« accord interne » pour « Contant niet in kassa » / « Waardebonnen » et la « procédure interne » d'impression/conservation du bon de commande ne sont décrits nulle part dans ce document.",
+    "Étape 5 : le nom exact du bouton « bestelling of latere afhaling » n'est pas donné.",
+    "PDF lu via la conversion texte de Google Drive (2 pages, 68 Ko) ; pas de photo apparente, PDF non téléchargé pour vérification visuelle."
+  ],
+  "source": {
+    "fichiers": {
+      "pdf": "1BuH59hVG2f01UuQRynPqqR0HVBiVZoJ_"
+    },
+    "lu": "pdf"
+  }
+}

@@ -1,0 +1,67 @@
+{# Produkty kategorii w widoku « Sprzedawalność w Belgii ». Zmienne : cat, be. #}
+{% set beLabels = {'ok': 'Sprzedawalny', 'warn': 'Na granicy', 'bad': 'Za drogi dla franczyzy', 'none': 'Brak ceny sklepu', 'noprice': 'Brak ceny fabrycznej'} %}
+{% set beBadges = {'ok': 'bg-success', 'warn': 'bg-warning text-dark', 'bad': 'bg-danger', 'none': 'bg-secondary', 'noprice': 'bg-secondary'} %}
+{% set beColors = {'ok': '#2f8a4f', 'warn': '#e0a100', 'bad': '#c0392b'} %}
+{% set beShort = {'ok': 'Sprzedawalny', 'warn': 'Na granicy', 'bad': 'Za drogi', 'none': 'Brak ceny sklepu', 'noprice': 'Brak ceny fabr.'} %}
+{% set scale = be.params.reserve + 0.8 %}
+<table class="table table-sm table-borderless mb-0 align-middle at-be-table">
+    <thead>
+        <tr class="small text-muted border-bottom">
+            <th class="ps-5" style="min-width:200px">Produkt</th>
+            <th class="text-end">Fabryka / szt.<br><span class="badge bg-secondary" style="font-size:.65rem;">EUR netto</span></th>
+            <th class="text-end">× {{ be.params.multiplier|number_format(2, ',', '') }} = cel<br>w sklepie</th>
+            <th class="text-end">Cena w sklepie<br><span class="badge bg-secondary" style="font-size:.65rem;">netto</span></th>
+            <th class="text-end">Sklep ÷ fabryka</th>
+            <th class="text-center">Werdykt</th>
+            <th class="text-end">Maks. fabryka / szt.</th>
+        </tr>
+    </thead>
+    <tbody>
+    {% for pr in cat.products %}
+        {% set r = be.products[pr.product_id] ?? null %}
+        {% if r %}
+        <tr data-be-product="{{ r.product_id }}">
+            <td class="ps-5">
+                {{ r.name }}
+                <div class="at-be-sub">
+                    {% if r.store %}
+                        <span title="{{ r.link == 'auto' ? 'dopasowanie po nazwie' : 'powiązanie ręczne' }}">↔ {{ r.store.name }}{{ r.link == 'auto' ? ' · auto' : '' }}</span> ·
+                    {% elseif r.link == 'excluded' %}
+                        nie sprzedawany w sklepach ·
+                    {% endif %}
+                    <a href="#" class="at-be-link" data-be-link="{{ r.product_id }}" data-be-name="{{ r.name|e('html_attr') }}">{{ r.store or r.link == 'excluded' ? 'zmień' : 'powiąż z produktem sklepu' }}</a>
+                </div>
+            </td>
+            <td class="text-end small">
+                {% if r.piece is not null %}<strong>{{ r.piece|number_format(2, ',', ' ') }} €</strong>{% else %}—{% endif %}
+                <br><span class="at-be-sub">{{ r.carton|number_format(2, ',', ' ') }} € / {{ r.ppc }} szt.</span>
+            </td>
+            <td class="text-end small">{{ r.target is not null ? r.target|number_format(2, ',', ' ') ~ ' €' : '—' }}{% if r.target_gross is not null %}<br><span class="at-be-sub">brutto {{ r.target_gross|number_format(2, ',', ' ') }} €</span>{% endif %}</td>
+            <td class="text-end small">
+                {% if r.store and r.store.net is not null %}
+                    <strong>{{ r.store.net|number_format(2, ',', ' ') }} €</strong>
+                    <br><span class="at-be-sub">{{ r.store.gross is not null ? 'brutto ' ~ r.store.gross|number_format(2, ',', ' ') ~ ' €' : '' }}</span>
+                    <br><span class="at-be-sub">{{ r.store.shops }} skl.{% if r.store.min is not null and r.store.max is not null and r.store.min != r.store.max %} · {{ r.store.min|number_format(2, ',', ' ') }}–{{ r.store.max|number_format(2, ',', ' ') }}{% endif %}</span>
+                {% else %}
+                    <span class="text-muted">—</span>
+                {% endif %}
+            </td>
+            <td>
+                {% if r.coef is not null %}
+                    <div class="at-be-coef"><strong>× {{ r.coef|number_format(2, ',', ' ') }}</strong>
+                        <div class="at-be-bar"><i style="width:{{ min(100, r.coef / scale * 100) }}%;background:{{ beColors[r.verdict] ?? '#999' }}"></i><b style="left:{{ be.params.multiplier / scale * 100 }}%"></b></div></div>
+                {% endif %}
+            </td>
+            <td class="text-center"><span class="badge {{ beBadges[r.verdict] }}">{{ beShort[r.verdict] }}</span>{% if r.reserve %}<br><span class="at-be-sub">rezerwa ceny</span>{% endif %}</td>
+            <td class="text-end small">
+                {% if r.max_factory is not null %}
+                    <strong>{{ r.max_factory|number_format(2, ',', ' ') }} €</strong>
+                    {% if r.delta is not null %}<br><span class="{{ r.delta >= 0 ? 'text-success' : 'text-danger' }} fw-semibold" style="font-size:.74rem">{{ r.delta >= 0 ? '+' : '−' }}{{ (r.delta|abs)|number_format(2, ',', ' ') }} €/szt.</span>{% endif %}
+                    <br><span class="at-be-sub">karton {{ r.max_carton|number_format(2, ',', ' ') }} €</span>
+                {% endif %}
+            </td>
+        </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+</table>

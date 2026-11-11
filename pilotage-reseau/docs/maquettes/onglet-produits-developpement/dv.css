@@ -1,0 +1,100 @@
+/* Maquettes « l'onglet Produits : est-ce que ça se développe ? » — par-dessus po.css. */
+:root{
+  --dv-avant:#EBD3D8;        /* les 6 semaines d'avant : --chart-prev */
+  --dv-apres:#B03048;        /* les 6 dernières : --chart-real */
+  --dv-res:#8a837a;          /* la moyenne d'un magasin du réseau */
+  --dv-up:#3f7a52;--dv-up-soft:rgba(63,122,82,.12);
+  --dv-dn:#B0792A;--dv-dn-soft:#F6E7CE;--dv-dn-ink:#7A5207;
+}
+.vd{display:inline-flex;align-items:center;gap:4px;font:400 10.5px var(--font-ui);padding:2px 7px;border-radius:5px;white-space:nowrap}
+.vd.up{background:var(--dv-up-soft);color:var(--dv-up)}
+.vd.dn{background:var(--dv-dn-soft);color:var(--dv-dn-ink)}
+.vd.st{background:var(--chip);color:var(--muted-2)}
+.vd.nouv{background:#fff;border:1px solid rgba(63,122,82,.45);color:var(--dv-up);padding:1px 6px}
+.vd.arr,.vd.peu{background:#fff;border:1px solid var(--line);color:var(--muted);padding:1px 6px}
+.vr{font-size:10.5px;color:var(--muted);white-space:nowrap}
+.vr.plus{color:var(--dv-up)}.vr.moins{color:var(--dv-dn-ink)}
+.ec.up{color:var(--dv-up)}.ec.dn{color:var(--dv-dn-ink)}.ec.st{color:var(--muted-2)}
+
+/* La question en tête */
+.dv-q{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:18px;align-items:start}
+.dv-rep{background:var(--table-head);border-radius:12px;padding:14px 16px}
+.dv-rep .k{font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dv-rep .gros{font:700 30px/1.1 var(--font-ui);letter-spacing:-.02em;margin-top:6px;font-variant-numeric:tabular-nums}
+.dv-rep .phr{font-size:13px;color:var(--ink);margin-top:6px;line-height:1.45}
+.dv-rep .s{font-size:11.5px;color:var(--muted);margin-top:8px;line-height:1.5}
+.dv-rep dl{display:grid;grid-template-columns:1fr auto;margin:10px 0 0;font-size:12px}
+.dv-rep dt,.dv-rep dd{margin:0;padding:5px 0;border-top:1px solid var(--line)}
+.dv-rep dt{color:var(--muted-2)}.dv-rep dd{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Les barres d'écart (E) */
+.ecarts{width:100%;border-collapse:collapse;font-size:12.5px}
+.ecarts th{font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap;background:var(--table-head)}
+.ecarts th:first-child,.ecarts td:first-child{text-align:left}
+.ecarts th.c,.ecarts td.c{text-align:center}
+.ecarts td{padding:7px 10px;border-bottom:1px solid var(--row-line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ecarts tr.tot td{background:var(--total-line)}
+.ecarts tr.g td:first-child{font-size:13px}
+.ecarts tr.k td:first-child{padding-left:30px;font-size:12px}
+.ecarts tr.hov td{background:#FBF6F4}
+.ecarts .nm .lien{color:var(--ink);border-bottom:1px dotted rgba(92,88,82,.5)}
+.ecarts tr.hov .lien{color:var(--accent);border-bottom-color:var(--accent)}
+.div{display:flex;align-items:center;width:100%;min-width:260px;height:14px}
+.div .g,.div .d{flex:1;display:flex;height:100%}
+.div .g{justify-content:flex-end;border-right:1px solid var(--ink)}
+.div .g i{background:var(--dv-dn);border-radius:3px 0 0 3px;height:100%}
+.div .d i{background:var(--dv-up);border-radius:0 3px 3px 0;height:100%}
+
+/* Les deux listes : ce qui se développe, ce qui recule (E) */
+.deux{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.mv{width:100%;border-collapse:collapse;font-size:12px}
+.mv th{font:400 9.5px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:right;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.mv th:first-child,.mv td:first-child{text-align:left}
+.mv td{padding:7px 8px;border-bottom:1px solid var(--row-line);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.mv td .sous{display:block;font-size:10.5px;color:var(--muted);padding-left:14px}
+.mv tr.ouv td{background:rgba(141,29,44,.05);border-bottom-color:transparent}
+.mv tr.ouv td:first-child{color:var(--accent)}
+.mv .fl{display:inline-block;width:14px;color:var(--muted);font-size:10px}
+.po-c>.ct .lab.up{color:var(--dv-up)}.po-c>.ct .lab.dn{color:var(--dv-dn-ink)}
+.ent{font-size:10px;color:var(--muted)}
+
+/* La liste déroulante du développement */
+.dvd{display:grid;grid-template-columns:minmax(0,1fr) 330px 230px;background:#fff;border:1px solid rgba(141,29,44,.35);border-radius:12px;margin:2px 10px 12px 34px;overflow:hidden;text-align:left;white-space:normal}
+.dvd.etroit{grid-template-columns:1fr 1fr;margin:2px 6px 10px 18px}
+.dvd.etroit>div:first-child{grid-column:1 / -1;border-bottom:1px solid var(--line)}
+.dvd>div{padding:13px 16px;min-width:0}
+.dvd>div+div{border-left:1px solid var(--line)}
+.dvd.etroit>div:nth-child(2){border-left:none}
+.dvd .k{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.dvd .ver{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.dvd .ver .big{font:700 22px/1.15 var(--font-ui);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.dvd .phr{font-size:12px;color:var(--muted-2);line-height:1.5;margin-top:4px}
+.aa{width:100%;border-collapse:collapse;font-size:11.5px}
+.aa th{font:400 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;color:var(--muted);text-align:right;padding:4px 4px;border-bottom:1px solid var(--line);white-space:nowrap}
+.aa th:first-child,.aa td:first-child{text-align:left}
+.aa td{padding:5px 4px;text-align:right;border-bottom:1px solid var(--row-line);font-variant-numeric:tabular-nums;white-space:nowrap}
+.aa td:first-child{color:var(--muted-2)}
+.dvd dl{margin:8px 0 0;display:grid;grid-template-columns:1fr auto;font-size:11.5px}
+.dvd dt,.dvd dd{margin:0;padding:4px 0;border-top:1px solid var(--row-line)}
+.dvd dt{color:var(--muted-2)}.dvd dd{text-align:right;font-variant-numeric:tabular-nums}
+.dvd dd small{color:var(--muted);font-size:10.5px}
+.dvd .act{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.dvd .act span{border:1px solid var(--line);border-radius:8px;padding:5px 10px;font-size:11.5px;color:var(--muted-2);background:#fff}
+.dvd .act span.pr{border-color:var(--accent);color:var(--accent)}
+
+/* Les petites courbes (F) */
+.mult{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.mc{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px 13px 8px;min-width:0;position:relative}
+.mc.hov{border-color:var(--accent);background:rgba(141,29,44,.03)}
+.mc .kk{font:400 10px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:26px}
+.mc .n{font-size:13.5px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:22px}
+.mc .row{display:flex;align-items:baseline;gap:8px;margin-top:6px;flex-wrap:wrap}
+.mc .v{font:700 19px/1.1 var(--font-ui);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.mc .s{font-size:10.5px;color:var(--muted);margin-top:3px}
+.mc .go{position:absolute;right:11px;top:11px;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;color:var(--muted-2);font-size:11px}
+.mc.hov .go{border-color:var(--accent);color:var(--accent)}
+.grp-t{font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 8px;display:flex;align-items:center;gap:8px}
+.grp-t:first-child{margin-top:0}
+.vr.vr-p{color:var(--dv-up)}.vr.vr-m{color:var(--dv-dn-ink)}
+.mc .row{align-items:center}
+.dvd.etroit .gr{max-width:900px}

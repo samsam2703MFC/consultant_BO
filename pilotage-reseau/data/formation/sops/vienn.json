@@ -1,0 +1,349 @@
+{
+  "id": "vienn",
+  "code": "0.1.06",
+  "type": "SOP",
+  "dossier": "02",
+  "version": "1.0",
+  "statut": null,
+  "langue_origine": "FR",
+  "poste": "cuisson",
+  "moment": "ouverture",
+  "duree": "de 4 h 20 à 5 h",
+  "titre": {
+    "fr": "Viennoiseries et sandwiches",
+    "nl": "Koffiekoeken en sandwiches"
+  },
+  "objectif": {
+    "fr": "Sortir, dorer, cuire et refroidir les produits sans mélanger les familles.",
+    "nl": "De producten uithalen, met ei bestrijken, bakken en laten afkoelen zonder de productfamilies te mengen."
+  },
+  "pour": {
+    "fr": "Le cuiseur chargé de la production du matin.",
+    "nl": "De afbakker die instaat voor de ochtendproductie."
+  },
+  "sections": [
+    {
+      "titre": {"fr": "Informations clés", "nl": "Belangrijke informatie"},
+      "etapes": [
+        {
+          "numero": "0.1",
+          "titre": {"fr": "Quand commencer", "nl": "Wanneer beginnen"},
+          "texte": {
+            "fr": "À la sonnerie d’une pousse : 4 h 20, 4 h 30 ou 5 h.",
+            "nl": "Bij het signaal van een rijskast: 4.20 u, 4.30 u of 5 u."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "0.2",
+          "titre": {"fr": "Matériel", "nl": "Materiaal"},
+          "texte": {
+            "fr": "Pistolet à dorer, œufs liquides, sucre cristal et chariots de support.",
+            "nl": "Eipistool, vloeibaar ei, kristalsuiker en rekwagens."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Sortir des pousses et préparer les produits — marche à suivre (respecter cet ordre)",
+        "nl": "Uit de rijskasten halen en de producten klaarmaken — werkwijze (volg deze volgorde)"
+      },
+      "etapes": [
+        {
+          "numero": "1",
+          "titre": {"fr": "Traiter la sonnerie de pousse", "nl": "Het signaal van de rijskast opvolgen"},
+          "texte": {
+            "fr": "4 h 20 et 4 h 30 : traiter les viennoiseries.\n5 h : traiter les sandwiches.\nTerminer uniquement l’action courte engagée, puis revenir à la pousse.",
+            "nl": "4.20 u en 4.30 u: de koffiekoeken afhandelen.\n5 u: de sandwiches afhandelen.\nAlleen de korte handeling waarmee je bezig bent afwerken, daarna terug naar de rijskast."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "1.1",
+          "titre": {"fr": "Marge de manœuvre", "nl": "Speling"},
+          "texte": {
+            "fr": "Sans action, la pousse passe automatiquement en mode froid et laisse une marge de 30 minutes. Entre les pains et les viennoiseries, ne lancer aucune autre cuisson.",
+            "nl": "Als er niets gebeurt, schakelt de rijskast automatisch over op koelstand, wat 30 minuten speling geeft. Tussen de broden en de koffiekoeken geen enkele andere bakbeurt starten."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "2",
+          "titre": {"fr": "Sortir toutes les grilles concernées", "nl": "Alle betrokken roosters uithalen"},
+          "texte": {
+            "fr": "Retirer toutes les grilles prêtes de la pousse. Les poser sur un chariot à côté de la zone de dorure.",
+            "nl": "Alle klare roosters uit de rijskast halen. Ze op een rekwagen naast de zone zetten waar met ei bestreken wordt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "3",
+          "titre": {"fr": "Séparer les chariots de support", "nl": "De rekwagens gescheiden houden"},
+          "texte": {
+            "fr": "Réserver généralement 1 ou 2 chariots aux produits dorés en attente de cuisson.\nRéserver 1 ou 2 autres chariots aux produits cuits.\nNe pas mélanger les produits dorés et les produits cuits.",
+            "nl": "Meestal 1 of 2 rekwagens voorbehouden voor met ei bestreken producten die op het bakken wachten.\n1 of 2 andere rekwagens voorbehouden voor gebakken producten.\nBestreken producten en gebakken producten niet mengen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "4",
+          "titre": {"fr": "Dorer tous les produits", "nl": "Alle producten met ei bestrijken"},
+          "texte": {
+            "fr": "Pulvériser une couche d’œuf liquide bien répartie sur toute la surface. Dorer toutes les grilles avant de charger un four.",
+            "nl": "Een goed verdeelde laag vloeibaar ei over het hele oppervlak spuiten. Alle roosters bestrijken voordat je een oven laadt."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "5",
+          "titre": {"fr": "Sucrer les produits concernés", "nl": "De betrokken producten suikeren"},
+          "texte": {
+            "fr": "Saupoudrer les tortillons et les gosettes aux pommes avec une quantité moyenne et régulière de sucre cristal.",
+            "nl": "De tortillons en de gosettes aux pommes bestrooien met een gemiddelde, gelijkmatige hoeveelheid kristalsuiker."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {
+        "fr": "Cuire, contrôler et refroidir — choisir le programme et contrôler le résultat",
+        "nl": "Bakken, controleren en laten afkoelen — het programma kiezen en het resultaat controleren"
+      },
+      "etapes": [
+        {
+          "numero": "5.1",
+          "titre": {"fr": "Capacité", "nl": "Capaciteit"},
+          "texte": {
+            "fr": "Un four contient au maximum 10 grilles.",
+            "nl": "Een oven bevat maximaal 10 roosters."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "6",
+          "titre": {"fr": "Choisir le ou les fours disponibles", "nl": "De beschikbare oven(s) kiezen"},
+          "texte": {
+            "fr": "Utiliser d’office un four. Si le deuxième four est libre et qu’il est utile pour la charge, l’utiliser également.",
+            "nl": "Sowieso één oven gebruiken. Als de tweede oven vrij is en nuttig is voor de lading, die ook gebruiken."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "7",
+          "titre": {"fr": "Charger les grilles", "nl": "De roosters laden"},
+          "texte": {
+            "fr": "Transférer manuellement les grilles du chariot vers le four. Le chariot reste à l’extérieur du four. Ne jamais dépasser 10 grilles par four.",
+            "nl": "De roosters met de hand van de rekwagen in de oven schuiven. De rekwagen blijft buiten de oven. Nooit meer dan 10 roosters per oven."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8",
+          "titre": {"fr": "Lancer le programme correspondant", "nl": "Het juiste programma starten"},
+          "texte": {
+            "fr": "Utiliser le programme enregistré sans modifier ses paramètres.",
+            "nl": "Het opgeslagen programma gebruiken zonder de instellingen te wijzigen."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "8.1",
+          "titre": {"fr": "Programmes et ajustements", "nl": "Programma’s en bijsturing"},
+          "texte": {
+            "fr": "Viennoiseries : programme « viennoiseries » ; ajustement : voir les règles de couleur.\nSandwiches : programme « sandwich » ; ajustement : +1 min si trop clairs, 1 fois max.",
+            "nl": "Koffiekoeken: programma “viennoiseries”; bijsturing: zie de kleurregels.\nSandwiches: programma “sandwich”; bijsturing: +1 min als ze te licht zijn, maximaal 1 keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "9",
+          "titre": {"fr": "Contrôler la couleur à la fin du programme", "nl": "De kleur controleren op het einde van het programma"},
+          "texte": {
+            "fr": "Ouvrir le four et observer chaque grille. Sortir les grilles dont la couleur est conforme. Laisser uniquement les grilles trop claires dans le four.",
+            "nl": "De oven openen en elk rooster bekijken. De roosters met de juiste kleur uithalen. Alleen de te lichte roosters in de oven laten."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "9.1",
+          "titre": {"fr": "Règles de prolongation", "nl": "Regels voor verlengen"},
+          "texte": {
+            "fr": "Fournée uniquement composée de pains au chocolat et de croissants : +1 minute systématiquement. Autres viennoiseries et sandwiches : +1 minute seulement si trop clairs, une seule fois maximum.",
+            "nl": "Ovenlading met uitsluitend chocoladebroodjes en croissants: altijd +1 minuut. Andere koffiekoeken en sandwiches: alleen +1 minuut als ze te licht zijn, maximaal één keer."
+          },
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "10",
+          "titre": {"fr": "Refroidir sans mélanger les familles", "nl": "Laten afkoelen zonder productfamilies te mengen"},
+          "texte": {
+            "fr": "Replacer les grilles cuites sur les chariots réservés. Laisser les produits refroidir sur leurs grilles. Garder les viennoiseries et les sandwiches sur des chariots distincts.",
+            "nl": "De gebakken roosters terugzetten op de voorbehouden rekwagens. De producten op hun roosters laten afkoelen. Koffiekoeken en sandwiches op aparte rekwagens houden."
+          },
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Contrôle rapide", "nl": "Snelle controle"},
+      "etapes": [
+        {
+          "numero": "C1",
+          "titre": {"fr": "Utilisation", "nl": "Gebruik"},
+          "texte": {
+            "fr": "Employer cette page comme contrôle rapide après la cuisson des viennoiseries et des sandwiches.",
+            "nl": "Deze pagina gebruiken als snelle controle na het bakken van de koffiekoeken en de sandwiches."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C2",
+          "titre": null,
+          "texte": {"fr": "Toutes les grilles prêtes ont été sorties et dorées.", "nl": "Alle klare roosters zijn uitgehaald en met ei bestreken."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C3",
+          "titre": null,
+          "texte": {"fr": "Tortillons et gosettes aux pommes ont reçu le sucre cristal.", "nl": "Tortillons en gosettes aux pommes hebben kristalsuiker gekregen."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C4",
+          "titre": null,
+          "texte": {"fr": "Maximum 10 grilles par four et programme correct lancé.", "nl": "Maximaal 10 roosters per oven en het juiste programma gestart."},
+          "critique": true,
+          "photo": null
+        },
+        {
+          "numero": "C5",
+          "titre": null,
+          "texte": {"fr": "Grilles conformes sorties avant toute prolongation.", "nl": "Roosters met de juiste kleur uitgehaald vóór elke verlenging."},
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "C6",
+          "titre": null,
+          "texte": {"fr": "Produits cuits refroidis sur leurs grilles et familles séparées.", "nl": "Gebakken producten afgekoeld op hun roosters en productfamilies gescheiden."},
+          "critique": false,
+          "photo": null
+        }
+      ]
+    },
+    {
+      "titre": {"fr": "Qui prévenir et en cas de doute", "nl": "Wie verwittigen en bij twijfel"},
+      "etapes": [
+        {
+          "numero": "P1",
+          "titre": {"fr": "J’appelle", "nl": "Ik bel"},
+          "texte": {
+            "fr": "Programme absent ou différent ; four ou pousse qui ne démarre pas.",
+            "nl": "Programma ontbreekt of is anders; oven of rijskast die niet start."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "P2",
+          "titre": {"fr": "Je demande un avis", "nl": "Ik vraag advies"},
+          "texte": {
+            "fr": "Couleur encore insuffisante après la prolongation autorisée.",
+            "nl": "Kleur nog onvoldoende na de toegelaten verlenging."
+          },
+          "critique": false,
+          "photo": null
+        },
+        {
+          "numero": "P3",
+          "titre": {"fr": "En cas de doute", "nl": "Bij twijfel"},
+          "texte": {
+            "fr": "Pendant la formation, demander une validation visuelle au formateur. Tant que le doute persiste, ne pas considérer la cuisson comme validée.",
+            "nl": "Tijdens de opleiding de opleider om een visuele goedkeuring vragen. Zolang de twijfel blijft, de bakbeurt niet als goedgekeurd beschouwen."
+          },
+          "critique": true,
+          "photo": null
+        }
+      ]
+    }
+  ],
+  "points_critiques": [
+    {
+      "fr": "Sonnerie de pousse : terminer seulement l’action courte engagée, puis traiter la pousse ; la marge de 30 minutes du mode froid n’est qu’une marge.",
+      "nl": "Signaal van de rijskast: alleen de korte handeling waarmee je bezig bent afwerken en dan de rijskast afhandelen; de 30 minuten speling in koelstand is alleen een buffer."
+    },
+    {
+      "fr": "Entre les pains et les viennoiseries, ne lancer aucune autre cuisson.",
+      "nl": "Tussen de broden en de koffiekoeken geen enkele andere bakbeurt starten."
+    },
+    {
+      "fr": "Ne pas mélanger produits dorés et produits cuits ; viennoiseries et sandwiches sur des chariots distincts.",
+      "nl": "Bestreken en gebakken producten niet mengen; koffiekoeken en sandwiches op aparte rekwagens."
+    },
+    {
+      "fr": "Jamais plus de 10 grilles par four ; programme enregistré utilisé sans modifier ses paramètres.",
+      "nl": "Nooit meer dan 10 roosters per oven; opgeslagen programma gebruiken zonder de instellingen te wijzigen."
+    },
+    {
+      "fr": "Prolongation : +1 minute systématique pour une fournée uniquement de pains au chocolat et de croissants ; sinon +1 minute seulement si trop clair, une seule fois.",
+      "nl": "Verlengen: altijd +1 minuut voor een lading met uitsluitend chocoladebroodjes en croissants; anders alleen +1 minuut als ze te licht zijn, maximaal één keer."
+    }
+  ],
+  "quiz": [
+    {
+      "question": {"fr": "Combien de grilles un four peut-il contenir au maximum ?", "nl": "Hoeveel roosters kan een oven maximaal bevatten?"},
+      "choix": {
+        "fr": ["8", "10", "12"],
+        "nl": ["8", "10", "12"]
+      },
+      "bonne": 1
+    },
+    {
+      "question": {"fr": "Une fournée composée uniquement de pains au chocolat et de croissants…", "nl": "Een ovenlading met uitsluitend chocoladebroodjes en croissants…"},
+      "choix": {
+        "fr": ["reçoit systématiquement +1 minute", "ne reçoit jamais de prolongation", "reçoit +1 minute seulement si elle est trop claire"],
+        "nl": ["krijgt altijd +1 minuut", "krijgt nooit een verlenging", "krijgt alleen +1 minuut als ze te licht is"]
+      },
+      "bonne": 0
+    },
+    {
+      "question": {"fr": "Quels produits reçoivent du sucre cristal ?", "nl": "Welke producten krijgen kristalsuiker?"},
+      "choix": {
+        "fr": ["Les croissants et les pains au chocolat", "Les sandwiches", "Les tortillons et les gosettes aux pommes"],
+        "nl": ["De croissants en de chocoladebroodjes", "De sandwiches", "De tortillons en de gosettes aux pommes"]
+      },
+      "bonne": 2
+    }
+  ],
+  "corrections": [],
+  "remarques": [
+    "Le programme des sandwiches est nommé « sandwich » (singulier) dans le tableau, alors que le texte parle des sandwiches : libellé gardé tel quel, à vérifier sur le four.",
+    "« J’appelle » : la personne à appeler n’est pas nommée dans le document."
+  ],
+  "source": {
+    "fichiers": {"pdf": null, "docx": "1LlpKrttP4lGp9OpwSFKIBrXhkcAPSpug"},
+    "lu": "docx"
+  }
+}

@@ -1,0 +1,408 @@
+<?php
+
+namespace App\Repositories\Client\Order;
+
+use App\Domain\Client\Order\CustomerOrderStatus;
+use App\Domain\Client\Order\OpenOrders;
+
+use App\Core\Helpers\BaseRepository;
+use App\Repositories\Document\DocumentRepository;
+
+/**
+ * Order model class
+ */
+class OrderRepository extends BaseRepository
+{
+
+    protected string $table = 'customer_order';
+
+    protected $allowedColumns = [
+        'id_customer',
+        'reference',
+        'invoice_num',
+        'status',
+        'order_description',
+        'expected_shipping_date',
+        'create_order_date',
+        'update_status_date',
+        'id_franchisee_collector',
+        'standard_price_list',
+        'id_proforma',
+        'id_wdt',
+        'is_freebie',
+        'order_batch_key',
+        'batch_index',
+        'order_type',
+        'parent_order_id',
+        'supplement_push_status',
+        'supplement_push_at',
+        'supplement_order_key'
+    ];
+
+    /** Domówienia remises en file depuis Stan wysyłek (« Ponów ») : en attente depuis moins d'un jour. */
+    public function requeuedSupplementIds(): array
+    {
+        $rows = $this->query("SELECT id FROM customer_order WHERE order_type = 'SUPPLEMENT' AND supplement_push_status = 'pending'
+            AND supplement_push_at >= NOW() - INTERVAL 1 DAY ORDER BY id LIMIT 20");
+        return is_array($rows) ? array_map(fn($r) => (int) (is_array($r) ? $r['id'] : $r->id), $rows) : [];
+    }
+
+    public function getById($id)
+    {
+        $sql = "SELECT 
+                    co.*,
+                    cs.id as id_customer,
+                    cs.name as customer_name,
+                    cs.surname as customer_surname,
+                    cs.company,
+                    cs.fac_street,
+                    cs.fac_street_num,
+                    cs.fac_zip,
+                    cs.fac_town,
+                    cs.tax_number
+                FROM customer_order co
+                INNER JOIN customer cs
+                    ON co.id_customer = cs.id
+                WHERE co.id = :id_order";
+        return $this->query($sql, ['id_order' => $id])[0];
+    }
+
+    public function getByIdFranchiseeCollector($data)
+    {
+        $sql = "SELECT 
+                    co.*,
+                    cs.company
+                FROM $this->table co
+                INNER JOIN customer cs
+                    ON co.id_customer = cs.id
+                WHERE co.id_franchisee_collector = :id_franchisee_collector";
+        return $this->query($sql, $data)[0];
+    }
+
+    public function getLastInsertedIdOfOrderFromCollector()
+    {
+        $sql = "SELECT IFNULL(MAX(id_franchisee_collector),0) as lastInsertedOrder FROM customer_order WHERE id_franchisee_collector IS NOT NULL";
+        return $this->query($sql);
+    }
+
+
+    public function getPending()
+    {
+        $sql = "SELECT
+                co.id as id,
+                co.id_customer,
+                CONCAT(cust.name, ' ', cust.surname) as fullname,
+                cust.company,
+                co.status,
+                co.order_description,
+                DATE(co.create_order_date) as create_date,
+                TIME(co.create_order_date) as create_order_time,
+                co.id_franchisee_collector,
+                DATE(expected_shipping_date) as expected_shipping_date,
+                cost.name as type_name,
+                co.id_proforma,
+                doc.status as proforma_status,
+                co.id_wdt,
+                co.is_freebie,
+                co.order_batch_key,
+                co.batch_index,
+                (SELECT COUNT(*) FROM customer_order co2
+                    WHERE co2.order_batch_key IS NOT NULL
+                    AND co2.order_batch_key = co.order_batch_key) as batch_total,
+                COALESCE(co.order_type, 'STANDARD') as order_type,
+                co.supplement_push_status,
+                if(
+                    cust.franchisee_uid is not null AND
+                    cust.credentials is not null, 
+                    1, 0) as integrated_customer,
+                ROUND((SELECT
+                           SUM((((cop.quantity_carton*fp.ppc) * fp.weight)/1000)) as totalWeightKg
+                       FROM customer_order_product cop
+                                INNER JOIN final_product fp
+                                           ON cop.id_product = fp.id
+                       WHERE cop.id_order = co.id),2) as totalSumKg
+            
+            FROM customer_order co
+                     INNER JOIN customer cust
+                                ON co.id_customer = cust.id
+                    INNER JOIN customer_order_status_type cost
+                        ON co.status = cost.id
+                    LEFT JOIN document_proforma doc
+                        ON co.id_proforma = doc.id
+            WHERE " . OpenOrders::sql('co') . "
+            ORDER BY expected_shipping_date;";
+        return $this->query($sql);
+    }
+
+
+    public function getClientsWithOrders(): array
+    {
+        $sql = "SELECT DISTINCT cust.id, cust.company
+                FROM customer_order co
+                INNER JOIN customer cust ON co.id_customer = cust.id
+                ORDER BY cust.company ASC";
+
+        return $this->query($sql);
+    }
+
+    /** @param list<int> $orderIds */
+    public function hasAllPendingIds(array $orderIds): bool
+    {
+        $orderIds = array_values(array_unique(array_filter($orderIds, static fn(int $id): bool => $id > 0)));
+        if ($orderIds === []) {
+            return false;
+        }
+
+        $placeholders = [];
+        $params = [];
+        foreach ($orderIds as $index => $id) {
+            $placeholder = ':id_' . $index;
+            $placeholders[] = $placeholder;
+            $params['id_' . $index] = $id;
+        }
+        $params['pending_status'] = CustomerOrderStatus::PENDING;
+        $rows = $this->query(
+            'SELECT COUNT(*) AS count_pending FROM customer_order
+             WHERE status = :pending_status AND id IN (' . implode(',', $placeholders) . ')',
+            $params
+        );
+        return is_array($rows) && (int) ($rows[0]['count_pending'] ?? 0) === count($orderIds);
+    }
+
+    /** Zwraca zrealizowane i wysłane zamówienia wraz z kluczami dokumentów. */
+    public function getArchived(array $filters = []): array
+    {
+        $where = [OpenOrders::closedSql('co')];
+        $params = [];
+        if (!empty($filters['client_id']) && ctype_digit((string) $filters['client_id'])) {
+            $where[] = 'co.id_customer = :client_id';
+            $params['client_id'] = (int) $filters['client_id'];
+        }
+        foreach (['date_from', 'date_to'] as $filter) {
+            if (!empty($filters[$filter]) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $filters[$filter])) {
+                $where[] = 'DATE(co.expected_shipping_date) ' . ($filter === 'date_from' ? '>=' : '<=') . " :{$filter}";
+                $params[$filter] = $filters[$filter];
+            }
+        }
+        if (($filters['document'] ?? '') === 'proforma') $where[] = 'co.id_proforma IS NOT NULL';
+        elseif (($filters['document'] ?? '') === 'wdt') $where[] = 'co.id_wdt IS NOT NULL';
+        elseif (($filters['document'] ?? '') === 'none') $where[] = 'co.id_proforma IS NULL AND co.id_wdt IS NULL';
+
+        $sorts = [
+            'client' => 'cust.company',
+            'description' => 'co.order_description',
+            'order_date' => 'co.create_order_date',
+            'shipping_date' => 'co.expected_shipping_date',
+            'weight' => 'total_sum_kg',
+            'status' => OpenOrders::effectiveStatusSql('co'),
+        ];
+        $sort = $sorts[$filters['sort'] ?? 'shipping_date'] ?? $sorts['shipping_date'];
+        $direction = strtolower($filters['direction'] ?? 'desc') === 'asc' ? 'ASC' : 'DESC';
+
+        $sql = "SELECT co.id, co.reference, co.status, co.order_description,
+                    DATE(co.create_order_date) AS create_date, TIME(co.create_order_date) AS create_order_time,
+                    DATE(co.expected_shipping_date) AS expected_shipping_date, co.id_proforma, co.id_wdt,
+                    cust.company, " . $this->statusLabelSql() . " AS status_name,
+                    IF(cust.franchisee_uid IS NOT NULL AND cust.credentials IS NOT NULL, 1, 0) AS integrated_customer,
+                    ROUND((SELECT SUM((cop.quantity_carton * fp.ppc * fp.weight) / 1000)
+                           FROM customer_order_product cop INNER JOIN final_product fp ON cop.id_product = fp.id
+                           WHERE cop.id_order = co.id), 2) AS total_sum_kg
+                FROM customer_order co
+                INNER JOIN customer cust ON co.id_customer = cust.id
+                WHERE " . implode(' AND ', $where) . "
+                ORDER BY " . $sort . " " . $direction . ", co.id DESC";
+        return $this->query($sql, $params);
+    }
+    public function insertOrderProductDataWithStandardPrice($data, $connObj)
+    {
+        $sql = "INSERT INTO customer_order_product (id_order, id_product, quantity_carton, expected_quantity_carton, purchase_price) 
+                        SELECT :id_order, id, :new_quantity, :exp_quantity, standard_price
+                        FROM final_product WHERE id = :id_product";
+        return $this->queryForTransaction($sql, $connObj, $data);
+    }
+
+    public function insertOrderProductData($data, $connObj)
+    {
+
+        $sql = "INSERT INTO customer_order_product (id_order, id_product, quantity_carton, expected_quantity_carton, purchase_price) 
+                        SELECT :id_order, fp.id, :new_quantity, :exp_quantity, IFNULL(fpcp.price, fp.standard_price)
+                        FROM final_product_customer_price fpcp
+                        RIGHT JOIN final_product fp
+                            ON fpcp.id_final_product = fp.id
+                        WHERE fp.id = :id_product AND fpcp.id_customer = :id_customer";
+        return $this->queryForTransaction($sql, $connObj, $data);
+    }
+
+
+    private function getQueryToInsertProductFromManualOrder($data)
+    {
+        $queryWithParamArr = [];
+        if ($data['standard_price_list'] == 1) {
+            foreach ($data['product'] as $productItem) {
+                $sql = "INSERT INTO customer_order_product (id_order, id_product, quantity_carton, expected_quantity_carton, purchase_price) 
+                        SELECT :insertedId, id, :quantity, :exp_quantity, standard_price
+                        FROM final_product WHERE id = :id_product";
+                $productId = key($productItem);
+                array_push($queryWithParamArr, [
+                    "query" => $sql,
+                    "data" => [
+                        "insertedId" => $data['id_order'],
+                        "quantity" => $productItem[$productId],
+                        "exp_quantity" => $productItem[$productId],
+                        "id_product" => $productId
+                    ]]);
+            }
+        } else {
+            foreach ($data['product'] as $productItem) {
+                $sql = "INSERT INTO customer_order_product (id_order, id_product, quantity_carton, expected_quantity_carton, purchase_price) 
+                        SELECT :insertedId, fp.id, :quantity, :exp_quantity, IFNULL(fpcp.price, fp.standard_price)
+                        FROM final_product_customer_price fpcp
+                        RIGHT JOIN final_product fp
+                            ON fpcp.id_final_product = fp.id
+                        WHERE fp.id = :id_product AND fpcp.id_customer = :id_customer";
+                $productId = key($productItem);
+                array_push($queryWithParamArr, [
+                    "query" => $sql,
+                    "data" => [
+                        "insertedId" => $data['id_order'],
+                        "quantity" => $productItem[$productId],
+                        "exp_quantity" => $productItem[$productId],
+                        "id_product" => $productId,
+                        "id_customer" => $data['id_customer']
+                    ]]);
+            }
+        }
+        return $queryWithParamArr;
+    }
+
+    /**
+     * Fakty do osi statusu zamówienia (strona edycji). Tylko podzapytania skalarne,
+     * bez GROUP BY: zgodne z MariaDB i z MySQL 8 (ONLY_FULL_GROUP_BY). Identyfikator
+     * zamówienia w JSON-ie listy kompletacyjnej: CAST(… AS CHAR) — MariaDB odrzuca AS JSON.
+     */
+    public function getStatusTimelineFacts(int $id): ?array
+    {
+        $sql = "SELECT co.id, co.status, co.create_order_date, co.expected_shipping_date,
+                       co.id_customer, co.id_proforma, co.id_wdt,
+                       dp.doc_num   AS proforma_num,
+                       dp.status    AS proforma_status,
+                       dp.create_timestamp AS proforma_at,
+                       dp.is_sent_to_client AS proforma_sent, dp.sent_to_client_at AS proforma_sent_at,
+                       (SELECT MIN(plg.generated_at)
+                          FROM picking_list_generation plg
+                         WHERE CASE WHEN JSON_VALID(plg.selected_order_ids_json)
+                                    THEN JSON_CONTAINS(plg.selected_order_ids_json, CAST(co.id AS CHAR))
+                                    ELSE 0 END) AS in_production_at,
+                       (SELECT MAX(pd.last_update_date)
+                          FROM palets_delivery pd
+                         WHERE pd.id_customer = co.id_customer
+                           AND pd.delivery_date = co.expected_shipping_date
+                           AND pd.status >= 2) AS prepared_at,
+                       (SELECT COUNT(*)
+                          FROM palets_delivery pd2
+                         WHERE pd2.id_customer = co.id_customer
+                           AND pd2.delivery_date = co.expected_shipping_date
+                           AND pd2.status = 1) AS pallets_scanning,
+                       (SELECT MIN(sl.shipment_date) FROM shipment_log sl WHERE sl.id_wdt = co.id_wdt) AS shipped_at,
+                       (SELECT MIN(sl2.id) FROM shipment_log sl2 WHERE sl2.id_wdt = co.id_wdt) AS id_shipment,
+                       w.doc_num       AS wdt_num,
+                       w.invoiced_date AS wdt_at,
+                       (SELECT ks.status FROM ksef_submission ks WHERE ks.id_document_wdt = co.id_wdt ORDER BY ks.id DESC LIMIT 1) AS ksef_status,
+                       (SELECT ks2.ksef_number FROM ksef_submission ks2 WHERE ks2.id_document_wdt = co.id_wdt ORDER BY ks2.id DESC LIMIT 1) AS ksef_number,
+                       -- P6 : livraison confirmée sur la tablette chauffeur, écart d'expédition de la WDT
+                       (SELECT ds.status FROM n_delivery_stop ds WHERE ds.id_customer = co.id_customer
+                           AND ds.ship_date = COALESCE((SELECT MIN(sl3.shipment_date) FROM shipment_log sl3 WHERE sl3.id_wdt = co.id_wdt), co.expected_shipping_date)
+                         ORDER BY ds.id DESC LIMIT 1) AS delivery_status,
+                       (SELECT ds2.id FROM n_delivery_stop ds2 WHERE ds2.id_customer = co.id_customer
+                           AND ds2.ship_date = COALESCE((SELECT MIN(sl4.shipment_date) FROM shipment_log sl4 WHERE sl4.id_wdt = co.id_wdt), co.expected_shipping_date)
+                         ORDER BY ds2.id DESC LIMIT 1) AS delivery_stop_id,
+                       (SELECT MAX(sl5.id_diff) FROM shipment_log sl5 WHERE sl5.id_wdt = co.id_wdt AND sl5.id_diff > 0) AS id_difference,
+                       (SELECT si.status FROM n_shipping_issue si JOIN shipment_log sl6 ON sl6.id_diff = si.id_difference WHERE sl6.id_wdt = co.id_wdt ORDER BY si.id DESC LIMIT 1) AS issue_status
+                FROM customer_order co
+                LEFT JOIN document_proforma dp ON dp.id = co.id_proforma
+                LEFT JOIN document_wdt w ON w.id = co.id_wdt
+                WHERE co.id = :id";
+        $rows = $this->query($sql, ['id' => $id]);
+        return !empty($rows[0]) ? $rows[0] : null;
+    }
+
+    public function getDatesOfSelectedOrders($data)
+    {
+        // Tylko liczby całkowite w SQL
+        $ids = array_values(array_unique(array_filter(array_map('intval', (array)($data['order_id'] ?? [])), fn($id) => $id > 0)));
+        $orderIdStr = $ids ? implode(',', $ids) : '0';
+
+        $sql = "SELECT DISTINCT DATE(co.expected_shipping_date) as expected_shipping_date FROM customer_order co WHERE co.id IN ({$orderIdStr}) ORDER BY co.expected_shipping_date LIMIT 4";
+        $res = $this->query($sql);
+
+        if ($res && count($res) <= 4) {
+            for ($i = count($res); $i < 4; $i++) {
+                $new = ['expected_shipping_date' => '-'];
+                array_push($res, $new);
+            }
+        } else {
+            $res = [];
+            for ($i = count($res); $i < 4; $i++) {
+                $new = ['expected_shipping_date' => '-'];
+                array_push($res, $new);
+            }
+        }
+
+        return $res;
+    }
+
+
+    public function getAssignedProforma($idOrder)
+    {
+        $sql = "SELECT id_proforma FROM customer_order WHERE id = :id_order";
+        $res = $this->query($sql, ['id_order' => $idOrder]);
+        return !empty($res) ? $res[0]['id_proforma'] : null;
+    }
+
+    public function updateWdtIdByShippingDateAndCustomer($wdtId, $shippingDate, $customerId)
+    {
+        $sql = "UPDATE customer_order SET id_wdt = :wdt_id WHERE expected_shipping_date = :shipping_date AND id_customer = :id_customer";
+        return $this->customUpdate($sql, [
+            'wdt_id' => $wdtId,
+            'shipping_date' => $shippingDate,
+            'id_customer' => $customerId
+        ]);
+    }
+
+    /** Nazwa statusu z CustomerOrderStatus (tabela customer_order_status_type ma stare nazwy : « Paletyzowane » dla 3). */
+    private function statusLabelSql(): string
+    {
+        $cases = '';
+        foreach (CustomerOrderStatus::labels() as $code => $label) $cases .= ' WHEN ' . (int) $code . ' THEN ' . $this->db->quote($label);
+        return 'CASE ' . OpenOrders::effectiveStatusSql('co') . $cases . " ELSE CONCAT('Status ', co.status) END";
+    }
+
+    /** Wyślij dzień : zamówienia z tą WDT jeszcze « Oczekujące » (id). */
+    public function pendingIdsByWdt(int $wdtId): array
+    {
+        $rows = $this->query('SELECT id FROM customer_order WHERE id_wdt = :wdt AND status = :pending ORDER BY id',
+            ['wdt' => $wdtId, 'pending' => CustomerOrderStatus::PENDING]);
+        return is_array($rows) ? array_map(fn($r) => (int) $r['id'], $rows) : [];
+    }
+
+    /** Dostawa potwierdzona przez kierowcę : zamówienia z WDT wysyłek klienta tego dnia, « Oczekujące » albo « W transporcie » (id). */
+    public function deliverableIds(string $shipDate, int $customerId): array
+    {
+        $rows = $this->query('SELECT co.id FROM customer_order co
+                WHERE co.status IN (:pending, :transit) AND co.id_wdt IN (SELECT sl.id_wdt FROM shipment_log sl WHERE sl.shipment_date = :d AND sl.id_customer = :c)
+                ORDER BY co.id', ['pending' => CustomerOrderStatus::PENDING, 'transit' => CustomerOrderStatus::IN_TRANSIT, 'd' => $shipDate, 'c' => $customerId]);
+        return is_array($rows) ? array_map(fn($r) => (int) $r['id'], $rows) : [];
+    }
+
+    /** Zmienia status zamówień (update_status_date = teraz) ; tylko z podanych statusów wyjściowych. */
+    public function setStatus(array $ids, int $status, array $fromStatuses): int
+    {
+        $ids = array_values(array_unique(array_map('intval', $ids)));
+        $from = array_values(array_unique(array_map('intval', $fromStatuses)));
+        if ($ids === [] || $from === []) return 0;
+        $stmt = $this->db->prepare('UPDATE customer_order SET status = ?, update_status_date = NOW() WHERE id IN (' . implode(',', array_fill(0, count($ids), '?'))
+            . ') AND status IN (' . implode(',', array_fill(0, count($from), '?')) . ')');
+        $stmt->execute(array_merge([$status], $ids, $from));
+        return $stmt->rowCount();
+    }
+}

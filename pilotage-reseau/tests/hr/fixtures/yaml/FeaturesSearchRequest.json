@@ -1,0 +1,24 @@
+{
+  "subEntityNumber": "1234567891",
+  "excludedWorkerTypes": [
+    "STU",
+    "STU"
+  ],
+  "jointCommissionNumbers": [
+    "124",
+    "124"
+  ],
+  "excludedJointCommissionNumbers": [
+    "124",
+    "124"
+  ],
+  "userEnterpriseSearch": {
+    "jointCommissionNumber": "124",
+    "enterpriseNumber": "enterpriseNumber",
+    "name": "name"
+  },
+  "workerTypes": [
+    "STU",
+    "STU"
+  ]
+}

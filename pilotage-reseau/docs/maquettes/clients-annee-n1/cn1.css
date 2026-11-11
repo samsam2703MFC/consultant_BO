@@ -1,0 +1,98 @@
+/* Maquettes « Clients par mois, 2026 face à 2025 » — Cockpit › Résultat › Année.
+ * Le cadre reprend les styles en ligne de tplResultat / tplObjectifs (templates.js) ;
+ * les classes cn-* sont les seules nouveautés. */
+body{background:var(--color-bg,#EAE4DC);margin:0;color:#222;font-family:var(--font-ui)}
+.mq{max-width:1180px;margin:0 auto;padding:28px 32px 48px;box-sizing:border-box}
+.mq *{box-sizing:border-box}
+.mq-h1{font-family:var(--font-display);font-size:32px;line-height:1.1;margin:0 0 6px}
+.mq-sous{font-size:13px;color:var(--color-text-muted);max-width:640px;line-height:1.5;margin-bottom:14px}
+.mq-ongs{display:flex;justify-content:flex-end;margin-bottom:14px}
+.mq-ongs>div{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px;flex-wrap:wrap}
+.mq-ongs span{font-size:12.5px;font-weight:500;padding:7px 16px;border-radius:8px;color:var(--color-text-muted);white-space:nowrap}
+.mq-ongs span i{font-style:normal;color:#2d7a3e;margin-right:6px;font-size:10px}
+.mq-ongs span.on{background:var(--color-primary);color:#fff}.mq-ongs span.on i{color:#fff}
+.mq-hz{display:inline-flex;border:.5px solid var(--color-border-secondary);border-radius:8px;overflow:hidden;margin-bottom:16px;background:var(--color-surface)}
+.mq-hz span{font-size:12px;font-weight:500;padding:7px 14px;color:var(--color-text-muted)}.mq-hz span.on{background:var(--color-primary);color:#fff}
+.mq-carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px}
+.mq-haut{display:grid;grid-template-columns:380px 1fr;gap:16px;align-items:start;margin-bottom:16px}
+.mq-haut .mq-carte{padding:20px}
+.mq-k{font-size:11px;font-weight:500;text-transform:uppercase;letter-spacing:.08em;color:var(--color-text-muted)}
+.mq-ligne{display:flex;justify-content:space-between;font-size:13px;margin-top:8px}.mq-ligne span:first-child{color:var(--color-text-muted)}
+.mq-existant{opacity:.6}
+.mq-tab{width:100%;border-collapse:collapse;font-size:12.5px}
+.mq-tab th{font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.05em;color:var(--color-text-muted);padding:12px 10px;border-bottom:.5px solid var(--color-border-tertiary);text-align:right;white-space:nowrap}
+.mq-tab th:first-child{text-align:left;padding-left:14px}
+.mq-tab td{padding:10px 10px;text-align:right;border-bottom:.5px solid var(--color-border-tertiary);white-space:nowrap}
+.mq-tab td:first-child{text-align:left;font-weight:500;padding-left:14px}
+.mq-tab tr:last-child td{border-bottom:none}
+.mq-tab .src{font-size:9.5px;color:var(--color-text-muted);font-weight:400;white-space:normal;max-width:150px;margin-left:auto;line-height:1.3}
+.mq-tab .ouv{color:var(--color-primary);font-size:12px;font-weight:500}
+.mq-pill{display:inline-block;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:500}
+.mq-scroll{overflow-x:auto}
+
+/* --- nouveau : la carte des clients --------------------------------------------------- */
+.cn-neuf{display:inline-block;font:700 9px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#FBEFE0;color:#8a5a00;border:1px solid #E8C9A0;border-radius:999px;padding:2px 7px;vertical-align:2px;margin-left:8px}
+.cn-carte{background:var(--color-surface);border:.5px solid var(--color-border-tertiary);border-radius:12px;padding:18px 20px 14px;margin-bottom:16px;position:relative}
+.cn-tete{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.cn-titre{font-size:13px;font-weight:500}
+.cn-leg{display:flex;gap:14px;font-size:11px;color:var(--color-text-muted);flex-wrap:wrap}
+.cn-leg span{display:inline-flex;align-items:center;gap:6px}
+.cn-leg i{display:inline-block;width:18px;height:0;border-top:2.5px solid #8D1D2C}
+.cn-leg i.n1{border-top:2px dashed #b9b1a6}
+.cn-leg i.bd{height:9px;width:14px;border:none;border-radius:2px;background:linear-gradient(90deg,rgba(46,109,180,.28) 50%,rgba(192,99,43,.28) 50%)}
+.cn-seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:8px;margin-left:auto}
+.cn-seg button{border:none;background:none;cursor:pointer;font:500 12px var(--font-ui);color:var(--color-text-muted);padding:6px 12px;border-radius:6px;white-space:nowrap}
+.cn-seg button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.cn-puces{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+.cn-puce{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:999px;padding:6px 12px;font:500 12px var(--font-ui);cursor:pointer;color:var(--color-text);display:inline-flex;gap:7px;align-items:baseline}
+.cn-puce b{font-weight:600;font-size:11px}
+.cn-puce.on{background:var(--color-primary);border-color:var(--color-primary);color:#fff}.cn-puce.on b{color:#fff!important}
+.cn-chiffres{display:flex;gap:28px;flex-wrap:wrap;margin:12px 0 2px}
+.cn-chiffres div{display:flex;flex-direction:column;gap:2px}
+.cn-chiffres small{font-size:10.5px;font-weight:500;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted)}
+.cn-chiffres b{font-size:20px;font-weight:500;font-variant-numeric:tabular-nums}
+.cn-chiffres span{font-size:11px;color:var(--color-text-muted)}
+.cn-svg{position:relative;margin-top:6px}
+.cn-svg svg{display:block;width:100%;overflow:visible}
+.cn-svg svg text{font-family:var(--font-ui)}
+.cn-note{font-size:11px;line-height:1.55;color:var(--color-text-muted);margin-top:8px}
+.cn-note b{color:#222;font-weight:500}
+.cn-bulle{position:absolute;pointer-events:none;background:#222;color:#fff;border-radius:8px;padding:9px 11px;font-size:11.5px;line-height:1.5;min-width:210px;max-width:290px;z-index:5;box-shadow:0 6px 18px rgba(0,0,0,.18);display:none}
+.cn-bulle b{font-weight:600}.cn-bulle .mu{color:#cfc8bf}.cn-bulle .up{color:#9cc8ff}.cn-bulle .dn{color:#ffb38a}
+.cn-perim{display:inline-flex;gap:6px;align-items:center;font-size:11px;color:var(--color-text-muted);margin-left:4px}
+.cn-perim button{border:.5px solid var(--color-border-secondary);background:var(--color-surface);border-radius:6px;padding:3px 8px;font:500 11px var(--font-ui);cursor:pointer;color:var(--color-text-muted)}
+.cn-perim button.on{border-color:#222;color:#222}
+
+/* le tableau : la colonne clients et la ligne choisie (A) */
+.mq-tab tr.cn-cl{cursor:pointer}
+.mq-tab tr.cn-cl:hover td{background:#FCFAF7}
+.mq-tab tr.cn-sel td{background:#FBF4F0}
+.mq-tab tr.cn-sel td:first-child{box-shadow:inset 3px 0 0 var(--color-primary);color:var(--color-primary)}
+.mq-tab td.cn-col{font-variant-numeric:tabular-nums}
+.mq-tab td.cn-col small{display:block;font-size:10px;color:var(--color-text-muted);font-weight:400}
+.cn-voir{display:block;font-size:10.5px;color:var(--color-primary);font-weight:500;opacity:0;height:0;overflow:hidden}
+.mq-tab tr.cn-cl:hover .cn-voir,.mq-tab tr.cn-sel .cn-voir{height:auto}
+.mq-tab tr.cn-cl:hover .cn-voir,.mq-tab tr.cn-sel .cn-voir{opacity:1}
+
+/* B : petits multiples */
+.cn-sec{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:22px 0 10px}
+.cn-sec h2{font-family:var(--font-display);font-weight:400;font-size:20px;margin:0}
+.cn-sec small{font-size:11.5px;color:var(--color-text-muted)}
+.cn-grille{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.cn-grille .cn-carte{margin-bottom:0;padding:14px 16px 10px}
+.cn-mini-t{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.cn-mini-t b{font-size:14px;font-weight:500}
+.cn-mini-t .v{margin-left:auto;font-size:12px;font-variant-numeric:tabular-nums}
+.cn-mini-t .v strong{font-weight:600}
+.cn-mini-s{font-size:11px;color:var(--color-text-muted);margin-top:2px}
+.cn-spark{display:inline-block;vertical-align:middle;margin-right:8px}
+
+@media (max-width:900px){
+  .mq{padding:18px 16px 40px}
+  .mq-haut{grid-template-columns:1fr}
+  .cn-grille{grid-template-columns:1fr}
+  .cn-seg{margin-left:0}
+  .mq-ongs{justify-content:flex-start}
+}
+
+.mq-tab th .cn-neuf{display:block;width:max-content;margin:3px 0 0 auto}

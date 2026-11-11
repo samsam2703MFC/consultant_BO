@@ -1,0 +1,86 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Zamówienia między grupami{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Zamówienia między grupami</h3>
+            <p class="text-subtitle text-muted mb-0">Kompozycje zamawiane na tabletach u grupy, która je robi : na kiedy, ilość, partia, stan. Grupę robiącą i wyprzedzenie ustawia się w recepturze (Kalkulacja › Kompozycje i półprodukty).</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section">
+    <div id="groupOrders" class="card" data-root="{{ root }}" data-api-base="{{ api_base }}" data-user="{{ session_user }}" data-labels="workshop">
+        <div class="card-header d-flex flex-wrap align-items-center gap-2">
+            <div class="at-tabs" role="tablist" data-go-range>
+                <button type="button" class="active" data-range="week">Wczoraj → 6 dni</button>
+                <button type="button" data-range="past">Ostatnie 14 dni</button>
+            </div>
+            <select class="form-select form-select-sm ms-auto" style="width:auto" data-go-group aria-label="Grupa"><option value="">Wszystkie grupy</option></select>
+        </div>
+        <div class="card-body pt-0"><div data-go-body><p class="text-muted mb-0">Wczytywanie…</p></div></div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/workshop/api.js?v={{ asset_v() }}"></script>
+<script>
+(() => {
+    const box = document.getElementById('groupOrders');
+    if (!box || !window.TfbWorkshop) return;
+    const {WorkshopApi, ui} = window.TfbWorkshop;
+    const api = new WorkshopApi(box);
+    const esc = ui.esc;
+    const body = box.querySelector('[data-go-body]');
+    const groupSel = box.querySelector('[data-go-group]');
+    const iso = (d) => d.toISOString().slice(0, 10);
+    const nf = (v) => new Intl.NumberFormat('pl-PL', {maximumFractionDigits: 3}).format(v ?? 0);
+    const STATES = {ordered: 'zamówione', accepted: 'przyjęte', in_production: 'w produkcji', ready: 'gotowe', picked: 'odebrane', cancelled: 'anulowane'};
+    let range = 'week';
+    const period = () => {
+        const now = new Date();
+        return range === 'week' ? [iso(new Date(now - 86400000)), iso(new Date(+now + 6 * 86400000))] : [iso(new Date(now - 14 * 86400000)), iso(now)];
+    };
+    async function load() {
+        body.innerHTML = '<p class="text-muted mb-0">Wczytywanie…</p>';
+        const [from, to] = period();
+        let rows;
+        try {
+            await api.init();
+            rows = (await api.list(`/execution/group-orders?from=${from}&to=${to}${groupSel.value ? '&group_id=' + groupSel.value : ''}`)).data || [];
+        } catch (err) { body.innerHTML = `<p class="text-danger mb-0">${esc(err.message)}</p>`; return; }
+        if (!rows.length) { body.innerHTML = '<p class="text-muted mb-0">Brak zamówień między grupami w tym okresie.</p>'; return; }
+        body.innerHTML = `<div class="table-responsive"><table class="table table-sm align-middle mb-0 go-erp">
+            <thead><tr><th>Na kiedy</th><th>Kompozycja</th><th>Dla</th><th>Robi</th><th class="text-end">Ilość</th><th>Partia</th><th>Stan</th><th>Zamówił(a)</th></tr></thead>
+            <tbody>${rows.map(o => `<tr><td class="text-nowrap">${esc(o.due_at.slice(8, 10) + '.' + o.due_at.slice(5, 7) + ' ' + o.due_at.slice(11, 16))}</td>
+                <td class="fw-semibold"><a class="text-reset" href="${esc(box.dataset.root)}/compositions/${o.recipe.id}/calculation">${esc(o.recipe.name)}</a></td>
+                <td>${esc(o.from.name)}</td><td>${esc(o.to.name)}</td><td class="text-end text-nowrap">${nf(o.quantity)} ${esc(o.unit)}</td>
+                <td>${o.batch ? esc(o.batch.lot_code) : '—'}</td>
+                <td><span class="go-st go-st-${esc(o.status)}">${esc(STATES[o.status] || o.status)}${o.status === 'picked' && o.picked_quantity ? ' ' + nf(o.picked_quantity) + ' ' + esc(o.unit) : ''}</span></td>
+                <td class="small text-muted">${esc(o.ordered_by || '—')}</td></tr>`).join('')}</tbody></table></div>`;
+    }
+    (async () => {
+        try { await api.init(); const g = await api.list('/referentiels/groups?active=1'); (g.data || []).forEach(x => groupSel.insertAdjacentHTML('beforeend', `<option value="${x.id}">${esc(x.name_pl || x.name)}</option>`)); } catch (e) { /* filtr bez grup */ }
+        load();
+    })();
+    groupSel.addEventListener('change', load);
+    box.querySelectorAll('[data-range]').forEach(b => b.addEventListener('click', () => {
+        range = b.dataset.range;
+        box.querySelectorAll('[data-range]').forEach(x => x.classList.toggle('active', x === b));
+        load();
+    }));
+})();
+</script>
+<style>
+.go-erp td, .go-erp th { font-variant-numeric: tabular-nums; }
+.go-st { display: inline-block; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 2px 8px; background: #f1ece6; color: #6b625b; white-space: nowrap; }
+.go-st-ordered { background: rgba(141, 29, 44, .08); color: var(--at-primary); }
+.go-st-accepted, .go-st-in_production { background: rgba(183, 121, 31, .14); color: #8a5a12; }
+.go-st-ready, .go-st-picked { background: rgba(46, 125, 79, .12); color: var(--at-success); }
+</style>
+{% endblock %}

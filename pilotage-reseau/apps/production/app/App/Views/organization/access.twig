@@ -1,0 +1,228 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Uprawnienia i menu{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Uprawnienia i menu</h3>
+            <p class="text-subtitle text-muted">Co każde stanowisko ma w menu i do czego ma dostęp. « W menu » = pozycja w railu ; « dostęp » = strony otwierane z wyszukiwarki (Ctrl K) i linków, bez pozycji w menu ; « brak » = adres pokazuje « Brak dostępu ». Zmiana zapisuje się od razu.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/organization/positions"><i class="bi bi-diagram-3"></i> Funkcje i zadania</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+<section class="section at-access">
+    {# [253] Dwa widoki : menu stanowisk (26 pozycji railu, 3 stany) i strony szczegółowo (dawna macierz). #}
+    <div class="at-access-views" role="tablist" aria-label="Widok">
+        <button type="button" class="at-view-btn active" data-view="menu" role="tab" aria-selected="true"><i class="bi bi-list-ul"></i> Menu stanowisk</button>
+        <button type="button" class="at-view-btn" data-view="pages" role="tab" aria-selected="false"><i class="bi bi-grid-3x3"></i> Strony szczegółowo</button>
+    </div>
+
+    <div class="card" data-view-pane="menu">
+        <div class="card-body pt-3">
+            <div class="at-menu-legend">
+                <span><span class="at-state at-state-menu">w menu</span> pozycja w railu</span>
+                <span><span class="at-state at-state-access">dostęp</span> strony z wyszukiwarki, bez pozycji w menu</span>
+                <span><span class="at-state at-state-none">brak</span> brak dostępu</span>
+                <span class="at-sub">Stanowisko bez własnego menu ma całe menu (wszystko, do czego ma dostęp). Pierwsza zmiana tworzy jego menu.</span>
+            </div>
+            <div class="table-responsive at-access-wrap">
+                <table class="table table-sm mb-0 at-access-table at-menu-table" id="menuMatrix">
+                    <thead>
+                        <tr>
+                            <th class="at-access-page">Pozycja menu <span class="at-sub">(zakładki)</span></th>
+                            {% for c in menu.columns %}
+                            <th class="text-center" data-mcol="{{ c.id }}">
+                                <div class="at-access-pos">{{ c.name }}</div>
+                                <div class="at-sub">{{ c.users ? c.users|join(', ') : 'nikt' }}</div>
+                                <div class="at-menu-count"><b data-count-of="{{ c.id }}">{{ c.count }}</b> w menu{% if not c.own %} <span class="at-sub" data-full-of="{{ c.id }}">· całe menu</span>{% endif %}</div>
+                                <button type="button" class="btn btn-sm btn-outline-secondary mt-1" data-reset="{{ c.id }}" title="Całe menu : wszystko, do czego stanowisko ma dostęp">całe menu</button>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for sec in menu.sections %}
+                        <tr class="at-access-section"><th colspan="{{ menu.columns|length + 1 }}">{{ sec.title }}</th></tr>
+                        {% for it in sec.items %}
+                        <tr data-item="{{ it.key }}">
+                            <td class="at-access-page">
+                                <a href="{{ root }}{{ it.href }}"><i class="bi {{ it.icon }}"></i> {{ it.label }}</a>
+                                {% if it.tabs %}<div class="at-sub">{{ it.tabs|join(' · ') }}</div>{% endif %}
+                            </td>
+                            {% for c in menu.columns %}
+                                {% set st = c.states[it.key] %}
+                                <td class="text-center">
+                                    {% if it.admin %}
+                                        <span class="at-sub">🔒 administrator</span>
+                                    {% else %}
+                                        <select class="form-select form-select-sm at-state-select at-state-{{ st }}" data-mcol="{{ c.id }}" data-item="{{ it.key }}" aria-label="{{ c.name }} : {{ it.label }}">
+                                            <option value="menu" {{ st == 'menu' ? 'selected' : '' }}>w menu</option>
+                                            <option value="access" {{ st == 'access' ? 'selected' : '' }}>dostęp</option>
+                                            {% if not it.always %}<option value="none" {{ st == 'none' ? 'selected' : '' }}>brak</option>{% endif %}
+                                        </select>
+                                        {% if c.open[it.key] is defined and c.open[it.key] %}<div class="at-sub" title="Pozycja otwiera tę stronę">→ {{ c.open[it.key] }}</div>{% endif %}
+                                    {% endif %}
+                                </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div data-view-pane="pages" hidden>
+    <div class="card">
+        <div class="card-body">
+            <p class="mb-1"><i class="bi bi-shield-check"></i> <strong>Administrator</strong> (rola « administrator produkcji ») widzi wszystkie strony, także te oznaczone 🔒 :
+                {% for a in admins %}<span class="at-chip"><i class="bi bi-person"></i> {{ a.name }}</span>{% else %}<span class="at-sub">nikt — konto « admin » jest administratorem.</span>{% endfor %}</p>
+            <p class="at-sub mb-0">Stanowisko użytkownika ustawiasz w « Funkcje i zadania » ; użytkownik bez stanowiska widzi strony z kolumny « Bez stanowiska ».</p>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-body pt-3">
+            <div class="table-responsive at-access-wrap">
+                <table class="table table-sm mb-0 at-access-table" id="accessMatrix">
+                    <thead>
+                        <tr>
+                            <th class="at-access-page">Strona</th>
+                            {% for c in columns %}
+                            <th class="text-center {{ c.active ? '' : 'at-inactive' }}" data-col="{{ c.id }}">
+                                <div class="at-access-pos">{{ c.name }}</div>
+                                <div class="at-sub">{% for u in c.users %}{{ u.name }}{{ u.admin ? ' (admin)' : '' }}{{ not loop.last ? ', ' : '' }}{% else %}nikt{% endfor %}</div>
+                                <div class="btn-group btn-group-sm mt-1" role="group" aria-label="Wszystkie strony dla {{ c.name }}">
+                                    <button type="button" class="btn btn-outline-secondary" data-all="{{ c.id }}" title="Wszystkie strony">wszystko</button>
+                                    <button type="button" class="btn btn-outline-secondary" data-none="{{ c.id }}" title="Żadna strona">nic</button>
+                                </div>
+                            </th>
+                            {% endfor %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr class="at-access-section"><th colspan="{{ columns|length + 1 }}">Strona startowa (logo, po zalogowaniu)</th></tr>
+                        <tr data-home-row>
+                            <td class="at-access-page">Dzisiaj dla produkcji, Rentowność dla kierownictwa ; administrator zawsze na Rentowności</td>
+                            {% for c in columns %}
+                            <td class="text-center"><select class="form-select form-select-sm" data-home="{{ c.id }}" aria-label="Strona startowa : {{ c.name }}">
+                                {% for path, label in home_pages %}<option value="{{ path }}" {{ c.home == path ? 'selected' : '' }}>{{ label }}</option>{% endfor %}
+                            </select></td>
+                            {% endfor %}
+                        </tr>
+                    {% for s in sections %}
+                        <tr class="at-access-section"><th colspan="{{ columns|length + 1 }}">{{ s.name }}</th></tr>
+                        {% for p in s.pages %}
+                        <tr data-page="{{ p.key }}">
+                            <td class="at-access-page"><a href="{{ root }}{{ p.path }}">{{ p.label }}</a></td>
+                            {% if p.admin %}
+                                <td colspan="{{ columns|length }}" class="text-center at-sub">🔒 tylko administrator</td>
+                            {% else %}
+                                {% for c in columns %}
+                                <td class="text-center"><input class="form-check-input" type="checkbox" data-col="{{ c.id }}" value="{{ p.key }}" {{ p.key in c.keys ? 'checked' : '' }} aria-label="{{ c.name }} : {{ p.label }}"></td>
+                                {% endfor %}
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include "page_components/ajax_helpers.twig" %}
+<script>
+// [253] Widoki : menu stanowisk / strony szczegółowo (zapamiętany w adresie : #strony).
+(function () {
+    const show = (view) => {
+        document.querySelectorAll('[data-view-pane]').forEach(p => p.hidden = p.dataset.viewPane !== view);
+        document.querySelectorAll('.at-view-btn').forEach(b => { b.classList.toggle('active', b.dataset.view === view); b.setAttribute('aria-selected', b.dataset.view === view); });
+    };
+    document.querySelectorAll('.at-view-btn').forEach(b => b.addEventListener('click', () => {
+        show(b.dataset.view);
+        history.replaceState(null, '', b.dataset.view === 'pages' ? '#strony' : location.pathname + location.search);
+    }));
+    if (location.hash === '#strony') show('pages');
+})();
+
+// [253] Menu stanowisk : stan pozycji (w menu / dostęp / brak) → zapis, odświeżenie kolumny (strony wspólne mogą zostać).
+(function () {
+    const table = document.getElementById('menuMatrix');
+    if (!table) return;
+    const paint = (col, states, count) => {
+        table.querySelectorAll(`select[data-mcol="${col}"]`).forEach(sel => {
+            const st = states[sel.dataset.item];
+            if (!st) return;
+            sel.value = st;
+            sel.className = sel.className.replace(/at-state-(menu|access|none|admin)/g, '').trim() + ' at-state-' + st;
+        });
+        const n = table.querySelector(`[data-count-of="${col}"]`);
+        if (n && count !== undefined) n.textContent = count;
+    };
+    const send = (col, body) => {
+        const sels = table.querySelectorAll(`select[data-mcol="${col}"]`);
+        sels.forEach(s => s.disabled = true);
+        return at.send(`/ajax/organization/menu/${col}`, 'PUT', body).then(res => {
+            sels.forEach(s => s.disabled = false);
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (res.ok && res.data) {
+                paint(col, res.data.states, res.data.count);
+                const full = table.querySelector(`[data-full-of="${col}"]`);
+                if (full) full.remove();
+            }
+        });
+    };
+    table.addEventListener('change', (e) => {
+        const sel = e.target.closest('select[data-mcol]');
+        if (sel) send(sel.dataset.mcol, {item: sel.dataset.item, state: sel.value});
+    });
+    table.addEventListener('click', (e) => {
+        const b = e.target.closest('[data-reset]');
+        if (b) send(b.dataset.reset, {reset: true}).then(() => location.reload());
+    });
+})();
+
+(function () {
+    const table = document.getElementById('accessMatrix');
+    const boxes = (col) => [...table.querySelectorAll(`input[data-col="${col}"]`)];
+    const save = (col) => {
+        const pages = boxes(col).filter(b => b.checked).map(b => b.value);
+        boxes(col).forEach(b => b.disabled = true);
+        at.send(`/ajax/organization/access/${col}`, 'PUT', {pages}).then(res => {
+            boxes(col).forEach(b => b.disabled = false);
+            at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            if (res.ok && res.data && res.data.pages) boxes(col).forEach(b => b.checked = res.data.pages.includes(b.value));
+        });
+    };
+    table.addEventListener('change', (e) => {
+        if (e.target.matches('input[data-col]')) save(e.target.dataset.col);
+        if (e.target.matches('select[data-home]')) {
+            const sel = e.target;
+            sel.disabled = true;
+            at.send(`/ajax/organization/access/${sel.dataset.home}/home`, 'PUT', {home: sel.value}).then(res => {
+                sel.disabled = false;
+                at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
+            });
+        }
+    });
+    table.addEventListener('click', (e) => {
+        const all = e.target.closest('[data-all]'), none = e.target.closest('[data-none]');
+        if (!all && !none) return;
+        const col = (all || none).dataset[all ? 'all' : 'none'];
+        boxes(col).forEach(b => b.checked = !!all);
+        save(col);
+    });
+})();
+</script>
+{% endblock %}
