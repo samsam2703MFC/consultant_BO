@@ -178,10 +178,11 @@ function tplRapport(r, x){
       <span class="ck">${p.checks.map(c => `<i class="${esc(c.cls)}">${esc(c.txt)}</i>`).join('')}</span>${p.com ? `<span class="com">${esc(p.com)}</span>` : ''}</div>`).join('')}</div>`) : '';
   const ck = carte('La checklist', esc(r.checklist), r.ecarts.length ? `<ul class="sv-ul">${r.ecarts.map(e => `<li>${esc(e)}</li>`).join('')}</ul>` : '<div class="mko-mu">Aucun écart relevé.</div>');
   const envoi = carte('L’envoi', esc(r.statut),
-    `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b><span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
+    `<div class="sv-kv"><span>À</span><b class="${r.a ? '' : 'ko'}">${esc(r.a || 'aucune adresse — réglez-la dans Qui fait quoi')}</b><span>Langue</span><b>${esc(r.langue)}</b><span>En copie</span><b>${esc(r.copies)}</b>${r.sms ? `<span>SMS</span><b class="${r.sms.ko ? 'ko' : ''}">${esc(r.sms.a)}</b>` : ''}<span>Envoie</span><b>${esc(r.envoie || '—')}</b></div>
     ${r.delai ? `<div class="${r.delaiKo ? 'ko' : 'att'}" style="font-weight:400;font-size:12.5px;margin-top:8px">${esc(r.delai)}</div>` : ''}
     ${!r.smtp ? '<div class="gc-pill att" style="margin-top:8px">SMTP non configuré : le rapport ira sur la page du franchisé, sans courriel</div>' : ''}
-    ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}`);
+    ${r.sms && r.sms.sansFournisseur ? '<div class="gc-pill att" style="margin-top:8px">Aucun fournisseur SMS réglé (MétaDonnée › Alertes SMS) : le SMS ne partira pas</div>' : ''}
+    ${r.dernier ? `<div class="mko-mu" style="margin-top:8px">${esc(r.dernier)}</div>` : ''}${r.sms && r.sms.dernier ? `<div class="mko-mu" style="margin-top:4px">${esc(r.sms.dernier)}</div>` : ''}`);
   return `<div class="sva-rap"><div class="sv-pile">${texte}${plans}</div><div class="sv-pile">${envoi}${score}${evaluation}${budget}${photos}${ck}${personnel}</div></div>
     <div class="sva-act"><button ${x.A(r.voir)} class="cx-btn">Voir le rapport</button>
       ${r.envoye ? `<button ${x.A(r.renvoyer)} class="cx-btn" ${r.busy ? 'disabled' : ''}>Renvoyer le courriel</button>`
@@ -270,11 +271,12 @@ export function tplSvAdmin(c, x){
   const barre = `<div class="sv-barre${s.modifie ? ' on' : ''}"><span>${s.modifie ? 'Modifications non enregistrées.' : 'Les règles valent pour tout le réseau ; un magasin peut avoir les siennes.'}</span>
     ${s.annuler ? `<button ${x.A(s.annuler)} class="cx-btn">Annuler</button>` : ''}<button ${x.A(s.enregistrer)} class="cx-btn prim" ${s.busy || !s.modifie ? 'disabled' : ''}>${s.busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>`;
   const mags = `<div class="mko-carte"><div class="mko-ct"><span class="mko-lab">Par magasin — qui fait quoi</span><span class="mko-mini">sous chaque magasin : son responsable et son cadre de visite</span></div><div style="overflow-x:auto"><table class="mko-tab sv-tab sv-qfq">
-      <thead><tr><th>Magasin</th><th>Prépare</th><th>Adapte le rapport</th><th>Envoie</th><th>Valide les corrections</th><th>En copie</th><th>Courriel du franchisé</th><th>Langue</th></tr></thead>
+      <thead><tr><th>Magasin</th><th>Prépare</th><th>Adapte le rapport</th><th>Envoie</th><th>Valide les corrections</th><th>En copie</th><th>Courriel du franchisé</th><th>GSM du franchisé</th><th>Langue</th></tr></thead>
       <tbody>${s.magasins.map(m => `<tr><td class="nom">${esc(m.court)}<small>${esc(m.responsable)}</small><small>${esc(m.cadre)}</small></td>
         <td>${sel(x, esc, m.setPrepare, m.prepare)}</td><td>${sel(x, esc, m.setAdapte, m.adapte)}</td><td>${sel(x, esc, m.setEnvoie, m.envoie)}</td><td>${sel(x, esc, m.setCorrections, m.corrections)}</td>
         <td><div class="sv-cc">${m.copie.map(p => `<button ${x.A(p.basculer)} class="cx-pu${p.on ? ' on' : ''}">${esc(p.nom)}</button>`).join('')}</div></td>
         <td><input class="mko-inp" type="email" style="min-width:190px" placeholder="adresse du franchisé" value="${esc(m.email)}" ${x.C(m.setEmail)}><small class="${m.emailKo ? 'ko' : ''}">${esc(m.emailAide)}</small></td>
+        <td><input class="mko-inp" type="tel" style="min-width:130px" placeholder="0470 12 34 56" value="${esc(m.tel)}" ${x.C(m.setTel)}><small class="${m.telKo ? 'ko' : ''}">${esc(m.telAide)}</small></td>
         <td>${sel(x, esc, m.setLangue, m.langues)}</td></tr>`).join('')}</tbody></table></div></div>`;
   const types = carte('Les types de visite — annoncée ou inopinée', 'annoncée : l’ordre du jour part au franchisé',
     `<div class="sv-types">${s.types.map(t => `<div class="sv-type"><b>${esc(t.nom)}</b>${duo(x, esc, { nom: 'Annoncée', on: t.annoncee, fn: t.annoncer }, { nom: 'Inopinée', on: !t.annoncee, fn: t.inopiner })}</div>`).join('')}</div>
@@ -296,6 +298,14 @@ export function tplSvAdmin(c, x){
     + regle('Photo de correction validée', 'par la personne réglée au magasin', num(D.validationHeures, D.setValidationHeures, 'heures'))
     + regle('Escalade', 'point en retard remonté à l’admin', num(D.escaladeJours, D.setEscaladeJours, 'jours de retard'))
     + regle('Relance du rapport pas lu', 'un courriel au franchisé', num(D.relanceLuJours, D.setRelanceLuJours, 'jours après l’envoi')));
+  const Sm = s.sms;
+  const sms = carte('Les SMS', 'au franchisé quand son rapport part',
+    regle('SMS au franchisé', 'à l’envoi du rapport : dans sa langue, avec le lien de sa page', duo(x, esc, { nom: 'Envoyé', on: Sm.actif, fn: Sm.allumer }, { nom: 'Coupé', on: !Sm.actif, fn: Sm.couper }))
+    + `<div class="sv-regle" style="display:block"><div><b>Copie de chaque SMS</b><small>à ces numéros, une fois le SMS du franchisé parti</small></div>
+      <div class="sv-pile" style="gap:6px;margin-top:8px">${Sm.copie.map(c => `<div class="cx-ligne"><input class="mko-inp" placeholder="Nom" style="width:120px" value="${esc(c.nom)}" ${x.C(c.setNom)}><input class="mko-inp" type="tel" placeholder="0470 12 34 56" style="flex:1;min-width:130px" value="${esc(c.tel)}" ${x.C(c.setTel)}><button ${x.A(c.retirer)} class="mko-pied-btn">Retirer</button></div>`).join('')}
+      <div><button ${x.A(Sm.ajouter)} class="mko-pied-btn">+ Ajouter un numéro</button></div></div></div>`
+    + (Sm.fournisseur ? '' : '<div class="gc-pill att" style="margin-top:8px">Aucun fournisseur SMS réglé : réglez SMSAPI dans MétaDonnée › Alertes SMS. Rien ne part en attendant.</div>')
+    + (Sm.actif && Sm.sansGsm.length ? `<div class="mko-mu" style="margin-top:8px">Sans GSM, pas de SMS : ${esc(Sm.sansGsm.join(', '))}.</div>` : ''));
   const voit = carte('Ce que voit le franchisé', 'sur sa page', `<div class="sv-pile" style="gap:8px">${s.voit.map(v => `<div class="sv-ligne">${bascule(x, v.on, v.basculer, esc(v.l))}</div>`).join('')}</div>`);
   const M = s.modele;
   const modeles = `<div class="mko-carte" style="margin-top:12px"><div class="mko-ct"><span class="mko-lab">Les courriels aux franchisés</span><span class="mko-mini">un modèle par langue · la langue suit le magasin</span></div>
@@ -307,7 +317,7 @@ export function tplSvAdmin(c, x){
       <div class="sv-pied" style="justify-content:flex-start"><button ${x.A(M.voir)} class="cx-btn">Aperçu</button>${M.remettre ? `<button ${x.A(M.remettre)} class="cx-btn">Remettre le texte livré</button>` : ''}<button ${x.A(M.enregistrer)} class="cx-btn prim" ${M.change ? '' : 'disabled'}>Enregistrer le modèle</button>
         <span class="cx-ligne" style="margin-left:auto"><input class="mko-inp" type="email" placeholder="adresse d’essai" style="width:200px" value="${esc(M.essaiA)}" ${x.I(M.setEssaiA)}><button ${x.A(M.essai)} class="cx-btn" ${M.smtp ? '' : 'disabled title="SMTP non configuré"'}>Envoyer un essai</button></span></div>
       ${M.apercu ? `<div class="sv-mail"><b>${esc(M.apercu.sujet)}</b><iframe class="sv-ifr court" srcdoc="${esc(M.apercu.html)}" title="Aperçu du courriel"></iframe></div>` : ''}</div></div></div>`;
-  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${voit}</div></div>${modeles}</div>`;
+  return `<div data-screen="suivi-qui-fait-quoi">${msgDe(esc, s.msg)}<div class="gc-kpis">${s.kpis.map(k => kpi(esc, k)).join('')}</div>${barre}${mags}<div class="cx-deux" style="margin-top:12px"><div class="sv-pile">${types}${pers}</div><div class="sv-pile">${delais}${sms}${voit}</div></div>${modeles}</div>`;
 }
 
 /* --- 6. Sources et API ---------------------------------------------------------------------- */

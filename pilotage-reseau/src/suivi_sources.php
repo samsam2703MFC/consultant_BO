@@ -52,7 +52,7 @@ const SS_ROUTES = [
     ['bureau', 'GET', '/suivi/rapport', 'ep_suivi_rapport', 'Le rapport de visite'],
     ['bureau', 'GET', '/suivi/rapport/apercu', 'ep_suivi_rapport_apercu', 'L’aperçu du rapport'],
     ['bureau', 'PUT', '/suivi/rapport/{id}', 'wr_suivi_rapport', 'Adapter le rapport, valider une correction'],
-    ['bureau', 'POST', '/suivi/rapport/{id}/envoyer', 'wr_suivi_rapport_envoyer', 'Envoyer le rapport au franchisé'],
+    ['bureau', 'POST', '/suivi/rapport/{id}/envoyer', 'wr_suivi_rapport_envoyer', 'Envoyer le rapport au franchisé, son SMS et la copie'],
     ['bureau', 'DELETE', '/visites/{id}', 'wr_visites_delete', 'Effacer une visite et ce qu’elle a produit'],
     ['bureau', 'GET', '/visites/synthese', 'ep_visites_synthese', 'La synthèse de la semaine'],
     ['bureau', 'GET', '/visites/cadre', 'ep_visites_cadre', 'Le cadre de visite des magasins'],
