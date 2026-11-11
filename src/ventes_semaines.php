@@ -81,6 +81,61 @@ function ep_ventes_reseau(): array
         'periodes' => $out, 'magasins' => $magasins, 'source' => vsSourceTexte($sources, $vue)];
 }
 
+/**
+ * GET /ventes/evolution — chaque magasin actif depuis sa première vente, mois
+ * par mois, chaque mois face au même mois un an plus tôt (Résultat ›
+ * Évolution magasin).
+ *
+ * Lu par années civiles, de la plus récente à la plus ancienne, avec les
+ * mêmes lectures que l'étendue « année » : une année lue porte aussi son N-1,
+ * et la lecture s'arrête à la première année dont le N-1 est vide pour tous
+ * les magasins — l'année d'avant n'a rien à montrer. Les mois clos du panel
+ * sont gravés (vsPanelJours) : seul le mois en cours se relit.
+ *
+ * Chaque mois porte ses jours vendus (`jours`) et ceux de son N-1 : l'écran
+ * en tire la lecture « par jour ouvert », qui neutralise les fermetures. Le
+ * mois en cours s'arrête à aujourd'hui, son N-1 au même jour.
+ */
+function ep_ventes_evolution(): array
+{
+    $auj = date('Y-m-d');
+    try { $shops = Db::rows('SELECT id, name FROM shops WHERE active = 1 ORDER BY name'); }
+    catch (PDOException $e) { $shops = Db::rows("SELECT id, name FROM ceo_shop WHERE status = 'Ouvert' ORDER BY name"); }
+    $par = []; $sources = [];
+    $an = (int) substr($auj, 0, 4);
+    for ($k = 0; $k < 10; $k++, $an--) {          // garde-fou : dix ans au plus
+        $periodes = vsPeriodes('annee', $k === 0 ? $auj : $an . '-12-31', 12);
+        $n1Vu = false;
+        foreach ($shops as $s) {
+            $sid = (int) $s['id'];
+            $m = vsMagasin($sid, $periodes, vsLireMagasin($sid, $periodes));
+            foreach ($m['periodes'] as $i => $p) {
+                if ($p['futur'] || $p['source'] === null) { continue; }
+                $P = $periodes[$i];
+                $sources[$p['source']] = true;
+                $par[$sid]['nom'] = (string) $s['name'];
+                $par[$sid]['mois'][substr($P['du'], 0, 7)] = [
+                    'mois' => substr($P['du'], 0, 7), 'an' => (int) substr($P['du'], 0, 4), 'mo' => (int) $P['iso'], 'lab' => $P['lab'],
+                    'enCours' => $P['enCours'], 'joursMois' => (int) date('t', strtotime($P['du'])), 'joursServis' => $P['joursServis'],
+                    'clients' => $p['tickets'], 'ca' => $p['ca'], 'jours' => $p['jours'], 'source' => $p['source'],
+                    'n1' => $p['n1'] === null ? null : ['clients' => $p['n1']['tickets'], 'ca' => $p['n1']['ca'], 'jours' => $p['n1']['jours'], 'source' => $p['n1']['source']]];
+            }
+            if ($m['totalN1'] !== null) { $n1Vu = true; }
+        }
+        if (!$n1Vu) { break; }
+    }
+    $magasins = [];
+    foreach ($par as $sid => $x) {
+        ksort($x['mois']);
+        $mois = array_values($x['mois']);
+        $magasins[] = ['id' => (string) $sid, 'nom' => $x['nom'], 'premier' => $mois[0]['mois'], 'mois' => $mois];
+    }
+    // Le plus ancien d'abord : l'histoire du réseau se lit dans l'ordre des ouvertures.
+    usort($magasins, static fn ($a, $b) => strcmp($a['premier'], $b['premier']) ?: strcmp($a['nom'], $b['nom']));
+    return ['aujourdhui' => $auj, 'du' => $magasins === [] ? null : min(array_column($magasins, 'premier')),
+        'magasins' => $magasins, 'source' => vsSourceTexte($sources, 'mois')];
+}
+
 function vsParams(): array
 {
     $auj = date('Y-m-d');

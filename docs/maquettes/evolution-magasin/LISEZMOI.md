@@ -1,6 +1,28 @@
 # Résultat › Évolution magasin — le magasin depuis que le panel a ses ventes
 
-**Statut : maquettes à choisir, rien n'est codé dans le BO.**
+**Statut : maquette A codée le 11/11/2026**, avec deux changements demandés : **un graphique par
+magasin** (tous les magasins l'un sous l'autre, plus de choix du magasin) et **Trafic clients /
+Chiffre d'affaires en onglet** (un graphique à la fois), plus le **Total / Par jour ouvert**
+calculé. Captures du code : `code-clients-total.png`, `code-ca-par-jour.png`.
+
+Ce qui est codé :
+
+- `GET /ventes/evolution` (`src/ventes_semaines.php`, `ep_ventes_evolution`) : chaque magasin actif
+  depuis sa première vente, mois par mois, chaque mois avec ses jours vendus et son N-1 (le mois
+  en cours arrêté à aujourd'hui, son N-1 au même jour). Lu par années civiles avec les lectures
+  de l'étendue « année », jusqu'à la première année sans N-1 ; les mois clos du panel sont
+  gravés, seul le mois en cours se relit.
+- Résultat › onglet **Évolution magasin** (`evCharge`, `evVals`, `evGraphe` dans `app.js`,
+  `tplResultatEvolution` et `svgEvolution` dans `templates.js`) : par magasin, la ligne des faits
+  (depuis, mois pleins, clients, CA, panier, meilleur mois), le graphique (N plein, N-1 pointillé,
+  gagné / perdu, écart sous chaque mois) et quatre tuiles (12 mois vs N-1, 3 derniers mois vs
+  N-1, mois au-dessus du N-1, mois en cours à jours égaux) ; en bas, l'année par année de tous
+  les magasins.
+- **Par jour ouvert** : chaque mois ÷ ses jours vendus, le N-1 ÷ les siens. Le mois en cours entre
+  alors sur la courbe (cercle vide, trait pointillé) : à jours vendus, il se compare. Gosselies,
+  juillet 2026 : +48 % en total (le N-1 a fermé une semaine), +14 % par jour ouvert.
+
+Le reste de cette page décrit les maquettes telles qu'elles ont été proposées.
 
 Demande du 11/11/2026 : l'analyse d'un magasin depuis qu'on a les données — le trafic clients et
 le chiffre d'affaires du magasin, chaque fois avec la ligne de la période et, quand c'est possible,
@@ -65,6 +87,7 @@ février 2026, pas encore de N-1.
 
 | Fichier | Ce que c'est |
 |---|---|
+| `code-clients-total.png`, `code-ca-par-jour.png` | l'onglet codé : trafic en total, CA par jour ouvert |
 | `a.png`, `b.png`, `c.png` | les trois maquettes, Corbais |
 | `a-halle.png` | la maquette A sur Halle, sans N-1 |
 | `a.html`, `a-halle.html`, `b.html`, `c.html` | les pages, générées |
