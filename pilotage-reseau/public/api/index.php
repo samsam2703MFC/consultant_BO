@@ -601,6 +601,7 @@ function route(string $method, string $path): mixed
             $path === '/stock/inventaires/ecart'      => ep_stock_inventaires_ecart(),
             $path === '/stock/inventaires/releve'     => ep_stock_inventaires_releve(),
             $path === '/ventes/reseau'                => ep_ventes_reseau(),
+            $path === '/ventes/evolution'             => ep_ventes_evolution(),
             $path === '/ventes/notifications'         => ep_stats_notifications(),
             $path === '/ventes/record'                => ep_stats_record(),
             $path === '/ventes/tendance'              => ep_stats_tendance(),
