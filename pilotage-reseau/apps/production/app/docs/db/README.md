@@ -1687,6 +1687,14 @@ chaque envoi est noté dans `n_time_sheet_mail` (salarié, mois, message) et son
 montré sur la ligne. Service `TimeSheetMailService` ; routes `GET|PUT /ajax/time/contacts`,
 `POST /ajax/time/months/{mois}/mail` (droit « time »). Test : `tests/time_tracking_test.php`.
 
+### Notifications urgentes discrètes — 268
+
+Demande du 11/11/2026 (« plus minimaliste et discret »). Sous la barre du haut, les notifications urgentes
+(`severity = danger`) ne sont plus des bandeaux rouges empilés : une seule ligne fine (point rouge, « N pilne », premier
+titre, « +N »), qui se déplie en liste compacte (« Przejdź », ✓ = lu) ; une seule notification = sa ligne avec ses
+actions. État replié / déplié gardé pour la session du navigateur. `assets/js/notifications.js`, styles `.at-urgent-*`
+(`atelier.css`). La cloche ne change pas.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
