@@ -4742,6 +4742,7 @@ function svgEvolution(S, esc){
   if (!S) { return ''; }
   const ft = 'font-family:var(--font-ui)';
   return `<svg viewBox="0 0 ${S.W} ${S.H}" preserveAspectRatio="xMidYMid meet" class="rm-s6c">
+    ${S.avant ? `<rect x="${S.avant.x}" y="${S.avant.y}" width="${S.avant.w}" height="${S.avant.h}" fill="rgba(34,34,34,.035)"/>${S.avant.t ? `<text x="${S.avant.tx}" y="${S.avant.ty}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${esc(S.avant.t)}</text>` : ''}` : ''}
     ${S.grad.map(t => `<line x1="${S.ml}" x2="${S.W - S.mr}" y1="${t.y}" y2="${t.y}" stroke="rgba(34,34,34,${t.base ? '.16' : '.07'})"/><text x="${S.ml - 8}" y="${(+t.y + 3.5).toFixed(1)}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(t.t)}</text>`).join('')}
     ${S.seps.map(s => `${s.trait ? `<line x1="${s.x}" x2="${s.x}" y1="${s.y1}" y2="${s.y2}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>` : ''}<text x="${s.xt}" y="${S.mt - 7}" font-size="11" font-weight="600" fill="#1c1a17" style="${ft}">${esc(s.t)}</text>`).join('')}
     ${S.aires.map(a => `<polygon points="${a.pts}" fill="${a.pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`).join('')}

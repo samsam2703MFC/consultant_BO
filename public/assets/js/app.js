@@ -10013,6 +10013,16 @@ class App {
       return { e: pc(n / j, n1 / j1), n: n / j, n1: n1 / j1 };
     };
     const lab = x => MC[x.mo] + ' ' + String(x.an).slice(2);
+    // UN axe pour tous les graphiques : du premier mois vendu du réseau au mois
+    // en cours (exclu en total, où il n'est pas sur la courbe). Les années
+    // tombent au même endroit d'un magasin à l'autre ; un magasin ouvert plus
+    // tard a une bande vide avant sa première vente.
+    const fin = String(D.aujourdhui || '').slice(0, 7), axe = [];
+    for (let k = D.du || D.magasins.map(m => m.premier).sort()[0]; k && k <= fin && axe.length < 240;) {
+      axe.push(k); const y = +k.slice(0, 4), mo = +k.slice(5, 7);
+      k = mo === 12 ? (y + 1) + '-01' : y + '-' + String(mo + 1).padStart(2, '0');
+    }
+    const axeG = parJour ? axe : axe.filter(k => k !== fin);
     out.magasins = D.magasins.map(m => {
       const M = m.mois.map(prep);
       const clos = M.filter(x => !x.enCours && !x.partiel);
@@ -10049,7 +10059,7 @@ class App {
         'panier ' + fE2(totCa / Math.max(1, totC)),
         best ? 'meilleur mois : ' + ML[best.mo] + ' ' + best.an + ' (' + fmt(v(best)) + ')' : ''
       ].filter(Boolean);
-      const svg = this.evGraphe(M, v, v1, fmt, fAxe, parJour, MC);
+      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC);
       return { id: m.id, nom, nomLong: m.nom, faits, tuiles, svg,
         avecN1: !!premN1, n1Txt: premN1 ? 'N-1 : le même mois un an plus tôt (pointillé), dès ' + ML[premN1.mo] + ' ' + premN1.an
           : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1),
@@ -10083,19 +10093,22 @@ class App {
     return out;
   }
   /**
-   * Le graphique d'un magasin, en repère 880 × 260 : la courbe du mois (trait
+   * Le graphique d'un magasin, en repère 880 × 262 : la courbe du mois (trait
    * plein), le N-1 (pointillé), le gagné / perdu entre les deux, l'écart en %
-   * sous chaque mois. Rend la géométrie ; le dessin est dans tplResultatEvolution.
+   * sous chaque mois. L'abscisse est l'axe COMMUN (`axe`, des 'AAAA-MM') :
+   * le même repère pour tous les magasins, marges comprises — les années
+   * s'alignent d'un graphique à l'autre. Rend la géométrie ; le dessin est
+   * dans svgEvolution.
    */
-  evGraphe(M, v, v1, fmt, fAxe, parJour, MC){
-    const W = 880, H = 262, ml = 54, mr = 18, mt = 26;
-    const L = parJour ? M : M.filter(x => !x.enCours);           // les mois sur l'axe
+  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC){
+    const W = 880, H = 262, ml = 54, mr = 18, mt = 26, mb = 42;  // marges fixes : même tracé partout
+    const parMois = {}; M.forEach(x => { parMois[x.mois] = x; });
+    const L = axe.map(k => parMois[k] || { vide: true, mois: k, an: +k.slice(0, 4), mo: +k.slice(5, 7) });
     const N = L.length;
-    if (!N) { return null; }
+    if (!N || L.every(x => x.vide)) { return null; }
     const pas = (W - ml - mr) / N;
     const avecChips = L.some(x => x.n1Ok) && pas >= 22;
-    const mb = 24 + (avecChips ? 18 : 0);
-    const n = L.map(v), n1 = L.map(v1);
+    const n = L.map(x => x.vide ? null : v(x)), n1 = L.map(x => x.vide ? null : v1(x));
     const surCourbe = L.map(x => !x.partiel);
     const vals = [];
     L.forEach((x, i) => { if (surCourbe[i] && n[i] != null) { vals.push(n[i]); } if (n1[i] != null) { vals.push(n1[i]); } });
@@ -10109,6 +10122,9 @@ class App {
     const f1 = x => x.toFixed(1);
     const out = { W, H, ml, mr, mt, hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
     for (let y = lo; y <= hi + 1e-6; y += st) { out.grad.push({ y: f1(Y(y)), t: fAxe(y), base: y === lo }); }
+    // Avant la première vente du magasin : une bande vide, dite comme telle.
+    const iPrem = L.findIndex(x => !x.vide);
+    if (iPrem > 0) { const w = iPrem * pas; out.avant = { x: ml, w: f1(w), y: mt - 2, h: f1(H - mb - mt + 2), tx: f1(ml + w / 2), ty: f1((mt + H - mb) / 2), t: w >= 110 ? 'pas encore ouvert' : '' }; }
     L.forEach((x, i) => { if (i === 0 || x.mo === 1) { const xs = i === 0 ? ml : (X(i - 1) + X(i)) / 2; out.seps.push({ x: f1(xs), xt: f1(xs + 5), t: String(x.an), trait: i > 0, y1: mt - 14, y2: f1(H - mb) }); } });
     // Le gagné / perdu entre les deux courbes, coupé là où elles se croisent.
     const okN = i => surCourbe[i] && n[i] != null && !(L[i].enCours && !parJour);
