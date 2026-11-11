@@ -1386,3 +1386,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-11T20:53:40Z ERP production : [264] [268] rectangles à coins arrondis (pavé, boutons, repère)
 2026-11-11T20:36:49Z Dashboard magasin › Produits : est-ce que ça se développe ? une tuile par catégorie, les produits au clic (prix, quantité, marge)
 2026-11-11T20:54:56Z Fusion : onglet Produits (#98) et diagnostics Commandes / Ventes sans les tables du webshop retiré (#92)
+2026-11-11T21:03:48Z ERP production : [267] Koszty i premie (Kierownik produkcji, prime 0,3 % du CA, coûts par groupe et par personne)
