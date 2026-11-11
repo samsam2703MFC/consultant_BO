@@ -76,12 +76,12 @@ Trois colonnes :
   coefficient et la marge par pièce sur le prix **HT** (même calcul que « Recette & marge ») : deux
   pourcentages pour un même produit (Croissant : 61,5 % et 60 %). À unifier ou à expliquer.
 
-## Régénérer
+## Régénérer (depuis `pilotage-reseau/`)
 
 ```bash
 node docs/maquettes/onglet-produits/extraire.js 4 2026-11-11   # relit le serveur, écrit reel-halle.json
 node docs/maquettes/onglet-produits/generer.js
-npx http-server . -p 8099 -c-1                                 # depuis la racine du dépôt
+npx http-server . -p 8099 -c-1                                 # depuis pilotage-reseau/
 node docs/maquettes/onglet-produits/capturer.js
 # → http://127.0.0.1:8099/docs/maquettes/onglet-produits/planche.html
 ```

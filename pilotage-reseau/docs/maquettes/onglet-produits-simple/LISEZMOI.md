@@ -43,11 +43,11 @@ Les données et les calculs viennent de la 2e version : le changement de caisse 
 (voir `../onglet-produits-developpement/LISEZMOI.md`), et le coût de recette actuel est appliqué à
 toutes les semaines (voir `../onglet-produits/LISEZMOI.md`).
 
-## Régénérer
+## Régénérer (depuis `pilotage-reseau/`)
 
 ```bash
 node docs/maquettes/onglet-produits-simple/generer.js
-npx http-server . -p 8099 -c-1                              # depuis la racine du dépôt
+npx http-server . -p 8099 -c-1                              # depuis pilotage-reseau/
 node docs/maquettes/onglet-produits-simple/capturer.js
 # → http://127.0.0.1:8099/docs/maquettes/onglet-produits-simple/planche.html
 ```

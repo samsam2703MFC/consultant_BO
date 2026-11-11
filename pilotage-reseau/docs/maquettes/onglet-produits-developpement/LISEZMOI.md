@@ -83,13 +83,13 @@ réseau, le réseau l'an dernier).
 - **Le coût par produit de S34 à S39** reste celui de la recette actuelle (voir
   `../onglet-produits/LISEZMOI.md`) : l'API rend des coûts faux sur ces semaines-là.
 
-## Régénérer
+## Régénérer (depuis `pilotage-reseau/`)
 
 ```bash
 node docs/maquettes/onglet-produits/extraire.js 4 2026-11-11            # le magasin, produit par produit
 node docs/maquettes/onglet-produits-developpement/extraire-reseau.js    # le réseau
 node docs/maquettes/onglet-produits-developpement/generer.js
-npx http-server . -p 8099 -c-1                                          # depuis la racine du dépôt
+npx http-server . -p 8099 -c-1                                          # depuis pilotage-reseau/
 node docs/maquettes/onglet-produits-developpement/capturer.js
 # → http://127.0.0.1:8099/docs/maquettes/onglet-produits-developpement/planche.html
 ```
