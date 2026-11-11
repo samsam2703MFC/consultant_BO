@@ -37,7 +37,6 @@
 
     const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
     const t = (k, p) => { let s = labels[k] ?? k; for (const [a, b] of Object.entries(p || {})) s = s.split('{' + a + '}').join(String(b)); return s; };
-    const fold = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ł/g, 'l');
     const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map(w => w.charAt(0)).join('').toUpperCase() || '?';
     const hue = (name) => [...String(name || '')].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 360, 7);
     const avatar = (name, cls) => `<span class="kiosk-avatar is-tone-${hue(name) % 5} ${cls || ''}" aria-hidden="true">${esc(initials(name))}</span>`;
@@ -155,32 +154,25 @@
         const people = allPeople();
         const present = people.filter(p => p.clocked_in).length;
         const now = new Date();
-        const toProduction = deviceInfo && deviceInfo.mode === 'atelier'
-            ? `<button type="button" class="kiosk-chip is-glass" data-to-production>${esc(t('to_production'))}</button>` : '';
         el.innerHTML = `<div class="kiosk-ipad office-home">
             <div class="kiosk-ipad-bar"><span class="kiosk-logo" aria-hidden="true">LA</span><span class="kiosk-ipad-name">${esc(t('title'))}</span>
-                ${toProduction}<button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
+                <button type="button" class="kiosk-chip is-glass" data-lang>${esc(t('lang_switch'))}</button></div>
             <section class="kiosk-ipad-hero office-hero"><div class="kiosk-ipad-time" data-clock>${now.toTimeString().slice(0, 5)}</div>
-                <div class="kiosk-ipad-date">${esc(longDate(now))}</div>
-                <p class="kiosk-ipad-greet">${esc(t('hero_all'))}</p>
-                <p class="office-present">${esc(t('present_total', {n: present, total: people.length}))}</p></section>
-            <input class="kiosk-search office-search" type="search" data-search placeholder="${esc(t('search'))}" aria-label="${esc(t('search'))}" autocomplete="off">
+                <div class="kiosk-ipad-date">${esc(longDate(now))}</div></section>
             <nav class="office-groupbar" aria-label="${esc(t('groups'))}">
                 <button type="button" class="office-group-chip ${filter === null ? 'is-on' : ''}" data-filter="">${esc(t('all_groups'))}<small>${present}/${people.length}</small></button>
                 ${sections.map(x => `<button type="button" class="office-group-chip ${filter === x.id ? 'is-on' : ''}" data-filter="${x.id}">${esc(x.name)}<small>${x.people.filter(p => p.clocked_in).length}/${x.people.length}</small></button>`).join('')}</nav>
             <div data-home-body></div></div>`;
         const body = el.querySelector('[data-home-body]');
-        const search = el.querySelector('[data-search]');
-        // Grupy jedna pod drugą, każda ze wszystkimi osobami ; wyszukiwanie po nazwisku we wszystkich grupach.
+        // Grupy jedna pod drugą, każda ze wszystkimi osobami (bez wyszukiwarki : dotknięcie nazwiska).
         const draw = () => {
-            const f = fold(search.value.trim());
             const groups = sections.filter(x => filter === null || x.id === filter)
-                .map(x => ({...x, list: f ? x.people.filter(p => fold(p.name).includes(f)) : x.people}))
-                .filter(x => x.list.length || (!f && filter !== null));
+                .map(x => ({...x, list: x.people}))
+                .filter(x => x.list.length || filter !== null);
             body.innerHTML = groups.length ? groups.map(x => `<section class="office-group">
                     <h2 class="office-group-title">${esc(x.name)} <small>${esc(t('section_people', {n: x.people.length, present: x.people.filter(p => p.clocked_in).length}))}</small></h2>
                     ${x.list.length ? `<div class="kiosk-apps office-people">${x.list.map(personTile).join('')}</div>` : `<p class="kiosk-muted">${esc(t('nobody'))}</p>`}</section>`).join('')
-                : `<p class="kiosk-muted">${esc(f ? t('no_match') : t('no_people'))}</p>`;
+                : `<p class="kiosk-muted">${esc(t('no_people'))}</p>`;
         };
         draw();
         body.addEventListener('click', (e) => {
@@ -195,10 +187,8 @@
             draw();
             el.querySelector('.office-groupbar').scrollIntoView({block: 'start', behavior: 'smooth'});
         });
-        search.addEventListener('input', draw);
-        el.querySelector('[data-to-production]')?.addEventListener('click', () => { store.set(HOME_KEY, null); location.replace(root + '/tablet/production'); });
-        // Stan obecności odświeżany co minutę, gdy nikt nie szuka.
-        timers.push(window.setInterval(() => { if (!search.value && document.activeElement !== search) renderHome(); }, 60000));
+        // Stan obecności odświeżany co minutę.
+        timers.push(window.setInterval(renderHome, 60000));
     }
 
     function personTile(p) {

@@ -1720,6 +1720,12 @@ panier marque une sortie avec « Tak » à la question marchandise ; un clic ouv
 heure de sortie, produits et pièces, « z braków », « inne », total des pièces. `TimeService::goods`, route
 `GET /ajax/time/goods?employee=&day=` (droit « time ») ; drapeau `g` des cases du mois.
 
+### Tablette bureau épurée — 272
+
+Demande du 11/11/2026. L'accueil de la tablette bureau (`/tablet/office`) n'a plus de barre de recherche, plus de texte
+« Znajdź swoje nazwisko i dotknij go », plus de compteur « Obecni : n / total » ni de lien vers la tablette de
+production : l'heure, la date, les boutons de groupes (avec leurs présents) et les personnes. Aucune table touchée.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
