@@ -1375,3 +1375,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-10T08:06:35Z [257] ERP production : facture KSeF dans la fenêtre « nouveau prix à valider »
 2026-11-10T08:14:11Z [257] ERP production : en-tête collant de la facture KSeF
 2026-11-11T19:12:37Z [259-261] ERP production : pracownicy + budżet, bilan Pobierz zamówienia, premie brutto brutto
+2026-11-11T19:52:08Z Résultat › Évolution magasin : clients et CA de chaque magasin depuis sa première vente, face au N-1 (total ou par jour ouvert)
