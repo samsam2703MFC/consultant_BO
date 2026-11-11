@@ -1,6 +1,6 @@
 # L'onglet Produits du dashboard magasin : quatre maquettes
 
-**Statut : à choisir.**
+**Statut : remplacées par la 2e version, centrée sur le développement** (`../onglet-produits-developpement/`, maquettes E, F, G). Le code reste, les deux générateurs le partagent.
 
 Demande du 11/11/2026, sur `/dashboard/?shop=4&vue=ops` : ajouter un onglet qui montre **quels
 produits je vends, combien, à quel prix et à quelle marge**, avec :

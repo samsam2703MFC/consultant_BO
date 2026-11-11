@@ -12,6 +12,8 @@ const fs = require('fs');
 const path = require('path');
 const D = __dirname;
 const R = JSON.parse(fs.readFileSync(path.join(D, 'reel-halle.json'), 'utf8'));
+// un autre générateur (onglet-produits-developpement) peut retoucher les données avant tout calcul
+if (typeof global.PO_PRETRAITER === 'function') { global.PO_PRETRAITER(R); }
 
 /* ---------- Formats ---------- */
 const nf = (n, d = 0) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -470,6 +472,11 @@ function modaleD(c) {
   </div>`;
 }
 
+/* ---------- Ce que réutilise onglet-produits-developpement/generer.js ---------- */
+module.exports = { R, W, N, IE, IC, sem, dCourt, dLong, J12, PERIODE, nf, fN, fE, fP, fT, clT, tendC, esc, somme, sur12,
+  ARTS, CATS, GRPS, TOT, rangM, agr, art, cat, grp, entete, page, pageModale, echelle, fAx, motifs, seg, spark, NOTE, tauxCell, margeCell, kpis };
+
+if (require.main === module) {
 /* ---------- Écriture ---------- */
 const ecrire = (f, s) => fs.writeFileSync(path.join(D, f), s);
 const T = 'Onglet Produits — maquette ';
@@ -494,3 +501,4 @@ ecrire('planche.html', `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-
 <div class="planche">${PL.map(([l, t, p, li]) => `<div class="pl-c"><div class="hd"><div class="l">Maquette ${l}</div><h2>${t}</h2><p>${p}</p></div><ul>${li.map(x => `<li>${x}</li>`).join('')}</ul><img src="${l.toLowerCase()}-haut.jpg" alt=""><img src="${l.toLowerCase()}-modale-haut.jpg" alt=""></div>`).join('')}</div></body></html>`);
 
 console.log('écrit : a, b, c, d (+ modales) et planche ·', ARTS.length, 'articles,', CATS.length, 'catégories,', GRPS.length, 'groupes · marge', fP(TOT.taux), '· médiane', medQ.toFixed(2), 'pièces/sem · quadrants', Object.entries(QA).map(([k, o]) => k + ' ' + o.n).join(', '), '· à vérifier', VERIF.length);
+}
