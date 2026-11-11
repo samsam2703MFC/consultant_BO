@@ -3686,3 +3686,4 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .tm-fix:hover:not(:disabled) { background: rgba(196, 30, 58, .12); }
 .tm-bulk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 8px 12px; border: 1px dashed rgba(176, 121, 42, .6); border-radius: 10px; background: #FBF6EE; font-size: 12.5px; }
 .tm-bulk .form-select { width: auto; min-width: 240px; }
+.tm-took { color: #7A5207; }

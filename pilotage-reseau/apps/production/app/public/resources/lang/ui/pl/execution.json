@@ -126,5 +126,9 @@
   "plan_help": "Jeden tablet biurowy (wejście / wyjście osobistym kodem QR i podpisem na telefonie), jeden tablet kierowcy i jeden tablet na każdą grupę produkcji (wejście / wyjście z podpisem na tablecie, produkcja dnia). « Utwórz » daje kod parowania : otwórz na tablecie podaną stronę i wpisz kod.",
   "office_all": "wszystkie działy · /tablet/office (QR telefonem albo PIN + podpis)",
   "mode_change_confirm": "Zmienić rodzaj tabletu « {name} » na « {mode} » ? Tablet zostaje sparowany — przy następnym powrocie do ekranu startowego otworzy właściwą stronę.",
-  "mode_changed": "Rodzaj tabletu : {mode}."
+  "mode_changed": "Rodzaj tabletu : {mode}.",
+  "q.kind": "Rodzaj",
+  "q.kind.confirm": "Potwierdzenie (✓)",
+  "q.kind.yes_no": "Tak / Nie (« Tak » → co)",
+  "q.info": "(i) informacja na tablecie — opcjonalnie"
 }

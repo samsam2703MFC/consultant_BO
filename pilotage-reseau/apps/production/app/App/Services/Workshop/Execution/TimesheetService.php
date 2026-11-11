@@ -78,6 +78,11 @@ final class TimesheetService
         foreach ($rows as $r) {
             $d = $r['direction'];
             $out[$d] ??= ['yes' => 0, 'total' => 0, 'no' => []];
+            // [263] Pytanie Tak / Nie (np. towar przy wyjściu) : odpowiedź, nie punkt do potwierdzenia — « Tak » z opisem.
+            if (($r['kind'] ?? 'confirm') === 'yes_no') {
+                if ((int) $r['answer'] === 1) $out[$d]['declared'][] = (string) ($r['note'] ?? '');
+                continue;
+            }
             $out[$d]['total']++;
             if ((int) $r['answer'] === 1) $out[$d]['yes']++; else $out[$d]['no'][] = $r['question'];
         }

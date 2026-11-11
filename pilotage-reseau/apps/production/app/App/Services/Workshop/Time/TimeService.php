@@ -154,7 +154,8 @@ final class TimeService
                     if ($out === null) $open = true;
                     else $worked += intdiv(max(0, $out - $in), 60);
                     $list[] = ['id' => (int) $k['id'], 'in' => $k['clock_in'], 'out' => $k['clock_out'], 'source' => $k['source'], 'note' => $k['note'],
-                        'corrected' => $k['corrected_at'] !== null, 'running' => $out === null ? intdiv(max(0, $now - $in), 60) : null];
+                        'corrected' => $k['corrected_at'] !== null, 'running' => $out === null ? intdiv(max(0, $now - $in), 60) : null,
+                        'took' => isset($k['took']) && $k['took'] !== null ? (string) $k['took'] : null];
                 }
                 $excess = $worked - $plan;
                 $overtime = $excess > $r['tolerance'] ? $excess : 0;
@@ -263,6 +264,8 @@ final class TimeService
                 'overtime_reason' => $ot ? ['code' => $ot['reason'], 'label' => self::OVERTIME_REASONS[$ot['reason']] ?? $ot['reason'], 'note' => $ot['note']] : null,
                 'absence_reason' => $ab ? ['code' => $ab['reason'], 'label' => self::ABSENCE_REASONS[$ab['reason']] ?? $ab['reason'], 'note' => $ab['note']] : null,
                 'status' => $status,
+                // [263] Towar zabrany przy wyjściu (odpowiedź « Tak » na tablecie / telefonie) : co.
+                'took' => implode(' · ', array_filter(array_map(fn($k) => $k['took'] === null ? null : ($k['took'] !== '' ? $k['took'] : 'tak'), $c['clocks']))) ?: null,
                 'comp_proposed' => array_map(fn($x) => ['id' => (int) $x['id'], 'day' => $x['day'], 'minutes' => (int) $x['minutes']], $proposed[$id] ?? []),
             ];
         }

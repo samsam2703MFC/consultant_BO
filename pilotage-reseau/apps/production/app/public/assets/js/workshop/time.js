@@ -178,7 +178,7 @@
             need_absence: '<span class="at-pill at-pill-danger">Powód ?</span>', ok: '<span class="at-pill at-pill-ok">OK</span>'}[p.status];
         const comp = p.comp_proposed.length ? `<span class="tm-sub"><i class="bi bi-pen"></i> dzień wolny ${dm(p.comp_proposed[0].day)} do podpisu</span>` : '';
         return `<tr class="${p.status !== 'ok' ? 'tm-need' : ''}" data-row="${p.employee_id}">
-            <td><b>${esc(p.name)}</b>${comp}</td>
+            <td><b>${esc(p.name)}</b>${comp}${p.took ? `<span class="tm-sub tm-took" title="Odpowiedź przy wyjściu (tablet / telefon)"><i class="bi bi-bag"></i> zabiera : ${esc(p.took)}</span>` : ''}</td>
             <td>${p.group ? `<span class="tm-group" style="--g:${esc(p.group_color || '#B8B2A8')}">${esc(p.group)}</span>` : '—'}</td>
             <td class="text-center">${inCell}</td><td class="text-center">${outCell}</td>
             <td class="text-end tm-num">${p.open ? '—' : (p.clocks.length ? hm(p.worked) : '—')}</td>

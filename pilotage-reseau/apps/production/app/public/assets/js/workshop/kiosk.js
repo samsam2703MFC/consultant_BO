@@ -803,12 +803,12 @@
     // punkty są potwierdzone i podpis złożony — bez podpisu nie ma wejścia ani wyjścia.
     function renderQuestions(questions, direction, error, sign) {
         resetIdle();
-        const yes = new Set();
+        // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
+        let refresh = () => {};
+        const cq = window.TfbClockQuestions(questions, {t, esc, onChange: () => { resetIdle(); refresh(); }});
         el.innerHTML = personHeader() + `<section class="kiosk-card kiosk-confirm">
                 <h2>${icon(direction === 'in' ? 'log-in' : 'log-out')} ${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</h2>
-                ${questions.length ? `<p class="kiosk-muted">${esc(t('confirm_help'))}</p>
-                <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
-                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>` : ''}
+                ${cq.html}
                 ${sign ? `<div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
                     <canvas class="kiosk-sign" data-pad width="900" height="240" aria-label="${esc(t('signature'))}"></canvas>
                     <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>` : ''}
@@ -818,20 +818,11 @@
             </section>`;
         const ok = el.querySelector('[data-confirm]');
         const pad = sign ? signaturePad(el.querySelector('[data-pad]'), () => refresh()) : null;
-        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)) || (pad !== null && pad.empty()); };
+        refresh = () => { ok.disabled = cq.blocked() || (pad !== null && pad.empty()); };
         refresh();
-        el.querySelector('.kiosk-checks')?.addEventListener('click', (e) => {
-            const b = e.target.closest('[data-q]');
-            if (!b) return;
-            resetIdle();
-            const id = Number(b.dataset.q);
-            if (yes.has(id)) yes.delete(id); else yes.add(id);
-            b.classList.toggle('is-on', yes.has(id));
-            b.setAttribute('aria-pressed', String(yes.has(id)));
-            refresh();
-        });
+        cq.bind(el);
         el.querySelector('[data-clear]')?.addEventListener('click', () => { pad.clear(); refresh(); });
-        ok.addEventListener('click', () => clockTap(ok, direction, questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), pad ? pad.image() : null));
+        ok.addEventListener('click', () => clockTap(ok, direction, cq.answers(), pad ? pad.image() : null));
         el.querySelector('[data-back]').addEventListener('click', () => renderMe());
     }
 

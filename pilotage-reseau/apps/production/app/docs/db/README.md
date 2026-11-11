@@ -1648,6 +1648,17 @@ travaillé). Un pointage compte pour le jour de son entrée. Récupération en j
   Administracja › Uprawnienia i menu et Zadania stanowisk.
 - Test : `tests/time_tracking_test.php` (base jetable).
 
+### Sortie : « Avez-vous repris de la marchandise ? » — 263 (migration 163)
+
+Demande du 11/11/2026. Questions de pointage (`n_clock_question`) : genre `kind` = `confirm` (case à confirmer, comme
+avant) ou `yes_no` (réponse Tak / Nie, les deux valables ; obligatoire = il faut choisir), information (i) `info_pl` /
+`info_fr`. Réponse « Tak » → ce qui est pris, obligatoire (`n_clock_answer.note`). Question ajoutée à la sortie, avec la
+règle de l'entreprise en (i) : manger sur place sans limite, rebuts à encoder, demande pour une fête au bureau (jamais
+refusée), pas de demi-tarte sous le manteau. Écran commun `assets/js/workshop/clock-questions.js` (tablette de bureau,
+tablette de groupe, téléphone) ; `ClockQuestionService::check` refuse la sortie sans réponse ou « Tak » sans précision.
+La déclaration apparaît dans Czas pracy › Dzień (« zabiera : … ») et sur la fiche des heures (pas comme point non
+confirmé). Gestion : Tablety › Pytania (rodzaj, (i)). Test : `tests/time_tracking_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

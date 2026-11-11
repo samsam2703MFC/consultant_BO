@@ -12,7 +12,8 @@ declare(strict_types=1);
  *     image invalide refusée ; ERP), absence « wn » et plan réduit, annulation ;
  *   - congés : 26 jours, « na żądanie » 4 par an, chevauchement refusé, droit par personne, alerte 2 absents d'un groupe ;
  *   - mois : matrice, clôture refusée (mois en cours, jours non validés), mois clos = plus de modification ;
- *   - fiche A4 PDF (logo SL Food), tâche n° 1 cochée par la validation, compteur du menu, tablette (/kiosk/me → comp_days).
+ *   - fiche A4 PDF (logo SL Food), tâche n° 1 cochée par la validation, compteur du menu, tablette (/kiosk/me → comp_days) ;
+ *   - [263] migration 163 : question de sortie « marchandise » Tak / Nie avec (i), « Tak » → quoi (obligatoire), visible au jour.
  *
  *   php tests/time_tracking_test.php
  *
@@ -78,7 +79,8 @@ try {
     $pdo->exec("INSERT INTO n_position_task (id, id_position, id_category, title_pl, title_fr, frequency, link_path, auto_code, sort_order, active) VALUES
         (50, 3, 1, 'Zakupy tygodnia', 'Achats', 'weekly', '/workshop/buy', 'buy_sent', 30, 1)");
 
-    $migrations = (string) file_get_contents(__DIR__ . '/../migrations/tfb/161_time_tracking.sql') . "\n" . file_get_contents(__DIR__ . '/../migrations/tfb/162_production_manager_time_only.sql');
+    $migrations = (string) file_get_contents(__DIR__ . '/../migrations/tfb/161_time_tracking.sql') . "\n" . file_get_contents(__DIR__ . '/../migrations/tfb/162_production_manager_time_only.sql')
+        . "\n" . file_get_contents(__DIR__ . '/../migrations/tfb/163_clock_goods_question.sql');
     foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements($migrations) as $sql) $pdo->exec($sql);
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
     expectTm($count("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'n_time_%'") === 6, 'migration 161: 6 tables');
@@ -249,6 +251,25 @@ try {
     $s = $time->sheet(11, '2026-11', $now);
     expectTm($s['totals']['overtime'] === 330 && $s['totals']['wn'] === 1 && $s['rows'][2]['reason'] === 'Zamówienie pilne / domówienie', 'sheet: validated overtime, comp day, reason');
     expectTm($c->get(\App\Repositories\Workshop\TimeRepository::class)->daysToValidate('2026-11-01', '2026-11-12') === 3, 'menu counter: days with clocks not validated (04, 05, 06.11)');
+
+    // --- [263] Sortie : « Czy zabierasz dziś towar ? » (Tak / Nie, (i), « Tak » → co)
+    expectTm($count("SELECT COUNT(*) FROM n_clock_question WHERE kind = 'yes_no' AND direction = 'out'") === 1, 'migration 163 (replayed twice): one goods question at clock-out');
+    $cq = $c->get(\App\Services\Workshop\Execution\ClockQuestionService::class);
+    $goods = array_values(array_filter($cq->forKiosk(true)['out'], fn($q) => $q['kind'] === 'yes_no'))[0];
+    expectTm($goods['required'] && str_starts_with($goods['text'], 'Avez-vous repris de la marchandise') && str_contains((string) $goods['info'], 'demi-tarte sous le manteau'), 'tablet (FR): goods question with (i) policy');
+    $gid = $goods['id'];
+    expectTm(refusal(fn() => $cq->check('out', [], false)) === 'CLOCK_QUESTIONS_REQUIRED', 'goods question must be answered (Tak or Nie)');
+    expectTm(refusal(fn() => $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => ' ']], false)) === 'CLOCK_QUESTIONS_REQUIRED', '« Tak » needs what is taken');
+    $no = $cq->check('out', [['question_id' => $gid, 'yes' => false]], false);
+    expectTm($no[0]['answer'] === false && $no[0]['note'] === null, '« Nie » is a valid answer');
+    $friday = (int) $pdo->query("SELECT id FROM n_prod_clock WHERE id_employee = 11 AND clock_in = '2026-11-06 06:00:00'")->fetchColumn();
+    $cq->save($friday, 'out', $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => '2 tarty z braków']], false));
+    expectTm($pdo->query("SELECT note FROM n_clock_answer WHERE id_clock = {$friday}")->fetchColumn() === '2 tarty z braków', 'declaration kept with the clock-out');
+    $fri = array_column($time->day('2026-11-06', $now)['people'], null, 'employee_id');
+    expectTm($fri[11]['took'] === '2 tarty z braków' && $fri[12]['took'] === null, 'Czas pracy › Dzień shows what was taken');
+    $sheetRow = $c->get(\App\Services\Workshop\Execution\TimesheetService::class)->month(11, '2026-11', $now)['days'];
+    $friRow = array_values(array_filter($sheetRow, fn($d) => $d['id'] === $friday))[0];
+    expectTm(($friRow['answers']['out']['declared'] ?? []) === ['2 tarty z braków'] && $friRow['answers']['out']['no'] === [], 'timesheet: declaration, not an unconfirmed point');
 
     echo "time_tracking_test: OK\n";
 } finally {

@@ -126,5 +126,9 @@
   "plan_help": "Une tablette de bureau (entrée / sortie par QR personnel et signature sur le téléphone), une tablette chauffeur et une tablette par groupe de production (entrée / sortie avec signature sur la tablette, production du jour). « Créer » donne le code d’appairage : ouvrez la page indiquée sur la tablette et saisissez le code.",
   "office_all": "tous les services · /tablet/office (QR avec le téléphone ou PIN + signature)",
   "mode_change_confirm": "Changer le type de la tablette « {name} » en « {mode} » ? Elle reste appairée — au prochain retour à l’accueil, elle ouvre la bonne page.",
-  "mode_changed": "Type de tablette : {mode}."
+  "mode_changed": "Type de tablette : {mode}.",
+  "q.kind": "Type",
+  "q.kind.confirm": "Confirmation (✓)",
+  "q.kind.yes_no": "Oui / Non (« Oui » → quoi)",
+  "q.info": "(i) information sur la tablette — facultatif"
 }

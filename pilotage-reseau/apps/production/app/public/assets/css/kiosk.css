@@ -1038,3 +1038,20 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
 .tm-av { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 50%; background: #8D1D2C; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 14px; }
 @media (max-width: 720px) { .tm-msg { grid-template-columns: 44px minmax(0, 1fr); } .tm-icon { width: 44px; height: 44px; } .tm-read { grid-column: 1 / -1; width: 100%; } }
 .tm-more { justify-self: start; min-height: 44px; }
+
+/* [263] Pytanie Tak / Nie przy odbiciu (np. towar przy wyjściu) : (i) z zasadą firmy, « Tak » → co. */
+.kiosk-yn { margin-top: 12px; padding: 14px 18px; border: 1px solid var(--k-line-2); border-radius: 16px; background: var(--k-surface); }
+.kiosk-yn-q { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; font-size: 19px; font-weight: 600; line-height: 1.3; }
+.kiosk-yn-i { flex: 0 0 40px; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--k-line-2); background: #fff; color: var(--k-muted);
+  font: 700 19px/1 Georgia, 'Times New Roman', serif; font-style: italic; cursor: pointer; }
+.kiosk-yn-i[aria-expanded="true"] { border-color: var(--k-primary); color: var(--k-primary); }
+.kiosk-yn-text { margin: 10px 0 0; padding: 12px 14px; border-radius: 12px; background: var(--k-fill); color: var(--k-text); font-size: 16px; line-height: 1.45; }
+.kiosk-yn-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.kiosk-yn-btns .kiosk-btn { min-height: 64px; font-size: 20px; border: 2px solid var(--k-line-2); background: #fff; color: var(--k-text); }
+.kiosk-yn-btns .kiosk-btn.is-on.is-ok { background: var(--k-ok); border-color: var(--k-ok); color: #fff; }
+.kiosk-yn-btns .kiosk-btn.is-on.is-warn { background: var(--k-warn); border-color: var(--k-warn); color: #fff; }
+.kiosk-yn-detail { display: flex; flex-direction: column; gap: 6px; margin-top: 12px; font-size: 16px; font-weight: 600; color: var(--k-muted); }
+.kiosk-yn-detail[hidden] { display: none; }
+.kiosk-yn-detail .kiosk-input { font-size: 20px; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--k-line-2); width: 100%; color: var(--k-text); background: #fff; }
+.kiosk-yn-detail .kiosk-input:focus { outline: none; border-color: var(--k-primary); box-shadow: 0 0 0 4px var(--k-primary-50); }
+.kiosk-phone .kiosk-yn-q { font-size: 18px; }

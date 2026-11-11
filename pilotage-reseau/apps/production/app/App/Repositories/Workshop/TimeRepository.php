@@ -37,10 +37,12 @@ final class TimeRepository extends WorkshopRepository
     {
         $params = [$from . ' 00:00:00', $to . ' 00:00:00'];
         $where = '';
-        if ($employeeId !== null) { $where = ' AND id_employee = ?'; $params[] = $employeeId; }
+        if ($employeeId !== null) { $where = ' AND k.id_employee = ?'; $params[] = $employeeId; }
         return $this->all(
-            "SELECT id, id_employee, clock_in, clock_out, source, note, corrected_at FROM n_prod_clock
-             WHERE clock_in >= ? AND clock_in < ?{$where} ORDER BY clock_in",
+            "SELECT k.id, k.id_employee, k.clock_in, k.clock_out, k.source, k.note, k.corrected_at,
+                    (SELECT GROUP_CONCAT(COALESCE(a.note, '') SEPARATOR ' · ') FROM n_clock_answer a JOIN n_clock_question q ON q.id = a.id_question
+                     WHERE a.id_clock = k.id AND q.kind = 'yes_no' AND a.answer = 1) AS took
+             FROM n_prod_clock k WHERE k.clock_in >= ? AND k.clock_in < ?{$where} ORDER BY k.clock_in",
             $params
         );
     }

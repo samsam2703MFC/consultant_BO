@@ -810,5 +810,10 @@
   "comp_help": "Kierownik produkcji zaproponował dzień wolny za nadgodziny. Podpisz palcem w ramce, żeby go potwierdzić.",
   "comp_sign": "Podpisuję",
   "comp_later": "Nie teraz",
-  "comp_done": "Dzień wolny podpisany."
+  "comp_done": "Dzień wolny podpisany.",
+  "yn_yes": "Tak",
+  "yn_no": "Nie",
+  "yn_info": "Informacja",
+  "yn_detail": "Co ? Wpisz krótko — braki trzeba wpisać",
+  "yn_detail_ph": "np. 2 tarty z braków"
 }

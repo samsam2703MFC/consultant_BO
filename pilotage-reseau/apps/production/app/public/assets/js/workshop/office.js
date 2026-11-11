@@ -300,13 +300,13 @@
     function renderConfirm(p, token, me, direction, error) {
         clearTimers();
         const questions = (me.questions && me.questions[direction]) || [];
-        const yes = new Set();
+        // [263] Punkty do potwierdzenia i pytania Tak / Nie (np. towar przy wyjściu, (i) z zasadą firmy).
+        let refresh = () => {};
+        const cq = window.TfbClockQuestions(questions, {t, esc, onChange: () => refresh()});
         el.innerHTML = header(`<button type="button" class="kiosk-btn is-small" data-home>‹ ${esc(t('back'))}</button>`) + `<section class="kiosk-card kiosk-confirm office-confirm">
                 <div class="office-qr-who">${avatar(p.name, 'is-lg')}<div><h2>${esc(p.name)}</h2>
                     <span class="office-action is-${direction}">${esc(t(direction === 'in' ? 'confirm_in' : 'confirm_out'))}</span></div></div>
-                ${questions.length ? `<p class="kiosk-muted">${esc(t('confirm_help'))}</p>
-                <div class="kiosk-checks">${questions.map(q => `<button type="button" class="kiosk-check" data-q="${q.id}" aria-pressed="false">
-                    <span class="kiosk-check-box" aria-hidden="true"></span><span>${esc(q.text)}${q.required ? '' : `<small>${esc(t('optional'))}</small>`}</span></button>`).join('')}</div>` : ''}
+                ${cq.html}
                 <div class="kiosk-confirm-sign"><p class="kiosk-status">${esc(t(direction === 'in' ? 'sign_in_here' : 'sign_out_here'))}</p>
                     <canvas class="kiosk-sign" data-pad width="900" height="260" aria-label="${esc(t('signature'))}"></canvas>
                     <div class="kiosk-row is-end"><button type="button" class="kiosk-btn is-small" data-clear>${esc(t('clear'))}</button></div></div>
@@ -315,23 +315,15 @@
             </section>`;
         const ok = el.querySelector('[data-confirm]');
         const pad = signaturePad(el.querySelector('[data-pad]'), () => refresh());
-        const refresh = () => { ok.disabled = questions.some(q => q.required && !yes.has(q.id)) || pad.empty(); };
+        refresh = () => { ok.disabled = cq.blocked() || pad.empty(); };
         refresh();
-        el.querySelector('.kiosk-checks')?.addEventListener('click', (e) => {
-            const b = e.target.closest('[data-q]');
-            if (!b) return;
-            const id = Number(b.dataset.q);
-            if (yes.has(id)) yes.delete(id); else yes.add(id);
-            b.classList.toggle('is-on', yes.has(id));
-            b.setAttribute('aria-pressed', String(yes.has(id)));
-            refresh();
-        });
+        cq.bind(el);
         el.querySelector('[data-clear]').addEventListener('click', () => { pad.clear(); refresh(); });
         const uuid = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'xxxxxxxx-xxxx-4xxx-8xxx-xxxxxxxxxxxx'.replace(/x/g, () => Math.floor(Math.random() * 16).toString(16));
         ok.addEventListener('click', async () => {
             ok.disabled = true;
             try {
-                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: questions.map(q => ({question_id: q.id, yes: yes.has(q.id)})), signature: pad.image()}, token);
+                const r = await api('POST', '/kiosk/clock', {direction, client_uuid: uuid, answers: cq.answers(), signature: pad.image()}, token);
                 const at = String((direction === 'out' ? r.clock.clock_out : r.clock.clock_in) || '').slice(11, 16);
                 // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
                 if (me.comp_days && me.comp_days.length) return renderComp(p, token, me.comp_days.slice(), {direction, at});

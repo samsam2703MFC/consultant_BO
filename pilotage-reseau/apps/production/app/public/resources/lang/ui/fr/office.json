@@ -63,5 +63,10 @@
   "comp_help": "Le responsable de production a proposé un jour de récupération. Signez du doigt dans le cadre pour le confirmer.",
   "comp_sign": "Je signe",
   "comp_later": "Pas maintenant",
-  "comp_done": "Jour de récupération signé."
+  "comp_done": "Jour de récupération signé.",
+  "yn_yes": "Oui",
+  "yn_no": "Non",
+  "yn_info": "Information",
+  "yn_detail": "Quoi ? En quelques mots — les rebuts doivent être encodés",
+  "yn_detail_ph": "ex. 2 tartes de rebut"
 }
