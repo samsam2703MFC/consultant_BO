@@ -1710,6 +1710,8 @@ produkcji par la migration ; l'administrateur peut le retirer dans Uprawnienia i
 Option de l'administrateur (Premie zespołów) : `manager.show_bonuses` — sans elle, aucune prime ne sort du serveur pour
 le Kierownik (les coûts restent). Le taux se règle au même endroit (0 à 5 %). Service `App\Services\Staff\TeamCostsService`,
 route `GET /ajax/time/costs`. Test : `tests/team_costs_test.php`.
+Migration 167 (même jour, « retirer pour le moment ») : droit `team_costs` retiré au Kierownik produkcji ; à rendre dans
+Uprawnienia i menu quand ce sera voulu.
 
 ## Conventions
 

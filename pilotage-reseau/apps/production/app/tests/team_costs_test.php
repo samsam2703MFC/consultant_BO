@@ -67,6 +67,12 @@ try {
         && $pdo->query("SELECT value FROM n_prod_param WHERE code = 'manager.quarterly_bonus'")->fetchColumn() === '0'
         && $count("SELECT COUNT(*) FROM n_page_access WHERE id_position = 3 AND page_key = 'team_costs'") === 1, 'migration 166 (replayed twice): 0,3 %, no quarterly bonus, access for the Kierownik');
 
+    // 167 : retiré pour le moment de la session Kierownik produkcji (demande du 11/11/2026), rejouable.
+    $m167 = (string) file_get_contents(__DIR__ . '/../migrations/tfb/167_manager_team_costs_off.sql');
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements($m167) as $sql) $pdo->exec($sql);
+    expectTc($count("SELECT COUNT(*) FROM n_page_access WHERE id_position = 3 AND page_key = 'team_costs'") === 0
+        && $pdo->query("SELECT value FROM n_prod_param WHERE code = 'manager.sales_bonus_pct'")->fetchColumn() === '0.3', 'migration 167 (replayed twice): tab removed from the Kierownik, settings kept');
+
     // --- Deux groupes de production, quatre personnes (une dans les deux groupes par une équipe), paliers
     $pdo->exec("INSERT INTO production_sections (id, name, depreciation, water_cost, power_supply_cost, fuel_cost, other_cost) VALUES (1, 'Piekarnia', 0, 0, 0, 0, 0), (2, 'Tarty', 0, 0, 0, 0, 0)");
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active, id_section, bonus_visible) VALUES
