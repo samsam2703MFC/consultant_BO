@@ -21,6 +21,8 @@ import { valsPromoTableau, valsPromoEdition, promosBadges, peMonter } from './pr
 import { valsVisibilite, visibiliteBadge } from './visibilite-vals.js';
 // MétaDonnée : un module à part, qui tient son DOM (window.CockpitMetaDonnee) — monté après chaque rendu.
 import './metadonnee.js';
+// Structure de gamme (11/11/2026) : le standard, les saisons, ce qui sort — un onglet du Planogramme, à côté de l'assortiment.
+import { valsStructure } from './structure-gamme.js';
 
 // Mode tablette (09/10/2026) : un écran tactile jusqu'à 1366 px, ou une fenêtre étroite. Les écrans qui s'y
 // prêtent (la fiche franchisé) replient le menu en tiroir et grossissent leurs cibles tactiles.
@@ -359,7 +361,7 @@ class App {
       cadreTaches: 'checklists',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', visibilite: 'visibilite', budget: 'budget', encodage: 'budget/encodage',
-      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment',
+      budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
       planogramme: 'planogramme', analyse: 'analyse',
       anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
       manque: 'catalogue/manque',
@@ -1131,6 +1133,7 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie. Ce qui est retenu devient l’assortiment obligatoire.'],
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
       promoEdition: ['Édition', 'Le formulaire du dashboard magasin, avec le magasin à choisir — ou tous les magasins : une promotion « X achetés + Y » s’écrit au panel, réservée au magasin ou pour tout le réseau, sans validation.'],
       apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
@@ -1190,7 +1193,9 @@ class App {
       // Le Catalogue n'a plus d'onglets (18/10/2026, maquette « A + D ») : une liste et sa fiche (valsCatalogue). Le
       // comptoir reçoit l'assortiment obligatoire, qui se tient là où on place les produits.
       planogramme: ['Comptoir · planogramme', 'Le comptoir standard et ce que chaque boutique doit tenir.',
-        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]]]] };
+        [['planogramme', 'Comptoir', titles.planogramme[1]], ['assortiment', 'Assortiment obligatoire', titles.assortiment[1]],
+          // La structure de gamme (11/11/2026) : ce que l'assortiment devrait être, calculé sur les ventes de douze mois.
+          ['structure', 'Structure de gamme', titles.structure[1]]]] };
     // Écrans sans onglet propre : ils allument l'onglet qui les porte (le calendrier est une vue des campagnes).
     const ecranOnglet = S.screen;
     const grp = Object.keys(GROUPES).find(k => k === ecranOnglet || (GROUPES[k][2] || []).some(o => o[0] === ecranOnglet));
@@ -1420,7 +1425,7 @@ class App {
       ['Produits', [
         ['catalogue', 'Catalogue', (this._pdDcs || {}).effacer || 0,
           ['anaprod', 'manque', 'prixvolume', 'analyse']],
-        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment']]]],
+        ['planogramme', 'Planogramme', (this.D.prodCatalogue || []).filter(p => (p.exigible !== undefined ? p.exigible : p.must) && !p.zone).length, ['assortiment', 'structure']]]],
       // Les promotions (26/10/2026, maquette A de docs/maquettes/promotions-cockpit) : sorties du dashboard magasin, qui
       // ne fait plus que les lire. L'Édition (l'assistant du dashboard, le magasin au choix) et le Tableau d'analyse
       // (toutes les promotions de tous les magasins). Les badges, une fois lues : les brouillons à reprendre, les
@@ -1517,9 +1522,9 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
-      assortiment: 'isAsso', planogramme: 'isPlano', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
@@ -1893,6 +1898,7 @@ class App {
     // Le Catalogue (18/10/2026) : la liste et sa fiche, avec les gestes du scoring (seuils, PDF, revue, détail du score).
     if (common.isCat) { this.valsProduits(common); this.catCharge(); this.valsCatalogue(common); }
     if (common.isAsso) this.valsAssortiment(common);
+    if (common.isStruct) valsStructure(this, common);
     // Le planogramme est lu dès qu'une fiche de présentation est ouverte, d'où
     // qu'elle vienne : l'assortiment ouvre la même fiche, et sans le plan elle
     // n'aurait aucun emplacement à proposer.
@@ -10032,10 +10038,11 @@ class App {
    */
   evVals(){
     const S = this.state, D = this.D.rev;
-    const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'jour' ? 'jour' : 'total';
+    // Par jour ouvert par défaut (demande du 11/11/2026) : la lecture qui neutralise les fermetures.
+    const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'total' ? 'total' : 'jour';
     const out = { quoi, mode, chargement: !D, erreur: D && D.erreur ? D.erreur : '',
       quois: [['clients', 'Trafic clients'], ['ca', 'Chiffre d’affaires']].map(o => ({ nom: o[1], on: o[0] === quoi, go: () => this.setState({ evQuoi: o[0] }) })),
-      modes: [['total', 'Total'], ['jour', 'Par jour ouvert']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
+      modes: [['jour', 'Par jour ouvert'], ['total', 'Total']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
       relire: () => this.evCharge(true) };
     if (!D || D.erreur) { return out; }
     if (!D.magasins.length) { out.vide = true; return out; }
@@ -10126,23 +10133,30 @@ class App {
     });
     out.unite = unite;
     out.chipTxt = 'sous chaque mois : l’écart au N-1, en %' + (parJour ? ' — par jour ouvert : le mois ÷ ses jours de vente, le N-1 ÷ les siens' : '');
-    // L'année par année : à périmètre comparable (les mois qui ont un N-1).
-    out.annees = [];
+    // Trimestre par trimestre (demande du 11/11/2026, à la place de l'année par
+    // année) : chaque trimestre face au même trimestre un an plus tôt, à
+    // périmètre comparable — seuls les mois qui ont un N-1 comptent dans l'écart.
+    out.trimestres = [];
     D.magasins.forEach(m => {
       const M = m.mois.map(prep);
-      [...new Set(M.map(x => x.an))].forEach((an, i) => {
-        const ms = M.filter(x => x.an === an), cmp = ms.filter(x => x.n1Ok);
+      const tri = x => x.an * 10 + Math.ceil(x.mo / 3);
+      [...new Set(M.map(tri))].forEach((t, i) => {
+        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok);
         const c = somme(ms, x => x.clients), ca = somme(ms, x => x.ca), j = somme(ms, x => x.jours);
         const cC = somme(cmp, x => x.clients), caC = somme(cmp, x => x.ca), jC = somme(cmp, x => x.jours);
         const c1 = somme(cmp, x => x.n1.clients), ca1 = somme(cmp, x => x.n1.ca), j1 = somme(cmp, x => x.n1.jours);
         const ec = c1 ? (parJour ? pc(cC / jC, c1 / j1) : pc(cC, c1)) : null, eca = ca1 ? (parJour ? pc(caC / jC, ca1 / j1) : pc(caC, ca1)) : null;
         const ep = c1 ? pc(caC / cC, ca1 / c1) : null;
         const cur = ms.find(x => x.enCours);
-        out.annees.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, an: String(an),
-          per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]),
+        const dernier = cmp[cmp.length - 1];
+        out.trimestres.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, nouvelAn: i > 0 && t % 10 === 1, enCours: !!cur,
+          lab: 'T' + (t % 10) + ' ' + Math.floor(t / 10),
+          per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]) + (ms.some(x => x.partiel) ? ' · ouverture' : ''),
           clients: parJour ? fI(c / Math.max(1, j)) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
           ec: ec == null ? '' : sg(ec), ecCoul: col(ec), eca: eca == null ? '' : sg(eca), ecaCoul: col(eca), ep: ep == null ? '' : sg(ep), epCoul: col(ep),
-          sansN1: !cmp.length, cmp: cmp.length ? cmp.length + ' mois : ' + MC[cmp[0].mo] + ' → ' + (cmp[cmp.length - 1].enCours ? cmp[cmp.length - 1].jours + ' ' : '') + MC[cmp[cmp.length - 1].mo] : '' });
+          sansN1: !cmp.length,
+          cmp: !cmp.length ? '' : (cmp.length === ms.length ? 'tout le trimestre' + (cur ? ' à date' : '')
+            : cmp.length + ' mois : ' + MC[cmp[0].mo] + (cmp.length > 1 ? ' → ' + (dernier.enCours ? dernier.jours + ' ' : '') + MC[dernier.mo] : '')) });
       });
     });
     out.colClients = parJour ? 'Clients / jour' : 'Clients';

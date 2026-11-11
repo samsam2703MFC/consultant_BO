@@ -16,6 +16,7 @@ import { tplVerifCa } from './verification-ca-tpl.js';
 import { tplVerifMouvements } from './verification-mouvements-tpl.js';
 import { tplPromoTableau, tplPromoEdition } from './promotions-tpl.js';
 import { tplVisibilite } from './visibilite-tpl.js';
+import { tplStructure } from './structure-gamme-tpl.js';
 
 /* Icônes linéaires du rail (design system §7.12, tracés du catalogue §8.4) :
    une notion = un tracé, réutilisé d'un module à l'autre. Une entrée sans
@@ -180,7 +181,7 @@ export function render(c, x){
           <span style="font-size:12px;color:var(--color-text-muted)">${esc(l.quoi)} — ${esc(l.source)}</span>
         </div>`).join('')}
       </div>` : ''}
-      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
+      ${c.isCat ? tplCatalogue(c, x) : ''}${c.isAsso ? tplAssortiment(c, x) : ''}${c.isStruct ? tplStructure(c, x) : ''}${c.isPlano ? tplPlanoStd(c, x) : ''}
       ${c.isAnalyse ? tplAnalyse(c, x) : ''}
       ${c.isAnaprod ? tplAnaprod(c, x) : ''}
       ${c.isDiag ? tplDiagnostic(c, x) : ''}
@@ -3317,9 +3318,9 @@ function tplResultatEvolution(c, x){
         </div></div>
       </div>`;
     const pill = (t, coul) => t ? `<span class="rr-pill" style="background:${coul}">${esc(t)}</span>` : '—';
-    const table = `<div class="rm-bloc"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>Année par année</span><span style="font-weight:400;text-transform:none;letter-spacing:0">les écarts ne comptent que les mois qui ont un N-1 — à périmètre comparable${g.mode === 'jour' ? ' · par jour ouvert' : ''}</span></div><div class="rm-card">
-      <table class="rr-tb ev-an"><tr><th>Magasin</th><th>Année</th><th>${esc(g.colClients)}</th><th>vs N-1</th><th>${esc(g.colCa)}</th><th>vs N-1</th><th>Panier</th><th>vs N-1</th><th>Jours vendus</th><th>Comparé sur</th></tr>
-      ${g.annees.map(a => `<tr class="${a.premier ? 'ev-prem' : ''}"><td>${esc(a.mag)}</td><td><b style="font-weight:400">${esc(a.an)}</b> <span style="color:var(--color-text-muted)">${esc(a.per)}</span></td><td>${esc(a.clients)}</td><td>${a.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(a.ec, a.ecCoul)}</td><td>${esc(a.ca)}</td><td>${a.sansN1 ? '' : pill(a.eca, a.ecaCoul)}</td><td>${esc(a.panier)}</td><td>${a.sansN1 ? '' : pill(a.ep, a.epCoul)}</td><td>${esc(a.jours)}</td><td style="color:var(--color-text-muted)">${esc(a.cmp || '—')}</td></tr>`).join('')}
+    const table = `<div class="rm-bloc"><div style="${cap};margin-bottom:8px;display:flex;justify-content:space-between;gap:12px"><span>Trimestre par trimestre</span><span style="font-weight:400;text-transform:none;letter-spacing:0">chaque trimestre face au même trimestre un an plus tôt · seuls les mois qui ont un N-1 comptent dans l’écart${g.mode === 'jour' ? ' · par jour ouvert' : ''}</span></div><div class="rm-card">
+      <table class="rr-tb ev-an"><tr><th>Magasin</th><th>Trimestre</th><th>${esc(g.colClients)}</th><th>vs N-1</th><th>${esc(g.colCa)}</th><th>vs N-1</th><th>Panier</th><th>vs N-1</th><th>Jours vendus</th><th>Comparé sur</th></tr>
+      ${g.trimestres.map(a => `<tr class="${a.premier ? 'ev-prem' : (a.nouvelAn ? 'ev-an1' : '')}${a.enCours ? ' ev-cours' : ''}"><td>${esc(a.mag)}</td><td><b style="font-weight:400">${esc(a.lab)}</b> <span style="color:var(--color-text-muted)">${esc(a.per)}</span></td><td>${esc(a.clients)}</td><td>${a.sansN1 ? '<span style="color:var(--color-text-muted)">pas de N-1</span>' : pill(a.ec, a.ecCoul)}</td><td>${esc(a.ca)}</td><td>${a.sansN1 ? '' : pill(a.eca, a.ecaCoul)}</td><td>${esc(a.panier)}</td><td>${a.sansN1 ? '' : pill(a.ep, a.epCoul)}</td><td>${esc(a.jours)}</td><td style="color:var(--color-text-muted)">${esc(a.cmp || '—')}</td></tr>`).join('')}
       </table></div></div>`;
     corps = `<div style="${cap};font-size:10px;margin:-6px 0 -6px;text-transform:none;letter-spacing:0">${esc(g.chipTxt)}</div>
       ${g.magasins.map(carte).join('')}

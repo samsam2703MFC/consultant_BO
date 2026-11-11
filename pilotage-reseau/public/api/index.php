@@ -65,6 +65,7 @@ require __DIR__ . '/../../src/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
 require __DIR__ . '/../../src/assortiment.php';
+require __DIR__ . '/../../src/structure_gamme.php';
 require __DIR__ . '/../../src/plano_proposition.php';
 require __DIR__ . '/../../src/rapports.php';
 require __DIR__ . '/../../src/planning_sync.php';
@@ -566,6 +567,7 @@ function route(string $method, string $path): mixed
             $path === '/produits/utilisation/jamais.pdf' => ep_prod_utilisation_jamais_pdf(),
             $path === '/produits/utilisation/jamais'   => ep_prod_utilisation_jamais(),
             $path === '/produits/manque'              => ep_prod_manque(),
+            $path === '/produits/structure'           => ep_produits_structure(),
             $path === '/ventes/sonde'                 => ep_ventes_sonde(),
             $path === '/ventes/clients/sonde'         => ep_ventes_clients_sonde(),
             $path === '/ventes/stats/sonde'           => ep_stats_ventes_sonde(),
@@ -829,6 +831,11 @@ function route(string $method, string $path): mixed
     // Retirer une référence du catalogue : le SEUL geste du cockpit sur une
     // table du panel, et il ne touche qu'un booléen — jamais une suppression.
     if ($method === 'POST' && $path === '/produits/actif') { return wr_prod_actif(); }
+    // Structure de gamme : règles et décisions, retrait des références sous le seuil (garde-fou recalculé
+    // côté serveur), assortiment obligatoire aligné sur la structure.
+    if ($method === 'PUT' && $path === '/produits/structure') { return wr_produits_structure(); }
+    if ($method === 'POST' && $path === '/produits/structure/desactiver') { return wr_produits_structure_desactiver(); }
+    if ($method === 'POST' && $path === '/produits/structure/appliquer') { return wr_produits_structure_appliquer(); }
     if ($method === 'POST' && $path === '/ventes/sim') { return wr_ventes_sim(); }
     if ($method === 'POST' && $path === '/ventes/record') { return wr_ventes_record(); }
     if ($method === 'POST' && $path === '/ventes/envoi-test') { return wr_ventes_envoi_test(); }

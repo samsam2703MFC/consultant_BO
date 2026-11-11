@@ -822,6 +822,33 @@ function prodActifTfb(int $pid, bool $actif): array
 }
 
 /**
+ * Activer ou retirer UNE référence : le seul geste du cockpit sur la fiche produit, un booléen, jamais
+ * une suppression. Avec un compte API, la source est TFBuddy (prodActifTfb : écrit, relit, vérifie) et la
+ * copie locale suit ; sans compte, la copie seule. Partagé par « Retirer du catalogue » (POST
+ * /produits/actif) et la structure de gamme (POST /produits/structure/desactiver).
+ *
+ * @return array{ok:bool, deja?:bool, ou?:string, motif?:string, alerte?:?string, erreurBase?:string}
+ */
+function prodActifEcrire(int $pid, bool $actif, bool $api): array
+{
+    if ($api) {
+        $tfb = prodActifTfb($pid, $actif);
+        if (!$tfb['ok']) { return ['ok' => false, 'motif' => $tfb['motif'] ?? 'refusé']; }
+        // La copie suit la source ; elle peut manquer, la source a déjà la main.
+        try { Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]); } catch (PDOException $e) { /* sans copie */ }
+        return ['ok' => true, 'deja' => !empty($tfb['deja']), 'ou' => 'TFBuddy (' . $tfb['canal'] . ')', 'alerte' => $tfb['alerte'] ?? null];
+    }
+    try {
+        // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
+        // était déjà celle-là — c'est exactement « rien à faire ici ».
+        $n = Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]);
+    } catch (PDOException $e) {
+        return ['ok' => false, 'erreurBase' => $e->getMessage()];
+    }
+    return ['ok' => true, 'deja' => $n === 0, 'ou' => 'copie locale seulement (aucun compte API)'];
+}
+
+/**
  * POST /produits/actif — retirer (ou remettre) des références du catalogue.
  *
  * LE CATALOGUE VIT CHEZ TFBUDDY. L'écriture part donc à la source
@@ -926,28 +953,18 @@ function wr_prod_actif(): array
             $refuses[] = ['ref' => $ref, 'nom' => $c['nom'], 'unites' => round($vendus[$pid], 1)];
             continue;
         }
-        $ou = 'copie locale seulement (aucun compte API)';
-        if ($api) {
-            $tfb = prodActifTfb($pid, $actif);
-            if (!$tfb['ok']) { $echecs[] = ['ref' => $ref, 'nom' => $c['nom'], 'motif' => $tfb['motif'] ?? 'refusé']; continue; }
-            if (!empty($tfb['alerte'])) { $alertes[] = ['ref' => $ref, 'nom' => $c['nom'], 'alerte' => $tfb['alerte']]; }
-            // La copie suit la source ; elle peut manquer, la source a déjà la main.
-            try { Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]); } catch (PDOException $e) { /* sans copie */ }
-            if (!empty($tfb['deja'])) { $inchangees[] = $ref; continue; }
-            $ou = 'TFBuddy (' . $tfb['canal'] . ')';
-        } else {
-            try {
-                // `rowCount()` de l'UPDATE lui-même : MySQL rend 0 quand la valeur
-                // était déjà celle-là — c'est exactement « rien à faire ici ».
-                if (Db::exec('UPDATE product SET is_active = ? WHERE id = ?', [$actif ? 1 : 0, $pid]) === 0) {
-                    $inchangees[] = $ref; continue;
-                }
-            } catch (PDOException $e) {
-                http_response_code(503);
-                return ['error' => 'écriture refusée par la base : ' . $e->getMessage(),
-                    'faits' => count($faits), 'refuses' => $refuses];
-            }
+        // Le même chemin pour tout retrait : TFBuddy (ERP puis panel) relu après écriture, puis la copie locale ;
+        // sans compte API, la copie seule (prodActifEcrire).
+        $e = prodActifEcrire($pid, $actif, $api);
+        if (isset($e['erreurBase'])) {
+            http_response_code(503);
+            return ['error' => 'écriture refusée par la base : ' . $e['erreurBase'],
+                'faits' => count($faits), 'refuses' => $refuses];
         }
+        if (!$e['ok']) { $echecs[] = ['ref' => $ref, 'nom' => $c['nom'], 'motif' => $e['motif'] ?? 'refusé']; continue; }
+        if (!empty($e['alerte'])) { $alertes[] = ['ref' => $ref, 'nom' => $c['nom'], 'alerte' => $e['alerte']]; }
+        if (!empty($e['deja'])) { $inchangees[] = $ref; continue; }
+        $ou = $e['ou'];
         journalAdd('CEO', 'Produit', $c['nom'],
             ($actif ? 'Remise au catalogue' : 'Retirée du catalogue (is_active = 0)')
             . ' — réf. ' . $ref . ' — ' . $ou . ($motif !== '' ? ' — ' . $motif : ''));

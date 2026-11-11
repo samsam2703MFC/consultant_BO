@@ -42,6 +42,7 @@ require __DIR__ . '/../src/linkedin_api.php';
 require __DIR__ . '/../src/social_publication.php';
 require __DIR__ . '/../src/fbcontrole.php';
 require __DIR__ . '/../src/rayons_photos.php';
+require __DIR__ . '/../src/structure_gamme.php';
 
 $ok = 0; $ko = 0;
 function verifie(string $nom, bool $cond, string $detail = ''): void
@@ -356,6 +357,39 @@ verifie('au pluriel près', $rv('Comptoir viennoiserie') === 'viennoiseries');
 verifie('par le début du nom, à la frontière d’un mot', $rv('Comptoir pains') === 'pains-boulangerie' && $rv('Comptoir tartes et sablés') === 'tartes');
 verifie('« Tartelettes » ne prend pas « Tartes »', $rv('Photo du comptoir - Tartelettes') === null);
 verifie('une tâche qui n’est pas un comptoir n’a pas de rayon', rvRayonDeTache('Contrôle Qualité – Tartes') === null && rvRayonDeTache('Comptoir pains') === null);
+
+// --- la structure de gamme (src/structure_gamme.php) --------------------------------------
+echo "Structure de gamme\n";
+verifie('le nom se normalise : accents, pluriel, ordre des mots', sgNorme('Frangipane & Poires') === sgNorme('Poire & Frangipane') && sgNorme('Pâté') === sgNorme('pate'));
+verifie('les règles restent dans leurs bornes', sgBorne('seuil', '2,5') === 2.5 && sgBorne('seuil', 99) === 20.0 && sgBorne('max', 0) === 1 && sgBorne('std', 'x') === 80.0);
+verifie('par défaut, désactiver sous 3 %', sgReglage()['regles']['seuil'] === 3.0);
+verifie('une décision : standard, hors standard, une saison ou une période — rien d’autre', sgDecisionValide('saison:ete') && sgDecisionValide('periode:noel') && sgDecisionValide('garder') && !sgDecisionValide('saison:noel') && !sgDecisionValide('desactiver') && !sgDecisionValide(3));
+verifie('la décision se dit en mots au journal', sgDecisionMot('saison:ete') === 'gardée en saison Été' && sgDecisionMot('periode:paques') === 'gardée pour Pâques');
+$mois = ['Déc', 'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov'];
+$serie = fn (array $u) => ['1' => $u];
+$ap = ['tranches' => $mois, 'bornes' => [], 'jours' => [], 'magasins' => [['nom' => 'A']], 'produits' => [
+    ['pid' => 100, 'nom' => 'Brownies', 'cat' => 'Tartes', 'total' => 600, 'ca' => 6000, 'parShop' => $serie([60, 60, 60, 60, 60, 60, 60, 60, 60, 60, 0, 0])],
+    ['pid' => 200, 'nom' => 'Brownies', 'cat' => 'Tartes Ø 28', 'total' => 100, 'ca' => 1000, 'parShop' => $serie([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 60, 40])],
+    ['pid' => 300, 'nom' => 'Cerise', 'cat' => 'Tartes', 'total' => 200, 'ca' => 2000, 'parShop' => $serie(array_fill(0, 12, 16))],
+    ['pid' => 400, 'nom' => 'Cerises', 'cat' => 'Tartes Ø 28', 'total' => 100, 'ca' => 1000, 'parShop' => $serie(array_fill(0, 12, 8))],
+    ['pid' => 500, 'nom' => 'Abricot', 'cat' => 'Tartes Ø 28', 'total' => 20, 'ca' => 100, 'parShop' => $serie(array_fill(0, 12, 2))],
+]];
+$cat = [
+    ['ref' => '200', 'pwaId' => 200, 'nom' => 'Brownies', 'categorie' => 'Tartes Ø 28', 'groupe' => 'Tartes', 'prix' => 10, 'mat' => 4, 'matFiable' => true, 'commission' => 0.4],
+    ['ref' => '300', 'pwaId' => 300, 'nom' => 'Cerise', 'categorie' => 'Tartes', 'groupe' => 'Tartes', 'prix' => 10],
+    ['ref' => '400', 'pwaId' => 400, 'nom' => 'Cerises', 'categorie' => 'Tartes Ø 28', 'groupe' => 'Tartes', 'prix' => 10, 'must' => true],
+    ['ref' => '500', 'pwaId' => 500, 'nom' => 'Abricot', 'categorie' => 'Tartes Ø 28', 'groupe' => 'Tartes', 'prix' => 5],
+    ['ref' => '600', 'pwaId' => 600, 'nom' => 'Rhubarbe', 'categorie' => 'Tartes Ø 28', 'groupe' => 'Tartes', 'prix' => 10],
+];
+$sg = sgAssembler($ap, $cat, [['id' => 600, 'volume' => 30]]);
+$P = []; foreach ($sg['produits'] as $p) { $P[$p['id']] = $p; }
+verifie('une référence retirée transmet son historique à l’active du même nom', $P[200]['anciens'] === [['id' => 100, 'cat' => 'Tartes']] && $P[200]['ca'] === 7000 && !isset($P[100]), json_encode($P[200]['anciens'] ?? null));
+verifie('la marge nette : CA − commission − pièces × coût', $P[200]['mg'] === round(7000 * 0.96 - 700 * 4), (string) $P[200]['mg']);
+verifie('deux actives au même nom sont signalées en doublon, pas fusionnées', isset($P[300]['doublon'], $P[400]['doublon']) && $P[300]['doublon'][0]['id'] === 400);
+verifie('sous le plancher de lecture, le volume du dernier mois est gardé', $P[600]['u'] === null && $P[600]['v1'] === 30.0);
+$parts = sgParts($sg);
+verifie('la part du serveur : le CA de la référence sur celui de sa catégorie', abs($parts[500]['part'] - 100 / 8100) < 1e-9 && abs($parts[200]['part'] - 7000 / 8100) < 1e-9);
+verifie('lancée le mois dernier (≥ plancher / 3 pièces) : jamais retirée', $parts[600]['recente'] === true);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);
