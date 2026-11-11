@@ -43,6 +43,8 @@ final class TaskWizards
         'yield_reviewed' => ['Wydajność i straty', '/production/yield-review', 'przegląd kwartału zatwierdzony', 3],
         // [262] Czas pracy : zadanie nr 1 kierownika produkcji — odbicia dnia sprawdzone, powody wybrane, dzień zatwierdzony.
         'time_day_validated' => ['Czas pracy dnia', '/time', 'dzień zatwierdzony (odbicia, powody nadgodzin i nieobecności)', 1],
+        // [273] Czas pracy miesiąca : poprzedni miesiąc sprawdzony i zamknięty (karty czasu pracy).
+        'time_month_closed' => ['Czas pracy miesiąca', '/time/month', 'poprzedni miesiąc zamknięty (karty czasu pracy)', 1],
     ];
 
     /** Stanowisko pracowni → grupa produkcji (dzień grupy na tablecie). */
@@ -73,6 +75,7 @@ final class TaskWizards
         'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (kreator kosztów surowców)',
         'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (kreator)',
         'time_day_validated' => 'gdy dzień jest zatwierdzony w Czasie pracy (odbicia, powody nadgodzin i nieobecności)',
+        'time_month_closed' => 'gdy poprzedni miesiąc jest zamknięty w Czasie pracy › Miesiąc (karty czasu pracy)',
     ];
 
     private const MONTH_STEPS = ['cartons' => 'Kartony', 'staff' => 'Personel', 'media' => 'Media', 'fixed' => 'Koszty stałe i logistyka',
@@ -195,6 +198,10 @@ final class TaskWizards
                 break;
             case 'time_day_validated':
                 if ($r = $this->repo->timeDay($day)) $out = ['done' => true, 'summary' => 'zatwierdzony ' . $hm($r['validated_at']) . ($r['summary'] ? ' · ' . $r['summary'] : '')] + $out;
+                break;
+            case 'time_month_closed':
+                $ym = date('Y-m', strtotime(substr($from, 0, 7) . '-01 -1 month'));
+                if ($r = $this->repo->timeMonth($ym)) $out = ['done' => true, 'summary' => self::monthLabel($ym) . ' zamknięty ' . date('d.m', strtotime((string) $r['closed_at']))] + $out;
                 break;
             case 'nc_reviewed':
             case 'material_costs_reviewed':
