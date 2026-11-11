@@ -29,7 +29,7 @@ export function tplSvTableau(c, x){
   if (s.indispo && !s.onglets) { return `<div data-screen="suivi-assistant">${panne(esc, s.indispo)}</div>`; }
   if (s.chargement) { return `<div data-screen="suivi-assistant">${attente(esc, 'Lecture des visites et de ce qui attend le bureau…')}</div>`; }
   const tete = `<div class="sva-tete"><div><h1 class="sva-h1">${esc(s.titre || 'Créer une visite')}</h1><p class="sva-chapo">${esc(s.chapo || '')}</p></div>
-    <button ${x.A(s.relire)} class="mko-pied-btn" title="${esc(s.lu)}">Relire</button></div>`;
+    <span class="sva-tete-act">${s.effacer ? `<button ${x.A(s.effacer)} class="mko-pied-btn sva-effacer" title="Effacer cette visite et tout ce qu’elle a produit">Effacer la visite</button>` : ''}<button ${x.A(s.relire)} class="mko-pied-btn" title="${esc(s.lu)}">Relire</button></span></div>`;
   const onglets = `<div class="sva-onglets">${s.onglets.map(o => `<button ${x.A(o.ouvrir)} class="sva-og${o.on ? ' on' : ''}">${o.pt ? `<i class="sva-pt ${esc(o.pt)}"></i>` : ''}${o.nom ? esc(o.nom) + (o.court ? ' · ' : '') : ''}<b>${esc(o.court)}</b>${o.quoi ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.quoi)}</em>` : ''}${o.echeance ? ` <em class="${o.urgent ? 'att' : ''}">${esc(o.echeance)}</em>` : ''}</button>`).join('')}
     ${s.autres ? sel(x, esc, s.setAutre, s.autres, 'height:34px;margin-bottom:2px;max-width:220px') : ''}
     <button ${x.A(s.creer.ouvrir)} class="sva-og plus${s.creer.on ? ' on' : ''}">${ic('plus')}Créer une visite</button>

@@ -981,6 +981,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/visites/photos/([\w-]{1,40})/reperes$#', $path, $m)) { return wr_visites_photo_reperes($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_delete($m[1]); }
     if ($method === 'PUT' && preg_match('#^/suivi/preparation/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_preparation($m[1]); }
     if ($method === 'PUT' && preg_match('#^/suivi/rapport/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_rapport($m[1]); }
     if ($method === 'POST' && preg_match('#^/suivi/rapport/([\w-]{1,40})/envoyer$#', $path, $m)) { return wr_suivi_rapport_envoyer($m[1]); }

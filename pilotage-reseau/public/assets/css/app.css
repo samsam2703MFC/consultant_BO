@@ -1176,6 +1176,8 @@ tr.clan-sel td:first-child{box-shadow:inset 3px 0 0 var(--color-primary);color:v
    la fiche vivante à droite, un onglet par visite qui attend le bureau. */
 [data-screen="suivi-assistant"]{--sva-trait:rgba(34,34,34,.10);--sva-trait2:rgba(34,34,34,.18);--sva-beige:#F4EFE8;--sva-pale:#F6E9EA;--sva-vio:#5B3D9E;--sva-vio-bg:#EEE6FA;--sva-ok:#2D7A3E;--sva-att:#B26A00}
 .sva-tete{display:flex;align-items:flex-start;gap:16px}.sva-tete>div{flex:1;min-width:0}
+.sva-tete-act{display:flex;gap:6px;flex:none}
+.sva-effacer{color:var(--color-primary);border-color:rgba(141,29,44,.35)}.sva-effacer:hover{background:var(--sva-pale)}
 .sva-h1{font:400 26px/1.1 var(--font-display);margin:2px 0 0}
 .sva-chapo{color:var(--color-text-muted);font-size:12.5px;margin:6px 0 0;max-width:640px}
 .sva-ic{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}

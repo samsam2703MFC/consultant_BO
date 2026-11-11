@@ -271,6 +271,28 @@ function visiteVals(app, sv, d, id, h){
   sv.etapes = etapesDe(app, faits, lignes, defaut, faite ? ['rapport', 'corrections', 'tablette'] : ouvrables);
   sv.titre = f.court + ' · ' + (t ? t.nom : 'visite');
   sv.chapo = 'La visite du ' + fmtDJ(v.prevu_le) + ' à ' + v.debut_h + ' avec ' + fin(consN) + ' Reprenez là où elle en est ; une étape faite se rouvre d’un clic.';
+  // Effacer la visite (11/11/2026, demande de Sam), à n'importe quelle étape : DELETE /visites/{id}, après confirmation.
+  const aVenir = ['planifiee', 'confirmee'].includes(v.statut) && v.prevu_le >= auj();
+  sv.effacer = () => {
+    if (app.state.svBusy) { return; }
+    const q = ['Effacer la visite de ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' ?', '',
+      'Tout part avec elle : ses réponses, ses photos, les points nés pendant la visite et les tâches de ' + consN + '.'];
+    if (rapportEnvoye) { q.push('Le rapport est déjà parti : ses points disparaissent aussi de la page du franchisé.'); }
+    if (aVenir) { q.push('L’agenda de ' + consN + ' reçoit l’annulation' + (p.annoncee && P.odj.envoyeLe ? ' ; le franchisé, qui a reçu l’ordre du jour, est prévenu par courriel.' : '.')); }
+    q.push('', 'Impossible de revenir en arrière.');
+    if (typeof window === 'undefined' || !window.confirm(q.join('\n'))) { return; }
+    app.setState({ svBusy: true });
+    app.api('DELETE', '/visites/' + id, { qui: 'Cockpit' }).then(r => {
+      const ok = r && r.ok !== false && !r.error && r.efface;
+      app.setState({ svBusy: false });
+      if (!ok) { message(app, 'Visite non effacée : ' + ((r && r.error) || 'sans réponse'), true); return; }
+      const n = r.efface; const su = r.suite || {};
+      const prev = [su.invitation && su.invitation.envoye ? 'annulation envoyée à l’agenda de ' + consN : '', su.franchise && su.franchise.envoye ? 'franchisé prévenu' : ''].filter(Boolean);
+      message(app, 'Visite effacée : ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' · ' + [pl(n.reponses, 'réponse'), pl(n.photos, 'photo'), pl(n.points, 'point'), pl(n.taches, 'tâche')].join(', ') + (prev.length ? ' · ' + prev.join(', ') : '') + '.');
+      app.setState({ svSel: { kind: 'nouvelle' }, svPas: null, svPrep: null, svRap: null, svPrepF: null, svRapF: null, svVisF: null });
+      relireTableau(app);
+    });
+  };
   const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
   const enregistrerVisite = (G, puis) => {
     app.setState({ svBusy: true });
