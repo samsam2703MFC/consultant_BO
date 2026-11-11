@@ -47,6 +47,24 @@ final class TimeRepository extends WorkshopRepository
         );
     }
 
+    /**
+     * [269] Towar zabrany przy wyjściu tego dnia : odbicia z odpowiedzią « Tak » (yes_no) i ich pozycje (n_clock_goods).
+     * @return list<array{id_clock:int, clock_out:?string, source:?string, note:?string, product:?string, quantity:?float, from_waste:?int, id_final_product:?int}>
+     */
+    public function goods(int $employeeId, string $day): array
+    {
+        return $this->all(
+            "SELECT k.id AS id_clock, k.clock_out, k.source, a.note, g.product, g.quantity, g.from_waste, g.id_final_product
+             FROM n_prod_clock k
+             JOIN n_clock_answer a ON a.id_clock = k.id AND a.answer = 1
+             JOIN n_clock_question q ON q.id = a.id_question AND q.kind = 'yes_no'
+             LEFT JOIN n_clock_goods g ON g.id_clock = k.id AND g.id_question = a.id_question
+             WHERE k.id_employee = ? AND k.clock_in >= ? AND k.clock_in < ? + INTERVAL 1 DAY
+             ORDER BY k.clock_in, g.id",
+            [$employeeId, $day . ' 00:00:00', $day]
+        );
+    }
+
     public function clock(int $id): ?array
     {
         return $this->all('SELECT id, id_employee, clock_in, clock_out, source, note FROM n_prod_clock WHERE id = ?', [$id])[0] ?? null;

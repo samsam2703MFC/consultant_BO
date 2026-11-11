@@ -16,7 +16,7 @@ declare(strict_types=1);
  *   - [263] migration 163 : question de sortie « marchandise » Tak / Nie avec (i), « Tak » → quoi (obligatoire), visible au jour ;
  *   - [264] migration 165 : choix rapide catégorie → produit → pièces (catalogue des produits actifs, lignes additionnées,
  *     « z braków », « Inne », produit inconnu ou quantité hors 1–999 refusés), lignes gardées (n_clock_goods), résumé au jour ;
- *   - [265] karta : colonnes « Dzień » et « Data » séparées ;
+ *   - [265] karta : colonnes « Dzień » et « Data » séparées ; [269] fenêtre du panier (ce qui est pris, par jour) ;
  *   - [266] migration 164 : adresse e-mail du salarié chiffrée (jamais en clair en base), adresse invalide refusée, karta du
  *     mois mise en file d'envoi avec le PDF en pièce jointe (aucun envoi réel), personnes sans adresse listées, envoi noté.
  *
@@ -42,6 +42,8 @@ function expectTm(bool $condition, string $message): void
 }
 
 /** Code HTTP (CustomException) ou code d'erreur (ApiException) d'un appel qui doit échouer. */
+function expectTc_goods(bool $c, string $m): void { expectTm($c, $m); }
+
 function refusal(callable $fn): string
 {
     try { $fn(); } catch (CustomException $e) { return $e->getCode() . ' ' . $e->getMessage(); } catch (ApiException $e) { return $e->errorCode(); }
@@ -322,6 +324,13 @@ try {
         && $pdo->query("SELECT product FROM n_clock_goods WHERE id_clock = {$thursday} AND id_final_product IS NULL")->fetchColumn() === '1 kg mąki', 'goods lines kept with the clock-out');
     $thu = array_column($time->day('2026-11-05', $now)['people'], null, 'employee_id');
     expectTm($thu[11]['took'] === '3 × Tarte pommes · 1 × Quiche lorraine (braki) · inne : 1 kg mąki', 'Czas pracy › Dzień shows the picked products');
+    // [269] Okno koszyka : pozycje dnia, sztuki, « inne » ; znacznik w tabeli miesiąca.
+    $gw = $time->goods(11, '2026-11-05');
+    expectTc_goods($gw['employee']['name'] === 'Adam Testowy' && count($gw['exits']) === 1 && count($gw['exits'][0]['lines']) === 3 && $gw['pieces'] === 4.0
+        && $gw['exits'][0]['lines'][1]['waste'] === true && $gw['exits'][0]['lines'][2]['other'] === true, 'basket window: lines of the day, pieces (other excluded)');
+    $mx = array_column($time->month('2026-11', $now)['people'], null, 'employee_id');
+    expectTc_goods($mx[11]['cells']['2026-11-05']['g'] === true && $mx[11]['cells']['2026-11-04']['g'] === false, 'month matrix: basket flag on the day with goods');
+    expectTc_goods($time->goods(12, '2026-11-05')['exits'] === [], 'nothing declared: empty window');
     $cq->save($thursday, 'out', $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 2, 'quantity' => 4]]]], false));
     expectTm($count("SELECT COUNT(*) FROM n_clock_goods WHERE id_clock = {$thursday}") === 1 && $pdo->query("SELECT note FROM n_clock_answer WHERE id_clock = {$thursday}")->fetchColumn() === '4 × Tarte poires', 'same clock answered again: lines replaced');
     $only = $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => 'karton po jajkach']], false);

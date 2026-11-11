@@ -18,6 +18,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/time/month', ['controller' => $c, 'method' => 'monthData']);
     $r->addRoute('GET', '/ajax/time/leave', ['controller' => $c, 'method' => 'leaveData']);
     $r->addRoute('GET', '/ajax/time/overtime', ['controller' => $c, 'method' => 'overtimeData']);
+    $r->addRoute('GET', '/ajax/time/goods', ['controller' => $c, 'method' => 'goodsData']);
     $r->addRoute('PUT', '/ajax/time/reasons', ['controller' => $c, 'method' => 'saveReason']);
     $r->addRoute('POST', '/ajax/time/days/{day:\d{4}-\d{2}-\d{2}}/validate', ['controller' => $c, 'method' => 'validateDay']);
     $r->addRoute('DELETE', '/ajax/time/days/{day:\d{4}-\d{2}-\d{2}}/validate', ['controller' => $c, 'method' => 'reopenDay']);

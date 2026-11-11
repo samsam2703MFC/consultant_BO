@@ -1713,6 +1713,13 @@ route `GET /ajax/time/costs`. Test : `tests/team_costs_test.php`.
 Migration 167 (même jour, « retirer pour le moment ») : droit `team_costs` retiré au Kierownik produkcji ; à rendre dans
 Uprawnienia i menu quand ce sera voulu.
 
+### Panier : marchandise reprise dans Czas pracy — 269
+
+Demande du 11/11/2026. Dans Czas pracy › Dzień (à côté du nom) et › Miesiąc (dans la case du jour), une petite icône
+panier marque une sortie avec « Tak » à la question marchandise ; un clic ouvre la fenêtre de ce qui a été pointé :
+heure de sortie, produits et pièces, « z braków », « inne », total des pièces. `TimeService::goods`, route
+`GET /ajax/time/goods?employee=&day=` (droit « time ») ; drapeau `g` des cases du mois.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

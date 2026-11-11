@@ -114,6 +114,12 @@ final class TimeController extends BaseController
         return $this->guarded(fn() => $this->time->calendar(self::date($_GET['from'] ?? null) ?? date('Y-m-d', strtotime('monday this week')), (int) ($_GET['days'] ?? 28)));
     }
 
+    /** [269] Towar zabrany przy wyjściu : ?employee=ID&day=YYYY-MM-DD. */
+    public function goodsData()
+    {
+        return $this->guarded(fn() => $this->time->goods((int) ($_GET['employee'] ?? 0), self::date($_GET['day'] ?? null) ?? ''));
+    }
+
     public function overtimeData()
     {
         return $this->guarded(fn() => $this->time->overtime());

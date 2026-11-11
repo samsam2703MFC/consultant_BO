@@ -73,7 +73,7 @@
         form.innerHTML = `<header class="tm-dialog-head"><h4 id="tmDialogTitle">${esc(title)}</h4>
                 <button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
             <div class="tm-dialog-body">${html}</div><p class="tm-dialog-error" data-error></p>
-            <footer class="tm-dialog-foot">${extra || ''}<button type="button" class="btn btn-light" data-close>Anuluj</button>
+            <footer class="tm-dialog-foot">${extra || ''}<button type="button" class="btn btn-light" data-close>${submitLabel ? 'Anuluj' : 'Zamknij'}</button>
                 ${submitLabel ? `<button type="submit" class="btn btn-primary" data-submit>${esc(submitLabel)}</button>` : ''}</footer>`;
         form.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dialog.close()));
         form.onsubmit = async (e) => {
@@ -180,7 +180,7 @@
             need_absence: '<span class="at-pill at-pill-danger">Powód ?</span>', ok: '<span class="at-pill at-pill-ok">OK</span>'}[p.status];
         const comp = p.comp_proposed.length ? `<span class="tm-sub"><i class="bi bi-pen"></i> dzień wolny ${dm(p.comp_proposed[0].day)} do podpisu</span>` : '';
         return `<tr class="${p.status !== 'ok' ? 'tm-need' : ''}" data-row="${p.employee_id}">
-            <td><b>${esc(p.name)}</b>${comp}${p.took ? `<span class="tm-sub tm-took" title="Odpowiedź przy wyjściu (tablet / telefon)"><i class="bi bi-bag"></i> zabiera : ${esc(p.took)}</span>` : ''}</td>
+            <td><b>${esc(p.name)}</b>${p.took ? ` ${basket(p.employee_id, D.day, p.took)}` : ''}${comp}</td>
             <td>${p.group ? `<span class="tm-group" style="--g:${esc(p.group_color || '#B8B2A8')}">${esc(p.group)}</span>` : '—'}</td>
             <td class="text-center">${inCell}</td><td class="text-center">${outCell}</td>
             <td class="text-end tm-num">${p.open ? '—' : (p.clocks.length ? hm(p.worked) : '—')}</td>
@@ -263,7 +263,7 @@
         const head = days.map(d => `<th class="${d.workday ? '' : 'tm-we'} ${d.validated ? 'tm-v' : ''}" title="${esc(d.holiday || '')}${d.validated ? ' zatwierdzony' : ''}">
             <a href="${root}/time?date=${d.date}">${d.n}<small>${d.dow}</small></a></th>`).join('');
         const rows = D.people.map(p => `<tr><td class="tm-name"><b>${esc(p.name)}</b><span class="tm-sub">${esc(p.group || '')}</span></td>
-            ${days.map(d => monthCell(p.cells[d.date], d)).join('')}
+            ${days.map(d => monthCell(p.cells[d.date], d, p.employee_id)).join('')}
             <td class="text-end tm-num"><b>${hm(p.worked)}</b></td><td class="text-end tm-num ${p.overtime ? 'tm-ot' : ''}">${p.overtime ? hm(p.overtime, true) : '0'}</td>
             <td class="text-end tm-num">${p.leave ? p.leave + ' d' : '0'}</td><td class="text-end tm-num">${hm(p.bank)}</td>
             <td class="tm-acts"><a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}&employee=${p.employee_id}" target="_blank" rel="noopener">PDF</a>${mailCell(p)}</td></tr>`).join('');
@@ -287,6 +287,26 @@
             <div class="tm-legend"><span><i class="tm-ot">9:10</i> nadgodziny (tylko dni zatwierdzone liczą się do sumy i banku)</span><span><i class="tm-a-U">U</i> urlop</span><span><i class="tm-a-L4">L4</i> chorobowe</span>
                 <span><i class="tm-a-WN">WN</i> wolne za nadgodziny</span><span><i class="tm-q">?</i> brak wyjścia / brak powodu</span><span><i class="tm-v-dot">3</i> dzień zatwierdzony</span></div>
             <p class="tm-note">« Zamknij miesiąc » : po ostatnim dniu, gdy wszystkie dni są zatwierdzone ; potem bez zmian (karty A4 do podpisu). Bank nadgodzin = nadgodziny jeszcze nieodebrane.</p>`;
+    }
+
+    // [269] Towar zabrany przy wyjściu : mała ikona koszyka w tabeli (Dzień, Miesiąc) → okno z tym, co zostało zaznaczone.
+    function basket(empId, day, title, small) {
+        return `<button type="button" class="tm-basket ${small ? 'is-small' : ''}" data-goods="${empId}" data-goods-day="${day}" title="${esc(title)}" aria-label="Towar zabrany przy wyjściu : ${esc(title)}"><i class="bi bi-basket2"></i></button>`;
+    }
+
+    async function goodsDialog(empId, day) {
+        let g;
+        try { g = (await call('GET', `/ajax/time/goods?employee=${empId}&day=${day}`)).data; } catch (e) { fail(e); return; }
+        const qty = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+        const exits = g.exits.map(x => {
+            const lines = x.lines.length ? `<table class="table tm-table tm-goods"><thead><tr><th>Produkt</th><th class="text-end">Sztuki</th><th></th></tr></thead><tbody>${x.lines.map(l => l.other
+                ? `<tr><td colspan="2"><span class="tm-sub">inne :</span> ${esc(l.product)}</td><td></td></tr>`
+                : `<tr><td>${esc(l.product)}</td><td class="text-end tm-num"><b>${qty(l.quantity)}</b></td><td>${l.waste ? '<span class="tm-tag tm-tag-warn">z braków</span>' : ''}</td></tr>`).join('')}</tbody></table>`
+                : `<p class="tm-goods-note">${esc(x.note || 'Tak (bez szczegółów)')}</p>`;
+            return `<div class="tm-goods-exit"><div class="tm-sub">Wyjście ${x.clock_out ? time(x.clock_out) : '—'} · ${esc({kiosk: 'tablet / telefon', manual: 'ręcznie'}[x.source] || '')}</div>${lines}</div>`;
+        }).join('') || '<p class="at-empty">Brak deklaracji tego dnia.</p>';
+        openDialog(`Towar zabrany — ${g.employee.name}, ${full(g.day)}`, `${exits}
+            ${g.pieces ? `<p class="tm-note">Razem : <b>${qty(g.pieces)} szt.</b> produktów. Braki (odpady) trzeba wpisać ; prośby na imprezę — przez biuro.</p>` : ''}`, null, null);
     }
 
     // [266] Karta e-mailem : adres pracownika (zapis zaszyfrowany) i wysyłka karty miesiąca (PDF w załączniku).
@@ -341,8 +361,14 @@
         } catch (e) { fail(e); } finally { if (btn) btn.disabled = false; }
     }
 
-    function monthCell(c, d) {
+    function monthCell(c, d, empId) {
         if (!c) return `<td class="${d.workday ? '' : 'tm-we'}"></td>`;
+        const g = c.g ? basket(empId, d.date, 'Towar zabrany przy wyjściu', true) : '';
+        const inner = monthCellInner(c, d);
+        return g ? inner.replace(/<\/td>$/, `${g}</td>`) : inner;
+    }
+
+    function monthCellInner(c, d) {
         if (c.a) return `<td class="${d.workday ? '' : 'tm-we'}"><i class="tm-a-${esc(c.a)}">${esc(c.a)}</i></td>`;
         if (c.st === 'open' || c.st === 'need_overtime' || c.st === 'need_absence') return `<td class="tm-q" title="${c.st === 'open' ? 'brak wyjścia' : 'brak powodu'}">${c.w ? hm(c.w) : '?'}</td>`;
         if (c.st === 'none') return `<td class="${d.workday ? '' : 'tm-we'}"></td>`;
@@ -574,6 +600,7 @@
             if (await confirmBox(`Zamknąć ${D.label} ? Po zamknięciu nie można zmieniać odbić, powodów ani urlopów tego miesiąca. Karty A4 do podpisu : « Drukuj wszystkich (PDF) ».`)) act(b, 'POST', `/ajax/time/months/${D.month}/close`);
             return;
         }
+        if (b.matches('[data-goods]')) { goodsDialog(Number(b.dataset.goods), b.dataset.goodsDay); return; }
         if (b.matches('[data-toggle-group]')) { const id = Number(b.dataset.toggleGroup); if (openGroups.has(id)) openGroups.delete(id); else openGroups.add(id); render(); return; }
         if (b.matches('[data-contacts]')) { contactsDialog(b.dataset.contacts || null); return; }
         if (b.matches('[data-mail-all]')) { mailSheets(b, null); return; }

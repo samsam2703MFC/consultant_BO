@@ -419,6 +419,29 @@ final class TimeService
     // Miesiąc (maquette 2)
     // =====================================================================================================
 
+    /**
+     * [269] Co osoba zabrała przy wyjściu danego dnia (okno z ikony koszyka) : każde wyjście z odpowiedzią « Tak » —
+     * godzina, źródło (tablet / telefon), pozycje (produkt, sztuki, z braków) i « inne » ; odpowiedź tekstowa sprzed [264].
+     */
+    public function goods(int $employeeId, string $day): array
+    {
+        $this->checkDate($day);
+        $e = $this->employeeOrFail($employeeId);
+        $exits = [];
+        foreach ($this->repo->goods($employeeId, $day) as $r) {
+            $id = (int) $r['id_clock'];
+            $exits[$id] ??= ['clock_out' => $r['clock_out'], 'source' => $r['source'], 'note' => $r['note'], 'lines' => []];
+            if ($r['product'] !== null) {
+                $exits[$id]['lines'][] = ['product' => (string) $r['product'], 'quantity' => (float) $r['quantity'], 'waste' => (bool) $r['from_waste'],
+                    'other' => $r['id_final_product'] === null];
+            }
+        }
+        $pieces = 0.0;
+        foreach ($exits as $x) foreach ($x['lines'] as $l) if (!$l['other']) $pieces += $l['quantity'];
+        return ['employee' => ['id' => $employeeId, 'name' => $e['name'], 'group' => $e['group_name']], 'day' => $day,
+            'exits' => array_values($exits), 'pieces' => $pieces];
+    }
+
     public function month(string $month, ?int $now = null): array
     {
         $this->checkMonth($month);
@@ -457,6 +480,8 @@ final class TimeService
                 if (isset($validated[$d])) $row['overtime'] += $c['overtime'];
                 $absNote = $notes[$id][$d]['absence']['reason'] ?? null;
                 $cells[$d] = ['w' => $c['worked'], 'ot' => $c['overtime'], 'a' => $a !== null ? self::TYPE_SHORT[$a] : ($absNote === 'nieusprawiedliwiona' ? 'NN' : null),
+                    // [269] towar zabrany przy wyjściu tego dnia (ikona koszyka w tabeli)
+                    'g' => (bool) array_filter($c['clocks'], fn($k) => $k['took'] !== null),
                     'st' => $c['clocks'] === [] && $status === 'ok' ? 'none' : $status, 'open' => $c['open']];
             }
             if ($row['worked'] === 0 && !array_filter($cells, fn($c) => $c['a'] !== null || $c['st'] !== 'none')) continue;
