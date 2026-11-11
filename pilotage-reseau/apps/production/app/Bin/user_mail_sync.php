@@ -19,10 +19,10 @@ if (!$lock || !flock($lock, LOCK_EX | LOCK_NB)) {
     exit(0);
 }
 
-$pdo = $container->get(PDO::class);
 $service = $container->get(App\Services\Mail\UserMailService::class);
 $stats = ['mailboxes' => 0, 'new' => 0, 'errors' => 0];
-foreach ($pdo->query('SELECT id_user FROM n_user_mailbox ORDER BY last_sync_at IS NOT NULL, last_sync_at')->fetchAll(PDO::FETCH_COLUMN) as $userId) {
+// [270] Skrzynki wstrzymane przez administratora są pomijane.
+foreach ($container->get(App\Repositories\Mail\UserMailRepository::class)->syncableUsers() as $userId) {
     $stats['mailboxes']++;
     try {
         $stats['new'] += $service->sync((int) $userId)['new'];

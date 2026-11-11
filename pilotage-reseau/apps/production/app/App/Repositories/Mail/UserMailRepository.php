@@ -45,6 +45,50 @@ final class UserMailRepository extends WorkshopRepository
         $this->db->prepare('DELETE FROM n_user_mailbox WHERE id_user = ?')->execute([$userId]);
     }
 
+    // --- [270] administrator : skrzynka ustawiana przez niego (managed), poczta wstrzymana (stopped) --------------------
+
+    /** @return array{managed:bool, stopped:bool, stopped_at:?string} */
+    public function adminPolicy(int $userId): array
+    {
+        $r = $this->all('SELECT managed, stopped, stopped_at FROM n_user_mail_admin WHERE id_user = ?', [$userId])[0] ?? null;
+        return ['managed' => (bool) ($r['managed'] ?? false), 'stopped' => (bool) ($r['stopped'] ?? false), 'stopped_at' => $r['stopped_at'] ?? null];
+    }
+
+    public function saveAdminPolicy(int $userId, bool $managed, bool $stopped, int $actorId): void
+    {
+        $this->db->prepare('INSERT INTO n_user_mail_admin (id_user, managed, stopped, stopped_at, updated_by) VALUES (?, ?, ?, IF(?, NOW(), NULL), ?)
+                            ON DUPLICATE KEY UPDATE managed = VALUES(managed), stopped_at = IF(VALUES(stopped) = 1, IF(stopped = 1, stopped_at, NOW()), NULL),
+                                                    stopped = VALUES(stopped), updated_by = VALUES(updated_by)')
+            ->execute([$userId, (int) $managed, (int) $stopped, (int) $stopped, $actorId]);
+    }
+
+    /** Użytkownicy ERP ze stanowiskiem, skrzynką (bez haseł) i ustawieniami administratora. */
+    public function adminUsers(): array
+    {
+        return $this->all(
+            'SELECT u.id, COALESCE(NULLIF(u.displayed_name, \'\'), TRIM(CONCAT(COALESCE(u.name, \'\'), \' \', COALESCE(u.surname, \'\'))), u.login) AS name, u.login,
+                    p.name_pl AS position, b.email, b.last_sync_at, b.last_error, COALESCE(a.managed, 0) AS managed, COALESCE(a.stopped, 0) AS stopped, a.stopped_at,
+                    (SELECT COUNT(*) FROM n_user_mail m WHERE m.id_user = u.id AND m.folder = \'INBOX\' AND m.seen = 0) AS unread
+             FROM user u
+             LEFT JOIN n_user_position up ON up.id_user = u.id LEFT JOIN n_position p ON p.id = up.id_position
+             LEFT JOIN n_user_mailbox b ON b.id_user = u.id LEFT JOIN n_user_mail_admin a ON a.id_user = u.id
+             ORDER BY b.email IS NULL, name'
+        );
+    }
+
+    public function userExists(int $userId): bool
+    {
+        return (bool) $this->all('SELECT 1 FROM user WHERE id = ?', [$userId]);
+    }
+
+    /** Skrzynki do synchronizacji w cronie : bez wstrzymanych przez administratora. @return list<int> */
+    public function syncableUsers(): array
+    {
+        return array_map('intval', array_column($this->all(
+            'SELECT b.id_user FROM n_user_mailbox b LEFT JOIN n_user_mail_admin a ON a.id_user = b.id_user
+             WHERE COALESCE(a.stopped, 0) = 0 ORDER BY b.last_sync_at IS NOT NULL, b.last_sync_at'), 'id_user'));
+    }
+
     /** Najwyższy znany UID folderu przy tym UIDVALIDITY (0 = nic) ; inny UIDVALIDITY = folder do pobrania od nowa. */
     public function maxUid(int $userId, string $folder, int $uidValidity): int
     {

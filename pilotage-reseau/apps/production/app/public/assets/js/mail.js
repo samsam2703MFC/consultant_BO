@@ -1,5 +1,6 @@
 /*
- * Poczta użytkownika (/mail) i ustawienia jego skrzynki (/mail/settings).
+ * Poczta użytkownika (/mail) i ustawienia jego skrzynki (/mail/settings) ; [270] administrator : skrzynki użytkowników
+ * (/mail/admin) — ustawienia za użytkownika, « tylko administrator », wstrzymanie poczty.
  * Skrzynka : foldery (Odebrane, Wysłane, Wysłane z ERP), lista z wyszukiwaniem pełnotekstowym, odczyt (HTML w ramce
  * bez skryptów i bez obrazów z internetu, dopóki użytkownik ich nie pokaże), załączniki, odpowiedź, przekazanie,
  * nowa wiadomość z załącznikami. Synchronizacja przy otwarciu i co 2 minuty, gdy strona jest widoczna.
@@ -58,6 +59,17 @@
     function inbox() {
         api('GET', '/ajax/mail/state').then(function (s) {
             state = s;
+            var pol = s.admin_policy || {};
+            if (pol.stopped) {
+                app.innerHTML = '<div class="card"><div class="card-body text-center py-5"><i class="bi bi-pause-circle" style="font-size:40px;color:#8D1D2C"></i>'
+                    + '<h4 class="mt-3">Poczta wstrzymana przez administratora</h4><p class="text-muted mb-0">Wiadomości zostają w ERP i wrócą, gdy administrator wznowi pocztę.</p></div></div>';
+                return;
+            }
+            if (!s.configured && pol.managed) {
+                app.innerHTML = '<div class="card"><div class="card-body text-center py-5"><i class="bi bi-envelope" style="font-size:40px;color:#8D1D2C"></i>'
+                    + '<h4 class="mt-3">Skrzynkę ustawi administrator</h4><p class="text-muted mb-0">Gdy będzie gotowa, pojawi się tutaj.</p></div></div>';
+                return;
+            }
             if (!s.configured) {
                 app.innerHTML = '<div class="card"><div class="card-body text-center py-5"><i class="bi bi-envelope-plus" style="font-size:40px;color:#8D1D2C"></i>'
                     + '<h4 class="mt-3">Podłącz swoją skrzynkę e-mail</h4><p class="text-muted">Odbieraj i wysyłaj wiadomości ze swojego adresu bez wychodzenia z ERP :'
@@ -438,15 +450,32 @@
     var DOMAINS = { 'gmail.com': 'gmail', 'googlemail.com': 'gmail', 'outlook.com': 'outlook', 'hotmail.com': 'outlook', 'live.com': 'outlook',
         'wp.pl': 'wp', 'onet.pl': 'onet', 'op.pl': 'onet', 'onet.eu': 'onet', 'o2.pl': 'o2', 'tlen.pl': 'o2', 'interia.pl': 'interia', 'interia.eu': 'interia' };
 
-    function settings() {
-        api('GET', '/ajax/mail/state').then(function (s) {
+    // target = użytkownik ustawiany przez administratora ({id, name}) ; bez niego — własna skrzynka.
+    function paths(target) {
+        var base = target ? '/ajax/mail/admin/users/' + target.id : '/ajax/mail';
+        return { state: target ? base + '/state' : '/ajax/mail/state', settings: base + '/settings', test: base + '/settings/test' };
+    }
+
+    function settings(target) {
+        var P = paths(target);
+        api('GET', P.state).then(function (s) {
             state = s;
+            var pol = s.admin_policy || {};
+            if (!target && pol.managed) {
+                app.innerHTML = '<div class="ml-settings"><div class="card"><div class="card-body"><h5><i class="bi bi-shield-lock"></i> Twoją skrzynkę ustawia administrator</h5>'
+                    + '<p class="text-muted mb-0">' + (s.mailbox ? 'Adres, serwery i hasło zmienia administrator (Poczta › Skrzynki użytkowników).' : 'Skrzynka nie jest jeszcze ustawiona.') + '</p>'
+                    + (pol.stopped ? '<div class="ml-banner mt-3"><i class="bi bi-pause-circle"></i> Poczta wstrzymana przez administratora.</div>' : '') + '</div></div>'
+                    + '<div class="card"><div class="card-body small">' + side(s) + '</div></div></div>';
+                return;
+            }
             var b = s.mailbox || { provider: 'gmail', imap_port: 993, imap_security: 'ssl', smtp_port: 587, smtp_security: 'starttls', tls_verify: true };
             var opt = function (v, cur, label) { return '<option value="' + v + '"' + (v === cur ? ' selected' : '') + '>' + esc(label) + '</option>'; };
             var sec = function (name, cur) { return '<select class="form-select form-select-sm" name="' + name + '">' + opt('ssl', cur, 'SSL / TLS') + opt('starttls', cur, 'STARTTLS') + '</select>'; };
             var field = function (label, html, name) { return '<label class="form-label small mb-1 d-block">' + label + html + '</label><div class="ml-err mb-2" data-err="' + name + '"></div>'; };
             var pwdHint = s.mailbox ? 'zostaw puste, aby nie zmieniać' : '';
-            app.innerHTML = '<div class="ml-settings"><div class="card"><div class="card-body"><form data-form autocomplete="off">'
+            var who = target ? '<div class="d-flex align-items-center gap-2 mb-3"><button type="button" class="btn btn-sm btn-outline-secondary" data-back><i class="bi bi-arrow-left"></i> Skrzynki użytkowników</button>'
+                + '<strong>' + esc(target.name) + '</strong>' + (pol.stopped ? '<span class="ml-tag is-fail">wstrzymana</span>' : '') + '</div>' : '';
+            app.innerHTML = who + '<div class="ml-settings"><div class="card"><div class="card-body"><form data-form autocomplete="off">'
                 + '<div class="row g-2"><div class="col-md-6">' + field('Dostawca poczty', '<select class="form-select" name="provider">' + Object.keys(s.providers).map(function (k) { return opt(k, b.provider, s.providers[k].label); }).join('') + '</select>', 'provider') + '</div>'
                 + '<div class="col-md-6">' + field('Adres e-mail', '<input class="form-control" type="email" name="email" value="' + esc(b.email || '') + '">', 'email') + '</div>'
                 + '<div class="col-md-6">' + field('Nazwa nadawcy', '<input class="form-control" name="display_name" maxlength="160" value="' + esc(b.display_name || '') + '" placeholder="np. Anna Kowalska — SL Food">', 'display_name') + '</div>'
@@ -487,12 +516,14 @@
                 if (DOMAINS[domain] && form.provider.value !== DOMAINS[domain]) { form.provider.value = DOMAINS[domain]; form.provider.dispatchEvent(new Event('change')); }
             });
             if (!s.mailbox) form.provider.dispatchEvent(new Event('change'));
-            form.addEventListener('submit', function (e) { e.preventDefault(); save(form); });
+            form.addEventListener('submit', function (e) { e.preventDefault(); save(form, target); });
             var del = app.querySelector('[data-delete]');
             if (del) del.addEventListener('click', function () {
-                if (!window.confirm('Odłączyć skrzynkę ? Wiadomości znikną z ERP (w Twojej skrzynce zostają).')) return;
-                api('DELETE', '/ajax/mail/settings').then(function () { settings(); });
+                if (!window.confirm('Odłączyć skrzynkę ? Wiadomości znikną z ERP (w skrzynce zostają).')) return;
+                api('DELETE', P.settings).then(function () { settings(target); });
             });
+            var back = app.querySelector('[data-back]');
+            if (back) back.addEventListener('click', adminList);
         }).catch(function (e) { app.innerHTML = '<div class="alert alert-danger">' + esc(e.message) + '</div>'; });
     }
 
@@ -505,10 +536,11 @@
             + '<div>Ostatnia synchronizacja : ' + esc(b.last_sync_at ? full(b.last_sync_at) : '—') + '</div>'
             + '<div>Folder wysłanych : ' + esc(b.sent_folder || 'nie znaleziony') + '</div>'
             + (b.last_error ? '<div class="text-danger mt-1">Ostatni błąd : ' + esc(b.last_error) + '</div>' : '')
-            + '<a class="btn btn-sm btn-outline-secondary mt-2" href="' + esc(root) + '/mail"><i class="bi bi-envelope"></i> Otwórz pocztę</a>' + mode;
+            + (page === 'admin' ? '' : '<a class="btn btn-sm btn-outline-secondary mt-2" href="' + esc(root) + '/mail"><i class="bi bi-envelope"></i> Otwórz pocztę</a>') + mode;
     }
 
-    function save(form) {
+    function save(form, target) {
+        var P = paths(target);
         var msg = app.querySelector('[data-msg]');
         var checks = app.querySelector('[data-checks]');
         app.querySelectorAll('[data-err]').forEach(function (el) { el.textContent = ''; });
@@ -520,21 +552,64 @@
         body.imap_password = form.password.value;
         body.smtp_password = form.smtp_password.value || form.password.value;
         msg.textContent = 'Zapisywanie…';
-        api('PUT', '/ajax/mail/settings', body).then(function (s) {
+        api('PUT', P.settings, body).then(function (s) {
             state = s;
             form.password.value = ''; form.smtp_password.value = '';
             msg.textContent = 'Zapisano. Sprawdzanie połączenia…';
-            return api('POST', '/ajax/mail/settings/test');
+            return api('POST', P.test);
         }).then(function (t) {
             var line = function (label, r) { return '<div class="ml-check"><i class="bi ' + (r.ok ? 'bi-check-circle-fill' : 'bi-x-circle-fill') + '"></i><div><strong>' + label + '</strong> — ' + esc(r.message) + '</div></div>'; };
             checks.innerHTML = line('Odbiór (IMAP)', t.imap) + line('Wysyłka (SMTP)', t.smtp);
             msg.textContent = t.imap.ok && t.smtp.ok ? 'Gotowe : skrzynka działa.' : 'Zapisano, ale połączenie wymaga poprawki.';
-            return api('GET', '/ajax/mail/state').then(function (s) { state = s; app.querySelector('.ml-settings .card:last-child .card-body').innerHTML = side(s); });
+            return api('GET', P.state).then(function (s) { state = s; app.querySelector('.ml-settings .card:last-child .card-body').innerHTML = side(s); });
         }).catch(function (e) {
             msg.textContent = e.message;
             Object.keys(e.fields || {}).forEach(function (k) { var el = app.querySelector('[data-err="' + k + '"]'); if (el) el.textContent = e.fields[k]; });
         });
     }
 
-    if (page === 'settings') settings(); else inbox();
+    // ===================================== [270] skrzynki użytkowników (administrator) =====================================
+    function adminList() {
+        api('GET', '/ajax/mail/admin/users').then(function (r) {
+            var users = r.users || [];
+            var rows = users.map(function (u) {
+                var status = u.stopped ? '<span class="ml-tag is-fail">wstrzymana</span>' : (u.email ? '<span class="ml-tag is-supplier">aktywna</span>' : '<span class="text-muted">—</span>');
+                return '<tr data-user="' + u.id + '"><td><strong>' + esc(u.name) + '</strong><div class="text-muted small">' + esc(u.position || 'bez stanowiska') + '</div></td>'
+                    + '<td>' + (u.email ? esc(u.email) : '<span class="text-muted">nie podłączona</span>')
+                    + (u.last_error ? '<div class="text-danger small" title="' + esc(u.last_error) + '"><i class="bi bi-exclamation-triangle"></i> błąd połączenia</div>' : '') + '</td>'
+                    + '<td class="small">' + (u.last_sync_at ? esc(full(u.last_sync_at)) : '—') + '</td>'
+                    + '<td class="text-end">' + (u.email ? u.unread : '') + '</td>'
+                    + '<td><label class="small mb-0 text-nowrap"><input type="checkbox" class="form-check-input me-1" data-managed' + (u.managed ? ' checked' : '') + '> tylko administrator</label></td>'
+                    + '<td>' + status + '</td>'
+                    + '<td class="text-end text-nowrap"><button type="button" class="btn btn-sm btn-outline-secondary" data-edit><i class="bi bi-gear"></i> ' + (u.email ? 'Ustawienia' : 'Ustaw skrzynkę') + '</button> '
+                    + '<button type="button" class="btn btn-sm ' + (u.stopped ? 'btn-primary' : 'btn-outline-danger') + '" data-stop>'
+                    + (u.stopped ? '<i class="bi bi-play-fill"></i> Wznów' : '<i class="bi bi-pause-fill"></i> Wstrzymaj') + '</button></td></tr>';
+            }).join('');
+            app.innerHTML = '<div class="card"><div class="card-body p-0"><div class="table-responsive"><table class="table table-sm align-middle mb-0 ml-admin">'
+                + '<thead><tr><th>Użytkownik</th><th>Skrzynka</th><th>Synchronizacja</th><th class="text-end">Nieprzeczytane</th><th>Ustawienia</th><th>Poczta</th><th></th></tr></thead>'
+                + '<tbody>' + (rows || '<tr><td colspan="7" class="text-muted p-3">Brak użytkowników.</td></tr>') + '</tbody></table></div></div></div>'
+                + '<p class="ml-help mt-2">« Tylko administrator » : użytkownik widzi swoją pocztę, ale adresu, serwerów i hasła nie zmienia. « Wstrzymaj » : bez odbioru, wysyłki i licznika ; wiadomości zostają w ERP.</p>';
+            var byId = {};
+            users.forEach(function (u) { byId[u.id] = u; });
+            app.querySelectorAll('tr[data-user]').forEach(function (tr) {
+                var u = byId[tr.dataset.user];
+                tr.querySelector('[data-edit]').addEventListener('click', function () { settings({ id: u.id, name: u.name }); });
+                tr.querySelector('[data-stop]').addEventListener('click', function (e) {
+                    if (!u.stopped && !window.confirm('Wstrzymać pocztę : ' + u.name + ' ?')) return;
+                    e.currentTarget.disabled = true;
+                    api('PUT', '/ajax/mail/admin/users/' + u.id + '/policy', { stopped: !u.stopped }).then(adminList)
+                        .catch(function (err) { window.alert(err.message); adminList(); });
+                });
+                tr.querySelector('[data-managed]').addEventListener('change', function (e) {
+                    api('PUT', '/ajax/mail/admin/users/' + u.id + '/policy', { managed: e.target.checked }).then(function (p) { u.managed = p.managed; })
+                        .catch(function (err) { window.alert(err.message); adminList(); });
+                });
+            });
+        }).catch(function (e) { app.innerHTML = '<div class="alert alert-danger">' + esc(e.message) + '</div>'; });
+    }
+
+    if (page === 'settings') settings();
+    else if (page === 'admin') adminList();
+    else if (page === 'denied') app.innerHTML = '<div class="alert alert-warning">Skrzynki użytkowników ustawia administrator.</div>';
+    else inbox();
 })();

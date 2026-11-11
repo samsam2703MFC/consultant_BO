@@ -70,6 +70,7 @@ final class PageAccess
         'execution' => ['Kto co zrobił i Zadania zespołu (wykonanie zadań stanowisk i grup, filtry, spóźnione, przypomnij osobie albo grupie)', 'Administracja', ['/organization/execution', '/organization/team-tasks'], false],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
+        'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
     ];
 

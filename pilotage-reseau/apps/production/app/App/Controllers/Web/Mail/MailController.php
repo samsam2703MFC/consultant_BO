@@ -106,6 +106,68 @@ class MailController extends BaseController
         });
     }
 
+    // --- [270] Skrzynki użytkowników (administrator) : ustawienia za użytkownika, « tylko administrator », wstrzymanie
+
+    public function admin()
+    {
+        if (!$this->access->isAdmin((int) user('id'))) return $this->view('mail/index', ['mail_page' => 'denied']);
+        return $this->view('mail/index', ['mail_page' => 'admin']);
+    }
+
+    public function adminUsers()
+    {
+        return $this->run(function () {
+            $this->adminId();
+            return ['users' => $this->mail->adminUsers()];
+        });
+    }
+
+    public function adminState($id)
+    {
+        return $this->run(function () use ($id) {
+            $this->adminId();
+            return $this->mail->state($this->mail->adminTarget((int) $id));
+        });
+    }
+
+    public function adminSave($id)
+    {
+        return $this->run(function () use ($id) {
+            $this->adminId();
+            $target = $this->mail->adminTarget((int) $id);
+            return $this->mail->saveMailbox($target, $this->getJson(Request::createFromGlobals()), true);
+        });
+    }
+
+    public function adminDelete($id)
+    {
+        return $this->run(function () use ($id) {
+            $this->adminId();
+            $this->mail->deleteMailbox($this->mail->adminTarget((int) $id), true);
+            return ['message' => 'Skrzynka odłączona, wiadomości usunięte z ERP (w skrzynce zostają).'];
+        });
+    }
+
+    public function adminTest($id)
+    {
+        return $this->run(function () use ($id) {
+            $this->adminId();
+            return $this->mail->test($this->mail->adminTarget((int) $id), true);
+        });
+    }
+
+    public function adminPolicy($id)
+    {
+        return $this->run(fn() => $this->mail->saveAdminPolicy((int) $id, $this->getJson(Request::createFromGlobals()), $this->adminId()));
+    }
+
+    private function adminId(): int
+    {
+        $id = $this->userId();
+        if (!$this->access->isAdmin($id)) throw new CustomException('Skrzynki użytkowników ustawia administrator.', 'errors', 403);
+        return $id;
+    }
+
     public function attachment($id, $index)
     {
         try {

@@ -20,6 +20,7 @@ final class PageTabs
         'mail' => ['label' => 'Poczta', 'section' => 'Start', 'icon' => 'bi-envelope', 'tabs' => [
             ['/mail', 'Skrzynka', 'bi-inbox'],
             ['/mail/settings', 'Ustawienia skrzynki', 'bi-envelope-at'],
+            ['/mail/admin', 'Skrzynki użytkowników', 'bi-people'],
         ]],
         // Zadania zespołu i « Kto co zrobił » (wykonanie zadań stanowisk) : jedna pozycja.
         'team_tasks' => ['label' => 'Zadania zespołu', 'section' => 'Start', 'icon' => 'bi-people', 'tabs' => [

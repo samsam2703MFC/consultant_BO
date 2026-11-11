@@ -1726,6 +1726,21 @@ Demande du 11/11/2026. L'accueil de la tablette bureau (`/tablet/office`) n'a pl
 « Znajdź swoje nazwisko i dotknij go », plus de compteur « Obecni : n / total » ni de lien vers la tablette de
 production : l'heure, la date, les boutons de groupes (avec leurs présents) et les personnes. Aucune table touchée.
 
+### Poczta du Kierownik produkcji, réglée et arrêtée par l'administrateur — 270
+
+Demande du 11/11/2026. Migration 168 : « Poczta » dans le menu du Kierownik produkcji (`n_position_menu`, avec Czas
+pracy) ; table `n_user_mail_admin` (par utilisateur, gardée quand la boîte est déconnectée) :
+- `managed` : la boîte est réglée seulement par l'administrateur — l'utilisateur lit, répond, écrit, mais ne change ni
+  ne déconnecte l'adresse, les serveurs ou le mot de passe (403) ; mis à 1 pour les utilisateurs du poste Kierownik ;
+- `stopped` (+ `stopped_at`) : poczta arrêtée — ni réception, ni liste, ni envoi, ni lecture (423), compteur à 0,
+  recherche vide, boîte sautée par le cron `Bin/user_mail_sync.php` ; les messages restent dans l'ERP et reviennent à la
+  reprise.
+Page `/mail/admin` (clé `mail_admin`, administrateur seul, onglet « Skrzynki użytkowników » de Poczta) : tous les
+utilisateurs avec poste, adresse, dernière synchronisation, erreur, non lus ; boutons rapides « Ustaw skrzynkę » (même
+formulaire et test de connexion que l'utilisateur, mot de passe chiffré, jamais renvoyé), « tylko administrator »,
+« Wstrzymaj » / « Wznów ». Routes `/ajax/mail/admin/users…` (GET liste et état, PUT réglages et `policy`, DELETE, POST
+test), refusées sans droit d'administrateur. Test : `tests/mail_admin_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

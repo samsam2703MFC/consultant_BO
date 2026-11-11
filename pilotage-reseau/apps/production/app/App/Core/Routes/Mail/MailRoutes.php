@@ -9,6 +9,14 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/mail/settings', ['controller' => $c, 'method' => 'settings']);
     $r->addRoute('GET', '/mail/messages/{id:\d+}/attachments/{index:\d+}', ['controller' => $c, 'method' => 'attachment']);
     $r->addRoute('GET', '/ajax/mail/state', ['controller' => $c, 'method' => 'state']);
+    // [270] Skrzynki użytkowników (administrator)
+    $r->addRoute('GET', '/mail/admin', ['controller' => $c, 'method' => 'admin']);
+    $r->addRoute('GET', '/ajax/mail/admin/users', ['controller' => $c, 'method' => 'adminUsers']);
+    $r->addRoute('GET', '/ajax/mail/admin/users/{id:\d+}/state', ['controller' => $c, 'method' => 'adminState']);
+    $r->addRoute('PUT', '/ajax/mail/admin/users/{id:\d+}/settings', ['controller' => $c, 'method' => 'adminSave']);
+    $r->addRoute('DELETE', '/ajax/mail/admin/users/{id:\d+}/settings', ['controller' => $c, 'method' => 'adminDelete']);
+    $r->addRoute('POST', '/ajax/mail/admin/users/{id:\d+}/settings/test', ['controller' => $c, 'method' => 'adminTest']);
+    $r->addRoute('PUT', '/ajax/mail/admin/users/{id:\d+}/policy', ['controller' => $c, 'method' => 'adminPolicy']);
     $r->addRoute('PUT', '/ajax/mail/settings', ['controller' => $c, 'method' => 'saveSettings']);
     $r->addRoute('DELETE', '/ajax/mail/settings', ['controller' => $c, 'method' => 'deleteSettings']);
     $r->addRoute('POST', '/ajax/mail/settings/test', ['controller' => $c, 'method' => 'test']);
