@@ -130,5 +130,6 @@
   "q.kind": "Type",
   "q.kind.confirm": "Confirmation (✓)",
   "q.kind.yes_no": "Oui / Non (« Oui » → quoi)",
+  "q.kind.yes_no_products": "Oui / Non + choix des produits (catégorie → produit → pièces)",
   "q.info": "(i) information sur la tablette — facultatif"
 }

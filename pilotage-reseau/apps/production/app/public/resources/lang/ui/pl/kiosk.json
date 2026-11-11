@@ -815,5 +815,16 @@
   "yn_no": "Nie",
   "yn_info": "Informacja",
   "yn_detail": "Co ? Wpisz krótko — braki trzeba wpisać",
-  "yn_detail_ph": "np. 2 tarty z braków"
+  "yn_detail_ph": "np. 2 tarty z braków",
+  "gp_help": "Co zabierasz ? Wybierz kategorię, potem produkt i liczbę sztuk.",
+  "gp_categories": "Kategorie produktów",
+  "gp_other": "Inne…",
+  "gp_other_label": "Czego nie ma na liście (np. surowiec) — wpisz krótko",
+  "gp_other_ph": "np. 1 kg mąki",
+  "gp_pieces": "szt.",
+  "gp_waste": "Z braków (odpad)",
+  "gp_waste_tag": "braki",
+  "gp_add": "Dodaj",
+  "gp_cancel": "Anuluj",
+  "gp_remove": "Usuń"
 }

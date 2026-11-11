@@ -4,6 +4,7 @@
  *   Dzień      : odbicia dnia, plan, różnica ; powód nadgodzin / nieobecności (lista), wyjście do uzupełnienia,
  *                odbicie ręczne, zatwierdzenie dnia (zadanie nr 1 kierownika produkcji) ;
  *   Miesiąc    : wszyscy × dni (godziny, nadgodziny, U / L4 / WN, ?), sumy, bank, karty A4 (PDF), zamknięcie miesiąca ;
+ *                [266] e-maile pracowników i karta miesiąca e-mailem (PDF w załączniku, kolejka wysyłki) ;
  *   Urlopy     : kalendarz zespołu (paski), pozostały urlop (26 dni), dodaj / usuń wpis, wymiar urlopu osoby ;
  *   Nadgodziny : bank (FIFO, odbiór w 3 miesiące), dzień wolny : propozycja → podpis pracownika (tu albo tablet biurowy).
  */
@@ -264,14 +265,16 @@
             ${days.map(d => monthCell(p.cells[d.date], d)).join('')}
             <td class="text-end tm-num"><b>${hm(p.worked)}</b></td><td class="text-end tm-num ${p.overtime ? 'tm-ot' : ''}">${p.overtime ? hm(p.overtime, true) : '0'}</td>
             <td class="text-end tm-num">${p.leave ? p.leave + ' d' : '0'}</td><td class="text-end tm-num">${hm(p.bank)}</td>
-            <td><a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}&employee=${p.employee_id}" target="_blank" rel="noopener">PDF</a></td></tr>`).join('');
+            <td class="tm-acts"><a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}&employee=${p.employee_id}" target="_blank" rel="noopener">PDF</a>${mailCell(p)}</td></tr>`).join('');
         const t = D.totals;
         body.innerHTML = `<div class="tm-bar">
                 <div class="tm-nav"><a class="btn btn-light btn-sm" href="?month=${D.prev}" aria-label="Poprzedni miesiąc">‹</a><span class="tm-date"><span>${esc(D.label)}</span></span>
                     <a class="btn btn-light btn-sm" href="?month=${D.next}" aria-label="Następny miesiąc">›</a></div>
                 <span class="tm-prev">zatwierdzone dni : <b>${D.validated}</b> z ${D.to_validate}${D.pending.length ? ` · do zatwierdzenia : ${D.pending.slice(0, 6).map(d => `<a href="${root}/time?date=${d}">${dm(d)}</a>`).join(', ')}${D.pending.length > 6 ? '…' : ''}` : ''}</span>
                 <span class="tm-spacer"></span>
-                ${D.people.length ? `<a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Drukuj wszystkich (PDF)</a>` : ''}
+                <button type="button" class="btn btn-light btn-sm" data-contacts><i class="bi bi-person-lines-fill"></i> E-maile pracowników</button>
+                ${D.people.length ? `<button type="button" class="btn btn-light btn-sm" data-mail-all><i class="bi bi-envelope"></i> Wyślij karty e-mailem…</button>
+                <a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}" target="_blank" rel="noopener"><i class="bi bi-file-earmark-pdf"></i> Drukuj wszystkich (PDF)</a>` : ''}
                 ${D.closed ? `<span class="at-pill at-pill-ok">zamknięty ${dm(D.closed.at)} ${esc(D.closed.by || '')}</span>${isAdmin ? ' <button type="button" class="btn btn-link btn-sm" data-reopen-month>Otwórz ponownie</button>' : ''}`
                     : `<button type="button" class="btn btn-primary btn-sm" data-close-month ${D.can_close ? '' : 'disabled'} title="${D.can_close ? '' : 'Po ostatnim dniu miesiąca, gdy wszystkie dni są zatwierdzone'}">Zamknij miesiąc…</button>`}
             </div>
@@ -283,6 +286,58 @@
             <div class="tm-legend"><span><i class="tm-ot">9:10</i> nadgodziny (tylko dni zatwierdzone liczą się do sumy i banku)</span><span><i class="tm-a-U">U</i> urlop</span><span><i class="tm-a-L4">L4</i> chorobowe</span>
                 <span><i class="tm-a-WN">WN</i> wolne za nadgodziny</span><span><i class="tm-q">?</i> brak wyjścia / brak powodu</span><span><i class="tm-v-dot">3</i> dzień zatwierdzony</span></div>
             <p class="tm-note">« Zamknij miesiąc » : po ostatnim dniu, gdy wszystkie dni są zatwierdzone ; potem bez zmian (karty A4 do podpisu). Bank nadgodzin = nadgodziny jeszcze nieodebrane.</p>`;
+    }
+
+    // [266] Karta e-mailem : adres pracownika (zapis zaszyfrowany) i wysyłka karty miesiąca (PDF w załączniku).
+    const mailOf = (id) => (D.mail && !Array.isArray(D.mail) ? D.mail[id] : null) || {email: false, sent: null};
+    const sentLabel = (s) => !s ? '' : s.status === 'sent' ? `wysłano ${dm(s.at)}` : s.status === 'failed' ? 'błąd wysyłki' : `w kolejce ${dm(s.at)}`;
+    function mailCell(p) {
+        const m = mailOf(p.employee_id);
+        if (!m.email) return ` <button type="button" class="btn btn-link btn-sm tm-nomail" data-contacts="${p.employee_id}" title="Brak adresu e-mail — dodaj">+ e-mail</button>`;
+        return ` <button type="button" class="btn btn-light btn-sm ${m.sent ? (m.sent.status === 'failed' ? 'tm-mail-err' : 'tm-mail-ok') : ''}" data-mail-one="${p.employee_id}"
+            title="${m.sent ? esc(sentLabel(m.sent)) + ' — wyślij ponownie' : 'Wyślij kartę e-mailem'}" aria-label="Wyślij kartę e-mailem : ${esc(p.name)}"><i class="bi bi-envelope${m.sent && m.sent.status !== 'failed' ? '-check' : ''}"></i></button>`;
+    }
+
+    async function contactsDialog(focusId) {
+        let list;
+        try { list = (await call('GET', `/ajax/time/contacts?month=${D.month}`)).data; } catch (e) { fail(e); return; }
+        const rows = list.map(c => `<tr><td><b>${esc(c.name)}</b><span class="tm-sub">${esc(c.group || '')}</span></td>
+            <td><input type="email" class="form-control form-control-sm" data-contact="${c.employee_id}" data-was="${esc(c.email || '')}" value="${esc(c.email || '')}"
+                maxlength="190" autocomplete="off" inputmode="email" placeholder="imie.nazwisko@…" aria-label="E-mail : ${esc(c.name)}"></td>
+            <td class="tm-sent">${esc(sentLabel(c.sent))}</td></tr>`).join('');
+        openDialog('E-maile pracowników', `<p class="tm-note">Adres służy do wysyłki karty czasu pracy (PDF). Zapisany w bazie w postaci zaszyfrowanej. Puste pole = bez wysyłki.</p>
+            <div class="tm-contacts"><table class="table tm-table"><thead><tr><th>Pracownik</th><th>E-mail</th><th>Karta ${esc(D.label)}</th></tr></thead><tbody>${rows}</tbody></table></div>`,
+            async () => {
+                const changed = [...form.querySelectorAll('[data-contact]')].filter(i => i.value.trim() !== i.dataset.was)
+                    .map(i => ({employee_id: Number(i.dataset.contact), email: i.value.trim()}));
+                if (!changed.length) return true;
+                const res = await call('PUT', '/ajax/time/contacts', {month: D.month, contacts: changed});
+                D.mail = res.data.mail;
+                render();
+                ok(res.message);
+                return true;
+            }, 'Zapisz adresy');
+        dialog.classList.add('tm-dialog-wide');
+        dialog.addEventListener('close', () => dialog.classList.remove('tm-dialog-wide'), {once: true});
+        const first = focusId ? form.querySelector(`[data-contact="${focusId}"]`) : null;
+        if (first) { first.focus(); first.scrollIntoView({block: 'center'}); }
+    }
+
+    async function mailSheets(btn, ids) {
+        const withMail = D.people.filter(p => mailOf(p.employee_id).email);
+        const one = ids ? D.people.find(p => p.employee_id === ids[0]) : null;
+        const open = D.closed ? '' : ` Miesiąc nie jest zamknięty${D.pending.length ? ` (${D.pending.length} ${pl(D.pending.length, 'dzień', 'dni', 'dni')} do zatwierdzenia)` : ''} — karta pokaże stan na dziś.`;
+        if (!ids && !withMail.length) { fail(new Error('Nikt z listy nie ma adresu e-mail — « E-maile pracowników ».')); return; }
+        const text = one ? `Wysłać kartę za ${D.label} do : ${one.name} ?${open}`
+            : `Wysłać karty za ${D.label} do ${withMail.length} ${pl(withMail.length, 'osoby', 'osób', 'osób')} z adresem e-mail${D.people.length > withMail.length ? ` (${D.people.length - withMail.length} bez adresu)` : ''} ?${open}`;
+        if (!await confirmBox(text)) return;
+        if (btn) btn.disabled = true;
+        try {
+            const res = await call('POST', `/ajax/time/months/${D.month}/mail`, ids ? {employee_ids: ids} : {});
+            D.mail = res.data.mail;
+            render();
+            ok(res.message);
+        } catch (e) { fail(e); } finally { if (btn) btn.disabled = false; }
     }
 
     function monthCell(c, d) {
@@ -471,6 +526,9 @@
             if (await confirmBox(`Zamknąć ${D.label} ? Po zamknięciu nie można zmieniać odbić, powodów ani urlopów tego miesiąca. Karty A4 do podpisu : « Drukuj wszystkich (PDF) ».`)) act(b, 'POST', `/ajax/time/months/${D.month}/close`);
             return;
         }
+        if (b.matches('[data-contacts]')) { contactsDialog(b.dataset.contacts || null); return; }
+        if (b.matches('[data-mail-all]')) { mailSheets(b, null); return; }
+        if (b.matches('[data-mail-one]')) { mailSheets(b, [Number(b.dataset.mailOne)]); return; }
         if (b.matches('[data-reopen-month]')) { if (await confirmBox('Otworzyć ponownie zamknięty miesiąc ?')) act(b, 'DELETE', `/ajax/time/months/${D.month}/close`); return; }
         if (b.matches('[data-add-absence]')) { absenceDialog(); return; }
         if (b.matches('[data-absence]')) { absenceDetail(Number(b.dataset.absence)); return; }

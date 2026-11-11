@@ -424,7 +424,29 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .at-bell-read:hover { border-color: var(--at-primary); color: var(--at-primary); }
 .at-bell-empty, .at-bell-more { margin: 0; padding: 18px 14px; text-align: center; color: var(--at-muted); font-size: 12.5px; }
 .at-bell-more { padding: 10px 14px; border-top: 1px solid var(--at-line); }
-.alert.at-urgent { margin-bottom: 8px; padding: 9px 14px; font-size: 13px; }
+/* [268] Pilne powiadomienia pod paskiem : jedna wąska linia, bez czerwonych ramek ; lista po rozwinięciu. */
+.at-urgent-strip { margin: 0 0 6px; font-size: 12.5px; line-height: 1.35; color: var(--at-muted); }
+.at-urgent-dot { flex: 0 0 8px; width: 8px; height: 8px; border-radius: 2px; background: var(--at-danger); }
+.at-urgent-toggle { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 30px; padding: 4px 2px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.at-urgent-toggle:focus-visible, .at-urgent-read:focus-visible, .at-urgent-go:focus-visible { outline: 2px solid var(--at-primary); outline-offset: 2px; border-radius: 4px; }
+.at-urgent-count { flex: none; font-weight: 600; color: var(--at-danger); }
+.at-urgent-first { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--at-text); }
+.at-urgent-more { flex: none; }
+.at-urgent-toggle .bi { flex: none; font-size: 11px; transition: transform .15s ease; }
+.at-urgent-strip.is-open .at-urgent-toggle .bi { transform: rotate(180deg); }
+.at-urgent-strip.is-open .at-urgent-first, .at-urgent-strip.is-open .at-urgent-more { visibility: hidden; }
+.at-urgent-list { display: none; margin: 0 0 4px 15px; border-left: 1px solid var(--at-line); }
+.at-urgent-strip.is-open .at-urgent-list { display: block; }
+.at-urgent-row { display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 3px 2px 3px 12px; }
+.at-urgent-strip > .at-urgent-row { padding-left: 2px; gap: 8px; }
+.at-urgent-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.at-urgent-text strong { font-weight: 600; color: var(--at-text); }
+.at-urgent-go { flex: none; font-size: 12.5px; text-decoration: none; }
+.at-urgent-go:hover { text-decoration: underline; }
+.at-urgent-read { flex: none; width: 26px; height: 26px; border: 0; border-radius: 6px; background: none; color: var(--at-muted); cursor: pointer; }
+.at-urgent-read:hover { background: rgba(34, 34, 34, .06); color: var(--at-text); }
+@media (max-width: 720px) { .at-urgent-text { white-space: normal; } }
+@media print { .at-urgent-strip { display: none; } }
 
 /* --- Pastylki d'état (réutilisées par plusieurs pages) ------------------------- */
 .at-pill { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; background: var(--at-bg-2); color: var(--at-text); font-size: 11.5px; font-weight: 500; white-space: nowrap; }
@@ -1413,7 +1435,7 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 
 /* Tydzień produkcji : wysyłka (najpierw) / magazyn (dni magazynowe) */
 .tfb-week-kpis { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
-.tfb-week-kpi.is-direct { border-left: 4px solid var(--at-primary, #8D1D2C); }
+.tfb-week-kpi.is-direct { border-left: 4px solid var(--at-primary); }
 .tfb-week-kpi.is-stock { border-left: 4px dashed #2E7D4F; }
 .tfb-week-daykind { font-weight: 400; font-size: 11px; color: var(--at-muted); }
 .tfb-week-dayhead.is-stock-day { background: color-mix(in srgb, #2E7D4F 8%, transparent); border-radius: 6px 6px 0 0; }
@@ -1534,13 +1556,13 @@ button.at-skill-level:focus-visible { outline: 2px solid var(--at-primary); outl
 /* Kierownik produkcji : karta stanowiska, raporty (FR + PL), audyt kompetencji ; druk = dokument zakładki po francusku, potem po polsku. */
 .tfb-mgr-tabs { margin: .5rem 0 1rem; flex-wrap: wrap; }
 .tfb-mgr-doc h2 { font-size: 1.5rem; margin: .25rem 0; }
-.tfb-mgr-doc h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-doc h4 { font-size: 1.05rem; margin: 1.25rem 0 .5rem; color: var(--at-primary); }
 .tfb-mgr-doc h5 { font-size: .95rem; margin: .75rem 0 .35rem; display: flex; justify-content: space-between; gap: 1rem; }
 .tfb-mgr-doc-head { border-bottom: 1px solid var(--at-line, #ddd); padding-bottom: .5rem; margin-bottom: .75rem; }
 .tfb-mgr-chars { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; margin: 0; }
 .tfb-mgr-chars dt { font-weight: 600; }
 .tfb-mgr-chars dd { margin: 0; }
-.tfb-mgr-hours { font-weight: 600; white-space: nowrap; color: var(--at-primary, #8D1D2C); }
+.tfb-mgr-hours { font-weight: 600; white-space: nowrap; color: var(--at-primary); }
 .tfb-mgr-mission ul { margin-bottom: .5rem; }
 .tfb-mgr-sep { margin: 2rem 0; border-top: 3px double var(--at-line, #ccc); }
 .tfb-mgr-table td, .tfb-mgr-table th { vertical-align: top; }
@@ -3665,6 +3687,19 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 /* Okno */
 .tm-dialog { width: min(560px, calc(100vw - 32px)); border: 1px solid var(--at-line); border-radius: 12px; padding: 0; box-shadow: 0 20px 60px rgba(24, 18, 20, .25); }
 .tm-dialog::backdrop { background: rgba(24, 18, 20, .42); }
+/* [266] E-maile pracowników : szersze okno z przewijaną listą ; przyciski karty w wierszu miesiąca. */
+.tm-dialog.tm-dialog-wide { width: min(760px, calc(100vw - 32px)); }
+.tm-contacts { max-height: min(56vh, 520px); overflow: auto; border: 1px solid var(--at-line); border-radius: 8px; }
+.tm-contacts table { margin: 0; }
+.tm-contacts thead th { position: sticky; top: 0; background: var(--at-surface, #fff); z-index: 1; }
+.tm-contacts td { vertical-align: middle; }
+.tm-contacts td:first-child { white-space: nowrap; }
+.tm-contacts td:first-child .tm-sub { display: block; }
+.tm-contacts .tm-sent { font-size: 12.5px; color: var(--at-muted); white-space: nowrap; }
+.tm-acts { white-space: nowrap; }
+.tm-nomail { padding-inline: 4px; font-size: 12px; }
+.tm-mail-ok { color: var(--at-success); }
+.tm-mail-err { color: var(--at-danger); }
 .tm-dialog-head { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px 6px; }
 .tm-dialog-head h4 { margin: 0; font-size: 1.05rem; }
 .tm-dialog-body { display: grid; gap: 10px; padding: 6px 20px; }

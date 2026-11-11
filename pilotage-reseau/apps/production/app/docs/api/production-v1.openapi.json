@@ -26780,6 +26780,38 @@
                                 },
                                 "yes": {
                                     "type": "boolean"
+                                },
+                                "note": {
+                                    "type": "string",
+                                    "maxLength": 200,
+                                    "description": "Question yes_no, réponse « Tak » : ce qui est pris (texte) ; avec picker products : « Inne », ce qui n'est pas dans la liste"
+                                },
+                                "items": {
+                                    "type": "array",
+                                    "maxItems": 30,
+                                    "description": "Question yes_no avec picker products, réponse « Tak » : produits repris (questions.catalog) — au moins une ligne ou une note",
+                                    "items": {
+                                        "type": "object",
+                                        "required": [
+                                            "product_id",
+                                            "quantity"
+                                        ],
+                                        "properties": {
+                                            "product_id": {
+                                                "type": "integer"
+                                            },
+                                            "quantity": {
+                                                "type": "integer",
+                                                "minimum": 1,
+                                                "maximum": 999,
+                                                "description": "pièces"
+                                            },
+                                            "waste": {
+                                                "type": "boolean",
+                                                "description": "pris dans les rebuts (braki)"
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -26810,6 +26842,33 @@
                             "out",
                             "both"
                         ]
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "confirm",
+                            "yes_no"
+                        ],
+                        "default": "confirm"
+                    },
+                    "picker": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "products"
+                        ],
+                        "default": "text",
+                        "description": "yes_no, réponse « Tak » : texte court ou choix rapide catégorie → produit → pièces"
+                    },
+                    "info_pl": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
+                    },
+                    "info_fr": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
                     },
                     "required": {
                         "type": "boolean"
@@ -26847,6 +26906,33 @@
                         ],
                         "default": "in"
                     },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "confirm",
+                            "yes_no"
+                        ],
+                        "default": "confirm"
+                    },
+                    "picker": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "products"
+                        ],
+                        "default": "text",
+                        "description": "yes_no, réponse « Tak » : texte court ou choix rapide catégorie → produit → pièces"
+                    },
+                    "info_pl": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
+                    },
+                    "info_fr": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
+                    },
                     "required": {
                         "type": "boolean"
                     },
@@ -26878,6 +26964,30 @@
                             "out",
                             "both"
                         ]
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "confirm",
+                            "yes_no"
+                        ]
+                    },
+                    "picker": {
+                        "type": "string",
+                        "enum": [
+                            "text",
+                            "products"
+                        ]
+                    },
+                    "info_pl": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
+                    },
+                    "info_fr": {
+                        "type": "string",
+                        "maxLength": 1000,
+                        "nullable": true
                     },
                     "required": {
                         "type": "boolean"
@@ -26916,6 +27026,35 @@
                         "items": {
                             "$ref": "#/components/schemas/ClockQuestionShort"
                         }
+                    },
+                    "catalog": {
+                        "type": "array",
+                        "description": "Présent quand une question a picker products : catégories (ordre alphabétique) et leurs produits actifs",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "name": {
+                                    "type": "string"
+                                },
+                                "products": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "integer"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -26930,6 +27069,25 @@
                     },
                     "required": {
                         "type": "boolean"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": [
+                            "confirm",
+                            "yes_no"
+                        ]
+                    },
+                    "picker": {
+                        "type": "string",
+                        "enum": [
+                            "products"
+                        ],
+                        "nullable": true,
+                        "description": "yes_no : « Tak » → choix rapide des produits (catalog)"
+                    },
+                    "info": {
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },

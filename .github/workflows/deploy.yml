@@ -18,7 +18,11 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-cockpit
+  # Renommé le 11/11/2026 : le run #2032 a fini toutes ses étapes à 20:20 mais
+  # GitHub l'a laissé « en cours » et refusait de l'annuler (409). Il tenait le
+  # verrou `deploy-cockpit`, et toutes les livraisons suivantes attendaient.
+  # Si ça se reproduit : renommer le groupe ici (ou force-cancel du run figé).
+  group: deploy-cockpit-v2
   # La dernière livraison gagne. Avec `false`, une exécution bloquée (mesuré :
   # `apt-get install sshpass` resté en cours 40 minutes) retenait la file, et
   # les livraisons suivantes n'ont jamais démarré — le serveur restait sur une

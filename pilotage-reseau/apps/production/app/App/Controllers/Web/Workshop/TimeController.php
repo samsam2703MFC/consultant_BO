@@ -8,6 +8,7 @@ use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Organization\PageAccessService;
 use App\Services\Workshop\Time\TimeService;
+use App\Services\Workshop\Time\TimeSheetMailService;
 use App\Services\Workshop\Time\TimeSheetPdf;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -20,7 +21,7 @@ final class TimeController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access)
+    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail)
     {
     }
 
@@ -35,7 +36,7 @@ final class TimeController extends BaseController
     public function month()
     {
         $month = self::month_($_GET['month'] ?? null) ?? date('Y-m');
-        $this->page('month', $this->time->month($month));
+        $this->page('month', $this->monthWithMail($month));
     }
 
     public function leave()
@@ -87,7 +88,7 @@ final class TimeController extends BaseController
 
     public function monthData()
     {
-        return $this->guarded(fn() => $this->time->month(self::month_($_GET['month'] ?? null) ?? date('Y-m')));
+        return $this->guarded(fn() => $this->monthWithMail(self::month_($_GET['month'] ?? null) ?? date('Y-m')));
     }
 
     public function leaveData()
@@ -223,6 +224,47 @@ final class TimeController extends BaseController
         });
     }
 
+    // --- [266] Adresy e-mail pracowników i karty e-mailem ---------------------------------------------------
+
+    /** Wszyscy aktywni pracownicy z adresem i ostatnią wysyłką karty miesiąca. */
+    public function contacts()
+    {
+        return $this->guarded(fn() => $this->mail->contacts(self::month_($_GET['month'] ?? null) ?? date('Y-m')));
+    }
+
+    /** Zapis kilku adresów naraz : contacts = [{employee_id, email}] ; pusty adres = usuń. */
+    public function saveContacts()
+    {
+        return $this->guarded(function () {
+            $in = $this->input();
+            $rows = isset($in['contacts']) && is_array($in['contacts']) ? $in['contacts'] : [];
+            if (!$rows || count($rows) > 300) throw new CustomException('Brak adresów do zapisania.', 'errors', 422);
+            // Tout ou rien : une adresse invalide ne laisse pas la liste à moitié enregistrée.
+            $clean = [];
+            foreach ($rows as $r) {
+                if (!is_array($r)) continue;
+                $email = trim((string) ($r['email'] ?? ''));
+                if ($email !== '' && (mb_strlen($email) > 190 || !filter_var($email, FILTER_VALIDATE_EMAIL))) throw new CustomException('Nieprawidłowy adres e-mail : ' . $email . '.', 'errors', 422);
+                $clean[(int) ($r['employee_id'] ?? 0)] = $email;
+            }
+            foreach ($clean as $employeeId => $email) $this->mail->setEmail($employeeId, $email, $this->userId());
+            $month = self::month_($in['month'] ?? null) ?? date('Y-m');
+            return ['message' => 'Zapisano adresy e-mail.', 'data' => ['contacts' => $this->mail->contacts($month), 'mail' => $this->mail->summary($month)]];
+        });
+    }
+
+    /** Karty miesiąca e-mailem : employee_ids (wybrane osoby) albo bez — wszyscy z adresem. */
+    public function mailSheets($month)
+    {
+        return $this->guarded(function () use ($month) {
+            $in = $this->input();
+            $ids = isset($in['employee_ids']) && is_array($in['employee_ids']) ? $in['employee_ids'] : null;
+            $r = $this->mail->send((string) $month, $ids, $this->userId());
+            $msg = 'Karty w kolejce do wysyłki : ' . $r['queued'] . '.' . ($r['missing'] ? ' Bez adresu e-mail : ' . implode(', ', array_slice($r['missing'], 0, 6)) . (count($r['missing']) > 6 ? '…' : '') . '.' : '');
+            return ['message' => $msg, 'data' => $r + ['mail' => $this->mail->summary((string) $month)]];
+        });
+    }
+
     // --- Narzędzia ---------------------------------------------------------------------------------------
 
     private function guarded(callable $fn)
@@ -234,6 +276,11 @@ final class TimeController extends BaseController
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    private function monthWithMail(string $month): array
+    {
+        return $this->time->month($month) + ['mail' => $this->mail->summary($month)];
     }
 
     private function input(): array

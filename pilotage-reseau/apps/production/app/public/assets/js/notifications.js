@@ -1,7 +1,8 @@
 /* ==========================================================================
    ERP — powiadomienia w dzwonku na górnym pasku.
    Licznik nieodczytanych + lista w menu dzwonka. Pod paskiem zostaje tylko
-   krótki baner dla pilnych (severity = danger). Odświeżanie co 20 s.
+   wąska, dyskretna linia dla pilnych (severity = danger) [268] : kropka, liczba,
+   pierwszy tytuł ; kilka pilnych rozwija się w zwartą listę. Odświeżanie co 20 s.
    ========================================================================== */
 (function () {
     'use strict';
@@ -73,6 +74,38 @@
         '</div>';
     }
 
+    var urgentOpen = false;
+    try { urgentOpen = window.sessionStorage.getItem('atUrgentOpen') === '1'; } catch (e) { /* tryb prywatny */ }
+
+    function urgentCount(n) {
+        var few = n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14);
+        return n + ' ' + (n === 1 || few ? 'pilne' : 'pilnych');
+    }
+
+    function urgentActions(n) {
+        var href = link(n.link_url);
+        return (href ? '<a class="at-urgent-go" href="' + esc(href) + '" data-notification-open="' + esc(n.id) + '">Przejdź</a>' : '') +
+            '<button class="at-urgent-read" type="button" data-notification-read="' + esc(n.id) + '" title="Oznacz jako odczytane" aria-label="Oznacz jako odczytane"><i class="bi bi-check2"></i></button>';
+    }
+
+    function urgentText(n) {
+        return '<span class="at-urgent-text"><strong>' + esc(n.title) + '</strong>' + (n.body ? ' — ' + esc(n.body) : '') + '</span>';
+    }
+
+    function strip(urgent) {
+        if (urgent.length === 1) {
+            return '<div class="at-urgent-strip" role="status"><div class="at-urgent-row"><span class="at-urgent-dot" aria-hidden="true"></span>' +
+                urgentText(urgent[0]) + urgentActions(urgent[0]) + '</div></div>';
+        }
+        return '<div class="at-urgent-strip' + (urgentOpen ? ' is-open' : '') + '" role="status">' +
+            '<button type="button" class="at-urgent-toggle" data-urgent-toggle aria-expanded="' + (urgentOpen ? 'true' : 'false') + '">' +
+                '<span class="at-urgent-dot" aria-hidden="true"></span><span class="at-urgent-count">' + urgentCount(urgent.length) + '</span>' +
+                '<span class="at-urgent-first">' + esc(urgent[0].title) + '</span><span class="at-urgent-more">+' + (urgent.length - 1) + '</span>' +
+                '<i class="bi bi-chevron-down" aria-hidden="true"></i></button>' +
+            '<div class="at-urgent-list">' + urgent.map(function (n) { return '<div class="at-urgent-row">' + urgentText(n) + urgentActions(n) + '</div>'; }).join('') + '</div>' +
+        '</div>';
+    }
+
     function render(data, total) {
         total = typeof total === 'number' ? total : data.length;
         count.hidden = total === 0;
@@ -83,17 +116,11 @@
             ? data.map(item).join('') + (total > data.length ? '<p class="at-bell-more">i ' + (total - data.length) + ' starszych</p>' : '')
             : '<p class="at-bell-empty">Brak nowych powiadomień</p>';
 
-        // Pod paskiem tylko pilne — reszta czeka w dzwonku.
+        // [268] Pod paskiem tylko pilne, dyskretnie : jedna wąska linia (kropka, liczba, pierwszy tytuł) ; kilka pilnych
+        // rozwija się po dotknięciu w zwartą listę. Reszta czeka w dzwonku.
         if (banner) {
-            banner.innerHTML = data.filter(function (n) { return n.severity === 'danger'; }).map(function (n) {
-                var href = link(n.link_url);
-                return '<div class="alert alert-danger at-urgent d-flex align-items-center gap-2" role="alert">' +
-                    '<i class="bi ' + ICONS.danger + '"></i>' +
-                    '<span class="me-auto"><strong>' + esc(n.title) + '</strong>' + (n.body ? ' — ' + esc(n.body) : '') + '</span>' +
-                    (href ? '<a class="btn btn-sm btn-outline-dark" href="' + esc(href) + '" data-notification-open="' + esc(n.id) + '">Przejdź</a>' : '') +
-                    '<button class="btn btn-sm btn-outline-dark" type="button" data-notification-read="' + esc(n.id) + '">Odczytane</button>' +
-                '</div>';
-            }).join('');
+            var urgent = data.filter(function (n) { return n.severity === 'danger'; });
+            banner.innerHTML = urgent.length ? strip(urgent) : '';
         }
 
         var ids = data.map(function (n) { return String(n.id); });
@@ -112,6 +139,14 @@
     }
 
     function onClick(e) {
+        var toggle = e.target.closest('[data-urgent-toggle]');
+        if (toggle) {
+            urgentOpen = !urgentOpen;
+            try { window.sessionStorage.setItem('atUrgentOpen', urgentOpen ? '1' : '0'); } catch (x) { /* tryb prywatny */ }
+            toggle.parentNode.classList.toggle('is-open', urgentOpen);
+            toggle.setAttribute('aria-expanded', urgentOpen ? 'true' : 'false');
+            return;
+        }
         var read = e.target.closest('[data-notification-read]');
         var open = e.target.closest('[data-notification-open]');
         if (read) {

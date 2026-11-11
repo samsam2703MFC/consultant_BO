@@ -169,7 +169,8 @@ try {
     $olaPhoneH = ['X-Qr-Token' => $olaQr, 'X-Phone-Token' => $olaPhone];
     [$s, $me] = $call('GET', '/kiosk/phone/me', null, $olaPhoneH);
     expectOff($s === 200 && $me['data']['employee']['id'] === $ola && $me['data']['clocked_in'] === false, 'phone: my state on my QR');
-    $yes = fn(array $qs) => array_map(fn($x) => ['question_id' => $x['id'], 'yes' => true], $qs);
+    // Points à confirmer : « oui » ; question Tak / Nie (marchandise à la sortie [263]) : « Nie », réponse valable sans précision.
+    $yes = fn(array $qs) => array_map(fn($x) => ['question_id' => $x['id'], 'yes' => ($x['kind'] ?? 'confirm') !== 'yes_no'], $qs);
     $img = imagecreatetruecolor(300, 120);
     imagefill($img, 0, 0, imagecolorallocate($img, 255, 255, 255));
     imageline($img, 10, 100, 290, 20, imagecolorallocate($img, 0, 0, 0));
