@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Maquette — Catalogue › Structure de gamme</title>
 <!-- Produits › Catalogue › onglet « Structure de gamme » (entre Fiches et Assortiment obligatoire).
-       ?v=1  Par catégorie : le standard (80 % du CA, 6 max), les saisons et périodes (4 max), ce qui sort (< 5 %)
+       ?v=1  Par catégorie : le standard (80 % du CA, 6 max), les saisons et périodes (4 max), ce qui sort (< 3 %)
        ?v=2  Une catégorie ouverte (Tartes – Ø 28 cm) : la répartition du CA, la décision référence par référence
        ?v=3  Saisons et périodes : la frise de l'année et, par catégorie, les 4 références de chaque saison
-       ?v=4  À désactiver : les références sous 5 % de leur catégorie, et le garde-fou du retrait
-     &base=mg  la même chose avec la marge nette au lieu du chiffre d'affaires
-     &cat=…    ouvrir une autre catégorie à l'écran 2
+       ?v=4  À désactiver : les références sous le seuil (3 %) de leur catégorie, et le garde-fou du retrait
+     Les variables (ligne de règles, appliquées par « Rafraîchir », reprises dans l'adresse) :
+     &base=mg  marge nette au lieu du chiffre d'affaires     &std=80  part couverte par le standard, en %
+     &max=6    plafond du standard par catégorie             &sai=4   plafond par saison ou période
+     &seuil=3  sous ce % de sa catégorie, une référence est à désactiver
+     &cat=…    la catégorie ouverte (écran 2) ou dépliée (écran 4)
      Données réelles (donnees.js, lues en GET par extraire.py) ; règles dans structure.js. -->
 <link rel="stylesheet" href="../../../public/assets/ds/global.css">
 <link rel="stylesheet" href="../../../public/assets/css/app.css">
@@ -25,6 +28,8 @@
   .sg .regle{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
   .sg .regle input{width:46px;padding:5px 7px;font-size:12.5px;text-align:right;border-radius:8px}
   .sg .src{font-size:11.5px;color:var(--muted)}
+  .sg .regle input.chg{border-color:var(--accent);outline:1px solid var(--accent)}
+  .sg .recalc{font-size:11.5px;color:var(--green)}
   .sg .card{padding:14px 16px}
   .sg .kpi-row{background:#fff;border:1px solid var(--line);border-radius:12px}
   .sg .kpi{min-width:150px}
@@ -121,27 +126,50 @@
 <script src="structure.js"></script>
 <script>
 (function () {
-  const Q = new URLSearchParams(location.search);
-  const V = Q.get('v') || '1', BASE = Q.get('base') === 'mg' ? 'mg' : 'ca';
   const D = window.SG, S = window.Structure;
-  const R = S.structurer(D, { base: BASE });
-  const Ralt = S.structurer(D, { base: BASE === 'ca' ? 'mg' : 'ca' });
-  const alt = new Map(Ralt.produits.map(p => [p.id, p]));
-  const T = R.totaux;
+
+  /* Les variables de la structure. Une valeur par défaut, une borne, et l'adresse pour s'en souvenir :
+     une capture se refait à l'identique avec ?seuil=3&max=6… — la ligne de règles les modifie,
+     « Rafraîchir » (ou Entrée dans un champ) recalcule. */
+  const DEFAUT = { v: '1', base: 'ca', cat: '', std: 80, max: 6, sai: 4, seuil: 3 };
+  const BORNES = { std: [50, 100], max: [1, 20], sai: [1, 10], seuil: [0, 20] };
+  const E = Object.assign({}, DEFAUT);
+  const Q0 = new URLSearchParams(location.search);
+  Object.keys(DEFAUT).forEach(k => { if (Q0.has(k)) { E[k] = Q0.get(k); } });
+  Object.keys(BORNES).forEach(k => { E[k] = borne(k, E[k], DEFAUT[k]); });
+  E.base = E.base === 'mg' ? 'mg' : 'ca';
+  function borne(k, v, repli) {
+    const x = parseFloat(String(v).replace(',', '.'));
+    if (!isFinite(x)) { return repli; }
+    const [a, b] = BORNES[k];
+    const y = Math.min(b, Math.max(a, x));
+    return k === 'max' || k === 'sai' ? Math.round(y) : Math.round(y * 10) / 10;
+  }
+  const vx = x => x.toLocaleString('fr-BE') + '\u00a0%';   // une variable en pourcentage : « 3 % », « 2,5 % »
+
+  let V, BASE, R, Ralt, alt, T, SA, PE, baseNom, baseCourt, avant = null;
+  function calculer() {
+    V = E.v; BASE = E.base;
+    const opts = b => ({ base: b, stdPart: E.std / 100, saiPart: E.std / 100, stdMax: E.max, saiMax: E.sai, seuil: E.seuil / 100 });
+    R = S.structurer(D, opts(BASE));
+    Ralt = S.structurer(D, opts(BASE === 'ca' ? 'mg' : 'ca'));
+    alt = new Map(Ralt.produits.map(p => [p.id, p]));
+    T = R.totaux;
+    SA = Object.fromEntries(R.saisons.map(x => [x.id, x]));
+    PE = Object.fromEntries(R.periodes.map(x => [x.id, x]));
+    baseNom = BASE === 'mg' ? 'marge nette' : 'chiffre d’affaires';
+    baseCourt = BASE === 'mg' ? 'de la marge' : 'du CA';
+  }
 
   const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const nb = n => Math.round(n).toLocaleString('fr-BE');
   const eur = n => n == null ? '—' : nb(n) + ' €';
   const keur = n => (n >= 1e6 ? (n / 1e6).toLocaleString('fr-BE', { maximumFractionDigits: 2 }) + ' M€' : nb(n / 1000) + ' k€');
-  // Une part sous le seuil ne s'arrondit jamais au seuil : 4,98 % s'écrit 4,9 %, pas 5,0 %.
-  const pt = x => x == null ? null : (x < 0.05 ? Math.floor(x * 1000) / 1000 : x);
+  // Une part sous le seuil ne s'arrondit jamais au seuil : 2,98 % s'écrit 2,9 %, pas 3,0 %.
+  const pt = x => x == null ? null : (x < E.seuil / 100 ? Math.floor(x * 1000) / 1000 : x);
   const pc = (x, d) => x == null ? '—' : (x * 100).toLocaleString('fr-BE', { maximumFractionDigits: d == null ? 0 : d, minimumFractionDigits: d == null ? 0 : d }) + ' %';
   const pl = (n, m, f) => n + ' ' + (n > 1 ? (f || m + 's') : m);
   const moisCourt = i => D.mois[i].split(' ')[0].toLowerCase().replace(/\.$/, '') + '.';
-  const SA = Object.fromEntries(R.saisons.map(s => [s.id, s]));
-  const PE = Object.fromEntries(R.periodes.map(s => [s.id, s]));
-  const baseNom = BASE === 'mg' ? 'marge nette' : 'chiffre d’affaires';
-  const baseCourt = BASE === 'mg' ? 'de la marge' : 'du CA';
   const du = D.bornes[0][0].split('-').reverse().join('/'), au = D.bornes[D.bornes.length - 1][1].split('-').reverse().join('/');
 
   /** Le statut en un mot, et sa forme. */
@@ -173,10 +201,12 @@
   function regles() {
     return `<div class="bar">
       <span class="regle">Base</span>
-      <div class="seg"><button class="${BASE === 'ca' ? 'is-on' : ''}">Chiffre d’affaires</button><button class="${BASE === 'mg' ? 'is-on' : ''}">Marge nette</button></div>
-      <span class="regle" style="margin-left:8px">Standard&nbsp;: <input value="80"> % ${baseCourt}, <input value="6"> max par catégorie</span>
-      <span class="regle">Saisons et périodes&nbsp;: <input value="4"> max</span>
-      <span class="regle">Désactiver sous <input value="5"> % de la catégorie</span>
+      <div class="seg"><button data-base="ca" class="${BASE === 'ca' ? 'is-on' : ''}">Chiffre d’affaires</button><button data-base="mg" class="${BASE === 'mg' ? 'is-on' : ''}">Marge nette</button></div>
+      <span class="regle" style="margin-left:8px">Standard&nbsp;: <input data-var="std" inputmode="decimal" value="${String(E.std).replace('.', ',')}"> % ${baseCourt}, <input data-var="max" inputmode="numeric" value="${E.max}"> max</span>
+      <span class="regle">Saisons, périodes&nbsp;: <input data-var="sai" inputmode="numeric" value="${E.sai}"> max</span>
+      <span class="regle">Désactiver sous <input data-var="seuil" inputmode="decimal" value="${String(E.seuil).replace('.', ',')}"> % de la catégorie</span>
+      <button class="btn btn--sm" id="rafraichir" title="Recalculer la structure avec ces valeurs">Rafraîchir</button>
+      ${avant ? `<span class="recalc">${avant}</span>` : ''}
       <span class="sp"></span>
       <span class="src">Ventes réseau du ${du} au ${au} · ${D.magasins.length} magasins · lu le ${D.lu.split('-').reverse().join('/')}</span>
     </div>`;
@@ -192,7 +222,7 @@
       </div>
       <div class="sg">
         <div class="bar">
-          <div class="seg">${vues.map(([k, l, n]) => `<button class="${(vue === k || (vue === '2' && k === '1')) ? 'is-on' : ''}">${l}${n ? ' · ' + n : ''}</button>`).join('')}</div>
+          <div class="seg">${vues.map(([k, l, n]) => `<button data-v="${k}" class="${(vue === k || (vue === '2' && k === '1')) ? 'is-on' : ''}">${l}${n ? ' · ' + n : ''}</button>`).join('')}</div>
         </div>
         ${regles()}
         ${corps}
@@ -216,11 +246,11 @@
       g.cats.forEach(C => {
         const off = C.desactiver, caOff = off.reduce((s, p) => s + (p.caPer || 0), 0);
         const cv = C.couverture;
-        lignes += `<tr class="row-link${C.cat === 'Tartes – Ø 28 cm' ? ' sel' : ''}">
+        lignes += `<tr class="row-link${C.cat === (E.cat || 'Tartes – Ø 28 cm') ? ' sel' : ''}" data-ouvrir="${esc(C.cat)}">
           <td class="nom">${esc(C.cat)}<span class="sub">${pl(C.actives, 'référence active', 'références actives')}${C.refs.some(p => p.doublon) ? ' · doublon' : ''}</span></td>
           <td></td>
           <td class="num">${eur(C.ca)}</td>
-          <td>${C.std.length ? `${C.std.length}<span class="muted" style="font-size:11px"> / 6</span>&nbsp;&nbsp;<span class="couv"><i style="width:${Math.min(100, cv * 100)}%"></i><b style="left:80%"></b></span>&nbsp; <span class="muted" style="font-size:11.5px">${pc(cv)}</span>${C.plafonne ? ' <span class="mini warn">plafond</span>' : ''}` : '<span class="muted">aucune vendue toute l’année</span>'}</td>
+          <td>${C.std.length ? `${C.std.length}<span class="muted" style="font-size:11px"> / ${E.max}</span>&nbsp;&nbsp;<span class="couv"><i style="width:${Math.min(100, cv * 100)}%"></i><b style="left:${E.std}%"></b></span>&nbsp; <span class="muted" style="font-size:11.5px">${pc(cv)}</span>${C.plafonne ? ' <span class="mini warn">plafond</span>' : ''}` : '<span class="muted">aucune vendue toute l’année</span>'}</td>
           <td>${caseS(C)}</td>
           <td>${caseP(C)}</td>
           <td class="num">${off.length ? off.length + '<span class="sub">' + (C.ca ? pc(caOff / C.ca) + ' du CA' : '') + '</span>' : '<span class="muted">—</span>'}</td>
@@ -231,10 +261,10 @@
     const corps = `
       <div class="kpi-row">
         ${kpi('Références actives', nb(T.actives), 'dont ' + T.hors + ' hors structure : B2B, bundles, extras')}
-        ${kpi('Standard', nb(T.standard), pc(T.caStandard / T.caStructure) + ' du CA · 6 max par catégorie')}
-        ${kpi('Saisons', nb(T.saison), '4 saisons · 4 max par catégorie')}
+        ${kpi('Standard', nb(T.standard), pc(T.caStandard / T.caStructure) + ' du CA · ' + E.max + ' max par catégorie')}
+        ${kpi('Saisons', nb(T.saison), '4 saisons · ' + E.sai + ' max par catégorie')}
         ${kpi('Périodes', nb(T.periode), 'Noël, Nouvel An, Pâques' + (T.aReactiver ? ' · ' + T.aReactiver + ' à réactiver' : ''))}
-        ${kpi('À désactiver', nb(T.desactiver), 'sous 5 % · ' + pc(T.caDesactiver / T.caStructure) + ' du CA')}
+        ${kpi('À désactiver', nb(T.desactiver), 'sous ' + vx(E.seuil) + ' · ' + pc(T.caDesactiver / T.caStructure) + ' du CA')}
         ${kpi('À arbitrer', nb(T.arbitrer), '+ ' + T.observation + ' en observation (moins de 6 mois)')}
       </div>
       <div class="encart neutre"><span>
@@ -251,14 +281,13 @@
           <tbody>${lignes}</tbody>
         </table></div>
       </section>
-      <p class="note">Standard : les références vendues toute l’année, de la plus forte à la plus faible ${baseCourt}, jusqu’à 80 % de leur catégorie, 6 au plus — une référence sous 5 % n’y entre pas. Saisons et périodes : la même règle sur les mois de la saison, 4 au plus. Une référence est saisonnière quand trois mois de suite font moins de 5 % de son volume et qu’une ou deux saisons voisines en font 70 % ; une période, quand un mois daté (décembre, janvier, mars-avril) en fait l’essentiel. Les mois sont lus en part du volume réseau : l’ouverture de Halle en février et le mois de novembre entamé ne déforment pas les saisons.</p>`;
+      <p class="note">Standard : les références vendues toute l’année, de la plus forte à la plus faible ${baseCourt}, jusqu’à ${vx(E.std)} de leur catégorie, ${E.max} au plus — une référence sous ${vx(E.seuil)} n’y entre pas. Saisons et périodes : la même règle sur les mois de la saison, ${E.sai} au plus. À désactiver : sous ${vx(E.seuil)} de la catégorie sur les mois où la référence se vend. Une référence est saisonnière quand trois mois de suite font moins de 5 % de son volume et qu’une ou deux saisons voisines en font 70 % ; une période, quand un mois daté (décembre, janvier, mars-avril) en fait l’essentiel. Les mois sont lus en part du volume réseau : l’ouverture de Halle en février et le mois de novembre entamé ne déforment pas les saisons.</p>`;
     cadre('1', corps, '<button class="btn">Exporter</button><button class="btn btn--primary">Appliquer à l’assortiment</button>');
   }
 
   /* ============ 2. Une catégorie ouverte ============ */
   function vue2() {
-    const nomCat = Q.get('cat') || 'Tartes – Ø 28 cm';
-    const C = R.cats.find(c => c.cat === nomCat);
+    const C = R.cats.find(c => c.cat === E.cat) || R.cats.find(c => c.cat === 'Tartes – Ø 28 cm');
     const perm = C.refs.filter(p => p.nature === 'permanent').sort((a, b) => b.val - a.val);
     const tot = perm.reduce((s, p) => s + p.val, 0);
     // La barre segmentée : le CA des références vendues toute l'année, dans l'ordre.
@@ -296,7 +325,7 @@
     }).join('');
     const nPerm = perm.length, moy = 1 / C.refs.filter(p => p.nature === 'permanent' || p.nature === 'faible').length;
     const corps = `
-      <div class="bar"><button class="linklike" style="padding:0">‹ Toutes les catégories</button></div>
+      <div class="bar"><button class="linklike" style="padding:0" data-v="1">‹ Toutes les catégories</button></div>
       <div>
         <div class="screen-subtitle" style="margin:0">${esc(C.cat)}</div>
         <p class="muted" style="font-size:12.5px;margin-top:2px">Groupe ${esc(C.grp)} · ${pl(C.actives, 'référence active', 'références actives')} · CA 12 mois ${eur(C.ca)} · marge nette ${eur(C.mg)}</p>
@@ -305,18 +334,18 @@
         <section class="card">
           <h2>Le ${baseNom} des ${nPerm} références vendues toute l’année</h2>
           <div class="seg100">${segs}
-            <div class="rep" style="left:80%"><span>80 %</span></div>
+            <div class="rep" style="left:${E.std}%"><span>${vx(E.std)}</span></div>
             ${lab6 != null ? `<div class="lab" style="left:0">Les ${C.std.length} premières : ${pc(C.couverture)}</div>` : ''}
           </div>
-          <div class="legende"><span><i style="background:var(--chart-real)"></i>Standard (${C.std.length} / 6)</span><span><i style="background:var(--chart-prev)"></i>Les autres références vendues toute l’année</span><span><i style="background:var(--chart-goal);width:2px"></i>80 % ${baseCourt}</span></div>
-          <p class="note" style="margin-top:10px">${C.plafonne ? `Le plafond de 6 arrive avant les 80 % : les 6 premières font ${pc(C.couverture)}. Il en faudrait ${perm.findIndex(p => p.cum >= 0.8) + 1} pour atteindre 80 %.` : `Les ${C.std.length} premières atteignent ${pc(C.couverture)}.`}</p>
+          <div class="legende"><span><i style="background:var(--chart-real)"></i>Standard (${C.std.length} / ${E.max})</span><span><i style="background:var(--chart-prev)"></i>Les autres références vendues toute l’année</span><span><i style="background:var(--chart-goal);width:2px"></i>${vx(E.std)} ${baseCourt}</span></div>
+          <p class="note" style="margin-top:10px">${C.plafonne ? `Le plafond de ${E.max} arrive avant les ${vx(E.std)} : les ${E.max} premières font ${pc(C.couverture)}. Il en faudrait ${perm.findIndex(p => p.cum >= E.std / 100) + 1} pour atteindre ${vx(E.std)}.` : `Les ${C.std.length} premières atteignent ${pc(C.couverture)}.`}</p>
         </section>
         <div style="display:flex;flex-direction:column;gap:10px">
-          <section class="card" style="padding:12px 14px"><div class="kpi__label" style="margin:0 0 4px">Sous 5 % de la catégorie</div><div class="kpi__value">${off.length}<small>${pc(caOff / C.ca)} du CA</small></div></section>
+          <section class="card" style="padding:12px 14px"><div class="kpi__label" style="margin:0 0 4px">Sous ${vx(E.seuil)} de la catégorie</div><div class="kpi__value">${off.length}<small>${pc(caOff / C.ca)} du CA</small></div></section>
           <section class="card" style="padding:12px 14px"><div class="kpi__label" style="margin:0 0 4px">Si l’on trie par ${BASE === 'ca' ? 'la marge' : 'le CA'}</div><div class="kpi__value">${chg.length}<small>${chg.length > 1 ? 'changements' : 'changement'}</small></div><div class="kpi__note">${esc(chg.slice(0, 3).map(p => p.nom).join(', '))}</div></section>
         </div>
       </div>
-      ${off.length && caOff / C.ca > 0.15 ? `<div class="encart"><span><b>À trancher pour cette catégorie.</b> Avec ${C.refs.filter(p => p.u).length} références vendues, la part moyenne d’une référence est de ${pc(1 / C.refs.filter(p => p.u).length, 1)} : la règle des 5 % en sort ${off.length}, qui font ensemble ${pc(caOff / C.ca)} du CA de la catégorie. Les garder hors standard (à arbitrer) ou les retirer, c’est la décision.</span></div>` : ''}
+      ${off.length && caOff / C.ca > 0.15 ? `<div class="encart"><span><b>À trancher pour cette catégorie.</b> Avec ${C.refs.filter(p => p.u).length} références vendues, la part moyenne d’une référence est de ${pc(1 / C.refs.filter(p => p.u).length, 1)} : la règle des ${vx(E.seuil)} en sort ${off.length}, qui font ensemble ${pc(caOff / C.ca)} du CA de la catégorie. Les garder hors standard (à arbitrer) ou les retirer, c’est la décision.</span></div>` : ''}
       <section class="card table-card" style="padding:0;margin-top:0">
         <div class="table-scroll"><table>
           <thead><tr><th class="num">#</th><th>Référence</th><th>12 mois</th><th class="num">CA 12 mois</th><th class="num">Part</th><th class="num">Cumul</th><th class="num">Marge nette</th><th>Proposition</th><th>Selon ${BASE === 'ca' ? 'la marge' : 'le CA'}</th><th>Décision</th></tr></thead>
@@ -376,7 +405,7 @@
           <tbody>${cats.map(C => `<tr><td class="nom">${esc(C.cat)}<span class="sub">${esc(C.grp)}</span></td>${R.saisons.map(s => cell(C.saisons[s.id], false)).join('')}${R.periodes.map(s => cell(C.periodes[s.id], true)).join('')}</tr>`).join('')}</tbody>
         </table></div>
       </section>
-      <p class="note">Les ventes sont lues par mois, sur un an : Noël et Nouvel An se séparent par le mois du pic (décembre ou janvier) — les galettes tombent au Nouvel An, les bûches et cougnous à Noël. Saint-Nicolas tombe avec Noël. Au jour près quand la lecture journalière sera branchée. Une référence de saison sous 5 % de sa catégorie pendant la saison n’est pas retenue.</p>`;
+      <p class="note">Les ventes sont lues par mois, sur un an : Noël et Nouvel An se séparent par le mois du pic (décembre ou janvier) — les galettes tombent au Nouvel An, les bûches et cougnous à Noël. Saint-Nicolas tombe avec Noël. Au jour près quand la lecture journalière sera branchée. Une référence de saison sous ${vx(E.seuil)} de sa catégorie pendant la saison n’est pas retenue.</p>`;
     cadre('3', corps, '<button class="btn">Exporter</button><button class="btn btn--primary">Appliquer à l’assortiment</button>');
   }
 
@@ -395,7 +424,7 @@
     const off = R.produits.filter(p => p.actif && p.statut === 'desactiver');
     const vendues = off.filter(p => p.u);
     const musts = off.filter(p => p.must);
-    const ouvert = Q.get('cat') || 'Sandwiches garnis';
+    const ouvert = E.cat === '-' ? '' : (R.cats.some(c => c.cat === E.cat && c.desactiver.some(p => p.actif)) ? E.cat : 'Sandwiches garnis');
     let lignes = '';
     R.groupes.forEach(g => {
       const cs = g.cats.filter(C => C.desactiver.some(p => p.actif));
@@ -404,7 +433,7 @@
       cs.forEach(C => {
         const l = C.desactiver.filter(p => p.actif), ca = l.reduce((s, p) => s + (p.caPer || 0), 0);
         const ouv = C.cat === ouvert;
-        lignes += `<tr class="${ouv ? 'sel' : 'row-link'}"><td><span class="ck on">✓</span></td>
+        lignes += `<tr class="${ouv ? 'sel' : 'row-link'}" data-deplier="${esc(ouv ? '-' : C.cat)}"><td><span class="ck on">✓</span></td>
           <td class="nom">${esc(C.cat)}<span class="sub">${ouv ? '' : esc(l.slice(0, 5).map(p => p.nom).join(', ')) + (l.length > 5 ? '…' : '')}</span></td>
           <td class="num">${l.length}<span class="sub">sur ${C.actives}</span></td>
           <td class="num">${eur(ca)}<span class="sub">${C.ca ? pc(ca / C.ca) + ' de la catégorie' : ''}</span></td>
@@ -426,7 +455,7 @@
         ${kpi('Sous le plancher', nb(off.length - vendues.length), 'moins de ' + D.plancher + ' pièces en 12 mois')}
         ${kpi('Obligatoires aujourd’hui', nb(musts.length), 'à retirer aussi de l’assortiment')}
       </div>
-      <div class="encart"><span><b>Le retrait du catalogue a un garde-fou.</b> Aujourd’hui, « Retirer du catalogue » refuse toute référence vendue ne serait-ce qu’une fois sur les douze derniers mois — presque toute cette liste est dans ce cas, et ${vendues.length} références dépassent ${D.plancher} pièces. Les désactiver demande un motif explicite, « moins de 5 % de sa catégorie », que le garde-fou accepte pour cette liste seulement, et qui reste au journal référence par référence.</span></div>
+      <div class="encart"><span><b>Le retrait du catalogue a un garde-fou.</b> Aujourd’hui, « Retirer du catalogue » refuse toute référence vendue ne serait-ce qu’une fois sur les douze derniers mois — presque toute cette liste est dans ce cas, et ${vendues.length} références dépassent ${D.plancher} pièces. Les désactiver demande un motif explicite, « moins de ${vx(E.seuil)} de sa catégorie », que le garde-fou accepte pour cette liste seulement, et qui reste au journal référence par référence.</span></div>
       <section class="card table-card" style="padding:0;margin-top:0">
         <div class="table-scroll"><table>
           <thead><tr><th style="width:30px"></th><th>Catégorie · référence</th><th class="num">Références</th><th class="num">CA 12 mois</th><th class="num">Encore vendues</th><th></th></tr></thead>
@@ -437,7 +466,44 @@
     cadre('4', corps, `<button class="btn btn--ghost">Annuler</button><button class="btn btn--primary">Désactiver ${off.length} références</button>`);
   }
 
-  ({ 1: vue1, 2: vue2, 3: vue3, 4: vue4 }[V] || vue1)();
+  /** Calculer, dessiner, écrire les variables dans l'adresse. */
+  function rendre() {
+    calculer();
+    ({ 1: vue1, 2: vue2, 3: vue3, 4: vue4 }[V] || vue1)();
+    const q = new URLSearchParams();
+    Object.keys(DEFAUT).forEach(k => { if (String(E[k]) !== String(DEFAUT[k])) { q.set(k, E[k]); } });
+    history.replaceState(null, '', location.pathname + (q.toString() ? '?' + q : ''));
+  }
+  function aller(ch) { Object.assign(E, ch); avant = null; rendre(); window.scrollTo(0, 0); }
+
+  /** « Rafraîchir » : relire les champs, recalculer, dire ce qui a bougé. */
+  function rafraichir() {
+    const t0 = R ? R.totaux : null;
+    document.querySelectorAll('input[data-var]').forEach(i => { E[i.dataset.var] = borne(i.dataset.var, i.value, E[i.dataset.var]); });
+    calculer();
+    const t1 = R.totaux;
+    const h = new Date().toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' });
+    avant = 'Recalculé à ' + h + (t0 ? ' — standard ' + t0.standard + ' → ' + t1.standard + ', à désactiver ' + t0.desactiver + ' → ' + t1.desactiver : '');
+    rendre();
+  }
+
+  document.addEventListener('click', ev => {
+    const b = ev.target.closest('[data-v],[data-base],[data-ouvrir],[data-deplier],#rafraichir');
+    if (!b) { return; }
+    if (b.id === 'rafraichir') { rafraichir(); }
+    else if (b.dataset.v) { aller({ v: b.dataset.v, cat: '' }); }
+    else if (b.dataset.base) { aller({ base: b.dataset.base }); }
+    else if (b.dataset.ouvrir) { aller({ v: '2', cat: b.dataset.ouvrir }); }
+    else if (b.dataset.deplier) { Object.assign(E, { cat: b.dataset.deplier }); avant = null; rendre(); }
+  });
+  document.addEventListener('keydown', ev => { if (ev.key === 'Enter' && ev.target.matches('input[data-var]')) { rafraichir(); } });
+  document.addEventListener('input', ev => {
+    if (!ev.target.matches('input[data-var]')) { return; }
+    const k = ev.target.dataset.var;
+    ev.target.classList.toggle('chg', borne(k, ev.target.value, E[k]) !== E[k]);
+  });
+
+  rendre();
 })();
 </script>
 </body>

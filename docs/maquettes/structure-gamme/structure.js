@@ -1,11 +1,11 @@
 /* Structure de gamme — les règles, sans affichage.
  *
  * Une référence reçoit UN statut par catégorie du panel :
- *   standard    vendue toute l'année, parmi celles qui font 80 % du CA (ou de la marge) de la catégorie, 6 au plus ;
- *   saison      vendue surtout pendant une ou deux saisons, parmi les 4 premières de la catégorie pour cette saison ;
- *   periode     vendue autour de Noël, du Nouvel An ou de Pâques, parmi les 4 premières de la catégorie ;
- *   desactiver  moins de 5 % du CA de sa catégorie, sur les mois où elle se vend ;
- *   arbitrer    ni retenue ni sous 5 % : au-delà du plafond ou des 80 % — à garder hors structure ou à retirer ;
+ *   standard    vendue toute l'année, parmi celles qui font stdPart (80 %) du CA ou de la marge de la catégorie, stdMax (6) au plus ;
+ *   saison      vendue surtout pendant une ou deux saisons, parmi les saiMax (4) premières de la catégorie pour cette saison ;
+ *   periode     vendue autour de Noël, du Nouvel An ou de Pâques, parmi les saiMax (4) premières de la catégorie ;
+ *   desactiver  moins de « seuil » (3 %) du CA de sa catégorie, sur les mois où elle se vend ;
+ *   arbitrer    ni retenue ni sous le seuil : au-delà du plafond ou des 80 % — à garder hors structure ou à retirer ;
  *   observation lancée il y a moins de 6 mois : jugée à 6 mois de ventes, ni retenue ni retirée d'ici là ;
  *   hors        catégories qui ne sont pas des produits (B2B, bundles, extras payants) ;
  *   retiree     déjà inactive au catalogue et sans saison : ne compte plus.
@@ -17,7 +17,9 @@
 (function (racine) {
   'use strict';
 
-  const REGLES = { base: 'ca', stdPart: 0.8, stdMax: 6, saiPart: 0.8, saiMax: 4, seuil: 0.05 };
+  // Les variables de la structure, et leur valeur par défaut. Toutes se passent en options à structurer() :
+  // la maquette les règle dans sa ligne de règles. Seuil de désactivation : 3 % (décision du 11/11/2026, 5 % avant).
+  const REGLES = { base: 'ca', stdPart: 0.8, stdMax: 6, saiPart: 0.8, saiMax: 4, seuil: 0.03 };
   // Ce qui n'est pas un produit à structurer : le B2B, les bundles et paniers, les extras facturés.
   const HORS_GRP = ['B. 2 B.', 'Bundle & Promotion'];
   const horsDe = p => HORS_GRP.includes(p.grp) || /^Extra\b/.test(p.cat);
