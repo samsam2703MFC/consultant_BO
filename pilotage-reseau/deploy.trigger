@@ -1388,3 +1388,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-11T20:54:56Z Fusion : onglet Produits (#98) et diagnostics Commandes / Ventes sans les tables du webshop retiré (#92)
 2026-11-11T21:03:48Z ERP production : [267] Koszty i premie (Kierownik produkcji, prime 0,3 % du CA, coûts par groupe et par personne)
 2026-11-11T21:13:24Z ERP production : [267] Koszty i premie retiré de la session Kierownik produkcji (migration 167)
+2026-11-11T21:18:44Z [269] panier Czas pracy + [272] tablette bureau épurée
