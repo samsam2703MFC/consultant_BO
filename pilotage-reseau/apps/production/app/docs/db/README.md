@@ -1587,6 +1587,32 @@ et à Finanse › Faktury i koszty) affiche la facture d'origine sans quitter la
 Aucune donnée nouvelle : tout vient de `GET /supply/invoices/{id}` (lignes `n_inv_line`, en-tête `n_inv`) déjà
 chargé par la fenêtre. Libellés `pu.show_invoice*`, `pu.from_line`, `pu.inv.*` (pl, fr) dans `supply.json`.
 
+### Premie zespołów : minimum 20 % et paliers en % du coût d'une personne — 259 (réglage, sans migration)
+
+Réglage écrit en ligne le 11/11/2026 à la demande (page Premie zespołów) : coût d'une personne 6 000 zł/mois ;
+minimum = 6 000 ÷ 20 % = 30 000 zł de ventes par personne ; paliers 15 % / 12,5 % / 10 % / 7,5 % / 5 % → 40 000 /
+48 000 / 60 000 / 80 000 / 120 000 zł, prime de 1 000 / 2 000 / 3 000 / 4 000 / 5 000 zł par personne (brutto brutto,
+coût employeur ; libellé de la colonne). Rien entre le minimum et le premier palier (règle existante : prime du plus
+haut palier atteint). Si le coût par personne change, les paliers en zł sont à recalculer.
+
+### Pracownicy produkcji = liste + Budżet personelu — 260 (sans migration)
+
+`/production-employees` (`employee/production/overview.twig`, `ProductionEmployeeController::overview`) : liste par
+dział, recherche, filtre, « Nowy pracownik » pour tous ; avec le droit aux salaires (`/staff/budget`, administrateur),
+le budget du personnel, la pula premii, les % des działy et, dans chaque ligne, coût employeur, minimum, actif et
+droit à la prime, enregistrés sur place (`/ajax/staff/...`, inchangés). Sans ce droit, aucune donnée de salaire n'est
+calculée pour la vue. `/staff/budget` (ainsi que `/staff/competencies`, `/hr/recipe-competencies`) redirige vers la page,
+paramètres gardés ; `staff/budget.twig` et l'ancienne liste PHP supprimés. Menu : « Płace i premie » = Premie zespołów
++ Kierownik produkcji.
+
+### « Pobierz zamówienia » : le bilan réel au lieu d'un succès général — 261 (sans migration)
+
+Constat du 11/11/2026 sur le serveur de test : les 4 boutiques franchisées n'ont ni adresse de webhooks ni clé dans
+leur fiche client (copie de test isolée) ; rien n'était récupéré, mais le bouton affichait « Zamówienie zaktualizowane ».
+`OrderCollectorService::runManualCollector()` rend désormais un bilan (boutiques, non configurées, sans réponse, qui
+ont répondu, commandes importées, refusées) ; la page l'affiche, en erreur (502) si aucune boutique n'a répondu.
+Chaque cas reste dans Stan wysyłek › Sklepy. Test : `tests/order_collect_report_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

@@ -47,7 +47,7 @@ final class Rail
         'access' => ['Uprawnienia i menu', 'bi-shield-lock', 'Administracja', '/organization/access', ['/organization/week-plan'], null],
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
-        'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/budget', [], null],
+        'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/team-bonus', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
 

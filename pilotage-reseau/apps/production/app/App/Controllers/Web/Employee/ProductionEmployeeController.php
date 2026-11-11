@@ -3,6 +3,8 @@ namespace App\Controllers\Web\Employee;
 
 use App\Core\Web\BaseController;
 use App\Repositories\Organization\PositionRepository;
+use App\Repositories\Staff\StaffRepository;
+use App\Services\Staff\StaffBudgetService;
 use App\Services\Employee\EmployeeCreationService;
 use App\Services\Employee\ProductionEmployeeService;
 use App\Services\Employee\Section\ProductionSectionService;
@@ -17,19 +19,40 @@ class ProductionEmployeeController extends BaseController
         ProductionEmployeeService $productionEmployeeService,
         ProductionSectionService $productionSectionService,
         private EmployeeCreationService $creation,
-        private PositionRepository $positions
+        private PositionRepository $positions,
+        private StaffBudgetService $budget,
+        private StaffRepository $staff,
     )
     {
         $this->productionEmployeeService = $productionEmployeeService;
         $this->productionSectionService = $productionSectionService;
     }
 
+    /**
+     * [260] Une seule page « Pracownicy produkcji » (fusion avec l'ancien Budżet personelu) : la liste par dział,
+     * recherche et ajout pour tous ; pour qui a le droit aux salaires (administrateur), le budget du personnel, les
+     * primes et, dans chaque ligne, coût employeur, minimum, actif et droit à la prime — enregistrés sur place.
+     * Sans ce droit, aucune valeur de salaire n'est calculée pour la vue.
+     */
     public function overview()
     {
-        $data['rows'] = $this->productionEmployeeService->getAllWithSection();
-        $data['production_sections'] = $this->productionSectionService->getAll();
-        $data['can_pay'] = self::canPay();
-
+        $canPay = self::canPay();
+        $data = ['can_pay' => $canPay, 'production_sections' => $this->productionSectionService->getAll()];
+        if ($canPay) {
+            $budget = $this->budget->overview((string) ($_GET['period'] ?? 'month'));
+            $data += $budget + ['selected' => $budget['period']['key']];
+        } else {
+            $sections = [];
+            foreach ($this->staff->employees() as $e) {
+                $id = (int) $e['id_section'];
+                $sections[$id] ??= ['id' => $id, 'name' => $e['section_name'], 'people' => 0, 'active' => 0, 'employees' => []];
+                $sections[$id]['people']++;
+                $sections[$id]['active'] += (int) $e['active'] === 1 ? 1 : 0;
+                $sections[$id]['employees'][] = ['id' => (int) $e['id'], 'name' => trim($e['name'] . ' ' . $e['surname']), 'active' => (int) $e['active'] === 1, 'notes' => $e['notes']];
+            }
+            $data['sections'] = $sections;
+        }
+        $data['employee_count'] = array_sum(array_map(fn($s) => count($s['employees'] ?? []), $data['sections']));
         $this->view("employee/production/overview", $data);
     }
 

@@ -34,12 +34,6 @@ class StaffController extends BaseController
         if (!$this->access->canSee($this->userId(), '/staff/budget')) throw new CustomException('Płace ustala administrator.', 'errors', 403);
     }
 
-    public function budget()
-    {
-        $data = $this->budget->overview((string) ($_GET['period'] ?? 'month'));
-        $this->view('staff/budget', $data + ['selected' => $data['period']['key']]);
-    }
-
     public function savePay($id)
     {
         try {

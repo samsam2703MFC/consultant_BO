@@ -187,7 +187,6 @@ final class PageTabs
         // Aktywność w ERP i licznik stron : jedna pozycja w Administracji (N7).
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów, moduł kierownika produkcji.
         'bonuses' => ['label' => 'Płace i premie', 'section' => 'Administracja', 'icon' => 'bi-wallet2', 'tabs' => [
-            ['/staff/budget', 'Budżet personelu', 'bi-wallet2'],
             ['/staff/team-bonus', 'Premie zespołów', 'bi-trophy'],
             ['/workshop/manager', 'Kierownik produkcji', 'bi-person-workspace'],
         ]],

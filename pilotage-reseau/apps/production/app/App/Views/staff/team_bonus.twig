@@ -28,7 +28,7 @@
                     </span>
 
                     <table class="table table-sm mt-3 mb-2 at-bonus-tiers">
-                        <thead><tr><th>Od (na osobę)</th><th>Premia na osobę</th><th></th></tr></thead>
+                        <thead><tr><th>Od (na osobę)</th><th>Premia na osobę (brutto brutto)</th><th></th></tr></thead>
                         <tbody data-tiers>
                         {% for tier in tiers %}
                             <tr data-tier>
@@ -117,7 +117,7 @@
                     <p class="at-profit-note">
                         Sprzedaż na osobę = ta sama liczba co na stronie <a href="{{ root }}/dashboard">Rentowność</a> : sprzedaż WDT działu grupy ÷ osoby opłacone w miesiącu,
                         w zł po kursie {{ rate|number_format(2, ',', ' ') }} z ustawień firmy. Bieżący miesiąc : « prognoza » = w obecnym tempie ({{ (elapsed * 100)|round }} % miesiąca), « dziś » = sprzedaż do dziś.
-                        Premia wypłacana za zamknięty miesiąc. N-1 : ten sam miesiąc rok wcześniej (kreska na wskaźniku tabletu). Budżet personelu z % sprzedaży : <a href="{{ root }}/staff/budget">Budżet personelu i premie</a>.
+                        Premia wypłacana za zamknięty miesiąc. N-1 : ten sam miesiąc rok wcześniej (kreska na wskaźniku tabletu). Budżet personelu z % sprzedaży, minimum i koszt każdej osoby : <a href="{{ root }}/production-employees">Pracownicy produkcji</a>.
                     </p>
                 </div>
             </div>

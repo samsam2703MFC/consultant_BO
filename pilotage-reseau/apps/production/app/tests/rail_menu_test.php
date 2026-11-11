@@ -58,8 +58,9 @@ expectRail(Rail::ITEMS['bonuses'][2] === 'Administracja' && Rail::adminOnly('bon
     && !in_array('/workshop/manager', $teamTabs, true) && !in_array('/staff/team-bonus', $teamTabs, true), 'Płace i premie : Administracja, tylko administrator');
 expectRail(App\Core\Web\PageAccess::keyFor('/staff/team-bonus') === 'team_bonus' && App\Core\Web\PageAccess::adminOnly('team_bonus')
     && App\Core\Web\PageAccess::keyFor('/staff/budget') === 'budget' && App\Core\Web\PageAccess::adminOnly('budget'), 'płace i premie : tylko administrator');
-expectRail(array_column(App\Core\Web\PageTabs::GROUPS['bonuses']['tabs'], 0) === ['/staff/budget', '/staff/team-bonus', '/workshop/manager'] && $teamTabs === ['/production-employees']
-    && Rail::itemFor('/staff/budget') === 'bonuses' && Rail::ITEMS['bonuses'][0] === 'Płace i premie', 'Płace i premie : budżet, premie, kierownik ; Zespół : pracownicy');
+// [260] Budżet personelu fusionné dans Pracownicy produkcji (Zespół) : Płace i premie = premie zespołów + kierownik.
+expectRail(array_column(App\Core\Web\PageTabs::GROUPS['bonuses']['tabs'], 0) === ['/staff/team-bonus', '/workshop/manager'] && $teamTabs === ['/production-employees']
+    && Rail::ITEMS['bonuses'][3] === '/staff/team-bonus' && Rail::ITEMS['bonuses'][0] === 'Płace i premie', 'Płace i premie : premie, kierownik ; Zespół : pracownicy (z płacami)');
 expectRail(Rail::itemFor('/my-card') === 'today' && App\Core\Web\PageAccess::keyFor('/my-card') === null, 'Moja karta stanowiska : strona wspólna pod Dzisiaj');
 // [255] Magazyn i dostawy surowców pod prawem Produkcja (nie dla wszystkich).
 foreach (['/workshop/stock', '/workshop/stock/mts', '/workshop/stock/forecast', '/workshop/stock-movements', '/workshop/deliveries'] as $p) {

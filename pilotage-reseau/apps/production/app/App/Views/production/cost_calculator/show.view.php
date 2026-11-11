@@ -329,7 +329,7 @@ $logisticsCosts = $logistics_costs ?? [];
                         <div class="card mb-0 mt-3">
                             <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
                                 <div><h4 class="card-title mb-0">Pracownicy (koszt pracodawcy)</h4>
-                                    <div class="small text-muted">Koszt wpisuje się w <?= \App\Core\Web\PageAccess::visible('/staff/budget') ? '<a href="' . ROOT . '/staff/budget">Budżecie personelu</a>' : 'Budżecie personelu (administrator)' ?> ; tutaj tylko korekta tego miesiąca (urlop bezpłatny, niepełny miesiąc).</div></div>
+                                    <div class="small text-muted">Koszt wpisuje się w <?= \App\Core\Web\PageAccess::visible('/staff/budget') ? '<a href="' . ROOT . '/production-employees">Pracownikach produkcji</a>' : 'Pracownikach produkcji (administrator)' ?> ; tutaj tylko korekta tego miesiąca (urlop bezpłatny, niepełny miesiąc).</div></div>
                                 <div class="d-flex gap-2">
                                     <?php if (!$isLocked): ?>
                                     <button class="btn btn-sm btn-outline-primary" onclick="syncFromBudget()" title="Koszty wszystkich pracowników tego miesiąca = Budżet personelu (korekty miesiąca zostaną zastąpione)"><i class="bi bi-arrow-repeat"></i> Pobierz z budżetu</button>
@@ -849,7 +849,7 @@ $logisticsCosts = $logistics_costs ?? [];
                     </div>
                     <div class="form-text text-muted">
                         <i class="bi bi-info-circle me-1"></i>
-                        Tylko ten miesiąc (urlop bezpłatny, niepełny miesiąc). Stała zmiana wynagrodzenia : <?= \App\Core\Web\PageAccess::visible('/staff/budget') ? '<a href="' . ROOT . '/staff/budget">Budżet personelu</a>' : 'Budżet personelu (administrator)' ?>.
+                        Tylko ten miesiąc (urlop bezpłatny, niepełny miesiąc). Stała zmiana wynagrodzenia : <?= \App\Core\Web\PageAccess::visible('/staff/budget') ? '<a href="' . ROOT . '/production-employees">Pracownicy produkcji</a>' : 'Pracownicy produkcji (administrator)' ?>.
                     </div>
                 </div>
             </div>

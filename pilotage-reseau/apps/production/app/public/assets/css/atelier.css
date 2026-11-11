@@ -3582,3 +3582,12 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .at-mycard .card-body { min-height: 72px; }
 .at-mycard-icon { font-size: 1.6rem; color: #8a1c2b; }
 .at-mycard .btn { min-height: 44px; border-radius: 10px; display: inline-flex; align-items: center; gap: 4px; }
+
+/* [260] Pracownicy produkcji (fusion avec le Budżet personelu) : barre de recherche, filtre de dział, ajout. */
+.at-team-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 16px; }
+.at-team-search { position: relative; flex: 1 1 260px; max-width: 360px; margin: 0; }
+.at-team-search > .bi { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #7a736a; font-size: 13px; pointer-events: none; }
+.at-team-search .form-control { padding-left: 34px; }
+.at-team-tools .form-select { width: auto; min-width: 180px; }
+.at-team [data-team-block][hidden], .at-team tr[data-team-name][hidden] { display: none !important; }
+.at-team tr.at-team-focus > td { background: rgba(141, 29, 44, .05); }

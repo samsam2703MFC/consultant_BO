@@ -7,7 +7,7 @@ return function (RouteCollector $r) {
     // Panel HR – przegląd kompetencji recepturowych
     // -------------------------------------------------------
     // Strona kompetencji usunięta : stary adres prowadzi do budżetu personelu.
-    $r->addRoute('GET', '/hr/recipe-competencies', ['redirect' => '/staff/budget']);
+    $r->addRoute('GET', '/hr/recipe-competencies', ['redirect' => '/production-employees']);
 
     // -------------------------------------------------------
     // AJAX – CRUD kompetencji
