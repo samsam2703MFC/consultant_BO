@@ -53,6 +53,8 @@ Sans recette chiffrée, on ne connaît ni le coût ni la marge du produit. L'obj
 
 ### Le gâteau à la part
 
+Le gâteau à la part remplacera l'assortiment de pâtisserie actuel. Le but : des produits plus proches de notre ADN, vendus à la part, un comptoir toujours rempli et moins de pertes, puisqu'on ne découpe que ce qui se vend.
+
 - Un seul gâteau entier de 10 parts, produit à l'usine, fini en Belgique et découpé devant le client avec une unité de découpe à ultrasons.
 - Prix de la part : 3,90 €. Une seule offre : le 4+1 (5 parts pour le prix de 4).
 - Objectif ×4 : le gâteau fini doit coûter 7,45 € HT maximum. Test dans un magasin pilote au 1er trimestre, puis dans les quatre magasins au 2e trimestre.

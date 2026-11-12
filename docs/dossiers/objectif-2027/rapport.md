@@ -125,6 +125,8 @@ Les entremets individuels se jettent à environ 11 à 13 % là où ils sont déc
 
 > [Pourquoi ce projet] Automatiser la production à l'usine, augmenter les marges et développer le réseau. L'usine produit un seul format de gâteau entier, une partie de la finition se fait en Belgique et la découpe se fait devant le client : un produit standard, à ×4, qui se reproduit tel quel dans chaque nouveau magasin.
 
+> [Le gâteau à la part remplace l'assortiment de pâtisserie] Des produits plus proches de l'ADN de la marque, vendus à la part, un comptoir toujours rempli et moins de pertes : on ne découpe que ce qui se vend. Aujourd'hui, la pâtisserie hors tartes, tartissières et cakes fait environ 218 000 € de CA par an, et les entremets individuels partent à la poubelle à 11 à 13 % là où ils sont déclarés.
+
 Une seule offre en volume : le 4+1 (5 parts pour 4 payées, 20 % de remise). Pour un ×4 (food cost de 25 %) avec la part à 3,90 € TTC, le gâteau fini doit coûter au plus 7,45 € HT dans le scénario réaliste (moitié des parts en 4+1, une part invendue), et 9,20 € si tout part au prix plein. Ce montant couvre le gâteau fini : la partie de la finition faite en Belgique s'en déduit. La formule de la réunion, 10 × 3,90 / 3 = 13,00 €, et l'usine à 13,20 € restent loin du ×4 (×2,3 à ×2,8).
 
 $$ prix usine max = (parts vendues × prix HT moyen d'une part) ÷ 4
