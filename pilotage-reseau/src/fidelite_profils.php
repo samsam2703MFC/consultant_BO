@@ -71,6 +71,12 @@ function fpSchema(): void
         Db::exec('ALTER TABLE ceo_fid_ticket ADD COLUMN canal VARCHAR(10) NULL AFTER commande');
         Db::exec("UPDATE ceo_fid_ticket SET canal = 'comptoir' WHERE commande = 0");
     }
+    // Familles, deuxième règle (12/11/2026) : le catalogue gardé et les familles déjà lues se refont une fois.
+    if ((int) setting('fidFamillesRegle', 1) < 2) {
+        Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'fidProfilsCatalogue'");
+        Db::exec('UPDATE ceo_fid_ticket SET familles = NULL WHERE familles IS NOT NULL');
+        Db::exec("INSERT INTO ceo_app_setting VALUES ('fidFamillesRegle', '2') ON DUPLICATE KEY UPDATE value = VALUES(value)");
+    }
     if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_profil')['n'] ?? 0) === 0) {
         foreach (FP_DEFAUTS as [$nom, $n, $u, $c]) {
             Db::exec('INSERT INTO ceo_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,1,NOW(),?)', [$nom, $n, $u, $c, 'profils de départ']);
@@ -131,13 +137,17 @@ function fpProfils(bool $actifsSeuls = false): array
  * Les tickets identifiés, par l'API
  * ------------------------------------------------------------------------- */
 /** La famille d'achat d'un article, par le libellé « catégorie » du catalogue. */
-function fpFamilleDe(string $lib): string
+function fpFamilleDe(string $cat, string $nom = ''): string
 {
-    if (preg_match('/réduction/iu', $lib)) { return 'antigaspi'; }
-    if (preg_match('/quiche|soupe|boisson|sandwich|traiteur|salade/iu', $lib)) { return 'sale'; }
-    if (preg_match('/viennoiserie/iu', $lib)) { return 'vienno'; }
-    if (preg_match('/pâtisserie individuelle|cookie|cake|individuel|brownie|brook|merveilleux/iu', $lib)) { return 'gouter'; }
-    if (preg_match('/pain|boulangerie|pistolet|baguette/iu', $lib)) { return 'pain'; }
+    // La catégorie de l'ERP d'abord, le nom du produit seulement sans catégorie (12/11/2026, sonde anti-gaspi de Halle :
+    // « Viennoiserie réduction » regroupe les mini-viennoiseries, pas de l'anti-gaspi ; le « Sandwich » de la Petite
+    // Boulangerie est un petit pain, pas du salé). L'anti-gaspi, c'est la catégorie « Anti-Gaspi ».
+    $t = trim($cat) !== '' ? $cat : $nom;
+    if (preg_match('/anti.?gaspi/iu', $t)) { return 'antigaspi'; }
+    if (preg_match('/viennoiserie/iu', $t)) { return 'vienno'; }
+    if (preg_match('/pain|boulangerie|pistolet|baguette/iu', $t)) { return 'pain'; }
+    if (preg_match('/quiche|soupe|boisson|sandwich|traiteur|salade|snacking|plat|poke|wrap|assiette|catering|fromage|pâtes|self|vin/iu', $t)) { return 'sale'; }
+    if (preg_match('/pâtisserie individuelle|cookie|cake|brownie|brook|merveilleux|biscuit|financier|mignardise|yaourt|glace/iu', $t)) { return 'gouter'; }
     return 'tartes';
 }
 
@@ -156,8 +166,7 @@ function fpCatalogue(): array
     foreach (PanelApi::liste(is_array($rp['corps']) ? $rp['corps'] : []) as $p) {
         $id = (int) ($p['id'] ?? 0);
         if ($id <= 0) { continue; }
-        $lib = (string) ($p['category_name'] ?? ($nomCat[(int) ($p['id_category'] ?? 0)] ?? '')) . ' ' . (string) ($p['name'] ?? '');
-        $v[$id] = fpFamilleDe($lib);
+        $v[$id] = fpFamilleDe((string) ($p['category_name'] ?? ($nomCat[(int) ($p['id_category'] ?? 0)] ?? '')), (string) ($p['name'] ?? ''));
     }
     if ($v !== []) {
         Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['fidProfilsCatalogue', json_encode(['le' => time(), 'v' => $v])]);
@@ -175,7 +184,7 @@ function fpLignes(mixed $corps): array
         if (!is_array($p)) { continue; }
         $q = max(1, (float) ($p['quantity'] ?? 1));
         $nom = trim((string) ($p['product_display_name'] ?? $p['product_name'] ?? ''));
-        $fam = $cat[(int) ($p['id_product'] ?? 0)] ?? fpFamilleDe($nom);
+        $fam = $cat[(int) ($p['id_product'] ?? 0)] ?? fpFamilleDe('', $nom);
         $f[$fam] = ($f[$fam] ?? 0) + $q;
         $art[] = ['nom' => $nom, 'q' => round($q, 1)];
     }

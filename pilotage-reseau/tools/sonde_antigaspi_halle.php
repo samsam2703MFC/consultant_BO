@@ -23,7 +23,7 @@ foreach (PanelApi::liste(is_array($rp['corps']) ? $rp['corps'] : []) as $p) {
     $id = (int) ($p['id'] ?? 0);
     if ($id <= 0) { continue; }
     $cat = (string) ($p['category_name'] ?? ($nomCat[(int) ($p['id_category'] ?? 0)] ?? ''));
-    $fam = fpFamilleDe($cat . ' ' . (string) ($p['name'] ?? ''));
+    $fam = fpFamilleDe($cat, (string) ($p['name'] ?? ''));
     $prod[$id] = ['cat' => $cat, 'nom' => (string) ($p['name'] ?? ''), 'fam' => $fam];
     $parFam[$fam] = ($parFam[$fam] ?? 0) + 1;
     if ($fam === 'antigaspi') { printf("  produit %-6d catégorie « %s » · « %s »\n", $id, $cat, $p['name'] ?? ''); }
@@ -48,7 +48,7 @@ foreach ($T as $t) {
         $prix = [];
         foreach ($l as $k => $v) { if (is_scalar($v) && preg_match('/price|amount|value|discount|reduc|promo|type|is_/i', (string) $k)) { $prix[] = $k . '=' . $v; } }
         printf("    produit %-6d « %s » · catalogue : %s · q=%s · %s\n", $idp, $l['product_display_name'] ?? $l['product_name'] ?? '',
-            isset($prod[$idp]) ? '« ' . $prod[$idp]['cat'] . ' » → ' . $prod[$idp]['fam'] : 'absent du catalogue → ' . fpFamilleDe((string) ($l['product_display_name'] ?? $l['product_name'] ?? '')),
+            isset($prod[$idp]) ? '« ' . $prod[$idp]['cat'] . ' » → ' . $prod[$idp]['fam'] : 'absent du catalogue → ' . fpFamilleDe('', (string) ($l['product_display_name'] ?? $l['product_name'] ?? '')),
             $l['quantity'] ?? '?', implode(' ', $prix));
     }
 }
