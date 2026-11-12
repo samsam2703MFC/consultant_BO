@@ -202,7 +202,7 @@ La gamme est trop longue pour ce qu'elle vend : 114 références font 80 % du CA
 | dont coefficient sous ×2,5 | 48 |
 | dont sans coût de recette au panel | 51 |
 
-Les références qui se vendent moins d'une fois par jour sont surtout en traiteur (38), en tartes (37), en épicerie (31) et en pâtisserie (20).
+Les références qui se vendent moins d'une fois par jour sont surtout en traiteur (38), en tartes (37), en épicerie (31) et en pâtisserie (20) ; le détail, référence par référence, est en annexe 7.
 
 Règle proposée pour les coupes :
 
@@ -730,6 +730,204 @@ Objet : que chaque contrôle se passe de la même façon dans les quatre magasin
 8. Défaut répété d'usage des outils : constat dans le cockpit, mise en demeure écrite, puis majoration de 0,5 % des royalties.
 
 Délais de correction proposés, à valider : P0 (hygiène, sécurité alimentaire) le jour même ; P1 sous 7 jours ; P2 avant la visite suivante.
+
+### Annexe 7 — la traîne de la gamme : les 163 références vendues moins d'une fois par jour
+
+Détail des indicateurs de la partie 2 (Adapter les gammes). Période : 3 août → 7 novembre 2026 (97 jours), quatre magasins ; CA HT = pièces vendues × prix HT actuel ; coefficient = médiane des magasins dont la recette est chiffrée au panel.
+
+| Magasin | Références disponibles | Références vendues | Part vendue |
+| --- | --- | --- | --- |
+| Corbais | 532 | 323 | 61 % |
+| Halle | 501 | 226 | 45 % |
+| Sombreffe | 512 | 274 | 54 % |
+| Gosselies | 522 | 285 | 55 % |
+
+| Famille | Références | CA HT sur la période | dont sous ×2,5 | dont sans coût de recette |
+| --- | --- | --- | --- | --- |
+| Traiteur | 38 | 18 793 € | 5 | 21 |
+| Tartes | 37 | 30 991 € | 7 | 7 |
+| Épicerie | 31 | 7 055 € | 17 | 10 |
+| Pâtisserie | 16 | 3 630 € | 5 | 3 |
+| Boissons | 10 | 1 039 € | 0 | 1 |
+| Boulangerie | 8 | 824 € | 4 | 1 |
+| Biscuiterie | 6 | 1 101 € | 2 | 1 |
+| Pâtisserie · Tartes | 4 | 2 341 € | 4 | 0 |
+| Fêtes & Occasions | 4 | 331 € | 2 | 1 |
+| B. 2 B. | 3 | 1 943 € | 1 | 2 |
+| Bundle & Promotion | 3 | 1 582 € | 0 | 2 |
+| Quiches | 2 | 1 406 € | 1 | 1 |
+| Viennoiserie | 1 | 59 € | 0 | 1 |
+| Total | 163 | 71 094 € (7,8 % du CA) | 48 | 51 |
+
+Liste par famille, de la moins vendue à la plus vendue. Coefficient « — » : pas de coût de recette au panel ; « à couper d'abord » : moins d'une pièce par jour et sous ×2,5.
+
+| Famille | Référence | Catégorie | Pièces par semaine (réseau) | CA HT sur la période | Coefficient | Magasins | Statut |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Traiteur | Cannelloni - tomates séchées, chèvre & courgettes | Plat Prepare - Chaud | 0,6 | 89 € | ×2,17 | 2 | à couper d'abord |
+| Traiteur | Gratin - hachis parmentier | Plat Prepare - Chaud | 0,6 | 88 € | — | 1 | à chiffrer |
+| Traiteur | Raclette à la personne | Fromages & Salaisons | 1,0 | 82 € | ×2,50 | 2 |  |
+| Traiteur | Wrapps - Saumon & Avocat | Wrapps | 1,2 | 122 € | — | 2 | à chiffrer |
+| Traiteur | Ravioles Ricotta & Epinard - Legumes | Plat Prepare - Chaud | 1,3 | 194 € | — | 1 | à chiffrer |
+| Traiteur | Chili con carne | Plat Prepare - Chaud | 1,4 | 224 € | ×5,04 | 1 |  |
+| Traiteur | FlipFlap - Légumes Grillés & Jambon Cru | Sandwiches garnis | 1,4 | 98 € | ×2,03 | 2 | à couper d'abord |
+| Traiteur | Soupe Tomate & Boulettes | Soupes | 1,4 | 97 € | ×2,73 | 3 |  |
+| Traiteur | Sac Papier Magasin | Extra - Payant | 1,5 | 5 € | — | 2 | à chiffrer |
+| Traiteur | Bol de soupe | Soupes | 3,1 | 122 € | ×5,95 | 1 |  |
+| Traiteur | Boite Lunch - Octo ( 38 x 33 x 90) / KraftEco | Plateau Sandwich | 3,2 | 122 € | ×2,51 | 1 |  |
+| Traiteur | Plateau Raclette - Classique | Fromages & Salaisons | 3,2 | 616 € | — | 1 | à chiffrer |
+| Traiteur | Salade de Lentilles | Salades féculentes | 3,2 | 450 € | — | 3 | à chiffrer |
+| Traiteur | Plateau apéritif | Fromages & Salaisons | 3,5 | 643 € | ×1,95 | 2 | à couper d'abord |
+| Traiteur | Cannelloni - poulet & estragon | Plat Prepare - Chaud | 4,0 | 632 € | — | 2 | à chiffrer |
+| Traiteur | Salade Italienne | Salades | 4,0 | 610 € | ×2,65 | 3 |  |
+| Traiteur | Sauce pour Salade - Vinaigrette | Extra - Traiteur | 4,0 | 53 € | — | 1 | à chiffrer |
+| Traiteur | Taboulé Petits Pois & Poulet | Salades féculentes | 4,1 | 616 € | — | 3 | à chiffrer |
+| Traiteur | Cannelloni - ricotta & épinards | Plat Prepare - Chaud | 4,2 | 652 € | — | 2 | à chiffrer |
+| Traiteur | Plateau de fruits - par personne | Plateaux | 4,3 | 167 € | — | 1 | à chiffrer |
+| Traiteur | Poulet Curry Jaune & Riz | Plat Prepare - Chaud | 4,3 | 708 € | — | 1 | à chiffrer |
+| Traiteur | Plateau Mini Wraps - 10 pièces | Plateau Sandwich | 4,7 | 2 453 € | — | 1 | à chiffrer |
+| Traiteur | Boulettes sauce tomate & purée | Plat Prepare - Chaud | 4,8 | 778 € | — | 1 | à chiffrer |
+| Traiteur | Boulettes sauce Liégoise & purée | Plat Prepare - Chaud | 4,8 | 778 € | — | 1 | à chiffrer |
+| Traiteur | Lasagne Jambon & Bolognaise | Plat Prepare - Chaud | 4,8 | 812 € | — | 2 | à chiffrer |
+| Traiteur | FlipFlap - Fromage Gouda Jeune | Flip & Flap | 5,1 | 380 € | ×2,28 | 3 | à couper d'abord |
+| Traiteur | Soupe Potiron & Citron | Soupes | 5,3 | 365 € | — | 3 | à chiffrer |
+| Traiteur | FlipFlap - Jambon aux herbes, tomates confites & burrata | Flip & Flap | 5,3 | 426 € | ×7,94 | 1 |  |
+| Traiteur | Poke Poulet Effiloché | Salades | 5,4 | 790 € | ×3,79 | 2 |  |
+| Traiteur | Poulet guacamole | Sandwiches garnis | 5,5 | 430 € | ×7,94 | 2 |  |
+| Traiteur | FlipFlap - Jambon alle erbe | Flip & Flap | 5,5 | 382 € | ×2,20 | 3 | à couper d'abord |
+| Traiteur | Salade Campagnarde | Salades | 5,6 | 825 € | ×3,68 | 3 |  |
+| Traiteur | Salade Saumon fumé | Salades | 5,7 | 1 012 € | — | 3 | à chiffrer |
+| Traiteur | Plateau sandwiches individuels - 10 pièces | Plateau Sandwich | 6,1 | 700 € | — | 2 | à chiffrer |
+| Traiteur | Salades d'accompagnement (1 à 2 personnes) | Salades | 6,4 | 125 € | ×17,84 | 2 |  |
+| Traiteur | Salade de pâtes - Pesto & Pin | Salade de pâtes | 6,6 | 1 047 € | — | 2 | à chiffrer |
+| Traiteur | Plateau demies-baguettes 10 pcs | Plateau Sandwich | 6,6 | 574 € | — | 2 | à chiffrer |
+| Traiteur | FlipFlap - Mortadella, ricotta & pistache | Flip & Flap | 6,6 | 526 € | ×7,94 | 3 |  |
+| Tartes | 1/2 - Fruits Frais | Tarte Fruits Frais | 0,7 | 181 € | ×3,23 | 2 |  |
+| Tartes | Tarte Sucre & Myrtilles | Tartes au sucre | 0,7 | 134 € | — | 3 | à chiffrer |
+| Tartes | Tarte Sucre & Speculoos | Tartes au sucre | 0,7 | 90 € | — | 3 | à chiffrer |
+| Tartes | Plusieurs Fruits | Tartes – Ø 28 cm | 0,8 | 227 € | ×2,89 | 1 |  |
+| Tartes | TartoCake - Pommes | Tartocake - 22Ø | 0,8 | 138 € | ×2,38 | 2 | à couper d'abord |
+| Tartes | 1/4 - Fruis Frais | Tarte Fruits Frais | 0,9 | 121 € | ×4,09 | 2 |  |
+| Tartes | Pomme Parisienne | Tartes | 1,7 | 431 € | ×2,50 | 3 |  |
+| Tartes | Brézilienne | Tartes | 1,8 | 536 € | — | 3 | à chiffrer |
+| Tartes | Croûte aux fruits | Croutes Fruits Frais | 1,9 | 559 € | ×3,69 | 3 |  |
+| Tartes | Fromage Citron & Coulis Framboise - 120⌀ | Tartissières - 12Ø | 2,0 | 262 € | ×2,71 | 3 |  |
+| Tartes | Flan Breton | Tartes – Ø 28 cm | 2,1 | 574 € | ×5,69 | 2 |  |
+| Tartes | Frangipane & Abricots | Tartes – Ø 28 cm | 2,2 | 731 € | ×2,44 | 4 | à couper d'abord |
+| Tartes | Flan Brézillien | Tartes | 2,3 | 741 € | ×3,43 | 3 |  |
+| Tartes | Abricot & Cerise | Tartes – Ø 28 cm | 2,5 | 724 € | ×2,47 | 4 | à couper d'abord |
+| Tartes | Tarte noix de Pécan | Tartes | 2,6 | 676 € | — | 1 | à chiffrer |
+| Tartes | Groseille | Tartes – Ø 28 cm | 2,7 | 750 € | ×4,50 | 4 |  |
+| Tartes | Rhubarbe Parisienne | Tartes – Ø 28 cm | 2,7 | 823 € | ×2,73 | 3 |  |
+| Tartes | Rhubarbe | Tartes – Ø 28 cm | 2,7 | 773 € | ×2,62 | 3 |  |
+| Tartes | Tarte Sucre & Fruits Rouges | Tartes au sucre | 2,9 | 490 € | — | 2 | à chiffrer |
+| Tartes | Frangipane | Tartes – Ø 28 cm | 3,0 | 987 € | ×2,75 | 2 |  |
+| Tartes | Frangipane & Pommes | Tartes – Ø 28 cm | 3,1 | 1 017 € | ×2,37 | 2 | à couper d'abord |
+| Tartes | Croûte Framboise | Croutes Fruits Frais | 3,5 | 1 082 € | ×4,03 | 4 |  |
+| Tartes | TartoCake - Cerise & Pistache | Tartocake - 22Ø | 3,6 | 1 167 € | ×2,71 | 2 |  |
+| Tartes | Croûte aux fruits - 8 Pers | Croutes Fruits Frais | 3,6 | 1 108 € | — | 1 | à chiffrer |
+| Tartes | Flan Framboises | Tartes | 3,8 | 1 200 € | — | 2 | à chiffrer |
+| Tartes | Tarte Sucre & Chocolat | Tartes au sucre | 4,0 | 732 € | ×5,18 | 4 |  |
+| Tartes | Rhubarbe & Fraises | Tartes – Ø 28 cm | 4,1 | 1 178 € | ×2,67 | 3 |  |
+| Tartes | Tarte TuttiFrutti | Tarte Fruits Frais | 4,2 | 1 316 € | ×3,86 | 2 |  |
+| Tartes | Tarte Sucre & Framboise | Tartes au sucre | 4,3 | 794 € | ×4,87 | 3 |  |
+| Tartes | Abricot & Rhubarbe | Tartes – Ø 28 cm | 4,4 | 1 261 € | ×2,90 | 4 |  |
+| Tartes | Rhubarbe | Tartes | 4,7 | 900 € | ×1,71 | 3 | à couper d'abord |
+| Tartes | Abricot | Tartes – Ø 28 cm | 4,8 | 1 342 € | ×3,08 | 4 |  |
+| Tartes | Fromage citronné & coulis de framboises | Tartissières - 19Ø | 5,2 | 1 408 € | ×2,45 | 4 | à couper d'abord |
+| Tartes | Riz Croustillant | Tartes – Ø 28 cm | 5,7 | 1 783 € | ×2,56 | 2 |  |
+| Tartes | Passion Sauvage | Tartissières - 19Ø | 5,7 | 1 521 € | ×2,38 | 4 | à couper d'abord |
+| Tartes | Tarte Fraises | Tarte Fruits Frais | 6,1 | 2 014 € | ×2,81 | 4 |  |
+| Tartes | Plusieurs Fruits | Tartes | 6,3 | 1 222 € | ×3,23 | 3 |  |
+| Épicerie | Crème Glacée Chocolat 200ml | Glace by Rawette | 0,6 | 47 € | ×1,25 | 2 | à couper d'abord |
+| Épicerie | Boule | Glace by Rawette | 0,6 | 25 € | — | 1 | à chiffrer |
+| Épicerie | Crème Glacée Vanille - 200 ml | Glace by Rawette | 0,7 | 52 € | ×1,25 | 2 | à couper d'abord |
+| Épicerie | Crème Glacée Stratiatella - 200 ml | Glace by Rawette | 0,7 | 52 € | ×1,25 | 3 | à couper d'abord |
+| Épicerie | Crème Glacée Spéculoos - 200 ml | Glace by Rawette | 0,7 | 52 € | ×1,25 | 3 | à couper d'abord |
+| Épicerie | Sorbet Passion & Mangue 600 ml | Glace by Rawette | 0,8 | 114 € | ×1,43 | 4 | à couper d'abord |
+| Épicerie | Miel - Toutes Fleurs | Épicerie | 0,8 | 103 € | — | 1 | à chiffrer |
+| Épicerie | Melocake Spéculoos – Boîte de 3 | Chocolaterie | 0,8 | 32 € | ×1,69 | 2 | à couper d'abord |
+| Épicerie | Miel - de Miellat | Épicerie | 0,9 | 158 € | — | 1 | à chiffrer |
+| Épicerie | Sorbet Framboise 600 ml | Glace by Rawette | 0,9 | 135 € | ×1,43 | 3 | à couper d'abord |
+| Épicerie | Sorbet Fraise 600 ml | Glace by Rawette | 1,0 | 145 € | ×1,30 | 4 | à couper d'abord |
+| Épicerie | Intenso - 250g. | Épicerie | 1,5 | 149 € | — | 1 | à chiffrer |
+| Épicerie | Miel - Tilleul | Épicerie | 1,7 | 0 € | — | 1 | à chiffrer |
+| Épicerie | Fiesta Arabica - 250g. | Épicerie | 1,8 | 177 € | — | 1 | à chiffrer |
+| Épicerie | Jus pommes-carottes- gingembre Bio - C’tout  bon! 25 cl | Épicerie | 1,9 | 80 € | — | 2 | à chiffrer |
+| Épicerie | Crème Glacée Spéculoos - 600 ml | Glace by Rawette | 2,2 | 311 € | ×1,43 | 4 | à couper d'abord |
+| Épicerie | Granola - Citron & Bleuet | Épicerie | 2,2 | 270 € | ×2,05 | 3 | à couper d'abord |
+| Épicerie | Granola - Noisette & Miel | Épicerie | 2,5 | 300 € | ×2,54 | 3 |  |
+| Épicerie | Crème Glacée Stratiatella - 600 ml | Glace by Rawette | 2,5 | 363 € | ×1,43 | 4 | à couper d'abord |
+| Épicerie | Melocake Pistache – Boîte de 3 | Chocolaterie | 2,5 | 130 € | ×1,69 | 2 | à couper d'abord |
+| Épicerie | Jus pommes framboises - C'tout Bon! 75 cl | Épicerie | 2,6 | 272 € | — | 2 | à chiffrer |
+| Épicerie | Crème Glacée Chocolat 600 ml | Glace by Rawette | 2,7 | 394 € | ×1,30 | 4 | à couper d'abord |
+| Épicerie | Crème Glacée Vanille 600 ml | Glace by Rawette | 2,7 | 394 € | ×1,43 | 4 | à couper d'abord |
+| Épicerie | Granola - Noisette & Chocolat | Épicerie | 2,7 | 344 € | ×2,23 | 3 | à couper d'abord |
+| Épicerie | Granola - Pommes & Canelle | Épicerie | 2,9 | 353 € | ×2,53 | 4 |  |
+| Épicerie | Melocake Noir – Boîte de 3 | Chocolaterie | 3,0 | 138 € | ×1,69 | 2 | à couper d'abord |
+| Épicerie | Granola - Banane & Chocolat | Épicerie | 3,5 | 423 € | ×2,57 | 3 |  |
+| Épicerie | Melocake – Boîte de 10 | Chocolaterie | 3,8 | 583 € | ×1,59 | 2 | à couper d'abord |
+| Épicerie | Malawa - 250g. | Épicerie | 4,4 | 361 € | — | 2 | à chiffrer |
+| Épicerie | Jus de pommes carotte gingembre Bio - C'tout Bon! 75 cl | Épicerie | 5,9 | 619 € | — | 2 | à chiffrer |
+| Épicerie | Jus pommes BIO - C'tout Bon! 75cl | Épicerie | 6,9 | 478 € | ×7,67 | 2 |  |
+| Pâtisserie | Glacé | Pâtisserie individuelle | 0,8 | 36 € | — | 1 | à chiffrer |
+| Pâtisserie | Chocolat & Caramel - Mignardise | Mignardise | 0,8 | 16 € | ×4,22 | 1 |  |
+| Pâtisserie | Bavarois Chocolat - Mignardise | Mignardise | 1,0 | 20 € | ×4,14 | 1 |  |
+| Pâtisserie | Brownies | Dessert | 1,1 | 53 € | ×3,34 | 2 |  |
+| Pâtisserie | Framboise & Chocolat - 180⌀ | Entremets - 190Ø | 1,2 | 348 € | ×2,45 | 4 | à couper d'abord |
+| Pâtisserie | Bavarois Framboise - Mignardise | Mignardise | 1,3 | 25 € | ×4,04 | 1 |  |
+| Pâtisserie | Feu de Bengale | Pâtisserie | 1,4 | 57 € | — | 1 | à chiffrer |
+| Pâtisserie | Opéra Ind. | Entremets - Individuel | 1,7 | 98 € | ×1,89 | 2 | à couper d'abord |
+| Pâtisserie | Gâteaux d'Anniversaire - Chocolat "Chiffre" | Pâtisserie | 2,6 | 221 € | — | 1 | à chiffrer |
+| Pâtisserie | Tiramisu - Mignardise | Mignardise | 3,5 | 86 € | ×4,22 | 1 |  |
+| Pâtisserie | Saint-Honoré - Classique | Entremets - 190Ø | 4,2 | 1 321 € | ×8,35 | 3 |  |
+| Pâtisserie | Miel - Mignardise | Mignardise | 4,5 | 111 € | ×3,68 | 1 |  |
+| Pâtisserie | Mignardises - 4+1 | Mignardise | 4,8 | 379 € | ×2,90 | 1 |  |
+| Pâtisserie | Duo Chocolat & Passion Ind. | Entremets - Individuel | 5,4 | 315 € | ×2,36 | 3 | à couper d'abord |
+| Pâtisserie | Tiramisu | Pâtisserie individuelle | 5,6 | 254 € | ×1,58 | 3 | à couper d'abord |
+| Pâtisserie | Mousse au chocolat | Pâtisserie individuelle | 6,1 | 291 € | ×1,41 | 3 | à couper d'abord |
+| Boissons | Oasis Tropical | Boissons froides | 0,7 | 33 € | ×3,01 | 1 |  |
+| Boissons | Fanta Citron | Boissons froides | 0,9 | 31 € | ×2,64 | 1 |  |
+| Boissons | IceTea Peche | Boissons froides | 1,5 | 50 € | ×2,94 | 1 |  |
+| Boissons | Bouteille Sprite 50cl | Boissons froides | 2,2 | 82 € | ×3,57 | 2 |  |
+| Boissons | Americano | Boissons chaudes | 3,0 | 108 € | — | 2 | à chiffrer |
+| Boissons | Bouteille Fanta 50cl | Boissons froides | 3,2 | 116 € | ×3,50 | 1 |  |
+| Boissons | Sprite | Boissons froides | 3,2 | 88 € | ×2,80 | 3 |  |
+| Boissons | Macchiato | Boissons chaudes | 3,6 | 132 € | ×6,33 | 1 |  |
+| Boissons | IceTea Pêche | Boissons froides | 6,0 | 162 € | ×3,67 | 3 |  |
+| Boissons | Bouteille Coca-Cola 50cl | Boissons froides | 6,5 | 238 € | ×3,74 | 2 |  |
+| Boulangerie | Briochette Sucre | Petite Boulangerie | 0,6 | 8 € | ×1,82 | 3 | à couper d'abord |
+| Boulangerie | Bun à Hamburger | Petite Boulangerie | 1,2 | 28 € | — | 2 | à chiffrer |
+| Boulangerie | Hotdog - Maxi | Petite Boulangerie | 1,3 | 31 € | ×17,99 | 1 |  |
+| Boulangerie | Pain à Hot Dog | Petite Boulangerie | 1,9 | 46 € | ×17,99 | 1 |  |
+| Boulangerie | Focaccia - Pesto Rosso | Pain Tradition | 3,3 | 161 € | ×2,00 | 3 | à couper d'abord |
+| Boulangerie | Blanc (Pauvre en Gluten) - 600 g. | Pain Tradition | 3,9 | 201 € | ×1,92 | 4 | à couper d'abord |
+| Boulangerie | Mini-Sandwich | Petite Boulangerie | 4,1 | 42 € | ×3,20 | 2 |  |
+| Boulangerie | Focaccia - Olives | Pain Tradition | 6,3 | 307 € | ×1,99 | 3 | à couper d'abord |
+| Biscuiterie | Rocher Coco - pièces | Biscuiterie | 1,3 | 17 € | ×1,02 | 2 | à couper d'abord |
+| Biscuiterie | Pecan - 100 g. | Biscuiterie | 1,5 | 97 € | ×2,24 | 4 | à couper d'abord |
+| Biscuiterie | Sujet en Massepain - Halloween | Biscuiterie | 1,7 | 108 € | — | 1 | à chiffrer |
+| Biscuiterie | Swirl - 100g. | Biscuiterie | 4,0 | 254 € | ×3,30 | 3 |  |
+| Biscuiterie | Amandes & Cannelles - 100 g | Biscuiterie | 4,2 | 268 € | ×2,66 | 4 |  |
+| Biscuiterie | Leopard - 100 g. | Biscuiterie | 5,6 | 356 € | ×3,00 | 4 |  |
+| Pâtisserie · Tartes | Entremet 120Ø - Framboise & Chocolat | Entremets - 4/6 personnes | 0,9 | 169 € | ×2,19 | 2 | à couper d'abord |
+| Pâtisserie · Tartes | Entremet 120Ø - Caramel & Noisette | Entremets - 4/6 personnes | 3,0 | 592 € | ×1,66 | 3 | à couper d'abord |
+| Pâtisserie · Tartes | Entremet 120Ø - Tiramisu | Entremets - 4/6 personnes | 4,0 | 832 € | ×2,19 | 3 | à couper d'abord |
+| Pâtisserie · Tartes | Entremet 120Ø - Bombe Chocolat | Entremets - 4/6 personnes | 4,3 | 747 € | ×1,38 | 3 | à couper d'abord |
+| Fêtes & Occasions | Cougnou Nature - 400 g. | Cougnou | 0,7 | 55 € | — | 1 | à chiffrer |
+| Fêtes & Occasions | Saint Nicolas - Lait | Noël | 0,8 | 104 € | ×1,47 | 4 | à couper d'abord |
+| Fêtes & Occasions | Saint Nicolas - Massepain | Noël | 0,9 | 123 € | ×1,47 | 1 | à couper d'abord |
+| Fêtes & Occasions | Cougnou - Sucre & Canelle | Cougnou | 1,3 | 49 € | ×2,87 | 3 |  |
+| B. 2 B. | Baguette Tradition - B.2 B. | B.2.B - Cartons | 0,9 | 486 € | ×1,46 | 1 | à couper d'abord |
+| B. 2 B. | Foccacia - B.2 B. | B.2.B - Cartons | 1,2 | 598 € | — | 1 | à chiffrer |
+| B. 2 B. | Baguette Tradition - B.2 B. | B.2.B - Cartons | 1,7 | 859 € | — | 1 | à chiffrer |
+| Bundle & Promotion | Plateau Brunch Déjeuner – Salé | Bundle | 0,6 | 170 € | ×3,44 | 1 |  |
+| Bundle & Promotion | Panier du jour - 15€ | Bundle | 3,0 | 594 € | — | 1 | à chiffrer |
+| Bundle & Promotion | Plateau Brunch Déjeuner – Sucré | Bundle | 3,7 | 818 € | — | 1 | à chiffrer |
+| Quiches | Quiche au Fromage Fumé, Tomate & Basilic | Quiches | 1,4 | 255 € | — | 4 | à chiffrer |
+| Quiches | Tian de Legumes | Quiches | 5,2 | 1 151 € | ×1,73 | 4 | à couper d'abord |
+| Viennoiserie | Pain au chocolat nappé & crème | Viennoiserie Ind. | 3,0 | 59 € | — | 3 | à chiffrer |
+
+Les produits de saison (Noël, Saint-Nicolas, cougnou, raclette) restent hors de la règle de coupe : la période mesurée ne couvre pas leur saison.
 
 ## Sources et réserves
 
