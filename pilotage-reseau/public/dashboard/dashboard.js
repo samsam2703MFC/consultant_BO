@@ -5604,6 +5604,21 @@
   }
   const fdDepuis = j => j == null ? '—' : (j === 0 ? 'aujourd’hui' : (j === 1 ? 'hier' : 'il y a ' + j + ' j'));
   function fdLegende(a, b) { return `<div class="fd-leg"><span><i style="background:${a.c}"></i>${esc(a.lib)}</span><span><i style="background:var(--color-text-muted)"></i>${esc(b)}</span></div>`; }
+  /* La part des tickets scannés (12/11/2026, Sam : « une grosse vignette sur le % de clients scannés sur l'ensemble des
+   * clients ; en dessous une échelle de 0 à 90 % : noir, rouge, orange, jaune, vert, vert foncé, or »). Un ticket compte
+   * comme scanné quand la caisse a reconnu le client (carte ou commande) ; la part se lit sur la mémoire des profils. */
+  const FD_ECHELLE = [[0, '#1d1d1f', 'noir'], [10, '#c62828', 'rouge'], [20, '#ef6c00', 'orange'], [35, '#f2c200', 'jaune'], [50, '#43a047', 'vert'], [65, '#1b5e20', 'vert foncé'], [80, '#c9a227', 'or']];
+  function fdScan(d) {
+    if (!d.tickets) { return ''; }
+    const v = 100 * (d.identifies || 0) / d.tickets, max = 90, pos = Math.min(v, max) / max * 100;
+    const bande = FD_ECHELLE.reduce((b, x) => (v >= x[0] ? x : b), FD_ECHELLE[0]);
+    const segs = FD_ECHELLE.map((x, i) => { const fin = i + 1 < FD_ECHELLE.length ? FD_ECHELLE[i + 1][0] : max;
+      return `<i style="left:${x[0] / max * 100}%;width:${(fin - x[0]) / max * 100}%;background:${x[1]}" title="${x[0]} à ${fin} % : ${x[2]}"></i>`; }).join('');
+    const reperes = FD_ECHELLE.map(x => x[0]).concat([max]).map(n => `<span style="left:${n / max * 100}%">${n} %</span>`).join('');
+    return `<div class="db-card fd-scan"><div class="fd-scan-h"><b style="color:${bande[1]}">${nf(v, 1)} %</b>
+        <div><span class="fd-scan-t">des tickets ont un client scanné</span><span class="fd-scan-s">${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)} · ${d.memoire} derniers jours</span></div></div>
+      <div class="fd-scan-e"><div class="fd-scan-b">${segs}<em style="left:${pos}%" title="${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div></div>`;
+  }
   function rendFidelite() {
     if (S.fdClient) { return rendFideliteClient(); }
     const k = cleFD(), d = S.aux[k];
@@ -5613,6 +5628,7 @@
     const P = d.profils || [], N = d.scannes || 0;
     const choisi = P.find(p => String(p.id) === String(S.fdProfil)) || P.find(p => p.clients > 0 && p.unite !== 'base') || P[0];
     let h = `<div class="db-sec">Les profils des clients scannés<small>${nf(N, 0)} clients reconnus en caisse sur ${d.memoire} jours · ${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)}${d.tickets ? ', soit 1 sur ' + nf(Math.round(d.tickets / Math.max(1, d.identifies)), 0) : ''} · rythme lu sur ${d.fenetre} jours</small></div>`;
+    h += fdScan(d);
     if (d.aLire) { h += `<div class="db-alerte">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de tickets restent à lire — la page se complète à la prochaine ouverture.</div>`; }
     h += `<div class="fd-tuiles">${P.map(p => {
       const vide = !p.clients;
@@ -5621,7 +5637,7 @@
         <b>${nf(p.part, 1)} %</b><span class="fd-n">${nf(p.clients, 0)} client${p.clients > 1 ? 's' : ''} sur ${nf(N, 0)}</span>
         <span class="fd-bar"><i style="width:${Math.max(1.5, p.part)}%;background:${esc(p.couleur)}"></i></span>
         <span class="fd-cond"><small>Condition</small>${esc(p.condition.charAt(0).toUpperCase() + p.condition.slice(1))}<em>${esc(p.equivalent)}</em></span>
-        ${vide ? '<span class="fd-vide">Aucun client à ce rythme pour l’instant.</span>' : `<span class="fd-kv"><span>Part du CA scanné</span><b>${fP(p.partCa)}</b><span>Panier moyen</span><b>${fU(p.panier)}</b><span>En commande</span><b>${fP0(p.commande)}</b><span>Dernier passage</span><b>${esc(fdDepuis(p.dernierPassage))}</b></span>`}</button>`;
+        ${vide ? '<span class="fd-vide">Aucun client à ce rythme pour l’instant.</span>' : `<span class="fd-kv"><span>Part du CA scanné</span><b>${fP(p.partCa)}</b><span>Panier moyen</span><b>${fU(p.panier)}</b><span>En commande</span><b>${fP0(p.commande)}</b></span>`}</button>`;
     }).join('')}</div>
       <p class="fd-note">Les conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients). Cliquer une vignette affiche son profil dans les radars.</p>`;
     const M = d.moyenne || {};

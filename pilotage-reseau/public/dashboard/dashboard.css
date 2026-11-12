@@ -2960,3 +2960,18 @@ body.ia-ouvert{overflow:hidden}
 
 /* La phrase de finition de l'assistant (12/11/2026) : après les puces et les priorités, en accent bordeaux. */
 .ia-fin{margin:12px 0 2px;padding:9px 12px;border-left:3px solid var(--color-primary);background:rgba(141,29,44,.05);border-radius:0 8px 8px 0;font-size:13.5px;line-height:1.5;color:var(--color-text)}
+
+/* La part des tickets scannés (12/11/2026) : le grand chiffre, puis l'échelle 0–90 % en sept bandes et son repère. */
+.fd-scan{padding:20px 24px 26px;margin-bottom:16px}
+.fd-scan-h{display:flex;align-items:center;gap:18px}
+.fd-scan-h>b{font-size:52px;line-height:1;font-weight:400;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.fd-scan-h>div{display:flex;flex-direction:column;gap:3px}
+.fd-scan-t{font-size:15px;color:var(--color-text)}.fd-scan-s{font-size:12.5px;color:var(--color-text-muted)}
+.fd-scan-e{margin-top:20px;position:relative}
+.fd-scan-b{position:relative;height:14px;border-radius:7px;overflow:visible}
+.fd-scan-b>i{position:absolute;top:0;bottom:0}
+.fd-scan-b>i:first-child{border-radius:7px 0 0 7px}.fd-scan-b>i:last-of-type{border-radius:0 7px 7px 0}
+.fd-scan-b>em{position:absolute;top:-6px;width:4px;height:26px;margin-left:-2px;background:#fff;border:2px solid var(--color-text);border-radius:3px;box-sizing:border-box}
+.fd-scan-r{position:relative;height:18px;margin-top:6px;font-size:11px;color:var(--color-text-muted)}
+.fd-scan-r>span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.fd-scan-r>span:first-child{transform:none}.fd-scan-r>span:last-child{transform:translateX(-100%)}
