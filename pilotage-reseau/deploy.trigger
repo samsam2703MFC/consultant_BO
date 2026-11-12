@@ -1421,3 +1421,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T15:16:17Z Assistant : coachs réglables au cockpit (ERP franchisé › Assistant · coachs), budget dans la fiche, questions gardées (ceo_assistant_question)
 2026-11-12T15:29:06Z Assistant : une phrase d'introduction, des puces, une phrase de finition
 2026-11-12T15:36:39Z Dashboard magasin : Revue du soir et Relire à côté de l'Assistant
+2026-11-12T15:38:38Z Dashboard magasin › Fidélité : part des tickets scannés (échelle 0–90 %), sans dernier passage dans les vignettes
