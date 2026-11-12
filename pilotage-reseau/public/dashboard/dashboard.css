@@ -3023,3 +3023,9 @@ body.ia-ouvert{overflow:hidden}
 .fd-can-l{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:10px;font-size:12.5px}
 .fd-can-l span{display:inline-flex;align-items:baseline;gap:6px}.fd-can-l i{width:9px;height:9px;border-radius:50%;display:inline-block}
 .fd-can-l b{font-weight:400}.fd-can-l small{color:var(--color-text-muted);font-size:11.5px}
+
+/* Les avatars, plus grands encore (12/11/2026, Sam) : 96 px au choix, 72 px aux réponses ; les cartes s'y ajustent. */
+.ia-ton{padding:8px 16px 8px 8px;gap:14px}
+.ia-ton b{font-size:15px}
+.ia-portrait{border-radius:16px}
+.ia-ligne{gap:12px}
