@@ -36,6 +36,8 @@ function sdTitre(string $t): void { echo "\n=== $t ===\n"; }
 /** Une valeur à montrer, masquée si son champ peut être nominatif ; les listes coupées à $n éléments. */
 function sdNettoie(mixed $v, string $cle = '', int $n = 4, int $prof = 0): mixed
 {
+    // Tout ce qui ressemble à un secret ou à une coordonnée bancaire est masqué, quel que soit le nom exact du champ.
+    if ($cle !== '' && preg_match('/pass|secret|token|bank|iban|swift|bic|account_number|tax|peppol|billing|vat/i', $cle) && !is_array($v)) { return $v === null || $v === '' ? $v : '•••'; }
     if ($cle !== '' && preg_match(SD_PRIVE, $cle) && !is_array($v)) { return $v === null || $v === '' ? $v : '•••'; }
     if (!is_array($v)) { return is_string($v) && mb_strlen($v) > 80 ? mb_substr($v, 0, 80) . '…' : $v; }
     if ($prof >= 5) { return '[…]'; }
@@ -85,8 +87,9 @@ sdTitre('4. Pertes, semaine');
 $w = PanelApi::sondeGet('/shops/' . SD_SHOP . '/products/waste?' . http_build_query(['from' => $lundi, 'to' => $hier, 'date_from' => $lundi, 'date_to' => $hier]), 30);
 echo '  HTTP ', $w['code'], "\n";
 if (is_array($w['corps'])) {
-    $hors = array_diff_key($w['corps'], ['products' => 1]);
-    echo '  enveloppe : ', json_encode(sdNettoie($hors, '', 3), JSON_UNESCAPED_UNICODE), "\n";
+    // L'enveloppe porte aussi la fiche de la société (`shop`) : jamais affichée, seul le résumé de la période l'est.
+    echo '  résumé : ', json_encode(sdNettoie($w['corps']['period_summary'] ?? null, '', 3), JSON_UNESCAPED_UNICODE), "\n";
+    echo '  clés de l\'enveloppe : ', implode(', ', array_keys($w['corps'])), "\n";
     $prods = is_array($w['corps']['products'] ?? null) ? $w['corps']['products'] : PanelApi::liste($w['corps']);
     echo '  références : ', count($prods), "\n";
     if ($prods) { echo '  champs : ', implode(', ', array_keys((array) $prods[0])), "\n"; }
