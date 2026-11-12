@@ -1408,3 +1408,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T11:48:51Z [285] Raport stanowisk + [284] Dzisiaj Produkcja
 2026-11-12T11:51:58Z [258] Design system phase 1
 2026-11-12T12:05:23Z [286][287] Profil = sesja, Dzisiaj i zadania, bez powtórzeń
+2026-11-12T12:33:05Z 288 urlopy : calendrier clic, demande téléphone + validation kierownik, report 01.06 ; HR zostało + rozmiar odzieży
