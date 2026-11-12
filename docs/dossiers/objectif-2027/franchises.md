@@ -28,13 +28,13 @@ Nos trois priorités pour 2027 :
 
 | Indicateur réseau | Aujourd'hui | Objectif 2027 |
 | --- | --- | --- |
-| Food cost | 39,4 % | vers 32 % |
+| Food cost | 39,4 % | 37 % |
 | Tâches rendues sur la tablette (T3) | 19 % | 100 % au 1er mars |
 | Produits avec une recette chiffrée au panel | 372 sur 533 (70 %) | 533 sur 533 (100 %) |
 | Produits au même prix dans les 4 magasins | 1 sur 5 | question ouverte (voir « Les prix ») |
 | Références vendues moins d'une fois par jour | 163 | coupées ou chiffrées |
 
-Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau.
+Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau. Passer de 39,4 % à 37 % représente donc environ 89 000 € de marge en plus par an.
 
 Produits avec une recette chiffrée, par magasin :
 

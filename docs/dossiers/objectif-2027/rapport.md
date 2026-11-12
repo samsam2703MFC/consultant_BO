@@ -8,7 +8,7 @@
 
 > [Le plus important en 2027 : l'expérience client, la marge et le trafic] Tout le reste du rapport sert ces trois points.
 > - Expérience client : le même accueil, la même vitrine et la même qualité de finition dans chaque magasin, tenus par les process, les tablettes et les contrôles. Les notes Google vont de 4,1 à 4,7.
-> - Marge : prix conseillés au plus haut du réseau (jusqu'à +432 k€ par an), gâteau à la part à ×4, coupes de gamme ; le food cost doit passer de 39,4 % vers le seuil de 32 %.
+> - Marge : prix conseillés au plus haut du réseau (jusqu'à +432 k€ par an), gâteau à la part à ×4, coupes de gamme ; objectif de food cost 2027 : 37 %, contre 39,4 % aujourd'hui (environ +89 k€ de marge par an).
 > - Trafic : le nombre de tickets recule à Corbais (−3,7 % sur un an) et à Sombreffe (−4,9 %), seul Gosselies gagne des clients (+10,6 %) ; le CA tient grâce au panier. Les leviers : le rétro-agenda des campagnes, le webshop et le B2B, la fidélisation et les nouvelles zones.
 
 Déroulé de la réunion, en sandwich : on ouvre sur ce qui marche, on pose l'état des lieux sans détour, on construit les solutions, et on finit pour motiver et développer.
@@ -22,7 +22,7 @@ Déroulé de la réunion, en sandwich : on ouvre sur ce qui marche, on pose l'é
 7. Pour finir : motiver et développer.
 8. Fournisseurs externes invités en fin de réunion.
 
-Côté chiffres, 2027 se joue sur la marge plus que sur le volume : le réseau fait environ 3,7 M€ de CA par an mais garde un food cost de 39,4 %, plus de 7 points au-dessus du seuil réseau de 32 %. Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau. Les chiffres soutiennent les décisions de la réunion, avec une correction sur le prix usine du gâteau à la part. Le plus gros levier est le nivellement des prix au plus haut du réseau : environ 432 000 € de marge brute par an à volumes inchangés, sous réserve du droit de la concurrence, qui interdit d'imposer un prix fixe aux franchisés.
+Côté chiffres, 2027 se joue sur la marge plus que sur le volume : le réseau fait environ 3,7 M€ de CA par an mais garde un food cost de 39,4 %, plus de 7 points au-dessus du seuil réseau de 32 %. L'objectif 2027 est de descendre à 37 %. Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau. Les chiffres soutiennent les décisions de la réunion, avec une correction sur le prix usine du gâteau à la part. Le plus gros levier est le nivellement des prix au plus haut du réseau : environ 432 000 € de marge brute par an à volumes inchangés, sous réserve du droit de la concurrence, qui interdit d'imposer un prix fixe aux franchisés.
 
 | Décision | Ce que disent les chiffres | Verdict |
 | --- | --- | --- |
