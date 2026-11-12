@@ -3001,3 +3001,8 @@ body.ia-ouvert{overflow:hidden}
 .fd-tsvg{display:block;width:100%;height:auto;padding:6px 10px 10px;box-sizing:border-box}
 .fd-tq{stroke:var(--color-border-tertiary);stroke-width:1}
 .fd-tl{font:400 10.5px var(--font-ui);fill:var(--color-text-muted)}
+
+/* Les avatars des coachs, plus grands (12/11/2026, Sam) : la pastille prend la taille du portrait. */
+.ia-av:has(.ia-portrait){width:auto;height:auto}
+.ia-portrait{border-radius:12px}
+.ia-ton .ia-av:has(.ia-portrait){margin:-2px 0}

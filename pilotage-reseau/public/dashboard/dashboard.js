@@ -5464,11 +5464,11 @@
   const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
   /** Le visage de l'assistant : son portrait s'il en a un (Pierre), sinon l'icône bulle ; `lit` fait pulser l'icône. */
   const iaVisage = (k, taille, lit) => { const t = iaTons().find(x => x.cle === k);
-    return t && t.avatar ? `<img class="ia-portrait${lit ? ' lit' : ''}" src="${esc(t.avatar)}" width="${taille}" height="${taille}" alt="${esc(t.nom)}">` : iaIcone(Math.round(taille * 0.6), lit ? 'lit' : ''); };
+    return t && t.avatar ? `<img class="ia-portrait${lit ? ' lit' : ''}" src="${esc(t.avatar)}" width="${taille}" height="${taille}" style="width:${taille}px;height:${taille}px" alt="${esc(t.nom)}">` : iaIcone(Math.round(taille * 0.6), lit ? 'lit' : ''); };
   function iaChoixTon() {
     const T = iaTons();
     if (!T.length) { return ''; }
-    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 30)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
+    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 48)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
   }
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
@@ -5518,7 +5518,7 @@
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
     if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 30, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 40, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
@@ -5532,10 +5532,10 @@
     const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 30, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 40, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 30)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 48)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
@@ -5663,7 +5663,8 @@
     let h = `<div class="db-sec">Les profils des clients scannés<small>${nf(N, 0)} clients reconnus en caisse sur ${d.memoire} jours · ${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)}${d.tickets ? ', soit 1 sur ' + nf(Math.round(d.tickets / Math.max(1, d.identifies)), 0) : ''} · rythme lu sur ${d.fenetre} jours</small></div>`;
     h += fdScan(d);
     if (d.aLire) { h += `<div class="db-alerte">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de tickets restent à lire — la page se complète à la prochaine ouverture.</div>`; }
-    h += `<div class="fd-tuiles">${P.map(p => {
+    // Du moins fidèle au plus fidèle, de gauche à droite (12/11/2026, Sam : « inverser le sens Fanbase et Découverte »).
+    h += `<div class="fd-tuiles">${P.slice().reverse().map(p => {
       const vide = !p.clients;
       return `<button class="fd-tui${p === choisi ? ' on' : ''}${vide ? ' vide' : ''}" data-fdp="${esc(p.id)}">
         <span class="fd-tn"><i style="background:${esc(p.couleur)}"></i>${esc(p.nom)}</span>
