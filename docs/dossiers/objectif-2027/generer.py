@@ -175,6 +175,9 @@ def rendre(md):
         if l.startswith('|'):
             while i < len(lignes) and lignes[i].startswith('|'): groupe.append(lignes[i]); i += 1
             blocs.append(tableau(groupe)); continue
+        if l.startswith('>> '):
+            m = re.match(r'^>> \[(.+?)\]\s*(.*)$', l)
+            blocs.append(f'<div class="vignette"><div class="vt">{inline(m.group(1))}</div><div class="vc">{inline(m.group(2))}</div></div>'); i += 1; continue
         if l.startswith('>'):
             while i < len(lignes) and lignes[i].startswith('>'): groupe.append(lignes[i]); i += 1
             blocs.append(encadre(groupe)); continue
@@ -244,6 +247,8 @@ tr{{break-inside:avoid}}
 table.court,.ensemble{{break-inside:avoid}}
 .box{{border-left:3px solid {RUBY};padding:2px 0 2px 12px;margin:6px 0 14px;break-inside:avoid}}
 .box p{{margin:0 0 6px}} .box ul{{margin:0}}
+.vignette{{margin:8px 0 14px;padding:14px 18px;border-left:3px solid {RUBY};background:{HEAD};break-inside:avoid}}
+.vignette .vt{{font-size:14px;line-height:1.35;margin-bottom:4px}} .vignette .vc{{font-size:11.5px;color:{INK}}}
 .formule{{margin:4px 0 12px;padding:8px 12px;border-top:1px solid {LINE};border-bottom:1px solid {LINE};text-align:center;font-size:11px}}
 .figure{{margin:6px 0 12px;break-inside:avoid}}
 .fig-titre{{font-size:11px;margin-bottom:6px}}

@@ -4,6 +4,8 @@
 
 > [Le but de 2027] Améliorer l'offre produit et avoir des process identiques dans tous les magasins. Un magasin qui ne suit pas le standard du réseau ne vaut rien : ses chiffres ne se comparent pas, il ne se revend pas et il ne porte pas la marque. Sur cette base, le réseau se développera sur de nouvelles zones : Wemmel, Grimbergen, Sambreville, Malines (Mechelen), liste ouverte.
 
+>> [La valeur de vos magasins est une responsabilité collective] Elle tient directement au respect des process, à l'expérience client et à la qualité de finition des produits.
+
 Déroulé de la réunion, en sandwich : on ouvre sur ce qui marche, on pose l'état des lieux sans détour, on construit les solutions, et on finit pour motiver et développer.
 
 1. Ouverture : ce qui marche.
