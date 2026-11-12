@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Maquette — Bingo de saison</title>
+<style>
+@font-face{font-family:'Gotham';font-weight:300;src:url('../../../public/assets/ds/fonts/Gotham_Light.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:400;src:url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:700;src:url('../../../public/assets/ds/fonts/Gotham_Regular.otf') format('opentype')}
+@font-face{font-family:'Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+@font-face{font-family:'Playwrite';src:url('../../../public/assets/ds/fonts/PlaywriteDEVA-Regular.ttf') format('truetype')}
+:root{--rubis:#8D1D2C;--rubis-f:#6E1622;--abricot:#F2C9A0;--abricot-d:#F8E2CB;--beige:#EAE4DC;--creme:#F5EFE4;--encre:#1c1a17;--muet:#7a736a;--muet2:#5c5852;
+  --pale:#B8B2A8;--ligne:#e6e0d8;--papier:#faf7f2;--vert:#3f7a52;--or:#B0792A}
+*{box-sizing:border-box}
+body{margin:0;width:1680px;background:var(--papier);color:var(--encre);font:400 13px/1.45 'Gotham',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+b,strong,h1,h2,h3{font-weight:400}
+svg{display:block;width:100%;height:100%}
+
+/* La planche */
+.pl{padding:34px 48px 40px}
+.pl-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muet)}
+.pl h1{margin:6px 0 6px;font-size:26px;letter-spacing:-.01em}
+.pl-sous{margin:0;max-width:1150px;color:var(--muet2);font-size:13.5px}
+.pl-g{display:grid;grid-template-columns:540px 392px minmax(0,1fr);gap:44px;margin-top:28px;align-items:start}
+.pl-t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muet);margin:0 0 12px}
+.pl-t em{font-style:normal;color:var(--pale)}
+
+/* ---- La carte imprimée (A6, 105 × 148 mm) ---------------------------------------------- */
+.carte>*{flex:none}
+.carte{width:540px;height:762px;background:var(--creme);border-radius:10px;padding:26px 26px 22px;position:relative;transform:rotate(-1.2deg);
+  box-shadow:0 1px 2px rgba(60,30,20,.12),0 18px 40px rgba(60,30,20,.16);display:flex;flex-direction:column;color:var(--encre)}
+.ca-h{display:flex;justify-content:space-between;align-items:flex-start}
+.ca-h img{height:24px}
+.ca-saison{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--rubis);text-align:right;line-height:1.5}
+.ca-titre{display:flex;align-items:baseline;gap:12px;margin:12px 0 0}
+.ca-titre b{font:400 76px/0.9 'Vank','Gotham';color:var(--rubis);letter-spacing:.01em}
+.ca-titre i{font:400 30px/1 'Playwrite','Gotham';font-style:normal;color:var(--rubis);transform:translateY(-6px)}
+.ca-acc{margin:8px 0 14px;font-size:12.5px;color:var(--muet2)}
+.ca-acc em{font-style:normal;color:var(--rubis)}
+.grille{display:grid;grid-template-columns:repeat(4,1fr);border:1.6px solid var(--rubis);border-radius:4px;overflow:hidden;background:#fff}
+.case{position:relative;height:106px;padding:6px 6px 7px;display:flex;flex-direction:column;align-items:center;text-align:center;border-right:1.2px solid var(--rubis);border-bottom:1.2px solid var(--rubis)}
+.case:nth-child(4n){border-right:none}.case:nth-child(n+9){border-bottom:none}
+.case.fete{background:var(--abricot-d)}
+.case .s{align-self:stretch;display:flex;justify-content:space-between;font-size:8.5px;color:var(--muet);letter-spacing:.02em}
+.case .s span:first-child{color:var(--rubis)}
+.case .ill{width:40px;height:40px;margin:1px 0 2px}
+.case .ti{font-size:10.5px;line-height:1.15;color:var(--encre)}
+.case .so{font-size:8.5px;line-height:1.2;color:var(--muet);margin-top:2px}
+.case .tag{white-space:nowrap;margin-top:3px;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--rubis);border:1px solid var(--rubis);border-radius:3px;padding:1px 4px}
+.case .tag.pr{color:var(--rubis);background:transparent}
+.paliers{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px}
+.paliers>div{border:1.2px solid var(--rubis);border-radius:6px;padding:7px 8px 8px;background:#fff;min-height:66px}
+.paliers b{display:block;font:400 26px/1 'Vank','Gotham';color:var(--rubis)}
+.paliers span{display:block;font-size:8.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--muet);margin:2px 0 3px}
+.paliers p{margin:0;font-size:10.5px;line-height:1.25}
+.paliers .tirage{background:var(--rubis);color:#fff}.paliers .tirage b,.paliers .tirage span{color:#fff}
+.ca-pied{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;margin-top:auto;align-items:end}
+.ca-comment h4{margin:0 0 4px;font-size:11px;color:var(--rubis);letter-spacing:.04em;text-transform:uppercase;font-weight:400}
+.ca-comment p{margin:0;font-size:10.5px;line-height:1.45;color:var(--muet2)}
+.ca-qr{text-align:center;font-size:8.5px;color:var(--muet);line-height:1.3}
+.ca-qr .q{width:96px;height:96px;background:#fff;border-radius:6px;padding:4px;margin-bottom:4px}
+.ca-qr .q svg path,.ca-qr .q svg rect{shape-rendering:crispEdges}
+
+/* ---- L'app du client --------------------------------------------------------------------- */
+.tel{width:392px;height:842px;border-radius:52px;background:#1c1a17;padding:12px;box-shadow:0 18px 40px rgba(60,30,20,.18)}
+.ecran{width:100%;height:100%;border-radius:41px;background:#F4EFE8;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.st{display:flex;justify-content:space-between;padding:14px 28px 0;font-size:13px;color:var(--encre)}
+.st i{font-style:normal;font-size:11px;letter-spacing:.04em}
+.ap-h{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px}
+.ap-h img{height:16px}
+.ap-h span{font-size:12px;color:var(--muet2)}
+.seg{display:flex;margin:2px 18px 10px;background:#E6DFD5;border-radius:8px;padding:2px}
+.seg span{flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:6px;color:var(--muet2)}
+.seg span.on{background:#fff;color:var(--rubis)}
+.ap{padding:0 18px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.hero{display:flex;align-items:flex-end;justify-content:space-between}
+.hero b{font:400 34px/0.95 'Vank','Gotham';color:var(--rubis)}
+.hero b i{font:400 17px 'Playwrite','Gotham';font-style:normal;margin-left:4px}
+.hero span{font-size:11px;color:var(--muet);text-align:right;line-height:1.35}
+.hero span em{font-style:normal;font-size:20px;color:var(--encre);display:block}
+.semaine{background:#fff;border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:center;border:1.4px dashed var(--rubis)}
+.semaine .ill{width:46px;height:46px}
+.semaine small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
+.semaine b{display:block;font-size:13.5px;margin-top:1px}
+.jauge{height:7px;border-radius:4px;background:#EDE7DE;margin:7px 0 4px;overflow:hidden}
+.jauge i{display:block;height:100%;background:var(--rubis);border-radius:4px}
+.semaine p{margin:0;font-size:10.5px;color:var(--muet2);line-height:1.35}
+.mini{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.mc{position:relative;background:#fff;border-radius:10px;height:84px;padding:5px 4px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.mc.fete{background:var(--abricot-d)}
+.mc .ill{width:36px;height:36px;margin:9px 12px 0 0}
+.mc .ti{font-size:8.6px;line-height:1.15;margin-top:3px;color:var(--encre)}
+.mc .d{position:absolute;top:4px;left:6px;font-size:7.5px;color:var(--muet)}
+.mc.futur{opacity:.42}
+.mc.manquee .ill,.mc.manquee .ti{opacity:.28;filter:grayscale(1)}
+.mc.manquee::after{content:'manquée';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muet);border:1px solid var(--pale);border-radius:3px;padding:1px 4px;background:rgba(255,255,255,.8)}
+.mc.encours{outline:1.6px dashed var(--rubis);outline-offset:-1.6px}
+.mc.encours .bar{position:absolute;left:8px;right:8px;bottom:6px;height:4px;border-radius:2px;background:#EDE7DE;overflow:hidden}
+.mc.encours .bar i{display:block;height:100%;background:var(--rubis)}
+.tampon{position:absolute;right:3px;top:3px;width:30px;height:30px;border-radius:50%;border:2px solid var(--rubis);color:var(--rubis);transform:rotate(-14deg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.55);opacity:.92;line-height:1}
+.tampon::before{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid var(--rubis)}
+.tampon b{font-size:12px}
+.tampon i{font-style:normal;font-size:5.5px;margin-top:1px}
+.cadeaux{background:#fff;border-radius:14px;padding:4px 12px}
+.cadeaux>div{display:grid;grid-template-columns:24px minmax(0,1fr) auto;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid #EFE9E1}
+.cadeaux>div:last-child{border-bottom:none}
+.cadeaux .n{width:24px;height:24px;border-radius:50%;background:#EDE7DE;color:var(--muet2);font-size:11px;display:flex;align-items:center;justify-content:center}
+.cadeaux .ok .n{background:var(--rubis);color:#fff}
+.cadeaux b{font-size:11.5px;display:block}
+.cadeaux span{font-size:10px;color:var(--muet);display:block}
+.cadeaux em{font-style:normal;font-size:10px;color:var(--rubis);white-space:nowrap}
+.cadeaux .perdu b,.cadeaux .perdu em{color:var(--pale)}
+.nav{display:flex;justify-content:space-around;padding:9px 0 20px;background:#fff;border-top:1px solid #EAE3D9;font-size:10px;color:var(--muet)}
+.nav span.on{color:var(--rubis)}
+.toast{position:absolute;top:8px;left:14px;right:14px;background:rgba(28,26,23,.94);color:#fff;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35}
+.toast .ill{width:30px;height:30px;background:var(--creme);border-radius:8px;padding:2px}
+.toast small{display:block;font-size:9.5px;color:#cfc7bd;text-transform:uppercase;letter-spacing:.06em}
+
+/* ---- Les règles et l'année ------------------------------------------------------------- */
+.reg{background:#fff;border:1px solid var(--ligne);border-radius:12px}
+.reg>div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--ligne)}
+.reg>div:last-child{border-bottom:none}
+.reg .ic{width:30px;height:30px;border-radius:8px;background:var(--rubis);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.reg b{display:block;font-size:13.5px}
+.reg p{margin:2px 0 0;font-size:12px;color:var(--muet2)}
+.reg .v{display:inline-block;color:var(--rubis);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px}
+.annee{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
+.sa{background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:12px 14px}
+.sa.on{border-color:var(--rubis);background:linear-gradient(0deg,#fff,#fff)}
+.sa h4{margin:0;display:flex;justify-content:space-between;font-size:14px;font-weight:400}
+.sa h4 small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--rubis)}
+.sa .dt{font-size:11px;color:var(--muet);margin:2px 0 7px}
+.sa .ch{display:flex;flex-wrap:wrap;gap:4px}
+.sa .ch span{font-size:10.5px;background:#F3EEE7;border-radius:4px;padding:2px 6px;color:var(--muet2)}
+.sa.on .ch span{background:var(--abricot-d);color:var(--rubis-f)}
+.note{margin:12px 0 0;font-size:11.5px;color:var(--muet);line-height:1.5}
+.note em{font-style:normal;color:var(--rubis)}
+</style>
+</head>
+<body>
+<div class="pl" id="pl"></div>
+<script src="../../../public/assets/vendor/qrcode/qrcode.js"></script>
+<script src="bingo.js"></script>
+<script>
+const { ILL, SEMAINES, REGLES, SAISONS, CLIENTE } = window.BINGO;
+const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const LOGO = '../../../public/assets/img/logo.png';
+
+/* La carte imprimée : celle que la vendeuse donne en caisse (la carte QR de Fidélité › En caisse). */
+const qr = (() => { const q = qrcode(0, 'M'); q.addData('L’Atelier by — carte fidélité Hiver 2026-2027 (maquette)'); q.make(); return q.createSvgTag(3, 0); })();
+const carte = `<div class="carte">
+  <div class="ca-h"><img src="${LOGO}" alt="L’Atelier by"><div class="ca-saison">Carte fidélité<br>Hiver 2026 – 2027</div></div>
+  <div class="ca-titre"><b>BINGO</b><i>d’hiver</i></div>
+  <p class="ca-acc">Du 23/11 au 14/02 · <em>une case par semaine, elle se coche toute seule.</em></p>
+  <div class="grille">${SEMAINES.map(s => `<div class="case${s.fete ? ' fete' : ''}">
+    <div class="s"><span>S${s.n}</span><span>${s.du} – ${s.au}</span></div>${s.fete ? `<span class="tag">Fête · ${s.jour}</span>` : '<span class="tag pr">À l’honneur</span>'}
+    <div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre}</div>${s.sous !== 'produit de la semaine' ? `<div class="so">${s.sous}</div>` : ''}</div>`).join('')}</div>
+  <div class="paliers">${REGLES.paliers.map(p => `<div class="${p.tirage ? 'tirage' : ''}"><b>${p.n}</b><span>${p.tirage ? 'carte pleine' : 'cases'}</span><p>${p.cadeau.replace('le tirage au sort : ', 'tirage au sort : ')}</p></div>`).join('')}</div>
+  <div class="ca-pied" style="margin-top:14px">
+    <div class="ca-comment"><h4>Comment ça marche</h4><p>Chaque semaine où vous dépensez <b>${REGLES.seuil} € ou plus</b> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez simplement l’app ou cette carte à la caisse.</p></div>
+    <div class="ca-qr"><div class="q">${qr}</div>Activez votre carte<br>N° 4417 0823</div>
+  </div>
+</div>`;
+
+/* L'app : Julie, le jeudi 14 janvier, six cases cochées. */
+const C = CLIENTE, sem = SEMAINES[C.semaine - 1], nCoch = Object.keys(C.cochees).length;
+const reste = REGLES.seuil - C.depense;
+const etat = s => C.cochees[s.n] ? 'coche' : (C.manquees.includes(s.n) ? 'manquee' : (s.n === C.semaine ? 'encours' : (s.n > C.semaine ? 'futur' : 'manquee')));
+const restant = 12 - C.semaine + 1;
+const app = `<div class="tel"><div class="ecran">
+  <div class="st"><span>9:41</span><i>5G ▮▮▮</i></div>
+  <div class="ap-h"><img src="${LOGO}" alt=""><span>Bonjour ${C.prenom}</span></div>
+  <div class="seg"><span class="on">Bingo</span><span>Points</span><span>Portefeuille</span></div>
+  <div class="ap">
+    <div class="hero"><b>BINGO<i>d’hiver</i></b><span><em>${nCoch} / 12</em>cases cochées</span></div>
+    <div class="semaine"><div class="ill">${ILL[sem.ill]}</div><div><small>Cette semaine · ${sem.du} – ${sem.au}</small><b>${sem.titre}</b>
+      <div class="jauge"><i style="width:${(100 * C.depense / REGLES.seuil).toFixed(0)}%"></i></div>
+      <p>${nf(C.depense, 2)} € sur ${REGLES.seuil} € — encore ${nf(reste, 2)} € d’ici dimanche et la case se coche toute seule.</p></div></div>
+    <div class="mini">${SEMAINES.map(s => { const e = etat(s);
+      return `<div class="mc ${e}${s.fete ? ' fete' : ''}"><span class="d">${s.du}</span><div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre.replace(' · ', '<br>')}</div>
+        ${e === 'coche' ? `<span class="tampon"><b>✓</b><i>${C.cochees[s.n]}</i></span>` : ''}${e === 'encours' ? `<span class="bar"><i style="width:${(100 * C.depense / REGLES.seuil).toFixed(0)}%"></i></span>` : ''}</div>`; }).join('')}</div>
+    <div class="cadeaux">${REGLES.paliers.map(p => {
+      const ok = nCoch >= p.n, possible = nCoch + restant >= p.n;
+      const droite = ok ? 'dans votre portefeuille' : (possible ? 'encore ' + (p.n - nCoch) + ' case' + (p.n - nCoch > 1 ? 's' : '') : 'au printemps');
+      const nom = p.cadeau.replace('le tirage au sort : ', 'tirage au sort : ');
+      return `<div class="${ok ? 'ok' : (possible ? '' : 'perdu')}"><span class="n">${ok ? '✓' : p.n}</span><div><b>${nom.charAt(0).toUpperCase() + nom.slice(1)}</b><span>${p.tirage ? 'carte pleine : les 12 semaines' : p.n + ' cases cochées'}</span></div><em>${droite}</em></div>`; }).join('')}</div>
+  </div>
+  <div class="toast"><div class="ill">${ILL.pain}</div><div><small>L’Atelier by · maintenant</small>Ticket de 4,20 € enregistré. Encore ${nf(reste, 2)} € cette semaine pour cocher « ${sem.titre} ».</div></div>
+  <div class="nav"><span>Accueil</span><span class="on">Fidélité</span><span>Commander</span><span>Profil</span></div>
+</div></div>`;
+
+/* Les règles, réglables au cockpit, et l'année. */
+const regles = `<div class="reg">
+  <div><span class="ic">€</span><div><b>Une case par semaine</b><p>Dès <span class="v">${REGLES.seuil} €</span> d’achats dans la semaine, en une ou plusieurs fois : boutique, click & collect, livraison. <span class="v">${REGLES.parSemaine}</span> case par semaine au plus.</p></div></div>
+  <div><span class="ic">✓</span><div><b>Elle se coche toute seule</b><p>Le ticket est rattaché à la carte : l’app ou la carte QR scannée à la caisse. Rien à tamponner, rien à demander à la vendeuse.</p></div></div>
+  <div><span class="ic">✦</span><div><b>Chaque semaine a son thème</b><p>Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div></div>
+  <div><span class="ic">4</span><div><b>Quatre paliers</b><p>${REGLES.paliers.map(p => '<span class="v">' + p.n + '</span> ' + p.cadeau.replace('le tirage au sort : ', 'tirage au sort, ')).join(' · ')}. Le cadeau arrive dans le portefeuille de l’app dès que le palier est atteint.</p></div></div>
+  <div><span class="ic">13</span><div><b>La semaine des cadeaux</b><p>Une 13e semaine entre deux cartes : les cadeaux se prennent, le tirage au sort a lieu, la carte de la saison suivante arrive. Quatre cartes font l’année.</p></div></div>
+</div>`;
+const annee = `<div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><h4>${s.nom}<small>${s.etat}</small></h4>
+  <div class="dt">${s.du} → ${s.au} · cadeaux ${s.cadeaux}</div><div class="ch">${s.fetes.map(f => `<span>${f}</span>`).join('')}</div></div>`).join('')}</div>`;
+
+document.getElementById('pl').innerHTML = `
+  <div class="pl-k">Maquette · Fidélité › Bingo de saison · 12/11/2026</div>
+  <h1>Le bingo de saison : une carte qui se remplit toute seule</h1>
+  <p class="pl-sous">Une carte par saison, une case par semaine. Dès ${REGLES.seuil} € d’achats dans la semaine, la case de la semaine se coche dans l’app, sans tampon. Chaque case porte une fête de la saison ou le produit de la semaine : il faut revenir chaque semaine pour remplir la carte.</p>
+  <div class="pl-g">
+    <section><h3 class="pl-t">La carte imprimée <em>· donnée en caisse, A6</em></h3>${carte}</section>
+    <section><h3 class="pl-t">L’app du client <em>· ${C.aujourdhui}</em></h3>${app}</section>
+    <section><h3 class="pl-t">Les règles <em>· réglables au cockpit</em></h3>${regles}
+      <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· 12 semaines + la semaine des cadeaux</em></h3>${annee}
+      <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Les montants, les paliers, les cadeaux et le thème de chaque semaine sont des valeurs de départ.</p></section>
+  </div>`;
+</script>
+</body>
+</html>
