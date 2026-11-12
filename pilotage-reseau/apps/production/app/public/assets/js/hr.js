@@ -10,6 +10,7 @@
     const root = (app.dataset.root || '').replace(/\/$/, '');
     const tab = app.dataset.tab;
     const admin = app.dataset.admin === '1';
+    const canPay = app.dataset.pay === '1';   // [277] wynagrodzenie, rachunek, PESEL, adres, szablony umów
     const body = app.querySelector('[data-hr-body]');
     const dialog = document.querySelector('[data-hr-dialog]');
     const card = dialog.querySelector('[data-hr-card]');
@@ -120,6 +121,7 @@
                     <label class="hr-f"><span>Umowa</span><select class="form-select form-select-sm" name="contract_type"><option value="">—</option>${opt(contracts, p.contract_type)}</select></label>
                     ${f('Koniec umowy', 'contract_end', p.contract_end, 'date')}${f('Wymiar', 'work_time', p.work_time)}${f('Badania lekarskie do', 'medical_until', p.medical_until, 'date')}
                     ${f('Kontakt w nagłych wypadkach', 'emergency', p.emergency)}</div>
+                    ${p.pay ? payHtml(p.pay, f, opt) : ''}
                     <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div></form>
                 <div class="hr-sec"><h5>Dokumenty (${c.documents.length})</h5>
                     <table class="table tm-table hr-docs"><tbody>${c.documents.map(x => `<tr><td><span class="tm-tag">${esc(x.kind_label)}</span> <a href="${root}/hr/document/${x.id}?inline=1" target="_blank" rel="noopener">${esc(x.title)}</a>
@@ -146,6 +148,10 @@
             const msg = card.querySelector('[data-msg]');
             form.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
             const payload = Object.fromEntries(['email', 'phone', 'birth_date', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency'].map(k => [k, form[k].value]));
+            if (p.pay) {
+                ['pay_type', 'pay_amount', 'bank', 'address', 'pesel'].forEach(k => { payload[k] = form[k].value; });
+                ['pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'].forEach(k => { payload[k] = form[k].checked; });
+            }
             try { await api('PUT', '/ajax/hr/people/' + id, payload); msg.textContent = 'Zapisano.'; refresh(); }
             catch (x) { msg.textContent = x.message; Object.keys(x.fields || {}).forEach(k => { if (form[k]) { form[k].classList.add('is-invalid'); form[k].title = x.fields[k]; } }); }
         });
@@ -179,6 +185,19 @@
             if (!confirm('Usunąć notatkę ?')) return;
             try { await api('DELETE', '/ajax/hr/notes/' + b.dataset.delNote); openCard(id); refresh(); } catch (x) { alert(x.message); }
         }));
+    }
+
+    // [277] Płace i umowy w karcie : tylko administrator i finanse (dostęp « Lista płac »).
+    function payHtml(pay, f, opt) {
+        const chk = (name, label, on, hint) => `<label class="hr-chk"><input type="checkbox" class="form-check-input" name="${name}" ${on ? 'checked' : ''}> ${label}${hint ? ` <span class="tm-sub">${hint}</span>` : ''}</label>`;
+        return `<h5 class="hr-subhead">Płace i umowy <span class="hr-lock"><i class="bi bi-lock"></i> administrator i finanse</span></h5>
+            <div class="hr-fields">
+                <label class="hr-f"><span>Wynagrodzenie</span><span class="hr-pay"><select class="form-select form-select-sm" name="pay_type"><option value="">—</option>${opt({monthly: 'miesięcznie', hourly: 'za godzinę'}, pay.type)}</select>
+                    <input class="form-control form-control-sm" name="pay_amount" inputmode="decimal" value="${pay.amount == null ? '' : String(pay.amount).replace('.', ',')}" placeholder="brutto zł"></span></label>
+                ${f('Rachunek bankowy', 'bank', pay.bank)}${f('Adres zamieszkania', 'address', pay.address)}${f('PESEL', 'pesel', pay.pesel)}</div>
+            <div class="hr-checks">${chk('pit2', 'PIT-2 (kwota zmniejszająca 300 zł)', pay.pit2)}${chk('kup_raised', 'Podwyższone koszty (dojazd)', pay.kup_raised)}
+                ${chk('young_relief', 'Ulga dla młodych', pay.young_relief, 'gdy < 26 lat')}${chk('student', 'Student / uczeń', pay.student, 'zlecenie : bez ZUS')}
+                ${chk('sick_insurance', 'Dobrowolne chorobowe', pay.sick_insurance, 'zlecenie')}</div>`;
     }
 
     function noteHtml(n, withName) {
@@ -216,7 +235,7 @@
         body.innerHTML = `<div class="tm-bar"><div class="tm-nav"><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, -1)}">‹</button>
                 <b class="hr-month">${esc(r.month_label)}</b><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, 1)}">›</button></div><span class="tm-spacer"></span>
                 ${r.summary ? `<span class="tm-sub">podsumowanie wysłane ${d(r.summary.sent_at.slice(0, 10))} ${r.summary.sent_at.slice(11, 16)}${r.summary.auto ? ' (automatycznie)' : ''}</span>` : '<span class="tm-sub">podsumowanie : ostatniego dnia miesiąca o 18:00, e-mailem do administratora</span>'}
-                ${admin ? '<button type="button" class="btn btn-primary btn-sm" data-send>Wyślij podsumowanie teraz</button>' : ''}</div>
+                ${admin ? `<button type="button" class="btn btn-primary btn-sm" data-send ${c.all ? '' : 'disabled title="Brak notatek w tym miesiącu — nie ma czego wysłać."'}>Wyślij podsumowanie teraz</button>` : ''}</div>
             <div class="tm-kpis"><div class="tm-kpi"><small>Notatki w miesiącu</small><b>${c.all}</b><span>${c.people} os.</span></div><div class="tm-kpi"><small>Publiczne</small><b>${c.public}</b></div>
                 <div class="tm-kpi"><small>Prywatne</small><b>${c.private}</b><span>${admin ? 'wszystkie' : 'tylko Twoje'}</span></div><div class="tm-kpi"><small>Do administratora</small><b>${c.to_admin}</b></div></div>
             <div class="at-card hr-card hr-month-list">${r.people.map(p => `<section class="hr-person"><h5><a href="#" data-open="${p.id}">${esc(p.name)}</a> <span class="tm-sub">${esc(p.group || '')}</span></h5>
@@ -253,6 +272,75 @@
         });
     }
 
+    // ================================ Szablony umów (makieta 42) ================================
+    async function templates() {
+        if (!canPay) { body.innerHTML = '<div class="alert alert-warning">Szablony umów (wynagrodzenie, PESEL, adres) : administrator i finanse.</div>'; return; }
+        const [t, ppl] = await Promise.all([api('GET', '/ajax/hr/templates'), api('GET', '/ajax/hr/people')]);
+        const people = ppl.people.filter(p => p.active);
+        let code = t.templates[0] ? t.templates[0].code : null;
+        let emp = people[0] ? people[0].id : null;
+        const extra = {sign_date: new Date().toISOString().slice(0, 10)};
+        body.innerHTML = `<div class="hr-tpl"><div class="hr-tpl-list">${t.templates.map(x => `<button type="button" class="hr-tpl-item" data-code="${esc(x.code)}"><b>${esc(x.title)}</b><span class="tm-sub">${esc(x.legal || '')}</span></button>`).join('')}
+                <p class="hr-note">Pola : ${Object.keys(t.fields).map(k => '{' + k + '}').join(' ')}. Wzory do sprawdzenia przez prawnika / biuro kadrowe przed pierwszym użyciem.</p></div>
+            <div class="hr-tpl-main"><div class="tm-bar hr-tpl-bar"><select class="form-select form-select-sm" data-emp>${people.map(p => `<option value="${p.id}">${esc(p.name)}${p.group ? ' · ' + esc(p.group) : ''}</option>`).join('')}</select>
+                    <span class="tm-spacer"></span><a class="btn btn-light btn-sm" data-docx href="#"><i class="bi bi-file-earmark-word"></i> Pobierz DOCX</a>
+                    <button type="button" class="btn btn-primary btn-sm" data-pdf><i class="bi bi-file-earmark-pdf"></i> Zapisz PDF w dokumentach</button>
+                    ${t.is_admin ? '<button type="button" class="btn btn-link btn-sm" data-edit>Edytuj treść</button>' : ''}</div>
+                <div class="hr-tpl-extra">${[['sign_date', 'Data zawarcia', 'date'], ['date_from', 'Od (puste = z karty)', 'date'], ['date_to', 'Do (puste = z karty)', 'date'], ['salary', 'Wynagrodzenie (puste = z karty)', 'text'],
+                    ['position', 'Stanowisko (puste = z karty)', 'text'], ['work_time', 'Wymiar (puste = z karty)', 'text'], ['subject', 'Przedmiot (zlecenie, dzieło)', 'text'], ['reason', 'Przyczyna (wypowiedzenie, świadectwo)', 'text']]
+                    .map(([k, l, ty]) => `<label class="hr-f" data-extra-f="${k}"><span>${l}</span><input class="form-control form-control-sm" type="${ty}" data-extra="${k}" value="${esc(extra[k] || '')}"></label>`).join('')}</div>
+                <div class="hr-doc" data-preview><p class="at-empty">Ładowanie…</p></div><p class="hr-msg" data-msg></p></div></div>`;
+        const sel = body.querySelector('[data-emp]');
+        if (emp) sel.value = emp;
+        const preview = body.querySelector('[data-preview]');
+        const msg = body.querySelector('[data-msg]');
+        const mark = (s) => esc(s).replace(/⟦(.*?)⟧/g, '<span class="hr-missing">$1</span>').replace(/\n/g, '<br>');
+        let timer = null;
+        async function draw() {
+            body.querySelectorAll('[data-code]').forEach(b => b.classList.toggle('is-on', b.dataset.code === code));
+            const fields = (t.templates.find(x => x.code === code) || {fields: []}).fields;
+            body.querySelectorAll('[data-extra-f]').forEach(l => {
+                const k = l.dataset.extraF;
+                const map = {date_from: 'data_od', date_to: 'data_do', salary: 'wynagrodzenie', position: 'stanowisko', work_time: 'wymiar', subject: 'przedmiot', reason: 'przyczyna', sign_date: 'data_zawarcia'};
+                l.hidden = !(fields.includes(map[k]) || (k === 'salary' && fields.includes('stawka_godzinowa')));
+            });
+            try {
+                const r = await api('POST', '/ajax/hr/templates/' + code + '/render', {employee_id: emp, extra});
+                preview.innerHTML = `<h4>${esc(r.heading)}</h4>${r.paragraphs.map(x => `<p>${mark(x)}</p>`).join('')}
+                    <div class="hr-sign"><span>…………………… ${esc(r.parties[0])}</span><span>…………………… ${esc(r.parties[1])}</span></div>`;
+                msg.textContent = r.missing.length ? 'Brakujące dane (na czerwono) : ' + r.missing.join(', ') + ' — uzupełnij w karcie HR albo powyżej.' : '';
+                body.querySelector('[data-pdf]').disabled = r.missing.length > 0;
+                const q = new URLSearchParams({employee: emp});
+                Object.entries(extra).forEach(([k, v]) => { if (v) q.append('extra[' + k + ']', v); });
+                const a = body.querySelector('[data-docx]');
+                a.href = r.missing.length ? '#' : root + '/hr/templates/' + code + '/docx?' + q;
+                a.classList.toggle('disabled', r.missing.length > 0);
+            } catch (e) { preview.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; }
+        }
+        body.querySelectorAll('[data-code]').forEach(b => b.addEventListener('click', () => { code = b.dataset.code; draw(); }));
+        sel.addEventListener('change', () => { emp = Number(sel.value); draw(); });
+        body.querySelectorAll('[data-extra]').forEach(i => i.addEventListener('input', () => { extra[i.dataset.extra] = i.value; clearTimeout(timer); timer = setTimeout(draw, 300); }));
+        body.querySelector('[data-pdf]').addEventListener('click', async () => {
+            try { const r = await api('POST', '/ajax/hr/templates/' + code + '/pdf', {employee_id: emp, extra}); msg.textContent = r.message; } catch (e) { msg.textContent = e.message; }
+        });
+        const edit = body.querySelector('[data-edit]');
+        if (edit) edit.addEventListener('click', () => {
+            const x = t.templates.find(y => y.code === code);
+            card.innerHTML = `<header class="tm-dialog-head"><h4 id="hrDialogTitle">Treść szablonu</h4><button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
+                <form class="tm-dialog-body" data-tpl><label class="hr-f"><span>Tytuł</span><input class="form-control form-control-sm" name="title" value="${esc(x.title)}"></label>
+                <label class="hr-f"><span>Treść (pierwszy akapit = nagłówek ; pusta linia = nowy akapit)</span><textarea class="form-control hr-tpl-edit" name="body" rows="18">${esc(x.body)}</textarea></label>
+                <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-tmsg></span></div></form>`;
+            dialog.showModal();
+            card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+            card.querySelector('[data-tpl]').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                try { t.templates = (await api('PUT', '/ajax/hr/templates/' + code, {title: e.target.title.value, body: e.target.body.value})); dialog.close(); templates(); }
+                catch (z) { card.querySelector('[data-tmsg]').textContent = z.message; }
+            });
+        });
+        if (code && emp) draw(); else preview.innerHTML = '<p class="at-empty">Brak aktywnych pracowników.</p>';
+    }
+
     dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
-    ({people, documents, notes, settings}[tab] || people)().catch(e => { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
+    ({people, documents, notes, settings, templates}[tab] || people)().catch(e => { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
 })();

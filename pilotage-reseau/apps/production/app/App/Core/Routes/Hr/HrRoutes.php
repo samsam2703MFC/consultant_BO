@@ -8,6 +8,8 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/hr', ['controller' => $c, 'method' => 'index']);
     $r->addRoute('GET', '/hr/documents', ['controller' => $c, 'method' => 'documentsPage']);
     $r->addRoute('GET', '/hr/notes', ['controller' => $c, 'method' => 'notesPage']);
+    $r->addRoute('GET', '/hr/templates', ['controller' => $c, 'method' => 'templatesPage']);
+    $r->addRoute('GET', '/hr/templates/{code:[a-z_]+}/docx', ['controller' => $c, 'method' => 'templateDocx']);
     $r->addRoute('GET', '/hr/settings', ['controller' => $c, 'method' => 'settingsPage']);
     $r->addRoute('GET', '/hr/document/{id:\d+}', ['controller' => $c, 'method' => 'download']);
 
@@ -23,4 +25,9 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/hr/notes/summary', ['controller' => $c, 'method' => 'sendSummary']);
     $r->addRoute('GET', '/ajax/hr/rules', ['controller' => $c, 'method' => 'rules']);
     $r->addRoute('PUT', '/ajax/hr/rules', ['controller' => $c, 'method' => 'saveRules']);
+    // [276] Szablony umów
+    $r->addRoute('GET', '/ajax/hr/templates', ['controller' => $c, 'method' => 'templateList']);
+    $r->addRoute('PUT', '/ajax/hr/templates/{code:[a-z_]+}', ['controller' => $c, 'method' => 'templateSave']);
+    $r->addRoute('POST', '/ajax/hr/templates/{code:[a-z_]+}/render', ['controller' => $c, 'method' => 'templateRender']);
+    $r->addRoute('POST', '/ajax/hr/templates/{code:[a-z_]+}/pdf', ['controller' => $c, 'method' => 'templatePdf']);
 };

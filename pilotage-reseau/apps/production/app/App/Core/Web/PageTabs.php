@@ -85,6 +85,7 @@ final class PageTabs
         'hr' => ['label' => 'HR', 'section' => 'Produkcja', 'icon' => 'bi-person-vcard', 'tabs' => [
             ['/hr', 'Pracownicy', 'bi-people', true],
             ['/hr/documents', 'Dokumenty', 'bi-folder2'],
+            ['/hr/templates', 'Szablony umów', 'bi-file-earmark-text'],
             ['/hr/notes', 'Notatki miesiąca', 'bi-journal-text'],
             ['/hr/settings', 'Ustawienia HR', 'bi-sliders'],
         ]],
@@ -207,6 +208,10 @@ final class PageTabs
         'bonuses' => ['label' => 'Płace i premie', 'section' => 'Administracja', 'icon' => 'bi-wallet2', 'tabs' => [
             ['/staff/team-bonus', 'Premie zespołów', 'bi-trophy'],
             ['/workshop/manager', 'Kierownik produkcji', 'bi-person-workspace'],
+        ]],
+        'payroll' => ['label' => 'Lista płac', 'section' => 'Administracja', 'icon' => 'bi-calculator', 'tabs' => [
+            ['/payroll', 'Lista płac', 'bi-calculator', true],
+            ['/payroll/settings', 'Ustawienia płac', 'bi-sliders'],
         ]],
         'activity' => ['label' => 'Aktywność', 'section' => 'Administracja', 'icon' => 'bi-activity', 'tabs' => [
             ['/organization/activity', 'Aktywność w ERP', 'bi-activity'],

@@ -10,7 +10,9 @@ final class HrRepository extends WorkshopRepository
 {
     protected string $table = 'n_hr_employee';
 
-    public const FIELDS = ['phone_enc', 'birth_enc', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency_enc'];
+    public const FIELDS = ['phone_enc', 'birth_enc', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency_enc',
+        // [277] paie et contrats (accès « payroll »)
+        'pay_type', 'pay_amount', 'bank_enc', 'address_enc', 'pesel_enc', 'pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'];
 
     /** Employés (actifs d'abord), groupe, poste de l'atelier, fiche HR, nombre de documents. */
     public function people(): array
@@ -18,7 +20,8 @@ final class HrRepository extends WorkshopRepository
         return $this->all(
             "SELECT e.id, e.active, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, pe.surname, g.name_pl AS group_name, g.color AS group_color,
                     p.name_pl AS position, h.phone_enc, h.birth_enc, h.gender, h.hire_date, h.contract_type, h.contract_end, h.work_time,
-                    h.medical_until, h.emergency_enc, (SELECT COUNT(*) FROM n_hr_document d WHERE d.id_employee = e.id) AS documents
+                    h.medical_until, h.emergency_enc, h.pay_type, h.pay_amount, h.bank_enc, h.address_enc, h.pesel_enc,
+                    h.pit2, h.kup_raised, h.young_relief, h.student, h.sick_insurance, (SELECT COUNT(*) FROM n_hr_document d WHERE d.id_employee = e.id) AS documents
              FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee
              LEFT JOIN n_prod_group g ON g.id = e.id_primary_group
              LEFT JOIN n_position p ON p.id = e.id_position
@@ -115,6 +118,28 @@ final class HrRepository extends WorkshopRepository
     {
         $sql = 'SELECT id_employee, COUNT(*) AS n FROM n_hr_note WHERE created_at >= ? AND created_at < ?' . ($all ? '' : " AND (visibility = 'public' OR author = ?)") . ' GROUP BY id_employee';
         return array_map('intval', array_column($this->all($sql, $all ? [$from, $to] : [$from, $to, (int) $viewer]), 'n', 'id_employee'));
+    }
+
+    // --- [276] modèles de contrats
+
+    public function templates(): array
+    {
+        return $this->all('SELECT t.code, t.title, t.legal, t.kind, t.body, t.sort, t.updated_at, u.displayed_name AS by_name FROM n_hr_template t LEFT JOIN user u ON u.id = t.updated_by ORDER BY t.sort, t.title');
+    }
+
+    public function template(string $code): ?array
+    {
+        return $this->all('SELECT * FROM n_hr_template WHERE code = ?', [$code])[0] ?? null;
+    }
+
+    public function saveTemplate(string $code, string $title, string $body, ?int $userId): void
+    {
+        $this->db->prepare('UPDATE n_hr_template SET title = ?, body = ?, updated_by = ? WHERE code = ?')->execute([$title, $body, $userId, $code]);
+    }
+
+    public function company(): array
+    {
+        return $this->all('SELECT wz_company_name AS name, wz_company_address_1 AS address_1, wz_company_address_2 AS address_2, wz_company_nip AS nip FROM erp_company_data WHERE id = 1')[0] ?? [];
     }
 
     // --- journal, bilans, administrateurs

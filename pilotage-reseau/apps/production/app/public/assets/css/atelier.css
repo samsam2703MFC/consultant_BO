@@ -3786,3 +3786,51 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 @media (max-width: 900px) { .hr-grid, .hr-fields { grid-template-columns: 1fr; } .hr-upload { grid-template-columns: 1fr 1fr; } }
 .hr-compose-bar label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .hr-compose-bar label .form-check-input { margin: 0; }
+
+/* [277] Lista płac (makieta 41) + [276] HR › Szablony umów (makieta 42) + płace w karcie HR */
+.hr-subhead { font-size: 13px; margin: 16px 0 8px; display: flex; gap: 10px; align-items: center; }
+.hr-pay { display: grid; grid-template-columns: 130px 1fr; gap: 6px; }
+.hr-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
+.hr-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; }
+.hr-chk .form-check-input { margin: 0; }
+.hr-tpl { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
+.hr-tpl-list { display: flex; flex-direction: column; gap: 6px; }
+.hr-tpl-item { text-align: left; background: var(--at-surface); border: 1px solid var(--at-line); border-radius: 10px; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
+.hr-tpl-item.is-on { border-color: var(--at-brand, #8D1D2C); background: rgba(141, 29, 44, .05); }
+.hr-tpl-item b { font-weight: 600; }
+.hr-tpl-bar select { max-width: 320px; }
+.hr-tpl-extra { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
+.hr-tpl-extra .hr-f[hidden] { display: none; }
+.hr-doc { background: #fff; border: 1px solid var(--at-line); border-radius: 12px; padding: 28px 34px; font-size: 13.5px; line-height: 1.55; max-width: 860px; }
+.hr-doc h4 { text-align: center; font-size: 16px; font-weight: 700; margin: 0 0 16px; }
+.hr-doc p { text-align: justify; margin: 0 0 10px; }
+.hr-missing { background: rgba(196, 30, 58, .1); color: #C41E3A; border-radius: 4px; padding: 0 4px; font-weight: 600; }
+.hr-sign { display: flex; justify-content: space-between; margin-top: 36px; color: var(--at-muted); font-size: 12.5px; }
+.hr-tpl-edit { font-family: ui-monospace, monospace; font-size: 12.5px; }
+.pay-flow { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 14px; }
+.pay-step { border: 1px solid var(--at-line); background: var(--at-surface); border-radius: 8px; padding: 6px 12px; font-size: 12.5px; color: var(--at-muted); }
+.pay-step.is-done { border-color: #2E7D4F; color: #2E7D4F; background: rgba(46, 125, 79, .06); }
+.pay-step.is-on { border-color: #8D1D2C; color: #8D1D2C; background: rgba(141, 29, 44, .05); font-weight: 600; }
+.pay-month { min-width: 150px; text-align: center; font-size: 14px; }
+.pay-row { cursor: pointer; }
+.pay-row:hover td { background: rgba(141, 29, 44, .03); }
+.pay-total td { font-weight: 700; background: #F8F4EE; }
+.pay-missing { font-size: 12.5px; margin: 10px 2px; }
+.pay-missing summary { cursor: pointer; }
+.pay-missing ul { columns: 2; margin: 6px 0 0; padding-left: 18px; }
+.pay-kpis { margin-top: 14px; }
+.tm-kpi.is-accent { border-left-color: #8D1D2C; }
+.tm-kpi.is-accent b { color: #8D1D2C; }
+.pay-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 14px 0 6px; }
+.pay-date { display: inline-flex; gap: 6px; align-items: center; font-size: 12.5px; color: var(--at-muted); margin: 0; }
+.pay-date input { width: 150px; }
+.pay-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 18px; }
+.pay-slip td { padding: 5px 8px; font-size: 12.5px; }
+.pay-slip .pay-sec td { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: #8a8379; padding-top: 12px; font-weight: 600; }
+.pay-slip .pay-sum td { font-weight: 700; }
+.pay-slip .pay-net td { font-weight: 700; color: #8D1D2C; font-size: 14px; }
+.pay-warn { border: 1px solid rgba(193, 122, 42, .4); background: rgba(193, 122, 42, .08); border-radius: 10px; padding: 8px 12px; font-size: 12.5px; margin-bottom: 10px; }
+.pay-warn p { margin: 2px 0; }
+.pay-rates input { min-width: 90px; }
+.pay-card { margin-bottom: 14px; }
+@media (max-width: 900px) { .hr-tpl, .pay-grid { grid-template-columns: 1fr; } .hr-tpl-extra { grid-template-columns: 1fr 1fr; } }

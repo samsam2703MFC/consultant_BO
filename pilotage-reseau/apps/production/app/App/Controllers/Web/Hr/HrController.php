@@ -6,6 +6,7 @@ namespace App\Controllers\Web\Hr;
 use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
+use App\Services\Hr\ContractTemplateService;
 use App\Services\Hr\HrService;
 use App\Services\Organization\PageAccessService;
 use Symfony\Component\HttpFoundation\Request;
@@ -18,18 +19,23 @@ final class HrController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private HrService $hr, private PageAccessService $access)
+    public function __construct(private HrService $hr, private PageAccessService $access, private ContractTemplateService $templates)
     {
     }
 
     public function index()
     {
-        $this->view('hr/index', ['tab' => 'people', 'is_admin' => $this->isAdmin()]);
+        $this->view('hr/index', ['tab' => 'people', 'is_admin' => $this->isAdmin(), 'can_pay' => $this->canPay()]);
     }
 
     public function documentsPage()
     {
         $this->view('hr/index', ['tab' => 'documents', 'is_admin' => $this->isAdmin()]);
+    }
+
+    public function templatesPage()
+    {
+        $this->view('hr/index', ['tab' => 'templates', 'is_admin' => $this->isAdmin(), 'can_pay' => $this->canPay()]);
     }
 
     public function notesPage()
@@ -44,17 +50,17 @@ final class HrController extends BaseController
 
     public function people()
     {
-        return $this->guarded(fn() => $this->hr->view($this->userId(), $this->isAdmin()));
+        return $this->guarded(fn() => $this->hr->view($this->userId(), $this->isAdmin(), null, $this->canPay()));
     }
 
     public function card($id)
     {
-        return $this->guarded(fn() => $this->hr->card((int) $id, $this->userId(), $this->isAdmin()));
+        return $this->guarded(fn() => $this->hr->card((int) $id, $this->userId(), $this->isAdmin(), null, $this->canPay()));
     }
 
     public function save($id)
     {
-        return $this->guarded(fn() => $this->hr->save((int) $id, $this->input(), $this->userId()));
+        return $this->guarded(fn() => $this->hr->save((int) $id, $this->input(), $this->userId(), $this->canPay()));
     }
 
     public function upload($id)
@@ -133,6 +139,68 @@ final class HrController extends BaseController
             if (!$this->isAdmin()) throw new CustomException('Ustawienia HR zmienia administrator.', 'errors', 403);
             return $this->hr->saveRules($this->input(), (int) $this->userId());
         });
+    }
+
+    // --- [276] Szablony umów (salaire, PESEL, adresse : accès « payroll »)
+
+    public function templateList()
+    {
+        return $this->guarded(fn() => ['templates' => $this->templatesOrFail()->list(), 'fields' => ContractTemplateService::FIELDS, 'is_admin' => $this->isAdmin()]);
+    }
+
+    public function templateSave($code)
+    {
+        return $this->guarded(function () use ($code) {
+            if (!$this->isAdmin()) throw new CustomException('Treść szablonów zmienia administrator.', 'errors', 403);
+            return $this->templatesOrFail()->save((string) $code, $this->input(), $this->userId());
+        });
+    }
+
+    public function templateRender($code)
+    {
+        return $this->guarded(function () use ($code) {
+            $in = $this->input();
+            return $this->templatesOrFail()->render((string) $code, (int) ($in['employee_id'] ?? 0), (array) ($in['extra'] ?? []), $this->userId());
+        });
+    }
+
+    public function templatePdf($code)
+    {
+        return $this->guarded(function () use ($code) {
+            $in = $this->input();
+            return $this->templatesOrFail()->savePdf((string) $code, (int) ($in['employee_id'] ?? 0), (array) ($in['extra'] ?? []), $this->userId());
+        });
+    }
+
+    /** DOCX : GET ?employee=ID&extra[...]=… (pobranie). */
+    public function templateDocx($code)
+    {
+        try {
+            if (!$this->canHr()) throw new CustomException('Brak dostępu do HR.', 'errors', 403);
+            $extra = array_map(fn($v) => is_string($v) ? mb_substr($v, 0, 500) : '', (array) ($_GET['extra'] ?? []));
+            $f = $this->templatesOrFail()->docx((string) $code, (int) ($_GET['employee'] ?? 0), $extra, $this->userId());
+        } catch (CustomException $e) {
+            http_response_code($e->getCode() >= 400 && $e->getCode() < 600 ? $e->getCode() : 422);
+            header('Content-Type: text/plain; charset=utf-8');
+            return $e->getMessage();
+        }
+        header('Content-Type: application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        header('Content-Disposition: attachment; filename="' . (preg_replace('/[^A-Za-z0-9._-]+/', '_', $f['filename']) ?: 'umowa.docx') . '"');
+        header('X-Content-Type-Options: nosniff');
+        header('Cache-Control: private, no-store');
+        return $f['content'];
+    }
+
+    private function templatesOrFail(): ContractTemplateService
+    {
+        if (!$this->canPay()) throw new CustomException('Szablony umów (wynagrodzenie, PESEL) : administrator i finanse.', 'errors', 403);
+        return $this->templates;
+    }
+
+    /** [277] Paie (salaire, compte, PESEL, adresse) : administrateur et accès « payroll ». */
+    private function canPay(): bool
+    {
+        return $this->access->canSee($this->userId(), '/payroll');
     }
 
     private function guarded(callable $fn)

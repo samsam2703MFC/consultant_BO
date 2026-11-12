@@ -14,7 +14,7 @@
 
 {% block content %}
 {# [271] HR (makiety 36–38, 11.11.2026) : App\Services\Hr\HrService ; zakładki = PageTabs « hr ». #}
-<section class="section tm hr" id="hrApp" data-root="{{ root }}" data-tab="{{ tab }}" data-admin="{{ is_admin ? 1 : 0 }}">
+<section class="section tm hr" id="hrApp" data-root="{{ root }}" data-tab="{{ tab }}" data-admin="{{ is_admin ? 1 : 0 }}" data-pay="{{ can_pay|default(false) ? 1 : 0 }}">
     <div data-hr-body><p class="at-empty">Ładowanie…</p></div>
 </section>
 <dialog class="tm-dialog hr-dialog" data-hr-dialog aria-labelledby="hrDialogTitle"><div data-hr-card></div></dialog>

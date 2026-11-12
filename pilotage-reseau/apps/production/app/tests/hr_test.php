@@ -39,7 +39,7 @@ function hrCode(callable $fn): string
 }
 
 expectHr(PageAccess::keyFor('/hr') === 'hr' && PageAccess::keyFor('/hr/notes') === 'hr' && !PageAccess::adminOnly('hr'), 'clé d\'accès « hr », attribuable à un poste');
-expectHr(Rail::itemFor('/hr/documents') === 'hr' && count(PageTabs::GROUPS['hr']['tabs']) === 4, 'entrée du rail et 4 onglets');
+expectHr(Rail::itemFor('/hr/documents') === 'hr' && count(PageTabs::GROUPS['hr']['tabs']) === 5, 'entrée du rail et 5 onglets (dont Szablony umów)');
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
 $source = getenv('TFB_TEST_SOURCE_DB') ?: 'erp';
@@ -76,6 +76,8 @@ try {
     expectHr($count("SELECT COUNT(*) FROM n_page_access WHERE page_key = 'hr'") === 2 && $count("SELECT COUNT(*) FROM n_position_menu WHERE item = 'hr' AND id_position = 3") === 1
         && $count("SELECT COUNT(*) FROM n_position_menu WHERE item = 'hr' AND id_position = 5") === 0 && $count("SELECT COUNT(*) FROM n_position_menu WHERE item = 'hr' AND id_position = 4") === 0,
         'droit « hr » : Kierownik et finances ; menu ajouté seulement aux postes qui ont un menu propre');
+    // [277] Champs de paie de la fiche (lus par HrRepository::people) : migration 171.
+    foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/171_payroll_contracts.sql')) as $sql) $pdo->exec($sql);
 
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost) VALUES (1, 'Jan', 'Testowy', 8000), (2, 'Ewa', 'Testowa', 7000), (3, 'Olek', 'Dawny', 6000)");

@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 namespace App\Services\Hr;
 
+use App\Domain\Payroll\BankXml;
 use App\Exceptions\CustomException;
 use App\Repositories\Hr\HrRepository;
 use App\Repositories\Workshop\ParamRepository;
@@ -54,7 +55,7 @@ final class HrService
 
     // --- Tableau des employés (makieta 36) -----------------------------------------------------------------
 
-    public function view(?int $viewer, bool $admin, ?DateTimeImmutable $today = null): array
+    public function view(?int $viewer, bool $admin, ?DateTimeImmutable $today = null, bool $canPay = false): array
     {
         $today ??= new DateTimeImmutable('today');
         $rules = $this->rules();
@@ -63,13 +64,13 @@ final class HrService
         $notes = $this->repo->noteCounts($from, $to, $admin, $viewer);
         $emails = $this->time->contacts();
         $people = [];
-        foreach ($this->repo->people() as $r) $people[] = $this->row($r, $emails, $notes, $rules, $today);
+        foreach ($this->repo->people() as $r) $people[] = $this->row($r, $emails, $notes, $rules, $today, $canPay);
         $this->repo->log($viewer, null, 'list');
         $active = array_values(array_filter($people, fn($p) => $p['active']));
         $seniority = array_values(array_filter(array_map(fn($p) => $p['seniority_months'], $active), fn($m) => $m !== null));
         return [
             'people' => $people, 'rules' => $rules, 'today' => $today->format('Y-m-d'), 'month' => $today->format('Y-m'), 'month_label' => self::monthLabel($today->format('Y-m')),
-            'kinds' => self::KINDS, 'contracts' => self::CONTRACTS, 'is_admin' => $admin,
+            'kinds' => self::KINDS, 'contracts' => self::CONTRACTS, 'is_admin' => $admin, 'can_pay' => $canPay,
             'kpi' => [
                 'active' => count($active), 'groups' => count(array_unique(array_filter(array_column($active, 'group')))),
                 'avg_seniority' => $seniority ? (int) round(array_sum($seniority) / count($seniority)) : null, 'max_seniority' => $seniority ? max($seniority) : null,
@@ -79,7 +80,7 @@ final class HrService
         ];
     }
 
-    private function row(array $r, array $emails, array $notes, array $rules, DateTimeImmutable $today): array
+    private function row(array $r, array $emails, array $notes, array $rules, DateTimeImmutable $today, bool $canPay = false): array
     {
         $id = (int) $r['id'];
         $email = isset($emails[$id]) ? $this->contacts->decrypt($emails[$id]) : null;
@@ -105,29 +106,42 @@ final class HrService
             'retire' => $retire, 'retire_soon' => $retire !== null && $retire['months_left'] <= 24,
             'documents' => (int) $r['documents'], 'notes_month' => $notes[$id] ?? 0,
             'missing' => !$email || !$phone || !$r['hire_date'] || !$birth || !$r['gender'],
+        ] + ($canPay ? ['pay' => $this->payFields($r)] : []);
+    }
+
+    /** [277] Paie et contrats : seulement pour l'administrateur et l'accès « payroll ». */
+    private function payFields(array $r): array
+    {
+        $iban = BankXml::iban($this->cipher->decrypt($r['bank_enc'] ?? null));
+        return [
+            'type' => $r['pay_type'] ?? null, 'amount' => ($r['pay_amount'] ?? null) !== null ? (float) $r['pay_amount'] : null,
+            'bank' => $iban ? BankXml::pretty($iban) : null, 'address' => $this->cipher->decrypt($r['address_enc'] ?? null) ?: null,
+            'pesel' => $this->cipher->decrypt($r['pesel_enc'] ?? null) ?: null,
+            'pit2' => (bool) ($r['pit2'] ?? 1), 'kup_raised' => (bool) ($r['kup_raised'] ?? 0), 'young_relief' => (bool) ($r['young_relief'] ?? 1),
+            'student' => (bool) ($r['student'] ?? 0), 'sick_insurance' => (bool) ($r['sick_insurance'] ?? 0),
         ];
     }
 
     // --- Fiche (makieta 37) ---------------------------------------------------------------------------------
 
-    public function card(int $employeeId, ?int $viewer, bool $admin, ?DateTimeImmutable $today = null): array
+    public function card(int $employeeId, ?int $viewer, bool $admin, ?DateTimeImmutable $today = null, bool $canPay = false): array
     {
-        $person = $this->person($employeeId, $today);
+        $person = $this->person($employeeId, $today, $canPay);
         $this->repo->log($viewer, $employeeId, 'card');
         return ['person' => $person, 'documents' => array_map(fn($d) => self::docRow($d, $viewer, $admin), $this->repo->documents($employeeId)),
             'notes' => array_map(fn($n) => $this->noteRow($n, $viewer, $admin), $this->repo->notes($employeeId, null, null, $admin, $viewer))];
     }
 
-    private function person(int $employeeId, ?DateTimeImmutable $today = null): array
+    public function person(int $employeeId, ?DateTimeImmutable $today = null, bool $canPay = false): array
     {
         $today ??= new DateTimeImmutable('today');
         foreach ($this->repo->people() as $r) {
-            if ((int) $r['id'] === $employeeId) return $this->row($r, $this->time->contacts(), [], $this->rules(), $today);
+            if ((int) $r['id'] === $employeeId) return $this->row($r, $this->time->contacts(), [], $this->rules(), $today, $canPay);
         }
         throw new CustomException('Nie ma takiego pracownika.', 'errors', 404);
     }
 
-    public function save(int $employeeId, array $in, ?int $viewer): array
+    public function save(int $employeeId, array $in, ?int $viewer, bool $canPay = false): array
     {
         if (!$this->repo->exists($employeeId)) throw new CustomException('Nie ma takiego pracownika.', 'errors', 404);
         $errors = [];
@@ -168,6 +182,7 @@ final class HrService
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) $errors['email'] = 'Niepoprawny adres e-mail.';
         }
         if (isset($data['hire_date'], $data['contract_end']) && $data['contract_end'] < $data['hire_date']) $errors['contract_end'] = 'Koniec umowy przed datą zatrudnienia.';
+        if ($canPay) $data += $this->payInput($in, $errors);
         if ($errors) throw new CustomException('Popraw zaznaczone pola.', 'errors', 422, ['fields' => $errors]);
         if ($data) $this->repo->save($employeeId, $data, $viewer);
         // E-mail : un seul endroit, celui de Czas pracy › E-maile pracowników (n_time_contact).
@@ -176,7 +191,51 @@ final class HrService
             else $this->time->setContact($employeeId, $this->contacts->encrypt($email), $viewer);
         }
         $this->repo->log($viewer, $employeeId, 'save');
-        return $this->person($employeeId);
+        return $this->person($employeeId, null, $canPay);
+    }
+
+    /** [277] Champs de paie de la fiche (validés ; compte, adresse et PESEL chiffrés). */
+    private function payInput(array $in, array &$errors): array
+    {
+        $data = [];
+        if (array_key_exists('pay_type', $in)) {
+            $t = (string) ($in['pay_type'] ?? '');
+            if ($t !== '' && !in_array($t, ['monthly', 'hourly'], true)) $errors['pay_type'] = 'Miesięcznie albo za godzinę.';
+            $data['pay_type'] = $t === '' ? null : $t;
+        }
+        if (array_key_exists('pay_amount', $in)) {
+            $v = str_replace([' ', ','], ['', '.'], (string) ($in['pay_amount'] ?? ''));
+            if ($v !== '' && (!is_numeric($v) || (float) $v <= 0 || (float) $v > 1_000_000)) $errors['pay_amount'] = 'Kwota brutto większa od 0.';
+            $data['pay_amount'] = $v === '' ? null : round((float) $v, 2);
+        }
+        if (array_key_exists('bank', $in)) {
+            $raw = trim((string) ($in['bank'] ?? ''));
+            $iban = $raw === '' ? null : BankXml::iban($raw);
+            if ($raw !== '' && $iban === null) $errors['bank'] = 'Numer rachunku : 26 cyfr (sprawdzona suma kontrolna).';
+            $data['bank_enc'] = $iban === null ? null : $this->cipher->encrypt($iban);
+        }
+        if (array_key_exists('address', $in)) {
+            $a = mb_substr(trim((string) ($in['address'] ?? '')), 0, 300);
+            $data['address_enc'] = $a === '' ? null : $this->cipher->encrypt($a);
+        }
+        if (array_key_exists('pesel', $in)) {
+            $p = preg_replace('/\s+/', '', (string) ($in['pesel'] ?? ''));
+            if ($p !== '' && !self::peselOk($p)) $errors['pesel'] = 'PESEL : 11 cyfr, zła suma kontrolna.';
+            $data['pesel_enc'] = $p === '' ? null : $this->cipher->encrypt($p);
+        }
+        foreach (['pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'] as $k) {
+            if (array_key_exists($k, $in)) $data[$k] = filter_var($in[$k], FILTER_VALIDATE_BOOLEAN) ? 1 : 0;
+        }
+        return $data;
+    }
+
+    public static function peselOk(string $p): bool
+    {
+        if (!preg_match('/^\d{11}$/', $p)) return false;
+        $w = [1, 3, 7, 9, 1, 3, 7, 9, 1, 3];
+        $sum = 0;
+        for ($i = 0; $i < 10; $i++) $sum += $w[$i] * (int) $p[$i];
+        return (10 - $sum % 10) % 10 === (int) $p[10];
     }
 
     // --- Documents ------------------------------------------------------------------------------------------

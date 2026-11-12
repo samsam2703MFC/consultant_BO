@@ -1766,6 +1766,36 @@ Pages `/hr` (Pracownicy), `/hr/documents`, `/hr/notes` (Notatki miesiąca), `/hr
 `/hr/document/{id}`. Bilan du mois : `Bin/hr_month_summary.php` (cron 18:05, envoi le dernier jour, une fois) et bouton
 de l'administrateur — l'e-mail ne contient que qui et combien, le texte reste dans l'ERP. Test : `tests/hr_test.php`.
 
+### Lista płac (paie) et modèles de contrats — 277, 276
+
+Demande du 12/11/2026 (maquettes 41 et 42 validées ; fichier banque : salaires seuls, ZUS et impôt payés à part).
+Migration 171 :
+- `n_hr_employee` + champs de paie : `pay_type` (mensuel / horaire), `pay_amount` (brut), compte bancaire, adresse et
+  PESEL **chiffrés** (`HrCipher`), `pit2`, `kup_raised`, `young_relief` (ulga dla młodych < 26 ans), `student`
+  (zlecenie : sans ZUS), `sick_insurance` (zlecenie : chorobowa volontaire). Visibles et modifiables seulement avec
+  l'accès « payroll » (administrateur, Administracja i fakturowanie) — le Kierownik voit la fiche HR sans ces champs ;
+- `n_pay_rate` : barèmes par année, **chacun avec sa source** (2026 : płaca minimalna 4 806 zł, 31,40 zł/h, limit
+  30-krotności 282 600 zł, ZUS 9,76 / 1,5 / 2,45 %, employeur 9,76 / 6,5 / wypadkowa 1,67 / FP 2,45 / FGŚP 0,10 %,
+  zdrowotna 9 %, KUP 250 / 300 / 20 %, PIT 12 / 32 % au-delà de 120 000 zł, kwota zmniejszająca 300 zł, ulga dla
+  młodych 85 528 zł, chorobowe 80 % jusqu'à 33 jours) ; copie sur l'année suivante en un clic (Ustawienia płac) ;
+- `n_pay_run` (mois : brouillon / approuvé, fichier XML pris, date d'exécution), `n_pay_line` (ligne figée + cumuls de
+  l'année : base emerytalna/rentowa, base PIT, revenu exonéré, jours de L4), `n_pay_adjust` (heures sup. payées 50 /
+  100 %, prime, retenue nette) ;
+- `n_hr_template` : 9 modèles (umowa o pracę nieokreślony / określony / próbny, zlecenie, o dzieło, aneks,
+  wypowiedzenie, świadectwo pracy, informacja o warunkach zatrudnienia), champs `{pracownik}`, `{wynagrodzenie}`… ;
+- paramètres `pay.debtor_iban` (vide = compte WZ de `erp_company_data`), `pay.company_city`, `pay.company_rep`,
+  `pay.workplace` ; droit et menu « payroll » pour ADMINISTRACJA.
+Calcul : `App\Domain\Payroll\PayrollCalculator` (pur, testé sur les chiffres de la maquette au grosz près) — salaire
+au prorata des jours ouvrés sous contrat (fériés PL), L4 (− 1/30 par jour, wynagrodzenie chorobowe 80 % sur la moyenne
+brute de 12 mois), absence non justifiée, heures sup. au taux horaire du mois × 150 / 200 %, plafond annuel ZUS, seuil
+de 32 %, ulga dla młodych, FP / FGŚP exonérés à 55 ans (K) / 60 ans (M). Heures des zlecenie : Czas pracy du mois.
+Pages `/payroll` (Lista płac : 5 étapes — Czas pracy clôturé, HR complet, approbation, fichier XML, CSV) et
+`/payroll/settings` ; sorties `/payroll/payslips` (paski PDF, « projekt » tant que non approuvé), `/payroll/bank-file`
+(ISO 20022 pain.001.001.03, catégorie SALA, caractères refusés par ING retirés, à importer dans la banque — l'ERP
+n'envoie rien), `/payroll/csv` (bureau comptable). HR › Szablony umów (`/hr/templates`) : aperçu avec champs manquants
+en rouge, DOCX (`/hr/templates/{code}/docx`) ou PDF rangé chiffré dans les documents de la personne. Tests :
+`tests/payroll_test.php`, `tests/hr_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).
