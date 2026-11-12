@@ -2975,3 +2975,16 @@ body.ia-ouvert{overflow:hidden}
 .fd-scan-r{position:relative;height:18px;margin-top:6px;font-size:11px;color:var(--color-text-muted)}
 .fd-scan-r>span{position:absolute;transform:translateX(-50%);white-space:nowrap}
 .fd-scan-r>span:first-child{transform:none}.fd-scan-r>span:last-child{transform:translateX(-100%)}
+
+/* Les clients qui reviennent (12/11/2026) : une liste déroulante, fermée par défaut, la recherche dans le titre. */
+.fd-dd{padding:0;overflow:hidden;margin-top:16px}
+.fd-dd-h{display:flex;align-items:center;gap:14px;padding:12px 16px;flex-wrap:wrap}
+.fd-dd-t{display:flex;align-items:baseline;gap:10px;flex:1;min-width:260px;border:none;background:none;padding:0;cursor:pointer;text-align:left;font:400 15px var(--font-ui);color:var(--color-text)}
+.fd-dd-t small{font-size:12px;color:var(--color-text-muted)}
+.fd-dd-ch{display:inline-block;width:12px;color:var(--color-primary);transition:transform .15s}
+.fd-dd.ouvert .fd-dd-ch{transform:rotate(90deg)}
+.fd-dd-q{width:280px;max-width:100%}
+.fd-dd-c{display:none;border-top:1px solid var(--color-border-tertiary)}
+.fd-dd.ouvert .fd-dd-c{display:block}
+.fd-dd-rien{margin:0;padding:14px 16px;font-size:13px;color:var(--color-text-muted)}
+.fd-dd-rien[hidden]{display:none}
