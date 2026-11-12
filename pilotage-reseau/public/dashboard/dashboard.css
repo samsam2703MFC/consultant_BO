@@ -3013,3 +3013,13 @@ body.ia-ouvert{overflow:hidden}
 .fd-scan-a{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .fd-scan-a span{font-size:12.5px;color:var(--color-text-muted)}.fd-scan-a b{font-size:20px;font-weight:400;font-variant-numeric:tabular-nums}
 .fd-scan-a small{font-size:11.5px;color:var(--color-text-muted)}
+
+/* Comment le client achète (12/11/2026) : une jauge comptoir · commande au comptoir · webshop. */
+.fd-can{padding:14px 18px 16px;margin-top:12px}
+.fd-can-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.fd-can-h b{font-weight:400;font-size:15px;font-family:var(--font-display)}.fd-can-h span{font-size:13px;color:var(--color-text-muted)}
+.fd-can-b{display:flex;height:16px;border-radius:8px;overflow:hidden;margin-top:12px;background:var(--color-background-secondary)}
+.fd-can-b i{display:block;height:100%}
+.fd-can-l{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:10px;font-size:12.5px}
+.fd-can-l span{display:inline-flex;align-items:baseline;gap:6px}.fd-can-l i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.fd-can-l b{font-weight:400}.fd-can-l small{color:var(--color-text-muted);font-size:11.5px}

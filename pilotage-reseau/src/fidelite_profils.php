@@ -63,6 +63,14 @@ function fpSchema(): void
         . 'quand DATETIME NOT NULL, montant DECIMAL(10,2) NOT NULL DEFAULT 0, commande TINYINT NOT NULL DEFAULT 0,'
         . 'familles VARCHAR(255) NULL,'                      // {"pain":2,…} une fois les lignes lues
         . 'KEY k_shop_jour (shop_id, jour), KEY k_client (shop_id, client_id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+    // Le canal de chaque ticket (12/11/2026, Sam : « s'il commande au comptoir ou plutôt sur le webshop ») : comptoir (vente
+    // directe), commande (prise au comptoir) ou webshop. Les anciens tickets sans commande sont des ventes directes ; les
+    // anciennes commandes restent sans canal jusqu'à la relecture de leur journée (fpLireJours).
+    $col = Db::row("SELECT COUNT(*) n FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'ceo_fid_ticket' AND COLUMN_NAME = 'canal'");
+    if ((int) ($col['n'] ?? 0) === 0) {
+        Db::exec('ALTER TABLE ceo_fid_ticket ADD COLUMN canal VARCHAR(10) NULL AFTER commande');
+        Db::exec("UPDATE ceo_fid_ticket SET canal = 'comptoir' WHERE commande = 0");
+    }
     if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_profil')['n'] ?? 0) === 0) {
         foreach (FP_DEFAUTS as [$nom, $n, $u, $c]) {
             Db::exec('INSERT INTO ceo_fid_profil (nom, n, unite, couleur, actif, updated_at, updated_by) VALUES (?,?,?,?,1,NOW(),?)', [$nom, $n, $u, $c, 'profils de départ']);
@@ -188,6 +196,8 @@ function fpLireJours(int $sid, string $du, string $au): array
     foreach (Db::rows('SELECT jour, lu_le FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $r) {
         $lus[$r['jour']] = substr((string) $r['lu_le'], 0, 10) > $r['jour'];
     }
+    // Une journée dont une commande n'a pas encore de canal se relit une fois.
+    foreach (Db::rows('SELECT DISTINCT jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ? AND canal IS NULL', [$sid, $du, $au]) as $r) { $lus[$r['jour']] = false; }
     $chemins = [];
     for ($j = $au; $j >= $du; $j = date('Y-m-d', strtotime($j . ' -1 day'))) {
         if (!empty($lus[$j])) { continue; }
@@ -214,11 +224,13 @@ function fpLireJours(int $sid, string $du, string $au): array
         // Les tickets déjà gardés gardent leurs familles ; les nouveaux s'ajoutent.
         $deja = array_column(Db::rows('SELECT id FROM ceo_fid_ticket WHERE shop_id = ? AND jour = ?', [$sid, $j]), 'id', 'id');
         foreach ($garder as $tid => $t) {
-            if (isset($deja[$tid])) { continue; }
-            $cmd = strtolower((string) ($t['source'] ?? '')) === 'webshop' || (int) ($t['order_ref'] ?? 0) > 0 || trim((string) ($t['po_hash'] ?? '')) !== '';
-            Db::exec('INSERT IGNORE INTO ceo_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande) VALUES (?,?,?,?,?,?,?)',
+            $web = strtolower((string) ($t['source'] ?? '')) === 'webshop';
+            $cmd = $web || (int) ($t['order_ref'] ?? 0) > 0 || trim((string) ($t['po_hash'] ?? '')) !== '';
+            $canal = $web ? 'webshop' : ($cmd ? 'commande' : 'comptoir');
+            if (isset($deja[$tid])) { Db::exec('UPDATE ceo_fid_ticket SET canal = ? WHERE id = ? AND canal IS NULL', [$canal, $tid]); continue; }
+            Db::exec('INSERT IGNORE INTO ceo_fid_ticket (id, shop_id, jour, client_id, quand, montant, commande, canal) VALUES (?,?,?,?,?,?,?,?)',
                 [$tid, $sid, $j, (int) $t['id_client'], substr((string) ($t['insert_timestamp'] ?? $j . ' 12:00:00'), 0, 19),
-                    round((float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0), 2), $cmd ? 1 : 0]);
+                    round((float) ($t['total_gross_amount_after_discount'] ?? $t['total_value_after_discount'] ?? 0), 2), $cmd ? 1 : 0, $canal]);
         }
         // Un ticket annulé ou corrigé disparaît de la liste : il disparaît aussi d'ici.
         foreach ($deja as $tid) { if (!isset($garder[(int) $tid])) { Db::exec('DELETE FROM ceo_fid_ticket WHERE id = ?', [(int) $tid]); } }
@@ -490,7 +502,10 @@ function ep_fidelite_client(): array
     $au = date('Y-m-d');
     $du = date('Y-m-d', strtotime($au . ' -179 days'));
     [, $reste] = fpLireJours($sid, $du, $au);
-    $T = Db::rows('SELECT id, jour, quand, montant, commande FROM ceo_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
+    $T = Db::rows('SELECT id, jour, quand, montant, commande, canal FROM ceo_fid_ticket WHERE shop_id = ? AND client_id = ? AND jour BETWEEN ? AND ? ORDER BY quand', [$sid, $cid, $du, $au]);
+    // Comment il achète : vente au comptoir, commande prise au comptoir, webshop (et, le temps de la relecture, commande sans canal).
+    $canaux = ['comptoir' => 0, 'commande' => 0, 'webshop' => 0, 'inconnu' => 0];
+    foreach ($T as $t) { $canaux[isset($canaux[$t['canal'] ?? '']) ? $t['canal'] : 'inconnu']++; }
     if ($T === []) { return ['error' => 'aucun ticket rattaché à ce client sur 180 jours', 'aLire' => $reste]; }
     // Les lignes de ses tickets, lues ici : les articles ne se gardent pas.
     $ch = [];
@@ -535,7 +550,7 @@ function ep_fidelite_client(): array
         'profils' => fpProfils(true), 'moyenne' => $m['moyenne'], 'axes' => FP_AXES, 'famillesLib' => FP_FAMILLES,
         'tk' => $C['tk'], 'eur' => round($C['eur'], 2), 'cmd' => $C['cmd'], 'parJour' => $parJour, 'moments' => $moment,
         'articles' => array_slice(array_map(static fn ($k, $v) => ['nom' => $k, 'q' => round($v, 1)], array_keys($art), $art), 0, 10),
-        'parMois' => $parMois, 'tickets' => array_reverse($tickets), 'aLire' => $reste] + $x;
+        'parMois' => $parMois, 'tickets' => array_reverse($tickets), 'canaux' => $canaux, 'aLire' => $reste] + $x;
 }
 
 /** POST /fidelite/profils : {profils:[{id?, nom, n, unite, couleur, actif, supprimer?}], fenetre?, memoire?, qui}. */
