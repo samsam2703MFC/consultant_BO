@@ -1796,6 +1796,22 @@ n'envoie rien), `/payroll/csv` (bureau comptable). HR › Szablony umów (`/hr/t
 en rouge, DOCX (`/hr/templates/{code}/docx`) ou PDF rangé chiffré dans les documents de la personne. Tests :
 `tests/payroll_test.php`, `tests/hr_test.php`.
 
+### HR › Szybka notatka et follow-ups — 279
+
+Demande du 12/11/2026 (maquette 44 validée). Migration 172 : `n_hr_note` + `kind` (ocena, pochwała, uwaga, rozmowa,
+szkolenie, BHP, nieobecność, inne), `topic_enc` (sujet **chiffré**), `audience` (« dla kogo » : `admin` + codes de postes
+ADMINISTRACJA, KIEROWNIK_PRODUKCJI, LOGISTYKA, JAKOSC ; vide + `private` = « tylko ja »), `channels` (bell, email, sms,
+task), follow-up (`followup_due`, `followup_user`, `followup_done_at`, `followup_done_by`, `followup_done_note`).
+Bouton « ＋ Szybka notatka » sur HR › Pracownicy, HR › Notatki miesiąca et dans la fiche (personne déjà choisie) :
+fenêtre en une page avec le résumé « Co się stanie » et l'aperçu de l'e-mail (`App\Services\Hr\HrQuickNoteService`).
+Visibilité : une note publique avec destinataires n'est visible que par leurs postes, l'auteur, le responsable du
+follow-up et l'administrateur. Alertes : cloche, e-mail (file d'envoi), SMS (`SmsTransport` ; sans passerelle : seulement
+noté) — qui, type, sujet et lien, **jamais le texte**. Follow-up : cloche du responsable, ligne dans « Mój tydzień »
+(canal « zadanie »), liste « Follow-upy otwarte » (Notatki), rappel chaque jour à partir du terme
+(`Bin/hr_followups.php`, cron 07:10, rouge après le terme), « Zrobione » avec une courte remarque. Routes
+`/ajax/hr/quick-note` (GET options, POST), `/ajax/hr/followups` (GET), `/ajax/hr/followups/{id}/done` (POST). Test :
+`tests/hr_quick_note_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

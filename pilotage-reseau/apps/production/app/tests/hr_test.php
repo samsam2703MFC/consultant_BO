@@ -78,6 +78,8 @@ try {
         'droit « hr » : Kierownik et finances ; menu ajouté seulement aux postes qui ont un menu propre');
     // [277] Champs de paie de la fiche (lus par HrRepository::people) : migration 171.
     foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/171_payroll_contracts.sql')) as $sql) $pdo->exec($sql);
+    // [279] Szybka notatka (rodzaj, temat, dla kogo, follow-up) : migration 172.
+    foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/172_hr_quick_note.sql')) as $sql) $pdo->exec($sql);
 
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost) VALUES (1, 'Jan', 'Testowy', 8000), (2, 'Ewa', 'Testowa', 7000), (3, 'Olek', 'Dawny', 6000)");

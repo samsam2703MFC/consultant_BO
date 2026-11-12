@@ -46,6 +46,7 @@
                 <div class="hr-chips">${[['all', 'Wszyscy'], ...groups.map(g => ['g:' + g, g]), ['missing', 'Brak danych (' + k.missing + ')'], ['contract', 'Umowa się kończy'], ['retire', 'Emerytura ≤ 2 lata'], ['inactive', 'Nieaktywni']]
                     .map(([v, l]) => `<button type="button" class="hr-chip ${filter === v ? 'is-on' : ''}" data-filter="${esc(v)}">${esc(l)}</button>`).join('')}</div>
                 <span class="tm-spacer"></span><span class="hr-lock"><i class="bi bi-lock"></i> dane osobowe</span>
+                <button type="button" class="btn btn-primary btn-sm" data-quick>＋ Szybka notatka</button>
                 ${admin ? '<button type="button" class="btn btn-light btn-sm" data-csv><i class="bi bi-filetype-csv"></i> CSV</button>' : ''}</div>
             <div class="table-responsive at-card hr-card"><table class="table tm-table hr-table"><thead><tr><th>Pracownik</th><th>E-mail</th><th class="text-end">Telefon</th>
                 <th class="text-end">Zatrudniony · staż</th><th>Umowa</th><th class="text-end">Emerytura (rok, wiek)</th><th class="text-end">Dokumenty</th><th class="text-end">Notatki (mies.)</th></tr></thead>
@@ -57,6 +58,7 @@
         body.querySelectorAll('[data-filter]').forEach(b => b.addEventListener('click', () => { filter = b.dataset.filter; body.querySelectorAll('[data-filter]').forEach(x => x.classList.toggle('is-on', x === b)); rows(); }));
         const csv = body.querySelector('[data-csv]');
         if (csv) csv.addEventListener('click', exportCsv);
+        body.querySelector('[data-quick]').addEventListener('click', () => quickNote(null, () => people()));
         const want = Number(new URLSearchParams(location.search).get('employee'));
         if (want) openCard(want);
     }
@@ -133,7 +135,7 @@
                         <input class="form-control form-control-sm" type="file" name="file" accept="application/pdf,image/jpeg,image/png,.docx" required>
                         <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-upload"></i> Dodaj</button><span class="hr-msg" data-upmsg></span></form>
                     <p class="tm-sub">PDF, zdjęcie albo DOCX, do 8 MB — plik jest zaszyfrowany na serwerze.</p></div>
-            </div><div class="hr-sec"><h5>Notatki</h5>
+            </div><div class="hr-sec"><h5>Notatki <button type="button" class="btn btn-light btn-sm hr-quick-in" data-quick-card>＋ Szybka notatka</button></h5>
                 <form class="hr-compose" data-note><textarea class="form-control" name="body" rows="3" maxlength="2000" placeholder="Nowa notatka…" required></textarea>
                     <div class="hr-compose-bar"><span class="hr-seg"><button type="button" class="is-on" data-vis="private">Prywatna</button><button type="button" data-vis="public">Publiczna</button></span>
                     <label class="tm-sub"><input type="checkbox" class="form-check-input" name="to_admin"> Wyślij do administratora</label><span class="tm-spacer"></span>
@@ -142,6 +144,8 @@
                 <p class="tm-sub"><b>Publiczna</b> : widzi ją kierownik produkcji i administracja (i trafia do podsumowania miesiąca). <b>Prywatna</b> : tylko autor i administrator.
                     <b>Do administratora</b> : od razu w dzwonku administratora.</p></div></div>`;
         card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+        card.querySelector('[data-quick-card]').addEventListener('click', () => quickNote(id, () => { openCard(id); refresh(); }));
+        bindFollowups(card, () => openCard(id));
         const form = card.querySelector('[data-form]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -200,13 +204,126 @@
                 ${chk('sick_insurance', 'Dobrowolne chorobowe', pay.sick_insurance, 'zlecenie')}</div>`;
     }
 
+    function followHtml(f, id) {
+        if (!f) return '';
+        if (f.done_at) return `<div class="hr-fu is-done"><i class="bi bi-check2-circle"></i> follow-up zrobiony ${d(f.done_at.slice(0, 10))}${f.done_by ? ' · ' + esc(f.done_by) : ''}${f.done_note ? ' — ' + esc(f.done_note) : ''}</div>`;
+        return `<div class="hr-fu ${f.late ? 'is-late' : ''}"><i class="bi bi-flag"></i> follow-up do ${d(f.due)}${f.who ? ' · ' + esc(f.who) : ''}${f.late ? ' · <b>po terminie</b>' : ''}
+            ${f.can_close ? ` <button type="button" class="btn btn-link btn-sm" data-fu-done="${id}">Zrobione</button>` : ''}</div>`;
+    }
+
     function noteHtml(n, withName) {
-        return `<div class="hr-n"><div class="hr-n-meta">${withName ? `<b>${esc(n.name)}</b> · ` : ''}${d(n.at.slice(0, 10))} ${n.at.slice(11, 16)}${n.by ? ' · ' + esc(n.by) : ''}
+        return `<div class="hr-n" id="note-${n.id}"><div class="hr-n-meta">${n.kind_label ? `<span class="hr-kind hr-k-${esc(n.kind)}">${esc(n.kind_label)}</span>` : ''}${withName ? `<b>${esc(n.name)}</b> · ` : ''}${d(n.at.slice(0, 10))} ${n.at.slice(11, 16)}${n.by ? ' · ' + esc(n.by) : ''}
                 <span class="tm-tag ${n.visibility === 'public' ? 'tm-tag-ok' : ''}">${n.visibility === 'public' ? 'publiczna' : 'prywatna'}</span>${n.to_admin ? '<span class="tm-tag tm-tag-warn">do administratora</span>' : ''}
-                ${n.can_delete ? `<button type="button" class="btn btn-link btn-sm text-danger hr-n-del" data-del-note="${n.id}">Usuń</button>` : ''}</div><div class="hr-n-body">${esc(n.body)}</div></div>`;
+                ${n.can_delete ? `<button type="button" class="btn btn-link btn-sm text-danger hr-n-del" data-del-note="${n.id}">Usuń</button>` : ''}</div>
+            ${n.topic ? `<div class="hr-n-topic">${esc(n.topic)}</div>` : ''}${n.topic && n.body === n.topic ? '' : `<div class="hr-n-body">${esc(n.body)}</div>`}
+            ${n.audience && n.audience.length ? `<div class="tm-sub">dla : ${esc(n.audience.join(', '))}</div>` : ''}${followHtml(n.followup, n.id)}</div>`;
     }
 
     function refresh() { if (tab === 'people') people().catch(() => {}); }
+
+    // Follow-up : « Zrobione » (krótka uwaga opcjonalna).
+    function bindFollowups(scope, after) {
+        scope.querySelectorAll('[data-fu-done]').forEach(b => b.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const note = prompt('Follow-up zrobiony — krótka uwaga (opcjonalnie) :', '');
+            if (note === null) return;
+            try { await api('POST', '/ajax/hr/followups/' + b.dataset.fuDone + '/done', {note}); after(); } catch (x) { alert(x.message); }
+        }));
+    }
+
+    // ================================ Szybka notatka (makieta 44) ================================
+    let quickOpts = null;
+    async function quickNote(employeeId, after) {
+        quickOpts = quickOpts || await api('GET', '/ajax/hr/quick-note');
+        const o = quickOpts;
+        const today = new Date().toISOString().slice(0, 10);
+        const st = {kind: o.kinds[0].code, audience: ['admin'], channels: ['bell'], followup: false, due: '', who: String((o.users.find(u => u.id === o.me) || o.users[0] || {}).id || '')};
+        const chip = (attr, v, l, on) => `<button type="button" class="hr-chip ${on ? 'is-on' : ''}" data-${attr}="${esc(v)}">${esc(l)}</button>`;
+        card.innerHTML = `<header class="tm-dialog-head"><h4 id="hrDialogTitle">Szybka notatka <span class="tm-sub">trafia do karty pracownika i do podsumowania miesiąca</span></h4>
+                <button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
+            <form class="tm-dialog-body hr-qn" data-qn><div class="hr-qn-l">
+                <div class="hr-lab">Rodzaj</div><div class="hr-chips" data-kinds>${o.kinds.map((k, i) => chip('kind', k.code, k.label, i === 0)).join('')}</div>
+                <div class="hr-qn-2"><label class="hr-f"><span>Dotyczy pracownika</span><select class="form-select form-select-sm" name="employee_id" required><option value="">— wybierz —</option>
+                    ${o.people.map(p => `<option value="${p.id}" ${p.id === employeeId ? 'selected' : ''}>${esc(p.name)}${p.group ? ' · ' + esc(p.group) : ''}</option>`).join('')}</select></label>
+                <label class="hr-f"><span>Temat</span><input class="form-control form-control-sm" name="topic" maxlength="160" required list="hrTopics"><datalist id="hrTopics"></datalist></label></div>
+                <div class="hr-topics" data-topics></div>
+                <label class="hr-f"><span>Treść</span><textarea class="form-control" name="body" rows="3" maxlength="2000"></textarea></label>
+                <div class="hr-lab">Dla kogo (kto widzi)</div><div class="hr-chips" data-auds>${o.audience.map(a => chip('aud', a.code, a.label + (a.code !== 'me' && a.code !== 'admin' ? ' (' + a.count + ')' : ''), a.code === 'admin')).join('')}</div>
+                <div class="hr-lab">Follow-up ?</div><div class="hr-fu-box"><span class="hr-seg"><button type="button" data-fu="1">Tak</button><button type="button" class="is-on" data-fu="0">Nie</button></span>
+                    <input class="form-control form-control-sm" type="date" name="followup_due" min="${today}" disabled>
+                    <select class="form-select form-select-sm" name="followup_user" disabled>${o.users.map(u => `<option value="${u.id}" ${String(u.id) === st.who ? 'selected' : ''}>kto : ${esc(u.name)}${u.position ? ' · ' + esc(u.position) : ''}</option>`).join('')}</select></div>
+                <div class="hr-lab">Powiadom teraz</div><div class="hr-chips" data-chans>${o.channels.map(c => chip('chan', c.code, c.label + (c.code === 'sms' && !o.sms_delivers ? ' (bez bramki : zapis)' : ''), c.code === 'bell')).join('')}</div>
+                <p class="tm-sub">E-mail i SMS : kto, rodzaj, temat i link — bez treści notatki (dane osobowe zostają w ERP).</p>
+            </div><aside class="hr-qn-r"><h6>Co się stanie</h6><ul data-sum></ul><div class="hr-qn-pv" data-pv></div></aside>
+            <footer class="hr-qn-foot"><span class="hr-msg" data-qmsg></span><span class="tm-spacer"></span><button type="button" class="btn btn-light btn-sm" data-close2>Anuluj</button>
+                <button type="button" class="btn btn-light btn-sm" data-again>Zapisz i dodaj następną</button><button type="submit" class="btn btn-primary btn-sm">Zapisz notatkę</button></footer></form>`;
+        if (!dialog.open) dialog.showModal();
+        const f = card.querySelector('[data-qn]');
+        const close = () => { dialog.close(); if (after) after(); };
+        card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+        card.querySelector('[data-close2]').addEventListener('click', () => dialog.close());
+        const kindOf = () => o.kinds.find(k => k.code === st.kind);
+        function topics() {
+            const k = kindOf();
+            card.querySelector('#hrTopics').innerHTML = k.topics.map(t => `<option value="${esc(t)}">`).join('');
+            card.querySelector('[data-topics]').innerHTML = k.topics.map(t => `<button type="button" class="hr-topic" data-topic="${esc(t)}">${esc(t)}</button>`).join('');
+            card.querySelectorAll('[data-topic]').forEach(b => b.addEventListener('click', () => { f.topic.value = b.dataset.topic; summary(); }));
+        }
+        function summary() {
+            const emp = f.employee_id.selectedOptions[0];
+            const name = f.employee_id.value ? emp.textContent.split(' · ')[0] : 'pracownik';
+            const priv = st.audience.length === 1 && st.audience[0] === 'me';
+            const auds = o.audience.filter(a => st.audience.includes(a.code) && a.code !== 'me');
+            const nRec = auds.reduce((s, a) => s + (a.code === 'admin' ? 1 : a.count), 0);
+            const ch = o.channels.filter(c => st.channels.includes(c.code) && c.code !== 'task').map(c => c.label.toLowerCase());
+            const who = f.followup_user.selectedOptions[0] ? f.followup_user.selectedOptions[0].textContent.replace('kto : ', '') : '';
+            card.querySelector('[data-sum]').innerHTML = [
+                `Notatka <span class="hr-kind hr-k-${esc(st.kind)}">${esc(kindOf().label)}</span> w karcie <b>${esc(name)}</b>, ${priv ? 'prywatna (Ty i administrator)' : 'widoczna dla : <b>' + esc(auds.map(a => a.label).join(' + ') || '—') + '</b>'}.`,
+                priv || !ch.length ? 'Bez powiadomień.' : esc(ch.join(' + ')) + ' do : ' + esc(auds.map(a => a.label).join(', ')) + ` (${nRec} ${nRec === 1 ? 'osoba' : 'osób'}).`,
+                st.followup ? `Follow-up do <b>${f.followup_due.value ? d(f.followup_due.value) : '…'}</b> → ${esc(who)}${st.channels.includes('task') ? ', zadanie w « Mój tydzień »' : ''}, przypomnienie w dniu terminu, czerwone po terminie.` : 'Bez follow-upu.',
+                'W podsumowaniu miesiąca : 1 notatka więcej.'].map(x => `<li>${x}</li>`).join('');
+            card.querySelector('[data-pv]').innerHTML = st.channels.includes('email') && !priv ? `<b>Podgląd e-maila</b>HR · nowa notatka (${esc(kindOf().label)}) — ${esc(name)} : « ${esc(f.topic.value || '…')} ».${st.followup && f.followup_due.value ? ' Follow-up do ' + d(f.followup_due.value) + '.' : ''} Otwórz w ERP →` : '';
+        }
+        const toggle = (sel, key, multi) => card.querySelectorAll(sel).forEach(b => b.addEventListener('click', () => {
+            const v = b.dataset[key];
+            if (!multi) { st.kind = v; card.querySelectorAll(sel).forEach(x => x.classList.toggle('is-on', x === b)); topics(); summary(); return; }
+            const arr = multi === 'aud' ? st.audience : st.channels;
+            if (multi === 'aud' && v === 'me') arr.splice(0, arr.length, 'me');
+            else { const i = arr.indexOf(v); if (i >= 0) arr.splice(i, 1); else arr.push(v); if (multi === 'aud') { const m = arr.indexOf('me'); if (m >= 0) arr.splice(m, 1); } }
+            card.querySelectorAll(sel).forEach(x => x.classList.toggle('is-on', arr.includes(x.dataset[key])));
+            summary();
+        }));
+        toggle('[data-kind]', 'kind', false);
+        toggle('[data-aud]', 'aud', 'aud');
+        toggle('[data-chan]', 'chan', 'chan');
+        card.querySelectorAll('[data-fu]').forEach(b => b.addEventListener('click', () => {
+            st.followup = b.dataset.fu === '1';
+            card.querySelectorAll('[data-fu]').forEach(x => x.classList.toggle('is-on', x === b));
+            f.followup_due.disabled = f.followup_user.disabled = !st.followup;
+            if (st.followup && !f.followup_due.value) f.followup_due.value = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+            summary();
+        }));
+        ['employee_id', 'topic', 'followup_due', 'followup_user'].forEach(k => f[k].addEventListener('input', summary));
+        f.employee_id.addEventListener('change', summary);
+        topics();
+        summary();
+        async function save(again) {
+            const msg = card.querySelector('[data-qmsg]');
+            f.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
+            try {
+                const r = await api('POST', '/ajax/hr/quick-note', {employee_id: Number(f.employee_id.value), kind: st.kind, topic: f.topic.value, body: f.body.value,
+                    audience: st.audience, channels: st.channels, followup: st.followup, followup_due: f.followup_due.value, followup_user: Number(f.followup_user.value)});
+                if (again) { f.topic.value = ''; f.body.value = ''; msg.textContent = r.message; summary(); if (after) after(); quickNote(null, after); setTimeout(() => { const m = card.querySelector('[data-qmsg]'); if (m) m.textContent = r.message; }, 0); }
+                else { close(); }
+            } catch (x) {
+                msg.textContent = x.message;
+                Object.keys(x.fields || {}).forEach(k => { if (f[k]) f[k].classList.add('is-invalid'); });
+            }
+        }
+        f.addEventListener('submit', (e) => { e.preventDefault(); save(false); });
+        card.querySelector('[data-again]').addEventListener('click', () => save(true));
+        (employeeId ? f.topic : f.employee_id).focus();
+    }
 
     // ================================ Dokumenty ================================
     async function documents() {
@@ -229,19 +346,29 @@
     // ================================ Notatki miesiąca (makieta 38) ================================
     async function notes(month) {
         month = month || new Date().toISOString().slice(0, 7);
-        const r = await api('GET', '/ajax/hr/notes?month=' + month);
+        const [r, fu] = await Promise.all([api('GET', '/ajax/hr/notes?month=' + month), api('GET', '/ajax/hr/followups')]);
         const shift = (m, k) => { const [y, mo] = m.split('-').map(Number); const t = new Date(y, mo - 1 + k, 1); return t.getFullYear() + '-' + String(t.getMonth() + 1).padStart(2, '0'); };
         const c = r.counts;
         body.innerHTML = `<div class="tm-bar"><div class="tm-nav"><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, -1)}">‹</button>
                 <b class="hr-month">${esc(r.month_label)}</b><button type="button" class="btn btn-light btn-sm" data-m="${shift(month, 1)}">›</button></div><span class="tm-spacer"></span>
                 ${r.summary ? `<span class="tm-sub">podsumowanie wysłane ${d(r.summary.sent_at.slice(0, 10))} ${r.summary.sent_at.slice(11, 16)}${r.summary.auto ? ' (automatycznie)' : ''}</span>` : '<span class="tm-sub">podsumowanie : ostatniego dnia miesiąca o 18:00, e-mailem do administratora</span>'}
-                ${admin ? `<button type="button" class="btn btn-primary btn-sm" data-send ${c.all ? '' : 'disabled title="Brak notatek w tym miesiącu — nie ma czego wysłać."'}>Wyślij podsumowanie teraz</button>` : ''}</div>
+                <button type="button" class="btn btn-primary btn-sm" data-quick>＋ Szybka notatka</button>
+                ${admin ? `<button type="button" class="btn btn-light btn-sm" data-send ${c.all ? '' : 'disabled title="Brak notatek w tym miesiącu — nie ma czego wysłać."'}>Wyślij podsumowanie teraz</button>` : ''}</div>
             <div class="tm-kpis"><div class="tm-kpi"><small>Notatki w miesiącu</small><b>${c.all}</b><span>${c.people} os.</span></div><div class="tm-kpi"><small>Publiczne</small><b>${c.public}</b></div>
-                <div class="tm-kpi"><small>Prywatne</small><b>${c.private}</b><span>${admin ? 'wszystkie' : 'tylko Twoje'}</span></div><div class="tm-kpi"><small>Do administratora</small><b>${c.to_admin}</b></div></div>
+                <div class="tm-kpi"><small>Prywatne</small><b>${c.private}</b><span>${admin ? 'wszystkie' : 'tylko Twoje'}</span></div><div class="tm-kpi"><small>Do administratora</small><b>${c.to_admin}</b></div>
+                <div class="tm-kpi ${fu.late ? 'is-danger' : (fu.open ? 'is-warn' : '')}"><small>Follow-upy otwarte</small><b>${fu.open}</b><span>${fu.late ? fu.late + ' po terminie' : 'w terminie'}</span></div></div>
+            ${fu.items.length ? `<div class="at-card hr-card hr-fu-list"><h5>Follow-upy otwarte</h5><table class="table tm-table"><tbody>${fu.items.map(x => `<tr class="${x.late ? 'is-late' : ''}">
+                <td><span class="hr-kind hr-k-${esc(x.kind)}">${esc(x.kind_label)}</span> <a href="#" data-open="${x.employee_id}">${esc(x.name)}</a> — ${esc(x.topic)}</td>
+                <td class="text-end tm-num">${d(x.due)}${x.late ? ' <span class="tm-tag tm-tag-warn">po terminie</span>' : ''}</td><td>${esc(x.who || '')}</td>
+                <td class="text-end">${x.can_close ? `<button type="button" class="btn btn-light btn-sm" data-fu-done="${x.id}">Zrobione</button>` : ''}</td></tr>`).join('')}</tbody></table></div>` : ''}
             <div class="at-card hr-card hr-month-list">${r.people.map(p => `<section class="hr-person"><h5><a href="#" data-open="${p.id}">${esc(p.name)}</a> <span class="tm-sub">${esc(p.group || '')}</span></h5>
                 ${p.notes.map(n => noteHtml(n)).join('')}</section>`).join('') || '<p class="at-empty p-3">Brak notatek w tym miesiącu.</p>'}</div>
             <p class="hr-note" data-sendmsg></p>`;
         body.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => notes(b.dataset.m)));
+        body.querySelector('[data-quick]').addEventListener('click', () => quickNote(null, () => notes(month)));
+        bindFollowups(body, () => notes(month));
+        const want = new URLSearchParams(location.search).get('note');
+        if (want) { const el = document.getElementById('note-' + want); if (el) { el.classList.add('is-target'); el.scrollIntoView({block: 'center'}); } }
         body.querySelectorAll('[data-open]').forEach(a => a.addEventListener('click', (e) => { e.preventDefault(); openCard(Number(a.dataset.open)); }));
         body.querySelectorAll('[data-del-note]').forEach(b => b.addEventListener('click', async () => {
             if (!confirm('Usunąć notatkę ?')) return;
