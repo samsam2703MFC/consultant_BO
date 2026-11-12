@@ -421,7 +421,7 @@ Le fonds marketing paie le Collectif MKTG, mais ses comptes ne permettent pas de
 - Le solde du fonds est à −6 435 € fin septembre, alors que les redevances marketing rapportent environ 5 150 € par mois au taux actuel : elles ne sont pas toutes enregistrées dans le fonds.
 - Les 9 085 € sont tous rangés sur le levier « Trafic », sans mesure de retour : aucune campagne n'a de ROI calculé, et la campagne « Réseaux sociaux – septembre 2026 » a 3 150 € de budget mais 0 € de dépense enregistrée.
 - Les magasins sont mal reliés entre le module marketing et le panel : la redevance de Corbais de juillet est rangée sous Gosselies.
-- À demander au Collectif : un compte rendu mensuel par campagne (livrables, portée, ventes des produits poussés), mesuré dans le cockpit.
+- À demander au Collectif : un compte rendu mensuel par campagne (livrables, portée, ventes des produits poussés), mesuré dans le cockpit, y compris pour les 1 500 € mensuels de publicité Meta et Google.
 
 ### Chocolat — Cédric (CDT) : ventes et marges
 
@@ -451,7 +451,7 @@ La gamme chocolat se vend peu et à petite marge : environ 15 200 € de CA par 
 
 ### Budget marketing : dépenses 2026 et budget prévisionnel 2027
 
-Le fonds marketing a payé 9 085 € en 2026, tout au Collectif MKTG, entre juin et septembre ; rien n'est enregistré depuis octobre. Au taux actuel, les redevances marketing de 2027 donneraient environ 61 800 €, dont 37 900 € déjà pris si l'animation mensuelle du Collectif continue au tarif de septembre.
+Le fonds marketing a enregistré 9 085 € de dépenses en 2026, tout au Collectif MKTG, entre juin et septembre. L'animation des réseaux sociaux coûte 3 160 € chaque mois, et 1 500 € par mois de publicité Meta et Google s'y ajoutent : ni l'une ni l'autre n'est enregistrée depuis octobre. En 2027, ces deux postes prendraient 55 900 € sur les 61 800 € de redevances marketing attendues au taux actuel.
 
 Les dépenses 2026 enregistrées dans le fonds :
 
@@ -461,11 +461,14 @@ Les dépenses 2026 enregistrées dans le fonds :
 | 01/07/2026 | Créa, tournage des produits (frais unique) | facture 2026/061 | 2 410 € |
 | 19/08/2026 | Tournage à Halle (NL) | facture 2026/060 | 1 005 € |
 | 24/08/2026 | Créa, tournage des produits (frais unique) | facture 2026/061 | 1 470 € |
-| 01/09/2026 | Septembre 2026 (réseaux sociaux) | facture 2026/062 | 3 160 € |
-| Total | | | 9 085 € |
+| 01/09/2026 | Septembre 2026 (réseaux sociaux, tarif mensuel) | facture 2026/062 | 3 160 € |
+| Total enregistré | | | 9 085 € |
+| oct. → déc. 2026 | Animation réseaux sociaux, 3 160 € par mois | non enregistré | 9 480 € |
+| 2026 | Publicité Meta et Google, 1 500 € par mois | non enregistré | mois de départ à préciser |
+| Total 2026 connu | | | 18 565 €, hors publicité |
 
 - Trois dépenses portent la même facture 2026/061 (4 920 € au total) : facture à vérifier auprès du Collectif.
-- Côté recettes, seules les redevances de juillet sont enregistrées (2 650 €, sans Halle). Au taux actuel, les redevances dues de juin à octobre font environ 25 200 € : enregistrées, elles mettraient le fonds à environ +16 100 € au lieu de −6 435 €.
+- Côté recettes, seules les redevances de juillet sont enregistrées (2 650 €, sans Halle). Au taux actuel, les redevances dues de juin à octobre font environ 25 200 € : enregistrées, avec l'animation d'octobre, elles mettraient le fonds à environ +12 900 € fin octobre au lieu de −6 435 €, publicité non comprise.
 - Si d'autres dépenses marketing 2026 ont été payées hors du fonds (publicité en ligne, impression, PLV), elles manquent à cette liste.
 
 Budget prévisionnel 2027, au taux actuel des redevances et au CA de 2026 :
@@ -480,14 +483,15 @@ Budget prévisionnel 2027, au taux actuel des redevances et au CA de 2026 :
 
 | Dépenses 2027 proposées | Montant | Base |
 | --- | --- | --- |
-| Animation réseaux sociaux (Collectif, mensuel) | 37 900 € | 3 160 € × 12, tarif de septembre 2026 |
-| Noël, Épiphanie, Saint-Nicolas et cougnou | 9 600 € | 40 % du reste : les fêtes font environ 135 k€ de CA |
-| Saint-Valentin, Pâques, fêtes des mères et des pères | 7 200 € | 30 % du reste |
-| Chandeleur, été, rentrée, Halloween | 3 550 € | 15 % du reste |
-| Webshop, B2B et fidélisation | 3 550 € | 15 % du reste |
+| Animation réseaux sociaux (Collectif, mensuel) | 37 900 € | 3 160 € × 12, tarif actuel |
+| Publicité Meta et Google | 18 000 € | 1 500 € × 12 |
+| Noël, Épiphanie, Saint-Nicolas et cougnou | 2 350 € | 40 % du reste : les fêtes font environ 135 k€ de CA |
+| Saint-Valentin, Pâques, fêtes des mères et des pères | 1 750 € | 30 % du reste |
+| Chandeleur, été, rentrée, Halloween | 900 € | 15 % du reste |
+| Webshop, B2B et fidélisation | 900 € | 15 % du reste |
 | Total | 61 800 € | |
 
-La répartition des temps forts est une proposition à arbitrer en réunion. Les ouvertures des nouvelles zones ne sont pas dans ce budget : elles relèvent du budget d'ouverture de chaque magasin, et leurs redevances viendront en plus.
+L'animation et la publicité prennent 90 % du budget : il ne reste qu'environ 5 900 € pour tous les temps forts. À trancher en réunion : réduire l'animation, flécher la publicité sur les temps forts du rétro-agenda, ou relever la redevance marketing. La répartition des temps forts est une proposition à arbitrer. Les ouvertures des nouvelles zones ne sont pas dans ce budget : elles relèvent du budget d'ouverture de chaque magasin, et leurs redevances viendront en plus.
 
 ### Budgets par objectif
 
@@ -510,7 +514,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | 100 % pointé, 100 % tracé | chiffres complets et comparables dans les 4 magasins | | T2 2027 |
 | Webshop et B2B via le webshop | moins de 1 % des ventes aujourd'hui ; B2B : 7 300 € par an, à Corbais seulement | | T1 → T2 2027 |
 | Fidélisation et suivi du profil client | aucun profil client suivi aujourd'hui | | T2 → T3 2027 |
-| Campagnes commerciales 2027 (rétro-agenda) | gammes de fête : environ 135 k€ de CA par an, vendus en deux mois | fonds marketing : environ 62 k€ par an au taux actuel des redevances | dès novembre 2026 |
+| Campagnes commerciales 2027 (rétro-agenda) | gammes de fête : environ 135 k€ de CA par an, vendus en deux mois | fonds marketing : environ 62 k€ par an, dont 55,9 k€ déjà engagés (Collectif et publicité) | dès novembre 2026 |
 | Robotique en production | 13 000 pièces par semaine en viennoiserie et boulangerie | | devis T2 2027 |
 | Contrôles (4 visites par mois et par magasin) | standards tenus et chiffres fiables partout | | T1 2027 |
 
