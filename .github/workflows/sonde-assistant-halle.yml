@@ -10,7 +10,14 @@ on:
   push:
     branches: [claude/elegant-cray-9i8enx]
     paths: ['pilotage-reseau/tools/sonde_assistant_halle.php', 'pilotage-reseau/src/assistant_magasin.php', 'pilotage-reseau/src/anthropic.php', '.github/workflows/sonde-assistant-halle.yml']
+  # Lancement à la main : `espace` enregistre l'identifiant d'espace de travail Anthropic (wrkspc_…, pas un secret) dans
+  # erp_cles (anthropic_workspace_id, portail commun) avant les questions. Rien n'est écrit dans le code.
   workflow_dispatch:
+    inputs:
+      espace:
+        description: "Identifiant d'espace de travail Anthropic (wrkspc_…), facultatif"
+        required: false
+        default: ""
 
 concurrency:
   group: sonde-assistant-halle
@@ -63,7 +70,10 @@ jobs:
       - name: Poser deux questions à l’assistant pour Halle
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          ESPACE: ${{ inputs.espace }}
         run: |
+          # L'identifiant passe par l'environnement et n'est accepté qu'au format wrkspc_ (rien d'autre n'atteint le shell distant).
+          if [ -n "${ESPACE}" ] && ! [[ "${ESPACE}" =~ ^wrkspc_[A-Za-z0-9]+$ ]]; then echo "espace refusé : format wrkspc_ attendu"; exit 1; fi
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "php -- '${TARGET_DIR}'" < tools/sonde_assistant_halle.php || true
+            "php -- '${TARGET_DIR}' '${ESPACE}'" < tools/sonde_assistant_halle.php || true
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/sonde_assistant_magasin.php /tmp/sonde_fidelite_profils.php /tmp/sonde_anthropic.php"

@@ -7,6 +7,8 @@ declare(strict_types=1);
  *   1. assemble la fiche de faits de Halle par l'API du panel (amFaits) et en montre la forme, sans secret ;
  *   2. pose « Que puis-je améliorer ? » à Claude (amDemander) et montre la réponse, le modèle, l'usage ;
  *   3. pose une question de suite avec le fil, pour vérifier la conversation et le cache.
+ * Sixième passage (12/11/2026) : lancé à la main avec l'entrée `espace`, le script enregistre l'identifiant dans erp_cles
+ * (anthropic_workspace_id, portail commun) puis pose ses questions. C'est sa seule écriture hors des caches.
  * Cinquième passage (12/11/2026) : pas de ligne anthropic_workspace_id ; la sonde cherche l'identifiant (format wrkspc_)
  * dans erp_cles et dit où il est, par son nom seulement.
  * Quatrième passage (12/11/2026) : l’identifiant d’espace de travail est dans erp_cles (anthropic_workspace_id) ; le
@@ -38,6 +40,15 @@ unset($v);
 // Cinquième passage : où est l'identifiant d'espace de travail ? Les noms seulement. Un identifiant Anthropic d'espace de
 // travail commence par « wrkspc_ » : la première valeur de erp_cles de ce format sert à l'essai (dans ce processus).
 echo "=== 0b. L'espace de travail (les noms, jamais les valeurs)\n";
+// Sixième passage (Sam, 12/11/2026, l'identifiant donné dans la conversation) : passé au lancement (workflow_dispatch,
+// entrée `espace`), il s'enregistre dans erp_cles, portail commun — ni dans le code, ni dans un réglage local.
+$espaceDonne = trim((string) ($argv[2] ?? ''));
+if ($espaceDonne !== '') {
+    if (preg_match('/^wrkspc_[A-Za-z0-9]+$/', $espaceDonne)) {
+        erpCleEcrire('anthropic_workspace_id', $espaceDonne, false, 'IA (Anthropic)', 'commun');
+        echo "  enregistré dans erp_cles : anthropic_workspace_id (portail commun)\n";
+    } else { echo "  identifiant refusé : format wrkspc_ attendu\n"; }
+}
 foreach (Db::rows("SELECT cle, portail, integration, maj_le FROM erp_cles WHERE maj_le >= CURDATE() - INTERVAL 1 DAY OR LOWER(cle) REGEXP 'work|wrk|espace|space|orga' ORDER BY maj_le DESC") as $r) {
     printf("  récente ou nommée comme un espace : %-34s portail %-8s %-22s %s\n", $r['cle'], $r['portail'], (string) $r['integration'], $r['maj_le']);
 }
