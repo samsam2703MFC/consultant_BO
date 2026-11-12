@@ -148,6 +148,17 @@ La découpe se fait devant le client avec une unité de découpe à ultrasons im
 
 Point de vigilance : les entremets individuels se vendent 4,50 € (environ 120 par semaine dans le réseau). Une part à 3,90 € reste sous ce prix : elle peut les cannibaliser si les deux gammes se ressemblent en vitrine.
 
+Simulation par client, part de tarte ou de gâteau à 3,90 € TTC, gâteau facturé 9,30 € HT par l'usine (0,78 € la part) : l'offre fait monter le ticket et la marge par client, même si la marge par part baisse.
+
+| Achat du client | Parts | Ticket TTC | Prix par part | Marge par client (HT) | Marge en % | Coefficient | Marge si l'usine facture 13,20 € |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| 1 part | 1 | 3,90 € | 3,90 € | 2,90 € | 79 % | ×4,75 | 2,58 € |
+| 2 parts | 2 | 7,80 € | 3,90 € | 5,81 € | 79 % | ×4,75 | 5,16 € |
+| 4+1 (5 parts, 4 payées) | 5 | 15,60 € | 3,12 € | 10,84 € | 74 % | ×3,80 | 9,22 € |
+| 6+2 (8 parts, 6 payées) | 8 | 23,40 € | 2,93 € | 15,88 € | 72 % | ×3,56 | 13,28 € |
+
+Le 4+1 vaut une remise de 20 % et le 6+2 de 25 %. Un client en 6+2 laisse 5,5 fois la marge d'un client à une part, et son ticket (23,40 €) dépasse le panier moyen du réseau (11,80 à 17,70 €) : l'offre sert le trafic et le panier. Avec l'usine à 9,30 €, les deux offres restent au-dessus de ×3,5 ; avec l'usine à 13,20 €, le 6+2 tombe à ×2,51. Si ces offres remplacent le 5+1, le prix usine qui tient ×4 (moitié des parts en offre, une part invendue) devient 9,11 € HT en 4+1 et 8,85 € HT en 6+2.
+
 ### Adapter les gammes : il y aura des coupes
 
 La gamme est trop longue pour ce qu'elle vend : 114 références font 80 % du CA du réseau, et 154 autres se partagent les 5 derniers pour cent. Couper cette traîne simplifie la production, la grille de prix unique et les invendus.
