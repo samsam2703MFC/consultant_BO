@@ -715,6 +715,7 @@ function auRoute(string $method, string $path): mixed
     return match (true) {
         $method === 'GET' && $path === '/audits/etat' => ep_audits_etat(),
         $method === 'GET' && $path === '/audits/apercu' => ep_audits_apercu(),
+        $method === 'GET' && $path === '/audits/catalogue' => ep_audits_catalogue(),
         $method === 'POST' && $path === '/audits/fournisseurs' => wr_audits_fournisseur(null),
         $method === 'PUT' && preg_match('#^/audits/fournisseurs/([\w-]{1,10})$#', $path, $m) === 1 => wr_audits_fournisseur($m[1]),
         $method === 'POST' && $path === '/audits/questions' => wr_audits_question(null),
@@ -756,6 +757,63 @@ function ep_audits_etat(): array
     return ['fournisseurs' => auFournisseurs(), 'questions' => auQuestions(), 'types' => AU_TYPES, 'genres' => AU_GENRES, 'seuils' => auSeuils(),
         'statuts' => AU_STATUTS, 'relancesDefaut' => AU_RELANCES, 'campagnes' => $camps,
         'smtp' => class_exists('Smtp') && Smtp::configured(), 'magasins' => count(viMagasins())];
+}
+
+/**
+ * Les fournisseurs de l'ERP (/material-suppliers : nom, e-mail), gardés une heure dans auditsErpFournisseurs —
+ * l'écran ne doit pas attendre l'ERP. Muet, l'ERP laisse la dernière liste lue.
+ */
+function auErpFournisseurs(bool $frais = false): array
+{
+    $c = setting('auditsErpFournisseurs', []);
+    $garde = is_array($c) && isset($c['le'], $c['liste']) && is_array($c['liste']);
+    if (!$frais && $garde && (int) strtotime((string) $c['le']) > time() - 3600) { return ['lu' => true, 'motif' => null, 'le' => $c['le'], 'liste' => $c['liste']]; }
+    if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['lu' => false, 'motif' => 'API de l’ERP non configurée', 'le' => null, 'liste' => []]; }
+    try { $r = PanelApi::get('/material-suppliers'); } catch (Throwable $e) { $r = null; }
+    if ($r === null) {
+        if ($garde && $c['liste']) { return ['lu' => true, 'motif' => 'ERP muet : liste lue le ' . $c['le'], 'le' => $c['le'], 'liste' => $c['liste']]; }
+        return ['lu' => false, 'motif' => 'l’ERP ne répond pas', 'le' => null, 'liste' => []];
+    }
+    $liste = [];
+    foreach ((function_exists('analyseListe') ? analyseListe($r) : (is_array($r) ? $r : [])) as $f) {
+        if (!is_array($f)) { continue; }
+        $nom = trim((string) ($f['name'] ?? $f['nom'] ?? ''));
+        if ($nom === '') { continue; }
+        $mail = trim((string) ($f['email'] ?? ''));
+        $liste[] = ['nom' => mb_substr($nom, 0, 120), 'email' => filter_var($mail, FILTER_VALIDATE_EMAIL) ? $mail : null];
+    }
+    $le = date('Y-m-d H:i:s');
+    auSettingSet('auditsErpFournisseurs', ['le' => $le, 'liste' => $liste]);
+    return ['lu' => true, 'motif' => null, 'le' => $le, 'liste' => $liste];
+}
+
+/**
+ * GET /audits/catalogue[?frais=1] — la liste déroulante « Ajouter un fournisseur » : ceux de l'ERP, puis ceux du
+ * référentiel du cockpit, sans ceux déjà référencés ni les doublons de nom. Un prestataire absent des deux (une
+ * agence, le collectif marketing) se saisit à la main.
+ */
+function ep_audits_catalogue(): array
+{
+    $norme = static fn (string $n): string => function_exists('caMailNom') ? caMailNom($n) : mb_strtolower(trim($n));
+    $cockpit = auFournisseurs();
+    $vus = [];
+    foreach ($cockpit as $f) { if ($f['ref']) { $vus[$norme($f['nom'])] = true; } }
+    $erp = auErpFournisseurs(!empty($_GET['frais']));
+    $out = [];
+    foreach ($erp['liste'] as $f) {
+        $k = $norme((string) $f['nom']);
+        if ($k === '' || isset($vus[$k])) { continue; }
+        $vus[$k] = true;
+        $out[] = ['nom' => $f['nom'], 'email' => $f['email'], 'source' => 'erp', 'perimetre' => ''];
+    }
+    foreach ($cockpit as $f) {
+        $k = $norme($f['nom']);
+        if ($f['ref'] || $k === '' || isset($vus[$k])) { continue; }
+        $vus[$k] = true;
+        $out[] = ['nom' => $f['nom'], 'email' => $f['email'], 'source' => 'cockpit', 'perimetre' => $f['perimetre']];
+    }
+    usort($out, static fn ($a, $b) => [$a['source'] !== 'erp', mb_strtolower($a['nom'])] <=> [$b['source'] !== 'erp', mb_strtolower($b['nom'])]);
+    return ['fournisseurs' => $out, 'erp' => $erp['lu'], 'motif' => $erp['motif'], 'le' => $erp['le']];
 }
 
 /** GET /audits/apercu[?c=] — la page du franchisé telle qu'elle sera (ou est) : sans magasin, sans écriture. */
