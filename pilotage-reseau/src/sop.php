@@ -448,7 +448,11 @@ function wr_sop_creer(): array
     $type = foType($b['type'] ?? 'SOP');
     $momentCode = isset($b['moment']) && is_string($b['moment']) ? $b['moment'] : null;
     if ($type === 'Checklist' ? $codeDonne === '' : preg_match('/^0\.[0-4]\.\d{2}$/', $codeDonne) !== 1) { $b['code'] = $type === 'Checklist' ? null : foCodeAuto($type, $momentCode); $codeDonne = ''; }
-    $base = foId(sopSlug($codeDonne ?: ($titre['fr'] ?: $titre['nl'])));
+    // L'identifiant : celui demandé (un fichier source, encoder_sop.py) s'il est libre ; sinon tiré du code ou du titre,
+    // coupé à 28 caractères (12/11/2026 : depuis le code automatique, un titre long ne formait plus d'identifiant).
+    $demande = foId($b['id'] ?? null);
+    if ($demande !== null && foSopRow($demande) !== null) { return foRefus(409, 'identifiant déjà pris : ' . $demande); }
+    $base = $demande ?? foId(rtrim(substr(sopSlug($codeDonne ?: ($titre['fr'] ?: $titre['nl'])), 0, 28), '-'));
     if ($base === null) { return foRefus(400, 'identifiant impossible à former'); }
     $id = $base;
     for ($i = 2; foSopRow($id) !== null; $i++) { $id = substr($base, 0, 28) . '-' . $i; }

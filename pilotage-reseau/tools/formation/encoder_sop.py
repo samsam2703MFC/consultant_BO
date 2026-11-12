@@ -132,7 +132,7 @@ def main():
             print('  absent du module → création (v1.0, à valider)')
             if a.ecrire:
                 c, r = appel(a.api, 'POST', '/formation/sop/fiche', {
-                    'code': doc['code'], 'type': doc['type'], 'dossier': doc['dossier'], 'poste': doc['poste'], 'moment': doc.get('moment'),
+                    'id': doc['id'], 'code': doc['code'], 'type': doc['type'], 'dossier': doc['dossier'], 'poste': doc['poste'], 'moment': doc.get('moment'),
                     'titre': contenu['titre'], 'objectif': contenu['objectif'], 'contenu': contenu, 'par': a.par})
                 if c >= 300 or (r or {}).get('id') != sid:
                     sys.exit(f'  création refusée ou identifiant inattendu ({c}) : {r}')
