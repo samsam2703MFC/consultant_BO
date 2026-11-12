@@ -17,6 +17,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/ajax/hr/people', ['controller' => $c, 'method' => 'people']);
     $r->addRoute('GET', '/ajax/hr/people/{id:\d+}', ['controller' => $c, 'method' => 'card']);
     $r->addRoute('PUT', '/ajax/hr/people/{id:\d+}', ['controller' => $c, 'method' => 'save']);
+    $r->addRoute('PUT', '/ajax/hr/people/{id:\d+}/leave', ['controller' => $c, 'method' => 'saveLeave']);
     $r->addRoute('POST', '/ajax/hr/people/{id:\d+}/documents', ['controller' => $c, 'method' => 'upload']);
     $r->addRoute('POST', '/ajax/hr/people/{id:\d+}/notes', ['controller' => $c, 'method' => 'addNote']);
     $r->addRoute('DELETE', '/ajax/hr/documents/{id:\d+}', ['controller' => $c, 'method' => 'deleteDocument']);

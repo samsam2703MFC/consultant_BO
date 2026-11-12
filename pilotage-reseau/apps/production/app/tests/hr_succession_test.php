@@ -47,7 +47,7 @@ try {
     $pdo->exec("USE {$testDb}");
     $pdo->exec("SET SESSION sql_mode = ''");
     $pdo->exec("INSERT INTO n_prod_param (code, value, default_value, value_type) SELECT code, value, default_value, value_type FROM {$source}.n_prod_param WHERE code LIKE 'hr.%' AND code <> 'hr.succession_months'");
-    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '173_hr_succession.sql', '173_hr_succession.sql'] as $f) {
+    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '173_hr_succession.sql', '173_hr_succession.sql', '179_hr_clothing_size.sql'] as $f) {
         foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
     }
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();

@@ -1913,6 +1913,21 @@ tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_pro
 - Rail : « Dzisiaj » et « Zadania » fusionnés en « Dzisiaj i zadania » (`today`, toujours présent) avec deux onglets
   (`PageTabs::GROUPS['today']`) : Dzisiaj (`/today`) et Zadania (`/my-tasks`).
 
+## [288] Urlopy : wnioski z telefonu, zaległy do 01.06, « zostało » w HR (migrations 178, 179)
+
+- `n_time_leave_request` : demande de congé faite au téléphone après le scan du QR (`/kiosk/phone/leave`, maquette 49) —
+  `type` (urlop, na_zadanie), `date_from` / `date_to` (une seule année), `days` (jours ouvrés hors fériés PL), `note`,
+  `status` (pending → approved / rejected / cancelled), `decision_note` (motif du refus, vu au téléphone), `id_absence`
+  (n_time_absence créé à la validation). Le kierownik produkcji (sinon l'administrateur) reçoit la cloche « Nowy wniosek
+  o urlop » ; il valide ou refuse dans Czas pracy › Urlopy i dni wolne (demande hachurée, maquette 48). Pas d'e-mail.
+- `n_time_leave_adjust` : korekta du solde d'une année (`id_employee`, `year`, `days` ±). HR saisit « zostało » dans le
+  tableau des employés actifs (ou dans le calendrier) ; l'ERP enregistre la différence avec le reste calculé.
+- Paramètres : `time.leave_carry_until` (« 01.06 ») — le reste de l'année précédente (zaległy) se prend jusqu'à cette date,
+  le congé pris dès le 1.01 le consomme d'abord, le solde est perdu après ; `time.leave_since_year` (2026) — première
+  année suivie (pas de zaległy calculé avant). Calcul : `TimeService::leaveBalances` (right + adjust + zaległy − pris − prévu).
+- `n_hr_employee.clothing_size` : rozmiar odzieży roboczej, liste XXS–XXXL (fiche HR). « Wymiar czasu pracy » (`work_time`)
+  reste le temps de travail utilisé par les modèles de contrat.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

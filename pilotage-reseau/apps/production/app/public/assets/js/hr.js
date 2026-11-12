@@ -49,7 +49,7 @@
                 <button type="button" class="btn btn-primary btn-sm" data-quick>＋ Szybka notatka</button>
                 ${admin ? '<button type="button" class="btn btn-light btn-sm" data-csv><i class="bi bi-filetype-csv"></i> CSV</button>' : ''}</div>
             <div class="table-responsive at-card hr-card"><table class="table tm-table hr-table"><thead><tr><th>Pracownik</th><th>E-mail</th><th class="text-end">Telefon</th>
-                <th class="text-end">Zatrudniony · staż</th><th>Umowa</th><th class="text-end">Emerytura (rok, wiek)</th><th class="text-end">Dokumenty</th><th class="text-end">Notatki (mies.)</th></tr></thead>
+                <th class="text-end">Zatrudniony · staż</th><th>Umowa</th><th class="text-end">Emerytura (rok, wiek)</th><th class="text-end">Urlop : zostało (${data.year})</th><th class="text-end">Dokumenty</th><th class="text-end">Notatki (mies.)</th></tr></thead>
                 <tbody data-rows></tbody></table></div>
             <p class="hr-note">Klik w wiersz → karta pracownika. « brak » = do uzupełnienia. E-mail ten sam co w Czas pracy › E-maile pracowników.
                 Emerytura : data urodzenia + wiek emerytalny (${data.rules.retire_k} kobiety / ${data.rules.retire_m} mężczyźni, Ustawienia HR).</p>`;
@@ -85,9 +85,33 @@
                 <td class="text-end tm-num">${p.hire_date ? d(p.hire_date) + `<div class="tm-sub">${esc(p.seniority)}</div>` : missing}</td>
                 <td>${p.contract_label ? esc(p.contract_label) + (p.contract_end ? ' do ' + d(p.contract_end) : '') : '—'}${p.contract_soon ? ' <span class="tm-tag tm-tag-warn">kończy się</span>' : ''}</td>
                 <td class="text-end tm-num">${p.retire ? p.retire.year + ' (' + p.retire.age + ')' + (p.retire_soon ? ` <span class="tm-tag tm-tag-warn">${p.retire.months_left <= 12 ? 'za ≤ 1 rok' : 'za ≤ 2 lata'}</span>` : '') : '—'}</td>
+                <td class="text-end tm-num hr-leave">${leaveCell(p)}</td>
                 <td class="text-end tm-num">${p.documents}</td><td class="text-end tm-num">${p.notes_month}</td></tr>`).join('')
-            : '<tr><td colspan="8" class="at-empty">Nikt nie pasuje.</td></tr>';
-        body.querySelectorAll('[data-id]').forEach(tr => tr.addEventListener('click', () => openCard(Number(tr.dataset.id))));
+            : '<tr><td colspan="9" class="at-empty">Nikt nie pasuje.</td></tr>';
+        body.querySelectorAll('[data-id]').forEach(tr => tr.addEventListener('click', (e) => { if (!e.target.closest('.hr-leave')) openCard(Number(tr.dataset.id)); }));
+        body.querySelectorAll('[data-leave-left]').forEach(inp => inp.addEventListener('change', () => saveLeave(inp)));
+    }
+
+    // [288] Urlop : « zostało » do wpisania (osoby aktywne) — ERP zapisuje korektę salda roku ; zaległy z poprzedniego roku do 01.06.
+    function leaveCell(p) {
+        if (!p.leave) return '—';
+        const l = p.leave;
+        const sub = [`z ${l.right}${l.adjust ? (l.adjust > 0 ? ' +' : ' −') + Math.abs(l.adjust) + ' korekta' : ''}`];
+        if (l.carry_left) sub.push(`zaległy ${l.carry_left}`);
+        if (l.carry_lapsed) sub.push(`przepadło ${l.carry_lapsed}`);
+        return `<input type="number" class="form-control form-control-sm hr-leave-in" min="0" max="80" step="1" value="${l.remaining}" data-leave-left="${p.id}" aria-label="Zostało dni urlopu — ${esc(p.name)}" title="Wpisz, ile dni urlopu zostało tej osobie w ${data.year} (wzięte i zaplanowane w kalendarzu już odjęte)">
+            <div class="tm-sub" data-leave-sub="${p.id}">${esc(sub.join(' · '))}</div>`;
+    }
+
+    async function saveLeave(inp) {
+        const sub = body.querySelector(`[data-leave-sub="${inp.dataset.leaveLeft}"]`);
+        inp.disabled = true;
+        try {
+            const r = await api('PUT', '/ajax/hr/people/' + inp.dataset.leaveLeft + '/leave', {remaining: Number(inp.value)});
+            inp.classList.remove('is-invalid'); inp.classList.add('is-valid');
+            if (sub) sub.textContent = r.message;
+            setTimeout(() => people().catch(() => {}), 900);
+        } catch (x) { inp.classList.add('is-invalid'); if (sub) sub.textContent = x.message; } finally { inp.disabled = false; }
     }
 
     function exportCsv() {
@@ -121,7 +145,9 @@
                     <label class="hr-f"><span>Płeć (wiek emerytalny)</span><select class="form-select form-select-sm" name="gender"><option value="">—</option>${opt({K: 'kobieta', M: 'mężczyzna'}, p.gender)}</select></label>
                     ${f('Zatrudniony od', 'hire_date', p.hire_date, 'date')}
                     <label class="hr-f"><span>Umowa</span><select class="form-select form-select-sm" name="contract_type"><option value="">—</option>${opt(contracts, p.contract_type)}</select></label>
-                    ${f('Koniec umowy', 'contract_end', p.contract_end, 'date')}${f('Wymiar', 'work_time', p.work_time)}${f('Badania lekarskie do', 'medical_until', p.medical_until, 'date')}
+                    ${f('Koniec umowy', 'contract_end', p.contract_end, 'date')}${f('Wymiar czasu pracy', 'work_time', p.work_time)}
+                    <label class="hr-f"><span>Rozmiar odzieży</span><select class="form-select form-select-sm" name="clothing_size"><option value="">—</option>${(data ? data.sizes : ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL']).map(s => `<option ${s === p.clothing_size ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+                    ${f('Badania lekarskie do', 'medical_until', p.medical_until, 'date')}
                     ${f('Kontakt w nagłych wypadkach', 'emergency', p.emergency)}</div>
                     ${p.pay ? payHtml(p.pay, f, opt) : ''}
                     <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div></form>
@@ -151,7 +177,7 @@
             e.preventDefault();
             const msg = card.querySelector('[data-msg]');
             form.querySelectorAll('.is-invalid').forEach(x => x.classList.remove('is-invalid'));
-            const payload = Object.fromEntries(['email', 'phone', 'birth_date', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency'].map(k => [k, form[k].value]));
+            const payload = Object.fromEntries(['email', 'phone', 'birth_date', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'clothing_size', 'medical_until', 'emergency'].map(k => [k, form[k].value]));
             if (p.pay) {
                 ['pay_type', 'pay_amount', 'bank', 'address', 'pesel'].forEach(k => { payload[k] = form[k].value; });
                 ['pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'].forEach(k => { payload[k] = form[k].checked; });

@@ -61,7 +61,7 @@ try {
     $pdo->exec("INSERT INTO n_position (id, code, name_pl, name_fr, kind, sort_order, active) VALUES (3, 'KIEROWNIK_PRODUKCJI', 'Kierownik produkcji', 'Chef', 'erp', 1, 1),
         (5, 'ADMINISTRACJA', 'Administracja i fakturowanie', 'Admin', 'erp', 2, 1), (4, 'LOGISTYKA', 'Logistyka', 'Logistique', 'erp', 3, 1)");
     $pdo->exec("INSERT INTO n_user_position (id_user, id_position) VALUES (2, 3), (3, 5), (4, 4)");
-    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '172_hr_quick_note.sql'] as $f) {
+    foreach (['170_hr.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '172_hr_quick_note.sql', '179_hr_clothing_size.sql'] as $f) {
         foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
     }
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();

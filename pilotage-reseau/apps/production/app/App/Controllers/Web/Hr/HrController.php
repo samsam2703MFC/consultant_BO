@@ -71,6 +71,12 @@ final class HrController extends BaseController
         return $this->guarded(fn() => $this->hr->save((int) $id, $this->input(), $this->userId(), $this->canPay()));
     }
 
+    /** [288] Zostało urlopu (korekta salda) — tableau des employés actifs. */
+    public function saveLeave($id)
+    {
+        return $this->guarded(fn() => $this->hr->saveLeaveRemaining((int) $id, $this->input()['remaining'] ?? null, $this->userId()));
+    }
+
     public function upload($id)
     {
         return $this->guarded(fn() => $this->hr->upload((int) $id, $this->input(), $this->userId()));

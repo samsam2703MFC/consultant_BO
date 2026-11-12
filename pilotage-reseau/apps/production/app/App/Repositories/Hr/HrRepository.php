@@ -14,7 +14,7 @@ final class HrRepository extends WorkshopRepository
     private const VISIBLE = "(n.visibility = 'public' AND (n.audience IS NULL OR FIND_IN_SET((SELECT p.code FROM n_user_position up JOIN n_position p ON p.id = up.id_position WHERE up.id_user = ? LIMIT 1), n.audience)))
                      OR n.author = ? OR n.followup_user = ?)";
 
-    public const FIELDS = ['phone_enc', 'birth_enc', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency_enc',
+    public const FIELDS = ['phone_enc', 'birth_enc', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'clothing_size', 'medical_until', 'emergency_enc',
         // [277] paie et contrats (accès « payroll »)
         'pay_type', 'pay_amount', 'bank_enc', 'address_enc', 'pesel_enc', 'pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'];
 
@@ -23,7 +23,7 @@ final class HrRepository extends WorkshopRepository
     {
         return $this->all(
             "SELECT e.id, e.active, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, pe.surname, g.name_pl AS group_name, g.color AS group_color,
-                    p.name_pl AS position, h.phone_enc, h.birth_enc, h.gender, h.hire_date, h.contract_type, h.contract_end, h.work_time,
+                    p.name_pl AS position, h.phone_enc, h.birth_enc, h.gender, h.hire_date, h.contract_type, h.contract_end, h.work_time, h.clothing_size,
                     h.medical_until, h.emergency_enc, h.pay_type, h.pay_amount, h.bank_enc, h.address_enc, h.pesel_enc,
                     h.pit2, h.kup_raised, h.young_relief, h.student, h.sick_insurance, (SELECT COUNT(*) FROM n_hr_document d WHERE d.id_employee = e.id) AS documents
              FROM n_prod_employee e JOIN production_employee pe ON pe.id = e.id_production_employee

@@ -80,6 +80,7 @@ try {
     foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/171_payroll_contracts.sql')) as $sql) $pdo->exec($sql);
     // [279] Szybka notatka (rodzaj, temat, dla kogo, follow-up) : migration 172.
     foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/172_hr_quick_note.sql')) as $sql) $pdo->exec($sql);
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/179_hr_clothing_size.sql')) as $sql) $pdo->exec($sql);
 
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost) VALUES (1, 'Jan', 'Testowy', 8000), (2, 'Ewa', 'Testowa', 7000), (3, 'Olek', 'Dawny', 6000)");
@@ -115,6 +116,16 @@ try {
     expectHr($p[11]['retire']['date'] === '2031-05-12' && $p[11]['retire']['age'] === 65 && !$p[11]['retire_soon'] && $p[11]['medical_alert'], 'homme : retraite à 65 ans (2031), visite médicale bientôt');
     expectHr($p[12]['retire']['year'] === 2041 && $p[12]['retire']['age'] === 60 && $p[12]['contract_soon'] && $p[12]['missing'], 'femme : retraite à 60 ans (2041), fin de période d\'essai, données manquantes');
     expectHr($v['kpi']['active'] === 2 && $v['kpi']['contracts_ending'] === 1 && !$p[13]['active'], 'indicateurs : 2 actifs, 1 contrat qui se termine ; l\'inactif reste listé');
+
+    // [288] Rozmiar odzieży (XXS–XXXL) et « zostało » urlopu saisi dans le tableau (korekta de l'année).
+    expectHr(hrCode(fn() => $hr->save(11, ['clothing_size' => 'XXXXL'], 1)) === '422', 'taille hors liste refusée');
+    $hr->save(11, ['clothing_size' => 'xl'], 1);
+    expectHr($pdo->query('SELECT clothing_size FROM n_hr_employee WHERE id_employee = 11')->fetchColumn() === 'XL' && in_array('XXS', $v['sizes'], true) && end($v['sizes']) === 'XXXL', 'taille XL enregistrée (liste XXS–XXXL)');
+    expectHr($p[11]['leave'] !== null && $p[11]['leave']['remaining'] === $p[11]['leave']['right'] && $p[13]['leave'] === null, 'urlop : reste affiché pour les actifs seulement');
+    $lv = $hr->saveLeaveRemaining(11, '14', 1);
+    expectHr($lv['remaining'] === 14 && $lv['adjust'] === 14 - $p[11]['leave']['right'] && str_contains($lv['message'], '14'), 'urlop : « zostało 14 » enregistré (korekta)');
+    expectHr(hrCode(fn() => $hr->saveLeaveRemaining(11, '1.5', 1)) === '422' && hrCode(fn() => $hr->saveLeaveRemaining(13, 5, 1)) === '422', 'urlop : nombre entier, personne active seulement');
+    expectHr(array_column($hr->view(1, true, $today)['people'], null, 'id')[11]['leave']['remaining'] === 14, 'tableau relu : zostało 14');
 
     // --- Documents
     $pdf = "%PDF-1.4\n% test HR\n1 0 obj << >> endobj\ntrailer << >>\n%%EOF\n";

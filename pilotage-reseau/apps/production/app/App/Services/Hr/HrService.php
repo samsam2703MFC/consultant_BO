@@ -24,6 +24,7 @@ use DateTimeImmutable;
 final class HrService
 {
     public const KINDS = ['umowa' => 'Umowa', 'aneks' => 'Aneks', 'badania' => 'Badania lekarskie', 'notatka' => 'Notatka', 'inne' => 'Inne'];
+    public const SIZES = ['XXS', 'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'];
     public const CONTRACTS = ['nieokreslony' => 'na czas nieokreślony', 'okreslony' => 'na czas określony', 'probny' => 'okres próbny', 'zlecenie' => 'umowa zlecenie', 'inna' => 'inna'];
     private const MIMES = ['application/pdf' => '%PDF', 'image/jpeg' => "\xFF\xD8\xFF", 'image/png' => "\x89PNG",
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document' => "PK\x03\x04"];
@@ -31,7 +32,8 @@ final class HrService
     private const MONTHS = [1 => 'styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
 
     public function __construct(private HrRepository $repo, private HrCipher $cipher, private TimeRepository $time, private StaffContactCipher $contacts,
-        private ParamRepository $params, private AppNotificationService $notifications, private OutgoingMessageService $outgoing)
+        private ParamRepository $params, private AppNotificationService $notifications, private OutgoingMessageService $outgoing,
+        private \App\Services\Workshop\Time\TimeService $timeService)
     {
     }
 
@@ -65,13 +67,21 @@ final class HrService
         $notes = $this->repo->noteCounts($from, $to, $admin, $viewer);
         $emails = $this->time->contacts();
         $people = [];
-        foreach ($this->repo->people() as $r) $people[] = $this->row($r, $emails, $notes, $rules, $today, $canPay);
+        // [288] Urlop : zostało w roku (personnes actives) — modifiable dans le tableau (korekta salda).
+        $leave = $this->timeService->leaveBalances((int) $today->format('Y'), $today->getTimestamp());
+        foreach ($this->repo->people() as $r) {
+            $row = $this->row($r, $emails, $notes, $rules, $today, $canPay);
+            $b = $leave[$row['id']] ?? null;
+            $row['leave'] = $b && $row['active'] ? ['remaining' => $b['remaining'], 'right' => $b['right'], 'adjust' => $b['adjust'], 'carry' => $b['carry'],
+                'carry_left' => $b['carry_left'], 'carry_lapsed' => $b['carry_lapsed'], 'used' => $b['used'], 'planned' => $b['planned']] : null;
+            $people[] = $row;
+        }
         $this->repo->log($viewer, null, 'list');
         $active = array_values(array_filter($people, fn($p) => $p['active']));
         $seniority = array_values(array_filter(array_map(fn($p) => $p['seniority_months'], $active), fn($m) => $m !== null));
         return [
             'people' => $people, 'rules' => $rules, 'today' => $today->format('Y-m-d'), 'month' => $today->format('Y-m'), 'month_label' => self::monthLabel($today->format('Y-m')),
-            'kinds' => self::KINDS, 'contracts' => self::CONTRACTS, 'is_admin' => $admin, 'can_pay' => $canPay,
+            'kinds' => self::KINDS, 'contracts' => self::CONTRACTS, 'sizes' => self::SIZES, 'is_admin' => $admin, 'can_pay' => $canPay, 'year' => (int) $today->format('Y'),
             'kpi' => [
                 'active' => count($active), 'groups' => count(array_unique(array_filter(array_column($active, 'group')))),
                 'avg_seniority' => $seniority ? (int) round(array_sum($seniority) / count($seniority)) : null, 'max_seniority' => $seniority ? max($seniority) : null,
@@ -102,7 +112,7 @@ final class HrService
             'hire_date' => $r['hire_date'], 'seniority_months' => $seniority, 'seniority' => $seniority === null ? null : self::span($seniority),
             'contract_type' => $r['contract_type'], 'contract_label' => $r['contract_type'] ? self::CONTRACTS[$r['contract_type']] ?? $r['contract_type'] : null,
             'contract_end' => $r['contract_end'], 'contract_soon' => $contractSoon, 'contract_alert' => $r['contract_end'] !== null && $r['contract_end'] <= $soon,
-            'work_time' => $r['work_time'], 'medical_until' => $r['medical_until'], 'medical_alert' => $r['medical_until'] !== null && $r['medical_until'] <= $soon,
+            'work_time' => $r['work_time'], 'clothing_size' => $r['clothing_size'] ?? null, 'medical_until' => $r['medical_until'], 'medical_alert' => $r['medical_until'] !== null && $r['medical_until'] <= $soon,
             'emergency' => $this->cipher->decrypt($r['emergency_enc']) ?: null,
             'retire' => $retire, 'retire_soon' => $retire !== null && $retire['months_left'] <= 24,
             'documents' => (int) $r['documents'], 'notes_month' => $notes[$id] ?? 0,
@@ -176,6 +186,12 @@ final class HrService
             $data['contract_type'] = $c === '' ? null : $c;
         }
         if (array_key_exists('work_time', $in)) $data['work_time'] = $text('work_time', 30) ?: null;
+        // [288] Rozmiar odzieży roboczej : lista XXS–XXXL.
+        if (array_key_exists('clothing_size', $in)) {
+            $s = strtoupper(trim((string) ($in['clothing_size'] ?? '')));
+            if ($s !== '' && !in_array($s, self::SIZES, true)) $errors['clothing_size'] = 'Wybierz rozmiar z listy (XXS–XXXL).';
+            $data['clothing_size'] = $s === '' ? null : $s;
+        }
         if (array_key_exists('emergency', $in)) { $e = $text('emergency', 200); $data['emergency_enc'] = $e === '' ? null : $this->cipher->encrypt($e); }
         $email = null;
         if (array_key_exists('email', $in)) {
@@ -240,6 +256,15 @@ final class HrService
     }
 
     // --- Documents ------------------------------------------------------------------------------------------
+
+    /** [288] « Zostało » wpisane w tabeli HR (personnes actives) → korekta salda urlopu de l'année. */
+    public function saveLeaveRemaining(int $employeeId, mixed $remaining, ?int $viewer): array
+    {
+        if (!is_numeric($remaining) || (int) $remaining != $remaining) throw new CustomException('Zostało : liczba całkowita dni.', 'errors', 422);
+        $b = $this->timeService->setLeaveRemaining($employeeId, (int) $remaining, $viewer);
+        $this->repo->log($viewer, $employeeId, 'leave');
+        return ['remaining' => $b['remaining'], 'adjust' => $b['adjust'], 'message' => 'Zapisano : zostało ' . $b['remaining'] . ' dni urlopu.'];
+    }
 
     public function upload(int $employeeId, array $in, ?int $viewer): array
     {

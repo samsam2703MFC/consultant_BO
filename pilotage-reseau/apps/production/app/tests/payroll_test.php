@@ -115,7 +115,7 @@ try {
     $pdo->exec("INSERT INTO user (id, name, surname, displayed_name, email, login, password) VALUES (1, 'Ada', 'Admin', 'Ada Admin', 'ada@example.invalid', 'ada', 'x')");
     $pdo->exec("INSERT INTO n_position (id, code, name_pl, name_fr, kind, sort_order, active) VALUES (5, 'ADMINISTRACJA', 'Administracja i fakturowanie', 'Admin', 'erp', 2, 1), (7, 'PIEKARZ', 'Piekarz', 'Boulanger', 'prod', 3, 1)");
     $pdo->exec("INSERT INTO n_position_menu (id_position, item) VALUES (5, 'invoicing')");
-    foreach (['170_hr.sql', '171_payroll_contracts.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql'] as $f) {
+    foreach (['170_hr.sql', '171_payroll_contracts.sql', '171_payroll_contracts.sql', '172_hr_quick_note.sql', '179_hr_clothing_size.sql'] as $f) {
         foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/' . $f)) as $sql) $pdo->exec($sql);
     }
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
