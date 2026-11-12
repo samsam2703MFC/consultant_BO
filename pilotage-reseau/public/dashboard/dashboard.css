@@ -2817,3 +2817,55 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
   .pd-prods td:nth-child(2),.pd-prods th:nth-child(2),.pd-prods td:last-child,.pd-prods th:last-child{display:none}
   .pd-ddb{grid-template-columns:1fr 1fr;margin-left:0}.pd-ddb>div:nth-child(3){border-left:none}
 }
+
+/* Fidélité (12/11/2026, maquettes B et C de docs/maquettes/fidelite-v3) : les profils du magasin, la fiche d'un client. */
+.fd-tuiles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}
+.fd-tui{display:flex;flex-direction:column;align-items:stretch;text-align:left;gap:4px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:12px 13px;cursor:pointer;font:inherit;color:inherit}
+.fd-tui.on{border:2px solid var(--color-primary);background:rgba(141,29,44,.04);padding:11px 12px}
+.fd-tui.vide{background:var(--color-background-secondary)}.fd-tui.vide>b{color:var(--color-text-muted)}
+.fd-tn{display:flex;align-items:center;gap:7px;font-size:14px}.fd-tn i,.fd-pt{display:inline-block;width:10px;height:10px;border-radius:50%;flex:none}
+.fd-pt{margin-right:6px;vertical-align:0}
+.fd-tui>b{font-family:var(--font-display);font-size:26px;font-weight:400;margin-top:6px;line-height:1.1}
+.fd-n{font-size:11.5px;color:var(--color-text-muted)}
+.fd-bar{height:6px;border-radius:3px;background:var(--color-background-secondary);overflow:hidden;margin:6px 0}.fd-bar i{display:block;height:100%}
+.fd-cond{display:flex;flex-direction:column;gap:1px;padding:8px 10px;border-radius:8px;background:var(--color-background-secondary);font-size:13px}
+.fd-cond small{font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}.fd-cond em{font-style:normal;font-size:11.5px;color:var(--color-text-muted)}
+.fd-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;margin-top:8px;font-size:12px;color:var(--color-text-muted)}.fd-kv b{font-weight:400;color:var(--color-text);text-align:right}
+.fd-vide{margin-top:8px;font-size:12px;color:var(--color-text-muted)}
+.fd-note{margin:8px 0 0;font-size:11.5px;color:var(--color-text-muted)}
+.fd-g2{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}
+.fd-c{padding-bottom:12px}.fd-c>.ct{font-family:var(--font-display);font-size:15px}
+.fd-c>.fd-note{padding:0 16px}
+.fd-radar{display:block;width:100%;max-width:340px;margin:6px auto 0}
+.fd-leg{display:flex;justify-content:center;gap:16px;font-size:12px;color:var(--color-text-muted)}.fd-leg i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.fd-t{width:100%;border-collapse:collapse;font-size:12.5px}
+.fd-t th{text-align:left;font:400 10px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);padding:9px 14px;background:var(--color-background-secondary)}
+.fd-t td{padding:10px 14px;border-top:1px solid var(--color-border-tertiary);vertical-align:top}
+.fd-t .n{text-align:right}.fd-t small{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:2px}
+.fd-t tbody tr[data-fdc]{cursor:pointer}.fd-t tbody tr[data-fdc]:hover td{background:var(--color-background-secondary)}
+.fd-retour{margin:0 0 10px}
+.fd-tete{display:grid;grid-template-columns:minmax(280px,1fr) 2fr;gap:20px;align-items:center;padding:16px 18px}
+.fd-id{display:flex;gap:12px;align-items:center}.fd-id b{display:block;font-family:var(--font-display);font-size:21px;font-weight:400}.fd-id span{font-size:12px;color:var(--color-text-muted)}
+.fd-av{width:44px;height:44px;border-radius:50%;background:var(--color-background-secondary);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--color-text-muted);flex:none}
+.fd-k{display:grid;grid-template-columns:repeat(4,1fr)}.fd-k div{padding:0 14px;border-left:3px solid var(--color-border-tertiary)}
+.fd-k b{display:block;font-family:var(--font-display);font-size:20px;font-weight:400}.fd-k span{display:block;font-size:11.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.35}
+.fd-g3{display:grid;grid-template-columns:280px 1fr 320px;gap:12px;margin-top:12px}
+.fd-g3b{display:grid;grid-template-columns:300px 300px 1fr;gap:12px;margin-top:0}
+.fd-mos{display:grid;gap:8px;padding:12px 14px}
+.fd-mo{display:grid;grid-template-columns:1fr auto;gap:2px 8px;padding:9px 11px;border:1px solid var(--color-border-tertiary);border-radius:9px;font-size:12.5px}
+.fd-mo .r{text-align:right;color:var(--color-text-muted)}.fd-mo small{grid-column:2;font-size:10.5px}
+.fd-cal{display:grid;grid-template-columns:44px repeat(7,1fr) 66px;gap:4px;align-items:center;padding:12px 14px}
+.fd-cal .h{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);text-align:center}
+.fd-cal .s{font-size:11px;color:var(--color-text-muted)}.fd-cal .t{font-size:11px;color:var(--color-text-muted);text-align:right}
+.fd-cal .c{height:24px;border-radius:5px;background:var(--color-background-secondary);font-size:10.5px;color:#fff;display:flex;align-items:center;justify-content:center}
+.fd-cal .c.cmd,.fd-sq.cmd{background:#B0792A}.fd-cal .c.cpt,.fd-sq.cpt{background:var(--color-primary)}.fd-cal .c.futur{background:none;border:1px dashed var(--color-border-tertiary)}
+.fd-sq{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px}
+.fd-lab{margin:12px 14px 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.fd-bj{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:80px;align-items:end;padding:0 14px}
+.fd-bj div{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:2px}
+.fd-bj i{width:70%;background:var(--color-primary);border-radius:3px 3px 0 0;min-height:2px}.fd-bj b{font-weight:400;font-size:11px}.fd-bj span{font-size:10px;color:var(--color-text-muted)}
+.fd-mom{margin:0 14px;font-size:12.5px;color:var(--color-text-muted)}
+.fd-hb{display:grid;grid-template-columns:1fr 90px 30px;gap:8px;align-items:center;padding:4px 14px;font-size:12.5px}
+.fd-hb i{height:8px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden}.fd-hb i b{display:block;height:100%;background:var(--color-primary)}
+.fd-tk{max-height:420px;overflow:auto}
+@media (max-width:1150px){.fd-tuiles{grid-template-columns:repeat(3,minmax(0,1fr))}.fd-g3,.fd-g3b,.fd-tete{grid-template-columns:1fr}}

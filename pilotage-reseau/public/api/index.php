@@ -30,6 +30,7 @@ require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
+require __DIR__ . '/../../src/fidelite_profils.php';   // Fidélité › Profils clients (12/11/2026)
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
@@ -686,6 +687,9 @@ function route(string $method, string $path): mixed
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
+            $path === '/fidelite/profils'              => ep_fidelite_profils(),
+            $path === '/fidelite/profils/magasin'      => ep_fidelite_profils_magasin(),
+            $path === '/fidelite/client'               => ep_fidelite_client(),
             $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
@@ -950,6 +954,7 @@ function route(string $method, string $path): mixed
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- fidélité : les règles du programme, publiées en un envoi
     if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
+    if ($method === 'POST' && $path === '/fidelite/profils') { return wr_fidelite_profils_post(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }

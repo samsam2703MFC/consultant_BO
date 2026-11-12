@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Espace franchisé · Fidélité (Halle)</title>
+<style>
+:root{--ink:#1c1a17;--muted-2:#5c5852;--muted:#7a736a;--faint:#B8B2A8;--paper:#faf7f2;--table-head:#FBF9F5;--total-line:#F8F4EE;--chip:#EDE7DE;--line:#e6e0d8;--row-line:rgba(34,34,34,.06);--accent:#8D1D2C;--danger:#b3261e;--green:#3f7a52;--prize:#B0792A;--prize-soft:#F6E7CE;--prize-ink:#7A5207;--stop:#A32014;--stop-soft:#F7E0DC;color-scheme:light;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}
+h1,h2,h3,h4,th,b,strong{font-weight:400}
+.workspace{display:flex;height:100vh;overflow:hidden}.workspace__main{flex:1;display:flex;flex-direction:column;min-width:0}
+.app__body{flex:1;overflow-y:auto;padding:22px 24px 40px}.app__body>*{max-width:1180px}
+.sidebar{flex:0 0 246px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding-bottom:24px}
+.sidebar__head{padding:20px 16px 8px}.sidebar__logo{font-size:17px;letter-spacing:.02em;color:var(--ink)}
+.sidebar__kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:9px}
+.sidebar__back{padding:6px 12px 4px}.sidebar__back a{display:flex;align-items:center;gap:9px;background:var(--paper);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__brand{margin:10px 12px 0;padding:8px 10px;font-size:13px;background:var(--table-head);border-radius:9px}
+.sidebar__groups{padding:2px 12px 0}.sidebar__group{margin-top:18px}
+.sidebar__group-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 10px 8px}
+.sidebar__item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__item.is-active{background:rgba(141,29,44,.08);color:var(--accent);font-weight:700}
+svg.i{width:16px;height:16px;flex:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:18px 24px;border-bottom:1px solid var(--line);background:#fff}
+.topbar__kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.topbar h1{font-size:26px;letter-spacing:-.01em;margin:0}.topbar__actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:400 13px/1.2 'Gotham',system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--sm{min-height:30px;padding:5px 11px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.seg button{padding:6px 11px;border:0;border-radius:7px;background:transparent;color:var(--muted-2);font:400 12.5px 'Gotham',system-ui,sans-serif}
+.seg button.is-on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.page-tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.page-tabs__tab{margin:0 0 -1px;padding:8px 12px;border:none;border-bottom:2px solid transparent;background:none;color:var(--muted-2);font:inherit;font-size:13px}
+.page-tabs__tab.is-on{color:var(--accent);border-bottom-color:var(--accent)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+h2{font-size:.95rem;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.section-label__aside{float:right;font-size:11.5px;text-transform:none;letter-spacing:normal;color:var(--muted)}
+.kpi-row{display:flex;flex-wrap:wrap;padding:4px 0}
+.kpi{flex:1;min-width:176px;padding:13px 18px;border-left:3px solid var(--line)}
+.kpi.is-stop{border-left-color:var(--stop)}.kpi.is-warn{border-left-color:var(--prize)}
+.kpi__value{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.kpi__label{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+.kpi__note{font-size:12px;color:var(--muted);margin-top:3px}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--stop);border-radius:12px;background:#fff}
+.verdict p{margin:0;font-size:15px;line-height:1.45}.verdict .muted{font-size:12.5px;margin-top:6px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--table-head);padding:10px 14px}
+tbody td{padding:11px 14px;border-top:1px solid var(--row-line)}
+.num{text-align:right}.sub{display:block;margin-top:2px;font-size:10.5px;color:var(--muted)}
+tr.total td{background:var(--total-line)}tr.is-me td{background:rgba(141,29,44,.04)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11.5px;white-space:nowrap}
+.chip--neutral{background:var(--chip);color:var(--muted-2)}
+.badge--ok{background:rgba(63,122,82,.12);color:var(--green)}
+.tag-warn,.tag-stop{display:inline-flex;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tag-warn{background:var(--prize-soft);color:var(--prize-ink)}.tag-stop{background:var(--stop-soft);color:var(--stop)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.split{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:10px 0 12px;background:var(--chip)}
+.split span{display:block;height:100%}
+.legend{display:grid;gap:9px;font-size:13px}.legend div{display:flex;align-items:center;gap:8px}.legend .num{margin-left:auto}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.steps li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--row-line);font-size:13px;line-height:1.45}
+.steps li:first-child{border-top:0;padding-top:2px}
+.step-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--muted-2);display:flex;align-items:center;justify-content:center;font-size:11.5px}
+.step-n.is-stop{background:var(--stop-soft);color:var(--stop)}
+.steps .sub{font-size:12px}
+.foot{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend-chart{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend-chart span{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+<div class="workspace">
+<nav class="sidebar" aria-label="Navigation principale">
+  <div class="sidebar__head"><div class="sidebar__logo">L’Atelier By</div><div class="sidebar__kicker">Espace franchisé</div></div>
+  <div class="sidebar__back"><a href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Retour à l’ERP</a></div>
+  <div class="sidebar__brand">L’Atelier by Halle</div>
+  <div class="sidebar__groups">
+    <div class="sidebar__group"><div class="sidebar__group-label">Pilotage</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Tableau de bord</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Ventes</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12l2 5H4z"/><path d="M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/></svg>Commandes</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Clients</div>
+      <a class="sidebar__item is-active" aria-current="page" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.6-9.5 9-9.5 9z"/></svg>Fidélité</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg>Clients</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v8H4v-8"/><path d="M2 7h20v5H2z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>Bons et promotions</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Paramètres</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages du magasin</a>
+    </div>
+  </div>
+</nav>
+
+<div class="workspace__main">
+  <header class="topbar">
+    <div><p class="topbar__kicker">Vue Franchisé</p><h1>Fidélité</h1></div>
+    <div class="topbar__actions">
+      <div class="seg" role="tablist"><button class="is-on">Cette semaine</button><button>4 semaines</button><button>Mois</button></div>
+      <a class="btn btn--primary" href="#">Inscrire un client</a>
+    </div>
+  </header>
+
+  <main class="app__body">
+    <nav class="page-tabs"><button class="page-tabs__tab is-on">En caisse</button><button class="page-tabs__tab">Membres</button><button class="page-tabs__tab">Récompenses</button></nav>
+
+    <div class="verdict">
+      <span class="step-n is-stop">!</span>
+      <div>
+        <p>Cette semaine, aucune vente au comptoir n’a été rattachée à un membre fidélité.</p>
+        <p class="muted">Du lundi 9 au jeudi 12 novembre, 10 h. 14 tickets sur 587 portent un client, presque tous des commandes. Aucun client de Halle n’a encore la fidélité activée.</p>
+      </div>
+    </div>
+
+    <section class="card" style="margin-top:16px;padding:6px 4px">
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi__value">587</div><div class="kpi__label">Tickets particuliers</div><div class="kpi__note">7 122 € encaissés</div></div>
+        <div class="kpi is-warn"><div class="kpi__value">14 · 2,4 %</div><div class="kpi__label">Rattachés à un client</div><div class="kpi__note">13 clients, 525 €</div></div>
+        <div class="kpi is-stop"><div class="kpi__value">2</div><div class="kpi__label">Ventes comptoir identifiées</div><div class="kpi__note">sans commande derrière</div></div>
+        <div class="kpi is-stop"><div class="kpi__value">0 / 638</div><div class="kpi__label">Membres actifs</div><div class="kpi__note">9 ont un code de scan</div></div>
+        <div class="kpi"><div class="kpi__value">0</div><div class="kpi__label">Bons fidélité utilisés</div><div class="kpi__note">aucun ticket avec bon</div></div>
+      </div>
+    </section>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Tickets rattachés à un client, jour par jour <span class="section-label__aside">Halle · 12 oct. → 12 nov.</span></h2>
+        <svg viewBox="0 0 660 180" width="100%" role="img" aria-label="Tickets rattachés à un client, jour par jour" style="display:block;margin-top:14px"><line x1="0" x2="660" y1="95.5" y2="95.5" stroke="rgba(34,34,34,.06)"/><text x="660" y="91.5" font-size="10.5" text-anchor="end" fill="#B8B2A8">5</text><line x1="0" x2="660" y1="33.0" y2="33.0" stroke="rgba(34,34,34,.06)"/><text x="660" y="29.0" font-size="10.5" text-anchor="end" fill="#B8B2A8">10</text><line x1="0.0" x2="0.0" y1="0" y2="158" stroke="#e6e0d8"/><text x="4.0" y="174" font-size="10.5" fill="#7a736a">lun. 12/10</text><rect x="3.3" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>12/10 : 2 ticket(s) rattaché(s) sur 125</title></rect><rect x="23.9" y="158.0" width="14.0" height="0.0" rx="2" fill="#EBD3D8"><title>13/10 : 0 ticket(s) rattaché(s) sur 117</title></rect><rect x="44.5" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>14/10 : 2 ticket(s) rattaché(s) sur 160</title></rect><rect x="65.2" y="145.5" width="14.0" height="12.5" rx="2" fill="#EBD3D8"><title>15/10 : 1 ticket(s) rattaché(s) sur 118</title></rect><rect x="85.8" y="83.0" width="14.0" height="75.0" rx="2" fill="#EBD3D8"><title>16/10 : 6 ticket(s) rattaché(s) sur 163</title></rect><text x="92.8" y="79.0" font-size="10.5" text-anchor="middle" fill="#5c5852">6</text><rect x="106.4" y="120.5" width="14.0" height="37.5" rx="2" fill="#EBD3D8"><title>17/10 : 3 ticket(s) rattaché(s) sur 156</title></rect><rect x="127.0" y="95.5" width="14.0" height="62.5" rx="2" fill="#EBD3D8"><title>18/10 : 5 ticket(s) rattaché(s) sur 173</title></rect><line x1="144.4" x2="144.4" y1="0" y2="158" stroke="#e6e0d8"/><text x="148.4" y="174" font-size="10.5" fill="#7a736a">lun. 19/10</text><rect x="147.7" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>19/10 : 2 ticket(s) rattaché(s) sur 131</title></rect><rect x="168.3" y="145.5" width="14.0" height="12.5" rx="2" fill="#EBD3D8"><title>20/10 : 1 ticket(s) rattaché(s) sur 130</title></rect><rect x="188.9" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>21/10 : 2 ticket(s) rattaché(s) sur 171</title></rect><rect x="209.6" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>22/10 : 2 ticket(s) rattaché(s) sur 124</title></rect><rect x="230.2" y="108.0" width="14.0" height="50.0" rx="2" fill="#EBD3D8"><title>23/10 : 4 ticket(s) rattaché(s) sur 167</title></rect><rect x="250.8" y="120.5" width="14.0" height="37.5" rx="2" fill="#EBD3D8"><title>24/10 : 3 ticket(s) rattaché(s) sur 201</title></rect><rect x="271.4" y="108.0" width="14.0" height="50.0" rx="2" fill="#EBD3D8"><title>25/10 : 4 ticket(s) rattaché(s) sur 208</title></rect><line x1="288.8" x2="288.8" y1="0" y2="158" stroke="#e6e0d8"/><text x="292.8" y="174" font-size="10.5" fill="#7a736a">lun. 26/10</text><rect x="292.1" y="120.5" width="14.0" height="37.5" rx="2" fill="#EBD3D8"><title>26/10 : 3 ticket(s) rattaché(s) sur 141</title></rect><rect x="312.7" y="145.5" width="14.0" height="12.5" rx="2" fill="#EBD3D8"><title>27/10 : 1 ticket(s) rattaché(s) sur 123</title></rect><rect x="333.3" y="120.5" width="14.0" height="37.5" rx="2" fill="#EBD3D8"><title>28/10 : 3 ticket(s) rattaché(s) sur 119</title></rect><rect x="353.9" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>29/10 : 2 ticket(s) rattaché(s) sur 125</title></rect><rect x="374.6" y="83.0" width="14.0" height="75.0" rx="2" fill="#EBD3D8"><title>30/10 : 6 ticket(s) rattaché(s) sur 154</title></rect><text x="381.6" y="79.0" font-size="10.5" text-anchor="middle" fill="#5c5852">6</text><rect x="395.2" y="20.5" width="14.0" height="137.5" rx="2" fill="#EBD3D8"><title>31/10 : 11 ticket(s) rattaché(s) sur 188</title></rect><text x="402.2" y="16.5" font-size="10.5" text-anchor="middle" fill="#5c5852">11</text><rect x="415.8" y="70.5" width="14.0" height="87.5" rx="2" fill="#EBD3D8"><title>01/11 : 7 ticket(s) rattaché(s) sur 204</title></rect><text x="422.8" y="66.5" font-size="10.5" text-anchor="middle" fill="#5c5852">7</text><line x1="433.1" x2="433.1" y1="0" y2="158" stroke="#e6e0d8"/><text x="437.1" y="174" font-size="10.5" fill="#7a736a">lun. 02/11</text><rect x="436.4" y="108.0" width="14.0" height="50.0" rx="2" fill="#EBD3D8"><title>02/11 : 4 ticket(s) rattaché(s) sur 143</title></rect><rect x="457.1" y="83.0" width="14.0" height="75.0" rx="2" fill="#EBD3D8"><title>03/11 : 6 ticket(s) rattaché(s) sur 117</title></rect><text x="464.1" y="79.0" font-size="10.5" text-anchor="middle" fill="#5c5852">6</text><rect x="477.7" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>04/11 : 2 ticket(s) rattaché(s) sur 133</title></rect><rect x="498.3" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>05/11 : 2 ticket(s) rattaché(s) sur 113</title></rect><rect x="518.9" y="120.5" width="14.0" height="37.5" rx="2" fill="#EBD3D8"><title>06/11 : 3 ticket(s) rattaché(s) sur 155</title></rect><rect x="539.5" y="58.0" width="14.0" height="100.0" rx="2" fill="#EBD3D8"><title>07/11 : 8 ticket(s) rattaché(s) sur 220</title></rect><text x="546.6" y="54.0" font-size="10.5" text-anchor="middle" fill="#5c5852">8</text><rect x="560.2" y="133.0" width="14.0" height="25.0" rx="2" fill="#EBD3D8"><title>08/11 : 2 ticket(s) rattaché(s) sur 204</title></rect><line x1="577.5" x2="577.5" y1="0" y2="158" stroke="#e6e0d8"/><text x="581.5" y="174" font-size="10.5" fill="#7a736a">lun. 09/11</text><rect x="580.8" y="108.0" width="14.0" height="50.0" rx="2" fill="#B03048"><title>09/11 : 4 ticket(s) rattaché(s) sur 131</title></rect><text x="587.8" y="104.0" font-size="10.5" text-anchor="middle" fill="#5c5852">4</text><rect x="601.4" y="120.5" width="14.0" height="37.5" rx="2" fill="#B03048"><title>10/11 : 3 ticket(s) rattaché(s) sur 154</title></rect><text x="608.4" y="116.5" font-size="10.5" text-anchor="middle" fill="#5c5852">3</text><rect x="622.0" y="70.5" width="14.0" height="87.5" rx="2" fill="#B03048"><title>11/11 : 7 ticket(s) rattaché(s) sur 226</title></rect><text x="629.1" y="66.5" font-size="10.5" text-anchor="middle" fill="#5c5852">7</text><rect x="642.7" y="158.0" width="14.0" height="0.0" rx="2" fill="#B03048"><title>12/11 : 0 ticket(s) rattaché(s) sur 76</title></rect><text x="649.7" y="154.0" font-size="10.5" text-anchor="middle" fill="#5c5852">0</text><line x1="0" x2="660" y1="158" y2="158" stroke="#e6e0d8"/></svg>
+        <div class="legend-chart"><span><i class="dot" style="background:#B03048"></i>cette semaine</span><span><i class="dot" style="background:#EBD3D8"></i>semaines précédentes</span><span>au survol : le nombre sur les tickets particuliers du jour</span></div>
+      </section>
+
+      <section class="card">
+        <h2>D’où viennent les 14 liens</h2>
+        <div class="split" aria-hidden="true"><span style="width:35.7%;background:#6B4FBB"></span><span style="width:50%;background:#B8B2A8"></span><span style="width:14.3%;background:#8D1D2C"></span></div>
+        <div class="legend">
+          <div><i class="dot" style="background:#6B4FBB"></i>Commandes webshop<span class="num">5</span></div>
+          <div><i class="dot" style="background:#B8B2A8"></i>Commandes encaissées en caisse<span class="num">7</span></div>
+          <div><i class="dot" style="background:#8D1D2C"></i>Ventes au comptoir, client identifié<span class="num">2</span></div>
+        </div>
+        <p class="foot">Seule la dernière ligne mesure la fidélité : un client qui achète au comptoir et se fait reconnaître. Une commande porte toujours son client.</p>
+      </section>
+    </div>
+
+    <div class="grid">
+      <section class="card" style="padding:0;overflow:hidden">
+        <div style="padding:1.25rem 1.25rem .25rem"><h2>Semaine après semaine</h2></div>
+        <table>
+          <thead><tr><th>Semaine</th><th class="num">Tickets partic.</th><th class="num">Rattachés</th><th class="num">Taux</th><th class="num">Comptoir</th><th class="num">CA identifié</th></tr></thead>
+          <tbody>
+            <tr><td>12 oct.</td><td class="num">1 012</td><td class="num">19</td><td class="num">1,9 %</td><td class="num">8</td><td class="num">764 €</td></tr>
+            <tr><td>19 oct.</td><td class="num">1 132</td><td class="num">18</td><td class="num">1,6 %</td><td class="num">5</td><td class="num">677 €</td></tr>
+            <tr><td>26 oct.</td><td class="num">1 054</td><td class="num">33</td><td class="num">3,1 %</td><td class="num">12</td><td class="num">1 360 €</td></tr>
+            <tr><td>2 nov.</td><td class="num">1 085</td><td class="num">27</td><td class="num">2,5 %</td><td class="num">10</td><td class="num">1 139 €</td></tr>
+            <tr class="total"><td>9 nov. <span class="sub">4 jours, jusqu’à jeudi 10 h</span></td><td class="num">587</td><td class="num">14</td><td class="num">2,4 %</td><td class="num"><span class="tag-stop">2</span></td><td class="num">525 €</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card" style="padding:0;overflow:hidden">
+        <div style="padding:1.25rem 1.25rem .25rem"><h2>Le réseau, cette semaine</h2></div>
+        <table>
+          <thead><tr><th>Magasin</th><th class="num">Rattachés</th><th class="num">Comptoir</th></tr></thead>
+          <tbody>
+            <tr><td>Corbais</td><td class="num">24 · 2,5 %</td><td class="num">11</td></tr>
+            <tr class="is-me"><td>Halle <span class="sub">votre magasin</span></td><td class="num">14 · 2,4 %</td><td class="num">2</td></tr>
+            <tr><td>Sombreffe</td><td class="num">7 · 1,3 %</td><td class="num">0</td></tr>
+            <tr><td>Gosselies</td><td class="num">0 · 0,0 %</td><td class="num">0</td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:16px">
+      <h2>Pour que la fidélité compte en caisse</h2>
+      <ol class="steps">
+        <li><span class="step-n is-stop">1</span><div>Activer la carte des clients inscrits<span class="sub">0 client sur 638 a la fidélité active, aucune carte liée. 9 ont un code de scan, dont 4 passés cette semaine (4 commandes webshop, 1 vente au comptoir).</span></div><span style="margin-left:auto"><span class="tag-stop">bloquant</span></span></li>
+        <li><span class="step-n">2</span><div>Scanner la carte avant d’encaisser<span class="sub">Le ticket garde alors le client : c’est ce qui fait monter la colonne « Comptoir ». Objectif proposé : 1 vente au comptoir sur 10 d’ici fin novembre.</span></div><span style="margin-left:auto"><span class="tag-warn">à suivre</span></span></li>
+        <li><span class="step-n">3</span><div>Proposer l’inscription aux clients qui commandent<span class="sub">Les 13 clients reconnus cette semaine viennent tous du webshop : ils ont déjà un compte, il leur manque la carte.</span></div><span style="margin-left:auto"><span class="chip chip--neutral">conseil</span></span></li>
+      </ol>
+    </section>
+
+    <p class="foot">Maquette du 12/11/2026. Chiffres réels de L’Atelier by Halle, lus par l’API du panel (tickets du jour et fiches clients), sans aucune table locale. « Comptoir » : ticket de caisse rattaché à un client, sans commande derrière. L’objectif de l’étape 2 est une proposition, à fixer.</p>
+  </main>
+</div>
+</div>
+</body>
+</html>

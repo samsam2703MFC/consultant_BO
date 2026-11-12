@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Dashboard magasin · Assistant (B, bilan)</title>
+<style>
+:root{--ink:#1c1a17;--muted-2:#5c5852;--muted:#7a736a;--faint:#B8B2A8;--paper:#faf7f2;--table-head:#FBF9F5;--total-line:#F8F4EE;--chip:#EDE7DE;--line:#e6e0d8;--row-line:rgba(34,34,34,.06);--accent:#8D1D2C;--danger:#b3261e;--green:#3f7a52;--prize:#B0792A;--prize-soft:#F6E7CE;--prize-ink:#7A5207;--stop:#A32014;--stop-soft:#F7E0DC;color-scheme:light;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}
+h1,h2,h3,h4,th,b,strong{font-weight:400}
+.workspace{display:flex;height:100vh;overflow:hidden}.workspace__main{flex:1;display:flex;flex-direction:column;min-width:0}
+.app__body{flex:1;overflow-y:auto;padding:22px 24px 40px}.app__body>*{max-width:1180px}
+.sidebar{flex:0 0 246px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding-bottom:24px}
+.sidebar__head{padding:20px 16px 8px}.sidebar__logo{font-size:17px;letter-spacing:.02em;color:var(--ink)}
+.sidebar__kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:9px}
+.sidebar__back{padding:6px 12px 4px}.sidebar__back a{display:flex;align-items:center;gap:9px;background:var(--paper);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__brand{margin:10px 12px 0;padding:8px 10px;font-size:13px;background:var(--table-head);border-radius:9px}
+.sidebar__groups{padding:2px 12px 0}.sidebar__group{margin-top:18px}
+.sidebar__group-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 10px 8px}
+.sidebar__item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__item.is-active{background:rgba(141,29,44,.08);color:var(--accent);font-weight:700}
+svg.i{width:16px;height:16px;flex:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:18px 24px;border-bottom:1px solid var(--line);background:#fff}
+.topbar__kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.topbar h1{font-size:26px;letter-spacing:-.01em;margin:0}.topbar__actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:400 13px/1.2 'Gotham',system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--sm{min-height:30px;padding:5px 11px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.seg button{padding:6px 11px;border:0;border-radius:7px;background:transparent;color:var(--muted-2);font:400 12.5px 'Gotham',system-ui,sans-serif}
+.seg button.is-on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.page-tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.page-tabs__tab{margin:0 0 -1px;padding:8px 12px;border:none;border-bottom:2px solid transparent;background:none;color:var(--muted-2);font:inherit;font-size:13px}
+.page-tabs__tab.is-on{color:var(--accent);border-bottom-color:var(--accent)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+h2{font-size:.95rem;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.section-label__aside{float:right;font-size:11.5px;text-transform:none;letter-spacing:normal;color:var(--muted)}
+.kpi-row{display:flex;flex-wrap:wrap;padding:4px 0}
+.kpi{flex:1;min-width:176px;padding:13px 18px;border-left:3px solid var(--line)}
+.kpi.is-stop{border-left-color:var(--stop)}.kpi.is-warn{border-left-color:var(--prize)}
+.kpi__value{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.kpi__label{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+.kpi__note{font-size:12px;color:var(--muted);margin-top:3px}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--stop);border-radius:12px;background:#fff}
+.verdict p{margin:0;font-size:15px;line-height:1.45}.verdict .muted{font-size:12.5px;margin-top:6px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--table-head);padding:10px 14px}
+tbody td{padding:11px 14px;border-top:1px solid var(--row-line)}
+.num{text-align:right}.sub{display:block;margin-top:2px;font-size:10.5px;color:var(--muted)}
+tr.total td{background:var(--total-line)}tr.is-me td{background:rgba(141,29,44,.04)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11.5px;white-space:nowrap}
+.chip--neutral{background:var(--chip);color:var(--muted-2)}
+.badge--ok{background:rgba(63,122,82,.12);color:var(--green)}
+.tag-warn,.tag-stop{display:inline-flex;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tag-warn{background:var(--prize-soft);color:var(--prize-ink)}.tag-stop{background:var(--stop-soft);color:var(--stop)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.split{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:10px 0 12px;background:var(--chip)}
+.split span{display:block;height:100%}
+.legend{display:grid;gap:9px;font-size:13px}.legend div{display:flex;align-items:center;gap:8px}.legend .num{margin-left:auto}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.steps li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--row-line);font-size:13px;line-height:1.45}
+.steps li:first-child{border-top:0;padding-top:2px}
+.step-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--muted-2);display:flex;align-items:center;justify-content:center;font-size:11.5px}
+.step-n.is-stop{background:var(--stop-soft);color:var(--stop)}
+.steps .sub{font-size:12px}
+.foot{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend-chart{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend-chart span{display:inline-flex;align-items:center;gap:6px}
+
+/* Le dashboard derrière la modale */
+body{background:var(--paper)}
+.fond{max-width:1440px;margin:0 auto;padding:18px 22px 40px}
+.db-head{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.db-titre-v3{font-size:26px;line-height:1.1}.db-sous-v3{font-size:12px;color:var(--muted);margin-top:4px}
+.db-droite{display:flex;gap:10px;align-items:center}
+.db-sel-v3{border:1px solid var(--line);border-radius:7px;padding:6px 10px;font:400 12.5px 'Gotham',system-ui,sans-serif;background:#fff}
+.btn-ia{display:inline-flex;align-items:center;gap:7px;min-height:34px;padding:6px 14px;border-radius:8px;border:1px solid var(--accent);background:var(--accent);color:#fff;font:400 13px 'Gotham',system-ui,sans-serif}
+.db-ong-v3{display:inline-flex;flex-wrap:wrap;background:var(--chip);border-radius:10px;padding:3px;margin:12px 0 16px}
+.db-ong-v3 button{border:0;background:none;border-radius:8px;padding:7px 14px;font:400 12.5px 'Gotham',system-ui,sans-serif;color:var(--muted-2)}
+.db-ong-v3 button.on{background:var(--accent);color:#fff}
+.f-tuiles{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.f-t{background:#fff;border:1px solid var(--line);border-radius:11px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.f-t span{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}.f-t b{font-size:24px;font-weight:400}.f-t small{font-size:11.5px;color:var(--muted)}
+.f-bloc{height:330px;background:#fff;border:1px solid var(--line);border-radius:12px;margin-top:12px}.f-bloc.b2{height:260px}
+.voile{position:fixed;inset:0;background:rgba(24,18,20,.42)}
+
+/* La modale */
+.modale{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:#fff;border-radius:14px;border:1px solid var(--line);display:flex;flex-direction:column;overflow:hidden}
+.m-a{width:1040px;height:720px}.m-b{width:960px;max-height:860px}
+.m-h{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line)}
+.m-h b{display:block;font-weight:400;font-size:16px}.m-h span{font-size:12px;color:var(--muted)}
+.m-ic{width:32px;height:32px;border-radius:8px;background:rgba(141,29,44,.08);color:var(--accent);display:flex;align-items:center;justify-content:center;flex:none}
+.m-x{margin-left:auto;border:0;background:none;font-size:22px;color:var(--muted);cursor:pointer;line-height:1}
+.m-corps{flex:1;display:grid;grid-template-columns:290px 1fr;min-height:0}
+.m-q{border-right:1px solid var(--line);padding:14px 14px;overflow:auto;background:var(--table-head)}
+.m-q-t{margin:0 0 4px;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.q-grp{margin:14px 0 6px;font-size:12px;color:var(--muted-2)}
+.q{display:block;width:100%;text-align:left;margin:0 0 6px;padding:9px 12px;border:1px solid var(--line);border-radius:9px;background:#fff;font:400 13px 'Gotham',system-ui,sans-serif;color:var(--ink);cursor:pointer}
+.q.on{border:2px solid var(--accent);background:rgba(141,29,44,.05);color:var(--accent);padding:8px 11px}
+.m-conv{display:flex;flex-direction:column;min-height:0}
+.fil{flex:1;overflow:auto;padding:18px 22px;display:flex;flex-direction:column;gap:14px}
+.bulle{max-width:88%;font-size:13px;line-height:1.55}
+.bulle.moi{align-self:flex-end;background:var(--accent);color:#fff;padding:9px 14px;border-radius:12px 12px 4px 12px}
+.bulle.ia{align-self:flex-start;background:var(--table-head);border:1px solid var(--line);padding:14px 16px;border-radius:12px 12px 12px 4px}
+.ia-tete{margin:0 0 10px}
+.ia-k{display:grid;grid-template-columns:repeat(4,1fr);gap:0;margin:4px 0 10px;background:#fff;border:1px solid var(--line);border-radius:10px}
+.ia-k div{padding:10px 12px;border-left:1px solid var(--line)}.ia-k div:first-child{border-left:0}
+.ia-k b{display:block;font-size:18px;font-weight:700;letter-spacing:-.02em}.ia-k span{font-size:11px;color:var(--muted)}
+.bulle ul{margin:0;padding-left:18px}.bulle li{margin:4px 0}.bulle li b{font-weight:400;color:var(--accent)}
+.ia-src{margin:10px 0 0;font-size:11px;color:var(--muted)}
+.suites{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:12px;color:var(--muted)}
+.suites button{border:1px solid rgba(34,34,34,.14);background:#fff;border-radius:8px;padding:6px 11px;font:400 12.5px 'Gotham',system-ui,sans-serif;color:var(--muted-2)}
+.saisie{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+.saisie input{flex:1;height:40px;border:1px solid var(--line);border-radius:9px;padding:0 14px;font:400 13px 'Gotham',system-ui,sans-serif}
+.saisie .btn{min-height:40px}
+.m-pied{margin:0;padding:0 18px 12px;font-size:11px;color:var(--muted)}
+
+/* B · Bilan */
+.m-b-corps{padding:16px 20px 18px;overflow:auto}
+.saisie.haut{border:0;padding:0}
+.tqs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.tq{text-align:left;padding:12px 14px;border:1px solid var(--line);border-radius:11px;background:#fff;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.tq b{font-weight:400;font-size:13.5px;color:var(--ink)}.tq span{font-size:11.5px;color:var(--muted)}
+.tq.on{border:2px solid var(--accent);background:rgba(141,29,44,.05);padding:11px 13px}.tq.on b{color:var(--accent)}
+.rep{margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:16px 18px;background:#fff}
+.rep-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px}.rep-h h3{margin:0;font-size:18px;font-weight:400}.rep-h span{font-size:11.5px;color:var(--muted)}
+.rep-intro{margin:6px 0 4px;font-size:13px;color:var(--muted-2)}
+.prio{display:grid;grid-template-columns:32px 1fr auto;gap:14px;align-items:start;padding:14px 0;border-top:1px solid var(--row-line)}
+.prio:first-of-type{border-top:0}
+.prio-n{width:26px;height:26px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px}
+.prio h4{margin:2px 0 4px;font-size:15px;font-weight:400}.prio p{margin:0;font-size:13px;line-height:1.5;color:var(--muted-2)}
+.prio-g{margin-top:6px!important;display:inline-block;padding:3px 9px;border-radius:6px;background:var(--prize-soft);color:var(--prize-ink)!important;font-size:12px!important}
+.rep-pied{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:6px;padding-top:12px;border-top:1px solid var(--row-line);font-size:11px;color:var(--muted)}
+.avis{display:flex;gap:6px}
+</style></head>
+<body><div class="fond"><div class="db-head"><div><div class="db-titre-v3">Dashboard magasin</div><div class="db-sous-v3">L’Atelier by Halle · jeudi 12 novembre</div></div>
+      <div class="db-droite"><button class="btn-ia"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg>Assistant</button><select class="db-sel-v3"><option>L’Atelier by Halle</option></select></div></div>
+      <div class="db-ong-v3"><button class="on">Opérationnel</button><button class="">Tâches</button><button class="">Semaine</button><button class="">Mois</button><button class="">Trimestre</button><button class="">Année</button><button class="">Produits</button><button class="">Promotions</button><button class="">Primes</button><button class="">Concurrence</button><button class="">Temps morts</button><button class="">Fidélité</button></div>
+      <div class="f-tuiles"><div class="f-t"><span>CA hier</span><b>3 492 €</b><small>mercredi 11, férié</small></div><div class="f-t"><span>Tickets</span><b>226</b><small>4,96 articles</small></div><div class="f-t"><span>Panier</span><b>15,45 €</b><small>mois : 13,50 €</small></div><div class="f-t"><span>Semaine</span><b>6 755 €</b><small>lun. → mer.</small></div><div class="f-t"><span>Mois</span><b>24 344 €</b><small>1er → 11</small></div><div class="f-t"><span>Contrôles</span><b>0 / 75</b><small>à midi</small></div></div><div class="f-bloc"></div><div class="f-bloc b2"></div></div><div class="voile"></div><div class="modale m-b" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
+  <header class="m-h"><span class="m-ic"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg></span><div><b>Assistant du magasin</b><span>L’Atelier by Halle</span></div><button class="m-x" aria-label="Fermer">×</button></header>
+  <div class="m-b-corps">
+    <div class="saisie haut"><input type="text" placeholder="Posez votre question : « pourquoi mardi est faible ? », « quoi mettre en avant samedi ? »…"><button class="btn btn--primary">Demander</button></div>
+    <div class="tqs"><button class="tq"><b>Comment s’est passée ma semaine ?</b><span>ventes, équipe, contrôles, clients</span></button><button class="tq on"><b>Que puis-je améliorer ?</b><span>les trois priorités, chiffrées</span></button><button class="tq"><b>Qu’est-ce qui marche le mieux ?</b><span>jours, produits, moments</span></button><button class="tq"><b>Comment va ma journée ?</b><span>à cette heure, face à l’objectif</span></button></div>
+    <section class="rep">
+      <div class="rep-h"><h3>Que puis-je améliorer ?</h3><span>semaine du 2 au 8 novembre, et cette semaine · lu à 11 h 59</span></div>
+      <p class="rep-intro">Trois priorités, de la plus rentable à la plus simple :</p>
+      <article class="prio"><span class="prio-n">1</span><div><h4>Faire monter le panier moyen</h4><p>13,13 € la semaine dernière, sous le seuil bas du réseau (18 €). Samedi et dimanche, il passe 15 € ; du lundi au vendredi, il reste entre 11 et 12 €.</p><p class="prio-g">+ 1 € de panier sur 1 086 tickets = + 1 086 € par semaine</p></div><button class="btn btn--sm">Voir mes produits ›</button></article><article class="prio"><span class="prio-n">2</span><div><h4>Remettre les contrôles en route</h4><p>0 tâche cochée sur 75 aujourd’hui à midi ; entre 0 et 34 % les sept derniers jours. L’ouverture (6 h – 9 h) n’est presque jamais validée.</p><p class="prio-g">22 tâches d’ouverture à cocher chaque matin</p></div><button class="btn btn--sm">Ouvrir les contrôles ›</button></article><article class="prio"><span class="prio-n">3</span><div><h4>Jeter moins de viennoiserie</h4><p>Cette semaine : croissant 12 % des ventes jetées, baulus 25 %, tortillon 15 %, presque tout pour date dépassée.</p><p class="prio-g">146 pièces jetées depuis lundi, 264,53 € de ventes</p></div><button class="btn btn--sm">Voir les pertes ›</button></article>
+      <div class="rep-pied"><span>Rédigé par l’assistant à partir des ventes, du P&amp;L, des contrôles et des pertes du magasin. Vérifiez avant d’agir.</span><span class="avis"><button class="btn btn--sm">Utile</button><button class="btn btn--sm">Pas utile</button><button class="btn btn--sm">Copier</button></span></div>
+    </section>
+  </div></div></body></html>

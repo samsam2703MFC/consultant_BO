@@ -1,0 +1,45 @@
+<body><div class="workspace">{{RAIL}}
+<div class="workspace__main">
+  <header class="topbar">
+    <div><p class="topbar__kicker">Vue Franchisé · L’Atelier by Halle</p><h1>Fidélité</h1></div>
+    <div class="topbar__actions"><div class="seg"><button>30 jours</button><button class="is-on">90 jours</button><button>Année</button></div><a class="btn btn--primary" href="#">Inscrire un client</a></div>
+  </header>
+  <main class="app__body">
+    <nav class="page-tabs"><button class="page-tabs__tab">En caisse</button><button class="page-tabs__tab is-on">Profils clients</button><button class="page-tabs__tab">Programme</button><button class="page-tabs__tab">Récompenses</button></nav>
+
+    <p class="section-label" style="margin-top:0">Les profils des clients scannés <span class="section-label__aside">209 clients reconnus en caisse sur 90 jours · 253 tickets sur 13 173, soit 1 sur 52</span></p>
+    <div class="tiles">{{LADDER}}</div>
+
+    <div class="g2">
+      <section class="card">
+        <h2>Récurrence <span class="section-label__aside">0 au centre, 100 au bord</span></h2>
+        {{RCOMP}}
+        <div class="lgs">{{LEG}}</div>
+      </section>
+      <section class="card">
+        <h2>Type d’achat <span class="section-label__aside">part des articles, en %</span></h2>
+        {{RFAM}}
+        <div class="lgs">{{LEG}}</div>
+      </section>
+      <section class="card">
+        <h2>Ce que dit le profil Habitué</h2>
+        <ul class="ins">
+          <li><b>Il vient pour le quotidien</b>75 % de pain, un panier de 13,30 € : trois fois moins que la moyenne des clients scannés.</li>
+          <li><b>Il commande plus qu’il ne passe</b>78 % de ses tickets passent par une commande ; au comptoir, il n’est presque jamais reconnu.</li>
+          <li><b>Il revient au moins deux fois par mois</b>Les deux habitués sont passés hier, l’un 16 fois en 3 mois : c’est lui que la carte doit récompenser en premier.</li>
+        </ul>
+        <p class="hint">Cliquer une vignette affiche son profil dans les deux radars.</p>
+      </section>
+    </div>
+
+    <section class="card table-card" style="padding:0;overflow:hidden;margin-top:16px">
+      <div style="padding:1.25rem 1.25rem .25rem"><h2>Les clients qui reviennent <span class="section-label__aside">réguliers et habitués · à l’écran du magasin, le prénom et l’initiale du nom</span></h2></div>
+      <table>
+        <thead><tr><th>Client</th><th>Profil</th><th class="num">Fréquence</th><th>Dernier passage</th><th class="num">Panier</th><th>Achète surtout</th><th>Action proposée</th></tr></thead>
+        <tbody>{{CARDS}}</tbody>
+      </table>
+    </section>
+
+    <p class="foot">Maquette du 12/11/2026. Chiffres réels de L’Atelier by Halle sur 90 jours (14/08 → 11/11/2026), lus par l’API du panel sans aucune table locale : tickets du jour (<code>/shops/4/transactions</code>), lignes des 253 tickets scannés (<code>/transactions/{id}?include=products</code>), catalogue (<code>/products</code>). Aucun client n’a encore la fidélité active : les profils se lisent aux achats. Les clients sont anonymisés (A à F). Conditions, échelles et actions : des propositions, à trancher.</p>
+  </main>
+</div></div></body></html>
