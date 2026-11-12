@@ -580,6 +580,63 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | Robotique en production | 13 000 pièces par semaine en viennoiserie et boulangerie | | devis T2 2027 |
 | Contrôles (4 visites par mois et par magasin) | standards tenus et chiffres fiables partout | | T1 2027 |
 
+### Les 48 références à couper d'abord
+
+À arrêter avec l'usine en janvier 2027 : ces références se vendent moins d'une fois par jour dans tout le réseau et tournent sous ×2,5. Ensemble, elles font 17 888 € de CA HT sur la période du 3 août au 7 novembre 2026, soit environ 67 k€ par an. Elles se coupent dans les quatre magasins à la fois. Deux cas se tranchent à part : les 11 glaces Glace by Rawette suivent la décision de l'audit du partenaire (partie 5), et les deux Saint-Nicolas sont revus après leur saison.
+
+| Référence | Famille | Coefficient | Pièces par semaine (réseau) | CA HT sur la période | Magasins |
+| --- | --- | --- | --- | --- | --- |
+| Cannelloni - tomates séchées, chèvre & courgettes | Traiteur | ×2,17 | 0,6 | 89 € | 2 |
+| FlipFlap - Légumes Grillés & Jambon Cru | Traiteur | ×2,03 | 1,4 | 98 € | 2 |
+| Plateau apéritif | Traiteur | ×1,95 | 3,5 | 643 € | 2 |
+| FlipFlap - Fromage Gouda Jeune | Traiteur | ×2,28 | 5,1 | 380 € | 3 |
+| FlipFlap - Jambon alle erbe | Traiteur | ×2,20 | 5,5 | 382 € | 3 |
+| TartoCake - Pommes | Tartes | ×2,38 | 0,8 | 138 € | 2 |
+| Frangipane & Abricots | Tartes | ×2,44 | 2,2 | 731 € | 4 |
+| Abricot & Cerise | Tartes | ×2,47 | 2,5 | 724 € | 4 |
+| Frangipane & Pommes | Tartes | ×2,37 | 3,1 | 1 017 € | 2 |
+| Rhubarbe | Tartes | ×1,71 | 4,7 | 900 € | 3 |
+| Fromage citronné & coulis de framboises | Tartes | ×2,45 | 5,2 | 1 408 € | 4 |
+| Passion Sauvage | Tartes | ×2,38 | 5,7 | 1 521 € | 4 |
+| Crème Glacée Chocolat 200ml | Épicerie | ×1,25 | 0,6 | 47 € | 2 |
+| Crème Glacée Vanille - 200 ml | Épicerie | ×1,25 | 0,7 | 52 € | 2 |
+| Crème Glacée Stratiatella - 200 ml | Épicerie | ×1,25 | 0,7 | 52 € | 3 |
+| Crème Glacée Spéculoos - 200 ml | Épicerie | ×1,25 | 0,7 | 52 € | 3 |
+| Sorbet Passion & Mangue 600 ml | Épicerie | ×1,43 | 0,8 | 114 € | 4 |
+| Melocake Spéculoos – Boîte de 3 | Épicerie | ×1,69 | 0,8 | 32 € | 2 |
+| Sorbet Framboise 600 ml | Épicerie | ×1,43 | 0,9 | 135 € | 3 |
+| Sorbet Fraise 600 ml | Épicerie | ×1,30 | 1,0 | 145 € | 4 |
+| Crème Glacée Spéculoos - 600 ml | Épicerie | ×1,43 | 2,2 | 311 € | 4 |
+| Granola - Citron & Bleuet | Épicerie | ×2,05 | 2,2 | 270 € | 3 |
+| Crème Glacée Stratiatella - 600 ml | Épicerie | ×1,43 | 2,5 | 363 € | 4 |
+| Melocake Pistache – Boîte de 3 | Épicerie | ×1,69 | 2,5 | 130 € | 2 |
+| Crème Glacée Chocolat 600 ml | Épicerie | ×1,30 | 2,7 | 394 € | 4 |
+| Crème Glacée Vanille 600 ml | Épicerie | ×1,43 | 2,7 | 394 € | 4 |
+| Granola - Noisette & Chocolat | Épicerie | ×2,23 | 2,7 | 344 € | 3 |
+| Melocake Noir – Boîte de 3 | Épicerie | ×1,69 | 3,0 | 138 € | 2 |
+| Melocake – Boîte de 10 | Épicerie | ×1,59 | 3,8 | 583 € | 2 |
+| Framboise & Chocolat - 180⌀ | Pâtisserie | ×2,45 | 1,2 | 348 € | 4 |
+| Opéra Ind. | Pâtisserie | ×1,89 | 1,7 | 98 € | 2 |
+| Duo Chocolat & Passion Ind. | Pâtisserie | ×2,36 | 5,4 | 315 € | 3 |
+| Tiramisu | Pâtisserie | ×1,58 | 5,6 | 254 € | 3 |
+| Mousse au chocolat | Pâtisserie | ×1,41 | 6,1 | 291 € | 3 |
+| Briochette Sucre | Boulangerie | ×1,82 | 0,6 | 8 € | 3 |
+| Focaccia - Pesto Rosso | Boulangerie | ×2,00 | 3,3 | 161 € | 3 |
+| Blanc (Pauvre en Gluten) - 600 g. | Boulangerie | ×1,92 | 3,9 | 201 € | 4 |
+| Focaccia - Olives | Boulangerie | ×1,99 | 6,3 | 307 € | 3 |
+| Rocher Coco - pièces | Biscuiterie | ×1,02 | 1,3 | 17 € | 2 |
+| Pecan - 100 g. | Biscuiterie | ×2,24 | 1,5 | 97 € | 4 |
+| Entremet 120Ø - Framboise & Chocolat | Pâtisserie · Tartes | ×2,19 | 0,9 | 169 € | 2 |
+| Entremet 120Ø - Caramel & Noisette | Pâtisserie · Tartes | ×1,66 | 3,0 | 592 € | 3 |
+| Entremet 120Ø - Tiramisu | Pâtisserie · Tartes | ×2,19 | 4,0 | 832 € | 3 |
+| Entremet 120Ø - Bombe Chocolat | Pâtisserie · Tartes | ×1,38 | 4,3 | 747 € | 3 |
+| Saint Nicolas - Lait | Fêtes & Occasions | ×1,47 | 0,8 | 104 € | 4 |
+| Saint Nicolas - Massepain | Fêtes & Occasions | ×1,47 | 0,9 | 123 € | 1 |
+| Baguette Tradition - B.2 B. | B. 2 B. | ×1,46 | 0,9 | 486 € | 1 |
+| Tian de Legumes | Quiches | ×1,73 | 5,2 | 1 151 € | 4 |
+
+Détail complet de la traîne, avec les 51 références encore sans coût de recette, en annexe 7.
+
 ### Prochaines étapes
 
 Les échéances ci-dessous sont des propositions ; les responsables restent à désigner.
