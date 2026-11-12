@@ -41,10 +41,11 @@ class PositionController extends BaseController
         ]));
     }
 
+    /** [290] Moje zadania = strona « Dzisiaj i zadania » (makieta 51, jedna strona bez zakładek). */
     public function myTasks()
     {
-        $userId = $this->userId();
-        $this->view('organization/my_tasks', $this->asMember($userId ? $this->service->myTasks($userId) : ['user' => null, 'groups' => [], 'overdue' => [], 'counts' => []]));
+        header('Location: ' . ROOT . '/today#zadania', true, 302);
+        exit;
     }
 
     public function setStatus($id)

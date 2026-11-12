@@ -22,7 +22,8 @@ final class Rail
         // [281] Kontrola (profil CEO) : administrator i konta CEO.
         'control' => ['Kontrola', 'bi-binoculars', '', '/control', [], null],
         // [286] Dzisiaj i zadania (jedna pozycja) : Dzisiaj (Mój tydzień) i Moje zadania w zakładkach — w railu każdego profilu.
-        'today' => ['Dzisiaj i zadania', 'bi-sun', '', '/today', ['/my-card', '/tasks'], null],
+        // [290] Dzisiaj i zadania : jedna strona (makieta 51) — /my-tasks przenosi na /today#zadania.
+        'today' => ['Dzisiaj i zadania', 'bi-sun', '', '/today', ['/my-tasks', '/my-card', '/tasks'], null],
         'mail' => ['Poczta', 'bi-envelope', '', '/mail', [], 'mail'],
         'team_tasks' => ['Zadania zespołu', 'bi-people', '', '/organization/team-tasks', [], null],
         'profitability' => ['Rentowność', 'bi-graph-up', 'Analiza', '/dashboard', [], null],

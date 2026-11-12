@@ -29,13 +29,22 @@
 {% endmacro %}
 {% import _self as wk %}
 
-{% block title %}Dzisiaj{% endblock %}
+{% block title %}Dzisiaj i zadania{% endblock %}
 
 {% block page_heading %}
-    <div class="page-heading">
+    {# [290] Dzisiaj i zadania : jedna strona (makieta 51) — zadania na górze, bez zakładek ; liczniki i Protokoły w nagłówku. #}
+    <div class="page-heading at-profit-head at-today-head">
         <div class="page-title">
-            <h3>Dzisiaj</h3>
-            <p class="text-subtitle text-muted">{{ today|day_pl }}</p>
+            <h3>Dzisiaj i zadania</h3>
+            <p class="text-subtitle text-muted">{{ today|day_pl }}{% if member and member.position_name %} · {{ member.position_name }}{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            {% if week and week.flow is defined and member and member.id_position %}{% set f0 = week.flow %}
+            <span class="at-count is-todo">do zrobienia {{ (f0.today|length) + (f0.now and not f0.now.late ? 1 : 0) }}</span>
+            {% if f0.late|length %}<span class="at-count is-late">zaległe {{ f0.late|length }}</span>{% endif %}
+            <span class="at-count is-done">zrobione {{ week.totals.done }}</span>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
         </div>
     </div>
 {% endblock %}
@@ -43,52 +52,9 @@
 {% block content %}
 <section class="section at-today">
 
-    {# --- Cztery liczby dnia -------------------------------------------------- #}
-    <div class="at-tiles">
-        <a class="at-tile" href="{{ root }}/client-orders">
-            <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
-            {% if next %}
-                <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
-                <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
-            {% else %}
-                <strong class="at-tile-value">—</strong>
-                <span class="at-tile-meta">Brak otwartych zamówień</span>
-            {% endif %}
-        </a>
-
-        <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/workshop/team-sheet">
-            <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
-            {% if not next %}
-                <strong class="at-tile-value">—</strong>
-                <span class="at-tile-meta">Nic nie jest zamówione</span>
-            {% elseif missing.products %}
-                <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
-                <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
-            {% else %}
-                <strong class="at-tile-value">Wszystko na stanie</strong>
-                <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
-            {% endif %}
-        </a>
-
-        {% set open_complaints = complaints.new + complaints.review %}
-        <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
-            <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
-            <strong class="at-tile-value">{{ open_complaints }}</strong>
-            <span class="at-tile-meta">
-                {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
-            </span>
-        </a>
-
-        <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
-            <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
-            <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
-            <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
-        </a>
-    </div>
-
     <div class="row">
         {# --- Mój tydzień : zadania stałe stanowiska dzień po dniu (plan ustala administrator) --- #}
-        <div class="col-12">
+        <div class="col-12" id="zadania">
             {% if not member or not member.id_position %}
             <div class="card at-mytasks">
                 <div class="card-header"><h4 class="card-title mb-0">Mój tydzień</h4><span class="at-sub">bez stanowiska</span></div>
@@ -136,7 +102,7 @@
                         <p class="mt-who">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</p>
                     </div>
                     <div class="mt-box mt-links">
-                        <a href="{{ root }}/my-tasks"><i class="bi bi-list-check"></i> Wszystkie moje zadania</a>
+                        <a href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły zadań</a>
                         {% if can_see('/organization/execution') %}<a href="{{ root }}/organization/execution"><i class="bi bi-people"></i> Kto co zrobił</a>{% endif %}
                         {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Zadania stanowiska</a>{% endif %}
                     </div>
@@ -162,6 +128,51 @@
         {# [284] Sesja / stanowisko Produkcja (kierownik produkcji) : tylko zadania — bez wskaźników, rentowności grup,
            planu wysyłek, « Do zrobienia » i ostatnich zamówień. #}
         {% if not tasks_focus %}
+        {# [290] Liczby dnia : pod zadaniami (makieta 51) ; sesja Produkcja — bez nich. #}
+        <div class="col-12">
+    {# --- Cztery liczby dnia -------------------------------------------------- #}
+        <div class="at-tiles">
+            <a class="at-tile" href="{{ root }}/client-orders">
+                <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
+                {% if next %}
+                    <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
+                    <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
+                {% else %}
+                    <strong class="at-tile-value">—</strong>
+                    <span class="at-tile-meta">Brak otwartych zamówień</span>
+                {% endif %}
+            </a>
+
+            <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/workshop/team-sheet">
+                <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
+                {% if not next %}
+                    <strong class="at-tile-value">—</strong>
+                    <span class="at-tile-meta">Nic nie jest zamówione</span>
+                {% elseif missing.products %}
+                    <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
+                    <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
+                {% else %}
+                    <strong class="at-tile-value">Wszystko na stanie</strong>
+                    <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
+                {% endif %}
+            </a>
+
+            {% set open_complaints = complaints.new + complaints.review %}
+            <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
+                <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
+                <strong class="at-tile-value">{{ open_complaints }}</strong>
+                <span class="at-tile-meta">
+                    {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
+                </span>
+            </a>
+
+            <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
+                <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
+                <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
+                <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
+            </a>
+        </div>
+        </div>
         {# --- Wskaźniki kierownika produkcji (dyrekcja) : cele i wyniki z modułu --- #}
         {% if manager_kpis %}
         <div class="col-12">

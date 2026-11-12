@@ -4036,3 +4036,10 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .hr-leave { min-width: 120px; }
 .hr-leave-in { width: 76px; margin-left: auto; text-align: right; font-variant-numeric: tabular-nums; }
 .hr-leave .tm-sub { white-space: normal; }
+
+/* [290] Dzisiaj i zadania (makieta 51) : liczniki w nagłówku — prostokąty z zaokrąglonymi rogami. */
+.at-count { display: inline-block; padding: 5px 11px; border-radius: 8px; font-size: 12.5px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.at-count.is-todo { background: #f6ead6; color: #8a5a12; }
+.at-count.is-late { background: rgba(196, 30, 58, .09); color: #C41E3A; }
+.at-count.is-done { background: rgba(46, 125, 79, .1); color: #2E7D4F; }
+#zadania { scroll-margin-top: 90px; }
