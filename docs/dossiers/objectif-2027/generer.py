@@ -58,10 +58,10 @@ def fig_patisserie():
 def fig_feuille_de_route():
     voies = ['Gamme pâtisserie', 'Réseau et process', 'Outils (développement continu)']
     trim = [('T1 2027', 'janv. – mars', [['Recettes complètes au panel', 'Prix usine du gâteau 10 parts', 'Test à la part : 1 magasin', 'Coupes de gamme arrêtées', 'Kit décor anniversaire unique'],
-                                        ['Corbais et Sombreffe : 80 % des tâches sur la tablette', 'Avenant +0,5 % signé', 'Tenue et packaging choisis'],
+                                        ['Corbais et Sombreffe : 80 % des tâches sur la tablette', 'Avenant +0,5 % signé', 'Tenue et packaging choisis', 'Anderlues : formation, puis ouverture en mars'],
                                         ['Cockpit : coefficient réel par produit, 4+1 compris']]),
             ('T2 2027', 'avr. – juin', [['Vente à la part : 4 magasins', 'Grille de prix unique', 'Entremets revus à ×3'],
-                                       ['Majoration en vigueur', '1re formation franchisé : 4 semaines, 4 magasins', 'Tenue et packaging en place'],
+                                       ['Majoration en vigueur', 'Dour : formation en mai, ouverture en juin', 'Tenue et packaging en place'],
                                        ['Tablette : invendus à la part', 'Parcours stagiaire 4 semaines']]),
             ('T3 2027', 'juil. – sept.', [['Reste de la gamme à ×3', 'Bilan des marges à 6 mois'], ['Contrôle des SOP au scoring trimestriel'],
                                          ['Alerte sous 80 % de tâches', 'Brouillon de mise en demeure']]),

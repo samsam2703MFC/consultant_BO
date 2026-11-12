@@ -47,7 +47,8 @@ Nos trois priorités pour 2027 :
 | Indicateur réseau | Aujourd'hui | Objectif 2027 |
 | --- | --- | --- |
 | Food cost | 39,4 % | 37 % |
-| Tâches rendues sur la tablette (T3) | 19 % | 100 % au 1er mars |
+| Tâches obligatoires rendues (T3) | 22 % (860 sur 3 932) | 100 % au 1er mars |
+| Tâches non obligatoires rendues (T3) | 15 % (465 sur 3 027) | au moins 80 % |
 | Produits avec une recette chiffrée au panel | 372 sur 533 (70 %) | 533 sur 533 (100 %) |
 | Produits au même prix dans les 4 magasins | 1 sur 5 | question ouverte (voir « Les prix ») |
 | Références vendues moins d'une fois par jour | 163 | coupées ou chiffrées |
@@ -241,6 +242,18 @@ Le CA progresse peu à périmètre constant (de −1 % à +7 %) et le food cost 
 | Halle | 427 k€ (ouverture le 20 février) | nouveau magasin | 630 k€ | 37,8 % | 81,2 % | 34 % (586 sur 1 742) |
 | Sombreffe | 515 k€ | −0,8 % (mai → oct.) | 622 k€ | 40,5 % | 92,3 % | 0 % (0 sur 1 739) |
 | Réseau | 2 995 k€ | | 3 700 k€ | 39,4 % | | 19 % (1 325 sur 6 959) |
+
+Tâches rendues au 3e trimestre, obligatoires et non obligatoires (une tâche obligatoire non faite met la journée à 0 dans le scoring) :
+
+| Magasin | Obligatoires rendues | Non obligatoires rendues | Total |
+| --- | --- | --- | --- |
+| Corbais | 0 % (2 sur 983) | 0 % (2 sur 756) | 0 % (4 sur 1 739) |
+| Gosselies | 44 % (434 sur 983) | 40 % (301 sur 756) | 42 % (735 sur 1 739) |
+| Halle | 43 % (424 sur 983) | 21 % (162 sur 759) | 34 % (586 sur 1 742) |
+| Sombreffe | 0 % (0 sur 983) | 0 % (0 sur 756) | 0 % (0 sur 1 739) |
+| Réseau | 22 % (860 sur 3 932) | 15 % (465 sur 3 027) | 19 % (1 325 sur 6 959) |
+
+Les tâches obligatoires sont surtout les photos des comptoirs (biscuiterie, boissons, pâtisseries, traiteur…) et les contrôles qualité : 15 tâches par magasin, marquées obligatoires dans le panel.
 
 Le résultat opérationnel n'est pas comparable d'une année à l'autre : les frais généraux n'étaient pas encodés début 2025, et Corbais les encode à 0 depuis octobre 2026. C'est déjà un argument pour des outils remplis partout de la même façon.
 
