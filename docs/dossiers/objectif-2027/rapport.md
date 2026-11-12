@@ -173,7 +173,20 @@ Le 4+1 (5 parts) tient juste dans la boîte M, remplie à 71 %.
 
 > [Idée : la caisse allume la bonne boîte] Une LED au-dessus de chaque emplacement de boîte, pilotée par la caisse via un Arduino. Quand la vendeuse encode l'article (1/4, 4+1, tarte entière…), la caisse envoie le format à la carte, qui allume la LED de la bonne boîte : pas d'erreur de format, un geste plus rapide, et chaque boîte sortie est comptée (100 % tracé, réassort du packaging).
 
-- À vérifier : la caisse doit pouvoir envoyer un signal à chaque article (réseau ou USB) ; une carte avec Wi-Fi, de type ESP32, évite les câbles. Matériel à chiffrer.
+- À vérifier : la caisse doit pouvoir envoyer un signal à chaque article (réseau ou USB) ; une carte avec Wi-Fi, de type ESP32, évite les câbles. Budget ci-dessous.
+
+Budget du packaging et des LED en 2027 :
+
+| Poste | Montant 2027 | Financé par |
+| --- | --- | --- |
+| Développement du packaging : 3 boîtes S, M, L | 5 000 à 6 500 € | budget marque |
+| Réassort des boîtes | environ 74 k€ pour le réseau (2 % du CA) | poste emballage de chaque magasin |
+| LED : prototype dans le magasin pilote (carte ESP32, 3 LED, alimentation, fixations) | environ 100 € | développement continu des outils |
+| LED : les 3 autres magasins | 50 à 80 € par magasin, 150 à 250 € | développement continu des outils |
+| Liaison caisse → carte (programme) | en interne, avec le cockpit ; à confirmer selon ce que la caisse permet | développement continu des outils |
+| Total LED, 4 magasins | environ 250 à 350 € de matériel | |
+
+Les montants LED sont estimés sur des prix publics courants de composants, à confirmer par devis ; le graphisme des boîtes est compris dans la mise au point graphique (3 000 €).
 
 ### Adapter les gammes : il y aura des coupes
 
@@ -553,6 +566,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | Coupes de gamme | 163 références à revoir (7,8 % du CA), moins d'invendus | | T1 2027 |
 | Kit décor anniversaire unique | gâteaux d'anniversaire à ×1,9 – ×2,4 aujourd'hui | | T1 2027 |
 | Tenue de travail et packaging uniques | image de marque ; emballage prévu à 2 % du CA | budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € ; réassort de l'emballage : environ 74 k€ pour le réseau | T1 → T2 2027 |
+| Packaging guidé par la caisse (LED et Arduino) | pas d'erreur de boîte, chaque boîte comptée | environ 250 à 350 € de matériel pour les 4 magasins ; programme en interne | prototype T1, 4 magasins T2 |
 | Tablette et SOP dans les 4 magasins | chiffres fiables (19 % des tâches rendues au T3) | | T1 2027 |
 | Formation des nouveaux franchisés | 4 semaines par franchisé | | T2 2027 |
 | Majoration de 0,5 % des royalties | +3,1 à 9 k€ par magasin en défaut | | T2 2027 |
