@@ -54,7 +54,7 @@
       onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
       ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles' }, article1: 'article',
       reserveT: 'Réservé au franchisé et au responsable', reserve: 'réservé', pinResp: 'PIN du responsable', pinRespS: 'Ce document est réservé au franchisé et au responsable du magasin. Tape le PIN du responsable pour l’ouvrir.',
-      rienManuel: 'Aucun article du manuel pour l’instant.', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues', parties: 'parties',
+      rienManuel: 'Aucun article du manuel pour l’instant.', consultT: 'Pour les consultants', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues', parties: 'parties',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
       rienMoment: 'Aucune SOP pour ce moment.',
       etats: { non: 'à lire', lu: 'lu', quiz: 'quiz réussi', vu: 'vu faire', a_revoir: 'à revoir' }, standards: 'standards', panelCoche: 'cochée au panel',
@@ -79,7 +79,7 @@
       onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
       ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels' }, article1: 'artikel',
       reserveT: 'Voorbehouden aan de franchisenemer en de verantwoordelijke', reserve: 'voorbehouden', pinResp: 'PIN van de verantwoordelijke', pinRespS: 'Dit document is voorbehouden aan de franchisenemer en de verantwoordelijke van de winkel. Typ de PIN van de verantwoordelijke om het te openen.',
-      rienManuel: 'Nog geen artikels in het handboek.', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen', parties: 'delen',
+      rienManuel: 'Nog geen artikels in het handboek.', consultT: 'Voor de consultants', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen', parties: 'delen',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
       rienMoment: 'Geen SOP voor dit moment.',
       etats: { non: 'te lezen', lu: 'gelezen', quiz: 'quiz geslaagd', vu: 'voorgedaan', a_revoir: 'opnieuw' }, standards: 'standaarden', panelCoche: 'aangevinkt in het panel',
@@ -235,7 +235,7 @@
      manuel opératoire, 07/11/2026) ── */
   const ONGLETS = ['ouverture', 'journee', 'fermeture', 'manuel'];
   // Un document réservé (acces « responsable », 07/11/2026) se range dans Manuel, quel que soit son moment.
-  const ongletDe = s => s.type === 'Article' || s.acces === 'responsable' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
+  const ongletDe = s => s.type === 'Article' || s.acces === 'responsable' || s.acces === 'consultant' ? 'manuel' : s.moment === 'ouverture' ? 'ouverture' : s.moment === 'fermeture' ? 'fermeture' : 'journee';
   function onglets() {
     const n = k => (S.init.sops || []).filter(s => ongletDe(s) === k && (k === 'manuel' || visible(s))).length;
     return `<div class="tb-moments" role="tablist">${ONGLETS.map(k => `<button role="tab" data-onglet="${k}" class="${S.onglet === k ? 'on' : ''}" aria-selected="${S.onglet === k}">
@@ -260,13 +260,14 @@
     // La journée se lit dans l'ordre : la journée, l'après-midi, puis ce qui se fait au besoin ; ouverture et fermeture par poste.
     const groupes = S.onglet === 'manuel'
       ? [{ l: t().reserveT, res: true, sops: sops.filter(s => s.acces === 'responsable') },
-        { l: t().articlesT, sops: sops.filter(s => s.acces !== 'responsable') }].map(g => Object.assign(g, { sops: g.sops.slice().sort((a, b) => foDe(a).localeCompare(foDe(b), 'fr', { numeric: true }) || L(a.titre).localeCompare(L(b.titre), 'fr')) }))
+        { l: t().consultT, cons: true, sops: sops.filter(s => s.acces === 'consultant') },
+        { l: t().articlesT, sops: sops.filter(s => s.acces !== 'responsable' && s.acces !== 'consultant') }].map(g => Object.assign(g, { sops: g.sops.slice().sort((a, b) => foDe(a).localeCompare(foDe(b), 'fr', { numeric: true }) || L(a.titre).localeCompare(L(b.titre), 'fr')) }))
       : S.onglet === 'journee'
       ? [['journee', t().sousJ.journee], ['apres-midi', t().sousJ['apres-midi']], ['autres', t().sousJ.autres]].map(([m, l]) => ({ l, sops: sops.filter(s => m === 'autres' ? !['journee', 'apres-midi'].includes(s.moment) : s.moment === m) }))
       : POSTES.map(p => ({ l: t().poste[p], sops: sops.filter(s => s.poste === p) })).concat([{ l: t().sansComp, sops: sops.filter(s => !POSTES.includes(s.poste)) }]);
     const corps = groupes.filter(g => g.sops.length).map(g => {
       const vus = g.sops.filter(s => st(s.id) === 'vu').length;
-      return `<div class="tb-grp${g.res ? ' tb-grp--res' : ''}"><div class="sec-t">${g.res ? ICO_CAD : ''}${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
+      return `<div class="tb-grp${g.res ? ' tb-grp--res' : g.cons ? ' tb-grp--cons' : ''}"><div class="sec-t">${g.res ? ICO_CAD : ''}${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
         ${g.sops.map(s => `<button class="tb-sop${s.acces === 'responsable' ? ' res' : ''}" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${s.acces === 'responsable' && !S.acces ? ICO_CAD : ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
           <small>${s.acces === 'responsable' ? esc(t().reserve) + ' · ' : ''}${s.type === 'Article' ? `${foDe(s) ? esc(foDe(s)) + ' · ' : ''}${s.nbEtapes} ${esc(t().parties)}` : `${s.acces === 'responsable' ? 'SOP · ' : ''}${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}`}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
     }).join('') || `<div class="vide">${esc(S.onglet === 'manuel' ? t().rienManuel : S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;

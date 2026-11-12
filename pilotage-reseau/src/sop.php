@@ -62,7 +62,9 @@ const FO_PIN_BLOCAGE_S = 600;           // … de 10 minutes, pour cette personn
 // de ceo_sop. Sur la tablette, un document réservé se range dans l'onglet Manuel, cadenas doré, et ne s'ouvre qu'avec le
 // PIN du responsable. Ce PIN est le réglage `foPinResponsable` (ceo_app_setting) ; tant qu'il n'est pas posé, le PIN
 // PROVISOIRE ci-dessous — à remplacer en fin de développement (le réglage, ou le PIN de la personne au panel).
-const FO_ACCES = ['tous', 'responsable'];
+// « consultant » (12/11/2026, client : « une section pour les consultants ») : ouvert à tous, sans PIN ; la tablette le
+// range dans le groupe « Pour les consultants » de l'onglet Manuel.
+const FO_ACCES = ['tous', 'responsable', 'consultant'];
 const FO_PIN_RESPONSABLE_PROVISOIRE = '1111';
 const FO_EQUIPE_CACHE_S = 6 * 3600;     // les noms et rôles du panel, gardés 6 h (jamais le PIN)
 const FO_COMPETENCES_CACHE_S = 86400;   // la liste des compétences du panel, gardée un jour
@@ -1617,8 +1619,9 @@ function foStats(array $c): array
 }
 
 /** Une SOP telle que l'API la rend (sans son contenu). */
-/** L'accès d'un document : « responsable » (réservé, PIN du responsable sur la tablette) ou « tous ». */
-function foAcces(array $r): string { return ($r['acces'] ?? null) === 'responsable' ? 'responsable' : 'tous'; }
+/** L'accès d'un document : « responsable » (réservé, PIN du responsable sur la tablette), « consultant » (ouvert, rangé
+ *  dans la section des consultants) ou « tous ». */
+function foAcces(array $r): string { $a = $r['acces'] ?? null; return in_array($a, ['responsable', 'consultant'], true) ? $a : 'tous'; }
 
 /** Le PIN du responsable qui ouvre les documents réservés : le réglage `foPinResponsable`, sinon le PIN provisoire. */
 function foPinResponsable(): string
