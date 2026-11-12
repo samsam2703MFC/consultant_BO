@@ -5259,7 +5259,7 @@ gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/mete
 **Règles** (`ceo_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
 `gain` — `base` {euros, points} (unique, toujours active), `panier` {min, points} ; `multi` — `creneau` {mult, jours[0=lundi…6], de, a, famille, pourquoi},
 `gamme` {mult, gamme, du, au}, `anniversaire` {mult, jours} ; `recoit` — `jauge` {points, valeur, validite} (unique), `tampons` {nom, unite, n, recompense, couleur},
-`declencheur` {evenement: inscription | visite2 | anniversaire | visiteN | panier | parrainage | absence, n, recompense:{type: bon | points | produit, valeur, libelle}, validite} ;
+`declencheur` {evenement: inscription | visite2 | anniversaire | visiteN | panier | parrainage | absence | carte, n, recompense:{type: bon | points | produit, valeur, libelle}, validite} ;
 `garde` (uniques) — `plafond` {points}, `cumul`, `unbon`, `expiration` {mois, preavis}, `exclus` {dates}, `budget` {pct du CA des clients carte}.
 `shop` = "" pour tout le réseau. Le serveur ramène chaque valeur dans ses bornes (`fidNormalise`).
 
@@ -5272,6 +5272,44 @@ endormi (> 45 j). « D'un mois à l'autre » compare l'état à J−30.
 **À brancher** : le flux des visites carte (PWA ou panel) vers `ceo_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
 `pwa_loyalty_card` / `pwa_loyalty_config`, réglées aujourd'hui par `/franchisor/loyalty-*` du webshop) ; les ventes par gamme ; le suivi des parrainages.
 Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %, produits pris à 85 %, 2,50 € le produit offert).
+
+### Fidélité — la carte QR donnée en caisse (12/11/2026, demande de Sam)
+
+« Faire un suivi et mise en route du système de fidélité : créer le process dans le POS — “c'est la première fois que vous
+venez ?” oui : la carte QR ; non : la carte QR avec un voucher. » Serveur : `src/fidelite_caisse.php`. Consigne de la caisse
+(Szymon) : `docs/consignes/caisse-fidelite-szymon.md`. Écran : **Fidélité › En caisse** (troisième onglet de `#/fidelity`).
+
+**La caisse** — sa clé de caisse, celle du pointage (`mot_borne`, sorte `caisse`), dans la requête ; CORS ouvert, `Cache-Control: no-store`.
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/fidelite/caisse/etat?b=` | `{shop, magasin, lance, lanceLe, bouton, question, oui, non, bon:{mode, libelle, valeur, jours}\|null, aujourdhui:{cartes, bons}}` — textes FR / NL ; la caisse montre le bouton si `lance`. 404 clé inconnue, 403 lien d'un écran. |
+| POST | `/fidelite/caisse/carte` | `{b, premiere: bool, ref?, emp?, carte?, essai?}` → `{id, premiere, essai, remise: carte \| carte_bon, bon:{mode: code \| papier, code, libelle, valeur, des, jusqu_au}\|null, motif, ecran:{fr, nl}, ticket: [lignes]\|null, annule, repris?}`. 409 magasin pas lancé (sauf `essai`), 400 `premiere` absent. La même `ref` (ou, sans `ref`, le même choix à la même caisse en moins de 4 s) rend la même remise. |
+| POST | `/fidelite/caisse/carte/annuler` | `{b, id}` → `{ok, id, bon}` — dans les 15 minutes (422 après, 404 autre magasin) ; le code créé au panel est désactivé (`PATCH /admin/voucher-codes/{id}/status`), repris au battement s'il résiste. |
+
+**Le cockpit** (session) :
+
+| Méthode | Route | Rôle |
+|---|---|---|
+| GET | `/fidelite/caisse?jours=30&shop=` | `{du, au, jours, magasins[{id, nom, lancement, cle, etapes[6]{k, nom, fait, txt}, pret, regle, periode{cartes, premieres, dejaVenus, bons, code, papier, sansBon}, aujourdhui, total, stock{recues, donnees, reste, jours}, pour100, ticketsLus, joursLus, membres, attente, alertes[]}], reseau, regleReseau, serie[{jour, premieres, dejaVenus}], vendeuses[], dernieres[], garde}` — essais et remises annulées hors des comptes. |
+| PUT | `/fidelite/caisse/lancement` | `{shop, cartesRecues?, cartesAjout?, campagne?, equipeLe?, lanceLe?, note?, qui?}` → `{ok, lancement, avis[]}` — `campagne` relue au panel : codes uniques (`UNIQUE`) sans client imposé, sinon 422 ; 404 introuvable ; 503 panel injoignable ; une campagne pas active passe avec un avis. 0 → bons papier. Journalisé (`Fidélité`). |
+| POST | `/fidelite/caisse/pousser` | `{id?}` → `{ok, relances, resultat}` — les codes en échec repartent, et les codes en attente sont créés au panel tout de suite. |
+
+**Le bon des déjà-venus** : le déclencheur `carte` du Programme (`declencheur` {evenement: `carte`, recompense: bon \| produit — pas de points, le
+client n'a pas encore de compte —, validite ≥ 1}), celui du magasin avant celui du réseau ; posé d'office une fois (2 €, 30 jours ; réglage
+`fidCarteSemee`). Il vaut du lendemain à `validite` jours. Bon « code » quand le magasin a une campagne : `FID` + 8 signes, rendu tout de suite,
+créé au panel après la réponse (`POST /admin/voucher-campaigns/{id}/codes`, `usage_limit` 1, `valid_from` demain — sans début si le panel le
+refuse) et repris au battement horaire (`/rapports/cron` → `fcaCron`), 5 essais puis « échec ». Bon « papier » sinon. 100 bons au plus par
+magasin et par jour (`motif: plafond du jour`).
+
+**Tables** : `ceo_fid_carte` (une remise : magasin, heure, `premiere`, `essai`, `ref`, carte scannée, vendeuse, clé, règle, bon {mode, libellé,
+valeur, code, dates, campagne, état `a_creer | cree | echec | papier | essai | a_retirer | annule`, numéro au panel, essais, erreur}, motif,
+annulation) ; `ceo_fid_lancement` (par magasin : cartes reçues, campagne, équipe briefée le, lancé le, note).
+
+**Le suivi** : cartes pour 100 tickets sur les jours relevés de `ceo_pwa_jour` ; nouveaux membres de l'app = clients `pwa` de `ceo_pwa_client`
+inscrits depuis le lancement et vus en caisse du magasin (`ceo_pwa_visite`). Alertes : lancé sans clé, plus de cartes ou moins de 7 jours de
+stock (rythme des 14 derniers), aucune carte depuis 3 jours, plus de 80 % de « déjà venus » (20 cartes au moins), codes refusés ou en attente
+depuis plus de 3 h.
 
 ### Le profil de l'employé — « Mon profil » de l'app (30/10/2026, demande de Sam)
 

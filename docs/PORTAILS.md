@@ -251,10 +251,12 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | consultant_BO | `ceo_scouting_population` | `rec_scouting_population` |  |
 | consultant_BO | `ceo_scouting_tile` | `rec_scouting_tile` |  |
 
-### Marketing — 218 table(s)
+### Marketing — 220 table(s)
 
 | Dépôt actuel | Table actuelle | Nom cible | Note |
 |---|---|---|---|
+| consultant_BO | `ceo_fid_carte` | `mar_fid_carte` | fidélité · la carte en caisse (lit la clé de caisse `mot_borne` et les relevés `ceo_pwa_*` : par l'API de Pilotage une fois séparé) |
+| consultant_BO | `ceo_fid_lancement` | `mar_fid_lancement` | fidélité · la carte en caisse |
 | consultant_BO | `ceo_fid_regle` | `mar_fid_regle` | fidélité |
 | consultant_BO | `ceo_fid_visite` | `mar_fid_visite` | fidélité |
 | consultant_BO | `ceo_md_form` | `mar_md_form` | MétaDonnée (formulaires de prospects Meta) |

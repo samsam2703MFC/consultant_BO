@@ -521,6 +521,24 @@ telle quelle.
   route ne les relit) et le comptage réel du tiroir — `final_cash` suit la
   recette (89 à 96 % mesurés), pas les espèces (7 %).
 
+## Fidélité : la carte QR donnée en caisse
+
+Troisième onglet de **ERP franchisé › Fidélité** (`#/fidelity`), **En caisse** (12/11/2026). À la caisse, la
+vendeuse demande « C'est la première fois que vous venez ? » : **oui** → la carte QR ; **non** → la carte QR et un
+bon (le déclencheur « Carte donnée en caisse » du Programme, 2 € valable 30 jours par défaut).
+
+- **La caisse** (Szymon, `docs/consignes/caisse-fidelite-szymon.md`) appelle `GET /fidelite/caisse/etat`,
+  `POST /fidelite/caisse/carte`, `POST /fidelite/caisse/carte/annuler` avec la clé de caisse du pointage. Le cockpit
+  compose les consignes (FR / NL) et les lignes du ticket.
+- **Le bon** : un code imprimé (campagne de bons du panel à codes uniques, créé au panel après la réponse et repris
+  chaque heure) ou un bon papier, au choix du magasin.
+- **La mise en route**, magasin par magasin : clé de caisse, cartes reçues, bon, équipe briefée, lancement, première
+  carte. Avant le lancement, le bouton reste caché à la caisse (remises d'essai possibles, hors des comptes).
+- **Le suivi** : cartes données, premières visites / déjà venus, bons, cartes pour 100 tickets, stock, nouveaux
+  membres de l'app, vendeuses, dernières remises, alertes.
+- **Données** : `src/fidelite_caisse.php`, tables `ceo_fid_carte` et `ceo_fid_lancement`. Tests :
+  `php bin/tests_fidelite_caisse.php`.
+
 ## Tablette des vendeuses (Book vendeuses)
 
 L'application de comptoir des vendeuses — gamme, photos, prix, saisons,
