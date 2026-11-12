@@ -5468,7 +5468,7 @@
   function iaChoixTon() {
     const T = iaTons();
     if (!T.length) { return ''; }
-    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 48)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
+    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><span class="ia-av">${iaVisage(t.cle, 64)}</span><span class="ia-ton-t"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></span></button>`).join('')}</div>`;
   }
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
@@ -5518,7 +5518,7 @@
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
     if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 40, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaVisage(dern.ton, 48, true)}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
@@ -5532,10 +5532,10 @@
     const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 40, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 48, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 48)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 56)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
