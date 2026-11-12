@@ -1402,3 +1402,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T10:23:05Z formation : identifiant des titres longs
 2026-11-12T10:33:52Z section consultants du manuel
 2026-11-12T10:35Z Asystent zamiast kreator (280)
+2026-11-12T11:01:17Z [282] Asystent partout dans l'ERP
