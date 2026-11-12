@@ -154,12 +154,12 @@ final class TaskLockService
     {
         $today = ($today ?? new DateTimeImmutable('today'))->setTime(0, 0);
         $task = $this->allowed($taskId, $userId);
-        if (!self::isGeneric($task)) throw new CustomException('To zadanie ma własny kreator — zalicza się samo po jego zakończeniu.', 'errors', 422);
+        if (!self::isGeneric($task)) throw new CustomException('To zadanie ma własnego asystenta — zalicza się samo po jego zakończeniu.', 'errors', 422);
         $occ = $this->targetOccurrence($task, $today) ?? throw new CustomException('Brak zadania do zrobienia w tym okresie.', 'errors', 404);
         if ($occ['status'] !== 'open') return ['done' => true, 'message' => 'Zadanie było już zrobione.'];
         $note = trim((string) ($in['note'] ?? ''));
         if (mb_strlen($note) > 400) throw new CustomException('Uwaga : najwyżej 400 znaków.', 'errors', 422);
-        $this->positions->setOccurrence((int) $occ['id'], 'done', $userId, 'Kreator' . ($note !== '' ? ' : ' . $note : ''));
+        $this->positions->setOccurrence((int) $occ['id'], 'done', $userId, 'Asystent' . ($note !== '' ? ' : ' . $note : ''));
         return ['done' => true, 'message' => 'Zadanie zakończone.' . ((int) ($task['mandatory'] ?? 0) ? ' ERP jest odblokowany.' : '')];
     }
 

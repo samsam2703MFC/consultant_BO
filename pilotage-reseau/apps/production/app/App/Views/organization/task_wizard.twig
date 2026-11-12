@@ -1,11 +1,11 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}{{ w is defined ? w.task.title : 'Kreator zadania' }}{% endblock %}
+{% block title %}{{ w is defined ? w.task.title : 'Asystent zadania' }}{% endblock %}
 
 {% block content %}
 {# [280] Kreator kroków zadania bez własnego kreatora (makieta 46) : kroki administratora albo domyślne, na końcu « Zakończ zadanie ». #}
 {% if error is defined %}
-<section class="section tl-wrap"><div class="tl-card"><h2>Kreator zadania</h2><p class="tl-warn">{{ error }}</p><a class="kw-btn" href="{{ root }}/today">Dzisiaj</a></div></section>
+<section class="section tl-wrap"><div class="tl-card"><h2>Asystent zadania</h2><p class="tl-warn">{{ error }}</p><a class="kw-btn" href="{{ root }}/today">Dzisiaj</a></div></section>
 {% else %}
 <section class="section tl-wrap" id="taskWizard" data-root="{{ root }}" data-task="{{ w.task.id }}">
     <div class="tl-wiz">

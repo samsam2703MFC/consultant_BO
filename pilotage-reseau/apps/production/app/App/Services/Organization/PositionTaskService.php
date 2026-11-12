@@ -785,7 +785,7 @@ final class PositionTaskService
             'auto_done' => $o !== null && $status === 'done' && $o['done_by'] === null && (($task['auto_code'] ?? null) !== null || $cronOn),
             'wizard' => $wizard ? ['label' => $wizard['label'], 'steps' => $wizard['steps'], 'event' => $wizard['event']]
                 : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany']
-                : ($generic ? ['label' => 'Kreator kroków', 'steps' => count(TaskLockService::steps($task)) + 1, 'event' => 'gdy « Zakończ zadanie »'] : null)),
+                : ($generic ? ['label' => 'Asystent kroków', 'steps' => count(TaskLockService::steps($task)) + 1, 'event' => 'gdy « Zakończ zadanie »'] : null)),
             'progress' => $state && !$state['done'] && $state['step'] !== null ? ['step' => (int) $state['step'], 'steps' => (int) $state['steps'], 'label' => $state['step_label']] : null,
             'summary' => $o['summary'] ?? ($state['summary'] ?? null),
             'cron' => $cronOn ? ['time' => substr((string) $task['cron_time'], 0, 5), 'then' => $task['cron_then'] ?? 'wait', 'label' => TaskCronService::ACTIONS[$task['cron_action']] ?? $task['cron_action'],

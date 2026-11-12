@@ -8,14 +8,14 @@
     <div class="tl-card">
         <h2>Najpierw to zadanie</h2>
         <div class="tl-sub">{{ now|date('d.m.Y · H:i') }}</div>
-        <div class="tl-warn"><i class="bi bi-lock-fill"></i> ERP jest zablokowany, bo obowiązkowe zadanie nie jest zrobione. Zakończ je w kreatorze — reszta ERP wróci od razu.</div>
+        <div class="tl-warn"><i class="bi bi-lock-fill"></i> ERP jest zablokowany, bo obowiązkowe zadanie nie jest zrobione. Zakończ je w asystencie — reszta ERP wróci od razu.</div>
         {% for b in blocking %}
         <div class="tl-task">
             <i class="bi bi-lock-fill tl-lock" aria-hidden="true"></i>
             <div><b>{{ b.title }}</b><small>termin {{ b.due|date('d.m') }}{{ b.due_time ? ' ' ~ b.due_time : '' }} · blokada od {{ b.block_at|date('d.m H:i') }}{{ b.minutes ? ' · ok. ' ~ b.minutes ~ ' min' : '' }}</small></div>
             <span class="tl-sp"></span>
             <button type="button" class="kw-btn ghost" data-unblock="{{ b.task_id }}" data-title="{{ b.title }}">Poproś o odblokowanie</button>
-            <a class="kw-btn pri" href="{{ root }}{{ b.link }}">Otwórz kreator <i class="bi bi-arrow-right"></i></a>
+            <a class="kw-btn pri" href="{{ root }}{{ b.link }}">Otwórz asystenta <i class="bi bi-arrow-right"></i></a>
         </div>
         {% endfor %}
         <p class="tl-note">Problem (awaria, brak danych) ? « Poproś o odblokowanie » — przełożony albo administrator dostaje powiadomienie i może odblokować ERP na dziś.

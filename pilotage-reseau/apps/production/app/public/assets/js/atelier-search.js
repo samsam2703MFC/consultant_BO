@@ -102,7 +102,7 @@
         'entrepot': 'magazyn magazynu', 'livree': 'dostarczono dostarczonych zrealizowane', 'livrees': 'dostarczonych zrealizowane', 'transport': 'transporcie',
         'statut': 'status statusy', 'statuts': 'status statusy', 'avis': 'powiadomienia powiadomienie', 'expeditions': 'wysylki wysylek', 'etat': 'stan',
         'doublon': 'ponownie jedno', 'realisee': 'zrealizowane', 'realisees': 'zrealizowane', 'emballeur': 'opakowania pakowanie pakowania',
-        'assistant': 'kreator kroki', 'assistants': 'kreator', 'wizard': 'kreator', 'creer': 'nowy kreator dodaj utworz', 'creation': 'nowy kreator', 'ajouter': 'dodaj nowy',
+        'assistant': 'asystent kreator kroki', 'assistants': 'kreator', 'wizard': 'kreator', 'creer': 'nowy kreator dodaj utworz', 'creation': 'nowy kreator', 'ajouter': 'dodaj nowy',
         'nouvelle': 'nowy nowe', 'nouvel': 'nowy', 'vehicule': 'pojazd pojazdy', 'vehicules': 'pojazdy pojazd', 'salarie': 'pracownik pracownicy', 'salaries': 'pracownicy pracownik',
         'proforma': 'proforma proformy', 'gratuit': 'gratis', 'conformite': 'zgodnosc', 'belgique': 'belgii belgia', 'onglet': 'zakladki', 'onglets': 'zakladki',
         'instruction': 'instrukcja kroki', 'instructions': 'instrukcja kroki', 'fenetre': 'oknie okno', 'lancer': 'wprowadz wprowadzony', 'introduire': 'wprowadz',

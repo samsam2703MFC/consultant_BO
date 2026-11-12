@@ -109,7 +109,7 @@ try {
     expectL($code === '422', 'zadanie z własnym kreatorem : bez « Zakończ zadanie » kreatora kroków');
     $r = $lock->finish(901, ['note' => 'wszystko rozliczone'], 2, new DateTimeImmutable('2026-11-12'));
     expectL($r['done'] && !in_array(901, array_column($lock->blocking(2, $after), 'task_id'), true)
-        && $count("SELECT COUNT(*) FROM n_task_occurrence WHERE id_task = 901 AND status = 'done' AND done_by = 2 AND note = 'Kreator : wszystko rozliczone'") === 1,
+        && $count("SELECT COUNT(*) FROM n_task_occurrence WHERE id_task = 901 AND status = 'done' AND done_by = 2 AND note = 'Asystent : wszystko rozliczone'") === 1,
         '« Zakończ zadanie » : zrobione (kto, uwaga) → blokada znika');
 
     // 4. Déblocage : demande → cloche ; seul le supérieur / l'admin décide
@@ -157,7 +157,7 @@ try {
     $items = [];
     $collect = function ($node) use (&$collect, &$items) { if (is_array($node)) { if (isset($node['task_id'], $node['link']) && array_key_exists('mandatory', $node)) $items[$node['task_id']] = $node; foreach ($node as $v) $collect($v); } };
     $collect($week);
-    expectL(isset($items[901]) && $items[901]['mandatory'] && $items[901]['link'] === '/tasks/wizard/901' && $items[901]['wizard']['label'] === 'Kreator kroków'
+    expectL(isset($items[901]) && $items[901]['mandatory'] && $items[901]['link'] === '/tasks/wizard/901' && $items[901]['wizard']['label'] === 'Asystent kroków'
         && isset($items[903]) && !$items[903]['mandatory'] && $items[903]['link'] === '/tasks/wizard/903', 'Mój tydzień : 🔒 obowiązkowe, każde zadanie → kreator');
 
     echo "task_lock_test: OK\n";

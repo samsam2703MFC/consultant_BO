@@ -71,15 +71,15 @@
         const runs = (r.id && P.runs[r.id]) || [];
         const last = runs[0];
         return `<span class="kw-badge ok"><i class="bi bi-robot"></i> ${esc(cronDays(r))} ${esc(r.cron_time || '')}${r.cron_then === 'wait' ? ' przygotuj' : ''}</span>
-            <small class="wp-sub">${r.cron_then === 'wait' ? 'osoba kończy w kreatorze' : 'zalicza się samo'}${last ? (Number(last.ok) === 1 ? ' · ostatnio OK' : (last.ok === null ? ' · w toku' : ' · <b class="text-danger">ostatnio błąd</b>')) : ''}</small>`;
+            <small class="wp-sub">${r.cron_then === 'wait' ? 'osoba kończy w asystencie' : 'zalicza się samo'}${last ? (Number(last.ok) === 1 ? ' · ostatnio OK' : (last.ok === null ? ' · w toku' : ' · <b class="text-danger">ostatnio błąd</b>')) : ''}</small>`;
     }
 
     function wizHtml(r) {
         const w = wiz(r.auto_code);
         if (w) return `<div class="wp-sel"><span>${esc(w.label)}<small>${esc(w.event)}</small></span></div>`;
         if (r.form_code) return '<div class="wp-sel none"><span>— ręcznie —<small>protokół zebrania</small></span></div>';
-        if (r.cron_on) return '<div class="wp-sel none"><span>— bez kreatora —<small>w całości automatyczne</small></span></div>';
-        return `<div class="wp-sel none"><span>Kreator kroków<small>${(r.wizard_steps || []).length ? r.wizard_steps.length + ' kroków + « Zakończ zadanie »' : (r.link_path ? esc(P.links[r.link_path] || r.link_path) + ' → « Zakończ zadanie »' : '« Zakończ zadanie »')}</small></span></div>`;
+        if (r.cron_on) return '<div class="wp-sel none"><span>— bez asystenta —<small>w całości automatyczne</small></span></div>';
+        return `<div class="wp-sel none"><span>Asystent kroków<small>${(r.wizard_steps || []).length ? r.wizard_steps.length + ' kroków + « Zakończ zadanie »' : (r.link_path ? esc(P.links[r.link_path] || r.link_path) + ' → « Zakończ zadanie »' : '« Zakończ zadanie »')}</small></span></div>`;
     }
 
     const linkLabel = (l) => (P.links[l] || l).split(' (')[0];
@@ -101,7 +101,7 @@
     }
 
     function tableHtml() {
-        if (!rows.length) return '<p class="at-empty">Brak zadań — dodaj pierwsze, przypnij kreator z listy obok albo skopiuj z innego stanowiska.</p>';
+        if (!rows.length) return '<p class="at-empty">Brak zadań — dodaj pierwsze, przypnij asystenta z listy obok albo skopiuj z innego stanowiska.</p>';
         const out = [];
         for (const [mode, label] of Object.entries(GROUPS)) {
             const list = rows.filter(r => r.mode === mode);
@@ -109,7 +109,7 @@
             out.push(`<tr class="grp"><td colspan="5">${label}</td></tr>`, ...list.map(rowHtml));
         }
         return `<div class="table-responsive"><table class="kw-t wp-t" id="adPlan">
-            <thead><tr><th style="width:24%">Zadanie</th><th style="width:25%">Kreator (zalicza się, gdy…)</th><th style="width:20%">Kiedy</th><th class="r">Min.</th><th style="width:20%">Automatycznie (cron)</th></tr></thead>
+            <thead><tr><th style="width:24%">Zadanie</th><th style="width:25%">Asystent (zalicza się, gdy…)</th><th style="width:20%">Kiedy</th><th class="r">Min.</th><th style="width:20%">Automatycznie (cron)</th></tr></thead>
             <tbody>${out.join('')}</tbody></table></div>`;
     }
 
@@ -167,11 +167,11 @@
     function editorHtml() {
         const r = sel && rowByKey(sel);
         if (!r) {
-            return `<div class="kw-card wp-ed empty"><h5>Edycja</h5><p class="at-empty mb-0">Kliknij zadanie w tabeli, aby zmienić kreator, częstotliwość, automatyzację i przypomnienia.</p></div>`;
+            return `<div class="kw-card wp-ed empty"><h5>Edycja</h5><p class="at-empty mb-0">Kliknij zadanie w tabeli, aby zmienić asystenta, częstotliwość, automatyzację i przypomnienia.</p></div>`;
         }
         const off = removed.has(r.key);
         const w = wiz(r.auto_code);
-        const wizOptions = `<option value="">— kreator kroków (bez własnego kreatora) —</option>` + P.wizards.map(x => {
+        const wizOptions = `<option value="">— asystent kroków (bez własnego asystenta) —</option>` + P.wizards.map(x => {
             const elsewhere = x.used.filter(u => !u.mine).map(u => u.position);
             return `<option value="${esc(x.code)}" ${x.code === r.auto_code ? 'selected' : ''}>${esc(x.label)} — ${esc(x.event)}${elsewhere.length ? ` (też : ${esc(elsewhere.join(', '))})` : ''}</option>`;
         }).join('');
@@ -187,11 +187,11 @@
             <div class="wp-f"><label for="wpTitle">Nazwa zadania</label><textarea id="wpTitle" class="kw-in" data-f="title_pl" rows="2" maxlength="200" placeholder="Nazwa nowego zadania">${esc(r.title_pl)}</textarea></div>
             <div class="wp-f"><label for="wpCat">Kategoria</label><select id="wpCat" class="kw-in" data-f="category_id"><option value="">—</option>
                 ${P.categories.map(c => `<option value="${c.id}" ${Number(c.id) === r.category_id ? 'selected' : ''}>${esc(c.name_pl)}</option>`).join('')}</select></div>
-            <div class="wp-f"><label for="wpWiz">Kreator — zadanie zalicza się samo, gdy…</label><select id="wpWiz" class="kw-in" data-f="wizard">${wizOptions}</select>
+            <div class="wp-f"><label for="wpWiz">Asystent — zadanie zalicza się samo, gdy…</label><select id="wpWiz" class="kw-in" data-f="wizard">${wizOptions}</select>
                 ${w ? `<div class="wp-sub"><i class="bi bi-magic"></i> otwiera ${esc(w.link)} · ${w.steps > 1 ? `${w.steps} kroków` : '1 krok'} · zalicza się, gdy ${esc(w.event)}</div>`
                     : `<select class="kw-in mt-1" data-f="link" aria-label="Strona ERP (link)">${linkOptions(r)}</select>
                        ${custom ? `<input class="kw-in mt-1" data-f="link_custom" value="${esc(r.link_path || '')}" placeholder="/strona-w-erp" maxlength="255" aria-label="Adres strony">` : ''}
-                       ${r.form_code ? '<div class="wp-sub"><i class="bi bi-journal-text"></i> kończy się protokołem</div>' : '<div class="wp-sub">Bez własnego kreatora : kreator kroków (ustaw kroki niżej, w « Obowiązkowe »).</div>'}`}</div>
+                       ${r.form_code ? '<div class="wp-sub"><i class="bi bi-journal-text"></i> kończy się protokołem</div>' : '<div class="wp-sub">Bez własnego asystenta : asystent kroków (ustaw kroki niżej, w « Obowiązkowe »).</div>'}`}</div>
             <div class="wp-f"><label for="wpExtra">Też w tym zadaniu (inne strony)</label>
                 ${(r.extra_links || []).length ? `<div class="wp-chips">${r.extra_links.map((l, i) => `<span>${esc(linkLabel(l))}<button type="button" data-extra-del="${i}" aria-label="Usuń : ${esc(linkLabel(l))}"><i class="bi bi-x-lg"></i></button></span>`).join('')}</div>` : ''}
                 ${(r.extra_links || []).length < 6 ? `<select id="wpExtra" class="kw-in" data-f="extra_add"><option value="">+ dodaj stronę…</option>${Object.entries(P.links).filter(([p]) => p !== r.link_path && !(r.extra_links || []).includes(p)).map(([p, l]) => `<option value="${esc(p)}">${esc(l)}</option>`).join('')}</select>` : ''}
@@ -212,7 +212,7 @@
                     <span>O której</span><input class="kw-in wp-time" type="time" data-f="cron_time" value="${esc(r.cron_time || '')}" aria-label="O której">
                     <span>Co robi</span><select class="kw-in" data-f="cron_action"><option value="">— wybierz —</option>${actions}</select>
                     <span>Potem</span><div class="wp-radio">
-                        <label><input type="radio" name="wpThen" value="wait" data-f="cron_then" ${r.cron_then !== 'done' ? 'checked' : ''}> czeka na osobę${w ? ' (kreator)' : ''}</label>
+                        <label><input type="radio" name="wpThen" value="wait" data-f="cron_then" ${r.cron_then !== 'done' ? 'checked' : ''}> czeka na osobę${w ? ' (asystent)' : ''}</label>
                         <label><input type="radio" name="wpThen" value="done" data-f="cron_then" ${r.cron_then === 'done' ? 'checked' : ''}> zalicza się samo</label></div>
                     <span>Gdy błąd</span><span class="wp-sub m-0">powiadomienie w dzwonku · ponowienie co 30 min, najwyżej 3 razy</span>
                 </div>${runsHtml(r)}` : '<div class="wp-sub">System nic nie robi sam — zadanie wykonuje osoba.</div>'}
@@ -224,11 +224,11 @@
                     <span>Blokuje</span><select class="kw-in" data-f="block_mode"><option value="due" ${r.block_mode !== 'next_day' ? 'selected' : ''}>w dniu terminu</option><option value="next_day" ${r.block_mode === 'next_day' ? 'selected' : ''}>dzień po terminie</option></select>
                     <span>Od godziny</span><input class="kw-in wp-time" type="time" data-f="block_time" value="${esc(r.block_time || '')}" aria-label="Od godziny"><span></span><span class="wp-sub m-0">${r.block_mode === 'next_day' ? 'puste = 09:00' : 'puste = godzina terminu, bez godziny : koniec dnia'}</span>
                     <span>Tolerancja</span><div class="wp-inline"><input class="kw-in wp-min" type="number" min="0" max="120" step="5" data-f="block_tolerance" value="${r.block_tolerance || 0}" aria-label="Tolerancja"><span>min</span></div>
-                </div><div class="wp-sub">Niezrobione → ERP osoby otwiera tylko ekran « Najpierw to zadanie » i kreator. Administrator nigdy nie jest blokowany ; przełożony może odblokować na dziś (z powodem).</div>`
+                </div><div class="wp-sub">Niezrobione → ERP osoby otwiera tylko ekran « Najpierw to zadanie » i asystenta. Administrator nigdy nie jest blokowany ; przełożony może odblokować na dziś (z powodem).</div>`
                     : '<div class="wp-sub">Tylko przypomnienia — ERP się nie blokuje.</div>'}
-                ${!w && !r.form_code ? `<div class="wp-f mt-2"><label>Kroki kreatora (zadanie bez własnego kreatora) — jeden krok na linię : tytuł | wskazówka | /strona</label>
+                ${!w && !r.form_code ? `<div class="wp-f mt-2"><label>Kroki asystenta (zadanie bez własnego asystenta) — jeden krok na linię : tytuł | wskazówka | /strona</label>
                     <textarea class="kw-in" rows="4" data-f="wizard_steps" placeholder="Sprawdź faktury przewoźników | porównaj z trasami miesiąca | /shipments">${esc((r.wizard_steps || []).map(x => [x.title, x.hint || '', x.link || ''].join(' | ')).join('\n'))}</textarea>
-                    <div class="wp-sub">Puste : kreator « Co zrobić » (strona zadania) → « Zakończ zadanie ». Każde kliknięcie w zadanie otwiera kreator.</div></div>` : ''}
+                    <div class="wp-sub">Puste : asystent « Co zrobić » (strona zadania) → « Zakończ zadanie ». Każde kliknięcie w zadanie otwiera asystenta.</div></div>` : ''}
             </div>
             <div class="wp-box">
                 <b><i class="bi bi-bell"></i> Przypomnienia</b>
@@ -247,7 +247,7 @@
     }
 
     function catalogHtml() {
-        return `<div class="kw-card"><h5>Kreatory do przypięcia</h5><div class="wp-cat">${P.wizards.map(w => {
+        return `<div class="kw-card"><h5>Asystenci do przypięcia</h5><div class="wp-cat">${P.wizards.map(w => {
             const mine = w.used.some(u => u.mine) || rows.some(r => r.auto_code === w.code && !removed.has(r.key));
             const where = w.used.map(u => u.position);
             return `<div class="it${mine || where.length ? ' used' : ''}"><b>${esc(w.label)}</b><span class="ev">zalicza się : ${esc(w.event)}</span>
@@ -265,7 +265,7 @@
         const week = live.filter(r => r.period === 'week').reduce((s, r) => s + (Number(r.minutes) || 0) * r.days.length, 0);
         app.innerHTML = `<p class="wp-lead">${users ? `Osoby : ${esc(users)}` : '<span class="kw-badge warn">nikt nie ma tego stanowiska</span>'} · ${live.length} zadań · ${dur(week)} / tydzień</p>
             <div class="wp-grid"><div class="kw-card">
-                <h5>${esc(P.position.name_pl)} <span class="kw-badge ok">${nWiz} z kreatorem — zaliczają się same</span><span class="kw-badge"><i class="bi bi-robot"></i> ${nCron} automatyczne</span><span class="kw-badge">${nManual} ręczne</span>
+                <h5>${esc(P.position.name_pl)} <span class="kw-badge ok">${nWiz} z asystentem — zaliczają się same</span><span class="kw-badge"><i class="bi bi-robot"></i> ${nCron} automatyczne</span><span class="kw-badge">${nManual} ręczne</span>
                     <span class="wk-sp"></span>${P.others.length ? '<button type="button" class="kw-btn" data-copy><i class="bi bi-files"></i> Kopiuj z innego stanowiska</button>' : ''}
                     <button type="button" class="kw-btn pri" data-add><i class="bi bi-plus-lg"></i> Nowe zadanie</button></h5>
                 <div data-table>${tableHtml()}</div>
