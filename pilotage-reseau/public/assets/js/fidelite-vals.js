@@ -10,6 +10,11 @@
  * d'un mois à l'autre, ce qu'achète chaque segment. Sans visite carte en base, le serveur calcule sur un jeu
  * d'essai et le dit (`test`) : l'écran l'affiche.
  *
+ * En caisse (12/11/2026, src/fidelite_caisse.php) : la carte QR donnée à la caisse — « première visite ? » oui : la
+ * carte ; non : la carte et le bon des déjà-venus. La mise en route magasin par magasin (clé de caisse, cartes reçues,
+ * bon papier ou code imprimé, équipe briefée, lancement), puis le suivi : cartes, bons, stock, cartes pour 100 tickets,
+ * nouveaux membres de l'app, vendeuses, alertes (GET /fidelite/caisse, PUT /fidelite/caisse/lancement).
+ *
  * Remplit `common.fid` ; le gabarit est tplFidelite (fidelite-tpl.js). */
 import { readOne } from './api.js';
 
@@ -19,7 +24,7 @@ const pc = n => n == null ? '—' : nf(n) + ' %';
 const JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
 const FAMILLES = [['', 'tous les achats'], ['pain', 'le pain'], ['petitdej', 'le petit-déjeuner'], ['lunch', 'le lunch'], ['gouter', 'le goûter'], ['occasion', 'l’occasion']];
 const MULTS = [[2, '×2'], [3, '×3'], [4, '×4'], [5, '×5']];
-const EVENEMENTS = [['inscription', 'à l’inscription'], ['visite2', 'à la 2e visite'], ['anniversaire', 'à l’anniversaire'], ['visiteN', 'à la n-ième visite du mois'], ['panier', 'pour un gros panier'], ['parrainage', 'au parrainage'], ['absence', 'après une absence']];
+const EVENEMENTS = [['inscription', 'à l’inscription'], ['visite2', 'à la 2e visite'], ['anniversaire', 'à l’anniversaire'], ['visiteN', 'à la n-ième visite du mois'], ['panier', 'pour un gros panier'], ['parrainage', 'au parrainage'], ['absence', 'après une absence'], ['carte', 'à la carte donnée en caisse (déjà venu)']];
 const COULEURS = ['#9a5b16', '#eb6834', '#5c4033', '#c2336a', '#2a78d6', '#1baf7a', '#6250d6', '#8D1D2C'];
 const UNIQUES = ['base', 'jauge', 'plafond', 'cumul', 'unbon', 'expiration', 'exclus', 'budget'];
 const BLOCS = [
@@ -34,7 +39,7 @@ const NOUVELLES = {
   creneau: () => ({ mult: 2, jours: [1, 2, 3], de: '14:00', a: '17:00', famille: '', pourquoi: '' }),
   gamme: () => { const d = new Date(); const iso = x => x.toISOString().slice(0, 10); const f = new Date(d); f.setDate(f.getDate() + 30); return { mult: 2, gamme: 'Nouvelle gamme', du: iso(d), au: iso(f) }; },
   tampons: n => ({ nom: 'Nouvelle carte', unite: 'articles achetés', n: 10, recompense: '1 article offert', couleur: COULEURS[n % COULEURS.length] }),
-  declencheur: ev => ({ evenement: ev, n: { inscription: 8, visite2: 14, visiteN: 10, panier: 30, absence: 30 }[ev] || 0, recompense: ev === 'anniversaire' || ev === 'visiteN' ? { type: 'produit', valeur: 0, libelle: 'un produit offert' } : (ev === 'visite2' || ev === 'parrainage' || ev === 'panier' ? { type: 'points', valeur: 50, libelle: '' } : { type: 'bon', valeur: 3, libelle: '' }), validite: 30 }),
+  declencheur: ev => ({ evenement: ev, n: { inscription: 8, visite2: 14, visiteN: 10, panier: 30, absence: 30 }[ev] || 0, recompense: ev === 'anniversaire' || ev === 'visiteN' ? { type: 'produit', valeur: 0, libelle: 'un produit offert' } : (ev === 'visite2' || ev === 'parrainage' || ev === 'panier' ? { type: 'points', valeur: 50, libelle: '' } : { type: 'bon', valeur: ev === 'carte' ? 2 : 3, libelle: '' }), validite: 30 }),
 };
 const copie = o => JSON.parse(JSON.stringify(o));
 /** « 14 », « 14h30 », « 1430 », « 14:30 » → « 14:30 » ; sinon null. */
@@ -120,7 +125,8 @@ const X = (v, set, w, ph) => ({ t: 'txtin', v, set, w: w || 140, ph: ph || '' })
 const S_ = (v, opts, set) => ({ t: 'sel', v, opts, set });
 function recompense(app, r){
   const rc = r.params.recompense || { type: 'bon', valeur: 2 };
-  const out = [S_(rc.type, [['bon', 'un bon de'], ['points', 'des points :'], ['produit', 'un produit :']], e => setParam(app, r, 'recompense', Object.assign({}, rc, { type: e.target.value, valeur: e.target.value === 'points' ? 50 : 3, libelle: e.target.value === 'produit' ? 'un produit offert' : '' })))];
+  const types = [['bon', 'un bon de'], ['points', 'des points :'], ['produit', 'un produit :']].filter(o => !(r.params.evenement === 'carte' && o[0] === 'points'));
+  const out = [S_(rc.type, types, e => setParam(app, r, 'recompense', Object.assign({}, rc, { type: e.target.value, valeur: e.target.value === 'points' ? 50 : 3, libelle: e.target.value === 'produit' ? 'un produit offert' : '' })))];
   if (rc.type === 'bon') { out.push(P(rc.valeur, e => setParam(app, r, 'recompense.valeur', +e.target.value), 52, '€', { pas: 0.5, cls: 'bon' })); }
   if (rc.type === 'points') { out.push(T('+'), P(rc.valeur, e => setParam(app, r, 'recompense.valeur', +e.target.value), 56, 'points', { cls: 'pts' })); }
   if (rc.type === 'produit') { out.push(X(rc.libelle, e => setParam(app, r, 'recompense.libelle', e.target.value), 170, 'ce qui est offert')); }
@@ -146,7 +152,8 @@ function phrase(app, r){
       const n = (w, u) => num('n', w, u);
       const debut = { inscription: [T('Quand un client s’inscrit, il reçoit')], visite2: [T('Quand il revient dans les'), n(40, 'jours'), T('après sa 1re visite, il reçoit')],
         anniversaire: [T('Le jour de son anniversaire, il reçoit')], visiteN: [T('À sa'), n(40, 'e'), T('visite du mois, il reçoit')], panier: [T('Quand son panier atteint'), n(52, '€'), T(', il reçoit')],
-        parrainage: [T('Quand il parraine un ami, il reçoit')], absence: [T('Quand un régulier n’est plus venu depuis'), n(46, 'jours'), T(', il reçoit')] }[p.evenement] || [];
+        parrainage: [T('Quand il parraine un ami, il reçoit')], absence: [T('Quand un régulier n’est plus venu depuis'), n(46, 'jours'), T(', il reçoit')],
+        carte: [T('Quand un client déjà venu reçoit sa carte QR à la caisse, il reçoit')] }[p.evenement] || [];
       const fin = p.evenement === 'inscription' ? [T('dès'), n(46, '€'), T('d’achat')] : [];
       return debut.concat(recompense(app, r), fin, valable(app, r), [T('.')]);
     }
@@ -184,7 +191,8 @@ function enClair(r){
     case 'declencheur': {
       const t = { inscription: ['Bienvenue', 'à l’inscription : ' + recTxt(rc) + ' dès ' + fE(p.n) + ' d’achat'], visite2: ['Deuxième visite', 'revenu dans les ' + p.n + ' jours : ' + recTxt(rc)],
         anniversaire: ['Anniversaire', recTxt(rc)], visiteN: [p.n + 'e visite du mois', recTxt(rc)], panier: ['Gros panier', 'dès ' + fE(p.n) + ' : ' + recTxt(rc)],
-        parrainage: ['Parrainage', recTxt(rc) + ' au parrain'], absence: ['Retour après ' + p.n + ' jours', 'un régulier absent reçoit ' + recTxt(rc)] }[p.evenement] || [p.evenement, ''];
+        parrainage: ['Parrainage', recTxt(rc) + ' au parrain'], absence: ['Retour après ' + p.n + ' jours', 'un régulier absent reçoit ' + recTxt(rc)],
+        carte: ['Carte donnée en caisse', 'déjà venu : ' + recTxt(rc) + ' avec la carte QR'] }[p.evenement] || [p.evenement, ''];
       return [t[0], t[1] + val, IC.decl];
     }
     case 'plafond': return ['Plafond des bonus', nf(p.points) + ' points bonus par jour et par client', IC.garde];
@@ -344,22 +352,142 @@ function valsClients(app, f){
   f.resume = nf(K.tickets30) + ' tickets carte et ' + fE(K.ca30) + ' sur 30 jours · panier ' + fE(K.panier, 2);
 }
 
+/* --- En caisse : la carte QR donnée à la caisse ------------------------------------------------------- */
+const JOURS_COURTS = ['dim', 'lun', 'mar', 'mer', 'jeu', 'ven', 'sam'];
+const dFr = d => d ? d.slice(8, 10) + '/' + d.slice(5, 7) : '';
+/** « Bon de 2 € » → « un bon de 2 € » ; un produit (« un café offert ») reste tel quel. */
+const unBon = l => /^bon de /i.test(l || '') ? 'un bon de ' + l.slice(7) : (l || '');
+const isoAuj = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+function caisseCharge(app, force){
+  const S = app.state, shop = S.fidShop || '', cle = 'k|' + shop, b = S.fidK;
+  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+  if (app._fidK === cle && !force) { return; }
+  app._fidK = cle;
+  app.setState({ fidK: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
+  readOne('/fidelite/caisse?jours=30' + (shop ? '&shop=' + encodeURIComponent(shop) : '')).then(d => {
+    app._fidK = null;
+    app.setState({ fidK: { cle, chargement: false, d: d || { error: 'injoignable' } } });
+  });
+}
+/** La mise en route d'un magasin : le brouillon du formulaire, posé par-dessus ce que le serveur a gardé. */
+function lancementVu(app, m){
+  const L = m.lancement || {}, B = (app.state.fidKBrouillon || {})[m.id] || {};
+  const v = { cartesRecues: L.cartesRecues, cartesAjout: '', mode: L.campagne ? 'code' : 'papier', campagne: L.campagne || '', equipeLe: L.equipeLe || '', lanceLe: L.lanceLe || '', note: L.note || '' };
+  return Object.assign(v, B);
+}
+function lancementPose(app, id, patch){
+  const B = Object.assign({}, app.state.fidKBrouillon || {});
+  B[id] = Object.assign({}, B[id] || {}, patch);
+  app.setState({ fidKBrouillon: B });
+}
+function lancementEnvoyer(app, m, extra){
+  if (app.state.fidKEnvoi) { return; }
+  const v = Object.assign(lancementVu(app, m), extra || {});
+  const corps = { shop: m.id, cartesRecues: +v.cartesRecues || 0, campagne: v.mode === 'code' ? (+v.campagne || 0) : 0, equipeLe: v.equipeLe || null, lanceLe: v.lanceLe || null, note: v.note || '', qui: 'Cockpit' };
+  if (+v.cartesAjout) { delete corps.cartesRecues; corps.cartesAjout = +v.cartesAjout; }
+  if (v.mode === 'code' && !(+v.campagne > 0)) { app.setState({ fidMsg: { txt: 'Le numéro de la campagne de bons du panel manque (ou choisissez « bon papier »).', ko: true } }); return; }
+  app.setState({ fidKEnvoi: true, fidMsg: null });
+  app.api('PUT', '/fidelite/caisse/lancement', corps).then(r => {
+    const ok = r && r.ok !== false;
+    const B = Object.assign({}, app.state.fidKBrouillon || {});
+    if (ok) { delete B[m.id]; }
+    app.setState({ fidKEnvoi: false, fidKBrouillon: B, fidMsg: ok ? { txt: m.nom + ' : mise en route enregistrée.' + ((r.avis || []).length ? ' Attention : ' + r.avis.join(' ; ') + '.' : ''), ko: (r.avis || []).length > 0 }
+      : { txt: m.nom + ' : refusé — ' + ((r && r.error) || 'sans réponse'), ko: true } });
+    if (ok) { caisseCharge(app, true); }
+  });
+}
+function relancerCodes(app){
+  if (app.state.fidKEnvoi) { return; }
+  app.setState({ fidKEnvoi: true });
+  app.api('POST', '/fidelite/caisse/pousser', {}).then(r => {
+    app.setState({ fidKEnvoi: false, fidMsg: r && r.ok !== false ? { txt: 'Codes relancés au panel : ' + (r.resultat || ''), ko: false } : { txt: 'Relance refusée : ' + ((r && r.error) || 'sans réponse'), ko: true } });
+    caisseCharge(app, true);
+  });
+}
+function valsCaisse(app, f){
+  const S = app.state, b = S.fidK || {}, d = b.d && !b.d.error ? b.d : null;
+  const k = { chargement: !d && !!b.chargement, indispo: !b.chargement && b.d && !d ? 'Lecture impossible — API injoignable (GET /fidelite/caisse).' : '' };
+  f.k = k;
+  if (!d) { return; }
+  const R = d.reseau || {}, shop = S.fidShop || '';
+  const M = (d.magasins || []).filter(m => !shop || String(m.id) === String(shop));
+  const T = shop && M[0] ? Object.assign({}, M[0].periode, { aujourdhui: M[0].aujourdhui, reste: M[0].stock.reste, recues: M[0].stock.recues, pour100: M[0].pour100, membres: M[0].membres, lances: M[0].lancement.lance ? 1 : 0 }) : R;
+  const nMag = (d.magasins || []).length;
+  k.tuiles = [
+    ['Cartes données', nf(T.cartes), 'sur 30 jours · ' + nf(T.aujourdhui) + ' aujourd’hui'],
+    ['Premières visites', T.cartes ? pc(100 * T.premieres / T.cartes) : '—', nf(T.premieres) + ' cartes · ' + nf(T.dejaVenus) + ' déjà venus'],
+    ['Bons remis', nf(T.bons), nf(T.code) + (T.code > 1 ? ' codes imprimés' : ' code imprimé') + ' · ' + nf(T.papier) + ' papier' + (T.sansBon ? ' · ' + nf(T.sansBon) + ' sans bon' : '')],
+    ['Cartes pour 100 tickets', T.pour100 == null ? '—' : nf(T.pour100, 1), T.pour100 == null ? 'tickets du jour pas encore relevés' : 'sur les jours relevés de la période'],
+    ['Nouveaux membres de l’app', T.membres == null ? '—' : nf(T.membres), 'vus en caisse depuis le lancement', 'fort'],
+  ];
+  k.lances = shop ? (T.lances ? 'Lancé' : 'Pas encore lancé') : nf(R.lances) + ' magasin' + (R.lances > 1 ? 's' : '') + ' lancé' + (R.lances > 1 ? 's' : '') + ' sur ' + nf(nMag);
+  // Le processus, tel que la caisse le montre : la question, ses deux réponses, le bon du moment.
+  const rg = (shop && M[0] && M[0].regle) || d.regleReseau;
+  k.processus = { bon: rg ? unBon(rg.libelle) : null, jours: rg ? rg.jours : null,
+    versProgramme: () => app.setState({ fidOnglet: 'p', fidOuvert: rg ? rg.id : null }) };
+  // La mise en route, magasin par magasin.
+  const ouvert = S.fidKOuvert;
+  k.magasins = M.map(m => {
+    const v = lancementVu(app, m), on = String(ouvert) === String(m.id);
+    const L = m.lancement || {};
+    const statut = L.lance ? 'Lancé le ' + dFr(L.lanceLe) : (L.lanceLe ? 'Prévu le ' + dFr(L.lanceLe) : 'À préparer');
+    return { id: m.id, nom: m.nom, pret: m.pret, total: (m.etapes || []).length, statut, lance: !!L.lance,
+      etapes: (m.etapes || []).map(e => ({ nom: e.nom, fait: e.fait, txt: e.txt })), alertes: m.alertes || [],
+      ouvert: on, ouvrir: () => app.setState({ fidKOuvert: on ? null : m.id }),
+      versPointages: (m.etapes || []).some(e => e.k === 'cle' && !e.fait) ? () => app.setState({ screen: 'pointages' }) : null,
+      edit: on ? { v, envoi: !!S.fidKEnvoi, campagneNom: L.campagneNom || '',
+        set: cle => e => lancementPose(app, m.id, { [cle]: e.target.value }),
+        auj: cle => () => lancementPose(app, m.id, { [cle]: isoAuj() }),
+        lancerAuj: !L.lance ? () => lancementEnvoyer(app, m, { lanceLe: isoAuj() }) : null,
+        enregistrer: () => lancementEnvoyer(app, m), fermer: () => app.setState({ fidKOuvert: null }),
+        modifie: !!(S.fidKBrouillon || {})[m.id] } : null };
+  });
+  // Le suivi par magasin.
+  k.suivi = M.map(m => {
+    const P = m.periode || {}, st = m.stock || {};
+    return { nom: m.nom, lance: !!(m.lancement || {}).lance, auj: nf(m.aujourdhui), cartes: nf(P.cartes), premieres: nf(P.premieres),
+      deja: P.cartes ? pc(100 * P.dejaVenus / P.cartes) : '—', bons: nf(P.bons), pour100: m.pour100 == null ? '—' : nf(m.pour100, 1),
+      stock: st.recues ? nf(st.reste) + (st.jours != null ? ' · ≈ ' + nf(st.jours) + ' j' : '') : '—', stockKo: st.recues > 0 && (st.reste <= 0 || (st.jours != null && st.jours < 7)),
+      membres: m.membres == null ? '—' : nf(m.membres), alertes: m.alertes || [] };
+  });
+  // La série des 30 jours : premières visites et déjà venus, empilés.
+  const mx = Math.max(1, ...(d.serie || []).map(x => x.premieres + x.dejaVenus));
+  k.serie = (d.serie || []).map(x => { const j = new Date(x.jour + 'T12:00:00');
+    return { p: 100 * x.premieres / mx, dv: 100 * x.dejaVenus / mx, titre: JOURS_COURTS[j.getDay()] + ' ' + dFr(x.jour) + ' : ' + x.premieres + ' premières visites, ' + x.dejaVenus + ' déjà venus',
+      lib: j.getDay() === 1 ? dFr(x.jour) : '' }; });
+  k.serieMax = nf(mx);
+  const noms = {}; (d.magasins || []).forEach(m => { noms[m.id] = m.nom; });
+  k.vendeuses = (d.vendeuses || []).map(v => ({ nom: v.nom, mag: noms[v.shop] || '', cartes: nf(v.cartes), detail: nf(v.premieres) + ' premières · ' + nf(v.dejaVenus) + ' déjà venus',
+    deja: v.cartes >= 10 && v.dejaVenus / v.cartes > 0.8 }));
+  const ETAT = { a_creer: 'code en cours de création', cree: 'code créé au panel', echec: 'code refusé par le panel', papier: 'bon papier', essai: 'essai', a_retirer: 'code à désactiver', annule: 'annulé' };
+  k.dernieres = (d.dernieres || []).slice(0, 12).map(x => ({ quand: dFr(x.le.slice(0, 10)) + ' ' + x.le.slice(11, 16), mag: x.magasin, vendeuse: x.vendeuse || '',
+    quoi: x.premiere ? 'Première visite · la carte' : (x.bon ? 'Déjà venu · la carte et ' + unBon(x.bon.libelle) : 'Déjà venu · la carte seule (' + (x.motif || 'sans bon') + ')'),
+    code: x.bon && x.bon.code ? x.bon.code : '', etat: x.annule ? 'annulé' : (x.essai ? 'essai' : (x.bon ? ETAT[x.bon.etat] || x.bon.etat : '')),
+    ko: !!(x.bon && (x.bon.etat === 'echec' || x.bon.etat === 'a_retirer')), barre: x.annule || x.essai, erreur: x.bon && x.bon.erreur ? x.bon.erreur : '' }));
+  const att = M.reduce((a, m) => { const t = m.attente || {}; a.echec += t.echec || 0; a.creer += t.a_creer || 0; a.retirer += t.a_retirer || 0; return a; }, { echec: 0, creer: 0, retirer: 0 });
+  k.attente = att.echec + att.creer + att.retirer ? { txt: [att.creer ? nf(att.creer) + ' en cours de création' : '', att.echec ? nf(att.echec) + ' refusé' + (att.echec > 1 ? 's' : '') : '', att.retirer ? nf(att.retirer) + ' à désactiver' : ''].filter(Boolean).join(' · '),
+    relancer: () => relancerCodes(app), envoi: !!S.fidKEnvoi } : null;
+  k.garde = d.garde || {};
+}
+
 /* --- Point d'entrée --------------------------------------------------------------------------------- */
 export function valsFidelite(app, common){
   const S = app.state;
   const onglet = S.fidOnglet || 'p';
   fidCharge(app, 'p', false);
   if (onglet === 'c') { fidCharge(app, 'c', false); }
+  if (onglet === 'k') { caisseCharge(app, false); }
   const dP = S.fidP && S.fidP.d && !S.fidP.d.error ? S.fidP.d : null;
   const dC = S.fidC && S.fidC.d && !S.fidC.d.error ? S.fidC.d : null;
   const mags = (dP || dC || {}).magasins || [];
   const shop = S.fidShop || '';
   const f = { onglet, blocs: [], profils: [], msg: S.fidMsg || null, fermerMsg: () => app.setState({ fidMsg: null }),
-    ongletP: () => app.setState({ fidOnglet: 'p' }), ongletC: () => app.setState({ fidOnglet: 'c' }),
+    ongletP: () => app.setState({ fidOnglet: 'p' }), ongletC: () => app.setState({ fidOnglet: 'c' }), ongletK: () => app.setState({ fidOnglet: 'k' }),
     nbRegles: dP ? (dP.regles || []).length : null, nbActifs: dC ? nf((dC.kpis || {}).actifs) : null,
     portees: [{ id: '', nom: 'Réseau', on: !shop }].concat(mags.map(m => ({ id: m.id, nom: m.nom, on: m.id === shop }))).map(m => Object.assign(m, { choisir: () => app.setState({ fidShop: m.id }) })),
-    rafraichir: () => { fidCharge(app, 'p', true); if (onglet === 'c') { fidCharge(app, 'c', true); } } };
+    rafraichir: () => { fidCharge(app, 'p', true); if (onglet === 'c') { fidCharge(app, 'c', true); } if (onglet === 'k') { caisseCharge(app, true); } } };
   common.fid = f;
   valsProgramme(app, f);
   if (onglet === 'c') { valsClients(app, f); }
+  if (onglet === 'k') { valsCaisse(app, f); }
 }

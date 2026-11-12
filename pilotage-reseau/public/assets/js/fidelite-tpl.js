@@ -3,7 +3,8 @@
  *
  * Écriture sobre, à la manière des Réglages d'Apple (demande du 24/10/2026) : des listes groupées, une ligne
  * par règle (titre court, résumé en clair, interrupteur) qui s'ouvre au clic pour se modifier ; les brouillons
- * se publient depuis une barre flottante. Programme : maquette C ; Clients : maquette B. */
+ * se publient depuis une barre flottante. Programme : maquette C ; Clients : maquette B. En caisse (12/11/2026) :
+ * la carte QR donnée à la caisse — le processus, la mise en route par magasin, le suivi. */
 
 const JOURS_L = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
 const JOURS_C = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
@@ -110,14 +111,66 @@ function tplClients(f, x){
     <p class="fi-note-s centre">${esc(f.resume)}</p></div>`;
 }
 
+function tplCaisse(f, x){
+  const { esc } = x, k = f.k || {};
+  if (k.chargement) { return '<div class="fi-vide">Lecture de la carte en caisse…</div>'; }
+  if (k.indispo) { return `<div class="fi-vide">${esc(k.indispo)}</div>`; }
+  if (!k.tuiles) { return ''; }
+  const chiffres = `<div class="fi-chiffres">${k.tuiles.map(([t, v, s, cls]) => `<div class="${cls || ''}"><span>${esc(t)}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join('')}</div>`;
+  const P = k.processus;
+  const processus = `<section class="fi-grp"><h3>Le processus en caisse</h3><div class="fi-liste fi-proc">
+    <div class="fi-proc-q"><span class="fi-ic" style="--c:#8D1D2C">?</span><div><b>« C’est la première fois que vous venez ? »</b><span>la vendeuse pose la question au client sans carte, puis touche sa réponse sur la caisse</span></div></div>
+    <div class="fi-proc-r">
+      <div><em class="oui">Oui</em><b>La carte QR</b><span>bouton « Oui » → la vendeuse donne la carte</span></div>
+      <div><em class="non">Non, déjà venu</em><b>La carte QR + ${esc(P.bon || 'pas de bon')}</b><span>${P.bon ? 'imprimé par la caisse (code) ou bon papier · valable ' + esc(P.jours) + ' jours dès le lendemain' : 'aucun déclencheur « carte » actif dans le Programme'}</span></div>
+    </div></div>
+    <p class="fi-grp-pied">Le bon des déjà-venus est une règle du Programme (On reçoit › Carte donnée en caisse). <button class="fi-lien" ${x.A(P.versProgramme)}>Modifier le bon ›</button> · Consigne de la caisse : docs/consignes/caisse-fidelite-szymon.md.</p></section>`;
+  const mise = `<section class="fi-grp"><h3>Mise en route · ${esc(k.lances)}</h3><div class="fi-liste">
+    ${k.magasins.length ? k.magasins.map(m => {
+      const E = m.edit;
+      const edit = E ? `<div class="fi-edit fi-lanc">
+        <label>Cartes QR reçues <span class="fi-champ"><input type="number" min="0" class="fi-in" style="width:80px" value="${esc(E.v.cartesRecues)}" ${x.C(E.set('cartesRecues'))}><span class="fi-u">en tout</span></span></label>
+        <label>Nouvelle livraison <span class="fi-champ"><input type="number" min="0" class="fi-in" style="width:80px" value="${esc(E.v.cartesAjout)}" placeholder="0" ${x.C(E.set('cartesAjout'))}><span class="fi-u">cartes à ajouter</span></span></label>
+        <label>Bon des déjà-venus <select class="fi-in s" ${x.C(E.set('mode'))}><option value="papier"${E.v.mode === 'papier' ? ' selected' : ''}>bon papier, donné par la vendeuse</option><option value="code"${E.v.mode === 'code' ? ' selected' : ''}>code imprimé par la caisse</option></select>
+          ${E.v.mode === 'code' ? `<span class="fi-champ">campagne n° <input type="number" min="1" class="fi-in" style="width:80px" value="${esc(E.v.campagne)}" ${x.C(E.set('campagne'))}></span>${E.campagneNom ? `<span class="fi-u">${esc(E.campagneNom)}</span>` : ''}` : ''}</label>
+        <label>Équipe briefée le <input type="date" class="fi-in d" value="${esc(E.v.equipeLe)}" ${x.C(E.set('equipeLe'))}> <button class="fi-lien" ${x.A(E.auj('equipeLe'))}>aujourd’hui</button></label>
+        <label>Lancement le <input type="date" class="fi-in d" value="${esc(E.v.lanceLe)}" ${x.C(E.set('lanceLe'))}> <span class="fi-u">le bouton s’allume à la caisse ce jour-là</span></label>
+        <label>Note <input type="text" class="fi-in t" style="width:320px" value="${esc(E.v.note)}" placeholder="présentoir, affiche, qui suit…" ${x.C(E.set('note'))}></label>
+        <p class="fi-note-s">Code imprimé : une campagne de bons du panel à codes uniques, rattachée à sa promotion (l’assistant des bons du dashboard magasin la crée). Chaque déjà-venu reçoit son code, d’une utilisation.</p>
+        <div class="fi-edit-pied"><span>${E.lancerAuj ? `<button class="fi-lien fort" ${x.A(E.lancerAuj)}${E.envoi ? ' disabled' : ''}>Lancer aujourd’hui</button>` : ''}</span>
+          <span class="fi-edit-act"><button class="fi-lien" ${x.A(E.fermer)}>Fermer</button><button class="fi-cta" ${x.A(E.enregistrer)}${E.envoi ? ' disabled' : ''}>${E.envoi ? 'Enregistrement…' : 'Enregistrer'}</button></span></div></div>` : '';
+      return `<div class="fi-row${m.ouvert ? ' ouvert' : ''}"><button class="fi-row-main" ${x.A(m.ouvrir)} aria-expanded="${m.ouvert}">
+        <span class="fi-ic" style="--c:${m.lance ? '#248a3d' : '#8e8e93'}">${esc(m.pret)}/${esc(m.total)}</span>
+        <span class="fi-row-txt"><b>${esc(m.nom)}</b><span class="fi-etapes">${m.etapes.map(e => `<i class="${e.fait ? 'f' : ''}" title="${esc(e.nom + ' : ' + e.txt)}">${e.fait ? '✓' : '·'} ${esc(e.nom)}</i>`).join('')}</span></span>
+        <span class="fi-row-stat${m.alertes.length ? ' ko' : ''}">${esc(m.alertes.length ? m.alertes[0] : m.statut)}</span><span class="fi-chev">›</span></button></div>
+        ${m.ouvert ? `<div class="fi-edit fi-etapes-d">${m.etapes.map(e => `<div><i class="${e.fait ? 'f' : ''}">${e.fait ? '✓' : ''}</i><b>${esc(e.nom)}</b><span>${esc(e.txt)}</span></div>`).join('')}
+          ${m.versPointages ? `<button class="fi-lien" ${x.A(m.versPointages)}>Créer la clé de caisse dans Pointages ›</button>` : ''}
+          ${m.alertes.length > 1 ? `<p class="fi-note-s ko">${m.alertes.map(esc).join(' · ')}</p>` : ''}</div>${edit}` : ''}`;
+    }).join('') : '<div class="fi-row vide">Aucun magasin ouvert.</div>'}
+  </div><p class="fi-grp-pied">Six étapes : la clé de caisse (celle du pointage), les cartes reçues, le bon des déjà-venus, l’équipe briefée, le lancement, la première carte. Avant le lancement, la caisse cache le bouton ; elle peut faire des remises d’essai, hors des comptes.</p></section>`;
+  const suivi = `<section class="fi-grp"><h3>Suivi par magasin · 30 jours</h3><div class="fi-liste fi-tab"><table>
+    <thead><tr><th>Magasin</th><th>Aujourd’hui</th><th>Cartes</th><th>Premières</th><th>Déjà venus</th><th>Bons</th><th>Pour 100 tickets</th><th>Stock</th><th>Membres app</th></tr></thead>
+    <tbody>${k.suivi.map(m => `<tr class="${m.lance ? '' : 'off'}"><td>${esc(m.nom)}${m.alertes.length ? `<small class="ko">${esc(m.alertes.join(' · '))}</small>` : ''}</td><td>${esc(m.auj)}</td><td>${esc(m.cartes)}</td><td>${esc(m.premieres)}</td><td>${esc(m.deja)}</td><td>${esc(m.bons)}</td><td>${esc(m.pour100)}</td><td class="${m.stockKo ? 'ko' : ''}">${esc(m.stock)}</td><td>${esc(m.membres)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="fi-grp-pied">Pour 100 tickets : cartes données sur les jours dont les tickets sont relevés (récurrence PWA). Membres app : clients de l’app inscrits depuis le lancement et vus à la caisse du magasin. Stock : cartes reçues moins cartes données, en jours au rythme des 14 derniers.</p></section>`;
+  const serie = `<section class="fi-grp"><h3>Cartes par jour</h3><div class="fi-liste fi-serie"><div class="fi-barres">${k.serie.map(j => `<div title="${esc(j.titre)}"><i class="d" style="height:${j.dv.toFixed(1)}%"></i><i class="p" style="height:${j.p.toFixed(1)}%"></i><span>${esc(j.lib)}</span></div>`).join('')}</div>
+    <div class="fi-leg pad"><span><i class="kp"></i>Premières visites</span><span><i class="kd"></i>Déjà venus</span><span>Échelle : ${esc(k.serieMax)} cartes au plus haut</span></div></div></section>`;
+  const vend = `<section class="fi-grp"><h3>Qui propose la carte</h3><div class="fi-liste">${k.vendeuses.length ? k.vendeuses.map(v => `<div class="fi-sim"><div><b>${esc(v.nom)}</b><span>${esc(v.mag)} · ${esc(v.detail)}</span></div><div class="fi-sim-v"><b class="${v.deja ? 'ko' : ''}">${esc(v.cartes)}</b><span>cartes</span></div></div>`).join('')
+    : '<div class="fi-row vide">Aucune carte rattachée à une vendeuse sur 30 jours.</div>'}</div><p class="fi-grp-pied">La vendeuse connectée à la caisse au moment de la remise. En rouge : plus de 80 % de « déjà venus ».</p></section>`;
+  const dern = `<section class="fi-grp"><h3>Dernières remises</h3><div class="fi-liste">${k.dernieres.length ? k.dernieres.map(r => `<div class="fi-sim${r.barre ? ' barre' : ''}"><div><b>${esc(r.quoi)}</b><span>${esc(r.quand)} · ${esc(r.mag)}${r.vendeuse ? ' · ' + esc(r.vendeuse) : ''}${r.code ? ' · ' + esc(r.code) : ''}</span>${r.erreur ? `<span class="ko">${esc(r.erreur)}</span>` : ''}</div><div class="fi-sim-v"><span class="${r.ko ? 'ko' : ''}">${esc(r.etat)}</span></div></div>`).join('')
+    : '<div class="fi-row vide">Aucune carte donnée pour l’instant.</div>'}</div>
+    ${k.attente ? `<p class="fi-grp-pied">Codes au panel : ${esc(k.attente.txt)}. <button class="fi-lien fort" ${x.A(k.attente.relancer)}${k.attente.envoi ? ' disabled' : ''}>Relancer maintenant</button> (sinon, repris chaque heure).</p>` : ''}</section>`;
+  return `<div class="fi-col">${chiffres}${processus}${mise}${suivi}${serie}<div class="fi-g2">${vend}${dern}</div>
+    <p class="fi-note-s centre">Garde-fous : ${esc(k.garde.bonsJour)} bons au plus par magasin et par jour ; une remise s’annule à la caisse pendant ${esc(k.garde.annulerMin)} minutes.</p></div>`;
+}
+
 export function tplFidelite(c, x){
   const { esc } = x, f = c.fid;
   if (!f) { return ''; }
   const shop = f.portees.find(p => p.on) || f.portees[0];
-  const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(f.ongletP)} class="${f.onglet === 'p' ? 'on' : ''}">Programme</button><button ${x.A(f.ongletC)} class="${f.onglet === 'c' ? 'on' : ''}">Clients</button></div>
+  const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(f.ongletP)} class="${f.onglet === 'p' ? 'on' : ''}">Programme</button><button ${x.A(f.ongletC)} class="${f.onglet === 'c' ? 'on' : ''}">Clients</button><button ${x.A(f.ongletK)} class="${f.onglet === 'k' ? 'on' : ''}">En caisse</button></div>
     <label class="fi-popup"><select ${x.C(e => { const p = f.portees.find(q => q.id === e.target.value); if (p) { p.choisir(); } })}>${f.portees.map(p => `<option value="${esc(p.id)}"${p.on ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select><span>${esc(shop ? shop.nom : 'Réseau')}</span></label></div>`;
-  const essai = f.test ? '<p class="fi-essai"><i></i>Données d’essai — aucune visite carte en base pour l’instant. Les calculs sont ceux qui tourneront sur les vraies visites.</p>' : '';
+  const essai = f.test && f.onglet !== 'k' ? '<p class="fi-essai"><i></i>Données d’essai — aucune visite carte en base pour l’instant. Les calculs sont ceux qui tourneront sur les vraies visites.</p>' : '';
   const msg = f.msg ? `<div class="fi-toast${f.msg.ko ? ' ko' : ''}">${esc(f.msg.txt)}<button ${x.A(f.fermerMsg)} aria-label="Fermer">×</button></div>` : '';
   const dock = f.onglet === 'p' && f.nbModifs ? `<div class="fi-dock"><span>${f.nbModifs} modification${f.nbModifs > 1 ? 's' : ''} non publiée${f.nbModifs > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(f.annuler)}>Annuler</button><button class="fi-cta" ${x.A(f.publier)}${f.envoi ? ' disabled' : ''}>${f.envoi ? 'Publication…' : 'Publier'}</button></div>` : '';
-  return `<div data-screen="fidelite" class="fi">${haut}${essai}${msg}${f.onglet === 'c' ? tplClients(f, x) : tplProgramme(f, x)}${dock}</div>`;
+  return `<div data-screen="fidelite" class="fi">${haut}${essai}${msg}${f.onglet === 'c' ? tplClients(f, x) : f.onglet === 'k' ? tplCaisse(f, x) : tplProgramme(f, x)}${dock}</div>`;
 }
