@@ -403,6 +403,63 @@ function ep_fidelite_profils_magasin(): array
     return fpMagasin($sid, true);
 }
 
+/**
+ * La tendance des profils (12/11/2026, Sam : « un troisième graphique : l'augmentation ou la diminution du nombre de ce
+ * type de récurrence ; un toggle 30 – 90 – 180 jours »). À des dates régulières de la période (chaque jour sur 30 jours,
+ * tous les 3 jours sur 90, chaque semaine sur 180), le profil de chaque client est recalculé tel qu'il était ce jour-là :
+ * clients scannés sur la mémoire avant cette date, rythme sur la fenêtre avant cette date. Les tickets viennent du même
+ * cache (ceo_fid_ticket) ; les journées manquantes se lisent à l'API, les plus récentes d'abord.
+ */
+function fpTendance(int $sid, int $jours): array
+{
+    $R = fpReglages();
+    $profils = fpProfils(true);
+    $au = date('Y-m-d');
+    $du = date('Y-m-d', strtotime($au . ' -' . ($jours + $R['memoire'] - 1) . ' days'));
+    [, $reste] = fpLireJours($sid, $du, $au);
+    $J = [];
+    foreach (Db::rows('SELECT DISTINCT client_id, jour FROM ceo_fid_ticket WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]) as $t) {
+        $J[(int) $t['client_id']][] = (string) $t['jour'];
+    }
+    $pas = $jours <= 30 ? 1 : ($jours <= 90 ? 3 : 7);
+    $dates = [];
+    for ($k = $jours; $k > 0; $k -= $pas) { $dates[] = date('Y-m-d', strtotime($au . ' -' . $k . ' days')); }
+    $dates[] = $au;
+    $base = end($profils)['id'];
+    $points = [];
+    foreach ($dates as $D) {
+        $debM = date('Y-m-d', strtotime($D . ' -' . ($R['memoire'] - 1) . ' days'));
+        $debF = date('Y-m-d', strtotime($D . ' -' . ($R['fenetre'] - 1) . ' days'));
+        $cnt = array_fill_keys(array_column($profils, 'id'), 0);
+        $tot = 0;
+        foreach ($J as $L) {
+            $vu = false; $nF = 0;
+            foreach ($L as $j) {
+                if ($j > $D || $j < $debM) { continue; }
+                $vu = true;
+                if ($j >= $debF) { $nF++; }
+            }
+            if (!$vu) { continue; }
+            $tot++;
+            $rythme = $nF * 30 / $R['fenetre'];
+            $id = $base;
+            foreach ($profils as $p) { if ($p['unite'] !== 'base' && $rythme >= $p['seuil']) { $id = $p['id']; break; } }
+            $cnt[$id]++;
+        }
+        $points[] = ['date' => $D, 'scannes' => $tot, 'parProfil' => $cnt];
+    }
+    return ['shop' => (string) $sid, 'jours' => $jours, 'pas' => $pas, 'fenetre' => $R['fenetre'], 'memoire' => $R['memoire'], 'aLire' => $reste, 'points' => $points];
+}
+
+/** GET /fidelite/profils/tendance?shop=&jours=30|90|180 : le nombre de clients de chaque profil, date après date. */
+function ep_fidelite_profils_tendance(): array
+{
+    $sid = fpShop();
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
+    $j = (int) ($_GET['jours'] ?? 90);
+    return fpTendance($sid, in_array($j, [30, 90, 180], true) ? $j : 90);
+}
+
 /** GET /fidelite/client?shop=&client= : l'historique d'un client sur 180 jours, ticket par ticket. */
 function ep_fidelite_client(): array
 {
