@@ -1399,3 +1399,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T09:33Z Sukcesja HR (278)
 2026-11-12T10:00Z Wejście do ERP przez QR (275)
 2026-11-12T10:14Z Zadania obowiązkowe (280)
+2026-11-12T10:23:05Z formation : identifiant des titres longs
