@@ -157,6 +157,23 @@ Simulation par client, part de tarte ou de gâteau à 3,90 € TTC, gâteau fact
 
 Le 4+1 vaut une remise de 20 %. Un client en 4+1 laisse 3,7 fois la marge d'un client à une part, avec un ticket de 15,60 €, dans le panier moyen du réseau (11,80 à 17,70 €) : l'offre sert le trafic et le panier. Avec l'usine à 9,10 €, le 4+1 reste près de ×4 ; avec l'usine à 13,20 €, il tombe à ×2,68.
 
+### Le packaging : trois formats de boîte, guidés par la caisse
+
+La simulation d'emballage validée le 12/11/2026 ramène toutes les tartes, quiches et gâteaux à trois formats de boîte (cotes intérieures ; tarte Ø 280 mm, gâteau Ø 290 mm, jeu de 2,5 mm par côté, parts posées en quinconce avec 5 mm d'écart).
+
+| Boîte | Intérieur | Ce qu'elle reçoit | Remplissage |
+| --- | --- | --- | --- |
+| S | 158 × 150 mm | tarte ou quiche 1/4 ; 1 ou 2 parts de gâteau | 65 % ; 28 à 56 % |
+| M | 295 × 158 mm | tarte ou quiche 1/2 ; 3 à 5 parts, donc le 4+1 | 66 % ; 43 à 71 % |
+| L | 295 × 295 mm | tarte ou quiche entière ; gâteau entier | 71 % ; 76 % |
+
+Le 4+1 (5 parts) tient juste dans la boîte M, remplie à 71 %.
+
+> [Idée : la caisse allume la bonne boîte] Une LED au-dessus de chaque emplacement de boîte, pilotée par la caisse via un Arduino. Quand la vendeuse encode l'article (1/4, 4+1, tarte entière…), la caisse envoie le format à la carte, qui allume la LED de la bonne boîte : pas d'erreur de format, un geste plus rapide, et chaque boîte sortie est comptée (100 % tracé, réassort du packaging).
+
+- À vérifier : la caisse doit pouvoir envoyer un signal à chaque article (réseau ou USB) ; une carte avec Wi-Fi, de type ESP32, évite les câbles. Matériel à chiffrer.
+- Écart à trancher : la simulation compte 10 parts par gâteau entier, le calcul du prix usine en compte 12.
+
 ### Adapter les gammes : il y aura des coupes
 
 La gamme est trop longue pour ce qu'elle vend : 114 références font 80 % du CA du réseau, et 154 autres se partagent les 5 derniers pour cent. Couper cette traîne simplifie la production, la grille de prix unique et les invendus.
@@ -569,6 +586,7 @@ Les échéances ci-dessous sont des propositions ; les responsables restent à d
 - [ ] Faire valider l'annexe au DIP sur la fréquence des contrôles et la SOP des contrôles, puis planifier les visites de novembre et décembre dans l'application Visites.
 - [ ] Préparer la démonstration de la réunion : tablette, application Visites, liaison au grand écran.
 - [ ] Compléter la liste des dépenses marketing 2026 (factures payées hors du fonds), enregistrer toutes les redevances dues dans le fonds, puis arbitrer le budget marketing 2027 (décembre 2026).
+- [ ] Fixer le nombre de parts par gâteau (10 ou 12), puis prototyper dans le magasin pilote la liaison caisse → Arduino → LED des emplacements de boîtes S, M, L (T1 2027).
 - [ ] Choisir une tenue de travail et un packaging uniques pour le réseau, chez un même fournisseur, avec un prix de vente commun pour les sacs et les boîtes, sur le budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € (février 2027).
 - [ ] Lancer les études de marché de Wemmel, Grimbergen, Sambreville et Malines dans le module Scouting du cockpit (T1 2027).
 - [ ] Faire valider la majoration de 0,5 % par l'avocat et préparer l'avenant au contrat (janvier 2027).
