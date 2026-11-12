@@ -5457,13 +5457,26 @@
   const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '' };
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
   const IA_ETOILE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg>';
+  /** André, le rat de l'assistant (12/11/2026, Sam : « un André plus design, minimaliste ») : un trait continu à la couleur
+   * du texte, seul le nez en bordeaux. États : `pense` (il lit : moustaches et nez qui frétillent, oreille qui bouge, il
+   * hoche) ; `salue` (un petit saut à l'ouverture). Au repos : il cligne et remue la queue. */
+  function iaAndre(etat, taille) {
+    return `<svg class="andre${etat ? ' ' + etat : ''}" viewBox="0 0 48 48" width="${taille || 36}" height="${taille || 36}" role="img" aria-label="André" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path class="queue" d="M11 34.5 C5 34.5 3.5 41 9 42 C13.5 42.8 16 40 20 40.6"/>
+      <g class="corps"><path d="M11 35 C9.5 25 18 19.5 27 21 C33 22 38 25 42.5 28 C38 31.5 32 34.6 25 35.3 C19 35.8 13 35.8 11 35 Z"/>
+        <path class="oreille" d="M21.2 21.6 A5.6 5.6 0 1 1 30.6 21.4"/>
+        <circle class="oeil" cx="33" cy="25.4" r="1.3" fill="currentColor" stroke="none"/>
+        <circle class="nez" cx="42.6" cy="28" r="1.7" stroke="none"/>
+        <g class="moust" stroke-width="1.3"><path d="M40.5 30.4 L46.5 32"/><path d="M41 26.2 L46.8 24.6"/></g></g>
+    </svg>`;
+  }
   function iaBoite() {
     let b = document.getElementById('db-ia');
     if (!b) { b = document.createElement('div'); b.id = 'db-ia'; document.body.appendChild(b); }
     return b;
   }
   function iaOuvrir() {
-    IA.ouvert = true;
+    IA.ouvert = true; IA.salue = true; setTimeout(() => { IA.salue = false; }, 1200);
     if (!IA.questions) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; iaRendre(); }).catch(() => { IA.questions = { tuiles: [], groupes: [] }; iaRendre(); }); }
     iaRendre();
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
@@ -5498,8 +5511,8 @@
     const Q = IA.questions || {}, dern = IA.fil[IA.fil.length - 1];
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
-    if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><i></i>L’assistant lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    if (!dern) { return h + `<div class="ia-accueil">${iaAndre('', 56)}<p>Bonjour, je suis André. Choisissez une question, ou posez la vôtre : je lis les chiffres de votre magasin dans l’ERP au moment où vous demandez.</p></div>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att">${iaAndre('pense', 44)}<span>André lit les chiffres du magasin… « ${esc(dern.q)} »</span></p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''}</span></div>
@@ -5513,11 +5526,11 @@
     const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + '<div class="ia-bulle ia"><p class="ia-att"><i></i>L’assistant lit les chiffres du magasin…</p></div>'; }
+      if (t.attente) { return h + `<div class="ia-ligne">${iaAndre('pense', 34)}<div class="ia-bulle ia"><p class="ia-att"><span>André lit les chiffres du magasin…</span></p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-bulle ia"><p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
-    }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
+      return h + `<div class="ia-ligne">${iaAndre('', 34)}<div class="ia-bulle ia"><p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+    }).join('') || `<div class="ia-accueil">${iaAndre('', 56)}<p>Bonjour, je suis André. Choisissez une question à gauche, ou posez la vôtre en bas.</p></div>`;
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
   function iaRendre() {
@@ -5526,7 +5539,7 @@
     document.body.classList.add('ia-ouvert');
     const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
     b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
-      <header class="ia-h"><span class="ia-ic">${IA_ETOILE}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
+      <header class="ia-h"><span class="ia-andre">${iaAndre((IA.fil.some(t => t.attente) ? 'pense' : (IA.salue ? 'salue' : '')), 40)}</span><div><b>André, l’assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
         <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
       ${IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`}</div>`;
@@ -6164,7 +6177,7 @@
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${IA_ETOILE}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaAndre("", 22)}Demander à André</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
