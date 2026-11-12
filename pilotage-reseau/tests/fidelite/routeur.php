@@ -13,6 +13,7 @@ if (str_starts_with($u, '/api/cockpit/')) {
         $p === '/fidelite/profils' => ep_fidelite_profils(),
         $p === '/fidelite/profils/magasin' => ep_fidelite_profils_magasin(),
         $p === '/fidelite/profils/tendance' => ep_fidelite_profils_tendance(),
+        $p === '/fidelite/scan' => ep_fidelite_scan(),
         $p === '/fidelite/client' => ep_fidelite_client(),
         $p === '/assistant/magasin/questions' => (require_once __DIR__ . '/../../src/assistant_magasin.php') ? ep_assistant_questions() : [],
         // Les coachs et les questions posées : le vrai backend sur la MariaDB du banc.

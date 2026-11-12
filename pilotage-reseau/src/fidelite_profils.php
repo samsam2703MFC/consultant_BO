@@ -460,6 +460,25 @@ function ep_fidelite_profils_tendance(): array
     return fpTendance($sid, in_array($j, [30, 90, 180], true) ? $j : 90);
 }
 
+/**
+ * La part des tickets scannés (12/11/2026, Sam : « par défaut c'est aujourd'hui ; en dessous le mois et l'année en
+ * moyenne »). Aujourd'hui, depuis le 1er du mois, depuis le 1er janvier : tickets identifiés sur tickets, lus dans le
+ * même cache (ceo_fid_jour). Les journées manquantes de l'année se lisent à l'API, les plus récentes d'abord.
+ */
+function ep_fidelite_scan(): array
+{
+    $sid = fpShop();
+    if ($sid <= 0) { http_response_code(422); return ['error' => 'magasin manquant (?shop=)']; }
+    $au = date('Y-m-d');
+    [, $reste] = fpLireJours($sid, date('Y-01-01'), $au);
+    $part = static function (string $du) use ($sid, $au): array {
+        $r = Db::row('SELECT COALESCE(SUM(tickets),0) t, COALESCE(SUM(identifies),0) i, COUNT(*) j FROM ceo_fid_jour WHERE shop_id = ? AND jour BETWEEN ? AND ?', [$sid, $du, $au]);
+        $t = (int) $r['t']; $i = (int) $r['i'];
+        return ['du' => $du, 'tickets' => $t, 'identifies' => $i, 'jours' => (int) $r['j'], 'part' => $t > 0 ? round(100 * $i / $t, 1) : null];
+    };
+    return ['shop' => (string) $sid, 'jour' => $part($au), 'mois' => $part(date('Y-m-01')), 'annee' => $part(date('Y-01-01')), 'aLire' => $reste];
+}
+
 /** GET /fidelite/client?shop=&client= : l'historique d'un client sur 180 jours, ticket par ticket. */
 function ep_fidelite_client(): array
 {

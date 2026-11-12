@@ -143,7 +143,7 @@
     // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
     if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
-    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); } rendre(); return; }
+    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
     if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
@@ -5581,6 +5581,8 @@
    * Lectures : /fidelite/profils/magasin?shop= et /fidelite/client?shop=&client= (API du panel, côté serveur). */
   function cleFD() { return 'fd|' + S.shop; }
   function cheminFD() { return '/fidelite/profils/magasin?shop=' + encodeURIComponent(S.shop); }
+  function cleFDS() { return 'fds|' + S.shop; }
+  function cheminFDS() { return '/fidelite/scan?shop=' + encodeURIComponent(S.shop); }
   function cleFDT() { return 'fdt|' + S.shop + '|' + S.fdT; }
   function cheminFDT() { return '/fidelite/profils/tendance?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.fdT; }
   function cleFDC() { return 'fdc|' + S.shop + '|' + S.fdClient; }
@@ -5610,17 +5612,27 @@
    * clients ; en dessous une échelle de 0 à 90 % : noir, rouge, orange, jaune, vert, vert foncé, or »). Un ticket compte
    * comme scanné quand la caisse a reconnu le client (carte ou commande) ; la part se lit sur la mémoire des profils. */
   const FD_ECHELLE = [[0, '#1d1d1f', 'noir'], [10, '#c62828', 'rouge'], [20, '#ef6c00', 'orange'], [35, '#f2c200', 'jaune'], [50, '#43a047', 'vert'], [65, '#1b5e20', 'vert foncé'], [80, '#c9a227', 'or']];
-  function fdScan(d) {
-    if (!d.tickets) { return ''; }
-    const v = 100 * (d.identifies || 0) / d.tickets, max = 90, pos = Math.min(v, max) / max * 100;
-    const bande = FD_ECHELLE.reduce((b, x) => (v >= x[0] ? x : b), FD_ECHELLE[0]);
+  function fdScan() {
+    const k = cleFDS(), d = S.aux[k];
+    if (S.err[k] || (d && d.error)) { return `<div class="db-err">Part des tickets scannés : ${esc(S.err[k] || d.error)}</div>`; }
+    if (!d) { return '<div class="db-card fd-scan"><div class="db-attente">Lecture des tickets scannés…</div></div>'; }
+    const max = 90;
+    const bande = v => FD_ECHELLE.reduce((b, x) => (v >= x[0] ? x : b), FD_ECHELLE[0]);
+    const J = d.jour || {}, v = J.part == null ? 0 : J.part, pos = Math.min(v, max) / max * 100;
     const segs = FD_ECHELLE.map((x, i) => { const fin = i + 1 < FD_ECHELLE.length ? FD_ECHELLE[i + 1][0] : max;
       return `<i style="left:${x[0] / max * 100}%;width:${(fin - x[0]) / max * 100}%;background:${x[1]}" title="${x[0]} à ${fin} % : ${x[2]}"></i>`; }).join('');
     const reperes = FD_ECHELLE.map(x => x[0]).concat([max]).map(n => `<span style="left:${n / max * 100}%">${n} %</span>`).join('');
-    return `<div class="db-card fd-scan"><div class="fd-scan-h"><b style="color:${bande[1]}">${nf(v, 1)} %</b>
-        <div><span class="fd-scan-t">des tickets ont un client scanné</span><span class="fd-scan-s">${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)} · ${d.memoire} derniers jours</span></div></div>
-      <div class="fd-scan-e"><div class="fd-scan-b">${segs}<em style="left:${pos}%" title="${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div></div>`;
+    // Le mois et l'année : leur part sur l'échelle (un repère discret chacun) et en chiffres sous la barre.
+    const autres = [['mois', 'Ce mois-ci', d.mois], ['annee', 'Cette année', d.annee]].filter(x => x[2] && x[2].part != null);
+    const marques = autres.map(x => `<em class="fd-scan-m" style="left:${Math.min(x[2].part, max) / max * 100}%" title="${x[1]} : ${nf(x[2].part, 1)} %"></em>`).join('');
+    const moyennes = autres.map(x => `<div class="fd-scan-a"><span>${x[1]}</span><b style="color:${bande(x[2].part)[1]}">${nf(x[2].part, 1)} %</b><small>${nf(x[2].identifies, 0)} sur ${nf(x[2].tickets, 0)} tickets</small></div>`).join('');
+    return `<div class="db-card fd-scan"><div class="fd-scan-h"><b style="color:${bande(v)[1]}">${J.part == null ? '—' : nf(v, 1) + ' %'}</b>
+        <div><span class="fd-scan-t">des tickets d’aujourd’hui ont un client scanné</span><span class="fd-scan-s">${nf(J.identifies || 0, 0)} tickets sur ${nf(J.tickets || 0, 0)} à l’heure qu’il est</span></div></div>
+      <div class="fd-scan-e"><div class="fd-scan-b">${segs}${marques}<em style="left:${pos}%" title="Aujourd’hui : ${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div>
+      ${moyennes ? `<div class="fd-scan-moy">${moyennes}</div>` : ''}
+      ${d.aLire ? `<p class="fd-note">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de l’année restent à lire ; la moyenne de l’année se complète à la prochaine ouverture.</p>` : ''}</div>`;
   }
+
   /* La tendance du profil choisi (12/11/2026, Sam : « un troisième graphique : l'augmentation ou la diminution du nombre
    * de ce type de récurrence ; un toggle 30 – 90 – 180 jours ») : le nombre de clients du profil, date après date
    * (GET /fidelite/profils/tendance), et l'écart entre le début et aujourd'hui. */
@@ -5661,7 +5673,7 @@
     const P = d.profils || [], N = d.scannes || 0;
     const choisi = P.find(p => String(p.id) === String(S.fdProfil)) || P.find(p => p.clients > 0 && p.unite !== 'base') || P[0];
     let h = `<div class="db-sec">Les profils des clients scannés<small>${nf(N, 0)} clients reconnus en caisse sur ${d.memoire} jours · ${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)}${d.tickets ? ', soit 1 sur ' + nf(Math.round(d.tickets / Math.max(1, d.identifies)), 0) : ''} · rythme lu sur ${d.fenetre} jours</small></div>`;
-    h += fdScan(d);
+    h += fdScan();
     if (d.aLire) { h += `<div class="db-alerte">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de tickets restent à lire — la page se complète à la prochaine ouverture.</div>`; }
     // Du moins fidèle au plus fidèle, de gauche à droite (12/11/2026, Sam : « inverser le sens Fanbase et Découverte »).
     h += `<div class="fd-tuiles">${P.slice().reverse().map(p => {
