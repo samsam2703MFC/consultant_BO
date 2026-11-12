@@ -745,6 +745,8 @@ final class PositionTaskService
         $state = $o['wizard_state'] ?? null;
         $late = $status === 'open' && $due !== null && $due < $today->format('Y-m-d') ? (int) floor((strtotime($today->format('Y-m-d')) - strtotime($due)) / 86400) : 0;
         $cronOn = (int) ($task['cron_on'] ?? 0) === 1 && ($task['cron_action'] ?? null) !== null;
+        // [280] Kreator kroków : zadanie bez własnego kreatora i bez protokołu (nie : zadanie w całości automatyczne).
+        $generic = $wizard === null && empty($task['form_code']) && !($cronOn && ($task['cron_then'] ?? 'wait') === 'done');
         // Cron « czeka na osobę » : uruchomienie udane w okresie wystąpienia = przygotowane przez system.
         $prepared = null;
         if ($cronOn && $o && $lastRun && (int) ($lastRun['ok'] ?? 0) === 1 && ($task['cron_then'] ?? 'wait') === 'wait') {
@@ -773,13 +775,17 @@ final class PositionTaskService
             'when' => $this->whenLabel($task, $due),
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
             'prepared' => $prepared,
-            'link' => $wizard['link'] ?? $link,
+            // [280] Zadanie zawsze otwiera kreator : własny, protokół albo kreator kroków (/tasks/wizard/{id}).
+            'link' => $wizard['link'] ?? ($generic ? '/tasks/wizard/' . (int) $task['id'] : $link),
+            'mandatory' => (bool) (int) ($task['mandatory'] ?? 0),
+            'block' => (int) ($task['mandatory'] ?? 0) ? TaskLockService::blockLabel($task) : null,
             'extra' => array_map(fn($l) => ['link' => $l, 'label' => self::LINKS[$l][1] ?? $l], self::extraLinks($task['extra_links'] ?? null)),
             'button' => $link !== null ? (self::LINKS[$link][1] ?? 'Otwórz') : null,
             'auto' => ($task['auto_code'] ?? null) ? (self::AUTO[$task['auto_code']] ?? null) : null,
             'auto_done' => $o !== null && $status === 'done' && $o['done_by'] === null && (($task['auto_code'] ?? null) !== null || $cronOn),
             'wizard' => $wizard ? ['label' => $wizard['label'], 'steps' => $wizard['steps'], 'event' => $wizard['event']]
-                : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany'] : null),
+                : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany']
+                : ($generic ? ['label' => 'Kreator kroków', 'steps' => count(TaskLockService::steps($task)) + 1, 'event' => 'gdy « Zakończ zadanie »'] : null)),
             'progress' => $state && !$state['done'] && $state['step'] !== null ? ['step' => (int) $state['step'], 'steps' => (int) $state['steps'], 'label' => $state['step_label']] : null,
             'summary' => $o['summary'] ?? ($state['summary'] ?? null),
             'cron' => $cronOn ? ['time' => substr((string) $task['cron_time'], 0, 5), 'then' => $task['cron_then'] ?? 'wait', 'label' => TaskCronService::ACTIONS[$task['cron_action']] ?? $task['cron_action'],
@@ -825,6 +831,12 @@ final class PositionTaskService
         if ($rule && preg_match('/^wd(\d+)$/', $rule, $m)) return $m[1] . '. dzień roboczy';
         if ($rule && preg_match('/^d(\d+)$/', $rule, $m)) return $m[1] . '. dzień';
         return 'ostatni dzień';
+    }
+
+    /** [280] Blokada ERP : wystąpienie po sprawdzeniu kreatora, który zalicza się sam (status może zmienić się na « done »). */
+    public function closeIfWizardDone(array $o, array $task, DateTimeImmutable $today): array
+    {
+        return $this->autoClose($o, $task, $today);
     }
 
     /**
@@ -1311,6 +1323,13 @@ final class PositionTaskService
             'remind_time' => !empty($task['remind_time']) ? substr((string) $task['remind_time'], 0, 5) : null,
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
             'backup_position_id' => isset($task['id_backup_position']) ? (int) $task['id_backup_position'] : null,
+            // [280] obowiązkowe (blokada ERP) i kroki kreatora zadania bez własnego kreatora
+            'mandatory' => (bool) (int) ($task['mandatory'] ?? 0),
+            'block_mode' => $task['block_mode'] ?? 'due',
+            'block_time' => !empty($task['block_time']) ? substr((string) $task['block_time'], 0, 5) : null,
+            'block_tolerance' => (int) ($task['block_tolerance'] ?? 0),
+            'block_label' => TaskLockService::blockLabel($task),
+            'wizard_steps' => json_decode((string) ($task['wizard_steps'] ?? ''), true) ?: [],
             'sort_order' => (int) ($task['sort_order'] ?? 0),
             // wykonania w 4 tygodniach (podział czasu rzeczywistego)
             'per_4w' => $period === 'week' ? 4 * count($days) : ($period === 'monthly' ? 1 : 1 / 3),
@@ -1403,6 +1422,26 @@ final class PositionTaskService
                 $backup = $row['backup_position_id'] === null || $row['backup_position_id'] === '' ? null : (int) $row['backup_position_id'];
                 if ($backup !== null && ($backup === $positionId || !$this->positions->exists($backup))) throw new CustomException("Wiersz {$n} : zastępstwo — wybierz inne stanowisko.", 'errors', 422);
                 $extra['id_backup_position'] = $backup;
+            }
+            // [280] Zadanie obowiązkowe : tryb blokady, godzina, tolerancja ; kroki kreatora (zadanie bez własnego kreatora).
+            if (array_key_exists('mandatory', $row)) {
+                $extra['mandatory'] = !empty($row['mandatory']) ? 1 : 0;
+                $mode = (string) ($row['block_mode'] ?? 'due');
+                if (!in_array($mode, ['due', 'next_day'], true)) throw new CustomException("Wiersz {$n} : nieznany tryb blokady.", 'errors', 422);
+                $extra['block_mode'] = $mode;
+                $bt = $row['block_time'] ?? null;
+                if ($bt !== null && $bt !== '' && !preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', (string) $bt)) throw new CustomException("Wiersz {$n} : godzina blokady w formacie GG:MM.", 'errors', 422);
+                $extra['block_time'] = $bt === '' ? null : $bt;
+                $tol = (int) ($row['block_tolerance'] ?? 0);
+                if ($tol < 0 || $tol > 120) throw new CustomException("Wiersz {$n} : tolerancja od 0 do 120 min.", 'errors', 422);
+                $extra['block_tolerance'] = $tol;
+            }
+            if (array_key_exists('wizard_steps', $row)) {
+                try {
+                    $extra['wizard_steps'] = TaskLockService::cleanSteps($row['wizard_steps']);
+                } catch (CustomException $e) {
+                    throw new CustomException("Wiersz {$n} : " . $e->getMessage(), 'errors', 422);
+                }
             }
             $plan[] = ['id' => $id, 'data' => ['title_pl' => $title, 'id_category' => $category, 'minutes' => $minutes, 'link_path' => $link, 'auto_code' => $auto] + $schedule + $extra];
         }

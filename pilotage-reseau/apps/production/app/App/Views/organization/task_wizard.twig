@@ -1,0 +1,81 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}{{ w is defined ? w.task.title : 'Kreator zadania' }}{% endblock %}
+
+{% block content %}
+{# [280] Kreator kroków zadania bez własnego kreatora (makieta 46) : kroki administratora albo domyślne, na końcu « Zakończ zadanie ». #}
+{% if error is defined %}
+<section class="section tl-wrap"><div class="tl-card"><h2>Kreator zadania</h2><p class="tl-warn">{{ error }}</p><a class="kw-btn" href="{{ root }}/today">Dzisiaj</a></div></section>
+{% else %}
+<section class="section tl-wrap" id="taskWizard" data-root="{{ root }}" data-task="{{ w.task.id }}">
+    <div class="tl-wiz">
+        <div class="tl-side">
+            {% for s in w.steps %}<div data-side="{{ loop.index0 }}">{{ loop.index }}. {{ s.title }}</div>{% endfor %}
+            <div data-side="{{ w.steps|length }}">{{ w.steps|length + 1 }}. Zakończ zadanie</div>
+            <div class="tl-sub mt-3" data-count></div>
+        </div>
+        <div class="tl-main">
+            <div class="tl-head"><h3>{{ w.task.title }}</h3>
+                <div class="tl-sub">{% if w.task.mandatory %}<i class="bi bi-lock-fill tl-lock"></i> obowiązkowe · blokuje ERP {{ w.task.block }}{% else %}zadanie stanowiska{% endif %}{{ w.task.minutes ? ' · ok. ' ~ w.task.minutes ~ ' min' : '' }}{{ w.occurrence ? ' · termin ' ~ w.occurrence.due|date('d.m') : '' }}</div></div>
+            {% if w.occurrence and w.occurrence.status != 'open' %}<div class="tl-ok"><i class="bi bi-check-circle"></i> Zadanie w tym okresie jest już zrobione.</div>{% endif %}
+            {% for s in w.steps %}
+            <div class="tl-step" data-step="{{ loop.index0 }}" hidden>
+                <h4>{{ s.title }}</h4>
+                {% if s.hint %}<div class="tl-hint"><i class="bi bi-lightbulb"></i> {{ s.hint }}</div>{% endif %}
+                {% if s.link %}<a class="kw-btn" href="{{ root }}{{ s.link }}" target="_blank" rel="noopener"><i class="bi bi-box-arrow-up-right"></i> Otwórz stronę</a>
+                    <p class="tl-sub mt-2">Strona otwiera się w nowej karcie — wróć tutaj i przejdź dalej.</p>{% endif %}
+                <label class="tl-chk"><input type="checkbox" class="form-check-input" data-check> Zrobione</label>
+            </div>
+            {% endfor %}
+            <div class="tl-step" data-step="{{ w.steps|length }}" hidden>
+                <h4>Zakończ zadanie</h4>
+                <div class="tl-hint"><i class="bi bi-lightbulb"></i> Krótka uwaga (co zrobione, problem) — widzi ją przełożony w « Kto co zrobił ».</div>
+                <textarea class="kw-in" rows="3" maxlength="400" data-note placeholder="np. wszystko rozliczone, 1 faktura czeka na korektę"></textarea>
+            </div>
+            <div class="tl-foot"><button type="button" class="kw-btn" data-prev><i class="bi bi-arrow-left"></i> Wstecz</button><span class="tl-sp"></span>
+                <span class="tl-msg" data-msg></span><button type="button" class="kw-btn pri" data-next>Dalej <i class="bi bi-arrow-right"></i></button></div>
+        </div>
+    </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if w is defined %}
+<script>
+(function () {
+    const app = document.getElementById('taskWizard');
+    const root = app.dataset.root, task = app.dataset.task;
+    const steps = [...app.querySelectorAll('[data-step]')];
+    const last = steps.length - 1;
+    let cur = 0;
+    const msg = app.querySelector('[data-msg]');
+    const next = app.querySelector('[data-next]');
+    function show() {
+        steps.forEach((s, i) => s.hidden = i !== cur);
+        app.querySelectorAll('[data-side]').forEach((d, i) => { d.classList.toggle('on', i === cur); d.classList.toggle('d', i < cur); });
+        app.querySelector('[data-prev]').disabled = cur === 0;
+        next.innerHTML = cur === last ? '<i class="bi bi-check-lg"></i> Zakończ zadanie' : 'Dalej <i class="bi bi-arrow-right"></i>';
+        app.querySelector('[data-count]').textContent = 'krok ' + (cur + 1) + ' z ' + steps.length;
+        msg.textContent = '';
+    }
+    app.querySelector('[data-prev]').addEventListener('click', () => { if (cur > 0) { cur--; show(); } });
+    next.addEventListener('click', async () => {
+        if (cur < last) {
+            const chk = steps[cur].querySelector('[data-check]');
+            if (chk && !chk.checked) { msg.textContent = 'Zaznacz « Zrobione », aby przejść dalej.'; return; }
+            cur++; show(); return;
+        }
+        next.disabled = true;
+        const r = await fetch(root + '/ajax/tasks/wizard/' + task + '/finish', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+            body: JSON.stringify({note: app.querySelector('[data-note]').value})});
+        const j = await r.json().catch(() => ({}));
+        next.disabled = false;
+        msg.textContent = j.message || (r.ok ? 'Zakończone.' : 'Błąd.');
+        if (r.ok) setTimeout(() => { window.location.href = root + '/today'; }, 1200);
+    });
+    show();
+})();
+</script>
+{% endif %}
+{% endblock %}

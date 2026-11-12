@@ -1,0 +1,37 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Odblokowanie ERP{% endblock %}
+
+{% block content %}
+{# [280] Prośba o odblokowanie ERP : decyzja przełożonego stanowiska albo administratora (na dziś, z powodem). #}
+<section class="section tl-wrap" id="taskUnblock" data-root="{{ root }}">
+    <div class="tl-card">
+        <h2>Odblokowanie ERP na dziś</h2>
+        {% if error is defined %}<p class="tl-warn">{{ error }}</p>
+        {% else %}
+        <p><b>{{ v.user.name }}</b> — zadanie obowiązkowe <b>{{ v.task.title }}</b> <span class="tl-sub">(blokuje ERP {{ v.task.block }})</span></p>
+        <p class="tl-sub">{{ v.blocked ? 'ERP tej osoby jest teraz zablokowany przez to zadanie.' : 'To zadanie teraz nie blokuje ERP tej osoby (zrobione albo jeszcze przed terminem).' }}</p>
+        <label class="tl-f">Powód odblokowania<input class="kw-in" data-reason maxlength="255" placeholder="np. awaria KSeF — zadanie jutro rano"></label>
+        <div class="tl-foot"><span class="tl-msg" data-msg></span><span class="tl-sp"></span>
+            <button type="button" class="kw-btn pri" data-go data-user="{{ v.user.id }}" data-task="{{ v.task.id }}"><i class="bi bi-unlock"></i> Odblokuj na dziś</button></div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const app = document.getElementById('taskUnblock');
+    const b = app && app.querySelector('[data-go]');
+    if (!b) return;
+    b.addEventListener('click', async () => {
+        const r = await fetch(app.dataset.root + '/ajax/tasks/unblock/' + b.dataset.user + '/' + b.dataset.task, {method: 'POST', credentials: 'same-origin',
+            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'}, body: JSON.stringify({reason: app.querySelector('[data-reason]').value})});
+        const j = await r.json().catch(() => ({}));
+        app.querySelector('[data-msg]').textContent = j.message || (r.ok ? 'Odblokowane.' : 'Błąd.');
+        if (r.ok) b.disabled = true;
+    });
+})();
+</script>
+{% endblock %}

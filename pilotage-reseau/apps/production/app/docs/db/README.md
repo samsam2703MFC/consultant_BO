@@ -1843,6 +1843,21 @@ premier scan : PIN) → l'ERP s'ouvre. Entrée déjà pointée à la tablette : 
 · Zakończ dzień » → même QR → sortie (question marchandise) → déconnexion. Sans liaison : pas de verrou. Routes
 `/ajax/erp-entry/state|qr|status` (GET), `/ajax/organization/erp-qr/{id}` (PUT, administrateur). Test : `tests/erp_entry_test.php`.
 
+### Zadania obowiązkowe (blokują ERP) + każde zadanie = kreator — 280
+
+Demande du 12/11/2026 (maquette 46 validée). Migration 175 : `n_position_task` + `mandatory`, `block_mode` (due = jour du
+terme, next_day = lendemain), `block_time`, `block_tolerance` (0–120 min), `wizard_steps` (JSON `[{title, hint, link}]`) ;
+`n_task_unblock` (déblocage du jour : compte, tâche, jour, motif, par qui). Aucune tâche obligatoire par défaut : l'administrateur
+coche « Obowiązkowe » dans Funkcje i zadania › Zadania stanowisk (encadré, avec les étapes de l'assistant). Blocage
+(`App\Services\Organization\TaskLockService::blocking`, appelé par `App\Core\App` pour les pages) : occurrence ouverte des
+7 derniers jours après l'heure de blocage (sans heure : heure du terme, sinon fin de journée ; lendemain : 09:00) ; une tâche
+reliée à un assistant qui se valide seul est vérifiée d'abord ; jamais l'administrateur. ERP bloqué → `/tasks/required`
+(« Najpierw to zadanie ») ; seules la page de l'assistant de la tâche, `/tasks/*` et le protocole restent ouverts. Chaque tâche
+ouvre toujours un assistant : le sien, le protocole, sinon l'assistant à étapes `/tasks/wizard/{id}` (« Zakończ zadanie » →
+occurrence faite avec la remarque). Déblocage : « Poproś o odblokowanie » → cloche du supérieur du poste et des
+administrateurs → `/tasks/unblock/{user}/{task}` (motif obligatoire, pour la journée). Mój tydzień : 🔒 sur les tâches
+obligatoires. Test : `tests/task_lock_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

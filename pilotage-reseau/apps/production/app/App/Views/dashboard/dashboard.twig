@@ -20,7 +20,7 @@
     {% import _self as wk %}
     <div class="mt-row{{ it.done ? ' done' : '' }}"{% if it.id %} data-wt="{{ it.id }}"{% endif %} data-min="{{ it.minutes ?? 0 }}">
         <span class="mt-d {{ it.done ? 'ok' : kind }}">{% if it.done %}<i class="bi bi-check-lg"></i>{% endif %}</span>
-        <div class="mt-t" title="{{ it.title }}">{{ it.short }}<small>{{ wk.sub(it) }}</small></div>
+        <div class="mt-t" title="{{ it.title }}{{ it.mandatory is defined and it.mandatory ? ' — obowiązkowe, blokuje ERP ' ~ it.block : '' }}">{% if it.mandatory is defined and it.mandatory %}<i class="bi bi-lock-fill mt-lock" aria-label="obowiązkowe"></i>{% endif %}{{ it.short }}<small>{{ wk.sub(it) }}</small></div>
         <span class="mt-w{{ kind == 'late' and not it.done ? ' late' : '' }}">{{ wk.when(it, kind) }}</span>
         <span class="mt-m">{{ it.minutes ? wk.dur(it.minutes) : '' }}</span>
         <span class="mt-p">{{ wk.dots(it) }}</span>

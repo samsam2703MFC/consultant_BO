@@ -151,6 +151,26 @@ class App
                             return;
                         }
                     }
+
+                    // [280] Zadania obowiązkowe : zadanie po terminie blokady → tylko ekran « Najpierw to zadanie » i kreator
+                    // zadania (strony ; wywołania AJAX stron kreatora działają). Błąd (np. migracja 175) : bez blokady.
+                    if (!$free && $method === 'GET' && !str_starts_with($uri, '/ajax/') && !preg_match('#^/(tasks/|my-tasks/\d+/form)#', $uri)) {
+                        try {
+                            $blocking = $container->get(\App\Services\Organization\TaskLockService::class)->blocking((int) (user('id') ?? 0));
+                        } catch (\Throwable $e) {
+                            error_log('[task-lock] ' . $e->getMessage());
+                            $blocking = [];
+                        }
+                        $open = false;
+                        foreach ($blocking as $b) {
+                            $path = (string) parse_url($b['link'], PHP_URL_PATH);
+                            if ($path !== '' && ($uri === $path || str_starts_with($uri, rtrim($path, '/') . '/'))) $open = true;
+                        }
+                        if ($blocking && !$open) {
+                            header('Location: ' . ROOT . '/tasks/required', true, 302);
+                            return;
+                        }
+                    }
                 }
 
                 $controllerFQCN = $handler['controller'];

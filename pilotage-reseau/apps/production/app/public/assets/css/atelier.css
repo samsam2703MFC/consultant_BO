@@ -3893,3 +3893,31 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 @media (max-width: 900px) { .hr-sx-form { grid-template-columns: 1fr 1fr; } .hr-sx-row { grid-template-columns: 150px 1fr; } }
 .hr-sx-agenda-box { margin-top: 12px; }
 .hr-sx-agenda td:first-child { width: 170px; } .hr-sx-agenda td:nth-child(2) { width: 140px; }
+
+/* [280] Zadania obowiązkowe (makieta 46) : ekran blokady, kreator kroków, odblokowanie. */
+.tl-wrap { max-width: 1100px; }
+.tl-card { background: var(--at-surface, #fff); border: 1px solid var(--at-line, #E4DDD4); border-radius: 14px; padding: 24px 28px; max-width: 880px; }
+.tl-card h2 { margin: 0 0 4px; font-size: 22px; font-weight: 500; }
+.tl-sub { font-size: 12.5px; color: #777; }
+.tl-warn { background: rgba(196, 30, 58, .07); border: 1px solid rgba(196, 30, 58, .25); color: #8D1D2C; border-radius: 10px; padding: 10px 14px; font-size: 13.5px; margin: 14px 0 16px; }
+.tl-ok { background: rgba(46, 125, 79, .08); color: #2E7D4F; border-radius: 10px; padding: 9px 12px; font-size: 13px; margin: 10px 0; }
+.tl-task { display: flex; align-items: center; gap: 12px; border: 1px solid var(--at-line, #E4DDD4); border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; font-size: 13.5px; flex-wrap: wrap; }
+.tl-task small { display: block; color: #888; font-size: 12px; margin-top: 2px; }
+.tl-lock { color: #8D1D2C; }
+.tl-sp { flex: 1; }
+.tl-note { font-size: 12.5px; color: #666; margin-top: 12px; }
+.tl-wiz { display: grid; grid-template-columns: 240px 1fr; background: var(--at-surface, #fff); border: 1px solid var(--at-line, #E4DDD4); border-radius: 14px; overflow: hidden; }
+.tl-side { background: #FBF9F6; border-right: 1px solid var(--at-line, #E4DDD4); padding: 16px; }
+.tl-side [data-side] { padding: 8px 10px; border-radius: 8px; font-size: 13px; margin-bottom: 4px; color: #555; }
+.tl-side .d { color: #2E7D4F; } .tl-side .d::before { content: '✓ '; }
+.tl-side .on { background: rgba(141, 29, 44, .08); color: #8D1D2C; font-weight: 600; }
+.tl-main { padding: 20px 24px; }
+.tl-head h3 { margin: 0 0 4px; font-size: 19px; font-weight: 500; }
+.tl-step h4 { font-size: 16px; margin: 18px 0 8px; font-weight: 600; }
+.tl-hint { background: #F6F1EA; border-radius: 10px; padding: 10px 12px; font-size: 13px; color: #555; margin: 8px 0 12px; }
+.tl-chk { display: flex; gap: 8px; align-items: center; margin-top: 14px; font-size: 14px; }
+.tl-foot { display: flex; gap: 10px; align-items: center; margin-top: 18px; }
+.tl-msg { font-size: 13px; color: #8D1D2C; }
+.tl-f { display: flex; flex-direction: column; gap: 4px; font-size: 13px; margin: 12px 0; }
+.mt-lock { color: #8D1D2C; font-size: 11px; margin-right: 3px; }
+@media (max-width: 760px) { .tl-wiz { grid-template-columns: 1fr; } .tl-side { border-right: 0; border-bottom: 1px solid var(--at-line, #E4DDD4); } }

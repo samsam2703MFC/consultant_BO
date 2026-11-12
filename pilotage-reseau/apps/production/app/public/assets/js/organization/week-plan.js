@@ -79,7 +79,7 @@
         if (w) return `<div class="wp-sel"><span>${esc(w.label)}<small>${esc(w.event)}</small></span></div>`;
         if (r.form_code) return '<div class="wp-sel none"><span>— ręcznie —<small>protokół zebrania</small></span></div>';
         if (r.cron_on) return '<div class="wp-sel none"><span>— bez kreatora —<small>w całości automatyczne</small></span></div>';
-        return `<div class="wp-sel none"><span>— bez kreatora —<small>${r.link_path ? esc(P.links[r.link_path] || r.link_path) : 'osoba zaznacza « Zrobione »'}</small></span></div>`;
+        return `<div class="wp-sel none"><span>Kreator kroków<small>${(r.wizard_steps || []).length ? r.wizard_steps.length + ' kroków + « Zakończ zadanie »' : (r.link_path ? esc(P.links[r.link_path] || r.link_path) + ' → « Zakończ zadanie »' : '« Zakończ zadanie »')}</small></span></div>`;
     }
 
     const linkLabel = (l) => (P.links[l] || l).split(' (')[0];
@@ -92,7 +92,7 @@
         const off = removed.has(r.key);
         const cat = r.category_id ? (P.categories.find(c => Number(c.id) === r.category_id)?.name_pl || '') : '';
         return `<tr data-row="${r.key}" class="wp-row${sel === r.key ? ' cur' : ''}${off ? ' ad-off' : ''}${r.id ? '' : ' ad-new'}" tabindex="0" aria-label="Edytuj : ${esc(r.title_pl || 'nowe zadanie')}">
-            <td class="nm"><b>${esc(r.title_pl || 'Nowe zadanie')}</b><small>${off ? 'do usunięcia przy zapisie' : esc(cat || '—')}</small></td>
+            <td class="nm"><b>${r.mandatory ? '<i class="bi bi-lock-fill mt-lock" title="obowiązkowe — blokuje ERP"></i>' : ''}${esc(r.title_pl || 'Nowe zadanie')}</b><small>${off ? 'do usunięcia przy zapisie' : esc(cat || '—')}</small></td>
             <td>${wizHtml(r)}${extraHtml(r)}</td>
             <td>${whenHtml(r)}</td>
             <td class="r"><span class="wp-num">${r.minutes ?? '—'}</span>${r.real ? `<small class="ad-real ${r.real_state}" title="Średni czas aktywny na stronie (4 tygodnie)">rzecz. ${r.real} min</small>` : ''}</td>
@@ -171,7 +171,7 @@
         }
         const off = removed.has(r.key);
         const w = wiz(r.auto_code);
-        const wizOptions = `<option value="">— bez kreatora (ręcznie) —</option>` + P.wizards.map(x => {
+        const wizOptions = `<option value="">— kreator kroków (bez własnego kreatora) —</option>` + P.wizards.map(x => {
             const elsewhere = x.used.filter(u => !u.mine).map(u => u.position);
             return `<option value="${esc(x.code)}" ${x.code === r.auto_code ? 'selected' : ''}>${esc(x.label)} — ${esc(x.event)}${elsewhere.length ? ` (też : ${esc(elsewhere.join(', '))})` : ''}</option>`;
         }).join('');
@@ -191,7 +191,7 @@
                 ${w ? `<div class="wp-sub"><i class="bi bi-magic"></i> otwiera ${esc(w.link)} · ${w.steps > 1 ? `${w.steps} kroków` : '1 krok'} · zalicza się, gdy ${esc(w.event)}</div>`
                     : `<select class="kw-in mt-1" data-f="link" aria-label="Strona ERP (link)">${linkOptions(r)}</select>
                        ${custom ? `<input class="kw-in mt-1" data-f="link_custom" value="${esc(r.link_path || '')}" placeholder="/strona-w-erp" maxlength="255" aria-label="Adres strony">` : ''}
-                       ${r.form_code ? '<div class="wp-sub"><i class="bi bi-journal-text"></i> kończy się protokołem</div>' : '<div class="wp-sub">Bez kreatora : osoba zaznacza « Zrobione ».</div>'}`}</div>
+                       ${r.form_code ? '<div class="wp-sub"><i class="bi bi-journal-text"></i> kończy się protokołem</div>' : '<div class="wp-sub">Bez własnego kreatora : kreator kroków (ustaw kroki niżej, w « Obowiązkowe »).</div>'}`}</div>
             <div class="wp-f"><label for="wpExtra">Też w tym zadaniu (inne strony)</label>
                 ${(r.extra_links || []).length ? `<div class="wp-chips">${r.extra_links.map((l, i) => `<span>${esc(linkLabel(l))}<button type="button" data-extra-del="${i}" aria-label="Usuń : ${esc(linkLabel(l))}"><i class="bi bi-x-lg"></i></button></span>`).join('')}</div>` : ''}
                 ${(r.extra_links || []).length < 6 ? `<select id="wpExtra" class="kw-in" data-f="extra_add"><option value="">+ dodaj stronę…</option>${Object.entries(P.links).filter(([p]) => p !== r.link_path && !(r.extra_links || []).includes(p)).map(([p, l]) => `<option value="${esc(p)}">${esc(l)}</option>`).join('')}</select>` : ''}
@@ -216,6 +216,19 @@
                         <label><input type="radio" name="wpThen" value="done" data-f="cron_then" ${r.cron_then === 'done' ? 'checked' : ''}> zalicza się samo</label></div>
                     <span>Gdy błąd</span><span class="wp-sub m-0">powiadomienie w dzwonku · ponowienie co 30 min, najwyżej 3 razy</span>
                 </div>${runsHtml(r)}` : '<div class="wp-sub">System nic nie robi sam — zadanie wykonuje osoba.</div>'}
+            </div>
+            <div class="wp-box">
+                <div class="wp-inline"><b><i class="bi bi-lock"></i> Obowiązkowe — blokuje ERP</b><span class="wk-sp"></span>
+                    <button type="button" class="wp-switch ${r.mandatory ? 'on' : ''}" data-f="mandatory" role="switch" aria-checked="${!!r.mandatory}" aria-label="Obowiązkowe"><i></i></button><b class="${r.mandatory ? 'text-success' : 'text-muted'}">${r.mandatory ? 'Tak' : 'Nie'}</b></div>
+                ${r.mandatory ? `<div class="wp-kv">
+                    <span>Blokuje</span><select class="kw-in" data-f="block_mode"><option value="due" ${r.block_mode !== 'next_day' ? 'selected' : ''}>w dniu terminu</option><option value="next_day" ${r.block_mode === 'next_day' ? 'selected' : ''}>dzień po terminie</option></select>
+                    <span>Od godziny</span><input class="kw-in wp-time" type="time" data-f="block_time" value="${esc(r.block_time || '')}" aria-label="Od godziny"><span></span><span class="wp-sub m-0">${r.block_mode === 'next_day' ? 'puste = 09:00' : 'puste = godzina terminu, bez godziny : koniec dnia'}</span>
+                    <span>Tolerancja</span><div class="wp-inline"><input class="kw-in wp-min" type="number" min="0" max="120" step="5" data-f="block_tolerance" value="${r.block_tolerance || 0}" aria-label="Tolerancja"><span>min</span></div>
+                </div><div class="wp-sub">Niezrobione → ERP osoby otwiera tylko ekran « Najpierw to zadanie » i kreator. Administrator nigdy nie jest blokowany ; przełożony może odblokować na dziś (z powodem).</div>`
+                    : '<div class="wp-sub">Tylko przypomnienia — ERP się nie blokuje.</div>'}
+                ${!w && !r.form_code ? `<div class="wp-f mt-2"><label>Kroki kreatora (zadanie bez własnego kreatora) — jeden krok na linię : tytuł | wskazówka | /strona</label>
+                    <textarea class="kw-in" rows="4" data-f="wizard_steps" placeholder="Sprawdź faktury przewoźników | porównaj z trasami miesiąca | /shipments">${esc((r.wizard_steps || []).map(x => [x.title, x.hint || '', x.link || ''].join(' | ')).join('\n'))}</textarea>
+                    <div class="wp-sub">Puste : kreator « Co zrobić » (strona zadania) → « Zakończ zadanie ». Każde kliknięcie w zadanie otwiera kreator.</div></div>` : ''}
             </div>
             <div class="wp-box">
                 <b><i class="bi bi-bell"></i> Przypomnienia</b>
@@ -352,6 +365,11 @@
             r.extra_links = (r.extra_links || []).filter((_, i) => i !== Number(xd.dataset.extraDel));
             return touch(r, true);
         }
+        if (e.target.closest('[data-f=mandatory]') && r) {
+            r.mandatory = !r.mandatory;
+            if (r.mandatory && !r.block_mode) r.block_mode = 'due';
+            return touch(r, true);
+        }
         if (e.target.closest('[data-f=cron_on]') && r) {
             r.cron_on = !r.cron_on;
             if (r.cron_on && !r.cron_freq) {
@@ -408,6 +426,8 @@
         else if (f === 'minutes') r.minutes = e.target.value === '' ? null : Number(e.target.value);
         else if (f === 'link_custom') r.link_path = e.target.value.trim() || null;
         else if (f === 'escalate_days') r.escalate_days = e.target.value === '' ? null : Number(e.target.value);
+        else if (f === 'block_tolerance') r.block_tolerance = Math.max(0, Math.min(120, Number(e.target.value) || 0));
+        else if (f === 'wizard_steps') r.wizard_steps = e.target.value.split('\n').map(l => l.split('|').map(x => x.trim())).filter(p => p[0]).map(p => ({title: p[0], hint: p[1] || '', link: p[2] || null}));
         else if (e.target.dataset.ruleN) { if (e.target.dataset.ruleN === 'month') r.month_day = readRule('month'); else r.cron_days = readRule('cron'); }
         else return;
         e.target.classList.remove('is-invalid');
@@ -437,6 +457,8 @@
             return touch(r, true);
         } else if (f === 'due_time') r.due_time = e.target.value || null;
         else if (f === 'cron_time') r.cron_time = e.target.value || null;
+        else if (f === 'block_mode') { r.block_mode = e.target.value; return touch(r, true); }
+        else if (f === 'block_time') r.block_time = e.target.value || null;
         else if (f === 'cron_action') r.cron_action = e.target.value || null;
         else if (f === 'cron_then') r.cron_then = e.target.value;
         else if (f === 'remind_on') { r.remind_time = e.target.checked ? (app.querySelector('[data-f=remind_time]').value || '09:00') : null; return touch(r, true); }
@@ -487,7 +509,8 @@
             tasks: rows.filter(r => !removed.has(r.key)).map(r => ({id: r.id, title_pl: r.title_pl.trim(), category_id: r.category_id, period: r.period, days: r.days,
                 minutes: r.minutes, link_path: r.link_path, extra_links: r.extra_links || [], auto_code: r.auto_code, due_time: r.due_time, month_day: r.period === 'week' ? null : r.month_day,
                 cron_on: !!r.cron_on, cron_freq: r.cron_freq, cron_days: r.cron_days, cron_time: r.cron_time, cron_action: r.cron_action, cron_then: r.cron_then || 'wait',
-                remind_time: r.remind_time, escalate_days: r.escalate_days, backup_position_id: r.backup_position_id ?? null})),
+                remind_time: r.remind_time, escalate_days: r.escalate_days, backup_position_id: r.backup_position_id ?? null,
+                mandatory: !!r.mandatory, block_mode: r.block_mode || 'due', block_time: r.block_time || null, block_tolerance: r.block_tolerance || 0, wizard_steps: r.wizard_steps || []})),
             removed: rows.filter(r => removed.has(r.key) && r.id).map(r => r.id),
         });
         button.disabled = false;
