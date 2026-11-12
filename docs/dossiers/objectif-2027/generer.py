@@ -58,7 +58,7 @@ def fig_feuille_de_route():
     voies = ['Gamme pâtisserie', 'Réseau et process', 'Outils (développement continu)']
     trim = [('T1 2027', 'janv. – mars', [['Recettes complètes au panel', 'Prix usine du gâteau 10 parts', 'Test à la part : 1 magasin', 'Coupes de gamme arrêtées', 'Kit décor anniversaire unique'],
                                         ['Corbais et Sombreffe : 80 % des tâches sur la tablette', 'Avenant +0,5 % signé', 'Tenue et packaging choisis'],
-                                        ['Cockpit : coefficient réel par produit, 5+1 compris']]),
+                                        ['Cockpit : coefficient réel par produit, 4+1 compris']]),
             ('T2 2027', 'avr. – juin', [['Vente à la part : 4 magasins', 'Grille de prix unique', 'Entremets revus à ×3'],
                                        ['Majoration en vigueur', '1re formation franchisé : 4 semaines, 4 magasins', 'Tenue et packaging en place'],
                                        ['Tablette : invendus à la part', 'Parcours stagiaire 4 semaines']]),
@@ -95,7 +95,64 @@ def fig_saisonnalite():
             '<figcaption>Ventes par jour, 100 = moyenne de l’année · Corbais, Gosselies, Sombreffe · décembre 2025 → novembre 2026 '
             '(novembre : 12 jours) · pièces × prix HT actuel.</figcaption></figure>')
 
-FIGURES = {'patisserie-par-magasin': fig_patisserie, 'feuille-de-route': fig_feuille_de_route, 'saisonnalite': fig_saisonnalite}
+# Packaging : 3 boîtes à l'échelle (simulation d'emballage validée le 12/11/2026), partagé avec le visuel du doc
+def emballage_formes():
+    import math
+    def arc(cx, cy, r, a0, a1, n=24):
+        return [(cx + r * math.cos(math.radians(a0 + (a1 - a0) * k / n)), cy + r * math.sin(math.radians(a0 + (a1 - a0) * k / n))) for k in range(n + 1)]
+    def quinconce(n, R=145, th=36, e=5):
+        h = math.radians(th / 2); W = R * (2 - math.cos(h)); pas = R * math.sin(h) + e / math.cos(h); parts = []
+        for i in range(n):
+            x = R * math.sin(h) + i * pas
+            if i % 2 == 0: parts.append([(x, W)] + arc(x, W, R, -90 - th / 2, -90 + th / 2))
+            else: parts.append([(x, 0)] + arc(x, 0, R, 90 - th / 2, 90 + th / 2))
+        L = 2 * R * math.sin(h) + (n - 1) * pas
+        return parts, L, W
+    def centre(polys, w, h, bw, bh, swap=False):
+        if swap: polys = [[(y, x) for x, y in p] for p in polys]; w, h = h, w
+        ox, oy = (bw - w) / 2, (bh - h) / 2
+        return [[(x + ox, y + oy) for x, y in p] for p in polys]
+    boites = {'S': (158, 150), 'M': (295, 158), 'L': (295, 295)}
+    t = {'S': centre([[(0, 0)] + arc(0, 140, 140, -90, 0) + [(0, 140)]], 140, 140, 158, 150),
+         'M': centre([arc(140, 140, 140, 180, 360)], 280, 140, 295, 158),
+         'L': centre([arc(140, 140, 140, 0, 360, 72)], 280, 280, 295, 295)}
+    p2, L2, W2 = quinconce(2); p5, L5, W5 = quinconce(5)
+    cake = [arc(145, 145, 145, 0, 360, 72)] + [[(145, 145), (145 + 145 * math.cos(math.radians(-90 + 36 * k)), 145 + 145 * math.sin(math.radians(-90 + 36 * k)))] for k in range(10)]
+    g = {'S': centre(p2, L2, W2, 158, 150, swap=True), 'M': centre(p5, L5, W5, 295, 158),
+         'L': centre(cake, 290, 290, 295, 295)}
+    return boites, t, g
+
+def chemin(pts, s, ox, oy, ferme=True):
+    d = 'M' + 'L'.join(f'{ox + x * s:.1f} {oy + y * s:.1f}' for x, y in pts)
+    return d + ('Z' if ferme else '')
+
+def fig_emballage():
+    boites, t, g = emballage_formes()
+    s, x0, gap, y1 = 0.6, 128, 34, 46
+    xs = {'S': x0, 'M': x0 + 158 * s + gap, 'L': x0 + 158 * s + gap + 295 * s + gap}
+    y2 = y1 + 295 * s + 40
+    o = [f'<svg viewBox="0 0 680 {y2 + 295 * s + 26:.0f}" class="fig" role="img" aria-label="Trois boîtes pour toutes les tartes, quiches et parts de gâteau">']
+    for k, nom in (('S', '158 × 150 mm'), ('M', '295 × 158 mm'), ('L', '295 × 295 mm')):
+        x = xs[k]; on = k == 'M'
+        o.append(f'<circle cx="{x + 5}" cy="14" r="4.5" fill="{RUBY if on else "#fff"}" stroke="{RUBY if on else FAINT}" stroke-width="1.2"/>')
+        o.append(f'<text x="{x + 15}" y="18" class="mg">Boîte {k}</text><text x="{x}" y="33" class="lg">{nom}</text>')
+    lignes = [(y1, t, '#78554B', ['Tartes, quiches', 'Ø 280 mm'], {'S': '1/4 · 65 %', 'M': '1/2 · 66 %', 'L': 'entière · 71 %'}, False),
+              (y2, g, RUBY, ['Gâteau 10 parts', 'Ø 290 mm, en quinconce'], {'S': '1 ou 2 parts · 28 à 56 %', 'M': '4+1 = 5 parts · 71 %', 'L': 'gâteau entier · 76 %'}, True)]
+    for y, formes, c, lab, leg, gat in lignes:
+        o.append(f'<text x="0" y="{y + 16}" class="mg">{lab[0]}</text><text x="0" y="{y + 30}" class="lg">{lab[1]}</text>')
+        for k, (bw, bh) in boites.items():
+            x = xs[k]
+            o.append(f'<rect x="{x}" y="{y}" width="{bw * s:.1f}" height="{bh * s:.1f}" rx="3" fill="none" stroke="{MUTED}" stroke-width="1.2"/>')
+            for p in formes[k]:
+                if len(p) == 2: o.append(f'<path d="{chemin(p, s, x, y, False)}" stroke="#fff" stroke-width="1"/>')
+                else: o.append(f'<path d="{chemin(p, s, x, y)}" fill="{c}" fill-opacity="0.22" stroke="{c}" stroke-width="1"/>')
+            o.append(f'<text x="{x}" y="{y + bh * s + 14:.1f}" class="tt">{leg[k]}</text>')
+    o.append('</svg>')
+    return ('<figure class="figure"><div class="fig-titre">Trois boîtes pour toutes les tartes, quiches et parts de gâteau</div>' + ''.join(o) +
+            '<figcaption>Cotes intérieures, à l’échelle · jeu de 2,5 mm par côté, 5 mm entre les parts · % = surface remplie · '
+            'LED pleine = boîte allumée par la caisse via l’Arduino (ici, un 4+1 encodé → boîte M).</figcaption></figure>')
+
+FIGURES = {'patisserie-par-magasin': fig_patisserie, 'feuille-de-route': fig_feuille_de_route, 'saisonnalite': fig_saisonnalite, 'emballage': fig_emballage}
 
 # --- Markdown du rapport → HTML
 NUM = re.compile(r'^[+−\-]?(\d|×)')

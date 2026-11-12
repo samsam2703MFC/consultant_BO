@@ -169,6 +169,8 @@ La simulation d'emballage validée le 12/11/2026 ramène toutes les tartes, quic
 
 Le 4+1 (5 parts) tient juste dans la boîte M, remplie à 71 %.
 
+{{emballage}}
+
 > [Idée : la caisse allume la bonne boîte] Une LED au-dessus de chaque emplacement de boîte, pilotée par la caisse via un Arduino. Quand la vendeuse encode l'article (1/4, 4+1, tarte entière…), la caisse envoie le format à la carte, qui allume la LED de la bonne boîte : pas d'erreur de format, un geste plus rapide, et chaque boîte sortie est comptée (100 % tracé, réassort du packaging).
 
 - À vérifier : la caisse doit pouvoir envoyer un signal à chaque article (réseau ou USB) ; une carte avec Wi-Fi, de type ESP32, évite les câbles. Matériel à chiffrer.
