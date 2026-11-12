@@ -5,13 +5,15 @@
  * Une carte = une saison de 12 semaines, une case par semaine. La case de la semaine se coche toute seule dès que
  * le client a dépensé 10 € (réglable) dans la semaine, en une ou plusieurs fois, ticket rattaché à sa carte (app
  * ou carte QR scannée à la caisse). Chaque case a son thème : une fête de la saison, ou le produit de la semaine
- * (l'idée de Natan : « un produit / une promo qu'on met en avant chaque semaine »). Une 13e semaine, la semaine des
- * cadeaux, fait la jointure avec la carte suivante : quatre saisons de 13 semaines font l'année.
+ * (l'idée de Natan : « un produit / une promo qu'on met en avant chaque semaine »). Toutes les x cases cochées (x réglable,
+ * 3 par défaut), un bon se débloque (12/11/2026, Sam : « toutes les x semaines, avec illustration, débloque un
+ * voucher ») : sa case illustrée ferme la ligne de la grille — x semaines, puis le bon. Une 13e semaine fait la
+ * jointure avec la carte suivante : quatre saisons de 13 semaines font l'année.
  *
  * Dates vérifiées (jour de la semaine) : 1er dimanche de l'Avent dim. 29/11/2026, Saint-Nicolas dim. 06/12, Noël
  * ven. 25/12, Nouvel An ven. 01/01/2027, Épiphanie mer. 06/01, Blue Monday lun. 18/01, Chandeleur mar. 02/02,
  * Mardi gras mar. 09/02, Saint-Valentin dim. 14/02, Pâques dim. 28/03, fête des mères (Belgique) dim. 09/05, fête
- * des pères dim. 13/06. Montants, paliers et cadeaux : des valeurs de départ, réglables. */
+ * des pères dim. 13/06. Le seuil, x, la valeur et la validité du bon : des valeurs de départ, réglables. */
 (function () {
   const R = '#8D1D2C', A = '#F2C9A0', C = '#F5EFE4', P = '#78554B', DORE = '#E0A86F', OR = '#B0821A', VERT = '#3f7a52', CHOCO = '#5C3A2E';
   const svg = (inner, label) => `<svg viewBox="0 0 64 64" role="img" aria-label="${label}"><g fill="none" stroke="${R}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${inner}</g></svg>`;
@@ -60,6 +62,19 @@
       <path d="M32 20c-4-8-14-8-12-2 1 3 8 3 12 2zM32 20c4-8 14-8 12-2-1 3-8 3-12 2z"/>`, 'cadeau'),
   };
 
+  /* Les bons : un coupon (bords crantés, pointillés) et le motif de son moment de la saison, dessinés en crème pour
+   * la case rubis. */
+  const coupon = (motif, label) => `<svg viewBox="0 0 64 64" role="img" aria-label="${label}"><g fill="none" stroke="${C}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 18h48v10a4 4 0 0 0 0 8v10H8V36a4 4 0 0 0 0-8z" fill="${R}" stroke="${A}"/><path d="M19 20v24" stroke="${A}" stroke-width="1.4" stroke-dasharray="2 2.6"/>
+    <g transform="translate(37 32)">${motif}</g><path d="M11.5 27h4M11.5 32h4M11.5 37h4" stroke="${A}" stroke-width="1.4"/></g></svg>`;
+  const MOTIF = {
+    etoile: `<path d="M0-11l3.2 6.6 7.3 1-5.3 5.1 1.3 7.2L0 5.5l-6.5 3.4 1.3-7.2-5.3-5.1 7.3-1z" fill="${A}" stroke="${C}"/>`,
+    couronne: `<path d="M-11 7l1.6-14 5 5.6L0-10l4.4 8.6 5-5.6L11 7z" fill="${A}" stroke="${C}"/><path d="M-11 10h22"/><circle cx="0" cy="1" r="1.6" fill="${R}" stroke="none"/>`,
+    flocon: `<path d="M0-11v22M-9.5-5.5l19 11M-9.5 5.5l19-11"/><path d="M-3-8.5L0-5.5 3-8.5M-3 8.5L0 5.5 3 8.5M-8.8-1.8l3.4 1.8-1.6 3.6M8.8 1.8L5.4 0 7-3.6M-7-3.6L-5.4 0-8.8 1.8M7 3.6L5.4 0 8.8-1.8" stroke-width="1.5"/>`,
+    noeud: `<path d="M0 0c-4-6-12-8-11-2 1 5 7 4 11 2zM0 0c4-6 12-8 11-2-1 5-7 4-11 2z" fill="${A}" stroke="${C}"/><path d="M0 0l-5 10M0 0l5 10"/><circle cx="0" cy="0" r="2.2" fill="${C}" stroke="none"/>`,
+  };
+  const BONS_ILL = Object.fromEntries(Object.entries(MOTIF).map(([k, m]) => [k, coupon(m, 'bon ' + k)]));
+
   /* La carte d'hiver 2026-2027 : 12 semaines, du lundi 23/11/2026 au dimanche 14/02/2027. */
   const SEMAINES = [
     { n: 1, du: '23/11', au: '29/11', titre: 'Le cougnou est là', sous: '1er dimanche de l’Avent', fete: 'Avent', jour: '29/11', ill: 'cougnou' },
@@ -80,15 +95,20 @@
   const REGLES = {
     seuil: 10,                    // euros dépensés dans la semaine pour cocher sa case
     parSemaine: 1,                // une case par semaine au plus
-    paliers: [
-      { n: 4, cadeau: 'une viennoiserie offerte' },
-      { n: 8, cadeau: 'un café et sa douceur' },
-      { n: 10, cadeau: 'une tarte de 4 parts' },
-      { n: 12, cadeau: 'le tirage au sort : un brunch pour 4', tirage: true },
-    ],
+    tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
+    bon: { valeur: 2, validite: 30 },   // le bon : 2 €, valable 30 jours dès le lendemain
   };
+  /* Les bons : leur nom et leur motif suivent le moment de la saison où un client fidèle les atteint (la semaine
+   * x, 2x, 3x… : avec x = 3, à l'Avent, aux Rois, en plein hiver, à la carte pleine). Valable pour tout x. */
+  const BONS = [
+    { jusqua: 4, nom: 'Bon de l’Avent', motif: 'etoile' },
+    { jusqua: 7, nom: 'Bon des Rois', motif: 'couronne' },
+    { jusqua: 11, nom: 'Bon de l’hiver', motif: 'flocon' },
+    { jusqua: 12, nom: 'Bon carte pleine', motif: 'noeud' },
+  ];
+  const bonDe = semaine => BONS.find(b => semaine <= b.jusqua) || BONS[BONS.length - 1];
 
-  /* L'année : quatre cartes de 12 semaines, plus la semaine des cadeaux entre deux cartes. */
+  /* L'année : quatre cartes de 12 semaines, plus une 13e semaine entre deux cartes (le dernier bon, la carte suivante). */
   const SAISONS = [
     { nom: 'Hiver', du: '23/11/2026', au: '14/02/2027', cadeaux: '15 – 21/02', fetes: ['Avent', 'Saint-Nicolas', 'Noël', 'Nouvel An', 'Épiphanie', 'Chandeleur', 'Mardi gras', 'Saint-Valentin'], etat: 'en cours' },
     { nom: 'Printemps', du: '22/02/2027', au: '16/05/2027', cadeaux: '17 – 23/05', fetes: ['Pâques 28/03', '1er avril', 'Fête du travail', 'Ascension', 'Fête des mères 09/05'], etat: 'à préparer' },
@@ -96,12 +116,15 @@
     { nom: 'Automne', du: '23/08/2027', au: '14/11/2027', cadeaux: '15 – 21/11', fetes: ['La rentrée', 'Fête de la FWB 27/09', 'Halloween', 'Toussaint', 'Saint-Martin 11/11'], etat: '' },
   ];
 
-  /* Une cliente, le jeudi 14 janvier 2027 (semaine 8) : six cases cochées, la semaine du Nouvel An manquée. */
+  /* Une cliente, le jeudi 14 janvier 2027 (semaine 8) : six cases cochées, la semaine du Nouvel An manquée ; le 1er
+   * bon (3e case, le 09/12) utilisé le 17/12, le 2e (6e case, le 06/01) dans son portefeuille. */
+  const DEBUT = '2026-11-23';      // le lundi de la semaine 1
   const CLIENTE = {
-    prenom: 'Julie', aujourdhui: 'jeudi 14 janvier', semaine: 8, depense: 6.4,
-    cochees: { 1: '27/11', 2: '05/12', 3: '09/12', 4: '19/12', 5: '24/12', 7: '06/01' },
-    manquees: [6],
+    prenom: 'Julie', semaine: 8, depense: 6.4,
+    cochees: { 1: '2026-11-27', 2: '2026-12-05', 3: '2026-12-09', 4: '2026-12-19', 5: '2026-12-24', 7: '2027-01-06' },
+    utilises: { 1: '2026-12-17' },
+    codes: { 1: 'FIDR4WQ8NZC', 2: 'FID7K2QM9PA' },
   };
 
-  window.BINGO = { ILL, SEMAINES, REGLES, SAISONS, CLIENTE };
+  window.BINGO = { ILL, BONS_ILL, SEMAINES, REGLES, BONS, bonDe, SAISONS, DEBUT, CLIENTE };
 })();
