@@ -5710,17 +5710,19 @@
   }
   /* Comment le client achète (12/11/2026, Sam : « une jauge : s'il commande au comptoir ou plutôt sur le webshop ») : sur
    * ses tickets des 180 jours, la part au comptoir (vente directe), en commande prise au comptoir et sur le webshop. */
-  const FD_CANAUX = [['comptoir', 'Au comptoir', '#9a948b'], ['commande', 'Commande au comptoir', '#B0792A'], ['webshop', 'Webshop', '#1B6FA8'], ['inconnu', 'Commande, canal en lecture', '#d9d3c9']];
+  // Dans cet ordre (Sam : « tricolore : commande comptoir, comptoir, webshop », puis « ou livraison au bureau »).
+  const FD_CANAUX = [['commande', 'Commande comptoir', '#8D1D2C'], ['comptoir', 'Comptoir', '#B0792A'], ['webshop', 'Webshop', '#1B6FA8'], ['livraison', 'Livraison bureau', '#3f7a52'], ['inconnu', 'Commande, canal en lecture', '#d9d3c9']];
   function fdCanaux(c) {
     if (!c) { return ''; }
     const tot = FD_CANAUX.reduce((a, x) => a + (c[x[0]] || 0), 0);
     if (!tot) { return ''; }
-    const L = FD_CANAUX.map(x => ({ k: x[0], lib: x[1], coul: x[2], n: c[x[0]] || 0, p: 100 * (c[x[0]] || 0) / tot })).filter(x => x.n > 0);
+    // Les trois canaux toujours à la légende, même à 0 % ; la part « en lecture » seulement tant qu'il en reste.
+    const L = FD_CANAUX.map(x => ({ k: x[0], lib: x[1], coul: x[2], n: c[x[0]] || 0, p: 100 * (c[x[0]] || 0) / tot })).filter(x => x.k !== 'inconnu' || x.n > 0);
     const dom = L.filter(x => x.k !== 'inconnu').sort((a, b) => b.n - a.n)[0];
-    const phrase = !dom ? 'Canal des commandes en cours de lecture.' : dom.p >= 60 ? 'Achète surtout ' + { comptoir: 'au comptoir', commande: 'en commande au comptoir', webshop: 'sur le webshop' }[dom.k] + '.' : 'Achète par plusieurs canaux.';
+    const phrase = !dom ? 'Canal des commandes en cours de lecture.' : dom.p >= 60 ? 'Achète surtout ' + { comptoir: 'au comptoir', commande: 'en commande au comptoir', webshop: 'sur le webshop', livraison: 'en livraison au bureau' }[dom.k] + '.' : 'Achète par plusieurs canaux.';
     return `<div class="db-card fd-can"><div class="fd-can-h"><b>Comment il achète</b><span>${esc(phrase)}</span></div>
-      <div class="fd-can-b">${L.map(x => `<i style="width:${x.p.toFixed(2)}%;background:${x.coul}" title="${esc(x.lib)} : ${nf(x.n, 0)} ticket${x.n > 1 ? 's' : ''}"></i>`).join('')}</div>
-      <div class="fd-can-l">${L.map(x => `<span><i style="background:${x.coul}"></i>${esc(x.lib)} <b>${nf(x.p, 0)} %</b><small>${nf(x.n, 0)} ticket${x.n > 1 ? 's' : ''}</small></span>`).join('')}</div></div>`;
+      <div class="fd-can-b">${L.filter(x => x.n > 0).map(x => `<i style="width:${x.p.toFixed(2)}%;background:${x.coul}" title="${esc(x.lib)} : ${nf(x.n, 0)} fois"></i>`).join('')}</div>
+      <div class="fd-can-l">${L.map(x => `<span><i style="background:${x.coul}"></i>${esc(x.lib)} <b>${nf(x.p, 0)} %</b><small>${nf(x.n, 0)} fois</small></span>`).join('')}</div></div>`;
   }
   function rendFideliteClient() {
     const k = cleFDC(), d = S.aux[k];
