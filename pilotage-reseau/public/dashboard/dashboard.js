@@ -5649,13 +5649,17 @@
         ${d.sansFamilles ? `<p class="fd-note">${nf(d.sansFamilles, 0)} ticket(s) dont les articles restent à lire.</p>` : ''}</div></div>`;
     const C = d.clients || [];
     const nomP = id => (P.find(p => String(p.id) === String(id)) || {});
-    h += `<div class="db-sec">Les clients qui reviennent<small>au-dessus du profil de base · cliquer un client ouvre son historique</small></div>`;
-    h += C.length ? `<div class="db-card"><table class="fd-t"><thead><tr><th>Client</th><th>Profil</th><th class="n">Rythme</th><th>Dernier passage</th><th class="n">Panier</th><th>Achète surtout</th><th></th></tr></thead><tbody>${C.map(c => {
+    // Les clients qui reviennent (12/11/2026, Sam : « liste déroulante, fermée par défaut, avec une barre de recherche dans
+    // le titre ») : le titre ouvre et ferme la liste ; la recherche filtre sur place (nom ou profil) et ouvre la liste.
+    const ouvert = !!S.fdListe;
+    h += `<div class="db-card fd-dd${ouvert ? ' ouvert' : ''}"><div class="fd-dd-h"><button type="button" class="fd-dd-t" data-fdliste="1" aria-expanded="${ouvert}"><span class="fd-dd-ch">›</span>Les clients qui reviennent<small>${nf(C.length, 0)} client${C.length > 1 ? 's' : ''} au-dessus du profil de base · cliquer un client ouvre son historique</small></button>
+      ${C.length ? `<input type="search" class="db-sel fd-dd-q" data-fdq="1" placeholder="Rechercher un client ou un profil…" value="${esc(S.fdQ || '')}" aria-label="Rechercher un client">` : ''}</div>`;
+    h += C.length ? `<div class="fd-dd-c"><table class="fd-t"><thead><tr><th>Client</th><th>Profil</th><th class="n">Rythme</th><th>Dernier passage</th><th class="n">Panier</th><th>Achète surtout</th><th></th></tr></thead><tbody>${C.map(c => {
       const p = nomP(c.profil), top = Object.entries(c.familles || {}).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => (d.familles[x[0]] || x[0]).toLowerCase() + ' ' + x[1] + ' %').join(', ');
-      return `<tr data-fdc="${esc(c.client)}"><td>${esc(c.nom)}</td><td><i class="fd-pt" style="background:${esc(p.couleur)}"></i>${esc(p.nom)}<small>${esc(p.condition || '')}</small></td>
+      return `<tr data-fdc="${esc(c.client)}" data-fdtexte="${esc((c.nom + ' ' + (p.nom || '')).toLowerCase())}"><td>${esc(c.nom)}</td><td><i class="fd-pt" style="background:${esc(p.couleur)}"></i>${esc(p.nom)}<small>${esc(p.condition || '')}</small></td>
         <td class="n">${nf(c.rythme, 1)} / mois<small>${nf(c.passagesFenetre, 0)} passages en ${d.fenetre} j</small></td><td>${esc(fdDepuis(c.depuis))}</td>
         <td class="n">${fU(c.eur / Math.max(1, c.tk))}</td><td>${esc(top || '—')}</td><td class="n"><span class="db-lien">Historique ›</span></td></tr>`;
-    }).join('')}</tbody></table></div>` : '<div class="db-alerte">Aucun client au-dessus du profil de base pour l’instant : les cartes scannées en caisse les feront apparaître.</div>';
+    }).join('')}</tbody></table><p class="fd-dd-rien" hidden>Aucun client ne correspond à la recherche.</p></div></div>` : '<p class="fd-dd-rien">Aucun client au-dessus du profil de base pour l’instant : les cartes scannées en caisse les feront apparaître.</p></div>';
     return h;
   }
   function rendFideliteClient() {
@@ -5710,6 +5714,24 @@
     $.querySelectorAll('[data-fdp]').forEach(b => b.addEventListener('click', () => { S.fdProfil = b.dataset.fdp; rendre(); }));
     $.querySelectorAll('[data-fdc]').forEach(b => b.addEventListener('click', () => { S.fdClient = b.dataset.fdc; urlMaj(); charger(false); window.scrollTo(0, 0); }));
     $.querySelectorAll('[data-fdretour]').forEach(b => b.addEventListener('click', () => { S.fdClient = null; urlMaj(); charger(false); }));
+    // La liste des clients : ouvrir et fermer sans relire ; filtrer sur place (le champ garde son curseur).
+    const dd = $.querySelector('.fd-dd');
+    const filtrer = q => {
+      if (!dd) { return; }
+      let n = 0;
+      dd.querySelectorAll('tr[data-fdtexte]').forEach(tr => { const ok = !q || tr.dataset.fdtexte.includes(q); tr.hidden = !ok; n += ok ? 1 : 0; });
+      const rien = dd.querySelector('.fd-dd-c .fd-dd-rien[hidden], .fd-dd-c table + .fd-dd-rien');
+      if (rien) { rien.hidden = n > 0; }
+    };
+    $.querySelectorAll('[data-fdliste]').forEach(b => b.addEventListener('click', () => { S.fdListe = !S.fdListe; dd.classList.toggle('ouvert', S.fdListe); b.setAttribute('aria-expanded', S.fdListe); }));
+    $.querySelectorAll('[data-fdq]').forEach(i => {
+      i.addEventListener('input', () => {
+        S.fdQ = i.value; const q = i.value.trim().toLowerCase();
+        if (q && !S.fdListe) { S.fdListe = true; dd.classList.add('ouvert'); }
+        filtrer(q);
+      });
+      filtrer((S.fdQ || '').trim().toLowerCase());
+    });
   }
   function rendTempsMorts() {
     const cle = cleTM(), D = S.aux[cle];
