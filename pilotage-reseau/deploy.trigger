@@ -1424,3 +1424,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T15:38:38Z Dashboard magasin › Fidélité : part des tickets scannés (échelle 0–90 %), sans dernier passage dans les vignettes
 2026-11-12T15:40:17Z Dashboard magasin › Fidélité : clients qui reviennent en liste déroulante avec recherche
 2026-11-12T15:46:09Z Fidélité : évolution du profil (30/90/180 j) ; assistant : un coach qui parle
+2026-11-12T15:51:10Z Dashboard magasin : avatars plus grands, profils de Découverte à Fanbase
