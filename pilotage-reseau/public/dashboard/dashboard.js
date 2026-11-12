@@ -5456,7 +5456,9 @@
    * Lectures : GET /assistant/magasin/questions ; POST /assistant/magasin {shop, question, fil}. */
   const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '' };
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
-  const IA_ETOILE = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9z"/><path d="M19 15l.8 1.9 1.9.8-1.9.8L19 20.4l-.8-1.9-1.9-.8 1.9-.8z"/></svg>';
+  /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
+   * étincelle dedans. Sur le bouton, dans l'entête, à côté de chaque réponse ; quand l'assistant lit, l'étincelle pulse. */
+  const iaIcone = (taille, cls) => `<svg class="ia-icone${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" width="${taille || 16}" height="${taille || 16}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6.5 3.5h11A2.5 2.5 0 0 1 20 6v7.5a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4A2.5 2.5 0 0 1 4 13.5V6a2.5 2.5 0 0 1 2.5-2.5z"/><path class="etin" d="M12 6.4l.95 2.35 2.35.95-2.35.95L12 13l-.95-2.35-2.35-.95 2.35-.95z" fill="currentColor" stroke-width="1"/></svg>`;
   function iaBoite() {
     let b = document.getElementById('db-ia');
     if (!b) { b = document.createElement('div'); b.id = 'db-ia'; document.body.appendChild(b); }
@@ -5499,7 +5501,7 @@
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
     if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><i></i>L’assistant lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaIcone(18, 'lit')}</span>L’assistant lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''}</span></div>
@@ -5513,10 +5515,10 @@
     const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + '<div class="ia-bulle ia"><p class="ia-att"><i></i>L’assistant lit les chiffres du magasin…</p></div>'; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18, 'lit')}</span><div class="ia-bulle ia"><p class="ia-att">L’assistant lit les chiffres du magasin…</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-bulle ia"><p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18)}</span><div class="ia-bulle ia"><p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
@@ -5526,7 +5528,7 @@
     document.body.classList.add('ia-ouvert');
     const filEl = b.querySelector('.ia-fil'), basAvant = filEl ? filEl.scrollHeight - filEl.scrollTop - filEl.clientHeight < 40 : true;
     b.innerHTML = `<div class="ia-voile" data-iafermer="1"></div><div class="ia-modale ${IA.mode === 'a' ? 'ma' : 'mb'}" role="dialog" aria-modal="true" aria-label="Assistant du magasin">
-      <header class="ia-h"><span class="ia-ic">${IA_ETOILE}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
+      <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
         <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
       ${IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`}</div>`;
@@ -6164,7 +6166,7 @@
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${IA_ETOILE}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
