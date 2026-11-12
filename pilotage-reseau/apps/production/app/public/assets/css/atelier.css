@@ -387,6 +387,9 @@ footer .footer { color: var(--at-muted); font-size: 12px; }
 .form-control.is-invalid, .form-select.is-invalid { border-color: var(--at-danger); background-image: none; padding-right: 12px; }
 .form-control.is-invalid:focus, .form-select.is-invalid:focus { box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.15); }
 .form-control.is-valid, .form-select.is-valid { border-color: var(--at-line-2); background-image: none; padding-right: 12px; }
+/* Liste valide : on garde la flèche de Bootstrap, sans la coche verte qui chevauchait le texte (« Inne ✓ »). */
+.form-select.is-valid:not([multiple]):not([size]), .was-validated .form-select:valid:not([multiple]):not([size]) { border-color: var(--at-line-2); padding-right: 2.25rem; background-size: 16px 12px, 0 0; }
+.was-validated .form-control:valid { border-color: var(--at-line-2); background-image: none; padding-right: 12px; }
 .invalid-feedback { color: var(--at-danger); font-size: 11.5px; }
 
 /* --- Dzwonek powiadomień ------------------------------------------------------ */
@@ -3783,7 +3786,7 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .hr-person { padding: 12px 16px; border-bottom: 1px solid #F0EBE4; }
 .hr-person h5 { font-size: 14px; margin: 0 0 8px; }
 .hr-settings { max-width: 720px; }
-@media (max-width: 900px) { .hr-grid, .hr-fields { grid-template-columns: 1fr; } .hr-upload { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) { .hr-grid, .hr-fields { grid-template-columns: 1fr; } }
 .hr-compose-bar label { display: inline-flex; align-items: center; gap: 6px; margin: 0; }
 .hr-compose-bar label .form-check-input { margin: 0; }
 
@@ -3791,8 +3794,23 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .hr-subhead { font-size: 13px; margin: 16px 0 8px; display: flex; gap: 10px; align-items: center; }
 .hr-pay { display: grid; grid-template-columns: 130px 1fr; gap: 6px; }
 .hr-checks { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; }
-.hr-chk { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; margin: 0; }
-.hr-chk .form-check-input { margin: 0; }
+/* Fiche HR : le titre « Płace i umowy » et les cases gagnent sur « .hr-sec h5 » et « .tm-dialog-body label » (plus forts). */
+.hr-sec h5.hr-subhead { font-size: 11.5px; margin: 18px 0 10px; padding-top: 14px; border-top: 1px solid var(--at-line); display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.hr-sec h5.hr-subhead .hr-lock { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.hr-checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 16px; margin-top: 14px; }
+.tm-dialog-body label.hr-chk { display: grid; grid-template-columns: 16px minmax(0, 1fr); column-gap: 8px; row-gap: 1px; align-items: start; font-size: 12.5px; color: var(--at-ink, #2b2b2b); margin: 0; line-height: 1.35; }
+.tm-dialog-body label.hr-chk .form-check-input { margin: 1px 0 0; float: none; }
+.tm-dialog-body label.hr-chk .tm-sub { grid-column: 2; font-size: 11.5px; }
+.hr-sec { padding: 14px 16px; }
+.hr-sec > h5 { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 26px; }
+.hr-sec .hr-actions { margin-top: 16px; }
+/* Ajout d'un document : 2 lignes (rodzaj + data, puis plik + Dodaj) — le nom du fichier n'est plus coupé. */
+.hr-upload { grid-template-columns: minmax(0, 1fr) 160px; gap: 8px; margin-top: 6px; }
+.hr-upload input[type=file] { grid-column: 1; }
+.hr-upload button { grid-column: 2; }
+.hr-upload .hr-msg { grid-column: 1 / -1; }
+.hr-upload .hr-msg:empty { display: none; }
+@media (max-width: 900px) { .hr-checks { grid-template-columns: 1fr; } }
 .hr-tpl { display: grid; grid-template-columns: 300px 1fr; gap: 16px; align-items: start; }
 .hr-tpl-list { display: flex; flex-direction: column; gap: 6px; }
 .hr-tpl-item { text-align: left; background: var(--at-surface); border: 1px solid var(--at-line); border-radius: 10px; padding: 9px 12px; display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
