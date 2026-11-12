@@ -2134,8 +2134,7 @@ Un clic sur un produit le déplie :
 - ses pièces de chaque semaine ;
 - le bouton « Fiche complète », qui ouvre la fiche existante (12 semaines, prix face au réseau, recette).
 
-Échap ou la croix ferme la fenêtre. Au téléphone, l'adresse `?vue=produits` retombe sur le jour, comme les autres
-onglets du bureau.
+Échap ou la croix ferme la fenêtre. Au téléphone (11/11/2026), l'onglet a sa place dans la barre du bas, entre Semaine et Primes (sept onglets). La page tient en une colonne : le graphique en milliers d'euros, une semaine sur deux, puis les tuiles sur deux colonnes. La catégorie s'ouvre en plein écran ; le prix et les 12 semaines y sont masqués, et le produit déplié tient sur deux colonnes.
 
 Limite connue : en S40, la caisse a renommé les tartes (« Tartes » → « Tartes – Ø 28 cm », noms néerlandais remplacés
 par des noms français). Dans la catégorie Tartes, les anciennes références paraissent donc « arrêtées » et les

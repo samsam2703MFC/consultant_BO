@@ -1288,14 +1288,15 @@
     sem: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
     prim: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="9" r="6"/><path d="M8.6 13.8 7 22l5-3 5 3-1.6-8.2"/></svg>',
     tach: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6h11M9 12h11M9 18h11"/><path d="m3 6 1.5 1.5L7 5M3 12l1.5 1.5L7 11M3 18l1.5 1.5L7 17"/></svg>',
+    prod: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8"/><path d="M15 7h6v6"/></svg>',
   };
   /** Le menu du téléphone : Opérationnel (la journée en cours, 06/10/2026), Exploitation, Contrôle,
    * Semaine, chacun avec sa couleur, et Primes (30/10/2026). La réclamation fournisseur s'ouvre depuis Contrôle et y ramène. */
   function mbOnglets() {
     const P = maEtats();
-    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'jour' ? S.mo : '')))));
-    // Six onglets depuis Tâches (08/11/2026).
-    return `<div class="mb-tabs mb-tabs5 mb-tabs6 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prim', 'Primes']]
+    const on = S.vue === 'ops' ? 'ops' : (S.vue === 'semaine' ? 'sem' : (S.vue === 'reclamation' ? 'ctrl' : (S.vue === 'primes' ? 'prim' : (S.vue === 'taches' ? 'tach' : (S.vue === 'produits' ? 'prod' : (S.vue === 'jour' ? S.mo : ''))))));
+    // Six onglets depuis Tâches (08/11/2026), sept depuis Produits (11/11/2026).
+    return `<div class="mb-tabs mb-tabs5 mb-tabs6 mb-tabs7 ma-tabs">${[['ops', 'Opérationnel'], ['exp', 'Exploitation'], ['ctrl', 'Contrôle'], ['tach', 'Tâches'], ['sem', 'Semaine'], ['prod', 'Produits'], ['prim', 'Primes']]
       .map(([k, l]) => `<button type="button" data-mo="${k}" class="${on === k ? 'on' : ''}"><i>${MA_ICO[k]}${P[k] && P[k] !== 'n' ? `<b class="pt p${P[k]}"></b>` : ''}</i>${l}</button>`).join('')}</div>`;
   }
 
@@ -5308,12 +5309,12 @@
   }
   /** Les 13 semaines en colonnes : les 6 d'avant en clair, les 6 dernières en foncé, la semaine en cours hachurée. */
   function pdBarres(D, vals, o) {
-    const { w = 1000, h = 200, etiq = true, unite = '€' } = o || {};
+    const { w = 1000, h = 200, etiq = true, unite = '€', mobile = false } = o || {};
     const n = vals.length, enC = n - 1, tr = D.semaines.tranches, bo = D.semaines.bornes;
     const max = Math.max(1, ...vals.slice(0, enC), vals[enC] || 0) * 1.06;
-    const mt = etiq ? 20 : 2, mb = etiq ? 34 : 2, slot = w / n, bw = Math.min(60, slot * 0.62);
+    const mt = etiq ? (mobile ? 16 : 20) : 2, mb = etiq ? (mobile ? 18 : 34) : 2, slot = w / n, bw = Math.min(60, slot * (mobile ? 0.7 : 0.62));
     const y = v => mt + (h - mt - mb) * (1 - Math.min(1, Math.max(0, v) / max));
-    const fv = v => unite === '€' ? (v >= 1000 ? nf(v / 1000, 1) + ' k€' : fE(v)) : fN(v);
+    const fv = v => unite === '€' ? (v >= 1000 ? nf(v / 1000, 1) + (mobile ? '' : ' k€') : fE(v)) : fN(v);
     const dC = s => s.slice(8, 10) + '/' + s.slice(5, 7);
     let g = '<defs><pattern id="pd-hach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#F4E4E7"/><line x1="0" y1="0" x2="0" y2="6" stroke="#B03048" stroke-width="2.4"/></pattern></defs>';
     vals.forEach((v, i) => {
@@ -5321,7 +5322,8 @@
       const fill = i === enC ? 'url(#pd-hach)' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)');
       const titre = tr[i] + ' (' + dC(bo[i][0]) + ' → ' + dC(bo[i][1]) + ') · ' + (unite === '€' ? fE(v) : fN(v) + ' pièces') + (i === enC ? ' · en cours, ' + D.semaines.jours[i] + ' j' : '');
       if (hh > 0.4) { g += `<path d="M${x.toFixed(1)},${y(0).toFixed(1)} v${(-hh + r).toFixed(1)} q0,${-r} ${r},${-r} h${(bw - 2 * r).toFixed(1)} q${r},0 ${r},${r} v${(hh - r).toFixed(1)} z" fill="${fill}"><title>${esc(titre)}</title></path>`; }
-      if (etiq) { g += `<text x="${cx.toFixed(1)}" y="${(top - 6).toFixed(1)}" text-anchor="middle" class="v${i === enC ? ' ec' : ''}">${fv(v)}</text><text x="${cx.toFixed(1)}" y="${h - 18}" text-anchor="middle" class="s${i === enC ? ' ec' : ''}">${esc(tr[i])}</text><text x="${cx.toFixed(1)}" y="${h - 5}" text-anchor="middle" class="d">${i === enC ? 'en cours' : dC(bo[i][0])}</text>`; }
+      if (etiq && mobile) { g += `<text x="${cx.toFixed(1)}" y="${(top - 4).toFixed(1)}" text-anchor="middle" class="v m${i === enC ? ' ec' : ''}">${fv(v)}</text>${i % 2 === 0 ? `<text x="${cx.toFixed(1)}" y="${h - 4}" text-anchor="middle" class="s m${i === enC ? ' ec' : ''}">${esc(tr[i])}</text>` : ''}`; }
+      else if (etiq) { g += `<text x="${cx.toFixed(1)}" y="${(top - 6).toFixed(1)}" text-anchor="middle" class="v${i === enC ? ' ec' : ''}">${fv(v)}</text><text x="${cx.toFixed(1)}" y="${h - 18}" text-anchor="middle" class="s${i === enC ? ' ec' : ''}">${esc(tr[i])}</text><text x="${cx.toFixed(1)}" y="${h - 5}" text-anchor="middle" class="d">${i === enC ? 'en cours' : dC(bo[i][0])}</text>`; }
     });
     g += `<line x1="0" x2="${w}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="var(--color-border-tertiary)"/>`;
     return `<svg class="pd-gr" viewBox="0 0 ${w} ${h}" role="img" aria-label="Chaque semaine : les 6 d’avant, les 6 dernières, la semaine en cours">${g}</svg>`;
@@ -5332,8 +5334,15 @@
     return `<svg class="pd-mini" viewBox="0 0 ${w} ${h}" aria-hidden="true">${vals.map((v, i) => { const hh = Math.max(v > 0 ? 1.5 : 0, (h - 1) * Math.min(1, v / max));
       return `<rect x="${(i * (bw + 2)).toFixed(1)}" y="${(h - hh).toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" rx="1.5" fill="${i === enC ? '#F4E4E7' : (i >= D.regle.apres[0] ? 'var(--pd-apres)' : 'var(--pd-avant)')}"/>`; }).join('')}</svg>`;
   }
-  const pdLegende = D => `<div class="pd-leg"><span><i class="av"></i>les 6 semaines d’avant</span><span><i class="ap"></i>les 6 dernières semaines</span><span><i class="ec"></i>${esc(D.semaines.tranches[D.semaines.tranches.length - 1])}, en cours</span></div>`;
-  function rendProduits() {
+  const pdLegende = (D, mob) => `<div class="pd-leg"><span><i class="av"></i>${mob ? '6 semaines d’avant' : 'les 6 semaines d’avant'}</span><span><i class="ap"></i>${mob ? '6 dernières' : 'les 6 dernières semaines'}</span><span><i class="ec"></i>${esc(D.semaines.tranches[D.semaines.tranches.length - 1])}, en cours</span>${mob ? '<span>en milliers d’euros</span>' : ''}</div>`;
+  /** Au téléphone (11/11/2026) : l'en-tête et la barre du bas des autres onglets, la page en une colonne. */
+  function rendProduitsMobile() {
+    return `<div class="mb-hd"><img src="../assets/img/logo.png" alt="">
+      <div><div class="t">${esc(nomShop())}</div><div class="d">Produits</div></div>
+      <span class="sp"></span>${rvBouton(true)}<button class="mb-ic" data-recharger="1" aria-label="relire">↻</button></div>
+      <div class="mb-sc"><div class="ma pd-mob">${rendProduits(true)}</div></div>${mbOnglets()}`;
+  }
+  function rendProduits(mob) {
     const cle = clePD(), D = S.aux[cle];
     if (!D) { return S.err[cle] ? `<div class="db-err">Produits : ${esc(S.err[cle])}</div>` : '<div class="db-attente">Lecture des 12 dernières semaines…</div>'; }
     if (D.indispo || D.error) { return `<div class="db-alerte">Produits : ${esc(D.motif || D.error)}</div>`; }
@@ -5345,8 +5354,8 @@
     h += `<div class="pd-c"><div class="pd-hd"><h2>Le magasin</h2><span class="pd-aide">le chiffre de chaque semaine</span></div><div class="pd-in">
       <div class="pd-rep"><span class="pd-gros ${k}">${pdGros(e)}</span><span class="pd-phr">Le magasin ${mot}.</span>
       <span class="pd-sous">${fE(e.apres)} par semaine sur les 6 dernières semaines, contre ${fE(e.avant)} avant.</span></div>
-      ${pdBarres(D, T.v, { w: 1350, h: 210 })}${pdLegende(D)}</div></div>`;
-    h += `<div class="pd-c"><div class="pd-hd"><h2>Vos catégories</h2><span class="pd-aide">cliquez une catégorie pour voir ses produits</span></div><div class="pd-in"><div class="pd-tuiles">`
+      ${pdBarres(D, T.v, mob ? { w: 360, h: 160, mobile: true } : { w: 1350, h: 210 })}${pdLegende(D, mob)}</div></div>`;
+    h += `<div class="pd-c"><div class="pd-hd"><h2>Vos catégories</h2><span class="pd-aide">${mob ? 'touchez une catégorie' : 'cliquez une catégorie pour voir ses produits'}</span></div><div class="pd-in"><div class="pd-tuiles">`
       + D.groupes.map(g => { const c = PD_CL[g.evo.verdict] || '';
         return `<button type="button" class="pd-ti ${c}" data-pdg="${esc(g.nom)}"><span class="pd-go" aria-hidden="true">›</span><span class="n">${esc(g.nom)}</span><span class="big ${c || 'st'}">${pdGros(g.evo)}</span><span class="s">${fE(g.evo.apres)} par semaine · ${g.n} produit${g.n > 1 ? 's' : ''}</span>${pdMini(D, g.v, 270, 34)}</button>`; }).join('')
       + '</div></div></div>';
@@ -5379,10 +5388,11 @@
     const prods = (D.produits || []).filter(p => p.groupe === g.nom), vus = S.pd.tous ? prods : prods.slice(0, 12);
     const ligne = p => { const o = String(p.id) === String(S.pd.ouvert);
       return `<tr class="pd-pr${o ? ' ouv' : ''}" data-pdp="${esc(p.id)}" tabindex="0" role="button" aria-expanded="${o}"><td><span class="fl">${o ? '▾' : '▸'}</span>${esc(p.nom)}</td><td>${p.prix != null ? pdPrix(p.prix) : '—'}</td><td>${nf(p.evo.qApres, 0)} pièces</td><td>${pdEvo(p.evo)}</td><td>${pdMini(D, p.q, 150, 28)}</td></tr>${o ? pdDeroule(D, p) : ''}`; };
-    box.innerHTML = `<div class="fi-voile" data-pdfermer="1"></div><div class="fi-modale pd-modale" role="dialog" aria-modal="true" aria-label="${esc(g.nom)}">
+    const mob = estMobile();
+    box.innerHTML = `<div class="fi-voile" data-pdfermer="1"></div><div class="fi-modale pd-modale${mob ? ' mob' : ''}" role="dialog" aria-modal="true" aria-label="${esc(g.nom)}">
       <div class="fi-hd"><div class="t"><h2>${esc(g.nom)}</h2><div class="pd-mrep">${pdEvo(g.evo)}<span>${fE(g.evo.apres)} par semaine sur les 6 dernières semaines, contre ${fE(g.evo.avant)} avant.</span></div></div><button type="button" class="fi-x" data-pdfermer="1" aria-label="Fermer">✕</button></div>
-      <div class="fi-bd">${pdBarres(D, g.v, { w: 940, h: 180 })}${pdLegende(D)}
-        <div class="pd-msec">Ses produits <span>cliquez un produit : prix, quantité, marge</span></div>
+      <div class="fi-bd">${pdBarres(D, g.v, mob ? { w: 360, h: 150, mobile: true } : { w: 940, h: 180 })}${pdLegende(D, mob)}
+        <div class="pd-msec">Ses produits <span>${mob ? 'touchez un produit' : 'cliquez un produit : prix, quantité, marge'}</span></div>
         <table class="pd-prods"><thead><tr><th>Produit</th><th>Prix</th><th>Par semaine</th><th>Évolution</th><th>12 semaines</th></tr></thead><tbody>${vus.map(ligne).join('')}</tbody></table>
         ${prods.length > vus.length ? `<button type="button" class="pd-plus" data-pdtous="1">▾ les ${prods.length - vus.length} autres produits</button>` : ''}</div></div>`;
     box.querySelectorAll('[data-pdfermer]').forEach(b => b.addEventListener('click', pdFermer));
@@ -5905,7 +5915,9 @@
       // Le mois, le trimestre et l'année n'existent pas au téléphone : on
       // retombe sur le jour plutôt que d'afficher un écran vide.
       // La production se pilote sur ordinateur (demande du 03/10/2026) : pas d'écran au téléphone.
-      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      if (!['ops', 'jour', 'semaine', 'reclamation', 'primes', 'taches', 'produits'].includes(S.vue)) { S.vue = 'jour'; urlMaj(); charger(false); }
+      // L'onglet Produits (11/11/2026) : la même page qu'au bureau, en une colonne ; la catégorie s'ouvre en plein écran.
+      if (S.vue === 'produits') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendProduitsMobile(); $.classList.add('mob'); brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); const sc2 = $.querySelector('.mb-sc'); if (sc2) { sc2.scrollTop = top; } pdRendre(); return; }
       // Les tâches et les checklists (08/11/2026) : la même page qu'au bureau, en une colonne.
       if (S.vue === 'taches') { const sc = $.querySelector('.mb-sc'), top = sc ? sc.scrollTop : 0; $.innerHTML = rendTachesMobile() + cqLoupe(true); $.classList.add('mob'); brancher(); tjBrancher(); cqRestaurer(cqPos); const sc2 = $.querySelector('.mb-sc'); if (sc2 && S.tjHaut !== S.date) { S.tjHaut = S.date; sc2.scrollTop = 0; } else if (sc2) { sc2.scrollTop = top; } return; }
       // Les primes : déplier une carte ne doit pas ramener en haut de la liste.
@@ -9169,7 +9181,7 @@
     $.querySelectorAll('[data-rgdrop]').forEach(b => b.addEventListener('click', () => { S.rgOuvert = !S.rgOuvert; rendre(); }));
     $.querySelectorAll('[data-mo]').forEach(b => b.addEventListener('click', () => {
       const k = b.dataset.mo, avant = S.vue;
-      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else { S.vue = 'jour'; S.mo = k; }
+      if (k === 'sem') { S.vue = 'semaine'; } else if (k === 'ops') { S.vue = 'ops'; } else if (k === 'prim') { S.vue = 'primes'; } else if (k === 'tach') { S.vue = 'taches'; } else if (k === 'prod') { S.vue = 'produits'; } else { S.vue = 'jour'; S.mo = k; }
       S.heure = null; S.jourH = null; urlMaj();
       if (S.vue === avant) { rendre(); const sc = $.querySelector('.mb-sc'); if (sc) { sc.scrollTop = 0; } } else { charger(false); } }));
     $.querySelectorAll('[data-invdrop]').forEach(b => b.addEventListener('click', () => { S.invOuvert = !S.invOuvert; rendre(); }));

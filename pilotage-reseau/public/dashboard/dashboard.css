@@ -2814,6 +2814,46 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 @media (max-width:760px){
   .pd-tuiles{grid-template-columns:repeat(2,minmax(0,1fr))}
   #db-pd .fi-modale{left:0;top:0;transform:none;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
-  .pd-prods td:nth-child(2),.pd-prods th:nth-child(2),.pd-prods td:last-child,.pd-prods th:last-child{display:none}
+  .pd-pr td:nth-child(2),.pd-prods th:nth-child(2),.pd-pr td:last-child,.pd-prods th:last-child{display:none}
   .pd-ddb{grid-template-columns:1fr 1fr;margin-left:0}.pd-ddb>div:nth-child(3){border-left:none}
 }
+/* L'onglet Produits au téléphone (11/11/2026) : sept onglets en bas, la page en une colonne, la catégorie en plein écran. */
+.mb-tabs.mb-tabs7{grid-template-columns:repeat(7,minmax(0,1fr))}
+.mb-tabs.mb-tabs7 button{font-size:8.5px;letter-spacing:-.01em;min-width:0;padding:2px 0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pd-mob{padding-top:10px}
+.pd-mob .pd-quand{margin:0 0 10px;font-size:12px}
+.pd-mob .pd-c{border-radius:12px;margin-bottom:10px}
+.pd-mob .pd-hd{padding:12px 14px 0}
+.pd-mob .pd-hd h2{font-size:15px}
+.pd-mob .pd-aide{font-size:11px}
+.pd-mob .pd-in{padding:10px 14px 14px}
+.pd-mob .pd-rep{gap:10px;margin-bottom:8px}
+.pd-mob .pd-gros{font-size:28px}
+.pd-mob .pd-phr{font-size:14px}
+.pd-mob .pd-sous{font-size:12px}
+.pd-mob .pd-leg{gap:10px;font-size:11px}
+.pd-mob .pd-tuiles{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.pd-mob .pd-ti{padding:11px 12px}
+.pd-mob .pd-ti .n{font-size:13.5px}
+.pd-mob .pd-ti .big{font-size:22px;margin-top:6px}
+.pd-mob .pd-ti .s{font-size:11px;margin-bottom:8px}
+.pd-mob .pd-go{right:11px;top:10px}
+.pd-mob .pd-note{margin-bottom:6px}
+.pd-gr text.m{font-size:9.5px}
+#db-pd .pd-modale.mob{left:0;top:0;transform:none;width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
+.pd-modale.mob .fi-hd{padding:14px 14px 8px}
+.pd-modale.mob .fi-hd h2{font-size:22px}
+.pd-modale.mob .fi-bd{padding:8px 14px 24px}
+.pd-modale.mob .pd-mrep{font-size:12.5px;gap:8px}
+.pd-modale.mob .pd-mrep .pd-evo{font-size:18px}
+.pd-modale.mob .pd-prods{font-size:13px}
+.pd-modale.mob .pd-prods th,.pd-modale.mob .pd-prods td{padding:9px 6px}
+.pd-modale.mob .pd-pr td:nth-child(2),.pd-modale.mob .pd-prods th:nth-child(2),.pd-modale.mob .pd-pr td:last-child,.pd-modale.mob .pd-prods th:last-child{display:none}
+.pd-modale.mob .pd-prods td:first-child{white-space:normal}
+.pd-modale.mob .pd-ddb{grid-template-columns:1fr 1fr;margin:2px 0 12px}
+.pd-modale.mob .pd-ddb>div{padding:11px 12px}
+.pd-modale.mob .pd-ddb>div:nth-child(3){border-left:none;border-top:1px solid var(--color-border-tertiary)}
+.pd-modale.mob .pd-ddb>div:nth-child(4){border-top:1px solid var(--color-border-tertiary)}
+.pd-modale.mob .pd-ddb .gr,.pd-modale.mob .pd-ddb .li{grid-column:1 / -1;border-left:none !important;border-top:1px solid var(--color-border-tertiary)}
+.pd-modale.mob .pd-ddb .li{padding-top:10px}
+.pd-modale.mob .pd-ddb .v{font-size:20px}
