@@ -2,6 +2,8 @@
 // Banc navigateur : les fichiers de public/, et l'API des profils servie par le vrai backend (faux panel, MariaDB locale).
 $u = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 if ($u === '/__banc.html') { readfile(__DIR__ . '/banc.html'); return true; }
+if ($u === '/__banc-coachs.html') { readfile(__DIR__ . '/banc-coachs.html'); return true; }
+// Les avatars des coachs, servis comme au cockpit (dashboard/avatars/ à côté de index.html).
 if (str_starts_with($u, '/api/cockpit/')) {
     require __DIR__ . '/lib.php';
     header('Content-Type: application/json');
@@ -12,6 +14,9 @@ if (str_starts_with($u, '/api/cockpit/')) {
         $p === '/fidelite/profils/magasin' => ep_fidelite_profils_magasin(),
         $p === '/fidelite/client' => ep_fidelite_client(),
         $p === '/assistant/magasin/questions' => (require_once __DIR__ . '/../../src/assistant_magasin.php') ? ep_assistant_questions() : [],
+        // Les coachs et les questions posées : le vrai backend sur la MariaDB du banc.
+        $p === '/assistant/coachs' => (require_once __DIR__ . '/../../src/assistant_magasin.php') ? ($_SERVER['REQUEST_METHOD'] === 'POST' ? wr_assistant_coachs() : ep_assistant_coachs()) : [],
+        $p === '/assistant/questions-posees' => (require_once __DIR__ . '/../../src/assistant_magasin.php') ? ep_assistant_questions_posees() : [],
         // L'assistant : sans clé Anthropic au banc, une réponse type au format du schéma (l'appel réel se vérifie au serveur).
         $_SERVER['REQUEST_METHOD'] === 'POST' && $p === '/assistant/magasin' => (static function () { usleep(600000); $b = json_decode((string) file_get_contents('php://input'), true);
             return ['luLe' => date('Y-m-d H:i'), 'modele' => 'banc', 'reponse' => ['titre' => (string) $b['question'], 'resume' => 'Réponse type du banc (' . count($b['fil'] ?? []) . ' échange(s) avant celui-ci).',
