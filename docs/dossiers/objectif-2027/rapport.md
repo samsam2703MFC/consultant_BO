@@ -444,6 +444,46 @@ La gamme chocolat se vend peu et à petite marge : environ 15 200 € de CA par 
 
 ## Plan d'action
 
+### Budget marketing : dépenses 2026 et budget prévisionnel 2027
+
+Le fonds marketing a payé 9 085 € en 2026, tout au Collectif MKTG, entre juin et septembre ; rien n'est enregistré depuis octobre. Au taux actuel, les redevances marketing de 2027 donneraient environ 61 800 €, dont 37 900 € déjà pris si l'animation mensuelle du Collectif continue au tarif de septembre.
+
+Les dépenses 2026 enregistrées dans le fonds :
+
+| Date | Objet | Pièce | Montant |
+| --- | --- | --- | --- |
+| 01/06/2026 | Mise en place et créa (frais unique) | facture 2026/061 | 1 040 € |
+| 01/07/2026 | Créa, tournage des produits (frais unique) | facture 2026/061 | 2 410 € |
+| 19/08/2026 | Tournage à Halle (NL) | facture 2026/060 | 1 005 € |
+| 24/08/2026 | Créa, tournage des produits (frais unique) | facture 2026/061 | 1 470 € |
+| 01/09/2026 | Septembre 2026 (réseaux sociaux) | facture 2026/062 | 3 160 € |
+| Total | | | 9 085 € |
+
+- Trois dépenses portent la même facture 2026/061 (4 920 € au total) : facture à vérifier auprès du Collectif.
+- Côté recettes, seules les redevances de juillet sont enregistrées (2 650 €, sans Halle). Au taux actuel, les redevances dues de juin à octobre font environ 25 200 € : enregistrées, elles mettraient le fonds à environ +16 100 € au lieu de −6 435 €.
+- Si d'autres dépenses marketing 2026 ont été payées hors du fonds (publicité en ligne, impression, PLV), elles manquent à cette liste.
+
+Budget prévisionnel 2027, au taux actuel des redevances et au CA de 2026 :
+
+| Recettes 2027 | Taux | CA annuel | Redevance marketing |
+| --- | --- | --- | --- |
+| Corbais | 1,5 % | 1 798 k€ | 26 960 € |
+| Halle | 2,5 % | 630 k€ | 15 760 € |
+| Gosselies | 1,5 % | 650 k€ | 9 750 € |
+| Sombreffe | 1,5 % | 622 k€ | 9 330 € |
+| Total | | 3 700 k€ | 61 800 € |
+
+| Dépenses 2027 proposées | Montant | Base |
+| --- | --- | --- |
+| Animation réseaux sociaux (Collectif, mensuel) | 37 900 € | 3 160 € × 12, tarif de septembre 2026 |
+| Noël, Épiphanie, Saint-Nicolas et cougnou | 9 600 € | 40 % du reste : les fêtes font environ 135 k€ de CA |
+| Saint-Valentin, Pâques, fêtes des mères et des pères | 7 200 € | 30 % du reste |
+| Chandeleur, été, rentrée, Halloween | 3 550 € | 15 % du reste |
+| Webshop, B2B et fidélisation | 3 550 € | 15 % du reste |
+| Total | 61 800 € | |
+
+La répartition des temps forts est une proposition à arbitrer en réunion. Les ouvertures des nouvelles zones ne sont pas dans ce budget : elles relèvent du budget d'ouverture de chaque magasin, et leurs redevances viendront en plus.
+
 ### Budgets par objectif
 
 Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir dans la colonne prévue, car aucun budget 2027 n'est encore encodé dans le cockpit. Seul l'emballage a déjà une référence dans le modèle de budget des franchisés.
@@ -489,6 +529,7 @@ Les échéances ci-dessous sont des propositions ; les responsables restent à d
 - [ ] Demander à l'usine des devis de robotisation, en commençant par la viennoiserie et la boulangerie (T2 2027).
 - [ ] Faire valider l'annexe au DIP sur la fréquence des contrôles et la SOP des contrôles, puis planifier les visites de novembre et décembre dans l'application Visites.
 - [ ] Préparer la démonstration de la réunion : tablette, application Visites, liaison au grand écran.
+- [ ] Compléter la liste des dépenses marketing 2026 (factures payées hors du fonds), enregistrer toutes les redevances dues dans le fonds, puis arbitrer le budget marketing 2027 (décembre 2026).
 - [ ] Choisir une tenue de travail et un packaging uniques pour le réseau, chez un même fournisseur, avec un prix de vente commun pour les sacs et les boîtes (février 2027).
 - [ ] Lancer les études de marché de Wemmel, Grimbergen, Sambreville et Malines dans le module Scouting du cockpit (T1 2027).
 - [ ] Faire valider la majoration de 0,5 % par l'avocat et préparer l'avenant au contrat (janvier 2027).
