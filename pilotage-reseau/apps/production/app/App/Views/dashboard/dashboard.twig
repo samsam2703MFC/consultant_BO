@@ -100,7 +100,7 @@
             {% else %}
             {% set t = week.totals %}
             {% set f = week.flow %}
-            <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes }}" data-done-min="{{ t.done_minutes }}">
+            <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes ?? 0 }}" data-done-min="{{ t.done_minutes ?? 0 }}">
               <div class="mt-wrap">
                 <div class="mt-main">
                     {% if f.now %}{% set n = f.now %}
@@ -126,8 +126,13 @@
                     <div class="mt-box">
                         <h6>Mój tydzień <small>tydz. {{ week.week.number }} · {{ week.week.from|date('d.m') }} – {{ week.week.to|date('d.m') }}</small></h6>
                         <div class="mt-big"><span data-wk="done">{{ t.done }} z {{ t.total }}</span></div>
+                        {% if show_minutes %}
                         <div class="wk-bar mt-bar"><i data-wk="bar" style="width: {{ t.minutes ? (t.done_minutes * 100 / t.minutes)|round : 0 }}%"></i></div>
                         <span class="at-sub" data-wk="done-min">zadań zrobionych · {{ wk.dur(t.done_minutes) }} z {{ wk.dur(t.minutes) }}</span>
+                        {% else %}{# [285] bez minut : pasek wg liczby zadań #}
+                        <div class="wk-bar mt-bar"><i data-wk="bar" style="width: {{ t.total ? (t.done * 100 / t.total)|round : 0 }}%"></i></div>
+                        <span class="at-sub" data-wk="done-min">zadań zrobionych</span>
+                        {% endif %}
                         <p class="mt-who">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</p>
                     </div>
                     <div class="mt-box mt-links">
@@ -154,6 +159,9 @@
         </div>
         {% endif %}
 
+        {# [284] Sesja / stanowisko Produkcja (kierownik produkcji) : tylko zadania — bez wskaźników, rentowności grup,
+           planu wysyłek, « Do zrobienia » i ostatnich zamówień. #}
+        {% if not tasks_focus %}
         {# --- Wskaźniki kierownika produkcji (dyrekcja) : cele i wyniki z modułu --- #}
         {% if manager_kpis %}
         <div class="col-12">
@@ -261,7 +269,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
+
+    {% if not tasks_focus %}
 
     <div class="row">
         {# --- Plan wysyłek ------------------------------------------------------ #}
@@ -381,6 +392,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </section>
 {% endblock %}
 
@@ -397,8 +409,13 @@
         d.done = Number(d.done) + delta;
         d.doneMin = Number(d.doneMin) + delta * min;
         week.querySelector('[data-wk=done]').textContent = `${d.done} z ${d.total}`;
-        week.querySelector('[data-wk=done-min]').textContent = `zadań zrobionych · ${dur(Number(d.doneMin))} z ${dur(Number(d.min))}`;
-        week.querySelector('[data-wk=bar]').style.width = (Number(d.min) ? Math.round(Number(d.doneMin) * 100 / Number(d.min)) : 0) + '%';
+        if (Number(d.min)) {
+            week.querySelector('[data-wk=done-min]').textContent = `zadań zrobionych · ${dur(Number(d.doneMin))} z ${dur(Number(d.min))}`;
+            week.querySelector('[data-wk=bar]').style.width = Math.round(Number(d.doneMin) * 100 / Number(d.min)) + '%';
+        } else {
+            // [285] Bez minut (nie administrator) : pasek wg liczby zadań.
+            week.querySelector('[data-wk=bar]').style.width = (Number(d.total) ? Math.round(Number(d.done) * 100 / Number(d.total)) : 0) + '%';
+        }
     }
     document.querySelectorAll('[data-wk-toggle]').forEach(button => button.addEventListener('click', () => {
         const id = button.dataset.wkToggle, row = button.closest('.mt-row, .mt-now');

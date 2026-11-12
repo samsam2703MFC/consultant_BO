@@ -1890,6 +1890,21 @@ tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_pro
 - **[283] « Zadania »** (`/my-tasks`) : nouvelle entrée du rail, toujours présente (`Rail::ALWAYS`, avec Dzisiaj), même pour
   un poste avec son propre menu ; « Uprawnienia i menu » l'affiche « w menu » sans pouvoir la retirer.
 
+### [285] Raport stanowisk (makieta 39) et [284] Dzisiaj « Produkcja » = tâches seulement
+
+- **Raport stanowisk** (`/organization/position-report`, onglet de « Zadania zespołu », administrateur et profil CEO ;
+  clé d'accès `position_report`) — `PositionReportService::report` : pour chaque poste ERP avec personnes, minutes des tâches
+  du jour, de la semaine et du mois et remplissage (÷ 8 h × personnes ; semaine et mois : jours ouvrés `tasks.workdays` hors
+  fériés PL × 8 h), fait / dû (échéances passées), en retard ; clic sur le poste → tâches du mois (fréquence, minutes, × n
+  dans le mois, total, fait / dû, « do 30.11 »). Postes de l'atelier (tablettes) sur une ligne. Tuiles : postes, fait dans le
+  mois (cible `tasks.done_target_pct`, 90 %), en retard, poste le plus rempli. Échéances des jours fériés ignorées. PDF =
+  impression du navigateur.
+- **Zadania stanowiska** : bandeau de remplissage jour · semaine · mois du poste (`positionFill`) + lien vers le rapport.
+- **Minutes réservées à l'administrateur** (et au profil CEO) : « Mój tydzień » (Dzisiaj) sans minutes ni durée (barre au
+  nombre de tâches) et « Kto co zrobił » sans tuile « Czas » ni minutes pour les autres comptes.
+- **[284] Dzisiaj, poste ou session Kierownik produkcji** : seulement les tâches (plus de « Wskaźniki kierownika »,
+  « Rentowność grup », « Plan wysyłek », « Do zrobienia », « Ostatnie zamówienia » — ils restent dans leurs modules).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

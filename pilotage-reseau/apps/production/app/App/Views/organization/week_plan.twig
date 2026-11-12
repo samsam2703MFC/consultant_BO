@@ -17,6 +17,18 @@
 {% block content %}
 {# Zadania stanowiska [219] → [227] (makieta 2, tylko administrator) : App\Services\Organization\PositionTaskService::weekPlan / saveWeekPlan / copyPlan.
    Tabela i panel edycji budowane w assets/js/organization/week-plan.js z danych poniżej ; zapis całego planu naraz. #}
+{% if fill %}
+{# [285] Wypełnienie stanowiska (makieta 39) : minuty zadań okresu ÷ czas pracy (8 h dzień, dni robocze × 8 h, × osoby). #}
+{% macro d(m) %}{% if not m %}0{% elseif m < 60 %}{{ m }} min{% elseif m % 60 == 0 %}{{ m // 60 }} h{% else %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endif %}{% endmacro %}
+{% import _self as wpf %}
+<div class="wp-fill" aria-label="Wypełnienie stanowiska">
+    {% for key, label in {day: 'Dzień', week: 'Tydzień ' ~ fill.period.week_no, month: 'Miesiąc (' ~ fill.period.month_name ~ ')'} %}
+    {% set f = attribute(fill, key) %}
+    <div><small>Wypełnienie · {{ label }}</small><b>{{ f.pct }} %</b> <span class="ct-mute">{{ wpf.d(f.min) }} z {{ wpf.d(f.cap) }}</span><span class="pr-bar"><i style="width: {{ min(100, f.pct) }}%"></i></span></div>
+    {% endfor %}
+    {% if can_see('/organization/position-report') %}<a class="btn btn-outline-primary align-self-center" href="{{ root }}/organization/position-report"><i class="bi bi-bar-chart-line"></i> Raport stanowisk</a>{% endif %}
+</div>
+{% endif %}
 <section class="section" id="weekPlanApp" data-position="{{ plan.position.id }}">
     <div class="kw"><p class="at-empty">Ładowanie…</p></div>
 </section>

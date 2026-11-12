@@ -1,0 +1,103 @@
+{% extends "layouts/base.twig" %}
+
+{% macro dur(m) %}{% if not m %}0{% elseif m < 60 %}{{ m }} min{% elseif m % 60 == 0 %}{{ m // 60 }} h{% else %}{{ m // 60 }} h {{ '%02d'|format(m % 60) }}{% endif %}{% endmacro %}
+{% macro fill(f, cap_label) %}{% import _self as pr %}<div class="pr-fill"><b>{{ pr.dur(f.min) }}</b><span class="pr-bar"><i style="width: {{ min(100, f.pct) }}%"></i></span><small>{{ f.pct }} % z {{ cap_label }}</small></div>{% endmacro %}
+
+{% block title %}Raport stanowisk{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Raport stanowisk</h3>
+            <p class="text-subtitle text-muted mb-0">Każde stanowisko ERP : zadania z minutami przydzielonymi przez administratora, wypełnienie dnia, tygodnia i miesiąca
+                (minuty zadań ÷ czas pracy) i co zostało zrobione. Minuty widzi tylko administrator — pracownik widzi tylko swoje zadania.</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap pr-noprint">
+            <button type="button" class="btn btn-outline-primary" onclick="window.print()"><i class="bi bi-filetype-pdf"></i> PDF</button>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [285] Raport stanowisk (makieta 39) : App\Services\Organization\PositionReportService::report. #}
+{% import _self as pr %}
+{% set p = r.period %}
+{% set k = r.kpi %}
+<section class="section ct-wrap pr-wrap" id="positionReport">
+    <div class="pr-bar-top">
+        <div class="pr-seg pr-noprint" role="group" aria-label="Okres">
+            <button type="button" data-pr-col="day">Dzień</button><button type="button" data-pr-col="week">Tydzień</button><button type="button" class="on" data-pr-col="month">Miesiąc</button>
+        </div>
+        <span class="ct-mute">{{ p.month_label }} · {{ p.month_days }} dni roboczych{% if p.holidays %} ({{ p.holidays|join(', ') }} święto){% endif %} · {{ p.month_days * 8 }} h</span>
+    </div>
+
+    <div class="ct-kpis pr-kpis">
+        <div class="ct-kpi"><small>Stanowiska ERP</small><b>{{ k.positions }}</b><span>{{ k.atelier ? '+ ' ~ k.atelier ~ ' stanowisk pracowni (tablety)' : 'bez stanowisk pracowni' }}</span></div>
+        <div class="ct-kpi{{ k.done_pct is not null and k.done_pct < k.target ? ' is-bad' : '' }}"><small>Zrobione w miesiącu</small><b>{{ k.done }} z {{ k.due }}</b>
+            <span>{{ k.done_pct is null ? '—' : k.done_pct ~ ' %' }} · cel {{ k.target }} %</span></div>
+        <div class="ct-kpi{{ k.late ? ' is-bad' : '' }}"><small>Spóźnione</small><b>{{ k.late }}</b><span>{{ k.late_by ? k.late_by|join(' · ') : 'brak' }}</span></div>
+        <div class="ct-kpi"><small>Najbardziej wypełnione</small><b>{{ k.top ? k.top.pct ~ ' %' : '—' }}</b>
+            <span>{% if k.top %}{{ k.top.name }} ({{ pr.dur(k.top.min) }} z {{ pr.dur(k.top.cap) }}){% else %}brak zadań z minutami{% endif %}</span></div>
+    </div>
+
+    <div class="ct-card ct-scroll">
+        <table class="ct-table pr-table" data-col="month">
+            <thead><tr>
+                <th>Stanowisko · zadanie</th>
+                <th class="pr-c-day">Dzień ({{ p.day_label }})</th>
+                <th class="pr-c-week">Tydzień {{ p.week_no }}</th>
+                <th class="pr-c-month">Miesiąc ({{ p.month_name }})</th>
+                <th class="num">Zrobione</th>
+            </tr></thead>
+            {% for row in r.rows|merge(r.atelier ? [r.atelier] : []) %}
+            {% set n = row.atelier ? row.positions : max(1, row.people) %}
+            <tbody class="pr-pos{{ row.atelier ? ' pr-atelier' : '' }}">
+                <tr class="pr-head" data-pr-toggle>
+                    <td><button type="button" class="pr-tg" aria-expanded="false"><i class="bi bi-chevron-right"></i></button>
+                        <b>{{ row.name }}</b> <span class="ct-mute">· {% if row.atelier %}{{ row.positions }} stanowisk · dzień grupy, pakowanie, trasa{% else %}{{ row.people }} os. · {{ row.tasks_count }} {{ row.tasks_count == 1 ? 'zadanie' : (row.tasks_count in [2, 3, 4] ? 'zadania' : 'zadań') }}{% endif %}</span></td>
+                    <td class="pr-c-day">{{ pr.fill(row.day, (n > 1 ? n ~ ' × ' : '') ~ '8 h') }}</td>
+                    <td class="pr-c-week">{{ pr.fill(row.week, (n > 1 ? n ~ ' × ' : '') ~ (p.week_days * 8) ~ ' h') }}</td>
+                    <td class="pr-c-month">{{ pr.fill(row.month, (n > 1 ? n ~ ' × ' : '') ~ (p.month_days * 8) ~ ' h') }}</td>
+                    <td class="num"><b>{{ row.done }} z {{ row.due }}</b>{% if row.late %}<small class="d-block ct-miss">{{ row.late }} {{ row.late == 1 ? 'spóźnione' : 'spóźnionych' }}</small>{% else %}<small class="d-block ct-mute">0 spóźnionych</small>{% endif %}</td>
+                </tr>
+                {% for t in row.tasks %}
+                <tr class="pr-task" hidden>
+                    <td><span class="pr-dot {{ t.late ? 'late' : (t.done >= t.due and t.due ? 'ok' : 'todo') }}"></span>{{ t.title }}<small class="d-block ct-mute">{{ t.freq }}{{ t.auto ? ' · asystent' : '' }}</small></td>
+                    <td class="pr-c-day"><b>{{ t.minutes ? t.minutes ~ ' min' : '—' }}</b> <span class="pr-adm">ADMIN</span></td>
+                    <td class="pr-c-week ct-mute">× {{ t.count }} w miesiącu</td>
+                    <td class="pr-c-month"><b>{{ t.total_min }} min</b></td>
+                    <td class="num">{{ t.done }}/{{ t.due }}{% if t.next_label %} <small class="ct-mute">· {{ t.next_label }}</small>{% endif %}{% if t.late %} <small class="ct-miss">· {{ t.late }} spóźn.</small>{% endif %}</td>
+                </tr>
+                {% else %}
+                <tr class="pr-task" hidden><td colspan="5" class="ct-mute">Brak zadań w tym miesiącu.</td></tr>
+                {% endfor %}
+            </tbody>
+            {% else %}
+            <tbody><tr><td colspan="5" class="ct-mute">Brak stanowisk z osobami i zadaniami.</td></tr></tbody>
+            {% endfor %}
+        </table>
+    </div>
+    <p class="ct-note"><span class="pr-dot ok"></span> zrobione (zaliczone samo) <span class="pr-dot late"></span> spóźnione <span class="pr-dot todo"></span> do zrobienia ·
+        Pasek : zaplanowane minuty zadań okresu ÷ czas pracy (8 h dzień, {{ p.week_days * 8 }} h tydzień, dni robocze × 8 h miesiąc, × liczba osób). Klik w stanowisko → zadania.
+        Minuty ustawia administrator w « Zadania stanowisk ».</p>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(() => {
+    const app = document.getElementById('positionReport');
+    if (!app) return;
+    const table = app.querySelector('.pr-table');
+    app.querySelectorAll('[data-pr-col]').forEach(b => b.addEventListener('click', () => {
+        app.querySelectorAll('[data-pr-col]').forEach(x => x.classList.toggle('on', x === b));
+        table.dataset.col = b.dataset.prCol;
+    }));
+    app.querySelectorAll('[data-pr-toggle]').forEach(tr => tr.addEventListener('click', () => {
+        const open = tr.querySelector('.pr-tg').getAttribute('aria-expanded') !== 'true';
+        tr.querySelector('.pr-tg').setAttribute('aria-expanded', open ? 'true' : 'false');
+        tr.parentElement.querySelectorAll('.pr-task').forEach(x => x.hidden = !open);
+    }));
+})();
+</script>
+{% endblock %}

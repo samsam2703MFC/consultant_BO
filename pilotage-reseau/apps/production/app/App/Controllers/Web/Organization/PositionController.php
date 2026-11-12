@@ -15,7 +15,8 @@ class PositionController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private PositionTaskService $service, private PositionSheetService $sheets)
+    public function __construct(private PositionTaskService $service, private PositionSheetService $sheets,
+        private \App\Services\Organization\PositionReportService $report)
     {
     }
 
@@ -59,7 +60,16 @@ class PositionController extends BaseController
     /** Plan tygodnia stanowiska (tylko administrator ; strona chroniona też przez katalog uprawnień). */
     public function weekPlan($id)
     {
-        $this->page(fn() => $this->view('organization/week_plan', ['plan' => $this->service->weekPlan((int) $id, $this->userId())]));
+        $this->page(function () use ($id) {
+            $plan = $this->service->weekPlan((int) $id, $this->userId());
+            // [285] Wypełnienie stanowiska dzień · tydzień · miesiąc (makieta 39) ; błąd → bez paska.
+            try {
+                $fill = $this->report->positionFill((int) $id);
+            } catch (\Throwable $e) {
+                $fill = null;
+            }
+            $this->view('organization/week_plan', ['plan' => $plan, 'fill' => $fill]);
+        });
     }
 
     public function weekPlanData($id)

@@ -1072,6 +1072,14 @@ final class PositionTaskService
         $lateList = array_values($byTask);
         usort($lateList, fn($a, $b) => $b['late_days'] <=> $a['late_days']);
         $runsOk = count(array_filter($runs, fn($r) => (int) ($r['ok'] ?? 0) === 1));
+        // [285] Minuty zadań widzi administrator (i profil CEO) — inni : bez minut (makieta 39).
+        if (!$this->access->isAdmin($actorId) && !$this->access->isCeo($actorId)) {
+            $tiles['minutes'] = $tiles['done_minutes'] = null;
+            $strip = fn(array $items) => array_map(fn($it) => array_key_exists('minutes', $it) ? ['minutes' => null] + $it : $it, $items);
+            foreach ($rows as &$row) $row['cells'] = array_map($strip, $row['cells']);
+            unset($row);
+            $lateList = $strip($lateList);
+        }
         return ['view' => $view, 'today' => $todayStr, 'columns' => array_map(fn($c) => $c + ['today' => $todayStr >= $c['from'] && $todayStr <= $c['to']], $cols),
             'rows' => $rows, 'system' => $system, 'tablets' => $tablets, 'late' => array_slice($lateList, 0, 30),
             'tiles' => $tiles + ['runs' => count($runs), 'runs_ok' => $runsOk, 'runs_failed' => count(array_filter($runs, fn($r) => $r['ok'] !== null && !(int) $r['ok']))]];

@@ -3978,3 +3978,34 @@ button.ct-cell.on { outline: 2px solid var(--ct-red); outline-offset: 1px; }
 .ct-ico { width: 26px; text-align: center; font-size: 17px; }
 .ct-sp { flex: 1; }
 .at-vs-head + li .at-vs-item { margin-top: 0; }
+
+/* [285] Raport stanowisk (makieta 39) : przełącznik okresu, paski wypełnienia, rozwijane stanowiska. */
+.pr-bar-top { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.pr-seg { display: inline-flex; border: 1px solid #D9D1C6; border-radius: 8px; overflow: hidden; background: #fff; }
+.pr-seg button { border: 0; background: transparent; padding: 5px 14px; font-size: 12.5px; color: #444; }
+.pr-seg button.on { background: #8D1D2C; color: #fff; font-weight: 600; }
+.pr-kpis { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pr-table td { vertical-align: top; }
+.pr-head { cursor: pointer; }
+.pr-head td { background: #FDFCFA; }
+.pr-atelier .pr-head td { background: #F8F5F1; }
+.pr-tg { border: 0; background: transparent; padding: 0 6px 0 0; color: #8D1D2C; }
+.pr-tg i { display: inline-block; transition: transform .15s; }
+.pr-tg[aria-expanded="true"] i { transform: rotate(90deg); }
+.pr-task td:first-child { padding-left: 34px; }
+.pr-fill { min-width: 150px; }
+.pr-fill b { font-variant-numeric: tabular-nums; }
+.pr-fill small { display: block; color: #777; font-size: 11.5px; }
+.pr-bar { display: block; height: 5px; border-radius: 3px; background: #F0EBE4; margin: 4px 0 2px; overflow: hidden; }
+.pr-bar i { display: block; height: 100%; background: #8D1D2C; border-radius: 3px; }
+.pr-table[data-col="day"] .pr-c-day, .pr-table[data-col="week"] .pr-c-week, .pr-table[data-col="month"] .pr-c-month { background: rgba(141, 29, 44, .035); }
+.pr-table th.pr-c-day, .pr-table th.pr-c-week, .pr-table th.pr-c-month { min-width: 160px; }
+.pr-adm { font-size: 10px; letter-spacing: .06em; padding: 1px 6px; border-radius: 5px; background: #F1ECE6; color: #8D1D2C; font-weight: 600; }
+.pr-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 7px; background: #cfc8be; }
+.pr-dot.ok { background: #2E7D4F; }
+.pr-dot.late { background: #C41E3A; }
+.pr-dot.todo { background: #E6A03C; }
+.wp-fill { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 12px; }
+.wp-fill > div { background: #fff; border: 1px solid #E4DDD4; border-radius: 10px; padding: 8px 12px; min-width: 170px; }
+.wp-fill small { display: block; font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: #777; }
+@media print { .pr-noprint, #sidebar, .navbar, .at-tabs { display: none !important; } .pr-task { display: table-row !important; } }

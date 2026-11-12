@@ -76,6 +76,8 @@ final class PageAccess
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
         'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
+        // [285] Raport stanowisk (makieta 39) : minuty zadań, wypełnienie stanowisk — tylko administrator (i profil CEO).
+        'position_report' => ['Raport stanowisk (minuty zadań, wypełnienie dnia / tygodnia / miesiąca, zrobione)', 'Administracja', ['/organization/position-report'], true],
         // [281] Kontrola (profil CEO, makieta 47) : wszyscy dziś, tydzień stanowisk, decyzje — administrator i konta CEO.
         'control' => ['Kontrola (profil CEO : wszyscy dziś, tydzień stanowisk, decyzje — odblokuj, przypomnij)', 'Administracja', ['/control'], true],
     ];
@@ -85,7 +87,7 @@ final class PageAccess
      * odczytu) i strony ustawień, których nie widzi (ustawia administrator). Reszta jak u administratora ; zapis zablokowany
      * w App poza decyzjami (CEO_WRITES).
      */
-    public const CEO_ADMIN_PAGES = ['control', 'activity', 'manager'];
+    public const CEO_ADMIN_PAGES = ['control', 'activity', 'manager', 'position_report'];
     public const CEO_HIDDEN = ['settings', 'devices'];
 
     /** [281] Zapisy dozwolone kontu CEO (prefiksy) : decyzje (odblokuj, przypomnij), profil pod awatarem, powiadomienia, aktywność. */

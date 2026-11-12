@@ -58,7 +58,7 @@
             <div><span>W toku</span><b>${t.running}</b><small>asystent rozpoczęty</small></div>
             <div class="${t.late ? 'late' : ''}"><span>Spóźnione</span><b>${t.late}</b><small>${t.escalated ? `${t.escalated} przełożony powiadomiony` : 'bez powiadomień'}</small></div>
             <div class="${runsBad ? 'late' : 'ok'}"><span>Automatycznie (cron)</span><b>${t.runs_ok} z ${t.runs}</b><small>${runsBad ? `${runsBad} ${plural(runsBad, 'błąd', 'błędy', 'błędów')}` : (t.runs ? 'bez błędów' : 'brak uruchomień')}</small></div>
-            <div><span>Czas</span><b>${dur(t.done_minutes)}</b><small>z ${dur(t.minutes)} zaplanowanych</small></div>
+            ${t.minutes === null ? '' : `<div><span>Czas</span><b>${dur(t.done_minutes)}</b><small>z ${dur(t.minutes)} zaplanowanych</small></div>`}
         </div>`;
     }
 

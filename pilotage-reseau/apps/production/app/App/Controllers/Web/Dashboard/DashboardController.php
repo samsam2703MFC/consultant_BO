@@ -29,6 +29,7 @@ class DashboardController extends BaseController
         private UserMailRepository $mail,
         private \App\Repositories\Workshop\TimeRepository $time,
         private GroupWeekProfitService $groupWeeks,
+        private \App\Services\Organization\PageAccessService $access,
     ) {}
 
     /** Strona startowa: rentowność produkcji (sprzedaż a koszt personelu na dział, brakująca sprzedaż do celu). */
@@ -94,7 +95,23 @@ class DashboardController extends BaseController
         } catch (\Throwable $e) {
             $data['manager_kpis'] = null;
         }
+        // [284] Produkcja (stanowisko albo sesja kierownika produkcji) : Dzisiaj = tylko zadania (bez wskaźników, rentowności
+        // grup, planu wysyłek, « Do zrobienia » i ostatnich zamówień — są w swoich modułach).
+        $data['tasks_focus'] = ($week['user']['position_code'] ?? null) === 'KIEROWNIK_PRODUKCJI';
+        // [285] Minuty zadań (przydziela administrator, makieta 39) widzi tylko administrator — pracownik widzi swoje zadania.
+        $data['show_minutes'] = $userId !== null && $this->access->isAdmin($userId);
+        if (!$data['show_minutes'] && is_array($data['week'])) $data['week'] = self::withoutMinutes($data['week']);
         $this->view('dashboard/dashboard', $data);
+    }
+
+    /** [285] Bez minut (klucze minutes / done_minutes) — Mój tydzień osoby, która nie jest administratorem. */
+    private static function withoutMinutes(array $a): array
+    {
+        foreach ($a as $k => $v) {
+            if ($k === 'minutes' || $k === 'done_minutes') $a[$k] = is_array($v) ? $v : null;
+            elseif (is_array($v)) $a[$k] = self::withoutMinutes($v);
+        }
+        return $a;
     }
 
     /** Liczniki przy pozycjach menu i wskaźnik rentowności w górnym pasku (assets/js/notifications.js). */

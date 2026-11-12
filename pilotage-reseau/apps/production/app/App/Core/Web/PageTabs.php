@@ -26,6 +26,8 @@ final class PageTabs
         'team_tasks' => ['label' => 'Zadania zespołu', 'section' => 'Start', 'icon' => 'bi-people', 'tabs' => [
             ['/organization/team-tasks', 'Zadania zespołu', 'bi-people'],
             ['/organization/execution', 'Kto co zrobił', 'bi-clipboard-check'],
+            // [285] Raport stanowisk (makieta 39) — tylko administrator (zakładka ukryta innym przez uprawnienia).
+            ['/organization/position-report', 'Raport stanowisk', 'bi-bar-chart-line'],
         ]],
         // --- Analiza
         // Rentowność : pulpit, wynik grup (miesiąc), rentowność grup (tydzień), raport miesięczny, analiza sprzedaży.
