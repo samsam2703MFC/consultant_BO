@@ -59,7 +59,14 @@
             </div>
 
 
-            <ul class="navbar-nav ms-auto mb-2 mb-lg-0">
+            {# [275] Wejście do ERP przez QR : wieczorem « Zakończ dzień » → kod → wyjście → wylogowanie. #}
+            {% set eday = erp_day() %}
+            {% if eday %}
+            <link rel="stylesheet" href="{{ root }}/assets/css/erp-entry.css?v={{ asset_v() }}">
+            <div class="ee-bar ms-auto" id="erpDay" data-root="{{ root }}"><span>W pracy od <span class="ee-since">{{ eday.since }}</span></span><button type="button" data-ee-end><i class="bi bi-power"></i> Zakończ dzień</button></div>
+            <script src="{{ root }}/assets/js/erp-entry.js?v={{ asset_v() }}" defer></script>
+            {% endif %}
+            <ul class="navbar-nav {{ eday ? '' : 'ms-auto' }} mb-2 mb-lg-0">
 
                 <li class="nav-item dropdown me-3" id="atBell" data-root="{{ root }}">
                     <a class="nav-link at-bell-toggle" href="#" data-bs-toggle="dropdown" data-bs-auto-close="outside"

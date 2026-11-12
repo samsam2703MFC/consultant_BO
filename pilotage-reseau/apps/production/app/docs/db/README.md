@@ -1830,6 +1830,19 @@ apparaissent dans « Mój tydzień » 7 jours avant leur début ; étape en reta
 `/ajax/hr/succession` (GET, POST), `/ajax/hr/succession/{id}` (PUT : successeur, responsable, date de départ, statut),
 `/ajax/hr/succession/items/{id}` (POST). Test : `tests/hr_succession_test.php`.
 
+### Wejście do ERP przez QR (czas pracy) — 275
+
+Demande du 12/11/2026 (maquette 40 validée). Migration 174 : `n_user_employee` (compte ERP ↔ personne de Czas pracy, une
+liaison par compte et par personne, réglée dans la fiche de l'utilisateur), `n_position.erp_qr` (activé pour
+Administracja i fakturowanie et Kierownik produkcji ; réglable dans « Uprawnienia i menu › Wejście przez QR »), appareil
+interne `ERP — wejście przez QR` (mode office, caché de la liste des tablettes ; paramètre `erp.qr_device_id`), `erp.qr_ttl_s`
+(180 s). Verrou (`App\Core\App`, `App\Services\Organization\ErpEntryService::locked`) : compte non administrateur, poste
+avec l'option, lié à une personne active, sans entrée pointée → page `/erp-entry` (QR personnel personne + jour, renouvelé
+tout seul ; AJAX : 423). Le téléphone appairé valide l'entrée comme pour la tablette de bureau (questions, signature ;
+premier scan : PIN) → l'ERP s'ouvre. Entrée déjà pointée à la tablette : ERP ouvert. Le soir, barre du haut « W pracy od …
+· Zakończ dzień » → même QR → sortie (question marchandise) → déconnexion. Sans liaison : pas de verrou. Routes
+`/ajax/erp-entry/state|qr|status` (GET), `/ajax/organization/erp-qr/{id}` (PUT, administrateur). Test : `tests/erp_entry_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

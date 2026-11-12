@@ -20,6 +20,38 @@
     <div class="at-access-views" role="tablist" aria-label="Widok">
         <button type="button" class="at-view-btn active" data-view="menu" role="tab" aria-selected="true"><i class="bi bi-list-ul"></i> Menu stanowisk</button>
         <button type="button" class="at-view-btn" data-view="pages" role="tab" aria-selected="false"><i class="bi bi-grid-3x3"></i> Strony szczegółowo</button>
+        <button type="button" class="at-view-btn" data-view="qr" role="tab" aria-selected="false"><i class="bi bi-qr-code"></i> Wejście przez QR</button>
+    </div>
+
+    {# [275] Makieta 40 (5) : które stanowiska wchodzą do ERP przez kod QR (czas pracy). #}
+    <div class="card" data-view-pane="qr" hidden>
+        <div class="card-body pt-3">
+            <p class="at-sub">Po zalogowaniu ERP pokazuje osobisty kod QR (osoba + dzień). Osoba skanuje go swoim telefonem i potwierdza → wejście w Czasie pracy, ERP się otwiera.
+                Wieczorem « Zakończ dzień » → ten sam kod → wyjście (pytanie o towar) → wylogowanie. Wejście odbite na tablecie biurowym = ERP otwiera się od razu.</p>
+            <div class="table-responsive">
+                <table class="table table-sm mb-0 at-access-table" id="qrMatrix">
+                    <thead><tr><th>Stanowisko</th><th class="text-center">Wejście do ERP przez QR</th><th>Bez wejścia</th><th>Wyjście</th><th>Konta (powiązanie z Czasem pracy · telefon)</th></tr></thead>
+                    <tbody>
+                    {% for p in erp_qr %}
+                        <tr data-qr-row="{{ p.id }}">
+                            <td><b>{{ p.name }}</b></td>
+                            <td class="text-center"><div class="form-check form-switch d-inline-block m-0"><input class="form-check-input" type="checkbox" role="switch" data-qr-pos="{{ p.id }}" {{ p.enabled ? 'checked' : '' }} aria-label="{{ p.name }} : wejście przez QR"></div>
+                                <span class="at-sub" data-qr-label>{{ p.enabled ? 'włączone' : 'wyłączone' }}</span></td>
+                            <td class="at-sub" data-qr-off>{{ p.enabled ? 'ERP zamknięty (tylko ekran QR)' : '—' }}</td>
+                            <td class="at-sub" data-qr-out>{{ p.enabled ? '« Zakończ dzień » + QR → wylogowanie' : '—' }}</td>
+                            <td>{% for u in p.users %}<span class="at-chip" title="{{ u.admin ? 'administrator : zawsze bez kodu' : (u.linked ? 'powiązane z pracownikiem' : 'brak powiązania : ERP bez kodu') }}">
+                                <i class="bi {{ u.admin ? 'bi-shield-check' : (u.linked ? 'bi-link-45deg' : 'bi-exclamation-triangle') }}"></i>
+                                <a href="{{ root }}/users/{{ u.id }}/edit">{{ u.name }}</a>{{ u.admin ? ' (admin)' : (u.linked ? (u.phones ? ' · telefon' : ' · bez telefonu') : ' · brak powiązania') }}</span>
+                                {% else %}<span class="at-sub">nikt</span>{% endfor %}</td>
+                        </tr>
+                    {% endfor %}
+                        <tr><td><b>Administrator</b></td><td class="text-center at-sub">nigdy</td><td class="at-sub" colspan="3">dostęp zawsze, bez kodu</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="at-sub mt-2">Konto ERP ↔ pracownik w Czasie pracy : jedno powiązanie w karcie użytkownika (Użytkownicy → edycja). Bez powiązania ERP otwiera się bez kodu.
+                Kod QR : osoba + dzień, ważny 3 min, odnawiany sam ; skan tylko telefonem sparowanym z tą osobą (pierwszy skan : PIN). Zapomniane wyjście : jak w Czasie pracy (poprawka kierownika z powodem).</p>
+        </div>
     </div>
 
     <div class="card" data-view-pane="menu">
@@ -151,9 +183,30 @@
     };
     document.querySelectorAll('.at-view-btn').forEach(b => b.addEventListener('click', () => {
         show(b.dataset.view);
-        history.replaceState(null, '', b.dataset.view === 'pages' ? '#strony' : location.pathname + location.search);
+        history.replaceState(null, '', b.dataset.view === 'pages' ? '#strony' : b.dataset.view === 'qr' ? '#qr' : location.pathname + location.search);
     }));
     if (location.hash === '#strony') show('pages');
+    if (location.hash === '#qr') show('qr');
+})();
+
+// [275] Wejście przez QR : przełącznik stanowiska → zapis od razu.
+(function () {
+    const table = document.getElementById('qrMatrix');
+    if (!table) return;
+    table.addEventListener('change', (e) => {
+        const box = e.target.closest('[data-qr-pos]');
+        if (!box) return;
+        box.disabled = true;
+        at.send(`/ajax/organization/erp-qr/${box.dataset.qrPos}`, 'PUT', {enabled: box.checked}).then(res => {
+            box.disabled = false;
+            if (!res.ok) box.checked = !box.checked;
+            const row = box.closest('tr'), on = box.checked;
+            row.querySelector('[data-qr-label]').textContent = on ? 'włączone' : 'wyłączone';
+            row.querySelector('[data-qr-off]').textContent = on ? 'ERP zamknięty (tylko ekran QR)' : '—';
+            row.querySelector('[data-qr-out]').textContent = on ? '« Zakończ dzień » + QR → wylogowanie' : '—';
+            at.notify(res.ok, res.ok ? (on ? 'Wejście przez QR włączone.' : 'Wejście przez QR wyłączone.') : (res.message || 'Błąd'));
+        });
+    });
 })();
 
 // [253] Menu stanowisk : stan pozycji (w menu / dostęp / brak) → zapis, odświeżenie kolumny (strony wspólne mogą zostać).

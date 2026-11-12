@@ -132,6 +132,22 @@
                                                    placeholder="Pozostaw puste, aby nie zmieniać">
                                         </div>
                                     </div>
+                                    <?php if (!empty($erp)): ?>
+                                    <div class="form-group row align-items-center">
+                                        <div class="col-3">
+                                            <label class="col-form-label" for="employee_id">Pracownik (Czas pracy)</label>
+                                        </div>
+                                        <div class="col-9">
+                                            <select id="employee_id" name="employee_id" class="form-select">
+                                                <option value="">— brak powiązania —</option>
+                                                <?php foreach ($erp['employees'] as $e): ?>
+                                                    <option value="<?= (int) $e['id'] ?>" <?= $erp['employee_id'] === $e['id'] ? 'selected' : '' ?> <?= $e['taken'] ? 'disabled' : '' ?>><?= htmlspecialchars($e['name']) ?><?= $e['taken'] ? ' (inne konto)' : '' ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small class="text-muted">Jedno powiązanie : odbicia wejścia i wyjścia tej osoby.<?= $erp['requires_qr'] ? ' Stanowisko wchodzi do ERP przez kod QR — po powiązaniu ERP otwiera się po odbiciu wejścia telefonem.' : '' ?></small>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="row mt-4">

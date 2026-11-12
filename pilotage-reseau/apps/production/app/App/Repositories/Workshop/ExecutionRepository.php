@@ -11,12 +11,14 @@ final class ExecutionRepository extends WorkshopRepository
 
     // --- Tablettes -------------------------------------------------------------------------------
 
+    /** Tablettes ([275] sans l'appareil interne de l'ERP qui signe les QR d'entrée). */
     public function devices(): array
     {
         return $this->all('SELECT d.id, d.name, d.id_group, d.mode, d.id_carrier_vehicle, cv.regis_num AS vehicle_label, g.name_pl AS group_pl, g.name_fr AS group_fr,
                                   d.active, d.last_seen_at, d.created_at, d.token_hash IS NOT NULL AS paired, d.pairing_expires_at
                            FROM n_prod_device d LEFT JOIN n_prod_group g ON g.id = d.id_group LEFT JOIN carrier_vehicle cv ON cv.id = d.id_carrier_vehicle
-                           ORDER BY d.active DESC, d.name');
+                           WHERE d.id NOT IN (SELECT CAST(p.value AS UNSIGNED) FROM n_prod_param p WHERE p.code = ?)
+                           ORDER BY d.active DESC, d.name', ['erp.qr_device_id']);
     }
 
     /** Pojazdy do wyboru dla tabletu kierowcy. */

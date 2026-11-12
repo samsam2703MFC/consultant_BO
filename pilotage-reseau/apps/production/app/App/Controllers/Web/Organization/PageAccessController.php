@@ -12,14 +12,15 @@ class PageAccessController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private PageAccessService $access)
+    public function __construct(private PageAccessService $access, private \App\Services\Organization\ErpEntryService $erpEntry)
     {
     }
 
     public function index()
     {
         // [253] « Uprawnienia i menu » : menu stanowisk (pozycje railu) i strony szczegółowo.
-        $this->view('organization/access', $this->access->matrix() + ['menu' => $this->access->menuMatrix()]);
+        // [275] Wejście do ERP przez QR : stanowiska ERP i konta (powiązanie z Czasem pracy).
+        $this->view('organization/access', $this->access->matrix() + ['menu' => $this->access->menuMatrix(), 'erp_qr' => $this->erpEntry->matrix()]);
     }
 
     public function save($id)

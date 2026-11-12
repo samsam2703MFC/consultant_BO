@@ -12,7 +12,8 @@ class UserController extends BaseController
 
     public function __construct(
         UserService $userService,
-        private UserCreationService $creation
+        private UserCreationService $creation,
+        private \App\Services\Organization\ErpEntryService $erpEntry
     )
     {
         $this->userService = $userService;
@@ -60,10 +61,17 @@ class UserController extends BaseController
             if (empty($this->errors)) {
                 $this->handleAction(function () use ($id) {
                     $this->userService->update($id, $_POST);
+                    // [275] Konto ERP ↔ pracownik w Czasie pracy (wejście do ERP przez QR).
+                    if (array_key_exists('employee_id', $_POST)) $this->erpEntry->link((int) $id, $_POST['employee_id'], user('id') ? (int) user('id') : null);
                     header('Location: ' . ROOT . '/users');
                     exit;
                 }, default: false);
             }
+        }
+        try {
+            $data['erp'] = $this->erpEntry->linkData((int) $id);
+        } catch (\Throwable $e) {
+            $data['erp'] = null;
         }
         $this->view("user/edit", $data);
     }

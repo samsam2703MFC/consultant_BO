@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="pl">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Dzień dobry — L'Atelier Production</title>
+    <link rel="stylesheet" href="{{ root }}/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
+    <link rel="stylesheet" href="{{ root }}/assets/css/erp-entry.css?v={{ asset_v() }}">
+</head>
+{# [275] Wejście do ERP przez QR (makieta 40) : przed otwarciem ERP osoba odbija wejście telefonem (kod osobisty na dziś). #}
+<body class="ee-body">
+<main class="ee-card" id="erpEntry" data-root="{{ root }}" data-next="{{ next }}" data-mode="in">
+    <div class="ee-left">
+        <div class="ee-brand">L'ATELIER <small>PRODUCTION</small></div>
+        <h1>Dzień dobry{{ state.first_name ? ', ' ~ state.first_name : '' }}</h1>
+        <p class="ee-lead">Zanim otworzysz ERP, odbij wejście — tak jak na tablecie biurowym.</p>
+        <ol class="ee-steps">
+            <li><b>1</b> Otwórz aparat w telefonie</li>
+            <li><b>2</b> Zeskanuj kod obok</li>
+            <li><b>3</b> Na telefonie : « OK, zatwierdzam »</li>
+        </ol>
+        <p class="ee-note">Bez telefonu ? Odbij wejście na tablecie biurowym (nazwisko → PIN) — ERP otworzy się sam.</p>
+        <a class="ee-logout" href="{{ root }}/logout"><i class="bi bi-box-arrow-right"></i> Wyloguj</a>
+    </div>
+    <div class="ee-right">
+        <div class="ee-qr"><canvas data-ee-qr aria-label="Kod QR wejścia"></canvas><div class="ee-done" data-ee-done hidden><span>✓</span><b data-ee-done-text>Wejście</b></div></div>
+        <p class="ee-wait" data-ee-wait>Czekam na skan…</p>
+        <p class="ee-meta" data-ee-meta></p>
+        <p class="ee-sub">Kod tylko dla Ciebie i tylko na dziś.</p>
+    </div>
+</main>
+<script src="{{ root }}/assets/js/erp-entry.js?v={{ asset_v() }}"></script>
+</body>
+</html>

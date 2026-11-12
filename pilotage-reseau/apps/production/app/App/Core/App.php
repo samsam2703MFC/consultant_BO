@@ -101,6 +101,7 @@ class App
                         // Menu (rail, linki) : w sesji administratora [239] — jak u wybranego stanowiska ; dostęp bez zmian.
                         \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->menuSees($userId, $path);
                         \App\Core\Web\ViewSession::$menu = fn() => $access->sessionMenu($userId);
+                        \App\Core\Web\ErpDay::$state = fn() => $container->get(\App\Services\Organization\ErpEntryService::class)->state($userId);
                         // [253] Menu stanowiska (rail) : pozycje i strony otwierane ; null = całe menu.
                         \App\Core\Web\Rail::$only = $access->railMenu($userId);
                         $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
@@ -122,6 +123,33 @@ class App
                             echo 'Brak dostępu do tej strony.';
                         }
                         return;
+                    }
+
+                    // [275] Wejście do ERP przez QR : stanowisko z opcją, konto powiązane z pracownikiem, wejście jeszcze nie
+                    // odbite → tylko ekran kodu QR (i wylogowanie). Błąd (np. migracja 174 jeszcze nie wykonana) : bez blokady.
+                    $free = $uri === '/erp-entry' || $uri === '/logout' || str_starts_with($uri, '/ajax/erp-entry/') || str_starts_with($uri, '/ajax/activity/')
+                        // strona skanu telefonu i tablety : nigdy nie blokowane
+                        || preg_match('#^/(kiosk|tablet|office|driver)(/|$)#', $uri) === 1;
+                    if (!$free) {
+                        try {
+                            $locked = $container->get(\App\Services\Organization\ErpEntryService::class)->locked((int) (user('id') ?? 0));
+                        } catch (\Throwable $e) {
+                            error_log('[erp-entry] ' . $e->getMessage());
+                            $locked = false;
+                        }
+                        if ($locked) {
+                            if ($method === 'GET' && !str_starts_with($uri, '/ajax/')) {
+                                $query = $_GET;
+                                unset($query['url']);
+                                $next = \App\Controllers\Web\Organization\ErpEntryController::safeNext($uri . ($query ? '?' . http_build_query($query) : ''));
+                                header('Location: ' . ROOT . '/erp-entry' . ($next !== '' ? '?next=' . rawurlencode($next) : ''), true, 302);
+                                return;
+                            }
+                            http_response_code(423);
+                            header('Content-Type: application/json; charset=utf-8');
+                            echo json_encode(['message' => 'Najpierw odbij wejście kodem QR (Czas pracy).', 'erp_entry' => ROOT . '/erp-entry'], JSON_UNESCAPED_UNICODE);
+                            return;
+                        }
                     }
                 }
 
