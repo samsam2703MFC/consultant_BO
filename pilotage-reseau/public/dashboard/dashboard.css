@@ -2957,3 +2957,6 @@ body.ia-ouvert{overflow:hidden}
 .ia-ton{flex-direction:row;align-items:center;gap:10px}
 .ia-ton-t{display:flex;flex-direction:column;gap:1px}
 @media (prefers-reduced-motion: reduce){.ia-portrait.lit{animation:none!important}}
+
+/* La phrase de finition de l'assistant (12/11/2026) : après les puces et les priorités, en accent bordeaux. */
+.ia-fin{margin:12px 0 2px;padding:9px 12px;border-left:3px solid var(--color-primary);background:rgba(141,29,44,.05);border-radius:0 8px 8px 0;font-size:13.5px;line-height:1.5;color:var(--color-text)}
