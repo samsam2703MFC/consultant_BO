@@ -1634,9 +1634,9 @@ function foPinResponsable(): string
 /** Un document réservé est-il ouvert par ce jeton d'accès (rendu par POST /formation/sop/tablette/acces) ? */
 function foAccesOuvert(array $r, mixed $jeton): bool
 {
-    if (foAcces($r) !== 'responsable') { return true; }
-    $d = foJetonLire($jeton);
-    return $d !== null && ($d['r'] ?? null) === 'responsable';
+    // Plus de blocage (12/11/2026, client : « retirer le blocage sur franchisé et responsable ») : un document
+    // « responsable » reste rangé à part dans l'onglet Manuel, mais s'ouvre sans PIN.
+    return true;
 }
 
 /**

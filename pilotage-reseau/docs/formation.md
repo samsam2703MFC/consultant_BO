@@ -1033,3 +1033,7 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   « Voor de consultants »), entre « Réservé au franchisé et au responsable » et « Articles du manuel opératoire ».
 - Rangés là : 0.0.32 « La visite du consultant en magasin » (`art-visite`) et 0.0.33 « Les contrôles en magasin »
   (`art-controles`), tous deux v1.0 « à valider » (11 et 9 parties, captures des écrans réels).
+- **Blocage retiré** (12/11/2026, client : « retirer le blocage sur franchisé et responsable ») : `foAccesOuvert` rend
+  toujours vrai ; les documents « responsable » restent groupés en tête de l'onglet Manuel (« Pour le franchisé et le
+  responsable », NL « Voor de franchisenemer en de verantwoordelijke »), sans cadenas ni PIN. L'écran du PIN et la route
+  `/formation/sop/tablette/acces` restent dans le code, plus appelés.
