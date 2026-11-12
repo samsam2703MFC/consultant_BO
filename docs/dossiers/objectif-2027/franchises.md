@@ -33,6 +33,8 @@ Nos trois priorités pour 2027 :
 | Produits avec une recette chiffrée au panel | 372 sur 533 (70 %) | 533 sur 533 (100 %) |
 | Produits au même prix dans les 4 magasins | 1 sur 5 | question ouverte (voir « Les prix ») |
 | Références vendues moins d'une fois par jour | 163 | coupées ou chiffrées |
+| Magasins qui déclarent leurs invendus chaque jour | 2 sur 4 | 4 sur 4, sur la tablette |
+| Entremets et pâtisserie individuelle jetés | jusqu'à 11 % des pièces | moins de 5 % |
 
 Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau. Passer de 39,4 % à 37 % représente donc environ 89 000 € de marge en plus par an.
 
@@ -147,6 +149,7 @@ Chaque campagne se prépare huit semaines à l'avance :
 
 - [ ] À partir du 1er mars 2027 : toute l'équipe travaille sur tablette (tâches, invendus, clôtures).
 - [ ] Coûts de recette complets au panel avant fin janvier.
+- [ ] Invendus déclarés chaque jour sur la tablette, et moins de 5 % de pièces jetées en entremets et pâtisserie individuelle.
 - [ ] Grille de prix conseillés chargée en caisse.
 - [ ] Vêtements de travail et packaging du réseau utilisés dès leur livraison (2e trimestre).
 - [ ] Campagnes lancées aux dates prévues.

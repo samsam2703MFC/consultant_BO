@@ -102,6 +102,8 @@ Seuls Gosselies et Sombreffe déclarent vraiment leurs invendus d'entremets et d
 | Corbais | 1 | 2 122 | 0,0 % | 9 € |
 | Réseau | 150 | 4 377 | 3,3 % | 940 € |
 
+> [Objectif 2027 : invendus et poubelles] Les quatre magasins déclarent leurs invendus chaque jour sur la tablette, au plus tard au 1er mars 2027. En entremets et pâtisserie individuelle, moins de 5 % des pièces finissent à la poubelle dans chaque magasin (11,2 % à Gosselies et 5,5 % à Sombreffe aujourd'hui). Seuil proposé, à confirmer une fois que Corbais et Halle déclarent vraiment.
+
 Les produits qui partent le plus à la poubelle, à Gosselies et Sombreffe réunis :
 
 | Produit | Pièces jetées | Part jetée | Valeur perdue (HT) |
