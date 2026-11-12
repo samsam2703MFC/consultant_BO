@@ -36,7 +36,8 @@ dessins, très fins à cette taille, ont le trait légèrement épaissi.
   la carte suivante arrive le lundi d'après. Quatre cartes font l'année : Printemps 22/02 → 23/05/2027 (Pâques
   28/03, fête des mères 09/05), Été 24/05 → 22/08 (fête des pères 13/06, fête nationale 21/07), Automne 23/08 →
   21/11 (Halloween, Toussaint, Saint-Martin).
-- **La case se coche toute seule** : dès **10 €** d'achats dans la semaine (réglable), en une ou plusieurs fois,
+- **La case se coche toute seule** : dès **19,90 €** d'achats dans la semaine (Sam : « seuil par semaine 19.90 » ;
+  réglable), en une ou plusieurs fois,
   ticket rattaché à la carte du client (l'app, ou la carte QR scannée à la caisse). Rien à tamponner.
 - **Chaque semaine a son thème, illustré** : une fête de la saison (Avent, Saint-Nicolas, Noël, Nouvel An,
   Épiphanie, Chandeleur, Mardi gras et Saint-Valentin) ou, entre deux fêtes, le produit « à l'honneur » (l'idée de
@@ -66,9 +67,9 @@ dessins, très fins à cette taille, ont le trait légèrement épaissi.
   | **Un client qui ne manque aucune semaine** | **114,50 €** | **45,80 €** |
   | Tirage : 1 an de pain (365 × 1,50 €), un gagnant pour le réseau | 547,50 € | 219,00 € |
 
-  Ce client a acheté au moins 130 € (13 semaines × 10 €), soit 78 € de marge brute à 40 % de food cost : les
-  cadeaux en coûtent 45,80 € (35,2 % de ses achats minimum), il reste 32,20 €. Un client qui dépense plus que le
-  seuil chaque semaine laisse davantage ; un bon non utilisé ne coûte rien.
+  Ce client a acheté au moins 258,70 € (13 semaines × 19,90 €), soit 155,22 € de marge brute à 40 % de food cost :
+  les cadeaux en coûtent 45,80 € (17,7 % de ses achats minimum), il reste 109,42 €. Un client qui dépense plus que
+  le seuil chaque semaine laisse davantage ; un bon non utilisé ne coûte rien.
 - **Carte pleine : le super bon et le tirage, les deux** (décidé par Sam le 12/11/2026). Toutes les cartes pleines
   du réseau participent aussi au tirage du
   lundi 22/02/2027, le jour où la carte du printemps arrive. À gagner : 1 an de pain, un pain par jour à 1,50 €,
@@ -80,7 +81,7 @@ dessins, très fins à cette taille, ont le trait légèrement épaissi.
 ## Réel et illustré
 
 Réel : les dates et les jours de la semaine des fêtes (vérifiés), le logo, les polices, les couleurs et les
-illustrations de la marque. Illustré : la cliente (Julie, 6 cases sur 13 le jeudi 14/01/2027, la semaine du Nouvel
+illustrations de la marque. Illustré : la cliente (Julie, 6 cases sur 13 le jeudi 14/01/2027, 6,40 € dépensés cette semaine, la semaine du Nouvel
 An manquée, deux bons débloqués dont un utilisé), les montants, les codes de bon, le numéro de carte. Le QR ne
 pointe vers rien.
 
@@ -104,9 +105,7 @@ pointe vers rien.
 
 ## À trancher
 
-1. Le montant du super bon (49,90 € en attendant) et le seuil : à 10 € par semaine, les cadeaux coûtent 35,2 % des
-   achats minimum d'un client qui ne manque aucune semaine (45,80 € de coût pour 130 €). À 15 € par semaine :
-   23,5 % ; à 20 € : 17,6 %.
+1. Le montant du super bon (49,90 € en attendant) : il doit dépasser 29,90 €.
 2. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (participation sans
    obligation d'achat ? publication du gagnant) — à faire valider ; un pain par jour d'ouverture ou par jour
    calendaire.

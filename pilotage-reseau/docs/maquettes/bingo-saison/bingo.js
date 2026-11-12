@@ -45,7 +45,7 @@
 
   /* Les réglages (valeurs de départ, réglables au cockpit). */
   const REGLES = {
-    seuil: 10,                    // euros dépensés dans la semaine pour cocher sa case
+    seuil: 19.9,                  // euros dépensés dans la semaine pour cocher sa case (Sam, 12/11/2026 : « seuil par semaine 19.90 »)
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
     // Chaque cadeau plus gros que le précédent (Sam, 12/11/2026 : « il faut que chaque cadeau soit de plus en plus

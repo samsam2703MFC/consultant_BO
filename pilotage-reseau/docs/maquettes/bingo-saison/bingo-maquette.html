@@ -2591,7 +2591,7 @@ var qrcode = function() {
 
   /* Les réglages (valeurs de départ, réglables au cockpit). */
   const REGLES = {
-    seuil: 10,                    // euros dépensés dans la semaine pour cocher sa case
+    seuil: 19.9,                  // euros dépensés dans la semaine pour cocher sa case (Sam, 12/11/2026 : « seuil par semaine 19.90 »)
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
     // Chaque cadeau plus gros que le précédent (Sam, 12/11/2026 : « il faut que chaque cadeau soit de plus en plus
@@ -2663,7 +2663,7 @@ const dLong = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-BE', { w
 const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeurs: REGLES.bon.valeurs.slice(), validite: REGLES.bon.validite, fc: REGLES.foodCost, superBon: REGLES.superBon.valeur, avis: '',
   tirage: T.actif, prix: T.prix, gagnants: T.gagnants, incline: true, teinte: true,
   semaine: CLIENTE.semaine, depense: CLIENTE.depense, cochees: Object.assign({}, CLIENTE.cochees), utilises: Object.assign({}, CLIENTE.utilises), neuf: null,
-  toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré. Encore 3,60 € cette semaine pour cocher « Le bon pain ».' } });
+  toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré. Encore ' + eur(Math.round((REGLES.seuil - CLIENTE.depense) * 100) / 100) + ' cette semaine pour cocher « Le bon pain ».' } });
 let S = depart();
 
 /* --- Ce qui se déduit de l'état ------------------------------------------------------------- */
@@ -2746,7 +2746,7 @@ function ticket(m){
   } else if (S.cochees[S.semaine]) {
     S.toast = { ill: sem.ill, txt: 'Ticket de ' + eur(m) + ' enregistré. La case de la semaine est déjà cochée : rendez-vous lundi.' };
   } else {
-    S.toast = { ill: sem.ill, txt: 'Ticket de ' + eur(m) + ' enregistré. Encore ' + eur(S.seuil - S.depense) + ' cette semaine pour cocher « ' + sem.titre + ' ».' };
+    S.toast = { ill: sem.ill, txt: 'Ticket de ' + eur(m) + ' enregistré. Encore ' + eur(Math.round((S.seuil - S.depense) * 100) / 100) + ' cette semaine pour cocher « ' + sem.titre + ' ».' };
   }
   rendre();
 }
@@ -2916,7 +2916,7 @@ function vueBarre(){
   const chk = (k, v, l) => `<label class="chk"><input type="checkbox" data-r="${k}"${v ? ' checked' : ''}>${l}</label>`;
   return `<div class="ctl">
     <div class="grp"><span>Réglages</span>x <span class="seg2">${[2, 3, 4].map(x => `<button class="${x === S.x ? 'on' : ''}" data-a="x" data-v="${x}">${x}</button>`).join('')}</span></div>
-    <div class="grp">seuil ${num('seuil', S.seuil, '€')}</div>
+    <div class="grp">seuil ${num('seuil', S.seuil, '€ par semaine', 0.1)}</div>
     <div class="grp">bons <label class="num"><input type="text" style="width:178px;text-align:left" value="${S.valeurs.map(v => nf(v, 2)).join(' – ')}" data-r="valeurs">€</label> ${num('validite', S.validite, 'jours')}</div>
     <div class="grp">super bon ${num('superBon', S.superBon, '€', 0.1)}</div>
     <div class="grp">food cost ${num('fc', S.fc, '%')}</div>
@@ -2926,7 +2926,7 @@ function vueBarre(){
     <div class="grp"><span>Présentation</span>${chk('incline', S.incline, 'carte inclinée')} ${chk('teinte', S.teinte, 'fêtes teintées')}</div>
     <span class="ligne"></span>
     <div class="grp"><span>Simulation</span><span class="etat">${fini ? 'Carte terminée (dès le ' + dm(T.le) + ')' : 'Semaine ' + S.semaine + ' · ' + sem.du + ' – ' + sem.au + ' · ' + nf(S.depense, 2) + ' €'}</span></div>
-    <div class="grp">${[2.8, 4.2, 7.5].map(m => `<button class="bt p" data-a="ticket" data-m="${m}"${fini ? ' disabled' : ''}>+ ticket ${eur(m)}</button>`).join('')}
+    <div class="grp">${[4.2, 7.5, 13.5].map(m => `<button class="bt p" data-a="ticket" data-m="${m}"${fini ? ' disabled' : ''}>+ ticket ${eur(m)}</button>`).join('')}
       <button class="bt" data-a="suivante"${fini ? ' disabled' : ''}>Semaine suivante ›</button><button class="bt" data-a="reset">Revenir au 14 janvier</button></div>
   </div>`;
 }

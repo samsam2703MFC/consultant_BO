@@ -75,21 +75,25 @@ function fichiersDessins(){
     if (!(valeurs.join() === '4.9,9.9,19.9,29.9' && superBon > valeurs[valeurs.length - 1])) {
       erreurs.push('les cadeaux ne grandissent pas : ' + valeurs.join(', ') + ' puis ' + superBon);
     }
-    // Le coût réel à 40 % de food cost : 114,50 € de cadeaux en vente coûtent 45,80 € ; il reste 32,20 € de marge.
+    // Le coût réel à 40 % de food cost : 114,50 € de cadeaux en vente coûtent 45,80 €, sur 258,70 € d'achats au moins
+    // (155,22 € de marge brute) ; il reste 109,42 €.
     const couts = await p.locator('.couts').innerText();
-    if (!/114,50 €[\s\S]*45,80 €[\s\S]*32,20 €/.test(couts)) { erreurs.push('le tableau des coûts est faux : ' + couts.replace(/\s+/g, ' ')); }
+    if (!/114,50 €[\s\S]*45,80 €[\s\S]*258,70 €[\s\S]*155,22 €[\s\S]*17,7 %[\s\S]*109,42 €/.test(couts)) { erreurs.push('le tableau des coûts est faux : ' + couts.replace(/\s+/g, ' ')); }
     const texte = async () => (await p.locator('.toast').count()) ? p.locator('.toast').innerText() : '';
-    // Le 14 janvier, 6,40 € : un ticket de 4,20 € coche « Le bon pain » (7e case).
+    // Le 14 janvier, 6,40 € sur un seuil de 19,90 € : un ticket de 4,20 € ne suffit pas, un de 13,50 € de plus coche
+    // « Le bon pain » (7e case).
     await clic('[data-a="ticket"][data-m="4.2"]');
+    if (!/Encore 9,30 €/.test(await texte())) { erreurs.push('un ticket sous le seuil ne dit pas ce qui manque : ' + (await texte())); }
+    await clic('[data-a="ticket"][data-m="13.5"]');
     await p.waitForTimeout(700);
     const t1 = await texte();
     if (!/Case cochée : Le bon pain/.test(t1)) { erreurs.push('la case de la semaine ne s’est pas cochée : ' + t1); }
     await p.locator('.tel').screenshot({ path: path.join(ICI, 'app-case-cochee.jpg'), type: 'jpeg', quality: 92 });
-    // Semaine 9 : 7,50 € + 2,80 € (8e case) ; semaine 10 : 7,50 € + 4,20 € → 9e case, le 3e bon.
+    // Semaine 9 : 7,50 € + 13,50 € (8e case) ; semaine 10 : 7,50 € + 13,50 € → 9e case, le 3e bon.
     await clic('[data-a="suivante"]');
-    await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="2.8"]');
+    await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="13.5"]');
     await clic('[data-a="suivante"]');
-    await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]');
+    await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="13.5"]');
     await p.waitForTimeout(700);
     const t2 = await texte();
     if (!/Bon débloqué : Bon de l’hiver, 19,90 €.*prochain vaudra 29,90 €/.test(t2)) { erreurs.push('le 3e bon ne s’est pas débloqué : ' + t2); }
@@ -102,8 +106,8 @@ function fichiersDessins(){
     // cadeau, et l'inscription au tirage.
     await clic('[data-a="reset"]');
     await clic('[data-a="semaine"][data-n="6"]');
-    await clic('[data-a="ticket"][data-m="7.5"]');
-    for (let n = 9; n <= 13; n++) { await clic('[data-a="suivante"]'); await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]'); }
+    await clic('[data-a="ticket"][data-m="13.5"]');
+    for (let n = 9; n <= 13; n++) { await clic('[data-a="suivante"]'); await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="13.5"]'); }
     await p.waitForTimeout(700);
     const t3 = await texte();
     if (!/Carte pleine, 13 cases sur 13 ! Super bon cadeau de 49,90 €.*tirage au sort/.test(t3)) { erreurs.push('la carte pleine ne donne pas le super bon et le tirage : ' + t3); }
