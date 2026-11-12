@@ -7,6 +7,8 @@ declare(strict_types=1);
  *   1. assemble la fiche de faits de Halle par l'API du panel (amFaits) et en montre la forme, sans secret ;
  *   2. pose « Que puis-je améliorer ? » à Claude (amDemander) et montre la réponse, le modèle, l'usage ;
  *   3. pose une question de suite avec le fil, pour vérifier la conversation et le cache.
+ * Deuxième passage (Sam, 12/11/2026 : « récupère-la dans la table erp keys ») : la clé se cherche dans erp_cles, par son
+ * nom ; seule son existence et son nom s'affichent.
  * Lancée par .github/workflows/sonde-assistant-halle.yml :  php -- /var/www/consulant_bo < tools/sonde_assistant_halle.php
  * Écritures : le cache de la fiche (ceo_app_setting `assistantFaits|4`) et le cache des tickets de la fidélité
  * (ceo_fid_*), les mêmes que la première ouverture du dashboard. Rien d'autre.
@@ -15,6 +17,18 @@ $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');
 foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'writes.php', 'panel_api.php', 'anthropic.php', 'fidelite.php'] as $f) { require_once "$dir/src/$f"; }
 require_once '/tmp/sonde_fidelite_profils.php';
 require_once '/tmp/sonde_assistant_magasin.php';
+
+echo "=== 0. La clé Claude dans erp_cles (les noms, jamais les valeurs)\n";
+$cands = Db::rows("SELECT cle, portail, integration, secret, indice, CHAR_LENGTH(valeur) n, maj_le FROM erp_cles
+    WHERE LOWER(cle) REGEXP 'anthropic|claude|sk-ant|ia_|_ia|llm' OR LOWER(COALESCE(integration,'')) REGEXP 'anthropic|claude|ia|llm' ORDER BY cle");
+foreach ($cands as $r) { printf("  %-32s portail %-8s intégration %-20s secret %d · %d caractères · indice %s · %s\n", $r['cle'], $r['portail'], (string) $r['integration'], $r['secret'], $r['n'], (string) $r['indice'], $r['maj_le']); }
+if (!$cands) { echo "  aucune clé IA dans erp_cles ; toutes les clés :\n"; foreach (Db::rows('SELECT cle, portail, integration FROM erp_cles ORDER BY portail, cle') as $r) { echo '    ', $r['portail'], ' · ', $r['cle'], ' · ', (string) $r['integration'], "\n"; } }
+// La première clé qui ressemble à une clé Anthropic sert à l'essai, dans ce processus seulement (jamais affichée).
+foreach ($cands as $r) {
+    $v = trim(erpCle((string) $r['cle']));
+    if (str_starts_with($v, 'sk-ant-')) { putenv('ANTHROPIC_API_KEY=' . $v); echo "  essai avec « {$r['cle']} » (préfixe sk-ant-)\n"; break; }
+}
+unset($v);
 
 echo "=== 1. La fiche de faits de Halle\n";
 $t0 = microtime(true);
