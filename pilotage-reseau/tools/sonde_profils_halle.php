@@ -58,6 +58,43 @@ foreach ($chemins as $d => $ch) {
 }
 printf("listes : %d lues, %d illisibles, %.1f s · tickets %d · particuliers %d · identifiés %d\n", count($chemins) - $illisibles, $illisibles, microtime(true) - $t0, $totTickets, $totPart, count($tickets));
 
+// 1b. Le catalogue par l'API : produit → catégorie → groupe.
+$cle = static function (array $x, array $noms) { foreach ($noms as $k) { if (isset($x[$k]) && is_scalar($x[$k]) && (string) $x[$k] !== '') { return $x[$k]; } } return null; };
+$rp = PanelApi::sondeGet('/products', 60);
+$prodL = is_array($rp['corps']) ? PanelApi::liste($rp['corps']) : [];
+echo "\n/products : HTTP ", $rp['code'], ' · ', count($prodL), " produits\n";
+if ($prodL) { echo '  champs : ', implode(', ', array_keys($prodL[0])), "\n"; }
+$rc = PanelApi::sondeGet('/product-categories', 30);
+$catL = is_array($rc['corps']) ? PanelApi::liste($rc['corps']) : [];
+echo '/product-categories : HTTP ', $rc['code'], ' · ', count($catL), " catégories\n";
+if ($catL) { echo '  champs : ', implode(', ', array_keys($catL[0])), "\n"; }
+$rg = PanelApi::sondeGet('/product-category-groups', 30);
+$grpL = is_array($rg['corps']) ? PanelApi::liste($rg['corps']) : [];
+echo '/product-category-groups : HTTP ', $rg['code'], ' · ', count($grpL), " groupes\n";
+if ($grpL) { echo '  champs : ', implode(', ', array_keys($grpL[0])), ' · exemple ', json_encode(array_map(static fn ($v) => is_array($v) ? (array_is_list($v) ? 'liste(' . count($v) . ')' : 'objet') : $v, $grpL[0]), JSON_UNESCAPED_UNICODE), "\n"; }
+$nomCat = []; $grpCat = [];
+foreach ($catL as $c) {
+    $id = (int) ($cle($c, ['id', 'id_category']) ?? 0);
+    $nomCat[$id] = (string) ($cle($c, ['name', 'category_name']) ?? ('cat#' . $id));
+    $g = $cle($c, ['group_name', 'category_group_name']);
+    if ($g !== null) { $grpCat[$id] = (string) $g; }
+}
+foreach ($grpL as $g) {
+    $gn = (string) ($cle($g, ['name', 'group_name']) ?? '?');
+    foreach (['categories', 'category_ids', 'id_categories'] as $k) {
+        foreach ((array) ($g[$k] ?? []) as $c) { $id = (int) (is_array($c) ? ($c['id'] ?? $c['id_category'] ?? 0) : $c); if ($id > 0) { $grpCat[$id] ??= $gn; } }
+    }
+}
+$famille = [];   // id_product → « groupe › catégorie »
+foreach ($prodL as $pr) {
+    $id = (int) ($cle($pr, ['id', 'id_product']) ?? 0);
+    $ic = (int) ($cle($pr, ['id_category', 'category_id']) ?? 0);
+    $cn = (string) ($cle($pr, ['category_name']) ?? ($nomCat[$ic] ?? ''));
+    if (is_array($pr['category'] ?? null)) { $ic = $ic ?: (int) ($pr['category']['id'] ?? 0); $cn = $cn ?: (string) ($pr['category']['name'] ?? ''); }
+    if ($id > 0) { $famille[$id] = ($grpCat[$ic] ?? '—') . ' › ' . ($cn !== '' ? $cn : ('cat#' . $ic)); }
+}
+echo 'produits rattachés à une famille : ', count($famille), "\n";
+
 // 2. Les lignes des tickets identifiés : la catégorie de chaque article.
 $ch2 = [];
 foreach ($tickets as $i => $t) { $ch2[$i] = '/transactions/' . $t['id'] . '?include=products'; }
@@ -73,11 +110,7 @@ foreach ($tickets as $i => &$t) {
     foreach ($prods as $p) {
         if (!is_array($p)) { continue; }
         $clesProduit ??= array_keys($p);
-        $c = '';
-        foreach (['category_name', 'category', 'product_category_name', 'group_name', 'category_group_name'] as $k) {
-            if (isset($p[$k]) && is_scalar($p[$k]) && trim((string) $p[$k]) !== '') { $c = trim((string) $p[$k]); break; }
-        }
-        if ($c === '') { $c = 'cat#' . (string) ($p['id_category'] ?? '?'); }
+        $c = $famille[(int) ($p['id_product'] ?? 0)] ?? ('? › produit ' . (int) ($p['id_product'] ?? 0) . ' ' . mb_substr((string) ($p['product_name'] ?? ''), 0, 24));
         $q = (float) ($p['quantity'] ?? 1);
         $t['cats'][$c] = ($t['cats'][$c] ?? 0) + max(1, $q);
         $cats[$c] = ($cats[$c] ?? 0) + max(1, $q);
@@ -90,7 +123,7 @@ arsort($cats);
 $code = []; $n = 0;
 foreach ($cats as $c => $q) { $code[$c] = 'k' . (++$n); }
 echo "catégories (code · articles) :\n";
-foreach ($cats as $c => $q) { printf("  %-4s %-40s %6.0f\n", $code[$c], mb_substr($c, 0, 40), $q); }
+foreach ($cats as $c => $q) { printf("  %-4s %-60s %6.0f\n", $code[$c], mb_substr($c, 0, 60), $q); }
 
 // 3. Un vecteur par client, rangé par nombre de jours de passage.
 $C = [];
