@@ -1406,3 +1406,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T11:19:23Z [281] Profil CEO Kontrola + [283] Zadania w railu
 2026-11-12T11:42:08Z blocage responsable retiré
 2026-11-12T11:48:51Z [285] Raport stanowisk + [284] Dzisiaj Produkcja
+2026-11-12T11:51:58Z [258] Design system phase 1
