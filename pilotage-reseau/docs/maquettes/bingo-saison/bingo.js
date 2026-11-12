@@ -26,7 +26,7 @@
     hiver: 's/winter-range.png', nicolas: 's/saint-nicholas-range.png', noel: 's/christmas-new-year-range.png',
     rois: 's/epiphany-galette-des-rois.png', valentin: 's/valentines-day-range.png',
     chocolat: 'd/hot-drink.png', biscuits: 'p/cookies.png', petitsfours: 'p/cupcake.png', pain: 'p/bread-1.png',
-    gateau: 'p/cake-slice.png', croissant: 'p/croissant.png', roule: 'p/rolls.png',
+    gateau: 'p/cake-slice.png', croissant: 'p/croissant.png', roule: 'p/rolls.png', tirage: 'p/bread-5.png',
   };
   const BASE = '../../../public/tablette/img/';
   const src = f => (window.BINGO_IMG && window.BINGO_IMG[f]) || BASE + f;
@@ -55,6 +55,9 @@
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
     bon: { valeur: 2, validite: 30 },   // le bon : 2 €, valable 30 jours dès le lendemain
+    // Le tirage au sort (12/11/2026, Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de
+    // pain à 1,5 € ») : parmi les cartes pleines (12 / 12), le lundi de la 13e semaine ; un pain par jour pendant un an.
+    tirage: { prix: 1.5, jours: 365, gagnants: 1, le: '2027-02-15' },
   };
   /* Les bons : leur nom et leur dessin suivent le moment de la saison où un client fidèle les atteint (la semaine
    * x, 2x, 3x… : avec x = 3, à l'Avent, aux Rois, en plein hiver, à la carte pleine). Valable pour tout x. */

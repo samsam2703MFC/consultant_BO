@@ -23,8 +23,8 @@ fait monter la dépense de la semaine et coche la case au seuil, « Semaine suiv
 coche ou se décoche d'un clic, « Revenir au 14 janvier » remet l'état de départ.
 
 Captures : `planche.jpg` (la planche, le 14 janvier), `carte.jpg` (la carte imprimée), `app.jpg` (l'app),
-`app-case-cochee.jpg` (un ticket coche la case de la semaine) et `app-bon-debloque.jpg` (la 9e case débloque le 3e
-bon). Régénérer depuis `pilotage-reseau/` : `node docs/maquettes/bingo-saison/generer.js` — il refait le fichier
+`app-case-cochee.jpg` (un ticket coche la case de la semaine), `app-bon-debloque.jpg` (la 9e case débloque le 3e
+bon) et `app-tirage.jpg` (la carte pleine, inscrite au tirage). Régénérer depuis `pilotage-reseau/` : `node docs/maquettes/bingo-saison/generer.js` — il refait le fichier
 autonome, joue ce parcours et échoue si la page lève une erreur. Sources : `planche.html` (mise en page et
 interaction), `bingo.js` (données et illustrations).
 
@@ -44,7 +44,14 @@ interaction), `bingo.js` (données et illustrations).
   l'Avent (étoile), des Rois (couronne), de l'hiver (flocon), de la carte pleine (nœud). Il arrive dans le
   portefeuille de l'app avec son code : un vrai bon du panel, créé comme celui du « déjà venu » de la caisse
   (`src/fidelite_caisse.php`).
-- **La 13e semaine** entre deux cartes : le dernier bon se prend, la carte suivante arrive. Quatre cartes de 13
+- **Carte pleine : le tirage au sort** (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an
+  de pain à 1,5 € »). Tous les clients qui ont coché les 12 cases participent, dans tout le réseau, au tirage du
+  lundi 15/02/2027 (le premier jour de la 13e semaine). À gagner : 1 an de pain, un pain par jour à 1,50 €, soit 365
+  pains et 547,50 € au prix de vente ; le prix du pain et le nombre de gagnants (1) sont réglables. Le gagnant
+  reçoit dans l'app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois. Dans l'app, la
+  carte du tirage dit « encore n cases » tant que rien n'est manqué, « vous participez » à la carte pleine, « ce sera
+  pour le printemps » après une semaine manquée. Dessin : le pain de campagne du design system (`p/bread-5.png`).
+- **La 13e semaine** entre deux cartes : le tirage au sort a lieu, le dernier bon se prend, la carte suivante arrive. Quatre cartes de 13
   semaines font l'année : Hiver, Printemps (Pâques 28/03, fête des mères 09/05), Été (fête des pères 13/06,
   fête nationale 21/07), Automne (Halloween, Toussaint, Saint-Martin).
 - **Branché sur ce qui existe** : la carte QR donnée en caisse (Fidélité › En caisse) devient la carte de la saison,
@@ -75,7 +82,9 @@ débloqués dont un utilisé), les montants, les codes de bon, le numéro de car
 1. Le seuil (10 €), x (3) et le bon (2 €, 30 jours) : au plus 4 bons de 2 € pour 12 semaines à 10 € au moins, soit
    au plus 6,7 % du minimum dépensé.
 2. Un bon fixe, ou qui grandit au fil de la saison (2 €, 2 €, 3 €, puis 5 € à la carte pleine) ?
-3. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
-4. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
-5. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
-6. Le dessin de la Chandeleur (des crêpes), et un cougnou pour l'Avent, à ajouter au design system.
+3. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (gratuit, sans obligation
+   d'achat ? conditions, publication du gagnant) ; un pain par jour d'ouverture ou par jour calendaire.
+4. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
+5. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
+6. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
+7. Le dessin de la Chandeleur (des crêpes), et un cougnou pour l'Avent, à ajouter au design system.

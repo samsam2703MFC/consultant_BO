@@ -7,7 +7,7 @@
  * 2. L'ouvre tel quel (file://) et joue un parcours : un ticket coche la case de la semaine ; deux semaines plus
  *    tard, la 9e case débloque le 3e bon. Échoue si la page lève une erreur ou si une ressource manque.
  * 3. Écrit les captures en densité 2 : planche.jpg (l'état de départ, le 14 janvier), carte.jpg, app.jpg,
- *    app-case-cochee.jpg et app-bon-debloque.jpg.
+ *    app-case-cochee.jpg, app-bon-debloque.jpg et app-tirage.jpg (la carte pleine inscrite au tirage).
  * Les données et le choix des dessins sont dans bingo.js ; la mise en page et l'interaction dans planche.html.
  */
 const fs = require('fs');
@@ -97,10 +97,23 @@ function fichiersDessins(){
     await clic('[data-a="x"][data-v="4"]');
     const nBons = await p.locator('.mini .mc.bon').count();
     if (nBons !== 3) { erreurs.push('x = 4 : ' + nBons + ' bons au lieu de 3'); }
-    console.log('parcours :', t1.replace(/\s+/g, ' ').slice(0, 90), '|', t2.replace(/\s+/g, ' ').slice(0, 90));
+    // Le tirage : la semaine du Nouvel An cochée après coup, puis chaque semaine jusqu'à la 12e → carte pleine, inscrite.
+    await clic('[data-a="reset"]');
+    await clic('[data-a="semaine"][data-n="6"]');
+    await clic('[data-a="ticket"][data-m="7.5"]');
+    for (let n = 9; n <= 12; n++) { await clic('[data-a="suivante"]'); await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]'); }
+    await p.waitForTimeout(700);
+    const t3 = await texte();
+    if (!/Carte pleine !.*tirage au sort/.test(t3)) { erreurs.push('la carte pleine n’entre pas au tirage : ' + t3); }
+    if (!(await p.locator('.tir.inscrit').count())) { erreurs.push('la carte du tirage ne dit pas « inscrit »'); }
+    await p.locator('.tel').screenshot({ path: path.join(ICI, 'app-tirage.jpg'), type: 'jpeg', quality: 92 });
+    await clic('[data-a="suivante"]');
+    const t4 = await texte();
+    if (!/Tirage au sort ce lundi 15 février/.test(t4)) { erreurs.push('la 13e semaine n’annonce pas le tirage : ' + t4); }
+    console.log('parcours :', t1.replace(/\s+/g, ' ').slice(0, 70), '|', t2.replace(/\s+/g, ' ').slice(0, 70), '|', t3.replace(/\s+/g, ' ').slice(0, 90));
   } finally {
     await b.close();
   }
   if (erreurs.length) { console.error('ÉCHEC :\n- ' + erreurs.join('\n- ')); process.exit(1); }
-  console.log('captures écrites : planche, carte, app, app-case-cochee, app-bon-debloque');
+  console.log('captures écrites : planche, carte, app, app-case-cochee, app-bon-debloque, app-tirage');
 })();
