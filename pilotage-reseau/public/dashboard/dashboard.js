@@ -5505,6 +5505,8 @@
       ${IA_ECRANS[p.ecran] ? `<button class="db-btn" data-iaaller="${esc(p.ecran)}">${esc(IA_ECRANS[p.ecran])} ›</button>` : '<span></span>'}</article>`).join('');
   }
   function iaPoints(r) { return (r.points || []).length ? `<ul class="ia-pts">${r.points.map(p => `<li><b>${esc(p.titre)}</b> ${esc(p.texte)}</li>`).join('')}</ul>` : ''; }
+  /** La phrase de finition (12/11/2026, Sam : « une phrase d'introduction, des puces, une phrase de finition »). */
+  function iaFin(r) { return r.conclusion ? `<p class="ia-fin">${esc(r.conclusion)}</p>` : ''; }
   function iaSuites(r) { return (r.suites || []).length ? `<div class="ia-suites"><span>Creuser :</span>${r.suites.slice(0, 3).map(s => `<button data-iaq="${esc(s)}" data-iamode="a">${esc(s)}</button>`).join('')}</div>` : ''; }
   function iaSaisie(haut) {
     const occupe = IA.fil.some(t => t.attente);
@@ -5520,7 +5522,7 @@
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
     h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
-      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${(r.priorites || []).length ? iaPrios(r, false) : iaPoints(r)}
+      <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, false)}${iaFin(r)}
       ${iaSuites(r)}
       <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
     return h;
@@ -5533,7 +5535,7 @@
       if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 30, true)}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 30)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaVisage(t.ton, 30)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${iaFin(r)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }

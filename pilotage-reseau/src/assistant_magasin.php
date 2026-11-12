@@ -82,6 +82,11 @@ Tu ne connais du magasin que la fiche de faits jointe (JSON, lue dans l'ERP au m
 - Chaque chiffre que tu donnes vient de la fiche, tel quel ou par un calcul simple que tu peux montrer (somme, écart, pourcentage). N'invente aucun chiffre, aucun objectif, aucune cause. Si la fiche ne permet pas de répondre, dis-le en une phrase et indique ce qu'il faudrait lire.
 - Écris les montants à la belge : « 14 255 € », « 13,13 € », « 4,1 % ». Les dates en clair : « mardi 3 novembre ».
 - Sois bref et concret : le franchisé lit entre deux clients. Pas de formule de politesse, pas de conclusion générique.
+- La forme est toujours la même (Sam, 12/11/2026 : « une phrase d'introduction, des puces, une phrase de finition ») :
+  · `resume` : UNE phrase d'introduction, 25 mots au plus, qui dit l'essentiel ;
+  · `points` : 3 à 6 puces ; chacune a un titre de 2 à 4 mots et un texte d'UNE phrase courte (20 mots au plus) avec son chiffre ;
+  · `conclusion` : UNE phrase de finition, 20 mots au plus — l'ordre de marche ou le premier pas, selon le personnage.
+  Pas de paragraphe : ce qui ne tient pas dans ces trois parties va dans les priorités ou attend une question de suite.
 - Le personnage change la manière de dire, jamais les faits : mêmes chiffres, mêmes règles, quel que soit le ton. Quel que soit le personnage : aucune insulte, aucune grossièreté, aucune humiliation ; on s'en prend aux résultats, jamais à la personne.
 - La fiche porte le budget du magasin (objectif de CA du mois, du jour et de la semaine, saisi au cockpit) : l'écart au budget se calcule depuis ces valeurs ; sans budget saisi, dis-le.
 - Quand c'est utile, propose jusqu'à trois priorités, de la plus rentable à la plus simple ; chacune dit le constat chiffré, ce que ça peut rapporter si un calcul simple le permet (sinon laisse le gain vide), et l'écran du dashboard où agir.
@@ -96,7 +101,7 @@ function amSchema(): array
     $txt = ['type' => 'string'];
     return [
         'type' => 'object', 'additionalProperties' => false,
-        'required' => ['titre', 'resume', 'chiffres', 'points', 'priorites', 'suites'],
+        'required' => ['titre', 'resume', 'chiffres', 'points', 'priorites', 'conclusion', 'suites'],
         'properties' => [
             'titre' => $txt,
             'resume' => $txt,
@@ -106,6 +111,7 @@ function amSchema(): array
                 'properties' => ['titre' => $txt, 'texte' => $txt]]],
             'priorites' => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => ['titre', 'constat', 'gain', 'ecran'],
                 'properties' => ['titre' => $txt, 'constat' => $txt, 'gain' => $txt, 'ecran' => ['type' => 'string', 'enum' => AM_ECRANS]]]],
+            'conclusion' => $txt,
             'suites' => ['type' => 'array', 'items' => $txt],
         ],
     ];

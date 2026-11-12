@@ -24,6 +24,7 @@ if (str_starts_with($u, '/api/cockpit/')) {
                 'points' => [['titre' => 'Le week-end porte la semaine :', 'texte' => 'samedi 3 362 €, dimanche 3 243 €.']],
                 'priorites' => [['titre' => 'Faire monter le panier moyen', 'constat' => '13,13 €, sous le seuil bas de 18 €.', 'gain' => '+ 1 € × 1 086 tickets = + 1 086 € par semaine', 'ecran' => 'produits'],
                     ['titre' => 'Remettre les contrôles en route', 'constat' => '0 tâche cochée sur 75 à midi.', 'gain' => '', 'ecran' => 'taches']],
+                'conclusion' => 'Ordre de marche : une vente additionnelle proposée à chaque ticket jusqu’à la fermeture.',
                 'suites' => ['Détaille le samedi', 'Compare avec le mois dernier']]]; })(),
         default => ['error' => 'route du banc inconnue : ' . $p],
     };
