@@ -506,6 +506,16 @@ function ep_fidelite_client(): array
     // Comment il achète : vente au comptoir, commande prise au comptoir, webshop (et, le temps de la relecture, commande sans canal).
     $canaux = ['comptoir' => 0, 'commande' => 0, 'webshop' => 0, 'inconnu' => 0];
     foreach ($T as $t) { $canaux[isset($canaux[$t['canal'] ?? '']) ? $t['canal'] : 'inconnu']++; }
+    // La livraison au bureau ne se voit que sur les commandes de l'ERP (`fulfilment_mode`, lues par coCommandes, gardées
+    // 10 minutes) : quand elles répondent, les commandes du client s'y comptent une fois chacune — commande au comptoir,
+    // webshop (retrait) ou livraison — et le comptoir reste celui des tickets.
+    $canaux['livraison'] = 0;
+    $cmds = function_exists('coCommandes') ? coCommandes($sid, $du) : null;
+    $siennes = is_array($cmds) ? array_values(array_filter($cmds, static fn ($c) => (int) ($c['cli'] ?? 0) === $cid)) : [];
+    if ($siennes !== []) {
+        $canaux = ['comptoir' => $canaux['comptoir'], 'commande' => 0, 'webshop' => 0, 'livraison' => 0, 'inconnu' => 0];
+        foreach ($siennes as $c) { $canaux[['compt' => 'commande', 'cc' => 'webshop', 'liv' => 'livraison'][$c['canal']] ?? 'commande']++; }
+    }
     if ($T === []) { return ['error' => 'aucun ticket rattaché à ce client sur 180 jours', 'aLire' => $reste]; }
     // Les lignes de ses tickets, lues ici : les articles ne se gardent pas.
     $ch = [];
