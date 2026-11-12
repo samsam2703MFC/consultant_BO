@@ -144,12 +144,61 @@ $rep = [];
 foreach ($C as $c) { $v = count($c['jours']); $k = $v >= 6 ? '6+' : (string) $v; $rep[$k] = ($rep[$k] ?? 0) + 1; }
 ksort($rep);
 echo 'jours de passage par client : ', json_encode($rep), "\n";
-echo "\nrang | jours de passage (0 = $du) | tickets | € | en commande | matin/midi/après-midi | catégories\n";
-$i = 0;
+
+// 4. Les profils pour la maquette : niveau de fidélité, et les deux radars (récurrence, type d'achat).
+// Le type d'achat se lit sur le libellé « groupe › catégorie » (ou « produit … » quand le catalogue ne le range pas).
+$familleDe = static function (string $lib): string {
+    if (preg_match('/réduction/iu', $lib)) { return 'antigaspi'; }
+    if (preg_match('/quiche|soupe|boisson|sandwich|traiteur/iu', $lib)) { return 'sale'; }
+    if (preg_match('/viennoiserie/iu', $lib)) { return 'vienno'; }
+    if (preg_match('/pâtisserie individuelle|cookie|cake|individuel|brownie|brook/iu', $lib)) { return 'gouter'; }
+    if (preg_match('/pain|boulangerie|pistolet/iu', $lib)) { return 'pain'; }
+    return 'tartes';
+};
+$FAM = ['pain', 'vienno', 'antigaspi', 'tartes', 'gouter', 'sale'];
+$codeFam = [];
+foreach ($code as $lib => $k) { $codeFam[$k] = $familleDe($lib); }
+echo "\nfamilles : ", json_encode(array_count_values($codeFam)), "\n";
+$niveau = static fn (int $v): int => $v >= 6 ? 4 : ($v >= 3 ? 3 : ($v >= 2 ? 2 : 1));
+$P = []; $parNiveau = [];
+$famClients = array_fill_keys($FAM, 0);
 foreach ($C as $c) {
-    $i++;
     $js = array_keys($c['jours']); sort($js);
-    arsort($c['cats']);
-    printf("C%d|%s|%d|%.2f|%d|%s|%s\n", $i, implode(',', $js), $c['tk'], $c['eur'], $c['cmd'], implode('/', $c['h']), json_encode(array_map(static fn ($q) => round($q, 1), $c['cats'])));
+    $v = count($js);
+    $f = array_fill_keys($FAM, 0.0);
+    foreach ($c['cats'] as $k => $q) { $f[$codeFam[$k]] += $q; }
+    $tot = array_sum($f) ?: 1;
+    foreach ($FAM as $k) { if ($f[$k] > 0) { $famClients[$k]++; } }
+    $part = array_map(static fn ($x) => round(100 * $x / $tot), $f);
+    $recence = SP_JOURS - 1 - end($js);
+    $comp = [
+        'frequence' => min(100, round(100 * ($v / 3) / 4)),            // 4 passages par mois = 100
+        'recence' => max(0, round(100 * (1 - $recence / SP_JOURS))),
+        'anciennete' => round(100 * (end($js) - $js[0]) / (SP_JOURS - 1)),
+        'panier' => min(100, round(100 * ($c['eur'] / $c['tk']) / 60)),  // 60 € = 100
+        'diversite' => round(100 * count(array_filter($f)) / count($FAM)),
+        'comptoir' => round(100 * ($c['tk'] - $c['cmd']) / $c['tk']),
+    ];
+    $n = $niveau($v);
+    $P[] = ['niv' => $n, 'jours' => $js, 'tk' => $c['tk'], 'eur' => round($c['eur'], 2), 'cmd' => $c['cmd'], 'h' => $c['h'], 'recence' => $recence, 'comp' => $comp, 'fam' => $part];
+    $x = &$parNiveau[$n];
+    $x ??= ['n' => 0, 'tk' => 0, 'eur' => 0.0, 'cmd' => 0, 'h' => [0, 0, 0], 'comp' => array_fill_keys(array_keys($comp), 0), 'fam' => array_fill_keys($FAM, 0), 'rec' => []];
+    $x['n']++; $x['tk'] += $c['tk']; $x['eur'] += $c['eur']; $x['cmd'] += $c['cmd'];
+    foreach ([0, 1, 2] as $i) { $x['h'][$i] += $c['h'][$i]; }
+    foreach ($comp as $k => $val) { $x['comp'][$k] += $val; }
+    foreach ($FAM as $k) { $x['fam'][$k] += $part[$k]; }
+    $x['rec'][] = $recence;
+    unset($x);
 }
+krsort($parNiveau);
+echo "\nNIVEAUX (moyennes par client) :\n";
+foreach ($parNiveau as $n => $x) {
+    sort($x['rec']);
+    echo json_encode(['niv' => $n, 'clients' => $x['n'], 'tickets' => $x['tk'], 'eur' => round($x['eur'], 2), 'panier' => round($x['eur'] / max(1, $x['tk']), 2),
+        'cmd' => $x['cmd'], 'h' => $x['h'], 'comp' => array_map(static fn ($v) => round($v / $x['n']), $x['comp']),
+        'fam' => array_map(static fn ($v) => round($v / $x['n']), $x['fam']), 'recence_mediane' => $x['rec'][intdiv(count($x['rec']), 2)]], JSON_UNESCAPED_UNICODE), "\n";
+}
+echo "\nclients par famille achetée : ", json_encode($famClients), "\n";
+echo "\nLES 10 PREMIERS CLIENTS :\n";
+foreach (array_slice($P, 0, 10) as $i => $x) { echo 'C', $i + 1, ' ', json_encode($x), "\n"; }
 echo "\nfin de la sonde\n";
