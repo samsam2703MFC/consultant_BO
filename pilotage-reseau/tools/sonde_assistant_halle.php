@@ -70,7 +70,7 @@ if (isset($r['reponse'])) {
     echo "\n=== 3. Question de suite (avec le fil)\n";
     $q2 = $r['reponse']['suites'][0] ?? 'Détaille le samedi';
     $t0 = microtime(true);
-    $r2 = amDemander($f, $q2, [['q' => 'Que puis-je améliorer ?', 'r' => $r['reponse']]]);
+    $r2 = amDemander($f, $q2, [['q' => 'Que puis-je améliorer ?', 'r' => $r['reponse']]], 'coach');
     printf("  « %s » · %.1f s\n", $q2, microtime(true) - $t0);
     echo json_encode($r2, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";
 }
