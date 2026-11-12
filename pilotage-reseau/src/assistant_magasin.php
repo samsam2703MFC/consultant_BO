@@ -53,7 +53,7 @@ const AM_AXES = ['budget' => 'Budget', 'trafic' => 'Trafic', 'controles' => 'Con
 const AM_NIVEAUX = ['fort' => 'Accent fort', 'suivi' => 'Suivi', 'non' => 'N’en parle pas'];
 const AM_COACHS = [
     'pierre' => [
-        'nom' => 'Pierre',
+        'nom' => 'Mr. Pierre',   // Sam, 12/11/2026 : « changer Pierre en Mr. Pierre »
         'dit' => 'bienveillant, motivateur',
         'ton' => "Coach business de pointe, bienveillant et motivateur. Tu vouvoies le franchisé. Commence par ce qui va bien, chiffre à l'appui, puis présente ce qui peut progresser comme une occasion, avec un premier pas simple à faire aujourd'hui. Pas de flatterie vide, pas de leçon.",
         'accents' => [
