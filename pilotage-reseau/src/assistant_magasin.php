@@ -8,7 +8,7 @@ declare(strict_types=1);
  * agit) puis on CREUSE en conversation (les questions de suite, le fil gardé dans la modale).
  *
  *   GET  /assistant/magasin/questions        les questions toutes prêtes (tuiles et liste rangée)
- *   POST /assistant/magasin  {shop, question, fil:[{q, r}]}   une réponse
+ *   POST /assistant/magasin  {shop, question, ton, fil:[{q, r}]}   une réponse, avec l'assistant choisi (AM_TONS)
  *
  * Trois règles :
  *  1. l'assistant ne lit QUE la fiche de faits du magasin, assemblée ici par l'API du panel (ventes, P&L, contrôles,
@@ -40,13 +40,30 @@ const AM_QUESTIONS = [
     ],
 ];
 
+/* Les trois assistants (12/11/2026, Sam : « mettre un choix d'assistant »). Le franchisé choisit le sien dans la modale ;
+ * le choix ne change que le TON : les chiffres, les règles et le schéma restent les mêmes. Le troisième est un coach à la
+ * dure, sous un nom inventé : l'assistant ne parle au nom d'aucune personne réelle, et il est rude sans insulter. */
+const AM_TONS = [
+    'sam' => ['Sam', 'nerveux, provocateur, challengeant', <<<'TXT'
+Tu es Sam. Tu tutoies le franchisé. Ton nerveux, rapide, provocateur : tu le secoues avec ses propres chiffres, tu poses la question qui dérange (« 61 contrôles pas faits à 14 h, tu attends quoi ? »), tu ne félicites que ce qui est vraiment bon, en une phrase. Phrases courtes, rythme sec. Tu pousses parce que tu sais qu'il peut faire mieux : jamais d'insulte ni de mépris.
+TXT],
+    'pierre' => ['Pierre', 'bienveillant, motivateur', <<<'TXT'
+Tu es Pierre. Tu vouvoies le franchisé. Ton chaleureux et encourageant : commence par ce qui va bien, chiffre à l'appui, puis présente ce qui peut progresser comme une occasion, avec un premier pas simple à faire aujourd'hui. Reste concret : pas de flatterie vide, pas de leçon.
+TXT],
+    'coach' => ['Le Coach', 'à la dure : ici, on joue pour gagner', <<<'TXT'
+Tu es le Coach. Tu tutoies. Style vestiaire, cash et exigeant, à la limite de la gueulante : ici on joue pour gagner, les excuses ne comptent pas, seuls les chiffres parlent. Tu peux être rude, familier, ironique sur la performance (« bouge-toi », « ça, c'est pas un score de gagnant », « les autres magasins ne t'attendent pas »). Tu t'en prends aux résultats, jamais à la personne : aucune insulte, aucune grossièreté, aucune humiliation. Tu finis sur l'ordre de marche du jour.
+TXT],
+];
+const AM_TON_DEFAUT = 'pierre';
+
 const AM_SYSTEME = <<<'TXT'
-Tu es l'assistant du dashboard d'un magasin franchisé L'Atelier by (boulangerie, pâtisserie, traiteur ; Belgique). Tu réponds au franchisé, en français, en le vouvoyant, sur SON magasin.
+Tu es l'assistant du dashboard d'un magasin franchisé L'Atelier by (boulangerie, pâtisserie, traiteur ; Belgique). Tu réponds au franchisé, en français, sur SON magasin, avec le ton du personnage décrit à la fin de ces consignes (il décide du tutoiement ou du vouvoiement).
 
 Tu ne connais du magasin que la fiche de faits jointe (JSON, lue dans l'ERP au moment indiqué). Règles :
 - Chaque chiffre que tu donnes vient de la fiche, tel quel ou par un calcul simple que tu peux montrer (somme, écart, pourcentage). N'invente aucun chiffre, aucun objectif, aucune cause. Si la fiche ne permet pas de répondre, dis-le en une phrase et indique ce qu'il faudrait lire.
 - Écris les montants à la belge : « 14 255 € », « 13,13 € », « 4,1 % ». Les dates en clair : « mardi 3 novembre ».
 - Sois bref et concret : le franchisé lit entre deux clients. Pas de formule de politesse, pas de conclusion générique.
+- Le personnage change la manière de dire, jamais les faits : mêmes chiffres, mêmes règles, quel que soit le ton.
 - Quand c'est utile, propose jusqu'à trois priorités, de la plus rentable à la plus simple ; chacune dit le constat chiffré, ce que ça peut rapporter si un calcul simple le permet (sinon laisse le gain vide), et l'écran du dashboard où agir.
 - Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos, aucun.
 - Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche doit permettre d'y répondre.
@@ -181,7 +198,7 @@ function amJour(string $d): string
  * L'appel
  * ------------------------------------------------------------------------- */
 /** POST /v1/messages : la fiche (en cache), le fil, la question ; la réponse contrainte au schéma. */
-function amDemander(array $faits, string $question, array $fil): array
+function amDemander(array $faits, string $question, array $fil, string $ton = AM_TON_DEFAUT): array
 {
     $c = Anthropic::config();
     if ($c['cle'] === '') { return ['erreur' => 'L’assistant n’est pas branché : aucune clé Anthropic dans les Paramètres du cockpit.']; }
@@ -204,7 +221,9 @@ function amDemander(array $faits, string $question, array $fil): array
     $corps = [
         'model' => $modele,
         'max_tokens' => 16000,
-        'system' => [['type' => 'text', 'text' => AM_SYSTEME, 'cache_control' => ['type' => 'ephemeral']]],
+        // Le personnage vient après le bloc commun mis en cache : il est court, et changer d'assistant ne repaie que lui.
+        'system' => [['type' => 'text', 'text' => AM_SYSTEME, 'cache_control' => ['type' => 'ephemeral']],
+            ['type' => 'text', 'text' => "Ton personnage :\n" . (AM_TONS[$ton] ?? AM_TONS[AM_TON_DEFAUT])[2]]],
         'messages' => $messages,
         'output_config' => ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => amSchema()]],
         'fallbacks' => 'default',
@@ -240,10 +259,12 @@ function amDemander(array $faits, string $question, array $fil): array
 /** Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton). */
 function ep_assistant_questions(): array
 {
-    return AM_QUESTIONS + ['actif' => class_exists('Anthropic') && Anthropic::configured()];
+    $tons = [];
+    foreach (AM_TONS as $k => [$nom, $dit]) { $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit]; }
+    return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'actif' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
-/** POST /assistant/magasin {shop, question, fil:[{q, r}]} → {reponse:{titre, resume, chiffres, points, priorites, suites}, luLe}. */
+/** POST /assistant/magasin {shop, question, ton, fil:[{q, r}]} → {reponse:{titre, resume, chiffres, points, priorites, suites}, luLe, ton}. */
 function wr_assistant_magasin(): array
 {
     $b = body();
@@ -252,8 +273,9 @@ function wr_assistant_magasin(): array
     if ($sid <= 0 || $q === '') { http_response_code(422); return ['error' => 'magasin ou question manquant']; }
     if (mb_strlen($q) > 500) { http_response_code(422); return ['error' => 'question trop longue (500 caractères au plus)']; }
     $faits = amFaits($sid);
-    $r = amDemander($faits, $q, is_array($b['fil'] ?? null) ? $b['fil'] : []);
+    $ton = isset(AM_TONS[$b['ton'] ?? '']) ? (string) $b['ton'] : AM_TON_DEFAUT;
+    $r = amDemander($faits, $q, is_array($b['fil'] ?? null) ? $b['fil'] : [], $ton);
     if (isset($r['erreur'])) { http_response_code(502); return ['error' => $r['erreur']]; }
-    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' : « ' . mb_substr($q, 0, 120) . ' »'); }
-    return ['reponse' => $r['reponse'], 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele']];
+    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' (' . AM_TONS[$ton][0] . ') : « ' . mb_substr($q, 0, 120) . ' »'); }
+    return ['reponse' => $r['reponse'], 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele'], 'ton' => $ton];
 }

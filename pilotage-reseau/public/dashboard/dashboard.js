@@ -5454,7 +5454,19 @@
    * CONVERSATION : les questions toutes prêtes à gauche, le fil à droite, les questions de suite. Le fil vit le temps de
    * la page. La modale est hors de #dash : rendre() ne l'efface pas.
    * Lectures : GET /assistant/magasin/questions ; POST /assistant/magasin {shop, question, fil}. */
-  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '' };
+  /* Le choix de l'assistant (12/11/2026, Sam) : Sam, Pierre ou le Coach, gardé dans ce navigateur. Il ne change que le ton
+   * des réponses ; la liste vient de GET /assistant/magasin/questions (tons). */
+  let tonGarde = '';
+  try { tonGarde = localStorage.getItem('dbIaTon') || ''; } catch (e) { /* stockage refusé */ }
+  const IA = { ouvert: false, mode: 'b', fil: [], questions: null, saisie: '', ton: tonGarde };
+  const iaTons = () => (IA.questions && IA.questions.tons) || [];
+  const iaTonCle = () => (iaTons().some(t => t.cle === IA.ton) ? IA.ton : ((IA.questions && IA.questions.tonDefaut) || ''));
+  const iaNomTon = k => { const t = iaTons().find(x => x.cle === k); return t ? t.nom : ''; };
+  function iaChoixTon() {
+    const T = iaTons();
+    if (!T.length) { return ''; }
+    return `<div class="ia-tons"><span class="ia-tons-t">Votre assistant</span>${T.map(t => `<button class="ia-ton${iaTonCle() === t.cle ? ' on' : ''}" data-iaton="${esc(t.cle)}" aria-pressed="${iaTonCle() === t.cle}"><b>${esc(t.nom)}</b><span>${esc(t.dit)}</span></button>`).join('')}</div>`;
+  }
   const IA_ECRANS = { produits: 'Voir mes produits', taches: 'Ouvrir les contrôles', semaine: 'Voir ma semaine', mois: 'Voir mon mois', fidelite: 'Voir mes clients', ops: 'Voir ma journée', promos: 'Voir mes promotions' };
   /* L'icône de l'assistant (12/11/2026, Sam : « mettre une icône assistant ») : une bulle de dialogue au trait, une
    * étincelle dedans. Sur le bouton, dans l'entête, à côté de chaque réponse ; quand l'assistant lit, l'étincelle pulse. */
@@ -5476,10 +5488,10 @@
     if (!q || IA.fil.some(t => t.attente)) { return; }
     if (mode) { IA.mode = mode; }
     const fil = IA.fil.filter(t => t.r).map(t => ({ q: t.q, r: t.r }));
-    const t = { q, attente: true };
+    const t = { q, attente: true, ton: iaTonCle() };
     IA.fil.push(t); IA.saisie = '';
     iaRendre();
-    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil })
+    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton })
       .then(d => { t.r = d.reponse; t.luLe = d.luLe; }).catch(e => { t.err = e.message; })
       .finally(() => { t.attente = false; iaRendre(); });
   }
@@ -5501,10 +5513,10 @@
     let h = iaSaisie(true);
     h += `<div class="ia-tqs">${(Q.tuiles || []).map(([t, s]) => `<button class="ia-tq${dern && dern.q === t ? ' on' : ''}" data-iaq="${esc(t)}"><b>${esc(t)}</b><span>${esc(s)}</span></button>`).join('')}</div>`;
     if (!dern) { return h + '<p class="ia-vide">Choisissez une question, ou posez la vôtre. L’assistant lit les chiffres de votre magasin dans l’ERP au moment de la question.</p>'; }
-    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaIcone(18, 'lit')}</span>L’assistant lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
+    if (dern.attente) { return h + `<div class="ia-rep"><p class="ia-att"><span class="ia-av">${iaIcone(18, 'lit')}</span>${esc(iaNomTon(dern.ton) || 'L’assistant')} lit les chiffres du magasin… « ${esc(dern.q)} »</p></div>`; }
     if (dern.err) { return h + `<div class="ia-rep"><p class="db-err">${esc(dern.err)}</p></div>`; }
     const r = dern.r;
-    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''}</span></div>
+    h += `<section class="ia-rep"><div class="ia-rep-h"><h3>${esc(r.titre || dern.q)}</h3><span>${[iaNomTon(dern.ton), dern.luLe ? 'chiffres lus à ' + esc(dern.luLe.slice(11, 16)) : ''].filter(Boolean).map(esc).join(' · ')}</span></div>
       <p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${(r.priorites || []).length ? iaPrios(r, false) : iaPoints(r)}
       ${iaSuites(r)}
       <div class="ia-pied"><span>Rédigé par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</span><button class="db-btn" data-iamode="a">Continuer en conversation ›</button></div></section>`;
@@ -5515,10 +5527,10 @@
     const gauche = `<aside class="ia-q"><p class="ia-q-t">Questions toutes prêtes</p>${(Q.groupes || []).map(([g, L]) => `<p class="ia-q-g">${esc(g)}</p>${L.map(q => `<button class="ia-qb" data-iaq="${esc(q)}">${esc(q)}</button>`).join('')}`).join('')}</aside>`;
     const fil = IA.fil.map((t, i) => {
       let h = `<div class="ia-bulle moi">${esc(t.q)}</div>`;
-      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18, 'lit')}</span><div class="ia-bulle ia"><p class="ia-att">L’assistant lit les chiffres du magasin…</p></div></div>`; }
+      if (t.attente) { return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18, 'lit')}</span><div class="ia-bulle ia"><p class="ia-att">${esc(iaNomTon(t.ton) || 'L’assistant')} lit les chiffres du magasin…</p></div></div>`; }
       if (t.err) { return h + `<div class="ia-bulle ia"><p class="db-err">${esc(t.err)}</p></div>`; }
       const r = t.r;
-      return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18)}</span><div class="ia-bulle ia"><p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
+      return h + `<div class="ia-ligne"><span class="ia-av">${iaIcone(18)}</span><div class="ia-bulle ia">${iaNomTon(t.ton) ? `<p class="ia-qui">${esc(iaNomTon(t.ton))}</p>` : ''}<p class="ia-res">${esc(r.resume)}</p>${iaChiffres(r)}${iaPoints(r)}${iaPrios(r, true)}${t.luLe ? `<p class="ia-src">Chiffres du magasin lus à ${esc(t.luLe.slice(11, 16))}</p>` : ''}</div></div>${i === IA.fil.length - 1 ? iaSuites(r) : ''}`;
     }).join('') || '<p class="ia-vide">Choisissez une question à gauche, ou posez la vôtre en bas.</p>';
     return `<div class="ia-corps">${gauche}<section class="ia-conv"><div class="ia-fil">${fil}</div>${iaSaisie(false)}<p class="ia-pied2">Les réponses sont rédigées par l’assistant à partir des chiffres du magasin. Vérifiez avant d’agir.</p></section></div>`;
   }
@@ -5531,6 +5543,7 @@
       <header class="ia-h"><span class="ia-ic">${iaIcone(20, IA.fil.some(t => t.attente) ? 'lit' : '')}</span><div><b>Assistant du magasin</b><span>${esc(nomShop())} · il lit les chiffres de votre magasin, rien d’autre</span></div>
         <span class="ia-modes">${[['b', 'Bilan'], ['a', 'Conversation']].map(([m, l]) => `<button class="${IA.mode === m ? 'on' : ''}" data-iamode="${m}">${l}</button>`).join('')}</span>
         <button class="ia-x" data-iafermer="1" aria-label="Fermer">×</button></header>
+      ${iaChoixTon()}
       ${IA.mode === 'a' ? iaConversation() : `<div class="ia-b">${iaBilan()}</div>`}</div>`;
     const f = b.querySelector('.ia-fil');
     if (f && basAvant) { f.scrollTop = f.scrollHeight; }
@@ -5541,6 +5554,11 @@
       if (q) { iaDemander(q, e.dataset.iamode); } else { IA.mode = e.dataset.iamode; iaRendre(); }
     }));
     b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq)));
+    b.querySelectorAll('[data-iaton]').forEach(e => e.addEventListener('click', () => {
+      IA.ton = e.dataset.iaton;
+      try { localStorage.setItem('dbIaTon', IA.ton); } catch (er) { /* stockage refusé */ }
+      iaRendre();
+    }));
     b.querySelectorAll('[data-iaaller]').forEach(e => e.addEventListener('click', () => iaAller(e.dataset.iaaller)));
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');
