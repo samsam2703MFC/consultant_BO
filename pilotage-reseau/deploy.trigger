@@ -1396,3 +1396,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T07:08Z Lista płac + szablony umów (277, 276)
 2026-11-12T07:44:04Z Visites : effacer une visite, SMS au franchisé à la validation (copie à Sam)
 2026-11-12T07:45Z Szybka notatka HR (279)
+2026-11-12T09:33Z Sukcesja HR (278)
