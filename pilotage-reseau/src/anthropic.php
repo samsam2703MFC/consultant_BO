@@ -27,7 +27,10 @@ final class Anthropic
         $s = setting('anthropic');
         if (!is_array($s)) { $s = []; }
         $env = static fn (string $k): string => (string) (getenv($k) ?: '');
-        $cle = trim((string) ($s['cle'] ?? '')) ?: $env('ANTHROPIC_API_KEY');
+        // La clé du cockpit (Paramètres › Connecteurs), sinon la clé commune de l'ERP (erp_cles, portail commun,
+        // `anthropic_api_key`, décision du 7 nov. 2026), sinon l'environnement.
+        $commune = function_exists('erpCle') ? erpCle('anthropic_api_key') : '';
+        $cle = trim((string) ($s['cle'] ?? '')) ?: (trim($commune) ?: $env('ANTHROPIC_API_KEY'));
         return [
             'cle'    => $cle,
             'modele' => trim((string) ($s['modele'] ?? '')) ?: 'claude-sonnet-5',

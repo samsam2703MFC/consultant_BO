@@ -98,7 +98,7 @@ function amFaits(int $sid): array
     $mois = date('Y-m-01');
     $nom = '';
     foreach (fidMagasins() as $x) { if ((int) $x['id'] === $sid) { $nom = (string) $x['nom']; } }
-    $f = ['magasin' => 'L’Atelier by ' . ($nom !== '' ? $nom : $sid), 'luLe' => date('Y-m-d H:i'), 'aujourdhui' => $auj . ' (' . amJour($auj) . ')'];
+    $f = ['magasin' => $nom !== '' ? $nom : 'magasin ' . $sid, 'luLe' => date('Y-m-d H:i'), 'aujourdhui' => $auj . ' (' . amJour($auj) . ')'];
     $f['ventes'] = ['aujourdhuiJusquIci' => amKpis($sid, $auj, $auj), 'hier' => amKpis($sid, $hier, $hier), 'cetteSemaine' => amKpis($sid, $lundi, $auj),
         'semaineDerniere' => amKpis($sid, $lundiP, $dimP), 'semaineAvant' => amKpis($sid, $lundiPP, $dimPP), 'moisEnCours' => amKpis($sid, $mois, $auj)];
     // Jour par jour, 21 jours : CA, tickets, panier (margin-heatmap) et salaires (P&L quotidien).
@@ -236,9 +236,10 @@ function amDemander(array $faits, string $question, array $fil): array
 /* ---------------------------------------------------------------------------
  * Les routes
  * ------------------------------------------------------------------------- */
+/** Les questions toutes prêtes, et si l'assistant est branché (sans clé, le dashboard ne montre pas le bouton). */
 function ep_assistant_questions(): array
 {
-    return AM_QUESTIONS;
+    return AM_QUESTIONS + ['actif' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
 /** POST /assistant/magasin {shop, question, fil:[{q, r}]} → {reponse:{titre, resume, chiffres, points, priorites, suites}, luLe}. */

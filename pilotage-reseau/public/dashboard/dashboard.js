@@ -5547,6 +5547,7 @@
     });
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && IA.ouvert) { iaFermer(); } });
+  if (!EMBED && !EMBED_PM) { lire('/assistant/magasin/questions').then(q => { IA.questions = q; if (q && q.actif) { rendre(); } }).catch(() => {}); }
   /* --- Fidélité (12/11/2026, maquettes B et C de docs/maquettes/fidelite-v3) --------------------------------------
    * Les profils de fréquence du magasin, réglés au cockpit (ERP franchisé › Fidélité › Profils clients) : la part des
    * clients scannés de chaque profil et, sous chaque vignette, sa condition ; les radars du profil choisi face à la
@@ -6163,7 +6164,7 @@
     $.classList.remove('mob');
     let h = '';
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span><button class="db-btn-ia" data-iaouvrir="1">${IA_ETOILE}Assistant</button><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${IA_ETOILE}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
