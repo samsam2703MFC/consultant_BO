@@ -23,7 +23,7 @@ final class TimeController extends BaseController
     use JsonErrors;
 
     public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail,
-        private TeamCostsService $teamCosts)
+        private TeamCostsService $teamCosts, private \App\Services\Workshop\Time\LeaveRequestService $leaveRequests)
     {
     }
 
@@ -221,6 +221,33 @@ final class TimeController extends BaseController
         return $this->guarded(function () use ($id) {
             $this->time->setLeaveRight((int) $id, (int) ($this->input()['days'] ?? -1), $this->userId());
             return ['message' => 'Zapisano wymiar urlopu.'];
+        });
+    }
+
+    /** [288] Wniosek z telefonu → urlop w kalendarzu. */
+    public function approveLeave($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->leaveRequests->approve((int) $id, $this->userId());
+            return ['message' => 'Zatwierdzono — urlop jest w kalendarzu.'];
+        });
+    }
+
+    public function rejectLeave($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->leaveRequests->reject((int) $id, (string) ($this->input()['reason'] ?? ''), $this->userId());
+            return ['message' => 'Wniosek odrzucony — pracownik zobaczy powód w telefonie.'];
+        });
+    }
+
+    /** [288] « Zostało » wpisane ręcznie (korekta salda roku). */
+    public function saveLeaveRemaining($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $in = $this->input();
+            $this->time->setLeaveRemaining((int) $id, (int) ($in['remaining'] ?? -1), $this->userId(), isset($in['year']) ? (int) $in['year'] : null);
+            return ['message' => 'Zapisano saldo urlopu.'];
         });
     }
 

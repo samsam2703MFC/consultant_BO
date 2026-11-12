@@ -33,6 +33,10 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/time/absences', ['controller' => $c, 'method' => 'addAbsence']);
     $r->addRoute('DELETE', '/ajax/time/absences/{id:\d+}', ['controller' => $c, 'method' => 'deleteAbsence']);
     $r->addRoute('PUT', '/ajax/time/leave/{id:\d+}', ['controller' => $c, 'method' => 'saveLeaveRight']);
+    // [288] Wnioski o urlop z telefonu : zatwierdza / odrzuca kierownik produkcji ; « zostało » (korekta salda).
+    $r->addRoute('POST', '/ajax/time/leave-requests/{id:\d+}/approve', ['controller' => $c, 'method' => 'approveLeave']);
+    $r->addRoute('POST', '/ajax/time/leave-requests/{id:\d+}/reject', ['controller' => $c, 'method' => 'rejectLeave']);
+    $r->addRoute('PUT', '/ajax/time/leave/{id:\d+}/remaining', ['controller' => $c, 'method' => 'saveLeaveRemaining']);
     $r->addRoute('POST', '/ajax/time/comps', ['controller' => $c, 'method' => 'proposeComp']);
     $r->addRoute('POST', '/ajax/time/comps/{id:\d+}/sign', ['controller' => $c, 'method' => 'signComp']);
     $r->addRoute('DELETE', '/ajax/time/comps/{id:\d+}', ['controller' => $c, 'method' => 'cancelComp']);

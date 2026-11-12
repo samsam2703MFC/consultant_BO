@@ -1099,3 +1099,44 @@ body:has(.kiosk-ipad) { background: radial-gradient(110% 70% at 0% 0%, var(--k-a
   .kiosk-gp-pad-card { padding: 16px 14px 14px; gap: 10px; }
   .kiosk-gp-qty output { font-size: 44px; }
 }
+
+/* [288] Urlop z telefonu (makieta 49) : saldo, kalendarz od–do, podsumowanie, « Moje urlopy ». Prostokąty z zaokrąglonymi rogami. */
+.kiosk-leave { display: flex; flex-direction: column; gap: 10px; margin-top: 14px; }
+.kiosk-leave .kiosk-big { min-height: 72px; font-size: 22px; border-radius: 16px; }
+.kiosk-leave-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kiosk-leave-tiles.is-4 { margin: 12px 0; }
+.kiosk-leave-tiles > div { background: var(--k-bg-2); border-radius: 12px; padding: 10px 12px; }
+.kiosk-leave-tiles small { display: block; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--k-muted); }
+.kiosk-leave-tiles b { display: block; font-size: 26px; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.kiosk-leave-tiles b span { font-size: 15px; font-weight: 500; }
+.kiosk-leave-tiles .is-bad b { color: var(--k-danger); }
+.kiosk-leave-form { display: flex; flex-direction: column; gap: 8px; }
+.kiosk-leave-form > .kiosk-btn.is-small:first-child { align-self: flex-start; }
+.kiosk-leave-form h2 { margin: 4px 0 0; }
+.kiosk-leave-types { display: flex; flex-wrap: wrap; gap: 8px; }
+.kiosk-chip.is-on { background: var(--k-ok-50); color: var(--k-ok); box-shadow: inset 0 0 0 1.5px var(--k-ok); }
+.kiosk-chip:disabled { opacity: .45; }
+.kiosk-cal-head { display: flex; align-items: center; justify-content: space-between; margin-top: 6px; }
+.kiosk-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; text-align: center; }
+.kiosk-cal small { font-size: 12px; color: var(--k-muted); padding: 2px 0; }
+.kiosk-cal-d { border: 0; background: transparent; min-height: 42px; border-radius: 9px; font-size: 16px; font-variant-numeric: tabular-nums; color: var(--k-text); }
+.kiosk-cal-d.is-off { color: #B8B2A8; }
+.kiosk-cal-d.is-today { box-shadow: inset 0 0 0 1.5px var(--k-line-2); }
+.kiosk-cal-d.is-in { background: var(--k-primary-50); color: var(--k-primary); }
+.kiosk-cal-d.is-end { background: var(--k-primary); color: #fff; font-weight: 700; }
+.kiosk-cal-d:disabled { opacity: .3; }
+.kiosk-leave-range { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.kiosk-leave-range > div { border: 1px solid var(--k-line); border-radius: 12px; padding: 8px 12px; display: flex; justify-content: space-between; align-items: baseline; }
+.kiosk-leave-range small { color: var(--k-muted); }
+.kiosk-leave-note { background: var(--k-warn-50); color: #7a4f0e; border-radius: 12px; padding: 10px 12px; margin: 0; font-size: 15px; }
+.kiosk-field { display: flex; flex-direction: column; gap: 4px; font-size: 14px; color: var(--k-muted); }
+.kiosk-field input { min-height: 46px; border: 1px solid var(--k-line-2); border-radius: 10px; padding: 8px 12px; font-size: 17px; color: var(--k-text); }
+.kiosk-center { text-align: center; }
+.kiosk-leave-list { list-style: none; margin: 4px 0; padding: 0; }
+.kiosk-leave-list li { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--k-line); }
+.kiosk-leave-list li > div { flex: 1 1 60%; }
+.kiosk-leave-list li .kiosk-muted { display: block; font-size: 13px; }
+.kiosk-tag { display: inline-block; padding: 3px 9px; border-radius: 7px; font-size: 13px; font-weight: 600; background: var(--k-fill); color: var(--k-muted); }
+.kiosk-tag.is-warn { background: var(--k-warn-50); color: #8a5a12; }
+.kiosk-tag.is-ok { background: var(--k-ok-50); color: var(--k-ok); }
+.kiosk-tag.is-bad { background: var(--k-danger-50); color: var(--k-danger); }

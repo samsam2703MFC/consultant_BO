@@ -74,9 +74,152 @@
             <button type="button" class="kiosk-btn is-small" data-lang>${esc(t('lang_switch'))}</button></div></header>`;
     }
 
-    function message(text, error) {
+    function message(text, error, withLeave) {
         el.innerHTML = header() + `<section class="kiosk-card kiosk-phone-msg"><p class="${error ? 'kiosk-error' : 'kiosk-status'}">${esc(text)}</p>
-            ${error ? `<p class="kiosk-muted">${esc(t('scan_help'))}</p>` : ''}${store.get(PHONE_KEY) ? `<button type="button" class="kiosk-btn is-small" data-forget>${esc(t('not_me'))}</button>` : ''}</section>`;
+            ${error ? `<p class="kiosk-muted">${esc(t('scan_help'))}</p>` : ''}${store.get(PHONE_KEY) ? `<button type="button" class="kiosk-btn is-small" data-forget>${esc(t('not_me'))}</button>` : ''}</section>
+            ${withLeave ? '<section class="kiosk-card kiosk-leave" data-leave-box></section>' : ''}`;
+        if (withLeave) leaveBox();
+    }
+
+    // =====================================================================================================
+    // [288] Urlop z telefonu (makieta 49) : saldo, wniosek od–do (kalendarz), podsumowanie, « Moje urlopy ».
+    // Wniosek zatwierdza kierownik produkcji w ERP (Urlopy i dni wolne) ; status widać przy następnym skanie.
+    // =====================================================================================================
+    let leave = null;
+    const ld = (d) => d ? `${d.slice(8, 10)}.${d.slice(5, 7)}` : '—';
+    const ldy = (d) => d ? `${ld(d)}.${d.slice(0, 4)}` : '—';
+    const addD = (d, n) => { const x = new Date(d + 'T12:00:00'); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+    const isWork = (d) => { const w = new Date(d + 'T12:00:00').getDay(); return w !== 0 && w !== 6 && !(leave.holidays || []).includes(d); };
+    const countWork = (from, to) => { let n = 0; for (let d = from; d <= to; d = addD(d, 1)) if (isWork(d)) n++; return n; };
+    const balFor = (d) => leave.balances[String(Number(String(d || leave.today).slice(0, 4)))] || leave.balances[String(leave.year)];
+
+    async function leaveBox() {
+        const box = el.querySelector('[data-leave-box]');
+        if (!box) return;
+        try { leave = await api('GET', '/kiosk/phone/leave'); } catch (err) { box.remove(); return; }
+        const b = leave.balances[String(leave.year)];
+        const pend = leave.requests.filter(r => r.status === 'pending').length;
+        box.innerHTML = `<div class="kiosk-leave-tiles"><div><small>${esc(t('leave_left', {year: leave.year}))}</small><b>${b.remaining} <span>${esc(t('leave_days'))}</span></b></div>
+                <div><small>${esc(t('leave_carry', {year: leave.year - 1}))}</small><b>${b.carry_left}</b>${b.carry_left ? `<span class="kiosk-muted">${esc(t('leave_until', {date: ldy(b.carry_deadline)}))}</span>` : ''}</div></div>
+            ${b.pending ? `<p class="kiosk-muted">${esc(t('leave_pending_days', {days: b.pending}))}</p>` : ''}
+            <button type="button" class="kiosk-btn kiosk-big is-primary" data-leave-new><i aria-hidden="true">🏖</i> ${esc(t('leave_request'))}</button>
+            <button type="button" class="kiosk-btn" data-leave-list>${esc(t('leave_mine', {n: leave.requests.length + leave.absences.length}))}${pend ? ` · ${esc(t('leave_status_pending'))} ${pend}` : ''}</button>`;
+        box.querySelector('[data-leave-new]').addEventListener('click', () => leaveForm({type: 'urlop', from: null, to: null, month: leave.today.slice(0, 7)}));
+        box.querySelector('[data-leave-list]').addEventListener('click', () => leaveList());
+    }
+
+    function leaveBack() {
+        return `<button type="button" class="kiosk-btn is-small" data-leave-home>‹ ${esc(t('back'))}</button>`;
+    }
+
+    function bindBack() {
+        const b = el.querySelector('[data-leave-home]');
+        if (b) b.addEventListener('click', () => renderClock());
+    }
+
+    function leaveForm(st, error) {
+        const b = balFor(st.from);
+        const odLeft = b.on_demand_left;
+        const [y, m] = st.month.split('-').map(Number);
+        const first = `${st.month}-01`;
+        const startPad = (new Date(first + 'T12:00:00').getDay() + 6) % 7;
+        const last = new Date(y, m, 0).getDate();
+        const months = lang === 'fr' ? ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+            : ['styczeń', 'luty', 'marzec', 'kwiecień', 'maj', 'czerwiec', 'lipiec', 'sierpień', 'wrzesień', 'październik', 'listopad', 'grudzień'];
+        const dows = lang === 'fr' ? ['lu', 'ma', 'me', 'je', 've', 'sa', 'di'] : ['pn', 'wt', 'śr', 'cz', 'pt', 'sb', 'nd'];
+        const cells = [];
+        for (let i = 0; i < startPad; i++) cells.push('<span></span>');
+        for (let n = 1; n <= last; n++) {
+            const d = `${st.month}-${String(n).padStart(2, '0')}`;
+            const off = d < leave.today || d > leave.max_date;
+            const cls = [isWork(d) ? '' : 'is-off', st.from && st.to && d > st.from && d < st.to ? 'is-in' : '', d === st.from || d === st.to ? 'is-end' : '', d === leave.today ? 'is-today' : ''].join(' ');
+            cells.push(`<button type="button" class="kiosk-cal-d ${cls}" data-day="${d}" ${off ? 'disabled' : ''}>${n}</button>`);
+        }
+        const prevM = m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, '0')}`;
+        const nextM = m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-leave-form">${leaveBack()}
+                <h2>${esc(t('leave_request_title'))}</h2><p class="kiosk-muted">${esc(t('leave_pick'))}</p>
+                <div class="kiosk-leave-types"><button type="button" class="kiosk-chip ${st.type === 'urlop' ? 'is-on' : ''}" data-type="urlop">${esc(t('leave_type_urlop'))}</button>
+                    <button type="button" class="kiosk-chip ${st.type === 'na_zadanie' ? 'is-on' : ''}" data-type="na_zadanie" ${odLeft ? '' : 'disabled'}>${esc(t('leave_type_od', {n: odLeft}))}</button></div>
+                <div class="kiosk-cal-head"><button type="button" class="kiosk-btn is-small" data-month="${prevM}" ${prevM < leave.today.slice(0, 7) ? 'disabled' : ''} aria-label="‹">‹</button>
+                    <b>${months[m - 1]} ${y}</b><button type="button" class="kiosk-btn is-small" data-month="${nextM}" ${nextM > leave.max_date.slice(0, 7) ? 'disabled' : ''} aria-label="›">›</button></div>
+                <div class="kiosk-cal">${dows.map(x => `<small>${x}</small>`).join('')}${cells.join('')}</div>
+                <div class="kiosk-leave-range"><div><small>${esc(t('leave_from'))}</small><b>${ldy(st.from)}</b></div><div><small>${esc(t('leave_to'))}</small><b>${ldy(st.to)}</b></div></div>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big is-primary" data-next ${st.from && st.to ? '' : 'disabled'}>${esc(t('next'))}</button></section>`;
+        bindBack();
+        el.querySelectorAll('[data-type]').forEach(x => x.addEventListener('click', () => leaveForm({...st, type: x.dataset.type})));
+        el.querySelectorAll('[data-month]').forEach(x => x.addEventListener('click', () => leaveForm({...st, month: x.dataset.month})));
+        el.querySelectorAll('[data-day]').forEach(x => x.addEventListener('click', () => {
+            const d = x.dataset.day;
+            // Pierwszy dotyk = od ; drugi = do (wcześniejszy dzień zaczyna od nowa).
+            if (!st.from || st.to || d < st.from) leaveForm({...st, from: d, to: null});
+            else leaveForm({...st, to: d});
+        }));
+        el.querySelector('[data-next]').addEventListener('click', () => {
+            if (st.from.slice(0, 4) !== st.to.slice(0, 4)) return leaveForm(st, t('leave_one_year'));
+            if (!countWork(st.from, st.to)) return leaveForm(st, t('leave_no_workdays'));
+            leaveSummary(st);
+        });
+    }
+
+    function leaveSummary(st, error) {
+        const b = balFor(st.from);
+        const n = countWork(st.from, st.to);
+        let cal = 0; for (let d = st.from; d <= st.to; d = addD(d, 1)) cal++;
+        const hol = (leave.holidays || []).filter(d => d >= st.from && d <= st.to && ![0, 6].includes(new Date(d + 'T12:00:00').getDay()));
+        const after = b.available - n;
+        const entitled = b.right + (b.adjust || 0) + b.carry - b.carry_lapsed;
+        const carryNote = b.carry_left ? t('leave_carry_first', {days: b.carry_left, date: ldy(b.carry_deadline)})
+            : (after > 0 ? t('leave_carry_next', {days: after, year: Number(st.from.slice(0, 4)) + 1, date: ldy(`${Number(st.from.slice(0, 4)) + 1}${b.carry_deadline.slice(4)}`)}) : '');
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-leave-form">${leaveBack()}
+                <h2>${ldy(st.from)}${st.to !== st.from ? ' – ' + ldy(st.to) : ''}</h2>
+                <p class="kiosk-muted">${esc(t('leave_span', {cal, work: n}))}${hol.length ? ' (' + esc(hol.map(ld).join(', ')) + ' ' + esc(t('leave_holiday')) + ')' : ''} · ${esc(st.type === 'urlop' ? t('leave_type_urlop') : t('leave_type_od', {n: b.on_demand_left}))}</p>
+                <div class="kiosk-leave-tiles is-4"><div><small>${esc(t('leave_entitled'))}</small><b>${entitled}</b></div><div><small>${esc(t('leave_taken'))}</small><b>${b.used + b.planned + b.pending}</b></div>
+                    <div><small>${esc(t('leave_this'))}</small><b>${n}</b></div><div class="${after < 0 ? 'is-bad' : ''}"><small>${esc(t('leave_after'))}</small><b>${after}</b></div></div>
+                ${carryNote ? `<p class="kiosk-leave-note">${esc(carryNote)}</p>` : ''}
+                <label class="kiosk-field"><span>${esc(t('leave_note'))}</span><input type="text" maxlength="255" data-note value="${esc(st.note || '')}"></label>
+                <p class="kiosk-error" data-error>${esc(error || '')}</p>
+                <button type="button" class="kiosk-btn kiosk-big is-primary" data-send ${after < 0 ? 'disabled' : ''}>${esc(t('leave_send'))}</button>
+                <p class="kiosk-muted kiosk-center">${esc(t('leave_send_help'))}</p></section>`;
+        bindBack();
+        const send = el.querySelector('[data-send]');
+        send.addEventListener('click', async () => {
+            send.disabled = true;
+            const note = el.querySelector('[data-note]').value;
+            try {
+                const r = await api('POST', '/kiosk/phone/leave', {type: st.type, from: st.from, to: st.to, note});
+                leave = await api('GET', '/kiosk/phone/leave');
+                leaveList(r.message || t('leave_sent'));
+            } catch (err) {
+                send.disabled = false;
+                el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message;
+            }
+        });
+    }
+
+    function leaveList(info) {
+        const b = leave.balances[String(leave.year)];
+        const st = {pending: ['is-warn', 'leave_status_pending'], approved: ['is-ok', 'leave_status_approved'], rejected: ['is-bad', 'leave_status_rejected'], cancelled: ['', 'leave_status_cancelled']};
+        // Zatwierdzone wnioski są już urlopem w kalendarzu : pokazujemy wpis z kalendarza (bez podwójnej linii).
+        const rows = leave.requests.filter(r => r.status !== 'approved').map(r => ({from: r.from, to: r.to, days: r.days, type: r.type, status: r.status, id: r.id, note: r.decision_note}))
+            .concat(leave.absences.map(a => ({from: a.from, to: a.to, days: a.days, type: a.type, status: 'approved'})))
+            .sort((a, c) => c.from.localeCompare(a.from));
+        el.innerHTML = header() + `<section class="kiosk-card kiosk-leave-form">${leaveBack()}
+                ${info ? `<p class="kiosk-status">${esc(info)}</p>` : ''}
+                <h2>${esc(t('leave_mine_title', {year: leave.year}))}</h2><p class="kiosk-muted">${esc(t('leave_balance_line', {left: b.remaining, total: b.right + (b.adjust || 0) + b.carry - b.carry_lapsed}))}</p>
+                <ul class="kiosk-leave-list">${rows.map(r => `<li><div><b>${ld(r.from)}${r.to !== r.from ? ' – ' + ld(r.to) : ''}</b> · ${r.days} ${esc(t('leave_days'))}${r.type === 'na_zadanie' ? ' (' + esc(t('leave_od_short')) + ')' : ''}
+                        ${r.status === 'rejected' && r.note ? `<span class="kiosk-muted">${esc(r.note)}</span>` : ''}</div>
+                    <span class="kiosk-tag ${st[r.status][0]}">${esc(t(st[r.status][1]))}</span>
+                    ${r.status === 'pending' ? `<button type="button" class="kiosk-btn is-small" data-cancel="${r.id}">${esc(t('leave_cancel'))}</button>` : ''}</li>`).join('') || `<li class="kiosk-muted">${esc(t('leave_none'))}</li>`}</ul>
+                <button type="button" class="kiosk-btn kiosk-big is-primary" data-leave-new>${esc(t('leave_request'))}</button></section>`;
+        bindBack();
+        el.querySelector('[data-leave-new]').addEventListener('click', () => leaveForm({type: 'urlop', from: null, to: null, month: leave.today.slice(0, 7)}));
+        el.querySelectorAll('[data-cancel]').forEach(x => x.addEventListener('click', async () => {
+            x.disabled = true;
+            try { await api('DELETE', '/kiosk/phone/leave/' + x.dataset.cancel); leave = await api('GET', '/kiosk/phone/leave'); leaveList(t('leave_cancelled')); }
+            catch (err) { x.disabled = false; alert(err.message); }
+        }));
     }
 
     function forget() {
@@ -166,7 +309,9 @@
                 <button type="button" class="kiosk-btn kiosk-big ${inside ? 'is-danger' : 'is-ok'}" data-clock-tap="${inside ? 'out' : 'in'}">${esc(t(inside ? 'clock_out' : 'clock_in'))}</button>
                 <p class="kiosk-error" data-error></p>
             </section>
+            <section class="kiosk-card kiosk-leave" data-leave-box></section>
             <button type="button" class="kiosk-btn is-small kiosk-phone-forget" data-forget>${esc(t('not_me'))}</button>`;
+        leaveBox();
         el.querySelector('[data-clock-tap]').addEventListener('click', (e) => {
             const direction = e.currentTarget.dataset.clockTap;
             const questions = me.questions?.[direction] || [];
@@ -227,14 +372,14 @@
         const ok = el.querySelector('[data-comp-sign]');
         const pad = signaturePad(el.querySelector('[data-pad]'), () => { ok.disabled = pad.empty(); });
         el.querySelector('[data-clear]').addEventListener('click', () => { pad.clear(); ok.disabled = true; });
-        el.querySelector('[data-comp-later]').addEventListener('click', () => message(done));
+        el.querySelector('[data-comp-later]').addEventListener('click', () => message(done, false, true));
         ok.addEventListener('click', async () => {
             ok.disabled = true;
             try {
                 await api('POST', `/kiosk/phone/comps/${c.id}/sign`, {image: pad.image()});
                 comps.shift();
                 if (comps.length) return renderComp(comps, done);
-                message(done + ' ' + t('comp_done'));
+                message(done + ' ' + t('comp_done'), false, true);
             } catch (err) {
                 ok.disabled = false;
                 el.querySelector('[data-error]').textContent = err.offline ? t('offline_retry') : err.message;
@@ -271,7 +416,7 @@
             // [262] Dzień wolny za nadgodziny zaproponowany przez kierownika : podpis zaraz po odbiciu.
             const me = await api('GET', '/kiosk/phone/me').catch(() => null);
             if (me && me.comp_days && me.comp_days.length) return renderComp(me.comp_days.slice(), done);
-            message(done);
+            message(done, false, true);
         } catch (err) {
             button.disabled = false;
             if (['PHONE_UNAUTHENTICATED', 'PHONE_REVOKED'].includes(err.code)) { forget(); return renderPeople(); }

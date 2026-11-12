@@ -89,6 +89,8 @@ final class TimeService
             'recovery_months' => max(1, (int) $this->params->get('time.recovery_months', '3')),
             'leave_days' => max(0, (int) $this->params->get('time.leave_days', '26')),
             'company' => trim($this->params->get('time.company_name', 'SL Food')) ?: 'SL Food',
+            'carry_until' => preg_match('/^\d{1,2}\.\d{1,2}$/', $c = trim($this->params->get('time.leave_carry_until', '01.06'))) ? $c : '01.06',
+            'leave_since' => max(2000, (int) $this->params->get('time.leave_since_year', '2026')),
         ];
     }
 
@@ -771,6 +773,10 @@ final class TimeService
         $staff = $this->repo->staff();
         $absences = [];
         foreach ($this->repo->absences($from, $to) as $a) $absences[(int) $a['id_employee']][] = $a;
+        // [288] Wnioski z telefonu do zatwierdzenia (kreskowane w kalendarzu).
+        $requests = [];
+        foreach ($this->repo->leaveRequests($from, $to) as $r) $requests[(int) $r['id_employee']][] = self::requestRow($r);
+        $pending = array_map([self::class, 'requestRow'], $this->repo->pendingLeaveRequests());
         $leave = $this->leaveBalances((int) substr($from, 0, 4), $now);
         $bank = $this->bankAll($now);
         $grid = [];
@@ -795,35 +801,59 @@ final class TimeService
                     if ($p['group_id'] !== null) $perGroupDay[$p['group_name']][$d] = ($perGroupDay[$p['group_name']][$d] ?? 0) + 1;
                 }
             }
-            $people[] = ['employee_id' => $id, 'name' => $p['name'], 'group' => $p['group_name'], 'absences' => $rows, 'bank' => $bank[$id]['bank'] ?? 0] + ($leave[$id] ?? []);
+            $people[] = ['employee_id' => $id, 'name' => $p['name'], 'group' => $p['group_name'], 'absences' => $rows, 'requests' => $requests[$id] ?? [],
+                'pending_days' => array_sum(array_map(fn($r) => $r['days'], array_filter($pending, fn($r) => $r['employee_id'] === $id))), 'bank' => $bank[$id]['bank'] ?? 0] + ($leave[$id] ?? []);
         }
         $warnings = [];
         foreach ($perGroupDay as $group => $byDay) {
             foreach ($byDay as $d => $n) if ($n > 1) $warnings[] = ['date' => $d, 'group' => $group, 'count' => $n];
         }
         usort($warnings, fn($a, $b) => [$a['date'], $a['group']] <=> [$b['date'], $b['group']]);
-        return ['from' => $from, 'to' => $to, 'days' => $grid, 'people' => $people, 'absent' => $perDay, 'warnings' => $warnings,
+        return ['from' => $from, 'to' => $to, 'days' => $grid, 'people' => $people, 'absent' => $perDay, 'warnings' => $warnings, 'pending' => $pending,
             'types' => array_diff_key(self::ABSENCE_TYPES, ['wn' => true]), 'rules' => $this->rules(), 'year' => (int) substr($from, 0, 4),
+            'holiday_dates' => array_keys(Holidays::between(substr($from, 0, 4) . '-01-01', ((int) substr($to, 0, 4) + 1) . '-12-31', ['PL'])),
+            'carry_deadline' => $this->carryDeadline((int) substr($from, 0, 4)),
             'prev' => date('Y-m-d', strtotime($from . ' -' . $days . ' days')), 'next' => date('Y-m-d', strtotime($from . ' +' . $days . ' days'))];
     }
 
     /**
-     * Soldes de congé de l'année : droit (n_time_leave ou time.leave_days), pris (jours ouvrés passés), prévus, reste ;
-     * « na żądanie » sur 4. @return array<int, array>
+     * Soldes de congé de l'année : droit (n_time_leave ou time.leave_days), korekta HR (n_time_leave_adjust), zaległy
+     * z poprzedniego roku (reste de l'année précédente, à prendre au plus tard le time.leave_carry_until — 01.06 — ;
+     * le congé pris dès le 1.01 consomme d'abord le zaległy, le reste est perdu après la date), pris (jours ouvrés
+     * passés), prévus, reste ; « na żądanie » sur 4. Le zaległy n'est calculé qu'à partir de l'année qui suit
+     * time.leave_since_year (avant : rien dans l'ERP, la korekta HR fixe le reste). @return array<int, array>
      */
     public function leaveBalances(int $year, ?int $now = null): array
     {
         $today = date('Y-m-d', $now ?? time());
+        $since = $this->rules()['leave_since'];
+        $carry = [];
+        $out = [];
+        for ($y = min($since, $year); $y <= $year; $y++) {
+            $out = $this->leaveYear($y, $carry, $today);
+            $carry = array_map(fn($o) => $o['carry_next'], $out);
+        }
+        return $out;
+    }
+
+    /** Une année : $carryIn = zaległy de chaque personne (jours restants de l'année précédente). */
+    private function leaveYear(int $year, array $carryIn, string $today): array
+    {
         $from = $year . '-01-01';
         $to = $year . '-12-31';
         $holidays = Holidays::between($from, $to, ['PL']);
         $rights = $this->repo->leaveRights();
+        $adjusts = $this->repo->leaveAdjusts($year);
         $default = $this->rules()['leave_days'];
+        $deadline = $this->carryDeadline($year);
+        $days = [];
         $out = [];
         foreach ($this->repo->staff() as $p) {
             $id = (int) $p['id'];
-            $out[$id] = ['right' => $rights[$id] ?? $default, 'custom_right' => isset($rights[$id]), 'used' => 0, 'planned' => 0, 'on_demand' => 0, 'l4' => 0];
+            $out[$id] = ['right' => $rights[$id] ?? $default, 'custom_right' => isset($rights[$id]), 'adjust' => $adjusts[$id] ?? 0, 'used' => 0, 'planned' => 0, 'on_demand' => 0, 'l4' => 0];
+            $days[$id] = 0;
         }
+        $before = [];
         foreach ($this->repo->absences($from, $to) as $a) {
             $id = (int) $a['id_employee'];
             if (!isset($out[$id])) continue;
@@ -832,13 +862,67 @@ final class TimeService
                 if (in_array($a['type'], self::LEAVE_TYPES, true)) {
                     $out[$id][$d <= $today ? 'used' : 'planned']++;
                     if ($a['type'] === 'na_zadanie') $out[$id]['on_demand']++;
+                    if ($d <= $deadline) $before[$id] = ($before[$id] ?? 0) + 1;
                 } elseif ($a['type'] === 'l4') {
                     $out[$id]['l4']++;
                 }
             }
         }
-        foreach ($out as &$o) $o['remaining'] = $o['right'] - $o['used'] - $o['planned'];
+        foreach ($out as $id => &$o) {
+            $carry = max(0, (int) ($carryIn[$id] ?? 0));
+            $carryUsed = min($carry, $before[$id] ?? 0);
+            $passed = $today > $deadline;
+            $own = $o['right'] + $o['adjust'];
+            $ownUsed = $o['used'] + $o['planned'] - $carryUsed;
+            $o += ['carry' => $carry, 'carry_used' => $carryUsed, 'carry_left' => $passed ? 0 : $carry - $carryUsed, 'carry_lapsed' => $passed ? $carry - $carryUsed : 0,
+                'carry_deadline' => $deadline, 'entitled' => $own + $carry];
+            $o['remaining'] = $own - $ownUsed + $o['carry_left'];
+            $o['own_left'] = $own - $ownUsed;
+            $o['carry_next'] = max(0, $own - $ownUsed);
+        }
+        unset($o);
         return $out;
+    }
+
+    /** Wniosek z telefonu (kalendarz, telefon). */
+    public static function requestRow(array $r): array
+    {
+        return ['id' => (int) $r['id'], 'employee_id' => (int) $r['id_employee'], 'name' => $r['name'] ?? null, 'type' => $r['type'], 'label' => self::ABSENCE_TYPES[$r['type']],
+            'short' => self::TYPE_SHORT[$r['type']], 'from' => $r['date_from'], 'to' => $r['date_to'], 'days' => (int) $r['days'], 'note' => $r['note'], 'status' => $r['status'],
+            'decision_note' => $r['decision_note'], 'created_at' => $r['created_at'], 'decided_at' => $r['decided_at']];
+    }
+
+    /** Date limite du zaległy de l'année (time.leave_carry_until, « JJ.MM », par défaut 01.06). */
+    public function carryDeadline(int $year): string
+    {
+        [$d, $m] = array_map('intval', explode('.', $this->rules()['carry_until'] . '.'));
+        return checkdate($m, $d, $year) ? sprintf('%04d-%02d-%02d', $year, $m, $d) : $year . '-06-01';
+    }
+
+    /**
+     * [288] HR : « zostało » wpisane w tabeli pracowników → korekta roku (différence entre le reste voulu et le reste
+     * calculé sans korekta). Le zaległy de l'année suivante en découle.
+     */
+    public function setLeaveRemaining(int $employeeId, int $remaining, ?int $userId, ?int $year = null, ?int $now = null): array
+    {
+        $this->employeeOrFail($employeeId);
+        if ($remaining < 0 || $remaining > 80) throw new CustomException('Zostało : od 0 do 80 dni.', 'errors', 422);
+        $year ??= (int) date('Y', $now ?? time());
+        $b = $this->leaveBalances($year, $now)[$employeeId] ?? throw new CustomException('Ta osoba nie jest aktywna.', 'errors', 422);
+        $adjust = $remaining - ($b['remaining'] - $b['adjust']);
+        if (abs($adjust) > 80) throw new CustomException('Korekta za duża (najwyżej ±80 dni).', 'errors', 422);
+        $this->repo->setLeaveAdjust($employeeId, $year, $adjust, $userId);
+        $this->log->record($userId, 'update', 'time_leave_adjust', $employeeId, ['year' => $year, 'days' => $b['adjust']], ['year' => $year, 'days' => $adjust, 'remaining' => $remaining], null);
+        return $this->leaveBalances($year, $now)[$employeeId];
+    }
+
+    /** Jours ouvrés (lun.–ven. hors fériés PL) entre deux dates incluses. */
+    public static function workdays(string $from, string $to): int
+    {
+        $holidays = Holidays::between($from, $to, ['PL']);
+        $n = 0;
+        for ($d = $from; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) if ((int) date('N', strtotime($d)) <= 5 && !isset($holidays[$d])) $n++;
+        return $n;
     }
 
     public function addAbsence(int $employeeId, string $type, string $from, string $to, ?string $note, ?int $userId, ?int $now = null): int
@@ -856,9 +940,7 @@ final class TimeService
         if ($type === 'na_zadanie') {
             $year = (int) substr($from, 0, 4);
             $bal = $this->leaveBalances($year, $now)[$employeeId] ?? ['on_demand' => 0];
-            $holidays = Holidays::between($from, $to, ['PL']);
-            $n = 0;
-            for ($d = $from; $d <= $to; $d = date('Y-m-d', strtotime($d . ' +1 day'))) if ((int) date('N', strtotime($d)) <= 5 && !isset($holidays[$d])) $n++;
+            $n = self::workdays($from, $to);
             if ($bal['on_demand'] + $n > self::ON_DEMAND_DAYS) throw new CustomException('Urlop na żądanie : najwyżej ' . self::ON_DEMAND_DAYS . ' dni w roku (wykorzystane ' . $bal['on_demand'] . ').', 'errors', 422);
         }
         return (int) $this->tx->execute(fn() => $this->insertAbsence($employeeId, $type, $from, $to, self::cleanNote($note), $userId));

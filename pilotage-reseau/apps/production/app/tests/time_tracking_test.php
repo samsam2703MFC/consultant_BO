@@ -113,6 +113,10 @@ try {
         'migration 169 (replayed twice): daily check of the clockings + monthly closing of the month');
     expectTm(\App\Core\Web\PageAccess::keyFor('/time/month') === 'time' && \App\Core\Web\Rail::itemFor('/time/overtime') === 'time' && isset(\App\Core\Web\PageAccess::HOME_PAGES['/time']), 'page access key, rail item and home page');
 
+    // [288] Wnioski o urlop, korekta salda, zaległy do 01.06 (rejouée deux fois).
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/178_leave_requests.sql')) as $sql) $pdo->exec($sql);
+    expectTm($pdo->query("SELECT value FROM n_prod_param WHERE code = 'time.leave_carry_until'")->fetchColumn() === '01.06', 'migration 178: carry-over deadline 01.06');
+
     // --- Personnes, pointages (semaine 2.11–8.11.2026 ; 11.11 férié PL)
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
     $pdo->exec("INSERT INTO production_employee (id, name, surname, cost, id_section) VALUES (1, 'Adam', 'Testowy', 0, 1), (2, 'Basia', 'Testowa', 0, 1), (3, 'Cezary', 'Testowy', 0, 1)");

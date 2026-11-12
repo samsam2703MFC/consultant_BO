@@ -272,6 +272,77 @@ final class TimeRepository extends WorkshopRepository
         return $stmt->rowCount() === 1;
     }
 
+    // [288] Korekta salda urlopu (HR) i wnioski o urlop z telefonu ---------------------------------------------
+
+    /** @return array<int, int> id_employee → jours (+/−) de l'année */
+    public function leaveAdjusts(int $year): array
+    {
+        $rows = $this->all('SELECT id_employee, days FROM n_time_leave_adjust WHERE year = ?', [$year]);
+        return array_map('intval', array_column($rows, 'days', 'id_employee'));
+    }
+
+    public function setLeaveAdjust(int $employeeId, int $year, int $days, ?int $userId): void
+    {
+        if ($days === 0) {
+            $this->db->prepare('DELETE FROM n_time_leave_adjust WHERE id_employee = ? AND year = ?')->execute([$employeeId, $year]);
+            return;
+        }
+        $this->db->prepare(
+            'INSERT INTO n_time_leave_adjust (id_employee, year, days, updated_by) VALUES (?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE days = VALUES(days), updated_by = VALUES(updated_by)'
+        )->execute([$employeeId, $year, $days, $userId]);
+    }
+
+    /** Wnioski nachodzące na okres (statuts au choix), avec le nom de la personne. */
+    public function leaveRequests(string $from, string $to, ?int $employeeId = null, array $statuses = ['pending']): array
+    {
+        $params = [$to, $from];
+        $where = '';
+        if ($employeeId !== null) { $where .= ' AND r.id_employee = ?'; $params[] = $employeeId; }
+        if ($statuses) { $where .= ' AND r.status IN (' . implode(',', array_fill(0, count($statuses), '?')) . ')'; array_push($params, ...$statuses); }
+        return $this->all(
+            "SELECT r.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name
+             FROM n_time_leave_request r JOIN n_prod_employee e ON e.id = r.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
+             WHERE r.date_from <= ? AND r.date_to >= ?{$where} ORDER BY r.date_from, r.id",
+            $params
+        );
+    }
+
+    public function pendingLeaveRequests(): array
+    {
+        return $this->all(
+            "SELECT r.*, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name
+             FROM n_time_leave_request r JOIN n_prod_employee e ON e.id = r.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
+             WHERE r.status = 'pending' ORDER BY r.date_from, r.id"
+        );
+    }
+
+    public function leaveRequest(int $id): ?array
+    {
+        return $this->all('SELECT * FROM n_time_leave_request WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    public function insertLeaveRequest(array $r): int
+    {
+        $this->db->prepare('INSERT INTO n_time_leave_request (id_employee, type, date_from, date_to, days, note, id_device) VALUES (?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$r['id_employee'], $r['type'], $r['date_from'], $r['date_to'], $r['days'], $r['note'] ?? null, $r['id_device'] ?? null]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    /** Décision (approved / rejected / cancelled) : seulement depuis « pending ». @return bool ligne changée */
+    public function decideLeaveRequest(int $id, string $status, ?string $note, ?int $absenceId, ?int $userId): bool
+    {
+        $st = $this->db->prepare("UPDATE n_time_leave_request SET status = ?, decision_note = ?, id_absence = ?, decided_by = ?, decided_at = NOW() WHERE id = ? AND status = 'pending'");
+        $st->execute([$status, $note, $absenceId, $userId, $id]);
+        return $st->rowCount() > 0;
+    }
+
+    /** Wnioski osoby (telefon : « Moje urlopy »), les plus récents d'abord. */
+    public function employeeLeaveRequests(int $employeeId, string $since): array
+    {
+        return $this->all('SELECT * FROM n_time_leave_request WHERE id_employee = ? AND date_to >= ? ORDER BY date_from DESC, id DESC LIMIT 30', [$employeeId, $since]);
+    }
+
     public function cancelComp(int $id): void
     {
         $this->db->prepare("UPDATE n_time_comp SET status = 'cancelled' WHERE id = ?")->execute([$id]);

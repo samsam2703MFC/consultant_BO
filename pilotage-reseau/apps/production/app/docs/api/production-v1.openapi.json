@@ -20394,6 +20394,211 @@
                 ]
             }
         },
+        "/kiosk/phone/leave": {
+            "get": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Urlop : saldo i wnioski / Congé : solde et demandes",
+                "operationId": "phoneLeave",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PhoneLeave"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "[288] Saldo de l'année (droit, korekta, zaległy jusqu'au 01.06, pris, prévu, reste, demandes en attente), fériés PL, demandes et congés de la personne.",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Wniosek o urlop od–do / Demande de congé du … au …",
+                "operationId": "phoneRequestLeave",
+                "responses": {
+                    "201": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LeaveRequestCreated"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/Error422"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "description": "Demande « do zatwierdzenia » : le kierownik produkcji valide dans Urlopy i dni wolne (cloche). Refus 422/409 LEAVE_REQUEST_REFUSED (solde, chevauchement, na żądanie 4/an).",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/LeaveRequestInput"
+                            }
+                        }
+                    }
+                },
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
+        "/kiosk/phone/leave/{id}": {
+            "delete": {
+                "tags": [
+                    "phone"
+                ],
+                "summary": "Anuluj wniosek / Annuler la demande",
+                "operationId": "phoneCancelLeave",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "status",
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "enum": [
+                                                "ok"
+                                            ]
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/LeaveRequestCancelled"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Error401"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Error403"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/Error404"
+                    },
+                    "409": {
+                        "$ref": "#/components/responses/Error409"
+                    },
+                    "500": {
+                        "$ref": "#/components/responses/Error500"
+                    }
+                },
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "$ref": "#/components/parameters/Lang"
+                    }
+                ],
+                "security": [
+                    {
+                        "phoneToken": [],
+                        "qrToken": []
+                    }
+                ]
+            }
+        },
         "/kiosk/employees/{id}/phones": {
             "delete": {
                 "tags": [
@@ -30610,6 +30815,110 @@
                     },
                     "questions": {
                         "$ref": "#/components/schemas/ClockQuestions"
+                    }
+                }
+            },
+            "PhoneLeave": {
+                "type": "object",
+                "properties": {
+                    "employee": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "today": {
+                        "type": "string"
+                    },
+                    "year": {
+                        "type": "integer"
+                    },
+                    "balances": {
+                        "type": "object",
+                        "description": "Par année : right, adjust, carry, carry_left, carry_lapsed, carry_deadline, used, planned, pending, remaining, available, on_demand_left",
+                        "additionalProperties": {
+                            "type": "object"
+                        }
+                    },
+                    "holidays": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "requests": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "absences": {
+                        "type": "array",
+                        "items": {
+                            "type": "object"
+                        }
+                    },
+                    "on_demand_max": {
+                        "type": "integer"
+                    },
+                    "carry_until": {
+                        "type": "string"
+                    },
+                    "max_date": {
+                        "type": "string"
+                    }
+                }
+            },
+            "LeaveRequestInput": {
+                "type": "object",
+                "required": [
+                    "type",
+                    "from",
+                    "to"
+                ],
+                "properties": {
+                    "type": {
+                        "type": "string",
+                        "enum": [
+                            "urlop",
+                            "na_zadanie"
+                        ]
+                    },
+                    "from": {
+                        "type": "string"
+                    },
+                    "to": {
+                        "type": "string"
+                    },
+                    "note": {
+                        "type": "string"
+                    }
+                }
+            },
+            "LeaveRequestCreated": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "days": {
+                        "type": "integer"
+                    },
+                    "message": {
+                        "type": "string"
+                    }
+                }
+            },
+            "LeaveRequestCancelled": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string"
                     }
                 }
             },
