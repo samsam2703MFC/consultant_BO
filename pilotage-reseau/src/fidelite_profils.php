@@ -455,8 +455,8 @@ function ep_fidelite_client(): array
     $x = fpProfilClient($C, $profils, $R, $au);
     $noms = fpNoms($sid, [$cid]);
     $m = fpMagasin($sid, false, false);
-    return ['shop' => (string) $sid, 'client' => $cid, 'nom' => $noms[$cid] ?? ('Client ' . $cid), 'du' => $du, 'au' => $au,
-        'profils' => fpProfils(true), 'moyenne' => $m['moyenne'], 'axes' => FP_AXES, 'familles' => FP_FAMILLES,
+    return ['shop' => (string) $sid, 'client' => $cid, 'nom' => $noms[$cid] ?? ('Client ' . $cid), 'du' => $du, 'au' => $au, 'fenetre' => $R['fenetre'],
+        'profils' => fpProfils(true), 'moyenne' => $m['moyenne'], 'axes' => FP_AXES, 'famillesLib' => FP_FAMILLES,
         'tk' => $C['tk'], 'eur' => round($C['eur'], 2), 'cmd' => $C['cmd'], 'parJour' => $parJour, 'moments' => $moment,
         'articles' => array_slice(array_map(static fn ($k, $v) => ['nom' => $k, 'q' => round($v, 1)], array_keys($art), $art), 0, 10),
         'parMois' => $parMois, 'tickets' => array_reverse($tickets), 'aLire' => $reste] + $x;

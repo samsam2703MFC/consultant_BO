@@ -22,7 +22,7 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -42,6 +42,8 @@
     prVue: 'mois', prFiltre: 'toutes', prM: null, prY: null, prTri: null, prTriAn: null, prOuv: {},
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
     // L'onglet Tâches (08/11/2026) : le filtre des checklists, celles dépliées, le guide (replié s'il a été replié), tous les retours.
+    // L'onglet Fidélité (12/11/2026) : le profil choisi pour les radars, le client dont la fiche est ouverte.
+    fdProfil: null, fdClient: /^\d+$/.test(q.get('client') || '') ? q.get('client') : null,
     tjF: 'tout', tjOuv: {}, tjRetTout: false, tjGuide: (function () { try { return localStorage.getItem('db.tjGuide') !== '0'; } catch (e) { return true; } })(),
     tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -140,6 +142,8 @@
     // Les temps morts : une lecture, le jour et sa semaine (07/11/2026).
     // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
     if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
+    // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
+    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); } else { lireAux(cleFD(), cheminFD(), force); } rendre(); return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
     if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
@@ -227,6 +231,7 @@
     if (EMBED) { u.searchParams.set('onglet', S.ppOnglet); }
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
+    if (S.vue === 'fidelite' && S.fdClient) { u.searchParams.set('client', S.fdClient); } else { u.searchParams.delete('client'); }
     if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
     history.replaceState(null, '', u.toString());
   }
@@ -5443,6 +5448,127 @@
       <span class="tm-leg-r">part de l’heure sans client <span class="tm-rampe">${TM_RAMPE.map(r => `<i style="background:${r[1]};color:${r[2]}">${r[3]}</i>`).join('')}</span> %</span></div>`;
   }
 
+  /* --- Fidélité (12/11/2026, maquettes B et C de docs/maquettes/fidelite-v3) --------------------------------------
+   * Les profils de fréquence du magasin, réglés au cockpit (ERP franchisé › Fidélité › Profils clients) : la part des
+   * clients scannés de chaque profil et, sous chaque vignette, sa condition ; les radars du profil choisi face à la
+   * moyenne ; les clients qui reviennent ; un clic ouvre la fiche du client, l'historique de son comportement.
+   * Lectures : /fidelite/profils/magasin?shop= et /fidelite/client?shop=&client= (API du panel, côté serveur). */
+  function cleFD() { return 'fd|' + S.shop; }
+  function cheminFD() { return '/fidelite/profils/magasin?shop=' + encodeURIComponent(S.shop); }
+  function cleFDC() { return 'fdc|' + S.shop + '|' + S.fdClient; }
+  function cheminFDC() { return '/fidelite/client?shop=' + encodeURIComponent(S.shop) + '&client=' + encodeURIComponent(S.fdClient); }
+  const FD_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
+  const FD_MOIS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+  /** Un radar : séries [{v:{axe:0..100}, c:couleur, fond:opacité, w:épaisseur}], axes {clé: libellé}. */
+  function fdRadar(series, axes, taille, maxv) {
+    const K = Object.keys(axes), n = K.length, cx = taille / 2, R = taille / 2 - 72, mx = maxv || 100;
+    const ang = i => -Math.PI / 2 + 2 * Math.PI * i / n;
+    const pt = (i, f) => (cx + R * f * Math.cos(ang(i))).toFixed(1) + ',' + (cx + R * f * Math.sin(ang(i))).toFixed(1);
+    let h = '';
+    [0.25, 0.5, 0.75, 1].forEach(f => { h += `<polygon points="${K.map((k, i) => pt(i, f)).join(' ')}" fill="none" stroke="var(--color-border-tertiary)"/>`; });
+    K.forEach((k, i) => {
+      const c = Math.cos(ang(i)), sn = Math.sin(ang(i));
+      h += `<line x1="${cx}" y1="${cx}" x2="${pt(i, 1).split(',')[0]}" y2="${pt(i, 1).split(',')[1]}" stroke="var(--color-border-tertiary)"/>`;
+      h += `<text x="${(cx + (R + 12) * c).toFixed(1)}" y="${(cx + (R + 12) * sn + (sn < -0.5 ? -4 : sn > 0.5 ? 12 : 4)).toFixed(1)}" font-size="11" text-anchor="${Math.abs(c) < 0.3 ? 'middle' : (c > 0 ? 'start' : 'end')}" fill="var(--color-text-muted)">${esc(axes[k])}</text>`;
+    });
+    series.filter(x => x && x.v).forEach(x => {
+      h += `<polygon points="${K.map((k, i) => pt(i, Math.min(mx, Math.max(2, x.v[k] || 0)) / mx)).join(' ')}" fill="${x.c}" fill-opacity="${x.fond}" stroke="${x.c}" stroke-width="${x.w}" stroke-linejoin="round"/>`;
+    });
+    return `<svg viewBox="0 0 ${taille} ${taille}" class="fd-radar" role="img">${h}</svg>`;
+  }
+  const fdDepuis = j => j == null ? '—' : (j === 0 ? 'aujourd’hui' : (j === 1 ? 'hier' : 'il y a ' + j + ' j'));
+  function fdLegende(a, b) { return `<div class="fd-leg"><span><i style="background:${a.c}"></i>${esc(a.lib)}</span><span><i style="background:var(--color-text-muted)"></i>${esc(b)}</span></div>`; }
+  function rendFidelite() {
+    if (S.fdClient) { return rendFideliteClient(); }
+    const k = cleFD(), d = S.aux[k];
+    if (S.err[k]) { return `<div class="db-err">Fidélité : ${esc(S.err[k])}</div>`; }
+    if (!d) { return `<div class="db-attente">Lecture des clients du magasin… la première ouverture relit les ${90} derniers jours de tickets.</div>`; }
+    if (d.error) { return `<div class="db-err">Fidélité : ${esc(d.error)}</div>`; }
+    const P = d.profils || [], N = d.scannes || 0;
+    const choisi = P.find(p => String(p.id) === String(S.fdProfil)) || P.find(p => p.clients > 0 && p.unite !== 'base') || P[0];
+    let h = `<div class="db-sec">Les profils des clients scannés<small>${nf(N, 0)} clients reconnus en caisse sur ${d.memoire} jours · ${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)}${d.tickets ? ', soit 1 sur ' + nf(Math.round(d.tickets / Math.max(1, d.identifies)), 0) : ''} · rythme lu sur ${d.fenetre} jours</small></div>`;
+    if (d.aLire) { h += `<div class="db-alerte">Lecture en cours : ${nf(d.aLire, 0)} journée(s) de tickets restent à lire — la page se complète à la prochaine ouverture.</div>`; }
+    h += `<div class="fd-tuiles">${P.map(p => {
+      const vide = !p.clients;
+      return `<button class="fd-tui${p === choisi ? ' on' : ''}${vide ? ' vide' : ''}" data-fdp="${esc(p.id)}">
+        <span class="fd-tn"><i style="background:${esc(p.couleur)}"></i>${esc(p.nom)}</span>
+        <b>${nf(p.part, 1)} %</b><span class="fd-n">${nf(p.clients, 0)} client${p.clients > 1 ? 's' : ''} sur ${nf(N, 0)}</span>
+        <span class="fd-bar"><i style="width:${Math.max(1.5, p.part)}%;background:${esc(p.couleur)}"></i></span>
+        <span class="fd-cond"><small>Condition</small>${esc(p.condition.charAt(0).toUpperCase() + p.condition.slice(1))}<em>${esc(p.equivalent)}</em></span>
+        ${vide ? '<span class="fd-vide">Aucun client à ce rythme pour l’instant.</span>' : `<span class="fd-kv"><span>Part du CA scanné</span><b>${fP(p.partCa)}</b><span>Panier moyen</span><b>${fU(p.panier)}</b><span>En commande</span><b>${fP0(p.commande)}</b><span>Dernier passage</span><b>${esc(fdDepuis(p.dernierPassage))}</b></span>`}</button>`;
+    }).join('')}</div>
+      <p class="fd-note">Les conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients). Cliquer une vignette affiche son profil dans les radars.</p>`;
+    const M = d.moyenne || {};
+    const serie = { c: choisi.couleur, lib: choisi.nom + ' · ' + nf(choisi.clients, 0) + ' client' + (choisi.clients > 1 ? 's' : '') };
+    h += `<div class="fd-g2"><div class="db-card fd-c"><div class="ct">Récurrence · ${esc(choisi.nom)}<span class="db-mini">0 au centre, 100 au bord</span></div>
+        ${fdRadar([{ v: M.radar, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: choisi.radar, c: choisi.couleur, fond: 0.16, w: 2.2 }], d.axes, 330)}${fdLegende(serie, 'Moyenne des ' + nf(N, 0) + ' clients')}</div>
+      <div class="db-card fd-c"><div class="ct">Type d’achat · ${esc(choisi.nom)}<span class="db-mini">part des articles, en %</span></div>
+        ${fdRadar([{ v: M.familles, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: choisi.familles, c: choisi.couleur, fond: 0.16, w: 2.2 }], d.familles, 330, 80)}${fdLegende(serie, 'Moyenne')}
+        ${d.sansFamilles ? `<p class="fd-note">${nf(d.sansFamilles, 0)} ticket(s) dont les articles restent à lire.</p>` : ''}</div></div>`;
+    const C = d.clients || [];
+    const nomP = id => (P.find(p => String(p.id) === String(id)) || {});
+    h += `<div class="db-sec">Les clients qui reviennent<small>au-dessus du profil de base · cliquer un client ouvre son historique</small></div>`;
+    h += C.length ? `<div class="db-card"><table class="fd-t"><thead><tr><th>Client</th><th>Profil</th><th class="n">Rythme</th><th>Dernier passage</th><th class="n">Panier</th><th>Achète surtout</th><th></th></tr></thead><tbody>${C.map(c => {
+      const p = nomP(c.profil), top = Object.entries(c.familles || {}).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 2).map(x => (d.familles[x[0]] || x[0]).toLowerCase() + ' ' + x[1] + ' %').join(', ');
+      return `<tr data-fdc="${esc(c.client)}"><td>${esc(c.nom)}</td><td><i class="fd-pt" style="background:${esc(p.couleur)}"></i>${esc(p.nom)}<small>${esc(p.condition || '')}</small></td>
+        <td class="n">${nf(c.rythme, 1)} / mois<small>${nf(c.passagesFenetre, 0)} passages en ${d.fenetre} j</small></td><td>${esc(fdDepuis(c.depuis))}</td>
+        <td class="n">${fU(c.eur / Math.max(1, c.tk))}</td><td>${esc(top || '—')}</td><td class="n"><span class="db-lien">Historique ›</span></td></tr>`;
+    }).join('')}</tbody></table></div>` : '<div class="db-alerte">Aucun client au-dessus du profil de base pour l’instant : les cartes scannées en caisse les feront apparaître.</div>';
+    return h;
+  }
+  function rendFideliteClient() {
+    const k = cleFDC(), d = S.aux[k];
+    let h = `<p class="fd-retour"><span class="db-lien" data-fdretour="1">‹ Retour aux profils</span></p>`;
+    if (S.err[k]) { return h + `<div class="db-err">Fiche client : ${esc(S.err[k])}</div>`; }
+    if (!d) { return h + '<div class="db-attente">Lecture de l’historique du client…</div>'; }
+    if (d.error) { return h + `<div class="db-err">${esc(d.error)}</div>`; }
+    const P = d.profils || [], p = P.find(x => x.id === d.profil) || {};
+    const fD2 = j => j.slice(8, 10) + '/' + j.slice(5, 7) + '/' + j.slice(0, 4);
+    h += `<div class="db-card fd-tete"><div class="fd-id"><span class="fd-av">${esc((d.nom || '?').charAt(0))}</span><div><b>${esc(d.nom)}</b><span>premier ticket reconnu le ${esc(fD2(d.premier))} · dernier passage ${esc(fdDepuis(d.depuis))}</span></div></div>
+      <div class="fd-k"><div><b style="color:${esc(p.couleur)}">${esc(p.nom || '—')}</b><span>${esc(p.condition || '')}<br>sur ${d.fenetre || 30} jours</span></div>
+        <div><b>${nf(d.passages, 0)}</b><span>passages<br>sur 180 jours</span></div><div><b>${fU(d.eur)}</b><span>dépensés<br>${fU(d.eur / Math.max(1, d.tk))} par passage</span></div>
+        <div><b>${nf(d.cmd, 0)} / ${nf(d.tk, 0)}</b><span>en commande<br>${nf(d.tk - d.cmd, 0)} au comptoir</span></div></div></div>`;
+    // Le profil mois par mois.
+    const mois = (d.parMois || []).map(m => { const q = P.find(x => x.id === m.profil) || {}; const mm = +m.mois.slice(5, 7);
+      return `<div class="fd-mo"><span>${esc(FD_MOIS[mm - 1].charAt(0).toUpperCase() + FD_MOIS[mm - 1].slice(1))}</span><span class="r">${nf(m.passages, 0)} passage${m.passages > 1 ? 's' : ''}</span><span><i class="fd-pt" style="background:${esc(q.couleur)}"></i>${esc(q.nom)}</span><small class="r">${m.jours < 28 ? 'sur ' + m.jours + ' jours · ' : ''}${nf(m.rythme, 1)} par mois</small></div>`; }).join('');
+    // Le calendrier : semaine par semaine, du lundi de son premier passage à aujourd'hui.
+    const T = (d.tickets || []).slice().reverse(), parJ = {};
+    T.forEach(t => { const j = t.quand.slice(0, 10); parJ[j] = parJ[j] || { e: 0, cmd: false, cpt: false }; parJ[j].e += t.montant; if (t.commande) { parJ[j].cmd = true; } else { parJ[j].cpt = true; } });
+    const iso = x => x.toISOString().slice(0, 10);
+    const deb = new Date(d.premier + 'T12:00:00'); deb.setDate(deb.getDate() - ((deb.getDay() + 6) % 7));
+    const fin = new Date(d.au + 'T12:00:00');
+    let cal = `<div class="fd-cal"><span></span>${FD_JOURS.map(j => `<span class="h">${j}</span>`).join('')}<span class="h">€</span>`;
+    const semaines = [];
+    for (let s0 = new Date(deb); s0 <= fin; s0.setDate(s0.getDate() + 7)) { semaines.push(new Date(s0)); }
+    semaines.slice(-14).forEach(s0 => {
+      let tot = 0, cases = '';
+      for (let i = 0; i < 7; i++) { const x = new Date(s0); x.setDate(s0.getDate() + i); const j = iso(x), v = parJ[j];
+        if (v) { tot += v.e; }
+        cases += j > d.au ? '<span class="c futur"></span>' : `<span class="c${v ? (v.cpt ? ' cpt' : ' cmd') : ''}" title="${v ? esc(j.slice(8, 10) + '/' + j.slice(5, 7) + ' : ' + fU(v.e)) : ''}">${v && v.e >= 10 ? nf(Math.round(v.e), 0) : ''}</span>`; }
+      cal += `<span class="s">${iso(s0).slice(8, 10)}/${iso(s0).slice(5, 7)}</span>${cases}<span class="t">${tot ? fU(tot) : '—'}</span>`;
+    });
+    cal += '</div>';
+    const mxJ = Math.max(1, ...(d.parJour || [0]));
+    const jours = `<div class="fd-bj">${(d.parJour || []).map((n, i) => `<div><i style="height:${Math.round(100 * n / mxJ)}%"></i><b>${n}</b><span>${FD_JOURS[i]}</span></div>`).join('')}</div>`;
+    const moments = Object.entries(d.moments || {}).filter(x => x[1]).sort((a, b) => b[1] - a[1]).map(x => x[0] + ' ' + x[1]).join(' · ');
+    const mxA = Math.max(1, ...(d.articles || []).map(a => a.q));
+    const art = (d.articles || []).slice(0, 7).map(a => `<div class="fd-hb"><span>${esc(a.nom)}</span><i><b style="width:${Math.round(100 * a.q / mxA)}%"></b></i><span class="n">${nf(a.q, 0)}</span></div>`).join('');
+    h += `<div class="fd-g3"><div class="db-card fd-c"><div class="ct">Son profil, mois par mois</div><div class="fd-mos">${mois}</div></div>
+      <div class="db-card fd-c"><div class="ct">Ses passages<span class="db-mini"><i class="fd-sq cmd"></i>commande <i class="fd-sq cpt"></i>comptoir · € par semaine</span></div>${cal}</div>
+      <div class="db-card fd-c"><div class="ct">Ses habitudes</div><p class="fd-lab">Jour de passage</p>${jours}<p class="fd-lab">Moment</p><p class="fd-mom">${esc(moments)}</p><p class="fd-lab">Ce qu’il prend</p>${art}</div></div>`;
+    const M = d.moyenne || {}, serie = { c: p.couleur || 'var(--color-primary)', lib: d.nom };
+    h += `<div class="fd-g3b"><div class="db-card fd-c"><div class="ct">Récurrence</div>${fdRadar([{ v: M.radar, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: d.radar, c: serie.c, fond: 0.16, w: 2.2 }], d.axes, 280)}${fdLegende(serie, 'Moyenne')}</div>
+      <div class="db-card fd-c"><div class="ct">Type d’achat</div>${fdRadar([{ v: M.familles, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: d.familles, c: serie.c, fond: 0.16, w: 2.2 }], d.famillesLib, 280, 80)}${fdLegende(serie, 'Moyenne')}</div>
+      <div class="db-card fd-c"><div class="ct">Ses tickets<span class="db-mini">du plus récent au plus ancien</span></div><div class="fd-tk"><table class="fd-t"><thead><tr><th>Date</th><th>Canal</th><th class="n">Montant</th><th>Articles</th></tr></thead><tbody>${(d.tickets || []).map(t => {
+        const dt = new Date(t.quand.replace(' ', 'T'));
+        return `<tr><td>${esc(t.quand.slice(8, 10) + '/' + t.quand.slice(5, 7))}<small>${FD_JOURS[(dt.getDay() + 6) % 7]} ${esc(t.quand.slice(11, 16))}</small></td><td>${t.commande ? 'Commande' : 'Comptoir'}</td><td class="n">${fU(t.montant)}</td><td>${esc((t.articles || []).join(', '))}</td></tr>`; }).join('')}</tbody></table></div></div></div>`;
+    return h;
+  }
+  function fdBrancher() {
+    $.querySelectorAll('[data-fdp]').forEach(b => b.addEventListener('click', () => { S.fdProfil = b.dataset.fdp; rendre(); }));
+    $.querySelectorAll('[data-fdc]').forEach(b => b.addEventListener('click', () => { S.fdClient = b.dataset.fdc; urlMaj(); charger(false); window.scrollTo(0, 0); }));
+    $.querySelectorAll('[data-fdretour]').forEach(b => b.addEventListener('click', () => { S.fdClient = null; urlMaj(); charger(false); }));
+  }
   function rendTempsMorts() {
     const cle = cleTM(), D = S.aux[cle];
     const dj = new Date(S.date + 'T12:00:00'), nomJ = JOUR_L[dj.getDay()];
@@ -5940,15 +6066,16 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
+      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button></div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'morts') { h += rendTempsMorts(); $.innerHTML = h; brancher(); return; }
+    if (S.vue === 'fidelite') { h += rendFidelite(); $.innerHTML = h; brancher(); fdBrancher(); return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
