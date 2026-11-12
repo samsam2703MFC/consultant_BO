@@ -1812,6 +1812,24 @@ noté) — qui, type, sujet et lien, **jamais le texte**. Follow-up : cloche du 
 `/ajax/hr/quick-note` (GET options, POST), `/ajax/hr/followups` (GET), `/ajax/hr/followups/{id}/done` (POST). Test :
 `tests/hr_quick_note_test.php`.
 
+### HR › Sukcesja (relève des départs) — 278
+
+Demande du 12/11/2026 (maquette 43 validée). Migration 173 : `n_hr_succession` (personne qui part, motif emerytura /
+wypowiedzenie / urlop / inne, date de départ, successeur ou remarque, responsable, statut active / done / cancelled,
+`auto`), `n_hr_succession_step` (5 étapes datées), `n_hr_succession_item` (cases à cocher ; `code = successor` = choix du
+successeur), `n_hr_succession_agenda` (passage progressif : 80 / 60 / 40 / 0 % du temps sur le poste) ; paramètre
+`hr.succession_months` (24, réglable 6–60 dans Ustawienia HR). Toute personne active dont la retraite (date de naissance +
+âge HR) tombe dans ce délai a un plan : montré à la volée sans écriture, enregistré par le cron du matin
+(`Bin/hr_followups.php`) ou dès la première action ; un plan annulé n'est pas recréé. Étapes à rebours sur les 12 mois
+avant le départ (comprimées s'il en reste moins) : 1. audit du poste et des savoirs, 2. recrutement / choix du successeur
+(choisir le successeur coche la case et ouvre l'étape 3), 3. formation en binôme, 4. passage progressif (aneks : seulement
+avec l'accord de la personne), 5. dernière passation et entretien final. Étape terminée quand toutes ses cases sont
+cochées ; plan terminé quand les 5 le sont. Responsable par défaut : le Kierownik produkcji ; ses étapes ouvertes
+apparaissent dans « Mój tydzień » 7 jours avant leur début ; étape en retard → cloche, une fois par semaine. Autres départs
+(« ＋ Dodaj odejście ») ajoutés à la main. Page `/hr/succession` (KPI, Gantt par personne, étapes et agenda) ; routes
+`/ajax/hr/succession` (GET, POST), `/ajax/hr/succession/{id}` (PUT : successeur, responsable, date de départ, statut),
+`/ajax/hr/succession/items/{id}` (POST). Test : `tests/hr_succession_test.php`.
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

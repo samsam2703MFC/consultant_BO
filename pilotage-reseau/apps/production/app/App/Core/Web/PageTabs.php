@@ -86,6 +86,7 @@ final class PageTabs
             ['/hr', 'Pracownicy', 'bi-people', true],
             ['/hr/documents', 'Dokumenty', 'bi-folder2'],
             ['/hr/templates', 'Szablony umów', 'bi-file-earmark-text'],
+            ['/hr/succession', 'Sukcesja', 'bi-arrow-left-right'],
             ['/hr/notes', 'Notatki miesiąca', 'bi-journal-text'],
             ['/hr/settings', 'Ustawienia HR', 'bi-sliders'],
         ]],

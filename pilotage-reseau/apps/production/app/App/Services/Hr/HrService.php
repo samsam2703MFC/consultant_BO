@@ -38,15 +38,16 @@ final class HrService
     public function rules(): array
     {
         return ['retire_k' => max(40, min(80, (int) $this->params->get('hr.retire_age_k', '60'))), 'retire_m' => max(40, min(80, (int) $this->params->get('hr.retire_age_m', '65'))),
-            'alert_days' => max(1, min(180, (int) $this->params->get('hr.alert_days', '30')))];
+            'alert_days' => max(1, min(180, (int) $this->params->get('hr.alert_days', '30'))),
+            'succession_months' => max(6, min(60, (int) $this->params->get('hr.succession_months', '24')))];
     }
 
     public function saveRules(array $in, int $userId): array
     {
-        foreach (['retire_k' => 'hr.retire_age_k', 'retire_m' => 'hr.retire_age_m', 'alert_days' => 'hr.alert_days'] as $k => $code) {
+        foreach (['retire_k' => 'hr.retire_age_k', 'retire_m' => 'hr.retire_age_m', 'alert_days' => 'hr.alert_days', 'succession_months' => 'hr.succession_months'] as $k => $code) {
             if (!array_key_exists($k, $in)) continue;
             $v = filter_var($in[$k], FILTER_VALIDATE_INT);
-            [$min, $max] = $k === 'alert_days' ? [1, 180] : [40, 80];
+            [$min, $max] = ['alert_days' => [1, 180], 'succession_months' => [6, 60]][$k] ?? [40, 80];
             if ($v === false || $v < $min || $v > $max) throw new CustomException("Wartość od {$min} do {$max}.", 'errors', 422, ['fields' => [$k => "Od {$min} do {$max}."]]);
             $this->params->setValue($code, (string) $v, $userId);
         }

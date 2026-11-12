@@ -388,14 +388,152 @@
         const f = (label, name, v, unit) => `<label class="hr-f"><span>${label}</span><span class="hr-unit"><input class="form-control form-control-sm" type="number" name="${name}" value="${v}" ${admin ? '' : 'disabled'}> ${unit}</span></label>`;
         body.innerHTML = `<form class="at-card hr-card hr-sec hr-settings" data-rules><h5>Ustawienia HR</h5><div class="hr-fields">
                 ${f('Wiek emerytalny — kobiety', 'retire_k', r.retire_k, 'lat')}${f('Wiek emerytalny — mężczyźni', 'retire_m', r.retire_m, 'lat')}
-                ${f('Przypomnienie przed końcem umowy i badań', 'alert_days', r.alert_days, 'dni')}</div>
+                ${f('Przypomnienie przed końcem umowy i badań', 'alert_days', r.alert_days, 'dni')}
+                ${f('Plan sukcesji, gdy do emerytury zostaje najwyżej', 'succession_months', r.succession_months, 'mies.')}</div>
                 ${admin ? '<div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-msg></span></div>' : '<p class="tm-sub">Ustawienia zmienia administrator.</p>'}
                 <p class="tm-sub">Podsumowanie notatek : ostatniego dnia miesiąca o 18:00, e-mailem do administratora (kto, ile notatek ; treść tylko w ERP).</p></form>`;
         const form = body.querySelector('[data-rules]');
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
-            try { await api('PUT', '/ajax/hr/rules', {retire_k: form.retire_k.value, retire_m: form.retire_m.value, alert_days: form.alert_days.value}); form.querySelector('[data-msg]').textContent = 'Zapisano.'; }
+            try { await api('PUT', '/ajax/hr/rules', {retire_k: form.retire_k.value, retire_m: form.retire_m.value, alert_days: form.alert_days.value, succession_months: form.succession_months.value}); form.querySelector('[data-msg]').textContent = 'Zapisano.'; }
             catch (x) { form.querySelector('[data-msg]').textContent = x.message; }
+        });
+    }
+
+    // ================================ Sukcesja (makieta 43) ================================
+    // Plan pokazany « na bieżąco » (virtual) zapisuje się przy pierwszej akcji : POST, potem akcja na zapisanym planie.
+    const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X', 'XI', 'XII'];
+    const STEP_COLORS = ['#8D1D2C', '#C17A2A', '#2E7D4F', '#6b5ea8', '#555'];
+    let sx = null;
+    let sxOpen = Number(new URLSearchParams(location.search).get('plan')) || null;
+
+    async function succession(view) {
+        sx = view || await api('GET', '/ajax/hr/succession');
+        const k = sx.kpi;
+        const active = sx.plans.filter(p => p.status === 'active');
+        const closed = sx.plans.filter(p => p.status !== 'active');
+        if (!sxOpen && active[0]) sxOpen = active[0].id || ('e' + active[0].employee_id);
+        body.innerHTML = `<div class="tm-kpis">
+                <div class="tm-kpi"><small>Emerytura ≤ ${sx.months / 12 === Math.round(sx.months / 12) ? (sx.months / 12) + (sx.months === 12 ? ' rok' : ' lata') : sx.months + ' mies.'}</small><b>${k.retire_soon}</b><span>plan uruchamiany automatycznie</span></div>
+                <div class="tm-kpi"><small>Plany w toku</small><b>${k.active}</b><span>${k.progress == null ? 'brak planów' : 'postęp ' + k.progress + ' %'}</span></div>
+                <div class="tm-kpi"><small>Etapy spóźnione</small><b class="${k.late ? 'hr-miss' : ''}">${k.late}</b><span>przypomnienie w dzwonku co tydzień</span></div>
+                <div class="tm-kpi"><small>Następcy wybrani</small><b>${k.successors} / ${k.active}</b><span>${k.active > k.successors ? 'rekrutacja w toku' : (k.active ? 'wszyscy wybrani' : '—')}</span></div></div>
+            <div class="tm-bar hr-bar"><span class="tm-sub">Emerytura : data urodzenia + wiek emerytalny (Ustawienia HR). Inne odejścia dodaj ręcznie.</span><span class="tm-spacer"></span>
+                <button type="button" class="btn btn-primary btn-sm" data-sx-add>＋ Dodaj odejście</button></div>
+            ${active.length ? active.map(planHtml).join('') : '<div class="at-card hr-card hr-sec"><p class="at-empty">Nikt nie odchodzi w najbliższym czasie — brak planów sukcesji.</p></div>'}
+            ${closed.length ? `<details class="hr-sx-closed"><summary>Zakończone i anulowane (${closed.length})</summary>${closed.map(planHtml).join('')}</details>` : ''}
+            <p class="hr-note">Zmiana wymiaru czasu pracy tylko za zgodą pracownika (aneks z <a href="${root}/hr/templates">szablonu</a>). Zadania etapów trafiają do « Mój tydzień » osoby odpowiedzialnej ;
+                spóźniony etap = przypomnienie w dzwonku. Nazwa : « Sukcesja » — obejmuje też odejścia inne niż emerytura (wypowiedzenie, długi urlop), dodawane ręcznie.</p>`;
+        body.querySelector('[data-sx-add]').addEventListener('click', addDeparture);
+        body.querySelectorAll('[data-sx-plan]').forEach(el => bindPlan(el));
+        const open = body.querySelector('.hr-sx.is-open');
+        if (open && new URLSearchParams(location.search).get('plan')) open.scrollIntoView({block: 'start'});
+    }
+
+    const keyOf = (p) => p.id || ('e' + p.employee_id);
+
+    function months(from, to) {
+        const out = [];
+        const a = new Date(from.slice(0, 7) + '-01T00:00:00'); const b = new Date(to + 'T00:00:00');
+        for (let t = new Date(a); t <= b && out.length < 25; t.setMonth(t.getMonth() + 1)) out.push(new Date(t));
+        return out;
+    }
+
+    function planHtml(p) {
+        const open = String(sxOpen) === String(keyOf(p));
+        const from = new Date(p.window_from + 'T00:00:00').getTime(); const to = new Date(p.window_to + 'T00:00:00').getTime();
+        const pos = (v) => Math.max(0, Math.min(100, (new Date(v + 'T00:00:00').getTime() - from) / Math.max(1, to - from) * 100));
+        const ms = months(p.window_from, p.window_to);
+        const iso = (m) => m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0') + '-01';
+        const head = ms.map((m, i) => `<span style="left:${pos(iso(m) < p.window_from ? p.window_from : iso(m))}%">${ROMAN[m.getMonth()]}${i === 0 || m.getMonth() === 0 ? ' ' + String(m.getFullYear()).slice(2) : ''}</span>`).join('');
+        const today = sx.today >= p.window_from && sx.today <= p.window_to ? `<i class="hr-sx-today" style="left:${pos(sx.today)}%" title="Dziś"></i>` : '';
+        const rows = p.steps.map((s, i) => {
+            const end = s.due >= p.window_to ? p.window_to : s.due;
+            return `<div class="hr-sx-row ${s.late ? 'is-late' : ''}"><div class="hr-sx-label"><b>${s.no}. ${esc(s.title)}</b><span class="tm-sub">${s.progress} %${s.done ? ' · zrobione' : s.late ? ' · <span class="hr-miss">spóźniony</span>' : s.current ? ' · w toku' : ''}</span></div>
+                <div class="hr-sx-track">${today}<div class="hr-sx-bar" style="left:${pos(s.start)}%;width:${Math.max(1.5, pos(end) - pos(s.start))}%;background:${STEP_COLORS[i]}" title="${d(s.start)} – ${d(s.due)}">
+                    <i style="width:${s.progress}%"></i><span>${d(s.start).slice(0, 5)} – ${d(s.due).slice(0, 5)}</span></div></div></div>`;
+        }).join('');
+        const people = sx.people.filter(x => x.id !== p.employee_id);
+        const opt = (list, cur, label) => list.map(x => `<option value="${x.id}" ${cur === x.id ? 'selected' : ''}>${esc(label(x))}</option>`).join('');
+        const editable = p.status !== 'cancelled';
+        const detail = open ? `<div class="hr-sx-detail">
+                <div class="hr-sx-form">
+                    <label class="hr-f"><span>Następca</span><select class="form-select form-select-sm" data-sx-field="successor_employee" ${editable ? '' : 'disabled'}><option value="">— do wyboru —</option>${opt(people, p.successor ? p.successor.id : null, x => x.name + (x.group ? ' · ' + x.group : ''))}</select></label>
+                    <label class="hr-f"><span>Uwagi o następcy (np. rekrutacja zewnętrzna)</span><input class="form-control form-control-sm" data-sx-field="successor_note" maxlength="200" value="${esc(p.successor_note || '')}" ${editable ? '' : 'disabled'}></label>
+                    <label class="hr-f"><span>Odpowiedzialny (Mój tydzień)</span><select class="form-select form-select-sm" data-sx-field="responsible_user" ${editable ? '' : 'disabled'}><option value="">—</option>${opt(sx.users, p.responsible ? p.responsible.id : null, x => x.name + (x.position ? ' · ' + x.position : ''))}</select></label>
+                    <label class="hr-f"><span>Data odejścia</span><input type="date" class="form-control form-control-sm" data-sx-field="departure_date" value="${p.departure}" ${editable ? '' : 'disabled'}></label>
+                </div>
+                <div class="hr-sx-steps">${p.steps.map(s => `<div class="hr-sx-step ${s.late ? 'is-late' : ''} ${s.done ? 'is-done' : ''}"><h6>Etap ${s.no} — ${esc(s.title.toLowerCase())}</h6>
+                    ${s.items.map(it => `<label class="hr-sx-item ${it.code ? 'is-auto' : ''}"><input type="checkbox" class="form-check-input" data-sx-item="${s.no}:${it.sort}" ${it.done ? 'checked' : ''} ${it.code || !editable ? 'disabled' : ''}>
+                        <span>${esc(it.label)}${it.done && it.done_name ? ` <span class="tm-sub">· ${esc(it.done_name)}</span>` : ''}</span></label>`).join('')}
+                    <p class="tm-sub">Odpowiedzialny : ${esc(p.responsible ? p.responsible.name || '—' : '—')} · ${d(s.start)} – termin ${d(s.due)}</p>
+                    </div>`).join('')}</div>
+                ${p.agenda.length ? `<div class="hr-sx-step hr-sx-agenda-box"><h6>Etap 4 — stopniowe przekazanie (agenda)</h6><table class="table table-sm hr-sx-agenda"><tbody>${p.agenda.map(a => `<tr><td class="text-nowrap">${d(a.from).slice(0, 5)} – ${d(a.to)}</td><td class="text-end text-nowrap">${a.pct} % na stanowisku</td><td>${esc(a.note)}</td></tr>`).join('')}</tbody></table>
+                    <p class="tm-sub">Zmiana wymiaru czasu pracy tylko za zgodą pracownika (aneks z <a href="${root}/hr/templates">szablonu</a>).</p></div>` : ''}
+                <div class="hr-actions">${p.status === 'cancelled' ? '<button type="button" class="btn btn-light btn-sm" data-sx-status="active">Przywróć plan</button>'
+                    : p.status === 'active' ? '<button type="button" class="btn btn-light btn-sm" data-sx-status="cancelled">Anuluj plan</button>' : ''}<span class="hr-msg" data-sx-msg></span></div></div>` : '';
+        return `<div class="at-card hr-card hr-sx ${open ? 'is-open' : ''}" data-sx-plan="${keyOf(p)}">
+            <div class="hr-sx-head"><b>${esc(p.name)}</b><span class="tm-sub">${[p.group, p.position].filter(Boolean).map(esc).join(' · ')}${p.group || p.position ? ' · ' : ''}${esc(p.reason_label.toLowerCase())} ${d(p.departure)}${p.retire_age ? ' (' + p.retire_age + ' lat)' : ''} · ${p.months_left ? 'za ' + p.months_left + ' mies.' : 'w tym miesiącu'}</span>
+                ${p.status === 'done' ? '<span class="hr-kind">zakończony</span>' : p.status === 'cancelled' ? '<span class="hr-kind">anulowany</span>' : ''}${p.auto ? '' : '<span class="hr-kind">ręcznie</span>'}
+                <span class="tm-spacer"></span><span>Następca : <b>${p.successor ? esc(p.successor.name) : (p.successor_note ? esc(p.successor_note) : 'do wyboru')}</b></span>
+                <span class="tm-sub text-nowrap">postęp ${p.progress} %</span>
+                <button type="button" class="btn btn-light btn-sm" data-sx-toggle>${open ? 'Zwiń' : 'Szczegóły etapów'}</button></div>
+            <div class="hr-sx-gantt"><div class="hr-sx-row hr-sx-months"><div class="hr-sx-label">Etap</div><div class="hr-sx-track">${head}</div></div>${rows}</div>${detail}</div>`;
+    }
+
+    /** Plan zapisany (dla planu pokazanego na bieżąco : utworzenie, potem odświeżone dane). */
+    async function ensure(p) {
+        if (p.id) return p;
+        const r = await api('POST', '/ajax/hr/succession', {employee_id: p.employee_id, reason: 'emerytura', auto: 1});
+        sx = r.view;
+        sxOpen = r.id;
+        return sx.plans.find(x => x.id === r.id);
+    }
+
+    function bindPlan(el) {
+        const key = el.dataset.sxPlan;
+        const plan = () => sx.plans.find(p => String(keyOf(p)) === key);
+        const msg = (t) => { const m = el.querySelector('[data-sx-msg]'); if (m) m.textContent = t; else alert(t); };
+        el.querySelector('[data-sx-toggle]').addEventListener('click', () => { sxOpen = String(sxOpen) === key ? null : key; succession(sx); });
+        el.querySelectorAll('[data-sx-field]').forEach(inp => inp.addEventListener('change', async () => {
+            try {
+                const p = await ensure(plan());
+                const v = inp.value === '' ? null : inp.value;
+                succession(await api('PUT', '/ajax/hr/succession/' + p.id, {[inp.dataset.sxField]: inp.type === 'select-one' && v !== null ? Number(v) : v}));
+            } catch (e) { msg(e.message); }
+        }));
+        el.querySelectorAll('[data-sx-item]').forEach(cb => cb.addEventListener('change', async () => {
+            try {
+                const p = await ensure(plan());
+                const [no, sort] = cb.dataset.sxItem.split(':').map(Number);
+                const it = p.steps.find(s => s.no === no).items.find(i => i.sort === sort);
+                succession(await api('POST', '/ajax/hr/succession/items/' + it.id, {done: cb.checked}));
+            } catch (e) { cb.checked = !cb.checked; msg(e.message); }
+        }));
+        el.querySelectorAll('[data-sx-status]').forEach(b => b.addEventListener('click', async () => {
+            if (b.dataset.sxStatus === 'cancelled' && !confirm('Anulować plan sukcesji ? Plan automatyczny nie wróci sam.')) return;
+            try { const p = await ensure(plan()); succession(await api('PUT', '/ajax/hr/succession/' + p.id, {status: b.dataset.sxStatus})); } catch (e) { msg(e.message); }
+        }));
+    }
+
+    function addDeparture() {
+        const reasons = Object.entries(sx.reasons).filter(([k]) => k !== 'emerytura').concat([['emerytura', sx.reasons.emerytura]]);
+        card.innerHTML = `<header class="tm-dialog-head"><h4 id="hrDialogTitle">Dodaj odejście</h4><button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
+            <form class="tm-dialog-body" data-sx-new>
+                <label class="hr-f"><span>Pracownik</span><select class="form-select form-select-sm" name="employee_id" required><option value="">—</option>${sx.people.map(x => `<option value="${x.id}">${esc(x.name + (x.group ? ' · ' + x.group : ''))}</option>`).join('')}</select></label>
+                <label class="hr-f"><span>Powód</span><select class="form-select form-select-sm" name="reason">${reasons.map(([k, l]) => `<option value="${k}">${esc(l)}</option>`).join('')}</select></label>
+                <label class="hr-f"><span>Data odejścia</span><input type="date" class="form-control form-control-sm" name="departure_date" required></label>
+                <p class="tm-sub">Etapy rozkładają się na 12 miesięcy przed odejściem (krócej, jeśli zostało mniej czasu).</p>
+                <div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Utwórz plan</button><span class="hr-msg" data-msg></span></div></form>`;
+        dialog.showModal();
+        card.querySelector('[data-close]').addEventListener('click', () => dialog.close());
+        card.querySelector('[data-sx-new]').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const f = e.target;
+            try {
+                const r = await api('POST', '/ajax/hr/succession', {employee_id: Number(f.employee_id.value), reason: f.reason.value, departure_date: f.departure_date.value});
+                dialog.close(); sxOpen = r.id; succession(r.view);
+            } catch (x) { f.querySelector('[data-msg]').textContent = x.message; }
         });
     }
 
@@ -469,5 +607,5 @@
     }
 
     dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
-    ({people, documents, notes, settings, templates}[tab] || people)().catch(e => { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
+    ({people, documents, notes, settings, templates, succession: () => succession()}[tab] || people)().catch(e => { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; });
 })();

@@ -10,6 +10,7 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/hr/notes', ['controller' => $c, 'method' => 'notesPage']);
     $r->addRoute('GET', '/hr/templates', ['controller' => $c, 'method' => 'templatesPage']);
     $r->addRoute('GET', '/hr/templates/{code:[a-z_]+}/docx', ['controller' => $c, 'method' => 'templateDocx']);
+    $r->addRoute('GET', '/hr/succession', ['controller' => $c, 'method' => 'successionPage']);
     $r->addRoute('GET', '/hr/settings', ['controller' => $c, 'method' => 'settingsPage']);
     $r->addRoute('GET', '/hr/document/{id:\d+}', ['controller' => $c, 'method' => 'download']);
 
@@ -30,6 +31,11 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/hr/quick-note', ['controller' => $c, 'method' => 'quickAdd']);
     $r->addRoute('GET', '/ajax/hr/followups', ['controller' => $c, 'method' => 'followups']);
     $r->addRoute('POST', '/ajax/hr/followups/{id:\d+}/done', ['controller' => $c, 'method' => 'followupDone']);
+    // [278] Sukcesja
+    $r->addRoute('GET', '/ajax/hr/succession', ['controller' => $c, 'method' => 'succession']);
+    $r->addRoute('POST', '/ajax/hr/succession', ['controller' => $c, 'method' => 'successionOpen']);
+    $r->addRoute('PUT', '/ajax/hr/succession/{id:\d+}', ['controller' => $c, 'method' => 'successionSave']);
+    $r->addRoute('POST', '/ajax/hr/succession/items/{id:\d+}', ['controller' => $c, 'method' => 'successionCheck']);
     // [276] Szablony umów
     $r->addRoute('GET', '/ajax/hr/templates', ['controller' => $c, 'method' => 'templateList']);
     $r->addRoute('PUT', '/ajax/hr/templates/{code:[a-z_]+}', ['controller' => $c, 'method' => 'templateSave']);

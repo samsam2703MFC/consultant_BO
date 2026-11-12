@@ -9,6 +9,7 @@ use App\Exceptions\CustomException;
 use App\Services\Hr\ContractTemplateService;
 use App\Services\Hr\HrQuickNoteService;
 use App\Services\Hr\HrService;
+use App\Services\Hr\HrSuccessionService;
 use App\Services\Organization\PageAccessService;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -21,7 +22,7 @@ final class HrController extends BaseController
     use JsonErrors;
 
     public function __construct(private HrService $hr, private PageAccessService $access, private ContractTemplateService $templates,
-        private HrQuickNoteService $quick)
+        private HrQuickNoteService $quick, private HrSuccessionService $succession)
     {
     }
 
@@ -43,6 +44,11 @@ final class HrController extends BaseController
     public function notesPage()
     {
         $this->view('hr/index', ['tab' => 'notes', 'is_admin' => $this->isAdmin()]);
+    }
+
+    public function successionPage()
+    {
+        $this->view('hr/index', ['tab' => 'succession', 'is_admin' => $this->isAdmin()]);
     }
 
     public function settingsPage()
@@ -163,6 +169,38 @@ final class HrController extends BaseController
     public function followupDone($id)
     {
         return $this->guarded(fn() => $this->quick->done((int) $id, $this->input(), $this->userId(), $this->isAdmin()));
+    }
+
+    // --- [278] Sukcesja (lecture sans écriture ; un plan affiché « à la volée » est enregistré à la première action)
+
+    public function succession()
+    {
+        return $this->guarded(fn() => $this->succession->view($this->userId()));
+    }
+
+    public function successionOpen()
+    {
+        return $this->guarded(function () {
+            $in = $this->input();
+            $id = $this->succession->open($in, $this->userId(), null, !empty($in['auto']));
+            return ['id' => $id, 'view' => $this->succession->view($this->userId())];
+        });
+    }
+
+    public function successionSave($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->succession->update((int) $id, $this->input(), $this->userId());
+            return $this->succession->view($this->userId());
+        });
+    }
+
+    public function successionCheck($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->succession->check((int) $id, !empty($this->input()['done']), $this->userId());
+            return $this->succession->view($this->userId());
+        });
     }
 
     // --- [276] Szablony umów (salaire, PESEL, adresse : accès « payroll »)

@@ -105,7 +105,7 @@ final class PositionTaskService
     public function __construct(private PositionRepository $positions, private ParamRepository $params, private PageAccessService $access,
         private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier,
         private \App\Repositories\Workshop\DevProductRepository $devProducts, private \App\Repositories\Hr\HrRepository $hrNotes,
-        private \App\Services\Hr\HrCipher $hrCipher)
+        private \App\Services\Hr\HrCipher $hrCipher, private \App\Repositories\Hr\HrSuccessionRepository $succession)
     {
     }
 
@@ -463,7 +463,7 @@ final class PositionTaskService
         usort($view['later'], fn($a, $b) => [$a['done'], $a['due']] <=> [$b['done'], $b['due']]);
         $view['totals'] = $this->weekTotals($view, $today);
         $view['today'] = $this->todayList($view, $today);
-        $view['flow'] = $this->flow($view, $today, array_merge($this->devItems($user, $today), $this->hrItems($userId, $today)));
+        $view['flow'] = $this->flow($view, $today, array_merge($this->devItems($user, $today), $this->hrItems($userId, $today), $this->successionItems($userId, $today)));
         return $view;
     }
 
@@ -490,6 +490,32 @@ final class PositionTaskService
                 'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
                 'minutes' => null, 'link' => '/hr/notes?note=' . (int) $r['id'], 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
                 'backup_for' => null, 'summary' => $kind . ' : ' . $topic, 'color' => '#8D1D2C', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
+                'stage' => null, 'dev' => null];
+        }
+        return $items;
+    }
+
+    /**
+     * [278] Sukcesja : étapes ouvertes des plans dont la personne est responsable, dès 7 jours avant leur début ;
+     * une ligne par étape (personne qui part, étape, terme), lien vers le plan ; terminée quand tout est coché.
+     */
+    private function successionItems(int $userId, DateTimeImmutable $today): array
+    {
+        try {
+            $rows = $this->succession->openSteps($userId, $today->modify('+7 days')->format('Y-m-d'));
+        } catch (\Throwable) {
+            return [];
+        }
+        $date = $today->format('Y-m-d');
+        $items = [];
+        foreach ($rows as $r) {
+            $due = (string) $r['due_date'];
+            $late = $due < $date ? (int) floor((strtotime($date) - strtotime($due)) / 86400) : 0;
+            $items[] = ['id' => null, 'task_id' => -2000000 - (int) $r['id'], 'title' => 'Sukcesja : ' . $r['name'] . ' — ' . $r['step_no'] . '. ' . $r['title'], 'short' => 'Sukcesja : ' . $r['name'],
+                'frequency' => 'Sukcesja', 'freq' => 'hr', 'status' => 'open', 'done' => false, 'late' => $late > 0, 'late_days' => $late, 'due' => $due, 'due_time' => null,
+                'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
+                'minutes' => null, 'link' => '/hr/succession?plan=' . (int) $r['id_plan'], 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
+                'backup_for' => null, 'summary' => 'Etap ' . $r['step_no'] . ' : ' . $r['title'], 'color' => '#8D1D2C', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
                 'stage' => null, 'dev' => null];
         }
         return $items;

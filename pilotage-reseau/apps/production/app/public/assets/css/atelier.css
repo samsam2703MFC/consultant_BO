@@ -3863,3 +3863,33 @@ button.rk-bar { cursor: pointer; } button.rk-bar:hover { background: #faf6f2; } 
 .hr-fu-list tr.is-late td { color: #C41E3A; }
 .hr-quick-in { float: right; margin-top: -3px; }
 @media (max-width: 900px) { .hr-qn { grid-template-columns: 1fr; } .hr-qn-r { border-left: 0; border-top: 1px solid #EFE9E2; } .hr-qn-2, .hr-fu-box { grid-template-columns: 1fr; } }
+
+/* [278] HR › Sukcesja (makieta 43) : karta planu, Gantt etapów w oknie przed odejściem, etapy z listą kontrolną. */
+.hr-sx { margin-bottom: 14px; padding: 0; overflow: hidden; }
+.hr-sx-head { display: flex; gap: 14px; align-items: center; flex-wrap: wrap; padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--at-line); }
+.hr-sx-gantt { font-size: 11.5px; }
+.hr-sx-row { display: grid; grid-template-columns: 240px 1fr; border-bottom: 1px solid var(--at-line-soft, #F0EBE4); }
+.hr-sx-row.is-late .hr-sx-label b { color: #C41E3A; }
+.hr-sx-label { padding: 7px 12px; display: flex; flex-direction: column; gap: 1px; }
+.hr-sx-months { background: #FBF9F6; color: #777; font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; }
+.hr-sx-months .hr-sx-track span { position: absolute; top: 8px; transform: translateX(2px); white-space: nowrap; }
+.hr-sx-track { position: relative; min-height: 34px; margin-right: 14px; }
+.hr-sx-bar { position: absolute; top: 6px; height: 22px; border-radius: 6px; color: #fff; font-weight: 600; overflow: hidden; display: flex; align-items: center; }
+.hr-sx-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: rgba(255, 255, 255, .22); }
+.hr-sx-bar span { position: relative; padding: 0 7px; white-space: nowrap; font-size: 10.5px; }
+.hr-sx-today { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1.5px dashed #8D1D2C; z-index: 1; }
+.hr-sx-detail { padding: 14px 16px; }
+.hr-sx-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px 14px; margin-bottom: 14px; }
+.hr-sx-steps { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.hr-sx-step { border: 1px solid var(--at-line); border-radius: 10px; padding: 10px 12px; }
+.hr-sx-step h6 { font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase; color: #777; margin: 0 0 8px; font-weight: 600; }
+.hr-sx-step.is-late { border-color: rgba(196, 30, 58, .45); }
+.hr-sx-step.is-done h6 { color: #2E7D4F; }
+.hr-sx-item { display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45; margin: 4px 0; }
+.hr-sx-item.is-auto { color: #555; font-style: italic; }
+.hr-sx-agenda { font-size: 12.5px; margin: 6px 0 4px; }
+.hr-sx-closed { margin: 6px 0 12px; }
+.hr-sx-closed summary { cursor: pointer; font-size: 13px; color: #666; margin-bottom: 10px; }
+@media (max-width: 900px) { .hr-sx-form { grid-template-columns: 1fr 1fr; } .hr-sx-row { grid-template-columns: 150px 1fr; } }
+.hr-sx-agenda-box { margin-top: 12px; }
+.hr-sx-agenda td:first-child { width: 170px; } .hr-sx-agenda td:nth-child(2) { width: 140px; }

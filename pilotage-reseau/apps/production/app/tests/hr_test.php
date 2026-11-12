@@ -39,7 +39,7 @@ function hrCode(callable $fn): string
 }
 
 expectHr(PageAccess::keyFor('/hr') === 'hr' && PageAccess::keyFor('/hr/notes') === 'hr' && !PageAccess::adminOnly('hr'), 'clé d\'accès « hr », attribuable à un poste');
-expectHr(Rail::itemFor('/hr/documents') === 'hr' && count(PageTabs::GROUPS['hr']['tabs']) === 5, 'entrée du rail et 5 onglets (dont Szablony umów)');
+expectHr(Rail::itemFor('/hr/documents') === 'hr' && count(PageTabs::GROUPS['hr']['tabs']) === 6 && PageAccess::keyFor('/hr/succession') === 'hr', 'entrée du rail et 6 onglets (dont Szablony umów, Sukcesja)');
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
 $source = getenv('TFB_TEST_SOURCE_DB') ?: 'erp';
