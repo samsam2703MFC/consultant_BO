@@ -16,6 +16,14 @@ body{margin:0;min-width:1680px;background:var(--papier);color:var(--encre);font:
 b,strong,h1,h2,h3,h4{font-weight:400}
 button,input{font:inherit;color:inherit}
 svg{display:block;width:100%;height:100%}
+/* Les dessins du design system : un trait rubis sur fond transparent. Blancs sur le rubis des bons. */
+/* Dessinés à 560 px, ils s'affichent autour de 40 : le trait s’épaissit d’un tiers de pixel de chaque côté pour rester lisible. */
+.ill img{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-drag:none;
+  filter:drop-shadow(.35px 0 0 #8D1D2C) drop-shadow(-.35px 0 0 #8D1D2C) drop-shadow(0 .35px 0 #8D1D2C) drop-shadow(0 -.35px 0 #8D1D2C)}
+.blanc img,.case.bon .ill img,.mc.bon .ill img,.toast.bon .ill img{
+  filter:brightness(0) invert(1) drop-shadow(.35px 0 0 #fff) drop-shadow(-.35px 0 0 #fff) drop-shadow(0 .35px 0 #fff) drop-shadow(0 -.35px 0 #fff)}
+.mc.bon.futur .ill img,.mc.bon.perdu .ill img,.mc.bon.proche .ill img{
+  filter:drop-shadow(.35px 0 0 #8D1D2C) drop-shadow(-.35px 0 0 #8D1D2C) drop-shadow(0 .35px 0 #8D1D2C) drop-shadow(0 -.35px 0 #8D1D2C)}
 
 /* La planche */
 .pl{padding:30px 48px 40px;max-width:1680px}
@@ -61,7 +69,7 @@ svg{display:block;width:100%;height:100%}
 .case.fete{background:var(--abricot-d)}
 .case .s{align-self:stretch;display:flex;justify-content:space-between;font-size:8.5px;color:var(--muet);letter-spacing:.02em;white-space:nowrap}
 .case .s span:first-child{color:var(--rubis)}
-.case .ill{width:36px;height:36px;margin:2px 0 2px}
+.case .ill{width:42px;height:42px;margin:1px 0 1px}
 .case .ti{font-size:10.5px;line-height:1.15;color:var(--encre)}
 .case .so{font-size:8.5px;line-height:1.2;color:var(--muet);margin-top:2px}
 .case .tag{white-space:nowrap;margin-top:3px;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--rubis);border:1px solid var(--rubis);border-radius:3px;padding:1px 4px}
@@ -69,7 +77,9 @@ svg{display:block;width:100%;height:100%}
 .case.bon{background:var(--rubis);color:#fff;box-shadow:inset -1.2px -1.2px 0 var(--rubis-f)}
 .case.bon .s span,.case.bon .s span:first-child{color:var(--abricot)}
 .case.bon .tag{background:var(--abricot);border-color:var(--abricot);color:var(--rubis)}
-.case.bon .ill{width:44px;height:44px;margin:0}
+.case.bon .ill{width:46px;height:46px;margin:0}
+.case.bon::before,.mc.bon::before{content:'';position:absolute;inset:4px;border:1px dashed rgba(242,201,160,.55);border-radius:4px;pointer-events:none}
+.mc.bon.futur::before,.mc.bon.perdu::before,.mc.bon.proche::before{border-color:rgba(141,29,44,.25)}
 .case.bon .ti{color:#fff}.case.bon .so{color:var(--abricot)}
 .ca-pied{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;margin-top:auto;padding-top:14px;align-items:end}
 .ca-comment h4{margin:0 0 4px;font-size:11px;color:var(--rubis);letter-spacing:.04em;text-transform:uppercase}
@@ -97,7 +107,7 @@ svg{display:block;width:100%;height:100%}
 .hero span em{font-style:normal;font-size:20px;color:var(--encre);display:block}
 .semaine{background:#fff;border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:center;border:1.4px dashed var(--rubis)}
 .semaine.faite{border-style:solid;border-color:var(--vert)}
-.semaine .ill{width:46px;height:46px}
+.semaine .ill{width:48px;height:48px}
 .semaine small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
 .semaine.faite small{color:var(--vert)}
 .semaine b{display:block;font-size:13.5px;margin-top:1px}
@@ -109,7 +119,7 @@ svg{display:block;width:100%;height:100%}
 .mc{position:relative;background:#fff;border-radius:10px;height:80px;padding:5px 4px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
 .mc.clic{cursor:pointer}.mc.clic:hover{outline:1px solid var(--pale)}
 .mc.fete{background:var(--abricot-d)}
-.mc .ill{width:34px;height:34px;margin:9px 12px 0 0}
+.mc .ill{width:38px;height:38px;margin:7px 12px 0 0}
 .mc .ti{font-size:8.4px;line-height:1.15;margin-top:3px;color:var(--encre)}
 .mc .d{position:absolute;top:4px;left:6px;font-size:7.5px;color:var(--muet)}
 .mc.futur{opacity:.42}
@@ -127,7 +137,7 @@ svg{display:block;width:100%;height:100%}
 .tampon i{font-style:normal;font-size:5.5px;margin-top:1px}
 .mc.bon{background:var(--rubis);color:#fff}
 .mc.bon .d{color:var(--abricot)}
-.mc.bon .ill{width:40px;height:40px;margin:8px 0 0}
+.mc.bon .ill{width:40px;height:40px;margin:7px 0 0}
 .mc.bon .ti{color:#fff;font-size:11px;margin-top:0}
 .mc.bon .bas{font-size:7.5px;color:var(--abricot);line-height:1.1}
 .mc.bon.futur,.mc.bon.perdu,.mc.bon.proche{background:#E9DCDD;opacity:1}
@@ -140,7 +150,7 @@ svg{display:block;width:100%;height:100%}
 .tampon.blanc{border-color:#fff;color:#fff;background:rgba(141,29,44,.35)}.tampon.blanc::before{border-color:#fff}
 .porte{background:#fff;border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center}
 .porte.vide{grid-template-columns:minmax(0,1fr);color:var(--muet);font-size:11px;padding:12px}
-.porte .ill{width:52px;height:52px}
+.porte .ill{width:52px;height:52px;border:1.2px dashed var(--rubis);border-radius:8px;padding:5px}
 .porte small{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
 .porte b{display:block;font-size:12.5px}
 .porte span{display:block;font-size:10px;color:var(--muet)}
@@ -149,8 +159,8 @@ svg{display:block;width:100%;height:100%}
 .nav span.on{color:var(--rubis)}
 .toast{position:absolute;top:8px;left:14px;right:14px;background:rgba(28,26,23,.94);color:#fff;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35;cursor:pointer;animation:descend .35s ease}
 .toast.bon{background:rgba(141,29,44,.97)}
-.toast .ill{width:30px;height:30px;background:var(--creme);border-radius:8px;padding:2px}
-.toast.bon .ill{background:var(--rubis);padding:0}
+.toast .ill{width:32px;height:32px;background:var(--creme);border-radius:8px;padding:3px}
+.toast.bon .ill{background:var(--rubis)}
 .toast small{display:block;font-size:9.5px;color:#cfc7bd;text-transform:uppercase;letter-spacing:.06em}
 @keyframes descend{from{transform:translateY(-30px);opacity:0}to{transform:none;opacity:1}}
 
@@ -172,7 +182,9 @@ svg{display:block;width:100%;height:100%}
 .annee{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
 .sa{background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:12px 14px}
 .sa.on{border-color:var(--rubis)}
-.sa h4{margin:0;display:flex;justify-content:space-between;font-size:14px}
+.sa h4{margin:0;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
+.sa h4 .ill{width:34px;height:34px;flex:none}
+.sa h4 span{flex:1}
 .sa h4 small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--rubis)}
 .sa .dt{font-size:11px;color:var(--muet);margin:2px 0 7px}
 .sa .ch{display:flex;flex-wrap:wrap;gap:4px}
@@ -265,7 +277,7 @@ function ticket(m){
 function semaineSuivante(){
   if (S.semaine > NS) { return; }
   S.semaine++; S.depense = 0; S.neuf = null;
-  S.toast = S.semaine > NS ? { ill: BONS_ILL.noeud, bon: true, txt: 'La carte d’hiver est terminée : la 13e semaine, le dernier bon se prend et la carte du printemps arrive.' } : null;
+  S.toast = S.semaine > NS ? { ill: ILL.valentin, bon: true, txt: 'La carte d’hiver est terminée : la 13e semaine, le dernier bon se prend et la carte du printemps arrive.' } : null;
   rendre();
 }
 function basculer(n){
@@ -329,7 +341,7 @@ function vueApp(){
   };
   const poche = B.filter(b => b.etat === 'pris').pop();
   const nB = B.filter(b => b.le).length;
-  const semaine = fini ? `<div class="semaine faite"><div class="ill">${BONS_ILL.noeud}</div><div><small>13e semaine · 15 – 21/02</small><b>La carte d’hiver est terminée</b><p>Le dernier bon se prend cette semaine ; la carte du printemps arrive lundi.</p></div></div>`
+  const semaine = fini ? `<div class="semaine faite"><div class="ill">${ILL.valentin}</div><div><small>13e semaine · 15 – 21/02</small><b>La carte d’hiver est terminée</b><p>Le dernier bon se prend cette semaine ; la carte du printemps arrive lundi.</p></div></div>`
     : `<div class="semaine${fait ? ' faite' : ''}"><div class="ill">${ILL[sem.ill]}</div><div><small>${fait ? 'Case cochée ✓' : 'Cette semaine'} · ${sem.du} – ${sem.au}</small><b>${sem.titre}</b>
       <div class="jauge"><i style="width:${pct.toFixed(0)}%"></i></div>
       <p>${fait ? eur(S.depense) + ' cette semaine. Rendez-vous lundi pour la case suivante.' : nf(S.depense, 2) + ' € sur ' + eur(S.seuil) + ' — encore ' + nf(S.seuil - S.depense, 2) + ' € d’ici dimanche et la case se coche toute seule.'}</p></div></div>`;
@@ -362,9 +374,9 @@ function vueRegles(){
     <div><span class="ic">13</span><div><b>La 13e semaine</b><p>Entre deux cartes : le dernier bon se prend, la carte de la saison suivante arrive. Quatre cartes font l’année.</p></div></div>
   </div>
   <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· 12 semaines + la 13e semaine</em></h3>
-  <div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><h4>${s.nom}<small>${s.etat}</small></h4>
+  <div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><h4><span class="ill">${s.img}</span><span>${s.nom}</span><small>${s.etat}</small></h4>
     <div class="dt">${s.du} → ${s.au} · relais ${s.cadeaux}</div><div class="ch">${s.fetes.map(f => `<span>${f}</span>`).join('')}</div></div>`).join('')}</div>
-  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons et le thème de chaque semaine sont des valeurs de départ.</p>`;
+  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons et le thème de chaque semaine sont des valeurs de départ. Les dessins sont ceux du design system (tablette des vendeuses) ; la Chandeleur n’a pas encore le sien : la brioche roulée la tient.</p>`;
 }
 
 function vueBarre(){

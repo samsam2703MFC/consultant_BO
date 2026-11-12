@@ -4,8 +4,18 @@ Demande du 12/11/2026 (Sam, après l'échange avec Natan et le bingo de Mix Brus
 bingo, une par saison, intégrer les fêtes spécifiques avec les illustrations ; le but est que ça se remplisse tout
 seul ; 10 € (variable) le point, un par semaine ».
 
-Complément du même jour : « toutes les x (variable) semaines, avec illustration, débloque un voucher », puis « faire
-un mock up HTML ».
+Compléments du même jour : « toutes les x (variable) semaines, avec illustration, débloque un voucher », « faire
+un mock up HTML », puis « use the illustration from the design system ».
+
+**Les illustrations sont celles du design system** : les dessins d'un seul trait rubis de la marque, rangés avec la
+tablette des vendeuses (`public/tablette/img` : `s/` les gammes et les fêtes, `p/` les produits, `d/` les
+boissons). Hiver (flocon), Saint-Nicolas, Noël et Nouvel An (sapin), Épiphanie (couronne), Saint-Valentin (cœurs),
+chocolat chaud, biscuits, petits fours (cupcake), baguette, part de gâteau, croissant ; Pâques, glace et feuille
+d'automne pour les trois autres saisons. Les bons reprennent le sapin, la couronne, le flocon et les cœurs, en blanc
+sur le rubis. **La Chandeleur n'a pas de dessin de crêpes** dans le design system : la brioche roulée
+(`p/rolls.png`) la tient en attendant le sien. Trois thèmes ont suivi les dessins disponibles : la semaine 1 devient
+« L'hiver commence » (au lieu du cougnou), la semaine 4 « Les biscuits de Noël » (au lieu du pain d'épices), le Blue
+Monday « une douceur pour le moral » (au lieu de l'éclair).
 
 **La maquette HTML** : `bingo-maquette.html`, un seul fichier (polices, logo, QR intégrés) qui s'ouvre partout.
 Interactive : x (2, 3 ou 4), le seuil, la valeur et la validité du bon se règlent dans la barre du haut ; « + ticket »
@@ -42,7 +52,8 @@ interaction), `bingo.js` (données et illustrations).
 
 ## Réel et illustré
 
-Réel : les dates et les jours de la semaine des fêtes (vérifiés), le logo, les polices et les couleurs de la marque.
+Réel : les dates et les jours de la semaine des fêtes (vérifiés), le logo, les polices, les couleurs et les
+illustrations de la marque.
 Illustré : la cliente (Julie, 6 cases sur 12 le jeudi 14/01/2027, la semaine du Nouvel An manquée, deux bons
 débloqués dont un utilisé), les montants, les codes de bon, le numéro de carte. Le QR ne pointe vers rien.
 
@@ -67,3 +78,4 @@ débloqués dont un utilisé), les montants, les codes de bon, le numéro de car
 3. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
 4. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
 5. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
+6. Le dessin de la Chandeleur (des crêpes), et un cougnou pour l'Avent, à ajouter au design system.
