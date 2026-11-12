@@ -1,0 +1,8 @@
+{
+  "titre": "Réunion Objectif 2027 — marge pâtisserie, standard réseau, outils de gestion",
+  "objet": "Rapport de réunion Objectif 2027 : offre produit, process identiques dans les 4 magasins, prix, gammes, développement du réseau",
+  "resume": "Rapport de la réunion Objectif 2027, au gabarit A des documents du design system. Le but de 2027 : améliorer l'offre produit et avoir des process identiques dans tous les magasins. Chiffres lus en lecture seule sur l'API du cockpit le 7 novembre 2026 ; la source du texte est rapport.md, tenue à jour avec le doc de la réunion, et generer.py refait le PDF.",
+  "reunion": "Objectif 2027",
+  "chiffres": "07/11/2026",
+  "magasins": "Corbais, Gosselies, Halle, Sombreffe"
+}

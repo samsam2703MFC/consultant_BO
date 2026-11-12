@@ -1,0 +1,244 @@
+# Rapport de réunion « Objectif 2027 » : rapport.md (tenu à jour avec le doc de la réunion) rendu en PDF A4 au gabarit
+# des documents de gestion du design system, version A (docs/design-system/DESIGN_SYSTEM.md, §13.4) : Gotham seule
+# (400 = Gotham_Medium, 700 = Gotham_Regular), Ruby #8D1D2C pour le filet d'en-tête et les encadrés, texte sans gras,
+# nombres à droite, en-têtes de tableau en petites capitales, pied « Page n / N ». Chromium (Playwright) compose le PDF.
+#
+#   python3 docs/dossiers/objectif-2027/generer.py
+#
+# Syntaxe de rapport.md : # titre · ## section · paragraphes · - puces · 1. listes · - [ ] tâches · tableaux | a | b |
+# · > [Libellé] encadré (lignes « > - » = puces de l'encadré) · ~ note en petit · $$ formule · {{figure}}.
+import base64, datetime, html, json, os, re, subprocess, sys, tempfile
+
+ICI = os.path.dirname(os.path.abspath(__file__))
+RACINE = os.path.abspath(os.path.join(ICI, '..', '..', '..'))
+FONTS = os.path.join(RACINE, 'public', 'assets', 'ds', 'fonts')
+LOGO = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(RACINE, 'public', 'assets', 'img', 'logo.png'), 'rb').read()).decode()
+SOURCE = os.path.join(ICI, 'rapport.md')
+HTML_OUT = os.path.join(tempfile.gettempdir(), 'objectif-2027-rapport.html')   # page intermédiaire, hors dépôt
+PDF_OUT = os.path.join(ICI, 'Objectif-2027-rapport-reunion.pdf')
+META = json.load(open(os.path.join(ICI, 'dossier.json'), encoding='utf-8'))
+
+INK, MUTED, FAINT, LINE, HEAD, RUBY = '#1c1a17', '#7a736a', '#b8b2a8', '#e6e0d8', '#fbf9f5', '#8D1D2C'
+H = lambda s: html.escape(str(s), quote=True)
+
+# --- Figures (mêmes données que les visuels du doc)
+def fig_patisserie():
+    cats = [('e46', 'Entremets 4/6 pers.', RUBY, '#ffffff'), ('e180', 'Entremets Ø 180', '#78554B', '#ffffff'),
+            ('eind', 'Entremets individuels', '#F2C9A0', INK), ('pind', 'Pâtisserie individuelle', FAINT, INK),
+            ('autres', 'Autres', LINE, INK)]
+    mags = [('Corbais', 1757750, {'e46': 35671, 'e180': 21321, 'eind': 26534, 'pind': 11924, 'autres': 4987}),
+            ('Halle', 646201, {'e46': 15128, 'e180': 11609, 'eind': 6285, 'pind': 8339, 'autres': 0}),
+            ('Sombreffe', 649050, {'e46': 9800, 'e180': 7551, 'eind': 12355, 'pind': 7797, 'autres': 3586}),
+            ('Gosselies', 660000, {'e46': 5149, 'e180': 5940, 'eind': 8207, 'pind': 6557, 'autres': 8982})]
+    W, x0, span, y0, bh, step = 680, 90, 430, 46, 26, 40
+    mx = max(sum(v.values()) for _, _, v in mags)
+    out = [f'<svg viewBox="0 0 {W} {y0 + step * len(mags) + 6}" class="fig" role="img" aria-label="Poids de la pâtisserie par magasin">']
+    lx = 0
+    for k, nom, c, _ in cats:
+        out.append(f'<rect x="{lx}" y="6" width="10" height="10" fill="{c}"/><text x="{lx + 15}" y="15" class="lg">{H(nom)}</text>')
+        lx += len(nom) * 5.6 + 34
+    for i, (m, caMag, v) in enumerate(mags):
+        y = y0 + i * step; cx = x0; t = sum(v.values())
+        out.append(f'<text x="0" y="{y + bh / 2 + 4}" class="mg">{H(m)}</text>')
+        for k, nom, c, enc in cats:
+            w = v[k] / mx * span
+            if w <= 0: continue
+            out.append(f'<rect x="{cx:.1f}" y="{y}" width="{max(w - 1, 0):.1f}" height="{bh}" fill="{c}"/>')
+            if w >= 40:
+                out.append(f'<text x="{cx + w / 2:.1f}" y="{y + bh / 2 + 4}" text-anchor="middle" class="vl" fill="{enc}">{round(v[k] / 1000)} k€</text>')
+            cx += w
+        pct = f'{t / caMag * 100:.1f}'.replace('.', ',')
+        out.append(f'<text x="{cx + 8:.1f}" y="{y + bh / 2 + 4}" class="tt">{round(t / 1000)} k€ · {pct} % du CA</text>')
+    out.append('</svg>')
+    return ('<figure class="figure">' + ''.join(out) +
+            '<figcaption>CA HT par an, hors tartes, tartissières et cakes · Autres = gâteaux d’anniversaire, mignardises, desserts · '
+            'pièces vendues × prix HT actuel, 3 août → 7 novembre 2026, annualisé.</figcaption></figure>')
+
+def fig_feuille_de_route():
+    voies = ['Gamme pâtisserie', 'Réseau et process', 'Outils (développement continu)']
+    trim = [('T1 2027', 'janv. – mars', [['Recettes complètes au panel', 'Prix usine du gâteau 12 parts', 'Test à la part : 1 magasin', 'Coupes de gamme arrêtées', 'Kit décor anniversaire unique'],
+                                        ['Corbais et Sombreffe : 80 % des tâches sur la tablette', 'Avenant +0,5 % signé', 'Tenue et packaging choisis'],
+                                        ['Cockpit : coefficient réel par produit, 5+1 compris']]),
+            ('T2 2027', 'avr. – juin', [['Vente à la part : 4 magasins', 'Grille de prix unique', 'Entremets revus à ×3'],
+                                       ['Majoration en vigueur', '1re formation franchisé : 4 semaines, 4 magasins', 'Tenue et packaging en place'],
+                                       ['Tablette : invendus à la part', 'Parcours stagiaire 4 semaines']]),
+            ('T3 2027', 'juil. – sept.', [['Reste de la gamme à ×3', 'Bilan des marges à 6 mois'], ['Contrôle des SOP au scoring trimestriel'],
+                                         ['Alerte sous 80 % de tâches', 'Brouillon de mise en demeure']]),
+            ('T4 2027', 'oct. – déc.', [['Gamme des fêtes à ×3', 'Bilan 2027, gamme 2028'], ['Décision sur la grille de redevances'],
+                                       ['Commande à l’usine depuis la tablette']])]
+    rows = ['<tr><th class="q"></th>' + ''.join(f'<th>{H(v)}</th>' for v in voies) + '</tr>']
+    for n, (t, mois, cases) in enumerate(trim):
+        rows.append(f'<tr><td class="q"><span class="qt">{H(t)}</span><span class="qm">{H(mois)}</span></td>' +
+                    ''.join('<td><div class="case">' + ''.join(f'<div>{H(x)}</div>' for x in c) + '</div></td>' for c in cases) + '</tr>')
+        if n == 0:
+            rows.append('<tr class="gate"><td></td><td colspan="3"><span class="losange"></span>Décision : étendre la vente à la part si le ×3 est tenu</td></tr>')
+    return ('<figure class="figure"><table class="fdr">' + ''.join(rows) + '</table>'
+            '<figcaption>Feuille de route 2027 proposée · 3 chantiers × 4 trimestres, 1 décision.</figcaption></figure>')
+
+FIGURES = {'patisserie-par-magasin': fig_patisserie, 'feuille-de-route': fig_feuille_de_route}
+
+# --- Markdown du rapport → HTML
+NUM = re.compile(r'^[+−\-]?(\d|×)')
+def typo(s):
+    # Espaces insécables (design system §13.1) : milliers en espace fine, avant €, %, k€, M€ et la ponctuation haute.
+    for _ in range(3):
+        s = re.sub(r'(\d) (\d{3})(?!\d)', '\\1\u202f\\2', s)
+    s = re.sub(r'(\d) (€|%|k€|M€|h\b|pièces|parts|références|semaines|jours|mois|magasins)', '\\1\u00a0\\2', s)
+    s = re.sub(r' ([:;?!»])', '\u00a0\\1', s)
+    s = re.sub(r'« ', '«\u00a0', s)
+    s = re.sub(r'\b(n°|T[1-4]|×) (\d)', '\\1\u00a0\\2', s)
+    return s
+
+def inline(s):
+    s = H(typo(s))
+    return re.sub(r'\*\*(.+?)\*\*', r'\1', s)          # pas de gras dans le texte (design system §4.3)
+
+def cellule(s, entete=False):
+    s = s.strip(); cls = ' class="num"' if (not entete and NUM.match(s) and len(s) < 34) else ''
+    return f'<{"th" if entete else "td"}{cls}>{inline(s)}</{"th" if entete else "td"}>'
+
+def tableau(lignes):
+    rows = [[c for c in l.strip().strip('|').split('|')] for l in lignes]
+    head, body = rows[0], rows[2:]
+    cls = ' '.join(c for c in ('large' if len(head) >= 6 else '', 'court' if len(body) <= 7 else '') if c)
+    out = [f'<table class="{cls}"><thead><tr>' + ''.join(cellule(c, True) for c in head) + '</tr></thead><tbody>']
+    for r in body:
+        out.append('<tr>' + ''.join(cellule(c) for c in r) + '</tr>')
+    out.append('</tbody></table>')
+    return ''.join(out)
+
+def liste(lignes, ordonnee):
+    items = []
+    for l in lignes:
+        t = re.sub(r'^\s*(-|\d+\.)\s+', '', l)
+        if t.startswith('[ ] ') or t.startswith('[x] '):
+            items.append(f'<li class="tache"><span class="case-a-cocher"></span>{inline(t[4:])}</li>')
+        else:
+            items.append(f'<li>{inline(t)}</li>')
+    tag = 'ol' if ordonnee else 'ul'
+    cls = ' class="taches"' if any('tache' in i for i in items) else ''
+    return f'<{tag}{cls}>' + ''.join(items) + f'</{tag}>'
+
+def encadre(lignes):
+    texte = [re.sub(r'^>\s?', '', l) for l in lignes]
+    m = re.match(r'^\[(.+?)\]\s*(.*)$', texte[0])
+    label, premier = (m.group(1), m.group(2)) if m else ('', texte[0])
+    corps = [premier] + texte[1:]
+    paras = [l for l in corps if not l.startswith('- ')]; puces = [l for l in corps if l.startswith('- ')]
+    out = '<div class="box">' + (f'<div class="label">{inline(label)}</div>' if label else '')
+    out += ''.join(f'<p>{inline(p)}</p>' for p in paras if p.strip())
+    if puces: out += liste(puces, False)
+    return out + '</div>'
+
+def rendre(md):
+    blocs, titre, cur = [], '', []
+    lignes = md.split('\n')
+    i = 0
+    while i < len(lignes):
+        l = lignes[i]
+        if not l.strip(): i += 1; continue
+        if l.startswith('# '): titre = l[2:].strip(); i += 1; continue
+        if l.startswith('## '): blocs.append(f'<h2>{inline(l[3:].strip())}</h2>'); i += 1; continue
+        if l.startswith('{{') and l.strip().endswith('}}'): blocs.append(FIGURES[l.strip()[2:-2]]()); i += 1; continue
+        if l.startswith('$$'): blocs.append(f'<div class="formule">{inline(l[2:].strip())}</div>'); i += 1; continue
+        if l.startswith('~ '): blocs.append(f'<p class="note">{inline(l[2:])}</p>'); i += 1; continue
+        groupe = []
+        if l.startswith('|'):
+            while i < len(lignes) and lignes[i].startswith('|'): groupe.append(lignes[i]); i += 1
+            blocs.append(tableau(groupe)); continue
+        if l.startswith('>'):
+            while i < len(lignes) and lignes[i].startswith('>'): groupe.append(lignes[i]); i += 1
+            blocs.append(encadre(groupe)); continue
+        if re.match(r'^(-|\d+\.)\s', l):
+            ordonnee = bool(re.match(r'^\d+\.', l))
+            while i < len(lignes) and re.match(r'^(-|\d+\.)\s', lignes[i]): groupe.append(lignes[i]); i += 1
+            blocs.append(liste(groupe, ordonnee)); continue
+        while i < len(lignes) and lignes[i].strip() and not re.match(r'^(#|\||>|-\s|\d+\.\s|~ |\$\$|\{\{)', lignes[i]):
+            groupe.append(lignes[i].strip()); i += 1
+        blocs.append(f'<p>{inline(" ".join(groupe))}</p>')
+    # Un titre ne reste jamais seul en bas de page : il part avec le début de sa section (le bloc qui suit, et le
+    # suivant s'il est court) ; la première annexe ouvre une nouvelle page.
+    out, i, annexe = [], 0, False
+    while i < len(blocs):
+        b = blocs[i]
+        if b.startswith('<h2>'):
+            if b.startswith('<h2>Annexe') and not annexe: b = b.replace('<h2>', '<h2 class="saut">', 1); annexe = True
+            g = [b] + blocs[i + 1:i + 2]
+            if i + 2 < len(blocs) and re.match(r'<(table class="[^"]*court|figure|div class="box"|div class="formule")', blocs[i + 2]):
+                g.append(blocs[i + 2])
+            out.append('<div class="ensemble">' + ''.join(g) + '</div>'); i += len(g); continue
+        # Un paragraphe qui annonce la suite (« … : ») part avec le tableau ou la liste qu'il introduit.
+        if b.startswith('<p>') and b.endswith(':</p>') and i + 1 < len(blocs) and re.match(r'<(table class="[^"]*court|ul|ol|figure)', blocs[i + 1]):
+            out.append('<div class="ensemble">' + b + blocs[i + 1] + '</div>'); i += 2; continue
+        out.append(b); i += 1
+    return titre, '\n'.join(out)
+
+def fontface():
+    return ''.join(f"@font-face{{font-family:'Gotham';src:url('file://{FONTS}/{f}') format('opentype');font-weight:{w};font-display:block}}"
+                   for f, w in (('Gotham_Medium.otf', 400), ('Gotham_Regular.otf', 700)))
+
+CSS = fontface() + f'''
+@page{{size:A4;margin:14mm 14mm 18mm}}
+*{{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+body{{margin:0;font:400 11px/1.5 'Gotham',Helvetica,Arial,sans-serif;color:{INK};background:#fff}}
+.head{{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid {RUBY};padding-bottom:12px;margin-bottom:18px}}
+.head img{{height:34px;display:block}}
+.type{{text-align:right;font-size:10px;color:{MUTED};line-height:1.5}}
+.type b{{display:block;font-size:15px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:{INK}}}
+h1{{font-size:21px;font-weight:400;line-height:1.25;margin:0 0 14px}}
+.refs{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:10px 0;border-top:1px solid {LINE};border-bottom:1px solid {LINE};margin-bottom:6px}}
+.refs .label,.box .label{{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:{MUTED};margin-bottom:3px}}
+.refs .v{{font-size:11px;font-weight:700}}
+h2{{font-size:15px;font-weight:400;line-height:1.3;margin:22px 0 8px;padding-top:2px;break-after:avoid}}
+p{{margin:0 0 8px}}
+p.note{{font-size:9.5px;color:{MUTED}}}
+ul,ol{{margin:0 0 10px;padding-left:16px}} li{{margin:0 0 3px}}
+ul.taches{{list-style:none;padding-left:0}}
+li.tache{{display:flex;gap:8px;align-items:flex-start}}
+.case-a-cocher{{flex:0 0 9px;height:9px;margin-top:3px;border:1px solid {FAINT};border-radius:2px}}
+table{{width:100%;border-collapse:collapse;font-size:10px;margin:4px 0 12px}}
+thead{{display:table-header-group}}
+th{{padding:6px 8px;border-bottom:1px solid {LINE};font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:{MUTED};font-weight:400;text-align:left;vertical-align:bottom;line-height:1.3}}
+td{{padding:6px 8px;border-bottom:1px solid rgba(34,34,34,.06);vertical-align:top}}
+td.num{{text-align:right;white-space:nowrap}}
+table.large{{font-size:9px}} table.large th{{font-size:7.5px}} table.large td,table.large th{{padding:5px 6px}}
+tr{{break-inside:avoid}}
+table.court,.ensemble{{break-inside:avoid}}
+h2.saut{{break-before:page;margin-top:0}}
+.box{{border-left:3px solid {RUBY};padding:2px 0 2px 12px;margin:6px 0 14px;break-inside:avoid}}
+.box p{{margin:0 0 6px}} .box ul{{margin:0}}
+.formule{{margin:4px 0 12px;padding:8px 12px;border-top:1px solid {LINE};border-bottom:1px solid {LINE};text-align:center;font-size:11px}}
+.figure{{margin:6px 0 12px;break-inside:avoid}}
+.figure figcaption{{font-size:8.5px;color:{MUTED};margin-top:6px}}
+svg.fig{{width:100%;height:auto;display:block;font-family:'Gotham',Helvetica,Arial,sans-serif}}
+svg .lg{{font-size:9px;fill:{INK}}} svg .mg{{font-size:10.5px;fill:{INK}}} svg .vl{{font-size:9px}} svg .tt{{font-size:10px;fill:{INK}}}
+table.fdr{{font-size:9.5px;margin:0;table-layout:fixed}}
+table.fdr th{{border:0;padding:0 6px 6px}} table.fdr th.q,table.fdr td.q{{width:74px}}
+table.fdr td{{border:0;padding:3px;vertical-align:top}}
+table.fdr .case{{border:1px solid {LINE};border-radius:6px;padding:7px 9px;min-height:62px;line-height:1.45}}
+table.fdr .qt{{display:block;font-size:10.5px}} table.fdr .qm{{display:block;font-size:8.5px;color:{MUTED}}}
+table.fdr tr.gate td{{padding:4px 3px 6px;font-size:9px;color:{INK}}}
+.losange{{display:inline-block;width:8px;height:8px;border:1.5px solid {RUBY};transform:rotate(45deg);margin:0 10px 0 6px;vertical-align:middle}}
+'''
+
+def main():
+    titre, corps = rendre(open(SOURCE, encoding='utf-8').read())
+    version = datetime.date.today().strftime('%d/%m/%Y')
+    refs = [('Réunion', META['reunion']), ('Chiffres lus le', META['chiffres']), ('Version du rapport', version), ('Magasins', META['magasins'])]
+    entete = (f'<div class="head"><img src="{LOGO}" alt="L’Atelier By"><div class="type"><b>Rapport de réunion</b>'
+              f'Objectif 2027 · {H(version)}</div></div><h1>{inline(titre)}</h1>'
+              '<div class="refs">' + ''.join(f'<div><div class="label">{H(k)}</div><div class="v">{H(v)}</div></div>' for k, v in refs) + '</div>')
+    doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>{H(titre)}</title><style>{CSS}</style></head><body>{entete}{corps}</body></html>'
+    open(HTML_OUT, 'w', encoding='utf-8').write(doc)
+    pied = ('<div style="width:100%;margin:0 14mm;padding-top:6px;border-top:1px solid #e6e0d8;font:7.5px/1.6 Helvetica,Arial,sans-serif;'
+            'color:#7a736a;display:flex;justify-content:space-between"><span>L’Atelier By · Rapport de réunion Objectif 2027 · ' + H(version) +
+            '</span><span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>')
+    js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();"
+          f"await p.goto('file://{HTML_OUT}',{{waitUntil:'load'}});await p.evaluate(()=>document.fonts.ready);"
+          f"await p.pdf({{path:{json.dumps(PDF_OUT)},format:'A4',printBackground:true,preferCSSPageSize:true,displayHeaderFooter:true,"
+          f"headerTemplate:'<div></div>',footerTemplate:{json.dumps(pied)}}});await b.close();}})().catch(e=>{{console.error(e);process.exit(1)}});")
+    subprocess.run(['node', '-e', js], check=True)
+    print('PDF :', PDF_OUT, os.path.getsize(PDF_OUT), 'octets')
+
+if __name__ == '__main__':
+    main()
