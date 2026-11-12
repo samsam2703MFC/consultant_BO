@@ -13,12 +13,10 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.abspath(os.path.join(ICI, '..', '..', '..'))
 FONTS = os.path.join(RACINE, 'public', 'assets', 'ds', 'fonts')
 LOGO = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(RACINE, 'public', 'assets', 'img', 'logo.png'), 'rb').read()).decode()
-# Deux versions : le rapport complet (par défaut) et la version lean pour les franchisés (argument « franchises »).
-LEAN = len(sys.argv) > 1 and sys.argv[1] == 'franchises'
-SOURCE = os.path.join(ICI, 'franchises.md' if LEAN else 'rapport.md')
-HTML_OUT = os.path.join(tempfile.gettempdir(), 'objectif-2027-franchises.html' if LEAN else 'objectif-2027-rapport.html')   # hors dépôt
-PDF_OUT = os.path.join(ICI, 'Objectif-2027-franchises.pdf' if LEAN else 'Objectif-2027-rapport-reunion.pdf')
-TYPE = 'Réunion franchisés' if LEAN else 'Rapport de réunion'
+SOURCE = os.path.join(ICI, 'rapport.md')
+HTML_OUT = os.path.join(tempfile.gettempdir(), 'objectif-2027-rapport.html')   # page intermédiaire, hors dépôt
+PDF_OUT = os.path.join(ICI, 'Objectif-2027-rapport-reunion.pdf')
+TYPE = 'Rapport de réunion'
 META = json.load(open(os.path.join(ICI, 'dossier.json'), encoding='utf-8'))
 
 INK, MUTED, FAINT, LINE, HEAD, RUBY = '#1c1a17', '#7a736a', '#b8b2a8', '#e6e0d8', '#fbf9f5', '#8D1D2C'
@@ -226,7 +224,7 @@ def rendre(md):
         if l.startswith('# '): titre = l[2:].strip(); i += 1; continue
         if l.startswith('### '): blocs.append(f'<h3>{inline(l[4:].strip())}</h3>'); i += 1; continue
         if l.startswith('## '):
-            t = l[3:].strip(); saut = not LEAN and not re.match(r'^(Synthèse|Ouverture|Sources)', t)
+            t = l[3:].strip(); saut = False   # le corps se lit d'un trait ; seules les annexes ouvrent une nouvelle page
             blocs.append(f'<h2 class="saut">{inline(t)}</h2>' if saut else f'<h2>{inline(t)}</h2>'); i += 1; continue
         if l.startswith('{{') and l.strip().endswith('}}'): blocs.append(FIGURES[l.strip()[2:-2]]()); i += 1; continue
         if l.startswith('$$'): blocs.append(f'<div class="formule">{inline(l[2:].strip())}</div>'); i += 1; continue
