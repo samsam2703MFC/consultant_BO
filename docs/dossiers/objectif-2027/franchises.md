@@ -2,26 +2,27 @@
 
 ## Le but de 2027
 
-> [Le but de 2027] Améliorer l'offre produit et avoir des process identiques dans tous les magasins. Un magasin qui ne suit pas le standard du réseau ne vaut rien : ses chiffres ne se comparent pas, il ne se revend pas et il ne porte pas la marque.
+> [Le but de 2027] Améliorer l'offre produit et travailler avec les mêmes process dans tous les magasins. Un magasin qui ne suit pas le standard du réseau perd sa valeur : ses chiffres ne peuvent pas être comparés aux autres et il est difficile à revendre.
 
 >> [La valeur de vos magasins est une responsabilité collective] Elle tient directement au respect des process, à l'expérience client et à la qualité de finition des produits.
 
-> [Au 1er mars 2027, c'est obligatoire] Tout le monde travaille avec sa ou ses tablettes : la tablette opératoire en cuisine, la tablette opérationnelle au comptoir. Check-lists, tâches, invendus, commandes et clôtures se font sur la tablette, dans les quatre magasins.
+> [Obligatoire à partir du 1er mars 2027] Chaque membre de l'équipe travaille avec sa ou ses tablettes : la tablette opératoire en cuisine et la tablette opérationnelle au comptoir. Les check-lists, les tâches, les invendus, les commandes et les clôtures se font sur la tablette, dans les quatre magasins.
 
-Trois priorités, et tout le reste les sert :
+Nos trois priorités pour 2027 :
 
 | Priorité | Ce que ça veut dire en magasin |
 | --- | --- |
-| Expérience client | le même accueil, la même vitrine, la même finition partout |
-| Marge | des prix conseillés communs, le gâteau à la part, une gamme plus courte |
-| Trafic | les campagnes préparées à l'avance, le webshop, le B2B, la fidélisation |
+| Expérience client | même accueil, même vitrine et même finition des produits dans chaque magasin |
+| Marge | prix conseillés communs, gâteau vendu à la part, gamme plus courte |
+| Trafic | campagnes préparées à l'avance, webshop, B2B, fidélisation |
 
 ## Ce qui marche
 
-- Halle, ouvert le 20 février, tourne déjà à 630 k€ par an, avec le meilleur food cost du réseau (37,8 %).
+- Halle, ouvert le 20 février, est sur un rythme de 630 k€ par an et a le meilleur food cost du réseau (37,8 %).
 - Gosselies progresse de 7 % sur un an et rend 67 % de ses tâches depuis octobre.
-- Sombreffe a tenu 92 % de son budget au 3e trimestre ; Corbais reste le moteur du réseau, à 1,8 M€ par an.
-- Les clients sont contents : les notes Google vont de 4,1 à 4,7.
+- Sombreffe a atteint 92 % de son budget au 3e trimestre.
+- Corbais fait 1,8 M€ de CA par an, en hausse de 2,3 %.
+- Les notes Google des magasins vont de 4,1 à 4,7.
 
 ## Où on en est
 
@@ -39,9 +40,9 @@ Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an p
 
 ### Le gâteau à la part
 
-- Un seul gâteau entier de 10 parts, fait à l'usine, fini en Belgique et découpé devant le client (découpe aux ultrasons).
-- La part à 3,90 €, et une seule offre : le 4+1 (5 parts pour le prix de 4).
-- Objectif ×4 : le gâteau fini doit coûter au plus 7,45 € HT. Test dans un magasin pilote au 1er trimestre, puis les quatre magasins.
+- Un seul gâteau entier de 10 parts, produit à l'usine, fini en Belgique et découpé devant le client avec une unité de découpe à ultrasons.
+- Prix de la part : 3,90 €. Une seule offre : le 4+1 (5 parts pour le prix de 4).
+- Objectif ×4 : le gâteau fini doit coûter 7,45 € HT maximum. Test dans un magasin pilote au 1er trimestre, puis dans les quatre magasins au 2e trimestre.
 
 | Achat du client | Ticket | Marge par client (HT) |
 | --- | --- | --- |
@@ -53,24 +54,24 @@ Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an p
 
 {{emballage}}
 
-Une LED au-dessus de chaque emplacement de boîte, pilotée par la caisse via un Arduino : la vendeuse encode l'article, la bonne boîte s'allume. Pas d'erreur de format, et chaque boîte sortie est comptée. Prototype au 1er trimestre.
+Une LED est placée au-dessus de chaque emplacement de boîte. Quand la vendeuse encode l'article, la caisse envoie l'information à un Arduino qui allume la LED de la bonne boîte. Cela évite les erreurs de format et permet de compter les boîtes utilisées. Un prototype sera installé dans le magasin pilote au 1er trimestre.
 
 ### Une gamme plus courte
 
-114 références font 80 % du CA. 163 se vendent moins d'une fois par jour dans tout le réseau : 48 sont à couper d'abord (sous ×2,5), 51 sont à chiffrer avant de décider. Une référence se coupe dans les quatre magasins à la fois ; les produits de saison restent hors de la règle.
+114 références font 80 % du CA. 163 références se vendent moins d'une fois par jour dans l'ensemble du réseau. Parmi elles, 48 ont un coefficient sous ×2,5 et seront coupées en premier ; 51 n'ont pas de coût de recette et doivent être chiffrées avant de décider. Une référence coupée l'est dans les quatre magasins en même temps. Les produits de saison ne sont pas concernés.
 
 {{saisonnalite}}
 
 ### Les prix
 
-Une grille de prix conseillés, la même dans les quatre magasins et chargée par défaut en caisse. Le franchiseur recommande, il n'impose pas : chacun voit dans le cockpit ses prix et ses marges face au réseau.
+Une grille de prix conseillés commune aux quatre magasins sera chargée par défaut en caisse. Ce sont des prix conseillés, pas des prix imposés. Chaque magasin peut comparer ses prix et ses marges à ceux du réseau dans le cockpit.
 
 ## 2. Les process
 
 ### 100 % pointé, 100 % tracé, sur la tablette
 
-- Chaque vente pointée sur la bonne référence, chaque pièce tracée, de la production à la vente ou à la poubelle.
-- Les mêmes check-lists, fiches recette, kit décor anniversaire, vêtements de travail et packaging partout.
+- Chaque vente est pointée sur la bonne référence et chaque pièce est suivie de la production jusqu'à la vente ou la poubelle.
+- Tous les magasins utilisent les mêmes check-lists, fiches recette, kit décor anniversaire, vêtements de travail et packaging.
 
 | Moment | Tablette opératoire (cuisine) | Tablette opérationnelle (comptoir) |
 | --- | --- | --- |
@@ -88,24 +89,24 @@ Une grille de prix conseillés, la même dans les quatre magasins et chargée pa
 | Bilan trimestriel (scoring sur 20) | 1 par trimestre | oui |
 | Revisite des points non conformes | après une visite | non |
 
-En réunion : un contrôle rendu en direct sur la tablette, projeté sur grand écran.
+Pendant la réunion, nous ferons un contrôle en direct sur la tablette, projeté sur grand écran.
 
 ### Si les outils ne sont pas utilisés
 
-Moins de 80 % des tâches rendues sur un mois : mise en demeure écrite, 30 jours pour revenir au seuil, puis +0,5 % de royalties, levé dès qu'un mois complet repasse au-dessus. Cela concerne l'usage des outils, jamais les prix.
+Si un magasin rend moins de 80 % de ses tâches sur un mois, il reçoit une mise en demeure écrite et dispose de 30 jours pour remonter au-dessus de ce seuil. Sans amélioration, les royalties augmentent de 0,5 % à partir du mois suivant. La majoration est retirée dès qu'un mois complet repasse au-dessus de 80 %. Cette règle porte uniquement sur l'utilisation des outils, pas sur les prix.
 
 ### Les nouveaux franchisés
 
-Quatre semaines de formation, une semaine dans chaque magasin, tablette en main. Un magasin n'accueille un stagiaire que s'il rend au moins 80 % de ses tâches.
+Un nouveau franchisé suit quatre semaines de formation : une semaine dans chacun des quatre magasins, en travaillant avec la tablette. Un magasin ne peut accueillir un stagiaire que s'il rend au moins 80 % de ses tâches.
 
 ## 3. Les ventes
 
-- Webshop : le même catalogue et les mêmes prix conseillés en ligne partout ; il pèse moins de 1 % des ventes aujourd'hui.
-- B2B via le webshop : plateaux, sandwiches et cartons de pain commandés en ligne par les entreprises.
-- Fidélisation : un compte client unique (caisse, webshop, B2B) et une offre simple, la même partout.
-- Nouvelles zones : Wemmel, Grimbergen, Sambreville, Malines, avec le standard complet dès l'ouverture.
+- Webshop : même catalogue et mêmes prix conseillés en ligne pour les quatre magasins. Il représente aujourd'hui moins de 1 % des ventes.
+- B2B : les entreprises commandent en ligne via le webshop (plateaux, sandwiches, cartons de pain).
+- Fidélisation : un compte client unique (caisse, webshop, B2B) et une même offre de fidélité dans tous les magasins.
+- Nouvelles zones étudiées : Wemmel, Grimbergen, Sambreville, Malines. Chaque nouveau magasin ouvrira avec le standard complet.
 
-Chaque temps fort se prépare huit semaines avant :
+Chaque campagne se prépare huit semaines à l'avance :
 
 | Temps fort 2027 | Date | Brief et gamme | Commande usine et kit tablette |
 | --- | --- | --- | --- |
@@ -125,17 +126,19 @@ Chaque temps fort se prépare huit semaines avant :
 
 ## Ce qu'on attend de chaque magasin
 
-- [ ] Au 1er mars 2027 : tout le monde sur sa ou ses tablettes, 100 % des tâches, invendus et clôtures.
-- [ ] Les coûts de recette complets au panel avant fin janvier.
-- [ ] La grille de prix conseillés chargée en caisse.
-- [ ] Les mêmes vêtements de travail et le même packaging dès qu'ils sont livrés (T2).
-- [ ] Les campagnes lancées à la date du rétro-agenda.
+- [ ] À partir du 1er mars 2027 : toute l'équipe travaille sur tablette (tâches, invendus, clôtures).
+- [ ] Coûts de recette complets au panel avant fin janvier.
+- [ ] Grille de prix conseillés chargée en caisse.
+- [ ] Vêtements de travail et packaging du réseau utilisés dès leur livraison (2e trimestre).
+- [ ] Campagnes lancées aux dates prévues.
 
 ## Pour finir
 
-- Pour chaque magasin : plus de marge sans plus de travail.
-- Pour la valeur du magasin : des chiffres complets et comparables, lisibles pour une banque, un repreneur ou un investisseur.
-- Pour le réseau : de nouvelles zones et de nouveaux franchisés formés dans des magasins qui montrent l'exemple.
-- Pour les équipes : une tablette, des fiches et des check-lists claires, les mêmes partout.
+Ce que ces changements apportent :
 
-Un réseau qui travaille pareil partout vaut plus, gagne plus et grandit plus vite. 2027 est l'année où chaque magasin devient un modèle à reproduire.
+- Chaque magasin gagne de la marge sans travail en plus.
+- Avec des chiffres complets et comparables, un magasin est plus facile à financer ou à revendre.
+- Le réseau peut ouvrir de nouvelles zones et former les nouveaux franchisés dans nos magasins.
+- Les équipes ont les mêmes outils, fiches et check-lists dans tous les magasins.
+
+Si les quatre magasins appliquent le même standard en 2027, chacun peut servir de modèle pour les prochaines ouvertures.
