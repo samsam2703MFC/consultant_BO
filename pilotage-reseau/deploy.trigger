@@ -1418,3 +1418,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T14:51:42Z Dashboard magasin : assistant (bouton Assistant, Sam / Pierre / le Coach, bilan et conversation), espace de travail Anthropic
 2026-11-12T15:01:21Z Dashboard magasin : assistant, avatar de Pierre, deux assistants (Pierre, le Coach)
 2026-11-12T15:02:56Z Dashboard magasin : assistant, avatar du Coach
+2026-11-12T15:16:17Z Assistant : coachs réglables au cockpit (ERP franchisé › Assistant · coachs), budget dans la fiche, questions gardées (ceo_assistant_question)
