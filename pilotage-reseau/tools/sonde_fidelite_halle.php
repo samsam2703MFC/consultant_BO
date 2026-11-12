@@ -14,8 +14,8 @@ declare(strict_types=1);
  *   3. les mêmes comptes pour les trois autres magasins, cette semaine et la précédente : le point de comparaison ;
  *   4. la fiche de chaque client rattaché à un ticket de Halle cette semaine (`/shops/4/clients/{id}`) : compte dans
  *      l'app, fidélité active, membre depuis, canal d'origine, magasin principal (un client d'un autre magasin) ;
- *   5. les clients de Halle (`/shops/4/clients`, paginé) : combien se sont inscrits cette semaine, et combien de ces
- *      nouveaux inscrits ont déjà un ticket rattaché ;
+ *   5. les membres fidélité (fidelity_active, loyalty_scan_code, fidelity_linked_at) parmi les clients de Halle
+ *      (`/shops/4/clients`) et de tout le réseau (`/clients`), et combien d'entre eux sont sur un ticket de Halle ;
  *   6. les tables du cockpit : le relevé du cron (`ceo_pwa_jour`) et les visites carte (`ceo_fid_visite`).
  *
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-fidelite-halle.yml` :
@@ -75,7 +75,8 @@ function sfClient(array $t): int
 /** Un ticket lié à une commande (webshop, click & collect, précommande) plutôt qu'une vente au comptoir. */
 function sfCommande(array $t): bool
 {
-    foreach (['id_client_order', 'client_order_id', 'id_order', 'order_id'] as $k) {
+    if (strtolower((string) ($t['source'] ?? '')) === 'webshop') { return true; }
+    foreach (['order_ref', 'id_client_order', 'client_order_id', 'id_order', 'order_id'] as $k) {
         if (isset($t[$k]) && is_scalar($t[$k]) && (int) $t[$k] > 0) { return true; }
     }
     return trim((string) ($t['po_hash'] ?? '')) !== '';
@@ -172,15 +173,20 @@ $doc = PanelApi::sondeGet('/../swagger/openapi.json', 30);
 $paths = is_array($doc['corps']['paths'] ?? null) ? $doc['corps']['paths'] : [];
 echo '  openapi.json : HTTP ', $doc['code'], ' · ', count($paths), " routes\n";
 foreach ($paths as $ch => $ops) {
-    if (!is_array($ops) || !preg_match('#loyal|fidel|stamp|reward|point|pwa|member#i', (string) $ch)) { continue; }
+    if (!is_array($ops) || !preg_match('#loyal|fidel|stamp|reward|points|pwa|scan#i', (string) $ch)) { continue; }
     $verbes = array_map('strtoupper', array_keys(array_filter($ops, 'is_array')));
     printf("  %-60s %s\n", $ch, implode(' ', $verbes));
+}
+foreach ($paths as $ch => $ops) {
+    if (!is_array($ops) || !preg_match('#^(/api/v1)?(/shops/\{[^}]+\})?/clients$#', (string) $ch) || !is_array($ops['get'] ?? null)) { continue; }
+    $prm = array_map(static fn ($x) => is_array($x) ? (string) ($x['name'] ?? '?') : '?', (array) ($ops['get']['parameters'] ?? []));
+    printf("  GET %-56s paramètres : %s\n", $ch, $prm ? implode(', ', $prm) : '—');
 }
 $sch = is_array($doc['corps']['components']['schemas'] ?? null) ? $doc['corps']['components']['schemas'] : [];
 foreach ($sch as $nom => $s) {
     if (!preg_match('/transaction|loyal|fidel|client|customer/i', (string) $nom) || !is_array($s['properties'] ?? null)) { continue; }
     $props = array_keys($s['properties']);
-    $fid = array_values(array_filter($props, static fn ($p) => preg_match('/loyal|fidel|point|stamp|card|pwa|member|client|customer|voucher/i', (string) $p)));
+    $fid = array_values(array_filter($props, static fn ($p) => preg_match('/loyal|fidel|point|stamp|card|pwa|member|id_client|id_customer|voucher|scan/i', (string) $p)));
     printf("  schéma %-38s %3d champs · liés client/fidélité : %s\n", $nom, count($props), $fid ? implode(', ', $fid) : '—');
 }
 
@@ -236,7 +242,7 @@ if ($ident !== [] || $ticketsSemaine !== []) {
     $f = is_array($d['corps']) ? (isset($d['corps']['data']) && is_array($d['corps']['data']) && !array_is_list($d['corps']['data']) ? $d['corps']['data'] : $d['corps']) : [];
     if ($f !== []) {
         echo '  champs : ', implode(', ', array_keys($f)), "\n";
-        $fid = array_filter(array_keys($f), static fn ($k) => preg_match('/loyal|fidel|point|stamp|card|pwa|member|voucher|reward/i', (string) $k));
+        $fid = array_filter(array_keys($f), static fn ($k) => preg_match('/loyal|fidel|point|stamp|card|pwa|member|voucher|reward|scan/i', (string) $k));
         echo '  liés fidélité : ', $fid ? implode(', ', $fid) : '—', "\n";
         foreach ($fid as $k) { $s = sfValeur((string) $k, $f[$k]); echo "    $k = ", $s ?? '(non affiché)', "\n"; }
     }
@@ -281,6 +287,7 @@ foreach ($ids as $cid) {
     foreach ($f as $k => $v) {
         if (is_array($v) && $v !== [] && !array_is_list($v)) { foreach ($v as $k2 => $v2) { if (!is_array($v2)) { $f[$k . '.' . $k2] = $v2; } } unset($f[$k]); }
     }
+    foreach ($f as $k => $v) { if (str_starts_with((string) $k, 'client.')) { $f[substr((string) $k, 7)] ??= $v; } }
     $fiches[$cid] = $f;
 }
 echo '  codes HTTP : ', json_encode($codes), ' · fiches lues ', count($fiches), "\n";
@@ -290,8 +297,8 @@ printf("  compte dans l'app (pwa_user)          : %d oui · %d non · %d champ a
     $cnt($fiches, fn ($f) => $vrai($f['pwa_user'] ?? null)), $cnt($fiches, fn ($f) => array_key_exists('pwa_user', $f) && !$vrai($f['pwa_user'])), $cnt($fiches, fn ($f) => !array_key_exists('pwa_user', $f)));
 printf("  fidélité active (fidelity_active)     : %d oui · %d non · %d champ absent\n",
     $cnt($fiches, fn ($f) => $vrai($f['fidelity_active'] ?? null)), $cnt($fiches, fn ($f) => array_key_exists('fidelity_active', $f) && !$vrai($f['fidelity_active'])), $cnt($fiches, fn ($f) => !array_key_exists('fidelity_active', $f)));
-$membre = static fn (array $f): string => substr((string) ($f['member_since'] ?? $f['created_at'] ?? ''), 0, 10);
-printf("  inscrits cette semaine (member_since ≥ %s) : %d · avant : %d · sans date : %d\n", $lundi,
+$membre = static fn (array $f): string => substr((string) ($f['member_since'] ?? $f['fidelity_linked_at'] ?? ''), 0, 10);
+printf("  membres fidélité (member_since ou fidelity_linked_at) depuis le %s : %d · avant : %d · jamais : %d\n", $lundi,
     $cnt($fiches, fn ($f) => $membre($f) >= $lundi), $cnt($fiches, fn ($f) => $membre($f) !== '' && $membre($f) < $lundi), $cnt($fiches, fn ($f) => $membre($f) === ''));
 printf("  magasin principal (id_main_shop)      : %d Halle · %d un autre magasin · %d sans\n",
     $cnt($fiches, fn ($f) => (int) ($f['id_main_shop'] ?? 0) === SF_SHOP), $cnt($fiches, fn ($f) => (int) ($f['id_main_shop'] ?? 0) > 0 && (int) $f['id_main_shop'] !== SF_SHOP),
@@ -302,45 +309,77 @@ echo '  tickets par client cette semaine      : ', json_encode($rep, JSON_FORCE_
 echo "\n  Les champs des fiches :\n";
 sfChamps(array_values($fiches));
 
-/* 5. Les clients de Halle : les inscrits de la semaine ─────────────────────────────────────────────────────── */
-sfTitre('5. Les clients de Halle : inscrits cette semaine, et lesquels ont déjà un ticket rattaché');
-$nouveaux = []; $vus = []; $total = 0; $pages = 0; $t0 = microtime(true); $fin = false; $premier = null;
-for ($off = 0; $pages < SF_PAGES_MAX && !$fin; $off += 2000) {
-    $ch5 = [];
-    for ($i = 0; $i < 4; $i++) { $ch5[$off + $i * 500] = '/shops/' . SF_SHOP . '/clients?limit=500&offset=' . ($off + $i * 500); }
-    $r5 = PanelApi::getParalleleDetail($ch5, 4, 40);
-    foreach ($ch5 as $o => $ch) {
-        $pages++;
-        $r = $r5[$o] ?? null;
-        $l = is_array($r['data'] ?? null) ? PanelApi::liste($r['data']) : [];
-        if ($o === 0) { echo '  première page : HTTP ', (int) ($r['code'] ?? 0), ' · ', count($l), " clients\n"; $premier = $l[0] ?? null; }
-        if (count($l) === 0) { $fin = true; continue; }
-        // Une API qui ignorerait `offset` rendrait toujours la même page : on s'arrête dès qu'une page n'apporte rien.
-        $neufs = 0;
-        foreach ($l as $c) { $id = (int) (is_array($c) ? ($c['id'] ?? 0) : 0); if ($id > 0 && !isset($vus[$id])) { $vus[$id] = true; $neufs++; } }
-        if ($neufs === 0) { $fin = true; echo "  page à l'offset $o : rien de neuf, lecture arrêtée\n"; continue; }
-        $total += $neufs;
-        foreach ($l as $c) {
-            if (!is_array($c) || !empty($c['is_b2b'])) { continue; }
-            $quand = substr((string) ($c['member_since'] ?? $c['created_at'] ?? $c['insert_timestamp'] ?? ''), 0, 10);
-            if ($quand >= $lundi) { $nouveaux[(int) ($c['id'] ?? 0)] = $c; }
+/* 5. Les membres fidélité : à Halle, puis sur tout le réseau ───────────────────────────────────────────────── */
+/** Toutes les pages d'une liste de clients (500 par page, quatre de front), dédoublonnées par id. */
+function sfTousClients(string $route, int $pagesMax): array
+{
+    $vus = []; $pages = 0; $fin = false; $t0 = microtime(true); $premier = null;
+    for ($off = 0; $pages < $pagesMax && !$fin; $off += 2000) {
+        $ch = [];
+        for ($i = 0; $i < 4; $i++) { $ch[$off + $i * 500] = $route . (str_contains($route, '?') ? '&' : '?') . 'limit=500&offset=' . ($off + $i * 500); }
+        $r = PanelApi::getParalleleDetail($ch, 4, 60);
+        foreach ($ch as $o => $c) {
+            $pages++;
+            $l = is_array($r[$o]['data'] ?? null) ? PanelApi::liste($r[$o]['data']) : [];
+            if ($o === 0) { echo "  $route : HTTP ", (int) ($r[$o]['code'] ?? 0), ' · ', count($l), " sur la première page\n"; }
+            if ($l === []) { $fin = true; continue; }
+            $neufs = 0;
+            foreach ($l as $x) { $id = (int) (is_array($x) ? ($x['id'] ?? 0) : 0); if ($id > 0 && !isset($vus[$id])) { $vus[$id] = $x; $neufs++; } }
+            if ($neufs === 0 || count($l) < 500) { $fin = true; }
         }
-        if (count($l) < 500) { $fin = true; }
     }
-}
-printf("  %d clients lus (%d pages, %.1f s)%s\n", $total, $pages, microtime(true) - $t0, $fin ? '' : ' — lecture arrêtée au plafond, liste incomplète');
-if (is_array($premier)) { echo '  champs de la liste : ', implode(', ', array_keys($premier)), "\n"; }
-$avecTicket = count(array_intersect_key($nouveaux, $clientsSemaine));
-printf("  particuliers inscrits depuis lundi : %d · dont avec un ticket de Halle rattaché cette semaine : %d (%s)\n", count($nouveaux), $avecTicket, sfPct($avecTicket, count($nouveaux)));
-if ($nouveaux !== []) {
-    $parJour = [];
-    foreach ($nouveaux as $c) { $j = substr((string) ($c['member_since'] ?? $c['created_at'] ?? $c['insert_timestamp'] ?? ''), 0, 10); $parJour[$j] = ($parJour[$j] ?? 0) + 1; }
-    ksort($parJour);
-    echo '  inscrits par jour : ', json_encode($parJour), "\n";
-    echo "  champs sûrs des nouveaux inscrits :\n";
-    sfChamps(array_values($nouveaux), '/pwa|fidel|loyal|channel|source|webshop|main_shop|member|is_|type|status|active/i');
+    printf("  %d clients lus (%d pages, %.1f s)%s\n", count($vus), $pages, microtime(true) - $t0, $fin ? '' : ' — plafond atteint, liste INCOMPLÈTE');
+    return $vus;
 }
 
+/** Les comptes fidélité d'une liste de clients particuliers. */
+function sfMembres(array $clients, string $lundi, array $clientsTickets): void
+{
+    $vrai = static fn ($v): bool => $v === true || $v === 1 || $v === '1' || $v === 'true';
+    $plein = static fn ($v): bool => $v !== null && $v !== '' && $v !== '0' && $v !== 0;
+    $part = array_filter($clients, static fn ($c) => is_array($c) && empty($c['is_b2b']));
+    $n = ['fid' => 0, 'scan' => 0, 'lie' => 0, 'membre' => 0, 'pwa' => 0, 'connecte' => 0, 'lieSemaine' => 0, 'creeSemaine' => 0, 'membreTicket' => 0];
+    $canal = []; $lieParJour = []; $membresParMag = [];
+    foreach ($part as $id => $c) {
+        $estFid = $vrai($c['fidelity_active'] ?? null);
+        $n['fid'] += $estFid ? 1 : 0;
+        $n['scan'] += $plein($c['loyalty_scan_code'] ?? null) ? 1 : 0;
+        $n['lie'] += $plein($c['fidelity_linked_at'] ?? null) ? 1 : 0;
+        $n['membre'] += $plein($c['member_since'] ?? null) ? 1 : 0;
+        $n['pwa'] += $vrai($c['pwa_user'] ?? null) ? 1 : 0;
+        $n['connecte'] += $plein($c['last_login_at'] ?? null) ? 1 : 0;
+        $lie = substr((string) ($c['fidelity_linked_at'] ?? $c['member_since'] ?? ''), 0, 10);
+        if ($lie !== '' && $lie >= date('Y-m-d', strtotime($lundi . ' -21 days'))) { $lieParJour[$lie] = ($lieParJour[$lie] ?? 0) + 1; }
+        if ($lie !== '' && $lie >= $lundi) { $n['lieSemaine']++; }
+        if (substr((string) ($c['create_timestamp'] ?? ''), 0, 10) >= $lundi) { $n['creeSemaine']++; }
+        if ($estFid || $plein($c['loyalty_scan_code'] ?? null)) {
+            $m = (string) ((int) ($c['preferred_shop_id'] ?? 0) ?: (int) ($c['id_main_shop'] ?? 0));
+            $membresParMag[$m] = ($membresParMag[$m] ?? 0) + 1;
+            if (isset($clientsTickets[(int) $id])) { $n['membreTicket']++; }
+        }
+        $k = (string) ($c['source_channel'] ?? 'null');
+        $canal[$k] = ($canal[$k] ?? 0) + 1;
+    }
+    arsort($canal); ksort($lieParJour); ksort($membresParMag);
+    printf("  particuliers : %d · fidelity_active=1 : %d · loyalty_scan_code rempli : %d · fidelity_linked_at rempli : %d · member_since rempli : %d\n",
+        count($part), $n['fid'], $n['scan'], $n['lie'], $n['membre']);
+    printf("  pwa_user=1 : %d · déjà connectés en ligne : %d · fiches créées depuis lundi : %d · cartes liées depuis lundi : %d\n",
+        $n['pwa'], $n['connecte'], $n['creeSemaine'], $n['lieSemaine']);
+    echo '  canal d\'origine : ', json_encode(array_slice($canal, 0, 8, true), JSON_UNESCAPED_UNICODE | JSON_FORCE_OBJECT), "\n";
+    echo '  membres (fidélité active ou code de scan) par magasin préféré / principal : ', json_encode($membresParMag, JSON_FORCE_OBJECT), "\n";
+    echo '  cartes liées par jour, trois dernières semaines : ', $lieParJour ? json_encode($lieParJour) : '—', "\n";
+    printf("  membres présents sur un ticket de Halle cette semaine : %d\n", $n['membreTicket']);
+}
+
+sfTitre('5. Les clients de Halle (/shops/' . SF_SHOP . '/clients) : les membres fidélité');
+$halle = sfTousClients('/shops/' . SF_SHOP . '/clients', SF_PAGES_MAX);
+sfMembres($halle, $lundi, $clientsSemaine);
+echo '  clients des tickets de la semaine présents dans cette liste : ', count(array_intersect_key($clientsSemaine, $halle)), ' / ', count($clientsSemaine), "\n";
+
+sfTitre('5b. Tout le réseau (/clients) : les membres fidélité, où qu\'ils soient rattachés');
+$reseau = sfTousClients('/clients', 120);
+sfMembres($reseau, $lundi, $clientsSemaine);
+echo '  clients des tickets de Halle de la semaine présents dans cette liste : ', count(array_intersect_key($clientsSemaine, $reseau)), ' / ', count($clientsSemaine), "\n";
 /* 6. Les tables du cockpit ─────────────────────────────────────────────────────────────────────────────────── */
 sfTitre('6. Les tables du cockpit');
 try {
