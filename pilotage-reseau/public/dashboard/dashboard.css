@@ -2988,3 +2988,16 @@ body.ia-ouvert{overflow:hidden}
 .fd-dd.ouvert .fd-dd-c{display:block}
 .fd-dd-rien{margin:0;padding:14px 16px;font-size:13px;color:var(--color-text-muted)}
 .fd-dd-rien[hidden]{display:none}
+
+/* L'évolution du profil choisi (12/11/2026) : le troisième graphique, à côté des deux radars. */
+.fd-g3{grid-template-columns:repeat(3,minmax(0,1fr))}
+@media (max-width:1100px){.fd-g3{grid-template-columns:1fr 1fr}}
+.fd-tg{display:inline-flex;background:var(--color-background-secondary);border-radius:8px;padding:2px;margin-left:auto}
+.fd-tg button{border:none;background:transparent;font:400 11.5px var(--font-ui);padding:3px 9px;border-radius:6px;color:var(--color-text-muted);cursor:pointer}
+.fd-tg button.on{background:#fff;color:var(--color-primary);box-shadow:0 0 0 1px var(--color-border-tertiary)}
+.fd-tdel{margin:10px 16px 0;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;font-size:13px}
+.fd-tdel b{font-size:22px;font-weight:400}.fd-tdel span{width:100%;font-size:12px;color:var(--color-text-muted)}
+.fd-tdel.mt b{color:#2e7d32}.fd-tdel.bs b{color:#c62828}.fd-tdel.eg b{color:var(--color-text)}
+.fd-tsvg{display:block;width:100%;height:auto;padding:6px 10px 10px;box-sizing:border-box}
+.fd-tq{stroke:var(--color-border-tertiary);stroke-width:1}
+.fd-tl{font:400 10.5px var(--font-ui);fill:var(--color-text-muted)}

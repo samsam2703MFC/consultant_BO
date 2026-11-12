@@ -43,7 +43,7 @@
     pushEtat: 'inconnu', pushMotif: '', pushOccupe: false,
     // L'onglet Tâches (08/11/2026) : le filtre des checklists, celles dépliées, le guide (replié s'il a été replié), tous les retours.
     // L'onglet Fidélité (12/11/2026) : le profil choisi pour les radars, le client dont la fiche est ouverte.
-    fdProfil: null, fdClient: /^\d+$/.test(q.get('client') || '') ? q.get('client') : null,
+    fdProfil: null, fdT: 90, fdClient: /^\d+$/.test(q.get('client') || '') ? q.get('client') : null,
     tjF: 'tout', tjOuv: {}, tjRetTout: false, tjGuide: (function () { try { return localStorage.getItem('db.tjGuide') !== '0'; } catch (e) { return true; } })(),
     tmSeuil: (function () { try { const v = +localStorage.getItem('db.tmSeuil'); return [5, 10, 15].includes(v) ? v : 10; } catch (e) { return 10; } })() };
   const AUJ = new Date().toISOString().slice(0, 10);
@@ -143,7 +143,7 @@
     // Les tâches et les checklists du magasin (08/11/2026) : la semaine jour par jour, les photos et les retours du contrôle.
     if (S.vue === 'taches') { tjCharger(force); rendre(); return; }
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
-    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); } else { lireAux(cleFD(), cheminFD(), force); } rendre(); return; }
+    if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); } rendre(); return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
     if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
     if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
@@ -5581,6 +5581,8 @@
    * Lectures : /fidelite/profils/magasin?shop= et /fidelite/client?shop=&client= (API du panel, côté serveur). */
   function cleFD() { return 'fd|' + S.shop; }
   function cheminFD() { return '/fidelite/profils/magasin?shop=' + encodeURIComponent(S.shop); }
+  function cleFDT() { return 'fdt|' + S.shop + '|' + S.fdT; }
+  function cheminFDT() { return '/fidelite/profils/tendance?shop=' + encodeURIComponent(S.shop) + '&jours=' + S.fdT; }
   function cleFDC() { return 'fdc|' + S.shop + '|' + S.fdClient; }
   function cheminFDC() { return '/fidelite/client?shop=' + encodeURIComponent(S.shop) + '&client=' + encodeURIComponent(S.fdClient); }
   const FD_JOURS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
@@ -5619,6 +5621,37 @@
         <div><span class="fd-scan-t">des tickets ont un client scanné</span><span class="fd-scan-s">${nf(d.identifies, 0)} tickets sur ${nf(d.tickets, 0)} · ${d.memoire} derniers jours</span></div></div>
       <div class="fd-scan-e"><div class="fd-scan-b">${segs}<em style="left:${pos}%" title="${nf(v, 1)} %"></em></div><div class="fd-scan-r">${reperes}</div></div></div>`;
   }
+  /* La tendance du profil choisi (12/11/2026, Sam : « un troisième graphique : l'augmentation ou la diminution du nombre
+   * de ce type de récurrence ; un toggle 30 – 90 – 180 jours ») : le nombre de clients du profil, date après date
+   * (GET /fidelite/profils/tendance), et l'écart entre le début et aujourd'hui. */
+  function fdTendance(choisi) {
+    const k = cleFDT(), t = S.aux[k];
+    const bascule = `<span class="fd-tg">${[30, 90, 180].map(n => `<button type="button" data-fdt="${n}" class="${S.fdT === n ? 'on' : ''}">${n} j</button>`).join('')}</span>`;
+    let corps;
+    if (S.err[k] || (t && t.error)) { corps = `<p class="fd-note">Tendance indisponible : ${esc(S.err[k] || t.error)}</p>`; }
+    else if (!t) { corps = '<div class="db-attente">Lecture de la tendance…</div>'; }
+    else {
+      const P = (t.points || []).map(x => ({ d: x.date, n: (x.parProfil || {})[choisi.id] || 0 }));
+      const a = P.length ? P[0].n : 0, b = P.length ? P[P.length - 1].n : 0, dv = b - a;
+      const pct = a > 0 ? Math.round(100 * dv / a) : null;
+      const sens = dv > 0 ? 'mt' : dv < 0 ? 'bs' : 'eg';
+      const W = 360, H = 230, g = 34, dr = 12, hb = 26, ht = 14;
+      const mx = Math.max(4, ...P.map(x => x.n)) * 1.15;
+      const X = i => g + (W - g - dr) * (P.length > 1 ? i / (P.length - 1) : 0), Y = v => H - hb - (H - hb - ht) * v / mx;
+      const ligne = P.map((x, i) => X(i).toFixed(1) + ',' + Y(x.n).toFixed(1)).join(' ');
+      const aire = P.length ? `${X(0).toFixed(1)},${Y(0).toFixed(1)} ${ligne} ${X(P.length - 1).toFixed(1)},${Y(0).toFixed(1)}` : '';
+      const grad = [0, 0.5, 1].map(f => { const v = Math.round(mx / 1.15 * f); return `<line x1="${g}" x2="${W - dr}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" class="fd-tq"/><text x="${g - 6}" y="${(Y(v) + 3.5).toFixed(1)}" text-anchor="end" class="fd-tl">${v}</text>`; }).join('');
+      const jj = s2 => s2.slice(8, 10) + '/' + s2.slice(5, 7);
+      const ix = P.length ? [0, Math.floor((P.length - 1) / 2), P.length - 1] : [];
+      const dates = ix.map((i, n) => `<text x="${X(i).toFixed(1)}" y="${H - 8}" text-anchor="${n === 0 ? 'start' : n === 2 ? 'end' : 'middle'}" class="fd-tl">${jj(P[i].d)}</text>`).join('');
+      corps = `<p class="fd-tdel ${sens}"><b>${dv === 0 ? 'Stable' : (dv > 0 ? '+' : '') + nf(dv, 0) + ' client' + (Math.abs(dv) > 1 ? 's' : '')}</b>${pct != null && dv !== 0 ? ` (${pct > 0 ? '+' : ''}${pct} %)` : ''}<span>${nf(a, 0)} il y a ${t.jours} jours → ${nf(b, 0)} aujourd’hui</span></p>
+        <svg viewBox="0 0 ${W} ${H}" class="fd-tsvg" role="img" aria-label="Clients ${esc(choisi.nom)} sur ${t.jours} jours">${grad}
+          <polygon points="${aire}" fill="${esc(choisi.couleur)}" opacity=".12"/><polyline points="${ligne}" fill="none" stroke="${esc(choisi.couleur)}" stroke-width="2.2" stroke-linejoin="round"/>
+          ${P.length ? `<circle cx="${X(P.length - 1).toFixed(1)}" cy="${Y(b).toFixed(1)}" r="4" fill="${esc(choisi.couleur)}"/>` : ''}${dates}</svg>
+        ${t.aLire ? `<p class="fd-note">Lecture en cours : ${nf(t.aLire, 0)} journée(s) de tickets restent à lire ; le début de la courbe se complète à la prochaine ouverture.</p>` : ''}`;
+    }
+    return `<div class="db-card fd-c"><div class="ct">Évolution · ${esc(choisi.nom)}${bascule}</div>${corps}</div>`;
+  }
   function rendFidelite() {
     if (S.fdClient) { return rendFideliteClient(); }
     const k = cleFD(), d = S.aux[k];
@@ -5642,11 +5675,11 @@
       <p class="fd-note">Les conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients). Cliquer une vignette affiche son profil dans les radars.</p>`;
     const M = d.moyenne || {};
     const serie = { c: choisi.couleur, lib: choisi.nom + ' · ' + nf(choisi.clients, 0) + ' client' + (choisi.clients > 1 ? 's' : '') };
-    h += `<div class="fd-g2"><div class="db-card fd-c"><div class="ct">Récurrence · ${esc(choisi.nom)}<span class="db-mini">0 au centre, 100 au bord</span></div>
+    h += `<div class="fd-g2 fd-g3"><div class="db-card fd-c"><div class="ct">Récurrence · ${esc(choisi.nom)}<span class="db-mini">0 au centre, 100 au bord</span></div>
         ${fdRadar([{ v: M.radar, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: choisi.radar, c: choisi.couleur, fond: 0.16, w: 2.2 }], d.axes, 330)}${fdLegende(serie, 'Moyenne des ' + nf(N, 0) + ' clients')}</div>
       <div class="db-card fd-c"><div class="ct">Type d’achat · ${esc(choisi.nom)}<span class="db-mini">part des articles, en %</span></div>
         ${fdRadar([{ v: M.familles, c: 'var(--color-text-muted)', fond: 0.06, w: 1.2 }, { v: choisi.familles, c: choisi.couleur, fond: 0.16, w: 2.2 }], d.familles, 330, 80)}${fdLegende(serie, 'Moyenne')}
-        ${d.sansFamilles ? `<p class="fd-note">${nf(d.sansFamilles, 0)} ticket(s) dont les articles restent à lire.</p>` : ''}</div></div>`;
+        ${d.sansFamilles ? `<p class="fd-note">${nf(d.sansFamilles, 0)} ticket(s) dont les articles restent à lire.</p>` : ''}</div>${fdTendance(choisi)}</div>`;
     const C = d.clients || [];
     const nomP = id => (P.find(p => String(p.id) === String(id)) || {});
     // Les clients qui reviennent (12/11/2026, Sam : « liste déroulante, fermée par défaut, avec une barre de recherche dans
@@ -5712,6 +5745,7 @@
   }
   function fdBrancher() {
     $.querySelectorAll('[data-fdp]').forEach(b => b.addEventListener('click', () => { S.fdProfil = b.dataset.fdp; rendre(); }));
+    $.querySelectorAll('[data-fdt]').forEach(b => b.addEventListener('click', () => { S.fdT = +b.dataset.fdt; charger(false); }));
     $.querySelectorAll('[data-fdc]').forEach(b => b.addEventListener('click', () => { S.fdClient = b.dataset.fdc; urlMaj(); charger(false); window.scrollTo(0, 0); }));
     $.querySelectorAll('[data-fdretour]').forEach(b => b.addEventListener('click', () => { S.fdClient = null; urlMaj(); charger(false); }));
     // La liste des clients : ouvrir et fermer sans relire ; filtrer sur place (le champ garde son curseur).
