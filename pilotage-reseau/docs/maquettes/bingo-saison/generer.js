@@ -69,6 +69,12 @@ function fichiersDessins(){
     await p.locator('.tel').screenshot({ path: path.join(ICI, 'app.jpg'), type: 'jpeg', quality: 92 });
 
     const clic = sel => p.locator(sel).first().click();
+    // Chaque cadeau plus gros que le précédent : les bons de la carte imprimée, puis le super bon au-dessus du dernier.
+    const valeurs = (await p.locator('.case.bon .val').allInnerTexts()).map(t => parseFloat(t.replace(',', '.')));
+    const superBon = parseFloat((await p.locator('[data-r="superBon"]').inputValue()));
+    if (!(valeurs.length === 4 && valeurs.every((v, i) => !i || v > valeurs[i - 1]) && superBon > valeurs[valeurs.length - 1])) {
+      erreurs.push('les cadeaux ne grandissent pas : ' + valeurs.join(', ') + ' puis ' + superBon);
+    }
     const texte = async () => (await p.locator('.toast').count()) ? p.locator('.toast').innerText() : '';
     // Le 14 janvier, 6,40 € : un ticket de 4,20 € coche « Le bon pain » (7e case).
     await clic('[data-a="ticket"][data-m="4.2"]');
@@ -83,7 +89,7 @@ function fichiersDessins(){
     await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]');
     await p.waitForTimeout(700);
     const t2 = await texte();
-    if (!/Bon débloqué : Bon de l’hiver/.test(t2)) { erreurs.push('le 3e bon ne s’est pas débloqué : ' + t2); }
+    if (!/Bon débloqué : Bon de l’hiver, 4 €.*prochain vaudra 5 €/.test(t2)) { erreurs.push('le 3e bon ne s’est pas débloqué : ' + t2); }
     await p.locator('.tel').screenshot({ path: path.join(ICI, 'app-bon-debloque.jpg'), type: 'jpeg', quality: 92 });
     // x = 4 : trois bons, à la 4e, la 8e et la 12e case.
     await clic('[data-a="x"][data-v="4"]');
@@ -105,6 +111,10 @@ function fichiersDessins(){
     await clic('[data-a="suivante"]');
     const t4 = await texte();
     if (!/printemps arrive lundi 22\/02.*tirage/.test(t4)) { erreurs.push('la fin de carte n’annonce pas le tirage du 22/02 : ' + t4); }
+    // Un super bon plus petit que le dernier bon : relevé, et la barre le dit.
+    await p.locator('[data-r="superBon"]').fill('3'); await p.locator('[data-r="superBon"]').dispatchEvent('change');
+    const releve = await p.locator('[data-r="superBon"]').inputValue();
+    if (releve !== '6' || !(await p.locator('.ctl .avis').count())) { erreurs.push('le super bon de 3 € n’est pas relevé au-dessus du dernier bon : ' + releve); }
     // Sans tirage : la case du super bon reste, le bandeau et la carte du tirage partent.
     await p.locator('[data-r="tirage"]').uncheck();
     if (await p.locator('.tir, .tirage-ca').count()) { erreurs.push('le tirage reste affiché une fois coupé'); }

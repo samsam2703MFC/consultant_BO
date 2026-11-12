@@ -80,6 +80,16 @@ button,input{font:inherit;color:inherit}
 .case.bon .tag{background:var(--abricot);border-color:var(--abricot);color:var(--rubis)}
 .case.bon .ill{width:44px;height:44px;margin:0}
 .case.bon .ti{color:#fff}.case.bon .so{color:var(--abricot)}
+.case.bon .val{font-size:15px;line-height:1.1;color:#fff;margin-top:1px}
+.echelle{display:flex;align-items:flex-end;gap:6px;margin-top:10px;height:128px}
+.echelle>div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.echelle .barre{flex:none;width:100%;border-radius:6px 6px 2px 2px;background:var(--rubis);display:flex;align-items:flex-start;justify-content:center;padding-top:5px}
+.echelle .barre .ill{width:22px;height:22px}
+.echelle .sup .barre{background:var(--rubis-f)}
+.echelle .tir .barre{background:repeating-linear-gradient(135deg,var(--rubis) 0 6px,var(--rubis-f) 6px 12px)}
+.echelle b{font-size:11.5px;color:var(--rubis);margin-bottom:3px;white-space:nowrap}
+.echelle span{flex:none;font-size:9.5px;color:var(--muet);margin-top:4px;text-align:center;line-height:1.15;white-space:nowrap}
+.avis{color:#a35d00}
 .case.bon::before,.mc.bon::before,.mega::before{content:'';position:absolute;inset:4px;border:1px dashed rgba(242,201,160,.55);border-radius:4px;pointer-events:none}
 /* Le super bon cadeau : un coupon large, crans sur les côtés */
 .case.mega{background:var(--rubis);color:#fff;flex-direction:row;align-items:center;gap:14px;padding:10px 18px;text-align:left;box-shadow:none;overflow:hidden}
@@ -2577,8 +2587,11 @@ var qrcode = function() {
     seuil: 10,                    // euros dépensés dans la semaine pour cocher sa case
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
-    bon: { valeur: 2, validite: 30 },   // le bon : 2 €, valable 30 jours dès le lendemain
-    superBon: { valeur: 10 },     // la carte pleine (13 / 13) : le super bon cadeau, en plus des bons
+    // Chaque cadeau plus gros que le précédent (Sam, 12/11/2026 : « il faut que chaque cadeau soit de plus en plus
+    // gros ») : le 1er bon vaut 2 €, chacun 1 € de plus (2, 3, 4, 5 € avec x = 3), valables 30 jours dès le lendemain ;
+    // le super bon dépasse le dernier bon ; le tirage, 1 an de pain, reste le plus gros.
+    bon: { valeur: 2, pas: 1, validite: 30 },
+    superBon: { valeur: 10 },     // la carte pleine (13 / 13) : le super bon cadeau, en plus des bons (plus gros que le dernier)
     // Le tirage au sort des cartes pleines, le lundi où la carte suivante arrive : un pain par jour pendant un an.
     tirage: { actif: true, prix: 1.5, jours: 365, gagnants: 1, le: '2027-02-22' },
   };
@@ -2635,7 +2648,7 @@ const jour = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.ge
 const dm = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7);
 const dLong = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeur: REGLES.bon.valeur, validite: REGLES.bon.validite, superBon: REGLES.superBon.valeur,
+const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeur: REGLES.bon.valeur, pas: REGLES.bon.pas, validite: REGLES.bon.validite, superBon: REGLES.superBon.valeur, avis: '',
   tirage: T.actif, prix: T.prix, gagnants: T.gagnants, incline: true, teinte: true,
   semaine: CLIENTE.semaine, depense: CLIENTE.depense, cochees: Object.assign({}, CLIENTE.cochees), utilises: Object.assign({}, CLIENTE.utilises), neuf: null,
   toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré. Encore 3,60 € cette semaine pour cocher « Le bon pain ».' } });
@@ -2648,13 +2661,23 @@ const nCoch = () => Object.keys(S.cochees).length;
 const etatSemaine = n => S.cochees[n] ? 'coche' : (n === S.semaine ? 'encours' : (n > S.semaine ? 'futur' : 'manquee'));
 const restantes = () => SEMAINES.filter(s => s.n >= S.semaine && !S.cochees[s.n]).length;
 const code = k => CLIENTE.codes[k] || 'FID' + String(k).padStart(8, '0');
+/** Chaque cadeau plus gros que le précédent : le i-e bon vaut le 1er plus (i − 1) pas. */
+const valeurBon = i => Math.round((S.valeur + (i - 1) * S.pas) * 100) / 100;
+const nBons = () => Math.floor(NS / S.x);
+const dernierBon = () => valeurBon(nBons());
+const totalBons = () => Array.from({ length: nBons() }, (_, i) => valeurBon(i + 1)).reduce((a, v) => a + v, 0);
+/** Le super bon dépasse toujours le dernier bon : sinon, il est relevé (et la barre le dit). */
+function garderOrdre(){
+  const min = dernierBon() + Math.max(1, S.pas);
+  if (S.superBon <= dernierBon()) { S.superBon = min; S.avis = 'super bon relevé à ' + eur(min) + ' : il doit dépasser le dernier bon (' + eur(dernierBon()) + ')'; }
+}
 /** Les bons de la saison : le i-e se débloque à la (i·x)-e case cochée, le jour où elle l'a été. */
 function bons(){
   const ordre = Object.keys(S.cochees).map(Number).sort((a, b) => a - b);
   const out = [], nb = Math.floor(NS / S.x);
   for (let i = 1; i <= nb; i++) {
     const k = i * S.x, b = bonDe(k), le = ordre.length >= k ? S.cochees[ordre[k - 1]] : null;
-    const o = { i, k, nom: b.nom, motif: b.motif, le };
+    const o = { i, k, nom: b.nom, motif: b.motif, le, valeur: valeurBon(i) };
     if (le) {
       o.fin = jour(le, S.validite);
       o.etat = S.utilises[i] ? 'utilise' : (o.fin < aujourdhui() ? 'expire' : 'pris');
@@ -2696,7 +2719,8 @@ function ticket(m){
         + (S.tirage ? ', et vous participez au tirage au sort du ' + dm(T.le) + ' : 1 an de pain à gagner.' : '.') };
     } else if (n % S.x === 0 && n / S.x <= Math.floor(NS / S.x)) {
       const b = bonDe(n);
-      S.toast = { bon: true, ill: b.motif, txt: 'Bon débloqué : ' + b.nom + ', ' + eur(S.valeur) + ' dans votre portefeuille, dès demain et pour ' + S.validite + ' jours.' };
+      const i = n / S.x, suivant = i < nBons() ? ' Le prochain vaudra ' + eur(valeurBon(i + 1)) + '.' : ' Le prochain : le super bon de ' + eur(S.superBon) + ' à la carte pleine.';
+      S.toast = { bon: true, ill: b.motif, txt: 'Bon débloqué : ' + b.nom + ', ' + eur(valeurBon(i)) + ' dans votre portefeuille, dès demain et pour ' + S.validite + ' jours.' + suivant };
     } else {
       const k = S.x - (n % S.x);
       S.toast = { ill: sem.ill, txt: 'Case cochée : ' + sem.titre + ' ✓ ' + (n + k <= NS ? 'Encore ' + k + ' case' + (k > 1 ? 's' : '') + ' pour le prochain bon.' : 'Plus que ' + (NS - n) + ' case' + (NS - n > 1 ? 's' : '') + ' pour la carte pleine.') };
@@ -2727,11 +2751,13 @@ function regler(k, v){
   if (k === 'x') { S.x = v; }
   if (k === 'seuil' && v >= 1) { S.seuil = v; }
   if (k === 'valeur' && v > 0) { S.valeur = v; }
+  if (k === 'pas' && v > 0) { S.pas = Math.round(v * 100) / 100; }
   if (k === 'validite' && v >= 1) { S.validite = Math.round(v); }
   if (k === 'superBon' && v > 0) { S.superBon = v; }
   if (k === 'prix' && v > 0) { S.prix = Math.round(v * 100) / 100; }
   if (k === 'gagnants' && v >= 1) { S.gagnants = Math.round(v); }
-  S.neuf = null;
+  S.neuf = null; S.avis = '';
+  garderOrdre();
   rendre();
 }
 const ACTIONS = { ticket: e => ticket(+e.dataset.m), suivante: semaineSuivante, reset: () => { S = depart(); rendre(); },
@@ -2749,8 +2775,9 @@ function vueCarte(){
         <p>Les ${NS} cases cochées : ${eur(S.superBon)} offerts, valables ${S.validite} jours. En plus des bons${S.tirage ? ', et le tirage au sort d’1 an de pain' : ''}.</p></div></div>`;
     }
     if (c.t === 'b') { const b = c.b;
+      const t = 34 + Math.round(14 * (b.i - 1) / Math.max(1, nBons() - 1));      // le dessin grandit avec le bon
       return `<div class="case bon"><div class="s"><span>Bon ${b.i}</span><span>${ord(b.k)} case</span></div><span class="tag">Débloqué</span>
-        <div class="ill blanc">${ILL[b.motif]}</div><div class="ti">${b.nom}</div><div class="so">${eur(S.valeur)} · ${S.validite} jours</div></div>`; }
+        <div class="ill blanc" style="width:${t}px;height:${t}px">${ILL[b.motif]}</div><div class="val">${eur(b.valeur)}</div><div class="ti">${b.nom}</div><div class="so">${S.validite} jours</div></div>`; }
     const s = c.s;
     return `<div class="case${s.fete ? ' fete' : ''}"><div class="s"><span>S${s.n}</span><span>${s.du} – ${s.au}</span></div>${s.fete ? `<span class="tag">Fête · ${s.jour}</span>` : '<span class="tag pr">À l’honneur</span>'}
       <div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre}</div>${s.sous !== 'produit de la semaine' ? `<div class="so">${s.sous}</div>` : ''}</div>`;
@@ -2758,12 +2785,12 @@ function vueCarte(){
   return `<div class="carte${S.incline ? ' incline' : ''}${S.teinte ? ' teinte' : ''}">
     <div class="ca-h"><img src="${LOGO}" alt="L’Atelier by"><div class="ca-saison">Carte fidélité<br>Hiver 2026 – 2027</div></div>
     <div class="ca-titre"><b>BINGO</b><i>d’hiver</i></div>
-    <p class="ca-acc">Du 23/11 au 21/02 · <em>une case par semaine, et toutes les ${S.x} cases, un bon.</em></p>
+    <p class="ca-acc">Du 23/11 au 21/02 · <em>une case par semaine, et toutes les ${S.x} cases, un bon de plus en plus gros.</em></p>
     <div class="grille" style="grid-template-columns:repeat(${S.x + 1},minmax(0,1fr))">${cellules().map(caseImp).join('')}</div>
     ${S.tirage ? `<div class="tirage-ca"><div class="ill">${ILL['bread-2']}</div><div><small>Carte pleine · tirage au sort le ${dm(T.le)}</small><b>1 AN DE PAIN</b>
       <p>Cochez les ${NS} cases : vous participez au tirage au sort. ${S.gagnants > 1 ? 'Les ' + S.gagnants + ' gagnants reçoivent' : 'Le gagnant reçoit'} un pain par jour pendant un an.</p></div></div>` : ''}
     <div class="ca-pied">
-      <div class="ca-comment"><h4>Comment ça marche</h4><p>Chaque semaine où vous dépensez <b>${eur(S.seuil)} ou plus</b> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Toutes les ${S.x} cases, un bon de ${eur(S.valeur)} se débloque dans l’app ; les ${NS} cases, le super bon cadeau${S.tirage ? ' et le tirage au sort' : ''}. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez l’app ou cette carte à la caisse.</p></div>
+      <div class="ca-comment"><h4>Comment ça marche</h4><p>Chaque semaine où vous dépensez <b>${eur(S.seuil)} ou plus</b> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Toutes les ${S.x} cases, un bon se débloque dans l’app, chacun plus gros que le précédent : ${Array.from({ length: nBons() }, (_, i) => eur(valeurBon(i + 1))).join(', ')} ; les ${NS} cases, le super bon de ${eur(S.superBon)}${S.tirage ? ' et le tirage au sort' : ''}. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez l’app ou cette carte à la caisse.</p></div>
       <div class="ca-qr"><div class="q">${qr}</div>Activez votre carte<br>N° 4417 0823</div>
     </div>
   </div>`;
@@ -2784,7 +2811,7 @@ function vueApp(){
     if (c.t === 'b') { const b = c.b;
       const bas = { pris: 'jusqu’au ' + (b.fin && dm(b.fin)), utilise: 'utilisé le ' + (S.utilises[b.i] && dm(S.utilises[b.i])), expire: 'expiré le ' + (b.fin && dm(b.fin)),
         proche: 'encore ' + (b.k - nCoch()) + ' case' + (b.k - nCoch() > 1 ? 's' : ''), futur: 'à la ' + ord(b.k) + ' case', perdu: 'au printemps' }[b.etat];
-      return `<div class="mc bon ${b.etat}${neufs.includes('b' + b.i) ? ' neuf' : ''}"><span class="d">${ord(b.k)} case</span><div class="ill${b.le ? ' blanc' : ''}">${ILL[b.motif]}</div><div class="ti">${eur(S.valeur)}</div><div class="bas">${bas}</div>
+      return `<div class="mc bon ${b.etat}${neufs.includes('b' + b.i) ? ' neuf' : ''}"><span class="d">${ord(b.k)} case</span><div class="ill${b.le ? ' blanc' : ''}">${ILL[b.motif]}</div><div class="ti">${eur(b.valeur)}</div><div class="bas">${bas}</div>
         ${b.le ? `<span class="tampon blanc"><b>✓</b><i>${dm(b.le)}</i></span>` : ''}</div>`; }
     const s = c.s, e = etatSemaine(s.n);
     return `<div class="mc ${e}${s.fete ? ' fete' : ''}${s.n < S.semaine ? ' clic' : ''}${neufs.includes('s' + s.n) ? ' neuf' : ''}" ${s.n < S.semaine ? `data-a="semaine" data-n="${s.n}" title="Cliquer : cochée ou manquée"` : ''}>
@@ -2794,7 +2821,7 @@ function vueApp(){
   // Le portefeuille : le super bon s'il est là, sinon le dernier bon pas encore utilisé.
   const dernier = B.filter(b => b.etat === 'pris').pop();
   const poche = SB && SB.etat === 'pris' ? { ill: 'cake', nom: 'Super bon cadeau · ' + eur(S.superBon), code: SB.code, fin: SB.fin }
-    : (dernier ? { ill: dernier.motif, nom: dernier.nom + ' · ' + eur(S.valeur), code: dernier.code, fin: dernier.fin } : null);
+    : (dernier ? { ill: dernier.motif, nom: dernier.nom + ' · ' + eur(dernier.valeur), code: dernier.code, fin: dernier.fin } : null);
   const nB = B.filter(b => b.le).length + (SB ? 1 : 0);
   const semaine = fini ? `<div class="semaine faite"><div class="ill">${ILL.cupcake}</div><div><small>Carte terminée · ${NS} semaines</small><b>La carte d’hiver est terminée</b><p>La carte du printemps arrive lundi ${dm(T.le)}${S.tirage ? ', le jour du tirage au sort des cartes pleines' : ''}.</p></div></div>`
     : `<div class="semaine${fait ? ' faite' : ''}"><div class="ill">${ILL[sem.ill]}</div><div><small>${fait ? 'Case cochée ✓' : 'Cette semaine'} · ${sem.du} – ${sem.au}</small><b>${sem.titre}</b>
@@ -2832,10 +2859,16 @@ function vueRegles(){
     <div><span class="ic">€</span><div><b>Une case par semaine</b><p>Dès <span class="v">${eur(S.seuil)}</span> d’achats dans la semaine, en une ou plusieurs fois : boutique, click & collect, livraison. Une case par semaine au plus.</p></div></div>
     <div><span class="ic">✓</span><div><b>Elle se coche toute seule</b><p>Le ticket est rattaché à la carte : l’app ou la carte QR scannée à la caisse. Rien à tamponner, rien à demander à la vendeuse.</p></div></div>
     <div><span class="ic">✦</span><div><b>Chaque semaine a son thème</b><p>Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div></div>
-    <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon illustré</b><p>${ks.length > 1 ? 'La ' + ks.slice(0, -1).join(', la ') + ' et la ' + ks[ks.length - 1] : 'La ' + ks[0]} case cochées débloquent chacune un bon de <span class="v">${eur(S.valeur)}</span>, valable <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
+    <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon de plus en plus gros</b><p>${ks.map((k, i) => (i ? (i === ks.length - 1 ? ' et la ' : ', la ') : 'La ') + k + ' case : ' + eur(valeurBon(i + 1))).join('')} — le 1er bon vaut <span class="v">${eur(S.valeur)}</span>, chacun <span class="v">${eur(S.pas)}</span> de plus, valables <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
       <div class="schemas">${[2, 3, 4].map(schema).join('')}</div></div></div>
-    <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, valable ${S.validite} jours, en plus des bons${S.tirage ? ', et inscrivent la carte au tirage au sort' : ''}. Il faut ne manquer aucune semaine.</p></div></div>
+    <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, plus gros que le dernier bon (${eur(dernierBon())}), valable ${S.validite} jours, en plus des bons${S.tirage ? ', et inscrivent la carte au tirage au sort' : ''}. Il faut ne manquer aucune semaine.</p></div></div>
     ${S.tirage ? `<div><span class="ic">1 an</span><div><b>Carte pleine : le tirage au sort</b><p>Tous les clients qui ont coché les ${NS} cases participent au tirage au sort du ${dLong(T.le)}, dans tout le réseau. À gagner : <span class="v">1 an de pain</span>, un pain par jour à <span class="v">${eur(S.prix)}</span>, soit ${T.jours} pains et ${eur(lot())} au prix de vente${S.gagnants > 1 ? ', pour chacun des <span class="v">' + S.gagnants + '</span> gagnants (' + eur(lot() * S.gagnants) + ' en tout)' : ', <span class="v">1</span> gagnant'}. Le gagnant reçoit dans l’app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.</p></div></div>` : ''}
+    <div><span class="ic">↗</span><div><b>L’échelle des cadeaux</b><p>Chaque cadeau dépasse le précédent. Un client qui ne manque aucune semaine reçoit ${eur(totalBons() + S.superBon)} de bons (${Array.from({ length: nBons() }, (_, i) => eur(valeurBon(i + 1))).join(' + ')} + ${eur(S.superBon)}) pour ${eur(NS * S.seuil)} d’achats au moins, soit ${nf(100 * (totalBons() + S.superBon) / (NS * S.seuil), 1)} % du minimum${S.tirage ? ', et sa chance au tirage' : ''}.</p>
+      <div class="echelle">${(() => {
+        const marches = Array.from({ length: nBons() }, (_, i) => ({ c: '', v: eur(valeurBon(i + 1)), l: ord((i + 1) * S.x) + ' case', ill: bonDe((i + 1) * S.x).motif }))
+          .concat([{ c: 'sup', v: eur(S.superBon), l: 'super bon', ill: 'cake' }]).concat(S.tirage ? [{ c: 'tir', v: '1 an de pain', l: eur(lot()), ill: 'bread-2' }] : []);
+        return marches.map((m, i) => `<div class="${m.c}"><b>${m.v}</b><div class="barre" style="height:${Math.round(22 + 70 * (i + 1) / marches.length)}px"><div class="ill blanc">${ILL[m.ill]}</div></div><span>${m.l}</span></div>`).join('');
+      })()}</div></div></div>
     <div><span class="ic">T</span><div><b>${NS} semaines, un trimestre</b><p>Une case pour chacune des ${NS} semaines du trimestre. La carte de la saison suivante arrive le lundi d’après : quatre cartes font l’année.</p></div></div>
   </div>
   <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· ${NS} semaines, un trimestre</em></h3>
@@ -2851,9 +2884,10 @@ function vueBarre(){
   return `<div class="ctl">
     <div class="grp"><span>Réglages</span>x <span class="seg2">${[2, 3, 4].map(x => `<button class="${x === S.x ? 'on' : ''}" data-a="x" data-v="${x}">${x}</button>`).join('')}</span></div>
     <div class="grp">seuil ${num('seuil', S.seuil, '€')}</div>
-    <div class="grp">bon ${num('valeur', S.valeur, '€', 0.5)} ${num('validite', S.validite, 'jours')}</div>
+    <div class="grp">1er bon ${num('valeur', S.valeur, '€', 0.5)} + ${num('pas', S.pas, '€ par bon', 0.5)} ${num('validite', S.validite, 'jours')}</div>
     <div class="grp">super bon ${num('superBon', S.superBon, '€')}</div>
     <div class="grp">${chk('tirage', S.tirage, 'tirage au sort')}${S.tirage ? ' · le pain ' + num('prix', S.prix, '€', 0.1) + ' ' + num('gagnants', S.gagnants, S.gagnants > 1 ? 'gagnants' : 'gagnant') : ''}</div>
+    ${S.avis ? `<div class="grp avis">${S.avis}</div>` : ''}
     <span class="sep"></span>
     <div class="grp"><span>Présentation</span>${chk('incline', S.incline, 'carte inclinée')} ${chk('teinte', S.teinte, 'fêtes teintées')}</div>
     <span class="ligne"></span>
@@ -2868,7 +2902,7 @@ function rendre(){
   document.getElementById('pl').innerHTML = `
     <div class="pl-k">Maquette interactive · Fidélité › Bingo de saison · 12/11/2026</div>
     <h1>Le bingo de saison : une carte qui se remplit toute seule</h1>
-    <p class="pl-sous">Une carte par saison, une case par semaine : dès ${eur(S.seuil)} d’achats dans la semaine, la case se coche dans l’app, sans tampon. Chaque case porte une fête de la saison ou le produit de la semaine ; toutes les ${S.x} cases cochées, un bon illustré se débloque, et la carte pleine donne le super bon cadeau${S.tirage ? ' et le tirage au sort d’1 an de pain' : ''}. Ajoutez des tickets, passez à la semaine suivante, cliquez une semaine passée, changez x.</p>
+    <p class="pl-sous">Une carte par saison, une case par semaine : dès ${eur(S.seuil)} d’achats dans la semaine, la case se coche dans l’app, sans tampon. Chaque case porte une fête de la saison ou le produit de la semaine ; toutes les ${S.x} cases cochées, un bon illustré se débloque, chacun plus gros que le précédent, et la carte pleine donne le super bon cadeau${S.tirage ? ' et le tirage au sort d’1 an de pain' : ''}. Ajoutez des tickets, passez à la semaine suivante, cliquez une semaine passée, changez x.</p>
     ${vueBarre()}
     <div class="pl-g">
       <section><h3 class="pl-t">La carte imprimée <em>· donnée en caisse, A6</em></h3>${vueCarte()}</section>

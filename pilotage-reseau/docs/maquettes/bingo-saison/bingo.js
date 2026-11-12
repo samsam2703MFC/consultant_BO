@@ -48,8 +48,11 @@
     seuil: 10,                    // euros dépensés dans la semaine pour cocher sa case
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
-    bon: { valeur: 2, validite: 30 },   // le bon : 2 €, valable 30 jours dès le lendemain
-    superBon: { valeur: 10 },     // la carte pleine (13 / 13) : le super bon cadeau, en plus des bons
+    // Chaque cadeau plus gros que le précédent (Sam, 12/11/2026 : « il faut que chaque cadeau soit de plus en plus
+    // gros ») : le 1er bon vaut 2 €, chacun 1 € de plus (2, 3, 4, 5 € avec x = 3), valables 30 jours dès le lendemain ;
+    // le super bon dépasse le dernier bon ; le tirage, 1 an de pain, reste le plus gros.
+    bon: { valeur: 2, pas: 1, validite: 30 },
+    superBon: { valeur: 10 },     // la carte pleine (13 / 13) : le super bon cadeau, en plus des bons (plus gros que le dernier)
     // Le tirage au sort des cartes pleines, le lundi où la carte suivante arrive : un pain par jour pendant un an.
     tirage: { actif: true, prix: 1.5, jours: 365, gagnants: 1, le: '2027-02-22' },
   };
