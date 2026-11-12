@@ -31,7 +31,7 @@ Nos trois priorités pour 2027 :
 | Food cost | 39,4 % | vers 32 % |
 | Tâches rendues sur la tablette (T3) | 19 % | 100 % au 1er mars |
 | Produits avec une recette chiffrée au panel | 372 sur 533 (70 %) | 533 sur 533 (100 %) |
-| Produits au même prix dans les 4 magasins | 1 sur 5 | tous, sur prix conseillés |
+| Produits au même prix dans les 4 magasins | 1 sur 5 | question ouverte (voir « Les prix ») |
 | Références vendues moins d'une fois par jour | 163 | coupées ou chiffrées |
 
 Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau.
@@ -75,7 +75,15 @@ Une LED est placée au-dessus de chaque emplacement de boîte. Quand la vendeuse
 
 ### Les prix
 
-Une grille de prix conseillés commune aux quatre magasins sera chargée par défaut en caisse. Ce sont des prix conseillés, pas des prix imposés. Chaque magasin peut comparer ses prix et ses marges à ceux du réseau dans le cockpit.
+Aujourd'hui, seul 1 produit sur 5 a le même prix dans les quatre magasins. Pour un même produit, l'écart peut aller jusqu'à 40 % d'un magasin à l'autre.
+
+> [Question ouverte : si les marges le permettent, pourquoi ne pas aller vers des prix uniformes ?] Des prix identiques partout, c'est plus simple pour le client, pour le webshop et pour les campagnes. Le réseau propose une grille de prix conseillés commune, chargée par défaut en caisse. Chaque magasin reste libre de ses prix : la loi interdit au franchiseur d'imposer un prix de vente. Chacun peut comparer ses prix et ses marges à ceux du réseau dans le cockpit et choisir de s'aligner.
+
+Pour en discuter en réunion :
+
+- Sur quels produits peut-on s'aligner tout de suite sans perdre de clients ?
+- Faut-il passer par paliers dans les magasins où l'écart est le plus grand ?
+- Quel prix retenir quand les formats ne sont pas tout à fait les mêmes ?
 
 ## 2. Les process
 
