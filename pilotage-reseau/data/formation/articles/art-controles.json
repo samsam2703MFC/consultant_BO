@@ -1,0 +1,277 @@
+{
+ "id": "art-controles",
+ "code": "0.0.33",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Les contrôles en magasin : types et fréquence",
+  "nl": "De controles in de winkel: soorten en frequentie"
+ },
+ "objectif": {
+  "fr": "Connaître tous les contrôles d’un magasin : qui les fait, quand, ce qu’ils vérifient et ce qui se passe après un écart.",
+  "nl": "Alle controles van een winkel kennen: wie ze doet, wanneer, wat ze nakijken en wat er na een afwijking gebeurt."
+ },
+ "pour": {
+  "fr": "Toute l’équipe du magasin et ceux qui la dirigent. À lire avant la première journée.",
+  "nl": "Het hele winkelteam en wie het leidt. Te lezen vóór de eerste dag."
+ },
+ "classement": {
+  "souscat": "D8.2",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P1",
+   "P2",
+   "P3",
+   "P4",
+   "P5",
+   "P6",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-TRANS.HACCP"
+  ],
+  "formations": [
+   "FO-02"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Chaque jour",
+    "nl": "Elke dag"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Les checklists du jour",
+      "nl": "De checklists van de dag"
+     },
+     "texte": {
+      "fr": "Qui : l’équipe du magasin, chacun selon son poste.\nQuand : à l’heure de chaque checklist, de l’ouverture à la fermeture.\nChaque tâche a son contrôle : l’auto-contrôle (la personne vérifie elle-même) ou un poste qui vérifie.\nUne tâche à photo n’est faite que si la photo est rendue.",
+      "nl": "Wie: het winkelteam, elk volgens zijn functie.\nWanneer: op het uur van elke checklist, van de opening tot de sluiting.\nElke taak heeft haar controle: de zelfcontrole (de persoon controleert zelf) of een functie die controleert.\nEen taak met foto is pas gedaan als de foto ingediend is."
+     },
+     "critique": false,
+     "photo": "ctl-checklists.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le contrôle qualité des photos",
+      "nl": "De kwaliteitscontrole van de foto’s"
+     },
+     "texte": {
+      "fr": "Chaque photo rendue est notée par le contrôleur, de 1 à 5 : 5 Exemplaire, 4 Conforme, 3 Non conforme mineur, 2 Non conforme majeur, 1 Non conforme critique.\nSous 4 : une non-conformité ; le contrôleur la commente et elle est signalée.\nChaque soir à 19 h, un magasin qui n’a envoyé aucune photo de contrôle ce jour-là reçoit un e-mail.",
+      "nl": "Elke ingediende foto wordt gescoord door de controleur, van 1 tot 5: 5 Voorbeeldig, 4 Conform, 3 Niet conform klein, 2 Niet conform groot, 1 Niet conform kritiek.\nOnder 4: een non-conformiteit; de controleur geeft commentaar en ze wordt gemeld.\nElke avond om 19 u krijgt een winkel die die dag geen enkele controlefoto stuurde een e-mail."
+     },
+     "critique": true,
+     "photo": "ctl-qualite.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La revue du soir",
+      "nl": "De avondronde"
+     },
+     "texte": {
+      "fr": "Qui : le responsable du magasin, à la fermeture (vers 18 h).\nElle passe les checklists pas finies, avec leur raison, puis les points de gestion.\nCertains se vérifient seuls : invendus déclarés, stock compté depuis moins de 7 jours, commandes clôturées, photos rendues, tâches obligatoires faites à 80 % au moins, non-conformités reprises.",
+      "nl": "Wie: de verantwoordelijke van de winkel, bij de sluiting (rond 18 u).\nZe overloopt de checklists die niet af zijn, met hun reden, daarna de beheerpunten.\nSommige worden vanzelf gecontroleerd: onverkocht aangegeven, voorraad geteld sinds minder dan 7 dagen, bestellingen afgesloten, foto’s ingediend, verplichte taken voor minstens 80 % gedaan, non-conformiteiten hersteld."
+     },
+     "critique": false,
+     "photo": "ctl-revue.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque semaine, chaque mois",
+    "nl": "Elke week, elke maand"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les checklists de la semaine et du mois",
+      "nl": "De checklists van de week en de maand"
+     },
+     "texte": {
+      "fr": "Chaque lundi : 1.5.01 Planogramme et merchandising.\nChaque mardi : 1.5.02 Audit visuel de la boutique.\nChaque mercredi : 4.5.01 Nettoyage approfondi.\nChaque mois : 5.6.01 Auto-audit HACCP, pour anticiper une inspection.",
+      "nl": "Elke maandag: 1.5.01 Planogram en merchandising.\nElke dinsdag: 1.5.02 Visuele audit van de winkel.\nElke woensdag: 4.5.01 Grondige schoonmaak.\nElke maand: 5.6.01 HACCP-zelfaudit, om een inspectie voor te zijn."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "La visite du consultant",
+      "nl": "Het bezoek van de consultant"
+     },
+     "texte": {
+      "fr": "Qui : le consultant du réseau ; quand : selon le cadre du magasin, sinon une fois par semaine.\nAnnoncée (Régulière, Production, Bilan trimestriel…) ou inopinée (Hygiène et qualité, Client mystère, Revisite).\nLe détail est dans l’article « La visite du consultant en magasin ».",
+      "nl": "Wie: de consultant van het netwerk; wanneer: volgens het kader van de winkel, anders één keer per week.\nAangekondigd (Regelmatig, Productie, Kwartaalbalans…) of onaangekondigd (Hygiëne en kwaliteit, Mystery shopper, Herbezoek).\nDe details staan in het artikel « Het bezoek van de consultant in de winkel »."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le client mystère",
+      "nl": "De mystery shopper"
+     },
+     "texte": {
+      "fr": "Un passage inopiné de 45 minutes, comme un client : accueil, attente, conseil, vente additionnelle, propreté, présentation, encaissement, au revoir.\nQuatre rubriques notées sur 20 : Accueil, Produits, Hygiène, Ambiance.\nUne rubrique sous 16/20 est revérifiée à la visite suivante.",
+      "nl": "Een onaangekondigd bezoek van 45 minuten, als klant: onthaal, wachttijd, advies, bijverkoop, netheid, presentatie, afrekenen, afscheid.\nVier rubrieken gescoord op 20: Onthaal, Producten, Hygiëne, Sfeer.\nEen rubriek onder 16/20 wordt bij het volgende bezoek opnieuw gecontroleerd."
+     },
+     "critique": false,
+     "photo": "ctl-client-mystere.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Chaque trimestre, chaque année",
+    "nl": "Elk kwartaal, elk jaar"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Le scoring du trimestre",
+      "nl": "De scoring van het kwartaal"
+     },
+     "texte": {
+      "fr": "Une note sur 20, faite de quatre parties de 5 points : la note Google, les tâches, le client mystère, le budget.\nTâches : une tâche obligatoire manquée met la journée à 0.\nBudget : 100 % du budget = 5, 90 % = 4, 80 % = 3, 70 % = 2, 60 % = 1, 50 % ou moins = 0.\nLe rapport part le premier jour du trimestre suivant ; la visite « Bilan trimestriel » le présente.",
+      "nl": "Een score op 20, opgebouwd uit vier delen van 5 punten: de Google-score, de taken, de mystery shopper, het budget.\nTaken: een gemiste verplichte taak zet de dag op 0.\nBudget: 100 % van het budget = 5, 90 % = 4, 80 % = 3, 70 % = 2, 60 % = 1, 50 % of minder = 0.\nHet rapport vertrekt op de eerste dag van het volgende kwartaal; het bezoek « Kwartaalbalans » stelt het voor."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "La formation HACCP",
+      "nl": "De HACCP-opleiding"
+     },
+     "texte": {
+      "fr": "La formation HACCP et hygiène (FO-02) est obligatoire chaque année, pour tous les postes.\nElle est contrôlée par le responsable Qualité et conformité du réseau.",
+      "nl": "De opleiding HACCP en hygiëne (FO-02) is elk jaar verplicht, voor alle functies.\nZe wordt gecontroleerd door de verantwoordelijke Kwaliteit en conformiteit van het netwerk."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Après un écart",
+    "nl": "Na een afwijking"
+   },
+   "etapes": [
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Ce qui se passe après un écart",
+      "nl": "Wat er na een afwijking gebeurt"
+     },
+     "texte": {
+      "fr": "Un écart devient un point à travailler : P0, P1 ou P2.\nIl se corrige avec une photo de la correction : P0 en 2 jours, P1 en 7 jours, P2 en 14 jours.\nLes non-conformités des 30 derniers jours se relisent dans le dashboard magasin, onglet Tâches.",
+      "nl": "Een afwijking wordt een werkpunt: P0, P1 of P2.\nZe wordt gecorrigeerd met een foto van de correctie: P0 binnen 2 dagen, P1 binnen 7 dagen, P2 binnen 14 dagen.\nDe non-conformiteiten van de laatste 30 dagen lees je terug in het winkeldashboard, tabblad Taken."
+     },
+     "critique": true,
+     "photo": "ctl-retours.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Une photo notée sous 4 est une non-conformité, à corriger.",
+   "nl": "Een foto met een score onder 4 is een non-conformiteit, te corrigeren."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le contrôleur note une photo 3 sur 5. Qu’est-ce que cela veut dire ?",
+    "nl": "De controleur geeft een foto 3 op 5. Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Conforme",
+     "Non conforme mineur : à corriger",
+     "Exemplaire"
+    ],
+    "nl": [
+     "Conform",
+     "Niet conform klein: te corrigeren",
+     "Voorbeeldig"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Quand se fait l’auto-audit HACCP (5.6.01) ?",
+    "nl": "Wanneer gebeurt de HACCP-zelfaudit (5.6.01)?"
+   },
+   "choix": {
+    "fr": [
+     "Chaque jour",
+     "Chaque semaine",
+     "Chaque mois"
+    ],
+    "nl": [
+     "Elke dag",
+     "Elke week",
+     "Elke maand"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Sur combien de points se calcule le scoring du trimestre ?",
+    "nl": "Op hoeveel punten wordt de scoring van het kwartaal berekend?"
+   },
+   "choix": {
+    "fr": [
+     "20 : quatre parties de 5 points",
+     "100",
+     "10"
+    ],
+    "nl": [
+     "20: vier delen van 5 punten",
+     "100",
+     "10"
+    ]
+   },
+   "bonne": 0
+  }
+ ]
+}

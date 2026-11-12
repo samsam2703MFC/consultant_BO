@@ -1,0 +1,290 @@
+{
+ "id": "art-visite",
+ "code": "0.0.32",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "tous",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "La visite du consultant en magasin",
+  "nl": "Het bezoek van de consultant in de winkel"
+ },
+ "objectif": {
+  "fr": "Savoir comment se passe une visite du consultant : avant, pendant, après, et ce que le magasin reçoit ensuite.",
+  "nl": "Weten hoe een bezoek van de consultant verloopt: vooraf, tijdens, achteraf, en wat de winkel daarna ontvangt."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et responsable du magasin (P4, P7 à P12). À lire avant la première visite.",
+  "nl": "Franchisenemer, manager, adjunct-manager en verantwoordelijke van de winkel (P4, P7 tot P12). Te lezen vóór het eerste bezoek."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Avant la visite",
+    "nl": "Vóór het bezoek"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Qui vient, et quand",
+      "nl": "Wie komt er, en wanneer"
+     },
+     "texte": {
+      "fr": "Le consultant du réseau : chaque type de visite demande un profil (Stratégie et Développement, Opérations et qualité, Produit et production).\nLa fréquence est fixée pour chaque magasin : un nombre de visites de chaque type par mois ou par trimestre ; sans ce cadre, une visite par semaine.\nUne visite est annoncée ou inopinée.\nAnnoncées : Régulière (1 h 30), Production (3 h), Bilan trimestriel (2 h), Ouverture et lancement (4 h), Suivi du plan d’action (45 min).\nInopinées : Hygiène et qualité (1 h), Client mystère (45 min), Revisite (1 h).",
+      "nl": "De consultant van het netwerk: elk soort bezoek vraagt een profiel (Strategie en Ontwikkeling, Operaties en kwaliteit, Product en productie).\nDe frequentie wordt per winkel vastgelegd: een aantal bezoeken van elk soort per maand of per kwartaal; zonder dat kader, één bezoek per week.\nEen bezoek is aangekondigd of onaangekondigd.\nAangekondigd: Regelmatig (1 u 30), Productie (3 u), Kwartaalbalans (2 u), Opening en lancering (4 u), Opvolging van het actieplan (45 min).\nOnaangekondigd: Hygiëne en kwaliteit (1 u), Mystery shopper (45 min), Herbezoek (1 u)."
+     },
+     "critique": false,
+     "photo": "vis-preparer.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "La préparation au bureau",
+      "nl": "De voorbereiding op kantoor"
+     },
+     "texte": {
+      "fr": "Le dossier de la visite se prépare seul : santé du magasin, points ouverts, tâches et contrôles photo, scoring, client mystère.\nLe bureau choisit le type de visite et ce qui part sur la tablette du consultant ; il peut ajouter ses propres points à vérifier.\nAvant une visite Régulière, le consultant relit la dernière visite et les plans d’action ouverts, et prépare les chiffres du mois (CA, food cost, invendus).",
+      "nl": "Het dossier van het bezoek stelt zichzelf samen: gezondheid van de winkel, open punten, taken en fotocontroles, scoring, mystery shopper.\nHet kantoor kiest het soort bezoek en wat naar de tablet van de consultant gaat; het kan eigen punten toevoegen om na te kijken.\nVóór een Regelmatig bezoek herleest de consultant het laatste bezoek en de open actieplannen, en bereidt hij de cijfers van de maand voor (omzet, food cost, onverkocht)."
+     },
+     "critique": false,
+     "photo": "vis-preparer.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "L’ordre du jour",
+      "nl": "De agenda"
+     },
+     "texte": {
+      "fr": "Visite annoncée : l’ordre du jour part par e-mail deux jours avant, dans la langue du magasin ; la visite figure sur la page du franchisé.\nVisite inopinée : rien n’est envoyé, rien n’apparaît sur la page du franchisé, aucun rappel la veille.",
+      "nl": "Aangekondigd bezoek: de agenda vertrekt twee dagen vooraf per e-mail, in de taal van de winkel; het bezoek staat op de pagina van de franchisenemer.\nOnaangekondigd bezoek: er wordt niets verstuurd, niets verschijnt op de pagina van de franchisenemer, geen herinnering de dag ervoor."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Pendant la visite",
+    "nl": "Tijdens het bezoek"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Sur la tablette du consultant",
+      "nl": "Op de tablet van de consultant"
+     },
+     "texte": {
+      "fr": "Le consultant suit la visite sur sa tablette, même sans réseau : les réponses partent dès que la connexion revient.\nLa visite se fait en six temps : Extérieur, Intérieur, Suivi de projet, Analyse, Développement, Météo et fin.\nChaque point se répond : OK, Écart ou N/A, Oui / Non, une note de 1 à 5, un pourcentage, un nombre ou un texte.\nUne étape obligatoire incomplète empêche de passer à la suivante.",
+      "nl": "De consultant volgt het bezoek op zijn tablet, ook zonder netwerk: de antwoorden vertrekken zodra de verbinding terug is.\nHet bezoek verloopt in zes delen: Buiten, Binnen, Projectopvolging, Analyse, Ontwikkeling, Weer en einde.\nElk punt krijgt een antwoord: OK, Afwijking of N/A, Ja / Nee, een score van 1 tot 5, een percentage, een getal of een tekst.\nEen onvolledige verplichte stap verhindert de volgende."
+     },
+     "critique": false,
+     "photo": "vis-tablette.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Extérieur et intérieur",
+      "nl": "Buiten en binnen"
+     },
+     "texte": {
+      "fr": "Extérieur : photos du jour de la façade et de l’arrière, puis les points de l’extérieur et de la charte de communication.\nIntérieur : la photo de l’intérieur, l’expérience client, l’équipe en poste, les modules du jour (produit, hygiène, visuel, planogramme, assortiment).\nLes contrôles en photo du jour sont relus et notés de 1 à 5.\nUne photo peut être annotée : des repères numérotés montrent ce qui ne va pas.",
+      "nl": "Buiten: foto’s van de dag van de gevel en de achterkant, daarna de punten van buiten en van de communicatiecharter.\nBinnen: de foto van de binnenkant, de klantenervaring, het team van dienst, de modules van de dag (product, hygiëne, visueel, planogram, assortiment).\nDe fotocontroles van de dag worden herlezen en gescoord van 1 tot 5.\nEen foto kan aangeduid worden: genummerde merktekens tonen wat niet klopt."
+     },
+     "critique": false,
+     "photo": "vis-sur-place.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Suivi de projet et analyse",
+      "nl": "Projectopvolging en analyse"
+     },
+     "texte": {
+      "fr": "Suivi de projet : les demandes du bureau et les points décidés aux visites précédentes ; une correction se prouve par une photo.\nAnalyse, assis avec le franchisé : chiffres et santé du magasin (CA face au budget, P&L court), les six leviers, trafic et avis Google, tâches des derniers mois, client mystère.",
+      "nl": "Projectopvolging: de vragen van het kantoor en de punten beslist bij vorige bezoeken; een correctie wordt met een foto bewezen.\nAnalyse, samen met de franchisenemer: cijfers en gezondheid van de winkel (omzet tegenover budget, korte W&V), de zes hefbomen, traffic en Google-reviews, taken van de laatste maanden, mystery shopper."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Développement et points à travailler",
+      "nl": "Ontwikkeling en werkpunten"
+     },
+     "texte": {
+      "fr": "Quand le CA est plus de 10 % sous ce qui est attendu, le consultant note pourquoi et les pistes du franchisé.\nIl note ce qu’il a vu : énergie de l’équipe, exécution du protocole, satisfaction des clients, et sa recommandation.\nLes points à travailler sont classés P0, P1 ou P2, du plus urgent au moins urgent.",
+      "nl": "Wanneer de omzet meer dan 10 % onder het verwachte ligt, noteert de consultant waarom en de pistes van de franchisenemer.\nHij noteert wat hij zag: energie van het team, uitvoering van het protocol, tevredenheid van de klanten, en zijn aanbeveling.\nDe werkpunten worden ingedeeld als P0, P1 of P2, van het dringendste naar het minst dringende."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Fin de visite et signatures",
+      "nl": "Einde van het bezoek en handtekeningen"
+     },
+     "texte": {
+      "fr": "Évaluation rapide sur six axes, de 1 à 5 : propreté, capacité métier, management, développement commercial, contact client, respect des normes.\nLa visite reçoit un score sur 100, calculé sur les points et leur poids ; il est figé à la fin de la visite.\nDeux signatures : le consultant, puis le franchisé, qui a vu le résumé.\nLa météo du franchisé et les notes de l’équipe restent internes : elles ne sont jamais dans le rapport.",
+      "nl": "Snelle evaluatie op zes assen, van 1 tot 5: netheid, vakkennis, management, commerciële ontwikkeling, klantcontact, naleving van de normen.\nHet bezoek krijgt een score op 100, berekend op de punten en hun gewicht; die wordt vastgezet op het einde van het bezoek.\nTwee handtekeningen: de consultant, daarna de franchisenemer, die de samenvatting gezien heeft.\nHet weerbericht van de franchisenemer en de scores van het team blijven intern: ze staan nooit in het rapport."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Après la visite",
+    "nl": "Na het bezoek"
+   },
+   "etapes": [
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Le rapport",
+      "nl": "Het rapport"
+     },
+     "texte": {
+      "fr": "À la fin, un brouillon part au bureau : le franchisé ne voit encore rien.\nLe bureau choisit les points et les photos qui partent, puis envoie le rapport dans les 48 heures : e-mail, PDF et page du franchisé.\nUn rapport pas lu après 3 jours est relancé.",
+      "nl": "Op het einde vertrekt een ontwerp naar het kantoor: de franchisenemer ziet nog niets.\nHet kantoor kiest de punten en foto’s die vertrekken, en verstuurt het rapport binnen 48 uur: e-mail, pdf en pagina van de franchisenemer.\nEen rapport dat na 3 dagen niet gelezen is, wordt herinnerd."
+     },
+     "critique": false,
+     "photo": "vis-page-franchise.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Corriger les points",
+      "nl": "De punten corrigeren"
+     },
+     "texte": {
+      "fr": "Pour chaque point, le franchisé envoie la photo de la correction depuis sa page.\nDélais : P0 en 2 jours, P1 en 7 jours, P2 en 14 jours.\nLe bureau accepte la correction ou la renvoie « à reprendre » avec un nouveau délai ; le consultant ferme le point sur place.\nUn point en retard de 2 jours remonte au responsable du réseau ; un P0 ouvert plus de 3 jours fait passer le magasin au rouge.",
+      "nl": "Voor elk punt stuurt de franchisenemer de foto van de correctie vanuit zijn pagina.\nTermijnen: P0 binnen 2 dagen, P1 binnen 7 dagen, P2 binnen 14 dagen.\nHet kantoor aanvaardt de correctie of stuurt ze terug « opnieuw te doen » met een nieuwe termijn; de consultant sluit het punt ter plaatse.\nEen punt dat 2 dagen te laat is, gaat naar de verantwoordelijke van het netwerk; een P0 die meer dan 3 dagen openstaat, zet de winkel op rood."
+     },
+     "critique": true,
+     "photo": "vis-page-franchise.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "La page du franchisé",
+      "nl": "De pagina van de franchisenemer"
+     },
+     "texte": {
+      "fr": "Une page propre au magasin, sans mot de passe : un lien personnel.\nOn y trouve la prochaine visite annoncée, les points à travailler avec l’envoi de la photo de correction, les rapports de visite, le client mystère rendu visible, le scoring et le journal des 60 derniers jours.\nLes brouillons, les visites inopinées, les notes du bureau et la météo n’y apparaissent jamais.",
+      "nl": "Een eigen pagina voor de winkel, zonder wachtwoord: een persoonlijke link.\nJe vindt er het volgende aangekondigde bezoek, de werkpunten met het opladen van de correctiefoto, de bezoekrapporten, de zichtbaar gemaakte mystery shopper, de scoring en het logboek van de laatste 60 dagen.\nOntwerpen, onaangekondigde bezoeken, notities van het kantoor en het weerbericht verschijnen er nooit."
+     },
+     "critique": false,
+     "photo": "vis-page-franchise.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un point P0 se corrige en 2 jours, avec une photo de la correction.",
+   "nl": "Een P0-punt wordt binnen 2 dagen gecorrigeerd, met een foto van de correctie."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le consultant arrive sans prévenir. Est-ce normal ?",
+    "nl": "De consultant komt zonder te verwittigen. Is dat normaal?"
+   },
+   "choix": {
+    "fr": [
+     "Non, toute visite est annoncée deux jours avant",
+     "Oui : les visites Hygiène et qualité, Client mystère et Revisite sont inopinées",
+     "Seulement le premier mois"
+    ],
+    "nl": [
+     "Nee, elk bezoek wordt twee dagen vooraf aangekondigd",
+     "Ja: de bezoeken Hygiëne en kwaliteit, Mystery shopper en Herbezoek zijn onaangekondigd",
+     "Alleen de eerste maand"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un point P1 est ouvert après la visite. Dans quel délai faut-il envoyer la photo de la correction ?",
+    "nl": "Na het bezoek staat een P1-punt open. Binnen welke termijn stuur je de foto van de correctie?"
+   },
+   "choix": {
+    "fr": [
+     "7 jours",
+     "2 jours",
+     "30 jours"
+    ],
+    "nl": [
+     "7 dagen",
+     "2 dagen",
+     "30 dagen"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Qu’est-ce qui n’apparaît jamais dans le rapport envoyé au franchisé ?",
+    "nl": "Wat verschijnt nooit in het rapport dat naar de franchisenemer gaat?"
+   },
+   "choix": {
+    "fr": [
+     "Les points à travailler",
+     "Les photos choisies par le bureau",
+     "La météo du franchisé et les notes de l’équipe"
+    ],
+    "nl": [
+     "De werkpunten",
+     "De foto’s die het kantoor koos",
+     "Het weerbericht van de franchisenemer en de scores van het team"
+    ]
+   },
+   "bonne": 2
+  }
+ ]
+}

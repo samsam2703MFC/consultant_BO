@@ -1,7 +1,46 @@
 {
- "id": "art-fo-36",
- "photos": {
-  "it-franchise-buddy.jpg": "u/20261110-6061e71363b2.jpg",
-  "it-tablette-sop.jpg": "u/20261110-9c5f8d021e93.jpg"
+ "ctl-checklists.jpg": {
+  "sha": "7f9e15f512d083c09b7beee48270336ac987dbbb4302c518407abb7d7aaf819d",
+  "u": "u/20261112-93e96ece9af7.jpg"
+ },
+ "ctl-client-mystere.jpg": {
+  "sha": "c64c88b71cf7380b1b5c06111dde8dc37886a7b7b5dc0fa4bc04562dc823b722",
+  "u": "u/20261112-22cca78dcbf6.jpg"
+ },
+ "ctl-qualite.jpg": {
+  "sha": "f36f6225b815ad051c78b341ac578afec85e2f434e2fe346968e3740be79d94d",
+  "u": "u/20261112-a181e4c138ea.jpg"
+ },
+ "ctl-retours.jpg": {
+  "sha": "88e1572a1d7486860d2d85d1da58ba58dcc8b897c23783e82265c27e5c5336b9",
+  "u": "u/20261112-f01854671567.jpg"
+ },
+ "ctl-revue.jpg": {
+  "sha": "85cdf8d9bfe8c09ccab211937c707f61cd7770cc97cfa168ecbad5f0f131cc21",
+  "u": "u/20261112-53db1df9385d.jpg"
+ },
+ "it-franchise-buddy.jpg": {
+  "sha": "fe8d643a76c9c7db8108f4b8710f3a515a7a1f9c35c56a01ab2f9b9b847dacd4",
+  "u": "u/20261110-6061e71363b2.jpg"
+ },
+ "it-tablette-sop.jpg": {
+  "sha": "e0a2f1c932364723c0fafdbe9e9e2958e61d54c5f415fcff55acc475411d7977",
+  "u": "u/20261110-9c5f8d021e93.jpg"
+ },
+ "vis-page-franchise.jpg": {
+  "sha": "ee87e2e0d816a781b4f5c71c58323e999aa4ad218afee041933459481e3a06bc",
+  "u": "u/20261112-b95eafa09bcc.jpg"
+ },
+ "vis-preparer.jpg": {
+  "sha": "5f8c31ff483498655e795d91f815e32ce135d272085a09d919a35360cff6fb17",
+  "u": "u/20261112-b22235a0e185.jpg"
+ },
+ "vis-sur-place.jpg": {
+  "sha": "3ef760716030d24c1f7041b4bcc9fdcdb236cd0e9e13a61e69248d7cbaf438d4",
+  "u": "u/20261112-0bbf5ad3d14e.jpg"
+ },
+ "vis-tablette.jpg": {
+  "sha": "be91a7cfb5e7891c67201db94cae8c5a16d72bd5dbdd9088ff220b3b274c77d4",
+  "u": "u/20261112-0db9d7b0d551.jpg"
  }
 }
