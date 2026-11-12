@@ -9,7 +9,7 @@ name: Sonde — assistant du dashboard magasin, appel réel (Halle) (lecture seu
 on:
   push:
     branches: [claude/elegant-cray-9i8enx]
-    paths: ['pilotage-reseau/tools/sonde_assistant_halle.php', 'pilotage-reseau/src/assistant_magasin.php', '.github/workflows/sonde-assistant-halle.yml']
+    paths: ['pilotage-reseau/tools/sonde_assistant_halle.php', 'pilotage-reseau/src/assistant_magasin.php', 'pilotage-reseau/src/anthropic.php', '.github/workflows/sonde-assistant-halle.yml']
   workflow_dispatch:
 
 concurrency:
@@ -58,6 +58,7 @@ jobs:
         run: |
           sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/assistant_magasin.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_assistant_magasin.php"
           sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/fidelite_profils.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_fidelite_profils.php"
+          sshpass -e scp ${SSH_OPTS} -P "${SSH_PORT}" src/anthropic.php "${SSH_USER}@${SSH_HOST}:/tmp/sonde_anthropic.php"
 
       - name: Poser deux questions à l’assistant pour Halle
         env:
@@ -65,4 +66,4 @@ jobs:
         run: |
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
             "php -- '${TARGET_DIR}'" < tools/sonde_assistant_halle.php || true
-          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/sonde_assistant_magasin.php /tmp/sonde_fidelite_profils.php"
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" "rm -f /tmp/sonde_assistant_magasin.php /tmp/sonde_fidelite_profils.php /tmp/sonde_anthropic.php"

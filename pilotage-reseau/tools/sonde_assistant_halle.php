@@ -7,6 +7,8 @@ declare(strict_types=1);
  *   1. assemble la fiche de faits de Halle par l'API du panel (amFaits) et en montre la forme, sans secret ;
  *   2. pose « Que puis-je améliorer ? » à Claude (amDemander) et montre la réponse, le modèle, l'usage ;
  *   3. pose une question de suite avec le fil, pour vérifier la conversation et le cache.
+ * Quatrième passage (12/11/2026) : l’identifiant d’espace de travail est dans erp_cles (anthropic_workspace_id) ; le
+ * nouveau src/anthropic.php, qui l’envoie, part aussi dans /tmp (le serveur a encore l’ancien).
  * Troisième passage (12/11/2026) : crédit ajouté au compte Anthropic, l’appel réel se vérifie (relancé une seconde fois).
  * Deuxième passage (Sam, 12/11/2026 : « récupère-la dans la table erp keys ») : la clé se cherche dans erp_cles, par son
  * nom ; seule son existence et son nom s'affichent.
@@ -15,7 +17,8 @@ declare(strict_types=1);
  * (ceo_fid_*), les mêmes que la première ouverture du dashboard. Rien d'autre.
  */
 $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');
-foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'writes.php', 'panel_api.php', 'anthropic.php', 'fidelite.php'] as $f) { require_once "$dir/src/$f"; }
+foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'writes.php', 'panel_api.php', 'fidelite.php'] as $f) { require_once "$dir/src/$f"; }
+require_once '/tmp/sonde_anthropic.php';
 require_once '/tmp/sonde_fidelite_profils.php';
 require_once '/tmp/sonde_assistant_magasin.php';
 
