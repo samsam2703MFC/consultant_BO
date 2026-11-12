@@ -1037,6 +1037,67 @@ function wr_visites_put(string $id): array
     return ['ok' => true, 'visite' => viVisiteLigne($apres ?? Db::row('SELECT * FROM con_visite WHERE id = ?', [(int) $v['id']])), 'suite' => $suite];
 }
 
+/**
+ * DELETE /visites/{id} — effacer une visite (11/11/2026, demande de Sam), à n'importe quelle étape : la visite et tout ce
+ * qu'elle a produit — ses réponses, ses photos (fichiers compris), les points nés pendant elle et leur historique, les
+ * tâches de son type. Une visite à venir est d'abord annulée comme par PUT statut annulee : l'agenda du consultant reçoit
+ * l'annulation et le franchisé d'une visite annoncée qui avait reçu l'ordre du jour est prévenu. Sans retour possible :
+ * l'écran le demande avant. Rend ce qui a été effacé.
+ */
+function wr_visites_delete(string $id): array
+{
+    ensureVisites();
+    if (function_exists('ensureVisitesCadre')) { ensureVisitesCadre(); }
+    $v = viVisiteParId($id);
+    if ($v === null) { http_response_code(404); return ['error' => 'visite inconnue']; }
+    $vid = (int) $v['id']; $qui = viQui(body() + ['qui' => 'Bureau']);
+    $court = viMagasins()[(string) $v['shop_id']]['court'] ?? (string) $v['shop_id'];
+    // À venir : prévenir avant d'effacer. Passée sans avoir été faite, ou déjà faite, personne n'attend plus rien.
+    $suite = null;
+    if (in_array($v['statut'], ['planifiee', 'confirmee'], true) && (string) $v['prevu_le'] >= date('Y-m-d') && function_exists('vcApresChangement')) {
+        try { $suite = vcApresChangement($v, ['statut' => 'annulee'] + $v); } catch (Throwable $e) { $suite = ['erreur' => $e->getMessage()]; }
+    }
+    $plans = array_map(static fn (array $r): int => (int) $r['id'], Db::rows('SELECT id FROM con_visite_action WHERE visite_id = ?', [$vid]));
+    $inP = implode(',', array_fill(0, count($plans), '?'));
+    $photos = Db::rows('SELECT id, chemin FROM con_visite_photo WHERE visite_id = ?' . ($plans ? " OR plan_id IN ($inP)" : ''), array_merge([$vid], $plans));
+    $phIds = array_map(static fn (array $r): int => (int) $r['id'], $photos);
+    $inF = implode(',', array_fill(0, count($phIds), '?'));
+    $n = ['reponses' => 0, 'photos' => count($phIds), 'points' => count($plans), 'taches' => 0];
+    $pdo = Db::pdo();
+    $pdo->beginTransaction();
+    try {
+        if ($plans) {
+            Db::exec("DELETE FROM con_visite_action_evt WHERE plan_id IN ($inP)", $plans);
+            Db::exec('DELETE FROM con_visite_action WHERE visite_id = ?', [$vid]);
+        }
+        if ($phIds) {
+            // Une photo de cette visite peut servir de preuve à un point d'une autre : le point reste, sans la photo.
+            Db::exec("UPDATE con_visite_action SET photo_id = NULL WHERE photo_id IN ($inF)", $phIds);
+            Db::exec("UPDATE con_visite_action_evt SET photo_id = NULL WHERE photo_id IN ($inF)", $phIds);
+            Db::exec("DELETE FROM con_visite_photo WHERE id IN ($inF)", $phIds);
+        }
+        $n['reponses'] = Db::exec('DELETE FROM con_visite_point WHERE visite_id = ?', [$vid]);
+        if (function_exists('ensureVisitesCadre')) { $n['taches'] = Db::exec('DELETE FROM con_consultant_tache WHERE visite_id = ?', [$vid]); }
+        Db::exec('DELETE FROM con_visite WHERE id = ?', [$vid]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        if ($pdo->inTransaction()) { $pdo->rollBack(); }
+        http_response_code(500);
+        return ['error' => 'visite non effacée : ' . $e->getMessage()];
+    }
+    // Les fichiers, une fois la base à jour : seulement ceux rangés sous uploads/visites/.
+    foreach ($photos as $p) {
+        $chemin = (string) $p['chemin'];
+        if (preg_match('#^uploads/visites/[\w-]+/[\w.-]+$#', $chemin) === 1 && is_file(__DIR__ . '/../public/' . $chemin)) { @unlink(__DIR__ . '/../public/' . $chemin); }
+    }
+    $prevenus = [];
+    if (!empty($suite['invitation']['envoye'])) { $prevenus[] = 'annulation à l’agenda du consultant'; }
+    if (!empty($suite['franchise']['envoye'])) { $prevenus[] = 'franchisé prévenu de l’annulation'; }
+    journalAdd($qui, 'Visite', null, 'Visite effacée : ' . $court . ' du ' . $v['prevu_le'] . ' (' . (($v['type_code'] ?? '') ?: 'reguliere') . ', ' . ($v['consultant_nom'] ?: 'sans consultant') . ', ' . $v['statut'] . ')'
+        . ' · ' . $n['reponses'] . ' réponse(s), ' . $n['photos'] . ' photo(s), ' . $n['points'] . ' point(s), ' . $n['taches'] . ' tâche(s)' . ($prevenus ? ' · ' . implode(', ', $prevenus) : ''));
+    return ['ok' => true, 'efface' => $n + ['id' => $vid, 'shop' => (string) $v['shop_id'], 'court' => $court], 'suite' => $suite];
+}
+
 /** La checklist d'une visite : celle de son type, la standard pour la régulière (vcTypes). */
 function viChecklistVisite(array $v): array
 {
