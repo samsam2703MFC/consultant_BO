@@ -10,6 +10,7 @@ import { valsFF, valsCQM } from './franchises-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
+import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
@@ -385,6 +386,8 @@ class App {
       tablette: 'tablette',
       // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
       fidelite: 'fidelity',
+      // Les coachs de l'assistant du dashboard magasin (12/11/2026).
+      assistantCoachs: 'assistant',
       // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
       primesApp: 'primes',
       // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
@@ -1140,6 +1143,7 @@ class App {
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
+      assistantCoachs: ['Assistant · coachs', 'Les deux coachs de l’assistant du dashboard magasin, Pierre et le Coach : leur ton, ce sur quoi chacun met l’accent et ce qu’il vérifie — budget, trafic, contrôles qualité. Et les questions que les franchisés leur posent.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
@@ -1457,7 +1461,9 @@ class App {
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
         // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
-        ['fidelite', 'Fidélité', 0]]],
+        ['fidelite', 'Fidélité', 0],
+        // L'assistant du dashboard magasin (12/11/2026) : les deux coachs (ton, accents, vérifications) et les questions posées.
+        ['assistantCoachs', 'Assistant · coachs', 0]]],
       // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
       // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
       // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
@@ -1522,11 +1528,11 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1950,6 +1956,7 @@ class App {
     if (common.isApiModule) { this.valsApiModule(common); }
     if (common.isPointages) { this.valsPointages(common); }
     if (common.isFid) { valsFidelite(this, common); }
+    if (common.isAsc) { valsAssistantCoachs(this, common); }
     if (common.isPromoTab) { valsPromoTableau(this, common); }
     if (common.isPromoEd) { valsPromoEdition(this, common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
