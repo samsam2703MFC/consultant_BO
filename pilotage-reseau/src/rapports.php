@@ -2347,6 +2347,10 @@ function ep_rapports_cron(): array
     $recurrence = 'module absent';
     try { if (function_exists('rpCron')) { $recurrence = rpCron(); } }
     catch (Throwable $eRp) { $recurrence = 'échec — ' . $eRp->getMessage(); }
+    // La carte en caisse (12/11/2026) : les codes de bon que le panel n'a pas encore pris, repris à chaque heure.
+    $fidCaisse = 'module absent';
+    try { if (function_exists('fcaCron')) { $fidCaisse = fcaCron(); } }
+    catch (Throwable $eF) { $fidCaisse = 'échec — ' . $eF->getMessage(); }
     // Vérification, lot 1 (31/10/2026) : un lot de recettes lues, la liste des recettes à corriger remise à jour.
     $verification = 'module absent';
     try { if (function_exists('vfCron')) { $verification = vfCron(); } }
@@ -2364,7 +2368,7 @@ function ep_rapports_cron(): array
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'verification' => $verification, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'fideliteCaisse' => $fidCaisse, 'verification' => $verification, 'resultat' => $resultat];
 }
 
 /**

@@ -30,6 +30,7 @@ require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
+require __DIR__ . '/../../src/fidelite_caisse.php';   // La carte de fidélité à la caisse (12/11/2026)
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
@@ -254,6 +255,30 @@ try {
         header('Cache-Control: no-store');
         $out = wr_pointage_caisse();
         echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
+    // La carte de fidélité à la caisse (12/11/2026, src/fidelite_caisse.php) : la même clé de caisse que le pointage,
+    // les mêmes règles d'ouverture (CORS, clé dans la requête, jamais dans un cookie). Après la réponse, le code d'un
+    // bon se crée au panel : la caisse n'attend pas l'ERP.
+    if ($path === '/fidelite/caisse/etat' || $path === '/fidelite/caisse/carte' || $path === '/fidelite/caisse/carte/annuler') {
+        header('Access-Control-Allow-Origin: *');
+        header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+        header('Access-Control-Allow-Headers: Content-Type, Accept');
+        header('Access-Control-Max-Age: 600');
+        header('Cache-Control: no-store');
+        if ($method === 'OPTIONS') { http_response_code(204); exit; }
+        $out = match (true) {
+            $method === 'GET' && $path === '/fidelite/caisse/etat'            => ep_fidelite_caisse_etat(),
+            $method === 'POST' && $path === '/fidelite/caisse/carte'          => wr_fidelite_caisse_carte(),
+            $method === 'POST' && $path === '/fidelite/caisse/carte/annuler'  => wr_fidelite_caisse_annuler(),
+            default => (static function (): array { http_response_code(405); return ['error' => 'méthode non prise en charge']; })(),
+        };
+        echo json_encode($out, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        if ($path === '/fidelite/caisse/carte' && ($out['bon']['mode'] ?? '') === 'code' && empty($out['essai']) && isset($out['id'])) {
+            if (function_exists('fastcgi_finish_request')) { fastcgi_finish_request(); }
+            try { fcaPousser(1, (int) $out['id']); } catch (Throwable $e) { /* repris au battement horaire */ }
+        }
         exit;
     }
 
@@ -686,6 +711,7 @@ function route(string $method, string $path): mixed
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
+            $path === '/fidelite/caisse'               => ep_fidelite_caisse(),
             $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
@@ -950,6 +976,9 @@ function route(string $method, string $path): mixed
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- fidélité : les règles du programme, publiées en un envoi
     if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
+    // --- fidélité : la carte en caisse — la mise en route d'un magasin, les codes à relancer au panel
+    if ($method === 'PUT' && $path === '/fidelite/caisse/lancement') { return wr_fidelite_caisse_lancement(); }
+    if ($method === 'POST' && $path === '/fidelite/caisse/pousser') { return wr_fidelite_caisse_pousser(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }

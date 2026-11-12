@@ -17,6 +17,9 @@ declare(strict_types=1);
  * doit les lire pour les appliquer (cartes à tampons et jauge : pwa_loyalty_card / _config) —
  * ce raccord reste à faire, l'écran ne prétend pas le contraire.
  *
+ * La carte en caisse (12/11/2026, src/fidelite_caisse.php) : le déclencheur « carte » donne le bon des déjà-venus
+ * qui reçoivent leur carte QR à la caisse ; ce qu'il a donné se compte dans ceo_fid_carte.
+ *
  * Les visites carte arrivent dans ceo_fid_visite (client, magasin, date-heure, montant, type
  * d'achat). Une base qui a des visites compte pour de vrai ; sans visite, l'analyse tourne sur
  * un JEU D'ESSAI généré (mêmes calculs) et la réponse le dit (`test`), comme la newsletter.
@@ -44,7 +47,7 @@ const FID_TYPES = ['base' => 'gain', 'panier' => 'gain', 'creneau' => 'multi', '
     'jauge' => 'recoit', 'tampons' => 'recoit', 'declencheur' => 'recoit',
     'plafond' => 'garde', 'cumul' => 'garde', 'unbon' => 'garde', 'expiration' => 'garde', 'exclus' => 'garde', 'budget' => 'garde'];
 const FID_UNIQUES = ['base', 'jauge', 'plafond', 'cumul', 'unbon', 'expiration', 'exclus', 'budget'];
-const FID_EVENEMENTS = ['inscription', 'visite2', 'anniversaire', 'visiteN', 'panier', 'parrainage', 'absence'];
+const FID_EVENEMENTS = ['inscription', 'visite2', 'anniversaire', 'visiteN', 'panier', 'parrainage', 'absence', 'carte'];
 const FID_TAUX_BON = 0.65;        // hypothèse : part des bons émis qui sont utilisés
 const FID_TAUX_PRODUIT = 0.85;    // hypothèse : part des produits offerts qui sont pris
 const FID_PRIX_PRODUIT = 2.5;     // hypothèse : prix de vente moyen d'un produit offert
@@ -76,6 +79,28 @@ function ensureFidelite(): void
         . 'KEY idx_quand (visited_at), KEY idx_client (client_ref, visited_at)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
     if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_regle')['n'] ?? 0) === 0) { fidSemer(); }
+    fidSemerCarte();
+}
+
+/** Le bon des déjà-venus qui reçoivent leur carte en caisse (12/11/2026) : posé une fois sur un programme d'avant. */
+const FID_CARTE_DEFAUT = ['evenement' => 'carte', 'n' => 0, 'recompense' => ['type' => 'bon', 'valeur' => 2, 'libelle' => ''], 'validite' => 30];
+function fidSemerCarte(): void
+{
+    static $fait = false;
+    if ($fait || !function_exists('setting')) { return; }
+    $fait = true;
+    if (setting('fidCarteSemee')) { return; }
+    $deja = false;
+    foreach (Db::rows("SELECT params_json FROM ceo_fid_regle WHERE type = 'declencheur'") as $r) {
+        if ((json_decode((string) $r['params_json'], true)['evenement'] ?? '') === 'carte') { $deja = true; break; }
+    }
+    if (!$deja) {
+        $ordre = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) m FROM ceo_fid_regle')['m'] ?? 0) + 10;
+        Db::exec('INSERT INTO ceo_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
+            ['recoit', 'declencheur', json_encode(fidNormalise('declencheur', FID_CARTE_DEFAUT), JSON_UNESCAPED_UNICODE), '', 1, $ordre, 'carte en caisse']);
+    }
+    // Retirée ensuite par la marque, elle ne revient pas.
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)', ['fidCarteSemee', json_encode(date('Y-m-d'))]);
 }
 
 /** Le programme de départ : celui de la maquette C. Posé une fois, sur une table vide. */
@@ -104,6 +129,7 @@ function fidSemer(): void
         ['declencheur', ['evenement' => 'visiteN', 'n' => 10, 'recompense' => ['type' => 'produit', 'valeur' => 0, 'libelle' => 'une tartelette surprise'], 'validite' => 14], '', 1],
         ['declencheur', ['evenement' => 'parrainage', 'n' => 0, 'recompense' => ['type' => 'points', 'valeur' => 100, 'libelle' => ''], 'validite' => 30], '', 1],
         ['declencheur', ['evenement' => 'absence', 'n' => 45, 'recompense' => ['type' => 'bon', 'valeur' => 3, 'libelle' => ''], 'validite' => 21], '', 1],
+        ['declencheur', FID_CARTE_DEFAUT, '', 1],
         ['plafond', ['points' => 300], '', 1],
         ['cumul', [], '', 1],
         ['unbon', [], '', 1],
@@ -189,6 +215,12 @@ function fidNormalise(string $type, array $p): ?array
             $ev = in_array($p['evenement'] ?? '', FID_EVENEMENTS, true) ? $p['evenement'] : 'inscription';
             $bornes = ['inscription' => [0, 100, 8], 'visite2' => [1, 60, 14], 'visiteN' => [2, 60, 10], 'panier' => [5, 500, 30], 'absence' => [7, 180, 45]];
             $n = isset($bornes[$ev]) ? fidEntier($p['n'] ?? null, $bornes[$ev][0], $bornes[$ev][1], $bornes[$ev][2]) : 0;
+            if ($ev === 'carte') {
+                // À la caisse, le client n'a pas encore de compte : pas de points, un bon (ou un produit) qui dure au moins un jour.
+                $rc = is_array($p['recompense'] ?? null) ? $p['recompense'] : [];
+                if (($rc['type'] ?? 'bon') === 'points') { $rc = ['type' => 'bon', 'valeur' => 2, 'libelle' => '']; }
+                return ['evenement' => 'carte', 'n' => 0, 'recompense' => fidRecompense($rc), 'validite' => fidEntier($p['validite'] ?? 30, 1, 365, 30)];
+            }
             return ['evenement' => $ev, 'n' => $n, 'recompense' => fidRecompense($p['recompense'] ?? null), 'validite' => fidEntier($p['validite'] ?? 30, 0, 365, 30)];
         case 'plafond': return ['points' => fidEntier($p['points'] ?? 300, 10, 10000, 300)];
         case 'cumul':
@@ -537,6 +569,16 @@ function fidStats(array $regles, array $V, int $R, string $shop): array
             case 'tampons': $txt = 'tampons tenus par la PWA'; break;
             case 'declencheur':
                 $ev = $p['evenement'];
+                if ($ev === 'carte') {
+                    // Les bons remis en caisse : comptés dans ceo_fid_carte (src/fidelite_caisse.php), pas dans les visites.
+                    $n = function_exists('fcaBonsRemis') ? fcaBonsRemis($r['shop'] !== '' ? $r['shop'] : $shop, gmdate('Y-m-d', ($R - 29) * 86400), gmdate('Y-m-d', $R * 86400)) : 0;
+                    $out[$id] = ['txt' => fidN($n) . ' bons remis en caisse sur 30 jours', 'n' => $n, 'cls' => ''];
+                    if ($r['actif']) {
+                        $rc = $p['recompense'];
+                        $cout[$r['id'] . '|carte'] = $rc['type'] === 'produit' ? $n * FID_PRIX_PRODUIT * FID_TAUX_PRODUIT : $n * $rc['valeur'] * FID_TAUX_BON;
+                    }
+                    continue 2;
+                }
                 if ($ev === 'visite2') {
                     $obs = (int) $bonus[$id];
                     $txt = $obs ? fidN($n) . ' sur ' . fidN($obs) . ' nouveaux (' . round(100 * $n / $obs) . ' %)' : 'aucun nouveau à lire';
