@@ -5,8 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= isset($pageTitle) ? $pageTitle : "Production · L'Atelier"?></title>
 
-    <link rel="preconnect" href="https://fonts.gstatic.com">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/bootstrap.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/perfect-scrollbar/perfect-scrollbar.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/vendors/bootstrap-icons/bootstrap-icons.css?v=1.11.3">
@@ -20,6 +18,7 @@
 
     <link rel="stylesheet" type="text/css" href="<?=ROOT?>/assets/css/tree_graph/ECOTree.css">
     <link rel="stylesheet" href="<?=ROOT?>/assets/css/atelier.css?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>">
+    <link rel="stylesheet" href="<?=ROOT?>/assets/css/ds.css?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>">
     <script src="<?=ROOT?>/assets/js/atelier.js" defer></script>
     <script src="<?=ROOT?>/assets/js/atelier-table.js" defer></script>
     <script src="<?=ROOT?>/assets/js/activity.js?v=<?= \App\Core\Twig\AppExtension::assetVersion() ?>" data-root="<?=ROOT?>" defer></script>

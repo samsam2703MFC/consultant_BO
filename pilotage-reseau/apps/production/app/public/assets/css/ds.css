@@ -1,0 +1,395 @@
+/* ==========================================================================
+   Design system « L'Atelier By » — couche commune de l'ERP production.
+   Référence : docs/DESIGN_SYSTEM.md (racine du dépôt), relevé du module Marketing.
+   Chargé APRÈS atelier.css (base.twig, header.view.php, login.view.php) : jetons §3,
+   police §4, coquille §6–§8, composants §7. Les tablettes (kiosk, packing, office,
+   driver) ont leur propre feuille et ne sont pas concernées.
+   Écarts assumés (voir le compte rendu) : 700 = Gotham_Black (Gotham_Regular n'a pas
+   ą ć ę ń ś ź ż ni €), contenu sur toute la largeur (décision 112), interface en polonais.
+   ========================================================================== */
+
+/* §4.1 — deux graisses seulement. 400 = Gotham_Medium (texte), 700 = accents. */
+@font-face { font-family: 'Gotham'; src: url('../fonts/atelier/Gotham_Medium.otf') format('opentype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Gotham'; src: url('../fonts/atelier/Gotham_Black.otf') format('opentype'); font-weight: 700; font-display: swap; }
+
+/* §3 — jetons, copiés tels quels. */
+:root {
+  --ink: #1c1a17;
+  --muted-2: #5c5852;
+  --muted: #7a736a;
+  --faint: #B8B2A8;
+  --paper: #faf7f2;
+  --table-head: #FBF9F5;
+  --total-line: #F8F4EE;
+  --chip: #EDE7DE;
+  --line: #e6e0d8;
+  --row-line: rgba(34, 34, 34, 0.06);
+  --accent: #8D1D2C;
+  --accent-hover: #6f1622;
+  --danger: #b3261e;
+  --green: #3f7a52;
+  --prize: #B0792A;
+  --prize-soft: #F6E7CE;
+  --prize-ink: #7A5207;
+  --stop: #A32014;
+  --stop-soft: #F7E0DC;
+  --select-soft: rgba(141, 29, 44, 0.05);
+  --rail-active: rgba(141, 29, 44, 0.08);
+  --ok-soft: rgba(63, 122, 82, 0.12);
+  --veil: rgba(24, 18, 20, 0.42);
+
+  /* Correspondance des anciens jetons de l'ERP (atelier.css) vers le système : chaque règle
+     existante qui lit --at-* suit sans être réécrite. */
+  --at-primary: var(--accent);
+  --at-primary-dark: var(--accent-hover);
+  --at-primary-soft: var(--rail-active);
+  --at-abricot: var(--prize-soft);
+  --at-on-abricot: var(--prize-ink);
+  --at-bg: var(--paper);
+  --at-bg-2: var(--total-line);
+  --at-surface: #fff;
+  --at-text: var(--ink);
+  --at-muted: var(--muted);
+  --at-line: var(--line);
+  --at-line-2: var(--line);
+  --at-success: var(--green);
+  --at-warning: var(--prize);
+  --at-danger: var(--danger);
+  --at-font-ui: 'Gotham', system-ui, sans-serif;
+  --at-font-display: 'Gotham', system-ui, sans-serif;
+
+  --bs-primary: #8D1D2C;
+  --bs-primary-rgb: 141, 29, 44;
+  --bs-body-font-family: 'Gotham', system-ui, sans-serif;
+  --bs-body-font-size: 13px;
+  --bs-body-color: #1c1a17;
+  --bs-body-bg: #faf7f2;
+  --bs-border-color: #e6e0d8;
+  --bs-link-color: #8D1D2C;
+  --bs-link-hover-color: #6f1622;
+  --bs-secondary-color: #7a736a;
+  color-scheme: light;
+}
+
+/* --- Base ------------------------------------------------------------------ */
+html, body { background: var(--paper); }
+body { font-family: 'Gotham', system-ui, sans-serif; font-size: 13px; color: var(--ink); line-height: normal; }
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 { font-family: 'Gotham', system-ui, sans-serif; color: var(--ink); }
+a { color: var(--accent); }
+a:hover { color: var(--accent-hover); }
+.text-muted, .text-subtitle, .text-secondary { color: var(--muted) !important; }
+.text-primary { color: var(--accent) !important; }
+.text-success { color: var(--green) !important; }
+.text-danger { color: var(--danger) !important; }
+.text-warning { color: var(--prize-ink) !important; }
+.text-info { color: var(--muted-2) !important; }
+.text-dark, .text-body { color: var(--ink) !important; }
+.bg-light { background-color: var(--table-head) !important; }
+.bg-white { background-color: #fff !important; }
+::selection { background: var(--rail-active); }
+code { padding: 1px 4px; border-radius: 4px; background: var(--chip); color: var(--ink); }
+hr { border-color: var(--line); opacity: 1; }
+
+/* §4.3 — le texte n'est jamais en gras : 400 partout, 700 pour la liste fermée d'accents
+   (entrée active du rail, valeur d'un chiffre clé). Les règles de page qui posent 500, 600, 700,
+   800 ou bold, et les <b>/<strong> d'interface, retombent ainsi sur 400 sans être réécrits un à un. */
+body *, body *::before, body *::after { font-weight: 400 !important; }
+.bi::before, [class^="bi-"]::before, [class*=" bi-"]::before, [class^="dripicons-"]::before, [class*=" dripicons-"]::before { font-weight: normal !important; }
+
+/* Accents (700) : entrée active du rail + valeurs de chiffres clés (KPI, 22–24 px). */
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link,
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link span:not(.at-count),
+.sidebar-wrapper .menu .submenu .submenu-item.active > a,
+.kpi__value, .ds-accent,
+.at-tile-value, .at-dash-value, .mt-big, .tfb-week-kpi strong, .tfb-fin-big > span, .tfb-fin-total > span,
+.tfb-buy-kpi-v, .lg-big, .ct-kpi b, .pm-prop .big, .tt-tiles b, .mc-tile b, .pd-eff-target strong,
+.at-logi-tour-total strong, .at-logi-customer-total strong, .sa-sec .v, .sa-verdict .fig b, .lp-kpi b, .dc-tile > b {
+  font-weight: 700 !important;
+}
+/* §4.2 — grande valeur de KPI : 24 px, -0.02em, interligne 1.15. */
+.at-tile-value, .at-dash-value, .mt-big, .tfb-fin-big > span, .tfb-buy-kpi-v, .lg-big, .ct-kpi b, .pm-prop .big, .tt-tiles b,
+.pd-eff-target strong, .at-logi-customer-total strong, .sa-verdict .fig b, .lp-kpi b, .dc-tile > b {
+  font-size: 24px !important; letter-spacing: -0.02em; line-height: 1.15;
+}
+/* Valeur de bandeau : 22 px. */
+.tfb-week-kpi strong, .tfb-fin-total > span, .mc-tile b, .at-logi-tour-total strong, .sa-sec .v { font-size: 22px !important; letter-spacing: -0.02em; }
+
+/* Focus clavier visible partout (contour bordeaux 2 px). */
+a:focus-visible, button:focus-visible, [tabindex]:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; box-shadow: none; }
+
+/* --- §8 Rail (246 px, blanc, filet à droite) -------------------------------- */
+.sidebar-wrapper { width: 246px; background: #fff; border-right: 1px solid var(--line); box-shadow: none; }
+@media screen and (min-width: 1200px) { #main { margin-left: 246px; } }
+@media screen and (max-width: 1199px) {
+  .sidebar-wrapper { left: -246px; box-shadow: none; }
+  #sidebar.active .sidebar-wrapper { left: 0; }
+}
+.sidebar-wrapper .sidebar-header { padding: 20px 16px 8px; }
+.sidebar-wrapper .sidebar-header img { width: auto; height: 26px; max-width: 100%; display: block; }
+.sidebar-wrapper .sidebar-header .logo::after {
+  content: 'Production'; display: block; margin-top: 9px;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent);
+}
+.sidebar-wrapper .menu { margin-top: 0; padding: 2px 12px 24px; }
+.sidebar-wrapper .menu .sidebar-title {
+  margin: 18px 0 0; padding: 0 10px 8px;
+  font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint);
+}
+.sidebar-wrapper .menu .sidebar-item { margin: 0; }
+.sidebar-wrapper .menu .sidebar-link {
+  display: flex; align-items: center; gap: 9px; padding: 9px 10px; border-radius: 9px;
+  font-size: 13px; color: var(--muted-2); transition: background-color .15s, color .15s;
+}
+.sidebar-wrapper .menu .sidebar-link span { margin-left: 0; }
+.sidebar-wrapper .menu .sidebar-link i, .sidebar-wrapper .menu .sidebar-link svg { color: currentColor; fill: currentColor; font-size: 16px; }
+.sidebar-wrapper .menu .sidebar-link:hover, .sidebar-wrapper .menu .sidebar-link:hover i { background-color: var(--paper); color: var(--muted-2); }
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link,
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link span,
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link i { background-color: transparent; color: var(--accent); }
+.sidebar-wrapper .menu .sidebar-item.active > .sidebar-link { background-color: var(--rail-active); }
+.sidebar-wrapper .menu .submenu .submenu-item a { padding: 7px 10px 7px 35px; border-radius: 9px; font-size: 12.5px; color: var(--muted-2); }
+.sidebar-wrapper .menu .submenu .submenu-item a:hover { background-color: var(--paper); color: var(--muted-2); }
+.sidebar-wrapper .menu .submenu .submenu-item.active > a { background-color: var(--rail-active); color: var(--accent); }
+/* §8.3 — compteur : un nombre en 11 px bordeaux poussé à droite, sans pastille pleine (écart signalé). */
+.at-count, .sidebar-wrapper .menu .sidebar-link .at-count, .sidebar-wrapper .menu .submenu .submenu-item a .at-count {
+  display: inline-block; min-width: 0; height: auto; margin-left: auto; padding: 0;
+  border-radius: 0; background: none !important; color: var(--accent) !important;
+  font-size: 11px; line-height: inherit; vertical-align: baseline;
+}
+.at-count[hidden] { display: none !important; }
+.sidebar-wrapper .at-kbd, .at-kbd { margin-left: auto; padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--muted); font-size: 10.5px; box-shadow: none; }
+
+/* --- §7.1 Barre supérieure (blanche, filet bas) et contenu ------------------ */
+#main.layout-navbar { padding: 0; }
+#main > header { margin: 0 !important; background: #fff; border-bottom: 1px solid var(--line); }
+#main > header .navbar { height: auto; min-height: 60px; padding: 10px 24px; background: transparent; }
+#main #main-content { padding: 22px 24px 40px; }
+#appNotificationBanner { padding-top: 12px; }
+.burger-btn i { color: var(--muted-2); }
+/* Recherche : champ de la barre d'outils (§7.5), hauteur 36 px. */
+.at-search-input { height: 36px; padding-top: 0; padding-bottom: 0; border: 1px solid var(--line); border-radius: 8px; background: #fff; font-size: 13px; color: var(--ink); box-shadow: none; }
+.at-search-input::placeholder { color: var(--muted); }
+.at-search-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--line); box-shadow: none; }
+.at-search-key { border: 1px solid var(--line); border-radius: 4px; background: #fff; color: var(--muted); box-shadow: none; }
+.at-search-panel { border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
+.at-search-item:hover, .at-search-item.is-active { background: var(--paper); box-shadow: none; }
+.at-search-item mark { background: var(--prize-soft); color: var(--ink); }
+/* Raccourcis de la barre : liens d'action discrets (pas de pastille colorée). */
+.quick-tags { background: transparent; padding: 0; gap: 2px; }
+.navbar .quick-tags .badge.badge {
+  padding: 7px 11px !important; border-radius: 8px; background: transparent !important; color: var(--muted-2) !important;
+  font-size: 12.5px; letter-spacing: 0; text-transform: none;
+}
+.navbar .quick-tags .badge.badge:hover { background: var(--paper) !important; color: var(--ink) !important; }
+.navbar .quick-tags .badge.badge:hover .at-count { background: none; color: var(--accent); }
+#atBell .at-bell-toggle { color: var(--muted-2); }
+.at-bell-count { min-width: 0; height: auto; padding: 0 3px; border-radius: 4px; background: #fff; color: var(--accent); font-size: 11px; line-height: 1.4; border: 1px solid var(--line); }
+.user-menu .user-name h6, .user-menu .user-name .user-dropdown-name { color: var(--ink); font-size: 13px; }
+.user-menu .user-img .bi-person-circle { color: var(--muted-2); font-size: 26px; }
+
+/* Titre de page : la taille fait la hiérarchie (26 px, 400), plus de police de titre (Vank). */
+.page-heading { margin: 0 0 16px; }
+.page-heading h3, .page-title h3, .page-heading h1, .page-title h1 {
+  font-family: 'Gotham', system-ui, sans-serif; font-size: 26px; letter-spacing: -0.01em; line-height: 1.15; color: var(--ink); margin: 0 0 4px;
+}
+.page-heading .text-subtitle, .page-title .text-subtitle, .page-heading p { font-size: 13px; color: var(--muted); }
+.breadcrumb { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; }
+.breadcrumb-item a { color: var(--muted); text-decoration: none; }
+.breadcrumb-item.active { color: var(--muted); }
+
+/* --- §7.7 Onglets de page : soulignés, bordeaux pour l'actif ---------------- */
+.at-page-tabs { gap: 4px; margin: 0 0 16px; padding: 0; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; }
+.at-page-tabs-title { margin: 0 6px 0 0; padding: 8px 12px 8px 0; border-right: 0; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.at-page-tabs-title .bi { display: none; }
+.at-page-tab { margin: 0 0 -1px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted-2); font-size: 13px; }
+.at-page-tab:hover { background: none; color: var(--ink); }
+.at-page-tab.active { background: none; color: var(--accent); border-bottom-color: var(--accent); }
+.at-page-tab.active .at-count { background: none; color: var(--accent); }
+.nav-tabs { border-bottom: 1px solid var(--line); gap: 4px; }
+.nav-tabs .nav-link { margin-bottom: -1px; padding: 8px 12px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: none; color: var(--muted-2); font-size: 13px; }
+.nav-tabs .nav-link:hover { color: var(--ink); border-color: transparent; }
+.nav-tabs .nav-link.active, .nav-tabs .nav-item.show .nav-link { background: none; color: var(--accent); border-bottom-color: var(--accent); }
+/* §7.6 — vues d'une même liste : sélecteur segmenté (fond --chip, actif blanc). */
+.nav-pills, .at-tabs { display: inline-flex; flex-wrap: wrap; gap: 2px; padding: 3px; border-radius: 9px; background: var(--chip); }
+.nav-pills .nav-link, .at-tabs button { padding: 6px 11px; border: 0; border-radius: 7px; background: transparent; color: var(--muted-2); font-size: 12.5px; }
+.nav-pills .nav-link.active, .nav-pills .show > .nav-link, .at-tabs button.active, .at-tabs button.is-active, .at-tabs button[aria-selected="true"] {
+  background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
+/* --- §7.3 Cartes -------------------------------------------------------------- */
+.card { background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: none; margin-bottom: 16px; }
+.card .card-header { background: transparent; border-bottom: 0; border-radius: 12px 12px 0 0; padding: 20px 20px 0; }
+.card .card-body { padding: 20px; }
+.card .card-header + .card-body { padding-top: 12px; }
+.card .card-footer { background: transparent; border-top: 1px solid var(--line); padding: 14px 20px; }
+.card .card-header h4, .card .card-header h5, .card .card-header .card-title, .card .card-title, .card > .card-body > h5:first-child, .card > .card-body > h2:first-child {
+  margin: 0 0 0.5rem; font-size: 0.95rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted);
+}
+.card .card-header .btn, .card .card-title .btn { text-transform: none; letter-spacing: 0; }
+
+/* --- §7.4 Boutons : un seul système ------------------------------------------ */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 7px 16px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; color: var(--ink); font-family: 'Gotham', system-ui, sans-serif; font-size: 13px; line-height: 1.2;
+  text-decoration: none; white-space: nowrap; box-shadow: none !important; transition: background .15s, border-color .15s, color .15s;
+}
+.btn:hover:not(:disabled):not(.disabled) { border-color: var(--muted-2); color: var(--ink); background: #fff; }
+.btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.btn:disabled, .btn.disabled { opacity: 0.45; cursor: not-allowed; }
+.btn-sm, .btn-group-sm > .btn { min-height: 30px; padding: 5px 11px; font-size: 12px; border-radius: 8px; }
+.btn-lg, .btn-group-lg > .btn { min-height: 36px; padding: 7px 16px; font-size: 13px; }
+/* Action principale (une par écran) : bordeaux plein. */
+.btn-primary, .btn-primary:disabled, .btn-primary.disabled { background: var(--accent); border-color: var(--accent); color: #fff !important; }
+.btn-primary:hover:not(:disabled):not(.disabled), .btn-primary:focus, .btn-primary:active, .btn-primary.active { background: var(--accent-hover) !important; border-color: var(--accent-hover) !important; color: #fff !important; }
+/* Une seule action principale par écran : dans une ligne de tableau, une liste ou une pastille d'action,
+   un bouton « primary » répété redevient le bouton blanc (§7.4, « .btn--sm dans une ligne de tableau »). */
+.table .btn-primary, .list-group .btn-primary, .at-todo .btn-primary {
+  background: #fff !important; border-color: var(--line) !important; color: var(--ink) !important;
+}
+.table .btn-primary:hover:not(:disabled), .list-group .btn-primary:hover:not(:disabled) { border-color: var(--muted-2) !important; }
+/* Toutes les autres couleurs Bootstrap deviennent le bouton blanc du système. */
+.btn-secondary, .btn-light, .btn-light-secondary, .btn-dark, .btn-info, .btn-warning, .btn-success,
+.btn-outline-primary, .btn-outline-secondary, .btn-outline-dark, .btn-outline-info, .btn-outline-warning, .btn-outline-success, .btn-outline-light,
+.btn-info.text-white, .btn-warning.text-white, .btn-success.text-white {
+  background: #fff; border-color: var(--line); color: var(--ink) !important;
+}
+.btn-info *, .btn-warning *, .btn-success * { color: inherit !important; }
+.btn-secondary:hover:not(:disabled), .btn-light:hover:not(:disabled), .btn-dark:hover:not(:disabled), .btn-info:hover:not(:disabled),
+.btn-warning:hover:not(:disabled), .btn-success:hover:not(:disabled), .btn-outline-primary:hover:not(:disabled), .btn-outline-secondary:hover:not(:disabled),
+.btn-outline-dark:hover:not(:disabled), .btn-outline-info:hover:not(:disabled), .btn-outline-warning:hover:not(:disabled), .btn-outline-success:hover:not(:disabled) {
+  background: #fff !important; border-color: var(--muted-2) !important; color: var(--ink) !important;
+}
+/* Retirer, effacer : discret, rouge au survol seulement. */
+.btn-danger, .btn-outline-danger { background: transparent; border-color: transparent; color: var(--muted-2) !important; }
+.btn-danger:hover:not(:disabled), .btn-outline-danger:hover:not(:disabled), .btn-danger:focus { background: rgba(179, 38, 30, 0.07) !important; border-color: transparent !important; color: var(--danger) !important; }
+/* Lien d'action. */
+.btn-link { min-height: 0; padding: 2px 4px; border: 0; border-radius: 6px; background: none; color: var(--muted-2) !important; font-size: 12px; text-decoration: underline; text-underline-offset: 2px; }
+.btn-link:hover:not(:disabled) { border: 0; background: none; color: var(--accent) !important; }
+/* Filtre actif dans une barre (choix exclusif) : bordeaux plein (§7.6). */
+.btn-check:checked + .btn, .btn.active, .btn-group > .btn.active,
+.btn-check:checked + .btn-outline-secondary, .btn-check:checked + .btn-outline-dark, .btn-check:checked + .btn-outline-primary {
+  background: var(--accent) !important; border-color: var(--accent) !important; color: #fff !important;
+}
+.btn-close { box-shadow: none !important; opacity: .5; }
+
+/* --- §7.5 Champs -------------------------------------------------------------- */
+label, .form-label, .form-group label, .col-form-label { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.form-check-label, .form-check label { font-size: 13px; color: var(--ink); }
+.form-control, .form-select, .choices__inner, .dataTable-input, .dataTable-selector {
+  font-family: 'Gotham', system-ui, sans-serif; font-size: 13px; color: var(--ink);
+  background-color: #fff; border: 1px solid var(--line); border-radius: 8px; box-shadow: none;
+}
+.form-control, .form-select { min-height: 36px; }
+.form-control-sm, .form-select-sm { min-height: 30px; font-size: 12.5px; border-radius: 8px; }
+.form-control::placeholder { color: var(--muted); }
+.form-control:focus, .form-select:focus, .is-focused .choices__inner, .is-open .choices__inner {
+  border-color: var(--line); outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: none;
+}
+.form-control:disabled, .form-select:disabled { background-color: transparent; color: var(--faint); border-color: var(--line); cursor: not-allowed; }
+.form-control[readonly] { background-color: var(--table-head); }
+.input-group-text { background-color: var(--table-head); border: 1px solid var(--line); color: var(--muted); font-size: 12.5px; border-radius: 8px; }
+.form-check-input { border-color: rgba(34, 34, 34, 0.25); box-shadow: none; }
+.form-check-input:checked { background-color: var(--accent); border-color: var(--accent); }
+.form-check-input:focus { border-color: var(--accent); outline: 2px solid var(--accent); outline-offset: 1px; box-shadow: none; }
+/* §7.11 — interrupteur : piste --chip, allumé or. */
+.form-switch .form-check-input { background-color: var(--chip); border-color: var(--chip); }
+.form-switch .form-check-input:checked { background-color: var(--prize); border-color: var(--prize); }
+.form-control.is-invalid, .form-select.is-invalid { border-color: var(--danger); }
+.invalid-feedback { color: var(--danger); font-size: 12px; }
+.choices__list--dropdown, .choices__list[aria-expanded] { border: 1px solid var(--line); border-radius: 8px; font-size: 13px; box-shadow: none; }
+.choices__list--dropdown .choices__item--selectable.is-highlighted { background-color: var(--paper); }
+.choices__list--multiple .choices__item { background-color: var(--chip); border-color: var(--chip); color: var(--ink); border-radius: 6px; }
+.at-required::after { color: var(--accent); }
+
+/* --- §7.8 Tableaux ------------------------------------------------------------ */
+.table { --bs-table-bg: transparent; --bs-table-striped-bg: transparent; --bs-table-hover-bg: var(--table-head); color: var(--ink); font-size: 13px; border-color: var(--row-line); }
+.table > :not(caption) > * > * { padding: 13px 14px; border-bottom-width: 0; border-top: 1px solid var(--row-line); box-shadow: none; }
+.table > thead > tr > *, .table thead th, .table > thead > tr > th, .table th[scope="col"] {
+  padding: 10px 14px; border-top: 0; border-bottom: 0;
+  font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--table-head); vertical-align: bottom;
+}
+.table-sm > :not(caption) > * > * { padding: 8px 10px; }
+.table-sm > thead > tr > *, .table-sm thead th { padding: 8px 10px; }
+.table-striped > tbody > tr:nth-of-type(odd) > * { --bs-table-accent-bg: transparent; }
+.table-hover > tbody > tr:hover > *, .row-link:hover td { --bs-table-accent-bg: var(--table-head); background: var(--table-head); }
+.table tfoot > tr > *, .table tr.table-secondary > *, .table-active { --bs-table-accent-bg: var(--total-line); background: var(--total-line); }
+.table-light, .table-light > th, .table-light > td, thead.table-light th, .table-dark, thead.table-dark th { --bs-table-bg: var(--table-head); background-color: var(--table-head) !important; color: var(--muted) !important; }
+.table-bordered > :not(caption) > * > * { border-width: 0; border-top: 1px solid var(--row-line); }
+.num, td.text-end, th.text-end { font-variant-numeric: tabular-nums; }
+
+/* --- §7.9 Pastilles d'état, badges, étiquettes (rectangles, jamais de pilule) -- */
+.badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 6px; font-size: 10.5px; letter-spacing: 0.04em; text-transform: uppercase; line-height: 1.3; }
+.badge.bg-success, .badge.bg-light-success, .bg-light-success { background: var(--ok-soft) !important; color: var(--green) !important; }
+.badge.bg-secondary, .badge.bg-light, .badge.bg-dark, .badge.bg-light-secondary, .bg-light-secondary { background: var(--chip) !important; color: var(--muted-2) !important; border: 0; }
+.badge.bg-warning, .badge.bg-info, .badge.bg-light-info, .badge.bg-light-warning, .bg-light-warning, .bg-light-info { background: var(--prize-soft) !important; color: var(--prize-ink) !important; }
+.badge.bg-danger, .badge.bg-light-danger, .bg-light-danger { background: var(--stop-soft) !important; color: var(--stop) !important; }
+.badge.bg-primary, .badge.bg-light-primary, .bg-light-primary { background: var(--rail-active) !important; color: var(--accent) !important; }
+.badge.text-dark, .badge.text-white { color: inherit; }
+.rounded-pill { border-radius: 6px !important; }
+.at-pill { border-radius: 6px; padding: 4px 10px; font-size: 11.5px; background: var(--chip); color: var(--muted-2); }
+.at-pill-ok { background: var(--ok-soft); color: var(--green); }
+.at-pill-warn { background: var(--prize-soft); color: var(--prize-ink); }
+.at-pill-danger { background: var(--stop-soft); color: var(--stop); }
+.at-pill-muted { background: var(--chip); color: var(--muted-2); }
+.tag-warn, .tag-stop { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+.tag-warn { background: var(--prize-soft); color: var(--prize-ink); }
+.tag-stop { background: var(--stop-soft); color: var(--stop); }
+.progress { height: 8px; border-radius: 4px; background: var(--chip); }
+.progress-bar { background-color: var(--accent); }
+
+/* --- Messages : bloc blanc bordé, filet de couleur à gauche (pas de fond coloré plein) */
+.alert { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 12px; background: #fff; color: var(--ink); font-size: 13px; box-shadow: none !important; }
+.alert-info, .alert-light-info, .alert-primary, .alert-light-primary, .alert-secondary, .alert-light-secondary { border-left-color: var(--muted-2); background: #fff; }
+.alert-success, .alert-light-success { border-left-color: var(--green); background: #fff; }
+.alert-warning, .alert-light-warning { border-left-color: var(--prize); background: #fff; }
+.alert-danger, .alert-light-danger { border-left-color: var(--danger); background: #fff; }
+.alert .bi { color: var(--muted-2); }
+.alert-success .bi { color: var(--green); }
+.alert-warning .bi { color: var(--prize); }
+.alert-danger .bi { color: var(--danger); }
+
+/* --- Fenêtres, menus déroulants, pagination (pas d'ombre) --------------------- */
+.modal-backdrop.show { opacity: 1; background: var(--veil); }
+.modal-content { border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
+.modal-header, .modal-footer { border-color: var(--line); }
+.modal-header { padding: 18px 24px; }
+.modal-body { padding: 20px 24px; }
+.modal-footer { padding: 14px 24px; gap: 10px; }
+.modal-footer > * { margin: 0; }
+.modal-title { font-size: 16px; color: var(--ink); }
+.dropdown-menu { border: 1px solid var(--line); border-radius: 10px; box-shadow: none; font-size: 13px; padding: 6px; }
+.dropdown-item { border-radius: 8px; padding: 7px 10px; color: var(--ink); }
+.dropdown-item:hover, .dropdown-item:focus { background: var(--paper); color: var(--ink); }
+.dropdown-item:active, .dropdown-item.active { background: var(--rail-active); color: var(--accent); }
+.pagination .page-link { border-color: var(--line); color: var(--muted-2); font-size: 12.5px; box-shadow: none; }
+.pagination .page-item.active .page-link { background: var(--accent); border-color: var(--accent); color: #fff; }
+.list-group-item { border-color: var(--line); }
+.list-group-item.active { background: var(--rail-active); border-color: var(--line); color: var(--accent); }
+.swal2-popup { font-family: 'Gotham', system-ui, sans-serif !important; border-radius: 12px !important; box-shadow: none !important; }
+.swal2-container.swal2-backdrop-show { background: var(--veil) !important; }
+.swal2-title { font-size: 16px !important; color: var(--ink) !important; }
+.swal2-html-container { font-size: 13px !important; color: var(--muted-2) !important; }
+.swal2-styled { min-height: 36px; padding: 7px 16px !important; border-radius: 8px !important; font-size: 13px !important; box-shadow: none !important; }
+.swal2-styled.swal2-confirm { background: var(--accent) !important; }
+.swal2-styled.swal2-cancel { background: #fff !important; color: var(--ink) !important; border: 1px solid var(--line) !important; }
+
+/* --- Ombres et pilules restantes des écrans de l'ERP (§2) ---------------------- */
+.at-tile, .at-tile:hover, .at-dash-kpi, .at-dash-card, .at-dash-more, .navbar, .sidebar-wrapper, .toast, .popover { box-shadow: none !important; }
+.at-tile { border: 1px solid var(--line); border-left: 3px solid var(--line); border-radius: 12px; }
+.at-tile-label { font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+.at-tile-meta { font-size: 12px; color: var(--muted); }
+.at-tile-ok { border-left-color: var(--green); }
+.at-tile-warn { border-left-color: var(--prize); }
+.at-tile-danger { border-left-color: var(--danger); }
+.at-tile-danger .at-tile-value { color: var(--stop); }
+.at-dash-kpi, .at-dash-card, .at-dash-more { border: 1px solid var(--line); border-radius: 12px; }
+
+/* --- Pied de page, connexion --------------------------------------------------- */
+footer .footer { color: var(--muted); font-size: 12px; padding: 0 24px 16px; }
+#auth { background: var(--paper); }
+#auth #auth-left .auth-logo img { width: auto; height: 26px; }
+#auth #auth-left .auth-title { font-family: 'Gotham', system-ui, sans-serif; font-size: 26px; letter-spacing: -0.01em; color: var(--ink); }
+#auth #auth-left .auth-subtitle { font-size: 13px; color: var(--muted); }
+#auth #auth-right { background: #fff; background-image: none; border-left: 1px solid var(--line); }
+#auth .form-control-xl { min-height: 44px; font-size: 13px; }
