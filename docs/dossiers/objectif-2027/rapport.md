@@ -6,6 +6,11 @@
 
 >> [La valeur de vos magasins est une responsabilité collective] Elle tient directement au respect des process, à l'expérience client et à la qualité de finition des produits.
 
+> [Le plus important en 2027 : l'expérience client, la marge et le trafic] Tout le reste du rapport sert ces trois points.
+> - Expérience client : le même accueil, la même vitrine et la même qualité de finition dans chaque magasin, tenus par les process, les tablettes et les contrôles. Les notes Google vont de 4,1 à 4,7.
+> - Marge : prix conseillés au plus haut du réseau (jusqu'à +432 k€ par an), gâteau à la part à ×4, coupes de gamme ; le food cost doit passer de 39,4 % vers le seuil de 32 %.
+> - Trafic : le nombre de tickets recule à Corbais (−3,7 % sur un an) et à Sombreffe (−4,9 %), seul Gosselies gagne des clients (+10,6 %) ; le CA tient grâce au panier. Les leviers : le rétro-agenda des campagnes, le webshop et le B2B, la fidélisation et les nouvelles zones.
+
 Déroulé de la réunion, en sandwich : on ouvre sur ce qui marche, on pose l'état des lieux sans détour, on construit les solutions, et on finit pour motiver et développer.
 
 1. Ouverture : ce qui marche.
@@ -254,7 +259,7 @@ Pourquoi : c'est ce qui rend chaque magasin comparable et donc précieux (100 % 
 
 ### Les contrôles : fréquence, SOP et démonstration en direct
 
-Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; en novembre, aucune n'est encore faite ni planifiée, et Corbais n'a jamais été visité dans l'outil. L'annexe E (annexe au DIP) fixe la fréquence de chaque contrôle, et l'annexe F (SOP) dit comment il se déroule.
+Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; en novembre, aucune n'est encore faite ni planifiée, et Corbais n'a jamais été visité dans l'outil. L'annexe 5 (annexe au DIP) fixe la fréquence de chaque contrôle, et l'annexe 6 (SOP) dit comment il se déroule.
 
 En réunion : on explique les contrôles, puis on rend un contrôle en direct sur la tablette, projeté sur grand écran :
 
@@ -552,13 +557,13 @@ Les fournisseurs externes sont invités en fin de réunion (Glace by Rawette, Co
 
 ## Annexes
 
-### Annexe A — le poids de la pâtisserie dans chaque magasin
+### Annexe 1 — le poids de la pâtisserie dans chaque magasin
 
 {{patisserie-par-magasin}}
 
 La part du CA est presque la même partout ; ce qui change, c'est le volume et le mélange. Les entremets 4/6 personnes font 36 % de la pâtisserie à Corbais et à Halle, mais 15 % à Gosselies, où les gâteaux d'anniversaire et les mignardises pèsent un quart des ventes.
 
-### Annexe B — les prix de vente magasin par magasin
+### Annexe 2 — les prix de vente magasin par magasin
 
 Aucun des 13 prix ci-dessous n'est le même dans les quatre magasins. L'écart va jusqu'à 60 % : l'Entremet Ø 120 Bombe chocolat se vend 9,90 € à Corbais et 15,90 € à Sombreffe.
 
@@ -582,7 +587,7 @@ Les gâteaux d'anniversaire sont les moins rentables de la gamme, entre ×1,93 e
 
 ~ Une case vide : le produit n'est pas au tarif du magasin.
 
-### Annexe C — les poubelles par catégorie et par magasin
+### Annexe 3 — les poubelles par catégorie et par magasin
 
 Les poubelles se concentrent sur les entremets individuels de Gosselies : 90 pièces jetées en 14 semaines, 13,5 % de ce qui sort. Corbais et Halle ne déclarent presque rien, quelle que soit la catégorie.
 
@@ -595,7 +600,7 @@ Les poubelles se concentrent sur les entremets individuels de Gosselies : 90 pi�
 
 ~ Période du 3 août au 7 novembre 2026 ; éclairs, choux nappés et chouquettes exclus. À Halle, la pâtisserie individuelle vendue est faite d'éclairs, d'où la case vide.
 
-### Annexe D — book des assortiments 2027
+### Annexe 4 — book des assortiments 2027
 
 Le book 2027 range les références en trois gammes : standard toute l'année, saisons, événements. Il part des ventes de décembre 2025 à octobre 2026 ; les 14 références lancées depuis août sont à classer.
 
@@ -626,7 +631,7 @@ Nouveautés à classer (14) : tartes Ø 28 (frangipane & poire, riz, moelleux au
 
 La tablette des vendeuses montre déjà, à côté de la gamme standard, les gammes de saison ouvertes ou qui ouvrent sous 45 jours : le book 2027 est ce qu'elle affichera. Lu sur les 400 premières références du cockpit sur 12 mois ; une référence lancée en cours d'année peut paraître saisonnière.
 
-### Annexe E — annexe au DIP : fréquence des contrôles
+### Annexe 5 — annexe au DIP : fréquence des contrôles
 
 Proposition de texte pour l'annexe du document d'information précontractuelle (DIP), à faire valider par l'avocat du réseau. Elle dit au futur franchisé, avant de signer, quels contrôles il recevra et à quel rythme.
 
@@ -644,7 +649,7 @@ Proposition de texte pour l'annexe du document d'information précontractuelle (
 
 Le DIP précise aussi la suite d'un contrôle : plan d'action, délai de correction, mise en demeure, et majoration de 0,5 % des royalties pour défaut d'usage des outils (partie 3). Les fréquences « à fixer » ne sont pas réglées dans le cockpit aujourd'hui.
 
-### Annexe F — SOP des contrôles
+### Annexe 6 — SOP des contrôles
 
 Objet : que chaque contrôle se passe de la même façon dans les quatre magasins, et que chaque écart ait une suite. Le consultant contrôle ; le franchisé corrige et envoie la preuve ; le réseau valide, renvoie ou escalade.
 
