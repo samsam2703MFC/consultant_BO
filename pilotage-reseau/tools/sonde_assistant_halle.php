@@ -7,6 +7,7 @@ declare(strict_types=1);
  *   1. assemble la fiche de faits de Halle par l'API du panel (amFaits) et en montre la forme, sans secret ;
  *   2. pose « Que puis-je améliorer ? » à Claude (amDemander) et montre la réponse, le modèle, l'usage ;
  *   3. pose une question de suite avec le fil, pour vérifier la conversation et le cache.
+ * Troisième passage (12/11/2026) : crédit ajouté au compte Anthropic, l’appel réel se vérifie.
  * Deuxième passage (Sam, 12/11/2026 : « récupère-la dans la table erp keys ») : la clé se cherche dans erp_cles, par son
  * nom ; seule son existence et son nom s'affichent.
  * Lancée par .github/workflows/sonde-assistant-halle.yml :  php -- /var/www/consulant_bo < tools/sonde_assistant_halle.php
