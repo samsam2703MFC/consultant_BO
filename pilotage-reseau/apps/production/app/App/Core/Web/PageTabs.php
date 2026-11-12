@@ -22,6 +22,11 @@ final class PageTabs
             ['/mail/settings', 'Ustawienia skrzynki', 'bi-envelope-at'],
             ['/mail/admin', 'Skrzynki użytkowników', 'bi-people'],
         ]],
+        // [286] Dzisiaj i zadania : jedna pozycja railu, dwie zakładki.
+        'today' => ['label' => 'Dzisiaj i zadania', 'section' => 'Start', 'icon' => 'bi-sun', 'tabs' => [
+            ['/today', 'Dzisiaj', 'bi-sun'],
+            ['/my-tasks', 'Zadania', 'bi-check2-square'],
+        ]],
         // Zadania zespołu i « Kto co zrobił » (wykonanie zadań stanowisk) : jedna pozycja.
         'team_tasks' => ['label' => 'Zadania zespołu', 'section' => 'Start', 'icon' => 'bi-people', 'tabs' => [
             ['/organization/team-tasks', 'Zadania zespołu', 'bi-people'],

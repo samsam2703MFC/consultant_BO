@@ -21,9 +21,8 @@ final class Rail
     public const ITEMS = [
         // [281] Kontrola (profil CEO) : administrator i konta CEO.
         'control' => ['Kontrola', 'bi-binoculars', '', '/control', [], null],
-        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-card'], null],
-        // [283] Zadania : moje zadania (asystent każdego zadania) — w railu każdego profilu, także z własnym menu stanowiska.
-        'my_tasks' => ['Zadania', 'bi-check2-square', '', '/my-tasks', ['/tasks'], null],
+        // [286] Dzisiaj i zadania (jedna pozycja) : Dzisiaj (Mój tydzień) i Moje zadania w zakładkach — w railu każdego profilu.
+        'today' => ['Dzisiaj i zadania', 'bi-sun', '', '/today', ['/my-card', '/tasks'], null],
         'mail' => ['Poczta', 'bi-envelope', '', '/mail', [], 'mail'],
         'team_tasks' => ['Zadania zespołu', 'bi-people', '', '/organization/team-tasks', [], null],
         'profitability' => ['Rentowność', 'bi-graph-up', 'Analiza', '/dashboard', [], null],
@@ -61,7 +60,7 @@ final class Rail
     ];
 
     /** [283] Pozycje zawsze w menu (każdy profil, także stanowisko z własnym menu). */
-    public const ALWAYS = ['today', 'my_tasks'];
+    public const ALWAYS = ['today'];
 
     /** Grupy zakładek bez własnej pozycji w railu : należą do pozycji (podświetlenie, wyszukiwarka). */
     public const GROUP_PARENT = ['communication' => 'settings', 'templates' => 'settings', 'production_settings' => 'settings'];

@@ -89,7 +89,7 @@
                     <div class="user-menu d-flex">
                         <div class="user-name text-end me-3">
                             <h6 class="mb-0 text-gray-600">{{ user.displayName }}</h6>
-                            <p class="mb-0 text-sm {{ vs.current ? 'at-vs-on' : 'text-gray-600' }}">{{ vs.label ?: 'Administrator' }}</p>
+                            <p class="mb-0 text-sm {{ vs.current or vs.label == 'CEO' ? 'at-vs-on' : 'text-gray-600' }}">{{ vs.label ?: 'Administrator' }}</p>
                         </div>
                         <div class="user-img d-flex align-items-center">
                             <div class="avatar avatar-md">
@@ -102,20 +102,11 @@
                     <li>
                         <h6 class="dropdown-header">Witaj{{ user.displayName ? ', ' ~ user.displayName : '' }}!</h6>
                     </li>
-                    {% if vs.profiles is defined and vs.profiles %}
-                    {# [281] Profil (makieta 47) : Administrator — praca i ustawienia ; CEO — kontrola (strona Kontrola, bez ustawień). #}
-                    <li><h6 class="dropdown-header at-vs-head">Profil</h6></li>
-                    {% for pr in vs.profiles %}
-                    <li><button type="button" class="dropdown-item at-vs-item{{ pr.current ? ' on' : '' }}" data-view-profile="{{ pr.key }}" aria-pressed="{{ pr.current ? 'true' : 'false' }}">
-                        <i class="bi {{ pr.icon }}"></i><span><b>{{ pr.name }}</b><small>{{ pr.sub }}</small></span>{% if pr.current %}<i class="bi bi-check2 at-vs-check"></i>{% endif %}</button></li>
-                    {% endfor %}
-                    <li><hr class="dropdown-divider"></li>
-                    {% endif %}
                     {% if vs.can_switch %}
-                    {# [239] Sesja : administrator ogląda ERP jak dane stanowisko (menu, strona startowa, zadania) ; uprawnienia bez zmian. #}
-                    <li><h6 class="dropdown-header at-vs-head">Sesja</h6></li>
+                    {# [286] Profil = sesja (jedna lista) : Administrator, CEO, Finanse, Produkcja, Logistyka… — menu, strona startowa i zadania profilu. #}
+                    <li><h6 class="dropdown-header at-vs-head">Profil</h6></li>
                     {% for s in vs.sessions %}
-                    <li><button type="button" class="dropdown-item at-vs-item{{ s.current ? ' on' : '' }}" data-view-session="{{ s.id ?? '' }}" aria-pressed="{{ s.current ? 'true' : 'false' }}">
+                    <li><button type="button" class="dropdown-item at-vs-item{{ s.current ? ' on' : '' }}" {% if s.profile %}data-view-profile="{{ s.profile }}"{% else %}data-view-session="{{ s.id }}"{% endif %} aria-pressed="{{ s.current ? 'true' : 'false' }}">
                         <i class="bi {{ s.icon }}"></i><span><b>{{ s.name }}</b><small>{{ s.sub }}</small></span>{% if s.current %}<i class="bi bi-check2 at-vs-check"></i>{% endif %}</button></li>
                     {% endfor %}
                     <li><hr class="dropdown-divider"></li>

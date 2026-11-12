@@ -1905,6 +1905,14 @@ tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_pro
 - **[284] Dzisiaj, poste ou session Kierownik produkcji** : seulement les tâches (plus de « Wskaźniki kierownika »,
   « Rentowność grup », « Plan wysyłek », « Do zrobienia », « Ostatnie zamówienia » — ils restent dans leurs modules).
 
+### [286] Profil = sesja (une seule liste) et « Dzisiaj i zadania » (une seule entrée du rail)
+
+- Sous l'avatar, une seule liste « Profil » : Administrator, CEO, puis les postes ERP (Finanse, Produkcja, Logistyka, puis les
+  autres) — `PageAccessService::sessionMenu` (`sessions` : `profile` admin / ceo, ou `id` du poste). Sous le nom : le profil
+  choisi (Administrator, CEO, Finanse, Produkcja…). Plus d'entrée « Pełny widok » (= Administrator).
+- Rail : « Dzisiaj » et « Zadania » fusionnés en « Dzisiaj i zadania » (`today`, toujours présent) avec deux onglets
+  (`PageTabs::GROUPS['today']`) : Dzisiaj (`/today`) et Zadania (`/my-tasks`).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

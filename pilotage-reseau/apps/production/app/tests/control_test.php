@@ -31,8 +31,8 @@ expectC(PageAccess::ceoMayWrite('/ajax/tasks/unblock/3/901') && PageAccess::ceoM
     && !PageAccess::ceoMayWrite('/ajax/organization/week-plan/2') && !PageAccess::ceoMayWrite('/users/edit/3'), 'CEO : zapis tylko decyzji');
 // [283] Zadania w railu każdego profilu (także menu stanowiska bez tej pozycji).
 $keys = array_merge(...array_map(fn($s) => array_column($s['items'], 'key'), Rail::menu(['production' => null])));
-expectC(in_array('my_tasks', $keys, true) && in_array('today', $keys, true) && Rail::ITEMS['my_tasks'][0] === 'Zadania', 'Zadania zawsze w menu');
-expectC(Rail::itemFor('/my-tasks') === 'my_tasks' && Rail::itemFor('/tasks/required') === 'my_tasks' && Rail::itemFor('/control') === 'control', 'podświetlenie Zadania i Kontrola');
+expectC(in_array('today', $keys, true) && !isset(Rail::ITEMS['my_tasks']) && Rail::ITEMS['today'][0] === 'Dzisiaj i zadania', '[286] Dzisiaj i zadania : jedna pozycja, zawsze w menu');
+expectC(Rail::itemFor('/my-tasks') === 'today' && Rail::itemFor('/tasks/required') === 'today' && Rail::itemFor('/control') === 'control', 'podświetlenie Dzisiaj i zadania, Kontrola');
 
 $dsn = getenv('TFB_TEST_DSN') ?: 'mysql:unix_socket=/run/mysqld/mysqld.sock';
 $source = getenv('TFB_TEST_SOURCE_DB') ?: 'erp';
@@ -102,15 +102,15 @@ try {
     expectC($a->homePath(4) === '/control' && !array_key_exists('settings', $a->railMenu(4)) && !array_key_exists('access', $a->railMenu(4))
         && array_key_exists('control', $a->railMenu(4)) && array_key_exists('profitability', $a->railMenu(4)), 'CEO : start Kontrola, menu bez ustawień');
     $menu = $a->sessionMenu(4);
-    expectC($menu['label'] === 'CEO · kontrola' && !$menu['can_switch'], 'CEO : etykieta pod imieniem, bez przełącznika');
+    expectC($menu['label'] === 'CEO' && !$menu['can_switch'], 'CEO : etykieta pod imieniem, bez przełącznika');
     expectC($lock->blocking(4) === [], 'CEO : nigdy blokady');
 
     // 2. Administrator : profil CEO pod awatarem.
     $m = $a->sessionMenu(1);
-    expectC(array_column($m['profiles'], 'key') === ['admin', 'ceo'] && $m['profiles'][0]['current'], 'profile pod awatarem : Administrator (bieżący) i CEO');
+    expectC(array_column(array_slice($m['sessions'], 0, 2), 'profile') === ['admin', 'ceo'] && $m['sessions'][0]['current'], 'profile pod awatarem : Administrator (bieżący) i CEO, potem stanowiska');
     expectC($a->switchSession(1, null, 'ceo') === '/control' && ViewSession::ceo(), 'profil CEO → Kontrola');
     $prefixes = $access()->railPrefixes(1);
-    expectC(($prefixes['/settings'] ?? null) === false && ($prefixes['/dashboard'] ?? null) === true && $access()->sessionMenu(1)['label'] === 'CEO · kontrola', 'profil CEO administratora : menu bez ustawień');
+    expectC(($prefixes['/settings'] ?? null) === false && ($prefixes['/dashboard'] ?? null) === true && $access()->sessionMenu(1)['label'] === 'CEO', 'profil CEO administratora : menu bez ustawień');
     expectC($access()->canSee(1, '/settings'), 'administrator w profilu CEO : dostęp bez zmian');
     expectC($access()->switchSession(1, null, 'admin') === '/dashboard' && !ViewSession::ceo(), 'powrót : Administrator');
     try { $access()->switchSession(2, null, 'ceo'); expectC(false, 'profil : tylko administrator'); } catch (CustomException $e) {}

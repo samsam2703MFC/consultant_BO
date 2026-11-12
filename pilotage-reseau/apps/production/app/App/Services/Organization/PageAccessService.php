@@ -31,8 +31,9 @@ final class PageAccessService
 
     /** [239] Sesje pod awatarem : nazwa obszaru i ikona wg kodu stanowiska (inne stanowiska — nazwa stanowiska). */
     private const SESSION_AREAS = [
+        // [286] Kolejność listy pod awatarem : Finanse, Produkcja, Logistyka, potem reszta.
+        'ADMINISTRACJA' => ['Finanse', 'bi-receipt'],
         'KIEROWNIK_PRODUKCJI' => ['Produkcja', 'bi-gear'],
-        'ADMINISTRACJA' => ['Administracja i finanse', 'bi-receipt'],
         'LOGISTYKA' => ['Logistyka', 'bi-truck'],
         'JAKOSC' => ['Jakość', 'bi-patch-check'],
         'ZAKUPY' => ['Zakupy', 'bi-cart3'],
@@ -177,31 +178,33 @@ final class PageAccessService
     public function sessionMenu(?int $userId): array
     {
         if (!$userId) return ['can_switch' => false, 'label' => '', 'current' => null, 'sessions' => []];
-        if ($this->profile($userId)['ceo']) return ['can_switch' => false, 'label' => 'CEO · kontrola', 'current' => null, 'sessions' => [], 'profiles' => []];
+        if ($this->profile($userId)['ceo']) return ['can_switch' => false, 'label' => 'CEO', 'current' => null, 'sessions' => []];
         if (!$this->profile($userId)['admin']) {
             $pos = $this->repo->userPosition($userId);
             $name = $pos ? (array_column($this->repo->positions(), 'name_pl', 'id')[$pos] ?? '') : '';
             return ['can_switch' => false, 'label' => $name !== '' ? $name : 'bez stanowiska', 'current' => null, 'sessions' => []];
         }
+        // [286] Profil = sesja : jedna lista pod awatarem — Administrator, CEO, potem stanowiska (Finanse, Produkcja, Logistyka…).
         $view = $this->viewPosition($userId);
         $ceo = ViewSession::ceo();
         $homes = $this->repo->homes();
-        // [281] Dwa profile tego samego konta (makieta 47) : Administrator — praca i ustawienia ; CEO — kontrola.
-        $profiles = [
-            ['key' => 'admin', 'name' => 'Administrator', 'sub' => 'praca i ustawienia — wszystko widzi, edytuje i ustawia', 'icon' => 'bi-person-gear', 'current' => !$ceo && $view === null],
-            ['key' => 'ceo', 'name' => 'CEO · kontrola', 'sub' => 'wszyscy i wszystko na żywo, bez ustawień — tylko decyzje', 'icon' => 'bi-binoculars', 'current' => $ceo],
+        $sessions = [
+            ['profile' => 'admin', 'id' => null, 'name' => 'Administrator', 'sub' => 'praca i ustawienia — wszystko widzi, edytuje i ustawia', 'icon' => 'bi-person-gear', 'current' => !$ceo && $view === null],
+            ['profile' => 'ceo', 'id' => null, 'name' => 'CEO', 'sub' => 'kontrola — wszyscy i wszystko na żywo, bez ustawień, tylko decyzje', 'icon' => 'bi-binoculars', 'current' => $ceo],
         ];
-        $sessions = [['id' => null, 'name' => 'Pełny widok', 'sub' => 'administrator — wszystkie strony', 'icon' => 'bi-grid-3x3-gap', 'current' => $view === null && !$ceo]];
-        $label = $ceo ? 'CEO · kontrola' : 'Administrator';
-        foreach ($this->sessionPositions() as $p) {
+        $label = $ceo ? 'CEO' : 'Administrator';
+        $positions = array_values($this->sessionPositions());
+        $order = array_flip(array_keys(self::SESSION_AREAS));
+        usort($positions, fn($a, $b) => ($order[$a['code']] ?? 99) <=> ($order[$b['code']] ?? 99));
+        foreach ($positions as $p) {
             [$area, $icon] = self::SESSION_AREAS[$p['code']] ?? [$p['name_pl'], 'bi-briefcase'];
             $pages = count(array_filter($this->repo->positionGrants((int) $p['id']), fn($k) => isset(PageAccess::PAGES[$k]) && !PageAccess::adminOnly($k)));
             $home = PageAccess::HOME_PAGES[$homes[(int) $p['id']] ?? '/today'] ?? 'Dzisiaj';
-            $sessions[] = ['id' => (int) $p['id'], 'name' => $area, 'sub' => $p['name_pl'] . ' · ' . $pages . ' ' . self::pagesWord($pages) . ' · start : ' . $home,
+            $sessions[] = ['profile' => null, 'id' => (int) $p['id'], 'name' => $area, 'sub' => $p['name_pl'] . ' · ' . $pages . ' ' . self::pagesWord($pages) . ' · start : ' . $home,
                 'icon' => $icon, 'current' => $view === (int) $p['id']];
-            if ($view === (int) $p['id']) $label = 'Sesja : ' . $area;
+            if ($view === (int) $p['id']) $label = $area;
         }
-        return ['can_switch' => true, 'label' => $label, 'current' => $view, 'sessions' => $sessions, 'profiles' => $profiles];
+        return ['can_switch' => true, 'label' => $label, 'current' => $view, 'sessions' => $sessions];
     }
 
     /** Zmiana sesji (tylko administrator) ; zwraca stronę startową nowej sesji. */

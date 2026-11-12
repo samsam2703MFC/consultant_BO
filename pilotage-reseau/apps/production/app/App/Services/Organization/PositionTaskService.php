@@ -220,9 +220,13 @@ final class PositionTaskService
             $groups[$key]['icon'] ??= $task['category_icon'] ?? null ?: 'bi-check2-square';
             $groups[$key]['sort'] ??= isset($task['category_sort']) ? (int) $task['category_sort'] : PHP_INT_MAX;
             $groups[$key]['open'] = ($groups[$key]['open'] ?? 0) + ($occurrence && $occurrence['status'] === 'open' ? 1 : 0);
-            $groups[$key]['items'][] = ['task' => $task, 'occurrence' => $occurrence, 'frequency' => self::FREQUENCY_LABELS[$task['frequency']] ?? $task['frequency']];
+            // [287] Bez powtórzeń : zaległe terminy zadania przy samym zadaniu (nie drugi raz w « Zaległe »).
+            $late = array_values(array_filter($overdue, fn($o) => (int) $o['id_task'] === $id));
+            $groups[$key]['items'][] = ['task' => $task, 'occurrence' => $occurrence, 'frequency' => self::FREQUENCY_LABELS[$task['frequency']] ?? $task['frequency'], 'late' => $late];
         }
         uasort($groups, fn($a, $b) => [$a['sort'], $a['label']] <=> [$b['sort'], $b['label']]);
+        $listed = array_keys($byId);
+        $overdue = array_values(array_filter($overdue, fn($o) => !in_array((int) $o['id_task'], $listed, true)));
         return ['groups' => $groups, 'overdue' => $overdue, 'counts' => $counts];
     }
 
