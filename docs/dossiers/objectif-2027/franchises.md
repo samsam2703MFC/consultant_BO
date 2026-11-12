@@ -30,11 +30,22 @@ Nos trois priorités pour 2027 :
 | --- | --- | --- |
 | Food cost | 39,4 % | vers 32 % |
 | Tâches rendues sur la tablette (T3) | 19 % | 100 % au 1er mars |
-| Produits sans coût de recette | 35 à 51 % | 0 |
+| Produits avec une recette chiffrée au panel | 372 sur 533 (70 %) | 533 sur 533 (100 %) |
 | Produits au même prix dans les 4 magasins | 1 sur 5 | tous, sur prix conseillés |
 | Références vendues moins d'une fois par jour | 163 | coupées ou chiffrées |
 
 Chaque point de food cost gagné vaut environ 37 000 € de marge brute par an pour le réseau.
+
+Produits avec une recette chiffrée, par magasin :
+
+| Magasin | Produits disponibles | Avec une recette chiffrée | À chiffrer |
+| --- | --- | --- | --- |
+| Corbais | 532 | 362 (68 %) | 170 |
+| Gosselies | 522 | 369 (71 %) | 153 |
+| Halle | 501 | 268 (53 %) | 233 |
+| Sombreffe | 512 | 360 (70 %) | 152 |
+
+Sans recette chiffrée, on ne connaît ni le coût ni la marge du produit. L'objectif est un suivi complet : 100 % des produits avec une recette chiffrée avant fin janvier 2027.
 
 ## 1. Le produit
 
