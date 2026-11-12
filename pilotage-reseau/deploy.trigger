@@ -1415,3 +1415,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T13:34:05Z Fidélité › Profils clients : conditions au cockpit (Fanbase … Découverte, fenêtre 30 j), onglet Fidélité du dashboard magasin, fiche client
 2026-11-12T13:37:34Z sesja Produkcja : + Zamówienia, Reklamacje i zwroty (migracja 181)
 2026-11-12T14:40:29Z sesja Finanse : + Wysyłki i dokumenty (WDT, WZ, CMR) (migracja 182)
+2026-11-12T14:51:42Z Dashboard magasin : assistant (bouton Assistant, Sam / Pierre / le Coach, bilan et conversation), espace de travail Anthropic
