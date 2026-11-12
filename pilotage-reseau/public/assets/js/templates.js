@@ -53,7 +53,7 @@ const ICO = {
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle', audits: 'form',
   ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
@@ -203,6 +203,7 @@ export function render(c, x){
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isCadreT ? tplCadreTaches(c, x) : ''}
+      ${c.isAudits ? tplAudits(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
       ${c.isAsc ? tplAssistantCoachs(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
@@ -7937,6 +7938,11 @@ function tplManque(c, x){
 /* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
  * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
  * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+/** Pilotage › Audit fournisseurs (12/11/2026) : la page audits/ intégrée ; même principe que le cadre des tâches. */
+function tplAudits(c, x){
+  const { esc } = x;
+  return `<div data-screen="audits"><iframe data-au src="${esc(c.au.src)}" title="Audit fournisseurs" scrolling="no" style="width:100%;height:${c.au.haut}px;min-height:calc(100vh - 110px);border:none;background:transparent;display:block"></iframe></div>`;
+}
 function tplCadreTaches(c, x){
   const { esc } = x;
   // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.

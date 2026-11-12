@@ -40,6 +40,7 @@ require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
 require __DIR__ . '/../../src/suivi.php';
+require __DIR__ . '/../../src/audits.php';          // Pilotage › Audit fournisseurs (12/11/2026)
 require __DIR__ . '/../../src/suivi_sources.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
@@ -273,6 +274,13 @@ try {
         exit;
     }
 
+    // L'audit des fournisseurs (audit/) : le franchisé répond par son lien personnel, sans session (src/audits.php).
+    if (str_starts_with($path, '/audits/public') && ($pub = auRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     // La tablette du poste (Formation › Standards, SOP) : ouverte sans session cockpit — chaque écriture porte
     // le PIN d'un employé, vérifié au panel, ou un jeton signé (src/sop.php). Depuis le lot 5 (06/11/2026), le PIN
     // du MAGASIN ouvre d'abord l'appareil (src/tablettes.php : état, ouvrir, fermer) ; les autres routes l'exigent.
@@ -353,6 +361,8 @@ function route(string $method, string $path): mixed
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
     if (str_starts_with($path, '/soir/')) { return rsRoute($method, $path); }
+    // Pilotage › Audit fournisseurs : le formulaire, les campagnes, les résultats, les copies (src/audits.php).
+    if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);

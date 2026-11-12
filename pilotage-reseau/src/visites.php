@@ -1626,6 +1626,8 @@ function viHorloge(bool $force = false): array
     }
     // Le suivi des franchisés : ordre du jour des visites annoncées, rapports en retard, relances.
     if (function_exists('suHorloge')) { try { suHorloge($fait); } catch (Throwable $e) { $fait['suiviErreur'] = $e->getMessage(); } }
+    // L'audit des fournisseurs : relances des franchisés qui n'ont pas répondu, clôture à la date dite (src/audits.php).
+    if (function_exists('auHorloge')) { try { auHorloge($fait); } catch (Throwable $e) { $fait['auditsErreur'] = $e->getMessage(); } }
     $etat['dernier'] = date('Y-m-d H:i:s');
     viSettingSet('visitesCron', $etat);
     return ['ok' => true, 'fait' => $fait, 'etat' => $etat];

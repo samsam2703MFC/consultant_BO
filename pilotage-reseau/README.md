@@ -355,6 +355,15 @@ Piège rencontré : la méthode ne pouvait pas s'appeler `caCharge()` — la
 Centrale d'achat en a déjà une, et la **dernière** définition d'une classe
 écrase la première, sans erreur. D'où `carteCharge()`.
 
+## Audit fournisseurs (Pilotage)
+
+Deux fois par an, les franchisés notent seuls, par un lien personnel reçu par e-mail et par notification push,
+chaque fournisseur et prestataire référencé (tronc commun + questions propres, types de réponse et points, règles).
+Résultats par fournisseur, actions ouvertes par les règles, copie à chaque fournisseur avec la note du franchiseur.
+Écran Pilotage › Audit fournisseurs (`public/audits/`), page du franchisé `public/audit/`, code `src/audits.php`,
+relances par l'horloge des visites. Détails : [`docs/audits-fournisseurs.md`](docs/audits-fournisseurs.md) ;
+tests : `php bin/tests_audits.php`.
+
 ## Module RH · Dimona (/hr)
 
 Les franchisés déclarent les Dimona de leur personnel (entrée, sortie, modification, annulation) à l'ONSS,

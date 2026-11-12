@@ -360,6 +360,8 @@ class App {
       resultatJour: 'resultat',
       // Le cadre des tâches du panel (07/11/2026) : la page task/ dans l'écran, « ?checklist=43 ».
       cadreTaches: 'checklists',
+      // L'audit des fournisseurs (12/11/2026) : la page audits/ dans l'écran (formulaire, campagnes, résultats, copies).
+      audits: 'audits',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', visibilite: 'visibilite', budget: 'budget', encodage: 'budget/encodage',
       budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
@@ -1146,6 +1148,7 @@ class App {
       assistantCoachs: ['Assistant · coachs', 'Les deux coachs de l’assistant du dashboard magasin, Pierre et le Coach : leur ton, ce sur quoi chacun met l’accent et ce qu’il vérifie — budget, trafic, contrôles qualité. Et les questions que les franchisés leur posent.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
+      audits: ['Audit fournisseurs', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -1361,6 +1364,9 @@ class App {
         // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
         // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
         ['cadreTaches', 'Cadre des tâches', 0],
+        // L'audit des fournisseurs et prestataires (12/11/2026, Sam : « dans le cockpit consultant, Pilotage ») :
+        // les franchisés notent chaque fournisseur référencé ; résultats et copie au fournisseur.
+        ['audits', 'Audit fournisseurs', 0],
         // Ouvertures, fermetures et reports de caisse, par magasin et par
         // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
         ['ext:caisse/', 'Caisse ↗', 0]]],
@@ -1528,12 +1534,12 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
       analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
-      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1946,6 +1952,7 @@ class App {
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isCadreT) { this.valsCadreTaches(common); } else { this._ctSrc = null; }
+    if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
@@ -9312,6 +9319,24 @@ class App {
     common.ct = { src: this._ctSrc, haut: this._ctHaut || 900 };
     // Une surface de travail, pas une page de lecture : toute la largeur de l'écran (07/11/2026, « it's for desktop,
     // use the whole screen ») — la classe app__body--wide du design system.
+    common.large = true;
+  }
+  /**
+   * L'audit des fournisseurs (12/11/2026) : la page audits/ en mode intégré (?embed=1), comme le cadre des tâches.
+   * La source ne change pas d'un rendu à l'autre (la saisie de la page ne se perd pas) ; la page dit sa hauteur
+   * (postMessage auHauteur) et le cadre la prend : une seule barre de défilement, celle du cockpit.
+   */
+  valsAudits(common){
+    if (!this._auEcoute) {
+      this._auEcoute = true;
+      window.addEventListener('message', ev => {
+        if (ev.origin !== location.origin || !ev.data || typeof ev.data.auHauteur !== 'number' || this.state.screen !== 'audits') { return; }
+        this._auHaut = Math.max(480, Math.min(30000, Math.round(ev.data.auHauteur)));
+        const cadre = document.querySelector('iframe[data-au]');
+        if (cadre) { cadre.style.height = this._auHaut + 'px'; }
+      });
+    }
+    common.au = { src: 'audits/?embed=1', haut: this._auHaut || 900 };
     common.large = true;
   }
   valsTablette(common){
