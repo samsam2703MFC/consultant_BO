@@ -49,10 +49,15 @@
     parSemaine: 1,                // une case par semaine au plus
     tousLes: 3,                   // x : toutes les x cases cochées, un bon se débloque
     // Chaque cadeau plus gros que le précédent (Sam, 12/11/2026 : « il faut que chaque cadeau soit de plus en plus
-    // gros ») : le 1er bon vaut 2 €, chacun 1 € de plus (2, 3, 4, 5 € avec x = 3), valables 30 jours dès le lendemain ;
-    // le super bon dépasse le dernier bon ; le tirage, 1 an de pain, reste le plus gros.
-    bon: { valeur: 2, pas: 1, validite: 30 },
-    superBon: { valeur: 10 },     // la carte pleine (13 / 13) : le super bon cadeau, en plus des bons (plus gros que le dernier)
+    // gros », puis « on commence les cadeaux à 4.9 - 9.9 - 19.9 - 29.9 ») : les bons, dans l'ordre, valables 30 jours
+    // dès le lendemain. Au-delà de la liste (x = 2 : 6 bons), la dernière marche se répète (39,90, 49,90 €).
+    bon: { valeurs: [4.9, 9.9, 19.9, 29.9], validite: 30 },
+    // La carte pleine (13 / 13) : le super bon cadeau, en plus des bons, plus gros que le dernier (29,90 €). 49,90 € :
+    // la marche suivante de l'échelle, en attendant le montant de Sam. Le tirage, 1 an de pain, reste le plus gros.
+    superBon: { valeur: 49.9 },
+    // Le coût réel d'un cadeau : sa valeur de vente × le food cost (Sam : « à 40 % de food cost, quelle est la vraie
+    // valeur du cadeau ? »). Un bon s'échange contre des produits : il coûte ce que coûtent leurs matières.
+    foodCost: 40,
     // Le tirage au sort des cartes pleines, le lundi où la carte suivante arrive : un pain par jour pendant un an.
     tirage: { actif: true, prix: 1.5, jours: 365, gagnants: 1, le: '2027-02-22' },
   };

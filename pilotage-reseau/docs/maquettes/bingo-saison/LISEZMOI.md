@@ -18,8 +18,8 @@ les deux, le super bon et le tirage (décision du 12/11/2026 ; l'interrupteur de
 dessins, très fins à cette taille, ont le trait légèrement épaissi.
 
 - `bingo-maquette.html` : la maquette interactive, un seul fichier (polices, logo, QR, dessins intégrés). Réglages :
-  x (2, 3 ou 4), le seuil, le 1er bon et le pas d'un bon au suivant, la validité, le super bon, le tirage (prix du
-  pain, gagnants) ;
+  x (2, 3 ou 4), le seuil, la liste des bons, la validité, le super bon, le food cost, le tirage (prix du pain,
+  gagnants) ;
   présentation : carte inclinée, fêtes teintées. Simulation : « + ticket » coche la case au seuil, « Semaine
   suivante » avance, une semaine passée se coche ou se décoche d'un clic, « Revenir au 14 janvier ».
 - Captures : `planche.jpg` (le 14 janvier), `carte.jpg`, `app.jpg`, `app-case-cochee.jpg` (un ticket coche la
@@ -42,16 +42,33 @@ dessins, très fins à cette taille, ont le trait légèrement épaissi.
   Épiphanie, Chandeleur, Mardi gras et Saint-Valentin) ou, entre deux fêtes, le produit « à l'honneur » (l'idée de
   Natan : un produit mis en avant chaque semaine, il faut revenir chaque semaine).
 - **Toutes les x cases cochées, un bon, chacun plus gros que le précédent** (Sam : « il faut que chaque cadeau soit de
-  plus en plus gros ») : le 1er vaut 2 €, chacun 1 € de plus — 2, 3, 4 et 5 € avec x = 3 —, valables 30 jours dès le
-  lendemain ; le 1er bon et le pas sont réglables, le dessin du bon grandit avec lui. Sa case
+  plus en plus gros », puis « on commence les cadeaux à 4.9 - 9.9 - 19.9 - 29.9 ») : 4,90, 9,90, 19,90 et 29,90 €
+  avec x = 3, valables 30 jours dès le lendemain ; la liste se règle, et au-delà (x = 2 : 6 bons) la dernière marche
+  se répète (39,90, 49,90 €). Le dessin du bon grandit avec lui. Sa case
   illustrée ferme la ligne de la grille (avec x = 3 : 4 bons, à la 3e, 6e, 9e et 12e case). Le compte est celui des
   cases cochées, pas des semaines d'affilée : une semaine manquée retarde le bon, elle ne le perd pas. Le code arrive
   dans le portefeuille de l'app : un vrai bon du panel, créé comme celui du « déjà venu » de la caisse
   (`src/fidelite_caisse.php`).
-- **Carte pleine (13 / 13) : le super bon cadeau**, 10 € (réglable), valable 30 jours, en plus des bons — dans la
-  case large qui termine la grille. Il faut ne manquer aucune semaine. Il dépasse toujours le dernier bon : réglé
-  plus bas, il est relevé (dernier bon + le pas). Puis le tirage, le plus gros : l'échelle des cadeaux, dans les
-  règles, les montre marche par marche (2, 3, 4, 5, 10 €, puis 1 an de pain).
+- **Carte pleine (13 / 13) : le super bon cadeau**, **49,90 € en attendant le montant de Sam** (la marche suivante de
+  l'échelle), valable 30 jours, en plus des bons — dans la case large qui termine la grille. Il faut ne manquer
+  aucune semaine. Il dépasse toujours le dernier bon : réglé plus bas, il est relevé (dernier bon + la dernière
+  marche). Puis le tirage, le plus gros : l'échelle des cadeaux, dans les règles, les montre marche par marche.
+- **Le coût réel** (Sam : « à 40 % de food cost, quelle est la vraie valeur du cadeau ? ») : un bon s'échange contre
+  des produits, il coûte leurs matières. À 40 % (réglable) :
+
+  | Cadeau | Valeur de vente | Coût réel |
+  |---|---:|---:|
+  | Bon 1, 3e case | 4,90 € | 1,96 € |
+  | Bon 2, 6e case | 9,90 € | 3,96 € |
+  | Bon 3, 9e case | 19,90 € | 7,96 € |
+  | Bon 4, 12e case | 29,90 € | 11,96 € |
+  | Super bon, 13 / 13 | 49,90 € | 19,96 € |
+  | **Un client qui ne manque aucune semaine** | **114,50 €** | **45,80 €** |
+  | Tirage : 1 an de pain (365 × 1,50 €), un gagnant pour le réseau | 547,50 € | 219,00 € |
+
+  Ce client a acheté au moins 130 € (13 semaines × 10 €), soit 78 € de marge brute à 40 % de food cost : les
+  cadeaux en coûtent 45,80 € (35,2 % de ses achats minimum), il reste 32,20 €. Un client qui dépense plus que le
+  seuil chaque semaine laisse davantage ; un bon non utilisé ne coûte rien.
 - **Carte pleine : le super bon et le tirage, les deux** (décidé par Sam le 12/11/2026). Toutes les cartes pleines
   du réseau participent aussi au tirage du
   lundi 22/02/2027, le jour où la carte du printemps arrive. À gagner : 1 an de pain, un pain par jour à 1,50 €,
@@ -87,10 +104,9 @@ pointe vers rien.
 
 ## À trancher
 
-1. Le seuil (10 €), x (3), l'échelle des bons (2 € puis + 1 €, 30 jours) et le super bon (10 €) : un client qui ne
-   manque aucune semaine reçoit 24 € de bons (2 + 3 + 4 + 5 + 10 €) pour 130 € d'achats au moins, soit 18,5 % du
-   minimum dépensé, plus sa chance au tirage (547,50 € au prix de vente pour un gagnant). Avec un 1er bon à 1 € et
-   le même pas : 20 € (15,4 %).
+1. Le montant du super bon (49,90 € en attendant) et le seuil : à 10 € par semaine, les cadeaux coûtent 35,2 % des
+   achats minimum d'un client qui ne manque aucune semaine (45,80 € de coût pour 130 €). À 15 € par semaine :
+   23,5 % ; à 20 € : 17,6 %.
 2. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (participation sans
    obligation d'achat ? publication du gagnant) — à faire valider ; un pain par jour d'ouverture ou par jour
    calendaire.

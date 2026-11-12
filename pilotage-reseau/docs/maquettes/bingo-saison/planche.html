@@ -41,7 +41,7 @@ button,input{font:inherit;color:inherit}
 .seg2 button{border:none;background:transparent;padding:4px 11px;border-radius:5px;cursor:pointer;color:var(--muet2);font-size:12px}
 .seg2 button.on{background:#fff;color:var(--rubis);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .num{display:inline-flex;align-items:center;gap:4px;background:var(--papier);border:1px solid var(--ligne);border-radius:6px;padding:2px 6px}
-.num input{width:44px;border:none;background:transparent;text-align:right;color:var(--rubis);outline:none;font-size:12.5px}
+.num input{width:52px;border:none;background:transparent;text-align:right;color:var(--rubis);outline:none;font-size:12.5px}
 .num input::-webkit-inner-spin-button{opacity:1}
 .chk{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
 .chk input{accent-color:var(--rubis);margin:0}
@@ -81,14 +81,21 @@ button,input{font:inherit;color:inherit}
 .case.bon .ill{width:44px;height:44px;margin:0}
 .case.bon .ti{color:#fff}.case.bon .so{color:var(--abricot)}
 .case.bon .val{font-size:15px;line-height:1.1;color:#fff;margin-top:1px}
-.echelle{display:flex;align-items:flex-end;gap:6px;margin-top:10px;height:128px}
+.echelle{display:flex;align-items:flex-end;gap:6px;margin-top:14px;height:160px}
 .echelle>div{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
 .echelle .barre{flex:none;width:100%;border-radius:6px 6px 2px 2px;background:var(--rubis);display:flex;align-items:flex-start;justify-content:center;padding-top:5px}
 .echelle .barre .ill{width:22px;height:22px}
 .echelle .sup .barre{background:var(--rubis-f)}
+.echelle .tir b{font-size:10.5px;white-space:normal;text-align:center;line-height:1.1}
 .echelle .tir .barre{background:repeating-linear-gradient(135deg,var(--rubis) 0 6px,var(--rubis-f) 6px 12px)}
 .echelle b{font-size:11.5px;color:var(--rubis);margin-bottom:3px;white-space:nowrap}
 .echelle span{flex:none;font-size:9.5px;color:var(--muet);margin-top:4px;text-align:center;line-height:1.15;white-space:nowrap}
+.echelle em{flex:none;font-style:normal;font-size:9.5px;color:var(--vert);white-space:nowrap}
+.couts{margin-top:8px;width:100%;border-collapse:collapse;font-size:11.5px;font-variant-numeric:tabular-nums}
+.couts td{padding:3px 0;border-top:1px solid var(--ligne);color:var(--muet2)}
+.couts td+td{text-align:right;white-space:nowrap;padding-left:10px}
+.couts tr.t td{color:var(--encre)}
+.couts .vert{color:var(--vert)}
 .avis{color:#a35d00}
 .case.bon::before,.mc.bon::before,.mega::before{content:'';position:absolute;inset:4px;border:1px dashed rgba(242,201,160,.55);border-radius:4px;pointer-events:none}
 /* Le super bon cadeau : un coupon large, crans sur les côtés */
@@ -255,7 +262,7 @@ const jour = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.ge
 const dm = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7);
 const dLong = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeur: REGLES.bon.valeur, pas: REGLES.bon.pas, validite: REGLES.bon.validite, superBon: REGLES.superBon.valeur, avis: '',
+const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeurs: REGLES.bon.valeurs.slice(), validite: REGLES.bon.validite, fc: REGLES.foodCost, superBon: REGLES.superBon.valeur, avis: '',
   tirage: T.actif, prix: T.prix, gagnants: T.gagnants, incline: true, teinte: true,
   semaine: CLIENTE.semaine, depense: CLIENTE.depense, cochees: Object.assign({}, CLIENTE.cochees), utilises: Object.assign({}, CLIENTE.utilises), neuf: null,
   toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré. Encore 3,60 € cette semaine pour cocher « Le bon pain ».' } });
@@ -268,14 +275,20 @@ const nCoch = () => Object.keys(S.cochees).length;
 const etatSemaine = n => S.cochees[n] ? 'coche' : (n === S.semaine ? 'encours' : (n > S.semaine ? 'futur' : 'manquee'));
 const restantes = () => SEMAINES.filter(s => s.n >= S.semaine && !S.cochees[s.n]).length;
 const code = k => CLIENTE.codes[k] || 'FID' + String(k).padStart(8, '0');
-/** Chaque cadeau plus gros que le précédent : le i-e bon vaut le 1er plus (i − 1) pas. */
-const valeurBon = i => Math.round((S.valeur + (i - 1) * S.pas) * 100) / 100;
+/** Chaque cadeau plus gros que le précédent : le i-e bon prend la i-e valeur de la liste ; au-delà, la dernière
+ *  marche se répète. */
+const marche = () => { const V = S.valeurs, n = V.length; return n > 1 ? V[n - 1] - V[n - 2] : V[0]; };
+const valeurBon = i => { const V = S.valeurs; return Math.round((i <= V.length ? V[i - 1] : V[V.length - 1] + (i - V.length) * marche()) * 100) / 100; };
+const listeBons = () => Array.from({ length: nBonsMax() }, (_, i) => nf(valeurBon(i + 1), 2)).join(' – ');
+function nBonsMax(){ return Math.max(S.valeurs.length, Math.floor(NS / S.x)); }
 const nBons = () => Math.floor(NS / S.x);
+/** Le coût réel d'un cadeau : sa valeur de vente × le food cost. */
+const cout = v => Math.round(v * S.fc) / 100;
 const dernierBon = () => valeurBon(nBons());
 const totalBons = () => Array.from({ length: nBons() }, (_, i) => valeurBon(i + 1)).reduce((a, v) => a + v, 0);
 /** Le super bon dépasse toujours le dernier bon : sinon, il est relevé (et la barre le dit). */
 function garderOrdre(){
-  const min = dernierBon() + Math.max(1, S.pas);
+  const min = Math.round((dernierBon() + Math.max(1, marche())) * 100) / 100;
   if (S.superBon <= dernierBon()) { S.superBon = min; S.avis = 'super bon relevé à ' + eur(min) + ' : il doit dépasser le dernier bon (' + eur(dernierBon()) + ')'; }
 }
 /** Les bons de la saison : le i-e se débloque à la (i·x)-e case cochée, le jour où elle l'a été. */
@@ -354,16 +367,23 @@ function basculer(n){
 }
 function regler(k, v){
   if (k === 'tirage' || k === 'incline' || k === 'teinte') { S[k] = !!v; rendre(); return; }
+  S.avis = '';
+  if (k === 'valeurs') {
+    // « 4,90 – 9,90 – 19,90 – 29,90 » : la virgule est décimale ; tirets, points-virgules, barres ou espaces séparent.
+    const L = String(v).replace(/[–—]/g, ' ').split(/[\s;\/]+|(?<=\d)-(?=\d)/).map(t => parseFloat(t.replace(',', '.'))).filter(n => n > 0);
+    if (L.length && L.every((n, i) => !i || n > L[i - 1])) { S.valeurs = L.map(n => Math.round(n * 100) / 100); }
+    else { S.avis = 'liste refusée : chaque bon doit dépasser le précédent'; }
+    S.neuf = null; garderOrdre(); rendre(); return;
+  }
   v = Number(v);
   if (k === 'x') { S.x = v; }
   if (k === 'seuil' && v >= 1) { S.seuil = v; }
-  if (k === 'valeur' && v > 0) { S.valeur = v; }
-  if (k === 'pas' && v > 0) { S.pas = Math.round(v * 100) / 100; }
   if (k === 'validite' && v >= 1) { S.validite = Math.round(v); }
   if (k === 'superBon' && v > 0) { S.superBon = v; }
   if (k === 'prix' && v > 0) { S.prix = Math.round(v * 100) / 100; }
   if (k === 'gagnants' && v >= 1) { S.gagnants = Math.round(v); }
-  S.neuf = null; S.avis = '';
+  if (k === 'fc' && v > 0 && v < 100) { S.fc = v; }
+  S.neuf = null;
   garderOrdre();
   rendre();
 }
@@ -466,16 +486,24 @@ function vueRegles(){
     <div><span class="ic">€</span><div><b>Une case par semaine</b><p>Dès <span class="v">${eur(S.seuil)}</span> d’achats dans la semaine, en une ou plusieurs fois : boutique, click & collect, livraison. Une case par semaine au plus.</p></div></div>
     <div><span class="ic">✓</span><div><b>Elle se coche toute seule</b><p>Le ticket est rattaché à la carte : l’app ou la carte QR scannée à la caisse. Rien à tamponner, rien à demander à la vendeuse.</p></div></div>
     <div><span class="ic">✦</span><div><b>Chaque semaine a son thème</b><p>Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div></div>
-    <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon de plus en plus gros</b><p>${ks.map((k, i) => (i ? (i === ks.length - 1 ? ' et la ' : ', la ') : 'La ') + k + ' case : ' + eur(valeurBon(i + 1))).join('')} — le 1er bon vaut <span class="v">${eur(S.valeur)}</span>, chacun <span class="v">${eur(S.pas)}</span> de plus, valables <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
+    <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon de plus en plus gros</b><p>${ks.map((k, i) => (i ? (i === ks.length - 1 ? ' et la ' : ', la ') : 'La ') + k + ' case : ' + eur(valeurBon(i + 1))).join('')} : chacun plus gros que le précédent, valables <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
       <div class="schemas">${[2, 3, 4].map(schema).join('')}</div></div></div>
     <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, plus gros que le dernier bon (${eur(dernierBon())}), valable ${S.validite} jours, en plus des bons${S.tirage ? ', et inscrivent la carte au tirage au sort' : ''}. Il faut ne manquer aucune semaine.</p></div></div>
     ${S.tirage ? `<div><span class="ic">1 an</span><div><b>Carte pleine : le tirage au sort</b><p>Tous les clients qui ont coché les ${NS} cases participent au tirage au sort du ${dLong(T.le)}, dans tout le réseau. À gagner : <span class="v">1 an de pain</span>, un pain par jour à <span class="v">${eur(S.prix)}</span>, soit ${T.jours} pains et ${eur(lot())} au prix de vente${S.gagnants > 1 ? ', pour chacun des <span class="v">' + S.gagnants + '</span> gagnants (' + eur(lot() * S.gagnants) + ' en tout)' : ', <span class="v">1</span> gagnant'}. Le gagnant reçoit dans l’app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.</p></div></div>` : ''}
-    <div><span class="ic">↗</span><div><b>L’échelle des cadeaux</b><p>Chaque cadeau dépasse le précédent. Un client qui ne manque aucune semaine reçoit ${eur(totalBons() + S.superBon)} de bons (${Array.from({ length: nBons() }, (_, i) => eur(valeurBon(i + 1))).join(' + ')} + ${eur(S.superBon)}) pour ${eur(NS * S.seuil)} d’achats au moins, soit ${nf(100 * (totalBons() + S.superBon) / (NS * S.seuil), 1)} % du minimum${S.tirage ? ', et sa chance au tirage' : ''}.</p>
+    <div><span class="ic">↗</span><div><b>L’échelle des cadeaux</b><p>Chaque cadeau dépasse le précédent. En haut, la valeur de vente que voit le client ; en bas, le coût réel à <span class="v">${nf(S.fc)} %</span> de food cost : un bon s’échange contre des produits, il coûte leurs matières.</p>
       <div class="echelle">${(() => {
-        const marches = Array.from({ length: nBons() }, (_, i) => ({ c: '', v: eur(valeurBon(i + 1)), l: ord((i + 1) * S.x) + ' case', ill: bonDe((i + 1) * S.x).motif }))
-          .concat([{ c: 'sup', v: eur(S.superBon), l: 'super bon', ill: 'cake' }]).concat(S.tirage ? [{ c: 'tir', v: '1 an de pain', l: eur(lot()), ill: 'bread-2' }] : []);
-        return marches.map((m, i) => `<div class="${m.c}"><b>${m.v}</b><div class="barre" style="height:${Math.round(22 + 70 * (i + 1) / marches.length)}px"><div class="ill blanc">${ILL[m.ill]}</div></div><span>${m.l}</span></div>`).join('');
-      })()}</div></div></div>
+        const marches = Array.from({ length: nBons() }, (_, i) => ({ c: '', v: eur(valeurBon(i + 1)), l: ord((i + 1) * S.x) + ' case', k: cout(valeurBon(i + 1)), ill: bonDe((i + 1) * S.x).motif }))
+          .concat([{ c: 'sup', v: eur(S.superBon), l: 'super bon', k: cout(S.superBon), ill: 'cake' }]).concat(S.tirage ? [{ c: 'tir', v: '1 an de pain', l: eur(lot()), k: cout(lot()), ill: 'bread-2' }] : []);
+        return marches.map((m, i) => `<div class="${m.c}"><b>${m.v}</b><div class="barre" style="height:${Math.round(22 + 70 * (i + 1) / marches.length)}px"><div class="ill blanc">${ILL[m.ill]}</div></div><span>${m.l}</span><em>coût ${eur(m.k)}</em></div>`).join('');
+      })()}</div>
+      ${(() => {
+        const vente = totalBons() + S.superBon, reel = cout(vente), mini = NS * S.seuil, marge = Math.round(mini * (100 - S.fc)) / 100;
+        return `<table class="couts"><tr><td>Un client qui ne manque aucune semaine : ${nBons()} bons + le super bon</td><td>${eur(vente)} en vente</td></tr>
+          <tr class="t"><td>Coût réel à ${nf(S.fc)} % de food cost</td><td>${eur(reel)}</td></tr>
+          <tr><td>Ses achats au moins (${NS} semaines × ${eur(S.seuil)}) et leur marge brute</td><td>${eur(mini)} · marge ${eur(marge)}</td></tr>
+          <tr class="t"><td>Les cadeaux coûtent ${nf(100 * reel / mini, 1)} % de ses achats minimum ; il reste</td><td class="vert">${eur(Math.round((marge - reel) * 100) / 100)} de marge</td></tr>
+          ${S.tirage ? `<tr><td>Le tirage, 1 an de pain (${S.gagnants > 1 ? S.gagnants + ' gagnants' : '1 gagnant'}), pour tout le réseau</td><td>${eur(lot() * S.gagnants)} · coût ${eur(cout(lot() * S.gagnants))}</td></tr>` : ''}</table>`;
+      })()}</div></div>
     <div><span class="ic">T</span><div><b>${NS} semaines, un trimestre</b><p>Une case pour chacune des ${NS} semaines du trimestre. La carte de la saison suivante arrive le lundi d’après : quatre cartes font l’année.</p></div></div>
   </div>
   <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· ${NS} semaines, un trimestre</em></h3>
@@ -491,8 +519,9 @@ function vueBarre(){
   return `<div class="ctl">
     <div class="grp"><span>Réglages</span>x <span class="seg2">${[2, 3, 4].map(x => `<button class="${x === S.x ? 'on' : ''}" data-a="x" data-v="${x}">${x}</button>`).join('')}</span></div>
     <div class="grp">seuil ${num('seuil', S.seuil, '€')}</div>
-    <div class="grp">1er bon ${num('valeur', S.valeur, '€', 0.5)} + ${num('pas', S.pas, '€ par bon', 0.5)} ${num('validite', S.validite, 'jours')}</div>
-    <div class="grp">super bon ${num('superBon', S.superBon, '€')}</div>
+    <div class="grp">bons <label class="num"><input type="text" style="width:178px;text-align:left" value="${S.valeurs.map(v => nf(v, 2)).join(' – ')}" data-r="valeurs">€</label> ${num('validite', S.validite, 'jours')}</div>
+    <div class="grp">super bon ${num('superBon', S.superBon, '€', 0.1)}</div>
+    <div class="grp">food cost ${num('fc', S.fc, '%')}</div>
     <div class="grp">${chk('tirage', S.tirage, 'tirage au sort')}${S.tirage ? ' · le pain ' + num('prix', S.prix, '€', 0.1) + ' ' + num('gagnants', S.gagnants, S.gagnants > 1 ? 'gagnants' : 'gagnant') : ''}</div>
     ${S.avis ? `<div class="grp avis">${S.avis}</div>` : ''}
     <span class="sep"></span>
