@@ -212,7 +212,8 @@ function amDemander(array $faits, string $question, array $fil): array
     $ch = curl_init('https://api.anthropic.com/v1/messages');
     curl_setopt_array($ch, [
         CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => ['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01', 'anthropic-beta: server-side-fallback-2026-07-01'],
+        CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01', 'anthropic-beta: server-side-fallback-2026-07-01'],
+            $c['espace'] !== '' ? ['anthropic-workspace-id: ' . $c['espace']] : []),
         CURLOPT_POSTFIELDS => json_encode($corps, JSON_UNESCAPED_UNICODE), CURLOPT_TIMEOUT => 120, CURLOPT_CONNECTTIMEOUT => 10,
     ]);
     $raw = curl_exec($ch);
