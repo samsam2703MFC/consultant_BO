@@ -5708,6 +5708,20 @@
     }).join('')}</tbody></table><p class="fd-dd-rien" hidden>Aucun client ne correspond à la recherche.</p></div></div>` : '<p class="fd-dd-rien">Aucun client au-dessus du profil de base pour l’instant : les cartes scannées en caisse les feront apparaître.</p></div>';
     return h;
   }
+  /* Comment le client achète (12/11/2026, Sam : « une jauge : s'il commande au comptoir ou plutôt sur le webshop ») : sur
+   * ses tickets des 180 jours, la part au comptoir (vente directe), en commande prise au comptoir et sur le webshop. */
+  const FD_CANAUX = [['comptoir', 'Au comptoir', '#9a948b'], ['commande', 'Commande au comptoir', '#B0792A'], ['webshop', 'Webshop', '#1B6FA8'], ['inconnu', 'Commande, canal en lecture', '#d9d3c9']];
+  function fdCanaux(c) {
+    if (!c) { return ''; }
+    const tot = FD_CANAUX.reduce((a, x) => a + (c[x[0]] || 0), 0);
+    if (!tot) { return ''; }
+    const L = FD_CANAUX.map(x => ({ k: x[0], lib: x[1], coul: x[2], n: c[x[0]] || 0, p: 100 * (c[x[0]] || 0) / tot })).filter(x => x.n > 0);
+    const dom = L.filter(x => x.k !== 'inconnu').sort((a, b) => b.n - a.n)[0];
+    const phrase = !dom ? 'Canal des commandes en cours de lecture.' : dom.p >= 60 ? 'Achète surtout ' + { comptoir: 'au comptoir', commande: 'en commande au comptoir', webshop: 'sur le webshop' }[dom.k] + '.' : 'Achète par plusieurs canaux.';
+    return `<div class="db-card fd-can"><div class="fd-can-h"><b>Comment il achète</b><span>${esc(phrase)}</span></div>
+      <div class="fd-can-b">${L.map(x => `<i style="width:${x.p.toFixed(2)}%;background:${x.coul}" title="${esc(x.lib)} : ${nf(x.n, 0)} ticket${x.n > 1 ? 's' : ''}"></i>`).join('')}</div>
+      <div class="fd-can-l">${L.map(x => `<span><i style="background:${x.coul}"></i>${esc(x.lib)} <b>${nf(x.p, 0)} %</b><small>${nf(x.n, 0)} ticket${x.n > 1 ? 's' : ''}</small></span>`).join('')}</div></div>`;
+  }
   function rendFideliteClient() {
     const k = cleFDC(), d = S.aux[k];
     let h = `<p class="fd-retour"><span class="db-lien" data-fdretour="1">‹ Retour aux profils</span></p>`;
@@ -5720,6 +5734,7 @@
       <div class="fd-k"><div><b style="color:${esc(p.couleur)}">${esc(p.nom || '—')}</b><span>${esc(p.condition || '')}<br>sur ${d.fenetre || 30} jours</span></div>
         <div><b>${nf(d.passages, 0)}</b><span>passages<br>sur 180 jours</span></div><div><b>${fU(d.eur)}</b><span>dépensés<br>${fU(d.eur / Math.max(1, d.tk))} par passage</span></div>
         <div><b>${nf(d.cmd, 0)} / ${nf(d.tk, 0)}</b><span>en commande<br>${nf(d.tk - d.cmd, 0)} au comptoir</span></div></div></div>`;
+    h += fdCanaux(d.canaux);
     // Le profil mois par mois.
     const mois = (d.parMois || []).map(m => { const q = P.find(x => x.id === m.profil) || {}; const mm = +m.mois.slice(5, 7);
       return `<div class="fd-mo"><span>${esc(FD_MOIS[mm - 1].charAt(0).toUpperCase() + FD_MOIS[mm - 1].slice(1))}</span><span class="r">${nf(m.passages, 0)} passage${m.passages > 1 ? 's' : ''}</span><span><i class="fd-pt" style="background:${esc(q.couleur)}"></i>${esc(q.nom)}</span><small class="r">${m.jours < 28 ? 'sur ' + m.jours + ' jours · ' : ''}${nf(m.rythme, 1)} par mois</small></div>`; }).join('');
