@@ -1413,3 +1413,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T13:01:47Z minuty zadań ukryte w widoku operatora
 2026-11-12T13:27:13Z karta HR (kolizje, odstępy) + stawki płac edytowalne dla finansów
 2026-11-12T13:34:05Z Fidélité › Profils clients : conditions au cockpit (Fanbase … Découverte, fenêtre 30 j), onglet Fidélité du dashboard magasin, fiche client
+2026-11-12T13:37:34Z sesja Produkcja : + Zamówienia, Reklamacje i zwroty (migracja 181)
