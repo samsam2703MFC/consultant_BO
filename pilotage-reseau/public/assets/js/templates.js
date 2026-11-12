@@ -8,6 +8,7 @@ import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplS
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplFidelite } from './fidelite-tpl.js';
+import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
@@ -203,6 +204,7 @@ export function render(c, x){
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isCadreT ? tplCadreTaches(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
+      ${c.isAsc ? tplAssistantCoachs(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}

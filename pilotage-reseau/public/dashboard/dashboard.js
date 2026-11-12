@@ -5486,7 +5486,7 @@
     setTimeout(() => { const i = document.querySelector('#db-ia input'); if (i) { i.focus(); } }, 30);
   }
   function iaFermer() { IA.ouvert = false; iaRendre(); }
-  function iaDemander(q, mode) {
+  function iaDemander(q, mode, origine) {
     q = String(q || '').trim();
     if (!q || IA.fil.some(t => t.attente)) { return; }
     if (mode) { IA.mode = mode; }
@@ -5494,7 +5494,7 @@
     const t = { q, attente: true, ton: iaTonCle() };
     IA.fil.push(t); IA.saisie = '';
     iaRendre();
-    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton })
+    ecrire('/assistant/magasin', { shop: S.shop, question: q, fil, ton: t.ton, origine: origine || 'libre' })
       .then(d => { t.r = d.reponse; t.luLe = d.luLe; }).catch(e => { t.err = e.message; })
       .finally(() => { t.attente = false; iaRendre(); });
   }
@@ -5554,9 +5554,10 @@
     b.querySelectorAll('[data-iamode]').forEach(e => e.addEventListener('click', ev => {
       ev.stopPropagation();
       const q = e.dataset.iaq;
-      if (q) { iaDemander(q, e.dataset.iamode); } else { IA.mode = e.dataset.iamode; iaRendre(); }
+      if (q) { iaDemander(q, e.dataset.iamode, 'suite'); } else { IA.mode = e.dataset.iamode; iaRendre(); }
     }));
-    b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq)));
+    // L'origine de la question part avec elle (gardée au cockpit, pour décider des agents spécialisés).
+    b.querySelectorAll('[data-iaq]:not([data-iamode])').forEach(e => e.addEventListener('click', () => iaDemander(e.dataset.iaq, null, e.classList.contains('ia-tq') ? 'tuile' : 'liste')));
     b.querySelectorAll('[data-iaton]').forEach(e => e.addEventListener('click', () => {
       IA.ton = e.dataset.iaton;
       try { localStorage.setItem('dbIaTon', IA.ton); } catch (er) { /* stockage refusé */ }
@@ -5566,7 +5567,7 @@
     b.querySelectorAll('[data-iaform]').forEach(fm => {
       const i = fm.querySelector('input');
       i.addEventListener('input', () => { IA.saisie = i.value; });
-      fm.addEventListener('submit', ev => { ev.preventDefault(); iaDemander(i.value); });
+      fm.addEventListener('submit', ev => { ev.preventDefault(); iaDemander(i.value, null, 'libre'); });
     });
   }
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && IA.ouvert) { iaFermer(); } });
