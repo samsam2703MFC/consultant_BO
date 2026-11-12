@@ -11,7 +11,7 @@ Côté chiffres, 2027 se joue sur la marge plus que sur le volume : le réseau f
 | Retravailler toute la gamme pâtisserie à ×3 | Hors tartes, tartissières et cakes, la pâtisserie pèse environ 218 000 € par an (6 % du CA) et tourne déjà à ×2,88. Remonter à ×3 les produits en dessous rapporte environ 11 000 € de marge brute par an. | Soutenu, gain modeste : l'enjeu est la vente à la part |
 | Niveler les prix partout au prix le plus haut du réseau | À volumes inchangés, environ +432 000 € de marge brute par an sur toute la gamme, dont 25 000 € en pâtisserie. Corbais en porte 276 000 €. Le food cost du réseau passerait de 39,4 % à environ 35,3 %. | Question ouverte : prix conseillés ou imposés ? Le plus gros levier ; par paliers à Corbais |
 | Adapter les gammes : il y aura des coupes | 114 références font 80 % du CA. 163 références se vendent moins d'une fois par jour dans tout le réseau (7,8 % du CA), dont 48 sous ×2,5. | Soutenu ; liste à arrêter par famille avec l'usine |
-| Gâteau de 12 parts à 3,30 € la part en 5+1, prix usine 12 × 3,30 / 3 = 13,20 € | Le calcul oublie la TVA (6 %), le 5+1 et les invendus. À 13,20 €, le coefficient réel tombe entre ×2,4 et ×2,6. | À corriger : prix usine à environ 10,50 € HT, ou 5+1 limité |
+| Gâteau de 12 parts à 3,90 € la part en 5+1, prix usine 12 × 3,90 / 3 = 15,60 € | Le calcul oublie la TVA (6 %), le 5+1 et les invendus. À 15,60 €, le coefficient réel tombe entre ×2,4 et ×2,6 ; avec l'usine à 13,20 €, il reste entre ×2,8 et ×3,3. | À corriger : prix usine à environ 12,40 € HT, ou 13,20 € avec le 5+1 limité |
 | Mêmes SOP partout, tout le monde sur la tablette, mêmes vêtements de travail et même packaging | 367 des 461 produits vendus dans plusieurs magasins n'ont pas le même prix. Corbais et Sombreffe ont rendu 0 % des tâches au 3e trimestre. | Soutenu, priorité n° 1 |
 | Nouveaux franchisés : 1 semaine dans chaque magasin, tablette en main | La formation n'a de sens que si les 4 magasins appliquent le standard. Aujourd'hui, 2 sur 4 n'utilisent pas les tâches. | Soutenu, après mise à niveau |
 | Développer le réseau : Wemmel, Grimbergen, Sambreville, Malines… | Les quatre magasins font de 0,57 à 1,84 M€ de CA sur 12 mois. Chaque ouverture suppose le standard en place : tablette, SOP, gamme commune, 4 semaines de formation. | Soutenu, une fois le standard en place dans les 4 magasins |
@@ -80,28 +80,28 @@ Les entremets individuels se jettent à environ 11 à 13 % là où ils sont déc
 
 ~ Période du 3 août au 7 novembre 2026 ; éclairs, choux nappés et chouquettes exclus.
 
-## Le gâteau de 12 parts à 3,30 € : le calcul du prix usine
+## Le gâteau de 12 parts à 3,90 € : le calcul du prix usine
 
-Le calcul de la réunion, 12 × 3,30 / 3 = 13,20 €, ne tient le ×3 que si les 12 parts partent au prix plein et en comptant la TVA dans le prix. Avec le 5+1, la TVA à 6 % et une part invendue, le coefficient réel tombe à ×2,38. Le prix usine qui garantit un vrai ×3 est d'environ 10,50 € HT.
+Avec la part à 3,90 €, la formule de la réunion donne 12 × 3,90 / 3 = 15,60 €. Elle ne tient le ×3 que si les 12 parts partent au prix plein, TVA comptée dans le prix : avec le 5+1, la TVA à 6 % et une part invendue, le coefficient réel tombe à ×2,38. Le prix usine qui garantit un vrai ×3 est d'environ 12,40 € HT ; si l'usine reste à 13,20 €, la part à 3,90 € donne de ×2,8 à ×3,3.
 
 $$ prix usine max = (parts vendues × prix HT moyen d'une part) ÷ 3
 
-| Scénario pour un gâteau de 12 parts à 3,30 € TTC | CA HT par gâteau | Coefficient réel si l'usine facture 13,20 € | Prix usine max pour un vrai ×3 |
-| --- | --- | --- | --- |
-| 12 parts au prix plein (calcul de la réunion, TVA retirée) | 37,36 € | ×2,83 | 12,45 € |
-| La moitié des parts vendues en 5+1 | 34,25 € | ×2,59 | 11,42 € |
-| Toutes les parts vendues en 5+1 | 31,13 € | ×2,36 | 10,38 € |
-| Moitié en 5+1 et 1 part invendue | 31,39 € | ×2,38 | 10,46 € |
+| Scénario pour un gâteau de 12 parts à 3,90 € TTC | CA HT par gâteau | Coefficient si l'usine facture 15,60 € | Coefficient si l'usine reste à 13,20 € | Prix usine max pour un vrai ×3 |
+| --- | --- | --- | --- | --- |
+| 12 parts au prix plein (TVA retirée) | 44,15 € | ×2,83 | ×3,34 | 14,72 € |
+| La moitié des parts vendues en 5+1 | 40,47 € | ×2,59 | ×3,07 | 13,49 € |
+| Toutes les parts vendues en 5+1 | 36,79 € | ×2,36 | ×2,79 | 12,26 € |
+| Moitié en 5+1 et 1 part invendue | 37,10 € | ×2,38 | ×2,81 | 12,37 € |
 
-Le 5+1 se lit « 5 achetées, 1 offerte » (6 parts pour 16,50 €, soit 2,75 € la part), comme les 4+1 déjà en place sur les mignardises et le cougnou. Le coefficient se calcule sur le prix HT, comme dans le panel.
+Le 5+1 se lit « 5 achetées, 1 offerte » (6 parts pour 19,50 €, soit 3,25 € la part), comme les 4+1 déjà en place sur les mignardises et le cougnou. Le coefficient se calcule sur le prix HT, comme dans le panel.
 
-Trois façons de tenir un vrai ×3 :
+Trois repères pour fixer le prix usine :
 
-1. Facturer le gâteau à environ 10,50 € HT par l'usine.
-2. Garder 13,20 € et réserver le 5+1 à la fin de journée, pour écouler les parts restantes plutôt que comme prix permanent.
-3. Garder 13,20 € et le 5+1 permanent, mais vendre la part environ 4,15 €.
+1. Facturer le gâteau à environ 12,40 € HT par l'usine : le ×3 tient même avec la moitié des parts en 5+1 et une part invendue.
+2. Garder l'usine à 13,20 € : le ×3 tient tant que le 5+1 reste limité (×3,07 avec la moitié des parts en 5+1 et sans invendu), mais tombe à ×2,8 dès qu'une part reste invendue.
+3. Ne pas appliquer la formule 12 × 3,90 / 3 = 15,60 € : elle compte la TVA dans le prix et ne donne jamais ×3 (×2,83 au mieux).
 
-Point de vigilance : les entremets individuels se vendent 4,50 € (environ 120 par semaine dans le réseau). Une part à 3,30 € peut les cannibaliser si les deux gammes se ressemblent en vitrine.
+Point de vigilance : les entremets individuels se vendent 4,50 € (environ 120 par semaine dans le réseau). Une part à 3,90 € reste sous ce prix : elle peut les cannibaliser si les deux gammes se ressemblent en vitrine.
 
 ## Un seul process : les mêmes SOP et la tablette pour tous
 
@@ -234,7 +234,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | --- | --- | --- | --- |
 | Niveler les prix (prix conseillés) | +432 k€ de marge au plus haut du réseau, +167 k€ au prix médian | | T2 2027 |
 | Pâtisserie à ×3 (produits sous ×3) | +11 k€ de marge | | T2 → T3 2027 |
-| Gâteau à la part (12 parts à 3,30 €) | nouveau produit, à mesurer au test | | test T1, 4 magasins T2 |
+| Gâteau à la part (12 parts à 3,90 €) | nouveau produit, à mesurer au test | | test T1, 4 magasins T2 |
 | Coupes de gamme | 163 références à revoir (7,8 % du CA), moins d'invendus | | T1 2027 |
 | Kit décor anniversaire unique | gâteaux d'anniversaire à ×1,9 – ×2,4 aujourd'hui | | T1 2027 |
 | Tenue de travail et packaging uniques | image de marque ; emballage prévu à 2 % du CA | emballage : environ 74 k€ pour le réseau | T1 → T2 2027 |
