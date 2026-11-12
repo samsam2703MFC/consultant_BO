@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Audit fournisseurs — Cockpit L'Atelier by</title>
+<!-- Pilotage › Audit fournisseurs (12/11/2026) : le formulaire (tronc commun et questions propres à chaque
+     fournisseur référencé), les campagnes (envoi aux franchisés, suivi, relances, clôture), les résultats par
+     fournisseur et la copie envoyée à chacun avec la note du franchiseur. Montrée dans le cockpit (écran « audits »,
+     ?embed=1, la hauteur suit le contenu par postMessage) ou seule. API : ../api/cockpit/audits/* (src/audits.php). -->
+<link rel="icon" href="../assets/img/logo.png">
+<link rel="stylesheet" href="../assets/ds/global.css">
+<style>
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-ui);font-size:13px}
+  body.embed{background:transparent}
+  .af{max-width:1280px;margin:0 auto;padding:18px 22px 60px}
+  body.embed .af{padding:0 0 40px;max-width:none}
+  .af-hd{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+  .af-hd h1{font:400 24px/1.15 var(--font-display);margin:0}.af-hd p{margin:4px 0 0;color:var(--muted);max-width:760px;line-height:1.5}
+  .af-hd .droite{margin-left:auto;display:flex;gap:8px}
+  body.embed .af-hd h1{display:none}
+  .af-fo{border-top:1px solid var(--line);padding:10px 0;display:grid;gap:8px}.af-fo:first-of-type{border-top:none}
+  .af-fo .af-f input,.af-fo .af-f select{width:100%;box-sizing:border-box}
+  .af-grid{display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:16px;align-items:start}
+  @media (max-width:1100px){.af-grid{grid-template-columns:1fr}}
+  .af-card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px}
+  .af-card h2{font:400 18px/1.2 var(--font-display);margin:0 0 4px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  .af-card h2 small{font:400 12px var(--font-ui);color:var(--muted)}
+  .af-card h2 .a{margin-left:auto}
+  .af-mu{color:var(--muted)}.af-sm{font-size:12px}
+  .af-sec{border:1px solid var(--line);border-radius:10px;margin:12px 0 0;overflow:hidden}
+  .af-sec > header{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--paper);border-bottom:1px solid var(--line)}
+  .af-sec > header b{font-weight:400;font-size:14px}.af-sec > header .pts{margin-left:auto;font-family:var(--font-mono,monospace);font-size:12px;color:var(--muted)}
+  .af-sec.commun > header{background:#fbf3e6}
+  .af-q{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:start;padding:10px 14px;border-top:1px solid var(--line)}
+  .af-q:first-of-type{border-top:none}
+  .af-q.sous{padding-left:44px}
+  .af-q .ord{display:flex;flex-direction:column;gap:2px}
+  .af-q .ord button{border:1px solid var(--line);background:#fff;border-radius:5px;width:26px;height:20px;padding:0;cursor:pointer;color:var(--muted);font-size:10px;line-height:1}
+  .af-q .lib{font-size:13.5px;line-height:1.4}.af-q .lib .sousm{color:var(--prize-ink);font-size:12px;margin-right:6px}
+  .af-q .meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:5px;align-items:center}
+  .af-q .act{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+  .af-ty{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;background:var(--chip);font-size:11.5px}
+  .af-bar{font-family:var(--font-mono,monospace);font-size:11.5px;color:var(--muted-2,#6b6259)}
+  .af-ed{background:var(--paper);border-top:1px solid var(--line);padding:14px;display:grid;gap:12px}
+  .af-row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+  .af-f{display:flex;flex-direction:column;gap:4px;font-size:11.5px;color:var(--muted)}
+  .af-f input,.af-f select,.af-f textarea{font:13px var(--font-ui);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:7px 9px;background:#fff}
+  .af-f textarea{min-height:70px;resize:vertical;line-height:1.45}
+  .af-f.grand{flex:1;min-width:240px}.af-f.n input{width:70px}
+  .af-chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--ink);cursor:pointer}
+  .af-box{border:1px solid var(--line);border-radius:8px;background:#fff;padding:10px 12px;display:grid;gap:8px}
+  .af-box > b{font-weight:400;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+  .af-tbl{width:100%;border-collapse:collapse;font-size:12.5px}
+  .af-tbl th{text-align:left;font-weight:400;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line)}
+  .af-tbl td{padding:8px;border-top:1px solid var(--line);vertical-align:middle}
+  .af-tbl tr:first-child td{border-top:none}.af-tbl .num{text-align:right;font-family:var(--font-mono,monospace)}
+  .af-tbl tr.clic{cursor:pointer}.af-tbl tr.clic:hover td{background:var(--paper)}.af-tbl tr.on td{background:#fbf3e6}
+  .af-tbl input,.af-tbl select{font:12.5px var(--font-ui);border:1px solid var(--line);border-radius:6px;padding:5px 7px;background:#fff;color:var(--ink);max-width:100%}
+  .af-meter{display:inline-block;width:110px;height:8px;border-radius:8px;background:var(--chip);vertical-align:middle;overflow:hidden;margin-right:8px}
+  .af-meter i{display:block;height:100%;background:var(--prize);border-radius:8px}
+  .af-rep{display:inline-flex;gap:2px;vertical-align:middle}.af-rep i{display:inline-block;height:14px;border-radius:3px;min-width:3px;font-style:normal;font-size:10px;color:#fff;text-align:center;line-height:14px}
+  .af-up{color:var(--green)}.af-down{color:var(--stop)}
+  .af-heat{border-collapse:separate;border-spacing:2px;font-size:12px}
+  .af-heat th{font-weight:400;font-size:11px;color:var(--muted);text-align:center;padding:0 2px 4px;max-width:110px;line-height:1.25}
+  .af-heat th:first-child{text-align:left}.af-heat td.b{padding-right:10px;white-space:nowrap}
+  .af-heat td.c{min-width:56px;height:26px;text-align:center;border-radius:4px;font-family:var(--font-mono,monospace);font-size:11.5px;background:var(--paper)}
+  .af-leg{display:flex;gap:10px;align-items:center;font-size:11.5px;color:var(--muted);margin-top:8px}.af-leg s{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:3px}
+  .af-com{padding:8px 0;border-top:1px solid var(--line);display:grid;grid-template-columns:22px 1fr;gap:8px;font-size:12.5px}.af-com:first-of-type{border-top:none}
+  .af-com q{quotes:"« " " »"}.af-com small{display:block;color:var(--muted);margin-top:2px}
+  .af-msg{border-radius:8px;padding:9px 12px;margin:0 0 12px;font-size:12.5px}
+  .af-msg.ok{background:rgba(63,122,82,.12);color:var(--green)}.af-msg.ko{background:var(--stop-soft);color:var(--stop)}.af-msg.info{background:var(--prize-soft);color:var(--prize-ink)}
+  .af-apercu{width:100%;height:560px;border:1px solid var(--line);border-radius:8px;background:#fff}
+  .af-vide{padding:22px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="af" id="af"><p class="af-mu">Chargement…</p></div>
+<script src="audits.js"></script>
+</body>
+</html>
