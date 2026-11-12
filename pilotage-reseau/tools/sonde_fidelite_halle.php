@@ -15,13 +15,14 @@ declare(strict_types=1);
  *   4. la fiche de chaque client rattaché à un ticket de Halle cette semaine (`/shops/4/clients/{id}`) : compte dans
  *      l'app, fidélité active, membre depuis, canal d'origine, magasin principal (un client d'un autre magasin) ;
  *   5. les membres fidélité (fidelity_active, loyalty_scan_code, fidelity_linked_at) parmi les clients de Halle
- *      (`/shops/4/clients`) et de tout le réseau (`/clients`), et combien d'entre eux sont sur un ticket de Halle ;
- *   6. les tables du cockpit : le relevé du cron (`ceo_pwa_jour`) et les visites carte (`ceo_fid_visite`).
+ *      (`/shops/4/clients`) et de tout le réseau (`/clients`), et combien d'entre eux sont sur un ticket de Halle.
+ *
+ * Tout passe par l'API du panel : aucune table locale n'est lue.
  *
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-fidelite-halle.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_fidelite_halle.php
  *
- * LECTURE SEULE : des GET au panel, des SELECT sur les tables du cockpit — le relevé ceo_pwa_* n'est pas regravé.
+ * LECTURE SEULE : des GET au panel, rien d'autre.
  * Rien de nominatif : des comptes, des noms de champ, des répartitions de valeurs courtes ; ni nom, ni téléphone,
  * ni e-mail, ni identifiant de client.
  */
@@ -396,20 +397,4 @@ sfTitre('5b. Tout le réseau (/clients) : les membres fidélité, où qu\'ils so
 $reseau = sfTousClients('/clients?type=b2c', 120);
 sfMembres($reseau, $lundi, $clientsSemaine, $typesSemaine);
 echo '  clients des tickets de Halle de la semaine présents dans cette liste : ', count(array_intersect_key($clientsSemaine, $reseau)), ' / ', count($clientsSemaine), "\n";
-/* 6. Les tables du cockpit ─────────────────────────────────────────────────────────────────────────────────── */
-sfTitre('6. Les tables du cockpit');
-try {
-    foreach (Db::rows('SELECT jour, tickets, identifies, lu_le, essais FROM ceo_pwa_jour WHERE shop_id = ? AND jour >= ? ORDER BY jour', [SF_SHOP, $lundiAvant]) as $r) {
-        printf("  ceo_pwa_jour  %s : %4d tickets · %3d identifiés · lu le %s · essais %d\n", $r['jour'], $r['tickets'], $r['identifies'], $r['lu_le'] ?? '—', $r['essais']);
-    }
-} catch (Throwable $e) { echo '  ceo_pwa_jour : ', $e->getMessage(), "\n"; }
-try {
-    $r = Db::row('SELECT COUNT(*) n, MIN(visited_at) du, MAX(visited_at) au, SUM(shop_id = ?) halle, SUM(shop_id = ? AND visited_at >= ?) halleSemaine FROM ceo_fid_visite', [(string) SF_SHOP, (string) SF_SHOP, $lundi]);
-    printf("  ceo_fid_visite : %d visites carte (du %s au %s) · Halle %d · Halle cette semaine %d\n", $r['n'] ?? 0, $r['du'] ?? '—', $r['au'] ?? '—', $r['halle'] ?? 0, $r['halleSemaine'] ?? 0);
-} catch (Throwable $e) { echo '  ceo_fid_visite : ', $e->getMessage(), "\n"; }
-try {
-    $r = Db::row('SELECT COUNT(*) n, SUM(actif = 1) actives, MAX(updated_at) maj FROM ceo_fid_regle');
-    printf("  ceo_fid_regle : %d règles, %d actives, dernière modification %s\n", $r['n'] ?? 0, $r['actives'] ?? 0, $r['maj'] ?? '—');
-} catch (Throwable $e) { echo '  ceo_fid_regle : ', $e->getMessage(), "\n"; }
-
 echo "\nfin de la sonde\n";
