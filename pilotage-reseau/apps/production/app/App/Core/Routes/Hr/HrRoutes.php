@@ -25,6 +25,11 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/hr/notes/summary', ['controller' => $c, 'method' => 'sendSummary']);
     $r->addRoute('GET', '/ajax/hr/rules', ['controller' => $c, 'method' => 'rules']);
     $r->addRoute('PUT', '/ajax/hr/rules', ['controller' => $c, 'method' => 'saveRules']);
+    // [279] Szybka notatka i follow-upy
+    $r->addRoute('GET', '/ajax/hr/quick-note', ['controller' => $c, 'method' => 'quickOptions']);
+    $r->addRoute('POST', '/ajax/hr/quick-note', ['controller' => $c, 'method' => 'quickAdd']);
+    $r->addRoute('GET', '/ajax/hr/followups', ['controller' => $c, 'method' => 'followups']);
+    $r->addRoute('POST', '/ajax/hr/followups/{id:\d+}/done', ['controller' => $c, 'method' => 'followupDone']);
     // [276] Szablony umów
     $r->addRoute('GET', '/ajax/hr/templates', ['controller' => $c, 'method' => 'templateList']);
     $r->addRoute('PUT', '/ajax/hr/templates/{code:[a-z_]+}', ['controller' => $c, 'method' => 'templateSave']);

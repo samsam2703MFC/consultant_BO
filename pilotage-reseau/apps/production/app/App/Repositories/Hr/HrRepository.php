@@ -10,6 +10,10 @@ final class HrRepository extends WorkshopRepository
 {
     protected string $table = 'n_hr_employee';
 
+    /** Visibilité d'une note pour un non-administrateur (3 paramètres : viewer × 3). */
+    private const VISIBLE = "(n.visibility = 'public' AND (n.audience IS NULL OR FIND_IN_SET((SELECT p.code FROM n_user_position up JOIN n_position p ON p.id = up.id_position WHERE up.id_user = ? LIMIT 1), n.audience)))
+                     OR n.author = ? OR n.followup_user = ?)";
+
     public const FIELDS = ['phone_enc', 'birth_enc', 'gender', 'hire_date', 'contract_type', 'contract_end', 'work_time', 'medical_until', 'emergency_enc',
         // [277] paie et contrats (accès « payroll »)
         'pay_type', 'pay_amount', 'bank_enc', 'address_enc', 'pesel_enc', 'pit2', 'kup_raised', 'young_relief', 'student', 'sick_insurance'];
@@ -79,7 +83,10 @@ final class HrRepository extends WorkshopRepository
 
     // --- notes
 
-    /** Notes d'une personne ou d'une période : l'administrateur voit tout, les autres les publiques et leurs privées. */
+    /**
+     * Notes d'une personne ou d'une période : l'administrateur voit tout ; les autres, leurs notes, celles dont ils suivent
+     * le follow-up et les publiques — [279] limitées aux postes « dla kogo » quand la note en désigne.
+     */
     public function notes(?int $employeeId, ?string $from, ?string $to, bool $all, ?int $viewer): array
     {
         $where = [];
@@ -87,10 +94,12 @@ final class HrRepository extends WorkshopRepository
         if ($employeeId !== null) { $where[] = 'n.id_employee = ?'; $params[] = $employeeId; }
         if ($from !== null) { $where[] = 'n.created_at >= ?'; $params[] = $from; }
         if ($to !== null) { $where[] = 'n.created_at < ?'; $params[] = $to; }
-        if (!$all) { $where[] = "(n.visibility = 'public' OR n.author = ?)"; $params[] = (int) $viewer; }
+        if (!$all) { $where[] = "(" . self::VISIBLE; array_push($params, (int) $viewer, (int) $viewer, (int) $viewer); }
         return $this->all("SELECT n.id, n.id_employee, n.body_enc, n.visibility, n.to_admin, n.author, n.created_at, u.displayed_name AS by_name,
+                                  n.kind, n.topic_enc, n.audience, n.channels, n.followup_due, n.followup_user, n.followup_done_at, n.followup_done_note,
+                                  fu.displayed_name AS followup_name, fd.displayed_name AS followup_done_name,
                                   TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name, g.name_pl AS group_name
-                           FROM n_hr_note n LEFT JOIN user u ON u.id = n.author
+                           FROM n_hr_note n LEFT JOIN user u ON u.id = n.author LEFT JOIN user fu ON fu.id = n.followup_user LEFT JOIN user fd ON fd.id = n.followup_done_by
                            JOIN n_prod_employee e ON e.id = n.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
                            LEFT JOIN n_prod_group g ON g.id = e.id_primary_group"
             . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY n.created_at DESC, n.id DESC', $params);
@@ -99,6 +108,78 @@ final class HrRepository extends WorkshopRepository
     public function note(int $id): ?array
     {
         return $this->all('SELECT * FROM n_hr_note WHERE id = ?', [$id])[0] ?? null;
+    }
+
+    /** [279] Szybka notatka : rodzaj, temat (chiffré), dla kogo, alertes, follow-up. */
+    public function insertQuickNote(array $d): int
+    {
+        $this->db->prepare('INSERT INTO n_hr_note (id_employee, kind, topic_enc, body_enc, visibility, to_admin, audience, channels, followup_due, followup_user, author)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+            ->execute([$d['id_employee'], $d['kind'], $d['topic_enc'], $d['body_enc'], $d['visibility'], (int) $d['to_admin'], $d['audience'], $d['channels'],
+                $d['followup_due'], $d['followup_user'], $d['author']]);
+        return (int) $this->db->lastInsertId();
+    }
+
+    public function followupDone(int $id, ?int $userId, ?string $note): void
+    {
+        $this->db->prepare('UPDATE n_hr_note SET followup_done_at = NOW(), followup_done_by = ?, followup_done_note = ? WHERE id = ? AND followup_done_at IS NULL')
+            ->execute([$userId, $note, $id]);
+    }
+
+    /** Follow-ups ouverts : tous (administrateur) ou ceux qui concernent la personne (responsable ou auteur). */
+    public function openFollowups(?int $viewer, bool $all): array
+    {
+        return $this->all("SELECT n.id, n.id_employee, n.kind, n.topic_enc, n.followup_due, n.followup_user, n.author, fu.displayed_name AS followup_name,
+                                  TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name
+                           FROM n_hr_note n LEFT JOIN user fu ON fu.id = n.followup_user
+                           JOIN n_prod_employee e ON e.id = n.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
+                           WHERE n.followup_due IS NOT NULL AND n.followup_done_at IS NULL" . ($all ? '' : ' AND (n.followup_user = ? OR n.author = ?)') . '
+                           ORDER BY n.followup_due, n.id', $all ? [] : [(int) $viewer, (int) $viewer]);
+    }
+
+    /** Follow-ups ouverts d'une personne avec « zadanie » (Mój tydzień). */
+    public function taskFollowups(int $userId): array
+    {
+        return $this->all("SELECT n.id, n.id_employee, n.kind, n.topic_enc, n.followup_due, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name
+                           FROM n_hr_note n JOIN n_prod_employee e ON e.id = n.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
+                           WHERE n.followup_user = ? AND n.followup_done_at IS NULL AND n.followup_due IS NOT NULL AND FIND_IN_SET('task', n.channels)
+                           ORDER BY n.followup_due", [$userId]);
+    }
+
+    /** Follow-ups ouverts dont le terme est atteint (rappel quotidien). */
+    public function dueFollowups(string $date): array
+    {
+        return $this->all("SELECT n.id, n.id_employee, n.kind, n.topic_enc, n.followup_due, n.followup_user, TRIM(CONCAT(pe.name, ' ', pe.surname)) AS name
+                           FROM n_hr_note n JOIN n_prod_employee e ON e.id = n.id_employee JOIN production_employee pe ON pe.id = e.id_production_employee
+                           WHERE n.followup_user IS NOT NULL AND n.followup_done_at IS NULL AND n.followup_due <= ?", [$date]);
+    }
+
+    /**
+     * Destinataires « dla kogo » : utilisateurs des postes cités, administrateurs pour « admin ».
+     * @param list<string> $codes @return array<int, array{id:int, name:string, email:?string, phone:?string}>
+     */
+    public function recipients(array $codes): array
+    {
+        $out = [];
+        $pos = array_values(array_filter($codes, fn($c) => $c !== 'admin'));
+        if ($pos) {
+            foreach ($this->all('SELECT u.id, u.displayed_name AS name, u.email, u.phone FROM user u JOIN n_user_position up ON up.id_user = u.id JOIN n_position p ON p.id = up.id_position
+                                 WHERE p.code IN (' . implode(',', array_fill(0, count($pos), '?')) . ')', $pos) as $r) $out[(int) $r['id']] = $r;
+        }
+        if (in_array('admin', $codes, true)) {
+            foreach ($this->admins() as $a) $out[$a['id']] ??= $this->all('SELECT id, displayed_name AS name, email, phone FROM user WHERE id = ?', [$a['id']])[0] ?? null;
+        }
+        return array_filter($out);
+    }
+
+    /** Personnes à qui confier un follow-up : administrateurs et postes de bureau. */
+    public function followupUsers(array $codes): array
+    {
+        $ids = array_column($this->admins(), 'id');
+        $rows = $this->all('SELECT u.id, u.displayed_name AS name, p.name_pl AS position FROM user u LEFT JOIN n_user_position up ON up.id_user = u.id LEFT JOIN n_position p ON p.id = up.id_position
+                            WHERE p.code IN (' . implode(',', array_fill(0, count($codes), '?')) . ')' . ($ids ? ' OR u.id IN (' . implode(',', array_map('intval', $ids)) . ')' : '') . '
+                            ORDER BY u.displayed_name', $codes);
+        return array_map(fn($r) => ['id' => (int) $r['id'], 'name' => $r['name'], 'position' => $r['position'] ?: (in_array((int) $r['id'], $ids, true) ? 'Administrator' : null)], $rows);
     }
 
     public function insertNote(int $employeeId, string $bodyEnc, string $visibility, bool $toAdmin, ?int $author): int
@@ -116,8 +197,8 @@ final class HrRepository extends WorkshopRepository
     /** Nombre de notes du mois visibles par personne. @return array<int, int> */
     public function noteCounts(string $from, string $to, bool $all, ?int $viewer): array
     {
-        $sql = 'SELECT id_employee, COUNT(*) AS n FROM n_hr_note WHERE created_at >= ? AND created_at < ?' . ($all ? '' : " AND (visibility = 'public' OR author = ?)") . ' GROUP BY id_employee';
-        return array_map('intval', array_column($this->all($sql, $all ? [$from, $to] : [$from, $to, (int) $viewer]), 'n', 'id_employee'));
+        $sql = 'SELECT n.id_employee, COUNT(*) AS n FROM n_hr_note n WHERE n.created_at >= ? AND n.created_at < ?' . ($all ? '' : ' AND (' . self::VISIBLE) . ' GROUP BY n.id_employee';
+        return array_map('intval', array_column($this->all($sql, $all ? [$from, $to] : [$from, $to, (int) $viewer, (int) $viewer, (int) $viewer]), 'n', 'id_employee'));
     }
 
     // --- [276] modèles de contrats

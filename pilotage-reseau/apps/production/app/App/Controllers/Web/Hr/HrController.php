@@ -7,6 +7,7 @@ use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Hr\ContractTemplateService;
+use App\Services\Hr\HrQuickNoteService;
 use App\Services\Hr\HrService;
 use App\Services\Organization\PageAccessService;
 use Symfony\Component\HttpFoundation\Request;
@@ -19,7 +20,8 @@ final class HrController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private HrService $hr, private PageAccessService $access, private ContractTemplateService $templates)
+    public function __construct(private HrService $hr, private PageAccessService $access, private ContractTemplateService $templates,
+        private HrQuickNoteService $quick)
     {
     }
 
@@ -139,6 +141,28 @@ final class HrController extends BaseController
             if (!$this->isAdmin()) throw new CustomException('Ustawienia HR zmienia administrator.', 'errors', 403);
             return $this->hr->saveRules($this->input(), (int) $this->userId());
         });
+    }
+
+    // --- [279] Szybka notatka et follow-ups
+
+    public function quickOptions()
+    {
+        return $this->guarded(fn() => $this->quick->options($this->userId()));
+    }
+
+    public function quickAdd()
+    {
+        return $this->guarded(fn() => $this->quick->add($this->input(), $this->userId()));
+    }
+
+    public function followups()
+    {
+        return $this->guarded(fn() => $this->quick->followups($this->userId(), $this->isAdmin()));
+    }
+
+    public function followupDone($id)
+    {
+        return $this->guarded(fn() => $this->quick->done((int) $id, $this->input(), $this->userId(), $this->isAdmin()));
     }
 
     // --- [276] Szablony umów (salaire, PESEL, adresse : accès « payroll »)

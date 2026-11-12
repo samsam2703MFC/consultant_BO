@@ -271,6 +271,28 @@ function visiteVals(app, sv, d, id, h){
   sv.etapes = etapesDe(app, faits, lignes, defaut, faite ? ['rapport', 'corrections', 'tablette'] : ouvrables);
   sv.titre = f.court + ' · ' + (t ? t.nom : 'visite');
   sv.chapo = 'La visite du ' + fmtDJ(v.prevu_le) + ' à ' + v.debut_h + ' avec ' + fin(consN) + ' Reprenez là où elle en est ; une étape faite se rouvre d’un clic.';
+  // Effacer la visite (11/11/2026, demande de Sam), à n'importe quelle étape : DELETE /visites/{id}, après confirmation.
+  const aVenir = ['planifiee', 'confirmee'].includes(v.statut) && v.prevu_le >= auj();
+  sv.effacer = () => {
+    if (app.state.svBusy) { return; }
+    const q = ['Effacer la visite de ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' ?', '',
+      'Tout part avec elle : ses réponses, ses photos, les points nés pendant la visite et les tâches de ' + consN + '.'];
+    if (rapportEnvoye) { q.push('Le rapport est déjà parti : ses points disparaissent aussi de la page du franchisé.'); }
+    if (aVenir) { q.push('L’agenda de ' + consN + ' reçoit l’annulation' + (p.annoncee && P.odj.envoyeLe ? ' ; le franchisé, qui a reçu l’ordre du jour, est prévenu par courriel.' : '.')); }
+    q.push('', 'Impossible de revenir en arrière.');
+    if (typeof window === 'undefined' || !window.confirm(q.join('\n'))) { return; }
+    app.setState({ svBusy: true });
+    app.api('DELETE', '/visites/' + id, { qui: 'Cockpit' }).then(r => {
+      const ok = r && r.ok !== false && !r.error && r.efface;
+      app.setState({ svBusy: false });
+      if (!ok) { message(app, 'Visite non effacée : ' + ((r && r.error) || 'sans réponse'), true); return; }
+      const n = r.efface; const su = r.suite || {};
+      const prev = [su.invitation && su.invitation.envoye ? 'annulation envoyée à l’agenda de ' + consN : '', su.franchise && su.franchise.envoye ? 'franchisé prévenu' : ''].filter(Boolean);
+      message(app, 'Visite effacée : ' + f.court + ' du ' + fmtDJ(v.prevu_le) + ' · ' + [pl(n.reponses, 'réponse'), pl(n.photos, 'photo'), pl(n.points, 'point'), pl(n.taches, 'tâche')].join(', ') + (prev.length ? ' · ' + prev.join(', ') : '') + '.');
+      app.setState({ svSel: { kind: 'nouvelle' }, svPas: null, svPrep: null, svRap: null, svPrepF: null, svRapF: null, svVisF: null });
+      relireTableau(app);
+    });
+  };
   const ouverte = sv.etapes.find(e => e.etat === 'cur').cle;
   const enregistrerVisite = (G, puis) => {
     app.setState({ svBusy: true });
@@ -435,6 +457,7 @@ function rapVals(app, sv, id){
     personnel: equipeVals(v.personnel),
     a: d.envoi.a, source: d.envoi.source, copies: d.envoi.copies.map(x => x.nom + (x.email ? '' : ' (sans adresse)')).join(', ') || 'personne',
     envoie: d.roles.envoieNom, adapte: d.roles.adapteNom, smtp: d.envoi.smtp,
+    sms: smsVals(d.envoi.sms),
     dernier: d.envoi.dernier ? (d.envoi.dernier.envoye ? 'Dernier courriel : envoyé à ' + d.envoi.dernier.a + ' (' + (d.envoi.dernier.langue || '') + ')' + (d.envoi.dernier.pdf ? ', PDF joint' : ', sans PDF (moteur PDF muet)') + '.' : 'Dernier courriel non parti : ' + d.envoi.dernier.motif + '.') : null,
     sujet: d.apercu.sujet, texte: d.apercu.texte,
     busy: !!S.svBusy,
@@ -492,6 +515,21 @@ function budgetDe(bc){
     horizon: bc.horizon === 'trimestre' ? 'pour la fin du trimestre' : bc.horizon === 'mois' ? 'pour le mois prochain' : '', echeance: bc.echeance ? 'd’ici le ' + jm(bc.echeance) : '',
     complet: !!bc.complet, qui: bc.qui || '' };
 }
+/**
+ * Le SMS de la validation (11/11/2026) : au franchisé quand le rapport part, en copie à Sam. Ce qui partira (le GSM, d'où il
+ * vient, la copie) et ce qui est parti.
+ */
+function smsVals(s){
+  if (!s) { return null; }
+  const copie = s.copies && s.copies.length ? ' · copie à ' + s.copies.join(', ') : '';
+  const D = s.dernier;
+  return { a: !s.actif ? 'coupé dans Qui fait quoi' : s.tel ? s.tel + (s.source && s.source !== 'Qui fait quoi' ? ' (' + s.source + ')' : '') + copie : 'aucun GSM — réglez-le dans Qui fait quoi',
+    ko: !!s.actif && !s.tel, sansFournisseur: !!s.actif && !s.fournisseur,
+    dernier: D ? (D.envoye ? 'SMS parti au ' + D.lisible + (D.le ? ' le ' + fmtDH(D.le) : '') + smsCopiesTxt(D.copies) + '.' : 'SMS non parti : ' + (D.motif || '—') + '.') : null };
+}
+function smsCopiesTxt(c){
+  return c && c.length ? ', copie à ' + c.map(x => x.nom + (x.envoye ? '' : ' (non partie : ' + (x.motif || '—') + ')')).join(', ') : '';
+}
 function rapCorps(F){
   return { phrase: F.phrase, positif: F.positif, sentiment: F.sentiment, execution: F.execution, clients: F.clients, causes: F.causes, diagnostic: F.diagnostic, reco: F.reco,
     plans: Object.keys(F.plans).map(id => Object.assign({ id: Number(id) }, F.plans[id])), photos: F.photos, qui: 'Cockpit' };
@@ -508,7 +546,8 @@ function rapSauver(app, id, F, envoyer){
       if (!ok2) { message(app, 'Envoi refusé : ' + ((e && e.error) || 'sans réponse'), true); return; }
       const en = e.envoi || {};
       message(app, 'Rapport envoyé : ' + pl(e.ouverts, 'point') + ' ouvert' + (e.ouverts > 1 ? 's' : '') + ' chez le franchisé' + (e.internes ? ', ' + e.internes + ' gardé' + (e.internes > 1 ? 's' : '') + ' en interne' : '') + '. '
-        + (en.envoye ? 'Courriel parti à ' + en.a + (en.copies && en.copies.length ? ', copie à ' + en.copies.join(', ') : '') + (en.pdf ? ', PDF joint.' : ', sans PDF.') : 'Courriel non parti : ' + (en.motif || '—') + ' — le rapport est sur sa page.'), !en.envoye);
+        + (en.envoye ? 'Courriel parti à ' + en.a + (en.copies && en.copies.length ? ', copie à ' + en.copies.join(', ') : '') + (en.pdf ? ', PDF joint.' : ', sans PDF.') : 'Courriel non parti : ' + (en.motif || '—') + ' — le rapport est sur sa page.')
+        + (e.sms ? (e.sms.envoye ? ' SMS au ' + e.sms.lisible + smsCopiesTxt(e.sms.copies) + '.' : ' SMS non parti : ' + (e.sms.motif || '—') + '.') : ''), !en.envoye || !!(e.sms && !e.sms.envoye));
       relireTableau(app);
     });
   });
@@ -674,7 +713,8 @@ export function valsSvAdmin(app, common){
   if (!d || d.error) { common.sv = sv; return; }
   const R = d.regles;
   const F = S.svReglesF || { magasins: Object.fromEntries(d.magasins.map(m => [m.id, Object.assign({}, m.regle)])), droits: Object.fromEntries(d.personnes.map(p => [p.id, Object.assign({}, p.droits)])),
-    admins: R.admins.map(a => Object.assign({}, a)), delais: Object.assign({}, R.delais), voit: Object.assign({}, R.voit), types: Object.fromEntries(d.types.map(t => [t.code, t.annoncee])), modifie: false };
+    admins: R.admins.map(a => Object.assign({}, a)), delais: Object.assign({}, R.delais), voit: Object.assign({}, R.voit), types: Object.fromEntries(d.types.map(t => [t.code, t.annoncee])),
+    sms: { actif: !R.sms || R.sms.actif !== false, copie: ((R.sms && R.sms.copie) || []).map(c => Object.assign({}, c)) }, modifie: false };
   const maj = patch => app.setState({ svReglesF: Object.assign({}, F, patch, { modifie: true }) });
   const majMag = (id, patch) => maj({ magasins: Object.assign({}, F.magasins, { [id]: Object.assign({}, F.magasins[id], patch) }) });
   const pers = d.personnes.map(p => ({ id: p.id, nom: p.nom })).concat(F.admins.filter(a => !d.personnes.some(p => p.id === a.id)).map(a => ({ id: a.id, nom: a.nom })));
@@ -693,6 +733,9 @@ export function valsSvAdmin(app, common){
     corrections: opts(r.corrections, [{ v: 'admin', nom: 'l’admin réseau' }, { v: 'responsable', nom: 'le responsable' }], 'valider'), setCorrections: e => majMag(m.id, { corrections: e.target.value }),
     copie: pers.map(p => ({ nom: p.nom, on: (r.copie || []).includes(p.id), basculer: () => majMag(m.id, { copie: (r.copie || []).includes(p.id) ? r.copie.filter(x => x !== p.id) : (r.copie || []).concat([p.id]) }) })),
     email: r.email || '', setEmail: e => majMag(m.id, { email: e.target.value.trim() }), emailAide: !r.email && m.adresse.email ? 'sinon ' + m.adresse.email + ' (' + m.adresse.source + ')' : (!r.email ? 'aucune adresse : rien ne partira' : ''), emailKo: !r.email && !m.adresse.email,
+    // Le GSM du franchisé (11/11/2026) : il reçoit un SMS quand son rapport part ; sinon, celui des alertes de leads.
+    tel: r.tel || '', setTel: e => majMag(m.id, { tel: e.target.value.trim() }),
+    telAide: !r.tel && m.telephone && m.telephone.tel ? 'sinon ' + m.telephone.tel + ' (' + m.telephone.source + ')' : (!r.tel ? 'aucun GSM : pas de SMS' : ''), telKo: !r.tel && !(m.telephone && m.telephone.tel),
     langues: [{ v: '', nom: 'auto · ' + d.langues[m.langueDefaut] }].concat(Object.keys(d.langues).map(k => ({ v: k, nom: d.langues[k] }))).map(o => Object.assign(o, { on: o.v === (r.langue || '') })), setLangue: e => majMag(m.id, { langue: e.target.value }) }; });
   sv.types = d.types.filter(t => t.actif !== false).map(t => ({ nom: t.nom, annoncee: !!F.types[t.code], annoncer: () => maj({ types: Object.assign({}, F.types, { [t.code]: true }) }), inopiner: () => maj({ types: Object.assign({}, F.types, { [t.code]: false }) }) }));
   sv.droits = Object.keys(DROITS).map(k => DROITS[k]);
@@ -711,6 +754,13 @@ export function valsSvAdmin(app, common){
     validationHeures: De.validationHeures, setValidationHeures: setD('validationHeures', true), escaladeJours: De.escaladeJours, setEscaladeJours: setD('escaladeJours', true),
     relanceLuJours: De.relanceLuJours, setRelanceLuJours: setD('relanceLuJours', true) };
   sv.voit = VOIT.map(([k, l]) => ({ l, on: !!F.voit[k], basculer: () => maj({ voit: Object.assign({}, F.voit, { [k]: !F.voit[k] }) }) }));
+  // Les SMS (11/11/2026) : au franchisé quand son rapport part, et la copie de chacun à ces numéros (Sam).
+  const Sm = F.sms; const majSms = patch => maj({ sms: Object.assign({}, Sm, patch) });
+  const majCopie = (i, patch) => { const l = Sm.copie.slice(); l[i] = Object.assign({}, l[i], patch); majSms({ copie: l }); };
+  sv.sms = { actif: !!Sm.actif, allumer: () => majSms({ actif: true }), couper: () => majSms({ actif: false }), fournisseur: d.smsFournisseur || null,
+    copie: Sm.copie.map((c, i) => ({ nom: c.nom || '', tel: c.tel || '', setNom: e => majCopie(i, { nom: e.target.value }), setTel: e => majCopie(i, { tel: e.target.value }), retirer: () => majSms({ copie: Sm.copie.filter((_, j) => j !== i) }) })),
+    ajouter: () => majSms({ copie: Sm.copie.concat([{ nom: '', tel: '' }]) }),
+    sansGsm: d.magasins.filter(m => !(F.magasins[m.id] || {}).tel && !(m.telephone && m.telephone.tel)).map(m => m.court) };
   sv.modifie = !!F.modifie; sv.busy = !!S.svBusy;
   sv.enregistrer = () => reglesSauver(app, F);
   sv.annuler = F.modifie ? () => app.setState({ svReglesF: null }) : null;
@@ -734,7 +784,8 @@ export function valsSvAdmin(app, common){
 function reglesSauver(app, F){
   const delais = Object.assign({}, F.delais);
   app.setState({ svBusy: true });
-  app.api('PUT', '/suivi/regles', { magasins: F.magasins, droits: F.droits, admins: F.admins, delais, voit: F.voit, types: F.types, qui: 'Cockpit' }).then(r => {
+  const sms = { actif: !!F.sms.actif, copie: F.sms.copie.filter(c => (c.tel || '').trim()) };
+  app.api('PUT', '/suivi/regles', { magasins: F.magasins, droits: F.droits, admins: F.admins, delais, voit: F.voit, types: F.types, sms, qui: 'Cockpit' }).then(r => {
     const ok = r && r.ok !== false && !r.error && r.regles;
     app.setState({ svBusy: false, svReglesF: ok ? null : app.state.svReglesF, svRegles: ok ? { path: '/suivi/regles', chargement: false, d: r } : app.state.svRegles });
     message(app, ok ? 'Règles enregistrées : elles valent pour les visites planifiées à partir de maintenant.' : 'Refusé : ' + ((r && r.error) || 'sans réponse'), !ok);

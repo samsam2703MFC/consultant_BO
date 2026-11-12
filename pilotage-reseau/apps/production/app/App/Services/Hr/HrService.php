@@ -327,7 +327,14 @@ final class HrService
     {
         return ['id' => (int) $n['id'], 'employee_id' => (int) $n['id_employee'], 'name' => $n['name'] ?? null, 'group' => $n['group_name'] ?? null,
             'body' => $this->cipher->decrypt($n['body_enc']) ?? '(nie do odczytania)', 'visibility' => $n['visibility'], 'to_admin' => (bool) $n['to_admin'],
-            'by' => $n['by_name'] ?? null, 'at' => $n['created_at'], 'can_delete' => $admin || (int) $n['author'] === (int) $viewer];
+            'by' => $n['by_name'] ?? null, 'at' => $n['created_at'], 'can_delete' => $admin || (int) $n['author'] === (int) $viewer,
+            // [279] Szybka notatka : rodzaj, temat, dla kogo, follow-up.
+            'kind' => $n['kind'] ?? null, 'kind_label' => isset($n['kind']) ? (HrQuickNoteService::KINDS[$n['kind']][0] ?? null) : null,
+            'topic' => isset($n['topic_enc']) ? $this->cipher->decrypt($n['topic_enc']) : null,
+            'audience' => !empty($n['audience']) ? array_values(array_map(fn($c) => HrQuickNoteService::AUDIENCE[$c] ?? $c, explode(',', $n['audience']))) : [],
+            'followup' => !empty($n['followup_due']) ? ['due' => $n['followup_due'], 'who' => $n['followup_name'] ?? null, 'done_at' => $n['followup_done_at'] ?? null,
+                'done_by' => $n['followup_done_name'] ?? null, 'done_note' => $n['followup_done_note'] ?? null, 'late' => empty($n['followup_done_at']) && $n['followup_due'] < date('Y-m-d'),
+                'can_close' => empty($n['followup_done_at']) && ($admin || (int) ($n['followup_user'] ?? 0) === (int) $viewer || (int) $n['author'] === (int) $viewer)] : null];
     }
 
     // --- Notes du mois (makieta 38) et bilan à l'administrateur -----------------------------------------------

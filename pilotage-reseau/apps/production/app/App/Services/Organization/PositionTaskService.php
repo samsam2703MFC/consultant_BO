@@ -104,7 +104,8 @@ final class PositionTaskService
 
     public function __construct(private PositionRepository $positions, private ParamRepository $params, private PageAccessService $access,
         private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier,
-        private \App\Repositories\Workshop\DevProductRepository $devProducts)
+        private \App\Repositories\Workshop\DevProductRepository $devProducts, private \App\Repositories\Hr\HrRepository $hrNotes,
+        private \App\Services\Hr\HrCipher $hrCipher)
     {
     }
 
@@ -462,8 +463,36 @@ final class PositionTaskService
         usort($view['later'], fn($a, $b) => [$a['done'], $a['due']] <=> [$b['done'], $b['due']]);
         $view['totals'] = $this->weekTotals($view, $today);
         $view['today'] = $this->todayList($view, $today);
-        $view['flow'] = $this->flow($view, $today, $this->devItems($user, $today));
+        $view['flow'] = $this->flow($view, $today, array_merge($this->devItems($user, $today), $this->hrItems($userId, $today)));
         return $view;
+    }
+
+    /**
+     * [279] Follow-upy HR z « Zadanie w Mój tydzień » : jeden wiersz na notatkę (rodzaj, pracownik, temat), termin,
+     * link do notatki ; zamknięcie : HR › Notatki miesiąca (« Zrobione »).
+     */
+    private function hrItems(int $userId, DateTimeImmutable $today): array
+    {
+        try {
+            $rows = $this->hrNotes->taskFollowups($userId);
+        } catch (\Throwable) {
+            return [];
+        }
+        $date = $today->format('Y-m-d');
+        $items = [];
+        foreach ($rows as $r) {
+            $due = (string) $r['followup_due'];
+            $late = $due < $date ? (int) floor((strtotime($date) - strtotime($due)) / 86400) : 0;
+            $kind = \App\Services\Hr\HrQuickNoteService::KINDS[$r['kind']][0] ?? 'Notatka';
+            $topic = $this->hrCipher->decrypt($r['topic_enc']) ?? '';
+            $items[] = ['id' => null, 'task_id' => -1000000 - (int) $r['id'], 'title' => 'Follow-up HR : ' . $r['name'] . ' — ' . $topic, 'short' => 'Follow-up HR : ' . $r['name'],
+                'frequency' => 'Follow-up HR', 'freq' => 'hr', 'status' => 'open', 'done' => false, 'late' => $late > 0, 'late_days' => $late, 'due' => $due, 'due_time' => null,
+                'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
+                'minutes' => null, 'link' => '/hr/notes?note=' . (int) $r['id'], 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
+                'backup_for' => null, 'summary' => $kind . ' : ' . $topic, 'color' => '#8D1D2C', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
+                'stage' => null, 'dev' => null];
+        }
+        return $items;
     }
 
     /**
