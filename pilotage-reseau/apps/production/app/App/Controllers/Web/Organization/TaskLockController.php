@@ -17,7 +17,7 @@ final class TaskLockController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private TaskLockService $lock)
+    public function __construct(private TaskLockService $lock, private \App\Services\Organization\PageAccessService $access)
     {
     }
 
@@ -29,7 +29,7 @@ final class TaskLockController extends BaseController
             header('Location: ' . ROOT . '/home', true, 302);
             exit;
         }
-        $this->view('organization/task_required', ['blocking' => $blocking, 'now' => date('Y-m-d H:i')]);
+        $this->view('organization/task_required', ['blocking' => $blocking, 'now' => date('Y-m-d H:i'), 'show_minutes' => $this->access->showTaskMinutes($this->userId())]);
     }
 
     /** GET /tasks/wizard/{id} : assistant de la tâche (assistant propre → redirection). */
@@ -46,7 +46,7 @@ final class TaskLockController extends BaseController
             header('Location: ' . ROOT . $w['own_wizard'], true, 302);
             exit;
         }
-        $this->view('organization/task_wizard', ['w' => $w]);
+        $this->view('organization/task_wizard', ['w' => $w, 'show_minutes' => $this->access->showTaskMinutes($this->userId())]);
     }
 
     public function finish($id)

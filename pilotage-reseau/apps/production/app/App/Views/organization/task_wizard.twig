@@ -16,7 +16,7 @@
         </div>
         <div class="tl-main">
             <div class="tl-head"><h3>{{ w.task.title }}</h3>
-                <div class="tl-sub">{% if w.task.mandatory %}<i class="bi bi-lock-fill tl-lock"></i> obowiązkowe · blokuje ERP {{ w.task.block }}{% else %}zadanie stanowiska{% endif %}{{ w.task.minutes ? ' · ok. ' ~ w.task.minutes ~ ' min' : '' }}{{ w.occurrence ? ' · termin ' ~ w.occurrence.due|date('d.m') : '' }}</div></div>
+                <div class="tl-sub">{% if w.task.mandatory %}<i class="bi bi-lock-fill tl-lock"></i> obowiązkowe · blokuje ERP {{ w.task.block }}{% else %}zadanie stanowiska{% endif %}{{ show_minutes and w.task.minutes ? ' · ok. ' ~ w.task.minutes ~ ' min' : '' }}{{ w.occurrence ? ' · termin ' ~ w.occurrence.due|date('d.m') : '' }}</div></div>
             {% if w.occurrence and w.occurrence.status != 'open' %}<div class="tl-ok"><i class="bi bi-check-circle"></i> Zadanie w tym okresie jest już zrobione.</div>{% endif %}
             {% for s in w.steps %}
             <div class="tl-step" data-step="{{ loop.index0 }}" hidden>

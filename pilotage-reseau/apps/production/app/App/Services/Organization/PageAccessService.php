@@ -49,6 +49,15 @@ final class PageAccessService
         return $this->profile($userId)['admin'];
     }
 
+    /**
+     * Minutes allouées aux tâches : seulement l'administrateur en vue complète. En sesja d'un poste (vue opérateur)
+     * et pour tout autre compte, elles sont masquées pour le moment.
+     */
+    public function showTaskMinutes(?int $userId): bool
+    {
+        return $this->isAdmin($userId) && $this->viewPosition($userId) === null;
+    }
+
     public function canSee(?int $userId, string $path): bool
     {
         $key = PageAccess::keyFor($path);

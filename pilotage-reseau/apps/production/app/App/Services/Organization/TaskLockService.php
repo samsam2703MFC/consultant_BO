@@ -114,7 +114,7 @@ final class TaskLockService
             $steps[] = ['title' => (string) $s['title'], 'hint' => (string) ($s['hint'] ?? ''), 'link' => self::safeLink($s['link'] ?? null)];
         }
         if ($steps) return $steps;
-        $steps[] = ['title' => 'Co zrobić', 'hint' => $task['title_pl'] . (!empty($task['minutes']) ? ' — ok. ' . (int) $task['minutes'] . ' min.' : ''), 'link' => self::safeLink($task['link_path'] ?? null)];
+        $steps[] = ['title' => 'Co zrobić', 'hint' => $task['title_pl'], 'link' => self::safeLink($task['link_path'] ?? null)];
         foreach (PositionTaskService::extraLinks($task['extra_links'] ?? null) as $l) {
             $steps[] = ['title' => PositionTaskService::LINKS[$l][1] ?? 'Też w tym zadaniu', 'hint' => 'Druga część zadania : sprawdź i uzupełnij tę stronę.', 'link' => self::safeLink($l)];
         }

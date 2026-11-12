@@ -99,7 +99,8 @@ class DashboardController extends BaseController
         // grup, planu wysyłek, « Do zrobienia » i ostatnich zamówień — są w swoich modułach).
         $data['tasks_focus'] = ($week['user']['position_code'] ?? null) === 'KIEROWNIK_PRODUKCJI';
         // [285] Minuty zadań (przydziela administrator, makieta 39) widzi tylko administrator — pracownik widzi swoje zadania.
-        $data['show_minutes'] = $userId !== null && $this->access->isAdmin($userId);
+        // Na razie także administrator w sesji stanowiska (widok operatora) ich nie widzi.
+        $data['show_minutes'] = $this->access->showTaskMinutes($userId);
         if (!$data['show_minutes'] && is_array($data['week'])) $data['week'] = self::withoutMinutes($data['week']);
         $this->view('dashboard/dashboard', $data);
     }
