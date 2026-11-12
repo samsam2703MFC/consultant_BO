@@ -2541,7 +2541,8 @@ var qrcode = function() {
  * carte QR scannée à la caisse). Chaque case a son thème : une fête de la saison, ou le produit de la semaine (l'idée
  * de Natan). Toutes les x cases cochées (x réglable, 3 par défaut), un bon se débloque : sa case illustrée ferme la
  * ligne de la grille. La carte pleine (13 / 13) débloque le super bon cadeau et entre au tirage au sort d'1 an de
- * pain (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de pain à 1,5 € »).
+ * pain (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de pain à 1,5 € » ; puis « les
+ * deux, super bon et tirage »).
  *
  * Dates vérifiées (jour de la semaine) : 1er dimanche de l'Avent dim. 29/11/2026, Saint-Nicolas dim. 06/12, Noël
  * ven. 25/12, Nouvel An ven. 01/01/2027, Épiphanie mer. 06/01, Blue Monday lun. 18/01, Chandeleur mar. 02/02,
@@ -2833,14 +2834,14 @@ function vueRegles(){
     <div><span class="ic">✦</span><div><b>Chaque semaine a son thème</b><p>Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div></div>
     <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon illustré</b><p>${ks.length > 1 ? 'La ' + ks.slice(0, -1).join(', la ') + ' et la ' + ks[ks.length - 1] : 'La ' + ks[0]} case cochées débloquent chacune un bon de <span class="v">${eur(S.valeur)}</span>, valable <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
       <div class="schemas">${[2, 3, 4].map(schema).join('')}</div></div></div>
-    <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, valable ${S.validite} jours, en plus des bons. Il faut ne manquer aucune semaine.</p></div></div>
+    <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, valable ${S.validite} jours, en plus des bons${S.tirage ? ', et inscrivent la carte au tirage au sort' : ''}. Il faut ne manquer aucune semaine.</p></div></div>
     ${S.tirage ? `<div><span class="ic">1 an</span><div><b>Carte pleine : le tirage au sort</b><p>Tous les clients qui ont coché les ${NS} cases participent au tirage au sort du ${dLong(T.le)}, dans tout le réseau. À gagner : <span class="v">1 an de pain</span>, un pain par jour à <span class="v">${eur(S.prix)}</span>, soit ${T.jours} pains et ${eur(lot())} au prix de vente${S.gagnants > 1 ? ', pour chacun des <span class="v">' + S.gagnants + '</span> gagnants (' + eur(lot() * S.gagnants) + ' en tout)' : ', <span class="v">1</span> gagnant'}. Le gagnant reçoit dans l’app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.</p></div></div>` : ''}
     <div><span class="ic">T</span><div><b>${NS} semaines, un trimestre</b><p>Une case pour chacune des ${NS} semaines du trimestre. La carte de la saison suivante arrive le lundi d’après : quatre cartes font l’année.</p></div></div>
   </div>
   <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· ${NS} semaines, un trimestre</em></h3>
   <div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><div class="ill">${ILL[s.ill]}</div><h4>${s.nom}<small>${s.etat}</small></h4>
     <div class="dt">${s.du} → ${s.au}</div><div class="ch">${s.fetes.map(f => `<span>${f}</span>`).join('')}</div></div>`).join('')}</div>
-  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons, le super bon, le tirage et le thème de chaque semaine sont des valeurs de départ. Version alignée sur la reprise dans Claude Design (claude-design.html).</p>`;
+  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons, le super bon, le tirage et le thème de chaque semaine sont des valeurs de départ. Version alignée sur la reprise dans Claude Design (claude-design.html) ; la carte pleine donne les deux, le super bon et le tirage (décision du 12/11/2026).</p>`;
 }
 
 function vueBarre(){

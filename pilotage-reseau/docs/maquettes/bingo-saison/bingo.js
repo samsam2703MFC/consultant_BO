@@ -12,7 +12,8 @@
  * carte QR scannée à la caisse). Chaque case a son thème : une fête de la saison, ou le produit de la semaine (l'idée
  * de Natan). Toutes les x cases cochées (x réglable, 3 par défaut), un bon se débloque : sa case illustrée ferme la
  * ligne de la grille. La carte pleine (13 / 13) débloque le super bon cadeau et entre au tirage au sort d'1 an de
- * pain (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de pain à 1,5 € »).
+ * pain (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de pain à 1,5 € » ; puis « les
+ * deux, super bon et tirage »).
  *
  * Dates vérifiées (jour de la semaine) : 1er dimanche de l'Avent dim. 29/11/2026, Saint-Nicolas dim. 06/12, Noël
  * ven. 25/12, Nouvel An ven. 01/01/2027, Épiphanie mer. 06/01, Blue Monday lun. 18/01, Chandeleur mar. 02/02,

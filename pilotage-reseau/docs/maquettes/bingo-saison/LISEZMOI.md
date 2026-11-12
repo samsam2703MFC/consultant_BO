@@ -13,8 +13,8 @@ dimanche » ; le **super bon cadeau** de la carte pleine (10 €) ; les thèmes 
 rubis de la marque, dont les crêpes de la Chandeleur, l'étincelle du Nouvel An, le gâteau sous cloche, la fleur du
 printemps et le soleil de l'été, absents de `public/tablette/img`).
 
-**La maquette du dépôt suit cette version** et garde en plus le tirage au sort d'1 an de pain (interrupteur dans la
-barre). Elle corrige deux détails de l'export : le portefeuille de l'app était coupé par la barre du bas, et les
+**La maquette du dépôt suit cette version** et y ajoute le tirage au sort d'1 an de pain : la carte pleine donne
+les deux, le super bon et le tirage (décision du 12/11/2026 ; l'interrupteur de la barre ne sert qu'à la démonstration). Elle corrige deux détails de l'export : le portefeuille de l'app était coupé par la barre du bas, et les
 dessins, très fins à cette taille, ont le trait légèrement épaissi.
 
 - `bingo-maquette.html` : la maquette interactive, un seul fichier (polices, logo, QR, dessins intégrés). Réglages :
@@ -47,7 +47,8 @@ dessins, très fins à cette taille, ont le trait légèrement épaissi.
   (`src/fidelite_caisse.php`).
 - **Carte pleine (13 / 13) : le super bon cadeau**, 10 € (réglable), valable 30 jours, en plus des bons — dans la
   case large qui termine la grille. Il faut ne manquer aucune semaine.
-- **Carte pleine : le tirage au sort** (interrupteur). Toutes les cartes pleines du réseau participent au tirage du
+- **Carte pleine : le super bon et le tirage, les deux** (décidé par Sam le 12/11/2026). Toutes les cartes pleines
+  du réseau participent aussi au tirage du
   lundi 22/02/2027, le jour où la carte du printemps arrive. À gagner : 1 an de pain, un pain par jour à 1,50 €,
   soit 365 pains et 547,50 € au prix de vente ; le prix du pain et le nombre de gagnants (1) sont réglables. Le
   gagnant reçoit dans l'app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.
@@ -81,12 +82,12 @@ pointe vers rien.
 
 ## À trancher
 
-1. Le seuil (10 €), x (3) et le bon (2 €, 30 jours) : au plus 4 bons de 2 € pour 13 semaines à 10 € au moins.
-2. La carte pleine : le super bon (10 €) **et** le tirage, ou l'un des deux ? Ensemble, un client qui ne manque
-   aucune semaine reçoit 18 € de bons pour 130 € d'achats au moins (13,8 % du minimum), plus sa chance au tirage.
-3. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (participation sans
+1. Le seuil (10 €), x (3), le bon (2 €, 30 jours) et le super bon (10 €) : un client qui ne manque aucune semaine
+   reçoit 18 € de bons (4 × 2 € + 10 €) pour 130 € d'achats au moins, soit 13,8 % du minimum dépensé, plus sa
+   chance au tirage (547,50 € au prix de vente pour un gagnant).
+2. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (participation sans
    obligation d'achat ? publication du gagnant) — à faire valider ; un pain par jour d'ouverture ou par jour
    calendaire.
-4. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
-5. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
-6. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
+3. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
+4. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
+5. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
