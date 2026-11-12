@@ -38,7 +38,7 @@ Côté chiffres, 2027 se joue sur la marge plus que sur le volume : le réseau f
 | Développer le webshop, le B2B via le webshop, la fidélisation et le suivi du profil client | Le webshop pèse moins de 1 % des ventes ; seul Corbais vend du B2B (environ 7 300 € par an) ; aucun profil client n'est suivi. | Soutenu ; même catalogue et mêmes prix en ligne d'abord |
 | Saisonnalité, book des assortiments 2027 et rétro-agenda des campagnes | Tartes et pâtisserie perdent environ 20 % en juillet et gagnent 15 à 30 % à l'automne ; les fêtes vendent en deux mois. Le brief de la galette 2027 devait partir le 11 novembre. | Soutenu ; à lancer tout de suite |
 | Robotique en production | Viennoiserie et boulangerie : 13 000 pièces par semaine sur 53 références ; tartes : 75 références pour 820 pièces. | À chiffrer avec l'usine, après les coupes de gamme |
-| Contrôles : annexe au DIP, SOP, démonstration sur la tablette | 4 visites régulières par mois prévues par magasin ; aucune faite ni planifiée en novembre, Corbais jamais visité dans l'outil. | Soutenu ; fréquence à inscrire au DIP |
+| Contrôles : annexe au DIP, SOP, démonstration sur la tablette | Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; la fréquence retenue est de 1 par mois. Aucune faite ni planifiée en novembre, Corbais jamais visité dans l'outil. | Soutenu ; fréquence à inscrire au DIP |
 | +0,5 % de royalties après mise en demeure | Environ 3 100 à 3 300 € par an pour un franchisé, 9 000 € pour Corbais. La grille de redevances diffère déjà d'un magasin à l'autre. | Soutenu, clause contractuelle à écrire |
 | Développement continu toute l'année | Oui : 56 évolutions du cockpit livrées depuis le 9 octobre. Une feuille de route 2027 est proposée plus bas. | Oui |
 
@@ -305,7 +305,7 @@ Pourquoi : c'est ce qui rend chaque magasin comparable et donc précieux (100 % 
 
 ### Les contrôles : fréquence, SOP et démonstration en direct
 
-Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; en novembre, aucune n'est encore faite ni planifiée, et Corbais n'a jamais été visité dans l'outil. L'annexe 5 (annexe au DIP) fixe la fréquence de chaque contrôle, et l'annexe 6 (SOP) dit comment il se déroule.
+Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; la fréquence retenue pour 2027 est de 1 visite régulière par mois et par magasin, à corriger dans le cockpit. En novembre, aucune n'est encore faite ni planifiée, et Corbais n'a jamais été visité dans l'outil. L'annexe 5 (annexe au DIP) fixe la fréquence de chaque contrôle, et l'annexe 6 (SOP) dit comment il se déroule.
 
 En réunion : on explique les contrôles, puis on rend un contrôle en direct sur la tablette, projeté sur grand écran :
 
@@ -584,7 +584,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | Fidélisation et suivi du profil client | aucun profil client suivi aujourd'hui | | T2 → T3 2027 |
 | Campagnes commerciales 2027 (rétro-agenda) | gammes de fête : environ 135 k€ de CA par an, vendus en deux mois | fonds marketing : environ 62 k€ par an, dont 55,9 k€ déjà engagés (Collectif et publicité) | dès novembre 2026 |
 | Robotique en production | 13 000 pièces par semaine en viennoiserie et boulangerie | | devis T2 2027 |
-| Contrôles (4 visites par mois et par magasin) | standards tenus et chiffres fiables partout | | T1 2027 |
+| Contrôles (1 visite régulière par mois et par magasin) | standards tenus et chiffres fiables partout | | T1 2027 |
 
 ### Les 48 références à couper d'abord
 
@@ -831,7 +831,7 @@ Proposition de texte pour l'annexe du document d'information précontractuelle (
 | Contrôle | Par qui | Fréquence | Annoncé | Durée | Ce qui est contrôlé |
 | --- | --- | --- | --- | --- | --- |
 | Tâches du jour sur la tablette | l'équipe du magasin, relue par le réseau | chaque jour | — | — | check-lists d'ouverture, de vitrine et de fermeture, photos des comptoirs, tâches obligatoires |
-| Visite régulière | consultant | 4 par mois | oui | 1 h 30 | produit, hygiène, visuel, planogramme, assortiment, suivi du client mystère : 23 points |
+| Visite régulière | consultant | 1 par mois | oui | 1 h 30 | produit, hygiène, visuel, planogramme, assortiment, suivi du client mystère : 23 points |
 | Visite production | consultant produit et production | à fixer | oui | 3 h | fabrication et fiches de production : 14 points |
 | Hygiène et qualité | consultant opérations et qualité | à fixer | non | 1 h | hygiène et sécurité alimentaire : 12 points |
 | Client mystère | opérations et qualité | 1 par trimestre | non | 45 min | accueil, hygiène, ambiance : 8 points |

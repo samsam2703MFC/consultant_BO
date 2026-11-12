@@ -107,7 +107,7 @@ Pour en discuter en réunion :
 | Contrôle | Fréquence | Annoncé |
 | --- | --- | --- |
 | Tâches du jour sur la tablette | chaque jour | — |
-| Visite régulière du consultant | 4 par mois | oui |
+| Visite régulière du consultant | 1 par mois | oui |
 | Client mystère | 1 par trimestre | non |
 | Bilan trimestriel (scoring sur 20) | 1 par trimestre | oui |
 | Revisite des points non conformes | après une visite | non |
