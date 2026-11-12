@@ -127,7 +127,6 @@ Un nouveau franchisé suit quatre semaines de formation : une semaine dans chacu
 - Webshop : même catalogue et mêmes prix conseillés en ligne pour les quatre magasins. Il représente aujourd'hui moins de 1 % des ventes.
 - B2B : les entreprises commandent en ligne via le webshop (plateaux, sandwiches, cartons de pain).
 - Fidélisation : un compte client unique (caisse, webshop, B2B) et une même offre de fidélité dans tous les magasins.
-- Nouvelles zones étudiées : Wemmel, Grimbergen, Sambreville, Malines. Chaque nouveau magasin ouvrira avec le standard complet.
 
 Chaque campagne se prépare huit semaines à l'avance :
 
@@ -143,7 +142,20 @@ Chaque campagne se prépare huit semaines à l'avance :
 | Saint-Nicolas et cougnou | 6 déc. | 11 oct. | 8 nov. |
 | Noël | 25 déc. | 30 oct. | 27 nov. |
 
-## 4. La feuille de route 2027
+## 4. Le développement du réseau
+
+Deux contrats sont signés à ce jour :
+
+| Nouveau magasin | Ouverture prévue |
+| --- | --- |
+| Anderlues | mars 2027 |
+| Dour | juin 2027 |
+
+Ces deux ouvertures renforcent le réseau et permettent d'améliorer la logistique : plus de magasins sur les mêmes tournées depuis l'usine.
+
+Autres zones à l'étude : Wemmel, Grimbergen, Sambreville, Malines. Chaque nouveau magasin ouvre avec le standard complet : tablettes, process, gamme commune, prix conseillés, vêtements de travail et packaging du réseau.
+
+## 5. La feuille de route 2027
 
 {{feuille-de-route}}
 

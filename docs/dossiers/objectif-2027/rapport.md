@@ -386,7 +386,14 @@ Aucun coût de robot n'est chiffré ici : chaque piste demande un devis et les v
 
 ### De nouvelles zones : Wemmel, Grimbergen, Sambreville, Malines
 
-Le réseau vise de nouvelles zones en 2027 : Wemmel, Grimbergen, Sambreville, Malines (Mechelen), liste ouverte. Chaque nouveau magasin ouvre avec le standard complet : tablette, SOP, gamme commune, prix conseillés, vêtements et packaging du réseau, après les quatre semaines de formation.
+Deux contrats sont signés à ce jour : Anderlues, ouverture prévue en mars 2027, et Dour, en juin 2027. Ces deux ouvertures renforcent le réseau et permettent d'améliorer la logistique, avec plus de magasins sur les mêmes tournées depuis l'usine.
+
+| Nouveau magasin | Contrat | Ouverture prévue |
+| --- | --- | --- |
+| Anderlues | signé | mars 2027 |
+| Dour | signé | juin 2027 |
+
+Le réseau étudie aussi d'autres zones : Wemmel, Grimbergen, Sambreville, Malines (Mechelen), liste ouverte. Chaque nouveau magasin ouvre avec le standard complet : tablette, SOP, gamme commune, prix conseillés, vêtements et packaging du réseau, après les quatre semaines de formation.
 
 Les magasins actuels donnent les repères pour chiffrer chaque zone :
 
