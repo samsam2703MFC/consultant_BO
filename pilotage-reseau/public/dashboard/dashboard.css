@@ -2927,29 +2927,3 @@ body.ia-ouvert{overflow:hidden}
 .ia-src{margin:8px 0 0;font-size:11px;color:var(--color-text-muted)}
 .ia-pied2{margin:0;padding:0 18px 12px;font-size:11px;color:var(--color-text-muted)}
 @media (max-width:900px){.ia-tqs{grid-template-columns:1fr 1fr}.ia-corps{grid-template-columns:1fr}.ia-q{display:none}}
-
-/* André, le rat de l'assistant (12/11/2026) : un trait, le nez bordeaux. Il cligne, remue la queue ; il frétille quand
-   il lit ; il saute à l'ouverture. Sur le bouton bordeaux, tout passe en blanc. */
-.andre{display:block;flex:none;overflow:visible;color:var(--color-text,#2b2522)}
-.andre .nez{fill:var(--andre-nez,#8D1D2C)}
-.andre .queue,.andre .corps,.andre .oeil,.andre .moust,.andre .nez,.andre .oreille{transform-box:fill-box}
-.andre .queue{transform-origin:100% 0;animation:andre-queue 2.8s ease-in-out infinite}
-.andre .oeil{transform-origin:center;animation:andre-cligne 4.2s infinite}
-.andre.pense .moust{transform-origin:0 50%;animation:andre-moust .3s ease-in-out infinite alternate}
-.andre.pense .nez{transform-origin:center;animation:andre-nez .3s ease-in-out infinite alternate}
-.andre.pense .oreille{transform-origin:50% 100%;animation:andre-oreille 1.1s ease-in-out infinite}
-.andre.pense .corps{transform-origin:20% 100%;animation:andre-lit 1.6s ease-in-out infinite}
-.andre.salue{animation:andre-saut .9s ease-out 1}
-@keyframes andre-queue{0%,100%{transform:rotate(0)}50%{transform:rotate(14deg)}}
-@keyframes andre-cligne{0%,92%,100%{transform:scaleY(1)}95%{transform:scaleY(.1)}}
-@keyframes andre-moust{from{transform:rotate(-7deg)}to{transform:rotate(7deg)}}
-@keyframes andre-nez{from{transform:scale(1)}to{transform:scale(1.3)}}
-@keyframes andre-oreille{0%,60%,100%{transform:rotate(0)}75%{transform:rotate(-12deg)}}
-@keyframes andre-lit{0%,100%{transform:rotate(0)}35%{transform:rotate(-4deg)}70%{transform:rotate(2deg)}}
-@keyframes andre-saut{0%{transform:translateY(0)}30%{transform:translateY(-6px) rotate(-5deg)}55%{transform:translateY(0)}75%{transform:translateY(-2px)}100%{transform:translateY(0)}}
-.db-btn-ia .andre{color:currentColor;--andre-nez:currentColor}
-.ia-andre{width:40px;height:40px;display:flex;align-items:center;justify-content:center}
-.ia-att{gap:12px}.ia-att .andre{margin:-6px 0}
-.ia-ligne{display:flex;align-items:flex-end;gap:8px;align-self:flex-start;max-width:92%}.ia-ligne .ia-bulle{max-width:none}
-.ia-accueil{display:flex;align-items:center;gap:14px;margin:18px 2px 4px;font-size:13.5px;color:var(--color-text-muted)}.ia-accueil p{margin:0;max-width:640px;line-height:1.5}
-@media (prefers-reduced-motion: reduce){.andre *,.andre{animation:none!important}}
