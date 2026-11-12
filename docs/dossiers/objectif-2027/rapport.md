@@ -504,6 +504,27 @@ Budget prévisionnel 2027, au taux actuel des redevances et au CA de 2026 :
 
 L'animation et la publicité prennent 90 % du budget : il ne reste qu'environ 5 900 € pour tous les temps forts. À trancher en réunion : réduire l'animation, flécher la publicité sur les temps forts du rétro-agenda, ou relever la redevance marketing. La répartition des temps forts est une proposition à arbitrer. Les ouvertures des nouvelles zones ne sont pas dans ce budget : elles relèvent du budget d'ouverture de chaque magasin, et leurs redevances viendront en plus.
 
+### Budget marque 2027 : packaging, uniformes, mise au point graphique
+
+Le budget marque finance trois chantiers en 2027, pour 10 500 à 12 000 € : moins d'un tiers de la redevance de marque attendue, environ 38 000 € au taux de 2 %.
+
+| Chantier | Montant | Lien avec 2027 |
+| --- | --- | --- |
+| Développement du packaging | 5 000 à 6 500 € | le même packaging partout, au même prix |
+| Développement des uniformes | environ 2 500 € | les mêmes vêtements de travail dans les quatre magasins |
+| Mise au point graphique | 3 000 € | une seule image : packaging, uniformes, vitrine, réseaux sociaux |
+| Total | 10 500 à 12 000 € | |
+
+| Redevance de marque 2027 | Taux | CA annuel | Redevance |
+| --- | --- | --- | --- |
+| Gosselies | 2 % | 650 k€ | 13 000 € |
+| Halle | 2 % | 630 k€ | 12 600 € |
+| Sombreffe | 2 % | 622 k€ | 12 440 € |
+| Corbais | pas de redevance de marque | 1 798 k€ | 0 € |
+| Total | | | 38 050 € |
+
+Le réassort du packaging reste sur le poste emballage de chaque magasin (2 % du CA dans le budget franchisé).
+
 ### Budgets par objectif
 
 Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir dans la colonne prévue, car aucun budget 2027 n'est encore encodé dans le cockpit. Seul l'emballage a déjà une référence dans le modèle de budget des franchisés.
@@ -515,7 +536,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | Gâteau à la part (12 parts à 3,90 €) | nouveau produit à ×4 : environ 27,80 € HT de marge par gâteau | découpe aux ultrasons : 7 000 USD par magasin, 28 000 USD pour les 4 | test T1, 4 magasins T2 |
 | Coupes de gamme | 163 références à revoir (7,8 % du CA), moins d'invendus | | T1 2027 |
 | Kit décor anniversaire unique | gâteaux d'anniversaire à ×1,9 – ×2,4 aujourd'hui | | T1 2027 |
-| Tenue de travail et packaging uniques | image de marque ; emballage prévu à 2 % du CA | emballage : environ 74 k€ pour le réseau | T1 → T2 2027 |
+| Tenue de travail et packaging uniques | image de marque ; emballage prévu à 2 % du CA | budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € ; réassort de l'emballage : environ 74 k€ pour le réseau | T1 → T2 2027 |
 | Tablette et SOP dans les 4 magasins | chiffres fiables (19 % des tâches rendues au T3) | | T1 2027 |
 | Formation des nouveaux franchisés | 4 semaines par franchisé | | T2 2027 |
 | Majoration de 0,5 % des royalties | +3,1 à 9 k€ par magasin en défaut | | T2 2027 |
@@ -550,7 +571,7 @@ Les échéances ci-dessous sont des propositions ; les responsables restent à d
 - [ ] Faire valider l'annexe au DIP sur la fréquence des contrôles et la SOP des contrôles, puis planifier les visites de novembre et décembre dans l'application Visites.
 - [ ] Préparer la démonstration de la réunion : tablette, application Visites, liaison au grand écran.
 - [ ] Compléter la liste des dépenses marketing 2026 (factures payées hors du fonds), enregistrer toutes les redevances dues dans le fonds, puis arbitrer le budget marketing 2027 (décembre 2026).
-- [ ] Choisir une tenue de travail et un packaging uniques pour le réseau, chez un même fournisseur, avec un prix de vente commun pour les sacs et les boîtes (février 2027).
+- [ ] Choisir une tenue de travail et un packaging uniques pour le réseau, chez un même fournisseur, avec un prix de vente commun pour les sacs et les boîtes, sur le budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € (février 2027).
 - [ ] Lancer les études de marché de Wemmel, Grimbergen, Sambreville et Malines dans le module Scouting du cockpit (T1 2027).
 - [ ] Faire valider la majoration de 0,5 % par l'avocat et préparer l'avenant au contrat (janvier 2027).
 - [ ] Remettre Corbais et Sombreffe sur les tâches de la tablette, objectif 80 % sur le mois de janvier 2027.
