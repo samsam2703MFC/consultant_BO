@@ -75,7 +75,27 @@ def fig_feuille_de_route():
     return ('<figure class="figure"><table class="fdr">' + ''.join(rows) + '</table>'
             '<figcaption>Feuille de route 2027 proposée · 3 chantiers × 4 trimestres, 1 décision.</figcaption></figure>')
 
-FIGURES = {'patisserie-par-magasin': fig_patisserie, 'feuille-de-route': fig_feuille_de_route}
+def fig_saisonnalite():
+    mois = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+    fam = [('Viennoiserie', [93, 94, 96, 112, 99, 101, 93, 102, 103, 110, 107, 90]), ('Boulangerie', [104, 98, 102, 105, 104, 95, 89, 97, 90, 98, 107, 111]),
+           ('Traiteur', [93, 108, 117, 115, 94, 123, 81, 75, 101, 97, 93, 102]), ('Quiches', [97, 125, 95, 110, 101, 99, 88, 88, 85, 102, 105, 104]),
+           ('Tartes', [82, 96, 107, 113, 123, 94, 77, 98, 84, 114, 129, 83]), ('Pâtisserie, entremets', [84, 113, 111, 107, 89, 84, 77, 93, 92, 116, 133, 100]),
+           ('Biscuiterie', [109, 117, 115, 126, 99, 95, 74, 80, 87, 100, 96, 101]), ('Boissons', [87, 90, 95, 107, 94, 112, 94, 89, 106, 134, 94, 98]),
+           ('Glace by Rawette', [0, 0, 0, 219, 289, 209, 109, 143, 107, 54, 70, 0]), ('Noël et galette', [740, 14, 4, 15, 1, 9, 4, 1, 0, 1, 6, 406]),
+           ('Cougnou', [40, 1, 0, 0, 0, 0, 0, 0, 0, 14, 634, 511])]
+    def fond(v):
+        if v >= 100: a = min(0.75, (v - 100) / 200 + 0.08); return f'rgba(120,85,75,{a:.2f})'          # Pop-Up #78554B
+        a = min(0.6, (100 - v) / 130 + 0.05); return f'rgba(184,178,168,{a:.2f})'                       # gris #b8b2a8
+    enc = lambda v: '#ffffff' if v >= 260 else INK
+    rows = ['<tr><th></th>' + ''.join(f'<th>{m}</th>' for m in mois) + '</tr>']
+    for nom, vs in fam:
+        rows.append(f'<tr><td class="fam">{H(nom)}</td>' + ''.join(f'<td style="background:{fond(v)};color:{enc(v)}">{v}</td>' for v in vs) + '</tr>')
+    return ('<figure class="figure"><div class="fig-titre">Tartes et pâtisserie creusent en juillet et montent à l’automne</div>'
+            '<table class="chaleur">' + ''.join(rows) + '</table>'
+            '<figcaption>Ventes par jour, 100 = moyenne de l’année · Corbais, Gosselies, Sombreffe · décembre 2025 → novembre 2026 '
+            '(novembre : 12 jours) · pièces × prix HT actuel.</figcaption></figure>')
+
+FIGURES = {'patisserie-par-magasin': fig_patisserie, 'feuille-de-route': fig_feuille_de_route, 'saisonnalite': fig_saisonnalite}
 
 # --- Markdown du rapport → HTML
 NUM = re.compile(r'^[+−\-]?(\d|×)')
@@ -100,10 +120,16 @@ def cellule(s, entete=False):
 def tableau(lignes):
     rows = [[c for c in l.strip().strip('|').split('|')] for l in lignes]
     head, body = rows[0], rows[2:]
+    # Une colonne est alignée à droite seulement si toutes ses cellules sont des nombres courts (la 1re colonne, jamais).
+    def numerique(k):
+        vals = [r[k].strip() for r in body if k < len(r) and r[k].strip()]
+        return k > 0 and bool(vals) and all(NUM.match(v) and len(v) <= 22 for v in vals)
+    num = [numerique(k) for k in range(len(head))]
     cls = ' '.join(c for c in ('large' if len(head) >= 6 else '', 'court' if len(body) <= 7 else '') if c)
-    out = [f'<table class="{cls}"><thead><tr>' + ''.join(cellule(c, True) for c in head) + '</tr></thead><tbody>']
+    td = lambda k, c, tag: f'<{tag}{" class=\"num\"" if num[k] else ""}>{inline(c.strip())}</{tag}>'
+    out = [f'<table class="{cls}"><thead><tr>' + ''.join(td(k, c, 'th') for k, c in enumerate(head)) + '</tr></thead><tbody>']
     for r in body:
-        out.append('<tr>' + ''.join(cellule(c) for c in r) + '</tr>')
+        out.append('<tr>' + ''.join(td(k, c, 'td') for k, c in enumerate(r)) + '</tr>')
     out.append('</tbody></table>')
     return ''.join(out)
 
@@ -138,7 +164,10 @@ def rendre(md):
         l = lignes[i]
         if not l.strip(): i += 1; continue
         if l.startswith('# '): titre = l[2:].strip(); i += 1; continue
-        if l.startswith('## '): blocs.append(f'<h2>{inline(l[3:].strip())}</h2>'); i += 1; continue
+        if l.startswith('### '): blocs.append(f'<h3>{inline(l[4:].strip())}</h3>'); i += 1; continue
+        if l.startswith('## '):
+            t = l[3:].strip(); saut = not re.match(r'^(Synthèse|Ouverture|Sources)', t)
+            blocs.append(f'<h2 class="saut">{inline(t)}</h2>' if saut else f'<h2>{inline(t)}</h2>'); i += 1; continue
         if l.startswith('{{') and l.strip().endswith('}}'): blocs.append(FIGURES[l.strip()[2:-2]]()); i += 1; continue
         if l.startswith('$$'): blocs.append(f'<div class="formule">{inline(l[2:].strip())}</div>'); i += 1; continue
         if l.startswith('~ '): blocs.append(f'<p class="note">{inline(l[2:])}</p>'); i += 1; continue
@@ -156,17 +185,21 @@ def rendre(md):
         while i < len(lignes) and lignes[i].strip() and not re.match(r'^(#|\||>|-\s|\d+\.\s|~ |\$\$|\{\{)', lignes[i]):
             groupe.append(lignes[i].strip()); i += 1
         blocs.append(f'<p>{inline(" ".join(groupe))}</p>')
-    # Un titre ne reste jamais seul en bas de page : il part avec le début de sa section (le bloc qui suit, et le
-    # suivant s'il est court) ; la première annexe ouvre une nouvelle page.
-    out, i, annexe = [], 0, False
+    # Un titre ne reste jamais seul en bas de page : il part avec le début de sa section (les titres qui se suivent, le
+    # bloc qui suit, et le suivant s'il est court). Chaque partie (sauf la synthèse, l'ouverture et les sources) ouvre
+    # une nouvelle page.
+    out, i = [], 0
     while i < len(blocs):
         b = blocs[i]
-        if b.startswith('<h2>'):
-            if b.startswith('<h2>Annexe') and not annexe: b = b.replace('<h2>', '<h2 class="saut">', 1); annexe = True
-            g = [b] + blocs[i + 1:i + 2]
-            if i + 2 < len(blocs) and re.match(r'<(table class="[^"]*court|figure|div class="box"|div class="formule")', blocs[i + 2]):
-                g.append(blocs[i + 2])
-            out.append('<div class="ensemble">' + ''.join(g) + '</div>'); i += len(g); continue
+        if b.startswith('<h2') or b.startswith('<h3'):
+            g = [b]; j = i + 1
+            while j < len(blocs) and blocs[j].startswith('<h3') and len(g) < 2: g.append(blocs[j]); j += 1
+            if j < len(blocs): g.append(blocs[j]); j += 1
+            if j < len(blocs) and re.match(r'<(table class="[^"]*court|figure|div class="box"|div class="formule")', blocs[j]):
+                g.append(blocs[j]); j += 1
+            if g[0].startswith('<h2 class="saut"'):
+                out.append('<div class="saut"></div>'); g[0] = g[0].replace(' class="saut"', '', 1)
+            out.append('<div class="ensemble">' + ''.join(g) + '</div>'); i = j; continue
         # Un paragraphe qui annonce la suite (« … : ») part avec le tableau ou la liste qu'il introduit.
         if b.startswith('<p>') and b.endswith(':</p>') and i + 1 < len(blocs) and re.match(r'<(table class="[^"]*court|ul|ol|figure)', blocs[i + 1]):
             out.append('<div class="ensemble">' + b + blocs[i + 1] + '</div>'); i += 2; continue
@@ -189,7 +222,11 @@ h1{{font-size:21px;font-weight:400;line-height:1.25;margin:0 0 14px}}
 .refs{{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:10px 0;border-top:1px solid {LINE};border-bottom:1px solid {LINE};margin-bottom:6px}}
 .refs .label,.box .label{{font-size:8.5px;letter-spacing:.07em;text-transform:uppercase;color:{MUTED};margin-bottom:3px}}
 .refs .v{{font-size:11px;font-weight:700}}
-h2{{font-size:15px;font-weight:400;line-height:1.3;margin:22px 0 8px;padding-top:2px;break-after:avoid}}
+h2{{font-size:18px;font-weight:400;line-height:1.3;margin:22px 0 10px;padding-top:2px;break-after:avoid}}
+h3{{font-size:14px;font-weight:400;line-height:1.3;margin:18px 0 7px;color:{INK};break-after:avoid}}
+h2+h3{{margin-top:6px}}
+div.saut{{break-before:page;height:0}}
+table.chaleur{{table-layout:fixed;font-size:9px}} table.chaleur td{{padding:4px 2px;text-align:center;border-bottom:2px solid #fff}} table.chaleur td.fam{{text-align:left;width:150px;padding-left:0}} table.chaleur th{{text-align:center;padding:4px 2px}}
 p{{margin:0 0 8px}}
 p.note{{font-size:9.5px;color:{MUTED}}}
 ul,ol{{margin:0 0 10px;padding-left:16px}} li{{margin:0 0 3px}}
@@ -198,17 +235,18 @@ li.tache{{display:flex;gap:8px;align-items:flex-start}}
 .case-a-cocher{{flex:0 0 9px;height:9px;margin-top:3px;border:1px solid {FAINT};border-radius:2px}}
 table{{width:100%;border-collapse:collapse;font-size:10px;margin:4px 0 12px}}
 thead{{display:table-header-group}}
+th.num{{text-align:right}}
 th{{padding:6px 8px;border-bottom:1px solid {LINE};font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:{MUTED};font-weight:400;text-align:left;vertical-align:bottom;line-height:1.3}}
 td{{padding:6px 8px;border-bottom:1px solid rgba(34,34,34,.06);vertical-align:top}}
 td.num{{text-align:right;white-space:nowrap}}
 table.large{{font-size:9px}} table.large th{{font-size:7.5px}} table.large td,table.large th{{padding:5px 6px}}
 tr{{break-inside:avoid}}
 table.court,.ensemble{{break-inside:avoid}}
-h2.saut{{break-before:page;margin-top:0}}
 .box{{border-left:3px solid {RUBY};padding:2px 0 2px 12px;margin:6px 0 14px;break-inside:avoid}}
 .box p{{margin:0 0 6px}} .box ul{{margin:0}}
 .formule{{margin:4px 0 12px;padding:8px 12px;border-top:1px solid {LINE};border-bottom:1px solid {LINE};text-align:center;font-size:11px}}
 .figure{{margin:6px 0 12px;break-inside:avoid}}
+.fig-titre{{font-size:11px;margin-bottom:6px}}
 .figure figcaption{{font-size:8.5px;color:{MUTED};margin-top:6px}}
 svg.fig{{width:100%;height:auto;display:block;font-family:'Gotham',Helvetica,Arial,sans-serif}}
 svg .lg{{font-size:9px;fill:{INK}}} svg .mg{{font-size:10.5px;fill:{INK}}} svg .vl{{font-size:9px}} svg .tt{{font-size:10px;fill:{INK}}}
