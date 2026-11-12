@@ -81,6 +81,14 @@ final class PageTabs
         ]],
         // [262] Czas pracy : zatwierdzenie dnia (makieta 1), miesiąc i karty A4 (2), urlopy i dni wolne (3), nadgodziny (4) ;
         // tablet biurowy (odbicia, podpis dnia wolnego) otwierany w nowej karcie.
+        // [271] HR (makiety 36–38).
+        'hr' => ['label' => 'HR', 'section' => 'Produkcja', 'icon' => 'bi-person-vcard', 'tabs' => [
+            ['/hr', 'Pracownicy', 'bi-people', true],
+            ['/hr/documents', 'Dokumenty', 'bi-folder2'],
+            ['/hr/templates', 'Szablony umów', 'bi-file-earmark-text'],
+            ['/hr/notes', 'Notatki miesiąca', 'bi-journal-text'],
+            ['/hr/settings', 'Ustawienia HR', 'bi-sliders'],
+        ]],
         'time' => ['label' => 'Czas pracy', 'section' => 'Produkcja', 'icon' => 'bi-clock-history', 'tabs' => [
             ['/time', 'Dzień', 'bi-calendar-check', true],
             ['/time/month', 'Miesiąc', 'bi-calendar3'],
@@ -200,6 +208,10 @@ final class PageTabs
         'bonuses' => ['label' => 'Płace i premie', 'section' => 'Administracja', 'icon' => 'bi-wallet2', 'tabs' => [
             ['/staff/team-bonus', 'Premie zespołów', 'bi-trophy'],
             ['/workshop/manager', 'Kierownik produkcji', 'bi-person-workspace'],
+        ]],
+        'payroll' => ['label' => 'Lista płac', 'section' => 'Administracja', 'icon' => 'bi-calculator', 'tabs' => [
+            ['/payroll', 'Lista płac', 'bi-calculator', true],
+            ['/payroll/settings', 'Ustawienia płac', 'bi-sliders'],
         ]],
         'activity' => ['label' => 'Aktywność', 'section' => 'Administracja', 'icon' => 'bi-activity', 'tabs' => [
             ['/organization/activity', 'Aktywność w ERP', 'bi-activity'],

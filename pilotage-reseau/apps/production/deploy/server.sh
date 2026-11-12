@@ -376,6 +376,55 @@ if [[ -f "$IMPORT_OK" ]]; then
   # dans la base de l'ERP (le mot de passe n'apparaît jamais dans les logs ; un compte saisi dans l'ERP est gardé).
   ( cd "$ERP_TARGET/app" && COCKPIT_CFG="$COCKPIT_CFG" "$PHPBIN" Bin/store_price_cockpit_account.php ) \
     || warn "Compte API du panel (prix magasin) : copie depuis le cockpit en échec — à saisir dans l'ERP (Ustawienia → Konto API panelu)."
+  # Boutiques des franchisés : rebranchement (décision du 12/11/2026 — l'ancien ERP est arrêté, cette copie prend les
+  # commandes). Interrupteur : deploy/boutiques.reconnect (date de la décision). Adresses et clés des boutiques reprises
+  # de la sauvegarde importée (table customer seule, base temporaire, rien n'est écrit dans les journaux), une fois par
+  # décision et par import ; ensuite récupération des commandes et réclamations toutes les 5 minutes (Bin/poller.php).
+  # Les e-mails (log_only) et KSeF (test, sans jeton) restent coupés.
+  RECONNECT_FLAG="$SRC/deploy/boutiques.reconnect"
+  poller_line=""
+  if [[ -f "$RECONNECT_FLAG" ]]; then
+    want="$(tr -d '[:space:]' < "$RECONNECT_FLAG")|$(cat "$IMPORT_OK" 2>/dev/null)"
+    done_mark="$ERP_IMPORT_DIR/.boutiques_reconnect"
+    if [[ "$(cat "$done_mark" 2>/dev/null)" != "$want" ]]; then
+      src_dump="$(ls -t "$ERP_IMPORT_DIR"/importe/*.zip "$ERP_IMPORT_DIR"/importe/*.sql "$ERP_IMPORT_DIR"/importe/*.sql.gz 2>/dev/null | head -1 || true)"
+      if [[ -z "$src_dump" ]]; then
+        warn "Boutiques : sauvegarde importée introuvable dans ${ERP_IMPORT_DIR}/importe — clés des boutiques non reprises."
+      else
+        tmpdb="${ERP_DB_NAME}_boutiques_tmp"
+        "${ADMIN[@]}" -e "DROP DATABASE IF EXISTS \`${tmpdb}\`; CREATE DATABASE \`${tmpdb}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+        if [[ "$IS_MYSQL" == "1" ]]; then conv=(perl -p "$SRC/deploy/mariadb_vers_mysql.pl"); else conv=(cat); fi
+        case "$src_dump" in
+          *.zip) reader=(unzip -p "$src_dump" '*.sql') ;;
+          *.gz)  reader=(zcat "$src_dump") ;;
+          *)     reader=(cat "$src_dump") ;;
+        esac
+        # Seulement le bloc de la table `customer` (structure + données ; export mysqldump ou phpMyAdmin polonais) ;
+        # jamais de USE / CREATE DATABASE.
+        "${reader[@]}" | "${conv[@]}" \
+          | awk '/^-- (Table structure for table|Dumping data for table|Struktura tabeli dla tabeli|Zrzut danych tabeli) `/ { p = ($0 ~ /`customer`$/) } p' \
+          | grep -v -E '^(USE |CREATE DATABASE)' | "${ADMIN[@]}" "$tmpdb" \
+          || warn "Boutiques : lecture de la table customer de la sauvegarde en échec."
+        has_customer="$("${ADMIN[@]}" -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='${tmpdb}' AND table_name='customer'")"
+        if [[ "$has_customer" == "1" ]]; then
+          restored="$("${ADMIN[@]}" -N "$ERP_DB_NAME" -e "
+            UPDATE customer c JOIN \`${tmpdb}\`.customer s ON s.id = c.id
+               SET c.credentials = COALESCE(c.credentials, s.credentials),
+                   c.franchisee_connection_password = COALESCE(c.franchisee_connection_password, s.franchisee_connection_password)
+             WHERE (c.credentials IS NULL AND s.credentials IS NOT NULL)
+                OR (c.franchisee_connection_password IS NULL AND s.franchisee_connection_password IS NOT NULL);
+            SELECT ROW_COUNT();")"
+          shops="$("${ADMIN[@]}" -N "$ERP_DB_NAME" -e "SELECT COUNT(*) FROM customer WHERE credentials IS NOT NULL")"
+          log "Boutiques : ${restored:-0} fiche(s) client rebranchée(s) depuis la sauvegarde ; ${shops} boutique(s) avec adresse et clé."
+          printf '%s' "$want" > "$done_mark" && chmod 600 "$done_mark"
+        else
+          warn "Boutiques : table customer absente de la sauvegarde — clés des boutiques non reprises."
+        fi
+        "${ADMIN[@]}" -e "DROP DATABASE IF EXISTS \`${tmpdb}\`;"
+      fi
+    fi
+    poller_line="*/5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/poller.php >> /var/log/production-erp-mail.log 2>&1"
+  fi
   # E-mails : la copie contient de vraies adresses de clients, rien n'en part (log_only),
   # sauf choix explicite ERP_MAIL_MODE=redirect avec ERP_MAIL_REDIRECT_TO (recette).
   mail_mode="${ERP_MAIL_MODE:-log_only}"
@@ -392,6 +441,10 @@ if [[ -f "$IMPORT_OK" ]]; then
 10 6 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/forecast_panel_read.php >> /var/log/production-erp-mail.log 2>&1
 # Zadania stanowisk : zadania automatyczne (cron), zaliczenie po kreatorach, przypomnienia i przełożeni
 */5 * * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/task_cron.php >> /var/log/production-erp-mail.log 2>&1
+# Boutiques des franchisés (si rebranchées : deploy/boutiques.reconnect) : commandes et réclamations toutes les 5 minutes
+${poller_line}
+# HR : bilan des notes du mois à l'administrateur, le dernier jour du mois après 18 h (une fois)
+5 18 * * * www-data cd ${ERP_TARGET}/app && ${PHPBIN} Bin/hr_month_summary.php >> /var/log/production-erp-mail.log 2>&1
 CRON
   chmod 644 /etc/cron.d/production-erp-mail
   touch /var/log/production-erp-mail.log && chown www-data:www-data /var/log/production-erp-mail.log

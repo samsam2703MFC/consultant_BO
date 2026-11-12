@@ -1,0 +1,25 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Lista płac{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading">
+        <div class="page-title">
+            <h3>Lista płac</h3>
+            <p class="text-subtitle text-muted mb-0">Wynagrodzenia miesiąca według prawa polskiego (stawki roku w Ustawieniach płac, każda ze źródłem) : godziny, L4 i nieobecności z Czasu pracy,
+                umowa, wynagrodzenie i rachunek z karty HR. Paski PDF, przelewy wynagrodzeń w pliku XML do banku, CSV dla biura rachunkowego. ZUS i podatek — osobno.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [277] Lista płac (makieta 41, 12.11.2026) : App\Services\Payroll\PayrollService ; zakładki = PageTabs « payroll ». #}
+<section class="section tm pay" id="payApp" data-root="{{ root }}" data-tab="{{ tab }}" data-admin="{{ is_admin ? 1 : 0 }}">
+    <div data-pay-body><p class="at-empty">Ładowanie…</p></div>
+</section>
+<dialog class="tm-dialog pay-dialog" data-pay-dialog aria-labelledby="payDialogTitle"><div data-pay-card></div></dialog>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/payroll.js?v={{ asset_v() }}"></script>
+{% endblock %}

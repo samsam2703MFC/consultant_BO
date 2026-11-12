@@ -30,6 +30,7 @@ final class Rail
         'team' => ['Zespół', 'bi-person-badge', 'Produkcja', '/production-employees', ['/staff'], null],
         // [262] Czas pracy (moduł Pointages) : dzień do zatwierdzenia, miesiąc, urlopy, nadgodziny ; licznik = dni do zatwierdzenia.
         'time' => ['Czas pracy', 'bi-clock-history', 'Produkcja', '/time', [], 'time'],
+        'hr' => ['HR', 'bi-person-vcard', 'Produkcja', '/hr', [], null],
         'tablets' => ['Tablety', 'bi-tablet', 'Produkcja', '/workshop/execution', ['/workshop/timesheet'], null],
         'purchasing' => ['Zakupy', 'bi-cart3', 'Zakupy', '/workshop/buy', ['/settings/ksef/purchase-invoices', '/purchases'], null],
         'materials' => ['Surowce i ceny', 'bi-basket', 'Zakupy', '/purchasing', ['/material-categories', '/materials'], null],
@@ -50,6 +51,8 @@ final class Rail
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
         'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/team-bonus', [], null],
+        // [277] Lista płac : administrator i Administracja i fakturowanie (finanse).
+        'payroll' => ['Lista płac', 'bi-calculator', 'Administracja', '/payroll', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
 
