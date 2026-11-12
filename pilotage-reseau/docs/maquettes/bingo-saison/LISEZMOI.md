@@ -2,67 +2,64 @@
 
 Demande du 12/11/2026 (Sam, après l'échange avec Natan et le bingo de Mix Brussels) : « type de carte de fidélité :
 bingo, une par saison, intégrer les fêtes spécifiques avec les illustrations ; le but est que ça se remplisse tout
-seul ; 10 € (variable) le point, un par semaine ».
+seul ; 10 € (variable) le point, un par semaine ». Compléments du même jour : « toutes les x (variable) semaines,
+avec illustration, débloque un voucher », « faire un mock up HTML », « use the illustration from the design
+system », « + un tirage au sort de tous les gens qui ont complété la carte, 1 an de pain à 1,5 € ».
 
-Compléments du même jour : « toutes les x (variable) semaines, avec illustration, débloque un voucher », « faire
-un mock up HTML », puis « use the illustration from the design system ».
+**Version de référence : celle que Sam a reprise dans Claude Design**, gardée telle quelle dans `claude-design.html`
+(la page exportée, qui s'ouvre seule). Elle a fixé : 13 semaines par carte (un trimestre), la 13e « La tarte du
+dimanche » ; le **super bon cadeau** de la carte pleine (10 €) ; les thèmes d'origine (cougnou, pain d'épices,
+éclair) ; ses illustrations, celles de son design system (dossier `ill/`, 220 px : les dessins d'un seul trait
+rubis de la marque, dont les crêpes de la Chandeleur, l'étincelle du Nouvel An, le gâteau sous cloche, la fleur du
+printemps et le soleil de l'été, absents de `public/tablette/img`).
 
-**Les illustrations sont celles du design system** : les dessins d'un seul trait rubis de la marque, rangés avec la
-tablette des vendeuses (`public/tablette/img` : `s/` les gammes et les fêtes, `p/` les produits, `d/` les
-boissons). Hiver (flocon), Saint-Nicolas, Noël et Nouvel An (sapin), Épiphanie (couronne), Saint-Valentin (cœurs),
-chocolat chaud, biscuits, petits fours (cupcake), baguette, part de gâteau, croissant ; Pâques, glace et feuille
-d'automne pour les trois autres saisons. Les bons reprennent le sapin, la couronne, le flocon et les cœurs, en blanc
-sur le rubis. **La Chandeleur n'a pas de dessin de crêpes** dans le design system : la brioche roulée
-(`p/rolls.png`) la tient en attendant le sien. Trois thèmes ont suivi les dessins disponibles : la semaine 1 devient
-« L'hiver commence » (au lieu du cougnou), la semaine 4 « Les biscuits de Noël » (au lieu du pain d'épices), le Blue
-Monday « une douceur pour le moral » (au lieu de l'éclair).
+**La maquette du dépôt suit cette version** et garde en plus le tirage au sort d'1 an de pain (interrupteur dans la
+barre). Elle corrige deux détails de l'export : le portefeuille de l'app était coupé par la barre du bas, et les
+dessins, très fins à cette taille, ont le trait légèrement épaissi.
 
-**La maquette HTML** : `bingo-maquette.html`, un seul fichier (polices, logo, QR intégrés) qui s'ouvre partout.
-Interactive : x (2, 3 ou 4), le seuil, la valeur et la validité du bon se règlent dans la barre du haut ; « + ticket »
-fait monter la dépense de la semaine et coche la case au seuil, « Semaine suivante » avance, une semaine passée se
-coche ou se décoche d'un clic, « Revenir au 14 janvier » remet l'état de départ.
-
-Captures : `planche.jpg` (la planche, le 14 janvier), `carte.jpg` (la carte imprimée), `app.jpg` (l'app),
-`app-case-cochee.jpg` (un ticket coche la case de la semaine), `app-bon-debloque.jpg` (la 9e case débloque le 3e
-bon) et `app-tirage.jpg` (la carte pleine, inscrite au tirage). Régénérer depuis `pilotage-reseau/` : `node docs/maquettes/bingo-saison/generer.js` — il refait le fichier
-autonome, joue ce parcours et échoue si la page lève une erreur. Sources : `planche.html` (mise en page et
-interaction), `bingo.js` (données et illustrations).
+- `bingo-maquette.html` : la maquette interactive, un seul fichier (polices, logo, QR, dessins intégrés). Réglages :
+  x (2, 3 ou 4), le seuil, la valeur et la validité du bon, le super bon, le tirage (prix du pain, gagnants) ;
+  présentation : carte inclinée, fêtes teintées. Simulation : « + ticket » coche la case au seuil, « Semaine
+  suivante » avance, une semaine passée se coche ou se décoche d'un clic, « Revenir au 14 janvier ».
+- Captures : `planche.jpg` (le 14 janvier), `carte.jpg`, `app.jpg`, `app-case-cochee.jpg` (un ticket coche la
+  case), `app-bon-debloque.jpg` (la 9e case débloque le 3e bon), `app-tirage.jpg` (13 / 13 : le super bon et le
+  tirage).
+- Régénérer depuis `pilotage-reseau/` : `node docs/maquettes/bingo-saison/generer.js` — il refait le fichier
+  autonome, joue ces parcours (et coupe le tirage pour vérifier qu'il disparaît) et échoue si la page lève une
+  erreur ou si une image manque. Sources : `planche.html` (mise en page, interaction), `bingo.js` (données, choix
+  des dessins), `ill/` (les dessins).
 
 ## Le principe
 
-- **Une carte par saison, une case par semaine.** Hiver : 12 semaines, du lundi 23/11/2026 au dimanche 14/02/2027.
+- **Une carte par saison, 13 semaines, une case par semaine.** Hiver : du lundi 23/11/2026 au dimanche 21/02/2027 ;
+  la carte suivante arrive le lundi d'après. Quatre cartes font l'année : Printemps 22/02 → 23/05/2027 (Pâques
+  28/03, fête des mères 09/05), Été 24/05 → 22/08 (fête des pères 13/06, fête nationale 21/07), Automne 23/08 →
+  21/11 (Halloween, Toussaint, Saint-Martin).
 - **La case se coche toute seule** : dès **10 €** d'achats dans la semaine (réglable), en une ou plusieurs fois,
   ticket rattaché à la carte du client (l'app, ou la carte QR scannée à la caisse). Rien à tamponner.
 - **Chaque semaine a son thème, illustré** : une fête de la saison (Avent, Saint-Nicolas, Noël, Nouvel An,
   Épiphanie, Chandeleur, Mardi gras et Saint-Valentin) ou, entre deux fêtes, le produit « à l'honneur » (l'idée de
   Natan : un produit mis en avant chaque semaine, il faut revenir chaque semaine).
-- **Toutes les x cases cochées, un bon** (x réglable, 3 par défaut) : un bon de 2 €, valable 30 jours dès le
-  lendemain (réglables). Chaque bon a sa case illustrée, qui ferme la ligne de la grille : x semaines, puis le bon
-  (avec x = 3, une grille de 4 × 4 et 4 bons à la 3e, 6e, 9e et 12e case ; x = 2 donne 6 bons, x = 4 en donne 3).
-  Le compte est celui des cases cochées, pas des semaines d'affilée : une semaine manquée retarde le bon, elle ne
-  le perd pas. Le nom et le motif du bon suivent le moment de la saison où un client fidèle l'atteint : bon de
-  l'Avent (étoile), des Rois (couronne), de l'hiver (flocon), de la carte pleine (nœud). Il arrive dans le
-  portefeuille de l'app avec son code : un vrai bon du panel, créé comme celui du « déjà venu » de la caisse
+- **Toutes les x cases cochées, un bon** (x réglable, 3 par défaut) : 2 €, valable 30 jours dès le lendemain. Sa case
+  illustrée ferme la ligne de la grille (avec x = 3 : 4 bons, à la 3e, 6e, 9e et 12e case). Le compte est celui des
+  cases cochées, pas des semaines d'affilée : une semaine manquée retarde le bon, elle ne le perd pas. Le code arrive
+  dans le portefeuille de l'app : un vrai bon du panel, créé comme celui du « déjà venu » de la caisse
   (`src/fidelite_caisse.php`).
-- **Carte pleine : le tirage au sort** (Sam : « + un tirage au sort de tous les gens qui ont complété la carte, 1 an
-  de pain à 1,5 € »). Tous les clients qui ont coché les 12 cases participent, dans tout le réseau, au tirage du
-  lundi 15/02/2027 (le premier jour de la 13e semaine). À gagner : 1 an de pain, un pain par jour à 1,50 €, soit 365
-  pains et 547,50 € au prix de vente ; le prix du pain et le nombre de gagnants (1) sont réglables. Le gagnant
-  reçoit dans l'app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois. Dans l'app, la
-  carte du tirage dit « encore n cases » tant que rien n'est manqué, « vous participez » à la carte pleine, « ce sera
-  pour le printemps » après une semaine manquée. Dessin : le pain de campagne du design system (`p/bread-5.png`).
-- **La 13e semaine** entre deux cartes : le tirage au sort a lieu, le dernier bon se prend, la carte suivante arrive. Quatre cartes de 13
-  semaines font l'année : Hiver, Printemps (Pâques 28/03, fête des mères 09/05), Été (fête des pères 13/06,
-  fête nationale 21/07), Automne (Halloween, Toussaint, Saint-Martin).
+- **Carte pleine (13 / 13) : le super bon cadeau**, 10 € (réglable), valable 30 jours, en plus des bons — dans la
+  case large qui termine la grille. Il faut ne manquer aucune semaine.
+- **Carte pleine : le tirage au sort** (interrupteur). Toutes les cartes pleines du réseau participent au tirage du
+  lundi 22/02/2027, le jour où la carte du printemps arrive. À gagner : 1 an de pain, un pain par jour à 1,50 €,
+  soit 365 pains et 547,50 € au prix de vente ; le prix du pain et le nombre de gagnants (1) sont réglables. Le
+  gagnant reçoit dans l'app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.
 - **Branché sur ce qui existe** : la carte QR donnée en caisse (Fidélité › En caisse) devient la carte de la saison,
   imprimée en A6 ; le client « déjà venu » reçoit en plus son bon.
 
 ## Réel et illustré
 
 Réel : les dates et les jours de la semaine des fêtes (vérifiés), le logo, les polices, les couleurs et les
-illustrations de la marque.
-Illustré : la cliente (Julie, 6 cases sur 12 le jeudi 14/01/2027, la semaine du Nouvel An manquée, deux bons
-débloqués dont un utilisé), les montants, les codes de bon, le numéro de carte. Le QR ne pointe vers rien.
+illustrations de la marque. Illustré : la cliente (Julie, 6 cases sur 13 le jeudi 14/01/2027, la semaine du Nouvel
+An manquée, deux bons débloqués dont un utilisé), les montants, les codes de bon, le numéro de carte. Le QR ne
+pointe vers rien.
 
 ## Ce qu'il faudrait pour le coder
 
@@ -71,20 +68,25 @@ débloqués dont un utilisé), les montants, les codes de bon, le numéro de car
   client et par semaine coche la case.
 - **La carte QR rattachée au compte** : le numéro de la carte donnée en caisse (`ceo_fid_carte.carte`) relié au
   compte de l'app à l'activation (PWA, dépôt WebShop).
-- **L'app** : l'onglet Bingo (la grille, la semaine en cours, les cadeaux) et la notification après chaque ticket.
-- **Les bons** : à la (k·x)-e case cochée, un code créé au panel dans la campagne du magasin (une utilisation),
-  comme le bon du « déjà venu » de la caisse.
-- **Le cockpit** : la saison (dates, thème et illustration de chaque semaine), le seuil, x, la valeur et la
-  validité du bon, et le suivi (cases cochées par semaine, bons débloqués et utilisés, coût).
+- **L'app** : l'onglet Bingo (la grille, la semaine en cours, le portefeuille, le tirage) et la notification après
+  chaque ticket.
+- **Les bons et le super bon** : à la (k·x)-e case cochée, puis à la 13e, un code créé au panel dans la campagne du
+  magasin (une utilisation), comme le bon du « déjà venu » de la caisse.
+- **Le tirage** : la liste des cartes pleines au lundi de fin de saison, le tirage, la carte « 1 an de pain » du
+  gagnant (un bon par jour, ou un code réutilisable une fois par jour).
+- **Le cockpit** : la saison (dates, thème et illustration de chaque semaine), le seuil, x, les bons, le super bon,
+  le tirage, et le suivi (cases cochées par semaine, bons débloqués et utilisés, cartes pleines, coût).
+- **Les illustrations** : les dessins de `ill/` qui manquent à `public/tablette/img` (crêpes, étincelle, gâteau sous
+  cloche, fleur, soleil) sont à verser au design system du dépôt, en 560 px comme les autres.
 
 ## À trancher
 
-1. Le seuil (10 €), x (3) et le bon (2 €, 30 jours) : au plus 4 bons de 2 € pour 12 semaines à 10 € au moins, soit
-   au plus 6,7 % du minimum dépensé.
-2. Un bon fixe, ou qui grandit au fil de la saison (2 €, 2 €, 3 €, puis 5 € à la carte pleine) ?
-3. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (gratuit, sans obligation
-   d'achat ? conditions, publication du gagnant) ; un pain par jour d'ouverture ou par jour calendaire.
+1. Le seuil (10 €), x (3) et le bon (2 €, 30 jours) : au plus 4 bons de 2 € pour 13 semaines à 10 € au moins.
+2. La carte pleine : le super bon (10 €) **et** le tirage, ou l'un des deux ? Ensemble, un client qui ne manque
+   aucune semaine reçoit 18 € de bons pour 130 € d'achats au moins (13,8 % du minimum), plus sa chance au tirage.
+3. Le tirage : un gagnant pour tout le réseau ou un par magasin ; le règlement du jeu (participation sans
+   obligation d'achat ? publication du gagnant) — à faire valider ; un pain par jour d'ouverture ou par jour
+   calendaire.
 4. Les semaines de fête : 10 € suffisent, ou il faut le produit de la fête (la galette à l'Épiphanie) ?
 5. La variante de Natan « x € dans chaque catégorie » : des cases bonus en plus des semaines ?
 6. Le verso de la carte imprimée (les règles en néerlandais, le QR en grand).
-7. Le dessin de la Chandeleur (des crêpes), et un cougnou pour l'Avent, à ajouter au design system.

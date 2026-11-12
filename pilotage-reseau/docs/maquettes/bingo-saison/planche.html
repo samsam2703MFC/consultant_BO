@@ -10,41 +10,41 @@
 @font-face{font-family:'Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
 @font-face{font-family:'Playwrite';src:url('../../../public/assets/ds/fonts/PlaywriteDEVA-Regular.ttf') format('truetype')}
 :root{--rubis:#8D1D2C;--rubis-f:#6E1622;--abricot:#F2C9A0;--abricot-d:#F8E2CB;--beige:#EAE4DC;--creme:#F5EFE4;--encre:#1c1a17;--muet:#7a736a;--muet2:#5c5852;
-  --pale:#B8B2A8;--ligne:#e6e0d8;--papier:#faf7f2;--chip:#EDE7DE;--vert:#3f7a52;--or:#B0792A}
+  --pale:#B8B2A8;--ligne:#e6e0d8;--papier:#faf7f2;--chip:#EDE7DE;--vert:#3f7a52;--rose:#F1E3E4}
 *{box-sizing:border-box}
 body{margin:0;min-width:1680px;background:var(--papier);color:var(--encre);font:400 13px/1.45 'Gotham',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
 b,strong,h1,h2,h3,h4{font-weight:400}
 button,input{font:inherit;color:inherit}
-svg{display:block;width:100%;height:100%}
-/* Les dessins du design system : un trait rubis sur fond transparent. Blancs sur le rubis des bons. */
-/* Dessinés à 560 px, ils s'affichent autour de 40 : le trait s’épaissit d’un tiers de pixel de chaque côté pour rester lisible. */
+
+/* Les dessins (ill/, design system de la marque) : un trait rubis sur fond transparent, blancs sur le rubis des bons.
+   Dessinés à 220 px, ils s'affichent autour de 30 à 50 : le trait s'épaissit d'un tiers de pixel pour rester lisible. */
 .ill img{display:block;width:100%;height:100%;object-fit:contain;-webkit-user-drag:none;
-  filter:drop-shadow(.35px 0 0 #8D1D2C) drop-shadow(-.35px 0 0 #8D1D2C) drop-shadow(0 .35px 0 #8D1D2C) drop-shadow(0 -.35px 0 #8D1D2C)}
-.blanc img,.case.bon .ill img,.mc.bon .ill img,.toast.bon .ill img{
-  filter:brightness(0) invert(1) drop-shadow(.35px 0 0 #fff) drop-shadow(-.35px 0 0 #fff) drop-shadow(0 .35px 0 #fff) drop-shadow(0 -.35px 0 #fff)}
-.mc.bon.futur .ill img,.mc.bon.perdu .ill img,.mc.bon.proche .ill img{
-  filter:drop-shadow(.35px 0 0 #8D1D2C) drop-shadow(-.35px 0 0 #8D1D2C) drop-shadow(0 .35px 0 #8D1D2C) drop-shadow(0 -.35px 0 #8D1D2C)}
+  filter:drop-shadow(.3px 0 0 #8D1D2C) drop-shadow(-.3px 0 0 #8D1D2C) drop-shadow(0 .3px 0 #8D1D2C) drop-shadow(0 -.3px 0 #8D1D2C)}
+.blanc img{filter:brightness(0) invert(1) drop-shadow(.3px 0 0 #fff) drop-shadow(-.3px 0 0 #fff) drop-shadow(0 .3px 0 #fff) drop-shadow(0 -.3px 0 #fff)}
 
 /* La planche */
 .pl{padding:30px 48px 40px;max-width:1680px}
 .pl-k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muet)}
-.pl h1{margin:6px 0 6px;font-size:26px;letter-spacing:-.01em}
-.pl-sous{margin:0;max-width:1150px;color:var(--muet2);font-size:13.5px}
+.pl h1{margin:6px 0 6px;font:400 34px/1.05 'Vank','Gotham';color:var(--rubis)}
+.pl-sous{margin:0;max-width:1180px;color:var(--muet2);font-size:13.5px}
 .pl-g{display:grid;grid-template-columns:540px 392px minmax(0,1fr);gap:44px;margin-top:22px;align-items:start}
 .pl-t{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muet);margin:0 0 12px}
 .pl-t em{font-style:normal;color:var(--pale)}
 
-/* La barre de la maquette : les réglages et la simulation */
-.ctl{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:18px;background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:10px 14px}
+/* La barre de la maquette : les réglages, la présentation, la simulation */
+.ctl{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;margin-top:18px;background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:10px 14px}
 .ctl .grp{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muet2)}
 .ctl .grp>span:first-child{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muet)}
 .ctl .sep{width:1px;align-self:stretch;background:var(--ligne)}
+.ctl .ligne{flex-basis:100%;height:0}
 .seg2{display:inline-flex;background:var(--chip);border-radius:7px;padding:2px}
 .seg2 button{border:none;background:transparent;padding:4px 11px;border-radius:5px;cursor:pointer;color:var(--muet2);font-size:12px}
 .seg2 button.on{background:#fff;color:var(--rubis);box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .num{display:inline-flex;align-items:center;gap:4px;background:var(--papier);border:1px solid var(--ligne);border-radius:6px;padding:2px 6px}
 .num input{width:44px;border:none;background:transparent;text-align:right;color:var(--rubis);outline:none;font-size:12.5px}
 .num input::-webkit-inner-spin-button{opacity:1}
+.chk{display:inline-flex;align-items:center;gap:5px;cursor:pointer}
+.chk input{accent-color:var(--rubis);margin:0}
 .bt{border:1px solid var(--ligne);background:#fff;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:12px;color:var(--muet2)}
 .bt:hover{border-color:var(--rubis);color:var(--rubis)}
 .bt.p{background:var(--rubis);border-color:var(--rubis);color:#fff}
@@ -53,8 +53,9 @@ svg{display:block;width:100%;height:100%}
 .ctl .etat{font-size:12px;color:var(--encre)}
 
 /* ---- La carte imprimée (A6, 105 × 148 mm) ---------------------------------------------- */
-.carte{width:540px;min-height:762px;background:var(--creme);border-radius:10px;padding:26px 26px 22px;position:relative;transform:rotate(-1.2deg);
+.carte{width:540px;min-height:762px;background:var(--creme);border-radius:10px;padding:26px 26px 22px;position:relative;
   box-shadow:0 1px 2px rgba(60,30,20,.12),0 18px 40px rgba(60,30,20,.16);display:flex;flex-direction:column;color:var(--encre)}
+.carte.incline{transform:rotate(-1.2deg)}
 .carte>*{flex:none}
 .ca-h{display:flex;justify-content:space-between;align-items:flex-start}
 .ca-h img{height:24px}
@@ -65,11 +66,11 @@ svg{display:block;width:100%;height:100%}
 .ca-acc{margin:8px 0 14px;font-size:12.5px;color:var(--muet2)}
 .ca-acc em{font-style:normal;color:var(--rubis)}
 .grille{display:grid;border:1.6px solid var(--rubis);border-radius:4px;overflow:hidden;background:#fff}
-.case{position:relative;min-height:108px;padding:6px 5px 7px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:inset -1.2px -1.2px 0 var(--rubis)}
-.case.fete{background:var(--abricot-d)}
+.case{position:relative;min-height:106px;padding:6px 5px 7px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:inset -1.2px -1.2px 0 var(--rubis)}
+.teinte .case.fete{background:var(--abricot-d)}
 .case .s{align-self:stretch;display:flex;justify-content:space-between;font-size:8.5px;color:var(--muet);letter-spacing:.02em;white-space:nowrap}
 .case .s span:first-child{color:var(--rubis)}
-.case .ill{width:42px;height:42px;margin:1px 0 1px}
+.case .ill{width:42px;height:42px;margin:1px 0}
 .case .ti{font-size:10.5px;line-height:1.15;color:var(--encre)}
 .case .so{font-size:8.5px;line-height:1.2;color:var(--muet);margin-top:2px}
 .case .tag{white-space:nowrap;margin-top:3px;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--rubis);border:1px solid var(--rubis);border-radius:3px;padding:1px 4px}
@@ -77,15 +78,28 @@ svg{display:block;width:100%;height:100%}
 .case.bon{background:var(--rubis);color:#fff;box-shadow:inset -1.2px -1.2px 0 var(--rubis-f)}
 .case.bon .s span,.case.bon .s span:first-child{color:var(--abricot)}
 .case.bon .tag{background:var(--abricot);border-color:var(--abricot);color:var(--rubis)}
-.case.bon .ill{width:46px;height:46px;margin:0}
-.case.bon::before,.mc.bon::before{content:'';position:absolute;inset:4px;border:1px dashed rgba(242,201,160,.55);border-radius:4px;pointer-events:none}
-.mc.bon.futur::before,.mc.bon.perdu::before,.mc.bon.proche::before{border-color:rgba(141,29,44,.25)}
+.case.bon .ill{width:44px;height:44px;margin:0}
 .case.bon .ti{color:#fff}.case.bon .so{color:var(--abricot)}
+.case.bon::before,.mc.bon::before,.mega::before{content:'';position:absolute;inset:4px;border:1px dashed rgba(242,201,160,.55);border-radius:4px;pointer-events:none}
+/* Le super bon cadeau : un coupon large, crans sur les côtés */
+.case.mega{background:var(--rubis);color:#fff;flex-direction:row;align-items:center;gap:14px;padding:10px 18px;text-align:left;box-shadow:none;overflow:hidden}
+.case.mega::after{content:'';position:absolute;inset:auto;left:-7px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:#fff;}
+.case.mega .cran{position:absolute;right:-7px;top:50%;width:14px;height:14px;margin-top:-7px;border-radius:50%;background:#fff}
+.case.mega .ill{width:58px;height:58px;flex:none}
+.case.mega small{display:block;font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--rubis);background:var(--abricot);border-radius:3px;padding:1px 5px;width:max-content}
+.case.mega b{display:block;font:400 25px/1.05 'Vank','Gotham';color:#fff;margin:4px 0 3px}
+.case.mega p{margin:0;font-size:9.5px;line-height:1.35;color:var(--abricot)}
+.tirage-ca{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:center;margin-top:12px;border:1.4px solid var(--rubis);border-radius:6px;padding:8px 12px;background:#fff}
+.tirage-ca .ill{width:46px;height:46px}
+.tirage-ca small{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--rubis)}
+.tirage-ca b{display:block;font:400 21px/1.05 'Vank','Gotham';color:var(--rubis);margin:1px 0}
+.tirage-ca p{margin:0;font-size:10px;line-height:1.35;color:var(--muet2)}
 .ca-pied{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;margin-top:auto;padding-top:14px;align-items:end}
 .ca-comment h4{margin:0 0 4px;font-size:11px;color:var(--rubis);letter-spacing:.04em;text-transform:uppercase}
 .ca-comment p{margin:0;font-size:10.5px;line-height:1.45;color:var(--muet2)}
 .ca-qr{text-align:center;font-size:8.5px;color:var(--muet);line-height:1.3}
 .ca-qr .q{width:96px;height:96px;background:#fff;border-radius:6px;padding:4px;margin-bottom:4px}
+.ca-qr .q svg{display:block;width:100%;height:100%}
 .ca-qr .q svg path,.ca-qr .q svg rect{shape-rendering:crispEdges}
 
 /* ---- L'app du client --------------------------------------------------------------------- */
@@ -93,71 +107,85 @@ svg{display:block;width:100%;height:100%}
 .ecran{width:100%;height:100%;border-radius:41px;background:#F4EFE8;overflow:hidden;position:relative;display:flex;flex-direction:column}
 .st{display:flex;justify-content:space-between;padding:14px 28px 0;font-size:13px;color:var(--encre)}
 .st i{font-style:normal;font-size:11px;letter-spacing:.04em}
-.ap-h{display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px}
+.ap-h{display:flex;align-items:center;justify-content:space-between;padding:10px 18px 6px}
 .ap-h img{height:16px}
 .ap-h span{font-size:12px;color:var(--muet2)}
-.seg{display:flex;margin:2px 18px 10px;background:#E6DFD5;border-radius:8px;padding:2px}
-.seg span{flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:6px;color:var(--muet2)}
+.seg{display:flex;margin:2px 18px 8px;background:#E6DFD5;border-radius:8px;padding:2px}
+.seg span{flex:1;text-align:center;font-size:12px;padding:5px 0;border-radius:6px;color:var(--muet2)}
 .seg span.on{background:#fff;color:var(--rubis)}
-.ap{padding:0 18px 10px;display:flex;flex-direction:column;gap:8px;flex:1;min-height:0;overflow-y:auto}
+.ap{padding:0 16px 10px;display:flex;flex-direction:column;gap:7px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none}
 .hero{display:flex;align-items:flex-end;justify-content:space-between}
-.hero b{font:400 34px/0.95 'Vank','Gotham';color:var(--rubis)}
-.hero b i{font:400 17px 'Playwrite','Gotham';font-style:normal;margin-left:4px}
+.hero b{font:400 32px/0.95 'Vank','Gotham';color:var(--rubis)}
+.hero b i{font:400 16px 'Playwrite','Gotham';font-style:normal;margin-left:4px}
 .hero span{font-size:11px;color:var(--muet);text-align:right;line-height:1.35}
-.hero span em{font-style:normal;font-size:20px;color:var(--encre);display:block}
-.semaine{background:#fff;border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:46px minmax(0,1fr);gap:10px;align-items:center;border:1.4px dashed var(--rubis)}
+.hero span em{font-style:normal;font-size:19px;color:var(--encre);display:block}
+.semaine{background:#fff;border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:44px minmax(0,1fr);gap:10px;align-items:center;border:1.4px dashed var(--rubis)}
 .semaine.faite{border-style:solid;border-color:var(--vert)}
-.semaine .ill{width:48px;height:48px}
+.semaine .ill{width:44px;height:44px}
 .semaine small{display:block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
 .semaine.faite small{color:var(--vert)}
 .semaine b{display:block;font-size:13.5px;margin-top:1px}
-.jauge{height:7px;border-radius:4px;background:var(--chip);margin:7px 0 4px;overflow:hidden}
+.jauge{height:6px;border-radius:4px;background:var(--chip);margin:6px 0 4px;overflow:hidden}
 .jauge i{display:block;height:100%;background:var(--rubis);border-radius:4px;transition:width .4s}
 .semaine.faite .jauge i{background:var(--vert)}
 .semaine p{margin:0;font-size:10.5px;color:var(--muet2);line-height:1.35}
-.mini{display:grid;gap:6px}
-.mc{position:relative;background:#fff;border-radius:10px;height:72px;padding:5px 4px 4px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
+.mini{display:grid;gap:5px}
+.mc{position:relative;background:#fff;border-radius:9px;height:62px;padding:4px 3px 3px;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden}
 .mc.clic{cursor:pointer}.mc.clic:hover{outline:1px solid var(--pale)}
-.mc.fete{background:var(--abricot-d)}
-.mc .ill{width:34px;height:34px;margin:5px 12px 0 0}
-.mc .ti{font-size:8.4px;line-height:1.15;margin-top:3px;color:var(--encre)}
-.mc .d{position:absolute;top:4px;left:6px;font-size:7.5px;color:var(--muet)}
+.teinte .mc.fete{background:var(--abricot-d)}
+.mc .ill{width:28px;height:28px;margin:7px 12px 0 0}
+.mc .ti{font-size:8px;line-height:1.1;margin-top:2px;color:var(--encre)}
+.mc .d{position:absolute;top:3px;left:5px;font-size:7px;color:var(--muet)}
 .mc.futur{opacity:.42}
 .mc.manquee .ill,.mc.manquee .ti{opacity:.28;filter:grayscale(1)}
-.mc.manquee::after{content:'manquée';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--muet);border:1px solid var(--pale);border-radius:3px;padding:1px 4px;background:rgba(255,255,255,.8)}
+.mc.manquee::after{content:'manquée';position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);font-size:8.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muet);border:1px solid var(--pale);border-radius:3px;padding:1px 4px;background:rgba(255,255,255,.8)}
 .mc.encours{outline:1.6px dashed var(--rubis);outline-offset:-1.6px}
-.mc .bar{position:absolute;left:8px;right:8px;bottom:6px;height:4px;border-radius:2px;background:var(--chip);overflow:hidden}
+.mc .bar{position:absolute;left:8px;right:8px;bottom:5px;height:4px;border-radius:2px;background:var(--chip);overflow:hidden}
 .mc .bar i{display:block;height:100%;background:var(--rubis)}
 .mc.neuf{animation:pop .6s ease}
 @keyframes pop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
-.tampon{position:absolute;right:3px;top:3px;width:30px;height:30px;border-radius:50%;border:2px solid var(--rubis);color:var(--rubis);transform:rotate(-14deg);
+.tampon{position:absolute;right:3px;top:3px;width:26px;height:26px;border-radius:50%;border:1.8px solid var(--rubis);color:var(--rubis);transform:rotate(-14deg);
   display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.55);opacity:.92;line-height:1}
-.tampon::before{content:'';position:absolute;inset:3px;border-radius:50%;border:1px solid var(--rubis)}
-.tampon b{font-size:12px}
-.tampon i{font-style:normal;font-size:5.5px;margin-top:1px}
-.mc.bon{background:var(--rubis);color:#fff}
-.mc.bon .d{color:var(--abricot)}
-.mc.bon .ill{width:36px;height:36px;margin:6px 0 0}
-.mc.bon .ti{color:#fff;font-size:11px;margin-top:0}
-.mc.bon .bas{font-size:7.5px;color:var(--abricot);line-height:1.1}
-.mc.bon.futur,.mc.bon.perdu,.mc.bon.proche{background:#E9DCDD;opacity:1}
-.mc.bon.futur .ill,.mc.bon.perdu .ill{opacity:.45}
-.mc.bon.futur .ti,.mc.bon.perdu .ti,.mc.bon.proche .ti{color:var(--rubis)}
-.mc.bon.futur .bas,.mc.bon.futur .d,.mc.bon.perdu .bas,.mc.bon.perdu .d{color:var(--muet)}
-.mc.bon.proche{outline:1.6px dashed var(--rubis);outline-offset:-1.6px}
-.mc.bon.proche .bas,.mc.bon.proche .d{color:var(--rubis)}
-.mc.bon.utilise .ill,.mc.bon.expire .ill{opacity:.55}
+.tampon::before{content:'';position:absolute;inset:2.5px;border-radius:50%;border:1px solid var(--rubis)}
+.tampon b{font-size:10.5px}
+.tampon i{font-style:normal;font-size:5px;margin-top:1px}
 .tampon.blanc{border-color:#fff;color:#fff;background:rgba(141,29,44,.35)}.tampon.blanc::before{border-color:#fff}
-.porte{background:#fff;border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:52px minmax(0,1fr) auto;gap:10px;align-items:center}
-.porte.vide{grid-template-columns:minmax(0,1fr);color:var(--muet);font-size:11px;padding:12px}
-.porte .ill{width:52px;height:52px;border:1.2px dashed var(--rubis);border-radius:8px;padding:5px}
-.porte small{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
+.mc.bon,.mc.mega{background:var(--rubis);color:#fff}
+.mc.bon .d,.mc.mega .d{color:var(--abricot)}
+.mc.bon .ill{width:30px;height:30px;margin:6px 0 0}
+.mc.bon .ti{color:#fff;font-size:10.5px;margin-top:0}
+.mc.bon .bas,.mc.mega .bas{font-size:7px;color:var(--abricot);line-height:1.1}
+.mc.bon.futur,.mc.bon.perdu,.mc.bon.proche,.mc.mega.possible,.mc.mega.perdu{background:var(--rose);opacity:1}
+.mc.bon.futur .ill,.mc.bon.perdu .ill,.mc.mega.perdu .ill{opacity:.45}
+.mc.bon.futur .ti,.mc.bon.perdu .ti,.mc.bon.proche .ti{color:var(--rubis)}
+.mc.bon.futur .bas,.mc.bon.futur .d,.mc.bon.perdu .bas,.mc.bon.perdu .d,.mc.mega.perdu .bas,.mc.mega.perdu .d{color:var(--muet)}
+.mc.bon.proche{outline:1.6px dashed var(--rubis);outline-offset:-1.6px}
+.mc.bon.proche .bas,.mc.bon.proche .d,.mc.mega.possible .bas,.mc.mega.possible .d{color:var(--rubis)}
+.mc.bon.futur::before,.mc.bon.perdu::before,.mc.bon.proche::before,.mc.mega.possible::before,.mc.mega.perdu::before{border-color:rgba(141,29,44,.25)}
+.mc.bon.utilise .ill,.mc.bon.expire .ill{opacity:.55}
+.mc.mega{flex-direction:row;align-items:center;gap:10px;padding:4px 12px;text-align:left}
+.mc.mega .ill{width:40px;height:40px;margin:0;flex:none}
+.mc.mega .d{position:static;display:block;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase}
+.mc.mega b{display:block;font:400 16px/1 'Vank','Gotham';margin:2px 0}
+.mc.mega.possible b,.mc.mega.perdu b{color:var(--rubis)}
+.porte{background:#fff;border-radius:14px;padding:7px 12px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center}
+.porte.vide{grid-template-columns:minmax(0,1fr);color:var(--muet);font-size:11px;padding:10px 12px}
+.porte .ill{width:44px;height:44px;border:1.2px dashed var(--rubis);border-radius:8px;padding:4px}
+.porte small{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
 .porte b{display:block;font-size:12.5px}
 .porte span{display:block;font-size:10px;color:var(--muet)}
 .porte em{font-style:normal;font-size:11px;color:#fff;background:var(--rubis);border-radius:6px;padding:6px 10px}
+.tir{background:#fff;border-radius:14px;padding:6px 12px;display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:center}
+.tir .ill{width:38px;height:38px}
+.tir small{display:block;font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
+.tir b{display:block;font-size:12px}
+.tir span{display:block;font-size:9.5px;color:var(--muet);line-height:1.3}
+.tir em{font-style:normal;font-size:10.5px;color:var(--rubis);white-space:nowrap}
+.tir.inscrit{background:var(--rubis);color:#fff}.tir.inscrit small,.tir.inscrit span,.tir.inscrit em{color:var(--abricot)}
+.tir.perdu{opacity:.62}
 .nav{display:flex;justify-content:space-around;padding:9px 0 20px;background:#fff;border-top:1px solid #EAE3D9;font-size:10px;color:var(--muet)}
 .nav span.on{color:var(--rubis)}
-.toast{position:absolute;top:8px;left:14px;right:14px;background:rgba(28,26,23,.94);color:#fff;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:30px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35;cursor:pointer;animation:descend .35s ease}
+.toast{position:absolute;top:8px;left:14px;right:14px;background:rgba(28,26,23,.94);color:#fff;border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35;cursor:pointer;animation:descend .35s ease}
 .toast.bon{background:rgba(141,29,44,.97)}
 .toast .ill{width:32px;height:32px;background:var(--creme);border-radius:8px;padding:3px}
 .toast.bon .ill{background:var(--rubis)}
@@ -166,9 +194,9 @@ svg{display:block;width:100%;height:100%}
 
 /* ---- Les règles et l'année ------------------------------------------------------------- */
 .reg{background:#fff;border:1px solid var(--ligne);border-radius:12px}
-.reg>div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--ligne)}
+.reg>div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:11px 16px;border-bottom:1px solid var(--ligne)}
 .reg>div:last-child{border-bottom:none}
-.reg .ic{width:30px;height:30px;border-radius:8px;background:var(--rubis);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px}
+.reg .ic{width:30px;height:30px;border-radius:8px;background:var(--rubis);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;white-space:nowrap}
 .reg b{display:block;font-size:13.5px}
 .reg p{margin:2px 0 0;font-size:12px;color:var(--muet2)}
 .reg .v{display:inline-block;color:var(--rubis);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px}
@@ -179,32 +207,19 @@ svg{display:block;width:100%;height:100%}
 .sg{display:grid;gap:2px}
 .sg i{width:9px;height:9px;border-radius:2px;background:#E6DFD5}
 .sg i.b{background:#C99AA1}.sch.on .sg i.b{background:var(--rubis)}
+.sg i.m{background:#D9B3B8}.sch.on .sg i.m{background:var(--rubis-f)}
 .annee{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:10px}
-.sa{background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:12px 14px}
+.sa{position:relative;background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:12px 14px;min-height:118px}
 .sa.on{border-color:var(--rubis)}
-.sa h4{margin:0;display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:14px}
-.sa h4 .ill{width:34px;height:34px;flex:none}
-.sa h4 span{flex:1}
+.sa h4{margin:0;display:flex;align-items:baseline;gap:10px;font-size:14px;padding-right:56px}
 .sa h4 small{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--rubis)}
+.sa>.ill{position:absolute;right:12px;top:10px;width:48px;height:48px;opacity:.6}
+.sa.on>.ill{opacity:1}
 .sa .dt{font-size:11px;color:var(--muet);margin:2px 0 7px}
-.sa .ch{display:flex;flex-wrap:wrap;gap:4px}
+.sa .ch{display:flex;flex-wrap:wrap;gap:4px;padding-right:40px}
 .sa .ch span{font-size:10.5px;background:#F3EEE7;border-radius:4px;padding:2px 6px;color:var(--muet2)}
 .sa.on .ch span{background:var(--abricot-d);color:var(--rubis-f)}
 .note{margin:12px 0 0;font-size:11.5px;color:var(--muet);line-height:1.5}
-/* Le tirage au sort des cartes pleines : 1 an de pain */
-.tirage-ca{display:grid;grid-template-columns:46px minmax(0,1fr);gap:12px;align-items:center;margin-top:12px;border:1.4px solid var(--rubis);border-radius:6px;padding:8px 12px;background:#fff}
-.tirage-ca .ill{width:46px;height:46px}
-.tirage-ca small{display:block;font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--rubis)}
-.tirage-ca b{display:block;font:400 21px/1.05 'Vank','Gotham';color:var(--rubis);margin:1px 0}
-.tirage-ca p{margin:0;font-size:10px;line-height:1.35;color:var(--muet2)}
-.tir{background:#fff;border-radius:14px;padding:8px 12px;display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:10px;align-items:center}
-.tir .ill{width:42px;height:42px}
-.tir small{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--rubis)}
-.tir b{display:block;font-size:12.5px}
-.tir span{display:block;font-size:10px;color:var(--muet);line-height:1.3}
-.tir em{font-style:normal;font-size:10.5px;color:var(--rubis);white-space:nowrap}
-.tir.inscrit{background:var(--rubis);color:#fff}.tir.inscrit small,.tir.inscrit span,.tir.inscrit em{color:var(--abricot)}
-.tir.perdu{opacity:.62}
 .note em{font-style:normal;color:var(--rubis)}
 </style>
 </head>
@@ -213,26 +228,27 @@ svg{display:block;width:100%;height:100%}
 <script src="../../../public/assets/vendor/qrcode/qrcode.js"></script>
 <script src="bingo.js"></script>
 <script>
-/* Le bingo de saison — maquette interactive (12/11/2026). Tout se calcule à partir de l'état `S` : les réglages
- * (x, seuil, bon) et la cliente simulée (semaine en cours, dépense de la semaine, cases cochées, bons utilisés).
- * Ajouter un ticket fait monter la dépense : au seuil, la case de la semaine se coche toute seule ; toutes les x
- * cases, un bon se débloque. Données et illustrations : bingo.js. */
-const { ILL, BONS_ILL, SEMAINES, REGLES, bonDe, SAISONS, DEBUT, CLIENTE } = window.BINGO;
+/* Le bingo de saison — maquette interactive (12/11/2026), alignée sur la version de Sam dans Claude Design
+ * (claude-design.html) : 13 semaines, le super bon cadeau de la carte pleine, ses illustrations ; plus le tirage au
+ * sort d'1 an de pain. Tout se calcule à partir de l'état `S` : les réglages et la cliente simulée (semaine en cours,
+ * dépense de la semaine, cases cochées, bons utilisés). Un ticket fait monter la dépense : au seuil, la case de la
+ * semaine se coche toute seule ; toutes les x cases, un bon ; aux 13 cases, le super bon et le tirage.
+ * Données et choix des dessins : bingo.js. */
+const { ILL, SEMAINES, REGLES, bonDe, SAISONS, DEBUT, CLIENTE } = window.BINGO;
 const LOGO = '../../../public/assets/img/logo.png';
 const NS = SEMAINES.length;
+const T = REGLES.tirage;
 const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
 const eur = v => nf(v, v % 1 ? 2 : 0) + ' €';
 const ord = n => n === 1 ? '1re' : n + 'e';
 const jour = (iso, n) => { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
 const dm = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7);
-const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const codeNeuf = () => 'FID' + Array.from({ length: 8 }, () => ALPHA[Math.floor(Math.random() * ALPHA.length)]).join('');
+const dLong = iso => new Date(iso + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
 
-const T = REGLES.tirage;
-const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeur: REGLES.bon.valeur, validite: REGLES.bon.validite, prix: T.prix, gagnants: T.gagnants,
-  semaine: CLIENTE.semaine, depense: CLIENTE.depense, cochees: Object.assign({}, CLIENTE.cochees), utilises: Object.assign({}, CLIENTE.utilises),
-  codes: Object.assign({}, CLIENTE.codes), neuf: null,
-  toast: { ill: ILL.pain, txt: 'Ticket de 4,20 € enregistré. Encore 3,60 € cette semaine pour cocher « Le bon pain ».' } });
+const depart = () => ({ x: REGLES.tousLes, seuil: REGLES.seuil, valeur: REGLES.bon.valeur, validite: REGLES.bon.validite, superBon: REGLES.superBon.valeur,
+  tirage: T.actif, prix: T.prix, gagnants: T.gagnants, incline: true, teinte: true,
+  semaine: CLIENTE.semaine, depense: CLIENTE.depense, cochees: Object.assign({}, CLIENTE.cochees), utilises: Object.assign({}, CLIENTE.utilises), neuf: null,
+  toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré. Encore 3,60 € cette semaine pour cocher « Le bon pain ».' } });
 let S = depart();
 
 /* --- Ce qui se déduit de l'état ------------------------------------------------------------- */
@@ -241,6 +257,7 @@ const aujourdhui = () => jour(lundi(S.semaine), 3);                  // le jeudi
 const nCoch = () => Object.keys(S.cochees).length;
 const etatSemaine = n => S.cochees[n] ? 'coche' : (n === S.semaine ? 'encours' : (n > S.semaine ? 'futur' : 'manquee'));
 const restantes = () => SEMAINES.filter(s => s.n >= S.semaine && !S.cochees[s.n]).length;
+const code = k => CLIENTE.codes[k] || 'FID' + String(k).padStart(8, '0');
 /** Les bons de la saison : le i-e se débloque à la (i·x)-e case cochée, le jour où elle l'a été. */
 function bons(){
   const ordre = Object.keys(S.cochees).map(Number).sort((a, b) => a - b);
@@ -249,9 +266,9 @@ function bons(){
     const k = i * S.x, b = bonDe(k), le = ordre.length >= k ? S.cochees[ordre[k - 1]] : null;
     const o = { i, k, nom: b.nom, motif: b.motif, le };
     if (le) {
-      o.des = jour(le, 1); o.fin = jour(le, S.validite);
+      o.fin = jour(le, S.validite);
       o.etat = S.utilises[i] ? 'utilise' : (o.fin < aujourdhui() ? 'expire' : 'pris');
-      o.code = S.codes[i] || (S.codes[i] = codeNeuf());
+      o.code = code(i);
     } else { o.etat = nCoch() + restantes() >= k ? 'futur' : 'perdu'; }
     out.push(o);
   }
@@ -259,14 +276,17 @@ function bons(){
   if (proche) { proche.etat = 'proche'; }
   return out;
 }
-/** Le tirage au sort : inscrit (carte pleine), encore possible (aucune semaine manquée) ou manqué. */
-const leTirage = () => nCoch() === NS ? 'inscrit' : (nCoch() + restantes() >= NS ? 'possible' : 'perdu');
-const lot = () => ({ valeur: S.prix * T.jours, txt: '1 an de pain', detail: 'un pain par jour à ' + eur(S.prix) + ', ' + T.jours + ' pains' });
-const dTirage = () => new Date(T.le + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
-/** La grille : x semaines, puis le bon qui ferme la ligne (une ligne incomplète n'a pas de bon). */
+/** La carte pleine (13 / 13) : le super bon cadeau et le tirage. Pleine, encore possible (aucune semaine manquée), ou manquée. */
+const pleine = () => nCoch() === NS ? 'plein' : (nCoch() + restantes() >= NS ? 'possible' : 'perdu');
+const superBon = () => { if (pleine() !== 'plein') { return null; } const le = Object.values(S.cochees).sort().pop(), fin = jour(le, S.validite);
+  return { le, fin, code: code('super'), etat: fin < aujourdhui() ? 'expire' : 'pris' }; };
+const lot = () => S.prix * T.jours;
+/** La grille : x semaines puis le bon qui ferme la ligne ; au bout, le super bon cadeau sur les colonnes qui restent. */
 function cellules(){
   const B = bons(), out = [];
   SEMAINES.forEach((s, i) => { out.push({ t: 's', s }); if ((i + 1) % S.x === 0) { out.push({ t: 'b', b: B[(i + 1) / S.x - 1] }); } });
+  const r = NS % S.x;
+  out.push({ t: 'm', span: r ? S.x + 1 - r : S.x + 1 });
   return out;
 }
 
@@ -279,28 +299,30 @@ function ticket(m){
   if (!S.cochees[S.semaine] && S.depense >= S.seuil) {
     S.cochees[S.semaine] = aujourdhui(); S.neuf = 's' + S.semaine;
     const n = avant + 1;
+    if (n % S.x === 0 && n / S.x <= Math.floor(NS / S.x)) { S.neuf += ' b' + n / S.x; }
     if (n === NS) {
-      if (n % S.x === 0) { S.neuf += ' b' + n / S.x; }
-      S.toast = { bon: true, ill: ILL.tirage, txt: 'Carte pleine ! ' + (n % S.x === 0 ? 'Votre dernier bon est débloqué, et vous' : 'Vous') + ' participez au tirage au sort du ' + dm(T.le) + ' : 1 an de pain à gagner.' };
+      S.neuf += ' m';
+      S.toast = { bon: true, ill: 'cake', txt: 'Carte pleine, ' + NS + ' cases sur ' + NS + ' ! Super bon cadeau de ' + eur(S.superBon) + ' débloqué dans votre portefeuille'
+        + (S.tirage ? ', et vous participez au tirage au sort du ' + dm(T.le) + ' : 1 an de pain à gagner.' : '.') };
     } else if (n % S.x === 0 && n / S.x <= Math.floor(NS / S.x)) {
-      const b = bonDe(n); S.neuf += ' b' + n / S.x;
-      S.toast = { bon: true, ill: BONS_ILL[b.motif], txt: 'Bon débloqué : ' + b.nom + ', ' + eur(S.valeur) + ' dans votre portefeuille, dès demain et pour ' + S.validite + ' jours.' };
+      const b = bonDe(n);
+      S.toast = { bon: true, ill: b.motif, txt: 'Bon débloqué : ' + b.nom + ', ' + eur(S.valeur) + ' dans votre portefeuille, dès demain et pour ' + S.validite + ' jours.' };
     } else {
       const k = S.x - (n % S.x);
-      S.toast = { ill: ILL[sem.ill], txt: 'Case cochée : ' + sem.titre + ' ✓ ' + (n / S.x < Math.floor(NS / S.x) || n % S.x ? 'Encore ' + k + ' case' + (k > 1 ? 's' : '') + ' pour le prochain bon.' : '') };
+      S.toast = { ill: sem.ill, txt: 'Case cochée : ' + sem.titre + ' ✓ ' + (n + k <= NS ? 'Encore ' + k + ' case' + (k > 1 ? 's' : '') + ' pour le prochain bon.' : 'Plus que ' + (NS - n) + ' case' + (NS - n > 1 ? 's' : '') + ' pour la carte pleine.') };
     }
   } else if (S.cochees[S.semaine]) {
-    S.toast = { ill: ILL[sem.ill], txt: 'Ticket de ' + eur(m) + ' enregistré. La case de la semaine est déjà cochée : rendez-vous lundi.' };
+    S.toast = { ill: sem.ill, txt: 'Ticket de ' + eur(m) + ' enregistré. La case de la semaine est déjà cochée : rendez-vous lundi.' };
   } else {
-    S.toast = { ill: ILL[sem.ill], txt: 'Ticket de ' + eur(m) + ' enregistré. Encore ' + eur(S.seuil - S.depense) + ' cette semaine pour cocher « ' + sem.titre + ' ».' };
+    S.toast = { ill: sem.ill, txt: 'Ticket de ' + eur(m) + ' enregistré. Encore ' + eur(S.seuil - S.depense) + ' cette semaine pour cocher « ' + sem.titre + ' ».' };
   }
   rendre();
 }
 function semaineSuivante(){
   if (S.semaine > NS) { return; }
   S.semaine++; S.depense = 0; S.neuf = null;
-  S.toast = S.semaine > NS ? (leTirage() === 'inscrit' ? { ill: ILL.tirage, bon: true, txt: 'Tirage au sort ce ' + dTirage() + ' parmi les cartes pleines : vous y êtes. Bonne chance !' }
-    : { ill: ILL.valentin, bon: true, txt: 'La carte d’hiver est terminée : la 13e semaine, le dernier bon se prend et la carte du printemps arrive.' }) : null;
+  S.toast = S.semaine > NS ? { bon: true, ill: 'cupcake', txt: 'La carte d’hiver est terminée : les ' + NS + ' semaines sont passées, la carte du printemps arrive lundi ' + dm(T.le) + '.'
+    + (S.tirage && pleine() === 'plein' ? ' Le tirage au sort a lieu ce jour-là : vous y êtes.' : '') } : null;
   rendre();
 }
 function basculer(n){
@@ -310,11 +332,13 @@ function basculer(n){
   rendre();
 }
 function regler(k, v){
+  if (k === 'tirage' || k === 'incline' || k === 'teinte') { S[k] = !!v; rendre(); return; }
   v = Number(v);
   if (k === 'x') { S.x = v; }
   if (k === 'seuil' && v >= 1) { S.seuil = v; }
   if (k === 'valeur' && v > 0) { S.valeur = v; }
   if (k === 'validite' && v >= 1) { S.validite = Math.round(v); }
+  if (k === 'superBon' && v > 0) { S.superBon = v; }
   if (k === 'prix' && v > 0) { S.prix = Math.round(v * 100) / 100; }
   if (k === 'gagnants' && v >= 1) { S.gagnants = Math.round(v); }
   S.neuf = null;
@@ -323,29 +347,33 @@ function regler(k, v){
 const ACTIONS = { ticket: e => ticket(+e.dataset.m), suivante: semaineSuivante, reset: () => { S = depart(); rendre(); },
   semaine: e => basculer(+e.dataset.n), x: e => regler('x', e.dataset.v), toast: () => { S.toast = null; rendre(); } };
 document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if (el && ACTIONS[el.dataset.a]) { ACTIONS[el.dataset.a](el); } });
-document.addEventListener('change', e => { const el = e.target.closest('[data-r]'); if (el) { regler(el.dataset.r, el.value); } });
+document.addEventListener('change', e => { const el = e.target.closest('[data-r]'); if (el) { regler(el.dataset.r, el.type === 'checkbox' ? el.checked : el.value); } });
 
 /* --- Le rendu ------------------------------------------------------------------------------- */
 const qr = (() => { const q = qrcode(0, 'M'); q.addData('L’Atelier by — carte fidélité Hiver 2026-2027 (maquette)'); q.make(); return q.createSvgTag(3, 0); })();
 
 function vueCarte(){
   const caseImp = c => {
+    if (c.t === 'm') {
+      return `<div class="case mega" style="grid-column:span ${c.span}"><span class="cran"></span><div class="ill blanc">${ILL.cake}</div><div><small>Carte pleine · ${NS} / ${NS}</small><b>SUPER BON CADEAU</b>
+        <p>Les ${NS} cases cochées : ${eur(S.superBon)} offerts, valables ${S.validite} jours. En plus des bons${S.tirage ? ', et le tirage au sort d’1 an de pain' : ''}.</p></div></div>`;
+    }
     if (c.t === 'b') { const b = c.b;
       return `<div class="case bon"><div class="s"><span>Bon ${b.i}</span><span>${ord(b.k)} case</span></div><span class="tag">Débloqué</span>
-        <div class="ill">${BONS_ILL[b.motif]}</div><div class="ti">${b.nom}</div><div class="so">${eur(S.valeur)} · ${S.validite} jours</div></div>`; }
+        <div class="ill blanc">${ILL[b.motif]}</div><div class="ti">${b.nom}</div><div class="so">${eur(S.valeur)} · ${S.validite} jours</div></div>`; }
     const s = c.s;
     return `<div class="case${s.fete ? ' fete' : ''}"><div class="s"><span>S${s.n}</span><span>${s.du} – ${s.au}</span></div>${s.fete ? `<span class="tag">Fête · ${s.jour}</span>` : '<span class="tag pr">À l’honneur</span>'}
       <div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre}</div>${s.sous !== 'produit de la semaine' ? `<div class="so">${s.sous}</div>` : ''}</div>`;
   };
-  return `<div class="carte">
+  return `<div class="carte${S.incline ? ' incline' : ''}${S.teinte ? ' teinte' : ''}">
     <div class="ca-h"><img src="${LOGO}" alt="L’Atelier by"><div class="ca-saison">Carte fidélité<br>Hiver 2026 – 2027</div></div>
     <div class="ca-titre"><b>BINGO</b><i>d’hiver</i></div>
-    <p class="ca-acc">Du 23/11 au 14/02 · <em>une case par semaine, et toutes les ${S.x} cases, un bon.</em></p>
-    <div class="grille" style="grid-template-columns:repeat(${S.x + 1},1fr)">${cellules().map(caseImp).join('')}</div>
-    <div class="tirage-ca"><div class="ill">${ILL.tirage}</div><div><small>Carte pleine · tirage au sort le ${dm(T.le)}</small><b>1 AN DE PAIN</b>
-      <p>Cochez les ${NS} cases : vous participez au tirage au sort. ${S.gagnants > 1 ? S.gagnants + ' gagnants' : 'Le gagnant'} reçoit un pain par jour pendant un an.</p></div></div>
+    <p class="ca-acc">Du 23/11 au 21/02 · <em>une case par semaine, et toutes les ${S.x} cases, un bon.</em></p>
+    <div class="grille" style="grid-template-columns:repeat(${S.x + 1},minmax(0,1fr))">${cellules().map(caseImp).join('')}</div>
+    ${S.tirage ? `<div class="tirage-ca"><div class="ill">${ILL['bread-2']}</div><div><small>Carte pleine · tirage au sort le ${dm(T.le)}</small><b>1 AN DE PAIN</b>
+      <p>Cochez les ${NS} cases : vous participez au tirage au sort. ${S.gagnants > 1 ? 'Les ' + S.gagnants + ' gagnants reçoivent' : 'Le gagnant reçoit'} un pain par jour pendant un an.</p></div></div>` : ''}
     <div class="ca-pied">
-      <div class="ca-comment"><h4>Comment ça marche</h4><p>Chaque semaine où vous dépensez <b>${eur(S.seuil)} ou plus</b> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Toutes les ${S.x} cases, un bon de ${eur(S.valeur)} se débloque dans l’app ; les ${NS} cases, le tirage au sort. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez l’app ou cette carte à la caisse.</p></div>
+      <div class="ca-comment"><h4>Comment ça marche</h4><p>Chaque semaine où vous dépensez <b>${eur(S.seuil)} ou plus</b> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Toutes les ${S.x} cases, un bon de ${eur(S.valeur)} se débloque dans l’app ; les ${NS} cases, le super bon cadeau${S.tirage ? ' et le tirage au sort' : ''}. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez l’app ou cette carte à la caisse.</p></div>
       <div class="ca-qr"><div class="q">${qr}</div>Activez votre carte<br>N° 4417 0823</div>
     </div>
   </div>`;
@@ -355,40 +383,52 @@ function vueApp(){
   const fini = S.semaine > NS, sem = SEMAINES[Math.min(S.semaine, NS) - 1], B = bons(), neufs = (S.neuf || '').split(' ');
   const fait = !fini && !!S.cochees[S.semaine];
   const pct = Math.min(100, 100 * S.depense / S.seuil);
+  const P = pleine(), SB = superBon(), reste = NS - nCoch();
   const caseApp = c => {
+    if (c.t === 'm') {
+      const bas = P === 'plein' ? 'débloqué le ' + dm(SB.le) + ' · jusqu’au ' + dm(SB.fin) : (P === 'possible' ? 'encore ' + reste + ' case' + (reste > 1 ? 's' : '') + ', sans en manquer une' : 'une semaine manquée : au printemps');
+      return `<div class="mc mega ${P}${neufs.includes('m') ? ' neuf' : ''}" style="grid-column:span ${c.span}"><div class="ill${P === 'plein' ? ' blanc' : ''}">${ILL.cake}</div>
+        <div><span class="d">${NS} / ${NS} cases · ${eur(S.superBon)}</span><b>SUPER BON CADEAU</b><div class="bas">${bas}</div></div>
+        ${P === 'plein' ? `<span class="tampon blanc"><b>✓</b><i>${dm(SB.le)}</i></span>` : ''}</div>`;
+    }
     if (c.t === 'b') { const b = c.b;
       const bas = { pris: 'jusqu’au ' + (b.fin && dm(b.fin)), utilise: 'utilisé le ' + (S.utilises[b.i] && dm(S.utilises[b.i])), expire: 'expiré le ' + (b.fin && dm(b.fin)),
         proche: 'encore ' + (b.k - nCoch()) + ' case' + (b.k - nCoch() > 1 ? 's' : ''), futur: 'à la ' + ord(b.k) + ' case', perdu: 'au printemps' }[b.etat];
-      return `<div class="mc bon ${b.etat}${neufs.includes('b' + b.i) ? ' neuf' : ''}"><span class="d">${ord(b.k)} case</span><div class="ill">${BONS_ILL[b.motif]}</div><div class="ti">${eur(S.valeur)}</div><div class="bas">${bas}</div>
+      return `<div class="mc bon ${b.etat}${neufs.includes('b' + b.i) ? ' neuf' : ''}"><span class="d">${ord(b.k)} case</span><div class="ill${b.le ? ' blanc' : ''}">${ILL[b.motif]}</div><div class="ti">${eur(S.valeur)}</div><div class="bas">${bas}</div>
         ${b.le ? `<span class="tampon blanc"><b>✓</b><i>${dm(b.le)}</i></span>` : ''}</div>`; }
     const s = c.s, e = etatSemaine(s.n);
     return `<div class="mc ${e}${s.fete ? ' fete' : ''}${s.n < S.semaine ? ' clic' : ''}${neufs.includes('s' + s.n) ? ' neuf' : ''}" ${s.n < S.semaine ? `data-a="semaine" data-n="${s.n}" title="Cliquer : cochée ou manquée"` : ''}>
-      <span class="d">${s.du}</span><div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre.replace(' · ', '<br>')}</div>
+      <span class="d">${s.du}</span><div class="ill">${ILL[s.ill]}</div><div class="ti">${s.titre}</div>
       ${e === 'coche' ? `<span class="tampon"><b>✓</b><i>${dm(S.cochees[s.n])}</i></span>` : ''}${e === 'encours' ? `<span class="bar"><i style="width:${pct.toFixed(0)}%"></i></span>` : ''}</div>`;
   };
-  const poche = B.filter(b => b.etat === 'pris').pop();
-  const nB = B.filter(b => b.le).length;
-  const semaine = fini ? `<div class="semaine faite"><div class="ill">${ILL.valentin}</div><div><small>13e semaine · 15 – 21/02</small><b>La carte d’hiver est terminée</b><p>Tirage au sort ce ${dTirage()} parmi les cartes pleines ; le dernier bon se prend cette semaine, la carte du printemps arrive lundi.</p></div></div>`
+  // Le portefeuille : le super bon s'il est là, sinon le dernier bon pas encore utilisé.
+  const dernier = B.filter(b => b.etat === 'pris').pop();
+  const poche = SB && SB.etat === 'pris' ? { ill: 'cake', nom: 'Super bon cadeau · ' + eur(S.superBon), code: SB.code, fin: SB.fin }
+    : (dernier ? { ill: dernier.motif, nom: dernier.nom + ' · ' + eur(S.valeur), code: dernier.code, fin: dernier.fin } : null);
+  const nB = B.filter(b => b.le).length + (SB ? 1 : 0);
+  const semaine = fini ? `<div class="semaine faite"><div class="ill">${ILL.cupcake}</div><div><small>Carte terminée · ${NS} semaines</small><b>La carte d’hiver est terminée</b><p>La carte du printemps arrive lundi ${dm(T.le)}${S.tirage ? ', le jour du tirage au sort des cartes pleines' : ''}.</p></div></div>`
     : `<div class="semaine${fait ? ' faite' : ''}"><div class="ill">${ILL[sem.ill]}</div><div><small>${fait ? 'Case cochée ✓' : 'Cette semaine'} · ${sem.du} – ${sem.au}</small><b>${sem.titre}</b>
       <div class="jauge"><i style="width:${pct.toFixed(0)}%"></i></div>
       <p>${fait ? eur(S.depense) + ' cette semaine. Rendez-vous lundi pour la case suivante.' : nf(S.depense, 2) + ' € sur ' + eur(S.seuil) + ' — encore ' + nf(S.seuil - S.depense, 2) + ' € d’ici dimanche et la case se coche toute seule.'}</p></div></div>`;
-  return `<div class="tel"><div class="ecran">
+  const tir = !S.tirage ? '' : (() => {
+    const l = { plein: ['Vous participez au tirage', 'carte pleine · tirage le ' + dm(T.le), 'inscrit', 'inscrit'],
+      possible: ['Tirage au sort · 1 an de pain', 'les ' + NS + ' cases pour participer · tirage le ' + dm(T.le), 'encore ' + reste + ' case' + (reste > 1 ? 's' : ''), ''],
+      perdu: ['Tirage au sort · 1 an de pain', 'il fallait les ' + NS + ' semaines : ce sera pour le printemps', '', 'perdu'] }[P];
+    return `<div class="tir ${l[3]}"><div class="ill${P === 'plein' ? ' blanc' : ''}">${ILL['bread-2']}</div><div><small>${P === 'plein' ? '1 an de pain à gagner' : 'Carte pleine'}</small><b>${l[0]}</b><span>${l[1]}</span></div><em>${l[2]}</em></div>`;
+  })();
+  return `<div class="tel"><div class="ecran${S.teinte ? ' teinte' : ''}">
     <div class="st"><span>9:41</span><i>5G ▮▮▮</i></div>
     <div class="ap-h"><img src="${LOGO}" alt=""><span>Bonjour ${CLIENTE.prenom}</span></div>
     <div class="seg"><span class="on">Bingo</span><span>Points</span><span>Portefeuille</span></div>
     <div class="ap">
       <div class="hero"><b>BINGO<i>d’hiver</i></b><span><em>${nCoch()} / ${NS}</em>cases · ${nB} bon${nB > 1 ? 's' : ''} débloqué${nB > 1 ? 's' : ''}</span></div>
       ${semaine}
-      <div class="mini" style="grid-template-columns:repeat(${S.x + 1},1fr)">${cellules().map(caseApp).join('')}</div>
-      ${poche ? `<div class="porte"><div class="ill">${BONS_ILL[poche.motif]}</div><div><small>Dans votre portefeuille</small><b>${poche.nom} · ${eur(S.valeur)}</b>
+      <div class="mini" style="grid-template-columns:repeat(${S.x + 1},minmax(0,1fr))">${cellules().map(caseApp).join('')}</div>
+      ${poche ? `<div class="porte"><div class="ill">${ILL[poche.ill]}</div><div><small>Dans votre portefeuille</small><b>${poche.nom}</b>
         <span>code ${poche.code} · jusqu’au ${dm(poche.fin)}</span></div><em>Montrer</em></div>` : '<div class="porte vide">Aucun bon à utiliser pour l’instant : le prochain arrive avec la case qui le débloque.</div>'}
-      ${(() => { const e = leTirage(), reste = NS - nCoch();
-        const ligne = { inscrit: ['Vous participez au tirage', 'carte pleine · tirage le ' + dm(T.le), 'inscrit'],
-          possible: ['Tirage au sort · 1 an de pain', 'les ' + NS + ' cases pour participer · tirage le ' + dm(T.le), 'encore ' + reste + ' case' + (reste > 1 ? 's' : '')],
-          perdu: ['Tirage au sort · 1 an de pain', 'il fallait les ' + NS + ' semaines : ce sera pour le printemps', ''] }[e];
-        return `<div class="tir ${e}"><div class="ill${e === 'inscrit' ? ' blanc' : ''}">${ILL.tirage}</div><div><small>${e === 'inscrit' ? '1 an de pain à gagner' : 'Carte pleine'}</small><b>${ligne[0]}</b><span>${ligne[1]}</span></div><em>${ligne[2]}</em></div>`; })()}
+      ${tir}
     </div>
-    ${S.toast ? `<div class="toast${S.toast.bon ? ' bon' : ''}" data-a="toast" title="Fermer"><div class="ill">${S.toast.ill}</div><div><small>L’Atelier by · maintenant</small>${S.toast.txt}</div></div>` : ''}
+    ${S.toast ? `<div class="toast${S.toast.bon ? ' bon' : ''}" data-a="toast" title="Fermer"><div class="ill${S.toast.bon ? ' blanc' : ''}">${ILL[S.toast.ill]}</div><div><small>L’Atelier by · maintenant</small>${S.toast.txt}</div></div>` : ''}
     <div class="nav"><span>Accueil</span><span class="on">Fidélité</span><span>Commander</span><span>Profil</span></div>
   </div></div>`;
 }
@@ -396,6 +436,7 @@ function vueApp(){
 function vueRegles(){
   const nb = Math.floor(NS / S.x), ks = Array.from({ length: nb }, (_, i) => ord((i + 1) * S.x));
   const schema = x => { let h = ''; for (let i = 0; i < NS; i++) { h += '<i></i>'; if ((i + 1) % x === 0) { h += '<i class="b"></i>'; } }
+    const r = NS % x; h += '<i class="m"></i>'.repeat(r ? x + 1 - r : x + 1);
     return `<button class="sch${x === S.x ? ' on' : ''}" data-a="x" data-v="${x}"><span class="sg" style="grid-template-columns:repeat(${x + 1},9px)">${h}</span><span>x = ${x}<br>${Math.floor(NS / x)} bons</span></button>`; };
   return `<div class="reg">
     <div><span class="ic">€</span><div><b>Une case par semaine</b><p>Dès <span class="v">${eur(S.seuil)}</span> d’achats dans la semaine, en une ou plusieurs fois : boutique, click & collect, livraison. Une case par semaine au plus.</p></div></div>
@@ -403,25 +444,30 @@ function vueRegles(){
     <div><span class="ic">✦</span><div><b>Chaque semaine a son thème</b><p>Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div></div>
     <div><span class="ic">x</span><div><b>Toutes les <span class="v">${S.x}</span> cases, un bon illustré</b><p>${ks.length > 1 ? 'La ' + ks.slice(0, -1).join(', la ') + ' et la ' + ks[ks.length - 1] : 'La ' + ks[0]} case cochées débloquent chacune un bon de <span class="v">${eur(S.valeur)}</span>, valable <span class="v">${S.validite}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
       <div class="schemas">${[2, 3, 4].map(schema).join('')}</div></div></div>
-    <div><span class="ic">12</span><div><b>Carte pleine : le tirage au sort</b><p>Tous les clients qui ont coché les ${NS} cases participent au tirage au sort du ${dTirage()}, dans tout le réseau. À gagner : <span class="v">1 an de pain</span>, un pain par jour à <span class="v">${eur(S.prix)}</span>, soit ${T.jours} pains et ${eur(lot().valeur)} au prix de vente${S.gagnants > 1 ? ', pour chacun des <span class="v">' + S.gagnants + '</span> gagnants (' + eur(lot().valeur * S.gagnants) + ' en tout)' : ', <span class="v">1</span> gagnant'}. Le gagnant reçoit dans l’app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.</p></div></div>
-    <div><span class="ic">13</span><div><b>La 13e semaine</b><p>Entre deux cartes : le tirage au sort a lieu, le dernier bon se prend, la carte de la saison suivante arrive. Quatre cartes font l’année.</p></div></div>
+    <div><span class="ic">${NS}</span><div><b>Carte pleine : le super bon cadeau</b><p>Les ${NS} cases cochées débloquent le super bon cadeau de <span class="v">${eur(S.superBon)}</span>, valable ${S.validite} jours, en plus des bons. Il faut ne manquer aucune semaine.</p></div></div>
+    ${S.tirage ? `<div><span class="ic">1 an</span><div><b>Carte pleine : le tirage au sort</b><p>Tous les clients qui ont coché les ${NS} cases participent au tirage au sort du ${dLong(T.le)}, dans tout le réseau. À gagner : <span class="v">1 an de pain</span>, un pain par jour à <span class="v">${eur(S.prix)}</span>, soit ${T.jours} pains et ${eur(lot())} au prix de vente${S.gagnants > 1 ? ', pour chacun des <span class="v">' + S.gagnants + '</span> gagnants (' + eur(lot() * S.gagnants) + ' en tout)' : ', <span class="v">1</span> gagnant'}. Le gagnant reçoit dans l’app une carte « 1 an de pain » : un pain par jour à la caisse, pendant 12 mois.</p></div></div>` : ''}
+    <div><span class="ic">T</span><div><b>${NS} semaines, un trimestre</b><p>Une case pour chacune des ${NS} semaines du trimestre. La carte de la saison suivante arrive le lundi d’après : quatre cartes font l’année.</p></div></div>
   </div>
-  <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· 12 semaines + la 13e semaine</em></h3>
-  <div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><h4><span class="ill">${s.img}</span><span>${s.nom}</span><small>${s.etat}</small></h4>
-    <div class="dt">${s.du} → ${s.au} · relais ${s.cadeaux}</div><div class="ch">${s.fetes.map(f => `<span>${f}</span>`).join('')}</div></div>`).join('')}</div>
-  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons et le thème de chaque semaine sont des valeurs de départ. Les dessins sont ceux du design system (tablette des vendeuses) ; la Chandeleur n’a pas encore le sien : la brioche roulée la tient.</p>`;
+  <h3 class="pl-t" style="margin-top:22px">Une carte par saison <em>· ${NS} semaines, un trimestre</em></h3>
+  <div class="annee">${SAISONS.map(s => `<div class="sa${s.etat === 'en cours' ? ' on' : ''}"><div class="ill">${ILL[s.ill]}</div><h4>${s.nom}<small>${s.etat}</small></h4>
+    <div class="dt">${s.du} → ${s.au}</div><div class="ch">${s.fetes.map(f => `<span>${f}</span>`).join('')}</div></div>`).join('')}</div>
+  <p class="note">Branché sur ce qui existe : la carte QR donnée en caisse (<em>Fidélité › En caisse</em>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons, le super bon, le tirage et le thème de chaque semaine sont des valeurs de départ. Version alignée sur la reprise dans Claude Design (claude-design.html).</p>`;
 }
 
 function vueBarre(){
   const fini = S.semaine > NS, sem = fini ? null : SEMAINES[S.semaine - 1];
   const num = (k, v, u, pas) => `<label class="num"><input type="number" min="1" step="${pas || 1}" value="${v}" data-r="${k}">${u}</label>`;
+  const chk = (k, v, l) => `<label class="chk"><input type="checkbox" data-r="${k}"${v ? ' checked' : ''}>${l}</label>`;
   return `<div class="ctl">
     <div class="grp"><span>Réglages</span>x <span class="seg2">${[2, 3, 4].map(x => `<button class="${x === S.x ? 'on' : ''}" data-a="x" data-v="${x}">${x}</button>`).join('')}</span></div>
     <div class="grp">seuil ${num('seuil', S.seuil, '€')}</div>
     <div class="grp">bon ${num('valeur', S.valeur, '€', 0.5)} ${num('validite', S.validite, 'jours')}</div>
-    <div class="grp">tirage : le pain ${num('prix', S.prix, '€', 0.1)} ${num('gagnants', S.gagnants, S.gagnants > 1 ? 'gagnants' : 'gagnant')}</div>
+    <div class="grp">super bon ${num('superBon', S.superBon, '€')}</div>
+    <div class="grp">${chk('tirage', S.tirage, 'tirage au sort')}${S.tirage ? ' · le pain ' + num('prix', S.prix, '€', 0.1) + ' ' + num('gagnants', S.gagnants, S.gagnants > 1 ? 'gagnants' : 'gagnant') : ''}</div>
     <span class="sep"></span>
-    <div class="grp"><span>Simulation</span><span class="etat">${fini ? '13e semaine (15 – 21/02)' : 'Semaine ' + S.semaine + ' · ' + sem.du + ' – ' + sem.au + ' · ' + nf(S.depense, 2) + ' €'}</span></div>
+    <div class="grp"><span>Présentation</span>${chk('incline', S.incline, 'carte inclinée')} ${chk('teinte', S.teinte, 'fêtes teintées')}</div>
+    <span class="ligne"></span>
+    <div class="grp"><span>Simulation</span><span class="etat">${fini ? 'Carte terminée (dès le ' + dm(T.le) + ')' : 'Semaine ' + S.semaine + ' · ' + sem.du + ' – ' + sem.au + ' · ' + nf(S.depense, 2) + ' €'}</span></div>
     <div class="grp">${[2.8, 4.2, 7.5].map(m => `<button class="bt p" data-a="ticket" data-m="${m}"${fini ? ' disabled' : ''}>+ ticket ${eur(m)}</button>`).join('')}
       <button class="bt" data-a="suivante"${fini ? ' disabled' : ''}>Semaine suivante ›</button><button class="bt" data-a="reset">Revenir au 14 janvier</button></div>
   </div>`;
@@ -432,11 +478,11 @@ function rendre(){
   document.getElementById('pl').innerHTML = `
     <div class="pl-k">Maquette interactive · Fidélité › Bingo de saison · 12/11/2026</div>
     <h1>Le bingo de saison : une carte qui se remplit toute seule</h1>
-    <p class="pl-sous">Une carte par saison, une case par semaine : dès ${eur(S.seuil)} d’achats dans la semaine, la case se coche dans l’app, sans tampon. Chaque case porte une fête de la saison ou le produit de la semaine, toutes les ${S.x} cases cochées, un bon illustré se débloque, et la carte pleine joue au tirage au sort d’1 an de pain. Ajoutez des tickets, passez à la semaine suivante, cliquez une semaine passée, changez x.</p>
+    <p class="pl-sous">Une carte par saison, une case par semaine : dès ${eur(S.seuil)} d’achats dans la semaine, la case se coche dans l’app, sans tampon. Chaque case porte une fête de la saison ou le produit de la semaine ; toutes les ${S.x} cases cochées, un bon illustré se débloque, et la carte pleine donne le super bon cadeau${S.tirage ? ' et le tirage au sort d’1 an de pain' : ''}. Ajoutez des tickets, passez à la semaine suivante, cliquez une semaine passée, changez x.</p>
     ${vueBarre()}
     <div class="pl-g">
       <section><h3 class="pl-t">La carte imprimée <em>· donnée en caisse, A6</em></h3>${vueCarte()}</section>
-      <section><h3 class="pl-t">L’app du client <em>· ${fini ? 'la 13e semaine' : new Date(aujourdhui() + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' })}</em></h3>${vueApp()}</section>
+      <section><h3 class="pl-t">L’app du client <em>· ${fini ? 'carte terminée' : dLong(aujourdhui())}</em></h3>${vueApp()}</section>
       <section><h3 class="pl-t">Les règles <em>· réglables au cockpit</em></h3>${vueRegles()}</section>
     </div>`;
 }

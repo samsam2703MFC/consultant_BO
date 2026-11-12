@@ -3,7 +3,7 @@
  *   node docs/maquettes/bingo-saison/generer.js        (depuis pilotage-reseau/)
  *
  * 1. Écrit bingo-maquette.html : planche.html avec ses polices, le logo, la bibliothèque QR, bingo.js et les dessins
- *    du design system (public/tablette/img, ramenés à 280 px) intégrés — un seul fichier, qui s'ouvre partout.
+ *    (ill/, ceux de la version Claude Design de Sam) intégrés — un seul fichier, qui s'ouvre partout.
  * 2. L'ouvre tel quel (file://) et joue un parcours : un ticket coche la case de la semaine ; deux semaines plus
  *    tard, la 9e case débloque le 3e bon. Échoue si la page lève une erreur ou si une ressource manque.
  * 3. Écrit les captures en densité 2 : planche.jpg (l'état de départ, le 14 janvier), carte.jpg, app.jpg,
@@ -17,10 +17,9 @@ let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node2
 
 const ICI = __dirname;
 const ASSETS = path.resolve(ICI, '../../../public/assets');
-const DESSINS = path.resolve(ICI, '../../../public/tablette/img');
+const DESSINS = path.join(ICI, 'ill');
 const b64 = f => fs.readFileSync(f).toString('base64');
 const MIME = { '.otf': 'font/otf', '.ttf': 'font/ttf', '.png': 'image/png' };
-const TAILLE = 280;          // les dessins s'affichent à 52 px au plus : 280 px suffisent en densité 2
 
 /* Les dessins dont la maquette a besoin : la liste que bingo.js déclare. */
 function fichiersDessins(){
@@ -33,21 +32,14 @@ function fichiersDessins(){
   const b = await pw.chromium.launch();
   const erreurs = [];
   try {
-    /* 1. Les dessins, ramenés à 280 px dans le navigateur (canvas), puis le fichier autonome. */
+    /* 1. Les dessins (220 px, tels qu'exportés de Claude Design), puis le fichier autonome. */
     const fichiers = fichiersDessins();
-    const outil = await b.newPage();
     const IMG = {};
     for (const f of fichiers) {
       const plein = path.join(DESSINS, f);
-      if (!fs.existsSync(plein)) { throw new Error('dessin introuvable dans le design system : ' + f); }
-      IMG[f] = await outil.evaluate(async ([uri, t]) => {
-        const im = new Image(); im.src = uri; await im.decode();
-        const c = document.createElement('canvas'); c.width = t; c.height = t;
-        const g = c.getContext('2d'); g.imageSmoothingQuality = 'high'; g.drawImage(im, 0, 0, t, t);
-        return c.toDataURL('image/png');
-      }, ['data:image/png;base64,' + b64(plein), TAILLE]);
+      if (!fs.existsSync(plein)) { throw new Error('dessin introuvable : ill/' + f); }
+      IMG[f.replace(/\.png$/, '')] = 'data:image/png;base64,' + b64(plein);
     }
-    await outil.close();
 
     let html = fs.readFileSync(path.join(ICI, 'planche.html'), 'utf8');
     html = html.replace(/url\('\.\.\/\.\.\/\.\.\/public\/assets\/([^']+)'\)/g, (m, rel) => {
@@ -61,7 +53,7 @@ function fichiersDessins(){
     if (/url\('\.\.\/|<script src=/.test(html)) { throw new Error('une ressource reste en lien relatif dans le fichier autonome'); }
     const AUTONOME = path.join(ICI, 'bingo-maquette.html');
     fs.writeFileSync(AUTONOME, html);
-    console.log('bingo-maquette.html :', Math.round(html.length / 1024), 'Ko ·', fichiers.length, 'dessins du design system');
+    console.log('bingo-maquette.html :', Math.round(html.length / 1024), 'Ko ·', fichiers.length, 'dessins');
 
     /* 2 et 3. Le parcours et les captures, sur le fichier autonome. */
     const p = await b.newPage({ viewport: { width: 1680, height: 1100 }, deviceScaleFactor: 2 });
@@ -97,19 +89,25 @@ function fichiersDessins(){
     await clic('[data-a="x"][data-v="4"]');
     const nBons = await p.locator('.mini .mc.bon').count();
     if (nBons !== 3) { erreurs.push('x = 4 : ' + nBons + ' bons au lieu de 3'); }
-    // Le tirage : la semaine du Nouvel An cochée après coup, puis chaque semaine jusqu'à la 12e → carte pleine, inscrite.
+    // La carte pleine : la semaine du Nouvel An cochée après coup, puis chaque semaine jusqu'à la 13e → le super bon
+    // cadeau, et l'inscription au tirage.
     await clic('[data-a="reset"]');
     await clic('[data-a="semaine"][data-n="6"]');
     await clic('[data-a="ticket"][data-m="7.5"]');
-    for (let n = 9; n <= 12; n++) { await clic('[data-a="suivante"]'); await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]'); }
+    for (let n = 9; n <= 13; n++) { await clic('[data-a="suivante"]'); await clic('[data-a="ticket"][data-m="7.5"]'); await clic('[data-a="ticket"][data-m="4.2"]'); }
     await p.waitForTimeout(700);
     const t3 = await texte();
-    if (!/Carte pleine !.*tirage au sort/.test(t3)) { erreurs.push('la carte pleine n’entre pas au tirage : ' + t3); }
+    if (!/Carte pleine, 13 cases sur 13 ! Super bon cadeau de 10 €.*tirage au sort/.test(t3)) { erreurs.push('la carte pleine ne donne pas le super bon et le tirage : ' + t3); }
+    if (!(await p.locator('.mc.mega.plein').count())) { erreurs.push('la case du super bon ne s’allume pas'); }
     if (!(await p.locator('.tir.inscrit').count())) { erreurs.push('la carte du tirage ne dit pas « inscrit »'); }
+    if (!/Super bon cadeau/.test(await p.locator('.porte').innerText())) { erreurs.push('le super bon n’est pas dans le portefeuille'); }
     await p.locator('.tel').screenshot({ path: path.join(ICI, 'app-tirage.jpg'), type: 'jpeg', quality: 92 });
     await clic('[data-a="suivante"]');
     const t4 = await texte();
-    if (!/Tirage au sort ce lundi 15 février/.test(t4)) { erreurs.push('la 13e semaine n’annonce pas le tirage : ' + t4); }
+    if (!/printemps arrive lundi 22\/02.*tirage/.test(t4)) { erreurs.push('la fin de carte n’annonce pas le tirage du 22/02 : ' + t4); }
+    // Sans tirage : la case du super bon reste, le bandeau et la carte du tirage partent.
+    await p.locator('[data-r="tirage"]').uncheck();
+    if (await p.locator('.tir, .tirage-ca').count()) { erreurs.push('le tirage reste affiché une fois coupé'); }
     console.log('parcours :', t1.replace(/\s+/g, ' ').slice(0, 70), '|', t2.replace(/\s+/g, ' ').slice(0, 70), '|', t3.replace(/\s+/g, ' ').slice(0, 90));
   } finally {
     await b.close();
