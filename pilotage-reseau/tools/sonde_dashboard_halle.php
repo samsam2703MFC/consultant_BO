@@ -23,7 +23,8 @@ foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'panel_api.php'] as $f) {
 }
 
 const SD_SHOP = 4;
-const SD_PRIVE = '/(^|_)(name|surname|nom|prenom|first_?name|last_?name|email|mail|phone|tel|address|adresse|street|city|zip|postal|iban|vat|tax_number|password|token|hash|comment|remark|note|client_name|employee_name|full_?name)($|_)/i';
+// `name` seul reste lisible (nom d'une checklist, d'un produit, d'un magasin) ; les noms de personne sont masqués.
+const SD_PRIVE = '/^(surname|display_name|first_?name|last_?name|full_?name|client_name|employee_name|completed_by|review_by_name|admin_validated_by_name|email|email_norm|phone|phone_e164|address|street|street_number|city|zip|iban|tax_number|password_hash|note|remark|comment|review_comment)$/i';
 
 $auj = date('Y-m-d');
 $hier = date('Y-m-d', strtotime('-1 day'));
@@ -55,7 +56,7 @@ function sdMontre(string $lib, string $chemin, int $n = 4): mixed
     $t = microtime(true);
     $r = PanelApi::sondeGet($chemin, 30);
     printf("\n-- %s  [%s] HTTP %d · %.1f s\n", $lib, $chemin, $r['code'], microtime(true) - $t);
-    if ($r['corps'] !== null) { echo json_encode(sdNettoie($r['corps'], '', $n), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT), "\n"; }
+    if ($r['corps'] !== null) { echo json_encode(sdNettoie($r['corps'], '', $n), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), "\n"; }
     elseif ($r['erreur']) { echo '   ', $r['erreur'], "\n"; }
     return $r['corps'];
 }
@@ -90,7 +91,7 @@ if (is_array($w['corps'])) {
     echo '  références : ', count($prods), "\n";
     if ($prods) { echo '  champs : ', implode(', ', array_keys((array) $prods[0])), "\n"; }
     usort($prods, static fn ($a, $b) => (float) ($b['waste_cost'] ?? $b['cost'] ?? $b['value'] ?? 0) <=> (float) ($a['waste_cost'] ?? $a['cost'] ?? $a['value'] ?? 0));
-    echo json_encode(sdNettoie(array_slice($prods, 0, 6), '', 6), JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";
+    foreach (array_slice($prods, 0, 8) as $x) { echo '  ', json_encode(sdNettoie($x, '', 3), JSON_UNESCAPED_UNICODE), "\n"; }
 }
 
 sdTitre('5. Commandes clients (à partir d\'hier)');
@@ -111,26 +112,50 @@ if ($l) {
     foreach ($par as $k => $v) { printf("  %-62s %3d · %8.2f €\n", $k, $v['n'], $v['eur']); }
 }
 
-sdTitre('6. Contrôles (tâches et checklists) — hier et aujourd\'hui');
+sdTitre('6. Contrôles (tâches) — hier et aujourd\'hui, une ligne par tâche');
 foreach ([$hier, $auj] as $j) {
-    sdMontre("tâches $j", '/consultant/shops/' . SD_SHOP . '/tasks?date=' . $j, 30);
-    sdMontre("checklists $j", '/consultant/shops/' . SD_SHOP . '/checklists?date=' . $j, 30);
+    $r = PanelApi::sondeGet('/consultant/shops/' . SD_SHOP . '/tasks?date=' . $j, 30);
+    $c = is_array($r['corps']) ? $r['corps'] : [];
+    echo "\n-- $j : HTTP ", $r['code'], ' · résumé ', json_encode($c['summary'] ?? null), "\n";
+    foreach ($c as $k => $v) {
+        if (in_array($k, ['summary', 'tasks'], true)) { continue; }
+        echo "  $k : ", json_encode(sdNettoie($v, (string) $k, 10), JSON_UNESCAPED_UNICODE), "\n";
+    }
+    $parCl = [];
+    foreach ((array) ($c['tasks'] ?? []) as $t) {
+        $cl = (string) ($t['checklist_name'] ?? '?');
+        $parCl[$cl]['h'] = substr((string) ($t['execution_time'] ?? ''), 0, 5);
+        $parCl[$cl]['n'] = ($parCl[$cl]['n'] ?? 0) + 1;
+        $parCl[$cl]['ok'] = ($parCl[$cl]['ok'] ?? 0) + (strtoupper((string) ($t['status'] ?? '')) === 'DONE' ? 1 : 0);
+        $parCl[$cl]['photo'] = ($parCl[$cl]['photo'] ?? 0) + (!empty($t['attachment_id']) ? 1 : 0);
+        $parCl[$cl]['statuts'][(string) ($t['status'] ?? '?')] = ($parCl[$cl]['statuts'][(string) ($t['status'] ?? '?')] ?? 0) + 1;
+        $parCl[$cl]['notes'][] = $t['review_rating'] ?? null;
+    }
+    uasort($parCl, static fn ($a, $b) => strcmp($a['h'], $b['h']));
+    foreach ($parCl as $cl => $x) {
+        $notes = array_values(array_filter($x['notes'], static fn ($v) => $v !== null));
+        printf("  %s  %-40s %2d / %2d faites · %2d photos · %s%s\n", $x['h'], mb_substr($cl, 0, 40), $x['ok'], $x['n'], $x['photo'], json_encode($x['statuts']),
+            $notes ? ' · notes ' . json_encode($notes) : '');
+    }
 }
 
 sdTitre('7. Planning (compté, sans nom)');
 $p = PanelApi::sondeGet('/shops/' . SD_SHOP . '/schedule', 30);
 $pl = is_array($p['corps']) ? PanelApi::liste($p['corps']) : [];
-echo '  HTTP ', $p['code'], ' · ', count($pl), " éléments\n";
-if ($pl) {
-    echo '  champs : ', implode(', ', array_keys((array) $pl[0])), "\n";
-    $parJour = [];
-    foreach ($pl as $s) {
-        $j = substr((string) ($s['date'] ?? $s['start'] ?? $s['start_datetime'] ?? $s['day'] ?? ''), 0, 10);
-        if ($j >= $lundi && $j <= date('Y-m-d', strtotime($lundi . ' +6 days'))) { $parJour[$j] = ($parJour[$j] ?? 0) + 1; }
+echo '  HTTP ', $p['code'], ' · ', count($pl), " postes en tout\n";
+$parJour = []; $max = '';
+foreach ($pl as $x) {
+    $j = (string) ($x['work_date'] ?? '');
+    if ($j > $max) { $max = $j; }
+    if ($j >= date('Y-m-d', strtotime($lundi . ' -7 days')) && $j <= date('Y-m-d', strtotime($lundi . ' +13 days'))) {
+        $h = (strtotime($j . ' ' . ($x['end_hour'] ?? '00:00')) - strtotime($j . ' ' . ($x['start_hour'] ?? '00:00'))) / 3600;
+        $parJour[$j]['postes'] = ($parJour[$j]['postes'] ?? 0) + 1;
+        $parJour[$j]['heures'] = round(($parJour[$j]['heures'] ?? 0) + max(0, $h), 1);
+        $parJour[$j]['personnes'][(int) ($x['id_employee'] ?? 0)] = 1;
     }
-    ksort($parJour);
-    echo '  postes par jour, cette semaine : ', json_encode($parJour), "\n";
-    echo '  exemple (nettoyé) : ', json_encode(sdNettoie($pl[0], '', 3), JSON_UNESCAPED_UNICODE), "\n";
 }
+ksort($parJour);
+echo "  dernier jour planifié : $max\n";
+foreach ($parJour as $j => $v) { printf("  %s : %d postes · %d personnes · %.1f h\n", $j, $v['postes'], count($v['personnes']), $v['heures']); }
 
 echo "\nfin de la sonde\n";
