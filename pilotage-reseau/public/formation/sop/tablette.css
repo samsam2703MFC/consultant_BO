@@ -331,7 +331,7 @@ textarea.in{min-height:64px;resize:vertical;line-height:1.45}
 
 /* Les documents RÉSERVÉS au franchisé et au responsable (07/11/2026) : cadenas et liseré dorés, dans l'onglet Manuel ;
    le PIN du responsable les ouvre. L'or est celui du design system (--prize). */
-.tb-grp--res .sec-t{display:flex;align-items:center;gap:8px;color:var(--prize)}
+.tb-grp--res .sec-t{color:var(--prize)}
 .tb-grp--cons .sec-t{color:#7A5207}
 .tb-sop.res{border-color:var(--prize);box-shadow:inset 4px 0 0 var(--prize)}
 .tb-sop.res:hover{border-color:var(--prize)}

@@ -53,7 +53,7 @@
       moment: { ouverture: 'Ouverture', journee: 'Journée', 'apres-midi': 'Après-midi', fermeture: 'Fermeture', autres: 'Autres moments' },
       onglets: { ouverture: 'Ouverture', journee: 'Journée de travail', fermeture: 'Fermeture', manuel: 'Manuel' }, manuel: 'Mode d’emploi du magasin', okFin: 'SOP lue jusqu’au bout',
       ongletsS: { ouverture: 'avant les clients', journee: 'du début à la fin', fermeture: 'jusqu’au coffre', manuel: 'articles' }, article1: 'article',
-      reserveT: 'Réservé au franchisé et au responsable', reserve: 'réservé', pinResp: 'PIN du responsable', pinRespS: 'Ce document est réservé au franchisé et au responsable du magasin. Tape le PIN du responsable pour l’ouvrir.',
+      reserveT: 'Pour le franchisé et le responsable', reserve: 'réservé', pinResp: 'PIN du responsable', pinRespS: 'Ce document est réservé au franchisé et au responsable du magasin. Tape le PIN du responsable pour l’ouvrir.',
       rienManuel: 'Aucun article du manuel pour l’instant.', consultT: 'Pour les consultants', articlesT: 'Articles du manuel opératoire', partie: 'Partie', toutesParties: 'Toutes les parties', suivArt: 'Lu · suivante →', lue: 'partie lue', lues: 'parties lues', parties: 'parties',
       sousJ: { journee: 'Pendant la journée', 'apres-midi': 'L’après-midi', autres: 'Au besoin' }, mesPostes: 'Mes postes', toutMagasin: 'Tout le magasin',
       rienMoment: 'Aucune SOP pour ce moment.',
@@ -78,7 +78,7 @@
       moment: { ouverture: 'Opening', journee: 'Overdag', 'apres-midi': 'Namiddag', fermeture: 'Sluiting', autres: 'Andere momenten' },
       onglets: { ouverture: 'Opening', journee: 'Werkdag', fermeture: 'Sluiting', manuel: 'Handboek' }, manuel: 'Handleiding van de winkel', okFin: 'SOP helemaal gelezen',
       ongletsS: { ouverture: 'vóór de klanten', journee: 'van begin tot einde', fermeture: 'tot aan de kluis', manuel: 'artikels' }, article1: 'artikel',
-      reserveT: 'Voorbehouden aan de franchisenemer en de verantwoordelijke', reserve: 'voorbehouden', pinResp: 'PIN van de verantwoordelijke', pinRespS: 'Dit document is voorbehouden aan de franchisenemer en de verantwoordelijke van de winkel. Typ de PIN van de verantwoordelijke om het te openen.',
+      reserveT: 'Voor de franchisenemer en de verantwoordelijke', reserve: 'voorbehouden', pinResp: 'PIN van de verantwoordelijke', pinRespS: 'Dit document is voorbehouden aan de franchisenemer en de verantwoordelijke van de winkel. Typ de PIN van de verantwoordelijke om het te openen.',
       rienManuel: 'Nog geen artikels in het handboek.', consultT: 'Voor de consultants', articlesT: 'Artikels van het operationeel handboek', partie: 'Deel', toutesParties: 'Alle delen', suivArt: 'Gelezen · volgende →', lue: 'deel gelezen', lues: 'delen gelezen', parties: 'delen',
       sousJ: { journee: 'Overdag', 'apres-midi': 'In de namiddag', autres: 'Indien nodig' }, mesPostes: 'Mijn posten', toutMagasin: 'Hele winkel',
       rienMoment: 'Geen SOP voor dit moment.',
@@ -267,9 +267,9 @@
       : POSTES.map(p => ({ l: t().poste[p], sops: sops.filter(s => s.poste === p) })).concat([{ l: t().sansComp, sops: sops.filter(s => !POSTES.includes(s.poste)) }]);
     const corps = groupes.filter(g => g.sops.length).map(g => {
       const vus = g.sops.filter(s => st(s.id) === 'vu').length;
-      return `<div class="tb-grp${g.res ? ' tb-grp--res' : g.cons ? ' tb-grp--cons' : ''}"><div class="sec-t">${g.res ? ICO_CAD : ''}${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
-        ${g.sops.map(s => `<button class="tb-sop${s.acces === 'responsable' ? ' res' : ''}" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${s.acces === 'responsable' && !S.acces ? ICO_CAD : ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
-          <small>${s.acces === 'responsable' ? esc(t().reserve) + ' · ' : ''}${s.type === 'Article' ? `${foDe(s) ? esc(foDe(s)) + ' · ' : ''}${s.nbEtapes} ${esc(t().parties)}` : `${s.acces === 'responsable' ? 'SOP · ' : ''}${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}`}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
+      return `<div class="tb-grp${g.res ? ' tb-grp--res' : g.cons ? ' tb-grp--cons' : ''}"><div class="sec-t">${esc(g.l)}${S.moi ? `<small>${vus} / ${g.sops.length} ${esc(t().vus)}</small>` : ''}</div>
+        ${g.sops.map(s => `<button class="tb-sop" data-sop="${esc(s.id)}"><span class="st ${st(s.id)}">${ic[st(s.id)]}</span><span class="x"><b>${esc(L(s.titre))}${s.statut === 'a_valider' ? ` <span class="pill att">${esc(t().aValider)}</span>` : ''}</b>
+          <small>${s.type === 'Article' ? `${foDe(s) ? esc(foDe(s)) + ' · ' : ''}${s.nbEtapes} ${esc(t().parties)}` : `${s.acces === 'responsable' ? 'SOP · ' : ''}${esc(t().poste[s.poste] || s.poste || '')} · ${s.nbEtapes} ${esc(t().etapes)}`}</small></span>${S.moi ? `<span class="pill ${st(s.id) === 'vu' ? 'ok' : st(s.id) === 'a_revoir' ? 'ko' : st(s.id) === 'non' ? '' : 'att'}">${esc(t().etats[st(s.id)])}</span>` : ''}<span class="fl">›</span></button>`).join('')}</div>`;
     }).join('') || `<div class="vide">${esc(S.onglet === 'manuel' ? t().rienManuel : S.moi && !S.tout ? t().rienJournee : t().rienMoment)}</div>`;
     const chips = S.moi
       ? `<div class="tb-chips"><button data-tout="0" class="${S.tout ? '' : 'on'}">${esc(t().mesPostes)}</button><button data-tout="1" class="${S.tout ? 'on' : ''}">${esc(t().toutMagasin)}</button></div>`
@@ -467,7 +467,6 @@
   async function ouvrir(id) {
     const ligne = ((S.init && S.init.sops) || []).find(x => x.id === id);
     // Un document réservé demande d'abord le PIN du responsable (une fois par onglet, 4 h).
-    if (ligne && ligne.acces === 'responsable' && !S.acces) { S.vue = 'acces'; S.aOuvrir = id; S.pin = ''; S.erreur = null; return rendre(); }
     try {
       S.sop = await api('/formation/sop/tablette/sop/' + encodeURIComponent(id) + (S.acces ? '?acces=' + encodeURIComponent(S.acces) : ''));
       S.vue = 'lecture'; S.etape = 0; S.vuEtapes = {}; S.sommaire = false; S.aide = false; S.qi = 0; S.reponses = []; S.choix = null; S.resultat = null; S.valideur = null; S.pin = ''; S.note = ''; S.erreur = null;
