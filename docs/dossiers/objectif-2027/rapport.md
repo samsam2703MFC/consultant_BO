@@ -29,7 +29,7 @@ Côté chiffres, 2027 se joue sur la marge plus que sur le volume : le réseau f
 | Retravailler toute la gamme pâtisserie à ×3 | Hors tartes, tartissières et cakes, la pâtisserie pèse environ 218 000 € par an (6 % du CA) et tourne déjà à ×2,88. Remonter à ×3 les produits en dessous rapporte environ 11 000 € de marge brute par an. | Soutenu, gain modeste : l'enjeu est la vente à la part |
 | Niveler les prix partout au prix le plus haut du réseau | À volumes inchangés, environ +432 000 € de marge brute par an sur toute la gamme, dont 25 000 € en pâtisserie. Corbais en porte 276 000 €. Le food cost du réseau passerait de 39,4 % à environ 35,3 %. | Question ouverte : prix conseillés ou imposés ? Le plus gros levier ; par paliers à Corbais |
 | Adapter les gammes : il y aura des coupes | 114 références font 80 % du CA. 163 références se vendent moins d'une fois par jour dans tout le réseau (7,8 % du CA), dont 48 sous ×2,5. | Soutenu ; liste à arrêter par famille avec l'usine |
-| Gâteau de 12 parts à 3,90 € la part, offre 4+1, objectif ×4 : finition en Belgique, découpe aux ultrasons devant le client | Pour un ×4, le gâteau fini doit coûter au plus 9,10 € HT (moitié des parts en 4+1, une part invendue). La formule 12 × 3,90 / 3 = 15,60 € et l'usine à 13,20 € donnent ×2,3 à ×3,3. Unité de découpe : 7 000 USD par magasin, remboursée après environ 220 gâteaux. | À cadrer avec l'usine : 9,10 € HT finition comprise. But : automatiser l'usine, augmenter les marges, développer le réseau |
+| Gâteau de 10 parts à 3,90 € la part, offre 4+1, objectif ×4 : finition en Belgique, découpe aux ultrasons devant le client | Pour un ×4, le gâteau fini doit coûter au plus 7,45 € HT (moitié des parts en 4+1, une part invendue). La formule 10 × 3,90 / 3 = 13,00 € et l'usine à 13,20 € donnent ×2,3 à ×2,8. Unité de découpe : 7 000 USD par magasin, remboursée après environ 270 gâteaux. | À cadrer avec l'usine : 7,45 € HT finition comprise. But : automatiser l'usine, augmenter les marges, développer le réseau |
 | Mêmes SOP partout, tout le monde sur la tablette, mêmes vêtements de travail et même packaging | 367 des 461 produits vendus dans plusieurs magasins n'ont pas le même prix. Corbais et Sombreffe ont rendu 0 % des tâches au 3e trimestre. | Soutenu, priorité n° 1 |
 | Nouveaux franchisés : 1 semaine dans chaque magasin, tablette en main | La formation n'a de sens que si les 4 magasins appliquent le standard. Aujourd'hui, 2 sur 4 n'utilisent pas les tâches. | Soutenu, après mise à niveau |
 | Développer le réseau : Wemmel, Grimbergen, Sambreville, Malines… | Les quatre magasins font de 0,57 à 1,84 M€ de CA sur 12 mois. Chaque ouverture suppose le standard en place : tablette, SOP, gamme commune, 4 semaines de formation. | Soutenu, une fois le standard en place dans les 4 magasins |
@@ -113,49 +113,49 @@ Les produits qui partent le plus à la poubelle, à Gosselies et Sombreffe réun
 | Duo framboise & passion Ø 180 | 5 | 7,5 % | 110 € |
 | Duo chocolat Ø 180 | 4 | 4,8 % | 90 € |
 
-Les entremets individuels se jettent à environ 11 à 13 % là où ils sont déclarés : c'est plus qu'une part sur douze. L'hypothèse d'une part invendue par gâteau, dans la section suivante, est donc réaliste, voire optimiste. Le même entremets individuel se vend 4,00 € à Gosselies, 4,50 € à Corbais et Halle, 4,90 € à Sombreffe.
+Les entremets individuels se jettent à environ 11 à 13 % là où ils sont déclarés : c'est plus qu'une part sur dix. L'hypothèse d'une part invendue par gâteau, dans la section suivante, est donc réaliste, voire optimiste. Le même entremets individuel se vend 4,00 € à Gosselies, 4,50 € à Corbais et Halle, 4,90 € à Sombreffe.
 
 ~ Période du 3 août au 7 novembre 2026 ; éclairs, choux nappés et chouquettes exclus.
 
 ## 2. Produit
 
-### Le gâteau de 12 parts à 3,90 € : prix usine pour un ×4, découpe devant le client
+### Le gâteau de 10 parts à 3,90 € : prix usine pour un ×4, découpe devant le client
 
 > [Pourquoi ce projet] Automatiser la production à l'usine, augmenter les marges et développer le réseau. L'usine produit un seul format de gâteau entier, une partie de la finition se fait en Belgique et la découpe se fait devant le client : un produit standard, à ×4, qui se reproduit tel quel dans chaque nouveau magasin.
 
-Une seule offre en volume : le 4+1 (5 parts pour 4 payées, 20 % de remise). Pour un ×4 (food cost de 25 %) avec la part à 3,90 € TTC, le gâteau fini doit coûter au plus 9,10 € HT dans le scénario réaliste (moitié des parts en 4+1, une part invendue), et 11,04 € si tout part au prix plein. Ce montant couvre le gâteau fini : la partie de la finition faite en Belgique s'en déduit. La formule de la réunion, 12 × 3,90 / 3 = 15,60 €, et l'usine à 13,20 € restent loin du ×4 (×2,3 à ×3,3).
+Une seule offre en volume : le 4+1 (5 parts pour 4 payées, 20 % de remise). Pour un ×4 (food cost de 25 %) avec la part à 3,90 € TTC, le gâteau fini doit coûter au plus 7,45 € HT dans le scénario réaliste (moitié des parts en 4+1, une part invendue), et 9,20 € si tout part au prix plein. Ce montant couvre le gâteau fini : la partie de la finition faite en Belgique s'en déduit. La formule de la réunion, 10 × 3,90 / 3 = 13,00 €, et l'usine à 13,20 € restent loin du ×4 (×2,3 à ×2,8).
 
 $$ prix usine max = (parts vendues × prix HT moyen d'une part) ÷ 4
 
-| Scénario pour un gâteau de 12 parts à 3,90 € TTC | CA HT par gâteau | Coefficient si l'usine facture 15,60 € | Coefficient si l'usine facture 13,20 € | Prix usine max pour un ×4 |
+| Scénario pour un gâteau de 10 parts à 3,90 € TTC | CA HT par gâteau | Coefficient si l'usine facture 13,00 € | Coefficient si l'usine facture 13,20 € | Prix usine max pour un ×4 |
 | --- | --- | --- | --- | --- |
-| 12 parts au prix plein (TVA retirée) | 44,15 € | ×2,83 | ×3,34 | 11,04 € |
-| La moitié des parts en 4+1 | 39,74 € | ×2,55 | ×3,01 | 9,93 € |
-| Moitié en 4+1 et 1 part invendue | 36,42 € | ×2,33 | ×2,76 | 9,11 € |
+| 10 parts au prix plein (TVA retirée) | 36,79 € | ×2,83 | ×2,79 | 9,20 € |
+| La moitié des parts en 4+1 | 33,11 € | ×2,55 | ×2,51 | 8,28 € |
+| Moitié en 4+1 et 1 part invendue | 29,80 € | ×2,29 | ×2,26 | 7,45 € |
 
 Le 4+1 se lit « 4 achetées, 1 offerte » (5 parts pour 15,60 €, soit 3,12 € la part), comme le 4+1 déjà en place sur les mignardises et le cougnou. Le coefficient se calcule sur le prix HT, comme dans le panel.
 
 Trois repères pour fixer le prix usine :
 
-1. Facturer le gâteau fini à environ 9,10 € HT, finition en Belgique comprise : le ×4 tient même avec la moitié des parts en 4+1 et une part invendue.
-2. Avec l'usine à 13,20 €, le ×4 est hors de portée (×2,8 à ×3,3) ; à 15,60 €, encore moins (×2,3 à ×2,8).
-3. Pour garder un prix usine plus haut, il faut limiter le 4+1 : sans offre et sans invendu, le ×4 tolère 11,04 € HT.
+1. Facturer le gâteau fini à environ 7,45 € HT, finition en Belgique comprise : le ×4 tient même avec la moitié des parts en 4+1 et une part invendue.
+2. Avec l'usine à 13,20 €, ou à 13,00 € selon la formule de la réunion, le ×4 est hors de portée (×2,3 à ×2,8).
+3. Pour garder un prix usine plus haut, il faut limiter le 4+1 : sans offre et sans invendu, le ×4 tolère 9,20 € HT.
 
-La découpe se fait devant le client avec une unité de découpe à ultrasons importée de Chine, à 7 000 USD par unité (environ 6 000 € à 0,86 € le dollar, cours à confirmer), hors transport et droits d'importation. Au ×4, un gâteau laisse environ 27,30 € HT de marge brute (scénario réaliste, avant le coût de la finition) : une unité est remboursée après environ 220 gâteaux, soit 7 mois à un gâteau par jour. Équiper les quatre magasins coûte 28 000 USD.
+La découpe se fait devant le client avec une unité de découpe à ultrasons importée de Chine, à 7 000 USD par unité (environ 6 000 € à 0,86 € le dollar, cours à confirmer), hors transport et droits d'importation. Au ×4, un gâteau laisse environ 22,35 € HT de marge brute (scénario réaliste, avant le coût de la finition) : une unité est remboursée après environ 270 gâteaux, soit 9 mois à un gâteau par jour. Équiper les quatre magasins coûte 28 000 USD.
 
 À vérifier avant la commande : le marquage CE de la machine, le règlement européen sur les machines s'appliquant à partir du 20 janvier 2027, et la conformité des pièces au contact des aliments.
 
 Point de vigilance : les entremets individuels se vendent 4,50 € (environ 120 par semaine dans le réseau). Une part à 3,90 € reste sous ce prix : elle peut les cannibaliser si les deux gammes se ressemblent en vitrine.
 
-Simulation par client, part de tarte ou de gâteau à 3,90 € TTC, gâteau facturé 9,10 € HT par l'usine (0,76 € la part) : le 4+1 fait monter le ticket et la marge par client, même si la marge par part baisse.
+Simulation par client, part de tarte ou de gâteau à 3,90 € TTC, gâteau de 10 parts facturé 7,45 € HT par l'usine (0,75 € la part) : le 4+1 fait monter le ticket et la marge par client, même si la marge par part baisse.
 
 | Achat du client | Parts | Ticket TTC | Prix par part | Marge par client (HT) | Marge en % | Coefficient | Marge si l'usine facture 13,20 € |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| 1 part | 1 | 3,90 € | 3,90 € | 2,92 € | 79 % | ×4,85 | 2,58 € |
-| 2 parts | 2 | 7,80 € | 3,90 € | 5,84 € | 79 % | ×4,85 | 5,16 € |
-| 4+1 (5 parts, 4 payées) | 5 | 15,60 € | 3,12 € | 10,92 € | 74 % | ×3,88 | 9,22 € |
+| 1 part | 1 | 3,90 € | 3,90 € | 2,93 € | 80 % | ×4,94 | 2,36 € |
+| 2 parts | 2 | 7,80 € | 3,90 € | 5,87 € | 80 % | ×4,94 | 4,72 € |
+| 4+1 (5 parts, 4 payées) | 5 | 15,60 € | 3,12 € | 10,99 € | 75 % | ×3,95 | 8,12 € |
 
-Le 4+1 vaut une remise de 20 %. Un client en 4+1 laisse 3,7 fois la marge d'un client à une part, avec un ticket de 15,60 €, dans le panier moyen du réseau (11,80 à 17,70 €) : l'offre sert le trafic et le panier. Avec l'usine à 9,10 €, le 4+1 reste près de ×4 ; avec l'usine à 13,20 €, il tombe à ×2,68.
+Le 4+1 vaut une remise de 20 %. Un client en 4+1 laisse 3,8 fois la marge d'un client à une part, avec un ticket de 15,60 €, dans le panier moyen du réseau (11,80 à 17,70 €) : l'offre sert le trafic et le panier. Avec l'usine à 7,45 €, le 4+1 reste près de ×4 ; avec l'usine à 13,20 €, il tombe à ×2,23.
 
 ### Le packaging : trois formats de boîte, guidés par la caisse
 
@@ -172,7 +172,6 @@ Le 4+1 (5 parts) tient juste dans la boîte M, remplie à 71 %.
 > [Idée : la caisse allume la bonne boîte] Une LED au-dessus de chaque emplacement de boîte, pilotée par la caisse via un Arduino. Quand la vendeuse encode l'article (1/4, 4+1, tarte entière…), la caisse envoie le format à la carte, qui allume la LED de la bonne boîte : pas d'erreur de format, un geste plus rapide, et chaque boîte sortie est comptée (100 % tracé, réassort du packaging).
 
 - À vérifier : la caisse doit pouvoir envoyer un signal à chaque article (réseau ou USB) ; une carte avec Wi-Fi, de type ESP32, évite les câbles. Matériel à chiffrer.
-- Écart à trancher : la simulation compte 10 parts par gâteau entier, le calcul du prix usine en compte 12.
 
 ### Adapter les gammes : il y aura des coupes
 
@@ -548,7 +547,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 | --- | --- | --- | --- |
 | Niveler les prix (prix conseillés) | +432 k€ de marge au plus haut du réseau, +167 k€ au prix médian | | T2 2027 |
 | Pâtisserie à ×3 (produits sous ×3) | +11 k€ de marge | | T2 → T3 2027 |
-| Gâteau à la part (12 parts à 3,90 €) | nouveau produit à ×4 : environ 27,30 € HT de marge par gâteau | découpe aux ultrasons : 7 000 USD par magasin, 28 000 USD pour les 4 | test T1, 4 magasins T2 |
+| Gâteau à la part (10 parts à 3,90 €) | nouveau produit à ×4 : environ 22,35 € HT de marge par gâteau | découpe aux ultrasons : 7 000 USD par magasin, 28 000 USD pour les 4 | test T1, 4 magasins T2 |
 | Coupes de gamme | 163 références à revoir (7,8 % du CA), moins d'invendus | | T1 2027 |
 | Kit décor anniversaire unique | gâteaux d'anniversaire à ×1,9 – ×2,4 aujourd'hui | | T1 2027 |
 | Tenue de travail et packaging uniques | image de marque ; emballage prévu à 2 % du CA | budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € ; réassort de l'emballage : environ 74 k€ pour le réseau | T1 → T2 2027 |
@@ -570,7 +569,7 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 Les échéances ci-dessous sont des propositions ; les responsables restent à désigner.
 
 - [ ] Compléter au panel les recettes manquantes de la gamme pâtisserie et corriger les recettes incohérentes (décembre 2026).
-- [ ] Chiffrer à l'usine le coût de revient réel du gâteau de 12 parts et de sa finition en Belgique, pour un prix usine d'au plus 9,10 € HT (×4), puis valider l'offre 4+1 (décembre 2026).
+- [ ] Chiffrer à l'usine le coût de revient réel du gâteau de 10 parts et de sa finition en Belgique, pour un prix usine d'au plus 7,45 € HT (×4), puis valider l'offre 4+1 (décembre 2026).
 - [ ] Demander à l'avocat ce qui peut être imposé en prix, puis fixer une grille de prix conseillés unique, alignée sur le prix le plus haut du réseau, et unifier les kits décor des gâteaux d'anniversaire (janvier 2027).
 - [ ] Arrêter avec l'usine la liste des références coupées, famille par famille, en partant des 48 références vendues moins d'une fois par jour et sous ×2,5 (janvier 2027).
 - [ ] Faire chiffrer l'import de l'unité de découpe à ultrasons (7 000 USD, transport, droits, marquage CE, contact alimentaire) et en équiper le magasin pilote (janvier 2027).
@@ -586,7 +585,7 @@ Les échéances ci-dessous sont des propositions ; les responsables restent à d
 - [ ] Faire valider l'annexe au DIP sur la fréquence des contrôles et la SOP des contrôles, puis planifier les visites de novembre et décembre dans l'application Visites.
 - [ ] Préparer la démonstration de la réunion : tablette, application Visites, liaison au grand écran.
 - [ ] Compléter la liste des dépenses marketing 2026 (factures payées hors du fonds), enregistrer toutes les redevances dues dans le fonds, puis arbitrer le budget marketing 2027 (décembre 2026).
-- [ ] Fixer le nombre de parts par gâteau (10 ou 12), puis prototyper dans le magasin pilote la liaison caisse → Arduino → LED des emplacements de boîtes S, M, L (T1 2027).
+- [ ] Prototyper dans le magasin pilote la liaison caisse → Arduino → LED des emplacements de boîtes S, M, L (T1 2027).
 - [ ] Choisir une tenue de travail et un packaging uniques pour le réseau, chez un même fournisseur, avec un prix de vente commun pour les sacs et les boîtes, sur le budget marque : packaging 5 000 à 6 500 €, uniformes environ 2 500 €, mise au point graphique 3 000 € (février 2027).
 - [ ] Lancer les études de marché de Wemmel, Grimbergen, Sambreville et Malines dans le module Scouting du cockpit (T1 2027).
 - [ ] Faire valider la majoration de 0,5 % par l'avocat et préparer l'avenant au contrat (janvier 2027).

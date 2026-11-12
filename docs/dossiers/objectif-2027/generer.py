@@ -56,7 +56,7 @@ def fig_patisserie():
 
 def fig_feuille_de_route():
     voies = ['Gamme pâtisserie', 'Réseau et process', 'Outils (développement continu)']
-    trim = [('T1 2027', 'janv. – mars', [['Recettes complètes au panel', 'Prix usine du gâteau 12 parts', 'Test à la part : 1 magasin', 'Coupes de gamme arrêtées', 'Kit décor anniversaire unique'],
+    trim = [('T1 2027', 'janv. – mars', [['Recettes complètes au panel', 'Prix usine du gâteau 10 parts', 'Test à la part : 1 magasin', 'Coupes de gamme arrêtées', 'Kit décor anniversaire unique'],
                                         ['Corbais et Sombreffe : 80 % des tâches sur la tablette', 'Avenant +0,5 % signé', 'Tenue et packaging choisis'],
                                         ['Cockpit : coefficient réel par produit, 5+1 compris']]),
             ('T2 2027', 'avr. – juin', [['Vente à la part : 4 magasins', 'Grille de prix unique', 'Entremets revus à ×3'],
