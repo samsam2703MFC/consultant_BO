@@ -13,9 +13,12 @@ ICI = os.path.dirname(os.path.abspath(__file__))
 RACINE = os.path.abspath(os.path.join(ICI, '..', '..', '..'))
 FONTS = os.path.join(RACINE, 'public', 'assets', 'ds', 'fonts')
 LOGO = 'data:image/png;base64,' + base64.b64encode(open(os.path.join(RACINE, 'public', 'assets', 'img', 'logo.png'), 'rb').read()).decode()
-SOURCE = os.path.join(ICI, 'rapport.md')
-HTML_OUT = os.path.join(tempfile.gettempdir(), 'objectif-2027-rapport.html')   # page intermédiaire, hors dépôt
-PDF_OUT = os.path.join(ICI, 'Objectif-2027-rapport-reunion.pdf')
+# Deux versions : le rapport complet (par défaut) et la version lean pour les franchisés (argument « franchises »).
+LEAN = len(sys.argv) > 1 and sys.argv[1] == 'franchises'
+SOURCE = os.path.join(ICI, 'franchises.md' if LEAN else 'rapport.md')
+HTML_OUT = os.path.join(tempfile.gettempdir(), 'objectif-2027-franchises.html' if LEAN else 'objectif-2027-rapport.html')   # hors dépôt
+PDF_OUT = os.path.join(ICI, 'Objectif-2027-franchises.pdf' if LEAN else 'Objectif-2027-rapport-reunion.pdf')
+TYPE = 'Réunion franchisés' if LEAN else 'Rapport de réunion'
 META = json.load(open(os.path.join(ICI, 'dossier.json'), encoding='utf-8'))
 
 INK, MUTED, FAINT, LINE, HEAD, RUBY = '#1c1a17', '#7a736a', '#b8b2a8', '#e6e0d8', '#fbf9f5', '#8D1D2C'
@@ -223,7 +226,7 @@ def rendre(md):
         if l.startswith('# '): titre = l[2:].strip(); i += 1; continue
         if l.startswith('### '): blocs.append(f'<h3>{inline(l[4:].strip())}</h3>'); i += 1; continue
         if l.startswith('## '):
-            t = l[3:].strip(); saut = not re.match(r'^(Synthèse|Ouverture|Sources)', t)
+            t = l[3:].strip(); saut = not LEAN and not re.match(r'^(Synthèse|Ouverture|Sources)', t)
             blocs.append(f'<h2 class="saut">{inline(t)}</h2>' if saut else f'<h2>{inline(t)}</h2>'); i += 1; continue
         if l.startswith('{{') and l.strip().endswith('}}'): blocs.append(FIGURES[l.strip()[2:-2]]()); i += 1; continue
         if l.startswith('$$'): blocs.append(f'<div class="formule">{inline(l[2:].strip())}</div>'); i += 1; continue
@@ -324,14 +327,14 @@ table.fdr tr.gate td{{padding:4px 3px 6px;font-size:9px;color:{INK}}}
 def main():
     titre, corps = rendre(open(SOURCE, encoding='utf-8').read())
     version = datetime.date.today().strftime('%d/%m/%Y')
-    refs = [('Réunion', META['reunion']), ('Chiffres lus le', META['chiffres']), ('Version du rapport', version), ('Magasins', META['magasins'])]
-    entete = (f'<div class="head"><img src="{LOGO}" alt="L’Atelier By"><div class="type"><b>Rapport de réunion</b>'
+    refs = [('Réunion', META['reunion']), ('Chiffres lus le', META['chiffres']), ('Version', version), ('Magasins', META['magasins'])]
+    entete = (f'<div class="head"><img src="{LOGO}" alt="L’Atelier By"><div class="type"><b>{TYPE}</b>'
               f'Objectif 2027 · {H(version)}</div></div><h1>{inline(titre)}</h1>'
               '<div class="refs">' + ''.join(f'<div><div class="label">{H(k)}</div><div class="v">{H(v)}</div></div>' for k, v in refs) + '</div>')
     doc = f'<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>{H(titre)}</title><style>{CSS}</style></head><body>{entete}{corps}</body></html>'
     open(HTML_OUT, 'w', encoding='utf-8').write(doc)
     pied = ('<div style="width:100%;margin:0 14mm;padding-top:6px;border-top:1px solid #e6e0d8;font:7.5px/1.6 Helvetica,Arial,sans-serif;'
-            'color:#7a736a;display:flex;justify-content:space-between"><span>L’Atelier By · Rapport de réunion Objectif 2027 · ' + H(version) +
+            'color:#7a736a;display:flex;justify-content:space-between"><span>L’Atelier By · ' + H(TYPE) + ' Objectif 2027 · ' + H(version) +
             '</span><span>Page <span class="pageNumber"></span> / <span class="totalPages"></span></span></div>')
     js = ("const {chromium}=require('playwright');(async()=>{const b=await chromium.launch();const p=await b.newPage();"
           f"await p.goto('file://{HTML_OUT}',{{waitUntil:'load'}});await p.evaluate(()=>document.fonts.ready);"

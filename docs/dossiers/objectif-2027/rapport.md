@@ -297,6 +297,8 @@ Comment s'en servir, chaque jour :
 
 Pourquoi : c'est ce qui rend chaque magasin comparable et donc précieux (100 % pointé, 100 % tracé), ce qui forme un nouveau franchisé en quatre semaines, et ce que mesurent les contrôles et la pénalité de 0,5 %.
 
+> [Au 1er mars 2027, c'est obligatoire] Tout le monde travaille avec sa ou ses tablettes : la tablette opératoire en cuisine, la tablette opérationnelle au comptoir. Check-lists, tâches, invendus, commandes et clôtures se font sur la tablette, dans les quatre magasins.
+
 ### Les contrôles : fréquence, SOP et démonstration en direct
 
 Le cadre du cockpit prévoit 4 visites régulières par mois et par magasin ; en novembre, aucune n'est encore faite ni planifiée, et Corbais n'a jamais été visité dans l'outil. L'annexe 5 (annexe au DIP) fixe la fréquence de chaque contrôle, et l'annexe 6 (SOP) dit comment il se déroule.
@@ -703,6 +705,7 @@ Ces références se vendent aussi moins d'une fois par jour dans le réseau, mai
 
 Les échéances ci-dessous sont des propositions ; les responsables restent à désigner.
 
+- [ ] Annoncer l'obligation du 1er mars 2027 : tout le monde sur sa ou ses tablettes, check-lists, tâches, invendus et clôtures compris.
 - [ ] Compléter au panel les recettes manquantes de la gamme pâtisserie et corriger les recettes incohérentes (décembre 2026).
 - [ ] Chiffrer à l'usine le coût de revient réel du gâteau de 10 parts et de sa finition en Belgique, pour un prix usine d'au plus 7,45 € HT (×4), puis valider l'offre 4+1 (décembre 2026).
 - [ ] Demander à l'avocat ce qui peut être imposé en prix, puis fixer une grille de prix conseillés unique, alignée sur le prix le plus haut du réseau, et unifier les kits décor des gâteaux d'anniversaire (janvier 2027).
