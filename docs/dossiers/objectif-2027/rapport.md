@@ -637,6 +637,68 @@ Les gains sont chiffrés à partir des ventes ; les budgets restent à saisir da
 
 Détail complet de la traîne, avec les 51 références encore sans coût de recette, en annexe 7.
 
+### Les 51 références à chiffrer
+
+Ces références se vendent aussi moins d'une fois par jour dans le réseau, mais elles n'ont pas de coût de recette au panel : on ne connaît pas leur coefficient. Ensemble, elles font 22 796 € de CA HT sur la période, soit environ 86 k€ par an, dont 21 en traiteur et 10 en épicerie.
+
+1. Avant fin janvier 2027 : saisir le coût au panel, la recette pour les produits fabriqués, le prix d'achat pour l'épicerie et les boissons.
+2. Appliquer ensuite la même règle : sous ×2,5, la référence rejoint la liste à couper ; au-dessus, elle reste si elle a sa place dans le book des assortiments 2027.
+3. Les produits de saison (cougnou, raclette, Halloween) et les sacs vendus en caisse sont chiffrés, mais pas coupés sur cette mesure.
+
+| Référence | Famille | Catégorie | Pièces par semaine (réseau) | CA HT sur la période | Magasins |
+| --- | --- | --- | --- | --- | --- |
+| Gratin - hachis parmentier | Traiteur | Plat Prepare - Chaud | 0,6 | 88 € | 1 |
+| Wrapps - Saumon & Avocat | Traiteur | Wrapps | 1,2 | 122 € | 2 |
+| Ravioles Ricotta & Epinard - Legumes | Traiteur | Plat Prepare - Chaud | 1,3 | 194 € | 1 |
+| Sac Papier Magasin | Traiteur | Extra - Payant | 1,5 | 5 € | 2 |
+| Plateau Raclette - Classique | Traiteur | Fromages & Salaisons | 3,2 | 616 € | 1 |
+| Salade de Lentilles | Traiteur | Salades féculentes | 3,2 | 450 € | 3 |
+| Cannelloni - poulet & estragon | Traiteur | Plat Prepare - Chaud | 4,0 | 632 € | 2 |
+| Sauce pour Salade - Vinaigrette | Traiteur | Extra - Traiteur | 4,0 | 53 € | 1 |
+| Taboulé Petits Pois & Poulet | Traiteur | Salades féculentes | 4,1 | 616 € | 3 |
+| Cannelloni - ricotta & épinards | Traiteur | Plat Prepare - Chaud | 4,2 | 652 € | 2 |
+| Plateau de fruits - par personne | Traiteur | Plateaux | 4,3 | 167 € | 1 |
+| Poulet Curry Jaune & Riz | Traiteur | Plat Prepare - Chaud | 4,3 | 708 € | 1 |
+| Plateau Mini Wraps - 10 pièces | Traiteur | Plateau Sandwich | 4,7 | 2 453 € | 1 |
+| Boulettes sauce tomate & purée | Traiteur | Plat Prepare - Chaud | 4,8 | 778 € | 1 |
+| Boulettes sauce Liégoise & purée | Traiteur | Plat Prepare - Chaud | 4,8 | 778 € | 1 |
+| Lasagne Jambon & Bolognaise | Traiteur | Plat Prepare - Chaud | 4,8 | 812 € | 2 |
+| Soupe Potiron & Citron | Traiteur | Soupes | 5,3 | 365 € | 3 |
+| Salade Saumon fumé | Traiteur | Salades | 5,7 | 1 012 € | 3 |
+| Plateau sandwiches individuels - 10 pièces | Traiteur | Plateau Sandwich | 6,1 | 700 € | 2 |
+| Salade de pâtes - Pesto & Pin | Traiteur | Salade de pâtes | 6,6 | 1 047 € | 2 |
+| Plateau demies-baguettes 10 pcs | Traiteur | Plateau Sandwich | 6,6 | 574 € | 2 |
+| Tarte Sucre & Myrtilles | Tartes | Tartes au sucre | 0,7 | 134 € | 3 |
+| Tarte Sucre & Speculoos | Tartes | Tartes au sucre | 0,7 | 90 € | 3 |
+| Brézilienne | Tartes | Tartes | 1,8 | 536 € | 3 |
+| Tarte noix de Pécan | Tartes | Tartes | 2,6 | 676 € | 1 |
+| Tarte Sucre & Fruits Rouges | Tartes | Tartes au sucre | 2,9 | 490 € | 2 |
+| Croûte aux fruits - 8 Pers | Tartes | Croutes Fruits Frais | 3,6 | 1 108 € | 1 |
+| Flan Framboises | Tartes | Tartes | 3,8 | 1 200 € | 2 |
+| Boule | Épicerie | Glace by Rawette | 0,6 | 25 € | 1 |
+| Miel - Toutes Fleurs | Épicerie | Épicerie | 0,8 | 103 € | 1 |
+| Miel - de Miellat | Épicerie | Épicerie | 0,9 | 158 € | 1 |
+| Intenso - 250g. | Épicerie | Épicerie | 1,5 | 149 € | 1 |
+| Miel - Tilleul | Épicerie | Épicerie | 1,7 | 0 € | 1 |
+| Fiesta Arabica - 250g. | Épicerie | Épicerie | 1,8 | 177 € | 1 |
+| Jus pommes-carottes- gingembre Bio - C’tout bon! 25 cl | Épicerie | Épicerie | 1,9 | 80 € | 2 |
+| Jus pommes framboises - C'tout Bon! 75 cl | Épicerie | Épicerie | 2,6 | 272 € | 2 |
+| Malawa - 250g. | Épicerie | Épicerie | 4,4 | 361 € | 2 |
+| Jus de pommes carotte gingembre Bio - C'tout Bon! 75 cl | Épicerie | Épicerie | 5,9 | 619 € | 2 |
+| Glacé | Pâtisserie | Pâtisserie individuelle | 0,8 | 36 € | 1 |
+| Feu de Bengale | Pâtisserie | Pâtisserie | 1,4 | 57 € | 1 |
+| Gâteaux d'Anniversaire - Chocolat "Chiffre" | Pâtisserie | Pâtisserie | 2,6 | 221 € | 1 |
+| Americano | Boissons | Boissons chaudes | 3,0 | 108 € | 2 |
+| Bun à Hamburger | Boulangerie | Petite Boulangerie | 1,2 | 28 € | 2 |
+| Sujet en Massepain - Halloween | Biscuiterie | Biscuiterie | 1,7 | 108 € | 1 |
+| Cougnou Nature - 400 g. | Fêtes & Occasions | Cougnou | 0,7 | 55 € | 1 |
+| Foccacia - B.2 B. | B. 2 B. | B.2.B - Cartons | 1,2 | 598 € | 1 |
+| Baguette Tradition - B.2 B. | B. 2 B. | B.2.B - Cartons | 1,7 | 859 € | 1 |
+| Panier du jour - 15€ | Bundle & Promotion | Bundle | 3,0 | 594 € | 1 |
+| Plateau Brunch Déjeuner – Sucré | Bundle & Promotion | Bundle | 3,7 | 818 € | 1 |
+| Quiche au Fromage Fumé, Tomate & Basilic | Quiches | Quiches | 1,4 | 255 € | 4 |
+| Pain au chocolat nappé & crème | Viennoiserie | Viennoiserie Ind. | 3,0 | 59 € | 3 |
+
 ### Prochaines étapes
 
 Les échéances ci-dessous sont des propositions ; les responsables restent à désigner.
@@ -909,7 +971,7 @@ Liste par famille, de la moins vendue à la plus vendue. Coefficient « — » :
 | Épicerie | Intenso - 250g. | Épicerie | 1,5 | 149 € | — | 1 | à chiffrer |
 | Épicerie | Miel - Tilleul | Épicerie | 1,7 | 0 € | — | 1 | à chiffrer |
 | Épicerie | Fiesta Arabica - 250g. | Épicerie | 1,8 | 177 € | — | 1 | à chiffrer |
-| Épicerie | Jus pommes-carottes- gingembre Bio - C’tout  bon! 25 cl | Épicerie | 1,9 | 80 € | — | 2 | à chiffrer |
+| Épicerie | Jus pommes-carottes- gingembre Bio - C’tout bon! 25 cl | Épicerie | 1,9 | 80 € | — | 2 | à chiffrer |
 | Épicerie | Crème Glacée Spéculoos - 600 ml | Glace by Rawette | 2,2 | 311 € | ×1,43 | 4 | à couper d'abord |
 | Épicerie | Granola - Citron & Bleuet | Épicerie | 2,2 | 270 € | ×2,05 | 3 | à couper d'abord |
 | Épicerie | Granola - Noisette & Miel | Épicerie | 2,5 | 300 € | ×2,54 | 3 |  |
