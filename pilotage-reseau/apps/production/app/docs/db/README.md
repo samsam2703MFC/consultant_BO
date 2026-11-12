@@ -139,7 +139,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   « przełożony powiadomiony ». Semaine en pastilles (assistant, en cours, fait, automatique, en retard).
 - Tâches du poste (maquette 227-2, `/organization/week-plan/{id}`, administrateur) : tableau par fréquence, panneau
   d'édition (assistant, fréquence Dzień / Tydzień / Mies. / Kw. + jours ou règle du mois + heure, minutes, « Automatycznie
-  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Asystentci do przypięcia »
+  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Asystenci do przypięcia »
   (libre / épinglé). Enregistrement : mêmes PUT + champs ci-dessus, validés (HH:MM, `wdN` / `dN`, 1–30 jours, cron complet).
 - « Kto co zrobił » (maquette 227-3, `/organization/execution`, catalogue d'accès `execution` : administrateur + postes
   supérieurs d'un autre poste — Kierownik produkcji, Logistyka, Brygadzista) : postes × jours (Dziś / Tydzień / Miesiąc), une
@@ -1866,6 +1866,29 @@ asystenta, kreatorze → asystencie, kreatory → asystenci. La migration 176 re
 tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_prod_param.description_pl`) ; l'historique
 (notes, rappels envoyés, journal) reste tel quel. Les adresses (`/finances/price-wizard`…) ne changent pas. Recherche :
 « kreator » reste un alias de « asystent ».
+
+### [281] Profil CEO — « Kontrola » (makieta 47, migration 177) et [283] « Zadania » dans chaque rail
+
+- **Deux profils pour le même compte administrateur** (sous l'avatar, au-dessus de « Sesja ») : *Administrator* (travail et
+  réglages, comme avant) et *CEO · kontrola* (session `ceo_profile`) : page d'accueil `/control`, menu sans les réglages
+  (`PageAccess::CEO_HIDDEN`), accès inchangé. Choisir une session de poste quitte le profil CEO et inversement.
+- **Compte CEO seul** (`n_user_ceo`, case « Profil CEO » dans la fiche utilisateur, réglée par l'administrateur) : voit tout
+  sauf les réglages (`PageAccess::ceoSees`, + Kontrola, Aktywność, module Kierownik), page d'accueil Kontrola, jamais de
+  verrou (QR d'entrée, tâches obligatoires). **Écriture refusée (403) sauf les décisions** (`PageAccess::CEO_WRITES` :
+  déblocage, « Przypomnij », profil, cloche, activité) — contrôle dans `App.php`.
+- **Kontrola** (`ControlService::overview`, lecture seule) : tuiles (présents / attendus, tâches du jour, obligatoires en
+  retard et ERP bloqués, demandes de déblocage, remplissage = minutes des tâches faites ÷ temps de travail) ; 1. tout le
+  monde aujourd'hui (comptes ERP avec poste, hors administrateurs et CEO) : entrée (QR = appareil `erp.qr_device_id`,
+  tablette, à la main), sortie, absence (`n_time_absence`), tâches du jour, obligatoire (🔒 bloqué → « Odblokuj », à faire
+  « do HH:MM », ✓), remplissage, activité ERP (`n_activity_view`) ; ligne « Zespoły pracowni » (personnes sans compte) ;
+  2. semaine poste × jour (`PositionTaskService::execution('week')` : à temps / en retard / partiel / rien, clic → tâches du
+  jour) ; 3. décisions : demandes de déblocage du jour encore bloquantes (cloche `task_unblock:{compte}:{tâche}:{jour}:{destinataire}`),
+  tâches en retard par poste (« Przypomnij » = `/ajax/organization/execution/remind/{id}`), sorties oubliées (7 jours),
+  résultats du mois (`ProfitabilityService::snapshot`).
+- Correctif : la demande de déblocage n'arrivait qu'au premier destinataire (clé de cloche unique) ; la clé contient
+  maintenant le destinataire — supérieur, administrateurs et comptes CEO reçoivent chacun la leur.
+- **[283] « Zadania »** (`/my-tasks`) : nouvelle entrée du rail, toujours présente (`Rail::ALWAYS`, avec Dzisiaj), même pour
+  un poste avec son propre menu ; « Uprawnienia i menu » l'affiche « w menu » sans pouvoir la retirer.
 
 ## Conventions
 

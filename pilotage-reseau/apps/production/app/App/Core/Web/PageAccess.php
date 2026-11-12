@@ -76,7 +76,35 @@ final class PageAccess
         'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
         'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
+        // [281] Kontrola (profil CEO, makieta 47) : wszyscy dziś, tydzień stanowisk, decyzje — administrator i konta CEO.
+        'control' => ['Kontrola (profil CEO : wszyscy dziś, tydzień stanowisk, decyzje — odblokuj, przypomnij)', 'Administracja', ['/control'], true],
     ];
+
+    /**
+     * [281] Profil CEO : strony « tylko administrator », które konto CEO widzi (kontrola, aktywność, moduł kierownika — do
+     * odczytu) i strony ustawień, których nie widzi (ustawia administrator). Reszta jak u administratora ; zapis zablokowany
+     * w App poza decyzjami (CEO_WRITES).
+     */
+    public const CEO_ADMIN_PAGES = ['control', 'activity', 'manager'];
+    public const CEO_HIDDEN = ['settings', 'devices'];
+
+    /** [281] Zapisy dozwolone kontu CEO (prefiksy) : decyzje (odblokuj, przypomnij), profil pod awatarem, powiadomienia, aktywność. */
+    public const CEO_WRITES = ['/logout', '/ajax/view-session', '/ajax/activity/', '/ajax/app-notifications', '/ajax/notifications', '/ajax/tasks/unblock/',
+        '/ajax/organization/execution/remind/', '/ajax/organization/team-tasks/remind', '/ajax/control/', '/ajax/search'];
+
+    /** [281] Czy konto CEO widzi pozycję katalogu. */
+    public static function ceoSees(string $key): bool
+    {
+        if (in_array($key, self::CEO_HIDDEN, true)) return false;
+        return !self::adminOnly($key) || in_array($key, self::CEO_ADMIN_PAGES, true);
+    }
+
+    /** [281] Czy zapis (POST…) jest dozwolony kontu CEO. */
+    public static function ceoMayWrite(string $uri): bool
+    {
+        foreach (self::CEO_WRITES as $p) if ($uri === rtrim($p, '/') || str_starts_with($uri, $p)) return true;
+        return false;
+    }
 
     /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */
     public const HOME_PAGES = ['/today' => 'Dzisiaj', '/dashboard' => 'Rentowność', '/finances/invoices' => 'Faktury i koszty', '/time' => 'Czas pracy'];

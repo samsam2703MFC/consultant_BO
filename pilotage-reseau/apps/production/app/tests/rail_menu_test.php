@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 /*
- * [253] Menu ERP bez dubli (makiety 25–26) : 29 pozycji ([256] Kierownik produkcji w Administracji, [262] Czas pracy, [271] HR, [277] Lista płac), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
+ * [253] Menu ERP bez dubli (makiety 25–26) : 30 pozycji ([256] Kierownik produkcji w Administracji, [262] Czas pracy, [271] HR, [277] Lista płac, [281] Kontrola), każda strona należy do jednej pozycji (zakładki bez powtórzeń),
  * wszystkie dawne linki railu mają pozycję, menu stanowiska (kolejność, strona otwierana), sesja administratora
  * « jako stanowisko », stanowisko bez menu = całe menu — reguły bez bazy + baza jednorazowa.
  *
@@ -20,7 +20,7 @@ function expectRail(bool $condition, string $message): void
 }
 
 // --- Bez bazy : układ ----------------------------------------------------------------------------------------------------
-expectRail(count(Rail::ITEMS) === 29 && Rail::count() === 29, 'menu wspólne : 29 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac)');
+expectRail(count(Rail::ITEMS) === 31 && Rail::count() === 31, 'menu wspólne : 31 pozycji (było 65 ; [256] + Kierownik produkcji w Administracji, [262] + Czas pracy, [271] + HR, [277] + Lista płac, [281] + Kontrola, [283] + Zadania)');
 expectRail(Rail::itemFor('/time/month') === 'time' && Rail::itemFor('/time') === 'time' && \App\Core\Web\PageAccess::keyFor('/time/overtime') === 'time', '[262] Czas pracy : pozycja railu i prawo « time »');
 expectRail(array_keys(array_filter(array_map(fn($i) => $i[2], Rail::ITEMS), fn($s) => !in_array($s, Rail::SECTIONS, true))) === [], 'sekcje pozycji znane');
 foreach (array_keys(PageTabs::GROUPS) as $group) {
@@ -84,8 +84,8 @@ expectRail(Rail::adminOnly('access') && !Rail::adminOnly('activity') && !Rail::a
 // Menu stanowiska : kolejność railu, strona otwierana, podświetlenie przez zakładki.
 $menu = Rail::menu(['purchasing' => '/workshop/receiving', 'today' => null, 'production' => '/purchasing/nc']);
 $items = array_merge(...array_map(fn($s) => $s['items'], $menu));
-expectRail(array_column($items, 'key') === ['today', 'production', 'purchasing'], 'kolejność railu, nie kolejność zapisu');
-expectRail($items[2]['href'] === '/workshop/receiving' && in_array('/workshop/buy', $items[2]['also'], true) && !in_array('/workshop/receiving', $items[2]['also'], true), 'strona otwierana + zakładki w podświetleniu');
+expectRail(array_column($items, 'key') === ['today', 'my_tasks', 'production', 'purchasing'], 'kolejność railu, nie kolejność zapisu ; [283] Zadania zawsze w menu');
+expectRail($items[3]['href'] === '/workshop/receiving' && in_array('/workshop/buy', $items[3]['also'], true) && !in_array('/workshop/receiving', $items[3]['also'], true), 'strona otwierana + zakładki w podświetleniu');
 expectRail(array_column($menu, 'title') === ['', 'Produkcja', 'Zakupy'], 'tylko sekcje z pozycjami');
 $view = file_get_contents(__DIR__ . '/../App/Views/page_components/sidebar.twig');
 expectRail(str_contains($view, 'rail_menu()') && str_contains($view, 'data-search-open') && str_contains($view, 'rail_all()') && substr_count($view, 'class="sidebar-item') <= 3, 'rail z definicji (bez ręcznej listy)');
@@ -158,14 +158,14 @@ try {
     // Stanowisko bez własnego menu : pierwsza zmiana tworzy menu z dostępnych pozycji.
     $repo->setGrants(3, ['production', 'supply'], 1);
     $res = $access()->saveMenuState(3, ['item' => 'mail', 'state' => 'access'], 1);
-    expectRail(array_keys($access()->railMenu(3)) === ['today', 'production', 'warehouse', 'purchasing', 'settings'],
+    expectRail(array_keys($access()->railMenu(3)) === ['today', 'my_tasks', 'production', 'warehouse', 'purchasing', 'settings'],
         'menu utworzone z dostępnych pozycji bez Poczty ' . json_encode(array_keys($access()->railMenu(3) ?? [])));
     expectRail(!array_key_exists('mail', $access()->railMenu(3)) && $res['states']['mail'] === 'access', 'Poczta poza menu');
     $res = $access()->saveMenuState(3, ['reset' => true], 1);
     expectRail($access()->railMenu(3) === null && $res['states']['mail'] === 'menu', 'całe menu : bez własnego menu');
     $m = $access()->menuMatrix();
-    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 29,
-        'macierz : stanowiska biurowe + bez stanowiska × 29 pozycji');
+    expectRail(array_column($m['columns'], 'name') === ['Specjalista ds. jakości', 'Kierownik produkcji', 'Bez stanowiska'] && count(array_merge(...array_column($m['sections'], 'items'))) === 31,
+        'macierz : stanowiska biurowe + bez stanowiska × 31 pozycji');
     echo "rail_menu_test: OK\n";
 } finally {
     $_SESSION = [];

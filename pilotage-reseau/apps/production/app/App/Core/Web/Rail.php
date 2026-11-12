@@ -19,7 +19,11 @@ final class Rail
      * licznik (data-count : /ajax/rail-counters) albo null]. Zakładki pozycji : PageTabs::GROUPS[klucz].
      */
     public const ITEMS = [
-        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-tasks', '/my-card'], null],
+        // [281] Kontrola (profil CEO) : administrator i konta CEO.
+        'control' => ['Kontrola', 'bi-binoculars', '', '/control', [], null],
+        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-card'], null],
+        // [283] Zadania : moje zadania (asystent każdego zadania) — w railu każdego profilu, także z własnym menu stanowiska.
+        'my_tasks' => ['Zadania', 'bi-check2-square', '', '/my-tasks', ['/tasks'], null],
         'mail' => ['Poczta', 'bi-envelope', '', '/mail', [], 'mail'],
         'team_tasks' => ['Zadania zespołu', 'bi-people', '', '/organization/team-tasks', [], null],
         'profitability' => ['Rentowność', 'bi-graph-up', 'Analiza', '/dashboard', [], null],
@@ -55,6 +59,9 @@ final class Rail
         'payroll' => ['Lista płac', 'bi-calculator', 'Administracja', '/payroll', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
+
+    /** [283] Pozycje zawsze w menu (każdy profil, także stanowisko z własnym menu). */
+    public const ALWAYS = ['today', 'my_tasks'];
 
     /** Grupy zakładek bez własnej pozycji w railu : należą do pozycji (podświetlenie, wyszukiwarka). */
     public const GROUP_PARENT = ['communication' => 'settings', 'templates' => 'settings', 'production_settings' => 'settings'];
@@ -136,7 +143,7 @@ final class Rail
         $sections = [];
         foreach (self::SECTIONS as $s) $sections[$s] = ['title' => $s, 'items' => []];
         foreach (self::ITEMS as $key => [$label, $icon, $section, $path, , $count]) {
-            if ($only !== null && !array_key_exists($key, $only)) continue;
+            if ($only !== null && !array_key_exists($key, $only) && !in_array($key, self::ALWAYS, true)) continue;
             $href = $only[$key] ?? $path;
             $sections[$section]['items'][] = ['key' => $key, 'label' => $label, 'icon' => $icon, 'href' => $href,
                 'also' => array_values(array_diff(self::paths($key), [$href])), 'count' => $count];

@@ -116,7 +116,7 @@
             <b>${esc(it.title || '')}</b><span>${state}</span>
             ${it.people ? `<span class="at-sub">${esc(it.people.join(', '))}${it.minutes ? ' · ' + dur(it.minutes) + ' planowane' : ''}</span>` : ''}
             ${it.summary ? `<span>${esc(it.summary)}</span>` : ''}${it.error ? `<span class="text-danger">${esc(it.error)}</span>` : ''}${it.note && it.state === 'ok' ? `<span class="at-sub">${esc(it.note)}</span>` : ''}
-            <span class="ex-pop-acts">${it.link ? `<a href="${esc(at.root + it.link)}">Otwórz ${it.state === 'auto' || it.state === 'ok' ? 'wynik' : 'asystent'} →</a>` : ''}<span class="wk-sp"></span>${actionable ? remindBtn(it.occurrence) : ''}</span></div>`;
+            <span class="ex-pop-acts">${it.link ? `<a href="${esc(at.root + it.link)}">Otwórz ${it.state === 'auto' || it.state === 'ok' ? 'wynik' : 'asystenta'} →</a>` : ''}<span class="wk-sp"></span>${actionable ? remindBtn(it.occurrence) : ''}</span></div>`;
     }
 
     function lateHtml() {

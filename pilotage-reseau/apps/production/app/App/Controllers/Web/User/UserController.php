@@ -13,7 +13,8 @@ class UserController extends BaseController
     public function __construct(
         UserService $userService,
         private UserCreationService $creation,
-        private \App\Services\Organization\ErpEntryService $erpEntry
+        private \App\Services\Organization\ErpEntryService $erpEntry,
+        private \App\Services\Organization\PageAccessService $access
     )
     {
         $this->userService = $userService;
@@ -63,6 +64,10 @@ class UserController extends BaseController
                     $this->userService->update($id, $_POST);
                     // [275] Konto ERP ↔ pracownik w Czasie pracy (wejście do ERP przez QR).
                     if (array_key_exists('employee_id', $_POST)) $this->erpEntry->link((int) $id, $_POST['employee_id'], user('id') ? (int) user('id') : null);
+                    // [281] Profil CEO (kontrola, bez ustawień) — tylko administrator.
+                    if (!empty($_POST['ceo_profile_sent']) && $this->access->isAdmin(user('id') ? (int) user('id') : null)) {
+                        $this->access->setCeo((int) $id, !empty($_POST['ceo_profile']), (int) user('id'));
+                    }
                     header('Location: ' . ROOT . '/users');
                     exit;
                 }, default: false);
@@ -72,6 +77,11 @@ class UserController extends BaseController
             $data['erp'] = $this->erpEntry->linkData((int) $id);
         } catch (\Throwable $e) {
             $data['erp'] = null;
+        }
+        try {
+            $data['ceo'] = $this->access->isAdmin(user('id') ? (int) user('id') : null) ? $this->access->isCeo((int) $id) : null;
+            if ($data['ceo'] === null) unset($data['ceo']);
+        } catch (\Throwable $e) {
         }
         $this->view("user/edit", $data);
     }

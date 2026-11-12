@@ -93,6 +93,7 @@ class App
                 // Uprawnienia stanowisk : strona spoza uprawnień użytkownika → 403 (strona startowa Rentowność → Dzisiaj).
                 // Błąd bazy (np. migracja 050 jeszcze nie wykonana) : zapis w logu, strona bez sprawdzenia — zamiast błędu na każdej stronie.
                 $denied = false;
+                $ceoReadOnly = false;
                 if (!empty($_SESSION['USER'])) {
                     try {
                         $access = $container->get(\App\Services\Organization\PageAccessService::class);
@@ -105,11 +106,19 @@ class App
                         // [253] Menu stanowiska (rail) : pozycje i strony otwierane ; null = całe menu.
                         \App\Core\Web\Rail::$only = $access->railMenu($userId);
                         $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
+                        // [281] Konto CEO : widzi wszystko, zapisuje tylko decyzje (odblokuj, przypomnij), profil i powiadomienia.
+                        $ceoReadOnly = $method !== 'GET' && $access->isCeo($userId) && !\App\Core\Web\PageAccess::ceoMayWrite($uri);
                     } catch (\Throwable $e) {
                         error_log('[page-access] ' . $e->getMessage());
                         \App\Core\Web\PageAccess::$checker = null;
                         \App\Core\Web\PageAccess::$rail = [];
                         \App\Core\Web\Rail::$only = null;
+                    }
+                    if ($ceoReadOnly ?? false) {
+                        http_response_code(403);
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['message' => 'Profil CEO : tylko podgląd i decyzje (odblokuj, przypomnij). Zmiany wprowadza administrator.'], JSON_UNESCAPED_UNICODE);
+                        return;
                     }
                     if ($denied) {
                         if ($uri === '/dashboard' && $method === 'GET') {

@@ -148,6 +148,18 @@
                                         </div>
                                     </div>
                                     <?php endif; ?>
+                                    <?php if (isset($ceo)): ?>
+                                    <?php /* [281] Profil CEO : kontrola (strona Kontrola), widzi wszystko, nic nie ustawia — tylko decyzje. */ ?>
+                                    <div class="form-group row align-items-center">
+                                        <div class="col-3"><label class="col-form-label" for="ceo_profile">Profil CEO</label></div>
+                                        <div class="col-9">
+                                            <input type="hidden" name="ceo_profile_sent" value="1">
+                                            <label class="form-check-label"><input type="checkbox" class="form-check-input me-2" id="ceo_profile" name="ceo_profile" value="1" <?= $ceo ? 'checked' : '' ?>>
+                                                Kontrola — widzi wszystkich i wszystko, bez ustawień (tylko decyzje : odblokuj, przypomnij)</label>
+                                            <small class="text-muted d-block">Np. wspólnik. Bez blokad (QR, zadania obowiązkowe). Administrator ma ten profil pod awatarem.</small>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="row mt-4">

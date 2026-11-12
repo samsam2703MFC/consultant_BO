@@ -17,7 +17,7 @@ use App\Repositories\Organization\PageAccessRepository;
  */
 final class PageAccessService
 {
-    /** @var array<int, array{admin:bool, keys:array<string,bool>}> */
+    /** @var array<int, array{admin:bool, ceo:bool, keys:array<string,bool>}> */
     private array $cache = [];
     /** @var array<int, list<string>> [255] prawa stanowiska sesji administratora (jedno zapytanie na żądanie) */
     private array $viewGrants = [];
@@ -25,6 +25,9 @@ final class PageAccessService
     private ?array $menus = null;
     /** @var array<int, array{id:int, code:string, name_pl:string}>|null stanowiska ERP do wyboru jako sesja */
     private ?array $sessionPositions = null;
+
+    /** [281] Pozycje railu ukryte w profilu CEO (ustawia administrator). */
+    private const CEO_RAIL_HIDDEN = ['settings', 'access'];
 
     /** [239] Sesje pod awatarem : nazwa obszaru i ikona wg kodu stanowiska (inne stanowiska — nazwa stanowiska). */
     private const SESSION_AREAS = [
@@ -52,7 +55,36 @@ final class PageAccessService
         if (!$userId) return false;
         $p = $this->profile($userId);
         if ($p['admin']) return true;
+        if ($p['ceo']) return PageAccess::ceoSees($key);
         return !PageAccess::adminOnly($key) && isset($p['keys'][$key]);
+    }
+
+    /** [281] Konto z samym profilem CEO (kontrola : widzi wszystko, nic nie ustawia ; zapis tylko decyzji). */
+    public function isCeo(?int $userId): bool
+    {
+        return $userId ? $this->profile($userId)['ceo'] : false;
+    }
+
+    /** [281] Profil CEO aktywny : konto CEO albo administrator z profilem « CEO · kontrola » pod awatarem. */
+    public function ceoView(?int $userId): bool
+    {
+        if (!$userId) return false;
+        $p = $this->profile($userId);
+        return $p['ceo'] || ($p['admin'] && ViewSession::ceo());
+    }
+
+    /** [281] Konta CEO (powiadomienia o prośbach o odblokowanie). @return list<int> */
+    public function ceoUsers(): array
+    {
+        return $this->repo->ceoUsers();
+    }
+
+    /** [281] Profil CEO konta (fiche użytkownika, tylko administrator). */
+    public function setCeo(int $userId, bool $on, ?int $actorId): void
+    {
+        if (!$this->isAdmin($actorId)) throw new CustomException('Profil CEO nadaje administrator.', 'errors', 403);
+        $this->repo->setCeo($userId, $on, $actorId);
+        unset($this->cache[$userId]);
     }
 
     /**
@@ -61,6 +93,12 @@ final class PageAccessService
      */
     public function railPrefixes(?int $userId): array
     {
+        if ($this->ceoView($userId)) {
+            // [281] Profil CEO : wszystko oprócz ustawień (także administrator w profilu CEO — tylko menu).
+            $out = [];
+            foreach (PageAccess::PAGES as $key => [, , $prefixes]) foreach ($prefixes as $p) $out[$p] = PageAccess::ceoSees($key);
+            return $out;
+        }
         $keys = $userId ? $this->profile($userId)['keys'] : [];
         if ($userId && $this->profile($userId)['admin']) {
             // [239] Sesja administratora : rail jak u stanowiska.
@@ -82,6 +120,10 @@ final class PageAccessService
      */
     public function menuSees(?int $userId, string $path): bool
     {
+        if ($this->ceoView($userId)) {
+            $key = PageAccess::keyFor($path);
+            return $key === null || PageAccess::ceoSees($key);
+        }
         $view = $this->viewPosition($userId);
         if ($view === null) return $this->canSee($userId, $path);
         $key = PageAccess::keyFor($path);
@@ -99,6 +141,8 @@ final class PageAccessService
     public function railMenu(?int $userId): ?array
     {
         if (!$userId) return null;
+        // [281] Profil CEO : całe menu bez pozycji ustawień (Ustawienia, Uprawnienia i menu).
+        if ($this->ceoView($userId)) return array_fill_keys(array_values(array_diff(array_keys(Rail::ITEMS), self::CEO_RAIL_HIDDEN)), null);
         if ($this->profile($userId)['admin']) {
             $view = $this->viewPosition($userId);
             return $view === null ? null : $this->positionMenu($view);
@@ -133,15 +177,22 @@ final class PageAccessService
     public function sessionMenu(?int $userId): array
     {
         if (!$userId) return ['can_switch' => false, 'label' => '', 'current' => null, 'sessions' => []];
+        if ($this->profile($userId)['ceo']) return ['can_switch' => false, 'label' => 'CEO · kontrola', 'current' => null, 'sessions' => [], 'profiles' => []];
         if (!$this->profile($userId)['admin']) {
             $pos = $this->repo->userPosition($userId);
             $name = $pos ? (array_column($this->repo->positions(), 'name_pl', 'id')[$pos] ?? '') : '';
             return ['can_switch' => false, 'label' => $name !== '' ? $name : 'bez stanowiska', 'current' => null, 'sessions' => []];
         }
         $view = $this->viewPosition($userId);
+        $ceo = ViewSession::ceo();
         $homes = $this->repo->homes();
-        $sessions = [['id' => null, 'name' => 'Pełny widok', 'sub' => 'administrator — wszystkie strony', 'icon' => 'bi-grid-3x3-gap', 'current' => $view === null]];
-        $label = 'Administrator';
+        // [281] Dwa profile tego samego konta (makieta 47) : Administrator — praca i ustawienia ; CEO — kontrola.
+        $profiles = [
+            ['key' => 'admin', 'name' => 'Administrator', 'sub' => 'praca i ustawienia — wszystko widzi, edytuje i ustawia', 'icon' => 'bi-person-gear', 'current' => !$ceo && $view === null],
+            ['key' => 'ceo', 'name' => 'CEO · kontrola', 'sub' => 'wszyscy i wszystko na żywo, bez ustawień — tylko decyzje', 'icon' => 'bi-binoculars', 'current' => $ceo],
+        ];
+        $sessions = [['id' => null, 'name' => 'Pełny widok', 'sub' => 'administrator — wszystkie strony', 'icon' => 'bi-grid-3x3-gap', 'current' => $view === null && !$ceo]];
+        $label = $ceo ? 'CEO · kontrola' : 'Administrator';
         foreach ($this->sessionPositions() as $p) {
             [$area, $icon] = self::SESSION_AREAS[$p['code']] ?? [$p['name_pl'], 'bi-briefcase'];
             $pages = count(array_filter($this->repo->positionGrants((int) $p['id']), fn($k) => isset(PageAccess::PAGES[$k]) && !PageAccess::adminOnly($k)));
@@ -150,16 +201,24 @@ final class PageAccessService
                 'icon' => $icon, 'current' => $view === (int) $p['id']];
             if ($view === (int) $p['id']) $label = 'Sesja : ' . $area;
         }
-        return ['can_switch' => true, 'label' => $label, 'current' => $view, 'sessions' => $sessions];
+        return ['can_switch' => true, 'label' => $label, 'current' => $view, 'sessions' => $sessions, 'profiles' => $profiles];
     }
 
     /** Zmiana sesji (tylko administrator) ; zwraca stronę startową nowej sesji. */
-    public function switchSession(?int $userId, mixed $positionId): string
+    public function switchSession(?int $userId, mixed $positionId, mixed $profile = null): string
     {
         if (!$userId || !$this->profile($userId)['admin']) throw new CustomException('Sesje stanowisk : tylko administrator.', 'errors', 403);
+        // [281] Profil : « ceo » (kontrola) albo « admin » (praca i ustawienia) — oba kończą sesję stanowiska.
+        if ($profile !== null && $profile !== '') {
+            if (!in_array($profile, ['admin', 'ceo'], true)) throw new CustomException('Nieznany profil.', 'errors', 422);
+            ViewSession::set(null);
+            ViewSession::setCeo($profile === 'ceo');
+            return $this->homePath($userId);
+        }
         $id = $positionId === null || $positionId === '' ? null : (is_numeric($positionId) ? (int) $positionId : -1);
         if ($id !== null && !isset($this->sessionPositions()[$id])) throw new CustomException('Nieznana sesja.', 'errors', 422);
         ViewSession::set($id);
+        ViewSession::setCeo(false);
         return $this->homePath($userId);
     }
 
@@ -188,6 +247,7 @@ final class PageAccessService
     public function homePath(?int $userId): string
     {
         if (!$userId) return '/today';
+        if ($this->ceoView($userId)) return '/control';
         if ($this->profile($userId)['admin']) {
             // [239] Sesja administratora : strona startowa stanowiska.
             $view = $this->viewPosition($userId);
@@ -279,6 +339,7 @@ final class PageAccessService
         $out = [];
         foreach (array_keys(Rail::ITEMS) as $item) {
             if (Rail::adminOnly($item)) { $out[$item] = 'admin'; continue; }
+            if (in_array($item, Rail::ALWAYS, true)) { $out[$item] = 'menu'; continue; }
             $keys = Rail::accessKeys($item);
             $seen = $keys === [] || array_intersect_key(array_fill_keys($keys, true), $grants) !== [];
             $out[$item] = !$seen ? 'none' : ($menu === null || array_key_exists($item, $menu) ? 'menu' : 'access');
@@ -306,6 +367,7 @@ final class PageAccessService
         if (!isset(Rail::ITEMS[$item])) throw new CustomException('Nieznana pozycja menu.', 'errors', 422);
         if (!isset(self::MENU_STATES[$state])) throw new CustomException('Nieznany stan : w menu, dostęp albo brak.', 'errors', 422);
         if (Rail::adminOnly($item)) throw new CustomException('« ' . Rail::ITEMS[$item][0] . ' » widzi tylko administrator.', 'errors', 422);
+        if (in_array($item, Rail::ALWAYS, true)) throw new CustomException('« ' . Rail::ITEMS[$item][0] . ' » jest zawsze w menu każdego stanowiska.', 'errors', 422);
         $keys = Rail::accessKeys($item);
         if ($state === 'none' && $keys === []) throw new CustomException('« ' . Rail::ITEMS[$item][0] . ' » widzą wszyscy — może być tylko w menu albo poza menu.', 'errors', 422);
 
@@ -371,13 +433,15 @@ final class PageAccessService
         return $this->repo->positionGrants($positionId);
     }
 
-    /** @return array{admin:bool, keys:array<string,bool>} */
+    /** @return array{admin:bool, ceo:bool, keys:array<string,bool>} */
     private function profile(int $userId): array
     {
         if (!isset($this->cache[$userId])) {
             $admin = $this->repo->isProdAdmin($userId) || (!$this->repo->anyProdAdmin() && $this->repo->login($userId) === 'admin');
-            $keys = $admin ? [] : array_fill_keys($this->repo->positionGrants($this->repo->userPosition($userId)), true);
-            $this->cache[$userId] = ['admin' => $admin, 'keys' => $keys];
+            // [281] Konto CEO (bez roli administratora) : widzi wszystko oprócz ustawień, zapis tylko decyzji (App).
+            $ceo = !$admin && $this->repo->isCeo($userId);
+            $keys = $admin || $ceo ? [] : array_fill_keys($this->repo->positionGrants($this->repo->userPosition($userId)), true);
+            $this->cache[$userId] = ['admin' => $admin, 'ceo' => $ceo, 'keys' => $keys];
         }
         return $this->cache[$userId];
     }

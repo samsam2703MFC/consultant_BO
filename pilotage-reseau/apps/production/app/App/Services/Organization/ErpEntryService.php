@@ -15,7 +15,7 @@ use DateTimeImmutable;
  * le QR personnel (personne + jour, erp.qr_ttl_s, renouvelé tout seul). Elle le scanne avec son téléphone appairé et valide
  * l'entrée (mêmes questions que la tablette de bureau) → l'ERP s'ouvre. Entrée déjà pointée (tablette de bureau, PIN) :
  * ERP ouvert directement. Le soir « Zakończ dzień » → même QR → sortie (question marchandise) → déconnexion.
- * Jamais pour l'administrateur ; sans liaison compte ↔ personne : pas de verrou (l'administrateur la règle dans la fiche
+ * Jamais pour l'administrateur ni pour un compte CEO [281] ; sans liaison compte ↔ personne : pas de verrou (l'administrateur la règle dans la fiche
  * de l'utilisateur, la page « Uprawnienia i menu » montre les comptes sans liaison).
  */
 final class ErpEntryService
@@ -28,7 +28,7 @@ final class ErpEntryService
     /** Personne liée au compte si l'entrée par QR s'applique à lui (sinon null). */
     public function subject(?int $userId): ?array
     {
-        if (!$userId || $this->access->isAdmin($userId) || !$this->repo->positionRequiresQr($userId)) return null;
+        if (!$userId || $this->access->isAdmin($userId) || $this->access->isCeo($userId) || !$this->repo->positionRequiresQr($userId)) return null;
         $e = $this->repo->employeeOf($userId);
         return $e && (int) $e['active'] ? ['employee_id' => (int) $e['id'], 'name' => $e['name']] : null;
     }

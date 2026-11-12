@@ -66,7 +66,8 @@ class PageAccessController extends BaseController
     public function session()
     {
         try {
-            $home = $this->access->switchSession($this->userId(), $this->getJson(Request::createFromGlobals())['position_id'] ?? null);
+            $in = $this->getJson(Request::createFromGlobals());
+            $home = $this->access->switchSession($this->userId(), $in['position_id'] ?? null, $in['profile'] ?? null);
             return $this->json(['data' => ['home' => $home]]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);

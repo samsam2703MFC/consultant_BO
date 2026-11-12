@@ -35,7 +35,7 @@ final class TaskLockService
      */
     public function blocking(?int $userId, ?DateTimeImmutable $now = null): array
     {
-        if (!$userId || $this->access->isAdmin($userId)) return [];
+        if (!$userId || $this->access->isAdmin($userId) || $this->access->isCeo($userId)) return [];
         $tasks = $this->repo->mandatoryTasks($userId);
         if (!$tasks) return [];
         $now ??= new DateTimeImmutable();
@@ -190,12 +190,13 @@ final class TaskLockService
         $task = $this->allowed($taskId, $userId);
         $reason = trim((string) ($in['reason'] ?? ''));
         if (mb_strlen($reason) < 3 || mb_strlen($reason) > 255) throw new CustomException('Podaj powód (3–255 znaków).', 'errors', 422);
-        $to = array_unique(array_merge($this->repo->usersOfPosition(isset($task['id_reports_to']) ? (int) $task['id_reports_to'] : null), array_column($this->hr->admins(), 'id')));
+        $to = array_unique(array_merge($this->repo->usersOfPosition(isset($task['id_reports_to']) ? (int) $task['id_reports_to'] : null), array_column($this->hr->admins(), 'id'), $this->access->ceoUsers()));
         $who = $this->repo->userName((int) $userId) ?? 'Osoba';
         foreach ($to as $u) {
             if ((int) $u === (int) $userId) continue;
+            // [281] Klucz z odbiorcą : każdy przełożony / administrator / CEO dostaje własne powiadomienie (klucz jest unikalny).
             $this->notifications->publishForUser((int) $u, 'task_unblock', 'warning', 'Prośba o odblokowanie ERP — ' . $who, $task['title_pl'] . ' : ' . $reason,
-                '/tasks/unblock/' . (int) $userId . '/' . $taskId, ['task_id' => $taskId, 'user_id' => (int) $userId], 'task_unblock:' . $userId . ':' . $taskId . ':' . date('Y-m-d'));
+                '/tasks/unblock/' . (int) $userId . '/' . $taskId, ['task_id' => $taskId, 'user_id' => (int) $userId], 'task_unblock:' . $userId . ':' . $taskId . ':' . date('Y-m-d') . ':' . (int) $u);
         }
         return ['message' => 'Prośba wysłana — przełożony albo administrator dostanie powiadomienie.'];
     }
@@ -203,7 +204,8 @@ final class TaskLockService
     public function canUnblock(?int $actorId, array $task): bool
     {
         if (!$actorId) return false;
-        if ($this->access->isAdmin($actorId)) return true;
+        // [281] Profil CEO : decyzja « Odblokuj na dziś » jak administrator.
+        if ($this->access->isAdmin($actorId) || $this->access->isCeo($actorId)) return true;
         return in_array($actorId, $this->repo->usersOfPosition(isset($task['id_reports_to']) ? (int) $task['id_reports_to'] : null), true);
     }
 

@@ -102,6 +102,15 @@
                     <li>
                         <h6 class="dropdown-header">Witaj{{ user.displayName ? ', ' ~ user.displayName : '' }}!</h6>
                     </li>
+                    {% if vs.profiles is defined and vs.profiles %}
+                    {# [281] Profil (makieta 47) : Administrator — praca i ustawienia ; CEO — kontrola (strona Kontrola, bez ustawień). #}
+                    <li><h6 class="dropdown-header at-vs-head">Profil</h6></li>
+                    {% for pr in vs.profiles %}
+                    <li><button type="button" class="dropdown-item at-vs-item{{ pr.current ? ' on' : '' }}" data-view-profile="{{ pr.key }}" aria-pressed="{{ pr.current ? 'true' : 'false' }}">
+                        <i class="bi {{ pr.icon }}"></i><span><b>{{ pr.name }}</b><small>{{ pr.sub }}</small></span>{% if pr.current %}<i class="bi bi-check2 at-vs-check"></i>{% endif %}</button></li>
+                    {% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    {% endif %}
                     {% if vs.can_switch %}
                     {# [239] Sesja : administrator ogląda ERP jak dane stanowisko (menu, strona startowa, zadania) ; uprawnienia bez zmian. #}
                     <li><h6 class="dropdown-header at-vs-head">Sesja</h6></li>
@@ -125,13 +134,15 @@
             {% if vs.can_switch %}
             <script>
                 // [239] Zmiana sesji : zapis na serwerze, potem strona startowa sesji.
-                document.querySelectorAll('[data-view-session]').forEach(function (b) {
+                // [281] Profil (Administrator / CEO) albo sesja stanowiska.
+                document.querySelectorAll('[data-view-session], [data-view-profile]').forEach(function (b) {
                     b.addEventListener('click', function () {
                         if (b.classList.contains('on')) return;
+                        var profile = b.dataset.viewProfile;
                         var id = b.dataset.viewSession;
                         b.disabled = true;
                         fetch('{{ root }}/ajax/view-session', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', Accept: 'application/json'},
-                            body: JSON.stringify({position_id: id === '' ? null : Number(id)})})
+                            body: JSON.stringify(profile ? {profile: profile} : {position_id: id === '' ? null : Number(id)})})
                             .then(function (r) { return r.json(); })
                             .then(function (j) { if (j && j.data && j.data.home) location.href = '{{ root }}' + j.data.home; else { b.disabled = false; alert((j && j.message) || 'Nie udało się zmienić sesji.'); } })
                             .catch(function () { b.disabled = false; alert('Nie udało się zmienić sesji.'); });

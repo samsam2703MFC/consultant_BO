@@ -27,6 +27,20 @@ final class ViewSession
         else unset($_SESSION[self::KEY]);
     }
 
+    /** [281] Profil CEO administratora (kontrola) : klucz sesji ; wybór sesji stanowiska go wyłącza i odwrotnie. */
+    public const CEO_KEY = 'ceo_profile';
+
+    public static function ceo(): bool
+    {
+        return ($_SESSION[self::CEO_KEY] ?? false) === true;
+    }
+
+    public static function setCeo(bool $on): void
+    {
+        if ($on) $_SESSION[self::CEO_KEY] = true;
+        else unset($_SESSION[self::CEO_KEY]);
+    }
+
     /** @return array{can_switch:bool, label:string, current:?int, sessions:list<array>} */
     public static function menu(): array
     {

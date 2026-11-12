@@ -1,0 +1,142 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Kontrola{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Kontrola</h3>
+            <p class="text-subtitle text-muted mb-0">Profil CEO · wszyscy i wszystko na żywo — {{ c.day_label }}, stan na {{ c.now }}. Bez ustawień : tylko decyzje (odblokuj, przypomnij, otwórz szczegóły).</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap">
+            <a class="btn btn-outline-primary" href="{{ root }}/control"><i class="bi bi-arrow-clockwise"></i> Odśwież</a>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [281] Kontrola (makieta 47) : App\Services\Organization\ControlService::overview. Decyzje przez istniejące ekrany i wywołania :
+   /tasks/unblock/{osoba}/{zadanie} (odblokuj na dziś), POST /ajax/organization/execution/remind/{wystąpienie} (przypomnij). #}
+{% set k = c.kpi %}
+<section class="section ct-wrap" id="controlApp" data-root="{{ root }}">
+    <div class="ct-kpis">
+        <div class="ct-kpi"><small>Obecni dziś</small><b>{{ k.present }} / {{ k.people }}</b>
+            <span>{{ k.missing }} bez wejścia{{ k.absent ? ' · nieobecni ' ~ k.absent : '' }}</span></div>
+        <div class="ct-kpi"><small>Zadania dziś</small><b>{{ k.tasks_pct is null ? '—' : k.tasks_pct ~ ' %' }}</b>
+            <span>{{ k.tasks_done }} z {{ k.tasks_total }} zrobione</span></div>
+        <div class="ct-kpi{{ k.mandatory_late ? ' is-bad' : '' }}"><small>Obowiązkowe po terminie</small><b>{{ k.mandatory_late }}</b>
+            <span>ERP zablokowany : {{ k.blocked }} {{ k.blocked == 1 ? 'osoba' : (k.blocked in [2, 3, 4] ? 'osoby' : 'osób') }}</span></div>
+        <div class="ct-kpi{{ k.requests ? ' is-me' : '' }}"><small>Prośby o odblokowanie</small><b>{{ k.requests }}</b>
+            <span>{{ k.requests ? 'czeka na decyzję' : 'brak' }}</span></div>
+        <div class="ct-kpi"><small>Wypełnienie stanowisk</small><b>{{ k.fill is null ? '—' : k.fill ~ ' %' }}</b>
+            <span>min. zadań ÷ czas pracy</span></div>
+    </div>
+
+    <h4 class="ct-h">1 · Wszyscy dziś — kto jest, co zrobił, co blokuje</h4>
+    <div class="ct-card ct-scroll">
+        <table class="ct-table">
+            <thead><tr><th>Osoba</th><th>Stanowisko</th><th>Wejście</th><th>Wyjście</th><th class="num">Zadania dziś</th><th>Obowiązkowe</th>
+                <th class="num">Wypełnienie</th><th class="num">Aktywność ERP</th><th></th></tr></thead>
+            <tbody>
+            {% for p in c.people %}
+                <tr class="{{ p.mandatory.state == 'blocked' ? 'ct-blocked' : '' }}">
+                    <td><b>{{ p.name }}</b>{% if not p.linked %}<small class="ct-mute d-block">bez powiązania z Czasem pracy</small>{% endif %}</td>
+                    <td class="ct-mute">{{ p.position }}</td>
+                    {% if p.absence %}
+                        <td colspan="2"><span class="ct-pill mute">{{ p.absence }}</span></td>
+                    {% else %}
+                        <td>{% if p.in %}{{ p.in }} <span class="ct-src">{{ p.in_source }}</span>{% else %}<span class="ct-miss">bez wejścia</span>{% endif %}</td>
+                        <td>{{ p.out ?: '—' }}</td>
+                    {% endif %}
+                    <td class="num">{{ p.tasks_total ? p.tasks_done ~ ' / ' ~ p.tasks_total : '—' }}</td>
+                    <td>
+                        {% set m = p.mandatory %}
+                        {% if m.state == 'blocked' %}<span class="ct-pill bad"><i class="bi bi-lock-fill"></i> {{ m.title }} — od {{ m.since }}</span>
+                        {% elseif m.state == 'due' %}<span class="ct-pill warn">{{ m.title }} — {{ m.next_day ? 'jutro' : 'do' }} {{ m.until }}</span>
+                        {% elseif m.state == 'done' %}<span class="ct-pill ok">✓ zrobione</span>
+                        {% else %}<span class="ct-mute">—</span>{% endif %}
+                    </td>
+                    <td class="num">{{ p.fill is null ? '—' : p.fill ~ ' %' }}</td>
+                    <td class="num">{{ p.activity_min ? (p.activity_min // 60) ~ ' h ' ~ ('%02d'|format(p.activity_min % 60)) : '—' }}</td>
+                    <td class="num">
+                        {% if p.action.kind == 'unblock' %}<a class="kw-btn pri ct-btn" href="{{ root }}{{ p.action.href }}">Odblokuj</a>
+                        {% elseif p.action.kind == 'remind' %}<button type="button" class="kw-btn ghost ct-btn" data-remind="{{ p.action.occurrences|join(',') }}">Przypomnij</button>
+                        {% else %}<a class="kw-btn ghost ct-btn" href="{{ root }}{{ p.action.href }}">Szczegóły</a>{% endif %}
+                    </td>
+                </tr>
+            {% else %}
+                <tr><td colspan="9" class="ct-mute">Brak kont ERP ze stanowiskiem.</td></tr>
+            {% endfor %}
+            {% set t = c.team %}
+                <tr class="ct-team">
+                    <td><b>Zespoły pracowni</b><small class="ct-mute d-block">{{ t.people }} os. · tablety (produkcja, pakowanie, kierowca)</small></td>
+                    <td class="ct-mute">tablety</td>
+                    <td colspan="2">{{ t.present }} / {{ t.people }} obecnych{{ t.absent ? ' · nieobecni ' ~ t.absent : '' }}</td>
+                    <td class="num">{{ t.total ? t.done ~ ' / ' ~ t.total : '—' }}</td>
+                    <td class="ct-mute">—</td><td class="num ct-mute">—</td><td class="num ct-mute">tablety</td>
+                    <td class="num"><a class="kw-btn ghost ct-btn" href="{{ root }}/organization/team-tasks">Zespoły <i class="bi bi-arrow-right"></i></a></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <h4 class="ct-h">2 · Tydzień — zadania zrobione na czas (stanowisko × dzień)</h4>
+    <div class="ct-card ct-scroll">
+        <table class="ct-table ct-week">
+            <thead><tr><th>Stanowisko</th>{% for col in c.week.columns %}<th class="num{{ col.today ? ' ct-today' : '' }}">{{ col.label }}</th>{% endfor %}</tr></thead>
+            <tbody>
+            {% for r in c.week.rows %}
+                <tr>
+                    <td><b>{{ r.name }}</b>{% if r.sub %}<small class="ct-mute d-block">{{ r.sub }}</small>{% endif %}</td>
+                    {% for cell in r.cells %}
+                        <td class="num">
+                            {% if cell.state == 'plan' %}<span class="ct-cell plan">{{ cell.items|length ? cell.items|length ~ ' zad.' : '—' }}</span>
+                            {% elseif cell.state == 'none' %}<span class="ct-cell none">—</span>
+                            {% else %}<button type="button" class="ct-cell {{ cell.state }}" data-cell="{{ loop.parent.loop.index0 }}-{{ loop.index0 }}">{{ cell.done }}/{{ cell.total }}{{ cell.late ? ' · ' ~ cell.late ~ ' późno' : '' }}</button>{% endif %}
+                        </td>
+                    {% endfor %}
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div class="ct-detail" id="ctDetail" hidden></div>
+    </div>
+    <p class="ct-note">Klik w komórkę → lista zadań dnia (kto, kiedy, uwaga z asystenta). Kolory :
+        <span class="ct-cell ok">na czas</span> <span class="ct-cell late">z opóźnieniem</span> <span class="ct-cell part">częściowo</span> <span class="ct-cell zero">nic</span></p>
+    <script type="application/json" id="ctWeek">{{ c.week.rows|json_encode|raw }}</script>
+
+    <h4 class="ct-h">3 · Do decyzji CEO</h4>
+    <div class="ct-card ct-decisions">
+        {% set d = c.decisions %}
+        {% for q in d.requests %}
+            <div class="ct-dec"><span class="ct-ico">🔒</span><div><b>{{ q.name }}</b> prosi o odblokowanie <small>{{ q.title }} · « {{ q.reason }} » · {{ q.at }}</small></div>
+                <span class="ct-sp"></span><a class="kw-btn pri ct-btn" href="{{ root }}{{ q.href }}">Odblokuj na dziś</a></div>
+        {% endfor %}
+        {% for l in d.late %}
+            <div class="ct-dec"><span class="ct-ico">⏱</span><div><b>{{ l.position }}</b> : {{ l.count }} {{ l.count == 1 ? 'zadanie' : (l.count in [2, 3, 4] ? 'zadania' : 'zadań') }} po terminie {{ l.since_label }}
+                <small>{{ l.titles|slice(0, 3)|join(' · ') }}{{ l.titles|length > 3 ? ' …' : '' }}</small></div>
+                <span class="ct-sp"></span><button type="button" class="kw-btn ghost ct-btn" data-remind="{{ l.occurrences|join(',') }}">Przypomnij</button></div>
+        {% endfor %}
+        {% if d.forgotten %}
+            <div class="ct-dec"><span class="ct-ico">🚪</span><div><b>Zapomniane wyjście</b> : {{ d.forgotten }} {{ d.forgotten == 1 ? 'osoba' : (d.forgotten in [2, 3, 4] ? 'osoby' : 'osób') }} (ostatnie 7 dni)
+                <small>do poprawki przez kierownika, z powodem</small></div><span class="ct-sp"></span><a class="kw-btn ghost ct-btn" href="{{ root }}/time">Czas pracy <i class="bi bi-arrow-right"></i></a></div>
+        {% endif %}
+        {% if d.results %}
+            {% set r = d.results %}
+            <div class="ct-dec"><span class="ct-ico">📈</span><div><b>Wyniki</b> : koszt personelu {{ r.month }} {{ r.staff_pct is null ? '—' : r.staff_pct|number_format(1, ',', ' ') ~ ' %' }}
+                (cel ≤ {{ r.staff_target|number_format(0, ',', ' ') }} %){% if r.margin_pct is not null %} · wynik {{ r.margin_pct|number_format(1, ',', ' ') }} %{% endif %}
+                <small>sprzedaż na osobę, marża — jak w Analizie</small></div><span class="ct-sp"></span>
+                <span class="ct-pill {{ r.staff_ok ? 'ok' : 'warn' }}">{{ r.staff_ok ? 'w celu' : 'powyżej celu' }}</span>
+                <a class="kw-btn ghost ct-btn" href="{{ root }}/dashboard">Analiza <i class="bi bi-arrow-right"></i></a></div>
+        {% endif %}
+        {% if not d.requests and not d.late and not d.forgotten and not d.results %}
+            <p class="ct-mute m-0">Nic nie czeka na decyzję.</p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+{% include 'page_components/ajax_helpers.twig' %}
+<script src="{{ root }}/assets/js/organization/control.js?v={{ asset_v() }}"></script>
+{% endblock %}
