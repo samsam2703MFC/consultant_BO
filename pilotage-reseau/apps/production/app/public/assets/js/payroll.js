@@ -161,20 +161,21 @@
         try { r = await api('GET', '/ajax/payroll/rates?year=' + year); } catch (e) { body.innerHTML = `<div class="alert alert-danger">${esc(e.message)}</div>`; return; }
         const rt = r.rates;
         const st = r.settings;
-        const dis = r.is_admin ? '' : 'disabled';
+        const edit = r.can_edit || r.is_admin;
+        const dis = edit ? '' : 'disabled';
         body.innerHTML = `<div class="tm-bar"><div class="tm-nav"><button type="button" class="btn btn-light btn-sm" data-y="${year - 1}">‹</button><b class="pay-month">Stawki ${year}</b>
                 <button type="button" class="btn btn-light btn-sm" data-y="${year + 1}">›</button></div><span class="tm-spacer"></span>
-                ${rt.own ? '' : `<span class="tm-tag tm-tag-warn">brak stawek ${year} — pokazane z ${rt.from_year}</span>${r.is_admin ? ' <button type="button" class="btn btn-primary btn-sm" data-copy>Skopiuj stawki ' + rt.from_year + ' na ' + year + '</button>' : ''}`}</div>
+                ${rt.own ? '' : `<span class="tm-tag tm-tag-warn">brak stawek ${year} — pokazane z ${rt.from_year}</span>${edit ? ' <button type="button" class="btn btn-primary btn-sm" data-copy>Skopiuj stawki ' + rt.from_year + ' na ' + year + '</button>' : ''}`}</div>
             <form class="at-card pay-card" data-rates><table class="table tm-table pay-rates"><thead><tr><th>Stawka</th><th class="text-end">Wartość</th><th>Jedn.</th><th>Źródło</th></tr></thead><tbody>
                 ${rt.rates.map(x => `<tr><td>${esc(x.label)}</td><td class="text-end"><input class="form-control form-control-sm text-end" name="v_${x.code}" value="${x.value == null ? '' : String(x.value).replace('.', ',')}" ${dis}></td>
                     <td class="tm-sub">${esc(x.unit)}</td><td><input class="form-control form-control-sm" name="s_${x.code}" value="${esc(x.source || '')}" ${dis}></td></tr>`).join('')}</tbody></table>
-                ${r.is_admin ? `<div class="hr-actions p-3"><button type="submit" class="btn btn-primary btn-sm">Zapisz stawki ${year}</button><span class="hr-msg" data-rmsg></span></div>` : '<p class="tm-sub p-3">Stawki zmienia administrator.</p>'}</form>
+                ${edit ? `<div class="hr-actions p-3"><button type="submit" class="btn btn-primary btn-sm">Zapisz stawki ${year}</button><span class="hr-msg" data-rmsg></span></div>` : '<p class="tm-sub p-3">Stawki zmienia administrator albo finanse.</p>'}</form>
             <form class="at-card hr-sec pay-card" data-company><h5>Firma i umowy</h5><div class="hr-fields">
                 <label class="hr-f"><span>Rachunek do przelewów wynagrodzeń</span><input class="form-control form-control-sm" name="debtor_iban" value="${esc(st.debtor_iban)}" placeholder="${esc(st.company_bank ? 'z danych firmy : ' + st.company_bank : 'PL…')}" ${dis}></label>
                 <label class="hr-f"><span>Miejscowość zawarcia umów</span><input class="form-control form-control-sm" name="city" value="${esc(st.city)}" ${dis}></label>
                 <label class="hr-f"><span>Reprezentant pracodawcy</span><input class="form-control form-control-sm" name="rep" value="${esc(st.rep)}" ${dis}></label>
                 <label class="hr-f"><span>Miejsce wykonywania pracy</span><input class="form-control form-control-sm" name="workplace" value="${esc(st.workplace)}" ${dis}></label></div>
-                ${r.is_admin ? '<div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-cmsg></span></div>' : ''}</form>
+                ${edit ? '<div class="hr-actions"><button type="submit" class="btn btn-primary btn-sm">Zapisz</button><span class="hr-msg" data-cmsg></span></div>' : ''}</form>
             <p class="hr-note">Stawki zmieniają się co rok (płaca minimalna, limit 30-krotności, stopa wypadkowa firmy) : 1 stycznia skopiuj stawki i popraw te, które się zmieniły, zawsze ze źródłem.</p>`;
         body.querySelectorAll('[data-y]').forEach(b => b.addEventListener('click', () => settings(Number(b.dataset.y))));
         const cp = body.querySelector('[data-copy]');

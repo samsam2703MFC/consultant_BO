@@ -58,13 +58,13 @@ final class PayrollController extends BaseController
 
     public function rates()
     {
-        return $this->guarded(fn() => ['rates' => $this->pay->rates($this->yearParam()), 'settings' => $this->pay->settings(), 'is_admin' => $this->isAdmin()]);
+        return $this->guarded(fn() => ['rates' => $this->pay->rates($this->yearParam()), 'settings' => $this->pay->settings(), 'is_admin' => $this->isAdmin(), 'can_edit' => true]);
     }
 
+    /** Stawki et ustawienia : tout compte qui a accès à la Lista płac (administrateur et finances) — « guarded » le vérifie. */
     public function saveRates()
     {
         return $this->guarded(function () {
-            if (!$this->isAdmin()) throw new CustomException('Stawki zmienia administrator.', 'errors', 403);
             return $this->pay->saveRates($this->yearParam(), $this->input(), $this->userId());
         });
     }
@@ -72,7 +72,6 @@ final class PayrollController extends BaseController
     public function copyRates()
     {
         return $this->guarded(function () {
-            if (!$this->isAdmin()) throw new CustomException('Stawki zmienia administrator.', 'errors', 403);
             return $this->pay->copyRates($this->yearParam(), $this->userId());
         });
     }
@@ -80,7 +79,6 @@ final class PayrollController extends BaseController
     public function saveSettings()
     {
         return $this->guarded(function () {
-            if (!$this->isAdmin()) throw new CustomException('Ustawienia płac zmienia administrator.', 'errors', 403);
             return $this->pay->saveSettings($this->input(), $this->userId());
         });
     }
