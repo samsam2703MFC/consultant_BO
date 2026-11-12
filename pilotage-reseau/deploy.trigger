@@ -1430,3 +1430,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T16:01:08Z Fidélité › fiche client : jauge commande comptoir / comptoir / webshop / livraison bureau
 2026-11-12T16:07:23Z Assistant : Mr. Pierre, avatars agrandis
 2026-11-12T17:04:06Z Fidélité : familles de produits par catégorie (anti-gaspi ≠ mini-viennoiseries)
+2026-11-12T18:12:05Z Assistant : avatars plus grands (96 / 72 px)
