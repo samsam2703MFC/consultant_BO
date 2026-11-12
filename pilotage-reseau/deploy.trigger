@@ -1410,3 +1410,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T12:05:23Z [286][287] Profil = sesja, Dzisiaj i zadania, bez powtórzeń
 2026-11-12T12:33:05Z 288 urlopy : calendrier clic, demande téléphone + validation kierownik, report 01.06 ; HR zostało + rozmiar odzieży
 2026-11-12T12:50:12Z 289/290 : Mój urlop (zastępca, CEO) + Dzisiaj i zadania jedna strona
+2026-11-12T13:01:47Z minuty zadań ukryte w widoku operatora
