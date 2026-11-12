@@ -110,14 +110,46 @@ function tplClients(f, x){
     <p class="fi-note-s centre">${esc(f.resume)}</p></div>`;
 }
 
+/** Profils clients (12/11/2026) : l'échelle, les profils (nom, condition, aujourd'hui, actif), comment on compte. */
+function tplProfils(f, x){
+  const { esc } = x;
+  if (f.chargementF) { return '<div class="fi-vide">Lecture des profils…</div>'; }
+  if (f.indispoF) { return `<div class="fi-vide">${esc(f.indispoF)}</div>`; }
+  const P = f.pf;
+  if (!P) { return ''; }
+  const echelle = `<div class="fi-pf-ech">${P.echelle.map(e => `<div><i style="background:${esc(e.couleur)}">${esc(e.nom)}</i><span>${esc(e.borne)}</span></div>`).join('')}</div>`;
+  const lignes = P.lignes.map(l => `<div class="fi-pf-row${l.actif ? '' : ' off'}${l.supprimer ? ' sup' : ''}">
+    <label class="fi-pf-pt" style="background:${esc(l.couleur)}" title="Couleur">${l.base ? '' : `<input type="color" value="${esc(l.couleur)}" ${x.C(l.setCouleur)}>`}</label>
+    <div class="fi-pf-nom"><input type="text" class="fi-in t" maxlength="40" value="${esc(l.nom)}" ${x.C(l.setNom)}>${l.modifie ? '<i class="fi-pt" title="modifié, pas encore publié"></i>' : ''}<span>${esc(l.equivalent)}</span></div>
+    <div class="fi-pf-cond">${l.base ? '<span class="fi-t">Tous les clients scannés sous le profil le plus bas</span>'
+      : `<span class="fi-champ"><input type="number" class="fi-in" style="width:46px" min="1" max="${l.unite === 'semaine' ? 7 : 30}" value="${esc(l.n)}" ${x.C(l.setN)}></span><span class="fi-t">fois par</span><select class="fi-in s" ${x.C(l.setUnite)}><option value="semaine"${l.unite === 'semaine' ? ' selected' : ''}>semaine</option><option value="mois"${l.unite === 'mois' ? ' selected' : ''}>mois</option></select>`}</div>
+    <div class="fi-pf-n"><b>${esc(l.aujourdhui)}</b><span>${esc(l.part)}</span></div>
+    <div class="fi-pf-act">${l.retirer ? `<button class="fi-lien rouge" ${x.A(l.retirer)}>${l.supprimer ? 'Garder' : (l.nouveau ? 'Annuler' : 'Retirer')}</button>` : ''}
+      ${l.basculer ? `<button class="fi-tog${l.actif ? ' on' : ''}" ${x.A(l.basculer)} role="switch" aria-checked="${l.actif}" title="${l.actif ? 'Désactiver' : 'Activer'}"></button>` : '<span class="fi-tog on fixe" title="Toujours actif"></span>'}</div></div>`).join('');
+  return `<div class="fi-col">
+    <p class="fi-pf-intro">${esc(P.intro)}</p>
+    <section class="fi-grp"><h3>L’échelle</h3><div class="fi-liste fi-pf-pad">${echelle}</div><p class="fi-grp-pied">Du plus rare au plus fidèle ; sous chaque profil, son seuil d’entrée. « 1 fois par semaine » vaut 4 passages par mois.</p></section>
+    <section class="fi-grp"><h3>Les profils de fréquence</h3><div class="fi-liste">
+      <div class="fi-pf-row fi-pf-tete"><span></span><span>Profil</span><span>Condition</span><span>Aujourd’hui</span><span>Actif</span></div>${lignes}
+      <button class="fi-add" ${x.A(P.ajouter)}><span>+</span>Ajouter un profil</button></div>
+      <p class="fi-grp-pied">Aujourd’hui : les profils publiés appliqués ${esc(P.apercu)}.</p></section>
+    <section class="fi-grp"><h3>Comment on compte</h3><div class="fi-liste">
+      <div class="fi-pf-opt"><b>Fenêtre du rythme</b><span>Le rythme se lit sur les <span class="fi-champ"><input type="number" class="fi-in" style="width:52px" min="7" max="120" value="${esc(P.fenetre)}" ${x.C(P.setFenetre)}></span> derniers jours, ramené à un mois de 30 jours</span></div>
+      <div class="fi-pf-opt"><b>Clients comptés</b><span>Les particuliers reconnus en caisse (carte scannée ou commande) au moins une fois sur les <span class="fi-champ"><input type="number" class="fi-in" style="width:52px" min="30" max="365" value="${esc(P.memoire)}" ${x.C(P.setMemoire)}></span> derniers jours ; les clients pro ne comptent pas</span></div>
+      <div class="fi-pf-opt"><b>Un passage</b><span>Un jour avec au moins un ticket rattaché au client ; deux tickets le même jour font un passage</span></div>
+      <div class="fi-pf-opt"><b>Profil d’un client</b><span>Recalculé à chaque lecture du dashboard magasin ; il monte et descend avec le rythme</span></div>
+    </div></section></div>`;
+}
+
 export function tplFidelite(c, x){
   const { esc } = x, f = c.fid;
   if (!f) { return ''; }
   const shop = f.portees.find(p => p.on) || f.portees[0];
-  const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(f.ongletP)} class="${f.onglet === 'p' ? 'on' : ''}">Programme</button><button ${x.A(f.ongletC)} class="${f.onglet === 'c' ? 'on' : ''}">Clients</button></div>
+  const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(f.ongletP)} class="${f.onglet === 'p' ? 'on' : ''}">Programme</button><button ${x.A(f.ongletC)} class="${f.onglet === 'c' ? 'on' : ''}">Clients</button><button ${x.A(f.ongletF)} class="${f.onglet === 'f' ? 'on' : ''}">Profils clients</button></div>
     <label class="fi-popup"><select ${x.C(e => { const p = f.portees.find(q => q.id === e.target.value); if (p) { p.choisir(); } })}>${f.portees.map(p => `<option value="${esc(p.id)}"${p.on ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select><span>${esc(shop ? shop.nom : 'Réseau')}</span></label></div>`;
   const essai = f.test ? '<p class="fi-essai"><i></i>Données d’essai — aucune visite carte en base pour l’instant. Les calculs sont ceux qui tourneront sur les vraies visites.</p>' : '';
   const msg = f.msg ? `<div class="fi-toast${f.msg.ko ? ' ko' : ''}">${esc(f.msg.txt)}<button ${x.A(f.fermerMsg)} aria-label="Fermer">×</button></div>` : '';
+  const dockF = f.onglet === 'f' && f.nbModifsF ? `<div class="fi-dock"><span>${f.nbModifsF} modification${f.nbModifsF > 1 ? 's' : ''} non publiée${f.nbModifsF > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(f.annulerF)}>Annuler</button><button class="fi-cta" ${x.A(f.publierF)}${f.envoi ? ' disabled' : ''}>${f.envoi ? 'Publication…' : 'Publier dans les magasins'}</button></div>` : '';
   const dock = f.onglet === 'p' && f.nbModifs ? `<div class="fi-dock"><span>${f.nbModifs} modification${f.nbModifs > 1 ? 's' : ''} non publiée${f.nbModifs > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(f.annuler)}>Annuler</button><button class="fi-cta" ${x.A(f.publier)}${f.envoi ? ' disabled' : ''}>${f.envoi ? 'Publication…' : 'Publier'}</button></div>` : '';
-  return `<div data-screen="fidelite" class="fi">${haut}${essai}${msg}${f.onglet === 'c' ? tplClients(f, x) : tplProgramme(f, x)}${dock}</div>`;
+  return `<div data-screen="fidelite" class="fi">${haut}${essai}${msg}${f.onglet === 'c' ? tplClients(f, x) : f.onglet === 'f' ? tplProfils(f, x) : tplProgramme(f, x)}${dock}${dockF}</div>`;
 }

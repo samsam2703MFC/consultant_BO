@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Espace franchisé · Fidélité › Profils clients (Halle)</title>
+<style>
+:root{--ink:#1c1a17;--muted-2:#5c5852;--muted:#7a736a;--faint:#B8B2A8;--paper:#faf7f2;--table-head:#FBF9F5;--total-line:#F8F4EE;--chip:#EDE7DE;--line:#e6e0d8;--row-line:rgba(34,34,34,.06);--accent:#8D1D2C;--danger:#b3261e;--green:#3f7a52;--prize:#B0792A;--prize-soft:#F6E7CE;--prize-ink:#7A5207;--stop:#A32014;--stop-soft:#F7E0DC;color-scheme:light;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}
+h1,h2,h3,h4,th,b,strong{font-weight:400}
+.workspace{display:flex;height:100vh;overflow:hidden}.workspace__main{flex:1;display:flex;flex-direction:column;min-width:0}
+.app__body{flex:1;overflow-y:auto;padding:22px 24px 40px}.app__body>*{max-width:1180px}
+.sidebar{flex:0 0 246px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding-bottom:24px}
+.sidebar__head{padding:20px 16px 8px}.sidebar__logo{font-size:17px;letter-spacing:.02em;color:var(--ink)}
+.sidebar__kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:9px}
+.sidebar__back{padding:6px 12px 4px}.sidebar__back a{display:flex;align-items:center;gap:9px;background:var(--paper);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__brand{margin:10px 12px 0;padding:8px 10px;font-size:13px;background:var(--table-head);border-radius:9px}
+.sidebar__groups{padding:2px 12px 0}.sidebar__group{margin-top:18px}
+.sidebar__group-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 10px 8px}
+.sidebar__item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__item.is-active{background:rgba(141,29,44,.08);color:var(--accent);font-weight:700}
+svg.i{width:16px;height:16px;flex:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:18px 24px;border-bottom:1px solid var(--line);background:#fff}
+.topbar__kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.topbar h1{font-size:26px;letter-spacing:-.01em;margin:0}.topbar__actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:400 13px/1.2 'Gotham',system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--sm{min-height:30px;padding:5px 11px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.seg button{padding:6px 11px;border:0;border-radius:7px;background:transparent;color:var(--muted-2);font:400 12.5px 'Gotham',system-ui,sans-serif}
+.seg button.is-on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.page-tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.page-tabs__tab{margin:0 0 -1px;padding:8px 12px;border:none;border-bottom:2px solid transparent;background:none;color:var(--muted-2);font:inherit;font-size:13px}
+.page-tabs__tab.is-on{color:var(--accent);border-bottom-color:var(--accent)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+h2{font-size:.95rem;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.section-label__aside{float:right;font-size:11.5px;text-transform:none;letter-spacing:normal;color:var(--muted)}
+.kpi-row{display:flex;flex-wrap:wrap;padding:4px 0}
+.kpi{flex:1;min-width:176px;padding:13px 18px;border-left:3px solid var(--line)}
+.kpi.is-stop{border-left-color:var(--stop)}.kpi.is-warn{border-left-color:var(--prize)}
+.kpi__value{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.kpi__label{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+.kpi__note{font-size:12px;color:var(--muted);margin-top:3px}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--stop);border-radius:12px;background:#fff}
+.verdict p{margin:0;font-size:15px;line-height:1.45}.verdict .muted{font-size:12.5px;margin-top:6px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--table-head);padding:10px 14px}
+tbody td{padding:11px 14px;border-top:1px solid var(--row-line)}
+.num{text-align:right}.sub{display:block;margin-top:2px;font-size:10.5px;color:var(--muted)}
+tr.total td{background:var(--total-line)}tr.is-me td{background:rgba(141,29,44,.04)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11.5px;white-space:nowrap}
+.chip--neutral{background:var(--chip);color:var(--muted-2)}
+.badge--ok{background:rgba(63,122,82,.12);color:var(--green)}
+.tag-warn,.tag-stop{display:inline-flex;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tag-warn{background:var(--prize-soft);color:var(--prize-ink)}.tag-stop{background:var(--stop-soft);color:var(--stop)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.split{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:10px 0 12px;background:var(--chip)}
+.split span{display:block;height:100%}
+.legend{display:grid;gap:9px;font-size:13px}.legend div{display:flex;align-items:center;gap:8px}.legend .num{margin-left:auto}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.steps li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--row-line);font-size:13px;line-height:1.45}
+.steps li:first-child{border-top:0;padding-top:2px}
+.step-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--muted-2);display:flex;align-items:center;justify-content:center;font-size:11.5px}
+.step-n.is-stop{background:var(--stop-soft);color:var(--stop)}
+.steps .sub{font-size:12px}
+.foot{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend-chart{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend-chart span{display:inline-flex;align-items:center;gap:6px}
+
+.app__body>*{max-width:1320px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+.section-label{margin:1.5rem 0 0;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.note{display:flex;gap:10px;align-items:center;margin-top:12px;padding:10px 14px;border-radius:10px;background:var(--prize-soft);color:var(--prize-ink);font-size:12.5px}
+.ladder{display:grid;grid-template-columns:1fr 96px 1fr 96px 1fr 96px 1fr;align-items:stretch;margin-top:12px}
+.step{background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.step.is-top{border-color:rgba(141,29,44,.45);background:rgba(141,29,44,.03)}
+.step__head{display:flex;align-items:center;gap:8px}.step__nom{font-size:15px}
+.lvl{display:inline-flex;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;align-items:center;justify-content:center;flex:none}
+.step__val{font-size:24px;font-weight:700;letter-spacing:-.02em;margin-top:10px}.step__val span{font-size:12px;font-weight:400;color:var(--muted);letter-spacing:0}
+.step__rule{font-size:11.5px;color:var(--muted);margin-top:2px}
+.step__bar{height:6px;background:var(--table-head);border-radius:3px;margin:10px 0 8px;overflow:hidden}.step__bar span{display:block;height:100%}
+.step dl{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;margin:0;font-size:12.5px}.step dt{color:var(--muted)}.step dd{margin:0;text-align:right}
+.arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;font-size:10.5px;color:var(--muted);padding:0 6px;line-height:1.35}
+.g2{display:grid;grid-template-columns:1fr 1fr 340px;gap:16px;margin-top:16px}
+.lgs{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;margin-top:6px;justify-content:center}.lg{display:inline-flex;align-items:center;gap:6px}.lg i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.muted{color:var(--muted)}
+.hb{display:grid;grid-template-columns:110px 1fr 36px;align-items:center;gap:10px;font-size:13px;padding:6px 0}
+.hb__t{height:10px;background:var(--table-head);border-radius:3px;overflow:hidden}.hb__t span{display:block;height:100%;background:#B03048;border-radius:3px}
+.ins{list-style:none;margin:0;padding:0}.ins li{padding:10px 0;border-top:1px solid var(--row-line);font-size:12.5px;line-height:1.5;color:var(--muted-2)}.ins li:first-child{border-top:0}
+.ins b{display:block;font-weight:400;color:var(--ink);font-size:13px;margin-bottom:2px}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:12px}
+.cli header{display:flex;align-items:center;gap:8px;margin-bottom:8px}.cli header b{font-weight:400;font-size:15px}.cli .r{margin-left:auto;font-size:11.5px}
+.cli__nums{display:grid;grid-template-columns:repeat(4,auto);justify-content:space-between;font-size:11.5px;color:var(--muted);margin:6px 0 4px}
+.cli__nums em{font-style:normal;color:var(--ink);font-size:13px;display:block}
+.cli__radars{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:4px}.mini-t{margin:6px 0 0;text-align:center;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.cli__fam{margin:4px 0 0;font-size:12px;color:var(--muted-2);text-align:center}
+.cli__act{margin:10px 0 0;padding-top:10px;border-top:1px solid var(--row-line);font-size:12.5px;color:var(--ink)}
+.axes{display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:11.5px;color:var(--muted);margin-top:12px}.axes b{font-weight:400;color:var(--muted-2)}
+code{font-size:11px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:10px}
+.tile{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;cursor:pointer}
+.tile.is-on{border:2px solid var(--accent);background:rgba(141,29,44,.03);padding:15px 17px}
+.tile__head{display:flex;align-items:center;gap:8px;font-size:15px}
+.tile__pct{font-size:30px;font-weight:700;letter-spacing:-.02em;margin-top:12px;line-height:1.1}
+.tile__n{font-size:12px;color:var(--muted);margin-top:3px}
+.tile__bar{height:6px;background:var(--table-head);border-radius:3px;margin:12px 0;overflow:hidden}.tile__bar span{display:block;height:100%}
+.tile__cond{display:grid;gap:2px;padding:10px 12px;border-radius:8px;background:var(--table-head);font-size:12px;color:var(--muted)}
+.tile__cond b{font-weight:400;font-size:13.5px;color:var(--ink)}.cond__t{font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
+.tile dl{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;margin:12px 0 0;font-size:12.5px}.tile dt{color:var(--muted)}.tile dd{margin:0;text-align:right}
+.lvl--sm{width:16px;height:16px;font-size:10px;vertical-align:-3px;margin-right:4px}
+.hint{margin:14px 0 0;font-size:11.5px;color:var(--muted)}
+.g2{grid-template-columns:1fr 1fr 330px}
+table{min-width:0}
+</style></head>
+<body><div class="workspace"><nav class="sidebar" aria-label="Navigation principale">
+  <div class="sidebar__head"><div class="sidebar__logo">L’Atelier By</div><div class="sidebar__kicker">Espace franchisé</div></div>
+  <div class="sidebar__back"><a href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Retour à l’ERP</a></div>
+  <div class="sidebar__brand">L’Atelier by Halle</div>
+  <div class="sidebar__groups">
+    <div class="sidebar__group"><div class="sidebar__group-label">Pilotage</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Tableau de bord</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Ventes</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12l2 5H4z"/><path d="M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/></svg>Commandes</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Clients</div>
+      <a class="sidebar__item is-active" aria-current="page" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.6-9.5 9-9.5 9z"/></svg>Fidélité</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg>Clients</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v8H4v-8"/><path d="M2 7h20v5H2z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>Bons et promotions</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Paramètres</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages du magasin</a>
+    </div>
+  </div>
+</nav>
+<div class="workspace__main">
+  <header class="topbar">
+    <div><p class="topbar__kicker">Vue Franchisé · L’Atelier by Halle</p><h1>Fidélité</h1></div>
+    <div class="topbar__actions"><div class="seg"><button>30 jours</button><button class="is-on">90 jours</button><button>Année</button></div><a class="btn btn--primary" href="#">Inscrire un client</a></div>
+  </header>
+  <main class="app__body">
+    <nav class="page-tabs"><button class="page-tabs__tab">En caisse</button><button class="page-tabs__tab is-on">Profils clients</button><button class="page-tabs__tab">Programme</button><button class="page-tabs__tab">Récompenses</button></nav>
+
+    <p class="section-label" style="margin-top:0">Les profils des clients scannés <span class="section-label__aside">209 clients reconnus en caisse sur 90 jours · 253 tickets sur 13 173, soit 1 sur 52</span></p>
+    <div class="tiles"><div class="tile"><div class="tile__head"><span class="lvl" style="background:#9a948b">1</span>Découverte</div><div class="tile__pct">90,4 %</div><div class="tile__n">189 clients sur 209 scannés</div><div class="tile__bar"><span style="width:90%;background:#9a948b"></span></div><div class="tile__cond"><span class="cond__t">Condition</span><b>Moins d’1 jour par mois</b><span>1 seul passage en 3 mois</span></div><dl><dt>Part du CA scanné</dt><dd>83 %</dd><dt>Panier moyen</dt><dd>47,80 €</dd><dt>En commande</dt><dd>37 %</dd><dt>Dernier passage</dt><dd>il y a 32 j <span class="muted">méd.</span></dd></dl></div><div class="tile"><div class="tile__head"><span class="lvl" style="background:#3f7a52">2</span>De retour</div><div class="tile__pct">6,7 %</div><div class="tile__n">14 clients sur 209 scannés</div><div class="tile__bar"><span style="width:7%;background:#3f7a52"></span></div><div class="tile__cond"><span class="cond__t">Condition</span><b>Moins d’1 jour par mois</b><span>2 passages en 3 mois</span></div><dl><dt>Part du CA scanné</dt><dd>10 %</dd><dt>Panier moyen</dt><dd>39,31 €</dd><dt>En commande</dt><dd>36 %</dd><dt>Dernier passage</dt><dd>il y a 35 j <span class="muted">méd.</span></dd></dl></div><div class="tile"><div class="tile__head"><span class="lvl" style="background:#B0792A">3</span>Régulier</div><div class="tile__pct">1,9 %</div><div class="tile__n">4 clients sur 209 scannés</div><div class="tile__bar"><span style="width:2%;background:#B0792A"></span></div><div class="tile__cond"><span class="cond__t">Condition</span><b>1 à 1,7 jour par mois</b><span>3 à 5 passages en 3 mois</span></div><dl><dt>Part du CA scanné</dt><dd>4 %</dd><dt>Panier moyen</dt><dd>34,04 €</dd><dt>En commande</dt><dd>50 %</dd><dt>Dernier passage</dt><dd>il y a 8 j <span class="muted">méd.</span></dd></dl></div><div class="tile is-on"><div class="tile__head"><span class="lvl" style="background:#8D1D2C">4</span>Habitué</div><div class="tile__pct">1,0 %</div><div class="tile__n">2 clients sur 209 scannés</div><div class="tile__bar"><span style="width:2%;background:#8D1D2C"></span></div><div class="tile__cond"><span class="cond__t">Condition</span><b>2 jours par mois ou plus</b><span>6 passages ou plus en 3 mois</span></div><dl><dt>Part du CA scanné</dt><dd>3 %</dd><dt>Panier moyen</dt><dd>13,30 €</dd><dt>En commande</dt><dd>78 %</dd><dt>Dernier passage</dt><dd>hier <span class="muted">méd.</span></dd></dl></div></div>
+
+    <div class="g2">
+      <section class="card">
+        <h2>Récurrence <span class="section-label__aside">0 au centre, 100 au bord</span></h2>
+        <svg viewBox="0 0 340 340" width="100%" style="display:block;max-width:340px;margin:0 auto"><polygon points="170.0,145.0 191.7,157.5 191.7,182.5 170.0,195.0 148.3,182.5 148.3,157.5" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,120.0 213.3,145.0 213.3,195.0 170.0,220.0 126.7,195.0 126.7,145.0" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,95.0 235.0,132.5 235.0,207.5 170.0,245.0 105.0,207.5 105.0,132.5" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,70.0 256.6,120.0 256.6,220.0 170.0,270.0 83.4,220.0 83.4,120.0" fill="none" stroke="#e6e0d8" stroke-width="1"/><line x1="170.0" y1="170.0" x2="170.0" y2="70.0" stroke="#e6e0d8"/><text x="170.0" y="54.0" font-size="11" text-anchor="middle" fill="#5c5852">Fréquence</text><line x1="170.0" y1="170.0" x2="256.6" y2="120.0" stroke="#e6e0d8"/><text x="267.0" y="118.0" font-size="11" text-anchor="start" fill="#5c5852">Récence</text><line x1="170.0" y1="170.0" x2="256.6" y2="220.0" stroke="#e6e0d8"/><text x="267.0" y="230.0" font-size="11" text-anchor="start" fill="#5c5852">Ancienneté</text><line x1="170.0" y1="170.0" x2="170.0" y2="270.0" stroke="#e6e0d8"/><text x="170.0" y="294.0" font-size="11" text-anchor="middle" fill="#5c5852">Panier</text><line x1="170.0" y1="170.0" x2="83.4" y2="220.0" stroke="#e6e0d8"/><text x="73.0" y="238.0" font-size="11" text-anchor="end" fill="#5c5852">Diversité</text><line x1="170.0" y1="170.0" x2="83.4" y2="120.0" stroke="#e6e0d8"/><text x="73.0" y="110.0" font-size="11" text-anchor="end" fill="#5c5852">Comptoir</text><polygon points="170.0,160.0 220.2,141.0 173.5,172.0 170.0,234.0 146.6,183.5 115.4,138.5" fill="#9a948b" fill-opacity="0.06" stroke="#9a948b" stroke-width="1.2" stroke-linejoin="round"/><polygon points="170.0,91.0 256.6,120.0 238.4,209.5 170.0,197.0 126.7,195.0 142.3,154.0" fill="#8D1D2C" fill-opacity="0.16" stroke="#8D1D2C" stroke-width="2.2" stroke-linejoin="round"/></svg>
+        <div class="lgs"><span class="lg"><i style="background:#8D1D2C"></i>Habitué</span><span class="lg"><i style="background:#9a948b"></i>Moyenne des 209 clients scannés</span></div>
+      </section>
+      <section class="card">
+        <h2>Type d’achat <span class="section-label__aside">part des articles, en %</span></h2>
+        <svg viewBox="0 0 340 340" width="100%" style="display:block;max-width:340px;margin:0 auto"><polygon points="170.0,145.0 191.7,157.5 191.7,182.5 170.0,195.0 148.3,182.5 148.3,157.5" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,120.0 213.3,145.0 213.3,195.0 170.0,220.0 126.7,195.0 126.7,145.0" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,95.0 235.0,132.5 235.0,207.5 170.0,245.0 105.0,207.5 105.0,132.5" fill="none" stroke="#e6e0d8" stroke-width="1"/><polygon points="170.0,70.0 256.6,120.0 256.6,220.0 170.0,270.0 83.4,220.0 83.4,120.0" fill="none" stroke="#e6e0d8" stroke-width="1"/><line x1="170.0" y1="170.0" x2="170.0" y2="70.0" stroke="#e6e0d8"/><text x="170.0" y="54.0" font-size="11" text-anchor="middle" fill="#5c5852">Pain</text><line x1="170.0" y1="170.0" x2="256.6" y2="120.0" stroke="#e6e0d8"/><text x="267.0" y="118.0" font-size="11" text-anchor="start" fill="#5c5852">Viennoiserie</text><line x1="170.0" y1="170.0" x2="256.6" y2="220.0" stroke="#e6e0d8"/><text x="267.0" y="230.0" font-size="11" text-anchor="start" fill="#5c5852">Anti-gaspi</text><line x1="170.0" y1="170.0" x2="170.0" y2="270.0" stroke="#e6e0d8"/><text x="170.0" y="294.0" font-size="11" text-anchor="middle" fill="#5c5852">Tartes & fêtes</text><line x1="170.0" y1="170.0" x2="83.4" y2="220.0" stroke="#e6e0d8"/><text x="73.0" y="238.0" font-size="11" text-anchor="end" fill="#5c5852">Goûter</text><line x1="170.0" y1="170.0" x2="83.4" y2="120.0" stroke="#e6e0d8"/><text x="73.0" y="110.0" font-size="11" text-anchor="end" fill="#5c5852">Salé</text><polygon points="170.0,137.5 189.5,158.8 175.4,173.1 170.0,217.5 161.3,175.0 164.6,166.9" fill="#9a948b" fill-opacity="0.06" stroke="#9a948b" stroke-width="1.2" stroke-linejoin="round"/><polygon points="170.0,76.2 190.6,158.1 172.2,171.2 170.0,176.2 167.8,171.2 167.8,168.8" fill="#8D1D2C" fill-opacity="0.16" stroke="#8D1D2C" stroke-width="2.2" stroke-linejoin="round"/></svg>
+        <div class="lgs"><span class="lg"><i style="background:#8D1D2C"></i>Habitué</span><span class="lg"><i style="background:#9a948b"></i>Moyenne des 209 clients scannés</span></div>
+      </section>
+      <section class="card">
+        <h2>Ce que dit le profil Habitué</h2>
+        <ul class="ins">
+          <li><b>Il vient pour le quotidien</b>75 % de pain, un panier de 13,30 € : trois fois moins que la moyenne des clients scannés.</li>
+          <li><b>Il commande plus qu’il ne passe</b>78 % de ses tickets passent par une commande ; au comptoir, il n’est presque jamais reconnu.</li>
+          <li><b>Il revient au moins deux fois par mois</b>Les deux habitués sont passés hier, l’un 16 fois en 3 mois : c’est lui que la carte doit récompenser en premier.</li>
+        </ul>
+        <p class="hint">Cliquer une vignette affiche son profil dans les deux radars.</p>
+      </section>
+    </div>
+
+    <section class="card table-card" style="padding:0;overflow:hidden;margin-top:16px">
+      <div style="padding:1.25rem 1.25rem .25rem"><h2>Les clients qui reviennent <span class="section-label__aside">réguliers et habitués · à l’écran du magasin, le prénom et l’initiale du nom</span></h2></div>
+      <table>
+        <thead><tr><th>Client</th><th>Profil</th><th class="num">Fréquence</th><th>Dernier passage</th><th class="num">Panier</th><th>Achète surtout</th><th>Action proposée</th></tr></thead>
+        <tbody><tr><td>Client A</td><td><span class="lvl lvl--sm" style="background:#8D1D2C">4</span> Habitué</td><td class="num">5,3 j / mois<span class="sub">16 passages en 3 mois</span></td><td>hier</td><td class="num">9,06 €</td><td>pain 78 %, viennoiserie 10 %</td><td>Lui proposer la carte : 16 passages sans un point</td></tr><tr><td>Client B</td><td><span class="lvl lvl--sm" style="background:#8D1D2C">4</span> Habitué</td><td class="num">2,3 j / mois<span class="sub">7 passages en 3 mois</span></td><td>hier</td><td class="num">23,00 €</td><td>pain 72 %, viennoiserie 28 %</td><td>Carte Pain : le faire revenir chaque semaine</td></tr><tr><td>Client C</td><td><span class="lvl lvl--sm" style="background:#B0792A">3</span> Régulier</td><td class="num">1,0 j / mois<span class="sub">3 passages en 3 mois</span></td><td>il y a 3 j</td><td class="num">43,70 €</td><td>pain 56 %, anti-gaspi 20 %</td><td>Jauge de points : il achète de tout</td></tr><tr><td>Client D</td><td><span class="lvl lvl--sm" style="background:#B0792A">3</span> Régulier</td><td class="num">1,0 j / mois<span class="sub">3 passages en 3 mois</span></td><td>il y a 8 j</td><td class="num">38,07 €</td><td>tartes & fêtes 100 %</td><td>L’inviter aux temps forts (cougnou, fêtes)</td></tr><tr><td>Client E</td><td><span class="lvl lvl--sm" style="background:#B0792A">3</span> Régulier</td><td class="num">1,0 j / mois<span class="sub">3 passages en 3 mois</span></td><td>il y a 14 j</td><td class="num">35,83 €</td><td>salé 80 %, tartes & fêtes 20 %</td><td>Lui parler de la formule lunch</td></tr><tr><td>Client F</td><td><span class="lvl lvl--sm" style="background:#B0792A">3</span> Régulier</td><td class="num">1,0 j / mois<span class="sub">3 passages en 3 mois</span></td><td>il y a 2 j</td><td class="num">18,58 €</td><td>pain 41 %, anti-gaspi 33 %</td><td>Un bon sur sa prochaine viennoiserie</td></tr></tbody>
+      </table>
+    </section>
+
+    <p class="foot">Maquette du 12/11/2026. Chiffres réels de L’Atelier by Halle sur 90 jours (14/08 → 11/11/2026), lus par l’API du panel sans aucune table locale : tickets du jour (<code>/shops/4/transactions</code>), lignes des 253 tickets scannés (<code>/transactions/{id}?include=products</code>), catalogue (<code>/products</code>). Aucun client n’a encore la fidélité active : les profils se lisent aux achats. Les clients sont anonymisés (A à F). Conditions, échelles et actions : des propositions, à trancher.</p>
+  </main>
+</div></div></body></html>

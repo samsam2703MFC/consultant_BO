@@ -1,0 +1,17 @@
+<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Banc · Fidélité › Profils</title>
+<link rel="stylesheet" href="/assets/ds/global.css"><link rel="stylesheet" href="/assets/css/fidelite.css">
+<style>body{background:#f2f2f7;padding:24px 32px;margin:0}</style></head><body><div id="ecran"></div>
+<script type="module">
+import { valsFidelite } from '/assets/js/fidelite-vals.js';
+import { tplFidelite } from '/assets/js/fidelite-tpl.js';
+const H = []; const reg = fn => (H.push(fn), H.length - 1);
+const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+const x = { esc, A: fn => `data-a="${reg(fn)}"`, C: fn => `data-c="${reg(fn)}"`, I: fn => `data-i="${reg(fn)}"` };
+const app = { state: { fidOnglet: 'f', fidShop: new URLSearchParams(location.search).get('shop') || '' },
+  setState(p) { Object.assign(this.state, p); rendre(); },
+  api(m, path, b) { return fetch('/api/cockpit' + path, { method: m, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) }).then(r => r.json()); } };
+function rendre() { H.length = 0; const c = {}; valsFidelite(app, c); document.getElementById('ecran').innerHTML = tplFidelite(c, x);
+  document.querySelectorAll('[data-a]').forEach(e => e.onclick = () => H[e.dataset.a]());
+  document.querySelectorAll('[data-c]').forEach(e => e.onchange = ev => H[e.dataset.c](ev)); }
+window.app = app; rendre();
+</script></body></html>
