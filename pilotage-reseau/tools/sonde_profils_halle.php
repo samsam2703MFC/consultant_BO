@@ -13,6 +13,8 @@ declare(strict_types=1);
  * Lancée sur le serveur du cockpit par `.github/workflows/sonde-profils-halle.yml` :
  *     php -- /var/www/consulant_bo < tools/sonde_profils_halle.php
  *
+ * Deuxième usage (12/11/2026) : les profils de fréquence du cockpit et l'historique des 6 premiers clients sur 180 jours.
+ *
  * LECTURE SEULE : des GET au panel, aucune table locale. Rien de nominatif : un client est un rang (C1, C2…), jamais
  * son identifiant ni son nom ; les lignes de ticket ne donnent que leur catégorie.
  */
@@ -201,4 +203,71 @@ foreach ($parNiveau as $n => $x) {
 echo "\nclients par famille achetée : ", json_encode($famClients), "\n";
 echo "\nLES 10 PREMIERS CLIENTS :\n";
 foreach (array_slice($P, 0, 10) as $i => $x) { echo 'C', $i + 1, ' ', json_encode($x), "\n"; }
+
+// 5. Les profils de fréquence du cockpit (12/11/2026, Sam) : passages par mois sur les 90 jours.
+$PROFILS = [['fanbase', '3 fois par semaine (Fanbase)', 12], ['2sem', '2 fois par semaine', 8], ['1sem', '1 fois par semaine', 4],
+    ['2a3mois', '2 à 3 fois par mois', 2], ['1mois', '1 fois par mois', 1], ['moins', 'moins d’1 fois par mois', 0]];
+$parProfil = [];
+foreach ($C as $c) {
+    $pm = count($c['jours']) / (SP_JOURS / 30);
+    foreach ($PROFILS as [$k, $lib, $min]) { if ($pm >= $min) { $parProfil[$k][] = $c; break; } }
+}
+echo "\nPROFILS DE FRÉQUENCE (passages par mois sur 90 jours) :\n";
+foreach ($PROFILS as [$k, $lib, $min]) {
+    $L = $parProfil[$k] ?? [];
+    $tk = array_sum(array_column($L, 'tk')); $eur = array_sum(array_column($L, 'eur')); $cmd = array_sum(array_column($L, 'cmd'));
+    printf("  %-32s %3d clients · %3d tickets · %9.2f € · %d en commande\n", $lib, count($L), $tk, $eur, $cmd);
+}
+
+// 6. L'historique des 6 premiers clients sur 180 jours, ticket par ticket : de quoi dessiner la fiche d'un client.
+$top = array_slice(array_keys($C), 0, 6, true);
+$rang = array_flip($top);
+$du2 = date('Y-m-d', strtotime($du . ' -90 days'));
+$ch6 = [];
+for ($d = $du2; $d < $du; $d = date('Y-m-d', strtotime($d . ' +1 day'))) { $ch6[$d] = '/shops/' . SP_SHOP . '/transactions?date=' . $d; }
+$res6 = PanelApi::getParalleleDetail($ch6, 4, 40);
+$hist = [];
+foreach ($tickets as $t) { if (isset($rang[$t['cli']])) { $hist[] = $t + ['avant' => false]; } }
+$ids6 = [];
+foreach ($ch6 as $d => $ch) {
+    foreach (analyseListe(is_array($res6[$d]['data'] ?? null) ? $res6[$d]['data'] : []) as $t) {
+        if (!is_array($t) || !isset($rang[(int) ($t['id_client'] ?? 0)])) { continue; }
+        $ids6[] = ['id' => (int) $t['id'], 'cli' => (int) $t['id_client'], 'ts' => (string) ($t['insert_timestamp'] ?? ''),
+            'eur' => (float) ($t['total_gross_amount_after_discount'] ?? 0),
+            'cmd' => strtolower((string) ($t['source'] ?? '')) === 'webshop' || (int) ($t['order_ref'] ?? 0) > 0, 'cats' => [], 'avant' => true];
+    }
+}
+$det = $ids6 ? PanelApi::getParalleleDetail(array_map(static fn ($t) => '/transactions/' . $t['id'] . '?include=products', $ids6), 4, 30) : [];
+foreach ($ids6 as $i => $t) {
+    $d = $det[$i]['data'] ?? null;
+    $d = is_array($d) && isset($d['data']) && is_array($d['data']) && !array_is_list($d['data']) ? $d['data'] : $d;
+    foreach ((array) ($d['products'] ?? []) as $p) {
+        if (!is_array($p)) { continue; }
+        $c = $famille[(int) ($p['id_product'] ?? 0)] ?? ('? › produit ' . (int) ($p['id_product'] ?? 0));
+        $t['cats'][$c] = ($t['cats'][$c] ?? 0) + max(1, (float) ($p['quantity'] ?? 1));
+    }
+    $hist[] = $t;
+}
+// Les noms d'article pour les tickets des 90 derniers jours (déjà lus) : relus ici pour l'historique.
+$det2 = PanelApi::getParalleleDetail(array_map(static fn ($t) => '/transactions/' . $t['id'] . '?include=products', array_values(array_filter($hist, static fn ($t) => !$t['avant']))), 4, 30);
+$noms = [];
+$k = 0;
+foreach ($hist as $t) {
+    if ($t['avant']) { continue; }
+    $d = $det2[$k++]['data'] ?? null;
+    $d = is_array($d) && isset($d['data']) && is_array($d['data']) && !array_is_list($d['data']) ? $d['data'] : $d;
+    foreach ((array) ($d['products'] ?? []) as $p) { if (is_array($p)) { $noms[$t['id']][] = trim((string) ($p['product_display_name'] ?? $p['product_name'] ?? '')) . '×' . round((float) ($p['quantity'] ?? 1), 1); } }
+}
+foreach ($ids6 as $i => $t) {
+    $d = $det[$i]['data'] ?? null;
+    $d = is_array($d) && isset($d['data']) && is_array($d['data']) && !array_is_list($d['data']) ? $d['data'] : $d;
+    foreach ((array) ($d['products'] ?? []) as $p) { if (is_array($p)) { $noms[$t['id']][] = trim((string) ($p['product_display_name'] ?? $p['product_name'] ?? '')) . '×' . round((float) ($p['quantity'] ?? 1), 1); } }
+}
+usort($hist, static fn ($a, $b) => [$rang[$a['cli']], $a['ts']] <=> [$rang[$b['cli']], $b['ts']]);
+echo "\nHISTORIQUE des 6 premiers clients, 180 jours ($du2 → $hier) : rang | date heure | € | commande | familles | articles\n";
+foreach ($hist as $t) {
+    $f = [];
+    foreach ($t['cats'] as $c => $q) { $fk = $familleDe($c); $f[$fk] = ($f[$fk] ?? 0) + $q; }
+    printf("C%d|%s|%.2f|%d|%s|%s\n", $rang[$t['cli']] + 1, substr($t['ts'], 0, 16), $t['eur'], $t['cmd'] ? 1 : 0, json_encode($f), mb_substr(implode(', ', $noms[$t['id']] ?? []), 0, 160));
+}
 echo "\nfin de la sonde\n";
