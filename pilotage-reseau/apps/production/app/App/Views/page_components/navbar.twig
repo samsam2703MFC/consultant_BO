@@ -113,6 +113,8 @@
                     {% endif %}
                     <li><a class="dropdown-item" href="#"><i class="icon-mid bi bi-person me-2"></i>
                             Mój profil</a></li>
+                    {# [289] Mój urlop : urlop z zastępcą (makieta 50), zatwierdza CEO. #}
+                    <li><a class="dropdown-item" href="{{ root }}/my-leave"><i class="icon-mid bi bi-airplane me-2"></i>Mój urlop</a></li>
                     {% if can_see('/settings') %}<li><a class="dropdown-item" href="{{ root }}/settings"><i class="icon-mid bi bi-gear me-2"></i>
                             Ustawienia</a></li>{% endif %}
                     <li>

@@ -252,7 +252,18 @@ final class TaskWizardRepository extends WorkshopRepository
     /** Nazwy osób na stanowisku (przypomnienie, przełożony). @return list<string> */
     public function positionPeople(int $positionId): array
     {
-        return array_map(fn($r) => (string) $r['name'], $this->all("SELECT COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS name FROM n_user_position up JOIN user u ON u.id = up.id_user WHERE up.id_position = ? ORDER BY name", [$positionId]));
+        $rows = $this->all("SELECT u.id, COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS name FROM n_user_position up JOIN user u ON u.id = up.id_user WHERE up.id_position = ? ORDER BY name", [$positionId]);
+        // [289] Osoba na zatwierdzonym urlopie : przypomnienie wskazuje zastępcę.
+        $day = date('Y-m-d');
+        return array_map(function ($r) use ($day) {
+            try {
+                $l = $this->all("SELECT COALESCE(NULLIF(TRIM(s.displayed_name), ''), s.login) AS sub FROM n_user_leave l LEFT JOIN user s ON s.id = l.id_substitute
+                    WHERE l.id_user = ? AND l.status = 'approved' AND l.date_from <= ? AND l.date_to >= ? LIMIT 1", [(int) $r['id'], $day, $day])[0] ?? null;
+            } catch (\PDOException) {
+                $l = null;
+            }
+            return (string) $r['name'] . ($l ? ' (urlop' . ($l['sub'] ? ' — zastępuje ' . $l['sub'] : '') . ')' : '');
+        }, $rows);
     }
 
     public function positionName(?int $positionId): ?string

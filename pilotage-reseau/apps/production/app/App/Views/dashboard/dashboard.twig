@@ -66,6 +66,9 @@
             {% else %}
             {% set t = week.totals %}
             {% set f = week.flow %}
+            {# [289] Zastępstwo urlopowe (makieta 50) : zadania osoby na urlopie są u zastępcy (oznaczone « zastępstwo : … »). #}
+            {% if week.on_leave %}<div class="at-leave-banner"><i class="bi bi-airplane"></i> <b>Jesteś na urlopie</b> do {{ week.on_leave.to|date('d.m.Y') }}{% if week.on_leave.substitute %} — Twoje zadania przejmuje {{ week.on_leave.substitute_position ? week.on_leave.substitute_position ~ ' — ' : '' }}{{ week.on_leave.substitute }}{% else %} — bez zastępcy, zadania czekają{% endif %}. <a href="{{ root }}/my-leave">Mój urlop</a></div>{% endif %}
+            {% for d in week.delegations ?? [] %}<div class="at-leave-banner"><i class="bi bi-person-check"></i> <b>Zastępstwo za {{ d.position }} — {{ d.name }}</b> · urlop {{ d.from|date('d.m') }}–{{ d.to|date('d.m') }} · {{ d.tasks }} {{ d.tasks == 1 ? 'zadanie' : (d.tasks in [2, 3, 4] ? 'zadania' : 'zadań') }} w Twojej liście (« zastępstwo »)</div>{% endfor %}
             <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes ?? 0 }}" data-done-min="{{ t.done_minutes ?? 0 }}">
               <div class="mt-wrap">
                 <div class="mt-main">

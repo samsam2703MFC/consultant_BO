@@ -1928,6 +1928,18 @@ tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_pro
 - `n_hr_employee.clothing_size` : rozmiar odzieży roboczej, liste XXS–XXXL (fiche HR). « Wymiar czasu pracy » (`work_time`)
   reste le temps de travail utilisé par les modèles de contrat.
 
+## [289] Mój urlop : urlop osoby z kontem ERP z zastępcą (migration 180)
+
+- `n_user_leave` : congé d'un compte ERP (Administrator / IT, CEO, Finanse, Logistyka, Produkcja, Jakość…) — `type` (urlop,
+  na_zadanie, inna), `date_from` / `date_to`, `days` (jours ouvrés hors fériés PL), `id_substitute` (remplaçant),
+  `status` (pending → approved / rejected / cancelled), `decision_note`. Page `/my-leave` (avatar › Mój urlop).
+- Validation : le CEO (sinon l'administrateur) — cloche « Urlop do zatwierdzenia », décision dans Mój urlop (aussi listée dans
+  Kontrola › Do decyzji). Le transfert des tâches n'est pas validé (décision du 12/11/2026) : remplaçant modifiable à tout moment.
+- Pendant un congé validé : les tâches du poste de la personne apparaissent dans « Dzisiaj i zadania » du remplaçant
+  (« zastępstwo : Finanse — Ewa F. (urlop do 20.11) ») ; tâches obligatoires : le remplaçant est bloqué, jamais la personne en
+  congé ; rappels : « (urlop — zastępuje …) ». Après le congé, plus rien à faire : le calcul se fait au jour (`UserLeaveRepository::delegations`).
+- Solde : `time.leave_days` (26) moins les congés de l'année (demandés + validés, urlop et na żądanie).
+
 ## Conventions
 
 - Préfixe `n_` pour toute nouvelle table ; migrations versionnées dans `migrations/tfb` (le nom du dossier et des scripts `Bin/tfb_*.php` reste, ce ne sont pas des tables).

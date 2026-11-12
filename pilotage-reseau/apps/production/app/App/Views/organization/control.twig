@@ -112,6 +112,11 @@
             <div class="ct-dec"><span class="ct-ico">🔒</span><div><b>{{ q.name }}</b> prosi o odblokowanie <small>{{ q.title }} · « {{ q.reason }} » · {{ q.at }}</small></div>
                 <span class="ct-sp"></span><a class="kw-btn pri ct-btn" href="{{ root }}{{ q.href }}">Odblokuj na dziś</a></div>
         {% endfor %}
+        {% for v in d.leaves ?? [] %}
+            <div class="ct-dec"><span class="ct-ico">🏖</span><div><b>{{ v.name }}</b>{{ v.position ? ' (' ~ v.position ~ ')' : '' }} : urlop {{ v.from|date('d.m') }}–{{ v.to|date('d.m') }} · {{ v.days }} dni
+                <small>zastępca : {{ v.substitute ?: 'brak' }} — zadania przejdą same po zatwierdzeniu</small></div>
+                <span class="ct-sp"></span><a class="kw-btn pri ct-btn" href="{{ root }}/my-leave#wnioski">Zatwierdź / odrzuć</a></div>
+        {% endfor %}
         {% for l in d.late %}
             <div class="ct-dec"><span class="ct-ico">⏱</span><div><b>{{ l.position }}</b> : {{ l.count }} {{ l.count == 1 ? 'zadanie' : (l.count in [2, 3, 4] ? 'zadania' : 'zadań') }} po terminie {{ l.since_label }}
                 <small>{{ l.titles|slice(0, 3)|join(' · ') }}{{ l.titles|length > 3 ? ' …' : '' }}</small></div>
@@ -129,7 +134,7 @@
                 <span class="ct-pill {{ r.staff_ok ? 'ok' : 'warn' }}">{{ r.staff_ok ? 'w celu' : 'powyżej celu' }}</span>
                 <a class="kw-btn ghost ct-btn" href="{{ root }}/dashboard">Analiza <i class="bi bi-arrow-right"></i></a></div>
         {% endif %}
-        {% if not d.requests and not d.late and not d.forgotten and not d.results %}
+        {% if not d.requests and not d.late and not d.forgotten and not d.results and not d.leaves %}
             <p class="ct-mute m-0">Nic nie czeka na decyzję.</p>
         {% endif %}
     </div>

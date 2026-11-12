@@ -17,6 +17,13 @@ final class TaskLockRepository extends WorkshopRepository
                            JOIN n_position p ON p.id = t.id_position WHERE up.id_user = ? AND t.active = 1 AND t.mandatory = 1 ORDER BY t.sort_order, t.id', [$userId]);
     }
 
+    /** [289] Tâches obligatoires d'un poste (remplaçant pendant un congé validé). */
+    public function mandatoryTasksOfPosition(int $positionId): array
+    {
+        return $this->all('SELECT t.*, p.code AS position_code, p.id_reports_to FROM n_position_task t JOIN n_position p ON p.id = t.id_position
+                           WHERE t.id_position = ? AND t.active = 1 AND t.mandatory = 1 ORDER BY t.sort_order, t.id', [$positionId]);
+    }
+
     /** Occurrences ouvertes d'une tâche dont le terme est entre $from et $to. */
     public function openOccurrences(int $taskId, string $from, string $to): array
     {

@@ -105,7 +105,8 @@ final class PositionTaskService
     public function __construct(private PositionRepository $positions, private ParamRepository $params, private PageAccessService $access,
         private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier,
         private \App\Repositories\Workshop\DevProductRepository $devProducts, private \App\Repositories\Hr\HrRepository $hrNotes,
-        private \App\Services\Hr\HrCipher $hrCipher, private \App\Repositories\Hr\HrSuccessionRepository $succession)
+        private \App\Services\Hr\HrCipher $hrCipher, private \App\Repositories\Hr\HrSuccessionRepository $succession,
+        private \App\Repositories\Organization\UserLeaveRepository $leaves)
     {
     }
 
@@ -173,6 +174,33 @@ final class PositionTaskService
                 'position_description' => $p['description'] ?? null, 'view_session' => true] + $user;
         }
         return $user;
+    }
+
+    /**
+     * [289] Zadania stanowisk osób na zatwierdzonym urlopie, których zastępcą jest użytkownik (dziś) ; podgląd « jako
+     * stanowisko » (sesja administratora) — bez zastępstw. @return array{0: array, 1: list<array>, 2: ?array}
+     */
+    private function withDelegations(int $userId, ?array $user, array $tasks, DateTimeImmutable $today): array
+    {
+        if (!$user || !empty($user['view_session'])) return [$tasks, [], null];
+        $day = $today->format('Y-m-d');
+        $own = array_flip(array_map(fn($t) => (int) $t['id'], $tasks));
+        $delegations = [];
+        foreach ($this->leaves->delegations($userId, $day) as $l) {
+            if ((int) $l['position_id'] === (int) ($user['id_position'] ?? 0)) continue;
+            $label = $l['position_name'] . ' — ' . $l['name'] . ' (urlop do ' . date('d.m', strtotime($l['date_to'])) . ')';
+            $n = 0;
+            foreach ($this->positions->tasks((int) $l['position_id'], true, true) as $task) {
+                if (isset($own[(int) $task['id']])) continue;
+                $own[(int) $task['id']] = true;
+                $tasks[] = ['backup_for' => $label] + $task;
+                $n++;
+            }
+            $delegations[] = ['position' => $l['position_name'], 'name' => $l['name'], 'from' => $l['date_from'], 'to' => $l['date_to'], 'tasks' => $n];
+        }
+        $mine = $this->leaves->onLeave($userId, $day);
+        $onLeave = $mine ? ['from' => $mine['date_from'], 'to' => $mine['date_to'], 'substitute' => $mine['substitute_name'], 'substitute_position' => $mine['substitute_position']] : null;
+        return [$tasks, $delegations, $onLeave];
     }
 
     /** Liste « Moje zadania » d'un utilisateur : tâches de son poste pour la période en cours, plus les retards. */
@@ -416,6 +444,9 @@ final class PositionTaskService
         $view = ['user' => $user, 'week' => ['number' => (int) $today->format('W'), 'from' => $monday->format('Y-m-d'), 'to' => $monday->modify('+' . (max($workdays) - 1) . ' days')->format('Y-m-d')],
             'days' => $days, 'strip' => [], 'overdue' => [], 'later' => [], 'totals' => null];
         $tasks = $user && $user['id_position'] ? $this->positions->tasks((int) $user['id_position'], true, true) : [];
+        // [289] Zastępstwo urlopowe (makieta 50) : w dni zatwierdzonego urlopu zadania stanowiska osoby są u zastępcy
+        // (« za Finanse — Osoba A ») ; osoba na urlopie widzi pasek z zastępcą.
+        [$tasks, $view['delegations'], $view['on_leave']] = $this->withDelegations($userId, $user, $tasks, $today);
         $byId = [];
         $current = [];
         try {

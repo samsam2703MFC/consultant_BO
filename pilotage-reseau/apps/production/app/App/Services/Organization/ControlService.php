@@ -23,7 +23,8 @@ final class ControlService
     private const DAY_SHORT = [1 => 'Pn', 2 => 'Wt', 3 => 'Śr', 4 => 'Cz', 5 => 'Pt', 6 => 'So', 7 => 'Nd'];
 
     public function __construct(private ControlRepository $repo, private PageAccessService $access, private PositionTaskService $tasks,
-        private TaskLockService $lock, private TaskLockRepository $locks, private ParamRepository $params, private ProfitabilityService $profit)
+        private TaskLockService $lock, private TaskLockRepository $locks, private ParamRepository $params, private ProfitabilityService $profit,
+        private \App\Repositories\Organization\UserLeaveRepository $leaves)
     {
     }
 
@@ -145,7 +146,10 @@ final class ControlService
             ],
             'people' => $people, 'team' => $team,
             'week' => ['columns' => array_map(fn($c) => ['label' => $c['label'], 'today' => $c['today']], $week['columns']), 'rows' => $weekRows],
-            'decisions' => ['requests' => $requests, 'late' => array_values($lateByPosition), 'forgotten' => count($forgotten), 'results' => $results],
+            'decisions' => ['requests' => $requests, 'late' => array_values($lateByPosition), 'forgotten' => count($forgotten), 'results' => $results,
+                // [289] Urlopy osób z biura do zatwierdzenia (Mój urlop).
+                'leaves' => array_map(fn($l) => ['id' => (int) $l['id'], 'name' => $l['name'], 'position' => $l['position_name'], 'from' => $l['date_from'], 'to' => $l['date_to'],
+                    'days' => (int) $l['days'], 'substitute' => $l['substitute_name']], $this->leaves->pending())],
         ];
     }
 

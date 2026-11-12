@@ -25,7 +25,8 @@ final class TaskLockService
     private const WINDOW_DAYS = 7;
 
     public function __construct(private TaskLockRepository $repo, private PositionRepository $positions, private PositionTaskService $tasks,
-        private PageAccessService $access, private AppNotificationService $notifications, private HrRepository $hr)
+        private PageAccessService $access, private AppNotificationService $notifications, private HrRepository $hr,
+        private \App\Repositories\Organization\UserLeaveRepository $leaves)
     {
     }
 
@@ -36,9 +37,16 @@ final class TaskLockService
     public function blocking(?int $userId, ?DateTimeImmutable $now = null): array
     {
         if (!$userId || $this->access->isAdmin($userId) || $this->access->isCeo($userId)) return [];
-        $tasks = $this->repo->mandatoryTasks($userId);
-        if (!$tasks) return [];
         $now ??= new DateTimeImmutable();
+        // [289] Urlop zatwierdzony : osoba nie jest blokowana ; zastępca — także zadaniami obowiązkowymi stanowiska osoby na urlopie.
+        $day = $now->format('Y-m-d');
+        if ($this->leaves->onLeave($userId, $day)) return [];
+        $tasks = $this->repo->mandatoryTasks($userId);
+        $seen = array_flip(array_map(fn($t) => (int) $t['id'], $tasks));
+        foreach ($this->leaves->delegations($userId, $day) as $l) {
+            foreach ($this->repo->mandatoryTasksOfPosition((int) $l['position_id']) as $t) if (!isset($seen[(int) $t['id']])) { $seen[(int) $t['id']] = true; $tasks[] = $t; }
+        }
+        if (!$tasks) return [];
         $today = $now->setTime(0, 0);
         $from = $today->modify('-' . self::WINDOW_DAYS . ' days')->format('Y-m-d');
         $out = [];
