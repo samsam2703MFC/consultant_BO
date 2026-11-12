@@ -1022,3 +1022,14 @@ où, comment, pourquoi, comment c'est validé, le code, un exemple. Les nombres 
 et SOP de `GET /formation/sop/liste`) ; chaque en-tête mène à son écran (la checklist : le Cadre des tâches, onglet
 Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.0.14 et la SOP 0.1.01).
 
+
+## Manuel : la section « Pour les consultants » (12/11/2026)
+
+- Client : « rajouter dans le manuel opératoire une section pour les consultants » ; choix : un 3e groupe dans l'onglet
+  Manuel de la tablette, ouvert à tous (pas de PIN), avec la visite et les contrôles.
+- Troisième valeur d'accès **`consultant`** (`FO_ACCES`, `foAcces`, `src/sop.php`) : ouverte comme « tous », posée par
+  `PATCH /formation/sop/fiche/{id}` {acces} (ou le champ `acces` du fichier source de l'encodeur). Sur la tablette
+  (`sop/tablette.js`) un document « consultant » se range dans l'onglet Manuel, groupe **« Pour les consultants »** (NL
+  « Voor de consultants »), entre « Réservé au franchisé et au responsable » et « Articles du manuel opératoire ».
+- Rangés là : 0.0.32 « La visite du consultant en magasin » (`art-visite`) et 0.0.33 « Les contrôles en magasin »
+  (`art-controles`), tous deux v1.0 « à valider » (11 et 9 parties, captures des écrans réels).
