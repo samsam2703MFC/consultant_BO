@@ -7,6 +7,8 @@ declare(strict_types=1);
  *   1. assemble la fiche de faits de Halle par l'API du panel (amFaits) et en montre la forme, sans secret ;
  *   2. pose « Que puis-je améliorer ? » à Claude (amDemander) et montre la réponse, le modèle, l'usage ;
  *   3. pose une question de suite avec le fil, pour vérifier la conversation et le cache.
+ * Cinquième passage (12/11/2026) : pas de ligne anthropic_workspace_id ; la sonde cherche l'identifiant (format wrkspc_)
+ * dans erp_cles et dit où il est, par son nom seulement.
  * Quatrième passage (12/11/2026) : l’identifiant d’espace de travail est dans erp_cles (anthropic_workspace_id) ; le
  * nouveau src/anthropic.php, qui l’envoie, part aussi dans /tmp (le serveur a encore l’ancien).
  * Troisième passage (12/11/2026) : crédit ajouté au compte Anthropic, l’appel réel se vérifie (relancé une seconde fois).
@@ -33,6 +35,23 @@ foreach ($cands as $r) {
     if (str_starts_with($v, 'sk-ant-')) { putenv('ANTHROPIC_API_KEY=' . $v); echo "  essai avec « {$r['cle']} » (préfixe sk-ant-)\n"; break; }
 }
 unset($v);
+// Cinquième passage : où est l'identifiant d'espace de travail ? Les noms seulement. Un identifiant Anthropic d'espace de
+// travail commence par « wrkspc_ » : la première valeur de erp_cles de ce format sert à l'essai (dans ce processus).
+echo "=== 0b. L'espace de travail (les noms, jamais les valeurs)\n";
+foreach (Db::rows("SELECT cle, portail, integration, maj_le FROM erp_cles WHERE maj_le >= CURDATE() - INTERVAL 1 DAY OR LOWER(cle) REGEXP 'work|wrk|espace|space|orga' ORDER BY maj_le DESC") as $r) {
+    printf("  récente ou nommée comme un espace : %-34s portail %-8s %-22s %s\n", $r['cle'], $r['portail'], (string) $r['integration'], $r['maj_le']);
+}
+$esp = '';
+foreach (Db::rows('SELECT cle, portail, valeur FROM erp_cles ORDER BY maj_le DESC') as $r) {
+    $v = trim((string) $r['valeur']);
+    if (preg_match('/^wrkspc_[A-Za-z0-9]+$/', $v)) { echo "  valeur au format wrkspc_ : « {$r['cle']} » (portail {$r['portail']})\n"; if ($esp === '') { $esp = $v; } }
+    elseif (str_contains($v, 'wrkspc_')) { echo "  « {$r['cle']} » (portail {$r['portail']}) contient wrkspc_ au milieu d'autre chose (espaces, guillemets ?)\n"; }
+}
+unset($v);
+$st = setting('anthropic', []);
+printf("  réglage cockpit « anthropic » : clé %s · espace %s\n", trim((string) ($st['cle'] ?? '')) !== '' ? 'renseignée (elle passe avant erp_cles)' : 'vide', trim((string) ($st['espace'] ?? '')) !== '' ? 'renseigné' : 'vide');
+if ($esp !== '' && Anthropic::config()['espace'] === '') { putenv('ANTHROPIC_WORKSPACE_ID=' . $esp); echo "  essai avec cet espace de travail\n"; }
+printf("  espace de travail retenu pour l'appel : %s\n", Anthropic::config()['espace'] !== '' ? 'oui' : 'AUCUN');
 
 echo "=== 1. La fiche de faits de Halle\n";
 $t0 = microtime(true);
