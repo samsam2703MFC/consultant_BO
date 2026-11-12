@@ -2948,3 +2948,12 @@ body.ia-ouvert{overflow:hidden}
 .ia-ton.on{border-color:var(--color-primary);box-shadow:inset 0 0 0 1px var(--color-primary);background:rgba(141,29,44,.05)}.ia-ton.on b{color:var(--color-primary)}
 .ia-qui{margin:0 0 4px;font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--color-primary)}
 @media (max-width:760px){.ia-tons{flex-wrap:wrap}.ia-tons-t{width:100%}}
+
+/* Le portrait de l'assistant (12/11/2026 : Pierre) : dans la pastille, carré arrondi ; il respire pendant la lecture. */
+.ia-av:has(.ia-portrait){background:none;overflow:hidden}
+.ia-portrait{display:block;width:100%;height:100%;border-radius:8px;object-fit:cover}
+.ia-portrait.lit{animation:ia-respire 1.3s ease-in-out infinite}
+@keyframes ia-respire{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+.ia-ton{flex-direction:row;align-items:center;gap:10px}
+.ia-ton-t{display:flex;flex-direction:column;gap:1px}
+@media (prefers-reduced-motion: reduce){.ia-portrait.lit{animation:none!important}}

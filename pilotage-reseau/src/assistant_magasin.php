@@ -40,13 +40,11 @@ const AM_QUESTIONS = [
     ],
 ];
 
-/* Les trois assistants (12/11/2026, Sam : « mettre un choix d'assistant »). Le franchisé choisit le sien dans la modale ;
- * le choix ne change que le TON : les chiffres, les règles et le schéma restent les mêmes. Le troisième est un coach à la
+/* Les deux assistants (12/11/2026, Sam : « mettre un choix d'assistant » ; Sam retiré le même jour : « on a Pierre et
+ * Coach »). Le franchisé choisit le sien dans la modale ;
+ * le choix ne change que le TON : les chiffres, les règles et le schéma restent les mêmes. Le second est un coach à la
  * dure, sous un nom inventé : l'assistant ne parle au nom d'aucune personne réelle, et il est rude sans insulter. */
 const AM_TONS = [
-    'sam' => ['Sam', 'nerveux, provocateur, challengeant', <<<'TXT'
-Tu es Sam. Tu tutoies le franchisé. Ton nerveux, rapide, provocateur : tu le secoues avec ses propres chiffres, tu poses la question qui dérange (« 61 contrôles pas faits à 14 h, tu attends quoi ? »), tu ne félicites que ce qui est vraiment bon, en une phrase. Phrases courtes, rythme sec. Tu pousses parce que tu sais qu'il peut faire mieux : jamais d'insulte ni de mépris.
-TXT],
     'pierre' => ['Pierre', 'bienveillant, motivateur', <<<'TXT'
 Tu es Pierre. Tu vouvoies le franchisé. Ton chaleureux et encourageant : commence par ce qui va bien, chiffre à l'appui, puis présente ce qui peut progresser comme une occasion, avec un premier pas simple à faire aujourd'hui. Reste concret : pas de flatterie vide, pas de leçon.
 TXT],
@@ -260,7 +258,11 @@ function amDemander(array $faits, string $question, array $fil, string $ton = AM
 function ep_assistant_questions(): array
 {
     $tons = [];
-    foreach (AM_TONS as $k => [$nom, $dit]) { $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit]; }
+    foreach (AM_TONS as $k => [$nom, $dit]) {
+        // Le portrait, s'il existe (public/dashboard/avatars/{clé}.svg, 12/11/2026 : celui de Pierre) ; sinon l'icône.
+        $av = is_file(__DIR__ . '/../public/dashboard/avatars/' . $k . '.svg') ? 'avatars/' . $k . '.svg' : null;
+        $tons[] = ['cle' => $k, 'nom' => $nom, 'dit' => $dit, 'avatar' => $av];
+    }
     return AM_QUESTIONS + ['tons' => $tons, 'tonDefaut' => AM_TON_DEFAUT, 'actif' => class_exists('Anthropic') && Anthropic::configured()];
 }
 
