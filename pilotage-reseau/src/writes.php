@@ -2115,6 +2115,9 @@ function wr_ia_compte(): array
     if (array_key_exists('effacer', $b) && !empty($b['effacer'])) { unset($cur['cle']); }
     $mod = trim((string) ($b['modele'] ?? ''));
     if ($mod !== '') { $cur['modele'] = $mod; }
+    // L'espace de travail Anthropic (identifiant, pas un secret) : exigé par une clé d'organisation.
+    $esp = trim((string) ($b['espace'] ?? ''));
+    if ($esp !== '' && preg_match('/^[A-Za-z0-9_-]{4,80}$/', $esp)) { $cur['espace'] = $esp; }
     Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
         ['anthropic', json_encode($cur, JSON_UNESCAPED_UNICODE)]);
     journalAdd('CEO', 'Paramètre', '—', 'Assistance IA — ' . ($cle !== '' ? 'clé enregistrée' : 'réglage mis à jour'));

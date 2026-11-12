@@ -27,9 +27,17 @@ final class Anthropic
         $s = setting('anthropic');
         if (!is_array($s)) { $s = []; }
         $env = static fn (string $k): string => (string) (getenv($k) ?: '');
-        $cle = trim((string) ($s['cle'] ?? '')) ?: $env('ANTHROPIC_API_KEY');
+        // La clé du cockpit (Paramètres › Connecteurs), sinon la clé commune de l'ERP (erp_cles, portail commun,
+        // `anthropic_api_key`, décision du 7 nov. 2026), sinon l'environnement.
+        $commune = function_exists('erpCle') ? erpCle('anthropic_api_key') : '';
+        $cle = trim((string) ($s['cle'] ?? '')) ?: (trim($commune) ?: $env('ANTHROPIC_API_KEY'));
+        // Une clé d'organisation (non rattachée à un espace de travail) exige l'en-tête anthropic-workspace-id :
+        // l'identifiant se lit au réglage, sinon dans erp_cles (`anthropic_workspace_id`), sinon dans l'environnement.
+        $espace = trim((string) ($s['espace'] ?? '')) ?: (function_exists('erpCle') ? trim(erpCle('anthropic_workspace_id')) : '');
+        $espace = $espace ?: $env('ANTHROPIC_WORKSPACE_ID');
         return [
             'cle'    => $cle,
+            'espace' => $espace,
             'modele' => trim((string) ($s['modele'] ?? '')) ?: 'claude-sonnet-5',
             'actif'  => !empty($s['actif']) || $cle !== '',
         ];
@@ -222,11 +230,11 @@ final class Anthropic
         curl_setopt_array($ch, [
             CURLOPT_POST           => true,
             CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_HTTPHEADER     => [
+            CURLOPT_HTTPHEADER     => array_merge([
                 'Content-Type: application/json',
                 'x-api-key: ' . $cle,
                 'anthropic-version: 2023-06-01',
-            ],
+            ], self::config()['espace'] !== '' ? ['anthropic-workspace-id: ' . self::config()['espace']] : []),
             CURLOPT_POSTFIELDS     => json_encode($corps, JSON_UNESCAPED_UNICODE),
             CURLOPT_TIMEOUT        => 90,
             CURLOPT_CONNECTTIMEOUT => 10,
