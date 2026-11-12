@@ -21,10 +21,17 @@ declare(strict_types=1);
  * (ceo_fid_*), les mêmes que la première ouverture du dashboard. Rien d'autre.
  */
 $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');
-foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'writes.php', 'panel_api.php', 'fidelite.php'] as $f) { require_once "$dir/src/$f"; }
+// Septième passage (12/11/2026) : le budget se lit par le calcul du jour, qui appelle des fonctions de tout le cockpit.
+// La sonde charge donc les mêmes fichiers que l'API (la liste de public/api/index.php), sauf les trois qu'elle apporte.
 require_once '/tmp/sonde_anthropic.php';
-require_once '/tmp/sonde_fidelite_profils.php';
-require_once '/tmp/sonde_assistant_magasin.php';
+require_once "$dir/src/Db.php";
+require_once "$dir/src/erp_cles.php";
+preg_match_all("#require(?:_once)? __DIR__ \. '/\.\./\.\./src/([a-z_]+\.php)'#", (string) file_get_contents("$dir/public/api/index.php"), $mm);
+foreach ($mm[1] as $fic) {
+    if (in_array($fic, ['anthropic.php', 'fidelite_profils.php', 'assistant_magasin.php'], true)) { continue; }
+    if ($fic === 'fidelite.php') { require_once "$dir/src/fidelite.php"; require_once '/tmp/sonde_fidelite_profils.php'; require_once '/tmp/sonde_assistant_magasin.php'; continue; }
+    require_once "$dir/src/$fic";
+}
 
 echo "=== 0. La clé Claude dans erp_cles (les noms, jamais les valeurs)\n";
 $cands = Db::rows("SELECT cle, portail, integration, secret, indice, CHAR_LENGTH(valeur) n, maj_le FROM erp_cles
@@ -65,12 +72,15 @@ if ($esp !== '' && Anthropic::config()['espace'] === '') { putenv('ANTHROPIC_WOR
 printf("  espace de travail retenu pour l'appel : %s\n", Anthropic::config()['espace'] !== '' ? 'oui' : 'AUCUN');
 
 echo "=== 1. La fiche de faits de Halle\n";
+// La fiche est gardée 10 minutes : la sonde l'oublie pour relire le budget.
+Db::exec('DELETE FROM ceo_app_setting WHERE `key` = ?', ['assistantFaits|4']);
 $t0 = microtime(true);
 $f = amFaits(4);
 printf("  lue en %.1f s · %d octets\n", microtime(true) - $t0, strlen((string) json_encode($f)));
 foreach ($f as $k => $v) { echo '  ', str_pad($k, 20), is_array($v) ? json_encode(array_slice($v, 0, 3, true), JSON_UNESCAPED_UNICODE) : $v, "\n"; }
 echo "  clé Anthropic : ", Anthropic::configured() ? 'présente' : 'ABSENTE', " · modèle de l'assistant : ", (setting('assistantMagasin', [])['modele'] ?? AM_MODELE), "\n";
 
+echo "  budget (en entier) : ", json_encode($f['budget'] ?? null, JSON_UNESCAPED_UNICODE), "\n";
 echo "\n=== 2. « Que puis-je améliorer ? »\n";
 $t0 = microtime(true);
 $r = amDemander($f, 'Que puis-je améliorer ?', []);
