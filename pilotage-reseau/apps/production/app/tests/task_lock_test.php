@@ -93,20 +93,20 @@ try {
     $ids = array_column($bl, 'task_id');
     expectL(in_array(901, $ids, true) && !in_array(903, $ids, true), 'po 11:00 : zadanie obowiązkowe blokuje, nieobowiązkowe nie');
     $b901 = array_values(array_filter($bl, fn($x) => $x['task_id'] === 901))[0];
-    expectL($b901['link'] === '/tasks/wizard/901' && $b901['generic'] && $b901['due'] === '2026-11-12', 'zadanie bez kreatora → kreator kroków');
+    expectL($b901['link'] === '/tasks/wizard/901' && $b901['generic'] && $b901['due'] === '2026-11-12', 'zadanie bez asystenta → asystent kroków');
     $b902 = array_values(array_filter($bl, fn($x) => $x['task_id'] === 902))[0] ?? null;
-    expectL($b902 === null || $b902['link'] === '/finances/payments-day', 'zadanie z kreatorem → jego kreator');
+    expectL($b902 === null || $b902['link'] === '/finances/payments-day', 'zadanie z asystentem → jego asystent');
     expectL($lock->blocking(1, $after) === [], 'administrator nigdy nie jest blokowany');
 
     // 3. Assistant à étapes → « Zakończ zadanie » → débloqué
     $w = $lock->wizard(901, 2, new DateTimeImmutable('2026-11-12'));
-    expectL($w['own_wizard'] === null && $w['steps'][0]['link'] === '/shipments' && $w['task']['mandatory'] && $w['occurrence']['status'] === 'open', 'kreator kroków : krok « Co zrobić » ze stroną zadania');
+    expectL($w['own_wizard'] === null && $w['steps'][0]['link'] === '/shipments' && $w['task']['mandatory'] && $w['occurrence']['status'] === 'open', 'asystent kroków : krok « Co zrobić » ze stroną zadania');
     $code = 'ok';
     try { $lock->wizard(901, 3); } catch (CustomException $e) { $code = (string) $e->getCode(); }
-    expectL($code === '403', 'kreator : inne stanowisko → odmowa');
+    expectL($code === '403', 'asystent : inne stanowisko → odmowa');
     $code = 'ok';
     try { $lock->finish(902, [], 2); } catch (CustomException $e) { $code = (string) $e->getCode(); }
-    expectL($code === '422', 'zadanie z własnym kreatorem : bez « Zakończ zadanie » kreatora kroków');
+    expectL($code === '422', 'zadanie z własnym asystentem : bez « Zakończ zadanie » asystenta kroków');
     $r = $lock->finish(901, ['note' => 'wszystko rozliczone'], 2, new DateTimeImmutable('2026-11-12'));
     expectL($r['done'] && !in_array(901, array_column($lock->blocking(2, $after), 'task_id'), true)
         && $count("SELECT COUNT(*) FROM n_task_occurrence WHERE id_task = 901 AND status = 'done' AND done_by = 2 AND note = 'Asystent : wszystko rozliczone'") === 1,
@@ -142,7 +142,7 @@ try {
     $t901 = array_values(array_filter($tasks->weekPlan($adm, 1)['tasks'], fn($t) => $t['id'] === 901))[0];
     expectL($t901['mandatory'] && $t901['block_mode'] === 'next_day' && $t901['block_time'] === '08:30' && $t901['block_tolerance'] === 10
         && count($t901['wizard_steps']) === 1 && $t901['block_label'] === 'dzień po terminie, od 08:30 + 10 min', 'plan stanowiska : obowiązkowe, blokada, kroki zapisane');
-    expectL(count($lock->wizard(901, 2)['steps']) === 1 && $lock->wizard(901, 2)['steps'][0]['title'] === 'Sprawdź faktury przewoźników', 'kreator : kroki administratora');
+    expectL(count($lock->wizard(901, 2)['steps']) === 1 && $lock->wizard(901, 2)['steps'][0]['title'] === 'Sprawdź faktury przewoźników', 'asystent : kroki administratora');
     foreach ([['block_tolerance' => 500], ['block_time' => '25:00'], ['block_mode' => 'x'], ['wizard_steps' => [['title' => 'A', 'link' => 'http://evil']]]] as $bad) {
         $r2 = array_map(fn($x) => $x['id'] === 901 ? $bad + ['mandatory' => true, 'block_mode' => 'due'] + $x : $x, $rows);
         $code = 'ok';
@@ -158,7 +158,7 @@ try {
     $collect = function ($node) use (&$collect, &$items) { if (is_array($node)) { if (isset($node['task_id'], $node['link']) && array_key_exists('mandatory', $node)) $items[$node['task_id']] = $node; foreach ($node as $v) $collect($v); } };
     $collect($week);
     expectL(isset($items[901]) && $items[901]['mandatory'] && $items[901]['link'] === '/tasks/wizard/901' && $items[901]['wizard']['label'] === 'Asystent kroków'
-        && isset($items[903]) && !$items[903]['mandatory'] && $items[903]['link'] === '/tasks/wizard/903', 'Mój tydzień : 🔒 obowiązkowe, każde zadanie → kreator');
+        && isset($items[903]) && !$items[903]['mandatory'] && $items[903]['link'] === '/tasks/wizard/903', 'Mój tydzień : 🔒 obowiązkowe, każde zadanie → asystent');
 
     echo "task_lock_test: OK\n";
 } finally {

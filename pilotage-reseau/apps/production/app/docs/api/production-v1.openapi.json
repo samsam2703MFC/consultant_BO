@@ -9585,7 +9585,7 @@
                 "tags": [
                     "supply"
                 ],
-                "summary": "Kreator faktur : wszystkie pozycje / Assistant factures : toutes les lignes",
+                "summary": "Asystent faktur : wszystkie pozycje / Assistant factures : toutes les lignes",
                 "operationId": "getPurchaseInvoiceWizard",
                 "responses": {
                     "200": {

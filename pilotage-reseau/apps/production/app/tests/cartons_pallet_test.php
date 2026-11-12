@@ -175,7 +175,7 @@ try {
     $d = $svc->save(4006, ['pallet_max_height_mm' => '', 'pallet_max_kg' => null], 7);
     expectCt($d['pallet_max_height_mm'] === null && $d['limits']['max_kg'] === 1000, 'puste = parametry logistyki');
     $s = $items->updateSettings(101, ['wizard_step' => 9], $ctx);
-    expectCt($s['settings']['wizard_step'] === 9 && ItemService::WIZARD_STEPS === 9, 'kreator : 9 kroków (krok 3 = Paleta)');
+    expectCt($s['settings']['wizard_step'] === 9 && ItemService::WIZARD_STEPS === 9, 'asystent : 9 kroków (krok 3 = Paleta)');
     // [213] Dane palety do wagi i wysokości : kartony na warstwę z ERP, gdy spójne ; inaczej z wymiarów kartonu.
     $pd = $svc->palletData([10, 11, 13]);
     expectCt($pd[10]['cpl'] === 8 && $pd[10]['cpl_source'] === 'carton' && $pd[10]['height_mm'] === 210 && $pd[10]['tare_g'] === 410.0,

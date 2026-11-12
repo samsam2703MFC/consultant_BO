@@ -301,7 +301,7 @@ try {
     $e = expectFail(fn() => $svc->create(['id_category' => 999, 'id_type' => 2, 'label_type' => 3] + $base, 7), 422, 'szczegóły : błędne pola');
     expectCard(array_keys($e->getErrors()['fields']) === ['id_category', 'id_type', 'label_type'], 'szczegóły : kategoria, typ, etykieta sprawdzone');
     $repo = $c->get(App\Repositories\Workshop\DevCardRepository::class);
-    expectCard(array_column($repo->categories(), 'name') === ['Pieczywo słone'] && array_map('intval', array_column($repo->types(), 'id')) === [1, 3], 'kreator : kategorie i typy');
+    expectCard(array_column($repo->categories(), 'name') === ['Pieczywo słone'] && array_map('intval', array_column($repo->types(), 'id')) === [1, 3], 'asystent : kategorie i typy');
 
     // « Sam pomysł » : produkt od razu, bez karty (dawny formularz /test-products/new i szybki formularz etapów).
     $idea = $svc->createProduct(['name' => 'Rogalik z pistacją', 'id_group' => 1, 'weekly_sales' => 60, 'seasonal' => true, 'quarters' => [4],
@@ -413,7 +413,7 @@ try {
     $dev = $pdo->query("SELECT d.weekly_sales, d.season_quarters, tp.name, tp.id_category, tp.id_type, tp.label_type FROM n_dev_product d JOIN test_product tp ON tp.id = d.id_test_product WHERE d.id_test_product = {$pid}")->fetch();
     expectCard($dev['name'] === 'Pogacza skręcana' && (int) $dev['weekly_sales'] === 50 && $dev['season_quarters'] === '4', 'poprawki po zapisie → produkt w rozwoju');
     expectCard((int) $dev['id_category'] === 5 && (int) $dev['id_type'] === 3 && (int) $dev['label_type'] === 1 && $state['category'] === 'Pieczywo słone' && $state['type'] === 'Pakowanie', 'poprawki po zapisie : kategoria, typ, etykieta');
-    expectFail(fn() => $svc->delete($id), 409, 'zapisanej karty nie usuwa się z kreatora');
+    expectFail(fn() => $svc->delete($id), 409, 'zapisanej karty nie usuwa się z asystenta');
 
     // Import gotowej karty .docx.
     $tmp = tempnam(sys_get_temp_dir(), 'imp');

@@ -70,7 +70,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 - Dzisiaj « Mój tydzień » (maquette 219-1) : les tâches fixes du poste de l'utilisateur, jour par jour pour la semaine ISO en
   cours (jours ouvrés `tasks.workdays`), chaque carte avec la catégorie (couleur), les minutes, le lien direct vers la page
-  ERP (« Kreator faktur → », « Kreator cen → »…) et la case « Zrobione » (PATCH `/ajax/my-tasks/{id}`, sans rechargement,
+  ERP (« Asystent faktur → », « Asystent cen → »…) et la case « Zrobione » (PATCH `/ajax/my-tasks/{id}`, sans rechargement,
   « Cofnij » remet à faire). Tâches quotidiennes de tous les jours dans un bandeau au-dessus (pastilles Pn…Pt) ; tuiles
   zrobione / total et minutes, aujourd'hui (tâches, minutes, liens), en retard, part des 40 h, mois et trimestre ; en dessous
   « Zaległe » (ouvertes des semaines passées) et « Miesiąc i kwartał ». Les jours passés sans occurrence restent grisés
@@ -84,7 +84,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Plan de la semaine du poste (maquette 219-2, administrateur seul : catalogue d'accès `week_plan`,
   `/organization/week-plan/{id}`, bouton « Plan tygodnia » sur chaque poste de Funkcje i zadania) : tâche, catégorie, jours
   (1 jour = hebdomadaire ce jour-là, tous les jours ouvrés = quotidienne, 2 à 4 jours = quotidienne ces jours-là
-  `weekdays`, ou « Mies. » / « Kw. »), minutes (0–480), lien (liste des pages : kreator faktur, faktury, kreator cen étapes
+  `weekdays`, ou « Mies. » / « Kw. »), minutes (0–480), lien (liste des pages : asystent faktur, faktury, asystent cen étapes
   1 / 2 / 3, zakupy tygodnia, dostawcy, oferty, NC… ou autre adresse), « zalicza się samo » ; colonne « Rzeczywiście » :
   temps actif moyen par exécution des personnes du poste sur la page du lien (`n_activity_view`, 4 dernières semaines,
   préfixe le plus long, partagé au prorata du plan entre tâches d'une même page ; rouge au-delà de 125 % du plan) ; charge
@@ -95,8 +95,8 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   d'un autre poste, sauf celles du même nom. `GET /ajax/organization/week-plan/{id}` relit le plan.
 - Colonnes ajoutées à `n_position_task` : `minutes` (SMALLINT, durée d'une exécution), `weekdays` (ex. « 1,4 »),
   `auto_code`. Migration : plan du poste ZAKUPY (minutes et jours des tâches existantes laissées vides ; tâche du mercredi
-  « Zaimportować ceny z faktur » → lien kreator faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
-  kreator cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
+  « Zaimportować ceny z faktur » → lien asystent faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
+  asystent cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
   la publication vendredi 10 min). Total : 4 h 15 par semaine.
 - Migration 140 (décision du 30/10/2026 : pas d'acheteur, les achats sont faits par la production) : toutes les tâches du poste
   ZAKUPY passent au poste KIEROWNIK_PRODUKCJI (Anna Szeremeta ; occurrences conservées, ordre après ses tâches), poste ZAKUPY
@@ -139,7 +139,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   « przełożony powiadomiony ». Semaine en pastilles (assistant, en cours, fait, automatique, en retard).
 - Tâches du poste (maquette 227-2, `/organization/week-plan/{id}`, administrateur) : tableau par fréquence, panneau
   d'édition (assistant, fréquence Dzień / Tydzień / Mies. / Kw. + jours ou règle du mois + heure, minutes, « Automatycznie
-  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Kreatory do przypięcia »
+  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Asystentci do przypięcia »
   (libre / épinglé). Enregistrement : mêmes PUT + champs ci-dessus, validés (HH:MM, `wdN` / `dN`, 1–30 jours, cron complet).
 - « Kto co zrobił » (maquette 227-3, `/organization/execution`, catalogue d'accès `execution` : administrateur + postes
   supérieurs d'un autre poste — Kierownik produkcji, Logistyka, Brygadzista) : postes × jours (Dziś / Tydzień / Miesiąc), une
@@ -151,9 +151,9 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 - Une tâche = un assistant : les tâches du Kierownik produkcji qui étaient des étapes d'un assistant existant sont fusionnées
   dans la tâche de l'assistant (21 → 13 tâches actives ; tâches fusionnées `active = 0`, historique des occurrences conservé) :
-  Zakupy tygodnia (lundi, 85 min) ← offres reçues + articles à moins de 3 fournisseurs ; Faktury tygodnia (mercredi, kreator
+  Zakupy tygodnia (lundi, 85 min) ← offres reçues + articles à moins de 3 fournisseurs ; Faktury tygodnia (mercredi, asystent
   faktur, 60 min) ← import des factures + nouveaux prix matières (factures et listes de prix) ; Koszty i marże (mercredi,
-  kreator cen étape 1) ← coût des recettes + marges des catégories (mensuels) ; Nowe ceny i publikacja (jeudi, étapes 2–3,
+  asystent cen étape 1) ← coût des recettes + marges des catégories (mensuels) ; Nowe ceny i publikacja (jeudi, étapes 2–3,
   40 min) ← vérification de la publication ; trimestre : évaluation des fournisseurs + appel d'offres matières clés = une tâche.
   Correspondance par poste, page et fréquence (pas par id), seulement si la tâche cible est active ; rejouable. Les achats
   restent au Kierownik produkcji (décision du 30/10 : pas d'acheteur). Doublon connu : contrôle des réceptions / NC chez
@@ -259,7 +259,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 ### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
 
-- Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
+- Asystent maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
   Bouton « Nowa maszyna » (en haut, « + maszyna w grupie … » sous chaque groupe, « Dodaj maszynę » dans un groupe sans
   machine) : nom, rodzaj (piec, maszyna, robot / linia + tryb sam / z operatorem / cobot avec part d'une personne,
   stanowisko ręczne, komora rozrostu, chłodnia, mrożenie — pour les komory : nombre de wózków), groupe propriétaire,
@@ -267,7 +267,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   depuis les étapes 2–3 (bouton crayon). Écriture via `WorkstationService` (code généré depuis le nom, unique ;
   journal `workstation`) ; noms en double refusés.
 - `n_prod_workstation_share` (id_workstation, id_group — PK, CASCADE) : groupes qui utilisent la machine d'un autre groupe
-  (journal `workstation_share`, source « kreator maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
+  (journal `workstation_share`, source « asystent maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
   « wspólna — maszyna grupy … », comptée une seule fois ; Wykorzystanie : « + Tarty » et filtre de groupe ; tablette TRS
   du groupe) ; elle travaille sur les shifts des équipes de chacun de ces groupes ; le temps de travail d'un produit sur
   la machine est compté à l'équipe du groupe du produit si ce groupe partage la machine, sinon au groupe de la machine.
@@ -275,7 +275,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Routes : `POST /ajax/production/capacity/machine-data` (nouvelle), `PUT /ajax/production/capacity/machine-data/{id}/machine`.
   Tests : `tests/machine_data_test.php`, `tests/capacity_test.php`.
 
-### Dane maszyn : kreator maszyny (01/11/2026, sans migration)
+### Dane maszyn : asystent maszyny (01/11/2026, sans migration)
 
 - Page : Produkcja › Moce produkcyjne › onglet « Dane maszyn » (maquettes 12 et 13). Pour le Kierownik produkcji (droit de
   la page Produkty `/workshop/products`) et l'administrateur. Trois compteurs : maszyny z kompletem danych, produkty z
@@ -291,7 +291,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   nouvelle étape en fin de karta (`step_no` = max + 1, nom = nom de la machine). `capacity_per_pass` = sztuk w wsadzie,
   `fixed_time_s` = 3600 ÷ wsadów na godzinę (arrondi), `variable_time_s` = 0, `operators_required` = osób (1 par défaut
   pour une nouvelle étape ; vide = inchangé). Lignes vides ou inchangées ignorées. Journal `n_prod_audit_log`
-  (`source` « kreator maszyny »). Limites : wsad 0–1 000 000 szt., 0–600 wsadów/h, 0–50 osób ; produit inconnu → 422,
+  (`source` « asystent maszyny »). Limites : wsad 0–1 000 000 szt., 0–600 wsadów/h, 0–50 osób ; produit inconnu → 422,
   machine inactive → 404.
 - Routes : `GET /ajax/production/capacity/machine-data`, `GET|PUT /ajax/production/capacity/machine-data/{id}`
   (`MachineDataService`, `MachineDataRepository`). Test : `tests/machine_data_test.php`. Formulaire A4 à imprimer
@@ -462,12 +462,12 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   `forecast.trend_max` 2, `forecast.capacity_hours` 0, `forecast.lead_days` 7, `forecast.cost_months` 3 ; `logistics.plan_weeks` 12 → 13 (plan
   logistique sur les mêmes 13 semaines, seulement s'il valait encore 12).
 
-### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
+### Assistant prix « Asystent cen » (migration 138, 30/10/2026)
 
-- Page : Analiza › Marże i koszty › « Kreator cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
-  kategorii et à la fin du kreator faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
+- Page : Analiza › Marże i koszty › « Asystent cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
+  kategorii et à la fin du asystent faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
   `price-wizard.js`. Trois étapes :
-  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le kreator faktur), « Przelicz koszty i marże »
+  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le asystent faktur), « Przelicz koszty i marże »
      (coût matières de toutes les recettes aux prix actuels, le même calcul que « Przelicz wszystkie marże »), marge par
      catégorie avant → après, écart à la marge de base, effet € / mois, produits dont le coût a changé avec leurs causes
      (matières de la recette dont le prix a changé : `raw_material_price_changelog`), matières qui ont changé ;
@@ -502,7 +502,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 ### Factures d'achat — assistant « toutes les lignes » (migration 137, 30/10/2026)
 
-- Page : Zaopatrzenie › Faktury › « Kreator : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
+- Page : Zaopatrzenie › Faktury › « Asystent : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
   1–3, `invoice-wizard.js`). Toutes les factures ouvertes de matières et emballages (KSeF, fichiers) :
   1. « Pobierz z KSeF » : un tableau des factures (lignes vérifiées n / m, remarques : nouveaux noms, prix, quantité /
      commande, litigieuses, fournisseur ERP manquant) ; le bouton KSeF ne fait que lire (aucun envoi) ;
@@ -938,7 +938,7 @@ et chauffeurs.
 - `n_recipe_producer.lead_days` : délai de commande de la composition (jours avant le besoin, 0 = le jour même ; NULL = sans
   délai). Le groupe qui fait la composition et ce délai se règlent au même endroit partout (une seule règle,
   `CompositionProducerService`) : formulaire de recette (onglet Skład, colonne « Robi grupa »), Kalkulacja › Kompozycje i
-  półprodukty, kreator produktu (étape Receptura), Karta produktu (étape Receptura : `PUT /produits/items/{id}/bom-losses`
+  półprodukty, asystent produktu (étape Receptura), Karta produktu (étape Receptura : `PUT /produits/items/{id}/bom-losses`
   avec `producer_group_id` / `lead_days`). Choisir un groupe crée la fiche « półprodukt » de ce groupe (`n_prod_item` semi,
   groupe principal = groupe qui fait) ; retirer le groupe supprime cette fiche si elle n'a encore aucun historique.
 - `n_group_order` : commande d'une composition par un groupe au groupe qui la fait (quantité, jour et heure) — `ordered`,
@@ -1843,7 +1843,7 @@ premier scan : PIN) → l'ERP s'ouvre. Entrée déjà pointée à la tablette : 
 · Zakończ dzień » → même QR → sortie (question marchandise) → déconnexion. Sans liaison : pas de verrou. Routes
 `/ajax/erp-entry/state|qr|status` (GET), `/ajax/organization/erp-qr/{id}` (PUT, administrateur). Test : `tests/erp_entry_test.php`.
 
-### Zadania obowiązkowe (blokują ERP) + każde zadanie = kreator — 280
+### Zadania obowiązkowe (blokują ERP) + każde zadanie = asystent — 280
 
 Demande du 12/11/2026 (maquette 46 validée). Migration 175 : `n_position_task` + `mandatory`, `block_mode` (due = jour du
 terme, next_day = lendemain), `block_time`, `block_tolerance` (0–120 min), `wizard_steps` (JSON `[{title, hint, link}]`) ;
@@ -1857,6 +1857,15 @@ ouvre toujours un assistant : le sien, le protocole, sinon l'assistant à étape
 occurrence faite avec la remarque). Déblocage : « Poproś o odblokowanie » → cloche du supérieur du poste et des
 administrateurs → `/tasks/unblock/{user}/{task}` (motif obligatoire, pour la journée). Mój tydzień : 🔒 sur les tâches
 obligatoires. Test : `tests/task_lock_test.php`.
+
+### [282] « Asystent » partout dans l'ERP (migration 176)
+
+Le mot polonais « kreator » devient « asystent » dans toute l'interface (vues, scripts, messages, menu caché de la
+recherche, OpenAPI) : Asystent cen, Asystent faktur, Asystent produktu, asystent maszyny… Formes : kreatora →
+asystenta, kreatorze → asystencie, kreatory → asystenci. La migration 176 renomme aussi les textes en base (titres des
+tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_prod_param.description_pl`) ; l'historique
+(notes, rappels envoyés, journal) reste tel quel. Les adresses (`/finances/price-wizard`…) ne changent pas. Recherche :
+« kreator » reste un alias de « asystent ».
 
 ## Conventions
 

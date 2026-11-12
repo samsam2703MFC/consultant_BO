@@ -18,9 +18,9 @@ final class TaskWizards
     public const CATALOG = [
         'forecast_approved' => ['Prognoza 13 tygodni', '/production/forecast', 'prognoza zatwierdzona', 1],
         'buy_sent' => ['Zakupy tygodnia', '/workshop/buy', 'zapytania ofertowe wysłane', 3],
-        'inv_checked' => ['Kreator faktur', '/workshop/supply#tab=invoices&inv=wizard', 'pozycje faktur sprawdzone', 1],
-        'costs_recalc' => ['Kreator cen — koszty i marże', '/finances/price-wizard', 'koszty i marże przeliczone', 3],
-        'prices_planned' => ['Kreator cen — nowe ceny', '/finances/price-wizard#step=2', 'nowe ceny zaplanowane', 3],
+        'inv_checked' => ['Asystent faktur', '/workshop/supply#tab=invoices&inv=wizard', 'pozycje faktur sprawdzone', 1],
+        'costs_recalc' => ['Asystent cen — koszty i marże', '/finances/price-wizard', 'koszty i marże przeliczone', 3],
+        'prices_planned' => ['Asystent cen — nowe ceny', '/finances/price-wizard#step=2', 'nowe ceny zaplanowane', 3],
         'week_plan_validated' => ['Plan produkcji tygodnia', '/production/plan-wizard', 'plan tygodnia zatwierdzony', 2],
         'production_day_closed' => ['Zatwierdzenia produkcji', '/production/follow-up', 'dzień zatwierdzony na tabletach', 1],
         'day_shipped' => ['Wysyłka dnia', '/shipping/wizard', 'wszystkie palety dnia z dokumentami', 1],
@@ -52,12 +52,12 @@ final class TaskWizards
 
     /** Zalicza się samo, gdy… (lista do planu stanowiska). */
     public const AUTO = [
-        'inv_checked' => 'gdy pozycje faktur są sprawdzone (kreator faktur)',
-        'costs_recalc' => 'gdy koszty i marże są przeliczone (kreator cen, krok 1)',
-        'prices_planned' => 'gdy nowe ceny są zaplanowane (kreator cen, krok 3)',
+        'inv_checked' => 'gdy pozycje faktur są sprawdzone (asystent faktur)',
+        'costs_recalc' => 'gdy koszty i marże są przeliczone (asystent cen, krok 1)',
+        'prices_planned' => 'gdy nowe ceny są zaplanowane (asystent cen, krok 3)',
         'buy_sent' => 'gdy zapytania ofertowe są wysłane (zakupy tygodnia)',
         'forecast_approved' => 'gdy prognoza 13 tygodni jest zatwierdzona (Produkcja › Prognoza)',
-        'week_plan_validated' => 'gdy plan produkcji tygodnia jest zatwierdzony (kreator planu)',
+        'week_plan_validated' => 'gdy plan produkcji tygodnia jest zatwierdzony (asystent planu)',
         'production_day_closed' => 'gdy dzień jest zatwierdzony na tabletach (zatwierdzenia produkcji)',
         'day_shipped' => 'gdy wszystkie palety dnia mają dokumenty (wysyłka dnia)',
         'logistics_plan_approved' => 'gdy tydzień planu logistyki jest zatwierdzony',
@@ -68,12 +68,12 @@ final class TaskWizards
         'packing_done' => 'gdy wszystkie produkty dnia wysyłki są spakowane (tablet pakowania)',
         'route_done' => 'gdy trasy dnia są zakończone na tablecie kierowcy',
         'receiving_checked' => 'gdy wszystkie dostawy dnia są sprawdzone (tablet pakowania › Przyjęcia)',
-        'payments_reviewed' => 'po kroku 3 kreatora płatności (wpłaty, przypomnienia, różnice dostaw)',
-        'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (kreator oceny)',
-        'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (kreator « Plan na jutro », krok 3)',
-        'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (kreator, krok 3)',
-        'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (kreator kosztów surowców)',
-        'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (kreator)',
+        'payments_reviewed' => 'po kroku 3 asystenta płatności (wpłaty, przypomnienia, różnice dostaw)',
+        'suppliers_reviewed' => 'gdy ocena dostawców kwartału jest zatwierdzona (asystent oceny)',
+        'tomorrow_sent' => 'gdy plan na jutro jest wysłany na tablety (asystent « Plan na jutro », krok 3)',
+        'nc_reviewed' => 'gdy niezgodności miesiąca są przejrzane, każda z działaniem (asystent, krok 3)',
+        'material_costs_reviewed' => 'gdy decyzje o surowcach miesiąca są zapisane (asystent kosztów surowców)',
+        'yield_reviewed' => 'gdy przegląd wydajności i strat kwartału jest zatwierdzony (asystent)',
         'time_day_validated' => 'gdy dzień jest zatwierdzony w Czasie pracy (odbicia, powody nadgodzin i nieobecności)',
         'time_month_closed' => 'gdy poprzedni miesiąc jest zamknięty w Czasie pracy › Miesiąc (karty czasu pracy)',
     ];
@@ -108,7 +108,7 @@ final class TaskWizards
      */
     public function state(string $code, string $from, string $to, string $day, ?string $positionCode = null): array
     {
-        $info = self::info($code) ?? throw new \InvalidArgumentException('Nieznany kreator: ' . $code);
+        $info = self::info($code) ?? throw new \InvalidArgumentException('Nieznany asystent: ' . $code);
         $out = ['done' => false, 'summary' => null, 'step' => null, 'steps' => $info['steps'], 'step_label' => null];
         $hm = fn(?string $ts) => $ts ? substr($ts, 11, 5) : '';
         switch ($code) {

@@ -54,7 +54,7 @@
             <div class="ok"><span>Zrobione</span><b>${t.done} z ${t.total}</b><small>${pct(t.done, t.total)} % · cel 90 %</small></div>
             <div class="${t.open ? 'todo' : ''}"><span>Niezrobione</span><b>${t.open}</b><small>${t.open_due} do dziś · ${t.open_later} później</small></div>
             <div class="${t.late ? 'late' : ''}"><span>Spóźnione</span><b>${t.late}</b><small>${t.late_2 ? `${t.late_2} ponad 2 dni` : 'żadne ponad 2 dni'}</small></div>
-            <div><span>W toku</span><b>${t.running}</b><small>kreator rozpoczęty</small></div>
+            <div><span>W toku</span><b>${t.running}</b><small>asystent rozpoczęty</small></div>
             <div><span>Przypomnienia dziś</span><b>${t.reminders}</b><small>${t.reminders_read} ${plural(t.reminders_read, 'przeczytane', 'przeczytane', 'przeczytanych')}</small></div>
         </div>`;
     }

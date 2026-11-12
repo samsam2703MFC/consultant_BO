@@ -73,7 +73,7 @@ final class DeadlineAlertService
         foreach ($this->missingCostMonths($now) as [$ym, $source]) {
             $this->notifications->publish('cost_month_missing', 'danger', 'Brak kosztów za ' . self::monthLabel($ym),
                 'Rentowność, wynik grup i raport miesięczny liczą ' . self::monthLabel($ym) . ($source ? ' na kosztach z ' . self::monthLabel($source) : ' bez kosztów')
-                    . '. Uzupełnij personel, media i koszty stałe w kreatorze « Zamknięcie miesiąca ».',
+                    . '. Uzupełnij personel, media i koszty stałe w asystencie « Zamknięcie miesiąca ».',
                 '/month-close/' . $ym, ['month' => $ym], 'cost_month_missing:' . $ym);
             $out['costs']++;
         }
@@ -117,7 +117,7 @@ final class DeadlineAlertService
         if (!$missing && (int) $now->format('j') >= $this->int('alerts.cost_due_day', 10, 1) && $this->repo->costMonthStatus($previous) === 'OPEN') {
             $items[] = ['tone' => 'warning', 'icon' => 'bi-calendar2-check', 'count' => 1,
                 'one' => 'miesiąc do zamknięcia', 'few' => 'miesiące do zamknięcia', 'many' => 'miesięcy do zamknięcia',
-                'note' => self::monthLabel($previous) . ' — kreator « Zamknięcie miesiąca » (raport miesięczny wychodzi po zamknięciu)',
+                'note' => self::monthLabel($previous) . ' — asystent « Zamknięcie miesiąca » (raport miesięczny wychodzi po zamknięciu)',
                 'url' => '/month-close/' . $previous, 'positions' => ['ADMINISTRACJA']];
         }
         return $items;

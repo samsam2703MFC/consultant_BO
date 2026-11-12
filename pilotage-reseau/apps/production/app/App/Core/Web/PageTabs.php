@@ -39,7 +39,7 @@ final class PageTabs
         'margins' => ['label' => 'Marże i ceny', 'section' => 'Analiza', 'icon' => 'bi-percent', 'tabs' => [
             ['/finances/product-margin', 'Marża produktów', 'bi-percent'],
             ['/finances/category-margin', 'Marża kategorii', 'bi-bar-chart-line'],
-            ['/finances/price-wizard', 'Kreator cen', 'bi-magic'],
+            ['/finances/price-wizard', 'Asystent cen', 'bi-magic'],
         ]],
         // Koszty : produktu i działów, kalkulator, faktury i koszty (przypisania, zatwierdzenie), usługi miesiąca, zamknięcie miesiąca.
         'costs' => ['label' => 'Koszty', 'section' => 'Analiza', 'icon' => 'bi-cash-coin', 'tabs' => [

@@ -104,7 +104,7 @@ try {
     $b = $pdo->query('SELECT capacity_per_pass, fixed_time_s, variable_time_s, operators_required FROM n_prod_routing_step WHERE id = 2')->fetch();
     expectMd($r['updated'] === 1 && (float) $b['capacity_per_pass'] == 200 && (int) $b['fixed_time_s'] === 1200 && (float) $b['variable_time_s'] == 0 && (float) $b['operators_required'] == 1.5, 'formierka : bagietka zmieniona, 1,5 osoby');
     $log = $pdo->query("SELECT before_json, after_json FROM n_prod_audit_log WHERE entity_id = 2 AND action = 'update'")->fetch();
-    expectMd($log && str_contains((string) $log['before_json'], '600') && str_contains((string) $log['after_json'], 'kreator maszyny'), 'dziennik : przed / po');
+    expectMd($log && str_contains((string) $log['before_json'], '600') && str_contains((string) $log['after_json'], 'asystent maszyny'), 'dziennik : przed / po');
     $o = $s->overview();
     expectMd($o['tiles']['products_with'] === 3, 'po zapisie : 3 produkty z danymi');
     $byId = [];
@@ -152,9 +152,9 @@ try {
     expectMd($piec['shared'] === ['Tarty'] && $piec['shared_from'] === null, 'Piekarnia : piec wspólny z Tarty');
     expectMd($o['tiles']['machines'] === $machinesBefore + 1, 'maszyna wspólna liczona raz');
     $m9 = $s->machine(9)['machine'];
-    expectMd($m9['group_ids'] === [1, 7] && $m9['shared'] === ['Tarty'], 'kreator : grupy maszyny (produkty Piekarni i Tarty) ' . json_encode($m9['group_ids']));
+    expectMd($m9['group_ids'] === [1, 7] && $m9['shared'] === ['Tarty'], 'asystent : grupy maszyny (produkty Piekarni i Tarty) ' . json_encode($m9['group_ids']));
     $log = $pdo->query("SELECT after_json FROM n_prod_audit_log WHERE entity = 'workstation_share' AND entity_id = 9")->fetchColumn();
-    expectMd($log && str_contains($log, 'kreator maszyny'), 'dziennik : grupy maszyny');
+    expectMd($log && str_contains($log, 'asystent maszyny'), 'dziennik : grupy maszyny');
     // Komora : wózki ; robot współpracujący.
     $k = $s->saveMachine(null, ['name' => 'Komora rozrostu T', 'type' => 'fermentation', 'group_id' => 7, 'capacity' => '12'], 1);
     $kr = $pdo->query("SELECT capacity_per_pass, capacity_unit FROM n_prod_workstation WHERE id = {$k['id']}")->fetch();

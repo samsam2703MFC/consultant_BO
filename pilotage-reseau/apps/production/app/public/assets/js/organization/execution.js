@@ -55,7 +55,7 @@
         const runsBad = t.runs_failed;
         return `<div class="kw-tiles ex-tiles">
             <div class="ok"><span>Zrobione</span><b>${t.done} z ${t.total}</b><small>${pct(t.done, t.total)} % · cel 90 %</small></div>
-            <div><span>W toku</span><b>${t.running}</b><small>kreator rozpoczęty</small></div>
+            <div><span>W toku</span><b>${t.running}</b><small>asystent rozpoczęty</small></div>
             <div class="${t.late ? 'late' : ''}"><span>Spóźnione</span><b>${t.late}</b><small>${t.escalated ? `${t.escalated} przełożony powiadomiony` : 'bez powiadomień'}</small></div>
             <div class="${runsBad ? 'late' : 'ok'}"><span>Automatycznie (cron)</span><b>${t.runs_ok} z ${t.runs}</b><small>${runsBad ? `${runsBad} ${plural(runsBad, 'błąd', 'błędy', 'błędów')}` : (t.runs ? 'bez błędów' : 'brak uruchomień')}</small></div>
             <div><span>Czas</span><b>${dur(t.done_minutes)}</b><small>z ${dur(t.minutes)} zaplanowanych</small></div>
@@ -116,7 +116,7 @@
             <b>${esc(it.title || '')}</b><span>${state}</span>
             ${it.people ? `<span class="at-sub">${esc(it.people.join(', '))}${it.minutes ? ' · ' + dur(it.minutes) + ' planowane' : ''}</span>` : ''}
             ${it.summary ? `<span>${esc(it.summary)}</span>` : ''}${it.error ? `<span class="text-danger">${esc(it.error)}</span>` : ''}${it.note && it.state === 'ok' ? `<span class="at-sub">${esc(it.note)}</span>` : ''}
-            <span class="ex-pop-acts">${it.link ? `<a href="${esc(at.root + it.link)}">Otwórz ${it.state === 'auto' || it.state === 'ok' ? 'wynik' : 'kreator'} →</a>` : ''}<span class="wk-sp"></span>${actionable ? remindBtn(it.occurrence) : ''}</span></div>`;
+            <span class="ex-pop-acts">${it.link ? `<a href="${esc(at.root + it.link)}">Otwórz ${it.state === 'auto' || it.state === 'ok' ? 'wynik' : 'asystent'} →</a>` : ''}<span class="wk-sp"></span>${actionable ? remindBtn(it.occurrence) : ''}</span></div>`;
     }
 
     function lateHtml() {

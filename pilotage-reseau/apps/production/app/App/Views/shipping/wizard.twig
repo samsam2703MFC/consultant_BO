@@ -23,7 +23,7 @@
          data-replacements="{{ (replacements ?: {})|json_encode }}"
          data-selected-date="{{ selected_date }}">
 
-    <ol class="at-steps" aria-label="Kroki kreatora">
+    <ol class="at-steps" aria-label="Kroki asystenta">
         <li data-step-tab="1"><span>Data wysyłki</span></li>
         <li data-step-tab="2"><span>Klienci i palety</span></li>
         <li data-step-tab="3"><span>Przewoźnik</span></li>
@@ -92,7 +92,7 @@
                 <div class="at-note at-note-safe">
                     <i class="bi bi-shield-check"></i><strong>Tworzenie dokumentów nie wysyła faktur do KSeF.</strong>
                     Jedyne, co wychodzi samo, to powiadomienie « wysłane » do sklepów franczyzy (kolejka, ponów w Stan wysyłek). Po sprawdzeniu dokumentów wyślesz wszystkie WDT dnia
-                    do KSeF jednym przyciskiem na końcu kreatora (z potwierdzeniem) albo pojedynczo na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
+                    do KSeF jednym przyciskiem na końcu asystenta (z potwierdzeniem) albo pojedynczo na stronie <a href="{{ root }}/shipments">Wysyłki i dokumenty</a>.
                     Statusy KSeF odświeżają się same co 5 minut ; WDT niewysłane lub odrzucone są w <a href="{{ root }}/client-orders/queue?rule=ksef">Do obsłużenia</a>.
                     <ul>
                         <li>Dla klientów franczyzowych ceny na WDT są odczytywane z cennika franczyzy — tak samo jak w trybie klasycznym; to tylko odczyt cennika.</li>

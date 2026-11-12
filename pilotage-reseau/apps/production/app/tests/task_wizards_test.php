@@ -171,9 +171,9 @@ try {
     // --- Zadania stanowiska : zapis pól [227] -------------------------------------------------------------------------
     $plan = $s->weekPlan(1, 1, new DateTimeImmutable('2026-11-04 12:00:00'));
     expectTz($plan['superior'] === 'Administrator' && $s->weekPlan(2, 1)['superior'] === 'Kierownik produkcji', 'przełożony : Administrator / Kierownik produkcji');
-    expectTz(isset($plan['cron_actions']['stock_recalc']) && count($plan['wizards']) === count(TaskWizards::CATALOG), 'katalog kreatorów i akcji');
+    expectTz(isset($plan['cron_actions']['stock_recalc']) && count($plan['wizards']) === count(TaskWizards::CATALOG), 'katalog asystentów i akcji');
     $fw = array_column($plan['wizards'], null, 'code')['forecast_approved'];
-    expectTz($fw['used'][0]['mine'] === true, 'kreator przypięty tutaj');
+    expectTz($fw['used'][0]['mine'] === true, 'asystent przypięty tutaj');
     $rows = $plan['tasks'];
     $with = fn(int $id, array $patch) => array_map(fn($r) => $r['id'] === $id ? array_merge($r, $patch) : $r, $rows);
     expectTzFail(fn() => $s->saveWeekPlan(1, ['tasks' => $with(1, ['due_time' => '25:00'])], 1), 422, 'termin 25:00 : 422');

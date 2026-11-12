@@ -35,17 +35,17 @@ final class PositionTaskService
     /** Strony ERP do wyboru w planie tygodnia : ścieżka => [etykieta listy, przycisk na karcie zadania]. Inny adres zostaje. */
     public const LINKS = [
         '/production/forecast' => ['Prognoza 13 tygodni (sezony z panelu, zakupy)', 'Prognoza'],
-        '/production/plan-wizard' => ['Plan produkcji tygodnia (kreator)', 'Plan tygodnia'],
-        '/shipping/wizard' => ['Wysyłka dnia (kreator : WZ, CMR, WDT)', 'Wysyłka'],
+        '/production/plan-wizard' => ['Plan produkcji tygodnia (asystent)', 'Plan tygodnia'],
+        '/shipping/wizard' => ['Wysyłka dnia (asystent : WZ, CMR, WDT)', 'Wysyłka'],
         '/logistics/live' => ['Pakowanie i paletyzacja na żywo (tablet pakowania)', 'Pakowanie'],
         '/logistics/deliveries' => ['Potwierdzenia dostaw (tablet kierowcy)', 'Dostawy'],
         '/logistics/plan' => ['Plan logistyki 13 tygodni', 'Plan logistyki'],
         '/finances/costs' => ['Finanse : koszty usług miesiąca', 'Koszty usług'],
-        '/workshop/supply#tab=invoices&inv=wizard' => ['Kreator faktur (zatwierdzanie pozycji)', 'Kreator faktur'],
+        '/workshop/supply#tab=invoices&inv=wizard' => ['Asystent faktur (zatwierdzanie pozycji)', 'Asystent faktur'],
         '/workshop/supply#tab=invoices' => ['Faktury zakupowe (wgraj PDF / zdjęcia, KSeF)', 'Faktury'],
-        '/finances/price-wizard' => ['Kreator cen — krok 1 : koszty i marże', 'Kreator cen'],
-        '/finances/price-wizard#step=2' => ['Kreator cen — krok 2 : nowe ceny', 'Kreator cen'],
-        '/finances/price-wizard#step=3' => ['Kreator cen — krok 3 : publikacja', 'Publikacje'],
+        '/finances/price-wizard' => ['Asystent cen — krok 1 : koszty i marże', 'Asystent cen'],
+        '/finances/price-wizard#step=2' => ['Asystent cen — krok 2 : nowe ceny', 'Asystent cen'],
+        '/finances/price-wizard#step=3' => ['Asystent cen — krok 3 : publikacja', 'Publikacje'],
         '/workshop/buy' => ['Zakupy tygodnia', 'Zakupy tygodnia'],
         '/workshop/buy#tab=suppliers' => ['Zakupy tygodnia › Dostawcy pozycji', 'Dostawcy'],
         '/purchasing/offers' => ['Oferty dostawców', 'Oferty'],
@@ -65,12 +65,12 @@ final class PositionTaskService
         '/communication/messages' => ['Wiadomości', 'Wiadomości'],
         '/communication/automations' => ['E-maile automatyczne', 'E-maile'],
         // [247] Lot « lżej » : kreatory zadań bez wcześniejszego kreatora.
-        '/production/tomorrow' => ['Plan na jutro (kreator : obciążenie grup, ludzie i surowce, tablety)', 'Plan na jutro'],
-        '/purchasing/nc-review' => ['Niezgodności miesiąca (kreator : przyczyna i działanie, dostawcy, audyt)', 'Niezgodności miesiąca'],
-        '/purchasing/cost-review' => ['Koszty surowców i oszczędności (kreator)', 'Koszty surowców'],
-        '/production/yield-review' => ['Wydajność i straty kwartału (kreator)', 'Wydajność i straty'],
+        '/production/tomorrow' => ['Plan na jutro (asystent : obciążenie grup, ludzie i surowce, tablety)', 'Plan na jutro'],
+        '/purchasing/nc-review' => ['Niezgodności miesiąca (asystent : przyczyna i działanie, dostawcy, audyt)', 'Niezgodności miesiąca'],
+        '/purchasing/cost-review' => ['Koszty surowców i oszczędności (asystent)', 'Koszty surowców'],
+        '/production/yield-review' => ['Wydajność i straty kwartału (asystent)', 'Wydajność i straty'],
         '/workshop/gantt' => ['Tablica tygodnia (przeciągnij i upuść)', 'Tablica tygodnia'],
-        '/purchasing/supplier-review' => ['Ocena dostawców (kreator kwartału)', 'Ocena dostawców'],
+        '/purchasing/supplier-review' => ['Ocena dostawców (asystent kwartału)', 'Ocena dostawców'],
     ];
 
     /** Zadanie zalicza się samo, gdy kreator jest zakończony w okresie zadania (katalog : TaskWizards). */
