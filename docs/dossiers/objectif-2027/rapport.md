@@ -451,7 +451,7 @@ La gamme chocolat se vend peu et à petite marge : environ 15 200 € de CA par 
 
 ### Budget marketing : dépenses 2026 et budget prévisionnel 2027
 
-Le fonds marketing a enregistré 9 085 € de dépenses en 2026, tout au Collectif MKTG, entre juin et septembre. L'animation des réseaux sociaux coûte 3 160 € chaque mois, et 1 500 € par mois de publicité Meta et Google s'y ajoutent : ni l'une ni l'autre n'est enregistrée depuis octobre. En 2027, ces deux postes prendraient 55 900 € sur les 61 800 € de redevances marketing attendues au taux actuel.
+Le fonds marketing a enregistré 9 085 € de dépenses en 2026, tout au Collectif MKTG, entre juin et septembre. L'animation des réseaux sociaux coûte 3 160 € chaque mois, et 1 500 € par mois de publicité Meta et Google s'y ajoutent : l'animation n'est plus enregistrée depuis octobre, et la publicité, lancée en septembre, ne l'a jamais été. En 2027, ces deux postes prendraient 55 900 € sur les 61 800 € de redevances marketing attendues au taux actuel.
 
 Les dépenses 2026 enregistrées dans le fonds :
 
@@ -464,11 +464,11 @@ Les dépenses 2026 enregistrées dans le fonds :
 | 01/09/2026 | Septembre 2026 (réseaux sociaux, tarif mensuel) | facture 2026/062 | 3 160 € |
 | Total enregistré | | | 9 085 € |
 | oct. → déc. 2026 | Animation réseaux sociaux, 3 160 € par mois | non enregistré | 9 480 € |
-| 2026 | Publicité Meta et Google, 1 500 € par mois | non enregistré | mois de départ à préciser |
-| Total 2026 connu | | | 18 565 €, hors publicité |
+| sept. → déc. 2026 | Publicité Meta et Google, 1 500 € par mois | non enregistré | 6 000 € |
+| Total 2026 | | | 24 565 € |
 
 - Trois dépenses portent la même facture 2026/061 (4 920 € au total) : facture à vérifier auprès du Collectif.
-- Côté recettes, seules les redevances de juillet sont enregistrées (2 650 €, sans Halle). Au taux actuel, les redevances dues de juin à octobre font environ 25 200 € : enregistrées, avec l'animation d'octobre, elles mettraient le fonds à environ +12 900 € fin octobre au lieu de −6 435 €, publicité non comprise.
+- Côté recettes, seules les redevances de juillet sont enregistrées (2 650 €, sans Halle). Au taux actuel, les redevances dues de juin à octobre font environ 25 200 € : enregistrées, avec l'animation d'octobre et la publicité de septembre et d'octobre, elles mettraient le fonds à environ +9 900 € fin octobre au lieu de −6 435 €.
 - Si d'autres dépenses marketing 2026 ont été payées hors du fonds (publicité en ligne, impression, PLV), elles manquent à cette liste.
 
 Budget prévisionnel 2027, au taux actuel des redevances et au CA de 2026 :
