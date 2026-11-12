@@ -1,0 +1,60 @@
+name: Sonde — anti-gaspi des profils clients de Halle (lecture seule)
+
+# Sam, 12/11/2026 : « anti-gaspi n'est pas un produit que Sonia H. a pris ». Les produits que la règle range en
+# anti-gaspi et les lignes des tickets concernés à Halle. Rien n'est écrit, rien de nominatif n'est affiché.
+#
+# Déclenchement : pousser un changement sur le script ou ce fichier dans la branche ci-dessous.
+# Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/elegant-cray-9i8enx]
+    paths: ['pilotage-reseau/tools/sonde_antigaspi_halle.php', '.github/workflows/sonde-antigaspi-halle.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: sonde-antigaspi-halle
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
+# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+defaults:
+  run:
+    working-directory: pilotage-reseau
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l tools/sonde_antigaspi_halle.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Lire les lignes des tickets rangés anti-gaspi
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+        run: |
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}'" < tools/sonde_antigaspi_halle.php
