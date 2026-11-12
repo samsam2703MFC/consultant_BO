@@ -13,7 +13,7 @@ Maquettes validées : dépôt `webshop-mrszoko-backoffice`, dossier
 | Sujet | Décision |
 |---|---|
 | Forme | **Un seul audit** pour tous les fournisseurs : un **tronc commun** posé à chacun (comparable entre eux) + les **questions propres** à chaque fournisseur. |
-| Fournisseurs | **Tous les fournisseurs référencés** : le référentiel `ceo_supplier`, colonne `audit_ref`. Un fournisseur référencé reçoit le tronc commun sans autre action. |
+| Fournisseurs | **Tous les fournisseurs référencés** : le référentiel `ceo_supplier`, colonne `audit_ref`. Un fournisseur référencé reçoit le tronc commun sans autre action. On le **choisit dans une liste déroulante** (13/11/2026) : les fournisseurs de l'ERP (`/material-suppliers`, gardés une heure dans `auditsErpFournisseurs`, e-mail pré-rempli), puis ceux du cockpit, ou « Autre » pour saisir un nom (agence, collectif). `GET /audits/catalogue[?frais=1]`. |
 | Qui répond | **Le franchisé seul**, par un **lien personnel** (sans compte) reçu par **e-mail** et par **notification push** (appareils du magasin abonnés depuis le dashboard ou l'app visites). |
 | Copie | **Chaque fournisseur reçoit une copie** de ses résultats avec la **note du franchiseur**, relue et envoyée à la main. Nom des boutiques masqué par défaut. |
 | Points | Non montrés au franchisé. Score d'un fournisseur = points obtenus / maximum, en %. Seuils réglables : Bon ≥ 80 %, À surveiller ≥ 60 %, sinon « Revoir le contrat ». |

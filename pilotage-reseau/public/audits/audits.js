@@ -13,7 +13,8 @@
   const jour = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + (s.length > 10 ? ' ' + s.slice(11, 16) : '') : '—';
   // Divergente validée (framboise ← gris → bleu), pour la grille et les répartitions : 1 = mauvais, 5 = très bien.
   const TEINTES = { 1: ['#A93A57', '#fff'], 2: ['#D98A9E', '#1c1a17'], 3: ['#DDD8D2', '#1c1a17'], 4: ['#7FA6CF', '#1c1a17'], 5: ['#2E6DA4', '#fff'] };
-  const S = { tab: 'formulaire', etat: null, edit: null, camp: null, campD: null, nouvelle: false, resCamp: null, res: null, resF: null, apercu: null, msg: null, occupe: false };
+  const S = { tab: 'formulaire', etat: null, edit: null, camp: null, campD: null, nouvelle: false, resCamp: null, res: null, resF: null, apercu: null, msg: null, occupe: false,
+    cat: null, nf: { choix: '', nom: '', cat: '', genre: 'fournisseur', email: '' } };
 
   async function api(methode, chemin, corps) {
     const r = await fetch(API + chemin, { method: methode, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: corps ? JSON.stringify(corps) : undefined });
@@ -134,7 +135,7 @@
       ${nouveau || (S.edit && S.edit.cle === cle && S.edit.parent) ? '' : `<div style="padding:10px 14px;border-top:1px solid var(--line)"><button class="btn btn--sm" data-qnouv="${esc(cle)}">+ Ajouter une question</button></div>`}</section>`;
   }
   function ongletFormulaire() {
-    const E = S.etat, qs = E.questions, refs = E.fournisseurs.filter(f => f.ref), autres = E.fournisseurs.filter(f => !f.ref);
+    const E = S.etat, qs = E.questions, refs = E.fournisseurs.filter(f => f.ref);
     const tronc = qs.filter(q => q.fournisseur == null), totTronc = tronc.reduce((s, q) => s + (maxDe(q) || 0), 0);
     const secs = [section('Tronc commun', 'posé à chaque fournisseur, pour les comparer entre eux', tronc, qs, '', '', true)]
       .concat(refs.map(f => section(f.nom, (f.cat || AU_GENRE(f.genre)) + ' · questions propres', qs.filter(q => q.fournisseur === f.id), qs, f.id, f.nom, false)));
@@ -148,13 +149,7 @@
       <div class="af-card"><h2>Fournisseurs référencés <small>${refs.length}</small></h2>
         <p class="af-mu af-sm" style="margin:0 0 8px">Chacun est noté par tous les franchisés. Un fournisseur ajouté ici reçoit le tronc commun.</p>
         ${refs.length ? refs.map(ligneF).join('') : '<div class="af-vide">Aucun fournisseur référencé.</div>'}
-        <div class="af-box" style="margin-top:12px"><b>Ajouter</b>
-          <div class="af-row"><label class="af-f grand">Nom<input data-nf="nom" placeholder="Glace Rawette"></label><label class="af-f">Catégorie<input data-nf="cat" placeholder="Glaces"></label></div>
-          <div class="af-row"><label class="af-f">Genre<select data-nf="genre">${Object.entries(E.genres).map(([c, l]) => `<option value="${c}">${l}</option>`).join('')}</select></label>
-            <label class="af-f grand">E-mail (copie des résultats)<input data-nf="email" type="email"></label></div>
-          <div><button class="btn btn--primary btn--sm" data-fajout${S.occupe ? ' disabled' : ''}>Référencer</button></div></div>
-        ${autres.length ? `<details style="margin-top:12px"><summary class="af-mu af-sm" style="cursor:pointer">Autres fournisseurs du cockpit (${autres.length})</summary>
-          <table class="af-tbl" style="margin-top:6px"><tbody>${autres.map(f => `<tr><td>${esc(f.nom)}<span class="af-mu af-sm" style="display:block">${esc(f.perimetre || '')}</span></td><td style="text-align:right"><button class="btn btn--sm" data-ref="${esc(f.id)}">Référencer</button></td></tr>`).join('')}</tbody></table></details>` : ''}
+        ${blocAjout(E)}
       </div>
       <div class="af-card"><h2>Seuils du score</h2><p class="af-mu af-sm" style="margin:0 0 8px">En % du maximum de chaque fournisseur.</p>
         <div class="af-row"><label class="af-f n">Bon dès<input type="number" data-seuil="bon" value="${esc(E.seuils.bon)}"></label><label class="af-f n">À surveiller dès<input type="number" data-seuil="surveiller" value="${esc(E.seuils.surveiller)}"></label>
@@ -162,6 +157,29 @@
     </div></div>`;
   }
   const AU_GENRE = g => (S.etat.genres || {})[g] || 'Fournisseur';
+  /** « Ajouter » : la liste déroulante des fournisseurs de l'ERP et du cockpit (GET catalogue), ou un nom saisi. */
+  function blocAjout(E) {
+    const C = S.cat, nf = S.nf, ls = C ? C.fournisseurs : [];
+    const opt = (f, i) => `<option value="${i}"${nf.choix === String(i) ? ' selected' : ''}>${esc(f.nom)}${f.perimetre ? ' — ' + esc(f.perimetre) : ''}</option>`;
+    const groupe = (src, lib) => { const g = ls.map((f, i) => [f, i]).filter(([f]) => f.source === src); return g.length ? `<optgroup label="${lib} (${g.length})">${g.map(([f, i]) => opt(f, i)).join('')}</optgroup>` : ''; };
+    const etat = !C ? 'Chargement de la liste de l’ERP…'
+      : C.erp ? `Liste de l’ERP lue le ${jour(C.le)}${C.motif ? ' (' + esc(C.motif) + ')' : ''} · <button class="linklike" data-catfrais>relire</button>`
+      : `ERP non lu : ${esc(C.motif || 'sans réponse')} · <button class="linklike" data-catfrais>réessayer</button>`;
+    return `<div class="af-box" style="margin-top:12px"><b>Ajouter un fournisseur</b>
+      <label class="af-f">Fournisseur ou prestataire<select data-nfsel>
+        <option value=""${nf.choix === '' ? ' selected' : ''}>— Choisir dans la liste —</option>${groupe('erp', 'ERP')}${groupe('cockpit', 'Cockpit')}
+        <option value="autre"${nf.choix === 'autre' ? ' selected' : ''}>Autre (saisir le nom)…</option></select></label>
+      <span class="af-mu af-sm">${etat}</span>
+      ${nf.choix === 'autre' ? `<label class="af-f">Nom<input data-nf="nom" value="${esc(nf.nom)}" placeholder="Collectif marketing"></label>` : ''}
+      <div class="af-row"><label class="af-f grand">Catégorie<input data-nf="cat" value="${esc(nf.cat)}" placeholder="Glaces, IT & numérique…"></label>
+        <label class="af-f">Genre<select data-nf="genre">${Object.entries(E.genres).map(([c, l]) => `<option value="${c}"${nf.genre === c ? ' selected' : ''}>${l}</option>`).join('')}</select></label></div>
+      <label class="af-f">E-mail (copie des résultats)<input data-nf="email" type="email" value="${esc(nf.email)}"></label>
+      <div><button class="btn btn--primary btn--sm" data-fajout${S.occupe || nf.choix === '' || (nf.choix === 'autre' && !nf.nom.trim()) ? ' disabled' : ''}>Référencer</button></div></div>`;
+  }
+  async function chargeCatalogue(frais) {
+    try { S.cat = await api('GET', 'catalogue' + (frais ? '?frais=1' : '')); }
+    catch (e) { S.cat = { fournisseurs: [], erp: false, motif: e.message, le: null }; }
+  }
   function brouillonQ(q) {
     const b = JSON.parse(JSON.stringify(q || {}));
     return Object.assign({ libelle: '', aide: '', type: 'note', obligatoire: true, coef: 1, min: '', max: '', choix: [], paliers: [], unite: '', si: null, regle: null }, b);
@@ -355,10 +373,16 @@
     if (d.palplus != null) { S.edit.q.paliers.push({ jusqua: '', points: 0 }); rendu(); return; }
     if (d.palx) { S.edit.q.paliers.splice(Number(d.palx), 1); rendu(); return; }
     if (d.fajout != null) {
-      const o = {}; $.querySelectorAll('[data-nf]').forEach(el => { o[el.dataset.nf] = el.value; });
-      await action(async () => { await api('POST', 'fournisseurs', o); await chargeEtat(); }, (o.nom || 'Le fournisseur') + ' est référencé : il reçoit le tronc commun.'); return;
+      const nf = S.nf, f = nf.choix !== '' && nf.choix !== 'autre' ? S.cat.fournisseurs[Number(nf.choix)] : null;
+      const o = { nom: f ? f.nom : nf.nom.trim(), cat: nf.cat, genre: nf.genre, email: nf.email };
+      await action(async () => {
+        await api('POST', 'fournisseurs', o);
+        S.nf = { choix: '', nom: '', cat: '', genre: 'fournisseur', email: '' };
+        await chargeEtat(); await chargeCatalogue(false);
+      }, o.nom + ' est référencé : il reçoit le tronc commun.'); return;
     }
-    if (d.ref || d.unref) { const id = d.ref || d.unref; await action(async () => { await api('PUT', 'fournisseurs/' + id, { ref: !!d.ref }); await chargeEtat(); }, d.ref ? 'Fournisseur référencé.' : 'Fournisseur retiré de l’audit (ses questions propres restent, inactives).'); return; }
+    if (d.catfrais != null) { S.cat = null; rendu(); await chargeCatalogue(true); rendu(); return; }
+    if (d.ref || d.unref) { const id = d.ref || d.unref; await action(async () => { await api('PUT', 'fournisseurs/' + id, { ref: !!d.ref }); await chargeEtat(); await chargeCatalogue(false); }, d.ref ? 'Fournisseur référencé.' : 'Fournisseur retiré de l’audit (ses questions propres restent, inactives).'); return; }
     if (d.seuils != null) { const o = {}; $.querySelectorAll('[data-seuil]').forEach(el => { o[el.dataset.seuil] = el.value; }); await action(async () => { await api('PUT', 'seuils', o); await chargeEtat(); }, 'Seuils enregistrés.'); return; }
     // Campagnes
     if (d.cnouv != null) { S.nouvelle = !S.nouvelle; rendu(); return; }
@@ -395,6 +419,7 @@
   });
   $.addEventListener('input', ev => {
     const t = ev.target, d = t.dataset;
+    if (d.nf) { S.nf[d.nf] = t.value; const b = $.querySelector('[data-fajout]'); if (b && d.nf === 'nom') b.disabled = S.occupe || !t.value.trim(); return; }
     if (!S.edit) return;
     const q = S.edit.q;
     if (d.e && d.e !== 'type' && d.e !== 'obligatoire') q[d.e] = t.value;
@@ -405,6 +430,13 @@
   });
   $.addEventListener('change', async ev => {
     const t = ev.target, d = t.dataset;
+    if (d.nfsel != null) {
+      S.nf.choix = t.value;
+      const f = t.value !== '' && t.value !== 'autre' ? S.cat.fournisseurs[Number(t.value)] : null;
+      // L'e-mail connu de l'ERP (ou de la fiche) pré-remplit la copie des résultats.
+      if (f) { S.nf.email = f.email || ''; if (!S.nf.cat && f.perimetre && f.perimetre !== 'Fonds marketing') S.nf.cat = f.perimetre; }
+      rendu(); if (t.value === 'autre') { const el = $.querySelector('[data-nf="nom"]'); if (el) el.focus(); } return;
+    }
     if (d.rescamp != null) { await action(() => chargeRes(Number(t.value))); return; }
     if (d.fo) { const [id, k] = d.fo.split(':'); await action(async () => { await api('PUT', 'fournisseurs/' + id, { [k]: t.value }); await chargeEtat(); }, 'Fiche enregistrée.'); return; }
     if (!S.edit) return;
@@ -418,6 +450,6 @@
   });
 
   (async function demarrer() {
-    try { await chargeEtat(); rendu(); } catch (e) { $.innerHTML = `<div class="af-msg ko">${esc(e.message)}</div>`; hauteur(); }
+    try { await chargeEtat(); rendu(); chargeCatalogue(false).then(rendu); } catch (e) { $.innerHTML = `<div class="af-msg ko">${esc(e.message)}</div>`; hauteur(); }
   })();
 })();
