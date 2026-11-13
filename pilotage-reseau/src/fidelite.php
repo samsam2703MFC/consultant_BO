@@ -2,669 +2,683 @@
 declare(strict_types=1);
 
 /**
- * Fidélité — ERP franchisé › Fidélité (adresse #/fidelity), demande du 24/10/2026.
- * Maquettes : docs/maquettes/fidelite (retenu : le Programme de C, les Clients de B).
+ * Fidélité — ERP franchisé › Fidélité (#/fidelity). Réécrit le 13/11/2026, à la demande de Sam :
+ *   « ça ne marche qu'avec l'API : pas depuis une table, uniquement depuis l'API » ;
+ *   « on ne garderait que la carte à points, fusionnée avec le bingo » ;
+ *   « nous faisons un mix entre le bingo et les points ».
+ * Maquettes : docs/maquettes/fidelite-bingo.
  *
- * Deux lectures, une écriture :
- *  - GET  /fidelite          le programme : les règles (on gagne, ça compte double, on reçoit,
- *                            garde-fous), ce que chacune a donné sur 30 jours, le budget estimé,
- *                            trois clients types pour le simulateur ;
- *  - GET  /fidelite/clients  la récurrence : récence × fréquence, segments, d'un mois à l'autre,
- *                            ce qu'achète chaque segment (six types d'achat) ;
- *  - POST /fidelite/regles   publie les règles modifiées, ajoutées ou retirées, en un envoi.
+ * Le programme, c'est UNE carte de l'ERP (TF Buddy) : la carte à points (`points_config` : tranches, ×2, coefficients
+ * par magasin, paliers d'échange, validités), avec le bingo de saison dedans. La case de la semaine se coche quand le
+ * client a gagné `seuilPoints` points sur la carte du lundi au dimanche ; toutes les `tousLes` cases, un bon (un code
+ * de campagne de l'ERP au nom du client) ; carte pleine, le super bon et le tirage. Les autres cartes (les tampons)
+ * s'arrêtent.
  *
- * Les règles vivent ici (ceo_fid_regle) : c'est le paramétrage de la marque. La PWA du client
- * doit les lire pour les appliquer (cartes à tampons et jauge : pwa_loyalty_card / _config) —
- * ce raccord reste à faire, l'écran ne prétend pas le contraire.
+ * Le cockpit ne garde RIEN du programme ni des clients : aucune table. Tout se lit et s'écrit par l'API de l'ERP
+ * (client ErpApi, compte admin) :
+ *  - GET  /fidelite             la carte (GET /admin/loyalty/cards), les magasins (GET /admin/loyalty/options), les
+ *                               cartes à arrêter, le bingo de la saison et ses campagnes (GET /admin/voucher-campaigns) ;
+ *  - GET  /fidelite/clients     la récurrence : GET /shops/{id}/loyalty/statistics, et GET /shops/{id}/loyalty/customers
+ *                               semaine par semaine (les points gagnés sur la carte font les cases) ;
+ *  - POST /fidelite/simuler     POST /admin/loyalty/simulate — rien n'est écrit ;
+ *  - POST /fidelite/publier     PATCH /admin/loyalty/cards/{id} avec sa revision ; carte figée (`terms_locked`) : POST de
+ *                               la version suivante et PATCH de la fin de l'ancienne ; fin des cartes à arrêter ;
+ *  - POST /fidelite/bingo/bons  les bons dus par le bingo, en simulation par défaut ; `ecrire: true` les crée
+ *                               (POST /admin/voucher-campaigns/{id}/codes) ; GET /fidelite/cron?jeton= le fait chaque
+ *                               lundi pour les campagnes ACTIVES dans l'ERP.
  *
- * Les visites carte arrivent dans ceo_fid_visite (client, magasin, date-heure, montant, type
- * d'achat). Une base qui a des visites compte pour de vrai ; sans visite, l'analyse tourne sur
- * un JEU D'ESSAI généré (mêmes calculs) et la réponse le dit (`test`), comme la newsletter.
+ * Seuls restent ici : le calendrier de la saison (src/data/fidelite_bingo.json : semaines, thèmes, dessins, valeurs
+ * des bons) et un cache des réponses de l'API (fichiers temporaires, jamais une source) pour ne pas relire les semaines
+ * closes à chaque ouverture.
  */
 
-const FID_MISSIONS = [
-    ['k' => 'pain', 'nom' => 'Pain quotidien', 'def' => 'pain seul ou avec un article'],
-    ['k' => 'petitdej', 'nom' => 'Petit-déjeuner', 'def' => 'viennoiserie et boisson chaude'],
-    ['k' => 'lunch', 'nom' => 'Lunch', 'def' => 'sandwich, quiche ou salade, boisson'],
-    ['k' => 'gouter', 'nom' => 'Goûter', 'def' => 'pâtisserie individuelle, cookies'],
-    ['k' => 'occasion', 'nom' => 'Occasion', 'def' => 'tarte entière, entremets, panier de 25 € et plus'],
-    ['k' => 'bureau', 'nom' => 'Commande & bureau', 'def' => 'click & collect, livraison au bureau'],
-];
-const FID_SEGMENTS = [
-    'H' => ['Habitués', '8 visites et plus par mois, vu il y a moins de 7 jours'],
-    'R' => ['Réguliers', '2 à 7 visites par mois, vu dans les 3 semaines'],
-    'O' => ['Occasionnels', 'moins de 2 visites par mois, vu dans les 45 jours'],
-    'N' => ['Nouveaux', '1re visite il y a moins de 30 jours'],
-    'AR' => ['À risque', 'au moins 2 visites par mois, plus vu depuis 21 à 45 jours'],
-    'E' => ['Endormis', 'plus vu depuis plus de 45 jours'],
-];
-const FID_RF_LIGNES = ['8 et +', '4 – 7', '2 – 3', '1', 'moins d’1'];
-const FID_RF_COLONNES = ['< 7 j', '7 – 20 j', '21 – 45 j', '46 – 60 j', '> 60 j'];
-const FID_TYPES = ['base' => 'gain', 'panier' => 'gain', 'creneau' => 'multi', 'gamme' => 'multi', 'anniversaire' => 'multi',
-    'jauge' => 'recoit', 'tampons' => 'recoit', 'declencheur' => 'recoit',
-    'plafond' => 'garde', 'cumul' => 'garde', 'unbon' => 'garde', 'expiration' => 'garde', 'exclus' => 'garde', 'budget' => 'garde'];
-const FID_UNIQUES = ['base', 'jauge', 'plafond', 'cumul', 'unbon', 'expiration', 'exclus', 'budget'];
-const FID_EVENEMENTS = ['inscription', 'visite2', 'anniversaire', 'visiteN', 'panier', 'parrainage', 'absence'];
-const FID_TAUX_BON = 0.65;        // hypothèse : part des bons émis qui sont utilisés
-const FID_TAUX_PRODUIT = 0.85;    // hypothèse : part des produits offerts qui sont pris
-const FID_PRIX_PRODUIT = 2.5;     // hypothèse : prix de vente moyen d'un produit offert
+const FID_TTL_CLOSE = 86400;     // une semaine close se relit au plus une fois par jour
+const FID_TTL_COURS = 600;       // la semaine en cours, toutes les dix minutes
+const FID_PAGE = 100;            // clients par page (le plafond de l'API)
+const FID_FRONT = 6;             // requêtes de front
 
 /* ---------------------------------------------------------------------------
- * Tables
+ * L'accès à l'ERP (un point d'entrée : les tests y branchent un faux ERP)
  * ------------------------------------------------------------------------- */
-function ensureFidelite(): void
+/** Une requête : {code, corps, erreur}. `$GLOBALS['FID_ERP']` (callable) remplace l'ERP dans les tests et les captures. */
+function fidErp(string $method, string $path, ?array $body = null): array
 {
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_regle ('
-        . 'id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
-        . 'bloc VARCHAR(8) NOT NULL,'                    // gain | multi | recoit | garde
-        . 'type VARCHAR(16) NOT NULL,'
-        . 'params_json TEXT NOT NULL,'
-        . 'shop_id VARCHAR(16) NOT NULL DEFAULT "",'     // "" = tout le réseau
-        . 'actif TINYINT NOT NULL DEFAULT 1,'
-        . 'sort_order INT NOT NULL DEFAULT 0,'
-        . 'updated_at DATETIME NULL,'
-        . 'updated_by VARCHAR(60) NULL'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    // Les visites carte : le flux de la PWA (ou du panel) s'y dépose. Vide → jeu d'essai.
-    Db::exec('CREATE TABLE IF NOT EXISTS ceo_fid_visite ('
-        . 'id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,'
-        . 'client_ref VARCHAR(40) NOT NULL,'
-        . 'shop_id VARCHAR(16) NOT NULL,'
-        . 'visited_at DATETIME NOT NULL,'
-        . 'montant DECIMAL(10,2) NOT NULL DEFAULT 0,'
-        . 'mission VARCHAR(12) NULL,'                    // pain | petitdej | lunch | gouter | occasion | bureau
-        . 'KEY idx_quand (visited_at), KEY idx_client (client_ref, visited_at)'
-        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
-    if ((int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_regle')['n'] ?? 0) === 0) { fidSemer(); }
+    if (isset($GLOBALS['FID_ERP']) && is_callable($GLOBALS['FID_ERP'])) { return ($GLOBALS['FID_ERP'])($method, $path, $body); }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return ['code' => 0, 'corps' => null, 'erreur' => 'compte admin ERP non configuré (Paramètres)']; }
+    return $method === 'GET' ? ErpApi::sondeGet($path) : ErpApi::ecrire($method, $path, $body);
 }
 
-/** Le programme de départ : celui de la maquette C. Posé une fois, sur une table vide. */
-function fidSemer(): void
+/** Plusieurs GET de front : [clé => corps | null]. */
+function fidErpTous(array $paths): array
 {
-    $id = [];
-    foreach (fidMagasins() as $m) { $id[mb_strtolower($m['nom'])] = $m['id']; }
-    $chez = static fn (string $nom): string => $id[$nom] ?? '';
-    $R = [
-        ['base', ['euros' => 1, 'points' => 1], '', 1],
-        ['panier', ['min' => 30, 'points' => 50], '', 1],
-        ['creneau', ['mult' => 2, 'jours' => [1, 2, 3], 'de' => '14:00', 'a' => '17:00', 'famille' => '', 'pourquoi' => 'jours creux : remplir l’après-midi'], '', 1],
-        ['creneau', ['mult' => 2, 'jours' => [0, 1, 2, 3, 4, 5], 'de' => '17:30', 'a' => '19:00', 'famille' => 'pain', 'pourquoi' => 'écouler : moins de pain jeté'], '', 1],
-        ['creneau', ['mult' => 2, 'jours' => [0], 'de' => '07:00', 'a' => '19:00', 'famille' => '', 'pourquoi' => 'le jour le plus creux'], $chez('sombreffe'), 1],
-        ['gamme', ['mult' => 2, 'gamme' => 'Automnale', 'du' => '2026-10-01', 'au' => '2026-11-15'], '', 1],
-        ['anniversaire', ['mult' => 3, 'jours' => 3], '', 1],
-        ['creneau', ['mult' => 2, 'jours' => [5], 'de' => '07:00', 'a' => '08:00', 'famille' => '', 'pourquoi' => 'brouillon : ouvrir plus tôt ?'], $chez('corbais'), 0],
-        ['jauge', ['points' => 150, 'valeur' => 5, 'validite' => 60], '', 1],
-        ['tampons', ['nom' => 'Carte Pain', 'unite' => 'pains achetés', 'n' => 10, 'recompense' => '1 pain offert', 'couleur' => '#9a5b16'], '', 1],
-        ['tampons', ['nom' => 'Carte Viennoiserie', 'unite' => 'viennoiseries achetées', 'n' => 10, 'recompense' => '1 croissant offert', 'couleur' => '#eb6834'], '', 1],
-        ['tampons', ['nom' => 'Carte Café', 'unite' => 'cafés achetés', 'n' => 8, 'recompense' => '1 café offert', 'couleur' => '#5c4033'], '', 1],
-        ['tampons', ['nom' => 'Carte Tarte', 'unite' => 'parts de tarte achetées', 'n' => 6, 'recompense' => '1 part de tarte offerte', 'couleur' => '#c2336a'], '', 1],
-        ['declencheur', ['evenement' => 'inscription', 'n' => 8, 'recompense' => ['type' => 'bon', 'valeur' => 2, 'libelle' => ''], 'validite' => 30], '', 1],
-        ['declencheur', ['evenement' => 'visite2', 'n' => 14, 'recompense' => ['type' => 'points', 'valeur' => 30, 'libelle' => ''], 'validite' => 0], '', 1],
-        ['declencheur', ['evenement' => 'anniversaire', 'n' => 0, 'recompense' => ['type' => 'produit', 'valeur' => 0, 'libelle' => 'une viennoiserie offerte'], 'validite' => 7], '', 1],
-        ['declencheur', ['evenement' => 'visiteN', 'n' => 10, 'recompense' => ['type' => 'produit', 'valeur' => 0, 'libelle' => 'une tartelette surprise'], 'validite' => 14], '', 1],
-        ['declencheur', ['evenement' => 'parrainage', 'n' => 0, 'recompense' => ['type' => 'points', 'valeur' => 100, 'libelle' => ''], 'validite' => 30], '', 1],
-        ['declencheur', ['evenement' => 'absence', 'n' => 45, 'recompense' => ['type' => 'bon', 'valeur' => 3, 'libelle' => ''], 'validite' => 21], '', 1],
-        ['plafond', ['points' => 300], '', 1],
-        ['cumul', [], '', 1],
-        ['unbon', [], '', 1],
-        ['expiration', ['mois' => 12, 'preavis' => 30], '', 1],
-        ['exclus', ['dates' => '24/12, 31/12'], '', 1],
-        ['budget', ['pct' => 5], '', 1],
-    ];
-    foreach ($R as $i => [$type, $p, $shop, $actif]) {
-        Db::exec('INSERT INTO ceo_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
-            [FID_TYPES[$type], $type, json_encode(fidNormalise($type, $p), JSON_UNESCAPED_UNICODE), $shop, $actif, ($i + 1) * 10, 'programme de départ']);
+    if (isset($GLOBALS['FID_ERP']) && is_callable($GLOBALS['FID_ERP'])) {
+        $out = [];
+        foreach ($paths as $k => $p) { $r = ($GLOBALS['FID_ERP'])('GET', $p, null); $out[$k] = $r['code'] >= 200 && $r['code'] < 300 ? $r['corps'] : null; }
+        return $out;
     }
+    if (!class_exists('ErpApi') || !ErpApi::disponible()) { return array_fill_keys(array_keys($paths), null); }
+    return ErpApi::getParallele($paths, FID_FRONT);
 }
 
-/** Les magasins ouverts du réseau (ceux de ep_stores). */
-function fidMagasins(): array
+/** La liste d'une réponse : `items`, `data.items`, `data`, ou le corps. */
+function fidItems(mixed $corps): array
 {
-    try { $shops = ep_stores(); } catch (Throwable $e) { $shops = []; }
+    if (!is_array($corps)) { return []; }
+    foreach ([$corps['items'] ?? null, $corps['data']['items'] ?? null, $corps['data'] ?? null, $corps] as $n) {
+        if (is_array($n) && array_is_list($n)) { return $n; }
+    }
+    return [];
+}
+/** L'objet d'une réponse : `data` s'il est un objet, sinon le corps. */
+function fidObjet(mixed $corps): array
+{
+    if (!is_array($corps)) { return []; }
+    return is_array($corps['data'] ?? null) && !array_is_list($corps['data']) ? $corps['data'] : $corps;
+}
+
+/* Le cache des réponses (fichiers temporaires). Il ne fait jamais foi : vide, tout se relit dans l'ERP. */
+function fidCacheDossier(): string
+{
+    $d = sys_get_temp_dir() . '/cockpit-fidelite';
+    if (!is_dir($d)) { @mkdir($d, 0700, true); }
+    return $d;
+}
+function fidCacheLire(string $cle, int $ttl): mixed
+{
+    if (!empty($GLOBALS['FID_SANS_CACHE'])) { return null; }
+    $f = fidCacheDossier() . '/' . sha1($cle) . '.json';
+    if (!is_file($f) || filemtime($f) < time() - $ttl) { return null; }
+    $v = json_decode((string) file_get_contents($f), true);
+    return is_array($v) ? $v : null;
+}
+function fidCacheEcrire(string $cle, mixed $val): void
+{
+    if (!empty($GLOBALS['FID_SANS_CACHE']) || !is_array($val)) { return; }
+    @file_put_contents(fidCacheDossier() . '/' . sha1($cle) . '.json', json_encode($val), LOCK_EX);
+}
+
+/* ---------------------------------------------------------------------------
+ * Le temps (heure du magasin, Europe/Bruxelles)
+ * ------------------------------------------------------------------------- */
+function fidAujourdhui(): string { return (string) ($GLOBALS['FID_AUJOURDHUI'] ?? date('Y-m-d')); }
+function fidHeureLocale(): string { return (string) ($GLOBALS['FID_HEURE'] ?? date('H:i')); }
+function fidPlus(string $d, int $jours): string { return gmdate('Y-m-d', (int) strtotime($d . ' 12:00:00 UTC') + $jours * 86400); }
+function fidEcart(string $a, string $b): int { return (int) round(((int) strtotime($b . ' 12:00:00 UTC') - (int) strtotime($a . ' 12:00:00 UTC')) / 86400); }
+/** Minuit (heure de Bruxelles) d'un jour, en UTC au format de l'API. */
+function fidUtc(string $jour, string $heure = '00:00:00'): string
+{
+    $d = new DateTimeImmutable($jour . ' ' . $heure, new DateTimeZone('Europe/Brussels'));
+    return $d->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d H:i:s');
+}
+
+/* ---------------------------------------------------------------------------
+ * Le bingo : la saison (calendrier) et ses règles
+ * ------------------------------------------------------------------------- */
+function fidBingoConf(): array
+{
+    static $c = null;
+    if ($c === null) {
+        $c = json_decode((string) @file_get_contents(__DIR__ . '/data/fidelite_bingo.json'), true);
+        if (!is_array($c)) { $c = ['seuilPoints' => 20, 'tousLes' => 3, 'validite' => 30, 'bons' => [], 'superBon' => null, 'saisons' => []]; }
+    }
+    return $c;
+}
+
+/** La saison du jour (ou la prochaine, ou la dernière) : ses semaines, chacune passée, en cours ou à venir. */
+function fidSaison(?string $jour = null): ?array
+{
+    $jour ??= fidAujourdhui();
+    $S = fidBingoConf()['saisons'] ?? [];
+    if (!$S) { return null; }
+    $choisie = null;
+    foreach ($S as $s) {
+        $fin = fidPlus((string) $s['du'], 7 * count($s['semaines']) - 1);
+        if ($jour <= $fin) { $choisie = $s; break; }
+    }
+    $s = $choisie ?? $S[count($S) - 1];
+    $n = count($s['semaines']);
+    $sem = []; $cours = 0;
+    foreach ($s['semaines'] as $i => $w) {
+        $du = fidPlus((string) $s['du'], 7 * $i); $au = fidPlus($du, 6);
+        $etat = $au < $jour ? 'passee' : ($du <= $jour ? 'cours' : 'avenir');
+        if ($etat === 'cours') { $cours = $i + 1; }
+        $sem[] = ['n' => $i + 1, 'du' => $du, 'au' => $au, 'titre' => (string) $w['titre'], 'sous' => (string) ($w['sous'] ?? ''),
+            'fete' => isset($w['fete']) ? (string) $w['fete'] : null, 'ill' => (string) ($w['ill'] ?? ''), 'etat' => $etat];
+    }
+    $closes = count(array_filter($sem, static fn ($w) => $w['etat'] === 'passee'));
+    return ['id' => (string) $s['id'], 'nom' => (string) $s['nom'], 'du' => (string) $s['du'], 'au' => fidPlus((string) $s['du'], 7 * $n - 1),
+        'ill' => (string) ($s['ill'] ?? ''), 'tirage' => $s['tirage'] ?? null, 'nomsBons' => $s['bons'] ?? [], 'semaines' => $sem,
+        'enCours' => $cours, 'closes' => $closes];
+}
+
+/** Les bons de la saison : [{k (case), valeur, nom, motif}] — toutes les x cases ; au-delà de la liste, la dernière marche se répète. */
+function fidBonsSaison(array $saison): array
+{
+    $c = fidBingoConf(); $x = max(1, (int) $c['tousLes']); $V = array_values($c['bons'] ?? []);
+    $n = intdiv(count($saison['semaines']), $x); $out = [];
+    for ($i = 1; $i <= $n; $i++) {
+        $nV = count($V);
+        $v = $i <= $nV ? (float) $V[$i - 1] : (float) $V[$nV - 1] + ($i - $nV) * ($nV > 1 ? (float) $V[$nV - 1] - (float) $V[$nV - 2] : (float) $V[0]);
+        $nm = $saison['nomsBons'][$i - 1] ?? ['nom' => 'Bon ' . $i, 'motif' => 'cake'];
+        $out[] = ['k' => $i * $x, 'valeur' => round($v, 2), 'nom' => (string) $nm['nom'], 'motif' => (string) ($nm['motif'] ?? 'cake')];
+    }
+    return $out;
+}
+
+/** « 4,90 € » */
+function fidEur(float $v): string { return number_format($v, $v == floor($v) ? 0 : 2, ',', ' ') . ' €'; }
+
+/** Les campagnes du bingo dans l'ERP : [valeur (en centimes) => {id, nom, statut}]. Une campagne par valeur, nommée « Bingo … 4,90 € ». */
+function fidCampagnes(): array
+{
+    $pre = (string) (fidBingoConf()['prefixeCampagne'] ?? 'Bingo');
+    $r = fidErp('GET', '/admin/voucher-campaigns?limit=100&name=' . rawurlencode($pre));
     $out = [];
-    foreach ($shops as $s) {
-        if (isset($s['status']) && !preg_match('/ouvert/i', (string) $s['status'])) { continue; }
-        $out[] = ['id' => (string) $s['id'], 'nom' => (string) $s['nom']];
+    foreach (fidItems($r['corps']) as $c) {
+        if (!is_array($c)) { continue; }
+        $c = is_array($c['campaign'] ?? null) ? $c['campaign'] : $c;
+        $nom = (string) ($c['name'] ?? '');
+        if (stripos($nom, $pre) !== 0 || !preg_match('/(\d+)(?:[,.](\d{1,2}))?\s*€/u', $nom, $m)) { continue; }
+        $cents = (int) $m[1] * 100 + (int) str_pad($m[2] ?? '0', 2, '0');
+        $out[$cents] = ['id' => (int) ($c['id'] ?? 0), 'nom' => $nom, 'statut' => strtoupper((string) ($c['status'] ?? ''))];
     }
     return $out;
 }
 
 /* ---------------------------------------------------------------------------
- * Règles : validation
+ * La carte
  * ------------------------------------------------------------------------- */
-function fidEntier(mixed $v, int $min, int $max, int $defaut): int
+/** Les cartes de l'ERP, toutes pages. */
+function fidCartesErp(?string &$erreur = null): array
 {
-    return is_numeric($v) ? max($min, min($max, (int) round((float) $v))) : $defaut;
-}
-function fidNombre(mixed $v, float $min, float $max, float $defaut): float
-{
-    return is_numeric($v) ? max($min, min($max, round((float) $v, 2))) : $defaut;
-}
-function fidTexte(mixed $v, int $max, string $defaut = ''): string
-{
-    $t = trim(preg_replace('/\s+/u', ' ', (string) ($v ?? '')));
-    return $t === '' ? $defaut : mb_substr($t, 0, $max);
-}
-function fidHeure(mixed $v, string $defaut): string
-{
-    return is_string($v) && preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $v) ? $v : $defaut;
-}
-function fidDate(mixed $v): string
-{
-    return is_string($v) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $v) && strtotime($v) !== false ? $v : '';
-}
-function fidRecompense(mixed $r): array
-{
-    $r = is_array($r) ? $r : [];
-    $t = in_array($r['type'] ?? '', ['bon', 'points', 'produit'], true) ? $r['type'] : 'bon';
-    return ['type' => $t, 'valeur' => $t === 'produit' ? 0 : ($t === 'points' ? fidEntier($r['valeur'] ?? 0, 1, 1000, 30) : fidNombre($r['valeur'] ?? 0, 0.5, 50, 2)),
-        'libelle' => $t === 'produit' ? fidTexte($r['libelle'] ?? '', 80, 'un produit offert') : ''];
+    $out = [];
+    for ($p = 1; $p <= 5; $p++) {
+        $r = fidErp('GET', '/admin/loyalty/cards?limit=100&page=' . $p);
+        if ($r['code'] < 200 || $r['code'] >= 300) { $erreur = $r['erreur'] ?? ('HTTP ' . $r['code']); break; }
+        $L = fidItems($r['corps']);
+        foreach ($L as $c) { if (is_array($c)) { $out[] = $c; } }
+        $pg = is_array($r['corps']) ? ($r['corps']['pagination'] ?? null) : null;
+        if (count($L) < 100 || !is_array($pg) || $p >= (int) ($pg['pages'] ?? $pg['last_page'] ?? 1)) { break; }
+    }
+    return $out;
 }
 
-/** Les paramètres d'une règle, ramenés dans leurs bornes ; null si le type est inconnu. */
-function fidNormalise(string $type, array $p): ?array
+/** Le barème de points ramené à une forme sûre (celle que l'API accepte). */
+function fidPointsConfig(mixed $p): ?array
 {
-    switch ($type) {
-        case 'base': return ['euros' => fidNombre($p['euros'] ?? 1, 0.5, 20, 1), 'points' => fidEntier($p['points'] ?? 1, 1, 100, 1)];
-        case 'panier': return ['min' => fidNombre($p['min'] ?? 30, 5, 500, 30), 'points' => fidEntier($p['points'] ?? 50, 1, 1000, 50)];
-        case 'creneau':
-            $j = array_values(array_unique(array_filter(array_map('intval', is_array($p['jours'] ?? null) ? $p['jours'] : []), fn ($x) => $x >= 0 && $x <= 6)));
-            sort($j);
-            $de = fidHeure($p['de'] ?? '', '14:00'); $a = fidHeure($p['a'] ?? '', '17:00');
-            if ($a <= $de) { $a = $de === '23:59' ? '23:59' : sprintf('%02d:%s', min(23, (int) substr($de, 0, 2) + 1), substr($de, 3, 2)); }
-            return ['mult' => fidEntier($p['mult'] ?? 2, 2, 5, 2), 'jours' => $j ?: [1, 2, 3], 'de' => $de, 'a' => $a,
-                'famille' => in_array($p['famille'] ?? '', ['', 'pain', 'petitdej', 'lunch', 'gouter', 'occasion'], true) ? $p['famille'] : '',
-                'pourquoi' => fidTexte($p['pourquoi'] ?? '', 120)];
-        case 'gamme':
-            $du = fidDate($p['du'] ?? ''); $au = fidDate($p['au'] ?? '');
-            if ($du !== '' && $au !== '' && $au < $du) { [$du, $au] = [$au, $du]; }
-            return ['mult' => fidEntier($p['mult'] ?? 2, 2, 5, 2), 'gamme' => fidTexte($p['gamme'] ?? '', 60, 'Nouvelle gamme'), 'du' => $du, 'au' => $au];
-        case 'anniversaire': return ['mult' => fidEntier($p['mult'] ?? 3, 2, 5, 3), 'jours' => fidEntier($p['jours'] ?? 3, 0, 15, 3)];
-        case 'jauge': return ['points' => fidEntier($p['points'] ?? 150, 10, 5000, 150), 'valeur' => fidNombre($p['valeur'] ?? 5, 0.5, 100, 5), 'validite' => fidEntier($p['validite'] ?? 60, 0, 365, 60)];
-        case 'tampons':
-            $c = is_string($p['couleur'] ?? null) && preg_match('/^#[0-9a-fA-F]{6}$/', $p['couleur']) ? $p['couleur'] : '#8D1D2C';
-            return ['nom' => fidTexte($p['nom'] ?? '', 40, 'Nouvelle carte'), 'unite' => fidTexte($p['unite'] ?? '', 40, 'articles achetés'), 'n' => fidEntier($p['n'] ?? 10, 1, 50, 10),
-                'recompense' => fidTexte($p['recompense'] ?? '', 60, '1 article offert'), 'couleur' => $c];
-        case 'declencheur':
-            $ev = in_array($p['evenement'] ?? '', FID_EVENEMENTS, true) ? $p['evenement'] : 'inscription';
-            $bornes = ['inscription' => [0, 100, 8], 'visite2' => [1, 60, 14], 'visiteN' => [2, 60, 10], 'panier' => [5, 500, 30], 'absence' => [7, 180, 45]];
-            $n = isset($bornes[$ev]) ? fidEntier($p['n'] ?? null, $bornes[$ev][0], $bornes[$ev][1], $bornes[$ev][2]) : 0;
-            return ['evenement' => $ev, 'n' => $n, 'recompense' => fidRecompense($p['recompense'] ?? null), 'validite' => fidEntier($p['validite'] ?? 30, 0, 365, 30)];
-        case 'plafond': return ['points' => fidEntier($p['points'] ?? 300, 10, 10000, 300)];
-        case 'cumul':
-        case 'unbon': return [];
-        case 'expiration': return ['mois' => fidEntier($p['mois'] ?? 12, 1, 60, 12), 'preavis' => fidEntier($p['preavis'] ?? 30, 0, 120, 30)];
-        case 'exclus': return ['dates' => fidTexte($p['dates'] ?? '', 120, '24/12, 31/12')];
-        case 'budget': return ['pct' => fidNombre($p['pct'] ?? 5, 0.5, 30, 5)];
+    if (!is_array($p) || empty($p['points_enabled'])) { return null; }
+    $bon = [];
+    foreach ((array) ($p['bonuses'] ?? []) as $b) {
+        if (!is_array($b)) { continue; }
+        $j = array_values(array_unique(array_filter(array_map('intval', (array) ($b['days'] ?? [])), static fn ($x) => $x >= 0 && $x <= 6)));
+        sort($j);
+        $de = (string) ($b['from'] ?? ''); $a = (string) ($b['to'] ?? '');
+        if (!$j || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $de) || !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $a) || $a <= $de) { continue; }
+        $bon[] = ['name' => mb_substr(trim((string) ($b['name'] ?? 'Bonus')) ?: 'Bonus', 0, 120), 'days' => $j, 'from' => $de, 'to' => $a,
+            'coefficient' => max(1.0, min(100.0, round((float) ($b['coefficient'] ?? 1), 4)))];
     }
+    $coef = [];
+    foreach ((array) ($p['shop_coefficients'] ?? []) as $id => $v) {
+        if ((int) $id > 0 && is_numeric($v)) { $coef[(string) (int) $id] = max(0.0, min(100.0, round((float) $v, 4))); }
+    }
+    $paliers = [];
+    foreach ((array) ($p['tiers'] ?? []) as $t) {
+        if (is_array($t) && (int) ($t['points'] ?? 0) > 0 && (int) ($t['voucher_cents'] ?? 0) > 0) { $paliers[(int) $t['points']] = (int) $t['voucher_cents']; }
+    }
+    ksort($paliers);
+    return ['stamps_enabled' => !empty($p['stamps_enabled']), 'points_enabled' => true,
+        'points_per_slice' => max(1, (int) ($p['points_per_slice'] ?? 1)), 'slice_cents' => max(1, (int) ($p['slice_cents'] ?? 100)),
+        'voucher_validity_days' => max(0, (int) ($p['voucher_validity_days'] ?? 0)), 'points_validity_days' => max(0, (int) ($p['points_validity_days'] ?? 0)),
+        'shop_coefficients' => $coef, 'bonuses' => $bon,
+        'tiers' => array_map(static fn ($pts, $c) => ['points' => $pts, 'voucher_cents' => $c], array_keys($paliers), array_values($paliers))];
+}
+
+/** Une carte de l'ERP, dans la forme de l'écran. */
+function fidCarteVue(array $c): array
+{
+    return ['id' => (int) ($c['id'] ?? 0), 'code' => (string) ($c['code'] ?? ''), 'nom' => (string) ($c['name'] ?? ''), 'version' => (int) ($c['version'] ?? 1),
+        'revision' => (int) ($c['revision'] ?? 0), 'verrou' => !empty($c['terms_locked']), 'actif' => (int) ($c['active'] ?? 0) === 1,
+        'portee' => (string) ($c['scope'] ?? ''), 'magasins' => array_map('intval', (array) ($c['shop_ids'] ?? [])),
+        'debut' => $c['starts_at'] ?? null, 'fin' => $c['ends_at'] ?? null, 'couleur' => (string) ($c['color_fill'] ?? ''),
+        'tampons' => (int) ($c['stamps_required'] ?? 0), 'recompense' => (string) ($c['reward_label'] ?? ''),
+        'points' => fidPointsConfig($c['points_config'] ?? null)];
+}
+
+/** La carte du programme : celle du code réglé (la version en cours la plus haute), sinon la première carte à points active. */
+function fidCarteProgramme(array $cartes): ?array
+{
+    $code = (string) (fidBingoConf()['carte'] ?? '');
+    $auj = fidUtc(fidAujourdhui(), '12:00:00');
+    $enCours = static fn ($c) => (int) ($c['active'] ?? 0) === 1 && fidPointsConfig($c['points_config'] ?? null) !== null
+        && (empty($c['starts_at']) || (string) $c['starts_at'] <= $auj) && (empty($c['ends_at']) || (string) $c['ends_at'] >= $auj);
+    $L = array_values(array_filter($cartes, $enCours));
+    usort($L, static fn ($a, $b) => [(string) ($b['code'] ?? '') === $code, (int) ($b['version'] ?? 1)] <=> [(string) ($a['code'] ?? '') === $code, (int) ($a['version'] ?? 1)]);
+    return $L[0] ?? null;
+}
+
+/** Les magasins : ceux de l'ERP (GET /admin/loyalty/options), sinon ceux du réseau. */
+function fidMagasins(): array
+{
+    $r = fidErp('GET', '/admin/loyalty/options');
+    $out = [];
+    foreach ((array) (fidObjet($r['corps'])['shops'] ?? []) as $s) {
+        if (!is_array($s) || (int) ($s['id'] ?? 0) <= 0) { continue; }
+        $nom = (string) ($s['name'] ?? $s['nom'] ?? $s['label'] ?? ('Magasin ' . $s['id']));
+        $out[] = ['id' => (string) (int) $s['id'], 'nom' => trim((string) preg_replace('/^.*\s[-–]\s/u', '', $nom))];
+    }
+    if (!$out && function_exists('ep_stores')) {
+        try { foreach (ep_stores() as $s) { if (!isset($s['status']) || preg_match('/ouvert/i', (string) $s['status'])) { $out[] = ['id' => (string) $s['id'], 'nom' => (string) $s['nom']]; } } } catch (Throwable $e) { /* rien */ }
+    }
+    return $out;
+}
+
+/** GET /fidelite — la carte, ses magasins, les cartes à arrêter, le bingo de la saison. */
+function ep_fidelite(): array
+{
+    $err = null;
+    $cartes = fidCartesErp($err);
+    $prog = fidCarteProgramme($cartes);
+    $saison = fidSaison();
+    $conf = fidBingoConf();
+    $camp = $err === null ? fidCampagnes() : [];
+    $bons = $saison ? array_map(static function ($b) use ($camp) { $b['campagne'] = $camp[(int) round($b['valeur'] * 100)] ?? null; return $b; }, fidBonsSaison($saison)) : [];
+    $super = !empty($conf['superBon']) ? ['valeur' => (float) $conf['superBon']['valeur'], 'provisoire' => !empty($conf['superBon']['provisoire']),
+        'campagne' => $camp[(int) round((float) $conf['superBon']['valeur'] * 100)] ?? null] : null;
+    $autres = [];
+    foreach ($cartes as $c) {
+        if ($prog !== null && (int) ($c['id'] ?? 0) === (int) $prog['id']) { continue; }
+        $v = fidCarteVue($c);
+        $finie = $v['fin'] !== null && (string) $v['fin'] < fidUtc(fidAujourdhui(), '12:00:00');
+        if ($v['actif'] && !$finie) { $autres[] = $v; }
+    }
+    return ['source' => 'api', 'erp' => ['ok' => $err === null, 'erreur' => $err], 'aujourdhui' => fidAujourdhui(), 'heure' => fidHeureLocale(),
+        'magasins' => $err === null ? fidMagasins() : [], 'carte' => $prog ? fidCarteVue($prog) : null, 'autres' => $autres,
+        'bingo' => ['saison' => $saison, 'seuil' => (int) $conf['seuilPoints'], 'tousLes' => (int) $conf['tousLes'], 'validite' => (int) $conf['validite'],
+            'bons' => $bons, 'superBon' => $super, 'tirage' => $conf['tirage'] ?? null, 'prefixe' => (string) ($conf['prefixeCampagne'] ?? 'Bingo')]];
+}
+
+/* ---------------------------------------------------------------------------
+ * Les clients : les points de chaque semaine, lus magasin par magasin
+ * ------------------------------------------------------------------------- */
+/** Le programme de la carte dans la fiche d'un client (programs[]). */
+function fidProgrammeDe(array $client, int $carte): ?array
+{
+    foreach ((array) ($client['programs'] ?? []) as $p) { if (is_array($p) && (int) ($p['id'] ?? 0) === $carte) { return $p; } }
     return null;
 }
 
-function fidRegles(): array
-{
-    return array_map(static fn ($r) => ['id' => (int) $r['id'], 'bloc' => $r['bloc'], 'type' => $r['type'], 'params' => json_decode((string) $r['params_json'], true) ?: [],
-        'shop' => (string) $r['shop_id'], 'actif' => (int) $r['actif'] === 1, 'ordre' => (int) $r['sort_order'], 'majLe' => $r['updated_at'], 'majPar' => $r['updated_by']],
-        Db::rows('SELECT * FROM ceo_fid_regle ORDER BY sort_order, id'));
-}
-
-/* ---------------------------------------------------------------------------
- * Les visites : réelles (ceo_fid_visite) ou jeu d'essai
- * ------------------------------------------------------------------------- */
-/** Jour (entier) d'une date Y-m-d. */
-function fidJour(string $d): int { return intdiv((int) strtotime($d . ' 12:00:00 UTC'), 86400); }
-/** Jour de la semaine, 0 = lundi. */
-function fidDow(int $j): int { return ($j + 3) % 7; }
-
-/** Le type d'achat d'une visite sans mission : par son montant et son heure. */
-function fidMission(int $minute, float $montant): int
-{
-    if ($montant >= 25) { return 4; }
-    if ($minute < 600) { return 1; }
-    if ($minute >= 690 && $minute < 810) { return 2; }
-    if ($minute >= 840 && $minute < 1020) { return 3; }
-    return 0;
-}
-
 /**
- * Les clients et leurs visites des 150 derniers jours, en tableaux plats par client :
- * ['shop', 'premier' (jour de la 1re visite), 'nais' (jour de l'année ou null), 'd' => jours, 'h' => minutes, 'm' => montants, 'k' => missions].
+ * Les fiches clients d'une période, pour chaque magasin, toutes pages : [shop => [fiche…]]. Une période close se garde
+ * en cache un jour ; la période qui touche aujourd'hui, dix minutes. `$appels` compte les requêtes envoyées à l'ERP.
  */
-function fidVisites(int $R): array
+function fidClientsPeriode(array $shops, int $carte, string $du, string $au, int &$appels): array
 {
-    $n = (int) (Db::row('SELECT COUNT(*) n FROM ceo_fid_visite')['n'] ?? 0);
-    if ($n === 0) { return ['test' => true, 'clients' => fidEssai($R)]; }
-    $du = gmdate('Y-m-d', ($R - 150) * 86400);
-    $prem = [];
-    foreach (Db::rows('SELECT client_ref, MIN(visited_at) p FROM ceo_fid_visite GROUP BY client_ref') as $r) { $prem[$r['client_ref']] = fidJour(substr((string) $r['p'], 0, 10)); }
-    $C = []; $shops = [];
-    $K = array_flip(array_column(FID_MISSIONS, 'k'));
-    foreach (Db::rows('SELECT client_ref, shop_id, visited_at, montant, mission FROM ceo_fid_visite WHERE visited_at >= ? ORDER BY visited_at', [$du]) as $r) {
-        $c = (string) $r['client_ref'];
-        $j = fidJour(substr((string) $r['visited_at'], 0, 10));
-        if ($j > $R) { continue; }
-        $min = (int) substr((string) $r['visited_at'], 11, 2) * 60 + (int) substr((string) $r['visited_at'], 14, 2);
-        $mt = (float) $r['montant'];
-        if (!isset($C[$c])) { $C[$c] = ['shop' => '', 'premier' => $prem[$c] ?? $j, 'nais' => null, 'd' => [], 'h' => [], 'm' => [], 'k' => []]; $shops[$c] = []; }
-        $C[$c]['d'][] = $j; $C[$c]['h'][] = $min; $C[$c]['m'][] = $mt;
-        $C[$c]['k'][] = isset($K[(string) $r['mission']]) ? $K[(string) $r['mission']] : fidMission($min, $mt);
-        $shops[$c][(string) $r['shop_id']] = ($shops[$c][(string) $r['shop_id']] ?? 0) + 1;
+    $ttl = $au < fidAujourdhui() ? FID_TTL_CLOSE : FID_TTL_COURS;
+    $chemin = static fn (string $s, int $p) => '/shops/' . $s . '/loyalty/customers?card_id=' . $carte . '&from=' . $du . '&to=' . $au . '&page=' . $p . '&limit=' . FID_PAGE;
+    $out = []; $manque = [];
+    foreach ($shops as $s) {
+        $c = fidCacheLire('cust|' . $s . '|' . $carte . '|' . $du . '|' . $au, $ttl);
+        if ($c !== null) { $out[$s] = $c; } else { $manque[] = $s; }
     }
-    foreach ($C as $c => &$x) { arsort($shops[$c]); $x['shop'] = (string) array_key_first($shops[$c]); }
-    unset($x);
-    return ['test' => false, 'clients' => array_values($C)];
-}
-
-/** Tirage pondéré : l'indice d'un poids. */
-function fidTire(array $poids): int
-{
-    $t = array_sum($poids); $u = mt_rand() / mt_getrandmax() * $t; $acc = 0;
-    foreach ($poids as $i => $p) { $acc += $p; if ($u <= $acc) { return $i; } }
-    return count($poids) - 1;
+    if (!$manque) { return $out; }
+    $p1 = fidErpTous(array_combine($manque, array_map(static fn ($s) => $chemin($s, 1), $manque)));
+    $appels += count($manque);
+    $suite = [];
+    foreach ($manque as $s) {
+        $out[$s] = fidItems($p1[$s]);
+        $tot = (int) ((is_array($p1[$s]) ? ($p1[$s]['pagination']['total'] ?? 0) : 0));
+        for ($p = 2; $p <= (int) ceil($tot / FID_PAGE) && $p <= 60; $p++) { $suite[$s . '|' . $p] = $chemin($s, $p); }
+    }
+    if ($suite) {
+        foreach (fidErpTous($suite) as $k => $corps) { $out[explode('|', $k)[0]] = array_merge($out[explode('|', $k)[0]], fidItems($corps)); }
+        $appels += count($suite);
+    }
+    foreach ($manque as $s) { if ($p1[$s] !== null) { fidCacheEcrire('cust|' . $s . '|' . $carte . '|' . $du . '|' . $au, $out[$s]); } }
+    return $out;
 }
 
 /**
- * Le jeu d'essai : 7 700 clients sur les magasins ouverts, six comportements (habitués,
- * réguliers, occasionnels, réguliers qui décrochent, endormis, nouveaux), 150 jours de
- * visites. Tirage fixe : le même jeu à chaque appel du même jour.
+ * Le bingo de chaque client sur la saison : [id => {nom, shops, points[semaine] (points gagnés, tous magasins), cases,
+ * solde, paliers, dernier}] — et, pour comparer, les mêmes semaines un an plus tôt (part des membres à `seuil` points).
  */
-function fidEssai(int $R): array
+function fidBingoClients(array $saison, int $carte, array $shops, int $seuil, int &$appels, int $decalage = 0): array
 {
-    $mags = fidMagasins();
-    $ids = $mags ? array_column($mags, 'id') : ['1'];
-    $poidsMag = array_slice([45, 24, 20, 11, 8, 6, 5, 4], 0, count($ids)) + array_fill(0, count($ids), 4);
-    $PAN = [5.6, 7.4, 10.4, 9.1, 34.9, 62.0];
-    $HEURE = [[9, 12, 8, 4, 3, 4, 3, 2, 2, 3, 9, 13, 8], [16, 24, 18, 9, 3, 1, 0, 0, 0, 0, 0, 0, 0], [0, 0, 1, 4, 16, 30, 22, 5, 1, 0, 0, 0, 0],
-        [0, 0, 1, 2, 2, 3, 5, 12, 16, 18, 13, 6, 2], [2, 8, 16, 18, 12, 6, 4, 4, 5, 6, 8, 6, 3], [3, 10, 14, 10, 12, 18, 8, 4, 3, 4, 6, 5, 3]];
-    $MIX = ['H' => [52, 26, 10, 5, 2, 5], 'R' => [30, 24, 22, 13, 5, 6], 'O' => [12, 14, 16, 22, 28, 8], 'L' => [18, 14, 40, 14, 6, 8]];
-    // [comportement, nombre, visites par jour, mélange]
-    $TYPES = [['H', 380, 0.37, 'H'], ['R', 1650, 0.12, 'R'], ['O', 1250, 0.03, 'O'], ['X', 1500, 0.12, 'L'], ['E', 2000, 0.0, 'O'], ['N', 900, 0.0, 'R']];
-    mt_srand(20261024);
     $C = [];
-    $D0 = $R - 150;
-    foreach ($TYPES as [$t, $nb, $taux, $mix]) {
-        for ($i = 0; $i < $nb; $i++) {
-            $c = ['shop' => $ids[fidTire($poidsMag)], 'premier' => $D0 - mt_rand(1, 400), 'nais' => mt_rand(0, 364), 'd' => [], 'h' => [], 'm' => [], 'k' => []];
-            $debut = $D0; $fin = $R; $tx = $taux; $mixC = $MIX[$mix];
-            if ($t === 'X') { $fin = $R - mt_rand(0, 140); }                       // décroche un jour des 140 derniers
-            if ($t === 'E') { $debut = $D0; $fin = $R - mt_rand(50, 150); $tx = 0.04; }
-            if ($t === 'N') {
-                $c['premier'] = $D0 + mt_rand(0, 150); $debut = $c['premier'];
-                $u = mt_rand(0, 99);
-                $tx = $u < 45 ? 0.12 : ($u < 75 ? 0.03 : 0.0);
-                fidAjoute($c, $debut, $mixC, $PAN, $HEURE);
+    $n = $decalage ? $saison['closes'] : ($saison['enCours'] ?: $saison['closes']);
+    for ($w = 1; $w <= $n; $w++) {
+        $sem = $saison['semaines'][$w - 1];
+        $du = fidPlus($sem['du'], -$decalage);
+        $au = min(fidPlus($sem['au'], -$decalage), fidAujourdhui());
+        foreach (fidClientsPeriode($shops, $carte, $du, $au, $appels) as $s => $L) {
+            foreach ($L as $f) {
+                if (!is_array($f) || (int) ($f['id'] ?? 0) <= 0) { continue; }
+                $prog = fidProgrammeDe($f, $carte);
+                if ($prog === null || !is_array($prog['global_progress']['points'] ?? null)) { continue; }
+                $id = (int) $f['id'];
+                $C[$id] ??= ['id' => $id, 'nom' => trim((string) ($f['name'] ?? '') . ' ' . mb_substr(trim((string) ($f['surname'] ?? '')), 0, 1) . (trim((string) ($f['surname'] ?? '')) !== '' ? '.' : '')),
+                    'shops' => [], 'points' => array_fill(1, $n, 0), 'solde' => 0, 'paliers' => [], 'dernier' => null];
+                $x = &$C[$id];
+                $x['shops'][$s] = true;
+                $x['points'][$w] += (int) ($prog['shop_activity']['points_earned'] ?? 0);
+                $gp = $prog['global_progress']['points'];
+                if ($w === $n) { $x['solde'] = (int) ($gp['balance'] ?? 0); $x['paliers'] = (array) ($gp['tiers'] ?? []); }
+                $der = $f['shop_activity']['last_transaction_at'] ?? null;
+                if (is_string($der) && ($x['dernier'] === null || $der > $x['dernier'])) { $x['dernier'] = $der; }
+                unset($x);
             }
-            if ($tx > 0) {
-                $j = $debut;
-                while (true) {
-                    $j += max(1, (int) round(-log(max(1e-9, mt_rand(1, mt_getrandmax()) / mt_getrandmax())) / $tx));
-                    if ($j > $fin) { break; }
-                    fidAjoute($c, $j, $mixC, $PAN, $HEURE);
-                }
-            }
-            if ($t === 'E' && !$c['d']) { fidAjoute($c, $fin, $mixC, $PAN, $HEURE); }
-            if ($c['d']) { $C[] = $c; }
         }
     }
-    mt_srand();
+    foreach ($C as &$x) {
+        $x['coches'] = []; $x['cases'] = 0;
+        for ($w = 1; $w <= $n; $w++) { $ok = $x['points'][$w] >= $seuil; $x['coches'][$w] = $ok; if ($ok) { $x['cases']++; } }
+    }
+    unset($x);
     return $C;
 }
-function fidAjoute(array &$c, int $j, array $mix, array $PAN, array $HEURE): void
-{
-    $k = fidTire($mix);
-    $h = 7 + fidTire($HEURE[$k]);
-    if (fidDow($j) === 6 && $h >= 13) { $h = 8 + mt_rand(0, 4); }       // le dimanche ferme à 13 h
-    $c['d'][] = $j; $c['h'][] = $h * 60 + mt_rand(0, 59);
-    $c['m'][] = round($PAN[$k] * (0.7 + 0.6 * mt_rand() / mt_getrandmax()), 2); $c['k'][] = $k;
-}
 
-/* ---------------------------------------------------------------------------
- * L'analyse
- * ------------------------------------------------------------------------- */
-/** Ligne (visites par mois) et colonne (jours depuis la dernière visite) de la grille. */
-function fidCase(float $f, int $rec): array
+/**
+ * Semaine après semaine, la part des membres déjà venus dans la saison (jusqu'à cette semaine) qui ont coché :
+ * [semaine => [coches, venus, part]]. La même mesure sert l'hiver passé (les mêmes semaines, 364 jours plus tôt).
+ */
+function fidParts(array $C, int $n): array
 {
-    $l = $f >= 8 ? 0 : ($f >= 4 ? 1 : ($f >= 2 ? 2 : ($f >= 1 ? 3 : 4)));
-    $c = $rec < 7 ? 0 : ($rec <= 20 ? 1 : ($rec <= 45 ? 2 : ($rec <= 60 ? 3 : 4)));
-    return [$l, $c];
-}
-function fidSegmentDe(int $l, int $c): string
-{
-    if ($c >= 3) { return 'E'; }
-    if ($l === 0 && $c === 0) { return 'H'; }
-    if ($l <= 2 && $c === 2) { return 'AR'; }
-    return $l <= 2 ? 'R' : 'O';
-}
-/** L'état d'un client à la date $R : null s'il n'était pas encore client. */
-function fidEtat(array $c, int $R): ?array
-{
-    $der = null; $n90 = 0;
-    foreach ($c['d'] as $j) {
-        if ($j > $R) { break; }
-        $der = $j;
-        if ($j > $R - 90) { $n90++; }
-    }
-    if ($der === null) { return null; }
-    $f = $n90 / 3; $rec = $R - $der;
-    [$l, $col] = fidCase($f, $rec);
-    $seg = $R - $c['premier'] < 30 ? 'N' : fidSegmentDe($l, $col);
-    return ['seg' => $seg, 'l' => $l, 'c' => $col, 'f' => $f, 'rec' => $rec];
-}
-
-/** Part de réguliers qui reviennent d'eux-mêmes après N jours d'absence. */
-function fidRetourSpontane(array $C, int $R, array $seuils): array
-{
-    $vus = array_fill_keys($seuils, 0); $revenus = array_fill_keys($seuils, 0);
-    foreach ($C as $c) {
-        $d = $c['d']; $n = count($d);
-        for ($i = 0; $i < $n; $i++) {
-            if ($d[$i] > $R - 60) { break; }             // on laisse 60 jours pour voir s'il revient
-            $avant = 0;
-            for ($k = $i; $k >= 0 && $d[$k] > $d[$i] - 90; $k--) { $avant++; }
-            if ($avant < 6) { continue; }                // un régulier : 2 visites par mois et plus
-            $suiv = $i + 1 < $n ? $d[$i + 1] : null;
-            $gap = $suiv === null ? $R - $d[$i] : $suiv - $d[$i];
-            foreach ($seuils as $s) {
-                if ($gap > $s) { $vus[$s]++; if ($suiv !== null) { $revenus[$s]++; } }
-            }
-        }
-    }
     $out = [];
-    foreach ($seuils as $s) { $out[$s] = $vus[$s] ? (int) round(100 * $revenus[$s] / $vus[$s]) : null; }
+    for ($w = 1; $w <= $n; $w++) {
+        $venus = 0; $coch = 0;
+        foreach ($C as $c) {
+            $deja = false;
+            for ($k = 1; $k <= $w; $k++) { if (($c['points'][$k] ?? 0) > 0) { $deja = true; break; } }
+            if (!$deja) { continue; }
+            $venus++; if (!empty($c['coches'][$w])) { $coch++; }
+        }
+        $out[$w] = [$coch, $venus, $venus ? (int) round(100 * $coch / $venus) : null];
+    }
     return $out;
 }
 
-/** GET /fidelite/clients — la récurrence et le type d'achat. */
+/** GET /fidelite/clients?shop=&q= — la récurrence que le bingo produit, lue dans l'ERP. */
 function ep_fidelite_clients(): array
 {
-    ensureFidelite();
-    [$R, $refIso] = fidReference();
-    $shop = fidTexte($_GET['shop'] ?? '', 16);
-    $V = fidVisites($R);
-    $C = $shop === '' ? $V['clients'] : array_values(array_filter($V['clients'], static fn ($c) => $c['shop'] === $shop));
-    $Rp = $R - 30;
-    $grille = array_fill(0, 5, array_fill(0, 5, 0));
-    $ordre = ['H', 'R', 'O', 'AR', 'E'];
-    $trans = array_fill(0, 5, array_fill(0, 5, 0));
-    $seg = []; foreach (array_keys(FID_SEGMENTS) as $s) { $seg[$s] = ['n' => 0, 'ca30' => 0.0, 'tickets90' => 0, 'ca90' => 0.0, 'f' => 0.0, 'mix' => array_fill(0, 6, 0), 'rec' => 0, 'shops' => [], 'caAvant' => 0.0]; }
-    $mixT = array_fill(0, 6, 0); $ca30 = 0.0; $tk30 = 0; $actifs = 0; $actifsP = 0; $nouvP = 0; $nouvPRev = 0;
-    foreach ($C as $c) {
-        $e = fidEtat($c, $R);
-        if ($e === null) { continue; }
-        $s = $e['seg'];
-        if ($s !== 'N') { $grille[$e['l']][$e['c']]++; }
-        $S = &$seg[$s];
-        $S['n']++; $S['f'] += $e['f']; $S['rec'] += $e['rec']; $S['shops'][$c['shop']] = ($S['shops'][$c['shop']] ?? 0) + 1;
-        $act = false; $actP = false;
-        foreach ($c['d'] as $i => $j) {
-            if ($j > $R) { break; }
-            if ($j > $R - 30) { $S['ca30'] += $c['m'][$i]; $ca30 += $c['m'][$i]; $tk30++; $act = true; }
-            if ($j > $Rp - 30 && $j <= $Rp) { $actP = true; }
-            if ($j > $R - 90) { $S['tickets90']++; $S['ca90'] += $c['m'][$i]; $S['mix'][$c['k'][$i]]++; $mixT[$c['k'][$i]]++; }
-            if ($j > $R - $e['rec'] - 90 && $j <= $R - $e['rec']) { $S['caAvant'] += $c['m'][$i]; }   // les 90 jours qui précèdent la dernière visite
-        }
-        unset($S);
-        if ($act) { $actifs++; }
-        if ($actP) { $actifsP++; }
-        // Retour à 30 jours : les nouveaux du mois d'avant, revenus dans les 30 jours de leur 1re visite.
-        if ($c['premier'] > $Rp - 30 && $c['premier'] <= $Rp) {
-            $nouvP++;
-            foreach ($c['d'] as $j) { if ($j > $c['premier'] && $j <= $c['premier'] + 30) { $nouvPRev++; break; } }
-        }
-        // D'un mois à l'autre : l'état 30 jours plus tôt, hors nouveaux.
-        $p = fidEtat($c, $Rp);
-        if ($p !== null && $p['seg'] !== 'N' && $s !== 'N') { $trans[array_search($p['seg'], $ordre, true)][array_search($s, $ordre, true)]++; }
+    $conf = fidBingoConf(); $seuil = (int) $conf['seuilPoints']; $x = max(1, (int) $conf['tousLes']);
+    $err = null;
+    $prog = fidCarteProgramme(fidCartesErp($err));
+    $saison = fidSaison();
+    if ($err !== null || $prog === null || $saison === null) {
+        return ['erp' => ['ok' => false, 'erreur' => $err ?? ($prog === null ? 'aucune carte à points active dans l’ERP' : 'aucune saison de bingo')], 'saison' => $saison];
     }
-    $montes = 0; $desc = 0;
-    foreach ($trans as $i => $r) { foreach ($r as $j => $v) { if ($j < $i) { $montes += $v; } elseif ($j > $i) { $desc += $v; } } }
-    $totMix = array_sum($mixT) ?: 1;
-    $segments = [];
-    foreach (FID_SEGMENTS as $id => [$nom, $def]) {
-        $S = $seg[$id]; $n = $S['n'];
-        arsort($S['shops']);
-        $top = $S['shops'] ? (string) array_key_first($S['shops']) : '';
-        $tm = array_sum($S['mix']) ?: 1;
-        $segments[] = ['id' => $id, 'nom' => $nom, 'def' => $def, 'n' => $n,
-            'partCa' => $ca30 > 0 ? round(100 * $S['ca30'] / $ca30, 1) : 0, 'ca30' => round($S['ca30']),
-            'panier' => $S['tickets90'] ? round($S['ca90'] / $S['tickets90'], 2) : null,
-            'visitesMois' => $n ? round($S['f'] / $n, 1) : null, 'joursSans' => $n ? (int) round($S['rec'] / $n) : null,
-            'caAvantMois' => round($S['caAvant'] / 3), 'mix' => array_map(static fn ($v) => round(100 * $v / $tm, 1), $S['mix']),
-            'topShop' => $top !== '' ? ['id' => $top, 'n' => $S['shops'][$top]] : null];
-    }
-    return [
-        'test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'ceo_fid_visite', 'ref' => $refIso, 'shop' => $shop,
-        'magasins' => fidMagasins(), 'missions' => FID_MISSIONS,
-        'kpis' => ['actifs' => $actifs, 'actifsPrec' => $actifsP, 'retour30' => $nouvP ? (int) round(100 * $nouvPRev / $nouvP) : null, 'nouveauxPrec' => $nouvP,
-            'montes' => $montes, 'descendus' => $desc, 'ca30' => round($ca30), 'tickets30' => $tk30, 'panier' => $tk30 ? round($ca30 / $tk30, 2) : null],
-        'rf' => ['lignes' => FID_RF_LIGNES, 'colonnes' => FID_RF_COLONNES, 'cases' => $grille,
-            'segments' => array_map(static fn ($l) => array_map(static fn ($c) => fidSegmentDe($l, $c), range(0, 4)), range(0, 4))],
-        'segments' => $segments, 'mixMoyen' => array_map(static fn ($v) => round(100 * $v / $totMix, 1), $mixT),
-        'transitions' => ['ordre' => $ordre, 'noms' => array_map(static fn ($s) => FID_SEGMENTS[$s][0], $ordre), 'm' => $trans],
-        'retourSpontane' => fidRetourSpontane($C, $R, [7, 14, 21, 30, 45, 60]),
-    ];
-}
+    $carte = (int) $prog['id'];
+    $mags = fidMagasins();
+    $tous = array_column($mags, 'id');
+    $shop = preg_match('/^\d{1,10}$/', (string) ($_GET['shop'] ?? '')) ? (string) $_GET['shop'] : '';
+    $q = mb_strtolower(trim((string) ($_GET['q'] ?? '')));
+    $appels = 0;
+    $C = fidBingoClients($saison, $carte, $tous, $seuil, $appels);
+    $A = fidBingoClients($saison, $carte, $tous, $seuil, $appels, 364);
+    $vus = $shop === '' ? $C : array_filter($C, static fn ($c) => isset($c['shops'][$shop]));
+    $avant = fidParts($shop === '' ? $A : array_filter($A, static fn ($c) => isset($c['shops'][$shop])), $saison['closes']);
+    $n = $saison['enCours'] ?: $saison['closes'];
+    $closes = $saison['closes'];
 
-/** La date de lecture : aujourd'hui, ou la fin du mois demandé s'il est passé. */
-function fidReference(): array
-{
-    $auj = date('Y-m-d');
-    $m = (string) ($_GET['mois'] ?? '');
-    $ref = preg_match('/^\d{4}-\d{2}$/', $m) ? min($auj, date('Y-m-t', (int) strtotime($m . '-01'))) : $auj;
-    return [fidJour($ref), $ref];
+    // Semaine après semaine : la part des membres venus dans la saison (jusque-là) qui ont coché, face à l'hiver passé.
+    $parts = fidParts($vus, $n);
+    $semaines = [];
+    for ($w = 1; $w <= $n; $w++) {
+        $s = $saison['semaines'][$w - 1];
+        $semaines[] = ['n' => $w, 'titre' => $s['titre'], 'ill' => $s['ill'], 'fete' => $s['fete'], 'etat' => $s['etat'], 'coches' => $parts[$w][0], 'venus' => $parts[$w][1],
+            'part' => $parts[$w][2], 'avant' => $avant[$w][2] ?? null];
+    }
+    // Où en sont les membres : les cases des semaines closes.
+    $rep = array_fill(0, $closes + 1, 0);
+    $casesCloses = static function (array $c) use ($closes): int { $k = 0; for ($w = 1; $w <= $closes; $w++) { if ($c['coches'][$w]) { $k++; } } return $k; };
+    foreach ($vus as $c) { $rep[$casesCloses($c)]++; }
+    // Les relances.
+    $cours = $saison['enCours'];
+    $palier1 = 0;
+    foreach ($prog['points_config']['tiers'] ?? [] as $t) { $palier1 = $palier1 ?: (int) $t['points']; }
+    $R = ['bon' => [], 'palier' => [], 'pleine' => [], 'decroche' => [], 'pasjoue' => []];
+    foreach ($vus as $id => $c) {
+        $k = $casesCloses($c);
+        $sem = $cours ? $c['points'][$cours] : 0;
+        if ($cours && ($k + 1) % $x === 0 && $sem < $seuil) { $R['bon'][] = $seuil - $sem; }
+        if ($palier1 && $c['solde'] >= $palier1) { $R['palier'][] = $c['solde']; }
+        if ($closes && $k === $closes) { $R['pleine'][] = 1; }
+        if ($k >= $x && $closes >= 2 && !$c['coches'][$closes] && !$c['coches'][$closes - 1] && !($cours && $sem >= $seuil)) { $R['decroche'][] = 1; }
+        if ($k === 0 && ($cours === 0 || $sem < $seuil)) { $R['pasjoue'][] = 1; }
+    }
+    $moy = static fn (array $l) => $l ? (int) round(array_sum($l) / count($l)) : 0;
+    $relances = [
+        ['cle' => 'bon', 'n' => count($R['bon']), 'titre' => 'La case de cette semaine leur donne un bon', 'detail' => 'il leur manque ' . $moy($R['bon']) . ' points en moyenne avant dimanche'],
+        ['cle' => 'palier', 'n' => count($R['palier']), 'titre' => 'Assez de points pour un bon, pas échangés', 'detail' => 'l’ERP n’échange jamais tout seul : le client le fait dans l’app'],
+        ['cle' => 'pleine', 'n' => count($R['pleine']), 'titre' => 'Encore en course pour la carte pleine', 'detail' => 'aucune semaine manquée jusqu’ici'],
+        ['cle' => 'decroche', 'n' => count($R['decroche']), 'titre' => 'Ont décroché', 'detail' => $x . ' cases ou plus, puis deux semaines sans case'],
+        ['cle' => 'pasjoue', 'n' => count($R['pasjoue']), 'titre' => 'Pas encore de case', 'detail' => 'membres venus sans atteindre ' . $seuil . ' points une semaine'],
+    ];
+    // Les membres : ce qu'il y a à faire pour chacun ; sans recherche, quelques-uns de chaque cas, le plus utile d'abord.
+    $bonDe = []; foreach (fidBonsSaison($saison) as $bb) { $bonDe[$bb['k']] = $bb['valeur']; }
+    $fiche = static function (array $c) use ($cours, $seuil, $x, $closes, $palier1, $casesCloses, $bonDe): array {
+        $prochain = null; $atteint = null;
+        foreach ($c['paliers'] as $t) {
+            if (!is_array($t)) { continue; }
+            if (!empty($t['reached'])) { $atteint = (int) $t['points']; } elseif ($prochain === null) { $prochain = ['points' => (int) $t['points'], 'reste' => (int) ($t['remaining'] ?? 0)]; }
+        }
+        $k = $casesCloses($c); $sem = $cours ? $c['points'][$cours] : 0;
+        [$cas, $faire] = match (true) {
+            $cours > 0 && ($k + 1) % $x === 0 && $sem < $seuil && isset($bonDe[$k + 1]) => [0, ($seuil - $sem) . ' points pour son bon de ' . fidEur($bonDe[$k + 1])],
+            $k >= $x && $closes >= 2 && !$c['coches'][$closes] && !$c['coches'][$closes - 1] && $sem < $seuil => [1, 'Décroché : deux semaines sans case'],
+            $atteint !== null => [2, 'Échanger ' . $atteint . ' points'],
+            $closes > 0 && $k === $closes => [3, 'En course pour la carte pleine'],
+            $k === 0 => [4, 'Pas encore de case'],
+            default => [5, ''],
+        };
+        return ['id' => $c['id'], 'nom' => $c['nom'] !== '' ? $c['nom'] : 'client n° ' . $c['id'], 'solde' => $c['solde'], 'atteint' => $atteint, 'prochain' => $prochain,
+            'cases' => $c['cases'], 'coches' => array_values($c['coches']), 'semaine' => $sem, 'dernier' => $c['dernier'], 'afaire' => $faire, 'cas' => $cas];
+    };
+    $L = array_map($fiche, array_values(array_filter($vus, static fn ($c) => $q === '' || str_contains(mb_strtolower($c['nom']), $q))));
+    usort($L, static fn ($a, $b) => [$a['cas'], $b['cases'], $b['solde']] <=> [$b['cas'], $a['cases'], $a['solde']]);
+    if ($q === '') {
+        $parCas = [];
+        foreach ($L as $m) { $parCas[$m['cas']][] = $m; }
+        $membres = [];
+        for ($i = 0; count($membres) < 12 && $i < 12; $i++) { foreach ($parCas as $l) { if (isset($l[$i]) && count($membres) < 12) { $membres[] = $l[$i]; } } }
+        usort($membres, static fn ($a, $b) => [$a['cas'], $b['cases']] <=> [$b['cas'], $a['cases']]);
+    } else {
+        $membres = array_slice($L, 0, 40);
+    }
+
+    // Les chiffres du magasin (ou du réseau) : GET /shops/{id}/loyalty/statistics sur la saison.
+    $stShops = $shop === '' ? $tous : [$shop];
+    $st = fidErpTous(array_combine($stShops, array_map(static fn ($s) => '/shops/' . $s . '/loyalty/statistics?card_id=' . $carte . '&from=' . $saison['du'] . '&to=' . min($saison['au'], fidAujourdhui()), $stShops)));
+    $appels += count($stShops);
+    $k = ['transactions' => 0, 'points' => 0, 'reconnues' => 0, 'appareils' => 0, 'ventes' => 0.0];
+    foreach ($st as $r) {
+        $o = fidObjet($r);
+        $k['transactions'] += (int) ($o['shop_activity']['transactions'] ?? 0);
+        $k['points'] += (int) ($o['shop_activity']['points_earned'] ?? 0);
+        $k['ventes'] += (float) ($o['shop_activity']['gross_sales_before_corrections'] ?? 0);
+        $k['reconnues'] += (int) ($o['recognitions']['count'] ?? 0);
+        $k['appareils'] += (int) ($o['recognitions']['devices'] ?? 0);
+    }
+    $joueurs = count(array_filter($vus, static fn ($c) => $c['cases'] > 0));
+    $venus = count(array_filter($vus, static fn ($c) => array_sum($c['points']) > 0));
+    $dern = end($semaines) ?: null;
+    return ['erp' => ['ok' => true, 'erreur' => null], 'aujourdhui' => fidAujourdhui(), 'heure' => fidHeureLocale(), 'shop' => $shop, 'magasins' => $mags,
+        'carte' => ['id' => $carte, 'nom' => (string) ($prog['name'] ?? '')], 'saison' => $saison, 'seuil' => $seuil, 'tousLes' => $x,
+        'kpis' => ['membres' => count($vus), 'venus' => $venus, 'joueurs' => $joueurs, 'partJoueurs' => count($vus) ? (int) round(100 * $joueurs / count($vus)) : null,
+            'semaine' => $dern ? $dern['part'] : null, 'semaineFinie' => $dern ? $dern['etat'] === 'passee' : true,
+            'points' => $k['points'], 'transactions' => $k['transactions'], 'ventes' => round($k['ventes']), 'reconnues' => $k['reconnues'], 'appareils' => $k['appareils']],
+        'semaines' => $semaines, 'repartition' => $rep, 'relances' => $relances, 'membres' => $membres, 'nbMembres' => count($L), 'appels' => $appels];
 }
 
 /* ---------------------------------------------------------------------------
- * Le programme : règles, ce qu'elles ont donné, budget
+ * Simuler, publier
  * ------------------------------------------------------------------------- */
-function fidMinute(string $hhmm): int { return (int) substr($hhmm, 0, 2) * 60 + (int) substr($hhmm, 3, 2); }
-function fidN(float $n, int $d = 0): string { return number_format($n, $d, ',', ' '); }
-
-/** Une visite tombe-t-elle dans le créneau ? */
-function fidDansCreneau(array $p, int $j, int $min, int $k): bool
+/** POST /fidelite/simuler {shop, montant (€), quand (AAAA-MM-JJTHH:MM), points?} — POST /admin/loyalty/simulate. */
+function wr_fidelite_simuler(): array
 {
-    if (!in_array(fidDow($j), $p['jours'], true)) { return false; }
-    if ($min < fidMinute($p['de']) || $min >= fidMinute($p['a'])) { return false; }
-    if ($p['famille'] !== '') { return FID_MISSIONS[$k]['k'] === $p['famille']; }
-    return true;
+    $b = body();
+    $cfg = fidPointsConfig($b['points'] ?? null);
+    if ($cfg === null) {
+        $err = null; $p = fidCarteProgramme(fidCartesErp($err));
+        $cfg = $p ? fidPointsConfig($p['points_config'] ?? null) : null;
+    }
+    if ($cfg === null) { http_response_code(422); return ['error' => 'aucun barème de points à simuler']; }
+    $shop = (int) ($b['shop'] ?? 0);
+    $quand = preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/', (string) ($b['quand'] ?? '')) ? (string) $b['quand'] : fidAujourdhui() . 'T' . fidHeureLocale();
+    $cents = (int) round(100 * max(0, (float) str_replace(',', '.', (string) ($b['montant'] ?? 0))));
+    if ($shop <= 0) { http_response_code(422); return ['error' => 'magasin manquant']; }
+    $r = fidErp('POST', '/admin/loyalty/simulate', ['config' => $cfg, 'shop_id' => $shop, 'amount_cents' => $cents, 'local_datetime' => $quand]);
+    if ($r['erreur'] !== null) { http_response_code($r['code'] >= 400 ? $r['code'] : 502); return ['error' => 'simulation refusée par l’ERP : ' . $r['erreur']]; }
+    $o = fidObjet($r['corps']);
+    $pts = (int) ($o['points'] ?? 0); $seuil = (int) fidBingoConf()['seuilPoints'];
+    return ['points' => $pts, 'tranches' => (int) ($o['slices'] ?? 0), 'coefMagasin' => (string) ($o['shop_coefficient'] ?? '1'),
+        'coefBonus' => (string) ($o['bonus_coefficient'] ?? '1'), 'heure' => (string) ($o['local_time'] ?? ''), 'seuil' => $seuil, 'coche' => $pts >= $seuil];
 }
 
-/** Ce que chaque règle a donné sur les 30 derniers jours, et le budget estimé. */
-function fidStats(array $regles, array $V, int $R, string $shop): array
+/** Les champs d'une carte à recopier dans sa version suivante (les conditions qu'une carte utilisée ne peut plus changer). */
+function fidCorpsVersion(array $c, array $points, string $debutUtc): array
 {
-    $C = $shop === '' ? $V['clients'] : array_values(array_filter($V['clients'], static fn ($c) => $c['shop'] === $shop));
-    $byType = []; foreach ($regles as $r) { if ($r['actif']) { $byType[$r['type']][] = $r; } }
-    $base = $byType['base'][0]['params'] ?? ['euros' => 1, 'points' => 1];
-    $ratio = $base['points'] / max(0.5, $base['euros']);
-    $jauge = $byType['jauge'][0]['params'] ?? ['points' => 150, 'valeur' => 5];
-    $ca = 0.0; $tk = 0; $nouv = 0; $out = []; $cpt = []; $bonus = [];
-    foreach ($regles as $r) { $cpt[$r['id']] = 0; $bonus[$r['id']] = 0.0; }
-    $applique = static fn (array $r, array $c): bool => $r['shop'] === '' || $r['shop'] === $c['shop'];
-    foreach ($C as $c) {
-        if ($c['premier'] > $R - 30 && $c['premier'] <= $R) { $nouv++; }
-        $n30 = 0;
-        foreach ($c['d'] as $i => $j) {
-            if ($j > $R) { break; }
-            if ($j <= $R - 30) { continue; }
-            $m = $c['m'][$i]; $ca += $m; $tk++; $n30++;
-            $best = 1;
-            foreach ($regles as $r) {
-                if (!$applique($r, $c)) { continue; }
-                $p = $r['params'];
-                if ($r['type'] === 'panier' && $m >= $p['min']) { $cpt[$r['id']]++; if ($r['actif']) { $bonus[$r['id']] += $p['points']; } }
-                if ($r['type'] === 'creneau' && fidDansCreneau($p, $j, $c['h'][$i], $c['k'][$i])) { $cpt[$r['id']]++; if ($r['actif']) { $best = max($best, $p['mult']); $bonus[$r['id']] += $m * $ratio * ($p['mult'] - 1); } }
-                if ($r['type'] === 'anniversaire' && $c['nais'] !== null && abs(((int) gmdate('z', $j * 86400)) - $c['nais']) <= $p['jours']) { $cpt[$r['id']]++; if ($r['actif']) { $bonus[$r['id']] += $m * $ratio * ($p['mult'] - 1); } }
-            }
-        }
-        foreach ($regles as $r) {
-            if ($r['type'] !== 'declencheur' || !$applique($r, $c)) { continue; }
-            $p = $r['params'];
-            if ($p['evenement'] === 'visiteN' && $n30 >= $p['n']) { $cpt[$r['id']]++; }
-            if ($p['evenement'] === 'inscription' && $c['premier'] > $R - 30 && $c['premier'] <= $R) { $cpt[$r['id']]++; }
-            if ($p['evenement'] === 'anniversaire' && $c['nais'] !== null && $n30 > 0) {
-                $z = (int) gmdate('z', $R * 86400); $ecart = ($z - $c['nais'] + 365) % 365;
-                if ($ecart < 30) { $cpt[$r['id']]++; }
-            }
-            if ($p['evenement'] === 'visite2' && $c['premier'] > $R - 30 - $p['n'] && $c['premier'] <= $R - $p['n']) {
-                $bonus[$r['id']] += 1;                  // nouveaux observables
-                foreach ($c['d'] as $j) { if ($j > $c['premier'] && $j <= $c['premier'] + $p['n']) { $cpt[$r['id']]++; break; } }
-            }
-            if ($p['evenement'] === 'absence') {
-                // Les réguliers qui franchissent le seuil d'absence dans les 30 jours.
-                $der = null; $avant = 0;
-                foreach ($c['d'] as $j) { if ($j > $R) { break; } $der = $j; }
-                if ($der !== null && $der + $p['n'] > $R - 30 && $der + $p['n'] <= $R) {
-                    foreach ($c['d'] as $j) { if ($j <= $der && $j > $der - 90) { $avant++; } }
-                    if ($avant >= 6) { $cpt[$r['id']]++; }
-                }
-            }
-        }
-    }
-    $pointsBase = $ca * $ratio;
-    $pointsBonus = 0.0;
-    foreach ($regles as $r) { if ($r['actif'] && in_array($r['type'], ['panier', 'creneau', 'anniversaire'], true)) { $pointsBonus += $bonus[$r['id']]; } }
-    $pointsTot = $pointsBase + $pointsBonus;
-    $bonsJauge = $pointsTot / max(1, $jauge['points']);
-    $cout = ['Bons de la jauge' => $bonsJauge * $jauge['valeur'] * FID_TAUX_BON];
-    foreach ($regles as $r) {
-        $p = $r['params']; $id = $r['id']; $n = $cpt[$id];
-        $txt = ''; $cls = '';
-        switch ($r['type']) {
-            case 'base': $txt = fidN($pointsBase) . ' points en 30 jours'; break;
-            case 'panier': $txt = fidN($n) . ' paniers · ' . fidN($n * $p['points']) . ' points'; break;
-            case 'creneau': $txt = fidN($n) . ' tickets' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
-            case 'anniversaire': $txt = fidN($n) . ' achats' . ($r['actif'] ? ' · + ' . fidN($bonus[$id]) . ' points' : ''); break;
-            case 'gamme': $txt = 'ventes par gamme à brancher'; break;
-            case 'jauge': $txt = 'environ ' . fidN($bonsJauge) . ' bons sur 30 jours'; break;
-            case 'tampons': $txt = 'tampons tenus par la PWA'; break;
-            case 'declencheur':
-                $ev = $p['evenement'];
-                if ($ev === 'visite2') {
-                    $obs = (int) $bonus[$id];
-                    $txt = $obs ? fidN($n) . ' sur ' . fidN($obs) . ' nouveaux (' . round(100 * $n / $obs) . ' %)' : 'aucun nouveau à lire';
-                } elseif ($ev === 'parrainage' || $ev === 'panier') {
-                    $txt = $ev === 'parrainage' ? 'suivi des parrainages à brancher' : '';
-                } else {
-                    $txt = fidN($n) . ' ' . ['inscription' => 'inscrits', 'anniversaire' => 'anniversaires', 'visiteN' => 'clients l’atteignent', 'absence' => 'réguliers passent le seuil'][$ev] . ' sur 30 jours';
-                }
-                if ($r['actif']) {
-                    $rc = $p['recompense'];
-                    if ($rc['type'] === 'bon') { $cout[$r['id'] . '|' . $ev] = $n * $rc['valeur'] * FID_TAUX_BON; }
-                    if ($rc['type'] === 'produit') { $cout[$r['id'] . '|' . $ev] = $n * FID_PRIX_PRODUIT * FID_TAUX_PRODUIT; }
-                }
-                if ($ev === 'absence') { $cls = 'alerte'; }
-                break;
-        }
-        $out[$id] = ['txt' => $txt, 'n' => $n, 'cls' => $cls];
-    }
-    $total = array_sum($cout);
-    $budgetPct = (float) ($byType['budget'][0]['params']['pct'] ?? 5);
-    return ['regles' => $out, 'budget' => ['cout' => round($total), 'ca' => round($ca), 'pct' => $ca > 0 ? round(100 * $total / $ca, 2) : null, 'plafond' => $budgetPct,
-        'tickets' => $tk, 'points' => round($pointsTot), 'nouveaux' => $nouv,
-        'hypotheses' => 'bons utilisés à ' . round(100 * FID_TAUX_BON) . ' %, produits offerts pris à ' . round(100 * FID_TAUX_PRODUIT) . ' % et comptés ' . fidN(FID_PRIX_PRODUIT, 2) . ' € pièce']];
-}
-
-/** Trois clients types pour le simulateur : la médiane des habitués, des réguliers, des occasionnels. */
-function fidProfils(array $C, int $R, array $regles): array
-{
-    $grp = ['H' => [], 'R' => [], 'O' => []];
-    foreach ($C as $c) {
-        $e = fidEtat($c, $R);
-        if ($e === null || !isset($grp[$e['seg']])) { continue; }
-        $n = 0; $ca = 0.0; $mix = array_fill(0, 6, 0); $dans = 0;
-        foreach ($c['d'] as $i => $j) {
-            if ($j > $R) { break; }
-            if ($j <= $R - 30) { continue; }
-            $n++; $ca += $c['m'][$i]; $mix[$c['k'][$i]]++;
-            foreach ($regles as $r) { if ($r['actif'] && $r['type'] === 'creneau' && ($r['shop'] === '' || $r['shop'] === $c['shop']) && fidDansCreneau($r['params'], $j, $c['h'][$i], $c['k'][$i])) { $dans++; break; } }
-        }
-        if ($n) { $grp[$e['seg']][] = [$n, $ca / $n, array_search(max($mix), $mix, true), $dans / $n]; }
-    }
+    $garde = ['code', 'name', 'image_path', 'color_tint', 'color_fill', 'color_accent', 'reward_label', 'stamps_required', 'reward_validity_days', 'scope',
+        'sort_order', 'keywords', 'shop_ids', 'reward_product_ids', 'reward_portion_ids', 'earning_product_ids', 'earning_category_ids',
+        'earning_category_group_ids', 'excluded_product_ids'];
     $out = [];
-    foreach (['H' => 'Habitué', 'R' => 'Régulier', 'O' => 'Occasionnel'] as $s => $nom) {
-        $L = $grp[$s];
-        if (!$L) { continue; }
-        usort($L, static fn ($a, $b) => $a[0] <=> $b[0]);
-        $m = $L[intdiv(count($L), 2)];
-        $mis = array_count_values(array_column($L, 2)); arsort($mis);
-        $out[] = ['nom' => $nom, 'mission' => FID_MISSIONS[(int) array_key_first($mis)]['nom'], 'visites' => $m[0], 'panier' => round(array_sum(array_column($L, 1)) / count($L), 2),
-            'partCreneau' => round(array_sum(array_column($L, 3)) / count($L), 3)];
+    foreach ($garde as $k) { if (array_key_exists($k, $c) && $c[$k] !== null && $c[$k] !== []) { $out[$k] = $c[$k]; } }
+    // Identifiants ou mots-clés, jamais les deux (règle de l'API).
+    if (!empty($out['keywords'])) { unset($out['earning_product_ids'], $out['earning_category_ids'], $out['earning_category_group_ids']); }
+    return $out + ['version' => (int) ($c['version'] ?? 1) + 1, 'starts_at' => $debutUtc, 'ends_at' => null, 'active' => 1, 'points_config' => $points];
+}
+
+/**
+ * POST /fidelite/publier {carte: {id, revision, points}, debut?: AAAA-MM-JJ, arreter?: [{id, le?}], qui}.
+ * Carte libre : PATCH avec sa revision. Carte figée (déjà utilisée) : POST de la version suivante dès `debut`, puis PATCH
+ * de la fin de l'ancienne la veille à minuit. Puis la fin des cartes à arrêter. L'ERP n'a pas de transaction : les étapes
+ * s'arrêtent à la première refusée et la réponse dit ce qui est fait.
+ */
+function wr_fidelite_publier(): array
+{
+    $b = body();
+    $qui = mb_substr(trim((string) ($b['qui'] ?? 'Cockpit')) ?: 'Cockpit', 0, 60);
+    $etapes = [];
+    $fait = static function (string $quoi, string $route, array $r) use (&$etapes): bool {
+        $etapes[] = ['quoi' => $quoi, 'route' => $route, 'code' => $r['code'], 'ok' => $r['erreur'] === null, 'erreur' => $r['erreur']];
+        return $r['erreur'] === null;
+    };
+    $ok = true;
+    $x = is_array($b['carte'] ?? null) ? $b['carte'] : null;
+    if ($x !== null) {
+        $id = (int) ($x['id'] ?? 0);
+        $pts = fidPointsConfig(($x['points'] ?? []) + ['points_enabled' => true]);
+        if ($id <= 0 || $pts === null) { http_response_code(422); return ['error' => 'carte ou barème illisible']; }
+        $lu = fidErp('GET', '/admin/loyalty/cards/' . $id);
+        if ($lu['erreur'] !== null) { http_response_code(502); return ['error' => 'carte illisible dans l’ERP : ' . $lu['erreur']]; }
+        $c = fidObjet($lu['corps']);
+        if ((int) ($c['revision'] ?? 0) !== (int) ($x['revision'] ?? -1)) {
+            http_response_code(409); return ['error' => 'la carte a changé dans l’ERP depuis votre lecture : relisez-la avant de publier', 'revision' => (int) ($c['revision'] ?? 0)];
+        }
+        if (empty($c['terms_locked'])) {
+            $ok = $fait('Barème de la carte', 'PATCH /admin/loyalty/cards/' . $id, fidErp('PATCH', '/admin/loyalty/cards/' . $id, ['revision' => (int) $c['revision'], 'points_config' => $pts]));
+        } else {
+            $debut = preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['debut'] ?? '')) && (string) $b['debut'] > fidAujourdhui() ? (string) $b['debut'] : fidPlus(fidAujourdhui(), 1);
+            $ok = $fait('Version ' . ((int) ($c['version'] ?? 1) + 1) . ' dès le ' . $debut, 'POST /admin/loyalty/cards',
+                fidErp('POST', '/admin/loyalty/cards', fidCorpsVersion($c, $pts, fidUtc($debut))));
+            if ($ok) {
+                $ok = $fait('Fin de la version ' . (int) ($c['version'] ?? 1), 'PATCH /admin/loyalty/cards/' . $id,
+                    fidErp('PATCH', '/admin/loyalty/cards/' . $id, ['revision' => (int) $c['revision'], 'ends_at' => fidUtc(fidPlus($debut, -1), '23:59:59')]));
+            }
+        }
+    }
+    foreach ((array) ($b['arreter'] ?? []) as $a) {
+        if (!$ok) { break; }
+        $id = (int) (is_array($a) ? ($a['id'] ?? 0) : $a);
+        if ($id <= 0) { continue; }
+        $le = is_array($a) && preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($a['le'] ?? '')) ? (string) $a['le'] : fidAujourdhui();
+        $lu = fidErp('GET', '/admin/loyalty/cards/' . $id);
+        if ($lu['erreur'] !== null) { $ok = $fait('Carte ' . $id, 'GET /admin/loyalty/cards/' . $id, $lu); break; }
+        $c = fidObjet($lu['corps']);
+        $ok = $fait('Fin de « ' . (string) ($c['name'] ?? $id) . ' » le ' . $le, 'PATCH /admin/loyalty/cards/' . $id,
+            fidErp('PATCH', '/admin/loyalty/cards/' . $id, ['revision' => (int) ($c['revision'] ?? 0), 'ends_at' => fidUtc($le, '23:59:59')]));
+    }
+    if (!$etapes) { http_response_code(422); return ['error' => 'rien à publier']; }
+    $n = count(array_filter($etapes, static fn ($e) => $e['ok']));
+    if (function_exists('journalAdd')) {
+        try { journalAdd($qui, 'Fidélité', null, 'Carte publiée dans l’ERP : ' . implode(' ; ', array_map(static fn ($e) => $e['quoi'] . ($e['ok'] ? '' : ' (refusé)'), $etapes))); } catch (Throwable $e) { /* le journal ne bloque pas */ }
+    }
+    if (!$ok) { http_response_code(502); }
+    return ['ok' => $ok, 'faites' => $n, 'etapes' => $etapes];
+}
+
+/* ---------------------------------------------------------------------------
+ * Les bons du bingo
+ * ------------------------------------------------------------------------- */
+/** Le code d'un bon : unique et stable (une seconde émission tombe sur le même code et l'ERP la refuse). */
+function fidCodeBon(string $saison, int $k, int $client): string { return 'BGO' . strtoupper(preg_replace('/\W/', '', $saison)) . 'K' . $k . 'C' . $client; }
+
+/** Les codes déjà émis d'une campagne, par client : [client => [code…]]. */
+function fidCodesEmis(int $camp): array
+{
+    $out = [];
+    for ($p = 1; $p <= 20; $p++) {
+        $r = fidErp('GET', '/admin/voucher-campaigns/' . $camp . '/codes?limit=200&page=' . $p);
+        $L = fidItems($r['corps']);
+        foreach ($L as $k) { if (is_array($k) && (int) ($k['id_customer'] ?? 0) > 0) { $out[(int) $k['id_customer']][] = (string) ($k['code'] ?? ''); } }
+        $pg = is_array($r['corps']) ? ($r['corps']['pagination'] ?? null) : null;
+        if (count($L) < 200 || !is_array($pg) || $p >= (int) ($pg['pages'] ?? 1)) { break; }
     }
     return $out;
 }
 
-/** GET /fidelite — le programme. */
-function ep_fidelite(): array
-{
-    ensureFidelite();
-    [$R, $refIso] = fidReference();
-    $shop = fidTexte($_GET['shop'] ?? '', 16);
-    $regles = fidRegles();
-    $V = fidVisites($R);
-    $vis = $shop === '' ? $regles : array_values(array_filter($regles, static fn ($r) => $r['shop'] === '' || $r['shop'] === $shop));
-    $C = $shop === '' ? $V['clients'] : array_values(array_filter($V['clients'], static fn ($c) => $c['shop'] === $shop));
-    return ['test' => $V['test'], 'source' => $V['test'] ? 'jeu d’essai' : 'ceo_fid_visite', 'ref' => $refIso, 'shop' => $shop,
-        'magasins' => fidMagasins(), 'missions' => FID_MISSIONS, 'regles' => $regles,
-        'stats' => fidStats($vis, $V, $R, $shop), 'profils' => fidProfils($C, $R, $vis),
-        'maintenant' => ['jour' => (int) date('N') - 1, 'heure' => date('H:i')]];
-}
-
-/* ---------------------------------------------------------------------------
- * Écriture : publier les règles
- * ------------------------------------------------------------------------- */
 /**
- * POST /fidelite/regles — { regles: [{ id?, type, params, shop, actif, supprimer? }] }.
- * Tout passe ou rien : une règle invalide refuse l'envoi entier.
+ * Les bons dus sur les semaines closes, et, si `ecrire`, leur création dans l'ERP. Un bon ne part que si sa campagne
+ * existe et qu'elle est ACTIVE dans l'ERP : la mettre en brouillon suffit à tout arrêter.
  */
-function wr_fidelite_regles_post(): array
+function fidBingoBons(bool $ecrire): array
 {
-    ensureFidelite();
-    $b = body();
-    $L = is_array($b['regles'] ?? null) ? $b['regles'] : [];
-    if (!$L) { http_response_code(422); return ['error' => 'aucune règle à publier']; }
-    $shops = array_column(fidMagasins(), 'nom', 'id');
-    $qui = fidTexte($b['qui'] ?? 'Cockpit', 60, 'Cockpit');
-    $ops = [];
-    foreach ($L as $x) {
-        if (!is_array($x)) { continue; }
-        $id = (int) ($x['id'] ?? 0);
-        $cur = $id ? Db::row('SELECT * FROM ceo_fid_regle WHERE id = ?', [$id]) : null;
-        if ($id && $cur === null) { http_response_code(404); return ['error' => 'règle ' . $id . ' introuvable']; }
-        $type = $cur ? (string) $cur['type'] : (string) ($x['type'] ?? '');
-        if (!isset(FID_TYPES[$type])) { http_response_code(422); return ['error' => 'type de règle inconnu : ' . $type]; }
-        if (!empty($x['supprimer'])) {
-            if (!$cur) { continue; }
-            if (in_array($type, FID_UNIQUES, true)) { http_response_code(422); return ['error' => 'cette règle ne se retire pas : désactivez-la']; }
-            $ops[] = ['del', $id, $type];
-            continue;
+    $conf = fidBingoConf(); $seuil = (int) $conf['seuilPoints'];
+    $err = null; $prog = fidCarteProgramme(fidCartesErp($err)); $saison = fidSaison();
+    if ($prog === null || $saison === null) { return ['ok' => false, 'error' => $err ?? 'aucune carte à points active, ou aucune saison']; }
+    $appels = 0;
+    $C = fidBingoClients($saison, (int) $prog['id'], array_column(fidMagasins(), 'id'), $seuil, $appels);
+    $camp = fidCampagnes();
+    $dus = fidBonsSaison($saison);
+    if (!empty($conf['superBon'])) { $dus[] = ['k' => count($saison['semaines']), 'valeur' => (float) $conf['superBon']['valeur'], 'nom' => 'Super bon cadeau', 'motif' => 'cake', 'super' => true]; }
+    $debut = fidPlus(fidAujourdhui(), 1); $fin = fidPlus($debut, (int) $conf['validite']);
+    $out = []; $crees = 0; $erreurs = [];
+    foreach ($dus as $bon) {
+        $cents = (int) round($bon['valeur'] * 100); $c = $camp[$cents] ?? null;
+        $ayants = [];
+        foreach ($C as $cl) {
+            $k = 0; for ($w = 1; $w <= $saison['closes']; $w++) { if ($cl['coches'][$w]) { $k++; } }
+            if ($k >= $bon['k']) { $ayants[] = $cl['id']; }
         }
-        if (!$cur && in_array($type, FID_UNIQUES, true)) { http_response_code(422); return ['error' => 'une seule règle « ' . $type . ' » par programme']; }
-        $p = fidNormalise($type, is_array($x['params'] ?? null) ? $x['params'] : (json_decode((string) ($cur['params_json'] ?? '{}'), true) ?: []));
-        $shop = fidTexte($x['shop'] ?? ($cur['shop_id'] ?? ''), 16);
-        if ($shop !== '' && !isset($shops[$shop])) { http_response_code(422); return ['error' => 'magasin inconnu : ' . $shop]; }
-        if ($type === 'base' && $shop !== '') { $shop = ''; }
-        $actif = array_key_exists('actif', $x) ? (!empty($x['actif']) ? 1 : 0) : (int) ($cur['actif'] ?? 1);
-        $ops[] = [$cur ? 'upd' : 'ins', $id, $type, $p, $shop, $actif];
-    }
-    $pdo = Db::pdo();
-    $pdo->beginTransaction();
-    try {
-        $ordre = (int) (Db::row('SELECT COALESCE(MAX(sort_order), 0) m FROM ceo_fid_regle')['m'] ?? 0);
-        foreach ($ops as $o) {
-            if ($o[0] === 'del') { Db::exec('DELETE FROM ceo_fid_regle WHERE id = ?', [$o[1]]); continue; }
-            $json = json_encode($o[3], JSON_UNESCAPED_UNICODE);
-            if ($o[0] === 'upd') {
-                Db::exec('UPDATE ceo_fid_regle SET params_json = ?, shop_id = ?, actif = ?, updated_at = NOW(), updated_by = ? WHERE id = ?', [$json, $o[4], $o[5], $qui, $o[1]]);
-            } else {
-                $ordre += 10;
-                Db::exec('INSERT INTO ceo_fid_regle (bloc, type, params_json, shop_id, actif, sort_order, updated_at, updated_by) VALUES (?,?,?,?,?,?,NOW(),?)',
-                    [FID_TYPES[$o[2]], $o[2], $json, $o[4], $o[5], $ordre, $qui]);
+        $emis = $c ? fidCodesEmis($c['id']) : [];
+        $nouveaux = array_values(array_filter($ayants, static fn ($id) => !isset($emis[$id])));
+        $ligne = ['k' => $bon['k'], 'valeur' => $bon['valeur'], 'nom' => $bon['nom'], 'campagne' => $c, 'ayants' => count($ayants), 'emis' => count($ayants) - count($nouveaux), 'aEmettre' => count($nouveaux)];
+        if ($ecrire && $nouveaux && $c && $c['statut'] === 'ACTIVE') {
+            foreach ($nouveaux as $id) {
+                $r = fidErp('POST', '/admin/voucher-campaigns/' . $c['id'] . '/codes', ['code' => fidCodeBon($saison['id'], $bon['k'], $id), 'status' => 'ACTIVE',
+                    'id_customer' => $id, 'valid_from' => $debut . ' 00:00:00', 'valid_to' => $fin . ' 23:59:59', 'usage_limit' => 1]);
+                if ($r['erreur'] === null) { $crees++; } elseif (count($erreurs) < 5) { $erreurs[] = 'client ' . $id . ' : ' . $r['erreur']; }
             }
         }
-        $pdo->commit();
-    } catch (Throwable $e) {
-        $pdo->rollBack();
-        throw $e;
+        $out[] = $ligne;
     }
-    $n = count($ops);
-    journalAdd($qui, 'Fidélité', null, 'Règles du programme publiées : ' . $n . ' modification' . ($n > 1 ? 's' : ''));
-    return ['ok' => true, 'n' => $n, 'regles' => fidRegles()];
+    if ($ecrire && $crees && function_exists('journalAdd')) {
+        try { journalAdd('Bingo', 'Fidélité', null, $crees . ' bon' . ($crees > 1 ? 's' : '') . ' du bingo émis dans l’ERP'); } catch (Throwable $e) { /* rien */ }
+    }
+    return ['ok' => !$erreurs, 'simulation' => !$ecrire, 'saison' => $saison['nom'], 'semainesCloses' => $saison['closes'], 'bons' => $out, 'crees' => $crees, 'erreurs' => $erreurs, 'appels' => $appels];
+}
+
+/** POST /fidelite/bingo/bons {ecrire?: false} — les bons dus ; `ecrire: true` les crée. */
+function wr_fidelite_bingo_bons(): array
+{
+    return fidBingoBons(!empty(body()['ecrire']));
+}
+
+/** GET /fidelite/cron?jeton= — le lundi, les bons de la semaine close (campagnes ACTIVES seulement) ; chaque nuit, le cache se réchauffe. */
+function ep_fidelite_cron(): array
+{
+    $jeton = (string) setting('rapportsJeton', '');
+    if ($jeton === '' || !hash_equals($jeton, (string) ($_GET['jeton'] ?? ''))) { http_response_code(403); return ['error' => 'jeton absent ou invalide']; }
+    $lundi = (int) date('N') === 1 && (int) date('G') >= 6 && (int) date('G') < 7;
+    if (!$lundi && empty($_GET['forcer'])) { return ['ok' => true, 'rien' => 'pas lundi 6 h']; }
+    return fidBingoBons(true);
 }

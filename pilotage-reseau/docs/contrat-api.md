@@ -5247,33 +5247,34 @@ rend aussi `types` (les types de visite, avec `annoncee`), pour le formulaire de
 contrôle gagne le dossier du bureau, la checklist du consultant, les points proposés, la météo (le temps d'un toucher
 gardé sur `con_visite.meteo`, puis le détail facultatif `POST /franchises/meteo`) et la fin de visite signée.
 
-### Fidélité — le programme et la récurrence des clients (24/10/2026, demande de Sam)
+### Fidélité — la carte à points et son bingo, uniquement par l'API de l'ERP (13/11/2026, demande de Sam)
 
-Écran **ERP franchisé › Fidélité** (`#/fidelity`), deux onglets : le **Programme** (maquette C de
-`docs/maquettes/fidelite`) et les **Clients** (maquette B). Serveur : `src/fidelite.php`.
+« Ça ne marche qu'avec l'API : pas depuis une table » ; « on ne garderait que la carte à points, fusionnée avec le
+bingo » ; « un mix entre le bingo et les points ». Écran **ERP franchisé › Fidélité** (`#/fidelity`), onglets
+Programme et Clients. Serveur : `src/fidelite.php`. Maquettes et captures du code : `docs/maquettes/fidelite-bingo`.
+Remplace la version du 24/10/2026 : `ceo_fid_regle`, `ceo_fid_visite` et le jeu d'essai ne sont plus lus ni créés (les
+tables restent en base, inutilisées), `POST /fidelite/regles` n'existe plus.
+
+**Le modèle.** Une seule carte, la carte à points de l'ERP (`points_config` : tranches, ×2, coefficients par magasin,
+paliers d'échange, validités), choisie par son code (`carte` de `src/data/fidelite_bingo.json`, la version en cours la
+plus haute). Le bingo de saison vit dedans : la case de la semaine se coche quand le client a gagné `seuilPoints`
+points sur la carte du lundi au dimanche, tous magasins (`programs[].shop_activity.points_earned` de
+`/shops/{id}/loyalty/customers?card_id&from&to`) ; toutes les `tousLes` cases un bon (une campagne de l'ERP par valeur,
+nommée « Bingo … 4,90 € ») ; carte pleine, le super bon. Le calendrier (semaines, thèmes, dessins) est dans
+`src/data/fidelite_bingo.json`. Aucune table : un cache de fichiers temporaires garde les semaines closes un jour.
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/fidelite?shop=&mois=` | `{test, source, ref, magasins[], missions[], regles[], stats:{regles:{id:{txt,n,cls}}, budget:{cout, ca, pct, plafond, tickets, points, nouveaux, hypotheses}}, profils[], maintenant}` — les règles (`{id, bloc, type, params, shop, actif, ordre}`), ce que chacune a donné sur les 30 derniers jours, le budget estimé, trois clients types (médianes des habitués, réguliers, occasionnels) pour le simulateur. |
-| GET | `/fidelite/clients?shop=&mois=` | `{test, source, ref, magasins[], missions[], kpis:{actifs, actifsPrec, retour30, nouveauxPrec, montes, descendus, ca30, tickets30, panier}, rf:{lignes, colonnes, cases[5][5], segments[5][5]}, segments[], mixMoyen[6], transitions:{ordre, noms, m[5][5]}, retourSpontane:{7,14,21,30,45,60}}`. |
-| POST | `/fidelite/regles` | `{regles:[{id?, type, params, shop, actif, supprimer?}], qui}` — publie en une transaction ; une règle invalide refuse tout l'envoi (422 type inconnu, règle unique retirée ou doublée, magasin inconnu ; 404 règle introuvable). Journalisé (`Fidélité`). |
+| GET | `/fidelite` | `{source:'api', erp:{ok, erreur}, aujourdhui, heure, magasins[], carte:{id, code, nom, version, revision, verrou, actif, magasins, debut, fin, points (points_config)}, autres[] (cartes actives à arrêter), bingo:{saison:{id, nom, du, au, semaines[{n, du, au, titre, fete, ill, etat: passee \| cours \| avenir}], enCours, closes}, seuil, tousLes, validite, bons[{k, valeur, nom, motif, campagne}], superBon, tirage}}`. Lit `GET /admin/loyalty/cards`, `/admin/loyalty/options`, `/admin/voucher-campaigns?name=Bingo`. |
+| GET | `/fidelite/clients?shop=&q=` | `{erp, saison, seuil, tousLes, kpis:{membres, venus, joueurs, partJoueurs, semaine, semaineFinie, points, transactions, ventes, reconnues, appareils}, semaines[{n, titre, part, avant, coches, venus}], repartition[cases], relances[{cle, n, titre, detail}], membres[≤ 12, ou 40 avec q], nbMembres, appels}`. Les cases se calculent sur tous les magasins ; `shop` filtre les membres du magasin. `avant` : la même mesure 364 jours plus tôt. |
+| POST | `/fidelite/simuler` | `{shop, montant, quand: AAAA-MM-JJTHH:MM, points?}` → `POST /admin/loyalty/simulate` → `{points, tranches, coefMagasin, coefBonus, heure, seuil, coche}`. Rien n'est écrit. |
+| POST | `/fidelite/publier` | `{carte?:{id, revision, points}, debut?, arreter?:[{id, le?}], qui}`. Carte libre : `PATCH /admin/loyalty/cards/{id}` avec sa revision. Carte figée (`terms_locked`) : `POST` de la version suivante (même code, dès `debut` à minuit, Bruxelles) puis `PATCH ends_at` de l'ancienne. Puis la fin des cartes à arrêter. 409 si la revision a changé ; l'ERP n'a pas de transaction : `etapes[]` dit ce qui est fait. Journalisé (`Fidélité`). |
+| POST | `/fidelite/bingo/bons` | `{ecrire?}` → `{bons[{k, valeur, campagne, ayants, emis, aEmettre}], crees}`. Simulation par défaut ; `ecrire: true` crée un code par client dû (`POST /admin/voucher-campaigns/{id}/codes`, `BGO{saison}K{case}C{client}`, valable 30 jours dès le lendemain, une utilisation), seulement si la campagne est `ACTIVE`. |
+| GET | `/fidelite/cron?jeton=` | Le lundi 6 h (`forcer=1` hors horaire) : les bons de la semaine close. Jeton des rapports. |
 
-**Règles** (`ceo_fid_regle`, posées une fois sur table vide : le programme de la maquette C). Blocs et types :
-`gain` — `base` {euros, points} (unique, toujours active), `panier` {min, points} ; `multi` — `creneau` {mult, jours[0=lundi…6], de, a, famille, pourquoi},
-`gamme` {mult, gamme, du, au}, `anniversaire` {mult, jours} ; `recoit` — `jauge` {points, valeur, validite} (unique), `tampons` {nom, unite, n, recompense, couleur},
-`declencheur` {evenement: inscription | visite2 | anniversaire | visiteN | panier | parrainage | absence, n, recompense:{type: bon | points | produit, valeur, libelle}, validite} ;
-`garde` (uniques) — `plafond` {points}, `cumul`, `unbon`, `expiration` {mois, preavis}, `exclus` {dates}, `budget` {pct du CA des clients carte}.
-`shop` = "" pour tout le réseau. Le serveur ramène chaque valeur dans ses bornes (`fidNormalise`).
-
-**Visites** (`ceo_fid_visite` : `client_ref`, `shop_id`, `visited_at`, `montant`, `mission` pain | petitdej | lunch | gouter | occasion | bureau, ou NULL → déduite du
-montant et de l'heure). Vide, les deux lectures calculent sur un **jeu d'essai** généré (7 700 clients, 150 jours, tirage fixe) et le disent (`test: true`) ; dès
-qu'une visite y est déposée, tout se calcule sur les vraies. Segments à la date de lecture : nouveau (1re visite < 30 j), puis la grille — visites par mois
-(moyenne 90 j) × jours depuis la dernière visite : habitué (8+, < 7 j), à risque (2+ par mois, 21–45 j), régulier (2+ par mois, < 21 j), occasionnel (moins de 2),
-endormi (> 45 j). « D'un mois à l'autre » compare l'état à J−30.
-
-**À brancher** : le flux des visites carte (PWA ou panel) vers `ceo_fid_visite` ; la PWA qui lit ces règles (ses cartes et sa jauge vivent dans
-`pwa_loyalty_card` / `pwa_loyalty_config`, réglées aujourd'hui par `/franchisor/loyalty-*` du webshop) ; les ventes par gamme ; le suivi des parrainages.
-Le budget repose sur trois hypothèses dites à l'écran (bons utilisés à 65 %, produits pris à 85 %, 2,50 € le produit offert).
+À demander à l'ERP : un palier hebdomadaire dans `points_config` (la grille vivrait dans la carte et l'app la lirait
+sans le cockpit) ; vérifier qu'un code de campagne au nom du client remonte dans `GET /webshop/vouchers`. L'app du
+client (maquette 2) n'est pas dans ce dépôt. Tests : `php bin/tests_fidelite.php` (faux ERP : `tools/fidelite_faux_erp.php`).
 
 ### Le profil de l'employé — « Mon profil » de l'app (30/10/2026, demande de Sam)
 

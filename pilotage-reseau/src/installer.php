@@ -83,7 +83,7 @@ function ensureInstalled(): void
     connecteurTable();
     ensureScouting();
     ensureNewsletter();
-    ensureFidelite();
+    // La fidélité n'a plus de table (13/11/2026) : la carte et ses clients se lisent dans l'ERP, par son API.
     ensureProspection();
     ensureVisites();
     ensureFacebook();

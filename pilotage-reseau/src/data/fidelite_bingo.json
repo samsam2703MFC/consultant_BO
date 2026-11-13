@@ -1,0 +1,37 @@
+{
+  "_": "Le bingo de saison de la carte à points (mix bingo + points, décision du 13/11/2026). Le calendrier et les thèmes des semaines vivent ici, avec le code ; tout le reste vient de l'API de l'ERP. Une case = seuilPoints points gagnés sur la carte du lundi au dimanche (×2 et coefficients compris). Toutes les tousLes cases, un bon (une campagne de l'ERP par valeur, nommée « {prefixeCampagne} … {valeur} € ») ; carte pleine : le super bon et le tirage. Valeurs de Sam (12/11/2026) ; le super bon est provisoire.",
+  "carte": "FID-POINTS",
+  "seuilPoints": 20,
+  "tousLes": 3,
+  "validite": 30,
+  "prefixeCampagne": "Bingo",
+  "bons": [4.9, 9.9, 19.9, 29.9],
+  "superBon": { "valeur": 49.9, "provisoire": true },
+  "tirage": { "lot": "1 an de pain", "prix": 1.5, "jours": 365, "gagnants": 1 },
+  "saisons": [
+    {
+      "id": "H27", "nom": "Hiver 2026 – 2027", "du": "2026-11-23", "ill": "hiver", "tirage": "2027-02-22",
+      "bons": [
+        { "nom": "Bon de l’Avent", "motif": "cake" },
+        { "nom": "Bon des Rois", "motif": "tartelette" },
+        { "nom": "Bon de l’hiver", "motif": "hiver" },
+        { "nom": "Bon carte pleine", "motif": "cupcake" }
+      ],
+      "semaines": [
+        { "titre": "Le cougnou est là", "sous": "1er dimanche de l’Avent", "fete": "29/11", "ill": "bread-2" },
+        { "titre": "Saint-Nicolas", "sous": "spéculoos et massepain", "fete": "06/12", "ill": "saint-nicolas" },
+        { "titre": "Le chocolat chaud", "sous": "produit de la semaine", "ill": "chocolat" },
+        { "titre": "Le pain d’épices", "sous": "produit de la semaine", "ill": "cookies" },
+        { "titre": "Noël", "sous": "la bûche", "fete": "25/12", "ill": "noel" },
+        { "titre": "Nouvel An", "sous": "les petits fours", "fete": "01/01", "ill": "artboard-4" },
+        { "titre": "Épiphanie", "sous": "la galette des rois", "fete": "06/01", "ill": "galette" },
+        { "titre": "Le bon pain", "sous": "produit de la semaine", "ill": "bread-1" },
+        { "titre": "Blue Monday", "sous": "un éclair pour le moral", "ill": "cake-slice" },
+        { "titre": "Le croissant", "sous": "produit de la semaine", "ill": "croissant" },
+        { "titre": "Chandeleur", "sous": "les crêpes", "fete": "02/02", "ill": "crepes" },
+        { "titre": "Saint-Valentin", "sous": "beignets de Mardi gras", "fete": "14/02", "ill": "valentin" },
+        { "titre": "La tarte du dimanche", "sous": "produit de la semaine", "ill": "tarte" }
+      ]
+    }
+  ]
+}

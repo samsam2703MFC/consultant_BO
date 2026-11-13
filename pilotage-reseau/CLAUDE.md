@@ -43,3 +43,10 @@ Lire `docs/dimona.md`. En bref :
   société franchisée.
 - Chaque règle métier ONSS cite sa source (ligne du YAML, page du PDF, instruction ONSS). Ce qui n'est pas
   cité n'est pas supposé.
+
+## Fidélité (`#/fidelity`, `src/fidelite.php`) — décision du 13/11/2026
+- **Un mix bingo + points, une seule carte** : la carte à points de l'ERP (`points_config`), avec le bingo de saison
+  dedans. La case de la semaine se coche avec les **points gagnés sur la carte** du lundi au dimanche ; toutes les x
+  cases un bon, carte pleine le super bon. Plus de cartes à tampons.
+- **Uniquement par l'API de l'ERP** (`/admin/loyalty/*`, `/shops/{id}/loyalty/*`, `/admin/voucher-campaigns/*`) :
+  aucune table du cockpit pour la fidélité. Maquettes : `docs/maquettes/fidelite-bingo`.
