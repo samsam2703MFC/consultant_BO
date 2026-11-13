@@ -31,6 +31,10 @@ else {
     $plat = [];
     array_walk_recursive($perms, static function ($v, $k) use (&$plat) { $plat[] = is_string($k) ? $k . ':' . (is_scalar($v) ? $v : '') : (string) $v; });
     echo '  champs du jeton : ', implode(', ', array_keys($pl)), "\n";
+    // Troisième passage (13/11/2026, Sam : « affiche le nom de la permission du jeton ») : l'application, la portée et les
+    // permissions telles quelles — des noms de droits, pas des secrets ; ni le jeton, ni les noms de la personne.
+    foreach (['app', 'scope_type', 'scope_id'] as $k) { if (isset($pl[$k])) { echo "  $k = ", json_encode($pl[$k], JSON_UNESCAPED_UNICODE), "\n"; } }
+    echo '  perms (tel quel) = ', json_encode($pl['perms'] ?? $pl['permissions'] ?? null, JSON_UNESCAPED_UNICODE), "\n";
     foreach (['actor_type', 'type', 'role', 'roles', 'scope', 'scopes', 'access', 'aud'] as $k) { if (isset($pl[$k])) { echo "  $k = ", json_encode($pl[$k], JSON_UNESCAPED_UNICODE), "\n"; } }
     echo '  permissions : ', count($plat), ' en tout · LOYALTY : ', json_encode(array_values(array_filter($plat, static fn ($x) => stripos($x, 'loyal') !== false)), JSON_UNESCAPED_UNICODE), "\n";
 }
