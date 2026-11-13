@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sombreffe, comptoir et B2B</title>
+<style>
+/* Design system L'Atelier By (docs/DESIGN_SYSTEM.md) : papier, blocs blancs bordés, un seul bordeaux, pas de gras
+   hors valeurs de KPI, rectangles aux coins arrondis. Mise en page : une colonne de lecture, du résumé au détail. */
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Medium.otf') format('opentype'); font-weight: 400; font-display: swap; }
+@font-face { font-family: 'Gotham'; src: url('fonts/Gotham_Regular.otf') format('opentype'); font-weight: 700; font-display: swap; }
+:root {
+  --ink: #1c1a17; --muted-2: #5c5852; --muted: #7a736a; --faint: #B8B2A8;
+  --paper: #faf7f2; --table-head: #FBF9F5; --total-line: #F8F4EE; --chip: #EDE7DE; --line: #e6e0d8;
+  --row-line: rgba(34, 34, 34, 0.06);
+  --accent: #8D1D2C; --b2b: #1f5f8b;
+  --green: #3f7a52; --stop: #A32014; --prize-soft: #F6E7CE; --prize-ink: #7A5207;
+  --font: 'Gotham', Helvetica, Arial, sans-serif;
+  color-scheme: light;
+}
+body { margin: 0; background: var(--paper); }
+.rp { font-family: var(--font); font-weight: 400; color: var(--ink); font-size: 13px; line-height: 1.5;
+  max-width: 1080px; margin: 0 auto; padding: 28px clamp(16px, 4vw, 40px) 48px; display: grid; gap: 18px; }
+.rp h1, .rp h2, .rp h3, .rp th, .rp b, .rp strong { font-weight: 400; }
+.rp-kicker { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); }
+.rp-titre { font-size: 26px; letter-spacing: -.01em; margin: 4px 0 2px; text-wrap: balance; }
+.rp-sous { font-size: 12.5px; color: var(--muted); }
+.rp-alerte { background: var(--prize-soft); color: var(--prize-ink); border-radius: 6px; padding: 12px 16px;
+  font-size: 13px; display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.rp-alerte .rp-alerte-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+.rp-carte { background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 20px; display: grid; gap: 14px; min-width: 0; }
+.rp-h2 { font-size: .95rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 0; }
+.rp-h3 { font-size: 15px; margin: 0; }
+.rp-p { margin: 0; max-width: 72ch; color: var(--ink); }
+.rp-aide { font-size: 12px; color: var(--muted); margin: 0; max-width: 90ch; }
+.rp-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.rp-kpi { border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; background: #fff; display: grid; gap: 4px; align-content: start; }
+.rp-kpi-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); }
+.rp-kpi-v { font-size: 24px; font-weight: 700; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.rp-kpi-s { font-size: 11.5px; color: var(--muted); }
+.rp-kpi.good .rp-kpi-v { color: var(--green); }
+.rp-kpi.bad .rp-kpi-v { color: var(--stop); }
+.rp-points { margin: 0; padding-left: 18px; display: grid; gap: 8px; max-width: 80ch; }
+.rp-faits { font-size: 12.5px; color: var(--muted-2); }
+.rp-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.rp-tete .rp-h3 { font-size: 18px; }
+.rp-onglets { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; font-size: 11.5px; color: var(--muted); align-items: center; }
+.rp-onglet { border: 1px solid rgba(34, 34, 34, .14); border-radius: 6px; padding: 2px 8px; color: var(--muted-2); }
+.rp-onglet.on { border-color: var(--accent); background: rgba(141, 29, 44, .05); color: var(--accent); }
+.rp-graphe { position: relative; min-width: 0; }
+.rp-graphe svg { display: block; width: 100%; height: auto; overflow: visible; }
+.rp-bulle { position: absolute; pointer-events: none; background: #fff; border: 1px solid var(--line); border-radius: 6px;
+  padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--ink); min-width: 160px; display: none; z-index: 2;
+  font-variant-numeric: tabular-nums; }
+.rp-bulle .t { color: var(--muted); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.rp-legende { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 11.5px; color: var(--muted); align-items: center; }
+.rp-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-sw { display: inline-block; width: 18px; height: 0; border-top: 2.6px solid var(--accent); }
+.rp-sw.n1 { border-top: 2px dashed var(--faint); }
+.rp-sw.aire { width: 14px; height: 10px; border: 0; border-radius: 2px; background: linear-gradient(90deg, rgba(63,122,82,.28) 50%, rgba(163,32,20,.22) 50%); }
+.rp-table-zone { overflow-x: auto; }
+.rp-table { border-collapse: collapse; width: 100%; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.rp-table th { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); text-align: left;
+  background: var(--table-head); padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.rp-table td { padding: 7px 10px; border-bottom: 1px solid var(--row-line); white-space: nowrap; }
+.rp-table .num { text-align: right; }
+.rp-table tfoot td { background: var(--total-line); border-bottom: 0; }
+.rp-table .dim { color: var(--faint); }
+.up { color: var(--green); } .down { color: var(--stop); }
+.rp-deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.rp-part { display: grid; gap: 8px; }
+.rp-barre { position: relative; display: flex; gap: 2px; height: 26px; border-radius: 4px; overflow: visible; }
+.rp-barre .seg { height: 100%; border-radius: 4px; }
+.rp-barre .plafond { position: absolute; top: -6px; bottom: -6px; border-left: 1.5px dashed var(--ink); }
+.rp-barre .plafond span { position: absolute; top: -18px; left: 4px; font-size: 11px; color: var(--muted-2); white-space: nowrap; }
+.rp-chiffres { display: flex; gap: 8px 24px; flex-wrap: wrap; font-size: 12.5px; }
+.rp-chiffres span { display: inline-flex; align-items: center; gap: 6px; }
+.rp-point { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+.rp-ouvert { background: var(--prize-soft); color: var(--prize-ink); border-radius: 6px; padding: 12px 16px; display: grid; gap: 6px; }
+.rp-ouvert .rp-alerte-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; }
+.rp-pistes { margin: 0; padding-left: 20px; display: grid; gap: 10px; max-width: 82ch; }
+.rp-pistes li::marker { color: var(--muted); }
+.rp-sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 100ch; }
+.rp-pied { font-size: 11.5px; color: var(--muted); }
+@media print {
+  body { background: #fff; }
+  .rp-carte, .rp-kpi { break-inside: avoid; }
+  .rp-alerte, .rp-ouvert, .rp-barre .seg, .rp-onglet.on { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+</style>
+</head>
+<body>
+<main class="rp" id="rapport">
+  <header id="entete">
+    <div class="rp-kicker">Pilotage réseau · rapport magasin</div>
+    <h1 class="rp-titre">Sombreffe, comptoir et B2B</h1>
+    <div class="rp-sous" id="sous-titre"></div>
+  </header>
+  <div class="rp-alerte" id="soins-intensifs"></div>
+
+  <section class="rp-carte" id="essentiel">
+    <h2 class="rp-h2">L’essentiel</h2>
+    <div class="rp-kpis" id="essentiel-kpis"></div>
+    <ul class="rp-points" id="essentiel-points"></ul>
+  </section>
+
+  <section class="rp-carte" id="evolution">
+    <div class="rp-tete">
+      <h2 class="rp-h3">Évolution magasin</h2>
+      <span class="rp-sous" id="evolution-releve"></span>
+      <span class="rp-onglets"><span>ventes</span><span class="rp-onglet on">Tout</span><span class="rp-onglet">Comptoir</span><span class="rp-onglet">B2B</span>
+        <span class="rp-onglet on">Chiffre d’affaires</span><span class="rp-onglet on">Total</span></span>
+    </div>
+    <div class="rp-faits" id="evolution-faits"></div>
+    <div class="rp-graphe" id="graphe-evolution"><div class="rp-bulle"></div></div>
+    <div class="rp-legende" id="evolution-legende">
+      <span><i class="rp-sw"></i>CA du mois</span>
+      <span><i class="rp-sw n1"></i>N-1 : le même mois un an plus tôt (pointillé), dès mai 2026</span>
+      <span><i class="rp-sw aire"></i>gagné / perdu face au N-1</span>
+      <span>mois d’ouverture, incomplet : hors courbe</span>
+      <span>* le N-1 a eu des jours fermés : « Par jour ouvert » les neutralise</span>
+    </div>
+    <div class="rp-kpis" id="evolution-tuiles"></div>
+  </section>
+
+  <section class="rp-carte" id="octobre-octobre">
+    <h2 class="rp-h2">Mai 2025 → octobre 2026</h2>
+    <p class="rp-p" id="oo-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
+    <p class="rp-aide" id="oo-note"></p>
+    <div class="rp-part" id="trafic">
+      <h3 class="rp-h3">Clients par jour ouvert</h3>
+      <div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div>
+    </div>
+    <div class="rp-deux">
+      <div class="rp-part" id="trimestres">
+        <h3 class="rp-h3">Trimestre par trimestre</h3>
+        <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
+      </div>
+      <div class="rp-part" id="comparable">
+        <h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
+        <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div>
+        <p class="rp-aide" id="comp-note"></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="rp-carte" id="comptoir-b2b">
+    <h2 class="rp-h2">Comptoir et B2B</h2>
+    <div class="rp-deux">
+      <div class="rp-part" id="part-b2b">
+        <h3 class="rp-h3">La part du B2B sur 12 mois</h3>
+        <div style="height:14px"></div>
+        <div class="rp-barre" id="barre-b2b"></div>
+        <div class="rp-chiffres" id="chiffres-b2b"></div>
+        <p class="rp-aide" id="aide-b2b"></p>
+      </div>
+      <div class="rp-part" id="question-panier">
+        <h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3>
+        <p class="rp-p" id="question-texte"></p>
+      </div>
+    </div>
+    <div class="rp-ouvert" id="a-completer"></div>
+  </section>
+
+  <section class="rp-carte" id="semaines">
+    <h2 class="rp-h2">Les dix dernières semaines</h2>
+    <p class="rp-p" id="sem-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
+  </section>
+
+  <section class="rp-carte" id="soins">
+    <h2 class="rp-h2">Soins intensifs : le point de départ</h2>
+    <p class="rp-p" id="soins-intro"></p>
+    <div class="rp-kpis" id="soins-reperes"></div>
+    <h3 class="rp-h3">À suivre chaque semaine</h3>
+    <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div>
+    <h3 class="rp-h3">Pistes</h3>
+    <ol class="rp-pistes" id="pistes"></ol>
+  </section>
+
+  <section class="rp-carte" id="sources">
+    <h2 class="rp-h2">Sources et méthode</h2>
+    <ul class="rp-sources" id="sources-liste"></ul>
+  </section>
+  <div class="rp-pied" id="pied"></div>
+</main>
+<script>
+const D = {"serie": [{"k": "2025-01", "lab": "janv.", "an": 2025, "ca": null, "clients": null, "jours": null, "ouverture": false, "n1": null}, {"k": "2025-02", "lab": "févr.", "an": 2025, "ca": null, "clients": null, "jours": null, "ouverture": false, "n1": null}, {"k": "2025-03", "lab": "mars", "an": 2025, "ca": null, "clients": null, "jours": null, "ouverture": false, "n1": null}, {"k": "2025-04", "lab": "avr.", "an": 2025, "ca": 4664.75, "clients": 495, "jours": 6, "ouverture": true, "n1": null}, {"k": "2025-05", "lab": "mai", "an": 2025, "ca": 53979.29, "clients": 4668, "jours": 29, "ouverture": false, "n1": null}, {"k": "2025-06", "lab": "juin", "an": 2025, "ca": 55060.7, "clients": 4686, "jours": 30, "ouverture": false, "n1": null}, {"k": "2025-07", "lab": "juil.", "an": 2025, "ca": 49577.5, "clients": 4269, "jours": 27, "ouverture": false, "n1": null}, {"k": "2025-08", "lab": "août", "an": 2025, "ca": 57613.1, "clients": 4815, "jours": 31, "ouverture": false, "n1": null}, {"k": "2025-09", "lab": "sept.", "an": 2025, "ca": 48262.3, "clients": 4298, "jours": 30, "ouverture": false, "n1": null}, {"k": "2025-10", "lab": "oct.", "an": 2025, "ca": 51098, "clients": 4590, "jours": 31, "ouverture": false, "n1": null}, {"k": "2025-11", "lab": "nov.", "an": 2025, "ca": 59100.45, "clients": 5051, "jours": 30, "ouverture": false, "n1": null}, {"k": "2025-12", "lab": "déc.", "an": 2025, "ca": 62373.22, "clients": 5224, "jours": 31, "ouverture": false, "n1": null}, {"k": "2026-01", "lab": "janv.", "an": 2026, "ca": 56279.27, "clients": 4574, "jours": 31, "ouverture": false, "n1": null}, {"k": "2026-02", "lab": "févr.", "an": 2026, "ca": 43794.79, "clients": 3986, "jours": 28, "ouverture": false, "n1": null}, {"k": "2026-03", "lab": "mars", "an": 2026, "ca": 49987.27, "clients": 4525, "jours": 31, "ouverture": false, "n1": null}, {"k": "2026-04", "lab": "avr.", "an": 2026, "ca": 51570.45, "clients": 4635, "jours": 30, "ouverture": false, "n1": null}, {"k": "2026-05", "lab": "mai", "an": 2026, "ca": 50096.35, "clients": 4186, "jours": 31, "ouverture": false, "n1": {"ca": 53979.29, "clients": 4668, "jours": 29}}, {"k": "2026-06", "lab": "juin", "an": 2026, "ca": 56811.15, "clients": 4453, "jours": 30, "ouverture": false, "n1": {"ca": 55060.7, "clients": 4686, "jours": 30}}, {"k": "2026-07", "lab": "juil.", "an": 2026, "ca": 45161.1, "clients": 4189, "jours": 31, "ouverture": false, "n1": {"ca": 49577.5, "clients": 4269, "jours": 27}}, {"k": "2026-08", "lab": "août", "an": 2026, "ca": 47874.4, "clients": 4333, "jours": 31, "ouverture": false, "n1": {"ca": 57613.1, "clients": 4815, "jours": 31}}, {"k": "2026-09", "lab": "sept.", "an": 2026, "ca": 55747.1, "clients": 4394, "jours": 30, "ouverture": false, "n1": {"ca": 48262.3, "clients": 4298, "jours": 30}}, {"k": "2026-10", "lab": "oct.", "an": 2026, "ca": 57503.65, "clients": 4442, "jours": 31, "ouverture": false, "n1": {"ca": 51098, "clients": 4590, "jours": 31}}], "lignes": [{"k": "2025-05", "lab": "mai 25", "jours": 29, "clients": 4668, "ca": 53979.29, "cliJour": 160.9655172413793, "caJour": 1861.354827586207, "panier": 11.563686803770352, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-06", "lab": "juin 25", "jours": 30, "clients": 4686, "ca": 55060.7, "cliJour": 156.2, "caJour": 1835.3566666666666, "panier": 11.75004268032437, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-07", "lab": "juil. 25", "jours": 27, "clients": 4269, "ca": 49577.5, "cliJour": 158.11111111111111, "caJour": 1836.2037037037037, "panier": 11.613375497774655, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-08", "lab": "août 25", "jours": 31, "clients": 4815, "ca": 57613.1, "cliJour": 155.32258064516128, "caJour": 1858.4870967741936, "panier": 11.96533748701973, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-09", "lab": "sept. 25", "jours": 30, "clients": 4298, "ca": 48262.3, "cliJour": 143.26666666666668, "caJour": 1608.7433333333333, "panier": 11.229013494648674, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-10", "lab": "oct. 25", "jours": 31, "clients": 4590, "ca": 51098, "cliJour": 148.06451612903226, "caJour": 1648.3225806451612, "panier": 11.132461873638345, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-11", "lab": "nov. 25", "jours": 30, "clients": 5051, "ca": 59100.45, "cliJour": 168.36666666666667, "caJour": 1970.0149999999999, "panier": 11.70074242724213, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2025-12", "lab": "déc. 25", "jours": 31, "clients": 5224, "ca": 62373.22, "cliJour": 168.51612903225808, "caJour": 2012.0393548387096, "panier": 11.939743491577335, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2026-01", "lab": "janv. 26", "jours": 31, "clients": 4574, "ca": 56279.27, "cliJour": 147.5483870967742, "caJour": 1815.460322580645, "panier": 12.304169217315259, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2026-02", "lab": "févr. 26", "jours": 28, "clients": 3986, "ca": 43794.79, "cliJour": 142.35714285714286, "caJour": 1564.099642857143, "panier": 10.98715253386854, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2026-03", "lab": "mars 26", "jours": 31, "clients": 4525, "ca": 49987.27, "cliJour": 145.96774193548387, "caJour": 1612.4925806451613, "panier": 11.046910497237569, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2026-04", "lab": "avr. 26", "jours": 30, "clients": 4635, "ca": 51570.45, "cliJour": 154.5, "caJour": 1719.0149999999999, "panier": 11.12631067961165, "vsCa": null, "vsCli": null, "vsPanier": null, "vsCaJour": null, "n1Fermes": false}, {"k": "2026-05", "lab": "mai 26", "jours": 31, "clients": 4186, "ca": 50096.35, "cliJour": 135.03225806451613, "caJour": 1616.0112903225806, "panier": 11.967594362159579, "vsCa": -7.193388427302406, "vsCli": -10.325621251071126, "vsPanier": 3.49289603950127, "vsCaJour": -13.18091175457321, "n1Fermes": true}, {"k": "2026-06", "lab": "juin 26", "jours": 30, "clients": 4453, "ca": 56811.15, "cliJour": 148.43333333333334, "caJour": 1893.7050000000002, "panier": 12.757949696833595, "vsCa": 3.179127762632894, "vsCli": -4.972257789159196, "vsPanier": 8.577900897304659, "vsCaJour": 3.179127762632894, "n1Fermes": false}, {"k": "2026-07", "lab": "juil. 26", "jours": 31, "clients": 4189, "ca": 45161.1, "cliJour": 135.1290322580645, "caJour": 1456.8096774193548, "panier": 10.780878491286703, "vsCa": -8.908073218697998, "vsCli": -1.8739751698290008, "vsPanier": -7.1684326976896084, "vsCaJour": -20.661870222736965, "n1Fermes": true}, {"k": "2026-08", "lab": "août 26", "jours": 31, "clients": 4333, "ca": 47874.4, "cliJour": 139.7741935483871, "caJour": 1544.335483870968, "panier": 11.048788368336027, "vsCa": -16.903620877890614, "vsCli": -10.010384215991696, "vsPanier": -7.6600356628302, "vsCaJour": -16.903620877890614, "n1Fermes": false}, {"k": "2026-09", "lab": "sept. 26", "jours": 30, "clients": 4394, "ca": 55747.1, "cliJour": 146.46666666666667, "caJour": 1858.2366666666667, "panier": 12.68709604005462, "vsCa": 15.508585376163175, "vsCli": 2.233597021870648, "vsPanier": 12.984956747098163, "vsCaJour": 15.508585376163175, "n1Fermes": false}, {"k": "2026-10", "lab": "oct. 26", "jours": 31, "clients": 4442, "ca": 57503.65, "cliJour": 143.29032258064515, "caJour": 1854.9564516129033, "panier": 12.945441242683476, "vsCa": 12.536009237152147, "vsCli": -3.2244008714596983, "vsPanier": 16.285520575985647, "vsCaJour": 12.536009237152147, "n1Fermes": false}], "total": {"ca": 951890.09, "clients": 81318, "jours": 543, "panier": 11.70577350648073, "caJour": 1753.020423572744, "cliJour": 149.75690607734808}, "comparable": {"n1": {"ca": 315590.89, "clients": 27326, "jours": 178, "panier": 11.54910671155676, "caJour": 1772.9825280898876, "cliJour": 153.51685393258427}, "n": {"ca": 313193.75, "clients": 25997, "jours": 184, "panier": 12.047303535023271, "caJour": 1702.139945652174, "cliJour": 141.28804347826087}}, "trim": [{"lab": "mai → juin 25", "ca": 109039.98999999999, "clients": 9354, "jours": 59, "panier": 11.6570440453282, "caJour": 1848.1354237288133, "cliJour": 158.54237288135593}, {"lab": "juil. → sept. 25", "ca": 155452.9, "clients": 13382, "jours": 88, "panier": 11.616567030339262, "caJour": 1766.5102272727272, "cliJour": 152.0681818181818}, {"lab": "oct. → déc. 25", "ca": 172571.66999999998, "clients": 14865, "jours": 92, "panier": 11.609261352169524, "caJour": 1875.7790217391303, "cliJour": 161.57608695652175}, {"lab": "janv. → mars 26", "ca": 150061.33, "clients": 13085, "jours": 90, "panier": 11.468194879633167, "caJour": 1667.348111111111, "cliJour": 145.38888888888889}, {"lab": "avr. → juin 26", "ca": 158477.95, "clients": 13274, "jours": 91, "panier": 11.938974687358748, "caJour": 1741.5159340659343, "cliJour": 145.86813186813185}, {"lab": "juil. → sept. 26", "ca": 148782.6, "clients": 12916, "jours": 92, "panier": 11.519247445029421, "caJour": 1617.2021739130435, "cliJour": 140.3913043478261}, {"lab": "oct. 26", "ca": 57503.65, "clients": 4442, "jours": 31, "panier": 12.945441242683476, "caJour": 1854.9564516129033, "cliJour": 143.29032258064515}], "semaines": [{"lab": "S37", "du": "2026-09-07", "au": "2026-09-13", "enCours": false, "jours": 7, "clients": 1071, "ca": 12066.55, "panier": 11.266619981325864, "n1ca": 11389.9, "n1panier": 11.155631733594515, "vsCa": 5.9407896469679145, "vsCli": 4.897159647404514}, {"lab": "S38", "du": "2026-09-14", "au": "2026-09-20", "enCours": false, "jours": 7, "clients": 1000, "ca": 12785.75, "panier": 12.78575, "n1ca": 11689.8, "n1panier": 11.449363369245837, "vsCa": 9.37526732707148, "vsCli": -2.0568070519098924}, {"lab": "S39", "du": "2026-09-21", "au": "2026-09-27", "enCours": false, "jours": 7, "clients": 1023, "ca": 14104.5, "panier": 13.787390029325513, "n1ca": 11537.1, "n1panier": 11.277712609970674, "vsCa": 22.253425904256694, "vsCli": 0.0}, {"lab": "S40", "du": "2026-09-28", "au": "2026-10-04", "enCours": false, "jours": 7, "clients": 1036, "ca": 14235.55, "panier": 13.740878378378378, "n1ca": 11527.5, "n1panier": 10.733240223463687, "vsCa": 23.49208414660593, "vsCli": -3.5381750465549366}, {"lab": "S41", "du": "2026-10-05", "au": "2026-10-11", "enCours": false, "jours": 7, "clients": 1040, "ca": 14077.9, "panier": 13.536442307692308, "n1ca": 11942.7, "n1panier": 11.119832402234637, "vsCa": 17.87870414562871, "vsCli": -3.165735567970207}, {"lab": "S42", "du": "2026-10-12", "au": "2026-10-18", "enCours": false, "jours": 7, "clients": 1059, "ca": 15010.2, "panier": 14.173937677053825, "n1ca": 11737, "n1panier": 11.167459562321598, "vsCa": 27.8878759478572, "vsCli": 0.7611798287345373}, {"lab": "S43", "du": "2026-10-19", "au": "2026-10-25", "enCours": false, "jours": 7, "clients": 941, "ca": 11768.95, "panier": 12.506854410201914, "n1ca": 11792.2, "n1panier": 11.792200000000001, "vsCa": -0.19716422720102988, "vsCli": -5.900000000000006}, {"lab": "S44", "du": "2026-10-26", "au": "2026-11-01", "enCours": false, "jours": 7, "clients": 936, "ca": 11054.35, "panier": 11.810202991452991, "n1ca": 11020.5, "n1panier": 11.064759036144578, "vsCa": 0.30715484778367497, "vsCli": -6.024096385542165}, {"lab": "S45", "du": "2026-11-02", "au": "2026-11-08", "enCours": false, "jours": 7, "clients": 1149, "ca": 16795.62, "panier": 14.617597911227152, "n1ca": 13326.9, "n1panier": 11.498619499568592, "vsCa": 26.027958489971414, "vsCli": -0.8628127696289956}, {"lab": "S46", "du": "2026-11-09", "au": "2026-11-15", "enCours": true, "jours": 3, "clients": 475, "ca": 5083.1, "panier": 10.701263157894738, "n1ca": 6260.9, "n1panier": 12.422420634920634, "vsCa": -18.811991886150548, "vsCli": -5.753968253968256}], "depart": {"du": "2026-10-12", "au": "2026-11-08", "labs": ["S42", "S43", "S44", "S45"], "n": {"ca": 54629.12, "clients": 4085, "jours": 28, "cliJour": 145.89285714285714, "caJour": 1951.0400000000002, "panier": 13.373101591187272}, "n1": {"ca": 47876.6, "clients": 4206, "jours": 28, "cliJour": 150.21428571428572, "caJour": 1709.8785714285714, "panier": 11.382929148834997}}, "soinsIntensifs": "2026-11-16", "cockpit": {"releve": "13/11/2026", "faits": "depuis avril 2025 (premières ventes, 6 j) · 18 mois pleins · 83 863 clients · 983,4 k€ de CA · panier 11,73 € · dont B2B 5,9 % sur 12 mois · meilleur mois : décembre 2025 (62,4 k€)", "partB2b": 5.9, "tuiles": [{"k": "6 mois vs N-1", "v": "−1 %", "s": "313,2 k€ contre 315,6 k€ · mai 26 → oct. 26", "cls": "bad"}, {"k": "3 derniers mois vs N-1", "v": "+3 %", "s": "août → oct. : 161,1 k€ contre 157,0 k€", "cls": "good"}, {"k": "Mois au-dessus du N-1", "v": "3 / 6", "s": "juin 26, sept. 26, oct. 26", "cls": ""}, {"k": "nov. en cours · 13 j", "v": "26,8 k€", "s": "+5 % face aux mêmes 13 jours de novembre 2025 (25,5 k€)", "cls": "good"}]}, "plafond": 40.0, "b2b": {"part": 5.9, "ca12": 636299.2, "b2b12": 37541.652799999996, "comptoir12": 598757.5471999999, "parMois": 3128.4710666666665, "ecart": 14460.069061812203, "ecartSept": 6406.814704513723, "ecartOct": 8053.25435729848, "partDeLAnnee": 38.51740129516142, "unPoint": 6362.991999999999, "panier12": 11.785064453993183, "unClientJour": 4301.5485257075115}, "oct": {"cli25": 148.06451612903226, "cli26": 143.29032258064515, "pan25": 11.132461873638345, "pan26": 12.945441242683476, "vsCa": 12.536009237152147, "vsCli": -3.2244008714596983, "vsPan": 16.285520575985647}, "lu": "2026-11-11"};
+
+/* --- Formats : 1 234 € (espace fine insécable), 12,5 %, signe moins typographique. --- */
+const FINE = ' ', INS = ' ', MOINS = '−';
+const grp = n => Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, FINE);
+const eur = n => grp(n) + INS + '€';
+const eur2 = n => n.toFixed(2).replace('.', ',') + INS + '€';
+const k1 = n => (n / 1000).toFixed(1).replace('.', ',') + INS + 'k€';
+const dec = (n, d = 1) => n.toFixed(d).replace('.', ',');
+const sgn = n => (n > 0.05 ? '+' : n < -0.05 ? MOINS : '');
+const pct = (n, d = 1) => n == null ? '—' : sgn(n) + dec(Math.abs(n), d) + INS + '%';
+const cls = n => n == null ? 'dim' : (n >= 0 ? 'up' : 'down');
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const $ = id => document.getElementById(id);
+const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const dateL = iso => { const [a, m, j] = iso.split('-').map(Number); return j + ' ' + MOIS_L[m - 1] + ' ' + a; };
+const dateC = iso => { const [a, m, j] = iso.split('-'); return j + '/' + m; };
+
+const B = D.b2b, O = D.oct, T = D.total, C = D.comparable, DEP = D.depart;
+const trim = lab => D.trim.find(t => t.lab === lab);
+const trimAvant = trim('oct. → déc. 25'), trimEte = trim('juil. → sept. 26');
+const ecC = k => (C.n[k] / C.n1[k] - 1) * 100;
+
+/* --- En-tête et bandeau --- */
+$('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
+$('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>Le magasin passe en soins intensifs le lundi ' +
+  esc(dateL(D.soinsIntensifs)) + '. Ce rapport en est le point de départ : l’état du magasin à l’entrée, les repères à battre et ce qu’on suit chaque semaine.</span>';
+
+/* --- L'essentiel --- */
+const kpi = (k, v, s, c = '') => `<div class="rp-kpi ${c}"><div class="rp-kpi-k">${esc(k)}</div><div class="rp-kpi-v">${esc(v)}</div><div class="rp-kpi-s">${esc(s)}</div></div>`;
+$('essentiel-kpis').innerHTML = [
+  kpi('CA · mai 25 → oct. 26', k1(T.ca), '18 mois · ' + grp(T.clients) + ' clients · panier ' + eur2(T.panier)),
+  kpi('Part du B2B', dec(B.part) + INS + '%', '≈ ' + k1(B.b2b12) + ' sur 12 mois · plafond ' + dec(D.plafond, 0) + INS + '%'),
+  kpi('Clients / jour · mai → oct.', dec(C.n.cliJour, 0), 'contre ' + dec(C.n1.cliJour, 0) + ' de mai à oct. 25 (' + pct(ecC('cliJour')) + ')', 'bad'),
+  kpi('Panier · oct. 26', eur2(O.pan26), 'contre ' + eur2(O.pan25) + ' en oct. 25 (' + pct(O.vsPan) + ')', 'good'),
+].join('');
+$('essentiel-points').innerHTML = [
+  `Sombreffe est un magasin de comptoir : le B2B pèse ${dec(B.part)} % du CA des 12 derniers mois, environ ${k1(B.b2b12)}, très loin du plafond de ${dec(D.plafond, 0)} %.`,
+  `Sur les six mois présents dans les deux années (mai → octobre), 2026 fait ${pct(ecC('ca'))} de CA et ${pct(ecC('clients'))} de clients face à 2025, avec ${C.n.jours - C.n1.jours} jours ouverts de plus ; par jour ouvert, ${pct(ecC('caJour'))} de CA et ${pct(ecC('cliJour'))} de clients.`,
+  `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
+  `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
+  `Le B2B seul n’explique probablement pas cette hausse : il faudrait qu’environ ${dec(B.partDeLAnnee, 0)} % du B2B de toute l’année soit tombé en septembre et octobre. Le détail mois par mois du comptoir et du B2B tranchera.`,
+].map(t => `<li>${esc(t)}</li>`).join('');
+
+/* --- Évolution magasin (le bloc du cockpit) --- */
+$('evolution-releve').textContent = 'relevé au cockpit le ' + D.cockpit.releve;
+$('evolution-faits').textContent = D.cockpit.faits;
+$('evolution-tuiles').innerHTML = D.cockpit.tuiles.map(t => kpi(t.k, t.v, t.s, t.cls)).join('');
+
+/* La bulle d'un graphique : placée dans le cadre, jamais dehors. */
+function bulle(zone, html, x, y) {
+  const b = zone.querySelector('.rp-bulle');
+  if (html == null) { b.style.display = 'none'; return; }
+  b.innerHTML = html; b.style.display = 'block';
+  const W = zone.clientWidth, bw = b.offsetWidth, bh = b.offsetHeight;
+  b.style.left = Math.max(0, Math.min(W - bw, x + 12)) + 'px';
+  b.style.top = Math.max(0, y - bh - 10) + 'px';
+}
+
+function grapheEvolution() {
+  const zone = $('graphe-evolution');
+  const W = Math.max(320, zone.clientWidth), etroit = W < 640;
+  const H = etroit ? 280 : 320, ml = 46, mr = 12, mt = 24, mb = 46;
+  const S = D.serie, n = S.length, pas = (W - ml - mr) / n;
+  const x = i => ml + pas * (i + 0.5);
+  const ymin = 30000, ymax = 70000, hP = H - mt - mb;
+  const y = v => mt + (ymax - v) / (ymax - ymin) * hP;
+  const ft = 'font-family:var(--font)';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="CA du mois de Sombreffe, de mai 2025 à octobre 2026, face au même mois un an plus tôt">`;
+  // Avant l'ouverture.
+  const avant = S.filter(m => m.ca == null).length;
+  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/>`
+    + `<text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit ? 'fermé' : 'pas encore ouvert'}</text>`; }
+  // Grille.
+  for (let v = ymin; v <= ymax; v += 10000) {
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v === ymin ? '.16' : '.07'})"/>`
+      + `<text x="${ml - 8}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v / 1000} k€</text>`;
+  }
+  // Années.
+  S.forEach((m, i) => { if (m.lab === 'janv.') {
+    if (i > 0) { s += `<line x1="${ml + pas * i}" x2="${ml + pas * i}" y1="${mt - 4}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`; }
+    s += `<text x="${ml + pas * i + 4}" y="${mt - 8}" font-size="11" fill="#1c1a17" style="${ft}">${m.an}</text>`;
+  } });
+  // Gagné / perdu entre la courbe et son N-1.
+  const avec = S.map((m, i) => ({ m, i })).filter(o => o.m.n1 && o.m.ca != null);
+  for (let k = 0; k < avec.length - 1; k++) {
+    const a = avec[k], b = avec[k + 1];
+    if (b.i !== a.i + 1) { continue; }
+    const da = a.m.ca - a.m.n1.ca, db = b.m.ca - b.m.n1.ca;
+    const poly = (pts, pos) => { s += `<polygon points="${pts.map(p => p.join(',')).join(' ')}" fill="${pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`; };
+    if ((da >= 0) === (db >= 0)) { poly([[x(a.i), y(a.m.ca)], [x(b.i), y(b.m.ca)], [x(b.i), y(b.m.n1.ca)], [x(a.i), y(a.m.n1.ca)]], da >= 0); }
+    else {
+      const t = da / (da - db), xc = x(a.i) + t * pas, yc = y(a.m.ca + t * (b.m.ca - a.m.ca));
+      poly([[x(a.i), y(a.m.ca)], [xc, yc], [x(a.i), y(a.m.n1.ca)]], da >= 0);
+      poly([[xc, yc], [x(b.i), y(b.m.ca)], [x(b.i), y(b.m.n1.ca)]], db >= 0);
+    }
+  }
+  // N-1 en pointillé.
+  if (avec.length) {
+    s += `<polyline points="${avec.map(o => x(o.i) + ',' + y(o.m.n1.ca)).join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    avec.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.m.n1.ca)}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"/>`; });
+  }
+  // La courbe, hors mois d'ouverture.
+  const pleins = S.map((m, i) => ({ m, i })).filter(o => o.m.ca != null && !o.m.ouverture);
+  s += `<polyline points="${pleins.map(o => x(o.i) + ',' + y(o.m.ca)).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
+  pleins.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.m.ca)}" r="3.2" fill="#8D1D2C"/>`; });
+  // Étiquettes : le meilleur mois, le plus faible, le dernier ; le mois d'ouverture en note.
+  const max = pleins.reduce((a, o) => o.m.ca > a.m.ca ? o : a), min = pleins.reduce((a, o) => o.m.ca < a.m.ca ? o : a), der = pleins[pleins.length - 1];
+  const halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  [[max, -10], [min, 18], [der, -10]].forEach(([o, dy]) => {
+    s += `<text x="${x(o.i)}" y="${y(o.m.ca) + dy}" font-size="10.5" text-anchor="middle" fill="#8D1D2C" style="${ft};${halo}">${k1(o.m.ca)}</text>`;
+  });
+  const ouv = S.findIndex(m => m.ouverture);
+  if (ouv >= 0) {
+    s += `<circle cx="${x(ouv)}" cy="${y(ymin) - 6}" r="3.6" fill="#fff" stroke="#8D1D2C" stroke-width="1.6"/>`
+      + `<text x="${x(ouv) + 7}" y="${y(ymin) - 12}" font-size="9.5" fill="#7a736a" style="${ft};${halo}">${eur(S[ouv].ca)} · ${S[ouv].jours} j</text>`;
+  }
+  // Mois et écarts sous l'axe.
+  const hb = H - mb + 16, hc = H - mb + 32;
+  S.forEach((m, i) => {
+    const montre = !etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab) || m.n1;
+    if (montre && !(etroit && m.n1 && !['mai', 'juil.', 'sept.'].includes(m.lab) && m.lab !== 'oct.')) {
+      s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`;
+    }
+    if (m.n1 && m.ca != null) {
+      const e = (m.ca / m.n1.ca - 1) * 100, r = Math.round(e);
+      const etoile = m.n1.jours < m.jours ? '*' : '';
+      s += `<text x="${x(i)}" y="${hc}" font-size="9.5" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
+    }
+  });
+  if (avec.length) { s += `<text x="${ml - 8}" y="${hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>`; }
+  // Les zones de survol, une par mois.
+  S.forEach((m, i) => { if (m.ca != null) { s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP + 34}" fill="transparent"/>`; } });
+  s += `<line class="guide" x1="0" x2="0" y1="${mt}" y2="${mt + hP}" stroke="rgba(34,34,34,.25)" visibility="hidden"/></svg>`;
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg'), guide = svg.querySelector('.guide');
+  svg.querySelectorAll('.hit').forEach(r => {
+    r.addEventListener('pointerenter', ev => {
+      const m = S[+r.dataset.i], xi = x(+r.dataset.i);
+      guide.setAttribute('x1', xi); guide.setAttribute('x2', xi); guide.setAttribute('visibility', 'visible');
+      let h = `<div class="t">${esc(m.lab)} ${m.an}${m.ouverture ? ' · ouverture' : ''}</div><div>CA ${eur(m.ca)} · ${m.jours} j</div><div>${grp(m.clients)} clients · panier ${eur2(m.ca / m.clients)}</div>`;
+      if (m.n1) {
+        h += `<div>N-1 ${eur(m.n1.ca)} · ${m.n1.jours} j</div><div class="${cls(m.ca / m.n1.ca - 1)}">${pct((m.ca / m.n1.ca - 1) * 100)} face au N-1</div>`;
+        if (m.n1.jours < m.jours) { h += `<div>par jour ouvert : ${pct(((m.ca / m.jours) / (m.n1.ca / m.n1.jours) - 1) * 100)}</div>`; }
+      }
+      const k = W / svg.getBoundingClientRect().width;
+      bulle(zone, h, xi / k, y(Math.max(m.ca, m.n1 ? m.n1.ca : 0, ymin)) / k);
+    });
+    r.addEventListener('pointerleave', () => { guide.setAttribute('visibility', 'hidden'); bulle(zone, null); });
+  });
+}
+
+/* --- Octobre à octobre --- */
+$('oo-intro').textContent = `Les dix-huit mois pleins depuis l’ouverture : ${k1(T.ca)} de CA, ${grp(T.clients)} clients, ${eur(T.caJour)} de CA par jour ouvert. Le N-1 commence en mai 2026 : le magasin a ouvert fin avril 2025.`;
+const L = D.lignes;
+$('oo-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Clients</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">CA / jour</th><th class="num">Panier</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th><th class="num">Panier vs N-1</th></tr></thead><tbody>'
+  + L.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${l.jours}</td><td class="num">${grp(l.clients)}</td><td class="num">${dec(l.cliJour, 0)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caJour)}</td><td class="num">${eur2(l.panier)}</td>`
+    + `<td class="num ${cls(l.vsCa)}">${pct(l.vsCa)}${l.n1Fermes ? '*' : ''}</td><td class="num ${cls(l.vsCli)}">${pct(l.vsCli)}</td><td class="num ${cls(l.vsPanier)}">${pct(l.vsPanier)}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>18 mois</td><td class="num">${T.jours}</td><td class="num">${grp(T.clients)}</td><td class="num">${dec(T.cliJour, 0)}</td><td class="num">${eur(T.ca)}</td><td class="num">${eur(T.caJour)}</td><td class="num">${eur2(T.panier)}</td><td></td><td></td><td></td></tr></tfoot>`;
+const juil = L.find(l => l.n1Fermes);
+$('oo-note').textContent = juil ? `* ${juil.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(juil.vsCaJour)}.` : '';
+
+$('trim-table').innerHTML = '<thead><tr><th>Période</th><th class="num">Clients / jour</th><th class="num">CA / jour</th><th class="num">Panier</th></tr></thead><tbody>'
+  + D.trim.map(t => `<tr><td>${esc(t.lab)}</td><td class="num">${dec(t.cliJour, 0)}</td><td class="num">${eur(t.caJour)}</td><td class="num">${eur2(t.panier)}</td></tr>`).join('') + '</tbody>';
+
+function grapheTrafic() {
+  const zone = $('graphe-trafic');
+  const W = Math.max(300, zone.clientWidth), H = 200, ml = 30, mr = 6, mt = 18, mb = 26;
+  const n = L.length, pas = (W - ml - mr) / n, lb = Math.min(28, pas * 0.62);
+  const vmax = 180, hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP;
+  const ft = 'font-family:var(--font)';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Clients par jour ouvert, d’octobre 2025 à octobre 2026">`;
+  [0, 50, 100, 150].forEach(v => { s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v ? '.07' : '.16'})"/><text x="${ml - 6}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v}</text>`; });
+  const vmaxL = L.reduce((a, l) => l.cliJour > a.cliJour ? l : a), vminL = L.reduce((a, l) => l.cliJour < a.cliJour ? l : a);
+  L.forEach((l, i) => {
+    const cx = ml + pas * (i + 0.5), h = y(0) - y(l.cliJour);
+    // Barre ancrée sur l'axe, coins arrondis en haut seulement.
+    s += `<path d="M${cx - lb / 2},${y(0)} V${y(l.cliJour) + 4} Q${cx - lb / 2},${y(l.cliJour)} ${cx - lb / 2 + 4},${y(l.cliJour)} H${cx + lb / 2 - 4} Q${cx + lb / 2},${y(l.cliJour)} ${cx + lb / 2},${y(l.cliJour) + 4} V${y(0)} Z" fill="#8D1D2C" opacity="${i === n - 1 ? 1 : 0.55}"/>`;
+    if (l === vmaxL || l === vminL || i === 0 || i === n - 1) { s += `<text x="${cx}" y="${y(l.cliJour) - 5}" font-size="10" text-anchor="middle" fill="#1c1a17" style="${ft}">${dec(l.cliJour, 0)}</text>`; }
+    if (W >= 520 || i % 3 === 0 || i === n - 1) { s += `<text x="${cx}" y="${H - 8}" font-size="9.5" text-anchor="middle" fill="#3b3731" style="${ft}">${esc(l.lab.split(' ')[0])}</text>`; }
+    s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP}" fill="transparent"/>`;
+  });
+  s += '</svg>';
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg');
+  svg.querySelectorAll('.hit').forEach(r => {
+    r.addEventListener('pointerenter', () => {
+      const l = L[+r.dataset.i], k = W / svg.getBoundingClientRect().width;
+      bulle(zone, `<div class="t">${esc(l.lab)}</div><div>${dec(l.cliJour, 1)} clients par jour ouvert</div><div>${grp(l.clients)} clients sur ${l.jours} jours</div>${l.vsCli != null ? `<div class="${cls(l.vsCli)}">${pct(l.vsCli)} de clients face au N-1</div>` : ''}`,
+        (ml + pas * (+r.dataset.i + 0.5)) / k, y(l.cliJour) / k);
+    });
+    r.addEventListener('pointerleave', () => bulle(zone, null));
+  });
+}
+
+const compL = [['CA', 'ca', eur], ['Jours ouverts', 'jours', v => String(v)], ['Clients', 'clients', grp], ['Clients par jour', 'cliJour', v => dec(v, 1)], ['CA par jour', 'caJour', eur], ['Panier', 'panier', eur2]];
+$('comp-table').innerHTML = '<thead><tr><th></th><th class="num">2025</th><th class="num">2026</th><th class="num">Écart</th></tr></thead><tbody>'
+  + compL.map(([lab, k, f]) => `<tr><td>${esc(lab)}</td><td class="num">${f(C.n1[k])}</td><td class="num">${f(C.n[k])}</td>`
+    + (k === 'jours' ? `<td class="num">+${C.n[k] - C.n1[k]}</td>` : `<td class="num ${cls(ecC(k))}">${pct(ecC(k))}</td>`) + '</tr>').join('') + '</tbody>';
+$('comp-note').textContent = 'En 2025, le magasin a eu des jours fermés en mai et en juillet : « par jour ouvert » compare à jours égaux.';
+
+/* --- Comptoir et B2B --- */
+const partC = 100 - B.part;
+$('barre-b2b').innerHTML = `<div class="seg" style="width:calc(${partC}% - 2px);background:#8D1D2C"></div><div class="seg" style="width:${B.part}%;background:var(--b2b)"></div>`
+  + `<div class="plafond" style="left:${D.plafond}%"><span>plafond B2B ${dec(D.plafond, 0)}${INS}%</span></div>`;
+$('chiffres-b2b').innerHTML = `<span><i class="rp-point" style="background:#8D1D2C"></i>Comptoir ${dec(partC)}${INS}% · ≈ ${esc(k1(B.comptoir12))}</span>`
+  + `<span><i class="rp-point" style="background:var(--b2b)"></i>B2B ${dec(B.part)}${INS}% · ≈ ${esc(k1(B.b2b12))}, soit ≈ ${esc(k1(B.parMois))} par mois</span>`;
+$('aide-b2b').textContent = `12 derniers mois clos : novembre 2025 → octobre 2026, ${k1(B.ca12)} de CA. B2B : les tickets des clients pro à TVA valide ; comptoir : tout le reste. Un point de part B2B vaut environ ${k1(B.unPoint)} par an.`;
+$('question-texte').textContent = `Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins (${k1(B.ecartSept)} en septembre, ${k1(B.ecartOct)} en octobre). `
+  + `Pour que le B2B l’explique à lui seul, il aurait dû gagner ces ${k1(B.ecart)} sur deux mois face à 2025 : environ ${dec(B.partDeLAnnee, 0)} % de tout le B2B des 12 derniers mois. `
+  + `C’est possible si une ou deux sociétés ont passé de grosses commandes. Sinon, c’est le panier du comptoir qui a monté (prix, produits d’automne, commandes). `
+  + `Les semaines montrent une hausse par à-coups (S39 à S42, puis S45), ce qui ressemble davantage à de grosses commandes qu’à une hausse de prix, qui relèverait toutes les semaines.`;
+$('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>Le comptoir et le B2B mois par mois, face au N-1. Dans le cockpit, Résultat › Évolution magasin, la bascule « ventes : Comptoir » puis « B2B » donne le même bloc que ci-dessus pour chaque canal : commandes pro, panier pro, part du CA mois par mois. Une fois collés, ils entrent dans ce rapport et tranchent la question du panier.</span>';
+
+/* --- Les dix dernières semaines --- */
+const SEM = D.semaines;
+$('sem-intro').textContent = 'Le nombre de clients bouge peu d’une semaine à l’autre ; le CA, lui, saute de 18 à 28 % certaines semaines (S39 à S42, S45) et reste à plat les autres (S43, S44).';
+$('sem-table').innerHTML = '<thead><tr><th>Semaine</th><th>Du</th><th class="num">Clients</th><th class="num">CA</th><th class="num">Panier</th><th class="num">Panier N-1</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th></tr></thead><tbody>'
+  + SEM.map(w => `<tr><td>${esc(w.lab)}${w.enCours ? ' · en cours (' + w.jours + ' j)' : ''}</td><td>${dateC(w.du)} → ${dateC(w.au)}</td><td class="num">${grp(w.clients)}</td><td class="num">${eur(w.ca)}</td><td class="num">${eur2(w.panier)}</td><td class="num">${eur2(w.n1panier)}</td>`
+    + `<td class="num ${cls(w.vsCa)}">${pct(w.vsCa)}</td><td class="num ${cls(w.vsCli)}">${pct(w.vsCli)}</td></tr>`).join('') + '</tbody>';
+
+/* --- Soins intensifs --- */
+const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
+$('soins-intro').textContent = `Les repères de départ sont les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}, du ${dateC(DEP.du)} au ${dateC(DEP.au)}), face aux mêmes semaines de 2025. Chaque semaine de soins intensifs se lit face à ces repères et face à son N-1.`;
+$('soins-reperes').innerHTML = [
+  kpi('Clients par jour ouvert', dec(N.cliJour, 1), 'contre ' + dec(N1.cliJour, 1) + ' en 2025 (' + pct(ec(N.cliJour, N1.cliJour)) + ')', ec(N.cliJour, N1.cliJour) >= 0 ? 'good' : 'bad'),
+  kpi('CA par jour ouvert', eur(N.caJour), 'contre ' + eur(N1.caJour) + ' en 2025 (' + pct(ec(N.caJour, N1.caJour)) + ')', ec(N.caJour, N1.caJour) >= 0 ? 'good' : 'bad'),
+  kpi('Panier', eur2(N.panier), 'contre ' + eur2(N1.panier) + ' en 2025 (' + pct(ec(N.panier, N1.panier)) + ')'),
+  kpi('Part du B2B', dec(B.part) + INS + '%', 'sur 12 mois ; la part de ces 4 semaines reste à lire'),
+].join('');
+const objCli = Math.ceil(N1.cliJour);
+$('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
+  + [
+    ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `revenir au niveau de 2025 : ${objCli} par jour`],
+    ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
+    ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
+    ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
+  ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
+const gainCli = objCli - N.cliJour;
+$('pistes').innerHTML = [
+  `Trancher la question du panier dès la première semaine : vues Comptoir et B2B du cockpit, panier hors clients pro. Si c’est le B2B, nommer les sociétés et savoir si leurs commandes vont durer. Si c’est le comptoir, retrouver ce qui a fait monter le panier et le garder.`,
+  `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à ${objCli} clients par jour ouvert, c’est environ ${dec(gainCli, 0)} clients de plus chaque jour. Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
+  `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(Math.abs(juil.vsCaJour)).replace('+', '')}.`,
+  `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`,
+  `Suivre chaque semaine les quatre indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
+].map(t => `<li>${esc(t)}</li>`).join('');
+
+/* --- Sources --- */
+$('sources-liste').innerHTML = [
+  `Bloc « Évolution magasin » : cockpit, Résultat › Évolution magasin, ventes : Tout, chiffre d’affaires, total ; relevé le ${D.cockpit.releve}.`,
+  `Mois et semaines : ventes du panel par jour (margin-heatmap), via /ventes/evolution et /ventes/semaines, lues le ${D.lu.split('-').reverse().join('/')}. Clients = tickets de caisse.`,
+  `B2B : tickets des clients pro à TVA valide ; comptoir = total moins B2B. La part de ${dec(B.part)} % est celle du cockpit sur les 12 derniers mois clos ; les montants en k€ l’appliquent au CA de ces 12 mois.`,
+  `N-1 : le même mois, ou la même semaine, un an plus tôt. Avril 2025, mois d’ouverture (6 jours), n’est pas comparé.`,
+  `L’écart de septembre-octobre : CA réel moins clients du mois × panier du même mois en 2025.`,
+].map(t => `<li>${esc(t)}</li>`).join('');
+$('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
+
+/* --- Dessins, redessinés à la largeur --- */
+function dessiner() { grapheEvolution(); grapheTrafic(); }
+dessiner();
+let attente; window.addEventListener('resize', () => { clearTimeout(attente); attente = setTimeout(dessiner, 120); });
+</script>
+</body>
+</html>

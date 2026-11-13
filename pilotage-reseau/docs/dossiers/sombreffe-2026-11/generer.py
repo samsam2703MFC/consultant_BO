@@ -1,0 +1,164 @@
+#!/usr/bin/env python3
+"""Rapport magasin — Sombreffe, comptoir et B2B, mai 2025 → octobre 2026 (les 18 mois pleins depuis l'ouverture).
+
+Écrit `rapport.html` à côté de ce script. Aucun chiffre n'est retapé quand une source le donne :
+- les mois et les semaines viennent de `docs/maquettes/evolution-magasin/donnees.json`, lus au panel le 11/11/2026
+  (`GET /ventes/evolution`, `GET /ventes/semaines`) ;
+- le bloc « Évolution magasin » (faits, tuiles, novembre en cours, part B2B) est celui du cockpit, vue « Tout »,
+  relevé le 13/11/2026 et collé par Sam : ses valeurs sont reprises telles quelles ci-dessous (COCKPIT).
+
+    python3 docs/dossiers/sombreffe-2026-11/generer.py
+
+La page charge Gotham dans `fonts/` (Gotham_Medium.otf en 400, Gotham_Regular.otf en 700, docs/DESIGN_SYSTEM.md §4.1) :
+pour la publier, joindre les deux fichiers de `public/assets/ds/fonts/` sous ce chemin. Ouverte telle quelle depuis le
+dépôt, elle tombe sur Helvetica.
+"""
+import json
+from decimal import Decimal, ROUND_HALF_UP
+from pathlib import Path
+
+ICI = Path(__file__).resolve().parent
+SOURCE = ICI.parent.parent / 'maquettes' / 'evolution-magasin' / 'donnees.json'
+SHOP = '5'
+
+# Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
+COCKPIT = {
+    'releve': '13/11/2026',
+    'faits': 'depuis avril 2025 (premières ventes, 6 j) · 18 mois pleins · 83 863 clients · 983,4 k€ de CA · '
+             'panier 11,73 € · dont B2B 5,9 % sur 12 mois · meilleur mois : décembre 2025 (62,4 k€)',
+    'partB2b': 5.9,                      # part du CA des 12 derniers mois clos (nov. 25 → oct. 26), clients pro à TVA valide
+    'tuiles': [
+        {'k': '6 mois vs N-1', 'v': '−1 %', 's': '313,2 k€ contre 315,6 k€ · mai 26 → oct. 26', 'cls': 'bad'},
+        {'k': '3 derniers mois vs N-1', 'v': '+3 %', 's': 'août → oct. : 161,1 k€ contre 157,0 k€', 'cls': 'good'},
+        {'k': 'Mois au-dessus du N-1', 'v': '3 / 6', 's': 'juin 26, sept. 26, oct. 26', 'cls': ''},
+        {'k': 'nov. en cours · 13 j', 'v': '26,8 k€', 's': '+5 % face aux mêmes 13 jours de novembre 2025 (25,5 k€)', 'cls': 'good'},
+    ],
+}
+PLAFOND_B2B = 40.0                       # plafond de la part B2B fixé aux visites
+
+MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
+MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
+
+
+def arr(x, n=0):
+    """Arrondi commercial (0,5 vers le haut), pas l'arrondi bancaire de Python."""
+    q = Decimal(1).scaleb(-n)
+    return float(Decimal(str(x)).quantize(q, rounding=ROUND_HALF_UP))
+
+
+def pc(a, b):
+    return None if not b else (a / b - 1) * 100
+
+
+def main():
+    d = json.loads(SOURCE.read_text(encoding='utf-8'))
+    mag = next(x for x in d['magasins'] if x['id'] == SHOP)
+    mois = {x['mois']: x for x in mag['mois']}
+
+    # Les mois du graphique : de janvier 2025 (avant l'ouverture) à octobre 2026.
+    serie = []
+    for an in (2025, 2026):
+        for mo in range(1, 13):
+            k = f'{an}-{mo:02d}'
+            if k > '2026-10':
+                break
+            x = mois.get(k)
+            n1 = (x or {}).get('n1') if k >= '2026-05' else None   # le N-1 se compare dès mai 2026 (avril 2025 : 6 jours)
+            serie.append({
+                'k': k, 'lab': MOIS_C[mo - 1], 'an': an,
+                'ca': x['ca'] if x else None, 'clients': x['clients'] if x else None, 'jours': x['jours'] if x else None,
+                'ouverture': bool(x) and k == '2025-04',
+                'n1': {'ca': n1['ca'], 'clients': n1['clients'], 'jours': n1['jours']} if n1 else None,
+            })
+
+    # La période : mai 2025 → octobre 2026, les 18 mois pleins (avril 2025, mois d'ouverture, n'a que 6 jours).
+    periode = [k for k in sorted(mois) if '2025-05' <= k <= '2026-10']
+    lignes = []
+    for k in periode:
+        x = mois[k]; n1 = x.get('n1') if k >= '2026-05' else None
+        an, mo = int(k[:4]), int(k[5:])
+        l = {'k': k, 'lab': f'{MOIS_C[mo - 1]} {str(an)[2:]}', 'jours': x['jours'], 'clients': x['clients'], 'ca': x['ca'],
+             'cliJour': x['clients'] / x['jours'], 'caJour': x['ca'] / x['jours'], 'panier': x['ca'] / x['clients'],
+             'vsCa': None, 'vsCli': None, 'vsPanier': None, 'vsCaJour': None, 'n1Fermes': False}
+        if n1:
+            l['vsCa'] = pc(x['ca'], n1['ca']); l['vsCli'] = pc(x['clients'], n1['clients'])
+            l['vsPanier'] = pc(x['ca'] / x['clients'], n1['ca'] / n1['clients'])
+            l['vsCaJour'] = pc(x['ca'] / x['jours'], n1['ca'] / n1['jours'])
+            l['n1Fermes'] = n1['jours'] < x['jours']
+        lignes.append(l)
+
+    def somme(ks):
+        ca = sum(mois[k]['ca'] for k in ks); cl = sum(mois[k]['clients'] for k in ks); j = sum(mois[k]['jours'] for k in ks)
+        return {'ca': ca, 'clients': cl, 'jours': j, 'panier': ca / cl, 'caJour': ca / j, 'cliJour': cl / j}
+
+    total = somme(periode)
+    trimestres = [
+        ('mai → juin 25', ['2025-05', '2025-06']),
+        ('juil. → sept. 25', ['2025-07', '2025-08', '2025-09']),
+        ('oct. → déc. 25', ['2025-10', '2025-11', '2025-12']),
+        ('janv. → mars 26', ['2026-01', '2026-02', '2026-03']),
+        ('avr. → juin 26', ['2026-04', '2026-05', '2026-06']),
+        ('juil. → sept. 26', ['2026-07', '2026-08', '2026-09']),
+        ('oct. 26', ['2026-10']),
+    ]
+    trim = [dict(lab=lab, **somme(ks)) for lab, ks in trimestres]
+    # Les six mois présents dans les deux années : mai → octobre 2025 face à mai → octobre 2026.
+    comparable = {'n1': somme(['2025-05', '2025-06', '2025-07', '2025-08', '2025-09', '2025-10']),
+                  'n': somme(['2026-05', '2026-06', '2026-07', '2026-08', '2026-09', '2026-10'])}
+
+    # Le B2B : la part du cockpit appliquée au CA des 12 mois qu'elle couvre (nov. 25 → oct. 26).
+    douze = [k for k in sorted(mois) if '2025-11' <= k <= '2026-10']
+    ca12 = sum(mois[k]['ca'] for k in douze)
+    b2b12 = ca12 * COCKPIT['partB2b'] / 100
+    # L'écart de septembre-octobre : le CA réel moins celui qu'auraient fait les mêmes clients au panier du N-1.
+    ecarts = []
+    for k in ('2026-09', '2026-10'):
+        x = mois[k]; n1 = x['n1']
+        ecarts.append(x['ca'] - x['clients'] * n1['ca'] / n1['clients'])
+    ecart = sum(ecarts)
+    panier12 = ca12 / sum(mois[k]['clients'] for k in douze)
+
+    # Les dix dernières semaines (la 46e en cours, 3 jours au 11/11).
+    semaines = []
+    for w in mag['semaines'][-10:]:
+        n1 = w['n1']
+        semaines.append({'lab': w['lab'], 'du': w['du'], 'au': w['au'], 'enCours': w['enCours'], 'jours': w['jours'],
+                         'clients': w['clients'], 'ca': w['ca'], 'panier': w['ca'] / w['clients'],
+                         'n1ca': n1['ca'], 'n1panier': n1['ca'] / n1['clients'],
+                         'vsCa': pc(w['ca'], n1['ca']), 'vsCli': pc(w['clients'], n1['clients'])})
+
+    # Le point de départ des soins intensifs (lundi 16/11/2026) : les quatre dernières semaines complètes, face au N-1.
+    pleines = [w for w in mag['semaines'] if not w['enCours'] and w['jours'] == 7 and w['n1']][-4:]
+    def rep(ws, cle):
+        ca = sum((w[cle] if cle else w)['ca'] for w in ws); cl = sum((w[cle] if cle else w)['clients'] for w in ws)
+        j = sum((w[cle] if cle else w)['jours'] for w in ws)
+        return {'ca': ca, 'clients': cl, 'jours': j, 'cliJour': cl / j, 'caJour': ca / j, 'panier': ca / cl}
+    depart = {'du': pleines[0]['du'], 'au': pleines[-1]['au'], 'labs': [w['lab'] for w in pleines],
+              'n': rep(pleines, None), 'n1': rep(pleines, 'n1')}
+
+    oct25, oct26 = mois['2025-10'], mois['2026-10']
+    donnees = {
+        'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
+        'soinsIntensifs': '2026-11-16',
+        'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
+        'b2b': {'part': COCKPIT['partB2b'], 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
+                'ecart': ecart, 'ecartSept': ecarts[0], 'ecartOct': ecarts[1], 'partDeLAnnee': ecart / b2b12 * 100,
+                'unPoint': ca12 / 100, 'panier12': panier12, 'unClientJour': panier12 * 365},
+        'oct': {'cli25': oct25['clients'] / oct25['jours'], 'cli26': oct26['clients'] / oct26['jours'],
+                'pan25': oct25['ca'] / oct25['clients'], 'pan26': oct26['ca'] / oct26['clients'],
+                'vsCa': pc(oct26['ca'], oct25['ca']), 'vsCli': pc(oct26['clients'], oct25['clients']),
+                'vsPan': pc(oct26['ca'] / oct26['clients'], oct25['ca'] / oct25['clients'])},
+        'lu': d['lu'],
+    }
+    gabarit = (ICI / 'gabarit.html').read_text(encoding='utf-8')
+    html = gabarit.replace('/*__DONNEES__*/null', json.dumps(donnees, ensure_ascii=False))
+    (ICI / 'rapport.html').write_text(html, encoding='utf-8')
+
+    # Contrôles à l'écran (pas dans le rapport).
+    print(f"18 mois : {total['ca']:.0f} € · {total['clients']} clients · panier {total['panier']:.2f}")
+    print(f"12 mois : {ca12:.0f} € · B2B ≈ {b2b12:.0f} € · écart sept.-oct. {ecart:.0f} € = {ecart / b2b12 * 100:.1f} % du B2B de l'année")
+    print('écarts vs N-1 :', [(s['k'], arr(pc(s['ca'], s['n1']['ca']))) for s in serie if s['n1']])
+
+
+if __name__ == '__main__':
+    main()
