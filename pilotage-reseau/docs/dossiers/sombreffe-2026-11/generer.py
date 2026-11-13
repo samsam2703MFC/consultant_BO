@@ -33,6 +33,8 @@ TACHES_JOUR = ICI.parent.parent / 'maquettes' / 'controle-taches-photos' / 'donn
 # - b2b-clients.csv : l'export de la requête des clients B2B année par année (LISEZMOI.md).
 PNL_MOIS = ICI / 'pnl-mois.json'
 B2B_CLIENTS = ICI / 'b2b-clients.csv'
+# - ventes-evolution.json : la réponse de GET /api/cockpit/ventes/evolution (le B2B de chaque mois et de son N-1).
+EVOLUTION_PRO = ICI / 'ventes-evolution.json'
 SHOP = '5'
 
 # Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
@@ -70,6 +72,17 @@ def main():
     mag = next(x for x in d['magasins'] if x['id'] == SHOP)
     mois = {x['mois']: x for x in mag['mois']}
 
+    # Le B2B de chaque mois (et de son N-1), si la réponse du cockpit est déposée : la règle du cockpit, un mois dont le
+    # B2B n'est pas lu sur tous ses jours vendus sort des courbes comptoir et B2B.
+    pro = {}
+    if EVOLUTION_PRO.exists():
+        ev = json.loads(EVOLUTION_PRO.read_text(encoding='utf-8'))
+        m5 = next((x for x in ev.get('magasins', []) if str(x.get('id')) == SHOP), None)
+        for x in (m5 or {}).get('mois', []):
+            def lu(p, jours):
+                return {'ca': p['ca'], 'clients': p['clients'], 'complet': int(p.get('joursLus') or 0) >= int(jours or 0)} if p else None
+            n1 = x.get('n1') or {}
+            pro[x['mois']] = {'n': lu(x.get('pro'), x.get('jours')), 'n1': lu(n1.get('pro'), n1.get('jours')) if n1 else None}
     # Les mois du graphique : de janvier 2025 (avant l'ouverture) à octobre 2026.
     serie = []
     for an in (2025, 2026):
@@ -84,6 +97,7 @@ def main():
                 'ca': x['ca'] if x else None, 'clients': x['clients'] if x else None, 'jours': x['jours'] if x else None,
                 'ouverture': bool(x) and k == '2025-04',
                 'n1': {'ca': n1['ca'], 'clients': n1['clients'], 'jours': n1['jours']} if n1 else None,
+                'pro': (pro.get(k) or {}).get('n'), 'n1pro': (pro.get(k) or {}).get('n1') if n1 else None,
             })
 
     # La période : mai 2025 → octobre 2026, les 18 mois pleins (avril 2025, mois d'ouverture, n'a que 6 jours).
@@ -232,7 +246,7 @@ def main():
 
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
-        'personnel': personnel, 'b2bClients': b2bClients, 'seuilPersonnel': SEUIL_PERSONNEL,
+        'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,

@@ -18,6 +18,16 @@ python3 pilotage-reseau/docs/dossiers/sombreffe-2026-11/generer.py && node pilot
 Tant qu'un de ces fichiers manque, sa partie du rapport est marquée « à compléter ». Déposé à côté de
 `generer.py`, il entre dans le rapport à la génération suivante.
 
+### `ventes-evolution.json` — le CA sans B2B et le B2B seul, mois par mois
+
+Dans le navigateur où le cockpit est ouvert, enregistrer la réponse de :
+
+    <adresse du cockpit>/api/cockpit/ventes/evolution
+
+Pour chaque mois et son N-1, le B2B (`pro` : CA, clients, jours lus ; `src/ventes_semaines.php`). Le rapport en
+tire les deux graphiques de l'Évolution magasin : le comptoir (le total moins le B2B) et le B2B seul. Comme au
+cockpit, un mois dont le B2B n'est pas lu sur tous ses jours vendus sort de ces deux courbes.
+
 ### `pnl-mois.json` — les frais de personnel face au CA, 18 mois
 
 Dans le navigateur où le cockpit est ouvert (la session suffit), enregistrer la réponse de :

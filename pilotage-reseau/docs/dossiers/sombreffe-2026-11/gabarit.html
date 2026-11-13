@@ -116,7 +116,7 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #octobre-octobre, #personnel, #temps-morts, #partie-2, #partie-3, #partie-4, #taches, #annexes { break-before: page; }
+  #evolution, #octobre-octobre, #personnel, #temps-morts, #partie-2, #partie-3, #partie-4, #taches, #annexes { break-before: page; }
   #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit le B2B */
   .rp-partie { border-top: 0; padding-top: 0; }   /* un thème par page */
   .rp-bulle { display: none !important; }
@@ -149,18 +149,30 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-tete">
       <h2 class="rp-h3">Évolution magasin</h2>
       <span class="rp-sous" id="evolution-releve"></span>
-      <span class="rp-onglets"><span>ventes</span><span class="rp-onglet on">Tout</span><span class="rp-onglet">Comptoir</span><span class="rp-onglet">B2B</span>
-        <span class="rp-onglet on">Chiffre d’affaires</span><span class="rp-onglet on">Total</span></span>
     </div>
     <div class="rp-faits" id="evolution-faits"></div>
-    <div class="rp-graphe" id="graphe-evolution"><div class="rp-bulle"></div></div>
+    <div class="rp-part" id="ev-comptoir">
+      <h3 class="rp-h3" id="ev-comptoir-titre"></h3>
+      <p class="rp-aide" id="ev-comptoir-note"></p>
+      <div class="rp-graphe" id="graphe-comptoir"><div class="rp-bulle"></div></div>
+    </div>
+    <div class="rp-part" id="ev-trafic">
+      <h3 class="rp-h3">Trafic : les clients du mois</h3>
+      <div class="rp-graphe" id="graphe-clients"><div class="rp-bulle"></div></div>
+    </div>
+    <div class="rp-part" id="ev-b2b">
+      <h3 class="rp-h3">B2B seul : le CA des clients pro</h3>
+      <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div>
+      <div class="rp-ouvert" id="ev-b2b-completer" hidden></div>
+    </div>
     <div class="rp-legende" id="evolution-legende">
-      <span><i class="rp-sw"></i>CA du mois</span>
+      <span><i class="rp-sw"></i>le mois</span>
       <span><i class="rp-sw n1"></i>N-1 : le même mois un an plus tôt (pointillé), dès mai 2026</span>
       <span><i class="rp-sw aire"></i>gagné / perdu face au N-1</span>
       <span>mois d’ouverture, incomplet : hors courbe</span>
-      <span>* le N-1 a eu des jours fermés : « Par jour ouvert » les neutralise</span>
+      <span>* le N-1 a eu plus de 2 jours fermés</span>
     </div>
+    <h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3>
     <div class="rp-kpis" id="evolution-tuiles"></div>
   </section>
 
@@ -399,98 +411,114 @@ function bulle(zone, html, x, y) {
   b.style.top = Math.max(0, y - bh - 10) + 'px';
 }
 
-function grapheEvolution() {
-  const zone = $('graphe-evolution');
-  const W = Math.max(320, zone.clientWidth), etroit = W < 640;
-  const H = etroit ? 280 : 320, ml = 46, mr = 12, mt = 24, mb = 46;
-  const S = D.serie, n = S.length, pas = (W - ml - mr) / n;
-  const x = i => ml + pas * (i + 0.5);
-  const ymin = 30000, ymax = 70000, hP = H - mt - mb;
-  const y = v => mt + (ymax - v) / (ymax - ymin) * hP;
-  const ft = 'font-family:var(--font)';
-  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="CA du mois de Sombreffe, de mai 2025 à octobre 2026, face au même mois un an plus tôt">`;
-  // Avant l'ouverture.
+/* Un graphique mois par mois, N plein et N-1 en pointillé, comme Résultat › Évolution magasin du cockpit.
+   cfg : val (mois → valeur | null), val1 (mois → valeur N-1 | null), axe (valeur → graduation), etiq (valeur → étiquette),
+   tip (valeur → bulle), nom (dans la bulle), zero (l'axe part de 0), couleur. */
+function grapheMois(id, cfg) {
+  const zone = $(id);
+  const W = Math.max(320, zone.clientWidth), etroit = W < 640, C = cfg.couleur || '#8D1D2C';
+  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44;
+  const S = D.serie, n = S.length, pas = (W - ml - mr) / n, x = i => ml + pas * (i + 0.5);
+  const pleins = S.map((m, i) => ({ m, i, v: m.ouverture ? null : cfg.val(m) })).filter(o => o.v != null);
+  const avec = S.map((m, i) => ({ m, i, v: cfg.val(m), w: cfg.val1(m) })).filter(o => o.v != null && o.w != null);
+  const tout = pleins.map(o => o.v).concat(avec.map(o => o.w));
+  if (!tout.length) { zone.querySelector('svg')?.remove(); return; }
+  // Des graduations rondes : 4 ou 5 pas de 1, 2 ou 5 × 10^k.
+  const lo = cfg.zero ? 0 : Math.min(...tout), hi = Math.max(...tout), brut = (hi - lo) / 4 || hi / 4 || 1;
+  const p10 = Math.pow(10, Math.floor(Math.log10(brut))), pasY = [1, 2, 5, 10].map(k => k * p10).find(k => k >= brut);
+  const ymin = cfg.zero ? 0 : Math.floor(lo / pasY) * pasY, ymax = Math.ceil(hi / pasY) * pasY || pasY, hP = H - mt - mb;
+  const y = v => mt + (ymax - v) / (ymax - ymin) * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(cfg.aria)}">`;
   const avant = S.filter(m => m.ca == null).length;
-  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/>`
-    + `<text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit ? 'fermé' : 'pas encore ouvert'}</text>`; }
-  // Grille.
-  for (let v = ymin; v <= ymax; v += 10000) {
-    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v === ymin ? '.16' : '.07'})"/>`
-      + `<text x="${ml - 8}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v / 1000} k€</text>`;
+  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/><text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit ? 'fermé' : 'pas encore ouvert'}</text>`; }
+  for (let v = ymin; v <= ymax + 1e-9; v += pasY) {
+    s += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v === ymin ? '.16' : '.07'})"/><text x="${ml - 8}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${esc(cfg.axe(v))}</text>`;
   }
-  // Années.
   S.forEach((m, i) => { if (m.lab === 'janv.') {
     if (i > 0) { s += `<line x1="${ml + pas * i}" x2="${ml + pas * i}" y1="${mt - 4}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`; }
     s += `<text x="${ml + pas * i + 4}" y="${mt - 8}" font-size="11" fill="#1c1a17" style="${ft}">${m.an}</text>`;
   } });
-  // Gagné / perdu entre la courbe et son N-1.
-  const avec = S.map((m, i) => ({ m, i })).filter(o => o.m.n1 && o.m.ca != null);
   for (let k = 0; k < avec.length - 1; k++) {
     const a = avec[k], b = avec[k + 1];
     if (b.i !== a.i + 1) { continue; }
-    const da = a.m.ca - a.m.n1.ca, db = b.m.ca - b.m.n1.ca;
-    const poly = (pts, pos) => { s += `<polygon points="${pts.map(p => p.join(',')).join(' ')}" fill="${pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`; };
-    if ((da >= 0) === (db >= 0)) { poly([[x(a.i), y(a.m.ca)], [x(b.i), y(b.m.ca)], [x(b.i), y(b.m.n1.ca)], [x(a.i), y(a.m.n1.ca)]], da >= 0); }
-    else {
-      const t = da / (da - db), xc = x(a.i) + t * pas, yc = y(a.m.ca + t * (b.m.ca - a.m.ca));
-      poly([[x(a.i), y(a.m.ca)], [xc, yc], [x(a.i), y(a.m.n1.ca)]], da >= 0);
-      poly([[xc, yc], [x(b.i), y(b.m.ca)], [x(b.i), y(b.m.n1.ca)]], db >= 0);
-    }
+    const da = a.v - a.w, db = b.v - b.w;
+    const poly = (pts, pos) => { s += `<polygon points="${pts.map(q => q.join(',')).join(' ')}" fill="${pos ? 'rgba(63,122,82,.16)' : 'rgba(163,32,20,.13)'}"/>`; };
+    if ((da >= 0) === (db >= 0)) { poly([[x(a.i), y(a.v)], [x(b.i), y(b.v)], [x(b.i), y(b.w)], [x(a.i), y(a.w)]], da >= 0); }
+    else { const t = da / (da - db), xc = x(a.i) + t * pas, yc = y(a.v + t * (b.v - a.v)); poly([[x(a.i), y(a.v)], [xc, yc], [x(a.i), y(a.w)]], da >= 0); poly([[xc, yc], [x(b.i), y(b.v)], [x(b.i), y(b.w)]], db >= 0); }
   }
-  // N-1 en pointillé.
   if (avec.length) {
-    s += `<polyline points="${avec.map(o => x(o.i) + ',' + y(o.m.n1.ca)).join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
-    avec.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.m.n1.ca)}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"/>`; });
+    s += `<polyline points="${avec.map(o => x(o.i) + ',' + y(o.w)).join(' ')}" fill="none" stroke="#B8B2A8" stroke-width="2" stroke-dasharray="5 4" stroke-linejoin="round"/>`;
+    avec.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.w)}" r="2.6" fill="#fff" stroke="#B8B2A8" stroke-width="1.6"/>`; });
   }
-  // La courbe, hors mois d'ouverture.
-  const pleins = S.map((m, i) => ({ m, i })).filter(o => o.m.ca != null && !o.m.ouverture);
-  s += `<polyline points="${pleins.map(o => x(o.i) + ',' + y(o.m.ca)).join(' ')}" fill="none" stroke="#8D1D2C" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`;
-  pleins.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.m.ca)}" r="3.2" fill="#8D1D2C"/>`; });
-  // Étiquettes : le meilleur mois, le plus faible, le dernier ; le mois d'ouverture en note.
-  const max = pleins.reduce((a, o) => o.m.ca > a.m.ca ? o : a), min = pleins.reduce((a, o) => o.m.ca < a.m.ca ? o : a), der = pleins[pleins.length - 1];
-  const halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
-  [[max, -10], [min, 18], [der, -10]].forEach(([o, dy]) => {
-    s += `<text x="${x(o.i)}" y="${y(o.m.ca) + dy}" font-size="10.5" text-anchor="middle" fill="#8D1D2C" style="${ft};${halo}">${k1(o.m.ca)}</text>`;
+  // La courbe, coupée là où un mois manque (un mois dont le B2B n'est pas lu en entier, par exemple).
+  let seg = [];
+  const trait = () => { if (seg.length > 1) { s += `<polyline points="${seg.join(' ')}" fill="none" stroke="${C}" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/>`; } seg = []; };
+  pleins.forEach((o, k) => { if (k && o.i !== pleins[k - 1].i + 1) { trait(); } seg.push(x(o.i) + ',' + y(o.v)); });
+  trait();
+  pleins.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.v)}" r="3.2" fill="${C}"/>`; });
+  const max = pleins.reduce((a, o) => o.v > a.v ? o : a), min = pleins.reduce((a, o) => o.v < a.v ? o : a), der = pleins[pleins.length - 1];
+  [[max, -10], [min, 18], [der, -10]].filter((e, k, L) => L.findIndex(f => f[0] === e[0]) === k).forEach(([o, dy]) => {
+    s += `<text x="${x(o.i)}" y="${y(o.v) + dy}" font-size="10.5" text-anchor="middle" fill="${C}" style="${ft};${halo}">${esc(cfg.etiq(o.v))}</text>`;
   });
   const ouv = S.findIndex(m => m.ouverture);
-  if (ouv >= 0) {
-    s += `<circle cx="${x(ouv)}" cy="${y(ymin) - 6}" r="3.6" fill="#fff" stroke="#8D1D2C" stroke-width="1.6"/>`
-      + `<text x="${x(ouv) + 7}" y="${y(ymin) - 12}" font-size="9.5" fill="#7a736a" style="${ft};${halo}">${eur(S[ouv].ca)} · ${S[ouv].jours} j</text>`;
+  if (ouv >= 0 && cfg.val(S[ouv]) != null) {
+    s += `<circle cx="${x(ouv)}" cy="${y(ymin) - 6}" r="3.6" fill="#fff" stroke="${C}" stroke-width="1.6"/><text x="${x(ouv) + 7}" y="${y(ymin) - 12}" font-size="9.5" fill="#7a736a" style="${ft};${halo}">${esc(cfg.tip(cfg.val(S[ouv])))} · ${S[ouv].jours} j</text>`;
   }
-  // Mois et écarts sous l'axe.
   const hb = H - mb + 16, hc = H - mb + 32;
   S.forEach((m, i) => {
-    const montre = !etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab) || m.n1;
-    if (montre && !(etroit && m.n1 && !['mai', 'juil.', 'sept.'].includes(m.lab) && m.lab !== 'oct.')) {
-      s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`;
-    }
-    if (m.n1 && m.ca != null) {
-      const e = (m.ca / m.n1.ca - 1) * 100, r = Math.round(e);
-      const etoile = m.n1.jours < m.jours - 2 ? '*' : '';   // la règle du cockpit : plus de 2 jours de moins
+    const montre = !etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab);
+    if (montre) { s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`; }
+    const v = cfg.val(m), w = cfg.val1(m);
+    if (v != null && w) {
+      const e = (v / w - 1) * 100, r = Math.round(e), etoile = m.n1 && m.n1.jours < m.jours - 2 ? '*' : '';
       s += `<text x="${x(i)}" y="${hc}" font-size="9.5" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
     }
   });
   if (avec.length) { s += `<text x="${ml - 8}" y="${hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>`; }
-  // Les zones de survol, une par mois.
-  S.forEach((m, i) => { if (m.ca != null) { s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP + 34}" fill="transparent"/>`; } });
+  S.forEach((m, i) => { if (cfg.val(m) != null) { s += `<rect class="hit" data-i="${i}" x="${ml + pas * i}" y="${mt}" width="${pas}" height="${hP + 34}" fill="transparent"/>`; } });
   s += `<line class="guide" x1="0" x2="0" y1="${mt}" y2="${mt + hP}" stroke="rgba(34,34,34,.25)" visibility="hidden"/></svg>`;
   zone.querySelector('svg')?.remove();
   zone.insertAdjacentHTML('beforeend', s);
   const svg = zone.querySelector('svg'), guide = svg.querySelector('.guide');
   svg.querySelectorAll('.hit').forEach(r => {
-    r.addEventListener('pointerenter', ev => {
-      const m = S[+r.dataset.i], xi = x(+r.dataset.i);
+    r.addEventListener('pointerenter', () => {
+      const m = S[+r.dataset.i], xi = x(+r.dataset.i), v = cfg.val(m), w = cfg.val1(m);
       guide.setAttribute('x1', xi); guide.setAttribute('x2', xi); guide.setAttribute('visibility', 'visible');
-      let h = `<div class="t">${esc(m.lab)} ${m.an}${m.ouverture ? ' · ouverture' : ''}</div><div>CA ${eur(m.ca)} · ${m.jours} j</div><div>${grp(m.clients)} clients · panier ${eur2(m.ca / m.clients)}</div>`;
-      if (m.n1) {
-        h += `<div>N-1 ${eur(m.n1.ca)} · ${m.n1.jours} j</div><div class="${cls(m.ca / m.n1.ca - 1)}">${pct((m.ca / m.n1.ca - 1) * 100)} face au N-1</div>`;
-        if (m.n1.jours < m.jours) { h += `<div>par jour ouvert : ${pct(((m.ca / m.jours) / (m.n1.ca / m.n1.jours) - 1) * 100)}</div>`; }
-      }
+      let h = `<div class="t">${esc(m.lab)} ${m.an}${m.ouverture ? ' · ouverture' : ''}</div><div>${esc(cfg.nom)} ${esc(cfg.tip(v))} · ${m.jours} j</div>`;
+      if (w) { h += `<div>N-1 ${esc(cfg.tip(w))}</div><div class="${cls(v / w - 1)}">${pct((v / w - 1) * 100)} face au N-1</div>`; }
       const k = W / svg.getBoundingClientRect().width;
-      bulle(zone, h, xi / k, y(Math.max(m.ca, m.n1 ? m.n1.ca : 0, ymin)) / k);
+      bulle(zone, h, xi / k, y(Math.max(v, w || 0)) / k);
     });
     r.addEventListener('pointerleave', () => { guide.setAttribute('visibility', 'hidden'); bulle(zone, null); });
   });
+}
+
+/* Les trois graphiques de l'Évolution magasin : le CA sans B2B (le comptoir), le trafic, le B2B seul. */
+const proOk = p => p && p.complet;
+function grapheEvolution() {
+  if (D.proLu) {
+    grapheMois('graphe-comptoir', { nom: 'CA comptoir', aria: 'CA du comptoir, sans le B2B, mois par mois, face au N-1',
+      val: m => m.ca != null && proOk(m.pro) ? m.ca - m.pro.ca : null, val1: m => m.n1 && proOk(m.n1pro) ? m.n1.ca - m.n1pro.ca : null,
+      axe: v => v / 1000 + ' k€', etiq: k1, tip: eur });
+    grapheMois('graphe-b2b', { nom: 'CA B2B', aria: 'CA des clients pro, mois par mois, face au N-1', couleur: '#1f5f8b', zero: true,
+      val: m => m.ca != null && proOk(m.pro) ? m.pro.ca : null, val1: m => m.n1 && proOk(m.n1pro) ? m.n1pro.ca : null,
+      axe: v => v >= 1000 ? v / 1000 + ' k€' : v + ' €', etiq: v => v >= 1000 ? k1(v) : eur(v), tip: eur });
+  } else {
+    grapheMois('graphe-comptoir', { nom: 'CA', aria: 'CA total du mois, B2B compris, face au N-1',
+      val: m => m.ca, val1: m => m.n1 ? m.n1.ca : null, axe: v => v / 1000 + ' k€', etiq: k1, tip: eur });
+  }
+  grapheMois('graphe-clients', { nom: 'Clients', aria: 'Clients du mois, face au N-1',
+    val: m => m.clients, val1: m => m.n1 ? m.n1.clients : null, axe: v => grp(v), etiq: v => grp(v), tip: v => grp(v) });
+}
+if (D.proLu) {
+  $('ev-comptoir-titre').textContent = 'CA sans B2B : le comptoir';
+  $('ev-comptoir-note').textContent = insec('Le CA total moins le B2B, les tickets des clients pro à TVA valide. Un mois dont le B2B n’est pas lu sur tous ses jours sort de la courbe.');
+} else {
+  $('ev-comptoir-titre').textContent = 'CA du mois, B2B compris';
+  $('ev-comptoir-note').textContent = insec(`En attendant la séparation comptoir / B2B, le CA total : le B2B en pèse ${dec(D.b2b.part)} % sur 12 mois.`);
+  $('graphe-b2b').hidden = true;
+  $('ev-b2b-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le CA B2B mois par mois, et avec lui le CA sans B2B : la réponse de la route /ventes/evolution du cockpit. Une fois reçue, les deux courbes se dessinent ici.')) + '</span>';
+  $('ev-b2b-completer').hidden = false;
 }
 
 /* --- Octobre à octobre --- */
