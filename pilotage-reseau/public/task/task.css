@@ -25,6 +25,8 @@ body{margin:0;background:var(--tk-fond);font-family:var(--font-ui);color:var(--i
 .tk-btn.danger{color:var(--danger);border-color:rgba(179,38,30,.4)}
 .tk-btn.ghost{background:transparent;border-color:transparent;color:var(--muted-2);text-decoration:none}
 .tk-btn.ghost:hover{background:rgba(34,34,34,.05)}
+/* Effacer, retirer : discret, rouge au survol seulement (docs/DESIGN_SYSTEM.md, « Survol d'un bouton destructeur »). */
+.tk-btn.ghost.danger:hover:not(:disabled){background:rgba(179,38,30,.07);color:var(--danger)}
 .tk-btn.mini{font-size:11px;padding:4px 9px;border-radius:7px}
 a.tk-btn{display:inline-flex;align-items:center}
 .tk-lien{border:none;background:none;padding:0;color:var(--accent);cursor:pointer;font:400 11px var(--font-ui);text-decoration:underline;text-underline-offset:2px}
