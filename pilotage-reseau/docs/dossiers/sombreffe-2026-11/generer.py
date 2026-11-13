@@ -237,6 +237,9 @@ def main():
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
+        # La note du rédacteur, en fin d'annexes, dictée le 13/11/2026 : reprise mot pour mot, l'orthographe seule corrigée.
+        'noteRedacteur': 'Privilégier une hygiène de vie saine et une activité physique par jour. '
+                         'Dire qu’on ne trouve pas le temps, c’est une excuse.',
         # Le mot d'ouverture, dicté le 13/11/2026 : repris mot pour mot, l'orthographe seule corrigée.
         'ouverture': 'Aujourd’hui, je représente les 110 personnes qui travaillent dans notre groupe : 110 personnes, dont '
                      '67 chefs et responsables de famille, qui ont des crédits et des engagements. Pour cela, je dois faire en '

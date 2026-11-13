@@ -90,6 +90,7 @@ body { margin: 0; background: var(--paper); }
 .rp-partie-titre { font-size: 22px; letter-spacing: -.01em; margin: 0 0 2px; }
 /* Le mot d'ouverture : la voix de celui qui signe le rapport, en grand, sans encadré ni gras. */
 .rp-ouverture { padding: 6px 0 4px; }
+.rp-note { margin: 0; font-size: 15px; line-height: 1.55; color: var(--ink); max-width: 62ch; }
 .rp-ouverture p { margin: 0; font-size: 18px; line-height: 1.5; letter-spacing: -.005em; color: var(--ink); max-width: 62ch; text-wrap: pretty; }
 .rp-annexes { padding-top: 8px; }
 .rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
@@ -111,7 +112,7 @@ body { margin: 0; background: var(--paper); }
   .rp { padding: 0; gap: 12px; max-width: none; }
   .rp * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .rp-carte { padding: 14px 16px; break-inside: auto; }
-  .rp-kpis, .rp-kpi, .rp-graphe, .rp-alerte, .rp-ouvert, .rp-part, .rp-table tr, .rp-points li, .rp-pistes li { break-inside: avoid; }
+  .rp-kpis, .rp-kpi, .rp-graphe, .rp-alerte, .rp-ouvert, .rp-part, .rp-table tr, .rp-points li, .rp-pistes li, #note-redacteur { break-inside: avoid; }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
@@ -328,6 +329,11 @@ body { margin: 0; background: var(--paper); }
     <h2 class="rp-h2">E · Sources et méthode</h2>
     <ul class="rp-sources" id="sources-liste"></ul>
   </section>
+
+  <section class="rp-carte" id="note-redacteur">
+    <h2 class="rp-h2">F · Note du rédacteur</h2>
+    <p class="rp-note" id="note-redacteur-texte"></p>
+  </section>
   <div class="rp-pied" id="pied"></div>
 </main>
 <script>
@@ -361,6 +367,7 @@ $('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</spa
   esc(dateL(D.soinsIntensifs)) + '. Ce rapport en est le point de départ : l’état du magasin à l’entrée, les repères à battre et ce qu’on suit chaque semaine.</span>';
 
 $('ouverture-texte').textContent = insec(D.ouverture);
+$('note-redacteur-texte').textContent = insec(D.noteRedacteur);
 
 /* --- L'essentiel --- */
 const kpi = (k, v, s, c = '') => `<div class="rp-kpi ${c}"><div class="rp-kpi-k">${esc(k)}</div><div class="rp-kpi-v">${esc(v)}</div><div class="rp-kpi-s">${esc(s)}</div></div>`;
