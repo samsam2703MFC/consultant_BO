@@ -17,6 +17,10 @@ printemps et le soleil de l'été, absents de `public/tablette/img`).
 les deux, le super bon et le tirage (décision du 12/11/2026 ; l'interrupteur de la barre ne sert qu'à la démonstration). Elle corrige deux détails de l'export : le portefeuille de l'app était coupé par la barre du bas, et les
 dessins, très fins à cette taille, ont le trait légèrement épaissi.
 
+- **Pour l'agent codeur** (13/11/2026) : `PROMPT-AGENT.md`, le brief complet du lot cockpit (tables, calcul des cases,
+  bons au panel, tirage, API, écrans, tests, questions ouvertes), et `edition-maquette.html`, l'écran d'édition de la
+  saison à construire (Fidélité › Bingo : règles, 13 semaines et leurs dessins, bons et campagnes, aperçu, coût,
+  contrôles avant publication) ; source `edition.html`, capture `edition.jpg`.
 - `bingo-maquette.html` : la maquette interactive, un seul fichier (polices, logo, QR, dessins intégrés). Réglages :
   x (2, 3 ou 4), le seuil, la liste des bons, la validité, le super bon, le food cost, le tirage (prix du pain,
   gagnants) ;

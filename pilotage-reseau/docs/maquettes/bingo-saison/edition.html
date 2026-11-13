@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1440">
+<title>Maquette — Fidélité › Bingo · édition de la saison</title>
+<style>
+@font-face{font-family:'Gotham';font-weight:400;src:url('../../../public/assets/ds/fonts/Gotham_Medium.otf') format('opentype')}
+@font-face{font-family:'Gotham';font-weight:700;src:url('../../../public/assets/ds/fonts/Gotham_Regular.otf') format('opentype')}
+@font-face{font-family:'Vank';src:url('../../../public/assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+:root{--rubis:#8D1D2C;--rubis-f:#6E1622;--abricot:#F2C9A0;--abricot-d:#F8E2CB;--encre:#1c1a17;--muet:#7a736a;--muet2:#5c5852;--pale:#B8B2A8;
+  --ligne:#e6e0d8;--papier:#faf7f2;--chip:#EDE7DE;--vert:#3f7a52;--ambre:#a35d00;--ambre-d:#F6E7CE;--sep:rgba(60,60,67,.13)}
+*{box-sizing:border-box}
+body{margin:0;min-width:1440px;background:var(--papier);color:var(--encre);font:400 13px/1.45 'Gotham',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+b,h1,h2,h3,h4{font-weight:400}
+button,input,select{font:inherit;color:inherit}
+.ill img{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(.3px 0 0 #8D1D2C) drop-shadow(-.3px 0 0 #8D1D2C) drop-shadow(0 .3px 0 #8D1D2C) drop-shadow(0 -.3px 0 #8D1D2C)}
+.blanc img{filter:brightness(0) invert(1) drop-shadow(.35px 0 0 #fff) drop-shadow(-.35px 0 0 #fff) drop-shadow(0 .35px 0 #fff) drop-shadow(0 -.35px 0 #fff)}
+
+/* La page du cockpit : rail, en-tête, onglets */
+.page{display:grid;grid-template-columns:236px minmax(0,1fr);min-height:100vh}
+.rail{background:#fff;border-right:1px solid var(--ligne);padding:18px 14px}
+.rail img{height:22px;margin:0 6px 18px}
+.rail h5{margin:16px 8px 6px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--pale);font-weight:400}
+.rail a{display:block;padding:7px 10px;border-radius:6px;color:var(--muet2);text-decoration:none;font-size:13px}
+.rail a.on{background:rgba(141,29,44,.07);color:var(--rubis)}
+.main{padding:22px 34px 90px}
+.k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muet)}
+h1{margin:4px 0 4px;font-size:26px}
+.intro{margin:0 0 16px;color:var(--muet2);max-width:900px}
+.haut{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.segc{display:inline-flex;background:var(--chip);border-radius:9px;padding:2px}
+.segc button{border:none;background:transparent;padding:6px 20px;border-radius:7px;min-width:110px;cursor:pointer}
+.segc button.on{background:#fff;color:var(--rubis)}
+.etat{margin-left:auto;font-size:12px;color:var(--muet)}
+
+/* Les saisons */
+.saisons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) 150px;gap:10px;margin-bottom:22px}
+.sa{position:relative;background:#fff;border:1px solid var(--ligne);border-radius:12px;padding:11px 14px;cursor:pointer;min-height:84px}
+.sa.on{border-color:var(--rubis);box-shadow:inset 0 0 0 1px var(--rubis)}
+.sa .ill{position:absolute;right:10px;top:10px;width:40px;height:40px;opacity:.7}
+.sa b{display:block;font-size:14px}
+.sa span{display:block;font-size:11px;color:var(--muet)}
+.sa i{display:inline-block;font-style:normal;margin-top:6px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 6px;background:var(--chip);color:var(--muet2)}
+.sa i.cours{background:rgba(63,122,82,.12);color:var(--vert)}.sa i.brou{background:var(--ambre-d);color:var(--ambre)}
+.sa.plus{display:flex;align-items:center;justify-content:center;color:var(--rubis);border-style:dashed}
+
+/* Deux colonnes */
+.cols{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:26px;align-items:start}
+.grp{margin-bottom:22px}
+.grp>h3{margin:0 0 7px 14px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muet2)}
+.grp>p.pied{margin:7px 14px 0;font-size:12px;color:var(--muet)}
+.liste{background:#fff;border-radius:14px;border:1px solid var(--ligne);overflow:hidden}
+.row{display:grid;grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:center;padding:11px 16px;border-top:1px solid var(--sep)}
+.row:first-child{border-top:none}
+.row .ic{width:30px;height:30px;border-radius:8px;background:var(--rubis);color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px}
+.row .ph{line-height:2.1}
+.row .ph small{display:block;line-height:1.4;font-size:11.5px;color:var(--muet)}
+.in{border:none;border-radius:7px;background:rgba(118,118,128,.08);padding:3px 8px;color:var(--rubis);font-variant-numeric:tabular-nums;outline:none;width:64px;text-align:right}
+.in:focus{background:#fff;box-shadow:0 0 0 1px var(--rubis)}
+.in.t{color:var(--encre);text-align:left;width:auto}
+.seg2{display:inline-flex;background:var(--chip);border-radius:7px;padding:2px;vertical-align:middle}
+.seg2 button{border:none;background:transparent;padding:2px 10px;border-radius:5px;cursor:pointer;color:var(--muet2)}
+.seg2 button.on{background:#fff;color:var(--rubis)}
+.chips{display:inline-flex;gap:5px;align-items:center;vertical-align:middle;flex-wrap:wrap}
+.chips .in{width:58px}
+.chips .x{border:none;background:none;color:var(--pale);cursor:pointer;padding:0 2px}
+.lien{border:none;background:none;color:var(--rubis);cursor:pointer;padding:0}
+.tog{width:44px;height:26px;border-radius:6px;border:none;background:#e9e9eb;position:relative;cursor:pointer}
+.tog::after{content:'';position:absolute;top:2px;left:2px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .15s}
+.tog.on{background:#34c759}.tog.on::after{left:20px}
+.avert{font-size:11.5px;color:var(--ambre)}
+.st{font-size:11.5px;color:var(--muet);text-align:right;white-space:nowrap}
+.st.ok{color:var(--vert)}.st.ko{color:var(--ambre)}
+
+/* Les semaines */
+.sem{display:grid;grid-template-columns:46px 40px minmax(0,1fr) 150px 100px 18px;gap:12px;align-items:center;padding:8px 16px;border-top:1px solid var(--sep);cursor:pointer}
+.sem:first-child{border-top:none}
+.sem:hover{background:#fdfbf8}
+.sem .n{font-size:11px;color:var(--rubis)}
+.sem .n small{display:block;color:var(--muet);font-size:10px}
+.sem .ill{width:36px;height:36px}
+.sem b{display:block;font-size:13.5px}
+.sem span{font-size:11.5px;color:var(--muet)}
+.tag{display:inline-block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 6px}
+.tag.f{background:var(--rubis);color:#fff}.tag.h{border:1px solid var(--rubis);color:var(--rubis)}
+.sem .pass{font-size:10.5px;color:var(--muet)}
+.sem .chev{color:#c7c7cc;font-size:17px}
+.sem.ouverte{background:#fdfbf8}.sem.ouverte .chev{transform:rotate(90deg)}
+.ed{padding:4px 16px 16px 74px;background:#fdfbf8;border-top:1px dashed var(--ligne)}
+.ed .ligne{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:12.5px;color:var(--muet2)}
+.ed .in.t{width:220px}
+.ed h4{margin:14px 0 6px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muet)}
+.pick{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:6px}
+.pick button{border:1px solid var(--ligne);background:#fff;border-radius:9px;padding:6px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:9px;color:var(--muet)}
+.pick button .ill{width:34px;height:34px}
+.pick button.on{border-color:var(--rubis);box-shadow:inset 0 0 0 1px var(--rubis);color:var(--rubis)}
+.pick button.manque{border-style:dashed}
+
+/* Les bons */
+.bon{display:grid;grid-template-columns:40px minmax(0,1fr) 100px 132px;gap:12px;align-items:center;padding:9px 16px;border-top:1px solid var(--sep)}
+.bon:first-child{border-top:none}
+.bon .ill{width:38px;height:38px;border-radius:8px;background:var(--rubis);padding:4px}
+.bon .ill.sup{background:var(--rubis-f)}
+.bon b{display:block;font-size:13.5px}
+.bon span{font-size:11.5px;color:var(--muet)}
+.bon .v{font-size:15px;color:var(--rubis);text-align:right}
+.bon .c{font-size:11.5px;color:var(--vert);text-align:right}
+
+/* La colonne de droite */
+.aside{position:sticky;top:16px}
+.card{background:#fff;border:1px solid var(--ligne);border-radius:14px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muet2);display:flex;justify-content:space-between;align-items:center}
+.apercu{border:1.4px solid var(--rubis);border-radius:4px;display:grid;overflow:hidden}
+.ap{min-height:52px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;box-shadow:inset -1px -1px 0 var(--rubis);padding:3px;text-align:center}
+.ap .ill{width:24px;height:24px}
+.ap span{font-size:7.5px;line-height:1.1;color:var(--encre)}
+.ap.f{background:var(--abricot-d)}
+.ap.b{background:var(--rubis);color:#fff}.ap.b span{color:#fff}
+.ap.m{background:var(--rubis-f);flex-direction:row;gap:8px}.ap.m span{color:#fff;font-size:9px}
+.ap.m b{font:400 13px/1 'Vank','Gotham';color:#fff;display:block}
+.ap-t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px}
+.ap-t b{font:400 26px/1 'Vank','Gotham';color:var(--rubis)}
+.ap-t span{font-size:10.5px;color:var(--muet)}
+.couts{width:100%;border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums}
+.couts td{padding:4px 0;border-top:1px solid var(--ligne);color:var(--muet2)}
+.couts td+td{text-align:right;white-space:nowrap;padding-left:8px}
+.couts tr.t td{color:var(--encre)}
+.couts .vert{color:var(--vert)}
+.ech{display:flex;align-items:flex-end;gap:4px;height:84px;margin:4px 0 10px}
+.ech div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.ech i{display:block;width:100%;border-radius:4px 4px 1px 1px;background:var(--rubis)}
+.ech .s i{background:var(--rubis-f)}.ech .t i{background:repeating-linear-gradient(135deg,var(--rubis) 0 5px,var(--rubis-f) 5px 10px)}
+.ech b{font-size:9.5px;color:var(--rubis);white-space:nowrap;margin-bottom:2px}
+.ctrl div{display:grid;grid-template-columns:18px minmax(0,1fr);gap:6px;font-size:12px;padding:4px 0;border-top:1px solid var(--ligne)}
+.ctrl div:first-child{border-top:none}
+.ctrl .ok{color:var(--vert)}.ctrl .ko{color:var(--ambre)}
+
+/* La barre de publication */
+.dock{position:sticky;bottom:18px;margin:10px auto 0;width:max-content;display:flex;align-items:center;gap:16px;background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border:1px solid var(--ligne);border-radius:10px;padding:7px 8px 7px 18px;z-index:5}
+.dock span{color:var(--muet2)}
+.cta{border:none;background:var(--rubis);color:#fff;border-radius:6px;padding:8px 16px;cursor:pointer}
+.cta[disabled]{opacity:.45;cursor:default}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="bingo.js"></script>
+<script>
+/* Maquette de l'écran d'édition d'une saison du bingo (cockpit, ERP franchisé › Fidélité › Bingo), 13/11/2026.
+ * Elle sert de référence visuelle au brief de l'agent codeur (PROMPT-AGENT.md). Données de départ : bingo.js, celles de
+ * la maquette du client (planche.html). Tout se modifie sur place ; l'aperçu, le coût et les contrôles suivent. Rien
+ * n'est enregistré : « Publier » montre seulement ce que l'écran réel fera. */
+const LOGO = '../../../public/assets/img/logo.png';
+const B = window.BINGO, ILL = B.ILL, NOMS = Object.keys(ILL);
+const NS = B.SEMAINES.length;
+const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+const eur = v => nf(v, v % 1 ? 2 : 0) + ' €';
+const ord = n => n === 1 ? '1re' : n + 'e';
+const copie = o => JSON.parse(JSON.stringify(o));
+const ETIQ = { 'artboard-4': 'étincelle', 'bread-1': 'baguette', 'bread-2': 'pain ovale', 'cake-slice': 'part de gâteau', cake: 'gâteau', chocolat: 'chocolat',
+  cookies: 'biscuits', crepes: 'crêpes', croissant: 'croissant', cupcake: 'cupcake', galette: 'galette', hiver: 'flocon', noel: 'sapin', printemps: 'fleur',
+  'saint-nicolas': 'saint Nicolas', tarte: 'tarte', tartelette: 'tartelette', valentin: 'cœurs', ete: 'soleil', automne: 'feuille' };
+
+/* L'état : la saison telle qu'enregistrée (`pub`), et le brouillon qu'on édite (`S`). La semaine 9 est en cours :
+ * les semaines passées sont figées (leur seuil et leur thème ne bougent plus). */
+const pub = {
+  seuil: B.REGLES.seuil, x: B.REGLES.tousLes, valeurs: B.REGLES.bon.valeurs.slice(), validite: B.REGLES.bon.validite,
+  superBon: B.REGLES.superBon.valeur, tirage: true, prix: B.REGLES.tirage.prix, gagnants: 1, portee: 'reseau', leTirage: '2027-02-22',
+  fc: B.REGLES.foodCost, semaines: copie(B.SEMAINES), bons: B.BONS.map(b => ({ nom: b.nom, motif: b.motif })),
+  campagnes: { 4.9: 4120, 9.9: 4121, 19.9: 4122, 29.9: null, 49.9: null },
+};
+let S = copie(pub), ouverte = 11, envoi = '';
+const EN_COURS = 9;
+
+/* --- Ce qui se déduit ------------------------------------------------------------------------ */
+const nBons = () => Math.floor(NS / S.x);
+const marche = () => { const V = S.valeurs, n = V.length; return n > 1 ? V[n - 1] - V[n - 2] : V[0]; };
+const valeurBon = i => Math.round((i <= S.valeurs.length ? S.valeurs[i - 1] : S.valeurs[S.valeurs.length - 1] + (i - S.valeurs.length) * marche()) * 100) / 100;
+const cout = v => Math.round(v * S.fc) / 100;
+const bonDe = k => B.BONS.find(b => k <= b.jusqua) || B.BONS[B.BONS.length - 1];
+const modifs = () => { let n = 0; for (const k of Object.keys(S)) { if (JSON.stringify(S[k]) !== JSON.stringify(pub[k])) { n++; } } return n; };
+function controles(){
+  const out = [];
+  const croissant = Array.from({ length: nBons() }, (_, i) => valeurBon(i + 1)).every((v, i, a) => !i || v > a[i - 1]);
+  out.push([croissant, 'Chaque bon dépasse le précédent (' + Array.from({ length: nBons() }, (_, i) => eur(valeurBon(i + 1))).join(' → ') + ')']);
+  out.push([S.superBon > valeurBon(nBons()), 'Le super bon (' + eur(S.superBon) + ') dépasse le dernier bon (' + eur(valeurBon(nBons())) + ')']);
+  out.push([S.semaines.every(s => s.titre.trim() && s.ill), 'Les ' + NS + ' semaines ont un titre et un dessin']);
+  const horsSemaine = S.semaines.filter(s => s.fete && s.jour && !feteDansSemaine(s));
+  out.push([!horsSemaine.length, horsSemaine.length ? 'Fête hors de sa semaine : ' + horsSemaine.map(s => 'S' + s.n).join(', ') : 'Chaque fête tombe dans sa semaine']);
+  const valeursCamp = Array.from({ length: nBons() }, (_, i) => valeurBon(i + 1)).concat([S.superBon]);
+  const sans = valeursCamp.filter(v => !S.campagnes[v]);
+  out.push([!sans.length, sans.length ? sans.length + ' campagne' + (sans.length > 1 ? 's' : '') + ' du panel à relier (' + sans.map(eur).join(', ') + ')' : 'Une campagne du panel par valeur de bon']);
+  out.push([S.superBon !== 49.9, S.superBon === 49.9 ? 'Super bon : 49,90 € est provisoire, montant à confirmer' : 'Super bon confirmé']);
+  return out;
+}
+/** Une fête dans sa semaine : « 06/12 » entre « 30/11 » et « 06/12 » (l'année suit l'hiver). */
+function feteDansSemaine(s){
+  const j = s.jour.match(/(\d{2})\/(\d{2})$/); if (!j) { return true; }
+  const d = v => { const [dd, mm] = v.split('/').map(Number); return (mm < 7 ? 2027 : 2026) * 10000 + mm * 100 + dd; };
+  return d(j[1] + '/' + j[2]) >= d(s.du) && d(j[1] + '/' + j[2]) <= d(s.au);
+}
+
+/* --- Les gestes ------------------------------------------------------------------------------ */
+function poser(k, v){
+  if (k === 'x') { S.x = +v; }
+  else if (k === 'tirage') { S.tirage = !S.tirage; }
+  else if (k === 'portee') { S.portee = v; }
+  else if (k === 'leTirage') { const m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/); if (m) { S.leTirage = m[3] + '-' + m[2] + '-' + m[1]; } }
+  else if (/^v\d+$/.test(k)) { const i = +k.slice(1), n = parseFloat(String(v).replace(',', '.')); if (n > 0) { S.valeurs[i] = Math.round(n * 100) / 100; } }
+  else { const n = parseFloat(String(v).replace(',', '.')); if (n > 0) { S[k] = k === 'gagnants' || k === 'validite' ? Math.round(n) : Math.round(n * 100) / 100; } }
+  envoi = ''; rendre();
+}
+const A = {
+  x: e => poser('x', e.dataset.v), tirage: () => poser('tirage'), portee: e => poser('portee', e.dataset.v),
+  ajouterBon: () => { S.valeurs.push(Math.round((S.valeurs[S.valeurs.length - 1] + marche()) * 100) / 100); rendre(); },
+  retirerBon: e => { if (S.valeurs.length > 1) { S.valeurs.splice(+e.dataset.i, 1); } rendre(); },
+  ouvrir: e => { const n = +e.dataset.n; ouverte = ouverte === n ? null : n; rendre(); },
+  dessin: e => { const s = S.semaines.find(x => x.n === +e.dataset.n); if (s) { s.ill = e.dataset.d; } rendre(); },
+  type: e => { const s = S.semaines.find(x => x.n === +e.dataset.n); if (s) { if (e.dataset.v === 'fete') { s.fete = s.fete || s.titre; s.jour = s.jour || s.au; s.sous = s.sous === 'produit de la semaine' ? '' : s.sous; } else { delete s.fete; delete s.jour; s.sous = 'produit de la semaine'; } } rendre(); },
+  saison: e => { envoi = e.dataset.v === 'Hiver' ? '' : 'Maquette : seule la saison d’hiver est remplie.'; rendre(); },
+  annuler: () => { S = copie(pub); envoi = ''; rendre(); },
+  publier: () => { envoi = 'Publié (maquette) : ' + modifs() + ' modification' + (modifs() > 1 ? 's' : '') + '. L’écran réel enregistre la saison, recrée les cases à venir et journalise.'; rendre(); },
+};
+document.addEventListener('click', e => { const el = e.target.closest('[data-a]'); if (el && A[el.dataset.a]) { A[el.dataset.a](el); } });
+document.addEventListener('change', e => {
+  const el = e.target.closest('[data-k]'); if (el) { poser(el.dataset.k, el.value); return; }
+  const w = e.target.closest('[data-w]'); if (w) { const s = S.semaines.find(x => x.n === +w.dataset.n); if (s) { s[w.dataset.w] = w.value; } rendre(); }
+  const b = e.target.closest('[data-bn]'); if (b) { S.bons[+b.dataset.bn].nom = b.value; rendre(); }
+});
+
+/* --- Le rendu -------------------------------------------------------------------------------- */
+const inp = (k, v, w) => `<input class="in" data-k="${k}" value="${nf(v, v % 1 ? 2 : 0)}" style="width:${w || 64}px">`;
+function vueRegles(){
+  const ctrl = controles();
+  return `<div class="grp"><h3>Les règles de la saison</h3><div class="liste">
+    <div class="row"><span class="ic">€</span><div class="ph">Une case par semaine dès ${inp('seuil', S.seuil)} € d’achats dans la semaine, en une ou plusieurs fois.
+      <small>Lundi → dimanche, heure de Bruxelles. Tickets rattachés à la carte (app ou carte QR), hors tickets pro. Les semaines passées gardent leur seuil.</small></div><span class="st">${S.seuil !== pub.seuil ? 'modifié' : ''}</span></div>
+    <div class="row"><span class="ic">x</span><div class="ph">Toutes les <span class="seg2">${[2, 3, 4].map(v => `<button data-a="x" data-v="${v}" class="${v === S.x ? 'on' : ''}">${v}</button>`).join('')}</span> cases cochées, un bon : ${nBons()} bons sur ${NS} semaines, à la ${Array.from({ length: nBons() }, (_, i) => ord((i + 1) * S.x)).join(', la ')} case.</div><span></span></div>
+    <div class="row"><span class="ic">↗</span><div class="ph">Les bons, chacun plus gros que le précédent :
+      <span class="chips">${S.valeurs.map((v, i) => `<input class="in" data-k="v${i}" value="${nf(v, 2)}"><button class="x" data-a="retirerBon" data-i="${i}" title="Retirer">×</button>`).join('')}<button class="lien" data-a="ajouterBon">+ un bon</button></span> €,
+      valables ${inp('validite', S.validite, 44)} jours dès le lendemain.
+      <small>${nBons() > S.valeurs.length ? 'Plus de bons que de valeurs : la dernière marche se répète (' + Array.from({ length: nBons() - S.valeurs.length }, (_, i) => eur(valeurBon(S.valeurs.length + i + 1))).join(', ') + ').' : 'Au-delà de la liste, la dernière marche se répète.'}</small></div><span class="st ${ctrl[0][0] ? 'ok' : 'ko'}">${ctrl[0][0] ? 'en ordre' : 'à corriger'}</span></div>
+    <div class="row"><span class="ic">13</span><div class="ph">Carte pleine (${NS} / ${NS}) : le super bon cadeau de ${inp('superBon', S.superBon)} €, en plus des bons.
+      ${S.superBon === 49.9 ? '<small class="avert">49,90 € est provisoire : montant à confirmer par Sam.</small>' : '<small>Il doit dépasser le dernier bon.</small>'}</div><span class="st ${ctrl[1][0] ? 'ok' : 'ko'}">${ctrl[1][0] ? 'au-dessus du dernier bon' : 'trop petit'}</span></div>
+    <div class="row"><span class="ic">1 an</span><div class="ph">Carte pleine : le tirage au sort d’<b>1 an de pain</b>, un pain par jour à ${inp('prix', S.prix, 52)} €, ${inp('gagnants', S.gagnants, 40)} gagnant${S.gagnants > 1 ? 's' : ''}
+      <span class="seg2">${[['reseau', 'pour le réseau'], ['magasin', 'par magasin']].map(([v, l]) => `<button data-a="portee" data-v="${v}" class="${v === S.portee ? 'on' : ''}">${l}</button>`).join('')}</span>, le <input class="in t" style="width:96px" data-k="leTirage" value="${S.leTirage.slice(8, 10)}/${S.leTirage.slice(5, 7)}/${S.leTirage.slice(0, 4)}">.
+      <small>Le lundi où la carte suivante arrive. Règlement à faire valider avant le lancement.</small></div><button class="tog${S.tirage ? ' on' : ''}" data-a="tirage" title="Tirage au sort"></button></div>
+    <div class="row"><span class="ic">%</span><div class="ph">Food cost ${inp('fc', S.fc, 44)} % — pour le coût réel des cadeaux (jamais montré au client).</div><span></span></div>
+  </div></div>`;
+}
+function vueSemaines(){
+  return `<div class="grp"><h3>Les ${NS} semaines · Hiver 2026 – 2027</h3><div class="liste">${S.semaines.map(s => {
+    const passee = s.n < EN_COURS, on = ouverte === s.n;
+    const ligne = `<div class="sem${on ? ' ouverte' : ''}" data-a="ouvrir" data-n="${s.n}"><span class="n">S${s.n}<small>${s.du} – ${s.au}</small></span><div class="ill">${ILL[s.ill] || ''}</div>
+      <div><b>${s.titre}</b><span>${s.sous !== 'produit de la semaine' ? s.sous : 'produit de la semaine'}</span></div>
+      <span>${s.fete ? `<span class="tag f">Fête · ${s.jour}</span>` : '<span class="tag h">À l’honneur</span>'}</span>
+      <span class="pass">${passee ? 'passée · figée' : (s.n === EN_COURS ? 'en cours' : 'à venir')}</span><span class="chev">›</span></div>`;
+    if (!on) { return ligne; }
+    const fige = passee ? ' disabled' : '';
+    return ligne + `<div class="ed">
+      ${passee ? '<div class="ligne avert">Semaine passée : ses cases sont cochées, son thème ne change plus.</div>' : ''}
+      <div class="ligne">Titre <input class="in t" data-w="titre" data-n="${s.n}" value="${s.titre}"${fige}> Sous-titre <input class="in t" data-w="sous" data-n="${s.n}" value="${s.sous === 'produit de la semaine' ? '' : s.sous}" placeholder="produit de la semaine"${fige}></div>
+      <div class="ligne">Type <span class="seg2"><button data-a="type" data-n="${s.n}" data-v="fete" class="${s.fete ? 'on' : ''}"${fige}>Fête</button><button data-a="type" data-n="${s.n}" data-v="honneur" class="${s.fete ? '' : 'on'}"${fige}>À l’honneur</button></span>
+        ${s.fete ? `Fête <input class="in t" style="width:170px" data-w="fete" data-n="${s.n}" value="${s.fete}"${fige}> le <input class="in t" style="width:90px" data-w="jour" data-n="${s.n}" value="${s.jour}"${fige}>` : 'Produit mis en avant en vitrine et sur les réseaux'}</div>
+      <h4>Le dessin · design system</h4>
+      <div class="pick">${NOMS.map(d => `<button data-a="dessin" data-n="${s.n}" data-d="${d}" class="${d === s.ill ? 'on' : ''}"${fige}><span class="ill">${ILL[d]}</span>${ETIQ[d] || d}</button>`).join('')}</div>
+      <div class="ligne"><span class="avert">Pas encore dans public/tablette/img (560 px) : crêpes, étincelle, gâteau, fleur, soleil — à verser au design system.</span></div>
+    </div>`;
+  }).join('')}</div><p class="pied">Une ligne s’ouvre d’un clic. Les semaines passées sont figées ; la semaine en cours se modifie encore, sans toucher aux cases déjà cochées.</p></div>`;
+}
+function vueBons(){
+  const L = Array.from({ length: nBons() }, (_, i) => ({ i, k: (i + 1) * S.x, v: valeurBon(i + 1), b: S.bons[i] || { nom: bonDe((i + 1) * S.x).nom, motif: bonDe((i + 1) * S.x).motif } }));
+  return `<div class="grp"><h3>Les bons et le super bon</h3><div class="liste">${L.map(o => `<div class="bon"><div class="ill blanc">${ILL[o.b.motif]}</div>
+      <div><input class="in t" style="width:200px" data-bn="${o.i}" value="${o.b.nom}"><span> · à la ${ord(o.k)} case · valable ${S.validite} jours</span></div>
+      <span class="v">${eur(o.v)}</span><span class="c">coût ${eur(cout(o.v))}<br>${S.campagnes[o.v] ? 'campagne ' + S.campagnes[o.v] : '<span class="avert">campagne à relier</span>'}</span></div>`).join('')}
+    <div class="bon"><div class="ill sup blanc">${ILL.cake}</div><div><b>Super bon cadeau</b><span>à la ${NS}e case, carte pleine · valable ${S.validite} jours</span></div>
+      <span class="v">${eur(S.superBon)}</span><span class="c">coût ${eur(cout(S.superBon))}<br>${S.campagnes[S.superBon] ? 'campagne ' + S.campagnes[S.superBon] : '<span class="avert">campagne à relier</span>'}</span></div>
+  </div><p class="pied">Chaque valeur de bon a sa campagne au panel (codes uniques, une utilisation) : le cockpit y crée le code du client quand la case le débloque, comme le bon du « déjà venu » en caisse.</p></div>`;
+}
+function vueApercu(){
+  const cells = [];
+  S.semaines.forEach((s, i) => { cells.push(`<div class="ap${s.fete ? ' f' : ''}"><div class="ill">${ILL[s.ill] || ''}</div><span>${s.titre}</span></div>`);
+    if ((i + 1) % S.x === 0) { const b = (i + 1) / S.x; cells.push(`<div class="ap b"><div class="ill blanc">${ILL[(S.bons[b - 1] || bonDe((i + 1))).motif]}</div><span>${eur(valeurBon(b))}</span></div>`); } });
+  const r = NS % S.x, span = r ? S.x + 1 - r : S.x + 1;
+  cells.push(`<div class="ap m" style="grid-column:span ${span}"><div class="ill blanc">${ILL.cake}</div><div><span>${NS} / ${NS} · ${eur(S.superBon)}</span><b>SUPER BON</b></div></div>`);
+  return `<div class="card"><h3>Aperçu de la carte <span style="text-transform:none;letter-spacing:0;color:var(--muet)">A6 · comme imprimée</span></h3>
+    <div class="ap-t"><b>BINGO d’hiver</b><span>dès ${eur(S.seuil)} / semaine</span></div>
+    <div class="apercu" style="grid-template-columns:repeat(${S.x + 1},minmax(0,1fr))">${cells.join('')}</div>
+    ${S.tirage ? `<p style="margin:8px 0 0;font-size:11px;color:var(--rubis)">Carte pleine : tirage au sort d’1 an de pain le ${S.leTirage.slice(8, 10)}/${S.leTirage.slice(5, 7)}.</p>` : ''}</div>`;
+}
+function vueCout(){
+  const V = Array.from({ length: nBons() }, (_, i) => valeurBon(i + 1)), vente = V.reduce((a, v) => a + v, 0) + S.superBon;
+  const reel = cout(vente), mini = Math.round(NS * S.seuil * 100) / 100, marge = Math.round(mini * (100 - S.fc)) / 100, lot = S.prix * 365 * S.gagnants;
+  const marches = V.map(v => ['', eur(v)]).concat([['s', eur(S.superBon)]]).concat(S.tirage ? [['t', '1 an']] : []);
+  return `<div class="card"><h3>Coût · client qui ne manque aucune semaine</h3>
+    <div class="ech">${marches.map(([c, l], i) => `<div class="${c}"><b>${l}</b><i style="height:${Math.round(12 + 60 * (i + 1) / marches.length)}px"></i></div>`).join('')}</div>
+    <table class="couts"><tr><td>Bons + super bon, en vente</td><td>${eur(vente)}</td></tr>
+      <tr class="t"><td>Coût réel à ${nf(S.fc)} % de food cost</td><td>${eur(reel)}</td></tr>
+      <tr><td>Achats minimum (${NS} × ${eur(S.seuil)}) · marge brute</td><td>${eur(mini)} · ${eur(marge)}</td></tr>
+      <tr class="t"><td>Part des achats minimum · marge qui reste</td><td>${nf(100 * reel / mini, 1)} % · <span class="vert">${eur(Math.round((marge - reel) * 100) / 100)}</span></td></tr>
+      ${S.tirage ? `<tr><td>Tirage (${S.gagnants} gagnant${S.gagnants > 1 ? 's' : ''}, ${S.portee === 'reseau' ? 'réseau' : 'par magasin'})</td><td>${eur(lot)} · coût ${eur(cout(lot))}${S.portee === 'magasin' ? ' par magasin' : ''}</td></tr>` : ''}</table></div>`;
+}
+function vueControles(){
+  return `<div class="card"><h3>Avant de publier</h3><div class="ctrl">${controles().map(([ok, t]) => `<div><span class="${ok ? 'ok' : 'ko'}">${ok ? '✓' : '!'}</span><span>${t}</span></div>`).join('')}</div></div>`;
+}
+/* Un rendu à la fois : le champ en cours de saisie perd d'abord le focus (son « change » passe avant), un rendu
+ * demandé pendant le rendu est ignoré — il est déjà pris en compte. */
+let enRendu = false;
+function rendre(){
+  if (enRendu) { return; }
+  enRendu = true;
+  try {
+    if (document.activeElement && document.activeElement !== document.body) { document.activeElement.blur(); }
+    rendreVraiment();
+  } finally { enRendu = false; }
+}
+function rendreVraiment(){
+  const n = modifs(), bloquant = controles().slice(0, 4).some(c => !c[0]);
+  document.getElementById('app').innerHTML = `<div class="page">
+    <nav class="rail"><img src="${LOGO}" alt="L’Atelier by"><h5>ERP franchisé</h5>
+      <a>Fiche & scoring</a><a>Promotions</a><a>Newsletter</a><a class="on">Fidélité</a><a>Pointages</a><a>Caisse</a></nav>
+    <main class="main">
+      <div class="k">ERP franchisé › Fidélité › Bingo</div><h1>Fidélité</h1>
+      <p class="intro">Le bingo de saison : une carte par trimestre, une case par semaine cochée toute seule au seuil d’achats, un bon de plus en plus gros toutes les x cases, et à la carte pleine le super bon et le tirage au sort. Ici, la saison se règle et se publie.</p>
+      <div class="haut"><div class="segc"><button>Programme</button><button>Clients</button><button>En caisse</button><button class="on">Bingo</button></div>
+        <span class="etat">Hiver 2026 – 2027 · publié le 16/11/2026 · semaine ${EN_COURS} sur ${NS} en cours</span></div>
+      <div class="saisons">${B.SAISONS.map((s, i) => `<div class="sa${i === 0 ? ' on' : ''}" data-a="saison" data-v="${s.nom}"><div class="ill">${ILL[s.ill]}</div><b>${s.nom} ${s.du.slice(6)}${s.nom === 'Hiver' ? ' – 27' : ''}</b><span>${s.du.slice(0, 5)} → ${s.au.slice(0, 5)}</span>
+        <i class="${i === 0 ? 'cours' : (i === 1 ? 'brou' : '')}">${i === 0 ? 'en cours' : (i === 1 ? 'brouillon' : 'à préparer')}</i></div>`).join('')}<div class="sa plus">+ Nouvelle saison</div></div>
+      ${envoi ? `<p class="avert" style="margin:-8px 0 14px">${envoi}</p>` : ''}
+      <div class="cols"><div>${vueRegles()}${vueSemaines()}${vueBons()}</div><aside class="aside">${vueApercu()}${vueCout()}${vueControles()}</aside></div>
+    <div class="dock"><span>${n ? n + ' réglage' + (n > 1 ? 's' : '') + ' modifié' + (n > 1 ? 's' : '') + ', pas encore publié' + (n > 1 ? 's' : '') : 'Saison à jour'}</span><button class="lien" data-a="annuler"${n ? '' : ' disabled'}>Annuler</button><button class="cta" data-a="publier"${n && !bloquant ? '' : ' disabled'}>Publier la saison</button></div>
+    </main></div>`;
+}
+rendre();
+</script>
+</body>
+</html>

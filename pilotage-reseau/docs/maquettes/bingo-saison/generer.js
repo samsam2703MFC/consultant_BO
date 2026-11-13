@@ -6,7 +6,8 @@
  *    (ill/, ceux de la version Claude Design de Sam) intégrés — un seul fichier, qui s'ouvre partout.
  * 2. L'ouvre tel quel (file://) et joue un parcours : un ticket coche la case de la semaine ; deux semaines plus
  *    tard, la 9e case débloque le 3e bon. Échoue si la page lève une erreur ou si une ressource manque.
- * 3. Écrit les captures en densité 2 : planche.jpg (l'état de départ, le 14 janvier), carte.jpg, app.jpg,
+ * 3. Fait de même pour l'écran d'édition du cockpit (edition.html → edition-maquette.html, edition.jpg).
+ * 4. Écrit les captures en densité 2 : planche.jpg (l'état de départ, le 14 janvier), carte.jpg, app.jpg,
  *    app-case-cochee.jpg, app-bon-debloque.jpg et app-tirage.jpg (la carte pleine inscrite au tirage).
  * Les données et le choix des dessins sont dans bingo.js ; la mise en page et l'interaction dans planche.html.
  */
@@ -41,7 +42,9 @@ function fichiersDessins(){
       IMG[f.replace(/\.png$/, '')] = 'data:image/png;base64,' + b64(plein);
     }
 
-    let html = fs.readFileSync(path.join(ICI, 'planche.html'), 'utf8');
+    /** Une page de la maquette en un seul fichier : polices, logo, bibliothèque QR, bingo.js et dessins intégrés. */
+    const autonome = (source, cible) => {
+    let html = fs.readFileSync(path.join(ICI, source), 'utf8');
     html = html.replace(/url\('\.\.\/\.\.\/\.\.\/public\/assets\/([^']+)'\)/g, (m, rel) => {
       const f = path.join(ASSETS, rel);
       return `url('data:${MIME[path.extname(f)]};base64,${b64(f)}')`;
@@ -51,9 +54,12 @@ function fichiersDessins(){
     html = html.replace('<script src="../../../public/assets/vendor/qrcode/qrcode.js"></script>', () => enLigne(path.join(ASSETS, 'vendor/qrcode/qrcode.js')));
     html = html.replace('<script src="bingo.js"></script>', () => '<script>window.BINGO_IMG = ' + JSON.stringify(IMG) + ';</script>\n' + enLigne(path.join(ICI, 'bingo.js')));
     if (/url\('\.\.\/|<script src=/.test(html)) { throw new Error('une ressource reste en lien relatif dans le fichier autonome'); }
-    const AUTONOME = path.join(ICI, 'bingo-maquette.html');
-    fs.writeFileSync(AUTONOME, html);
-    console.log('bingo-maquette.html :', Math.round(html.length / 1024), 'Ko ·', fichiers.length, 'dessins');
+    fs.writeFileSync(path.join(ICI, cible), html);
+    console.log(cible + ' :', Math.round(html.length / 1024), 'Ko ·', fichiers.length, 'dessins');
+    return path.join(ICI, cible);
+    };
+    const AUTONOME = autonome('planche.html', 'bingo-maquette.html');
+    const EDITION = autonome('edition.html', 'edition-maquette.html');
 
     /* 2 et 3. Le parcours et les captures, sur le fichier autonome. */
     const p = await b.newPage({ viewport: { width: 1680, height: 1100 }, deviceScaleFactor: 2 });
@@ -125,10 +131,29 @@ function fichiersDessins(){
     // Sans tirage : la case du super bon reste, le bandeau et la carte du tirage partent.
     await p.locator('[data-r="tirage"]').uncheck();
     if (await p.locator('.tir, .tirage-ca').count()) { erreurs.push('le tirage reste affiché une fois coupé'); }
+    // L'écran d'édition (cockpit) : il s'ouvre seul, la ligne de la Chandeleur montre les crêpes ; changer x refait la
+    // grille de l'aperçu ; un bon plus petit que le précédent bloque la publication.
+    const e = await b.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
+    e.on('pageerror', x => erreurs.push('édition : ' + x.message));
+    e.on('requestfailed', r => erreurs.push('édition, ressource manquante : ' + r.url().slice(0, 100)));
+    await e.goto('file://' + EDITION, { waitUntil: 'load' });
+    await e.evaluate(() => document.fonts.ready);
+    await e.waitForTimeout(300);
+    if (await e.evaluate(() => [...document.images].filter(i => !i.complete || !i.naturalWidth).length)) { erreurs.push('édition : image(s) non chargée(s)'); }
+    if ((await e.locator('.pick button.on').innerText()).trim() !== 'crêpes') { erreurs.push('édition : la Chandeleur ne montre pas les crêpes'); }
+    // Une fenêtre aussi haute que la page : la barre de publication (collée en bas de l'écran) reste à sa place, en bas.
+    await e.setViewportSize({ width: 1440, height: await e.evaluate(() => document.documentElement.scrollHeight) });
+    await e.screenshot({ path: path.join(ICI, 'edition.jpg'), fullPage: true, type: 'jpeg', quality: 90 });
+    await e.setViewportSize({ width: 1440, height: 1000 });
+    await e.locator('.seg2 [data-a="x"][data-v="4"]').click();
+    if ((await e.locator('.apercu .ap.b').count()) !== 3) { erreurs.push('édition : x = 4 ne donne pas 3 bons dans l’aperçu'); }
+    await e.locator('[data-k="v1"]').fill('3'); await e.locator('[data-k="v1"]').dispatchEvent('change');
+    if (!(await e.locator('.cta[disabled]').count())) { erreurs.push('édition : un bon plus petit que le précédent laisse publier'); }
+    await e.close();
     console.log('parcours :', t1.replace(/\s+/g, ' ').slice(0, 70), '|', t2.replace(/\s+/g, ' ').slice(0, 70), '|', t3.replace(/\s+/g, ' ').slice(0, 90));
   } finally {
     await b.close();
   }
   if (erreurs.length) { console.error('ÉCHEC :\n- ' + erreurs.join('\n- ')); process.exit(1); }
-  console.log('captures écrites : planche, carte, app, app-case-cochee, app-bon-debloque, app-tirage');
+  console.log('captures écrites : planche, carte, app, app-case-cochee, app-bon-debloque, app-tirage, edition');
 })();
