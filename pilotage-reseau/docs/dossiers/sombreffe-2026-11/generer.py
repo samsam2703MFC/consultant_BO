@@ -35,6 +35,10 @@ PNL_MOIS = ICI / 'pnl-mois.json'
 B2B_CLIENTS = ICI / 'b2b-clients.csv'
 # - ventes-evolution.json : la réponse de GET /api/cockpit/ventes/evolution (le B2B de chaque mois et de son N-1).
 EVOLUTION_PRO = ICI / 'ventes-evolution.json'
+# - b2b-detail.json : le B2B par société et par mois, regroupé par regrouper_b2b.py depuis /exploitation/pro/detail.
+#   Il prime sur /ventes/evolution pour les mois qu'il couvre en entier : relu ticket par ticket, il corrige les mois
+#   que le relevé gravé du cockpit compte à zéro (août et septembre 2026, constaté le 13/11/2026).
+B2B_DETAIL = ICI / 'b2b-detail.json'
 SHOP = '5'
 
 # Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
@@ -83,6 +87,11 @@ def main():
                 return {'ca': p['ca'], 'clients': p['clients'], 'complet': int(p.get('joursLus') or 0) >= int(jours or 0)} if p else None
             n1 = x.get('n1') or {}
             pro[x['mois']] = {'n': lu(x.get('pro'), x.get('jours')), 'n1': lu(n1.get('pro'), n1.get('jours')) if n1 else None}
+    detail = json.loads(B2B_DETAIL.read_text(encoding='utf-8')) if B2B_DETAIL.exists() else None
+    if detail:
+        for ym, m in detail['mois'].items():
+            if m['jours'] >= m['joursMois']:
+                pro.setdefault(ym, {'n': None, 'n1': None})['n'] = {'ca': m['ca'], 'clients': m['tickets'], 'complet': True, 'source': 'detail'}
     # Les mois du graphique : de janvier 2025 (avant l'ouverture) à octobre 2026.
     serie = []
     for an in (2025, 2026):
@@ -140,6 +149,13 @@ def main():
     douze = [k for k in sorted(mois) if '2025-11' <= k <= '2026-10']
     ca12 = sum(mois[k]['ca'] for k in douze)
     b2b12 = ca12 * COCKPIT['partB2b'] / 100
+    # Corrigée si le B2B des 12 mois est lu en entier (copie de caisse, puis détail jour par jour) : le cockpit compte
+    # août et septembre 2026 à zéro alors que les tickets du panel en portent (constaté le 13/11/2026).
+    lus12 = [(pro.get(k) or {}).get('n') for k in douze]
+    b2bCorrige = all(p and p['complet'] for p in lus12)
+    partB2b = COCKPIT['partB2b']
+    if b2bCorrige:
+        b2b12 = sum(p['ca'] for p in lus12); partB2b = b2b12 / ca12 * 100
     # L'écart de septembre-octobre : le CA réel moins celui qu'auraient fait les mêmes clients au panier du N-1.
     ecarts = []
     for k in ('2026-09', '2026-10'):
@@ -246,7 +262,7 @@ def main():
 
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
-        'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'seuilPersonnel': SEUIL_PERSONNEL,
+        'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
@@ -270,7 +286,7 @@ def main():
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
-        'b2b': {'part': COCKPIT['partB2b'], 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
+        'b2b': {'part': partB2b, 'partCockpit': COCKPIT['partB2b'], 'corrige': b2bCorrige, 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
                 'ecart': ecart, 'ecartSept': ecarts[0], 'ecartOct': ecarts[1], 'partDeLAnnee': ecart / b2b12 * 100,
                 'unPoint': ca12 / 100, 'panier12': panier12, 'unClientJour': panier12 * 365},
         'oct': {'cli25': oct25['clients'] / oct25['jours'], 'cli26': oct26['clients'] / oct26['jours'],
