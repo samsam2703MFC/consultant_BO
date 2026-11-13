@@ -83,6 +83,7 @@ body { margin: 0; background: var(--paper); }
 .rp-sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 100ch; }
 .rp-pied { font-size: 11.5px; color: var(--muted); }
 .rp-renvoi { font-style: normal; color: var(--muted-2); }
+.rp [hidden] { display: none !important; }
 .rp-annexes { padding-top: 8px; }
 .rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
 .rp-chaleur th { background: none; border-bottom: 0; padding: 4px 4px; text-align: center; }
@@ -107,7 +108,8 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #octobre-octobre, #taches, #soins, #suivi, #annexes { break-before: page; }   /* un thème par page */
+  #octobre-octobre, #taches, #personnel, #soins, #suivi, #annexes { break-before: page; }
+  #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit les tâches */   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
 </style>
@@ -176,6 +178,12 @@ body { margin: 0; background: var(--paper); }
         <p class="rp-p" id="question-texte"></p>
       </div>
     </div>
+    <div class="rp-part" id="b2b-clients" hidden>
+      <h3 class="rp-h3">Les clients B2B, année par année</h3>
+      <p class="rp-p" id="b2b-clients-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table" id="b2b-clients-table"></table></div>
+      <p class="rp-aide" id="b2b-clients-note"></p>
+    </div>
     <div class="rp-ouvert" id="a-completer"></div>
     <p class="rp-aide rp-renvoi">Les dix dernières semaines face à 2025, celles où le CA saute : annexe B.</p>
   </section>
@@ -204,6 +212,16 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
       <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
     <p class="rp-aide rp-renvoi">La journée complète en checklists, heure par heure : annexe D.</p>
+  </section>
+
+  <section class="rp-carte" id="personnel">
+    <h2 class="rp-h2">Frais de personnel face au chiffre d’affaires</h2>
+    <p class="rp-p" id="pe-intro"></p>
+    <div class="rp-kpis" id="pe-kpis"></div>
+    <div class="rp-graphe" id="graphe-personnel"><div class="rp-bulle"></div></div>
+    <div class="rp-table-zone"><table class="rp-table" id="pe-table"></table></div>
+    <p class="rp-aide" id="pe-note"></p>
+    <div class="rp-ouvert" id="pe-completer" hidden></div>
   </section>
 
   <section class="rp-carte" id="soins">
@@ -488,7 +506,9 @@ $('question-texte').textContent = insec(`Avec le panier de 2025, les clients de 
   + `Pour que le B2B l’explique à lui seul, il aurait dû gagner ces ${k1(B.ecart)} sur deux mois face à 2025 : environ ${dec(B.partDeLAnnee, 0)} % de tout le B2B des 12 derniers mois. `
   + `C’est possible si une ou deux sociétés ont passé de grosses commandes. Sinon, c’est le panier du comptoir qui a monté (prix, produits d’automne, commandes). `
   + `Les semaines montrent une hausse par à-coups (S39 à S42, puis S45), ce qui ressemble davantage à de grosses commandes qu’à une hausse de prix, qui relèverait toutes les semaines.`);
-$('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>Le comptoir et le B2B mois par mois, face au N-1. Dans le cockpit, Résultat › Évolution magasin, la bascule « ventes : Comptoir » puis « B2B » donne le même bloc que ci-dessus pour chaque canal : commandes pro, panier pro, part du CA mois par mois. Une fois collés, ils entrent dans ce rapport et tranchent la question du panier.</span>';
+$('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le comptoir et le B2B mois par mois, face au N-1 : dans le cockpit, Résultat › Évolution magasin, la bascule « ventes : Comptoir » puis « B2B ». '
+  + (D.b2bClients ? '' : 'Les clients B2B année par année, avec leur volume : l’export de la copie de caisse, client par client. ')
+  + 'Une fois reçus, ils entrent dans ce rapport et tranchent la question du panier.')) + '</span>';
 
 /* --- Les dix dernières semaines --- */
 const SEM = D.semaines;
@@ -589,6 +609,69 @@ $('tc-releve').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Tâches r
   + RL.map(r => `<tr class="${r.shop === '5' ? 'moi' : ''}"><td>${esc(r.nom)}</td><td class="num ${r.rendues ? '' : 'down'}">${r.rendues} / ${r.taches}</td><td class="num ${r.obligatoiresRendues ? '' : 'down'}">${r.obligatoiresRendues} / ${r.obligatoires}</td><td class="num">${r.photos}</td></tr>`).join('') + '</tbody>';
 $('tc-releve-note').textContent = `Ce jour-là, Sombreffe n’a rendu aucune de ses ${RS.taches} tâches, dont ${RS.obligatoires} obligatoires. C’est un seul jour, relevé au panel avant la nomenclature du 08/11 : il montre ce que voit le bureau quand rien n’est rendu. Le suivi se lit chaque jour dans le dashboard magasin, onglet Tâches : obligatoires faites, photos rendues, non-conformités sur 30 jours.`;
 
+/* --- Les clients B2B, année par année (l'export de la copie de caisse, s'il est là) --- */
+const BC = D.b2bClients;
+if (BC && BC.clients.length) {
+  const tot = k => BC.clients.reduce((a, c) => a + c[k], 0), MAXL = 15;
+  const vus = BC.clients.slice(0, MAXL), reste = BC.clients.slice(MAXL);
+  $('b2b-clients-texte').textContent = insec(`${BC.clients.length} clients marqués pro au panel ont acheté à Sombreffe depuis l’ouverture. Sur les 12 derniers mois (novembre 2025 → octobre 2026), ils font ${k1(tot('ca12'))}, soit ${dec(tot('ca12') / BC.ca12Magasin * 100)} % du CA du magasin.`);
+  const ligne = (nom, c, cls = '') => `<tr class="${cls}"><td>${esc(nom)}</td><td class="num">${c.ca2025 ? eur(c.ca2025) : '—'}</td><td class="num">${c.cmd2025 || '—'}</td><td class="num">${c.ca2026 ? eur(c.ca2026) : '—'}</td><td class="num">${c.cmd2026 || '—'}</td>`
+    + `<td class="num">${c.ca12 ? eur(c.ca12) : '—'}</td><td class="num">${c.ca12 ? dec(c.ca12 / BC.ca12Magasin * 100, 2) + INS + '%' : '—'}</td><td>${c.dernier ? esc(dateC(String(c.dernier).slice(0, 10)) + '/' + String(c.dernier).slice(2, 4)) : ''}</td>`
+    + (BC.colTva ? `<td>${esc(c.tva && c.tva !== 'NULL' ? c.tva : '—')}</td>` : '') + '</tr>';
+  const somme = L => ({ ca2025: L.reduce((a, c) => a + c.ca2025, 0), cmd2025: L.reduce((a, c) => a + c.cmd2025, 0), ca2026: L.reduce((a, c) => a + c.ca2026, 0), cmd2026: L.reduce((a, c) => a + c.cmd2026, 0), ca12: L.reduce((a, c) => a + c.ca12, 0) });
+  $('b2b-clients-table').innerHTML = '<thead><tr><th>Client</th><th class="num">CA 2025</th><th class="num">Cmd 2025</th><th class="num">CA 2026</th><th class="num">Cmd 2026</th><th class="num">12 mois</th><th class="num">Part du CA</th><th>Dernier achat</th>' + (BC.colTva ? '<th>TVA</th>' : '') + '</tr></thead><tbody>'
+    + vus.map(c => ligne(c.nom, c)).join('') + (reste.length ? ligne(`et ${reste.length} autres`, somme(reste), 'dim') : '')
+    + '</tbody><tfoot>' + ligne('Total B2B', somme(BC.clients)).replace('<tr class="">', '<tr>') + '</tfoot>';
+  $('b2b-clients-note').textContent = 'Cmd : commandes (tickets). 2025 depuis l’ouverture, fin avril ; 2026 jusqu’au dernier jour de la copie de caisse. Le cockpit ne compte en B2B que les clients à TVA valide (5,9 % sur 12 mois) : un client marqué pro sans TVA valide y reste au comptoir.';
+  $('b2b-clients').hidden = false;
+}
+
+/* --- Frais de personnel face au CA (le P&L du panel, s'il est là) --- */
+const PE = D.personnel, SEUIL_P = D.seuilPersonnel;
+if (PE && PE.cumul.mois) {
+  const ML = PE.mois.filter(m => !m.indispo), dernierP = ML[ML.length - 1];
+  const maxP = ML.reduce((a, m) => m.labourPct > a.labourPct ? m : a), minP = ML.reduce((a, m) => m.labourPct < a.labourPct ? m : a);
+  const moisC = ym => { const l = D.lignes.find(x => x.k === ym); return l ? l.lab : ym; };
+  $('pe-intro').textContent = insec(`Les frais de personnel du P&L du panel, mois par mois, face au chiffre d’affaires du même P&L, sur ${PE.cumul.mois} mois lus. Repère : le seuil de main-d’œuvre du cockpit, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-kpis').innerHTML = [
+    kpi(`Personnel · ${PE.cumul.mois} mois`, dec(PE.cumul.labourPct) + INS + '%', `${k1(PE.cumul.labour)} sur ${k1(PE.cumul.ca)} de CA`, PE.cumul.labourPct > SEUIL_P ? 'bad' : 'good'),
+    kpi('Dernier mois · ' + moisC(dernierP.mois), dec(dernierP.labourPct) + INS + '%', `${eur(dernierP.labour)} de personnel`, dernierP.labourPct > SEUIL_P ? 'bad' : 'good'),
+    kpi('Mois le plus lourd', dec(maxP.labourPct) + INS + '%', moisC(maxP.mois)),
+    kpi('Mois le plus léger', dec(minP.labourPct) + INS + '%', moisC(minP.mois)),
+  ].join('');
+  const n1 = ym => { const [a, m] = ym.split('-'); const x = PE.mois.find(z => z.mois === (+a - 1) + '-' + m && !z.indispo); return x ? x.labourPct : null; };
+  $('pe-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">CA</th><th class="num">Frais de personnel</th><th class="num">% du CA</th><th class="num">Même mois N-1</th><th class="num">Écart</th></tr></thead><tbody>'
+    + PE.mois.map(m => m.indispo ? `<tr><td>${esc(moisC(m.mois))}</td><td class="num dim" colspan="5">non lu au panel</td></tr>`
+      : `<tr><td>${esc(moisC(m.mois))}</td><td class="num">${eur(m.ca)}</td><td class="num">${eur(m.labour)}</td><td class="num ${m.labourPct > SEUIL_P ? 'down' : ''}">${dec(m.labourPct)} %</td>`
+        + (n1(m.mois) != null ? `<td class="num">${dec(n1(m.mois))} %</td><td class="num ${m.labourPct - n1(m.mois) > 0 ? 'down' : 'up'}">${sgn(m.labourPct - n1(m.mois))}${dec(Math.abs(m.labourPct - n1(m.mois)))} pt</td>` : '<td class="num dim">—</td><td class="num dim">—</td>') + '</tr>').join('')
+    + `</tbody><tfoot><tr><td>${PE.cumul.mois} mois</td><td class="num">${eur(PE.cumul.ca)}</td><td class="num">${eur(PE.cumul.labour)}</td><td class="num">${dec(PE.cumul.labourPct)} %</td><td></td><td></td></tr></tfoot>`;
+  $('pe-note').textContent = insec(`Source : le P&L quotidien du panel additionné par mois (route /analyse/pnl/mois du cockpit). En rouge, un mois au-dessus du seuil de ${dec(SEUIL_P, 0)} %. Le CA du P&L peut différer de quelques euros de celui des ventes (les tickets).`);
+  window.grapheP = () => {
+    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 190, ml = 34, mr = 6, mt = 16, mb = 24;
+    const n = PE.mois.length, pas = (W - ml - mr) / n, lb = Math.min(26, pas * 0.6);
+    const vmax = Math.max(SEUIL_P + 10, Math.ceil(maxP.labourPct / 10) * 10), hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP, ft = 'font-family:var(--font)';
+    let sv = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Frais de personnel en % du CA, mois par mois">`;
+    for (let v = 0; v <= vmax; v += 10) { sv += `<line x1="${ml}" x2="${W - mr}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(34,34,34,${v ? '.07' : '.16'})"/><text x="${ml - 6}" y="${y(v) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${v} %</text>`; }
+    PE.mois.forEach((m, i) => {
+      const cx = ml + pas * (i + 0.5);
+      if (!m.indispo) {
+        const yt = y(m.labourPct);
+        sv += `<path d="M${cx - lb / 2},${y(0)} V${yt + 4} Q${cx - lb / 2},${yt} ${cx - lb / 2 + 4},${yt} H${cx + lb / 2 - 4} Q${cx + lb / 2},${yt} ${cx + lb / 2},${yt + 4} V${y(0)} Z" fill="${m.labourPct > SEUIL_P ? '#A32014' : '#8D1D2C'}" opacity="${m === dernierP ? 1 : 0.6}"/>`;
+        if (m === maxP || m === minP || m === dernierP) { sv += `<text x="${cx}" y="${yt - 5}" font-size="10" text-anchor="middle" fill="#1c1a17" style="${ft}">${dec(m.labourPct, 0)}</text>`; }
+      }
+      if (W >= 520 || i % 3 === 0 || i === n - 1) { sv += `<text x="${cx}" y="${H - 8}" font-size="9.5" text-anchor="middle" fill="#3b3731" style="${ft}">${esc(moisC(m.mois).split(' ')[0])}</text>`; }
+    });
+    sv += `<line x1="${ml}" x2="${W - mr}" y1="${y(SEUIL_P)}" y2="${y(SEUIL_P)}" stroke="#1c1a17" stroke-dasharray="4 3"/><text x="${ml + 4}" y="${y(SEUIL_P) - 4}" font-size="10" text-anchor="start" fill="#1c1a17" style="${ft};paint-order:stroke;stroke:#fff;stroke-width:3px">seuil ${dec(SEUIL_P, 0)} %</text></svg>`;
+    zone.querySelector('svg')?.remove(); zone.insertAdjacentHTML('beforeend', sv);
+  };
+} else {
+  ['pe-kpis', 'graphe-personnel', 'pe-table', 'pe-note'].forEach(id => { $(id).hidden = true; });
+  $('pe-intro').textContent = insec(`Les frais de personnel face au chiffre d’affaires, mois par mois sur les 18 mois, viennent du P&L du panel. Repère : le seuil de main-d’œuvre du cockpit, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le P&L mois par mois de Sombreffe, de mai 2025 à octobre 2026 : la route /analyse/pnl/mois du cockpit (shop 5, du 2025-05 au 2026-10). Une fois reçu, le tableau des 18 mois et son graphique se remplissent ici.')) + '</span>';
+  $('pe-completer').hidden = false;
+  $('personnel').classList.add('rp-attente');
+}
+
 /* --- Soins intensifs --- */
 const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
 $('soins-intro').textContent = `Les repères de départ sont les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}, du ${dateC(DEP.du)} au ${dateC(DEP.au)}), face aux mêmes semaines de 2025. Chaque semaine de soins intensifs se lit face à ces repères et face à son N-1.`;
@@ -627,6 +710,7 @@ $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th>
     ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
     ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
     ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
+    ['Frais de personnel, % du CA', 'P&L du panel, mini P&L de la visite', D.personnel && D.personnel.cumul.mois ? dec(D.personnel.mois.filter(m => !m.indispo).slice(-1)[0].labourPct) + ' %' : 'à lire', `sous ${dec(D.seuilPersonnel, 0)} % du CA`],
     ['Budgets des charges', 'Budget du cockpit, mini P&L de la visite', 'à lire', 'chaque poste dans son budget'],
     ['Plan de trésorerie', 'Plan de trésorerie du magasin, météo financière en visite', 'à faire', 'tout payé le lundi, à temps'],
     ['Encodage des produits', 'Panel', 'à vérifier', 'tous les produits encodés (condition de la marque)'],
@@ -656,7 +740,7 @@ $('sources-liste').innerHTML = [
 $('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
 
 /* --- Dessins, redessinés à la largeur --- */
-function dessiner() { grapheEvolution(); grapheTrafic(); }
+function dessiner() { grapheEvolution(); grapheTrafic(); if (window.grapheP) { window.grapheP(); } }
 dessiner();
 let attente; window.addEventListener('resize', () => { clearTimeout(attente); attente = setTimeout(dessiner, 120); });
 </script>

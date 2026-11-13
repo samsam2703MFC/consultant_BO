@@ -13,6 +13,7 @@ La page charge Gotham dans `fonts/` (Gotham_Medium.otf en 400, Gotham_Regular.ot
 pour la publier, joindre les deux fichiers de `public/assets/ds/fonts/` sous ce chemin. Ouverte telle quelle depuis le
 dépôt, elle tombe sur Helvetica.
 """
+import csv
 import json
 import re
 from decimal import Decimal, ROUND_HALF_UP
@@ -27,6 +28,11 @@ TM_SEUIL = '10'                         # un temps mort : un trou d'au moins 10 
 # (docs/maquettes/controle-taches-photos/donnees.json, lu par /pwa/tasks?date=).
 CHECKLISTS = ICI.parent.parent.parent / 'src' / 'checklists_codes.php'
 TACHES_JOUR = ICI.parent.parent / 'maquettes' / 'controle-taches-photos' / 'donnees.json'
+# Les données que le bureau dépose à côté de ce script, si elles existent (sinon le rapport les marque « à compléter ») :
+# - pnl-mois.json : la réponse de GET /api/cockpit/analyse/pnl/mois?shop=5&du=2025-05&au=2026-10 (P&L du panel par mois) ;
+# - b2b-clients.csv : l'export de la requête des clients B2B année par année (LISEZMOI.md).
+PNL_MOIS = ICI / 'pnl-mois.json'
+B2B_CLIENTS = ICI / 'b2b-clients.csv'
 SHOP = '5'
 
 # Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
@@ -43,6 +49,7 @@ COCKPIT = {
     ],
 }
 PLAFOND_B2B = 40.0                       # plafond de la part B2B fixé aux visites
+SEUIL_PERSONNEL = 33.0                   # main-d'œuvre en % du CA : le repli du cockpit (seuilsCharges, src/endpoints.php)
 
 MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -185,8 +192,47 @@ def main():
     taches = {'journee': jour, 'semaineMois': [c for c in ck if c['moment'] >= 5], 'releve': releve, 'releveLe': tj['date'],
               'seuil': tj['seuil']}
 
+    # Les frais de personnel face au CA, mois par mois, dans le P&L du panel (s'il a été déposé).
+    personnel = None
+    if PNL_MOIS.exists():
+        pm = json.loads(PNL_MOIS.read_text(encoding='utf-8'))
+        m5 = next((x for x in pm.get('magasins', []) if str(x.get('id')) == SHOP), None)
+        if m5:
+            lignesP = []
+            for x in m5['mois']:
+                if x.get('indispo') or not x.get('ca'):
+                    lignesP.append({'mois': x['mois'], 'indispo': True}); continue
+                lignesP.append({'mois': x['mois'], 'ca': x['ca'], 'labour': x['labour'], 'labourPct': x.get('labourPct'),
+                                'overhead': x.get('overhead'), 'overheadPct': x.get('overheadPct'),
+                                'sansValeur': (x.get('sansValeur') or {}).get('labour', 0)})
+            lus = [l for l in lignesP if not l.get('indispo')]
+            ca_p = sum(l['ca'] for l in lus); lab_p = sum(l['labour'] for l in lus)
+            personnel = {'du': pm.get('du'), 'au': pm.get('au'), 'source': pm.get('source'), 'mois': lignesP,
+                         'cumul': {'mois': len(lus), 'ca': ca_p, 'labour': lab_p, 'labourPct': lab_p / ca_p * 100 if ca_p else None}}
+
+    # Les clients B2B année par année (s'ils ont été déposés) : l'export de la requête, séparateur deviné.
+    b2bClients = None
+    if B2B_CLIENTS.exists():
+        texte = B2B_CLIENTS.read_text(encoding='utf-8-sig')
+        dialecte = csv.Sniffer().sniff(texte.splitlines()[0], delimiters=',;\t')
+        rangs = list(csv.DictReader(texte.splitlines(), dialect=dialecte))
+        num = lambda v: float(str(v).replace(',', '.')) if str(v or '').strip() not in ('', 'NULL') else 0.0
+        colTva = next((c for c in (rangs[0].keys() if rangs else []) if re.search(r'vat|tva', c, re.I)), None)
+        clients = []
+        for r in rangs:
+            nom = (r.get('societe') or '').strip()
+            if not nom or nom == 'NULL':
+                nom = ' '.join(x for x in ((r.get('firstname') or r.get('name') or ''), (r.get('lastname') or r.get('surname') or '')) if x and x != 'NULL').strip() or f"Client {r.get('id_client')}"
+            clients.append({'id': r.get('id_client'), 'nom': nom, 'ca2025': num(r.get('ca_2025')), 'cmd2025': int(num(r.get('commandes_2025'))),
+                            'ca2026': num(r.get('ca_2026')), 'cmd2026': int(num(r.get('commandes_2026'))), 'ca12': num(r.get('ca_12_mois')),
+                            'total': num(r.get('ca_total')), 'premier': r.get('premier_achat'), 'dernier': r.get('dernier_achat'),
+                            'tva': (r.get(colTva) or '').strip() if colTva else None})
+        clients.sort(key=lambda c: -c['total'])
+        b2bClients = {'clients': clients, 'colTva': colTva, 'ca12Magasin': ca12}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'personnel': personnel, 'b2bClients': b2bClients, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
