@@ -7,8 +7,9 @@ declare(strict_types=1);
  *
  * Elle ne passe pas par l'API du cockpit (public/api/index.php). Elle charge le module de la fidélité bingo + points :
  * src/fidelite_bingo.php en production (à côté de l'ancien src/fidelite.php, qu'elle ne charge pas), src/fidelite.php
- * sur la branche de la PR #103. LECTURE SEULE : rien n'est publié, aucun bon n'est émis, aucune carte ni campagne
- * n'est créée (la création de l'admin n'est qu'un aperçu de ce qui serait envoyé).
+ * sur la branche de la PR #103. Rien n'est publié ni émis. DEUX ÉCRITURES seulement, confirmées dans la page et
+ * journalisées : créer la carte à points (POST /admin/loyalty/cards) et créer les campagnes du bingo qui manquent, en
+ * brouillon (POST /admin/voucher-campaigns).
  *
  *   GET  api.php?r=/fidelite/verification
  *   GET  api.php?r=/fidelite[&saison=]
@@ -17,6 +18,8 @@ declare(strict_types=1);
  *   GET  api.php?r=/fidelite/client&id=                la carte d'un client
  *   POST api.php?r=/fidelite/simuler                   {shop, montant, quand}
  *   POST api.php?r=/fidelite/bingo/bons                toujours en simulation, quoi qu'on envoie
+ *   POST api.php?r=/fidelite/creer                     {points?, debut?, confirmer: true} — crée la carte à points
+ *   POST api.php?r=/fidelite/creer-campagnes           {saison?, confirmer: true} — crée les campagnes manquantes (brouillon)
  *
  * L'accès suit celui du cockpit : src/acces.php s'il est là (en mode « console », la session du siège), sinon la
  * connexion du cockpit (src/auth.php).
@@ -56,6 +59,9 @@ try {
         $methode === 'GET' && $route === '/fidelite/client' => ep_fidelite_client(),
         $methode === 'POST' && $route === '/fidelite/simuler' => wr_fidelite_simuler(),
         $methode === 'POST' && $route === '/fidelite/bingo/bons' => fidBingoBons(false),   // jamais d'émission ici
+        // Les deux seules écritures de la page (Sam, 13/11/2026 : « je dois pouvoir la créer ») : confirmées, journalisées.
+        $methode === 'POST' && $route === '/fidelite/creer' => wr_fidelite_creer(),
+        $methode === 'POST' && $route === '/fidelite/creer-campagnes' => wr_fidelite_creer_campagnes(),
         default => null,
     };
     if ($r === null) {

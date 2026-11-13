@@ -140,12 +140,15 @@ final class FidFauxErp
         }
         if ($method === 'POST' && $p === '/admin/loyalty/cards') {
             foreach (['code', 'name', 'starts_at', 'shop_ids'] as $k) { if (!isset($body[$k])) { return $ko(422, $k . ' required'); } }
+            $ids = !empty($body['earning_product_ids']) || !empty($body['earning_category_ids']) || !empty($body['earning_category_group_ids']);
+            if ($ids === !empty($body['keywords'])) { return $ko(422, 'earning IDs or normalized keywords are required and cannot mix'); }
+            foreach ($this->cartes as $c) { if ($c['code'] === $body['code'] && (int) ($c['version'] ?? 1) === (int) ($body['version'] ?? 1)) { return $ko(409, 'code/version already exists'); } }
             $id = max(array_keys($this->cartes)) + 1;
             $this->cartes[$id] = $body + ['id' => $id, 'revision' => 1, 'terms_locked' => false];
             return $ok(['status' => 'success', 'data' => $this->cartes[$id]], 201);
         }
         if ($method === 'GET' && $p === '/admin/loyalty/options') {
-            return $ok(['shops' => array_map(static fn ($id, $n) => ['id' => $id, 'name' => $n], array_keys(self::SHOPS), self::SHOPS), 'products' => [], 'reward_portions' => [], 'categories' => [], 'category_groups' => []]);
+            return $ok(['shops' => array_map(static fn ($id, $n) => ['id' => $id, 'name' => $n], array_keys(self::SHOPS), self::SHOPS), 'products' => [], 'reward_portions' => [], 'categories' => [['id' => 31, 'name' => 'Pains'], ['id' => 32, 'name' => 'Viennoiseries'], ['id' => 33, 'name' => 'Pâtisseries']], 'category_groups' => []]);
         }
         if ($method === 'POST' && $p === '/admin/loyalty/simulate') {
             $cfg = $body['config'] ?? null; $shop = (string) ($body['shop_id'] ?? '');
@@ -156,6 +159,13 @@ final class FidFauxErp
             foreach ($cfg['bonuses'] as $b) { if (in_array($dow, $b['days'], true) && $hm >= $b['from'] && $hm < $b['to']) { $bc = max($bc, (float) $b['coefficient']); } }
             return $ok(['points' => (int) floor($slices * $cfg['points_per_slice'] * $sc * $bc), 'base_cents' => (int) $body['amount_cents'], 'slices' => $slices,
                 'shop_coefficient' => rtrim(rtrim(number_format($sc, 4, '.', ''), '0'), '.'), 'bonus_coefficient' => rtrim(rtrim(number_format($bc, 4, '.', ''), '0'), '.'), 'local_time' => str_replace('T', ' ', $t) . ':00']);
+        }
+        if ($method === 'POST' && $p === '/admin/voucher-campaigns') {
+            if (empty($body['name'])) { return $ko(422, 'name required'); }
+            $id = max(array_keys($this->campagnes) ?: [100]) + 1;
+            $this->campagnes[$id] = ['id' => $id, 'name' => $body['name'], 'status' => $body['status'] ?? 'DRAFT', 'code_type' => $body['code_type'] ?? 'SHARED', 'requires_customer' => !empty($body['requires_customer'])];
+            $this->codes[$id] = [];
+            return $ok(['status' => 'success', 'data' => $this->campagnes[$id]], 201);
         }
         if ($method === 'GET' && $p === '/admin/voucher-campaigns') {
             $L = array_values(array_filter($this->campagnes, static fn ($c) => !isset($q['name']) || stripos($c['name'], (string) $q['name']) !== false));

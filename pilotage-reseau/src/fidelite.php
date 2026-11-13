@@ -295,6 +295,19 @@ function fidMagasins(): array
     return $out;
 }
 
+/** Les identifiants des catégories de l'ERP (GET /admin/loyalty/options) : ce qui rapporte des points, tout le catalogue. */
+function fidCategories(): array
+{
+    $r = fidErp('GET', '/admin/loyalty/options');
+    $o = fidObjet($r['corps']);
+    foreach (['categories' => 'earning_category_ids', 'category_groups' => 'earning_category_group_ids'] as $k => $champ) {
+        $ids = [];
+        foreach ((array) ($o[$k] ?? []) as $c) { if (is_array($c) && (int) ($c['id'] ?? $c['id_category'] ?? 0) > 0) { $ids[] = (int) ($c['id'] ?? $c['id_category']); } }
+        if ($ids) { return [$champ => array_values(array_unique($ids))]; }
+    }
+    return [];
+}
+
 /** GET /fidelite?saison= — la carte à points, ses magasins, les cartes à arrêter, les quatre cartes de bingo de l'année, la saison choisie (celle du jour par défaut). */
 function ep_fidelite(): array
 {
@@ -775,11 +788,14 @@ function ep_fidelite_creation(): array
         'points_validity_days' => 365, 'shop_coefficients' => (object) array_fill_keys(array_column($mags, 'id'), 1),
         'bonuses' => [['name' => 'Jours creux', 'days' => [1, 2, 3], 'from' => '14:00', 'to' => '17:00', 'coefficient' => 2]],
         'tiers' => [['points' => (int) $pal['points'], 'voucher_cents' => (int) round(100 * (float) $pal['valeur'])]]];
+    // Une carte du même code, même arrêtée, garde sa version : la nouvelle prend la suivante (code + version identifient les conditions).
+    $versionSuivante = 1;
+    foreach ($cartes as $c) { if ((string) ($c['code'] ?? '') === (string) ($conf['carte'] ?? 'FID-POINTS')) { $versionSuivante = max($versionSuivante, (int) ($c['version'] ?? 1) + 1); } }
     $carte = ['code' => (string) ($conf['carte'] ?? 'FID-POINTS'), 'name' => $prog ? (string) ($prog['name'] ?? 'Carte L’Atelier') : 'Carte L’Atelier',
-        'version' => $prog ? (int) ($prog['version'] ?? 1) + 1 : 1, 'scope' => 'NETWORK', 'shop_ids' => array_map('intval', array_column($mags, 'id')),
-        'starts_at' => fidUtc($saison ? max($saison['du'], fidPlus(fidAujourdhui(), 1)) : fidPlus(fidAujourdhui(), 1)), 'ends_at' => null, 'active' => 1, 'sort_order' => 0,
+        'version' => $versionSuivante, 'scope' => 'NETWORK', 'shop_ids' => array_map('intval', array_column($mags, 'id')),
+        'starts_at' => fidUtc($prog ? fidPlus(fidAujourdhui(), 1) : fidAujourdhui()), 'ends_at' => null, 'active' => 1, 'sort_order' => 0,
         'color_tint' => '#F8E2CB', 'color_fill' => '#8D1D2C', 'color_accent' => '#F2C9A0', 'reward_label' => 'Bon de ' . fidEur((float) $pal['valeur']),
-        'keywords' => ['tout'], 'points_config' => $points];
+        'points_config' => $points] + (fidCategories() ?: ['keywords' => ['tout']]);
     $existantes = $saison && $err === null ? fidCampagnes($saison['campagne']) : [];
     $valeurs = [];
     if ($saison) { foreach (fidBonsSaison($saison) as $b) { $valeurs[(string) $b['valeur']] = $b['valeur']; } }
@@ -798,11 +814,79 @@ function ep_fidelite_creation(): array
         'regles' => ['seuil' => (float) $conf['seuilEuros'], 'tousLes' => max(1, (int) $conf['tousLes']), 'bons' => $saison ? array_map(static fn ($b) => ['k' => $b['k'], 'valeur' => $b['valeur'], 'nom' => $b['nom']], fidBonsSaison($saison)) : [],
             'superBon' => !empty($conf['superBon']) ? (float) $conf['superBon']['valeur'] : null, 'validite' => (int) ($conf['validite'] ?? 30)],
         'envois' => [
-            ['quoi' => $prog ? 'Nouvelle version de la carte à points (v' . $carte['version'] . ')' : 'La carte à points', 'methode' => 'POST', 'route' => '/admin/loyalty/cards', 'permission' => 'LOYALTY.MANAGE', 'corps' => $carte],
+            ['quoi' => $prog ? 'Nouvelle version de la carte à points (v' . $carte['version'] . ')' : 'La carte à points (v' . $carte['version'] . ')', 'methode' => 'POST', 'route' => '/admin/loyalty/cards', 'permission' => 'LOYALTY.MANAGE', 'corps' => $carte],
         ],
         'campagnes' => $campagnes,
         'codeExemple' => ['methode' => 'POST', 'route' => '/admin/voucher-campaigns/{id}/codes', 'corps' => ['code' => fidCodeBon($saison['id'] ?? 'X', 3, 12345), 'status' => 'ACTIVE',
             'id_customer' => 12345, 'valid_from' => fidPlus(fidAujourdhui(), 1) . ' 00:00:00', 'valid_to' => fidPlus(fidAujourdhui(), 1 + (int) ($conf['validite'] ?? 30)) . ' 23:59:59', 'usage_limit' => 1]]];
+}
+
+/**
+ * POST /fidelite/creer {points?, debut?: AAAA-MM-JJ, confirmer: true, qui} — CRÉE la carte à points dans l'ERP
+ * (POST /admin/loyalty/cards), d'après l'aperçu de l'admin (GET /fidelite/creation) et le barème modifié dans la page.
+ * Sans carte en place : la version 1, active dès `debut` (aujourd'hui par défaut). Une carte déjà en place : la version
+ * suivante, même code (la publication du cockpit arrête l'ancienne). Ce qui rapporte des points : toutes les catégories
+ * de l'ERP. Il faut `confirmer: true` et la permission LOYALTY.MANAGE. Journalisé.
+ */
+function wr_fidelite_creer(): array
+{
+    $b = body();
+    if (empty($b['confirmer'])) { http_response_code(422); return ['error' => 'confirmation manquante : rien n’est créé']; }
+    $_GET = [];
+    $apercu = ep_fidelite_creation();
+    if (!$apercu['erp']['ok']) { http_response_code(502); return ['error' => 'ERP injoignable : ' . ($apercu['erp']['erreur'] ?? '')]; }
+    $corps = $apercu['envois'][0]['corps'];
+    if (!$corps['shop_ids']) { http_response_code(422); return ['error' => 'aucun magasin lu dans l’ERP (GET /admin/loyalty/options)']; }
+    if (is_array($b['points'] ?? null)) {
+        $pts = fidPointsConfig($b['points'] + ['points_enabled' => true]);
+        if ($pts === null) { http_response_code(422); return ['error' => 'barème illisible']; }
+        $corps['points_config'] = $pts;
+    }
+    // Les coefficients des seuls magasins de la carte (l'ERP refuse les autres) ; les absents valent 1.
+    $coef = (array) ($corps['points_config']['shop_coefficients'] ?? []);
+    $corps['points_config']['shop_coefficients'] = [];
+    foreach ($corps['shop_ids'] as $id) { $corps['points_config']['shop_coefficients'][(string) $id] = (float) ($coef[(string) $id] ?? 1); }
+    if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['debut'] ?? '')) && (string) $b['debut'] >= fidAujourdhui()) { $corps['starts_at'] = fidUtc((string) $b['debut']); }
+    $r = fidErp('POST', '/admin/loyalty/cards', $corps);
+    if ($r['erreur'] !== null) {
+        http_response_code($r['code'] >= 400 ? $r['code'] : 502);
+        return ['ok' => false, 'error' => 'l’ERP a refusé la carte : ' . $r['erreur'], 'code' => $r['code'], 'reponse' => $r['corps'], 'envoye' => $corps];
+    }
+    $carte = fidObjet($r['corps']);
+    $carte = is_array($carte['data'] ?? null) ? $carte['data'] : $carte;
+    if (function_exists('journalAdd')) {
+        $qui = mb_substr(trim((string) ($b['qui'] ?? 'Page de test')) ?: 'Page de test', 0, 60);
+        try { journalAdd($qui, 'Fidélité', null, 'Carte à points créée dans l’ERP : ' . $corps['code'] . ' v' . $corps['version'] . (isset($carte['id']) ? ' (id ' . $carte['id'] . ')' : '')); } catch (Throwable $e) { /* le journal ne bloque pas */ }
+    }
+    return ['ok' => true, 'code' => $r['code'], 'carte' => $carte, 'envoye' => $corps];
+}
+
+/**
+ * POST /fidelite/creer-campagnes {saison?, confirmer: true} — crée dans l'ERP les campagnes de bons de la saison qui
+ * manquent (POST /admin/voucher-campaigns), EN BROUILLON : aucun bon ne part tant qu'une campagne n'est pas ACTIVE.
+ * Permission MENU.BUNDLE.MANAGE. Journalisé.
+ */
+function wr_fidelite_creer_campagnes(): array
+{
+    $b = body();
+    if (empty($b['confirmer'])) { http_response_code(422); return ['error' => 'confirmation manquante : rien n’est créé']; }
+    $_GET = ['saison' => (string) ($b['saison'] ?? '')];
+    $apercu = ep_fidelite_creation();
+    if (!$apercu['erp']['ok']) { http_response_code(502); return ['error' => 'ERP injoignable : ' . ($apercu['erp']['erreur'] ?? '')]; }
+    $etapes = [];
+    foreach ($apercu['campagnes'] as $c) {
+        if ($c['existe']) { $etapes[] = ['campagne' => $c['corps']['name'], 'ok' => true, 'deja' => true]; continue; }
+        $r = fidErp('POST', '/admin/voucher-campaigns', $c['corps']);
+        $etapes[] = ['campagne' => $c['corps']['name'], 'ok' => $r['erreur'] === null, 'code' => $r['code'], 'erreur' => $r['erreur']];
+        if ($r['erreur'] !== null) { break; }
+    }
+    $creees = count(array_filter($etapes, static fn ($e) => $e['ok'] && empty($e['deja'])));
+    if ($creees && function_exists('journalAdd')) {
+        try { journalAdd((string) ($b['qui'] ?? 'Page de test'), 'Fidélité', null, $creees . ' campagne(s) du bingo créée(s) en brouillon dans l’ERP'); } catch (Throwable $e) { /* rien */ }
+    }
+    $ok = !array_filter($etapes, static fn ($e) => !$e['ok']);
+    if (!$ok) { http_response_code(502); }
+    return ['ok' => $ok, 'creees' => $creees, 'etapes' => $etapes];
 }
 
 /**

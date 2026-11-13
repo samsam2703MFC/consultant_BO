@@ -187,6 +187,33 @@ verifie($cr['envois'][0]['route'] === '/admin/loyalty/cards' && $cr['envois'][0]
 verifie(count($cr['campagnes']) === 2 && $cr['campagnes'][0]['corps']['name'] === 'Bingo hiver · 2 €' && $cr['campagnes'][0]['existe']['id'] === 41, 'les campagnes de la saison, et celles qui existent déjà');
 verifie(count(array_filter($e->ecrits, static fn ($w) => $w[1] !== '/admin/loyalty/simulate')) === 0, 'la création n’envoie rien');
 
+// --- 7b. Créer la carte et les campagnes (page de test, après confirmation) --------------------------------
+$e = nouvelErp(60);
+$e->cartes = array_filter($e->cartes, static fn ($c) => $c['id'] !== 12);   // l'ERP réel : pas de carte à points
+$GLOBALS['corps'] = ['confirmer' => false];
+verifie(isset(wr_fidelite_creer()['error']) && $e->ecrits === [], 'sans confirmation : rien n’est créé');
+$d = ep_fidelite();
+verifie($d['carte'] === null, 'pas de carte à points : rien à lire');
+$pts = ['points_per_slice' => 1, 'slice_cents' => 100, 'voucher_validity_days' => 30, 'points_validity_days' => 365, 'shop_coefficients' => ['4' => 1.5, '99' => 2],
+    'bonuses' => [['name' => 'Jours creux', 'days' => [1, 2, 3], 'from' => '14:00', 'to' => '17:00', 'coefficient' => 2]], 'tiers' => [['points' => 100, 'voucher_cents' => 500]]];
+$GLOBALS['corps'] = ['confirmer' => true, 'points' => $pts, 'debut' => '2027-01-14'];
+$r = wr_fidelite_creer();
+$w = $e->ecrits[0][2] ?? [];
+verifie($r['ok'] === true && $e->ecrits[0][0] === 'POST' && $e->ecrits[0][1] === '/admin/loyalty/cards', 'la carte est créée : POST /admin/loyalty/cards');
+verifie($w['version'] === 1 && $w['code'] === 'FID-POINTS' && $w['shop_ids'] === [2, 3, 4, 5] && $w['starts_at'] === '2027-01-13 23:00:00', 'v1, les quatre magasins, active dès aujourd’hui minuit');
+verifie($w['earning_category_ids'] === [31, 32, 33] && !isset($w['keywords']), 'ce qui rapporte : toutes les catégories, pas de mot-clé');
+verifie($w['points_config']['shop_coefficients'] === ['2' => 1.0, '3' => 1.0, '4' => 1.5, '5' => 1.0], 'les coefficients des seuls magasins de la carte');
+verifie(ep_fidelite()['carte']['code'] === 'FID-POINTS', 'la carte créée se lit aussitôt comme carte du programme');
+$GLOBALS['corps'] = ['confirmer' => true];
+$r = wr_fidelite_creer();
+verifie($r['ok'] === true && $e->ecrits[1][2]['version'] === 2, 'une seconde création : la version suivante, jamais un doublon');
+$e->campagnes = [];
+$GLOBALS['corps'] = ['confirmer' => true, 'saison' => 'H27'];
+$r = wr_fidelite_creer_campagnes();
+verifie($r['ok'] && $r['creees'] === 2 && array_column($e->campagnes, 'name') === ['Bingo hiver · 2 €', 'Bingo hiver · 10 €'], 'les deux campagnes de l’hiver sont créées');
+verifie(array_column($e->campagnes, 'status') === ['DRAFT', 'DRAFT'] && array_column($e->campagnes, 'code_type') === ['UNIQUE', 'UNIQUE'], 'en brouillon, codes uniques');
+verifie(wr_fidelite_creer_campagnes()['creees'] === 0, 'une seconde fois : rien de plus');
+
 // --- 7. La vérification (page de test) -----------------------------------------------------
 $e = nouvelErp(60);
 $v = ep_fidelite_verification();

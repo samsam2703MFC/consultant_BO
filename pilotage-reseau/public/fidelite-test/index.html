@@ -204,7 +204,11 @@ a{color:var(--accent)}
         <details><summary>corps de la requête</summary><pre>${esc(JSON.stringify(c.corps, null, 2))}</pre></details></div>`).join('')}
       <div class="req"><div class="h"><span>Puis, chaque lundi : un code par bon gagné, au nom du client</span><code>${esc(d.codeExemple.methode + ' ' + d.codeExemple.route)}</code></div>
         <details><summary>exemple</summary><pre>${esc(JSON.stringify(d.codeExemple.corps, null, 2))}</pre></details></div>
-      <div class="row"><button class="p" disabled>Créer dans l’ERP</button><span class="mu">Désactivé sur la page de test : rien n’est envoyé. La création se fera depuis le cockpit.</span></div>`;
+      <div class="req" style="border-color:var(--accent)"><div class="h"><span>${C ? 'Une carte est déjà en place : créer la v' + env.corps.version + ' (même code), active dès le' : 'Créer la carte à points dans l’ERP, active dès le'}</span>
+          <input type="date" id="cr-debut" value="${esc(d.aujourdhui)}" min="${esc(d.aujourdhui)}"></div>
+        <div class="row"><button class="p" id="b-creer">Créer la carte dans l’ERP</button><button id="b-creer-camp"${d.campagnes.every(c => c.existe) ? ' disabled' : ''}>Créer les campagnes manquantes (en brouillon)</button></div>
+        <div class="mu" style="margin-top:6px">Écriture réelle dans l’ERP, après confirmation, et notée au journal du cockpit. Ce qui rapporte des points : ${env.corps.earning_category_ids ? 'toutes les catégories (' + env.corps.earning_category_ids.length + ')' : (env.corps.earning_category_group_ids ? 'tous les groupes de catégories (' + env.corps.earning_category_group_ids.length + ')' : 'le mot-clé « tout » (aucune catégorie lue)')}. Les campagnes naissent en brouillon : aucun bon ne part avant de les activer dans l’ERP.</div>
+        <div id="cr-res"></div></div>`;
     $('admin-c').innerHTML = (d.erp.ok ? '' : `<div class="gap">ERP injoignable : ${esc(d.erp.erreur)} — l’aperçu part des valeurs du handoff.</div>`) + sais
       + `<div class="g2" style="margin-top:6px"><div>${reglages}<h3>Les 13 semaines</h3><div id="sem-a" class="mu">…</div></div><div>${sortie}</div></div>`;
     semainesSaison(sa ? sa.id : '');
@@ -223,6 +227,22 @@ a{color:var(--accent)}
     if (t.dataset.jour != null) { const b = P.bonuses[+t.dataset.b], k = +t.dataset.jour; b.days = b.days.includes(k) ? (b.days.length > 1 ? b.days.filter(x => x !== k) : b.days) : b.days.concat([k]).sort((x, y) => x - y); return adminRendu(); }
     if (t.dataset.retirer != null) { P.bonuses.splice(+t.dataset.retirer, 1); return adminRendu(); }
     if (t.id === 'b-ajbon') { P.bonuses.push({ name: 'Nouveau créneau', days: [1, 2, 3], from: '14:00', to: '17:00', coefficient: 2 }); return adminRendu(); }
+  });
+  // Les deux écritures : la carte, les campagnes. Confirmées, puis tout se relit.
+  $('admin-c').addEventListener('click', async e => {
+    const t = e.target.closest('button'); if (!t || !CR || (t.id !== 'b-creer' && t.id !== 'b-creer-camp')) { return; }
+    const camp = t.id === 'b-creer-camp', env = CR.envois[0];
+    const q = camp ? 'Créer dans l’ERP, en brouillon, les campagnes : ' + CR.campagnes.filter(c => !c.existe).map(c => c.corps.name).join(', ') + ' ?'
+      : 'Créer dans l’ERP la carte « ' + env.corps.name + ' » (' + env.corps.code + ' v' + env.corps.version + '), ' + nf(P.slice_cents / 100, 2) + ' € = ' + P.points_per_slice + ' point, palier ' + P.tiers[0].points + ' → ' + nf(P.tiers[0].voucher_cents / 100, 2) + ' €, sur ' + env.corps.shop_ids.length + ' magasins, active dès le ' + $('cr-debut').value.split('-').reverse().join('/') + ' ?';
+    if (!window.confirm(q)) { return; }
+    t.disabled = true; $('cr-res').innerHTML = '<p class="mu">Envoi à l’ERP…</p>';
+    const r = camp ? await appel('POST', '/fidelite/creer-campagnes', { saison: CR.saison ? CR.saison.id : '', confirmer: true, qui: 'Page de test' })
+      : await appel('POST', '/fidelite/creer', { points: P, debut: $('cr-debut').value, confirmer: true, qui: 'Page de test' });
+    const ok = r.code >= 200 && r.code < 300 && r.d && r.d.ok;
+    const html = ok ? (camp ? `<p class="ok">${r.d.creees} campagne(s) créée(s) en brouillon.</p>` : `<p class="ok">Carte créée dans l’ERP${r.d.carte && r.d.carte.id ? ' : id ' + r.d.carte.id : ''} (HTTP ${r.code}).</p>`)
+      : `<p class="ko">Refusé : HTTP ${r.code} · ${esc((r.d && r.d.error) || 'sans réponse')}</p>${r.d && r.d.etapes ? '<p class="mu">' + r.d.etapes.map(x => esc(x.campagne) + ' : ' + (x.ok ? (x.deja ? 'existait' : 'créée') : esc(x.erreur))).join(' · ') + '</p>' : ''}`;
+    if (ok) { await admin(CR.saison ? CR.saison.id : ''); magasin(); }
+    $('cr-res').innerHTML = html + brut(r.d);
   });
   $('admin-c').addEventListener('change', e => {
     const t = e.target, v = String(t.value).replace(',', '.');
@@ -243,6 +263,7 @@ a{color:var(--accent)}
     $('mag-c').innerHTML = '<p class="mu">Lecture des clients de ' + esc(HALLE.nom) + ', semaine par semaine…</p>';
     const q = $('mag-q').value.trim();
     const r = await appel('GET', '/fidelite/clients?shop=' + encodeURIComponent(HALLE.id) + '&tous=1' + (q ? '&q=' + encodeURIComponent(q) : ''));
+    if (r.d && r.d.erp && !r.d.erp.ok && /aucune carte/.test(r.d.erp.erreur || '')) { $('mag-c').innerHTML = '<div class="gap">Aucune carte à points active dans l’ERP : créez-la plus haut (A · L’admin, « Créer la carte dans l’ERP »), puis relisez Halle.</div>'; return; }
     if (r.code !== 200 || !r.d || !r.d.erp || !r.d.erp.ok) { return echec('mag-c', r); }
     MAG = r.d; MAG.ms = r.ms; MAGVUE = { tri: 'cases', filtre: 'tous', n: 30 };
     magRendu();

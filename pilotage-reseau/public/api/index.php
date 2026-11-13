@@ -956,6 +956,8 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/fidelite/simuler') { return wr_fidelite_simuler(); }
     if ($method === 'POST' && $path === '/fidelite/publier') { return wr_fidelite_publier(); }
     if ($method === 'POST' && $path === '/fidelite/bingo/bons') { return wr_fidelite_bingo_bons(); }
+    if ($method === 'POST' && $path === '/fidelite/creer') { return wr_fidelite_creer(); }
+    if ($method === 'POST' && $path === '/fidelite/creer-campagnes') { return wr_fidelite_creer_campagnes(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }
