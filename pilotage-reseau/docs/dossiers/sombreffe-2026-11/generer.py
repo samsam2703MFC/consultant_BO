@@ -55,7 +55,9 @@ COCKPIT = {
     ],
 }
 PLAFOND_B2B = 40.0                       # plafond de la part B2B fixé aux visites
-SEUIL_PERSONNEL = 33.0                   # main-d'œuvre en % du CA : le repli du cockpit (seuilsCharges, src/endpoints.php)
+TAUX_MATIERE = 40.0                      # matière première et emballage, % du CA : le taux budget du réseau (Budget › Paramètres, 38 + 2)
+SEUIL_PERSONNEL = 15.0                   # frais de personnel en % du CA, hors rémunération du franchisé : le seuil du réseau (13/11/2026)
+PNL_RESEAU = ICI / 'pnl-reseau.json'     # GET /api/cockpit/analyse/pnl/mois?tous=1&du=2025-05&au=2026-10
 
 MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -275,10 +277,68 @@ def main():
         b2bClients = {'clients': sorted(clientsA, key=lambda c: -c['total']), 'colTva': None, 'ca12Magasin': ca12, 'source': 'detail',
                       'du': min(detail['mois']), 'au': max(detail['mois'])}
 
+    # Le panier moyen face aux autres magasins, sur les mois où les quatre sont ouverts (Halle depuis février 2026,
+    # jusqu'au dernier mois clos), puis ce qu'auraient fait les clients de Sombreffe au panier le plus bas des autres.
+    tous = {x['id']: {'nom': x['nom'].split(' - ')[-1], 'mois': {m['mois']: m for m in x['mois'] if not m.get('enCours')}}
+            for x in d['magasins']}
+    communs = [k for k in douze if all(k in m['mois'] for m in tous.values())]
+    magasinsP = []
+    for sid, m in tous.items():
+        ca_ = sum(m['mois'][k]['ca'] for k in communs); cl_ = sum(m['mois'][k]['clients'] for k in communs)
+        magasinsP.append({'shop': sid, 'nom': m['nom'], 'moi': sid == SHOP, 'ca': ca_, 'clients': cl_, 'panier': ca_ / cl_,
+                          'cliJour': cl_ / sum(m['mois'][k]['jours'] for k in communs)})
+    magasinsP.sort(key=lambda x: -x['panier'])
+    bas = min((m for m in magasinsP if not m['moi']), key=lambda m: m['panier'])
+    moisP = [{'k': k, 'lab': f"{MOIS_C[int(k[5:]) - 1]} {k[2:4]}", 'clients': mois[k]['clients'], 'ca': mois[k]['ca'],
+              'panier': mois[k]['ca'] / mois[k]['clients'], 'caBas': mois[k]['clients'] * bas['panier'],
+              'ecart': mois[k]['clients'] * bas['panier'] - mois[k]['ca']} for k in communs]
+    panierAutres = {'du': communs[0], 'au': communs[-1], 'nbMois': len(communs), 'magasins': magasinsP,
+                    'bas': {'nom': bas['nom'], 'panier': bas['panier']}, 'mois': moisP,
+                    'clients': sum(l['clients'] for l in moisP), 'ca': sum(l['ca'] for l in moisP),
+                    'caBas': sum(l['caBas'] for l in moisP), 'ecart': sum(l['ecart'] for l in moisP)}
+    panierAutres['ecartAn'] = panierAutres['ecart'] / len(communs) * 12
+
+    # Le personnel des quatre magasins : mai → octobre 2026, puis tous les mois lus.
+    personnelReseau = None
+    if PNL_RESEAU.exists():
+        pr = json.loads(PNL_RESEAU.read_text(encoding='utf-8'))
+        personnelReseau = []
+        for m in pr.get('magasins', []):
+            L = [x for x in m['mois'] if not x.get('indispo') and x.get('ca')]
+            s6 = [x for x in L if '2026-05' <= x['mois'] <= '2026-10']
+            ca6 = sum(x['ca'] for x in s6); lab6 = sum(x['labour'] for x in s6)
+            personnelReseau.append({'shop': str(m['id']), 'nom': m.get('court') or m['nom'], 'ca6': ca6, 'lab6': lab6,
+                                    'pct6': lab6 / ca6 * 100 if ca6 else None, 'pctTout': (m.get('cumul') or {}).get('labourPct'), 'nMois': len(L)})
+        personnelReseau.sort(key=lambda x: (x['shop'] == SHOP, x['pct6'] or 0))
+
+    # Le résultat théorique (13/11/2026) : même trafic, panier au plus bas des autres magasins, personnel au seuil du
+    # réseau. Le P&L du panel ne chiffre ni la matière ni le résultat au mois : la matière est prise au taux budget du
+    # réseau, des deux côtés ; les frais généraux sont ceux du P&L, inchangés.
+    theorique = None
+    if personnel and panierAutres:
+        pmm = {x['mois']: x for x in personnel['mois'] if not x.get('indispo')}
+        ks = [k for k in communs if k in pmm]
+        n = len(ks)
+        cl_ = sum(mois[k]['clients'] for k in ks); ca_ = sum(mois[k]['ca'] for k in ks)
+        lab_ = sum(pmm[k]['labour'] for k in ks); fg_ = sum(pmm[k]['overhead'] for k in ks)
+        tm, sp = TAUX_MATIERE / 100, SEUIL_PERSONNEL / 100
+        def compte(clients, panier, partPersonnel):
+            ca = clients * panier
+            c = {'clients': clients, 'panier': panier, 'ca': ca, 'matiere': ca * tm, 'personnel': ca * partPersonnel, 'fg': fg_ / n}
+            c['resultat'] = c['ca'] - c['matiere'] - c['personnel'] - c['fg']
+            return c
+        partReelle = lab_ / ca_
+        theorique = {'du': ks[0], 'au': ks[-1], 'n': n, 'tauxMatiere': TAUX_MATIERE, 'seuil': SEUIL_PERSONNEL,
+                     'bas': panierAutres['bas'],
+                     'reel': compte(cl_ / n, ca_ / cl_, partReelle),
+                     'theo': compte(cl_ / n, panierAutres['bas']['panier'], sp),
+                     'personnelSeul': compte(cl_ / n, ca_ / cl_, sp),
+                     'panierSeul': compte(cl_ / n, panierAutres['bas']['panier'], partReelle)}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
-        'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
-        'taches': taches,
+        'personnel': personnel, 'personnelReseau': personnelReseau, 'theorique': theorique, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
+        'taches': taches, 'panierAutres': panierAutres,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
@@ -317,6 +377,9 @@ def main():
     # Contrôles à l'écran (pas dans le rapport).
     print(f"18 mois : {total['ca']:.0f} € · {total['clients']} clients · panier {total['panier']:.2f}")
     print(f"12 mois : {ca12:.0f} € · B2B ≈ {b2b12:.0f} € · écart sept.-oct. {ecart:.0f} € = {ecart / b2b12 * 100:.1f} % du B2B de l'année")
+    print(f"panier au plus bas des autres : {panierAutres['caBas']:.0f} € contre {panierAutres['ca']:.0f} € → écart {panierAutres['ecart']:.0f} €")
+    if theorique:
+        print('résultat théorique / mois :', round(theorique['reel']['resultat']), '→', round(theorique['theo']['resultat']))
     print('après-midi :', {k: round(v, 1) for k, v in tempsMorts['apresMidi'].items()})
     print('écarts vs N-1 :', [(s['k'], arr(pc(s['ca'], s['n1']['ca']))) for s in serie if s['n1']])
 

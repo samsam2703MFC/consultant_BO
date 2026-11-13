@@ -109,6 +109,31 @@ body { margin: 0; background: var(--paper); }
 .rp-chaleur tfoot td.jour { text-align: left; }
 .rp-ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #F8EEEF, #8D1D2C); }
 .rp-table tr.moi td { background: var(--total-line); }
+/* Une page par étape (13/11/2026, Sam : « le moins de texte possible, seulement des puces », « 1 page par étape ») :
+   quatre pages, une par étape, puis les annexes en tableaux ; les paragraphes deviennent des puces (fin du script). */
+.rp-aide, .rp-renvoi, .rp-partie .rp-sous, #evolution-legende span:nth-child(n+4), #tc-niveaux, #ev-comptoir-note, #ev-b2b-note { display: none !important; }
+.rp-page { display: grid; gap: 10px; min-width: 0; }
+.rp-points { gap: 4px; }
+.rp-chaleur td.c { height: 17px; font-size: 10.5px; }
+#tm-legende, #page-1 #tm-kpis, #page-1 #pe-kpis { display: none !important; }
+.rp-jauge { min-width: 50px; }
+#b2b-top-table td:first-child { white-space: normal; }
+.rp-ouverture p { font-size: 15px; max-width: none; }
+.rp-kpi { padding: 9px 12px; } .rp-kpi-v { font-size: 19px; }
+.rp-carte { gap: 8px; padding: 12px 16px; }
+.rp-table td { padding: 3px 8px; } .rp-table th { padding: 5px 8px; } .rp-table { font-size: 12px; }
+.rp-points, .rp-pistes { display: block; columns: 2; column-gap: 28px; max-width: none; }
+.rp-points li, .rp-pistes li { break-inside: avoid; margin-bottom: 3px; }
+#ev-graphes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+#p1-milieu { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; align-items: start; }
+#pe-kpis { grid-template-columns: 1fr 1fr; }
+.rp-annexe-titre { font-size: 22px; margin: 0; }
+@media print {
+  .rp { font-size: 12px; line-height: 1.35; gap: 10px; }
+  .rp-h3 { font-size: 13px; } .rp-partie-n { font-size: 28px; } .rp-partie-titre { font-size: 19px; }
+  .rp-partie { padding-top: 0; break-after: avoid; }
+  #page-2, #page-3, #page-4, #annexes { break-before: page; }
+}
 /* Impression et PDF (pdf.js) : A4, papier blanc, rien de coupé, une carte peut passer d'une page à l'autre mais pas un
    tableau de chiffres clés, un graphique, une ligne ou une note. */
 @media print {
@@ -120,8 +145,6 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #evolution, #octobre-octobre, #personnel, #temps-morts, #partie-2, #partie-3, #partie-4, #taches, #annexes { break-before: page; }
-  #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit le B2B */
   .rp-partie { border-top: 0; padding-top: 0; }   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
@@ -129,237 +152,205 @@ body { margin: 0; background: var(--paper); }
 </head>
 <body>
 <main class="rp" id="rapport">
-  <header id="entete">
-    <div class="rp-kicker">Pilotage réseau · rapport magasin</div>
-    <h1 class="rp-titre">Sombreffe, comptoir et B2B</h1>
-    <div class="rp-sous" id="sous-titre"></div>
-  </header>
-  <section class="rp-ouverture" id="ouverture"><p id="ouverture-texte"></p></section>
-  <div class="rp-alerte" id="soins-intensifs"></div>
-
-  <!-- 1 · L'ÉTAT DES LIEUX ------------------------------------------------------------------------------------ -->
-  <header class="rp-partie" id="partie-1">
-    <div class="rp-partie-n">1</div>
-    <div><h2 class="rp-partie-titre">L’état des lieux</h2><p class="rp-sous">Ce que les chiffres disent du magasin, de mai 2025 à octobre 2026.</p></div>
-  </header>
-
-  <section class="rp-carte" id="essentiel">
-    <h2 class="rp-h2">Les chiffres clés</h2>
-    <div class="rp-kpis" id="essentiel-kpis"></div>
-    <ul class="rp-points" id="essentiel-points"></ul>
+  <!-- PAGE 1 · L'ÉTAT DES LIEUX -->
+  <section class="rp-page" id="page-1">
+    <header id="entete">
+      <div class="rp-kicker">Pilotage réseau · rapport magasin</div>
+      <h1 class="rp-titre">Sombreffe, comptoir et B2B</h1>
+      <div class="rp-sous" id="sous-titre"></div>
+    </header>
+    <section class="rp-ouverture" id="ouverture"><p id="ouverture-texte"></p></section>
+    <div class="rp-alerte" id="soins-intensifs"></div>
+    <header class="rp-partie" id="partie-1"><div class="rp-partie-n">1</div><div><h2 class="rp-partie-titre">L’état des lieux</h2></div></header>
+    <section class="rp-carte" id="essentiel">
+      <div class="rp-kpis" id="essentiel-kpis"></div>
+      <ul class="rp-points" id="essentiel-points"></ul>
+    </section>
+    <section class="rp-carte" id="evolution">
+      <div class="rp-tete"><h2 class="rp-h3">Évolution magasin</h2><span class="rp-sous" id="evolution-releve"></span></div>
+      <div class="rp-faits" id="evolution-faits"></div>
+      <div id="ev-graphes">
+        <div class="rp-part" id="ev-comptoir"><h3 class="rp-h3" id="ev-comptoir-titre"></h3><p class="rp-aide" id="ev-comptoir-note"></p>
+          <div class="rp-graphe" id="graphe-comptoir"><div class="rp-bulle"></div></div></div>
+        <div class="rp-part" id="ev-trafic"><h3 class="rp-h3">Trafic : les clients du mois</h3>
+          <div class="rp-graphe" id="graphe-clients"><div class="rp-bulle"></div></div></div>
+        <div class="rp-part" id="ev-b2b"><h3 class="rp-h3">B2B seul : le CA des clients pro</h3><p class="rp-aide" id="ev-b2b-note"></p>
+          <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div></div>
+      </div>
+      <div class="rp-legende" id="evolution-legende">
+        <span><i class="rp-sw"></i>le mois</span>
+        <span><i class="rp-sw n1"></i>N-1 : le même mois un an plus tôt</span>
+        <span><i class="rp-sw aire"></i>gagné / perdu face au N-1</span>
+        <span>mois d’ouverture, incomplet : hors courbe</span>
+        <span>* le N-1 a eu plus de 2 jours fermés</span>
+      </div>
+    </section>
+    <div id="p1-milieu">
+      <section class="rp-carte" id="comptoir-b2b">
+        <h2 class="rp-h2">Comptoir et B2B</h2>
+        <div class="rp-part" id="part-b2b">
+          <div style="height:12px"></div>
+          <div class="rp-barre" id="barre-b2b"></div>
+          <div class="rp-chiffres" id="chiffres-b2b"></div>
+          <p class="rp-aide" id="aide-b2b"></p>
+        </div>
+        <div class="rp-part" id="b2b-trimestres" hidden>
+          <div class="rp-table-zone"><table class="rp-table" id="b2b-trim-table"></table></div>
+          <p class="rp-aide" id="b2b-trim-note"></p>
+        </div>
+      </section>
+      <section class="rp-carte" id="personnel">
+        <h2 class="rp-h2">Frais de personnel, % du CA</h2>
+        <div class="rp-kpis" id="pe-kpis"></div>
+        <div class="rp-graphe" id="graphe-personnel"><div class="rp-bulle"></div></div>
+        <div class="rp-table-zone"><table class="rp-table" id="pe-reseau"></table></div>
+      </section>
+    </div>
+    <section class="rp-carte" id="temps-morts">
+      <h2 class="rp-h2">Temps morts au comptoir · la part de l’heure sans client</h2>
+      <div class="rp-kpis" id="tm-kpis"></div>
+      <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
+      <div class="rp-legende" id="tm-legende"></div>
+    </section>
   </section>
 
-  <section class="rp-carte" id="evolution">
-    <div class="rp-tete">
-      <h2 class="rp-h3">Évolution magasin</h2>
-      <span class="rp-sous" id="evolution-releve"></span>
-    </div>
-    <div class="rp-faits" id="evolution-faits"></div>
-    <div class="rp-part" id="ev-comptoir">
-      <h3 class="rp-h3" id="ev-comptoir-titre"></h3>
-      <p class="rp-aide" id="ev-comptoir-note"></p>
-      <div class="rp-graphe" id="graphe-comptoir"><div class="rp-bulle"></div></div>
-    </div>
-    <div class="rp-part" id="ev-trafic">
-      <h3 class="rp-h3">Trafic : les clients du mois</h3>
-      <div class="rp-graphe" id="graphe-clients"><div class="rp-bulle"></div></div>
-    </div>
-    <div class="rp-part" id="ev-b2b">
-      <h3 class="rp-h3">B2B seul : le CA des clients pro</h3>
-      <p class="rp-aide" id="ev-b2b-note"></p>
-      <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div>
-    </div>
-    <div class="rp-legende" id="evolution-legende">
-      <span><i class="rp-sw"></i>le mois</span>
-      <span><i class="rp-sw n1"></i>N-1 : le même mois un an plus tôt (pointillé), dès mai 2026</span>
-      <span><i class="rp-sw aire"></i>gagné / perdu face au N-1</span>
-      <span>mois d’ouverture, incomplet : hors courbe</span>
-      <span>* le N-1 a eu plus de 2 jours fermés</span>
-    </div>
-    <h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3>
-    <div class="rp-kpis" id="evolution-tuiles"></div>
+  <!-- PAGE 2 · LE PROBLÈME -->
+  <section class="rp-page" id="page-2">
+    <header class="rp-partie" id="partie-2"><div class="rp-partie-n">2</div><div><h2 class="rp-partie-titre">Le problème</h2></div></header>
+    <section class="rp-carte" id="probleme">
+      <ol class="rp-pistes" id="probleme-points"></ol>
+      <div class="rp-alerte" id="tm-constat"></div>
+      <div class="rp-deux">
+        <div class="rp-part" id="question-panier"><h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3><p class="rp-p" id="question-texte"></p></div>
+        <div class="rp-part" id="b2b-top" hidden><h3 class="rp-h3" id="b2b-top-titre"></h3>
+          <div class="rp-table-zone"><table class="rp-table" id="b2b-top-table"></table></div></div>
+      </div>
+      <div class="rp-deux">
+        <div class="rp-part" id="panier"><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
+          <div class="rp-table-zone"><table class="rp-table" id="panier-magasins"></table></div></div>
+        <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
+          <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
+      </div>
+    </section>
   </section>
 
-  <section class="rp-carte" id="octobre-octobre">
-    <h2 class="rp-h2">Mai 2025 → octobre 2026</h2>
+  <!-- PAGE 3 · VERS QUOI ON TEND -->
+  <section class="rp-page" id="page-3">
+    <header class="rp-partie" id="partie-3"><div class="rp-partie-n">3</div><div><h2 class="rp-partie-titre">Vers quoi on tend</h2></div></header>
+    <section class="rp-carte" id="soins">
+      <h2 class="rp-h2">D’où l’on part</h2>
+      <p class="rp-p" id="soins-intro"></p>
+      <div class="rp-kpis" id="soins-reperes"></div>
+      <h3 class="rp-h3">Où l’on va : les clients par jour</h3>
+      <p class="rp-p" id="cv-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div>
+      <p class="rp-aide" id="cv-calcul"></p>
+      <h3 class="rp-h3">Les cibles</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="cibles"></table></div>
+    </section>
+    <section class="rp-carte" id="theorique" hidden>
+      <h2 class="rp-h2" id="theo-titre"></h2>
+      <ul class="rp-points" id="theo-points"></ul>
+      <div class="rp-table-zone"><table class="rp-table" id="theo-table"></table></div>
+    </section>
+  </section>
+
+  <!-- PAGE 4 · COMMENT ON VA Y ARRIVER -->
+  <section class="rp-page" id="page-4">
+    <header class="rp-partie" id="partie-4"><div class="rp-partie-n">4</div><div><h2 class="rp-partie-titre">Comment on va y arriver</h2></div></header>
+    <div class="rp-alerte" id="cout-relance"></div>
+    <section class="rp-carte" id="gestion">
+      <h2 class="rp-h2">4.1 · La structure de gestion</h2>
+      <p class="rp-p" id="gestion-intro"></p>
+      <div class="rp-part" id="marque"><h3 class="rp-h3">La marque participe, sous conditions</h3><p class="rp-p" id="marque-texte"></p>
+        <div class="rp-table-zone"><table class="rp-table" id="marque-conditions"></table></div></div>
+      <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
+      <div class="rp-part" id="suivi"><h3 class="rp-h3">Le suivi, chaque semaine</h3>
+        <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div></div>
+    </section>
+    <section class="rp-carte" id="taches">
+      <h2 class="rp-h2">4.2 · Les tâches et les checklists</h2>
+      <p class="rp-p" id="tc-intro"></p>
+      <div class="rp-deux">
+        <div class="rp-part" id="tc-checklist"><h3 class="rp-h3">La checklist : à quoi elle sert</h3><ul class="rp-points" id="tc-checklist-points"></ul></div>
+        <div class="rp-part" id="tc-taches"><h3 class="rp-h3">Les tâches : à quoi elles servent</h3><ul class="rp-points" id="tc-taches-points"></ul>
+          <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
+      </div>
+      <div class="rp-alerte" id="tc-sombreffe"></div>
+    </section>
+    <section class="rp-carte" id="developpement">
+      <h2 class="rp-h2">4.3 · Le développement</h2>
+      <div class="rp-part" id="chantier-ventes"><p class="rp-p" id="cv-aide"></p></div>
+      <div class="rp-part" id="pistes-zone"><h3 class="rp-h3">Les pistes</h3><ol class="rp-pistes" id="pistes"></ol></div>
+    </section>
+    <section class="rp-carte" id="note-redacteur">
+      <h2 class="rp-h2">Note du rédacteur</h2>
+      <p class="rp-note" id="note-redacteur-texte"></p>
+    </section>
+  </section>
+
+  <!-- ANNEXES -->
+  <header class="rp-annexes" id="annexes">
+    <div class="rp-kicker">Sombreffe, comptoir et B2B</div>
+    <h2 class="rp-annexe-titre">Annexes</h2>
+  </header>
+  <section class="rp-carte" id="annexe-a">
+    <h2 class="rp-h2">A · Les 18 mois</h2>
     <p class="rp-p" id="oo-intro"></p>
-    <div class="rp-part" id="trafic">
-      <h3 class="rp-h3">Clients par jour ouvert</h3>
-      <div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div>
+    <div class="rp-deux">
+      <div class="rp-part" id="trafic"><h3 class="rp-h3">Clients par jour ouvert</h3><div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div></div>
+      <div class="rp-part" id="comparable"><h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
+        <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div><p class="rp-aide" id="comp-note"></p></div>
     </div>
-    <div class="rp-part" id="comparable">
-      <h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
-      <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div>
-      <p class="rp-aide" id="comp-note"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
+    <p class="rp-aide" id="oo-note"></p>
+    <div class="rp-deux">
+      <div class="rp-part"><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
+      <div class="rp-part"><h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3><div class="rp-kpis" id="evolution-tuiles"></div></div>
     </div>
-    <p class="rp-aide rp-renvoi">Le détail mois par mois et trimestre par trimestre : annexe A.</p>
   </section>
-
-  <section class="rp-carte" id="comptoir-b2b">
-    <h2 class="rp-h2">Comptoir et B2B</h2>
-    <div class="rp-part" id="part-b2b">
-      <h3 class="rp-h3">La part du B2B sur 12 mois</h3>
-      <div style="height:14px"></div>
-      <div class="rp-barre" id="barre-b2b"></div>
-      <div class="rp-chiffres" id="chiffres-b2b"></div>
-      <p class="rp-aide" id="aide-b2b"></p>
-    </div>
-    <div class="rp-part" id="b2b-trimestres" hidden>
-      <h3 class="rp-h3">La part du B2B, trimestre par trimestre</h3>
-      <div class="rp-table-zone"><table class="rp-table" id="b2b-trim-table"></table></div>
-      <p class="rp-aide" id="b2b-trim-note"></p>
-    </div>
+  <section class="rp-carte" id="annexe-b">
+    <h2 class="rp-h2">B · Les clients B2B</h2>
     <div class="rp-ouvert" id="a-completer"></div>
-    <div class="rp-part" id="b2b-6mois" hidden>
-      <h3 class="rp-h3" id="b2b-6mois-titre"></h3>
-      <p class="rp-p" id="b2b-6mois-texte"></p>
-      <div class="rp-table-zone"><table class="rp-table rp-serre" id="b2b-6mois-table"></table></div>
-      <p class="rp-aide" id="b2b-6mois-note"></p>
-    </div>
-    <div class="rp-part" id="b2b-clients" hidden>
-      <h3 class="rp-h3">Les clients B2B, année par année</h3>
-      <p class="rp-p" id="b2b-clients-texte"></p>
-      <div class="rp-table-zone"><table class="rp-table" id="b2b-clients-table"></table></div>
-      <p class="rp-aide" id="b2b-clients-note"></p>
-    </div>
-    <p class="rp-aide rp-renvoi">Les dix dernières semaines face à 2025, celles où le CA saute : annexe B.</p>
+    <div class="rp-part" id="b2b-6mois" hidden><h3 class="rp-h3" id="b2b-6mois-titre"></h3><p class="rp-p" id="b2b-6mois-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="b2b-6mois-table"></table></div><p class="rp-aide" id="b2b-6mois-note"></p></div>
+    <div class="rp-part" id="b2b-clients" hidden><h3 class="rp-h3">Les clients B2B, année par année</h3><p class="rp-p" id="b2b-clients-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table" id="b2b-clients-table"></table></div><p class="rp-aide" id="b2b-clients-note"></p></div>
   </section>
-
-  <section class="rp-carte" id="personnel">
-    <h2 class="rp-h2">Frais de personnel face au chiffre d’affaires</h2>
+  <section class="rp-carte" id="annexe-c">
+    <h2 class="rp-h2">C · Le trafic de Sombreffe au panier du plus bas des autres magasins</h2>
+    <h3 class="rp-h3" id="panier-mois-titre"></h3>
+    <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-mois"></table></div>
+  </section>
+  <section class="rp-carte" id="semaines">
+    <h2 class="rp-h2">D · Les dix dernières semaines</h2>
+    <p class="rp-p" id="sem-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
+  </section>
+  <section class="rp-carte" id="annexe-e">
+    <h2 class="rp-h2">E · Temps morts</h2>
+    <p class="rp-p" id="tm-intro"></p>
+    <ul class="rp-points" id="tm-points"></ul>
+    <div class="rp-deux">
+      <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
+      <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
+    </div>
+  </section>
+  <section class="rp-carte" id="annexe-f">
+    <h2 class="rp-h2">F · Frais de personnel, mois par mois</h2>
     <p class="rp-p" id="pe-intro"></p>
-    <div class="rp-kpis" id="pe-kpis"></div>
-    <div class="rp-graphe" id="graphe-personnel"><div class="rp-bulle"></div></div>
     <div class="rp-table-zone"><table class="rp-table" id="pe-table"></table></div>
     <p class="rp-aide" id="pe-note"></p>
     <div class="rp-ouvert" id="pe-completer" hidden></div>
   </section>
-
-  <section class="rp-carte" id="temps-morts">
-    <h2 class="rp-h2">Temps morts au comptoir</h2>
-    <p class="rp-p" id="tm-intro"></p>
-    <div class="rp-kpis" id="tm-kpis"></div>
-    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
-    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
-    <div class="rp-legende" id="tm-legende"></div>
-    <ul class="rp-points" id="tm-points"></ul>
-    <p class="rp-aide rp-renvoi">Les temps morts par jour de la semaine et face aux autres magasins : annexe C.</p>
-  </section>
-
-  <!-- 2 · LE PROBLÈME ------------------------------------------------------------------------------------------ -->
-  <header class="rp-partie" id="partie-2">
-    <div class="rp-partie-n">2</div>
-    <div><h2 class="rp-partie-titre">Le problème</h2><p class="rp-sous">Ce qui ne va pas, et ce que les chiffres ne disent pas seuls.</p></div>
-  </header>
-
-  <section class="rp-carte" id="probleme">
-    <h2 class="rp-h2">Ce qui ne va pas</h2>
-    <ol class="rp-pistes" id="probleme-points"></ol>
-    <div class="rp-alerte" id="tm-constat"></div>
-    <div class="rp-part" id="question-panier">
-      <h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3>
-      <p class="rp-p" id="question-texte"></p>
-    </div>
-    <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
-      <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
-  </section>
-
-  <!-- 3 · VERS QUOI ON TEND -------------------------------------------------------------------------------------- -->
-  <header class="rp-partie" id="partie-3">
-    <div class="rp-partie-n">3</div>
-    <div><h2 class="rp-partie-titre">Vers quoi on tend</h2><p class="rp-sous">D’où l’on part, où l’on va : chacun doit faire sa part.</p></div>
-  </header>
-
-  <section class="rp-carte" id="soins">
-    <h2 class="rp-h2">D’où l’on part</h2>
-    <p class="rp-p" id="soins-intro"></p>
-    <div class="rp-kpis" id="soins-reperes"></div>
-    <h3 class="rp-h3">Où l’on va : les clients par jour</h3>
-    <p class="rp-p" id="cv-texte"></p>
-    <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div>
-    <p class="rp-aide" id="cv-calcul"></p>
-    <h3 class="rp-h3">Les cibles</h3>
-    <div class="rp-table-zone"><table class="rp-table" id="cibles"></table></div>
-  </section>
-
-  <!-- 4 · COMMENT ON VA Y ARRIVER ---------------------------------------------------------------------------------- -->
-  <header class="rp-partie" id="partie-4">
-    <div class="rp-partie-n">4</div>
-    <div><h2 class="rp-partie-titre">Comment on va y arriver</h2><p class="rp-sous">La structure de gestion, les tâches et les checklists, le développement.</p></div>
-  </header>
-  <div class="rp-alerte" id="cout-relance"></div>
-
-  <section class="rp-carte" id="gestion">
-    <h2 class="rp-h2">4.1 · La structure de gestion</h2>
-    <p class="rp-p" id="gestion-intro"></p>
-    <div class="rp-part" id="marque">
-      <h3 class="rp-h3">La marque participe, sous conditions</h3>
-      <p class="rp-p" id="marque-texte"></p>
-      <div class="rp-table-zone"><table class="rp-table" id="marque-conditions"></table></div>
-    </div>
-    <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
-    <div class="rp-part" id="suivi"><h3 class="rp-h3">Le suivi, chaque semaine</h3>
-      <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div></div>
-  </section>
-
-  <section class="rp-carte" id="taches">
-    <h2 class="rp-h2">4.2 · Les tâches et les checklists</h2>
-    <p class="rp-p" id="tc-intro"></p>
-    <div class="rp-deux">
-      <div class="rp-part" id="tc-checklist"><h3 class="rp-h3">La checklist : à quoi elle sert</h3><ul class="rp-points" id="tc-checklist-points"></ul></div>
-      <div class="rp-part" id="tc-taches"><h3 class="rp-h3">Les tâches : à quoi elles servent</h3><ul class="rp-points" id="tc-taches-points"></ul>
-        <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
-    </div>
-    <div class="rp-alerte" id="tc-sombreffe"></div>
-    <p class="rp-aide rp-renvoi">La journée complète en checklists, heure par heure : annexe D.</p>
-  </section>
-
-  <section class="rp-carte" id="developpement">
-    <h2 class="rp-h2">4.3 · Le développement</h2>
-    <div class="rp-part" id="chantier-ventes"><h3 class="rp-h3">Où trouver les clients</h3><p class="rp-p" id="cv-aide"></p></div>
-    <div class="rp-part" id="pistes-zone"><h3 class="rp-h3">Les pistes</h3><ol class="rp-pistes" id="pistes"></ol></div>
-  </section>
-
-  <header class="rp-annexes" id="annexes">
-    <div class="rp-kicker">Sombreffe, comptoir et B2B</div>
-    <h2 class="rp-titre">Annexes</h2>
-    <div class="rp-sous">Les tableaux détaillés, dans l’ordre où le rapport y renvoie.</div>
-  </header>
-
-  <section class="rp-carte" id="annexe-a">
-    <h2 class="rp-h2">A · Les 18 mois, mois par mois</h2>
-    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
-    <p class="rp-aide" id="oo-note"></p>
-    <h3 class="rp-h3">Trimestre par trimestre</h3>
-    <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
-  </section>
-
-  <section class="rp-carte" id="semaines">
-    <h2 class="rp-h2">B · Les dix dernières semaines</h2>
-    <p class="rp-p" id="sem-intro"></p>
-    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
-  </section>
-
-  <section class="rp-carte" id="annexe-c">
-    <h2 class="rp-h2">C · Temps morts par jour et face au réseau</h2>
-    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
-    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
-  </section>
-
-  <section class="rp-carte" id="annexe-d">
-    <h2 class="rp-h2">D · La journée en checklists</h2>
+  <section class="rp-carte" id="annexe-g">
+    <h2 class="rp-h2">G · La journée en checklists</h2>
     <div class="rp-table-zone"><table class="rp-table" id="tc-journee"></table></div>
     <p class="rp-aide" id="tc-semaine"></p>
   </section>
-
   <section class="rp-carte" id="sources">
-    <h2 class="rp-h2">E · Sources et méthode</h2>
+    <h2 class="rp-h2">H · Sources et méthode</h2>
     <ul class="rp-sources" id="sources-liste"></ul>
-  </section>
-
-  <section class="rp-carte" id="note-redacteur">
-    <h2 class="rp-h2">F · Note du rédacteur</h2>
-    <p class="rp-note" id="note-redacteur-texte"></p>
   </section>
   <div class="rp-pied" id="pied"></div>
 </main>
@@ -454,7 +445,7 @@ function bulle(zone, html, x, y) {
 function grapheMois(id, cfg) {
   const zone = $(id);
   const W = Math.max(320, zone.clientWidth), etroit = W < 640, C = cfg.couleur || '#8D1D2C';
-  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44;
+  const H = etroit ? 200 : 180, ml = 50, mr = 12, mt = 22, mb = 44;
   const S = D.serie, n = S.length, pas = (W - ml - mr) / n, x = i => ml + pas * (i + 0.5);
   const pleins = S.map((m, i) => ({ m, i, v: m.ouverture ? null : cfg.val(m) })).filter(o => o.v != null);
   const avec = S.map((m, i) => ({ m, i, v: cfg.val(m), w: cfg.val1(m) })).filter(o => o.v != null && o.w != null);
@@ -508,7 +499,7 @@ function grapheMois(id, cfg) {
     const v = cfg.val(m), w = cfg.val1(m);
     if (v != null && w) {
       const e = (v / w - 1) * 100, r = Math.round(e), etoile = m.n1 && m.n1.jours < m.jours - 2 ? '*' : '';
-      s += `<text x="${x(i)}" y="${hc}" font-size="9.5" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
+      s += `<text x="${x(i)}" y="${hc + (etroit && i % 2 ? 11 : 0)}" font-size="${etroit ? 8.5 : 9.5}" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
     }
   });
   if (avec.length) { s += `<text x="${ml - 8}" y="${hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>`; }
@@ -534,7 +525,7 @@ function grapheMois(id, cfg) {
    mois clos (la part du cockpit appliquée à leur CA), tracée comme une moyenne sur ces 12 mois, rien de plus. */
 function grapheB2bMoyenne() {
   const zone = $('graphe-b2b'), W = Math.max(320, zone.clientWidth), etroit = W < 640, C = '#1f5f8b';
-  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
+  const H = etroit ? 200 : 180, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
   const x = i => ml + pas * (i + 0.5), v = D.b2b.parMois, pasY = 1000, ymax = Math.ceil(v * 1.6 / pasY) * pasY, hP = H - mt - mb;
   const y = w => mt + (ymax - w) / ymax * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
   const i0 = S.findIndex(m => m.k === '2025-11'), i1 = S.findIndex(m => m.k === '2026-10'), xa = ml + pas * i0, xb = ml + pas * (i1 + 1);
@@ -608,7 +599,7 @@ $('trim-table').innerHTML = '<thead><tr><th>Période</th><th class="num">Clients
 
 function grapheTrafic() {
   const zone = $('graphe-trafic');
-  const W = Math.max(300, zone.clientWidth), H = 200, ml = 30, mr = 6, mt = 18, mb = 26;
+  const W = Math.max(300, zone.clientWidth), H = 150, ml = 30, mr = 6, mt = 18, mb = 26;
   const n = L.length, pas = (W - ml - mr) / n, lb = Math.min(28, pas * 0.62);
   const vmax = 180, hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP;
   const ft = 'font-family:var(--font)';
@@ -642,6 +633,24 @@ $('comp-table').innerHTML = '<thead><tr><th></th><th class="num">2025</th><th cl
   + compL.map(([lab, k, f]) => `<tr><td>${esc(lab)}</td><td class="num">${f(C.n1[k])}</td><td class="num">${f(C.n[k])}</td>`
     + (k === 'jours' ? `<td class="num">+${C.n[k] - C.n1[k]}</td>` : `<td class="num ${cls(ecC(k))}">${pct(ecC(k))}</td>`) + '</tr>').join('') + '</tbody>';
 $('comp-note').textContent = 'En 2025, le magasin a eu des jours fermés en mai et en juillet : « par jour ouvert » compare à jours égaux.';
+
+/* --- Le panier moyen face aux autres magasins (mois où les quatre sont ouverts) --- */
+const PA = D.panierAutres, moisCL = k => { const [a, m] = k.split('-'); return ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][+m - 1] + ' ' + a.slice(2); };
+const perPA = moisCL(PA.du) + ' → ' + moisCL(PA.au);
+const moiPA = PA.magasins.find(m => m.moi);
+$('panier-mag-titre').textContent = 'Panier moyen · ' + perPA + ' (' + PA.nbMois + ' mois)';
+$('panier-magasins').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">Panier</th><th class="num">vs Sombreffe</th></tr></thead><tbody>'
+  + PA.magasins.map(m => `<tr${m.moi ? ' class="moi"' : ''}><td>${esc(m.nom)}${m.nom === PA.bas.nom ? ' · le plus bas des autres' : ''}</td><td class="num">${dec(m.cliJour, 0)}</td><td class="num">${k1(m.ca)}</td><td class="num">${eur2(m.panier)}</td><td class="num ${m.moi ? 'dim' : cls(m.panier - moiPA.panier)}">${m.moi ? '—' : pct((m.panier / moiPA.panier - 1) * 100)}</td></tr>`).join('')
+  + '</tbody>';
+$('panier-mois-titre').textContent = 'Le trafic de Sombreffe au panier de ' + PA.bas.nom + ' (' + eur2(PA.bas.panier) + ')';
+$('panier-mois').innerHTML = '<thead><tr><th>Mois</th><th class="num">Clients</th><th class="num">Panier</th><th class="num">CA réel</th><th class="num">CA au panier ' + esc(PA.bas.nom) + '</th><th class="num">Écart</th></tr></thead><tbody>'
+  + PA.mois.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${grp(l.clients)}</td><td class="num">${eur2(l.panier)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caBas)}</td><td class="num ${cls(l.ecart)}">${sgn(l.ecart)}${eur(Math.abs(l.ecart))}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>${PA.nbMois} mois</td><td class="num">${grp(PA.clients)}</td><td class="num">${eur2(PA.ca / PA.clients)}</td><td class="num">${eur(PA.ca)}</td><td class="num">${eur(PA.caBas)}</td><td class="num ${cls(PA.ecart)}">${sgn(PA.ecart)}${eur(Math.abs(PA.ecart))}</td></tr></tfoot>`;
+$('panier-points').innerHTML = [
+  `Panier de Sombreffe : ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA}).`,
+  `Le plus bas des autres : ${esc(PA.bas.nom)}, ${eur2(PA.bas.panier)} (${pct((PA.bas.panier / moiPA.panier - 1) * 100)}).`,
+  `Au panier de ${esc(PA.bas.nom)}, les ${grp(PA.clients)} clients de Sombreffe auraient fait ${k1(PA.caBas)} au lieu de ${k1(PA.ca)} : ${sgn(PA.ecart)}${k1(Math.abs(PA.ecart))} en ${PA.nbMois} mois, ≈ ${sgn(PA.ecartAn)}${k1(Math.abs(PA.ecartAn))} par an.`,
+].map(t => '<li>' + t + '</li>').join('');
 
 /* --- Comptoir et B2B --- */
 const partC = 100 - B.part;
@@ -791,7 +800,7 @@ $('probleme-points').innerHTML = [
   B2BX && B2BX.sept ? null : `La hausse du CA de septembre et octobre ne vient pas des clients. En octobre, ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier (${pct(O.vsPan)}). B2B ou comptoir, le détail mois par mois le dira.`,
   `L’été 2026 a été faible : juillet ${pct(juil.vsCa)} (${pct(juil.vsCaJour)} par jour ouvert), août ${pct(aout.vsCa)}.`,
   D.personnel && D.personnel.cumul.mois
-    ? (PE6 ? `Les frais de personnel montent : ${dec(PE6.n.pct)} % du CA de mai à octobre 2026, contre ${dec(PE6.n1.pct)} % un an plus tôt (${sgn(PE6.n.pct - PE6.n1.pct)}${dec(Math.abs(PE6.n.pct - PE6.n1.pct))} points, ${sgn(PE6.n.lab - PE6.n1.lab)}${k1(Math.abs(PE6.n.lab - PE6.n1.lab))}), à CA presque égal. Ils restent sous le seuil de ${dec(D.seuilPersonnel, 0)} %.`
+    ? (PE6 ? `Les frais de personnel montent : ${dec(PE6.n.pct)} % du CA de mai à octobre 2026, contre ${dec(PE6.n1.pct)} % un an plus tôt (${sgn(PE6.n.pct - PE6.n1.pct)}${dec(Math.abs(PE6.n.pct - PE6.n1.pct))} points, ${sgn(PE6.n.lab - PE6.n1.lab)}${k1(Math.abs(PE6.n.lab - PE6.n1.lab))}), à CA presque égal. ${PE6.n.pct > D.seuilPersonnel ? 'Ils dépassent' : 'Ils restent sous'} le seuil de ${dec(D.seuilPersonnel, 0)} % (hors rémunération du franchisé).`
       : `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`)
     : 'Les frais de personnel face au CA restent à lire dans le P&L du panel (partie 1).',
 ].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
@@ -808,10 +817,10 @@ $('probleme-points').innerHTML = [
   const LQ = Object.values(T);
   if (LQ.some(t => t.lus)) {
     const nomQ = t => `${t.q === 1 ? '1er' : t.q + 'e'} trimestre ${t.an}`;
-    $('b2b-trim-table').innerHTML = '<thead><tr><th>Trimestre</th><th>Mois</th><th class="num">CA</th><th class="num">Comptoir</th><th class="num">B2B</th><th class="num">Part B2B</th><th></th></tr></thead><tbody>'
+    $('b2b-trim-table').innerHTML = '<thead><tr><th>Trimestre</th><th class="num">CA</th><th class="num">Comptoir</th><th class="num">B2B</th><th class="num">Part B2B</th><th></th></tr></thead><tbody>'
       + LQ.map(t => {
         const part = t.lus ? t.b2b / t.ca * 100 : null;
-        return `<tr><td>${esc(nomQ(t))}</td><td>${esc(t.mois.join(', ') + (t.ouverture ? ' (ouverture fin avril)' : t.mois.length < 3 ? ' (incomplet)' : ''))}</td><td class="num">${eur(t.ca)}</td>`
+        return `<tr><td>${esc('T' + t.q + ' ' + t.an + (t.ouverture ? ' (dès le 25/04)' : t.mois.length < 3 ? ' (' + t.mois.join(', ') + ')' : ''))}</td><td class="num">${eur(t.ca)}</td>`
           + (t.lus ? `<td class="num">${eur(t.ca - t.b2b)}</td><td class="num">${eur(t.b2b)}</td><td class="num">${dec(part)} %</td>`
                    + `<td><div class="rp-jauge" title="${dec(part)} % sur un plafond de ${dec(D.plafond, 0)} %"><i style="width:${Math.min(100, part / D.plafond * 100)}%"></i></div></td>`
                    : '<td class="num dim" colspan="4">B2B pas lu sur tous les jours</td>') + '</tr>';
@@ -874,7 +883,7 @@ if (PE && PE.cumul.mois) {
   const ML = PE.mois.filter(m => !m.indispo), dernierP = ML[ML.length - 1];
   const maxP = ML.reduce((a, m) => m.labourPct > a.labourPct ? m : a), minP = ML.reduce((a, m) => m.labourPct < a.labourPct ? m : a);
   const moisC = ym => { const l = D.lignes.find(x => x.k === ym); return l ? l.lab : ym; };
-  $('pe-intro').textContent = insec(`Les frais de personnel du P&L du panel, mois par mois, face au chiffre d’affaires du même P&L, sur ${PE.cumul.mois} mois lus. Repère : le seuil de main-d’œuvre du cockpit, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-intro').textContent = insec(`Les frais de personnel du P&L du panel, mois par mois, face au chiffre d’affaires du même P&L, sur ${PE.cumul.mois} mois lus. Repère : le seuil du réseau pour les frais de personnel hors rémunération du franchisé, ${dec(SEUIL_P, 0)} % du CA.`);
   $('pe-kpis').innerHTML = [
     kpi(`Personnel · ${PE.cumul.mois} mois`, dec(PE.cumul.labourPct) + INS + '%', `${k1(PE.cumul.labour)} sur ${k1(PE.cumul.ca)} de CA`, PE.cumul.labourPct > SEUIL_P ? 'bad' : 'good'),
     kpi('Dernier mois · ' + moisC(dernierP.mois), dec(dernierP.labourPct) + INS + '%', `${eur(dernierP.labour)} de personnel`, dernierP.labourPct > SEUIL_P ? 'bad' : 'good'),
@@ -889,7 +898,7 @@ if (PE && PE.cumul.mois) {
     + `</tbody><tfoot><tr><td>${PE.cumul.mois} mois</td><td class="num">${eur(PE.cumul.ca)}</td><td class="num">${eur(PE.cumul.labour)}</td><td class="num">${dec(PE.cumul.labourPct)} %</td><td></td><td></td></tr></tfoot>`;
   $('pe-note').textContent = insec(`Source : le P&L quotidien du panel additionné par mois (route /analyse/pnl/mois du cockpit). En rouge, un mois au-dessus du seuil de ${dec(SEUIL_P, 0)} %. Le CA du P&L peut différer de quelques euros de celui des ventes (les tickets).`);
   window.grapheP = () => {
-    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 190, ml = 34, mr = 6, mt = 16, mb = 24;
+    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 150, ml = 34, mr = 6, mt = 16, mb = 24;
     const n = PE.mois.length, pas = (W - ml - mr) / n, lb = Math.min(26, pas * 0.6);
     const vmax = Math.max(SEUIL_P + 10, Math.ceil(maxP.labourPct / 10) * 10), hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP, ft = 'font-family:var(--font)';
     let sv = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Frais de personnel en % du CA, mois par mois">`;
@@ -908,10 +917,55 @@ if (PE && PE.cumul.mois) {
   };
 } else {
   ['pe-kpis', 'graphe-personnel', 'pe-table', 'pe-note'].forEach(id => { $(id).hidden = true; });
-  $('pe-intro').textContent = insec(`Les frais de personnel face au chiffre d’affaires, mois par mois sur les 18 mois, viennent du P&L du panel. Repère : le seuil de main-d’œuvre du cockpit, ${dec(SEUIL_P, 0)} % du CA.`);
+  $('pe-intro').textContent = insec(`Les frais de personnel face au chiffre d’affaires, mois par mois sur les 18 mois, viennent du P&L du panel. Repère : le seuil du réseau pour les frais de personnel hors rémunération du franchisé, ${dec(SEUIL_P, 0)} % du CA.`);
   $('pe-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le P&L mois par mois de Sombreffe, de mai 2025 à octobre 2026 : la route /analyse/pnl/mois du cockpit (shop 5, du 2025-05 au 2026-10). Une fois reçu, le tableau des 18 mois et son graphique se remplissent ici.')) + '</span>';
   $('pe-completer').hidden = false;
   $('personnel').classList.add('rp-attente');
+}
+
+/* --- Le résultat théorique : 15 % de personnel, panier dans la moyenne basse --- */
+if (D.theorique) {
+  const T = D.theorique, R = T.reel, H = T.theo, lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
+  const gain = c => c.resultat - R.resultat;
+  $('theo-titre').textContent = `Le résultat théorique : ${dec(T.seuil, 0)} % de personnel, panier à ${eur2(T.bas.panier)}`;
+  $('theo-points').innerHTML = [
+    `Même trafic : ${grp(R.clients)} clients par mois (${lab(T.du)} → ${lab(T.au)}, ${T.n} mois).`,
+    `Panier dans la moyenne basse : ${eur2(T.bas.panier)}, celui de ${T.bas.nom}, le plus bas des autres magasins, contre ${eur2(R.panier)}.`,
+    `Personnel : ${dec(T.seuil, 0)} % du CA, contre ${dec(R.personnel / R.ca * 100)} %.`,
+    `Matière et emballage : ${dec(T.tauxMatiere, 0)} % du CA des deux côtés (taux budget du réseau ; le P&L du panel ne la chiffre pas). Frais généraux : ceux du P&L.`,
+    `Résultat : ${sgn(gain(H))}${eur(Math.abs(gain(H)))} par mois, ${sgn(gain(H))}${k1(Math.abs(gain(H) * 12))} par an ; le personnel seul en apporte ${k1(gain(T.personnelSeul) * 12)}, le panier seul ${k1(gain(T.panierSeul) * 12)}.`,
+  ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  const lignesT = [['Clients', c => grp(c.clients)], ['Panier', c => eur2(c.panier)], ['CA', c => eur(c.ca)], [`Matière et emballage (${dec(T.tauxMatiere, 0)} %)`, c => eur(c.matiere)],
+    ['Personnel', c => eur(c.personnel)], ['Frais généraux', c => eur(c.fg)], ['Résultat', c => eur(c.resultat)], ['Résultat, % du CA', c => dec(c.resultat / c.ca * 100) + ' %']];
+  const fois = (c, k) => ({ clients: c.clients * k, panier: c.panier, ca: c.ca * k, matiere: c.matiere * k, personnel: c.personnel * k, fg: c.fg * k, resultat: c.resultat * k });
+  $('theo-table').innerHTML = '<thead><tr><th></th><th class="num">Un mois, aujourd’hui</th><th class="num">Un mois, théorique</th><th class="num">Un trimestre</th><th class="num">Une année</th><th class="num">Écart sur l’année</th></tr></thead><tbody>'
+    + lignesT.map(([nom, f], i) => {
+      const ecart = ['CA', 'Personnel', 'Résultat'].includes(nom) ? (k => k(H) * 12 - k(R) * 12) : null;
+      const cle = { 'CA': c => c.ca, 'Personnel': c => c.personnel, 'Résultat': c => c.resultat }[nom];
+      return `<tr class="${nom === 'Résultat' ? 'moi' : ''}"><td>${esc(nom)}</td><td class="num">${esc(f(R))}</td><td class="num">${esc(f(H))}</td><td class="num">${esc(f(fois(H, 3)))}</td><td class="num">${esc(f(fois(H, 12)))}</td>`
+        + `<td class="num ${cle ? cls(nom === 'Personnel' ? -(cle(H) - cle(R)) : cle(H) - cle(R)) : ''}">${cle ? sgn(cle(H) - cle(R)) + eur(Math.abs((cle(H) - cle(R)) * 12)) : ''}</td></tr>`;
+    }).join('') + '</tbody>';
+  $('theorique').hidden = false;
+}
+
+/* --- Le personnel des quatre magasins --- */
+if (D.personnelReseau && D.personnelReseau.length) {
+  $('pe-reseau').innerHTML = '<thead><tr><th>Magasin</th><th class="num">CA mai → oct. 26</th><th class="num">Personnel</th><th class="num">% du CA</th><th class="num">Tous les mois lus</th></tr></thead><tbody>'
+    + D.personnelReseau.map(m => `<tr class="${m.shop === '5' ? 'moi' : ''}"><td>${esc(m.nom)}${m.shop === '5' ? ' (ce magasin)' : ''}</td><td class="num">${eur(m.ca6)}</td><td class="num">${eur(m.lab6)}</td>`
+      + `<td class="num ${m.pct6 > D.seuilPersonnel ? 'down' : 'up'}">${dec(m.pct6)} %</td><td class="num">${m.pctTout != null ? dec(m.pctTout) + ' %' : '—'} <span class="dim">(${m.nMois} mois)</span></td></tr>`).join('') + '</tbody>';
+}
+
+/* --- Le B2B : les cinq premiers clients des six derniers mois --- */
+if (D.b2bDetail && D.b2bDetail.societes.length) {
+  const M6 = Object.keys(D.b2bDetail.mois).sort().slice(-6);
+  const S6 = D.b2bDetail.societes.map(c => ({ nom: c.nom, dernier: c.dernier, t: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0), n: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).tickets || 0), 0) }))
+    .filter(c => c.t > 0).sort((a, b) => b.t - a.t);
+  const tot = S6.reduce((a, c) => a + c.t, 0), lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
+  $('b2b-top-titre').textContent = `Le B2B : les 5 premiers clients, ${lab(M6[0])} → ${lab(M6[M6.length - 1])}`;
+  $('b2b-top-table').innerHTML = '<thead><tr><th>Société</th><th class="num">CA</th><th class="num">Tickets</th><th class="num">Part du B2B</th></tr></thead><tbody>'
+    + S6.slice(0, 5).map(c => `<tr><td>${esc(c.nom)}</td><td class="num">${eur(c.t)}</td><td class="num">${c.n}</td><td class="num">${dec(c.t / tot * 100)} %</td></tr>`).join('')
+    + `</tbody><tfoot><tr><td>${S6.length} sociétés</td><td class="num">${eur(tot)}</td><td class="num">${S6.reduce((a, c) => a + c.n, 0)}</td><td class="num">100 %</td></tr></tfoot>`;
+  $('b2b-top').hidden = false;
 }
 
 /* --- Soins intensifs --- */
@@ -949,7 +1003,7 @@ $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui<
     ['Après-midi sans client, 14 h → 18 h', dec(APM.pct, 0) + ' %', 'moins de 50 %, 10 tickets par heure'],
     ['Cuisson de l’après-midi', 'arrêtée', 'chaque jour, checklist 1.3.01 à 14 h'],
     ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
-    ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `revenir vers ${dec(PE6.n1.pct)} % (2025), sous ${dec(SEUIL_P, 0)} %` : `sous ${dec(SEUIL_P, 0)} % du CA`],
+    ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `vers ${dec(SEUIL_P, 0)} % du CA, le seuil du réseau` : `sous ${dec(SEUIL_P, 0)} % du CA`],
     ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} %`],
     ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget, tout payé le lundi'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
@@ -996,6 +1050,14 @@ $('sources-liste').innerHTML = [
   `Temps morts : seuil ${TM.seuil} min, ${TM.semaines} semaines du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, tickets par heure du panel lus le ${TM.luLe}. Les minutes des tickets sont tirées dans leur heure (500 tirages par journée) ; vérifié sur les tickets réels d’une semaine, le résultat tombe juste en moyenne (423 temps morts mesurés pour 422 estimés). L’onglet Temps morts du dashboard magasin les mesure ticket par ticket.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 $('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
+
+/* --- Version courte : chaque paragraphe en puces, une phrase par puce --- */
+document.querySelectorAll('p.rp-p').forEach(p => {
+  const t = p.textContent.trim(); if (!t) { return; }
+  const ph = t.split(/(?<=[.!?])\s+(?=[A-ZÀ-ÝÉ«0-9])/);
+  const ul = document.createElement('ul'); ul.className = 'rp-points'; ul.id = p.id; ul.hidden = p.hidden;
+  ul.innerHTML = ph.map(x => '<li>' + esc(x) + '</li>').join(''); p.replaceWith(ul);
+});
 
 /* --- Dessins, redessinés à la largeur --- */
 function dessiner() { grapheEvolution(); grapheTrafic(); if (window.grapheP) { window.grapheP(); } }
