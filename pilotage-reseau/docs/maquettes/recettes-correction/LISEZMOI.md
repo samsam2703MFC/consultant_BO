@@ -1,6 +1,26 @@
 # Vérification › Recettes à corriger : corriger d'ici, ou ouvrir au bon endroit (maquette)
 
-**Statut : maquette du 13/11/2026, à valider.** Rien n'est codé.
+**Statut : codé le 13/11/2026** (décision : « tout, CEO seul »). Captures de l'écran codé : `code-liste.png`,
+`code-ligne.png`, `code-apres.png`, `code-volet.png`, `code-registre.png`. Les maquettes `a`, `b`, `c` restent pour mémoire.
+
+## Ce qui est codé
+
+- **Serveur** : `src/verification_correction.php` (préfixe `vrc`), routes dans `public/api/index.php`, contrat dans
+  `docs/contrat-api.md` (« corriger d'ici »). Les règles (`src/verification.php`) portent sur chaque ligne ce qu'il faut
+  pour proposer le geste (`corr`).
+- **Écran** : `verification-correction-vals.js` et `verification-correction-tpl.js`, branchés dans `verification-vals.js`
+  et `verification-tpl.js` ; style `rc-` dans `verification.css`.
+- **Tests** : `php bin/tests_verification_correction.php` — un faux panel qui recalcule les coûts et applique les
+  écritures ; chaque geste de bout en bout, l'annulation, le refus (422) et le « sans effet ».
+- **Captures** : `capturer-code.js` ouvre le vrai cockpit avec l'API simulée par les réponses du test
+  (`VRC_FIXTURES=dossier php bin/tests_verification_correction.php`, puis `node … capturer-code.js dossier`).
+
+Écarts à la maquette : une correction ne part qu'après « Vérifier ce qui sera écrit » (le corps exact s'affiche) puis
+« Appliquer au panel » ; une ligne lourde dans une **sous-recette** (qui peut servir à d'autres produits) passe par le
+volet, jamais par un clic ; les corrections de la visite s'affichent en tête de la liste (« Corrigé depuis cette page »),
+le registre complet se déplie sous la liste et règle les adresses du panel.
+
+## La maquette (pour mémoire)
 
 Demande du 13/11/2026, sur `#/verification/recettes` : « dans les problèmes de recette, qu'on puisse en direct,
 si possible, corriger, ou un lien direct ».
