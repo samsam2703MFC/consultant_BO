@@ -85,6 +85,9 @@ body { margin: 0; background: var(--paper); }
 .rp-renvoi { font-style: normal; color: var(--muted-2); }
 .rp [hidden] { display: none !important; }
 .rp-serre td, .rp-serre th { padding-left: 6px; padding-right: 6px; }
+/* La part B2B d'un trimestre : une barre fine, à l'échelle du plafond de 40 %, le plafond en trait. */
+.rp-jauge { position: relative; height: 8px; min-width: 120px; background: var(--chip); border-radius: 2px; }
+.rp-jauge i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--b2b); border-radius: 2px; }
 /* Les quatre parties : un grand numéro, le titre, une ligne qui dit ce qu'on y trouve. */
 .rp-partie { display: flex; gap: 16px; align-items: baseline; padding: 18px 0 2px; border-top: 1px solid var(--line); }
 .rp-partie-n { font-size: 34px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
@@ -200,6 +203,11 @@ body { margin: 0; background: var(--paper); }
       <div class="rp-barre" id="barre-b2b"></div>
       <div class="rp-chiffres" id="chiffres-b2b"></div>
       <p class="rp-aide" id="aide-b2b"></p>
+    </div>
+    <div class="rp-part" id="b2b-trimestres" hidden>
+      <h3 class="rp-h3">La part du B2B, trimestre par trimestre</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="b2b-trim-table"></table></div>
+      <p class="rp-aide" id="b2b-trim-note"></p>
     </div>
     <div class="rp-ouvert" id="a-completer"></div>
     <div class="rp-part" id="b2b-6mois" hidden>
@@ -787,6 +795,31 @@ $('probleme-points').innerHTML = [
       : `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`)
     : 'Les frais de personnel face au CA restent à lire dans le P&L du panel (partie 1).',
 ].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
+
+/* --- La part du B2B par trimestre : le CA des ventes, le B2B de chaque mois (relu, sinon la copie de caisse) --- */
+{
+  const T = {};
+  D.serie.filter(m => m.ca != null).forEach(m => {
+    const q = Math.floor((+m.k.slice(5) - 1) / 3) + 1, cle = m.an + '-T' + q;
+    const t = T[cle] = T[cle] || { an: m.an, q, mois: [], ca: 0, b2b: 0, lus: true, ouverture: false };
+    t.mois.push(m.lab); t.ca += m.ca; t.ouverture = t.ouverture || m.ouverture;
+    if (m.pro && m.pro.complet) { t.b2b += m.pro.ca; } else { t.lus = false; }
+  });
+  const LQ = Object.values(T);
+  if (LQ.some(t => t.lus)) {
+    const nomQ = t => `${t.q === 1 ? '1er' : t.q + 'e'} trimestre ${t.an}`;
+    $('b2b-trim-table').innerHTML = '<thead><tr><th>Trimestre</th><th>Mois</th><th class="num">CA</th><th class="num">Comptoir</th><th class="num">B2B</th><th class="num">Part B2B</th><th></th></tr></thead><tbody>'
+      + LQ.map(t => {
+        const part = t.lus ? t.b2b / t.ca * 100 : null;
+        return `<tr><td>${esc(nomQ(t))}</td><td>${esc(t.mois.join(', ') + (t.ouverture ? ' (ouverture fin avril)' : t.mois.length < 3 ? ' (incomplet)' : ''))}</td><td class="num">${eur(t.ca)}</td>`
+          + (t.lus ? `<td class="num">${eur(t.ca - t.b2b)}</td><td class="num">${eur(t.b2b)}</td><td class="num">${dec(part)} %</td>`
+                   + `<td><div class="rp-jauge" title="${dec(part)} % sur un plafond de ${dec(D.plafond, 0)} %"><i style="width:${Math.min(100, part / D.plafond * 100)}%"></i></div></td>`
+                   : '<td class="num dim" colspan="4">B2B pas lu sur tous les jours</td>') + '</tr>';
+      }).join('') + '</tbody>';
+    $('b2b-trim-note').textContent = insec(`La barre est à l’échelle du plafond B2B de ${dec(D.plafond, 0)} % (barre pleine). Le B2B de chaque mois : les tickets relus un par un quand ils le sont, sinon la copie de caisse du cockpit ; le CA : les ventes du mois (les tickets).`);
+    $('b2b-trimestres').hidden = false;
+  }
+}
 
 /* --- Les clients B2B, mois par mois (le détail jour par jour du cockpit, s'il est là) --- */
 const BD = D.b2bDetail;
