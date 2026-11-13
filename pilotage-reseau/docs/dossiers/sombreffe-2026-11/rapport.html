@@ -162,8 +162,8 @@ body { margin: 0; background: var(--paper); }
     </div>
     <div class="rp-part" id="ev-b2b">
       <h3 class="rp-h3">B2B seul : le CA des clients pro</h3>
+      <p class="rp-aide" id="ev-b2b-note"></p>
       <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div>
-      <div class="rp-ouvert" id="ev-b2b-completer" hidden></div>
     </div>
     <div class="rp-legende" id="evolution-legende">
       <span><i class="rp-sw"></i>le mois</span>
@@ -493,6 +493,41 @@ function grapheMois(id, cfg) {
   });
 }
 
+/* Le B2B tant que le cockpit n'a pas donné son détail mensuel : la seule valeur réelle, la moyenne des 12 derniers
+   mois clos (la part du cockpit appliquée à leur CA), tracée comme une moyenne sur ces 12 mois, rien de plus. */
+function grapheB2bMoyenne() {
+  const zone = $('graphe-b2b'), W = Math.max(320, zone.clientWidth), etroit = W < 640, C = '#1f5f8b';
+  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
+  const x = i => ml + pas * (i + 0.5), v = D.b2b.parMois, pasY = 1000, ymax = Math.ceil(v * 1.6 / pasY) * pasY, hP = H - mt - mb;
+  const y = w => mt + (ymax - w) / ymax * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
+  const i0 = S.findIndex(m => m.k === '2025-11'), i1 = S.findIndex(m => m.k === '2026-10'), xa = ml + pas * i0, xb = ml + pas * (i1 + 1);
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="B2B : la moyenne mensuelle des 12 derniers mois">`;
+  const avant = S.filter(m => m.ca == null).length;
+  if (avant) { s += `<rect x="${ml}" y="${mt}" width="${pas * avant}" height="${hP}" fill="rgba(34,34,34,.035)"/><text x="${ml + pas * avant / 2}" y="${mt + hP / 2}" font-size="10.5" text-anchor="middle" fill="#a59d92" style="${ft}">${etroit ? 'fermé' : 'pas encore ouvert'}</text>`; }
+  for (let w = 0; w <= ymax; w += pasY) { s += `<line x1="${ml}" x2="${W - mr}" y1="${y(w)}" y2="${y(w)}" stroke="rgba(34,34,34,${w ? '.07' : '.16'})"/><text x="${ml - 8}" y="${y(w) + 3.5}" font-size="10" text-anchor="end" fill="#8a8378" style="${ft}">${w ? w / 1000 + ' k€' : '0 €'}</text>`; }
+  S.forEach((m, i) => { if (m.lab === 'janv.') {
+    if (i > 0) { s += `<line x1="${ml + pas * i}" x2="${ml + pas * i}" y1="${mt - 4}" y2="${mt + hP}" stroke="rgba(34,34,34,.22)" stroke-dasharray="2 3"/>`; }
+    s += `<text x="${ml + pas * i + 4}" y="${mt - 8}" font-size="11" fill="#1c1a17" style="${ft}">${m.an}</text>`;
+  } });
+  // La moyenne : une bande sur les 12 mois qu'elle couvre, son niveau, son chiffre.
+  s += `<rect x="${xa}" y="${y(v)}" width="${xb - xa}" height="${y(0) - y(v)}" fill="rgba(31,95,139,.10)"/>`
+    + `<line x1="${xa}" x2="${xb}" y1="${y(v)}" y2="${y(v)}" stroke="${C}" stroke-width="2.6" stroke-dasharray="7 4"/>`
+    + `<text x="${(xa + xb) / 2}" y="${y(v) - 8}" font-size="10.5" text-anchor="middle" fill="${C}" style="${ft};${halo}">moyenne : ≈ ${esc(k1(v))} par mois · ${esc(dec(D.b2b.part))} % du CA</text>`;
+  const iMai = S.findIndex(m => m.k === '2025-05');
+  if (iMai >= 0 && iMai < i0) { s += `<text x="${(ml + pas * iMai + xa) / 2}" y="${y(v) - 8}" font-size="9.5" text-anchor="middle" fill="#a59d92" style="${ft}">non chiffré</text>`; }
+  const hb = H - mb + 16;
+  S.forEach((m, i) => { if (!etroit || ['janv.', 'avr.', 'juil.', 'oct.'].includes(m.lab)) { s += `<text x="${x(i)}" y="${hb}" font-size="10" text-anchor="middle" fill="#3b3731" style="${ft}">${m.lab}</text>`; } });
+  s += `<rect class="hit" x="${xa}" y="${mt}" width="${xb - xa}" height="${hP}" fill="transparent"/></svg>`;
+  zone.querySelector('svg')?.remove();
+  zone.insertAdjacentHTML('beforeend', s);
+  const svg = zone.querySelector('svg');
+  svg.querySelector('.hit').addEventListener('pointerenter', () => {
+    const k = W / svg.getBoundingClientRect().width;
+    bulle(zone, `<div class="t">nov. 25 → oct. 26</div><div>B2B ≈ ${esc(k1(D.b2b.b2b12))} sur 12 mois</div><div>≈ ${esc(k1(v))} par mois en moyenne</div><div>${esc(dec(D.b2b.part))} % du CA (cockpit)</div>`, (xa + xb) / 2 / k, y(v) / k);
+  });
+  svg.querySelector('.hit').addEventListener('pointerleave', () => bulle(zone, null));
+}
+
 /* Les trois graphiques de l'Évolution magasin : le CA sans B2B (le comptoir), le trafic, le B2B seul. */
 const proOk = p => p && p.complet;
 function grapheEvolution() {
@@ -506,6 +541,7 @@ function grapheEvolution() {
   } else {
     grapheMois('graphe-comptoir', { nom: 'CA', aria: 'CA total du mois, B2B compris, face au N-1',
       val: m => m.ca, val1: m => m.n1 ? m.n1.ca : null, axe: v => v / 1000 + ' k€', etiq: k1, tip: eur });
+    grapheB2bMoyenne();
   }
   grapheMois('graphe-clients', { nom: 'Clients', aria: 'Clients du mois, face au N-1',
     val: m => m.clients, val1: m => m.n1 ? m.n1.clients : null, axe: v => grp(v), etiq: v => grp(v), tip: v => grp(v) });
@@ -513,12 +549,11 @@ function grapheEvolution() {
 if (D.proLu) {
   $('ev-comptoir-titre').textContent = 'CA sans B2B : le comptoir';
   $('ev-comptoir-note').textContent = insec('Le CA total moins le B2B, les tickets des clients pro à TVA valide. Un mois dont le B2B n’est pas lu sur tous ses jours sort de la courbe.');
+  $('ev-b2b-note').textContent = insec('Les tickets des clients pro à TVA valide, mois par mois, face au même mois un an plus tôt.');
 } else {
   $('ev-comptoir-titre').textContent = 'CA du mois, B2B compris';
   $('ev-comptoir-note').textContent = insec(`En attendant la séparation comptoir / B2B, le CA total : le B2B en pèse ${dec(D.b2b.part)} % sur 12 mois.`);
-  $('graphe-b2b').hidden = true;
-  $('ev-b2b-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le CA B2B mois par mois, et avec lui le CA sans B2B : la réponse de la route /ventes/evolution du cockpit. Une fois reçue, les deux courbes se dessinent ici.')) + '</span>';
-  $('ev-b2b-completer').hidden = false;
+  $('ev-b2b-note').textContent = insec(`La moyenne réelle des 12 derniers mois : ≈ ${k1(D.b2b.b2b12)} de B2B, ${dec(D.b2b.part)} % du CA. Le détail mois par mois, face au N-1, s’y dessinera avec la réponse de la route /ventes/evolution du cockpit.`);
 }
 
 /* --- Octobre à octobre --- */
