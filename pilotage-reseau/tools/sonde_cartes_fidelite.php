@@ -17,6 +17,23 @@ foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'panel_api.php'] as $f) { r
 $corps = static fn (array $r) => is_array($r['corps'] ?? null) ? $r['corps'] : [];
 $erreur = static fn (array $r) => 'HTTP ' . (int) ($r['code'] ?? 0) . ' ' . mb_substr(is_string($r['corps'] ?? null) ? $r['corps'] : (string) json_encode($r['corps'] ?? null, JSON_UNESCAPED_UNICODE), 0, 300);
 
+// Deuxième passage (13/11/2026) : les permissions sont inscrites dans le jeton à sa création ; le cockpit garde le sien
+// 30 minutes. Reconnexion forcée, puis le contenu du jeton : le type de compte et les permissions LOYALTY seulement —
+// jamais le jeton lui-même.
+echo "=== -1. Le jeton du cockpit, renouvelé (son contenu, pas le jeton)\n";
+Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'panelApiToken'");
+$jt = PanelApi::jetonSonde(true);
+if ($jt === null) { echo "  pas de jeton\n"; }
+else {
+    $pl = json_decode((string) base64_decode(strtr(explode('.', $jt . '..')[1], '-_', '+/')), true);
+    $pl = is_array($pl) ? $pl : [];
+    $perms = (array) ($pl['perms'] ?? $pl['permissions'] ?? []);
+    $plat = [];
+    array_walk_recursive($perms, static function ($v, $k) use (&$plat) { $plat[] = is_string($k) ? $k . ':' . (is_scalar($v) ? $v : '') : (string) $v; });
+    echo '  champs du jeton : ', implode(', ', array_keys($pl)), "\n";
+    foreach (['actor_type', 'type', 'role', 'roles', 'scope', 'scopes', 'access', 'aud'] as $k) { if (isset($pl[$k])) { echo "  $k = ", json_encode($pl[$k], JSON_UNESCAPED_UNICODE), "\n"; } }
+    echo '  permissions : ', count($plat), ' en tout · LOYALTY : ', json_encode(array_values(array_filter($plat, static fn ($x) => stripos($x, 'loyal') !== false)), JSON_UNESCAPED_UNICODE), "\n";
+}
 echo "=== 0. Les cartes définies (/admin/loyalty/cards)\n";
 $r = PanelApi::sondeGet('/admin/loyalty/cards', 30);
 if ((int) ($r['code'] ?? 0) !== 200) { echo '  ', $erreur($r), "\n"; }
