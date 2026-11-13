@@ -14,6 +14,7 @@ pour la publier, joindre les deux fichiers de `public/assets/ds/fonts/` sous ce 
 dépôt, elle tombe sur Helvetica.
 """
 import json
+import re
 from decimal import Decimal, ROUND_HALF_UP
 from pathlib import Path
 
@@ -22,6 +23,10 @@ SOURCE = ICI.parent.parent / 'maquettes' / 'evolution-magasin' / 'donnees.json'
 # Les temps morts : 8 semaines (07/09 → 01/11/2026), lues au panel le 07/11/2026 (docs/maquettes/temps-morts/LISEZMOI.md).
 TEMPS_MORTS = ICI.parent.parent / 'maquettes' / 'temps-morts' / 'data.json'
 TM_SEUIL = '10'                         # un temps mort : un trou d'au moins 10 minutes entre deux tickets
+# Les checklists : la nomenclature unique (src/checklists_codes.php) et un relevé réel des tâches du jeudi 01/10/2026
+# (docs/maquettes/controle-taches-photos/donnees.json, lu par /pwa/tasks?date=).
+CHECKLISTS = ICI.parent.parent.parent / 'src' / 'checklists_codes.php'
+TACHES_JOUR = ICI.parent.parent / 'maquettes' / 'controle-taches-photos' / 'donnees.json'
 SHOP = '5'
 
 # Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
@@ -164,8 +169,25 @@ def main():
                                'tk': sum(hs[h]['tk'] for h in apm) / len(apm), 'ca': sum(hs[h]['ca'] for h in apm) / len(apm),
                                'heures': len(apm)}
 
+    # Les checklists de la journée : code, nom, heure, lus dans la source unique ; les moments 5 et 6 sont la semaine et le mois.
+    ck = []
+    for m in re.finditer(r"\['code' => '(\d\.\d\.\d{2})', 'fr' => '((?:[^'\\]|\\.)*)'.*?'heure' => (null|'[\d:]+')", CHECKLISTS.read_text(encoding='utf-8')):
+        code, nom, heure = m.group(1), m.group(2).replace("\\'", "'"), m.group(3).strip("'")
+        ck.append({'code': code, 'nom': nom, 'heure': None if heure == 'null' else heure, 'moment': int(code[2])})
+    jour = sorted([c for c in ck if c['moment'] <= 4], key=lambda c: (c['heure'] or '99', c['code']))
+    # Le relevé des tâches du 01/10/2026, magasin par magasin : rendues, obligatoires rendues, photos.
+    tj = json.loads(TACHES_JOUR.read_text(encoding='utf-8'))
+    releve = [{'shop': str(x['shopId']), 'nom': x['shop'].split(' - ')[-1], 'taches': len(x['taches']),
+               'rendues': sum(t['statut'] != 'nonRendue' for t in x['taches']),
+               'obligatoires': sum(bool(t['obligatoire']) for t in x['taches']),
+               'obligatoiresRendues': sum(bool(t['obligatoire']) and t['statut'] != 'nonRendue' for t in x['taches']),
+               'photos': sum(bool(t.get('photo')) for t in x['taches'])} for x in tj['shops']]
+    taches = {'journee': jour, 'semaineMois': [c for c in ck if c['moment'] >= 5], 'releve': releve, 'releveLe': tj['date'],
+              'seuil': tj['seuil']}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'taches': taches,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
