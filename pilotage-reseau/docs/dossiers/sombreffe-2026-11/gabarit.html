@@ -115,7 +115,9 @@ body { margin: 0; background: var(--paper); }
 .rp-page { display: grid; gap: 10px; min-width: 0; }
 .rp-points { gap: 4px; }
 .rp-chaleur td.c { height: 17px; font-size: 10.5px; }
-#page-1 #pe-kpis { display: none !important; }   /* le tableau des temps morts est passé en annexe E (13/11/2026) */
+#page-1 #pe-kpis { display: none !important; }
+.rp-sources { display: block; columns: 2; column-gap: 28px; max-width: none; }
+.rp-sources li { break-inside: avoid; margin-bottom: 3px; }   /* le tableau des temps morts est passé en annexe E (13/11/2026) */
 .rp-jauge { min-width: 50px; }
 #b2b-top-table td:first-child { white-space: normal; }
 .rp-ouverture p { font-size: 15px; max-width: none; }
@@ -329,10 +331,8 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-legende" id="tm-legende"></div>
     <p class="rp-p" id="tm-intro"></p>
     <ul class="rp-points" id="tm-points"></ul>
-    <div class="rp-deux">
-      <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
-      <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
-    </div>
+    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
+    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
   </section>
   <section class="rp-carte" id="annexe-f">
     <h2 class="rp-h2">F · Frais de personnel, mois par mois</h2>
