@@ -1,0 +1,86 @@
+/* Maquette « Recettes à corriger : corriger d'ici ou ouvrir au bon endroit » (13/11/2026).
+ * S'ajoute à global.css, app.css et verification.css (la page en ligne, préfixe vr-) ;
+ * n'ajoute que les classes rc-*. */
+.rc-pill{display:inline-block;font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#3a3633;color:#fff;border-radius:999px;padding:5px 12px}
+
+/* La couverture : ce que donneraient les propositions */
+.vr-cov .jg b.rc-gh{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(45,122,62,.35) 0 4px,rgba(45,122,62,.12) 4px 8px)}
+.rc-cov3{display:flex;flex-direction:column;gap:3px;margin-top:8px;font-size:11.5px;color:var(--color-text-muted)}
+.rc-cov3 b{color:var(--color-text);font-weight:400}
+.rc-cov3 .ok{color:var(--vr-ok)}
+
+/* Le filtre « se corrige ici / au panel » */
+.rc-seg{display:inline-flex;gap:2px;background:var(--color-background-secondary);padding:3px;border-radius:7px}
+.rc-seg button{border:none;background:transparent;font:400 11.5px var(--font-ui);color:var(--color-text-muted);padding:5px 11px;border-radius:5px;cursor:pointer;white-space:nowrap}
+.rc-seg button b{font-weight:400;color:var(--color-text);margin-left:3px}
+.rc-seg button.on{background:var(--color-surface);color:var(--color-text);box-shadow:0 0 0 1px var(--color-border-secondary)}
+
+/* La proposition, sous « ce qui cloche » */
+.rc-prop{display:block;margin-top:5px;font-size:11.5px;color:#245f33;line-height:1.4}
+.rc-prop::before{content:'→ ';color:var(--vr-ok)}
+.rc-prop.panel{color:var(--color-text-muted)}.rc-prop.panel::before{content:'↗ ';color:var(--color-text-muted)}
+
+/* La colonne « Corriger » : le geste, puis les liens directs */
+.rc-act{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.rc-btn{font:400 11.5px var(--font-ui);border:1px solid var(--color-primary);background:var(--color-primary);color:#fff;border-radius:6px;padding:4px 11px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+.rc-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.rc-btn.sec{background:var(--color-surface);color:var(--color-primary)}
+.rc-btn.gris{background:var(--color-surface);color:var(--color-text);border-color:var(--color-border-secondary)}
+.rc-btn.ok{background:var(--vr-ok);border-color:var(--vr-ok)}
+.rc-liens{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+.rc-ln{font:400 11px var(--font-ui);color:var(--color-text-muted);text-decoration:none;border-bottom:1px dotted rgba(34,34,34,.35);white-space:nowrap}
+.rc-ln:hover{color:var(--color-primary)}
+
+/* Une valeur à saisir dans la ligne */
+.rc-in{font:400 12px var(--font-ui);width:62px;padding:4px 7px;border:1px solid var(--color-border-secondary);border-radius:6px;background:#fff;color:var(--color-text);text-align:right}
+.rc-in.l{width:84px}
+.rc-in.mod{border-color:var(--vr-ok);box-shadow:0 0 0 2px rgba(45,122,62,.15)}
+.rc-sel{font:400 12px var(--font-ui);padding:4px 6px;border:1px solid var(--color-border-secondary);border-radius:6px;background:#fff;color:var(--color-text)}
+.rc-sel.mod{border-color:var(--vr-ok);box-shadow:0 0 0 2px rgba(45,122,62,.15)}
+.rc-inl{display:flex;align-items:center;gap:7px;margin-top:6px;flex-wrap:wrap;font-size:11.5px;color:var(--color-text-muted)}
+.rc-inl b{font-weight:400;color:var(--color-text)}
+.rc-av{color:var(--color-text-muted);text-decoration:line-through;text-decoration-color:rgba(192,24,43,.55)}
+.rc-ap{color:#245f33}
+
+/* La ligne ouverte : la correction en place */
+.vr-t tr.rc-on>td{background:#fbf6ef;border-bottom-color:transparent}
+.vr-t tr.rc-ouvert>td{background:#fbf6ef;padding:2px 14px 16px 44px;white-space:normal;text-align:left}
+.rc-ed{display:grid;grid-template-columns:1.25fr 1fr;gap:14px}
+.rc-bloc{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden}
+.rc-bloc h4{margin:0;font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);padding:10px 12px 6px}
+.rc-bloc .vr-t td,.rc-bloc .vr-t th{padding:7px 10px}
+.rc-bloc .vr-t tr:last-child td{border-bottom:none}
+.rc-mod>td{background:rgba(45,122,62,.06)}
+.rc-ajout>td{background:rgba(45,122,62,.06)}
+.rc-ajout td.nom b::before{content:'+ ';color:var(--vr-ok)}
+.rc-why{display:block;font-size:10.5px;color:var(--color-text-muted);white-space:normal;margin-top:2px}
+.rc-pied{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:11.5px;color:var(--color-text-muted);line-height:1.45}
+.rc-pied .vr-sp{min-width:10px}
+.rc-pied b{font-weight:400;color:var(--color-text)}
+
+/* La ligne corrigée */
+.vr-t tr.rc-fait>td{background:rgba(45,122,62,.07)}
+.rc-ok{display:inline-flex;align-items:center;gap:6px;color:var(--vr-ok);font-size:11.5px}
+.rc-ok i{width:16px;height:16px;border-radius:50%;background:var(--vr-ok);color:#fff;font-style:normal;font-size:10px;display:inline-flex;align-items:center;justify-content:center}
+
+/* Le volet en correction */
+.rc-fiche-act{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:12px 20px;border-bottom:1px solid var(--vr-trait);font-size:11.5px}
+.rc-fiche-act .vr-mu{font-size:11px}
+.rc-x{border:none;background:transparent;color:var(--faint);font-size:15px;cursor:pointer;padding:0 2px}
+.rc-plus{display:flex;align-items:center;gap:8px;padding:9px 10px;font-size:12px;color:var(--color-text-muted)}
+.rc-plus .rc-in{width:260px;text-align:left}
+.rc-sugg{display:inline-flex;align-items:center;gap:6px;font-size:11px;background:#e9f1ea;color:#245f33;border-radius:6px;padding:2px 8px;margin-left:6px;white-space:nowrap}
+.rc-barre{position:sticky;bottom:0;background:#fff;border-top:1px solid var(--vr-trait);box-shadow:0 -6px 18px rgba(34,30,26,.06);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:12px}
+.rc-barre b{font-weight:400}
+.rc-barre>div:first-child{flex:1 1 380px}
+.rc-barre small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px;max-width:520px;line-height:1.4}
+.rc-rend{display:flex;align-items:center;gap:8px;padding:6px 20px 0;font-size:12px;color:var(--color-text-muted)}
+
+/* Les règles et le registre */
+.rc-oui{color:var(--vr-ok)}.rc-non{color:var(--color-text-muted)}.rc-loc{color:#2F5D8A}
+.rc-code{font:400 10.5px ui-monospace,Menlo,monospace;background:var(--paper);border-radius:4px;padding:1px 5px;white-space:nowrap}
+.rc-ko{color:var(--vr-ko)}
+.rc-note{padding:11px 18px;font-size:12px;line-height:1.55;background:var(--table-head);border-top:1px solid var(--vr-trait);color:var(--color-text-muted)}
+.rc-note b{font-weight:400;color:var(--color-text)}
+.vr-t td.rc-w{white-space:normal;max-width:300px;line-height:1.4}
+.vr-t td.rc-w .rc-code{display:inline-block;margin:1px 0}
