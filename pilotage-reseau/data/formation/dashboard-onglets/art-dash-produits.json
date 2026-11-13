@@ -1,0 +1,265 @@
+{
+ "id": "art-dash-produits",
+ "code": "0.0.43",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture, puis 10 min sur l’onglet Produits de son magasin",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Produits",
+  "nl": "Het dashboard: het tabblad Producten"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Produits : savoir si le magasin et chaque catégorie se développent sur six semaines, trouver les produits qui montent ou reculent, et lire la fiche d’un produit (ventes, prix face au réseau, recette et marge).",
+  "nl": "Het tabblad Producten lezen: weten of de winkel en elke categorie groeien over zes weken, de producten vinden die stijgen of dalen, en de fiche van een product lezen (verkoop, prijs tegenover het netwerk, recept en marge)."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le magasin et ses catégories",
+    "nl": "De winkel en zijn categorieën"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Six semaines face aux six d’avant",
+      "nl": "Zes weken tegenover de zes ervoor"
+     },
+     "texte": {
+      "fr": "L’onglet Produits répond à une question : est-ce que le magasin se développe ?\nLa phrase en tête donne les deux périodes : « Les 6 dernières semaines (… → …) comparées aux 6 d’avant (… → …) ».\nCe sont des semaines closes, du lundi au dimanche ; la semaine en cours est montrée à part, hachurée, et n’entre pas dans la comparaison.\nLes chiffres sont les ventes du panel, semaine par semaine ; l’onglet ne suit pas la date choisie en haut.\nLa règle est rappelée au bas de la page : « ▲ plus de 8 % de chiffre sur les 6 dernières semaines face aux 6 d’avant, ▼ 8 % de moins, = entre les deux ».\nSi un bandeau dit « Le panel n’a pas rendu … : les comparaisons sont partielles » : ne rien conclure, relire plus tard avec « ↻ Relire ».",
+      "nl": "Het tabblad Producten beantwoordt één vraag: groeit de winkel?\nDe zin bovenaan geeft de twee periodes: « Les 6 dernières semaines (… → …) comparées aux 6 d’avant (… → …) ».\nHet zijn afgesloten weken, van maandag tot zondag; de lopende week staat apart, gearceerd, en telt niet mee in de vergelijking.\nDe cijfers zijn de verkopen uit het panel, week per week; het tabblad volgt de datum bovenaan niet.\nDe regel staat onderaan de pagina: « ▲ plus de 8 % de chiffre sur les 6 dernières semaines face aux 6 d’avant, ▼ 8 % de moins, = entre les deux ».\nAls een balk zegt « Le panel n’a pas rendu … : les comparaisons sont partielles »: niets besluiten, later herlezen met « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-produits-semaines.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Le magasin",
+      "nl": "De winkel"
+     },
+     "texte": {
+      "fr": "La carte « Le magasin » donne le verdict en grand : ▲ en vert, ▼ en ocre, = en gris, avec une phrase : « Le magasin se développe », « recule », « est stable », « démarre », « ne vend plus » ou « vend trop peu pour juger ».\nDessous : le chiffre d’affaires moyen par semaine des 6 dernières semaines, « contre … avant ».\nLe graphique montre 13 semaines : les 6 d’avant en rose clair, les 6 dernières en bordeaux, la semaine en cours hachurée, « en cours ».\nLe pourcentage compare deux moyennes de six semaines : une bonne ou une mauvaise semaine seule ne fait pas le verdict.\nEntre −8 % et +8 %, c’est « = stable » : +7 % reste stable.\nSi le verdict est ▼ : regarder quelles catégories sont en ocre juste en dessous.",
+      "nl": "De kaart « Le magasin » toont het oordeel in het groot: ▲ in het groen, ▼ in oker, = in het grijs, met een zin: « Le magasin se développe », « recule », « est stable », « démarre », « ne vend plus » of « vend trop peu pour juger ».\nEronder: de gemiddelde omzet per week van de laatste 6 weken, « contre … avant ».\nDe grafiek toont 13 weken: de 6 ervoor in lichtroze, de 6 laatste in bordeaux, de lopende week gearceerd, « en cours ».\nHet percentage vergelijkt twee gemiddelden van zes weken: één goede of slechte week alleen maakt het oordeel niet.\nTussen −8 % en +8 % is het « = stable »: +7 % blijft stabiel.\nAls het oordeel ▼ is: kijk welke categorieën er net onder in oker staan."
+     },
+     "critique": true,
+     "photo": "do-produits-magasin.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Vos catégories",
+      "nl": "Uw categorieën"
+     },
+     "texte": {
+      "fr": "Une tuile par catégorie, de la plus grosse à la plus petite au chiffre d’affaires.\nChaque tuile : le nom, le verdict (▲, ▼, =, « nouveau », « arrêté » ou « peu vendu »), le chiffre moyen par semaine des 6 dernières semaines, le nombre de produits et ses 13 semaines en petit.\nFond vert : la catégorie monte ou est nouvelle. Fond ocre : elle baisse. Fond blanc : stable, arrêtée ou trop peu vendue.\n« nouveau » : elle vendait très peu ou rien avant ; « arrêté » : elle ne vend presque plus ; « peu vendu » : moins de 24 pièces sur les 12 semaines.\nUn toucher sur une tuile (›) ouvre sa fenêtre.\nSi une grosse catégorie est en ocre : l’ouvrir et chercher les produits qui reculent.",
+      "nl": "Eén tegel per categorie, van de grootste naar de kleinste in omzet.\nElke tegel: de naam, het oordeel (▲, ▼, =, « nouveau », « arrêté » of « peu vendu »), de gemiddelde omzet per week van de laatste 6 weken, het aantal producten en zijn 13 weken in het klein.\nGroene achtergrond: de categorie stijgt of is nieuw. Okeren achtergrond: ze daalt. Witte achtergrond: stabiel, gestopt of te weinig verkocht.\n« nouveau »: ze verkocht vroeger heel weinig of niets; « arrêté »: ze verkoopt bijna niets meer; « peu vendu »: minder dan 24 stuks over de 12 weken.\nEen tik op een tegel (›) opent haar venster.\nAls een grote categorie in oker staat: open ze en zoek de producten die achteruitgaan."
+     },
+     "critique": false,
+     "photo": "do-produits-categories.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Une catégorie et ses produits",
+    "nl": "Een categorie en haar producten"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "La fenêtre d’une catégorie",
+      "nl": "Het venster van een categorie"
+     },
+     "texte": {
+      "fr": "En tête : le nom de la catégorie, son verdict et son chiffre par semaine, maintenant et avant.\nLe graphique de ses 13 semaines, avec la même légende que le magasin.\n« Ses produits » : Produit · Prix · Par semaine · Évolution · 12 semaines ; les 12 premiers au chiffre, puis « ▾ les N autres produits ».\nPrix : le prix de vente de la pièce au catalogue, TTC. Par semaine : les pièces vendues par semaine sur les 6 dernières semaines.\nÉvolution : ▲ ou ▼ et l’écart de chiffre d’affaires, « = stable » avec l’écart en petit, « nouveau · S… », « arrêté · S… » ou « trop peu vendu ».\n✕, ou un toucher à côté de la fenêtre, la ferme.\nSi un produit qui se vendait bien est « arrêté » : vérifier qu’il est toujours produit et proposé en vitrine.",
+      "nl": "Bovenaan: de naam van de categorie, haar oordeel en haar omzet per week, nu en ervoor.\nDe grafiek van haar 13 weken, met dezelfde legende als voor de winkel.\n« Ses produits »: Produit · Prix · Par semaine · Évolution · 12 semaines; de 12 eerste in omzet, daarna « ▾ les N autres produits ».\nPrix: de verkoopprijs van het stuk in de catalogus, incl. btw. Par semaine: de verkochte stuks per week over de laatste 6 weken.\nÉvolution: ▲ of ▼ en het verschil in omzet, « = stable » met het verschil in het klein, « nouveau · S… », « arrêté · S… » of « trop peu vendu ».\n✕, of een tik naast het venster, sluit het.\nAls een product dat goed verkocht « arrêté » is: nagaan of het nog gemaakt en in de vitrine aangeboden wordt."
+     },
+     "critique": false,
+     "photo": "do-produits-fenetre.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Un produit déplié",
+      "nl": "Een opengeklapt product"
+     },
+     "texte": {
+      "fr": "Un toucher sur une ligne (▸) la déplie, un second la replie.\nPrix de vente : le prix TTC de la pièce au catalogue ; « encaissé en moyenne … » quand le prix réellement encaissé s’en écarte. Sans prix au catalogue : le prix moyen encaissé.\nQuantité : les pièces par semaine maintenant, « avant : … » et l’écart (▲ vert à +8 % ou plus, ▼ ocre à −8 % ou moins, = sinon).\nMarge : la marge brute du catalogue, (prix HT − coût de la recette) ÷ prix HT, et ce qu’elle rapporte par semaine.\n« — » et « coût de la recette manquant » quand la recette n’a pas de coût ; « recette à vérifier » quand le coût dépasse le prix HT ou fait moins de 5 % du prix.\n« Pièces vendues, chaque semaine » : les 13 semaines du produit ; « Fiche complète ↗ » ouvre la fiche du produit (la fenêtre de la catégorie se ferme).\nSi la marge dit « recette à vérifier » : faire corriger la recette au panel, puis « ↻ Relire ».",
+      "nl": "Een tik op een rij (▸) klapt ze open, een tweede klapt ze weer dicht.\nPrix de vente: de prijs incl. btw van het stuk in de catalogus; « encaissé en moyenne … » als de werkelijk geïnde prijs ervan afwijkt. Zonder catalogusprijs: de gemiddelde geïnde prijs.\nQuantité: de stuks per week nu, « avant : … » en het verschil (▲ groen vanaf +8 %, ▼ oker vanaf −8 %, = anders).\nMarge: de brutomarge van de catalogus, (prijs excl. btw − kost van het recept) ÷ prijs excl. btw, en wat ze per week opbrengt.\n« — » en « coût de la recette manquant » als het recept geen kost heeft; « recette à vérifier » als de kost hoger is dan de prijs excl. btw of minder dan 5 % van de prijs.\n« Pièces vendues, chaque semaine »: de 13 weken van het product; « Fiche complète ↗ » opent de productfiche (het venster van de categorie sluit).\nAls de marge « recette à vérifier » zegt: laat het recept in het panel verbeteren, daarna « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-produits-deplie.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La fiche produit",
+    "nl": "De productfiche"
+   },
+   "etapes": [
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "La fiche : Ventes · 12 semaines",
+      "nl": "De fiche: Ventes · 12 semaines"
+     },
+     "texte": {
+      "fr": "En tête : le nom du produit, sa catégorie, le magasin et, en pastilles, le prix encaissé et le prix réseau.\nTrois onglets : « Ventes · 12 semaines », « Prix face au réseau », « Recette & marge ».\nVentes · 12 semaines : les pièces vendues chaque semaine, en bleu le magasin, en orange le réseau (la moyenne par magasin, sans magasin nommé) ; la dernière semaine est en cours, en pointillés.\nUn toucher sur une semaine montre sa valeur.\nÀ droite : les pièces des 12 semaines, la moyenne par semaine, « 6 dernières face aux 6 d’avant » (vert si ça monte, orange si ça baisse), la moyenne par magasin du réseau et « Face au réseau ».\nSi le magasin vend nettement moins que le réseau : regarder « Prix face au réseau » avant de penser au prix.",
+      "nl": "Bovenaan: de naam van het product, zijn categorie, de winkel en, in labels, de geïnde prijs en de netwerkprijs.\nDrie tabbladen: « Ventes · 12 semaines », « Prix face au réseau », « Recette & marge ».\nVentes · 12 semaines: de verkochte stuks per week, in het blauw de winkel, in het oranje het netwerk (het gemiddelde per winkel, zonder winkel te noemen); de laatste week loopt nog, in stippellijn.\nEen tik op een week toont haar waarde.\nRechts: de stuks van de 12 weken, het gemiddelde per week, « 6 dernières face aux 6 d’avant » (groen als het stijgt, oranje als het daalt), het gemiddelde per winkel van het netwerk en « Face au réseau ».\nAls de winkel duidelijk minder verkoopt dan het netwerk: kijk naar « Prix face au réseau » voor je aan de prijs denkt."
+     },
+     "critique": false,
+     "photo": "do-produits-fiche.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "La fiche : Prix face au réseau",
+      "nl": "De fiche: Prix face au réseau"
+     },
+     "texte": {
+      "fr": "Un nuage de points : le prix encaissé (de gauche à droite) face aux pièces vendues pour 10 000 € de chiffre (de bas en haut).\nLe point bleu, c’est le magasin ; les points gris, les autres magasins, nommés ; les deux traits, le prix réseau (la médiane) et le volume moyen du réseau. Les coins disent « moins cher · vend plus », « plus cher · vend moins »…\nLa période : « Dernier mois » (d’office), « 3 derniers mois » ou « 12 mois ».\nÀ droite : prix de vente en caisse, prix encaissé, prix réseau (médiane), écart ; pièces vendues, pièces pour 10 000 € de chiffre, « Face aux autres magasins » ; puis chaque magasin (Vente · Encaissé · / 10 k€).\n« Au prix réseau, par mois » : ce que changerait le chiffre d’un mois si le magasin vendait au prix réseau, au même volume (−181 € : 181 € de chiffre en moins).\n« moins de 5 pièces sur la période : à lire avec prudence » quand le produit se vend très peu.\nSi le magasin est « plus cher · vend moins » : en parler au responsable ; un prix se change au panel, jamais ici.",
+      "nl": "Een puntenwolk: de geïnde prijs (van links naar rechts) tegenover de verkochte stuks per 10 000 € omzet (van onder naar boven).\nHet blauwe punt is de winkel; de grijze punten de andere winkels, met naam; de twee lijnen de netwerkprijs (de mediaan) en het gemiddelde volume van het netwerk. De hoeken zeggen « moins cher · vend plus », « plus cher · vend moins »…\nDe periode: « Dernier mois » (standaard), « 3 derniers mois » of « 12 mois ».\nRechts: verkoopprijs in de kassa, geïnde prijs, netwerkprijs (mediaan), verschil; verkochte stuks, stuks per 10 000 € omzet, « Face aux autres magasins »; daarna elke winkel (Vente · Encaissé · / 10 k€).\n« Au prix réseau, par mois »: wat de omzet van een maand zou veranderen als de winkel aan de netwerkprijs verkocht, bij hetzelfde volume (−181 €: 181 € minder omzet).\n« moins de 5 pièces sur la période : à lire avec prudence » als het product heel weinig verkoopt.\nAls de winkel « plus cher · vend moins » is: bespreek het met de verantwoordelijke; een prijs wijzig je in het panel, nooit hier."
+     },
+     "critique": true,
+     "photo": "do-produits-prix.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "La fiche : Recette & marge et le simulateur de prix",
+      "nl": "De fiche: Recette & marge en de prijssimulator"
+     },
+     "texte": {
+      "fr": "« Le coefficient » : prix de vente ÷ coût de la recette, sur une jauge de × 1 à × 4 : rouge sous × 1,67 (marge 40 %), ocre jusqu’à × 2,5 (marge 60 %), vert au-delà ; repères : l’objectif (× 3,13 pour 32 % de matière), sa catégorie, le magasin aujourd’hui.\nUne phrase dit « Dans le vert. » ou « Sous l’objectif. », avec le prix de vente ou le coût matière qu’il faudrait pour arriver à × 2,5, et l’ingrédient qui pèse le plus.\n« La recette, pièce par pièce » : chaque ingrédient, sa quantité, son coût, sa part du coût ; un toucher sur une matière déplie son prix (ce magasin, prix conseillé, réseau, fournisseur).\n« Marge brute » : la marge en %, au prix encaissé.\nLe simulateur : le champ « Prix de vente », − et + par 5 centimes ; le coefficient, la marge et le résultat par pièce se recalculent, « remettre » revient au prix encaissé. Rien n’est enregistré : un prix se change au panel.\nOuverte depuis l’onglet Produits, la fiche ne connaît pas le prix encaissé du jour : « — », « coût matière inconnu », pas de simulateur. Ouverte depuis les ventes du jour (Opérationnel), elle les a.\nSi le coefficient est rouge : regarder d’abord l’ingrédient que la phrase nomme, avant de penser au prix.",
+      "nl": "« Le coefficient »: verkoopprijs ÷ kost van het recept, op een meter van × 1 tot × 4: rood onder × 1,67 (marge 40 %), oker tot × 2,5 (marge 60 %), groen daarboven; ijkpunten: de doelstelling (× 3,13 voor 32 % grondstof), zijn categorie, de winkel vandaag.\nEen zin zegt « Dans le vert. » of « Sous l’objectif. », met de verkoopprijs of de grondstofkost die nodig zou zijn om × 2,5 te halen, en het ingrediënt dat het zwaarst weegt.\n« La recette, pièce par pièce »: elk ingrediënt, zijn hoeveelheid, zijn kost, zijn aandeel in de kost; een tik op een grondstof klapt zijn prijs open (deze winkel, aangeraden prijs, netwerk, leverancier).\n« Marge brute »: de marge in %, aan de geïnde prijs.\nDe simulator: het veld « Prix de vente », − en + per 5 cent; de coëfficiënt, de marge en het resultaat per stuk worden herberekend, « remettre » keert terug naar de geïnde prijs. Niets wordt bewaard: een prijs wijzig je in het panel.\nGeopend vanuit het tabblad Producten kent de fiche de geïnde prijs van de dag niet: « — », « coût matière inconnu », geen simulator. Geopend vanuit de verkopen van de dag (Operationeel) heeft ze die wel.\nAls de coëfficiënt rood is: kijk eerst naar het ingrediënt dat de zin noemt, voor je aan de prijs denkt."
+     },
+     "critique": false,
+     "photo": "do-produits-recette.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Le verdict compare deux moyennes de six semaines closes ; la semaine en cours n’y entre pas, et entre −8 % et +8 % tout est « stable ».",
+   "nl": "Het oordeel vergelijkt twee gemiddelden van zes afgesloten weken; de lopende week telt niet mee, en tussen −8 % en +8 % is alles « stable »."
+  },
+  {
+   "fr": "Le dashboard ne change aucun prix : la fiche et son simulateur montrent, le prix se change au panel.",
+   "nl": "Het dashboard wijzigt geen enkele prijs: de fiche en haar simulator tonen, de prijs wijzig je in het panel."
+  },
+  {
+   "fr": "« Au prix réseau, par mois » se lit à volume égal : il ne dit pas ce que ferait le volume si le prix changeait.",
+   "nl": "« Au prix réseau, par mois » lees je bij gelijk volume: het zegt niet wat het volume zou doen als de prijs verandert."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Une catégorie affiche « = +7 % ». Qu’est-ce que cela veut dire ?",
+    "nl": "Een categorie toont « = +7 % ». Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Elle progresse fortement",
+     "Elle est stable : il faut 8 % ou plus pour un ▲",
+     "Le panel n’a pas rendu ses chiffres"
+    ],
+    "nl": [
+     "Ze stijgt sterk",
+     "Ze is stabiel: voor een ▲ is 8 % of meer nodig",
+     "Het panel heeft haar cijfers niet doorgegeven"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Que compare l’onglet Produits ?",
+    "nl": "Wat vergelijkt het tabblad Producten?"
+   },
+   "choix": {
+    "fr": [
+     "La journée choisie en haut face à la veille",
+     "Les 6 dernières semaines closes face aux 6 d’avant",
+     "Le mois en cours face au même mois l’an dernier"
+    ],
+    "nl": [
+     "De gekozen dag bovenaan tegenover de dag ervoor",
+     "De laatste 6 afgesloten weken tegenover de 6 ervoor",
+     "De lopende maand tegenover dezelfde maand vorig jaar"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Dans la fiche, le simulateur montre × 2,6 à un prix plus élevé. Que se passe-t-il en caisse ?",
+    "nl": "In de fiche toont de simulator × 2,6 bij een hogere prijs. Wat gebeurt er in de kassa?"
+   },
+   "choix": {
+    "fr": [
+     "Rien : le simulateur n’enregistre rien, le prix se change au panel",
+     "Le nouveau prix part en caisse le lendemain",
+     "Le prix change pour tout le réseau"
+    ],
+    "nl": [
+     "Niets: de simulator bewaart niets, de prijs wijzig je in het panel",
+     "De nieuwe prijs gaat de volgende dag naar de kassa",
+     "De prijs verandert voor het hele netwerk"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "Fiche produit ouverte depuis l’onglet Produits (« Fiche complète ↗ ») : elle ne reçoit pas le prix encaissé du jour (data-fq/fv/fc vides), donc l’onglet « Recette & marge » montre « — », « coût matière inconnu », « Sans coût de recette gravé, pas de marge brute » et pas de simulateur de prix, alors que le coût de recette est lu (0,68 € pour le Croissant de Halle). Le simulateur n’apparaît que depuis les ventes du jour (Opérationnel). À corriger ? (passer le prix du catalogue à la fiche). Le texte de l’étape 8 décrit donc le simulateur d’après le code ; la capture le montre absent.",
+  "La note du bas dit « ▲ plus de 8 % » ; le code range dans ▲ à partir de 8 % exactement (pct ≥ 8). Écart minime, à harmoniser si on veut.",
+  "Les infobulles des colonnes (semaine, dates, chiffre) ne s’ouvrent qu’au survol : pas sur tablette ; non décrites.",
+  "L’onglet ne dépend pas de la date du dashboard (lecture /analyse/developpement/magasin sans date) : écrit tel quel, à confirmer si la date doit un jour le piloter."
+ ]
+}

@@ -1,0 +1,79 @@
+[
+ {
+  "nom": "do-promos-lecture",
+  "vue": "promos",
+  "cibles": [
+   ".pm-lecture"
+  ],
+  "attendre": ".pm-lecture",
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 8000
+ },
+ {
+  "nom": "do-promos-canaux",
+  "vue": "promos",
+  "cibles": [
+   ".cn-card"
+  ],
+  "attendre": ".cn-card .cn-r",
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 10000
+ },
+ {
+  "nom": "do-promos-liste",
+  "vue": "promos",
+  "cibles": [
+   ".pm-liste"
+  ],
+  "attendre": ".pm-liste",
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 10000
+ },
+ {
+  "nom": "do-promos-colonnes",
+  "vue": "promos",
+  "clics": [
+   "[data-pmcols]"
+  ],
+  "cibles": [
+   ".pm-cols"
+  ],
+  "attendre": ".pm-liste",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 10000
+ },
+ {
+  "nom": "do-promos-coef",
+  "vue": "promos",
+  "clics": [
+   ".pm-coefb"
+  ],
+  "cibles": [
+   "#db-pmc .fi-modale"
+  ],
+  "attendre": ".pm-coefb",
+  "cadre": "ecran",
+  "mobile": false,
+  "pause": 10000
+ },
+ {
+  "nom": "do-promos-bon",
+  "vue": "promos",
+  "clics": [
+   "[data-pmf-st=\"toutes\"]",
+   "button[data-pmbonvoir]"
+  ],
+  "cibles": [
+   ".pm-bon"
+  ],
+  "attendre": ".pm-bon .pm-bon-tete",
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 10000,
+  "shop": "2"
+ }
+]

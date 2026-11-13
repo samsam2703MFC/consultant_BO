@@ -1,0 +1,7 @@
+[
+ {"nom": "do-revue-bouton", "vue": "taches", "date": "2026-11-08", "cibles": [".db-hd .rv-btn"], "cadre": "haut", "mobile": false},
+ {"nom": "do-revue-qui", "vue": "taches", "date": "2026-11-12", "clics": [".db-hd .rv-btn"], "attendre": "#rv .rv-q", "cibles": ["#rv .rv-tel"], "cadre": "ecran", "mobile": false},
+ {"nom": "do-revue-checklist", "vue": "taches", "date": "2026-11-08", "clics": [".db-hd .rv-btn", "#rv [data-rvrouvrir]", "#rv [data-rvvoir]"], "attendre": "#rv .rv-ul", "cibles": ["#rv .rv-tel"], "cadre": "ecran", "mobile": false},
+ {"nom": "do-revue-fin", "vue": "taches", "date": "2026-11-08", "clics": [".db-hd .rv-btn"], "attendre": "#rv .rv-sc4", "cibles": ["#rv .rv-tel"], "cadre": "ecran", "mobile": false},
+ {"nom": "do-revue-rouvrir", "vue": "taches", "date": "2026-11-08", "clics": [".db-hd .rv-btn"], "attendre": "#rv .rv-sc4", "cibles": ["#rv [data-rvrouvrir]"], "cadre": "ecran", "mobile": false}
+]

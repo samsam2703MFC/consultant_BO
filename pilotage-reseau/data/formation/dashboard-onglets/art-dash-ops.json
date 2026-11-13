@@ -1,0 +1,429 @@
+{
+ "id": "art-dash-ops",
+ "code": "0.0.37",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "40 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Opérationnel",
+  "nl": "Het dashboard: het tabblad Operationeel"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Opérationnel bloc par bloc : la journée face au réseau et à l’objectif, heure par heure, l’argent de la journée et le magasin en direct (équipe, vitrine, photos, stock), et savoir quelle fenêtre ouvrir pour répondre à une question.",
+  "nl": "Het tabblad Operationeel blok per blok lezen: de dag tegenover het netwerk en de doelstelling, uur per uur, het geld van de dag en de winkel live (team, vitrine, foto’s, voorraad), en weten welk venster je opent om een vraag te beantwoorden."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avec l’onglet ouvert sur son magasin.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, met het tabblad open op de eigen winkel."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le jour face au réseau et à l’objectif",
+    "nl": "De dag tegenover het netwerk en de doelstelling"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ta place dans le réseau",
+      "nl": "Jouw plaats in het netwerk"
+     },
+     "texte": {
+      "fr": "Tout en haut : la journée du magasin face aux autres magasins ouverts (« 4 magasins ouverts »), sans les nommer.\nCinq tuiles : « Chiffre d’affaires », « Clients », « Panier moyen » (hors clients pro), « Marge brute », « B2B · clients pro » (avec sa part du CA).\nLe rang (« 2e / 4 ») : vert quand tu es premier, bordeaux quand tu es dernier, noir entre les deux.\nLa ligne va du plus bas au plus haut du réseau : le point bordeaux, c’est toi ; les points gris, les autres ; le trait noir, la médiane.\nSous le chiffre : « médiane … », puis l’écart « vs médiane » et le chiffre du premier (« le 1er : … » ; si tu es premier, « le 2e : … »).\nLe panier ne se classe qu’entre magasins lus de la même façon (hors clients pro).\nSi tu es dernier sur un chiffre : descends dans l’heure par heure et le duel pour voir quand et sur quoi le retard s’est fait.",
+      "nl": "Helemaal bovenaan: de dag van de winkel tegenover de andere open winkels (« 4 magasins ouverts »), zonder ze te noemen.\nVijf tegels: « Chiffre d’affaires » (omzet), « Clients » (klanten), « Panier moyen » (gemiddeld ticket, zonder zakelijke klanten), « Marge brute » (brutomarge), « B2B · clients pro » (met zijn aandeel in de omzet).\nDe rang (« 2e / 4 »): groen als je eerste bent, bordeaux als je laatste bent, zwart daartussen.\nDe lijn loopt van het laagste naar het hoogste cijfer van het netwerk: het bordeaux punt ben jij; de grijze punten de anderen; het zwarte streepje de mediaan.\nOnder het cijfer: « médiane … », daarna het verschil « vs médiane » en het cijfer van de eerste (« le 1er : … »; ben je eerste, dan « le 2e : … »).\nHet gemiddeld ticket wordt alleen gerangschikt tussen winkels die op dezelfde manier gelezen zijn (zonder zakelijke klanten).\nBen je laatste op een cijfer: ga naar uur per uur en het duel om te zien wanneer en waarop de achterstand ontstond."
+     },
+     "critique": false,
+     "photo": "do-ops-reseau.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "L’objectif comptoir du jour",
+      "nl": "De toonbankdoelstelling van de dag"
+     },
+     "texte": {
+      "fr": "« Objectif comptoir du vendredi » : l’objectif du jour moins la part B2B habituelle (lue sur les quatre derniers mêmes jours) ; sans B2B lu, une seule jauge, « Objectif du … », comptoir et pro ensemble.\nPiste « Aujourd’hui », en bordeaux : le comptoir à l’heure qu’il est, et sa part de l’objectif (« 1 002 € · 59 % »).\nLa partie hachurée mène à la « projection » : ce que la journée fera ce soir au rythme actuel.\nPiste « Vendredi dernier », en bleu : le même jour la semaine passée à la même heure, puis hachuré jusqu’à « journée … » (tout ce jour-là).\nLe trait pointillé vertical : la part de la journée écoulée, écrite en haut à droite (« 77 % de la journée écoulée »), ou « journée terminée ».\nObjectif atteint : la barre passe en or et l’étiquette « objectif atteint » s’affiche ; quand un chiffre dépasse l’objectif, la piste s’allonge et l’objectif devient un repère.\nSi la projection reste sous l’objectif en milieu de journée : regarde la vitrine (ce qui va manquer) et l’heure par heure avant la prochaine cuisson.",
+      "nl": "« Objectif comptoir du vendredi »: de doelstelling van de dag min het gebruikelijke B2B-aandeel (gelezen op de vier laatste dezelfde dagen); zonder gelezen B2B één enkele meter, « Objectif du … », toonbank en zakelijk samen.\nBalk « Aujourd’hui » (vandaag), in bordeaux: de toonbank tot nu, en zijn aandeel in de doelstelling (« 1 002 € · 59 % »).\nHet gearceerde deel loopt naar de « projection »: wat de dag vanavond haalt aan het huidige ritme.\nBalk « Vendredi dernier » (vorige vrijdag), in het blauw: dezelfde dag vorige week op hetzelfde uur, daarna gearceerd tot « journée … » (die hele dag).\nDe verticale stippellijn: het verstreken deel van de dag, rechtsboven geschreven (« 77 % de la journée écoulée »), of « journée terminée ».\nDoelstelling gehaald: de balk wordt goud en het label « objectif atteint » verschijnt; gaat een cijfer boven de doelstelling, dan wordt de balk langer en de doelstelling een merkteken.\nBlijft de projectie halfweg de dag onder de doelstelling: kijk naar de vitrine (wat zal ontbreken) en uur per uur vóór de volgende bakbeurt."
+     },
+     "critique": true,
+     "photo": "do-ops-objectif.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les commandes du jour",
+      "nl": "De bestellingen van de dag"
+     },
+     "texte": {
+      "fr": "Sous la jauge du comptoir, la ligne « Commandes du jour » : « comptoir N · webshop N », le montant pris en commande, et « N à vérifier » en couleur. Pas de commande : pas de ligne.\nÀ vérifier : une précommande remise sans ticket de caisse, ou une commande pas remise dont l’heure est passée (une commande en paiement différé n’y compte pas).\nUn toucher ouvre la fenêtre « Commandes du jour » : onglets « Toutes · Comptoir · Webshop ».\n« Le CA en commandes » : une barre par état — Encaissées en caisse, En paiement différé, Encaissées un autre jour, Webshop hors caisse, Pas retirées, À venir, Remises sans ticket — puis « Pris en commande » et « … dans le CA du jour · caisse du jour … ».\nDessous, chaque commande : l’heure, les articles, le statut et le ticket lié, le montant et son étiquette (« en caisse », « payée avant », « en ligne », « pas retirée », « sans ticket »…) ; ▾ montre les articles.\nSi une commande est « sans ticket » : déplie-la ; la fenêtre propose un ticket du même montant dans l’heure s’il existe — à vérifier en caisse.",
+      "nl": "Onder de toonbankmeter de regel « Commandes du jour »: « comptoir N · webshop N », het bestelde bedrag, en « N à vérifier » in kleur. Geen bestelling: geen regel.\nTe controleren: een voorbestelling afgegeven zonder kassaticket, of een niet afgegeven bestelling waarvan het uur voorbij is (een bestelling met uitgestelde betaling telt niet mee).\nEen tik opent het venster « Commandes du jour »: tabbladen « Toutes · Comptoir · Webshop ».\n« Le CA en commandes »: een balk per toestand — Encaissées en caisse, En paiement différé, Encaissées un autre jour, Webshop hors caisse, Pas retirées, À venir, Remises sans ticket — daarna « Pris en commande » en « … dans le CA du jour · caisse du jour … ».\nDaaronder elke bestelling: het uur, de artikelen, de status en het gekoppelde ticket, het bedrag en zijn label (« en caisse », « payée avant », « en ligne », « pas retirée », « sans ticket »…); ▾ toont de artikelen.\nStaat een bestelling op « sans ticket »: klap ze open; het venster stelt een ticket van hetzelfde bedrag binnen het uur voor als het bestaat — na te kijken aan de kassa."
+     },
+     "critique": false,
+     "photo": "do-ops-commandes.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "L’objectif B2B et les ventes B2B",
+      "nl": "De B2B-doelstelling en de B2B-verkoop"
+     },
+     "texte": {
+      "fr": "Seulement si le magasin a du B2B (aujourd’hui, le même jour la semaine passée ou d’habitude) : une seconde jauge, « Objectif B2B du … » (la part B2B habituelle), sinon « B2B du … ».\nEn haut à droite : le nombre de tickets pro et la « part habituelle » en %. Deux pistes, aujourd’hui et le même jour la semaine passée, et le repère « part B2B habituelle … ».\nLe montant B2B retire déjà la remise personnelle des clients en paiement différé.\n« le détail des tickets › » ouvre la fenêtre « Ventes B2B » : un onglet pour le jour regardé, un pour le même jour la semaine d’avant.\nQuatre tuiles : « CA B2B » (part du CA du jour), « Tickets pro » (sociétés), « Panier pro » (face au comptoir), « À facturer ». Puis chaque ticket : heure, société, articles, montant et « comptoir », « facturé » ou « différé » ; ▾ montre les articles. Puis « Ce qu’ils ont acheté », par catégorie.\nUn ticket marqué pro sans numéro de TVA valide est compté au comptoir : la fenêtre le dit en note.\nSi un ticket pro porte « compte sans nom au panel » : le client pro est à nommer au panel, puis « ↻ Relire ».",
+      "nl": "Alleen als de winkel B2B heeft (vandaag, dezelfde dag vorige week of gewoonlijk): een tweede meter, « Objectif B2B du … » (het gebruikelijke B2B-aandeel), anders « B2B du … ».\nRechtsboven: het aantal zakelijke tickets en het « part habituelle » (gebruikelijk aandeel) in %. Twee balken, vandaag en dezelfde dag vorige week, en het merkteken « part B2B habituelle … ».\nHet B2B-bedrag trekt de persoonlijke korting van klanten met uitgestelde betaling er al af.\n« le détail des tickets › » opent het venster « Ventes B2B »: één tabblad voor de bekeken dag, één voor dezelfde dag een week eerder.\nVier tegels: « CA B2B » (aandeel in de omzet van de dag), « Tickets pro » (bedrijven), « Panier pro » (tegenover de toonbank), « À facturer » (te factureren). Daarna elk ticket: uur, bedrijf, artikelen, bedrag en « comptoir », « facturé » of « différé »; ▾ toont de artikelen. Daarna « Ce qu’ils ont acheté », per categorie.\nEen ticket gemarkeerd als zakelijk zonder geldig btw-nummer telt mee aan de toonbank: het venster vermeldt het in een noot.\nDraagt een zakelijk ticket « compte sans nom au panel »: de zakelijke klant moet een naam krijgen in het panel, daarna « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-ops-b2b.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Heure par heure",
+    "nl": "Uur per uur"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Heure par heure : CA, clients, panier",
+      "nl": "Uur per uur: omzet, klanten, ticket"
+     },
+     "texte": {
+      "fr": "La courbe du chiffre d’affaires cumulé d’aujourd’hui (bordeaux) face à celle du même jour la semaine passée (bleu, en tirets), de 6 h à 20 h.\nLes lignes pointillées horizontales : « objectif comptoir … » et « part B2B habituelle … » ; le trait vertical, l’heure qu’il est (« maintenant »).\n« Comptoir et pro séparés » : une courbe comptoir et une courbe pro (en marches, le pro tombe par tickets) pour chaque jour ; « Combinés » : une seule courbe par jour. La bascule n’existe que si le magasin a du B2B.\n« CA · Clients · Panier » : Clients dessine le nombre de clients cumulé face à la « référence … clients » ; Panier dessine le panier moyen de chaque heure (pas un cumul) et la ligne « panier du jour ».\nEn Panier : les clients de chaque heure en barres pâles au pied ; un point creux = moins de 5 clients ou l’heure en cours ; en tête, « le plus haut … · le plus bas … ».\nUne vente après 20 h compte dans la dernière heure.\nSi la courbe d’aujourd’hui décroche de celle de la semaine passée : passe sur Clients puis sur Panier pour savoir lequel des deux manque.",
+      "nl": "De curve van de gecumuleerde omzet van vandaag (bordeaux) tegenover die van dezelfde dag vorige week (blauw, gestreept), van 6 u tot 20 u.\nDe horizontale stippellijnen: « objectif comptoir … » en « part B2B habituelle … »; de verticale lijn, het huidige uur (« maintenant »).\n« Comptoir et pro séparés »: een toonbankcurve en een zakelijke curve (in trappen, zakelijk valt per ticket) voor elke dag; « Combinés »: één curve per dag. De schakelaar bestaat alleen als de winkel B2B heeft.\n« CA · Clients · Panier »: Clients tekent het gecumuleerde aantal klanten tegenover de « référence … clients »; Panier tekent het gemiddeld ticket van elk uur (geen cumul) en de lijn « panier du jour ».\nBij Panier: de klanten van elk uur in lichte staafjes onderaan; een hol punt = minder dan 5 klanten of het lopende uur; bovenaan « le plus haut … · le plus bas … ».\nEen verkoop na 20 u telt mee in het laatste uur.\nValt de curve van vandaag weg van die van vorige week: schakel naar Clients en daarna naar Panier om te weten welk van de twee ontbreekt."
+     },
+     "critique": false,
+     "photo": "do-ops-heures.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le duel, chiffre par chiffre",
+      "nl": "Het duel, cijfer per cijfer"
+     },
+     "texte": {
+      "fr": "Trois lignes : « Chiffre d’affaires », « Clients », « Panier moyen » (hors clients pro).\nColonnes : « aujourd’hui · 12:36 » (le CA avec sa part de l’objectif, le panier avec ses produits par client) ; « vendredi dernier à 12:34 » ; l’écart en % ; « vendredi dernier · journée » ; « référence ».\nL’écart : vert quand aujourd’hui fait mieux, rouge quand il fait moins bien, neutre sous 1 %.\nLa référence : pour le CA, son libellé est écrit dessous (« moyenne des 6 derniers vendredis ») ; pour les clients, l’écart « face à la référence » ; pour le panier, le panier du réseau « aujourd’hui ».\nMarge brute et résultat ne sont pas ici : ils sont dans le P&L court, plus bas.\nSi les clients sont en retard et le panier en avance : le problème est le trafic (vitrine, offre), pas la vente au comptoir ; l’inverse demande la vente additionnelle.",
+      "nl": "Drie regels: « Chiffre d’affaires », « Clients », « Panier moyen » (zonder zakelijke klanten).\nKolommen: « aujourd’hui · 12:36 » (de omzet met zijn aandeel in de doelstelling, het ticket met de producten per klant); « vendredi dernier à 12:34 »; het verschil in %; « vendredi dernier · journée »; « référence ».\nHet verschil: groen als vandaag beter doet, rood als het minder goed doet, neutraal onder 1 %.\nDe referentie: voor de omzet staat de omschrijving eronder (« moyenne des 6 derniers vendredis »); voor de klanten het verschil « face à la référence »; voor het ticket het gemiddeld ticket van het netwerk « aujourd’hui ».\nBrutomarge en resultaat staan hier niet: ze staan in de korte W&V, verderop.\nLopen de klanten achter en het ticket voor: het probleem is de traffic (vitrine, aanbod), niet de verkoop aan de toonbank; het omgekeerde vraagt bijverkoop."
+     },
+     "critique": false,
+     "photo": "do-ops-duel.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "L’argent de la journée",
+    "nl": "Het geld van de dag"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Le P&L court de la journée",
+      "nl": "De korte W&V van de dag"
+     },
+     "texte": {
+      "fr": "Une cascade : « Chiffre d’affaires » (clients, panier) − « Coût matière » = « Marge brute » − « Invendus et poubelle » − « Main-d’œuvre » − « Frais généraux » = « Résultat ».\nChaque ligne : le montant, son % du CA, une barre et, pour les coûts, « seuil … » sous le libellé.\nCoût matière, main-d’œuvre, frais généraux : vert jusqu’au seuil, ambre jusqu’à 1,3 × le seuil, rouge au-delà.\nInvendus et poubelle : ambre, rouge au-delà de 5 % du CA ; « rien déclaré au panel » quand rien n’est saisi ; « les saisies ▸ » ouvre la fenêtre des invendus.\nRésultat : vert à 15 % et plus, ambre à 5 % et plus, rouge en dessous. La main-d’œuvre est celle du planning ; les heures du franchisé sont dites à part (« hors … h de franchisé »).\nLe matin, le résultat est toujours mauvais : les coûts de la journée sont posés, le chiffre d’affaires pas encore. Il se lit le soir.\nSi une ligne est rouge le soir : ouvre ce qui l’explique (les saisies d’invendus, l’équipe du jour, les catégories) ; un chiffre faux se corrige à la source, puis « ↻ Relire ».",
+      "nl": "Een waterval: « Chiffre d’affaires » (klanten, ticket) − « Coût matière » (grondstofkost) = « Marge brute » − « Invendus et poubelle » (onverkocht en afval) − « Main-d’œuvre » (personeelskost) − « Frais généraux » (algemene kosten) = « Résultat ».\nElke regel: het bedrag, zijn % van de omzet, een balk en, voor de kosten, « seuil … » (drempel) onder de naam.\nGrondstofkost, personeelskost, algemene kosten: groen tot de drempel, amber tot 1,3 × de drempel, rood daarboven.\nOnverkocht en afval: amber, rood boven 5 % van de omzet; « rien déclaré au panel » als niets ingegeven is; « les saisies ▸ » opent het venster van het onverkocht.\nResultaat: groen vanaf 15 %, amber vanaf 5 %, rood daaronder. De personeelskost is die van de planning; de uren van de franchisenemer staan apart (« hors … h de franchisé »).\n’s Ochtends is het resultaat altijd slecht: de kosten van de dag staan er al, de omzet nog niet. Je leest het ’s avonds.\nIs een regel ’s avonds rood: open wat hem verklaart (de ingaven van onverkocht, het team van de dag, de categorieën); een fout cijfer corrigeer je aan de bron, daarna « ↻ Relire »."
+     },
+     "critique": true,
+     "photo": "do-ops-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Invendus et poubelle : les saisies",
+      "nl": "Onverkocht en afval: de ingaven"
+     },
+     "texte": {
+      "fr": "La fenêtre « Invendus et poubelle » : chaque pièce jetée telle qu’encodée en caisse, pour le jour regardé.\nEn tête : le nombre de saisies et de pièces, ce que compte le panel (pièces, références), le coût de production, le nombre d’opérateurs.\nLe tableau : « Heure », « Opérateur », « Produit », « Quantité », « Motif » ; puis « Par opérateur ».\nQuand le journal des saisies manque pour ce jour, une note le dit et la fenêtre donne le total par produit : « Motif », « Jetées », « Coût », « Valeur perdue ».\nPour un motif de qualité ou de casse, la ligne porte « Réclamer au fournisseur » et « Remarque à l’opérateur ».\nSi un même produit revient chaque jour dans la liste : revois sa quantité de cuisson avec la vitrine (partie « Recuire ou pas »).",
+      "nl": "Het venster « Invendus et poubelle »: elk weggegooid stuk zoals ingegeven aan de kassa, voor de bekeken dag.\nBovenaan: het aantal ingaven en stukken, wat het panel telt (stukken, referenties), de productiekost, het aantal operatoren.\nDe tabel: « Heure », « Opérateur », « Produit », « Quantité », « Motif »; daarna « Par opérateur ».\nOntbreekt het logboek van de ingaven voor die dag, dan zegt een noot het en geeft het venster het totaal per product: « Motif », « Jetées », « Coût », « Valeur perdue ».\nBij een reden van kwaliteit of breuk draagt de regel « Réclamer au fournisseur » en « Remarque à l’opérateur ».\nKomt hetzelfde product elke dag terug in de lijst: herzie zijn bakhoeveelheid met de vitrine (deel « Bijbakken of niet »)."
+     },
+     "critique": false,
+     "photo": "do-ops-invendus.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Ventes par catégorie : Liste et Treemap",
+      "nl": "Verkoop per categorie: Liste en Treemap"
+     },
+     "texte": {
+      "fr": "Sous-onglets « Liste · Treemap · Promotions · Portions » (les deux derniers seulement quand les tickets sont lus).\nListe : « Groupe › catégorie › produit » ; ▸ déplie. Colonnes : « Poids dans le CA » (barre), « CA », « Part », « Marge brute », « Taux », « Coef » (CA ÷ coût matière).\nLa couleur de la barre = le taux de marge : noir sous 40 %, rouge 40–50, orange 50–60, vert 60–70, or à 70 % et plus ; gris (et « ? ») : coût matière inconnu.\n« N produits sans coût » sous une catégorie ; « Non ventilé » en bas : l’écart entre le CA de la journée et la somme des produits (lignes sans produit, remises, tickets pas encore lus). Le total est celui du P&L court.\n« i » à côté d’un groupe ou d’une catégorie ouvre ses 12 dernières semaines ; un toucher sur un produit ouvre sa fiche.\nTreemap : un rectangle par catégorie, sa surface = son poids dans le CA, sa couleur = la même échelle de marge.\nSi un gros rectangle est noir ou rouge : ouvre ses produits ; une marge basse se travaille sur le prix ou la recette (fiche produit, onglet « Recette & marge »).",
+      "nl": "Subtabbladen « Liste · Treemap · Promotions · Portions » (de laatste twee alleen als de tickets gelezen zijn).\nListe: « Groupe › catégorie › produit »; ▸ klapt open. Kolommen: « Poids dans le CA » (balk), « CA », « Part » (aandeel), « Marge brute », « Taux » (percentage), « Coef » (omzet ÷ grondstofkost).\nDe kleur van de balk = het margepercentage: zwart onder 40 %, rood 40–50, oranje 50–60, groen 60–70, goud vanaf 70 %; grijs (en « ? »): grondstofkost onbekend.\n« N produits sans coût » onder een categorie; « Non ventilé » onderaan: het verschil tussen de omzet van de dag en de som van de producten (lijnen zonder product, kortingen, nog niet gelezen tickets). Het totaal is dat van de korte W&V.\n« i » naast een groep of een categorie opent haar 12 laatste weken; een tik op een product opent zijn fiche.\nTreemap: één rechthoek per categorie, de oppervlakte = haar gewicht in de omzet, de kleur = dezelfde margeschaal.\nIs een grote rechthoek zwart of rood: open zijn producten; een lage marge werk je bij op de prijs of het recept (productfiche, tabblad « Recette & marge »)."
+     },
+     "critique": true,
+     "photo": "do-ops-categories.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "La fiche produit",
+      "nl": "De productfiche"
+     },
+     "texte": {
+      "fr": "Elle s’ouvre d’un toucher sur un produit (ventes par catégorie, à compléter) ou par « la fiche du produit › » de la fenêtre de stock. En tête : vendus aujourd’hui, « prix encaissé », « prix réseau », « marge brute », « coefficient ».\nLe coefficient : rouge sous × 1,67 (marge 40 %), orange sous × 2,5 (marge 60 %), vert au-delà.\n« Ventes · 12 semaines » : le magasin (bleu) face à la moyenne par magasin du réseau (orange) ; à droite, les pièces, « 6 dernières face aux 6 d’avant », « Face au réseau ». La dernière semaine est en cours.\n« Prix face au réseau » (« Dernier mois · 3 derniers mois · 12 mois ») : prix de vente en caisse, prix encaissé, prix réseau (médiane), écart, pièces pour 10 000 € de chiffre, « Au prix réseau, par mois », et les autres magasins.\n« Recette & marge » : la jauge du coefficient de × 1 à × 4 avec ses repères (sa catégorie, le magasin aujourd’hui, l’objectif) ; le champ « Prix de vente » (− / + 5 centimes) recalcule la pièce à un autre prix.\nLe prix testé ne change rien en caisse : c’est un calcul à l’écran. Un prix se change au panel.\nSi le coefficient est rouge : compare d’abord au prix réseau, puis regarde quelle matière pèse le plus dans la recette.",
+      "nl": "Ze opent met een tik op een product (verkoop per categorie, aan te vullen) of via « la fiche du produit › » in het voorraadvenster. Bovenaan: vandaag verkocht, « prix encaissé » (geïnde prijs), « prix réseau » (netwerkprijs), « marge brute », « coefficient ».\nDe coëfficiënt: rood onder × 1,67 (marge 40 %), oranje onder × 2,5 (marge 60 %), groen daarboven.\n« Ventes · 12 semaines »: de winkel (blauw) tegenover het gemiddelde per winkel van het netwerk (oranje); rechts de stukken, « 6 dernières face aux 6 d’avant », « Face au réseau ». De laatste week loopt nog.\n« Prix face au réseau » (« Dernier mois · 3 derniers mois · 12 mois »): verkoopprijs aan de kassa, geïnde prijs, netwerkprijs (mediaan), verschil, stukken per 10 000 € omzet, « Au prix réseau, par mois », en de andere winkels.\n« Recette & marge »: de meter van de coëfficiënt van × 1 tot × 4 met zijn merktekens (de categorie, de winkel vandaag, de doelstelling); het veld « Prix de vente » (− / + 5 cent) herrekent het stuk tegen een andere prijs.\nDe geteste prijs verandert niets aan de kassa: het is een berekening op het scherm. Een prijs wijzig je in het panel.\nIs de coëfficiënt rood: vergelijk eerst met de netwerkprijs, kijk daarna welke grondstof het zwaarst weegt in het recept."
+     },
+     "critique": false,
+     "photo": "do-ops-fiche.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Une catégorie sur 12 semaines",
+      "nl": "Een categorie over 12 weken"
+     },
+     "texte": {
+      "fr": "Le « i » d’un groupe ou d’une catégorie ouvre sa fenêtre : deux onglets, « 12 dernières semaines » et « La journée · 6 h – 18 h », et la bascule « Chiffre d’affaires · Pièces ».\n12 semaines : le magasin (bleu) face à la moyenne par magasin du réseau (orange) et la tendance du magasin en pointillé ; ▲▼ sous l’axe : face à la semaine d’avant.\nÀ droite : la tendance (« les 4 dernières semaines closes face aux 4 d’avant »), « Le réseau, même calcul », la pente, la meilleure et la plus faible semaine, « Face au réseau ».\nLa journée : chaque heure en barres, la moyenne des derniers mêmes jours en gris, le jour en bleu ; le trait rouge, maintenant.\nÀ droite : vendu, la moyenne à la même heure, l’écart, « L’heure forte », « Avant midi » face à « Avant midi, d’habitude ». Un toucher sur une semaine ou une heure montre sa valeur.\nSi la tendance du magasin baisse quand celle du réseau monte : le recul est propre au magasin ; regarde les produits de la catégorie un par un.",
+      "nl": "De « i » van een groep of een categorie opent haar venster: twee tabbladen, « 12 dernières semaines » en « La journée · 6 h – 18 h », en de schakelaar « Chiffre d’affaires · Pièces ».\n12 weken: de winkel (blauw) tegenover het gemiddelde per winkel van het netwerk (oranje) en de trend van de winkel in stippellijn; ▲▼ onder de as: tegenover de week ervoor.\nRechts: de trend (« les 4 dernières semaines closes face aux 4 d’avant »), « Le réseau, même calcul », de helling, de beste en de zwakste week, « Face au réseau ».\nDe dag: elk uur in staafjes, het gemiddelde van de laatste dezelfde dagen in grijs, de dag in blauw; de rode lijn, nu.\nRechts: verkocht, het gemiddelde op hetzelfde uur, het verschil, « L’heure forte » (het sterkste uur), « Avant midi » tegenover « Avant midi, d’habitude ». Een tik op een week of een uur toont de waarde.\nDaalt de trend van de winkel terwijl die van het netwerk stijgt: de achteruitgang is eigen aan de winkel; bekijk de producten van de categorie één voor één."
+     },
+     "critique": false,
+     "photo": "do-ops-c12.jpg",
+     "video": null
+    },
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Ventes par catégorie : Promotions et Portions",
+      "nl": "Verkoop per categorie: Promoties en Porties"
+     },
+     "texte": {
+      "fr": "Promotions : en tête, « … du CA en promotion », « … de remises », les tickets avec une promotion, et une étiquette par promotion déclenchée (« nom ×N »).\nLe tableau : « Part vendue en promotion », « CA », « En promo », « Part », « Remise », « Pièces promo », par groupe › catégorie › produit, puis une ligne par promotion (sa couleur). Une remise qu’aucune promotion n’explique est en gris.\nPortions : les catégories qui se vendent en parts. En tête, la part du CA vendue en portions, les pièces entières vendues, le prix moyen par pièce entière, et les pièces « encore en parts si rien ne restait d’hier ».\nUne colonne par taille (« Entière », « ½ », « ¼ »…), puis « En entières », « Reste », « CA », « € par entière ».\n« Reste » est une estimation : ce qui resterait en parts dans la dernière pièce coupée, si rien ne restait de la veille et que rien n’a été recoupé.\nSi une forte remise apparaît en gris : elle ne vient d’aucune promotion du panel ; vérifie en caisse qui l’a donnée et pourquoi.",
+      "nl": "Promoties: bovenaan « … du CA en promotion », « … de remises » (kortingen), de tickets met een promotie, en één label per uitgevoerde promotie (« naam ×N »).\nDe tabel: « Part vendue en promotion », « CA », « En promo », « Part », « Remise », « Pièces promo », per groep › categorie › product, daarna één regel per promotie (haar kleur). Een korting die geen enkele promotie verklaart, staat in het grijs.\nPorties: de categorieën die in delen verkocht worden. Bovenaan het aandeel van de omzet in porties, de verkochte hele stukken, de gemiddelde prijs per heel stuk, en de stukken « encore en parts si rien ne restait d’hier ».\nEén kolom per grootte (« Entière », « ½ », « ¼ »…), daarna « En entières », « Reste », « CA », « € par entière ».\n« Reste » is een schatting: wat in delen zou overblijven van het laatst aangesneden stuk, als er niets van gisteren overbleef en niets opnieuw gesneden werd.\nVerschijnt een grote korting in het grijs: ze komt van geen enkele promotie in het panel; kijk aan de kassa na wie ze gaf en waarom."
+     },
+     "critique": false,
+     "photo": "do-ops-promos.jpg",
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "À compléter pour des chiffres justes",
+      "nl": "Aan te vullen voor juiste cijfers"
+     },
+     "texte": {
+      "fr": "La carte n’apparaît que si quelque chose manque dans la caisse ou le panel pour que les ventes par catégorie tombent juste.\n« Ventes sans produit » : les lignes de caisse qui ne sont rattachées à aucun produit et les remises sur ticket entier ; le détail : « Heure », « Libellé de caisse », « Qté », « Montant ».\n« Produits sans coût » : les produits vendus sans coût de recette, avec leurs ventes ; le détail : « Produit », « Catégorie », « Qté », « CA » ; un toucher ouvre la fiche produit.\nDes tickets passés depuis la dernière lecture ne sont pas une erreur : la carte le dit, ils se liront au passage suivant.\nTant que ces lignes existent, la marge des catégories est incomplète (gris, « ? »).\nSi la carte est là : rattache la ligne à un produit en caisse, chiffre la recette au panel, puis « ↻ Relire ».",
+      "nl": "De kaart verschijnt alleen als er iets ontbreekt in de kassa of het panel om de verkoop per categorie juist te laten uitkomen.\n« Ventes sans produit »: de kassalijnen die aan geen enkel product gekoppeld zijn en de kortingen op een volledig ticket; het detail: « Heure », « Libellé de caisse », « Qté », « Montant ».\n« Produits sans coût »: de verkochte producten zonder receptkost, met hun verkoop; het detail: « Produit », « Catégorie », « Qté », « CA »; een tik opent de productfiche.\nTickets van na de laatste lezing zijn geen fout: de kaart zegt het, ze worden bij de volgende lezing gelezen.\nZolang deze regels bestaan, is de marge van de categorieën onvolledig (grijs, « ? »).\nStaat de kaart er: koppel de lijn aan een product in de kassa, bereken het recept in het panel, daarna « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-ops-acompleter.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le magasin en direct",
+    "nl": "De winkel live"
+   },
+   "etapes": [
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "La journée : équipe, four, vitrine, commandes",
+      "nl": "De dag: team, oven, vitrine, bestellingen"
+     },
+     "texte": {
+      "fr": "Une frise de 4 h à 20 h, quatre lignes ; le trait vertical, maintenant.\n« Équipe » (les heures au planning) : une barre par personne, « 04:00–12:00 · prénom » ; grisée quand la personne n’est pas en poste en ce moment.\n« Four » : chaque cuisson à son heure ; « · à valider » quand elle n’a pas encore été confirmée. « Vitrine » : les pièces de chaque cuisson en vitrine (« 512 p. »). « Commandes » : un repère par commande et « N commandes aujourd’hui · N retirées ».\nÀ droite, « Ventes au comptoir, heure par heure » : la moyenne des 6 derniers mêmes jours (beige) face au vendu — vert au-dessus, ambre en dessous, bordeaux l’heure en cours.\n« L’équipe du jour › » (ou un toucher sur une barre de l’équipe) ouvre le détail de l’équipe.\nSi une cuisson passée reste « à valider » : la faire confirmer au suivi de production, sinon la vitrine compte sans elle.",
+      "nl": "Een tijdlijn van 4 u tot 20 u, vier regels; de verticale lijn, nu.\n« Équipe » (de uren in de planning): één balk per persoon, « 04:00–12:00 · voornaam »; grijs als de persoon nu niet aan het werk is.\n« Four » (oven): elke bakbeurt op haar uur; « · à valider » als ze nog niet bevestigd is. « Vitrine »: de stukken van elke bakbeurt in de vitrine (« 512 p. »). « Commandes »: een merkteken per bestelling en « N commandes aujourd’hui · N retirées ».\nRechts « Ventes au comptoir, heure par heure »: het gemiddelde van de 6 laatste dezelfde dagen (beige) tegenover het verkochte — groen erboven, amber eronder, bordeaux het lopende uur.\n« L’équipe du jour › » (of een tik op een balk van het team) opent het detail van het team.\nBlijft een voorbije bakbeurt op « à valider »: laat ze bevestigen in de productieopvolging, anders telt de vitrine zonder haar."
+     },
+     "critique": false,
+     "photo": "do-ops-journee.jpg",
+     "video": null
+    },
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "L’équipe du jour",
+      "nl": "Het team van de dag"
+     },
+     "texte": {
+      "fr": "Une ligne par personne au planning, rangée par ventes à l’heure de vente ; une personne qui a vendu sans être au planning a sa ligne (« vend sans être au planning »).\nColonnes : « Planning », « Faites » (heures faites à l’heure qu’il est, et en poste, fini, arrive à…), « Vendu » (le vendeur sur chaque ticket), « Par heure », « Panier », « Produit », « Coût », « Coût / ventes ».\nPar heure = ses ventes ÷ les heures de son poste où le magasin a vendu. Produit = les cuissons de son poste, si elle tient un poste de production. Coût = son taux horaire au panel × ses heures faites.\nUn franchisé ne pèse pas au P&L : sa ligne dit « franchisé · hors P&L ». « taux absent au panel » : pas de coût calculé.\nUn toucher sur une personne déplie son heure par heure : par heure, ses ventes, tickets, panier, articles par ticket et part du magasin, ou « production », et ses fours.\nEn bas, la ligne « Magasin » ; × ferme le tableau.\nSi une ligne affiche « taux absent au panel » : le taux horaire est à compléter au panel, puis « ↻ Relire ».",
+      "nl": "Eén regel per persoon in de planning, gerangschikt volgens verkoop per verkoopuur; wie verkocht zonder in de planning te staan, heeft een eigen regel (« vend sans être au planning »).\nKolommen: « Planning », « Faites » (gewerkte uren tot nu, en aan het werk, klaar, komt om…), « Vendu » (de verkoper op elk ticket), « Par heure », « Panier », « Produit », « Coût », « Coût / ventes ».\nPer uur = haar verkoop ÷ de uren van haar shift waarin de winkel verkocht. Productie = de bakbeurten van haar shift, als ze een productiepost heeft. Kost = haar uurloon in het panel × haar gewerkte uren.\nEen franchisenemer weegt niet op de W&V: zijn regel zegt « franchisé · hors P&L ». « taux absent au panel »: geen kost berekend.\nEen tik op een persoon klapt haar uur per uur open: per uur haar verkoop, tickets, ticket, artikelen per ticket en aandeel van de winkel, of « production », en haar ovens.\nOnderaan de regel « Magasin »; × sluit de tabel.\nToont een regel « taux absent au panel »: het uurloon moet aangevuld worden in het panel, daarna « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-ops-equipe.jpg",
+     "video": null
+    },
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "La vitrine S · M · L",
+      "nl": "De vitrine S · M · L"
+     },
+     "texte": {
+      "fr": "En tête : « N produits vont manquer d’ici la fermeture · … € de ventes à sauver » (ou « ✓ rien ne va manquer »), et « prochaine cuisson : … à … » à droite.\nTrois blocs repliés : « S Short life », « M Medium life », « L Long life » ; ▸ déplie. Chaque en-tête dit « N réf. » et « N vont manquer · +N à cuire · … € à sauver ».\nLes trois petits carrés au bout de l’en-tête sont des filtres : rouge « Vide maintenant », orange « Va manquer », vert « En ordre ». D’office, rouge et orange sont allumés.\nUne ligne : l’heure de la rupture, le produit, une case par heure (vert en vitrine, orange vitrine basse, rouge vide alors que des clients le demandent), les pièces et euros qui manquent, puis le geste (« +N dans la cuisson de … », « à recuire », « déjà prévu à … »).\nLong life : le stock face à 3 jours de vente (« +N pour tenir 3 jours »). Douze lignes au plus : « voir les N autres ».\nJournée terminée : les mêmes lignes disent « ont manqué » et « ventes perdues ».\nSi un produit est rouge : touche sa ligne ; la fenêtre de stock dit combien recuire et quand.",
+      "nl": "Bovenaan: « N produits vont manquer d’ici la fermeture · … € de ventes à sauver » (of « ✓ rien ne va manquer »), en rechts « prochaine cuisson : … à … ».\nDrie dichtgeklapte blokken: « S Short life », « M Medium life », « L Long life »; ▸ klapt open. Elke kop zegt « N réf. » en « N vont manquer · +N à cuire · … € à sauver ».\nDe drie vierkantjes aan het eind van de kop zijn filters: rood « Vide maintenant », oranje « Va manquer », groen « En ordre ». Standaard staan rood en oranje aan.\nEen regel: het uur van het tekort, het product, één vak per uur (groen in de vitrine, oranje vitrine laag, rood leeg terwijl klanten ernaar vragen), de ontbrekende stukken en euro’s, daarna de handeling (« +N dans la cuisson de … », « à recuire », « déjà prévu à … »).\nLong life: de voorraad tegenover 3 dagen verkoop (« +N pour tenir 3 jours »). Hoogstens twaalf regels: « voir les N autres ».\nDag afgelopen: dezelfde regels zeggen « ont manqué » en « ventes perdues ».\nIs een product rood: tik op zijn regel; het voorraadvenster zegt hoeveel en wanneer bij te bakken."
+     },
+     "critique": true,
+     "photo": "do-ops-vitrine.jpg",
+     "video": null
+    },
+    {
+     "numero": "17",
+     "titre": {
+      "fr": "Recuire ou pas : la fenêtre de stock",
+      "nl": "Bijbakken of niet: het voorraadvenster"
+     },
+     "texte": {
+      "fr": "Un toucher sur une ligne de la vitrine ouvre la fenêtre du produit : sa durée de vie (S, M, L), son prix, « la fiche du produit › ».\nLa réponse d’abord : « +N Recuire N pièces dans la cuisson de … » (ou « maintenant »), avec le calcul « à vendre d’ici la fermeture − en vitrine − déjà prévu = à recuire ». Ou « 0 Pas de recuisson » et ce qui sera « en trop ce soir ».\nLong life : « Refaire N pièces » pour tenir 3 jours de vente, ou « Stock suffisant ».\nLe graphique : la moyenne des derniers mêmes jours (barres), le vendu d’aujourd’hui, la ligne « en vitrine », la ligne « avec la recuisson » ou « prévu », et « ce soir N ».\nÀ droite : « Les cuissons du jour », la recuisson proposée, puis « Sans recuisson » face à « Avec +N ».\nQuand le panel compte un stock négatif, des ventes ont dépassé les sorties déclarées : le calcul part d’une vitrine vide, la note le dit.\nSi le stock est négatif : faire déclarer les sorties de cuisson au suivi de production, sinon la proposition reste fausse.",
+      "nl": "Een tik op een regel van de vitrine opent het venster van het product: zijn houdbaarheid (S, M, L), zijn prijs, « la fiche du produit › ».\nEerst het antwoord: « +N Recuire N pièces dans la cuisson de … » (of « maintenant »), met de berekening « à vendre d’ici la fermeture − en vitrine − déjà prévu = à recuire ». Of « 0 Pas de recuisson » en wat « en trop ce soir » zal zijn.\nLong life: « Refaire N pièces » om 3 dagen verkoop te dekken, of « Stock suffisant ».\nDe grafiek: het gemiddelde van de laatste dezelfde dagen (staafjes), het verkochte van vandaag, de lijn « en vitrine », de lijn « avec la recuisson » of « prévu », en « ce soir N ».\nRechts: « Les cuissons du jour », de voorgestelde bijbakbeurt, daarna « Sans recuisson » tegenover « Avec +N ».\nTelt het panel een negatieve voorraad, dan overtrof de verkoop de aangegeven uitgiftes: de berekening vertrekt van een lege vitrine, de noot zegt het.\nIs de voorraad negatief: laat de uitgiftes van de bakbeurten aangeven in de productieopvolging, anders blijft het voorstel fout."
+     },
+     "critique": false,
+     "photo": "do-ops-recuire.jpg",
+     "video": null
+    },
+    {
+     "numero": "18",
+     "titre": {
+      "fr": "Les contrôles en photo",
+      "nl": "De controles met foto"
+     },
+     "texte": {
+      "fr": "Les tâches du jour qui demandent une photo, rangées par checklist. En tête : les filtres « Tout », « Écarts », « À contrôler », « Conformes », « Non rendues », « Sans photo » (seulement ceux qui ont des photos) et le résumé (qui a rendu, quand, qui a noté, la moyenne sur 5).\nDessous, une pastille par checklist : heure · code · rendues / attendues ; un toucher amène sa carte.\nUne carte par checklist, dans l’ordre des heures, sur la couleur de sa zone ; ‹ › font défiler. Chaque photo porte sa pastille : la note sur 5, « à contrôler », « non rendue » ou « sans photo ».\nObligatoire : cadre plein. Facultative : cadre en pointillé, photo estompée et le mot « facultative ».\nUn toucher sur une photo l’ouvre en grand : les repères du contrôleur numérotés, « Rendue », « Notée », « Ouvrir la photo seule ↗ », ‹ › et la bande des autres photos ; Échap ferme.\nSi une photo est en écart : reprendre la tâche ; la reprise se suit dans l’onglet Tâches, « Retours du contrôle qualité ».",
+      "nl": "De taken van de dag die een foto vragen, geordend per checklist. Bovenaan: de filters « Tout », « Écarts », « À contrôler », « Conformes », « Non rendues », « Sans photo » (alleen die met foto’s) en de samenvatting (wie indiende, wanneer, wie scoorde, het gemiddelde op 5).\nDaaronder één bolletje per checklist: uur · code · ingediend / verwacht; een tik brengt je naar de kaart.\nEén kaart per checklist, in de volgorde van de uren, op de kleur van haar zone; ‹ › schuiven door. Elke foto draagt haar label: de score op 5, « à contrôler », « non rendue » of « sans photo ».\nVerplicht: volle rand. Facultatief: stippelrand, vervaagde foto en het woord « facultative ».\nEen tik op een foto opent ze in het groot: de genummerde merktekens van de controleur, « Rendue », « Notée », « Ouvrir la photo seule ↗ », ‹ › en de strook van de andere foto’s; Escape sluit.\nStaat een foto op afwijking: herneem de taak; de hername volg je in het tabblad Taken, « Retours du contrôle qualité »."
+     },
+     "critique": false,
+     "photo": "do-ops-controles.jpg",
+     "video": null
+    },
+    {
+     "numero": "19",
+     "titre": {
+      "fr": "La barre de stock",
+      "nl": "De voorraadbalk"
+     },
+     "texte": {
+      "fr": "Tout en bas : l’inventaire matière du magasin, relu avec la page. Pas d’inventaire : pas de barre.\nTrois états : « ✓ Stock au complet » (vert), « N références sous le minimum » (rouge, avec « N à zéro » et « N négatifs »), « Inventaire non recompté depuis N jours » (orange, au-delà de 7 jours).\nDessous : le nombre de références et le dernier comptage (« il y a N jours »).\n« la liste ▾ » ouvre l’inventaire : d’abord « En alerte », puis tout par catégorie ; colonnes « Référence », « Catégorie », « Stock », « Minimum », « Manque », « Compté le ».\n« M’avertir » : une notification sur cet appareil dès qu’une référence passe sous son minimum (connexion https) ; ensuite « averti sur cet appareil » et « Essai ».\nSi une référence est négative : c’est un écart de caisse ou de comptage ; la recompter et corriger l’inventaire à la source.",
+      "nl": "Helemaal onderaan: de grondstoffeninventaris van de winkel, opnieuw gelezen met de pagina. Geen inventaris: geen balk.\nDrie toestanden: « ✓ Stock au complet » (groen), « N références sous le minimum » (rood, met « N à zéro » en « N négatifs »), « Inventaire non recompté depuis N jours » (oranje, na 7 dagen).\nDaaronder: het aantal referenties en de laatste telling (« il y a N jours »).\n« la liste ▾ » opent de inventaris: eerst « En alerte », daarna alles per categorie; kolommen « Référence », « Catégorie », « Stock », « Minimum », « Manque », « Compté le ».\n« M’avertir »: een melding op dit toestel zodra een referentie onder haar minimum zakt (https-verbinding); daarna « averti sur cet appareil » en « Essai ».\nIs een referentie negatief: het is een kassa- of telverschil; tel ze opnieuw en corrigeer de inventaris aan de bron."
+     },
+     "critique": false,
+     "photo": "do-ops-stock.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Le résultat du P&L court se lit le soir : le matin, les coûts de toute la journée sont déjà posés, le chiffre d’affaires pas encore.",
+   "nl": "Het resultaat van de korte W&V lees je ’s avonds: ’s ochtends staan de kosten van de hele dag er al, de omzet nog niet."
+  },
+  {
+   "fr": "L’objectif du comptoir n’est pas l’objectif du jour : la part B2B habituelle en est retirée et a sa propre jauge.",
+   "nl": "De toonbankdoelstelling is niet de doelstelling van de dag: het gebruikelijke B2B-aandeel is eraf getrokken en heeft een eigen meter."
+  },
+  {
+   "fr": "Le dashboard ne change rien : un chiffre faux (prix, recette, inventaire, taux horaire) se corrige à la source, puis « ↻ Relire ».",
+   "nl": "Het dashboard verandert niets: een fout cijfer (prijs, recept, inventaris, uurloon) corrigeer je aan de bron, daarna « ↻ Relire »."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "À 11 h, l’objectif comptoir montre 45 % et la projection reste sous l’objectif. Les clients sont en retard sur vendredi dernier, le panier en avance. D’où vient le retard ?",
+    "nl": "Om 11 u toont de toonbankdoelstelling 45 % en blijft de projectie onder de doelstelling. De klanten lopen achter op vorige vrijdag, het ticket loopt voor. Waar komt de achterstand vandaan?"
+   },
+   "choix": {
+    "fr": [
+     "Du panier : il faut vendre plus à chaque client",
+     "Du trafic : il manque des clients (vitrine, offre)",
+     "Du B2B : il fausse le comptoir"
+    ],
+    "nl": [
+     "Van het ticket: je moet meer verkopen per klant",
+     "Van de traffic: er ontbreken klanten (vitrine, aanbod)",
+     "Van de B2B: die vervalst de toonbank"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Dans les ventes par catégorie, une barre est grise et la marge affiche « ? ». Que faut-il faire ?",
+    "nl": "In de verkoop per categorie is een balk grijs en toont de marge « ? ». Wat moet je doen?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, la catégorie ne fait pas de marge",
+     "Chiffrer le coût de recette des produits au panel, puis « ↻ Relire »",
+     "Taper un prix dans la fiche produit pour corriger"
+    ],
+    "nl": [
+     "Niets, de categorie maakt geen marge",
+     "De receptkost van de producten berekenen in het panel, daarna « ↻ Relire »",
+     "Een prijs intikken in de productfiche om te corrigeren"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Dans la vitrine, un produit Short life est rouge. Que dit la fenêtre de stock ?",
+    "nl": "In de vitrine staat een Short life-product in het rood. Wat zegt het voorraadvenster?"
+   },
+   "choix": {
+    "fr": [
+     "Combien recuire et dans quelle cuisson, calculé sur ce qui reste à vendre d’ici la fermeture",
+     "Le stock matière de la farine",
+     "Le prix du produit face au réseau"
+    ],
+    "nl": [
+     "Hoeveel bij te bakken en in welke bakbeurt, berekend op wat nog te verkopen is tot sluitingstijd",
+     "De grondstoffenvoorraad van de bloem",
+     "De prijs van het product tegenover het netwerk"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "La fenêtre « Invendus et poubelle » propose « Réclamer au fournisseur » et « Remarque à l’opérateur » (motifs qualité et casse) : ces deux boutons écrivent (réclamation au panel, remarque dans les évaluations). C’est une exception à « le dashboard est en lecture seule » ; l’article les nomme sans détailler le formulaire. À confirmer : faut-il les expliquer pas à pas ?",
+  "Sous « Ventes B2B », « compte sans nom au panel » : l’article dit de nommer le client pro au panel ; à confirmer que c’est bien là que la société se renseigne.",
+  "« Recuire ou pas » et « La journée » : la consigne de faire confirmer / déclarer les cuissons « au suivi de production » s’appuie sur les libellés du code (« lecture du suivi de production »), pas sur une procédure écrite ; à faire relire par l’exploitation.",
+  "Le commentaire du code dit « l’or au-delà de 75 % » pour l’échelle de marge, la légende et le calcul disent 70 % : l’article suit 70 %.",
+  "La capture de la barre de stock ne montre pas « M’avertir » : le dashboard capturé est servi en http, le bouton n’apparaît qu’en https (le texte le dit).",
+  "Captures : jour en cours (12:30 environ) pour le direct ; 10/11/2026 pour les commandes et les ventes B2B (seul jour récent avec un ticket pro) ; 12/11/2026 pour le P&L, les invendus, les catégories et les fenêtres qui en partent (journée complète)."
+ ]
+}

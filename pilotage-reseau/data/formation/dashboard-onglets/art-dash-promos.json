@@ -1,0 +1,206 @@
+{
+ "id": "art-dash-promos",
+ "code": "0.0.44",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "10 min de lecture, puis 10 min sur l’onglet Promotions de son magasin",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Promotions",
+  "nl": "Het dashboard: het tabblad Promoties"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Promotions : savoir quelles promotions sont en caisse, où et combien elles sont utilisées, ce qu’elles laissent comme marge (le coefficient du lot) et retrouver les codes d’un bon.",
+  "nl": "Het tabblad Promoties lezen: weten welke promoties in de kassa staan, waar en hoeveel ze gebruikt worden, welke marge ze laten (de coëfficiënt van het pakket) en de codes van een bon terugvinden."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ce que montre l’onglet",
+    "nl": "Wat het tabblad toont"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Lecture seule",
+      "nl": "Alleen-lezen"
+     },
+     "texte": {
+      "fr": "En tête : « Promotions du magasin », le magasin, et « relu au panel à … » avec « ↻ relire le panel ».\nLe bandeau le dit : « Lecture seule : les promotions se créent et se modifient au cockpit, dans Promotions › Édition. »\nToutes les promotions viennent du panel : celles de la marque et celles réservées au magasin.\nÀ l’ouverture de l’onglet, la dernière liste lue s’affiche, puis le panel est relu : une promotion créée ou changée au panel se voit sans attendre.\nSi une promotion manque ou semble fausse : la corriger au cockpit (Promotions › Édition), ou la signaler à la marque si c’est la sienne, puis « ↻ relire le panel ».",
+      "nl": "Bovenaan: « Promotions du magasin », de winkel, en « relu au panel à … » met « ↻ relire le panel ».\nDe balk zegt het: « Lecture seule : les promotions se créent et se modifient au cockpit, dans Promotions › Édition. »\nAlle promoties komen uit het panel: die van het merk en die voorbehouden aan de winkel.\nBij het openen van het tabblad verschijnt eerst de laatst gelezen lijst, daarna wordt het panel herlezen: een promotie die in het panel aangemaakt of gewijzigd werd, zie je meteen.\nAls een promotie ontbreekt of fout lijkt: verbeter ze in de cockpit (Promotions › Édition), of meld ze aan het merk als het de hare is, daarna « ↻ relire le panel »."
+     },
+     "critique": false,
+     "photo": "do-promos-lecture.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Où les promotions sont utilisées",
+      "nl": "Waar de promoties gebruikt worden"
+     },
+     "texte": {
+      "fr": "Les promotions reconnues dans les tickets, par canal : Comptoir (gris), Click & collect (bleu), Livraison (bleu foncé).\n« En nombre » (d’office) : combien de fois une promotion s’est appliquée sur un ticket ; « En remise € » : ce qu’elle a coûté en remise. « 7 jours » ou « 30 jours » (d’office).\nEn haut à droite : la part du webshop et le total. Une ligne par promotion : « N fois · N % web », sa barre par canal et son « Coef. du lot ».\n« Remise non reconnue » : une remise sur une ligne de ticket qu’aucune promotion du panel n’explique.\nÀ droite, « Jour par jour · toutes promotions » : comptoir en bas, webshop au-dessus ; un jour pas encore lu reste vide.\nLe ticket d’une commande webshop encaissée au magasin compte dans son canal ; les commandes payées en ligne ne se lisent pas encore (la note le dit).\nSi « Remise non reconnue » pèse lourd : chercher en caisse les remises faites à la main.",
+      "nl": "De promoties die in de tickets herkend worden, per kanaal: Comptoir (grijs), Click & collect (blauw), Livraison (donkerblauw).\n« En nombre » (standaard): hoeveel keer een promotie op een ticket toegepast werd; « En remise € »: wat ze aan korting kostte. « 7 jours » of « 30 jours » (standaard).\nRechtsboven: het aandeel van de webshop en het totaal. Eén rij per promotie: « N fois · N % web », haar balk per kanaal en haar « Coef. du lot ».\n« Remise non reconnue »: een korting op een ticketlijn die geen enkele promotie van het panel verklaart.\nRechts, « Jour par jour · toutes promotions »: toonbank onderaan, webshop erboven; een dag die nog niet gelezen is, blijft leeg.\nHet ticket van een webshopbestelling die in de winkel afgerekend wordt, telt in haar kanaal; online betaalde bestellingen worden nog niet gelezen (de noot zegt het).\nAls « Remise non reconnue » zwaar weegt: zoek in de kassa de kortingen die met de hand gegeven worden."
+     },
+     "critique": false,
+     "photo": "do-promos-canaux.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La liste des promotions",
+    "nl": "De lijst van de promoties"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La liste",
+      "nl": "De lijst"
+     },
+     "texte": {
+      "fr": "Les filtres : « Actives » (en caisse aujourd’hui, d’office), « À venir », « Brouillons », « Terminées », « Toutes », chacun avec son nombre.\n« Toutes les sortes », « X achetés + Y » ou « Bundles » ; « Chercher une promotion… » cherche dans le nom et le texte.\nOrdre : en caisse d’abord, puis à venir, brouillons, terminées ; à état égal, par date de début.\nOrigine : « Marque » ou « Magasin » ; « bon » à côté du nom quand la promotion ne s’applique qu’avec un code.\nStatut : « En caisse », « À venir », « Brouillon · inactive au panel », « Terminée », « Inactive au panel ».\nRien sous « Actives » : « Aucune promotion en caisse aujourd’hui dans ce magasin. »\nSi une promotion attendue n’est pas dans « Actives » : regarder « À venir » et « Brouillons », puis la faire activer au cockpit.",
+      "nl": "De filters: « Actives » (vandaag in de kassa, standaard), « À venir », « Brouillons », « Terminées », « Toutes », elk met zijn aantal.\n« Toutes les sortes », « X achetés + Y » of « Bundles »; « Chercher une promotion… » zoekt in de naam en de tekst.\nVolgorde: eerst in de kassa, dan komend, concepten, afgelopen; bij gelijke stand op begindatum.\nOrigine: « Marque » of « Magasin »; « bon » naast de naam als de promotie alleen met een code geldt.\nStatut: « En caisse », « À venir », « Brouillon · inactive au panel », « Terminée », « Inactive au panel ».\nNiets onder « Actives »: « Aucune promotion en caisse aujourd’hui dans ce magasin. »\nAls een verwachte promotie niet in « Actives » staat: kijk in « À venir » en « Brouillons », en laat ze daarna in de cockpit activeren."
+     },
+     "critique": false,
+     "photo": "do-promos-liste.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les colonnes",
+      "nl": "De kolommen"
+     },
+     "texte": {
+      "fr": "Par défaut : Promotion, Origine, Le client achète, Il reçoit, Comptoir, Webshop, Seuil, Début, Fin, Bon, Statut, Coef.\n« Colonnes ▾ » ajoute ou retire Sorte, Créneaux, Par ticket, N° au panel (« Promotion » reste toujours) ; le choix est gardé dans ce navigateur, « Revenir aux colonnes par défaut » le remet.\nLe client achète / Il reçoit : par exemple « 2 × Cookies » et « le 3e −1,40 € », « 20 × Sandwich » et « les 6 suivants offerts », ou « le lot à 19,90 € ».\nComptoir, Webshop : ✓ quand la promotion vaut sur ce canal ; sans restriction au panel, elle vaut sur les deux.\nSeuil : le montant minimal du ticket. Fin : « sans fin » s’il n’y en a pas. Par ticket : « 1 fois », « répétable » ou « N fois max ».\nBon : « codes » quand la caisse ne l’applique qu’avec un de ses codes.\nSi le tableau dépasse l’écran : le faire glisser de côté, ou retirer des colonnes.",
+      "nl": "Standaard: Promotion, Origine, Le client achète, Il reçoit, Comptoir, Webshop, Seuil, Début, Fin, Bon, Statut, Coef.\n« Colonnes ▾ » voegt Sorte, Créneaux, Par ticket, N° au panel toe of haalt ze weg (« Promotion » blijft altijd); de keuze wordt in deze browser bewaard, « Revenir aux colonnes par défaut » zet ze terug.\nLe client achète / Il reçoit: bijvoorbeeld « 2 × Cookies » en « le 3e −1,40 € », « 20 × Sandwich » en « les 6 suivants offerts », of « le lot à 19,90 € ».\nComptoir, Webshop: ✓ als de promotie op dat kanaal geldt; zonder beperking in het panel geldt ze op beide.\nSeuil: het minimumbedrag van het ticket. Fin: « sans fin » als er geen is. Par ticket: « 1 fois », « répétable » of « N fois max ».\nBon: « codes » als de kassa ze alleen met een van haar codes toepast.\nAls de tabel breder is dan het scherm: schuif ze opzij, of haal kolommen weg."
+     },
+     "critique": false,
+     "photo": "do-promos-colonnes.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Le coefficient du lot",
+      "nl": "De coëfficiënt van het pakket"
+     },
+     "texte": {
+      "fr": "Le coefficient du lot : prix payé HT ÷ coût matière, dans le cas le plus serré, aux prix et coûts de recette d’aujourd’hui. Le repère est × 2 : vert au-dessus, rouge en dessous ; un bundle n’en a pas (« — »).\nUn toucher sur le coefficient (ⓘ) ouvre sa fenêtre : « Coefficient du lot », « Sans la promotion », « Écart au repère », et la jauge (min. × 2, sans promo, avec la promo).\n« Ce qui fixe le chiffre » : le lot exact, « Payé par le client, HT », « Coût matière des N articles », « Marge brute du lot » et ce qu’elle serait sans la promotion.\n« Voir produit par produit (N) » : chaque produit visé, son coefficient normal et dans la promotion, son pire lot et « ok », « à surveiller » ou « sous ×2 » ; « ← L’essentiel » revient.\nLe repère ne bloque pas une promotion : il signale une marge trop mince.\nSi le coefficient est sous × 2 : une promotion du magasin se revoit au cockpit ; une promotion de la marque se signale à la marque (la fenêtre le dit).",
+      "nl": "De coëfficiënt van het pakket: betaalde prijs excl. btw ÷ grondstofkost, in het krapste geval, aan de prijzen en receptkosten van vandaag. Het ijkpunt is × 2: groen erboven, rood eronder; een bundel heeft er geen (« — »).\nEen tik op de coëfficiënt (ⓘ) opent zijn venster: « Coefficient du lot », « Sans la promotion », « Écart au repère », en de meter (min. × 2, zonder promo, met de promo).\n« Ce qui fixe le chiffre »: het exacte pakket, « Payé par le client, HT », « Coût matière des N articles », « Marge brute du lot » en wat ze zonder promotie zou zijn.\n« Voir produit par produit (N) »: elk betrokken product, zijn normale coëfficiënt en die in de promotie, zijn slechtste pakket en « ok », « à surveiller » of « sous ×2 »; « ← L’essentiel » keert terug.\nHet ijkpunt blokkeert geen promotie: het wijst op een te dunne marge.\nAls de coëfficiënt onder × 2 ligt: een promotie van de winkel herzie je in de cockpit; een promotie van het merk meld je aan het merk (het venster zegt het)."
+     },
+     "critique": true,
+     "photo": "do-promos-coef.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Les codes d’un bon",
+      "nl": "De codes van een bon"
+     },
+     "texte": {
+      "fr": "Une promotion du magasin déclenchée par un bon porte « bon » à côté de son nom : la caisse ne l’applique qu’avec un de ses codes.\n« codes » (colonne Bon), ou « Voir les codes du bon » dans le menu ⋯ de la ligne, ouvre « Bon de la promotion » en haut de la page.\nDessus : l’état (« Actif », « Brouillon », « Hors service »), le n° au panel, à qui il s’adresse (« un code pour tous », « des codes uniques », « des clients »), ses utilisations ; « incomplet au panel : … » quand il manque quelque chose.\nUn code pour tous : le code en grand et « N utilisations au plus » ou « sans limite d’utilisations ».\nSinon le tableau Code · Client (« B2B ») · Statut (« actif », « désactivé ») · Utilisation ; « Copier les codes » les copie tous, un par ligne, le client à côté. ✕ ferme le bloc.\nSi un code est refusé en caisse : vérifier ici qu’il est « actif » et que le bon n’est pas « Hors service » ; le bon se règle au cockpit.",
+      "nl": "Een promotie van de winkel die door een bon geactiveerd wordt, draagt « bon » naast haar naam: de kassa past ze alleen toe met een van haar codes.\n« codes » (kolom Bon), of « Voir les codes du bon » in het menu ⋯ van de rij, opent « Bon de la promotion » bovenaan de pagina.\nErop: de status (« Actif », « Brouillon », « Hors service »), het nr. in het panel, voor wie hij is (« un code pour tous », « des codes uniques », « des clients »), zijn gebruik; « incomplet au panel : … » als er iets ontbreekt.\nEén code voor iedereen: de code in het groot en « N utilisations au plus » of « sans limite d’utilisations ».\nAnders de tabel Code · Client (« B2B ») · Statut (« actif », « désactivé ») · Utilisation; « Copier les codes » kopieert ze allemaal, één per regel, de klant ernaast. ✕ sluit het blok.\nAls een code in de kassa geweigerd wordt: controleer hier of hij « actif » is en of de bon niet « Hors service » is; de bon regel je in de cockpit."
+     },
+     "critique": false,
+     "photo": "do-promos-bon.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "L’onglet Promotions se lit : on crée et on modifie une promotion au cockpit, dans Promotions › Édition, puis on relit le panel.",
+   "nl": "Het tabblad Promoties lees je: een promotie maak en wijzig je in de cockpit, in Promotions › Édition, daarna herlees je het panel."
+  },
+  {
+   "fr": "Le coefficient du lot est celui du cas le plus serré, aux prix et coûts d’aujourd’hui : sous × 2, la marge de la promotion est trop mince.",
+   "nl": "De coëfficiënt van het pakket is die van het krapste geval, aan de prijzen en kosten van vandaag: onder × 2 is de marge van de promotie te dun."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Une promotion de la marque affiche « × 1,86 » en rouge. Que faire ?",
+    "nl": "Een promotie van het merk toont « × 1,86 » in het rood. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "La modifier dans le dashboard",
+     "La signaler à la marque : elle est sous le repère × 2",
+     "Rien, le rouge veut dire qu’elle est terminée"
+    ],
+    "nl": [
+     "Ze wijzigen in het dashboard",
+     "Ze aan het merk melden: ze ligt onder het ijkpunt × 2",
+     "Niets, rood betekent dat ze afgelopen is"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Que veut dire « Remise non reconnue » ?",
+    "nl": "Wat betekent « Remise non reconnue »?"
+   },
+   "choix": {
+    "fr": [
+     "Une remise sur une ligne de ticket qu’aucune promotion du panel n’explique",
+     "Une promotion pas encore activée",
+     "Une commande webshop payée en ligne"
+    ],
+    "nl": [
+     "Een korting op een ticketlijn die geen enkele promotie van het panel verklaart",
+     "Een promotie die nog niet geactiveerd is",
+     "Een online betaalde webshopbestelling"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "La fenêtre du coefficient garde un bouton « Dupliquer » (data-pmcdup) et, sous × 2, la phrase « Retirez-la, ou dupliquez-la avec un avantage plus petit. » : ces gestes appartiennent au cockpit (Promotions › Édition). Non documentés ici ; probablement à retirer du dashboard (le menu ⋯ des lignes ne garde déjà que « Voir les codes du bon »).",
+  "Halle (magasin 4) n’a aucune promotion à bon : la capture do-promos-bon est prise sur Corbais (magasin 2, bon « CMR - Newsletter Tubize Formule 2 »). La refaire avec SHOP=2 : node tools/formation/captures_onglets.js … art-dash-promos -- do-promos-bon (avec SHOP=4, elle échoue).",
+  "Dans la capture de la liste, la colonne « Coef. » est hors de l’écran à 1200 px (tableau à faire glisser) : elle se voit dans la capture « Où les promotions sont utilisées ».",
+  "« Remise non reconnue » : le libellé à l’écran ; l’explication (« remise sur la ligne qu’aucune promotion du panel n’explique ») vient du serveur (promos_magasin.php) et n’est pas affichée."
+ ]
+}

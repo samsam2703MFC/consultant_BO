@@ -1,0 +1,328 @@
+{
+ "id": "art-dash-concurrence",
+ "code": "0.0.46",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Concurrence",
+  "nl": "Het dashboard: het tabblad Concurrentie"
+ },
+ "objectif": {
+  "fr": "Savoir lire l’onglet Concurrence : nos prix face à ceux relevés autour du magasin (Top 10 du réseau, cougnou, galette des rois, n’importe quel produit), le verdict à ± 5 %, et poser un relevé terrain juste.",
+  "nl": "Het tabblad Concurrentie kunnen lezen: onze prijzen tegenover die rond de winkel opgenomen (Top 10 van het netwerk, cougnou, driekoningentaart, eender welk product), het oordeel op ± 5 %, en een juiste terreinopname toevoegen."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire dans la formation FO-05, après l’article « Comprendre le dashboard magasin » (0.0.15).",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen in opleiding FO-05, na het artikel « Het winkeldashboard begrijpen » (0.0.15)."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Ce que l’onglet compare",
+    "nl": "Wat het tabblad vergelijkt"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "« Top 10 réseau »",
+      "nl": "« Top 10 réseau »"
+     },
+     "texte": {
+      "fr": "En tête de l’onglet, trois boutons choisissent ce qu’on compare : « Top 10 réseau », « Cougnou », « Galette des rois ».\n« Top 10 réseau » s’ouvre d’office : les dix produits les plus vendus des 4 magasins du réseau sur les 3 derniers mois, face aux prix relevés autour de ce magasin.\nLes prix des concurrents viennent du module Benchmark de TFBuddy (relevés du réseau et relevés web du cockpit) : la première lecture est lente, jusqu’à une minute.\nLe bouton en bordeaux est la comparaison affichée ; un toucher sur un autre bouton en change.\nSi un message « Concurrence : … » ou « Ventes du réseau : … » s’affiche à la place des chiffres : la lecture a échoué, « ↻ Relire » la relance.",
+      "nl": "Bovenaan het tabblad kiezen drie knoppen wat je vergelijkt: « Top 10 réseau », « Cougnou », « Galette des rois ».\n« Top 10 réseau » opent standaard: de tien best verkochte producten van de 4 winkels van het netwerk over de laatste 3 maanden, tegenover de prijzen die rond deze winkel opgenomen zijn.\nDe prijzen van de concurrenten komen uit de module Benchmark van TFBuddy (opnames van het netwerk en webopnames van de cockpit): de eerste lezing is traag, tot een minuut.\nDe bordeaux knop is de vergelijking die getoond wordt; een tik op een andere knop wisselt ervan.\nAls er een bericht « Concurrence : … » of « Ventes du réseau : … » verschijnt in plaats van de cijfers: de lezing is mislukt, « ↻ Relire » start ze opnieuw."
+     },
+     "critique": false,
+     "photo": "do-concurrence-top10.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "« Cougnou » : le prix au kilo",
+      "nl": "« Cougnou »: de prijs per kilo"
+     },
+     "texte": {
+      "fr": "« Cougnou » compare nos cougnous au kilo : chaque prix (promo comprise) est ramené en €/kg, prix ÷ poids.\nLa première tuile, « Notre cougnou », donne notre prix au kilo, puis notre prix de vente et le poids retenu (« ≈ … g »).\n« à confirmer » en doré : ce poids n’est pas encore confirmé, notre prix au kilo est une estimation.\nUn relevé sans poids (« taille non publiée ») reste dans la liste mais n’entre pas dans les médianes.\nSi « à confirmer » s’affiche : ne pas tirer de conclusion sur notre prix au kilo avant que le poids réel soit confirmé ; le signaler au responsable.",
+      "nl": "« Cougnou » vergelijkt onze cougnous per kilo: elke prijs (promo inbegrepen) wordt omgerekend naar €/kg, prijs ÷ gewicht.\nDe eerste tegel, « Notre cougnou », geeft onze prijs per kilo, daarna onze verkoopprijs en het aangenomen gewicht (« ≈ … g »).\n« à confirmer » in goud: dat gewicht is nog niet bevestigd, onze kiloprijs is een schatting.\nEen opname zonder gewicht (« taille non publiée ») blijft in de lijst maar telt niet mee in de medianen.\nAls « à confirmer » verschijnt: trek geen besluit over onze kiloprijs voor het echte gewicht bevestigd is; meld het aan de verantwoordelijke."
+     },
+     "critique": false,
+     "photo": "do-concurrence-cougnou.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "« Galette des rois » : à surface égale",
+      "nl": "« Galette des rois »: bij gelijke oppervlakte"
+     },
+     "texte": {
+      "fr": "« Galette des rois » compare à surface égale : chaque galette est ramenée à notre diamètre, prix × (Ø de notre galette / Ø de la sienne)².\nNotre diamètre est écrit dans le titre du graphique : « Où nous situons-nous — € à Ø … cm ».\nUne galette vendue au poids (« vendu au poids ») ou sans diamètre publié ne se compare pas : elle reste dans la liste, hors médianes.\nComme pour le cougnou, la famille a sa visibilité web et sa liste « À faire » (plus bas).\nSi l’écart face aux supermarchés paraît énorme : lire aussi la médiane des artisans et des chaînes ; le verdict du Top 10, lui, se fait face aux boulangeries, hors supermarchés.",
+      "nl": "« Galette des rois » vergelijkt bij gelijke oppervlakte: elke galette wordt omgerekend naar onze diameter, prijs × (Ø van onze galette / Ø van de hunne)².\nOnze diameter staat in de titel van de grafiek: « Où nous situons-nous — € à Ø … cm ».\nEen galette die per gewicht verkocht wordt (« vendu au poids ») of zonder gepubliceerde diameter, is niet vergelijkbaar: ze blijft in de lijst, buiten de medianen.\nNet als de cougnou heeft deze familie haar webzichtbaarheid en haar lijst « À faire » (verderop).\nAls het verschil met de supermarkten enorm lijkt: lees ook de mediaan van de ambachtelijke bakkers en van de ketens; het oordeel van de Top 10 valt tegenover de bakkerijen, zonder supermarkten."
+     },
+     "critique": false,
+     "photo": "do-concurrence-galette.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "« Aller chercher un produit… »",
+      "nl": "« Aller chercher un produit… »"
+     },
+     "texte": {
+      "fr": "Le champ « Aller chercher un produit… » cherche dans le catalogue du magasin : taper au moins deux lettres du nom ou de la catégorie.\nLa liste propose jusqu’à 12 produits, avec leur catégorie et leur prix ; un toucher ouvre la comparaison de ce produit.\nUn toucher sur une ligne du tableau du Top 10 fait la même chose.\nLe produit choisi s’ajoute en bordeaux à côté des trois boutons ; « Top 10 réseau » ramène au tableau.\nSi « Aucun produit du magasin ne correspond. » : essayer un autre mot ; si « Catalogue du magasin en lecture… » : attendre quelques secondes.",
+      "nl": "Het veld « Aller chercher un produit… » zoekt in de catalogus van de winkel: typ minstens twee letters van de naam of de categorie.\nDe lijst stelt tot 12 producten voor, met hun categorie en hun prijs; een tik opent de vergelijking van dat product.\nEen tik op een lijn van de tabel van de Top 10 doet hetzelfde.\nHet gekozen product komt er in bordeaux bij, naast de drie knoppen; « Top 10 réseau » brengt je terug naar de tabel.\nBij « Aucun produit du magasin ne correspond. »: probeer een ander woord; bij « Catalogue du magasin en lecture… »: wacht enkele seconden."
+     },
+     "critique": false,
+     "photo": "do-concurrence-chercher.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le Top 10 réseau",
+    "nl": "De Top 10 van het netwerk"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Les 6 tuiles",
+      "nl": "De 6 tegels"
+     },
+     "texte": {
+      "fr": "« Top 10 réseau » : les pièces vendues de ces dix produits dans les 4 magasins, sur la période écrite dessous.\n« Au prix du marché » : les produits à ± 5 % de la médiane des boulangeries.\n« Au-dessus » : plus de 5 % au-dessus de la médiane ; la tuile est verte quand il n’y en a aucun. « En dessous » : plus de 5 % sous la médiane.\n« Relevés » : les prix concurrents de ce magasin dans TFBuddy pour ces dix produits.\n« Sans relevé » : les produits qui n’ont encore aucun prix concurrent.\nSi « Sans relevé » n’est pas à 0 : relever ces produits chez les concurrents et les poser avec « + Relevé terrain ».",
+      "nl": "« Top 10 réseau »: de verkochte stuks van die tien producten in de 4 winkels, over de periode die eronder staat.\n« Au prix du marché »: de producten binnen ± 5 % van de mediaan van de bakkerijen.\n« Au-dessus »: meer dan 5 % boven de mediaan; de tegel is groen als er geen enkel is. « En dessous »: meer dan 5 % onder de mediaan.\n« Relevés »: de concurrentieprijzen van deze winkel in TFBuddy voor die tien producten.\n« Sans relevé »: de producten die nog geen enkele concurrentieprijs hebben.\nAls « Sans relevé » niet op 0 staat: neem die producten op bij de concurrenten en voeg ze toe met « + Relevé terrain »."
+     },
+     "critique": false,
+     "photo": "do-concurrence-tuiles.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le tableau du Top 10 et son verdict",
+      "nl": "De tabel van de Top 10 en het oordeel"
+     },
+     "texte": {
+      "fr": "Une ligne par produit, du plus vendu au moins vendu ; sous le nom : catégorie, pièces vendues, chiffre d’affaires.\n« Nous » : notre prix à la pièce ; « Médiane boulangeries » (artisans, chaînes, stations) ; « Médiane supermarchés » en gris, pour information.\n« Fourchette » : la boulangerie la moins chère et la plus chère ; « Position » : un point gris par boulangerie, le trait bordeaux est notre prix.\n« Relevés » : les boulangeries, puis « + » les supermarchés ; « Écart » : notre prix face à la médiane des boulangeries, arrondi (« −5 % » peut déjà être « en dessous »).\n« Verdict » : « au-dessus » en rouge au-delà de + 5 %, « en dessous » en vert sous − 5 %, « au prix du marché » entre les deux, « pas de relevé » sans prix concurrent.\nUn toucher sur une ligne ouvre le détail du produit.\nSi un produit est « au-dessus » : ouvrir sa ligne et regarder quels concurrents sont moins chers, à quelle distance et à quelle date, avant toute décision de prix.",
+      "nl": "Eén lijn per product, van best tot minst verkocht; onder de naam: categorie, verkochte stuks, omzet.\n« Nous »: onze prijs per stuk; « Médiane boulangeries » (ambachtelijke bakkers, ketens, tankstations); « Médiane supermarchés » in grijs, ter informatie.\n« Fourchette »: de goedkoopste en de duurste bakkerij; « Position »: één grijs punt per bakkerij, het bordeaux streepje is onze prijs.\n« Relevés »: de bakkerijen, daarna « + » de supermarkten; « Écart »: onze prijs tegenover de mediaan van de bakkerijen, afgerond (« −5 % » kan al « en dessous » zijn).\n« Verdict »: « au-dessus » in rood boven + 5 %, « en dessous » in groen onder − 5 %, « au prix du marché » ertussen, « pas de relevé » zonder concurrentieprijs.\nEen tik op een lijn opent het detail van het product.\nAls een product « au-dessus » staat: open zijn lijn en kijk welke concurrenten goedkoper zijn, op welke afstand en op welke datum, vóór elke prijsbeslissing."
+     },
+     "critique": true,
+     "photo": "do-concurrence-tableau.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Une famille ou un produit",
+    "nl": "Een familie of een product"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Les tuiles d’un produit ou d’une famille",
+      "nl": "De tegels van een product of een familie"
+     },
+     "texte": {
+      "fr": "Première tuile : « Notre prix » (« Notre cougnou », « Notre galette » pour une famille).\nPuis la médiane des supermarchés, celle des artisans et celle des chaînes et stations ; dessous, le nombre de relevés et notre écart : « nous +x % » en rouge quand nous sommes plus chers, en vert quand nous sommes moins chers.\n« Moins chers que nous » : combien de relevés comparables (taille connue) sont sous notre prix.\nDernière tuile : « Visibilité web » pour une famille (contrôles atelierby.be passés, en vert à partir de la moitié) ou « Relevés » pour un produit.\nLes prix comptent la promo quand le concurrent en a une.\nSi une médiane dit « aucun relevé » : la comparaison avec ce type de concurrent manque ; la compléter par un relevé terrain.",
+      "nl": "Eerste tegel: « Notre prix » (« Notre cougnou », « Notre galette » voor een familie).\nDaarna de mediaan van de supermarkten, die van de ambachtelijke bakkers en die van de ketens en tankstations; eronder het aantal opnames en ons verschil: « nous +x % » in rood als wij duurder zijn, in groen als wij goedkoper zijn.\n« Moins chers que nous »: hoeveel vergelijkbare opnames (gekende grootte) onder onze prijs liggen.\nLaatste tegel: « Visibilité web » voor een familie (geslaagde controles van atelierby.be, groen vanaf de helft) of « Relevés » voor een product.\nDe prijzen houden rekening met de promo als de concurrent er een heeft.\nAls een mediaan « aucun relevé » zegt: de vergelijking met dat type concurrent ontbreekt; vul ze aan met een terreinopname."
+     },
+     "critique": false,
+     "photo": "do-concurrence-produit.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "« Où nous situons-nous »",
+      "nl": "« Où nous situons-nous »"
+     },
+     "texte": {
+      "fr": "Une échelle de prix en €, dans la mesure écrite dans le titre : à la pièce, au kilo ou à notre diamètre.\nTrois rangées de points : supermarchés en gris clair, artisans en doré, chaînes et stations en gris foncé ; un point = un relevé comparable.\nLe trait bordeaux « nous … € » est notre prix.\nSurvoler un point montre le concurrent, son produit et son prix ramené.\nLe graphique n’apparaît que s’il y a au moins un relevé comparable.\nSi la plupart des points dorés sont à gauche du trait bordeaux : les artisans autour du magasin sont moins chers que nous ; le dire au responsable.",
+      "nl": "Een prijsschaal in €, in de maat die in de titel staat: per stuk, per kilo of op onze diameter.\nDrie rijen punten: supermarkten in lichtgrijs, ambachtelijke bakkers in goud, ketens en tankstations in donkergrijs; één punt = één vergelijkbare opname.\nHet bordeaux streepje « nous … € » is onze prijs.\nOver een punt gaan toont de concurrent, zijn product en zijn omgerekende prijs.\nDe grafiek verschijnt pas als er minstens één vergelijkbare opname is.\nAls de meeste gouden punten links van het bordeaux streepje staan: de ambachtelijke bakkers rond de winkel zijn goedkoper dan wij; meld het aan de verantwoordelijke."
+     },
+     "critique": false,
+     "photo": "do-concurrence-situer.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Les concurrents du magasin",
+      "nl": "De concurrenten van de winkel"
+     },
+     "texte": {
+      "fr": "« … — les concurrents du magasin » : tous les relevés, du moins cher au plus cher (prix ramené).\nSous chaque concurrent : son type (GMS, Artisan, Chaîne), sa distance, la source (TFBuddy ou relevé web) et la date du relevé ; « non rattaché » : le relevé n’est pas lié à notre produit, il est retrouvé par son nom.\nColonnes : taille (ou Ø), prix (la promo dessous), prix ramené, « Écart » (« nous +x % » en rouge, en vert quand nous sommes moins chers, « même prix »), « source ↗ » ouvre la page où le prix a été vu.\n« taille non publiée » ou « vendu au poids » : le relevé ne se compare pas.\nLe dashboard ne corrige aucun relevé : un prix faux se corrige dans TFBuddy, puis « ↻ Relire ».\nSi « Aucun prix concurrent relevé pour ce produit. » : « + Ajouter un relevé terrain » ouvre le formulaire.",
+      "nl": "« … — les concurrents du magasin »: alle opnames, van goedkoopst tot duurst (omgerekende prijs).\nOnder elke concurrent: zijn type (GMS, Artisan, Chaîne), zijn afstand, de bron (TFBuddy of webopname) en de datum van de opname; « non rattaché »: de opname is niet aan ons product gekoppeld, ze is teruggevonden op naam.\nKolommen: grootte (of Ø), prijs (de promo eronder), omgerekende prijs, « Écart » (« nous +x % » in rood, in groen als wij goedkoper zijn, « même prix »), « source ↗ » opent de pagina waar de prijs gezien werd.\n« taille non publiée » of « vendu au poids »: de opname is niet vergelijkbaar.\nHet dashboard corrigeert geen enkele opname: een foute prijs corrigeer je in TFBuddy, daarna « ↻ Relire ».\nBij « Aucun prix concurrent relevé pour ce produit. »: « + Ajouter un relevé terrain » opent het formulier."
+     },
+     "critique": true,
+     "photo": "do-concurrence-concurrents.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "« Produits proches »",
+      "nl": "« Produits proches »"
+     },
+     "texte": {
+      "fr": "Pour un produit cherché : les relevés qui contiennent le mot principal du produit sans être le même produit (par exemple « pain » pour le pain au chocolat).\nIls sont là pour information : ils n’entrent ni dans les médianes ni dans l’écart.\nColonnes : concurrent (type, distance, date), produit, prix.\nSi un produit proche est en fait le même que le nôtre : il doit être rattaché à notre produit dans TFBuddy ; le signaler au responsable.",
+      "nl": "Voor een opgezocht product: de opnames die het hoofdwoord van het product bevatten zonder hetzelfde product te zijn (bijvoorbeeld « pain » voor de pain au chocolat).\nZe staan er ter informatie: ze tellen niet mee in de medianen en niet in het verschil.\nKolommen: concurrent (type, afstand, datum), product, prijs.\nAls een verwant product eigenlijk hetzelfde is als het onze: het moet in TFBuddy aan ons product gekoppeld worden; meld het aan de verantwoordelijke."
+     },
+     "critique": false,
+     "photo": "do-concurrence-proches.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Visibilité web et « À faire »",
+      "nl": "Webzichtbaarheid en « À faire »"
+     },
+     "texte": {
+      "fr": "Pour le cougnou et la galette : « Visibilité web — atelierby.be », les contrôles faits sur notre site, « ✓ fait » en vert ou « ✗ manque » en rouge, avec la date de lecture.\nÀ droite, « À faire » : les actions tirées du benchmark, numérotées.\nCes deux blocs se lisent : rien ne se coche ici.\nSous la page : la date de lecture et le nombre de comparaisons rattachées dans TFBuddy sur 90 jours.\nSi un contrôle touche notre magasin (page, prix, poids affichés) et dit « ✗ manque » : le signaler au responsable.",
+      "nl": "Voor de cougnou en de galette: « Visibilité web — atelierby.be », de controles op onze site, « ✓ fait » in groen of « ✗ manque » in rood, met de datum van lezing.\nRechts « À faire »: de acties uit de benchmark, genummerd.\nDie twee blokken lees je alleen: hier vink je niets aan.\nOnderaan de pagina: de datum van lezing en het aantal gekoppelde vergelijkingen in TFBuddy over 90 dagen.\nAls een controle onze winkel raakt (pagina, prijs, gewicht getoond) en « ✗ manque » zegt: meld het aan de verantwoordelijke."
+     },
+     "critique": false,
+     "photo": "do-concurrence-web.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Poser un relevé terrain",
+    "nl": "Een terreinopname toevoegen"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Le formulaire « Relevé terrain »",
+      "nl": "Het formulier « Relevé terrain »"
+     },
+     "texte": {
+      "fr": "« + Relevé terrain » ouvre « Relevé terrain — un prix vu chez un concurrent » : le prix est posé dans le module Benchmark de TFBuddy, daté d’aujourd’hui.\n« Concurrent » : le choisir dans la liste, ou laisser « — nouveau concurrent — » et remplir « Nouveau : nom » et « Type » (Artisan, GMS, Chaîne).\n« Notre produit » : le produit comparé ; « Produit vu » : le nom tel qu’il est chez le concurrent.\n« Prix (€) » est obligatoire ; « Promo (€) » si le concurrent en a une ; « Taille » et « Unité » (g, kg, cm (Ø), pièce) : sans taille, un cougnou ou une galette ne se compare pas.\n« Poser le relevé » l’enregistre, « Fermer » abandonne : c’est la seule chose que cet onglet écrit. Relire chaque champ avant d’envoyer.\nSi « Indiquez le concurrent, le produit vu et son prix. » : un de ces champs manque ; si « Relevé refusé : … » : rien n’est parti, recommencer plus tard.",
+      "nl": "« + Relevé terrain » opent « Relevé terrain — un prix vu chez un concurrent »: de prijs wordt in de module Benchmark van TFBuddy gezet, met de datum van vandaag.\n« Concurrent »: kies hem in de lijst, of laat « — nouveau concurrent — » staan en vul « Nouveau : nom » en « Type » in (Artisan, GMS, Chaîne).\n« Notre produit »: het vergeleken product; « Produit vu »: de naam zoals bij de concurrent.\n« Prix (€) » is verplicht; « Promo (€) » als de concurrent er een heeft; « Taille » en « Unité » (g, kg, cm (Ø), pièce): zonder grootte is een cougnou of een galette niet vergelijkbaar.\n« Poser le relevé » bewaart de opname, « Fermer » breekt af: het is het enige wat dit tabblad schrijft. Herlees elk veld voor je verstuurt.\nBij « Indiquez le concurrent, le produit vu et son prix. »: een van die velden ontbreekt; bij « Relevé refusé : … »: er is niets vertrokken, probeer later opnieuw."
+     },
+     "critique": true,
+     "photo": "do-concurrence-releve.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Le verdict du Top 10 se lit face aux boulangeries (artisans, chaînes, stations), hors supermarchés : au prix du marché à ± 5 % de la médiane, au-dessus ou en dessous au-delà.",
+   "nl": "Het oordeel van de Top 10 lees je tegenover de bakkerijen (ambachtelijke bakkers, ketens, tankstations), zonder supermarkten: aan de marktprijs binnen ± 5 % van de mediaan, erboven of eronder daarbuiten."
+  },
+  {
+   "fr": "Un prix se compare à la même mesure : à la pièce, au kilo pour le cougnou, à notre diamètre pour la galette ; sans taille connue, un relevé n’entre pas dans les médianes.",
+   "nl": "Een prijs vergelijk je in dezelfde maat: per stuk, per kilo voor de cougnou, op onze diameter voor de galette; zonder gekende grootte telt een opname niet mee in de medianen."
+  },
+  {
+   "fr": "Le dashboard ne corrige aucun prix : un relevé faux se corrige dans TFBuddy ; seul « Poser le relevé » écrit, daté du jour.",
+   "nl": "Het dashboard corrigeert geen enkele prijs: een foute opname corrigeer je in TFBuddy; alleen « Poser le relevé » schrijft iets, met de datum van vandaag."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Dans le Top 10, notre prix est 8 % au-dessus de la médiane des boulangeries. Quel est le verdict ?",
+    "nl": "In de Top 10 ligt onze prijs 8 % boven de mediaan van de bakkerijen. Wat is het oordeel?"
+   },
+   "choix": {
+    "fr": [
+     "« au prix du marché »",
+     "« au-dessus »",
+     "« en dessous »"
+    ],
+    "nl": [
+     "« au prix du marché »",
+     "« au-dessus »",
+     "« en dessous »"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Comment une galette concurrente de 22 cm est-elle comparée à la nôtre ?",
+    "nl": "Hoe wordt een galette van 22 cm van een concurrent met de onze vergeleken?"
+   },
+   "choix": {
+    "fr": [
+     "À son prix tel quel",
+     "Ramenée à notre diamètre, à surface égale : prix × (notre Ø / son Ø)²",
+     "Au kilo"
+    ],
+    "nl": [
+     "Aan haar prijs zoals hij is",
+     "Omgerekend naar onze diameter, bij gelijke oppervlakte: prijs × (onze Ø / haar Ø)²",
+     "Per kilo"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un relevé de cougnou dit « taille non publiée ». Que devient-il ?",
+    "nl": "Een opname van een cougnou zegt « taille non publiée ». Wat gebeurt ermee?"
+   },
+   "choix": {
+    "fr": [
+     "Il compte dans la médiane à son prix",
+     "Il reste dans la liste mais n’entre pas dans les médianes",
+     "Il est effacé de TFBuddy"
+    ],
+    "nl": [
+     "Hij telt mee in de mediaan aan zijn prijs",
+     "Hij blijft in de lijst maar telt niet mee in de medianen",
+     "Hij wordt uit TFBuddy gewist"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Le poids de référence du cougnou (« ≈ … g à confirmer ») et notre diamètre de galette viennent du benchmark (familles) : le code du dashboard ne dit pas où ils se confirment ; l’article dit seulement « le signaler au responsable ».",
+  "Les captures montrent Halle le 13/11/2026 ; « Aller chercher un produit… » est capturé sans liste de résultats (l’outil de capture ne sait pas taper).",
+  "Le formulaire « Relevé terrain » est capturé ouvert (famille Cougnou) ; « Poser le relevé » n’a pas été touché."
+ ]
+}

@@ -1,0 +1,351 @@
+{
+ "id": "art-dash-semaine",
+ "code": "0.0.39",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "20 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Semaine",
+  "nl": "Het dashboard: het tabblad Week"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Semaine bloc par bloc : où en est la semaine face à son objectif et au réseau, ce que rapportent les canaux et les offres, ce qui part à la poubelle, et quelles heures gagnent ou perdent de l’argent.",
+  "nl": "Het tabblad Week blok per blok lezen: waar de week staat tegenover haar doelstelling en het netwerk, wat de kanalen en de acties opbrengen, wat in het afval belandt, en welke uren geld verdienen of verliezen."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12), et le candidat franchisé en formation FO-05. À lire après « Comprendre le dashboard magasin » (0.0.15), le dashboard de son magasin ouvert à côté.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12), en de kandidaat-franchisenemer in opleiding FO-05. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met het dashboard van je winkel ernaast open."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le haut de l’onglet",
+    "nl": "Bovenaan het tabblad"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La barre des non-conformités",
+      "nl": "De balk van de non-conformiteiten"
+     },
+     "texte": {
+      "fr": "En tête : les tâches notées sous le seuil de conformité par le contrôle qualité, du lundi au dimanche (jamais après aujourd’hui).\nGris « Aucune tâche notée cette semaine » : aucun contrôle consigné. Vert « ✓ Aucune non-conformité cette semaine » : des tâches notées, rien à reprendre.\nBordeaux « ! N non-conformités cette semaine » : une pastille par écart encore ouvert (gravité critique, majeure ou mineure, puis la tâche), trois au plus, et le nombre de reprises.\n« détail ▾ » : une ligne par écart — gravité et note sur 5, le jour (↻ = récidive), la tâche, le constat, et ce qu’elle est devenue depuis.\nLe devenir : « ✓ Reprise notée n/5 », « ↻ Renotée n/5 » (encore non conforme) ou « ✗ Pas de reprise notée ».\nUn toucher sur une ligne ouvre la photo et ses repères, la checklist, qui a relevé l’écart, et « Ouvrir la tâche dans Contrôle des tâches › ».\nLe seuil de conformité est écrit en tête du détail (4/5 par défaut).\nSi une ligne reste « ✗ Pas de reprise notée » : refaire la tâche avec sa photo ; c’est le contrôleur qui la renote.",
+      "nl": "Bovenaan: de taken die de kwaliteitscontrole onder de conformiteitsdrempel scoorde, van maandag tot zondag (nooit na vandaag).\nGrijs « Aucune tâche notée cette semaine »: geen controle genoteerd. Groen « ✓ Aucune non-conformité cette semaine »: taken gescoord, niets te herstellen.\nBordeaux « ! N non-conformités cette semaine »: één bolletje per open afwijking (ernst kritiek, majeur of mineur, daarna de taak), hoogstens drie, en het aantal herstellingen.\n« détail ▾ »: één regel per afwijking — ernst en score op 5, de dag (↻ = herhaling), de taak, de vaststelling, en wat er sindsdien mee gebeurd is.\nWat ervan werd: « ✓ Reprise notée n/5 », « ↻ Renotée n/5 » (nog steeds niet conform) of « ✗ Pas de reprise notée ».\nEen tik op een regel opent de foto met haar markeringen, de checklist, wie de afwijking vaststelde, en « Ouvrir la tâche dans Contrôle des tâches › ».\nDe conformiteitsdrempel staat bovenaan het detail (standaard 4/5).\nAls een regel op « ✗ Pas de reprise notée » blijft staan: de taak opnieuw uitvoeren met haar foto; de controleur scoort ze opnieuw."
+     },
+     "critique": false,
+     "photo": "do-semaine-nc.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Ta place dans le réseau",
+      "nl": "Jouw plaats in het netwerk"
+     },
+     "texte": {
+      "fr": "Cinq chiffres de la semaine face aux autres magasins ouverts : Chiffre d’affaires, Clients, Panier moyen, Atteinte de l’attendu, B2B · clients pro.\nEn Semaine, « Atteinte de l’attendu » prend la place de la marge brute de l’Opérationnel : chaque magasin face à son propre objectif à ce jour.\nLa jauge va du dernier (à gauche) au premier (à droite) : le point bordeaux c’est toi, les points gris les autres, le trait la médiane.\nLe rang (« 2e / 4 ») : vert quand tu es premier, bordeaux quand tu es dernier, noir entre les deux.\nSous le chiffre : la médiane, l’écart à la médiane, et le chiffre du premier (le 2e quand c’est toi le premier).\nLe panier se classe hors clients pro ; sous B2B, la part du pro dans le CA. Aucun autre magasin n’est nommé.\nSi un chiffre est dernier : le calendrier et les douze semaines, plus bas, disent quel jour ou quelle semaine décroche.",
+      "nl": "Vijf cijfers van de week tegenover de andere open winkels: Chiffre d’affaires, Clients, Panier moyen, Atteinte de l’attendu, B2B · clients pro.\nIn Week neemt « Atteinte de l’attendu » de plaats in van de brutomarge van Operationeel: elke winkel tegenover zijn eigen doelstelling tot vandaag.\nDe meter loopt van de laatste (links) naar de eerste (rechts): het bordeaux punt ben jij, de grijze punten de anderen, het streepje de mediaan.\nDe rang (« 2e / 4 »): groen als je eerste bent, bordeaux als je laatste bent, zwart daartussen.\nOnder het cijfer: de mediaan, het verschil met de mediaan, en het cijfer van de eerste (de 2e als jij de eerste bent).\nHet gemiddeld ticket wordt gerangschikt zonder zakelijke klanten; onder B2B het aandeel zakelijk in de omzet. Geen enkele andere winkel wordt bij naam genoemd.\nAls een cijfer laatste is: de kalender en de twaalf weken, lager, zeggen welke dag of welke week achterblijft."
+     },
+     "critique": false,
+     "photo": "do-semaine-reseau.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les tâches de la semaine",
+      "nl": "De taken van de week"
+     },
+     "texte": {
+      "fr": "« Les tâches de la semaine » : les jours relevés et la part des tâches faites.\nFaites et Non faites : le total de la semaine, et la moyenne par jour.\n« Jours sous 40 % » : les jours où moins de 40 % des tâches ont été faites.\n« Le fil des jours » : une case par jour — vert 80 % et plus, vert clair 40 % et plus, rose sous 40 %, rouge rien de fait.\n« détail ▾ » : une ligne par jour, sa barre et « faites / total ».\nLes tâches bloquantes ne se comptent pas sur la semaine : « bloquantes : voir le jour ».\nSi des jours sont sous 40 % : ouvrir ces jours dans l’onglet Tâches pour voir quelles checklists n’ont pas été rendues.",
+      "nl": "« Les tâches de la semaine »: de opgenomen dagen en het aandeel uitgevoerde taken.\nFaites en Non faites: het totaal van de week, en het gemiddelde per dag.\n« Jours sous 40 % »: de dagen waarop minder dan 40 % van de taken uitgevoerd werd.\n« Le fil des jours »: één vak per dag — groen 80 % en meer, lichtgroen 40 % en meer, roze onder 40 %, rood niets gedaan.\n« détail ▾ »: één regel per dag, met de balk en « uitgevoerd / totaal ».\nBlokkerende taken worden niet over de week geteld: « bloquantes : voir le jour ».\nAls er dagen onder 40 % zijn: open die dagen in het tabblad Taken om te zien welke checklists niet ingediend zijn."
+     },
+     "critique": false,
+     "photo": "do-semaine-taches.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le résultat de la semaine",
+    "nl": "Het resultaat van de week"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les 8 tuiles du résultat",
+      "nl": "De 8 tegels van het resultaat"
+     },
+     "texte": {
+      "fr": "CA de la semaine : l’objectif (budget validé, sinon CA théorique de l’étude) et l’attendu à ce jour (objectif réparti par la pondération réseau).\nAtteinte : le CA en % de l’attendu à ce jour, l’écart en euros et les clients manquants (ou d’avance) ; bordeaux en retard, vert sinon.\nProjection : où la semaine finira au rythme actuel, et l’écart à l’objectif. Reste à faire : ce qui manque, par jour restant (« semaine close » une fois finie).\nPar jour ouvert : le CA moyen, les clients et le panier par jour.\nMarge brute : en % et en euros, avec le coût matière face à son seuil.\nRésultat net : vert s’il est positif, bordeaux sinon. Record (doré) : le meilleur jour de la semaine, ses clients et son écart à son objectif.\nSi l’Atteinte est en bordeaux : « Reste à faire » dit l’effort par jour restant, et les clients manquants le nombre de clients à aller chercher.",
+      "nl": "CA de la semaine: de doelstelling (gevalideerd budget, anders de theoretische omzet uit de studie) en het verwachte tot vandaag (doelstelling verdeeld volgens de netwerkweging).\nAtteinte: de omzet in % van het verwachte tot vandaag, het verschil in euro en de ontbrekende klanten (of de voorsprong); bordeaux bij achterstand, anders groen.\nProjection: waar de week eindigt aan het huidige ritme, en het verschil met de doelstelling. Reste à faire: wat ontbreekt, per resterende dag (« semaine close » als ze voorbij is).\nPar jour ouvert: de gemiddelde omzet, de klanten en het gemiddeld ticket per dag.\nMarge brute: in % en in euro, met de grondstofkost tegenover zijn drempel.\nRésultat net: groen als het positief is, anders bordeaux. Record (goud): de beste dag van de week, zijn klanten en zijn verschil met zijn doelstelling.\nAls Atteinte in het bordeaux staat: « Reste à faire » zegt de inspanning per resterende dag, en de ontbrekende klanten hoeveel klanten je moet gaan halen."
+     },
+     "critique": true,
+     "photo": "do-semaine-tuiles.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Commandes et canaux",
+      "nl": "Bestellingen en kanalen"
+     },
+     "texte": {
+      "fr": "Trois canaux : Comptoir (tickets de caisse, dont clients pro), Click & collect (webshop retiré en boutique), Livraison (webshop livré).\nPour chacun : le chiffre, sa part du CA, les tickets ou commandes, le panier ; la barre du haut montre les trois parts.\nSous le comptoir, « dont clients pro » et leur part du CA : vert sous 35 %, orange de 35 à 40 %, rouge au-delà — la règle plafonne le pro à 40 % du CA de la semaine.\nÀ gauche, « La semaine — jour par jour, par canal » : une barre empilée par jour.\nÀ droite, « Les commandes de la semaine — jour par jour » : commandes (dont comptoir), click & collect, livraison, « À préparer » ; les jours à venir montrent ce qui est déjà pris.\nAu pied : le total des commandes, le webshop, ce qui reste à préparer et les commandes déjà prises.\nSi la part pro passe en orange ou en rouge : la semaine dépend trop des clients pro, c’est au comptoir qu’il faut regagner du chiffre.",
+      "nl": "Drie kanalen: Comptoir (kassatickets, inclusief zakelijke klanten), Click & collect (webshop, afgehaald in de winkel), Livraison (webshop, geleverd).\nVoor elk: het cijfer, het aandeel in de omzet, de tickets of bestellingen, het gemiddeld ticket; de balk bovenaan toont de drie aandelen.\nOnder de toonbank « dont clients pro » en hun aandeel in de omzet: groen onder 35 %, oranje van 35 tot 40 %, rood daarboven — de regel begrenst zakelijk op 40 % van de weekomzet.\nLinks « La semaine — jour par jour, par canal »: één gestapelde balk per dag.\nRechts « Les commandes de la semaine — jour par jour »: bestellingen (waarvan toonbank), click & collect, levering, « À préparer »; de komende dagen tonen wat al genomen is.\nOnderaan: het totaal van de bestellingen, de webshop, wat nog klaar te maken is en de bestellingen die al genomen zijn.\nAls het zakelijke aandeel oranje of rood wordt: de week hangt te veel af van zakelijke klanten, aan de toonbank moet je omzet terugwinnen."
+     },
+     "critique": false,
+     "photo": "do-semaine-canaux.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Promotions et bundles",
+      "nl": "Promoties en bundels"
+     },
+     "texte": {
+      "fr": "Ce que rapportent les offres : bundles (catégorie « Bundle & Promotion » du panel) et promotions posées par le cockpit sur les jours creux.\nQuatre chiffres : CA des offres (et sa part du CA), Par jour lu, Marge brute des offres (et son coefficient), Actives (bundles + promotions, « à ajuster »).\nUne ligne par offre : canaux, depuis quand, pièces et CA de la semaine, marge (vert 60 % et plus, brun 50 à 60 %, rouge sous 50 %), jour par jour, face à la référence (les 4 semaines d’avant), verdict.\nGarder : l’offre rapporte, + 8 % ou plus face à la référence, ou marge tenue. Ajuster : entre − 3 % et + 8 %, ou marge sous 50 %.\nArrêter : sous − 3 %. Trop tôt : moins de 5 jours lus, pas encore de verdict.\nSans offre : « Aucune offre en cours sur la semaine ». Les offres se créent et se modifient au cockpit, pas ici.\nSi une offre est « Ajuster » ou « Arrêter » : en parler au consultant, qui la modifie au cockpit.",
+      "nl": "Wat de acties opbrengen: bundels (categorie « Bundle & Promotion » in het panel) en promoties die de cockpit op de rustige dagen plaatst.\nVier cijfers: CA des offres (en het aandeel in de omzet), Par jour lu, Marge brute des offres (en de coëfficiënt), Actives (bundels + promoties, « à ajuster »).\nEén regel per actie: kanalen, sinds wanneer, stuks en omzet van de week, marge (groen 60 % en meer, bruin 50 tot 60 %, rood onder 50 %), dag per dag, tegenover de referentie (de 4 weken ervoor), oordeel.\nGarder: de actie brengt op, + 8 % of meer tegenover de referentie, of de marge houdt stand. Ajuster: tussen − 3 % en + 8 %, of marge onder 50 %.\nArrêter: onder − 3 %. Trop tôt: minder dan 5 gelezen dagen, nog geen oordeel.\nZonder actie: « Aucune offre en cours sur la semaine ». Acties worden in de cockpit aangemaakt en gewijzigd, niet hier.\nAls een actie op « Ajuster » of « Arrêter » staat: bespreek het met de consultant, die ze in de cockpit aanpast."
+     },
+     "critique": false,
+     "photo": "do-semaine-offres.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Invendus et poubelle",
+      "nl": "Onverkocht en afval"
+     },
+     "texte": {
+      "fr": "Les pièces jetées déclarées en caisse sur la semaine ; leur coût de production se retranche du résultat.\nJetées (pièces, références) · Coût de production (en rouge, retranché du résultat) · Valeur de vente perdue · Motifs (le premier, puis chaque motif et ses pièces).\n« voir le détail ▾ » : par produit, du plus coûteux au moins coûteux — motif, jetées, coût, valeur perdue (les 12 premières références).\n« Le panel ne répond pas » : rien n’est retranché du résultat cette fois-là.\nRien de déclaré ne veut pas dire rien de jeté : une poubelle non saisie fausse le résultat.\nSi le coût de production monte d’une semaine à l’autre : regarder les produits en tête de liste et leurs cuissons.",
+      "nl": "De weggegooide stuks die in de kassa aangegeven zijn over de week; hun productiekost gaat van het resultaat af.\nJetées (stuks, referenties) · Coût de production (in het rood, van het resultaat afgetrokken) · Valeur de vente perdue · Motifs (de eerste, daarna elke reden en haar stuks).\n« voir le détail ▾ »: per product, van het duurste naar het goedkoopste — reden, weggegooid, kost, verloren waarde (de eerste 12 referenties).\n« Le panel ne répond pas »: dan wordt niets van het resultaat afgetrokken.\nNiets aangegeven betekent niet niets weggegooid: afval dat niet ingegeven is, vervalst het resultaat.\nAls de productiekost van week tot week stijgt: kijk naar de producten bovenaan de lijst en naar hun bakbeurten."
+     },
+     "critique": true,
+     "photo": "do-semaine-invendus.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Les saisies une par une",
+      "nl": "De ingaven één voor één"
+     },
+     "texte": {
+      "fr": "« Les saisies une par une — heure, opérateur, quantité ▸ » (sous la carte, ou « les saisies ▸ » dans le P&L) ouvre la fenêtre « Invendus et poubelle ».\nEn tête : le nombre de saisies et de pièces, le total du panel, le coût de production, le nombre d’opérateurs.\nLe tableau, jour par jour : heure, opérateur, produit, quantité, motif ; puis « Par opérateur ».\nQuand le journal des saisies ne remonte pas, la fenêtre le dit et montre le total par produit du panel.\nSi journal et panel ne tombent pas juste, une phrase le signale (saisies corrigées, reports).\nSur une ligne de motif qualité ou casse : « Réclamer au fournisseur » et « Remarque à l’opérateur ». ✕ ferme la fenêtre.\nSi le même produit revient en casse : la réclamation au fournisseur se fait depuis sa ligne.",
+      "nl": "« Les saisies une par une — heure, opérateur, quantité ▸ » (onder de kaart, of « les saisies ▸ » in de W&V) opent het venster « Invendus et poubelle ».\nBovenaan: het aantal ingaven en stuks, het totaal van het panel, de productiekost, het aantal operatoren.\nDe tabel, dag per dag: uur, operator, product, hoeveelheid, reden; daarna « Par opérateur ».\nAls het journaal van de ingaven niet doorkomt, zegt het venster dat en toont het het totaal per product van het panel.\nAls journaal en panel niet overeenkomen, meldt een zin dat (gecorrigeerde ingaven, overdrachten).\nOp een regel met reden kwaliteit of breuk: « Réclamer au fournisseur » en « Remarque à l’opérateur ». ✕ sluit het venster.\nAls hetzelfde product telkens als breuk terugkomt: de klacht bij de leverancier vertrekt vanaf zijn regel."
+     },
+     "critique": false,
+     "photo": "do-semaine-saisies.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Le CA de chaque jour",
+      "nl": "De omzet van elke dag"
+     },
+     "texte": {
+      "fr": "Le calendrier de la semaine, du lundi au dimanche, une case par jour.\nTrois boutons en haut à droite : CA (le CA sur l’attendu), Atteinte (% de l’objectif à date), Clients (les clients sur les attendus).\nLe bouton choisit le chiffre en grand, la couleur et la jauge : le CA face à l’objectif CA du jour, ou les clients face à l’objectif clients (objectif CA ÷ panier moyen).\nCouleurs : vert foncé 110 % et plus, vert 100 à 110, crème 90 à 100, orange clair 75 à 90, orange sous 75 %.\nLa jauge va de 0 à 120 % de l’objectif ; son trait marque 100 %.\n« en cours » hachuré : la journée d’aujourd’hui, pas encore jugée ; « record » : le meilleur jour ; « fermé » ; un jour à venir montre son objectif.\nSi un jour est orange : passer en Clients — moins de clients, c’est le trafic ; autant de clients, c’est le panier.",
+      "nl": "De kalender van de week, van maandag tot zondag, één vak per dag.\nDrie knoppen rechtsboven: CA (de omzet tegenover het verwachte), Atteinte (% van de doelstelling tot vandaag), Clients (de klanten tegenover de verwachte).\nDe knop kiest het grote cijfer, de kleur en de meter: de omzet tegenover de omzetdoelstelling van de dag, of de klanten tegenover de klantendoelstelling (omzetdoelstelling ÷ gemiddeld ticket).\nKleuren: donkergroen 110 % en meer, groen 100 tot 110, crème 90 tot 100, lichtoranje 75 tot 90, oranje onder 75 %.\nDe meter loopt van 0 tot 120 % van de doelstelling; zijn streepje staat op 100 %.\n« en cours » gearceerd: de dag van vandaag, nog niet beoordeeld; « record »: de beste dag; « fermé »; een komende dag toont zijn doelstelling.\nAls een dag oranje is: schakel naar Clients — minder klanten, dan is het de traffic; evenveel klanten, dan is het het ticket."
+     },
+     "critique": false,
+     "photo": "do-semaine-calendrier.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Le P&L de la semaine",
+      "nl": "De W&V van de week"
+     },
+     "texte": {
+      "fr": "Chiffre d’affaires (clients, panier) − Coût matière = Marge brute.\nMarge brute − Invendus et poubelle − Main-d’œuvre − Frais généraux = Résultat.\nCoût matière, main-d’œuvre, frais généraux : le % en vert jusqu’au seuil, orange jusqu’à 1,3 fois le seuil, rouge au-delà ; le seuil est écrit sous la ligne.\nRésultat : vert à 15 % et plus, orange de 5 à 15 %, rouge sous 5 %.\nInvendus : orange, rouge au-delà de 5 % du CA ; « les saisies ▸ » ouvre la fenêtre des saisies.\nLa main-d’œuvre est celle du planning ; les heures du franchisé sont dites à part (« hors … h de franchisé »).\nSi une ligne est rouge : vérifier d’abord la donnée (planning, coût des recettes au panel, invendus saisis) ; une erreur se corrige à la source, puis « ↻ Relire ».",
+      "nl": "Chiffre d’affaires (klanten, ticket) − Coût matière = Marge brute.\nMarge brute − Invendus et poubelle − Main-d’œuvre − Frais généraux = Résultat.\nGrondstofkost, personeelskost, algemene kosten: het % in het groen tot aan de drempel, oranje tot 1,3 keer de drempel, rood daarboven; de drempel staat onder de regel.\nRésultat: groen vanaf 15 %, oranje van 5 tot 15 %, rood onder 5 %.\nOnverkocht: oranje, rood boven 5 % van de omzet; « les saisies ▸ » opent het venster van de ingaven.\nDe personeelskost is die van de planning; de uren van de franchisenemer staan apart (« hors … h de franchisé »).\nAls een regel rood is: controleer eerst het gegeven (planning, receptkost in het panel, ingegeven onverkocht); een fout corrigeer je aan de bron, daarna « ↻ Herlezen »."
+     },
+     "critique": true,
+     "photo": "do-semaine-pl.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Les douze dernières semaines",
+      "nl": "De twaalf laatste weken"
+     },
+     "texte": {
+      "fr": "Les douze dernières semaines closes (trait bordeaux), chacune face à la même semaine un an plus tôt (N-1, pointillé gris).\nTrois boutons : Clients · Panier moyen · Articles par client.\nLa bande entre les courbes : bleue au-dessus du N-1, orange en dessous. Sous la courbe, une pastille par semaine (S45…) : bleu à + 3 % et plus, orange à − 3 % et moins, gris entre les deux.\nTrois tuiles : « Douze semaines vs N-1 », « Semaine en cours » (face au N-1 aux mêmes jours), « Meilleure semaine » (« Semaine la plus haute » pour le panier et les articles).\nLa semaine en cours reste hors de la courbe ; sans N-1 (magasin trop jeune), le motif est écrit à la place.\nLe panier est hors clients pro quand leurs tickets sont lus ; sinon, c’est écrit sous la courbe.\nSi la bande reste orange plusieurs semaines : en Clients, c’est le trafic ; en Panier ou Articles, c’est la vente additionnelle.",
+      "nl": "De twaalf laatste afgesloten weken (bordeaux lijn), elk tegenover dezelfde week een jaar eerder (N-1, grijze stippellijn).\nDrie knoppen: Clients · Panier moyen · Articles par client.\nDe band tussen de curves: blauw boven N-1, oranje eronder. Onder de curve één bolletje per week (S45…): blauw vanaf + 3 %, oranje vanaf − 3 %, grijs daartussen.\nDrie tegels: « Douze semaines vs N-1 », « Semaine en cours » (tegenover N-1 op dezelfde dagen), « Meilleure semaine » (« Semaine la plus haute » voor ticket en artikelen).\nDe lopende week blijft buiten de curve; zonder N-1 (te jonge winkel) staat de reden in de plaats.\nHet gemiddeld ticket is zonder zakelijke klanten als hun tickets gelezen zijn; anders staat dat onder de curve.\nAls de band meerdere weken oranje blijft: bij Clients is het de traffic; bij Panier of Articles is het de bijverkoop."
+     },
+     "critique": false,
+     "photo": "do-semaine-douze.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les heures",
+    "nl": "De uren"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Les heures",
+      "nl": "De uren"
+     },
+     "texte": {
+      "fr": "Six tuiles : Heure avec le plus de clients, Heure avec le plus de CA, Marge brute, Marge nette des heures (après rémunération), Heure la plus rentable, Heure la moins rentable.\n« La journée type » : une colonne par heure ; la barre = les ventes de l’heure, empilées en coût matière, rémunération et marge nette ; hachuré rouge = perte.\nSous chaque barre, la case de la marge nette : rouge sous 0, orange sous 20 % des ventes, vert clair sous 40 %, vert au-delà.\nDeux boutons : « Moyenne / jour ouvert » (d’office, un jour type) et « Total » (toute la semaine).\nUn toucher sur une heure la choisit pour « Une heure en détail », plus bas.\nSi une heure est rouge semaine après semaine : la rémunération y dépasse la marge, c’est là qu’on revoit le planning.",
+      "nl": "Zes tegels: Heure avec le plus de clients, Heure avec le plus de CA, Marge brute, Marge nette des heures (na verloning), Heure la plus rentable, Heure la moins rentable.\n« La journée type »: één kolom per uur; de balk = de verkoop van het uur, gestapeld in grondstofkost, verloning en nettomarge; rood gearceerd = verlies.\nOnder elke balk het vak van de nettomarge: rood onder 0, oranje onder 20 % van de verkoop, lichtgroen onder 40 %, groen daarboven.\nTwee knoppen: « Moyenne / jour ouvert » (standaard, een typedag) en « Total » (de hele week).\nEen tik op een uur kiest dat uur voor « Een uur in detail », lager.\nAls een uur week na week rood is: de verloning ligt er hoger dan de marge, daar stuur je de planning bij."
+     },
+     "critique": false,
+     "photo": "do-semaine-heures.jpg",
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Les périodes matin · midi · après-midi",
+      "nl": "De periodes ochtend · middag · namiddag"
+     },
+     "texte": {
+      "fr": "Repliées d’office : la ligne de titre dit déjà la période qui fait la semaine et sa part des ventes ; « voir les périodes ▾ » ouvre la grille.\nUne grille jour × période : matin 6 – 10 h, midi 11 – 14 h, après-midi 15 – 19 h (avant 6 h compte dans le matin, après 19 h dans l’après-midi).\nChaque case : le CA, la marge nette et sa part, les clients, et son rang dans la journée au CA (1er, 2e, 3e).\n« Colorer par » CA · Marge nette · Clients : la couleur compare à la meilleure case de la semaine (80 % et plus, 55 à 80, 35 à 55, 18 à 35, sous 18 %).\nColonne Semaine : le total de chaque période et sa part ; ligne Journée : le total du jour.\nSi une période reste claire tous les jours : c’est un creux régulier, à travailler avec l’offre, les cuissons et le planning.",
+      "nl": "Standaard dichtgeklapt: de titelregel zegt al welke periode de week maakt en haar aandeel in de verkoop; « voir les périodes ▾ » opent het rooster.\nEen rooster dag × periode: ochtend 6 – 10 u, middag 11 – 14 u, namiddag 15 – 19 u (vóór 6 u telt bij de ochtend, na 19 u bij de namiddag).\nElk vak: de omzet, de nettomarge en haar aandeel, de klanten, en de rang in de dag op omzet (1er, 2e, 3e).\n« Colorer par » CA · Marge nette · Clients: de kleur vergelijkt met het beste vak van de week (80 % en meer, 55 tot 80, 35 tot 55, 18 tot 35, onder 18 %).\nKolom Semaine: het totaal van elke periode en haar aandeel; regel Journée: het totaal van de dag.\nAls een periode elke dag licht blijft: het is een vast dal, aan te pakken met het aanbod, de bakbeurten en de planning."
+     },
+     "critique": false,
+     "photo": "do-semaine-periodes.jpg",
+     "video": null
+    },
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Une heure en détail",
+      "nl": "Een uur in detail"
+     },
+     "texte": {
+      "fr": "À gauche, « Heure par heure » : clients, panier, ventes, − matière, = marge brute, en poste, − rémunération, = marge nette ; la ligne « Jour type » (ou « Période ») fait le total.\nÀ droite, l’heure choisie (la plus rentable d’office ; un toucher sur une ligne en change) : ventes − coût matière = marge brute − rémunération = marge nette.\n« Top 5 de l’heure — par marge brute » : pièces, marge, taux (orange sous 50 %).\n« Top 3 des catégories — par marge brute » : leurs références et leur part des ventes de l’heure.\n« sans coût » : la recette n’est pas chiffrée au panel. Le personnel en poste est la moyenne des jours ouverts.\nSi un produit du top est « sans coût » : faire chiffrer sa recette au panel, puis « ↻ Relire ».",
+      "nl": "Links « Heure par heure »: klanten, ticket, verkoop, − grondstof, = brutomarge, in dienst, − verloning, = nettomarge; de regel « Jour type » (of « Période ») maakt het totaal.\nRechts het gekozen uur (standaard het meest rendabele; een tik op een regel kiest een ander): verkoop − grondstofkost = brutomarge − verloning = nettomarge.\n« Top 5 de l’heure — par marge brute »: stuks, marge, percentage (oranje onder 50 %).\n« Top 3 des catégories — par marge brute »: hun referenties en hun aandeel in de verkoop van het uur.\n« sans coût »: het recept is niet berekend in het panel. Het personeel in dienst is het gemiddelde van de open dagen.\nAls een product uit de top « sans coût » is: laat zijn recept berekenen in het panel, daarna « ↻ Herlezen »."
+     },
+     "critique": false,
+     "photo": "do-semaine-heure.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "L’Atteinte se lit face à l’attendu à ce jour, pas face à l’objectif de toute la semaine.",
+   "nl": "Atteinte lees je tegenover het verwachte tot vandaag, niet tegenover de doelstelling van de hele week."
+  },
+  {
+   "fr": "Rien de déclaré en invendus ne veut pas dire rien de jeté : une poubelle non saisie fausse le résultat.",
+   "nl": "Niets aangegeven als onverkocht betekent niet niets weggegooid: afval dat niet ingegeven is, vervalst het resultaat."
+  },
+  {
+   "fr": "Le dashboard ne corrige rien : un chiffre faux se corrige à la source (caisse, panel, planning), puis « ↻ Relire ».",
+   "nl": "Het dashboard corrigeert niets: een fout cijfer corrigeer je aan de bron (kassa, panel, planning), daarna « ↻ Herlezen »."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Mercredi, la tuile Atteinte affiche 96 % en bordeaux. Que dit-elle ?",
+    "nl": "Woensdag toont de tegel Atteinte 96 % in het bordeaux. Wat zegt ze?"
+   },
+   "choix": {
+    "fr": [
+     "La semaine a fait 96 % de son objectif total",
+     "Le CA est à 96 % de ce qu’il fallait avoir fait à ce jour",
+     "Le magasin est 96e du réseau"
+    ],
+    "nl": [
+     "De week haalde 96 % van haar totale doelstelling",
+     "De omzet staat op 96 % van wat er tot vandaag moest zijn",
+     "De winkel staat 96e in het netwerk"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Une promotion porte le verdict « Ajuster ». Qu’est-ce que cela veut dire ?",
+    "nl": "Een promotie krijgt het oordeel « Ajuster ». Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Elle fait entre − 3 % et + 8 % face à la référence, ou sa marge est sous 50 %",
+     "Elle a moins de 5 jours lus",
+     "Elle fait moins de − 3 % face à la référence"
+    ],
+    "nl": [
+     "Ze doet tussen − 3 % en + 8 % tegenover de referentie, of haar marge ligt onder 50 %",
+     "Ze heeft minder dan 5 gelezen dagen",
+     "Ze doet minder dan − 3 % tegenover de referentie"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Dans les douze dernières semaines, la bande est orange en Clients depuis un mois. Où chercher ?",
+    "nl": "In de twaalf laatste weken is de band in Clients al een maand oranje. Waar zoek je?"
+   },
+   "choix": {
+    "fr": [
+     "Le panier : la vente additionnelle baisse",
+     "Le trafic : il vient moins de clients qu’un an plus tôt",
+     "Le coût matière"
+    ],
+    "nl": [
+     "Het ticket: de bijverkoop daalt",
+     "De traffic: er komen minder klanten dan een jaar eerder",
+     "De grondstofkost"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "La barre des non-conformités est prise au magasin 3 (Gosselies), semaine du 28/09/2026 : au magasin 4, aucune semaine récente n’a de non-conformité (champ « shop » du plan).",
+  "Promotions et bundles : aucune offre sur aucun magasin ces dernières semaines ; la capture montre la carte vide (« Aucune offre en cours »). Les verdicts sont décrits d’après le code et la légende.",
+  "Dans la fenêtre des saisies d’invendus, « Réclamer au fournisseur » et « Remarque à l’opérateur » ENVOIENT quelque chose (panel, évaluations) : à confirmer si l’article doit les présenter ainsi.",
+  "Seuil du coût matière : valeur rendue par le serveur (d.seuils.food, 32 % par défaut dans le code, 40 % affiché au magasin 4) ; l’article ne cite pas de chiffre.",
+  "Couleur de marge des offres entre 50 et 60 % : #7A5207, appelée « brun » ici (pas de nom dans le code).",
+  "Fenêtre des saisies d’invendus au magasin 4 : le journal des mouvements s’arrête au 13/07/2026, la capture montre donc le total par produit du panel (pas l’heure ni l’opérateur)."
+ ]
+}

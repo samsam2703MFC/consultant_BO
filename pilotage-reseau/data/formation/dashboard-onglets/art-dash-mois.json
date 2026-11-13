@@ -1,0 +1,243 @@
+{
+ "id": "art-dash-mois",
+ "code": "0.0.40",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Mois",
+  "nl": "Het dashboard: het tabblad Maand"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Mois : ce qu’il ajoute à la Semaine — les six leviers face à l’an dernier et au réseau, l’évolution de chaque canal, le profil des jours et la rentabilité jour par jour.",
+  "nl": "Het tabblad Maand lezen: wat het toevoegt aan Week — de zes hefbomen tegenover vorig jaar en het netwerk, de evolutie van elk kanaal, het profiel van de dagen en de rentabiliteit dag per dag."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12), et le candidat franchisé en formation FO-05. À lire après « Comprendre le dashboard magasin » (0.0.15), le dashboard de son magasin ouvert à côté.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12), en de kandidaat-franchisenemer in opleiding FO-05. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met het dashboard van je winkel ernaast open."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le mois en un coup d’œil",
+    "nl": "De maand in één oogopslag"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Ce qui change par rapport à la Semaine",
+      "nl": "Wat verandert tegenover Week"
+     },
+     "texte": {
+      "fr": "La frise montre les douze mois de l’année : le CA, une jauge et « % de l’objectif » ; « en cours » sur le mois actuel ; un toucher ouvre le mois.\nJauge : vert à 100 % et plus, crème 90 à 100, orange clair 75 à 90, orange sous 75 % ; « sans objectif », « pas de vente » ; un mois à venir montre son objectif. ‹ 2026 › change d’année.\nLes blocs de la Semaine reviennent, sur le mois : non-conformités, Ta place dans le réseau, Les tâches du mois, les 8 tuiles (« CA du mois »), promotions, invendus, P&L du mois, les heures.\nAu mois, les périodes matin · midi · après-midi se lisent par semaine (« Sem. n ») et le rang se lit dans la semaine.\nEn plus : les six leviers, l’évolution de chaque canal, le profil des jours et la rentabilité jour par jour. Les douze dernières semaines restent dans l’onglet Semaine.\n« Ce mois-ci » ramène au mois en cours.\nSi la jauge du mois est orange : les tuiles « Atteinte » et « Reste à faire », plus bas, disent l’effort par jour restant.",
+      "nl": "De tijdlijn toont de twaalf maanden van het jaar: de omzet, een meter en « % de l’objectif »; « en cours » op de lopende maand; een tik opent de maand.\nMeter: groen vanaf 100 %, crème 90 tot 100, lichtoranje 75 tot 90, oranje onder 75 %; « sans objectif », « pas de vente »; een komende maand toont haar doelstelling. ‹ 2026 › wisselt van jaar.\nDe blokken van Week komen terug, over de maand: non-conformiteiten, Jouw plaats in het netwerk, Les tâches du mois, de 8 tegels (« CA du mois »), promoties, onverkocht, W&V van de maand, de uren.\nIn de maand lees je de periodes ochtend · middag · namiddag per week (« Sem. n ») en de rang binnen de week.\nExtra: de zes hefbomen, de evolutie van elk kanaal, het profiel van de dagen en de rentabiliteit dag per dag. De twaalf laatste weken blijven in het tabblad Week.\n« Ce mois-ci » brengt je terug naar de lopende maand.\nAls de meter van de maand oranje is: de tegels « Atteinte » en « Reste à faire », lager, zeggen de inspanning per resterende dag."
+     },
+     "critique": false,
+     "photo": "do-mois-haut.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les non-conformités par gravité",
+      "nl": "De non-conformiteiten per ernst"
+     },
+     "texte": {
+      "fr": "La même barre qu’en Semaine, sur le mois (« N non-conformités ce mois »).\nAu mois, « détail ▾ » range les écarts par gravité : une ligne par niveau (critique, majeure, mineure) et sa note sur 5.\nPour chaque niveau : le nombre d’écarts, un point par écart (au survol : la tâche et le jour), « n repris · n encore ouverts ».\n« voir ▾ » déplie les écarts du niveau, une ligne chacun comme en Semaine ; un toucher sur une ligne ouvre la photo et le constat.\nLa pastille « reprises validées » dit les reprises contresignées par le contrôleur.\nSi des écarts restent « encore ouverts » en fin de mois : les reprendre en priorité, les critiques d’abord.",
+      "nl": "Dezelfde balk als in Week, over de maand (« N non-conformités ce mois »).\nIn de maand rangschikt « détail ▾ » de afwijkingen per ernst: één regel per niveau (kritiek, majeur, mineur) en de score op 5.\nVoor elk niveau: het aantal afwijkingen, één punt per afwijking (bij aanwijzen: de taak en de dag), « n repris · n encore ouverts ».\n« voir ▾ » klapt de afwijkingen van het niveau open, één regel elk zoals in Week; een tik op een regel opent de foto en de vaststelling.\nHet bolletje « reprises validées » telt de herstellingen die de controleur mee ondertekende.\nAls er op het einde van de maand afwijkingen « encore ouverts » blijven: eerst die herstellen, de kritieke eerst."
+     },
+     "critique": false,
+     "photo": "do-mois-nc.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les leviers et les canaux",
+    "nl": "De hefbomen en de kanalen"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les six leviers : le mois",
+      "nl": "De zes hefbomen: de maand"
+     },
+     "texte": {
+      "fr": "Une tuile par levier : Trafic (clients par jour), Récurrence (taux de retour des clients identifiés), Expérience client (note Google), Food cost, Labour cost, Overhead cost (% du CA).\nLa valeur du mois (à date s’il est en cours) et sa pastille, aux seuils de la Table KPI : vert sous l’alerte, orange entre alerte et critique, rouge au-delà ; pour le trafic, l’écart au réseau.\nDessous : l’écart au même mois de l’an dernier (vert = mieux qu’en N-1), puis le réseau et le seuil.\n« pas de N-1 », « mois d’ouverture » : pas de comparaison possible. La note Google n’a de N-1 qu’un an après son premier relevé (« N-1 dès … »).\nRécurrence : aussi la part des tickets identifiés et le taux des seuls clients PWA.\nFood cost « hors norme, à vérifier au P&L » : une valeur très loin de l’habitude du magasin.\nSi un coût est rouge : le P&L du mois, plus bas, montre la ligne en cause ; un chiffre faux se corrige à la source.",
+      "nl": "Eén tegel per hefboom: Trafic (klanten per dag), Récurrence (terugkeer van de geïdentificeerde klanten), Expérience client (Google-score), Food cost, Labour cost, Overhead cost (% van de omzet).\nDe waarde van de maand (tot vandaag als ze loopt) en haar bolletje, volgens de drempels van de KPI-tabel: groen onder het alarm, oranje tussen alarm en kritiek, rood daarboven; voor de traffic het verschil met het netwerk.\nEronder: het verschil met dezelfde maand vorig jaar (groen = beter dan N-1), daarna het netwerk en de drempel.\n« pas de N-1 », « mois d’ouverture »: geen vergelijking mogelijk. De Google-score heeft pas een N-1 een jaar na de eerste opname (« N-1 dès … »).\nRécurrence: ook het aandeel geïdentificeerde tickets en het percentage van alleen de PWA-klanten.\nFood cost « hors norme, à vérifier au P&L »: een waarde ver van wat gewoon is voor de winkel.\nAls een kost rood is: de W&V van de maand, lager, toont de regel die het veroorzaakt; een fout cijfer corrigeer je aan de bron."
+     },
+     "critique": true,
+     "photo": "do-mois-leviers.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les six leviers : l’évolution de l’année",
+      "nl": "De zes hefbomen: de evolutie van het jaar"
+     },
+     "texte": {
+      "fr": "« L’évolution de l’année » : une ligne par levier, une barre par mois de janvier au mois en cours. La note Google n’a pas de relevé mois par mois : elle reste dans « Le mois ».\nChaque barre à la couleur de la Table KPI : vert sous l’alerte, orange entre alerte et critique, rouge au-delà ; hachurée = mois hors norme, écarté.\nTrafic : rouge quand il est sous la moyenne des autres magasins ce mois-là de plus que le seuil écrit (« rouge à plus de 10 % sous le réseau »).\nAu milieu : le meilleur et le pire mois, le mois en cours et son statut.\nÀ droite : la moyenne des mois lus face au réseau (la moyenne des autres magasins sur les mêmes mois) et l’écart.\nSi un levier reste orange ou rouge plusieurs mois de suite : c’est le sujet à poser au consultant, plus qu’un mois isolé.",
+      "nl": "« L’évolution de l’année »: één regel per hefboom, één balk per maand van januari tot de lopende maand. De Google-score heeft geen opname maand per maand: die blijft in « Le mois ».\nElke balk in de kleur van de KPI-tabel: groen onder het alarm, oranje tussen alarm en kritiek, rood daarboven; gearceerd = maand buiten de norm, weggelaten.\nTraffic: rood als ze die maand meer dan de vermelde drempel onder het gemiddelde van de andere winkels ligt (« rouge à plus de 10 % sous le réseau »).\nIn het midden: de beste en de slechtste maand, de lopende maand en haar status.\nRechts: het gemiddelde van de gelezen maanden tegenover het netwerk (het gemiddelde van de andere winkels over dezelfde maanden) en het verschil.\nAls een hefboom meerdere maanden na elkaar oranje of rood blijft: dat is het onderwerp voor de consultant, meer dan één losse maand."
+     },
+     "critique": false,
+     "photo": "do-mois-evolution.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Les canaux du mois",
+      "nl": "De kanalen van de maand"
+     },
+     "texte": {
+      "fr": "Quatre tuiles : Comptoir (hors clients pro), Clients pro — B2B, Click & collect, Livraison — le chiffre, sa part du CA, tickets ou commandes, panier.\nSur chaque tuile : l’écart au mois d’avant aux mêmes dates (vert ou rouge, par exemple « + 9 % vs octo. ») et la courbe des six derniers mois, le mois en cours projeté en pointillé.\n« voir l’évolution ▾ » ouvre le cumul du canal : le mois jour après jour (trait plein) face au mois d’avant aux mêmes dates (pointillé gris).\nLe trait vertical vert ou rouge : l’avance ou le retard en euros à la date ; le pointillé en couleur : la fin du mois au rythme actuel.\nSous le graphique : à date contre le mois d’avant (en %), le nombre, le panier, la part du CA.\nDessous, comme en Semaine : le mois jour par jour par canal, et « Les commandes du mois — semaine par semaine ».\nSi le comptoir est en retard sur le mois d’avant : le cumul montre à partir de quel jour l’écart s’est creusé.",
+      "nl": "Vier tegels: Comptoir (zonder zakelijke klanten), Clients pro — B2B, Click & collect, Livraison — het cijfer, het aandeel in de omzet, tickets of bestellingen, gemiddeld ticket.\nOp elke tegel: het verschil met de vorige maand op dezelfde data (groen of rood, bijvoorbeeld « + 9 % vs octo. ») en de curve van de zes laatste maanden, de lopende maand geprojecteerd in stippellijn.\n« voir l’évolution ▾ » opent het cumul van het kanaal: de maand dag na dag (volle lijn) tegenover de vorige maand op dezelfde data (grijze stippellijn).\nHet verticale groene of rode streepje: de voorsprong of achterstand in euro op die datum; de gekleurde stippellijn: het einde van de maand aan het huidige ritme.\nOnder de grafiek: tot vandaag tegenover de vorige maand (in %), het aantal, het gemiddeld ticket, het aandeel in de omzet.\nEronder, zoals in Week: de maand dag per dag per kanaal, en « Les commandes du mois — semaine par semaine ».\nAls de toonbank achterloopt op de vorige maand: het cumul toont vanaf welke dag de kloof gegroeid is."
+     },
+     "critique": false,
+     "photo": "do-mois-canaux.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Le mois jour par jour",
+    "nl": "De maand dag per dag"
+   },
+   "etapes": [
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Le calendrier du mois",
+      "nl": "De kalender van de maand"
+     },
+     "texte": {
+      "fr": "Le calendrier de la Semaine, sur tout le mois : lundi → dimanche, une case par jour.\nCA · Atteinte · Clients : les mêmes trois boutons, avec en tête les totaux du mois à date face à l’attendu.\nCouleurs face à l’objectif du jour : 110 % et plus, 100 à 110, 90 à 100, 75 à 90, sous 75 % ; le trait de la jauge : 100 %.\n« record » : le meilleur jour du mois ; « en cours » hachuré ; les jours à venir montrent leur objectif.\nLu en colonnes, il montre le jour de la semaine qui reste orange.\nSi la fin du mois s’annonce courte : les objectifs des jours à venir disent ce qu’il reste à faire chaque jour.",
+      "nl": "De kalender van Week, over de hele maand: maandag → zondag, één vak per dag.\nCA · Atteinte · Clients: dezelfde drie knoppen, met bovenaan de totalen van de maand tot vandaag tegenover het verwachte.\nKleuren tegenover de dagdoelstelling: 110 % en meer, 100 tot 110, 90 tot 100, 75 tot 90, onder 75 %; het streepje van de meter: 100 %.\n« record »: de beste dag van de maand; « en cours » gearceerd; de komende dagen tonen hun doelstelling.\nIn kolommen gelezen toont hij de weekdag die oranje blijft.\nAls het einde van de maand krap wordt: de doelstellingen van de komende dagen zeggen wat er elke dag nog moet gebeuren."
+     },
+     "critique": false,
+     "photo": "do-mois-calendrier.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Le profil des jours",
+      "nl": "Het profiel van de dagen"
+     },
+     "texte": {
+      "fr": "À côté du P&L du mois (le même qu’en Semaine) : le CA moyen par jour de la semaine, sur les jours déjà passés du mois.\nBarre bordeaux : ce jour atteint en moyenne son objectif ; grise : il ne l’atteint pas. Le trait noir : l’objectif du jour.\nÀ droite : le CA moyen et le % de l’objectif (vert à 100 % et plus, rouge en dessous).\nLa ligne de titre nomme « le point faible du mois » : le jour le plus loin de son objectif.\nSi le même jour est le point faible plusieurs mois de suite : c’est sur ce jour que portent l’offre, la vitrine et le planning.",
+      "nl": "Naast de W&V van de maand (dezelfde als in Week): de gemiddelde omzet per weekdag, over de reeds voorbije dagen van de maand.\nBordeaux balk: die dag haalt gemiddeld zijn doelstelling; grijs: hij haalt ze niet. Het zwarte streepje: de dagdoelstelling.\nRechts: de gemiddelde omzet en het % van de doelstelling (groen vanaf 100 %, rood eronder).\nDe titelregel noemt « le point faible du mois »: de dag die het verst van zijn doelstelling ligt.\nAls dezelfde dag meerdere maanden na elkaar het zwakke punt is: op die dag richt je het aanbod, de vitrine en de planning."
+     },
+     "critique": false,
+     "photo": "do-mois-profil.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Rentabilité jour par jour",
+      "nl": "Rentabiliteit dag per dag"
+     },
+     "texte": {
+      "fr": "« Rentabilité — le résultat net, jour par jour » : une case par jour du mois en cours, le résultat net en % des ventes.\nLégende : rouge sous 0 %, orange de 0 à 5, verts de 5 à 25, doré au-delà de 25 % ; « · » = jour fermé. À l’écran, 0 à 5 % et plus de 25 % ont la même teinte : lire le chiffre.\nAu survol : la date, le net en euros et en %.\nSous les cases : le total du mois, et le personnel et les frais généraux du mois, répartis par jour ouvert.\nElle ne se lit que sur le mois en cours (P&L quotidien du panel) ; sans réponse du panel, le motif est écrit à la place des cases.\nSi plusieurs jours sont rouges : les ouvrir dans l’Opérationnel pour voir leur P&L court.",
+      "nl": "« Rentabilité — le résultat net, jour par jour »: één vak per dag van de lopende maand, het nettoresultaat in % van de verkoop.\nLegende: rood onder 0 %, oranje van 0 tot 5, groen van 5 tot 25, goud boven 25 %; « · » = gesloten dag. Op het scherm hebben 0 tot 5 % en meer dan 25 % dezelfde tint: lees het cijfer.\nBij aanwijzen: de datum, het netto in euro en in %.\nOnder de vakken: het totaal van de maand, en het personeel en de algemene kosten van de maand, verdeeld per open dag.\nZe is alleen leesbaar voor de lopende maand (dagelijkse W&V van het panel); zonder antwoord van het panel staat de reden in plaats van de vakken.\nAls meerdere dagen rood zijn: open ze in Operationeel om hun korte W&V te zien."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Les pastilles des leviers suivent les seuils de la Table KPI : un levier rouge plusieurs mois de suite compte plus qu’un mois isolé.",
+   "nl": "De bolletjes van de hefbomen volgen de drempels van de KPI-tabel: een hefboom die meerdere maanden rood is, weegt zwaarder dan één losse maand."
+  },
+  {
+   "fr": "L’écart d’un canal se lit face au mois d’avant aux mêmes dates, pas face au mois d’avant entier.",
+   "nl": "Het verschil van een kanaal lees je tegenover de vorige maand op dezelfde data, niet tegenover de hele vorige maand."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "La tuile Food cost porte une pastille orange. Que dit-elle ?",
+    "nl": "De tegel Food cost heeft een oranje bolletje. Wat zegt het?"
+   },
+   "choix": {
+    "fr": [
+     "Le food cost est entre le seuil d’alerte et le seuil critique de la Table KPI",
+     "Le food cost est meilleur qu’en N-1",
+     "Le P&L du mois n’est pas saisi"
+    ],
+    "nl": [
+     "De food cost ligt tussen de alarmdrempel en de kritieke drempel van de KPI-tabel",
+     "De food cost is beter dan in N-1",
+     "De W&V van de maand is niet ingegeven"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Le 13 du mois, la tuile Comptoir affiche « − 5 % vs octo. ». À quoi est-ce comparé ?",
+    "nl": "Op de 13e van de maand toont de tegel Comptoir « − 5 % vs octo. ». Waarmee wordt vergeleken?"
+   },
+   "choix": {
+    "fr": [
+     "À tout le mois d’octobre",
+     "Aux treize premiers jours d’octobre",
+     "À l’objectif du mois"
+    ],
+    "nl": [
+     "Met de hele maand oktober",
+     "Met de dertien eerste dagen van oktober",
+     "Met de doelstelling van de maand"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Rentabilité jour par jour : pas de capture — au magasin 4 le panel répond « margin-heatmap sans réponse pour ce magasin », et aux magasins 3 et 5 toutes les cases valent 0 % ce mois-ci (photo: null).",
+  "Rentabilité : le code colore 0–5 % et plus de 25 % de la même teinte (var(--prize)) alors que la légende dit « orange » et « doré » : à corriger dans le dashboard ou à garder tel quel dans l’article.",
+  "Les non-conformités par gravité sont prises au magasin 3 (Gosselies), octobre 2026 : le magasin 4 n’a aucune non-conformité récente.",
+  "Ordre des parties : celui de l’écran (la barre des non-conformités est en haut de l’onglet, le calendrier avant le profil des jours et la rentabilité).",
+  "Le profil des jours et le P&L du mois partagent une ligne ; le P&L est décrit dans l’article Semaine (0.0.39)."
+ ]
+}

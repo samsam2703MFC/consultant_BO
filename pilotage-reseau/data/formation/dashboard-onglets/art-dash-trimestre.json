@@ -1,0 +1,170 @@
+{
+ "id": "art-dash-trimestre",
+ "code": "0.0.41",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "8 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Trimestre",
+  "nl": "Het dashboard: het tabblad Kwartaal"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Trimestre : où en est le trimestre face au plan de développement, mois par mois, et ce que le franchisé, le consultant et la marque en ont dit.",
+  "nl": "Het tabblad Kwartaal lezen: waar het kwartaal staat tegenover het ontwikkelingsplan, maand per maand, en wat de franchisenemer, de consultant en het merk erover zeiden."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12), et le candidat franchisé en formation FO-05. À lire après « Comprendre le dashboard magasin » (0.0.15), le dashboard de son magasin ouvert à côté.",
+  "nl": "Franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12), en de kandidaat-franchisenemer in opleiding FO-05. Te lezen na « Het winkeldashboard begrijpen » (0.0.15), met het dashboard van je winkel ernaast open."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le trimestre face au plan de développement",
+    "nl": "Het kwartaal tegenover het ontwikkelingsplan"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La frise des 4 trimestres",
+      "nl": "De tijdlijn van de 4 kwartalen"
+     },
+     "texte": {
+      "fr": "Sous les onglets : T1 · janv. – mars à T4 · oct. – déc., chacun avec le CA des mois lus, une jauge et « % de l’objectif » (l’objectif de ses trois mois).\nJauge : vert à 100 % et plus, crème 90 à 100, orange clair 75 à 90, orange sous 75 % ; le trimestre ouvert est encadré en bordeaux, « en cours » marque l’actuel.\nLa part se calcule sur les mois qui ont un objectif : un mois sans objectif ne compte pas.\nUn trimestre à venir montre son objectif ; ‹ 2026 › change d’année.\nUn toucher ouvre le trimestre ; « Ce trimestre » ramène au trimestre en cours.\nSi plusieurs trimestres restent sous 90 % : l’objectif de l’année est en jeu, voir l’onglet Année.",
+      "nl": "Onder de tabbladen: T1 · janv. – mars tot T4 · oct. – déc., elk met de omzet van de gelezen maanden, een meter en « % de l’objectif » (de doelstelling van zijn drie maanden).\nMeter: groen vanaf 100 %, crème 90 tot 100, lichtoranje 75 tot 90, oranje onder 75 %; het geopende kwartaal heeft een bordeaux rand, « en cours » duidt het lopende aan.\nHet aandeel wordt berekend op de maanden met een doelstelling: een maand zonder doelstelling telt niet mee.\nEen komend kwartaal toont zijn doelstelling; ‹ 2026 › wisselt van jaar.\nEen tik opent het kwartaal; « Ce trimestre » brengt je terug naar het lopende kwartaal.\nAls meerdere kwartalen onder 90 % blijven: de jaardoelstelling komt in gevaar, zie het tabblad Jaar."
+     },
+     "critique": false,
+     "photo": "do-trimestre-frise.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les 6 tuiles",
+      "nl": "De 6 tegels"
+     },
+     "texte": {
+      "fr": "« Résultat — le trimestre Tn » : l’objectif du plan de développement, l’attendu au rythme des budgets mensuels.\nObjectif Tn : celui du plan de développement, et ses trois mois. Réalisé : le CA, sa part de l’objectif et les mois lus.\nAttendu à ce jour : ce qu’il fallait avoir fait aujourd’hui, au rythme des budgets mensuels.\nÉcart : réalisé face à l’attendu, en euros et en % — « en avance » en vert, « en retard » en bordeaux.\nClients manquants : l’écart traduit en clients, au panier moyen écrit dessous.\nMarge nette : en % des ventes, avec food et labour ; vert à 10 % et plus, bordeaux en dessous.\nSi l’Écart est bordeaux : il se lit face à l’attendu, pas face à l’objectif entier — à mi-trimestre, 47 % de l’objectif peut être dans les temps.",
+      "nl": "« Résultat — le trimestre Tn »: de doelstelling van het ontwikkelingsplan, het verwachte volgens het ritme van de maandbudgetten.\nObjectif Tn: die van het ontwikkelingsplan, en zijn drie maanden. Réalisé: de omzet, het aandeel van de doelstelling en de gelezen maanden.\nAttendu à ce jour: wat er vandaag moest gerealiseerd zijn, volgens het ritme van de maandbudgetten.\nÉcart: gerealiseerd tegenover verwacht, in euro en in % — « en avance » in het groen, « en retard » in het bordeaux.\nClients manquants: het verschil omgerekend in klanten, aan het gemiddeld ticket dat eronder staat.\nMarge nette: in % van de verkoop, met food en labour; groen vanaf 10 %, bordeaux eronder.\nAls Écart bordeaux is: het geldt tegenover het verwachte, niet tegenover de hele doelstelling — halverwege het kwartaal kan 47 % van de doelstelling op schema zijn."
+     },
+     "critique": true,
+     "photo": "do-trimestre-tuiles.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Les 3 mois du trimestre",
+      "nl": "De 3 maanden van het kwartaal"
+     },
+     "texte": {
+      "fr": "Deux barres par mois : grise = le budget du mois, en couleur = le réalisé.\nLa légende : « vert ≥ 95 %, rouge sinon, orange = mois en cours » (à l’écran, le rouge est bordeaux et l’orange doré).\nSous chaque mois : son CA, son budget, le % atteint, « en cours », les clients.\nUn mois à venir : « — » et son budget.\nSi le mois en cours est loin de son budget : l’onglet Mois dit ce qu’il reste à faire par jour.",
+      "nl": "Twee balken per maand: grijs = het maandbudget, in kleur = het gerealiseerde.\nDe legende: « vert ≥ 95 %, rouge sinon, orange = mois en cours » (op het scherm is het rood bordeaux en het oranje goud).\nOnder elke maand: de omzet, het budget, het behaalde %, « en cours », de klanten.\nEen komende maand: « — » en het budget.\nAls de lopende maand ver van haar budget ligt: het tabblad Maand zegt wat er per dag nog moet gebeuren."
+     },
+     "critique": false,
+     "photo": "do-trimestre-mois.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les annotations et le rituel du trimestre",
+      "nl": "De notities en het kwartaalritueel"
+     },
+     "texte": {
+      "fr": "« Les annotations du trimestre » : trois voix du plan de développement — Franchisé, Consultant, Marque — avec la date et l’auteur de la dernière mise à jour.\n« pas encore d’annotation » : cette voix n’a rien écrit pour le trimestre.\n« Actions du trimestre » : chaque action, son responsable, son effet en euros par an et son état (à faire, en cours, fait) ; sinon « aucune action posée sur ce trimestre ».\n« Rituel du trimestre » : cinq traits, l’étape atteinte (« étape 2 / 5 ») et « validé le … par … » ou « non validé ».\nLe dashboard ne fait que lire : annotations, actions et rituel s’écrivent dans le plan de développement, pas ici.\nSi un trimestre se ferme sans annotation ni rituel validé : le poser au consultant avant le trimestre suivant.",
+      "nl": "« Les annotations du trimestre »: drie stemmen uit het ontwikkelingsplan — Franchisenemer, Consultant, Merk — met de datum en de auteur van de laatste wijziging.\n« pas encore d’annotation »: die stem schreef nog niets voor het kwartaal.\n« Actions du trimestre »: elke actie, haar verantwoordelijke, haar effect in euro per jaar en haar stand (te doen, bezig, gedaan); anders « aucune action posée sur ce trimestre ».\n« Rituel du trimestre »: vijf streepjes, de bereikte stap (« étape 2 / 5 ») en « validé le … par … » of « non validé ».\nHet dashboard leest alleen: notities, acties en ritueel worden in het ontwikkelingsplan geschreven, niet hier.\nAls een kwartaal afsluit zonder notitie of gevalideerd ritueel: bespreek het met de consultant vóór het volgende kwartaal."
+     },
+     "critique": false,
+     "photo": "do-trimestre-annotations.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "L’écart du trimestre se lit face à l’attendu à ce jour, pas face à l’objectif entier.",
+   "nl": "Het verschil van het kwartaal lees je tegenover het verwachte tot vandaag, niet tegenover de hele doelstelling."
+  },
+  {
+   "fr": "Annotations, actions et rituel se lisent ici mais s’écrivent dans le plan de développement.",
+   "nl": "Notities, acties en ritueel lees je hier, maar ze worden in het ontwikkelingsplan geschreven."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Mi-novembre, le T4 affiche 47 % de l’objectif et un écart de − 2 %. Que conclure ?",
+    "nl": "Half november toont T4 47 % van de doelstelling en een verschil van − 2 %. Wat besluit je?"
+   },
+   "choix": {
+    "fr": [
+     "Le trimestre est perdu de moitié",
+     "Le magasin est légèrement en retard sur ce qu’il fallait avoir fait à ce jour",
+     "Le plan de développement est faux"
+    ],
+    "nl": [
+     "Het kwartaal is voor de helft verloren",
+     "De winkel loopt licht achter op wat er tot vandaag moest gebeuren",
+     "Het ontwikkelingsplan klopt niet"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Où s’écrivent les annotations du trimestre ?",
+    "nl": "Waar worden de notities van het kwartaal geschreven?"
+   },
+   "choix": {
+    "fr": [
+     "Dans l’onglet Trimestre du dashboard",
+     "Dans le plan de développement",
+     "Dans la revue du soir"
+    ],
+    "nl": [
+     "In het tabblad Kwartaal van het dashboard",
+     "In het ontwikkelingsplan",
+     "In de avondronde"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Le nom des cinq étapes du rituel du trimestre n’est pas dans le dashboard (seulement « étape n / 5 ») : l’article ne les nomme pas.",
+  "L’écran exact où s’écrivent annotations, actions et rituel (plan de développement au cockpit ?) n’est pas dit dans le code du dashboard : à préciser.",
+  "Magasin 4 : aucune annotation ni action sur les trimestres de 2026 ; la capture montre « pas encore d’annotation ».",
+  "Les 3 mois : la légende dit « rouge » et « orange », les barres sont bordeaux (--color-primary) et dorées (--prize)."
+ ]
+}

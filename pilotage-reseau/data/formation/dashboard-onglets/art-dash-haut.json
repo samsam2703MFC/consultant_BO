@@ -1,0 +1,244 @@
+{
+ "id": "art-dash-haut",
+ "code": "0.0.34",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "8 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : le haut de l’écran",
+  "nl": "Het dashboard: de bovenkant van het scherm"
+ },
+ "objectif": {
+  "fr": "Savoir lire et utiliser la ligne du haut du dashboard, commune à tous les onglets : le magasin, les onglets, la date, la relecture, la valeur du magasin, la frise des périodes et le lien vers le cockpit.",
+  "nl": "De bovenste rij van het dashboard kunnen lezen en gebruiken, gemeenschappelijk voor alle tabbladen: de winkel, de tabbladen, de datum, het herlezen, de waarde van de winkel, de tijdlijn van de periodes en de link naar de cockpit."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Comprendre le dashboard magasin » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Le haut de l’écran",
+    "nl": "De bovenkant van het scherm"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Logo et magasin",
+      "nl": "Logo en winkel"
+     },
+     "texte": {
+      "fr": "En haut à gauche : le logo, puis le nom du magasin regardé (ici « Atelier by - Halle »).\nLe magasin vient du lien reçu (…/dashboard/?shop=…) : il n’y a pas de liste pour en changer à l’écran.\nTant que la liste des magasins n’est pas lue, le titre dit « Magasin » suivi du numéro.\nTous les chiffres de l’écran sont ceux de ce magasin seul.\nSi le nom n’est pas celui de ton magasin : rouvre le lien de ton magasin, ne lis aucun chiffre avant.",
+      "nl": "Linksboven: het logo, dan de naam van de winkel die je bekijkt (hier « Atelier by - Halle »).\nDe winkel komt uit de link die je kreeg (…/dashboard/?shop=…): er is geen lijst om op het scherm van winkel te wisselen.\nZolang de lijst van de winkels niet gelezen is, staat er « Magasin » gevolgd door het nummer.\nAlle cijfers op het scherm zijn die van deze winkel alleen.\nAls de naam niet die van je winkel is: open opnieuw de link van je winkel, lees geen enkel cijfer voordien."
+     },
+     "critique": false,
+     "photo": "do-haut-logo.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les 12 onglets",
+      "nl": "De 12 tabbladen"
+     },
+     "texte": {
+      "fr": "Sous le logo, une ligne de 12 onglets : « Opérationnel », « Tâches », « Semaine », « Mois », « Trimestre », « Année »,\npuis « Produits », « Promotions », « Primes », « Concurrence », « Temps morts », « Fidélité ».\nL’onglet ouvert est en bordeaux plein. Un toucher change d’onglet ; la date regardée est gardée.\nChaque onglet a son article dans cette section du Manuel.\nSi un onglet reste vide longtemps : touche « ↻ Relire » (partie suivante).",
+      "nl": "Onder het logo een rij van 12 tabbladen: « Opérationnel », « Tâches », « Semaine », « Mois », « Trimestre », « Année »,\ndan « Produits », « Promotions », « Primes », « Concurrence », « Temps morts », « Fidélité ».\nHet open tabblad is vol bordeaux. Een tik verandert van tabblad; de bekeken datum blijft behouden.\nElk tabblad heeft zijn artikel in deze afdeling van het Handboek.\nAls een tabblad lang leeg blijft: tik op « ↻ Relire » (volgend deel)."
+     },
+     "critique": false,
+     "photo": "do-haut-onglets.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La date",
+      "nl": "De datum"
+     },
+     "texte": {
+      "fr": "Sur « Tâches » et « Temps morts », à droite des onglets : « Date », puis ‹, le calendrier et ›. Sur « Année » : « Année de ».\n‹ et › reculent ou avancent d’un jour (d’une année sur « Année ») ; le calendrier choisit un jour ; jamais un jour à venir.\nSur « Opérationnel », « Semaine », « Mois » et « Trimestre », pas de calendrier : la date se change dans la frise (plus bas).\nQuand on ne regarde pas la période en cours, un bouton ramène à elle : « Aujourd’hui », « Cette semaine », « Ce mois-ci » ou « Ce trimestre ».\n« Produits », « Promotions », « Primes », « Concurrence » et « Fidélité » n’ont ni date ni bouton.\nSi un chiffre paraît faux : vérifie d’abord la date regardée, puis le bouton qui ramène à aujourd’hui.",
+      "nl": "Op « Tâches » en « Temps morts », rechts van de tabbladen: « Date », dan ‹, de kalender en ›. Op « Année »: « Année de ».\n‹ en › gaan een dag terug of vooruit (een jaar op « Année »); de kalender kiest een dag; nooit een dag in de toekomst.\nOp « Opérationnel », « Semaine », « Mois » en « Trimestre » geen kalender: de datum verander je in de tijdlijn (verderop).\nAls je niet naar de lopende periode kijkt, brengt een knop je terug: « Aujourd’hui », « Cette semaine », « Ce mois-ci » of « Ce trimestre ».\n« Produits », « Promotions », « Primes », « Concurrence » en « Fidélité » hebben geen datum en geen knop.\nAls een cijfer fout lijkt: controleer eerst de bekeken datum, dan de knop die terugbrengt naar vandaag."
+     },
+     "critique": true,
+     "photo": "do-haut-date.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "« ↻ Relire »",
+      "nl": "« ↻ Relire »"
+     },
+     "texte": {
+      "fr": "« ↻ Relire » relit tout ce que l’onglet ouvert montre : la caisse, le panel, le cockpit.\nIl relit aussi de lui-même : « Opérationnel » toutes les deux minutes, sur aujourd’hui et quand la page est à l’écran.\n« Tâches » et « Temps morts » se relisent toutes les dix minutes, sur aujourd’hui.\nLes autres onglets et les jours passés ne se relisent que sur « ↻ Relire ».\nLe dashboard ne corrige aucun chiffre : une erreur se corrige à la source, puis « ↻ Relire ».\nSi un chiffre ne bouge pas après une correction à la source : attends une minute, puis « ↻ Relire » encore une fois.",
+      "nl": "« ↻ Relire » herleest alles wat het open tabblad toont: de kassa, het panel, de cockpit.\nHet herleest ook vanzelf: « Opérationnel » om de twee minuten, op vandaag en als de pagina op het scherm staat.\n« Tâches » en « Temps morts » worden om de tien minuten herlezen, op vandaag.\nDe andere tabbladen en de voorbije dagen worden alleen herlezen met « ↻ Relire ».\nHet dashboard corrigeert geen enkel cijfer: een fout corrigeer je aan de bron, daarna « ↻ Relire ».\nAls een cijfer niet verandert na een correctie aan de bron: wacht een minuut, dan nog eens « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-haut-relire.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La valeur, la frise, le cockpit",
+    "nl": "De waarde, de tijdlijn, de cockpit"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "La pastille « Valeur » et son tiroir",
+      "nl": "Het label « Valeur » en zijn lade"
+     },
+     "texte": {
+      "fr": "En doré, « Valeur » et un montant : ce que vaut le magasin au rythme de ses ventes.\nLe calcul : le chiffre d’affaires des 730 derniers jours ÷ les jours d’activité × 365 ÷ 6, soit deux mois de chiffre d’affaires.\nLe mois en cours est écarté ; un magasin plus jeune est divisé par ses jours vécus, pas par 730.\n« Valeur du magasin… » : la lecture est en cours ; « — » : aucun mois complet de chiffre d’affaires.\nUn toucher ouvre le tiroir sous la frise sur « Semaine », « Mois », « Trimestre » et « Année » : la formule en toutes lettres, puis « La valeur année par année ».\nSi la valeur paraît basse pour un magasin jeune : lis la phrase « … jours d’activité » du tiroir avant de conclure.",
+      "nl": "In goud « Valeur » en een bedrag: wat de winkel waard is aan het ritme van zijn verkoop.\nDe berekening: de omzet van de laatste 730 dagen ÷ de dagen activiteit × 365 ÷ 6, dus twee maanden omzet.\nDe lopende maand telt niet mee; een jongere winkel wordt gedeeld door zijn geleefde dagen, niet door 730.\n« Valeur du magasin… »: het lezen loopt nog; « — »: geen enkele volledige maand omzet.\nEen tik opent de lade onder de tijdlijn op « Semaine », « Mois », « Trimestre » en « Année »: de formule voluit, dan « La valeur année par année ».\nAls de waarde laag lijkt voor een jonge winkel: lees de zin « … jours d’activité » in de lade voor je besluit."
+     },
+     "critique": false,
+     "photo": "do-haut-valeur.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "La frise des jours, des mois, des trimestres",
+      "nl": "De tijdlijn van de dagen, maanden, kwartalen"
+     },
+     "texte": {
+      "fr": "Sous les onglets, sur « Opérationnel » et « Semaine » : les sept jours, du lundi au dimanche, « semaine du … au … ».\nChaque jour : son chiffre d’affaires et « % obj. » ; aujourd’hui dit « en cours », un jour à venir « à venir » ou son objectif, un jour fermé « fermé ».\nLe point de couleur : vert à 100 % de l’objectif et plus, crème dès 90 %, orange dès 75 %, orange foncé en dessous, gris sans objectif ; noir pour aujourd’hui.\n‹ et › changent de semaine. Sur « Opérationnel », un toucher ouvre ce jour ; sur « Semaine », il l’ouvre dans « Opérationnel ».\nSur « Mois », les 12 mois de l’année ; sur « Trimestre », les 4 trimestres : une barre à la même couleur, « % de l’objectif » ; ‹ et › changent d’année.\nSi plusieurs jours sont orange d’affilée : ouvre-les un à un dans « Opérationnel » pour voir l’heure qui manque.",
+      "nl": "Onder de tabbladen, op « Opérationnel » en « Semaine »: de zeven dagen, van maandag tot zondag, « semaine du … au … ».\nElke dag: zijn omzet en « % obj. »; vandaag zegt « en cours », een komende dag « à venir » of zijn doelstelling, een gesloten dag « fermé ».\nHet gekleurde punt: groen vanaf 100 % van de doelstelling, crème vanaf 90 %, oranje vanaf 75 %, donkeroranje daaronder, grijs zonder doelstelling; zwart voor vandaag.\n‹ en › wisselen van week. Op « Opérationnel » opent een tik die dag; op « Semaine » opent hij hem in « Opérationnel ».\nOp « Mois » de 12 maanden van het jaar; op « Trimestre » de 4 kwartalen: een balk in dezelfde kleur, « % de l’objectif »; ‹ en › wisselen van jaar.\nAls meerdere dagen na elkaar oranje zijn: open ze een voor een in « Opérationnel » om het uur te zien dat ontbreekt."
+     },
+     "critique": true,
+     "photo": "do-haut-frise.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Le lien « Cockpit › Résultat »",
+      "nl": "De link « Cockpit › Résultat »"
+     },
+     "texte": {
+      "fr": "Tout à droite de la ligne du haut : « Cockpit › Résultat › ».\nIl ouvre la page Résultat du cockpit, d’où viennent les chiffres de résultat du dashboard.\nC’est là, pas dans le dashboard, que se règlent objectifs et paramètres.\nSi un objectif ou un seuil te semble faux : signale-le au responsable du cockpit, puis « ↻ Relire » une fois corrigé.",
+      "nl": "Helemaal rechts op de bovenste rij: « Cockpit › Résultat › ».\nHij opent de pagina Resultaat van de cockpit, waar de resultaatcijfers van het dashboard vandaan komen.\nDaar, niet in het dashboard, worden doelstellingen en parameters ingesteld.\nAls een doelstelling of een drempel je fout lijkt: meld het aan de verantwoordelijke van de cockpit, dan « ↻ Relire » zodra het gecorrigeerd is."
+     },
+     "critique": false,
+     "photo": "do-haut-cockpit.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Regarde toujours la date avant un chiffre : un jour passé ouvert par erreur se lit comme aujourd’hui.",
+   "nl": "Kijk altijd eerst naar de datum vóór een cijfer: een voorbije dag die per vergissing open staat, lees je als vandaag."
+  },
+  {
+   "fr": "Dans la frise, la couleur se lit face à l’objectif du jour : vert dès 100 %, crème dès 90 %, orange dès 75 %, orange foncé en dessous.",
+   "nl": "In de tijdlijn lees je de kleur tegenover de doelstelling van de dag: groen vanaf 100 %, crème vanaf 90 %, oranje vanaf 75 %, donkeroranje daaronder."
+  },
+  {
+   "fr": "Le dashboard ne corrige rien : on corrige à la source, puis « ↻ Relire ».",
+   "nl": "Het dashboard corrigeert niets: je corrigeert aan de bron, daarna « ↻ Relire »."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Dans la frise, le point d’un jour est orange. Qu’est-ce que ça veut dire ?",
+    "nl": "In de tijdlijn is het punt van een dag oranje. Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Le jour a fait entre 75 % et 90 % de son objectif",
+     "Le jour est fermé",
+     "Le jour a dépassé son objectif"
+    ],
+    "nl": [
+     "De dag haalde tussen 75 % en 90 % van zijn doelstelling",
+     "De dag is gesloten",
+     "De dag overschreed zijn doelstelling"
+    ]
+   },
+   "bonne": 0
+  },
+  {
+   "question": {
+    "fr": "Un chiffre de la caisse a été corrigé. Que fais-tu dans le dashboard ?",
+    "nl": "Een kassacijfer werd gecorrigeerd. Wat doe je in het dashboard?"
+   },
+   "choix": {
+    "fr": [
+     "Je change le chiffre dans le dashboard",
+     "« ↻ Relire » : le dashboard relit la source",
+     "Rien, il ne se mettra jamais à jour"
+    ],
+    "nl": [
+     "Ik verander het cijfer in het dashboard",
+     "« ↻ Relire »: het dashboard herleest de bron",
+     "Niets, het wordt nooit bijgewerkt"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Sur quels onglets la pastille « Valeur » ouvre-t-elle son tiroir ?",
+    "nl": "Op welke tabbladen opent het label « Valeur » zijn lade?"
+   },
+   "choix": {
+    "fr": [
+     "Sur tous les onglets",
+     "Sur « Semaine », « Mois », « Trimestre » et « Année »",
+     "Seulement sur « Opérationnel »"
+    ],
+    "nl": [
+     "Op alle tabbladen",
+     "Op « Semaine », « Mois », « Trimestre » en « Année »",
+     "Alleen op « Opérationnel »"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Le tiroir de la valeur (rendValeur) n’est rendu que sur Semaine, Mois, Trimestre et Année : sur Opérationnel, Tâches, etc., toucher « Valeur » change seulement la flèche ▾/▴. Voulu ?",
+  "Sur Tâches, la pastille reste « Valeur du magasin… » : cet onglet ne lit pas les ventes mensuelles (capture du 13/11).",
+  "Le plan disait « Aujourd’hui… seulement sur Tâches, Temps morts, Année » : dans le code, le calendrier ‹ › n’existe que là, mais le bouton de retour existe aussi sur Opérationnel (« Aujourd’hui »), Semaine, Mois et Trimestre. Le texte suit le code.",
+  "À 1200 px de large, « Date » et ‹ passent au bout de la ligne des onglets et le calendrier sur la ligne suivante (capture do-haut-date).",
+  "Accès au lien « Cockpit › Résultat » pour un responsable de magasin : non vérifié (le lien est relatif, ../#/resultat)."
+ ]
+}

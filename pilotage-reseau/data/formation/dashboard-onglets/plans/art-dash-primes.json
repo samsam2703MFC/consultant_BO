@@ -1,0 +1,6 @@
+[
+ {"nom":"do-primes-outils","vue":"primes","cibles":[".pr-outils"],"attendre":".pr-outils","cadre":"haut","mobile":false,"pause":10000},
+ {"nom":"do-primes-equipe","vue":"primes","cibles":[".pr-eqb"],"attendre":".pr-eqb","cadre":"centre","mobile":false,"pause":10000},
+ {"nom":"do-primes-tableau","vue":"primes","cibles":[".pr-carte"],"attendre":".pr-carte","cadre":"centre","mobile":false,"pause":10000},
+ {"nom":"do-primes-annee","vue":"primes","clics":["[data-prvue=\"annee\"]"],"cibles":[".pr-carte"],"attendre":".pr-carte","cadre":"haut","mobile":false,"pause":10000}
+]

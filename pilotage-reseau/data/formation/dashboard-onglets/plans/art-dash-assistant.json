@@ -1,0 +1,68 @@
+[
+ {
+  "nom": "do-assist-ouvrir",
+  "vue": "ops",
+  "attendre": ".db-hd .db-btn-ia",
+  "cibles": [
+   ".db-hd .db-btn-ia"
+  ],
+  "cadre": "haut",
+  "mobile": false
+ },
+ {
+  "nom": "do-assist-choix",
+  "vue": "ops",
+  "attendre": ".db-hd .db-btn-ia",
+  "clics": [
+   ".db-hd .db-btn-ia"
+  ],
+  "cibles": [
+   "#db-ia .ia-ton:nth-of-type(1)",
+   "#db-ia .ia-ton:nth-of-type(2)"
+  ],
+  "cadre": "ecran",
+  "mobile": false
+ },
+ {
+  "nom": "do-assist-bilan",
+  "vue": "ops",
+  "attendre": ".db-hd .db-btn-ia",
+  "clics": [
+   ".db-hd .db-btn-ia"
+  ],
+  "cibles": [
+   "#db-ia .ia-saisie",
+   "#db-ia .ia-tqs"
+  ],
+  "cadre": "ecran",
+  "mobile": false
+ },
+ {
+  "nom": "do-assist-conversation",
+  "vue": "ops",
+  "attendre": ".db-hd .db-btn-ia",
+  "clics": [
+   ".db-hd .db-btn-ia",
+   "#db-ia .ia-modes [data-iamode=\"a\"]"
+  ],
+  "cibles": [
+   "#db-ia .ia-conv"
+  ],
+  "cadre": "ecran",
+  "mobile": false
+ },
+ {
+  "nom": "do-assist-questions",
+  "vue": "ops",
+  "attendre": ".db-hd .db-btn-ia",
+  "clics": [
+   ".db-hd .db-btn-ia",
+   "#db-ia .ia-modes [data-iamode=\"a\"]"
+  ],
+  "cibles": [
+   "#db-ia .ia-q"
+  ],
+  "cadre": "ecran",
+  "mobile": false
+ }
+]

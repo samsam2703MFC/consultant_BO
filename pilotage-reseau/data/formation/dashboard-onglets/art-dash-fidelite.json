@@ -1,0 +1,265 @@
+{
+ "id": "art-dash-fidelite",
+ "code": "0.0.48",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Fidélité",
+  "nl": "Het dashboard: het tabblad Klantentrouw"
+ },
+ "objectif": {
+  "fr": "Savoir lire l’onglet Fidélité : la part des tickets scannés, les profils de fréquence et leurs radars, leur évolution, les clients qui reviennent et la fiche d’un client.",
+  "nl": "Het tabblad Klantentrouw kunnen lezen: het aandeel gescande tickets, de frequentieprofielen en hun radars, hun evolutie, de klanten die terugkomen en de fiche van een klant."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire dans la formation FO-05, après l’article « Comprendre le dashboard magasin » (0.0.15).",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen in opleiding FO-05, na het artikel « Het winkeldashboard begrijpen » (0.0.15)."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Les clients scannés",
+    "nl": "De gescande klanten"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La part des tickets scannés (échelle 0-90 %)",
+      "nl": "Het aandeel gescande tickets (schaal 0-90 %)"
+     },
+     "texte": {
+      "fr": "Sous le titre « Les profils des clients scannés » : combien de clients sont reconnus en caisse sur la période, combien de tickets sur combien (« soit 1 sur … ») et sur combien de jours le rythme est lu.\nLe grand chiffre : la part des tickets d’aujourd’hui qui ont un client scanné (reconnu en caisse par sa carte ou sa commande), « N tickets sur M à l’heure qu’il est ».\nL’échelle de 0 à 90 % : noir sous 10 %, rouge de 10 à 20, orange de 20 à 35, jaune de 35 à 50, vert de 50 à 65, vert foncé de 65 à 80, or au-delà ; le grand chiffre prend la couleur de sa bande.\nLe repère plein est aujourd’hui ; deux traits fins gris marquent « Ce mois-ci » et « Cette année », écrits en chiffres sous la barre.\nSi la part reste dans le noir ou le rouge : tout l’onglet ne parle que d’une petite partie des clients ; faire scanner la carte du client à chaque passage.",
+      "nl": "Onder de titel « Les profils des clients scannés »: hoeveel klanten aan de kassa herkend zijn over de periode, hoeveel tickets op hoeveel (« soit 1 sur … ») en over hoeveel dagen het ritme gelezen wordt.\nHet grote cijfer: het aandeel tickets van vandaag met een gescande klant (aan de kassa herkend via zijn kaart of zijn bestelling), « N tickets sur M à l’heure qu’il est ».\nDe schaal van 0 tot 90 %: zwart onder 10 %, rood van 10 tot 20, oranje van 20 tot 35, geel van 35 tot 50, groen van 50 tot 65, donkergroen van 65 tot 80, goud daarboven; het grote cijfer krijgt de kleur van zijn band.\nDe volle markering is vandaag; twee dunne grijze streepjes tonen « Ce mois-ci » en « Cette année », in cijfers onder de balk.\nAls het aandeel in het zwart of het rood blijft: het hele tabblad spreekt maar over een klein deel van de klanten; laat de kaart van de klant bij elk bezoek scannen."
+     },
+     "critique": true,
+     "photo": "do-fidelite-scannes.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les profils",
+    "nl": "De profielen"
+   },
+   "etapes": [
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les vignettes des profils",
+      "nl": "De tegels van de profielen"
+     },
+     "texte": {
+      "fr": "Une vignette par profil de fréquence, du moins fidèle à gauche au plus fidèle à droite (sur la capture : Découverte, Occasionnel, Régulier, Hebdo, Fidèle, Fanbase).\nDans chacune : la part des clients scannés de ce profil en %, « N clients sur M », une barre, puis la « Condition » (par exemple « 1 fois par mois ») et son équivalent en passages.\nDessous : « Part du CA scanné », « Panier moyen », « En commande » ; un profil vide dit « Aucun client à ce rythme pour l’instant. ».\nUn toucher sur une vignette l’encadre en bordeaux et affiche son profil dans les radars et l’évolution.\nLes conditions se règlent au cockpit (ERP franchisé › Fidélité › Profils clients), pas ici.\nSi un profil a très peu de clients : ses chiffres parlent de quelques personnes, pas d’un groupe ; ne pas en tirer de règle.",
+      "nl": "Eén tegel per frequentieprofiel, van minst trouw links tot meest trouw rechts (op de foto: Découverte, Occasionnel, Régulier, Hebdo, Fidèle, Fanbase).\nIn elke tegel: het aandeel gescande klanten van dat profiel in %, « N clients sur M », een balk, daarna de « Condition » (bijvoorbeeld « 1 fois par mois ») en het equivalent in bezoeken.\nEronder: « Part du CA scanné », « Panier moyen », « En commande »; een leeg profiel zegt « Aucun client à ce rythme pour l’instant. ».\nEen tik op een tegel omkadert hem in bordeaux en toont zijn profiel in de radars en de evolutie.\nDe voorwaarden stel je in de cockpit in (ERP franchisé › Fidélité › Profils clients), niet hier.\nAls een profiel heel weinig klanten heeft: de cijfers gaan over enkele personen, niet over een groep; trek er geen regel uit."
+     },
+     "critique": true,
+     "photo": "do-fidelite-profils.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Récurrence et type d’achat (les radars)",
+      "nl": "Herhaling en aankooptype (de radars)"
+     },
+     "texte": {
+      "fr": "« Récurrence · <profil> » : six axes (Fréquence, Récence, Ancienneté, Panier, Diversité, Comptoir), 0 au centre, 100 au bord.\n« Type d’achat · <profil> » : la part des articles par famille (Pain, Viennoiserie, Anti-gaspi, Tartes & fêtes, Goûter, Salé), en %.\nEn couleur : le profil choisi ; en gris : la moyenne de tous les clients scannés.\nLà où la couleur dépasse le gris, ce profil fait plus que la moyenne.\nSi « N ticket(s) dont les articles restent à lire » s’affiche : le type d’achat n’est pas encore complet, relire plus tard.",
+      "nl": "« Récurrence · <profiel> »: zes assen (Fréquence, Récence, Ancienneté, Panier, Diversité, Comptoir), 0 in het midden, 100 aan de rand.\n« Type d’achat · <profiel> »: het aandeel artikels per familie (Pain, Viennoiserie, Anti-gaspi, Tartes & fêtes, Goûter, Salé), in %.\nIn kleur: het gekozen profiel; in grijs: het gemiddelde van alle gescande klanten.\nWaar de kleur buiten het grijs komt, doet dat profiel meer dan het gemiddelde.\nAls « N ticket(s) dont les articles restent à lire » verschijnt: het aankooptype is nog niet volledig, herlees later."
+     },
+     "critique": false,
+     "photo": "do-fidelite-radars.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "L’évolution (30 · 90 · 180 j)",
+      "nl": "De evolutie (30 · 90 · 180 d)"
+     },
+     "texte": {
+      "fr": "« Évolution · <profil> » : le nombre de clients de ce profil, date après date.\nLes boutons « 30 j », « 90 j », « 180 j » choisissent la période (90 j d’office).\nEn tête : la différence entre le début et aujourd’hui, en vert quand le profil gagne des clients, en rouge quand il en perd, « Stable » sinon ; dessous « … il y a N jours → … aujourd’hui ».\nSi « Lecture en cours » s’affiche : le début de la courbe se complète à la prochaine ouverture.\nSi un profil fidèle perd des clients : ouvrir « Les clients qui reviennent » et regarder qui n’est plus passé depuis longtemps (« Dernier passage »).",
+      "nl": "« Évolution · <profiel> »: het aantal klanten van dat profiel, datum na datum.\nDe knoppen « 30 j », « 90 j », « 180 j » kiezen de periode (standaard 90 d).\nBovenaan: het verschil tussen het begin en vandaag, in groen als het profiel klanten wint, in rood als het er verliest, anders « Stable »; eronder « … il y a N jours → … aujourd’hui ».\nAls « Lecture en cours » verschijnt: het begin van de curve vult zich aan bij de volgende opening.\nAls een trouw profiel klanten verliest: open « Les clients qui reviennent » en kijk wie al lang niet meer langsgekomen is (« Dernier passage »)."
+     },
+     "critique": false,
+     "photo": "do-fidelite-evolution.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les clients",
+    "nl": "De klanten"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "« Les clients qui reviennent »",
+      "nl": "« Les clients qui reviennent »"
+     },
+     "texte": {
+      "fr": "La liste des clients au-dessus du profil de base ; fermée d’office, un toucher sur le titre l’ouvre ou la ferme.\nLe champ « Rechercher un client ou un profil… » filtre sur le nom ou le profil et ouvre la liste.\nColonnes : Client, Profil (et sa condition), Rythme (« … / mois », passages sur la période), Dernier passage (« aujourd’hui », « hier », « il y a N j »), Panier, Achète surtout (les deux familles en tête).\n« Historique › » : un toucher sur la ligne ouvre la fiche du client.\nLes noms sont des données personnelles : ils restent dans le magasin (sur la capture de cet article, ils sont floutés).\nSi « Aucun client ne correspond à la recherche. » : essayer une autre orthographe ou le nom du profil.",
+      "nl": "De lijst van de klanten boven het basisprofiel; standaard dicht, een tik op de titel opent of sluit ze.\nHet veld « Rechercher un client ou un profil… » filtert op naam of profiel en opent de lijst.\nKolommen: Client, Profil (en de voorwaarde), Rythme (« … / mois », bezoeken over de periode), Dernier passage (« aujourd’hui », « hier », « il y a N j »), Panier, Achète surtout (de twee belangrijkste families).\n« Historique › »: een tik op de lijn opent de fiche van de klant.\nDe namen zijn persoonsgegevens: ze blijven in de winkel (op de foto van dit artikel zijn ze vervaagd).\nBij « Aucun client ne correspond à la recherche. »: probeer een andere schrijfwijze of de naam van het profiel."
+     },
+     "critique": false,
+     "photo": "do-fidelite-clients.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "La fiche d’un client : l’en-tête et « Comment il achète »",
+      "nl": "De fiche van een klant: de kop en « Comment il achète »"
+     },
+     "texte": {
+      "fr": "« ‹ Retour aux profils » ramène à la page des profils.\nL’en-tête : le client, « premier ticket reconnu le … », le dernier passage ; son profil (sa couleur, sa condition, « sur 30 jours »), ses passages sur 180 jours, ce qu’il a dépensé et par passage, « en commande » sur le total et combien au comptoir.\n« Comment il achète » : une barre en couleurs, Commande comptoir (bordeaux), Comptoir (doré), Webshop (bleu), Livraison bureau (vert), avec % et nombre de fois.\nLa phrase à côté dit le canal qui fait au moins 60 % (« Achète surtout sur le webshop. ») ou « Achète par plusieurs canaux. ».\nSi une part grise « Commande, canal en lecture » s’affiche : le canal de certaines commandes se lit encore, relire plus tard.",
+      "nl": "« ‹ Retour aux profils » brengt je terug naar de pagina van de profielen.\nDe kop: de klant, « premier ticket reconnu le … », het laatste bezoek; zijn profiel (kleur, voorwaarde, « sur 30 jours »), zijn bezoeken over 180 dagen, wat hij uitgaf en per bezoek, « en commande » op het totaal en hoeveel aan de toonbank.\n« Comment il achète »: een gekleurde balk, Commande comptoir (bordeaux), Comptoir (goud), Webshop (blauw), Livraison bureau (groen), met % en aantal keer.\nDe zin ernaast noemt het kanaal dat minstens 60 % haalt (« Achète surtout sur le webshop. ») of « Achète par plusieurs canaux. ».\nAls een grijs deel « Commande, canal en lecture » verschijnt: het kanaal van sommige bestellingen wordt nog gelezen, herlees later."
+     },
+     "critique": false,
+     "photo": "do-fidelite-fiche.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Son profil, ses passages, ses habitudes",
+      "nl": "Zijn profiel, zijn bezoeken, zijn gewoontes"
+     },
+     "texte": {
+      "fr": "« Son profil, mois par mois » : chaque mois, ses passages, son profil et son rythme par mois.\n« Ses passages » : les 14 dernières semaines, une case par jour ; attention, ici la case dorée est une commande et la bordeaux le comptoir ; le montant s’écrit dès 10 €, le total de la semaine à droite.\n« Ses habitudes » : ses passages par jour de la semaine, ses moments (matin, midi, après-midi, soir) et « Ce qu’il prend » (ses articles les plus achetés).\nSi un client fidèle n’a plus de case dans les dernières semaines : le signaler au responsable.",
+      "nl": "« Son profil, mois par mois »: per maand zijn bezoeken, zijn profiel en zijn ritme per maand.\n« Ses passages »: de laatste 14 weken, één vakje per dag; let op, hier is het gouden vakje een bestelling en het bordeaux de toonbank; het bedrag staat er vanaf 10 €, het weektotaal rechts.\n« Ses habitudes »: zijn bezoeken per weekdag, zijn momenten (ochtend, middag, namiddag, avond) en « Ce qu’il prend » (zijn meest gekochte artikels).\nAls een trouwe klant de laatste weken geen vakje meer heeft: meld het aan de verantwoordelijke."
+     },
+     "critique": false,
+     "photo": "do-fidelite-habitudes.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Ses radars et ses tickets",
+      "nl": "Zijn radars en zijn tickets"
+     },
+     "texte": {
+      "fr": "« Récurrence » et « Type d’achat » : les mêmes radars que pour un profil, le client en couleur face à la moyenne en gris.\n« Ses tickets », du plus récent au plus ancien : date, jour et heure, canal (Commande ou Comptoir), montant, articles.\nTout vient des tickets de la caisse : rien ne se modifie ici.\nSi un ticket paraît faux : il se corrige à la source (caisse, panel), puis « ↻ Relire ».",
+      "nl": "« Récurrence » en « Type d’achat »: dezelfde radars als voor een profiel, de klant in kleur tegenover het gemiddelde in grijs.\n« Ses tickets », van recentst tot oudst: datum, dag en uur, kanaal (Commande of Comptoir), bedrag, artikels.\nAlles komt uit de tickets van de kassa: hier wijzig je niets.\nAls een ticket fout lijkt: het wordt aan de bron gecorrigeerd (kassa, panel), daarna « ↻ Relire »."
+     },
+     "critique": false,
+     "photo": "do-fidelite-tickets.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Les profils ne parlent que des clients scannés : quand la part des tickets scannés est basse, ils ne décrivent qu’une petite partie de la clientèle.",
+   "nl": "De profielen spreken alleen over de gescande klanten: als het aandeel gescande tickets laag is, beschrijven ze maar een klein deel van het cliënteel."
+  },
+  {
+   "fr": "Les conditions des profils se règlent au cockpit (ERP franchisé › Fidélité › Profils clients) ; le dashboard ne fait que les lire.",
+   "nl": "De voorwaarden van de profielen stel je in de cockpit in (ERP franchisé › Fidélité › Profils clients); het dashboard leest ze alleen."
+  },
+  {
+   "fr": "Les noms et les tickets des clients sont des données personnelles : ils restent dans le magasin.",
+   "nl": "De namen en de tickets van de klanten zijn persoonsgegevens: ze blijven in de winkel."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le grand chiffre en haut de l’onglet affiche 8 %, en noir. Que faut-il en conclure ?",
+    "nl": "Het grote cijfer bovenaan het tabblad toont 8 %, in het zwart. Wat besluit je daaruit?"
+   },
+   "choix": {
+    "fr": [
+     "8 % des clients sont fidèles",
+     "Seuls 8 % des tickets d’aujourd’hui ont un client scanné : les profils ne parlent que d’une petite partie des clients",
+     "Le magasin a perdu 8 % de clients"
+    ],
+    "nl": [
+     "8 % van de klanten is trouw",
+     "Slechts 8 % van de tickets van vandaag heeft een gescande klant: de profielen spreken maar over een klein deel van de klanten",
+     "De winkel verloor 8 % klanten"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Où change-t-on la condition d’un profil (par exemple « 1 fois par mois ») ?",
+    "nl": "Waar wijzig je de voorwaarde van een profiel (bijvoorbeeld « 1 fois par mois »)?"
+   },
+   "choix": {
+    "fr": [
+     "Dans la vignette du profil",
+     "Au cockpit : ERP franchisé › Fidélité › Profils clients",
+     "Dans la fiche du client"
+    ],
+    "nl": [
+     "In de tegel van het profiel",
+     "In de cockpit: ERP franchisé › Fidélité › Profils clients",
+     "In de fiche van de klant"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Dans les radars, que représente la forme grise ?",
+    "nl": "Wat stelt de grijze vorm in de radars voor?"
+   },
+   "choix": {
+    "fr": [
+     "La moyenne de tous les clients scannés",
+     "Le profil choisi",
+     "Les clients non scannés"
+    ],
+    "nl": [
+     "Het gemiddelde van alle gescande klanten",
+     "Het gekozen profiel",
+     "De niet-gescande klanten"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "Couleurs inversées dans la fiche client : « Comment il achète » met Comptoir en doré et Commande comptoir en bordeaux, « Ses passages » met la commande en doré et le comptoir en bordeaux. L’article le signale ; à harmoniser dans le dashboard ?",
+  "Données personnelles : les photos do-fidelite-clients, do-fidelite-fiche, do-fidelite-habitudes et do-fidelite-tickets ont été prises avec les noms floutés (champ « flou » ajouté au plan, ignoré par captures_onglets.js ; elles ont été produites par une copie de l’outil qui floute ces sélecteurs avant la capture). Relancer captures_onglets.js sur ces quatre noms referait des images AVEC les noms : ne pas le faire sans floutage. do-fidelite-habitudes ne contient pas de nom.",
+  "La part des tickets scannés (grand chiffre) est toujours celle d’aujourd’hui : la capture du 13/11/2026 à midi montre 0,0 % (noir). Une capture en fin de journée serait plus parlante.",
+  "Les noms des profils (Découverte… Fanbase) et leurs conditions viennent du cockpit : l’article les cite comme exemple de la capture."
+ ]
+}

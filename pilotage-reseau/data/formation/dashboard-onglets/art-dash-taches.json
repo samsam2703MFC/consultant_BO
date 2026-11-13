@@ -1,0 +1,227 @@
+{
+ "id": "art-dash-taches",
+ "code": "0.0.38",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : l’onglet Tâches",
+  "nl": "Het dashboard: het tabblad Taken"
+ },
+ "objectif": {
+  "fr": "Lire l’onglet Tâches : la semaine, les quatre tuiles du jour, le code des checklists, chaque checklist et chaque tâche (faite, sans photo, pas faite) et les retours du contrôle qualité, pour savoir ce qui reste à faire ou à reprendre.",
+  "nl": "Het tabblad Taken lezen: de week, de vier tegels van de dag, de code van de checklists, elke checklist en elke taak (gedaan, zonder foto, niet gedaan) en de feedback van de kwaliteitscontrole, om te weten wat nog te doen of te hernemen is."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05, avec l’onglet ouvert sur son magasin.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Het winkeldashboard begrijpen » (0.0.15), in opleiding FO-05, met het tabblad open op de eigen winkel."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "La semaine et le jour",
+    "nl": "De week en de dag"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "La semaine",
+      "nl": "De week"
+     },
+     "texte": {
+      "fr": "En haut : « Semaine du … au … », une case par jour du lundi au dimanche.\nChaque case : la part des tâches obligatoires faites ce jour-là, « N / N faites », et « · N sans photo » quand des tâches ont été cochées sans la photo demandée.\nLa barre de la case : vert à 90 % et plus, ambre à 50 % et plus, rouge en dessous.\nLe jour en cours dit « en cours » ; un jour à venir dit « à venir » ; le jour ouvert est encadré.\nUn toucher sur une case ouvre ce jour : toute la page passe sur lui. « ‹ semaine d’avant » et « semaine d’après › » changent de semaine.\nSi un jour est rouge : ouvre-le et regarde quelles checklists ne sont pas faites (partie « Les checklists du jour »).",
+      "nl": "Bovenaan: « Semaine du … au … », één vak per dag van maandag tot zondag.\nElk vak: het aandeel van de verplichte taken die die dag gedaan zijn, « N / N faites », en « · N sans photo » als taken aangevinkt werden zonder de gevraagde foto.\nDe balk van het vak: groen vanaf 90 %, amber vanaf 50 %, rood daaronder.\nDe lopende dag zegt « en cours »; een komende dag zegt « à venir »; de geopende dag is omkaderd.\nEen tik op een vak opent die dag: de hele pagina schakelt naar die dag. « ‹ semaine d’avant » en « semaine d’après › » wisselen van week.\nIs een dag rood: open hem en kijk welke checklists niet gedaan zijn (deel « De checklists van de dag »)."
+     },
+     "critique": false,
+     "photo": "do-taches-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les 4 tuiles",
+      "nl": "De 4 tegels"
+     },
+     "texte": {
+      "fr": "« Tâches obligatoires faites » : le % du jour (mêmes couleurs que la semaine), « N sur N · N pas faites · N cochées sans photo ».\n« Photos rendues » : rendues sur demandées, « N photos manquent » ou « toutes les photos sont rendues ».\n« Contrôle qualité du jour » : la moyenne des notes sur 5 quand des photos sont notées, sinon « N à contrôler » et la date du « dernier passage du contrôleur ».\n« Non-conformités · 30 jours » : les notes sous 4 du mois écoulé et combien ont été reprises ; un toucher descend aux retours.\nSeules les tâches obligatoires comptent dans ces pourcentages.\nSi « Photos rendues » est bas alors que les tâches sont cochées : ce sont des tâches cochées sans photo, elles ne comptent pas comme faites.",
+      "nl": "« Tâches obligatoires faites »: het % van de dag (dezelfde kleuren als de week), « N sur N · N pas faites · N cochées sans photo ».\n« Photos rendues »: ingediend op gevraagd, « N photos manquent » of « toutes les photos sont rendues ».\n« Contrôle qualité du jour »: het gemiddelde van de scores op 5 als er foto’s gescoord zijn, anders « N à contrôler » en de datum van de « dernier passage du contrôleur ».\n« Non-conformités · 30 jours »: de scores onder 4 van de voorbije maand en hoeveel er hersteld zijn; een tik brengt je naar de feedback.\nAlleen de verplichte taken tellen mee in deze percentages.\nIs « Photos rendues » laag terwijl de taken aangevinkt zijn: het zijn taken aangevinkt zonder foto, ze tellen niet als gedaan."
+     },
+     "critique": true,
+     "photo": "do-taches-tuiles.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Comment c’est organisé",
+      "nl": "Hoe het georganiseerd is"
+     },
+     "texte": {
+      "fr": "Une checklist est une liste de tâches à faire à un moment de la journée ; son code a trois parties, par exemple 1.1.02 · Photos des comptoirs.\n1er chiffre, qui : 1 Vente, 2 Boulangerie, 3 Traiteur, 4 Nettoyage, 5 Gestion (chacun sa couleur) ; 0 : SOP et manuel.\n2e chiffre, quand : .1 Ouverture, .2 Journée, .3 Après-midi, .4 Fermeture, .5 Chaque semaine, .6 Chaque mois. Le dernier nombre : le numéro de la checklist.\nObligatoire : à faire chaque jour où elle revient. Photo : faite seulement si la photo est rendue. Contrôle qualité : chaque photo est notée de 1 à 5, sous 4 c’est une non-conformité.\n« replier ▴ » / « déplier ▾ » : le choix reste sur l’appareil.\nSi un code commence par des lettres (par exemple CO-01) : c’est un ancien code, rangé sans zone (« ancien code »).",
+      "nl": "Een checklist is een lijst taken die op een moment van de dag gedaan moeten worden; de code heeft drie delen, bijvoorbeeld 1.1.02 · Photos des comptoirs.\n1e cijfer, wie: 1 Verkoop, 2 Bakkerij, 3 Traiteur, 4 Schoonmaak, 5 Beheer (elk zijn kleur); 0: SOP’s en handboek.\n2e cijfer, wanneer: .1 Opening, .2 Dag, .3 Namiddag, .4 Sluiting, .5 Elke week, .6 Elke maand. Het laatste getal: het nummer van de checklist.\nVerplicht: te doen op elke dag dat ze terugkomt. Foto: pas gedaan als de foto ingediend is. Kwaliteitscontrole: elke foto krijgt een score van 1 tot 5, onder 4 is het een non-conformiteit.\n« replier ▴ » / « déplier ▾ »: de keuze blijft op het toestel bewaard.\nBegint een code met letters (bijvoorbeeld CO-01): het is een oude code, zonder zone gerangschikt (« ancien code »)."
+     },
+     "critique": false,
+     "photo": "do-taches-organisation.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Les checklists et les tâches",
+    "nl": "De checklists en de taken"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les checklists du jour",
+      "nl": "De checklists van de dag"
+     },
+     "texte": {
+      "fr": "Dans l’ordre des codes ; en tête, le nombre de checklists et de tâches obligatoires du jour.\nUne ligne par checklist : le code sur la couleur de sa zone, le titre, « heure · zone · moment », la barre et le compte (« 7 / 9 »).\nL’état : « faite » (vert), « en partie » (orange), « pas commencée » aujourd’hui ou « pas faite » un jour passé (rouge), « à venir » (gris) quand son heure n’est pas encore là.\nFiltres : « Toutes », « Pas commencées » (ou « Pas faites »), « En partie », « Faites », chacun avec son nombre.\n« voir ▾ » ouvre les tâches d’une checklist ; « Tout déplier » les ouvre toutes, « Tout replier » les referme.\nUne tâche citée par deux checklists compte dans les deux.\nSi une checklist est « pas faite » après son heure : ouvre-la pour voir quelle tâche manque et qui était en poste.",
+      "nl": "In de volgorde van de codes; bovenaan het aantal checklists en verplichte taken van de dag.\nEén regel per checklist: de code op de kleur van haar zone, de titel, « uur · zone · moment », de balk en de telling (« 7 / 9 »).\nDe toestand: « faite » (groen), « en partie » (oranje), « pas commencée » vandaag of « pas faite » op een voorbije dag (rood), « à venir » (grijs) als haar uur nog niet gekomen is.\nFilters: « Toutes », « Pas commencées » (of « Pas faites »), « En partie », « Faites », elk met zijn aantal.\n« voir ▾ » opent de taken van een checklist; « Tout déplier » opent ze allemaal, « Tout replier » klapt ze weer dicht.\nEen taak die in twee checklists staat, telt in beide mee.\nIs een checklist « pas faite » na haar uur: open ze om te zien welke taak ontbreekt en wie er aan het werk was."
+     },
+     "critique": false,
+     "photo": "do-taches-checklists.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Une tâche : faite, sans photo, pas faite",
+      "nl": "Een taak: gedaan, zonder foto, niet gedaan"
+     },
+     "texte": {
+      "fr": "Les tâches d’une checklist ouverte, les faites d’abord. Le petit appareil photo à côté du nom : une photo est demandée.\n✓ faite : « faite à 07:12 par … ». ! cochée sans photo : la photo demandée manque, la tâche ne compte pas comme faite. ✗ : « pas encore faite » ou « pas faite », avec « prévue à … ».\nÀ droite, la vignette de la photo (avec le nombre de remarques du contrôleur) ; un toucher l’ouvre en grand, avec les repères numérotés, « Rendue », « Notée » et ‹ › pour passer aux autres.\nPuis la note du contrôle : un chiffre sur sa couleur et son niveau (5 Exemplaire, 4 Conforme, 3 NC mineur, 2 NC majeur, 1 NC critique), ou « à contrôler ».\nLe commentaire du contrôleur s’affiche entre guillemets sous la tâche.\nSi une tâche est « cochée sans photo » : il faut rendre la photo ; tant qu’elle manque, la tâche reste à faire dans les chiffres.",
+      "nl": "De taken van een geopende checklist, de gedane eerst. Het fototoestelletje naast de naam: er wordt een foto gevraagd.\n✓ gedaan: « faite à 07:12 par … ». ! aangevinkt zonder foto: de gevraagde foto ontbreekt, de taak telt niet als gedaan. ✗: « pas encore faite » of « pas faite », met « prévue à … ».\nRechts het miniatuur van de foto (met het aantal opmerkingen van de controleur); een tik opent ze in het groot, met de genummerde merktekens, « Rendue », « Notée » en ‹ › om naar de andere te gaan.\nDaarna de score van de controle: een cijfer op zijn kleur en zijn niveau (5 Exemplaire, 4 Conforme, 3 NC mineur, 2 NC majeur, 1 NC critique), of « à contrôler ».\nDe opmerking van de controleur staat tussen aanhalingstekens onder de taak.\nStaat een taak op « cochée sans photo »: de foto moet ingediend worden; zolang ze ontbreekt, blijft de taak in de cijfers te doen."
+     },
+     "critique": true,
+     "photo": "do-taches-tache.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "Retours du contrôle qualité",
+      "nl": "Feedback van de kwaliteitscontrole"
+     },
+     "texte": {
+      "fr": "Les notes et les commentaires du contrôleur des 30 derniers jours, le plus récent en haut ; douze lignes, puis « Voir les N retours ».\nUne ligne : le jour, la note et son niveau, la tâche, le commentaire, « noté par … le … à … ».\nUne note sous 4 est une non-conformité ; la ligne dit ce qu’elle est devenue : « reprise le … · N/5 » (vert), « encore non conforme le … » (rouge), « reprise pas encore notée » (orange).\nUn toucher sur une ligne ouvre la photo et ses remarques (ou le jour de la photo, s’il est autre).\nRien depuis un mois : « Aucune photo notée ces 30 derniers jours ».\nSi une ligne reste « encore non conforme » : la reprise n’a pas tenu ; la tâche est à refaire et à montrer au prochain passage.",
+      "nl": "De scores en de opmerkingen van de controleur van de laatste 30 dagen, de recentste bovenaan; twaalf regels, daarna « Voir les N retours ».\nEen regel: de dag, de score en het niveau, de taak, de opmerking, « noté par … le … à … ».\nEen score onder 4 is een non-conformiteit; de regel zegt wat ermee gebeurd is: « reprise le … · N/5 » (groen), « encore non conforme le … » (rood), « reprise pas encore notée » (oranje).\nEen tik op een regel opent de foto en de opmerkingen (of de dag van de foto, als het een andere is).\nNiets sinds een maand: « Aucune photo notée ces 30 derniers jours ».\nBlijft een regel op « encore non conforme »: de hername hield geen stand; de taak moet opnieuw en getoond worden bij de volgende passage."
+     },
+     "critique": false,
+     "photo": "do-taches-retours.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Une tâche qui demande une photo n’est faite que si la photo est rendue : cochée sans photo, elle ne compte pas.",
+   "nl": "Een taak die een foto vraagt, is pas gedaan als de foto ingediend is: aangevinkt zonder foto telt ze niet."
+  },
+  {
+   "fr": "Seules les tâches obligatoires comptent dans les pourcentages de l’onglet.",
+   "nl": "Alleen de verplichte taken tellen mee in de percentages van het tabblad."
+  },
+  {
+   "fr": "Une note sous 4 est une non-conformité : elle reste dans les retours jusqu’à une reprise notée conforme.",
+   "nl": "Een score onder 4 is een non-conformiteit: ze blijft in de feedback tot een hername conform gescoord is."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Une tâche « photo des comptoirs » a été cochée, mais sans la photo. Comment l’onglet la compte-t-il ?",
+    "nl": "Een taak « foto van de toonbanken » werd aangevinkt, maar zonder foto. Hoe telt het tabblad ze?"
+   },
+   "choix": {
+    "fr": [
+     "Faite : elle est cochée",
+     "Pas faite : elle se montre à part, « cochée sans photo », et ne compte pas",
+     "Elle est retirée du jour"
+    ],
+    "nl": [
+     "Gedaan: ze is aangevinkt",
+     "Niet gedaan: ze staat apart, « cochée sans photo », en telt niet mee",
+     "Ze wordt uit de dag geschrapt"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Que veut dire le code 2.4.01 ?",
+    "nl": "Wat betekent de code 2.4.01?"
+   },
+   "choix": {
+    "fr": [
+     "Vente, ouverture, checklist 1",
+     "Boulangerie, fermeture, checklist 1",
+     "Gestion, chaque semaine, checklist 1"
+    ],
+    "nl": [
+     "Verkoop, opening, checklist 1",
+     "Bakkerij, sluiting, checklist 1",
+     "Beheer, elke week, checklist 1"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un retour du contrôle qualité dit « encore non conforme le … ». Que faut-il faire ?",
+    "nl": "Een feedback van de kwaliteitscontrole zegt « encore non conforme le … ». Wat moet je doen?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, la note est déjà posée",
+     "Refaire la tâche correctement : la reprise n’a pas tenu",
+     "Supprimer la photo"
+    ],
+    "nl": [
+     "Niets, de score staat er al",
+     "De taak correct opnieuw doen: de hername hield geen stand",
+     "De foto verwijderen"
+    ]
+   },
+   "bonne": 1
+  }
+ ],
+ "remarques": [
+  "Captures prises sur le jeudi 12/11/2026 (journée complète, magasin 4) : le jour en cours ne montrait que 16 % des tâches.",
+  "Le guide « Comment c’est organisé » est ouvert d’office ; son état (replié ou déplié) est gardé sur l’appareil. La capture le montre ouvert."
+ ]
+}

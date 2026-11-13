@@ -1,0 +1,122 @@
+[
+ {
+  "nom": "do-tel-onglets",
+  "vue": "exp",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"exp\"]"
+  ],
+  "attendre": ".ma-tabs [data-mo=\"exp\"] b.pt",
+  "cibles": [
+   ".ma-tabs"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-ops",
+  "vue": "ops",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"ops\"]"
+  ],
+  "attendre": ".op-mob .op-duel .seg.j7",
+  "cibles": [
+   ".op-mob .op-duel"
+  ],
+  "pause": 12000
+ },
+ {
+  "nom": "do-tel-vitrine",
+  "vue": "ops",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"ops\"]"
+  ],
+  "attendre": ".op-mob .op-v3s",
+  "cibles": [
+   ".op-mob .op-bloc:has(.op-v3s)"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-exp",
+  "vue": "exp",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"exp\"]"
+  ],
+  "attendre": ".ma .ma-v .dots",
+  "cibles": [
+   ".ma > .ma-v"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-ctrl",
+  "vue": "ctrl",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"ctrl\"]"
+  ],
+  "attendre": ".ma-rc",
+  "cibles": [
+   ".ma-car",
+   ".ma-rc"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-reclamation",
+  "vue": "ctrl",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"ctrl\"]",
+   ".ma-rc"
+  ],
+  "attendre": ".rc-form",
+  "cibles": [
+   ".rc-form"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-taches",
+  "vue": "tach",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"tach\"]"
+  ],
+  "attendre": ".tj-mob .tj-kpis",
+  "cibles": [
+   ".tj-mob .tj-kpis"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-semaine",
+  "vue": "sem",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"sem\"]"
+  ],
+  "attendre": ".ma-dam",
+  "cibles": [
+   ".ma > .ma-v"
+  ],
+  "pause": 9000
+ },
+ {
+  "nom": "do-tel-primes",
+  "vue": "prim",
+  "mobile": true,
+  "clics": [
+   "[data-mo=\"prim\"]"
+  ],
+  "attendre": ".pr-mob .ma-v",
+  "cibles": [
+   ".pr-mob .pr-mob-f",
+   ".pr-mob > .ma-v"
+  ],
+  "pause": 9000
+ }
+]

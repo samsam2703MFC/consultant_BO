@@ -1,0 +1,287 @@
+{
+ "id": "art-dash-telephone",
+ "code": "0.0.49",
+ "type": "Article",
+ "dossier": "05",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "9 min de lecture",
+ "titre": {
+  "fr": "Le dashboard : au téléphone",
+  "nl": "Het dashboard: op de telefoon"
+ },
+ "objectif": {
+  "fr": "Savoir lire le dashboard sur son téléphone : les six onglets du bas et leurs pastilles, Opérationnel, Exploitation, Contrôle et la réclamation fournisseur, Tâches, Semaine et Primes.",
+  "nl": "Het dashboard op je telefoon kunnen lezen: de zes tabbladen onderaan en hun bolletjes, Opérationnel, Exploitation, Contrôle en de klacht bij de leverancier, Tâches, Semaine en Primes."
+ },
+ "pour": {
+  "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire après « Comprendre le dashboard magasin » (0.0.15), dans la formation FO-05.",
+  "nl": "Kandidaat-franchisenemer, franchisenemer, manager, adjunct-manager en afdelingschef verkoop (P4, P7 tot P12). Te lezen na « Comprendre le dashboard magasin » (0.0.15), in opleiding FO-05."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [
+   "C-PILOTAGE.KPI",
+   "C-PILOTAGE.Vente"
+  ],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Se repérer",
+    "nl": "Je weg vinden"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Les 6 onglets et leurs pastilles",
+      "nl": "De 6 tabbladen en hun bolletjes"
+     },
+     "texte": {
+      "fr": "Au téléphone, les onglets sont en bas : « Opérationnel », « Exploitation », « Contrôle », « Tâches », « Semaine », « Primes ».\nEn haut : le magasin, la date avec ‹ et ›, l’icône de la revue du soir et ↻ (relire). Mois, trimestre et année se lisent sur ordinateur.\n« Exploitation », « Contrôle » et « Semaine » portent une pastille : la couleur du pire de leurs chiffres.\nRouge : au moins un chiffre à reprendre ; orange : au moins un à surveiller ; vert : tout est bon ; pas de pastille : rien encore jugé.\nSi une pastille est rouge : ouvre cet onglet en premier.",
+      "nl": "Op de telefoon staan de tabbladen onderaan: « Opérationnel », « Exploitation », « Contrôle », « Tâches », « Semaine », « Primes ».\nBovenaan: de winkel, de datum met ‹ en ›, het icoon van de avondreview en ↻ (herlezen). Maand, kwartaal en jaar lees je op een computer.\n« Exploitation », « Contrôle » en « Semaine » hebben een bolletje: de kleur van het slechtste van hun cijfers.\nRood: minstens één cijfer om te herstellen; oranje: minstens één om in het oog te houden; groen: alles is goed; geen bolletje: nog niets beoordeeld.\nAls een bolletje rood is: open dat tabblad eerst."
+     },
+     "critique": false,
+     "photo": "do-tel-onglets.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Opérationnel",
+    "nl": "Opérationnel"
+   },
+   "etapes": [
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Les jauges du jour",
+      "nl": "De meters van de dag"
+     },
+     "texte": {
+      "fr": "« Objectif comptoir du » jour et son montant ; à droite l’heure et la part de la journée écoulée.\n« Aujourd’hui » : le chiffre du comptoir et son % de l’objectif, puis en hachuré la projection au rythme de la journée.\nDessous, le même jour la semaine dernière : à la même heure, puis sa journée entière ; le trait = l’objectif comptoir.\n« Commandes du jour » ouvre la liste des commandes (comptoir et webshop). Puis « Objectif B2B du » jour, face à la part B2B habituelle ; un toucher ouvre « Ventes B2B ».\nPlus bas : « Le duel, chiffre par chiffre » (clients, panier moyen) et « Heure par heure » (« CA », « Clients », « Panier »).\nSi la barre d’aujourd’hui est loin derrière celle de la semaine dernière à la même heure : regarde « Heure par heure » pour voir quand le retard s’est fait.",
+      "nl": "« Objectif comptoir du » dag en zijn bedrag; rechts het uur en het deel van de dag dat voorbij is.\n« Aujourd’hui »: de omzet van de toonbank en zijn % van de doelstelling, dan gearceerd de projectie aan het ritme van de dag.\nDaaronder dezelfde dag vorige week: op hetzelfde uur, dan de hele dag; de streep = de doelstelling toonbank.\n« Commandes du jour » opent de lijst van de bestellingen (toonbank en webshop). Dan « Objectif B2B du » dag, tegenover het gewone B2B-aandeel; een tik opent « Ventes B2B ».\nVerderop: « Le duel, chiffre par chiffre » (klanten, gemiddeld ticket) en « Heure par heure » (« CA », « Clients », « Panier »).\nAls de balk van vandaag ver achter die van vorige week op hetzelfde uur zit: kijk in « Heure par heure » wanneer de achterstand ontstond."
+     },
+     "critique": true,
+     "photo": "do-tel-ops.jpg",
+     "video": null
+    },
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "La vitrine et la journée",
+      "nl": "De vitrine en de dag"
+     },
+     "texte": {
+      "fr": "« La vitrine » : trois onglets, S « Short life », M « Medium life » (pièces en vitrine) et L « Long life » (pièces en stock).\nSous chacun, les alertes : « N vides », « N va manquer », et pour L « N sous le stock ».\nDessous, les familles de l’onglet choisi ; on les déplie pour voir les références, avec « recuire N » quand il faut cuire.\n« La journée » : une barre par personne au planning (verte en poste, grise finie, en cadre à venir), le trait de maintenant, et les cuissons à l’heure du four (vert validée, orange à valider).\nSi une famille dit « vide » ou « va manquer » : vois avec la production avant le prochain rush.",
+      "nl": "« La vitrine »: drie tabbladen, S « Short life », M « Medium life » (stuks in de vitrine) en L « Long life » (stuks in voorraad).\nOnder elk de alarmen: « N vides », « N va manquer », en voor L « N sous le stock ».\nDaaronder de families van het gekozen tabblad; je klapt ze open om de referenties te zien, met « recuire N » als er gebakken moet worden.\n« La journée »: één balk per persoon op de planning (groen aan het werk, grijs klaar, omkaderd nog te komen), de streep van nu, en de bakbeurten op het uur van de oven (groen gevalideerd, oranje te valideren).\nAls een familie « vide » of « va manquer » zegt: overleg met de productie vóór de volgende drukte."
+     },
+     "critique": false,
+     "photo": "do-tel-vitrine.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Exploitation et Contrôle",
+    "nl": "Exploitation en Contrôle"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Exploitation",
+      "nl": "Exploitation"
+     },
+     "texte": {
+      "fr": "En tête, le verdict : le nombre de « points à surveiller » et leurs noms, ou ✓ « tout est au vert » ; à droite un point par chiffre.\nLes seuils : chiffre d’affaires vert dès 100 % de l’objectif, orange dès 90 % ; résultat vert dès 15 % des ventes, orange dès 5 %.\nMatière verte jusqu’au seuil du réseau, orange jusqu’à 10 points au-dessus ; main-d’œuvre verte jusqu’à 20 %, orange jusqu’à 25 % ; poubelle verte jusqu’à 1,5 % du chiffre, orange jusqu’à 3 %.\nPuis « Le P&L court de la journée », les tuiles « Réseau » (le rang) et « Canaux » (un toucher les déplie), et les ventes par catégorie.\n« tout est au vert » ne rassure que si la ligne dit aussi « N au vert » : « 0 au vert · N pas encore jugés » veut dire que rien n’est encore lu.\nSi un point est rouge : ouvre la ligne du P&L court qui lui correspond.",
+      "nl": "Bovenaan het oordeel: het aantal « points à surveiller » en hun namen, of ✓ « tout est au vert »; rechts één punt per cijfer.\nDe drempels: omzet groen vanaf 100 % van de doelstelling, oranje vanaf 90 %; resultaat groen vanaf 15 % van de verkoop, oranje vanaf 5 %.\nGrondstoffen groen tot de drempel van het netwerk, oranje tot 10 punten erboven; personeel groen tot 20 %, oranje tot 25 %; afval groen tot 1,5 % van de omzet, oranje tot 3 %.\nDan « Le P&L court de la journée » (de korte W&V), de tegels « Réseau » (de rang) en « Canaux » (een tik klapt ze open), en de verkoop per categorie.\n« tout est au vert » stelt alleen gerust als de regel ook « N au vert » zegt: « 0 au vert · N pas encore jugés » betekent dat nog niets gelezen is.\nAls een punt rood is: open de lijn van de korte W&V die erbij hoort."
+     },
+     "critique": true,
+     "photo": "do-tel-exp.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Contrôle",
+      "nl": "Contrôle"
+     },
+     "texte": {
+      "fr": "« Les contrôles en photo » : en titre les écarts et les photos « à contrôler », dessous qui a rendu quoi et quand.\nLes photos du jour défilent sur une ligne ; chacune dit son comptoir, l’heure et qui l’a prise. Un toucher l’ouvre en grand.\nDessous, le bouton « ✎ Réclamer un produit au fournisseur » (partie suivante).\nSi une photo manque : demande-la à la personne du poste avant la fin du service.",
+      "nl": "« Les contrôles en photo »: in de titel de afwijkingen en de foto’s « à contrôler », daaronder wie wat en wanneer indiende.\nDe foto’s van de dag schuiven op één rij; elke foto zegt de toonbank, het uur en wie ze nam. Een tik opent ze groot.\nDaaronder de knop « ✎ Réclamer un produit au fournisseur » (volgend deel).\nAls een foto ontbreekt: vraag ze aan de persoon van die post vóór het einde van de dienst."
+     },
+     "critique": false,
+     "photo": "do-tel-ctrl.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "La réclamation fournisseur",
+      "nl": "De klacht bij de leverancier"
+     },
+     "texte": {
+      "fr": "Une page à part, « Réclamation fournisseur », en cinq lignes : « La photo » (quatre au plus), « Le produit », « Combien », « Le problème », « Un mot pour le fournisseur » (facultatif).\nLe produit : « Scanner » l’étiquette ou « Saisir » son nom ou son SKU ; la livraison qui l’a apporté se choisit dessous.\nLe problème : « Taille ou poids », « Emballage abîmé », « Informations incorrectes », « Non conforme à la commande », « Quantité dans l’emballage », « Qualité du produit », « Autre raison ».\nLe bouton dit ce qui manque (« Choisir le produit », « Indiquer combien », « Choisir le problème »), puis « Envoyer à » et le fournisseur : la réclamation part chez lui.\nDessous, « Mes réclamations · 12 derniers mois » : « Toutes », « En attente », « Sans suite », « Réglées », « Refusées ».\nSi une réclamation est refusée faute de preuve : renvoie-la avec le produit entier et l’étiquette du carton en photo.",
+      "nl": "Een aparte pagina, « Réclamation fournisseur », in vijf lijnen: « La photo » (maximaal vier), « Le produit », « Combien », « Le problème », « Un mot pour le fournisseur » (niet verplicht).\nHet product: « Scanner » het etiket of « Saisir » de naam of de SKU; de levering die het bracht kies je eronder.\nHet probleem: « Taille ou poids », « Emballage abîmé », « Informations incorrectes », « Non conforme à la commande », « Quantité dans l’emballage », « Qualité du produit », « Autre raison ».\nDe knop zegt wat ontbreekt (« Choisir le produit », « Indiquer combien », « Choisir le problème »), dan « Envoyer à » en de leverancier: de klacht vertrekt naar hem.\nDaaronder « Mes réclamations · 12 derniers mois »: « Toutes », « En attente », « Sans suite », « Réglées », « Refusées ».\nAls een klacht geweigerd wordt bij gebrek aan bewijs: stuur ze opnieuw met het hele product en het etiket van de doos op foto."
+     },
+     "critique": false,
+     "photo": "do-tel-reclamation.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Tâches, Semaine, Primes",
+    "nl": "Tâches, Semaine, Primes"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Tâches",
+      "nl": "Tâches"
+     },
+     "texte": {
+      "fr": "La même page que sur ordinateur, en une colonne : la date avec ‹ et › en haut.\nLa semaine jour par jour (part des tâches obligatoires faites), puis quatre tuiles : « Tâches obligatoires faites », « Photos rendues », « Contrôle qualité du jour », « Non-conformités · 30 jours ».\nPuis « Comment c’est organisé » et « Les checklists du jour », avec leurs filtres.\nLe détail se lit dans l’article « Tâches » de cette section.\nSi le pourcentage du jour est bas en fin de service : ouvre « Pas commencées » (« Pas faites » un jour passé) et fais finir ce qui manque.",
+      "nl": "Dezelfde pagina als op de computer, in één kolom: de datum met ‹ en › bovenaan.\nDe week dag per dag (aandeel gedane verplichte taken), dan vier tegels: « Tâches obligatoires faites », « Photos rendues », « Contrôle qualité du jour », « Non-conformités · 30 jours ».\nDan « Comment c’est organisé » en « Les checklists du jour », met hun filters.\nHet detail lees je in het artikel « Tâches » van deze afdeling.\nAls het percentage van de dag laag is op het einde van de dienst: open « Pas commencées » (« Pas faites » op een voorbije dag) en laat afwerken wat ontbreekt."
+     },
+     "critique": false,
+     "photo": "do-tel-taches.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Semaine",
+      "nl": "Semaine"
+     },
+     "texte": {
+      "fr": "En tête : l’écart en euros, « d’avance sur l’objectif » ou « sur l’objectif à ce jour », les jours en dessous et au-dessus, un point par jour.\n« Chiffre de la semaine » : le réalisé face à l’objectif et une barre par jour.\nLe damier « la semaine » : Résultat, Contrôles, Notés, Poubelle, jour par jour ; légende « bon », « à surveiller », « à reprendre », « rien ou en cours ».\nPuis les tuiles Résultat, Matière, Poubelle, Réseau et la tuile « Valeur » ; ‹ et › changent de semaine.\nSi le damier a une colonne rouge : ouvre ce jour sur ordinateur, dans « Opérationnel ».",
+      "nl": "Bovenaan: het verschil in euro, « d’avance sur l’objectif » of « sur l’objectif à ce jour », de dagen eronder en erboven, één punt per dag.\n« Chiffre de la semaine »: het gerealiseerde tegenover de doelstelling en één balk per dag.\nHet dambord « la semaine »: Résultat, Contrôles, Notés, Poubelle, dag per dag; legende « bon », « à surveiller », « à reprendre », « rien ou en cours ».\nDan de tegels Résultat, Matière, Poubelle, Réseau en de tegel « Valeur »; ‹ en › wisselen van week.\nAls het dambord een rode kolom heeft: open die dag op de computer, in « Opérationnel »."
+     },
+     "critique": false,
+     "photo": "do-tel-semaine.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Primes",
+      "nl": "Primes"
+     },
+     "texte": {
+      "fr": "En haut, le mois avec ‹ et › (« · en cours »), puis « Mois · Année » et « Toutes · Du magasin ».\nLe montant « acquis ce mois », le nombre de vendeuses et de primes individuelles gagnées ; puis « Le magasin, ensemble ».\nUne carte par vendeuse : son nom, ce qu’elle a acquis, un point par prime (« gagnée », « en tête »). Le franchisé y figure « sans prime ».\nUn toucher déplie la carte : chaque prime, sa barre et où elle en est. En « Année » : « gagnés en » l’année et le nombre de mois primés.\nSi une vendeuse est juste sous un objectif : dis-lui ce qui lui manque, la carte dépliée le montre.",
+      "nl": "Bovenaan de maand met ‹ en › (« · en cours »), dan « Mois · Année » en « Toutes · Du magasin ».\nHet bedrag « acquis ce mois », het aantal verkoopsters en gewonnen individuele premies; dan « Le magasin, ensemble ».\nEén kaart per verkoopster: haar naam, wat ze verworven heeft, één punt per premie (« gagnée », « en tête »). De franchisenemer staat erin met « sans prime ».\nEen tik klapt de kaart open: elke premie, haar balk en waar ze staat. In « Année »: « gagnés en » het jaar en het aantal bekroonde maanden.\nAls een verkoopster net onder een doelstelling zit: zeg haar wat ontbreekt, de opengeklapte kaart toont het."
+     },
+     "critique": false,
+     "photo": "do-tel-primes.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Au téléphone, la pastille d’un onglet a la couleur du pire de ses chiffres : un seul rouge suffit.",
+   "nl": "Op de telefoon heeft het bolletje van een tabblad de kleur van het slechtste cijfer: één rood volstaat."
+  },
+  {
+   "fr": "« tout est au vert » avec « 0 au vert » veut dire : rien n’est encore lu, pas « tout va bien ».",
+   "nl": "« tout est au vert » met « 0 au vert » betekent: nog niets gelezen, niet « alles gaat goed »."
+  },
+  {
+   "fr": "La jauge du comptoir se lit sans le B2B : le B2B a sa propre jauge, face à sa part habituelle.",
+   "nl": "De meter van de toonbank lees je zonder de B2B: de B2B heeft zijn eigen meter, tegenover zijn gewone aandeel."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "La pastille de « Contrôle » est orange. Qu’est-ce que ça veut dire ?",
+    "nl": "Het bolletje van « Contrôle » is oranje. Wat betekent dat?"
+   },
+   "choix": {
+    "fr": [
+     "Tout est en ordre",
+     "Au moins un chiffre de l’onglet est à surveiller, aucun à reprendre",
+     "L’onglet n’est pas encore lu"
+    ],
+    "nl": [
+     "Alles is in orde",
+     "Minstens één cijfer van het tabblad moet je in het oog houden, geen enkel om te herstellen",
+     "Het tabblad is nog niet gelezen"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "« Exploitation » affiche « tout est au vert · 0 au vert · 8 pas encore jugés ». Que conclure ?",
+    "nl": "« Exploitation » toont « tout est au vert · 0 au vert · 8 pas encore jugés ». Wat besluit je?"
+   },
+   "choix": {
+    "fr": [
+     "La journée est excellente",
+     "Rien n’est encore jugé : attendre la lecture ou « ↻ »",
+     "Le magasin est fermé"
+    ],
+    "nl": [
+     "De dag is uitstekend",
+     "Nog niets beoordeeld: wacht op het lezen of « ↻ »",
+     "De winkel is gesloten"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Où réclame-t-on un produit abîmé au fournisseur ?",
+    "nl": "Waar dien je een klacht in bij de leverancier voor een beschadigd product?"
+   },
+   "choix": {
+    "fr": [
+     "« Contrôle » › « ✎ Réclamer un produit au fournisseur »",
+     "« Primes »",
+     "Sur ordinateur, onglet « Produits »"
+    ],
+    "nl": [
+     "« Contrôle » › « ✎ Réclamer un produit au fournisseur »",
+     "« Primes »",
+     "Op de computer, tabblad « Produits »"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "Exploitation au téléphone : tant que la journée n’est pas lue, le verdict affiche ✓ « tout est au vert · 0 au vert · 8 pas encore jugés » (maVerdict sans point jugé = vert). Vu en capture le 13/11 : un franchisé peut y lire « tout va bien ». À corriger dans le code (verdict neutre tant que rien n’est jugé) ?",
+  "La réclamation fournisseur est la seule page du téléphone qui envoie quelque chose (au fournisseur) : non utilisée pour les captures, rien n’a été envoyé.",
+  "Couleurs exactes de la frise « La journée » (vert en poste, gris fini, cadre à venir ; cuissons vert validée, orange à valider) prises des commentaires du code, pas du CSS.",
+  "Captures du vendredi 13/11/2026 vers 12 h 40 (journée en cours) ; la photo de la réclamation commence à « Le produit », « La photo » est juste au-dessus."
+ ]
+}

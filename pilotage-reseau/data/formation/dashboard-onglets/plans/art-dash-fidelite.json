@@ -1,0 +1,128 @@
+[
+ {
+  "nom": "do-fidelite-scannes",
+  "vue": "fidelite",
+  "attendre": ".fd-tsvg",
+  "cibles": [
+   ".fd-scan"
+  ],
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-fidelite-profils",
+  "vue": "fidelite",
+  "attendre": ".fd-tsvg",
+  "cibles": [
+   ".fd-tuiles"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-fidelite-radars",
+  "vue": "fidelite",
+  "attendre": ".fd-tsvg",
+  "cibles": [
+   ".fd-g3 > .db-card:nth-child(1)",
+   ".fd-g3 > .db-card:nth-child(2)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-fidelite-evolution",
+  "vue": "fidelite",
+  "attendre": ".fd-tsvg",
+  "cibles": [
+   ".fd-g3 > .db-card:nth-child(3)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-fidelite-clients",
+  "vue": "fidelite",
+  "attendre": ".fd-tsvg",
+  "clics": [
+   "[data-fdliste]"
+  ],
+  "cibles": [
+   ".fd-dd"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000,
+  "flou": [
+   ".fd-dd tr[data-fdc] td:first-child"
+  ]
+ },
+ {
+  "nom": "do-fidelite-fiche",
+  "vue": "fidelite",
+  "attendre": ".fd-g3b",
+  "clics": [
+   "[data-fdliste]",
+   "tr[data-fdc]"
+  ],
+  "cibles": [
+   ".fd-tete",
+   ".fd-can"
+  ],
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 15000,
+  "flou": [
+   ".fd-id b",
+   ".fd-av",
+   ".fd-leg span:first-child"
+  ],
+  "pauseClic": 6000
+ },
+ {
+  "nom": "do-fidelite-habitudes",
+  "vue": "fidelite",
+  "attendre": ".fd-g3b",
+  "clics": [
+   "[data-fdliste]",
+   "tr[data-fdc]"
+  ],
+  "cibles": [
+   ".fd-g3"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000,
+  "flou": [
+   ".fd-id b",
+   ".fd-av",
+   ".fd-leg span:first-child"
+  ],
+  "pauseClic": 6000
+ },
+ {
+  "nom": "do-fidelite-tickets",
+  "vue": "fidelite",
+  "attendre": ".fd-g3b",
+  "clics": [
+   "[data-fdliste]",
+   "tr[data-fdc]"
+  ],
+  "cibles": [
+   ".fd-g3b"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000,
+  "flou": [
+   ".fd-id b",
+   ".fd-av",
+   ".fd-leg span:first-child"
+  ],
+  "pauseClic": 6000
+ }
+]

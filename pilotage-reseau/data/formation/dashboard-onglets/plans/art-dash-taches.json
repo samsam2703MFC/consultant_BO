@@ -1,0 +1,74 @@
+[
+ {
+  "nom": "do-taches-semaine",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "attendre": ".tj-bande .tj-barre",
+  "cibles": [
+   ".tj-sem",
+   ".tj-bande"
+  ],
+  "cadre": "haut",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-taches-tuiles",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-tuiles.tj-kpis"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-taches-organisation",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-card.tj-guide"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-taches-checklists",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-card:has(.tj-f)"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-taches-tache",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "clics": [
+   ".tj-h[data-tjcl^=\"1.1.02\"]",
+   ".tj-sem .db-lab"
+  ],
+  "cibles": [
+   ".tj-cl.open"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ },
+ {
+  "nom": "do-taches-retours",
+  "vue": "taches",
+  "date": "2026-11-12",
+  "cibles": [
+   ".db-card.tj-ret"
+  ],
+  "cadre": "centre",
+  "mobile": false,
+  "pause": 15000
+ }
+]

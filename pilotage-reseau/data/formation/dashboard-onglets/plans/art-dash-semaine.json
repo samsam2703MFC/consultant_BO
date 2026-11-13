@@ -1,0 +1,16 @@
+[
+ {"nom": "do-semaine-nc", "vue": "semaine", "shop": 3, "date": "2026-10-04", "clics": [".db-ncbar[data-ncdrop]", ".db-ncl[data-ncrow]"], "cibles": [".db-ncbar", ".db-ncdl"], "attendre": ".db-ncbar[data-ncdrop]", "cadre": "haut", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-reseau", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-bench"], "attendre": ".db-bench", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-taches", "vue": "semaine", "date": "2026-11-13", "clics": [".db-taches [data-tdrop]"], "cibles": [".db-taches", ".db-tdrop"], "attendre": ".db-taches [data-tdrop]", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-tuiles", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-tuiles.huit"], "attendre": ".db-tuiles.huit", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-canaux", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-split.co"], "attendre": ".db-split.co", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-offres", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-offres"], "attendre": ".db-offres", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-invendus", "vue": "semaine", "date": "2026-11-13", "clics": [".db-inv [data-invdrop]"], "cibles": [".db-inv"], "attendre": ".db-inv [data-invdrop]", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-saisies", "vue": "semaine", "date": "2026-11-13", "clics": [".db-inv [data-invmodale]"], "cibles": ["#db-invm .fi-modale"], "attendre": "#db-invm .im-tab", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-calendrier", "vue": "semaine", "date": "2026-11-13", "cibles": [".cal-a"], "attendre": ".cal-a", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-pl", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-card:has(.db-cascade)"], "attendre": ".db-cascade", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-douze", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-card:has(.db-s6)"], "attendre": ".db-s6", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-heures", "vue": "semaine", "date": "2026-11-13", "cibles": ["div.db-tuiles:not(.huit)", ".db-card:has(.db-gr)"], "attendre": ".db-gr", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-periodes", "vue": "semaine", "date": "2026-11-13", "clics": ["[data-perdrop]"], "cibles": [".db-card:has(.db-per)"], "attendre": "[data-perdrop]", "cadre": "ecran", "mobile": false, "pause": 9000},
+ {"nom": "do-semaine-heure", "vue": "semaine", "date": "2026-11-13", "cibles": [".db-g2:has(.db-wf)"], "attendre": ".db-wf", "cadre": "ecran", "mobile": false, "pause": 9000}
+]
