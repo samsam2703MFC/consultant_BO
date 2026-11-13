@@ -1443,3 +1443,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-13T15:55:37Z Fidélité : page de test à part (fidelite-test/, sa propre API, lecture seule) — le dashboard ne change pas
 2026-11-13T18:47:10Z Fidélité, page de test à part : l'admin (création en aperçu), le magasin test Halle et la carte de chaque client
 2026-11-13T19:34:07Z Cadre des tâches : effacer une tâche depuis sa checklist (« Modifier la tâche » › « Supprimer la tâche… »)
+2026-11-13T20:43:33Z Fidélité, page de test à part : créer la carte à points et les campagnes du bingo dans l'ERP (confirmé, journalisé)
