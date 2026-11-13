@@ -3924,6 +3924,14 @@ changement), `refuse` (4xx/5xx, message du panel), `local` (rien au panel).
 | `GET /verification/recettes/candidats?nom=` | — | `{candidats[{rid, nom, score, libre, pareil}], recettes, motif}` (liste `GET /recipes` gardée 24 h) |
 | `PUT /verification/recettes/liens` | `{produit, recette, sousRecette, matiere, portion, formatPrix?{methode, route, corps}}` | modèles d'adresse du panel (`{pid}`, `{rid}`, `{mid}`, `{sid}`, `{sous}`), réglage `verifLiens` ; route du prix, réglage `vrcFormatPrix` |
 
+**Mesuré le 13/11/2026** (sonde en ligne, recette 489 « Wrapps - Poulet & Parmesan ») : `GET /recipes/{id}` rend `{id,
+name, id_product, materials[], subrecipes[], preparation_types, preparation_steps, *_photo_path}`. Une ligne de matière :
+`{connection_id, id (la matière), quantity ("2.00", en texte), waste_amount_perc, name, id_unit, unit_name, category_name}` ;
+une ligne de sous-recette : `{connection_id, id (la sous-recette), quantity, name, id_unit, unit_name}`. **Pas de
+rendement** dans la recette (seul `/cost` rend `yield_quantity`) : le geste `rendement` refuse alors d'écrire et renvoie au
+panel. Une ligne reprise d'une autre recette (ajout, copie) part **sans son `connection_id`**. `GET /products/{id}` porte
+`id_recipe` (le geste `rattacher`).
+
 `GET /verification/recettes` porte en plus `liens` (les modèles d'adresse) et, sur chaque ligne, `corr` : ce qu'il faut
 pour proposer le geste (`unite` : `mid`, `matiere`, `sous`, `facteur`, `q`, `u`, `coutAvant`, `coutApres` ; `prix` : `sid`,
 `magasin`, `matieres[{mid, nom, u, propose (médiane des autres magasins), min, max}]` ; `port` : `sid`, `fraction` lue
