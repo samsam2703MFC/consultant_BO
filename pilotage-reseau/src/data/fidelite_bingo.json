@@ -1,6 +1,6 @@
 {
   "_": "Bingo + points, le handoff de Sam (« Bingo design system rebuild », 13/11/2026 : docs/maquettes/fidelite-bingo/handoff). Une carte de fidélité à points, permanente, dans l'ERP (son code : « carte ») et QUATRE cartes de bingo par an, une par saison de 13 semaines. Le bingo fait revenir : la case de la semaine se coche dès seuilEuros € d'achats du lundi au dimanche, tous magasins, une case par semaine au plus. Toutes les tousLes cases cochées, un bon de bons[i] € ; 13 / 13, le super bon. Les points font consommer : 1 point par euro (la carte de l'ERP), ×multiplicateurCase une fois la case cochée jusqu'au dimanche, un bon tous les palier points. Chaque saison a ses campagnes de bons dans l'ERP, nommées « {campagne} · {valeur} € ». Les valeurs sont des valeurs de départ, à valider. Hiver : la saison de Sam ; printemps, été, automne : thèmes proposés, à valider (« aValider »).",
-  "carte": "FIDPOINTS",
+  "carte": "points-atelier",
   "seuilEuros": 10,
   "tousLes": 3,
   "validite": 30,

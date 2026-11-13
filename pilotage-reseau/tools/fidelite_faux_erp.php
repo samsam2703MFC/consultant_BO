@@ -29,7 +29,7 @@ final class FidFauxErp
     {
         $n = (int) ($o['clients'] ?? 600);
         $this->cartes = [
-            12 => ['id' => 12, 'code' => 'FIDPOINTS', 'name' => 'Carte L’Atelier', 'version' => 1, 'revision' => 7, 'terms_locked' => true, 'active' => 1,
+            12 => ['id' => 12, 'code' => 'points-atelier', 'name' => 'Carte L’Atelier', 'version' => 1, 'revision' => 7, 'terms_locked' => true, 'active' => 1,
                 'scope' => 'NETWORK', 'shop_ids' => [2, 3, 4, 5], 'starts_at' => '2026-01-04 23:00:00', 'ends_at' => null, 'sort_order' => 0,
                 'color_tint' => '#F8E2CB', 'color_fill' => '#8D1D2C', 'color_accent' => '#F2C9A0', 'reward_label' => 'Bon de 5 €', 'image_path' => '',
                 'stamps_required' => 1, 'reward_validity_days' => 60, 'keywords' => ['tout'], 'reward_product_ids' => [502],
@@ -39,8 +39,8 @@ final class FidFauxErp
                         ['name' => 'Fin de journée', 'days' => [0, 1, 2, 3, 4, 5], 'from' => '17:30', 'to' => '19:00', 'coefficient' => '2']],
                     'tiers' => [['points' => 100, 'voucher_cents' => 500]]]],
         ];
-        foreach ([[3, 'Carte Pain', 'PAIN', 10, '#9a5b16', '1 pain offert'], [4, 'Carte Viennoiserie', 'VIENN', 10, '#eb6834', '1 croissant offert'],
-            [5, 'Carte Café', 'CAFE', 8, '#5c4033', '1 café offert'], [6, 'Carte Tarte', 'TARTE', 6, '#c2336a', '1 part de tarte offerte']] as [$id, $nom, $code, $t, $c, $r]) {
+        foreach ([[3, 'Carte Pain', 'pain', 10, '#9a5b16', '1 pain offert'], [4, 'Carte Viennoiserie', 'viennoiserie', 10, '#eb6834', '1 croissant offert'],
+            [5, 'Carte Café', 'cafe', 8, '#5c4033', '1 café offert'], [6, 'Carte Tarte', 'tarte', 6, '#c2336a', '1 part de tarte offerte']] as [$id, $nom, $code, $t, $c, $r]) {
             $this->cartes[$id] = ['id' => $id, 'code' => $code, 'name' => $nom, 'version' => 1, 'revision' => 3, 'terms_locked' => true, 'active' => 1, 'scope' => 'NETWORK',
                 'shop_ids' => [2, 3, 4, 5], 'starts_at' => '2025-09-01 00:00:00', 'ends_at' => null, 'stamps_required' => $t, 'reward_label' => $r,
                 'reward_validity_days' => 30, 'color_fill' => $c, 'points_config' => null];
@@ -124,7 +124,8 @@ final class FidFauxErp
     {
         $u = parse_url($path); parse_str($u['query'] ?? '', $q); $p = $u['path'];
         $ok = static fn ($corps, int $code = 200) => ['code' => $code, 'corps' => $corps, 'erreur' => null];
-        $ko = static fn (int $code, string $msg) => ['code' => $code, 'corps' => ['status' => 'error', 'description' => $msg], 'erreur' => 'HTTP ' . $code . ' : ' . $msg];
+        $ko = static fn (int $code, string $msg, array $champs = []) => ['code' => $code, 'corps' => ['status' => 'error', 'description' => $msg] + ($champs ? ['code' => $msg, 'errors' => $champs] : []),
+            'erreur' => 'HTTP ' . $code . ' : ' . $msg . ($champs ? ' — ' . implode(' ; ', array_map(static fn ($k, $v) => $k . ' : ' . $v, array_keys($champs), $champs)) : '')];
         if ($method !== 'GET') { $this->ecrits[] = [$method, $path, $body]; }
         if ($method === 'GET' && $p === '/admin/loyalty/cards') { return $ok(['items' => array_values($this->cartes), 'pagination' => ['page' => 1, 'limit' => 100, 'total' => count($this->cartes), 'pages' => 1]]); }
         if (preg_match('#^/admin/loyalty/cards/(\d+)$#', $p, $m)) {
@@ -141,8 +142,8 @@ final class FidFauxErp
         if ($method === 'POST' && $p === '/admin/loyalty/cards') {
             foreach (['code', 'name', 'starts_at', 'shop_ids'] as $k) { if (!isset($body[$k])) { return $ko(422, $k . ' required'); } }
             // Ce que l'ERP réel a répondu le 13/11/2026 : « code : INVALID_CODE ; reward_product_ids : SELECT_AT_LEAST_ONE ».
-            if (!preg_match('/^[A-Z0-9_]{2,40}$/', (string) $body['code'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION — code : INVALID_CODE'); }
-            if (empty($body['reward_product_ids']) && empty($body['reward_portion_ids'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION — reward_product_ids : SELECT_AT_LEAST_ONE'); }
+            if (!preg_match('/^[a-z0-9][a-z0-9_-]{1,39}$/', (string) $body['code'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION', ['code' => 'INVALID_CODE']); }
+            if (empty($body['reward_product_ids']) && empty($body['reward_portion_ids'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION', ['reward_product_ids' => 'SELECT_AT_LEAST_ONE']); }
             $ids = !empty($body['earning_product_ids']) || !empty($body['earning_category_ids']) || !empty($body['earning_category_group_ids']);
             if ($ids === !empty($body['keywords'])) { return $ko(422, 'earning IDs or normalized keywords are required and cannot mix'); }
             foreach ($this->cartes as $c) { if ($c['code'] === $body['code'] && (int) ($c['version'] ?? 1) === (int) ($body['version'] ?? 1)) { return $ko(409, 'code/version already exists'); } }
