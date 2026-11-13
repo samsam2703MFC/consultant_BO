@@ -10054,7 +10054,11 @@ class App {
   }
   /**
    * Les valeurs de l'onglet : un graphique par magasin — le trafic clients ou
-   * le chiffre d'affaires (l'onglet choisi), en total ou par jour ouvert.
+   * le chiffre d'affaires (l'onglet choisi), en total ou par jour ouvert ; sur
+   * toutes les ventes, le comptoir seul ou le B2B seul (13/11/2026 : B2B = les
+   * tickets des clients pro à TVA valide, `pro` de chaque mois ; comptoir = le
+   * reste ; un mois dont le pro n'est pas lu sur tous ses jours sort de la
+   * courbe de ces deux-là).
    *
    * Trois règles, les mêmes partout :
    *  - le mois d'OUVERTURE (moins de 75 % des jours vendus) n'est pas sur la
@@ -10072,7 +10076,10 @@ class App {
     const S = this.state, D = this.D.rev;
     // Par jour ouvert par défaut (demande du 11/11/2026) : la lecture qui neutralise les fermetures.
     const quoi = S.evQuoi === 'ca' ? 'ca' : 'clients', mode = S.evMode === 'total' ? 'total' : 'jour';
-    const out = { quoi, mode, chargement: !D, erreur: D && D.erreur ? D.erreur : '',
+    // Les ventes (13/11/2026) : tout, le comptoir seul ou le B2B seul — la bascule d'Analyse réseau.
+    const canal = S.evCanal === 'comptoir' || S.evCanal === 'b2b' ? S.evCanal : 'tout', b2b = canal === 'b2b';
+    const out = { quoi, mode, canal, coul: b2b ? '#1f5f8b' : '#8D1D2C', chargement: !D, erreur: D && D.erreur ? D.erreur : '',
+      canaux: [['tout', 'Tout'], ['comptoir', 'Comptoir'], ['b2b', 'B2B']].map(o => ({ nom: o[1], on: o[0] === canal, go: () => this.setState({ evCanal: o[0] }) })),
       quois: [['clients', 'Trafic clients'], ['ca', 'Chiffre d’affaires']].map(o => ({ nom: o[1], on: o[0] === quoi, go: () => this.setState({ evQuoi: o[0] }) })),
       modes: [['jour', 'Par jour ouvert'], ['total', 'Total']].map(o => ({ nom: o[1], on: o[0] === mode, go: () => this.setState({ evMode: o[0] }) })),
       relire: () => this.evCharge(true) };
@@ -10083,15 +10090,24 @@ class App {
     const fI = n => Math.round(n || 0).toLocaleString('fr-BE');
     const fK = n => Math.abs(n) >= 1e6 ? (n / 1e6).toFixed(2).replace('.', ',') + ' M€' : (Math.abs(n) >= 10000 ? (n / 1000).toFixed(1).replace('.', ',') + ' k€' : fI(n) + ' €');
     const fE2 = n => n.toFixed(2).replace('.', ',') + ' €';
+    const fP1 = n => n.toFixed(1).replace('.', ',') + ' %';
+    const fD1 = n => Math.abs(n) < 10 ? n.toFixed(1).replace('.', ',') : fI(n);   // 2,4 commandes pro par jour
     const pc = (a, b) => b ? 100 * (a - b) / b : null;
     const sg = v => v == null ? '—' : (v >= 0.5 ? '+' : (v <= -0.5 ? '−' : '±')) + Math.abs(Math.round(v)) + ' %';
     const col = v => v == null ? '#B8B2A8' : (v >= 3 ? '#3f7a52' : (v <= -3 ? '#A32014' : '#7A5207'));
     const parJour = mode === 'jour';
     // Le format d'une valeur de l'onglet : un total ou une moyenne par jour vendu.
-    const fmt = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : fK) : fI;
-    const fAxe = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : (n => Math.round(n / 1000) + ' k€')) : fI;
-    const unite = quoi === 'ca' ? (parJour ? 'CA par jour ouvert' : 'CA du mois') : (parJour ? 'clients par jour ouvert' : 'clients du mois (tickets)');
-    const g = x => quoi === 'ca' ? x.ca : x.clients;
+    const fmt = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : fK) : (b2b && parJour ? fD1 : fI);
+    const fAxe = quoi === 'ca' ? (parJour ? (n => fI(n) + ' €') : (n => Math.abs(n) >= 10000 ? Math.round(n / 1000) + ' k€' : fI(n) + ' €')) : (b2b && parJour ? fD1 : fI);
+    const NOMS = { tout: ['clients', 'CA'], comptoir: ['clients au comptoir', 'CA comptoir'], b2b: ['commandes pro', 'CA B2B'] }[canal];
+    const unite = quoi === 'ca' ? NOMS[1] + (parJour ? ' par jour ouvert' : ' du mois')
+      : NOMS[0] + (parJour ? ' par jour ouvert' : ' du mois') + ' (tickets)';
+    // Le B2B d'un mois (ou de son N-1) n'est utilisable que si tous ses jours vendus ont leur pro lu : sinon le
+    // comptoir porterait le pro des jours manquants. Un tel mois sort de la courbe en Comptoir et en B2B.
+    const split = o => !!(o && o.pro && o.pro.joursLus >= o.jours);
+    const lire = (o, q) => canal === 'tout' ? o[q] : (!split(o) ? null : (b2b ? o.pro[q] : Math.max(0, o[q] - o.pro[q])));
+    const qk = quoi === 'ca' ? 'ca' : 'clients';
+    const g = x => lire(x, qk), g1 = x => lire(x.n1, qk);
     const prep = x => {
       const ref = x.enCours ? x.joursServis : x.joursMois;
       const partiel = !x.enCours && x.jours < 0.75 * x.joursMois;
@@ -10099,17 +10115,20 @@ class App {
       return Object.assign({}, x, { partiel, n1Ok: !!(x.n1 && !n1Partiel && !partiel),
         n1Court: !!(x.n1 && !n1Partiel && !partiel && x.n1.jours < x.jours - 2) });
     };
-    // La valeur d'un mois et de son N-1 dans la lecture choisie ; la somme d'une liste de mois, idem.
-    const v = x => parJour ? (x.jours ? g(x) / x.jours : null) : g(x);
-    const v1 = x => !x.n1Ok ? null : (parJour ? (x.n1.jours ? (quoi === 'ca' ? x.n1.ca : x.n1.clients) / x.n1.jours : null) : (quoi === 'ca' ? x.n1.ca : x.n1.clients));
-    const somme = (L, f) => { const a = L.reduce((t, x) => t + f(x), 0); return a; };
+    // La valeur d'un mois et de son N-1 dans la lecture choisie (null : pas lue sur ce canal).
+    const v = x => { const a = g(x); return a == null ? null : (parJour ? (x.jours ? a / x.jours : null) : a); };
+    const v1 = x => { if (!x.n1Ok) { return null; } const a = g1(x); return a == null ? null : (parJour ? (x.n1.jours ? a / x.n1.jours : null) : a); };
+    const somme = (L, f) => L.reduce((t, x) => t + f(x), 0);
     const ecartListe = L => {
-      if (!L.length || L.some(x => !x.n1Ok)) { return null; }
-      const n = somme(L, g), n1 = somme(L, x => quoi === 'ca' ? x.n1.ca : x.n1.clients);
+      if (!L.length || L.some(x => v(x) == null || v1(x) == null)) { return null; }
+      const n = somme(L, g), n1 = somme(L, g1);
       if (!parJour) { return { e: pc(n, n1), n, n1 }; }
       const j = somme(L, x => x.jours), j1 = somme(L, x => x.n1.jours);
       return { e: pc(n / j, n1 / j1), n: n / j, n1: n1 / j1 };
     };
+    // La part B2B du CA d'une liste de mois (et de leurs N-1), sur les mois dont le pro est lu.
+    const partPro = L => { const M2 = L.filter(split), t = somme(M2, x => x.ca); return t > 0 ? 100 * somme(M2, x => x.pro.ca) / t : null; };
+    const partPro1 = L => { const M2 = L.filter(x => x.n1Ok && split(x.n1)), t = somme(M2, x => x.n1.ca); return t > 0 ? 100 * somme(M2, x => x.n1.pro.ca) / t : null; };
     const lab = x => MC[x.mo] + ' ' + String(x.an).slice(2);
     // UN axe pour tous les graphiques : du premier mois vendu du réseau au mois
     // en cours (exclu en total, où il n'est pas sur la courbe). Les années
@@ -10121,80 +10140,111 @@ class App {
       k = mo === 12 ? (y + 1) + '-01' : y + '-' + String(mo + 1).padStart(2, '0');
     }
     const axeG = parJour ? axe : axe.filter(k => k !== fin);
+    const reseau12 = []; let nonLus = 0, closTotal = 0;
     out.magasins = D.magasins.map(m => {
       const M = m.mois.map(prep);
-      const clos = M.filter(x => !x.enCours && !x.partiel);
+      const closTous = M.filter(x => !x.enCours && !x.partiel);
+      // En Comptoir et en B2B, seuls les mois dont le pro est lu comptent ; les autres sont dits.
+      const clos = closTous.filter(x => v(x) != null);
+      const sansPro = canal === 'tout' ? [] : M.filter(x => !x.partiel && !split(x));
       const cur = M.find(x => x.enCours) || null;
       const prem = M[0];
-      const premN1 = M.find(x => x.n1Ok) || null;
+      const premN1 = M.find(x => x.n1Ok && v1(x) != null) || null;
       const nom = this.rrCourt(m.nom);
+      reseau12.push(...closTous.slice(-12));
+      closTotal += closTous.slice(-12).length; nonLus += closTous.slice(-12).filter(x => !split(x)).length;
       // Les tuiles de droite.
-      const d12 = clos.slice(-12), avec12 = d12.filter(x => x.n1Ok);
+      const d12 = clos.slice(-12), avec12 = d12.filter(x => v1(x) != null);
       const e12 = ecartListe(avec12);
       const t3 = clos.slice(-3), e3 = t3.length === 3 ? ecartListe(t3) : null;
-      const avecN1 = clos.filter(x => x.n1Ok), dessus = avecN1.filter(x => v(x) >= v1(x));
+      const avecN1 = clos.filter(x => v1(x) != null), dessus = avecN1.filter(x => v(x) >= v1(x));
+      const p12 = partPro(closTous.slice(-12)), p12n1 = partPro1(closTous.slice(-12));
       const tuiles = [
         e12 ? { k: (avec12.length === 12 ? '12 mois' : avec12.length + ' mois') + ' vs N-1', v: sg(e12.e), s: fmt(e12.n) + ' contre ' + fmt(e12.n1) + (parJour ? ' par jour' : '') + ' · ' + lab(avec12[0]) + ' → ' + lab(avec12[avec12.length - 1]), cls: e12.e >= 0 ? 'good' : 'bad' }
-          : { k: 'Vs N-1', v: '—', s: 'pas encore de N-1 — il arrive en ' + ML[prem.mo] + ' ' + (prem.an + 1) },
+          : { k: 'Vs N-1', v: '—', s: canal !== 'tout' && !clos.length ? 'B2B pas encore lu'
+            : (canal !== 'tout' && M.some(x => x.n1Ok) ? 'pas de N-1 lu sur ce canal' : 'pas encore de N-1 — il arrive en ' + ML[prem.mo] + ' ' + (prem.an + 1)) },
         e3 ? { k: '3 derniers mois vs N-1', v: sg(e3.e), s: MC[t3[0].mo] + ' → ' + MC[t3[2].mo] + ' : ' + fmt(e3.n) + ' contre ' + fmt(e3.n1), cls: e3.e >= 0 ? 'good' : 'bad' }
           : (() => { const a = clos.slice(-3), b = clos.slice(-6, -3); const va = parJour ? somme(a, g) / Math.max(1, somme(a, x => x.jours)) : somme(a, g), vb = parJour ? somme(b, g) / Math.max(1, somme(b, x => x.jours)) : somme(b, g);
             return { k: '3 derniers mois', v: a.length ? fmt(va) : '—', s: b.length === 3 ? '<b style="color:' + col(pc(va, vb)) + '">' + sg(pc(va, vb)) + '</b> face aux 3 d’avant' : '' }; })(),
-        avecN1.length ? { k: 'Mois au-dessus du N-1', v: dessus.length + ' / ' + avecN1.length, s: dessus.length ? (dessus.length > 4 ? '… ' : '') + dessus.slice(-4).map(lab).join(', ') : 'aucun', cls: dessus.length * 2 >= avecN1.length ? 'good' : 'bad' }
-          : { k: 'Mois au-dessus du N-1', v: '—', s: 'pas encore de N-1' },
-        cur ? (() => { const e = cur.n1Ok ? pc(v(cur), v1(cur)) : null;
-          return { k: MC[cur.mo] + ' en cours · ' + cur.jours + ' j', v: fmt(v(cur)),
-            s: e == null ? (cur.n1 ? 'N-1 incomplet' : 'pas de N-1 : premier ' + ML[cur.mo]) : '<b style="color:' + col(e) + '">' + sg(e) + '</b> face aux mêmes ' + cur.joursServis + ' jours de ' + ML[cur.mo] + ' ' + (cur.an - 1) + ' (' + fmt(v1(cur)) + ')',
+        // En B2B, la 3e tuile dit la part du CA, face au plafond des visites (40 %).
+        b2b ? { k: 'Part du CA · ' + (closTous.slice(-12).filter(split).length || '') + ' mois', v: p12 == null ? '—' : fP1(p12),
+            s: (p12n1 != null ? 'contre ' + fP1(p12n1) + ' un an plus tôt · ' : '') + 'plafond 40 %', cls: '' }
+          : (avecN1.length ? { k: 'Mois au-dessus du N-1', v: dessus.length + ' / ' + avecN1.length, s: dessus.length ? (dessus.length > 4 ? '… ' : '') + dessus.slice(-4).map(lab).join(', ') : 'aucun', cls: dessus.length * 2 >= avecN1.length ? 'good' : 'bad' }
+            : { k: 'Mois au-dessus du N-1', v: '—', s: 'pas encore de N-1' }),
+        cur ? (() => { const vc = v(cur), e = vc != null && cur.n1Ok && v1(cur) != null ? pc(vc, v1(cur)) : null;
+          return { k: MC[cur.mo] + ' en cours · ' + cur.jours + ' j', v: vc == null ? '—' : fmt(vc),
+            s: vc == null ? 'B2B pas encore lu sur tous ses jours' : (e == null ? (cur.n1 ? 'N-1 incomplet' : 'pas de N-1 : premier ' + ML[cur.mo]) : '<b style="color:' + col(e) + '">' + sg(e) + '</b> face aux mêmes ' + cur.joursServis + ' jours de ' + ML[cur.mo] + ' ' + (cur.an - 1) + ' (' + fmt(v1(cur)) + ')'),
             cls: e == null ? '' : (e >= 0 ? 'good' : 'bad') }; })()
           : { k: 'Mois en cours', v: '—', s: 'pas de vente lue ce mois-ci' }
       ];
       const best = clos.length ? clos.reduce((a, b) => v(b) > v(a) ? b : a) : null;
-      const totC = somme(M, x => x.clients), totCa = somme(M, x => x.ca), totJ = somme(M, x => x.jours);
+      // Les faits du magasin, sur les mois lus du canal.
+      const ML2 = M.filter(x => canal === 'tout' || split(x));
+      const totC = somme(ML2, x => lire(x, 'clients')), totCa = somme(ML2, x => lire(x, 'ca')), totJ = somme(ML2, x => x.jours);
+      const nomC = b2b ? 'commandes pro' : 'clients';
       const faits = [
         'depuis ' + ML[prem.mo] + ' ' + prem.an + (prem.partiel ? ' (premières ventes, ' + prem.jours + ' j)' : ''),
-        clos.length + ' mois pleins',
-        parJour ? fI(totC / Math.max(1, totJ)) + ' clients par jour ouvert' : fI(totC) + ' clients',
-        parJour ? fI(totCa / Math.max(1, totJ)) + ' € par jour ouvert' : fK(totCa) + ' de CA',
-        'panier ' + fE2(totCa / Math.max(1, totC)),
+        closTous.length + ' mois pleins',
+        ML2.length ? (parJour ? (b2b ? fD1(totC / Math.max(1, totJ)) : fI(totC / Math.max(1, totJ))) + ' ' + nomC + ' par jour ouvert' : fI(totC) + ' ' + nomC) : '',
+        ML2.length ? (parJour ? fI(totCa / Math.max(1, totJ)) + ' € par jour ouvert' : fK(totCa) + ' de CA') : '',
+        totC ? (b2b ? 'panier pro ' : (canal === 'comptoir' ? 'panier comptoir ' : 'panier ')) + fE2(totCa / totC) : '',
+        canal === 'tout' && p12 != null ? 'dont B2B ' + fP1(p12) + ' sur 12 mois' : '',
+        canal === 'comptoir' && p12 != null ? fP1(100 - p12) + ' du CA sur 12 mois' : '',
         best ? 'meilleur mois : ' + ML[best.mo] + ' ' + best.an + ' (' + fmt(v(best)) + ')' : ''
       ].filter(Boolean);
-      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC);
+      const svg = this.evGraphe(M, axeG, v, v1, fmt, fAxe, parJour, MC, out.coul);
+      const sansL = sansPro.filter(x => !x.enCours);
       return { id: m.id, nom, nomLong: m.nom, faits, tuiles, svg,
+        tag: canal === 'tout' ? '' : (b2b ? 'B2B' : 'Comptoir'),
+        sansPro: sansL.length ? sansL.length + ' mois sans B2B lu sur tous leurs jours, hors courbe (' + lab(sansL[0]) + (sansL.length > 1 ? ' → ' + lab(sansL[sansL.length - 1]) : '') + ')' : '',
         avecN1: !!premN1, n1Txt: premN1 ? 'N-1 : le même mois un an plus tôt (pointillé), dès ' + ML[premN1.mo] + ' ' + premN1.an
-          : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1),
-        ouverture: M.some(x => x.partiel), etoile: !parJour && M.some(x => x.n1Court) };
+          : (canal !== 'tout' && M.some(x => x.n1Ok) ? 'pas de N-1 lu sur ce canal' : 'pas encore de N-1 : premières ventes en ' + ML[prem.mo] + ' ' + prem.an + ' — la ligne N-1 apparaîtra en ' + ML[prem.mo] + ' ' + (prem.an + 1)),
+        ouverture: M.some(x => x.partiel), etoile: !parJour && M.some(x => x.n1Court && v1(x) != null) };
     });
     out.unite = unite;
     out.chipTxt = 'sous chaque mois : l’écart au N-1, en %' + (parJour ? ' — par jour ouvert : le mois ÷ ses jours de vente, le N-1 ÷ les siens' : '');
+    // La ligne du canal : ce qu'il compte, sa part du CA du réseau sur les 12 derniers mois lus, et ce qui manque.
+    const pR = partPro(reseau12);
+    const manque = nonLus ? ' · B2B lu sur ' + (closTotal - nonLus) + ' mois-magasin sur ' + closTotal : '';
+    out.canalInfo = canal === 'tout' ? (pR != null ? 'Tout : tous les tickets de caisse · dont B2B ' + fP1(pR) + ' du CA du réseau sur 12 mois' + manque : '')
+      : (b2b ? 'B2B : les tickets des clients pro à TVA valide' : 'Comptoir : tous les tickets sauf ceux des clients pro à TVA valide — un pro sans TVA valide reste au comptoir')
+        + (pR != null ? ' · ' + fP1(b2b ? pR : 100 - pR) + ' du CA du réseau sur 12 mois' : '') + manque;
     // Trimestre par trimestre (demande du 11/11/2026, à la place de l'année par
     // année) : chaque trimestre face au même trimestre un an plus tôt, à
     // périmètre comparable — seuls les mois qui ont un N-1 comptent dans l'écart.
+    // En Comptoir et en B2B, seuls les mois dont le pro est lu.
     out.trimestres = [];
     D.magasins.forEach(m => {
-      const M = m.mois.map(prep);
+      const M = m.mois.map(prep).filter(x => canal === 'tout' || split(x));
       const tri = x => x.an * 10 + Math.ceil(x.mo / 3);
+      const C = x => lire(x, 'clients'), CA = x => lire(x, 'ca'), C1 = x => lire(x.n1, 'clients'), CA1 = x => lire(x.n1, 'ca');
       [...new Set(M.map(tri))].forEach((t, i) => {
-        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok);
-        const c = somme(ms, x => x.clients), ca = somme(ms, x => x.ca), j = somme(ms, x => x.jours);
-        const cC = somme(cmp, x => x.clients), caC = somme(cmp, x => x.ca), jC = somme(cmp, x => x.jours);
-        const c1 = somme(cmp, x => x.n1.clients), ca1 = somme(cmp, x => x.n1.ca), j1 = somme(cmp, x => x.n1.jours);
+        const ms = M.filter(x => tri(x) === t), cmp = ms.filter(x => x.n1Ok && C1(x) != null);
+        const c = somme(ms, C), ca = somme(ms, CA), j = somme(ms, x => x.jours);
+        const cC = somme(cmp, C), caC = somme(cmp, CA), jC = somme(cmp, x => x.jours);
+        const c1 = somme(cmp, C1), ca1 = somme(cmp, CA1), j1 = somme(cmp, x => x.n1.jours);
         const ec = c1 ? (parJour ? pc(cC / jC, c1 / j1) : pc(cC, c1)) : null, eca = ca1 ? (parJour ? pc(caC / jC, ca1 / j1) : pc(caC, ca1)) : null;
-        const ep = c1 ? pc(caC / cC, ca1 / c1) : null;
+        const ep = c1 && cC ? pc(caC / cC, ca1 / c1) : null;
         const cur = ms.find(x => x.enCours);
         const dernier = cmp[cmp.length - 1];
+        const pp = partPro(ms);
         out.trimestres.push({ mag: i === 0 ? this.rrCourt(m.nom) : '', premier: i === 0, nouvelAn: i > 0 && t % 10 === 1, enCours: !!cur,
           lab: 'T' + (t % 10) + ' ' + Math.floor(t / 10),
           per: MC[ms[0].mo] + ' → ' + (cur ? cur.jours + ' ' + MC[cur.mo] : MC[ms[ms.length - 1].mo]) + (ms.some(x => x.partiel) ? ' · ouverture' : ''),
-          clients: parJour ? fI(c / Math.max(1, j)) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
+          clients: parJour ? (b2b ? fD1(c / Math.max(1, j)) : fI(c / Math.max(1, j))) : fI(c), ca: parJour ? fI(ca / Math.max(1, j)) + ' €' : fK(ca), panier: c ? fE2(ca / c) : '—', jours: fI(j),
+          part: pp == null ? '—' : fP1(pp),
           ec: ec == null ? '' : sg(ec), ecCoul: col(ec), eca: eca == null ? '' : sg(eca), ecaCoul: col(eca), ep: ep == null ? '' : sg(ep), epCoul: col(ep),
           sansN1: !cmp.length,
           cmp: !cmp.length ? '' : (cmp.length === ms.length ? 'tout le trimestre' + (cur ? ' à date' : '')
             : cmp.length + ' mois : ' + MC[cmp[0].mo] + (cmp.length > 1 ? ' → ' + (dernier.enCours ? dernier.jours + ' ' : '') + MC[dernier.mo] : '')) });
       });
     });
-    out.colClients = parJour ? 'Clients / jour' : 'Clients';
-    out.colCa = parJour ? 'CA / jour' : 'CA';
+    out.colClients = (b2b ? 'Commandes pro' : 'Clients') + (parJour ? ' / jour' : '');
+    out.colCa = (b2b ? 'CA B2B' : (canal === 'comptoir' ? 'CA comptoir' : 'CA')) + (parJour ? ' / jour' : '');
+    out.colPanier = b2b ? 'Panier pro' : (canal === 'comptoir' ? 'Panier comptoir' : 'Panier');
+    out.colPart = canal === 'tout' ? 'Part B2B' : (b2b ? 'Part du CA' : '');
     out.sousTitre = D.magasins.length + ' magasin' + (D.magasins.length > 1 ? 's' : '') + ' · depuis ' + ML[+D.du.slice(5, 7)] + ' ' + D.du.slice(0, 4) + ' · mois par mois, face au N-1';
-    out.source = D.source || '';
+    out.source = (D.source || '') + (canal !== 'tout' && D.sourcePro ? ' · ' + D.sourcePro : '');
     return out;
   }
   /**
@@ -10205,7 +10255,7 @@ class App {
    * s'alignent d'un graphique à l'autre. Rend la géométrie ; le dessin est
    * dans svgEvolution.
    */
-  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC){
+  evGraphe(M, axe, v, v1, fmt, fAxe, parJour, MC, coul){
     const W = 880, H = 262, ml = 54, mr = 18, mt = 26, mb = 42;  // marges fixes : même tracé partout
     const parMois = {}; M.forEach(x => { parMois[x.mois] = x; });
     const L = axe.map(k => parMois[k] || { vide: true, mois: k, an: +k.slice(0, 4), mo: +k.slice(5, 7) });
@@ -10218,6 +10268,7 @@ class App {
     const vals = [];
     L.forEach((x, i) => { if (surCourbe[i] && n[i] != null) { vals.push(n[i]); } if (n1[i] != null) { vals.push(n1[i]); } });
     if (!vals.length) { L.forEach((x, i) => { if (n[i] != null) { vals.push(n[i]); } }); }
+    if (!vals.length) { return null; }   // rien de lu sur ce canal (le B2B d'avant les relevés)
     const vmin = Math.min(...vals), vmax = Math.max(...vals), et = (vmax - vmin) || Math.abs(vmax) || 1;
     let lo = Math.max(0, vmin - et * 0.25), hi = vmax + et * 0.18;
     const r = (hi - lo) / 4, p10 = Math.pow(10, Math.floor(Math.log10(r))), st = [1, 2, 2.5, 5, 10].map(k => k * p10).find(k => k >= r);
@@ -10225,7 +10276,7 @@ class App {
     const X = i => ml + (i + 0.5) * pas;
     const Y = val => mt + (hi - Math.max(lo, val)) / (hi - lo || 1) * (H - mt - mb);
     const f1 = x => x.toFixed(1);
-    const out = { W, H, ml, mr, mt, hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
+    const out = { W, H, ml, mr, mt, coul: coul || '#8D1D2C', hb: H - mb + 15, hc: H - mb + 32, grad: [], seps: [], aires: [], segs1: [], segs: [], cour: null, pts1: [], pts: [], labels: [], notes: [], cats: [] };
     for (let y = lo; y <= hi + 1e-6; y += st) { out.grad.push({ y: f1(Y(y)), t: fAxe(y), base: y === lo }); }
     // Avant la première vente du magasin : une bande vide, dite comme telle.
     const iPrem = L.findIndex(x => !x.vide);
@@ -10254,7 +10305,7 @@ class App {
       if (n1[i] != null) { out.pts1.push({ x: f1(X(i)), y: f1(Y(n1[i])), titre: titre(x) + ' · N-1 : ' + fmt(n1[i]) + (parJour ? ' par jour (' + x.n1.jours + ' j)' : '') }); }
       if (n[i] == null) { return; }
       const vide = x.partiel || x.enCours;
-      out.pts.push({ x: f1(X(i)), y: f1(Y(n[i])), vide, titre: titre(x) + ' · ' + fmt(n[i]) + (parJour ? ' par jour (' + x.jours + ' j vendus)' : '') + (x.n1Ok ? ' · N-1 : ' + fmt(n1[i]) : '') });
+      out.pts.push({ x: f1(X(i)), y: f1(Y(n[i])), vide, titre: titre(x) + ' · ' + fmt(n[i]) + (parJour ? ' par jour (' + x.jours + ' j vendus)' : '') + (n1[i] != null ? ' · N-1 : ' + fmt(n1[i]) : '') });
       if (x.partiel) { out.notes.push({ x: f1(X(i) + 7), y: f1(Y(n[i]) - 6), t: fmt(n[i]) + ' · ' + x.jours + ' j' }); }
     });
     // Les valeurs écrites : le plus haut, le plus bas, le dernier mois plein.
