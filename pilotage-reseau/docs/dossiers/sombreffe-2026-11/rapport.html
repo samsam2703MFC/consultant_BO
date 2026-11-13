@@ -82,6 +82,8 @@ body { margin: 0; background: var(--paper); }
 .rp-pistes li::marker { color: var(--muted); }
 .rp-sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 100ch; }
 .rp-pied { font-size: 11.5px; color: var(--muted); }
+.rp-renvoi { font-style: normal; color: var(--muted-2); }
+.rp-annexes { padding-top: 8px; }
 .rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
 .rp-chaleur th { background: none; border-bottom: 0; padding: 4px 4px; text-align: center; }
 .rp-chaleur th.jour, .rp-chaleur td.jour { text-align: left; padding-right: 10px; }
@@ -105,7 +107,7 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #octobre-octobre, #soins { break-before: page; }
+  #octobre-octobre, #taches, #soins, #annexes { break-before: page; }   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
 </style>
@@ -147,23 +149,16 @@ body { margin: 0; background: var(--paper); }
   <section class="rp-carte" id="octobre-octobre">
     <h2 class="rp-h2">Mai 2025 → octobre 2026</h2>
     <p class="rp-p" id="oo-intro"></p>
-    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
-    <p class="rp-aide" id="oo-note"></p>
     <div class="rp-part" id="trafic">
       <h3 class="rp-h3">Clients par jour ouvert</h3>
       <div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div>
     </div>
-    <div class="rp-deux">
-      <div class="rp-part" id="trimestres">
-        <h3 class="rp-h3">Trimestre par trimestre</h3>
-        <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
-      </div>
-      <div class="rp-part" id="comparable">
-        <h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
-        <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div>
-        <p class="rp-aide" id="comp-note"></p>
-      </div>
+    <div class="rp-part" id="comparable">
+      <h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div>
+      <p class="rp-aide" id="comp-note"></p>
     </div>
+    <p class="rp-aide rp-renvoi">Le détail mois par mois et trimestre par trimestre : annexe A.</p>
   </section>
 
   <section class="rp-carte" id="comptoir-b2b">
@@ -182,12 +177,7 @@ body { margin: 0; background: var(--paper); }
       </div>
     </div>
     <div class="rp-ouvert" id="a-completer"></div>
-  </section>
-
-  <section class="rp-carte" id="semaines">
-    <h2 class="rp-h2">Les dix dernières semaines</h2>
-    <p class="rp-p" id="sem-intro"></p>
-    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
+    <p class="rp-aide rp-renvoi">Les dix dernières semaines face à 2025, celles où le CA saute : annexe B.</p>
   </section>
 
   <section class="rp-carte" id="temps-morts">
@@ -198,9 +188,8 @@ body { margin: 0; background: var(--paper); }
     <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
     <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
     <div class="rp-legende" id="tm-legende"></div>
-    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
-    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
     <ul class="rp-points" id="tm-points"></ul>
+    <p class="rp-aide rp-renvoi">Les temps morts par jour de la semaine et face aux autres magasins : annexe C.</p>
   </section>
 
   <section class="rp-carte" id="taches">
@@ -212,12 +201,9 @@ body { margin: 0; background: var(--paper); }
         <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
     </div>
     <div class="rp-alerte" id="tc-sombreffe"></div>
-    <div class="rp-deux">
-      <div class="rp-part" id="tc-journee-zone"><h3 class="rp-h3">La journée en checklists</h3>
-        <div class="rp-table-zone"><table class="rp-table" id="tc-journee"></table></div><p class="rp-aide" id="tc-semaine"></p></div>
-      <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
-        <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
-    </div>
+    <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
+      <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
+    <p class="rp-aide rp-renvoi">La journée complète en checklists, heure par heure : annexe D.</p>
   </section>
 
   <section class="rp-carte" id="soins">
@@ -230,8 +216,40 @@ body { margin: 0; background: var(--paper); }
     <ol class="rp-pistes" id="pistes"></ol>
   </section>
 
+  <header class="rp-annexes" id="annexes">
+    <div class="rp-kicker">Sombreffe, comptoir et B2B</div>
+    <h2 class="rp-titre">Annexes</h2>
+    <div class="rp-sous">Les tableaux détaillés, dans l’ordre où le rapport y renvoie.</div>
+  </header>
+
+  <section class="rp-carte" id="annexe-a">
+    <h2 class="rp-h2">A · Les 18 mois, mois par mois</h2>
+    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
+    <p class="rp-aide" id="oo-note"></p>
+    <h3 class="rp-h3">Trimestre par trimestre</h3>
+    <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
+  </section>
+
+  <section class="rp-carte" id="semaines">
+    <h2 class="rp-h2">B · Les dix dernières semaines</h2>
+    <p class="rp-p" id="sem-intro"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
+  </section>
+
+  <section class="rp-carte" id="annexe-c">
+    <h2 class="rp-h2">C · Temps morts par jour et face au réseau</h2>
+    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
+    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
+  </section>
+
+  <section class="rp-carte" id="annexe-d">
+    <h2 class="rp-h2">D · La journée en checklists</h2>
+    <div class="rp-table-zone"><table class="rp-table" id="tc-journee"></table></div>
+    <p class="rp-aide" id="tc-semaine"></p>
+  </section>
+
   <section class="rp-carte" id="sources">
-    <h2 class="rp-h2">Sources et méthode</h2>
+    <h2 class="rp-h2">E · Sources et méthode</h2>
     <ul class="rp-sources" id="sources-liste"></ul>
   </section>
   <div class="rp-pied" id="pied"></div>
