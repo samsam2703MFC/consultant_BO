@@ -106,7 +106,7 @@ function vrcLire(array $o, string $type, int $id): array
         }
     }
     [$cr, $rend] = vrcCle($o, VRC_CLES_REND);
-    return ['type' => $type, 'id' => $id, 'nom' => vfTxt($o, ['name', 'recipe_name', 'label']), 'rendement' => $rend, 'cleRend' => $cr ?? 'yield_quantity',
+    return ['type' => $type, 'id' => $id, 'nom' => vfTxt($o, ['name', 'recipe_name', 'label']), 'rendement' => $rend, 'cleRend' => $cr,
         'lignes' => $lignes, 'sous' => $sous, 'modifiable' => $sansCle === 0 && (isset($o['materials']) || isset($o['subrecipes'])),
         'cles' => array_slice(array_keys($o), 0, 40)];
 }
@@ -120,6 +120,17 @@ function vrcQte(?float $q, string $u = ''): string
     $t = number_format($q, $d, ',', ' ');
     if ($d > 0) { $t = rtrim(rtrim($t, '0'), ','); }
     return $t . ($u !== '' ? ' ' . $u : '');
+}
+
+/**
+ * Une ligne reprise d'une AUTRE recette, prête à entrer dans celle-ci : sans son `connection_id` (mesuré le 13/11/2026 :
+ * chaque ligne de GET /recipes/{id} porte l'identifiant de son lien à SA recette ; le renvoyer ailleurs viserait ce lien-là).
+ */
+function vrcSansLien(array $e): array
+{
+    foreach (['connection_id', 'pivot_id', 'recipe_material_id', 'id_recipe', 'recipe_id', 'id_subrecipe_parent'] as $k) { unset($e[$k]); }
+    if (isset($e['pivot']) && is_array($e['pivot'])) { unset($e['pivot']['id'], $e['pivot']['recipe_id'], $e['pivot']['id_recipe']); }
+    return $e;
 }
 
 /** Pose une quantité dans une entrée, là où le panel la met (à plat ou dans son pivot). */
@@ -154,12 +165,15 @@ function vrcModifier(array $o, array $changements): array
             $n = (float) ($c['n'] ?? 0);
             if ($n <= 0) { $erreurs[] = 'Le rendement doit être positif.'; continue; }
             [$cr, $avant] = vrcCle($o, VRC_CLES_REND);
-            $corps[$cr ?? 'yield_quantity'] = $n;
+            // Mesuré le 13/11/2026 : GET /recipes/{id} ne rend pas le rendement (seul /cost le dit). Sans clé lue, on
+            // n'écrit pas une clé devinée : le rendement se pose au panel.
+            if ($cr === null) { $erreurs[] = 'Le panel ne rend pas le rendement de cette recette (GET /recipes/{id}) : il se pose au panel.'; continue; }
+            $corps[$cr] = $n;
             $lisible[] = 'Rendement ' . ($avant === null ? '—' : vrcQte($avant, '')) . ' → ' . vrcQte($n, '');
             continue;
         }
         if ($t === 'remplacer') {
-            foreach (VRC_CLES_LISTES as $l) { if (isset($c[$l]) && is_array($c[$l])) { $listes[$l] = array_values(array_filter($c[$l], 'is_array')); $touche[$l] = true; } }
+            foreach (VRC_CLES_LISTES as $l) { if (isset($c[$l]) && is_array($c[$l])) { $listes[$l] = array_map('vrcSansLien', array_values(array_filter($c[$l], 'is_array'))); $touche[$l] = true; } }
             $lisible[] = 'Lignes copiées : ' . count($listes['materials']) . ' matière(s), ' . count($listes['subrecipes']) . ' sous-recette(s)';
             continue;
         }
@@ -170,7 +184,7 @@ function vrcModifier(array $o, array $changements): array
             $liste = isset($c['liste']) && $c['liste'] === 'subrecipes' ? 'subrecipes' : 'materials';
             $cle = vrcIdLigne($e, $liste);
             if ($cle === '' || $trouver($cle) !== null) { $erreurs[] = 'La ligne « ' . (vfTxt($e, ['name']) ?: $cle) . ' » est déjà dans la recette.'; continue; }
-            $listes[$liste][] = vrcPoserQte($e, $q); $touche[$liste] = true;
+            $listes[$liste][] = vrcPoserQte(vrcSansLien($e), $q); $touche[$liste] = true;
             $lisible[] = '+ ' . (vfTxt($e, ['name']) ?: $cle) . ' : ' . vrcQte($q, vrcUnite($e));
             continue;
         }

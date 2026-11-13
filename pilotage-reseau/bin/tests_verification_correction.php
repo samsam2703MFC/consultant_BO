@@ -250,6 +250,21 @@ verifie('vrcModifier : l’inverse garde l’avant', $m['inverse']['materials'] 
 verifie('vrcModifier : ligne inconnue = erreur', vrcModifier($o, [['type' => 'qte', 'cle' => 'm77', 'q' => 1]])['erreurs'] !== []);
 verifie('vrcConstater : relu pareil = rien', vrcConstater($m['corps'], array_merge($o, $m['corps'])) === []);
 verifie('vrcConstater : relu inchangé = écart', vrcConstater($m['corps'], $o) === ['yield_quantity', 'materials', 'subrecipes']);
+// La forme mesurée au panel le 13/11/2026 (GET /recipes/489) : `id` = la matière, `connection_id` = le lien, quantités en texte, pas de rendement.
+$vrai = ['id' => 489, 'name' => 'Wrapps - Poulet & Parmesan', 'id_product' => 6700018,
+    'materials' => [['connection_id' => 464, 'id' => 607, 'quantity' => '2.00', 'waste_amount_perc' => '0.0000', 'name' => 'Épices poulet', 'id_unit' => 3, 'unit_name' => 'g'],
+                    ['connection_id' => 465, 'id' => 387, 'quantity' => '10.00', 'name' => 'Tomates semi séchées', 'id_unit' => 3, 'unit_name' => 'g']],
+    'subrecipes' => [['connection_id' => 474, 'id' => 307, 'quantity' => '20.00', 'name' => 'Mayonnaise maison', 'id_unit' => 3, 'unit_name' => 'g']]];
+$lu = vrcLire($vrai, 'recette', 489);
+verifie('forme réelle : lignes m607, m387 et sous-recette s307, modifiable', array_column($lu['lignes'], 'cle') === ['m607', 'm387'] && $lu['sous'][0]['cle'] === 's307' && $lu['modifiable'] && $lu['cleRend'] === null);
+$m = vrcModifier($vrai, [['type' => 'qte', 'cle' => 's307', 'q' => 2], ['type' => 'ajouter', 'entree' => ['connection_id' => 999, 'id' => 610, 'quantity' => '5.00', 'name' => 'Parmesan', 'id_unit' => 3], 'q' => 4]]);
+verifie('forme réelle : la quantité de la sous-recette, le connection_id gardé', $m['corps']['subrecipes'][0]['quantity'] === 2.0 && $m['corps']['subrecipes'][0]['connection_id'] === 474);
+verifie('forme réelle : une ligne reprise d’ailleurs part sans son connection_id', !isset($m['corps']['materials'][2]['connection_id']) && $m['corps']['materials'][2]['quantity'] === 4.0 && $m['corps']['materials'][0]['connection_id'] === 464);
+verifie('forme réelle : pas de rendement lu, pas de rendement écrit', vrcModifier($vrai, [['type' => 'rendement', 'n' => 12]])['corps'] === [] && vrcModifier($vrai, [['type' => 'rendement', 'n' => 12]])['erreurs'] !== []);
+verifie('forme réelle : « 2.00 » relu vaut 2', vrcConstater(['materials' => [['id' => 607, 'quantity' => 2.0]]], ['materials' => [['id' => 607, 'quantity' => '2.00']]]) === []);
+$c2 = vrcModifier($vrai, [['type' => 'remplacer', 'materials' => $vrai['materials'], 'subrecipes' => []]]);
+verifie('copier : les lignes du modèle partent sans leurs connection_id', !isset($c2['corps']['materials'][0]['connection_id']) && $c2['corps']['materials'][0]['id'] === 607);
+
 $pr = vrcProches('Pâtes Amatriciana', [418 => 'Pâtes Amatriciana', 12 => 'Merveilleux', 30 => 'Pates amatriciana (old)'], [30 => true]);
 verifie('vrcProches : même nom et libre d’abord', ($pr[0]['rid'] ?? 0) === 418 && $pr[0]['pareil'] && $pr[0]['libre']);
 verifie('vrcProches : écarte les noms sans rapport', !in_array(12, array_column($pr, 'rid'), true));

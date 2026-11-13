@@ -41,7 +41,7 @@ export function gesteDe(l){
       prop: '« ' + c.matiere + ' » : ' + qte(c.q, c.u) + ' par pièce → ' + qte(c.q * c.facteur, c.u) + ' ; la pièce passe de ' + fE(c.coutAvant) + ' à ' + fE(c.coutApres) + '.' }
       // Une ligne lourde dans une sous-recette, qui peut servir à d'autres produits : le volet, jamais un clic.
       : (l.rid ? { type: 'volet', bouton: 'Corriger', prop: c.sous ? '« ' + c.matiere + ' » est dans la sous-recette « ' + c.sous + ' », qui peut servir à d’autres produits : la recette s’ouvre en correction (la quantité de sous-recette, ou sa ligne).' : '' } : null);
-    case 'rend': return l.rid ? { type: 'ligne', bouton: 'Poser le rendement', prop: 'Le nombre de pièces que donne la recette entière.' } : null;
+    case 'rend': return l.rid ? { type: 'ligne', bouton: 'Poser le rendement', prop: 'Le nombre de pièces que donne la recette entière. Si le panel ne le rend pas dans la recette, « Vérifier » le dit : il se pose alors au panel.' } : null;
     case 'port': return { type: 'ligne', bouton: 'Poser la fraction', prop: c.fraction ? 'Lue dans le nom : ' + nf(c.fraction, 2) + ' de la pièce.' : 'La part de la pièce que vend la portion (½ = 0,5, ¼ = 0,25).' };
     case 'prix': return (c.matieres || []).length ? { type: 'ligne', bouton: 'Saisir ' + ((c.matieres || []).length > 1 ? 'les prix' : 'le prix'),
       prop: (c.matieres || []).filter(m => m.propose != null).slice(0, 2).map(m => m.nom + ' : ' + fE(m.propose, m.propose < 1 ? 4 : 2) + '/' + (m.u || 'unité') + ' ailleurs').join(' · ') } : null;
@@ -330,7 +330,7 @@ export function valsEdition(app, F){
   return {
     chargement: false, blocs, lienRecette: lienPanel(L.recette, { rid: d.rid, pid: d.pid }), liens: Object.keys(L).map(k => ({ txt: { produit: 'Produit', recette: 'Recette ' + d.rid, sousRecette: 'Sous-recettes', matiere: 'Matières', portion: 'Portions' }[k] || k, url: L[k] })),
     rendement: { val: E.rend != null ? E.rend : (R.rendement == null ? '' : String(R.rendement).replace('.', ',')), avant: R.rendement, change: rendN > 0 && Math.abs(rendN - (R.rendement || 0)) > 1e-9,
-      poser: R.modifiable ? e => maj({ rend: e.target.value }) : null },
+      poser: R.modifiable && R.cleRend ? e => maj({ rend: e.target.value }) : null },
     total: { avant: fE(avant, 3), apres: fE(apres, 3), change: Math.abs(apres - avant) > 1e-6 || changements.length > 0, estime: changements.some(c => c.type === 'ajouter') },
     magasins: F && F.magasinsBruts ? F.magasinsBruts.filter(m => m.present).map(m => ({ nom: m.nom, avant: fE(m.cout), apres: m.cout == null ? '—' : fE(m.cout * ratio), prix: fE(m.prixHt),
       food: m.cout != null && m.prixHt ? nf(100 * m.cout * ratio / m.prixHt, 0) + ' %' : '—', ton: m.cout != null && m.prixHt ? ((100 * m.cout * ratio / m.prixHt) >= 100 || (100 * m.cout * ratio / m.prixHt) < 5 ? 'ko' : ((100 * m.cout * ratio / m.prixHt) > 40 ? 'att' : 'ok')) : 'mu' })) : [],
