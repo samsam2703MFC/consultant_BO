@@ -1437,3 +1437,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-13T12:36:52Z dashboard : 5 corrections
 2026-11-13T12:42:55Z Dashboard magasin › Fidélité : onglet Cartes de fidélité (ERP en direct), détail de carte, carte dans la fiche client
 2026-11-13T12:45:40Z fiche produit : libellé du prix catalogue
+2026-11-13T12:48:03Z Résultat › Évolution magasin : bascule ventes Tout | Comptoir | B2B
