@@ -45,20 +45,33 @@ verifie($s['enCours'] === 8 && $s['closes'] === 7, 'jeudi 14/01 : semaine 8 en c
 verifie($s['semaines'][7]['du'] === '2027-01-11' && $s['semaines'][7]['au'] === '2027-01-17', 'S8 du lundi 11 au dimanche 17/01');
 verifie($s['au'] === '2027-02-21', 'la saison finit le dimanche 21/02');
 verifie(fidSaison('2026-11-22')['enCours'] === 0 && fidSaison('2026-11-22')['closes'] === 0, 'la veille : rien de commencé');
+$A = fidAnnee('2027-01-14');
+verifie(array_column($A, 'id') === ['H27', 'P27', 'E27', 'A27'] && array_column($A, 'etat') === ['cours', 'avenir', 'avenir', 'avenir'], 'quatre cartes de bingo dans l’année');
+verifie($A[1]['du'] === '2027-02-22' && $A[3]['au'] === '2027-11-21', 'chaque saison commence le lundi qui suit la précédente');
+foreach (fidBingoConf()['saisons'] as $x) { verifie(count($x['semaines']) === 13, 'treize semaines : ' . $x['id']); }
+verifie(fidSaison('2027-02-22')['id'] === 'P27' && fidSaison('2027-02-21')['id'] === 'H27', 'la carte suivante arrive le lundi');
+verifie(fidSaison('2027-01-14', 'E27')['etat'] === 'avenir' && fidSaison('2027-01-14', 'E27')['campagne'] === 'Bingo été', 'une autre saison se choisit');
 $b = fidBonsSaison($s);
-verifie(array_column($b, 'k') === [3, 6, 9, 12] && array_column($b, 'valeur') === [4.9, 9.9, 19.9, 29.9], 'un bon toutes les 3 cases, de plus en plus gros');
+verifie(array_column($b, 'k') === [3, 6, 9, 12] && array_column($b, 'valeur') === [2.0, 2.0, 2.0, 2.0], 'un bon de 2 € toutes les 3 cases (handoff)');
+verifie(array_column($b, 'nom') === ['Bon de l’Avent', 'Bon des Rois', 'Bon de l’hiver', 'Bon carte pleine'], 'les noms des bons selon le rang');
 verifie(fidUtc('2026-11-23') === '2026-11-22 23:00:00' && fidUtc('2027-06-01') === '2027-05-31 22:00:00', 'minuit de Bruxelles en UTC (hiver, été)');
 
 // --- 2. GET /fidelite : la carte et le bingo ------------------------------------------------
 $d = ep_fidelite();
 verifie($d['erp']['ok'] && $d['carte']['id'] === 12 && $d['carte']['code'] === 'FID-POINTS', 'la carte du programme : FID-POINTS');
 verifie($d['carte']['verrou'] === true && $d['carte']['revision'] === 7, 'la carte est figée, revision 7');
-verifie($d['carte']['points']['tiers'] === [['points' => 150, 'voucher_cents' => 500]], 'le palier 150 → 5 €');
+verifie($d['carte']['points']['tiers'] === [['points' => 100, 'voucher_cents' => 500]], 'le palier 100 → 5 €');
+verifie($d['bingo']['seuil'] === 10.0 && $d['bingo']['multiplicateur'] === 2.0 && $d['bingo']['palier']['points'] === 100, 'les réglages du handoff : 10 €, ×2 après la case, 100 points');
 verifie(count($d['carte']['points']['bonuses']) === 2 && $d['carte']['points']['bonuses'][0]['days'] === [1, 2, 3], 'deux ×2, mardi à jeudi (lundi = 0)');
 verifie(count($d['autres']) === 4 && $d['autres'][0]['nom'] === 'Carte Pain', 'quatre cartes à tampons à arrêter');
 verifie(count($d['magasins']) === 4 && $d['magasins'][0]['nom'] === 'Corbais', 'les magasins de l’ERP, nom court');
-verifie(array_map(static fn ($x) => $x['campagne']['id'] ?? null, $d['bingo']['bons']) === [41, 42, 43, 44], 'chaque bon a sa campagne « Bingo … € »');
+verifie(array_map(static fn ($x) => $x['campagne']['id'] ?? null, $d['bingo']['bons']) === [41, 41, 41, 41], 'les bons de 2 € partagent la campagne « Bingo hiver · 2 € »');
 verifie($d['bingo']['superBon']['campagne']['statut'] === 'DRAFT' && $d['bingo']['superBon']['provisoire'], 'le super bon : campagne en brouillon, montant provisoire');
+verifie(count($d['annee']) === 4 && $d['annee'][0]['etat'] === 'cours', 'les quatre cartes de l’année');
+$_GET = ['saison' => 'P27'];
+$dp = ep_fidelite();
+verifie($dp['bingo']['saison']['id'] === 'P27' && ($dp['bingo']['bons'][0]['campagne']['id'] ?? null) === 51 && $dp['bingo']['superBon']['campagne'] === null, 'le printemps a ses propres campagnes');
+$_GET = [];
 
 // --- 3. GET /fidelite/clients : les cases viennent des points de chaque semaine -------------
 $c = ep_fidelite_clients();
@@ -81,21 +94,22 @@ $cq = ep_fidelite_clients();
 verifie($cq['membres'] !== [] && count(array_filter($cq['membres'], static fn ($m) => !str_starts_with($m['nom'], 'Julie'))) === 0, 'la recherche par prénom');
 $_GET = [];
 
-// La règle elle-même : 20 points dans la semaine, tous magasins, sinon pas de case.
+// La règle elle-même : 10 € d'achats dans la semaine, tous magasins, sinon pas de case (les points n'y sont pour rien).
 $GLOBALS['FID_ERP'] = static function (string $m, string $p, ?array $b) {
     if (str_starts_with($p, '/admin/loyalty/options')) { return ['code' => 200, 'corps' => ['shops' => [['id' => 2, 'name' => 'Corbais'], ['id' => 3, 'name' => 'Gosselies']]], 'erreur' => null]; }
     parse_str((string) parse_url($p, PHP_URL_QUERY), $q);
     $shop = (int) preg_replace('#^/shops/(\d+)/.*#', '$1', $p);
-    // Semaine 1 : 12 points à Corbais + 8 à Gosselies = 20 → case ; semaine 2 : 19 → pas de case.
-    $pts = ['2026-11-23' => [2 => 12, 3 => 8], '2026-11-30' => [2 => 19, 3 => 0]][$q['from'] ?? ''][$shop] ?? 0;
-    $f = ['id' => 7, 'name' => 'Julie', 'surname' => 'V', 'programs' => [['id' => 12, 'global_progress' => ['points' => ['balance' => 40, 'tiers' => []]], 'shop_activity' => ['points_earned' => $pts]]], 'shop_activity' => []];
+    // Semaine 1 : 6,40 € à Corbais + 3,60 € à Gosselies = 10 € → case ; semaine 2 : 9,99 € (et 40 points) → pas de case.
+    [$eur, $pts] = ['2026-11-23' => [2 => [6.4, 6], 3 => [3.6, 3]], '2026-11-30' => [2 => [9.99, 40], 3 => [0, 0]]][$q['from'] ?? ''][$shop] ?? [0, 0];
+    $f = ['id' => 7, 'name' => 'Julie', 'surname' => 'V', 'programs' => [['id' => 12, 'global_progress' => ['points' => ['balance' => 40, 'tiers' => []]], 'shop_activity' => ['points_earned' => $pts]]],
+        'shop_activity' => ['gross_sales_before_corrections' => number_format($eur, 2, '.', '')]];
     return ['code' => 200, 'corps' => ['items' => [$f], 'pagination' => ['total' => 1]], 'erreur' => null];
 };
 $GLOBALS['FID_AUJOURDHUI'] = '2026-12-07';
 $n = 0;
-$C = fidBingoClients(fidSaison(), 12, ['2', '3'], 20, $n);
-verifie($C[7]['points'][1] === 20 && $C[7]['coches'][1] === true, '12 + 8 points dans deux magasins = une case');
-verifie($C[7]['points'][2] === 19 && $C[7]['coches'][2] === false && $C[7]['cases'] === 1, '19 points : pas de case');
+$C = fidBingoClients(fidSaison(), 12, ['2', '3'], 10.0, $n);
+verifie(abs($C[7]['euros'][1] - 10.0) < 0.001 && $C[7]['coches'][1] === true, '6,40 € + 3,60 € dans deux magasins = une case');
+verifie($C[7]['coches'][2] === false && $C[7]['points'][2] === 40 && $C[7]['cases'] === 1, '9,99 € : pas de case, quels que soient les points');
 verifie($C[7]['nom'] === 'Julie V.', 'prénom et initiale');
 
 // --- 4. POST /fidelite/simuler -----------------------------------------------------------------
@@ -108,7 +122,9 @@ $GLOBALS['corps'] = ['shop' => 5, 'montant' => 22.4, 'quand' => '2027-01-14T15:1
 verifie(wr_fidelite_simuler()['points'] === 66, 'le barème en cours d’écriture : Sombreffe ×1,5 → 66 points');
 $GLOBALS['corps'] = ['shop' => 2, 'montant' => 12, 'quand' => '2027-01-18T10:00'];
 $r = wr_fidelite_simuler();
-verifie($r['points'] === 12 && $r['coche'] === false, 'lundi 10 h, 12 € : 12 points, pas de case');
+verifie($r['points'] === 12 && $r['coche'] === true, 'lundi 10 h, 12 € : 12 points, et la case (≥ 10 €)');
+$GLOBALS['corps'] = ['shop' => 2, 'montant' => '6,40', 'quand' => '2027-01-11T10:00'];
+verifie(wr_fidelite_simuler()['coche'] === false, '6,40 € seul ne coche pas');
 verifie($e->ecrits[0][1] === '/admin/loyalty/simulate' && count(array_filter($e->ecrits, static fn ($w) => $w[1] !== '/admin/loyalty/simulate')) === 0, 'simuler n’écrit rien d’autre');
 
 // --- 5. POST /fidelite/publier -----------------------------------------------------------------
@@ -142,7 +158,7 @@ verifie($r['bons'][2]['ayants'] === 0 && $r['bons'][4]['k'] === 13, 'personne à
 $r = fidBingoBons(true);
 verifie($r['crees'] === $dus && $dus > 0, 'les bons dus sont créés (campagnes actives)');
 $w = $e->ecrits[0][2];
-verifie(preg_match('/^BGOH27K[36]C\d+$/', $w['code']) === 1 && $w['usage_limit'] === 1 && $w['valid_from'] === '2027-01-15 00:00:00' && $w['valid_to'] === '2027-02-14 23:59:59', 'un code par client, valable 30 jours dès le lendemain');
+verifie(preg_match('/^BGOH27K[36]C\d+$/', $w['code']) === 1 && str_contains($e->ecrits[0][1], '/41/codes') && $w['usage_limit'] === 1 && $w['valid_from'] === '2027-01-15 00:00:00' && $w['valid_to'] === '2027-02-14 23:59:59', 'un code par client, valable 30 jours dès le lendemain');
 $r = fidBingoBons(true);
 verifie($r['crees'] === 0, 'une seconde fois : rien de plus');
 $e->campagnes[41]['status'] = 'DRAFT';

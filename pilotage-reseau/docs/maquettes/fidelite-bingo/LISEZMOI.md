@@ -106,3 +106,14 @@ php -S 127.0.0.1:8098 -t public docs/maquettes/fidelite-bingo/capture_api.php
 ```bash
 node docs/maquettes/fidelite-bingo/capturer.cjs
 ```
+
+## Structure et handoff (13/11/2026, après la version codée)
+
+- **Structure** : une carte à points permanente et **quatre cartes de bingo par an** ; l'écran montre les cinq en
+  tête du Programme, une saison se choisit d'un clic (`code-programme-printemps.png`). Printemps, été, automne :
+  thèmes proposés, « à valider ».
+- **Handoff de Sam** (`handoff/` : README, maquette interactive, source) : il fait foi. Le code en suit les règles —
+  case dès 10 € d'achats, bons de 2 €, super bon de 10 €, 100 points = 5 € — et remplace la règle « 20 points » des
+  maquettes 1 à 3 ci-dessus. Deux règles n'ont pas d'API dans l'ERP (le ×2 par client après la case, l'échange
+  automatique au palier) : l'écran le dit, rien n'est simulé.
+- Les dessins de `public/assets/img/bingo` sont ceux du handoff (560 px).

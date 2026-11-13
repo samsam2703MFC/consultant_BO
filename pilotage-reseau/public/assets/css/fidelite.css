@@ -74,6 +74,19 @@
 .fi-tog.on{background:var(--prize)}.fi-tog.on::after{left:19px}
 .fi-pt{display:inline-block;width:8px;height:8px;border-radius:999px;margin-right:4px;vertical-align:0}
 
+/* Les cartes de l'année : la carte à points, puis les quatre cartes de bingo */
+.fi-an{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,2fr);gap:10px;align-items:stretch}
+.fi-an>.fi-carte{grid-template-columns:1fr}
+.fi-annee{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.fi-sa{position:relative;text-align:left;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 12px 10px;display:flex;flex-direction:column;gap:3px;align-items:flex-start}
+.fi-sa.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.fi-sa.passee{opacity:.6}
+.fi-sa-i{position:absolute;right:10px;top:10px;width:38px;height:38px;opacity:.85}
+.fi-sa b{font-size:14px;padding-right:40px}
+.fi-sa small{font-size:11px;color:var(--muted)}
+.fi-sa em{margin-top:4px}
+.fi-tag.neu{background:var(--chip);color:var(--muted-2)}
+.fi-tag.av{background:var(--prize-soft);color:var(--prize-ink)}
 /* La carte */
 .fi-carte{display:grid;grid-template-columns:320px minmax(0,1fr)}
 .fi-carte-v{background:var(--accent);color:#fff;padding:15px 18px;display:flex;flex-direction:column;gap:12px;justify-content:space-between}

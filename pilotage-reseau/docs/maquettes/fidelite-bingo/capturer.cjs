@@ -35,6 +35,13 @@ const D = __dirname;
   await p.locator('.fi-card:has-text("Simuler") button:has-text("Simuler")').click();
   await attendre('.fi-kpi');
   await plein('code-programme.png');
+  // Une autre carte de l'année : le printemps (thèmes à valider, campagnes en brouillon).
+  await p.locator('.fi-sa:has-text("Printemps")').click();
+  await p.waitForFunction(() => /carte de bingo · printemps/i.test(document.body.innerText), null, { timeout: 60000 });
+  await attendre('.fi-sem-g');
+  await plein('code-programme-printemps.png');
+  await p.locator('.fi-sa:has-text("Hiver")').click();
+  await p.waitForFunction(() => /carte de bingo · hiver/i.test(document.body.innerText), null, { timeout: 60000 });
 
   // Les clients : le réseau, puis les bons dus.
   await p.locator('.fi-segc button:has-text("Clients")').click();

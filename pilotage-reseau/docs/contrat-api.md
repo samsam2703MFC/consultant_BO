@@ -5255,19 +5255,22 @@ Programme et Clients. Serveur : `src/fidelite.php`. Maquettes et captures du cod
 Remplace la version du 24/10/2026 : `ceo_fid_regle`, `ceo_fid_visite` et le jeu d'essai ne sont plus lus ni créés (les
 tables restent en base, inutilisées), `POST /fidelite/regles` n'existe plus.
 
-**Le modèle.** Une seule carte, la carte à points de l'ERP (`points_config` : tranches, ×2, coefficients par magasin,
-paliers d'échange, validités), choisie par son code (`carte` de `src/data/fidelite_bingo.json`, la version en cours la
-plus haute). Le bingo de saison vit dedans : la case de la semaine se coche quand le client a gagné `seuilPoints`
-points sur la carte du lundi au dimanche, tous magasins (`programs[].shop_activity.points_earned` de
-`/shops/{id}/loyalty/customers?card_id&from&to`) ; toutes les `tousLes` cases un bon (une campagne de l'ERP par valeur,
-nommée « Bingo … 4,90 € ») ; carte pleine, le super bon. Le calendrier (semaines, thèmes, dessins) est dans
-`src/data/fidelite_bingo.json`. Aucune table : un cache de fichiers temporaires garde les semaines closes un jour.
+**Le modèle** (structure du 13/11/2026 et handoff de Sam, `docs/maquettes/fidelite-bingo/handoff`, qui fait foi) :
+une carte de fidélité à points permanente dans l'ERP (`points_config`, choisie par son code : `carte` de
+`src/data/fidelite_bingo.json`), et **quatre cartes de bingo par an**, une par saison de 13 semaines (le calendrier,
+les thèmes et les dessins du même fichier). Le bingo fait revenir : la case de la semaine se coche dès `seuilEuros`
+(10 €) d'achats du lundi au dimanche, tous magasins (`shop_activity.gross_sales_before_corrections` de
+`/shops/{id}/loyalty/customers?card_id&from&to`, additionné), une case par semaine ; toutes les `tousLes` cases un bon
+(2 €), 13 / 13 le super bon (10 €) — des codes de la campagne de la saison, nommée « Bingo hiver · 2 € ». Les points
+font consommer : 1 point par euro et un bon tous les 100 points (le barème de la carte). **Pas dans l'API**, dit à
+l'écran et à demander à l'ERP : le ×2 d'un client jusqu'au dimanche une fois sa case cochée, et l'échange automatique
+au palier. Aucune table : un cache de fichiers temporaires garde les semaines closes un jour.
 
 | Méthode | Route | Rôle |
 |---|---|---|
-| GET | `/fidelite` | `{source:'api', erp:{ok, erreur}, aujourdhui, heure, magasins[], carte:{id, code, nom, version, revision, verrou, actif, magasins, debut, fin, points (points_config)}, autres[] (cartes actives à arrêter), bingo:{saison:{id, nom, du, au, semaines[{n, du, au, titre, fete, ill, etat: passee \| cours \| avenir}], enCours, closes}, seuil, tousLes, validite, bons[{k, valeur, nom, motif, campagne}], superBon, tirage}}`. Lit `GET /admin/loyalty/cards`, `/admin/loyalty/options`, `/admin/voucher-campaigns?name=Bingo`. |
-| GET | `/fidelite/clients?shop=&q=` | `{erp, saison, seuil, tousLes, kpis:{membres, venus, joueurs, partJoueurs, semaine, semaineFinie, points, transactions, ventes, reconnues, appareils}, semaines[{n, titre, part, avant, coches, venus}], repartition[cases], relances[{cle, n, titre, detail}], membres[≤ 12, ou 40 avec q], nbMembres, appels}`. Les cases se calculent sur tous les magasins ; `shop` filtre les membres du magasin. `avant` : la même mesure 364 jours plus tôt. |
-| POST | `/fidelite/simuler` | `{shop, montant, quand: AAAA-MM-JJTHH:MM, points?}` → `POST /admin/loyalty/simulate` → `{points, tranches, coefMagasin, coefBonus, heure, seuil, coche}`. Rien n'est écrit. |
+| GET | `/fidelite?saison=` | `{source:'api', erp:{ok, erreur}, aujourdhui, heure, magasins[], annee[4 cartes de bingo {id, nom, du, au, ill, etat, aValider, campagne}], carte:{id, code, nom, version, revision, verrou, actif, magasins, debut, fin, points (points_config)}, autres[] (cartes actives à arrêter), bingo:{seuil (€), multiplicateur, palier, saison:{id, nom, du, au, campagne, aValider, semaines[{n, du, au, titre, fete, ill, etat: passee \| cours \| avenir}], enCours, closes}, seuil, tousLes, validite, bons[{k, valeur, nom, motif, campagne}], superBon, tirage}}`. Lit `GET /admin/loyalty/cards`, `/admin/loyalty/options`, `/admin/voucher-campaigns?name=Bingo`. |
+| GET | `/fidelite/clients?shop=&q=` | `{erp, saison, seuil (€), tousLes, kpis:{membres, venus, joueurs, partJoueurs, semaine, semaineFinie, points, transactions, ventes, reconnues, appareils}, semaines[{n, titre, part, avant, coches, venus}], repartition[cases], relances[{cle, n, titre, detail}], membres[≤ 12, ou 40 avec q], nbMembres, appels}`. Les cases se calculent sur tous les magasins ; `shop` filtre les membres du magasin. `avant` : la même mesure 364 jours plus tôt. |
+| POST | `/fidelite/simuler` | `{shop, montant, quand: AAAA-MM-JJTHH:MM, points?}` → `POST /admin/loyalty/simulate` → `{points, tranches, coefMagasin, coefBonus, heure, seuil, montant, coche}` (`coche` : ce ticket seul atteint le seuil). Rien n'est écrit. |
 | POST | `/fidelite/publier` | `{carte?:{id, revision, points}, debut?, arreter?:[{id, le?}], qui}`. Carte libre : `PATCH /admin/loyalty/cards/{id}` avec sa revision. Carte figée (`terms_locked`) : `POST` de la version suivante (même code, dès `debut` à minuit, Bruxelles) puis `PATCH ends_at` de l'ancienne. Puis la fin des cartes à arrêter. 409 si la revision a changé ; l'ERP n'a pas de transaction : `etapes[]` dit ce qui est fait. Journalisé (`Fidélité`). |
 | POST | `/fidelite/bingo/bons` | `{ecrire?}` → `{bons[{k, valeur, campagne, ayants, emis, aEmettre}], crees}`. Simulation par défaut ; `ecrire: true` crée un code par client dû (`POST /admin/voucher-campaigns/{id}/codes`, `BGO{saison}K{case}C{client}`, valable 30 jours dès le lendemain, une utilisation), seulement si la campagne est `ACTIVE`. |
 | GET | `/fidelite/cron?jeton=` | Le lundi 6 h (`forcer=1` hors horaire) : les bons de la semaine close. Jeton des rapports. |

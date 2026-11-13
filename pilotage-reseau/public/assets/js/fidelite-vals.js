@@ -27,13 +27,14 @@ const num = v => { const n = parseFloat(String(v).replace(',', '.')); return isF
 function charge(app, quoi, force){
   const S = app.state, shop = S.fidShop || '', q = S.fidQ || '';
   const k = quoi === 'p' ? 'fidP' : 'fidC';
-  const cle = quoi === 'p' ? 'p' : 'c|' + shop + '|' + q;
+  const sa = S.fidSaison || '';
+  const cle = quoi === 'p' ? 'p|' + sa : 'c|' + shop + '|' + q;
   const b = S[k];
   if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
   if (!force && app['_' + k] === cle) { return; }
   app['_' + k] = cle;
   app.setState({ [k]: { cle, chargement: true, d: b && b.cle === cle ? b.d : (b && b.d) || null } });
-  const qs = quoi === 'p' ? '' : '?' + [shop ? 'shop=' + encodeURIComponent(shop) : '', q ? 'q=' + encodeURIComponent(q) : ''].filter(Boolean).join('&');
+  const qs = quoi === 'p' ? (sa ? '?saison=' + encodeURIComponent(sa) : '') : '?' + [shop ? 'shop=' + encodeURIComponent(shop) : '', q ? 'q=' + encodeURIComponent(q) : ''].filter(Boolean).join('&');
   readOne((quoi === 'p' ? '/fidelite' : '/fidelite/clients') + (qs === '?' ? '' : qs)).then(d => {
     app['_' + k] = null;
     app.setState({ [k]: { cle, chargement: false, d: d || { erp: { ok: false, erreur: 'API du cockpit injoignable' } } } });
@@ -94,12 +95,16 @@ function valsProgramme(app, f){
   const mags = d.magasins || [];
   const B = d.bingo || {};
   const sa = B.saison;
-  f.saison = sa ? { nom: sa.nom, enCours: sa.enCours, n: sa.semaines.length, du: ddmm(sa.du), au: ddmm(sa.au) } : null;
+  f.saison = sa ? { nom: sa.nom, enCours: sa.enCours, n: sa.semaines.length, du: ddmm(sa.du), au: ddmm(sa.au), aValider: sa.aValider } : null;
   // La carte.
   const c = d.carte;
   f.carte = c ? { nom: c.nom, code: c.code, version: c.version, revision: c.revision, verrou: c.verrou, id: c.id, nMag: (c.magasins || []).length,
     debut: c.debut ? ddmm(c.debut.slice(0, 10)) : '' } : null;
-  if (f.carte && c.points) { f.carte.regle = eur(c.points.slice_cents / 100) + ' = ' + c.points.points_per_slice + ' point' + (c.points.points_per_slice > 1 ? 's' : '') + (B.seuil ? ' · une case dès ' + B.seuil + ' points par semaine' : ''); }
+  if (f.carte && c.points) { f.carte.regle = eur(c.points.slice_cents / 100) + ' = ' + c.points.points_per_slice + ' point' + (c.points.points_per_slice > 1 ? 's' : '') + (B.seuil ? ' · une case dès ' + eur(B.seuil) + ' par semaine' : ''); }
+  // Les cartes de l'année : la carte à points, et les quatre cartes de bingo (une par saison).
+  f.annee = (d.annee || []).map(x => ({ id: x.id, nom: x.nom, ill: x.ill, du: ddmm(x.du), au: ddmm(x.au), etat: x.etat, aValider: x.aValider,
+    etatTxt: x.etat === 'cours' ? 'en cours · S' + x.enCours : (x.etat === 'passee' ? 'terminée' : 'à venir'), on: sa && x.id === sa.id,
+    choisir: () => app.setState({ fidSaison: x.id }) }));
   f.autres = (d.autres || []).map(a => ({ nom: a.nom, quoi: a.tampons ? a.tampons + ' tampons → ' + a.recompense : (a.points ? 'points' : ''), couleur: a.couleur || '#B8B2A8' }));
   f.arreter = S.fidArreter !== false;
   f.basculerArreter = () => app.setState({ fidArreter: !f.arreter });
@@ -136,7 +141,7 @@ function valsProgramme(app, f){
       validites: f.modifie('voucher_validity_days') || f.modifie('points_validity_days') };
   }
   // Le bingo.
-  f.bingo = sa ? { seuil: B.seuil, tousLes: B.tousLes, validite: B.validite, prefixe: B.prefixe,
+  f.bingo = sa ? { seuil: B.seuil, seuilTxt: eur(B.seuil), multTxt: nf(B.multiplicateur || 2), palierTxt: B.palier ? B.palier.points + ' points, ' + eur(B.palier.valeur) : 'palier', tousLes: B.tousLes, validite: B.validite, prefixe: B.prefixe,
     bons: (B.bons || []).map(x => ({ k: x.k, v: eur(x.valeur), nom: x.nom, motif: x.motif, camp: x.campagne ? { nom: x.campagne.nom, statut: x.campagne.statut, actif: x.campagne.statut === 'ACTIVE' } : null })),
     sup: B.superBon ? { v: eur(B.superBon.valeur), provisoire: B.superBon.provisoire, camp: B.superBon.campagne ? { statut: B.superBon.campagne.statut, actif: B.superBon.campagne.statut === 'ACTIVE' } : null } : null,
     tirage: B.tirage ? { lot: B.tirage.lot, le: sa.tirage ? ddmm(sa.tirage) : '' } : null,
@@ -153,7 +158,7 @@ function valsProgramme(app, f){
   if (f.sim.r && !f.sim.r.error) {
     const r = f.sim.r;
     f.sim.lignes = [['Tranches de ' + eur(P ? P.slice_cents / 100 : 1), nf(r.tranches) + ' × ' + (P ? P.points_per_slice : 1)], ['Magasin', '×' + nf(+r.coefMagasin, 2)], ['Bonus du moment', +r.coefBonus > 1 ? '×' + nf(+r.coefBonus, 2) : 'aucun'],
-      ['Bingo : ' + nf(r.points) + ' points ≥ ' + r.seuil + ' ?', r.coche ? 'la case de la semaine' : 'pas encore la case']];
+      ['Bingo : ' + eur(r.montant) + ' ≥ ' + eur(r.seuil) + ' ?', r.coche ? 'la case, à lui seul' : 'pas la case à lui seul']];
   }
   // La publication.
   f.debut = S.fidDebut || '';
@@ -172,7 +177,7 @@ function valsClients(app, f){
   f.erpC = d.erp || { ok: false };
   if (!f.erpC.ok) { return; }
   const K = d.kpis || {};
-  f.cl = { appels: d.appels, seuil: d.seuil, tousLes: d.tousLes, saison: d.saison ? d.saison.nom : '', du: d.saison ? ddmm(d.saison.du) : '', aujourdhui: ddmm(d.aujourdhui) + ' à ' + d.heure,
+  f.cl = { appels: d.appels, seuil: d.seuil, seuilTxt: eur(d.seuil), tousLes: d.tousLes, saison: d.saison ? d.saison.nom : '', du: d.saison ? ddmm(d.saison.du) : '', aujourdhui: ddmm(d.aujourdhui) + ' à ' + d.heure,
     mag: d.shop ? ((d.magasins || []).find(m => String(m.id) === String(d.shop)) || {}).nom : 'le réseau', chargement: !!b.chargement };
   f.tuiles = [
     ['Membres de la carte', nf(K.membres), nf(K.venus) + ' venus dans la saison', 'programs[].global_progress.points'],
@@ -189,7 +194,7 @@ function valsClients(app, f){
   f.enCourse = nf(R[R.length - 1] || 0); f.sansCase = nf(R[0] || 0);
   f.relances = (d.relances || []).map(r => ({ n: nf(r.n), titre: r.titre, detail: r.detail }));
   f.membres = (d.membres || []).map(m => ({ nom: m.nom, solde: nf(m.solde), palier: m.atteint ? m.atteint + ' atteint · à échanger' : (m.prochain ? 'encore ' + m.prochain.reste + ' pour ' + m.prochain.points : ''),
-    coches: m.coches, cases: m.cases, n: m.coches.length, semaine: nf(m.semaine) + ' pts', ok: m.semaine >= d.seuil, dernier: m.dernier ? m.dernier.slice(8, 10) + '/' + m.dernier.slice(5, 7) + ' ' + m.dernier.slice(11, 16) : '—', afaire: m.afaire }));
+    coches: m.coches, cases: m.cases, n: m.coches.length, semaine: nf(m.semaine, 2) + ' €', pts: nf(m.pointsSemaine) + ' pts', ok: m.semaine >= d.seuil, dernier: m.dernier ? m.dernier.slice(8, 10) + '/' + m.dernier.slice(5, 7) + ' ' + m.dernier.slice(11, 16) : '—', afaire: m.afaire }));
   f.nbMembres = nf(d.nbMembres);
   f.q = S.fidQ || '';
   f.chercher = e => { app.setState({ fidQ: e.target.value.trim() }); };

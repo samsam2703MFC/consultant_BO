@@ -37,7 +37,7 @@ final class FidFauxErp
                     'voucher_validity_days' => 60, 'points_validity_days' => 365, 'shop_coefficients' => ['2' => '1', '3' => '1', '4' => '1', '5' => '1'],
                     'bonuses' => [['name' => 'Jours creux', 'days' => [1, 2, 3], 'from' => '14:00', 'to' => '17:00', 'coefficient' => '2'],
                         ['name' => 'Fin de journée', 'days' => [0, 1, 2, 3, 4, 5], 'from' => '17:30', 'to' => '19:00', 'coefficient' => '2']],
-                    'tiers' => [['points' => 150, 'voucher_cents' => 500]]]],
+                    'tiers' => [['points' => 100, 'voucher_cents' => 500]]]],
         ];
         foreach ([[3, 'Carte Pain', 'PAIN', 10, '#9a5b16', '1 pain offert'], [4, 'Carte Viennoiserie', 'VIENN', 10, '#eb6834', '1 croissant offert'],
             [5, 'Carte Café', 'CAFE', 8, '#5c4033', '1 café offert'], [6, 'Carte Tarte', 'TARTE', 6, '#c2336a', '1 part de tarte offerte']] as [$id, $nom, $code, $t, $c, $r]) {
@@ -45,8 +45,7 @@ final class FidFauxErp
                 'shop_ids' => [2, 3, 4, 5], 'starts_at' => '2025-09-01 00:00:00', 'ends_at' => null, 'stamps_required' => $t, 'reward_label' => $r,
                 'reward_validity_days' => 30, 'color_fill' => $c, 'points_config' => null];
         }
-        foreach ([[41, 'Bingo hiver · 4,90 €', 'ACTIVE'], [42, 'Bingo hiver · 9,90 €', 'ACTIVE'], [43, 'Bingo hiver · 19,90 €', 'ACTIVE'],
-            [44, 'Bingo hiver · 29,90 €', 'ACTIVE'], [45, 'Bingo hiver · 49,90 €', 'DRAFT']] as [$id, $nom, $st]) {
+        foreach ([[41, 'Bingo hiver · 2 €', 'ACTIVE'], [45, 'Bingo hiver · 10 €', 'DRAFT'], [51, 'Bingo printemps · 2 €', 'DRAFT']] as [$id, $nom, $st]) {
             $this->campagnes[$id] = ['id' => $id, 'name' => $nom, 'status' => $st, 'code_type' => 'UNIQUE', 'requires_customer' => true];
             $this->codes[$id] = [];
         }

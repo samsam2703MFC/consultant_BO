@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/global.css">
+<script src="_ds/l-atelier-by-8504a4e3-7796-44da-b087-3fbd9dcb8dcd/_ds_bundle.js"></script>
+<script src="qrcode.js"></script>
+<script src="illustrations.js"></script>
+<style>
+body{margin:0;background:var(--color-bg);color:var(--color-text);font-family:var(--font-ui)}
+a{color:var(--color-primary)}a:hover{color:var(--color-text)}
+b,strong,h1,h2,h3,h4{font-weight:400}
+input[type=number]::-webkit-inner-spin-button{opacity:1}
+@keyframes bingoPop{0%{transform:scale(.85)}60%{transform:scale(1.06)}100%{transform:scale(1)}}
+@keyframes bingoDescend{from{transform:translateY(-30px);opacity:0}to{transform:none;opacity:1}}
+</style>
+</helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#8D1D2C"></rect><text x="50" y="62" font-family="Georgia,serif" font-size="34" fill="#F2C9A0" text-anchor="middle">B</text></svg></template>
+<div style="padding:30px 48px 48px;max-width:1680px;box-sizing:border-box;font-size:13px;line-height:1.45">
+  <div style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted)">Maquette interactive · Fidélité › Bingo de saison · 12/11/2026</div>
+  <h1 style="margin:8px 0 8px;font-family:var(--font-display);font-size:var(--font-size-page-title);line-height:var(--line-height-display);color:var(--color-primary);font-weight:400;text-wrap:pretty">Bingo + points : le bingo fait revenir, les points font consommer</h1>
+  <p style="margin:0;max-width:1150px;color:var(--color-text-muted);font-size:14px;line-height:1.55;text-wrap:pretty">Deux moteurs sur une seule carte. Le <span style="color:var(--color-primary)">bingo</span> récompense la fréquence : une case par semaine dès {{ seuilTxt }} d’achats, un bon toutes les {{ x }} cases, un super bon à 13 / 13. Les <span style="color:var(--color-primary)">points</span> récompensent le panier : {{ ptsParEuro }} point par euro, doublés une fois la case de la semaine cochée, et un bon de {{ palierValTxt }} tous les {{ palier }} points. Ajoutez des tickets, passez à la semaine suivante, changez les réglages.</p>
+
+  <div style="display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:20px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-lg);padding:10px 14px">
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">
+      <span style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase">Réglages</span>
+      <span>x</span>
+      <span style="display:inline-flex;background:var(--color-background-secondary);border-radius:var(--radius-md);padding:2px">
+        <sc-for list="{{ xOpts }}" as="o" hint-placeholder-count="3">
+          <button onClick="{{ o.onClick }}" style="border:none;padding:4px 11px;border-radius:var(--radius-sm);cursor:pointer;font-size:12px;background:{{ o.bg }};color:{{ o.color }};box-shadow:{{ o.shadow }}">{{ o.v }}</button>
+        </sc-for>
+      </span>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">seuil
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ seuil }}" onChange="{{ onSeuil }}" style="width:44px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
+    </label>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">bon
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="0.5" step="0.5" value="{{ valeur }}" onChange="{{ onValeur }}" style="width:44px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ validite }}" onChange="{{ onValidite }}" style="width:44px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">jours</span>
+    </div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">super bon
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ megaValeur }}" onChange="{{ onMega }}" style="width:44px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
+    </label>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">points
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ ptsParEuro }}" onChange="{{ onPtsEuro }}" style="width:30px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">pt/€</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ palier }}" onChange="{{ onPalier }}" style="width:40px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">pts</span>
+      <span>=</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ palierVal }}" onChange="{{ onPalierVal }}" style="width:30px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
+    </div>
+    <span style="width:1px;align-self:stretch;background:var(--color-border-tertiary)"></span>
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px">
+      <span style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted)">Simulation</span>
+      <span style="color:var(--color-text)">{{ etatTxt }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <sc-for list="{{ tickets }}" as="t" hint-placeholder-count="3">
+        <button class="btn-primary" onClick="{{ t.onClick }}" disabled="{{ t.disabled }}" style="padding:7px 12px;font-size:12px;opacity:{{ t.op }}">{{ t.label }}</button>
+      </sc-for>
+      <button class="btn-secondary" onClick="{{ suivante }}" disabled="{{ fini }}" style="padding:7px 12px;font-size:12px;background:var(--color-surface);opacity:{{ suivOp }}">Semaine suivante ›</button>
+      <button class="btn-secondary" onClick="{{ reset }}" style="padding:7px 12px;font-size:12px;background:var(--color-surface)">Revenir au 14 janvier</button>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:44px;margin-top:26px;align-items:flex-start">
+
+    <section style="flex:none;width:540px;max-width:100%">
+      <h3 style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 14px;font-weight:400">La carte imprimée <span style="opacity:.6">· donnée en caisse, A6</span></h3>
+      <div style="width:540px;min-height:762px;box-sizing:border-box;background:var(--color-background-secondary);border-radius:10px;padding:26px 26px 22px;position:relative;transform:{{ tiltT }};box-shadow:0 1px 2px rgba(60,30,20,.12),0 18px 40px rgba(60,30,20,.16);display:flex;flex-direction:column;color:var(--color-text)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <img src="img/logo.png" alt="L’Atelier by" style="height:26px;display:block">
+          <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--color-primary);text-align:right;line-height:1.5">Carte fidélité<br>Hiver 2026 – 2027</div>
+        </div>
+        <div style="display:flex;align-items:baseline;gap:12px;margin:14px 0 0">
+          <span style="font-family:var(--font-display);font-size:76px;line-height:.9;color:var(--color-primary)">BINGO</span>
+          <span style="font-family:var(--font-accent);font-size:28px;line-height:1;color:var(--color-primary);transform:translateY(-6px)">d’hiver</span>
+        </div>
+        <p style="margin:10px 0 14px;font-size:12.5px;color:var(--color-text-muted)">Du 23/11 au 21/02 · <span style="color:var(--color-primary)">une case par semaine, et toutes les {{ x }} cases, un bon.</span></p>
+        <div style="display:grid;grid-template-columns:{{ gridCols }};border:1.6px solid var(--color-primary);border-radius:4px;overflow:hidden;background:var(--color-surface)">
+          <sc-for list="{{ printCells }}" as="c" hint-placeholder-count="16">
+            <sc-if value="{{ c.isSem }}" hint-placeholder-val="{{ true }}">
+              <div style="position:relative;min-height:112px;padding:6px 5px 7px;display:flex;flex-direction:column;align-items:center;text-align:center;box-shadow:inset -1.2px -1.2px 0 var(--color-primary);background:{{ c.bg }}">
+                <div style="align-self:stretch;display:flex;justify-content:space-between;font-size:8.5px;color:var(--color-text-muted);letter-spacing:.02em;white-space:nowrap"><span style="color:var(--color-primary)">{{ c.l }}</span><span>{{ c.r }}</span></div>
+                <span style="white-space:nowrap;margin-top:3px;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--color-primary);border-radius:3px;padding:1px 4px;background:{{ c.tagBg }};color:{{ c.tagColor }}">{{ c.tag }}</span>
+                <img src="{{ c.ill }}" alt="{{ c.ti }}" style="width:42px;height:42px;object-fit:contain;margin:2px 0;display:block">
+                <div style="font-size:10.5px;line-height:1.15;color:var(--color-text)">{{ c.ti }}</div>
+                <sc-if value="{{ c.hasSo }}" hint-placeholder-val="{{ false }}"><div style="font-size:8.5px;line-height:1.2;color:var(--color-text-muted);margin-top:2px">{{ c.so }}</div></sc-if>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.isBon }}" hint-placeholder-val="{{ false }}">
+              <div style="position:relative;min-height:112px;padding:6px 5px 7px;display:flex;flex-direction:column;align-items:center;text-align:center;background:var(--color-primary);color:var(--color-surface);box-shadow:inset -1.2px -1.2px 0 var(--color-primary)">
+                <div style="align-self:stretch;display:flex;justify-content:space-between;font-size:8.5px;color:var(--color-secondary);letter-spacing:.02em;white-space:nowrap"><span>{{ c.l }}</span><span>{{ c.r }}</span></div>
+                <span style="white-space:nowrap;margin-top:3px;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 4px;background:var(--color-secondary);color:var(--color-primary)">Débloqué</span>
+                <img src="{{ c.ill }}" alt="{{ c.ti }}" style="width:46px;height:46px;object-fit:contain;display:block;filter:brightness(0) invert(1)">
+                <div style="font-size:10.5px;line-height:1.15">{{ c.ti }}</div>
+                <div style="font-size:8.5px;line-height:1.2;color:var(--color-secondary);margin-top:2px">{{ c.so }}</div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ c.isMega }}" hint-placeholder-val="{{ false }}">
+              <div style="grid-column:{{ c.span }};position:relative;min-height:112px;padding:9px 12px;box-sizing:border-box;display:flex;background:var(--color-primary);color:var(--color-surface);box-shadow:inset -1.2px -1.2px 0 var(--color-primary);overflow:hidden">
+                <span style="position:absolute;left:-8px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:var(--color-surface)"></span>
+                <span style="position:absolute;right:-8px;top:50%;width:16px;height:16px;margin-top:-8px;border-radius:50%;background:var(--color-surface)"></span>
+                <div style="flex:1;position:relative;border:1.4px dashed var(--color-secondary);border-radius:6px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:12px;padding:6px 14px 6px 10px">
+                  <img src="img/ill/cake.png" alt="Gâteau" style="width:66px;height:66px;object-fit:contain;display:block;filter:brightness(0) invert(1)">
+                  <div style="min-width:0">
+                    <span style="display:inline-block;white-space:nowrap;font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;border-radius:3px;padding:1px 5px;background:var(--color-secondary);color:var(--color-primary)">Carte pleine · 13 / 13</span>
+                    <div style="font-family:var(--font-display);font-size:25px;line-height:.95;margin-top:5px">SUPER BON CADEAU</div>
+                    <div style="font-size:10px;line-height:1.3;color:var(--color-secondary);margin-top:4px">{{ c.so }}</div>
+                  </div>
+                  <img src="img/ill/artboard-4.png" alt="" style="position:absolute;right:6px;top:6px;width:26px;height:26px;object-fit:contain;filter:brightness(0) invert(1);opacity:.85">
+                </div>
+              </div>
+            </sc-if>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:14px;margin-top:auto;padding-top:16px;align-items:end">
+          <div>
+            <h4 style="margin:0 0 4px;font-size:11px;color:var(--color-primary);letter-spacing:.04em;text-transform:uppercase;font-weight:400">Comment ça marche</h4>
+            <p style="margin:0;font-size:10.5px;line-height:1.45;color:var(--color-text-muted)">Chaque semaine où vous dépensez <span style="color:var(--color-text)">{{ seuilTxt }} ou plus</span> chez nous, en une ou plusieurs fois, la case de la semaine se coche toute seule. Toutes les {{ x }} cases, un bon de {{ valeurTxt }} se débloque dans l’app. Scannez ce QR une fois : votre bingo vit dans l’app. Ensuite, montrez l’app ou cette carte à la caisse.</p>
+            <p style="margin:6px 0 0;font-size:10.5px;line-height:1.45;color:var(--color-text-muted)"><span style="color:var(--color-primary)">Et vos points :</span> {{ ptsParEuro }} point par euro dépensé, <span style="color:var(--color-text)">doublés</span> dès que la case de la semaine est cochée. {{ palier }} points = {{ palierValTxt }} offerts.</p>
+          </div>
+          <div style="text-align:center;font-size:8.5px;color:var(--color-text-muted);line-height:1.3">
+            <div style="width:96px;height:96px;box-sizing:border-box;background:var(--color-surface);border-radius:var(--radius-sm);padding:5px;margin-bottom:4px">
+              <img src="{{ qr }}" alt="QR d’activation" style="width:100%;height:100%;display:block;image-rendering:pixelated">
+            </div>Activez votre carte<br>N° 4417 0823
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section style="flex:none;width:392px;max-width:100%">
+      <h3 style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 14px;font-weight:400">L’app du client <span style="opacity:.6">· {{ appDate }}</span></h3>
+      <div style="width:392px;height:842px;box-sizing:border-box;border-radius:52px;background:var(--color-text);padding:12px;box-shadow:0 18px 40px rgba(60,30,20,.18)">
+        <div style="width:100%;height:100%;border-radius:41px;background:var(--color-background-secondary);overflow:hidden;position:relative;display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;padding:14px 28px 0;font-size:13px"><span>9:41</span><span style="font-size:11px;letter-spacing:.04em">5G ▮▮▮</span></div>
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px"><img src="img/logo.png" alt="" style="height:17px;display:block"><span style="font-size:12px;color:var(--color-text-muted)">Bonjour Julie</span></div>
+          <div style="display:flex;margin:2px 18px 10px;background:var(--color-bg);border-radius:var(--radius-md);padding:2px">
+            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-primary)">Bingo</span>
+            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;color:var(--color-text-muted)">Points</span>
+            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;color:var(--color-text-muted)">Portefeuille</span>
+          </div>
+          <div style="padding:0 18px 10px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto">
+            <div style="display:flex;align-items:flex-end;justify-content:space-between">
+              <div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:var(--font-display);font-size:34px;line-height:.95;color:var(--color-primary)">BINGO</span><span style="font-family:var(--font-accent);font-size:15px;color:var(--color-primary)">d’hiver</span></div>
+              <div style="font-size:11px;color:var(--color-text-muted);text-align:right;line-height:1.35"><div style="font-size:20px;color:var(--color-text)">{{ casesTxt }}</div>{{ bonsTxt }}</div>
+            </div>
+            <div style="background:var(--color-surface);border-radius:14px;padding:11px 12px;display:grid;grid-template-columns:50px minmax(0,1fr);gap:10px;align-items:center;border:1.4px {{ semBorder }} var(--color-primary)">
+              <img src="{{ semIll }}" alt="" style="width:50px;height:50px;object-fit:contain;display:block">
+              <div>
+                <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">{{ semSmall }}</div>
+                <div style="font-size:13.5px;margin-top:1px">{{ semTitre }}</div>
+                <sc-if value="{{ semJauge }}" hint-placeholder-val="{{ true }}">
+                  <div style="height:7px;border-radius:4px;background:var(--color-bg);margin:7px 0 4px;overflow:hidden"><div style="height:100%;background:var(--color-primary);border-radius:4px;transition:width .4s;width:{{ pctW }}"></div></div>
+                </sc-if>
+                <p style="margin:0;font-size:10.5px;color:var(--color-text-muted);line-height:1.35">{{ semP }}</p>
+              </div>
+            </div>
+            <div style="background:var(--color-surface);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;animation:{{ ptsAnim }}">
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px">
+                <div style="display:flex;align-items:baseline;gap:6px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">Mes points</span><span style="font-family:var(--font-display);font-size:24px;line-height:1;color:var(--color-primary)">{{ points }}</span><span style="font-size:10.5px;color:var(--color-text-muted)">/ {{ palier }}</span></div>
+                <span style="font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 6px;white-space:nowrap;background:{{ boostBg }};color:{{ boostFg }}">{{ boostTag }}</span>
+              </div>
+              <div style="height:7px;border-radius:4px;background:var(--color-bg);overflow:hidden"><div style="height:100%;background:var(--color-secondary);border-radius:4px;transition:width .4s;width:{{ ptsPctW }}"></div></div>
+              <p style="margin:0;font-size:10.5px;color:var(--color-text-muted);line-height:1.35">{{ ptsP }}</p>
+            </div>
+            <div style="display:grid;gap:6px;grid-template-columns:{{ gridCols }}">
+              <sc-for list="{{ miniCells }}" as="m" hint-placeholder-count="16">
+                <sc-if value="{{ m.isSem }}" hint-placeholder-val="{{ true }}">
+                  <div onClick="{{ m.onClick }}" title="{{ m.title }}" style="position:relative;border-radius:10px;height:84px;padding:5px 4px 4px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;outline-offset:-1.6px;background:{{ m.bg }};opacity:{{ m.op }};outline:{{ m.outline }};cursor:{{ m.cursor }};animation:{{ m.anim }}">
+                    <span style="position:absolute;top:4px;left:6px;font-size:7.5px;color:var(--color-text-muted)">{{ m.d }}</span>
+                    <img src="{{ m.ill }}" alt="" style="width:38px;height:38px;object-fit:contain;margin:9px 10px 0 0;display:block;opacity:{{ m.illOp }};filter:{{ m.illFilter }}">
+                    <div style="font-size:8.4px;line-height:1.15;margin-top:3px;opacity:{{ m.illOp }}">{{ m.ti }}</div>
+                    <sc-if value="{{ m.stamp }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;right:3px;top:3px;width:30px;height:30px;box-sizing:border-box;border-radius:50%;border:2px solid var(--color-primary);color:var(--color-primary);transform:rotate(-14deg);display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(255,255,255,.6);line-height:1"><span style="font-size:12px">✓</span><span style="font-size:5.5px;margin-top:1px">{{ m.stampDate }}</span></span>
+                    </sc-if>
+                    <sc-if value="{{ m.bar }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;left:8px;right:8px;bottom:6px;height:4px;border-radius:2px;background:var(--color-bg);overflow:hidden"><span style="display:block;height:100%;background:var(--color-primary);width:{{ pctW }}"></span></span>
+                    </sc-if>
+                    <sc-if value="{{ m.manquee }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;left:50%;top:44%;transform:translate(-50%,-50%) rotate(-12deg);font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted);border:1px solid var(--color-border-secondary);border-radius:3px;padding:1px 4px;background:rgba(255,255,255,.85)">manquée</span>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.isBon }}" hint-placeholder-val="{{ false }}">
+                  <div style="position:relative;border-radius:10px;height:84px;padding:5px 4px 4px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;text-align:center;overflow:hidden;outline-offset:-1.6px;background:{{ m.bg }};outline:{{ m.outline }};animation:{{ m.anim }}">
+                    <span style="position:absolute;top:4px;left:6px;font-size:7.5px;color:{{ m.sub }}">{{ m.d }}</span>
+                    <img src="{{ m.ill }}" alt="" style="width:40px;height:40px;object-fit:contain;margin:8px 0 0;display:block;opacity:{{ m.illOp }};filter:{{ m.illFilter }}">
+                    <div style="font-size:11px;line-height:1.15;color:{{ m.fg }}">{{ m.ti }}</div>
+                    <div style="font-size:7.5px;line-height:1.1;color:{{ m.sub }}">{{ m.bas }}</div>
+                    <sc-if value="{{ m.stamp }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;right:3px;top:3px;width:30px;height:30px;box-sizing:border-box;border-radius:50%;border:2px solid var(--color-surface);color:var(--color-surface);transform:rotate(-14deg);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:12px">✓</span><span style="font-size:5.5px;margin-top:1px">{{ m.stampDate }}</span></span>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ m.isMega }}" hint-placeholder-val="{{ false }}">
+                  <div style="grid-column:{{ m.span }};position:relative;border-radius:10px;height:84px;padding:5px;box-sizing:border-box;display:flex;overflow:hidden;outline-offset:-1.6px;background:{{ m.bg }};outline:{{ m.outline }};animation:{{ m.anim }}">
+                    <div style="flex:1;border:1.2px dashed {{ m.sub }};border-radius:7px;display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px;padding:4px 8px">
+                      <img src="img/ill/cake.png" alt="" style="width:46px;height:46px;object-fit:contain;display:block;opacity:{{ m.illOp }};filter:{{ m.illFilter }}">
+                      <div style="min-width:0">
+                        <div style="font-size:7.5px;letter-spacing:.06em;text-transform:uppercase;color:{{ m.sub }}">{{ m.d }}</div>
+                        <div style="font-family:var(--font-display);font-size:15px;line-height:1;margin-top:2px;color:{{ m.fg }}">SUPER BON CADEAU</div>
+                        <div style="font-size:8px;line-height:1.2;margin-top:2px;color:{{ m.sub }}">{{ m.bas }}</div>
+                      </div>
+                    </div>
+                    <sc-if value="{{ m.stamp }}" hint-placeholder-val="{{ false }}">
+                      <span style="position:absolute;right:8px;top:8px;width:30px;height:30px;box-sizing:border-box;border-radius:50%;border:2px solid var(--color-surface);color:var(--color-surface);transform:rotate(-14deg);display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1"><span style="font-size:12px">✓</span><span style="font-size:5.5px;margin-top:1px">{{ m.stampDate }}</span></span>
+                    </sc-if>
+                  </div>
+                </sc-if>
+              </sc-for>
+            </div>
+            <sc-for list="{{ poche }}" as="p" hint-placeholder-count="2">
+              <div style="background:var(--color-surface);border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;animation:{{ p.anim }}">
+                <div style="width:44px;height:44px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:{{ p.tileBg }}"><img src="{{ p.ill }}" alt="" style="width:36px;height:36px;object-fit:contain;filter:{{ p.filter }}"></div>
+                <div>
+                  <div style="font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">{{ p.src }}</div>
+                  <div style="font-size:12.5px">{{ p.nom }}</div>
+                  <div style="font-size:10px;color:var(--color-text-muted)">{{ p.code }}</div>
+                </div>
+                <span style="font-size:11px;color:var(--color-surface);background:var(--color-primary);border-radius:var(--radius-sm);padding:6px 10px">Montrer</span>
+              </div>
+            </sc-for>
+            <sc-if value="{{ noPoche }}" hint-placeholder-val="{{ false }}">
+              <div style="background:var(--color-surface);border-radius:14px;padding:12px;color:var(--color-text-muted);font-size:11px">Aucun bon à utiliser pour l’instant : le prochain arrive avec une case ou un palier de points.</div>
+            </sc-if>
+          </div>
+          <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeToast }}" title="Fermer" style="position:absolute;top:8px;left:14px;right:14px;color:var(--color-surface);border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35;cursor:pointer;animation:bingoDescend .35s ease;background:{{ toastBg }}">
+              <div style="width:32px;height:32px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:{{ toastIllBg }}"><img src="{{ toastIll }}" alt="" style="width:28px;height:28px;object-fit:contain;filter:{{ toastIllFilter }}"></div>
+              <div><div style="font-size:9.5px;color:var(--color-secondary);text-transform:uppercase;letter-spacing:.06em">L’Atelier by · maintenant</div>{{ toastTxt }}</div>
+            </div>
+          </sc-if>
+          <div style="display:flex;justify-content:space-around;padding:9px 0 20px;background:var(--color-surface);border-top:1px solid var(--color-border-tertiary);font-size:10px;color:var(--color-text-muted)"><span>Accueil</span><span style="color:var(--color-primary)">Fidélité</span><span>Commander</span><span>Profil</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section style="flex:1 1 420px;min-width:0;max-width:720px">
+      <h3 style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 14px;font-weight:400">Deux moteurs <span style="opacity:.6">· une seule carte</span></h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-bottom:22px">
+        <div style="background:var(--color-primary);color:var(--color-surface);border-radius:var(--radius-lg);padding:14px 16px">
+          <div style="font-family:var(--font-display);font-size:26px;line-height:1">BINGO</div>
+          <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-secondary);margin-top:4px">fait revenir · la fréquence</div>
+          <p style="margin:8px 0 0;font-size:12px;line-height:1.45">Une case par semaine, pas plus : dépenser 40 € d’un coup ne coche qu’une case. Seul le retour la semaine suivante fait avancer la carte.</p>
+        </div>
+        <div style="background:var(--color-surface);border:1px solid var(--color-primary);border-radius:var(--radius-lg);padding:14px 16px">
+          <div style="font-family:var(--font-display);font-size:26px;line-height:1;color:var(--color-primary)">POINTS</div>
+          <div style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);margin-top:4px">fait consommer · le panier</div>
+          <p style="margin:8px 0 0;font-size:12px;line-height:1.45;color:var(--color-text-muted)">Chaque euro compte, sans plafond. Une fois la case cochée, le bingo n’a plus rien à offrir cette semaine : les points doublés prennent le relais.</p>
+        </div>
+      </div>
+      <h3 style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted);margin:0 0 14px;font-weight:400">Les règles <span style="opacity:.6">· réglables au cockpit</span></h3>
+      <div style="background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-lg)">
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:13px">€</span>
+          <div><div style="font-size:13.5px">Une case par semaine</div><p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)">Dès <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ seuilTxt }}</span> d’achats dans la semaine, en une ou plusieurs fois : boutique, click &amp; collect, livraison. Une case par semaine au plus.</p></div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:13px">✓</span>
+          <div><div style="font-size:13.5px">Elle se coche toute seule</div><p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)">Le ticket est rattaché à la carte : l’app ou la carte QR scannée à la caisse. Rien à tamponner, rien à demander à la vendeuse.</p></div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:13px">✦</span>
+          <div><div style="font-size:13.5px">Chaque semaine a son thème</div><p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)">Les fêtes de la saison, illustrées (Saint-Nicolas, Noël, Épiphanie, Chandeleur…) et, entre deux fêtes, le produit de la semaine mis en avant en vitrine et sur les réseaux.</p></div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:13px">x</span>
+          <div>
+            <div style="font-size:13.5px">Toutes les <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ x }}</span> cases, un bon illustré</div>
+            <p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)">{{ ksTxt }} case cochées débloquent chacune un bon de <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ valeurTxt }}</span>, valable <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ validite }}</span> jours dès le lendemain. Sa case s’allume et le code arrive dans le portefeuille de l’app : un vrai bon du panel, créé comme celui du « déjà venu ». La grille suit x : x semaines par ligne, le bon au bout.</p>
+            <div style="display:flex;gap:16px;margin-top:9px;flex-wrap:wrap">
+              <sc-for list="{{ schemas }}" as="sc" hint-placeholder-count="3">
+                <button onClick="{{ sc.onClick }}" style="display:flex;align-items:center;gap:8px;font-size:10.5px;line-height:1.3;border-radius:var(--radius-md);padding:5px 7px;cursor:pointer;text-align:left;color:{{ sc.color }};border:1px solid {{ sc.border }};background:{{ sc.bg }}">
+                  <span style="display:grid;gap:2px;grid-template-columns:{{ sc.cols }}">
+                    <sc-for list="{{ sc.cells }}" as="q" hint-placeholder-count="16"><i style="width:9px;height:9px;border-radius:2px;display:block;background:{{ q.bg }}"></i></sc-for>
+                  </span>
+                  <span>{{ sc.l1 }}<br>{{ sc.l2 }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-secondary);color:var(--color-primary);display:flex;align-items:center;justify-content:center;font-size:12px">pt</span>
+          <div><div style="font-size:13.5px">Les points, à chaque ticket</div><p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)"><span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ ptsParEuro }}</span> point par euro, arrondi à l’euro inférieur, sur chaque ticket. <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">×2</span> sur les tickets suivants dès que la case de la semaine est cochée, jusqu’au dimanche. Tous les <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ palier }}</span> points, un bon de <span style="color:var(--color-primary);background:rgba(141,29,44,.07);border-radius:4px;padding:0 5px">{{ palierValTxt }}</span> arrive dans le portefeuille ; le reste est gardé. Les points ne s’arrêtent pas avec la saison.</p></div>
+        </div>
+        <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:12px;padding:12px 16px">
+          <span style="width:30px;height:30px;border-radius:var(--radius-md);background:var(--color-primary);color:var(--color-surface);display:flex;align-items:center;justify-content:center;font-size:12px">13</span>
+          <div><div style="font-size:13.5px">13 semaines, un trimestre</div><p style="margin:2px 0 0;font-size:12px;color:var(--color-text-muted)">Une case pour chacune des 13 semaines du trimestre. La carte de la saison suivante arrive le lundi d’après : quatre cartes font l’année.</p></div>
+        </div>
+      </div>
+
+      <h3 style="font-size:var(--font-size-admin-label);letter-spacing:var(--tracking-admin);text-transform:uppercase;color:var(--color-text-muted);margin:24px 0 12px;font-weight:400">Une carte par saison <span style="opacity:.6">· 13 semaines, un trimestre</span></h3>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px">
+        <sc-for list="{{ saisons }}" as="s" hint-placeholder-count="4">
+          <div style="background:var(--color-surface);border-radius:var(--radius-lg);padding:12px 14px;display:grid;grid-template-columns:minmax(0,1fr) 56px;gap:8px;border:1px solid {{ s.border }}">
+            <div>
+              <div style="display:flex;align-items:baseline;justify-content:space-between;gap:8px"><span style="font-size:14px">{{ s.nom }}</span><span style="font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--color-primary)">{{ s.etat }}</span></div>
+              <div style="font-size:11px;color:var(--color-text-muted);margin:2px 0 8px">{{ s.dt }}</div>
+              <div style="display:flex;flex-wrap:wrap;gap:4px">
+                <sc-for list="{{ s.fetes }}" as="f" hint-placeholder-count="4"><span style="font-size:10.5px;border-radius:4px;padding:2px 6px;background:{{ s.chipBg }};color:{{ s.chipFg }}">{{ f }}</span></sc-for>
+              </div>
+            </div>
+            <img src="{{ s.ill }}" alt="" style="width:56px;height:56px;object-fit:contain;display:block;opacity:{{ s.illOp }}">
+          </div>
+        </sc-for>
+      </div>
+      <p style="margin:14px 0 0;font-size:11.5px;color:var(--color-text-muted);line-height:1.5;text-wrap:pretty">Branché sur ce qui existe : la carte QR donnée en caisse (<span style="color:var(--color-primary)">Fidélité › En caisse</span>) devient la carte de la saison ; le « déjà venu » reçoit en plus son bon. Le seuil, x, la valeur des bons, le taux de points, le palier et le thème de chaque semaine sont des valeurs de départ.</p>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;carteInclinee&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Présentation&quot;},&quot;fetesTeintees&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;section&quot;:&quot;Présentation&quot;}}">
+class Component extends DCLogic {
+  static SEM = [
+    { n: 1, du: '23/11', au: '29/11', titre: 'Le cougnou est là', sous: '1er dimanche de l’Avent', fete: 'Avent', jour: '29/11', ill: 'bread-2' },
+    { n: 2, du: '30/11', au: '06/12', titre: 'Saint-Nicolas', sous: 'spéculoos et massepain', fete: 'Saint-Nicolas', jour: '06/12', ill: 'saint-nicolas' },
+    { n: 3, du: '07/12', au: '13/12', titre: 'Le chocolat chaud', sous: 'produit de la semaine', ill: 'chocolat' },
+    { n: 4, du: '14/12', au: '20/12', titre: 'Le pain d’épices', sous: 'produit de la semaine', ill: 'cookies' },
+    { n: 5, du: '21/12', au: '27/12', titre: 'Noël', sous: 'la bûche', fete: 'Noël', jour: '25/12', ill: 'noel' },
+    { n: 6, du: '28/12', au: '03/01', titre: 'Nouvel An', sous: 'les petits fours', fete: 'Nouvel An', jour: '01/01', ill: 'artboard-4' },
+    { n: 7, du: '04/01', au: '10/01', titre: 'Épiphanie', sous: 'la galette des rois', fete: 'Épiphanie', jour: '06/01', ill: 'galette' },
+    { n: 8, du: '11/01', au: '17/01', titre: 'Le bon pain', sous: 'produit de la semaine', ill: 'bread-1' },
+    { n: 9, du: '18/01', au: '24/01', titre: 'Blue Monday', sous: 'un éclair pour le moral', ill: 'cake-slice' },
+    { n: 10, du: '25/01', au: '31/01', titre: 'Le croissant', sous: 'produit de la semaine', ill: 'croissant' },
+    { n: 11, du: '01/02', au: '07/02', titre: 'Chandeleur', sous: 'les crêpes', fete: 'Chandeleur', jour: '02/02', ill: 'crepes' },
+    { n: 12, du: '08/02', au: '14/02', titre: 'Saint-Valentin', sous: 'beignets de Mardi gras', fete: 'Mardi gras · Saint-Valentin', jour: '09 et 14/02', ill: 'valentin' },
+    { n: 13, du: '15/02', au: '21/02', titre: 'La tarte du dimanche', sous: 'produit de la semaine', ill: 'tarte' },
+  ];
+  static BONS = [
+    { jusqua: 4, nom: 'Bon de l’Avent', ill: 'cake' },
+    { jusqua: 7, nom: 'Bon des Rois', ill: 'tartelette' },
+    { jusqua: 11, nom: 'Bon de l’hiver', ill: 'hiver' },
+    { jusqua: 13, nom: 'Bon carte pleine', ill: 'cupcake' },
+  ];
+  static SAISONS = [
+    { nom: 'Hiver', du: '23/11/2026', au: '21/02/2027', fetes: ['Avent', 'Saint-Nicolas', 'Noël', 'Nouvel An', 'Épiphanie', 'Chandeleur', 'Mardi gras', 'Saint-Valentin'], etat: 'en cours', ill: 'hiver' },
+    { nom: 'Printemps', du: '22/02/2027', au: '23/05/2027', fetes: ['Pâques 28/03', '1er avril', 'Fête du travail', 'Ascension', 'Fête des mères 09/05'], etat: 'à préparer', ill: 'printemps' },
+    { nom: 'Été', du: '24/05/2027', au: '22/08/2027', fetes: ['Fête des pères 13/06', 'Fête de la musique', 'Fête nationale 21/07', '15 août'], etat: '', ill: 'ete' },
+    { nom: 'Automne', du: '23/08/2027', au: '21/11/2027', fetes: ['La rentrée', 'Fête de la FWB 27/09', 'Halloween', 'Toussaint', 'Saint-Martin 11/11'], etat: '', ill: 'automne' },
+  ];
+  static DEBUT = '2026-11-23';
+  static CODES = { 1: 'FIDR4WQ8NZC', 2: 'FID7K2QM9PA', 3: 'FIDX5HT3LWE', 4: 'FIDB9MV2KQS', 5: 'FIDN6CJ8RTD', 6: 'FIDH3PZ7WVU' };
+
+  depart() {
+    return { x: 3, seuil: 10, valeur: 2, validite: 30, megaValeur: 10, ptsParEuro: 1, palier: 100, palierVal: 5, points: 78, bonsPts: [], dernierGain: 4, semaine: 8, depense: 6.4,
+      cochees: { 1: '2026-11-27', 2: '2026-12-05', 3: '2026-12-09', 4: '2026-12-19', 5: '2026-12-24', 7: '2027-01-06' },
+      utilises: { 1: '2026-12-17' }, neuf: null,
+      toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré, +4 pts. Encore 3,60 € cette semaine pour cocher « Le bon pain » et doubler vos points.' }, qr: '' };
+  }
+  state = this.depart();
+
+  componentDidMount() {
+    const go = () => {
+      if (!window.qrcode || !window.BINGO_ILL) { this._t = setTimeout(go, 60); return; }
+      const q = window.qrcode(0, 'M'); q.addData('L’Atelier by — carte fidélité Hiver 2026-2027 (maquette)'); q.make();
+      this.setState({ qr: q.createDataURL(4, 0) });
+    };
+    go();
+  }
+  componentWillUnmount() { clearTimeout(this._t); }
+
+  src(n) { return (window.BINGO_ILL && window.BINGO_ILL[n]) || 'img/ill/' + n + '.png'; }
+  nf(n, d) { return Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
+  eur(v) { return this.nf(v, v % 1 ? 2 : 0) + ' €'; }
+  ord(n) { return n === 1 ? '1re' : n + 'e'; }
+  jour(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  dm(iso) { return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
+  lundi(n) { return this.jour(Component.DEBUT, 7 * (n - 1)); }
+  auj(S) { return this.jour(this.lundi(S.semaine), 3); }
+  bonDe(k) { const B = Component.BONS; return B.find(b => k <= b.jusqua) || B[B.length - 1]; }
+  etat(S, n) { return S.cochees[n] ? 'coche' : (n === S.semaine ? 'encours' : (n > S.semaine ? 'futur' : 'manquee')); }
+
+  bons(S) {
+    const NS = Component.SEM.length, ordre = Object.keys(S.cochees).map(Number).sort((a, b) => a - b);
+    const nC = ordre.length, rest = Component.SEM.filter(s => s.n >= S.semaine && !S.cochees[s.n]).length;
+    const out = [];
+    for (let i = 1; i <= Math.floor(NS / S.x); i++) {
+      const k = i * S.x, b = this.bonDe(k), le = nC >= k ? S.cochees[ordre[k - 1]] : null;
+      const o = { i, k, nom: b.nom, ill: b.ill, le };
+      if (le) {
+        o.fin = this.jour(le, S.validite);
+        o.etat = S.utilises[i] ? 'utilise' : (o.fin < this.auj(S) ? 'expire' : 'pris');
+        o.code = Component.CODES[i];
+      } else { o.etat = nC + rest >= k ? 'futur' : 'perdu'; }
+      out.push(o);
+    }
+    const p = out.find(o => o.etat === 'futur'); if (p) p.etat = 'proche';
+    return out;
+  }
+  cellules(S, B) {
+    const out = [];
+    Component.SEM.forEach((s, i) => { out.push({ t: 's', s }); if ((i + 1) % S.x === 0) out.push({ t: 'b', b: B[(i + 1) / S.x - 1] }); });
+    const r = Component.SEM.length % S.x;
+    out.push({ t: 'm', span: 'span ' + (r ? S.x + 1 - r : S.x + 1) });
+    return out;
+  }
+
+  ticket(m) {
+    const S = this.state, NS = Component.SEM.length;
+    if (S.semaine > NS) return;
+    const cochees = Object.assign({}, S.cochees), avant = Object.keys(cochees).length, sem = Component.SEM[S.semaine - 1];
+    const depense = Math.round((S.depense + m) * 100) / 100;
+    const boost = !!cochees[S.semaine], gain = Math.floor(m * S.ptsParEuro) * (boost ? 2 : 1);
+    const pTxt = ' +' + gain + ' pts' + (boost ? ' (×2)' : '') + '.';
+    let neuf = null, toast;
+    if (!cochees[S.semaine] && depense >= S.seuil) {
+      cochees[S.semaine] = this.auj(S); neuf = 's' + S.semaine;
+      const n = avant + 1;
+      if (n % S.x === 0 && n / S.x <= Math.floor(NS / S.x)) {
+        const b = this.bonDe(n); neuf += ' b' + n / S.x;
+        toast = { bon: true, ill: b.ill, txt: 'Bon débloqué : ' + b.nom + ', ' + this.eur(S.valeur) + ' dans votre portefeuille.' + pTxt + ' Vos points sont doublés jusqu’à dimanche.' };
+      } else {
+        const k = S.x - (n % S.x);
+        toast = { ill: sem.ill, txt: 'Case cochée : ' + sem.titre + ' ✓' + pTxt + ' Vos points sont doublés jusqu’à dimanche' + (n / S.x < Math.floor(NS / S.x) || n % S.x ? ' ; encore ' + k + ' case' + (k > 1 ? 's' : '') + ' pour le prochain bon.' : '.') };
+      }
+    } else if (cochees[S.semaine]) {
+      toast = { ill: sem.ill, txt: 'Ticket de ' + this.eur(m) + ' :' + pTxt + ' La case est déjà cochée, vos points comptent double jusqu’à dimanche.' };
+    } else {
+      toast = { ill: sem.ill, txt: 'Ticket de ' + this.eur(m) + ' enregistré,' + pTxt.slice(0, -1) + '. Encore ' + this.nf(S.seuil - depense, 2) + ' € cette semaine pour cocher « ' + sem.titre + ' » et doubler vos points.' };
+    }
+    if (neuf && Object.keys(cochees).length === NS) { neuf += ' m'; toast = { bon: true, ill: 'cake', txt: 'Carte pleine, 13 cases sur 13 ! Super bon cadeau de ' + this.eur(S.megaValeur) + ' débloqué dans votre portefeuille.' }; }
+    let points = S.points + gain; const bonsPts = S.bonsPts.slice();
+    while (points >= S.palier) { points -= S.palier; bonsPts.push({ le: this.auj(S), code: 'PTS' + (4821 + bonsPts.length * 7) + 'K' }); neuf = (neuf || '') + ' p' + bonsPts.length;
+      toast = { bon: true, ill: 'croissant', txt: S.palier + ' points atteints : bon de ' + this.eur(S.palierVal) + ' dans votre portefeuille. ' + points + ' pts gardés pour le suivant.' }; }
+    this.setState({ depense, cochees, neuf, toast, points, bonsPts, dernierGain: gain });
+  }
+  suivante() {
+    const S = this.state, NS = Component.SEM.length;
+    if (S.semaine > NS) return;
+    const semaine = S.semaine + 1;
+    this.setState({ semaine, depense: 0, neuf: null, dernierGain: null,
+      toast: semaine > NS ? { bon: true, ill: 'cupcake', txt: 'La carte d’hiver est terminée : les 13 semaines sont passées, la carte du printemps arrive lundi.' } : null });
+  }
+  basculer(n) {
+    const S = this.state; if (n >= S.semaine) return;
+    const cochees = Object.assign({}, S.cochees);
+    if (cochees[n]) delete cochees[n]; else cochees[n] = this.jour(this.lundi(n), 3);
+    this.setState({ cochees, neuf: cochees[n] ? 's' + n : null, toast: null });
+  }
+  regler(k, v) {
+    v = Number(v); const p = { neuf: null };
+    if (k === 'x') p.x = v;
+    if (k === 'seuil' && v >= 1) p.seuil = v;
+    if (k === 'valeur' && v > 0) p.valeur = v;
+    if (k === 'validite' && v >= 1) p.validite = Math.round(v);
+    if (k === 'mega' && v > 0) p.megaValeur = v;
+    if (k === 'ptsEuro' && v >= 1) p.ptsParEuro = Math.round(v);
+    if (k === 'palier' && v >= 10) p.palier = Math.round(v);
+    if (k === 'palierVal' && v > 0) p.palierVal = v;
+    this.setState(p);
+  }
+
+  renderVals() {
+    const S = this.state, C = Component, NS = C.SEM.length, fini = S.semaine > NS;
+    const nC = Object.keys(S.cochees).length, B = this.bons(S), cells = this.cellules(S, B);
+    const neufs = (S.neuf || '').split(' '), pct = Math.min(100, 100 * S.depense / S.seuil);
+    const tint = this.props.fetesTeintees ?? true;
+    const FETE = tint ? 'color-mix(in srgb, var(--color-secondary) 42%, var(--color-surface))' : 'var(--color-surface)';
+    const ROSE = 'color-mix(in srgb, var(--color-primary) 12%, var(--color-surface))';
+    const WHITE = 'brightness(0) invert(1)', DASH = '1.6px dashed var(--color-primary)';
+
+    const NSr = NS, plein = nC === NSr, rest = C.SEM.filter(s => s.n >= S.semaine && !S.cochees[s.n]).length;
+    const megaLe = plein ? Object.values(S.cochees).sort().pop() : null;
+    const printCells = cells.map(c => {
+      if (c.t === 'm') return { isMega: true, isBon: false, isSem: false, span: c.span, so: 'Les 13 cases cochées : ' + this.eur(S.megaValeur) + ' offerts, valables ' + S.validite + ' jours. En plus des bons.' };
+      if (c.t === 'b') { const b = c.b;
+        return { isMega: false, isBon: true, isSem: false, l: 'Bon ' + b.i, r: this.ord(b.k) + ' case', ill: this.src(b.ill), ti: b.nom, so: this.eur(S.valeur) + ' · ' + S.validite + ' jours' }; }
+      const s = c.s, pr = s.sous === 'produit de la semaine';
+      return { isMega: false, isBon: false, isSem: true, l: 'S' + s.n, r: s.du + ' – ' + s.au, bg: s.fete ? FETE : 'var(--color-surface)',
+        tag: s.fete ? 'Fête · ' + s.jour : 'À l’honneur', tagBg: s.fete ? 'var(--color-primary)' : 'transparent', tagColor: s.fete ? 'var(--color-surface)' : 'var(--color-primary)',
+        ill: this.src(s.ill), ti: s.titre, so: pr ? '' : s.sous, hasSo: !pr };
+    });
+
+    const miniCells = cells.map(c => {
+      if (c.t === 'm') {
+        const possible = nC + rest >= NS, left = NS - nC;
+        return { isMega: true, isBon: false, isSem: false, span: c.span, d: plein ? 'Carte pleine · ' + this.eur(S.megaValeur) : '13 / 13 cases · ' + this.eur(S.megaValeur),
+          bas: plein ? 'débloqué le ' + this.dm(megaLe) : possible ? 'encore ' + left + ' case' + (left > 1 ? 's' : '') + ', sans en manquer une' : 'une semaine manquée : au printemps',
+          bg: plein ? 'var(--color-primary)' : ROSE, fg: plein ? 'var(--color-surface)' : 'var(--color-primary)',
+          sub: plein ? 'var(--color-secondary)' : (possible ? 'var(--color-primary)' : 'var(--color-text-muted)'),
+          illFilter: plein ? WHITE : 'none', illOp: possible || plein ? 1 : 0.45, outline: 'none',
+          stamp: plein, stampDate: plein ? this.dm(megaLe) : '', anim: neufs.includes('m') ? 'bingoPop .6s ease' : 'none' };
+      }
+      if (c.t === 'b') {
+        const b = c.b, on = !!b.le, k = b.k - nC;
+        const bas = { pris: 'jusqu’au ' + (b.fin && this.dm(b.fin)), utilise: 'utilisé le ' + (S.utilises[b.i] && this.dm(S.utilises[b.i])), expire: 'expiré le ' + (b.fin && this.dm(b.fin)),
+          proche: 'encore ' + k + ' case' + (k > 1 ? 's' : ''), futur: 'à la ' + this.ord(b.k) + ' case', perdu: 'au printemps' }[b.etat];
+        return { isMega: false, isBon: true, isSem: false, d: this.ord(b.k) + ' case', ill: this.src(b.ill), ti: this.eur(S.valeur), bas,
+          bg: on ? 'var(--color-primary)' : ROSE, fg: on ? 'var(--color-surface)' : 'var(--color-primary)',
+          sub: on ? 'var(--color-secondary)' : (b.etat === 'proche' ? 'var(--color-primary)' : 'var(--color-text-muted)'),
+          illFilter: on ? WHITE : 'none', illOp: (b.etat === 'futur' || b.etat === 'perdu') ? 0.45 : (b.etat === 'utilise' || b.etat === 'expire') ? 0.55 : 1,
+          outline: b.etat === 'proche' ? DASH : 'none', stamp: on, stampDate: on ? this.dm(b.le) : '', anim: neufs.includes('b' + b.i) ? 'bingoPop .6s ease' : 'none' };
+      }
+      const s = c.s, e = this.etat(S, s.n), past = s.n < S.semaine;
+      return { isMega: false, isBon: false, isSem: true, d: s.du, ill: this.src(s.ill), ti: s.titre, bg: s.fete ? FETE : 'var(--color-surface)',
+        op: e === 'futur' ? 0.42 : 1, illOp: e === 'manquee' ? 0.28 : 1, illFilter: e === 'manquee' ? 'grayscale(1)' : 'none',
+        outline: e === 'encours' ? DASH : 'none', stamp: e === 'coche', stampDate: e === 'coche' ? this.dm(S.cochees[s.n]) : '',
+        bar: e === 'encours', manquee: e === 'manquee', cursor: past ? 'pointer' : 'default',
+        onClick: past ? () => this.basculer(s.n) : undefined, title: past ? 'Cliquer : cochée ou manquée' : '',
+        anim: neufs.includes('s' + s.n) ? 'bingoPop .6s ease' : 'none' };
+    });
+
+    const sem = C.SEM[Math.min(S.semaine, NS) - 1], fait = !fini && !!S.cochees[S.semaine];
+    const nB = B.filter(b => b.le).length;
+    const poche = B.filter(b => b.etat === 'pris').map(b => ({ src: 'Bingo · ' + this.ord(b.k) + ' case', nom: b.nom + ' · ' + this.eur(S.valeur), code: 'code ' + b.code + ' · jusqu’au ' + this.dm(b.fin), ill: this.src(b.ill), tileBg: 'var(--color-primary)', filter: WHITE, anim: neufs.includes('b' + b.i) ? 'bingoPop .6s ease' : 'none' }))
+      .concat(S.bonsPts.map((b, i) => ({ src: 'Points · ' + S.palier + ' pts', nom: 'Bon points · ' + this.eur(S.palierVal), code: 'code ' + b.code + ' · jusqu’au ' + this.dm(this.jour(b.le, S.validite)), ill: this.src('croissant'), tileBg: 'var(--color-secondary)', filter: 'none', anim: neufs.includes('p' + (i + 1)) ? 'bingoPop .6s ease' : 'none' })))
+      .concat(plein ? [{ src: 'Bingo · carte pleine', nom: 'Super bon cadeau · ' + this.eur(S.megaValeur), code: 'code FIDMEGA13H · jusqu’au ' + this.dm(this.jour(megaLe, S.validite)), ill: this.src('cake'), tileBg: 'var(--color-primary)', filter: WHITE, anim: neufs.includes('m') ? 'bingoPop .6s ease' : 'none' }] : []).reverse();
+    const nb = Math.floor(NS / S.x), ks = Array.from({ length: nb }, (_, i) => this.ord((i + 1) * S.x));
+    const t = S.toast;
+
+    return {
+      x: S.x, seuil: S.seuil, valeur: S.valeur, validite: S.validite, fini,
+      seuilTxt: this.eur(S.seuil), valeurTxt: this.eur(S.valeur),
+      gridCols: 'repeat(' + (S.x + 1) + ',minmax(0,1fr))',
+      tiltT: (this.props.carteInclinee ?? true) ? 'rotate(-1.2deg)' : 'none',
+      xOpts: [2, 3, 4].map(v => ({ v, onClick: () => this.regler('x', v), bg: v === S.x ? 'var(--color-surface)' : 'transparent',
+        color: v === S.x ? 'var(--color-primary)' : 'var(--color-text-muted)', shadow: v === S.x ? '0 1px 2px rgba(0,0,0,.08)' : 'none' })),
+      onSeuil: e => this.regler('seuil', e.target.value), onValeur: e => this.regler('valeur', e.target.value), onValidite: e => this.regler('validite', e.target.value), onMega: e => this.regler('mega', e.target.value), megaValeur: S.megaValeur,
+      onPtsEuro: e => this.regler('ptsEuro', e.target.value), onPalier: e => this.regler('palier', e.target.value), onPalierVal: e => this.regler('palierVal', e.target.value),
+      ptsParEuro: S.ptsParEuro, palier: S.palier, palierVal: S.palierVal, palierValTxt: this.eur(S.palierVal), points: S.points,
+      ptsPctW: Math.min(100, 100 * S.points / S.palier).toFixed(0) + '%', ptsAnim: neufs.some(n => n[0] === 'p') ? 'bingoPop .6s ease' : 'none',
+      boostTag: fini ? 'carte terminée' : fait ? '×2 jusqu’à dimanche' : '×1 · cochez pour ×2',
+      boostBg: fait && !fini ? 'var(--color-primary)' : 'var(--color-bg)', boostFg: fait && !fini ? 'var(--color-surface)' : 'var(--color-text-muted)',
+      ptsP: (S.dernierGain != null ? '+' + S.dernierGain + ' pts au dernier ticket · ' : '') + 'encore ' + Math.max(0, S.palier - S.points) + ' pts pour un bon de ' + this.eur(S.palierVal) + (fait && !fini ? ' : chaque euro en vaut deux cette semaine.' : '.'),
+      etatTxt: fini ? 'Carte terminée (dès le 22/02)' : 'Semaine ' + S.semaine + ' · ' + sem.du + ' – ' + sem.au + ' · ' + this.nf(S.depense, 2) + ' €',
+      tickets: [2.8, 4.2, 7.5].map(m => ({ label: '+ ticket ' + this.eur(m), onClick: () => this.ticket(m), disabled: fini, op: fini ? 0.4 : 1 })),
+      suivante: () => this.suivante(), suivOp: fini ? 0.4 : 1, reset: () => this.setState(Object.assign(this.depart(), { qr: S.qr })),
+      qr: S.qr, printCells, miniCells, pctW: pct.toFixed(0) + '%',
+      appDate: fini ? 'carte terminée' : new Date(this.auj(S) + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' }),
+      casesTxt: nC + ' / ' + NS, bonsTxt: 'cases · ' + nB + ' bon' + (nB > 1 ? 's' : '') + ' débloqué' + (nB > 1 ? 's' : ''),
+      semBorder: (fait || fini) ? 'solid' : 'dashed', semJauge: !fini,
+      semIll: this.src(fini ? 'cupcake' : sem.ill),
+      semSmall: fini ? 'Carte terminée · 13 semaines' : (fait ? 'Case cochée ✓' : 'Cette semaine') + ' · ' + sem.du + ' – ' + sem.au,
+      semTitre: fini ? 'La carte d’hiver est terminée' : sem.titre,
+      semP: fini ? 'La carte du printemps arrive lundi 22/02.'
+        : fait ? this.eur(S.depense) + ' cette semaine. Rendez-vous lundi pour la case suivante.'
+        : this.nf(S.depense, 2) + ' € sur ' + this.eur(S.seuil) + ' — encore ' + this.nf(S.seuil - S.depense, 2) + ' € d’ici dimanche et la case se coche toute seule.',
+      poche, noPoche: !poche.length,
+      hasToast: !!t, toastTxt: t ? t.txt : '', toastIll: t ? this.src(t.ill) : '',
+      toastBg: t && t.bon ? 'var(--color-primary)' : 'var(--color-text)',
+      toastIllBg: t && t.bon ? 'transparent' : 'var(--color-background-secondary)', toastIllFilter: t && t.bon ? WHITE : 'none',
+      closeToast: () => this.setState({ toast: null }),
+      ksTxt: ks.length > 1 ? 'La ' + ks.slice(0, -1).join(', la ') + ' et la ' + ks[ks.length - 1] : 'La ' + ks[0],
+      schemas: [2, 3, 4].map(xx => {
+        const on = xx === S.x, cellsS = [];
+        for (let i = 0; i < NS; i++) { cellsS.push({ bg: 'var(--color-bg)' }); if ((i + 1) % xx === 0) cellsS.push({ bg: on ? 'var(--color-primary)' : 'color-mix(in srgb, var(--color-primary) 40%, var(--color-surface))' }); }
+        return { onClick: () => this.regler('x', xx), cols: 'repeat(' + (xx + 1) + ',9px)', cells: cellsS, l1: 'x = ' + xx, l2: Math.floor(NS / xx) + ' bons',
+          color: on ? 'var(--color-primary)' : 'var(--color-text-muted)', border: on ? 'var(--color-primary)' : 'transparent', bg: on ? 'rgba(141,29,44,.04)' : 'transparent' };
+      }),
+      saisons: C.SAISONS.map(s => { const on = s.etat === 'en cours';
+        return { nom: s.nom, etat: s.etat, dt: s.du + ' → ' + s.au, fetes: s.fetes, ill: this.src(s.ill), illOp: on ? 1 : 0.6,
+          border: on ? 'var(--color-primary)' : 'var(--color-border-tertiary)',
+          chipBg: on ? 'color-mix(in srgb, var(--color-secondary) 42%, var(--color-surface))' : 'var(--color-background-secondary)',
+          chipFg: on ? 'var(--color-primary)' : 'var(--color-text-muted)' }; }),
+    };
+  }
+}
+</script>
+</body>
+</html>
