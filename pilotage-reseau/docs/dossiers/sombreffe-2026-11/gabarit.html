@@ -84,6 +84,9 @@ body { margin: 0; background: var(--paper); }
 .rp-pied { font-size: 11.5px; color: var(--muted); }
 .rp-renvoi { font-style: normal; color: var(--muted-2); }
 .rp [hidden] { display: none !important; }
+/* Le mot d'ouverture : la voix de celui qui signe le rapport, en grand, sans encadré ni gras. */
+.rp-ouverture { padding: 6px 0 4px; }
+.rp-ouverture p { margin: 0; font-size: 18px; line-height: 1.5; letter-spacing: -.005em; color: var(--ink); max-width: 62ch; text-wrap: pretty; }
 .rp-annexes { padding-top: 8px; }
 .rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
 .rp-chaleur th { background: none; border-bottom: 0; padding: 4px 4px; text-align: center; }
@@ -121,6 +124,7 @@ body { margin: 0; background: var(--paper); }
     <h1 class="rp-titre">Sombreffe, comptoir et B2B</h1>
     <div class="rp-sous" id="sous-titre"></div>
   </header>
+  <section class="rp-ouverture" id="ouverture"><p id="ouverture-texte"></p></section>
   <div class="rp-alerte" id="soins-intensifs"></div>
 
   <section class="rp-carte" id="essentiel">
@@ -317,6 +321,8 @@ const ecC = k => (C.n[k] / C.n1[k] - 1) * 100;
 $('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
 $('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>Le magasin passe en soins intensifs le lundi ' +
   esc(dateL(D.soinsIntensifs)) + '. Ce rapport en est le point de départ : l’état du magasin à l’entrée, les repères à battre et ce qu’on suit chaque semaine.</span>';
+
+$('ouverture-texte').textContent = insec(D.ouverture);
 
 /* --- L'essentiel --- */
 const kpi = (k, v, s, c = '') => `<div class="rp-kpi ${c}"><div class="rp-kpi-k">${esc(k)}</div><div class="rp-kpi-v">${esc(v)}</div><div class="rp-kpi-s">${esc(s)}</div></div>`;

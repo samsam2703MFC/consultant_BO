@@ -237,6 +237,9 @@ def main():
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
+        # Le mot d'ouverture, dicté le 13/11/2026 : repris mot pour mot, l'orthographe seule corrigée.
+        'ouverture': 'Aujourd’hui, je représente les 110 personnes qui travaillent dans notre groupe : 110 personnes, dont '
+                     '67 chefs et responsables de famille. Et pour cela, je dois faire en sorte que chacun fasse sa part.',
         # Les objectifs de clients par jour fixés par le bureau le 13/11/2026 : la base (départ + 5), l'objectif court terme,
         # puis l'objectif normalisé, le plan normal d'évolution du magasin.
         'objectifs': {'palier': 5, 'courtTerme': 156, 'normalise': 165, 'le': '13/11/2026'},
