@@ -12,11 +12,11 @@
  "duree": "10 min de lecture",
  "titre": {
   "fr": "Le dashboard : l’onglet Temps morts",
-  "nl": "Het dashboard: het tabblad Dode momenten"
+  "nl": "Het dashboard: het tabblad Dode tijd"
  },
  "objectif": {
   "fr": "Savoir lire l’onglet Temps morts : le seuil, les cinq tuiles face à l’habitude, la journée minute par minute et la semaine jour par jour, pour voir quand le magasin attend le client.",
-  "nl": "Het tabblad Dode momenten kunnen lezen: de drempel, de vijf tegels tegenover de gewoonte, de dag minuut per minuut en de week dag per dag, om te zien wanneer de winkel op de klant wacht."
+  "nl": "Het tabblad Dode tijd kunnen lezen: de drempel, de vijf tegels tegenover de gewoonte, de dag minuut per minuut en de week dag per dag, om te zien wanneer de winkel op de klant wacht."
  },
  "pour": {
   "fr": "Candidat franchisé, franchisé, manager, adjoint manager et chef de section vente (P4, P7 à P12). À lire dans la formation FO-05, après l’article « Comprendre le dashboard magasin » (0.0.15).",
@@ -74,7 +74,7 @@
      },
      "texte": {
       "fr": "« Temps morts » : leur nombre ; « Sans client » : le temps passé sans ticket, « sur … » le temps entre le premier et le dernier ticket ; « Part de l’ouverture » : ce temps sans client en %.\n« Le plus long trou » : sa durée, de quelle heure à quelle heure ; « Tickets » : tous comptés, comptoir et pro, ou le ticket isolé écarté en bord de journée.\nSous les trois premières : l’habitude, la moyenne des 4 mêmes jours de semaine d’avant (« les 4 jeudis d’avant »).\nLe badge d’écart est vert quand il y a moins de temps mort que l’habitude, rouge quand il y en a plus, gris « comme l’habitude ».\nPour la journée en cours (« · en cours »), il n’y a pas de badge : la journée n’est pas finie.\nSi le badge est rouge : regarder dans la grille à quelles heures tombent les temps morts.",
-      "nl": "« Temps morts »: hun aantal; « Sans client »: de tijd zonder ticket, « sur … » de tijd tussen het eerste en het laatste ticket; « Part de l’ouverture »: die tijd zonder klant in %.\n« Le plus long trou »: de duur, van welk uur tot welk uur; « Tickets »: alle meegeteld, toonbank en zakelijk, of het geïsoleerde ticket aan de rand van de dag dat weggelaten is.\nOnder de eerste drie: de gewoonte, het gemiddelde van de 4 zelfde weekdagen ervoor (« les 4 jeudis d’avant »).\nHet verschilbadge is groen als er minder dode momenten zijn dan gewoonlijk, rood als er meer zijn, grijs « comme l’habitude ».\nVoor de lopende dag (« · en cours ») is er geen badge: de dag is nog niet voorbij.\nAls het badge rood is: kijk in het rooster op welke uren de dode momenten vallen."
+      "nl": "« Temps morts »: hun aantal; « Sans client »: de tijd zonder ticket, « sur … » de tijd tussen het eerste en het laatste ticket; « Part de l’ouverture »: die tijd zonder klant in %.\n« Le plus long trou »: de duur, van welk uur tot welk uur; « Tickets »: alle meegeteld, toonbank en zakelijk, of het geïsoleerde ticket aan de rand van de dag dat weggelaten is.\nOnder de eerste drie: de gewoonte, het gemiddelde van de 4 zelfde weekdagen ervoor (« les 4 jeudis d’avant »).\nHet verschilbadge is groen als er minder dode tijd is dan gewoonlijk, rood als er meer is, grijs « comme l’habitude ».\nVoor de lopende dag (« · en cours ») is er geen badge: de dag is nog niet voorbij.\nAls het badge rood is: kijk in het rooster op welke uren de dode tijd valt."
      },
      "critique": true,
      "photo": "do-morts-tuiles.jpg",
@@ -96,7 +96,7 @@
      },
      "texte": {
       "fr": "Une ligne par heure, du premier au dernier ticket ; un carré par minute (00, 15, 30, 45 en tête).\nCarré foncé : au moins un ticket dans la minute (le chiffre quand il y en a plusieurs).\nCarré rose : la minute tombe dans un temps mort ; carré clair : minute calme, moins que le seuil sans ticket ; hachuré : avant le premier ou après le dernier ticket.\nÀ droite de chaque heure : « sans client », la part de l’heure sans ticket, puis le nombre de tickets et de temps morts (« tm »).\nSurvoler un carré donne son heure, ses tickets ou le temps mort (de … à …, sa durée).\nSi la même heure reste rose plusieurs jours de suite : la signaler au responsable, c’est une heure où l’équipe attend le client.",
-      "nl": "Eén lijn per uur, van het eerste tot het laatste ticket; één vakje per minuut (00, 15, 30, 45 bovenaan).\nDonker vakje: minstens één ticket in die minuut (het cijfer als er meerdere zijn).\nRoze vakje: de minuut valt in een dood moment; licht vakje: rustige minuut, korter dan de drempel zonder ticket; gearceerd: vóór het eerste of na het laatste ticket.\nRechts van elk uur: « sans client », het aandeel van het uur zonder ticket, daarna het aantal tickets en dode momenten (« tm »).\nOver een vakje gaan geeft het uur, de tickets of het dode moment (van … tot …, de duur).\nAls hetzelfde uur meerdere dagen na elkaar roze blijft: meld het aan de verantwoordelijke, het is een uur waarop het team op de klant wacht."
+      "nl": "Eén lijn per uur, van het eerste tot het laatste ticket; één vakje per minuut (00, 15, 30, 45 bovenaan).\nDonker vakje: minstens één ticket in die minuut (het cijfer als er meerdere zijn).\nRoze vakje: de minuut valt in een dood moment; licht vakje: rustige minuut, korter dan de drempel zonder ticket; gearceerd: vóór het eerste of na het laatste ticket.\nRechts van elk uur: « sans client », het aandeel van het uur zonder ticket, daarna het aantal tickets en de dode tijd (« tm »).\nOver een vakje gaan geeft het uur, de tickets of de dode tijd (van … tot …, de duur).\nAls hetzelfde uur meerdere dagen na elkaar roze blijft: meld het aan de verantwoordelijke, het is een uur waarop het team op de klant wacht."
      },
      "critique": false,
      "photo": "do-morts-journee.jpg",
@@ -144,7 +144,7 @@
  "points_critiques": [
   {
    "fr": "Un chiffre de temps mort ne se compare qu’au même seuil (5, 10 ou 15 min) : le seuil choisi change toute la page.",
-   "nl": "Een cijfer van dode momenten vergelijk je alleen bij dezelfde drempel (5, 10 of 15 min): de gekozen drempel verandert de hele pagina."
+   "nl": "Een cijfer van dode tijd vergelijk je alleen bij dezelfde drempel (5, 10 of 15 min): de gekozen drempel verandert de hele pagina."
   },
   {
    "fr": "La journée en cours n’est pas jugée face à l’habitude : on la lit le soir, ou on lit une journée close.",
@@ -215,7 +215,6 @@
   }
  ],
  "remarques": [
-  "Le titre néerlandais demandé est « Dode momenten » ; l’article 0.0.15 (art-pil-01) dit « Dode tijd » : à harmoniser.",
   "Captures du jeudi 12/11/2026 (journée close, Halle), seuil 10 min.",
   "L’article ne dit pas quoi faire des heures creuses (tâches, horaires d’équipe) : rien dans le code ; à compléter par l’équipe si souhaité."
  ]
