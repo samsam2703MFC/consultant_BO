@@ -1439,3 +1439,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-13T12:45:40Z fiche produit : libellé du prix catalogue
 2026-11-13T12:48:03Z Résultat › Évolution magasin : bascule ventes Tout | Comptoir | B2B
 accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26:57Z
+2026-11-13T13:46:33Z Accès rouvert : plus de connexion (siège ni magasins)
