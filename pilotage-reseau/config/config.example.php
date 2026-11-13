@@ -38,6 +38,10 @@ return [
         'bic'              => null,
     ],
 
+    // L'accès à l'API (src/acces.php) : 'console' exige une session de la console franchisé (en ligne, posé par
+    // bin/deploy.sh) ; 'ouvert' la laisse ouverte (banc, poste de développement).
+    'acces' => (getenv('COCKPIT_ACCES') ?: 'ouvert') === 'console' ? 'console' : 'ouvert',
+
     // Écran de connexion intégré. false (défaut) : accès ouvert — les
     // utilisateurs arrivent redirigés depuis l'ERP, qui porte l'auth.
     // true : mot de passe défini au premier lancement, session 30 jours.

@@ -204,15 +204,27 @@ jobs:
           echo "OK  ${ERP_URL}/ répond ${code} depuis l'extérieur"
 
       - name: Recette publique (endpoints depuis le runner)
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
         run: |
           # Un déploiement « réussi » ne prouve que le transfert de fichiers.
           # Cette recette est le seul endroit qui dit si l'application RÉPOND,
           # donc elle doit couvrir ce qui vient d'être livré — sinon elle
           # certifie une mise en ligne qu'elle n'a pas vérifiée.
           fail=0
+          # L'API est fermée (13/11/2026, src/acces.php) : sans session, 401. La recette lit avec la clé que cette
+          # livraison a tirée (config.php, `accesRecette`), relue sur le serveur et masquée dans le journal.
+          RECETTE="$(sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -r '\$c = require \"/var/www/consulant_bo/config/config.php\"; echo (string) (\$c[\"accesRecette\"] ?? \"\");'" 2>/dev/null || true)"
+          if [ -n "$RECETTE" ]; then echo "::add-mask::$RECETTE"; fi
+          # La clé ne voyage qu'en https (le serveur a son certificat d'adresse IP).
+          APP_BASE_S="https://${APP_BASE#http://}"
+          ferme=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/api/cockpit/meta")
+          if [ "$ferme" != "401" ]; then echo "::error::/api/cockpit/meta sans session répond HTTP $ferme (401 attendu : l'API doit être fermée)"; fail=1
+          else echo "OK  l'API est fermée sans session (401)"; fi
           for ep in meta stores consultants people 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="
-            if ! curl -fsS "${APP_BASE}/api/cockpit/${ep}" | head -c 500; then
+            if ! curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/${ep}" | head -c 500; then
               echo; echo "::error::Échec recette sur /api/cockpit/${ep}"; fail=1
             fi
             echo
@@ -221,11 +233,11 @@ jobs:
           # Les contrats que les écrans supposent, vérifiés sur la vraie base :
           # sans eux, l'écran s'affiche vide et personne ne sait pourquoi.
           echo "== contrats attendus =="
-          meta=$(curl -fsS "${APP_BASE}/api/cockpit/meta" || echo '{}')
+          meta=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/meta" || echo '{}')
           if ! echo "$meta" | grep -q '"niveaux":\[{'; then
             echo "::error::/meta ne porte pas les niveaux de validation (réglage signalement absent)"; fail=1
           else echo "OK  /meta porte les cinq niveaux de validation"; fi
-          su=$(curl -fsS "${APP_BASE}/api/cockpit/taches/suivi?periode=semaine" || echo '{}')
+          su=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/taches/suivi?periode=semaine" || echo '{}')
           for k in validees moyenne repartition ouverts signalements parIntervenant; do
             if ! echo "$su" | grep -q "\"$k\""; then
               echo "::error::/taches/suivi ne porte pas « $k »"; fail=1
@@ -234,7 +246,7 @@ jobs:
           [ "$fail" = "0" ] && echo "OK  /taches/suivi porte les six champs de l'écran de suivi"
           # Le Scouting est parti dans le CRM (Étude de faisabilité) ; Développement
           # commercial et Prospection lisent encore ici les magasins pointés.
-          rs=$(curl -fsS "${APP_BASE}/api/cockpit/scouting/reseau" || echo '{}')
+          rs=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/scouting/reseau" || echo '{}')
           if ! echo "$rs" | grep -q '"magasins":\['; then echo "::error::/scouting/reseau ne rend pas les magasins du réseau"; fail=1
           else echo "OK  /scouting/reseau rend les magasins du réseau ($(echo "$rs" | grep -o '"position":"' | wc -l) positionnés)"; fi
 
@@ -255,17 +267,17 @@ jobs:
           rc=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/tablette/img/__absent__.png")
           if [ "$rc" != "404" ]; then echo "::error::un fichier absent de tablette/ répond HTTP $rc (404 attendu, sinon le shell du cockpit part en 200)"; fail=1
           else echo "OK  un fichier absent de tablette/ rend 404"; fi
-          bk=$(curl -fsS --max-time 120 "${APP_BASE}/api/cockpit/tablette/book" || echo '{}')
+          bk=$(curl -H "X-Recette: ${RECETTE}" -fsS --max-time 120 "${APP_BASE_S}/api/cockpit/tablette/book" || echo '{}')
           if ! echo "$bk" | grep -q '"products":\['; then
             echo "::error::/tablette/book ne rend pas de produits : $(echo "$bk" | head -c 300)"; fail=1
           else echo "OK  /tablette/book rend $(echo "$bk" | grep -o '"alKnown":' | wc -l) produit(s)"; fi
           # L'accueil de la tablette : les objectifs (CA, vente additionnelle) du réseau.
-          ob=$(curl -fsS --max-time 120 "${APP_BASE}/api/cockpit/tablette/objectifs" || echo '{}')
+          ob=$(curl -H "X-Recette: ${RECETTE}" -fsS --max-time 120 "${APP_BASE_S}/api/cockpit/tablette/objectifs" || echo '{}')
           if ! echo "$ob" | grep -q '"ca":{'; then
             echo "::error::/tablette/objectifs ne rend pas de bloc ca : $(echo "$ob" | head -c 300)"; fail=1
           else echo "OK  /tablette/objectifs rend le CA du réseau : $(echo "$ob" | grep -o '"semaine":{[^}]*}' | head -1)"; fi
           # Les remarques des clients saisies sur la tablette (lecture seule : la recette n'en crée aucune).
-          rq=$(curl -fsS "${APP_BASE}/api/cockpit/tablette/remarques?jours=30" || echo '{}')
+          rq=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/tablette/remarques?jours=30" || echo '{}')
           if ! echo "$rq" | grep -q '"remarques":\['; then
             echo "::error::/tablette/remarques ne rend pas de liste remarques : $(echo "$rq" | head -c 300)"; fail=1
           else echo "OK  /tablette/remarques rend $(echo "$rq" | grep -o '"nonTraitees":[0-9]*') sur 30 jours"; fi
@@ -275,7 +287,7 @@ jobs:
           # consultant connecté y retrouve ses tâches. Une divergence ici ne
           # lève aucune erreur — elle vide simplement son écran.
           echo "== identifiants d'intervenant =="
-          cons=$(curl -fsS "${APP_BASE}/api/cockpit/consultants" || echo '[]')
+          cons=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/consultants" || echo '[]')
           echo "$cons" | head -c 400; echo
           if echo "$cons" | grep -q '"id":"u'; then
             echo "OK  les consultants portent un identifiant « u<membership> »"
@@ -286,14 +298,14 @@ jobs:
           # Personne ne doit disparaître entre les deux listes : un filtre trop
           # zélé sur /people cachait trois consultants sur cinq, sans rien dire.
           nc=$(echo "$cons" | grep -o '"id":"u' | wc -l)
-          np=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"id":"u' | wc -l)
+          np=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/people" | grep -o '"id":"u' | wc -l)
           echo "consultants : $nc · destinataires : $np"
           if [ "$np" -lt "$nc" ]; then
             echo "::warning::$((nc - np)) intervenant(s) absent(s) de la liste des destinataires"
           else
             echo "OK  aucun intervenant ne disparaît de la liste des destinataires"
           fi
-          sans=$(curl -fsS "${APP_BASE}/api/cockpit/people" | grep -o '"joignable":false' | wc -l)
+          sans=$(curl -H "X-Recette: ${RECETTE}" -fsS "${APP_BASE_S}/api/cockpit/people" | grep -o '"joignable":false' | wc -l)
           [ "$sans" -gt 0 ] && echo "::notice::$sans compte(s) sans adresse e-mail — un rapport ne peut pas leur être envoyé"
           true
 

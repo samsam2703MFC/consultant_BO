@@ -62,6 +62,8 @@ function authRoute(string $method, string $path): ?array
     }
     if ($method === 'POST' && $path === '/auth/setup') {
         if (authIsSetup()) { http_response_code(409); return ['error' => 'déjà configuré']; }
+        // L'API fermée (src/acces.php) : le mot de passe ne se crée qu'avec la preuve du compte ERP (/acces/siege/creer).
+        if (function_exists('accesMode') && accesMode() === 'console') { http_response_code(403); return ['error' => 'Créez le mot de passe depuis la page de connexion.']; }
         $pw = (string) (body()['password'] ?? '');
         if (strlen($pw) < 8) { http_response_code(422); return ['error' => 'Mot de passe : 8 caractères minimum.']; }
         Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
@@ -72,7 +74,9 @@ function authRoute(string $method, string $path): ?array
     }
     if ($method === 'POST' && $path === '/auth/login') {
         $pw = (string) (body()['password'] ?? '');
+        if (function_exists('accesFreine') && accesFreine('siege')) { http_response_code(429); return ['error' => 'Trop d’essais. Réessayez dans un quart d’heure.']; }
         if (!authIsSetup() || !password_verify($pw, (string) authHash())) {
+            if (function_exists('accesEchec')) { accesEchec('siege'); }
             usleep(500000); // freiner la force brute
             http_response_code(401);
             return ['error' => 'Mot de passe incorrect.'];

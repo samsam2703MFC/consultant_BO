@@ -262,6 +262,12 @@ else
   log "Tablettes : aucun code de gestion (TABLETTES_CODE ou /var/lib/consulant_bo/prive/tablettes_code) — la gestion des tablettes est ouverte sans code (décision du client, 06/11/2026)."
 fi
 
+# L'accès à l'API (13/11/2026, src/acces.php) : l'API demande une session (siège ou magasin). La recette de
+# cette livraison (les curl en loopback plus bas) passe avec une clé tirée au hasard ici, à chaque livraison, posée
+# dans config.php (`accesRecette`) et envoyée dans l'en-tête X-Recette. Jamais affichée ; la suivante la remplace.
+ACCES_RECETTE="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+export ACCES_RECETTE
+
 # --- 4. config/config.php (génération sûre via var_export) ---------------
 CFG="$TARGET_DIR/config/config.php"
 if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
@@ -287,6 +293,9 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
+      // L’accès (src/acces.php) : « console » = session exigée (siège, magasin ou console) ; COCKPIT_ACCES=ouvert pour rouvrir.
+      "acces"   => (getenv("COCKPIT_ACCES") ?: "console") === "ouvert" ? "ouvert" : "console",
+      "accesRecette" => getenv("ACCES_RECETTE") ?: null,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
       // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du
       // serveur), la PROD fermée tant que HR_DIMONA_PROD_ENABLED ne vaut pas 1, et les surcharges
@@ -633,7 +642,7 @@ log "Recette (loopback) — premier appel déclenche tables + seed…"
 rc=0
 for ep in meta stores pwa/reports; do
   echo "== GET ${LOCAL_BASE}/api/cockpit/${ep} =="
-  if ! curl -fsS "${LOCAL_BASE}/api/cockpit/${ep}" | head -c 500; then
+  if ! curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/${ep}" | head -c 500; then
     rc=1; warn "Échec sur /api/cockpit/${ep}"
   fi
   echo
@@ -768,7 +777,7 @@ log "Benchmark concurrents : relevés cougnou / galette posés dans l'ERP en arr
 # faux qui a l'air juste. On mesure donc la couverture et la vraisemblance.
 # L'écran Exploitation ne sert à rien s'il ne rend aucun magasin, et il ment
 # s'il prend le mois courant pour un mois clos. On vérifie les deux.
-curl -fsS "${LOCAL_BASE}/api/cockpit/exploitation" 2>/dev/null | php -r '
+curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/exploitation" 2>/dev/null | php -r '
 $r = json_decode(file_get_contents("php://stdin"), true);
 $m = $r["magasins"] ?? [];
 printf("  exploitation: %d magasin(s), jour %s, mois %s%s\n", count($m),
@@ -782,7 +791,7 @@ foreach ($m as $s) {
 }
 '
 echo "== catalogue produit =="
-CAT_JSON="$(curl -fsS "${LOCAL_BASE}/api/cockpit/production/catalogue" 2>/dev/null || echo '[]')"
+CAT_JSON="$(curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/catalogue" 2>/dev/null || echo '[]')"
 php -r '
 $j = json_decode(file_get_contents("php://stdin"), true);
 if (!is_array($j) || !$j) { echo "  AUCUN produit rendu par /production/catalogue\n"; exit; }
@@ -811,7 +820,7 @@ printf("  marge exploitable   : %d (%.0f %%)\n", $mg, 100 * $mg / $n);
 # pas une erreur, mais un arbre entièrement orphelin trahit une jointure morte.
 echo "== arbre produit =="
 for r in groupes categories; do
-  curl -fsS "${LOCAL_BASE}/api/cockpit/production/${r}" 2>/dev/null | php -r '
+  curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/${r}" 2>/dev/null | php -r '
   $r = json_decode(file_get_contents("php://stdin"), true);
   $k = isset($r["groupes"]) ? "groupes" : "categories";
   if (!is_array($r) || empty($r[$k])) { printf("  %-11s : VIDE%s\n", $k, isset($r["erreur"]) ? " — ".$r["erreur"] : ""); exit; }
@@ -825,11 +834,11 @@ for r in groupes categories; do
 done
 # Ouvrir une branche réelle : un référentiel qui se compte bien mais dont
 # aucune catégorie ne rend de produit reste un arbre mort.
-CID="$(curl -fsS "${LOCAL_BASE}/api/cockpit/production/categories" 2>/dev/null \
+CID="$(curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/categories" 2>/dev/null \
   | php -r '$r=json_decode(file_get_contents("php://stdin"),true);
             foreach (($r["categories"] ?? []) as $c) { if (!empty($c["id"])) { echo $c["id"]; break; } }')"
 if [ -n "$CID" ]; then
-  curl -fsS "${LOCAL_BASE}/api/cockpit/production/categorie/produits?id=${CID}" 2>/dev/null | php -r '
+  curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/categorie/produits?id=${CID}" 2>/dev/null | php -r '
   $r = json_decode(file_get_contents("php://stdin"), true);
   $p = $r["produits"] ?? [];
   printf("  branche %s (%s) : %d référence(s), source %s%s\n",
@@ -853,7 +862,7 @@ done
 
 echo "== analyse dans le temps =="
 rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod /tmp/ceo_an_sous
-curl -fsS --max-time 300 "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
+curl -H "X-Recette: ${ACCES_RECETTE}" -fsS --max-time 300 "${LOCAL_BASE}/api/cockpit/produits/analyse/options" 2>/dev/null | php -r '
 $r = json_decode(file_get_contents("php://stdin"), true);
 $c = $r["categories"] ?? []; $p = $r["produits"] ?? []; $s = $r["souscategories"] ?? [];
 printf("  options     : %d groupe(s), %d categorie(s), %d reference(s), releve %s%s\n",
@@ -875,7 +884,7 @@ for kind in categorie souscategorie produit; do
   KEY="$(cat "$f" 2>/dev/null || true)"
   [ -z "$KEY" ] && continue
   T0=$(date +%s)
-  curl -fsS --max-time 300 -G "${LOCAL_BASE}/api/cockpit/produits/analyse" \
+  curl -H "X-Recette: ${ACCES_RECETTE}" -fsS --max-time 300 -G "${LOCAL_BASE}/api/cockpit/produits/analyse" \
        --data-urlencode "type=${kind}" --data-urlencode "cle=${KEY}" \
        --data-urlencode "granularite=${gran}" 2>/dev/null | php -r '
   $r = json_decode(file_get_contents("php://stdin"), true);
@@ -900,7 +909,7 @@ done
 rm -f /tmp/ceo_an_cat /tmp/ceo_an_prod
 # Gammes saisonnières : les traductions ne vivent que dans l'API, la table
 # d'alias de la base étant vide. Si elles manquent, l'écran restera monolingue.
-curl -fsS "${LOCAL_BASE}/api/cockpit/production/periodes" 2>/dev/null | php -r '
+curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/periodes" 2>/dev/null | php -r '
 $r = json_decode(file_get_contents("php://stdin"), true);
 $p = $r["periodes"] ?? [];
 $tr = 0; $vides = 0;
@@ -917,7 +926,7 @@ if ($best) { file_put_contents("/tmp/ceo_periode_id", (string) $best["id"]); }
 '
 PID="$(cat /tmp/ceo_periode_id 2>/dev/null || true)"; rm -f /tmp/ceo_periode_id
 if [ -n "$PID" ]; then
-  curl -fsS "${LOCAL_BASE}/api/cockpit/production/periode/produits?id=${PID}" 2>/dev/null | php -r '
+  curl -H "X-Recette: ${ACCES_RECETTE}" -fsS "${LOCAL_BASE}/api/cockpit/production/periode/produits?id=${PID}" 2>/dev/null | php -r '
   $r = json_decode(file_get_contents("php://stdin"), true);
   $p = $r["produits"] ?? [];
   printf("  gamme %s (%s) : %d référence(s), source %s%s\n", $r["periodeId"] ?? "?",
@@ -982,11 +991,11 @@ fi
 # Le module Formation à la racine : la page, et son API à côté d'elle (31/10/2026).
 fm_page=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1/formation/" 2>/dev/null || echo 000)
 fm_https=$(curl -sk -o /dev/null -w '%{http_code}' --max-time 10 "https://127.0.0.1/formation/" 2>/dev/null || echo 000)
-fm_api=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/referentiel?_cache=600" 2>/dev/null || echo 000)
+fm_api=$(curl -H "X-Recette: ${ACCES_RECETTE}" -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/referentiel?_cache=600" 2>/dev/null || echo 000)
 log "Formation : /formation/ → HTTP ${fm_page} (https ${fm_https}) ; API /formation/api/cockpit → HTTP ${fm_api} (200 attendu, 503 = compte panel à brancher)."
 # La gestion des tablettes des magasins : avec un code de gestion configuré, elle ne répond jamais sans lui (lot 6) ;
 # sans code configuré, elle est ouverte (décision du client du 06/11/2026).
-tb_gest=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/tablettes" 2>/dev/null || echo 000)
+tb_gest=$(curl -H "X-Recette: ${ACCES_RECETTE}" -s -o /dev/null -w '%{http_code}' --max-time 30 "http://127.0.0.1/formation/api/cockpit/formation/tablettes" 2>/dev/null || echo 000)
 if [[ -n "${TABLETTES_CODE:-}" ]]; then
   log "Tablettes : gestion sans code de gestion → HTTP ${tb_gest} (403 attendu : un code est configuré)."
   if [[ "$tb_gest" == "200" ]]; then warn "Tablettes : un code de gestion est configuré mais la gestion répond SANS lui — à corriger avant tout."; fi
