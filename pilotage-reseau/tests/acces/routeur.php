@@ -1,6 +1,7 @@
 <?php
 // Banc de l'accès (src/acces.php) : la vraie API du cockpit et ses pages, et une FAUSSE console franchisé sous
-// /webshop/api (deux comptes fictifs : « Siège Test », et « Franchisé Test » qui n'a que le magasin 2).
+// /webshop/api (deux comptes fictifs : « Siège Test », et « Franchisé Test » qui n'a que le magasin 2). Pour le banc
+// sans console (comme le serveur au 13/11/2026), HR_CONSOLE_API_INTERNAL pointe une adresse absente (404).
 // Lancement : COCKPIT_ACCES=console HR_CONSOLE_API_INTERNAL=http://127.0.0.1:8777/webshop/api HR_CONSOLE_API_BASE=/webshop/api \
 //             php -S 127.0.0.1:8777 -t public tests/acces/routeur.php
 $u = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
