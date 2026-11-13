@@ -1037,3 +1037,13 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   toujours vrai ; les documents « responsable » restent groupés en tête de l'onglet Manuel (« Pour le franchisé et le
   responsable », NL « Voor de franchisenemer en de verantwoordelijke »), sans cadenas ni PIN. L'écran du PIN et la route
   `/formation/sop/tablette/acces` restent dans le code, plus appelés.
+
+## Le Manuel de la tablette en trois boutons (maquette B, 13/11/2026)
+
+- Client : « on click de Manuel il faut 3 boutons : Franchisé · Consultant · Manuel opératoire » (maquettes A, B, C ;
+  **B retenue**). Sous les quatre cartes, trois cartes plus petites (`.tb-sousman`, `S.manSous` 'fr' · 'co' · 'ma', retenu
+  sur l'appareil `foManSous`, Franchisé d'office), chacune avec son nombre et une ligne (« et responsable », « visites et
+  contrôles », « le métier, pour tous ») ; seule la liste du bouton choisi s'affiche. Franchisé = accès « responsable » ;
+  Consultant = accès « consultant » ; Manuel opératoire = le reste (rangé par formation).
+- Nouveau dossier **05 « Le dashboard magasin, onglet par onglet »** (`FO_DOSSIERS`) : sous Franchisé, ses documents ont
+  leur propre groupe, rangés par code (0.0.34 → 0.0.49).

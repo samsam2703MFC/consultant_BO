@@ -51,6 +51,8 @@ const FO_DOSSIERS = [
     '02' => ['fr' => 'Cuisson et production', 'nl' => 'Bakken en productie'],
     '03' => ['fr' => 'Nettoyage et fermeture', 'nl' => 'Schoonmaak en sluiting'],
     '04' => ['fr' => 'Fiches de référence', 'nl' => 'Referentiefiches'],
+    // Le dashboard magasin, onglet par onglet (13/11/2026) : la section du Manuel, sous « Franchisé » sur la tablette.
+    '05' => ['fr' => 'Le dashboard magasin, onglet par onglet', 'nl' => 'Het winkeldashboard, tabblad per tabblad'],
 ];
 const FO_TRAD = ['origine', 'relue', 'a_relire'];
 const FO_PARTIES = ['preouverture', 'ouverture', 'operationnel', 'formation'];   // les quatre parties du Manuel opératoire (MN_PARTIES)

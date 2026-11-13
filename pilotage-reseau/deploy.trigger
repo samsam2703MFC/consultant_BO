@@ -1433,3 +1433,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 2026-11-12T18:12:05Z Assistant : avatars plus grands (96 / 72 px)
 2026-11-12T19:56:18Z Pilotage › Audit fournisseurs : formulaire, campagnes (e-mail + push), page du franchisé, résultats, copie au fournisseur
 2026-11-12T21:18:15Z Audit fournisseurs : liste déroulante des fournisseurs (ERP, cockpit, autre)
+2026-11-13T11:25:16Z manuel en trois boutons
