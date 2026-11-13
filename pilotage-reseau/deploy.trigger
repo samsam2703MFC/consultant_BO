@@ -1441,3 +1441,4 @@ Mise en ligne : lots 4 i 5 audytu — nawigacja (Zakupy, jedna lista wysyłek, s
 accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26:57Z
 2026-11-13T13:46:33Z Accès rouvert : plus de connexion (siège ni magasins)
 2026-11-13T15:55:37Z Fidélité : page de test à part (fidelite-test/, sa propre API, lecture seule) — le dashboard ne change pas
+2026-11-13T18:47:10Z Fidélité, page de test à part : l'admin (création en aperçu), le magasin test Halle et la carte de chaque client

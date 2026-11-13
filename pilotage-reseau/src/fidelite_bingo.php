@@ -509,7 +509,11 @@ function ep_fidelite_clients(): array
     };
     $L = array_map($fiche, array_values(array_filter($vus, static fn ($c) => $q === '' || str_contains(mb_strtolower($c['nom']), $q))));
     usort($L, static fn ($a, $b) => [$a['cas'], $b['cases'], $b['solde']] <=> [$b['cas'], $a['cases'], $a['solde']]);
-    if ($q === '') {
+    if (!empty($_GET['tous'])) {
+        // Tous les membres (200 au plus), par cases puis par points : la liste d'un magasin.
+        usort($L, static fn ($a, $b) => [$b['cases'], $b['solde']] <=> [$a['cases'], $a['solde']]);
+        $membres = array_slice($L, 0, 200);
+    } elseif ($q === '') {
         $parCas = [];
         foreach ($L as $m) { $parCas[$m['cas']][] = $m; }
         $membres = [];
@@ -706,6 +710,107 @@ function fidBingoBons(bool $ecrire): array
 function wr_fidelite_bingo_bons(): array
 {
     return fidBingoBons(!empty(body()['ecrire']));
+}
+
+/**
+ * GET /fidelite/client?id= — la carte d'un client, telle que l'app la montrerait : ses semaines (achats, points, case),
+ * ses bons du bingo (gagnés, émis : un code à son nom dans la campagne de la saison), son solde et ses paliers. Lu dans
+ * l'ERP comme le reste (les semaines de tous les magasins ; les codes par GET …/codes?id_customer=).
+ */
+function ep_fidelite_client(): array
+{
+    $id = (int) ($_GET['id'] ?? 0);
+    $conf = fidBingoConf(); $seuil = (float) $conf['seuilEuros'];
+    $err = null; $prog = fidCarteProgramme(fidCartesErp($err)); $saison = fidSaison();
+    if ($id <= 0) { http_response_code(400); return ['error' => 'id du client manquant']; }
+    if ($prog === null || $saison === null) { return ['erp' => ['ok' => false, 'erreur' => $err ?? 'aucune carte à points active']]; }
+    $appels = 0;
+    $C = fidBingoClients($saison, (int) $prog['id'], array_column(fidMagasins(), 'id'), $seuil, $appels);
+    $c = $C[$id] ?? null;
+    if ($c === null) { http_response_code(404); return ['error' => 'client ' . $id . ' introuvable sur la carte cette saison']; }
+    $cours = $saison['enCours'];
+    $semaines = [];
+    foreach ($saison['semaines'] as $w) {
+        $n = $w['n'];
+        $semaines[] = ['n' => $n, 'titre' => $w['titre'], 'sous' => $w['sous'], 'fete' => $w['fete'], 'ill' => $w['ill'], 'du' => $w['du'], 'au' => $w['au'], 'etat' => $w['etat'],
+            'euros' => isset($c['euros'][$n]) ? round($c['euros'][$n], 2) : null, 'points' => $c['points'][$n] ?? null,
+            'coche' => !empty($c['coches'][$n]), 'manquee' => $w['etat'] === 'passee' && empty($c['coches'][$n])];
+    }
+    $camp = fidCampagnes($saison['campagne']);
+    $codes = [];
+    foreach ($camp as $cp) {
+        $r = fidErp('GET', '/admin/voucher-campaigns/' . $cp['id'] . '/codes?limit=50&id_customer=' . $id);
+        foreach (fidItems($r['corps']) as $k) { if (is_array($k) && (int) ($k['id_customer'] ?? 0) === $id) { $codes[(string) ($k['code'] ?? '')] = $k; } }
+    }
+    $dus = fidBonsSaison($saison);
+    if (!empty($conf['superBon'])) { $dus[] = ['k' => count($saison['semaines']), 'valeur' => (float) $conf['superBon']['valeur'], 'nom' => 'Super bon cadeau', 'motif' => 'cake', 'super' => true]; }
+    $manquees = count(array_filter($semaines, static fn ($w) => $w['manquee']));
+    $bons = array_map(static function ($b) use ($c, $codes, $saison, $id, $manquees) {
+        $code = fidCodeBon($saison['id'], $b['k'], $id); $k = $codes[$code] ?? null;
+        $possible = count($saison['semaines']) - $manquees >= $b['k'];
+        return $b + ['gagne' => $c['cases'] >= $b['k'], 'reste' => max(0, $b['k'] - $c['cases']), 'possible' => $possible,
+            'code' => $k ? $code : null, 'statut' => $k ? (string) ($k['status'] ?? '') : null, 'jusquau' => $k['valid_to'] ?? null];
+    }, $dus);
+    $prochain = null; $atteint = null;
+    foreach ($c['paliers'] as $t) {
+        if (!is_array($t)) { continue; }
+        if (!empty($t['reached'])) { $atteint = ['points' => (int) $t['points'], 'valeur' => (int) $t['voucher_cents'] / 100]; }
+        elseif ($prochain === null) { $prochain = ['points' => (int) $t['points'], 'valeur' => (int) $t['voucher_cents'] / 100, 'reste' => (int) ($t['remaining'] ?? 0)]; }
+    }
+    $sem = $cours ? (float) $c['euros'][$cours] : 0.0;
+    return ['erp' => ['ok' => true, 'erreur' => null], 'aujourdhui' => fidAujourdhui(), 'seuil' => $seuil, 'tousLes' => max(1, (int) $conf['tousLes']), 'multiplicateur' => (float) ($conf['multiplicateurCase'] ?? 2),
+        'saison' => ['id' => $saison['id'], 'nom' => $saison['nom'], 'du' => $saison['du'], 'au' => $saison['au'], 'enCours' => $cours, 'campagne' => $saison['campagne']],
+        'client' => ['id' => $id, 'nom' => $c['nom'] !== '' ? $c['nom'] : 'client n° ' . $id, 'magasins' => array_keys($c['shops']), 'dernier' => $c['dernier'],
+            'solde' => $c['solde'], 'atteint' => $atteint, 'prochain' => $prochain, 'cases' => $c['cases'], 'manquees' => $manquees,
+            'semaine' => ['n' => $cours, 'euros' => round($sem, 2), 'reste' => max(0, round($seuil - $sem, 2)), 'coche' => $cours ? !empty($c['coches'][$cours]) : false]],
+        'semaines' => $semaines, 'bons' => $bons, 'appels' => $appels];
+}
+
+/**
+ * GET /fidelite/creation?saison= — ce que l'admin enverrait à l'ERP pour CRÉER le programme, sans rien envoyer : la carte
+ * à points (POST /admin/loyalty/cards, d'après la carte en place ou le handoff), et les campagnes de bons de la saison
+ * (POST /admin/voucher-campaigns), avec ce qui existe déjà. La page de test l'affiche en formulaire ; l'envoi n'y est pas.
+ */
+function ep_fidelite_creation(): array
+{
+    $conf = fidBingoConf();
+    $err = null; $cartes = fidCartesErp($err); $prog = fidCarteProgramme($cartes);
+    $saison = fidSaison(null, preg_match('/^[\w-]{1,12}$/', (string) ($_GET['saison'] ?? '')) ? (string) $_GET['saison'] : null);
+    $mags = $err === null ? fidMagasins() : [];
+    $pal = (array) ($conf['palier'] ?? ['points' => 100, 'valeur' => 5]);
+    $points = $prog ? fidPointsConfig($prog['points_config'] ?? null) : null;
+    $points ??= ['stamps_enabled' => false, 'points_enabled' => true, 'points_per_slice' => 1, 'slice_cents' => 100, 'voucher_validity_days' => (int) ($conf['validite'] ?? 30),
+        'points_validity_days' => 365, 'shop_coefficients' => (object) array_fill_keys(array_column($mags, 'id'), 1),
+        'bonuses' => [['name' => 'Jours creux', 'days' => [1, 2, 3], 'from' => '14:00', 'to' => '17:00', 'coefficient' => 2]],
+        'tiers' => [['points' => (int) $pal['points'], 'voucher_cents' => (int) round(100 * (float) $pal['valeur'])]]];
+    $carte = ['code' => (string) ($conf['carte'] ?? 'FID-POINTS'), 'name' => $prog ? (string) ($prog['name'] ?? 'Carte L’Atelier') : 'Carte L’Atelier',
+        'version' => $prog ? (int) ($prog['version'] ?? 1) + 1 : 1, 'scope' => 'NETWORK', 'shop_ids' => array_map('intval', array_column($mags, 'id')),
+        'starts_at' => fidUtc($saison ? max($saison['du'], fidPlus(fidAujourdhui(), 1)) : fidPlus(fidAujourdhui(), 1)), 'ends_at' => null, 'active' => 1, 'sort_order' => 0,
+        'color_tint' => '#F8E2CB', 'color_fill' => '#8D1D2C', 'color_accent' => '#F2C9A0', 'reward_label' => 'Bon de ' . fidEur((float) $pal['valeur']),
+        'keywords' => ['tout'], 'points_config' => $points];
+    $existantes = $saison && $err === null ? fidCampagnes($saison['campagne']) : [];
+    $valeurs = [];
+    if ($saison) { foreach (fidBonsSaison($saison) as $b) { $valeurs[(string) $b['valeur']] = $b['valeur']; } }
+    if (!empty($conf['superBon'])) { $valeurs[(string) $conf['superBon']['valeur']] = (float) $conf['superBon']['valeur']; }
+    $campagnes = [];
+    foreach ($valeurs as $v) {
+        $nom = ($saison ? $saison['campagne'] : 'Bingo') . ' · ' . fidEur($v);
+        $campagnes[] = ['valeur' => $v, 'existe' => $existantes[(int) round($v * 100)] ?? null,
+            'corps' => ['name' => $nom, 'description' => 'Bons du bingo de saison, un code par client (cockpit, fidélité).', 'status' => 'DRAFT', 'code_type' => 'UNIQUE',
+                'requires_customer' => true, 'usage_limit_per_code' => 1, 'valid_from' => $saison ? $saison['du'] . ' 00:00:00' : null,
+                'valid_to' => $saison ? fidPlus($saison['au'], (int) ($conf['validite'] ?? 30) + 1) . ' 23:59:59' : null]];
+    }
+    return ['erp' => ['ok' => $err === null, 'erreur' => $err], 'aujourdhui' => fidAujourdhui(), 'magasins' => $mags,
+        'carteEnPlace' => $prog ? fidCarteVue($prog) : null, 'saison' => $saison ? ['id' => $saison['id'], 'nom' => $saison['nom'], 'du' => $saison['du'], 'au' => $saison['au'], 'campagne' => $saison['campagne']] : null,
+        'annee' => fidAnnee(),
+        'regles' => ['seuil' => (float) $conf['seuilEuros'], 'tousLes' => max(1, (int) $conf['tousLes']), 'bons' => $saison ? array_map(static fn ($b) => ['k' => $b['k'], 'valeur' => $b['valeur'], 'nom' => $b['nom']], fidBonsSaison($saison)) : [],
+            'superBon' => !empty($conf['superBon']) ? (float) $conf['superBon']['valeur'] : null, 'validite' => (int) ($conf['validite'] ?? 30)],
+        'envois' => [
+            ['quoi' => $prog ? 'Nouvelle version de la carte à points (v' . $carte['version'] . ')' : 'La carte à points', 'methode' => 'POST', 'route' => '/admin/loyalty/cards', 'permission' => 'LOYALTY.MANAGE', 'corps' => $carte],
+        ],
+        'campagnes' => $campagnes,
+        'codeExemple' => ['methode' => 'POST', 'route' => '/admin/voucher-campaigns/{id}/codes', 'corps' => ['code' => fidCodeBon($saison['id'] ?? 'X', 3, 12345), 'status' => 'ACTIVE',
+            'id_customer' => 12345, 'valid_from' => fidPlus(fidAujourdhui(), 1) . ' 00:00:00', 'valid_to' => fidPlus(fidAujourdhui(), 1 + (int) ($conf['validite'] ?? 30)) . ' 23:59:59', 'usage_limit' => 1]]];
 }
 
 /**
