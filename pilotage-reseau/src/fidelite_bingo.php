@@ -303,11 +303,23 @@ function fidMagasins(): array
     return $out;
 }
 
-/** Le code d'une carte : lettres et chiffres en capitales (l'ERP a refusé « FID-POINTS » : INVALID_CODE, 13/11/2026). */
+/**
+ * Le code d'une carte : lettres, chiffres, tiret et soulignement, rien d'autre. L'ERP a refusé « FID-POINTS » puis
+ * « FIDPOINTS » (INVALID_CODE, 13/11/2026) sans dire son format : le code par défaut est en minuscules, et
+ * fidCodesEssai() donne les variantes à tenter.
+ */
 function fidCodeCarte(string $c): string
 {
-    $c = strtoupper((string) preg_replace('/[^A-Za-z0-9]/', '', $c));
-    return substr($c !== '' ? $c : 'FIDPOINTS', 0, 32);
+    $c = trim((string) preg_replace('/[^A-Za-z0-9_-]+/', '-', trim($c)), '-_');
+    return substr($c !== '' ? $c : 'points-atelier', 0, 40);
+}
+
+/** Les variantes d'un code à tenter quand l'ERP répond INVALID_CODE : le code tel quel, puis en minuscules (tiret, soulignement, collé), puis en capitales. */
+function fidCodesEssai(string $c): array
+{
+    $mots = array_values(array_filter(preg_split('/[^A-Za-z0-9]+/', $c) ?: []));
+    $min = array_map('strtolower', $mots);
+    return array_values(array_unique(array_filter([$c, implode('-', $min), implode('_', $min), implode('', $min), strtoupper(implode('_', $mots))])));
 }
 
 /** Les produits de l'ERP (GET /admin/loyalty/options) : [{id, nom}] — l'ERP exige un produit de récompense, même pour une carte à points. */
@@ -890,10 +902,23 @@ function wr_fidelite_creer(): array
     $corps['points_config']['shop_coefficients'] = [];
     foreach ($corps['shop_ids'] as $id) { $corps['points_config']['shop_coefficients'][(string) $id] = (float) ($coef[(string) $id] ?? 1); }
     if (preg_match('/^\d{4}-\d{2}-\d{2}$/', (string) ($b['debut'] ?? '')) && (string) $b['debut'] >= fidAujourdhui()) { $corps['starts_at'] = fidUtc((string) $b['debut']); }
-    $r = fidErp('POST', '/admin/loyalty/cards', $corps);
+    // L'ERP ne dit pas le format de son code : sur un refus qui ne porte QUE sur le code (INVALID_CODE), les variantes
+    // du même code sont tentées l'une après l'autre. Un refus n'écrit rien ; la réponse dit les essais.
+    $essais = [];
+    foreach (fidCodesEssai((string) $corps['code']) as $i => $code) {
+        if ($i > 0) {
+            $erreurs = (array) (($r['corps']['errors'] ?? null) ?: []);
+            if ((int) $r['code'] !== 422 || array_keys($erreurs) !== ['code']) { break; }
+        }
+        $corps['code'] = $code;
+        $r = fidErp('POST', '/admin/loyalty/cards', $corps);
+        $essais[] = ['code' => $code, 'http' => $r['code'], 'ok' => $r['erreur'] === null];
+        if ($r['erreur'] === null) { break; }
+    }
     if ($r['erreur'] !== null) {
         http_response_code($r['code'] >= 400 ? $r['code'] : 502);
-        return ['ok' => false, 'error' => 'l’ERP a refusé la carte : ' . $r['erreur'], 'code' => $r['code'], 'reponse' => $r['corps'], 'envoye' => $corps];
+        return ['ok' => false, 'error' => 'l’ERP a refusé la carte : ' . $r['erreur'], 'code' => $r['code'], 'essais' => $essais,
+            'codesExistants' => array_column($apercu['codesExistants'], 'code'), 'reponse' => $r['corps'], 'envoye' => $corps];
     }
     $carte = fidObjet($r['corps']);
     $carte = is_array($carte['data'] ?? null) ? $carte['data'] : $carte;
@@ -901,7 +926,7 @@ function wr_fidelite_creer(): array
         $qui = mb_substr(trim((string) ($b['qui'] ?? 'Page de test')) ?: 'Page de test', 0, 60);
         try { journalAdd($qui, 'Fidélité', null, 'Carte à points créée dans l’ERP : ' . $corps['code'] . ' v' . $corps['version'] . (isset($carte['id']) ? ' (id ' . $carte['id'] . ')' : '')); } catch (Throwable $e) { /* le journal ne bloque pas */ }
     }
-    return ['ok' => true, 'code' => $r['code'], 'carte' => $carte, 'envoye' => $corps];
+    return ['ok' => true, 'code' => $r['code'], 'codeCarte' => $corps['code'], 'essais' => $essais, 'carte' => $carte, 'envoye' => $corps];
 }
 
 /**

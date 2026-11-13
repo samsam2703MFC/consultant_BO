@@ -190,9 +190,9 @@ a{color:var(--accent)}
       de <input data-b="${i}" data-k="from" value="${esc(b.from)}" style="width:58px"> à <input data-b="${i}" data-k="to" value="${esc(b.to)}" style="width:58px">
       <input data-b="${i}" data-k="name" value="${esc(b.name)}" style="width:130px"><button class="x" data-retirer="${i}" title="Retirer">×</button></div>`).join('');
     const reglages = `<h3>La carte à points ${C ? '· en place : ' + esc(C.nom) + ' (' + esc(C.code) + ', v' + C.version + (C.verrou ? ', barème figé' : '') + ')' : '· aucune dans l’ERP'}</h3>
-      <div class="row"><label>Code <input id="cr-code" value="${esc(CODE)}" style="width:120px" title="lettres et chiffres"></label>
+      <div class="row"><label>Code <input id="cr-code" value="${esc(CODE)}" style="width:120px" title="lettres, chiffres, tiret, soulignement"></label>
         <label>Produit de récompense <select id="cr-rec" style="max-width:260px">${(d.produits || []).map(p => `<option value="${p.id}"${p.id === REC ? ' selected' : ''}>${esc(p.nom)}</option>`).join('') || '<option value="">aucun produit lu</option>'}</select></label></div>
-      <div class="mu" style="margin-top:4px">L’ERP exige un produit de récompense même pour une carte à points, et un code en lettres et chiffres. ${(d.codesExistants || []).length ? 'Cartes déjà dans l’ERP : ' + d.codesExistants.map(c => '<code>' + esc(c.code) + '</code> ' + esc(c.nom) + ' v' + c.version + (c.actif ? '' : ' (arrêtée)') + (c.points ? ' · points' : '')).join(' · ') : 'Aucune carte dans l’ERP.'}</div>
+      <div class="mu" style="margin-top:4px">L’ERP exige un produit de récompense même pour une carte à points. Il ne dit pas le format du code : s’il le refuse, la page essaie d’elle-même ses variantes (minuscules, tiret, soulignement…). ${(d.codesExistants || []).length ? 'Cartes déjà dans l’ERP : ' + d.codesExistants.map(c => '<code>' + esc(c.code) + '</code> ' + esc(c.nom) + ' v' + c.version + (c.actif ? '' : ' (arrêtée)') + (c.points ? ' · points' : '')).join(' · ') : 'Aucune carte dans l’ERP.'}</div>
       <div class="row"><label>Chaque <input class="n" data-p="slice_eur" value="${nf(P.slice_cents / 100, 2)}"> € =</label><label><input class="n" data-p="points_per_slice" value="${P.points_per_slice}"> point(s)</label>
         <label>· palier <input class="n" data-t="points" value="${P.tiers[0].points}"> points →</label><label><input class="n" data-t="eur" value="${nf(P.tiers[0].voucher_cents / 100, 2)}"> €</label></div>
       <div class="row"><label>Bon valable <input class="n" data-p="voucher_validity_days" value="${P.voucher_validity_days}"> jours</label><label>· chaque point <input class="n" data-p="points_validity_days" value="${P.points_validity_days}"> jours</label></div>
@@ -243,8 +243,8 @@ a{color:var(--accent)}
     const r = camp ? await appel('POST', '/fidelite/creer-campagnes', { saison: CR.saison ? CR.saison.id : '', confirmer: true, qui: 'Page de test' })
       : await appel('POST', '/fidelite/creer', { points: P, debut: $('cr-debut').value, code: CODE, recompense: REC, confirmer: true, qui: 'Page de test' });
     const ok = r.code >= 200 && r.code < 300 && r.d && r.d.ok;
-    const html = ok ? (camp ? `<p class="ok">${r.d.creees} campagne(s) créée(s) en brouillon.</p>` : `<p class="ok">Carte créée dans l’ERP${r.d.carte && r.d.carte.id ? ' : id ' + r.d.carte.id : ''} (HTTP ${r.code}).</p>`)
-      : `<p class="ko">Refusé : HTTP ${r.code} · ${esc((r.d && r.d.error) || 'sans réponse')}</p>${r.d && r.d.etapes ? '<p class="mu">' + r.d.etapes.map(x => esc(x.campagne) + ' : ' + (x.ok ? (x.deja ? 'existait' : 'créée') : esc(x.erreur))).join(' · ') + '</p>' : ''}`;
+    const html = ok ? (camp ? `<p class="ok">${r.d.creees} campagne(s) créée(s) en brouillon.</p>` : `<p class="ok">Carte créée dans l’ERP${r.d.carte && r.d.carte.id ? ' : id ' + r.d.carte.id : ''}, code « ${esc(r.d.codeCarte)} » (HTTP ${r.code}).</p>${(r.d.essais || []).length > 1 ? '<p class="mu">Codes essayés : ' + r.d.essais.map(x => esc(x.code) + (x.ok ? ' ✓' : ' (refusé)')).join(' · ') + '</p>' : ''}`)
+      : `<p class="ko">Refusé : HTTP ${r.code} · ${esc((r.d && r.d.error) || 'sans réponse')}</p>${r.d && (r.d.essais || []).length ? '<p class="mu">Codes essayés : ' + r.d.essais.map(x => esc(x.code)).join(' · ') + (r.d.codesExistants && r.d.codesExistants.length ? ' — codes déjà dans l’ERP : ' + r.d.codesExistants.map(esc).join(', ') : '') + '</p>' : ''}${r.d && r.d.etapes ? '<p class="mu">' + r.d.etapes.map(x => esc(x.campagne) + ' : ' + (x.ok ? (x.deja ? 'existait' : 'créée') : esc(x.erreur))).join(' · ') + '</p>' : ''}`;
     if (ok) { await admin(CR.saison ? CR.saison.id : ''); magasin(); }
     $('cr-res').innerHTML = html + brut(r.d);
   });
@@ -256,7 +256,7 @@ a{color:var(--accent)}
     else if (t.dataset.t === 'eur') { if (+v > 0) { P.tiers[0].voucher_cents = Math.round(+v * 100); } }
     else if (t.dataset.coef) { if (Array.isArray(P.shop_coefficients)) { P.shop_coefficients = {}; } if (+v >= 0) { P.shop_coefficients[t.dataset.coef] = +v; } }
     else if (t.dataset.b != null) { const b = P.bonuses[+t.dataset.b]; b[t.dataset.k] = t.dataset.k === 'coefficient' ? +v : t.value; }
-    else if (t.id === 'cr-code') { CODE = t.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32) || CODE; }
+    else if (t.id === 'cr-code') { CODE = t.value.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '').slice(0, 40) || CODE; }
     else if (t.id === 'cr-rec') { REC = +t.value; return; }
     else if (t.id === 'cr-debut') { return; }
     adminRendu();
