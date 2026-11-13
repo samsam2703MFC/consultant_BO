@@ -29,10 +29,10 @@ final class FidFauxErp
     {
         $n = (int) ($o['clients'] ?? 600);
         $this->cartes = [
-            12 => ['id' => 12, 'code' => 'FID-POINTS', 'name' => 'Carte L’Atelier', 'version' => 1, 'revision' => 7, 'terms_locked' => true, 'active' => 1,
+            12 => ['id' => 12, 'code' => 'FIDPOINTS', 'name' => 'Carte L’Atelier', 'version' => 1, 'revision' => 7, 'terms_locked' => true, 'active' => 1,
                 'scope' => 'NETWORK', 'shop_ids' => [2, 3, 4, 5], 'starts_at' => '2026-01-04 23:00:00', 'ends_at' => null, 'sort_order' => 0,
                 'color_tint' => '#F8E2CB', 'color_fill' => '#8D1D2C', 'color_accent' => '#F2C9A0', 'reward_label' => 'Bon de 5 €', 'image_path' => '',
-                'stamps_required' => 1, 'reward_validity_days' => 60, 'keywords' => ['tout'],
+                'stamps_required' => 1, 'reward_validity_days' => 60, 'keywords' => ['tout'], 'reward_product_ids' => [502],
                 'points_config' => ['stamps_enabled' => false, 'points_enabled' => true, 'points_per_slice' => 1, 'slice_cents' => 100,
                     'voucher_validity_days' => 60, 'points_validity_days' => 365, 'shop_coefficients' => ['2' => '1', '3' => '1', '4' => '1', '5' => '1'],
                     'bonuses' => [['name' => 'Jours creux', 'days' => [1, 2, 3], 'from' => '14:00', 'to' => '17:00', 'coefficient' => '2'],
@@ -140,6 +140,9 @@ final class FidFauxErp
         }
         if ($method === 'POST' && $p === '/admin/loyalty/cards') {
             foreach (['code', 'name', 'starts_at', 'shop_ids'] as $k) { if (!isset($body[$k])) { return $ko(422, $k . ' required'); } }
+            // Ce que l'ERP réel a répondu le 13/11/2026 : « code : INVALID_CODE ; reward_product_ids : SELECT_AT_LEAST_ONE ».
+            if (!preg_match('/^[A-Z0-9_]{2,40}$/', (string) $body['code'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION — code : INVALID_CODE'); }
+            if (empty($body['reward_product_ids']) && empty($body['reward_portion_ids'])) { return $ko(422, 'LOYALTY_INVALID_CONFIGURATION — reward_product_ids : SELECT_AT_LEAST_ONE'); }
             $ids = !empty($body['earning_product_ids']) || !empty($body['earning_category_ids']) || !empty($body['earning_category_group_ids']);
             if ($ids === !empty($body['keywords'])) { return $ko(422, 'earning IDs or normalized keywords are required and cannot mix'); }
             foreach ($this->cartes as $c) { if ($c['code'] === $body['code'] && (int) ($c['version'] ?? 1) === (int) ($body['version'] ?? 1)) { return $ko(409, 'code/version already exists'); } }
@@ -148,7 +151,7 @@ final class FidFauxErp
             return $ok(['status' => 'success', 'data' => $this->cartes[$id]], 201);
         }
         if ($method === 'GET' && $p === '/admin/loyalty/options') {
-            return $ok(['shops' => array_map(static fn ($id, $n) => ['id' => $id, 'name' => $n], array_keys(self::SHOPS), self::SHOPS), 'products' => [], 'reward_portions' => [], 'categories' => [['id' => 31, 'name' => 'Pains'], ['id' => 32, 'name' => 'Viennoiseries'], ['id' => 33, 'name' => 'Pâtisseries']], 'category_groups' => []]);
+            return $ok(['shops' => array_map(static fn ($id, $n) => ['id' => $id, 'name' => $n], array_keys(self::SHOPS), self::SHOPS), 'products' => [['id' => 501, 'name' => 'Baguette tradition'], ['id' => 502, 'name' => 'Croissant au beurre'], ['id' => 503, 'name' => 'Café'], ['id' => 504, 'name' => 'Tartelette aux fruits']], 'reward_portions' => [], 'categories' => [['id' => 31, 'name' => 'Pains'], ['id' => 32, 'name' => 'Viennoiseries'], ['id' => 33, 'name' => 'Pâtisseries']], 'category_groups' => []]);
         }
         if ($method === 'POST' && $p === '/admin/loyalty/simulate') {
             $cfg = $body['config'] ?? null; $shop = (string) ($body['shop_id'] ?? '');

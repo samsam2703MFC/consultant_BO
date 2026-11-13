@@ -169,17 +169,18 @@ a{color:var(--accent)}
   let MAGS = [], HALLE = null;
 
   /* ---------- A. L'admin : la création, en aperçu --------------------------------------------------------- */
-  let CR = null, P = null;   // la réponse, et le barème en cours d'écriture (local)
+  let CR = null, P = null, CODE = '', REC = 0;   // la réponse, et le barème en cours d'écriture (local)
   async function admin(saison){
     $('admin-c').innerHTML = '<p class="mu">Lecture…</p>';
     const r = await appel('GET', '/fidelite/creation' + (saison ? '?saison=' + encodeURIComponent(saison) : ''));
     if (r.code !== 200 || !r.d || !r.d.erp) { return echec('admin-c', r); }
     CR = r.d; P = JSON.parse(JSON.stringify(CR.envois[0].corps.points_config));
+    CODE = CR.envois[0].corps.code; REC = CR.recompense;
     if (!Array.isArray(P.shop_coefficients) && typeof P.shop_coefficients !== 'object') { P.shop_coefficients = {}; }
     MAGS = CR.magasins || []; trouverHalle(); remplirMagasins();
     adminRendu();
   }
-  function corpsCarte(){ const c = JSON.parse(JSON.stringify(CR.envois[0].corps)); c.points_config = P; return c; }
+  function corpsCarte(){ const c = JSON.parse(JSON.stringify(CR.envois[0].corps)); c.points_config = P; c.code = CODE; if (REC) { c.reward_product_ids = [REC]; } return c; }
   function adminRendu(){
     const d = CR, sa = d.saison, C = d.carteEnPlace;
     const sais = `<div class="saisons">${(d.annee || []).map(a => `<button class="sa${sa && a.id === sa.id ? ' on' : ''}" data-saison="${esc(a.id)}"><span class="si">${ill(a.ill)}</span><b>${esc(a.nom)}</b>
@@ -189,6 +190,9 @@ a{color:var(--accent)}
       de <input data-b="${i}" data-k="from" value="${esc(b.from)}" style="width:58px"> à <input data-b="${i}" data-k="to" value="${esc(b.to)}" style="width:58px">
       <input data-b="${i}" data-k="name" value="${esc(b.name)}" style="width:130px"><button class="x" data-retirer="${i}" title="Retirer">×</button></div>`).join('');
     const reglages = `<h3>La carte à points ${C ? '· en place : ' + esc(C.nom) + ' (' + esc(C.code) + ', v' + C.version + (C.verrou ? ', barème figé' : '') + ')' : '· aucune dans l’ERP'}</h3>
+      <div class="row"><label>Code <input id="cr-code" value="${esc(CODE)}" style="width:120px" title="lettres et chiffres"></label>
+        <label>Produit de récompense <select id="cr-rec" style="max-width:260px">${(d.produits || []).map(p => `<option value="${p.id}"${p.id === REC ? ' selected' : ''}>${esc(p.nom)}</option>`).join('') || '<option value="">aucun produit lu</option>'}</select></label></div>
+      <div class="mu" style="margin-top:4px">L’ERP exige un produit de récompense même pour une carte à points, et un code en lettres et chiffres. ${(d.codesExistants || []).length ? 'Cartes déjà dans l’ERP : ' + d.codesExistants.map(c => '<code>' + esc(c.code) + '</code> ' + esc(c.nom) + ' v' + c.version + (c.actif ? '' : ' (arrêtée)') + (c.points ? ' · points' : '')).join(' · ') : 'Aucune carte dans l’ERP.'}</div>
       <div class="row"><label>Chaque <input class="n" data-p="slice_eur" value="${nf(P.slice_cents / 100, 2)}"> € =</label><label><input class="n" data-p="points_per_slice" value="${P.points_per_slice}"> point(s)</label>
         <label>· palier <input class="n" data-t="points" value="${P.tiers[0].points}"> points →</label><label><input class="n" data-t="eur" value="${nf(P.tiers[0].voucher_cents / 100, 2)}"> €</label></div>
       <div class="row"><label>Bon valable <input class="n" data-p="voucher_validity_days" value="${P.voucher_validity_days}"> jours</label><label>· chaque point <input class="n" data-p="points_validity_days" value="${P.points_validity_days}"> jours</label></div>
@@ -233,11 +237,11 @@ a{color:var(--accent)}
     const t = e.target.closest('button'); if (!t || !CR || (t.id !== 'b-creer' && t.id !== 'b-creer-camp')) { return; }
     const camp = t.id === 'b-creer-camp', env = CR.envois[0];
     const q = camp ? 'Créer dans l’ERP, en brouillon, les campagnes : ' + CR.campagnes.filter(c => !c.existe).map(c => c.corps.name).join(', ') + ' ?'
-      : 'Créer dans l’ERP la carte « ' + env.corps.name + ' » (' + env.corps.code + ' v' + env.corps.version + '), ' + nf(P.slice_cents / 100, 2) + ' € = ' + P.points_per_slice + ' point, palier ' + P.tiers[0].points + ' → ' + nf(P.tiers[0].voucher_cents / 100, 2) + ' €, sur ' + env.corps.shop_ids.length + ' magasins, active dès le ' + $('cr-debut').value.split('-').reverse().join('/') + ' ?';
+      : 'Créer dans l’ERP la carte « ' + env.corps.name + ' » (' + CODE + '), récompense « ' + (((CR.produits || []).find(p => p.id === REC) || {}).nom || '—') + ' », ' + nf(P.slice_cents / 100, 2) + ' € = ' + P.points_per_slice + ' point, palier ' + P.tiers[0].points + ' → ' + nf(P.tiers[0].voucher_cents / 100, 2) + ' €, sur ' + env.corps.shop_ids.length + ' magasins, active dès le ' + $('cr-debut').value.split('-').reverse().join('/') + ' ?';
     if (!window.confirm(q)) { return; }
     t.disabled = true; $('cr-res').innerHTML = '<p class="mu">Envoi à l’ERP…</p>';
     const r = camp ? await appel('POST', '/fidelite/creer-campagnes', { saison: CR.saison ? CR.saison.id : '', confirmer: true, qui: 'Page de test' })
-      : await appel('POST', '/fidelite/creer', { points: P, debut: $('cr-debut').value, confirmer: true, qui: 'Page de test' });
+      : await appel('POST', '/fidelite/creer', { points: P, debut: $('cr-debut').value, code: CODE, recompense: REC, confirmer: true, qui: 'Page de test' });
     const ok = r.code >= 200 && r.code < 300 && r.d && r.d.ok;
     const html = ok ? (camp ? `<p class="ok">${r.d.creees} campagne(s) créée(s) en brouillon.</p>` : `<p class="ok">Carte créée dans l’ERP${r.d.carte && r.d.carte.id ? ' : id ' + r.d.carte.id : ''} (HTTP ${r.code}).</p>`)
       : `<p class="ko">Refusé : HTTP ${r.code} · ${esc((r.d && r.d.error) || 'sans réponse')}</p>${r.d && r.d.etapes ? '<p class="mu">' + r.d.etapes.map(x => esc(x.campagne) + ' : ' + (x.ok ? (x.deja ? 'existait' : 'créée') : esc(x.erreur))).join(' · ') + '</p>' : ''}`;
@@ -252,6 +256,9 @@ a{color:var(--accent)}
     else if (t.dataset.t === 'eur') { if (+v > 0) { P.tiers[0].voucher_cents = Math.round(+v * 100); } }
     else if (t.dataset.coef) { if (Array.isArray(P.shop_coefficients)) { P.shop_coefficients = {}; } if (+v >= 0) { P.shop_coefficients[t.dataset.coef] = +v; } }
     else if (t.dataset.b != null) { const b = P.bonuses[+t.dataset.b]; b[t.dataset.k] = t.dataset.k === 'coefficient' ? +v : t.value; }
+    else if (t.id === 'cr-code') { CODE = t.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 32) || CODE; }
+    else if (t.id === 'cr-rec') { REC = +t.value; return; }
+    else if (t.id === 'cr-debut') { return; }
     adminRendu();
   });
 

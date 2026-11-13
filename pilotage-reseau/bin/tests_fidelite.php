@@ -58,7 +58,7 @@ verifie(fidUtc('2026-11-23') === '2026-11-22 23:00:00' && fidUtc('2027-06-01') =
 
 // --- 2. GET /fidelite : la carte et le bingo ------------------------------------------------
 $d = ep_fidelite();
-verifie($d['erp']['ok'] && $d['carte']['id'] === 12 && $d['carte']['code'] === 'FID-POINTS', 'la carte du programme : FID-POINTS');
+verifie($d['erp']['ok'] && $d['carte']['id'] === 12 && $d['carte']['code'] === 'FIDPOINTS', 'la carte du programme : FIDPOINTS');
 verifie($d['carte']['verrou'] === true && $d['carte']['revision'] === 7, 'la carte est figée, revision 7');
 verifie($d['carte']['points']['tiers'] === [['points' => 100, 'voucher_cents' => 500]], 'le palier 100 → 5 €');
 verifie($d['bingo']['seuil'] === 10.0 && $d['bingo']['multiplicateur'] === 2.0 && $d['bingo']['palier']['points'] === 100, 'les réglages du handoff : 10 €, ×2 après la case, 100 points');
@@ -138,7 +138,7 @@ $GLOBALS['corps'] = ['carte' => ['id' => 12, 'revision' => 7, 'points' => $pts],
 $r = wr_fidelite_publier();
 verifie($r['ok'] === true && count($r['etapes']) === 4, 'carte figée : version 2, fin de la v1, deux cartes arrêtées');
 verifie($e->ecrits[0][0] === 'POST' && $e->ecrits[0][2]['version'] === 2 && $e->ecrits[0][2]['starts_at'] === '2027-01-31 23:00:00', 'la v2 commence le 01/02 à minuit, heure de Bruxelles');
-verifie($e->ecrits[0][2]['points_config']['tiers'][1] === ['points' => 300, 'voucher_cents' => 1100] && $e->ecrits[0][2]['code'] === 'FID-POINTS', 'la v2 : même code, nouveau barème');
+verifie($e->ecrits[0][2]['points_config']['tiers'][1] === ['points' => 300, 'voucher_cents' => 1100] && $e->ecrits[0][2]['code'] === 'FIDPOINTS', 'la v2 : même code, nouveau barème');
 verifie(!isset($e->ecrits[0][2]['earning_product_ids']) && $e->ecrits[0][2]['keywords'] === ['tout'], 'mots-clés OU identifiants, jamais les deux');
 verifie($e->ecrits[1][0] === 'PATCH' && $e->ecrits[1][2] === ['revision' => 7, 'ends_at' => '2027-01-31 22:59:59'], 'la v1 finit la veille à 23:59:59');
 verifie($e->cartes[3]['ends_at'] === '2027-01-14 22:59:59' && $e->cartes[4]['revision'] === 4, 'les cartes à tampons s’arrêtent ce soir');
@@ -183,7 +183,7 @@ $_GET = ['id' => '1'];
 verifie(isset(ep_fidelite_client()['error']), 'un client inconnu : erreur, pas de carte');
 $_GET = [];
 $cr = ep_fidelite_creation();
-verifie($cr['envois'][0]['route'] === '/admin/loyalty/cards' && $cr['envois'][0]['corps']['version'] === 2 && $cr['envois'][0]['corps']['code'] === 'FID-POINTS', 'la création : la version suivante de la carte');
+verifie($cr['envois'][0]['route'] === '/admin/loyalty/cards' && $cr['envois'][0]['corps']['version'] === 2 && $cr['envois'][0]['corps']['code'] === 'FIDPOINTS', 'la création : la version suivante de la carte');
 verifie(count($cr['campagnes']) === 2 && $cr['campagnes'][0]['corps']['name'] === 'Bingo hiver · 2 €' && $cr['campagnes'][0]['existe']['id'] === 41, 'les campagnes de la saison, et celles qui existent déjà');
 verifie(count(array_filter($e->ecrits, static fn ($w) => $w[1] !== '/admin/loyalty/simulate')) === 0, 'la création n’envoie rien');
 
@@ -200,10 +200,13 @@ $GLOBALS['corps'] = ['confirmer' => true, 'points' => $pts, 'debut' => '2027-01-
 $r = wr_fidelite_creer();
 $w = $e->ecrits[0][2] ?? [];
 verifie($r['ok'] === true && $e->ecrits[0][0] === 'POST' && $e->ecrits[0][1] === '/admin/loyalty/cards', 'la carte est créée : POST /admin/loyalty/cards');
-verifie($w['version'] === 1 && $w['code'] === 'FID-POINTS' && $w['shop_ids'] === [2, 3, 4, 5] && $w['starts_at'] === '2027-01-13 23:00:00', 'v1, les quatre magasins, active dès aujourd’hui minuit');
+verifie($w['version'] === 1 && $w['code'] === 'FIDPOINTS' && $w['shop_ids'] === [2, 3, 4, 5] && $w['starts_at'] === '2027-01-13 23:00:00', 'v1, code en lettres et chiffres, les quatre magasins, active dès aujourd’hui minuit');
+verifie($w['reward_product_ids'] === [502], 'un produit de récompense, exigé par l’ERP : le croissant par défaut');
 verifie($w['earning_category_ids'] === [31, 32, 33] && !isset($w['keywords']), 'ce qui rapporte : toutes les catégories, pas de mot-clé');
 verifie($w['points_config']['shop_coefficients'] === ['2' => 1.0, '3' => 1.0, '4' => 1.5, '5' => 1.0], 'les coefficients des seuls magasins de la carte');
-verifie(ep_fidelite()['carte']['code'] === 'FID-POINTS', 'la carte créée se lit aussitôt comme carte du programme');
+verifie(ep_fidelite()['carte']['code'] === 'FIDPOINTS', 'la carte créée se lit aussitôt comme carte du programme');
+$GLOBALS['corps'] = ['confirmer' => true, 'code' => 'fid-test 2', 'recompense' => 999];
+verifie(str_contains((string) (wr_fidelite_creer()['error'] ?? ''), 'récompense'), 'un produit inconnu de l’ERP : refusé avant l’envoi');
 $GLOBALS['corps'] = ['confirmer' => true];
 $r = wr_fidelite_creer();
 verifie($r['ok'] === true && $e->ecrits[1][2]['version'] === 2, 'une seconde création : la version suivante, jamais un doublon');
@@ -219,7 +222,7 @@ $e = nouvelErp(60);
 $v = ep_fidelite_verification();
 verifie($v['ok'] && count($v['etapes']) === 7, 'sept routes vérifiées, toutes en ordre');
 verifie($e->ecrits === [['POST', '/admin/loyalty/simulate', $e->ecrits[0][2]]], 'la vérification n’écrit rien (seule la simulation, que l’ERP n’enregistre pas)');
-verifie(str_contains($v['etapes'][0]['note'], 'FID-POINTS') && str_contains($v['etapes'][3]['note'], 'Bingo hiver · 2 €'), 'elle dit la carte et les campagnes trouvées');
+verifie(str_contains($v['etapes'][0]['note'], 'FIDPOINTS') && str_contains($v['etapes'][3]['note'], 'Bingo hiver · 2 €'), 'elle dit la carte et les campagnes trouvées');
 $GLOBALS['FID_ERP'] = static fn (string $m, string $p) => str_starts_with($p, '/admin/voucher-campaigns') ? ['code' => 403, 'corps' => null, 'erreur' => 'HTTP 403'] : ($e)($m, $p, null);
 $v = ep_fidelite_verification();
 verifie(!$v['ok'] && str_contains($v['etapes'][3]['note'], 'MENU.BUNDLE.MANAGE'), 'un 403 dit la permission qui manque');
