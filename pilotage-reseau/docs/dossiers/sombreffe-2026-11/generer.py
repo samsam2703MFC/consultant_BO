@@ -19,6 +19,9 @@ from pathlib import Path
 
 ICI = Path(__file__).resolve().parent
 SOURCE = ICI.parent.parent / 'maquettes' / 'evolution-magasin' / 'donnees.json'
+# Les temps morts : 8 semaines (07/09 → 01/11/2026), lues au panel le 07/11/2026 (docs/maquettes/temps-morts/LISEZMOI.md).
+TEMPS_MORTS = ICI.parent.parent / 'maquettes' / 'temps-morts' / 'data.json'
+TM_SEUIL = '10'                         # un temps mort : un trou d'au moins 10 minutes entre deux tickets
 SHOP = '5'
 
 # Le bloc du cockpit (Résultat › Évolution magasin, ventes : Tout), relevé le 13/11/2026.
@@ -136,8 +139,32 @@ def main():
     depart = {'du': pleines[0]['du'], 'au': pleines[-1]['au'], 'labs': [w['lab'] for w in pleines],
               'n': rep(pleines, None), 'n1': rep(pleines, 'n1')}
 
+    # Les temps morts, seuil 10 min : par jour de semaine (0 = lundi), par heure, et le croisement des deux.
+    tmD = json.loads(TEMPS_MORTS.read_text(encoding='utf-8'))
+    tm = tmD['magasins'][SHOP]
+    def tmJour(j, bords=None):
+        t = j['seuils'][TM_SEUIL]
+        return {'nb': t['nb'], 'min': t['min'], 'pct': t['pct'], 'minBords': t['minBords'], 'tickets': j['tickets'],
+                'ouvert': j['ouvert'], 'plusLong': j['plusLong'], 'plusLongHeure': j.get('plusLongHeure'), 'bords': bords,
+                'heures': {h: {'pct': v['pct'], 'min': v['min'], 'nb': v['nb'], 'tk': j['heures'][h]['tk'],
+                               'ouvert': j['heures'][h]['ouvert']} for h, v in t['heures'].items()}}
+    tempsMorts = {
+        'du': tmD['meta']['du'], 'au': tmD['meta']['au'], 'semaines': tmD['meta']['semaines'], 'seuil': int(TM_SEUIL),
+        'luLe': tmD['meta']['source'].rsplit('lu le ', 1)[-1],
+        'semaine': tmJour(tm['semaine']),
+        'jours': [tmJour(tm['jours'][str(i)], tm['bords'][str(i)]) for i in range(7)],
+        'reseau': [{'nom': m['nom'], 'shop': sid, 'nb': m['semaine']['seuils'][TM_SEUIL]['nb'],
+                    'min': m['semaine']['seuils'][TM_SEUIL]['min'], 'pct': m['semaine']['seuils'][TM_SEUIL]['pct'],
+                    'tickets': m['semaine']['tickets']} for sid, m in tmD['magasins'].items()],
+    }
+    # L'après-midi (14 h → 18 h) : la part sans client, pondérée par les minutes ouvertes, et les tickets par heure.
+    hs = tempsMorts['semaine']['heures']; apm = [h for h in ('14', '15', '16', '17') if h in hs]
+    tempsMorts['apresMidi'] = {'pct': sum(hs[h]['min'] for h in apm) / sum(hs[h]['ouvert'] for h in apm) * 100,
+                               'tk': sum(hs[h]['tk'] for h in apm) / len(apm), 'heures': len(apm)}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
@@ -157,6 +184,7 @@ def main():
     # Contrôles à l'écran (pas dans le rapport).
     print(f"18 mois : {total['ca']:.0f} € · {total['clients']} clients · panier {total['panier']:.2f}")
     print(f"12 mois : {ca12:.0f} € · B2B ≈ {b2b12:.0f} € · écart sept.-oct. {ecart:.0f} € = {ecart / b2b12 * 100:.1f} % du B2B de l'année")
+    print('après-midi :', {k: round(v, 1) for k, v in tempsMorts['apresMidi'].items()})
     print('écarts vs N-1 :', [(s['k'], arr(pc(s['ca'], s['n1']['ca']))) for s in serie if s['n1']])
 
 

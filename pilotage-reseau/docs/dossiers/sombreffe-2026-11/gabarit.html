@@ -68,7 +68,7 @@ body { margin: 0; background: var(--paper); }
 .rp-table .dim { color: var(--faint); }
 .up { color: var(--green); } .down { color: var(--stop); }
 .rp-deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
-.rp-part { display: grid; gap: 8px; }
+.rp-part { display: grid; gap: 8px; align-content: start; min-width: 0; }
 .rp-barre { position: relative; display: flex; gap: 2px; height: 26px; border-radius: 4px; overflow: visible; }
 .rp-barre .seg { height: 100%; border-radius: 4px; }
 .rp-barre .plafond { position: absolute; top: -6px; bottom: -6px; border-left: 1.5px dashed var(--ink); }
@@ -82,6 +82,18 @@ body { margin: 0; background: var(--paper); }
 .rp-pistes li::marker { color: var(--muted); }
 .rp-sources { margin: 0; padding-left: 18px; display: grid; gap: 4px; font-size: 12px; color: var(--muted); max-width: 100ch; }
 .rp-pied { font-size: 11.5px; color: var(--muted); }
+.rp-chaleur { border-collapse: separate; border-spacing: 2px; width: auto; min-width: 100%; }
+.rp-chaleur th { background: none; border-bottom: 0; padding: 4px 4px; text-align: center; }
+.rp-chaleur th.jour, .rp-chaleur td.jour { text-align: left; padding-right: 10px; }
+.rp-chaleur td { border-bottom: 0; padding: 0; }
+.rp-chaleur td.c { min-width: 42px; height: 30px; text-align: center; border-radius: 4px; font-size: 12px; cursor: default; }
+.rp-chaleur td.vide { color: var(--faint); text-align: center; }
+.rp-chaleur tr.moy td.jour { color: var(--muted-2); }
+.rp-chaleur tr.moy td.c { outline: 1px solid var(--line); outline-offset: -1px; }
+.rp-chaleur tfoot td { background: none; color: var(--muted); font-size: 11.5px; text-align: center; padding-top: 6px; }
+.rp-chaleur tfoot td.jour { text-align: left; }
+.rp-ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #F8EEEF, #8D1D2C); }
+.rp-table tr.moi td { background: var(--total-line); }
 @media print {
   body { background: #fff; }
   .rp-carte, .rp-kpi { break-inside: avoid; }
@@ -169,6 +181,18 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
   </section>
 
+  <section class="rp-carte" id="temps-morts">
+    <h2 class="rp-h2">Temps morts au comptoir</h2>
+    <p class="rp-p" id="tm-intro"></p>
+    <div class="rp-kpis" id="tm-kpis"></div>
+    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
+    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
+    <div class="rp-legende" id="tm-legende"></div>
+    <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
+    <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
+    <ul class="rp-points" id="tm-points"></ul>
+  </section>
+
   <section class="rp-carte" id="soins">
     <h2 class="rp-h2">Soins intensifs : le point de départ</h2>
     <p class="rp-p" id="soins-intro"></p>
@@ -200,6 +224,7 @@ const pct = (n, d = 1) => n == null ? '—' : sgn(n) + dec(Math.abs(n), d) + INS
 const cls = n => n == null ? 'dim' : (n >= 0 ? 'up' : 'down');
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const $ = id => document.getElementById(id);
+const insec = t => t.replace(/ (%|€|k€|h\b|min\b|j\b)/g, INS + '$1');
 const MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
 const dateL = iso => { const [a, m, j] = iso.split('-').map(Number); return j + ' ' + MOIS_L[m - 1] + ' ' + a; };
 const dateC = iso => { const [a, m, j] = iso.split('-'); return j + '/' + m; };
@@ -228,7 +253,7 @@ $('essentiel-points').innerHTML = [
   `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
   `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
   `Le B2B seul n’explique probablement pas cette hausse : il faudrait qu’environ ${dec(B.partDeLAnnee, 0)} % du B2B de toute l’année soit tombé en septembre et octobre. Le détail mois par mois du comptoir et du B2B tranchera.`,
-].map(t => `<li>${esc(t)}</li>`).join('');
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Évolution magasin (le bloc du cockpit) --- */
 $('evolution-releve').textContent = 'relevé au cockpit le ' + D.cockpit.releve;
@@ -396,10 +421,10 @@ $('barre-b2b').innerHTML = `<div class="seg" style="width:calc(${partC}% - 2px);
 $('chiffres-b2b').innerHTML = `<span><i class="rp-point" style="background:#8D1D2C"></i>Comptoir ${dec(partC)}${INS}% · ≈ ${esc(k1(B.comptoir12))}</span>`
   + `<span><i class="rp-point" style="background:var(--b2b)"></i>B2B ${dec(B.part)}${INS}% · ≈ ${esc(k1(B.b2b12))}, soit ≈ ${esc(k1(B.parMois))} par mois</span>`;
 $('aide-b2b').textContent = `12 derniers mois clos : novembre 2025 → octobre 2026, ${k1(B.ca12)} de CA. B2B : les tickets des clients pro à TVA valide ; comptoir : tout le reste. Un point de part B2B vaut environ ${k1(B.unPoint)} par an.`;
-$('question-texte').textContent = `Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins (${k1(B.ecartSept)} en septembre, ${k1(B.ecartOct)} en octobre). `
+$('question-texte').textContent = insec(`Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins (${k1(B.ecartSept)} en septembre, ${k1(B.ecartOct)} en octobre). `
   + `Pour que le B2B l’explique à lui seul, il aurait dû gagner ces ${k1(B.ecart)} sur deux mois face à 2025 : environ ${dec(B.partDeLAnnee, 0)} % de tout le B2B des 12 derniers mois. `
   + `C’est possible si une ou deux sociétés ont passé de grosses commandes. Sinon, c’est le panier du comptoir qui a monté (prix, produits d’automne, commandes). `
-  + `Les semaines montrent une hausse par à-coups (S39 à S42, puis S45), ce qui ressemble davantage à de grosses commandes qu’à une hausse de prix, qui relèverait toutes les semaines.`;
+  + `Les semaines montrent une hausse par à-coups (S39 à S42, puis S45), ce qui ressemble davantage à de grosses commandes qu’à une hausse de prix, qui relèverait toutes les semaines.`);
 $('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>Le comptoir et le B2B mois par mois, face au N-1. Dans le cockpit, Résultat › Évolution magasin, la bascule « ventes : Comptoir » puis « B2B » donne le même bloc que ci-dessus pour chaque canal : commandes pro, panier pro, part du CA mois par mois. Une fois collés, ils entrent dans ce rapport et tranchent la question du panier.</span>';
 
 /* --- Les dix dernières semaines --- */
@@ -408,6 +433,64 @@ $('sem-intro').textContent = 'Le nombre de clients bouge peu d’une semaine à 
 $('sem-table').innerHTML = '<thead><tr><th>Semaine</th><th>Du</th><th class="num">Clients</th><th class="num">CA</th><th class="num">Panier</th><th class="num">Panier N-1</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th></tr></thead><tbody>'
   + SEM.map(w => `<tr><td>${esc(w.lab)}${w.enCours ? ' · en cours (' + w.jours + ' j)' : ''}</td><td>${dateC(w.du)} → ${dateC(w.au)}</td><td class="num">${grp(w.clients)}</td><td class="num">${eur(w.ca)}</td><td class="num">${eur2(w.panier)}</td><td class="num">${eur2(w.n1panier)}</td>`
     + `<td class="num ${cls(w.vsCa)}">${pct(w.vsCa)}</td><td class="num ${cls(w.vsCli)}">${pct(w.vsCli)}</td></tr>`).join('') + '</tbody>';
+
+/* --- Temps morts au comptoir (seuil 10 min, 8 semaines) --- */
+const TM = D.tempsMorts, TS = TM.semaine, JOURS = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'];
+const hm = m => { m = Math.round(m); return m < 60 ? m + INS + 'min' : Math.floor(m / 60) + INS + 'h' + INS + String(m % 60).padStart(2, '0'); };
+const HEURES = Object.keys(TS.heures).map(Number).sort((a, b) => a - b);
+const APM = TM.apresMidi;
+$('tm-intro').textContent = `Un temps mort : au moins ${TM.seuil} minutes sans ticket entre deux clients, entre le premier et le dernier ticket du jour. `
+  + `Mesuré sur ${TM.semaines} semaines pleines, du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, chaque jour de la semaine compté ${TM.semaines} fois.`;
+$('tm-kpis').innerHTML = [
+  kpi('Temps morts par jour', dec(TS.nb), `au moins ${TM.seuil} min sans client · ${dec(TS.tickets, 0)} tickets par jour`),
+  kpi('Sans client par jour', hm(TS.min), `${dec(TS.pct, 0)} % de l’ouverture (${hm(TS.ouvert)} du premier au dernier ticket)`, 'bad'),
+  kpi('Après-midi sans client', dec(APM.pct, 0) + INS + '%', `de 14 h à 18 h · ${dec(APM.tk)} tickets par heure`, 'bad'),
+  kpi('Plus long trou du jour', hm(TS.plusLong), `en moyenne, le plus souvent vers ${TS.plusLongHeure} h`),
+].join('');
+
+// La couleur d'une case : un seul ton, du rose pâle (0 %) au bordeaux (100 %).
+const RAMPE = [[248, 238, 239], [141, 29, 44]];
+const teinte = p => { const t = Math.max(0, Math.min(1, p / 100)); return 'rgb(' + RAMPE[0].map((c, i) => Math.round(c + (RAMPE[1][i] - c) * t)).join(',') + ')'; };
+const encre = p => p >= 58 ? '#fff' : '#1c1a17';
+const caseTm = (h, x, bord, jour) => {
+  if (!x) { return '<td class="vide">—</td>'; }
+  return `<td class="c" style="background:${teinte(x.pct)};color:${encre(x.pct)}" data-j="${esc(jour)}" data-h="${h}" data-pct="${x.pct}" data-min="${x.min}" data-nb="${x.nb}" data-tk="${x.tk}">${Math.round(x.pct)}${bord ? '*' : ''}</td>`;
+};
+$('tm-table').innerHTML = '<thead><tr><th class="jour"></th>' + HEURES.map(h => `<th>${h} h</th>`).join('') + '</tr></thead><tbody>'
+  + TM.jours.map((j, i) => `<tr><td class="jour">${JOURS[i]}</td>` + HEURES.map(h => caseTm(h, j.heures[h], j.bords && (h === j.bords[0] || h === j.bords[1]), JOURS[i])).join('') + '</tr>').join('')
+  + '<tr class="moy"><td class="jour">Moyenne</td>' + HEURES.map(h => caseTm(h, TS.heures[h], h === HEURES[0] || h === HEURES[HEURES.length - 1], 'Moyenne des 7 jours')).join('') + '</tr>'
+  + '</tbody><tfoot><tr><td class="jour">Tickets / heure</td>' + HEURES.map(h => `<td>${dec(TS.heures[h].tk)}</td>`).join('') + '</tr></tfoot>';
+$('tm-legende').innerHTML = '<span>0 %</span><span class="rp-ramp"></span><span>100 % de l’heure sans client</span>'
+  + '<span>* heure d’ouverture ou de fermeture : surestimée si le magasin ouvre ou ferme à la demi-heure</span>';
+(() => {
+  const zone = $('tm-carte');
+  zone.querySelectorAll('td.c').forEach(td => {
+    td.addEventListener('pointerenter', () => {
+      const r = td.getBoundingClientRect(), z = zone.getBoundingClientRect(), v = td.dataset;
+      bulle(zone, `<div class="t">${esc(v.j)} · ${v.h} h</div><div>${dec(+v.pct)} % de l’heure sans client</div><div>${dec(+v.min)} min · ${dec(+v.nb)} temps mort${+v.nb >= 2 ? 's' : ''}</div><div>${dec(+v.tk)} tickets dans l’heure</div>`,
+        r.left - z.left + r.width / 2, r.top - z.top);
+    });
+    td.addEventListener('pointerleave', () => bulle(zone, null));
+  });
+})();
+const lienHeure = j => j.plusLongHeure != null ? `${hm(j.plusLong)}, vers ${j.plusLongHeure} h` : hm(j.plusLong);
+$('tm-jours').innerHTML = '<thead><tr><th>Jour</th><th class="num">Temps morts</th><th class="num">Sans client</th><th class="num">Part de l’ouverture</th><th class="num">Plus long trou</th><th class="num">Tickets</th></tr></thead><tbody>'
+  + TM.jours.map((j, i) => `<tr><td>${JOURS[i]}</td><td class="num">${dec(j.nb)}</td><td class="num">${hm(j.min)}</td><td class="num">${dec(j.pct, 0)} %</td><td class="num">${lienHeure(j)}</td><td class="num">${dec(j.tickets, 0)}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>Moyenne</td><td class="num">${dec(TS.nb)}</td><td class="num">${hm(TS.min)}</td><td class="num">${dec(TS.pct, 0)} %</td><td class="num">${lienHeure(TS)}</td><td class="num">${dec(TS.tickets, 0)}</td></tr></tfoot>`;
+const RES = TM.reseau.slice().sort((a, b) => b.nb - a.nb);
+$('tm-reseau').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Temps morts / jour</th><th class="num">Sans client</th><th class="num">Part</th><th class="num">Tickets / jour</th></tr></thead><tbody>'
+  + RES.map(m => `<tr class="${m.shop === '5' ? 'moi' : ''}"><td>${esc(m.nom)}</td><td class="num">${dec(m.nb)}</td><td class="num">${hm(m.min)}</td><td class="num">${dec(m.pct, 0)} %</td><td class="num">${dec(m.tickets, 0)}</td></tr>`).join('') + '</tbody>';
+const semaineJ = TM.jours.slice(0, 5), weJ = TM.jours.slice(5);
+const nbMin = a => Math.min(...a.map(j => j.nb)), nbMax = a => Math.max(...a.map(j => j.nb));
+const apmH = ['14', '15', '16', '17'].filter(h => TS.heures[h]).map(h => TS.heures[h].pct);
+const gainApm = (10 - APM.tk) * APM.heures;
+$('tm-points').innerHTML = [
+  `L’après-midi est le grand creux : de 14 h à 18 h, ${dec(Math.min(...apmH), 0)} à ${dec(Math.max(...apmH), 0)} % de chaque heure se passe sans client. Le comptoir y fait ${dec(APM.tk)} tickets par heure, contre ${dec(TS.heures['12'].tk)} à midi.`,
+  `Le midi est plein : ${dec(TS.heures['12'].pct, 0)} % de l’heure sans client à 12 h, ${dec(TS.heures['11'].pct, 0)} % à 11 h. Le matin, de 8 h à 11 h, est entre les deux (${dec(TS.heures['8'].pct, 0)} à ${dec(Math.max(TS.heures['9'].pct, TS.heures['10'].pct), 0)} %).`,
+  `Le week-end remplit le comptoir : ${dec(weJ[0].nb)} temps morts le samedi et ${dec(weJ[1].nb)} le dimanche, contre ${dec(nbMin(semaineJ))} à ${dec(nbMax(semaineJ))} en semaine. Jeudi et vendredi sont les jours les plus creux : ${hm(TM.jours[3].min)} et ${hm(TM.jours[4].min)} sans client.`,
+  `Sombreffe a le plus de temps morts du réseau : ${dec(TS.nb)} par jour et ${dec(TS.pct, 0)} % de son ouverture sans client, contre ${dec(RES.find(m => m.shop === '2').nb)} et ${dec(RES.find(m => m.shop === '2').pct, 0)} % à Corbais.`,
+  `Repère : sous 10 tickets dans l’heure, plus de la moitié de l’heure se passe sans client. Amener l’après-midi de ${dec(APM.tk)} à 10 tickets par heure, c’est environ ${dec(gainApm, 0)} clients de plus par jour.`,
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Soins intensifs --- */
 const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
@@ -425,15 +508,17 @@ $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th>
     ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
     ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
     ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
+    ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
 const gainCli = objCli - N.cliJour;
 $('pistes').innerHTML = [
   `Trancher la question du panier dès la première semaine : vues Comptoir et B2B du cockpit, panier hors clients pro. Si c’est le B2B, nommer les sociétés et savoir si leurs commandes vont durer. Si c’est le comptoir, retrouver ce qui a fait monter le panier et le garder.`,
   `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à ${objCli} clients par jour ouvert, c’est environ ${dec(gainCli, 0)} clients de plus chaque jour. Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
+  `Viser l’après-midi pour ces clients : de 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client et le comptoir ne fait que ${dec(APM.tk)} tickets par heure. Une offre ou une animation de 14 h à 18 h, surtout du lundi au vendredi, a la place de faire ces clients-là.`,
   `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(Math.abs(juil.vsCaJour)).replace('+', '')}.`,
   `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`,
   `Suivre chaque semaine les quatre indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
-].map(t => `<li>${esc(t)}</li>`).join('');
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Sources --- */
 $('sources-liste').innerHTML = [
@@ -442,7 +527,8 @@ $('sources-liste').innerHTML = [
   `B2B : tickets des clients pro à TVA valide ; comptoir = total moins B2B. La part de ${dec(B.part)} % est celle du cockpit sur les 12 derniers mois clos ; les montants en k€ l’appliquent au CA de ces 12 mois.`,
   `N-1 : le même mois, ou la même semaine, un an plus tôt. Avril 2025, mois d’ouverture (6 jours), n’est pas comparé.`,
   `L’écart de septembre-octobre : CA réel moins clients du mois × panier du même mois en 2025.`,
-].map(t => `<li>${esc(t)}</li>`).join('');
+  `Temps morts : seuil ${TM.seuil} min, ${TM.semaines} semaines du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, tickets par heure du panel lus le ${TM.luLe}. Les minutes des tickets sont tirées dans leur heure (500 tirages par journée) ; vérifié sur les tickets réels d’une semaine, le résultat tombe juste en moyenne (423 temps morts mesurés pour 422 estimés). L’onglet Temps morts du dashboard magasin les mesure ticket par ticket.`,
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
 $('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
 
 /* --- Dessins, redessinés à la largeur --- */
