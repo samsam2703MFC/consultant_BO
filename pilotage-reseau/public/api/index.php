@@ -32,6 +32,7 @@ require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
 require __DIR__ . '/../../src/fidelite_profils.php';   // Fidélité › Profils clients (12/11/2026)
 require __DIR__ . '/../../src/assistant_magasin.php';   // L'assistant du dashboard magasin (12/11/2026)
+require __DIR__ . '/../../src/fidelite_cartes.php';     // Les cartes de fidélité, lues dans l'ERP (13/11/2026)
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
@@ -701,6 +702,9 @@ function route(string $method, string $path): mixed
             $path === '/fidelite/profils'              => ep_fidelite_profils(),
             $path === '/fidelite/profils/tendance'     => ep_fidelite_profils_tendance(),
             $path === '/fidelite/scan'                 => ep_fidelite_scan(),
+            $path === '/fidelite/cartes'               => ep_fidelite_cartes(),
+            $path === '/fidelite/carte-client'         => ep_fidelite_carte_client(),
+            $path === '/fidelite/carte'                => ep_fidelite_carte(),
             $path === '/fidelite/profils/magasin'      => ep_fidelite_profils_magasin(),
             $path === '/fidelite/client'               => ep_fidelite_client(),
             $path === '/assistant/magasin/questions'    => ep_assistant_questions(),
