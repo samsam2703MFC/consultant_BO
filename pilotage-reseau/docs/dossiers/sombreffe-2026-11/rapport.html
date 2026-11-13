@@ -786,21 +786,16 @@ $('tc-releve-note').textContent = `Ce jour-là, Sombreffe n’a rendu aucune de 
 
 /* --- Le problème --- */
 const aout = L.find(l => l.k === '2026-08');
-$('probleme-points').innerHTML = [
-  `Le trafic baisse. De mai à octobre, ${dec(C.n.cliJour, 0)} clients par jour ouvert en 2026 contre ${dec(C.n1.cliJour, 0)} en 2025 (${pct(ecC('cliJour'))}). Le CA tient à peine (${pct(ecC('ca'))}), avec ${C.n.jours - C.n1.jours} jours ouverts de plus.`,
-  `L’après-midi est vide. De 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client, avec ${dec(APM.tk)} tickets par heure. Sombreffe a le plus de temps morts du réseau : ${dec(TS.nb)} par jour, ${hm(TS.min)} sans client.`,
-  'Le magasin ne cuit plus l’après-midi : ce creux, il le crée lui-même (constat terrain, ci-dessous).',
-  `Les tâches ne sont pas rendues. Le ${dateL(TC.releveLe).replace(/^1 /, '1er ')}, aucune des ${RS.taches} tâches du jour, dont ${RS.obligatoires} obligatoires, et aucune photo : le bureau ne peut rien vérifier.`,
-  ...(B2BX && B2BX.sept ? [
-    `La hausse du CA de septembre et octobre ne vient pas du comptoir : elle vient du B2B, ${k1(B2BX.sept.b26)} sur ces deux mois contre ${k1(B2BX.sept.b25)} en 2025. Sans le B2B, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`,
-    `Le B2B tient à un seul client : ${B2BX.top.nom}, ${k1(B2BX.top.total)} sur ${k1(B2BX.tot)} de mai à octobre 2026 (${dec(B2BX.topPct, 0)} %). Sans lui, le B2B retombe à environ ${k1(B2BX.sansTop)} par mois.`,
-  ] : []),
-  B2BX && B2BX.sept ? null : `La hausse du CA de septembre et octobre ne vient pas des clients. En octobre, ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier (${pct(O.vsPan)}). B2B ou comptoir, le détail mois par mois le dira.`,
-  `L’été 2026 a été faible : juillet ${pct(juil.vsCa)} (${pct(juil.vsCaJour)} par jour ouvert), août ${pct(aout.vsCa)}.`,
-  D.personnel && D.personnel.cumul.mois
-    ? (PE6 ? `Les frais de personnel montent : ${dec(PE6.n.pct)} % du CA de mai à octobre 2026, contre ${dec(PE6.n1.pct)} % un an plus tôt (${sgn(PE6.n.pct - PE6.n1.pct)}${dec(Math.abs(PE6.n.pct - PE6.n1.pct))} points, ${sgn(PE6.n.lab - PE6.n1.lab)}${k1(Math.abs(PE6.n.lab - PE6.n1.lab))}), à CA presque égal. ${PE6.n.pct > D.seuilPersonnel ? 'Ils dépassent' : 'Ils restent sous'} le seuil de ${dec(D.seuilPersonnel, 0)} % (hors rémunération du franchisé).`
-      : `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`)
-    : 'Les frais de personnel face au CA restent à lire dans le P&L du panel (partie 1).',
+$('probleme-points').innerHTML = [   // une ligne par constat (13/11/2026, Sam : « simplifier les puces »)
+  `Trafic en baisse : ${dec(C.n.cliJour, 0)} clients par jour contre ${dec(C.n1.cliJour, 0)} en 2025 (${pct(ecC('cliJour'), 0)}).`,
+  `Après-midi vide : ${dec(APM.pct, 0)} % du temps sans client de 14 h à 18 h.`,
+  'Plus de cuisson l’après-midi (constat terrain).',
+  `Tâches non rendues : ${RS.rendues} sur ${RS.taches} le ${dateC(TC.releveLe)}.`,
+  B2BX && B2BX.sept ? `Hausse de septembre-octobre : le B2B ; sans lui, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`
+                    : `Octobre : ${pct(O.vsCa, 0)} de CA, mais ${pct(O.vsCli, 0)} de clients.`,
+  B2BX ? `B2B : ${dec(B2BX.topPct, 0)} % pour un seul client.` : null,
+  `Été faible : juillet ${pct(juil.vsCa, 0)}, août ${pct(aout.vsCa, 0)}.`,
+  PE6 ? `Personnel : ${dec(PE6.n.pct)} % du CA (${dec(PE6.n1.pct)} % en 2025 ; seuil ${dec(D.seuilPersonnel, 0)} %).` : null,
 ].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- La part du B2B par trimestre : le CA des ventes, le B2B de chaque mois (relu, sinon la copie de caisse) --- */
