@@ -10,7 +10,13 @@ on:
   push:
     branches: [claude/elegant-cray-9i8enx]
     paths: ['pilotage-reseau/tools/sonde_cartes_fidelite.php', '.github/workflows/sonde-cartes-fidelite.yml']
+  # Lancement à la main : `client` (identifiant numérique) ajoute les cartes de ce seul client à Halle, sans nom.
   workflow_dispatch:
+    inputs:
+      client:
+        description: "Identifiant du client (chiffres), facultatif"
+        required: false
+        default: ""
 
 concurrency:
   group: sonde-cartes-fidelite
@@ -55,6 +61,8 @@ jobs:
       - name: Lire les cartes, les statistiques et les clients de fidélité
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          CLIENT: ${{ inputs.client }}
         run: |
+          if [ -n "${CLIENT}" ] && ! [[ "${CLIENT}" =~ ^[0-9]{1,10}$ ]]; then echo "client refusé : chiffres attendus"; exit 1; fi
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "php -- '${TARGET_DIR}'" < tools/sonde_cartes_fidelite.php
+            "php -- '${TARGET_DIR}' '${CLIENT}'" < tools/sonde_cartes_fidelite.php

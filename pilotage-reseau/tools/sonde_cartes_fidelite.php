@@ -81,4 +81,23 @@ foreach ([2, 3, 4, 5] as $sid) {
         }
     }
 }
+// 3. Un client donné au lancement (entrée `client`, chiffres seulement) : ses cartes et son activité à Halle, sans nom.
+$cid = ctype_digit((string) ($argv[2] ?? '')) ? (int) $argv[2] : 0;
+if ($cid > 0) {
+    echo "\n=== 3. Le client $cid à Halle — ses cartes (/loyalty/customers), sans nom\n";
+    $page = 1; $trouve = false;
+    do {
+        $r = PanelApi::sondeGet('/shops/4/loyalty/customers?' . http_build_query(['from' => date('Y-01-01'), 'to' => date('Y-m-d'), 'page' => $page, 'limit' => 100]), 40);
+        if ((int) ($r['code'] ?? 0) !== 200) { echo '  ', $erreur($r), "\n"; break; }
+        $c = $corps($r);
+        foreach ((array) ($c['items'] ?? []) as $cl) {
+            if ((int) ($cl['id'] ?? 0) !== $cid) { continue; }
+            $trouve = true;
+            unset($cl['name'], $cl['surname']);
+            echo '  ', json_encode($cl, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), "\n";
+        }
+        $page++;
+    } while (!$trouve && ($page - 1) * 100 < (int) ($c['pagination']['total'] ?? 0) && $page <= 40);
+    if (!$trouve) { echo "  pas de compte de carte pour ce client à Halle\n"; }
+}
 echo "\nfin de la sonde\n";
