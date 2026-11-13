@@ -2858,7 +2858,8 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
 .fd-cal .h{font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:var(--color-text-muted);text-align:center}
 .fd-cal .s{font-size:11px;color:var(--color-text-muted)}.fd-cal .t{font-size:11px;color:var(--color-text-muted);text-align:right}
 .fd-cal .c{height:24px;border-radius:5px;background:var(--color-background-secondary);font-size:10.5px;color:#fff;display:flex;align-items:center;justify-content:center}
-.fd-cal .c.cmd,.fd-sq.cmd{background:#B0792A}.fd-cal .c.cpt,.fd-sq.cpt{background:var(--color-primary)}.fd-cal .c.futur{background:none;border:1px dashed var(--color-border-tertiary)}
+/* Les mêmes couleurs que « Comment il achète » (FD_CANAUX, 13/11/2026) : commande bordeaux, comptoir or. */
+.fd-cal .c.cmd,.fd-sq.cmd{background:var(--color-primary)}.fd-cal .c.cpt,.fd-sq.cpt{background:#B0792A}.fd-cal .c.futur{background:none;border:1px dashed var(--color-border-tertiary)}
 .fd-sq{display:inline-block;width:9px;height:9px;border-radius:2px;margin:0 3px 0 8px}
 .fd-lab{margin:12px 14px 6px;font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
 .fd-bj{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;height:80px;align-items:end;padding:0 14px}

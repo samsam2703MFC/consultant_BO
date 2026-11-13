@@ -1047,3 +1047,20 @@ Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.
   Consultant = accès « consultant » ; Manuel opératoire = le reste (rangé par formation).
 - Nouveau dossier **05 « Le dashboard magasin, onglet par onglet »** (`FO_DOSSIERS`) : sous Franchisé, ses documents ont
   leur propre groupe, rangés par code (0.0.34 → 0.0.49).
+
+## Dashboard magasin : cinq corrections relevées en écrivant le manuel (13/11/2026)
+
+- Client : « oui corrige 1 à 5 » (points relevés en rédigeant la section « Le dashboard magasin, onglet par onglet »).
+  1. Téléphone › Exploitation : sans aucun point jugé (chiffres du jour pas lus), le verdict ne dit plus ✓ « tout est
+     au vert » mais « … pas encore jugé · N points en attente des chiffres du jour » ; avec des points jugés au vert et
+     d'autres pas encore : « rien à signaler pour l'instant » (`maVerdict`).
+  2. Couleurs : orange (#D98A0B) ≠ doré (#B0792A) comme le disent les légendes — heatmap de l'Année (80–95 %), colonne
+     Atteinte du tableau des trimestres, rentabilité jour par jour du Mois (0–5 %) ; la légende des « 3 mois du
+     trimestre » dit « bordeaux » et « or », les couleurs des barres.
+  3. Fidélité › fiche client : « Ses passages » prend les couleurs de « Comment il achète » (commande bordeaux,
+     comptoir or).
+  4. Promotions : la fenêtre du coefficient n'a plus « Dupliquer » sur le dashboard (il reste au cockpit, `EMBED_PM`) ;
+     sous × 2 : « À revoir au cockpit (Promotions › Édition) ». « Réclamer au fournisseur » et « Remarque à
+     l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
+  5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
+     `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».

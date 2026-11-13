@@ -1077,11 +1077,14 @@
   /** La ligne du haut : combien de tuiles ne sont pas vertes, lesquelles, et toutes les pastilles. */
   function maVerdict(T, regler) {
     const pb = T.filter(t => t.pt === 'r' || t.pt === 'o'), n = pb.length;
-    const cls = pb.some(t => t.pt === 'r') ? 'ko' : (n ? 'wa' : 'ok');
-    const titre = n ? maPl(n, 'point').replace(/^\d+ /, '') + (regler ? ' à régler' : ' à surveiller') : 'tout est au vert';
     const vert = T.filter(t => t.pt === 'v').length, gris = T.filter(t => !t.pt || t.pt === 'n').length;
-    const em = n ? pb.map(t => t.court || t.k).join(' · ') : (vert + ' au vert' + (gris ? ' · ' + gris + ' pas encore jugé' + (gris > 1 ? 's' : '') : ''));
-    return `<div class="ma-v"><span class="n ${cls}">${n || '✓'}</span><span class="t">${titre}<em>${em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
+    // Rien de jugé (chiffres du jour pas encore lus, 13/11/2026) : ni ✓ ni « tout est au vert » — un responsable le
+    // lisait comme « tout va bien ». Quelques points jugés, d'autres pas : « rien à signaler pour l'instant ».
+    const rien = !n && !vert;
+    const cls = pb.some(t => t.pt === 'r') ? 'ko' : (n ? 'wa' : (rien ? 'mu' : 'ok'));
+    const titre = n ? maPl(n, 'point').replace(/^\d+ /, '') + (regler ? ' à régler' : ' à surveiller') : (rien ? 'pas encore jugé' : (gris ? 'rien à signaler pour l’instant' : 'tout est au vert'));
+    const em = n ? pb.map(t => t.court || t.k).join(' · ') : (rien ? gris + ' point' + (gris > 1 ? 's' : '') + ' en attente des chiffres du jour' : vert + ' au vert' + (gris ? ' · ' + gris + ' pas encore jugé' + (gris > 1 ? 's' : '') : ''));
+    return `<div class="ma-v"><span class="n ${cls}">${n || (rien ? '…' : '✓')}</span><span class="t">${titre}<em>${em}</em></span><span class="dots">${T.map(t => `<i class="${t.pt || 'n'}"></i>`).join('')}</span></div>`;
   }
 
   /** Exploitation : le jour, ce qu'il rapporte. */
@@ -3884,7 +3887,7 @@
           <div class="pmc-l"><span>Payé par le client, HT</span><b>${fU(C.paye)}</b></div>
           <div class="pmc-l"><span>Coût matière des ${nb} article${nb > 1 ? 's' : ''}</span><b>${fU(C.cout)}</b></div>
           <div class="pmc-l"><span>Marge brute du lot</span><b>${fU(marge)} <small class="mu">au lieu de ${fU(margeSans)}</small></b></div></div>
-        ${C.lot < min ? `<div class="pm-warn pmc-ko">Sous ${fXm(min)} avec les prix et coûts d’aujourd’hui. ${l.src === 'mag' ? 'Retirez-la, ou dupliquez-la avec un avantage plus petit.' : 'Promotion de la marque : à lui signaler.'}</div>` : ''}
+        ${C.lot < min ? `<div class="pm-warn pmc-ko">Sous ${fXm(min)} avec les prix et coûts d’aujourd’hui. ${l.src === 'mag' ? (EMBED_PM ? 'Retirez-la, ou dupliquez-la avec un avantage plus petit.' : 'À revoir au cockpit (Promotions › Édition) : la retirer, ou la refaire avec un avantage plus petit.') : 'Promotion de la marque : à lui signaler.'}</div>` : ''}
         ${enr != null && Math.abs(enr - C.lot) >= 0.01 ? `<div class="pm-warn">À l’enregistrement : ${fX(enr)}. Les prix ou les coûts de recette ont changé depuis.</div>` : ''}
         <div class="fi-note" style="margin-top:10px">${autres.length ? (autres[0] === autres[autres.length - 1] ? `L${autres.length > 1 ? 'es ' + autres.length + ' autres combinaisons' : '’autre combinaison'} possible${autres.length > 1 ? 's' : ''} en caisse : ${fX(autres[0])}.` : `Les ${autres.length} autres combinaisons possibles en caisse sont plus confortables : de ${fX(autres[0])} à ${fX(autres[autres.length - 1])}.`) + ' ' : ''}Prix HT de la caisse et coûts de recette du magasin, aujourd’hui.
           ${C.coutReseau.length ? ` Coût du réseau, faute de coût calculé pour le magasin : ${esc(C.coutReseau.slice(0, 4).join(', '))}${C.coutReseau.length > 4 ? '…' : ''}.` : ''}
@@ -3892,7 +3895,7 @@
     }
     if (K && C.lot != null) {
       pied = `<div class="pmc-pied">${vue === 'produits' ? '<button type="button" class="db-btn" data-pmcvue="lot">← L’essentiel</button>' : (nProd > 1 ? `<button type="button" class="db-btn" data-pmcvue="produits">Voir produit par produit (${nProd})</button>` : '')}
-        <button type="button" class="db-btn" data-pmcdup="${esc((l.src === 'mag' ? 'mag:' : 'panel:') + l.id)}">Dupliquer</button><span style="flex:1"></span><button type="button" class="db-btn prim" data-pmcfermer="1">Fermer</button></div>`;
+        ${EMBED_PM ? `<button type="button" class="db-btn" data-pmcdup="${esc((l.src === 'mag' ? 'mag:' : 'panel:') + l.id)}">Dupliquer</button>` : ''}<span style="flex:1"></span><button type="button" class="db-btn prim" data-pmcfermer="1">Fermer</button></div>`;
     }
     const ancienne = box.querySelector('.fi-modale'), defil = ancienne && ancienne.dataset.vue === vue ? ancienne.scrollTop : 0;
     box.innerHTML = `<div class="fi-voile" data-pmcfermer="1"></div><div class="fi-modale${vue === 'produits' ? '' : ' pmc-etroite'}" data-vue="${vue}" role="dialog" aria-modal="true" aria-label="Coefficient de marge — ${esc(l.nom)}">
@@ -5369,7 +5372,7 @@
       <div><div class="k">Quantité</div><div class="v">${nf(e.qApres, 0)} <small>par semaine</small></div><div class="s">avant : ${nf(e.qAvant, 0)}${dq != null ? ` · <span class="pd-evo ${k}">${k === 'up' ? '▲' : (k === 'dn' ? '▼' : '=')} ${pdSigne(dq)}</span>` : ''}</div></div>
       <div><div class="k">Marge</div>${p.marge != null ? `<div class="v">${nf(p.marge, 0)} %</div><div class="s">${fE(p.margeSemaine)} par semaine</div>` : `<div class="v">—</div><div class="s">${esc(p.margeMotif || 'coût de la recette inconnu')}</div>`}</div>
       <div class="gr"><div class="k">Pièces vendues, chaque semaine</div>${pdBarres(D, p.q, { w: 420, h: 90, etiq: false, unite: 'p' })}</div>
-      <div class="li"><button type="button" class="pd-fiche" data-fprod="${esc(p.id)}" data-fnom="${esc(p.nom)}" data-fq="" data-fv="" data-ft="" data-fc="" data-fcat="${esc(p.cat || '')}">Fiche complète ↗</button></div>
+      <div class="li"><button type="button" class="pd-fiche" data-fprod="${esc(p.id)}" data-fnom="${esc(p.nom)}" data-fq="" data-fv="" data-ft="" data-fc="" data-fp="${p.prixHt != null ? p.prixHt : ''}" data-fcat="${esc(p.cat || '')}">Fiche complète ↗</button></div>
     </div></td></tr>`;
   }
   function pdOuvrir(nom) { S.pd = { g: nom, ouvert: null, tous: false, retour: document.activeElement }; pdRendre(); }
@@ -6899,7 +6902,7 @@
   }
   function ficheOuvrir(b) {
     const n = v => v === '' || v == null ? null : +v;
-    S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), c: n(b.dataset.fc), cat: b.dataset.fcat || '', onglet: 1, mois: 1, retour: document.activeElement };
+    S.fiche = { pid: b.dataset.fprod, nom: b.dataset.fnom, q: n(b.dataset.fq), v: n(b.dataset.fv), taux: n(b.dataset.ft), c: n(b.dataset.fc), p: n(b.dataset.fp), cat: b.dataset.fcat || '', onglet: 1, mois: 1, retour: document.activeElement };
     ficheLire(); ficheLireRecette(); ficheRendre();
   }
   /* Les 12 semaines d'une catégorie ou d'un groupe (10/10/2026) : seulement la courbe, en euros ou en pièces,
@@ -7109,7 +7112,8 @@
   const FI_ZONES = { ko: 100 / 60, att: 2.5 };   // marge < 40 % ⇔ coef < 1,67 ; < 60 % ⇔ < 2,5 (échelle MARGES)
   function ficheRecette(F, d, R, errR) {
     const fX = n => n == null ? '—' : '× ' + nf(n, 2), fPt = n => n == null ? '—' : nf(n, 2) + ' €';
-    const q = F.q || 0, prix = q > 0 && F.v != null ? F.v / q : null, matT = q > 0 && F.c != null ? F.c / q : null;
+    // Sans vente ce jour (fiche ouverte depuis Produits, 13/11/2026) : le prix HT du catalogue, pour la marge et le simulateur.
+    const q = F.q || 0, prix = q > 0 && F.v != null ? F.v / q : (F.p > 0 ? F.p : null), matT = q > 0 && F.c != null ? F.c / q : null;
     // Le coût de recette : celui que le panel calcule aujourd'hui pour ce magasin (il bouge à chaque édition de prix) ;
     // à défaut, celui gravé avec les tickets du jour.
     const matA = R && R.api && R.total > 0 ? R.total : null, mat = matA != null ? matA : matT;
@@ -7150,7 +7154,7 @@
         <div class="fi-rjb${etage ? ' etage' : ''}${simOn ? ' sim' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
           ${reperes.map(r => `<span class="fi-rrep ${r.cls || ''}" style="left:${pct(r.v).toFixed(1)}%"><i></i><em>${esc(r.lib)}<small>${esc(r.sous)}</small></em></span>`).join('')}
           ${cV != null ? `<span class="fi-rmoi ${niv(cV)}" style="left:${pct(cV).toFixed(1)}%"><i></i><em>${simOn ? 'à ' + fPt(sim) : 'ce produit'}<small>${fX(cV)}</small></em></span>` : ''}
-          ${simOn ? `<span class="fi-rmoi enc" style="left:${pct(coef).toFixed(1)}%"><i></i><em>encaissé ${fPt(prix)}<small>${fX(coef)}</small></em></span>` : ''}</div>
+          ${simOn ? `<span class="fi-rmoi enc" style="left:${pct(coef).toFixed(1)}%"><i></i><em>${q > 0 ? 'encaissé' : 'catalogue'} ${fPt(prix)}<small>${fX(coef)}</small></em></span>` : ''}</div>
           <div class="fi-raxe"><span>× 1</span><span>× ${nf(FI_ZONES.ko, 2)} · marge 40 %</span><span>× 2,5 · marge 60 %</span><span>× 4</span></div>
           </div></div>`;
     if (simOn) {
@@ -7224,7 +7228,7 @@
     const mag = nomShop(), court = mag.replace(/^.* - /, '');
     const chips = [F.q != null ? `<span class="fi-chip">${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} <b>${fN(F.q)} vendu${F.q >= 2 ? 's' : ''}</b>${F.v != null ? ' · ' + fE(F.v) : ''}</span>` : '',
       d && d.prix ? `<span class="fi-chip">prix encaissé <b>${fPx(d.prix.magasin.p)}</b></span><span class="fi-chip">prix réseau <b>${fPx(d.prix.reseau.med)}</b></span>` : '',
-      (() => { const R0 = S.aux[cleRecette()], pq = F.q > 0 && F.v != null ? F.v / F.q : null, m0 = R0 && R0.api && R0.total > 0 ? R0.total : (F.q > 0 && F.c > 0 ? F.c / F.q : null);
+      (() => { const R0 = S.aux[cleRecette()], pq = F.q > 0 && F.v != null ? F.v / F.q : (F.p > 0 ? F.p : null), m0 = R0 && R0.api && R0.total > 0 ? R0.total : (F.q > 0 && F.c > 0 ? F.c / F.q : null);
         if (pq == null || m0 == null || !(pq > 0)) { return F.taux != null ? `<span class="fi-chip">marge brute <b>${fP0(F.taux)}</b></span>` : ''; }
         const cf = pq / m0; return `<span class="fi-chip">marge brute <b>${fP0(100 * (pq - m0) / pq)}</b></span><span class="fi-chip fi-rchip ${cf < FI_ZONES.ko ? 'ko' : (cf < FI_ZONES.att ? 'att' : 'ok')}">coefficient <b>× ${nf(cf, 2)}</b></span>`; })(),
       F.onglet === 3 && F.simPrix != null && F.simPrix > 0 ? `<span class="fi-chip fi-rchip sim">prix testé <b>${nf(F.simPrix, 2)} €</b></span>` : ''].join('');
@@ -7797,7 +7801,7 @@
     if (S.date.slice(0, 7) !== AUJ.slice(0, 7)) { return `<div class="db-note" style="padding:0 0 12px">La heatmap de rentabilité ne se lit que sur le mois en cours (P&amp;L quotidien du panel).</div>`; }
     const r = S.aux['rentab'];
     const teinte = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
-      : p < 0 ? 'background:var(--accent);color:#fff' : p < 5 ? 'background:var(--prize);color:#fff'
+      : p < 0 ? 'background:var(--accent);color:#fff' : p < 5 ? 'background:#D98A0B;color:#fff'
       : p < 10 ? 'background:#A8B545;color:#fff' : p < 15 ? 'background:#7CB342;color:#fff'
       : p < 25 ? 'background:#3D8B44;color:#fff' : 'background:var(--prize);color:#fff';
     let h = `<div class="db-card"><div class="ct"><span class="db-lab">Rentabilité — le résultat net, jour par jour</span><span class="db-mini">${r && r.du ? 'mois en cours · ' + fD(r.du) + ' → ' + fD(r.au) : ''}</span></div>`;
@@ -9137,7 +9141,7 @@
     const mx = Math.max(...M.map(x => Math.max((x.caBudget || x.caTheorique || 0), x.ca || 0)), 1);
     const moisAuj = +AUJ.slice(5, 7), anAuj = +AUJ.slice(0, 4);
     h += `<div class="db-g2" style="grid-template-columns:1.4fr 1fr;margin-bottom:12px">
-      <div class="db-card"><div class="ct"><span class="db-lab">Les 3 mois du trimestre</span><span class="db-mini">gris : budget du mois · couleur : réalisé (vert ≥ 95 %, rouge sinon, orange = mois en cours)</span></div>
+      <div class="db-card"><div class="ct"><span class="db-lab">Les 3 mois du trimestre</span><span class="db-mini">gris : budget du mois · couleur : réalisé (vert ≥ 95 %, bordeaux sinon, or = mois en cours)</span></div>
         ${!perf && !S.err[clePerf()] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
           return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i><i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i></div><div class="n">${MO[x.mois - 1]} · ${futur ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !futur ? ' · ' + fP(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`}
       </div>
@@ -9151,7 +9155,7 @@
     const T = Array.isArray(plan.trimestres) ? plan.trimestres : [];
     if (!T.length) { return ''; }
     const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
-    const col = p => p == null ? '#B9B2A8' : p < 80 ? '#8D1D2C' : p < 95 ? '#B0792A' : p < 105 ? '#7CB342' : '#B0792A';
+    const col = p => p == null ? '#B9B2A8' : p < 80 ? '#8D1D2C' : p < 95 ? '#D98A0B' : p < 105 ? '#7CB342' : '#B0792A';   // orange ≠ doré (13/11/2026)
     const tag = t => t.enCours ? '<span class="db-tg enc">en cours</span>' : (t.clos ? '<span class="db-tg clos">clos</span>' : '<span class="db-tg fut">à venir</span>');
     const tot = { o: 0, r: 0, a: 0 };
     const rows = T.map(t => { const att = t.attendu ? 100 * (t.realise || 0) / t.attendu : null; tot.o += t.objectif || 0; tot.r += t.realise || 0; tot.a += t.attendu || 0;
@@ -9207,7 +9211,7 @@
       const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop));
       const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
       const tPct = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
-        : p < 80 ? 'background:var(--accent);color:#fff' : p < 95 ? 'background:var(--prize);color:#fff' : p < 105 ? 'background:#7CB342;color:#fff' : 'background:var(--prize);color:#fff';
+        : p < 80 ? 'background:var(--accent);color:#fff' : p < 95 ? 'background:#D98A0B;color:#fff' : p < 105 ? 'background:#7CB342;color:#fff' : 'background:var(--prize);color:#fff';
       const mxCa = Math.max(...cells.map(c => c.ca || 0), 1);
       const tCa = ca => ca == null || !ca ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : `background:rgba(141,29,44,${(0.15 + 0.75 * ca / mxCa).toFixed(2)});color:${ca / mxCa > 0.45 ? '#fff' : '#1c1a17'}`;
       const auj = new Date();
