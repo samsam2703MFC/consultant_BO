@@ -109,6 +109,25 @@ body { margin: 0; background: var(--paper); }
 .rp-chaleur tfoot td.jour { text-align: left; }
 .rp-ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #F8EEEF, #8D1D2C); }
 .rp-table tr.moi td { background: var(--total-line); }
+/* Version courte (13/11/2026, Sam : « 4 pages, éviter les textes, garder les infos en puces, garder les graphiques ») :
+   les notes de méthode, les renvois, les annexes et les longues listes de clients ne s'affichent plus ; les paragraphes
+   deviennent des puces (fin du script). */
+.rp-aide, .rp-renvoi, #annexes, #semaines, #annexe-c, #annexe-d, #sources, #b2b-clients, #b2b-6mois .rp-table-zone,
+#pe-table, #tc-releve-zone, #chantier-ventes, #tc-sombreffe, #soins > .rp-h3:last-of-type, #soins > .rp-table-zone:has(#cibles), #dix-huit-mois > .rp-h3, #dix-huit-mois > .rp-table-zone:has(#trim-table), #tc-niveaux, .rp-partie .rp-sous, #evolution-legende span:nth-child(n+4) { display: none !important; }
+.rp-points { gap: 4px; }
+@media print { .rp-partie { break-after: avoid; } .rp-deux .rp-points { columns: 1; } .rp { font-size: 12px; line-height: 1.38; gap: 10px; } .rp-h3 { font-size: 13.5px; } .rp-partie { padding-top: 6px; } .rp-partie-n { font-size: 28px; } .rp-partie-titre { font-size: 19px; } }
+.rp-chaleur td.c { height: 22px; font-size: 11px; }
+.rp-ouverture p { font-size: 15px; max-width: none; }
+.rp-kpi { padding: 10px 12px; } .rp-kpi-v { font-size: 20px; }
+.rp-carte { gap: 10px; padding: 14px 16px; }
+.rp-table td { padding: 3px 8px; } .rp-table th { padding: 5px 8px; } .rp-table { font-size: 12px; }
+.rp-points, .rp-pistes { display: block; columns: 2; column-gap: 28px; max-width: none; }
+.rp-points li, .rp-pistes li { break-inside: avoid; margin-bottom: 4px; }
+#ev-graphes { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+#personnel { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); align-items: start; }
+#personnel > .rp-h2, #personnel > ul, #personnel > .rp-ouvert { grid-column: 1 / -1; }
+#pe-kpis { grid-template-columns: 1fr 1fr; }
+#oo-deux, #dhm-deux { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 18px; align-items: start; }
 /* Impression et PDF (pdf.js) : A4, papier blanc, rien de coupé, une carte peut passer d'une page à l'autre mais pas un
    tableau de chiffres clés, un graphique, une ligne ou une note. */
 @media print {
@@ -120,8 +139,6 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #evolution, #octobre-octobre, #personnel, #temps-morts, #partie-2, #partie-3, #partie-4, #taches, #annexes { break-before: page; }
-  #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit le B2B */
   .rp-partie { border-top: 0; padding-top: 0; }   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
@@ -155,6 +172,7 @@ body { margin: 0; background: var(--paper); }
       <span class="rp-sous" id="evolution-releve"></span>
     </div>
     <div class="rp-faits" id="evolution-faits"></div>
+    <div id="ev-graphes">
     <div class="rp-part" id="ev-comptoir">
       <h3 class="rp-h3" id="ev-comptoir-titre"></h3>
       <p class="rp-aide" id="ev-comptoir-note"></p>
@@ -168,6 +186,7 @@ body { margin: 0; background: var(--paper); }
       <h3 class="rp-h3">B2B seul : le CA des clients pro</h3>
       <p class="rp-aide" id="ev-b2b-note"></p>
       <div class="rp-graphe" id="graphe-b2b"><div class="rp-bulle"></div></div>
+    </div>
     </div>
     <div class="rp-legende" id="evolution-legende">
       <span><i class="rp-sw"></i>le mois</span>
@@ -183,6 +202,7 @@ body { margin: 0; background: var(--paper); }
   <section class="rp-carte" id="octobre-octobre">
     <h2 class="rp-h2">Mai 2025 → octobre 2026</h2>
     <p class="rp-p" id="oo-intro"></p>
+    <div id="oo-deux">
     <div class="rp-part" id="trafic">
       <h3 class="rp-h3">Clients par jour ouvert</h3>
       <div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div>
@@ -192,7 +212,26 @@ body { margin: 0; background: var(--paper); }
       <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div>
       <p class="rp-aide" id="comp-note"></p>
     </div>
-    <p class="rp-aide rp-renvoi">Le détail mois par mois et trimestre par trimestre : annexe A.</p>
+    </div>
+  </section>
+
+  <section class="rp-carte" id="dix-huit-mois">
+    <h2 class="rp-h2">Les 18 mois, mois par mois</h2>
+    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
+    <p class="rp-aide" id="oo-note"></p>
+    <h3 class="rp-h3">Trimestre par trimestre</h3>
+    <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
+  </section>
+
+  <section class="rp-carte" id="panier">
+    <h2 class="rp-h2">Le panier moyen face aux autres magasins</h2>
+    <ul class="rp-points" id="panier-points"></ul>
+    <div class="rp-deux">
+      <div class="rp-part"><h3 class="rp-h3" id="panier-mag-titre"></h3>
+        <div class="rp-table-zone"><table class="rp-table" id="panier-magasins"></table></div></div>
+      <div class="rp-part"><h3 class="rp-h3" id="panier-mois-titre"></h3>
+        <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-mois"></table></div></div>
+    </div>
   </section>
 
   <section class="rp-carte" id="comptoir-b2b">
@@ -326,13 +365,6 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-sous">Les tableaux détaillés, dans l’ordre où le rapport y renvoie.</div>
   </header>
 
-  <section class="rp-carte" id="annexe-a">
-    <h2 class="rp-h2">A · Les 18 mois, mois par mois</h2>
-    <div class="rp-table-zone"><table class="rp-table" id="oo-table"></table></div>
-    <p class="rp-aide" id="oo-note"></p>
-    <h3 class="rp-h3">Trimestre par trimestre</h3>
-    <div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div>
-  </section>
 
   <section class="rp-carte" id="semaines">
     <h2 class="rp-h2">B · Les dix dernières semaines</h2>
@@ -358,7 +390,7 @@ body { margin: 0; background: var(--paper); }
   </section>
 
   <section class="rp-carte" id="note-redacteur">
-    <h2 class="rp-h2">F · Note du rédacteur</h2>
+    <h2 class="rp-h2">Note du rédacteur</h2>
     <p class="rp-note" id="note-redacteur-texte"></p>
   </section>
   <div class="rp-pied" id="pied"></div>
@@ -454,7 +486,7 @@ function bulle(zone, html, x, y) {
 function grapheMois(id, cfg) {
   const zone = $(id);
   const W = Math.max(320, zone.clientWidth), etroit = W < 640, C = cfg.couleur || '#8D1D2C';
-  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44;
+  const H = etroit ? 200 : 180, ml = 50, mr = 12, mt = 22, mb = 44;
   const S = D.serie, n = S.length, pas = (W - ml - mr) / n, x = i => ml + pas * (i + 0.5);
   const pleins = S.map((m, i) => ({ m, i, v: m.ouverture ? null : cfg.val(m) })).filter(o => o.v != null);
   const avec = S.map((m, i) => ({ m, i, v: cfg.val(m), w: cfg.val1(m) })).filter(o => o.v != null && o.w != null);
@@ -508,7 +540,7 @@ function grapheMois(id, cfg) {
     const v = cfg.val(m), w = cfg.val1(m);
     if (v != null && w) {
       const e = (v / w - 1) * 100, r = Math.round(e), etoile = m.n1 && m.n1.jours < m.jours - 2 ? '*' : '';
-      s += `<text x="${x(i)}" y="${hc}" font-size="9.5" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
+      s += `<text x="${x(i)}" y="${hc + (etroit && i % 2 ? 11 : 0)}" font-size="${etroit ? 8.5 : 9.5}" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
     }
   });
   if (avec.length) { s += `<text x="${ml - 8}" y="${hc}" font-size="9" text-anchor="end" fill="#8a8378" style="${ft}">vs N-1</text>`; }
@@ -534,7 +566,7 @@ function grapheMois(id, cfg) {
    mois clos (la part du cockpit appliquée à leur CA), tracée comme une moyenne sur ces 12 mois, rien de plus. */
 function grapheB2bMoyenne() {
   const zone = $('graphe-b2b'), W = Math.max(320, zone.clientWidth), etroit = W < 640, C = '#1f5f8b';
-  const H = etroit ? 230 : 250, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
+  const H = etroit ? 200 : 180, ml = 50, mr = 12, mt = 22, mb = 44, S = D.serie, n = S.length, pas = (W - ml - mr) / n;
   const x = i => ml + pas * (i + 0.5), v = D.b2b.parMois, pasY = 1000, ymax = Math.ceil(v * 1.6 / pasY) * pasY, hP = H - mt - mb;
   const y = w => mt + (ymax - w) / ymax * hP, ft = 'font-family:var(--font)', halo = 'paint-order:stroke;stroke:#fff;stroke-width:3px';
   const i0 = S.findIndex(m => m.k === '2025-11'), i1 = S.findIndex(m => m.k === '2026-10'), xa = ml + pas * i0, xb = ml + pas * (i1 + 1);
@@ -608,7 +640,7 @@ $('trim-table').innerHTML = '<thead><tr><th>Période</th><th class="num">Clients
 
 function grapheTrafic() {
   const zone = $('graphe-trafic');
-  const W = Math.max(300, zone.clientWidth), H = 200, ml = 30, mr = 6, mt = 18, mb = 26;
+  const W = Math.max(300, zone.clientWidth), H = 150, ml = 30, mr = 6, mt = 18, mb = 26;
   const n = L.length, pas = (W - ml - mr) / n, lb = Math.min(28, pas * 0.62);
   const vmax = 180, hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP;
   const ft = 'font-family:var(--font)';
@@ -642,6 +674,24 @@ $('comp-table').innerHTML = '<thead><tr><th></th><th class="num">2025</th><th cl
   + compL.map(([lab, k, f]) => `<tr><td>${esc(lab)}</td><td class="num">${f(C.n1[k])}</td><td class="num">${f(C.n[k])}</td>`
     + (k === 'jours' ? `<td class="num">+${C.n[k] - C.n1[k]}</td>` : `<td class="num ${cls(ecC(k))}">${pct(ecC(k))}</td>`) + '</tr>').join('') + '</tbody>';
 $('comp-note').textContent = 'En 2025, le magasin a eu des jours fermés en mai et en juillet : « par jour ouvert » compare à jours égaux.';
+
+/* --- Le panier moyen face aux autres magasins (mois où les quatre sont ouverts) --- */
+const PA = D.panierAutres, moisCL = k => { const [a, m] = k.split('-'); return ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'][+m - 1] + ' ' + a.slice(2); };
+const perPA = moisCL(PA.du) + ' → ' + moisCL(PA.au);
+const moiPA = PA.magasins.find(m => m.moi);
+$('panier-mag-titre').textContent = 'Panier moyen · ' + perPA + ' (' + PA.nbMois + ' mois)';
+$('panier-magasins').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">Panier</th><th class="num">vs Sombreffe</th></tr></thead><tbody>'
+  + PA.magasins.map(m => `<tr${m.moi ? ' class="moi"' : ''}><td>${esc(m.nom)}${m.nom === PA.bas.nom ? ' · le plus bas des autres' : ''}</td><td class="num">${dec(m.cliJour, 0)}</td><td class="num">${k1(m.ca)}</td><td class="num">${eur2(m.panier)}</td><td class="num ${m.moi ? 'dim' : cls(m.panier - moiPA.panier)}">${m.moi ? '—' : pct((m.panier / moiPA.panier - 1) * 100)}</td></tr>`).join('')
+  + '</tbody>';
+$('panier-mois-titre').textContent = 'Le trafic de Sombreffe au panier de ' + PA.bas.nom + ' (' + eur2(PA.bas.panier) + ')';
+$('panier-mois').innerHTML = '<thead><tr><th>Mois</th><th class="num">Clients</th><th class="num">Panier</th><th class="num">CA réel</th><th class="num">CA au panier ' + esc(PA.bas.nom) + '</th><th class="num">Écart</th></tr></thead><tbody>'
+  + PA.mois.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${grp(l.clients)}</td><td class="num">${eur2(l.panier)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caBas)}</td><td class="num ${cls(l.ecart)}">${sgn(l.ecart)}${eur(Math.abs(l.ecart))}</td></tr>`).join('')
+  + `</tbody><tfoot><tr><td>${PA.nbMois} mois</td><td class="num">${grp(PA.clients)}</td><td class="num">${eur2(PA.ca / PA.clients)}</td><td class="num">${eur(PA.ca)}</td><td class="num">${eur(PA.caBas)}</td><td class="num ${cls(PA.ecart)}">${sgn(PA.ecart)}${eur(Math.abs(PA.ecart))}</td></tr></tfoot>`;
+$('panier-points').innerHTML = [
+  `Panier de Sombreffe : ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA}).`,
+  `Le plus bas des autres : ${esc(PA.bas.nom)}, ${eur2(PA.bas.panier)} (${pct((PA.bas.panier / moiPA.panier - 1) * 100)}).`,
+  `Au panier de ${esc(PA.bas.nom)}, les ${grp(PA.clients)} clients de Sombreffe auraient fait ${k1(PA.caBas)} au lieu de ${k1(PA.ca)} : ${sgn(PA.ecart)}${k1(Math.abs(PA.ecart))} en ${PA.nbMois} mois, ≈ ${sgn(PA.ecartAn)}${k1(Math.abs(PA.ecartAn))} par an.`,
+].map(t => '<li>' + t + '</li>').join('');
 
 /* --- Comptoir et B2B --- */
 const partC = 100 - B.part;
@@ -889,7 +939,7 @@ if (PE && PE.cumul.mois) {
     + `</tbody><tfoot><tr><td>${PE.cumul.mois} mois</td><td class="num">${eur(PE.cumul.ca)}</td><td class="num">${eur(PE.cumul.labour)}</td><td class="num">${dec(PE.cumul.labourPct)} %</td><td></td><td></td></tr></tfoot>`;
   $('pe-note').textContent = insec(`Source : le P&L quotidien du panel additionné par mois (route /analyse/pnl/mois du cockpit). En rouge, un mois au-dessus du seuil de ${dec(SEUIL_P, 0)} %. Le CA du P&L peut différer de quelques euros de celui des ventes (les tickets).`);
   window.grapheP = () => {
-    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 190, ml = 34, mr = 6, mt = 16, mb = 24;
+    const zone = $('graphe-personnel'), W = Math.max(300, zone.clientWidth), H = 150, ml = 34, mr = 6, mt = 16, mb = 24;
     const n = PE.mois.length, pas = (W - ml - mr) / n, lb = Math.min(26, pas * 0.6);
     const vmax = Math.max(SEUIL_P + 10, Math.ceil(maxP.labourPct / 10) * 10), hP = H - mt - mb, y = v => mt + (vmax - v) / vmax * hP, ft = 'font-family:var(--font)';
     let sv = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Frais de personnel en % du CA, mois par mois">`;
@@ -996,6 +1046,14 @@ $('sources-liste').innerHTML = [
   `Temps morts : seuil ${TM.seuil} min, ${TM.semaines} semaines du ${dateC(TM.du)} au ${dateC(TM.au)}/${TM.au.slice(0, 4)}, tickets par heure du panel lus le ${TM.luLe}. Les minutes des tickets sont tirées dans leur heure (500 tirages par journée) ; vérifié sur les tickets réels d’une semaine, le résultat tombe juste en moyenne (423 temps morts mesurés pour 422 estimés). L’onglet Temps morts du dashboard magasin les mesure ticket par ticket.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 $('pied').textContent = 'Rapport établi le 13 novembre 2026 · pilotage réseau L’Atelier By.';
+
+/* --- Version courte : chaque paragraphe en puces, une phrase par puce --- */
+document.querySelectorAll('p.rp-p').forEach(p => {
+  const t = p.textContent.trim(); if (!t) { return; }
+  const ph = t.split(/(?<=[.!?])\s+(?=[A-ZÀ-ÝÉ«0-9])/);
+  const ul = document.createElement('ul'); ul.className = 'rp-points'; ul.id = p.id; ul.hidden = p.hidden;
+  ul.innerHTML = ph.map(x => '<li>' + esc(x) + '</li>').join(''); p.replaceWith(ul);
+});
 
 /* --- Dessins, redessinés à la largeur --- */
 function dessiner() { grapheEvolution(); grapheTrafic(); if (window.grapheP) { window.grapheP(); } }
