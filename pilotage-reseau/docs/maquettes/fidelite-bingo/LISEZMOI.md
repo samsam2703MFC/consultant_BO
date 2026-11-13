@@ -125,3 +125,7 @@ Le handoff ajoute l'onglet Points de l'app : chaque lundi, chaque client reçoit
 le plus fort s'applique. Rien de cela n'existe dans l'API de l'ERP (un ×2 par créneau, pour tous, sur tout le
 ticket ; pas de lignes de ticket dans les rapports de fidélité). Le Programme les montre en réglages « pas dans
 l'API » ; ce que l'ERP doit ajouter est écrit dans `DEMANDE-ERP.md`.
+
+**Réduit le 13/11/2026 (Sam : « retire le coefficient par personne mais pas jour, l'API le gère »)** : plus de jour
+perso ni d'offre perso. Restent les jours ×2 / ×3 (les créneaux de la carte, déjà dans l'API), la case cochée ×2 et le
+produit de la semaine ×2 (à demander à l'ERP).

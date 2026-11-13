@@ -17,15 +17,9 @@
   },
   "multiplicateurCase": 2,
   "coefficients": {
-    "_": "Coefficients de la semaine, par client (handoff, onglet Points) : sur chaque ligne de ticket, le plus fort s'applique, jamais la somme. Recalculés chaque lundi d'après le profil d'achat. Pas dans l'API de l'ERP : DEMANDE-ERP.md.",
+    "_": "Coefficients (handoff, onglet Points), réduits le 13/11/2026 : pas de coefficient par personne pour le moment. Les jours ×2 / ×3 sont les créneaux de la carte (points_config.bonuses), que l'ERP applique déjà. La case cochée ×2 et le produit de la semaine ×2 ne sont pas dans l'API (DEMANDE-ERP.md). Ils ne s'additionnent pas : le plus fort s'applique.",
     "caseCochee": 2,
-    "jourPerso": 3,
-    "offrePerso": [
-      2,
-      3
-    ],
-    "produitSemaine": 2,
-    "habituel": 1
+    "produitSemaine": 2
   },
   "palier": {
     "points": 100,

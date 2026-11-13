@@ -142,12 +142,12 @@ function valsProgramme(app, f){
   }
   // Le bingo.
   const K = B.coefficients || {};
-  f.coefs7 = K.caseCochee ? [
-    ['×' + K.caseCochee, 'Case cochée', 'pour tous, sur les tickets qui suivent la case, jusqu’au dimanche 23:59'],
-    ['×' + K.jourPerso, 'Jour perso', 'un jour où le client vient rarement : la veille de son jour habituel'],
-    ['×' + (K.offrePerso || []).join('·'), 'Offre perso · ×' + (K.offrePerso || []).join(' ou ×'), 'un produit pour élargir son panier : une catégorie jamais prise, une affinité, un produit délaissé'],
-    ['×' + K.produitSemaine, 'Produit de la semaine', 'pour tous : le thème de la case du bingo'],
-    ['×' + K.habituel, 'Produit habituel', 'jamais bonifié : ce qu’il achète déjà, montré comme repère']] : [];
+  const jours = P ? P.bonuses.map(b => '×' + nf(+b.coefficient, 1).replace(',0', '') + ' ' + b.name.toLowerCase()) : [];
+  f.coefs7 = [
+    [jours.length ? '×' + Math.max(...P.bonuses.map(b => +b.coefficient)) : '×1', 'Les jours et les heures', (jours.length ? jours.join(' · ') + ' — ' : '') + 'les créneaux de la carte, réglés plus haut : l’ERP les applique déjà', 'API'],
+    K.caseCochee ? ['×' + K.caseCochee, 'Case cochée', 'pour tous, sur les tickets qui suivent la case, jusqu’au dimanche 23:59', 'pas dans l’API'] : null,
+    K.produitSemaine ? ['×' + K.produitSemaine, 'Produit de la semaine', 'pour tous : le thème de la case du bingo', 'pas dans l’API'] : null,
+  ].filter(Boolean);
   f.bingo = sa ? { seuil: B.seuil, seuilTxt: eur(B.seuil), multTxt: nf(B.multiplicateur || 2), palierTxt: B.palier ? B.palier.points + ' points, ' + eur(B.palier.valeur) : 'palier', tousLes: B.tousLes, validite: B.validite, prefixe: B.prefixe,
     bons: (B.bons || []).map(x => ({ k: x.k, v: eur(x.valeur), nom: x.nom, motif: x.motif, camp: x.campagne ? { nom: x.campagne.nom, statut: x.campagne.statut, actif: x.campagne.statut === 'ACTIVE' } : null })),
     sup: B.superBon ? { v: eur(B.superBon.valeur), provisoire: B.superBon.provisoire, camp: B.superBon.campagne ? { statut: B.superBon.campagne.statut, actif: B.superBon.campagne.statut === 'ACTIVE' } : null } : null,
