@@ -107,7 +107,7 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #octobre-octobre, #taches, #soins, #annexes { break-before: page; }   /* un thème par page */
+  #octobre-octobre, #taches, #soins, #suivi, #annexes { break-before: page; }   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
 </style>
@@ -211,11 +211,21 @@ body { margin: 0; background: var(--paper); }
     <p class="rp-p" id="soins-intro"></p>
     <div class="rp-kpis" id="soins-reperes"></div>
     <h3 class="rp-h3">Deux chantiers pour aller chercher le maximum</h3>
+    <div class="rp-alerte" id="cout-relance"></div>
+    <div class="rp-part" id="marque">
+      <h3 class="rp-h3">La marque participe, sous conditions</h3>
+      <p class="rp-p" id="marque-texte"></p>
+      <div class="rp-table-zone"><table class="rp-table" id="marque-conditions"></table></div>
+    </div>
     <div class="rp-deux" id="chantiers">
       <div class="rp-part" id="chantier-ventes"><h3 class="rp-h3">1 · Développer les ventes</h3><p class="rp-p" id="cv-texte"></p>
         <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div><p class="rp-aide" id="cv-aide"></p></div>
       <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">2 · Réduire les frais, tenir la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
     </div>
+  </section>
+
+  <section class="rp-carte" id="suivi">
+    <h2 class="rp-h2">Soins intensifs : le suivi et les pistes</h2>
     <h3 class="rp-h3">À suivre chaque semaine</h3>
     <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div>
     <h3 class="rp-h3">Pistes</h3>
@@ -305,7 +315,7 @@ $('essentiel-points').innerHTML = [
   `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
   `Constat terrain : le magasin ne cuit plus l’après-midi, et c’est là que le comptoir se vide. De 14 h à 18 h, ${dec(D.tempsMorts.apresMidi.pct, 0)} % du temps passe sans client.`,
   `Le B2B seul n’explique probablement pas cette hausse : il faudrait qu’environ ${dec(B.partDeLAnnee, 0)} % du B2B de toute l’année soit tombé en septembre et octobre. Le détail mois par mois du comptoir et du B2B tranchera.`,
-  `Deux chantiers pour les soins intensifs : développer les ventes, 5 clients de plus par jour pour revenir à la base puis 5 de plus pour l’objectif ; réduire les frais, en tenant les budgets et un plan de trésorerie (on paie le lundi, on court pour arriver au budget).`,
+  `Deux chantiers pour les soins intensifs, parce que redynamiser un magasin coûte cher : développer les ventes (la base à ${dec(D.depart.n.cliJour + D.objectifs.palier, 0)} clients par jour, l’objectif court terme à ${D.objectifs.courtTerme}, l’objectif normalisé à ${D.objectifs.normalise}) ; réduire les frais, en tenant les budgets et un plan de trésorerie (on paie le lundi, on court pour arriver au budget). La marque veut bien participer, sous conditions : les tâches et les checklists, l’encodage des produits, le suivi des règles.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Évolution magasin (le bloc du cockpit) --- */
@@ -589,13 +599,20 @@ $('soins-reperes').innerHTML = [
   kpi('Part du B2B', dec(B.part) + INS + '%', 'sur 12 mois ; la part de ces 4 semaines reste à lire'),
 ].join('');
 const objCli = Math.ceil(N1.cliJour);
-const PALIER = 5, base = N.cliJour + PALIER, objectif = base + PALIER;   // la base, puis l'objectif : 5 clients par jour chacun
+const OBJ = D.objectifs, PALIER = OBJ.palier, base = N.cliJour + PALIER, objectif = OBJ.courtTerme, normalise = OBJ.normalise;
+const enPlus = c => Math.round(c - N.cliJour);   // clients par jour de plus qu'au départ
+const MQ = D.marque;
+$('marque-texte').textContent = insec('La marque veut bien participer à la relance du magasin, mais sous conditions. Sa participation dépend de ce que le magasin tient chaque jour :');
+$('marque-conditions').innerHTML = '<thead><tr><th>Condition</th><th>Ce qui est attendu</th><th>Où ça se vérifie</th></tr></thead><tbody>'
+  + MQ.conditions.map(c => `<tr><td>${esc(c.quoi)}</td><td>${esc(c.comment)}</td><td>${esc(c.ou)}</td></tr>`).join('')
+  + '<tr><td class="dim">…</td><td class="dim">liste à compléter</td><td></td></tr></tbody>';
+$('cout-relance').innerHTML = `<span class="rp-alerte-k">À retenir</span><span>${esc(insec('Redynamiser un magasin, ça coûte cher. D’où les deux chantiers menés ensemble : les ventes pour regagner les clients, les frais et la trésorerie pour tenir pendant ce temps.'))}</span>`;
 const parMois = n => n * B.panier12 * 365 / 12, parAn = n => n * B.panier12 * 365;
-$('cv-texte').textContent = insec(`Le chiffre d’affaires se fait avec des clients. Deux paliers de ${PALIER} clients par jour : le premier ramène le magasin à sa base, le niveau de 2025 ; le second l’amène à l’objectif.`);
+$('cv-texte').textContent = insec(`Le chiffre d’affaires se fait avec des clients. ${PALIER} clients de plus par jour ramènent le magasin à sa base, le niveau de 2025 ; ${PALIER} de plus l’amènent à l’objectif court terme, ${objectif} par jour. L’objectif normalisé, le plan normal d’évolution du magasin, est de ${normalise} clients par jour.`);
 $('cv-paliers').innerHTML = '<thead><tr><th>Palier</th><th class="num">Clients / jour</th><th class="num">En plus</th><th class="num">CA en plus / mois</th><th class="num">par an</th></tr></thead><tbody>'
-  + [['Départ (' + DEP.labs[0] + ' à ' + DEP.labs[DEP.labs.length - 1] + ')', N.cliJour, 0], ['La base', base, PALIER], ['L’objectif', objectif, 2 * PALIER]]
-    .map(([lab, c, n]) => `<tr class="${n === 2 * PALIER ? 'moi' : ''}"><td>${esc(lab)}</td><td class="num">${dec(c, 0)}</td><td class="num">${n ? '+' + n : '—'}</td><td class="num">${n ? '≈ ' + k1(parMois(n)) : '—'}</td><td class="num">${n ? '≈ ' + k1(parAn(n)) : '—'}</td></tr>`).join('') + '</tbody>';
-$('cv-aide').textContent = insec(`Au panier moyen des 12 derniers mois (${eur2(B.panier12)}). Où les trouver : l’après-midi, de 14 h à 18 h, où le comptoir ne fait que ${dec(D.tempsMorts.apresMidi.tk)} tickets par heure ; à 10 tickets par heure, c’est environ ${dec((10 - D.tempsMorts.apresMidi.tk) * D.tempsMorts.apresMidi.heures, 0)} clients de plus par jour, presque les deux paliers, avec la reprise de la cuisson (checklist 1.3.01).`);
+  + [['Départ (' + DEP.labs[0] + ' à ' + DEP.labs[DEP.labs.length - 1] + ')', N.cliJour, 0], ['La base', base, PALIER], ['Objectif court terme', objectif, enPlus(objectif)], ['Objectif normalisé', normalise, enPlus(normalise)]]
+    .map(([lab, c, n]) => `<tr class="${c === objectif ? 'moi' : ''}"><td>${esc(lab)}</td><td class="num">${dec(c, 0)}</td><td class="num">${n ? '+' + n : '—'}</td><td class="num">${n ? '≈ ' + k1(parMois(n)) : '—'}</td><td class="num">${n ? '≈ ' + k1(parAn(n)) : '—'}</td></tr>`).join('') + '</tbody>';
+$('cv-aide').textContent = insec(`Au panier moyen des 12 derniers mois (${eur2(B.panier12)}). Où les trouver : l’après-midi, de 14 h à 18 h, où le comptoir ne fait que ${dec(D.tempsMorts.apresMidi.tk)} tickets par heure ; à 10 tickets par heure, c’est environ ${dec((10 - D.tempsMorts.apresMidi.tk) * D.tempsMorts.apresMidi.heures, 0)} clients de plus par jour, de quoi atteindre l’objectif court terme, avec la reprise de la cuisson (checklist 1.3.01). L’objectif normalisé demande en plus de remplir les autres creux : de 9 h à 11 h, ${dec(Math.min(D.tempsMorts.semaine.heures['9'].pct, D.tempsMorts.semaine.heures['10'].pct), 0)} à ${dec(Math.max(D.tempsMorts.semaine.heures['9'].pct, D.tempsMorts.semaine.heures['10'].pct), 0)} % du temps passe aussi sans client.`);
 $('cf-points').innerHTML = [
   'Tenir les budgets : chaque poste de charges, matière, personnel, frais généraux, reste dans son budget ; ce qui dépasse se coupe. Le budget du cockpit et le mini P&L de la visite le montrent mois par mois.',
   'Faire la trésorerie : un plan de trésorerie, semaine par semaine. On paie le lundi ; le reste de la semaine, on court pour arriver au budget de ventes.',
@@ -604,20 +621,22 @@ $('cf-points').innerHTML = [
 $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
   + [
     ['Cuisson de l’après-midi', 'Dashboard magasin, onglet Tâches : checklists 1.3.01 et 1.3.02, photo de 14 h 30', 'arrêtée', 'faites chaque jour, photo comprise'],
-    ['Tâches obligatoires rendues', 'Dashboard magasin, onglet Tâches', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour'],
-    ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `la base : ${dec(base, 0)} par jour, puis l’objectif : ${dec(objectif, 0)}`],
+    ['Tâches obligatoires rendues', 'Dashboard magasin, onglet Tâches', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour (condition de la marque)'],
+    ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `la base : ${dec(base, 0)} par jour ; court terme : ${objectif} ; normalisé : ${normalise}`],
     ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
     ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
     ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
     ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
     ['Budgets des charges', 'Budget du cockpit, mini P&L de la visite', 'à lire', 'chaque poste dans son budget'],
     ['Plan de trésorerie', 'Plan de trésorerie du magasin, météo financière en visite', 'à faire', 'tout payé le lundi, à temps'],
+    ['Encodage des produits', 'Panel', 'à vérifier', 'tous les produits encodés (condition de la marque)'],
+    ['Suivi des règles du réseau', 'Visite', 'à vérifier', 'appliquées (condition de la marque)'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
 const gainCli = objCli - N.cliJour;
 $('pistes').innerHTML = [
   `Reprendre la cuisson l’après-midi : c’est la première décision. Le magasin ne cuit plus l’après-midi, et le comptoir y passe ${dec(APM.pct, 0)} % du temps sans client avec ${dec(APM.tk)} tickets par heure. Passer à 10 tickets par heure de 14 h à 18 h, c’est environ ${dec(gainApm, 0)} clients de plus par jour, plus que les ${dec(gainCli, 0)} qui manquent face à 2025. La preuve se lit chaque jour dans les checklists 1.3.01 et 1.3.02, photo de la vitrine comprise.`,
   `Trancher la question du panier dès la première semaine : vues Comptoir et B2B du cockpit, panier hors clients pro. Si c’est le B2B, nommer les sociétés et savoir si leurs commandes vont durer. Si c’est le comptoir, retrouver ce qui a fait monter le panier et le garder.`,
-  `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à la base, ${dec(base, 0)} clients par jour ouvert (${PALIER} de plus), puis à l’objectif, ${dec(objectif, 0)} (${PALIER} de plus encore). Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
+  `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à la base, ${dec(base, 0)} clients par jour ouvert (${PALIER} de plus), puis à l’objectif court terme, ${objectif}, et enfin à l’objectif normalisé, ${normalise} clients par jour, le plan normal d’évolution du magasin. Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
   `Réduire les frais : passer chaque poste de charges au budget et couper ce qui dépasse ; tenir le plan de trésorerie, on paie le lundi et on court toute la semaine pour arriver au budget.`,
   `Compléter la reprise de la cuisson par une offre de l’après-midi, surtout du lundi au vendredi, les jours les plus creux.`,
   `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(-juil.vsCaJour).replace('+', '')}.`,

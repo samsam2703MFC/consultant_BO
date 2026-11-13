@@ -191,6 +191,15 @@ def main():
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
+        # Les objectifs de clients par jour fixés par le bureau le 13/11/2026 : la base (départ + 5), l'objectif court terme,
+        # puis l'objectif normalisé, le plan normal d'évolution du magasin.
+        'objectifs': {'palier': 5, 'courtTerme': 156, 'normalise': 165, 'le': '13/11/2026'},
+        # La participation de la marque à la relance (13/11/2026), et ses conditions telles que le bureau les a posées ;
+        # la liste reste ouverte.
+        'marque': {'le': '13/11/2026', 'conditions': [
+            {'quoi': 'Les tâches et les checklists', 'comment': 'faites chaque jour, photos comprises', 'ou': 'dashboard magasin, onglet Tâches'},
+            {'quoi': 'L’encodage des produits', 'comment': 'tous les produits encodés', 'ou': 'au panel'},
+            {'quoi': 'Le suivi des règles du réseau', 'comment': 'appliquées et vérifiées', 'ou': 'en visite'}]},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
