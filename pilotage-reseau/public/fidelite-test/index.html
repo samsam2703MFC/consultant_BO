@@ -134,9 +134,10 @@ a{color:var(--accent)}
     <div id="mag-c"></div></section>
 
   <!-- C. La carte du client -->
-  <section class="card" id="carte"><h2>C · La carte du client <span class="row" style="margin:0"><label>Client n° <input id="cl-id" class="n" style="width:90px"></label><button id="b-cl">Voir</button></span></h2>
+  <section class="card" id="carte"><h2>C · La carte du client <span class="row" style="margin:0"><label>Client <select id="cl-liste" style="max-width:340px"><option value="">— la liste se charge avec Halle (B) —</option></select></label>
+      <label>ou n° <input id="cl-id" class="n" style="width:90px"></label><button id="b-cl">Voir</button></span></h2>
     <div class="mu" style="margin-top:6px">Telle que l’app la montrerait : ses points, sa semaine, sa grille de bingo et ses bons — et, à côté, d’où vient chaque case. <code>api.php?r=/fidelite/client&amp;id=…</code></div>
-    <div id="cl-c"><p class="mu">Choisissez un client dans la liste de Halle (B), ou tapez son numéro.</p></div></section>
+    <div id="cl-c"><p class="mu">Choisissez un client dans la liste déroulante (les clients de Halle), cliquez-en un dans la partie B, ou tapez son numéro.</p></div></section>
 
   <!-- Le diagnostic -->
   <section class="card" id="diag"><h2>Diagnostic de l’API</h2>
@@ -270,12 +271,20 @@ a{color:var(--accent)}
     $('mag-c').innerHTML = '<p class="mu">Lecture des clients de ' + esc(HALLE.nom) + ', semaine par semaine…</p>';
     const q = $('mag-q').value.trim();
     const r = await appel('GET', '/fidelite/clients?shop=' + encodeURIComponent(HALLE.id) + '&tous=1' + (q ? '&q=' + encodeURIComponent(q) : ''));
-    if (r.d && r.d.erp && !r.d.erp.ok && /aucune carte/.test(r.d.erp.erreur || '')) { $('mag-c').innerHTML = '<div class="gap">Aucune carte à points active dans l’ERP : créez-la plus haut (A · L’admin, « Créer la carte dans l’ERP »), puis relisez Halle.</div>'; return; }
+    if (r.d && r.d.erp && !r.d.erp.ok && /aucune carte/.test(r.d.erp.erreur || '')) { MAG = null; remplirClients(); $('cl-liste').innerHTML = '<option value="">pas encore de carte à points (A)</option>'; $('mag-c').innerHTML = '<div class="gap">Aucune carte à points active dans l’ERP : créez-la plus haut (A · L’admin, « Créer la carte dans l’ERP »), puis relisez Halle.</div>'; return; }
     if (r.code !== 200 || !r.d || !r.d.erp || !r.d.erp.ok) { return echec('mag-c', r); }
     MAG = r.d; MAG.ms = r.ms; MAGVUE = { tri: 'cases', filtre: 'tous', n: 30 };
+    remplirClients();
     magRendu();
   }
   let MAG = null, MAGVUE = null;
+  /** La liste déroulante de la carte (C) : tous les clients lus pour Halle, par prénom. */
+  function remplirClients(){
+    const L = (MAG && MAG.membres ? MAG.membres.slice() : []).sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.id - b.id);
+    const choisi = $('cl-liste').value;
+    $('cl-liste').innerHTML = (L.length ? `<option value="">— ${L.length} client(s) de ${esc(HALLE ? HALLE.nom : '')} —</option>` : '<option value="">aucun client lu</option>')
+      + L.map(m => `<option value="${m.id}"${String(m.id) === choisi ? ' selected' : ''}>${esc(m.nom)} · n° ${m.id} · ${m.cases} case(s) · ${nf(m.solde)} pts</option>`).join('');
+  }
   function magRendu(){
     const d = MAG, K = d.kpis, V = MAGVUE, nS = d.saison.closes + (d.saison.enCours ? 1 : 0);
     const F = { tous: () => true, plein: m => m.cases >= nS && nS > 0, bien: m => m.cases > 0 && m.cases < nS && m.cases >= nS / 2, peu: m => m.cases > 0 && m.cases < nS / 2, zero: m => m.cases === 0 };
@@ -302,7 +311,7 @@ a{color:var(--accent)}
     if (b && b.dataset.filtre) { MAGVUE.filtre = b.dataset.filtre; MAGVUE.n = 30; return magRendu(); }
     if (b && b.id === 'mag-plus') { MAGVUE.n += 30; return magRendu(); }
   });
-  $('mag-c').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (!tr) { return; } document.querySelectorAll('#mag-c tr.on').forEach(x => x.classList.remove('on')); tr.classList.add('on'); $('cl-id').value = tr.dataset.id; carte(+tr.dataset.id); });
+  $('mag-c').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (!tr) { return; } document.querySelectorAll('#mag-c tr.on').forEach(x => x.classList.remove('on')); tr.classList.add('on'); $('cl-id').value = tr.dataset.id; $('cl-liste').value = tr.dataset.id; carte(+tr.dataset.id); });
 
   /* ---------- C. La carte du client --------------------------------------------------------------------- */
   async function carte(id){
@@ -346,7 +355,8 @@ a{color:var(--accent)}
       <p class="mu">${esc(c.nom)} · n° ${c.id} · ${c.cases} case(s), ${c.manquees} semaine(s) manquée(s) · dernier passage ${c.dernier ? ddmm(c.dernier.slice(0, 10)) + ' ' + c.dernier.slice(11, 16) : '—'} · ${nf(d.appels)} appel(s) à l’ERP</p>`;
     $('cl-c').innerHTML = `<div class="g2b" style="margin-top:12px">${tel}<div>${detail}${brut(d)}</div></div>`;
   }
-  $('b-cl').onclick = () => carte(+$('cl-id').value);
+  $('b-cl').onclick = () => carte(+$('cl-id').value || +$('cl-liste').value);
+  $('cl-liste').addEventListener('change', e => { if (e.target.value) { $('cl-id').value = e.target.value; carte(+e.target.value); } });
 
   /* ---------- Le diagnostic ------------------------------------------------------------------------------ */
   $('b-verif').onclick = async () => {
