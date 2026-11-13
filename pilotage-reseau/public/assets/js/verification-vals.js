@@ -7,8 +7,11 @@
  * la recalcule et lit un petit lot de recettes de plus.
  *
  * Remplit `common.vr` ; le gabarit est tplVerification (verification-tpl.js), le style verification.css (vr-).
- * La liste est pour le CEO seul (décision du 31/10/2026) : pas d'envoi, un export CSV. */
+ * La liste est pour le CEO seul (décision du 31/10/2026) : pas d'envoi, un export CSV.
+ * Corriger d'ici (13/11/2026, « tout, CEO seul ») : chaque ligne porte son geste — corrigé en place, dans le volet de la
+ * recette, ou au panel par un lien direct — et le registre garde ce qui a été écrit (verification-correction-vals.js). */
 import { readOne } from './api.js';
+import { gesteDe, valsLigneOuverte, valsRecentes, valsRegistre, valsEdition, ouvrirEnCorrection, chargerEdition, lienPanel } from './verification-correction-vals.js';
 
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
 const fE = (n, d) => n == null ? '—' : nf(n, d) + ' €';
@@ -46,7 +49,8 @@ function exporter(lignes, d){
 
 /** La fiche d'un produit (sa recette, ses prix, ses signalements) : ouverte au clic dans la liste. */
 function vrFiche(app, pid){
-  app.setState({ vrFiche: { pid, chargement: true, d: null } });
+  const avant = app.state.vrFiche;
+  app.setState({ vrFiche: { pid, chargement: !(avant && avant.pid === pid && avant.d), d: avant && avant.pid === pid ? avant.d : null } });
   readOne('/verification/recettes/fiche?pid=' + encodeURIComponent(pid)).then(d => {
     if (((app.state.vrFiche || {}).pid) !== pid) { return; }
     app.setState({ vrFiche: { pid, chargement: false, d: d || { error: 'injoignable' } } });
@@ -57,14 +61,21 @@ function vrFiche(app, pid){
 function valsFiche(app){
   const F = app.state.vrFiche;
   if (!F) { return null; }
-  const fermer = () => app.setState({ vrFiche: null });
+  const fermer = () => app.setState({ vrFiche: null, vrEd: null, vrFicheMode: 'lire' });
   if (F.chargement || !F.d) { return { chargement: true, fermer }; }
   const d = F.d;
   if (d.error || d.indispo) { return { erreur: d.motif || 'La fiche n’a pas pu être lue.', fermer }; }
   const mags = d.magasins || [];
   const r = d.recette;
-  return {
+  const mode = d.rid && app.state.vrFicheMode === 'corriger' ? 'corriger' : 'lire';
+  const E = app.state.vrEd;
+  if (mode === 'corriger' && (!E || E.rid !== d.rid)) { setTimeout(() => chargerEdition(app, d.pid, d.rid), 0); }
+  const A = ((app.state.vrData || {}).d || {}).liens || {};
+  const out = {
     fermer, nom: d.nom || ('Produit ' + d.pid), cat: d.cat || '', rid: d.rid, lien: d.lienPanel || null,
+    mode, lire: () => app.setState({ vrFicheMode: 'lire' }), corriger: d.rid ? () => app.setState({ vrFicheMode: 'corriger' }) : null,
+    liens: [['Produit', lienPanel(A.produit, { pid: d.pid })], ['Recette ' + (d.rid || ''), d.rid ? lienPanel(A.recette, { rid: d.rid, pid: d.pid }) : null]].filter(z => z[1]).map(([txt, url]) => ({ txt, url })),
+    magasinsBruts: mags, relire: () => vrFiche(app, d.pid),
     signalements: (d.signalements || []).map(l => ({ nom: l.nomRegle, classe: CLASSES[l.regle] || 'pb-orph', detail: l.detail, magasins: (l.magasins || []).join(' · ') })),
     magasins: mags.map(m => ({ nom: m.nom, present: m.present, cout: m.cout == null ? '—' : fE(m.cout, 2), prix: m.prixHt == null ? '—' : fE(m.prixHt, 2), coef: m.coef == null ? '—' : '×' + nf(m.coef, 2),
       food: m.food == null ? '—' : pc(m.food), ton: m.food == null ? 'mu' : (m.food >= 100 || m.food < 5 ? 'ko' : (m.food > 40 ? 'att' : 'ok')),
@@ -75,6 +86,22 @@ function valsFiche(app){
         cout: l.cout == null ? '—' : fE(l.cout, 3), part: l.part == null ? '' : pc(l.part, 0), lourde: (l.part || 0) > 50,
         prix: mags.map(m => { const p = (l.prixMagasins || {})[m.id]; return p === 'inconnu' ? { txt: '?', ton: 'mu' } : (p == null ? { txt: 'sans prix', ton: 'ko' } : { txt: nf(p, p < 1 ? 4 : 2), ton: '' }); }) })) } : null,
   };
+  out.edition = mode === 'corriger' ? valsEdition(app, out) : null;
+  return out;
+}
+
+/** Les liens directs d'une ligne (produit, recette, matière en cause), par les modèles d'adresse du panel. */
+function liensLigne(l, L){
+  const out = [];
+  const add = (txt, modele, ids) => { const u = lienPanel(modele, ids); if (u && !out.some(o => o.url === u)) { out.push({ txt, url: u }); } };
+  if (l.pid) { add('Produit', L.produit, { pid: l.pid }); }
+  if (l.rid) { add('Recette ' + l.rid, L.recette, { rid: l.rid, pid: l.pid }); }
+  const c = l.corr || {};
+  if (c.mid) { add(c.matiere || 'Matière', L.matiere, { mid: c.mid }); }
+  (c.matieres || []).slice(0, 2).forEach(m => add(m.nom, L.matiere, { mid: m.mid }));
+  if (l.regle === 'orph' && l.mid) { add('Matière', L.matiere, { mid: l.mid }); }
+  if (l.regle === 'port' && l.pid) { add('Portion', L.portion, { pid: l.pid }); }
+  return out;
 }
 
 export function valsVerification(app, common){
@@ -107,6 +134,8 @@ export function valsVerification(app, common){
   else if (tri === 'nom') { L.sort((a, b2) => String(a.nom).localeCompare(String(b2.nom), 'fr')); }
   const lien = (pid, rid) => d.lienRecette && pid ? d.lienRecette.replace('{pid}', pid).replace('{id}', pid).replace('{rid}', rid || '') : null;
   const mags = d.magasins || [];
+  const LI = d.liens || { produit: d.lienRecette };
+  const rafraichirFiche = () => { const F = app.state.vrFiche; if (F && F.pid) { vrFiche(app, F.pid); } };
   v.lignes = L.map((l, i) => {
     const dj = jour(l.depuis);
     const jours = dj && auj ? Math.max(0, Math.round((auj - dj) / 864e5)) : null;
@@ -116,8 +145,21 @@ export function valsVerification(app, common){
       magasinsTxt: (l.magasins || []).length === mags.length && mags.length > 2 ? 'les ' + mags.length + ' magasins' : (l.magasins || []).join(' · '),
       depuis: jours == null ? '' : (jours === 0 ? 'aujourd’hui' : jours + ' j'), depuisDate: l.depuis || '', depuisTitre: l.depuis ? 'repérée le ' + jjmm(l.depuis) : '',
       rid: l.rid || null, lien: lien(l.pid, l.rid), formule: !!l.formule, pid: l.pid || null,
-      ouvrir: l.pid ? () => vrFiche(app, l.pid) : null };
+      ouvrir: l.pid ? () => { app.setState({ vrFicheMode: 'lire', vrEd: null }); vrFiche(app, l.pid); } : null };
+  }).map((x, i) => {
+    // Le geste de la ligne (13/11/2026) : corriger en place, dans le volet, ou au panel.
+    const l = L[i];
+    const brut = Object.assign({}, l, { cle: l.cle, nom: x.nom });
+    const g = gesteDe(brut);
+    const ouvert = S.vrOuvert === l.cle;
+    const liens = liensLigne(brut, LI);
+    return Object.assign(x, { cle: l.cle, geste: g, liens, ouvert,
+      agir: !g ? null : (g.type === 'volet' ? () => ouvrirEnCorrection(app, brut, pid => vrFiche(app, pid)) : () => app.setState({ vrOuvert: ouvert ? null : l.cle })),
+      corrigerVolet: g && g.volet && l.rid ? () => ouvrirEnCorrection(app, brut, pid => vrFiche(app, pid)) : null,
+      ouverte: ouvert && g && g.type !== 'volet' && g.type !== 'panel' ? valsLigneOuverte(app, brut, d, rafraichirFiche) : null });
   });
+  v.recentes = valsRecentes(app, LI);
+  v.registre = valsRegistre(app, LI);
   v.formules = { on: avecF, n: (shop ? toutes.filter(l => (l.shops || []).indexOf(shop) >= 0) : toutes).filter(l => l.formule).length,
     ca: fE(((d.couverture || {}).formules || {}).ca), basculer: () => app.setState({ vrFormules: !avecF }) };
   v.vide = tous.length === 0;
