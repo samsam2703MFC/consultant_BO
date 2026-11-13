@@ -94,10 +94,19 @@ body { margin: 0; background: var(--paper); }
 .rp-chaleur tfoot td.jour { text-align: left; }
 .rp-ramp { display: inline-block; width: 120px; height: 10px; border-radius: 2px; background: linear-gradient(90deg, #F8EEEF, #8D1D2C); }
 .rp-table tr.moi td { background: var(--total-line); }
+/* Impression et PDF (pdf.js) : A4, papier blanc, rien de coupé, une carte peut passer d'une page à l'autre mais pas un
+   tableau de chiffres clés, un graphique, une ligne ou une note. */
 @media print {
   body { background: #fff; }
-  .rp-carte, .rp-kpi { break-inside: avoid; }
-  .rp-alerte, .rp-ouvert, .rp-barre .seg, .rp-onglet.on { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp { padding: 0; gap: 12px; max-width: none; }
+  .rp * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .rp-carte { padding: 14px 16px; break-inside: auto; }
+  .rp-kpis, .rp-kpi, .rp-graphe, .rp-alerte, .rp-ouvert, .rp-part, .rp-table tr, .rp-points li, .rp-pistes li { break-inside: avoid; }
+  .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
+  .rp-table-zone { overflow: visible; }
+  .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
+  #octobre-octobre { break-before: page; }
+  .rp-bulle { display: none !important; }
 }
 </style>
 </head>
@@ -339,7 +348,7 @@ function grapheEvolution() {
     }
     if (m.n1 && m.ca != null) {
       const e = (m.ca / m.n1.ca - 1) * 100, r = Math.round(e);
-      const etoile = m.n1.jours < m.jours ? '*' : '';
+      const etoile = m.n1.jours < m.jours - 2 ? '*' : '';   // la règle du cockpit : plus de 2 jours de moins
       s += `<text x="${x(i)}" y="${hc}" font-size="9.5" text-anchor="middle" fill="${e >= 0 ? '#3f7a52' : '#A32014'}" style="${ft}">${sgn(r)}${Math.abs(r)}${etoile}</text>`;
     }
   });
@@ -373,8 +382,8 @@ $('oo-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th
   + L.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${l.jours}</td><td class="num">${grp(l.clients)}</td><td class="num">${dec(l.cliJour, 0)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caJour)}</td><td class="num">${eur2(l.panier)}</td>`
     + `<td class="num ${cls(l.vsCa)}">${pct(l.vsCa)}${l.n1Fermes ? '*' : ''}</td><td class="num ${cls(l.vsCli)}">${pct(l.vsCli)}</td><td class="num ${cls(l.vsPanier)}">${pct(l.vsPanier)}</td></tr>`).join('')
   + `</tbody><tfoot><tr><td>18 mois</td><td class="num">${T.jours}</td><td class="num">${grp(T.clients)}</td><td class="num">${dec(T.cliJour, 0)}</td><td class="num">${eur(T.ca)}</td><td class="num">${eur(T.caJour)}</td><td class="num">${eur2(T.panier)}</td><td></td><td></td><td></td></tr></tfoot>`;
-const juil = L.find(l => l.n1Fermes);
-$('oo-note').textContent = juil ? `* ${juil.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(juil.vsCaJour)}.` : '';
+const courts = L.filter(l => l.n1Fermes), juil = L.find(l => l.k === '2026-07');
+$('oo-note').textContent = courts.map(l => `* ${l.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(l.vsCaJour)}.`).join(' ');
 
 $('trim-table').innerHTML = '<thead><tr><th>Période</th><th class="num">Clients / jour</th><th class="num">CA / jour</th><th class="num">Panier</th></tr></thead><tbody>'
   + D.trim.map(t => `<tr><td>${esc(t.lab)}</td><td class="num">${dec(t.cliJour, 0)}</td><td class="num">${eur(t.caJour)}</td><td class="num">${eur2(t.panier)}</td></tr>`).join('') + '</tbody>';
@@ -521,9 +530,9 @@ $('pistes').innerHTML = [
   `Trancher la question du panier dès la première semaine : vues Comptoir et B2B du cockpit, panier hors clients pro. Si c’est le B2B, nommer les sociétés et savoir si leurs commandes vont durer. Si c’est le comptoir, retrouver ce qui a fait monter le panier et le garder.`,
   `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à ${objCli} clients par jour ouvert, c’est environ ${dec(gainCli, 0)} clients de plus chaque jour. Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
   `Compléter la reprise de la cuisson par une offre de l’après-midi, surtout du lundi au vendredi, les jours les plus creux.`,
-  `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(Math.abs(juil.vsCaJour)).replace('+', '')}.`,
+  `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(-juil.vsCaJour).replace('+', '')}.`,
   `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`,
-  `Suivre chaque semaine les quatre indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
+  `Suivre chaque semaine les indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Sources --- */

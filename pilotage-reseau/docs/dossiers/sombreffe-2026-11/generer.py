@@ -87,7 +87,8 @@ def main():
             l['vsCa'] = pc(x['ca'], n1['ca']); l['vsCli'] = pc(x['clients'], n1['clients'])
             l['vsPanier'] = pc(x['ca'] / x['clients'], n1['ca'] / n1['clients'])
             l['vsCaJour'] = pc(x['ca'] / x['jours'], n1['ca'] / n1['jours'])
-            l['n1Fermes'] = n1['jours'] < x['jours']
+            # La règle du cockpit (app.js, n1Court) : le N-1 est « court » s'il a plus de 2 jours de moins.
+            l['n1Fermes'] = n1['jours'] < x['jours'] - 2
         lignes.append(l)
 
     def somme(ks):
