@@ -117,6 +117,18 @@ body { margin: 0; background: var(--paper); }
 .rp-chaleur td.c { height: 17px; font-size: 10.5px; }
 #page-1 #pe-kpis { display: none !important; }
 .rp-sources { display: block; columns: 2; column-gap: 28px; max-width: none; }
+/* Les trois axes (13/11/2026) : le trafic × le panier, le résultat de chaque case, la part du personnel. */
+.rp-grille { table-layout: fixed; border-collapse: separate; border-spacing: 4px; }
+.rp-grille th, .rp-grille td { text-align: center; vertical-align: middle; white-space: normal; border: 0; }
+.rp-grille thead th { background: var(--table-head); border-radius: 6px; padding: 8px 4px; font-size: 11.5px; }
+.rp-grille tbody th { background: var(--table-head); border-radius: 6px; padding: 8px 6px; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); }
+.rp-grille .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.rp-grille td.axe { padding: 30px 6px; border-radius: 6px; }
+.axe-v { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.axe-s { font-size: 11px; color: var(--muted); }
+.axe-g { font-size: 14px; color: var(--green); margin-top: 6px; }
+.axe-p { font-size: 11.5px; color: var(--muted-2); margin-top: 2px; }
+.axe-p.ok { color: var(--green); }
 .rp-sources li { break-inside: avoid; margin-bottom: 3px; }   /* le tableau des temps morts est passé en annexe E (13/11/2026) */
 .rp-jauge { min-width: 50px; }
 #b2b-top-table td:first-child { white-space: normal; }
@@ -257,7 +269,13 @@ body { margin: 0; background: var(--paper); }
   <!-- PAGE 3 · VERS QUOI ON TEND -->
   <section class="rp-page" id="page-3">
     <header class="rp-partie" id="partie-3"><div class="rp-partie-n">3</div><div><h2 class="rp-partie-titre">Vers quoi on tend</h2></div></header>
-    <section class="rp-carte" id="soins">
+    <section class="rp-carte" id="axes" hidden>
+      <div class="rp-kpis" id="axes-tuiles"></div>
+      <h2 class="rp-h3" id="axes-titre"></h2>
+      <div class="rp-table-zone"><table class="rp-table rp-grille" id="axes-table"></table></div>
+      <ul class="rp-points" id="axes-points"></ul>
+    </section>
+    <section class="rp-carte" id="soins" hidden>   <!-- remplacé par les trois axes le 13/11/2026 (Sam) -->
       <h2 class="rp-h2">D’où l’on part</h2>
       <p class="rp-p" id="soins-intro"></p>
       <div class="rp-kpis" id="soins-reperes"></div>
@@ -268,7 +286,7 @@ body { margin: 0; background: var(--paper); }
       <h3 class="rp-h3">Les cibles</h3>
       <div class="rp-table-zone"><table class="rp-table" id="cibles"></table></div>
     </section>
-    <section class="rp-carte" id="theorique" hidden>
+    <section class="rp-carte" id="theorique" data-masque="1" hidden>   <!-- remplacé par les trois axes le 13/11/2026 (Sam) -->
       <h2 class="rp-h2" id="theo-titre"></h2>
       <ul class="rp-points" id="theo-points"></ul>
       <div class="rp-table-zone"><table class="rp-table rp-serre" id="theo-table"></table></div>
@@ -963,7 +981,37 @@ if (D.theorique) {
       return `<tr class="${nom === 'Résultat' ? 'moi' : ''}"><td>${esc(nom)}</td><td class="num">${esc(f(R))}</td><td class="num">${esc(f(H))}</td><td class="num">${esc(f(fois(H, 3)))}</td><td class="num">${esc(f(fois(H, 12)))}</td>`
         + `<td class="num ${cle ? cls(nom === 'Personnel' ? -(cle(H) - cle(R)) : cle(H) - cle(R)) : ''}">${cle ? sgn(cle(H) - cle(R)) + eur(Math.abs((cle(H) - cle(R)) * 12)) : ''}</td></tr>`;
     }).join('') + '</tbody>';
-  $('theorique').hidden = false;
+}
+
+/* --- Vers quoi on tend : trois axes (13/11/2026, Sam) — le trafic, le panier, et le personnel qui tend vers 15 % de
+   lui-même quand le magasin vend plus, à équipe égale. Base : le mois moyen de février à octobre 2026. --- */
+if (D.theorique) {
+  const T = D.theorique, R = T.reel, jm = R.clients / T.cliJour, tm = T.tauxMatiere / 100, seuil = D.seuilPersonnel;
+  const res = (dc, dp) => { const ca = (T.cliJour + dc) * jm * (R.panier + dp); return { ca, r: ca * (1 - tm) - R.personnel - R.fg, p: R.personnel / ca * 100 }; };
+  const DC = [0, 5, 10, 15], DP = [0, 0.5, 1, 2], b = res(0, 0), max = res(15, 2);
+  const euroP = v => (v % 1 ? dec(v, 2) : String(v)) + INS + '€';
+  $('axes-tuiles').innerHTML = [
+    kpi('1 · Le trafic', '+5 · +10 · +15', `clients par jour ; aujourd’hui ${dec(T.cliJour, 0)}`),
+    kpi('2 · Le panier', '+0,50 · +1 · +2 €', `aujourd’hui ${eur2(R.panier)}`),
+    kpi('3 · Le personnel', `→ ${dec(seuil, 0)} %`, `aujourd’hui ${dec(b.p)} % du CA ; il baisse tout seul quand le magasin vend plus`),
+  ].join('');
+  $('axes-titre').textContent = 'Le résultat d’un mois, selon le trafic et le panier, à équipe égale';
+  const vert = g => `rgba(63, 122, 82, ${(0.07 + 0.33 * g / (max.r - b.r)).toFixed(3)})`;
+  $('axes-table').innerHTML = '<thead><tr><th>Clients par jour<span class="sous">panier →</span></th>'
+    + DP.map(dp => `<th>${dp ? '+' + euroP(dp).replace('.', ',') : 'Panier d’aujourd’hui'}<span class="sous">${eur2(R.panier + dp)}</span></th>`).join('') + '</tr></thead><tbody>'
+    + DC.map(dc => `<tr><th>${dc ? '+' + dc + ' par jour' : 'Trafic d’aujourd’hui'}<span class="sous">${dec(T.cliJour + dc, 0)} clients</span></th>`
+      + DP.map(dp => {
+        const c = res(dc, dp), g = c.r - b.r, ici = !dc && !dp;
+        return `<td class="axe" style="background:${ici ? 'var(--total-line)' : vert(g)}"><div class="axe-v">${eur(c.r)}</div><div class="axe-s">par mois</div>`
+          + `<div class="axe-g">${ici ? '<span style="color:var(--muted)">aujourd’hui</span>' : '+' + k1(g * 12) + ' par an'}</div>`
+          + `<div class="axe-p ${c.p <= seuil ? 'ok' : ''}">personnel ${dec(c.p)} %</div></td>`;
+      }).join('') + '</tr>').join('') + '</tbody>';
+  $('axes-points').innerHTML = [
+    `De ${eur(b.r)} à ${eur(max.r)} par mois : +15 clients par jour et +2 € de panier, c’est +${k1((max.r - b.r) * 12)} par an.`,
+    `À équipe égale (${eur(R.personnel)} de personnel par mois), le personnel passe sous ${dec(seuil, 0)} % du CA à partir de ${k1(R.personnel / (seuil / 100))} de CA par mois.`,
+    `Hypothèses : matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau), frais généraux du P&L (${eur(R.fg)} par mois) ; base : le mois moyen de février à octobre 2026.`,
+  ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  $('axes').hidden = false;
 }
 
 /* --- Le personnel des quatre magasins --- */
