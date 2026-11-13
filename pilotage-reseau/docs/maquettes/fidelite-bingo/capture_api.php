@@ -10,14 +10,23 @@ declare(strict_types=1);
  *   node docs/maquettes/fidelite-bingo/capturer.cjs
  */
 $chemin = (string) parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH);
+// La page de test à part : son api.php, branchée sur le faux ERP (avant les doublures ci-dessous, qu'elle n'utilise pas).
+if ($chemin === '/fidelite-test/api.php') {
+    require __DIR__ . '/../../../tools/fidelite_faux_erp.php';
+    $GLOBALS['FID_ERP'] = new FidFauxErp(['clients' => 3180]);
+    $GLOBALS['FID_AUJOURDHUI'] = '2027-01-14';
+    $GLOBALS['FID_HEURE'] = '16:00';
+    require __DIR__ . '/../../../public/fidelite-test/api.php';
+    return true;
+}
 if (!str_starts_with($chemin, '/api/')) { return false; }        // le reste : les fichiers de public/
 header('Content-Type: application/json; charset=utf-8');
 $route = preg_replace('#^/api/cockpit#', '', $chemin);
 $methode = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 
-function body(): array { $d = json_decode((string) file_get_contents('php://input'), true); return is_array($d) ? $d : []; }
-function setting(string $k, mixed $d = null): mixed { return $d; }
-function journalAdd(string $a, string $k, ?string $p, string $m, ?string $ts = null): void {}
+if (!function_exists('body')) { function body(): array { $d = json_decode((string) file_get_contents('php://input'), true); return is_array($d) ? $d : []; } }
+if (!function_exists('setting')) { function setting(string $k, mixed $d = null): mixed { return $d; } }
+if (!function_exists('journalAdd')) { function journalAdd(string $a, string $k, ?string $p, string $m, ?string $ts = null): void {} }
 require __DIR__ . '/../../../src/fidelite.php';
 require __DIR__ . '/../../../tools/fidelite_faux_erp.php';
 $GLOBALS['FID_ERP'] = new FidFauxErp(['clients' => 3180]);

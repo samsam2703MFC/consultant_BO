@@ -54,14 +54,22 @@ const D = __dirname;
   await p.waitForFunction(() => document.querySelector('.fi-grp h3') && /Corbais/.test(document.body.innerText));
   await attendre('.fi-tuiles');
   await plein('code-clients-corbais.png');
-  // La page de test (public/fidelite-test), toutes les sections lues.
+  // La page de test à part (public/fidelite-test) : l'admin, le magasin test Halle, la carte d'un client.
   await p.setViewportSize({ width: 1280, height: 900 });
   await p.goto(BASE + 'fidelite-test/index.html', { waitUntil: 'networkidle' });
-  for (const [b, sel] of [['#b-verif', '#verif table'], ['#b-prog', '#prog table'], ['#b-sim', '#sim .kpis'], ['#b-cli', '#cli .kpis'], ['#b-bons', '#bons table']]) {
-    await p.click(b); await p.waitForSelector(sel, { timeout: 120000 });
-  }
-  await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(300);
-  await p.screenshot({ path: path.join(D, 'code-page-test.png'), fullPage: true }); console.log('capture code-page-test.png');
+  await p.waitForSelector('#admin-c .req', { timeout: 120000 });
+  await p.waitForSelector('#mag-c tr[data-id]', { timeout: 180000 });
+  await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(400);
+  await p.screenshot({ path: path.join(D, 'code-page-test-admin.png'), fullPage: true, clip: await p.evaluate(() => { const r = document.getElementById('admin').getBoundingClientRect(); return { x: 0, y: r.top + scrollY - 120, width: 1280, height: r.height + 140 }; }) });
+  await p.locator('#mag-c button[data-filtre="bien"]').click(); await p.waitForTimeout(300);
+  await p.screenshot({ path: path.join(D, 'code-page-test-halle.png'), fullPage: true, clip: await p.evaluate(() => { const r = document.getElementById('magasin').getBoundingClientRect(); return { x: 0, y: r.top + scrollY - 10, width: 1280, height: r.height + 20 }; }) });
+  // Un client qui a des cases et des semaines manquées : le filtre « la moitié et plus », le premier.
+  await p.locator('#mag-c button[data-filtre="bien"]').click();
+  await p.locator('#mag-c tr[data-id]').first().click();
+  await p.waitForSelector('#cl-c .tel', { timeout: 180000 });
+  await p.waitForTimeout(600);
+  await p.screenshot({ path: path.join(D, 'code-page-test-carte.png'), fullPage: true, clip: await p.evaluate(() => { const r = document.getElementById('carte').getBoundingClientRect(); return { x: 0, y: r.top + scrollY - 10, width: 1280, height: r.height + 20 }; }) });
+  console.log('captures de la page de test : admin, halle, carte');
   console.log('erreurs', err.length ? err : 'aucune');
   await b.close();
 })();

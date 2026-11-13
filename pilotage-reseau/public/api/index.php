@@ -688,6 +688,8 @@ function route(string $method, string $path): mixed
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
             $path === '/fidelite/cron'                 => ep_fidelite_cron(),
             $path === '/fidelite/verification'         => ep_fidelite_verification(),
+            $path === '/fidelite/client'               => ep_fidelite_client(),
+            $path === '/fidelite/creation'             => ep_fidelite_creation(),
             $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),

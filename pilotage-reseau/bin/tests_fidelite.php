@@ -165,6 +165,28 @@ verifie($r['crees'] === 0, 'une seconde fois : rien de plus');
 $e->campagnes[41]['status'] = 'DRAFT';
 verifie(fidBingoBons(true)['crees'] === 0, 'une campagne en brouillon n’émet rien');
 
+// --- 7a. La page de test : la carte d'un client, l'aperçu de la création, tous les membres d'un magasin ------------
+$e = nouvelErp(240);
+$_GET = ['shop' => '4', 'tous' => '1'];
+$h = ep_fidelite_clients();
+verifie(count($h['membres']) === $h['nbMembres'] && $h['membres'][0]['cases'] >= end($h['membres'])['cases'], 'Halle : tous ses membres, par cases');
+$id = $h['membres'][0]['id'];
+$_GET = ['id' => (string) $id];
+$k = ep_fidelite_client();
+verifie($k['client']['id'] === $id && count($k['semaines']) === 13 && count($k['bons']) === 5, 'la carte d’un client : 13 semaines, 4 bons et le super bon');
+verifie($k['client']['cases'] === count(array_filter(array_column($k['semaines'], 'coche'))), 'ses cases = ses semaines cochées');
+verifie($k['semaines'][7]['etat'] === 'cours' && $k['semaines'][12]['euros'] === null, 'la semaine en cours, les semaines à venir sans achats');
+$e->codes[41][] = ['id' => 1, 'code' => fidCodeBon('H27', 3, $id), 'id_customer' => $id, 'status' => 'ACTIVE', 'valid_to' => '2027-02-14 23:59:59'];
+$k = ep_fidelite_client();
+verifie($k['bons'][0]['code'] === fidCodeBon('H27', 3, $id) && $k['bons'][0]['jusquau'] === '2027-02-14 23:59:59', 'un bon émis montre son code et sa fin');
+$_GET = ['id' => '1'];
+verifie(isset(ep_fidelite_client()['error']), 'un client inconnu : erreur, pas de carte');
+$_GET = [];
+$cr = ep_fidelite_creation();
+verifie($cr['envois'][0]['route'] === '/admin/loyalty/cards' && $cr['envois'][0]['corps']['version'] === 2 && $cr['envois'][0]['corps']['code'] === 'FID-POINTS', 'la création : la version suivante de la carte');
+verifie(count($cr['campagnes']) === 2 && $cr['campagnes'][0]['corps']['name'] === 'Bingo hiver · 2 €' && $cr['campagnes'][0]['existe']['id'] === 41, 'les campagnes de la saison, et celles qui existent déjà');
+verifie(count(array_filter($e->ecrits, static fn ($w) => $w[1] !== '/admin/loyalty/simulate')) === 0, 'la création n’envoie rien');
+
 // --- 7. La vérification (page de test) -----------------------------------------------------
 $e = nouvelErp(60);
 $v = ep_fidelite_verification();
