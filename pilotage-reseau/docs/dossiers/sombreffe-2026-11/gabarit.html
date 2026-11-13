@@ -201,6 +201,7 @@ body { margin: 0; background: var(--paper); }
       <div class="rp-chiffres" id="chiffres-b2b"></div>
       <p class="rp-aide" id="aide-b2b"></p>
     </div>
+    <div class="rp-ouvert" id="a-completer"></div>
     <div class="rp-part" id="b2b-6mois" hidden>
       <h3 class="rp-h3" id="b2b-6mois-titre"></h3>
       <p class="rp-p" id="b2b-6mois-texte"></p>
@@ -213,7 +214,6 @@ body { margin: 0; background: var(--paper); }
       <div class="rp-table-zone"><table class="rp-table" id="b2b-clients-table"></table></div>
       <p class="rp-aide" id="b2b-clients-note"></p>
     </div>
-    <div class="rp-ouvert" id="a-completer"></div>
     <p class="rp-aide rp-renvoi">Les dix dernières semaines face à 2025, celles où le CA saute : annexe B.</p>
   </section>
 
@@ -379,6 +379,24 @@ const B = D.b2b, O = D.oct, T = D.total, C = D.comparable, DEP = D.depart;
 const trim = lab => D.trim.find(t => t.lab === lab);
 const trimAvant = trim('oct. → déc. 25'), trimEte = trim('juil. → sept. 26');
 const ecC = k => (C.n[k] / C.n1[k] - 1) * 100;
+const PE6 = (() => {
+  const pe = D.personnel; if (!pe) { return null; }
+  const s6 = (a, b) => { const L = pe.mois.filter(m => !m.indispo && m.mois >= a && m.mois <= b); const ca = L.reduce((x, m) => x + m.ca, 0), lab = L.reduce((x, m) => x + m.labour, 0); return { n: L.length, ca, lab, pct: ca ? lab / ca * 100 : null }; };
+  const n = s6('2026-05', '2026-10'), n1 = s6('2025-05', '2025-10');
+  return n.n === 6 && n1.n === 6 ? { n, n1 } : null;
+})();
+const B2BX = (() => {
+  const bd = D.b2bDetail;
+  if (!bd || !bd.societes.length) { return null; }
+  const tot = bd.societes.reduce((a, c) => a + c.total, 0), top = bd.societes[0], nMois = Object.keys(bd.mois).length;
+  const so = c => ((c.mois['2026-09'] || {}).ca || 0) + ((c.mois['2026-10'] || {}).ca || 0);
+  const mS = D.serie.find(m => m.k === '2026-09'), mO = D.serie.find(m => m.k === '2026-10');
+  const ok = m => m && m.pro && m.pro.complet && m.n1pro && m.n1pro.complet;
+  const sept = ok(mS) && ok(mO) ? { b26: mS.pro.ca + mO.pro.ca, b25: mS.n1pro.ca + mO.n1pro.ca, bS: mS.pro.ca, bO: mO.pro.ca,
+    c26: (mS.ca - mS.pro.ca) + (mO.ca - mO.pro.ca), c25: (mS.n1.ca - mS.n1pro.ca) + (mO.n1.ca - mO.n1pro.ca) } : null;
+  return { tot, top, topPct: top.total / tot * 100, topSO: so(top), sansTop: (tot - top.total) / nMois, sept, nMois,
+    oct: mO && mO.pro ? mO.pro.ca : null, octPart: mO && mO.pro ? mO.pro.ca / mO.ca * 100 : null };
+})();
 
 /* --- En-tête et bandeau --- */
 $('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
@@ -400,7 +418,9 @@ $('essentiel-points').innerHTML = [
   `Sombreffe est un magasin de comptoir : le B2B pèse ${dec(B.part)} % du CA des 12 derniers mois, environ ${k1(B.b2b12)}, très loin du plafond de ${dec(D.plafond, 0)} %.`,
   `Sur les six mois présents dans les deux années (mai → octobre), 2026 fait ${pct(ecC('ca'))} de CA et ${pct(ecC('clients'))} de clients face à 2025, avec ${C.n.jours - C.n1.jours} jours ouverts de plus ; par jour ouvert, ${pct(ecC('caJour'))} de CA et ${pct(ecC('cliJour'))} de clients.`,
   `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
-  `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
+  B2BX && B2BX.sept
+    ? `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients. La hausse vient du B2B : ${k1(B2BX.oct)} en octobre, ${dec(B2BX.octPart, 0)} % du CA, surtout d’un seul client. Sans le B2B, le comptoir de septembre et octobre recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} % face à 2025.`
+    : `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Évolution magasin (le bloc du cockpit) --- */
@@ -464,7 +484,7 @@ function grapheMois(id, cfg) {
   trait();
   pleins.forEach(o => { s += `<circle cx="${x(o.i)}" cy="${y(o.v)}" r="3.2" fill="${C}"/>`; });
   const max = pleins.reduce((a, o) => o.v > a.v ? o : a), min = pleins.reduce((a, o) => o.v < a.v ? o : a), der = pleins[pleins.length - 1];
-  [[max, -10], [min, 18], [der, -10]].filter((e, k, L) => L.findIndex(f => f[0] === e[0]) === k).forEach(([o, dy]) => {
+  [[max, -10], [min, y(min.v) + 18 > mt + hP - 4 ? -10 : 18], [der, -10]].filter((e, k, L) => L.findIndex(f => f[0] === e[0]) === k).forEach(([o, dy]) => {
     s += `<text x="${x(o.i)}" y="${y(o.v) + dy}" font-size="10.5" text-anchor="middle" fill="${C}" style="${ft};${halo}">${esc(cfg.etiq(o.v))}</text>`;
   });
   const ouv = S.findIndex(m => m.ouverture);
@@ -634,13 +654,19 @@ $('question-texte').textContent = insec(`Avec le panier de 2025, les clients de 
     const b26 = mS.pro.ca + mO.pro.ca, b25 = mS.n1pro.ca + mO.n1pro.ca, dB = b26 - b25, reste = B.ecart - dB;
     $('question-texte').textContent = insec(`Avec le panier de 2025, les clients de septembre et d’octobre 2026 auraient fait ${k1(B.ecart)} de moins. `
       + `Relu ticket par ticket, le B2B de ces deux mois fait ${k1(b26)} (septembre ${eur(mS.pro.ca)}, octobre ${eur(mO.pro.ca)}), contre ${k1(b25)} un an plus tôt : `
-      + (dB > 0 ? `il explique ${k1(dB)} de la hausse, soit ${dec(Math.min(100, dB / B.ecart * 100), 0)} %. ` : 'il n’explique pas la hausse. ')
-      + (reste > 0 ? `Le reste, environ ${k1(reste)}, vient du comptoir : un panier plus haut, à clients égaux ou moins nombreux.` : 'Le comptoir, lui, ne progresse pas.'));
+      + (dB >= B.ecart ? `il explique toute la hausse, et plus : ${k1(dB)} de B2B en plus pour ${k1(B.ecart)} de hausse. ` : dB > 0 ? `il explique ${k1(dB)} de la hausse, soit ${dec(dB / B.ecart * 100, 0)} %. ` : 'il n’explique pas la hausse. ')
+      + (B2BX ? `Un seul client en fait l’essentiel : ${B2BX.top.nom}, ${k1(B2BX.topSO)} sur ces deux mois. ` : '')
+      + (reste > 0 ? `Le reste, environ ${k1(reste)}, vient du comptoir.` : (() => { const c26 = (mS.ca - mS.pro.ca) + (mO.ca - mO.pro.ca), c25 = (mS.n1.ca - mS.n1pro.ca) + (mO.n1.ca - mO.n1pro.ca); return `Sans le B2B, le comptoir recule : ${k1(c26)} en septembre et octobre 2026, contre ${k1(c25)} un an plus tôt (${pct((c26 / c25 - 1) * 100)}).`; })()));
   }
 }
-$('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec('Le comptoir et le B2B mois par mois, face au N-1 : dans le cockpit, Résultat › Évolution magasin, la bascule « ventes : Comptoir » puis « B2B ». '
-  + (D.b2bClients ? '' : 'Les clients B2B année par année, avec leur volume : l’export de la copie de caisse, client par client. ')
-  + 'Une fois reçus, ils entrent dans ce rapport et tranchent la question du panier.')) + '</span>';
+{
+  const manque = [];
+  if (!D.proLu) { manque.push('Le comptoir et le B2B mois par mois, face au N-1 : la réponse de la route /ventes/evolution du cockpit.'); }
+  if (!D.b2bClients && !D.b2bDetail) { manque.push('Les clients B2B, avec leur volume.'); }
+  else if (!D.b2bClients) { manque.push('Les clients B2B de 2025, pour le tableau année par année.'); }
+  if (manque.length) { $('a-completer').innerHTML = '<span class="rp-alerte-k">À compléter</span><span>' + esc(insec(manque.join(' '))) + '</span>'; }
+  else { $('a-completer').hidden = true; }
+}
 
 /* --- Les dix dernières semaines --- */
 const SEM = D.semaines;
@@ -748,12 +774,17 @@ $('probleme-points').innerHTML = [
   `L’après-midi est vide. De 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client, avec ${dec(APM.tk)} tickets par heure. Sombreffe a le plus de temps morts du réseau : ${dec(TS.nb)} par jour, ${hm(TS.min)} sans client.`,
   'Le magasin ne cuit plus l’après-midi : ce creux, il le crée lui-même (constat terrain, ci-dessous).',
   `Les tâches ne sont pas rendues. Le ${dateL(TC.releveLe).replace(/^1 /, '1er ')}, aucune des ${RS.taches} tâches du jour, dont ${RS.obligatoires} obligatoires, et aucune photo : le bureau ne peut rien vérifier.`,
-  `La hausse du CA de septembre et octobre ne vient pas des clients. En octobre, ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier (${pct(O.vsPan)}). B2B ou comptoir, le détail mois par mois le dira.`,
+  ...(B2BX && B2BX.sept ? [
+    `La hausse du CA de septembre et octobre ne vient pas du comptoir : elle vient du B2B, ${k1(B2BX.sept.b26)} sur ces deux mois contre ${k1(B2BX.sept.b25)} en 2025. Sans le B2B, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`,
+    `Le B2B tient à un seul client : ${B2BX.top.nom}, ${k1(B2BX.top.total)} sur ${k1(B2BX.tot)} de mai à octobre 2026 (${dec(B2BX.topPct, 0)} %). Sans lui, le B2B retombe à environ ${k1(B2BX.sansTop)} par mois.`,
+  ] : []),
+  B2BX && B2BX.sept ? null : `La hausse du CA de septembre et octobre ne vient pas des clients. En octobre, ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier (${pct(O.vsPan)}). B2B ou comptoir, le détail mois par mois le dira.`,
   `L’été 2026 a été faible : juillet ${pct(juil.vsCa)} (${pct(juil.vsCaJour)} par jour ouvert), août ${pct(aout.vsCa)}.`,
   D.personnel && D.personnel.cumul.mois
-    ? `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`
+    ? (PE6 ? `Les frais de personnel montent : ${dec(PE6.n.pct)} % du CA de mai à octobre 2026, contre ${dec(PE6.n1.pct)} % un an plus tôt (${sgn(PE6.n.pct - PE6.n1.pct)}${dec(Math.abs(PE6.n.pct - PE6.n1.pct))} points, ${sgn(PE6.n.lab - PE6.n1.lab)}${k1(Math.abs(PE6.n.lab - PE6.n1.lab))}), à CA presque égal. Ils restent sous le seuil de ${dec(D.seuilPersonnel, 0)} %.`
+      : `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`)
     : 'Les frais de personnel face au CA restent à lire dans le P&L du panel (partie 1).',
-].map(t => `<li>${esc(insec(t))}</li>`).join('');
+].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Les clients B2B, mois par mois (le détail jour par jour du cockpit, s'il est là) --- */
 const BD = D.b2bDetail;
@@ -879,7 +910,7 @@ $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui<
     ['Après-midi sans client, 14 h → 18 h', dec(APM.pct, 0) + ' %', 'moins de 50 %, 10 tickets par heure'],
     ['Cuisson de l’après-midi', 'arrêtée', 'chaque jour, checklist 1.3.01 à 14 h'],
     ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
-    ['Frais de personnel', PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', `sous ${dec(SEUIL_P, 0)} % du CA`],
+    ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `revenir vers ${dec(PE6.n1.pct)} % (2025), sous ${dec(SEUIL_P, 0)} %` : `sous ${dec(SEUIL_P, 0)} % du CA`],
     ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} %`],
     ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget, tout payé le lundi'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
@@ -911,7 +942,8 @@ $('pistes').innerHTML = [
   `Réduire les frais : passer chaque poste de charges au budget et couper ce qui dépasse ; tenir le plan de trésorerie, on paie le lundi et on court toute la semaine pour arriver au budget.`,
   `Compléter la reprise de la cuisson par une offre de l’après-midi, surtout du lundi au vendredi, les jours les plus creux.`,
   `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(-juil.vsCaJour).replace('+', '')}.`,
-  `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`,
+  `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`
+    + (B2BX ? ` Il tient aujourd’hui à un seul client (${dec(B2BX.topPct, 0)} % du B2B de mai à octobre) : le garder, et en trouver d’autres.` : ''),
   `Suivre chaque semaine les indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 

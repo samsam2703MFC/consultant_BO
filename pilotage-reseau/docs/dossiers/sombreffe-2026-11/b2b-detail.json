@@ -42,21 +42,21 @@
    "joursMois": 31
   },
   "2026-09": {
-   "ca": 1189.7,
-   "caApresRemise": 1186.43,
-   "tickets": 15,
-   "jours": 7,
-   "caJour": 11835.05,
+   "ca": 10834.55,
+   "caApresRemise": 10817.45,
+   "tickets": 75,
+   "jours": 30,
+   "caJour": 55747.1,
    "sansTvaCa": 0.0,
    "sansTvaTickets": 0,
    "joursMois": 30
   },
   "2026-10": {
-   "ca": 861.0,
-   "caApresRemise": 859.64,
-   "tickets": 5,
-   "jours": 1,
-   "caJour": 2246.1,
+   "ca": 11423.0,
+   "caApresRemise": 11402.08,
+   "tickets": 72,
+   "jours": 31,
+   "caJour": 57503.65,
    "sansTvaCa": 0.0,
    "sansTvaTickets": 0,
    "joursMois": 31
@@ -67,11 +67,11 @@
    "cle": "c9367",
    "nom": "SA GLOBAL UNIVERSITY FOR ENVIRONMENT AND SAFETY TRAINING",
    "premier": "2026-05-04",
-   "dernier": "2026-10-15",
-   "factures": 40,
-   "differes": 39,
-   "total": 10010.35,
-   "tickets": 41,
+   "dernier": "2026-10-30",
+   "factures": 93,
+   "differes": 86,
+   "total": 26981.0,
+   "tickets": 94,
    "mois": {
     "2026-05": {
      "ca": 775.7,
@@ -90,12 +90,80 @@
      "tickets": 1
     },
     "2026-09": {
-     "ca": 727.1,
-     "tickets": 2
+     "ca": 8350.45,
+     "tickets": 26
     },
     "2026-10": {
-     "ca": 845.2,
+     "ca": 10192.5,
+     "tickets": 32
+    }
+   }
+  },
+  {
+   "cle": "c6355",
+   "nom": "SRL REDEBEL REGULATORY AFFAIRS",
+   "premier": "2026-05-19",
+   "dernier": "2026-10-08",
+   "factures": 14,
+   "differes": 14,
+   "total": 1429.3,
+   "tickets": 14,
+   "mois": {
+    "2026-05": {
+     "ca": 214.2,
+     "tickets": 2
+    },
+    "2026-07": {
+     "ca": 225.4,
      "tickets": 3
+    },
+    "2026-08": {
+     "ca": 31.2,
+     "tickets": 1
+    },
+    "2026-09": {
+     "ca": 913.5,
+     "tickets": 7
+    },
+    "2026-10": {
+     "ca": 45.0,
+     "tickets": 1
+    }
+   }
+  },
+  {
+   "cle": "c6210",
+   "nom": "SRL BATIS-MOI",
+   "premier": "2026-05-04",
+   "dernier": "2026-10-29",
+   "factures": 106,
+   "differes": 106,
+   "total": 1196.0,
+   "tickets": 108,
+   "mois": {
+    "2026-05": {
+     "ca": 260.6,
+     "tickets": 19
+    },
+    "2026-06": {
+     "ca": 216.4,
+     "tickets": 23
+    },
+    "2026-07": {
+     "ca": 163.3,
+     "tickets": 17
+    },
+    "2026-08": {
+     "ca": 191.4,
+     "tickets": 12
+    },
+    "2026-09": {
+     "ca": 171.0,
+     "tickets": 18
+    },
+    "2026-10": {
+     "ca": 193.3,
+     "tickets": 19
     }
    }
   },
@@ -116,50 +184,14 @@
    }
   },
   {
-   "cle": "c6210",
-   "nom": "SRL BATIS-MOI",
-   "premier": "2026-05-04",
-   "dernier": "2026-10-15",
-   "factures": 74,
-   "differes": 74,
-   "total": 878.0,
-   "tickets": 76,
-   "mois": {
-    "2026-05": {
-     "ca": 260.6,
-     "tickets": 19
-    },
-    "2026-06": {
-     "ca": 216.4,
-     "tickets": 23
-    },
-    "2026-07": {
-     "ca": 163.3,
-     "tickets": 17
-    },
-    "2026-08": {
-     "ca": 191.4,
-     "tickets": 12
-    },
-    "2026-09": {
-     "ca": 32.7,
-     "tickets": 4
-    },
-    "2026-10": {
-     "ca": 13.6,
-     "tickets": 1
-    }
-   }
-  },
-  {
    "cle": "c8847",
    "nom": "SA MONUMENT HAINAUT",
    "premier": "2026-05-05",
-   "dernier": "2026-09-15",
-   "factures": 15,
-   "differes": 15,
-   "total": 862.4,
-   "tickets": 16,
+   "dernier": "2026-10-27",
+   "factures": 22,
+   "differes": 22,
+   "total": 1020.7,
+   "tickets": 23,
    "mois": {
     "2026-05": {
      "ca": 96.8,
@@ -178,8 +210,12 @@
      "tickets": 4
     },
     "2026-09": {
-     "ca": 179.9,
-     "tickets": 2
+     "ca": 252.1,
+     "tickets": 5
+    },
+    "2026-10": {
+     "ca": 86.1,
+     "tickets": 4
     }
    }
   },
@@ -187,11 +223,11 @@
    "cle": "c9494",
    "nom": "SRL Immo Event",
    "premier": "2026-05-03",
-   "dernier": "2026-08-16",
-   "factures": 8,
+   "dernier": "2026-10-18",
+   "factures": 14,
    "differes": 3,
-   "total": 598.75,
-   "tickets": 12,
+   "total": 915.35,
+   "tickets": 18,
    "mois": {
     "2026-05": {
      "ca": 151.75,
@@ -208,34 +244,14 @@
     "2026-08": {
      "ca": 166.6,
      "tickets": 3
-    }
-   }
-  },
-  {
-   "cle": "c6355",
-   "nom": "SRL REDEBEL REGULATORY AFFAIRS",
-   "premier": "2026-05-19",
-   "dernier": "2026-09-01",
-   "factures": 7,
-   "differes": 7,
-   "total": 596.8,
-   "tickets": 7,
-   "mois": {
-    "2026-05": {
-     "ca": 214.2,
-     "tickets": 2
-    },
-    "2026-07": {
-     "ca": 225.4,
-     "tickets": 3
-    },
-    "2026-08": {
-     "ca": 31.2,
-     "tickets": 1
     },
     "2026-09": {
-     "ca": 126.0,
-     "tickets": 1
+     "ca": 167.5,
+     "tickets": 3
+    },
+    "2026-10": {
+     "ca": 149.1,
+     "tickets": 3
     }
    }
   },
@@ -259,11 +275,11 @@
    "cle": "c6903",
    "nom": "SRL IMMOBILIERE DE LA HOULETTE",
    "premier": "2026-05-02",
-   "dernier": "2026-08-19",
-   "factures": 9,
-   "differes": 9,
-   "total": 390.55,
-   "tickets": 9,
+   "dernier": "2026-10-12",
+   "factures": 11,
+   "differes": 11,
+   "total": 526.55,
+   "tickets": 11,
    "mois": {
     "2026-05": {
      "ca": 179.35,
@@ -280,6 +296,50 @@
     "2026-08": {
      "ca": 200.9,
      "tickets": 2
+    },
+    "2026-10": {
+     "ca": 136.0,
+     "tickets": 2
+    }
+   }
+  },
+  {
+   "cle": "c6589",
+   "nom": "SRL BUREAU D'EXPERTS Ph. DEPLASSE ET ASSOCIES",
+   "premier": "2026-07-27",
+   "dernier": "2026-09-17",
+   "factures": 2,
+   "differes": 2,
+   "total": 422.3,
+   "tickets": 2,
+   "mois": {
+    "2026-07": {
+     "ca": 80.8,
+     "tickets": 1
+    },
+    "2026-09": {
+     "ca": 341.5,
+     "tickets": 1
+    }
+   }
+  },
+  {
+   "cle": "c10749",
+   "nom": "CPAS Villers-la-Ville",
+   "premier": "2026-06-30",
+   "dernier": "2026-09-24",
+   "factures": 2,
+   "differes": 2,
+   "total": 375.0,
+   "tickets": 2,
+   "mois": {
+    "2026-06": {
+     "ca": 175.0,
+     "tickets": 1
+    },
+    "2026-09": {
+     "ca": 200.0,
+     "tickets": 1
     }
    }
   },
@@ -304,30 +364,14 @@
    }
   },
   {
-   "cle": "c11797",
-   "nom": "SRL AVBC",
-   "premier": "2026-07-05",
-   "dernier": "2026-07-05",
-   "factures": 1,
-   "differes": 0,
-   "total": 198.5,
-   "tickets": 1,
-   "mois": {
-    "2026-07": {
-     "ca": 198.5,
-     "tickets": 1
-    }
-   }
-  },
-  {
    "cle": "c8614",
    "nom": "SRL CHAUTEC",
    "premier": "2026-05-12",
-   "dernier": "2026-10-15",
-   "factures": 18,
-   "differes": 18,
-   "total": 175.6,
-   "tickets": 18,
+   "dernier": "2026-10-26",
+   "factures": 25,
+   "differes": 25,
+   "total": 263.0,
+   "tickets": 25,
    "mois": {
     "2026-05": {
      "ca": 43.3,
@@ -346,27 +390,99 @@
      "tickets": 4
     },
     "2026-09": {
-     "ca": 34.0,
-     "tickets": 4
+     "ca": 91.0,
+     "tickets": 9
     },
     "2026-10": {
-     "ca": 2.2,
+     "ca": 32.6,
+     "tickets": 3
+    }
+   }
+  },
+  {
+   "cle": "c6548",
+   "nom": "AC LES BONS VILLERS",
+   "premier": "2026-09-11",
+   "dernier": "2026-09-21",
+   "factures": 3,
+   "differes": 3,
+   "total": 257.5,
+   "tickets": 3,
+   "mois": {
+    "2026-09": {
+     "ca": 257.5,
+     "tickets": 3
+    }
+   }
+  },
+  {
+   "cle": "c12626",
+   "nom": "ASBL Ocarina",
+   "premier": "2026-10-03",
+   "dernier": "2026-10-03",
+   "factures": 1,
+   "differes": 0,
+   "total": 229.8,
+   "tickets": 1,
+   "mois": {
+    "2026-10": {
+     "ca": 229.8,
      "tickets": 1
     }
    }
   },
   {
-   "cle": "c10749",
-   "nom": "CPAS Villers-la-Ville",
-   "premier": "2026-06-30",
-   "dernier": "2026-06-30",
+   "cle": "c11797",
+   "nom": "SRL AVBC",
+   "premier": "2026-07-05",
+   "dernier": "2026-07-05",
    "factures": 1,
-   "differes": 1,
-   "total": 175.0,
+   "differes": 0,
+   "total": 198.5,
    "tickets": 1,
    "mois": {
+    "2026-07": {
+     "ca": 198.5,
+     "tickets": 1
+    }
+   }
+  },
+  {
+   "cle": "c6356",
+   "nom": "SA REDEBEL",
+   "premier": "2026-06-02",
+   "dernier": "2026-10-14",
+   "factures": 4,
+   "differes": 4,
+   "total": 176.3,
+   "tickets": 4,
+   "mois": {
     "2026-06": {
-     "ca": 175.0,
+     "ca": 111.5,
+     "tickets": 2
+    },
+    "2026-10": {
+     "ca": 64.8,
+     "tickets": 2
+    }
+   }
+  },
+  {
+   "cle": "c12081",
+   "nom": "Commune de Villers-la-Ville",
+   "premier": "2026-08-18",
+   "dernier": "2026-10-17",
+   "factures": 2,
+   "differes": 2,
+   "total": 133.0,
+   "tickets": 2,
+   "mois": {
+    "2026-08": {
+     "ca": 70.0,
+     "tickets": 1
+    },
+    "2026-10": {
+     "ca": 63.0,
      "tickets": 1
     }
    }
@@ -396,22 +512,6 @@
    }
   },
   {
-   "cle": "c6356",
-   "nom": "SA REDEBEL",
-   "premier": "2026-06-02",
-   "dernier": "2026-06-22",
-   "factures": 2,
-   "differes": 2,
-   "total": 111.5,
-   "tickets": 2,
-   "mois": {
-    "2026-06": {
-     "ca": 111.5,
-     "tickets": 2
-    }
-   }
-  },
-  {
    "cle": "c11198",
    "nom": "SRL SONO X-CLUSIVE",
    "premier": "2026-05-09",
@@ -428,17 +528,49 @@
    }
   },
   {
-   "cle": "c6589",
-   "nom": "SRL BUREAU D'EXPERTS Ph. DEPLASSE ET ASSOCIES",
-   "premier": "2026-07-27",
-   "dernier": "2026-07-27",
+   "cle": "c6148",
+   "nom": "SA S.A. MAISON COURTAIN",
+   "premier": "2026-05-02",
+   "dernier": "2026-10-27",
+   "factures": 8,
+   "differes": 8,
+   "total": 81.5,
+   "tickets": 8,
+   "mois": {
+    "2026-05": {
+     "ca": 4.0,
+     "tickets": 1
+    },
+    "2026-06": {
+     "ca": 10.9,
+     "tickets": 1
+    },
+    "2026-07": {
+     "ca": 31.9,
+     "tickets": 3
+    },
+    "2026-08": {
+     "ca": 24.1,
+     "tickets": 2
+    },
+    "2026-10": {
+     "ca": 10.6,
+     "tickets": 1
+    }
+   }
+  },
+  {
+   "cle": "c12879",
+   "nom": "ASBL VALORISATION DE LA BIOMASSE",
+   "premier": "2026-10-29",
+   "dernier": "2026-10-29",
    "factures": 1,
-   "differes": 1,
-   "total": 80.8,
+   "differes": 0,
+   "total": 81.0,
    "tickets": 1,
    "mois": {
-    "2026-07": {
-     "ca": 80.8,
+    "2026-10": {
+     "ca": 81.0,
      "tickets": 1
     }
    }
@@ -455,6 +587,22 @@
    "mois": {
     "2026-09": {
      "ca": 74.0,
+     "tickets": 1
+    }
+   }
+  },
+  {
+   "cle": "c12577",
+   "nom": "SAMBRE HABITAT",
+   "premier": "2026-10-01",
+   "dernier": "2026-10-01",
+   "factures": 0,
+   "differes": 0,
+   "total": 73.8,
+   "tickets": 1,
+   "mois": {
+    "2026-10": {
+     "ca": 73.8,
      "tickets": 1
     }
    }
@@ -484,45 +632,17 @@
    }
   },
   {
-   "cle": "c6148",
-   "nom": "SA S.A. MAISON COURTAIN",
-   "premier": "2026-05-02",
-   "dernier": "2026-08-25",
-   "factures": 7,
-   "differes": 7,
-   "total": 70.9,
-   "tickets": 7,
-   "mois": {
-    "2026-05": {
-     "ca": 4.0,
-     "tickets": 1
-    },
-    "2026-06": {
-     "ca": 10.9,
-     "tickets": 1
-    },
-    "2026-07": {
-     "ca": 31.9,
-     "tickets": 3
-    },
-    "2026-08": {
-     "ca": 24.1,
-     "tickets": 2
-    }
-   }
-  },
-  {
-   "cle": "c12081",
-   "nom": "Commune de Villers-la-Ville",
-   "premier": "2026-08-18",
-   "dernier": "2026-08-18",
+   "cle": "c12732",
+   "nom": "A.C.W.(ASBL)",
+   "premier": "2026-10-12",
+   "dernier": "2026-10-12",
    "factures": 1,
    "differes": 1,
-   "total": 70.0,
+   "total": 65.4,
    "tickets": 1,
    "mois": {
-    "2026-08": {
-     "ca": 70.0,
+    "2026-10": {
+     "ca": 65.4,
      "tickets": 1
     }
    }
