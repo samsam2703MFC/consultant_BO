@@ -13,16 +13,22 @@ declare(strict_types=1);
  * Lancée par .github/workflows/sonde-cartes-fidelite.yml : php -- /var/www/consulant_bo < tools/sonde_cartes_fidelite.php
  */
 $dir = rtrim((string) ($argv[1] ?? '/var/www/consulant_bo'), '/');
-foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'panel_api.php'] as $f) { require_once "$dir/src/$f"; }
+foreach (['Db.php', 'erp_cles.php', 'endpoints.php', 'panel_api.php', 'erp_api.php'] as $f) { require_once "$dir/src/$f"; }
 $corps = static fn (array $r) => is_array($r['corps'] ?? null) ? $r['corps'] : [];
 $erreur = static fn (array $r) => 'HTTP ' . (int) ($r['code'] ?? 0) . ' ' . mb_substr(is_string($r['corps'] ?? null) ? $r['corps'] : (string) json_encode($r['corps'] ?? null, JSON_UNESCAPED_UNICODE), 0, 300);
 
 // Deuxième passage (13/11/2026) : les permissions sont inscrites dans le jeton à sa création ; le cockpit garde le sien
 // 30 minutes. Reconnexion forcée, puis le contenu du jeton : le type de compte et les permissions LOYALTY seulement —
 // jamais le jeton lui-même.
-echo "=== -1. Le jeton du cockpit, renouvelé (son contenu, pas le jeton)\n";
-Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'panelApiToken'");
-$jt = PanelApi::jetonSonde(true);
+// Quatrième passage (13/11/2026, Sam : « tu as le compte admin dans consultant ») : lancée avec compte=admin, la sonde
+// passe par le compte admin ERP du cockpit (src/erp_api.php, /admin/auth/login, identifiants côté serveur).
+$admin = ($argv[3] ?? '') === 'admin';
+$get = static fn (string $p, int $t = 30): array => $admin ? ErpApi::sondeGet($p) : PanelApi::sondeGet($p, $t);
+echo '=== -1. Le jeton du cockpit (', $admin ? 'compte ADMIN ERP' : 'compte consultant', "), renouvelé — son contenu, pas le jeton\n";
+if ($admin) { echo '  compte admin ERP configuré : ', ErpApi::configured() ? 'oui' : 'NON', "\n"; }
+else { Db::exec("DELETE FROM ceo_app_setting WHERE `key` = 'panelApiToken'"); }
+$jt = $admin ? ErpApi::jetonSonde(true) : PanelApi::jetonSonde(true);
+if ($jt === null && $admin) { echo '  connexion admin : ', (string) ErpApi::$lastError, "\n"; }
 if ($jt === null) { echo "  pas de jeton\n"; }
 else {
     $pl = json_decode((string) base64_decode(strtr(explode('.', $jt . '..')[1], '-_', '+/')), true);
@@ -39,7 +45,7 @@ else {
     echo '  permissions : ', count($plat), ' en tout · LOYALTY : ', json_encode(array_values(array_filter($plat, static fn ($x) => stripos($x, 'loyal') !== false)), JSON_UNESCAPED_UNICODE), "\n";
 }
 echo "=== 0. Les cartes définies (/admin/loyalty/cards)\n";
-$r = PanelApi::sondeGet('/admin/loyalty/cards', 30);
+$r = $get('/admin/loyalty/cards', 30);
 if ((int) ($r['code'] ?? 0) !== 200) { echo '  ', $erreur($r), "\n"; }
 foreach ((array) ($corps($r)['items'] ?? $corps($r)['data'] ?? []) as $c) {
     if (!is_array($c)) { continue; }
@@ -53,7 +59,7 @@ $periodes = ['ce mois' => [date('Y-m-01'), date('Y-m-d')], 'depuis janvier' => [
 foreach ([2, 3, 4, 5] as $sid) {
     echo "\n=== 1. Magasin $sid — /loyalty/statistics\n";
     foreach ($periodes as $lib => [$du, $au]) {
-        $r = PanelApi::sondeGet('/shops/' . $sid . '/loyalty/statistics?' . http_build_query(['from' => $du, 'to' => $au]), 30);
+        $r = $get('/shops/' . $sid . '/loyalty/statistics?' . http_build_query(['from' => $du, 'to' => $au]), 30);
         if ((int) ($r['code'] ?? 0) !== 200) { echo "  $lib : ", $erreur($r), "\n"; continue; }
         $s = $corps($r);
         echo "  $lib ($du → $au) · participants ", json_encode($s['participants'] ?? null), "\n";
@@ -65,7 +71,7 @@ foreach ([2, 3, 4, 5] as $sid) {
     $page = 1; $tot = null; $n = 0;
     $parCarte = []; $actifs = 0; $bloques = 0; $avecAchat = 0; $multi = 0;
     do {
-        $r = PanelApi::sondeGet('/shops/' . $sid . '/loyalty/customers?' . http_build_query(['from' => date('Y-m-01'), 'to' => date('Y-m-d'), 'page' => $page, 'limit' => 100]), 40);
+        $r = $get('/shops/' . $sid . '/loyalty/customers?' . http_build_query(['from' => date('Y-m-01'), 'to' => date('Y-m-d'), 'page' => $page, 'limit' => 100]), 40);
         if ((int) ($r['code'] ?? 0) !== 200) { echo '  ', $erreur($r), "\n"; break; }
         $c = $corps($r);
         $tot = (int) ($c['pagination']['total'] ?? 0);
@@ -108,7 +114,7 @@ if ($cid > 0) {
     echo "\n=== 3. Le client $cid à Halle — ses cartes (/loyalty/customers), sans nom\n";
     $page = 1; $trouve = false;
     do {
-        $r = PanelApi::sondeGet('/shops/4/loyalty/customers?' . http_build_query(['from' => date('Y-01-01'), 'to' => date('Y-m-d'), 'page' => $page, 'limit' => 100]), 40);
+        $r = $get('/shops/4/loyalty/customers?' . http_build_query(['from' => date('Y-01-01'), 'to' => date('Y-m-d'), 'page' => $page, 'limit' => 100]), 40);
         if ((int) ($r['code'] ?? 0) !== 200) { echo '  ', $erreur($r), "\n"; break; }
         $c = $corps($r);
         foreach ((array) ($c['items'] ?? []) as $cl) {

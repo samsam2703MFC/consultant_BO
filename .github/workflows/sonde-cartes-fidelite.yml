@@ -17,6 +17,10 @@ on:
         description: "Identifiant du client (chiffres), facultatif"
         required: false
         default: ""
+      compte:
+        description: "Compte des lectures : consultant (par défaut) ou admin (compte admin ERP du cockpit)"
+        required: false
+        default: "consultant"
 
 concurrency:
   group: sonde-cartes-fidelite
@@ -62,7 +66,9 @@ jobs:
         env:
           SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
           CLIENT: ${{ inputs.client }}
+          COMPTE: ${{ inputs.compte }}
         run: |
           if [ -n "${CLIENT}" ] && ! [[ "${CLIENT}" =~ ^[0-9]{1,10}$ ]]; then echo "client refusé : chiffres attendus"; exit 1; fi
+          if [ -n "${COMPTE}" ] && ! [[ "${COMPTE}" =~ ^(consultant|admin)$ ]]; then echo "compte refusé"; exit 1; fi
           sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
-            "php -- '${TARGET_DIR}' '${CLIENT}'" < tools/sonde_cartes_fidelite.php
+            "php -- '${TARGET_DIR}' '${CLIENT}' '${COMPTE}'" < tools/sonde_cartes_fidelite.php
