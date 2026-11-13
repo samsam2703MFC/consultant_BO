@@ -26,7 +26,8 @@ declare(strict_types=1);
  *   1. l'aperçu montre chaque appel et son corps exact, sans rien envoyer ;
  *   2. la création s'arrête au premier refus du panel ; une tâche identique (même nom, même
  *      jour, même heure) n'est jamais recréée — elle est seulement ajoutée à la checklist ;
- *   3. seul ce qui a été créé depuis cet écran (table ceo_cadre_cree) peut y être supprimé.
+ *   3. seul ce qui a été créé depuis cet écran (table ceo_cadre_cree) s'y supprime d'un clic ; une tâche ou une
+ *      checklist créée dans le panel, seulement avec son nom exact (?confirmer=).
  *
  * Compte : celui du cockpit (compte consultant, PanelApi) ; ou, si le panel le refuse sur ces
  * routes, un compte administrateur du panel connecté depuis l'écran — son jeton voyage dans
@@ -1615,28 +1616,46 @@ function tkModifierLot(array $b): array
 }
 
 /**
- * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — seulement ce qui a été créé depuis
- * cet écran (ceo_cadre_cree). Supprimer une checklist laisse ses tâches dans le panel.
+ * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — ce qui a été créé depuis cet écran (ceo_cadre_cree), ou ce
+ * dont ?confirmer= porte le nom exact au panel. Supprimer une checklist laisse ses tâches dans le panel.
+ * Pour une tâche, ?checklists=43,12 (les checklists où l'écran la voit) : son nom s'y lit quand GET /tasks ne la rend
+ * pas (une tâche en pause, que l'écran lit par sa ligne de checklist).
  */
 function tkSupprimer(string $genre, int $id): array
 {
     ensureCadreCree();
     $r = Db::row('SELECT * FROM ceo_cadre_cree WHERE genre = ? AND panel_id = ? AND supprime_le IS NULL', [$genre, $id]);
     $quoi = $genre === 'checklist' ? 'checklist' : 'tâche';
-    // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant ») : supprimée seulement si
-    // ?confirmer= porte son NOM EXACT tel que le panel le donne — la suppression est voulue, pas un clic de travers.
+    // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant » ; 13/11/2026, « je dois
+    // pouvoir effacer une tâche ») : supprimée seulement si ?confirmer= porte son NOM EXACT tel que le panel le donne — la
+    // suppression est voulue, pas un clic de travers.
     $confirmer = trim((string) ($_GET['confirmer'] ?? ''));
     if ($r === null && $confirmer !== '') {
-        $L = PanelApi::liste((array) (tkReq('GET', $genre === 'checklist' ? '/operational-framework/checklists' : '/tasks')['corps'] ?? []));
+        // Toutes les pages : une seule ne rendait pas les tâches au-delà de la première, « introuvables au panel ».
+        [$L, $e] = tkLireListe($genre === 'checklist' ? '/operational-framework/checklists' : '/tasks');
         $nom = null;
-        foreach ($L as $x) { if ((int) ($x['id'] ?? 0) === $id) { $nom = trim((string) ($x['name'] ?? $x['base_name'] ?? '')); } }
-        if ($nom === null) { http_response_code(404); return ['error' => ucfirst($quoi) . ' #' . $id . ' introuvable au panel']; }
+        foreach ((array) $L as $x) {
+            if ((int) ($x['id'] ?? $x['task_id'] ?? 0) === $id) { $nom = tkTxt($x['name'] ?? $x['base_name'] ?? ''); break; }
+        }
+        if ($nom === null && $genre === 'tache') {
+            $cids = array_slice(array_values(array_unique(array_filter(array_map('intval', explode(',', (string) ($_GET['checklists'] ?? '')))))), 0, 10);
+            foreach ($cids as $cid) {
+                [$Lc] = tkLireListe('/operational-framework/checklists/' . $cid . '/tasks');
+                foreach ((array) $Lc as $x) {
+                    if ((int) ($x['task_id'] ?? $x['id'] ?? 0) === $id) { $nom = tkTxt($x['name'] ?? $x['base_name'] ?? ''); break 2; }
+                }
+            }
+        }
+        if ($nom === null) {
+            http_response_code($L === null ? 502 : 404);
+            return ['error' => $L === null ? 'lecture du panel impossible : ' . $e : ucfirst($quoi) . ' #' . $id . ' introuvable au panel'];
+        }
         if ($nom !== $confirmer) { http_response_code(409); return ['error' => 'le nom ne correspond pas : le panel dit « ' . $nom . ' »']; }
         $r = ['nom' => $nom, 'horsCockpit' => true];
     }
     if ($r === null) {
         http_response_code(403);
-        return ['error' => 'seule une ' . $quoi . ' créée depuis cet écran se supprime ici ; les autres se suppriment dans le panel'];
+        return ['error' => 'sans son nom exact (?confirmer=), seule une ' . $quoi . ' créée depuis cet écran se supprime ici'];
     }
     $chemin = $genre === 'checklist' ? '/operational-framework/checklists/' . $id : '/tasks/' . $id;
     $rep = tkReq('DELETE', $chemin);

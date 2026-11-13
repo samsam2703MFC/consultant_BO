@@ -1133,7 +1133,7 @@
     const doublon = dbl ? ` <span class="dc-dbl" title="${esc('Ressemble à « ' + dbl.t.nom + ' », déjà dans ' + dbl.c.nom)}">≈ déjà dans ${esc(dcCode(dbl.c.nom).code || dbl.c.nom)}</span>` : '';
     return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
       <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
-      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
       ${c ? '' : dcRanger(t)}<span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
   }
   /* --- filtre par poste (10/11/2026, « dans Document, un filtre par poste ») : la zone de la checklist, et la fonction
@@ -1684,7 +1684,7 @@
         </div>
         ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
         ${m.plan ? `<div class="tk-cb" style="padding-top:0"><div class="tk-k" style="margin-bottom:4px">${m.plan.fait ? 'Résultat' : 'Ce qui partira au panel'}</div>${appels(m.plan.operations, !!m.plan.fait)}</div>` : ''}
-        <div class="tk-pied"><button class="tk-btn ghost" data-a="brut" data-id="${m.id}" title="Ce que le panel renvoie pour cette tâche : niveaux, contrôleurs, champs bruts">Détails du panel</button><span class="sp"></span><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
+        <div class="tk-pied"><button class="tk-btn ghost danger" data-a="supprimer" data-id="${m.id}" ${m.envoi ? 'disabled' : ''}>${m.envoi === 'suppr' ? 'Suppression…' : 'Supprimer la tâche…'}</button><button class="tk-btn ghost" data-a="brut" data-id="${m.id}" title="Ce que le panel renvoie pour cette tâche : niveaux, contrôleurs, champs bruts">Détails du panel</button><span class="sp"></span><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
           ${m.plan && !m.plan.fait ? `<button class="tk-btn prim" data-a="modifEnvoyer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button>` : ''}
           <button class="tk-btn" data-a="fermer">${m.plan && m.plan.fait ? 'Fermer' : 'Annuler'}</button></div>`;
     }
@@ -2132,11 +2132,44 @@
         return charger(true);
       }
       case 'supprimer': {
-        const c = ((S.cadre && S.cadre.creees) || []).find(x => x.id === +id);
-        if (!confirm(`Supprimer du panel la tâche « ${c ? c.nom : '#' + id} » (#${id}) ?`)) { return; }
-        try { await api('DELETE', '/task/taches/' + id); S.msg = { k: 'ok', t: 'Tâche #' + esc(id) + ' supprimée du panel.' }; S.sel.delete(+id); }
-        catch (e) { S.msg = { k: 'ko', t: 'Suppression refusée : ' + esc(e.message) }; }
-        return charger(true);
+        // Toute tâche se supprime (13/11/2026, « je dois pouvoir effacer une tâche », depuis ?checklist=43) : la fenêtre
+        // « Modifier la tâche » a « Supprimer la tâche… ». Celles créées ici partent telles quelles ; les autres avec leur
+        // nom exact (?confirmer=), que le serveur compare à celui du panel, comme pour une checklist.
+        const cc = ((S.cadre && S.cadre.creees) || []).find(x => x.id === +id);
+        const t = tache(id);
+        const nom = t ? String(t.nom || '').trim() : (cc ? cc.nom : '');
+        const cls = checklistsParTache()[+id] || [];
+        const ou = cls.map(c => '« ' + c.nom + ' »').join(', ');
+        if (!confirm('Supprimer du panel la tâche « ' + (nom || '#' + id) + ' » (#' + id + ') ?\n\n'
+          + (cls.length ? 'Elle disparaît de ' + (cls.length > 1 ? 'ses ' + cls.length + ' checklists : ' : 'la checklist ') + ou + ' : les équipes ne la verront plus.' : 'Elle n’est dans aucune checklist.')
+          + (t && t.actif != null ? '\n\nPour seulement l’arrêter, décochez plutôt « Active » : elle est mise en pause et se reprend.' : '')
+          + '\n\nOn ne peut pas annuler.')) { return; }
+        const m = S.modale && S.modale.type === 'modif' && S.modale.id === +id ? S.modale : null;
+        if (m) { m.envoi = 'suppr'; m.err = null; rendre(); }
+        const p = new URLSearchParams();
+        if (!cc && nom) { p.set('confirmer', nom); }
+        if (cls.length) { p.set('checklists', cls.map(c => c.id).join(',')); }
+        const qs = p.toString();
+        try { await api('DELETE', '/task/taches/' + id + (qs ? '?' + qs : '')); }
+        catch (e) {
+          const droits = e.status === 401 || e.status === 403 || /\b40[13]\b/.test(e.message)
+            ? (admin() ? ' — la session administrateur du panel a peut-être expiré : reconnectez-vous (en haut).' : ' — essayez avec un compte administrateur du panel (en haut).') : '';
+          // Dans la fenêtre, l'erreur reste sous les yeux ; ailleurs, en tête de page.
+          if (m && S.modale === m) { m.envoi = false; m.err = 'Suppression refusée : ' + e.message + droits; return rendre(); }
+          S.msg = { k: 'ko', t: 'Suppression refusée : ' + esc(e.message + droits) };
+          return charger(true);
+        }
+        if (m && S.modale === m) { S.modale = null; }
+        S.sel.delete(+id);
+        S.msg = { k: 'ok', t: 'Tâche « ' + esc(nom || '#' + id) + ' » supprimée du panel.' };
+        await charger(true);
+        // Le panel a dit oui, mais la montre encore dans une checklist : on le dit plutôt que de laisser croire qu'elle est partie.
+        const reste = S.err ? [] : checklistsParTache()[+id] || [];
+        if (reste.length) {
+          S.msg = { k: 'wa', t: 'Le panel a accepté la suppression de « ' + esc(nom || '#' + id) + ' », mais la montre encore dans ' + reste.map(c => '« ' + esc(c.nom) + ' »').join(', ') + '. Rechargez dans un moment ; si elle y reste, retirez-la de la checklist au panel.' };
+          rendre();
+        }
+        return;
       }
       case 'brut': {
         S.modale = { type: 'brut', id: +id, data: null, y: el.getBoundingClientRect().top + window.scrollY }; rendre();
