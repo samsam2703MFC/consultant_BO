@@ -1016,15 +1016,22 @@
     const ops = (r && r.operations) || [];
     const range = !!(ops[0] && ops[0].ok);
     if (range) {
-      c.taches.push({ taskId: t.id, ordre: (r && r.ordre) || c.taches.length + 1, note: '' });
+      // Déjà dans la checklist (409 du panel, 13/11/2026) : réactivée, le panel l'y montre ; restée en pause, il la cache
+      // et c'est l'écran qui la place dans sa checklist (pauseDans).
+      const deja = !!(r && r.dejaDedans), reactivee = ops.some(o => /\/active$/.test(o.chemin || '') && o.ok);
+      if (!deja || reactivee) { c.taches.push({ taskId: t.id, ordre: (r && r.ordre) || c.taches.length + 1, note: '' }); }
+      else { (S.cadre.pauseDans = Object.assign({}, S.cadre.pauseDans))[t.id] = [c.id]; }
       S.cadre.horsChecklist = (S.cadre.horsChecklist || []).filter(id => id !== t.id);
-      if (ops.some(o => /\/active$/.test(o.chemin || '') && o.ok)) { t.actif = true; }
+      S.cadre.enPause = (S.cadre.enPause || []).filter(id => id !== t.id);
+      if (reactivee) { t.actif = true; }
       if (r && r.qui) { Object.assign(S.qui = S.qui || {}, r.qui); }
       S.dcSugg = null;
       const fait = [ops.some(o => /\/active$/.test(o.chemin || '') && o.ok) ? 'réactivée' : '', q && q.niveaux.length ? q.niveaux.length + ' niveau' + (q.niveaux.length > 1 ? 'x' : '') : '', q && q.controleurs.length ? q.controleurs.length + ' contrôleur' + (q.controleurs.length > 1 ? 's' : '') : ''].filter(Boolean).join(', ');
-      S.dcRange = { ko: !!d.err, cid: c.id, t: `« ${t.nom} » rangée dans ${c.nom}${fait ? ' (' + fait + ')' : ''}.${d.err ? ' Attention : ' + d.err : ''}` };
+      S.dcRange = { ko: !!d.err, cid: c.id, t: deja
+        ? `« ${t.nom} » était déjà dans ${c.nom} : en pause, le panel la cachait.${fait ? ' Fait : ' + fait + '.' : ' Elle y est montrée en pause.'}${d.err ? ' Attention : ' + d.err : ''}`
+        : `« ${t.nom} » rangée dans ${c.nom}${fait ? ' (' + fait + ')' : ''}.${d.err ? ' Attention : ' + d.err : ''}` };
       if (S.dd === d) { S.dd = null; }
-      dcFlash([t.id], d.err ? '✓ rangée, en partie' : '✓ rangée ici', !!d.err);
+      dcFlash([t.id], deja ? (reactivee ? '✓ réactivée ici' : '✓ elle était ici') : d.err ? '✓ rangée, en partie' : '✓ rangée ici', !!d.err);
     } else if (S.dd !== d) { S.dcRange = { ko: true, cid: null, t: `« ${t.nom} » n’a pas été rangée : ${d.err || 'refus du panel'}` }; }
     d.envoi = false;
     rendre();
@@ -1124,7 +1131,8 @@
   }
 
   /* --- une ligne, une section, le document --- */
-  function dcLigne(t, c, code) {
+  /** `cachee` : une tâche en pause que le panel ne montre pas dans sa checklist (l'écran sait qu'elle y est, pauseDans). */
+  function dcLigne(t, c, code, cachee) {
     const cid = c ? c.id : null;
     const liens = (((S.cadre || {}).sopLiens || {})[t.id] || []).map(y => `<a class="tk-pas" href="../formation/#/sop/${encodeURIComponent(y.sopId)}" target="_blank" rel="noopener" title="${esc(y.titre)}">${esc(y.code || 'SOP')}${y.etape ? ' · ' + esc(y.etape) : ''}</a>`).join(' ');
     const ici = S.dd && S.dd.id === t.id && S.dd.c === cid;
@@ -1133,7 +1141,7 @@
     const doublon = dbl ? ` <span class="dc-dbl" title="${esc('Ressemble à « ' + dbl.t.nom + ' », déjà dans ' + dbl.c.nom)}">≈ déjà dans ${esc(dcCode(dbl.c.nom).code || dbl.c.nom)}</span>` : '';
     return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
       <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
-      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${c && !cachee ? ' ' + dcDeplacer(t, c) : ''}${cachee ? ` <button class="tk-pas att dc-react" data-a="dcReactiver" data-id="${t.id}" data-c="${c.id}" title="La réactiver : les équipes la retrouvent dans cette checklist">en pause · réactiver</button>` : t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
       ${c ? '' : dcRanger(t)}<span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
   }
   /* --- filtre par poste (10/11/2026, « dans Document, un filtre par poste ») : la zone de la checklist, et la fonction
@@ -1141,6 +1149,8 @@
   const dcFctOk = t => { if (!S.dcFct) { return true; } const q = S.qui && S.qui[t.id]; return !!q && q.fait.some(n => (n.poste || n.nom) === S.dcFct); };
   const dcTachesVues = c => dcTachesDe(c).filter(dcFctOk);
   const dcFiltre = () => !!(S.dcZone || S.dcFct);
+  /** Les tâches en pause de cette checklist : le panel les cache, l'écran sait qu'elles y sont (13/11/2026). */
+  const dcPausesDe = c => { const P = (S.cadre && S.cadre.pauseDans) || {}; return taches().filter(t => (P[t.id] || []).includes(c.id) && dcFctOk(t)); };
   function dcFiltres() {
     const zones = {}; checklists().forEach(c => { const p = c.poste || 'Sans poste'; zones[p] = (zones[p] || 0) + dcTachesVues(c).length; });
     const rang = p => { const i = PL_ORDRE.indexOf(sansAccent(p)); return i < 0 ? (p === 'Sans poste' ? 99 : 50) : i; };
@@ -1158,15 +1168,16 @@
     const ts = dcTachesVues(c);
     const js = [...new Set(ts.flatMap(dcJoursDe))];
     const nPh = ts.filter(t => t.photo).length;
+    const pz = dcPausesDe(c);
     const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection(c) : '';
     return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}" id="dc-${c.id}">
       <h2 class="dc-h2">${code ? `<span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(code)}</span>` : ''}<span>${esc(titre)}</span>
         <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button></h2>
       <div class="dc-meta"><span>🕘 ${esc(c.heure || 'sans heure')}</span>${c.poste ? `<span><i class="dc-pd" style="background:${dcCouleur(c.poste)}"></i>${esc(posteAff(c.poste))}</span>` : ''}${ts.length ? dcPoints(js) : ''}
-        <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}</span></div>
+        <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}${pz.length ? ` · ${pz.length} en pause` : ''}</span></div>
       ${dcQuiChecklist(c)}
       ${c.description && c.description.trim() !== 'Array' ? `<div class="dc-desc">${esc(c.description)}</div>` : ''}${sel}
-      <div class="dc-ls">${ts.map(t => dcLigne(t, c, code)).join('') || '<div class="dc-vide">Aucune tâche dans cette checklist.</div>'}</div>
+      <div class="dc-ls">${ts.map(t => dcLigne(t, c, code)).join('')}${pz.map(t => dcLigne(t, c, code, true)).join('')}${ts.length || pz.length ? '' : '<div class="dc-vide">Aucune tâche dans cette checklist.</div>'}</div>
       <button class="dc-ajout" data-a="dcAjouter" data-id="${c.id}">＋ Ajouter des tâches à cette checklist</button></section>`;
   }
   function docVue() {
@@ -1187,7 +1198,7 @@
     // Les tâches en pause que le panel ne range dans aucune liste (09/11/2026) : leur checklist est inconnue, pas absente.
     const pz = new Set((S.cadre && S.cadre.enPause) || []), pause = S.dcZone ? [] : taches().filter(t => pz.has(t.id) && dcFctOk(t));
     const pauseHtml = pause.length ? `<div class="dc-moment">En pause</div><section class="dc-s" id="dc-pause"><h2 class="dc-h2"><span>En pause · checklist inconnue</span></h2>
-      <div class="dc-meta"><span class="mu">${pause.length} tâche${pause.length > 1 ? 's' : ''} en pause : le panel ne les montre dans aucune checklist tant qu’elles sont en pause : leur checklist est inconnue. « Ranger » répond « déjà dans cette checklist » quand elle y est déjà.</span></div>
+      <div class="dc-meta"><span class="mu">${pause.length} tâche${pause.length > 1 ? 's' : ''} en pause dont la checklist est inconnue : le panel ne montre une tâche en pause dans aucune checklist. « Ranger » la remet dans la sienne ; si elle y est déjà, le panel le dit, l’écran s’en souvient et la montre dans sa checklist.</span></div>
       <div class="dc-ls">${pause.map(t => dcLigne(t, null, '')).join('')}</div></section>` : '';
     return `<div class="dc">${sommaire}<div class="tk-card dc-doc">
       ${S.dup ? volet() : ''}
@@ -2069,6 +2080,22 @@
       case 'tlTout': { const T = tlEtat(); if (!T.sel) { return; } const D = tlDonnees(); (D.cell[T.sel.k + '|' + T.sel.s] || []).forEach(x => tlPoser(x.t.id, tlHeure(x) + +el.dataset.v, false)); T.sel = { k: T.sel.k, s: T.sel.s + +el.dataset.v }; return rendre(); }
       case 'ddPlusieurs': { const d = S.dd; if (!d || d.id == null) { return; } S.sel = new Set([d.id]); if (d.c) { S.cl = String(d.c); } S.dd = null; ouvrirDup(); rendre(); voirHaut(); return; }
       case 'dcAller': S.cl = id; S.dd = null; adresse(id); rendre(); return dcAller(id);
+      // « en pause · réactiver » sur une tâche que le panel cache dans sa checklist (13/11/2026) : réactivée, il l'y montre.
+      case 'dcReactiver': {
+        const t = tache(id), c = checklist(el.dataset.c);
+        if (!t || !c || el.disabled) { return; }
+        el.disabled = true; el.textContent = 'réactivation…';
+        try {
+          await api('PATCH', '/task/taches/' + t.id, { actif: true });
+          t.actif = true;
+          const P = Object.assign({}, S.cadre.pauseDans); delete P[t.id]; S.cadre.pauseDans = P;
+          if (!c.taches.some(l => l.taskId === t.id)) { c.taches.push({ taskId: t.id, ordre: Math.max(0, ...c.taches.map(l => +l.ordre || 0)) + 1, note: '' }); }
+          dcFlash([t.id], '✓ réactivée');
+        } catch (e) {
+          S.msg = { k: 'ko', t: 'Réactivation de « ' + esc(t.nom) + ' » refusée : ' + esc(e.message) + (e.status === 401 || e.status === 403 ? ' — essayez avec un compte administrateur du panel (en haut).' : '') };
+        }
+        return rendre();
+      }
       case 'dcAjouter': S.cl = id; S.dd = null; adresse(id); return wzOuvrir('existante');
       case 'dcQuiRelire': S.dcQui = null; return dcQuiCharger();
       case 'plCase': {

@@ -217,6 +217,77 @@ function ensureCadreCree(): void
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
+/**
+ * La checklist de chaque tâche, telle que l'écran l'a vue au panel (« lue ») ou que le panel l'a dite en refusant de l'y
+ * remettre (« 409 »). Le panel ne montre une tâche EN PAUSE dans aucune checklist : sans cette mémoire, l'écran la
+ * disait « checklist inconnue » et « Ranger » butait sur « Task already assigned to this checklist » (13/11/2026).
+ */
+function ensureCadreTacheCl(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS ceo_cadre_tache_cl (
+        task_id INT NOT NULL,
+        checklist_id INT NOT NULL,
+        source VARCHAR(10) NOT NULL DEFAULT \'lue\',
+        vu_le DATETIME NOT NULL,
+        PRIMARY KEY (task_id, checklist_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/**
+ * Tient la mémoire à jour depuis une lecture du cadre, et rend, pour chaque tâche en pause que le panel ne range nulle
+ * part, les checklists où elle était : {taskId: [checklistId]}.
+ *   - une tâche vue dans des checklists : la mémoire prend exactement celles-là ;
+ *   - une tâche active vue nulle part : elle a été retirée, la mémoire l'oublie ;
+ *   - une tâche en pause vue nulle part : la mémoire la garde, c'est elle qui sait.
+ * Seulement sur une lecture complète (toutes les tâches, toutes les checklists) : une checklist illisible ferait croire
+ * que ses tâches en sont sorties.
+ *
+ * @param array<int, array> $taches  les tâches normalisées, par id
+ * @param array<int, array<int, true>> $ou  pour chaque tâche vue, ses checklists
+ * @param list<int> $clIds  les checklists qui existent
+ * @return array<int, list<int>>
+ */
+function tkMemoireChecklists(array $taches, array $ou, array $clIds, bool $complet): array
+{
+    ensureCadreTacheCl();
+    $memo = [];
+    foreach (Db::rows('SELECT task_id, checklist_id FROM ceo_cadre_tache_cl') as $r) { $memo[(int) $r['task_id']][(int) $r['checklist_id']] = true; }
+    if ($complet) {
+        $maint = date('Y-m-d H:i:s');
+        foreach ($taches as $id => $t) {
+            $vues = array_keys($ou[$id] ?? []);
+            $avant = array_keys($memo[$id] ?? []);
+            if ($vues === [] && ($t['actif'] ?? null) === false) { continue; }
+            sort($vues); sort($avant);
+            if ($vues === $avant) { continue; }
+            Db::exec('DELETE FROM ceo_cadre_tache_cl WHERE task_id = ?', [$id]);
+            foreach ($vues as $cid) { Db::exec('INSERT INTO ceo_cadre_tache_cl (task_id, checklist_id, source, vu_le) VALUES (?,?,?,?)', [$id, $cid, 'lue', $maint]); }
+            $memo[$id] = array_fill_keys($vues, true);
+        }
+    }
+    $existe = array_fill_keys($clIds, true);
+    $pause = [];
+    foreach ($taches as $id => $t) {
+        if (isset($ou[$id]) || ($t['actif'] ?? null) !== false) { continue; }
+        $cs = array_values(array_filter(array_keys($memo[$id] ?? []), fn ($c) => isset($existe[$c])));
+        if ($cs) { $pause[$id] = $cs; }
+    }
+    return $pause;
+}
+
+/** Le panel a dit où est une tâche (409 « already assigned ») : on s'en souvient. */
+function tkRetenirChecklist(int $tid, int $cid, string $source): void
+{
+    try {
+        ensureCadreTacheCl();
+        Db::exec('INSERT INTO ceo_cadre_tache_cl (task_id, checklist_id, source, vu_le) VALUES (?,?,?,?)
+                  ON DUPLICATE KEY UPDATE source = VALUES(source), vu_le = VALUES(vu_le)', [$tid, $cid, $source, date('Y-m-d H:i:s')]);
+    } catch (PDOException $e) { /* la mémoire n'est qu'un confort : le panel reste la référence */ }
+}
+
 function tkTracer(string $genre, int $id, string $nom, string $jour, string $heure, ?int $cid, ?int $modele): void
 {
     try {
@@ -257,7 +328,7 @@ function tkCadre(): array
         if ($cid > 0) { $req[$cid] = '/operational-framework/checklists/' . $cid . '/tasks'; }
     }
     $contenus = $req ? PanelApi::getParallele($req) : [];
-    $dans = [];
+    $dans = []; $ou = [];
     $checklists = [];
     foreach ($cls as $c) {
         $cid = (int) ($c['id'] ?? $c['checklist_id'] ?? 0);
@@ -271,6 +342,7 @@ function tkCadre(): array
             $lignes[] = ['taskId' => $tid, 'ordre' => (int) ($x['sort_order'] ?? $x['position'] ?? $i + 1),
                 'note' => tkTxt($x['note'] ?? '')];
             $dans[$tid] = true;
+            $ou[$tid][$cid] = true;
             // Une tâche absente de /tasks (inactive, filtrée) reste lisible par sa ligne de checklist.
             if (!isset($taches[$tid])) {
                 $n = tkNormTache(['id' => $tid] + $x);
@@ -297,6 +369,14 @@ function tkCadre(): array
     } catch (PDOException $e) { /* table impossible : les listes restent vides */ }
 
     // Les tâches reliées à une étape de standard (ceo_sop_tache) : l'écran les étiquette « SOP-… · étape … ».
+    // Les tâches en pause dont on sait la checklist (ceo_cadre_tache_cl) : l'écran les montre dans leur checklist.
+    $pauseDans = [];
+    try {
+        $complet = !isset($erreurs['taches']) && !isset($erreurs['checklists'])
+            && !array_filter(array_keys($erreurs), fn ($k) => str_starts_with((string) $k, 'checklist '));
+        $pauseDans = tkMemoireChecklists($taches, $ou, array_map(fn ($c) => $c['id'], $checklists), $complet);
+    } catch (PDOException $e) { /* table impossible : elles restent « checklist inconnue » */ }
+
     $sopLiens = [];
     try {
         ensureSopTache();
@@ -312,9 +392,11 @@ function tkCadre(): array
         'taches' => array_values($taches),
         // Le panel ne liste pas les tâches EN PAUSE dans leurs checklists (09/11/2026 : « Ranger » rendait 409 « déjà dans
         // cette checklist » pour des tâches que l'écran disait hors checklist). Hors checklist = une tâche active absente de
-        // toutes les listes ; une tâche en pause absente va dans `enPause` : sa checklist est inconnue, pas absente.
+        // toutes les listes ; une tâche en pause absente va dans `pauseDans` si l'écran sait où elle est (13/11/2026),
+        // sinon dans `enPause` : sa checklist est inconnue, pas absente.
         'horsChecklist' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']]) && ($t['actif'] ?? null) !== false))),
-        'enPause' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']]) && ($t['actif'] ?? null) === false))),
+        'enPause' => array_values(array_map(fn ($t) => $t['id'], array_filter($taches, fn ($t) => !isset($dans[$t['id']]) && !isset($pauseDans[$t['id']]) && ($t['actif'] ?? null) === false))),
+        'pauseDans' => $pauseDans ?: (object) [],
         'niveaux' => array_values(array_filter(array_map('tkNiveauNorm', $nivs), fn ($l) => $l['id'] > 0)),
         'options' => ['jours' => tkValeurs($taches, 'day_of_week'), 'frequences' => tkValeurs($taches, 'frequency')],
         'creees' => $creees,
@@ -1551,6 +1633,14 @@ function tkRanger(array $b): array
     $ops = [['quoi' => 'Ajouter à la checklist #' . $cid, 'methode' => 'POST', 'chemin' => '/operational-framework/checklists/' . $cid . '/tasks', 'corps' => ['task_id' => $tid, 'sort_order' => $ordre + 1]]];
     $r = tkReq('POST', $ops[0]['chemin'], $ops[0]['corps']);
     $ops[0] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
+    // 409 « Task already assigned to this checklist » (13/11/2026) : elle y est déjà, en pause, et le panel la cachait.
+    // Ce n'est pas un refus : on s'en souvient et on continue (la réactiver, qui fait, qui contrôle).
+    $deja = $r['code'] === 409;
+    if ($deja) {
+        $ops[0] = ['quoi' => 'Déjà dans la checklist #' . $cid . ' (en pause, le panel la cachait)', 'methode' => 'POST', 'chemin' => $ops[0]['chemin'],
+            'corps' => $ops[0]['corps'], 'ok' => true, 'code' => 409, 'reponse' => $r['corps'], 'erreur' => null];
+        tkRetenirChecklist($tid, $cid, '409');
+    }
     if (!$ops[0]['ok']) {
         journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ' : ajout à la checklist #' . $cid . ' refusé par le panel');
         http_response_code(502);
@@ -1580,12 +1670,12 @@ function tkRanger(array $b): array
         $ops[$k] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
     }
     $refus = array_values(array_filter($ops, fn ($o) => !$o['ok']));
-    journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ' rangée dans la checklist #' . $cid
+    journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $tid . ($deja ? ' déjà dans la checklist #' . $cid . ' (en pause, cachée par le panel)' : ' rangée dans la checklist #' . $cid)
         . (!empty($b['reactiver']) ? ', réactivée' : '') . (count($ops) > 1 ? ' (' . count($ops) . ' appels)' : '') . ($refus ? ' — ' . count($refus) . ' refusé(s) par le panel' : ''));
     $q = tkQui(['ids' => [$tid]]);
     if ($refus) { http_response_code(502); }
-    return ['ok' => !$refus, 'ordre' => $ordre + 1, 'operations' => $ops, 'qui' => $q['qui'],
-        'error' => $refus ? 'rangée, mais ' . count($refus) . ' appel' . (count($refus) > 1 ? 's' : '') . ' refusé' . (count($refus) > 1 ? 's' : '') . ' : ' . $refus[0]['quoi'] . ' — ' . $refus[0]['erreur'] : null];
+    return ['ok' => !$refus, 'ordre' => $ordre + 1, 'dejaDedans' => $deja, 'operations' => $ops, 'qui' => $q['qui'],
+        'error' => $refus ? ($deja ? 'déjà dans la checklist' : 'rangée') . ', mais ' . count($refus) . ' appel' . (count($refus) > 1 ? 's' : '') . ' refusé' . (count($refus) > 1 ? 's' : '') . ' : ' . $refus[0]['quoi'] . ' — ' . $refus[0]['erreur'] : null];
 }
 
 /**
@@ -1664,6 +1754,7 @@ function tkSupprimer(string $genre, int $id): array
         return ['error' => $rep['erreur'], 'reponse' => $rep['corps']];
     }
     Db::exec('UPDATE ceo_cadre_cree SET supprime_le = ? WHERE genre = ? AND panel_id = ?', [date('Y-m-d H:i:s'), $genre, $id]);
+    if ($genre === 'tache') { try { ensureCadreTacheCl(); Db::exec('DELETE FROM ceo_cadre_tache_cl WHERE task_id = ?', [$id]); } catch (PDOException $e) { /* confort */ } }
     journalAdd('CEO', 'Cadre des tâches', null, ucfirst($quoi) . ' « ' . $r['nom'] . ' » (#' . $id . ') supprimée du panel' . (!empty($r['horsCockpit']) ? ' (créée dans le panel, suppression confirmée par son nom)' : ''));
     return ['ok' => true, 'id' => $id, 'reponse' => $rep['corps']];
 }

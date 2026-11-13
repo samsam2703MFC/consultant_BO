@@ -68,6 +68,8 @@ textarea.tk-in{width:100%;min-height:64px;font-family:ui-monospace,Menlo,Consola
 .tk-pas.oui{background:rgba(63,122,82,.12);color:var(--tk-ok)}
 .tk-pas.att{background:var(--prize-soft);color:var(--prize-ink)}
 .tk-pas.non{background:#fbe9eb;color:var(--tk-ko)}
+/* « en pause · réactiver » : la pastille, cliquable (une tâche en pause que le panel cache dans sa checklist). */
+button.tk-pas.dc-react{border:0;font-family:inherit;line-height:inherit;cursor:pointer}button.tk-pas.dc-react:hover:not(:disabled){filter:brightness(.95);text-decoration:underline}
 
 /* Volet de duplication */
 .tk-dup{border:1.5px solid var(--accent)}
