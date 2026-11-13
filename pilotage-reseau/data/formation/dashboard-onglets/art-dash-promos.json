@@ -198,7 +198,6 @@
   }
  ],
  "remarques": [
-  "La fenêtre du coefficient garde un bouton « Dupliquer » (data-pmcdup) et, sous × 2, la phrase « Retirez-la, ou dupliquez-la avec un avantage plus petit. » : ces gestes appartiennent au cockpit (Promotions › Édition). Non documentés ici ; probablement à retirer du dashboard (le menu ⋯ des lignes ne garde déjà que « Voir les codes du bon »).",
   "Halle (magasin 4) n’a aucune promotion à bon : la capture do-promos-bon est prise sur Corbais (magasin 2, bon « CMR - Newsletter Tubize Formule 2 »). La refaire avec SHOP=2 : node tools/formation/captures_onglets.js … art-dash-promos -- do-promos-bon (avec SHOP=4, elle échoue).",
   "Dans la capture de la liste, la colonne « Coef. » est hors de l’écran à 1200 px (tableau à faire glisser) : elle se voit dans la capture « Où les promotions sont utilisées ».",
   "« Remise non reconnue » : le libellé à l’écran ; l’explication (« remise sur la ligne qu’aucune promotion du panel n’explique ») vient du serveur (promos_magasin.php) et n’est pas affichée."

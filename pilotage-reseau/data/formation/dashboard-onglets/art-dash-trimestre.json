@@ -87,8 +87,8 @@
       "nl": "De 3 maanden van het kwartaal"
      },
      "texte": {
-      "fr": "Deux barres par mois : grise = le budget du mois, en couleur = le réalisé.\nLa légende : « vert ≥ 95 %, rouge sinon, orange = mois en cours » (à l’écran, le rouge est bordeaux et l’orange doré).\nSous chaque mois : son CA, son budget, le % atteint, « en cours », les clients.\nUn mois à venir : « — » et son budget.\nSi le mois en cours est loin de son budget : l’onglet Mois dit ce qu’il reste à faire par jour.",
-      "nl": "Twee balken per maand: grijs = het maandbudget, in kleur = het gerealiseerde.\nDe legende: « vert ≥ 95 %, rouge sinon, orange = mois en cours » (op het scherm is het rood bordeaux en het oranje goud).\nOnder elke maand: de omzet, het budget, het behaalde %, « en cours », de klanten.\nEen komende maand: « — » en het budget.\nAls de lopende maand ver van haar budget ligt: het tabblad Maand zegt wat er per dag nog moet gebeuren."
+      "fr": "Deux barres par mois : grise = le budget du mois, en couleur = le réalisé.\nLa légende : « vert ≥ 95 %, bordeaux sinon, or = mois en cours ».\nSous chaque mois : son CA, son budget, le % atteint, « en cours », les clients.\nUn mois à venir : « — » et son budget.\nSi le mois en cours est loin de son budget : l’onglet Mois dit ce qu’il reste à faire par jour.",
+      "nl": "Twee balken per maand: grijs = het maandbudget, in kleur = het gerealiseerde.\nDe legende: « vert ≥ 95 %, bordeaux sinon, or = mois en cours » (groen ≥ 95 %, anders bordeaux, goud = lopende maand).\nOnder elke maand: de omzet, het budget, het behaalde %, « en cours », de klanten.\nEen komende maand: « — » en het budget.\nAls de lopende maand ver van haar budget ligt: het tabblad Maand zegt wat er per dag nog moet gebeuren."
      },
      "critique": false,
      "photo": "do-trimestre-mois.jpg",
@@ -164,7 +164,6 @@
  "remarques": [
   "Le nom des cinq étapes du rituel du trimestre n’est pas dans le dashboard (seulement « étape n / 5 ») : l’article ne les nomme pas.",
   "L’écran exact où s’écrivent annotations, actions et rituel (plan de développement au cockpit ?) n’est pas dit dans le code du dashboard : à préciser.",
-  "Magasin 4 : aucune annotation ni action sur les trimestres de 2026 ; la capture montre « pas encore d’annotation ».",
-  "Les 3 mois : la légende dit « rouge » et « orange », les barres sont bordeaux (--color-primary) et dorées (--prize)."
+  "Magasin 4 : aucune annotation ni action sur les trimestres de 2026 ; la capture montre « pas encore d’annotation »."
  ]
 }

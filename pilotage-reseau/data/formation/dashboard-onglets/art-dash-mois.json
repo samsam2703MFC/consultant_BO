@@ -173,8 +173,8 @@
       "nl": "Rentabiliteit dag per dag"
      },
      "texte": {
-      "fr": "« Rentabilité — le résultat net, jour par jour » : une case par jour du mois en cours, le résultat net en % des ventes.\nLégende : rouge sous 0 %, orange de 0 à 5, verts de 5 à 25, doré au-delà de 25 % ; « · » = jour fermé. À l’écran, 0 à 5 % et plus de 25 % ont la même teinte : lire le chiffre.\nAu survol : la date, le net en euros et en %.\nSous les cases : le total du mois, et le personnel et les frais généraux du mois, répartis par jour ouvert.\nElle ne se lit que sur le mois en cours (P&L quotidien du panel) ; sans réponse du panel, le motif est écrit à la place des cases.\nSi plusieurs jours sont rouges : les ouvrir dans l’Opérationnel pour voir leur P&L court.",
-      "nl": "« Rentabilité — le résultat net, jour par jour »: één vak per dag van de lopende maand, het nettoresultaat in % van de verkoop.\nLegende: rood onder 0 %, oranje van 0 tot 5, groen van 5 tot 25, goud boven 25 %; « · » = gesloten dag. Op het scherm hebben 0 tot 5 % en meer dan 25 % dezelfde tint: lees het cijfer.\nBij aanwijzen: de datum, het netto in euro en in %.\nOnder de vakken: het totaal van de maand, en het personeel en de algemene kosten van de maand, verdeeld per open dag.\nZe is alleen leesbaar voor de lopende maand (dagelijkse W&V van het panel); zonder antwoord van het panel staat de reden in plaats van de vakken.\nAls meerdere dagen rood zijn: open ze in Operationeel om hun korte W&V te zien."
+      "fr": "« Rentabilité — le résultat net, jour par jour » : une case par jour du mois en cours, le résultat net en % des ventes.\nLégende : rouge sous 0 %, orange de 0 à 5, verts de 5 à 25, doré au-delà de 25 % ; « · » = jour fermé.\nAu survol : la date, le net en euros et en %.\nSous les cases : le total du mois, et le personnel et les frais généraux du mois, répartis par jour ouvert.\nElle ne se lit que sur le mois en cours (P&L quotidien du panel) ; sans réponse du panel, le motif est écrit à la place des cases.\nSi plusieurs jours sont rouges : les ouvrir dans l’Opérationnel pour voir leur P&L court.",
+      "nl": "« Rentabilité — le résultat net, jour par jour »: één vak per dag van de lopende maand, het nettoresultaat in % van de verkoop.\nLegende: rood onder 0 %, oranje van 0 tot 5, groen van 5 tot 25, goud boven 25 %; « · » = gesloten dag.\nBij aanwijzen: de datum, het netto in euro en in %.\nOnder de vakken: het totaal van de maand, en het personeel en de algemene kosten van de maand, verdeeld per open dag.\nZe is alleen leesbaar voor de lopende maand (dagelijkse W&V van het panel); zonder antwoord van het panel staat de reden in plaats van de vakken.\nAls meerdere dagen rood zijn: open ze in Operationeel om hun korte W&V te zien."
      },
      "critique": false,
      "photo": null,
@@ -235,7 +235,6 @@
  ],
  "remarques": [
   "Rentabilité jour par jour : pas de capture — au magasin 4 le panel répond « margin-heatmap sans réponse pour ce magasin », et aux magasins 3 et 5 toutes les cases valent 0 % ce mois-ci (photo: null).",
-  "Rentabilité : le code colore 0–5 % et plus de 25 % de la même teinte (var(--prize)) alors que la légende dit « orange » et « doré » : à corriger dans le dashboard ou à garder tel quel dans l’article.",
   "Les non-conformités par gravité sont prises au magasin 3 (Gosselies), octobre 2026 : le magasin 4 n’a aucune non-conformité récente.",
   "Ordre des parties : celui de l’écran (la barre des non-conformités est en haut de l’onglet, le calendrier avant le profil des jours et la rentabilité).",
   "Le profil des jours et le P&L du mois partagent une ligne ; le P&L est décrit dans l’article Semaine (0.0.39)."

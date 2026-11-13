@@ -87,8 +87,8 @@
       "nl": "Kwartaal per kwartaal"
      },
      "texte": {
-      "fr": "Une ligne par trimestre (clos, en cours, à venir) : objectif, réalisé, attendu, écart, atteinte, clients manquants, panier, food, labour, marge nette, annotations.\nAtteinte = réalisé ÷ attendu : bordeaux sous 80 %, doré de 80 à 95, vert de 95 à 105, doré à 105 % et plus.\nAnnotations : le début de chaque voix (Franchisé, Consultant, Marque), les actions faites et l’étape du rituel (« rituel 2/5 »).\nLa dernière ligne : le total de l’année, l’objectif de l’année et la projection.\nPanier : hors clients pro ; en gris, clients pro compris (tickets pro pas encore lus).\nUn toucher sur une ligne ouvre le trimestre dans l’onglet Trimestre.\nSi un trimestre clos est sous 80 % : ses annotations doivent dire pourquoi ; vides, c’est au rituel du trimestre de les écrire.",
-      "nl": "Eén regel per kwartaal (afgesloten, lopend, komend): doelstelling, gerealiseerd, verwacht, verschil, bereikt, ontbrekende klanten, ticket, food, labour, nettomarge, notities.\nAtteinte = gerealiseerd ÷ verwacht: bordeaux onder 80 %, goud van 80 tot 95, groen van 95 tot 105, goud vanaf 105 %.\nNotities: het begin van elke stem (Franchisenemer, Consultant, Merk), de uitgevoerde acties en de stap van het ritueel (« rituel 2/5 »).\nDe laatste regel: het totaal van het jaar, de jaardoelstelling en de projectie.\nTicket: zonder zakelijke klanten; in het grijs met zakelijke klanten (zakelijke tickets nog niet gelezen).\nEen tik op een regel opent het kwartaal in het tabblad Kwartaal.\nAls een afgesloten kwartaal onder 80 % ligt: de notities moeten zeggen waarom; zijn ze leeg, dan schrijft het kwartaalritueel ze."
+      "fr": "Une ligne par trimestre (clos, en cours, à venir) : objectif, réalisé, attendu, écart, atteinte, clients manquants, panier, food, labour, marge nette, annotations.\nAtteinte = réalisé ÷ attendu : bordeaux sous 80 %, orange de 80 à 95, vert de 95 à 105, doré à 105 % et plus.\nAnnotations : le début de chaque voix (Franchisé, Consultant, Marque), les actions faites et l’étape du rituel (« rituel 2/5 »).\nLa dernière ligne : le total de l’année, l’objectif de l’année et la projection.\nPanier : hors clients pro ; en gris, clients pro compris (tickets pro pas encore lus).\nUn toucher sur une ligne ouvre le trimestre dans l’onglet Trimestre.\nSi un trimestre clos est sous 80 % : ses annotations doivent dire pourquoi ; vides, c’est au rituel du trimestre de les écrire.",
+      "nl": "Eén regel per kwartaal (afgesloten, lopend, komend): doelstelling, gerealiseerd, verwacht, verschil, bereikt, ontbrekende klanten, ticket, food, labour, nettomarge, notities.\nAtteinte = gerealiseerd ÷ verwacht: bordeaux onder 80 %, oranje van 80 tot 95, groen van 95 tot 105, goud vanaf 105 %.\nNotities: het begin van elke stem (Franchisenemer, Consultant, Merk), de uitgevoerde acties en de stap van het ritueel (« rituel 2/5 »).\nDe laatste regel: het totaal van het jaar, de jaardoelstelling en de projectie.\nTicket: zonder zakelijke klanten; in het grijs met zakelijke klanten (zakelijke tickets nog niet gelezen).\nEen tik op een regel opent het kwartaal in het tabblad Kwartaal.\nAls een afgesloten kwartaal onder 80 % ligt: de notities moeten zeggen waarom; zijn ze leeg, dan schrijft het kwartaalritueel ze."
      },
      "critique": false,
      "photo": "do-annee-trimestres.jpg",
@@ -123,8 +123,8 @@
       "nl": "De heatmap"
      },
      "texte": {
-      "fr": "« Heatmap mensuelle » : une case par mois, une ligne pour l’année d’avant, une pour l’année en cours.\nDeux boutons : « % d’atteinte du budget » et « CA du mois ». Le budget : le budget validé, sinon le CA théorique de l’étude.\nEn % d’atteinte, la légende : rouge sous 80 %, orange 80 à 95, vert 95 à 105, doré au-delà de 105 %. À l’écran, 80 à 95 % et plus de 105 % ont la même teinte dorée : lire le chiffre.\nEn CA du mois : plus la case est foncée, plus le mois a vendu.\nLe mois en cours est encadré en pointillé ; au survol d’une case : CA, budget, tickets, panier.\nSi plusieurs mois se suivent sous 80 % : l’objectif de l’année est à revoir avec le consultant, au rituel du trimestre.",
-      "nl": "« Heatmap mensuelle »: één vak per maand, één regel voor het vorige jaar, één voor het lopende jaar.\nTwee knoppen: « % d’atteinte du budget » en « CA du mois ». Het budget: het gevalideerde budget, anders de theoretische omzet uit de studie.\nIn % bereikt, de legende: rood onder 80 %, oranje 80 tot 95, groen 95 tot 105, goud boven 105 %. Op het scherm hebben 80 tot 95 % en meer dan 105 % dezelfde gouden tint: lees het cijfer.\nIn CA du mois: hoe donkerder het vak, hoe meer de maand verkocht heeft.\nDe lopende maand heeft een stippelrand; bij aanwijzen van een vak: omzet, budget, tickets, ticket.\nAls meerdere maanden na elkaar onder 80 % liggen: de jaardoelstelling bespreek je met de consultant, op het kwartaalritueel."
+      "fr": "« Heatmap mensuelle » : une case par mois, une ligne pour l’année d’avant, une pour l’année en cours.\nDeux boutons : « % d’atteinte du budget » et « CA du mois ». Le budget : le budget validé, sinon le CA théorique de l’étude.\nEn % d’atteinte, la légende : rouge sous 80 %, orange 80 à 95, vert 95 à 105, doré au-delà de 105 %.\nEn CA du mois : plus la case est foncée, plus le mois a vendu.\nLe mois en cours est encadré en pointillé ; au survol d’une case : CA, budget, tickets, panier.\nSi plusieurs mois se suivent sous 80 % : l’objectif de l’année est à revoir avec le consultant, au rituel du trimestre.",
+      "nl": "« Heatmap mensuelle »: één vak per maand, één regel voor het vorige jaar, één voor het lopende jaar.\nTwee knoppen: « % d’atteinte du budget » en « CA du mois ». Het budget: het gevalideerde budget, anders de theoretische omzet uit de studie.\nIn % bereikt, de legende: rood onder 80 %, oranje 80 tot 95, groen 95 tot 105, goud boven 105 %.\nIn CA du mois: hoe donkerder het vak, hoe meer de maand verkocht heeft.\nDe lopende maand heeft een stippelrand; bij aanwijzen van een vak: omzet, budget, tickets, ticket.\nAls meerdere maanden na elkaar onder 80 % liggen: de jaardoelstelling bespreek je met de consultant, op het kwartaalritueel."
      },
      "critique": true,
      "photo": "do-annee-heatmap.jpg",
@@ -164,8 +164,8 @@
  "quiz": [
   {
    "question": {
-    "fr": "Dans la heatmap, une case dorée affiche 86 %. Comment la lire ?",
-    "nl": "In de heatmap toont een goudkleurig vak 86 %. Hoe lees je het?"
+    "fr": "Dans la heatmap, une case orange affiche 86 %. Comment la lire ?",
+    "nl": "In de heatmap toont een oranje vak 86 %. Hoe lees je het?"
    },
    "choix": {
     "fr": [
@@ -202,7 +202,6 @@
   }
  ],
  "remarques": [
-  "Heatmap (% d’atteinte) et colonne Atteinte du tableau des trimestres : 80–95 % et ≥ 105 % ont la même couleur (var(--prize) / #B0792A) alors que la légende dit « orange » et « doré ». Couleur d’Atteinte du tableau des trimestres : sur l’attendu (réalisé ÷ attendu), pas sur l’objectif.",
   "L’onglet Année affiche encore un sélecteur de date (‹ › et le calendrier), contrairement aux autres onglets de période ; non décrit ici (article « Le haut de l’écran »)."
  ]
 }

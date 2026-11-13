@@ -159,8 +159,8 @@
       "nl": "Zijn profiel, zijn bezoeken, zijn gewoontes"
      },
      "texte": {
-      "fr": "« Son profil, mois par mois » : chaque mois, ses passages, son profil et son rythme par mois.\n« Ses passages » : les 14 dernières semaines, une case par jour ; attention, ici la case dorée est une commande et la bordeaux le comptoir ; le montant s’écrit dès 10 €, le total de la semaine à droite.\n« Ses habitudes » : ses passages par jour de la semaine, ses moments (matin, midi, après-midi, soir) et « Ce qu’il prend » (ses articles les plus achetés).\nSi un client fidèle n’a plus de case dans les dernières semaines : le signaler au responsable.",
-      "nl": "« Son profil, mois par mois »: per maand zijn bezoeken, zijn profiel en zijn ritme per maand.\n« Ses passages »: de laatste 14 weken, één vakje per dag; let op, hier is het gouden vakje een bestelling en het bordeaux de toonbank; het bedrag staat er vanaf 10 €, het weektotaal rechts.\n« Ses habitudes »: zijn bezoeken per weekdag, zijn momenten (ochtend, middag, namiddag, avond) en « Ce qu’il prend » (zijn meest gekochte artikels).\nAls een trouwe klant de laatste weken geen vakje meer heeft: meld het aan de verantwoordelijke."
+      "fr": "« Son profil, mois par mois » : chaque mois, ses passages, son profil et son rythme par mois.\n« Ses passages » : les 14 dernières semaines, une case par jour ; la case bordeaux est une commande, la dorée le comptoir (les couleurs de « Comment il achète ») ; le montant s’écrit dès 10 €, le total de la semaine à droite.\n« Ses habitudes » : ses passages par jour de la semaine, ses moments (matin, midi, après-midi, soir) et « Ce qu’il prend » (ses articles les plus achetés).\nSi un client fidèle n’a plus de case dans les dernières semaines : le signaler au responsable.",
+      "nl": "« Son profil, mois par mois »: per maand zijn bezoeken, zijn profiel en zijn ritme per maand.\n« Ses passages »: de laatste 14 weken, één vakje per dag; het bordeaux vakje is een bestelling, het gouden de toonbank (de kleuren van « Comment il achète »); het bedrag staat er vanaf 10 €, het weektotaal rechts.\n« Ses habitudes »: zijn bezoeken per weekdag, zijn momenten (ochtend, middag, namiddag, avond) en « Ce qu’il prend » (zijn meest gekochte artikels).\nAls een trouwe klant de laatste weken geen vakje meer heeft: meld het aan de verantwoordelijke."
      },
      "critique": false,
      "photo": "do-fidelite-habitudes.jpg",
@@ -257,7 +257,6 @@
   }
  ],
  "remarques": [
-  "Couleurs inversées dans la fiche client : « Comment il achète » met Comptoir en doré et Commande comptoir en bordeaux, « Ses passages » met la commande en doré et le comptoir en bordeaux. L’article le signale ; à harmoniser dans le dashboard ?",
   "Données personnelles : les photos do-fidelite-clients, do-fidelite-fiche, do-fidelite-habitudes et do-fidelite-tickets ont été prises avec les noms floutés (champ « flou » ajouté au plan, ignoré par captures_onglets.js ; elles ont été produites par une copie de l’outil qui floute ces sélecteurs avant la capture). Relancer captures_onglets.js sur ces quatre noms referait des images AVEC les noms : ne pas le faire sans floutage. do-fidelite-habitudes ne contient pas de nom.",
   "La part des tickets scannés (grand chiffre) est toujours celle d’aujourd’hui : la capture du 13/11/2026 à midi montre 0,0 % (noir). Une capture en fin de journée serait plus parlante.",
   "Les noms des profils (Découverte… Fanbase) et leurs conditions viennent du cockpit : l’article les cite comme exemple de la capture."

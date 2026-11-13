@@ -117,8 +117,8 @@
       "nl": "Exploitation"
      },
      "texte": {
-      "fr": "En tête, le verdict : le nombre de « points à surveiller » et leurs noms, ou ✓ « tout est au vert » ; à droite un point par chiffre.\nLes seuils : chiffre d’affaires vert dès 100 % de l’objectif, orange dès 90 % ; résultat vert dès 15 % des ventes, orange dès 5 %.\nMatière verte jusqu’au seuil du réseau, orange jusqu’à 10 points au-dessus ; main-d’œuvre verte jusqu’à 20 %, orange jusqu’à 25 % ; poubelle verte jusqu’à 1,5 % du chiffre, orange jusqu’à 3 %.\nPuis « Le P&L court de la journée », les tuiles « Réseau » (le rang) et « Canaux » (un toucher les déplie), et les ventes par catégorie.\n« tout est au vert » ne rassure que si la ligne dit aussi « N au vert » : « 0 au vert · N pas encore jugés » veut dire que rien n’est encore lu.\nSi un point est rouge : ouvre la ligne du P&L court qui lui correspond.",
-      "nl": "Bovenaan het oordeel: het aantal « points à surveiller » en hun namen, of ✓ « tout est au vert »; rechts één punt per cijfer.\nDe drempels: omzet groen vanaf 100 % van de doelstelling, oranje vanaf 90 %; resultaat groen vanaf 15 % van de verkoop, oranje vanaf 5 %.\nGrondstoffen groen tot de drempel van het netwerk, oranje tot 10 punten erboven; personeel groen tot 20 %, oranje tot 25 %; afval groen tot 1,5 % van de omzet, oranje tot 3 %.\nDan « Le P&L court de la journée » (de korte W&V), de tegels « Réseau » (de rang) en « Canaux » (een tik klapt ze open), en de verkoop per categorie.\n« tout est au vert » stelt alleen gerust als de regel ook « N au vert » zegt: « 0 au vert · N pas encore jugés » betekent dat nog niets gelezen is.\nAls een punt rood is: open de lijn van de korte W&V die erbij hoort."
+      "fr": "En tête, le verdict : le nombre de « points à surveiller » et leurs noms ; ✓ « tout est au vert » quand tout est jugé ; « … pas encore jugé » tant que les chiffres du jour ne sont pas lus ; à droite un point par chiffre.\nLes seuils : chiffre d’affaires vert dès 100 % de l’objectif, orange dès 90 % ; résultat vert dès 15 % des ventes, orange dès 5 %.\nMatière verte jusqu’au seuil du réseau, orange jusqu’à 10 points au-dessus ; main-d’œuvre verte jusqu’à 20 %, orange jusqu’à 25 % ; poubelle verte jusqu’à 1,5 % du chiffre, orange jusqu’à 3 %.\nPuis « Le P&L court de la journée », les tuiles « Réseau » (le rang) et « Canaux » (un toucher les déplie), et les ventes par catégorie.\n« rien à signaler pour l’instant » : les points jugés sont au vert, les autres attendent encore leurs chiffres.\nSi un point est rouge : ouvre la ligne du P&L court qui lui correspond.",
+      "nl": "Bovenaan het oordeel: het aantal « points à surveiller » en hun namen; ✓ « tout est au vert » als alles beoordeeld is; « … pas encore jugé » zolang de cijfers van de dag niet gelezen zijn; rechts één punt per cijfer.\nDe drempels: omzet groen vanaf 100 % van de doelstelling, oranje vanaf 90 %; resultaat groen vanaf 15 % van de verkoop, oranje vanaf 5 %.\nGrondstoffen groen tot de drempel van het netwerk, oranje tot 10 punten erboven; personeel groen tot 20 %, oranje tot 25 %; afval groen tot 1,5 % van de omzet, oranje tot 3 %.\nDan « Le P&L court de la journée » (de korte W&V), de tegels « Réseau » (de rang) en « Canaux » (een tik klapt ze open), en de verkoop per categorie.\n« rien à signaler pour l’instant »: de beoordeelde punten zijn groen, de andere wachten nog op hun cijfers.\nAls een punt rood is: open de lijn van de korte W&V die erbij hoort."
      },
      "critique": true,
      "photo": "do-tel-exp.jpg",
@@ -211,8 +211,8 @@
    "nl": "Op de telefoon heeft het bolletje van een tabblad de kleur van het slechtste cijfer: één rood volstaat."
   },
   {
-   "fr": "« tout est au vert » avec « 0 au vert » veut dire : rien n’est encore lu, pas « tout va bien ».",
-   "nl": "« tout est au vert » met « 0 au vert » betekent: nog niets gelezen, niet « alles gaat goed »."
+   "fr": "« pas encore jugé » veut dire : rien n’est encore lu, pas « tout va bien ».",
+   "nl": "« pas encore jugé » betekent: er is nog niets gelezen, niet « alles is goed »."
   },
   {
    "fr": "La jauge du comptoir se lit sans le B2B : le B2B a sa propre jauge, face à sa part habituelle.",
@@ -241,8 +241,8 @@
   },
   {
    "question": {
-    "fr": "« Exploitation » affiche « tout est au vert · 0 au vert · 8 pas encore jugés ». Que conclure ?",
-    "nl": "« Exploitation » toont « tout est au vert · 0 au vert · 8 pas encore jugés ». Wat besluit je?"
+    "fr": "« Exploitation » affiche « … pas encore jugé · 8 points en attente des chiffres du jour ». Que conclure ?",
+    "nl": "« Exploitation » toont « … pas encore jugé · 8 points en attente des chiffres du jour ». Wat besluit je?"
    },
    "choix": {
     "fr": [
@@ -279,7 +279,6 @@
   }
  ],
  "remarques": [
-  "Exploitation au téléphone : tant que la journée n’est pas lue, le verdict affiche ✓ « tout est au vert · 0 au vert · 8 pas encore jugés » (maVerdict sans point jugé = vert). Vu en capture le 13/11 : un franchisé peut y lire « tout va bien ». À corriger dans le code (verdict neutre tant que rien n’est jugé) ?",
   "La réclamation fournisseur est la seule page du téléphone qui envoie quelque chose (au fournisseur) : non utilisée pour les captures, rien n’a été envoyé.",
   "Couleurs exactes de la frise « La journée » (vert en poste, gris fini, cadre à venir ; cuissons vert validée, orange à valider) prises des commentaires du code, pas du CSS.",
   "Captures du vendredi 13/11/2026 vers 12 h 40 (journée en cours) ; la photo de la réclamation commence à « Le produit », « La photo » est juste au-dessus."
