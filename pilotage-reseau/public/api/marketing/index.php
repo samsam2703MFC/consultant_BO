@@ -29,8 +29,7 @@ require_once __DIR__ . '/../../../src/writes.php';
 require_once __DIR__ . '/../../../src/auth.php';
 require_once __DIR__ . '/../../../src/acces.php';
 
-// L'accès (13/11/2026) : l'identité posée en dur ci-dessous ne vaut que pour le siège, connecté avec son compte de la
-// console (src/acces.php). Seules les routes publiques des campagnes (/api/v1/public/…) restent ouvertes.
+// L'accès (13/11/2026) : l'identité posée en dur ci-dessous ne vaut que pour le siège connecté (src/acces.php). Seules les routes publiques des campagnes (/api/v1/public/…) restent ouvertes.
 $chemin = (string) (parse_url((string) ($_SERVER['REQUEST_URI'] ?? '/'), PHP_URL_PATH) ?: '/');
 if (!str_contains($chemin, '/api/v1/public/')) {
     $refus = accesRefus((string) ($_SERVER['REQUEST_METHOD'] ?? 'GET'), '/marketing-assistant');
