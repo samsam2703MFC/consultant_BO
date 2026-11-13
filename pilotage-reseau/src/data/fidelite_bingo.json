@@ -16,6 +16,17 @@
     "provisoire": true
   },
   "multiplicateurCase": 2,
+  "coefficients": {
+    "_": "Coefficients de la semaine, par client (handoff, onglet Points) : sur chaque ligne de ticket, le plus fort s'applique, jamais la somme. Recalculés chaque lundi d'après le profil d'achat. Pas dans l'API de l'ERP : DEMANDE-ERP.md.",
+    "caseCochee": 2,
+    "jourPerso": 3,
+    "offrePerso": [
+      2,
+      3
+    ],
+    "produitSemaine": 2,
+    "habituel": 1
+  },
   "palier": {
     "points": 100,
     "valeur": 5

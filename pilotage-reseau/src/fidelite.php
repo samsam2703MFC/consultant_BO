@@ -317,7 +317,7 @@ function ep_fidelite(): array
     return ['source' => 'api', 'erp' => ['ok' => $err === null, 'erreur' => $err], 'aujourdhui' => fidAujourdhui(), 'heure' => fidHeureLocale(),
         'magasins' => $err === null ? fidMagasins() : [], 'carte' => $prog ? fidCarteVue($prog) : null, 'autres' => $autres,
         'annee' => fidAnnee(),
-        'bingo' => ['saison' => $saison, 'seuil' => (float) $conf['seuilEuros'], 'multiplicateur' => (float) ($conf['multiplicateurCase'] ?? 1), 'palier' => $conf['palier'] ?? null, 'tousLes' => (int) $conf['tousLes'], 'validite' => (int) $conf['validite'],
+        'bingo' => ['saison' => $saison, 'seuil' => (float) $conf['seuilEuros'], 'multiplicateur' => (float) ($conf['multiplicateurCase'] ?? 1), 'palier' => $conf['palier'] ?? null, 'coefficients' => array_diff_key((array) ($conf['coefficients'] ?? []), ['_' => 1]), 'tousLes' => (int) $conf['tousLes'], 'validite' => (int) $conf['validite'],
             'bons' => $bons, 'superBon' => $super, 'tirage' => $conf['tirage'] ?? null, 'prefixe' => $saison ? $saison['campagne'] : 'Bingo']];
 }
 

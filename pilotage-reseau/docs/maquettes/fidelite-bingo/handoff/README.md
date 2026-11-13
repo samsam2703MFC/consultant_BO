@@ -70,6 +70,35 @@ points += gain ; convertir les paliers
 ```
 Une semaine se clôt le dimanche 23:59 : remise à zéro de `depenseSem`, fin du boost.
 
+### Coefficients personnalisés (onglet Points)
+Chaque lundi, le moteur calcule pour chaque client un jeu de bonus d'après son profil d'achat. Les bonus **ne s'additionnent pas** : sur chaque ligne de ticket, le coefficient le plus fort s'applique.
+
+`coefLigne = max(caseCochee ? 2 : 1, coefJour(date), coefProduit(produit))`
+
+- **Case cochée ×2** : pour tous, sur les tickets postérieurs à la case, jusqu'au dimanche.
+- **Jour perso ×3** : un jour où le client vient rarement, la veille de son jour habituel. Exemple maquette : vendredi, pour une cliente du samedi matin.
+- **Offre perso ×2 ou ×3** : un produit choisi pour élargir le panier. Exemples :
+  - une catégorie jamais achetée (éclair, ×3) ;
+  - une affinité « les clients qui aiment X » (tartelette, ×3) ;
+  - un produit délaissé (cookies, ×2).
+  La maquette fait tourner une offre par semaine (`PERSO[(semaine-1) % 3]`).
+- **Produit de la semaine ×2** : pour tous, c'est le thème de la case bingo.
+- **Produit habituel ×1** : on ne bonifie jamais ce que le client achète déjà ; il est affiché comme repère.
+
+Le profil affiché sous les bonus (« Choisi d'après vos habitudes ») explique le choix au client. Données nécessaires :
+- jour et créneau habituels ;
+- catégories achetées et jamais achetées ;
+- panier moyen ;
+- produits achetés auparavant mais plus récemment.
+
+Modèle : `BonusHebdo { clientId, semaine, jour?: {index, coef, raison}, produits: [{sku, coef, type: perso|semaine|habituel, raison}] }`.
+
+Écran (onglet Points, de haut en bas) :
+1. En-tête « POINTS » + « de Julie », solde et reste au palier, jauge abricot.
+2. **Votre semaine** : 7 pastilles Lun → Dim avec la date et le coefficient du jour. Couleurs : ×1 beige, ×2 abricot, ×3 rubis. Le jour courant a un contour noir de 1,4 px, les jours passés une opacité de 0,45. Dessous, une ligne d'explication par bonus.
+3. **Compte plus cette semaine** : offre perso (fond abricot à 30 %, bordure pleine, coefficient sur fond rubis), produit de la semaine (bordure pointillée, coefficient abricot), produit habituel (×1 grisé).
+4. **Choisi d'après vos habitudes** : puces du profil et rappel de non-cumul.
+
 ### Modèle de données (proposition)
 - `CarteSaison { id, saison, debut, fin, semaines[13]: {n, du, au, titre, sous, fete?, jourFete?, illustration} }`
 - `CarteClient { id, clientId, carteSaisonId, numero, qrToken, cochees: {n: date}, depenseParSemaine: {n: €} }`

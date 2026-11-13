@@ -64,8 +64,13 @@ function tplProgramme(f, x){
     <div class="fi-r"><span class="fi-ic">${esc(B.palierTxt.split(' ')[0])}</span><div class="fi-ph">Tous les ${esc(B.palierTxt)} : un bon, de lui-même, et le reste des points est gardé. Les points ne s’arrêtent pas avec la saison.
       <small>Le palier de la carte ${api('tiers[]', esc)} ; l’ERP n’échange que si le client le demande ${api('POST /webshop/loyalty/points/redeem', esc)}</small></div><span class="fi-st att">échange manuel dans l’ERP</span></div>
     <div class="fi-r"><span class="fi-ic gris">1</span><div class="fi-ph">Un bon à la fois en caisse : bon de points ou bon du bingo, le client choisit dans l’app.<small>${api('POST /webshop/vouchers/activation', esc)} · la caisse le lit</small></div><span class="fi-st">ERP</span></div>
-  </div>${gap('À demander à l’ERP', 'Deux règles du handoff n’existent pas dans l’API : le ×' + B.multTxt + ' d’un client jusqu’au dimanche une fois sa case cochée (les ×2 de l’ERP sont des créneaux pour tous ; le cockpit ne peut pas créditer de points), et l’échange automatique au palier. Le cockpit ne les simule pas.', esc)}
+  </div>${gap('À demander à l’ERP', 'Le ×' + B.multTxt + ' d’un client une fois sa case cochée et l’échange automatique au palier n’existent pas dans l’API (les ×2 de l’ERP sont des créneaux pour tous ; le cockpit ne peut pas créditer de points). Le cockpit ne les simule pas.', esc)}
   <p class="fi-pied">Plus à l’écran, faute d’API : bonus panier, anniversaire, bienvenue, 2e visite, parrainage, retour après absence, plafond, jours exclus, budget. Le bingo reprend le rôle des déclencheurs de visite.</p></section>` : '';
+  const coefs = f.coefs7 && f.coefs7.length ? `<section class="fi-grp"><h3>Les coefficients de la semaine · chaque client les siens</h3><div class="fi-liste">
+    ${f.coefs7.map(([k, t, d]) => `<div class="fi-r"><span class="fi-ic${k === '×1' ? ' gris' : ''}">${esc(k)}</span><div class="fi-ph">${esc(t)}<small>${esc(d)}</small></div><span class="fi-st att">${k === '×1' ? '' : 'pas dans l’API'}</span></div>`).join('')}
+    <div class="fi-r"><span class="fi-ic gris">max</span><div class="fi-ph">Ils ne s’additionnent pas : sur chaque ligne du ticket, le plus fort s’applique. Recalculés chaque lundi d’après le profil d’achat du client.
+      <small>coefLigne = max(case cochée, jour perso, offre perso ou produit de la semaine) · le profil : jour et créneau habituels, catégories prises et jamais prises, panier moyen, produits délaissés</small></div><span></span></div>
+  </div>${gap('À demander à l’ERP', 'L’API ne connaît qu’un ×2 par créneau horaire, pour tous et sur tout le ticket. Ces coefficients demandent à l’ERP un bonus par client et par produit, appliqué au calcul des points, et les lignes des tickets pour le profil. La demande est écrite : docs/maquettes/fidelite-bingo/DEMANDE-ERP.md.', esc)}</section>` : '';
   const S = f.sim, R = S.r;
   const sim = `<section class="fi-card"><h3>Simuler un ticket</h3><div class="fi-src">${api('POST /admin/loyalty/simulate', esc)} · barème en cours d’écriture</div>
     <div class="fi-sim-f"><label>Magasin <select class="fi-in s t" ${x.C(S.setShop)}>${S.shops.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
@@ -83,7 +88,7 @@ function tplProgramme(f, x){
   const src = `<section class="fi-card"><h3>D’où vient l’écran</h3><table class="fi-kv">
     ${[['La carte, le barème', 'GET /admin/loyalty/cards'], ['Les magasins', 'GET /admin/loyalty/options'], ['Les bons du bingo', 'GET /admin/voucher-campaigns'], ['Les points de la semaine', 'GET /shops/{id}/loyalty/customers'], ['Écrire', 'POST · PATCH /admin/loyalty/cards']]
       .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${api(v, esc)}</td></tr>`).join('')}</table><div class="fi-src">Aucune table du cockpit : tout se relit dans l’ERP à l’ouverture.</div></section>`;
-  return `${erp}${carte}<div class="fi-g21"><div class="fi-col">${points}${bingo}${ensemble}</div><aside class="fi-col fi-aside">${sim}${pub}${src}</aside></div>`;
+  return `${erp}${carte}<div class="fi-g21"><div class="fi-col">${points}${bingo}${ensemble}${coefs}</div><aside class="fi-col fi-aside">${sim}${pub}${src}</aside></div>`;
 }
 
 function tplClients(f, x){

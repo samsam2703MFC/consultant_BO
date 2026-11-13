@@ -52,4 +52,5 @@ Lire `docs/dimona.md`. En bref :
   points font consommer (×2 jusqu'au dimanche une fois la case cochée, un bon tous les 100 points).
 - **Uniquement par l'API de l'ERP** (`/admin/loyalty/*`, `/shops/{id}/loyalty/*`, `/admin/voucher-campaigns/*`) :
   aucune table du cockpit. Ce que l'API ne sait pas faire (le ×2 par client après la case, l'échange automatique au
-  palier) se dit à l'écran et se demande à l'ERP ; il ne se simule pas.
+  palier, les coefficients personnels de la semaine — jour perso, offre perso, produit de la semaine, le plus fort par
+  ligne) se dit à l'écran et se demande à l'ERP (`docs/maquettes/fidelite-bingo/DEMANDE-ERP.md`) ; il ne se simule pas.

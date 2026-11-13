@@ -117,3 +117,11 @@ node docs/maquettes/fidelite-bingo/capturer.cjs
   maquettes 1 à 3 ci-dessus. Deux règles n'ont pas d'API dans l'ERP (le ×2 par client après la case, l'échange
   automatique au palier) : l'écran le dit, rien n'est simulé.
 - Les dessins de `public/assets/img/bingo` sont ceux du handoff (560 px).
+
+## Coefficients personnalisés (handoff du 13/11/2026, 2e version)
+
+Le handoff ajoute l'onglet Points de l'app : chaque lundi, chaque client reçoit ses bonus de la semaine (case cochée
+×2, jour perso ×3, offre perso ×2 ou ×3, produit de la semaine ×2, produit habituel ×1) ; sur chaque ligne de ticket,
+le plus fort s'applique. Rien de cela n'existe dans l'API de l'ERP (un ×2 par créneau, pour tous, sur tout le
+ticket ; pas de lignes de ticket dans les rapports de fidélité). Le Programme les montre en réglages « pas dans
+l'API » ; ce que l'ERP doit ajouter est écrit dans `DEMANDE-ERP.md`.

@@ -67,6 +67,7 @@ verifie(count($d['autres']) === 4 && $d['autres'][0]['nom'] === 'Carte Pain', 'q
 verifie(count($d['magasins']) === 4 && $d['magasins'][0]['nom'] === 'Corbais', 'les magasins de l’ERP, nom court');
 verifie(array_map(static fn ($x) => $x['campagne']['id'] ?? null, $d['bingo']['bons']) === [41, 41, 41, 41], 'les bons de 2 € partagent la campagne « Bingo hiver · 2 € »');
 verifie($d['bingo']['superBon']['campagne']['statut'] === 'DRAFT' && $d['bingo']['superBon']['provisoire'], 'le super bon : campagne en brouillon, montant provisoire');
+verifie($d['bingo']['coefficients'] === ['caseCochee' => 2, 'jourPerso' => 3, 'offrePerso' => [2, 3], 'produitSemaine' => 2, 'habituel' => 1], 'les coefficients de la semaine (handoff, onglet Points)');
 verifie(count($d['annee']) === 4 && $d['annee'][0]['etat'] === 'cours', 'les quatre cartes de l’année');
 $_GET = ['saison' => 'P27'];
 $dp = ep_fidelite();

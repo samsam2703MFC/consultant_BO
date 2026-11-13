@@ -48,8 +48,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
       <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ megaValeur }}" onChange="{{ onMega }}" style="width:44px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
     </label>
     <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-muted)">points
-      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ ptsParEuro }}" onChange="{{ onPtsEuro }}" style="width:30px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">pt/€</span>
-      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ palier }}" onChange="{{ onPalier }}" style="width:40px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">pts</span>
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ ptsParEuro }}" onChange="{{ onPtsEuro }}" style="width:30px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px"><span style="white-space:nowrap">pt/€</span></span>
+      <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ palier }}" onChange="{{ onPalier }}" style="width:48px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">pts</span>
       <span>=</span>
       <span style="display:inline-flex;align-items:center;gap:4px;background:var(--color-background-secondary);border:1px solid var(--color-border-tertiary);border-radius:var(--radius-sm);padding:2px 6px"><input type="number" min="1" step="1" value="{{ palierVal }}" onChange="{{ onPalierVal }}" style="width:30px;border:none;background:transparent;text-align:right;color:var(--color-primary);outline:none;font-size:12.5px">€</span>
     </div>
@@ -60,10 +60,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
     </div>
     <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
       <sc-for list="{{ tickets }}" as="t" hint-placeholder-count="3">
-        <button class="btn-primary" onClick="{{ t.onClick }}" disabled="{{ t.disabled }}" style="padding:7px 12px;font-size:12px;opacity:{{ t.op }}">{{ t.label }}</button>
+        <button class="btn-primary" onClick="{{ t.onClick }}" disabled="{{ t.disabled }}" style="padding:7px 12px;font-size:12px;white-space:nowrap;opacity:{{ t.op }}">{{ t.label }}</button>
       </sc-for>
-      <button class="btn-secondary" onClick="{{ suivante }}" disabled="{{ fini }}" style="padding:7px 12px;font-size:12px;background:var(--color-surface);opacity:{{ suivOp }}">Semaine suivante ›</button>
-      <button class="btn-secondary" onClick="{{ reset }}" style="padding:7px 12px;font-size:12px;background:var(--color-surface)">Revenir au 14 janvier</button>
+      <button class="btn-secondary" onClick="{{ suivante }}" disabled="{{ fini }}" style="padding:7px 12px;font-size:12px;white-space:nowrap;background:var(--color-surface);opacity:{{ suivOp }}">Semaine suivante ›</button>
+      <button class="btn-secondary" onClick="{{ reset }}" style="padding:7px 12px;font-size:12px;white-space:nowrap;background:var(--color-surface)">Revenir au 14 janvier</button>
     </div>
   </div>
 
@@ -140,11 +140,12 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
           <div style="display:flex;justify-content:space-between;padding:14px 28px 0;font-size:13px"><span>9:41</span><span style="font-size:11px;letter-spacing:.04em">5G ▮▮▮</span></div>
           <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 18px 8px"><img src="img/logo.png" alt="" style="height:17px;display:block"><span style="font-size:12px;color:var(--color-text-muted)">Bonjour Julie</span></div>
           <div style="display:flex;margin:2px 18px 10px;background:var(--color-bg);border-radius:var(--radius-md);padding:2px">
-            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:var(--radius-sm);background:var(--color-surface);color:var(--color-primary)">Bingo</span>
-            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;color:var(--color-text-muted)">Points</span>
-            <span style="flex:1;text-align:center;font-size:12px;padding:6px 0;color:var(--color-text-muted)">Portefeuille</span>
+            <sc-for list="{{ tabs }}" as="tb" hint-placeholder-count="3">
+              <span onClick="{{ tb.onClick }}" style="flex:1;text-align:center;font-size:12px;padding:6px 0;border-radius:var(--radius-sm);cursor:pointer;background:{{ tb.bg }};color:{{ tb.color }};box-shadow:{{ tb.shadow }}">{{ tb.label }}</span>
+            </sc-for>
           </div>
-          <div style="padding:0 18px 10px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto">
+          <div style="padding:0 18px 10px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0;overflow-y:auto;scrollbar-width:none">
+            <sc-if value="{{ tabBingo }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:flex;align-items:flex-end;justify-content:space-between">
               <div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:var(--font-display);font-size:34px;line-height:.95;color:var(--color-primary)">BINGO</span><span style="font-family:var(--font-accent);font-size:15px;color:var(--color-primary)">d’hiver</span></div>
               <div style="font-size:11px;color:var(--color-text-muted);text-align:right;line-height:1.35"><div style="font-size:20px;color:var(--color-text)">{{ casesTxt }}</div>{{ bonsTxt }}</div>
@@ -214,6 +215,56 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
                 </sc-if>
               </sc-for>
             </div>
+            </div></sc-if>
+            <sc-if value="{{ tabPoints }}" hint-placeholder-val="{{ false }}"><div style="display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:flex-end;justify-content:space-between">
+                <div style="display:flex;align-items:baseline;gap:6px"><span style="font-family:var(--font-display);font-size:34px;line-height:.95;color:var(--color-primary)">POINTS</span><span style="font-family:var(--font-accent);font-size:15px;color:var(--color-primary)">de Julie</span></div>
+                <div style="font-size:11px;color:var(--color-text-muted);text-align:right;line-height:1.35"><div style="font-size:20px;color:var(--color-text)">{{ points }} pts</div>{{ ptsReste }}</div>
+              </div>
+              <div style="height:7px;border-radius:4px;background:var(--color-surface);overflow:hidden;margin-top:-2px"><div style="height:100%;background:var(--color-secondary);border-radius:4px;transition:width .4s;width:{{ ptsPctW }}"></div></div>
+              <div style="background:var(--color-surface);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">Votre semaine</span><span style="font-size:10px;color:var(--color-text-muted)">{{ semDates }}</span></div>
+                <div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px">
+                  <sc-for list="{{ jours }}" as="j" hint-placeholder-count="7">
+                    <div style="border-radius:8px;padding:5px 0 6px;display:flex;flex-direction:column;align-items:center;gap:1px;outline-offset:-1.4px;background:{{ j.bg }};color:{{ j.fg }};opacity:{{ j.op }};outline:{{ j.outline }}">
+                      <span style="font-size:8.5px;text-transform:uppercase;letter-spacing:.04em">{{ j.d }}</span>
+                      <span style="font-size:8px;opacity:.75">{{ j.date }}</span>
+                      <span style="display:flex;align-items:baseline;gap:1px;margin-top:2px;line-height:1"><span style="font-size:10px">×</span><span style="font-family:var(--font-display);font-size:19px">{{ j.k }}</span></span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:5px">
+                  <sc-for list="{{ raisons }}" as="r" hint-placeholder-count="2">
+                    <div style="display:grid;grid-template-columns:30px minmax(0,1fr);gap:8px;align-items:center;font-size:10.5px;line-height:1.35;color:var(--color-text-muted)">
+                      <span style="font-size:10px;text-align:center;border-radius:4px;padding:2px 0;background:{{ r.bg }};color:{{ r.fg }}">{{ r.tag }}</span>
+                      <span>{{ r.txt }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="background:var(--color-surface);border-radius:14px;padding:11px 12px;display:flex;flex-direction:column;gap:8px">
+                <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">Compte plus cette semaine</span><span style="font-size:9.5px;color:var(--color-text-muted);white-space:nowrap">jusqu’au {{ dimanche }}</span></div>
+                <sc-for list="{{ offres }}" as="o" hint-placeholder-count="3">
+                  <div style="display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;border-radius:10px;padding:6px 8px 6px 6px;background:{{ o.bg }};border:1px {{ o.borderStyle }} var(--color-primary)">
+                    <img src="{{ o.ill }}" alt="" style="width:44px;height:44px;object-fit:contain;display:block">
+                    <div style="min-width:0">
+                      <div style="font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary)">{{ o.tag }}</div>
+                      <div style="font-size:12.5px;line-height:1.2">{{ o.nom }}</div>
+                      <div style="font-size:9.5px;line-height:1.3;color:var(--color-text-muted);margin-top:1px">{{ o.why }}</div>
+                    </div>
+                    <span style="display:flex;align-items:baseline;gap:1px;line-height:1;border-radius:8px;padding:6px 8px 4px;background:{{ o.coefBg }};color:{{ o.coefFg }}"><span style="font-size:11px">×</span><span style="font-family:var(--font-display);font-size:24px">{{ o.k }}</span></span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:var(--color-surface);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:6px">
+                <span style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)">Choisi d’après vos habitudes</span>
+                <div style="display:flex;flex-wrap:wrap;gap:4px">
+                  <sc-for list="{{ profil }}" as="pf" hint-placeholder-count="4"><span style="font-size:10px;border-radius:4px;padding:2px 6px;background:var(--color-background-secondary);color:var(--color-text)">{{ pf }}</span></sc-for>
+                </div>
+                <p style="margin:0;font-size:9.5px;line-height:1.35;color:var(--color-text-muted)">Les bonus changent chaque lundi. Ils ne s’additionnent pas : sur chaque article, le coefficient le plus fort s’applique.</p>
+              </div>
+            </div></sc-if>
+            <sc-if value="{{ showWallet }}" hint-placeholder-val="{{ true }}"><div style="display:flex;flex-direction:column;gap:10px">
             <sc-for list="{{ poche }}" as="p" hint-placeholder-count="2">
               <div style="background:var(--color-surface);border-radius:14px;padding:9px 12px;display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:10px;align-items:center;animation:{{ p.anim }}">
                 <div style="width:44px;height:44px;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;background:{{ p.tileBg }}"><img src="{{ p.ill }}" alt="" style="width:36px;height:36px;object-fit:contain;filter:{{ p.filter }}"></div>
@@ -228,6 +279,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:1}
             <sc-if value="{{ noPoche }}" hint-placeholder-val="{{ false }}">
               <div style="background:var(--color-surface);border-radius:14px;padding:12px;color:var(--color-text-muted);font-size:11px">Aucun bon à utiliser pour l’instant : le prochain arrive avec une case ou un palier de points.</div>
             </sc-if>
+            </div></sc-if>
           </div>
           <sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
             <div onClick="{{ closeToast }}" title="Fermer" style="position:absolute;top:8px;left:14px;right:14px;color:var(--color-surface);border-radius:16px;padding:10px 12px;display:grid;grid-template-columns:32px minmax(0,1fr);gap:10px;align-items:center;font-size:11px;line-height:1.35;cursor:pointer;animation:bingoDescend .35s ease;background:{{ toastBg }}">
@@ -345,13 +397,21 @@ class Component extends DCLogic {
     { nom: 'Automne', du: '23/08/2027', au: '21/11/2027', fetes: ['La rentrée', 'Fête de la FWB 27/09', 'Halloween', 'Toussaint', 'Saint-Martin 11/11'], etat: '', ill: 'automne' },
   ];
   static DEBUT = '2026-11-23';
+  static PERSO = [
+    { nom: 'L’éclair au chocolat', ill: 'cake-slice', coef: 3, why: 'Vous n’avez encore jamais pris de pâtisserie chez nous.', prix: 3.9 },
+    { nom: 'La tartelette aux fruits', ill: 'tartelette', coef: 3, why: 'Les clients qui aiment votre baguette l’adorent.', prix: 4.2 },
+    { nom: 'Les cookies', ill: 'cookies', coef: 2, why: 'Vous en preniez en octobre, plus depuis.', prix: 3.5 },
+  ];
+  static JOUR_PERSO = { i: 4, coef: 3, why: 'Vendredi ×3 : vous venez surtout le samedi, on vous attend aussi la veille.' };
+  static PROFIL = ['surtout le samedi matin', 'pain & viennoiserie', 'panier moyen 6,40 €', 'jamais de pâtisserie'];
+  static JOURS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
   static CODES = { 1: 'FIDR4WQ8NZC', 2: 'FID7K2QM9PA', 3: 'FIDX5HT3LWE', 4: 'FIDB9MV2KQS', 5: 'FIDN6CJ8RTD', 6: 'FIDH3PZ7WVU' };
 
   depart() {
-    return { x: 3, seuil: 10, valeur: 2, validite: 30, megaValeur: 10, ptsParEuro: 1, palier: 100, palierVal: 5, points: 78, bonsPts: [], dernierGain: 4, semaine: 8, depense: 6.4,
+    return { tab: 'points', x: 3, seuil: 10, valeur: 2, validite: 30, megaValeur: 10, ptsParEuro: 1, palier: 100, palierVal: 5, points: 78, bonsPts: [], dernierGain: 4, semaine: 8, depense: 6.4,
       cochees: { 1: '2026-11-27', 2: '2026-12-05', 3: '2026-12-09', 4: '2026-12-19', 5: '2026-12-24', 7: '2027-01-06' },
       utilises: { 1: '2026-12-17' }, neuf: null,
-      toast: { ill: 'bread-1', txt: 'Ticket de 4,20 € enregistré, +4 pts. Encore 3,60 € cette semaine pour cocher « Le bon pain » et doubler vos points.' }, qr: '' };
+      toast: null, qr: '' };
   }
   state = this.depart();
 
@@ -367,7 +427,7 @@ class Component extends DCLogic {
 
   src(n) { return (window.BINGO_ILL && window.BINGO_ILL[n]) || 'img/ill/' + n + '.png'; }
   nf(n, d) { return Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }); }
-  eur(v) { return this.nf(v, v % 1 ? 2 : 0) + ' €'; }
+  eur(v) { return this.nf(v, v % 1 ? 2 : 0) + '\u00a0€'; }
   ord(n) { return n === 1 ? '1re' : n + 'e'; }
   jour(iso, n) { const d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
   dm(iso) { return iso.slice(8, 10) + '/' + iso.slice(5, 7); }
@@ -401,13 +461,19 @@ class Component extends DCLogic {
     return out;
   }
 
-  ticket(m) {
+  offre(S) { return Component.PERSO[(Math.min(S.semaine, Component.SEM.length) - 1) % Component.PERSO.length]; }
+  jourCoef(S, i) {
+    const iso = this.jour(this.lundi(S.semaine), i), c = S.cochees[S.semaine];
+    return Math.max(c && iso >= c ? 2 : 1, i === Component.JOUR_PERSO.i ? Component.JOUR_PERSO.coef : 1);
+  }
+  ticket(m, prod) {
     const S = this.state, NS = Component.SEM.length;
     if (S.semaine > NS) return;
     const cochees = Object.assign({}, S.cochees), avant = Object.keys(cochees).length, sem = Component.SEM[S.semaine - 1];
     const depense = Math.round((S.depense + m) * 100) / 100;
-    const boost = !!cochees[S.semaine], gain = Math.floor(m * S.ptsParEuro) * (boost ? 2 : 1);
-    const pTxt = ' +' + gain + ' pts' + (boost ? ' (×2)' : '') + '.';
+    const boost = !!cochees[S.semaine], jc = 3 === Component.JOUR_PERSO.i ? Component.JOUR_PERSO.coef : 1, pc = prod ? prod.coef : 1;
+    const coef = Math.max(boost ? 2 : 1, jc, pc), gain = Math.floor(m * S.ptsParEuro) * coef;
+    const pTxt = ' +' + gain + ' pts' + (coef > 1 ? ' (×' + coef + (pc === coef && prod ? ', offre perso' : '') + ')' : '') + '.';
     let neuf = null, toast;
     if (!cochees[S.semaine] && depense >= S.seuil) {
       cochees[S.semaine] = this.auj(S); neuf = 's' + S.semaine;
@@ -529,7 +595,33 @@ class Component extends DCLogic {
       boostBg: fait && !fini ? 'var(--color-primary)' : 'var(--color-bg)', boostFg: fait && !fini ? 'var(--color-surface)' : 'var(--color-text-muted)',
       ptsP: (S.dernierGain != null ? '+' + S.dernierGain + ' pts au dernier ticket · ' : '') + 'encore ' + Math.max(0, S.palier - S.points) + ' pts pour un bon de ' + this.eur(S.palierVal) + (fait && !fini ? ' : chaque euro en vaut deux cette semaine.' : '.'),
       etatTxt: fini ? 'Carte terminée (dès le 22/02)' : 'Semaine ' + S.semaine + ' · ' + sem.du + ' – ' + sem.au + ' · ' + this.nf(S.depense, 2) + ' €',
-      tickets: [2.8, 4.2, 7.5].map(m => ({ label: '+ ticket ' + this.eur(m), onClick: () => this.ticket(m), disabled: fini, op: fini ? 0.4 : 1 })),
+      tickets: [2.8, 4.2, 7.5].map(m => ({ label: '+ ticket ' + this.eur(m), onClick: () => this.ticket(m), disabled: fini, op: fini ? 0.4 : 1 }))
+        .concat([{ label: '+ ' + this.offre(S).nom.replace(/^(L’|La |Les )/, '').toLowerCase() + ' ' + this.eur(this.offre(S).prix) + ' (offre perso)', onClick: () => this.ticket(this.offre(S).prix, this.offre(S)), disabled: fini, op: fini ? 0.4 : 1 }]),
+      tabs: [['bingo', 'Bingo'], ['points', 'Points'], ['portefeuille', 'Portefeuille']].map(([k, label]) => ({ label, onClick: () => this.setState({ tab: k }),
+        bg: S.tab === k ? 'var(--color-surface)' : 'transparent', color: S.tab === k ? 'var(--color-primary)' : 'var(--color-text-muted)', shadow: S.tab === k ? '0 1px 2px rgba(0,0,0,.08)' : 'none' })),
+      tabBingo: S.tab === 'bingo', tabPoints: S.tab === 'points', showWallet: S.tab !== 'points',
+      ptsReste: 'encore ' + Math.max(0, S.palier - S.points) + ' pts pour ' + this.eur(S.palierVal),
+      dimanche: this.dm(this.jour(this.lundi(Math.min(S.semaine, NS)), 6)),
+      semDates: fini ? 'carte terminée' : sem.du + ' – ' + sem.au,
+      jours: C.JOURS.map((d, i) => { const k = this.jourCoef(S, i), past = !fini && i < 3, today = !fini && i === 3, hi = k > 1;
+        return { d, date: this.dm(this.jour(this.lundi(Math.min(S.semaine, NS)), i)), k, op: past ? 0.45 : 1,
+          bg: k >= 3 ? 'var(--color-primary)' : hi ? 'var(--color-secondary)' : 'var(--color-background-secondary)',
+          fg: k >= 3 ? 'var(--color-surface)' : hi ? 'var(--color-primary)' : 'var(--color-text-muted)',
+          outline: today ? '1.4px solid var(--color-text)' : 'none' }; }),
+      raisons: [
+        fait ? { tag: '×2', bg: 'var(--color-secondary)', fg: 'var(--color-primary)', txt: 'Case cochée le ' + this.dm(S.cochees[S.semaine]) + ' : tout compte double jusqu’à dimanche.' }
+             : { tag: '×2', bg: 'var(--color-background-secondary)', fg: 'var(--color-text-muted)', txt: 'Encore ' + this.nf(Math.max(0, S.seuil - S.depense), 2) + ' € pour cocher la case : ensuite, tout compte double jusqu’à dimanche.' },
+        { tag: '×' + C.JOUR_PERSO.coef, bg: 'var(--color-primary)', fg: 'var(--color-surface)', txt: C.JOUR_PERSO.why },
+      ],
+      offres: [
+        { tag: 'Pour vous · offre perso', nom: this.offre(S).nom, why: this.offre(S).why, ill: this.src(this.offre(S).ill), k: this.offre(S).coef,
+          bg: 'color-mix(in srgb, var(--color-secondary) 30%, var(--color-surface))', borderStyle: 'solid', coefBg: 'var(--color-primary)', coefFg: 'var(--color-surface)' },
+        { tag: 'Produit de la semaine', nom: fini ? '—' : sem.titre, why: 'Pour tous : le thème de la case bingo.', ill: this.src(fini ? 'cupcake' : sem.ill), k: 2,
+          bg: 'var(--color-surface)', borderStyle: 'dashed', coefBg: 'var(--color-secondary)', coefFg: 'var(--color-primary)' },
+        { tag: 'Votre habituel', nom: 'La baguette tradition', why: 'Vous la prenez presque à chaque passage : elle compte normalement.', ill: this.src('bread-1'), k: 1,
+          bg: 'var(--color-surface)', borderStyle: 'none', coefBg: 'var(--color-background-secondary)', coefFg: 'var(--color-text-muted)' },
+      ],
+      profil: C.PROFIL,
       suivante: () => this.suivante(), suivOp: fini ? 0.4 : 1, reset: () => this.setState(Object.assign(this.depart(), { qr: S.qr })),
       qr: S.qr, printCells, miniCells, pctW: pct.toFixed(0) + '%',
       appDate: fini ? 'carte terminée' : new Date(this.auj(S) + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' }),
