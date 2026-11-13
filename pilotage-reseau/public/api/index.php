@@ -22,6 +22,7 @@ require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/marketing_tables.php';
 require __DIR__ . '/../../src/con_tables.php';
 require __DIR__ . '/../../src/auth.php';
+require __DIR__ . '/../../src/acces.php';   // L'accès : les comptes de la console franchisé (13/11/2026)
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
@@ -159,20 +160,20 @@ try {
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
     if ($method === 'GET' && preg_match('#^/benchmarks/(cougnou|galette)/rapport\.html$#', $path, $m)) {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         header('Content-Type: text/html; charset=utf-8');
         echo benchmarkHtml([benchmarkRapport($m[1], ($_GET['web'] ?? '1') !== '0')]);
         exit;
     }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         header('Content-Type: text/html; charset=utf-8');
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
     // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
     }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
@@ -286,16 +287,17 @@ try {
         }
     }
 
-    $out = authRoute($method, $path);       // /auth/* : toujours accessibles
+    $out = authRoute($method, $path) ?? accesRoute($method, $path);   // /auth/* et /acces/* : toujours accessibles
     if ($out === null) {
         // Les autres portails lisent quelques routes avec le jeton de service d'erp_cles (X-Service-Token).
         $service = erpRouteIntegration($method, $path) && erpJetonServiceOk();
-        if (authEnabled() && !authOk() && !$service) {   // session exigée seulement si l'auth intégrée est activée
-            http_response_code(401);
-            $out = ['error' => 'auth', 'setup' => authIsSetup()];
+        // La session de la console franchisé (src/acces.php) : le siège ouvre tout, un franchisé ses magasins.
+        if (($refus = accesRefus($method, $path, $service)) !== null) {
+            http_response_code($refus[0]);
+            $out = $refus[1];
         } else {
             // L'adresse https par nom de domaine de cette API, publiée pour les autres portails (pil_api_url).
-            if (!authEnabled() || authOk()) { erpPublierAdresse(); }
+            if (!$service) { erpPublierAdresse(); }
             $out = routeGardee($method, $path);
         }
     }
