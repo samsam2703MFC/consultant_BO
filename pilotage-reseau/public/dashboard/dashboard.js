@@ -7299,7 +7299,7 @@
     // 1. La jauge : le prix de vente se tape, le coefficient se recalcule et le repère se déplace.
     const simOn = sim != null && Math.abs(sim - prix) >= 0.005, pV = simOn ? sim : prix, cV = simOn ? sCoef : coef, tV = simOn ? sTaux : taux;
     const saisie = F.simSaisie != null ? F.simSaisie : (pV != null ? nf(pV, 2) : '');
-    const champ = prix != null && mat > 0 ? `<div class="fi-rsc"><span class="k">Prix de vente</span><span class="fi-rsimc"><button type="button" data-fsimpas="-0.05" aria-label="moins 5 centimes">−</button><input type="text" inputmode="decimal" data-fsiminput="1" value="${esc(saisie)}" aria-label="prix de vente"><b>€</b><button type="button" data-fsimpas="0.05" aria-label="plus 5 centimes">+</button></span>${simOn ? `<small>au lieu de ${fPt(prix)} encaissé · <button type="button" class="fi-rlien" data-fsimx="1">remettre</button></small>` : `<small>le prix encaissé ${S.date === AUJ ? 'aujourd’hui' : 'ce jour'} · tapez un autre prix pour voir le coefficient</small>`}</div>` : '';
+    const champ = prix != null && mat > 0 ? `<div class="fi-rsc"><span class="k">Prix de vente</span><span class="fi-rsimc"><button type="button" data-fsimpas="-0.05" aria-label="moins 5 centimes">−</button><input type="text" inputmode="decimal" data-fsiminput="1" value="${esc(saisie)}" aria-label="prix de vente"><b>€</b><button type="button" data-fsimpas="0.05" aria-label="plus 5 centimes">+</button></span>${simOn ? `<small>au lieu de ${fPt(prix)} encaissé · <button type="button" class="fi-rlien" data-fsimx="1">remettre</button></small>` : `<small>${q > 0 ? 'le prix encaissé ' + (S.date === AUJ ? 'aujourd’hui' : 'ce jour') : 'le prix HT du catalogue'} · tapez un autre prix pour voir le coefficient</small>`}</div>` : '';
     let h = `<section class="fi-rc fi-rjauge"><div class="fi-rct"><span class="fi-rh">Le coefficient</span></div>
       <div class="fi-rjg"><div class="fi-rjn ${niv(cV)}">${champ}<b>${fX(cV)}</b><span>${NIV[niv(cV)]}</span><small>${tV != null ? 'marge brute ' + fP0(tV) + ' · matière ' + fP0(100 - tV) + ' du prix' : 'le coût de recette de cette pièce n’est pas gravé'}</small></div>
         <div class="fi-rjb${etage ? ' etage' : ''}${simOn ? ' sim' : ''}"><div class="fi-rband"><i class="ko" style="width:${pct(FI_ZONES.ko).toFixed(1)}%"></i><i class="att" style="width:${(pct(FI_ZONES.att) - pct(FI_ZONES.ko)).toFixed(1)}%"></i><i class="ok" style="width:${(100 - pct(FI_ZONES.att)).toFixed(1)}%"></i>
@@ -7335,7 +7335,7 @@
     else {
       // Au prix simulé quand la simulation est ouverte, sinon au prix encaissé.
       const pS = sim != null ? sim : prix, tauxS = 100 * (pS - mat) / pS;
-      marge = `<div class="fi-rmb${sim != null ? ' sim' : ''}"><b class="${tauxS >= 100 - se.food ? 'ok' : (tauxS >= 100 - se.food - 8 ? 'att' : 'ko')}">${fP0(tauxS)}</b><small>${sim != null ? 'au prix testé ' + fPt(sim) : 'au prix encaissé ' + fPt(prix)}</small></div>`;
+      marge = `<div class="fi-rmb${sim != null ? ' sim' : ''}"><b class="${tauxS >= 100 - se.food ? 'ok' : (tauxS >= 100 - se.food - 8 ? 'att' : 'ko')}">${fP0(tauxS)}</b><small>${sim != null ? 'au prix testé ' + fPt(sim) : (q > 0 ? 'au prix encaissé ' : 'au prix du catalogue ') + fPt(prix)}</small></div>`;
     }
     return `${h}<div class="fi-rdeux mb"><section class="fi-rc">${titreRec}${rec}</section><section class="fi-rc"><div class="fi-rct"><span class="fi-rh">Marge brute</span></div>${marge}</section></div>`;
   }
