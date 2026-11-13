@@ -102,6 +102,22 @@ function vfTxt(array $x, array $cles): string
     return '';
 }
 
+/** La fraction d'une portion lue dans son nom : « 1/4 - Quiches » → 0,25, « ½ Tarte » → 0,5 ; null sinon. */
+function vfFractionDuNom(string $nom): ?float
+{
+    $nom = strtr($nom, ['½' => '1/2', '¼' => '1/4', '¾' => '3/4', '⅓' => '1/3', '⅙' => '1/6', '⅛' => '1/8']);
+    if (preg_match('#(?:^|\s)(\d+)\s*/\s*(\d+)(?:\s|$|-)#u', ' ' . $nom . ' ', $m) !== 1) { return null; }
+    $f = (int) $m[2] > 0 ? (int) $m[1] / (int) $m[2] : 0.0;
+    return $f > 0 && $f < 1 ? round($f, 4) : null;
+}
+
+/** Les matières marquées « hors recette » depuis la liste (13/11/2026) : [cle => true]. */
+function vfHorsRecette(): array
+{
+    try { $h = setting('vfHorsRecette', []); } catch (Throwable $e) { $h = []; }
+    return is_array($h) ? array_fill_keys(array_map('strval', array_keys($h)), true) : [];
+}
+
 function vfMediane(array $v): ?float
 {
     $v = array_values(array_filter($v, static fn ($x) => $x !== null));
@@ -361,9 +377,10 @@ function vfStocks(array $sids): array
  * @param array $S      [sid => [cle => matière en stock]]
  * @param float $ratioMin le seuil bas du coût (part du prix HT)
  * @param array $F      [pid => true] — les formules et promotions (marquées, comptées à part dans la couverture)
+ * @param array $hors   [cle => true] — les matières marquées « hors recette » au cockpit (emballage, hygiène…)
  * @return array{lignes: array, couverture: array, parRegle: array, recettes: array, aLire: array}
  */
-function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS, array $F = []): array
+function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS, array $F = [], array $hors = []): array
 {
     $info = [];          // pid => produit de référence (le premier magasin qui le connaît)
     foreach ($D as $sid => $ps) { foreach ($ps as $pid => $p) { $info[$pid] ??= $p; } }
@@ -432,20 +449,30 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                     $cand['vide'] = ['Recette « ' . $nomR . ' » sans aucune ligne : coût 0 €.', []];
                 }
                 if (($r['rend'] ?? null) !== null && (float) $r['rend'] <= 0) {
-                    $cand['rend'] = ['Rendement à 0 dans la recette « ' . $nomR . ' » : le coût de la recette entière part sur une seule pièce.', []];
+                    $cand['rend'] = ['Rendement à 0 dans la recette « ' . $nomR . ' » : le coût de la recette entière part sur une seule pièce.', ['corr' => ['cout' => $cout !== null ? round((float) $cout, 4) : null]]];
                 }
                 // Une matière sans prix DANS CE MAGASIN (le magasin a été lu, la matière n'y a pas de prix).
                 if (isset($M[$sid]) && $M[$sid] !== [] && $L !== []) {
-                    $sansPrix = [];
+                    $sansPrix = []; $manquants = [];
                     foreach ($L as $l) {
                         $mid = (int) ($l['mid'] ?? 0);
                         if ($mid <= 0) { continue; }
                         $px = $M[$sid][$mid] ?? null;
-                        if ($px === null || $px <= 0) { $sansPrix[$l['nom'] !== '' ? $l['nom'] : 'matière ' . $mid] = true; }
+                        if ($px === null || $px <= 0) {
+                            $nomM = $l['nom'] !== '' ? $l['nom'] : 'matière ' . $mid;
+                            if (isset($sansPrix[$nomM])) { continue; }
+                            $sansPrix[$nomM] = true;
+                            // La proposition (13/11/2026) : la médiane du prix de cette matière dans les autres magasins.
+                            $ailleurs = [];
+                            foreach ($M as $s2 => $m2) { if ((int) $s2 !== (int) $sid && ($m2[$mid] ?? 0) > 0) { $ailleurs[] = (float) $m2[$mid]; } }
+                            $manquants[] = ['mid' => $mid, 'nom' => $nomM, 'u' => (string) ($l['u'] ?? ''), 'propose' => $ailleurs === [] ? null : round((float) vfMediane($ailleurs), 4),
+                                'min' => $ailleurs === [] ? null : round(min($ailleurs), 4), 'max' => $ailleurs === [] ? null : round(max($ailleurs), 4)];
+                        }
                     }
                     if ($sansPrix !== []) {
                         $n = count($sansPrix); $noms = array_keys($sansPrix);
-                        $cand['prix'] = [($n > 1 ? $n . ' matières' : '1 matière') . ' sans prix à ' . $court . ' : ' . implode(', ', array_slice($noms, 0, 4)) . ($n > 4 ? '…' : '') . '.', []];
+                        $cand['prix'] = [($n > 1 ? $n . ' matières' : '1 matière') . ' sans prix à ' . $court . ' : ' . implode(', ', array_slice($noms, 0, 4)) . ($n > 4 ? '…' : '') . '.',
+                            ['corr' => ['sid' => (int) $sid, 'magasin' => $court, 'matieres' => $manquants]]];
                     }
                 }
                 // Une ligne qui pèse plus de la moitié du coût et que ×1000 ou ÷1000 ramène dans un coût plausible.
@@ -461,7 +488,9 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                             $r2 = $alt / $prixRef;
                             if ($r2 >= max($ratioMin, 0.05) && $r2 < 0.8) {
                                 $cand['unite'] = ['« ' . $lourde['nom'] . ' » pèse ' . vfPct(100 * $lourde['cout'] / $total) . ' du coût (' . vfQte($lourde['q'], (string) $lourde['u']) . ', ' . vfEur((float) $lourde['cout']) . ') : '
-                                    . ($ratio >= 1 ? 'lue mille fois trop grande' : 'lue mille fois trop petite') . ', la pièce coûterait ' . vfEur($alt) . ' (' . vfPct(100 * $r2) . ' du prix HT) au lieu de ' . vfEur($total) . '.', ['mid' => (int) ($lourde['mid'] ?? 0)]];
+                                    . ($ratio >= 1 ? 'lue mille fois trop grande' : 'lue mille fois trop petite') . ', la pièce coûterait ' . vfEur($alt) . ' (' . vfPct(100 * $r2) . ' du prix HT) au lieu de ' . vfEur($total) . '.',
+                                    ['mid' => (int) ($lourde['mid'] ?? 0), 'corr' => ['mid' => (int) ($lourde['mid'] ?? 0), 'matiere' => (string) $lourde['nom'], 'sous' => $lourde['sous'] ?? null,
+                                        'facteur' => $ratio >= 1 ? 0.001 : 1000, 'q' => $lourde['q'], 'u' => (string) $lourde['u'], 'coutAvant' => round($total, 4), 'coutApres' => round($alt, 4)]]];
                             }
                         }
                     }
@@ -471,7 +500,8 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             if ($p !== null && !empty($p['divisible'])) {
                 $part = $p['part'];
                 if ($part === null || $part <= 0 || $part >= 1) {
-                    $cand['port'] = ['Vendu à la portion sans part définie : le prix est celui d’une portion, le coût celui de la pièce entière.', []];
+                    $cand['port'] = ['Vendu à la portion sans part définie : le prix est celui d’une portion, le coût celui de la pièce entière.',
+                        ['corr' => ['sid' => (int) $sid, 'fraction' => vfFractionDuNom((string) ($p['nom'] ?? '')), 'cout' => $cout !== null ? round((float) $cout, 4) : null]]];
                 }
             }
             // Coût invraisemblable face au prix HT de CE magasin.
@@ -492,13 +522,14 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                     if ($med !== null && $med > 0) {
                         $ecart = 100 * ($cout - $med) / $med;
                         if (abs($ecart) > VF_ECART_RESEAU) {
-                            $cand['reseau'] = [vfEur($cout) . ' à ' . $court . ' ; médiane des autres magasins ' . vfEur($med) . ' (' . ($ecart > 0 ? '+' : '') . vfPct($ecart) . ').', []];
+                            $cand['reseau'] = [vfEur($cout) . ' à ' . $court . ' ; médiane des autres magasins ' . vfEur($med) . ' (' . ($ecart > 0 ? '+' : '') . vfPct($ecart) . ').',
+                                ['corr' => ['sid' => (int) $sid, 'magasin' => $court, 'cout' => round((float) $cout, 4), 'mediane' => round($med, 4)]]];
                         }
                     }
                 }
             }
-            // L'explication la plus précise l'emporte : vide, unité ou prix manquant expliquent un coût aberrant.
-            if (isset($cand['vide']) || isset($cand['unite']) || isset($cand['prix'])) { unset($cand['inv'], $cand['reseau']); }
+            // L'explication la plus précise l'emporte : vide, unité, prix manquant ou rendement à zéro expliquent un coût aberrant.
+            if (isset($cand['vide']) || isset($cand['unite']) || isset($cand['prix']) || isset($cand['rend'])) { unset($cand['inv'], $cand['reseau']); }
             if (isset($cand['inv'])) { unset($cand['reseau']); }
             foreach ($cand as $regle => [$detail, $extra]) { $ajoute($regle, $pid, $sid, $ca, $detail, $base + ['rid' => $rid] + $extra); }
             if ($cand !== []) { $nonFiable[$k] = true; }
@@ -524,6 +555,7 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                 if (($mid > 0 && isset($emploiId[$mid])) || isset($emploiNom[mb_strtolower($nomM)])) { continue; }
                 if (preg_match(VF_HORS_RECETTE, $nomM . ' ' . ($m['cat'] ?? '')) === 1) { continue; }
                 $cle = 'orph:' . ($mid > 0 ? 'm' . $mid : mb_strtolower($nomM));
+                if (isset($hors[$cle])) { continue; }
                 $px = $mid > 0 ? ($M[$sid][$mid] ?? null) : null;
                 $val = $px !== null && $px > 0 ? (float) $m['q'] * $px : null;
                 if (!isset($flags[$cle])) { $flags[$cle] = ['cle' => $cle, 'regle' => 'orph', 'pid' => null, 'mid' => $mid ?: null, 'rid' => null, 'nom' => $nomM, 'cat' => (string) ($m['cat'] ?? ''), 'ca' => 0.0, 'valeur' => 0.0, 'shops' => [], 'stocks' => [], 'detail' => '', 'caDetail' => -1.0]; }
@@ -613,7 +645,7 @@ function vfAnalyse(int $budget): array
     $p = setting('production', []);
     $ratioMin = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
     $F = vfFormules($V['ventes'], $D);
-    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS, $F);
+    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS, $F, vfHorsRecette());
     $complet = $a['aLire'] === [];
     $a['depuis'] = vfRegistre($a['lignes'], $complet);
     foreach ($a['lignes'] as &$l) { $l['depuis'] = $a['depuis']['cles'][$l['cle']] ?? date('Y-m-d'); }
@@ -627,8 +659,10 @@ function vfAnalyse(int $budget): array
         'periode' => ['du' => $V['du'], 'au' => $V['au'], 'jours' => VF_JOURS],
         'seuils' => ['coutRatioMin' => $ratioMin, 'ecartReseau' => VF_ECART_RESEAU, 'partUnite' => VF_PART_UNITE],
         'lienRecette' => vfLienPanelModele(),
+        // Les adresses des écrans du panel, pour les liens directs de chaque ligne (13/11/2026, verification_correction.php).
+        'liens' => function_exists('vrcLiens') ? vrcLiens() : ['produit' => vfLienPanelModele()],
         'lu' => date('c'),
-        'source' => 'ventes : tickets gravés par la moisson (30 jours, aujourd’hui exclu) · produits, recettes et coûts : API du panel (/shops/{id}/products/available, /shops/{id}/recipes/{recette}/cost, /shops/{id}/materials, /shops/{id}/material-inventory) · lecture seule',
+        'source' => 'ventes : tickets gravés par la moisson (30 jours, aujourd’hui exclu) · produits, recettes et coûts : API du panel (/shops/{id}/products/available, /shops/{id}/recipes/{recette}/cost, /shops/{id}/materials, /shops/{id}/material-inventory) · corrections : écrites au panel depuis cette page, relues, au registre',
     ];
     vfGarder('vfAnalyse', $out);
     return $out;
