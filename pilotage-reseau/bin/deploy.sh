@@ -262,7 +262,7 @@ else
   log "Tablettes : aucun code de gestion (TABLETTES_CODE ou /var/lib/consulant_bo/prive/tablettes_code) — la gestion des tablettes est ouverte sans code (décision du client, 06/11/2026)."
 fi
 
-# L'accès à l'API (13/11/2026, src/acces.php) : l'API demande une session de la console franchisé. La recette de
+# L'accès à l'API (13/11/2026, src/acces.php) : l'API demande une session (siège ou magasin). La recette de
 # cette livraison (les curl en loopback plus bas) passe avec une clé tirée au hasard ici, à chaque livraison, posée
 # dans config.php (`accesRecette`) et envoyée dans l'en-tête X-Recette. Jamais affichée ; la suivante la remplace.
 ACCES_RECETTE="$(openssl rand -hex 24 2>/dev/null || head -c 24 /dev/urandom | od -An -tx1 | tr -d ' \n')"
@@ -293,7 +293,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
-      // L’accès (src/acces.php) : « console » = session de la console franchisé exigée ; COCKPIT_ACCES=ouvert pour rouvrir.
+      // L’accès (src/acces.php) : « console » = session exigée (siège, magasin ou console) ; COCKPIT_ACCES=ouvert pour rouvrir.
       "acces"   => (getenv("COCKPIT_ACCES") ?: "console") === "ouvert" ? "ouvert" : "console",
       "accesRecette" => getenv("ACCES_RECETTE") ?: null,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
