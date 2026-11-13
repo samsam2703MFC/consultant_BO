@@ -151,6 +151,12 @@ body { margin: 0; background: var(--paper); }
   .rp-serre { font-size: 11px; } .rp-serre td, .rp-serre th { padding: 3px 4px; }
   .rp-chaleur td.c { min-width: 32px; }
   #probleme .rp-deux { grid-template-columns: minmax(0, 1fr); }   /* un bloc par ligne, comme les graphiques */
+  /* Au PDF, les blocs s'empilent en disposition simple : Chromium coupe mal une grille d'une page à l'autre (un
+     graphique chevauchait le bloc suivant, 13/11/2026). Les rangées de chiffres clés restent en grille. */
+  .rp, .rp-page, .rp-carte, #ev-graphes, #p1-milieu, .rp-deux { display: block; }
+  .rp > *, .rp-page > *, .rp-carte > *, #ev-graphes > *, #p1-milieu > *, .rp-deux > * { margin-bottom: 10px; }
+  .rp-carte > *:last-child, .rp-deux > *:last-child { margin-bottom: 0; }
+  #cibles, #cv-paliers { font-size: 12px; }
   .rp-legende { font-size: 12px; }
   .rp-alerte, .rp-ouvert { font-size: 13px; }
 }
@@ -308,10 +314,10 @@ body { margin: 0; background: var(--paper); }
   <!-- ANNEXES -->
   <header class="rp-annexes" id="annexes">
     <div class="rp-kicker">Sombreffe, comptoir et B2B</div>
-    <h2 class="rp-annexe-titre">Annexes</h2>
+    <h2 class="rp-annexe-titre">Annexe</h2>
   </header>
   <section class="rp-carte" id="annexe-a">
-    <h2 class="rp-h2">A · Les 18 mois</h2>
+    <h2 class="rp-h2">Les 18 mois, mois par mois</h2>
     <p class="rp-p" id="oo-intro"></p>
     <div class="rp-deux">
       <div class="rp-part" id="trafic"><h3 class="rp-h3">Clients par jour ouvert</h3><div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div></div>
@@ -325,7 +331,7 @@ body { margin: 0; background: var(--paper); }
       <div class="rp-part"><h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3><div class="rp-kpis" id="evolution-tuiles"></div></div>
     </div>
   </section>
-  <section class="rp-carte" id="annexe-b">
+  <section class="rp-carte" id="annexe-b" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">B · Les clients B2B</h2>
     <div class="rp-ouvert" id="a-completer"></div>
     <div class="rp-part" id="b2b-6mois" hidden><h3 class="rp-h3" id="b2b-6mois-titre"></h3><p class="rp-p" id="b2b-6mois-texte"></p>
@@ -333,17 +339,17 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-part" id="b2b-clients" hidden><h3 class="rp-h3">Les clients B2B, année par année</h3><p class="rp-p" id="b2b-clients-texte"></p>
       <div class="rp-table-zone"><table class="rp-table rp-serre" id="b2b-clients-table"></table></div><p class="rp-aide" id="b2b-clients-note"></p></div>
   </section>
-  <section class="rp-carte" id="annexe-c">
+  <section class="rp-carte" id="annexe-c" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">C · Le trafic de Sombreffe au panier du plus bas des autres magasins</h2>
     <h3 class="rp-h3" id="panier-mois-titre"></h3>
     <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-mois"></table></div>
   </section>
-  <section class="rp-carte" id="semaines">
+  <section class="rp-carte" id="semaines" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">D · Les dix dernières semaines</h2>
     <p class="rp-p" id="sem-intro"></p>
     <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
   </section>
-  <section class="rp-carte" id="annexe-e">
+  <section class="rp-carte" id="annexe-e" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2" id="temps-morts">E · Temps morts au comptoir</h2>
     <div class="rp-kpis" id="tm-kpis"></div>
     <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
@@ -354,23 +360,23 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-part" id="tm-par-jour"><h3 class="rp-h3">Par jour de la semaine</h3><div class="rp-table-zone"><table class="rp-table" id="tm-jours"></table></div></div>
     <div class="rp-part" id="tm-face-reseau"><h3 class="rp-h3">Face au réseau</h3><div class="rp-table-zone"><table class="rp-table" id="tm-reseau"></table></div></div>
   </section>
-  <section class="rp-carte" id="annexe-f">
+  <section class="rp-carte" id="annexe-f" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">F · Frais de personnel, mois par mois</h2>
     <p class="rp-p" id="pe-intro"></p>
     <div class="rp-table-zone"><table class="rp-table" id="pe-table"></table></div>
     <p class="rp-aide" id="pe-note"></p>
     <div class="rp-ouvert" id="pe-completer" hidden></div>
   </section>
-  <section class="rp-carte" id="annexe-g">
+  <section class="rp-carte" id="annexe-g" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">G · La journée en checklists</h2>
     <div class="rp-table-zone"><table class="rp-table" id="tc-journee"></table></div>
     <p class="rp-aide" id="tc-semaine"></p>
   </section>
-  <section class="rp-carte" id="sources">
+  <section class="rp-carte" id="sources" hidden>   <!-- retiré le 13/11/2026 (Sam) -->
     <h2 class="rp-h2">H · Sources et méthode</h2>
     <ul class="rp-sources" id="sources-liste"></ul>
   </section>
-  <div class="rp-pied" id="pied"></div>
+  <div class="rp-pied" id="pied" hidden></div>
 </main>
 <script>
 const D = /*__DONNEES__*/null;
@@ -942,12 +948,10 @@ if (D.theorique) {
     + T.scenarios.map(c => `<tr class="${c.plus === 10 ? 'moi' : ''}"><td>${c.plus ? '+ ' + c.plus + ' par jour' : 'Le même nombre'}</td><td class="num">${dec(c.cliJour, 0)}</td><td class="num">${grp(c.clients)}</td>`
       + `<td class="num">${eur(c.ca)}</td><td class="num">${eur(c.resultat)}</td><td class="num">${eur(c.resultat * 3)}</td><td class="num">${eur(c.resultat * 12)}</td><td class="num">${dec(c.resultat / c.ca * 100)} %</td></tr>`).join('')
     + '</tbody>';
-  $('theo-points').innerHTML = [
-    `Même trafic : ${grp(R.clients)} clients par mois (${lab(T.du)} → ${lab(T.au)}, ${T.n} mois).`,
-    `Panier dans la moyenne basse : ${eur2(T.bas.panier)}, celui de ${T.bas.nom}, le plus bas des autres magasins, contre ${eur2(R.panier)}.`,
-    `Personnel : ${dec(T.seuil, 0)} % du CA, contre ${dec(R.personnel / R.ca * 100)} %.`,
-    `Matière et emballage : ${dec(T.tauxMatiere, 0)} % du CA des deux côtés (taux budget du réseau ; le P&L du panel ne la chiffre pas). Frais généraux : ceux du P&L.`,
-    `Résultat : ${sgn(gain(H))}${eur(Math.abs(gain(H)))} par mois, ${sgn(gain(H))}${k1(Math.abs(gain(H) * 12))} par an ; le personnel seul en apporte ${k1(gain(T.personnelSeul) * 12)}, le panier seul ${k1(gain(T.panierSeul) * 12)}.`,
+  $('theo-points').innerHTML = [   // court (13/11/2026)
+    `Même trafic, panier à ${eur2(T.bas.panier)} (${T.bas.nom}), personnel à ${dec(T.seuil, 0)} % du CA.`,
+    `Matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau) ; frais généraux du P&L.`,
+    `Résultat : ${sgn(gain(H))}${eur(Math.abs(gain(H)))} par mois, ${sgn(gain(H))}${k1(Math.abs(gain(H) * 12))} par an.`,
   ].map(t => `<li>${esc(insec(t))}</li>`).join('');
   const lignesT = [['Clients', c => grp(c.clients)], ['Panier', c => eur2(c.panier)], ['CA', c => eur(c.ca)], [`Matière et emballage (${dec(T.tauxMatiere, 0)} %)`, c => eur(c.matiere)],
     ['Personnel', c => eur(c.personnel)], ['Frais généraux', c => eur(c.fg)], ['Résultat', c => eur(c.resultat)], ['Résultat, % du CA', c => dec(c.resultat / c.ca * 100) + ' %']];
@@ -984,7 +988,7 @@ if (D.b2bDetail && D.b2bDetail.societes.length) {
 
 /* --- Soins intensifs --- */
 const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
-$('soins-intro').textContent = `Les repères de départ sont les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}, du ${dateC(DEP.du)} au ${dateC(DEP.au)}), face aux mêmes semaines de 2025. Chaque semaine de soins intensifs se lit face à ces repères et face à son N-1.`;
+$('soins-intro').textContent = insec(`Départ : les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}), face aux mêmes semaines de 2025.`);
 $('soins-reperes').innerHTML = [
   kpi('Clients par jour ouvert', dec(N.cliJour, 1), 'contre ' + dec(N1.cliJour, 1) + ' en 2025 (' + pct(ec(N.cliJour, N1.cliJour)) + ')', ec(N.cliJour, N1.cliJour) >= 0 ? 'good' : 'bad'),
   kpi('CA par jour ouvert', eur(N.caJour), 'contre ' + eur(N1.caJour) + ' en 2025 (' + pct(ec(N.caJour, N1.caJour)) + ')', ec(N.caJour, N1.caJour) >= 0 ? 'good' : 'bad'),
@@ -1001,7 +1005,7 @@ $('marque-conditions').innerHTML = '<thead><tr><th>Condition</th><th>Ce qui est 
   + '<tr><td class="dim">…</td><td class="dim">liste à compléter</td><td></td></tr></tbody>';
 $('cout-relance').innerHTML = `<span class="rp-alerte-k">À retenir</span><span>${esc(insec('Redynamiser un magasin, ça coûte cher. D’où les deux chantiers menés ensemble : les ventes pour regagner les clients, les frais et la trésorerie pour tenir pendant ce temps.'))}</span>`;
 const parMois = n => n * B.panier12 * 365 / 12, parAn = n => n * B.panier12 * 365;
-$('cv-texte').textContent = insec(`Le chiffre d’affaires se fait avec des clients. ${PALIER} clients de plus par jour ramènent le magasin à sa base, le niveau de 2025 ; ${PALIER} de plus l’amènent à l’objectif court terme, ${objectif} par jour. L’objectif normalisé, le plan normal d’évolution du magasin, est de ${normalise} clients par jour.`);
+$('cv-texte').textContent = insec(`Trois paliers : la base (+${PALIER} par jour), le court terme (${objectif} par jour), le normalisé (${normalise} par jour).`);
 $('cv-paliers').innerHTML = '<thead><tr><th>Palier</th><th class="num">Clients / jour</th><th class="num">En plus</th><th class="num">CA en plus / mois</th><th class="num">par an</th></tr></thead><tbody>'
   + [['Départ (' + DEP.labs[0] + ' à ' + DEP.labs[DEP.labs.length - 1] + ')', N.cliJour, 0], ['La base', base, PALIER], ['Objectif court terme', objectif, enPlus(objectif)], ['Objectif normalisé', normalise, enPlus(normalise)]]
     .map(([lab, c, n]) => `<tr class="${c === objectif ? 'moi' : ''}"><td>${esc(lab)}</td><td class="num">${dec(c, 0)}</td><td class="num">${n ? '+' + n : '—'}</td><td class="num">${n ? '≈ ' + k1(parMois(n)) : '—'}</td><td class="num">${n ? '≈ ' + k1(parAn(n)) : '—'}</td></tr>`).join('') + '</tbody>';

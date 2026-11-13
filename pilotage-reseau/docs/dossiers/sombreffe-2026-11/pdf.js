@@ -11,8 +11,8 @@ const path = require('path');
 const ICI = __dirname;
 const SORTIE = path.join(ICI, 'Sombreffe-rapport-2026-11.pdf');
 const POLICES = path.join(ICI, '..', '..', '..', 'public', 'assets', 'ds', 'fonts');
-const ECHELLE = 0.9;           // 186 mm utiles ÷ 0,9 ≈ 780 px de mise en page : lisible imprimé (13/11/2026, « trop petit »)
-const LARGEUR = 780;
+const ECHELLE = 0.8;           // 186 mm utiles ÷ 0,8 ≈ 880 px : l’état des lieux tient sans couper un graphique (13/11/2026)
+const LARGEUR = 880;
 
 (async () => {
   // Les polices le temps du rendu : la page les attend dans fonts/, le dépôt les garde dans public/assets/ds/fonts.
