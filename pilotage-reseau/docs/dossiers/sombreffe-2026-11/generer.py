@@ -146,7 +146,7 @@ def main():
         t = j['seuils'][TM_SEUIL]
         return {'nb': t['nb'], 'min': t['min'], 'pct': t['pct'], 'minBords': t['minBords'], 'tickets': j['tickets'],
                 'ouvert': j['ouvert'], 'plusLong': j['plusLong'], 'plusLongHeure': j.get('plusLongHeure'), 'bords': bords,
-                'heures': {h: {'pct': v['pct'], 'min': v['min'], 'nb': v['nb'], 'tk': j['heures'][h]['tk'],
+                'heures': {h: {'pct': v['pct'], 'min': v['min'], 'nb': v['nb'], 'tk': j['heures'][h]['tk'], 'ca': j['heures'][h]['ca'],
                                'ouvert': j['heures'][h]['ouvert']} for h, v in t['heures'].items()}}
     tempsMorts = {
         'du': tmD['meta']['du'], 'au': tmD['meta']['au'], 'semaines': tmD['meta']['semaines'], 'seuil': int(TM_SEUIL),
@@ -160,13 +160,16 @@ def main():
     # L'après-midi (14 h → 18 h) : la part sans client, pondérée par les minutes ouvertes, et les tickets par heure.
     hs = tempsMorts['semaine']['heures']; apm = [h for h in ('14', '15', '16', '17') if h in hs]
     tempsMorts['apresMidi'] = {'pct': sum(hs[h]['min'] for h in apm) / sum(hs[h]['ouvert'] for h in apm) * 100,
-                               'tk': sum(hs[h]['tk'] for h in apm) / len(apm), 'heures': len(apm)}
+                               'tk': sum(hs[h]['tk'] for h in apm) / len(apm), 'ca': sum(hs[h]['ca'] for h in apm) / len(apm),
+                               'heures': len(apm)}
 
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
+        # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
+        'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
         'b2b': {'part': COCKPIT['partB2b'], 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
                 'ecart': ecart, 'ecartSept': ecarts[0], 'ecartOct': ecarts[1], 'partDeLAnnee': ecart / b2b12 * 100,

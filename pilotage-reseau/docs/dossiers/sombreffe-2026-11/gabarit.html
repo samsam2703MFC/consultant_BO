@@ -185,6 +185,7 @@ body { margin: 0; background: var(--paper); }
     <h2 class="rp-h2">Temps morts au comptoir</h2>
     <p class="rp-p" id="tm-intro"></p>
     <div class="rp-kpis" id="tm-kpis"></div>
+    <div class="rp-alerte" id="tm-constat"></div>
     <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
     <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
     <div class="rp-legende" id="tm-legende"></div>
@@ -252,6 +253,7 @@ $('essentiel-points').innerHTML = [
   `Sur les six mois présents dans les deux années (mai → octobre), 2026 fait ${pct(ecC('ca'))} de CA et ${pct(ecC('clients'))} de clients face à 2025, avec ${C.n.jours - C.n1.jours} jours ouverts de plus ; par jour ouvert, ${pct(ecC('caJour'))} de CA et ${pct(ecC('cliJour'))} de clients.`,
   `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
   `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
+  `Constat terrain : le magasin ne cuit plus l’après-midi, et c’est là que le comptoir se vide. De 14 h à 18 h, ${dec(D.tempsMorts.apresMidi.pct, 0)} % du temps passe sans client.`,
   `Le B2B seul n’explique probablement pas cette hausse : il faudrait qu’environ ${dec(B.partDeLAnnee, 0)} % du B2B de toute l’année soit tombé en septembre et octobre. Le détail mois par mois du comptoir et du B2B tranchera.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
@@ -492,6 +494,8 @@ $('tm-points').innerHTML = [
   `Repère : sous 10 tickets dans l’heure, plus de la moitié de l’heure se passe sans client. Amener l’après-midi de ${dec(APM.tk)} à 10 tickets par heure, c’est environ ${dec(gainApm, 0)} clients de plus par jour.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
+$('tm-constat').innerHTML = `<span class="rp-alerte-k">Constat terrain · ${esc(D.constat.le)}</span><span>${esc(insec(D.constat.texte + ` Les chiffres le montrent : de 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client, avec ${dec(APM.tk)} tickets et ${eur(APM.ca)} de CA par heure, contre ${dec(TS.heures['12'].tk)} tickets et ${eur(TS.heures['12'].ca)} à midi.`))}</span>`;
+
 /* --- Soins intensifs --- */
 const N = DEP.n, N1 = DEP.n1, ec = (a, b) => (a / b - 1) * 100;
 $('soins-intro').textContent = `Les repères de départ sont les quatre dernières semaines complètes (${DEP.labs[0]} à ${DEP.labs[DEP.labs.length - 1]}, du ${dateC(DEP.du)} au ${dateC(DEP.au)}), face aux mêmes semaines de 2025. Chaque semaine de soins intensifs se lit face à ces repères et face à son N-1.`;
@@ -504,6 +508,7 @@ $('soins-reperes').innerHTML = [
 const objCli = Math.ceil(N1.cliJour);
 $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
   + [
+    ['Cuisson de l’après-midi', 'Visite, ou photo du four et de la vitrine l’après-midi', 'arrêtée', 'une cuisson chaque après-midi'],
     ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `revenir au niveau de 2025 : ${objCli} par jour`],
     ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
     ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
@@ -512,9 +517,10 @@ $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th>
   ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
 const gainCli = objCli - N.cliJour;
 $('pistes').innerHTML = [
+  `Reprendre la cuisson l’après-midi : c’est la première décision. Le magasin ne cuit plus l’après-midi, et le comptoir y passe ${dec(APM.pct, 0)} % du temps sans client avec ${dec(APM.tk)} tickets par heure. Passer à 10 tickets par heure de 14 h à 18 h, c’est environ ${dec(gainApm, 0)} clients de plus par jour, plus que les ${dec(gainCli, 0)} qui manquent face à 2025.`,
   `Trancher la question du panier dès la première semaine : vues Comptoir et B2B du cockpit, panier hors clients pro. Si c’est le B2B, nommer les sociétés et savoir si leurs commandes vont durer. Si c’est le comptoir, retrouver ce qui a fait monter le panier et le garder.`,
   `Regagner des clients au comptoir : c’est le chiffre qui baisse depuis un an. Revenir à ${objCli} clients par jour ouvert, c’est environ ${dec(gainCli, 0)} clients de plus chaque jour. Un client par jour ouvert vaut environ ${k1(B.unClientJour)} par an au panier des 12 derniers mois (${eur2(B.panier12)}).`,
-  `Viser l’après-midi pour ces clients : de 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client et le comptoir ne fait que ${dec(APM.tk)} tickets par heure. Une offre ou une animation de 14 h à 18 h, surtout du lundi au vendredi, a la place de faire ces clients-là.`,
+  `Compléter la reprise de la cuisson par une offre de l’après-midi, surtout du lundi au vendredi, les jours les plus creux.`,
   `Préparer l’été 2027 : juillet et août 2026 sont les deux mois les plus faibles face au N-1 (${pct(L.find(l => l.k === '2026-07').vsCa)} et ${pct(L.find(l => l.k === '2026-08').vsCa)}) ; par jour ouvert, juillet recule même de ${pct(Math.abs(juil.vsCaJour)).replace('+', '')}.`,
   `Développer le B2B : ${dec(B.part)} % de part pour un plafond de ${dec(D.plafond, 0)} %, la marge est grande. Chaque point de part vaut environ ${k1(B.unPoint)} par an.`,
   `Suivre chaque semaine les quatre indicateurs ci-dessus, face aux repères de départ, jusqu’à la sortie des soins intensifs.`,
