@@ -275,31 +275,10 @@ def main():
         b2bClients = {'clients': sorted(clientsA, key=lambda c: -c['total']), 'colTva': None, 'ca12Magasin': ca12, 'source': 'detail',
                       'du': min(detail['mois']), 'au': max(detail['mois'])}
 
-    # Le panier moyen face aux autres magasins, sur les mois où les quatre sont ouverts (Halle depuis février 2026,
-    # jusqu'au dernier mois clos), puis ce qu'auraient fait les clients de Sombreffe au panier le plus bas des autres.
-    tous = {x['id']: {'nom': x['nom'].split(' - ')[-1], 'mois': {m['mois']: m for m in x['mois'] if not m.get('enCours')}}
-            for x in d['magasins']}
-    communs = [k for k in douze if all(k in m['mois'] for m in tous.values())]
-    magasinsP = []
-    for sid, m in tous.items():
-        ca_ = sum(m['mois'][k]['ca'] for k in communs); cl_ = sum(m['mois'][k]['clients'] for k in communs)
-        magasinsP.append({'shop': sid, 'nom': m['nom'], 'moi': sid == SHOP, 'ca': ca_, 'clients': cl_, 'panier': ca_ / cl_,
-                          'cliJour': cl_ / sum(m['mois'][k]['jours'] for k in communs)})
-    magasinsP.sort(key=lambda x: -x['panier'])
-    bas = min((m for m in magasinsP if not m['moi']), key=lambda m: m['panier'])
-    moisP = [{'k': k, 'lab': f"{MOIS_C[int(k[5:]) - 1]} {k[2:4]}", 'clients': mois[k]['clients'], 'ca': mois[k]['ca'],
-              'panier': mois[k]['ca'] / mois[k]['clients'], 'caBas': mois[k]['clients'] * bas['panier'],
-              'ecart': mois[k]['clients'] * bas['panier'] - mois[k]['ca']} for k in communs]
-    panierAutres = {'du': communs[0], 'au': communs[-1], 'nbMois': len(communs), 'magasins': magasinsP,
-                    'bas': {'nom': bas['nom'], 'panier': bas['panier']}, 'mois': moisP,
-                    'clients': sum(l['clients'] for l in moisP), 'ca': sum(l['ca'] for l in moisP),
-                    'caBas': sum(l['caBas'] for l in moisP), 'ecart': sum(l['ecart'] for l in moisP)}
-    panierAutres['ecartAn'] = panierAutres['ecart'] / len(communs) * 12
-
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
-        'taches': taches, 'panierAutres': panierAutres,
+        'taches': taches,
         'tempsMorts': tempsMorts,
         'serie': serie, 'lignes': lignes, 'total': total, 'comparable': comparable, 'trim': trim, 'semaines': semaines, 'depart': depart,
         'soinsIntensifs': '2026-11-16',
@@ -338,7 +317,6 @@ def main():
     # Contrôles à l'écran (pas dans le rapport).
     print(f"18 mois : {total['ca']:.0f} € · {total['clients']} clients · panier {total['panier']:.2f}")
     print(f"12 mois : {ca12:.0f} € · B2B ≈ {b2b12:.0f} € · écart sept.-oct. {ecart:.0f} € = {ecart / b2b12 * 100:.1f} % du B2B de l'année")
-    print(f"panier au plus bas des autres : {panierAutres['caBas']:.0f} € contre {panierAutres['ca']:.0f} € → écart {panierAutres['ecart']:.0f} €")
     print('après-midi :', {k: round(v, 1) for k, v in tempsMorts['apresMidi'].items()})
     print('écarts vs N-1 :', [(s['k'], arr(pc(s['ca'], s['n1']['ca']))) for s in serie if s['n1']])
 
