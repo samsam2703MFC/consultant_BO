@@ -686,6 +686,10 @@ function route(string $method, string $path): mixed
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
+            $path === '/fidelite/cron'                 => ep_fidelite_cron(),
+            $path === '/fidelite/verification'         => ep_fidelite_verification(),
+            $path === '/fidelite/client'               => ep_fidelite_client(),
+            $path === '/fidelite/creation'             => ep_fidelite_creation(),
             $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
@@ -948,8 +952,12 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
-    // --- fidélité : les règles du programme, publiées en un envoi
-    if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
+    // --- fidélité : la carte à points et son bingo, écrits dans l'ERP par son API (src/fidelite.php)
+    if ($method === 'POST' && $path === '/fidelite/simuler') { return wr_fidelite_simuler(); }
+    if ($method === 'POST' && $path === '/fidelite/publier') { return wr_fidelite_publier(); }
+    if ($method === 'POST' && $path === '/fidelite/bingo/bons') { return wr_fidelite_bingo_bons(); }
+    if ($method === 'POST' && $path === '/fidelite/creer') { return wr_fidelite_creer(); }
+    if ($method === 'POST' && $path === '/fidelite/creer-campagnes') { return wr_fidelite_creer_campagnes(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }

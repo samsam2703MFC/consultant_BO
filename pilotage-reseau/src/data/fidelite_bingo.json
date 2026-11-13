@@ -1,0 +1,428 @@
+{
+  "_": "Bingo + points, le handoff de Sam (« Bingo design system rebuild », 13/11/2026 : docs/maquettes/fidelite-bingo/handoff). Une carte de fidélité à points, permanente, dans l'ERP (son code : « carte ») et QUATRE cartes de bingo par an, une par saison de 13 semaines. Le bingo fait revenir : la case de la semaine se coche dès seuilEuros € d'achats du lundi au dimanche, tous magasins, une case par semaine au plus. Toutes les tousLes cases cochées, un bon de bons[i] € ; 13 / 13, le super bon. Les points font consommer : 1 point par euro (la carte de l'ERP), ×multiplicateurCase une fois la case cochée jusqu'au dimanche, un bon tous les palier points. Chaque saison a ses campagnes de bons dans l'ERP, nommées « {campagne} · {valeur} € ». Les valeurs sont des valeurs de départ, à valider. Hiver : la saison de Sam ; printemps, été, automne : thèmes proposés, à valider (« aValider »).",
+  "carte": "points-atelier",
+  "seuilEuros": 10,
+  "tousLes": 3,
+  "validite": 30,
+  "prefixeCampagne": "Bingo",
+  "bons": [
+    2,
+    2,
+    2,
+    2
+  ],
+  "superBon": {
+    "valeur": 10,
+    "provisoire": true
+  },
+  "multiplicateurCase": 2,
+  "coefficients": {
+    "_": "Coefficients (handoff, onglet Points), réduits le 13/11/2026 : pas de coefficient par personne pour le moment. Les jours ×2 / ×3 sont les créneaux de la carte (points_config.bonuses), que l'ERP applique déjà. La case cochée ×2 et le produit de la semaine ×2 ne sont pas dans l'API (DEMANDE-ERP.md). Ils ne s'additionnent pas : le plus fort s'applique.",
+    "caseCochee": 2,
+    "produitSemaine": 2
+  },
+  "palier": {
+    "points": 100,
+    "valeur": 5
+  },
+  "tirage": null,
+  "saisons": [
+    {
+      "id": "H27",
+      "nom": "Hiver 2026 – 2027",
+      "du": "2026-11-23",
+      "ill": "hiver",
+      "tirage": "2027-02-22",
+      "bons": [
+        {
+          "nom": "Bon de l’Avent",
+          "motif": "cake"
+        },
+        {
+          "nom": "Bon des Rois",
+          "motif": "tartelette"
+        },
+        {
+          "nom": "Bon de l’hiver",
+          "motif": "hiver"
+        },
+        {
+          "nom": "Bon carte pleine",
+          "motif": "cupcake"
+        }
+      ],
+      "semaines": [
+        {
+          "titre": "Le cougnou est là",
+          "sous": "1er dimanche de l’Avent",
+          "fete": "29/11",
+          "ill": "bread-2"
+        },
+        {
+          "titre": "Saint-Nicolas",
+          "sous": "spéculoos et massepain",
+          "fete": "06/12",
+          "ill": "saint-nicolas"
+        },
+        {
+          "titre": "Le chocolat chaud",
+          "sous": "produit de la semaine",
+          "ill": "chocolat"
+        },
+        {
+          "titre": "Le pain d’épices",
+          "sous": "produit de la semaine",
+          "ill": "cookies"
+        },
+        {
+          "titre": "Noël",
+          "sous": "la bûche",
+          "fete": "25/12",
+          "ill": "noel"
+        },
+        {
+          "titre": "Nouvel An",
+          "sous": "les petits fours",
+          "fete": "01/01",
+          "ill": "artboard-4"
+        },
+        {
+          "titre": "Épiphanie",
+          "sous": "la galette des rois",
+          "fete": "06/01",
+          "ill": "galette"
+        },
+        {
+          "titre": "Le bon pain",
+          "sous": "produit de la semaine",
+          "ill": "bread-1"
+        },
+        {
+          "titre": "Blue Monday",
+          "sous": "un éclair pour le moral",
+          "ill": "cake-slice"
+        },
+        {
+          "titre": "Le croissant",
+          "sous": "produit de la semaine",
+          "ill": "croissant"
+        },
+        {
+          "titre": "Chandeleur",
+          "sous": "les crêpes",
+          "fete": "02/02",
+          "ill": "crepes"
+        },
+        {
+          "titre": "Saint-Valentin",
+          "sous": "beignets de Mardi gras",
+          "fete": "14/02",
+          "ill": "valentin"
+        },
+        {
+          "titre": "La tarte du dimanche",
+          "sous": "produit de la semaine",
+          "ill": "tarte"
+        }
+      ],
+      "campagne": "Bingo hiver",
+      "aValider": false
+    },
+    {
+      "id": "P27",
+      "nom": "Printemps 2027",
+      "du": "2027-02-22",
+      "ill": "printemps",
+      "tirage": "2027-05-24",
+      "campagne": "Bingo printemps",
+      "aValider": true,
+      "bons": [
+        {
+          "nom": "Bon du réveil",
+          "motif": "croissant"
+        },
+        {
+          "nom": "Bon de Pâques",
+          "motif": "chocolat"
+        },
+        {
+          "nom": "Bon d’avril",
+          "motif": "printemps"
+        },
+        {
+          "nom": "Bon carte pleine",
+          "motif": "cupcake"
+        }
+      ],
+      "semaines": [
+        {
+          "titre": "Le printemps arrive",
+          "sous": "produit de la semaine",
+          "ill": "printemps"
+        },
+        {
+          "titre": "Le pain complet",
+          "sous": "produit de la semaine",
+          "ill": "bread-1"
+        },
+        {
+          "titre": "La tarte au citron",
+          "sous": "produit de la semaine",
+          "ill": "tartelette"
+        },
+        {
+          "titre": "Le croissant aux amandes",
+          "sous": "produit de la semaine",
+          "ill": "croissant"
+        },
+        {
+          "titre": "Pâques",
+          "sous": "les œufs en chocolat",
+          "ill": "chocolat",
+          "fete": "28/03"
+        },
+        {
+          "titre": "Poisson d’avril",
+          "sous": "un gâteau poisson",
+          "ill": "cake-slice",
+          "fete": "01/04"
+        },
+        {
+          "titre": "Les cookies",
+          "sous": "produit de la semaine",
+          "ill": "cookies"
+        },
+        {
+          "titre": "Le pain aux céréales",
+          "sous": "produit de la semaine",
+          "ill": "bread-2"
+        },
+        {
+          "titre": "La tarte aux fraises",
+          "sous": "les premières fraises",
+          "ill": "tarte"
+        },
+        {
+          "titre": "Fête du travail",
+          "sous": "le muguet",
+          "ill": "printemps",
+          "fete": "01/05"
+        },
+        {
+          "titre": "Fête des mères",
+          "sous": "le gâteau des mamans",
+          "ill": "valentin",
+          "fete": "09/05"
+        },
+        {
+          "titre": "Pentecôte",
+          "sous": "le brunch",
+          "ill": "croissant",
+          "fete": "16/05"
+        },
+        {
+          "titre": "Le gâteau du dimanche",
+          "sous": "produit de la semaine",
+          "ill": "cake"
+        }
+      ]
+    },
+    {
+      "id": "E27",
+      "nom": "Été 2027",
+      "du": "2027-05-24",
+      "ill": "ete",
+      "tirage": "2027-08-23",
+      "campagne": "Bingo été",
+      "aValider": true,
+      "bons": [
+        {
+          "nom": "Bon du soleil",
+          "motif": "ete"
+        },
+        {
+          "nom": "Bon de la musique",
+          "motif": "cupcake"
+        },
+        {
+          "nom": "Bon de juillet",
+          "motif": "tarte"
+        },
+        {
+          "nom": "Bon carte pleine",
+          "motif": "cake"
+        }
+      ],
+      "semaines": [
+        {
+          "titre": "L’été commence",
+          "sous": "produit de la semaine",
+          "ill": "ete"
+        },
+        {
+          "titre": "La baguette du pique-nique",
+          "sous": "produit de la semaine",
+          "ill": "bread-1"
+        },
+        {
+          "titre": "Fête des pères",
+          "sous": "le gâteau des papas",
+          "ill": "cake",
+          "fete": "13/06"
+        },
+        {
+          "titre": "La tarte aux abricots",
+          "sous": "produit de la semaine",
+          "ill": "tarte"
+        },
+        {
+          "titre": "Fête de la musique",
+          "sous": "les petits fours",
+          "ill": "artboard-4",
+          "fete": "21/06"
+        },
+        {
+          "titre": "Les cookies",
+          "sous": "produit de la semaine",
+          "ill": "cookies"
+        },
+        {
+          "titre": "Les vacances",
+          "sous": "le sandwich du départ",
+          "ill": "bread-2"
+        },
+        {
+          "titre": "La tartelette aux fruits",
+          "sous": "produit de la semaine",
+          "ill": "tartelette"
+        },
+        {
+          "titre": "Fête nationale",
+          "sous": "le 21 juillet",
+          "ill": "artboard-4",
+          "fete": "21/07"
+        },
+        {
+          "titre": "Le croissant du matin",
+          "sous": "produit de la semaine",
+          "ill": "croissant"
+        },
+        {
+          "titre": "La glace et le cupcake",
+          "sous": "produit de la semaine",
+          "ill": "cupcake"
+        },
+        {
+          "titre": "15 août",
+          "sous": "la tarte de l’Assomption",
+          "ill": "tarte",
+          "fete": "15/08"
+        },
+        {
+          "titre": "La part de gâteau",
+          "sous": "produit de la semaine",
+          "ill": "cake-slice"
+        }
+      ]
+    },
+    {
+      "id": "A27",
+      "nom": "Automne 2027",
+      "du": "2027-08-23",
+      "ill": "automne",
+      "tirage": "2027-11-22",
+      "campagne": "Bingo automne",
+      "aValider": true,
+      "bons": [
+        {
+          "nom": "Bon de la rentrée",
+          "motif": "croissant"
+        },
+        {
+          "nom": "Bon d’octobre",
+          "motif": "automne"
+        },
+        {
+          "nom": "Bon d’Halloween",
+          "motif": "cake-slice"
+        },
+        {
+          "nom": "Bon carte pleine",
+          "motif": "cupcake"
+        }
+      ],
+      "semaines": [
+        {
+          "titre": "L’automne arrive",
+          "sous": "produit de la semaine",
+          "ill": "automne"
+        },
+        {
+          "titre": "La rentrée",
+          "sous": "la collation",
+          "ill": "croissant",
+          "fete": "01/09"
+        },
+        {
+          "titre": "Le pain du goûter",
+          "sous": "produit de la semaine",
+          "ill": "bread-1"
+        },
+        {
+          "titre": "La tarte aux pommes",
+          "sous": "produit de la semaine",
+          "ill": "tarte"
+        },
+        {
+          "titre": "Les cookies",
+          "sous": "produit de la semaine",
+          "ill": "cookies"
+        },
+        {
+          "titre": "Fête de la FWB",
+          "sous": "le 27 septembre",
+          "ill": "artboard-4",
+          "fete": "27/09"
+        },
+        {
+          "titre": "Le pain aux noix",
+          "sous": "produit de la semaine",
+          "ill": "bread-2"
+        },
+        {
+          "titre": "Le chocolat chaud",
+          "sous": "produit de la semaine",
+          "ill": "chocolat"
+        },
+        {
+          "titre": "La tartelette aux poires",
+          "sous": "produit de la semaine",
+          "ill": "tartelette"
+        },
+        {
+          "titre": "Halloween",
+          "sous": "les biscuits citrouille",
+          "ill": "cake-slice",
+          "fete": "31/10"
+        },
+        {
+          "titre": "Toussaint",
+          "sous": "le gâteau de famille",
+          "ill": "cake",
+          "fete": "01/11"
+        },
+        {
+          "titre": "Saint-Martin",
+          "sous": "les cougnous de la Saint-Martin",
+          "ill": "bread-2",
+          "fete": "11/11"
+        },
+        {
+          "titre": "Le cupcake d’automne",
+          "sous": "produit de la semaine",
+          "ill": "cupcake"
+        }
+      ]
+    }
+  ]
+}

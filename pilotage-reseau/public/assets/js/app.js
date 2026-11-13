@@ -1139,7 +1139,7 @@ class App {
       apiModule: ['API du module', 'Primes et application employé : ce que chaque page lit et écrit, d’où viennent les données, et ce que chaque route répond à l’instant.'],
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
-      fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
+      fidelite: ['Fidélité', 'Une carte à points permanente et quatre cartes de bingo par an. Le bingo fait revenir : une case par semaine dès 10 € d’achats, un bon toutes les 3 cases. Les points font consommer : doublés une fois la case cochée, un bon tous les 100 points. Tout se lit et se publie dans l’ERP, par son API.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],

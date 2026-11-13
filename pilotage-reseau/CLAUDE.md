@@ -43,3 +43,14 @@ Lire `docs/dimona.md`. En bref :
   société franchisée.
 - Chaque règle métier ONSS cite sa source (ligne du YAML, page du PDF, instruction ONSS). Ce qui n'est pas
   cité n'est pas supposé.
+
+## Fidélité (`#/fidelity`, `src/fidelite.php`) — décisions du 13/11/2026
+- **Structure** : une carte de fidélité à points, permanente, dans l'ERP (`points_config`), et **quatre cartes de
+  bingo par an** (une par saison de 13 semaines, `src/data/fidelite_bingo.json`). Plus de cartes à tampons.
+- **Un mix bingo + points**, selon le handoff de Sam (`docs/maquettes/fidelite-bingo/handoff`, il fait foi) : le
+  bingo fait revenir (une case par semaine dès 10 € d'achats, un bon toutes les x cases, le super bon à 13/13) ; les
+  points font consommer (×2 jusqu'au dimanche une fois la case cochée, un bon tous les 100 points).
+- **Uniquement par l'API de l'ERP** (`/admin/loyalty/*`, `/shops/{id}/loyalty/*`, `/admin/voucher-campaigns/*`) :
+  aucune table du cockpit. Ce que l'API ne sait pas faire (le ×2 par client après la case, l'échange automatique au
+  palier, le produit de la semaine ×2 ; pas de coefficient par personne pour le moment — les jours ×2 / ×3 sont les
+  créneaux de la carte, gérés par l'API) se dit à l'écran et se demande à l'ERP (`docs/maquettes/fidelite-bingo/DEMANDE-ERP.md`) ; il ne se simule pas.
