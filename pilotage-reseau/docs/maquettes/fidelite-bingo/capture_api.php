@@ -34,6 +34,7 @@ $r = match (true) {
     $methode === 'GET' && $route === '/meta' => $meta,
     $methode === 'GET' && $route === '/fidelite' => ep_fidelite(),
     $methode === 'GET' && $route === '/fidelite/clients' => ep_fidelite_clients(),
+    $methode === 'GET' && $route === '/fidelite/verification' => ep_fidelite_verification(),
     $methode === 'POST' && $route === '/fidelite/simuler' => wr_fidelite_simuler(),
     $methode === 'POST' && $route === '/fidelite/bingo/bons' => wr_fidelite_bingo_bons(),
     $methode === 'POST' && $route === '/fidelite/publier' => wr_fidelite_publier(),

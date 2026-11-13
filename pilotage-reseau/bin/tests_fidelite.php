@@ -165,6 +165,16 @@ verifie($r['crees'] === 0, 'une seconde fois : rien de plus');
 $e->campagnes[41]['status'] = 'DRAFT';
 verifie(fidBingoBons(true)['crees'] === 0, 'une campagne en brouillon n’émet rien');
 
+// --- 7. La vérification (page de test) -----------------------------------------------------
+$e = nouvelErp(60);
+$v = ep_fidelite_verification();
+verifie($v['ok'] && count($v['etapes']) === 7, 'sept routes vérifiées, toutes en ordre');
+verifie($e->ecrits === [['POST', '/admin/loyalty/simulate', $e->ecrits[0][2]]], 'la vérification n’écrit rien (seule la simulation, que l’ERP n’enregistre pas)');
+verifie(str_contains($v['etapes'][0]['note'], 'FID-POINTS') && str_contains($v['etapes'][3]['note'], 'Bingo hiver · 2 €'), 'elle dit la carte et les campagnes trouvées');
+$GLOBALS['FID_ERP'] = static fn (string $m, string $p) => str_starts_with($p, '/admin/voucher-campaigns') ? ['code' => 403, 'corps' => null, 'erreur' => 'HTTP 403'] : ($e)($m, $p, null);
+$v = ep_fidelite_verification();
+verifie(!$v['ok'] && str_contains($v['etapes'][3]['note'], 'MENU.BUNDLE.MANAGE'), 'un 403 dit la permission qui manque');
+
 // --- 7. ERP absent ------------------------------------------------------------------------
 $GLOBALS['FID_ERP'] = static fn () => ['code' => 0, 'corps' => null, 'erreur' => 'API ERP injoignable'];
 $d = ep_fidelite();

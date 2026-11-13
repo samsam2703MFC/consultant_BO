@@ -54,6 +54,14 @@ const D = __dirname;
   await p.waitForFunction(() => document.querySelector('.fi-grp h3') && /Corbais/.test(document.body.innerText));
   await attendre('.fi-tuiles');
   await plein('code-clients-corbais.png');
+  // La page de test (public/fidelite-test), toutes les sections lues.
+  await p.setViewportSize({ width: 1280, height: 900 });
+  await p.goto(BASE + 'fidelite-test/index.html', { waitUntil: 'networkidle' });
+  for (const [b, sel] of [['#b-verif', '#verif table'], ['#b-prog', '#prog table'], ['#b-sim', '#sim .kpis'], ['#b-cli', '#cli .kpis'], ['#b-bons', '#bons table']]) {
+    await p.click(b); await p.waitForSelector(sel, { timeout: 120000 });
+  }
+  await p.evaluate(() => document.fonts.ready); await p.waitForTimeout(300);
+  await p.screenshot({ path: path.join(D, 'code-page-test.png'), fullPage: true }); console.log('capture code-page-test.png');
   console.log('erreurs', err.length ? err : 'aucune');
   await b.close();
 })();

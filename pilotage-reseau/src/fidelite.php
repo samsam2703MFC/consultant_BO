@@ -700,6 +700,59 @@ function wr_fidelite_bingo_bons(): array
     return fidBingoBons(!empty(body()['ecrire']));
 }
 
+/**
+ * GET /fidelite/verification — l'API de l'ERP, route par route, telle que la fidélité l'utilise : {ok, compte, etapes:
+ * [{etape, methode, route, ok, code, ms, note}], resume}. LECTURE SEULE : des GET, et la simulation de points (que l'ERP
+ * n'écrit pas). Sert la page de test (public/fidelite-test). Un 403 dit la permission qui manque au compte admin.
+ */
+function ep_fidelite_verification(): array
+{
+    $etapes = [];
+    $sonde = static function (string $etape, string $methode, string $route, ?array $corps, string $permission, ?callable $lire = null) use (&$etapes): array {
+        $t = microtime(true);
+        $r = fidErp($methode, $route, $corps);
+        $ok = $r['code'] >= 200 && $r['code'] < 300;
+        $note = $ok ? ($lire ? (string) $lire($r['corps']) : '') : ($r['code'] === 403 ? 'refusé : il manque la permission ' . $permission . ' au compte admin ERP'
+            : ($r['code'] === 401 ? 'jeton refusé : vérifiez le compte admin ERP (Paramètres)' : (string) ($r['erreur'] ?? 'sans réponse')));
+        $etapes[] = ['etape' => $etape, 'methode' => $methode, 'route' => $route, 'ok' => $ok, 'code' => $r['code'], 'ms' => (int) round(1000 * (microtime(true) - $t)), 'note' => mb_substr($note, 0, 300)];
+        return $r;
+    };
+    $compte = class_exists('ErpApi') && !isset($GLOBALS['FID_ERP']) ? ErpApi::statut() : ['configure' => true, 'base' => 'faux ERP'];
+    $cartes = $sonde('Les cartes de fidélité', 'GET', '/admin/loyalty/cards?limit=100', null, 'aucune (jeton admin valide)', static function ($c) {
+        $L = fidItems($c); $p = fidCarteProgramme($L);
+        return count($L) . ' carte(s) ; carte à points du programme : ' . ($p ? ($p['name'] ?? '') . ' (' . ($p['code'] ?? '') . ', id ' . $p['id'] . ', v' . ($p['version'] ?? 1) . ')' : 'aucune — créez-la ou réglez « carte » dans src/data/fidelite_bingo.json');
+    });
+    $prog = fidCarteProgramme(fidItems($cartes['corps']));
+    if ($prog) { $sonde('La carte du programme', 'GET', '/admin/loyalty/cards/' . (int) $prog['id'], null, 'LOYALTY.MANAGE', static fn ($c) => 'revision ' . (fidObjet($c)['revision'] ?? '?') . (empty(fidObjet($c)['terms_locked']) ? '' : ' · barème figé (une modification crée une nouvelle version)')); }
+    $opt = $sonde('Les magasins', 'GET', '/admin/loyalty/options', null, 'LOYALTY.MANAGE', static fn ($c) => count((array) (fidObjet($c)['shops'] ?? [])) . ' magasin(s)');
+    $saison = fidSaison();
+    $pre = $saison ? $saison['campagne'] : 'Bingo';
+    $sonde('Les campagnes du bingo (' . $pre . ')', 'GET', '/admin/voucher-campaigns?limit=100&name=' . rawurlencode($pre), null, 'MENU.BUNDLE.MANAGE', static function ($c) use ($pre) {
+        $n = array_map(static fn ($x) => (string) (($x['campaign'] ?? $x)['name'] ?? '') . ' [' . (string) (($x['campaign'] ?? $x)['status'] ?? '') . ']', fidItems($c));
+        return $n ? implode(' · ', $n) : 'aucune campagne « ' . $pre . ' · … € » : à créer dans l’ERP (UNIQUE, client requis) pour que les bons partent';
+    });
+    $shop = (int) ((array) (fidObjet($opt['corps'])['shops'] ?? [[]]))[0]['id'] ?? 0;
+    if ($shop > 0 && $prog) {
+        $du = $saison ? max($saison['du'], fidPlus(fidAujourdhui(), -6)) : fidPlus(fidAujourdhui(), -6);
+        $q = 'card_id=' . (int) $prog['id'] . '&from=' . $du . '&to=' . fidAujourdhui();
+        $sonde('Statistiques d’un magasin (' . $shop . ')', 'GET', '/shops/' . $shop . '/loyalty/statistics?' . $q, null, 'un jeton qui couvre ce magasin',
+            static fn ($c) => 'participants ' . (fidObjet($c)['participants']['unique_customers'] ?? '?') . ' · points gagnés ' . (fidObjet($c)['shop_activity']['points_earned'] ?? '?') . ' · ventes ' . (fidObjet($c)['shop_activity']['gross_sales_before_corrections'] ?? '?') . ' €');
+        $sonde('Clients d’un magasin (' . $shop . ')', 'GET', '/shops/' . $shop . '/loyalty/customers?' . $q . '&limit=5', null, 'un jeton qui couvre ce magasin', static function ($c) {
+            $L = fidItems($c); $f = $L[0] ?? null;
+            return 'total ' . ((is_array($c) ? ($c['pagination']['total'] ?? null) : null) ?? '?') . ($f ? ' · 1er : achats ' . ($f['shop_activity']['gross_sales_before_corrections'] ?? '?') . ' €, programme ' . (count((array) ($f['programs'] ?? [])) ? 'présent' : 'absent') : ' · aucun client sur la période');
+        });
+        $cfg = fidPointsConfig($prog['points_config'] ?? null);
+        if ($cfg) {
+            $sonde('Simulation de points (rien n’est écrit)', 'POST', '/admin/loyalty/simulate', ['config' => $cfg, 'shop_id' => $shop, 'amount_cents' => 2240, 'local_datetime' => fidAujourdhui() . 'T15:10'], 'LOYALTY.MANAGE',
+                static fn ($c) => '22,40 € aujourd’hui à 15:10 → ' . (fidObjet($c)['points'] ?? '?') . ' points (magasin ×' . (fidObjet($c)['shop_coefficient'] ?? '?') . ', bonus ×' . (fidObjet($c)['bonus_coefficient'] ?? '?') . ')');
+        }
+    }
+    $ko = array_values(array_filter($etapes, static fn ($e) => !$e['ok']));
+    return ['ok' => !$ko && $prog !== null, 'compte' => ['base' => $compte['base'] ?? '', 'configure' => !empty($compte['configure'])], 'aujourdhui' => fidAujourdhui(),
+        'saison' => $saison ? ['id' => $saison['id'], 'nom' => $saison['nom'], 'enCours' => $saison['enCours']] : null, 'etapes' => $etapes,
+        'resume' => $ko ? count($ko) . ' route(s) en échec : ' . implode(' ; ', array_map(static fn ($e) => $e['etape'] . ' (HTTP ' . $e['code'] . ')', $ko)) : ($prog ? 'Toutes les routes répondent.' : 'L’API répond, mais aucune carte à points active.')];
+}
+
 /** GET /fidelite/cron?jeton= — le lundi, les bons de la semaine close (campagnes ACTIVES seulement) ; chaque nuit, le cache se réchauffe. */
 function ep_fidelite_cron(): array
 {
