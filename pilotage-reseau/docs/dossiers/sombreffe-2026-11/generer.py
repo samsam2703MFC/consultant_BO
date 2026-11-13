@@ -260,6 +260,21 @@ def main():
         clients.sort(key=lambda c: -c['total'])
         b2bClients = {'clients': clients, 'colTva': colTva, 'ca12Magasin': ca12}
 
+    # Le tableau des clients année par année, tiré du détail jour par jour quand il couvre 2025 (sans export CSV).
+    if b2bClients is None and detail and any(ym.startswith('2025') for ym in detail['mois']):
+        def somme(c, test):
+            x = [v for ym, v in c['mois'].items() if test(ym)]
+            return round(sum(v['ca'] for v in x), 2), sum(v['tickets'] for v in x)
+        clientsA = []
+        for c in detail['societes']:
+            ca25, n25 = somme(c, lambda ym: ym.startswith('2025'))
+            ca26, n26 = somme(c, lambda ym: ym.startswith('2026'))
+            ca12_, _ = somme(c, lambda ym: '2025-11' <= ym <= '2026-10')
+            clientsA.append({'id': c['cle'], 'nom': c['nom'], 'ca2025': ca25, 'cmd2025': n25, 'ca2026': ca26, 'cmd2026': n26,
+                             'ca12': ca12_, 'total': c['total'], 'premier': c['premier'], 'dernier': c['dernier'], 'tva': None})
+        b2bClients = {'clients': sorted(clientsA, key=lambda c: -c['total']), 'colTva': None, 'ca12Magasin': ca12, 'source': 'detail',
+                      'du': min(detail['mois']), 'au': max(detail['mois'])}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'personnel': personnel, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,

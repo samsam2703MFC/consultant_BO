@@ -388,7 +388,9 @@ const PE6 = (() => {
 const B2BX = (() => {
   const bd = D.b2bDetail;
   if (!bd || !bd.societes.length) { return null; }
-  const tot = bd.societes.reduce((a, c) => a + c.total, 0), top = bd.societes[0], nMois = Object.keys(bd.mois).length;
+  const M6 = Object.keys(bd.mois).sort().slice(-6), nMois = M6.length;
+  const SOC = bd.societes.map(c => ({ ...c, total: M6.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0) })).sort((a, b) => b.total - a.total);
+  const tot = SOC.reduce((a, c) => a + c.total, 0), top = SOC[0];
   const so = c => ((c.mois['2026-09'] || {}).ca || 0) + ((c.mois['2026-10'] || {}).ca || 0);
   const mS = D.serie.find(m => m.k === '2026-09'), mO = D.serie.find(m => m.k === '2026-10');
   const ok = m => m && m.pro && m.pro.complet && m.n1pro && m.n1pro.complet;
@@ -789,21 +791,23 @@ $('probleme-points').innerHTML = [
 /* --- Les clients B2B, mois par mois (le détail jour par jour du cockpit, s'il est là) --- */
 const BD = D.b2bDetail;
 if (BD && BD.societes.length) {
-  const MS = Object.keys(BD.mois).sort(), labM = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab.split(' ')[0];
+  const MS = Object.keys(BD.mois).sort().slice(-6), labM = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab.split(' ')[0];
   const caMois = ym => (D.lignes.find(l => l.k === ym) || {}).ca;
-  const totB2b = BD.societes.reduce((a, c) => a + c.total, 0), MAXS = 15;
-  const vus = BD.societes.slice(0, MAXS), reste = BD.societes.slice(MAXS);
+  const SOC = BD.societes.map(c => { const t = MS.reduce((a, ym) => a + ((c.mois[ym] || {}).ca || 0), 0), n = MS.reduce((a, ym) => a + ((c.mois[ym] || {}).tickets || 0), 0);
+    return { ...c, total: t, tickets: n }; }).filter(c => c.total > 0).sort((a, b) => b.total - a.total);
+  const totB2b = SOC.reduce((a, c) => a + c.total, 0), MAXS = 15;
+  const vus = SOC.slice(0, MAXS), reste = SOC.slice(MAXS);
   const premierM = MS[0], dernierM = MS[MS.length - 1];
   $('b2b-6mois-titre').textContent = `Les clients B2B, ${labM(premierM)} → ${(D.lignes.find(l => l.k === dernierM) || { lab: dernierM }).lab}, mois par mois`;
-  const top3 = BD.societes.slice(0, 3).reduce((a, c) => a + c.total, 0);
-  $('b2b-6mois-texte').textContent = insec(`${BD.societes.length} sociétés ont acheté en B2B sur la période, pour ${k1(totB2b)}. Les trois premières font ${dec(top3 / totB2b * 100, 0)} % du B2B : ${BD.societes.slice(0, 3).map(c => c.nom).join(', ')}.`);
+  const top3 = SOC.slice(0, 3).reduce((a, c) => a + c.total, 0);
+  $('b2b-6mois-texte').textContent = insec(`${SOC.length} sociétés ont acheté en B2B sur la période, pour ${k1(totB2b)}. Les trois premières font ${dec(top3 / totB2b * 100, 0)} % du B2B : ${SOC.slice(0, 3).map(c => c.nom).join(', ')}.`);
   const cel = v => v ? eur(v) : '<span class="dim">—</span>';
   const ligne = (nom, c, cls = '') => `<tr class="${cls}"><td>${esc(nom)}</td>` + MS.map(ym => `<td class="num">${cel((c.mois[ym] || {}).ca)}</td>`).join('')
     + `<td class="num">${eur(c.total)}</td><td class="num">${c.tickets}</td><td class="num">${dec(c.total / totB2b * 100)} %</td><td>${c.dernier ? esc(dateC(c.dernier)) : ''}</td></tr>`;
   const somme = L => { const r = { total: 0, tickets: 0, mois: {} }; L.forEach(c => { r.total += c.total; r.tickets += c.tickets; MS.forEach(ym => { const x = c.mois[ym]; if (x) { r.mois[ym] = r.mois[ym] || { ca: 0 }; r.mois[ym].ca += x.ca; } }); }); return r; };
   $('b2b-6mois-table').innerHTML = '<thead><tr><th>Société</th>' + MS.map(ym => `<th class="num">${esc(labM(ym))}</th>`).join('') + '<th class="num">Total</th><th class="num">Tickets</th><th class="num">Part du B2B</th><th>Dernier</th></tr></thead><tbody>'
     + vus.map(c => ligne(c.nom, c)).join('') + (reste.length ? ligne(`et ${reste.length} autres`, somme(reste), 'dim') : '')
-    + '</tbody><tfoot>' + ligne('Total B2B', somme(BD.societes)).replace('<tr class="">', '<tr>')
+    + '</tbody><tfoot>' + ligne('Total B2B', somme(SOC)).replace('<tr class="">', '<tr>')
     + '<tr><td>Part du CA du magasin</td>' + MS.map(ym => `<td class="num">${BD.mois[ym].ca && caMois(ym) ? dec(BD.mois[ym].ca / caMois(ym) * 100) + ' %' : '—'}</td>`).join('') + '<td class="num">' + dec(totB2b / MS.reduce((a, ym) => a + (caMois(ym) || 0), 0) * 100) + ' %</td><td></td><td></td><td></td></tr></tfoot>';
   const incomplets = MS.filter(ym => BD.mois[ym].jours < BD.mois[ym].joursMois);
   $('b2b-6mois-note').textContent = insec('Relu au cockpit ticket par ticket, jour par jour (route /exploitation/pro/detail) : les tickets des clients pro à TVA valide, au montant de caisse. '
@@ -825,7 +829,9 @@ if (BC && BC.clients.length) {
   $('b2b-clients-table').innerHTML = '<thead><tr><th>Client</th><th class="num">CA 2025</th><th class="num">Cmd 2025</th><th class="num">CA 2026</th><th class="num">Cmd 2026</th><th class="num">12 mois</th><th class="num">Part du CA</th><th>Dernier achat</th>' + (BC.colTva ? '<th>TVA</th>' : '') + '</tr></thead><tbody>'
     + vus.map(c => ligne(c.nom, c)).join('') + (reste.length ? ligne(`et ${reste.length} autres`, somme(reste), 'dim') : '')
     + '</tbody><tfoot>' + ligne('Total B2B', somme(BC.clients)).replace('<tr class="">', '<tr>') + '</tfoot>';
-  $('b2b-clients-note').textContent = 'Cmd : commandes (tickets). 2025 depuis l’ouverture, fin avril ; 2026 jusqu’au dernier jour de la copie de caisse. Le cockpit ne compte en B2B que les clients à TVA valide (5,9 % sur 12 mois) : un client marqué pro sans TVA valide y reste au comptoir.';
+  $('b2b-clients-note').textContent = BC.source === 'detail'
+    ? insec('Cmd : commandes (tickets). Relu au cockpit ticket par ticket, jour par jour : 2025 depuis l’ouverture, fin avril ; 2026 de janvier à octobre. Les tickets des clients pro à TVA valide, au montant de caisse.')
+    : 'Cmd : commandes (tickets). 2025 depuis l’ouverture, fin avril ; 2026 jusqu’au dernier jour de la copie de caisse. Le cockpit ne compte en B2B que les clients à TVA valide : un client marqué pro sans TVA valide y reste au comptoir.';
   $('b2b-clients').hidden = false;
 }
 
