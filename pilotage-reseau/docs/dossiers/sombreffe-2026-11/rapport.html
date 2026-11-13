@@ -115,7 +115,7 @@ body { margin: 0; background: var(--paper); }
 .rp-page { display: grid; gap: 10px; min-width: 0; }
 .rp-points { gap: 4px; }
 .rp-chaleur td.c { height: 17px; font-size: 10.5px; }
-#tm-legende, #page-1 #tm-kpis, #page-1 #pe-kpis { display: none !important; }
+#page-1 #pe-kpis { display: none !important; }   /* le tableau des temps morts est passé en annexe E (13/11/2026) */
 .rp-jauge { min-width: 50px; }
 #b2b-top-table td:first-child { white-space: normal; }
 .rp-ouverture p { font-size: 15px; max-width: none; }
@@ -206,12 +206,6 @@ body { margin: 0; background: var(--paper); }
         <div class="rp-table-zone"><table class="rp-table" id="pe-reseau"></table></div>
       </section>
     </div>
-    <section class="rp-carte" id="temps-morts">
-      <h2 class="rp-h2">Temps morts au comptoir · la part de l’heure sans client</h2>
-      <div class="rp-kpis" id="tm-kpis"></div>
-      <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
-      <div class="rp-legende" id="tm-legende"></div>
-    </section>
   </section>
 
   <!-- PAGE 2 · LE PROBLÈME -->
@@ -328,7 +322,11 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-table-zone"><table class="rp-table" id="sem-table"></table></div>
   </section>
   <section class="rp-carte" id="annexe-e">
-    <h2 class="rp-h2">E · Temps morts</h2>
+    <h2 class="rp-h2" id="temps-morts">E · Temps morts au comptoir</h2>
+    <div class="rp-kpis" id="tm-kpis"></div>
+    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
+    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
+    <div class="rp-legende" id="tm-legende"></div>
     <p class="rp-p" id="tm-intro"></p>
     <ul class="rp-points" id="tm-points"></ul>
     <div class="rp-deux">
