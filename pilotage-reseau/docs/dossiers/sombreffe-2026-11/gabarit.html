@@ -84,6 +84,10 @@ body { margin: 0; background: var(--paper); }
 .rp-pied { font-size: 11.5px; color: var(--muted); }
 .rp-renvoi { font-style: normal; color: var(--muted-2); }
 .rp [hidden] { display: none !important; }
+/* Les quatre parties : un grand numéro, le titre, une ligne qui dit ce qu'on y trouve. */
+.rp-partie { display: flex; gap: 16px; align-items: baseline; padding: 18px 0 2px; border-top: 1px solid var(--line); }
+.rp-partie-n { font-size: 34px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rp-partie-titre { font-size: 22px; letter-spacing: -.01em; margin: 0 0 2px; }
 /* Le mot d'ouverture : la voix de celui qui signe le rapport, en grand, sans encadré ni gras. */
 .rp-ouverture { padding: 6px 0 4px; }
 .rp-ouverture p { margin: 0; font-size: 18px; line-height: 1.5; letter-spacing: -.005em; color: var(--ink); max-width: 62ch; text-wrap: pretty; }
@@ -111,8 +115,9 @@ body { margin: 0; background: var(--paper); }
   .rp-h2, .rp-h3, .rp-tete { break-after: avoid; }
   .rp-table-zone { overflow: visible; }
   .rp-table tfoot { display: table-row-group; }   /* le total une seule fois, pas en bas de chaque page */
-  #octobre-octobre, #taches, #personnel, #soins, #suivi, #annexes { break-before: page; }
-  #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit les tâches */   /* un thème par page */
+  #octobre-octobre, #personnel, #temps-morts, #partie-2, #partie-3, #partie-4, #taches, #annexes { break-before: page; }
+  #personnel.rp-attente { break-before: auto; }   /* en attente des données : la section suit le B2B */
+  .rp-partie { border-top: 0; padding-top: 0; }   /* un thème par page */
   .rp-bulle { display: none !important; }
 }
 </style>
@@ -127,8 +132,14 @@ body { margin: 0; background: var(--paper); }
   <section class="rp-ouverture" id="ouverture"><p id="ouverture-texte"></p></section>
   <div class="rp-alerte" id="soins-intensifs"></div>
 
+  <!-- 1 · L'ÉTAT DES LIEUX ------------------------------------------------------------------------------------ -->
+  <header class="rp-partie" id="partie-1">
+    <div class="rp-partie-n">1</div>
+    <div><h2 class="rp-partie-titre">L’état des lieux</h2><p class="rp-sous">Ce que les chiffres disent du magasin, de mai 2025 à octobre 2026.</p></div>
+  </header>
+
   <section class="rp-carte" id="essentiel">
-    <h2 class="rp-h2">L’essentiel</h2>
+    <h2 class="rp-h2">Les chiffres clés</h2>
     <div class="rp-kpis" id="essentiel-kpis"></div>
     <ul class="rp-points" id="essentiel-points"></ul>
   </section>
@@ -169,18 +180,12 @@ body { margin: 0; background: var(--paper); }
 
   <section class="rp-carte" id="comptoir-b2b">
     <h2 class="rp-h2">Comptoir et B2B</h2>
-    <div class="rp-deux">
-      <div class="rp-part" id="part-b2b">
-        <h3 class="rp-h3">La part du B2B sur 12 mois</h3>
-        <div style="height:14px"></div>
-        <div class="rp-barre" id="barre-b2b"></div>
-        <div class="rp-chiffres" id="chiffres-b2b"></div>
-        <p class="rp-aide" id="aide-b2b"></p>
-      </div>
-      <div class="rp-part" id="question-panier">
-        <h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3>
-        <p class="rp-p" id="question-texte"></p>
-      </div>
+    <div class="rp-part" id="part-b2b">
+      <h3 class="rp-h3">La part du B2B sur 12 mois</h3>
+      <div style="height:14px"></div>
+      <div class="rp-barre" id="barre-b2b"></div>
+      <div class="rp-chiffres" id="chiffres-b2b"></div>
+      <p class="rp-aide" id="aide-b2b"></p>
     </div>
     <div class="rp-part" id="b2b-clients" hidden>
       <h3 class="rp-h3">Les clients B2B, année par année</h3>
@@ -190,32 +195,6 @@ body { margin: 0; background: var(--paper); }
     </div>
     <div class="rp-ouvert" id="a-completer"></div>
     <p class="rp-aide rp-renvoi">Les dix dernières semaines face à 2025, celles où le CA saute : annexe B.</p>
-  </section>
-
-  <section class="rp-carte" id="temps-morts">
-    <h2 class="rp-h2">Temps morts au comptoir</h2>
-    <p class="rp-p" id="tm-intro"></p>
-    <div class="rp-kpis" id="tm-kpis"></div>
-    <div class="rp-alerte" id="tm-constat"></div>
-    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
-    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
-    <div class="rp-legende" id="tm-legende"></div>
-    <ul class="rp-points" id="tm-points"></ul>
-    <p class="rp-aide rp-renvoi">Les temps morts par jour de la semaine et face aux autres magasins : annexe C.</p>
-  </section>
-
-  <section class="rp-carte" id="taches">
-    <h2 class="rp-h2">Tâches et checklist</h2>
-    <p class="rp-p" id="tc-intro"></p>
-    <div class="rp-deux">
-      <div class="rp-part" id="tc-checklist"><h3 class="rp-h3">La checklist : à quoi elle sert</h3><ul class="rp-points" id="tc-checklist-points"></ul></div>
-      <div class="rp-part" id="tc-taches"><h3 class="rp-h3">Les tâches : à quoi elles servent</h3><ul class="rp-points" id="tc-taches-points"></ul>
-        <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
-    </div>
-    <div class="rp-alerte" id="tc-sombreffe"></div>
-    <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
-      <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
-    <p class="rp-aide rp-renvoi">La journée complète en checklists, heure par heure : annexe D.</p>
   </section>
 
   <section class="rp-carte" id="personnel">
@@ -228,30 +207,89 @@ body { margin: 0; background: var(--paper); }
     <div class="rp-ouvert" id="pe-completer" hidden></div>
   </section>
 
+  <section class="rp-carte" id="temps-morts">
+    <h2 class="rp-h2">Temps morts au comptoir</h2>
+    <p class="rp-p" id="tm-intro"></p>
+    <div class="rp-kpis" id="tm-kpis"></div>
+    <h3 class="rp-h3">Par heure et par jour : la part de l’heure passée sans client</h3>
+    <div class="rp-graphe" id="tm-carte"><div class="rp-bulle"></div><div class="rp-table-zone"><table class="rp-table rp-chaleur" id="tm-table"></table></div></div>
+    <div class="rp-legende" id="tm-legende"></div>
+    <ul class="rp-points" id="tm-points"></ul>
+    <p class="rp-aide rp-renvoi">Les temps morts par jour de la semaine et face aux autres magasins : annexe C.</p>
+  </section>
+
+  <!-- 2 · LE PROBLÈME ------------------------------------------------------------------------------------------ -->
+  <header class="rp-partie" id="partie-2">
+    <div class="rp-partie-n">2</div>
+    <div><h2 class="rp-partie-titre">Le problème</h2><p class="rp-sous">Ce qui ne va pas, et ce que les chiffres ne disent pas seuls.</p></div>
+  </header>
+
+  <section class="rp-carte" id="probleme">
+    <h2 class="rp-h2">Ce qui ne va pas</h2>
+    <ol class="rp-pistes" id="probleme-points"></ol>
+    <div class="rp-alerte" id="tm-constat"></div>
+    <div class="rp-part" id="question-panier">
+      <h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3>
+      <p class="rp-p" id="question-texte"></p>
+    </div>
+    <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
+      <div class="rp-table-zone"><table class="rp-table" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
+  </section>
+
+  <!-- 3 · VERS QUOI ON TEND -------------------------------------------------------------------------------------- -->
+  <header class="rp-partie" id="partie-3">
+    <div class="rp-partie-n">3</div>
+    <div><h2 class="rp-partie-titre">Vers quoi on tend</h2><p class="rp-sous">D’où l’on part, où l’on va : chacun doit faire sa part.</p></div>
+  </header>
+
   <section class="rp-carte" id="soins">
-    <h2 class="rp-h2">Soins intensifs : le point de départ</h2>
+    <h2 class="rp-h2">D’où l’on part</h2>
     <p class="rp-p" id="soins-intro"></p>
     <div class="rp-kpis" id="soins-reperes"></div>
-    <h3 class="rp-h3">Deux chantiers pour aller chercher le maximum</h3>
-    <div class="rp-alerte" id="cout-relance"></div>
+    <h3 class="rp-h3">Où l’on va : les clients par jour</h3>
+    <p class="rp-p" id="cv-texte"></p>
+    <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div>
+    <p class="rp-aide" id="cv-calcul"></p>
+    <h3 class="rp-h3">Les cibles</h3>
+    <div class="rp-table-zone"><table class="rp-table" id="cibles"></table></div>
+  </section>
+
+  <!-- 4 · COMMENT ON VA Y ARRIVER ---------------------------------------------------------------------------------- -->
+  <header class="rp-partie" id="partie-4">
+    <div class="rp-partie-n">4</div>
+    <div><h2 class="rp-partie-titre">Comment on va y arriver</h2><p class="rp-sous">La structure de gestion, les tâches et les checklists, le développement.</p></div>
+  </header>
+  <div class="rp-alerte" id="cout-relance"></div>
+
+  <section class="rp-carte" id="gestion">
+    <h2 class="rp-h2">4.1 · La structure de gestion</h2>
+    <p class="rp-p" id="gestion-intro"></p>
     <div class="rp-part" id="marque">
       <h3 class="rp-h3">La marque participe, sous conditions</h3>
       <p class="rp-p" id="marque-texte"></p>
       <div class="rp-table-zone"><table class="rp-table" id="marque-conditions"></table></div>
     </div>
-    <div class="rp-deux" id="chantiers">
-      <div class="rp-part" id="chantier-ventes"><h3 class="rp-h3">1 · Développer les ventes</h3><p class="rp-p" id="cv-texte"></p>
-        <div class="rp-table-zone"><table class="rp-table" id="cv-paliers"></table></div><p class="rp-aide" id="cv-aide"></p></div>
-      <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">2 · Réduire les frais, tenir la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
-    </div>
+    <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
+    <div class="rp-part" id="suivi"><h3 class="rp-h3">Le suivi, chaque semaine</h3>
+      <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div></div>
   </section>
 
-  <section class="rp-carte" id="suivi">
-    <h2 class="rp-h2">Soins intensifs : le suivi et les pistes</h2>
-    <h3 class="rp-h3">À suivre chaque semaine</h3>
-    <div class="rp-table-zone"><table class="rp-table" id="soins-suivi"></table></div>
-    <h3 class="rp-h3">Pistes</h3>
-    <ol class="rp-pistes" id="pistes"></ol>
+  <section class="rp-carte" id="taches">
+    <h2 class="rp-h2">4.2 · Les tâches et les checklists</h2>
+    <p class="rp-p" id="tc-intro"></p>
+    <div class="rp-deux">
+      <div class="rp-part" id="tc-checklist"><h3 class="rp-h3">La checklist : à quoi elle sert</h3><ul class="rp-points" id="tc-checklist-points"></ul></div>
+      <div class="rp-part" id="tc-taches"><h3 class="rp-h3">Les tâches : à quoi elles servent</h3><ul class="rp-points" id="tc-taches-points"></ul>
+        <div class="rp-table-zone"><table class="rp-table" id="tc-niveaux"></table></div></div>
+    </div>
+    <div class="rp-alerte" id="tc-sombreffe"></div>
+    <p class="rp-aide rp-renvoi">La journée complète en checklists, heure par heure : annexe D.</p>
+  </section>
+
+  <section class="rp-carte" id="developpement">
+    <h2 class="rp-h2">4.3 · Le développement</h2>
+    <div class="rp-part" id="chantier-ventes"><h3 class="rp-h3">Où trouver les clients</h3><p class="rp-p" id="cv-aide"></p></div>
+    <div class="rp-part" id="pistes-zone"><h3 class="rp-h3">Les pistes</h3><ol class="rp-pistes" id="pistes"></ol></div>
   </section>
 
   <header class="rp-annexes" id="annexes">
@@ -337,9 +375,6 @@ $('essentiel-points').innerHTML = [
   `Sur les six mois présents dans les deux années (mai → octobre), 2026 fait ${pct(ecC('ca'))} de CA et ${pct(ecC('clients'))} de clients face à 2025, avec ${C.n.jours - C.n1.jours} jours ouverts de plus ; par jour ouvert, ${pct(ecC('caJour'))} de CA et ${pct(ecC('cliJour'))} de clients.`,
   `Le trafic recule : ${dec(trimAvant.cliJour, 0)} clients par jour ouvert d’octobre à décembre 2025, ${dec(trimEte.cliJour, 0)} de juillet à septembre 2026, ${dec(O.cli26, 0)} en octobre 2026 contre ${dec(O.cli25, 0)} un an plus tôt.`,
   `Octobre 2026 fait ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier qui porte la hausse (${eur2(O.pan26)} contre ${eur2(O.pan25)}).`,
-  `Constat terrain : le magasin ne cuit plus l’après-midi, et c’est là que le comptoir se vide. De 14 h à 18 h, ${dec(D.tempsMorts.apresMidi.pct, 0)} % du temps passe sans client.`,
-  `Le B2B seul n’explique probablement pas cette hausse : il faudrait qu’environ ${dec(B.partDeLAnnee, 0)} % du B2B de toute l’année soit tombé en septembre et octobre. Le détail mois par mois du comptoir et du B2B tranchera.`,
-  `Deux chantiers pour les soins intensifs, parce que redynamiser un magasin coûte cher : développer les ventes (la base à ${dec(D.depart.n.cliJour + D.objectifs.palier, 0)} clients par jour, l’objectif court terme à ${D.objectifs.courtTerme}, l’objectif normalisé à ${D.objectifs.normalise}) ; réduire les frais, en tenant les budgets et un plan de trésorerie (on paie le lundi, on court pour arriver au budget). La marque veut bien participer, sous conditions : les tâches et les checklists, l’encodage des produits, le suivi des règles.`,
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 
 /* --- Évolution magasin (le bloc du cockpit) --- */
@@ -615,6 +650,20 @@ $('tc-releve').innerHTML = '<thead><tr><th>Magasin</th><th class="num">Tâches r
   + RL.map(r => `<tr class="${r.shop === '5' ? 'moi' : ''}"><td>${esc(r.nom)}</td><td class="num ${r.rendues ? '' : 'down'}">${r.rendues} / ${r.taches}</td><td class="num ${r.obligatoiresRendues ? '' : 'down'}">${r.obligatoiresRendues} / ${r.obligatoires}</td><td class="num">${r.photos}</td></tr>`).join('') + '</tbody>';
 $('tc-releve-note').textContent = `Ce jour-là, Sombreffe n’a rendu aucune de ses ${RS.taches} tâches, dont ${RS.obligatoires} obligatoires. C’est un seul jour, relevé au panel avant la nomenclature du 08/11 : il montre ce que voit le bureau quand rien n’est rendu. Le suivi se lit chaque jour dans le dashboard magasin, onglet Tâches : obligatoires faites, photos rendues, non-conformités sur 30 jours.`;
 
+/* --- Le problème --- */
+const aout = L.find(l => l.k === '2026-08');
+$('probleme-points').innerHTML = [
+  `Le trafic baisse. De mai à octobre, ${dec(C.n.cliJour, 0)} clients par jour ouvert en 2026 contre ${dec(C.n1.cliJour, 0)} en 2025 (${pct(ecC('cliJour'))}). Le CA tient à peine (${pct(ecC('ca'))}), avec ${C.n.jours - C.n1.jours} jours ouverts de plus.`,
+  `L’après-midi est vide. De 14 h à 18 h, ${dec(APM.pct, 0)} % du temps passe sans client, avec ${dec(APM.tk)} tickets par heure. Sombreffe a le plus de temps morts du réseau : ${dec(TS.nb)} par jour, ${hm(TS.min)} sans client.`,
+  'Le magasin ne cuit plus l’après-midi : ce creux, il le crée lui-même (constat terrain, ci-dessous).',
+  `Les tâches ne sont pas rendues. Le ${dateL(TC.releveLe).replace(/^1 /, '1er ')}, aucune des ${RS.taches} tâches du jour, dont ${RS.obligatoires} obligatoires, et aucune photo : le bureau ne peut rien vérifier.`,
+  `La hausse du CA de septembre et octobre ne vient pas des clients. En octobre, ${pct(O.vsCa)} de CA avec ${pct(O.vsCli)} de clients : c’est le panier (${pct(O.vsPan)}). B2B ou comptoir, le détail mois par mois le dira.`,
+  `L’été 2026 a été faible : juillet ${pct(juil.vsCa)} (${pct(juil.vsCaJour)} par jour ouvert), août ${pct(aout.vsCa)}.`,
+  D.personnel && D.personnel.cumul.mois
+    ? `Les frais de personnel pèsent ${dec(D.personnel.cumul.labourPct)} % du CA sur ${D.personnel.cumul.mois} mois, pour un seuil de ${dec(D.seuilPersonnel, 0)} %.`
+    : 'Les frais de personnel face au CA restent à lire dans le P&L du panel (partie 1).',
+].map(t => `<li>${esc(insec(t))}</li>`).join('');
+
 /* --- Les clients B2B, année par année (l'export de la copie de caisse, s'il est là) --- */
 const BC = D.b2bClients;
 if (BC && BC.clients.length) {
@@ -701,7 +750,22 @@ $('cv-texte').textContent = insec(`Le chiffre d’affaires se fait avec des clie
 $('cv-paliers').innerHTML = '<thead><tr><th>Palier</th><th class="num">Clients / jour</th><th class="num">En plus</th><th class="num">CA en plus / mois</th><th class="num">par an</th></tr></thead><tbody>'
   + [['Départ (' + DEP.labs[0] + ' à ' + DEP.labs[DEP.labs.length - 1] + ')', N.cliJour, 0], ['La base', base, PALIER], ['Objectif court terme', objectif, enPlus(objectif)], ['Objectif normalisé', normalise, enPlus(normalise)]]
     .map(([lab, c, n]) => `<tr class="${c === objectif ? 'moi' : ''}"><td>${esc(lab)}</td><td class="num">${dec(c, 0)}</td><td class="num">${n ? '+' + n : '—'}</td><td class="num">${n ? '≈ ' + k1(parMois(n)) : '—'}</td><td class="num">${n ? '≈ ' + k1(parAn(n)) : '—'}</td></tr>`).join('') + '</tbody>';
-$('cv-aide').textContent = insec(`Au panier moyen des 12 derniers mois (${eur2(B.panier12)}). Où les trouver : l’après-midi, de 14 h à 18 h, où le comptoir ne fait que ${dec(D.tempsMorts.apresMidi.tk)} tickets par heure ; à 10 tickets par heure, c’est environ ${dec((10 - D.tempsMorts.apresMidi.tk) * D.tempsMorts.apresMidi.heures, 0)} clients de plus par jour, de quoi atteindre l’objectif court terme, avec la reprise de la cuisson (checklist 1.3.01). L’objectif normalisé demande en plus de remplir les autres creux : de 9 h à 11 h, ${dec(Math.min(D.tempsMorts.semaine.heures['9'].pct, D.tempsMorts.semaine.heures['10'].pct), 0)} à ${dec(Math.max(D.tempsMorts.semaine.heures['9'].pct, D.tempsMorts.semaine.heures['10'].pct), 0)} % du temps passe aussi sans client.`);
+$('cv-calcul').textContent = insec(`Le CA en plus se compte au panier moyen des 12 derniers mois (${eur2(B.panier12)}), sur 365 jours ouverts.`);
+const h9 = Math.round(Math.min(TS.heures['9'].pct, TS.heures['10'].pct)), h10 = Math.round(Math.max(TS.heures['9'].pct, TS.heures['10'].pct));
+$('cv-aide').textContent = insec(`L’après-midi d’abord : de 14 h à 18 h, le comptoir ne fait que ${dec(APM.tk)} tickets par heure et passe ${dec(APM.pct, 0)} % du temps sans client. À 10 tickets par heure, c’est environ ${dec((10 - APM.tk) * APM.heures, 0)} clients de plus par jour : de quoi atteindre l’objectif court terme, avec la reprise de la cuisson (checklist 1.3.01 à 14 h). `
+  + `Pour l’objectif normalisé, il faut aussi remplir les autres creux : de 9 h à 11 h, ${h9 === h10 ? h9 : h9 + ' à ' + h10} % du temps passe sans client. Et le B2B : ${dec(B.part)} % du CA, pour un plafond de ${dec(D.plafond, 0)} %.`);
+$('gestion-intro').textContent = insec(`À partir du lundi ${dateL(D.soinsIntensifs)}, le magasin est en soins intensifs : un suivi chaque semaine face aux repères de départ, les visites, les budgets et la trésorerie tenus, et la marque qui participe sous conditions.`);
+const PEc = D.personnel && D.personnel.cumul.mois ? D.personnel : null;
+$('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui</th><th>Visé</th></tr></thead><tbody>'
+  + [
+    ['Clients par jour ouvert', dec(N.cliJour, 1), `${dec(base, 0)} (la base), puis ${objectif} (court terme), puis ${normalise} (normalisé)`],
+    ['Après-midi sans client, 14 h → 18 h', dec(APM.pct, 0) + ' %', 'moins de 50 %, 10 tickets par heure'],
+    ['Cuisson de l’après-midi', 'arrêtée', 'chaque jour, checklist 1.3.01 à 14 h'],
+    ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
+    ['Frais de personnel', PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', `sous ${dec(SEUIL_P, 0)} % du CA`],
+    ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} %`],
+    ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget, tout payé le lundi'],
+  ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
 $('cf-points').innerHTML = [
   'Tenir les budgets : chaque poste de charges, matière, personnel, frais généraux, reste dans son budget ; ce qui dépasse se coupe. Le budget du cockpit et le mini P&L de la visite le montrent mois par mois.',
   'Faire la trésorerie : un plan de trésorerie, semaine par semaine. On paie le lundi ; le reste de la semaine, on court pour arriver au budget de ventes.',
