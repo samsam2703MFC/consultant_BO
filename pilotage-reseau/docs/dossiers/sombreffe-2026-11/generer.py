@@ -334,6 +334,11 @@ def main():
                      'theo': compte(cl_ / n, panierAutres['bas']['panier'], sp),
                      'personnelSeul': compte(cl_ / n, ca_ / cl_, sp),
                      'panierSeul': compte(cl_ / n, panierAutres['bas']['panier'], partReelle)}
+        # Avec plus de clients (13/11/2026) : 5 puis 10 clients de plus par jour ouvert, mêmes hypothèses.
+        jours_ = sum(mois[k]['jours'] for k in ks)
+        theorique['cliJour'] = cl_ / jours_
+        theorique['scenarios'] = [dict(compte((cl_ + plus * jours_) / n, panierAutres['bas']['panier'], sp), plus=plus,
+                                       cliJour=cl_ / jours_ + plus) for plus in (0, 5, 10)]
 
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {

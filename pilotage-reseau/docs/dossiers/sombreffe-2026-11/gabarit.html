@@ -266,6 +266,8 @@ body { margin: 0; background: var(--paper); }
       <h2 class="rp-h2" id="theo-titre"></h2>
       <ul class="rp-points" id="theo-points"></ul>
       <div class="rp-table-zone"><table class="rp-table rp-serre" id="theo-table"></table></div>
+      <h3 class="rp-h3">Avec plus de clients : + 5 et + 10 clients par jour</h3>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="theo-plus"></table></div>
     </section>
   </section>
 
@@ -935,7 +937,11 @@ if (PE && PE.cumul.mois) {
 if (D.theorique) {
   const T = D.theorique, R = T.reel, H = T.theo, lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
   const gain = c => c.resultat - R.resultat;
-  $('theo-titre').textContent = `Le résultat théorique : ${dec(T.seuil, 0)} % de personnel, panier à ${eur2(T.bas.panier)}`;
+  $('theo-titre').textContent = `Le résultat théorique, avec le même nombre de clients : ${dec(T.seuil, 0)} % de personnel, panier à ${eur2(T.bas.panier)}`;
+  $('theo-plus').innerHTML = '<thead><tr><th>Clients</th><th class="num">Par jour</th><th class="num">Par mois</th><th class="num">CA par mois</th><th class="num">Résultat par mois</th><th class="num">Par trimestre</th><th class="num">Par an</th><th class="num">% du CA</th></tr></thead><tbody>'
+    + T.scenarios.map(c => `<tr class="${c.plus === 10 ? 'moi' : ''}"><td>${c.plus ? '+ ' + c.plus + ' par jour' : 'Le même nombre'}</td><td class="num">${dec(c.cliJour, 0)}</td><td class="num">${grp(c.clients)}</td>`
+      + `<td class="num">${eur(c.ca)}</td><td class="num">${eur(c.resultat)}</td><td class="num">${eur(c.resultat * 3)}</td><td class="num">${eur(c.resultat * 12)}</td><td class="num">${dec(c.resultat / c.ca * 100)} %</td></tr>`).join('')
+    + '</tbody>';
   $('theo-points').innerHTML = [
     `Même trafic : ${grp(R.clients)} clients par mois (${lab(T.du)} → ${lab(T.au)}, ${T.n} mois).`,
     `Panier dans la moyenne basse : ${eur2(T.bas.panier)}, celui de ${T.bas.nom}, le plus bas des autres magasins, contre ${eur2(R.panier)}.`,
