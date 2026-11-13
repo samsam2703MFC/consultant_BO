@@ -3029,3 +3029,51 @@ body.ia-ouvert{overflow:hidden}
 .ia-ton b{font-size:15px}
 .ia-portrait{border-radius:16px}
 .ia-ligne{gap:12px}
+
+/* Les cartes de fidélité (13/11/2026, maquette A1) : sous-onglets, entonnoir, cartes, clients, réseau ; la carte dans la fiche client. */
+.fd-ong{display:inline-flex;background:var(--color-background-secondary);border-radius:10px;padding:3px;margin:0 0 6px}
+.fd-ong button{border:none;background:none;border-radius:8px;padding:6px 16px;font:400 12.5px var(--font-ui);color:var(--color-text-muted);cursor:pointer}
+.fd-ong button.on{background:#fff;color:var(--color-text);box-shadow:0 0 0 1px var(--color-border-tertiary)}
+.db-sec .fd-tg{margin-left:auto}
+.fdc-fun{display:grid;grid-template-columns:repeat(5,1fr);padding:0}
+.fdc-fun>div{padding:16px 18px;border-right:1px solid var(--color-border-tertiary)}.fdc-fun>div:last-child{border-right:0}
+.fdc-fun b{display:block;font-size:30px;font-weight:400;font-variant-numeric:tabular-nums}.fdc-fun span{display:block;font-size:12px;color:var(--color-text-muted)}
+.fdc-bar{display:block;height:8px;border-radius:4px;background:var(--color-background-secondary);margin-top:12px;overflow:hidden}.fdc-bar>i{display:block;height:100%;background:var(--color-primary)}
+.fdc-fun em{display:block;font-style:normal;font-size:11.5px;color:var(--color-primary);margin-top:6px}
+.fdc-row{display:grid;grid-template-columns:240px 1fr 110px 140px 90px;gap:16px;align-items:center;padding:14px 18px;border-top:1px solid var(--color-border-tertiary)}
+.fdc-row:first-child{border-top:0}
+.fdc-t{display:flex;align-items:center;gap:10px;font-size:14px}.fdc-t small{display:block;font-size:11px;color:var(--color-text-muted)}
+.fdc-ic{display:inline-block;width:22px;height:14px;border-radius:4px;flex:none;vertical-align:-2px;margin-right:6px}.fdc-ic.g{width:34px;height:22px;margin:0}
+.fdc-mini{display:flex;align-items:flex-end;gap:3px;height:46px}.fdc-mini i{flex:1;border-radius:3px 3px 0 0;display:block}
+.fdc-mini-l{display:flex;justify-content:space-between;font-size:10.5px;color:var(--color-text-muted);margin-top:3px}.fdc-mini-t{font-size:12.5px;color:var(--color-text-muted)}
+.fdc-v{text-align:right}.fdc-v b{display:block;font-size:20px;font-weight:400}.fdc-v b.ok{color:#2e7d32}.fdc-v span{font-size:11px;color:var(--color-text-muted)}
+.fdc-g2{display:grid;grid-template-columns:2fr 1fr;gap:16px}
+@media (max-width:1100px){.fdc-g2{grid-template-columns:1fr}.fdc-fun{grid-template-columns:repeat(3,1fr)}.fdc-row{grid-template-columns:1fr 1fr}}
+.fdc-filtre{display:flex;gap:10px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--color-border-tertiary)}.fdc-filtre input{width:260px}.fdc-filtre .fd-tg{margin-left:auto}
+.fdc-chip{display:inline-flex;align-items:center;gap:6px;margin:2px 12px 2px 0;font-size:12px;white-space:nowrap}.fdc-chip small{color:var(--color-text-muted)}
+.fdc-dots{display:inline-flex;gap:2px;vertical-align:middle}.fdc-dots i{width:8px;height:8px;border-radius:50%;display:block}.fdc-dots.p i{width:6px;height:6px}
+.fdc-pret{font-size:10.5px;color:#fff;background:#2e7d32;border-radius:5px;padding:1px 6px}
+tr.moi td{background:rgba(141,29,44,.05)}
+.fdc-cc{display:grid;grid-template-columns:2fr 1fr;gap:14px}
+.fdc-carte{border-radius:16px;padding:16px 18px;color:#fff}.fdc-carte .nm{font-size:16px}.fdc-carte .rc{font-size:12px;opacity:.85}
+.fdc-tps{display:grid;gap:8px;margin-top:14px}.fdc-tps i{aspect-ratio:1;border-radius:50%;border:2px dashed rgba(255,255,255,.55);display:block}.fdc-tps i.f{background:#fff;border-style:solid;border-color:#fff}
+.fdc-carte .bas{display:flex;justify-content:space-between;gap:10px;margin-top:12px;font-size:12px}
+.fdc-pts{font-size:30px;margin-top:14px}
+.fdc-faire{padding:14px 18px}.fdc-faire .lab{font-size:12px;color:var(--color-text-muted)}
+.fdc-faire ul{list-style:none;margin:8px 0 0;padding:0}.fdc-faire li{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--color-border-tertiary);font-size:12.5px}
+.fdc-faire li span{color:var(--color-text-muted)}.fdc-faire li span.ok{color:#2e7d32}
+.fdc-kv{display:grid;grid-template-columns:1fr auto;gap:6px 14px;font-size:12.5px;margin-top:12px}.fdc-kv span{color:var(--color-text-muted)}.fdc-kv b{font-weight:400}
+.fdc-pas{padding:14px 18px;display:flex;flex-direction:column;gap:4px}.fdc-pas b{font-weight:400}.fdc-pas span{font-size:12.5px;color:var(--color-text-muted)}
+
+/* Le détail d'une carte, sous sa ligne (13/11/2026). */
+.fdc-row[data-fdcarte]{cursor:pointer}.fdc-row[data-fdcarte]:hover{background:rgba(141,29,44,.03)}.fdc-row.on{background:rgba(141,29,44,.05)}
+.fdc-det{border-top:1px solid var(--color-border-tertiary);border-left:4px solid var(--c,#8D1D2C);padding:16px 20px;background:#fff}
+.fdc-det-g{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:24px}
+.fdc-det .lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--color-text-muted)}
+.fdc-det .sub{font-size:11.5px;color:var(--color-text-muted);margin-top:8px}
+.fdc-tags{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:5px}.fdc-tags li{font-size:12px;background:var(--color-background-secondary);border-radius:6px;padding:2px 8px}
+.fdc-mini.g{height:auto;align-items:flex-end;gap:3px;margin-top:6px}.fdc-mini.g>div{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--color-text-muted)}
+.fdc-mini.g>div i{width:100%;border-radius:3px 3px 0 0;display:block}.fdc-mini.g span{font-size:10.5px;color:var(--color-text)}
+.fdc-siens{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:8px;font-size:12.5px}.fdc-siens>span[data-fdc]{cursor:pointer;display:inline-flex;align-items:center;gap:6px}.fdc-siens>span[data-fdc]:hover{color:var(--color-primary)}
+@media (max-width:1100px){.fdc-det-g{grid-template-columns:1fr}}
+.fdc-mini.g>div i{flex:none}
