@@ -19,3 +19,16 @@ dans les quatre magasins (sonde `tools/sonde_cartes_fidelite.php`, 13/11/2026) :
 - aucune donnée de contact ni aucun code de carte n'est rendu ; les noms (prénom, nom) le sont.
 
 `generer.py` refait les trois pages depuis `cartes.css`.
+
+## Variantes de A (13/11/2026, « vers le A, refais plusieurs versions »)
+
+Chaque magasin vérifie les cartes **en général** et **client par client** (Sam, 13/11/2026) : sous chaque variante,
+le bloc « Par client » (recherche, filtre par carte, récompense prête, inactifs ; chaque client avec ses cartes et où il en est).
+
+| Variante | L'idée | Capture |
+|---|---|---|
+| **A1 · Entonnoir** | Du client reconnu en caisse à la récompense : reconnus → inscrits → actifs → presque au cadeau → récompenses prêtes ; puis une ligne par carte | `a1-entonnoir.jpg` |
+| **A2 · Les cartes** | Chaque carte dessinée comme une carte à tampons : sur chaque case, combien de clients en sont là ; les points par palier | `a2-cartes.jpg` |
+| **A3 · À faire aujourd'hui** | Orientée caisse : récompenses à offrir, clients presque au cadeau, clients reconnus à inscrire (par profil) ; puis les chiffres | `a3-a-faire.jpg` |
+
+`generer_a.py` refait les trois variantes (il relance `generer.py`).
