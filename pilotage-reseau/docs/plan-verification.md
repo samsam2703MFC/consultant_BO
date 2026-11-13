@@ -148,8 +148,8 @@ produits reçus sans trace en caisse).
 On classe par **CA concerné sur 30 jours**. On montre la **couverture**, c'est-à-dire la
 part du CA qui passe par une recette fiable, avec l'objectif de 100 %. « Repérée depuis »
 vient de la base quotidienne ; une ligne disparaît d'elle-même quand la recette est
-corrigée au panel. Le bouton « Ouvrir au panel » mène à la recette. **On n'écrit rien au
-panel.** La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit. Les formules et promotions restent dans la liste, avec un **interrupteur devant** qui les masque (31/10) ; éteint, la couverture se lit sans elles.
+corrigée au panel. Le bouton « Ouvrir au panel » mène à la recette. ~~On n'écrit rien au
+panel.~~ **Décision du 13/11 : on corrige d'ici** (« tout, CEO seul ») — voir « Corriger d'ici » plus bas. La liste est **pour le CEO seul** (31/10) : pas d'envoi, un export suffit. Les formules et promotions restent dans la liste, avec un **interrupteur devant** qui les masque (31/10) ; éteint, la couverture se lit sans elles.
 
 ### 3.6 Gestes à surveiller
 
@@ -376,6 +376,17 @@ recette se voit comme une amélioration, à partir du jour où elle a eu lieu.
 | ~~6. Alertes~~ | **Pas pour l'instant (31/10).** Plus tard : un magasin rouge deux jours de suite, une commande livrée non validée depuis 24 h | lot 3 | S |
 
 **Constat du lot 2 (relevé du 31/10)** : aucun des quatre magasins ne valide ses cuissons, n'enregistre sa clôture ni ne compte sa vitrine. Le « produit » d'une journée n'est donc que le plan ; l'audit le dit (« Non mesuré », écart au plan en gris) et ne qualifie une fuite que sur des journées mesurées. Les ventes et la poubelle déclarée sont réelles — Corbais, par exemple, ne déclare aucune poubelle. **Pour que l'audit devienne une mesure, les magasins doivent valider leurs cuissons et leur clôture** ; en attendant, la mesure réelle des fuites passe par la matière (inventaires hebdomadaires, lot 4).
+
+**Corriger d'ici (décision du 13/11, codé le 13/11)** : chaque ligne porte son geste — corrigé en place (unité ×/÷1000,
+rendement, fraction de portion, prix d'une matière, rattacher une recette de nom proche, recalculer un magasin, « hors
+recette »), dans le volet de la recette en mode *Corriger* (quantités, lignes retirées ou ajoutées, rendement, copie d'une
+recette proche pour une recette vide), ou au panel par un lien direct (formules). Écriture prudente, faute de contrat :
+lire l'objet, ne changer que la clé visée dans la forme lue, écrire, **relire et constater** ; un 2xx sans changement est
+« sans effet ». Registre `ceo_verif_correction` (l'avant, pour « Annuler »). Code : `src/verification_correction.php`,
+`verification-correction-vals.js`, `verification-correction-tpl.js` ; tests : `php bin/tests_verification_correction.php` ;
+maquette et captures : `docs/maquettes/recettes-correction`. Une ligne lourde dans une sous-recette (partagée) passe par
+le volet, jamais par un clic. Le prix d'une matière part par une route réglable (`vrcFormatPrix`, par défaut
+`POST /materials/{mid}/manual-price {id_shop, price}`) : la première écriture dira si c'est la bonne.
 
 **Ouvrir et corriger une recette (demande du 31/10)** : un clic sur le produit ouvre sa fiche (recette, prix par magasin, signalements) et mène à sa page au panel. Les routes d'écriture existent (`PATCH /recipes/{id}`, `PATCH /subrecipes/{id}`, `POST /recipes`, `PATCH /products/{id}`, `POST /materials/{id}/manual-price`, `PATCH /product-portions/{id}`, `POST /shops/{id}/recipes/recalculate`) mais sans contrat : la correction depuis le cockpit viendra après la mesure du format (la sonde lit `/recipes/{id}`) et une première écriture validée par le CEO.
 

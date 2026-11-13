@@ -3903,6 +3903,36 @@ mène à la page produit du panel, `/panel/products/{pid}` (mesuré : la route e
 le réglage `verifLienRecette` (avec `{pid}`) le remplace. La correction depuis le cockpit attend la mesure du format
 de `PATCH /recipes/{id}` : la sonde rend désormais `recetteBrute` (`/recipes/{id}`) et `produitBrut` (`/products/{id}`).
 
+### `/verification/recettes/*` — corriger d'ici (Recettes à corriger, 13/11/2026)
+
+Code : `src/verification_correction.php` (préfixe `vrc`) ; écran : `verification-correction-vals.js`,
+`verification-correction-tpl.js` ; tests : `php bin/tests_verification_correction.php` (faux panel). Session du cockpit
+seulement (CEO).
+
+Le cockpit **écrit au panel** avec son compte consultant. Les routes d'écriture du panel n'ont pas de contrat dans le
+swagger (« runtime routes ») : chaque écriture lit l'objet (`GET /recipes/{id}`, `/subrecipes/{id}`, `/products/{id}`,
+`/product-portions/{id}`), ne change que la clé visée dans la forme lue (la liste `materials` ou `subrecipes` entière, une
+quantité changée ; `yield_quantity` ; `id_recipe` ; `portion_size`), envoie **les seules clés changées** en `PATCH` sur le
+même chemin, puis relit et constate. Résultats : `ok` (relu), `sans_effet` (2xx, mais la relecture ne montre pas le
+changement), `refuse` (4xx/5xx, message du panel), `local` (rien au panel).
+
+| Route | Corps / paramètres | Rend |
+|---|---|---|
+| `POST /verification/recettes/corriger` | `{geste, apercu?, cle?, pid?, nom?, shop?, rid?, …}` — gestes : `quantite` (`mid`, `sous?`, `q` ou `facteur`), `recette` (`changements[]` : `{type: qte\|retirer\|ajouter\|rendement, objet: recette\|sousRecette, id, cle: m12\|s7, q?, n?, mid?, source?}`), `rendement` (`n`), `copier` (`source`), `rattacher` (`rid`), `portion` (`fraction`), `prix` (`mid`, `prix`), `recalculer`, `horsRecette` (`cle` orph:…) | `apercu` : `{apercu, resume, ecritures[{methode, route, corps, annulable}]}` sans rien écrire ; sinon `{ok, ecritures[ligne du registre], liste}` — `liste` = l'analyse recalculée (même forme que `GET /verification/recettes`), `null` si rien n'a pris |
+| `POST /verification/recettes/annuler` | `{id}` | réécrit le corps inverse par la même route, relit ; `{ok, ecritures, liste}` |
+| `GET /verification/recettes/registre[?pid=]` | — | `{lignes[{id, le, geste, pid, nom, objet, objetId, methode, route, resume, http, resultat, resultatNom, message, coutAvant, coutApres, annulable, annuleDe, annulePar}], liens, formatPrix}` |
+| `GET /verification/recettes/edition?rid=&pid=` | — | `{ok, objets[{type, id, nom, rendement, cleRend, modifiable, cles, lignes[{cle, mid, nom, q, u, cleQte, coutPiece}], sous[{cle, id, nom, q, u}]}], matieres[{mid, nom, u, source}], modeles[{rid, nom, recette, lignes}], coutPiece, luDans, liens}` |
+| `GET /verification/recettes/candidats?nom=` | — | `{candidats[{rid, nom, score, libre, pareil}], recettes, motif}` (liste `GET /recipes` gardée 24 h) |
+| `PUT /verification/recettes/liens` | `{produit, recette, sousRecette, matiere, portion, formatPrix?{methode, route, corps}}` | modèles d'adresse du panel (`{pid}`, `{rid}`, `{mid}`, `{sid}`, `{sous}`), réglage `verifLiens` ; route du prix, réglage `vrcFormatPrix` |
+
+`GET /verification/recettes` porte en plus `liens` (les modèles d'adresse) et, sur chaque ligne, `corr` : ce qu'il faut
+pour proposer le geste (`unite` : `mid`, `matiere`, `sous`, `facteur`, `q`, `u`, `coutAvant`, `coutApres` ; `prix` : `sid`,
+`magasin`, `matieres[{mid, nom, u, propose (médiane des autres magasins), min, max}]` ; `port` : `sid`, `fraction` lue
+dans le nom, `cout` ; `reseau` : `sid`, `magasin`, `cout`, `mediane` ; `rend` : `cout`). Les matières marquées « hors
+recette » (réglage `vfHorsRecette`) ne remontent plus. Mesuré le 13/11 : au panel, `/panel/products/{id}`,
+`/panel/recipes`, `/panel/subrecipes` et `/panel/materials` existent (renvoi à la connexion) ; les pages de détail d'une
+recette ou d'une matière ne se devinent pas (le panel rend 200 pour toute adresse) : elles se règlent dans le registre.
+
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 
 Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
