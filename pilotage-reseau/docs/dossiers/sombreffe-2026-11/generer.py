@@ -240,10 +240,10 @@ def main():
         # La note du rédacteur, en fin d'annexes, dictée le 13/11/2026 : reprise mot pour mot, l'orthographe seule corrigée.
         'noteRedacteur': 'Privilégier une hygiène de vie saine et une activité physique par jour. '
                          'Dire qu’on ne trouve pas le temps, c’est une excuse.',
-        # Le mot d'ouverture, dicté le 13/11/2026 : repris mot pour mot, l'orthographe seule corrigée.
-        'ouverture': 'Aujourd’hui, je représente les 110 personnes qui travaillent dans notre groupe : 110 personnes, dont '
-                     '67 chefs et responsables de famille, qui ont des crédits et des engagements. Pour cela, je dois faire en '
-                     'sorte que chacun fasse sa part. Et pour eux, aujourd’hui et maintenant, je remets les choses en place.',
+        # Le mot d'ouverture, tel que le bureau l'a écrit le 13/11/2026 (texte fourni, repris à l'identique).
+        'ouverture': 'Nous sommes 110 dans ce groupe. Parmi nous, 67 chefs et responsables de famille, avec des crédits '
+                     'et des engagements à tenir. Ce que chacun fait, ou ne fait pas, pèse sur les 109 autres. Pour que '
+                     'ça tienne, chacun doit faire sa part. C’est pour eux qu’on remet les choses en place, aujourd’hui et maintenant.',
         # Les objectifs de clients par jour fixés par le bureau le 13/11/2026 : la base (départ + 5), l'objectif court terme,
         # puis l'objectif normalisé, le plan normal d'évolution du magasin.
         'objectifs': {'palier': 5, 'courtTerme': 156, 'normalise': 165, 'le': '13/11/2026'},
