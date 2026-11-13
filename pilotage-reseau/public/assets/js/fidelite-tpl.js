@@ -1,123 +1,132 @@
-/* Cockpit CEO — gabarit de l'écran Fidélité (ERP franchisé › Fidélité, #/fidelity). Les valeurs viennent de
- * fidelite-vals.js (`c.fid`) ; le style de fidelite.css (préfixe fi-).
- *
- * Écriture sobre, à la manière des Réglages d'Apple (demande du 24/10/2026) : des listes groupées, une ligne
- * par règle (titre court, résumé en clair, interrupteur) qui s'ouvre au clic pour se modifier ; les brouillons
- * se publient depuis une barre flottante. Programme : maquette C ; Clients : maquette B. */
+/* Cockpit CEO — gabarit de l'écran Fidélité (ERP franchisé › Fidélité, #/fidelity), réécrit le 13/11/2026 : un mix
+ * bingo + points, une seule carte, lue et publiée dans l'ERP. Valeurs : fidelite-vals.js (`c.fid`) ; style :
+ * fidelite.css (préfixe fi-). Maquettes : docs/maquettes/fidelite-bingo (1 : le programme, 3 : les clients). */
 
-const JOURS_L = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
-const JOURS_C = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
-
-/** La phrase d'une règle ouverte : du texte, et des valeurs modifiables sur place. */
-function phraseHtml(M, x){
-  const { esc } = x;
-  let h = '';
-  M.forEach((m, i) => {
-    let s = '';
-    if (m.t === 'txt') { s = `<span class="fi-t">${esc(m.v)}</span>`; }
-    else if (m.t === 'num') { s = `<span class="fi-champ"><input type="number" class="fi-in" style="width:${Math.max(36, m.w - 6)}px" value="${esc(m.v)}" step="${m.pas || 1}" min="0" ${x.I(m.set)}>${m.u ? `<span class="fi-u">${esc(m.u)}</span>` : ''}</span>`; }
-    else if (m.t === 'txtin') { s = `<input type="text" class="fi-in t" style="width:${m.w}px" value="${esc(m.v)}" placeholder="${esc(m.ph)}" ${x.I(m.set)}>`; }
-    else if (m.t === 'sel') { s = `<select class="fi-in s" ${x.C(m.set)}>${m.opts.map(o => `<option value="${esc(o[0])}"${String(o[0]) === String(m.v) ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select>`; }
-    else if (m.t === 'jours') { s = `<span class="fi-jours">${JOURS_C.map((j, k) => `<button ${x.A(() => m.basculer(k))} class="${m.v.includes(k) ? 'on' : ''}" title="${JOURS_L[k]}">${j}</button>`).join('')}</span>`; }
-    else if (m.t === 'heure') { s = `<input type="text" inputmode="numeric" maxlength="5" class="fi-in h" value="${esc(m.v)}" placeholder="hh:mm" ${x.C(m.set)}>`; }
-    else if (m.t === 'date') { s = `<input type="date" class="fi-in d" value="${esc(m.v)}" ${x.C(m.set)}>`; }
-    else if (m.t === 'pastille') { s = `<i class="fi-pastille" style="background:${esc(m.v)}"></i>`; }
-    const colle = m.t === 'txt' && /^[,.]/.test(m.v);
-    h += (i && !colle ? ' ' : '') + s;
-  });
-  return h;
-}
-
-function ligneRegle(r, x){
-  const { esc } = x;
-  const etat = (r.actif ? '' : ' off') + (r.supprimer ? ' sup' : '') + (r.ouvert ? ' ouvert' : '');
-  const tog = r.basculer ? `<button class="fi-tog${r.actif ? ' on' : ''}" ${x.A(r.basculer)} role="switch" aria-checked="${r.actif}" title="${r.actif ? 'Désactiver' : 'Activer'}"></button>` : '<span class="fi-tog on fixe" title="Toujours active"></span>';
-  const edit = r.ouvert ? `<div class="fi-edit"><div class="fi-ph">${phraseHtml(r.morceaux, x)}</div>
-    <div class="fi-edit-pied">${r.portee ? `<label class="fi-portee">S’applique à <select class="fi-in s" ${x.C(r.portee.set)}>${r.portee.opts.map(o => `<option value="${esc(o[0])}"${o[0] === r.portee.v ? ' selected' : ''}>${esc(o[1])}</option>`).join('')}</select></label>` : '<span></span>'}
-      <span class="fi-edit-act">${r.retirer ? `<button class="fi-lien rouge" ${x.A(r.retirer)}>${r.supprimer ? 'Garder la règle' : (r.nouvelle ? 'Annuler' : 'Retirer la règle')}</button>` : ''}<button class="fi-lien fort" ${x.A(r.fermer)}>OK</button></span></div></div>` : '';
-  return `<div class="fi-row${etat}">
-    <button class="fi-row-main" ${x.A(r.ouvrir)} aria-expanded="${r.ouvert}"><span class="fi-ic" style="--c:${esc(r.ic.couleur)}">${esc(r.ic.txt)}</span>
-      <span class="fi-row-txt"><b>${r.modifiee ? '<i class="fi-pt" title="modifiée, pas encore publiée"></i>' : ''}${esc(r.titre)}</b><span>${esc(r.resume)}</span></span>
-      <span class="fi-row-stat${r.statCls === 'ko' ? ' ko' : ''}">${esc(r.stat)}</span><span class="fi-chev">›</span></button>
-    ${tog}</div>${edit}`;
-}
+const IMG = 'assets/img/bingo/';
+const ill = (n, cls) => n ? `<img class="${cls || 'fi-ill'}" src="${IMG}${n}.png" alt="" draggable="false">` : '';
+const api = (t, esc) => `<code class="fi-api">${esc(t)}</code>`;
+const gap = (titre, t, esc) => `<div class="fi-gap"><span>${esc(titre)}</span>${esc(t)}</div>`;
 
 function tplProgramme(f, x){
   const { esc } = x;
-  if (f.chargement) { return '<div class="fi-vide">Lecture du programme…</div>'; }
-  if (f.indispo) { return `<div class="fi-vide">${esc(f.indispo)}</div>`; }
-  const groupes = f.blocs.map(b => `<section class="fi-grp"><h3>${esc(b.titre)}</h3><div class="fi-liste">
-    ${b.regles.length ? b.regles.map(r => ligneRegle(r, x)).join('') : '<div class="fi-row vide">Aucune règle pour ce magasin.</div>'}
-    ${b.ajouts.map(([t, fn]) => `<button class="fi-add" ${x.A(fn)}><span>+</span>${esc(t)}</button>`).join('')}
-    ${b.declencheurs ? `<label class="fi-add"><span>+</span><select ${x.C(b.declencheurs.choisir)}>${b.declencheurs.opts.map(o => `<option value="${esc(o[0])}">${esc(o[1])}</option>`).join('')}</select></label>` : ''}
-  </div><p class="fi-grp-pied">${esc(b.sous)}</p></section>`).join('');
-  const A = f.app || {};
-  const tel = `<div class="fi-tel"><div class="fi-ecran">
-    <div class="fi-pass"><div class="fi-pass-h"><span>L’Atelier by</span><span>Fidélité</span></div>
-      <div class="fi-pass-v">${A.solde}<small> / ${A.jauge} points</small></div>
-      <div class="fi-pass-j"><i style="width:${A.pct}%"></i></div><div class="fi-pass-s">Encore ${A.reste} points pour un bon de ${esc(A.bon)}</div></div>
-    ${A.creneau ? `<div class="fi-notif"><b>Aujourd’hui</b>${esc(A.creneau.replace(/^Aujourd’hui /, ''))}</div>` : ''}
-    <div class="fi-tel-k">Cartes</div>
-    ${(A.cartes || []).map(k => `<div class="fi-tel-carte" style="--c:${esc(k.couleur)}"><b>${esc(k.nom)}</b><span>${Array.from({ length: k.n }, (_, i) => `<i class="${i < k.faits ? 'f' : ''}"></i>`).join('')}</span></div>`).join('') || '<div class="fi-tel-carte vide">Aucune carte active</div>'}
-    <div class="fi-tel-k">Portefeuille</div>
-    <div class="fi-tel-p"><div><b>${esc(A.bon)}</b><span>jusqu’au ${esc(A.bonFin)}</span></div>${A.cadeau ? `<div><b>Cadeau</b><span>${esc(A.cadeau)}</span></div>` : ''}</div>
-  </div></div>`;
-  const B = f.budget || {};
-  const R = 34, C = 2 * Math.PI * R;
-  const anneau = `<svg viewBox="0 0 84 84" width="84" height="84" aria-hidden="true"><circle cx="42" cy="42" r="${R}" fill="none" stroke="var(--fi-fill)" stroke-width="8"/>
-    <circle cx="42" cy="42" r="${R}" fill="none" stroke="${B.depasse ? 'var(--fi-rouge)' : 'var(--color-primary)'}" stroke-width="8" stroke-linecap="round" stroke-dasharray="${(C * (B.part || 0)).toFixed(1)} ${C.toFixed(1)}" transform="rotate(-90 42 42)"/></svg>`;
-  return `<div class="fi-g21"><div class="fi-col">${groupes}</div><aside class="fi-col fi-aside">
-    <section class="fi-grp"><h3>Ce que voit le client</h3>${tel}</section>
-    <section class="fi-grp"><h3>Simulateur</h3><div class="fi-liste">
-      ${f.profils.length ? f.profils.map(p => `<div class="fi-sim"><div><b>${esc(p.nom)}</b><span>${esc(p.mission)} · ${esc(p.sous)}</span></div><div class="fi-sim-v"><b>${esc(p.jours)} j</b><span>entre deux bons · rend <em class="${p.fort ? 'fort' : ''}">${esc(p.rend)}</em></span></div></div>`).join('') : '<div class="fi-row vide">Pas assez de clients pour dégager des profils.</div>'}
-    </div><p class="fi-grp-pied">Trois clients types du réseau, recalculés sur les règles en cours d’écriture.</p></section>
-    <section class="fi-grp"><h3>Budget</h3><div class="fi-liste"><div class="fi-bud">${anneau}<div><b>${esc(B.pct)}</b><span>du chiffre des clients carte · plafond ${esc(B.plafond)}</span><span>${esc(B.cout)} sur 30 jours${B.depasse ? ' — <em class="ko">au-dessus du plafond</em>' : ''}</span></div></div></div>
-      <p class="fi-grp-pied">Règles publiées. Hypothèses : ${esc(B.hypotheses)}.</p></section>
-  </aside></div>`;
+  if (f.chargement) { return '<div class="fi-vide">Lecture de la carte dans l’ERP…</div>'; }
+  if (!f.erp) { return ''; }
+  const erp = f.erp.ok ? '' : gap('ERP injoignable', 'La carte ne se lit pas : ' + (f.erp.erreur || 'sans réponse') + '. Le compte admin ERP se règle dans Paramètres.', esc);
+  const C = f.carte;
+  const carte = C ? `<section class="fi-grp"><h3>La carte ${api('GET /admin/loyalty/cards', esc)}</h3><div class="fi-liste fi-carte">
+    <div class="fi-carte-v"><div class="fi-carte-h"><span>L’Atelier by</span><span>Points · Bingo</span></div>
+      <div class="fi-carte-m"><span class="fi-blanc">${ill('hiver')}</span><div><b>${esc(C.nom)}</b><small>${esc(C.regle || '')}</small></div></div>
+      <div class="fi-carte-p">${esc(C.code)} · v${C.version} · réseau, ${C.nMag} magasins${C.debut ? ' · depuis le ' + esc(C.debut) : ''}</div></div>
+    <div class="fi-carte-t"><div class="fi-l"><span>La seule carte du programme : les points pour ce que le client dépense, le bingo pour chaque semaine où il revient.</span><span class="fi-tag ok">active</span></div>
+      ${f.autres.length ? `<div class="fi-l mu"><span>${f.autres.map(a => `<i class="fi-pt" style="background:${esc(a.couleur)}"></i>${esc(a.nom)}`).join(', ')} : ${f.arreter ? 'arrêtées à la publication' : 'gardées'} ; leurs récompenses prêtes restent valables jusqu’à leur échéance.</span>
+        <button class="fi-tog${f.arreter ? ' on' : ''}" ${x.A(f.basculerArreter)} role="switch" aria-checked="${f.arreter}" title="Arrêter les cartes à tampons"></button></div>` : ''}
+      <div class="fi-src">revision ${C.revision}${C.verrou ? ' · carte utilisée : barème figé, il se change par une nouvelle version' : ''}</div></div>
+  </div></section>` : (f.erp.ok ? gap('Pas de carte', 'Aucune carte à points active dans l’ERP : créez-la d’abord (POST /admin/loyalty/cards).', esc) : '');
+  const M = f.marques || {};
+  const mod = k => M[k] ? '<span class="fi-mod">modifié</span>' : '';
+  const points = f.base ? `<section class="fi-grp"><h3>Les points · ce que le client gagne ${api('points_config', esc)}</h3><div class="fi-liste">
+    <div class="fi-r"><span class="fi-ic">€</span><div class="fi-ph">Chaque <input class="fi-in" value="${esc(f.base.euros)}" ${x.C(f.base.setEuros)} style="width:58px"> € dépensé rapporte <input class="fi-in" type="number" min="1" value="${f.base.points}" ${x.C(f.base.setPoints)} style="width:44px"> point${f.base.points > 1 ? 's' : ''}, arrondi à l’inférieur, en boutique et au webshop.
+      <small>${api('slice_cents', esc)} ${api('points_per_slice', esc)}</small></div>${mod('base')}</div>
+    ${f.bonus.map(b => `<div class="fi-r"><span class="fi-ic">×${esc(String(b.coef).replace('.', ','))}</span><div class="fi-ph">Les points comptent <select class="fi-in s" ${x.C(b.setCoef)}>${[1.5, 2, 3].map(v => `<option value="${v}"${v === b.coef ? ' selected' : ''}>×${String(v).replace('.', ',')}</option>`).join('')}</select>
+      <span class="fi-jours">${b.jours.map(j => `<button ${x.A(j.basculer)} class="${j.on ? 'on' : ''}" title="${esc(j.titre)}">${j.l}</button>`).join('')}</span> de <input class="fi-in h" value="${esc(b.de)}" ${x.C(b.setDe)}> à <input class="fi-in h" value="${esc(b.a)}" ${x.C(b.setA)}> — <input class="fi-in t" value="${esc(b.nom)}" ${x.C(b.setNom)} style="width:130px">
+      <small>${api('bonuses[]', esc)} heure du magasin · sur tout le ticket · deux ×2 à la fois : le plus fort l’emporte</small></div><button class="fi-x" ${x.A(b.retirer)} title="Retirer">×</button></div>`).join('')}
+    <button class="fi-add" ${x.A(f.ajouterBonus)}><span>+</span>Ajouter un créneau ×2</button>
+    <div class="fi-r"><span class="fi-ic">◎</span><div class="fi-ph">Par magasin : ${f.coefs.map(m => `${esc(m.nom)} ×<input class="fi-in${m.modif ? ' mod' : ''}" value="${esc(m.v)}" ${x.C(m.set)} style="width:50px">`).join(' · ')}
+      <small>${api('shop_coefficients', esc)} un coefficient vaut toute la semaine : l’API ne lie pas un créneau à un magasin</small></div>${mod('coefs')}</div>
+  </div></section>
+  <section class="fi-grp"><h3>Les points · ce qu’il en fait</h3><div class="fi-liste">
+    <div class="fi-r"><span class="fi-ic">↗</span><div class="fi-ph">Il échange ses points dans l’app, au palier exact :
+      ${f.paliers.map(p => `<span class="fi-pal"><input class="fi-in" type="number" min="1" value="${p.points}" ${x.C(p.setPoints)} style="width:58px"> → <input class="fi-in" value="${esc(p.euros)}" ${x.C(p.setEuros)} style="width:54px"> € <em>${esc(p.taux)} %</em>${p.retirer ? `<button class="fi-x" ${x.A(p.retirer)} title="Retirer">×</button>` : ''}</span>`).join('')}
+      <small>${api('tiers[]', esc)} jusqu’à 19 paliers · % : ce que le palier rend sur les achats · jamais automatique ${api('POST /webshop/loyalty/points/redeem', esc)}</small></div>${mod('paliers')}</div>
+    ${f.ajouterPalier ? `<button class="fi-add" ${x.A(f.ajouterPalier)}><span>+</span>Ajouter un palier</button>` : ''}
+    <div class="fi-r"><span class="fi-ic">j</span><div class="fi-ph">Le bon vaut <input class="fi-in" type="number" min="0" value="${f.validites.bon}" ${x.C(f.validites.setBon)} style="width:52px"> jours ; chaque point vaut <input class="fi-in" type="number" min="0" value="${f.validites.points}" ${x.C(f.validites.setPoints)} style="width:58px"> jours, les plus anciens partent en premier.
+      <small>${api('voucher_validity_days', esc)} ${api('points_validity_days', esc)} · 0 = sans fin</small></div>${mod('validites')}</div>
+  </div></section>` : '';
+  const B = f.bingo;
+  const bingo = B ? `<section class="fi-grp"><h3>Le bingo de la carte · la récurrence</h3><div class="fi-liste">
+    <div class="fi-r"><span class="fi-ic">${B.seuil}</span><div class="fi-ph">Une case par semaine dès <span class="fi-v">${B.seuil} points</span> gagnés sur la carte, du lundi au dimanche, tous magasins, en une ou plusieurs fois.
+      <small>Les points de la semaine : ${api('GET /shops/{id}/loyalty/customers?card_id&from&to', esc)} → ${api('programs[].shop_activity.points_earned', esc)}, additionnés sur les magasins · ×2 et coefficients compris</small></div><span class="fi-st">${B.seuil} € · ${B.seuil / 2} € à ×2</span></div>
+    <div class="fi-r"><span class="fi-ic">${B.tousLes}</span><div class="fi-ph">Toutes les <span class="fi-v">${B.tousLes}</span> cases, un bon de plus en plus gros, valable <span class="fi-v">${B.validite} jours</span> dès le lendemain :
+      <span class="fi-bons">${B.bons.map(b => `<span class="fi-bon${b.camp ? '' : ' manque'}" title="${esc(b.camp ? b.camp.nom + ' · ' + b.camp.statut : 'pas de campagne « ' + B.prefixe + ' … ' + b.v + ' » dans l’ERP')}"><span class="fi-blanc">${ill(b.motif)}</span>${esc(b.v)}<em>${b.k}e case</em></span>`).join('')}</span>
+      <small>Une campagne par valeur, nommée « ${esc(B.prefixe)} … € » ${api('GET /admin/voucher-campaigns', esc)} ; le bon du client ${api('POST …/codes {id_customer, valid_to, usage_limit: 1}', esc)}</small></div>
+      <span class="fi-st ${f.nbCamp === B.bons.length ? 'ok' : 'att'}">${f.nbCamp} / ${B.bons.length} campagnes</span></div>
+    ${B.sup ? `<div class="fi-r"><span class="fi-ic">${B.semaines.length}</span><div class="fi-ph">Carte pleine : le super bon de <span class="fi-v">${esc(B.sup.v)}</span>${B.tirage ? ` et le tirage au sort d’<span class="fi-v t">${esc(B.tirage.lot)}</span>${B.tirage.le ? ' le ' + esc(B.tirage.le) : ''}` : ''}.
+      <small>${B.sup.camp ? 'campagne ' + esc(B.sup.camp.statut) + (B.sup.camp.actif ? '' : ' : rien ne part tant qu’elle n’est pas active') : 'pas encore de campagne'} · le tirage se fait sur la liste des cartes pleines</small></div><span class="fi-st ${B.sup.provisoire ? 'att' : ''}">${B.sup.provisoire ? 'montant à confirmer' : ''}</span></div>` : ''}
+    <div class="fi-r fi-sem"><span class="fi-ic clair">${ill('hiver')}</span><div><div class="fi-sem-g">${B.semaines.map(w => `<div class="${w.etat}${w.fete ? ' fete' : ''}" title="S${w.n} · ${esc(w.titre)} · ${esc(w.du)}"><span>${ill(w.ill)}</span><em>S${w.n}</em></div>`).join('')}</div>
+      <small>${esc(f.saison.nom)} : ${f.saison.n} semaines, du ${esc(f.saison.du)} au ${esc(f.saison.au)}${f.saison.enCours ? ' · S' + f.saison.enCours + ' en cours' : ''}. Le calendrier, les fêtes et les dessins : ${api('src/data/fidelite_bingo.json', esc)}</small></div></div>
+  </div>${gap('Manque à l’API', 'L’ERP ne coche pas de case : le cockpit lit les points de chaque semaine et n’écrit dans l’ERP que les bons. Rien n’est gardé de son côté. À demander à l’ERP : un palier hebdomadaire dans points_config.', esc)}</section>` : '';
+  const ensemble = `<section class="fi-grp"><h3>Points et bingo, une seule carte</h3><div class="fi-liste">
+    ${[['Un ticket rapporte des points ; les points de la semaine cochent la case.', 'Le client ne compte qu’une seule chose : ses points'],
+      ['Les ×2 font avancer le bingo : aux heures creuses, deux fois moins d’achats suffisent pour la case.', 'Le bingo pousse vers les créneaux à remplir'],
+      ['Échanger des points ne décoche rien : la case compte les points gagnés, pas le solde.', 'points_earned sur la semaine, jamais balance'],
+      ['Un bon à la fois en caisse : bon de points ou bon du bingo, le client choisit dans l’app.', 'POST /webshop/vouchers/activation · la caisse le lit']]
+      .map(([t, s], i) => `<div class="fi-r"><span class="fi-ic gris">${i + 1}</span><div class="fi-ph">${esc(t)}<small>${esc(s)}</small></div><span></span></div>`).join('')}
+  </div><p class="fi-pied">Plus à l’écran, faute d’API : bonus panier, anniversaire, bienvenue, 2e visite, parrainage, retour après absence, plafond, jours exclus, budget. Le bingo reprend le rôle des déclencheurs de visite.</p></section>`;
+  const S = f.sim, R = S.r;
+  const sim = `<section class="fi-card"><h3>Simuler un ticket</h3><div class="fi-src">${api('POST /admin/loyalty/simulate', esc)} · barème en cours d’écriture</div>
+    <div class="fi-sim-f"><label>Magasin <select class="fi-in s t" ${x.C(S.setShop)}>${S.shops.map(m => `<option value="${esc(m.id)}"${m.on ? ' selected' : ''}>${esc(m.nom)}</option>`).join('')}</select></label>
+      <label>Montant <input class="fi-in t" value="${esc(S.montant)}" ${x.C(S.setMontant)} style="width:64px"> €</label>
+      <label class="l2">Le <input class="fi-in t" type="datetime-local" value="${esc(S.quand)}" ${x.C(S.setQuand)}></label></div>
+    <button class="fi-btn" ${x.A(S.lancer)}${S.envoi ? ' disabled' : ''}>${S.envoi ? 'Calcul…' : 'Simuler'}</button>
+    ${R ? (R.error ? `<p class="fi-ko">${esc(R.error)}</p>` : `<div class="fi-kpi"><b>${R.points} points</b></div><table class="fi-kv">${S.lignes.map(([k, v], i) => `<tr><td>${esc(k)}</td><td class="${i === 3 && R.coche ? 'ok' : ''}">${esc(v)}</td></tr>`).join('')}</table>`) : ''}
+    <div class="fi-src">Rien n’est écrit : ni vente, ni solde, ni bon.</div></section>`;
+  const pub = C ? `<section class="fi-card"><h3>Publier dans l’ERP</h3>
+    ${f.aPublier ? `<table class="fi-kv">${f.modifs.map(m => `<tr><td>${esc(m)}</td><td>barème</td></tr>`).join('')}${f.arreter ? f.autres.map(a => `<tr><td>Fin de ${esc(a.nom)}</td><td>${f.debut ? 'la veille' : 'ce soir'}</td></tr>`).join('') : ''}</table>` : '<p class="fi-mu">Rien de modifié.</p>'}
+    ${C.verrou && f.modifs.length ? `${gap('Carte utilisée', 'Le barème de la v' + C.version + ' est figé : la publication crée la v' + (C.version + 1) + ' (même code) et arrête la v' + C.version + ' la veille à minuit.', esc)}
+      <label class="fi-debut">La v${C.version + 1} commence le <input class="fi-in t" type="date" value="${esc(f.debut)}" ${x.C(f.setDebut)}></label>` : ''}
+    <div class="fi-act"><button class="fi-cta" ${x.A(f.publier || (() => {}))}${!f.publier || f.envoi ? ' disabled' : ''}>${f.envoi ? 'Publication…' : 'Publier dans l’ERP'}</button>${f.annuler ? `<button class="fi-btn" ${x.A(f.annuler)}>Annuler</button>` : ''}</div>
+    <div class="fi-src col"><span>${api(C.verrou ? 'POST /admin/loyalty/cards' : 'PATCH /admin/loyalty/cards/' + C.id, esc)} ${C.verrou ? 'la version suivante' : 'avec la revision ' + C.revision}</span><span>${api('PATCH /admin/loyalty/cards/{id}', esc)} les fins de carte</span><span>409 si quelqu’un a modifié entre-temps : on relit et on recommence.</span></div></section>` : '';
+  const src = `<section class="fi-card"><h3>D’où vient l’écran</h3><table class="fi-kv">
+    ${[['La carte, le barème', 'GET /admin/loyalty/cards'], ['Les magasins', 'GET /admin/loyalty/options'], ['Les bons du bingo', 'GET /admin/voucher-campaigns'], ['Les points de la semaine', 'GET /shops/{id}/loyalty/customers'], ['Écrire', 'POST · PATCH /admin/loyalty/cards']]
+      .map(([k, v]) => `<tr><td>${esc(k)}</td><td>${api(v, esc)}</td></tr>`).join('')}</table><div class="fi-src">Aucune table du cockpit : tout se relit dans l’ERP à l’ouverture.</div></section>`;
+  return `${erp}${carte}<div class="fi-g21"><div class="fi-col">${points}${bingo}${ensemble}</div><aside class="fi-col fi-aside">${sim}${pub}${src}</aside></div>`;
 }
 
 function tplClients(f, x){
   const { esc } = x;
-  if (f.chargementC) { return '<div class="fi-vide">Lecture des clients…</div>'; }
-  if (f.indispoC) { return `<div class="fi-vide">${esc(f.indispoC)}</div>`; }
-  if (!f.rf) { return ''; }
-  const chiffres = `<div class="fi-chiffres">${f.tuiles.map(([k, v, s, cls]) => `<div class="${cls || ''}"><span>${esc(k)}</span><b>${esc(v)}</b><small>${esc(s)}</small></div>`).join('')}</div>`;
-  const R = f.rf;
-  const grille = `<div class="fi-rf"><span></span>${R.colonnes.map(c => `<span class="fi-rf-h">${esc(c)}</span>`).join('')}
-    ${R.cases.map((ligne, l) => `<span class="fi-rf-l">${esc(R.lignes[l])}</span>${ligne.map(k => `<button ${x.A(k.choisir)} title="${esc(k.titre)}" class="fi-rf-c${k.on ? ' on' : ''}${k.t > 0.55 ? ' fonce' : ''}" style="--t:${k.t.toFixed(3)}">${esc(k.n)}${k.ar ? '<i></i>' : ''}</button>`).join('')}`).join('')}</div>
-    <div class="fi-rf-axe"><span>vu récemment</span><span>dernière visite →</span></div>
-    <p class="fi-note-s">En ligne, les visites par mois (moyenne sur 90 jours). Point rouge : à risque. Les ${esc(R.nouveaux)} nouveaux sont lus à part.</p>`;
-  const D = f.detail;
-  const detail = `<div class="fi-det">
-    <div class="fi-segs">${f.segPuces.map(p => `<button ${x.A(p.choisir)} class="${p.on ? 'on' : ''}">${esc(p.nom)}</button>`).join('')}</div>
-    <div class="fi-det-n"><b>${esc(D.n)}</b><span>${esc(D.nom).toLowerCase()} · ${esc(D.joursSans)}</span></div>
-    <p class="fi-note-s">${esc(D.def)}</p>
-    <div class="fi-mix">${D.mix.map(m => m.v ? `<i class="${m.cls}" style="flex:${m.v}" title="${esc(m.nom)} ${esc(m.txt)}"></i>` : '').join('')}</div>
-    <div class="fi-leg">${D.mix.filter(m => m.v >= 12).map(m => `<span><i class="${m.cls}"></i>${esc(m.nom)} ${esc(m.txt)}</span>`).join('')}</div>
-    <div class="fi-kv">${D.lignes.map(([k, v]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}</div>
-    ${D.lecture ? `<p class="fi-lecture">${esc(D.lecture)}</p>` : ''}
-    <div class="fi-act">${D.avancer ? `<button class="fi-cta" ${x.A(D.avancer)}${D.envoi ? ' disabled' : ''}>Avancer le bon à 21 jours</button>` : ''}<button class="fi-lien fort" ${x.A(D.versProgramme)}>Voir les règles ›</button></div></div>`;
-  const flux = `<div class="fi-liste">${(f.flux || []).map(l => `<div class="fi-flux"><div><b>${esc(l.nom)}</b><span>${esc(l.total)} clients il y a 30 jours</span></div>
-    <div class="fi-flux-b"><i class="m" style="flex:${l.monte.toFixed(2)}"></i><i class="r" style="flex:${l.reste.toFixed(2)}"></i><i class="d" style="flex:${l.descend.toFixed(2)}"></i></div>
-    <div class="fi-flux-v"><span class="vert">${esc(l.monteTxt)}</span><span>${esc(l.resteTxt)}</span><span class="rouge">${esc(l.descendTxt)}</span></div></div>`).join('')}</div>
-    <p class="fi-grp-pied">Vert : passés à un segment plus fidèle. Rouge : descendus. ${esc(f.trans.lecture)}</p>`;
-  const mix = `<div class="fi-liste">${f.mixSeg.map(s => `<div class="fi-mixl"><b>${esc(s.nom)}</b><div class="fi-mix">${s.mix.map(m => m.v ? `<i class="${m.cls}" style="flex:${m.v}" title="${esc(m.titre)}"></i>` : '').join('')}</div><span>${esc(s.panier)}</span></div>`).join('')}
-    <div class="fi-leg pad">${f.missions.map(m => `<span title="${esc(m.def)}"><i class="${m.cls}"></i>${esc(m.nom)}</span>`).join('')}</div></div>
-    <p class="fi-grp-pied">${esc(f.mixLecture)}</p>`;
-  return `<div class="fi-col">${chiffres}
-    <section class="fi-grp"><h3>Récence × fréquence</h3><div class="fi-liste fi-rfg"><div>${grille}</div>${detail}</div></section>
-    <div class="fi-g2"><section class="fi-grp"><h3>D’un mois à l’autre</h3>${flux}</section><section class="fi-grp"><h3>Ce qu’achète chaque segment</h3>${mix}</section></div>
-    <p class="fi-note-s centre">${esc(f.resume)}</p></div>`;
+  if (f.chargementC && !f.erpC) { return '<div class="fi-vide">Lecture des clients dans l’ERP, semaine par semaine…</div>'; }
+  if (f.erpC && !f.erpC.ok) { return gap('ERP injoignable', 'Les clients ne se lisent pas : ' + (f.erpC.erreur || 'sans réponse') + '.', esc); }
+  if (!f.cl) { return ''; }
+  const L = f.cl;
+  const tuiles = `<div class="fi-tuiles">${f.tuiles.map(([k, v, s, r]) => `<div><span>${esc(k)}</span><b>${esc(v)}</b><small>${esc(s)}</small>${api(r, esc)}</div>`).join('')}</div>`;
+  const graphe = `<section class="fi-card"><h3>Semaine après semaine · part des membres qui cochent <span class="fi-mu">${L.seuil} points dans la semaine</span></h3>
+    <div class="fi-bars">${f.semaines.map(w => `<div class="fi-bar"><div class="fi-bar-c">
+      ${w.avant != null ? `<div class="a"><span>${w.avant}</span><i style="height:${w.hA}px"></i></div>` : ''}<div class="p${w.cours ? ' cours' : ''}"><span>${w.part ?? ''}</span><i style="height:${w.hP}px"></i></div></div>
+      <div class="fi-bar-l">${ill(w.ill)}<span class="${w.cours ? 'acc' : ''}">S${w.n} · ${esc(w.titre)}</span><em>${w.cours ? 'en cours' : esc(w.ecart)}</em></div></div>`).join('')}</div>
+    <div class="fi-leg"><span><i class="p"></i>${esc(L.saison)}, avec le bingo</span><span><i class="a"></i>Mêmes semaines un an plus tôt, points seuls</span><span class="d">en % des membres venus dans la saison · en vert, l’écart</span></div>
+    <div class="fi-src">Une semaine = un appel par magasin ${api('GET /shops/{id}/loyalty/customers?card_id&from=lundi&to=dimanche', esc)}</div></section>`;
+  const rep = `<section class="fi-card"><h3>Où en sont les membres <span class="fi-mu">semaines closes</span></h3>
+    ${f.repartition.map(r => `<div class="fi-rep"><span>${r.k} case${r.k > 1 ? 's' : ''}${r.bon ? ' <em class="fi-tag plein">bon</em>' : ''}</span><i class="${r.k === 0 ? 'z' : (r.plein ? 'f' : '')}" style="width:${r.l}%"></i><b>${esc(r.n)}</b></div>`).join('')}
+    <p class="fi-mu">Toutes les cases jusqu’ici : <span class="acc">${esc(f.enCourse)} membres</span> peuvent encore remplir la carte. Sans case : ${esc(f.sansCase)}.</p></section>`;
+  const table = `<section class="fi-grp"><h3>Les membres · ${esc(L.mag)} ${api('GET /shops/{id}/loyalty/customers', esc)}
+      <input class="fi-in t fi-q" type="search" placeholder="Chercher un prénom" value="${esc(f.q)}" ${x.C(f.chercher)}></h3>
+    <div class="fi-liste"><div class="fi-tr h"><span>Client</span><span>Points · palier</span><span>Bingo</span><span>Cette semaine</span><span>Dernier passage</span><span>À faire</span></div>
+    ${f.membres.map(m => `<div class="fi-tr"><span>${esc(m.nom)}</span><span>${esc(m.solde)}<small>${esc(m.palier)}</small></span>
+      <span><span class="fi-cases">${m.coches.map(c => `<i class="${c ? 'on' : ''}"></i>`).join('')}</span><small>${m.cases} / ${m.n}</small></span>
+      <span class="${m.ok ? 'ok' : ''}">${esc(m.semaine)}${m.ok ? ' · cochée' : ''}</span><span class="mu">${esc(m.dernier)}</span><span class="mu">${esc(m.afaire)}</span></div>`).join('') || '<div class="fi-tr vide">Aucun membre.</div>'}
+    </div><p class="fi-pied">${esc(f.nbMembres)} membres${f.q ? '' : ' · ici, quelques-uns de chaque cas : cherchez un prénom pour les voir tous'} · solde et paliers ${api('global_progress.points', esc)} · cette semaine ${api('shop_activity.points_earned', esc)} · dernier passage ${api('last_transaction_at', esc)} · prénom et initiale : l’API ne donne ni téléphone ni e-mail.</p></section>`;
+  const B = f.bons;
+  const bons = `<section class="fi-card"><h3>Les bons du bingo <span class="fi-mu">tout le réseau</span></h3>
+    ${B.r && B.lignes ? `<table class="fi-kv">${B.lignes.map(l => `<tr><td>${esc(l.v)} · ${l.k}e case<small>${esc(l.ayants)} y ont droit · ${esc(l.emis)} émis · campagne ${esc(l.camp)}</small></td><td class="${l.a && l.actif ? 'acc' : ''}">${esc(l.aTxt)} à émettre</td></tr>`).join('')}</table>
+      ${B.crees != null ? `<p class="fi-ok">${B.crees} bon${B.crees > 1 ? 's' : ''} créé${B.crees > 1 ? 's' : ''} dans l’ERP.</p>` : `<div class="fi-act"><button class="fi-cta" ${x.A(B.emettre)}${!B.total || B.envoi ? ' disabled' : ''}>${B.envoi ? 'Émission…' : 'Émettre ' + B.total + ' bon' + (B.total > 1 ? 's' : '')}</button></div>`}`
+      : `<p class="fi-mu">Qui a gagné quel bon sur les semaines closes, et ce qui reste à émettre. Seules les campagnes actives dans l’ERP émettent ; chaque lundi, le cron le fait seul.</p><button class="fi-btn" ${x.A(B.voir)}${B.chargement ? ' disabled' : ''}>${B.chargement ? 'Calcul…' : 'Voir les bons dus'}</button>`}
+    <div class="fi-src">${api('POST /admin/voucher-campaigns/{id}/codes', esc)} un code par client, une utilisation</div></section>`;
+  const relances = `<section class="fi-grp"><h3>À relancer cette semaine</h3><div class="fi-liste">${f.relances.map(r => `<div class="fi-rel"><b>${esc(r.n)}</b><div>${esc(r.titre)}<small>${esc(r.detail)}</small></div></div>`).join('')}</div>
+    <p class="fi-pied">Les listes partent par la newsletter ou la notification de l’app ; rien ne part d’ici.</p></section>`;
+  const lire = `<section class="fi-card"><h3>Lire l’API sans se tromper</h3><div class="fi-notes">
+    <p>Le solde et les paliers sont ceux du réseau : ils se répètent dans chaque magasin, le cockpit ne les additionne jamais.</p>
+    <p>Les points gagnés et les ventes sont ceux du magasin, sur la période : ceux-là s’additionnent.</p>
+    <p>Une carte reconnue n’est ni un scan prouvé ni un achat : une demande de la caisse, répétitions comprises.</p>
+    <p>${esc(String(L.appels))} appel${L.appels > 1 ? 's' : ''} à l’ERP pour cette lecture ; les semaines closes se gardent un jour en cache.</p></div></section>`;
+  return `<div class="fi-col">${tuiles}<div class="fi-g21">${graphe}${rep}</div><div class="fi-g21"><div class="fi-col">${table}</div><aside class="fi-col">${relances}${bons}${lire}</aside></div></div>`;
 }
 
 export function tplFidelite(c, x){
   const { esc } = x, f = c.fid;
   if (!f) { return ''; }
-  const shop = f.portees.find(p => p.on) || f.portees[0];
   const haut = `<div class="fi-haut"><div class="fi-segc"><button ${x.A(f.ongletP)} class="${f.onglet === 'p' ? 'on' : ''}">Programme</button><button ${x.A(f.ongletC)} class="${f.onglet === 'c' ? 'on' : ''}">Clients</button></div>
-    <label class="fi-popup"><select ${x.C(e => { const p = f.portees.find(q => q.id === e.target.value); if (p) { p.choisir(); } })}>${f.portees.map(p => `<option value="${esc(p.id)}"${p.on ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select><span>${esc(shop ? shop.nom : 'Réseau')}</span></label></div>`;
-  const essai = f.test ? '<p class="fi-essai"><i></i>Données d’essai — aucune visite carte en base pour l’instant. Les calculs sont ceux qui tourneront sur les vraies visites.</p>' : '';
+    ${f.onglet === 'c' ? `<div class="fi-segc p">${f.portees.map(p => `<button ${x.A(p.choisir)} class="${p.on ? 'on' : ''}">${esc(p.nom)}</button>`).join('')}</div>` : ''}
+    <span class="fi-etat">${f.saison ? esc(f.saison.nom) + (f.saison.enCours ? ' · semaine ' + f.saison.enCours + ' sur ' + f.saison.n : '') : ''}${f.cl ? ' · ' + esc(f.cl.aujourdhui) : ''}</span></div>`;
   const msg = f.msg ? `<div class="fi-toast${f.msg.ko ? ' ko' : ''}">${esc(f.msg.txt)}<button ${x.A(f.fermerMsg)} aria-label="Fermer">×</button></div>` : '';
-  const dock = f.onglet === 'p' && f.nbModifs ? `<div class="fi-dock"><span>${f.nbModifs} modification${f.nbModifs > 1 ? 's' : ''} non publiée${f.nbModifs > 1 ? 's' : ''}</span><button class="fi-lien" ${x.A(f.annuler)}>Annuler</button><button class="fi-cta" ${x.A(f.publier)}${f.envoi ? ' disabled' : ''}>${f.envoi ? 'Publication…' : 'Publier'}</button></div>` : '';
-  return `<div data-screen="fidelite" class="fi">${haut}${essai}${msg}${f.onglet === 'c' ? tplClients(f, x) : tplProgramme(f, x)}${dock}</div>`;
+  return `<div data-screen="fidelite" class="fi">${haut}${msg}${f.onglet === 'c' ? tplClients(f, x) : tplProgramme(f, x)}</div>`;
 }

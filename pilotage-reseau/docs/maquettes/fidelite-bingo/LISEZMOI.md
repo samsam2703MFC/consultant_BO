@@ -66,8 +66,7 @@ Ce que dit la documentation de l'API et que les écrans respectent :
   `GET /webshop/vouchers` ?
 - **Ce qui disparaît de l'écran faute d'API** : bonus panier, anniversaire ×3, bienvenue, 2e visite, parrainage,
   retour après 45 jours, plafond, jours exclus, budget. Le bingo reprend le rôle des déclencheurs de visite.
-- `src/fidelite.php` garde aujourd'hui le programme dans `ceo_fid_regle` et les visites dans `ceo_fid_visite`. Pour
-  suivre la règle « uniquement l'API », il faudra le réécrire comme un client de ces routes.
+- `src/fidelite.php` : réécrit le 13/11/2026 comme un client de ces routes (voir plus bas).
 
 ## Réel et illustré
 
@@ -86,3 +85,24 @@ node docs/maquettes/fidelite-bingo/generer.cjs m3-clients   # une seule
 
 `commun.cjs` contient le style (design system commun), le rail, la saison et la grille. Chaque `m*.cjs` écrit sa
 page, puis `generer.cjs` la capture (1440 px, ×2).
+
+## La version finale, codée (13/11/2026)
+
+`src/fidelite.php` est réécrit en client de l'API de l'ERP : plus aucune table (contrat : `docs/contrat-api.md`,
+« Fidélité — la carte à points et son bingo »). L'écran (`public/assets/js/fidelite-vals.js`, `fidelite-tpl.js`,
+`assets/css/fidelite.css`) reprend la maquette 1 pour le Programme et la maquette 3 pour les Clients.
+
+Captures du code, sur le faux ERP (`tools/fidelite_faux_erp.php`, clients illustrés), le jeudi 14/01/2027 à 16:00 :
+
+- `code-programme.png` : la carte avec un brouillon (Sombreffe ×1,5, un palier 300 → 11 €), un ticket simulé et la
+  publication en version 2 ;
+- `code-clients.png` : le réseau, avec les bons dus ;
+- `code-clients-corbais.png` : un magasin.
+
+```bash
+php -S 127.0.0.1:8098 -t public docs/maquettes/fidelite-bingo/capture_api.php
+```
+
+```bash
+node docs/maquettes/fidelite-bingo/capturer.cjs
+```
