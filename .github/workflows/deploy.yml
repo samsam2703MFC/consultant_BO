@@ -219,8 +219,14 @@ jobs:
           if [ -n "$RECETTE" ]; then echo "::add-mask::$RECETTE"; fi
           # La clé ne voyage qu'en https (le serveur a son certificat d'adresse IP).
           APP_BASE_S="https://${APP_BASE#http://}"
+          # Le réglage `acces` du serveur dit ce qu'on attend sans session : « ouvert » (13/11/2026) 200, « console » 401.
+          MODE="$(sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -r '\$c = require \"/var/www/consulant_bo/config/config.php\"; echo (string) (\$c[\"acces\"] ?? \"console\");'" 2>/dev/null || true)"
           ferme=$(curl -s -o /dev/null -w '%{http_code}' "${APP_BASE}/api/cockpit/meta")
-          if [ "$ferme" != "401" ]; then echo "::error::/api/cockpit/meta sans session répond HTTP $ferme (401 attendu : l'API doit être fermée)"; fail=1
+          if [ "$MODE" = "ouvert" ]; then
+            if [ "$ferme" != "200" ]; then echo "::error::/api/cockpit/meta sans session répond HTTP $ferme (200 attendu : accès ouvert)"; fail=1
+            else echo "OK  l'API est ouverte (réglage acces = ouvert)"; fi
+          elif [ "$ferme" != "401" ]; then echo "::error::/api/cockpit/meta sans session répond HTTP $ferme (401 attendu : l'API doit être fermée)"; fail=1
           else echo "OK  l'API est fermée sans session (401)"; fi
           for ep in meta stores consultants people 'taches/suivi?periode=semaine' 'taches/suivi?periode=mois'; do
             echo "== GET ${APP_BASE}/api/cockpit/${ep} =="

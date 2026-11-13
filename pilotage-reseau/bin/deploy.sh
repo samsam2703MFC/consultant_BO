@@ -293,8 +293,9 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
-      // L’accès (src/acces.php) : « console » = session exigée (siège, magasin ou console) ; COCKPIT_ACCES=ouvert pour rouvrir.
-      "acces"   => (getenv("COCKPIT_ACCES") ?: "console") === "ouvert" ? "ouvert" : "console",
+      // L’accès (src/acces.php) : « ouvert » depuis le 13/11/2026 (Sam : « enlève la connexion, laisse ouvert ») — ni mot
+      // de passe du siège ni code de magasin ; COCKPIT_ACCES=console pour refermer (session exigée).
+      "acces"   => (getenv("COCKPIT_ACCES") ?: "ouvert") === "console" ? "console" : "ouvert",
       "accesRecette" => getenv("ACCES_RECETTE") ?: null,
       "seed"    => false,   // base vide par défaut ; pas de données de démo
       // Module RH / Dimona (/hr) : la console franchisé qui identifie (API vue du navigateur et du

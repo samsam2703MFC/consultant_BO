@@ -23,8 +23,9 @@ declare(strict_types=1);
  * routes d'intégration des autres portails (X-Service-Token) ; les horloges (…/cron?jeton=) ; la recette de chaque
  * livraison (clé X-Recette tirée par bin/deploy.sh).
  *
- * Réglage `acces` de config.php : « console » (en ligne, posé par bin/deploy.sh : connexion exigée) ou « ouvert »
- * (banc, installation autonome). Absent : fermé.
+ * Réglage `acces` de config.php : « console » (connexion exigée) ou « ouvert » (aucune connexion). En ligne, bin/deploy.sh
+ * pose « ouvert » depuis le 13/11/2026 (Sam : « enlève la connexion, laisse ouvert ») ; COCKPIT_ACCES=console referme.
+ * Absent : fermé.
  */
 
 const ACCES_COOKIES = ['franchisee' => 'fb_franchisee_session', 'franchisor' => 'fb_franchisor_session'];
