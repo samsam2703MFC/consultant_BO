@@ -740,6 +740,20 @@ chmod 600 /etc/cron.d/cockpit-carte
 php "$TARGET_DIR/bin/carte_sources.php" >>/var/log/cockpit-carte.log 2>&1 || true
 log "Carte des sources : /etc/cron.d/cockpit-carte — chaque nuit à 3 h 40 (journal : /var/log/cockpit-carte.log)."
 
+# --- L'historique des ventes (18 mois) ----------------------------------------
+# Ce que lit l'assistant du dashboard quand une question dépasse sa fiche (src/historique_ventes.php) : les tickets
+# et les produits vendus, heure par heure, de chaque magasin. Toutes les dix minutes de 20 h à 6 h, quand personne
+# ne lit le dashboard (le panel lâche quand on le presse). Rattraper 18 mois prend quelques nuits — de l'ordre de
+# 500 000 tickets ; ensuite, chaque nuit lit la veille. État : php bin/historique_moisson.php --etat.
+{
+  echo "SHELL=/bin/sh"
+  echo "PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin"
+  echo "*/10 20-23,0-5 * * * root php ${TARGET_DIR}/bin/historique_moisson.php >>/var/log/cockpit-historique.log 2>&1"
+} > /etc/cron.d/cockpit-historique
+chown root:root /etc/cron.d/cockpit-historique
+chmod 600 /etc/cron.d/cockpit-historique
+log "Historique des ventes : /etc/cron.d/cockpit-historique — toutes les dix minutes de 20 h à 6 h (journal : /var/log/cockpit-historique.log)."
+
 log "Notifications de stock : /etc/cron.d/cockpit-push — toutes les 15 min de 5 h à 20 h (journal : /var/log/cockpit-push.log)."
 
 # Le disque, surveillé entre deux livraisons (24/10/2026) : toutes les 6 heures, ménage sûr dès 85 %,
