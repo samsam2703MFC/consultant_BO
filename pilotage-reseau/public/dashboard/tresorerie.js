@@ -472,7 +472,7 @@
     const nTape = C.genre.filter(g => g === 'saisi').length;
     const srcLib = { budget: 'budget validé', n1: 'année passée' + (d.croissance ? ' ' + (d.croissance > 0 ? '+ ' : '− ') + String(Math.abs(d.croissance)).replace('.', ',') + ' %' : '') };
     ligne('Cash début de semaine', 'Ce que tu as sur le compte le lundi matin. Calculé tout seul : le solde réel du dimanche précédent s’il est saisi, sinon le cash prévu.', i => T(C.debut[i], { cls: 'mu' }), { bord: 'aucun' });
-    ligne('Encaissements (ventes)', 'Tes ventes TTC, semaine par semaine. Une semaine close prend le réel de la caisse. Les autres partent du budget validé ou de l’année passée (onglet Budget & étude) ; tu tapes ta prévision par-dessus. Case vidée : retour à la base.', i => {
+    ligne('Encaissements (ventes)', 'Tes ventes TTC, semaine par semaine. Une semaine close prend le réel de la caisse. Les autres partent du budget validé (à défaut l’étude de marché, puis l’année passée) ; tu tapes ta prévision par-dessus. Case vidée : retour au budget.', i => {
       const w = W[i], g = C.genre[i];
       if (g === 'reel') { return T(C.ventes[i], { cls: 'reel', titre: 'Réalisé : ventes de la semaine en caisse. Il remplace la prévision.' }); }
       const b = C.base[i], saisi = d.ventes[w.du];
@@ -584,20 +584,15 @@
    * L'onglet « Budget & étude » (14/11/2026, maquette B retenue, « fonds les deux onglets, lecture seule ») : la base
    * des ventes prévues ; puis, pour un exercice, mois par mois, l'étude de marché (saisonnalité, CA théorique), le budget
    * (CA, réalisé, atteinte, N-1, évolution, atterrissage), les charges du budget en euros jusqu'à la marge brute et au
-   * disponible pour la rémunération, et le P&L réel face aux taux du budget ; enfin l'étude et les exercices en cartes.
+   * disponible pour la rémunération, et le P&L réel face aux taux du budget ; enfin l'étude en carte.
    * Tout se lit dans le cockpit (src/tresorerie.php, /tresorerie/budget) ; rien ne s'y modifie, les liens y mènent.
    */
   function rendBudget(C, d, R, auj) {
-    const S = E, B = S.B, tend = R.tendance;
-    const sur = u => /^https?:\/\//.test(String(u || '')) ? String(u) : null;
-    const crm = B && B.liens ? sur(B.liens.crm) : null;
-    let h = `<div class="tr-src">Lu dans le cockpit › Budget (fiche du magasin, étude de marché) et le Compte de résultat réseau du CRM · lecture seule ·
-      <a href="../#/budget" target="_blank" rel="noopener">Le budget dans le cockpit ↗</a>${crm ? ` · <a href="${esc(crm)}" target="_blank" rel="noopener">Les postes dans le CRM ↗</a>` : ''}</div>`;
-    // La base des ventes prévues (la seule chose qui se règle ici : elle appartient au plan, pas au budget).
-    h += `<div class="tr-carte tr-base"><div class="tr-base-l"><span class="tr-k">Les ventes prévues du plan partent de</span>
-      <div class="tr-choix">${[['budget', 'Le budget validé', 'à défaut de budget, l’étude puis l’année passée'], ['n1', 'L’année passée', 'avec la croissance ci-contre ; à défaut, le budget']].map(([k, l, x]) => `<button type="button" class="tr-ch${d.base === k ? ' on' : ''}" data-tra="base:${k}"><b>${l}</b><small>${x}</small></button>`).join('')}</div></div>
-      <div class="tr-param tr-base-c"><div><span>Croissance appliquée à l’année passée (%)</span>${champ('croissance', d.croissance, { cls: 'tr-in-p', aff: v => (v > 0 ? '+' : '') + String(v || 0).replace('.', ',') + ' %' })}</div>
-      <small>${tend ? `Repère : sur les ${tend.semaines} dernières semaines closes, ${eur(tend.ca)} contre ${eur(tend.n1)} un an plus tôt, soit <b>${pctS(tend.pct / 100)}</b>.` : 'Pas assez de semaines comparables pour mesurer la tendance.'} Les semaines closes prennent toujours le réel de la caisse.</small></div></div>`;
+    // Retirés le 14/11/2026 : la ligne « Lu dans le cockpit… » et ses liens, et la carte « Les ventes prévues du plan
+    // partent de » (base, croissance, tendance). La base reste celle du plan : le budget validé, à défaut l'étude, puis
+    // l'année passée.
+    const S = E, B = S.B;
+    let h = '';
     if (!B) {
       if (S.errB) { return h + `<div class="db-err">Budget et étude : ${esc(S.errB)} <button type="button" class="tr-lien" data-tra="relireB">Relire</button></div>`; }
       return h + '<div class="db-attente">Lecture du budget, de l’étude et du P&amp;L…</div>';
@@ -679,8 +674,10 @@
     }
     h += `<div class="tr-carte tr-carte-t"><div class="tr-cbar"><div class="tr-h3">Le budget, mois par mois</div><div class="tr-ctl">${ans.map(y => { const x = (B.exercices || []).find(e => e.annee === y) || {}; return `<button type="button" class="tr-pil${y === an ? ' on' : ''}" data-tra="anb:${y}">${y} · ${court(x)}</button>`; }).join('')}</div></div>
       <div class="tr-defil"><table class="tr-tab tr-tab-b"><thead><tr><th></th>${MO.map((m, i) => `<th class="${ymI(i) === cur ? 'cur' : ''}">${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
-      <div class="tr-note tr-p">€ TTC. * mois en cours, à ce jour. ‡ mois N-1 incomplet (le magasin n’était pas encore ouvert tout le mois) : hors de l’évolution. Atteinte et évolution : les mois clos. Atterrissage : le réalisé des jours d’avant le plan, puis les ventes du plan (réel des semaines closes compris) ; son total quand toute l’année est couverte. Vert : dans le budget, rouge : au-delà. Le réel vient du P&amp;L du panel ; personnel et frais généraux se comparent aux repères de la table KPI${ch.length ? ', le compte de résultat du CRM n’ayant pas de poste personnel' : ''}.</div></div>`;
-    h += `<div class="tr-g2">${carteEtude(ex, an)}${carteExercices(B, R, ans)}</div>`;
+      <div class="tr-note tr-p">€ TTC · * mois en cours, à ce jour.</div></div>`;
+    // La carte « Le budget, exercice par exercice » est retirée (14/11/2026) : la validation est dans l'entête de la
+    // section budget et sur le bouton de l'année, les charges dans la grille.
+    h += carteEtude(ex, an);
     const src = liste(R.sources);
     h += `<p class="tr-mu tr-p">Ventes : ${src.length ? src.map(x => x === 'panel' ? 'le panel (jour par jour)' : 'la copie de caisse').join(' et ') : 'aucune vente lue'}${R.premiereVente ? ', depuis le ' + R.premiereVente.split('-').reverse().join('/') : ''}.</p>`;
     return h;
@@ -705,28 +702,10 @@
       ${sais ? `<div><div class="tr-mu tr-p">La saisonnalité${ex.saisonnaliteSource === 'reseau' ? ' (courbe du réseau, l’étude n’en a pas)' : ''} : la part de l’année de chaque mois</div><div class="tr-sais">${sais.map((v, i) => `<div><span>${String(Math.round(+v * 10) / 10).replace('.', ',')} %</span><i style="height:${Math.round(48 * v / mx)}px"></i><span>${MO[i].replace('.', '')}</span></div>`).join('')}</div></div>` : ''}</div>`;
   }
 
-  /** Les exercices du plan : la fiche du budget, sa validation, le réalisé à date face à lui ; les charges en résumé. */
   /** Les exercices montrés : ceux qui ont commencé, et ceux à venir dont le budget est déjà encodé. */
   function anneesVisibles(B, anAuj) {
     const v = B.annees.filter(y => y <= anAuj || ((B.exercices || []).find(e => e.annee === y) || {}).moisBudget > 0);
     return v.length ? v : [B.annees[0]];
-  }
-  function carteExercices(B, R, ans) {
-    const ch = (B.charges || []).map(c => c.pctValide > 0 ? c.pctValide : c.pctReseau).filter(x => x > 0), tot = ch.reduce((a, b) => a + b, 0);
-    const mat = (B.charges || []).filter(c => c.matiere).reduce((t, c) => t + (c.pctValide > 0 ? c.pctValide : c.pctReseau), 0);
-    const ex = (B.exercices || []).filter(x => ans.includes(x.annee)).map(x => {
-      const M = (R.mois || []).filter(m => +m.ym.slice(0, 4) === x.annee && m.complet && m.realise != null && m.budget);
-      const re = M.reduce((t, m) => t + m.realise, 0), bu = M.reduce((t, m) => t + m.budget, 0);
-      const chip = x.valideLe ? `<span class="tr-chip ok">Validé le ${x.valideLe.split('-').reverse().join('/')}</span>` : (x.moisBudget ? '<span class="tr-chip wa">Encodé, pas encore validé</span>' : '<span class="tr-chip wa">Pas de budget encodé</span>');
-      const tete = x.moisBudget ? `${eur(x.totalBudget)} · ${x.moisBudget} mois sur 12 encodés` : (x.fiche ? 'fiche ouverte, 0 mois sur 12' : 'pas de fiche');
-      const l2 = x.moisBudget ? (x.totalTheorique && Math.abs(x.totalTheorique - x.totalBudget) < 1 ? '= le CA théorique de l’étude' : (x.totalTheorique ? 'l’étude donnait ' + eur(x.totalTheorique) : 'pas de CA théorique')) + (x.panierEngagement ? ' · panier d’engagement : ' + n(x.panierEngagement) + ' €' : ' · panier d’engagement : non fixé')
-        : (x.moisTheorique ? `Le plan prend le CA théorique de l’étude : <b>${eur(x.totalTheorique)}</b>` : 'Le plan prend l’année passée');
-      const l3 = M.length ? `${MO[+M[0].ym.slice(5) - 1].replace('.', '')} → ${MO[+M[M.length - 1].ym.slice(5) - 1].replace('.', '')} : réalisé <b>${eur(re)}</b> pour ${eur(bu)} ${x.moisBudget ? 'au budget' : 'à l’étude'}, soit <b class="${re >= bu ? 'ok-t' : 'neg-t'}">${pctS(re / bu - 1)}</b>`
-        : (x.moisBudget ? '' : 'À encoder et valider avec le consultant : le plan le reprendra tout seul.');
-      return `<div class="tr-exb"><b>${x.annee}</b><div class="l">${chip}<span>${tete}</span></div><small>${l2}</small>${l3 ? `<small>${l3}</small>` : ''}</div>`;
-    }).join('');
-    const charges = ch.length ? `<div class="tr-exb"><b class="mu">Charges</b><div class="l"><span>${ch.length} postes · ${p1(tot)} du CA</span></div><small>Marge brute = CA − ${p1(mat)} · disponible pour la rémunération : ${p1(100 - tot)} du CA</small></div>` : '';
-    return `<div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">Le budget, exercice par exercice</span></div>${ex}${charges}</div>`;
   }
 
   function rendGuide(C, d, R) {
@@ -743,7 +722,7 @@
       <div class="tr-k">Ce qui est repris tout seul</div>
       <div class="tr-def"><b>Ce qui a été fait</b><span>Une semaine close prend les ventes réelles de la caisse : tu n’as plus à les taper. Le mois en cours et les mois passés sont dans l’onglet « N-1, budget, réalisé ».</span>
       <b>Le budget validé</b><span>Le CA budget de chaque mois, réparti sur ses semaines au profil de l’an passé : la base des ventes prévues. Ses taux donnent le plafond matière, le repère du personnel et, pour un plan neuf, les paiements proposés.</span>
-      <b>L’année passée</b><span>Les ventes de la même semaine un an plus tôt : la base des ventes quand il n’y a pas de budget, ou si tu la choisis (avec une croissance).</span></div>
+      <b>L’année passée</b><span>Les ventes de la même semaine un an plus tôt : un repère sous les encaissements, et la base des ventes quand il n’y a ni budget ni étude.</span></div>
       <div class="tr-k">Les couleurs</div>
       <div class="tr-def tr-def-c"><span class="tr-ex abr">6 200</span><span>Un chiffre réel que toi seul connais : solde bancaire du dimanche, cash de départ, coussin de sécurité.</span>
       <span class="tr-ex">14 000</span><span>Une prévision que tu modifies : ventes, montants fournisseurs, paiements ponctuels.</span>
@@ -770,7 +749,6 @@
     if (k === 'start') { return maj(d => { d.startCash = v; delete d.startCashNote; }); }
     if (k === 'coussin') { return maj(d => { d.coussin = v == null ? 0 : v; }); }
     if (k === 'plafond') { return maj(d => { d.plafond = v == null ? 0 : v / 100; }); }
-    if (k === 'croissance') { return maj(d => { d.croissance = v == null ? 0 : v; }); }
     if (k === 's') { return maj(d => { if (v == null) { delete d.ventes[a]; } else { d.ventes[a] = v; } }); }
     if (k === 'p') { return maj(d => { if (!v) { delete d.ponct[a]; } else { d.ponct[a] = v; } }); }
     if (k === 'r') { return maj(d => { if (v == null) { delete d.reel[a]; } else { d.reel[a] = v; } }); }
@@ -800,7 +778,6 @@
     if (k === 'fen') { S.fen = a; S.decal = null; return rendre(); }
     if (k === 'nav') { S.decal = +a === 0 ? null : F.borne(F.decal + (+a) * F.nW); return rendre(); }
     if (k === 'barre') { S.decal = F.borne(+a - (F.nW >= C.N ? 0 : 1)); return rendre(); }
-    if (k === 'base') { return maj(d => { d.base = a === 'n1' ? 'n1' : 'budget'; }); }
     if (k === 'addF') { return maj(d => { if (d.fournisseurs.length < 15) { d.fournisseurs.push({ id: uid(), nom: '', pct: 0, montants: {} }); } }); }
     if (k === 'delF') { return maj(d => { d.fournisseurs = d.fournisseurs.filter(x => x.id !== a); }); }
     if (k === 'addP') { return maj(d => { if (d.paiements.length < 50) { d.paiements.push({ id: uid(), libelle: '', cat: 'Frais fixes', montant: 0, freq: 'Chaque mois', sem: 1, debut: '', fin: '', note: '' }); } }); }

@@ -2251,11 +2251,10 @@ retenue) : pour les exercices du plan, ce que le cockpit tient sur CE magasin se
 **L'écran** (onglet Trésorerie, après Année) : le modèle, onglet pour onglet — Plan (routine du dimanche, décision des
 4 semaines à venir, repères, cash de fin de semaine, la grille semaine par semaine, pilotage, dettes hors plan),
 Fournisseurs, Paiements, Mode d'emploi — plus **Budget & étude** (14/11/2026, il remplace « N-1, budget, réalisé ») :
-la base des ventes prévues (budget validé ou année passée + croissance, la seule chose qui s'y règle), puis pour
-l'exercice choisi, mois par mois : l'étude (saisonnalité, CA théorique), le budget (CA, réalisé, atteinte, N-1,
+pour l'exercice choisi, mois par mois : l'étude (saisonnalité, CA théorique), le budget (CA, réalisé, atteinte, N-1,
 évolution, atterrissage), les charges du budget en euros (taux × CA au budget, à défaut l'étude) jusqu'à la marge brute
 et au disponible pour la rémunération, le P&L réel face aux taux (matière du budget, repères de la table KPI) ; enfin
-l'étude (potentiel, montée en régime, saisonnalité) et les exercices (validation, réalisé à date) en cartes. Un mois N-1
+l'étude (potentiel, montée en régime, saisonnalité) en carte ; la validation du budget se lit dans la section budget et sur le bouton de l'année (la carte des exercices et la note sous le tableau sont retirées le 14/11/2026). Un mois N-1
 où le magasin n'était pas encore ouvert tout le mois est marqué ‡ et sort de l'évolution. Dans la grille du plan, sous
 « Encaissements », trois lignes de repère (un repère absent : un tiret et son motif) ; une case calculée se saisit au
 double-clic pour sa seule semaine (`forces`). Un plan neuf est proposé sans être enregistré : base des ventes (le budget
