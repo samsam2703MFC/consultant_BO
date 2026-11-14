@@ -124,7 +124,7 @@ function valsForm(app){
   const sub = v => v === '{prix}' ? prixBase : (v === '{sid}' ? s0 : (v === '{mid}' ? F.mid : (v === '{fid}' ? F.fid : (v === '{date}' ? new Date().toISOString().slice(0, 10) : (v !== '' && !isNaN(Number(v)) && !/^0\d/.test(v) ? Number(v) : v)))));
   const local = {}; Object.keys(corps).forEach(k => { local[k] = sub(corps[k]); });
   const routeLocale = F.route.replace('{sid}', s0 == null ? '{sid}' : s0).replace('{mid}', F.mid).replace('{fid}', F.fid || '{fid}');
-  const corpsEnvoi = { geste: 'prix', mid: F.mid, prix: prixBase, shops, fid: F.fid, matiere: F.nom, format, garder: !!F.garder };
+  const corpsEnvoi = Object.assign({ geste: 'prix', mid: F.mid, prix: prixBase, shops, fid: F.fid, matiere: F.nom, format, garder: !!F.garder }, app.state.vtCompteAdmin && !admin() ? { compte: 'admin' } : {});
   const valide = prixBase > 0 && shops.length > 0 && F.route.startsWith('/');
   const prev = F.prev, res = F.res;
   return {
@@ -132,7 +132,8 @@ function valsForm(app){
     compte: (() => {
       const a = admin(), C = app.state.vtAdmin || {};
       const majC = p => app.setState({ vtAdmin: Object.assign({}, app.state.vtAdmin, p) });
-      return { admin: !!a, expire: a ? new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
+      return { cockpitAdmin: !a && !!app.state.vtCompteAdmin, basculerCockpit: () => app.setState({ vtCompteAdmin: !app.state.vtCompteAdmin, vtForm: Object.assign({}, app.state.vtForm, { prev: null }) }),
+        admin: !!a, expire: a ? new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
         ouvert: !!C.ouvert, ouvrir: () => majC({ ouvert: !C.ouvert, erreur: null }), tel: C.tel || '', poserTel: e => majC({ tel: e.target.value }),
         mdp: C.mdp || '', poserMdp: e => majC({ mdp: e.target.value }), erreur: C.erreur || null, enCours: !!C.enCours,
         quitter: () => { sessionStorage.removeItem(CLE_ADMIN); app.setState({ vtAdmin: {}, vtForm: Object.assign({}, app.state.vtForm, { prev: null }) }); },
