@@ -2222,6 +2222,10 @@ plan a été fait : l'import dans un autre demande confirmation), `source` (d'o�
 paiements ou 50 dettes, plus de 600 000 octets. Table : `pil_tresorerie_plan` (`shop_id`, `donnees` JSON, `version`,
 `maj_le`), créée au premier appel, au préfixe du portail Pilotage.
 
+**Accès** (src/acces.php) : `/tresorerie` est un écran de magasin (`ACCES_FRANCHISE`). Chaque franchisé a son propre
+plan : connecté par le code de son magasin ou par la console, il ne lit et n'écrit que le plan de **ses** magasins
+(`shop` de l'adresse et du corps vérifiés, 403 sinon) ; le siège les voit tous.
+
 **L'écran** (onglet Trésorerie, après Année) : le modèle, onglet pour onglet — Plan (routine du dimanche, décision des
 4 semaines à venir, repères, cash de fin de semaine, la grille semaine par semaine, pilotage, dettes hors plan),
 Fournisseurs, Paiements, Mode d'emploi — plus « N-1, budget, réalisé » : la base des ventes prévues (budget validé ou
