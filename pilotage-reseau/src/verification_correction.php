@@ -1059,3 +1059,58 @@ function ep_verification_sonde_chemin(): array
     }
     return ['chemin' => $c, 'code' => $d['code'] ?? null, 'data' => $r];
 }
+
+/** Le stock d'un magasin tel que /shops/{id}/material-inventory le rend : [mid => [nom, quantité, unité]]. */
+function vrcStockMagasin(int $sid): array
+{
+    $out = [];
+    foreach (PanelApi::liste((array) PanelApi::get('/shops/' . $sid . '/material-inventory')) as $l) {
+        $mid = (int) ($l['id_material'] ?? 0);
+        if ($mid > 0) { $out[$mid] = [trim((string) ($l['material_name'] ?? '')), (float) ($l['current_quantity'] ?? 0), (string) ($l['unit_name'] ?? '')]; }
+    }
+    return $out;
+}
+
+/**
+ * POST /verification/recettes/reception {commande, corps?, apercu?, compte?} — réceptionner UNE livraison fournisseur
+ * (14/11/2026, « comment valider les marchandises dans le stock des shops ? ») : POST /orders/{commande}/delivery. La route
+ * n'a pas de contrat : le corps est celui donné (vide par défaut) et la réponse brute du panel revient. Avant et après :
+ * l'état de la livraison (/deliveries/{id}) et le stock du magasin ; la différence est rendue, le tout noté au registre.
+ * Rien n'est annulable d'ici (une réception ne se défait pas par l'API).
+ */
+function wr_verification_reception(): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'error' => 'Le compte du panel n’est pas configuré (Paramètres).']; }
+    @set_time_limit(120);
+    $b = body();
+    $id = (int) ($b['commande'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['error' => 'commande requise']; }
+    $corps = [];
+    foreach ((array) ($b['corps'] ?? []) as $k => $v) { if (preg_match('/^[A-Za-z_]\w{0,60}$/', (string) $k) && (is_scalar($v) || $v === null)) { $corps[(string) $k] = $v; } }
+    $avant = vrcDeballer(PanelApi::get('/deliveries/' . $id));
+    if ($avant === null) { return ['ok' => false, 'error' => 'La livraison ' . $id . ' n’a pas pu être lue (/deliveries/' . $id . ') : rien n’est envoyé.']; }
+    $sid = (int) ($avant['id_shop'] ?? 0);
+    $route = '/orders/' . $id . '/delivery';
+    $etat = static fn (?array $d): array => $d === null ? [] : array_intersect_key($d, array_flip(['status', 'delivered_on', 'supplier_fulfillment_status', 'expected_date', 'in_transit_sent_at']));
+    if (!empty($b['apercu'])) { return ['apercu' => true, 'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'magasin' => $sid, 'livraison' => $etat($avant)]; }
+    $stockAvant = $sid > 0 ? vrcStockMagasin($sid) : [];
+    PanelApi::$lastError = null;
+    [$ok, $res] = PanelApi::envoi('POST', $route, $corps);
+    $http = preg_match('/HTTP (\d{3})/', (string) PanelApi::$lastError, $m) ? (int) $m[1] : ($ok ? 200 : 0);
+    $apres = vrcDeballer(PanelApi::get('/deliveries/' . $id));
+    $stockApres = $ok && $sid > 0 ? vrcStockMagasin($sid) : $stockAvant;
+    $diff = [];
+    foreach ($stockApres as $mid => [$nom, $q, $u]) {
+        $q0 = $stockAvant[$mid][1] ?? 0.0;
+        if (abs($q - $q0) > 1e-9) { $diff[] = ['mid' => $mid, 'nom' => $nom, 'avant' => $q0, 'apres' => $q, 'unite' => $u]; }
+    }
+    usort($diff, static fn ($x, $y) => abs($y['apres'] - $y['avant']) <=> abs($x['apres'] - $x['avant']));
+    $r = ['geste' => 'reception', 'cle' => 'cmd:' . $id, 'pid' => null, 'nom' => 'Livraison ' . ($avant['order_key'] ?? $id), 'shop' => $sid, 'objet' => 'livraison', 'objetId' => $id,
+        'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'http' => $http, 'inverse' => null,
+        'resume' => 'Réception de la livraison ' . $id . ' : ' . ($avant['status'] ?? '?') . ' → ' . ($apres['status'] ?? '?') . ' · ' . count($diff) . ' matière(s) au stock changée(s)',
+        'resultat' => !$ok ? 'refuse' : (($apres['status'] ?? '') !== ($avant['status'] ?? '') || $diff !== [] ? 'ok' : 'sans_effet'),
+        'message' => !$ok ? vrcMessage($res) : ''];
+    $r['id'] = vrcNoter($r);
+    return ['ok' => $r['resultat'] === 'ok', 'ecritures' => [vrcLigneRegistre($r + ['reponse' => mb_substr((string) json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 3000), 'httpPanel' => $http])],
+        'livraison' => ['avant' => $etat($avant), 'apres' => $etat($apres)], 'stock' => array_slice($diff, 0, 80), 'nStock' => count($diff)];
+}
