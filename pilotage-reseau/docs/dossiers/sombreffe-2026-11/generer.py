@@ -392,7 +392,10 @@ def main():
                      'avec': ['Ta gestion va s’améliorer.', 'Tu seras plus calme et reposée.',
                               'Tu es remplaçable : quelqu’un peut tenir ton magasin si tu ne peux pas.',
                               'Ton magasin vaut quelque chose.'],
-                     'sans': 'Si tu as un problème et que je ne trouve personne pour te remplacer, tu te retrouves à la rue avec tes enfants.'},
+                     # « Sans le faire », remplacé le 14/11/2026 (Sam).
+                     'sans': ['Personne ne t’aidera.', 'Tu as des responsabilités financières.',
+                              'Si quelque chose se passe, je dois pouvoir mettre dans ton magasin quelqu’un qui n’est pas de ton équipe.',
+                              'La confiance n’exclut pas le contrôle.']},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
