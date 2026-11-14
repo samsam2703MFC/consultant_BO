@@ -1948,13 +1948,18 @@ function ep_exploitation_equipe_heures(): array
     $cle = 'eqH' . $sid . ':' . $date;
     $c = setting($cle);
     // `v` 2 : les heures portent leurs articles ; `v` 3 : la liste des tickets à la minute. Un relevé plus ancien se refait.
-    if (is_array($c) && (int) ($c['v'] ?? 0) >= 3 && isset($c['p'], $c['q']) && (date('Y-m-d', (int) $c['q']) > $date || (int) $c['q'] > time() - 600)) {
+    // Un jour clos se garde — sauf s'il y reste un vendeur sans nom (« Employé 145 », 14/11/2026) : il se relit, dix minutes
+    // au plus tôt après le relevé, le temps que le panel connaisse la personne.
+    $sansNomC = is_array($c) && preg_grep('/^Employé \d+$/u', array_map('strval', (array) ($c['n'] ?? []))) !== [];
+    if (is_array($c) && (int) ($c['v'] ?? 0) >= 3 && isset($c['p'], $c['q']) && ((date('Y-m-d', (int) $c['q']) > $date && !$sansNomC) || (int) $c['q'] > time() - 600)) {
         return ['shop' => (string) $sid, 'date' => $date, 'personnes' => $c['p'], 'sansNom' => $c['s'] ?? null, 'noms' => $c['n'] ?? [], 'tickets' => $c['t'] ?? [], 'aLire' => 0, 'lu' => date('H:i', (int) $c['q'])];
     }
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'compte du panel non configuré']; }
     $liste = PanelApi::get('/shops/' . $sid . '/transactions?date=' . $date);
     if (!is_array($liste)) { return ['shop' => (string) $sid, 'date' => $date, 'indispo' => true, 'motif' => 'le panel n’a pas rendu les tickets du jour']; }
-    $noms = function_exists('venteEmployes') ? venteEmployes() : [];
+    // Un nom pour chaque vendeur des tickets : un compte inconnu du cockpit se relit au panel (venteEmployesConnus).
+    $ids = array_map(static fn ($t) => is_array($t) ? (int) ($t['id_employee'] ?? 0) : 0, analyseListe($liste));
+    $noms = function_exists('venteEmployesConnus') ? venteEmployesConnus($ids) : (function_exists('venteEmployes') ? venteEmployes() : []);
     $T = [];
     foreach (analyseListe($liste) as $t) {
         if (!is_array($t)) { continue; }

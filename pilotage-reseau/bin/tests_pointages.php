@@ -26,6 +26,8 @@ final class Db {
   static function exec(string $q, array $a = []): int { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->rowCount(); }
   static function rows(string $q, array $a = []): array { $s = self::pdo()->prepare($q); $s->execute($a); return $s->fetchAll(PDO::FETCH_ASSOC); }
   static function row(string $q, array $a = []): ?array { $r = self::rows($q, $a); return $r[0] ?? null; }
+  // Les mentions légales du pied de l'e-mail (src/doc.php, docEmetteur) lisent config.php : rien ici.
+  static function config(): array { return []; }
 }
 function setting(string $k, $d = null) { $r = Db::row('SELECT value FROM ceo_app_setting WHERE key = ?', [$k]); return $r ? json_decode($r['value'], true) : $d; }
 function journalAdd(...$a) {}
@@ -39,6 +41,8 @@ final class PanelApi {
   static function getParallele(array $ch, int $f = 4): array { $o = []; foreach ($ch as $k => $p) { $o[$k] = self::$listes[(string) $k] ?? null; } return $o; }
 }
 function venteEmployes(): array { return [11 => ['nom' => 'Zoé M.'], 12 => ['nom' => 'Hugo P.'], 13 => ['nom' => 'Inès K.'], 99 => ['nom' => 'Caisse 2'], 21 => ['nom' => 'Lina B.'], 22 => ['nom' => 'Tom R.']]; }
+// Un vendeur que le cockpit ne connaît pas encore se relit au panel (src/ventes.php, venteEmployesConnus) : ici le 145.
+function venteEmployesConnus(array $ids): array { $GLOBALS['DEMANDES'][] = $ids; return venteEmployes() + [145 => ['nom' => 'Yasmine K.']]; }
 function rapAppel(callable|string $ep, array $get = []) { return $ep(); }
 function rapLogoDataUri(): string { return ''; }
 function rapBaseUrl(): string { return 'https://185.180.206.46/consulant_bo'; }
@@ -112,5 +116,14 @@ $mR = Smtp::$env[array_search('sam@x.be', $dest, true)] ?? ['', '', ''];
 verifie('le récapitulatif nomme les trois magasins concernés', str_starts_with($mR[1], 'Pointages suspects — 3 magasins, ') && str_contains($mR[2], 'Limal') && str_contains($mR[2], 'Halle'));
 $n = count(Smtp::$env); psDistribuer($rep);
 verifie('second passage : personne n’est servi deux fois', count(Smtp::$env) === $n);
+
+// --- Un compte que le cockpit ne connaît pas (14/11/2026, « Employé 145 » à Halle) : son nom est demandé avant l'e-mail.
+$GLOBALS['DEMANDES'] = [];
+PanelApi::$listes = ['6' => $liste([[psMin('13:35'), 145, '', 9.0], [psMin('14:00'), 145, '', 11.0], [psMin('15:00'), 145, '', 7.5], [psMin('15:20'), 0, '', 3.0]])];
+$TK = psTickets([6], date('Y-m-d'));
+verifie('un seul appel pour tous les magasins, avec les vendeurs des tickets', count($GLOBALS['DEMANDES']) === 1 && in_array(145, $GLOBALS['DEMANDES'][0], true), json_encode($GLOBALS['DEMANDES']));
+verifie('le compte 145 porte le nom relu, un ticket sans vendeur reste sans nom', ($TK['6'][0][2] ?? '') === 'Yasmine K.' && ($TK['6'][3][2] ?? null) === '', json_encode($TK));
+$C5 = psDetecter([['nom' => 'Inès K.', 'debut' => '13:00', 'fin' => '18:30', 'postes' => ['Vente'], 'idEmp' => 13]], $TK['6']);
+verifie('la phrase nomme le compte, plus « Employé 145 »', count($C5) === 1 && str_contains(psPhrase($C5[0]), 'au compte « <b>Yasmine K.</b> »'), json_encode($C5));
 echo "\n$ok ok, $ko KO\n";
 exit($ko > 0 ? 1 : 0);
