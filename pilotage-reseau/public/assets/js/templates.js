@@ -9,6 +9,7 @@ import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplFidelite } from './fidelite-tpl.js';
 import { tplVerification } from './verification-tpl.js';
+import { tplParamProduits } from './produit-parametrage-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
 import { tplVerifMatieres } from './verification-matieres-tpl.js';
@@ -48,7 +49,8 @@ const ICO = {
   droits: 'M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6',
   journal: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
   modeles: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
-  retour: 'M19 12H5M12 19l-7-7 7-7'
+  retour: 'M19 12H5M12 19l-7-7 7-7',
+  reglages: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4'
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
@@ -57,7 +59,7 @@ const ICO_ECRAN = {
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
   verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
-  catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
+  paramProduits: 'reglages', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
   promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
@@ -218,7 +220,7 @@ export function render(c, x){
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isVerifR ? tplVerification(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}
       ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
