@@ -5,7 +5,8 @@
  * (../api/cockpit/dashboard/catalogues…), qui lit la boutique dans la session, ajoute le jeton de service et relaie
  * au Marketing (src/catalogues_magasin.php). Le navigateur ne voit jamais le jeton. Les contraintes (produits vendus
  * par la boutique, ses prix, 8 à 16 pages par 2 dont les quatre de la marque — couverture, page 2, avant-dernière et
- * dernière —, cinq mises en page dont les présentations de gamme, gabarits A · B · C, place libre — photo de la
+ * dernière —, six mises en page dont les présentations de gamme et les grandes vignettes 2 × 2, gabarits A · B · C, en-tête titre ·
+ * bandeau · grande illustration, une page par catégorie ajoutée, place libre — photo de la
  * médiathèque du réseau ou de ma boutique, ou illustration) sont celles du Marketing : ses refus s'affichent tels quels.
  * Les pages se dessinent comme celles du Marketing (src/views/catalogue/CataloguePages.tsx), mêmes classes `cat-*`.
  *
@@ -19,6 +20,7 @@
     vedette: { label: '1 vedette + 4', cap: 5 },
     grille: { label: 'Grille 2 × 3', cap: 6 },
     liste: { label: 'Liste avec prix', cap: 12 },
+    mosaique: { label: 'Grandes vignettes 2 × 2', cap: 4 },
     presentation: { label: 'Présentation seule', cap: 0 },
     presentation_liste: { label: 'Présentation + liste', cap: 8 },
   };
@@ -28,10 +30,17 @@
     produits: { A: ['Classique', 'fond papier, titre centré'], B: ['Bandeau', 'bandeau de couleur, titre à gauche'], C: ['Épuré', 'fond blanc, titre à gauche'] },
     presentation: { A: ['Illustration', 'dessin au centre, fond papier'], B: ['Pleine couleur', 'fond de couleur, dessin en blanc'], C: ['Photo pleine', 'grande image en haut'] },
   };
+  /** L'en-tête d'une page de produits et l'illustration de sa catégorie (client, 14/11/2026 : « 2 ou 3 possibilités de
+   * montrer le titre et l'illustration ») — les mêmes que le Marketing (HEADER_LABELS, CataloguePages.tsx). */
+  const ENTETES = {
+    titre: ['Titre + pictogramme', 'le titre et un petit pictogramme'],
+    bandeau: ['Bandeau illustré', 'bandeau de couleur, illustration en blanc'],
+    grande: ['Grande illustration', 'grande illustration en haut, puis le titre'],
+  };
   /** Une rangée entière libre : la place libre peut prendre une photo ou l'illustration (la règle du Marketing). */
-  const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : false;
+  const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : l === 'mosaique' ? n <= 2 : false;
   /** Rangées de la grille restées libres, que la place libre prend en pleine largeur. */
-  const rangsLibres = (l, n) => l === 'grille' ? 3 - Math.ceil(n / 2) : l === 'vedette' ? 2 - Math.ceil(Math.max(0, n - 1) / 2) : 0;
+  const rangsLibres = (l, n) => l === 'grille' ? 3 - Math.ceil(n / 2) : l === 'vedette' ? 2 - Math.ceil(Math.max(0, n - 1) / 2) : l === 'mosaique' ? 2 - Math.ceil(n / 2) : 0;
   const STATUTS = { brouillon: 'Brouillon', pret: 'PDF prêt', imprime: 'Imprimé' };
   /** De 8 à 16 pages, toujours par 2 (« rajouter une page, c'est toujours par 2 »), dont 4 de la marque (1, 2,
    * avant-dernière, dernière) ; le Marketing en dit la liste. */
@@ -119,13 +128,15 @@
     S.titre = c.title;
     S.choix = {}; (c.products || []).forEach(p => { S.choix[p.id] = p.on !== false; });
     S.pages = (c.pages || []).map(p => ({ layout: p.layout, category: p.category == null ? null : +p.category, template: p.template || 'A',
-      gamme: p.gamme == null ? null : +p.gamme, text: p.text || '', textNl: p.textNl || '', filler: p.filler || null, fillerMediaId: p.fillerMediaId == null ? null : +p.fillerMediaId }));
+      gamme: p.gamme == null ? null : +p.gamme, text: p.text || '', textNl: p.textNl || '', filler: p.filler || null, fillerMediaId: p.fillerMediaId == null ? null : +p.fillerMediaId,
+      header: ENTETES[p.header] ? p.header : 'titre', script: p.script === true }));
     S.format = c.format || 'A5';
     S.nbPages = NB_PAGES.includes(+c.pageCount) ? +c.pageCount : 8;
     S.langs = (c.langs && c.langs.length ? c.langs : ['fr']).slice();
     if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; }
     // Promotions de TFBuddy : les choix explicites ; une offre absente est cochée si elle touche un produit coché.
-    S.offres = {}; (c.offers || []).forEach(o => { S.offres[o.type + '-' + o.id] = !!o.on; });
+    S.offres = {}; S.offresImg = {}; (c.offers || []).forEach(o => { S.offres[o.type + '-' + o.id] = !!o.on; if (o.mediaId != null) { S.offresImg[o.type + '-' + o.id] = +o.mediaId; } });
+    S.choixOffre = null;
     S.dispo = c.showAvailability !== false;
     S.modifie = false;
   }
@@ -141,7 +152,9 @@
   /** Les choix à envoyer : seulement les explicites, ceux d'une offre encore proposée. */
   function offresCorps(S) {
     const connues = new Set(offres(S).map(o => o.id));
-    return Object.keys(S.offres || {}).filter(k => connues.has(k)).map(k => { const o = offres(S).find(x => x.id === k); return { type: o.type, id: +o.erpId, on: !!S.offres[k] }; });
+    // Une offre qui a une image de la médiathèque (« insert picture from médiathèque ») part aussi, avec son `mediaId`.
+    const cles = Array.from(new Set(Object.keys(S.offres || {}).concat(Object.keys(S.offresImg || {})))).filter(k => connues.has(k));
+    return cles.map(k => { const o = offres(S).find(x => x.id === k); return { type: o.type, id: +o.erpId, on: offreOn(S, o), mediaId: (S.offresImg || {})[k] != null ? +S.offresImg[k] : null }; });
   }
 
   /** Les pages intérieures telles que le Marketing les attend (seulement ce qui ne vaut pas son défaut). */
@@ -153,9 +166,13 @@
       if (estPres(p.layout)) {
         if (p.text) { o.text = p.text; }
         if (p.textNl) { o.textNl = p.textNl; }
-      } else if (p.filler) {
-        o.filler = p.filler;
-        if (p.filler === 'photo') { o.fillerMediaId = p.fillerMediaId; }
+      } else {
+        if (p.filler) {
+          o.filler = p.filler;
+          if (p.filler === 'photo') { o.fillerMediaId = p.fillerMediaId; }
+        }
+        if (p.header && p.header !== 'titre') { o.header = p.header; }
+        if (p.script) { o.script = true; }
       }
       return o;
     });
@@ -255,15 +272,20 @@
     produits(S).forEach(p => { if (S.choix[p.id] && !vus.has(+p.id)) { vus.add(+p.id); lignes.push({ id: +p.id, on: true }); } });
     const avant = JSON.stringify((S.cat.products || []).map(p => [+p.id, p.on !== false]));
     const apres = JSON.stringify(lignes.map(p => [p.id, p.on]));
-    let corps = avant === apres ? null : { products: lignes, pages: [] };
+    // Sans `pages` : le Marketing garde ma mise en page et donne SA page à une catégorie ajoutée (une page vide, sinon
+    // + 2 pages, 16 au plus) ; une catégorie retirée laisse sa page vide.
+    let corps = avant === apres ? null : { products: lignes };
+    const nbAvant = S.nbPages;
     // Promotions et disponibilité : enregistrées avec les produits (une offre cochée prend une case de sa page).
-    const offresAvant = JSON.stringify((S.cat.offers || []).map(o => [o.type, +o.id, !!o.on]).sort());
+    const offresAvant = JSON.stringify((S.cat.offers || []).map(o => [o.type, +o.id, !!o.on, o.mediaId == null ? null : +o.mediaId]).sort());
     const offresApres = offresCorps(S);
-    if (JSON.stringify(offresApres.map(o => [o.type, o.id, o.on]).sort()) !== offresAvant) { corps = Object.assign(corps || {}, { offers: offresApres }); }
+    if (JSON.stringify(offresApres.map(o => [o.type, o.id, o.on, o.mediaId]).sort()) !== offresAvant) { corps = Object.assign(corps || {}, { offers: offresApres }); }
     if (S.dispo !== (S.cat.showAvailability !== false)) { corps = Object.assign(corps || {}, { showAvailability: S.dispo }); }
     const p = majTitre(S).then(() => corps ? appel('PUT', '/' + S.cat.id + qs(S), corps).then(j => { adopter(S, j.data); oublierDocs(S); }) : null)
       .then(() => { S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
-    occupe(S, p, 'Enregistrement des produits');
+    occupe(S, p, 'Enregistrement des produits').then(() => {
+      if (!S.msg && S.nbPages > nbAvant) { S.msg = { type: 'inf', titre: 'Chaque catégorie a sa page : ' + (S.nbPages - nbAvant) + ' pages ajoutées (' + S.nbPages + ' pages).' }; rendre(S); }
+    });
   }
   function enregistrerPages(S, suite) {
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
@@ -374,6 +396,9 @@
     else if (a === 'creer') { creer(S); }
     else if (a === 'etape') { aller(S, +v); }
     else if (a === 'prod') { if (S.choix) { S.choix[v] = !S.choix[v]; rendre(S); } }
+    else if (a === 'offreImg') { S.choixOffre = S.choixOffre === v ? null : v; if (!S.medias) { chargerMedias(S); } rendre(S); }
+    else if (a === 'offreImgRetirer') { delete S.offresImg[v]; rendre(S); }
+    else if (a === 'offrePhoto') { S.offresImg[b.dataset.o] = +v; S.choixOffre = null; S.mediaUrls = S.mediaUrls || {}; rendre(S); }
     else if (a === 'offre') { const o = offres(S).find(x => x.id === v); if (o) { S.offres[v] = !offreOn(S, o); rendre(S); } }
     else if (a === 'dispo') { S.dispo = !S.dispo; rendre(S); }
     else if (a === 'tout') { (b.dataset.cat ? produits(S) : visibles(S)).filter(p => !b.dataset.cat || String(p.categoryId) === b.dataset.cat).forEach(p => { S.choix[p.id] = v === '1'; }); rendre(S); }
@@ -381,6 +406,8 @@
     else if (a === 'nbpages') { changerNbPages(S, +v); }
     else if (a === 'repartirN') { repartir(S, +v); }
     else if (a === 'layout') { changerType(S, +b.dataset.i, v); }
+    else if (a === 'script') { S.pages[+b.dataset.i].script = v === '1'; S.modifie = true; rendre(S); }
+    else if (a === 'entete') { S.pages[+b.dataset.i].header = v; S.modifie = true; rendre(S); }
     else if (a === 'gabarit') { S.pages[+b.dataset.i].template = v; S.modifie = true; rendre(S); }
     else if (a === 'place') {
       const p = S.pages[+b.dataset.i];
@@ -589,7 +616,7 @@
     const plus = (S.cat.products || []).filter(p => p.on !== false && !vendus.has(+p.id));
     h += sectionOffres(S);
     if (plus.length) { h += '<div class="cm-msg inf" style="margin-top:12px">' + plus.length + ' produit(s) de ce catalogue ne sont plus vendus au webshop de ma boutique : ils sortiront du catalogue à l’enregistrement.</div>'; }
-    h += '<div class="cm-msg inf" style="margin-top:12px">Seuls les produits de MON webshop sont proposés, à MES prix. Changer les produits refait la mise en page automatiquement.</div>';
+    h += '<div class="cm-msg inf" style="margin-top:12px">Seuls les produits de MON webshop sont proposés, à MES prix. Une catégorie ajoutée a sa page (une page vide, sinon 2 pages de plus, 16 au plus) ; une catégorie retirée laisse sa page vide.</div>';
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="1">‹ Point de départ</button><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="3"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Mise en page ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
   }
@@ -604,18 +631,24 @@
       const on = offreOn(S, o);
       const ou = o.type === 'scheduledDiscount' ? 'prix barré' : nomCat(S, o.categoryId);
       const det = [(o.products || []).map(p => p.name).join(' + ') + (o.moreProducts ? ' + ' + o.moreProducts : ''), o.period].filter(Boolean).join(' · ');
-      h += '<div class="cm-offre' + (on ? '' : ' off') + '"><span class="bd">' + esc(o.badge) + '</span><span class="nm">' + esc(o.name) + '<small>' + esc(det) + '</small><small>→ ' + esc(ou) + '</small></span>'
+      const img = (S.offresImg || {})[o.id];
+      const choixImg = o.type === 'scheduledDiscount' ? '' : '<span class="cm-offre-img">' + (img != null
+        ? (S.mediaUrls && S.mediaUrls[img] ? '<img src="' + esc(S.mediaUrls[img]) + '" alt="">' : '<span class="cm-cpt">image n° ' + img + '</span>')
+          + '<button class="cm-lien" data-cm="offreImg" data-v="' + esc(o.id) + '">Changer</button><button class="cm-lien" data-cm="offreImgRetirer" data-v="' + esc(o.id) + '" title="Revenir aux photos des produits">Retirer</button>'
+        : '<button class="cm-btn" data-cm="offreImg" data-v="' + esc(o.id) + '" title="Une image de la médiathèque à la place des photos des produits, dans la vignette">Image</button>') + '</span>';
+      h += '<div class="cm-offre' + (on ? '' : ' off') + '"><span class="bd">' + esc(o.badge) + '</span><span class="nm">' + esc(o.name) + '<small>' + esc(det) + '</small><small>→ ' + esc(ou) + '</small>' + choixImg + '</span>'
         + (o.priceCents != null ? '<b>' + (o.oldPriceCents != null ? '<s>' + esc(prix(o.oldPriceCents)) + '</s> ' : '') + esc(prix(o.priceCents)) + '</b>' : '<b></b>')
         + '<button class="cm-sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(o.name) + '" data-cm="offre" data-v="' + esc(o.id) + '"><span class="tr" aria-hidden="true"></span></button></div>';
+      if (S.choixOffre === o.id) { h += rendreMediasOffre(S, o.id); }
     });
-    h += '<div class="cm-offre dispo"><span class="nm">Afficher la disponibilité<small>période et délai de commande lus dans TFBuddy, sous le prix</small></span><b></b>'
+    h += '<div class="cm-offre dispo"><span class="nm">Afficher la disponibilité<small>période et délai de commande lus dans TFBuddy, en pied de chaque page</small></span><b></b>'
       + '<button class="cm-sw' + (S.dispo ? ' on' : '') + '" role="switch" aria-checked="' + !!S.dispo + '" aria-label="Afficher la disponibilité" data-cm="dispo"><span class="tr" aria-hidden="true"></span></button></div>';
     return h + '</div>';
   }
 
   function mini(layout, tpl) {
     if (estPres(layout)) { return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true"><b></b><i></i>' + (layout === 'presentation_liste' ? '<u></u><u></u><u></u>' : '') + '</span>'; }
-    const n = layout === 'vedette' ? 5 : 6;
+    const n = layout === 'vedette' ? 5 : layout === 'mosaique' ? 4 : 6;
     return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true">' + '<i></i>'.repeat(n) + '</span>';
   }
   /** Vignette d'une variante de gabarit (la même que le Marketing). */
@@ -630,6 +663,16 @@
       + (t === 'B' ? '<rect x=".6" y=".6" width="38.8" height="10" fill="currentColor" fill-opacity=".85"/>' : '')
       + '<rect x="' + (t === 'A' ? 11 : 4) + '" y="4" width="18" height="3" rx="1" fill="' + (t === 'B' ? '#fff' : 'currentColor') + '"/>' + (t === 'C' ? '<rect x="4" y="9.5" width="32" height=".8" fill="currentColor"/>' : '');
     [14, 26, 38].forEach(y => { [4, 21].forEach(x => { h += '<rect x="' + x + '" y="' + y + '" width="15" height="10" rx="1.5"' + (t === 'C' ? ' fill="currentColor" fill-opacity=".18"' : ' fill="none" stroke="currentColor" stroke-width="1"') + '/>'; }); });
+    return h + '</svg>';
+  }
+  /** Vignette d'un en-tête (la même que le Marketing, HeaderIcon). */
+  function vignetteEntete(t) {
+    const dessin = (cx, cy, r, c) => '<g fill="none" stroke="' + c + '" stroke-width="1.1"><path d="M' + (cx - r) + ' ' + (cy + r * 0.5) + ' Q' + cx + ' ' + (cy - r * 1.1) + ' ' + (cx + r) + ' ' + (cy + r * 0.5) + ' Z"/></g>';
+    let h = '<svg width="28" height="36" viewBox="0 0 40 52" aria-hidden="true"><rect x=".6" y=".6" width="38.8" height="50.8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>';
+    if (t === 'bandeau') { h += '<rect x=".6" y=".6" width="38.8" height="13" fill="currentColor" fill-opacity=".85"/>' + dessin(8.5, 7, 4.5, '#fff') + '<rect x="16" y="5.5" width="18" height="3" rx="1" fill="#fff"/>'; }
+    else if (t === 'grande') { h += dessin(20, 10, 7, 'currentColor') + '<rect x="11" y="18" width="18" height="3" rx="1" fill="currentColor"/>'; }
+    else { h += dessin(10, 6.5, 3, 'currentColor') + '<rect x="15" y="5" width="16" height="3" rx="1" fill="currentColor"/>'; }
+    (t === 'grande' ? [25, 37] : [17, 29, 41]).forEach(y => { [4, 21].forEach(x => { h += '<rect x="' + x + '" y="' + y + '" width="15" height="' + (t === 'grande' ? 10 : 9) + '" rx="1.5" fill="none" stroke="currentColor" stroke-width="1"/>'; }); });
     return h + '</svg>';
   }
   function rendreE3(S) {
@@ -673,16 +716,30 @@
       h += '<div class="cm-pg' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + mini(p.layout, p.template)
         + '<div class="cm-pg-c">' + corps + '</div>'
         + '<div class="ctl"><div class="cm-seg cm-types">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '"' + (estPres(l) && !gs.length ? ' disabled' : '') + '>' + LAYOUTS[l].label + '</button>').join('') + '</div>'
+        + (pres ? '' : '<div class="cm-gab cm-ent" role="group" aria-label="Titre et illustration de la page ' + (i + 3) + '">' + Object.keys(ENTETES).map(t => '<button data-cm="entete" data-i="' + i + '" data-v="' + t + '" class="' + ((p.header || 'titre') === t ? 'on' : '') + '" title="' + esc(ENTETES[t][0] + ' — ' + ENTETES[t][1] + ' (le dessin de la famille de la catégorie, sinon celui de la gamme)') + '">' + vignetteEntete(t) + '<span>' + esc(ENTETES[t][0]) + '</span></button>').join('') + '</div>'
+          + '<div class="cm-script"><span title="Le nom de la catégorie, sous celui de la gamme, en lettres manuscrites (Playwrite, la police manuscrite de la marque)">Catégorie manuscrite</span><div class="cm-seg">'
+          + [['0', 'Non'], ['1', 'Oui']].map(o => '<button data-cm="script" data-i="' + i + '" data-v="' + o[0] + '" class="' + ((!!p.script) === (o[0] === '1') ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</div></div>')
         + '<div class="cm-gab" role="group" aria-label="Gabarit de la page ' + (i + 3) + '">' + ['A', 'B', 'C'].map(t => '<button data-cm="gabarit" data-i="' + i + '" data-v="' + t + '" class="' + ((p.template || 'A') === t ? 'on' : '') + '" title="' + t + ' · ' + GABARITS[fam][t][0] + ' — ' + GABARITS[fam][t][1] + '">' + vignette(fam, t) + '<span>' + t + ' · ' + GABARITS[fam][t][0] + '</span></button>').join('') + '</div></div>'
         + '<div class="mv"><button class="cm-btn" data-cm="monter" data-v="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Monter">↑</button><button class="cm-btn" data-cm="descendre" data-v="' + i + '"' + (i === S.pages.length - 1 ? ' disabled' : '') + ' aria-label="Descendre">↓</button></div></div>';
     });
     h += marque(nb - 1, '<span class="mini texte" aria-hidden="true"></span>', 'Avant-dernière page', 'Charte de la marque · nos services');
     h += marque(nb, '<span class="mini" aria-hidden="true" style="background:#F6F1E9"></span>', 'Dernière page', 'Commande en ligne, QR de mon webshop, adresse et horaires de ma boutique');
     h += '</div>';
+    const sansPage = cats.filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
+    if (sansPage.length) { h += '<div class="cm-msg inf" style="margin-top:12px">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page à elle' + (sansPage.length > 1 ? 's' : '') + ' : ' + (S.nbPages >= 16 ? 'plus de place (16 pages) — ' : '') + 'ses produits vont en « Notre sélection » s’il y en a une. Choisissez sa catégorie sur une page' + (S.nbPages < 16 ? ' ou ajoutez 2 pages' : '') + '.</div>'; }
     if (portes.sansPlace) { h += '<div class="cm-msg inf" style="margin-top:12px">' + portes.sansPlace + ' produit' + (portes.sansPlace > 1 ? 's' : '') + ' choisi' + (portes.sansPlace > 1 ? 's' : '') + ' sans place dans les pages. ' + (S.nbPages < 16 ? 'Ajoutez 2 pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, une page « Notre sélection », ou « Répartir automatiquement ».</div>'; }
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Mes produits</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Aperçu et PDF ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
+  }
+  /** Le choix de l'image d'une vignette d'offre : les images de la médiathèque du réseau et de ma boutique. */
+  function rendreMediasOffre(S, id) {
+    let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une image" value="' + esc(S.mediasQ) + '">'
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button><span class="sp"></span><button class="cm-btn" data-cm="offreImg" data-v="' + esc(id) + '">Fermer</button></div>';
+    if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
+    if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
+    if (!S.medias.length) { return h + '<div class="cm-vide">Aucune image dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
+    return h + '<div class="cm-grille">' + S.medias.map(m => '<button data-cm="offrePhoto" data-o="' + esc(id) + '" data-v="' + m.id + '" class="' + (+(S.offresImg || {})[id] === +m.id ? 'on' : '') + '" title="' + esc(m.name) + '"><img src="' + esc(m.thumbnailUrl || m.url) + '" alt="" loading="lazy"><span>' + esc(m.name) + '</span></button>').join('') + '</div></div>';
   }
   /** Le choix de la photo de la place libre : les images de la médiathèque du réseau et de ma boutique. */
   function rendreMedias(S, i) {
@@ -719,7 +776,7 @@
     const z = largeurPx / (f.w * PX_MM);
     const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')'
       : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A')
-      : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
+      : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · ' + (ENTETES[p.header] ? ENTETES[p.header][0] : ENTETES.titre[0]).toLowerCase() + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
       + (p.locked ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
       + '<div class="pz" style="transform:scale(' + z + ');width:' + f.w + 'mm;height:' + f.h + 'mm"><div style="position:absolute;left:-' + BLEED + 'mm;top:-' + BLEED + 'mm">' + page(doc, i) + '</div></div></div>'
@@ -756,9 +813,14 @@
       + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
       + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div></div>';
   }
-  function photo(pr) {
-    return '<span class="cat-photo' + (pr.imageUrl ? ' cat-photo--img' : '') + '">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
+  /** La photo du webshop ; sans elle, le dessin de la famille de la page (sinon l'illustration de l'en-tête) — rendu de
+   * `Photo`, CataloguePages.tsx ; un cercle vide seulement sans aucun dessin. */
+  function photo(pr, repli) {
+    const d = pr.imageUrl ? null : dessin(repli);
+    return '<span class="cat-photo' + (pr.imageUrl ? ' cat-photo--img' : '') + (d ? ' cat-photo--drawing' : '') + '">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : d ? '<img src="' + esc(d) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
   }
+  /** Le dessin de repli d'une page pour les vignettes sans photo. */
+  const repliDe = p => (p && (p.familyDrawingUrl || p.drawingUrl)) || null;
   /** Le prix ; barré par une remise programmée : l'ancien prix à côté, rayé (rendu de `Price`, CataloguePages.tsx). */
   function prixHtml(pr, lang) {
     const vieux = pr.oldPriceCents != null;
@@ -767,49 +829,60 @@
   }
   const dispoHtml = t => t ? '<span class="cat-avail">' + esc(t) + '</span>' : '';
   /** La vignette d'une promotion (rendu de `OfferCard`, CataloguePages.tsx). */
-  function offreCarte(o, lang, grand, rang) {
-    const vus = (o.products || []).slice(0, rang ? 3 : grand ? 4 : (o.products || []).length > 2 ? 4 : 2);
-    const photos = '<span class="cat-offer__photos cat-offer__photos--' + Math.max(1, vus.length) + '">' + (vus.length ? vus.map(photo).join('') : '<span class="cat-photo"><span class="cat-photo__none"></span></span>') + '</span>';
+  function offreCarte(o, lang, grand, rang, repli) {
+    // L'image choisie dans la médiathèque remplace les photos des produits ; sans rien, le dessin de la famille.
+    const vus = o.imageUrl ? [] : (o.products || []).slice(0, rang ? 3 : grand ? 4 : (o.products || []).length > 2 ? 4 : 2);
+    const photos = '<span class="cat-offer__photos cat-offer__photos--' + Math.max(1, vus.length) + '">'
+      + (o.imageUrl ? '<span class="cat-photo cat-photo--media"><img src="' + esc(o.imageUrl) + '" alt=""></span>' : vus.length ? vus.map(x => photo(x, repli)).join('') : photo({}, repli)) + '</span>';
     const noms = (o.products || []).map(p => (p.quantity != null && p.quantity !== 1 ? p.quantity + ' × ' : '') + p.name).join(' + ');
     const plus = o.moreProducts > 0 ? (lang === 'nl' ? ' + ' + o.moreProducts + ' andere' : ' + ' + o.moreProducts + ' autre' + (o.moreProducts > 1 ? 's' : '')) : '';
     return '<div class="cat-offer cat-offer--' + esc(o.type) + (grand ? ' cat-offer--big' : '') + (rang ? ' cat-offer--row' : '') + '"><span class="cat-offer__badge">' + esc(o.badge) + '</span>' + photos
       + '<div class="cat-offer__text"><div class="cat-name">' + esc(o.name) + '</div>' + (noms && !rang ? '<div class="cat-offer__items">' + esc(noms + plus) + '</div>' : '')
       + (o.deal ? '<div class="cat-offer__deal">' + esc(o.deal) + '</div>' : '') + (o.priceCents != null ? prixHtml(o, lang) : '') + dispoHtml(o.period) + '</div></div>';
   }
-  function carte(pr, lang, grand) {
-    if (pr.kind === 'offer') { return offreCarte(pr, lang, grand, false); }
+  function carte(pr, lang, grand, repli) {
+    if (pr.kind === 'offer') { return offreCarte(pr, lang, grand, false, repli); }
     return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + (pr.oldPriceCents != null ? ' cat-card--promo' : '') + '">'
-      + (pr.promo ? '<span class="cat-offer__badge cat-card__badge">' + esc(pr.promo.label) + '</span>' : '') + photo(pr)
-      + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>' + prixHtml(pr, lang) + dispoHtml(pr.availability) + '</div></div>';
+      + (pr.promo ? '<span class="cat-offer__badge cat-card__badge">' + esc(pr.promo.label) + '</span>' : '') + photo(pr, repli)
+      + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>' + prixHtml(pr, lang) + '</div></div>';
   }
   /** Une image livrée avec le Marketing (dessin de saison, de famille) : son adresse absolue, rendue par le document. */
   const dessin = (url) => /^(https?:)?\/\//.test(String(url || '')) ? url : null;
-  function liste(pr, lang) {
-    return '<div class="cat-list">' + pr.map(x => x.kind === 'offer' ? offreCarte(x, lang, false, true)
-      : '<div class="cat-row' + (x.availability ? ' cat-row--avail' : '') + '">' + photo(x) + '<span class="cat-name">' + esc(x.name) + dispoHtml(x.availability) + '</span><i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
+  function liste(pr, lang, repli) {
+    return '<div class="cat-list">' + pr.map(x => x.kind === 'offer' ? offreCarte(x, lang, false, true, repli)
+      : '<div class="cat-row">' + photo(x, repli) + '<span class="cat-name">' + esc(x.name) + '</span><i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
   }
+  /** La disponibilité de la page en pied de page (rendu de `AvailabilityFooter`, composé par le Marketing). */
+  const piedDispo = t => t ? '<div class="cat-foot">' + esc(t) + '</div>' : '';
   /** La place libre : la photo de la médiathèque, ou l'illustration (rendu de `Filler`, CataloguePages.tsx). */
   function placeLibre(f, style) {
     const d = dessin(f.drawingUrl), src = d || f.imageUrl;
     return '<div class="cat-filler cat-filler--' + esc(f.kind) + (d ? ' cat-filler--drawing' : '') + '" style="' + style + '">' + (src ? '<img src="' + esc(src) + '" alt="">' : '') + '</div>';
   }
   function interieur(doc, p) {
-    const lang = doc.version.lang, pr = p.products || [], f = p.filler || null;
+    const lang = doc.version.lang, pr = p.products || [], f = p.filler || null, r = repliDe(p);
     const rangs = f ? rangsLibres(p.layout, pr.length) : 0;
     const etendu = 'grid-column:1 / -1;grid-row:span ' + rangs;
     let b = '';
     if (!pr.length) {
       b = f ? placeLibre(f, 'flex:1 1 0') : '<div class="cat-empty">' + (lang === 'nl' ? 'Lege pagina' : 'Page vide') + '</div>';
     } else if (p.layout === 'liste') {
-      b = liste(pr, lang) + (f ? placeLibre(f, 'flex:1 1 0') : '');
+      b = liste(pr, lang, r) + (f ? placeLibre(f, 'flex:1 1 0') : '');
+    } else if (p.layout === 'mosaique') {
+      b = '<div class="cat-grid cat-grid--2x2 cat-grid--mosaique">' + pr.map(x => carte(x, lang, false, r)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     } else if (p.layout === 'vedette') {
-      b = carte(pr[0], lang, true) + '<div class="cat-grid cat-grid--2x2">' + pr.slice(1).map(x => carte(x, lang, false)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
+      b = carte(pr[0], lang, true, r) + '<div class="cat-grid cat-grid--2x2">' + pr.slice(1).map(x => carte(x, lang, false, r)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     } else {
-      b = '<div class="cat-grid cat-grid--2x3">' + pr.map(x => carte(x, lang, false)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
+      b = '<div class="cat-grid cat-grid--2x3">' + pr.map(x => carte(x, lang, false, r)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     }
-    const marque = dessin(p.drawingUrl);
-    return '<div class="cat-inner cat-inner--' + esc(p.layout) + ' cat-t-' + esc(p.template || 'A') + '"><div class="cat-h">' + (marque ? '<img class="cat-h__mark" src="' + esc(marque) + '" alt="">' : '')
-      + '<span class="cat-h__text">' + esc(p.title) + '</span></div><div class="cat-body">' + b + '</div></div>';
+    // L'en-tête (rendu de `Heading`, CataloguePages.tsx) : la gamme et son illustration (titre + pictogramme · bandeau
+    // illustré · grande illustration), puis la catégorie en sous-titre, manuscrite au choix ; sans gamme, la catégorie seule.
+    const d = dessin(p.drawingUrl), ph = d ? null : (p.gammeImageUrl || null), src = d || ph, ent = ENTETES[p.header] ? p.header : 'titre';
+    const g = p.gammeTitle || null, sc = p.script ? ' cat-h__script' : '', cl = ph ? ' is-photo' : '';
+    return '<div class="cat-inner cat-inner--' + esc(p.layout) + ' cat-t-' + esc(p.template || 'A') + ' cat-head-' + ent + '"><div class="cat-h cat-h--' + ent + (src ? '' : ' cat-h--nodraw') + (g ? ' cat-h--gamme' : '') + '"><div class="cat-h__top">'
+      + (src ? (ent === 'grande' ? '<span class="cat-h__big' + cl + '"><img src="' + esc(src) + '" alt=""></span>' : '<img class="cat-h__mark' + cl + '" src="' + esc(src) + '" alt="">') : '')
+      + '<span class="cat-h__text' + (g ? '' : sc) + '">' + esc(g || p.title) + '</span></div>' + (g ? '<div class="cat-h__sub' + sc + '">' + esc(p.title) + '</div>' : '')
+      + '</div><div class="cat-body">' + b + '</div>' + piedDispo(p.availabilityFooter) + '</div>';
   }
   /** La page de présentation d'une gamme (rendu de `Presentation`, CataloguePages.tsx). */
   function presentation(doc, p) {
@@ -819,7 +892,7 @@
       + '<div class="cat-pres__visual ' + (v ? (v[1] ? 'is-photo' : 'is-drawing') : 'is-none') + '">' + (v ? '<img src="' + esc(v[0]) + '" alt="">' : '') + '</div>'
       + '<div class="cat-pres__head"><div class="cat-pres__eyebrow">' + (lang === 'nl' ? 'Het gamma' : 'La gamme') + '</div><div class="cat-pres__title">' + esc(p.title) + '</div><div class="cat-pres__rule"></div>'
       + (p.text ? '<div class="cat-pres__text">' + esc(p.text) + '</div>' : '') + '</div>'
-      + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang) + '</div>' : '') + '</div>';
+      + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang, repliDe(p)) + '</div>' : '') + (avecListe ? piedDispo(p.availabilityFooter) : '') + '</div>';
   }
   function qr(url, mm) {
     if (typeof window.qrcode !== 'function') { return ''; }
