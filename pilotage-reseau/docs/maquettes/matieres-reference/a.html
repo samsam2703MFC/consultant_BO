@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Matières premières — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="mm.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group"><div class="sidebar__group-label">Vérification</div>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg><span class="sidebar__item-label">Audit des flux</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Fuites par magasin</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Inventaires</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Matières ↔ recettes</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Chiffre d’affaires</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Mouvements d’un produit</span></button>
+    <button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg><span class="sidebar__item-label">Recettes à corriger</span><span class="sidebar__count">212</span></button>
+    <button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Évolution</span></button></div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Recettes à corriger</h1>
+      </div>
+      <div class="topbar__actions"><span class="mm-pill">Maquette · noms et fournisseurs réels, montants en partie d’illustration</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      <p class="shell-sub page-intro">Chaque produit vendu doit avoir une recette complète, chiffrée et plausible : sinon l’écart de matière, la marge et le CA attendu sont faux. La bascule « Matières premières » montre les matières de ces recettes et leur prix dans chaque magasin, face au prix de référence de leur fournisseur.</p>
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div data-screen="verification-recettes" class="vr mm-page">
+  <div class="vr-haut"><div class="mm-bascule"><button>Recettes à corriger <b>212</b></button><button class="on">Matières premières <b>412</b></button></div><span class="vr-sp"></span><span class="vr-lu">Prix des magasins lus à 08:19 · listes de prix des fournisseurs gardées 24 h</span><button class="vr-btn">Relire</button><button class="vr-btn">Exporter la liste</button></div>
+  <div class="vr-card">
+    <div class="mm-kpis"><div class="mm-kpi "><div class="k">Matières dans les recettes</div><div class="v">412</div><div class="s">celles des produits vendus ces 30 jours</div></div><div class="mm-kpi ko"><div class="k">Sans prix dans un magasin</div><div class="v">75</div><div class="s">au moins un magasin qui vend la recette ne la chiffre pas</div></div><div class="mm-kpi att"><div class="k">Centrale sans liste de prix</div><div class="v">58</div><div class="s">aucun prix de référence fournisseur lié au panel</div></div><div class="mm-kpi att"><div class="k">Écart à la référence</div><div class="v">9</div><div class="s">plus de 10 % entre le magasin et le prix de référence</div></div><div class="mm-kpi att"><div class="k">Unité à vérifier</div><div class="v">3</div><div class="s">colis en pièces, matière en grammes (ou l’inverse)</div></div></div>
+    <div class="vr-chips"><button class="on">Toutes <b>412</b></button><button class=""><i class="vr-pt pb-prix"></i>Sans prix <b>75</b></button><button class=""><i class="vr-pt pb-reseau"></i>Écart à la référence <b>9</b></button><button class=""><i class="vr-pt pb-orph"></i>Sans fournisseur lié <b>58</b></button><button class=""><i class="vr-pt pb-unite"></i>Unité à vérifier <b>3</b></button><button class=""><i class="vr-pt pb-port"></i>Prix choisis, à écrire <b>4</b></button></div>
+    <div class="vr-fil"><input class="mm-q" placeholder="Chercher une matière…"><select class="vr-sel"><option>Centrale et libres</option></select><select class="vr-sel"><option>Classées par CA des recettes (30 jours)</option></select><span class="vr-sp"></span><span class="vr-lu">12 lignes sur 412</span></div>
+    <div class="vr-tw"><table class="vr-t"><thead><tr><th class="g">Matière première</th><th class="g">Employée dans<small>recettes vendues, CA 30 jours</small></th><th>Halle<small>prix du magasin</small></th><th>Gosselies<small>prix du magasin</small></th><th>Corbais<small>prix du magasin</small></th><th>Sombreffe<small>prix du magasin</small></th><th>Prix de référence<small>fournisseur, réseau ou saisi</small></th><th>Appliquer à</th></tr></thead><tbody>
+      <tr class="mm-on"><td class="g nom vr-ouvre"><b>Poche Sauce Tikka</b><small>Plat Prepare - Chaud<span class="mm-src c">centrale</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>4 recettes</b> · 1 380 € de CA</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td><div class="mm-dd"><button class="mm-dd-btn choisi ouvert">Berdiff s.a. · 5,42 € / kg<small>colis de 4 poches à 10,83 € · poche de 500 g</small></button><div class="mm-menu">
+  <h5>Liste de prix du fournisseur, en vigueur</h5>
+  <div class="mm-opt on alerte"><b>Berdiff s.a.</b><span class="px"><b>2,71 € / poche</b></span>
+    <small>Colis de 4 pcs à 10,83 € HT · en vigueur depuis le 21/08 · centrale. La matière se compte en grammes, le colis en pièces : poids d’une poche <input class="rc-in mod" value="500"> g → <b>5,42 € / kg</b></small></div>
+  <h5>Le réseau</h5>
+  <div class="mm-opt"><span class="vr-mu">Prix des autres magasins</span><span class="px vr-mu">aucun ne la chiffre</span></div>
+  <h5>Autre</h5>
+  <div class="mm-opt"><b>Saisir un prix</b><span class="px"><input class="rc-in" placeholder="€ / kg"></span></div>
+  <div class="mm-opt"><span class="vr-mu">Laisser sans prix</span><span></span></div>
+</div></div></td><td><select class="mm-a"><option>Les 4 magasins</option></select></td></tr><tr><td class="g nom vr-ouvre"><b>Mayonnaise</b><small>Matières premières (traiteur)<span class="mm-src c">centrale</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>9 recettes</b> · 6 460 € — Plateau mini sandwiches - 30 pièces, - 20 pièces…</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Choisir un prix…<small>aucune liste de prix fournisseur liée</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Houmous</b><small>Matières premières (traiteur)<span class="mm-src c">centrale</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>3 recettes</b> · 4 860 € — Plateau mini sandwiches - 30 pièces…</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Choisir un prix…<small>aucune liste de prix fournisseur liée</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr class="mm-on"><td class="g nom vr-ouvre"><b>Fondant chocolat</b><small>Matières premières (boulangerie)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>1 recette</b> · 2 640 € — Pain au Chocolat Nappé</td><td class="mm-px"><span class="mm-p new">2,56 €<small>à écrire</small></span></td><td class="mm-px"><span class="mm-p ok">2,56 €</span></td><td class="mm-px"><span class="mm-p ok">2,56 €</span></td><td class="mm-px"><span class="mm-p ok">2,56 €</span></td><td><div class="mm-dd"><button class="mm-dd-btn choisi">Médiane du réseau · 2,56 € / kg<small>3 magasins sur 4 · Bruyerre S.A. : liste de prix non lue</small></button></div></td><td><select class="mm-a"><option>Halle (sans prix)</option></select></td></tr><tr class="mm-imp"><td colspan="8"><div class="mm-impact"><div class="rc-bloc"><h4>Ce que change le prix choisi — Fondant chocolat à Halle, 2,56 € / kg</h4>
+    <table class="vr-t"><thead><tr><th class="g">Recette</th><th>Quantité<small>par pièce</small></th><th>Coût de la pièce<small>Halle, avant</small></th><th>Après</th><th>Matière<small>% du prix, après</small></th></tr></thead><tbody>
+    <tr><td class="g nom"><b>Pain au Chocolat Nappé</b></td><td>12 g</td><td><span class="rc-av">0,35 €</span></td><td><b class="rc-ap">0,38 €</b></td><td><span class="vx-p ok">24 %</span></td></tr>
+    </tbody></table></div><div class="vr-mu" style="flex:1 1 280px;font-size:11.5px;line-height:1.5;padding-top:8px">Le signalement « matière sans prix » de ces recettes à Halle disparaît après l’écriture. Le prix part au panel par la route réglée dans le registre (<span class="rc-code">POST /materials/{mid}/manual-price</span>), il est relu, et « Annuler » remet l’état d’avant.</div></div></td></tr><tr><td class="g nom vr-ouvre"><b>Frangipane &amp; Abricots – 28 Ø</b><small>Tartes - 28<span class="mm-src c">centrale</span> · € / pce</small></td>
+    <td class="g mm-emploi"><b>1 recette</b> · 1 130 € — Frangipane & Abricots – 28 Ø</td><td class="mm-px"><span class="mm-p ok">9,622 €</span></td><td class="mm-px"><span class="mm-p new">9,622 €<small>à écrire</small></span></td><td class="mm-px"><span class="mm-p new">9,622 €<small>à écrire</small></span></td><td class="mm-px"><span class="mm-p new">9,622 €<small>à écrire</small></span></td><td><div class="mm-dd"><button class="mm-dd-btn choisi">SLFood · 9,622 € / pce<small>colis de 10 pcs à 96,22 € · en vigueur depuis le 09/10</small></button></div></td><td><select class="mm-a"><option>Les 3 magasins sans prix</option></select></td></tr><tr><td class="g nom vr-ouvre"><b>Cougnou - Nature 400 g. - Cru</b><small>Noël<span class="mm-src c">centrale</span> · € / pce</small></td>
+    <td class="g mm-emploi"><b>1 recette</b> · pas encore vendu</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">SLFood · 2,408 € / pce — disponible<small>colis de 24 pcs à 57,78 € · en vigueur depuis le 02/11</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Sucre (Blanc)</b><small>Matières premières (boulangerie)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>14 recettes</b> · 9 210 €</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ok">1,89 €</span></td><td class="mm-px"><span class="mm-p ok">1,89 €</span></td><td class="mm-px"><span class="mm-p ok">1,89 €</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Médiane du réseau · 1,89 € / kg — disponible<small>Bruyerre S.A. : liste de prix non lue</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Oignons grillés</b><small>Matières premières (viandes)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>5 recettes</b> · 2 120 €</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ok">9,89 €</span></td><td class="mm-px"><span class="mm-p ok">9,89 €</span></td><td class="mm-px"><span class="mm-p ok">9,89 €</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Médiane du réseau · 9,89 € / kg — disponible<small>aucun fournisseur lié</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Poulet effiloché</b><small>Matières premières (traiteur)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>6 recettes</b> · 3 940 €</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ok">19,80 €</span></td><td class="mm-px"><span class="mm-p ok">19,80 €</span></td><td class="mm-px"><span class="mm-p ok">19,80 €</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Médiane du réseau · 19,80 € / kg — disponible<small>aucun fournisseur lié</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Épices poulet</b><small>Matières premières (traiteur)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>3 recettes</b> · 2 262 € — Wrapps - Poulet & Parmesan…</td><td class="mm-px"><span class="mm-p ok">12,90 €</span></td><td class="mm-px"><span class="mm-p ok">12,90 €</span></td><td class="mm-px"><span class="mm-p ok">12,90 €</span></td><td class="mm-px"><span class="mm-p ok">12,90 €</span></td><td><div class="mm-dd"><button class="mm-dd-btn ">Médiane du réseau · 12,90 € / kg<small>les 4 magasins alignés</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>iceberg</b><small>Matières premières (légumes)<span class="mm-src c">centrale</span> · € / kg</small></td>
+    <td class="g mm-emploi"><b>5 recettes</b> · 3 310 € — Wrapps - Poulet & Parmesan…</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Choisir un prix…<small>aucune liste de prix fournisseur liée</small></button></div></td><td><span class="vr-mu">—</span></td></tr><tr><td class="g nom vr-ouvre"><b>Boîte pâtissière carton blanc - 250x250x80 PEFC</b><small>Matières premières (Emballage)<span class="mm-src">libre</span> · € / kg</small></td>
+    <td class="g mm-emploi">hors recette (emballage)</td><td class="mm-px"><span class="mm-p ko">sans prix</span></td><td class="mm-px"><span class="mm-p att">188,60 €<small>compté en g</small></span></td><td class="mm-px"><span class="mm-p att">188,60 €<small>compté en g</small></span></td><td class="mm-px"><span class="mm-p att">188,60 €<small>compté en g</small></span></td><td><div class="mm-dd"><button class="mm-dd-btn vide">Unité à corriger au panel ↗<small>une boîte se compte en pièces, pas en grammes</small></button></div></td><td><span class="vr-mu">—</span></td></tr>
+    </tbody></table></div>
+    <div class="mm-barre"><div><b>4 prix choisis — 9 écritures</b> (une par matière et par magasin) : Poche Sauce Tikka dans 4 magasins, Frangipane & Abricots dans 3, Fondant chocolat à Halle, Sucre (Blanc) à Halle.
+      <small>Rien ne part sans « Vérifier » puis « Appliquer » : chaque prix est écrit au panel avec le compte consultant, relu, et noté au registre des corrections (« Annuler » remet l’avant).</small></div>
+      <button class="rc-btn gris">Annuler les choix</button><button class="rc-btn">Vérifier ce qui sera écrit</button></div>
+    <div class="vr-pied"><b>Le prix de référence</b>, au choix dans la liste déroulante de chaque matière : la liste de prix <b>en vigueur</b> d’un fournisseur lié à la matière au panel (prix du colis ÷ taille du colis, daté), le prix médian des autres magasins, ou un prix saisi. Quand le colis et la matière ne se comptent pas dans la même unité (poches, pièces face aux grammes), la conversion se pose dans la liste avant de choisir. <b>Appliquer à</b> : un magasin, les magasins sans prix, ou tous. Source : /shops/{id}/materials (prix des magasins), /material-suppliers + catalog-mappings, /material-suppliers/{f}/shops/{s}/price-lists/current.</div>
+  </div>
+</div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>
