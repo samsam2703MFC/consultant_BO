@@ -52,6 +52,7 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/historique_ventes.php';   // L'historique des ventes, 18 mois, pour l'assistant (14/11/2026)
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/inventaires.php';
@@ -599,6 +600,7 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
+            $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
@@ -794,6 +796,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
     if ($method === 'POST' && $path === '/ventes/lignes-moisson') { return wr_pv_lignes_moisson(); }
     if ($method === 'POST' && $path === '/ventes/stats-moisson') { return wr_stats_ventes_moisson(); }
+    if ($method === 'POST' && $path === '/historique/ventes/moisson') { return wr_historique_moisson(); }
     if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
