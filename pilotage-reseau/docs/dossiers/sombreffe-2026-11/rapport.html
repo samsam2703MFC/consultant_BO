@@ -1224,7 +1224,7 @@ $('cv-paliers').innerHTML = '<thead><tr><th>Palier</th><th class="num">Clients /
 $('cv-calcul').textContent = insec(`Le CA en plus se compte au panier moyen des 12 derniers mois (${eur2(B.panier12)}), sur 365 jours ouverts.`);
 const h9 = Math.round(Math.min(TS.heures['9'].pct, TS.heures['10'].pct)), h10 = Math.round(Math.max(TS.heures['9'].pct, TS.heures['10'].pct));
 $('cv-aide').textContent = insec(`L’après-midi : de ${dec(APM.tk)} à 10 tickets par heure, c’est ≈ ${dec((10 - APM.tk) * APM.heures, 0)} clients de plus par jour. Le matin, de 9 h à 11 h : ${h9 === h10 ? h9 : h9 + ' à ' + h10} % du temps sans client. Le B2B : ${dec(B.part)} % du CA, plafond ${dec(D.plafond, 0)} %.`);
-$('gestion-intro').textContent = insec(`Soins intensifs dès le lundi ${dateL(D.soinsIntensifs)} : un suivi chaque semaine, face aux repères de départ.`);
+$('gestion-intro').textContent = insec(`Soins intensifs : 6 semaines de suivi intensif, du lundi ${dateL(D.soinsIntensifs)} au dimanche ${dateL(finSoins)}.`);   // 14/11/2026 (Sam)
 const PEc = D.personnel && D.personnel.cumul.mois ? D.personnel : null;
 $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui</th><th>Visé</th></tr></thead><tbody>'
   + [
