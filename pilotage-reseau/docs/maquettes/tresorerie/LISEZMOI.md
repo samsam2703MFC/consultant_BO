@@ -49,7 +49,7 @@ faites sur les vrais chiffres de Sombreffe et gardées hors du dépôt (public) 
 **B retenue**, les deux onglets fondus (« N-1, budget, réalisé » disparaît), **lecture seule** : on modifie dans le
 cockpit (budget, étude) et dans le CRM (postes de charges), les liens y mènent. Le contenu : la base des ventes
 prévues ; pour un exercice, mois par mois, l'étude, le budget, le réalisé et l'atterrissage, les charges du budget en
-euros jusqu'au disponible pour la rémunération, le P&L réel face aux taux ; l'étude et les exercices en cartes.
+euros jusqu'au disponible pour la rémunération, le P&L réel face aux taux ; l'étude en carte. Retirés ensuite (14/11/2026) : la ligne « Lu dans le cockpit… » et ses liens, la carte « Les ventes prévues du plan partent de » (la base reste le budget validé, à défaut l'étude, puis l'année passée), la carte « Le budget, exercice par exercice » et la note sous le tableau.
 
 ## Les chiffres de Sombreffe du modèle
 
@@ -65,7 +65,7 @@ calcul de `src/tresorerie.php`).
 - `code-plan.jpg` : un plan neuf, proposé d'après le budget validé.
 - `code-semaines-closes.jpg` : un plan ouvert deux semaines plus tôt — la semaine close au réel de la caisse, un
   dimanche oublié.
-- `code-budget-etude.jpg` : l'onglet « Budget & étude » (la base des ventes, le budget mois par mois, l'étude, les exercices).
+- `code-budget-etude.jpg` : l'onglet « Budget & étude » (la base des ventes, le budget mois par mois, l'étude).
 - `code-fournisseurs.jpg`, `code-paiements.jpg`.
 
 ## Limites connues
