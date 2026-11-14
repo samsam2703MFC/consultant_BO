@@ -4,8 +4,8 @@
  * Les catalogues vivent dans le portail Marketing ; ce module parle à l'API du cockpit à côté de lui
  * (../api/cockpit/dashboard/catalogues…), qui lit la boutique dans la session, ajoute le jeton de service et relaie
  * au Marketing (src/catalogues_magasin.php). Le navigateur ne voit jamais le jeton. Les contraintes (produits vendus
- * par la boutique, ses prix, couverture et dernière page de la marque, trois mises en page) sont celles du Marketing :
- * ses refus s'affichent tels quels.
+ * par la boutique, ses prix, 8, 12 ou 16 pages dont les quatre de la marque — couverture, page 2, avant-dernière et
+ * dernière —, trois mises en page) sont celles du Marketing : ses refus s'affichent tels quels.
  *
  * Utilisation (dashboard.js) : DbCatalogue.racine(shop, nomMagasin) rend l'élément du module — gardé d'un rendu du
  * dashboard à l'autre, avec son état.
@@ -19,13 +19,16 @@
     liste: { label: 'Liste avec prix', cap: 12 },
   };
   const STATUTS = { brouillon: 'Brouillon', pret: 'PDF prêt', imprime: 'Imprimé' };
+  /** 8, 12 ou 16 pages, dont 4 de la marque (1, 2, avant-dernière, dernière) ; le Marketing en dit la liste. */
+  const NB_PAGES = [8, 12, 16];
+  const PAGES_MARQUE = 4;
   const FORMAT_MM = { A5: { w: 148, h: 210 }, A4: { w: 210, h: 297 } };
   const BLEED = 3;
   const PX_MM = 96 / 25.4;
   const ETAPES = [
     ['Point de départ', 'mes gammes, ou tous mes produits'],
     ['Je clique mes produits', 'ceux de MA boutique, à mes prix'],
-    ['Mise en page', 'format, pages intérieures'],
+    ['Mise en page', '8, 12 ou 16 pages, format'],
     ['Aperçu et PDF', 'FR ou NL'],
   ];
   const CADENAS = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.2" width="8" height="5.8" rx="1.2" fill="currentColor"/><path d="M4 5.4V3.8a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
@@ -60,7 +63,7 @@
       el.className = 'cm';
       etats[shop] = { shop, el, vue: 'liste', liste: null, listeErr: null, prod: null, prodErr: null, cat: null, etape: 1,
         src: null, titre: '', choix: null, pages: null, format: 'A5', langs: ['fr'], lang: 'fr', doc: {}, docErr: {}, msg: null,
-        occupe: false, rech: '', modifie: false };
+        occupe: false, rech: '', modifie: false, nbPages: 8, ouverts: null, proposer: null };
       el.addEventListener('click', ev => clic(etats[shop], ev));
       el.addEventListener('input', ev => saisie(etats[shop], ev));
       el.addEventListener('change', ev => changement(etats[shop], ev));
@@ -101,6 +104,7 @@
     S.choix = {}; (c.products || []).forEach(p => { S.choix[p.id] = p.on !== false; });
     S.pages = (c.pages || []).map(p => ({ layout: p.layout, category: p.category == null ? null : +p.category }));
     S.format = c.format || 'A5';
+    S.nbPages = NB_PAGES.includes(+c.pageCount) ? +c.pageCount : 8;
     S.langs = (c.langs && c.langs.length ? c.langs : ['fr']).slice();
     if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; }
     S.modifie = false;
@@ -112,12 +116,12 @@
     const nom = id => { const p = produits(S).find(x => +x.id === +id); return p ? '« ' + p.name + ' »' : 'Produit ' + id; };
     const det = (e.details || []).map(d => {
       const msg = String(d.message || '').replace(/^Produit (\d+)/, (t, id) => nom(id));
-      return /^products\[/.test(d.field || '') || !d.field ? msg : d.field + ' : ' + msg;
+      return /^(products|pages)\[/.test(d.field || '') || !d.field ? msg : d.field + ' : ' + msg;
     });
     return { type: 'err', titre: (avant ? avant + ' — ' : '') + e.message, details: det };
   }
   function occupe(S, p, avant) {
-    S.occupe = true; S.msg = null; rendre(S);
+    S.occupe = true; S.msg = null; S.proposer = null; rendre(S);
     return p.catch(e => { S.msg = erreurMsg(S, e, avant); }).finally(() => {
       S.occupe = false; rendre(S);
       // Un refus doit se voir, même si l'on est en bas de la liste des produits.
@@ -127,11 +131,11 @@
   }
   function nouveau(S) {
     S.vue = 'assistant'; S.etape = 1; S.cat = null; S.src = null; S.titre = ''; S.titreAuto = ''; S.choix = null; S.pages = null;
-    S.format = 'A5'; S.langs = ['fr']; S.lang = 'fr'; S.msg = null; S.rech = ''; oublierDocs(S);
+    S.format = 'A5'; S.nbPages = 8; S.ouverts = null; S.langs = ['fr']; S.lang = 'fr'; S.msg = null; S.rech = ''; oublierDocs(S);
     chargerProduits(S); rendre(S);
   }
   function ouvrir(S, id, etape) {
-    S.vue = 'assistant'; S.msg = null; S.rech = ''; oublierDocs(S);
+    S.vue = 'assistant'; S.msg = null; S.rech = ''; S.ouverts = null; oublierDocs(S);
     chargerProduits(S);
     const c = (S.liste || []).find(x => +x.id === +id);
     if (c) { adopter(S, c); S.etape = etape || 2; }
@@ -141,7 +145,7 @@
     const titre = S.titre.trim();
     if (!titre) { S.msg = { type: 'err', titre: 'Donnez un titre à votre catalogue.' }; rendre(S); return; }
     if (!S.src || (Array.isArray(S.src) && !S.src.length)) { S.msg = { type: 'err', titre: 'Choisissez le point de départ : une ou plusieurs gammes, ou tous mes produits.' }; rendre(S); return; }
-    const corps = { title: titre, format: 'A5', langs: ['fr'] };
+    const corps = { title: titre, format: 'A5', pageCount: S.nbPages, langs: ['fr'] };
     if (S.src === 'tous') {
       corps.source = { kind: 'choix' };
       corps.products = produits(S).map(p => ({ id: +p.id, on: true }));
@@ -174,8 +178,21 @@
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
-  function repartir(S) {
-    occupe(S, appel('PUT', '/' + S.cat.id + qs(S), { pages: [] }).then(j => { adopter(S, j.data); oublierDocs(S); }), 'Répartition automatique');
+  function repartir(S, nb) {
+    const corps = nb ? { pageCount: nb, pages: [] } : { pages: [] };
+    S.proposer = null;
+    occupe(S, appel('PUT', '/' + S.cat.id + qs(S), corps).then(j => { adopter(S, j.data); oublierDocs(S); }), 'Répartition automatique');
+  }
+  /** Le nombre de pages : enregistré tout de suite (les pages non enregistrées d'abord). Réduire quand une page à
+   * retirer porte des produits : le Marketing refuse (CATALOGUE_PAGES_NOT_EMPTY) ; on propose de répartir. */
+  function changerNbPages(S, nb) {
+    if (!S.cat) { S.nbPages = nb; rendre(S); return; }
+    if (nb === S.nbPages) { return; }
+    S.proposer = null;
+    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: S.pages.map(p => ({ layout: p.layout, category: p.category })) }) : Promise.resolve();
+    const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; })
+      .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
+    occupe(S, p, 'Passage à ' + nb + ' pages');
   }
   function aller(S, n) {
     if (S.occupe || n === S.etape) { return; }
@@ -248,11 +265,12 @@
     else if (a === 'creer') { creer(S); }
     else if (a === 'etape') { aller(S, +v); }
     else if (a === 'prod') { if (S.choix) { S.choix[v] = !S.choix[v]; rendre(S); } }
-    else if (a === 'tout') { visibles(S).filter(p => !b.dataset.cat || String(p.categoryId) === b.dataset.cat).forEach(p => { S.choix[p.id] = v === '1'; }); rendre(S); }
+    else if (a === 'tout') { (b.dataset.cat ? produits(S) : visibles(S)).filter(p => !b.dataset.cat || String(p.categoryId) === b.dataset.cat).forEach(p => { S.choix[p.id] = v === '1'; }); rendre(S); }
+    else if (a === 'acc') { const o = ouverts(S); if (o.has(v)) { o.delete(v); } else { o.add(v); } rendre(S); }
+    else if (a === 'nbpages') { changerNbPages(S, +v); }
+    else if (a === 'repartirN') { repartir(S, +v); }
     else if (a === 'layout') { S.pages[+b.dataset.i].layout = v; S.modifie = true; rendre(S); }
     else if (a === 'monter' || a === 'descendre') { const i = +v, j = a === 'monter' ? i - 1 : i + 1; if (j >= 0 && j < S.pages.length) { const t = S.pages[i]; S.pages[i] = S.pages[j]; S.pages[j] = t; S.modifie = true; rendre(S); } }
-    else if (a === 'retirer') { S.pages.splice(+v, 1); S.modifie = true; rendre(S); }
-    else if (a === 'ajouter') { const cats = catsChoisies(S); S.pages.push({ layout: 'grille', category: cats.length ? cats[0] : null }); S.modifie = true; rendre(S); }
     else if (a === 'repartir') { repartir(S); }
     else if (a === 'format') { S.format = v; S.modifie = true; rendre(S); }
     else if (a === 'lang') { S.lang = v; chargerDoc(S); rendre(S); }
@@ -279,6 +297,14 @@
     const r = S.rech.trim().toLowerCase();
     return produits(S).filter(p => !r || String(p.name).toLowerCase().includes(r) || String(p.nameNl || '').toLowerCase().includes(r));
   }
+  /** Les catégories dépliées à l'étape 2 : à l'ouverture, celles qui ont un produit coché. */
+  function ouverts(S) {
+    if (!S.ouverts) {
+      S.ouverts = new Set();
+      produits(S).forEach(p => { if (S.choix && S.choix[p.id]) { S.ouverts.add(p.categoryId == null ? '' : String(p.categoryId)); } });
+    }
+    return S.ouverts;
+  }
   function catsChoisies(S) {
     const ids = new Set(choisis(S));
     const out = [];
@@ -290,7 +316,8 @@
   function message(S) {
     if (!S.msg) { return ''; }
     const d = S.msg.details && S.msg.details.length ? '<ul>' + S.msg.details.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
-    return '<div class="cm-msg ' + S.msg.type + '" role="' + (S.msg.type === 'err' ? 'alert' : 'status') + '">' + esc(S.msg.titre) + d + '</div>';
+    const r = S.proposer ? '<div style="margin-top:8px"><button class="cm-btn pri" data-cm="repartirN" data-v="' + S.proposer + '">Répartir automatiquement sur ' + S.proposer + ' pages</button></div>' : '';
+    return '<div class="cm-msg ' + S.msg.type + '" role="' + (S.msg.type === 'err' ? 'alert' : 'status') + '">' + esc(S.msg.titre) + d + r + '</div>';
   }
   function bandeauErreur(e, quoi) {
     return '<div class="cm-msg err" role="alert"><b>' + esc(quoi) + '</b> — ' + esc(e.message) + '</div>';
@@ -343,16 +370,22 @@
   }
 
   function cote(S, contenu) {
-    return '<aside class="cm-cote">' + contenu + '<div class="note">' + CADENAS.replace('<svg', '<svg style="width:11px;height:11px;vertical-align:-1px"') + ' Couverture et dernière page : celles de la marque (logo, commande en ligne, adresse, horaires et QR de MA boutique). Je choisis seulement les produits et la mise en page des pages intérieures.</div></aside>';
+    return '<aside class="cm-cote">' + contenu + '<div class="note">' + CADENAS.replace('<svg', '<svg style="width:11px;height:11px;vertical-align:-1px"') + ' Quatre pages sont celles de la marque : la couverture, la page 2, l’avant-dernière et la dernière (commande en ligne, adresse, horaires et QR de MA boutique). Je choisis les produits et la mise en page des autres.</div></aside>';
   }
   function resume(S) {
     if (!S.cat) { return '<div class="k">Mon catalogue</div><div class="cm-cpt">Il se crée à la fin de cette étape.</div>'; }
-    const n = choisis(S).length, pages = 2 + (S.pages || []).length;
+    const n = choisis(S).length, pages = S.nbPages;
     return '<div class="k">Mon catalogue · ' + pages + ' pages ' + esc(S.format) + '</div>'
       + '<div style="font-size:13px">' + n + ' produit' + (n > 1 ? 's' : '') + ' choisi' + (n > 1 ? 's' : '') + '</div>'
-      + '<div class="cm-cpt" style="margin-top:4px">' + (S.pages || []).map(p => esc(nomCat(S, p.category)) + ' · ' + esc(LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : p.layout)).join('<br>') + '</div>';
+      + '<div class="cm-cpt" style="margin-top:4px">' + (S.pages || []).map((p, i) => (i + 3) + ' · ' + esc(nomCat(S, p.category)) + ' · ' + esc(LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : p.layout)).join('<br>') + '</div>';
   }
 
+  /** 8 · 12 · 16 pages (le Marketing en donne la liste, `pageCounts`). */
+  function segPages(S, libelle) {
+    const liste = (S.prod && Array.isArray(S.prod.pageCounts) && S.prod.pageCounts.length ? S.prod.pageCounts : NB_PAGES).map(Number);
+    return '<div class="cm-champ"><span>' + esc(libelle) + '</span><div class="cm-seg">' + liste.map(n => '<button data-cm="nbpages" data-v="' + n + '" class="' + (S.nbPages === n ? 'on' : '') + '"'
+      + (S.occupe ? ' disabled' : '') + ' title="' + (n - PAGES_MARQUE) + ' pages de produits + ' + PAGES_MARQUE + ' pages de la marque">' + n + ' pages</button>').join('') + '</div></div>';
+  }
   function rendreE1(S) {
     let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Point de départ</span></div>';
     if (S.cat) {
@@ -364,6 +397,7 @@
       return h + '</section>' + cote(S, resume(S)) + '</div>';
     }
     h += '<label class="cm-champ"><span>Titre du catalogue</span><input type="text" maxlength="160" data-cm="titre" placeholder="Mes bûches 2026" value="' + esc(S.titre) + '"></label>';
+    h += segPages(S, 'Nombre de pages · dont 4 de la marque (modifiable ensuite)');
     if (!S.prod && !S.prodErr) { h += '<div class="cm-vide">Lecture des produits et des gammes de ma boutique…</div>'; }
     else if (S.prod) {
       const prods = produits(S);
@@ -396,18 +430,32 @@
     vis.forEach(p => { const k = p.categoryId == null ? '' : String(p.categoryId); if (!groupes.has(k)) { groupes.set(k, []); } groupes.get(k).push(p); });
     const ordre = categories(S).map(c => String(c.id)).filter(k => groupes.has(k)).concat(Array.from(groupes.keys()).filter(k => !categories(S).some(c => String(c.id) === k)));
     if (!vis.length) { h += '<div class="cm-vide">' + (S.rech ? 'Aucun produit ne répond à « ' + esc(S.rech) + ' ».' : 'Aucun produit au webshop de ma boutique.') + '</div>'; }
+    // Les catégories en accordéons : un clic sur l'en-tête déplie / replie ; la recherche déplie celles qui ont un résultat.
+    const ouv = ouverts(S), cherche = S.rech.trim() !== '';
+    h += '<div class="cm-accs">';
     ordre.forEach(k => {
       const liste = groupes.get(k);
-      h += '<div class="cm-cat">' + esc(k === '' ? 'Sans catégorie' : nomCat(S, +k)) + ' · ' + liste.length + '<button class="cm-btn" style="padding:3px 9px;font-size:11px" data-cm="tout" data-v="1" data-cat="' + esc(k === '' ? 'null' : k) + '">Toute la catégorie</button></div><div class="cm-prods">';
-      liste.forEach(p => {
-        const on = !!S.choix[p.id];
-        const ecart = p.shopPriceCents != null && p.priceCents != null && p.shopPriceCents !== p.priceCents;
-        h += '<button class="cm-prod' + (on ? ' on' : '') + '" data-cm="prod" data-v="' + p.id + '" aria-pressed="' + on + '">'
-          + '<span class="cb" aria-hidden="true"></span><span class="ph">' + (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="" loading="lazy">' : '<i>sans photo</i>') + '</span>'
-          + '<span class="nm">' + esc(p.name) + '</span><span class="px">' + esc(nomCat(S, p.categoryId)) + '<b class="' + (p.priceCents == null ? 'mu' : '') + '"' + (ecart ? ' title="Au comptoir : ' + esc(prix(p.shopPriceCents)) + ' — le catalogue prend le prix du webshop"' : '') + '>' + (p.priceCents == null ? 'sans prix' : esc(prix(p.priceCents))) + '</b></span></button>';
-      });
+      const tous = produits(S).filter(p => (p.categoryId == null ? '' : String(p.categoryId)) === k);
+      const nOn = tous.filter(p => S.choix[p.id]).length, tout = tous.length > 0 && nOn === tous.length;
+      const ouvert = cherche || ouv.has(k);
+      h += '<div class="cm-acc' + (ouvert ? ' ouvert' : '') + '"><div class="cm-acc-hd">'
+        + '<button class="cm-acc-t" data-cm="acc" data-v="' + esc(k) + '" aria-expanded="' + ouvert + '"><span class="chev" aria-hidden="true">›</span><span class="nm">' + esc(k === '' ? 'Sans catégorie' : nomCat(S, +k)) + '</span>'
+        + '<span class="n">' + nOn + ' / ' + tous.length + ' produit' + (tous.length > 1 ? 's' : '') + '</span></button>'
+        + '<button class="cm-sw' + (tout ? ' on' : '') + '" role="switch" aria-checked="' + tout + '" data-cm="tout" data-v="' + (tout ? '0' : '1') + '" data-cat="' + esc(k === '' ? 'null' : k) + '" title="' + (tout ? 'Retirer toute la catégorie' : 'Toute la catégorie') + '"><span class="l">toute la catégorie</span><span class="tr" aria-hidden="true"></span></button></div>';
+      if (ouvert) {
+        h += '<div class="cm-acc-l">';
+        liste.forEach(p => {
+          const on = !!S.choix[p.id];
+          const ecart = p.shopPriceCents != null && p.priceCents != null && p.shopPriceCents !== p.priceCents;
+          h += '<div class="cm-pl' + (on ? '' : ' off') + '"><span class="ph">' + (p.imageUrl ? '<img src="' + esc(p.imageUrl) + '" alt="" loading="lazy">' : '') + '</span>'
+            + '<span class="nm">' + esc(p.name) + '</span><b class="' + (p.priceCents == null ? 'mu' : '') + '"' + (ecart ? ' title="Au comptoir : ' + esc(prix(p.shopPriceCents)) + ' — le catalogue prend le prix du webshop"' : '') + '>' + (p.priceCents == null ? 'sans prix' : esc(prix(p.priceCents))) + '</b>'
+            + '<button class="cm-sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(p.name) + '" data-cm="prod" data-v="' + p.id + '"><span class="tr" aria-hidden="true"></span></button></div>';
+        });
+        h += '</div>';
+      }
       h += '</div>';
     });
+    h += '</div>';
     // Les produits du catalogue que la boutique ne vend plus : dits, grisés.
     const vendus = new Set(produits(S).map(p => +p.id));
     const plus = (S.cat.products || []).filter(p => p.on !== false && !vendus.has(+p.id));
@@ -427,26 +475,29 @@
     const capCat = {}; (S.pages || []).forEach(p => { const k = p.category == null ? 'null' : String(p.category); capCat[k] = (capCat[k] || 0) + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 0); });
     const cats = catsChoisies(S);
     let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Mise en page</span><span class="sp"></span><button class="cm-btn" data-cm="repartir"' + (S.occupe ? ' disabled' : '') + '>↺ Répartir automatiquement</button></div>';
-    h += '<div class="cm-reglages"><div class="cm-champ"><span>Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="format" data-v="' + f + '" class="' + (S.format === f ? 'on' : '') + '">' + f + '</button>').join('') + '</div></div>'
+    h += '<div class="cm-reglages">' + segPages(S, 'Nombre de pages · dont 4 de la marque') + '<div class="cm-champ"><span>Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="format" data-v="' + f + '" class="' + (S.format === f ? 'on' : '') + '">' + f + '</button>').join('') + '</div></div>'
       + '<div class="cm-champ"><span>Langues</span><div class="cm-cases">' + [['fr', 'Français'], ['nl', 'Néerlandais']].map(l => '<label><input type="checkbox" data-cm="langs" value="' + l[0] + '"' + (S.langs.includes(l[0]) ? ' checked' : '') + '> ' + l[1] + '</label>').join('') + '</div></div></div>';
     h += '<div class="cm-pages">';
-    h += '<div class="cm-pg lock"><span class="no">1</span><span class="mini cover" aria-hidden="true"></span><div><div class="t">Couverture</div><div class="s">Charte de la marque · le nom de ma boutique</div></div><span class="cm-lock">' + CADENAS + ' Marque</span><span></span></div>';
+    const marque = (no, mini, t, s2) => '<div class="cm-pg lock"><span class="no">' + no + '</span>' + mini + '<div><div class="t">' + t + '</div><div class="s">' + s2 + '</div></div><span class="cm-lock">' + CADENAS + ' Marque</span><span></span></div>';
+    const nb = S.nbPages;
+    h += marque(1, '<span class="mini cover" aria-hidden="true"></span>', 'Couverture', 'Charte de la marque · le nom de ma boutique');
+    h += marque(2, '<span class="mini texte" aria-hidden="true"></span>', 'Page 2', 'Charte de la marque · le mot de la boulangerie');
     (S.pages || []).forEach((p, i) => {
       const k = p.category == null ? 'null' : String(p.category);
       const n = parCat[k] || 0, cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 0;
       const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
-      h += '<div class="cm-pg"><span class="no">' + (i + 2) + '</span>' + mini(p.layout)
-        + '<div><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 2) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
+      h += '<div class="cm-pg"><span class="no">' + (i + 3) + '</span>' + mini(p.layout)
+        + '<div><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
         + options.map(c => '<option value="' + c + '"' + (+p.category === +c ? ' selected' : '') + '>' + esc(nomCat(S, c)) + '</option>').join('') + '</select>'
         + '<div class="cm-cpt' + (p.category != null && (capCat[k] || 0) < n ? ' ko' : '') + '" style="margin-top:4px">' + (p.category == null ? 'les produits qui restent, ' + cap + ' places' : n + ' produit' + (n > 1 ? 's' : '') + ' choisi' + (n > 1 ? 's' : '') + ' dans cette catégorie · ' + cap + ' places sur cette page') + '</div></div>'
         + '<div class="ctl"><div class="cm-seg">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '">' + LAYOUTS[l].label + '</button>').join('') + '</div></div>'
-        + '<div class="mv"><button class="cm-btn" data-cm="monter" data-v="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Monter">↑</button><button class="cm-btn" data-cm="descendre" data-v="' + i + '"' + (i === S.pages.length - 1 ? ' disabled' : '') + ' aria-label="Descendre">↓</button><button class="cm-btn dis" data-cm="retirer" data-v="' + i + '" aria-label="Retirer la page">✕</button></div></div>';
+        + '<div class="mv"><button class="cm-btn" data-cm="monter" data-v="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Monter">↑</button><button class="cm-btn" data-cm="descendre" data-v="' + i + '"' + (i === S.pages.length - 1 ? ' disabled' : '') + ' aria-label="Descendre">↓</button></div></div>';
     });
-    h += '<div><button class="cm-btn" data-cm="ajouter"' + ((S.pages || []).length >= 40 ? ' disabled' : '') + '>＋ Ajouter une page</button></div>';
-    h += '<div class="cm-pg lock"><span class="no">' + ((S.pages || []).length + 2) + '</span><span class="mini" aria-hidden="true" style="background:#F6F1E9"></span><div><div class="t">Dernière page</div><div class="s">Commande en ligne, QR de mon webshop, adresse et horaires de ma boutique</div></div><span class="cm-lock">' + CADENAS + ' Marque</span><span></span></div>';
+    h += marque(nb - 1, '<span class="mini texte" aria-hidden="true"></span>', 'Avant-dernière page', 'Charte de la marque · nos services');
+    h += marque(nb, '<span class="mini" aria-hidden="true" style="background:#F6F1E9"></span>', 'Dernière page', 'Commande en ligne, QR de mon webshop, adresse et horaires de ma boutique');
     h += '</div>';
     const trop = Object.keys(parCat).filter(k => k !== 'null' && (capCat[k] || 0) < parCat[k]);
-    if (trop.length) { h += '<div class="cm-msg inf" style="margin-top:12px">Pas assez de place pour : ' + trop.map(k => esc(nomCat(S, +k)) + ' (' + parCat[k] + ' produits, ' + (capCat[k] || 0) + ' places)').join(', ') + '. Ajoutez une page, choisissez une mise en page plus dense, ou une page « Notre sélection ».</div>'; }
+    if (trop.length) { h += '<div class="cm-msg inf" style="margin-top:12px">Pas assez de place pour : ' + trop.map(k => esc(nomCat(S, +k)) + ' (' + parCat[k] + ' produits, ' + (capCat[k] || 0) + ' places)').join(', ') + '. ' + (S.nbPages < 16 ? 'Passez à ' + (S.nbPages + 4) + ' pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, ou une page « Notre sélection ».</div>'; }
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Mes produits</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Aperçu et PDF ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
@@ -475,7 +526,7 @@
     const p = doc.pages[i];
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const z = largeurPx / (f.w * PX_MM);
-    const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ((p.products || []).length ? '' : ' · vide');
+    const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')' : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ((p.products || []).length ? '' : ' · vide');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
       + (p.locked ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
       + '<div class="pz" style="transform:scale(' + z + ');width:' + f.w + 'mm;height:' + f.h + 'mm"><div style="position:absolute;left:-' + BLEED + 'mm;top:-' + BLEED + 'mm">' + page(doc, i) + '</div></div></div>'
@@ -489,6 +540,7 @@
     let corps = '';
     if (p.kind === 'cover') { corps = couverture(doc, p); }
     else if (p.kind === 'back') { corps = dos(doc, p); }
+    else if (p.kind === 'brand') { corps = marquePage(doc, p); }
     else { corps = interieur(doc, p); }
     return '<div class="cat-face cat-face--' + esc(p.kind) + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
   }
@@ -500,6 +552,14 @@
       + (p.subtitle ? '<div class="cat-cover__sub">' + esc(p.subtitle) + '</div>' : '')
       + (p.eyebrow ? '<div class="cat-cover__shop">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '')
       + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
+  }
+  /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste. */
+  function marquePage(doc, p) {
+    const blocs = String(p.text || '').split(/\n\s*\n/).map(b => b.split('\n').map(l => l.trim()).filter(Boolean)).filter(l => l.length);
+    return '<div class="cat-brand' + (p.imageUrl ? ' cat-brand--image' : '') + '">'
+      + (p.imageUrl ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
+      + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
+      + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div></div>';
   }
   function photo(pr) {
     return '<span class="cat-photo">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
@@ -518,6 +578,7 @@
     } else {
       b = '<div class="cat-grid cat-grid--2x3">' + pr.map(x => carte(x, lang, false)).join('') + '</div>';
     }
+    if (!pr.length) { b = '<div class="cat-empty">' + (lang === 'nl' ? 'Lege pagina' : 'Page vide') + '</div>'; }
     return '<div class="cat-inner cat-inner--' + esc(p.layout) + '"><div class="cat-h">' + esc(p.title) + '</div><div class="cat-body">' + b + '</div></div>';
   }
   function qr(url, mm) {
