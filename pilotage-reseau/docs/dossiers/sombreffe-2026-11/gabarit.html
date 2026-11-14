@@ -124,6 +124,13 @@ body { margin: 0; background: var(--paper); }
 .rp-grille tbody th { background: var(--table-head); border-radius: 6px; padding: 8px 6px; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); }
 .rp-grille .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
 .rp-grille td.axe { padding: 30px 6px; border-radius: 6px; }
+.rp-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.rp-plan > li { display: grid; grid-template-columns: 36px 1fr; align-items: baseline; break-inside: avoid; }
+.rp-plan .n { font-size: 26px; line-height: 1; color: var(--accent); font-variant-numeric: tabular-nums; }
+.rp-plan .t { font-size: 16px; color: var(--ink); }
+.rp-plan .fort { color: var(--accent); }
+.rp-plan .s { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.rp-plan .q { margin: 4px 0 0; padding-left: 18px; font-size: 14px; display: grid; gap: 2px; }
 .rp-vignette { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: #fff; padding: 12px 16px; break-inside: avoid; }
 .rp-schema { margin: 0; break-inside: avoid; }
 .rp-schema svg { display: block; width: 100%; max-width: 760px; height: auto; }
@@ -323,6 +330,10 @@ body { margin: 0; background: var(--paper); }
   <section class="rp-page" id="page-4">
     <header class="rp-partie" id="partie-4"><div class="rp-partie-n">4</div><div><h2 class="rp-partie-titre">Comment on va y arriver</h2></div></header>
     <div class="rp-alerte" id="cout-relance"></div>
+    <section class="rp-carte" id="plan" hidden>   <!-- dicté le 14/11/2026 (Sam) -->
+      <h2 class="rp-h2">Le plan, en cinq points</h2>
+      <ol class="rp-plan" id="plan-liste"></ol>
+    </section>
     <section class="rp-carte" id="gestion">
       <h2 class="rp-h2">4.1 · La structure de gestion</h2>
       <p class="rp-p" id="gestion-intro"></p>
@@ -1167,6 +1178,20 @@ if (D.pourquoi) {
   $('pourquoi-avec').innerHTML = D.pourquoi.avec.map(t => `<li>${esc(insec(t))}</li>`).join('');
   $('pourquoi-sans').innerHTML = D.pourquoi.sans.map(t => `<li>${esc(insec(t))}</li>`).join('');
   $('pourquoi').hidden = false;
+}
+/* --- Le plan en cinq points (14/11/2026, Sam) : le texte dicté, et sous un point le chiffre de départ du rapport --- */
+if (D.plan) {
+  const depart = {
+    personnel: PE6 ? `aujourd’hui ${dec(PE6.n.pct)} % du CA (mai → oct. 26) ; seuil ${dec(D.seuilPersonnel, 0)} %` : '',
+    ventes: `${dec(N.cliJour, 0)} clients par jour au départ ; ${objectif} à court terme, puis ${normalise}`,
+    prix: `panier ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA})`,
+    additionnelles: D.repere ? `aujourd’hui ${dec(D.repere.moi.articles)} articles par client (8 dernières semaines)` : '',
+  };
+  $('plan-liste').innerHTML = D.plan.points.map((p, i) => `<li><span class="n">${i + 1}</span><div>`
+    + `<div class="t">${p.fort ? `<span class="fort">${esc(p.fort)} : </span>` + esc(insec(p.titre.charAt(0).toLowerCase() + p.titre.slice(1))) : esc(insec(p.titre))}</div>`
+    + (p.questions ? `<ul class="q">${p.questions.map(q => `<li>${esc(insec(q))}</li>`).join('')}</ul>` : '')
+    + (depart[p.k] ? `<div class="s">${esc(insec(depart[p.k]))}</div>` : '') + '</div></li>').join('');
+  $('plan').hidden = false;
 }
 $('cout-relance').innerHTML = `<span class="rp-alerte-k">À retenir</span><span>${esc(insec('Redynamiser un magasin, ça coûte cher. D’où les deux chantiers menés ensemble : les ventes pour regagner les clients, les frais et la trésorerie pour tenir pendant ce temps.'))}</span>`;
 const parMois = n => n * B.panier12 * 365 / 12, parAn = n => n * B.panier12 * 365;

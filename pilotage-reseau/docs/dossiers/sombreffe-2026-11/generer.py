@@ -397,6 +397,15 @@ def main():
                      'sans': ['Personne ne t’aidera.', 'Tu as des responsabilités financières.',
                               'Si quelque chose se passe, je dois pouvoir mettre dans ton magasin quelqu’un qui n’est pas de ton équipe.',
                               'La confiance n’exclut pas le contrôle.']},
+        # Le plan en cinq points, dicté par le bureau le 14/11/2026 : repris tel quel, au tutoiement, l'orthographe seule
+        # corrigée. Le rapport ajoute sous un point le chiffre de départ qu'il a déjà.
+        'plan': {'le': '14/11/2026', 'points': [
+            {'k': 'personnel', 'titre': 'Le ratio personnel : licencier ou remplacer.'},
+            {'k': 'experience', 'titre': 'L’expérience client.',
+             'questions': ['L’assortiment est-il complet ?', 'Le client reçoit-il quelque chose de chaud ?', 'Est-ce que ça sent bon ?']},
+            {'k': 'ventes', 'titre': 'Développer tes ventes.'},
+            {'k': 'prix', 'titre': 'Augmenter tes prix.'},
+            {'k': 'additionnelles', 'titre': 'Les ventes additionnelles.', 'fort': 'Très important'}]},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B, 'plafondClient': PLAFOND_CLIENT_B2B,
