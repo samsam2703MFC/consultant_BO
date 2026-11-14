@@ -356,3 +356,10 @@
   .cm-pg{grid-template-columns:30px 50px minmax(0,1fr)}
   .cm-pg .ctl,.cm-pg .mv{grid-column:1/-1}
 }
+
+/* Une photo du webshop garde son ratio : la vignette prend la forme de la photo (comme le Marketing). */
+.cat-card{justify-content:center}
+.cat-card .cat-photo--img{display:contents}
+.cat-card .cat-photo--img img{flex:0 1 auto;min-height:0;width:100%;height:auto;object-fit:contain;border-radius:calc(var(--u) * 2mm)}
+.cat-card--big .cat-photo--img img{flex:0 0 48%;width:48%;max-height:100%}
+.cat-row .cat-photo--img{background:transparent}

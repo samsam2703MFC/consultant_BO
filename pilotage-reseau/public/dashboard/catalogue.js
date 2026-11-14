@@ -713,7 +713,7 @@
       + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div></div>';
   }
   function photo(pr) {
-    return '<span class="cat-photo">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
+    return '<span class="cat-photo' + (pr.imageUrl ? ' cat-photo--img' : '') + '">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
   }
   function carte(pr, lang, grand) {
     return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + '">' + photo(pr) + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>'
