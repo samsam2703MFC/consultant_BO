@@ -13,6 +13,18 @@ const px = (v, par) => v == null || isNaN(v) ? '—' : nf(v, dec(v, par)) + ' �
 const court = n => String(n || '').replace(/^.* - /, '');
 const jm = s => s ? s.slice(8, 10) + '/' + s.slice(5, 7) + '/' + s.slice(2, 4) : '';
 const SANS = 'Aucun fournisseur lié';
+/* Le compte administrateur du panel (14/11/2026) : même session que le cadre des tâches (sessionStorage « tk.admin »,
+ * jeton dans l'en-tête X-Panel-Jeton). Le mot de passe ne fait que passer vers POST /task/connexion. */
+const CLE_ADMIN = 'tk.admin';
+const admin = () => { try { const a = JSON.parse(sessionStorage.getItem(CLE_ADMIN) || 'null'); return a && a.jeton && a.expire * 1000 > Date.now() + 30000 ? a : null; } catch (e) { return null; } };
+function envoyerPanel(app, corps){
+  const a = admin();
+  if (!a) { return write(app.source || 'api', 'POST', '/verification/recettes/corriger', corps); }
+  return fetch(apiBase(app) + '/verification/recettes/corriger', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Panel-Jeton': a.jeton }, body: JSON.stringify(corps) })
+    .then(async r => { let j = {}; try { j = await r.json(); } catch (e) { /* vide */ } return Object.assign({}, j, { ok: r.ok && j.ok !== false, status: r.status }); })
+    .catch(() => ({ ok: false, error: 'serveur injoignable' }));
+}
+const apiBase = app => (typeof app.apiBase === 'function' ? app.apiBase() : 'api/cockpit');
 /** Les trois routes de prix du panel (swagger), et leurs champs de départ. {sid} {mid} {prix} {fid} {date} se remplacent à l'envoi. */
 const PRESETS = [
   { id: 'manual', nom: 'Prix du magasin (manual-price)', methode: 'POST', route: '/materials/{mid}/manual-price', champs: [['id_shop', '{sid}'], ['price', '{prix}']] },
@@ -117,6 +129,23 @@ function valsForm(app){
   const prev = F.prev, res = F.res;
   return {
     nom: F.nom, par: F.par, fournisseur: F.fournisseur, refTxt: F.refTxt, fid: F.fid,
+    compte: (() => {
+      const a = admin(), C = app.state.vtAdmin || {};
+      const majC = p => app.setState({ vtAdmin: Object.assign({}, app.state.vtAdmin, p) });
+      return { admin: !!a, expire: a ? new Date(a.expire * 1000).toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : '',
+        ouvert: !!C.ouvert, ouvrir: () => majC({ ouvert: !C.ouvert, erreur: null }), tel: C.tel || '', poserTel: e => majC({ tel: e.target.value }),
+        mdp: C.mdp || '', poserMdp: e => majC({ mdp: e.target.value }), erreur: C.erreur || null, enCours: !!C.enCours,
+        quitter: () => { sessionStorage.removeItem(CLE_ADMIN); app.setState({ vtAdmin: {}, vtForm: Object.assign({}, app.state.vtForm, { prev: null }) }); },
+        connecter: C.tel && C.mdp && !C.enCours ? () => {
+          majC({ enCours: true, erreur: null });
+          fetch(apiBase(app) + '/task/connexion', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: JSON.stringify({ phone: C.tel, password: C.mdp }) })
+            .then(async r => { let j = {}; try { j = await r.json(); } catch (e) { /* vide */ } return j; })
+            .then(j => {
+              if (j && j.jeton) { sessionStorage.setItem(CLE_ADMIN, JSON.stringify({ jeton: j.jeton, renouvellement: j.renouvellement || '', expire: j.expire })); app.setState({ vtAdmin: {}, vtForm: Object.assign({}, app.state.vtForm, { prev: null }) }); }
+              else { majC({ enCours: false, mdp: '', erreur: (j && j.error) || 'connexion refusée' }); }
+            }).catch(() => majC({ enCours: false, mdp: '', erreur: 'serveur injoignable' }));
+        } : null };
+    })(),
     fermer: () => app.setState({ vtForm: null }),
     magasins: F.magasins.map(m => ({ nom: m.nom, prix: m.prix == null ? 'sans prix' : px(m.prix * F.facteur, F.par), on: !!F.choisis[m.id],
       basculer: () => maj({ choisis: Object.assign({}, app.state.vtForm.choisis, { [m.id]: !app.state.vtForm.choisis[m.id] }) }) })),
@@ -134,14 +163,14 @@ function valsForm(app){
     invalide: !valide,
     verifier: valide && !(prev && prev.enCours) ? () => {
       app.setState({ vtForm: Object.assign({}, app.state.vtForm, { prev: { enCours: true }, res: null }) });
-      write(app.source || 'api', 'POST', '/verification/recettes/corriger', Object.assign({ apercu: true }, corpsEnvoi)).then(r => app.setState({ vtForm: Object.assign({}, app.state.vtForm, { prev: { d: r } }) }));
+      envoyerPanel(app, Object.assign({ apercu: true }, corpsEnvoi)).then(r => app.setState({ vtForm: Object.assign({}, app.state.vtForm, { prev: { d: r } }) }));
     } : null,
     apercu: prev && prev.d && prev.d.apercu ? (prev.d.ecritures || []).map(e => ({ txt: e.methode + ' ' + e.route + '\n' + JSON.stringify(e.corps, null, 2), resume: e.resume, permise: e.permise !== false })) : null,
     refus: prev && prev.d && !prev.d.apercu ? (prev.d.error || 'Le cockpit n’a pas pu préparer l’envoi.') : null,
     enCours: !!(prev && prev.enCours) || !!(res && res.enCours),
     envoyer: prev && prev.d && prev.d.apercu ? () => {
       app.setState({ vtForm: Object.assign({}, app.state.vtForm, { res: { enCours: true } }) });
-      write(app.source || 'api', 'POST', '/verification/recettes/corriger', corpsEnvoi).then(r => {
+      envoyerPanel(app, corpsEnvoi).then(r => {
         app.setState({ vtForm: Object.assign({}, app.state.vtForm, { res: { d: r }, prev: null }), vrRecentes: (r.ecritures || []).concat(app.state.vrRecentes || []).slice(0, 20), vrReg: null });
         if (r.ok) { app.setState({ vmData: null }); }
       });
