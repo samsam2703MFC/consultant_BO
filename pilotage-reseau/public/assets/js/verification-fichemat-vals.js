@@ -61,7 +61,10 @@ export function valsFicheMat(app){
   });
   const cA = champ('allergens');
   const allSel = val('allergens') || [];
-  const allergenes = cA.modifiable ? (R.allergenes || []).map(code => ({ code, nom: ALL[code] || code, on: allSel.indexOf(code) >= 0,
+  // La liste du panel (/allergens) ; illisible, les 14 allergènes UE sous les codes que le panel emploie (mesurés sur /shops/{id}/materials).
+  const UE = ['cereals_gluten', 'crustaceans', 'eggs', 'fish', 'peanuts', 'soybeans', 'milk', 'nuts', 'celery', 'mustard', 'sesame_seeds', 'sulphites', 'lupin', 'molluscs'];
+  const refAll = (R.allergenes || []).length ? R.allergenes : UE.concat(allSel.filter(c => UE.indexOf(c) < 0));
+  const allergenes = cA.modifiable ? refAll.map(code => ({ code, nom: ALL[code] || code, on: allSel.indexOf(code) >= 0,
     basculer: () => { const cur = (val('allergens') || []).slice(); const i = cur.indexOf(code); if (i >= 0) { cur.splice(i, 1); } else { cur.push(code); } cur.sort(); poser('allergens', cur); } })) : null;
   const L = d.ligne || null;
   const uniteChange = change('id_unit');
