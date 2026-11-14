@@ -125,11 +125,20 @@ body { margin: 0; background: var(--paper); }
 .rp-grille .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
 .rp-grille td.axe { padding: 30px 6px; border-radius: 6px; }
 .rp-vignette { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px; background: #fff; padding: 12px 16px; break-inside: avoid; }
+.rp-schema { margin: 0; break-inside: avoid; }
+.rp-schema svg { display: block; width: 100%; max-width: 760px; height: auto; }
 .rp-vignette-k { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
 .rp-vignette-cols { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; }
 .rp-vignette-h { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
 .rp-vignette-liste { margin: 0; padding-left: 20px; display: grid; gap: 3px; font-size: 14px; }
 .rp-vignette-sans .rp-vignette-liste { color: var(--stop); padding-left: 18px; }
+@media print {   /* l’étape 4 sur une page avec le schéma de la trésorerie (14/11/2026) */
+  #soins-suivi { font-size: 11px; line-height: 1.25; } #soins-suivi td { padding: 2px 6px; } #soins-suivi th { padding: 3px 6px; }
+  #soins-suivi td:nth-child(1) { width: 22%; } #soins-suivi td:nth-child(2) { width: 36%; }
+  .rp-vignette { padding: 9px 14px; } .rp-vignette-liste { font-size: 12.5px; gap: 1px; } .rp-vignette-k { margin-bottom: 4px; }
+  .rp-schema svg { max-width: 700px; }
+  #gestion-intro, #marque-texte { columns: 1; }   /* une puce seule tient sur une ligne */
+}
 #repere { margin-top: 18px; }
 #repere .rp-kpis { margin: 8px 0 10px; }
 .repere-graphes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 8px; break-inside: avoid; }
@@ -332,7 +341,26 @@ body { margin: 0; background: var(--paper); }
           <div class="rp-vignette-sans"><div class="rp-vignette-h">Sans le faire</div><ul class="rp-vignette-liste" id="pourquoi-sans"></ul></div>
         </div>
       </div>
-      <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3><ul class="rp-points" id="cf-points"></ul></div>
+      <div class="rp-part" id="chantier-frais"><h3 class="rp-h3">Les frais, les budgets, la trésorerie</h3>
+      <figure class="rp-schema" id="cf-schema">   <!-- la semaine de trésorerie, 14/11/2026 (Sam) -->
+        <svg viewBox="0 0 800 134" role="img" aria-label="Le lundi, le chiffre de la semaine paie tout : 500 euros pour soi d’abord, puis toutes les factures. Du mardi au dimanche, on refait ce chiffre, jusqu’à l’objectif de chiffre d’affaires de la semaine." style="font-family:var(--font)">
+          <text x="20" y="16" font-size="13" fill="#1c1a17">Lundi : on paie tout</text>
+          <text x="318" y="16" font-size="13" fill="#1c1a17">Du mardi au dimanche : on fait du chiffre</text>
+          <line x1="20" x2="690" y1="34" y2="34" stroke="#3f7a52" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <line x1="20" x2="690" y1="112" y2="112" stroke="rgba(34,34,34,.2)"/>
+          <rect x="20" y="34" width="56" height="16" fill="#8D1D2C"/>
+          <rect x="20" y="50" width="56" height="62" fill="#A32014" fill-opacity=".75"/>
+          <text x="48" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Lun</text>
+          <text x="88" y="46" font-size="12.5" fill="#8D1D2C">1. d’abord 500 € pour soi</text>
+          <text x="88" y="85" font-size="12.5" fill="#A32014">2. ensuite toutes les factures</text>
+          <rect x="318" y="99.0" width="40" height="13.0" rx="3" fill="#3f7a52" fill-opacity="0.45"/><text x="338" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Mar</text><rect x="380" y="86.0" width="40" height="26.0" rx="3" fill="#3f7a52" fill-opacity="0.54"/><text x="400" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Mer</text><rect x="442" y="73.0" width="40" height="39.0" rx="3" fill="#3f7a52" fill-opacity="0.63"/><text x="462" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Jeu</text><rect x="504" y="60.0" width="40" height="52.0" rx="3" fill="#3f7a52" fill-opacity="0.72"/><text x="524" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Ven</text><rect x="566" y="47.0" width="40" height="65.0" rx="3" fill="#3f7a52" fill-opacity="0.81"/><text x="586" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Sam</text><rect x="628" y="34.0" width="40" height="78.0" rx="3" fill="#3f7a52" fill-opacity="0.90"/><text x="648" y="129" font-size="12" text-anchor="middle" fill="#3b3731">Dim</text>
+          <text x="700" y="38" font-size="12" fill="#3f7a52">objectif de CA</text>
+          <text x="700" y="53" font-size="12" fill="#3f7a52">de la semaine</text>
+          <text x="700" y="92" font-size="12" fill="#5c5852">le lundi suivant,</text>
+          <text x="700" y="107" font-size="12" fill="#5c5852">tout est payé</text>
+        </svg>
+      </figure>
+        <ul class="rp-points" id="cf-points"></ul></div>
       <div class="rp-part" id="suivi"><h3 class="rp-h3">Le suivi, chaque semaine</h3>
         <div class="rp-table-zone"><table class="rp-table rp-serre" id="soins-suivi"></table></div></div>
     </section>
@@ -1170,8 +1198,7 @@ $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui<
 $('cf-points').innerHTML = [   // court (13/11/2026) ; le lundi, dicté le 14/11/2026 (Sam)
   'Budgets : chaque poste dans son budget ; ce qui dépasse se coupe.',
   'Trésorerie : un plan semaine par semaine.',
-  'Chaque lundi : on se paie d’abord 500 €, ensuite on paie toutes les factures.',
-  'Comme ça, l’objectif premier, c’est de faire son objectif de chiffre d’affaires.',
+  'L’objectif premier : faire son objectif de chiffre d’affaires.',   // le lundi : dans le schéma (14/11/2026)
   'En visite : tout est-il payé à temps ?',
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
