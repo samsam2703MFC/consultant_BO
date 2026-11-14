@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Fiche matière — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="fm.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group"><div class="sidebar__group-label">Vérification</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg><span class="sidebar__item-label">Audit des flux</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Matières ↔ recettes</span></button><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg><span class="sidebar__item-label">Recettes à corriger</span><span class="sidebar__count">212</span></button></div><div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Recettes à corriger</h1>
+      </div>
+      <div class="topbar__actions"><span class="fm-pill">Maquette · données lues en ligne le 14/11, saisies d’illustration</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="vr fm-fond"><div class="vr-haut"><div class="vm-bascule"><button>Recettes à corriger <b>212</b></button><button class="on">Matières premières <b>400</b></button></div></div>
+  <div class="vr-card"><div class="vm-kpis"><div class="vm-kpi"><div class="k">Matières dans les recettes</div><div class="v">400</div></div><div class="vm-kpi ko"><div class="k">Sans prix dans un magasin</div><div class="v">106</div></div><div class="vm-kpi att"><div class="k">Sans liste de prix fournisseur</div><div class="v">178</div></div><div class="vm-kpi att"><div class="k">Écart à la référence</div><div class="v">83</div></div><div class="vm-kpi att"><div class="k">Unité à vérifier</div><div class="v">13</div></div></div>
+  <div class="vr-tw"><table class="vr-t vm-t"><thead><tr><th class="g">Matière première</th><th class="g">Employée dans</th><th>Corbais</th><th>Gosselies</th><th>Sombreffe</th><th>Halle</th></tr></thead><tbody>
+  <tr><td class="g nom vr-ouvre"><b>Fondant chocolat</b></td><td class="g">1 recette · 2 640 €</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td class="g nom vr-ouvre"><b>Houmous</b></td><td class="g">3 recettes · 4 860 €</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td class="g nom vr-ouvre"><b>Sucre (Blanc)</b></td><td class="g">11 recettes · 4 959 €</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td class="g nom vr-ouvre"><b>Poche Sauce Tikka</b></td><td class="g">1 recette · 538 €</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><td class="g nom vr-ouvre"><b>Mayonnaise</b></td><td class="g">9 recettes · 6 460 €</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+  </tbody></table></div></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div><div class="vr"><div class="vr-voile"></div><div class="vr-fiche fm-fiche"><div class="vr-fi-t"><div><b>Sucre (Blanc)</b><small>Matières premières (boulangerie) · libre · matière 491 · 11 recettes, 4 959 € de CA sur 30 jours</small></div><button class="vr-x">×</button></div>
+    <div class="rc-fiche-act"><div class="rc-seg"><button>Lire</button><button class="on">Modifier</button></div><span class="vr-mu">Au panel :</span><a class="rc-ln" href="#">Matière 491 ↗</a><a class="rc-ln" href="#">Liste de prix Bruyerre S.A. ↗</a></div><div class="fm-sec"><h3>Paramètres <span>— pour tout le réseau : chaque magasin, chaque recette qui l’emploie</span></h3>
+    <div class="fm-grille"><label class="fm-champ">Nom<input value="Sucre (Blanc)"></label><label class="fm-champ">Catégorie<select><option>Matières premières (boulangerie)</option></select></label><label class="fm-champ">Unité de base<select><option>g — gramme</option></select><small>les prix se lisent par kg</small></label><label class="fm-champ">Type<select><option>Matière première (RAW)</option></select></label><label class="fm-champ">Source<select><option>Libre (OPEN)</option></select><small>achetée par le magasin chez un fournisseur autorisé</small></label><label class="fm-champ">Perte<input value="0 %"></label><label class="fm-champ">TVA<select><option>6 %</option></select></label><label class="fm-champ l2">Matière au panel<input value="n° 491 · « Sucre (Blanc) »"><small>recettes : 11 · sous-recettes : —</small></label></div>
+    <div style="display:flex;gap:26px;margin:12px 0 6px"><span class="fm-tog"><i></i>Fait partie d’un emballage</span><span class="fm-tog"><i></i>Peut être un supplément d’un produit</span><span class="fm-tog"><i></i>Intégrée chez le fournisseur</span></div>
+    <div class="fm-champ" style="margin-top:8px">Allergènes<div class="fm-al"><span class="">Gluten</span><span class="">Crustacés</span><span class="">Œufs</span><span class="">Poissons</span><span class="">Arachides</span><span class="">Soja</span><span class="">Lait</span><span class="">Fruits à coque</span><span class="">Céleri</span><span class="">Moutarde</span><span class="">Sésame</span><span class="">Sulfites</span><span class="">Lupin</span><span class="">Mollusques</span></div></div>
+    <div class="fm-champ" style="margin-top:10px">Employée dans<div class="fm-rec"><span>Choux Nappe</span><span>Flan Breton</span><span>Saint-Honoré - Classique</span><span>Poke Poulet Classique</span><span>Poke Poulet Effiloché</span><span>+ 6 autres</span></div></div>
+    </div><div class="fm-sec fm-px"><h3>Prix — la comparaison <span>— par kg, hors TVA ; écart de chaque prix au prix général</span></h3>
+    <table class="vr-t"><thead><tr><th class="g">Source</th><th>Prix<small>€ / kg</small></th><th>Écart<small>au prix général</small></th><th class="g">État</th><th></th></tr></thead><tbody><tr class="fm-gen"><td class="g nom"><b>Prix général</b><small>prix de référence du panel, pour tout le réseau</small></td>
+      <td><span class="rc-av">1,00</span> <input value="1,89" class="mod"></td>
+      <td></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal">POST /materials/491/manual-price</td><td></td></tr><tr><td class="g nom"><b>Prix conseillé du panel</b></td>
+      <td><span class="rc-av">1,00</span> <input value="1,89" class="mod"></td>
+      <td><span class="fm-e ok">0 %</span></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal"></td><td></td></tr><tr class="fm-grp"><td colspan="6">Fournisseurs liés</td></tr><tr><td class="g nom"><b>Bruyerre S.A.</b><small>libre · lien « connexion »</small></td>
+      <td><span class="vr-mu">pas de prix</span></td>
+      <td></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal">liste de prix lue : aucun prix en vigueur pour cette matière</td><td><button class="fm-lien">Lier une référence…</button></td></tr><tr class="fm-grp"><td colspan="6">Magasins</td></tr><tr><td class="g nom"><b>Corbais</b></td>
+      <td>1,89</td>
+      <td><span class="fm-e ko">+89 %</span> → <span class="fm-e ok">0 %</span></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal"></td><td><button class="fm-lien">Prendre comme prix général</button></td></tr><tr><td class="g nom"><b>Gosselies</b></td>
+      <td>1,89</td>
+      <td><span class="fm-e ko">+89 %</span> → <span class="fm-e ok">0 %</span></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal"></td><td></td></tr><tr><td class="g nom"><b>Sombreffe</b></td>
+      <td>1,89</td>
+      <td><span class="fm-e ko">+89 %</span> → <span class="fm-e ok">0 %</span></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal"></td><td></td></tr><tr><td class="g nom"><b>Halle</b></td>
+      <td><input value="1,89" class="mod"></td>
+      <td><span class="fm-e ko">sans prix</span> → <span class="fm-e ok">0 %</span></td>
+      <td class="g vr-mu" style="font-size:11.5px;white-space:normal">à écrire : le prix général</td><td></td></tr></tbody></table>
+    <div class="fm-synthese"><b>Le prix général du panel (1,00 €/kg) est 47 % sous ce que paient les trois magasins qui chiffrent le sucre (1,89 €/kg)</b>, et Halle n’a pas de prix : une recette chiffrée au prix général sous-estime le sucre, celle de Halle l’ignore. Proposé : le prix général et le prix conseillé à 1,89 €/kg, et Halle au prix général.</div></div><div class="fm-sec"><h3>L’effet sur les recettes <span>— le coût de la pièce, avant et après</span></h3><table class="vr-t"><thead><tr><th class="g">Produit</th><th class="g">Magasin</th><th>Quantité<small>par pièce</small></th><th>Avant</th><th>Après</th></tr></thead><tbody>
+    <tr><td class="g nom"><b>Flan Breton</b></td><td class="g">Halle</td><td>181,8 g</td><td><span class="rc-av">3,46 €</span></td><td><b class="rc-ap">3,81 €</b></td></tr><tr><td class="g nom"><b>Choux Nappe</b></td><td class="g">Halle</td><td>0,65 g</td><td><span class="rc-av">—</span></td><td><b class="rc-ap">+0,001 €</b></td></tr></tbody></table></div><div style="height:14px"></div><div class="rc-barre"><div><b>3 changements</b><small>Prix conseillé et de référence : <span class="rc-code">PATCH /materials/491</span> · prix général : <span class="rc-code">POST /materials/491/manual-price</span> · Halle : <span class="rc-code">prix du magasin</span>. Relus aussitôt, notés au registre, « Annuler » remet l’avant.</small></div><span class="vr-sp"></span><button class="rc-btn gris">Annuler les changements</button><button class="rc-btn">Vérifier ce qui sera écrit</button></div></div></div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

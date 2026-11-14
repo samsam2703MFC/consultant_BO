@@ -3932,6 +3932,13 @@ rendement** dans la recette (seul `/cost` rend `yield_quantity`) : le geste `ren
 panel. Une ligne reprise d'une autre recette (ajout, copie) part **sans son `connection_id`**. `GET /products/{id}` porte
 `id_recipe` (le geste `rattacher`).
 
+**Règle `tarif`** (14/11/2026) : « prix en retard sur le fournisseur ». `vfRefFournisseurs` lit, pour chaque magasin, la liste
+de prix EN VIGUEUR du premier fournisseur lié qui chiffre la matière (même lecture que `vmpOptions`) ; un écart de plus de
+`VF_ECART_TARIF` (10 %, décidé le 14/11 ; 2 % au départ) au prix du magasin signale le produit, avec `corr {sid, magasin, matieres[{mid, nom, u, prix, ref,
+fournisseur, depuis, shops (les magasins en retard au même prix de référence), alignes}], coutAvant, coutApres}`. Le geste
+proposé est `prix` (les magasins en retard, au prix du fournisseur). Le coût qui entre dans la médiane du réseau (règle
+`reseau`) est le coût au prix du fournisseur : un magasin à jour n'est plus « hors norme » parce que d'autres sont en retard.
+
 `GET /verification/recettes` porte en plus `liens` (les modèles d'adresse) et, sur chaque ligne, `corr` : ce qu'il faut
 pour proposer le geste (`unite` : `mid`, `matiere`, `sous`, `facteur`, `q`, `u`, `coutAvant`, `coutApres` ; `prix` : `sid`,
 `magasin`, `matieres[{mid, nom, u, propose (médiane des autres magasins), min, max}]` ; `port` : `sid`, `fraction` lue
@@ -3939,6 +3946,46 @@ dans le nom, `cout` ; `reseau` : `sid`, `magasin`, `cout`, `mediane` ; `rend` : 
 recette » (réglage `vfHorsRecette`) ne remontent plus. Mesuré le 13/11 : au panel, `/panel/products/{id}`,
 `/panel/recipes`, `/panel/subrecipes` et `/panel/materials` existent (renvoi à la connexion) ; les pages de détail d'une
 recette ou d'une matière ne se devinent pas (le panel rend 200 pour toute adresse) : elles se règlent dans le registre.
+
+### `GET /verification/recettes/matieres` — les matières des recettes et leur prix de référence (14/11/2026)
+
+Code : `src/verification_matieres_prix.php` (préfixe `vmp`) ; écran : la bascule « Matières premières » de Recettes à
+corriger (`verification-prix-vals.js`, `verification-prix-tpl.js`, style `vm-`) ; maquette `docs/maquettes/matieres-reference`.
+Lecture seule, gardée dix minutes (`vmpTable`, oubliée à chaque prix écrit) ; `?rafraichir=1` relit.
+
+Rend `lignes[]` : `{mid, nom, cat, source (CENTRAL|OPEN…), uniteBase, par (kg|l|pce), facteur, nRecettes, ca,
+recettes[{pid, nom, ca, q (par pièce, unité de base), cout {magasin: coût de la pièce}}], magasins[{id, nom, lu, prix
+(par unité de base), ecart (% à la référence), ref}], options[{type: fournisseur|conseille|reference|mediane, id, nom,
+centrale, listeLue, enVigueur, colis {prix, taille, unite, parColis}, depuis, conversion (g|ml quand le colis se compte en
+pièces), prixMagasins {magasin: prix par unité de base}, parPieceMagasins}], drapeaux {sansPrix, ecart, sansFournisseur,
+unite, emballage, conversion}}`, `compteurs`, `magasins`, `recettes {vendues, lues}`, `seuilEcart` (10 %), `formatPrix`.
+
+Le prix d'un fournisseur vient de sa liste de prix **en vigueur pour le magasin** (`price-lists/current`, prix du colis
+÷ taille × unités par colis), ramené à l'unité de la matière (un colis en kg pour une matière en g : ÷ 1000). Un colis
+en pièces pour une matière en grammes ne donne pas de prix : l'écran demande le poids d'une pièce. L'écriture passe par
+`POST /verification/recettes/corriger {geste: prix, mid, prix (par unité de base), shops: [...]}` : une écriture par
+magasin, relue ; un prix qui en remplace un autre s'annule (l'ancien repart), un premier prix non.
+
+### `/verification/recettes/matiere` — la fiche d'une matière, modifiable (14/11/2026)
+
+Code : `src/verification_matiere_edition.php` (préfixe `vmx`) ; écran : `verification-fichemat-vals.js`,
+`verification-fichemat-tpl.js` (style `vx-`), ouvert au clic sur une matière de la bascule « Matières premières » ;
+maquette `docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable, pour tout le réseau**.
+
+- `GET ?mid=` : `{ok, mid, nom, champs[{cle, lib, type (texte|categorie|unite|valeurs|nombre|tva|oui|allergenes|prix),
+  valeur, modifiable, valeurs}], cles, unite, par, facteur, refs {categories, unites, allergenes, tva}, ligne (la ligne de
+  /verification/recettes/matieres : magasins, fournisseurs, recettes), liens}`. Un champ n'est `modifiable` que si
+  `GET /materials/{id}` le rend : on n'écrit pas une clé devinée. Les valeurs proposées pour type et source sont celles
+  vues dans les matières des magasins. Références : `/material-categories`, `/units`, `/allergens`,
+  `/countries/BE/materials/vat-rates` (gardées 24 h).
+- `POST {mid, apercu?, champs: {clé: valeur}, magasins: {magasin: prix par unité de base}}` : les champs changés partent
+  en `PATCH /materials/{id}` (seules les clés changées, dans la forme lue : allergènes en objets, en identifiants ou en
+  texte ; booléens en 0/1 si le panel les rend ainsi), relus et constatés ; puis les prix des magasins (geste `prix`).
+  Si les paramètres ne prennent pas, les prix ne partent pas. Le prix général est `reference_unit_price_net`, le prix
+  conseillé `suggested_base_unit_price_net` (par unité de base). « Annuler » remet l'avant (même route).
+- **La TVA** (14/11/2026) : mesuré en ligne, `GET /materials/{id}` ne la rend pas. Elle se lit et s'écrit sur
+  `/materials/{id}/vat-rates` (ligne du pays `BE` : `country_code`, `vat_rate`) : `POST` avec la ligne lue, son seul taux
+  changé, puis relue ; « Annuler » repose l'ancien taux. Si la route ne répond pas, la TVA reste en lecture.
 
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 

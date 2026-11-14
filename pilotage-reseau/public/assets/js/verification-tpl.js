@@ -4,11 +4,17 @@
  * la liste classée par chiffre d'affaires concerné. Corriger d'ici (13/11/2026) : docs/maquettes/recettes-correction — le
  * geste et les liens directs de chaque ligne, la correction en place, le volet en correction, le registre. */
 
+import { tplPrix } from './verification-prix-tpl.js';
+import { tplFicheMat } from './verification-fichemat-tpl.js';
 import { tplCellule, tplProp, tplOuverte, tplRecentes, tplRegistre, tplEdition } from './verification-correction-tpl.js';
 
 export function tplVerification(c, x){
   const { esc } = x, v = c.vr;
   if (!v) { return ''; }
+  const bascule = (v.bascule || []).length ? `<div class="vm-bascule">${v.bascule.map(b => `<button class="${b.on ? 'on' : ''}" ${x.A(b.choisir)}>${esc(b.nom)}${b.n != null ? ` <b>${b.n}</b>` : ''}</button>`).join('')}</div>` : '';
+  if (v.vue === 'matieres') {
+    return `<div data-screen="verification-recettes" class="vr"><div class="vr-haut">${bascule}<span class="vr-sp"></span></div>${tplPrix(v.prix, x)}${tplRegistre(v.registre, x)}${tplFicheMat(v.ficheMat, x)}</div>`;
+  }
   const relire = `<button class="vr-btn" ${x.A(v.rafraichir)}${v.relecture || v.chargement ? ' disabled' : ''}>${v.relecture || v.chargement ? 'Lecture…' : 'Relire'}</button>`;
   if (v.chargement) {
     return `<div data-screen="verification-recettes" class="vr"><div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des ventes des trente derniers jours, des produits et des recettes du panel… La première fois, jusqu’à une minute : le panel ne tient que quatre lectures à la fois.</div></div>`;
@@ -17,7 +23,7 @@ export function tplVerification(c, x){
     return `<div data-screen="verification-recettes" class="vr"><div class="vr-card vr-etat ko">${esc(v.indispo || v.erreur)}<span class="vr-sp"></span>${relire}</div></div>`;
   }
   const cov = v.cov;
-  const haut = `<div class="vr-haut"><span class="vr-lu">Ventes ${esc(v.periode)}${v.lu ? ' · ' + esc(v.lu) : ''}</span><span class="vr-sp"></span>${relire}<button class="vr-btn" ${x.A(v.exporter)}${v.lignes.length ? '' : ' disabled'}>Exporter la liste</button></div>`;
+  const haut = `<div class="vr-haut">${bascule}<span class="vr-lu">Ventes ${esc(v.periode)}${v.lu ? ' · ' + esc(v.lu) : ''}</span><span class="vr-sp"></span>${relire}<button class="vr-btn" ${x.A(v.exporter)}${v.lignes.length ? '' : ' disabled'}>Exporter la liste</button></div>`;
   const lecture = v.lecture.complet
     ? `Les ${v.lecture.vendues} recettes des produits vendus sont relues.`
     : `${v.lecture.lues} recettes relues sur ${v.lecture.vendues} : les ${v.lecture.aLire} autres se lisent au prochain passage du cron (chaque heure), ou avec « Relire ». Tant qu’elles restent, les règles qui lisent les lignes de la recette ne les jugent pas encore${cov.aRelire ? ' (' + esc(cov.aRelire) + ' de ventes)' : ''}.`;
@@ -50,7 +56,7 @@ export function tplVerification(c, x){
         <td>${l.geste || (l.liens || []).length ? tplCellule(l, x) : (l.rid ? `<span class="vr-mu" title="Le numéro de la recette au panel">recette ${l.rid}</span>` : '')}</td></tr>${l.ouverte ? tplOuverte(l.ouverte, 8, x) : ''}`).join('')}
       </tbody></table></div>`;
   }
-  const pied = `<div class="vr-pied"><b>Les règles</b>, magasin par magasin, sur les produits vendus ces trente jours : <b>pas de recette</b> (produit vendu sans recette au panel) · <b>formule sans ses produits</b> (une formule ou une promotion vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit — promotion « bundle » du panel) · <b>recette vide</b> (aucune ligne) · <b>matière sans prix</b> (dans un magasin qui vend le produit) · <b>coût invraisemblable</b> (coût de la pièce sous ${esc(v.seuilMin)} ou au-dessus du prix HT) · <b>hors norme du réseau</b> (plus de 40 % d’écart à la médiane des autres magasins) · <b>unité suspecte</b> (une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans un coût plausible) · <b>rendement à zéro</b> · <b>portion sans fraction</b> · <b>matière jamais en recette</b> (en stock, employée par aucune recette vendue). Une même pièce ne porte que l’explication la plus précise. « Repérée depuis » : le premier jour où le cockpit l’a vue ; une ligne disparaît d’elle-même quand la recette est corrigée. <b>Corriger d’ici</b> : chaque geste montre d’abord ce qui sera écrit, puis l’écrit au panel avec le compte consultant, le relit et le note au registre (« Annuler » remet l’avant). Les liens ↗ ouvrent l’écran du panel ; leurs adresses se règlent dans le registre. <span class="vr-mu">${esc(v.source)}</span></div>`;
+  const pied = `<div class="vr-pied"><b>Les règles</b>, magasin par magasin, sur les produits vendus ces trente jours : <b>pas de recette</b> (produit vendu sans recette au panel) · <b>formule sans ses produits</b> (une formule ou une promotion vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit — promotion « bundle » du panel) · <b>recette vide</b> (aucune ligne) · <b>matière sans prix</b> (dans un magasin qui vend le produit) · <b>prix en retard sur le fournisseur</b> (le prix d’une matière dans ce magasin s’écarte de plus de 10 % de la liste de prix du fournisseur en vigueur ; la comparaison au réseau se fait alors sur le coût au prix du fournisseur) · <b>coût invraisemblable</b> (coût de la pièce sous ${esc(v.seuilMin)} ou au-dessus du prix HT) · <b>hors norme du réseau</b> (plus de 40 % d’écart à la médiane des autres magasins) · <b>unité suspecte</b> (une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans un coût plausible) · <b>rendement à zéro</b> · <b>portion sans fraction</b> · <b>matière jamais en recette</b> (en stock, employée par aucune recette vendue). Une même pièce ne porte que l’explication la plus précise. « Repérée depuis » : le premier jour où le cockpit l’a vue ; une ligne disparaît d’elle-même quand la recette est corrigée. <b>Corriger d’ici</b> : chaque geste montre d’abord ce qui sera écrit, puis l’écrit au panel avec le compte consultant, le relit et le note au registre (« Annuler » remet l’avant). Les liens ↗ ouvrent l’écran du panel ; leurs adresses se règlent dans le registre. <span class="vr-mu">${esc(v.source)}</span></div>`;
   return `<div data-screen="verification-recettes" class="vr">${haut}<div class="vr-card">${couverture}${chips}${filtres}${tplRecentes(v.recentes, x)}${corps}${pied}</div>${tplRegistre(v.registre, x)}${tplFiche(v.fiche, x)}</div>`;
 }
 

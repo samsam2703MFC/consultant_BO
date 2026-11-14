@@ -11,12 +11,14 @@
  * Corriger d'ici (13/11/2026, « tout, CEO seul ») : chaque ligne porte son geste — corrigé en place, dans le volet de la
  * recette, ou au panel par un lien direct — et le registre garde ce qui a été écrit (verification-correction-vals.js). */
 import { readOne } from './api.js';
+import { valsMatieres } from './verification-prix-vals.js';
+import { valsFicheMat } from './verification-fichemat-vals.js';
 import { gesteDe, valsLigneOuverte, valsRecentes, valsRegistre, valsEdition, ouvrirEnCorrection, chargerEdition, lienPanel } from './verification-correction-vals.js';
 
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
 const fE = (n, d) => n == null ? '—' : nf(n, d) + ' €';
 const pc = (n, d) => n == null ? '—' : nf(n, d == null ? 1 : d) + ' %';
-const CLASSES = { sans: 'pb-sans', form: 'pb-form', vide: 'pb-vide', prix: 'pb-prix', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
+const CLASSES = { sans: 'pb-sans', form: 'pb-form', vide: 'pb-vide', prix: 'pb-prix', tarif: 'pb-tarif', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
 const jour = s => { const d = new Date(String(s || '').slice(0, 10) + 'T12:00:00'); return isNaN(d) ? null : d; };
 const jjmm = s => { const d = jour(s); return d ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') : ''; };
 const heure = s => { const d = new Date(s || ''); return isNaN(d) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
@@ -120,6 +122,13 @@ export function valsVerification(app, common){
     fiche: valsFiche(app),
   };
   common.vr = v;
+  // La bascule (14/11/2026) : les recettes à corriger, ou les matières premières de ces recettes et leur prix de référence.
+  const vue = S.vrVue === 'matieres' ? 'matieres' : 'recettes';
+  const nMat = (((S.vmData || {}).d || {}).compteurs || {}).matieres;
+  v.vue = vue;
+  v.bascule = [['recettes', 'Recettes à corriger', brut && brut.total != null ? brut.total : null], ['matieres', 'Matières premières', nMat == null ? null : nMat]]
+    .map(([id, nom, n]) => ({ nom, n, on: vue === id, choisir: () => app.setState({ vrVue: id }) }));
+  if (vue === 'matieres') { v.prix = valsMatieres(app); v.ficheMat = valsFicheMat(app); }
   if (!d) { return; }
 
   // Les formules et promotions (décision du 31/10/2026) : gardées, un interrupteur devant la liste les masque ;

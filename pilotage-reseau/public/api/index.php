@@ -52,6 +52,9 @@ require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
+require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
+require __DIR__ . '/../../src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
+require __DIR__ . '/../../src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -595,6 +598,11 @@ function route(string $method, string $path): mixed
             $path === '/verification/recettes/edition' => ep_verification_edition(),
             $path === '/verification/recettes/candidats' => ep_verification_candidats(),
             $path === '/verification/recettes/registre' => ep_verification_registre(),
+            $path === '/verification/recettes/matieres' => ep_verification_matieres_prix(),
+            $path === '/verification/recettes/matiere'  => ep_verification_matiere(),
+            // Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) : la liste, la fiche d'un produit.
+            $path === '/produits/parametrage/liste'   => ep_produits_parametrage_liste(),
+            $path === '/produits/parametrage'         => ep_produits_parametrage(),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
             $path === '/verification/fuites'          => ep_verification_fuites(),
@@ -904,6 +912,8 @@ function route(string $method, string $path): mixed
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
     if ($method === 'POST' && $path === '/verification/recettes/corriger') { return wr_verification_corriger(); }
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
+    if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
+    if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
     if ($method === 'PUT' && $path === '/verification/recettes/liens') { return wr_verification_liens(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
     if ($method === 'POST' && $path === '/visibilite/sync') { return wr_visibilite_sync(); }

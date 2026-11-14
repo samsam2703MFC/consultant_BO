@@ -52,7 +52,7 @@ const VRC_GESTES = ['quantite', 'recette', 'rendement', 'copier', 'rattacher', '
  * ------------------------------------------------------------------------------------------- */
 
 /** Un objet du panel débarrassé de son enveloppe (`data`, `recipe`…) ; null pour une liste ou une réponse vide. */
-function vrcDeballer(mixed $d, array $cles = ['data', 'recipe', 'subrecipe', 'product', 'portion']): ?array
+function vrcDeballer(mixed $d, array $cles = ['data', 'recipe', 'subrecipe', 'product', 'portion', 'material']): ?array
 {
     if (!is_array($d) || $d === []) { return null; }
     foreach ($cles as $k) { if (isset($d[$k]) && is_array($d[$k]) && $d[$k] !== [] && !array_is_list($d[$k])) { $d = $d[$k]; } }
@@ -222,6 +222,9 @@ function vrcProjection(string $cle, mixed $v): mixed
         ksort($o);
         return $o;
     }
+    // Les allergènes d'une matière (14/11/2026) : leurs codes, quelle que soit la forme (objets, identifiants, texte).
+    if ($cle === 'allergens' && function_exists('vmxAllergenesDe')) { return vmxAllergenesDe($v, vmxAllergenesRef()); }
+    if (is_bool($v)) { return $v ? 1.0 : 0.0; }
     return is_numeric($v) ? (float) $v : $v;
 }
 
@@ -335,9 +338,16 @@ function vrcResultatNom(string $r): string
 function vrcMessage(mixed $res): string
 {
     if (!is_array($res)) { return (string) (PanelApi::$lastError ?? 'pas de réponse'); }
-    foreach (['description', 'message', 'detail', 'error'] as $k) { if (!empty($res[$k]) && is_string($res[$k])) { return $res[$k]; } }
-    if (!empty($res['errors'])) { return (string) json_encode($res['errors'], JSON_UNESCAPED_UNICODE); }
-    return (string) (PanelApi::$lastError ?? '');
+    $msg = '';
+    foreach (['description', 'message', 'detail', 'error'] as $k) { if (!empty($res[$k]) && is_string($res[$k])) { $msg = $res[$k]; break; } }
+    // Mesuré le 14/11 : un refus « MISSING_REQUIRED_FIELDS » ne dit rien seul ; le reste de la réponse (champs attendus,
+    // erreurs par champ) est gardé au registre, pour régler le corps sans deviner.
+    $reste = array_diff_key($res, array_flip(['description', 'message', 'status', 'code']));
+    if ($reste !== [] || (isset($res['code']) && $msg !== (string) $res['code'])) {
+        $j = json_encode(['code' => $res['code'] ?? null] + $reste, JSON_UNESCAPED_UNICODE);
+        if ($j !== false && $j !== '{"code":null}') { $msg .= ($msg !== '' ? ' — ' : '') . mb_substr($j, 0, 480); }
+    }
+    return $msg !== '' ? $msg : (string) (PanelApi::$lastError ?? '');
 }
 
 /** Le chemin de lecture d'un objet du panel. */
@@ -348,6 +358,7 @@ function vrcChemin(string $objet, int $id): string
         'sousRecette' => '/subrecipes/' . $id,
         'produit' => '/products/' . $id,
         'portion' => '/product-portions/' . $id,
+        'matiere' => '/materials/' . $id,
         default => '',
     };
 }
@@ -390,7 +401,8 @@ function vrcLigneRegistre(array $r): array
         'resultat' => (string) $r['resultat'], 'resultatNom' => vrcResultatNom((string) $r['resultat']), 'message' => (string) ($r['message'] ?? ''),
         'coutAvant' => isset($r['cout_avant']) ? (float) $r['cout_avant'] : ($r['coutAvant'] ?? null), 'coutApres' => isset($r['cout_apres']) ? (float) $r['cout_apres'] : ($r['coutApres'] ?? null),
         'annulable' => ($r['resultat'] ?? '') === 'ok' || ($r['resultat'] ?? '') === 'local' ? (($r['inverse'] ?? null) !== null && ($r['annule_par'] ?? null) === null && ($r['annule_de'] ?? null) === null) : false,
-        'annuleDe' => isset($r['annule_de']) ? (int) $r['annule_de'] : null, 'annulePar' => isset($r['annule_par']) ? (int) $r['annule_par'] : null];
+        'annuleDe' => isset($r['annule_de']) ? (int) $r['annule_de'] : null, 'annulePar' => isset($r['annule_par']) ? (int) $r['annule_par'] : null,
+        'reponse' => $r['reponse'] ?? null, 'httpPanel' => $r['httpPanel'] ?? null, 'corps' => isset($r['corps']) && is_array($r['corps']) ? $r['corps'] : null];
 }
 
 /* ---------------------------------------------------------------------------------------------
@@ -560,29 +572,30 @@ function vrcGeste(array $b): array
         return ['ok' => $r['resultat'] === 'ok', 'ecritures' => [vrcLigneRegistre($r)], 'liste' => $r['resultat'] === 'refuse' ? null : vrcApres((int) ($b['rid'] ?? 0) > 0 ? [(int) $b['rid']] : [], $sid)];
     }
 
-    // Le prix d'une matière dans un magasin : la route se règle (aucun contrat), la relecture tranche.
+    // Le prix d'une matière dans un ou plusieurs magasins (`shop` ou `shops`) : la route se règle (aucun contrat), la
+    // relecture tranche. Un prix qui remplace un prix existant s'annule (l'ancien prix repart) ; un premier prix, non.
     if ($geste === 'prix') {
         $mid = (int) ($b['mid'] ?? 0); $prix = (float) ($b['prix'] ?? 0);
-        if ($sid <= 0 || $mid <= 0 || $prix <= 0) { http_response_code(400); return ['error' => 'magasin, matière et prix requis']; }
-        $f = vrcFormatPrix();
-        $subst = ['{sid}' => (string) $sid, '{mid}' => (string) $mid];
-        $route = strtr($f['route'], $subst);
-        $corps = [];
-        foreach ($f['corps'] as $k => $v) { $corps[$k] = $v === '{prix}' ? $prix : (is_string($v) && isset($subst[$v]) ? (int) $subst[$v] : $v); }
-        $resume = ($b['matiere'] ?? ('matière ' . $mid)) . ' à ' . (vfMagasins()[$sid] ?? ('magasin ' . $sid)) . ' : ' . vfEur($prix, 4) . ' l’unité';
-        if ($apercu) { return ['apercu' => true, 'resume' => $resume, 'ecritures' => [['methode' => $f['methode'], 'route' => $route, 'corps' => $corps, 'annulable' => false]]]; }
-        PanelApi::$lastError = null;
-        [$ok, $res] = PanelApi::envoi($f['methode'], $route, $corps);
-        $r = $base + ['objet' => 'matiere', 'objetId' => $mid, 'methode' => $f['methode'], 'route' => $route, 'corps' => $corps, 'resume' => $resume, 'http' => $ok ? 200 : 0];
-        if (!$ok) { $r['resultat'] = 'refuse'; $r['message'] = vrcMessage($res); }
-        else {
-            vrcOublier('matieresApi:' . $sid);
-            $lu = (mfMatieresApi([$sid], true)[$sid][(string) $mid]['prix'] ?? null);
-            $r['resultat'] = $lu !== null && abs((float) $lu - $prix) <= 0.0001 + 1e-6 * $prix ? 'ok' : 'sans_effet';
-            $r['message'] = $r['resultat'] === 'ok' ? '' : 'Le panel a accepté, mais le prix du magasin relu vaut ' . ($lu === null ? 'toujours rien' : vfEur((float) $lu, 4)) . ' : la route ou le corps sont à régler (réglage vrcFormatPrix).';
+        $shops = array_values(array_unique(array_filter(array_map('intval', (array) ($b['shops'] ?? ($sid > 0 ? [$sid] : []))))));
+        if ($shops === [] || $mid <= 0 || $prix <= 0) { http_response_code(400); return ['error' => 'magasin(s), matière et prix requis']; }
+        $matiere = mb_substr((string) ($b['matiere'] ?? ('matière ' . $mid)), 0, 120);
+        $format = vrcFormatSaisi($b['format'] ?? null); $fid = (int) ($b['fid'] ?? 0);
+        if (isset($b['format']) && $format === null) { return ['ok' => false, 'error' => 'Le format saisi n’est pas valable (méthode POST, PATCH ou PUT ; route qui commence par / ; champs nom → valeur).']; }
+        $avants = mfMatieresApi($shops, true);
+        if ($apercu) {
+            $ec = [];
+            foreach ($shops as $s) { $ec[] = vrcPrixPlan($s, $mid, $prix, $format, $fid) + ['annulable' => $format === null && ($avants[$s][(string) $mid]['prix'] ?? null) > 0, 'resume' => vrcPrixResume($matiere, $s, $prix, $avants[$s][(string) $mid]['prix'] ?? null)]; }
+            return ['apercu' => true, 'resume' => $matiere . ' : ' . count($shops) . ' magasin(s), ' . vfEur($prix, 4) . ' l’unité de base', 'ecritures' => $ec];
         }
-        $r['id'] = vrcNoter($r);
-        return ['ok' => $r['resultat'] === 'ok', 'ecritures' => [vrcLigneRegistre($r)], 'liste' => $r['resultat'] === 'ok' ? vrcApres((int) ($b['rid'] ?? 0) > 0 ? [(int) $b['rid']] : [], $sid, [$sid]) : null];
+        $faites = [];
+        foreach ($shops as $s) {
+            $faites[] = vrcLigneRegistre(vrcEcrirePrix(['shop' => $s] + $base, $s, $mid, $prix, $matiere, $avants[$s][(string) $mid]['prix'] ?? null, $format, $fid));
+        }
+        $okN = count(array_filter($faites, static fn ($f) => $f['resultat'] === 'ok'));
+        // Le format qui a pris devient celui de tous les prix, si on le demande (« Garder ce format »).
+        if ($format !== null && $okN > 0 && !empty($b['garder'])) { vfGarderBrut('vrcFormatPrix', $format); }
+        vrcOublier('vmpTable');
+        return ['ok' => $okN === count($faites), 'ecritures' => $faites, 'liste' => $okN > 0 ? vrcApres((int) ($b['rid'] ?? 0) > 0 ? [(int) $b['rid']] : [], $shops[0], $shops) : null];
     }
 
     // Rattacher une recette à un produit.
@@ -665,6 +678,76 @@ function vrcGeste(array $b): array
     return ['ok' => $tout, 'ecritures' => $faites, 'liste' => $liste];
 }
 
+/** Les routes de prix que le formulaire peut viser (swagger du panel) : rien d'autre ne part d'ici. */
+const VRC_ROUTES_PRIX = ['#^/materials/\d+/manual-price$#', '#^/shops/\d+/materials/avg-price$#', '#^/shops/\d+/suppliers/\d+/materials/price$#'];
+
+/**
+ * Un format de prix saisi dans le formulaire (14/11/2026 : « je dois pouvoir avoir le formulaire avec le prix et toutes les
+ * données à poster ») : méthode, route et champs, avec {sid}, {mid}, {prix}, {fid}, {date}. Null s'il n'est pas valable.
+ */
+function vrcFormatSaisi(mixed $f): ?array
+{
+    if (!is_array($f)) { return null; }
+    $m = strtoupper((string) ($f['methode'] ?? ''));
+    $r = (string) ($f['route'] ?? '');
+    if (!in_array($m, ['POST', 'PATCH', 'PUT'], true) || !str_starts_with($r, '/') || !is_array($f['corps'] ?? null)) { return null; }
+    $corps = [];
+    foreach ($f['corps'] as $k => $v) { $k = trim((string) $k); if ($k !== '' && preg_match('/^[A-Za-z_][\w.]{0,60}$/', $k) && (is_scalar($v) || $v === null)) { $corps[$k] = $v; } }
+    return ['methode' => $m, 'route' => mb_substr($r, 0, 200), 'corps' => $corps];
+}
+
+/** La route et le corps du prix d'une matière dans un magasin : le format saisi, sinon le réglage `vrcFormatPrix`. */
+function vrcPrixPlan(int $sid, int $mid, float $prix, ?array $format = null, int $fid = 0): array
+{
+    $f = $format ?? vrcFormatPrix();
+    $subst = ['{sid}' => (string) $sid, '{mid}' => (string) $mid, '{fid}' => (string) $fid, '{date}' => date('Y-m-d')];
+    $corps = [];
+    foreach ($f['corps'] as $k => $v) {
+        if ($v === '{prix}') { $corps[$k] = $prix; }
+        elseif (is_string($v) && isset($subst[$v])) { $corps[$k] = in_array($v, ['{sid}', '{mid}', '{fid}'], true) ? (int) $subst[$v] : $subst[$v]; }
+        elseif (is_string($v) && is_numeric($v) && !preg_match('/^0\d/', $v)) { $corps[$k] = $v + 0; }
+        else { $corps[$k] = $v; }
+    }
+    $route = strtr($f['route'], $subst);
+    $permise = false; foreach (VRC_ROUTES_PRIX as $re) { if (preg_match($re, $route)) { $permise = true; } }
+    return ['methode' => $f['methode'], 'route' => $route, 'corps' => $corps, 'permise' => $permise];
+}
+
+function vrcPrixResume(string $matiere, int $sid, float $prix, ?float $avant): string
+{
+    return $matiere . ' à ' . (vfMagasins()[$sid] ?? ('magasin ' . $sid)) . ' : ' . ($avant > 0 ? vfEur((float) $avant, 4) . ' → ' : '') . vfEur($prix, 4) . ' l’unité de base';
+}
+
+/** Écrit le prix d'une matière dans un magasin, le relit, le note. L'inverse (l'ancien prix) n'existe que s'il y avait un prix. */
+function vrcEcrirePrix(array $base, int $sid, int $mid, float $prix, string $matiere, ?float $avant, ?array $format = null, int $fid = 0): array
+{
+    $pl = vrcPrixPlan($sid, $mid, $prix, $format, $fid);
+    if (!$pl['permise']) {
+        $r = $base + ['objet' => 'prixMagasin', 'objetId' => $mid, 'shop' => $sid, 'methode' => $pl['methode'], 'route' => $pl['route'], 'corps' => $pl['corps'], 'http' => 0,
+            'resume' => vrcPrixResume($matiere, $sid, $prix, $avant), 'resultat' => 'refuse', 'message' => 'Route refusée par le cockpit : seules les routes de prix du panel sont permises.'];
+        $r['id'] = vrcNoter($r);
+        return $r;
+    }
+    PanelApi::$lastError = null;
+    [$ok, $res] = PanelApi::envoi($pl['methode'], $pl['route'], $pl['corps']);
+    $r = $base + ['objet' => 'prixMagasin', 'objetId' => $mid, 'shop' => $sid, 'methode' => $pl['methode'], 'route' => $pl['route'], 'corps' => $pl['corps'],
+        'resume' => vrcPrixResume($matiere, $sid, $prix, $avant), 'http' => $ok ? 200 : 0,
+        'inverse' => $avant > 0 ? ['prix' => (float) $avant, 'mid' => $mid, 'sid' => $sid, 'matiere' => $matiere] : null];
+    // La réponse brute du panel, telle quelle, pour le formulaire : c'est elle qui dit ce qu'il attend.
+    $r['reponse'] = mb_substr((string) json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 3000);
+    $r['httpPanel'] = preg_match('/HTTP (\d{3})/', (string) PanelApi::$lastError, $mm) ? (int) $mm[1] : ($ok ? 200 : 0);
+    if ($format !== null) { $r['inverse'] = null; }   // un format d'essai ne sert pas à annuler
+    if (!$ok) { $r['resultat'] = 'refuse'; $r['message'] = vrcMessage($res); $r['inverse'] = null; }
+    else {
+        vrcOublier('matieresApi:' . $sid);
+        $lu = (mfMatieresApi([$sid], true)[$sid][(string) $mid]['prix'] ?? null);
+        $r['resultat'] = $lu !== null && abs((float) $lu - $prix) <= 0.0001 + 1e-6 * $prix ? 'ok' : 'sans_effet';
+        $r['message'] = $r['resultat'] === 'ok' ? '' : 'Le panel a accepté, mais le prix du magasin relu vaut ' . ($lu === null ? 'toujours rien' : vfEur((float) $lu, 4)) . ' : la route ou le corps sont à régler (réglage vrcFormatPrix, dans le registre).';
+    }
+    $r['id'] = vrcNoter($r);
+    return $r;
+}
+
 /** Le stock des produits disponibles d'un magasin est relu à la prochaine demande. */
 function vrcOublierDispo(): void
 {
@@ -715,7 +798,19 @@ function wr_verification_annuler(): array
     $inv = json_decode((string) $r['inverse'], true);
     $base = ['geste' => (string) $r['geste'], 'cle' => $r['cle'], 'pid' => $r['product_id'] !== null ? (int) $r['product_id'] : null, 'nom' => (string) $r['nom'],
         'shop' => $r['shop_id'] !== null ? (int) $r['shop_id'] : null, 'annuleDe' => $id, 'coutAvant' => $r['cout_apres'], 'coutApres' => $r['cout_avant']];
-    if ($r['resultat'] === 'local') {
+    if ((string) $r['objet'] === 'tvaMatiere' && function_exists('vmxEcrireTva')) {
+        if (!is_array($inv) || !isset($inv['taux'])) { return ['ok' => false, 'error' => 'L’ancienne TVA n’a pas été gardée.']; }
+        [, $tauxLu, $ligneLue] = vmxTvaLue(PanelApi::get('/materials/' . (int) $inv['mid'] . '/vat-rates'));
+        $n = vmxEcrireTva($base + ['objetId' => (int) $inv['mid']], (int) $inv['mid'], (float) $inv['taux'], $tauxLu, $ligneLue);
+        $n['resume'] = 'Annulation de la correction n° ' . $id . ' : ' . $n['resume'];
+        if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
+    } elseif ((string) $r['objet'] === 'prixMagasin') {
+        if (!is_array($inv) || !isset($inv['prix'])) { return ['ok' => false, 'error' => 'L’ancien prix n’a pas été gardé.']; }
+        $n = vrcEcrirePrix($base + ['objetId' => (int) $inv['mid']], (int) $inv['sid'], (int) $inv['mid'], (float) $inv['prix'], (string) ($inv['matiere'] ?? ''), null);
+        $n['resume'] = 'Annulation de la correction n° ' . $id . ' : ' . $n['resume'];
+        if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
+        vrcOublier('vmpTable');
+    } elseif ($r['resultat'] === 'local') {
         $h = setting('vfHorsRecette', []); $h = is_array($h) ? $h : [];
         unset($h[(string) ($inv['horsRecette'] ?? '')]);
         vfGarderBrut('vfHorsRecette', $h);

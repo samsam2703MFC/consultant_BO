@@ -80,6 +80,11 @@ final class Panel
     public static array $refus = [];      // chemin => message (422)
     public static array $ignore = [];     // chemin => true : 200 sans rien changer
     public static array $ecrits = [];     // [méthode, chemin, corps]
+    public static array $materiaux = [];  // mid => objet (comme GET /materials/{id})
+    public static array $tva = [];        // mid => lignes (comme GET /materials/{id}/vat-rates)
+    public static array $champsProduit = []; // pid => les autres champs de GET /products/{id} (paramétrage des produits)
+    public static array $gammes = [];     // id => [objet de la gamme, [pid]] (/product-availability-periods)
+    public static array $prixProduit = []; // sid => [pid => prix TTC]
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
@@ -125,9 +130,20 @@ final class Panel
         }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m)) { return self::$recettes[(int) $m[1]] ?? null; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m)) { return isset(self::$sous[(int) $m[1]]) ? ['data' => self::$sous[(int) $m[1]]] : null; }
+        if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m)) { return isset(self::$tva[(int) $m[1]]) ? ['data' => self::$tva[(int) $m[1]]] : null; }
+        if (preg_match('#^/materials/(\d+)$#', $c, $m)) { return isset(self::$materiaux[(int) $m[1]]) ? ['data' => self::$materiaux[(int) $m[1]]] : null; }
+        if ($c === '/allergens') { return [['id' => 1, 'code' => 'cereals_gluten'], ['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']]; }
+        if ($c === '/units') { return [['id' => 1, 'name' => 'g'], ['id' => 5, 'name' => 'pcs'], ['id' => 2, 'name' => 'kg']]; }
+        if ($c === '/material-categories') { return [['id' => 30, 'name' => 'Matières premières (boulangerie)'], ['id' => 31, 'name' => 'Matières premières (traiteur)']]; }
+        if ($c === '/countries/BE/materials/vat-rates') { return [['rate' => 6], ['rate' => 21]]; }
         if ($c === '/recipes') { return array_map(static fn ($o) => ['id' => $o['id'], 'name' => $o['name']], array_values(self::$recettes)); }
         if (preg_match('#^/products/(\d+)/portions$#', $c, $m)) { return array_values(array_filter(self::$portions, static fn ($x) => $x['product_id'] === (int) $m[1])); }
-        if (preg_match('#^/products/(\d+)$#', $c, $m)) { $p = self::$produits[(int) $m[1]] ?? null; return $p === null ? null : ['product' => ['id' => (int) $m[1], 'name' => $p['nom'], 'id_recipe' => $p['id_recipe']]]; }
+        if (preg_match('#^/products/(\d+)$#', $c, $m)) { $p = self::$produits[(int) $m[1]] ?? null; return $p === null ? null : ['product' => ['id' => (int) $m[1], 'name' => $p['nom'], 'id_recipe' => $p['id_recipe']] + (self::$champsProduit[(int) $m[1]] ?? [])]; }
+        if ($c === '/product-availability-periods') { return array_map(static fn ($g) => $g[0], array_values(self::$gammes)); }
+        if (preg_match('#^/product-availability-periods/(\d+)/products$#', $c, $m)) { return isset(self::$gammes[(int) $m[1]]) ? ['data' => array_map(static fn ($pid) => ['id' => $pid, 'name' => 'p' . $pid], self::$gammes[(int) $m[1]][1])] : null; }
+        if (preg_match('#^/shops/(\d+)/products/(\d+)$#', $c, $m)) { return isset(self::$prixProduit[(int) $m[1]][(int) $m[2]]) ? ['data' => ['id' => (int) $m[2], 'portion_price_gross' => number_format(self::$prixProduit[(int) $m[1]][(int) $m[2]], 2, '.', '')]] : null; }
+        if ($c === '/product-categories') { return [['id' => 81125, 'name' => 'Tartes – Ø 28 cm', 'price_coefficient' => '2.7000', 'production_area_name' => 'Production Boulangerie'], ['id' => 51000, 'name' => 'Anti-Gaspi', 'price_coefficient' => '2.1500']]; }
+        if ($c === '/product-storage-locations') { return [['id' => 30, 'name' => 'Comptoir Frigo - 1'], ['id' => 32, 'name' => 'Comptoir Tartes']]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m)) { return self::$portions[(int) $m[1]] ?? null; }
         if (preg_match('#^/shops/(\d+)/material-inventory$#', $c, $m)) {
             return array_map(static fn ($x) => ['id_material' => $x[0], 'material_name' => $x[1], 'current_quantity' => $x[2], 'unit_name' => $x[3], 'exist_in_inventory' => 1, 'category_name' => 'Sucres'], self::$stock[(int) $m[1]] ?? []);
@@ -140,9 +156,29 @@ final class Panel
         self::$ecrits[] = [$meth, $c, $b];
         if (isset(self::$refus[$c])) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422 : ' . self::$refus[$c]; return [false, ['description' => self::$refus[$c]]]; }
         if (isset(self::$ignore[$c])) { return [true, ['status' => 'ok']]; }
+        if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m) && $meth === 'POST') {
+            $mid = (int) $m[1]; $fait = false;
+            foreach (self::$tva[$mid] as &$l) { if ($l['country_code'] === ($b['country_code'] ?? '')) { $l['vat_rate'] = number_format((float) $b['vat_rate'], 2, '.', ''); $fait = true; } }
+            unset($l);
+            if (!$fait) { self::$tva[$mid][] = ['country_code' => $b['country_code'], 'vat_rate' => number_format((float) $b['vat_rate'], 2, '.', '')]; }
+            return [true, []];
+        }
+        if (preg_match('#^/materials/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$materiaux[(int) $m[1]] = array_merge(self::$materiaux[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$recettes[(int) $m[1]] = array_merge(self::$recettes[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$sous[(int) $m[1]] = array_merge(self::$sous[(int) $m[1]], $b); return [true, []]; }
-        if (preg_match('#^/products/(\d+)$#', $c, $m) && $meth === 'PATCH') { if (array_key_exists('id_recipe', $b)) { self::$produits[(int) $m[1]]['id_recipe'] = $b['id_recipe']; } return [true, []]; }
+        if (preg_match('#^/products/(\d+)$#', $c, $m) && $meth === 'PATCH') {
+            $pid = (int) $m[1];
+            if (array_key_exists('id_recipe', $b)) { self::$produits[$pid]['id_recipe'] = $b['id_recipe']; }
+            if (array_key_exists('name', $b)) { self::$produits[$pid]['nom'] = $b['name']; }
+            foreach ($b as $k => $v) { if (!in_array($k, ['id_recipe', 'name'], true) && array_key_exists($k, self::$champsProduit[$pid] ?? [])) { self::$champsProduit[$pid][$k] = $v; } }
+            return [true, []];
+        }
+        if (preg_match('#^/products/(\d+)/availability-periods$#', $c, $m) && $meth === 'PATCH') {
+            if (!isset($b['availability_period_ids'])) { PanelApi::$lastError = 'PATCH ' . $c . ' → HTTP 422 : MISSING_REQUIRED_FIELDS'; return [false, ['code' => 'MISSING_REQUIRED_FIELDS']]; }
+            foreach (self::$gammes as $id => $g) { $l = array_values(array_diff($g[1], [(int) $m[1]])); if (in_array($id, $b['availability_period_ids'], true)) { $l[] = (int) $m[1]; } self::$gammes[$id][1] = $l; }
+            return [true, []];
+        }
+        if (preg_match('#^/shops/(\d+)/products/(\d+)/price$#', $c, $m) && $meth === 'PATCH') { self::$prixProduit[(int) $m[1]][(int) $m[2]] = (float) ($b['portion_price_gross'] ?? ($b['price'] ?? 0)); return [true, []]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m) && $meth === 'PATCH') {
             $id = (int) $m[1]; self::$portions[$id] = array_merge(self::$portions[$id], $b);
             self::$produits[self::$portions[$id]['product_id']]['part'] = self::$portions[$id]['portion_size'];
@@ -164,6 +200,8 @@ final class PanelApi
     public static function get(string $c): mixed { $r = Panel::get($c); return is_array($r) ? ($r['data'] ?? $r) : $r; }
     public static function getParallele(array $chemins, int $front = 4, int $timeout = 25): array { $o = []; foreach ($chemins as $k => $c) { $o[$k] = Panel::get($c); } return $o; }
     public static function envoi(string $m, string $c, array $b): array { return Panel::envoi($m, $c, $b); }
+    public static function getParalleleDetail(array $chemins, int $front = 4, int $timeout = 25, bool $r = true): array { $o = []; foreach ($chemins as $k => $c) { $d = Panel::get($c); $o[$k] = ['code' => $d === null ? 401 : 200, 'data' => $d, 'ms' => 0, 'erreur' => null]; } return $o; }
+    public static function liste(array $d): array { return array_is_list($d) ? array_values(array_filter($d, 'is_array')) : (isset($d['data']) && is_array($d['data']) ? self::liste($d['data']) : []); }
 }
 function mfMatieresApi(array $sids, bool $frais): array
 {
@@ -172,8 +210,36 @@ function mfMatieresApi(array $sids, bool $frais): array
     return $out;
 }
 
+// Les doubles du module « fiche matière » (src/matiere_fiche.php) : unités, fournisseurs liés, listes de prix.
+function mfUnite(string $u): array { $u = strtolower($u); return $u === 'g' ? ['facteur' => 1000.0, 'label' => 'kg'] : ($u === 'pièce' || $u === 'pcs' ? ['facteur' => 1.0, 'label' => 'pce'] : ['facteur' => 1.0, 'label' => $u]); }
+function mfParUnite(?float $prix, ?float $taille, ?float $parColis): ?float { if ($prix === null || $prix <= 0) { return null; } return $prix / (($taille > 0 ? $taille : 1.0) * ($parColis > 0 ? $parColis : 1.0)); }
+function mfFournisseurs(bool $frais): array
+{
+    return ['f' => ['7' => ['nom' => 'SLFood', 'type' => 'CENTRAL'], '8' => ['nom' => 'Berdiff s.a.', 'type' => 'CENTRAL']],
+        'm' => ['521' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'BL5', 'taille' => 5.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
+                '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]],
+                '504' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'PARM1', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
+                // Deux références SLFood pour le thon : les magasins sont alignés sur l'une (16 €), l'autre est plus récente (24 €).
+                '560' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'TH1', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0], ['fid' => '7', 'via' => 'catalogue', 'sku' => 'TH2', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
+                '570' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'PT8', 'taille' => 8.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
+}
+function mfListePrix(string $fid, int $sid, bool $frais): array
+{
+    // SLFood : les blancs d'œufs (pas à Corbais) et la tarte aux pommes, 61,70 € les 8 depuis le 09/10 (l'audit du 14/11).
+    $c = $fid === '7' ? ($sid === 2 ? [] : ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']])
+        + ['PT8' => ['prix' => 61.7, 'taille' => 8.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-10-09', 'nomMatiere' => ''],
+           'TH1' => ['prix' => 16.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-08-01', 'nomMatiere' => ''], 'TH2' => ['prix' => 24.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-11-09', 'nomMatiere' => '']]
+        : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => ''],
+           // Un colis mal décrit : 2 700 € « le kg » de parmesan (le magasin paie 27 €) — un écart ×100, pas un retard.
+           'PARM1' => ['prix' => 2700.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
+    return ['c' => $c, 'l' => [], 'lu' => true];
+}
+
 require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_correction.php';
+require __DIR__ . '/../src/verification_matieres_prix.php';
+require __DIR__ . '/../src/verification_matiere_edition.php';
+require __DIR__ . '/../src/produit_parametrage.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -194,11 +260,12 @@ Db::$shops = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 3, 'name' =>
 Panel::$noms = [501 => ['Tortilla blé', 'pièce'], 502 => ['Poulet émincé', 'kg'], 503 => ['Mayonnaise', 'l'], 504 => ['Parmesan', 'kg'],
     510 => ['Bâtons chocolat', 'kg'], 511 => ['Pâte croissant', 'kg'], 512 => ['Nappage chocolat', 'kg'], 513 => ['Beurre de tourage', 'kg'],
     520 => ['Sucre glace', 'kg'], 521 => ['Blancs d’œufs', 'kg'], 530 => ['Farine T65', 'kg'], 531 => ['Olives', 'kg'], 540 => ['Pâte brisée', 'kg'], 541 => ['Appareil quiche', 'l'],
-    550 => ['Tomate', 'kg'], 551 => ['Lardons', 'kg'], 560 => ['Thon', 'kg'], 599 => ['Sucre perlé', 'kg']];
+    550 => ['Tomate', 'kg'], 551 => ['Lardons', 'kg'], 560 => ['Thon', 'kg'], 570 => ['Pomme Tranches 28 Ø', 'pcs'], 599 => ['Sucre perlé', 'kg']];
 foreach ([4, 3, 2] as $s) {
-    Panel::$prix[$s] = [501 => 0.38, 502 => 14.0, 503 => 5.0, 504 => 27.0, 510 => 13.2, 511 => 3.5, 512 => 9.17, 513 => 8.4, 520 => 1.85, 521 => 6.2, 530 => 0.9, 531 => 11.0, 540 => 4.0, 541 => 3.2, 550 => 2.4, 551 => 12.0, 560 => 16.0, 599 => 3.1];
+    Panel::$prix[$s] = [501 => 0.38, 502 => 14.0, 503 => 5.0, 504 => 27.0, 510 => 13.2, 511 => 3.5, 512 => 9.17, 513 => 8.4, 520 => 1.85, 521 => 6.2, 530 => 0.9, 531 => 11.0, 540 => 4.0, 541 => 3.2, 550 => 2.4, 551 => 12.0, 560 => 16.0, 570 => 7.7125, 599 => 3.1];
 }
 unset(Panel::$prix[4][520]);   // le sucre glace n'a pas de prix à Halle
+Panel::$prix[2][570] = 5.095;  // Corbais en retard sur la liste SLFood (l'audit des Pommes Tranches)
 $mat = static fn (int $mid, float $q) => ['id_material' => $mid, 'name' => Panel::$noms[$mid][0], 'quantity' => $q, 'unit_name' => Panel::$noms[$mid][1]];
 $rec = static fn (int $id, string $nom, float $y, array $m, array $s = []) => ['id' => $id, 'name' => $nom, 'yield_quantity' => $y, 'materials' => $m, 'subrecipes' => $s];
 Panel::$sous[77] = ['id' => 77, 'name' => 'Sauce César', 'yield_quantity' => 1.0, 'materials' => [$mat(503, 0.922)], 'subrecipes' => []];
@@ -211,6 +278,7 @@ Panel::$recettes = [
     17 => $rec(17, 'FlipFlap Thon', 1, [$mat(501, 1), $mat(560, 0.12), $mat(550, 0.05)]),
     11 => $rec(11, 'Cookie Noix Caramel', 1, []),
     18 => $rec(18, 'Cookie Chocolat', 1, [$mat(530, 0.04), $mat(510, 0.015)]),
+    19 => $rec(19, 'Pommes Tranches', 1, [$mat(570, 1), $mat(550, 0.1)]),
     418 => $rec(418, 'Pâtes Amatriciana', 1, [$mat(550, 0.12), $mat(551, 0.05)]),
 ];
 $prod = static fn (string $nom, string $cat, float $ht, ?int $rid, array $x = []) => array_merge(['nom' => $nom, 'cat' => $cat, 'prixHt' => $ht, 'id_recipe' => $rid, 'divisible' => false, 'part' => null, 'shops' => [4, 3, 2], 'custom' => []], $x);
@@ -224,6 +292,7 @@ Panel::$produits = [
     106 => $prod('1/4 - Quiches', 'Quiches', 14.0, 16, ['divisible' => true, 'part' => null]),
     107 => $prod('FlipFlap - Thon', 'Sandwiches garnis', 5.40, 17, ['custom' => [4 => 0.79]]),
     108 => $prod('Cookie Chocolat', 'Cookies', 2.08, 18),
+    109 => $prod('Pommes Tranches', 'Tartes – Ø 28 cm', 19.72, 19),
 ];
 Panel::$portions = [61 => ['id' => 61, 'product_id' => 106, 'name' => '1/4', 'portion_size' => null]];
 Panel::$stock = [3 => [[599, 'Sucre perlé', 5.0, 'kg']]];
@@ -283,6 +352,16 @@ verifie('portion sans fraction : ¼ lu dans le nom', ($par['port:106']['corr']['
 verifie('hors norme : FlipFlap à Halle, magasin 4', ($par['reseau:107']['corr']['sid'] ?? 0) === 4);
 verifie('recette vide : Cookie Noix & Caramel', isset($par['vide:101']));
 verifie('matière jamais en recette : sucre perlé', isset($par['orph:m599']));
+verifie('tarif : Corbais en retard sur SLFood, Halle et Gosselies alignés', ($par['tarif:109']['corr']['matieres'][0]['shops'] ?? []) === [2]
+    && ($par['tarif:109']['corr']['matieres'][0]['ref'] ?? 0) === 7.7125 && $par['tarif:109']['corr']['matieres'][0]['alignes'] === ['Halle', 'Gosselies'], json_encode($par['tarif:109'] ?? array_keys($par)));
+verifie('tarif : Halle n’est plus « hors norme » parce que Corbais est en retard', !isset($par['reseau:109']) && $par['tarif:109']['magasins'] === ['Corbais']);
+verifie('tarif : le coût de la pièce, avant → après', abs(($par['tarif:109']['corr']['coutAvant'] ?? 0) - 5.335) < 1e-6 && abs($par['tarif:109']['corr']['coutApres'] - 7.9525) < 1e-6, json_encode($par['tarif:109']['corr'] ?? null));
+verifie('tarif : sous le seuil de 10 %, pas de signalement (blancs d’œufs 6,20 face à 6,50 : 4,6 %)', !isset($par['tarif:102']));
+verifie('tarif : un écart ×100 est un colis à vérifier, il ne corrige pas le coût', ($par['tarif:103']['corr']['matieres'][0]['suspect'] ?? false) === true
+    && str_contains($par['tarif:103']['detail'], 'colis') && abs(($par['tarif:103']['corr']['coutApres'] ?? 0) - $par['tarif:103']['corr']['coutAvant']) < 1e-9, json_encode($par['tarif:103'] ?? null));
+verifie('tarif : deux références, le magasin aligné sur l’une n’est pas en retard (thon à 16 € face à 16 € et 24 €)', !isset($par['tarif:107']));
+$th = null; foreach ($t0 = vmpOptions('kg', [['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'TH1', 'parColis' => 1.0, 'taille' => 1.0, 'tailleUnite' => 'kg'], ['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'TH2', 'parColis' => 1.0, 'taille' => 1.0, 'tailleUnite' => 'kg']], ['7' => mfListePrix('7', 4, false)], null, null, null, 'Thon') as $x) { $th[] = $x['id']; }
+verifie('options : une par référence, pas fondues', $th === ['f7-TH1', 'f7-TH2'], json_encode($th));
 verifie('la liste porte les adresses du panel', ($a['liens']['produit'] ?? '') !== '' && str_contains((string) ($a['liens']['recette'] ?? ''), '/panel/recipes'));
 
 // --- 3. Les gestes de bout en bout ---------------------------------------------------------------------------------
@@ -383,6 +462,21 @@ unset(Panel::$ignore['/recipes/11']);
 $r = $geste(['geste' => 'copier', 'rid' => 11, 'source' => 18, 'pid' => 101, 'cle' => 'vide:101', 'nom' => 'Cookie Noix & Caramel']);
 verifie('copier : la recette vide prend les lignes du modèle', $r['ok'] && count(Panel::$recettes[11]['materials']) === 2 && !in_array('vide:101', $cles($r['liste']), true));
 
+// Aligner Corbais sur la liste SLFood : le geste « prix » que propose la ligne « tarif ».
+$t = $par['tarif:109']['corr']['matieres'][0];
+$r = $geste(['geste' => 'prix', 'mid' => $t['mid'], 'prix' => $t['ref'], 'shops' => $t['shops'], 'matiere' => $t['nom'], 'rid' => 19, 'pid' => 109, 'cle' => 'tarif:109', 'nom' => 'Pommes Tranches']);
+verifie('tarif : aligné en un geste, la ligne part, l’ancien prix s’annule', $r['ok'] && Panel::$prix[2][570] === 7.7125 && !in_array('tarif:109', $cles($r['liste']), true) && $r['ecritures'][0]['annulable'], json_encode($r['ecritures'] ?? $r));
+
+// Le formulaire de prix (14/11/2026) : la route et les champs saisis, la réponse brute du panel, « garder ce format ».
+$n0 = count(Panel::$ecrits);
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'format' => ['methode' => 'POST', 'route' => '/products/1', 'corps' => ['price' => '{prix}']]]);
+verifie('formulaire : une route hors des routes de prix ne part pas', !$r['ok'] && count(Panel::$ecrits) === $n0 && str_contains($r['ecritures'][0]['message'], 'Route refusée'));
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'format' => ['methode' => 'PATCH', 'route' => '/shops/{sid}/materials/avg-price', 'corps' => ['id_material' => '{mid}', 'avg_price' => '{prix}', 'valid_from' => '{date}']]]);
+verifie('formulaire : refus du panel, sa réponse brute est rendue', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'refuse' && str_contains((string) $r['ecritures'][0]['reponse'], 'route inconnue') && $r['ecritures'][0]['corps']['id_material'] === 560 && $r['ecritures'][0]['corps']['valid_from'] === date('Y-m-d'), json_encode($r['ecritures'][0]));
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'garder' => true, 'format' => ['methode' => 'POST', 'route' => '/materials/{mid}/manual-price', 'corps' => ['id_shop' => '{sid}', 'price' => '{prix}']]]);
+verifie('formulaire : le format qui prend est gardé pour tous les prix', $r['ok'] && Panel::$prix[3][560] === 17.5 && setting('vrcFormatPrix')['route'] === '/materials/{mid}/manual-price');
+Panel::$prix[3][560] = 16.0;
+
 // Les garde-fous.
 verifie('geste inconnu : 400', isset($geste(['geste' => 'supprimer'])['error']));
 verifie('quantité nulle : refusée avant le panel', !$geste(['geste' => 'quantite', 'rid' => 14, 'mid' => 511, 'q' => 0])['ok']);
@@ -399,6 +493,132 @@ $BODY = ['recette' => 'https://atelierby.tfbuddy.com/panel/recipes/{rid}/edit'];
 $l = wr_verification_liens();
 verifie('adresses : modèle de la recette réglé, défaut du produit gardé', $l['ok'] && $l['liens']['recette'] === 'https://atelierby.tfbuddy.com/panel/recipes/{rid}/edit' && str_contains($l['liens']['produit'], '/panel/products/{pid}'));
 verifie('adresses : un lien sans identifiant ne se fait pas', !isset(vrcLiensDe(['pid' => 5])['recette']) && vrcLiensDe(['pid' => 5, 'rid' => 9])['recette'] === 'https://atelierby.tfbuddy.com/panel/recipes/9/edit');
+
+// --- 4. Les matières premières et leur prix de référence (14/11/2026) ---------------------------------------------
+echo "Les matières premières\n";
+$o = vmpOptions('g', [['fid' => '8', 'nom' => 'Berdiff s.a.', 'type' => 'CENTRAL', 'sku' => 'T', 'parColis' => 1.0, 'taille' => 4.0, 'tailleUnite' => 'pcs']],
+    ['8' => ['c' => ['T' => ['prix' => 10.83, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21']], 'lu' => true]], null, null, null, 'Poche Sauce Tikka');
+verifie('options : colis de pièces pour une matière en g → conversion, prix par pièce', $o[0]['prix'] === null && $o[0]['conversion'] === 'g' && abs($o[0]['parPiece'] - 2.7075) < 1e-9);
+$o = vmpOptions('g', [['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'B', 'parColis' => 1.0, 'taille' => 5.0, 'tailleUnite' => 'kg']],
+    ['7' => ['c' => ['B' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09']], 'lu' => true]], null, null, 6.0, 'Blancs');
+verifie('options : colis en kg pour une matière en g → prix par g (÷1000), puis la médiane', abs($o[0]['prix'] - 0.0065) < 1e-12 && $o[1]['type'] === 'mediane' && vmpReference($o)['id'] === 'f7-B');
+unset(Panel::$prix[3][521]);
+vrcOublier('matieresApi:3');
+$_GET = [];
+$t = ep_verification_matieres_prix();
+fixture('matieres', $t);
+$bl = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 521) { $bl = $l; } }
+verifie('tableau : les blancs d’œufs, employés par le Merveilleux', $bl !== null && $bl['recettes'][0]['nom'] === 'Merveilleux' && $bl['nRecettes'] === 1, json_encode(array_column($t['lignes'], 'nom')));
+verifie('tableau : sans prix à Gosselies seulement', $bl['drapeaux']['sansPrix'] === 1 && $bl['magasins'][1]['prix'] === null && $bl['magasins'][0]['prix'] === 6.2);
+$f7 = null; foreach ($bl['options'] as $op) { if (str_starts_with($op['id'], 'f7')) { $f7 = $op; } }
+verifie('tableau : SLFood en vigueur à Halle et Gosselies, pas à Corbais (liste vide)', $f7 !== null && $f7['enVigueur'] && $f7['prixMagasins']['4'] === 6.5 && $f7['prixMagasins']['2'] === null);
+verifie('tableau : écart de plus de 10 % à la référence (6,20 face à 6,50 = −4,6 %, non)', $bl['drapeaux']['ecart'] === 0);
+$mayo = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 503) { $mayo = $l; } }
+verifie('tableau : mayonnaise en poches de pièces → unité à vérifier', $mayo !== null && $mayo['drapeaux']['conversion']);
+verifie('tableau : gardé dix minutes', isset(ep_verification_matieres_prix()['cache']['le']));
+// Un prix pour deux magasins d'un coup (Gosselies sans prix, Halle qui en avait un) ; l'aperçu n'écrit rien.
+$n0 = count(Panel::$ecrits);
+$ap = $geste(['geste' => 'prix', 'apercu' => true, 'mid' => 521, 'matiere' => 'Blancs d’œufs', 'prix' => 6.5, 'shops' => [3, 4]]);
+verifie('prix à plusieurs magasins : l’aperçu dit qui a un retour possible', count(Panel::$ecrits) === $n0 && count($ap['ecritures']) === 2 && !$ap['ecritures'][0]['annulable'] && $ap['ecritures'][1]['annulable']);
+$r = $geste(['geste' => 'prix', 'mid' => 521, 'matiere' => 'Blancs d’œufs', 'prix' => 6.5, 'shops' => [3, 4]]);
+verifie('prix à plusieurs magasins : deux écritures relues', $r['ok'] && count($r['ecritures']) === 2 && Panel::$prix[3][521] === 6.5 && Panel::$prix[4][521] === 6.5);
+verifie('prix à plusieurs magasins : le tableau sera recalculé', setting('vmpTable') === null);
+$idH = $r['ecritures'][1]['id'];
+verifie('prix remplacé : annulable, premier prix : non', $r['ecritures'][1]['annulable'] && !$r['ecritures'][0]['annulable']);
+$BODY = ['id' => $idH];
+$u = wr_verification_annuler();
+verifie('annuler un prix : l’ancien prix repart, relu', $u['ok'] && Panel::$prix[4][521] === 6.2 && Panel::$prix[3][521] === 6.5, json_encode($u));
+
+// --- 5. La fiche d'une matière, modifiable (14/11/2026) ----------------------------------------------------------
+echo "La fiche d'une matière\n";
+Panel::$materiaux[521] = ['id' => 521, 'name' => 'Blancs d’œufs', 'id_category' => 31, 'id_unit' => 2, 'unit_name' => 'kg', 'material_type' => 'RAW', 'source_type' => 'CENTRAL',
+    'waste_amount_perc' => '0.00', 'vat_rate' => '6.00', 'is_part_of_package' => 0, 'can_be_product_addon' => 0, 'allergens' => [['id' => 3, 'code' => 'eggs']],
+    'reference_unit_price_net' => null, 'suggested_base_unit_price_net' => null];
+$ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'waste_amount_perc' => 5, 'allergens' => ['eggs', 'milk'], 'is_part_of_package' => true, 'kind' => 'simple'], vmxAllergenesRef());
+verifie('matière : une clé absente du panel ne s’écrit pas', count($ch['erreurs']) === 1 && str_contains($ch['erreurs'][0], 'Genre'));
+$ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'waste_amount_perc' => 5, 'allergens' => ['eggs', 'milk'], 'is_part_of_package' => true], vmxAllergenesRef());
+$cc = array_keys($ch['corps']); sort($cc);
+verifie('matière : seules les clés changées partent, dans la forme lue', $cc === ['allergens', 'is_part_of_package', 'waste_amount_perc'] && $ch['corps']['waste_amount_perc'] === 5.0 && $ch['corps']['is_part_of_package'] === 1
+    && $ch['corps']['allergens'] === [['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']], json_encode($ch));
+verifie('matière : les allergènes en texte gardent leur forme', vmxAllergenesPour('eggs', ['eggs', 'milk'], vmxAllergenesRef()) === 'eggs, milk');
+$_GET = ['mid' => '521'];
+$f = ep_verification_matiere();
+fixture('matiere-521', $f);
+$parCle = array_column($f['champs'], null, 'cle');
+verifie('fiche : les champs rendus sont modifiables, les autres non', $parCle['name']['modifiable'] && !$parCle['kind']['modifiable'] && $parCle['allergens']['valeur'] === ['eggs']);
+verifie('fiche : listes de référence et ligne du tableau', count($f['refs']['categories']) === 2 && $f['refs']['tva'] === [6.0, 21.0] && ($f['ligne']['mid'] ?? 0) === 521 && $f['par'] === 'kg');
+$n0 = count(Panel::$ecrits);
+$BODY = ['mid' => 521, 'apercu' => true, 'champs' => ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => 6.5], 'magasins' => ['2' => 6.5]];
+$ap = wr_verification_matiere();
+fixture('apercu-matiere', $ap);
+verifie('fiche : l’aperçu n’écrit rien, montre le PATCH et le prix du magasin', count(Panel::$ecrits) === $n0 && count($ap['ecritures']) === 2 && $ap['ecritures'][0]['route'] === '/materials/521');
+$BODY['apercu'] = false;
+$r = wr_verification_matiere();
+fixture('ecrire-matiere', $r);
+verifie('fiche : paramètres écrits et relus, puis le prix de Corbais', $r['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs frais' && Panel::$materiaux[521]['reference_unit_price_net'] === 6.5 && Panel::$prix[2][521] === 6.5, json_encode($r));
+$pm = array_values(array_filter(Panel::$ecrits, static fn ($e) => $e[1] === '/materials/521'));
+verifie('fiche : le PATCH ne porte que les deux clés changées', end($pm)[2] === ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => 6.5]);
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('fiche : « Annuler » remet le nom et le prix général', $u['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs' && Panel::$materiaux[521]['reference_unit_price_net'] === null, json_encode($u));
+Panel::$ignore['/materials/521'] = true;
+$BODY = ['mid' => 521, 'champs' => ['waste_amount_perc' => 3], 'magasins' => ['3' => 7.0]];
+$r = wr_verification_matiere();
+verifie('fiche : paramètres sans effet → les prix ne partent pas', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'sans_effet' && count($r['ecritures']) === 1 && Panel::$prix[3][521] === 6.5);
+unset(Panel::$ignore['/materials/521']);
+
+// La TVA, sur sa route (/materials/{id}/vat-rates : elle n'est pas dans la matière, mesuré le 14/11).
+Panel::$tva[521] = [['id' => 9, 'country_code' => 'BE', 'vat_rate' => '6.00']];
+unset(Panel::$materiaux[521]['vat_rate']);
+$_GET = ['mid' => '521'];
+$f = ep_verification_matiere();
+$cT = array_column($f['champs'], null, 'cle')['vat_rate'];
+verifie('TVA : lue sur sa route, modifiable', $cT['modifiable'] && $cT['valeur'] === 6.0);
+verifie('TVA : le corps reprend la ligne lue, taux changé (sans son id)', vmxTvaCorps(Panel::$tva[521][0], 21.0) === ['country_code' => 'BE', 'vat_rate' => 21.0]);
+$BODY = ['mid' => 521, 'champs' => ['vat_rate' => 21]];
+$r = wr_verification_matiere();
+verifie('TVA : posée, relue', $r['ok'] && Panel::$tva[521][0]['vat_rate'] === '21.00' && end(Panel::$ecrits)[1] === '/materials/521/vat-rates', json_encode($r));
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('TVA : « Annuler » remet 6 %', $u['ok'] && Panel::$tva[521][0]['vat_rate'] === '6.00', json_encode($u));
+$BODY = ['mid' => 521, 'champs' => ['vat_rate' => 'abc']];
+verifie('TVA : une valeur invalide ne part pas', !wr_verification_matiere()['ok']);
+
+
+// --- Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) ---------------------------------------------
+Panel::$champsProduit[100] = ['tax_val_perc' => 6, 'is_active' => 1, 'webshop_active' => 0, 'suggested_sale_price' => '21.90', 'shelf_life_minutes' => 2880, 'id_storage' => 30,
+    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null];
+Panel::$gammes = [14 => [['id' => 14, 'name' => 'Gamme Standard', 'from_md' => 101, 'to_md' => 1231, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 0], [100]],
+    6 => [['id' => 6, 'name' => 'Automnale', 'from_md' => 901, 'to_md' => 1101, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 1], []]];
+foreach (array_keys(Db::$reglages) as $k) { if (str_starts_with($k, 'ppm')) { unset(Db::$reglages[$k]); } }
+$_GET = ['pid' => '100'];
+$f = ep_produits_parametrage();
+$cP = array_column($f['champs'] ?? [], null, 'cle');
+verifie('paramétrage : la fiche lit le produit, ses champs rendus sont modifiables, les autres non', ($f['ok'] ?? false) && $cP['suggested_sale_price']['modifiable'] && !$cP['nutriscore']['modifiable'] && $f['gammesProduit'] === [14], json_encode($f['ok'] ?? $f));
+verifie('paramétrage : listes de référence et liaisons mesurées', isset($f['refs']['categories']['81125']) && count($f['liaisons']) === count(PPM_LIAISONS) && $f['liaisons'][0]['etat'] === 'lisible');
+$ch = ppmChangements(Panel::$champsProduit[100] + ['name' => 'Wrapps'], ['suggested_sale_price' => '22,5', 'webshop_active' => true, 'tax_val_perc' => '6', 'id_storage' => '32']);
+verifie('paramétrage : seules les clés changées, dans la forme lue (texte décimal, entier, 0/1)', $ch['corps'] === ['suggested_sale_price' => '22.50', 'webshop_active' => 1, 'id_storage' => 32] && $ch['inverse']['suggested_sale_price'] === '21.90', json_encode($ch));
+verifie('paramétrage : un champ que le panel ne rend pas ne s’écrit pas', ppmChangements(Panel::$champsProduit[100], ['nutriscore' => 'A'])['erreurs'] !== []);
+$BODY = ['pid' => 100, 'apercu' => true, 'champs' => ['suggested_sale_price' => '22,50', 'webshop_active' => 1], 'gammes' => [14, 6], 'prix' => []];
+$a = wr_produits_parametrage();
+verifie('paramétrage : l’aperçu montre le PATCH du produit et l’envoi des gammes', ($a['apercu'] ?? false) && count($a['ecritures']) === 2 && $a['ecritures'][0]['route'] === '/products/100'
+    && $a['ecritures'][1]['route'] === '/products/100/availability-periods' && $a['ecritures'][1]['corps'] === ['availability_period_ids' => [6, 14]], json_encode($a));
+$BODY['apercu'] = false;
+$r = wr_produits_parametrage();
+verifie('paramétrage : écrit, relu, gammes posées', $r['ok'] && Panel::$champsProduit[100]['suggested_sale_price'] === '22.50' && in_array(100, Panel::$gammes[6][1], true), json_encode($r));
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('paramétrage : « Annuler » remet le prix conseillé', $u['ok'] && Panel::$champsProduit[100]['suggested_sale_price'] === '21.90', json_encode($u));
+$BODY = ['pid' => 100, 'gammes' => [14], 'formats' => ['gammes' => ['methode' => 'PATCH', 'route' => '/products/{pid}/availability-periods', 'corps' => ['periods' => '{gammes}']]]];
+$r = wr_produits_parametrage();
+verifie('paramétrage : un format de gammes refusé rend la réponse brute du panel', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'refuse' && str_contains($r['ecritures'][0]['reponse'], 'MISSING_REQUIRED_FIELDS'), json_encode($r));
+$BODY = ['pid' => 100, 'gammes' => [14], 'formats' => ['gammes' => ['methode' => 'PATCH', 'route' => '/recipes/1', 'corps' => ['x' => 1]]]];
+verifie('paramétrage : une route hors des gammes est refusée avant tout envoi', !wr_produits_parametrage()['ok'] && end(Panel::$ecrits)[1] !== '/recipes/1');
+Panel::$prixProduit[3][100] = 19.9;
+$BODY = ['pid' => 100, 'prix' => ['3' => '20,90'], 'garder' => true, 'formats' => ['prix' => ['methode' => 'PATCH', 'route' => '/shops/{sid}/products/{pid}/price', 'corps' => ['portion_price_gross' => '{prix}']]]];
+$r = wr_produits_parametrage();
+verifie('paramétrage : prix d’un magasin écrit et relu, format gardé', $r['ok'] && Panel::$prixProduit[3][100] === 20.9 && ppmFormat('prix')['corps'] === ['portion_price_gross' => '{prix}'], json_encode($r));
+verifie('paramétrage : gammes d’une forme quelconque', ppmIdsProduits(['data' => [['id_product' => 5], ['product_id' => 6], 7]]) === [5, 6, 7] || ppmIdsProduits([['id_product' => 5], ['product_id' => 6]]) === [5, 6]);
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);

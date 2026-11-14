@@ -1,0 +1,17 @@
+/* Maquette réelle « Matières par fournisseur ou catégorie » (14/11/2026) : s'ajoute à verification.css. */
+.mf-pill{display:inline-block;font:400 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;background:#8D1D2C;color:#fff;border-radius:999px;padding:5px 12px}
+.mf-fil{gap:12px;padding:12px 18px;border-bottom:1px solid var(--vr-trait)}
+.mf-sel{font-weight:400;border-color:var(--color-text)}
+.mf-t td{vertical-align:middle}
+.mf-t tr.mf-g>td{background:var(--table-head);font:400 11px var(--font-ui);letter-spacing:.06em;text-transform:uppercase;color:var(--color-primary);text-align:left;padding:10px 12px 6px}
+.mf-t tr.mf-g>td span{text-transform:none;letter-spacing:0;color:var(--color-text-muted);margin-left:8px}
+.mf-t td.mf-e{width:6px;padding:0!important}
+.mf-t td.mf-e.ok{background:var(--vr-ok)}.mf-t td.mf-e.att{background:#E8A33D}.mf-t td.mf-e.ko{background:var(--vr-ko)}.mf-t td.mf-e.mu{background:#cfc8bf}
+.mf-f{white-space:normal!important;max-width:230px;font-size:11.5px;line-height:1.35}
+.mf-f b{font-weight:400}.mf-f small,.mf-r small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.mf-r b{font-weight:400}
+.mf-c{display:inline-block;min-width:70px;padding:2px 7px;border-radius:6px;text-align:right;font-size:12px}
+.mf-c small{display:block;font-size:10px}
+.mf-c.ok{color:var(--vr-ok)}.mf-c.att{color:var(--vr-att);background:var(--prize-soft)}.mf-c.ko{color:var(--vr-ko);background:var(--stop-soft)}
+.mf-mu{color:var(--color-text-muted);font-size:11.5px}
+.mf-b{font:400 11px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:6px;padding:3px 9px;background:#fff;cursor:pointer}
