@@ -16,12 +16,15 @@ declare(strict_types=1);
  * `?shop=` choisit parmi eux, accesRefus refuse les autres) ; le siège (ou l'accès « ouvert ») désigne le magasin
  * regardé par `?shop=`, comme pour tous les écrans du dashboard.
  *
- * Toutes les contraintes (produits vendus par la boutique, ses prix, couverture et dernière page de la charte, trois
- * mises en page, source gamme ou choix) sont appliquées par le Marketing : ses réponses — succès ou erreurs
+ * Toutes les contraintes (produits vendus par la boutique, ses prix, couverture et dernière page de la charte, 8 à 16
+ * pages par 2, cinq mises en page dont les présentations de gamme, gabarits A · B · C, place libre — photo de la
+ * médiathèque du réseau ou de la boutique, ou illustration —, source gamme ou choix) sont appliquées par le Marketing : ses réponses — succès ou erreurs
  * `{success:false, error:{code, message, details}}` — repartent telles quelles, avec leur code HTTP.
  *
  * Routes du cockpit (sous /dashboard, donc ouvertes aux sessions des magasins — ACCES_FRANCHISE) :
  *   GET    /dashboard/catalogues/produits                  → …/catalogue-products
+ *   GET    /dashboard/catalogues/medias?page=&q=            → …/catalogue-media?perPage=24&page=&filter[name][like]=
+ *          (les images de la médiathèque que la boutique peut mettre à la place libre d'une page : réseau et siennes)
  *   GET    /dashboard/catalogues                           → …/catalogues?perPage=100&sort=-updatedAt
  *   POST   /dashboard/catalogues                           → …/catalogues
  *   GET    /dashboard/catalogues/{id}                      → …/catalogues/{id}
@@ -116,7 +119,11 @@ function cmAppel(string $url, string $methode, ?array $corps, string $jeton): ar
     return [$code, is_array($j) ? $j : null, $brut];
 }
 
-/** Ne garde du corps que les champs que le Marketing accepte d'une boutique (jamais une boutique, jamais un prix). */
+/**
+ * Ne garde du corps que les champs que le Marketing accepte d'une boutique (jamais une boutique, jamais un prix). Les
+ * pages intérieures (`pages`) partent telles quelles — {layout, category, template, gamme, text, textNl, filler,
+ * fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique.
+ */
 function cmCorps(array $champs): array
 {
     $b = body();
@@ -133,6 +140,13 @@ function cmRoute(string $method, string $path): ?array
     $cible = null; $corps = null; $requete = [];
     if ($suite === '/produits' && $method === 'GET') {
         $cible = '/catalogue-products';
+    } elseif ($suite === '/medias' && $method === 'GET') {
+        // Les images de la place libre : le Marketing ne rend que celles du réseau et de la boutique du chemin.
+        $cible = '/catalogue-media';
+        $page = (string) ($_GET['page'] ?? '1');
+        $requete = ['page' => ctype_digit($page) && (int) $page > 0 ? (int) $page : 1, 'perPage' => 24];
+        $q = mb_substr(trim((string) ($_GET['q'] ?? '')), 0, 80);
+        if ($q !== '') { $requete['filter'] = ['name' => ['like' => $q]]; }
     } elseif ($suite === '' && $method === 'GET') {
         $cible = '/catalogues';
         $requete = ['perPage' => 100, 'sort' => '-updatedAt'];
