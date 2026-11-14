@@ -196,6 +196,7 @@ function mfFournisseurs(bool $frais): array
     return ['f' => ['7' => ['nom' => 'SLFood', 'type' => 'CENTRAL'], '8' => ['nom' => 'Berdiff s.a.', 'type' => 'CENTRAL']],
         'm' => ['521' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'BL5', 'taille' => 5.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
                 '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]],
+                '504' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'PARM1', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
                 '570' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'PT8', 'taille' => 8.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
 }
 function mfListePrix(string $fid, int $sid, bool $frais): array
@@ -203,7 +204,9 @@ function mfListePrix(string $fid, int $sid, bool $frais): array
     // SLFood : les blancs d'œufs (pas à Corbais) et la tarte aux pommes, 61,70 € les 8 depuis le 09/10 (l'audit du 14/11).
     $c = $fid === '7' ? ($sid === 2 ? [] : ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']])
         + ['PT8' => ['prix' => 61.7, 'taille' => 8.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-10-09', 'nomMatiere' => '']]
-        : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
+        : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => ''],
+           // Un colis mal décrit : 2 700 € « le kg » de parmesan (le magasin paie 27 €) — un écart ×100, pas un retard.
+           'PARM1' => ['prix' => 2700.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
     return ['c' => $c, 'l' => [], 'lu' => true];
 }
 
@@ -328,6 +331,8 @@ verifie('tarif : Corbais en retard sur SLFood, Halle et Gosselies alignés', ($p
 verifie('tarif : Halle n’est plus « hors norme » parce que Corbais est en retard', !isset($par['reseau:109']) && $par['tarif:109']['magasins'] === ['Corbais']);
 verifie('tarif : le coût de la pièce, avant → après', abs(($par['tarif:109']['corr']['coutAvant'] ?? 0) - 5.335) < 1e-6 && abs($par['tarif:109']['corr']['coutApres'] - 7.9525) < 1e-6, json_encode($par['tarif:109']['corr'] ?? null));
 verifie('tarif : les blancs d’œufs (6,20 face à 6,50 chez SLFood) à Halle et Gosselies', isset($par['tarif:102']) && $par['tarif:102']['corr']['matieres'][0]['shops'] === [4, 3]);
+verifie('tarif : un écart ×100 est un colis à vérifier, il ne corrige pas le coût', ($par['tarif:103']['corr']['matieres'][0]['suspect'] ?? false) === true
+    && str_contains($par['tarif:103']['detail'], 'colis') && abs(($par['tarif:103']['corr']['coutApres'] ?? 0) - $par['tarif:103']['corr']['coutAvant']) < 1e-9, json_encode($par['tarif:103'] ?? null));
 verifie('la liste porte les adresses du panel', ($a['liens']['produit'] ?? '') !== '' && str_contains((string) ($a['liens']['recette'] ?? ''), '/panel/recipes'));
 
 // --- 3. Les gestes de bout en bout ---------------------------------------------------------------------------------

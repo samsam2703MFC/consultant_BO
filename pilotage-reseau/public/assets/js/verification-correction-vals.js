@@ -45,9 +45,11 @@ export function gesteDe(l){
     case 'port': return { type: 'ligne', bouton: 'Poser la fraction', prop: c.fraction ? 'Lue dans le nom : ' + nf(c.fraction, 2) + ' de la pièce.' : 'La part de la pièce que vend la portion (½ = 0,5, ¼ = 0,25).' };
     case 'prix': return (c.matieres || []).length ? { type: 'ligne', bouton: 'Saisir ' + ((c.matieres || []).length > 1 ? 'les prix' : 'le prix'),
       prop: (c.matieres || []).filter(m => m.propose != null).slice(0, 2).map(m => m.nom + ' : ' + fE(m.propose, m.propose < 1 ? 4 : 2) + '/' + (m.u || 'unité') + ' ailleurs').join(' · ') } : null;
-    case 'tarif': return (c.matieres || []).length ? { type: 'ligne', bouton: 'Aligner sur ' + (c.matieres[0].fournisseur || 'le fournisseur'),
+    case 'tarif': return (c.matieres || []).length ? (c.matieres.every(m => m.suspect)
+      ? { type: 'panel', bouton: 'Vérifier le colis au panel ↗', prop: 'Écart de ×' + nf(c.matieres[0].ratio, 2) + ' entre le magasin et la liste du fournisseur : le colis ou l’unité est mal décrit. Ouvrez la fiche de la matière (bascule « Matières premières »), ou le panel.' }
+      : { type: 'ligne', bouton: 'Aligner sur ' + (c.matieres.find(m => !m.suspect).fournisseur || 'le fournisseur'),
       prop: c.matieres.slice(0, 2).map(m => m.nom + ' : ' + fE(m.prix, m.prix < 10 ? 4 : 2) + ' → ' + fE(m.ref, m.ref < 10 ? 4 : 2) + ' (' + (m.shops || []).length + ' magasin' + ((m.shops || []).length > 1 ? 's' : '') + ')').join(' · ')
-        + (c.coutApres != null ? ' ; la pièce ' + fE(c.coutAvant) + ' → ' + fE(c.coutApres) + '.' : '') } : null;
+        + (c.coutApres != null ? ' ; la pièce ' + fE(c.coutAvant) + ' → ' + fE(c.coutApres) + '.' : '') }) : null;
     case 'sans': return { type: 'ligne', bouton: 'Rattacher une recette', prop: 'Une recette du panel de nom proche, à rattacher ; sans recette proche, à créer au panel.' };
     case 'reseau': return { type: 'ligne', bouton: 'Recalculer à ' + (c.magasin || 'ce magasin'), ico: 'roue', prop: 'Recalculer le coût des recettes de ' + (c.magasin || 'ce magasin') + ' (médiane des autres : ' + fE(c.mediane) + ') ; s’il ne bouge pas, le coût est saisi à la main.', volet: !!l.rid };
     case 'vide': return l.rid ? { type: 'volet', bouton: 'Compléter la recette', prop: 'Copier les lignes d’une recette proche, puis ajuster.' } : null;
@@ -90,10 +92,11 @@ export function valsLigneOuverte(app, l, d, rafraichir){
     if (!(p > 0)) { erreur = 'Le prix de l’unité, hors TVA.'; } else { corps = Object.assign(base, { geste: 'prix', shop: c.sid, mid: m.mid, matiere: m.nom, prix: p }); }
   } else if (l.regle === 'tarif') {
     // Aligner les magasins en retard sur la liste du fournisseur en vigueur (14/11/2026) : une matière à la fois.
-    const ms = c.matieres || [];
+    // Un écart de plus de ×2 n'est pas un retard : il ne s'aligne pas d'un clic (le colis est à vérifier).
+    const ms = (c.matieres || []).filter(x => !x.suspect);
     const m = ms.find(x => x.mid === sais.mid) || ms[0] || {};
     if (ms.length > 1) { champs.push({ lib: 'Matière', choix: ms.map(x => ({ id: x.mid, nom: x.nom, on: x.mid === m.mid })), poser: e => poser('mid', Number(e.target.value)) }); }
-    corps = Object.assign(base, { geste: 'prix', mid: m.mid, matiere: m.nom, prix: m.ref, shops: m.shops || [c.sid] });
+    if (m.mid) { corps = Object.assign(base, { geste: 'prix', mid: m.mid, matiere: m.nom, prix: m.ref, shops: m.shops || [c.sid] }); } else { erreur = 'Le colis ou l’unité est à vérifier avant d’aligner.'; }
   } else if (l.regle === 'sans') {
     const cand = (S.vrCand || {})[cle];
     if (!cand) { setTimeout(() => chargerCandidats(app, l), 0); }
