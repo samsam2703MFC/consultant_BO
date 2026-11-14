@@ -124,7 +124,24 @@
     S.nbPages = NB_PAGES.includes(+c.pageCount) ? +c.pageCount : 8;
     S.langs = (c.langs && c.langs.length ? c.langs : ['fr']).slice();
     if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; }
+    // Promotions de TFBuddy : les choix explicites ; une offre absente est cochée si elle touche un produit coché.
+    S.offres = {}; (c.offers || []).forEach(o => { S.offres[o.type + '-' + o.id] = !!o.on; });
+    S.dispo = c.showAvailability !== false;
     S.modifie = false;
+  }
+  /** Les promotions de TFBuddy qui valent pour ma boutique (lues avec ses produits). */
+  const offres = S => (S.prod && S.prod.offers) || [];
+  /** Une offre est-elle cochée ? Le choix, sinon : touche-t-elle un produit coché ? (la règle du Marketing) */
+  function offreOn(S, o) {
+    if (Object.prototype.hasOwnProperty.call(S.offres || {}, o.id)) { return !!S.offres[o.id]; }
+    const ids = new Set(choisis(S));
+    const cats = new Set(produits(S).filter(p => ids.has(+p.id) && p.categoryId != null).map(p => +p.categoryId));
+    return (o.productIds || []).some(id => ids.has(+id)) || (o.categoryIds || []).some(id => cats.has(+id));
+  }
+  /** Les choix à envoyer : seulement les explicites, ceux d'une offre encore proposée. */
+  function offresCorps(S) {
+    const connues = new Set(offres(S).map(o => o.id));
+    return Object.keys(S.offres || {}).filter(k => connues.has(k)).map(k => { const o = offres(S).find(x => x.id === k); return { type: o.type, id: +o.erpId, on: !!S.offres[k] }; });
   }
 
   /** Les pages intérieures telles que le Marketing les attend (seulement ce qui ne vaut pas son défaut). */
@@ -238,7 +255,12 @@
     produits(S).forEach(p => { if (S.choix[p.id] && !vus.has(+p.id)) { vus.add(+p.id); lignes.push({ id: +p.id, on: true }); } });
     const avant = JSON.stringify((S.cat.products || []).map(p => [+p.id, p.on !== false]));
     const apres = JSON.stringify(lignes.map(p => [p.id, p.on]));
-    const corps = avant === apres ? null : { products: lignes, pages: [] };
+    let corps = avant === apres ? null : { products: lignes, pages: [] };
+    // Promotions et disponibilité : enregistrées avec les produits (une offre cochée prend une case de sa page).
+    const offresAvant = JSON.stringify((S.cat.offers || []).map(o => [o.type, +o.id, !!o.on]).sort());
+    const offresApres = offresCorps(S);
+    if (JSON.stringify(offresApres.map(o => [o.type, o.id, o.on]).sort()) !== offresAvant) { corps = Object.assign(corps || {}, { offers: offresApres }); }
+    if (S.dispo !== (S.cat.showAvailability !== false)) { corps = Object.assign(corps || {}, { showAvailability: S.dispo }); }
     const p = majTitre(S).then(() => corps ? appel('PUT', '/' + S.cat.id + qs(S), corps).then(j => { adopter(S, j.data); oublierDocs(S); }) : null)
       .then(() => { S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
     occupe(S, p, 'Enregistrement des produits');
@@ -352,6 +374,8 @@
     else if (a === 'creer') { creer(S); }
     else if (a === 'etape') { aller(S, +v); }
     else if (a === 'prod') { if (S.choix) { S.choix[v] = !S.choix[v]; rendre(S); } }
+    else if (a === 'offre') { const o = offres(S).find(x => x.id === v); if (o) { S.offres[v] = !offreOn(S, o); rendre(S); } }
+    else if (a === 'dispo') { S.dispo = !S.dispo; rendre(S); }
     else if (a === 'tout') { (b.dataset.cat ? produits(S) : visibles(S)).filter(p => !b.dataset.cat || String(p.categoryId) === b.dataset.cat).forEach(p => { S.choix[p.id] = v === '1'; }); rendre(S); }
     else if (a === 'acc') { const o = ouverts(S); if (o.has(v)) { o.delete(v); } else { o.add(v); } rendre(S); }
     else if (a === 'nbpages') { changerNbPages(S, +v); }
@@ -563,10 +587,30 @@
     // Les produits du catalogue que la boutique ne vend plus : dits, grisés.
     const vendus = new Set(produits(S).map(p => +p.id));
     const plus = (S.cat.products || []).filter(p => p.on !== false && !vendus.has(+p.id));
+    h += sectionOffres(S);
     if (plus.length) { h += '<div class="cm-msg inf" style="margin-top:12px">' + plus.length + ' produit(s) de ce catalogue ne sont plus vendus au webshop de ma boutique : ils sortiront du catalogue à l’enregistrement.</div>'; }
     h += '<div class="cm-msg inf" style="margin-top:12px">Seuls les produits de MON webshop sont proposés, à MES prix. Changer les produits refait la mise en page automatiquement.</div>';
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="1">‹ Point de départ</button><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="3"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Mise en page ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
+  }
+
+  /** « Promotions et bundles » : les offres de TFBuddy de ma boutique, un interrupteur chacune ; et la disponibilité. */
+  function sectionOffres(S) {
+    const liste = offres(S), err = S.prod && S.prod.offersError;
+    let h = '<div class="cm-offres"><div class="cm-offres-h"><span class="k">Promotions et bundles</span><span class="sp"></span><span class="cm-tag">lus dans TFBuddy</span></div>';
+    if (err) { h += '<div class="cm-msg err">Promotions de TFBuddy illisibles : ' + esc(err) + '. Rien n’est inventé : le catalogue n’en montre aucune.</div>'; }
+    else if (!liste.length) { h += '<div class="cm-vide">Aucune promotion active dans TFBuddy pour ma boutique.</div>'; }
+    liste.forEach(o => {
+      const on = offreOn(S, o);
+      const ou = o.type === 'scheduledDiscount' ? 'prix barré' : nomCat(S, o.categoryId);
+      const det = [(o.products || []).map(p => p.name).join(' + ') + (o.moreProducts ? ' + ' + o.moreProducts : ''), o.period].filter(Boolean).join(' · ');
+      h += '<div class="cm-offre' + (on ? '' : ' off') + '"><span class="bd">' + esc(o.badge) + '</span><span class="nm">' + esc(o.name) + '<small>' + esc(det) + '</small><small>→ ' + esc(ou) + '</small></span>'
+        + (o.priceCents != null ? '<b>' + (o.oldPriceCents != null ? '<s>' + esc(prix(o.oldPriceCents)) + '</s> ' : '') + esc(prix(o.priceCents)) + '</b>' : '<b></b>')
+        + '<button class="cm-sw' + (on ? ' on' : '') + '" role="switch" aria-checked="' + on + '" aria-label="' + esc(o.name) + '" data-cm="offre" data-v="' + esc(o.id) + '"><span class="tr" aria-hidden="true"></span></button></div>';
+    });
+    h += '<div class="cm-offre dispo"><span class="nm">Afficher la disponibilité<small>période et délai de commande lus dans TFBuddy, sous le prix</small></span><b></b>'
+      + '<button class="cm-sw' + (S.dispo ? ' on' : '') + '" role="switch" aria-checked="' + !!S.dispo + '" aria-label="Afficher la disponibilité" data-cm="dispo"><span class="tr" aria-hidden="true"></span></button></div>';
+    return h + '</div>';
   }
 
   function mini(layout, tpl) {
@@ -715,14 +759,34 @@
   function photo(pr) {
     return '<span class="cat-photo' + (pr.imageUrl ? ' cat-photo--img' : '') + '">' + (pr.imageUrl ? '<img src="' + esc(pr.imageUrl) + '" alt="">' : '<span class="cat-photo__none"></span>') + '</span>';
   }
+  /** Le prix ; barré par une remise programmée : l'ancien prix à côté, rayé (rendu de `Price`, CataloguePages.tsx). */
+  function prixHtml(pr, lang) {
+    const vieux = pr.oldPriceCents != null;
+    return '<span class="cat-prices">' + (vieux ? '<s class="cat-old">' + esc(prix(pr.oldPriceCents, lang)) + '</s>' : '')
+      + '<span class="cat-price' + (pr.priceCents == null ? ' cat-price--none' : '') + (vieux ? ' cat-price--promo' : '') + '">' + esc(prix(pr.priceCents, lang)) + '</span></span>';
+  }
+  const dispoHtml = t => t ? '<span class="cat-avail">' + esc(t) + '</span>' : '';
+  /** La vignette d'une promotion (rendu de `OfferCard`, CataloguePages.tsx). */
+  function offreCarte(o, lang, grand, rang) {
+    const vus = (o.products || []).slice(0, rang ? 3 : grand ? 4 : (o.products || []).length > 2 ? 4 : 2);
+    const photos = '<span class="cat-offer__photos cat-offer__photos--' + Math.max(1, vus.length) + '">' + (vus.length ? vus.map(photo).join('') : '<span class="cat-photo"><span class="cat-photo__none"></span></span>') + '</span>';
+    const noms = (o.products || []).map(p => (p.quantity != null && p.quantity !== 1 ? p.quantity + ' × ' : '') + p.name).join(' + ');
+    const plus = o.moreProducts > 0 ? (lang === 'nl' ? ' + ' + o.moreProducts + ' andere' : ' + ' + o.moreProducts + ' autre' + (o.moreProducts > 1 ? 's' : '')) : '';
+    return '<div class="cat-offer cat-offer--' + esc(o.type) + (grand ? ' cat-offer--big' : '') + (rang ? ' cat-offer--row' : '') + '"><span class="cat-offer__badge">' + esc(o.badge) + '</span>' + photos
+      + '<div class="cat-offer__text"><div class="cat-name">' + esc(o.name) + '</div>' + (noms && !rang ? '<div class="cat-offer__items">' + esc(noms + plus) + '</div>' : '')
+      + (o.deal ? '<div class="cat-offer__deal">' + esc(o.deal) + '</div>' : '') + (o.priceCents != null ? prixHtml(o, lang) : '') + dispoHtml(o.period) + '</div></div>';
+  }
   function carte(pr, lang, grand) {
-    return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + '">' + photo(pr) + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>'
-      + '<span class="cat-price' + (pr.priceCents == null ? ' cat-price--none' : '') + '">' + esc(prix(pr.priceCents, lang)) + '</span></div></div>';
+    if (pr.kind === 'offer') { return offreCarte(pr, lang, grand, false); }
+    return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + (pr.oldPriceCents != null ? ' cat-card--promo' : '') + '">'
+      + (pr.promo ? '<span class="cat-offer__badge cat-card__badge">' + esc(pr.promo.label) + '</span>' : '') + photo(pr)
+      + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>' + prixHtml(pr, lang) + dispoHtml(pr.availability) + '</div></div>';
   }
   /** Une image livrée avec le Marketing (dessin de saison, de famille) : son adresse absolue, rendue par le document. */
   const dessin = (url) => /^(https?:)?\/\//.test(String(url || '')) ? url : null;
   function liste(pr, lang) {
-    return '<div class="cat-list">' + pr.map(x => '<div class="cat-row">' + photo(x) + '<span class="cat-name">' + esc(x.name) + '</span><i></i><span class="cat-price' + (x.priceCents == null ? ' cat-price--none' : '') + '">' + esc(prix(x.priceCents, lang)) + '</span></div>').join('') + '</div>';
+    return '<div class="cat-list">' + pr.map(x => x.kind === 'offer' ? offreCarte(x, lang, false, true)
+      : '<div class="cat-row' + (x.availability ? ' cat-row--avail' : '') + '">' + photo(x) + '<span class="cat-name">' + esc(x.name) + dispoHtml(x.availability) + '</span><i></i>' + prixHtml(x, lang) + '</div>').join('') + '</div>';
   }
   /** La place libre : la photo de la médiathèque, ou l'illustration (rendu de `Filler`, CataloguePages.tsx). */
   function placeLibre(f, style) {
