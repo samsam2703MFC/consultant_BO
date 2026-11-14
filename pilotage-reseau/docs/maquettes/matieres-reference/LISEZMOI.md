@@ -1,6 +1,11 @@
 # Recettes à corriger › Matières premières : le prix de référence fournisseur, en liste déroulante (maquette)
 
-**Statut : maquette du 14/11/2026, à valider.** Rien n'est codé.
+**Statut : codé le 14/11/2026** (« ok code-le et mets en ligne »). Serveur : `src/verification_matieres_prix.php`,
+`GET /verification/recettes/matieres` ; écriture : le geste `prix` des corrections, étendu à plusieurs magasins et
+annulable quand un prix en remplace un autre ; écran : `verification-prix-vals.js`, `verification-prix-tpl.js` (style
+`vm-` dans `verification.css`) ; tests : `php bin/tests_verification_correction.php` (partie « matières premières »).
+Écart à la maquette : la liste déroulante est une liste native (un choix, puis, s'il le faut, le poids d'une pièce ou
+le prix saisi juste dessous).
 
 Demande du 14/11/2026 : « en bascule, un tableau avec toutes les matières premières utilisées dans les recettes, où
 je peux adapter avec le prix de référence fournisseur (liste déroulante) ».

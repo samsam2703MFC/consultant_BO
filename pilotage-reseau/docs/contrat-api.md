@@ -3941,6 +3941,25 @@ recette » (réglage `vfHorsRecette`) ne remontent plus. Mesuré le 13/11 : au p
 `/panel/recipes`, `/panel/subrecipes` et `/panel/materials` existent (renvoi à la connexion) ; les pages de détail d'une
 recette ou d'une matière ne se devinent pas (le panel rend 200 pour toute adresse) : elles se règlent dans le registre.
 
+### `GET /verification/recettes/matieres` — les matières des recettes et leur prix de référence (14/11/2026)
+
+Code : `src/verification_matieres_prix.php` (préfixe `vmp`) ; écran : la bascule « Matières premières » de Recettes à
+corriger (`verification-prix-vals.js`, `verification-prix-tpl.js`, style `vm-`) ; maquette `docs/maquettes/matieres-reference`.
+Lecture seule, gardée dix minutes (`vmpTable`, oubliée à chaque prix écrit) ; `?rafraichir=1` relit.
+
+Rend `lignes[]` : `{mid, nom, cat, source (CENTRAL|OPEN…), uniteBase, par (kg|l|pce), facteur, nRecettes, ca,
+recettes[{pid, nom, ca, q (par pièce, unité de base), cout {magasin: coût de la pièce}}], magasins[{id, nom, lu, prix
+(par unité de base), ecart (% à la référence), ref}], options[{type: fournisseur|conseille|reference|mediane, id, nom,
+centrale, listeLue, enVigueur, colis {prix, taille, unite, parColis}, depuis, conversion (g|ml quand le colis se compte en
+pièces), prixMagasins {magasin: prix par unité de base}, parPieceMagasins}], drapeaux {sansPrix, ecart, sansFournisseur,
+unite, emballage, conversion}}`, `compteurs`, `magasins`, `recettes {vendues, lues}`, `seuilEcart` (10 %), `formatPrix`.
+
+Le prix d'un fournisseur vient de sa liste de prix **en vigueur pour le magasin** (`price-lists/current`, prix du colis
+÷ taille × unités par colis), ramené à l'unité de la matière (un colis en kg pour une matière en g : ÷ 1000). Un colis
+en pièces pour une matière en grammes ne donne pas de prix : l'écran demande le poids d'une pièce. L'écriture passe par
+`POST /verification/recettes/corriger {geste: prix, mid, prix (par unité de base), shops: [...]}` : une écriture par
+magasin, relue ; un prix qui en remplace un autre s'annule (l'ancien repart), un premier prix non.
+
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 
 Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`
