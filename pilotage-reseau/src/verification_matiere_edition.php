@@ -59,7 +59,11 @@ function vmxAllergenesRef(): array
     $c = vfCache('vmxAllergenes', VMX_SEC_REF);
     if ($c !== null) { return $c['v']; }
     $out = [];
-    foreach (analyseListe(PanelApi::get('/allergens')) as $a) {
+    // Même lecture que la tablette (tbReferenceLue) : la liste, où que le panel la range dans sa réponse.
+    $r = PanelApi::get('/allergens');
+    $l = is_array($r) ? (method_exists(PanelApi::class, 'liste') ? PanelApi::liste($r) : analyseListe($r)) : [];
+    if ($l === [] && is_array($r)) { $l = array_values(array_filter($r, 'is_array')); if (count($l) === 1 && array_is_list($l[0])) { $l = $l[0]; } }
+    foreach ($l as $a) {
         if (is_array($a) && is_numeric($a['id'] ?? null) && is_scalar($a['code'] ?? null)) { $out[(string) (int) $a['id']] = strtolower(trim((string) $a['code'])); }
     }
     if ($out !== []) { vfGarder('vmxAllergenes', $out); }
