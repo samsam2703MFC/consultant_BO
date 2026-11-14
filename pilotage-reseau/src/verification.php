@@ -54,7 +54,8 @@ const VF_ECART_RESEAU = 40.0;       // % d'écart à la médiane des autres maga
 const VF_PART_UNITE = 0.5;          // une ligne qui pèse plus de la moitié du coût
 const VF_PROFONDEUR = 4;            // sous-recettes dépliées au plus
 const VF_RELUES_ORPH = 0.95;
-const VF_ECART_TARIF = 2.0;         // % d'écart entre le prix d'un magasin et la liste de prix du fournisseur en vigueur (14/11/2026)        // part des recettes relues pour juger les matières orphelines
+const VF_ECART_TARIF = 2.0;
+const VF_TARIF_SUSPECT = 2.0;       // au-delà de ×2 ou ÷2, c'est le colis ou l'unité qu'il faut vérifier, pas un retard de prix         // % d'écart entre le prix d'un magasin et la liste de prix du fournisseur en vigueur (14/11/2026)        // part des recettes relues pour juger les matières orphelines
 
 /** Les règles : code => [nom, explication]. L'ordre est celui des pastilles à l'écran. */
 const VF_REGLES = [
@@ -415,13 +416,17 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             $ref = $Ref[$sid][$mid] ?? null; $px = $M[$sid][$mid] ?? null;
             if ($ref === null || $px === null || !($px > 0) || !($ref['prix'] > 0) || $q <= 0) { continue; }
             if (abs($px - $ref['prix']) / $ref['prix'] * 100 <= VF_ECART_TARIF) { continue; }
-            $delta += $q * ($ref['prix'] - $px);
+            $suspect = $ref['prix'] / $px > VF_TARIF_SUSPECT || $ref['prix'] / $px < 1 / VF_TARIF_SUSPECT;
+            if (!$suspect) { $delta += $q * ($ref['prix'] - $px); }   // un colis douteux ne corrige pas le coût
             if (isset($devs[$mid])) { continue; }
             $enRetard = []; $alignes = [];
             foreach ($parMid[$mid] ?? [] as $s2 => [$p2, $r2]) {
                 if (abs($p2 - $r2) / $r2 * 100 > VF_ECART_TARIF) { if (abs($r2 - $ref['prix']) < 1e-9) { $enRetard[] = $s2; } } else { $alignes[] = $mags[$s2] ?? (string) $s2; }
             }
+            $ratio = $ref['prix'] / $px;
             $devs[$mid] = ['mid' => $mid, 'nom' => (string) ($l['nom'] ?? ''), 'u' => (string) ($l['u'] ?? ''), 'prix' => round((float) $px, 6), 'ref' => round((float) $ref['prix'], 6),
+                // Mesuré en ligne le 14/11 : sur 116 matières, une dizaine à ×3, ×11, ×99 ou ÷100 — un colis mal décrit, pas un retard.
+                'suspect' => $ratio > VF_TARIF_SUSPECT || $ratio < 1 / VF_TARIF_SUSPECT, 'ratio' => round($ratio, 3),
                 'fournisseur' => (string) ($ref['fournisseur'] ?? ''), 'depuis' => $ref['depuis'] ?? null, 'shops' => $enRetard !== [] ? $enRetard : [$sid], 'alignes' => $alignes];
         }
         return [$delta, array_values($devs)];
@@ -557,7 +562,8 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                 $fmt = static fn (float $v): string => vfEur($v, $v < 1 ? 4 : ($v < 10 ? 4 : 2));
                 $cand['tarif'] = ['« ' . $d0['nom'] . ' » à ' . $fmt($d0['prix']) . ' l’unité à ' . $court . ' ; la liste ' . ($d0['fournisseur'] !== '' ? 'de ' . $d0['fournisseur'] . ' ' : '') . 'en vigueur'
                     . ($d0['depuis'] ? ' depuis le ' . date('d/m', strtotime((string) $d0['depuis'])) : '') . ' dit ' . $fmt($d0['ref']) . ($d0['alignes'] !== [] ? ' (' . implode(', ', $d0['alignes']) . ' y ' . (count($d0['alignes']) > 1 ? 'sont' : 'est') . ')' : '')
-                    . (count($devs) > 1 ? ', et ' . (count($devs) - 1) . ' autre(s) matière(s)' : '') . ($cout !== null ? '. La pièce : ' . vfEur($cout) . ' → ' . vfEur($cout + $dTarif) . '.' : '.'),
+                    . (count($devs) > 1 ? ', et ' . (count($devs) - 1) . ' autre(s) matière(s)' : '')
+                    . (!empty($d0['suspect']) ? ' — écart de ×' . str_replace('.', ',', (string) round($d0['ratio'], 2)) . ' : le colis ou l’unité est à vérifier, pas un retard de prix.' : ($cout !== null && abs($dTarif) > 1e-9 ? '. La pièce : ' . vfEur($cout) . ' → ' . vfEur($cout + $dTarif) . '.' : '.')),
                     ['corr' => ['sid' => (int) $sid, 'magasin' => $court, 'matieres' => $devs, 'coutAvant' => $cout !== null ? round((float) $cout, 4) : null, 'coutApres' => $cout !== null ? round((float) $cout + $dTarif, 4) : null]]];
             }
             // Hors norme du réseau : la médiane des AUTRES magasins (deux au moins), sur les coûts au prix du fournisseur.
