@@ -9,7 +9,8 @@
  *   - le budget validé : le CA budget de chaque semaine (le mois réparti au profil de l'an passé), les taux de
  *     matière et de personnel, les postes de charges (les paiements proposés d'un plan neuf) ;
  *   - ce qui a été fait : le CA réel de chaque semaine close remplace la prévision.
- * Un onglet « N-1, budget, réalisé » les met côte à côte, mois par mois, et règle la base des ventes prévues.
+ * L'onglet « Budget & étude » (lecture seule) les met côte à côte, mois par mois, avec l'étude de marché, les charges du
+ * budget et le P&L réel, et règle la base des ventes prévues.
  *
  * Une page autonome, sans compilation : `window.DashTresorerie.mount(el, {shop, apiBase, nomShop})`. Le plan est
  * enregistré au serveur (un par magasin, avec sa version) quelques instants après chaque saisie.
@@ -225,7 +226,7 @@
 
   function nouvelEtat(shop) {
     return { shop, data: null, R: null, version: 0, majLe: null, neuf: true, debut: null, err: null, lecture: false,
-      onglet: 'plan', fen: '13 semaines', decal: null, brouillon: null, annule: false, fmt: {},
+      onglet: 'plan', fen: '13 semaines', B: null, errB: null, lectB: false, anB: null, decal: null, brouillon: null, annule: false, fmt: {},
       sale: false, envoi: false, reEnvoi: false, errEnr: null, conflit: null, enrA: null, minuteur: null, rendu: null };
   }
 
@@ -252,13 +253,25 @@
       if (R.debut !== S.debut) { throw new Error('repères lus pour un autre premier lundi (' + R.debut + ')'); }
       S.R = R;
       if (!S.data) { S.data = defauts(R, S.debut); S.neuf = true; }
+      chargerBudget(force);
     }).catch(e => { S.err = e.message; }).finally(() => { S.lecture = false; rendre(); });
+  }
+
+  /** Le budget, l'étude, les charges et le P&L du magasin (onglet « Budget & étude ») : une lecture à part, gardée. */
+  function chargerBudget(force) {
+    const S = E; if (!S || S.lectB || !S.debut) { return; }
+    S.lectB = true; S.errB = null;
+    const debut = S.debut;
+    appel('/tresorerie/budget?shop=' + encodeURIComponent(S.shop) + '&debut=' + encodeURIComponent(debut) + '&_cache=600' + (force ? '&rafraichir=1' : ''))
+      .then(B => { if (S.debut === debut) { S.B = B; } })
+      .catch(e => { S.errB = e.message; })
+      .finally(() => { S.lectB = false; if (E === S && S.onglet === 'budget') { rendre(); } });
   }
 
   /** Une saisie : le plan change, l'écran se redessine, l'enregistrement part un instant plus tard. */
   function maj(fn) {
     const S = E; if (!S || !S.data) { return; }
-    const d = clone(S.data); fn(d); S.data = d; S.sale = true; S.importe = null; S.errImport = null;
+    const d = clone(S.data); fn(d); S.data = d; S.sale = true;
     clearTimeout(S.minuteur); S.minuteur = setTimeout(enregistrer, 700);
     planifierRendu();
   }
@@ -311,17 +324,15 @@
   }
   function planifierRendu() { if (E && !E.rendu) { E.rendu = setTimeout(rendre, 0); } }
 
-  function etatTexte() {
+  /**
+   * L'enregistrement ne s'affiche plus quand tout va bien (14/11/2026 : « enlève Enregistré, Repartir de zéro, Importer,
+   * Exporter ») ; il se dit quand une saisie n'a pas pu partir — sans quoi elle se perdrait en silence.
+   */
+  function bandeauEtat() {
     const S = E;
-    if (S.conflit) { return '<span class="tr-ko">Pas enregistré : le plan a changé ailleurs</span>'; }
-    if (S.envoi) { return 'Enregistrement…'; }
-    if (S.errEnr) { return `<span class="tr-ko">Pas enregistré : ${esc(S.errEnr)}</span> <button type="button" class="tr-lien" data-tra="reessayer">Réessayer</button>`; }
-    if (S.sale) { return 'Modifié…'; }
-    if (S.neuf) { return 'Proposé, pas encore enregistré'; }
-    const t = S.enrA || (S.majLe ? new Date(S.majLe.replace(' ', 'T')) : null);
-    return t && !isNaN(t) ? 'Enregistré · ' + t.toLocaleDateString('fr-BE', { day: '2-digit', month: '2-digit' }) + ' à ' + t.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : 'Enregistré';
+    return S.errEnr ? `<div class="db-err">Ta dernière saisie n’est pas enregistrée : ${esc(S.errEnr)}. <button type="button" class="tr-lien" data-tra="reessayer">Réessayer</button></div>` : '';
   }
-  function rendreEtat() { const el = racine && racine.querySelector('[data-tretat]'); if (el) { el.innerHTML = etatTexte(); } }
+  function rendreEtat() { const el = racine && racine.querySelector('[data-tretat]'); if (el) { el.innerHTML = bandeauEtat(); } }
 
   function corps() {
     const S = E;
@@ -331,29 +342,26 @@
     }
     const auj = jourUTC(), d = S.data, R = S.R, C = calcul(d, R, auj), W = C.W, N = C.N;
     const an0 = W[0].annee, an1 = C.anT;
-    const onglets = [['plan', 'Plan ' + (an0 === an1 ? an0 : an0 + '-' + an1)], ['fournisseurs', 'Fournisseurs'], ['paiements', 'Paiements'], ['reperes', 'N-1, budget, réalisé'], ['guide', 'Mode d’emploi']];
+    const onglets = [['plan', 'Plan ' + (an0 === an1 ? an0 : an0 + '-' + an1)], ['fournisseurs', 'Fournisseurs'], ['paiements', 'Paiements'], ['budget', 'Budget & étude'], ['guide', 'Mode d’emploi']];
     let h = `<div class="tr">`;
     h += `<header class="tr-hd"><div class="tr-hd-g"><div class="tr-sur">Trésorerie · ${esc(ctx.nomShop || '')}</div>
       <h2 class="tr-h1">Plan de trésorerie</h2>
-      <div class="tr-sous">Semaine par semaine, du lundi ${esc(dLong(W[0].ms))} au dimanche ${esc(dLong(W[N - 1].dimanche))} · Montants en € TTC</div></div>
-      <div class="tr-hd-d"><span class="tr-etat" data-tretat>${etatTexte()}</span>
-      <button type="button" class="tr-btn-t" data-tra="reset">Repartir de zéro</button><button type="button" class="tr-btn-t" data-tra="importer" title="Un plan au format du module (JSON), par exemple repris d’un ancien fichier">Importer un plan</button><input type="file" accept=".json,application/json" data-trfichier hidden><button type="button" class="tr-btn" data-tra="export">Exporter CSV</button></div></header>`;
+      <div class="tr-sous">Semaine par semaine, du lundi ${esc(dLong(W[0].ms))} au dimanche ${esc(dLong(W[N - 1].dimanche))} · Montants en € TTC</div></div></header>`;
     h += `<nav class="tr-ong">${onglets.map(([k, l]) => `<button type="button" data-tra="onglet:${k}" class="${S.onglet === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</nav>`;
+    h += `<div data-tretat>${bandeauEtat()}</div>`;
     if (S.conflit) {
       const c = S.conflit, t = c.majLe ? new Date(String(c.majLe).replace(' ', 'T')) : null;
       h += `<div class="db-err">Le plan a été modifié sur un autre écran${t && !isNaN(t) ? ' le ' + t.toLocaleDateString('fr-BE') + ' à ' + t.toLocaleTimeString('fr-BE', { hour: '2-digit', minute: '2-digit' }) : ''} : tes dernières saisies ici ne sont pas enregistrées. <button type="button" class="tr-lien" data-tra="reprendre">Reprendre le plan enregistré</button></div>`;
     }
-    if (S.errImport) { h += `<div class="db-err">Import refusé : ${esc(S.errImport)}</div>`; }
-    if (S.importe) { h += `<div class="tr-bandeau">Plan importé : ${esc(S.importe)}. Il remplace le plan de ce magasin et s’enregistre comme une saisie.</div>`; }
     if (S.neuf && !S.sale && !S.envoi) {
       h += `<div class="tr-bandeau">Plan proposé d’après ${d.base === 'budget' ? 'le budget validé' : 'l’année passée'} et les postes du budget. Rien n’est enregistré tant que tu n’as rien modifié : commence par ton solde de départ, puis tes paiements réels (onglet Paiements).</div>`;
     }
-    if (auj > W[N - 1].dimanche) { h += `<div class="db-alerte">Ce plan s’est terminé le ${esc(dLong(W[N - 1].dimanche))}. « Repartir de zéro » en ouvre un nouveau à partir de cette semaine.</div>`; }
+    if (auj > W[N - 1].dimanche) { h += `<div class="db-alerte">Ce plan s’est terminé le ${esc(dLong(W[N - 1].dimanche))}. Pour en ouvrir un nouveau, contacte le siège.</div>`; }
     if (S.err) { h += `<div class="db-err">${esc(S.err)}</div>`; }
     if (S.onglet === 'plan') { h += rendPlan(C, d, R, auj); }
     else if (S.onglet === 'fournisseurs') { h += rendFournisseurs(C, d); }
     else if (S.onglet === 'paiements') { h += rendPaiements(C, d); }
-    else if (S.onglet === 'reperes') { h += rendReperes(C, d, R, auj); }
+    else if (S.onglet === 'budget') { h += rendBudget(C, d, R, auj); }
     else { h += rendGuide(C, d, R); }
     return h + '</div>';
   }
@@ -464,12 +472,12 @@
     const nTape = C.genre.filter(g => g === 'saisi').length;
     const srcLib = { budget: 'budget validé', n1: 'année passée' + (d.croissance ? ' ' + (d.croissance > 0 ? '+ ' : '− ') + String(Math.abs(d.croissance)).replace('.', ',') + ' %' : '') };
     ligne('Cash début de semaine', 'Ce que tu as sur le compte le lundi matin. Calculé tout seul : le solde réel du dimanche précédent s’il est saisi, sinon le cash prévu.', i => T(C.debut[i], { cls: 'mu' }), { bord: 'aucun' });
-    ligne('Encaissements (ventes)', 'Tes ventes TTC, semaine par semaine. Une semaine close prend le réel de la caisse. Les autres partent du budget validé ou de l’année passée (onglet N-1, budget, réalisé) ; tu tapes ta prévision par-dessus. Case vidée : retour à la base.', i => {
+    ligne('Encaissements (ventes)', 'Tes ventes TTC, semaine par semaine. Une semaine close prend le réel de la caisse. Les autres partent du budget validé ou de l’année passée (onglet Budget & étude) ; tu tapes ta prévision par-dessus. Case vidée : retour à la base.', i => {
       const w = W[i], g = C.genre[i];
       if (g === 'reel') { return T(C.ventes[i], { cls: 'reel', titre: 'Réalisé : ventes de la semaine en caisse. Il remplace la prévision.' }); }
       const b = C.base[i], saisi = d.ventes[w.du];
       return champ('s:' + w.du, saisi, { cls: 'tr-in' + (saisi == null ? ' est' : ''), aff: v => v == null ? (b ? '≈ ' + n(b.v) : '') : n(v), ph: b ? '' : 'à saisir', titre: b ? 'Base : ' + srcLib[b.src] + ' ' + eur(b.v) : 'Ni budget ni année passée pour cette semaine' });
-    }, { total: C.tA(C.ventes), gras: 600, sous: 'Base : ' + (d.base === 'budget' ? 'budget validé' : srcLib.n1) + (nTape ? ` · ${nTape} sem. tapée${nTape > 1 ? 's' : ''}` : ''), versOnglet: 'reperes' });
+    }, { total: C.tA(C.ventes), gras: 600, sous: 'Base : ' + (d.base === 'budget' ? 'budget validé' : srcLib.n1) + (nTape ? ` · ${nTape} sem. tapée${nTape > 1 ? 's' : ''}` : ''), versOnglet: 'budget' });
     ligne('Repère · réalisé en caisse', 'Les ventes réellement encaissées (panel). La semaine en cours : à ce jour.', i => { const r = W[i].ref, passe = W[i].ms <= auj; return T(r.realise, { cls: 'ref', vide: passe ? '–' : '', titre: r.complet ? (r.realise != null ? 'Semaine close' : 'Aucune vente lue cette semaine') : (r.realise != null ? 'À ce jour, semaine en cours' : (passe ? 'Aucune vente lue à ce jour' : 'Semaine à venir')) }); }, { total: C.tA(W.map(w => w.ref.realise)), ref: true, note: W.some(w => w.ms <= auj) ? '' : 'semaines à venir' });
     ligne('Repère · budget validé', 'Le budget du mois réparti sur ses jours au profil de l’an passé. Vide : pas de budget pour ce mois.', i => { const r = W[i].ref; return T(r.budget, { cls: 'ref', vide: '–', titre: r.budget == null ? 'Pas de budget pour ce mois (cockpit › Budget), ni de CA théorique de l’étude' : [r.budgetSource === 'theorique' ? 'CA théorique de l’étude (pas de budget encodé)' : '', r.budget != null && r.budgetJours < 7 ? `Extrapolé de ${r.budgetJours} jours budgétés sur 7` : ''].filter(Boolean).join(' · ') }); }, { total: C.budA, ref: true });
     ligne('Repère · même semaine N-1', 'Les ventes de la même semaine un an plus tôt (décalée de 364 jours : un lundi face à un lundi).', i => T(W[i].ref.n1, { cls: 'ref', vide: '–', titre: W[i].ref.n1 == null ? motifN1(W[i]) : '' }), { total: C.n1A, ref: true, note: noteN1 });
@@ -572,51 +580,146 @@
     return h;
   }
 
-  /** L'année passée, le budget validé et le réalisé, mois par mois, et la base des ventes prévues. */
-  function rendReperes(C, d, R, auj) {
-    const pm = ventesParMois(C);
-    const tend = R.tendance;
-    let h = `<div class="tr-g2">
-      <div class="tr-carte"><div class="tr-h3">D’où partent les ventes prévues</div>
-        <div class="tr-choix">${[['budget', 'Le budget validé', 'Le CA budget de chaque mois, réparti au profil de l’an passé. À défaut de budget, l’année passée.'], ['n1', 'L’année passée', 'Le CA de la même semaine un an plus tôt, avec la croissance ci-dessous. À défaut, le budget.']].map(([k, l, s]) => `<button type="button" class="tr-ch${d.base === k ? ' on' : ''}" data-tra="base:${k}"><b>${l}</b><small>${s}</small></button>`).join('')}</div>
-        <div class="tr-param"><div><span>Croissance appliquée à l’année passée (%)</span>${champ('croissance', d.croissance, { cls: 'tr-in-p', aff: v => (v > 0 ? '+' : '') + String(v || 0).replace('.', ',') + ' %' })}</div>
-        <small>${tend ? `Repère : sur les ${tend.semaines} dernières semaines closes, ${eur(tend.ca)} contre ${eur(tend.n1)} un an plus tôt, soit <b>${pctS(tend.pct / 100)}</b>.` : 'Pas assez de semaines comparables pour mesurer la tendance.'}</small></div>
-        <small class="tr-mu">Les semaines closes prennent toujours le réel de la caisse ; une vente tapée dans le plan passe avant la base.</small></div>
-      <div class="tr-carte"><div class="tr-h3">Le budget</div><div class="tr-buds">${liste(R.budgets).map(b => {
-        const etat = b.valideLe ? `validé le ${b.valideLe.split('-').reverse().join('/')}` : (b.fiche ? 'encodé, pas encore validé' : (b.moisBudget + b.moisTheorique ? 'pas de fiche budget' : 'aucun budget encodé'));
-        const mois = b.moisBudget + b.moisTheorique;
-        return `<div class="tr-bud"><b>${b.annee}</b><span>${esc(etat)}</span><small>${mois ? `${b.moisBudget} mois budgétés${b.moisTheorique ? ', ' + b.moisTheorique + ' au CA théorique de l’étude' : ''} · ${eur(b.total)}` : 'les semaines de cette année partent de l’année passée'}</small></div>`; }).join('')}</div>
-        <small class="tr-mu">Le budget s’encode et se valide avec le consultant (cockpit › Budget). Un mois sans budget prend le CA théorique de l’étude, à défaut l’année passée.</small></div></div>`;
-
-    // Le tableau des mois, une année après l'autre.
-    const annees = [...new Set(R.mois.map(m => +m.ym.slice(0, 4)))];
+  /**
+   * L'onglet « Budget & étude » (14/11/2026, maquette B retenue, « fonds les deux onglets, lecture seule ») : la base
+   * des ventes prévues ; puis, pour un exercice, mois par mois, l'étude de marché (saisonnalité, CA théorique), le budget
+   * (CA, réalisé, atteinte, N-1, évolution, atterrissage), les charges du budget en euros jusqu'à la marge brute et au
+   * disponible pour la rémunération, et le P&L réel face aux taux du budget ; enfin l'étude et les exercices en cartes.
+   * Tout se lit dans le cockpit (src/tresorerie.php, /tresorerie/budget) ; rien ne s'y modifie, les liens y mènent.
+   */
+  function rendBudget(C, d, R, auj) {
+    const S = E, B = S.B, tend = R.tendance;
+    const sur = u => /^https?:\/\//.test(String(u || '')) ? String(u) : null;
+    const crm = B && B.liens ? sur(B.liens.crm) : null;
+    let h = `<div class="tr-src">Lu dans le cockpit › Budget (fiche du magasin, étude de marché) et le Compte de résultat réseau du CRM · lecture seule ·
+      <a href="../#/budget" target="_blank" rel="noopener">Le budget dans le cockpit ↗</a>${crm ? ` · <a href="${esc(crm)}" target="_blank" rel="noopener">Les postes dans le CRM ↗</a>` : ''}</div>`;
+    // La base des ventes prévues (la seule chose qui se règle ici : elle appartient au plan, pas au budget).
+    h += `<div class="tr-carte tr-base"><div class="tr-base-l"><span class="tr-k">Les ventes prévues du plan partent de</span>
+      <div class="tr-choix">${[['budget', 'Le budget validé', 'à défaut de budget, l’étude puis l’année passée'], ['n1', 'L’année passée', 'avec la croissance ci-contre ; à défaut, le budget']].map(([k, l, x]) => `<button type="button" class="tr-ch${d.base === k ? ' on' : ''}" data-tra="base:${k}"><b>${l}</b><small>${x}</small></button>`).join('')}</div></div>
+      <div class="tr-param tr-base-c"><div><span>Croissance appliquée à l’année passée (%)</span>${champ('croissance', d.croissance, { cls: 'tr-in-p', aff: v => (v > 0 ? '+' : '') + String(v || 0).replace('.', ',') + ' %' })}</div>
+      <small>${tend ? `Repère : sur les ${tend.semaines} dernières semaines closes, ${eur(tend.ca)} contre ${eur(tend.n1)} un an plus tôt, soit <b>${pctS(tend.pct / 100)}</b>.` : 'Pas assez de semaines comparables pour mesurer la tendance.'} Les semaines closes prennent toujours le réel de la caisse.</small></div></div>`;
+    if (!B) {
+      if (S.errB) { return h + `<div class="db-err">Budget et étude : ${esc(S.errB)} <button type="button" class="tr-lien" data-tra="relireB">Relire</button></div>`; }
+      return h + '<div class="db-attente">Lecture du budget, de l’étude et du P&amp;L…</div>';
+    }
+    if (!Array.isArray(B.annees) || !B.annees.length) { return h + `<div class="db-err">Budget et étude : réponse incomplète du serveur. <button type="button" class="tr-lien" data-tra="relireB">Relire</button></div>`; }
+    const anAuj = new Date(auj).getUTCFullYear();
+    const ans = B.annees;
+    if (!ans.includes(S.anB)) { S.anB = ans.includes(anAuj) ? anAuj : ans[0]; }
+    const an = S.anB, ex = (B.exercices || []).find(x => x.annee === an) || { mois: [], moisBudget: 0, moisTheorique: 0 };
+    const statut = x => x.valideLe ? 'validé le ' + x.valideLe.split('-').reverse().join('/') : (x.moisBudget ? 'encodé, pas encore validé' : (x.moisTheorique ? 'pas de budget encodé : l’étude' : 'ni budget ni étude'));
+    const court = x => x.valideLe ? 'validé' : (x.moisBudget ? 'budget encodé' : (x.moisTheorique ? 'étude (pas de budget)' : 'rien d’encodé'));
+    const M = Array.from({ length: 12 }, (_, i) => (R.mois || []).find(m => m.ym === an + '-' + String(i + 1).padStart(2, '0')) || {});
+    const X = Array.from({ length: 12 }, (_, i) => (ex.mois || [])[i] || {});
+    const base = i => X[i].budget != null ? X[i].budget : (X[i].theorique != null ? X[i].theorique : null);
+    const parBudget = ex.moisBudget > 0;
+    const reel = {}; (B.reel || []).forEach(r => { reel[r.ym] = r; });
+    const pm = ventesParMois(C), cur = isoDe(auj).slice(0, 7), ymI = i => an + '-' + String(i + 1).padStart(2, '0');
     const ratio = (a, b) => a != null && b ? a / b - 1 : null;
-    annees.forEach(an => {
-      const M = R.mois.filter(m => +m.ym.slice(0, 4) === an);
-      const som = (k, pred) => { let s = 0, vu = false; M.forEach(m => { if ((!pred || pred(m)) && m[k] != null) { s += +m[k]; vu = true; } }); return vu ? s : null; };
-      const clos = m => m.complet;
-      // L'atterrissage du mois : le réalisé des jours d'avant le plan, puis les ventes du plan (réel des semaines closes compris).
-      const att = m => (m.avantPlan != null || pm[m.ym]) ? (+m.avantPlan || 0) + (pm[m.ym] || 0) : null;
-      const tR = som('realise'), tB = som('budget'), tN = som('n1'), tP = M.reduce((t, m) => t + (att(m) || 0), 0), toutAtt = M.every(m => att(m) != null);
-      const tRc = som('realise', clos), tBc = som('budget', m => clos(m) && m.realise != null), tNc = som('n1', m => clos(m) && m.realise != null);
-      const cel = (v, cls) => `<td class="${cls || ''}">${v == null ? '–' : esc(v)}</td>`;
-      const lignes = [
-        ['Réalisé (caisse)', m => cel(m.realise == null ? null : n(m.realise) + (m.complet ? '' : ' *'), 'g6'), cel(tR == null ? null : n(tR), 'g6')],
-        ['Budget validé', m => cel(m.budget == null ? null : n(m.budget) + (m.budgetSource === 'theorique' ? ' †' : '')), cel(tB == null ? null : n(tB))],
-        ['Atteinte du budget', m => { const r = m.complet ? ratio(m.realise, m.budget) : null; return cel(r == null ? null : pctS(r), r == null ? '' : (r < -0.05 ? 'neg-t' : (r >= 0 ? 'ok-t' : 'bas-t'))); }, (() => { const r = ratio(tRc, tBc); return cel(r == null ? null : pctS(r), r == null ? '' : (r < -0.05 ? 'neg-t' : (r >= 0 ? 'ok-t' : 'bas-t'))); })()],
-        ['Année passée (N-1)', m => cel(m.n1 == null ? null : n(m.n1), 'mu'), cel(tN == null ? null : n(tN), 'mu')],
-        ['Évolution face à N-1', m => { const r = m.complet ? ratio(m.realise, m.n1) : null; return cel(r == null ? null : pctS(r), r == null ? '' : (r < 0 ? 'neg-t' : 'ok-t')); }, (() => { const r = ratio(tRc, tNc); return cel(r == null ? null : pctS(r), r == null ? '' : (r < 0 ? 'neg-t' : 'ok-t')); })()],
-        ['Atterrissage : réalisé, puis plan', m => cel(att(m) == null ? null : n(att(m)), 'pl'), cel(tP && toutAtt ? n(tP) : null, 'pl')],
-        ['Atterrissage face au budget', m => { const r = ratio(att(m), m.budget); return cel(r == null ? null : pctS(r), 'mu'); }, (() => { const r = toutAtt ? ratio(tP, tB) : null; return cel(r == null ? null : pctS(r), 'mu'); })()]
-      ];
-      h += `<div class="tr-carte tr-carte-t"><div class="tr-cbar"><div class="tr-h3">${an} · mois par mois</div><span class="tr-mu">€ TTC · * mois en cours, à ce jour · † CA théorique de l’étude (pas de budget encodé)</span></div><div class="tr-defil"><table class="tr-tab">
-        <thead><tr><th></th>${M.map(m => `<th class="${m.ym === isoDe(auj).slice(0, 7) ? 'cur' : ''}">${MO[+m.ym.slice(5, 7) - 1]}</th>`).join('')}<th>Total</th></tr></thead>
-        <tbody>${lignes.map(([l, f, t]) => `<tr><th>${esc(l)}</th>${M.map(f).join('')}${t}</tr>`).join('')}</tbody></table></div>
-        <div class="tr-note tr-p">Atteinte et évolution : les mois clos seulement${tRc != null ? ' (le total compare les mois clos qui ont les deux chiffres)' : ''}. Atterrissage : le réalisé des jours d’avant le plan, puis les ventes du plan (chaque semaine répartie sur ses jours, le réel des semaines closes compris) ; le total, quand toute l’année est couverte.</div></div>`;
-    });
+    const somme = arr => { let t = 0, vu = false; arr.forEach(v => { if (v != null) { t += +v; vu = true; } }); return vu ? t : null; };
+    const att = i => (M[i].avantPlan != null || pm[ymI(i)]) ? (+M[i].avantPlan || 0) + (pm[ymI(i)] || 0) : null;
+    const clos = i => !!M[i].complet;
+    const lignes = [];
+    const sec = t => lignes.push(`<tr><td class="sec" colspan="14">${t}</td></tr>`);
+    const L = (lab, vals, tot, cls, tr) => lignes.push(`<tr class="${tr || ''}"><th>${lab}</th>${vals.map((v, i) => `<td class="${typeof cls === 'function' ? cls(i) : (cls || '')}">${v}</td>`).join('')}<td>${tot == null ? '' : tot}</td></tr>`);
+    const nn = v => v == null ? '–' : n(v);
+    const vert = (r, bon) => r == null ? '' : (bon(r) ? 'g' : 'k');
+    // L'étude
+    const et = ex.etude, pot = et && et.potentielMaturite, mon = (et && et.monteeEnRegime) || {};
+    const pctAnnee = k => k == null ? null : (k >= 4 ? 100 : (mon['a' + k] != null ? +mon['a' + k] : null));
+    const pa = et ? pctAnnee(et.anneeExploitation) : null;
+    sec('L’étude de marché · ' + (pot ? 'potentiel ' + eur(pot) + ' à maturité' : 'pas d’étude encodée') + (et && et.anneeExploitation ? ' · année ' + et.anneeExploitation + (pa != null ? ', ' + pa + ' %' : '') : ''));
+    const sais = ex.saisonnalite;
+    L('Saisonnalité ' + (ex.saisonnaliteSource === 'reseau' ? 'du réseau' : 'de l’étude'), sais ? sais.map(v => String(Math.round(+v * 10) / 10).replace('.', ',') + ' %') : Array(12).fill('–'), sais ? '100 %' : '', 'mu');
+    L('CA théorique de l’étude', X.map(x => nn(x.theorique)), nn(ex.totalTheorique));
+    sec('Le budget · ' + statut(ex));
+    L('CA au budget', X.map(x => nn(x.budget)), nn(ex.totalBudget), '', 'fort');
+    L('Réalisé (caisse)', M.map((m, i) => m.realise == null ? '–' : n(m.realise) + (clos(i) ? '' : ' *')), nn(somme(M.map(m => m.realise))));
+    const att1 = M.map((m, i) => clos(i) ? ratio(m.realise, base(i)) : null);
+    const iClos = M.map((m, i) => i).filter(i => clos(i) && M[i].realise != null && base(i));
+    L('Atteinte ' + (parBudget ? 'du budget' : 'de l’étude'), att1.map(r => r == null ? '–' : pctS(r)), iClos.length ? pctS(ratio(somme(iClos.map(i => M[i].realise)), somme(iClos.map(base)))) : '', i => vert(att1[i], r => r >= 0));
+    // Un mois N-1 où le magasin n'avait pas encore ouvert tout le mois (ouverture en cours de mois) ne se compare pas :
+    // six jours de vente face à un mois entier, c'est « + 1 005 % ».
+    const pv = R.premiereVente || null, n1Partiel = i => !!(pv && M[i].n1 != null && pv > (an - 1) + '-' + String(i + 1).padStart(2, '0') + '-01');
+    lignes.push(`<tr><th>Année passée (N-1)</th>${M.map((m, i) => n1Partiel(i) ? `<td class="mu" title="Mois incomplet : première vente le ${pv.split('-').reverse().join('/')}"><i>${nn(m.n1)}</i> ‡</td>` : `<td class="mu">${nn(m.n1)}</td>`).join('')}<td>${nn(somme(M.map(m => m.n1)))}</td></tr>`);
+    const evo = M.map((m, i) => clos(i) && !n1Partiel(i) ? ratio(m.realise, m.n1) : null), iEvo = M.map((m, i) => i).filter(i => clos(i) && !n1Partiel(i) && M[i].realise != null && M[i].n1);
+    L('Évolution face à N-1', evo.map(r => r == null ? '–' : pctS(r)), iEvo.length ? pctS(ratio(somme(iEvo.map(i => M[i].realise)), somme(iEvo.map(i => M[i].n1)))) : '', i => vert(evo[i], r => r >= 0));
+    const A = M.map((m, i) => att(i)), toutA = A.every(v => v != null);
+    L('Atterrissage : réalisé, puis plan', A.map(nn), toutA ? n(somme(A)) : '', 'pl');
+    const aB = A.map((v, i) => ratio(v, base(i)));
+    L('Atterrissage face ' + (parBudget ? 'au budget' : 'à l’étude'), aB.map(r => r == null ? '–' : pctS(r)), toutA ? pctS(ratio(somme(A), somme(X.map((x, i) => base(i))))) : '', 'mu');
+    // Les charges du budget, en euros
+    const ch = (B.charges || []).map(c => Object.assign({ pct: c.pctValide > 0 ? c.pctValide : c.pctReseau }, c)).filter(c => c.pct > 0);
+    if (ch.length) {
+      sec('Les charges au budget · € par mois = taux × ' + (parBudget ? 'CA au budget' : 'CA théorique de l’étude'));
+      const bases = X.map((x, i) => base(i)), tB = somme(bases);
+      ch.forEach(c => L(`${esc(c.poste)} <small class="tr-mu">${String(c.pct).replace('.', ',')} %${c.pctValide > 0 && c.pctReseau > 0 && c.pctValide !== c.pctReseau ? ' · réseau ' + String(c.pctReseau).replace('.', ',') + ' %' : ''}</small>`, bases.map(b => b == null ? '–' : n(c.pct / 100 * b)), tB == null ? '' : n(c.pct / 100 * tB), 'mu'));
+      const pMat = ch.filter(c => c.matiere).reduce((t, c) => t + c.pct, 0), pTot = ch.reduce((t, c) => t + c.pct, 0);
+      const nomP = re => ((B.paliers || []).find(p => re.test(p.droite || '')) || {}).nom;
+      if (pMat > 0) { L(`${esc(nomP(/^cat:/) || 'Marge brute')} <small class="tr-mu">${pct(1 - pMat / 100)}</small>`, bases.map(b => b == null ? '–' : n((1 - pMat / 100) * b)), tB == null ? '' : n((1 - pMat / 100) * tB), '', 'fort'); }
+      L(`${esc(nomP(/^tout$/) || 'Disponible pour la rémunération')} <small class="tr-mu">${pct(1 - pTot / 100)}</small>`, bases.map(b => b == null ? '–' : n((1 - pTot / 100) * b)), tB == null ? '' : n((1 - pTot / 100) * tB), '', 'fort');
+    }
+    // Le réel du P&L, mois clos
+    const T = R.taux || {};
+    sec('Le réel du P&amp;L (panel), mois clos · face aux taux du budget');
+    const pnl = (k, i) => clos(i) && reel[ymI(i)] && reel[ymI(i)][k] != null ? +reel[ymI(i)][k] : null;
+    const ligneP = (lab, k, seuil, haut) => { const v = M.map((m, i) => pnl(k, i)); L(lab, v.map(x => x == null ? '–' : p1(x)), '', i => v[i] == null || seuil == null ? '' : (haut ? (v[i] > seuil + 0.05 ? 'k' : 'g') : (v[i] < seuil ? 'k' : ''))); };
+    ligneP(`Matière <small class="tr-mu">budget ${p1(T.matiere)}</small>`, 'matiere', T.matiere, true);
+    ligneP(`Personnel <small class="tr-mu">repère ${p1(T.personnel)}</small>`, 'personnel', T.personnel, true);
+    ligneP(`Frais généraux <small class="tr-mu">repère ${p1(T.fraisGeneraux)}</small>`, 'fraisGeneraux', T.fraisGeneraux, true);
+    ligneP('Marge nette', 'marge', 0, false);
+    // Ni budget, ni étude, ni vente, ni année passée : une phrase plutôt qu'un mur de tirets.
+    const vide = !ex.moisBudget && !ex.moisTheorique && M.every(m => m.realise == null && m.n1 == null);
+    const pills = ans.map(y => { const x = (B.exercices || []).find(e => e.annee === y) || {}; return `<button type="button" class="tr-pil${y === an ? ' on' : ''}" data-tra="anb:${y}">${y} · ${court(x)}</button>`; }).join('');
+    if (vide) {
+      return h + `<div class="tr-carte"><div class="tr-cbar"><div class="tr-h3">Le budget, mois par mois</div><div class="tr-ctl">${pills}</div></div>
+        <div class="tr-note">Pour ${an}, ni budget, ni étude de marché, ni vente lue : rien à mettre côte à côte. Le budget et l’étude s’encodent dans le cockpit, avec le consultant ; l’onglet les reprendra tout seul.</div></div>`;
+    }
+    h += `<div class="tr-carte tr-carte-t"><div class="tr-cbar"><div class="tr-h3">Le budget, mois par mois</div><div class="tr-ctl">${ans.map(y => { const x = (B.exercices || []).find(e => e.annee === y) || {}; return `<button type="button" class="tr-pil${y === an ? ' on' : ''}" data-tra="anb:${y}">${y} · ${court(x)}</button>`; }).join('')}</div></div>
+      <div class="tr-defil"><table class="tr-tab tr-tab-b"><thead><tr><th></th>${MO.map((m, i) => `<th class="${ymI(i) === cur ? 'cur' : ''}">${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
+      <div class="tr-note tr-p">€ TTC. * mois en cours, à ce jour. ‡ mois N-1 incomplet (le magasin n’était pas encore ouvert tout le mois) : hors de l’évolution. Atteinte et évolution : les mois clos. Atterrissage : le réalisé des jours d’avant le plan, puis les ventes du plan (réel des semaines closes compris) ; son total quand toute l’année est couverte. Vert : dans le budget, rouge : au-delà. Le réel vient du P&amp;L du panel ; personnel et frais généraux se comparent aux repères de la table KPI${ch.length ? ', le compte de résultat du CRM n’ayant pas de poste personnel' : ''}.</div></div>`;
+    h += `<div class="tr-g2">${carteEtude(ex, an)}${carteExercices(B, R)}</div>`;
     const src = liste(R.sources);
-    h += `<p class="tr-mu tr-p">Ventes : ${src.length ? src.map(s => s === 'panel' ? 'le panel (jour par jour)' : 'la copie de caisse').join(' et ') : 'aucune vente lue'}${R.premiereVente ? ', depuis le ' + R.premiereVente.split('-').reverse().join('/') : ''}. Budget : cockpit › Budget (CA du mois, à défaut le CA théorique de l’étude).</p>`;
+    h += `<p class="tr-mu tr-p">Ventes : ${src.length ? src.map(x => x === 'panel' ? 'le panel (jour par jour)' : 'la copie de caisse').join(' et ') : 'aucune vente lue'}${R.premiereVente ? ', depuis le ' + R.premiereVente.split('-').reverse().join('/') : ''}.</p>`;
     return h;
+  }
+  const p1 = v => v == null || !isFinite(v) ? '–' : (Math.round(v * 10) / 10).toFixed(1).replace('.', ',').replace('-', '− ') + ' %';
+
+  /** L'étude de marché d'un exercice : potentiel, montée en régime (l'année de l'exercice entourée), saisonnalité. */
+  function carteEtude(ex, an) {
+    const et = ex.etude;
+    if (!et || !et.potentielMaturite) { return `<div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">L’étude de marché</span></div><div class="tr-note">Pas d’étude de marché encodée pour ce magasin en ${an} (cockpit › Budget, avec le consultant).</div></div>`; }
+    const pot = +et.potentielMaturite, mon = et.monteeEnRegime || {}, k0 = et.anneeExploitation;
+    const annexe = et.annexe && /^https?:\/\//.test(String(et.annexe.url || '')) ? `<a href="${esc(et.annexe.url)}" target="_blank" rel="noopener">${esc(et.annexe.nom || 'l’étude jointe')} ↗</a>` : 'aucune annexe jointe';
+    const dt = et.date ? 'du ' + String(et.date).slice(0, 10).split('-').reverse().join('/') : 'non datée';
+    const cartes = [1, 2, 3, 4].map(k => {
+      const pc = k >= 4 ? 100 : (mon['a' + k] != null ? +mon['a' + k] : null), y = k0 ? an - k0 + k : null;
+      return `<div class="${k === k0 || (k === 4 && k0 >= 4) ? 'ici' : ''}"><span>Année ${k === 4 ? '4 et +' : k}${y ? ' · ' + y : ''}</span><b>${pc == null ? '–' : eur(pot * pc / 100)}</b><small>${pc == null ? 'non renseignée' : pc + ' % du potentiel'}</small></div>`;
+    }).join('');
+    const sais = ex.saisonnalite, mx = sais ? Math.max(...sais.map(Number)) || 1 : 1;
+    return `<div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">L’étude de marché</span><span class="tr-mu">${esc(dt)} · ${et.source ? esc(et.source) : 'source non renseignée'} · ${annexe}</span></div>
+      <div class="tr-pot"><span class="tr-titre">Potentiel à maturité</span><b>${eur(pot)} par an</b><span class="tr-mu">${et.potentielMenages ? n(et.potentielMenages) + ' ménages' : 'ménages du potentiel : non renseignés'}</span></div>
+      <div><div class="tr-mu tr-p">La montée en régime : ce que l’étude attend de chaque année d’exploitation</div><div class="tr-mont">${cartes}</div></div>
+      ${sais ? `<div><div class="tr-mu tr-p">La saisonnalité${ex.saisonnaliteSource === 'reseau' ? ' (courbe du réseau, l’étude n’en a pas)' : ''} : la part de l’année de chaque mois</div><div class="tr-sais">${sais.map((v, i) => `<div><span>${String(Math.round(+v * 10) / 10).replace('.', ',')} %</span><i style="height:${Math.round(48 * v / mx)}px"></i><span>${MO[i].replace('.', '')}</span></div>`).join('')}</div></div>` : ''}</div>`;
+  }
+
+  /** Les exercices du plan : la fiche du budget, sa validation, le réalisé à date face à lui ; les charges en résumé. */
+  function carteExercices(B, R) {
+    const ch = (B.charges || []).map(c => c.pctValide > 0 ? c.pctValide : c.pctReseau).filter(x => x > 0), tot = ch.reduce((a, b) => a + b, 0);
+    const mat = (B.charges || []).filter(c => c.matiere).reduce((t, c) => t + (c.pctValide > 0 ? c.pctValide : c.pctReseau), 0);
+    const ex = (B.exercices || []).map(x => {
+      const M = (R.mois || []).filter(m => +m.ym.slice(0, 4) === x.annee && m.complet && m.realise != null && m.budget);
+      const re = M.reduce((t, m) => t + m.realise, 0), bu = M.reduce((t, m) => t + m.budget, 0);
+      const chip = x.valideLe ? `<span class="tr-chip ok">Validé le ${x.valideLe.split('-').reverse().join('/')}</span>` : (x.moisBudget ? '<span class="tr-chip wa">Encodé, pas encore validé</span>' : '<span class="tr-chip wa">Pas de budget encodé</span>');
+      const tete = x.moisBudget ? `${eur(x.totalBudget)} · ${x.moisBudget} mois sur 12 encodés` : (x.fiche ? 'fiche ouverte, 0 mois sur 12' : 'pas de fiche');
+      const l2 = x.moisBudget ? (x.totalTheorique && Math.abs(x.totalTheorique - x.totalBudget) < 1 ? '= le CA théorique de l’étude' : (x.totalTheorique ? 'l’étude donnait ' + eur(x.totalTheorique) : 'pas de CA théorique')) + (x.panierEngagement ? ' · panier d’engagement : ' + n(x.panierEngagement) + ' €' : ' · panier d’engagement : non fixé')
+        : (x.moisTheorique ? `Le plan prend le CA théorique de l’étude : <b>${eur(x.totalTheorique)}</b>` : 'Le plan prend l’année passée');
+      const l3 = M.length ? `${MO[+M[0].ym.slice(5) - 1].replace('.', '')} → ${MO[+M[M.length - 1].ym.slice(5) - 1].replace('.', '')} : réalisé <b>${eur(re)}</b> pour ${eur(bu)} ${x.moisBudget ? 'au budget' : 'à l’étude'}, soit <b class="${re >= bu ? 'ok-t' : 'neg-t'}">${pctS(re / bu - 1)}</b>`
+        : (x.moisBudget ? '' : 'À encoder et valider avec le consultant : le plan le reprendra tout seul.');
+      return `<div class="tr-exb"><b>${x.annee}</b><div class="l">${chip}<span>${tete}</span></div><small>${l2}</small>${l3 ? `<small>${l3}</small>` : ''}</div>`;
+    }).join('');
+    const charges = ch.length ? `<div class="tr-exb"><b class="mu">Charges</b><div class="l"><span>${ch.length} postes · ${p1(tot)} du CA</span></div><small>Marge brute = CA − ${p1(mat)} · disponible pour la rémunération : ${p1(100 - tot)} du CA</small></div>` : '';
+    return `<div class="tr-carte"><div class="tr-carte-hd"><span class="tr-k">Le budget, exercice par exercice</span></div>${ex}${charges}</div>`;
   }
 
   function rendGuide(C, d, R) {
@@ -680,9 +783,10 @@
   function action(cmd) {
     const S = E; if (!S) { return; }
     const [k, a] = [cmd.slice(0, cmd.indexOf(':') < 0 ? cmd.length : cmd.indexOf(':')), cmd.indexOf(':') < 0 ? '' : cmd.slice(cmd.indexOf(':') + 1)];
-    if (k === 'onglet') { S.onglet = a; return rendre(); }
+    if (k === 'onglet') { S.onglet = a; if (a === 'budget' && !S.B && !S.lectB) { chargerBudget(false); } return rendre(); }
+    if (k === 'anb') { S.anB = +a; return rendre(); }
+    if (k === 'relireB') { S.errB = null; chargerBudget(true); return rendre(); }
     if (k === 'relire') { return charger(true); }
-    if (k === 'importer') { const f = racine && racine.querySelector('[data-trfichier]'); if (f) { f.value = ''; f.click(); } return; }
     if (k === 'reessayer') { S.sale = true; return enregistrer(); }
     if (!S.R || !S.data) { return; }
     const C = calcul(S.data, S.R, jourUTC()), F = fenetre(C);
@@ -696,67 +800,14 @@
     if (k === 'delP') { return maj(d => { d.paiements = d.paiements.filter(x => x.id !== a); }); }
     if (k === 'addH') { return maj(d => { if (d.hors.length < 50) { d.hors.push({ id: uid(), libelle: 'Nouvelle dette', montant: null, note: '' }); } }); }
     if (k === 'delH') { return maj(d => { d.hors = d.hors.filter(x => x.id !== a); }); }
-    if (k === 'export') { return exporter(C, S.data); }
     if (k === 'reprendre') {
       const c = S.conflit || {};
       S.conflit = null; S.sale = false; S.version = c.version || 0; S.majLe = c.majLe || null;
       S.data = c.plan ? normaliser(c.plan) : null; S.neuf = !c.plan;
-      if (S.data && S.data.debut !== S.debut) { S.debut = S.data.debut; S.R = null; return charger(false); }
+      if (S.data && S.data.debut !== S.debut) { S.debut = S.data.debut; S.R = null; S.B = null; return charger(false); }
       if (!S.data) { S.data = defauts(S.R, S.debut); }
       return rendre();
     }
-    if (k === 'reset') {
-      if (!window.confirm('Repartir d’un plan neuf, proposé d’après le budget et l’année passée, à partir de cette semaine ? Tes saisies (soldes, ventes, fournisseurs, paiements, dettes) seront effacées.')) { return; }
-      clearTimeout(S.minuteur); S.sale = false;
-      const fini = () => { S.data = null; S.R = null; S.version = 0; S.majLe = null; S.neuf = true; S.decal = null; S.enrA = null; charger(false); };
-      if (S.version > 0) {
-        appel('/tresorerie/plan', { method: 'POST', body: JSON.stringify({ shop: S.shop, version: S.version, donnees: null }) })
-          .then(fini).catch(e => { if (e.status === 409) { S.conflit = e.corps || {}; } else { S.errEnr = e.message; } rendre(); });
-      } else { fini(); }
-    }
-  }
-
-  /**
-   * Importer un plan (format v2, JSON) : un ancien fichier repris (Sombreffe, 14/11/2026), une sauvegarde. Un plan qui
-   * dit pour quel magasin il a été fait (`magasin`) ne s'importe ailleurs qu'après confirmation ; un plan enregistré
-   * n'est remplacé qu'après confirmation. L'import s'enregistre comme une saisie (version, conflit).
-   */
-  function importer(texte, fichier) {
-    const S = E; if (!S) { return; }
-    let p = null;
-    try { p = JSON.parse(texte); } catch (x) { p = null; }
-    const motif = !p || typeof p !== 'object' || Array.isArray(p) ? 'ce n’est pas un fichier JSON lisible'
-      : (p.v !== 2 ? 'ce n’est pas un plan de trésorerie au format du module (v: 2)'
-        : (!/^\d{4}-\d{2}-\d{2}$/.test(String(p.debut || '')) || new Date(msDe(p.debut)).getUTCDay() !== 1 ? 'premier lundi du plan invalide' : null));
-    if (motif) { S.errImport = motif + ' (' + fichier + ')'; return rendre(); }
-    const sans = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const ici = ctx.nomShop || ('magasin ' + S.shop);
-    if (p.magasin && !sans(ici).includes(sans(p.magasin))
-      && !window.confirm(`Ce plan a été fait pour « ${p.magasin} », et ce dashboard est celui de « ${ici} ». L’importer quand même ?`)) { return; }
-    if ((S.version > 0 || S.sale) && !window.confirm(`Remplacer le plan de « ${ici} » par celui du fichier « ${fichier} » ? Ce qui y est saisi aujourd’hui sera remplacé.`)) { return; }
-    clearTimeout(S.minuteur);
-    S.data = normaliser(p); S.sale = true; S.neuf = false; S.conflit = null; S.errImport = null; S.errEnr = null; S.decal = null;
-    S.importe = p.source || fichier;
-    enregistrer();
-    if (S.data.debut !== S.debut) { S.debut = S.data.debut; S.R = null; charger(false); } else { rendre(); }
-  }
-
-  function exporter(C, d) {
-    const W = C.W;
-    const num = v => v == null ? '' : String(Math.round(v));
-    const L = [['', ...W.map(w => dm(w.ms) + '/' + w.annee)]];
-    const aj = (l, arr) => L.push([l, ...arr.map(num)]);
-    aj('Cash début de semaine', C.debut); aj('Encaissements (ventes)', C.ventes);
-    aj('Repère · réalisé en caisse', W.map(w => w.ref.realise)); aj('Repère · budget validé', W.map(w => w.ref.budget)); aj('Repère · même semaine N-1', W.map(w => w.ref.n1));
-    aj('Marchandises (fournisseurs)', C.march);
-    CATS.forEach(k => aj(k, C.cats[k])); aj('Ponctuels / imprévus', C.ponct); aj('Total décaissements', C.totdec);
-    aj('Solde de la semaine', C.solde); aj('Cash fin de semaine (prévu)', C.fin); aj('Cash réel en banque (dimanche)', C.reel); aj('Écart réel − prévu', C.ecart);
-    const csv = '﻿' + L.map(r => r.map(x => /[;"\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x).join(';')).join('\r\n');
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
-    a.download = 'plan_tresorerie_' + String(ctx.nomShop || E.shop).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '') + '.csv';
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
 
   /** Les écouteurs d'un élément racine : posés une fois, tout passe par eux (délégation). */
@@ -809,12 +860,6 @@
     });
     el.addEventListener('change', e => {
       const t = e.target; if (!E || !t.dataset) { return; }
-      if (t.dataset.trfichier != null) {
-        const f = t.files && t.files[0]; if (!f) { return; }
-        if (f.size > 600000) { E.errImport = 'fichier trop lourd (' + f.name + ')'; return rendre(); }
-        f.text().then(x => importer(x, f.name)).catch(() => { E.errImport = 'fichier illisible (' + f.name + ')'; rendre(); });
-        return;
-      }
       const ref = t.dataset.trtxt || t.dataset.trsel || t.dataset.trdate; if (!ref) { return; }
       const [g, id, champ2] = ref.split(':'), v = t.value;
       maj(d => {
