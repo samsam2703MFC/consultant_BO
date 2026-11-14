@@ -177,8 +177,7 @@ body { margin: 0; background: var(--paper); }
   .rp-partie { padding-top: 0; break-after: avoid; }
   #page-2, #page-3, #page-4, #annexes { break-before: page; }
   #pieces, #page-fin { break-before: page; }   /* l’étape 4, deuxième page : les pièces (14/11/2026) */
-  #annexe-bas { display: grid !important; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }   /* l’annexe sur une page */
-  #annexe-bas > * { margin-bottom: 0; } #evolution-tuiles { grid-template-columns: 1fr 1fr; }
+  #evolution-tuiles { grid-template-columns: repeat(4, 1fr); }   /* l’annexe simplifiée : les tuiles du cockpit, quatre de front */
 }
 /* Lisible imprimé (13/11/2026, Sam : « trop petit, illisible ») : au PDF (échelle 0,8), le texte courant fait environ
    8 points, les tableaux 7,5, les étiquettes des graphiques 7. */
@@ -411,22 +410,20 @@ body { margin: 0; background: var(--paper); }
 
   <!-- ANNEXES -->
   <header class="rp-annexes" id="annexes">
-    <div class="rp-kicker">Sombreffe, comptoir et B2B</div>
-    <h2 class="rp-annexe-titre">Annexe</h2>
+    <h2 class="rp-annexe-titre">Annexe · mois par mois</h2>   <!-- simplifiée le 14/11/2026 (Sam) -->
   </header>
   <section class="rp-carte" id="annexe-a">
-    <h2 class="rp-h2">Mois par mois</h2>
-    <p class="rp-p" id="oo-intro"></p>
+    <p class="rp-p" id="oo-intro" hidden></p>
     <div class="rp-deux">
       <div class="rp-part" id="trafic"><h3 class="rp-h3">Clients par jour ouvert</h3><div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div></div>
-      <div class="rp-part" id="comparable"><h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
+      <div class="rp-part" id="comparable" hidden><h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
         <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div><p class="rp-aide" id="comp-note"></p></div>
     </div>
     <h3 class="rp-h3">Mai → octobre 2026, face au N-1</h3>   <!-- les six mois seuls, 14/11/2026 (Sam) -->
     <div class="rp-table-zone"><table class="rp-table rp-serre" id="oo-table"></table></div>
     <p class="rp-aide" id="oo-note"></p>
     <div class="rp-deux" id="annexe-bas">
-      <div class="rp-part"><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
+      <div class="rp-part" hidden><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
       <div class="rp-part"><h3 class="rp-h3">Les tuiles du cockpit, ventes : Tout</h3><div class="rp-kpis" id="evolution-tuiles"></div></div>
     </div>
   </section>
