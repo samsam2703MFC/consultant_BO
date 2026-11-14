@@ -1460,3 +1460,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T10:16:58Z Recettes à corriger : prix en retard sur le fournisseur (audit Pommes Tranches)
 2026-11-14T10:21:20Z Prix en retard sur le fournisseur : écart au-delà de x2 = colis à vérifier
 2026-11-14T10:28:59Z Prix en retard sur le fournisseur : seuil à 10 %
+2026-11-14T10:36:09Z Prix en retard : chaque référence fournisseur compte
