@@ -138,7 +138,7 @@ produits reçus sans trace en caisse).
 | Formule sans ses produits | une formule ou une promotion vendue comme un seul article, sans recette : ses produits doivent sortir sur le ticket, chacun à prix réduit (promotion « bundle » du panel) — ajoutée le 31/10 |
 | Recette vide | aucune ligne |
 | Matière sans prix | `price_source` MISSING dans un magasin qui vend le produit |
-| Prix en retard sur le fournisseur (14/11) | le prix de la matière dans le magasin s'écarte de plus de 2 % de la liste de prix du fournisseur lié, en vigueur pour ce magasin ; le coût comparé aux autres magasins (« hors norme ») est alors le coût au prix du fournisseur. Né de l'audit des Pommes Tranches : Corbais et Sombreffe à 5,095 € la tarte quand SLFood dit 7,7125 € depuis le 09/10, et la règle « hors norme » accusait Halle et Gosselies, qui étaient justes |
+| Prix en retard sur le fournisseur (14/11) | le prix de la matière dans le magasin s'écarte de plus de 10 % (2 % au départ, relevé le 14/11) de la liste de prix du fournisseur lié, en vigueur pour ce magasin ; le coût comparé aux autres magasins (« hors norme ») est alors le coût au prix du fournisseur. Né de l'audit des Pommes Tranches : Corbais et Sombreffe à 5,095 € la tarte quand SLFood dit 7,7125 € depuis le 09/10, et la règle « hors norme » accusait Halle et Gosselies, qui étaient justes |
 | Coût invraisemblable | coût de la pièce < 5 % ou ≥ 100 % du prix HT (le contrôle `svCoutPlausible` existe) |
 | Hors norme du réseau | plus de 40 % d'écart à la médiane des magasins (ex. coût « custom ») |
 | Unité suspecte | une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans la norme de sa catégorie |
