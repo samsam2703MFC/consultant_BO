@@ -1,0 +1,1107 @@
+{
+ "lu": "14/11/2026",
+ "magasin": {
+  "id": 5,
+  "nom": "Sombreffe",
+  "adresse": "Chaussée de Nivelles 136/D, 5140 Sombreffe",
+  "actifs": 482
+ },
+ "concurrent": {
+  "nom": "Dumont et Partners",
+  "type": "Artisan",
+  "adresse": "Chaussée de Gembloux 37, 5140 Tongrinne (Sombreffe)",
+  "bce": "BE 0465.380.462",
+  "distance": "≈ 4 km"
+ },
+ "pdfs": {
+  "T": {
+   "nom": "dumont-tarif-2026.pdf",
+   "pages": 4,
+   "ko": 312,
+   "lecture": "texte",
+   "date": "Tarif au 1er octobre 2026 (p. 1)"
+  },
+  "F": {
+   "nom": "dumont-fetes-fin-annee.pdf",
+   "pages": 2,
+   "ko": 1840,
+   "lecture": "texte",
+   "date": "Commandes jusqu’au 20/12 (p. 1)"
+  },
+  "S": {
+   "nom": "folder-novembre-scan.pdf",
+   "pages": 1,
+   "ko": 2210,
+   "lecture": "image",
+   "date": "Novembre 2026 (p. 1)"
+  }
+ },
+ "releve": "2026-11-10",
+ "nous": [
+  {
+   "id": 1200003,
+   "nom": "Pain Doré",
+   "cat": "Pain",
+   "idCat": 12000,
+   "prix": 2.9,
+   "poidsPanel": 600,
+   "poids": 600
+  },
+  {
+   "id": 1200001,
+   "nom": "Pain Demi-Gris",
+   "cat": "Pain",
+   "idCat": 12000,
+   "prix": 2.9,
+   "poidsPanel": 600,
+   "poids": 600
+  },
+  {
+   "id": 1200002,
+   "nom": "Pain 10 Céréales",
+   "cat": "Pain",
+   "idCat": 12000,
+   "prix": 2.9,
+   "poidsPanel": 600,
+   "poids": 600
+  },
+  {
+   "id": 1210001,
+   "nom": "Pain au Noix & Sésame",
+   "cat": "Pain Tradition",
+   "idCat": 12100,
+   "prix": 4.5,
+   "poidsPanel": 600,
+   "src": "nom « 600 g » (panel : 600)",
+   "poids": 600
+  },
+  {
+   "id": 1300003,
+   "nom": "Baguette Tradition",
+   "cat": "Petite Boulangerie",
+   "idCat": 13000,
+   "prix": 2.3,
+   "poidsPanel": 350,
+   "poids": 350
+  },
+  {
+   "id": 1300001,
+   "nom": "Pistolet à l'Ancienne",
+   "cat": "Petite Boulangerie",
+   "idCat": 13000,
+   "prix": 0.9,
+   "poidsPanel": 60,
+   "poids": null
+  },
+  {
+   "id": 1300012,
+   "nom": "Sandwich",
+   "cat": "Petite Boulangerie",
+   "idCat": 13000,
+   "prix": 1.0,
+   "poidsPanel": 65,
+   "poids": null
+  },
+  {
+   "id": 1300007,
+   "nom": "Cramique",
+   "cat": "Petite Boulangerie",
+   "idCat": 13000,
+   "prix": 5.1,
+   "poidsPanel": 350,
+   "poids": 350
+  },
+  {
+   "id": 1300008,
+   "nom": "Craquelin",
+   "cat": "Petite Boulangerie",
+   "idCat": 13000,
+   "prix": 5.1,
+   "poidsPanel": 350,
+   "poids": 350
+  },
+  {
+   "id": 1610006,
+   "nom": "Croissant",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 1.7,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1610004,
+   "nom": "Pain au Chocolat",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 1.8,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1610002,
+   "nom": "Suisse",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 1.8,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 6700170,
+   "nom": "Couque au Beurre",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 1.7,
+   "poidsPanel": 90,
+   "poids": null
+  },
+  {
+   "id": 1610001,
+   "nom": "Croissant Amandes",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 2.2,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1610005,
+   "nom": "Huit",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 1.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1610003,
+   "nom": "Tortillon",
+   "cat": "Viennoiserie Ind.",
+   "idCat": 16100,
+   "prix": 0.0,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1620005,
+   "nom": "Mini - Croissant",
+   "cat": "Viennoiserie réduction",
+   "idCat": 16200,
+   "prix": 0.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 6700246,
+   "nom": "Riz",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 1600,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 6700228,
+   "nom": "Pommes Tranches",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 1500,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 6700232,
+   "nom": "Pommes Parisienne",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 1600,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 6700229,
+   "nom": "Pommes Amandes",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 1400,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 6700233,
+   "nom": "Fromage",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 1600,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 1131001,
+   "nom": "Tarte Sucre Blanc",
+   "cat": "Tartes au sucre",
+   "idCat": 11310,
+   "prix": 15.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1122001,
+   "nom": "Croûte aux fruits",
+   "cat": "Croutes Fruits Frais",
+   "idCat": 11220,
+   "prix": 21.5,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 6700283,
+   "nom": "Plusieurs Fruits",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 21.9,
+   "poidsPanel": 2500,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 6700285,
+   "nom": "Frangipane",
+   "cat": "Tartes – Ø 28 cm",
+   "idCat": 81125,
+   "prix": 24.9,
+   "poidsPanel": 2500,
+   "d": 28,
+   "poids": null
+  },
+  {
+   "id": 1540001,
+   "nom": "éclair chocolat",
+   "cat": "Pâtisserie individuelle",
+   "idCat": 15400,
+   "prix": 3.3,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1530001,
+   "nom": "Javanais Ind.",
+   "cat": "Entremets - Individuel",
+   "idCat": 15300,
+   "prix": 4.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1530006,
+   "nom": "Merveilleux",
+   "cat": "Entremets - Individuel",
+   "idCat": 15300,
+   "prix": 4.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1530002,
+   "nom": "Misérable Ind.",
+   "cat": "Entremets - Individuel",
+   "idCat": 15300,
+   "prix": 4.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1540009,
+   "nom": "Mousse au chocolat",
+   "cat": "Pâtisserie individuelle",
+   "idCat": 15400,
+   "prix": 3.5,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1540010,
+   "nom": "Tiramisu",
+   "cat": "Pâtisserie individuelle",
+   "idCat": 15400,
+   "prix": 3.5,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1500005,
+   "nom": "Gâteaux Anniversaire | Chocolat /personnes",
+   "cat": "Pâtisserie",
+   "idCat": 15000,
+   "prix": 5.5,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1500006,
+   "nom": "Gâteaux Anniversaire | Fruits  /personnes",
+   "cat": "Pâtisserie",
+   "idCat": 15000,
+   "prix": 5.5,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 2300016,
+   "nom": "Club",
+   "cat": "Sandwiches garnis",
+   "idCat": 23000,
+   "prix": 5.8,
+   "poidsPanel": 350,
+   "poids": null
+  },
+  {
+   "id": 2300018,
+   "nom": "SuperClub (Comté & Jambon de Pays)",
+   "cat": "Sandwiches garnis",
+   "idCat": 23000,
+   "prix": 6.0,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 1410003,
+   "nom": "Quiche Lorraine",
+   "cat": "Quiches",
+   "idCat": 14100,
+   "prix": 13.9,
+   "poidsPanel": 0,
+   "poids": null
+  },
+  {
+   "id": 4100001,
+   "nom": "Cougnou - Sucre",
+   "cat": "Cougnou",
+   "idCat": 81126,
+   "prix": 2.9,
+   "poidsPanel": 0,
+   "estime": true,
+   "src": "≈ 220 g estimé (benchmark cougnou, à confirmer)",
+   "poids": 220
+  },
+  {
+   "id": 6700139,
+   "nom": "Cougnou Nature - 400 g.",
+   "cat": "Cougnou",
+   "idCat": 81126,
+   "prix": 0.0,
+   "poidsPanel": 400,
+   "poids": 400
+  },
+  {
+   "id": 4100007,
+   "nom": "Bûche Chocolat - 4/6 personnes",
+   "cat": "Noël",
+   "idCat": 41000,
+   "prix": 19.9,
+   "poidsPanel": 0,
+   "parts": 5,
+   "src": "4/6 personnes → 5",
+   "poids": null
+  },
+  {
+   "id": 6700147,
+   "nom": "Bûche Praliné & Noisettes – 4/6 personnes",
+   "cat": "Noël",
+   "idCat": 41000,
+   "prix": 19.9,
+   "poidsPanel": 900,
+   "parts": 5,
+   "src": "4/6 personnes → 5",
+   "poids": null
+  },
+  {
+   "id": 4100013,
+   "nom": "Galette Frangipane",
+   "cat": "Noël",
+   "idCat": 41000,
+   "prix": 19.9,
+   "poidsPanel": 0,
+   "d": 24,
+   "src": "Ø 24 cm (benchmark galette)",
+   "poids": null
+  },
+  {
+   "id": 4100017,
+   "nom": "Saint Nicolas - Lait",
+   "cat": "Noël",
+   "idCat": 41000,
+   "prix": 7.9,
+   "poidsPanel": 0,
+   "poids": null
+  }
+ ],
+ "lignes": [
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Pain blanc 800 g",
+   "prix": 3.3,
+   "st": "conf",
+   "c": 74,
+   "pid": 1200003,
+   "cand": [
+    1200003,
+    1200001
+   ],
+   "base": "kg",
+   "g": 800,
+   "note": "« blanc » ≈ Pain Doré ?"
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Pain gris 800 g",
+   "prix": 3.4,
+   "st": "conf",
+   "c": 81,
+   "pid": 1200001,
+   "cand": [
+    1200001,
+    1200002
+   ],
+   "base": "kg",
+   "g": 800,
+   "note": "« gris » ≠ « demi-gris »"
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Pain 10 céréales 800 g",
+   "prix": 3.9,
+   "st": "sur",
+   "c": 95,
+   "pid": 1200002,
+   "cand": [
+    1200002
+   ],
+   "base": "kg",
+   "g": 800
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Pain aux noix 500 g",
+   "prix": 4.6,
+   "st": "conf",
+   "c": 78,
+   "pid": 1210001,
+   "cand": [
+    1210001
+   ],
+   "base": "kg",
+   "g": 500,
+   "note": "noix & sésame chez nous"
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Pain de mie sans croûte",
+   "prix": 3.6,
+   "st": "sans",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "cat": 12000
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Pains",
+   "brut": "Baguette",
+   "prix": 1.9,
+   "st": "sur",
+   "c": 91,
+   "pid": 1300003,
+   "cand": [
+    1300003
+   ],
+   "base": "piece",
+   "note": "poids non indiqué : à la pièce"
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Petits pains",
+   "brut": "Pistolets — les 6",
+   "prix": 4.2,
+   "st": "sur",
+   "c": 92,
+   "pid": 1300001,
+   "cand": [
+    1300001
+   ],
+   "base": "lot",
+   "lot": 6
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Petits pains",
+   "brut": "Sandwichs mous — les 6",
+   "prix": 3.6,
+   "st": "sur",
+   "c": 90,
+   "pid": 1300012,
+   "cand": [
+    1300012
+   ],
+   "base": "lot",
+   "lot": 6
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Petits pains",
+   "brut": "Cramique 500 g",
+   "prix": 5.9,
+   "st": "sur",
+   "c": 94,
+   "pid": 1300007,
+   "cand": [
+    1300007
+   ],
+   "base": "kg",
+   "g": 500
+  },
+  {
+   "pdf": "T",
+   "p": 1,
+   "sec": "Petits pains",
+   "brut": "Craquelin 500 g",
+   "prix": 6.5,
+   "st": "sur",
+   "c": 94,
+   "pid": 1300008,
+   "cand": [
+    1300008
+   ],
+   "base": "kg",
+   "g": 500
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Croissant pur beurre",
+   "prix": 1.4,
+   "st": "sur",
+   "c": 97,
+   "pid": 1610006,
+   "cand": [
+    1610006
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Pain au chocolat",
+   "prix": 1.6,
+   "st": "sur",
+   "c": 99,
+   "pid": 1610004,
+   "cand": [
+    1610004
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Couque suisse",
+   "prix": 1.9,
+   "st": "sur",
+   "c": 93,
+   "pid": 1610002,
+   "cand": [
+    1610002
+   ],
+   "base": "piece",
+   "appris": true
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Couque au beurre",
+   "prix": 1.5,
+   "st": "sur",
+   "c": 98,
+   "pid": 6700170,
+   "cand": [
+    6700170
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Croissant aux amandes",
+   "prix": 2.3,
+   "st": "sur",
+   "c": 96,
+   "pid": 1610001,
+   "cand": [
+    1610001
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Escargot aux raisins",
+   "prix": 1.9,
+   "st": "conf",
+   "c": 58,
+   "pid": 1610005,
+   "cand": [
+    1610005,
+    1610003
+   ],
+   "base": "piece",
+   "note": "aucun escargot chez nous : le plus proche ?",
+   "ouvert": true
+  },
+  {
+   "pdf": "T",
+   "p": 2,
+   "sec": "Viennoiseries",
+   "brut": "Mini-viennoiseries (pièce)",
+   "prix": 0.8,
+   "st": "conf",
+   "c": 70,
+   "pid": 1620005,
+   "cand": [
+    1620005
+   ],
+   "base": "piece",
+   "note": "assortiment : comparé au mini-croissant"
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte au riz",
+   "prix": 19.5,
+   "st": "sur",
+   "c": 92,
+   "pid": 6700246,
+   "cand": [
+    6700246
+   ],
+   "base": "surface",
+   "d": 26
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte aux pommes",
+   "prix": 17.5,
+   "st": "conf",
+   "c": 66,
+   "pid": 6700228,
+   "cand": [
+    6700228,
+    6700232,
+    6700229
+   ],
+   "base": "surface",
+   "d": 26,
+   "note": "3 tartes aux pommes chez nous"
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte au fromage",
+   "prix": 18.5,
+   "st": "sur",
+   "c": 90,
+   "pid": 6700233,
+   "cand": [
+    6700233
+   ],
+   "base": "surface",
+   "d": 26
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte au sucre",
+   "prix": 14.0,
+   "st": "conf",
+   "c": 76,
+   "pid": 1131001,
+   "cand": [
+    1131001
+   ],
+   "base": "piece",
+   "note": "notre Ø n’est pas au panel : à la pièce"
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte aux fruits frais (saison)",
+   "prix": 22.5,
+   "st": "conf",
+   "c": 61,
+   "pid": 1122001,
+   "cand": [
+    1122001,
+    6700283
+   ],
+   "base": "piece",
+   "note": "croûte ou tarte « plusieurs fruits » ?"
+  },
+  {
+   "pdf": "T",
+   "p": 3,
+   "sec": "Tartes Ø 26 cm (6-8 p.)",
+   "brut": "Tarte frangipane",
+   "prix": 19.0,
+   "st": "sur",
+   "c": 95,
+   "pid": 6700285,
+   "cand": [
+    6700285
+   ],
+   "base": "surface",
+   "d": 26
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Éclair au chocolat",
+   "prix": 2.8,
+   "st": "sur",
+   "c": 98,
+   "pid": 1540001,
+   "cand": [
+    1540001
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Javanais",
+   "prix": 4.2,
+   "st": "sur",
+   "c": 95,
+   "pid": 1530001,
+   "cand": [
+    1530001
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Merveilleux",
+   "prix": 4.5,
+   "st": "sur",
+   "c": 97,
+   "pid": 1530006,
+   "cand": [
+    1530006
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Misérable",
+   "prix": 4.2,
+   "st": "sur",
+   "c": 95,
+   "pid": 1530002,
+   "cand": [
+    1530002
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Mousse au chocolat",
+   "prix": 3.2,
+   "st": "sur",
+   "c": 94,
+   "pid": 1540009,
+   "cand": [
+    1540009
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Tiramisu",
+   "prix": 3.8,
+   "st": "sur",
+   "c": 99,
+   "pid": 1540010,
+   "cand": [
+    1540010
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Gâteau d’anniversaire — la part",
+   "prix": 4.8,
+   "st": "conf",
+   "c": 72,
+   "pid": 1500005,
+   "cand": [
+    1500005,
+    1500006
+   ],
+   "base": "piece",
+   "note": "chocolat ou fruits ?"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Pâtisseries",
+   "brut": "Pralines maison — le kg",
+   "prix": 58.0,
+   "st": "sans",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "cat": null,
+   "note": "pas de pralines au kilo chez nous"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Traiteur",
+   "brut": "Sandwich jambon-fromage",
+   "prix": 4.2,
+   "st": "conf",
+   "c": 64,
+   "pid": 2300016,
+   "cand": [
+    2300016,
+    2300018
+   ],
+   "base": "piece",
+   "note": "notre baguette garnie est plus grande"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Traiteur",
+   "brut": "Quiche lorraine (6 p.)",
+   "prix": 15.5,
+   "st": "sur",
+   "c": 97,
+   "pid": 1410003,
+   "cand": [
+    1410003
+   ],
+   "base": "piece"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Conditions",
+   "brut": "Commandes 48 h à l’avance",
+   "prix": null,
+   "st": "ign",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "note": "pas un produit"
+  },
+  {
+   "pdf": "T",
+   "p": 4,
+   "sec": "Conditions",
+   "brut": "Livraison à domicile",
+   "prix": 5.0,
+   "st": "ign",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "note": "un service, pas un produit"
+  },
+  {
+   "pdf": "F",
+   "p": 1,
+   "sec": "Saint-Nicolas",
+   "brut": "Saint-Nicolas en chocolat 150 g",
+   "prix": 6.5,
+   "st": "conf",
+   "c": 80,
+   "pid": 4100017,
+   "cand": [
+    4100017
+   ],
+   "base": "piece",
+   "note": "notre poids n’est pas au panel : à la pièce"
+  },
+  {
+   "pdf": "F",
+   "p": 2,
+   "sec": "Noël & Nouvel An",
+   "brut": "Cougnou 250 g",
+   "prix": 4.5,
+   "st": "sur",
+   "c": 91,
+   "pid": 4100001,
+   "cand": [
+    4100001
+   ],
+   "base": "kg",
+   "g": 250
+  },
+  {
+   "pdf": "F",
+   "p": 2,
+   "sec": "Noël & Nouvel An",
+   "brut": "Cougnou 500 g",
+   "prix": 8.5,
+   "st": "conf",
+   "c": 88,
+   "pid": 6700139,
+   "cand": [
+    6700139
+   ],
+   "base": "kg",
+   "g": 500,
+   "note": "notre prix : 0 € au panel",
+   "prixManque": true
+  },
+  {
+   "pdf": "F",
+   "p": 2,
+   "sec": "Noël & Nouvel An",
+   "brut": "Bûche moka 6 pers.",
+   "prix": 28.0,
+   "st": "conf",
+   "c": 69,
+   "pid": 4100007,
+   "cand": [
+    4100007,
+    6700147
+   ],
+   "base": "part",
+   "parts": 6,
+   "note": "pas de bûche moka : chocolat ou praliné ?"
+  },
+  {
+   "pdf": "F",
+   "p": 2,
+   "sec": "Noël & Nouvel An",
+   "brut": "Bûche glacée 6 pers.",
+   "prix": 32.0,
+   "st": "sans",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "cat": null,
+   "note": "nos glaces Rawette n’ont pas de bûche"
+  },
+  {
+   "pdf": "F",
+   "p": 2,
+   "sec": "Noël & Nouvel An",
+   "brut": "Galette des rois frangipane Ø 22 cm",
+   "prix": 17.5,
+   "st": "sur",
+   "c": 92,
+   "pid": 4100013,
+   "cand": [
+    4100013
+   ],
+   "base": "surface",
+   "d": 22
+  },
+  {
+   "pdf": "S",
+   "p": 1,
+   "sec": "Promos de novembre",
+   "brut": "4 croissants + 1 offert",
+   "prix": 5.6,
+   "st": "sur",
+   "c": 89,
+   "pid": 1610006,
+   "cand": [
+    1610006
+   ],
+   "base": "promo",
+   "lot": 5,
+   "promo": true,
+   "normal": 1.4
+  },
+  {
+   "pdf": "S",
+   "p": 1,
+   "sec": "Promos de novembre",
+   "brut": "Tarte au riz −20 % le mercredi",
+   "prix": 15.6,
+   "st": "sur",
+   "c": 90,
+   "pid": 6700246,
+   "cand": [
+    6700246
+   ],
+   "base": "promo",
+   "promo": true,
+   "normal": 19.5,
+   "d": 26
+  },
+  {
+   "pdf": "S",
+   "p": 1,
+   "sec": "Promos de novembre",
+   "brut": "C?uque … 1,?0 €",
+   "prix": null,
+   "st": "illi",
+   "c": null,
+   "pid": null,
+   "cand": [],
+   "base": "piece",
+   "note": "scan flou : à relire sur le PDF"
+  }
+ ]
+}
