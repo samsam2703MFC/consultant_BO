@@ -2146,6 +2146,7 @@ correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`)
 
     GET  /tresorerie/references?shop=4&debut=2026-11-16
     GET  /tresorerie/plan?shop=4
+    GET  /tresorerie/budget?shop=4&debut=2026-11-16
     POST /tresorerie/plan  { "shop": "4", "version": 3, "donnees": { … } | null }
 
 Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
@@ -2212,9 +2213,8 @@ ou `march` pour les marchandises) : ils remplacent le calcul de cette semaine-l�
 calcul. `base` = `budget`
 ou `n1` ; `croissance` en % appliqué à l'année passée. Facultatifs, gardés tels quels : `magasin` (pour quel magasin le
 plan a été fait : l'import dans un autre demande confirmation), `source` (d'où il vient, affiché après l'import),
-`startCashNote` (l'aide du cash de départ, effacée dès qu'un solde est tapé). L'écran importe un plan à ce format
-(« Importer un plan ») : les chiffres de l'ancien fichier de Sombreffe, tirés du modèle, passent par là — le dépôt
-étant public, ils n'y sont pas versés.
+`startCashNote` (l'aide du cash de départ, effacée dès qu'un solde est tapé). L'écran ne propose plus d'import (14/11/2026) ; les
+chiffres de l'ancien fichier de Sombreffe, tirés du modèle, ne sont pas versés dans ce dépôt public.
 
 **L'écriture** (`POST /tresorerie/plan`) : `version` = celle qu'on a lue. Le plan change (`version` + 1, `majLe`), ou
 **409** sans rien écrire si un autre écran l'a enregistré entre-temps — la réponse porte alors le plan tel qu'il est
@@ -2223,17 +2223,49 @@ plan a été fait : l'import dans un autre demande confirmation), `source` (d'o�
 paiements ou 50 dettes, plus de 600 000 octets. Table : `pil_tresorerie_plan` (`shop_id`, `donnees` JSON, `version`,
 `maj_le`), créée au premier appel, au préfixe du portail Pilotage.
 
+**Budget & étude** (`GET /tresorerie/budget`, lecture seule, gardé par `_cache=600` ; 14/11/2026, maquette B
+retenue) : pour les exercices du plan, ce que le cockpit tient sur CE magasin seulement — rien ne s'y modifie.
+
+```json
+{ "shop": "4", "annees": [2026, 2027],
+  "exercices": [ { "annee": 2026, "fiche": true, "valideLe": "2026-01-20", "panierEngagement": 11.5, "caTheoriqueAn": 684000,
+                   "etude": { "date": "2024-06-01", "source": "Étude d’implantation", "potentielMenages": 5200, "potentielMaturite": 900000,
+                              "anneeExploitation": 2, "monteeEnRegime": { "a1": 65, "a2": 76, "a3": 88 }, "annexe": null },
+                   "saisonnalite": [7, 7, 8, 9, 8, 8, 7, 7, 8, 9, 9, 13], "saisonnaliteSource": "etude",
+                   "mois": [ { "mois": 1, "budget": 52200, "theorique": 51300 } ], "moisBudget": 12, "moisTheorique": 12,
+                   "totalBudget": 684000, "totalTheorique": 672600 } ],
+  "charges": [ { "categorie": "Occupation", "poste": "Loyer", "pctValide": 7, "pctReseau": 6, "matiere": false } ],
+  "paliers": [ { "nom": "Marge brute", "droite": "cat:Matière" }, { "nom": "Disponible pour rémunération", "droite": "tout" } ],
+  "reel": [ { "ym": "2026-01", "ca": 50100.5, "matiere": 38.4, "personnel": 29.1, "fraisGeneraux": 12.9, "marge": 8.2 } ],
+  "taux": { "food": 40, "labour": 33, "overhead": 13.5 }, "liens": { "crm": "https://…" } }
+```
+
+- **`exercices`** : `ceo_shop_budget` (fiche, `validated_on`, étude de marché) et `ceo_shop_month_perf` (chaque mois
+  `revenue_budget` et `ca_theorique`, un zéro n'étant pas un budget). Sans saisonnalité d'étude, la courbe du réseau
+  (`saisonnaliteReseau`, `saisonnaliteSource: "reseau"`).
+- **`charges`** et **`paliers`** : `budgetCharges` (Budget › Paramètres, aligné sur le Compte de résultat du CRM), le
+  « % validé » et le « % réseau » de chaque poste ; `liens.crm` : où les modifier (`bcEtat().modifier`).
+- **`reel`** : le P&L mensuel de Résultat (`ep_perf`, comme `/stores/perf`) relu pour ce seul magasin, de janvier de
+  l'année d'avant le plan au mois en cours ; marge nette en %.
+
 **L'écran** (onglet Trésorerie, après Année) : le modèle, onglet pour onglet — Plan (routine du dimanche, décision des
 4 semaines à venir, repères, cash de fin de semaine, la grille semaine par semaine, pilotage, dettes hors plan),
-Fournisseurs, Paiements, Mode d'emploi — plus « N-1, budget, réalisé » : la base des ventes prévues (budget validé ou
-année passée + croissance), l'état du budget de chaque exercice, et chaque mois le réalisé, le budget, l'atteinte,
-le N-1, l'évolution et l'atterrissage (réalisé avant le plan, puis plan). Dans la grille, sous « Encaissements », trois
-lignes de repère : réalisé en caisse, budget validé, même semaine N-1. Un plan neuf est proposé sans être enregistré :
-base des ventes (le budget s'il couvre au moins la moitié des semaines que couvre l'année passée), coussin de 40 % d'une
-semaine de ventes, un fournisseur au taux matière du budget, un paiement mensuel par poste de charges du budget (hors
-matière et amortissements) et la paie au taux personnel si le budget n'en a pas ; le solde de départ, la TVA, l'ONSS et
-les dettes restent à saisir. Chaque saisie s'enregistre 0,7 s plus tard. Au téléphone, `?vue=tresorerie` retombe sur le
-jour, comme les autres onglets du bureau.
+Fournisseurs, Paiements, Mode d'emploi — plus **Budget & étude** (14/11/2026, il remplace « N-1, budget, réalisé ») :
+la base des ventes prévues (budget validé ou année passée + croissance, la seule chose qui s'y règle), puis pour
+l'exercice choisi, mois par mois : l'étude (saisonnalité, CA théorique), le budget (CA, réalisé, atteinte, N-1,
+évolution, atterrissage), les charges du budget en euros (taux × CA au budget, à défaut l'étude) jusqu'à la marge brute
+et au disponible pour la rémunération, le P&L réel face aux taux (matière du budget, repères de la table KPI) ; enfin
+l'étude (potentiel, montée en régime, saisonnalité) et les exercices (validation, réalisé à date) en cartes. Un mois N-1
+où le magasin n'était pas encore ouvert tout le mois est marqué ‡ et sort de l'évolution. Dans la grille du plan, sous
+« Encaissements », trois lignes de repère (un repère absent : un tiret et son motif) ; une case calculée se saisit au
+double-clic pour sa seule semaine (`forces`). Un plan neuf est proposé sans être enregistré : base des ventes (le budget
+s'il couvre au moins la moitié des semaines que couvre l'année passée), coussin de 40 % d'une semaine de ventes, un
+fournisseur au taux matière du budget, un paiement mensuel par poste de charges du budget (hors matière et
+amortissements) et la paie au taux personnel si le budget n'en a pas ; le solde de départ, la TVA, l'ONSS et les dettes
+restent à saisir. Chaque saisie s'enregistre 0,7 s plus tard ; l'entête ne montre ni l'état d'enregistrement ni de
+bouton (14/11/2026 : « enlève Enregistré, Repartir de zéro, Importer un plan, Exporter CSV ») — seul un échec
+d'enregistrement s'affiche, avec « Réessayer ». Au téléphone, `?vue=tresorerie` retombe sur le jour, comme les autres
+onglets du bureau.
 
 ### `/analyse/produits/magasin` — la fiche d'un produit dans le dashboard d'un magasin
 
