@@ -920,6 +920,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/centrale/commandes/mail/envoyer') { return wr_ca_mail_envoyer(); }
     if ($method === 'POST' && $path === '/centrale/achats/relance') { return wr_ca_relance(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
+    if ($method === 'POST' && $path === '/rapports/suspension') { return wr_rapports_suspension(); }
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
     if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }
     if ($method === 'PUT' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_patch((int) $m[1]); }

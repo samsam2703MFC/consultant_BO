@@ -4592,6 +4592,11 @@ function tplReporting(c, x){
           ? `<button ${x.A(c.rapComposeFermer)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">← Retour à la liste</button>`
           : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Nouveau rapport</button>`}
       </div>
+      ${c.rapGen.suspension ? `
+      <div style="padding:10px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap;${c.rapGen.suspension.suspendu ? 'background:rgba(141,29,44,0.08)' : ''}">
+        <span style="flex:1;min-width:240px;font-size:12px;${c.rapGen.suspension.suspendu ? 'color:var(--accent)' : 'color:var(--color-text-muted)'}">${esc(c.rapGen.suspension.txt)}</span>
+        <button ${x.A(c.rapGen.suspension.basculer)}${c.rapGen.suspension.occupe ? ' disabled' : ''} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 14px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${esc(c.rapGen.suspension.bouton)}</button>
+      </div>` : ''}
       ${c.rapComposeOn ? `
       <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">

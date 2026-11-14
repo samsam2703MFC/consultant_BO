@@ -14647,9 +14647,28 @@ class App {
           this.setState({ caNet: Object.assign({}, c1, { envoi: false, msg: r.ok ? { ok: true, txt: 'Envoyé à ' + r.a + ' : « ' + r.sujet + ' ».' } : { ok: false, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
         });
       } };
+    // L'interrupteur général (14/11/2026, Sam : « inactive tous les rapports ») : suspendus, aucun rapport ne part de
+    // l'horloge ; chaque ligne garde sa case « actif », la reprise remet tout comme avant.
+    const susp = (rd && rd.suspension) || null;
     common.rapGen = {
       chargement: !rz || rz.chargement,
       cronUrl: (rd && rd.cronUrl) || '',
+      suspension: susp ? {
+        suspendu: !!susp.suspendu,
+        txt: susp.suspendu
+          ? 'Envois automatiques suspendus' + (susp.depuis ? ' depuis le ' + dateRun(susp.depuis) : '') + ' — aucun rapport ne part, ni aux magasins ni au réseau. Chaque rapport garde son réglage ; les envois à la main restent possibles.'
+          : 'Envois automatiques en marche : chaque rapport actif part à son heure.',
+        bouton: susp.suspendu ? 'Reprendre les envois' : 'Tout suspendre',
+        occupe: !!S.rapSuspOccupe,
+        basculer: () => {
+          if (this.state.rapSuspOccupe) { return; }
+          this.setState({ rapSuspOccupe: true });
+          this.api('POST', '/rapports/suspension', { suspendu: !susp.suspendu }).then(r => {
+            this.setState({ rapSuspOccupe: false });
+            this.notify(r && r.ok ? (susp.suspendu ? 'Envois repris' : 'Tous les rapports sont suspendus') : 'Pas enregistré : ' + ((r && r.error) || 'erreur'));
+            this.rapCharge(true);
+          });
+        } } : null,
       indispo: rz && !rz.chargement && !rd ? 'La lecture de /rapports a échoué — voir Diagnostic API.' : '',
       lignes: ((rd && rd.rapports) || []).map(r => {
         const defs = (rd && rd.blocs) || {}, levs = (rd && rd.leviers) || {};
