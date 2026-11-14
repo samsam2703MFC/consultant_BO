@@ -302,7 +302,7 @@ function biMots(string $s): array
     $n = strtr($n, [' pur beurre ' => ' ', ' couque suisse ' => ' suisse ', ' couques suisses ' => ' suisse ', ' couque au chocolat ' => ' pain chocolat ',
         ' couques au chocolat ' => ' pain chocolat ', ' sandwich mou ' => ' sandwich ', ' sandwichs mous ' => ' sandwich ', ' petits pains ' => ' pistolet ',
         ' pain gris ' => ' pain gris ', ' eclairs ' => ' eclair ', ' tartelette ' => ' tartelette ', ' cougnous ' => ' cougnou ', ' koekebrood ' => ' cougnou ',
-        ' merveilleux ' => ' merveilleux ', ' gateau d anniversaire ' => ' anniversaire ', ' gateaux anniversaire ' => ' anniversaire ']);
+        ' gateau d anniversaire ' => ' anniversaire ', ' gateaux anniversaire ' => ' anniversaire ', ' galette des rois ' => ' galette ', ' galettes des rois ' => ' galette ']);
     static $vides = ['de', 'du', 'des', 'la', 'le', 'les', 'l', 'd', 'au', 'aux', 'a', 'et', 'en', 'avec', 'sans', 'pur', 'maison', 'artisanal', 'artisanale',
         'piece', 'pieces', 'pc', 'pcs', 'ind', 'individuel', 'individuelle', 'g', 'gr', 'kg', 'cm', 'pers', 'personne', 'personnes', 'p', 'part', 'parts',
         'x', 'n', 'nr', 'o', 'ou', 'un', 'une', 'par', 'pour', 'the', 'el', 'een', 'het', 'met', 'kilo', 'environ', 'env',
@@ -367,24 +367,36 @@ function biProduit(array $p): array
     if (preg_match('/(\d{1,2})\s*(?:\/|à|-)\s*(\d{1,2})\s*(?:personnes|pers)/iu', $nom, $m)) { $parts = ((int) $m[1] + (int) $m[2]) / 2; }
     elseif (preg_match('/(\d{1,2})\s*(?:personnes|pers\b|parts)/iu', $nom, $m)) { $parts = (float) $m[1]; }
     $lot = null;
-    if (preg_match('/\(x\s*(\d{1,2})\)|(\d{1,2})\s*(?:pièces|pcs|pc\b)|boîte de\s*(\d{1,2})/iu', $nom, $m)) { $lot = (int) max((int) ($m[1] ?? 0), (int) ($m[2] ?? 0), (int) ($m[3] ?? 0)) ?: null; }
+    if (preg_match('/\(x\s*(\d{1,2})\)|(\d{1,2})\s*(?:pièces|pcs|pc\b)|boîte de\s*(\d{1,2})|^(\d{1,2})\s*x\b/iu', $nom, $m)) { $lot = (int) max((int) ($m[1] ?? 0), (int) ($m[2] ?? 0), (int) ($m[3] ?? 0), (int) ($m[4] ?? 0)) ?: null; }
+    // Le cougnou et la galette sans taille au panel : celles du benchmark saisonnier (réglage benchmark.taille, poids estimé à confirmer).
+    $estime = false;
+    if ($poids === null && preg_match('/cougnou/iu', $t) && function_exists('benchmarkTailleRef')) { $poids = (float) benchmarkTailleRef('cougnou') ?: null; $estime = $poids !== null; }
+    if ($d === null && preg_match('/galette/iu', $nom) && function_exists('benchmarkTailleRef')) { $d = (float) benchmarkTailleRef('galette') ?: null; }
     $prix = (float) ($p['portion_price_gross'] ?? ($p['portion_price'] ?? 0));
     return ['pid' => (int) $p['id'], 'nom' => $nom, 'cat' => $cat, 'catId' => (int) ($p['id_category'] ?? 0) ?: null, 'prix' => $prix > 0 ? round($prix, 2) : 0.0,
-        'poids' => $poids, 'd' => $d, 'parts' => $parts, 'lot' => $lot, 'mots' => biMots($nom), 'motsCat' => biMots($cat)];
+        'poids' => $poids, 'poidsEstime' => $estime, 'd' => $d, 'parts' => $parts, 'lot' => $lot, 'mots' => biMots($nom), 'motsCat' => biMots($cat)];
 }
 
-/** Le score d'un de nos produits pour une ligne, de 0 à 99 : les mots du nom, puis du nom avec sa catégorie, la rubrique. */
+/** Le score d'un de nos produits pour une ligne, de 0 à 99 (affiché). */
 function biScore(array $ligne, array $prod): int
 {
+    return (int) max(0, min(99, round(biScoreBrut($ligne, $prod) * 100)));
+}
+
+/** Le score brut, sans plafond (il départage deux produits à 99) : les mots du nom, puis du nom avec sa catégorie, la rubrique. */
+function biScoreBrut(array $ligne, array $prod): float
+{
     $mots = biMots($ligne['libelle']);
-    if (!$mots) { return 0; }
+    if (!$mots) { return 0.0; }
     $s = max(biDice($mots, $prod['mots']), 0.95 * biDice($mots, array_values(array_unique(array_merge($prod['mots'], $prod['motsCat'])))));
     // La rubrique du PDF (« Viennoiseries », « Tartes ») qui retrouve la catégorie : un petit plus.
     if ($ligne['rubrique'] !== '' && biDice(biMots($ligne['rubrique']), $prod['motsCat']) > 0) { $s += 0.05; }
     // Un format que nous n'avons pas (diamètre face à un produit sans Ø) : un peu moins sûr.
     if ($ligne['d'] !== null && $prod['d'] === null) { $s -= 0.05; }
-    if ($prod['prix'] <= 0) { $s -= 0.03; }
-    return (int) max(0, min(99, round($s * 100)));
+    // Un produit sans prix dans ce magasin, un lot face à une pièce : moins probable, il perd les égalités.
+    if ($prod['prix'] <= 0) { $s -= 0.10; }
+    if ($prod['lot'] && !$ligne['pieces']) { $s -= 0.10; }
+    return $s;
 }
 
 /** La mémoire des correspondances confirmées : [concurrent|libelle => pid], le concurrent d'abord, le réseau ensuite. */
@@ -420,17 +432,21 @@ function biProposer(array $ligne, array $catalogue, array $memoire): array
     $mots = biMots($ligne['libelle']);
     $complets = [];
     foreach ($catalogue as $p) {
-        $sc = biScore($ligne, $p);
-        // Tous les mots de la ligne dans le nom du produit : « Pistolets » dans « Pistolet à l'Ancienne ».
+        $brut = biScoreBrut($ligne, $p);
+        $sc = (int) max(0, min(99, round($brut * 100)));
+        // Tous les mots de la ligne dans le produit (nom et catégorie) : « Pistolets » dans « Pistolet à l'Ancienne »,
+        // « Tarte au riz » dans « Riz » des Tartes Ø 28. Les mots du nom qui restent disent ce qu'il a de plus.
         $restent = $p['mots'];
+        $cat = $p['motsCat'];
         $complet = $mots !== [];
         foreach ($mots as $m) {
             $trouve = false;
             foreach ($restent as $j => $x) { if (biMotProche($m, $x)) { unset($restent[$j]); $trouve = true; break; } }
+            if (!$trouve) { foreach ($cat as $x) { if (biMotProche($m, $x)) { $trouve = true; break; } } }
             if (!$trouve) { $complet = false; break; }
         }
-        if ($complet) { $complets[$p['pid']] = array_values($restent); }
-        if ($sc >= 35) { $cands[] = ['pid' => $p['pid'], 'score' => $sc]; }
+        if ($complet && $p['prix'] > 0) { $complets[$p['pid']] = array_values($restent); }
+        if ($sc >= 35) { $cands[] = ['pid' => $p['pid'], 'score' => $sc, 'brut' => $brut]; }
     }
     // Un seul de nos produits contient tous les mots de la ligne, avec un mot de plus au plus et qui n'en change pas le sens
     // (pas « demi », « mini », « nappé ») : c'est lui. Deux mots de plus : probable, à confirmer.
@@ -439,21 +455,21 @@ function biProposer(array $ligne, array $catalogue, array $memoire): array
         $extra = $complets[$pid];
         $sens = (bool) array_intersect($extra, ['demi', 'mini', 'maxi', 'double', 'nappe', 'petit', 'grand', 'garni', 'glace']);
         $plancher = !$sens && count($extra) <= 1 ? 90 : (count($extra) <= 2 ? 75 : 0);
-        foreach ($cands as &$c) { if ($c['pid'] === $pid) { $c['score'] = max($c['score'], $plancher); } }
+        foreach ($cands as &$c) { if ($c['pid'] === $pid && $c['score'] < $plancher) { $c['score'] = $plancher; $c['brut'] = $plancher / 100; } }
         unset($c);
     }
-    usort($cands, static fn ($a, $b) => $b['score'] <=> $a['score'] ?: $a['pid'] <=> $b['pid']);
+    usort($cands, static fn ($a, $b) => $b['brut'] <=> $a['brut'] ?: $a['pid'] <=> $b['pid']);
     $cands = array_slice($cands, 0, 5);
     $mem = $memoire[biCleLibelle($ligne['libelle'])] ?? null;
     if ($mem !== null && isset($parPid[$mem])) {
         $cands = array_values(array_filter($cands, fn ($c) => $c['pid'] !== $mem));
-        array_unshift($cands, ['pid' => $mem, 'score' => 99]);
+        array_unshift($cands, ['pid' => $mem, 'score' => 99, 'brut' => 2.0]);
         return ['pid' => $mem, 'score' => 99, 'statut' => 'sur', 'candidats' => array_slice($cands, 0, 5), 'appris' => true];
     }
     $top = $cands[0] ?? null;
     if ($top === null || $top['score'] < 60) { return ['pid' => null, 'score' => $top['score'] ?? 0, 'statut' => 'sans', 'candidats' => $cands, 'appris' => false]; }
     // Deux candidats au coude à coude : à confirmer, même haut.
-    $serre = isset($cands[1]) && $cands[1]['score'] >= $top['score'] - 3;
+    $serre = isset($cands[1]) && $cands[1]['brut'] >= $top['brut'] - 0.03;
     return ['pid' => $top['pid'], 'score' => $top['score'], 'statut' => $top['score'] >= 90 && !$serre ? 'sur' : 'conf', 'candidats' => $cands, 'appris' => false];
 }
 
@@ -469,22 +485,27 @@ function biComparer(array $l, array $p): ?array
     $nousPiece = $p['lot'] ? $p['prix'] / $p['lot'] : $p['prix'];
     $promo = $l['promo'] ?? null;
     $eux = $promo !== null && $prixL === null ? $promo : $prixL;
-    $base = 'à la pièce'; $unite = ''; $nous = $nousPiece;
+    $base = 'à la pièce'; $unite = ''; $nous = $nousPiece; $indicatif = false;
+    // Un prix au kilo face à un produit à la pièce sans poids : rien de comparable.
+    if ($l['g'] && abs($l['g'] - 1000) < 0.5 && !$p['poids']) { return null; }
     if ($l['pieces']) {
         $eux = $eux / $l['pieces']; $base = 'les ' . $l['pieces'] . ', ramené à la pièce';
     } elseif ($l['g'] && $p['poids']) {
         $eux = $eux / ($l['g'] / 1000); $nous = $p['prix'] / ($p['poids'] / 1000); $unite = '/kg';
-        $base = 'au kg · ' . biNf($l['g'], 0) . ' g / ' . biNf($p['poids'], 0) . ' g';
+        $base = 'au kg · ' . biNf($l['g'], 0) . ' g / ' . biNf($p['poids'], 0) . ' g' . (!empty($p['poidsEstime']) ? ' (estimé)' : '');
     } elseif ($l['d'] && $p['d']) {
         $eux = $eux * ($p['d'] / $l['d']) ** 2;
         $base = 'Ø ' . biNf($l['d'], 0) . ' → Ø ' . biNf($p['d'], 0) . ', même surface';
     } elseif ($l['parts'] && $p['parts']) {
         $eux = $eux / $l['parts']; $nous = $p['prix'] / $p['parts']; $unite = '/part';
         $base = 'à la part · ' . $l['parts'] . ' p. / ' . biNf($p['parts'], 0) . ' p.';
+    } elseif ($l['g'] || $l['d'] || $l['parts']) {
+        // Leur taille est écrite, la nôtre n'est pas au panel : à la pièce, pour information seulement.
+        $indicatif = true; $base = 'à la pièce, indicatif (notre ' . ($l['g'] ? 'poids' : ($l['d'] ? 'Ø' : 'nombre de parts')) . ' n’est pas au panel)';
     }
     if ($eux <= 0) { return null; }
     return ['base' => $base, 'eux' => round($eux, 3), 'nous' => round($nous, 3), 'unite' => $unite, 'ecart' => round($nous / $eux - 1, 4),
-        'promo' => $promo !== null && $prixL !== null];
+        'promo' => $promo !== null && $prixL !== null, 'indicatif' => $indicatif];
 }
 
 function biNf(float $v, int $d): string { return number_format($v, $d, ',', ' '); }
@@ -570,8 +591,9 @@ function biVue(array $imp, bool $avecCatalogue = true): array
         $prop = $l['etat'] === 'illi' ? ['pid' => null, 'score' => 0, 'statut' => 'sans', 'candidats' => [], 'appris' => false] : biProposer($l, $cat, $mem);
         $dec = biDecision($l, $prop, (array) $imp['choix']);
         $n[$dec['etat']]++;
-        $p = $dec['pid'] ? ($parPid[$dec['pid']] ?? null) : ($prop['pid'] ? ($parPid[$prop['pid']] ?? null) : null);
-        $lignes[] = $l + ['proposition' => $prop, 'decision' => $dec,
+        // Le produit affiché : celui retenu, ou la proposition qui attend sa confirmation ; rien pour « sans équivalent » ou « ignorée ».
+        $p = $dec['pid'] ? ($parPid[$dec['pid']] ?? null) : ($dec['etat'] === 'attente' && $prop['pid'] ? ($parPid[$prop['pid']] ?? null) : null);
+        $lignes[] = $l + ['proposition' => $prop, 'decision' => $dec, 'choix' => array_key_exists((string) $l['i'], (array) $imp['choix']) ? (int) $imp['choix'][(string) $l['i']] : null,
             'produit' => $p ? ['pid' => $p['pid'], 'nom' => $p['nom'], 'cat' => $p['cat'], 'prix' => $p['prix']] : ($dec['pid'] ? ['pid' => $dec['pid'], 'nom' => 'produit ' . $dec['pid'], 'cat' => '', 'prix' => 0.0] : null),
             'comparaison' => $p ? biComparer($l, $p) : null,
             'candidats' => array_map(fn ($x) => ['pid' => $x['pid'], 'score' => $x['score'], 'nom' => $parPid[$x['pid']]['nom'] ?? '', 'cat' => $parPid[$x['pid']]['cat'] ?? '',
@@ -579,7 +601,10 @@ function biVue(array $imp, bool $avecCatalogue = true): array
     }
     // Ce que l'encodage comparera : les lignes rattachées, hors promotions et prix manquants.
     $ecarts = [];
-    foreach ($lignes as $l) { if ($l['decision']['etat'] === 'produit' && $l['comparaison'] && empty($l['comparaison']['manque']) && $l['promo'] === null) { $ecarts[] = $l['comparaison']['ecart']; } }
+    foreach ($lignes as $l) {
+        $k = $l['comparaison'];
+        if ($l['decision']['etat'] === 'produit' && $k && empty($k['manque']) && empty($k['indicatif']) && $l['promo'] === null) { $ecarts[] = $k['ecart']; }
+    }
     return [
         'id' => (int) $imp['id'], 'source' => (string) $imp['source'], 'statut' => (string) $imp['statut'], 'titre' => (string) $imp['titre'],
         'creeLe' => substr((string) $imp['cree_le'], 0, 16), 'nomOrigine' => $imp['nom_origine'], 'octets' => (int) $imp['octets'], 'demande' => $imp['demande'],
@@ -710,13 +735,14 @@ function biRetenir(string $concurrent, array $paires): void
  * Les concurrents de chaque magasin, avec leur code postal et leur classement : TFBuddy (ce que le benchmark tient),
  * les relevés web du cockpit qui n'y sont pas encore, et les relevés importés qui attendent l'encodage.
  */
-function biClassement(): array
+function biClassement(?int $seul = null): array
 {
     $mags = biMagasins();
     $plages = biZones($mags);
-    $out = []; $vus = []; $tous = [];
+    $out = [];
     $lire = BenchmarkApi::disponible();
     foreach ($mags as $id => $m) {
+        if ($seul !== null && $id !== $seul) { continue; }
         $L = [];
         $liste = $lire ? BenchmarkApi::concurrents($id, true) : null;
         foreach ((array) $liste as $c) {
