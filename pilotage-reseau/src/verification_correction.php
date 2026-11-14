@@ -978,3 +978,41 @@ function wr_verification_liens(): array
     vrcOublier('vfAnalyse');
     return ['ok' => true, 'liens' => vrcLiens(), 'formatPrix' => vrcFormatPrix()];
 }
+
+/**
+ * GET /verification/recettes/sonde-prix?mid=&fid=[&shops=2,5][&sku=] — lecture seule (14/11/2026, « d'où vient le
+ * prix ? ») : le prix d'une matière vu de toutes les routes du panel qui le portent, pour choisir le format d'écriture
+ * sans deviner. Par magasin : la ligne de /shops/{id}/materials, la ligne de la liste du fournisseur (courante,
+ * dernière, programmée), la liste vue du magasin et les notifications de changement de prix. Les listes sont réduites
+ * aux lignes de la matière (ou aux trois premières) : jamais une réponse entière.
+ */
+function ep_verification_sonde_prix(): array
+{
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $mid = (int) ($_GET['mid'] ?? 0); $fid = (int) ($_GET['fid'] ?? 0);
+    if ($mid <= 0) { http_response_code(400); return ['error' => 'mid requis']; }
+    $shops = array_values(array_filter(array_map('intval', explode(',', (string) ($_GET['shops'] ?? implode(',', array_keys(vfMagasins())))))));
+    $sku = (string) ($_GET['sku'] ?? '');
+    $garde = static function ($r) use ($mid, $sku): mixed {
+        if (!is_array($r)) { return $r; }
+        $l = PanelApi::liste($r);
+        if ($l === []) { return array_is_list($r) ? $r : array_map(static fn ($v) => is_array($v) && count($v) > 5 ? '[' . count($v) . ' éléments]' : $v, $r); }
+        $a = array_values(array_filter($l, static function ($x) use ($mid, $sku) {
+            $j = (string) json_encode($x);
+            return preg_match('/"(id_material|material_id|id)":"?' . $mid . '"?[,}]/', $j) === 1 || ($sku !== '' && str_contains($j, '"' . $sku . '"'));
+        }));
+        return ['n' => count($l), 'lignes' => $a !== [] ? array_slice($a, 0, 5) : array_slice($l, 0, 3), 'filtre' => $a !== []];
+    };
+    $out = ['mid' => $mid, 'fid' => $fid, 'materiau' => vrcObjet('matiere', $mid), 'lu' => []];
+    $chemins = [];
+    foreach ($shops as $s) {
+        $chemins[$s . ':materials'] = '/shops/' . $s . '/materials';
+        if ($fid > 0) {
+            foreach (['current', 'latest', 'schedule'] as $q) { $chemins[$s . ':liste-' . $q] = '/material-suppliers/' . $fid . '/shops/' . $s . '/price-lists/' . $q; }
+            $chemins[$s . ':liste-magasin'] = '/shops/' . $s . '/suppliers/' . $fid . '/price-list';
+            $chemins[$s . ':notifications'] = '/material-suppliers/' . $fid . '/shops/' . $s . '/price-change-notifications';
+        }
+    }
+    foreach (PanelApi::getParalleleDetail($chemins, 4, 30, false) as $k => $d) { $out['lu'][$k] = ['code' => $d['code'] ?? null, 'route' => $chemins[$k], 'data' => $garde($d['data'] ?? null)]; }
+    return $out;
+}
