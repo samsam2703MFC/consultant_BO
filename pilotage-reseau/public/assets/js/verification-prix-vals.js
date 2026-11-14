@@ -5,6 +5,7 @@
  * au panel par le geste `prix` des corrections (relu, au registre, « Annuler »). Gabarit : verification-prix-tpl.js. */
 import { readOne, write } from './api.js';
 import { ouvrirFiche } from './verification-fichemat-vals.js';
+import { valsTableau } from './verification-tableau-vals.js';
 
 const nf = (n, d) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[  ]/g, ' ');
 const num = s => { const t = String(s == null ? '' : s).trim().replace(/\s/g, '').replace(',', '.'); if (t === '') { return null; } const n = Number(t); return isFinite(n) ? n : NaN; };
@@ -81,6 +82,11 @@ export function valsMatieres(app){
   const v = { chargement: !!M.chargement && !d, relecture: !!M.chargement && !!d, rafraichir: () => charger(app, true),
     erreur: M.d && M.d.error ? 'Le serveur du cockpit n’a pas répondu : réessayez dans un instant.' : (M.d && M.d.indispo ? M.d.motif : null) };
   if (!d) { return v; }
+  // Deux lectures (14/11/2026) : par fournisseur ou par catégorie, avec le formulaire du prix ; ou la liste de toutes les matières.
+  const aff = S.vmAff === 'liste' ? 'liste' : 'tableau';
+  v.affichages = [['tableau', 'Par fournisseur ou catégorie'], ['liste', 'Toutes les matières, prix de référence au choix']].map(([id, nom]) => ({ nom, on: aff === id, choisir: () => app.setState({ vmAff: id }) }));
+  v.lu = d.cache && d.cache.le ? 'calculé à ' + d.cache.le.slice(11, 16) : (d.lu ? 'calculé à ' + String(d.lu).slice(11, 16) : '');
+  if (aff === 'tableau') { v.tableau = valsTableau(app, d); v.source = d.source || ''; return v; }
   const ch = S.vmChoix || {};
   const majChoix = (mid, patch) => app.setState({ vmChoix: Object.assign({}, app.state.vmChoix, { [mid]: Object.assign({ a: 'sansPrix' }, (app.state.vmChoix || {})[mid], patch) }), vmPrev: null, vmRes: null });
   const filtre = S.vmFiltre || '', q = String(S.vmQ || '').trim().toLowerCase();
