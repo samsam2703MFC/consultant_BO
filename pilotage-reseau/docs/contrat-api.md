@@ -5521,7 +5521,7 @@ jamais de boutique (champs filtrés).
 
     GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
     GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
-    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref}, format, langs, products, pages}
+    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, langs, products, pages}
     GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, langs, products, pages, status, printQty)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
     POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)

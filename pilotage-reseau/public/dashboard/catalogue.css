@@ -80,6 +80,11 @@
 .cm-src button{display:flex;flex-direction:column;gap:3px;text-align:left;border:1px solid var(--color-border-tertiary);background:var(--color-surface);border-radius:12px;padding:13px 14px;cursor:pointer;font:inherit;color:inherit}
 .cm-src button.on{border-color:var(--color-primary);box-shadow:0 0 0 1px var(--color-primary);background:rgba(141,29,44,.03)}
 .cm-src .n{font-size:14px}
+.cm-src button.gam{position:relative;padding-left:40px}
+.cm-src button.gam .cb{position:absolute;left:14px;top:15px;width:16px;height:16px;border-radius:4px;border:1.5px solid #B8B2A8;background:#fff;display:grid;place-items:center}
+.cm-src button.gam.on .cb{background:var(--color-primary);border-color:var(--color-primary)}
+.cm-src button.gam.on .cb::after{content:'';width:7px;height:3px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px)}
+.cm-src button:disabled{opacity:.5;cursor:default}
 .cm-src .d{font-size:11.5px;color:var(--color-text-muted)}
 
 /* Étape 2 : les produits */

@@ -23,7 +23,7 @@
   const BLEED = 3;
   const PX_MM = 96 / 25.4;
   const ETAPES = [
-    ['Point de départ', 'une gamme, ou tous mes produits'],
+    ['Point de départ', 'mes gammes, ou tous mes produits'],
     ['Je clique mes produits', 'ceux de MA boutique, à mes prix'],
     ['Mise en page', 'format, pages intérieures'],
     ['Aperçu et PDF', 'FR ou NL'],
@@ -126,7 +126,7 @@
     });
   }
   function nouveau(S) {
-    S.vue = 'assistant'; S.etape = 1; S.cat = null; S.src = null; S.titre = ''; S.choix = null; S.pages = null;
+    S.vue = 'assistant'; S.etape = 1; S.cat = null; S.src = null; S.titre = ''; S.titreAuto = ''; S.choix = null; S.pages = null;
     S.format = 'A5'; S.langs = ['fr']; S.lang = 'fr'; S.msg = null; S.rech = ''; oublierDocs(S);
     chargerProduits(S); rendre(S);
   }
@@ -140,13 +140,14 @@
   function creer(S) {
     const titre = S.titre.trim();
     if (!titre) { S.msg = { type: 'err', titre: 'Donnez un titre à votre catalogue.' }; rendre(S); return; }
-    if (!S.src) { S.msg = { type: 'err', titre: 'Choisissez le point de départ : une gamme, ou tous mes produits.' }; rendre(S); return; }
+    if (!S.src || (Array.isArray(S.src) && !S.src.length)) { S.msg = { type: 'err', titre: 'Choisissez le point de départ : une ou plusieurs gammes, ou tous mes produits.' }; rendre(S); return; }
     const corps = { title: titre, format: 'A5', langs: ['fr'] };
     if (S.src === 'tous') {
       corps.source = { kind: 'choix' };
       corps.products = produits(S).map(p => ({ id: +p.id, on: true }));
     } else {
-      corps.source = { kind: 'gamme', ref: +S.src };
+      // Une gamme : un entier ; plusieurs (8 au plus) : la liste, produits cumulés par le Marketing.
+      corps.source = { kind: 'gamme', ref: S.src.length === 1 ? +S.src[0] : S.src.map(Number) };
     }
     occupe(S, appel('POST', qs(S), corps).then(j => { adopter(S, j.data); S.etape = 2; S.liste = null; }), 'Création du catalogue');
   }
@@ -210,6 +211,28 @@
     occupe(S, appel('DELETE', '/' + id + qs(S)).then(() => chargerListe(S)), 'Suppression');
   }
 
+  /** Étape 1 : « Tous mes produits » est exclusif ; les gammes se cochent (8 au plus). Le titre proposé suit les
+   * gammes cochées (« Noël + Saint-Nicolas ») tant qu'il n'a pas été réécrit. */
+  const MAX_GAMMES = 8;
+  function choisirSource(S, v) {
+    if (v === 'tous') { S.src = S.src === 'tous' ? null : 'tous'; }
+    else {
+      const l = Array.isArray(S.src) ? S.src.slice() : [];
+      const i = l.indexOf(v);
+      if (i >= 0) { l.splice(i, 1); } else if (l.length < MAX_GAMMES) { l.push(v); } else { S.msg = { type: 'inf', titre: MAX_GAMMES + ' gammes au plus dans un catalogue.' }; }
+      S.src = l.length ? l : null;
+    }
+    const propose = Array.isArray(S.src) ? S.src.map(id => (gammes(S).find(g => String(g.id) === id) || {}).name).filter(Boolean).join(' + ') : '';
+    if (!S.titre.trim() || S.titre === S.titreAuto) { S.titre = propose; S.titreAuto = propose; }
+    rendre(S);
+  }
+  /** Les gammes d'un catalogue : `source.refs` (toutes), à défaut `source.ref`. */
+  function gammesDe(S, c) {
+    const src = (c && c.source) || {};
+    const refs = Array.isArray(src.refs) && src.refs.length ? src.refs : (src.ref != null ? [src.ref] : []);
+    const noms = refs.map(r => (gammes(S).find(g => String(g.id) === String(r)) || {}).name).filter(Boolean);
+    return noms.length === refs.length && noms.length ? noms : (src.label ? [src.label] : noms);
+  }
   function clic(S, ev) {
     const b = ev.target.closest('[data-cm]');
     if (!b || b.disabled || !S.el.contains(b)) { return; }
@@ -221,7 +244,7 @@
     else if (a === 'apercu') { ouvrir(S, v, 4); }
     else if (a === 'suppr') { ev.stopPropagation(); supprimer(S, v); }
     else if (a === 'statut') { ev.stopPropagation(); statut(S, v, b.dataset.st); }
-    else if (a === 'src') { S.src = v; if (!S.titre.trim() && v !== 'tous') { const g = gammes(S).find(x => String(x.id) === v); if (g) { S.titre = g.name; } } rendre(S); }
+    else if (a === 'src') { choisirSource(S, v); }
     else if (a === 'creer') { creer(S); }
     else if (a === 'etape') { aller(S, +v); }
     else if (a === 'prod') { if (S.choix) { S.choix[v] = !S.choix[v]; rendre(S); } }
@@ -284,7 +307,8 @@
     }
     h += '<div class="db-card" style="overflow:hidden"><table class="cm-tab"><thead><tr><th>Catalogue</th><th style="width:110px">État</th><th class="s-col" style="width:90px">Pages</th><th class="s-col" style="width:90px">Produits</th><th style="width:120px">Mis à jour</th><th></th></tr></thead><tbody>';
     S.liste.forEach(c => {
-      const src = c.source && c.source.kind === 'gamme' ? 'Gamme ' + (c.source.label || '') : 'Mes produits';
+      const ng = c.source && c.source.kind === 'gamme' ? gammesDe(S, c) : null;
+      const src = ng ? (ng.length > 1 ? 'Gammes ' : 'Gamme ') + ng.join(' + ') : 'Mes produits';
       h += '<tr class="cl" data-cm="ouvrir" data-v="' + c.id + '"><td><div class="t">' + esc(c.title) + '</div><div class="s">' + esc(src) + ' · ' + esc(c.format) + ' · ' + esc((c.langs || ['fr']).join(' + ').toUpperCase()) + '</div></td>'
         + '<td><span class="cm-et ' + esc(c.status) + '">' + esc(STATUTS[c.status] || c.status) + '</span></td>'
         + '<td class="n s-col">' + (c.pageCount || 0) + '</td><td class="n s-col">' + (c.productCount || 0) + '</td>'
@@ -332,9 +356,10 @@
   function rendreE1(S) {
     let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Point de départ</span></div>';
     if (S.cat) {
-      const src = S.cat.source && S.cat.source.kind === 'gamme' ? 'la gamme « ' + (S.cat.source.label || '') + ' »' : 'tous mes produits';
+      const ng = S.cat.source && S.cat.source.kind === 'gamme' ? gammesDe(S, S.cat) : null;
+      const src = ng ? (ng.length > 1 ? 'des gammes ' : 'de la gamme ') + ng.map(n => '« ' + n + ' »').join(' + ') : 'de tous mes produits';
       h += '<label class="cm-champ"><span>Titre du catalogue</span><input type="text" maxlength="160" data-cm="titre" value="' + esc(S.titre) + '"></label>'
-        + '<div class="cm-msg inf">Ce catalogue est parti de ' + esc(src) + '. Le point de départ ne change plus ; les produits se choisissent à l’étape 2.</div>'
+        + '<div class="cm-msg inf">Ce catalogue est parti ' + esc(src) + '. Le point de départ ne change plus ; les produits se choisissent à l’étape 2.</div>'
         + '<div class="cm-pied"><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="2"' + (S.occupe ? ' disabled' : '') + '>Mes produits ›</button></div>';
       return h + '</section>' + cote(S, resume(S)) + '</div>';
     }
@@ -342,13 +367,18 @@
     if (!S.prod && !S.prodErr) { h += '<div class="cm-vide">Lecture des produits et des gammes de ma boutique…</div>'; }
     else if (S.prod) {
       const prods = produits(S);
-      h += '<div class="cm-champ"><span>Je pars de…</span></div><div class="cm-src">';
+      const coches = Array.isArray(S.src) ? S.src : [];
+      const cumul = coches.length ? prods.filter(p => (p.gammes || []).some(x => coches.includes(String(x)))).length : 0;
+      h += '<div class="cm-champ"><span>Je pars de… une ou plusieurs gammes (' + MAX_GAMMES + ' au plus), ou tous mes produits</span></div>';
+      if (coches.length) { h += '<div class="cm-cpt" style="margin:-6px 0 10px">' + coches.length + ' gamme' + (coches.length > 1 ? 's' : '') + ' cochée' + (coches.length > 1 ? 's' : '') + ' · <b style="font-weight:400;color:var(--color-primary)">' + cumul + ' produit' + (cumul > 1 ? 's' : '') + ' cumulé' + (cumul > 1 ? 's' : '') + '</b> (un produit de deux gammes compte une fois)</div>'; }
+      h += '<div class="cm-src">';
       gammes(S).forEach(g => {
         const n = prods.filter(p => (p.gammes || []).map(Number).includes(+g.id)).length;
         const quand = g.from || g.to ? ' · ' + [g.from ? 'du ' + date(g.from) : '', g.to ? 'au ' + date(g.to) : ''].filter(Boolean).join(' ') : '';
-        h += '<button data-cm="src" data-v="' + esc(g.id) + '" class="' + (S.src === String(g.id) ? 'on' : '') + '"' + (n ? '' : ' disabled') + '><span class="n">Gamme ' + esc(g.name) + '</span><span class="d">' + n + ' produit' + (n > 1 ? 's' : '') + ' dans ma boutique' + esc(quand) + '</span></button>';
+        const on = coches.includes(String(g.id));
+        h += '<button data-cm="src" data-v="' + esc(g.id) + '" role="checkbox" aria-checked="' + on + '" class="gam' + (on ? ' on' : '') + '"' + (n && (on || coches.length < MAX_GAMMES) ? '' : ' disabled') + '><span class="cb" aria-hidden="true"></span><span class="n">Gamme ' + esc(g.name) + '</span><span class="d">' + n + ' produit' + (n > 1 ? 's' : '') + ' dans ma boutique' + esc(quand) + '</span></button>';
       });
-      h += '<button data-cm="src" data-v="tous" class="' + (S.src === 'tous' ? 'on' : '') + '"' + (prods.length ? '' : ' disabled') + '><span class="n">Tous mes produits</span><span class="d">' + prods.length + ' produit' + (prods.length > 1 ? 's' : '') + ' de mon webshop</span></button></div>';
+      h += '<button data-cm="src" data-v="tous" role="radio" aria-checked="' + (S.src === 'tous') + '" class="' + (S.src === 'tous' ? 'on' : '') + '"' + (prods.length ? '' : ' disabled') + '><span class="n">Tous mes produits</span><span class="d">' + prods.length + ' produit' + (prods.length > 1 ? 's' : '') + ' de mon webshop</span></button></div>';
       if (!prods.length) { h += '<div class="cm-msg inf" style="margin-top:12px">Le Marketing ne trouve aucun produit au webshop de ma boutique : rien à mettre au catalogue pour l’instant.</div>'; }
     }
     h += '<div class="cm-pied"><span class="sp"></span><button class="cm-btn pri" data-cm="creer"' + (S.occupe || !S.prod ? ' disabled' : '') + '>' + (S.occupe ? 'Création…' : 'Créer et choisir mes produits ›') + '</button></div>';
