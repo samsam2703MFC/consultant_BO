@@ -290,9 +290,9 @@ body { margin: 0; background: var(--paper); }
           <div class="rp-alerte" id="b2b-cadre" hidden></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
       </div>
       <div class="rp-deux">
-        <div class="rp-part" id="panier"><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
+        <div class="rp-part" id="panier" hidden>   <!-- simplifié le 14/11/2026 (Sam) : une ligne dans la liste --><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
           <div class="rp-table-zone"><table class="rp-table rp-serre" id="panier-magasins"></table></div></div>
-        <div class="rp-part" id="tc-releve-zone"><h3 class="rp-h3" id="tc-releve-titre"></h3>
+        <div class="rp-part" id="tc-releve-zone" hidden>   <!-- simplifié le 14/11/2026 (Sam) : la ligne 4 de la liste --><h3 class="rp-h3" id="tc-releve-titre"></h3>
           <div class="rp-table-zone"><table class="rp-table rp-serre" id="tc-releve"></table></div><p class="rp-aide" id="tc-releve-note"></p></div>
       </div>
     </section>
@@ -1001,6 +1001,7 @@ $('probleme-points').innerHTML = [   // une ligne par constat (13/11/2026, Sam :
   B2BX && B2BX.sept ? `Hausse de septembre-octobre : le B2B ; sans lui, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`
                     : `Octobre : ${pct(O.vsCa, 0)} de CA, mais ${pct(O.vsCli, 0)} de clients.`,
   B2BX ? `B2B : ${dec(B2BX.topPct, 0)} % pour un seul client ; plafond ${dec(D.plafondClient, 0)} % par client.` : null,
+  `Panier : ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${PA.bas.nom} : ${eur2(PA.bas.panier)}).`,   // 14/11/2026
   `Été faible : juillet ${pct(juil.vsCa, 0)}, août ${pct(aout.vsCa, 0)}.`,
   PE6 ? `Personnel : ${dec(PE6.n.pct)} % du CA (${dec(PE6.n1.pct)} % en 2025 ; seuil ${dec(D.seuilPersonnel, 0)} %).` : null,
 ].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
@@ -1281,7 +1282,7 @@ if (D.b2bDetail && D.b2bDetail.societes.length) {
   const CB = D.cadreB2b, g = CB && S6.find(c => c.nom.toUpperCase().includes(CB.motif));
   if (g) {
     $('b2b-cadre').innerHTML = `<span class="rp-alerte-k">${esc(CB.client)} : un bon client, à cadrer</span><ul class="rp-points">`
-      + [`${eur(g.t)} en 6 mois, ${dec(g.t / tot * 100)} % du B2B ; plafond ${dec(D.plafondClient, 0)} % par client.`, ...CB.points]
+      + CB.points   // ses chiffres sont dans le tableau juste au-dessus (simplifié le 14/11/2026)
         .map(t => `<li>${esc(insec(t))}</li>`).join('') + '</ul>';
     $('b2b-cadre').hidden = false;
   }
