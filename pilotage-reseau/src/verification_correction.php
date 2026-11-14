@@ -679,7 +679,10 @@ function vrcGeste(array $b): array
 }
 
 /** Les routes de prix que le formulaire peut viser (swagger du panel) : rien d'autre ne part d'ici. */
-const VRC_ROUTES_PRIX = ['#^/materials/\d+/manual-price$#', '#^/shops/\d+/materials/avg-price$#', '#^/shops/\d+/suppliers/\d+/materials/price$#'];
+// Le 14/11/2026 : le prix d'une matière de centrale est « géré par le fournisseur » (403 SUPPLIER_MANAGED_PRICE au
+// magasin) ; on repasse alors le tarif du fournisseur pour le magasin, par la route de la centrale.
+const VRC_ROUTES_PRIX = ['#^/materials/\d+/manual-price$#', '#^/shops/\d+/materials/avg-price$#', '#^/shops/\d+/suppliers/\d+/materials/price$#',
+    '#^/material-suppliers/\d+/shops/\d+/products/\d+/price$#'];
 
 /**
  * Un format de prix saisi dans le formulaire (14/11/2026 : « je dois pouvoir avoir le formulaire avec le prix et toutes les
