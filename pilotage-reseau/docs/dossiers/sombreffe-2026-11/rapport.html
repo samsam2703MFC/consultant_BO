@@ -135,7 +135,7 @@ body { margin: 0; background: var(--paper); }
 .repere-graphes { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 8px; break-inside: avoid; }
 .repere-g-titre { font-size: 12px; color: var(--muted-2); margin-bottom: 2px; }
 .repere-note { font-size: 11.5px; color: var(--muted); margin: 0; }
-@media print { .rp-grille td.axe { padding: 13px 6px; } #repere { margin-top: 10px; } }   /* l’étape 3 et le repère de Halle sur une seule page */
+/* le repère de Halle retiré (14/11/2026) : la grille reprend toute sa hauteur à l’impression */
 .axe-v { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .axe-s { font-size: 11px; color: var(--muted); }
 .axe-g { font-size: 14px; color: var(--green); margin-top: 6px; }
@@ -286,7 +286,7 @@ body { margin: 0; background: var(--paper); }
       <h2 class="rp-h3" id="axes-titre"></h2>
       <div class="rp-table-zone"><table class="rp-table rp-grille" id="axes-table"></table></div>
       <ul class="rp-points" id="axes-points"></ul>
-      <div id="repere" hidden>   <!-- le repère de Halle, 8 dernières semaines (14/11/2026, Sam) -->
+      <div id="repere" data-masque="1" hidden>   <!-- le repère de Halle (14/11/2026), retiré le 14/11/2026 (Sam) : gardé, pas montré -->
         <h2 class="rp-h3" id="repere-titre"></h2>
         <div class="rp-kpis" id="repere-tuiles"></div>
         <div class="repere-graphes">   <!-- graphique demandé le 14/11/2026 (Sam) -->
@@ -1082,7 +1082,7 @@ if (D.theorique) {
     `Hypothèses : matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau), frais généraux du P&L (${eur(R.fg)} par mois) ; base : le mois moyen de février à octobre 2026.`,
   ].map(t => `<li>${esc(insec(t))}</li>`).join('');
   // Le repère : ce que Halle a fait ces 8 dernières semaines, appliqué à Sombreffe avec le même calcul que la grille.
-  if (D.repere) {
+  if (D.repere && !$('repere').dataset.masque) {
     const P = D.repere, RH = P.halle, RM = P.moi, dc = RH.apres - RH.avant, dp = RH.panierComptoir - RM.panierComptoir, h = res(dc, dp);
     $('repere-titre').textContent = `Le repère : ${P.nom}, les 8 dernières semaines (${dateC(RH.du)} → ${dateC(RH.au)}/${RH.au.slice(0, 4)})`;
     $('repere-tuiles').innerHTML = [
