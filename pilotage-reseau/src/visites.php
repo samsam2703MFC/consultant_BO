@@ -850,6 +850,8 @@ function ep_visites_app(): array
         'boutiques' => $e['boutiques'], 'consultants' => array_map(fn ($c) => $c + ['profil' => function_exists('vcProfilDe') ? vcProfilDe($c['id']) : '', 'profilNom' => function_exists('vcProfilDe') ? vcProfilNom(vcProfilDe($c['id'])) : ''], viConsultants()),
         'visites' => $visites, 'points' => $points, 'photos' => $photos, 'plans' => $e['plans'],
         'msp' => $e['msp'], 'equipe' => $e['equipe'], 'checklist' => viChecklist(), 'photosQuestions' => viPhotos(), 'charte' => viCharte(), 'types' => $types, 'cadre' => function_exists('vcCadre') ? vcCadre() : [], 'taches' => $taches,
+        // Les délais de correction des points (13/11/2026) : ceux des règles du réseau (Suivi › Qui fait quoi), proposés par la tablette.
+        'delaisPoints' => (static function (): array { $d = function_exists('suRegles') ? (suRegles()['delais'] ?? []) : []; return ['P0' => (int) ($d['p0'] ?? 2), 'P1' => (int) ($d['p1'] ?? 7), 'P2' => (int) ($d['p2'] ?? 14)]; })(),
         'causes' => viCausesPlano(), 'causesDiag' => viCausesDiag(), 'seuils' => viSeuils(),
         // Les repères sur photo (05/11/2026) : le barème de gravité du Contrôle des tâches (réglage « signalement »), ses couleurs.
         'reperesNiveaux' => viReperesNiveaux(),

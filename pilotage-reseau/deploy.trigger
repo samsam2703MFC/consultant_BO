@@ -1473,3 +1473,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T12:58:29Z Sonde : commandes fournisseur et livraisons (lecture seule)
 2026-11-14T16:35:34Z Réception d'une livraison fournisseur
 2026-11-14T16:41:31Z Réception : commande par sa clé
+2026-11-14T17:07:31Z visites : délais du réseau

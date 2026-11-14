@@ -2062,7 +2062,7 @@
     reviewInit(v, finie, ecarts) {
       const f = this.form;
       if (f.pa) { return; }
-      f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), e.grave ? 1 : 3), garde: true }));
+      f.pa = finie ? [] : (ecarts || this.ecartsDe(v)).map(e => ({ cid: uuid(), ref: e.ref, titre: e.titre, detail: e.detail, priorite: e.grave ? 'P0' : 'P1', assigne: 'franchise', echeance: plusJours(auj(), this.delaiPoint(e.grave ? 'P0' : 'P1')), garde: true }));
       if (!finie && v.budgetCa) { this.vbPistesDansPlan(v.budgetCa); }
       f.positif = v.positif || ''; f.sentiment = v.sentiment || 0; f.meteo = v.meteo || 0; f.notes = v.notes || ''; f.execution = v.execution || ''; f.clients = v.clients || ''; f.causes = (v.causes || []).slice(); f.diagnostic = v.diagnostic || ''; f.reco = v.reco || '';
       const ev = (v.evaluation && v.evaluation.notes) || {};
@@ -2132,6 +2132,8 @@
      * qu'on a vu et la recommandation, le plan d'action et la fin de visite.
      * Chaque étape se replie une fois faite ; on peut rouvrir n'importe laquelle.
      */
+    /** Le délai de correction d'un point (13/11/2026) : celui des règles du réseau (P0 2 j · P1 7 j · P2 14 j par défaut). */
+    delaiPoint(prio) { const d = (this.D && this.D.delaisPoints) || {}; return +d[prio] || ({ P0: 2, P1: 7, P2: 14 })[prio] || 7; }
     v_controle() {
       const v = this.visite(this.p); if (!v) { return this.hd('Visite introuvable', '', 'agenda'); }
       if (v.statut === 'terminee') { return this.v_review(); }
@@ -2691,9 +2693,12 @@
         if (i >= 0 && j >= 0 && j < o.length) { [o[i], o[j]] = [o[j], o[i]]; f.seuils.ordreTemps = o.join(','); this.rendre(); } return; }
       if (a === 'sens-raz') { if (this.form.seuils) { this.form.seuils.ordreTemps = ''; this.rendre(); } return; }
       if (a === 'bloq-tog') { const B = this.form.seuils && this.form.seuils.etapesBloquantes; if (B) { B[v] = !this.etapeBloquante(v, B); this.rendre(); } return; }
-      if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { this.form.pa[i][parts[1]] = parts[2]; this.rendre(); } return; }
+      if (a === 'pa') { const i = Number(parts[0]); if (this.form.pa && this.form.pa[i]) { const x = this.form.pa[i];
+        // Changer la priorité remet l'échéance au délai du réseau, si elle était encore celle de l'ancienne priorité (13/11/2026).
+        if (parts[1] === 'priorite' && x.priorite !== parts[2] && x.echeance === plusJours(auj(), this.delaiPoint(x.priorite))) { x.echeance = plusJours(auj(), this.delaiPoint(parts[2])); }
+        x[parts[1]] = parts[2]; this.rendre(); } return; }
       if (a === 'pa-del') { this.form.pa.splice(Number(v), 1); this.rendre(); return; }
-      if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), 3) }); this.rendre(); return; }
+      if (a === 'pa-add') { this.form.pa.push({ cid: uuid(), titre: '', detail: '', priorite: 'P1', assigne: 'franchise', echeance: plusJours(auj(), this.delaiPoint('P1')) }); this.rendre(); return; }
       if (a === 'terminer') { this.terminer(v); return; }
       if (a === 'meteo') { this.meteo(v); this.rendre(); return; }
       if (a === 'mt-retard') { const r = this.form.mt_retards = this.form.mt_retards || []; const i = r.indexOf(v); if (i >= 0) { r.splice(i, 1); } else { r.push(v); } this.rendre(); return; }
