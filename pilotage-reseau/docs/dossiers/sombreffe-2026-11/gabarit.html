@@ -85,7 +85,7 @@ body { margin: 0; background: var(--paper); }
 .rp-renvoi { font-style: normal; color: var(--muted-2); }
 .rp [hidden] { display: none !important; }
 .rp-serre td, .rp-serre th { padding-left: 6px; padding-right: 6px; }
-/* La part B2B d'un trimestre : une barre fine, à l'échelle du plafond de 40 %, le plafond en trait. */
+/* La part B2B d'un trimestre : une barre fine, à l'échelle du plafond B2B (30 %), le plafond en trait. */
 .rp-jauge { position: relative; height: 8px; min-width: 120px; background: var(--chip); border-radius: 2px; }
 .rp-jauge i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--b2b); border-radius: 2px; }
 /* Les quatre parties : un grand numéro, le titre, une ligne qui dit ce qu'on y trouve. */
@@ -768,7 +768,8 @@ const partC = 100 - B.part;
 $('barre-b2b').innerHTML = `<div class="seg" style="width:calc(${partC}% - 2px);background:#8D1D2C"></div><div class="seg" style="width:${B.part}%;background:var(--b2b)"></div>`
   + `<div class="plafond" style="left:${D.plafond}%"><span>plafond B2B ${dec(D.plafond, 0)}${INS}%</span></div>`;
 $('chiffres-b2b').innerHTML = `<span><i class="rp-point" style="background:#8D1D2C"></i>Comptoir ${dec(partC)}${INS}% · ≈ ${esc(k1(B.comptoir12))}</span>`
-  + `<span><i class="rp-point" style="background:var(--b2b)"></i>B2B ${dec(B.part)}${INS}% · ≈ ${esc(k1(B.b2b12))}, soit ≈ ${esc(k1(B.parMois))} par mois</span>`;
+  + `<span><i class="rp-point" style="background:var(--b2b)"></i>B2B ${dec(B.part)}${INS}% · ≈ ${esc(k1(B.b2b12))}, soit ≈ ${esc(k1(B.parMois))} par mois</span>`
+  + `<span>Plafond : ${dec(D.plafond, 0)}${INS}% du CA en B2B ; aucun client au-delà de ${dec(D.plafondClient, 0)}${INS}% du B2B</span>`;   // 14/11/2026 (Sam)
 $('aide-b2b').textContent = `12 derniers mois clos : novembre 2025 → octobre 2026, ${k1(B.ca12)} de CA. B2B : les tickets des clients pro à TVA valide ; comptoir : tout le reste. Un point de part B2B vaut environ ${k1(B.unPoint)} par an.`;
 if (B.corrige) {
   $('aide-b2b').textContent += insec(` Le cockpit affiche ${dec(B.partCockpit)} % : il compte août et septembre 2026 à zéro, alors que les tickets du panel, relus un par un, portent du B2B. Ce rapport prend les tickets relus.`);
@@ -903,7 +904,7 @@ $('probleme-points').innerHTML = [   // une ligne par constat (13/11/2026, Sam :
   `Tâches non rendues : ${RS.rendues} sur ${RS.taches} le ${dateC(TC.releveLe)}.`,
   B2BX && B2BX.sept ? `Hausse de septembre-octobre : le B2B ; sans lui, le comptoir recule de ${dec(Math.abs((B2BX.sept.c26 / B2BX.sept.c25 - 1) * 100))} %.`
                     : `Octobre : ${pct(O.vsCa, 0)} de CA, mais ${pct(O.vsCli, 0)} de clients.`,
-  B2BX ? `B2B : ${dec(B2BX.topPct, 0)} % pour un seul client.` : null,
+  B2BX ? `B2B : ${dec(B2BX.topPct, 0)} % pour un seul client ; plafond ${dec(D.plafondClient, 0)} % par client.` : null,
   `Été faible : juillet ${pct(juil.vsCa, 0)}, août ${pct(aout.vsCa, 0)}.`,
   PE6 ? `Personnel : ${dec(PE6.n.pct)} % du CA (${dec(PE6.n1.pct)} % en 2025 ; seuil ${dec(D.seuilPersonnel, 0)} %).` : null,
 ].filter(Boolean).map(t => `<li>${esc(insec(t))}</li>`).join('');
@@ -1115,8 +1116,8 @@ if (D.b2bDetail && D.b2bDetail.societes.length) {
     .filter(c => c.t > 0).sort((a, b) => b.t - a.t);
   const tot = S6.reduce((a, c) => a + c.t, 0), lab = ym => (D.lignes.find(l => l.k === ym) || { lab: ym }).lab;
   $('b2b-top-titre').textContent = `Le B2B : les 5 premiers clients, ${lab(M6[0])} → ${lab(M6[M6.length - 1])}`;
-  $('b2b-top-table').innerHTML = '<thead><tr><th>Société</th><th class="num">CA</th><th class="num">Tickets</th><th class="num">Part du B2B</th></tr></thead><tbody>'
-    + S6.slice(0, 5).map(c => `<tr><td>${esc(c.nom)}</td><td class="num">${eur(c.t)}</td><td class="num">${c.n}</td><td class="num">${dec(c.t / tot * 100)} %</td></tr>`).join('')
+  $('b2b-top-table').innerHTML = '<thead><tr><th>Société</th><th class="num">CA</th><th class="num">Tickets</th><th class="num">Part du B2B<span class="dim"> · plafond ' + dec(D.plafondClient, 0) + INS + '%</span></th></tr></thead><tbody>'
+    + S6.slice(0, 5).map(c => `<tr><td>${esc(c.nom)}</td><td class="num">${eur(c.t)}</td><td class="num">${c.n}</td><td class="num ${c.t / tot * 100 > D.plafondClient ? 'down' : ''}">${dec(c.t / tot * 100)} %</td></tr>`).join('')
     + `</tbody><tfoot><tr><td>${S6.length} sociétés</td><td class="num">${eur(tot)}</td><td class="num">${S6.reduce((a, c) => a + c.n, 0)}</td><td class="num">100 %</td></tr></tfoot>`;
   $('b2b-top').hidden = false;
 }
@@ -1163,7 +1164,7 @@ $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui<
     ['Cuisson de l’après-midi', 'arrêtée', 'chaque jour, checklist 1.3.01 à 14 h'],
     ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
     ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `vers ${dec(SEUIL_P, 0)} % du CA, le seuil du réseau` : `sous ${dec(SEUIL_P, 0)} % du CA`],
-    ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} %`],
+    ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} % ; aucun client au-delà de ${dec(D.plafondClient, 0)} % du B2B`],
     ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget ; le lundi, 500 € pour soi, puis toutes les factures'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
 $('cf-points').innerHTML = [   // court (13/11/2026) ; le lundi, dicté le 14/11/2026 (Sam)
@@ -1179,7 +1180,7 @@ $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th>
     ['Tâches obligatoires rendues', 'Dashboard magasin, onglet Tâches', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour (condition de la marque)'],
     ['Clients par jour ouvert, face au N-1', 'Résultat › Évolution magasin, trafic clients, par jour ouvert', dec(N.cliJour, 1), `la base : ${dec(base, 0)} par jour ; court terme : ${objectif} ; normalisé : ${normalise}`],
     ['Panier hors clients pro', 'Dashboard magasin, panier moyen (hors B2B)', 'à lire', 'savoir si la hausse du panier tient au comptoir'],
-    ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', 'nommer les sociétés et leur rythme de commande'],
+    ['CA B2B et sociétés servies', 'Dashboard magasin, jauge B2B et feuille « Ventes B2B »', 'à lire', `B2B sous ${dec(D.plafond, 0)} % du CA ; aucun client au-delà de ${dec(D.plafondClient, 0)} % du B2B`],
     ['CA par jour ouvert, face au N-1', 'Résultat › Évolution magasin, chiffre d’affaires, par jour ouvert', eur(N.caJour), 'rester au-dessus du N-1 à jours égaux'],
     ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
     ['Frais de personnel, % du CA', 'P&L du panel, mini P&L de la visite', D.personnel && D.personnel.cumul.mois ? dec(D.personnel.mois.filter(m => !m.indispo).slice(-1)[0].labourPct) + ' %' : 'à lire', `sous ${dec(D.seuilPersonnel, 0)} % du CA`],
@@ -1196,7 +1197,7 @@ $('pistes').innerHTML = [   // court (13/11/2026)
   'Tenir budgets et trésorerie : le lundi, 500 € pour soi, puis toutes les factures.',
   'Une offre l’après-midi, du lundi au vendredi.',
   `Préparer l’été 2027 (juillet ${pct(L.find(l => l.k === '2026-07').vsCa, 0)}, août ${pct(L.find(l => l.k === '2026-08').vsCa, 0)}).`,
-  B2BX ? `B2B : garder ${B2BX.top.nom}, trouver d’autres clients.` : `Développer le B2B : ${dec(B.part)} %, plafond ${dec(D.plafond, 0)} %.`,
+  B2BX ? `B2B : trouver d’autres clients, aucun au-delà de ${dec(D.plafondClient, 0)} % du B2B.` : `Développer le B2B : ${dec(B.part)} %, plafond ${dec(D.plafond, 0)} %.`,
   'Suivre les indicateurs chaque semaine.',
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 

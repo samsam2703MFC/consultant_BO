@@ -54,7 +54,8 @@ COCKPIT = {
         {'k': 'nov. en cours · 13 j', 'v': '26,8 k€', 's': '+5 % face aux mêmes 13 jours de novembre 2025 (25,5 k€)', 'cls': 'good'},
     ],
 }
-PLAFOND_B2B = 40.0                       # plafond de la part B2B fixé aux visites
+PLAFOND_B2B = 30.0                       # plafond de la part B2B dans le CA : 30 % (14/11/2026, Sam ; 40 % avant)
+PLAFOND_CLIENT_B2B = 30.0                # et aucun client au-delà de 30 % du B2B (14/11/2026, Sam)
 TAUX_MATIERE = 40.0                      # matière première et emballage, % du CA : le taux budget du réseau (Budget › Paramètres, 38 + 2)
 SEUIL_PERSONNEL = 15.0                   # frais de personnel en % du CA, hors rémunération du franchisé : le seuil du réseau (13/11/2026)
 PNL_RESEAU = ICI / 'pnl-reseau.json'     # GET /api/cockpit/analyse/pnl/mois?tous=1&du=2025-05&au=2026-10
@@ -398,7 +399,7 @@ def main():
                               'La confiance n’exclut pas le contrôle.']},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
-        'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
+        'cockpit': COCKPIT, 'plafond': PLAFOND_B2B, 'plafondClient': PLAFOND_CLIENT_B2B,
         'b2b': {'part': partB2b, 'partCockpit': COCKPIT['partB2b'], 'corrige': b2bCorrige, 'ca12': ca12, 'b2b12': b2b12, 'comptoir12': ca12 - b2b12, 'parMois': b2b12 / 12,
                 'ecart': ecart, 'ecartSept': ecarts[0], 'ecartOct': ecarts[1], 'partDeLAnnee': ecart / b2b12 * 100,
                 'unPoint': ca12 / 100, 'panier12': panier12, 'unClientJour': panier12 * 365},
