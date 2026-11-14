@@ -5521,6 +5521,7 @@ jamais de boutique (champs filtrés).
 
     GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
     GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
+    GET    /dashboard/catalogues/medias?shop=&page=&q= → …/catalogue-media?perPage=24&page=&filter[name][like]=q
     POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages}
     GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
@@ -5533,7 +5534,8 @@ details}}`, même code HTTP) — sauf un 401 du Marketing (jeton refusé), rendu
 
 **8, 12 ou 16 pages** (14/11/2026, client : « 8, 12 ou 16 pages, dont les pages 1-2, l'avant-dernière et la dernière
 sont du template du catalogue fait par le franchiseur » ; contrat du Marketing, `docs/openapi/catalogues.yaml` v1.1) :
-`pageCount` ∈ {8, 12, 16} (défaut 8 ; autre valeur → 422) à la création et au PUT. Quatre pages viennent de la Charte des
+`pageCount` ∈ {8, 12, 16} (défaut 8 ; autre valeur → 422 — élargi ensuite à tout nombre pair de 8 à 16, voir plus
+bas) à la création et au PUT. Quatre pages viennent de la Charte des
 catalogues de la marque, verrouillées : couverture (1), page 2, avant-dernière, dernière — aucun champ pour elles. `pages`
 = exactement `pageCount − 4` pages intérieures `{layout, category}` : plus courte, complétée de pages vides ; plus longue,
 422 ; `[]` = répartition automatique sur ce nombre. Changer `pageCount` sans `pages` ajoute des pages vides ou retire
@@ -5541,6 +5543,24 @@ celles de la fin si elles sont vides — sinon 422 `CATALOGUE_PAGES_NOT_EMPTY` (
 répartir automatiquement). `…/catalogue-products` rend aussi `pageCounts: [8, 12, 16]`. Le document rend `pageCount`
 pages : `cover`, `brand` (`slot: page2` : titre, texte, image), pages intérieures, `brand` (`slot: penultimate`), `back`.
 Étape 2 de l'écran : produits par catégorie en accordéons, chaque produit par un interrupteur.
+
+**Pages par 2, présentations de gamme, gabarits, place libre** (14/11/2026, client : « rajouter une page, c'est
+toujours par 2 », « une page de présentation (seule ou avec liste de produits), templates et layout ; chaque gamme doit
+avoir son illustration », « choisir à chaque fois 2-3 possibilités », « s'il y a de la place, une photo (de la
+médiathèque) ou une illustration » ; contrat du Marketing v1.2) : `pageCount` = tout nombre **pair** de 8 à 16
+(`pageCounts: [8, 10, 12, 14, 16]` ; 9, 11, 18… → 422) ; l'écran : « − 2 pages · N pages · ＋ 2 pages » (+ 2 = deux pages
+intérieures vides en fin ; − 2 = la règle ci-dessus, refus `CATALOGUE_PAGES_NOT_EMPTY` et « Répartir automatiquement »).
+Une page intérieure est `{layout, category, template?, gamme?, text?, textNl?, filler?, fillerMediaId?}` — `layout` ∈
+`vedette · grille · liste · presentation · presentation_liste` (`layouts`), `template` ∈ `A · B · C` (`templates`,
+absent = A), `gamme` obligatoire pour une présentation (une de `gammes`), `text` / `textNl` 400 caractères,
+`filler` ∈ `photo · illustration` (`fillers`) avec `fillerMediaId` pour une photo (une de `/medias`). Le relais ne
+filtre que le premier niveau du corps : `pages` part tel quel, le Marketing valide (422 `VALIDATION_FAILED`, champ
+nommé, `pages[i].template`…). Le document rend des pages `presentation` (`title`, `text`, `imageUrl`, `drawing`,
+`drawingUrl`, `products`) et, sur les pages `products`, `template`, `gamme`, `drawingUrl` (dessin de la gamme dans
+l'en-tête), `room`, `fillable` (une rangée entière libre), `filler` `{kind, imageUrl, drawing, drawingUrl}`. Étape 3
+de l'écran : par page, type (5 vignettes), gabarit (3 vignettes), gamme, catégorie, texte FR / NL d'une présentation,
+« Place libre : Rien · Photo · Illustration » quand il reste une rangée libre (photo choisie dans la médiathèque,
+`/medias`) ; étape 4 et PDF : le même rendu que le Marketing (`catalogue.js` reprend `CataloguePages.tsx`).
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).

@@ -4,8 +4,10 @@
  * Les catalogues vivent dans le portail Marketing ; ce module parle à l'API du cockpit à côté de lui
  * (../api/cockpit/dashboard/catalogues…), qui lit la boutique dans la session, ajoute le jeton de service et relaie
  * au Marketing (src/catalogues_magasin.php). Le navigateur ne voit jamais le jeton. Les contraintes (produits vendus
- * par la boutique, ses prix, 8, 12 ou 16 pages dont les quatre de la marque — couverture, page 2, avant-dernière et
- * dernière —, trois mises en page) sont celles du Marketing : ses refus s'affichent tels quels.
+ * par la boutique, ses prix, 8 à 16 pages par 2 dont les quatre de la marque — couverture, page 2, avant-dernière et
+ * dernière —, cinq mises en page dont les présentations de gamme, gabarits A · B · C, place libre — photo de la
+ * médiathèque du réseau ou de ma boutique, ou illustration) sont celles du Marketing : ses refus s'affichent tels quels.
+ * Les pages se dessinent comme celles du Marketing (src/views/catalogue/CataloguePages.tsx), mêmes classes `cat-*`.
  *
  * Utilisation (dashboard.js) : DbCatalogue.racine(shop, nomMagasin) rend l'élément du module — gardé d'un rendu du
  * dashboard à l'autre, avec son état.
@@ -17,10 +19,23 @@
     vedette: { label: '1 vedette + 4', cap: 5 },
     grille: { label: 'Grille 2 × 3', cap: 6 },
     liste: { label: 'Liste avec prix', cap: 12 },
+    presentation: { label: 'Présentation seule', cap: 0 },
+    presentation_liste: { label: 'Présentation + liste', cap: 8 },
   };
+  const estPres = l => l === 'presentation' || l === 'presentation_liste';
+  /** Les variantes de gabarit (2-3 possibilités pour chaque mise en page), les mêmes que le Marketing. */
+  const GABARITS = {
+    produits: { A: ['Classique', 'fond papier, titre centré'], B: ['Bandeau', 'bandeau de couleur, titre à gauche'], C: ['Épuré', 'fond blanc, titre à gauche'] },
+    presentation: { A: ['Illustration', 'dessin au centre, fond papier'], B: ['Pleine couleur', 'fond de couleur, dessin en blanc'], C: ['Photo pleine', 'grande image en haut'] },
+  };
+  /** Une rangée entière libre : la place libre peut prendre une photo ou l'illustration (la règle du Marketing). */
+  const remplissable = (l, n) => l === 'grille' ? n <= 4 : l === 'vedette' ? n <= 3 : l === 'liste' ? n <= 9 : false;
+  /** Rangées de la grille restées libres, que la place libre prend en pleine largeur. */
+  const rangsLibres = (l, n) => l === 'grille' ? 3 - Math.ceil(n / 2) : l === 'vedette' ? 2 - Math.ceil(Math.max(0, n - 1) / 2) : 0;
   const STATUTS = { brouillon: 'Brouillon', pret: 'PDF prêt', imprime: 'Imprimé' };
-  /** 8, 12 ou 16 pages, dont 4 de la marque (1, 2, avant-dernière, dernière) ; le Marketing en dit la liste. */
-  const NB_PAGES = [8, 12, 16];
+  /** De 8 à 16 pages, toujours par 2 (« rajouter une page, c'est toujours par 2 »), dont 4 de la marque (1, 2,
+   * avant-dernière, dernière) ; le Marketing en dit la liste. */
+  const NB_PAGES = [8, 10, 12, 14, 16];
   const PAGES_MARQUE = 4;
   const FORMAT_MM = { A5: { w: 148, h: 210 }, A4: { w: 210, h: 297 } };
   const BLEED = 3;
@@ -28,7 +43,7 @@
   const ETAPES = [
     ['Point de départ', 'mes gammes, ou tous mes produits'],
     ['Je clique mes produits', 'ceux de MA boutique, à mes prix'],
-    ['Mise en page', '8, 12 ou 16 pages, format'],
+    ['Mise en page', 'pages par 2, gabarits, présentations'],
     ['Aperçu et PDF', 'FR ou NL'],
   ];
   const CADENAS = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.2" width="8" height="5.8" rx="1.2" fill="currentColor"/><path d="M4 5.4V3.8a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
@@ -63,7 +78,8 @@
       el.className = 'cm';
       etats[shop] = { shop, el, vue: 'liste', liste: null, listeErr: null, prod: null, prodErr: null, cat: null, etape: 1,
         src: null, titre: '', choix: null, pages: null, format: 'A5', langs: ['fr'], lang: 'fr', doc: {}, docErr: {}, msg: null,
-        occupe: false, rech: '', modifie: false, nbPages: 8, ouverts: null, proposer: null };
+        occupe: false, rech: '', modifie: false, nbPages: 8, ouverts: null, proposer: null,
+        medias: null, mediasErr: null, mediasQ: '', choixPhoto: null };
       el.addEventListener('click', ev => clic(etats[shop], ev));
       el.addEventListener('input', ev => saisie(etats[shop], ev));
       el.addEventListener('change', ev => changement(etats[shop], ev));
@@ -102,12 +118,66 @@
     S.cat = c;
     S.titre = c.title;
     S.choix = {}; (c.products || []).forEach(p => { S.choix[p.id] = p.on !== false; });
-    S.pages = (c.pages || []).map(p => ({ layout: p.layout, category: p.category == null ? null : +p.category }));
+    S.pages = (c.pages || []).map(p => ({ layout: p.layout, category: p.category == null ? null : +p.category, template: p.template || 'A',
+      gamme: p.gamme == null ? null : +p.gamme, text: p.text || '', textNl: p.textNl || '', filler: p.filler || null, fillerMediaId: p.fillerMediaId == null ? null : +p.fillerMediaId }));
     S.format = c.format || 'A5';
     S.nbPages = NB_PAGES.includes(+c.pageCount) ? +c.pageCount : 8;
     S.langs = (c.langs && c.langs.length ? c.langs : ['fr']).slice();
     if (!S.langs.includes(S.lang)) { S.lang = S.langs[0]; }
     S.modifie = false;
+  }
+
+  /** Les pages intérieures telles que le Marketing les attend (seulement ce qui ne vaut pas son défaut). */
+  function pagesCorps(S) {
+    return S.pages.map(p => {
+      const o = { layout: p.layout, category: estPres(p.layout) ? null : p.category };
+      if (p.template && p.template !== 'A') { o.template = p.template; }
+      if (p.gamme != null) { o.gamme = p.gamme; }
+      if (estPres(p.layout)) {
+        if (p.text) { o.text = p.text; }
+        if (p.textNl) { o.textNl = p.textNl; }
+      } else if (p.filler) {
+        o.filler = p.filler;
+        if (p.filler === 'photo') { o.fillerMediaId = p.fillerMediaId; }
+      }
+      return o;
+    });
+  }
+  /** Les images de la médiathèque pour la place libre (réseau et celles de ma boutique). */
+  function chargerMedias(S) {
+    S.mediasErr = null;
+    const q = S.mediasQ.trim();
+    return appel('GET', '/medias' + qs(S) + (q ? '&q=' + encodeURIComponent(q) : '')).then(j => {
+      S.medias = j.data || [];
+      S.mediaUrls = S.mediaUrls || {};
+      S.medias.forEach(m => { S.mediaUrls[m.id] = m.thumbnailUrl || m.url; });
+    }).catch(e => { S.mediasErr = e; }).finally(() => rendre(S));
+  }
+  /** Ce que chaque page porte, calculé comme le Marketing (`fill`) : catégorie et gamme de la page, « Notre sélection »
+   * pour le reste, une présentation avec liste prend les premiers produits de sa gamme. */
+  function remplir(S) {
+    const ids = choisis(S);
+    const prods = ids.map(id => produits(S).find(p => +p.id === id)).filter(Boolean)
+      .map(p => ({ id: +p.id, cat: p.categoryId == null ? 0 : +p.categoryId, gammes: (p.gammes || []).map(Number) }));
+    // L'ordre du catalogue : celui de ses produits, à défaut celui du webshop.
+    const rang = {}; (S.cat.products || []).forEach((p, i) => { rang[+p.id] = i; });
+    prods.sort((a, b) => (rang[a.id] ?? 1e6) - (rang[b.id] ?? 1e6));
+    const ordreCat = {}; prods.forEach(p => { if (!(p.cat in ordreCat)) { ordreCat[p.cat] = Object.keys(ordreCat).length; } });
+    const parCat = prods.slice().sort((a, b) => ordreCat[a.cat] - ordreCat[b.cat]);
+    const pris = new Set();
+    const out = (S.pages || []).map(p => {
+      const cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 6;
+      const liste = estPres(p.layout) ? prods : parCat;
+      let n = 0;
+      for (const x of liste) {
+        if (n >= cap) { break; }
+        if (pris.has(x.id) || (p.category != null && x.cat !== +p.category) || (p.gamme != null && !x.gammes.includes(+p.gamme))) { continue; }
+        pris.add(x.id); n++;
+      }
+      return n;
+    });
+    out.sansPlace = prods.filter(x => !pris.has(x.id)).length;
+    return out;
   }
 
   /* --- les gestes ----------------------------------------------------------------------------------------------- */
@@ -174,7 +244,7 @@
     occupe(S, p, 'Enregistrement des produits');
   }
   function enregistrerPages(S, suite) {
-    const corps = { format: S.format, langs: S.langs.slice(), pages: S.pages.map(p => ({ layout: p.layout, category: p.category })) };
+    const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
     const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
@@ -189,11 +259,28 @@
     if (!S.cat) { S.nbPages = nb; rendre(S); return; }
     if (nb === S.nbPages) { return; }
     S.proposer = null;
-    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: S.pages.map(p => ({ layout: p.layout, category: p.category })) }) : Promise.resolve();
+    const avant = S.modifie ? appel('PUT', '/' + S.cat.id + qs(S), { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) }) : Promise.resolve();
     const p = avant.then(() => appel('PUT', '/' + S.cat.id + qs(S), { pageCount: nb })).then(j => { adopter(S, j.data); oublierDocs(S); S.liste = null; })
       .catch(e => { if (e.code === 'CATALOGUE_PAGES_NOT_EMPTY') { S.proposer = nb; } throw e; });
     occupe(S, p, 'Passage à ' + nb + ' pages');
   }
+  /** Le type d'une page : une présentation prend une gamme (la sienne, sinon la première du catalogue). */
+  function changerType(S, i, l) {
+    const p = S.pages[i];
+    if (estPres(l)) {
+      const g = p.gamme != null ? p.gamme : gammesCatalogue(S)[0];
+      if (g == null) { S.msg = { type: 'inf', titre: 'Aucune gamme au webshop de ma boutique : pas de page de présentation possible.' }; rendre(S); return; }
+      p.gamme = g; p.category = null; p.filler = null; p.fillerMediaId = null;
+    }
+    p.layout = l; S.modifie = true; rendre(S);
+  }
+  /** Les gammes proposées pour une page : celles du catalogue d'abord, puis les autres de ma boutique. */
+  function gammesCatalogue(S) {
+    const src = (S.cat && S.cat.source) || {};
+    const refs = src.kind === 'gamme' ? (Array.isArray(src.refs) && src.refs.length ? src.refs : (src.ref != null ? [src.ref] : [])).map(Number) : [];
+    return refs.concat(gammes(S).map(g => +g.id).filter(id => !refs.includes(id)));
+  }
+  const nomGamme = (S, id) => { const g = gammes(S).find(x => +x.id === +id); return g ? g.name : 'Gamme ' + id; };
   function aller(S, n) {
     if (S.occupe || n === S.etape) { return; }
     if (!S.cat && n > 1) { return; }
@@ -269,7 +356,16 @@
     else if (a === 'acc') { const o = ouverts(S); if (o.has(v)) { o.delete(v); } else { o.add(v); } rendre(S); }
     else if (a === 'nbpages') { changerNbPages(S, +v); }
     else if (a === 'repartirN') { repartir(S, +v); }
-    else if (a === 'layout') { S.pages[+b.dataset.i].layout = v; S.modifie = true; rendre(S); }
+    else if (a === 'layout') { changerType(S, +b.dataset.i, v); }
+    else if (a === 'gabarit') { S.pages[+b.dataset.i].template = v; S.modifie = true; rendre(S); }
+    else if (a === 'place') {
+      const p = S.pages[+b.dataset.i];
+      if (v === 'photo') { S.choixPhoto = S.choixPhoto === +b.dataset.i ? null : +b.dataset.i; if (!S.medias) { chargerMedias(S); } rendre(S); }
+      else { p.filler = v || null; p.fillerMediaId = null; S.choixPhoto = null; S.modifie = true; rendre(S); }
+    }
+    else if (a === 'photo') { const p = S.pages[+b.dataset.i]; p.filler = 'photo'; p.fillerMediaId = +v; S.choixPhoto = null; S.modifie = true; rendre(S); }
+    else if (a === 'photoFermer') { S.choixPhoto = null; rendre(S); }
+    else if (a === 'photoChercher') { chargerMedias(S); }
     else if (a === 'monter' || a === 'descendre') { const i = +v, j = a === 'monter' ? i - 1 : i + 1; if (j >= 0 && j < S.pages.length) { const t = S.pages[i]; S.pages[i] = S.pages[j]; S.pages[j] = t; S.modifie = true; rendre(S); } }
     else if (a === 'repartir') { repartir(S); }
     else if (a === 'format') { S.format = v; S.modifie = true; rendre(S); }
@@ -281,10 +377,14 @@
     const t = ev.target;
     if (t.dataset.cm === 'titre') { S.titre = t.value; }
     if (t.dataset.cm === 'rech') { S.rech = t.value; rendreGarde(S, t); }
+    if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { S.pages[+t.dataset.i][t.dataset.cm === 'ptexte' ? 'text' : 'textNl'] = t.value.slice(0, 400); S.modifie = true; }
+    if (t.dataset.cm === 'mediasQ') { S.mediasQ = t.value; }
   }
   function changement(S, ev) {
     const t = ev.target;
     if (t.dataset.cm === 'pcat') { S.pages[+t.dataset.i].category = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
+    if (t.dataset.cm === 'pgamme') { S.pages[+t.dataset.i].gamme = t.value === '' ? null : +t.value; S.modifie = true; rendre(S); }
+    if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { rendre(S); }
     if (t.dataset.cm === 'langs') { const l = t.value; S.langs = t.checked ? Array.from(new Set(S.langs.concat(l))) : S.langs.filter(x => x !== l); if (!S.langs.length) { S.langs = ['fr']; } S.modifie = true; rendre(S); }
   }
   /** Un rendu pendant la frappe : le champ garde le curseur. */
@@ -377,14 +477,18 @@
     const n = choisis(S).length, pages = S.nbPages;
     return '<div class="k">Mon catalogue · ' + pages + ' pages ' + esc(S.format) + '</div>'
       + '<div style="font-size:13px">' + n + ' produit' + (n > 1 ? 's' : '') + ' choisi' + (n > 1 ? 's' : '') + '</div>'
-      + '<div class="cm-cpt" style="margin-top:4px">' + (S.pages || []).map((p, i) => (i + 3) + ' · ' + esc(nomCat(S, p.category)) + ' · ' + esc(LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : p.layout)).join('<br>') + '</div>';
+      + '<div class="cm-cpt" style="margin-top:4px">' + (S.pages || []).map((p, i) => (i + 3) + ' · ' + esc(estPres(p.layout) ? nomGamme(S, p.gamme) : nomCat(S, p.category)) + ' · ' + esc(LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : p.layout)).join('<br>') + '</div>';
   }
 
-  /** 8 · 12 · 16 pages (le Marketing en donne la liste, `pageCounts`). */
+  /** « − 2 pages · N pages · ＋ 2 pages » (le Marketing donne la liste permise, `pageCounts`). */
   function segPages(S, libelle) {
     const liste = (S.prod && Array.isArray(S.prod.pageCounts) && S.prod.pageCounts.length ? S.prod.pageCounts : NB_PAGES).map(Number);
-    return '<div class="cm-champ"><span>' + esc(libelle) + '</span><div class="cm-seg">' + liste.map(n => '<button data-cm="nbpages" data-v="' + n + '" class="' + (S.nbPages === n ? 'on' : '') + '"'
-      + (S.occupe ? ' disabled' : '') + ' title="' + (n - PAGES_MARQUE) + ' pages de produits + ' + PAGES_MARQUE + ' pages de la marque">' + n + ' pages</button>').join('') + '</div></div>';
+    const i = liste.indexOf(S.nbPages), moins = i > 0 ? liste[i - 1] : null, plus = i >= 0 && i < liste.length - 1 ? liste[i + 1] : null;
+    const off = S.occupe ? ' disabled' : '';
+    return '<div class="cm-champ"><span>' + esc(libelle) + '</span><div class="cm-seg cm-nbp">'
+      + '<button data-cm="nbpages" data-v="' + (moins || '') + '"' + (moins ? off : ' disabled') + ' title="' + (moins ? 'Retirer les deux dernières pages intérieures (' + moins + ' pages)' : liste[0] + ' pages au moins') + '">− 2 pages</button>'
+      + '<span class="on" title="' + (S.nbPages - PAGES_MARQUE) + ' pages de produits + ' + PAGES_MARQUE + ' pages de la marque">' + S.nbPages + ' pages</span>'
+      + '<button data-cm="nbpages" data-v="' + (plus || '') + '"' + (plus ? off : ' disabled') + ' title="' + (plus ? 'Ajouter deux pages intérieures vides en fin (' + plus + ' pages)' : liste[liste.length - 1] + ' pages au plus') + '">＋ 2 pages</button></div></div>';
   }
   function rendreE1(S) {
     let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Point de départ</span></div>';
@@ -465,17 +569,33 @@
     return h + '</section>' + cote(S, resume(S)) + '</div>';
   }
 
-  function mini(layout) {
-    const n = layout === 'vedette' ? 5 : layout === 'grille' ? 6 : 6;
-    return '<span class="mini ' + layout + '" aria-hidden="true">' + '<i></i>'.repeat(n) + '</span>';
+  function mini(layout, tpl) {
+    if (estPres(layout)) { return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true"><b></b><i></i>' + (layout === 'presentation_liste' ? '<u></u><u></u><u></u>' : '') + '</span>'; }
+    const n = layout === 'vedette' ? 5 : 6;
+    return '<span class="mini ' + layout + ' t' + esc(tpl || 'A') + '" aria-hidden="true">' + '<i></i>'.repeat(n) + '</span>';
+  }
+  /** Vignette d'une variante de gabarit (la même que le Marketing). */
+  function vignette(famille, t) {
+    if (famille === 'presentation') {
+      const plein = t === 'B' ? ' fill="currentColor" fill-opacity=".85"' : ' fill="none"', clair = t === 'B' ? '#fff' : 'currentColor';
+      return '<svg width="28" height="36" viewBox="0 0 40 52" aria-hidden="true"><rect x=".6" y=".6" width="38.8" height="50.8" rx="2"' + plein + ' stroke="currentColor" stroke-width="1.4"/>'
+        + (t === 'C' ? '<rect x=".6" y=".6" width="38.8" height="28" fill="currentColor" fill-opacity=".25"/>' : '<circle cx="20" cy="17" r="9" fill="none" stroke="' + clair + '" stroke-width="1.4"/>')
+        + '<rect x="' + (t === 'C' ? 5 : 9) + '" y="34" width="22" height="4" rx="1" fill="' + clair + '"/><rect x="' + (t === 'C' ? 5 : 12) + '" y="41" width="16" height="2" rx="1" fill="' + clair + '" opacity=".6"/></svg>';
+    }
+    let h = '<svg width="28" height="36" viewBox="0 0 40 52" aria-hidden="true"><rect x=".6" y=".6" width="38.8" height="50.8" rx="2" fill="none" stroke="currentColor" stroke-width="1.4"/>'
+      + (t === 'B' ? '<rect x=".6" y=".6" width="38.8" height="10" fill="currentColor" fill-opacity=".85"/>' : '')
+      + '<rect x="' + (t === 'A' ? 11 : 4) + '" y="4" width="18" height="3" rx="1" fill="' + (t === 'B' ? '#fff' : 'currentColor') + '"/>' + (t === 'C' ? '<rect x="4" y="9.5" width="32" height=".8" fill="currentColor"/>' : '');
+    [14, 26, 38].forEach(y => { [4, 21].forEach(x => { h += '<rect x="' + x + '" y="' + y + '" width="15" height="10" rx="1.5"' + (t === 'C' ? ' fill="currentColor" fill-opacity=".18"' : ' fill="none" stroke="currentColor" stroke-width="1"') + '/>'; }); });
+    return h + '</svg>';
   }
   function rendreE3(S) {
     const prods = produits(S), ids = new Set(choisis(S));
     const parCat = {}; prods.forEach(p => { if (ids.has(+p.id)) { const k = p.categoryId == null ? 'null' : String(p.categoryId); parCat[k] = (parCat[k] || 0) + 1; } });
-    const capCat = {}; (S.pages || []).forEach(p => { const k = p.category == null ? 'null' : String(p.category); capCat[k] = (capCat[k] || 0) + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 0); });
     const cats = catsChoisies(S);
+    const portes = remplir(S);
+    const gs = gammesCatalogue(S);
     let h = '<div class="cm-corps"><section class="cm-pan"><div class="h"><span class="k">Mise en page</span><span class="sp"></span><button class="cm-btn" data-cm="repartir"' + (S.occupe ? ' disabled' : '') + '>↺ Répartir automatiquement</button></div>';
-    h += '<div class="cm-reglages">' + segPages(S, 'Nombre de pages · dont 4 de la marque') + '<div class="cm-champ"><span>Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="format" data-v="' + f + '" class="' + (S.format === f ? 'on' : '') + '">' + f + '</button>').join('') + '</div></div>'
+    h += '<div class="cm-reglages">' + segPages(S, 'Nombre de pages · toujours par 2 · dont 4 de la marque') + '<div class="cm-champ"><span>Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="format" data-v="' + f + '" class="' + (S.format === f ? 'on' : '') + '">' + f + '</button>').join('') + '</div></div>'
       + '<div class="cm-champ"><span>Langues</span><div class="cm-cases">' + [['fr', 'Français'], ['nl', 'Néerlandais']].map(l => '<label><input type="checkbox" data-cm="langs" value="' + l[0] + '"' + (S.langs.includes(l[0]) ? ' checked' : '') + '> ' + l[1] + '</label>').join('') + '</div></div></div>';
     h += '<div class="cm-pages">';
     const marque = (no, mini, t, s2) => '<div class="cm-pg lock"><span class="no">' + no + '</span>' + mini + '<div><div class="t">' + t + '</div><div class="s">' + s2 + '</div></div><span class="cm-lock">' + CADENAS + ' Marque</span><span></span></div>';
@@ -483,24 +603,51 @@
     h += marque(1, '<span class="mini cover" aria-hidden="true"></span>', 'Couverture', 'Charte de la marque · le nom de ma boutique');
     h += marque(2, '<span class="mini texte" aria-hidden="true"></span>', 'Page 2', 'Charte de la marque · le mot de la boulangerie');
     (S.pages || []).forEach((p, i) => {
-      const k = p.category == null ? 'null' : String(p.category);
-      const n = parCat[k] || 0, cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 0;
-      const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
-      h += '<div class="cm-pg"><span class="no">' + (i + 3) + '</span>' + mini(p.layout)
-        + '<div><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
-        + options.map(c => '<option value="' + c + '"' + (+p.category === +c ? ' selected' : '') + '>' + esc(nomCat(S, c)) + '</option>').join('') + '</select>'
-        + '<div class="cm-cpt' + (p.category != null && (capCat[k] || 0) < n ? ' ko' : '') + '" style="margin-top:4px">' + (p.category == null ? 'les produits qui restent, ' + cap + ' places' : n + ' produit' + (n > 1 ? 's' : '') + ' choisi' + (n > 1 ? 's' : '') + ' dans cette catégorie · ' + cap + ' places sur cette page') + '</div></div>'
-        + '<div class="ctl"><div class="cm-seg">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '">' + LAYOUTS[l].label + '</button>').join('') + '</div></div>'
+      const pres = estPres(p.layout), cap = LAYOUTS[p.layout] ? LAYOUTS[p.layout].cap : 0, porte = portes[i] || 0;
+      const k = p.category == null ? 'null' : String(p.category), n = parCat[k] || 0;
+      const fam = pres ? 'presentation' : 'produits';
+      let corps = '';
+      if (pres) {
+        corps += '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '">' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>'
+          + '<div class="cm-cpt" style="margin-top:4px">' + (p.layout === 'presentation_liste' ? porte + ' produit' + (porte > 1 ? 's' : '') + ' de la gamme listé' + (porte > 1 ? 's' : '') + ' avec leurs prix (8 au plus)' : 'l’illustration, le nom et le texte de la gamme') + '</div>'
+          + '<textarea class="cm-txt" data-cm="ptexte" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte de la présentation (facultatif, 400 caractères)">' + esc(p.text) + '</textarea>'
+          + (S.langs.includes('nl') ? '<textarea class="cm-txt" data-cm="ptexteNl" data-i="' + i + '" maxlength="400" rows="2" placeholder="Texte néerlandais">' + esc(p.textNl) + '</textarea>' : '');
+      } else {
+        const options = cats.filter(c => c !== null).concat(p.category != null && !cats.includes(p.category) ? [p.category] : []);
+        corps += '<div class="cm-lig"><select class="cm-sel" data-cm="pcat" data-i="' + i + '" aria-label="Catégorie de la page ' + (i + 3) + '"><option value=""' + (p.category == null ? ' selected' : '') + '>Notre sélection (toutes catégories)</option>'
+          + options.map(c => '<option value="' + c + '"' + (+p.category === +c ? ' selected' : '') + '>' + esc(nomCat(S, c)) + '</option>').join('') + '</select>'
+          + (gs.length ? '<select class="cm-sel" data-cm="pgamme" data-i="' + i + '" aria-label="Gamme de la page ' + (i + 3) + '"><option value=""' + (p.gamme == null ? ' selected' : '') + '>Toutes les gammes</option>' + gs.map(g => '<option value="' + g + '"' + (+p.gamme === g ? ' selected' : '') + '>' + esc(nomGamme(S, g)) + '</option>').join('') + '</select>' : '') + '</div>'
+          + '<div class="cm-cpt" style="margin-top:4px">' + porte + ' produit' + (porte > 1 ? 's' : '') + ' sur ' + cap + ' places' + (p.category == null ? ' · les produits qui restent' : ' · ' + n + ' choisi' + (n > 1 ? 's' : '') + ' dans cette catégorie') + '</div>';
+        if (remplissable(p.layout, porte) || p.filler) {
+          corps += '<div class="cm-place"><span class="l" title="Quand la page n’est pas pleine, une photo de la médiathèque ou l’illustration de la gamme prend la place libre">Place libre</span><div class="cm-seg">'
+            + [['', 'Rien'], ['photo', 'Photo'], ['illustration', 'Illustration']].map(o => '<button data-cm="place" data-i="' + i + '" data-v="' + o[0] + '" class="' + ((p.filler || '') === o[0] ? 'on' : '') + '">' + o[1] + '</button>').join('') + '</div>'
+            + (p.filler === 'photo' && p.fillerMediaId ? '<span class="cm-vign">' + (S.mediaUrls && S.mediaUrls[p.fillerMediaId] ? '<img src="' + esc(S.mediaUrls[p.fillerMediaId]) + '" alt="">' : 'photo n° ' + p.fillerMediaId) + '</span>' : '')
+            + (!remplissable(p.layout, porte) ? '<span class="cm-cpt">page pleine : rien n’est imprimé</span>' : '') + '</div>';
+          if (S.choixPhoto === i) { corps += rendreMedias(S, i); }
+        }
+      }
+      h += '<div class="cm-pg' + (pres ? ' pres' : '') + '"><span class="no">' + (i + 3) + '</span>' + mini(p.layout, p.template)
+        + '<div class="cm-pg-c">' + corps + '</div>'
+        + '<div class="ctl"><div class="cm-seg cm-types">' + Object.keys(LAYOUTS).map(l => '<button data-cm="layout" data-i="' + i + '" data-v="' + l + '" class="' + (p.layout === l ? 'on' : '') + '"' + (estPres(l) && !gs.length ? ' disabled' : '') + '>' + LAYOUTS[l].label + '</button>').join('') + '</div>'
+        + '<div class="cm-gab" role="group" aria-label="Gabarit de la page ' + (i + 3) + '">' + ['A', 'B', 'C'].map(t => '<button data-cm="gabarit" data-i="' + i + '" data-v="' + t + '" class="' + ((p.template || 'A') === t ? 'on' : '') + '" title="' + t + ' · ' + GABARITS[fam][t][0] + ' — ' + GABARITS[fam][t][1] + '">' + vignette(fam, t) + '<span>' + t + ' · ' + GABARITS[fam][t][0] + '</span></button>').join('') + '</div></div>'
         + '<div class="mv"><button class="cm-btn" data-cm="monter" data-v="' + i + '"' + (i === 0 ? ' disabled' : '') + ' aria-label="Monter">↑</button><button class="cm-btn" data-cm="descendre" data-v="' + i + '"' + (i === S.pages.length - 1 ? ' disabled' : '') + ' aria-label="Descendre">↓</button></div></div>';
     });
     h += marque(nb - 1, '<span class="mini texte" aria-hidden="true"></span>', 'Avant-dernière page', 'Charte de la marque · nos services');
     h += marque(nb, '<span class="mini" aria-hidden="true" style="background:#F6F1E9"></span>', 'Dernière page', 'Commande en ligne, QR de mon webshop, adresse et horaires de ma boutique');
     h += '</div>';
-    const trop = Object.keys(parCat).filter(k => k !== 'null' && (capCat[k] || 0) < parCat[k]);
-    if (trop.length) { h += '<div class="cm-msg inf" style="margin-top:12px">Pas assez de place pour : ' + trop.map(k => esc(nomCat(S, +k)) + ' (' + parCat[k] + ' produits, ' + (capCat[k] || 0) + ' places)').join(', ') + '. ' + (S.nbPages < 16 ? 'Passez à ' + (S.nbPages + 4) + ' pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, ou une page « Notre sélection ».</div>'; }
+    if (portes.sansPlace) { h += '<div class="cm-msg inf" style="margin-top:12px">' + portes.sansPlace + ' produit' + (portes.sansPlace > 1 ? 's' : '') + ' choisi' + (portes.sansPlace > 1 ? 's' : '') + ' sans place dans les pages. ' + (S.nbPages < 16 ? 'Ajoutez 2 pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, une page « Notre sélection », ou « Répartir automatiquement ».</div>'; }
     h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Mes produits</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
       + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Aperçu et PDF ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
+  }
+  /** Le choix de la photo de la place libre : les images de la médiathèque du réseau et de ma boutique. */
+  function rendreMedias(S, i) {
+    let h = '<div class="cm-medias"><div class="cm-lig"><input type="search" class="cm-rech" data-cm="mediasQ" placeholder="Chercher une photo" value="' + esc(S.mediasQ) + '">'
+      + '<button class="cm-btn" data-cm="photoChercher">Chercher</button><span class="sp"></span><button class="cm-btn" data-cm="photoFermer">Fermer</button></div>';
+    if (S.mediasErr) { return h + bandeauErreur(S.mediasErr, 'La médiathèque n’a pas pu être lue') + '</div>'; }
+    if (!S.medias) { return h + '<div class="cm-vide">Lecture de la médiathèque…</div></div>'; }
+    if (!S.medias.length) { return h + '<div class="cm-vide">Aucune photo dans la médiathèque du réseau ni de ma boutique.</div></div>'; }
+    return h + '<div class="cm-grille">' + S.medias.map(m => '<button data-cm="photo" data-i="' + i + '" data-v="' + m.id + '" class="' + (+S.pages[i].fillerMediaId === +m.id ? 'on' : '') + '" title="' + esc(m.name) + '"><img src="' + esc(m.thumbnailUrl || m.url) + '" alt="" loading="lazy"><span>' + esc(m.name) + '</span></button>').join('') + '</div></div>';
   }
 
   function rendreE4(S) {
@@ -526,7 +673,9 @@
     const p = doc.pages[i];
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const z = largeurPx / (f.w * PX_MM);
-    const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')' : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ((p.products || []).length ? '' : ' · vide');
+    const leg = p.kind === 'cover' ? 'Couverture' : p.kind === 'back' ? 'Dernière page' : p.kind === 'brand' ? 'Page ' + (i + 1) + ' · marque (' + (p.slot === 'page2' ? 'page 2' : 'avant-dernière') + ')'
+      : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A')
+      : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
       + (p.locked ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
       + '<div class="pz" style="transform:scale(' + z + ');width:' + f.w + 'mm;height:' + f.h + 'mm"><div style="position:absolute;left:-' + BLEED + 'mm;top:-' + BLEED + 'mm">' + page(doc, i) + '</div></div></div>'
@@ -541,8 +690,10 @@
     if (p.kind === 'cover') { corps = couverture(doc, p); }
     else if (p.kind === 'back') { corps = dos(doc, p); }
     else if (p.kind === 'brand') { corps = marquePage(doc, p); }
+    else if (p.kind === 'presentation') { corps = presentation(doc, p); }
     else { corps = interieur(doc, p); }
-    return '<div class="cat-face cat-face--' + esc(p.kind) + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
+    const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
+    return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
   }
   const css = (v, d) => /^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d;
   const logo = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
@@ -568,18 +719,43 @@
     return '<div class="cat-card' + (grand ? ' cat-card--big' : '') + '">' + photo(pr) + '<div class="cat-card__text"><div class="cat-name">' + esc(pr.name) + '</div>'
       + '<span class="cat-price' + (pr.priceCents == null ? ' cat-price--none' : '') + '">' + esc(prix(pr.priceCents, lang)) + '</span></div></div>';
   }
+  /** Une image livrée avec le Marketing (dessin de saison, de famille) : son adresse absolue, rendue par le document. */
+  const dessin = (url) => /^(https?:)?\/\//.test(String(url || '')) ? url : null;
+  function liste(pr, lang) {
+    return '<div class="cat-list">' + pr.map(x => '<div class="cat-row">' + photo(x) + '<span class="cat-name">' + esc(x.name) + '</span><i></i><span class="cat-price' + (x.priceCents == null ? ' cat-price--none' : '') + '">' + esc(prix(x.priceCents, lang)) + '</span></div>').join('') + '</div>';
+  }
+  /** La place libre : la photo de la médiathèque, ou l'illustration (rendu de `Filler`, CataloguePages.tsx). */
+  function placeLibre(f, style) {
+    const d = dessin(f.drawingUrl), src = d || f.imageUrl;
+    return '<div class="cat-filler cat-filler--' + esc(f.kind) + (d ? ' cat-filler--drawing' : '') + '" style="' + style + '">' + (src ? '<img src="' + esc(src) + '" alt="">' : '') + '</div>';
+  }
   function interieur(doc, p) {
-    const lang = doc.version.lang, pr = p.products || [];
+    const lang = doc.version.lang, pr = p.products || [], f = p.filler || null;
+    const rangs = f ? rangsLibres(p.layout, pr.length) : 0;
+    const etendu = 'grid-column:1 / -1;grid-row:span ' + rangs;
     let b = '';
-    if (p.layout === 'liste') {
-      b = '<div class="cat-list">' + pr.map(x => '<div class="cat-row">' + photo(x) + '<span class="cat-name">' + esc(x.name) + '</span><i></i><span class="cat-price' + (x.priceCents == null ? ' cat-price--none' : '') + '">' + esc(prix(x.priceCents, lang)) + '</span></div>').join('') + '</div>';
-    } else if (p.layout === 'vedette' && pr.length) {
-      b = carte(pr[0], lang, true) + '<div class="cat-grid cat-grid--2x2">' + pr.slice(1).map(x => carte(x, lang, false)).join('') + '</div>';
+    if (!pr.length) {
+      b = f ? placeLibre(f, 'flex:1 1 0') : '<div class="cat-empty">' + (lang === 'nl' ? 'Lege pagina' : 'Page vide') + '</div>';
+    } else if (p.layout === 'liste') {
+      b = liste(pr, lang) + (f ? placeLibre(f, 'flex:1 1 0') : '');
+    } else if (p.layout === 'vedette') {
+      b = carte(pr[0], lang, true) + '<div class="cat-grid cat-grid--2x2">' + pr.slice(1).map(x => carte(x, lang, false)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     } else {
-      b = '<div class="cat-grid cat-grid--2x3">' + pr.map(x => carte(x, lang, false)).join('') + '</div>';
+      b = '<div class="cat-grid cat-grid--2x3">' + pr.map(x => carte(x, lang, false)).join('') + (f && rangs > 0 ? placeLibre(f, etendu) : '') + '</div>';
     }
-    if (!pr.length) { b = '<div class="cat-empty">' + (lang === 'nl' ? 'Lege pagina' : 'Page vide') + '</div>'; }
-    return '<div class="cat-inner cat-inner--' + esc(p.layout) + '"><div class="cat-h">' + esc(p.title) + '</div><div class="cat-body">' + b + '</div></div>';
+    const marque = dessin(p.drawingUrl);
+    return '<div class="cat-inner cat-inner--' + esc(p.layout) + ' cat-t-' + esc(p.template || 'A') + '"><div class="cat-h">' + (marque ? '<img class="cat-h__mark" src="' + esc(marque) + '" alt="">' : '')
+      + '<span class="cat-h__text">' + esc(p.title) + '</span></div><div class="cat-body">' + b + '</div></div>';
+  }
+  /** La page de présentation d'une gamme (rendu de `Presentation`, CataloguePages.tsx). */
+  function presentation(doc, p) {
+    const lang = doc.version.lang, d = dessin(p.drawingUrl), avecListe = p.layout === 'presentation_liste', t = p.template || 'A';
+    const v = t === 'C' ? (p.imageUrl ? [p.imageUrl, true] : d ? [d, false] : null) : (d ? [d, false] : p.imageUrl ? [p.imageUrl, true] : null);
+    return '<div class="cat-pres cat-pres--' + (avecListe ? 'liste' : 'seule') + ' cat-t-' + esc(t) + '">'
+      + '<div class="cat-pres__visual ' + (v ? (v[1] ? 'is-photo' : 'is-drawing') : 'is-none') + '">' + (v ? '<img src="' + esc(v[0]) + '" alt="">' : '') + '</div>'
+      + '<div class="cat-pres__head"><div class="cat-pres__eyebrow">' + (lang === 'nl' ? 'Het gamma' : 'La gamme') + '</div><div class="cat-pres__title">' + esc(p.title) + '</div><div class="cat-pres__rule"></div>'
+      + (p.text ? '<div class="cat-pres__text">' + esc(p.text) + '</div>' : '') + '</div>'
+      + (avecListe && (p.products || []).length ? '<div class="cat-pres__list">' + liste(p.products, lang) + '</div>' : '') + '</div>';
   }
   function qr(url, mm) {
     if (typeof window.qrcode !== 'function') { return ''; }
