@@ -1098,11 +1098,13 @@ $('cibles').innerHTML = '<thead><tr><th>Cible</th><th class="num">Aujourd’hui<
     ['Tâches obligatoires rendues', `${RS.obligatoiresRendues} / ${RS.obligatoires} le ${dateC(TC.releveLe)}`, 'toutes, chaque jour, photo comprise'],
     ['Frais de personnel', PE6 ? dec(PE6.n.pct) + ' % (mai → oct. 26)' : PEc ? dec(PEc.cumul.labourPct) + ' % du CA' : 'à lire', PE6 ? `vers ${dec(SEUIL_P, 0)} % du CA, le seuil du réseau` : `sous ${dec(SEUIL_P, 0)} % du CA`],
     ['Part du B2B', dec(B.part) + ' %', `à développer, plafond ${dec(D.plafond, 0)} %`],
-    ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget, tout payé le lundi'],
+    ['Budgets et trésorerie', 'à faire', 'chaque poste dans son budget ; le lundi, 500 € pour soi, puis toutes les factures'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td class="num">${esc(insec(r[1]))}</td><td>${esc(insec(r[2]))}</td></tr>`).join('') + '</tbody>';
-$('cf-points').innerHTML = [   // court (13/11/2026)
+$('cf-points').innerHTML = [   // court (13/11/2026) ; le lundi, dicté le 14/11/2026 (Sam)
   'Budgets : chaque poste dans son budget ; ce qui dépasse se coupe.',
-  'Trésorerie : un plan semaine par semaine ; on paie le lundi, on court pour arriver au budget.',
+  'Trésorerie : un plan semaine par semaine.',
+  'Chaque lundi : on se paie d’abord 500 €, ensuite on paie toutes les factures.',
+  'Comme ça, l’objectif premier, c’est de faire son objectif de chiffre d’affaires.',
   'En visite : tout est-il payé à temps ?',
 ].map(t => `<li>${esc(insec(t))}</li>`).join('');
 $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th><th class="num">Départ</th><th>Repère proposé</th></tr></thead><tbody>'
@@ -1116,7 +1118,7 @@ $('soins-suivi').innerHTML = '<thead><tr><th>Indicateur</th><th>Où le lire</th>
     ['Temps morts, après-midi sans client', 'Dashboard magasin, onglet Temps morts', dec(TS.nb) + ' / jour · ' + dec(APM.pct, 0) + ' %', 'moins de la moitié de l’après-midi sans client'],
     ['Frais de personnel, % du CA', 'P&L du panel, mini P&L de la visite', D.personnel && D.personnel.cumul.mois ? dec(D.personnel.mois.filter(m => !m.indispo).slice(-1)[0].labourPct) + ' %' : 'à lire', `sous ${dec(D.seuilPersonnel, 0)} % du CA`],
     ['Budgets des charges', 'Budget du cockpit, mini P&L de la visite', 'à lire', 'chaque poste dans son budget'],
-    ['Plan de trésorerie', 'Plan de trésorerie du magasin, météo financière en visite', 'à faire', 'tout payé le lundi, à temps'],
+    ['Plan de trésorerie', 'Plan de trésorerie du magasin, météo financière en visite', 'à faire', 'le lundi : 500 € pour soi, puis toutes les factures'],
     ['Encodage des produits', 'Panel', 'à vérifier', 'tous les produits encodés (condition de la marque)'],
     ['Suivi des règles du réseau', 'Visite', 'à vérifier', 'appliquées (condition de la marque)'],
   ].map(r => `<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td class="num">${esc(r[2])}</td><td>${esc(r[3])}</td></tr>`).join('') + '</tbody>';
@@ -1125,7 +1127,7 @@ $('pistes').innerHTML = [   // court (13/11/2026)
   `Reprendre la cuisson l’après-midi : 10 tickets par heure de 14 h à 18 h, ≈ ${dec(gainApm, 0)} clients de plus par jour.`,
   `Regagner le comptoir : ${dec(base, 0)}, puis ${objectif}, puis ${normalise} clients par jour.`,
   PE6 ? `Ramener le personnel de ${dec(PE6.n.pct)} % vers ${dec(D.seuilPersonnel, 0)} % du CA.` : `Ramener le personnel vers ${dec(D.seuilPersonnel, 0)} % du CA.`,
-  'Tenir budgets et trésorerie : on paie le lundi.',
+  'Tenir budgets et trésorerie : le lundi, 500 € pour soi, puis toutes les factures.',
   'Une offre l’après-midi, du lundi au vendredi.',
   `Préparer l’été 2027 (juillet ${pct(L.find(l => l.k === '2026-07').vsCa, 0)}, août ${pct(L.find(l => l.k === '2026-08').vsCa, 0)}).`,
   B2BX ? `B2B : garder ${B2BX.top.nom}, trouver d’autres clients.` : `Développer le B2B : ${dec(B.part)} %, plafond ${dec(D.plafond, 0)} %.`,
