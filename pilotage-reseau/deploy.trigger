@@ -1458,3 +1458,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T08:01:37Z Rapports : interrupteur général, livré suspendu — aucun rapport ne part plus de l'horloge (reprise d'un clic dans Rapports)
 2026-11-14T09:29:21Z Fiche matière : la TVA modifiable (sur /materials/{id}/vat-rates)
 2026-11-14T10:16:58Z Recettes à corriger : prix en retard sur le fournisseur (audit Pommes Tranches)
+2026-11-14T10:21:20Z Prix en retard sur le fournisseur : écart au-delà de x2 = colis à vérifier
