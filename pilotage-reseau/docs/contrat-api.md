@@ -3935,6 +3935,13 @@ rendement** dans la recette (seul `/cost` rend `yield_quantity`) : le geste `ren
 panel. Une ligne reprise d'une autre recette (ajout, copie) part **sans son `connection_id`**. `GET /products/{id}` porte
 `id_recipe` (le geste `rattacher`).
 
+**Règle `tarif`** (14/11/2026) : « prix en retard sur le fournisseur ». `vfRefFournisseurs` lit, pour chaque magasin, la liste
+de prix EN VIGUEUR du premier fournisseur lié qui chiffre la matière (même lecture que `vmpOptions`) ; un écart de plus de
+`VF_ECART_TARIF` (2 %) au prix du magasin signale le produit, avec `corr {sid, magasin, matieres[{mid, nom, u, prix, ref,
+fournisseur, depuis, shops (les magasins en retard au même prix de référence), alignes}], coutAvant, coutApres}`. Le geste
+proposé est `prix` (les magasins en retard, au prix du fournisseur). Le coût qui entre dans la médiane du réseau (règle
+`reseau`) est le coût au prix du fournisseur : un magasin à jour n'est plus « hors norme » parce que d'autres sont en retard.
+
 `GET /verification/recettes` porte en plus `liens` (les modèles d'adresse) et, sur chaque ligne, `corr` : ce qu'il faut
 pour proposer le geste (`unite` : `mid`, `matiere`, `sous`, `facteur`, `q`, `u`, `coutAvant`, `coutApres` ; `prix` : `sid`,
 `magasin`, `matieres[{mid, nom, u, propose (médiane des autres magasins), min, max}]` ; `port` : `sid`, `fraction` lue
