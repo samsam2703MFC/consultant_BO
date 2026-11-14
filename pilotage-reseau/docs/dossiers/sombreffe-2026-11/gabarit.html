@@ -122,8 +122,11 @@ body { margin: 0; background: var(--paper); }
 .rp-grille th, .rp-grille td { text-align: center; vertical-align: middle; white-space: normal; border: 0; }
 .rp-grille thead th { background: var(--table-head); border-radius: 6px; padding: 8px 4px; font-size: 11.5px; }
 .rp-grille tbody th { background: var(--table-head); border-radius: 6px; padding: 8px 6px; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--ink); }
-.rp-grille .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
+.rp-grille .sous, #repere-table .sous { display: block; color: var(--muted); font-size: 11px; text-transform: none; letter-spacing: 0; margin-top: 2px; }
 .rp-grille td.axe { padding: 30px 6px; border-radius: 6px; }
+#repere { margin-top: 18px; }
+#repere .rp-kpis { margin: 8px 0 10px; }
+@media print { .rp-grille td.axe { padding: 20px 6px; } #repere { margin-top: 12px; } }   /* l’étape 3 et le repère de Halle sur une seule page */
 .axe-v { font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .axe-s { font-size: 11px; color: var(--muted); }
 .axe-g { font-size: 14px; color: var(--green); margin-top: 6px; }
@@ -274,6 +277,12 @@ body { margin: 0; background: var(--paper); }
       <h2 class="rp-h3" id="axes-titre"></h2>
       <div class="rp-table-zone"><table class="rp-table rp-grille" id="axes-table"></table></div>
       <ul class="rp-points" id="axes-points"></ul>
+      <div id="repere" hidden>   <!-- le repère de Halle, 8 dernières semaines (14/11/2026, Sam) -->
+        <h2 class="rp-h3" id="repere-titre"></h2>
+        <div class="rp-kpis" id="repere-tuiles"></div>
+        <div class="rp-table-zone"><table class="rp-table rp-serre" id="repere-table"></table></div>
+        <ul class="rp-points" id="repere-points"></ul>
+      </div>
     </section>
     <section class="rp-carte" id="soins" hidden>   <!-- remplacé par les trois axes le 13/11/2026 (Sam) -->
       <h2 class="rp-h2">D’où l’on part</h2>
@@ -1011,6 +1020,25 @@ if (D.theorique) {
     `À équipe égale (${eur(R.personnel)} de personnel par mois), le personnel passe sous ${dec(seuil, 0)} % du CA à partir de ${k1(R.personnel / (seuil / 100))} de CA par mois.`,
     `Hypothèses : matière à ${dec(T.tauxMatiere, 0)} % du CA (taux budget du réseau), frais généraux du P&L (${eur(R.fg)} par mois) ; base : le mois moyen de février à octobre 2026.`,
   ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+  // Le repère : ce que Halle a fait ces 8 dernières semaines, appliqué à Sombreffe avec le même calcul que la grille.
+  if (D.repere) {
+    const P = D.repere, RH = P.halle, RM = P.moi, dc = RH.apres - RH.avant, dp = RH.panierComptoir - RM.panierComptoir, h = res(dc, dp);
+    $('repere-titre').textContent = `Le repère : ${P.nom}, les 8 dernières semaines (${dateC(RH.du)} → ${dateC(RH.au)}/${RH.au.slice(0, 4)})`;
+    $('repere-tuiles').innerHTML = [
+      kpi(`${P.nom} · les clients par jour`, `+${dec(dc)}`, `${dec(RH.avant, 0)} → ${dec(RH.apres, 0)} : 4 premières → 4 dernières semaines (${pct((RH.apres / RH.avant - 1) * 100)}) ; Sombreffe ${dec(RM.avant, 0)} → ${dec(RM.apres, 0)}`, 'good'),
+      kpi(`${P.nom} · le panier au comptoir`, eur2(RH.panierComptoir), `Sombreffe ${eur2(RM.panierComptoir)} : ${eur2(dp)} de moins par client ; ${dec(RH.articles)} articles par client contre ${dec(RM.articles)}`),
+      kpi(`Sombreffe au rythme de ${P.nom}`, eur(h.r), `par mois, contre ${eur(b.r)} : +${k1((h.r - b.r) * 12)} par an ; personnel ${dec(h.p)} %`, 'good'),
+    ].join('');
+    const lignesR = [[`${P.nom} · clients par jour`, RH, w => dec(w.cliJour, 0), dec(RH.cliJour, 0), ''], ['Sombreffe · clients par jour', RM, w => dec(w.cliJour, 0), dec(RM.cliJour, 0), 'moi'],
+      [`${P.nom} · panier au comptoir`, RH, w => eur2(w.panierComptoir), eur2(RH.panierComptoir), ''], ['Sombreffe · panier au comptoir', RM, w => eur2(w.panierComptoir), eur2(RM.panierComptoir), 'moi']];
+    $('repere-table').innerHTML = '<thead><tr><th></th>' + RH.semaines.map(w => `<th class="num">${w.lab}<span class="sous">${dateC(w.du)}</span></th>`).join('') + '<th class="num">8 semaines</th></tr></thead><tbody>'
+      + lignesR.map(([nom, S, f, tot, c]) => `<tr class="${c}"><td>${esc(nom)}</td>${S.semaines.map(w => `<td class="num">${esc(f(w))}</td>`).join('')}<td class="num">${esc(tot)}</td></tr>`).join('') + '</tbody>';
+    $('repere-points').innerHTML = [
+      `Sombreffe au rythme de ${P.nom} : +${dec(dc)} clients par jour et +${eur2(dp)} de panier, à équipe égale, même calcul que la grille.`,
+      `${P.nom} n’a pas de N-1 (premières ventes le ${dateC(P.ouverture)}/${P.ouverture.slice(0, 4)}) : la hausse se lit d’une semaine à l’autre.`,
+    ].map(t => `<li>${esc(insec(t))}</li>`).join('');
+    $('repere').hidden = false;
+  }
   $('axes').hidden = false;
 }
 

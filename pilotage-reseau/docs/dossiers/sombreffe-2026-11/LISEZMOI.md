@@ -28,6 +28,16 @@ Pour chaque mois et son N-1, le B2B (`pro` : CA, clients, jours lus ; `src/vente
 tire les deux graphiques de l'Évolution magasin : le comptoir (le total moins le B2B) et le B2B seul. Comme au
 cockpit, un mois dont le B2B n'est pas lu sur tous ses jours vendus sort de ces deux courbes.
 
+### `semaines-halle.json` et `semaines-sombreffe.json` — le repère de Halle, 8 dernières semaines
+
+Dans le navigateur où le cockpit est ouvert, enregistrer la réponse de (shop 4 pour Halle, 5 pour Sombreffe) :
+
+    <adresse du cockpit>/api/cockpit/ventes/semaines?shop=4&vue=semaine&date=2026-11-14&n=13&pro=1&articles=1
+
+Les 13 dernières semaines (`src/ventes_semaines.php`) : clients, CA, comptoir (`pro=1`), articles. Le rapport garde
+les 8 dernières semaines complètes : la hausse des clients par jour de Halle (4 premières face aux 4 dernières), son
+panier au comptoir face à celui de Sombreffe, et ce que donnerait Sombreffe à ce rythme (étape 3, sous la grille).
+
 ### `pnl-mois.json` — les frais de personnel face au CA, 18 mois
 
 Dans le navigateur où le cockpit est ouvert (la session suffit), enregistrer la réponse de :

@@ -58,6 +58,11 @@ PLAFOND_B2B = 40.0                       # plafond de la part B2B fixé aux visi
 TAUX_MATIERE = 40.0                      # matière première et emballage, % du CA : le taux budget du réseau (Budget › Paramètres, 38 + 2)
 SEUIL_PERSONNEL = 15.0                   # frais de personnel en % du CA, hors rémunération du franchisé : le seuil du réseau (13/11/2026)
 PNL_RESEAU = ICI / 'pnl-reseau.json'     # GET /api/cockpit/analyse/pnl/mois?tous=1&du=2025-05&au=2026-10
+# Le repère de Halle (14/11/2026, Sam) : la hausse de ses clients et son panier sur les 8 dernières semaines complètes,
+# face à Sombreffe sur les mêmes semaines. GET /api/cockpit/ventes/semaines?shop=4 (Halle) puis 5, vue=semaine,
+# date=2026-11-14, n=13, pro=1 (le comptoir de chaque semaine), articles=1.
+SEMAINES_HALLE = ICI / 'semaines-halle.json'
+SEMAINES_MOI = ICI / 'semaines-sombreffe.json'
 
 MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
 MOIS_L = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -340,8 +345,25 @@ def main():
         theorique['scenarios'] = [dict(compte((cl_ + plus * jours_) / n, panierAutres['bas']['panier'], sp), plus=plus,
                                        cliJour=cl_ / jours_ + plus) for plus in (0, 5, 10)]
 
+    # Le repère de Halle : les 8 dernières semaines complètes (la semaine en cours n'entre pas), la hausse des clients
+    # par jour (les 4 premières face aux 4 dernières), le panier, le panier du comptoir (hors clients pro).
+    def huitSemaines(f):
+        s = json.loads(f.read_text(encoding='utf-8'))
+        W = [w for w in s['semaines'] if not w['enCours'] and w['jours'] == 7][-8:]
+        cj = lambda L: sum(w['tickets'] for w in L) / sum(w['jours'] for w in L)
+        return {'du': W[0]['du'], 'au': W[-1]['au'], 'avant': cj(W[:4]), 'apres': cj(W[4:]), 'cliJour': cj(W),
+                'panier': sum(w['ca'] for w in W) / sum(w['tickets'] for w in W),
+                'panierComptoir': sum(w['caComptoir'] for w in W) / sum(w['ticketsComptoir'] for w in W),
+                'articles': sum(w['articles'] for w in W) / sum(w['tickets'] for w in W), 'n1Motif': s.get('n1Motif'),
+                'semaines': [{'lab': w['lab'], 'du': w['du'], 'cliJour': w['tickets'] / w['jours'],
+                              'panierComptoir': w['caComptoir'] / w['ticketsComptoir']} for w in W]}
+    repere = None
+    if SEMAINES_HALLE.exists() and SEMAINES_MOI.exists():
+        repere = {'nom': 'Halle', 'ouverture': '2026-02-20', 'halle': huitSemaines(SEMAINES_HALLE), 'moi': huitSemaines(SEMAINES_MOI)}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'repere': repere,
         'personnel': personnel, 'personnelReseau': personnelReseau, 'theorique': theorique, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches, 'panierAutres': panierAutres,
         'tempsMorts': tempsMorts,
