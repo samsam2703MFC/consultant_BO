@@ -1464,3 +1464,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T10:42:12Z Corrections : réponse entière du panel au registre
 2026-11-14T10:53:54Z Matières par fournisseur ou catégorie, formulaire du prix
 2026-11-14T11:12:38Z Paramétrage des produits
+2026-11-14T12:03:16Z Paramétrage : champ refusé isolé
