@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Aligner les prix sur les fournisseurs — Cockpit CEO (maquette réelle)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="al.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group"><div class="sidebar__group-label">Vérification</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"></path></svg><span class="sidebar__item-label">Audit des flux</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Matières ↔ recettes</span></button><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"></path></svg><span class="sidebar__item-label">Recettes à corriger</span></button></div><div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Recettes à corriger</h1>
+      </div>
+      <div class="topbar__actions"><span class="al-pill">Maquette réelle · lue en ligne le 14/11 · rien n’est écrit</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="vr al">
+  <div class="vr-haut"><div class="vm-bascule"><button>Recettes à corriger</button><button class="on">Matières premières</button></div><span class="vr-sp"></span><span class="vr-lu">Lu en ligne le 14/11 · couverture 73,5 %</span></div>
+  <div class="vr-card">
+    <div class="al-t"><h2>Aligner les prix des magasins sur les listes des fournisseurs</h2>
+      <p>Chaque matière dont le prix, dans un magasin, s’écarte de plus de 10 % de la liste de prix <b>en vigueur</b> de son fournisseur (règle « prix en retard sur le fournisseur »). Une coche par matière : décochée, elle ne part pas. Les écarts de plus de ×2 sont mis de côté (colis à vérifier).</p></div>
+    <div class="vm-kpis">
+      <div class="vm-kpi"><div class="k">Matières à aligner</div><div class="v">55</div><div class="s">3 fournisseurs : Berdiff s.a., SLFood, Centrale d’achats – Atelier By</div></div>
+      <div class="vm-kpi att"><div class="k">Prix à écrire</div><div class="v">141</div><div class="s">Corbais 34 · Gosselies 24 · Sombreffe 52 · Halle 31</div></div>
+      <div class="vm-kpi"><div class="k">Sens</div><div class="v">97 ↑ · 44 ↓</div><div class="s">hausses : le magasin payait moins que la liste ; baisses : plus</div></div>
+      <div class="vm-kpi"><div class="k">Produits touchés</div><div class="v">63</div><div class="s">25 411 € de CA sur 30 jours</div></div>
+      <div class="vm-kpi ko"><div class="k">Mis de côté</div><div class="v">8</div><div class="s">écart de plus de ×2 : colis ou unité à vérifier</div></div>
+    </div>
+    <div class="vr-tw"><table class="vr-t al-t2"><thead><tr><th class="g" style="width:26px"><input type="checkbox" checked></th><th class="g">Matière</th><th class="g">Fournisseur<small>liste de prix en vigueur</small></th><th>Corbais<small>avant → après</small></th><th>Gosselies<small>avant → après</small></th><th>Sombreffe<small>avant → après</small></th><th>Halle<small>avant → après</small></th><th class="g">Produits touchés<small>coût de la pièce, avant → après</small></th><th>CA<small>30 jours</small></th></tr></thead>
+      <tbody><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Poche Sauce Arrabiata</b><small>Plat Prepare - Chaud · € / pce</small></td>
+    <td class="g al-f"><b>Berdiff s.a.</b><small>colis de 4 pcs × 150 à 10,67 € HT · en vigueur depuis le 20/09</small></td>
+    <td class="al-c"><span class="al-av">0,0156 €</span><b class="al-ap">0,0178 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">0,0221 €</span><b class="al-ap">0,0178 €</b><small class="b">−20 %</small></td><td class="al-c"><span class="al-av">0,0156 €</span><b class="al-ap">0,0178 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">0,0156 €</span><b class="al-ap">0,0178 €</b><small class="h">+14 %</small></td>
+    <td class="g al-p"><div><b>Pâtes Amatriciana</b> <span class="al-mu">Corbais : </span></div><div><b>Penne all'Arrabbiata &amp; Burratina</b> <span class="al-mu">Corbais : </span></div><div class="al-mu">+ 3 autres</div></td>
+    <td>2 150 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Pomme Amandes 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 68,20 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">6,194 €</span><b class="al-ap">8,525 €</b><small class="h">+38 %</small></td><td class="al-c"><span class="al-av">6,194 €</span><b class="al-ap">8,525 €</b><small class="h">+38 %</small></td><td class="al-c"><span class="al-av">6,194 €</span><b class="al-ap">8,525 €</b><small class="h">+38 %</small></td><td class="al-c"><span class="al-ok">8,525 € ✓</span></td>
+    <td class="g al-p"><div><b>Pommes Amandes</b> <span class="al-mu">Corbais : 6,47 → 8,80 €</span></div></td>
+    <td>2 093 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Caramel beurre sale &amp; Chocolat - 20⌀</b><small>Tartissières - 19Ø · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 6 pcs à 56,12 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">8,025 €</span><b class="al-ap">9,353 €</b><small class="h">+17 %</small></td><td class="al-c"><span class="al-av">8,025 €</span><b class="al-ap">9,353 €</b><small class="h">+17 %</small></td><td class="al-c"><span class="al-av">8,025 €</span><b class="al-ap">9,353 €</b><small class="h">+17 %</small></td><td class="al-c"><span class="al-av">8,025 €</span><b class="al-ap">9,353 €</b><small class="h">+17 %</small></td>
+    <td class="g al-p"><div><b>Mousse chocolat &amp; caramel beurre salé</b> <span class="al-mu">Corbais : 8,03 → 9,35 €</span></div></td>
+    <td>1 900 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Sandwich 70 g.</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 160 pcs à 35,49 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">0,2218 € ✓</span></td><td class="al-c"><span class="al-ok">0,2218 € ✓</span></td><td class="al-c"><span class="al-av">0,1982 €</span><b class="al-ap">0,2218 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">0,2218 € ✓</span></td>
+    <td class="g al-p"><div><b>Sandwich</b> <span class="al-mu">Sombreffe : 0,20 → 0,22 €</span></div><div><b>Plateau sandwiches individuels - 10 pièces</b> <span class="al-mu">Sombreffe : </span></div><div class="al-mu">+ 1 autre</div></td>
+    <td>1 735 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Fromage - 28⌀</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 76,73 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">8,448 €</span><b class="al-ap">9,591 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-ok">9,591 € ✓</span></td><td class="al-c"><span class="al-av">8,448 €</span><b class="al-ap">9,591 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-ok">9,591 € ✓</span></td>
+    <td class="g al-p"><div><b>Fromage</b> <span class="al-mu">Corbais : 8,45 → 9,59 €</span></div></td>
+    <td>1 494 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Brookie - 28⌀</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 10 pcs à 99,41 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">8,899 €</span><b class="al-ap">9,941 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">9,941 € ✓</span></td><td class="al-c"><span class="al-av">8,899 €</span><b class="al-ap">9,941 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">9,941 € ✓</span></td>
+    <td class="g al-p"><div><b>Brookie</b> <span class="al-mu">Corbais : 8,90 → 9,94 €</span></div></td>
+    <td>1 491 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Riz – 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 73,46 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">8,124 €</span><b class="al-ap">9,183 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-av">8,124 €</span><b class="al-ap">9,183 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-av">8,124 €</span><b class="al-ap">9,183 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-ok">9,183 € ✓</span></td>
+    <td class="g al-p"><div><b>Riz</b> <span class="al-mu">Corbais : 8,12 → 9,18 €</span></div></td>
+    <td>1 304 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Pomme Tranches 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 61,70 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">5,095 €</span><b class="al-ap">7,713 €</b><small class="h">+51 %</small></td><td class="al-c"><span class="al-ok">7,713 € ✓</span></td><td class="al-c"><span class="al-av">5,095 €</span><b class="al-ap">7,713 €</b><small class="h">+51 %</small></td><td class="al-c"><span class="al-ok">7,713 € ✓</span></td>
+    <td class="g al-p"><div><b>Pommes Tranches</b> <span class="al-mu">Corbais : 5,37 → 7,99 €</span></div></td>
+    <td>1 275 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Melocake Mixte – Boîte de 6 (b)</b><small>Chocolaterie · € / pce</small></td>
+    <td class="g al-f"><b>Centrale d’achats – Atelier By</b><small>colis de 5 pcs à 21,90 € HT · en vigueur depuis le 19/08</small></td>
+    <td class="al-c"><span class="al-av">3,300 €</span><b class="al-ap">4,380 €</b><small class="h">+33 %</small></td><td class="al-c"><span class="al-av">3,300 €</span><b class="al-ap">4,380 €</b><small class="h">+33 %</small></td><td class="al-c"><span class="al-av">3,300 €</span><b class="al-ap">4,380 €</b><small class="h">+33 %</small></td><td class="al-c"><span class="al-av">3,300 €</span><b class="al-ap">4,380 €</b><small class="h">+33 %</small></td>
+    <td class="g al-p"><div><b>Melocake – Boîte de 6</b> <span class="al-mu">Sombreffe : 3,30 → 4,38 €</span></div></td>
+    <td>920 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Fermier Seigle &amp; Levain 600 g.</b><small>Pain · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 11 pcs à 15,00 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,606 €</span><b class="al-ap">1,364 €</b><small class="b">−15 %</small></td><td class="al-c"><span class="al-ok">1,364 € ✓</span></td><td class="al-c"><span class="al-av">1,606 €</span><b class="al-ap">1,364 €</b><small class="b">−15 %</small></td><td class="al-c"><span class="al-ok">1,364 € ✓</span></td>
+    <td class="g al-p"><div><b>Fermier Seigle &amp; Levain</b> <span class="al-mu">Corbais : 1,61 → 1,36 €</span></div></td>
+    <td>783 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Poires &amp; Chocolat 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 80,61 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">6,943 €</span><b class="al-ap">10,08 €</b><small class="h">+45 %</small></td><td class="al-c"><span class="al-ok">10,08 € ✓</span></td><td class="al-c"><span class="al-av">6,943 €</span><b class="al-ap">10,08 €</b><small class="h">+45 %</small></td><td class="al-c"><span class="al-ok">10,08 € ✓</span></td>
+    <td class="g al-p"><div><b>Poires &amp; Chocolat</b> <span class="al-mu">Corbais : 7,22 → 10,35 €</span></div></td>
+    <td>754 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Mousse Chocolat &amp; Caramel (12⌀)</b><small>Tartissières - 12Ø · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 18 pcs à 65,88 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">3,161 €</span><b class="al-ap">3,660 €</b><small class="h">+16 %</small></td><td class="al-c"><span class="al-ok">3,660 € ✓</span></td><td class="al-c"><span class="al-av">3,161 €</span><b class="al-ap">3,660 €</b><small class="h">+16 %</small></td><td class="al-c"><span class="al-av">3,161 €</span><b class="al-ap">3,660 €</b><small class="h">+16 %</small></td>
+    <td class="g al-p"><div><b>Mousse Chocolat &amp; Caramel - 120⌀</b> <span class="al-mu">Corbais : 3,16 → 3,66 €</span></div></td>
+    <td>570 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Soupe Courgette</b><small>Soupes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 6 pcs à 44,83 € HT · en vigueur depuis le 05/11</small></td>
+    <td class="al-c"><span class="al-av">9,098 €</span><b class="al-ap">7,472 €</b><small class="b">−18 %</small></td><td class="al-c"><span class="al-av">9,098 €</span><b class="al-ap">7,472 €</b><small class="b">−18 %</small></td><td class="al-c"><span class="al-av">9,098 €</span><b class="al-ap">7,472 €</b><small class="b">−18 %</small></td><td class="al-c"><span class="al-av">9,098 €</span><b class="al-ap">7,472 €</b><small class="b">−18 %</small></td>
+    <td class="g al-p"><div><b>Soupe Courgette</b> <span class="al-mu">Corbais : 9,10 → 7,47 €</span></div></td>
+    <td>555 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cerise 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 71,10 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">7,728 €</span><b class="al-ap">8,888 €</b><small class="h">+15 %</small></td><td class="al-c"><span class="al-av">7,728 €</span><b class="al-ap">8,888 €</b><small class="h">+15 %</small></td><td class="al-c"><span class="al-av">7,728 €</span><b class="al-ap">8,888 €</b><small class="h">+15 %</small></td><td class="al-c"><span class="al-ok">8,888 € ✓</span></td>
+    <td class="g al-p"><div><b>Cerise</b> <span class="al-mu">Sombreffe : 8,00 → 9,16 €</span></div></td>
+    <td>512 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Misérable Ind.</b><small>Entremets - Individuel · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 36 pcs à 60,01 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,118 €</span><b class="al-ap">1,667 €</b><small class="h">+49 %</small></td><td class="al-c"><span class="al-ok">1,667 € ✓</span></td><td class="al-c"><span class="al-av">1,118 €</span><b class="al-ap">1,667 €</b><small class="h">+49 %</small></td><td class="al-c"><span class="al-av">1,118 €</span><b class="al-ap">1,667 €</b><small class="h">+49 %</small></td>
+    <td class="g al-p"><div><b>Misérable Ind.</b> <span class="al-mu">Corbais : 1,12 → 1,67 €</span></div></td>
+    <td>499 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Merveilleux (30 pieces)</b><small>Entremets - Individuel · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 30 pcs à 56,54 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,805 € ✓</span></td><td class="al-c"><span class="al-ok">1,885 € ✓</span></td><td class="al-c"><span class="al-av">1,492 €</span><b class="al-ap">1,885 €</b><small class="h">+26 %</small></td><td class="al-c"><span class="al-av">1,492 €</span><b class="al-ap">1,885 €</b><small class="h">+26 %</small></td>
+    <td class="g al-p"><div><b>Merveilleux</b> <span class="al-mu">Halle : </span></div></td>
+    <td>491 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Duo Chocolat - 180⌀</b><small>Entremets - 190Ø · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 6 pcs à 48,34 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">8,057 € ✓</span></td><td class="al-c"><span class="al-ok">8,057 € ✓</span></td><td class="al-c"><span class="al-av">9,637 €</span><b class="al-ap">8,057 €</b><small class="b">−16 %</small></td><td class="al-c"><span class="al-ok">8,057 € ✓</span></td>
+    <td class="g al-p"><div><b>Duo Chocolat - 180⌀</b> <span class="al-mu">Sombreffe : 9,64 → 8,06 €</span></div></td>
+    <td>478 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Chocolat Lait</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 62,09 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,478 € ✓</span></td><td class="al-c"><span class="al-ok">1,478 € ✓</span></td><td class="al-c"><span class="al-av">1,257 €</span><b class="al-ap">1,478 €</b><small class="h">+18 %</small></td><td class="al-c"><span class="al-ok">1,478 € ✓</span></td>
+    <td class="g al-p"><div><b>Cookie Chocolat Lait</b> <span class="al-mu">Sombreffe : 1,26 → 1,48 €</span></div></td>
+    <td>475 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Duo Framboise &amp; Passion Ind.</b><small>Entremets - Individuel · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 45 pcs à 50,24 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,492 €</span><b class="al-ap">1,116 €</b><small class="b">−25 %</small></td><td class="al-c"><span class="al-ok">1,116 € ✓</span></td><td class="al-c"><span class="al-av">1,492 €</span><b class="al-ap">1,116 €</b><small class="b">−25 %</small></td><td class="al-c"><span class="al-av">1,492 €</span><b class="al-ap">1,116 €</b><small class="b">−25 %</small></td>
+    <td class="g al-p"><div><b>Duo Framboise &amp; Passion Ind.</b> <span class="al-mu">Corbais : 1,49 → 1,12 €</span></div></td>
+    <td>391 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Plaque Biscuit Crème Fraiche Chocolat</b><small>Pâtisserie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 2 pcs à 44,86 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">43,88 €</span><b class="al-ap">22,43 €</b><small class="b">−49 %</small></td><td class="al-c"><span class="al-av">43,88 €</span><b class="al-ap">22,43 €</b><small class="b">−49 %</small></td><td class="al-c"><span class="al-av">43,88 €</span><b class="al-ap">22,43 €</b><small class="b">−49 %</small></td><td class="al-c"><span class="al-av">43,88 €</span><b class="al-ap">22,43 €</b><small class="b">−49 %</small></td>
+    <td class="g al-p"><div><b>Gâteaux Anniversaire | Chocolat /personnes</b> <span class="al-mu">Corbais : 2,19 → 1,12 €</span></div></td>
+    <td>381 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Duo Chocolat Ind.</b><small>Entremets - Individuel · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 45 pcs à 54,51 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,751 €</span><b class="al-ap">1,211 €</b><small class="b">−31 %</small></td><td class="al-c"><span class="al-ok">1,211 € ✓</span></td><td class="al-c"><span class="al-av">1,751 €</span><b class="al-ap">1,211 €</b><small class="b">−31 %</small></td><td class="al-c"><span class="al-av">1,751 €</span><b class="al-ap">1,211 €</b><small class="b">−31 %</small></td>
+    <td class="g al-p"><div><b>Duo Chocolat Ind.</b> <span class="al-mu">Corbais : 1,75 → 1,21 €</span></div></td>
+    <td>356 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Pommes Parisienne -28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 10 pcs à 100,57 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">7,887 €</span><b class="al-ap">10,06 €</b><small class="h">+28 %</small></td><td class="al-c"><span class="al-ok">10,06 € ✓</span></td><td class="al-c"><span class="al-av">7,887 €</span><b class="al-ap">10,06 €</b><small class="h">+28 %</small></td><td class="al-c"><span class="al-ok">10,06 € ✓</span></td>
+    <td class="g al-p"><div><b>Pommes Parisienne</b> <span class="al-mu">Sombreffe : 7,89 → 10,06 €</span></div></td>
+    <td>343 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Soupe Potiron &amp; Citron (6 x 1l.)</b><small>Soupes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 6 pcs à 41,88 € HT · en vigueur depuis le 05/11</small></td>
+    <td class="al-c"><span class="al-av">5,228 €</span><b class="al-ap">6,980 €</b><small class="h">+34 %</small></td><td class="al-c"><span class="al-av">5,228 €</span><b class="al-ap">6,980 €</b><small class="h">+34 %</small></td><td class="al-c"><span class="al-av">5,228 €</span><b class="al-ap">6,980 €</b><small class="h">+34 %</small></td><td class="al-c"><span class="al-av">5,228 €</span><b class="al-ap">6,980 €</b><small class="h">+34 %</small></td>
+    <td class="g al-p"><div><b>Soupe Potiron &amp; Citron</b> <span class="al-mu">Corbais : 5,23 → 6,98 €</span></div></td>
+    <td>322 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Sandwich 35 g.</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 100 pcs à 26,54 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">0,2654 € ✓</span></td><td class="al-c"><span class="al-ok">0,2654 € ✓</span></td><td class="al-c"><span class="al-av">0,2331 €</span><b class="al-ap">0,2654 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">0,2331 €</span><b class="al-ap">0,2654 €</b><small class="h">+14 %</small></td>
+    <td class="g al-p"><div><b>Mini sandwiche garni / pièces</b> <span class="al-mu">Sombreffe : 0,89 → 0,92 €</span></div><div><b>Plateau mini sandwiches - 30 pièces</b> <span class="al-mu">Sombreffe : </span></div><div class="al-mu">+ 1 autre</div></td>
+    <td>322 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Caramel &amp; Noix de Pecan - 100g.</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 55,18 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,314 € ✓</span></td><td class="al-c"><span class="al-ok">1,314 € ✓</span></td><td class="al-c"><span class="al-av">1,102 €</span><b class="al-ap">1,314 €</b><small class="h">+19 %</small></td><td class="al-c"><span class="al-av">1,102 €</span><b class="al-ap">1,314 €</b><small class="h">+19 %</small></td>
+    <td class="g al-p"><div><b>Cookie Noix &amp; Caramel</b> <span class="al-mu">Halle : 1,10 → 1,31 €</span></div></td>
+    <td>319 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø - Caramel &amp; Noisette</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 59,61 € HT · en vigueur depuis le 06/03</small></td>
+    <td class="al-c"><span class="al-av">8,490 €</span><b class="al-ap">6,623 €</b><small class="b">−22 %</small></td><td class="al-c"><span class="al-ok">8,490 € ✓</span></td><td class="al-c"><span class="al-ok">8,490 € ✓</span></td><td class="al-c"><span class="al-ok">8,490 € ✓</span></td>
+    <td class="g al-p"><div><b>Entremet 120Ø - Caramel &amp; Noisette</b> <span class="al-mu">Corbais : 8,49 → 6,62 €</span></div></td>
+    <td>292 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Damier 100g. - Biscuit</b><small>Biscuiterie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 24 pcs à 47,44 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,421 €</span><b class="al-ap">1,977 €</b><small class="h">+39 %</small></td><td class="al-c"><span class="al-av">1,421 €</span><b class="al-ap">1,977 €</b><small class="h">+39 %</small></td><td class="al-c"><span class="al-av">1,421 €</span><b class="al-ap">1,977 €</b><small class="h">+39 %</small></td><td class="al-c"><span class="al-av">1,421 €</span><b class="al-ap">1,977 €</b><small class="h">+39 %</small></td>
+    <td class="g al-p"><div><b>Damier - 100 g.</b> <span class="al-mu">Corbais : 1,42 → 1,98 €</span></div></td>
+    <td>279 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Chocolat Blanc</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 59,96 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,428 € ✓</span></td><td class="al-c"><span class="al-ok">1,428 € ✓</span></td><td class="al-c"><span class="al-av">1,257 €</span><b class="al-ap">1,428 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-ok">1,428 € ✓</span></td>
+    <td class="g al-p"><div><b>Cookie Chocolat Blanc</b> <span class="al-mu">Sombreffe : 1,26 → 1,43 €</span></div></td>
+    <td>266 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Chocolat Noir</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 62,75 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,494 € ✓</span></td><td class="al-c"><span class="al-av">1,257 €</span><b class="al-ap">1,494 €</b><small class="h">+19 %</small></td><td class="al-c"><span class="al-av">1,257 €</span><b class="al-ap">1,494 €</b><small class="h">+19 %</small></td><td class="al-c"><span class="al-ok">1,494 € ✓</span></td>
+    <td class="g al-p"><div><b>Cookie Chocolat Noir</b> <span class="al-mu">Sombreffe : 1,26 → 1,49 €</span></div></td>
+    <td>236 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø - Tiramisu</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 48,74 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,416 €</b><small class="b">−16 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,416 €</b><small class="b">−16 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,416 €</b><small class="b">−16 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,416 €</b><small class="b">−16 %</small></td>
+    <td class="g al-p"><div><b>Entremet 120Ø - Tiramisu</b> <span class="al-mu">Sombreffe : 6,42 → 5,42 €</span></div></td>
+    <td>235 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Groseille 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 49,69 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">4,034 €</span><b class="al-ap">6,211 €</b><small class="h">+54 %</small></td><td class="al-c"><span class="al-ok">6,211 € ✓</span></td><td class="al-c"><span class="al-av">4,034 €</span><b class="al-ap">6,211 €</b><small class="h">+54 %</small></td><td class="al-c"><span class="al-ok">6,211 € ✓</span></td>
+    <td class="g al-p"><div><b>Groseille</b> <span class="al-mu">Corbais : 4,17 → 6,35 €</span></div></td>
+    <td>196 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Double Chocolat</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 62,75 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,494 € ✓</span></td><td class="al-c"><span class="al-av">1,330 €</span><b class="al-ap">1,494 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-av">1,330 €</span><b class="al-ap">1,494 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">1,494 € ✓</span></td>
+    <td class="g al-p"><div><b>Cookie Double Chocolat</b> <span class="al-mu">Sombreffe : 1,33 → 1,49 €</span></div></td>
+    <td>187 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Lepoard 100g. - Biscuit</b><small>Biscuiterie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 24 pcs à 41,92 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,542 €</span><b class="al-ap">1,747 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-av">1,542 €</span><b class="al-ap">1,747 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-av">1,542 €</span><b class="al-ap">1,747 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-av">1,542 €</span><b class="al-ap">1,747 €</b><small class="h">+13 %</small></td>
+    <td class="g al-p"><div><b>Leopard - 100 g.</b> <span class="al-mu">Corbais : 1,54 → 1,75 €</span></div></td>
+    <td>162 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Rhubarbe &amp; Fraises 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 52,49 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">7,470 €</span><b class="al-ap">6,561 €</b><small class="b">−12 %</small></td><td class="al-c"><span class="al-av">7,470 €</span><b class="al-ap">6,561 €</b><small class="b">−12 %</small></td><td class="al-c"><span class="al-av">7,470 €</span><b class="al-ap">6,561 €</b><small class="b">−12 %</small></td><td class="al-c"><span class="al-ok">6,561 € ✓</span></td>
+    <td class="g al-p"><div><b>Rhubarbe &amp; Fraises</b> <span class="al-mu">Sombreffe : 7,74 → 6,84 €</span></div></td>
+    <td>158 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Rhubarbe Parisienne -28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 113,42 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">7,563 €</span><b class="al-ap">14,18 €</b><small class="h">+87 %</small></td><td class="al-c"><span class="al-ok">14,18 € ✓</span></td><td class="al-c"><span class="al-av">7,563 €</span><b class="al-ap">14,18 €</b><small class="h">+87 %</small></td><td class="al-c"><span class="al-av">7,563 €</span><b class="al-ap">14,18 €</b><small class="h">+87 %</small></td>
+    <td class="g al-p"><div><b>Rhubarbe Parisienne</b> <span class="al-mu">Halle : 7,56 → 14,18 €</span></div></td>
+    <td>149 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø -  Duo Framboise &amp; Passion</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 46,95 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">5,217 € ✓</span></td><td class="al-c"><span class="al-av">6,466 €</span><b class="al-ap">5,217 €</b><small class="b">−19 %</small></td><td class="al-c"><span class="al-av">6,466 €</span><b class="al-ap">5,217 €</b><small class="b">−19 %</small></td><td class="al-c"><span class="al-ok">5,217 € ✓</span></td>
+    <td class="g al-p"><div><b>Entremet 120Ø -  Duo Framboise &amp; Passion</b> <span class="al-mu">Sombreffe : 6,47 → 5,22 €</span></div></td>
+    <td>140 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Bombe Chocolat Ind.</b><small>Entremets - Individuel · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 24 pcs à 45,34 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,823 € ✓</span></td><td class="al-c"><span class="al-ok">1,889 € ✓</span></td><td class="al-c"><span class="al-av">3,068 €</span><b class="al-ap">1,889 €</b><small class="b">−38 %</small></td><td class="al-c"><span class="al-av">3,068 €</span><b class="al-ap">1,889 €</b><small class="b">−38 %</small></td>
+    <td class="g al-p"><div><b>Bombe Chocolat Ind.</b> <span class="al-mu">Sombreffe : 0,15 → 0,09 €</span></div></td>
+    <td>113 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Craquelin</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 18 pcs à 35,35 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,964 € ✓</span></td><td class="al-c"><span class="al-av">1,727 €</span><b class="al-ap">1,964 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,727 €</span><b class="al-ap">1,964 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-ok">1,964 € ✓</span></td>
+    <td class="g al-p"><div><b>Craquelin</b> <span class="al-mu">Sombreffe : 1,73 → 1,96 €</span></div></td>
+    <td>112 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cramique</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 18 pcs à 35,86 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,992 € ✓</span></td><td class="al-c"><span class="al-av">1,753 €</span><b class="al-ap">1,992 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,753 €</span><b class="al-ap">1,992 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,753 €</span><b class="al-ap">1,992 €</b><small class="h">+14 %</small></td>
+    <td class="g al-p"><div><b>Cramique</b> <span class="al-mu">Sombreffe : 1,75 → 1,99 €</span></div></td>
+    <td>106 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Swirl 100g. - Biscuit</b><small>Biscuiterie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 24 pcs à 48,13 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,399 €</span><b class="al-ap">2,005 €</b><small class="h">+43 %</small></td><td class="al-c"><span class="al-av">1,399 €</span><b class="al-ap">2,005 €</b><small class="h">+43 %</small></td><td class="al-c"><span class="al-av">1,399 €</span><b class="al-ap">2,005 €</b><small class="h">+43 %</small></td><td class="al-c"><span class="al-av">1,399 €</span><b class="al-ap">2,005 €</b><small class="h">+43 %</small></td>
+    <td class="g al-p"><div><b>Swirl - 100g.</b> <span class="al-mu">Sombreffe : 1,40 → 2,01 €</span></div></td>
+    <td>103 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Tendresse au Chocolat</b><small>Financier · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 40 pcs à 51,06 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,099 €</span><b class="al-ap">1,277 €</b><small class="h">+16 %</small></td><td class="al-c"><span class="al-ok">1,277 € ✓</span></td><td class="al-c"><span class="al-av">1,099 €</span><b class="al-ap">1,277 €</b><small class="h">+16 %</small></td><td class="al-c"><span class="al-av">1,099 €</span><b class="al-ap">1,277 €</b><small class="h">+16 %</small></td>
+    <td class="g al-p"><div><b>Tendresse au Chocolat</b> <span class="al-mu">Sombreffe : 1,10 → 1,28 €</span></div></td>
+    <td>89 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Fromage Citron &amp; Coulis Framboise - 20⌀</b><small>Tartissières - 19Ø · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 6 pcs à 53,10 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">8,850 € ✓</span></td><td class="al-c"><span class="al-ok">8,850 € ✓</span></td><td class="al-c"><span class="al-av">7,660 €</span><b class="al-ap">8,850 €</b><small class="h">+16 %</small></td><td class="al-c"><span class="al-av">7,660 €</span><b class="al-ap">8,850 €</b><small class="h">+16 %</small></td>
+    <td class="g al-p"><div><b>Fromage citronné &amp; coulis de framboises</b> <span class="al-mu">Halle : 7,66 → 8,85 €</span></div></td>
+    <td>84 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Tiramisu - Mignardise (emb)</b><small>Mignardise · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 80 pcs à 31,12 € HT · en vigueur depuis le 06/03</small></td>
+    <td class="al-c"><span class="al-ok">42,45 € ✓</span></td><td class="al-c"><span class="al-av">0,4244 €</span><b class="al-ap">0,3215 €</b><small class="b">−24 %</small></td><td class="al-c"><span class="al-ok">0,3215 € ✓</span></td><td class="al-c"><span class="al-av">42,45 €</span><b class="al-ap">0,3215 €</b><small class="b">−99 %</small></td>
+    <td class="g al-p"><div><b>Tiramisu - Mignardise</b> <span class="al-mu">Gosselies : 0,42 → 0,32 €</span></div></td>
+    <td>84 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Frangipane &amp; Pommes – 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 10 pcs à 99,16 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">8,845 €</span><b class="al-ap">9,916 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">9,916 € ✓</span></td><td class="al-c"><span class="al-av">8,845 €</span><b class="al-ap">9,916 €</b><small class="h">+12 %</small></td><td class="al-c"><span class="al-ok">9,916 € ✓</span></td>
+    <td class="g al-p"><div><b>Frangipane &amp; Pommes</b> <span class="al-mu">Corbais : 8,85 → 9,92 €</span></div></td>
+    <td>83 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Mini - Pomme</b><small>Viennoiserie réduction · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 80 pcs à 50,74 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">0,6343 € ✓</span></td><td class="al-c"><span class="al-ok">0,6343 € ✓</span></td><td class="al-c"><span class="al-av">0,5610 €</span><b class="al-ap">0,6343 €</b><small class="h">+13 %</small></td><td class="al-c"><span class="al-ok">0,6343 € ✓</span></td>
+    <td class="g al-p"><div><b>Mini - Pomme</b> <span class="al-mu">Sombreffe : 0,56 → 0,63 €</span></div></td>
+    <td>80 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø - Bombe Chocolat</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 48,95 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">5,439 € ✓</span></td><td class="al-c"><span class="al-ok">5,220 € ✓</span></td><td class="al-c"><span class="al-av">8,558 €</span><b class="al-ap">5,439 €</b><small class="b">−36 %</small></td><td class="al-c"><span class="al-av">8,558 €</span><b class="al-ap">5,439 €</b><small class="b">−36 %</small></td>
+    <td class="g al-p"><div><b>Entremet 120Ø - Bombe Chocolat</b> <span class="al-mu">Sombreffe : 10,86 → 7,75 €</span></div></td>
+    <td>80 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø - Framboise &amp; Chocolat</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 47,00 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,222 €</b><small class="b">−19 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,222 €</b><small class="b">−19 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,222 €</b><small class="b">−19 %</small></td><td class="al-c"><span class="al-av">6,424 €</span><b class="al-ap">5,222 €</b><small class="b">−19 %</small></td>
+    <td class="g al-p"><div><b>Entremet 120Ø - Framboise &amp; Chocolat</b> <span class="al-mu">Corbais : 6,42 → 5,22 €</span></div></td>
+    <td>75 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Tendresse aux Framboises</b><small>Financier · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 40 pcs à 48,57 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,021 €</span><b class="al-ap">1,214 €</b><small class="h">+19 %</small></td><td class="al-c"><span class="al-ok">1,214 € ✓</span></td><td class="al-c"><span class="al-av">1,021 €</span><b class="al-ap">1,214 €</b><small class="h">+19 %</small></td><td class="al-c"><span class="al-av">1,021 €</span><b class="al-ap">1,214 €</b><small class="h">+19 %</small></td>
+    <td class="g al-p"><div><b>Tendresse aux Framboises</b> <span class="al-mu">Sombreffe : 1,02 → 1,21 €</span></div></td>
+    <td>61 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Brioche tressée au sucre perlé (cru)</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 16 pcs à 42,51 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">2,657 € ✓</span></td><td class="al-c"><span class="al-ok">2,657 € ✓</span></td><td class="al-c"><span class="al-av">2,333 €</span><b class="al-ap">2,657 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">2,333 €</span><b class="al-ap">2,657 €</b><small class="h">+14 %</small></td>
+    <td class="g al-p"><div><b>Brioche tressée au sucre perlé</b> <span class="al-mu">Sombreffe : 2,33 → 2,66 €</span></div></td>
+    <td>54 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Entremet 120Ø - Miserable</b><small>Entremets - 4/6 personnes · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 9 pcs à 66,35 € HT · en vigueur depuis le 06/03</small></td>
+    <td class="al-c"><span class="al-ok">7,372 € ✓</span></td><td class="al-c"><span class="al-av">8,490 €</span><b class="al-ap">6,093 €</b><small class="b">−28 %</small></td><td class="al-c"><span class="al-av">8,490 €</span><b class="al-ap">6,093 €</b><small class="b">−28 %</small></td><td class="al-c"><span class="al-av">8,490 €</span><b class="al-ap">6,093 €</b><small class="b">−28 %</small></td>
+    <td class="g al-p"><div><b>Bombe Chocolat</b> <span class="al-mu">Sombreffe : 8,49 → 6,09 €</span></div></td>
+    <td>30 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Riz Croustillant – 28 Ø</b><small>Tartes - 28 · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 8 pcs à 88,72 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">9,183 €</span><b class="al-ap">11,09 €</b><small class="h">+21 %</small></td><td class="al-c"><span class="al-ok">11,09 € ✓</span></td><td class="al-c"><span class="al-av">9,183 €</span><b class="al-ap">11,09 €</b><small class="h">+21 %</small></td><td class="al-c"><span class="al-av">9,183 €</span><b class="al-ap">11,09 €</b><small class="h">+21 %</small></td>
+    <td class="g al-p"><div><b>Riz Croustillant</b> <span class="al-mu">Corbais : 9,18 → 11,09 €</span></div></td>
+    <td>20 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Cookie Avoine Raisins et Noisette (cru)</b><small>Cookies · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 42 pcs à 48,46 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-ok">1,154 € ✓</span></td><td class="al-c"><span class="al-ok">1,154 € ✓</span></td><td class="al-c"><span class="al-av">0,9488 €</span><b class="al-ap">1,154 €</b><small class="h">+22 %</small></td><td class="al-c"><span class="al-ok">1,154 € ✓</span></td>
+    <td class="g al-p"><div><b>Cookie Avoine Raisins et Noisette</b> <span class="al-mu">Sombreffe : 0,95 → 1,15 €</span></div></td>
+    <td>9 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Briochette Sucre</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 80 pcs à 40,61 € HT · en vigueur depuis le 16/03</small></td>
+    <td class="al-c"><span class="al-ok">0,4663 € ✓</span></td><td class="al-c"><span class="al-av">0,4663 €</span><b class="al-ap">0,4195 €</b><small class="b">−10 %</small></td><td class="al-c"><span class="al-av">0,4663 €</span><b class="al-ap">0,4195 €</b><small class="b">−10 %</small></td><td class="al-c"><span class="al-av">0,4663 €</span><b class="al-ap">0,4195 €</b><small class="b">−10 %</small></td>
+    <td class="g al-p"><div><b>Briochette Sucre</b> <span class="al-mu">Halle : 0,47 → 0,42 €</span></div></td>
+    <td>6 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Pecan 100g. - Biscuit</b><small>Biscuiterie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 24 pcs à 63,39 € HT · en vigueur depuis le 06/03</small></td>
+    <td class="al-c"><span class="al-av">2,059 €</span><b class="al-ap">2,641 €</b><small class="h">+28 %</small></td><td class="al-c"><span class="al-ok">2,183 € ✓</span></td><td class="al-c"><span class="al-ok">2,183 € ✓</span></td><td class="al-c"><span class="al-ok">2,059 € ✓</span></td>
+    <td class="g al-p"><div><b>Pecan - 100 g.</b> <span class="al-mu">Corbais : 2,06 → 2,64 €</span></div></td>
+    <td>5 €</td></tr><tr><td class="al-n"><input type="checkbox" checked></td><td class="g nom"><b>Brioche Crue 400g.</b><small>Petite Boulangerie · € / pce</small></td>
+    <td class="g al-f"><b>SLFood</b><small>colis de 16 pcs à 32,72 € HT · en vigueur depuis le 09/10</small></td>
+    <td class="al-c"><span class="al-av">1,794 €</span><b class="al-ap">2,045 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,794 €</span><b class="al-ap">2,045 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,794 €</span><b class="al-ap">2,045 €</b><small class="h">+14 %</small></td><td class="al-c"><span class="al-av">1,794 €</span><b class="al-ap">2,045 €</b><small class="h">+14 %</small></td>
+    <td class="g al-p"><div><b>Brioche 400g.</b> <span class="al-mu">Halle : 1,79 → 2,05 €</span></div></td>
+    <td>4 €</td></tr></tbody></table></div>
+    <div class="al-sec"><h3>Mis de côté : colis ou unité à vérifier (8)</h3><p class="al-mu">Un écart de plus de ×2 entre le magasin et la liste n’est pas un retard de prix : le colis ou l’unité est mal décrit au panel. Rien ne part pour ces matières ; à revoir dans leur fiche.</p>
+      <table class="vr-t"><thead><tr><th class="g">Matière</th><th class="g">Fournisseur</th><th>Magasin</th><th>Liste</th><th>Écart</th><th class="g">Produits</th></tr></thead><tbody><tr><td class="g nom"><b>Soupe Carotte &amp; Gigembre</b><small>Soupes · € / pce</small></td><td class="g">SLFood</td>
+  <td>4,145 €</td><td>6,177 €</td><td><span class="al-x">× 3,25</span></td>
+  <td class="g al-mu">Soupe Carotte &amp; Gigembre</td></tr><tr><td class="g nom"><b>Plaque Biscuit Crème Fraiche Fruits</b><small>Pâtisserie · € / pce</small></td><td class="g">SLFood</td>
+  <td>43,83 €</td><td>21,85 €</td><td><span class="al-x">× 0,50</span></td>
+  <td class="g al-mu">Gâteaux Anniversaire | Fruits  /personnes</td></tr><tr><td class="g nom"><b>Boite Lunch - Rectangle ( 44 x 29 x 55) | KraftEco</b><small>Matières premières (Emballage) · € / pce</small></td><td class="g">SLFood</td>
+  <td>0,0255 €</td><td>2,248 €</td><td><span class="al-x">× 88,27</span></td>
+  <td class="g al-mu">Boite Lunch - Rectangle ( 31x 23 x 70) | KraftEco, Boite Lunch - Rectangle ( 44 x 29 x 55) | KraftEco</td></tr><tr><td class="g nom"><b>Opéra Ind.</b><small>Entremets - Individuel · € / pce</small></td><td class="g">SLFood</td>
+  <td>22,64 €</td><td>2,030 €</td><td><span class="al-x">× 0,09</span></td>
+  <td class="g al-mu">Opéra Ind.</td></tr><tr><td class="g nom"><b>Hotdog - Maxi (Cru)</b><small>Boulangerie · € / pce</small></td><td class="g">SLFood</td>
+  <td>0,0944 €</td><td>0,9323 €</td><td><span class="al-x">× 9,88</span></td>
+  <td class="g al-mu">Hotdog - Maxi, Pain à Hot Dog</td></tr><tr><td class="g nom"><b>Hamburger - Maxi (Cru)</b><small>Boulangerie · € / pce</small></td><td class="g">SLFood</td>
+  <td>0,0944 €</td><td>0,9323 €</td><td><span class="al-x">× 9,88</span></td>
+  <td class="g al-mu">Hamburger - Maxi</td></tr><tr><td class="g nom"><b>Chocolat &amp; Caramel - Mignardise (emb.)</b><small>Mignardise · € / pce</small></td><td class="g">SLFood</td>
+  <td>0,8490 €</td><td>0,4287 €</td><td><span class="al-x">× 0,01</span></td>
+  <td class="g al-mu">Chocolat &amp; Caramel - Mignardise</td></tr><tr><td class="g nom"><b>Soupe Tomate &amp; Boulettes</b><small>Soupes · € / pce</small></td><td class="g">SLFood</td>
+  <td>2,302 €</td><td>5,170 €</td><td><span class="al-x">× 2,72</span></td>
+  <td class="g al-mu">Soupe Tomate &amp; Boulettes</td></tr></tbody></table></div>
+    <div class="rc-barre al-barre"><div><b>55 matières cochées — 141 prix à écrire</b><small>Une écriture par matière et par magasin (le prix du magasin, route du registre : POST /materials/{mid}/manual-price). Chacune est relue ; une écriture refusée ou sans effet arrête la matière, pas les autres. Tout va au registre des corrections, et chaque prix remplacé s’annule (« Annuler » remet l’ancien).</small></div><span class="vr-sp"></span><button class="rc-btn gris">Annuler</button><button class="rc-btn">Vérifier ce qui sera écrit</button></div>
+  </div>
+</div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>
