@@ -195,12 +195,16 @@ function mfFournisseurs(bool $frais): array
 {
     return ['f' => ['7' => ['nom' => 'SLFood', 'type' => 'CENTRAL'], '8' => ['nom' => 'Berdiff s.a.', 'type' => 'CENTRAL']],
         'm' => ['521' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'BL5', 'taille' => 5.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
-                '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
+                '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]],
+                '570' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'PT8', 'taille' => 8.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
 }
 function mfListePrix(string $fid, int $sid, bool $frais): array
 {
-    $c = $fid === '7' ? ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']] : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
-    return ['c' => $sid === 2 ? [] : $c, 'l' => [], 'lu' => true];
+    // SLFood : les blancs d'œufs (pas à Corbais) et la tarte aux pommes, 61,70 € les 8 depuis le 09/10 (l'audit du 14/11).
+    $c = $fid === '7' ? ($sid === 2 ? [] : ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']])
+        + ['PT8' => ['prix' => 61.7, 'taille' => 8.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-10-09', 'nomMatiere' => '']]
+        : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
+    return ['c' => $c, 'l' => [], 'lu' => true];
 }
 
 require __DIR__ . '/../src/verification.php';
@@ -227,11 +231,12 @@ Db::$shops = [['id' => 4, 'name' => 'Atelier by - Halle'], ['id' => 3, 'name' =>
 Panel::$noms = [501 => ['Tortilla blé', 'pièce'], 502 => ['Poulet émincé', 'kg'], 503 => ['Mayonnaise', 'l'], 504 => ['Parmesan', 'kg'],
     510 => ['Bâtons chocolat', 'kg'], 511 => ['Pâte croissant', 'kg'], 512 => ['Nappage chocolat', 'kg'], 513 => ['Beurre de tourage', 'kg'],
     520 => ['Sucre glace', 'kg'], 521 => ['Blancs d’œufs', 'kg'], 530 => ['Farine T65', 'kg'], 531 => ['Olives', 'kg'], 540 => ['Pâte brisée', 'kg'], 541 => ['Appareil quiche', 'l'],
-    550 => ['Tomate', 'kg'], 551 => ['Lardons', 'kg'], 560 => ['Thon', 'kg'], 599 => ['Sucre perlé', 'kg']];
+    550 => ['Tomate', 'kg'], 551 => ['Lardons', 'kg'], 560 => ['Thon', 'kg'], 570 => ['Pomme Tranches 28 Ø', 'pcs'], 599 => ['Sucre perlé', 'kg']];
 foreach ([4, 3, 2] as $s) {
-    Panel::$prix[$s] = [501 => 0.38, 502 => 14.0, 503 => 5.0, 504 => 27.0, 510 => 13.2, 511 => 3.5, 512 => 9.17, 513 => 8.4, 520 => 1.85, 521 => 6.2, 530 => 0.9, 531 => 11.0, 540 => 4.0, 541 => 3.2, 550 => 2.4, 551 => 12.0, 560 => 16.0, 599 => 3.1];
+    Panel::$prix[$s] = [501 => 0.38, 502 => 14.0, 503 => 5.0, 504 => 27.0, 510 => 13.2, 511 => 3.5, 512 => 9.17, 513 => 8.4, 520 => 1.85, 521 => 6.2, 530 => 0.9, 531 => 11.0, 540 => 4.0, 541 => 3.2, 550 => 2.4, 551 => 12.0, 560 => 16.0, 570 => 7.7125, 599 => 3.1];
 }
 unset(Panel::$prix[4][520]);   // le sucre glace n'a pas de prix à Halle
+Panel::$prix[2][570] = 5.095;  // Corbais en retard sur la liste SLFood (l'audit des Pommes Tranches)
 $mat = static fn (int $mid, float $q) => ['id_material' => $mid, 'name' => Panel::$noms[$mid][0], 'quantity' => $q, 'unit_name' => Panel::$noms[$mid][1]];
 $rec = static fn (int $id, string $nom, float $y, array $m, array $s = []) => ['id' => $id, 'name' => $nom, 'yield_quantity' => $y, 'materials' => $m, 'subrecipes' => $s];
 Panel::$sous[77] = ['id' => 77, 'name' => 'Sauce César', 'yield_quantity' => 1.0, 'materials' => [$mat(503, 0.922)], 'subrecipes' => []];
@@ -244,6 +249,7 @@ Panel::$recettes = [
     17 => $rec(17, 'FlipFlap Thon', 1, [$mat(501, 1), $mat(560, 0.12), $mat(550, 0.05)]),
     11 => $rec(11, 'Cookie Noix Caramel', 1, []),
     18 => $rec(18, 'Cookie Chocolat', 1, [$mat(530, 0.04), $mat(510, 0.015)]),
+    19 => $rec(19, 'Pommes Tranches', 1, [$mat(570, 1), $mat(550, 0.1)]),
     418 => $rec(418, 'Pâtes Amatriciana', 1, [$mat(550, 0.12), $mat(551, 0.05)]),
 ];
 $prod = static fn (string $nom, string $cat, float $ht, ?int $rid, array $x = []) => array_merge(['nom' => $nom, 'cat' => $cat, 'prixHt' => $ht, 'id_recipe' => $rid, 'divisible' => false, 'part' => null, 'shops' => [4, 3, 2], 'custom' => []], $x);
@@ -257,6 +263,7 @@ Panel::$produits = [
     106 => $prod('1/4 - Quiches', 'Quiches', 14.0, 16, ['divisible' => true, 'part' => null]),
     107 => $prod('FlipFlap - Thon', 'Sandwiches garnis', 5.40, 17, ['custom' => [4 => 0.79]]),
     108 => $prod('Cookie Chocolat', 'Cookies', 2.08, 18),
+    109 => $prod('Pommes Tranches', 'Tartes – Ø 28 cm', 19.72, 19),
 ];
 Panel::$portions = [61 => ['id' => 61, 'product_id' => 106, 'name' => '1/4', 'portion_size' => null]];
 Panel::$stock = [3 => [[599, 'Sucre perlé', 5.0, 'kg']]];
@@ -316,6 +323,11 @@ verifie('portion sans fraction : ¼ lu dans le nom', ($par['port:106']['corr']['
 verifie('hors norme : FlipFlap à Halle, magasin 4', ($par['reseau:107']['corr']['sid'] ?? 0) === 4);
 verifie('recette vide : Cookie Noix & Caramel', isset($par['vide:101']));
 verifie('matière jamais en recette : sucre perlé', isset($par['orph:m599']));
+verifie('tarif : Corbais en retard sur SLFood, Halle et Gosselies alignés', ($par['tarif:109']['corr']['matieres'][0]['shops'] ?? []) === [2]
+    && ($par['tarif:109']['corr']['matieres'][0]['ref'] ?? 0) === 7.7125 && $par['tarif:109']['corr']['matieres'][0]['alignes'] === ['Halle', 'Gosselies'], json_encode($par['tarif:109'] ?? array_keys($par)));
+verifie('tarif : Halle n’est plus « hors norme » parce que Corbais est en retard', !isset($par['reseau:109']) && $par['tarif:109']['magasins'] === ['Corbais']);
+verifie('tarif : le coût de la pièce, avant → après', abs(($par['tarif:109']['corr']['coutAvant'] ?? 0) - 5.335) < 1e-6 && abs($par['tarif:109']['corr']['coutApres'] - 7.9525) < 1e-6, json_encode($par['tarif:109']['corr'] ?? null));
+verifie('tarif : les blancs d’œufs (6,20 face à 6,50 chez SLFood) à Halle et Gosselies', isset($par['tarif:102']) && $par['tarif:102']['corr']['matieres'][0]['shops'] === [4, 3]);
 verifie('la liste porte les adresses du panel', ($a['liens']['produit'] ?? '') !== '' && str_contains((string) ($a['liens']['recette'] ?? ''), '/panel/recipes'));
 
 // --- 3. Les gestes de bout en bout ---------------------------------------------------------------------------------
@@ -415,6 +427,11 @@ verifie('2xx sans changement : « sans effet », la relecture le dit', !$r['ok']
 unset(Panel::$ignore['/recipes/11']);
 $r = $geste(['geste' => 'copier', 'rid' => 11, 'source' => 18, 'pid' => 101, 'cle' => 'vide:101', 'nom' => 'Cookie Noix & Caramel']);
 verifie('copier : la recette vide prend les lignes du modèle', $r['ok'] && count(Panel::$recettes[11]['materials']) === 2 && !in_array('vide:101', $cles($r['liste']), true));
+
+// Aligner Corbais sur la liste SLFood : le geste « prix » que propose la ligne « tarif ».
+$t = $par['tarif:109']['corr']['matieres'][0];
+$r = $geste(['geste' => 'prix', 'mid' => $t['mid'], 'prix' => $t['ref'], 'shops' => $t['shops'], 'matiere' => $t['nom'], 'rid' => 19, 'pid' => 109, 'cle' => 'tarif:109', 'nom' => 'Pommes Tranches']);
+verifie('tarif : aligné en un geste, la ligne part, l’ancien prix s’annule', $r['ok'] && Panel::$prix[2][570] === 7.7125 && !in_array('tarif:109', $cles($r['liste']), true) && $r['ecritures'][0]['annulable'], json_encode($r['ecritures'] ?? $r));
 
 // Les garde-fous.
 verifie('geste inconnu : 400', isset($geste(['geste' => 'supprimer'])['error']));
