@@ -4,11 +4,16 @@
  * la liste classée par chiffre d'affaires concerné. Corriger d'ici (13/11/2026) : docs/maquettes/recettes-correction — le
  * geste et les liens directs de chaque ligne, la correction en place, le volet en correction, le registre. */
 
+import { tplPrix } from './verification-prix-tpl.js';
 import { tplCellule, tplProp, tplOuverte, tplRecentes, tplRegistre, tplEdition } from './verification-correction-tpl.js';
 
 export function tplVerification(c, x){
   const { esc } = x, v = c.vr;
   if (!v) { return ''; }
+  const bascule = (v.bascule || []).length ? `<div class="vm-bascule">${v.bascule.map(b => `<button class="${b.on ? 'on' : ''}" ${x.A(b.choisir)}>${esc(b.nom)}${b.n != null ? ` <b>${b.n}</b>` : ''}</button>`).join('')}</div>` : '';
+  if (v.vue === 'matieres') {
+    return `<div data-screen="verification-recettes" class="vr"><div class="vr-haut">${bascule}<span class="vr-sp"></span></div>${tplPrix(v.prix, x)}${tplRegistre(v.registre, x)}</div>`;
+  }
   const relire = `<button class="vr-btn" ${x.A(v.rafraichir)}${v.relecture || v.chargement ? ' disabled' : ''}>${v.relecture || v.chargement ? 'Lecture…' : 'Relire'}</button>`;
   if (v.chargement) {
     return `<div data-screen="verification-recettes" class="vr"><div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des ventes des trente derniers jours, des produits et des recettes du panel… La première fois, jusqu’à une minute : le panel ne tient que quatre lectures à la fois.</div></div>`;
@@ -17,7 +22,7 @@ export function tplVerification(c, x){
     return `<div data-screen="verification-recettes" class="vr"><div class="vr-card vr-etat ko">${esc(v.indispo || v.erreur)}<span class="vr-sp"></span>${relire}</div></div>`;
   }
   const cov = v.cov;
-  const haut = `<div class="vr-haut"><span class="vr-lu">Ventes ${esc(v.periode)}${v.lu ? ' · ' + esc(v.lu) : ''}</span><span class="vr-sp"></span>${relire}<button class="vr-btn" ${x.A(v.exporter)}${v.lignes.length ? '' : ' disabled'}>Exporter la liste</button></div>`;
+  const haut = `<div class="vr-haut">${bascule}<span class="vr-lu">Ventes ${esc(v.periode)}${v.lu ? ' · ' + esc(v.lu) : ''}</span><span class="vr-sp"></span>${relire}<button class="vr-btn" ${x.A(v.exporter)}${v.lignes.length ? '' : ' disabled'}>Exporter la liste</button></div>`;
   const lecture = v.lecture.complet
     ? `Les ${v.lecture.vendues} recettes des produits vendus sont relues.`
     : `${v.lecture.lues} recettes relues sur ${v.lecture.vendues} : les ${v.lecture.aLire} autres se lisent au prochain passage du cron (chaque heure), ou avec « Relire ». Tant qu’elles restent, les règles qui lisent les lignes de la recette ne les jugent pas encore${cov.aRelire ? ' (' + esc(cov.aRelire) + ' de ventes)' : ''}.`;

@@ -58,6 +58,7 @@ require __DIR__ . '/../../src/ventes_semaines.php';
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
+require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -612,6 +613,7 @@ function route(string $method, string $path): mixed
             $path === '/verification/recettes/edition' => ep_verification_edition(),
             $path === '/verification/recettes/candidats' => ep_verification_candidats(),
             $path === '/verification/recettes/registre' => ep_verification_registre(),
+            $path === '/verification/recettes/matieres' => ep_verification_matieres_prix(),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
             $path === '/verification/fuites'          => ep_verification_fuites(),
