@@ -53,7 +53,8 @@ const VF_BUDGET_CRON = 120;         // recettes lues au plus par battement du cr
 const VF_ECART_RESEAU = 40.0;       // % d'écart à la médiane des autres magasins
 const VF_PART_UNITE = 0.5;          // une ligne qui pèse plus de la moitié du coût
 const VF_PROFONDEUR = 4;            // sous-recettes dépliées au plus
-const VF_RELUES_ORPH = 0.95;        // part des recettes relues pour juger les matières orphelines
+const VF_RELUES_ORPH = 0.95;
+const VF_ECART_TARIF = 2.0;         // % d'écart entre le prix d'un magasin et la liste de prix du fournisseur en vigueur (14/11/2026)        // part des recettes relues pour juger les matières orphelines
 
 /** Les règles : code => [nom, explication]. L'ordre est celui des pastilles à l'écran. */
 const VF_REGLES = [
@@ -61,6 +62,7 @@ const VF_REGLES = [
     'form'   => ['Formule sans ses produits', 'formule vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit (promotion « bundle » du panel)'],
     'vide'   => ['Recette vide', 'la recette n’a aucune ligne'],
     'prix'   => ['Matière sans prix', 'une matière de la recette n’a pas de prix dans un magasin qui vend le produit'],
+    'tarif'  => ['Prix en retard sur le fournisseur', 'le prix d’une matière dans ce magasin diffère de la liste de prix du fournisseur en vigueur'],
     'inv'    => ['Coût invraisemblable', 'le coût de la pièce est sous le seuil ou au-dessus du prix HT'],
     'reseau' => ['Coût hors norme du réseau', 'plus de 40 % d’écart à la médiane des autres magasins'],
     'unite'  => ['Unité suspecte', 'une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans la norme'],
@@ -378,9 +380,11 @@ function vfStocks(array $sids): array
  * @param float $ratioMin le seuil bas du coût (part du prix HT)
  * @param array $F      [pid => true] — les formules et promotions (marquées, comptées à part dans la couverture)
  * @param array $hors   [cle => true] — les matières marquées « hors recette » au cockpit (emballage, hygiène…)
+ * @param array $Ref    [sid => [mid => [prix, fournisseur, depuis]]] — la liste de prix du fournisseur EN VIGUEUR pour ce
+ *                      magasin, par unité de base (14/11/2026, vfRefFournisseurs) ; vide : la règle « tarif » se tait
  * @return array{lignes: array, couverture: array, parRegle: array, recettes: array, aLire: array}
  */
-function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS, array $F = [], array $hors = []): array
+function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S, float $ratioMin = 0.05, int $nJours = VF_JOURS, array $F = [], array $hors = [], array $Ref = []): array
 {
     $info = [];          // pid => produit de référence (le premier magasin qui le connaît)
     foreach ($D as $sid => $ps) { foreach ($ps as $pid => $p) { $info[$pid] ??= $p; } }
@@ -397,8 +401,40 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
         }
     }
     // Le coût de chaque produit dans chaque magasin, pour la norme du réseau.
+    // Les prix d'un magasin en retard sur la liste du fournisseur en vigueur (14/11/2026, audit des Pommes Tranches : Corbais
+    // et Sombreffe à 5,095 € la tarte quand SLFood dit 7,7125 € depuis le 09/10). Par recette et magasin : l'écart de coût
+    // d'une pièce s'il était au prix du fournisseur, et les matières en cause.
+    $parMid = [];   // mid => [sid => [prix, ref]] — pour dire quels magasins sont alignés
+    foreach ($Ref as $sid => $ms) { foreach ($ms as $mid => $r) { $px = $M[$sid][$mid] ?? null; if ($px !== null && $px > 0) { $parMid[(int) $mid][(int) $sid] = [(float) $px, (float) $r['prix']]; } } }
+    $tarif = static function (int $sid, ?int $rid) use ($R, $M, $Ref, $parMid, $mags): array {
+        $r = $rid ? ($R[$rid] ?? null) : null;
+        if ($r === null || ($Ref[$sid] ?? []) === []) { return [0.0, []]; }
+        $delta = 0.0; $devs = [];
+        foreach ((array) ($r['lignes'] ?? []) as $l) {
+            $mid = (int) ($l['mid'] ?? 0); $q = (float) ($l['q'] ?? 0);
+            $ref = $Ref[$sid][$mid] ?? null; $px = $M[$sid][$mid] ?? null;
+            if ($ref === null || $px === null || !($px > 0) || !($ref['prix'] > 0) || $q <= 0) { continue; }
+            if (abs($px - $ref['prix']) / $ref['prix'] * 100 <= VF_ECART_TARIF) { continue; }
+            $delta += $q * ($ref['prix'] - $px);
+            if (isset($devs[$mid])) { continue; }
+            $enRetard = []; $alignes = [];
+            foreach ($parMid[$mid] ?? [] as $s2 => [$p2, $r2]) {
+                if (abs($p2 - $r2) / $r2 * 100 > VF_ECART_TARIF) { if (abs($r2 - $ref['prix']) < 1e-9) { $enRetard[] = $s2; } } else { $alignes[] = $mags[$s2] ?? (string) $s2; }
+            }
+            $devs[$mid] = ['mid' => $mid, 'nom' => (string) ($l['nom'] ?? ''), 'u' => (string) ($l['u'] ?? ''), 'prix' => round((float) $px, 6), 'ref' => round((float) $ref['prix'], 6),
+                'fournisseur' => (string) ($ref['fournisseur'] ?? ''), 'depuis' => $ref['depuis'] ?? null, 'shops' => $enRetard !== [] ? $enRetard : [$sid], 'alignes' => $alignes];
+        }
+        return [$delta, array_values($devs)];
+    };
     $coutsPid = [];
-    foreach ($D as $sid => $ps) { foreach ($ps as $pid => $p) { if (($p['cout'] ?? null) !== null && $p['cout'] > 0) { $coutsPid[$pid][$sid] = (float) $p['cout']; } } }
+    foreach ($D as $sid => $ps) {
+        foreach ($ps as $pid => $p) {
+            if (($p['cout'] ?? null) === null || $p['cout'] <= 0) { continue; }
+            // Le coût comparé aux autres magasins est celui qu'aurait le magasin au prix du fournisseur : un magasin à jour n'est
+            // plus « hors norme » parce que les autres sont en retard.
+            $coutsPid[$pid][$sid] = (float) $p['cout'] + $tarif((int) $sid, ($p['recette'] ?? null) ? (int) $p['recette'] : null)[0];
+        }
+    }
 
     $flags = [];          // cle => ligne en construction
     $nonFiable = [];      // sid:pid => true
@@ -514,8 +550,18 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
                     $cand['inv'] = ['Coût ' . vfEur($cout) . ' pour ' . vfEur($prixHt) . ' HT à ' . $court . ' (' . vfPct(100 * $cout / $prixHt, 1) . ' du prix), sous le seuil de ' . vfPct(100 * $ratioMin) . '.', []];
                 }
             }
-            // Hors norme du réseau : la médiane des AUTRES magasins (deux au moins).
-            if ($cout !== null && $cout > 0) {
+            // Prix en retard sur la liste du fournisseur (14/11/2026).
+            [$dTarif, $devs] = $tarif((int) $sid, $rid ? (int) $rid : null);
+            if ($devs !== []) {
+                $d0 = $devs[0];
+                $fmt = static fn (float $v): string => vfEur($v, $v < 1 ? 4 : ($v < 10 ? 4 : 2));
+                $cand['tarif'] = ['« ' . $d0['nom'] . ' » à ' . $fmt($d0['prix']) . ' l’unité à ' . $court . ' ; la liste ' . ($d0['fournisseur'] !== '' ? 'de ' . $d0['fournisseur'] . ' ' : '') . 'en vigueur'
+                    . ($d0['depuis'] ? ' depuis le ' . date('d/m', strtotime((string) $d0['depuis'])) : '') . ' dit ' . $fmt($d0['ref']) . ($d0['alignes'] !== [] ? ' (' . implode(', ', $d0['alignes']) . ' y ' . (count($d0['alignes']) > 1 ? 'sont' : 'est') . ')' : '')
+                    . (count($devs) > 1 ? ', et ' . (count($devs) - 1) . ' autre(s) matière(s)' : '') . ($cout !== null ? '. La pièce : ' . vfEur($cout) . ' → ' . vfEur($cout + $dTarif) . '.' : '.'),
+                    ['corr' => ['sid' => (int) $sid, 'magasin' => $court, 'matieres' => $devs, 'coutAvant' => $cout !== null ? round((float) $cout, 4) : null, 'coutApres' => $cout !== null ? round((float) $cout + $dTarif, 4) : null]]];
+            }
+            // Hors norme du réseau : la médiane des AUTRES magasins (deux au moins), sur les coûts au prix du fournisseur.
+            if ($cout !== null && $cout > 0 && $devs === []) {
                 $autres = $coutsPid[$pid] ?? []; unset($autres[$sid]);
                 if (count($autres) >= 2) {
                     $med = vfMediane(array_values($autres));
@@ -531,6 +577,7 @@ function vfRegles(array $mags, array $V, array $D, array $R, array $M, array $S,
             // L'explication la plus précise l'emporte : vide, unité, prix manquant ou rendement à zéro expliquent un coût aberrant.
             if (isset($cand['vide']) || isset($cand['unite']) || isset($cand['prix']) || isset($cand['rend'])) { unset($cand['inv'], $cand['reseau']); }
             if (isset($cand['inv'])) { unset($cand['reseau']); }
+            if (isset($cand['tarif'])) { unset($cand['inv'], $cand['reseau']); }   // le retard de prix explique le coût
             foreach ($cand as $regle => [$detail, $extra]) { $ajoute($regle, $pid, $sid, $ca, $detail, $base + ['rid' => $rid] + $extra); }
             if ($cand !== []) { $nonFiable[$k] = true; }
             elseif ($r === null) { $caARelire += $ca; if (isset($F[$pid])) { $fARelire += $ca; } }
@@ -645,7 +692,7 @@ function vfAnalyse(int $budget): array
     $p = setting('production', []);
     $ratioMin = (is_array($p) && isset($p['coutRatioMin'])) ? (float) $p['coutRatioMin'] : 0.05;
     $F = vfFormules($V['ventes'], $D);
-    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS, $F, vfHorsRecette());
+    $a = vfRegles($mags, $V['ventes'], $D, $R, $M, $S, $ratioMin, VF_JOURS, $F, vfHorsRecette(), vfRefFournisseurs($R, $sids));
     $complet = $a['aLire'] === [];
     $a['depuis'] = vfRegistre($a['lignes'], $complet);
     foreach ($a['lignes'] as &$l) { $l['depuis'] = $a['depuis']['cles'][$l['cle']] ?? date('Y-m-d'); }
@@ -666,6 +713,44 @@ function vfAnalyse(int $budget): array
     ];
     vfGarder('vfAnalyse', $out);
     return $out;
+}
+
+/**
+ * Les prix de référence des fournisseurs (14/11/2026) : pour chaque magasin et chaque matière des recettes lues, la liste de
+ * prix EN VIGUEUR du premier fournisseur lié qui la chiffre, par unité de base — même lecture que la bascule « Matières
+ * premières » (vmpOptions). [sid => [mid => [prix, fournisseur, depuis]]] ; vide sans le module des fiches matières.
+ */
+function vfRefFournisseurs(array $R, array $sids): array
+{
+    if (!function_exists('mfFournisseurs') || !function_exists('mfListePrix') || !function_exists('vmpOptions')) { return []; }
+    try {
+        $F = mfFournisseurs(false);
+        $u = [];
+        foreach ($R as $r) { foreach ((array) ($r['lignes'] ?? []) as $l) { $mid = (int) ($l['mid'] ?? 0); if ($mid > 0 && isset($F['m'][(string) $mid])) { $u[$mid] ??= ['u' => (string) ($l['u'] ?? ''), 'nom' => (string) ($l['nom'] ?? '')]; } } }
+        if ($u === []) { return []; }
+        $M = function_exists('mfMatieresApi') ? mfMatieresApi($sids, false) : [];
+        $listes = [];
+        $out = [];
+        foreach ($u as $mid => $x) {
+            $liens = [];
+            foreach ($F['m'][(string) $mid] as $lien) {
+                $f = $F['f'][$lien['fid']] ?? ['nom' => 'Fournisseur ' . $lien['fid'], 'type' => ''];
+                $liens[] = ['fid' => (string) $lien['fid'], 'nom' => $f['nom'], 'type' => $f['type'], 'sku' => (string) $lien['sku'], 'parColis' => $lien['parColis'], 'taille' => $lien['taille'], 'tailleUnite' => (string) $lien['tailleUnite']];
+            }
+            foreach ($sids as $sid) {
+                $pl = [];
+                foreach ($liens as $l) { $listes[$l['fid'] . ':' . $sid] ??= mfListePrix($l['fid'], (int) $sid, false); $pl[$l['fid']] = $listes[$l['fid'] . ':' . $sid]; }
+                $unite = (string) (($M[$sid][(string) $mid]['unite'] ?? '') ?: $x['u']);
+                foreach (vmpOptions($unite, $liens, $pl, null, null, null, $x['nom']) as $o) {
+                    if ($o['type'] === 'fournisseur' && !empty($o['enVigueur']) && ($o['prix'] ?? null) !== null && $o['prix'] > 0) {
+                        $out[$sid][$mid] = ['prix' => (float) $o['prix'], 'fournisseur' => $o['nom'], 'depuis' => $o['depuis'] ?? null];
+                        break;
+                    }
+                }
+            }
+        }
+        return $out;
+    } catch (Throwable $e) { return []; }
 }
 
 /**
