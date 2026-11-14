@@ -172,8 +172,24 @@ function mfMatieresApi(array $sids, bool $frais): array
     return $out;
 }
 
+// Les doubles du module « fiche matière » (src/matiere_fiche.php) : unités, fournisseurs liés, listes de prix.
+function mfUnite(string $u): array { $u = strtolower($u); return $u === 'g' ? ['facteur' => 1000.0, 'label' => 'kg'] : ($u === 'pièce' || $u === 'pcs' ? ['facteur' => 1.0, 'label' => 'pce'] : ['facteur' => 1.0, 'label' => $u]); }
+function mfParUnite(?float $prix, ?float $taille, ?float $parColis): ?float { if ($prix === null || $prix <= 0) { return null; } return $prix / (($taille > 0 ? $taille : 1.0) * ($parColis > 0 ? $parColis : 1.0)); }
+function mfFournisseurs(bool $frais): array
+{
+    return ['f' => ['7' => ['nom' => 'SLFood', 'type' => 'CENTRAL'], '8' => ['nom' => 'Berdiff s.a.', 'type' => 'CENTRAL']],
+        'm' => ['521' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'BL5', 'taille' => 5.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
+                '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
+}
+function mfListePrix(string $fid, int $sid, bool $frais): array
+{
+    $c = $fid === '7' ? ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']] : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
+    return ['c' => $sid === 2 ? [] : $c, 'l' => [], 'lu' => true];
+}
+
 require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_correction.php';
+require __DIR__ . '/../src/verification_matieres_prix.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -399,6 +415,41 @@ $BODY = ['recette' => 'https://atelierby.tfbuddy.com/panel/recipes/{rid}/edit'];
 $l = wr_verification_liens();
 verifie('adresses : modèle de la recette réglé, défaut du produit gardé', $l['ok'] && $l['liens']['recette'] === 'https://atelierby.tfbuddy.com/panel/recipes/{rid}/edit' && str_contains($l['liens']['produit'], '/panel/products/{pid}'));
 verifie('adresses : un lien sans identifiant ne se fait pas', !isset(vrcLiensDe(['pid' => 5])['recette']) && vrcLiensDe(['pid' => 5, 'rid' => 9])['recette'] === 'https://atelierby.tfbuddy.com/panel/recipes/9/edit');
+
+// --- 4. Les matières premières et leur prix de référence (14/11/2026) ---------------------------------------------
+echo "Les matières premières\n";
+$o = vmpOptions('g', [['fid' => '8', 'nom' => 'Berdiff s.a.', 'type' => 'CENTRAL', 'sku' => 'T', 'parColis' => 1.0, 'taille' => 4.0, 'tailleUnite' => 'pcs']],
+    ['8' => ['c' => ['T' => ['prix' => 10.83, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21']], 'lu' => true]], null, null, null, 'Poche Sauce Tikka');
+verifie('options : colis de pièces pour une matière en g → conversion, prix par pièce', $o[0]['prix'] === null && $o[0]['conversion'] === 'g' && abs($o[0]['parPiece'] - 2.7075) < 1e-9);
+$o = vmpOptions('g', [['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'B', 'parColis' => 1.0, 'taille' => 5.0, 'tailleUnite' => 'kg']],
+    ['7' => ['c' => ['B' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09']], 'lu' => true]], null, null, 6.0, 'Blancs');
+verifie('options : colis en kg pour une matière en g → prix par g (÷1000), puis la médiane', abs($o[0]['prix'] - 0.0065) < 1e-12 && $o[1]['type'] === 'mediane' && vmpReference($o)['id'] === 'f7');
+unset(Panel::$prix[3][521]);
+vrcOublier('matieresApi:3');
+$_GET = [];
+$t = ep_verification_matieres_prix();
+fixture('matieres', $t);
+$bl = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 521) { $bl = $l; } }
+verifie('tableau : les blancs d’œufs, employés par le Merveilleux', $bl !== null && $bl['recettes'][0]['nom'] === 'Merveilleux' && $bl['nRecettes'] === 1, json_encode(array_column($t['lignes'], 'nom')));
+verifie('tableau : sans prix à Gosselies seulement', $bl['drapeaux']['sansPrix'] === 1 && $bl['magasins'][1]['prix'] === null && $bl['magasins'][0]['prix'] === 6.2);
+$f7 = null; foreach ($bl['options'] as $op) { if ($op['id'] === 'f7') { $f7 = $op; } }
+verifie('tableau : SLFood en vigueur à Halle et Gosselies, pas à Corbais (liste vide)', $f7 !== null && $f7['enVigueur'] && $f7['prixMagasins']['4'] === 6.5 && $f7['prixMagasins']['2'] === null);
+verifie('tableau : écart de plus de 10 % à la référence (6,20 face à 6,50 = −4,6 %, non)', $bl['drapeaux']['ecart'] === 0);
+$mayo = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 503) { $mayo = $l; } }
+verifie('tableau : mayonnaise en poches de pièces → unité à vérifier', $mayo !== null && $mayo['drapeaux']['conversion']);
+verifie('tableau : gardé dix minutes', isset(ep_verification_matieres_prix()['cache']['le']));
+// Un prix pour deux magasins d'un coup (Gosselies sans prix, Halle qui en avait un) ; l'aperçu n'écrit rien.
+$n0 = count(Panel::$ecrits);
+$ap = $geste(['geste' => 'prix', 'apercu' => true, 'mid' => 521, 'matiere' => 'Blancs d’œufs', 'prix' => 6.5, 'shops' => [3, 4]]);
+verifie('prix à plusieurs magasins : l’aperçu dit qui a un retour possible', count(Panel::$ecrits) === $n0 && count($ap['ecritures']) === 2 && !$ap['ecritures'][0]['annulable'] && $ap['ecritures'][1]['annulable']);
+$r = $geste(['geste' => 'prix', 'mid' => 521, 'matiere' => 'Blancs d’œufs', 'prix' => 6.5, 'shops' => [3, 4]]);
+verifie('prix à plusieurs magasins : deux écritures relues', $r['ok'] && count($r['ecritures']) === 2 && Panel::$prix[3][521] === 6.5 && Panel::$prix[4][521] === 6.5);
+verifie('prix à plusieurs magasins : le tableau sera recalculé', setting('vmpTable') === null);
+$idH = $r['ecritures'][1]['id'];
+verifie('prix remplacé : annulable, premier prix : non', $r['ecritures'][1]['annulable'] && !$r['ecritures'][0]['annulable']);
+$BODY = ['id' => $idH];
+$u = wr_verification_annuler();
+verifie('annuler un prix : l’ancien prix repart, relu', $u['ok'] && Panel::$prix[4][521] === 6.2 && Panel::$prix[3][521] === 6.5, json_encode($u));
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
