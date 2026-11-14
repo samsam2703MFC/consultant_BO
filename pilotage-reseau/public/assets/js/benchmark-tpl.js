@@ -68,11 +68,11 @@ function fiche(F, x){
       <label class="bk-ch bk-date">Date du relevé<input type="date" class="bk-in" value="${esc(F.date)}" ${x.C(F.poserDate)}></label></div>`;
   const src = F.sources.length || F.remarques ? `<div class="bk-sources">${F.remarques ? `<div><b>Remarque de l’IA :</b> ${esc(F.remarques)}</div>` : ''}${F.sources.length ? `<div><b>Pages lues :</b> ${F.sources.map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.txt)}</a>`).join(' · ')}</div>` : ''}</div>` : '';
   const tuiles = `<div class="bk-tuiles">${F.tuiles.map(t => `<div class="bk-tuile ${t[3] || ''}"><small>${esc(t[0])}</small><b>${esc(t[1])}</b><span>${esc(t[2])}</span></div>`).join('')}</div>`;
-  const lignes = F.groupes.map(g => `<tr class="grp"><td colspan="8">${esc(g.nom)}<span>${g.lignes.length} ligne${g.lignes.length > 1 ? 's' : ''}</span></td></tr>` + g.lignes.map(l => ligne(l, x)).join('')).join('');
+  const lignes = F.groupes.map(g => `<tr class="grp"><td colspan="7">${esc(g.nom)}<span>${g.lignes.length} ligne${g.lignes.length > 1 ? 's' : ''}</span></td></tr>` + g.lignes.map(l => ligne(l, x)).join('')).join('');
   const table = `<div class="bk-sec">Les lignes face à nos produits <span>— catalogue et prix de ${esc(F.magasinRef || 'notre magasin')} ; un choix confirmé est retenu pour ce concurrent et pour tout le réseau</span>
       ${F.toutConfirmer ? `<button class="rc-btn sec" ${x.A(F.toutConfirmer)}${F.maj ? ' disabled' : ''}>Confirmer les ${F.nAttente} propositions</button>` : ''}</div>
     ${F.catalogueLu ? '' : '<div class="bk-alerte">Le catalogue du magasin n’a pas pu être lu au panel : les lignes ne sont pas rapprochées.</div>'}
-    <div class="bk-tw"><table class="bk-t"><thead><tr><th class="g">Ligne lue</th><th>Prix</th><th class="g">Notre produit</th><th>Notre prix</th><th class="g">Comparé</th><th>Écart<small>nous face à eux</small></th><th>Confiance</th><th>État</th></tr></thead><tbody>${lignes || '<tr><td colspan="8" class="bk-vide">Aucune ligne de prix lue.</td></tr>'}</tbody></table></div>`;
+    <div class="bk-tw"><table class="bk-t"><thead><tr><th class="g">Ligne lue</th><th>Prix</th><th class="g">Notre produit</th><th>Notre prix</th><th class="g">Comparé</th><th title="Notre prix face au leur, sur la même base">Écart</th><th>Confiance</th></tr></thead><tbody>${lignes || '<tr><td colspan="7" class="bk-vide">Aucune ligne de prix lue.</td></tr>'}</tbody></table></div>`;
   const P = F.plan;
   const enc = `<div class="bk-sec">Encoder dans le benchmark de TFBuddy <span>— vérifié avant, chaque écriture relue après ; rejouable sans doublon</span></div>
     ${P && P.refus ? `<div class="rc-ko">✕ ${esc(P.refus)}</div>` : ''}
@@ -92,11 +92,10 @@ function ligne(l, x){
     <td>${l.manque ? `<span class="bk-ko">${esc(l.nous)}</span>` : esc(l.nous)}${l.nousSous ? `<small>${esc(l.nousSous)}</small>` : ''}</td>
     <td class="g bk-base">${esc(l.base)}${l.euxSous ? `<small>${esc(l.euxSous)}</small>` : ''}</td>
     <td>${l.ecart ? `<span class="bk-ec ${l.ecartTon}">${esc(l.ecart)}</span>` : ''}</td>
-    <td>${l.confiance != null ? `<div class="bk-conf ${l.confTon}"><span><i style="width:${l.confiance}%"></i></span>${l.confiance} %</div>` : ''}</td>
-    <td><span class="bk-etat ${l.ton}">${esc(l.etat)}</span>${l.appris ? '<span class="bk-appris">appris</span>' : ''}</td></tr>`;
+    <td class="bk-cf">${l.confiance != null ? `<div class="bk-conf ${l.confTon}"><span><i style="width:${l.confiance}%"></i></span>${l.confiance} %</div>` : ''}<span class="bk-etat ${l.ton}">${esc(l.etat)}</span>${l.appris ? '<span class="bk-appris">appris</span>' : ''}</td></tr>`;
   if (!l.ouvert || !l.cherche) { return tr; }
   const Q = l.cherche;
-  return tr + `<tr class="ouvert"><td colspan="8"><div class="bk-cherche"><input id="${esc(Q.id)}" class="bk-in" placeholder="Chercher dans le catalogue du magasin…" value="${esc(Q.q)}" ${x.I(Q.poser)}><button class="vx-lien" ${x.A(Q.fermer)}>Fermer</button>
+  return tr + `<tr class="ouvert"><td colspan="7"><div class="bk-cherche"><input id="${esc(Q.id)}" class="bk-in" placeholder="Chercher dans le catalogue du magasin…" value="${esc(Q.q)}" ${x.I(Q.poser)}><button class="vx-lien" ${x.A(Q.fermer)}>Fermer</button>
     <div class="bk-trouves">${Q.resultats.map(r => `<button ${x.A(r.prendre)}><b>${esc(r.nom)}</b><small>${esc(r.sous)}</small></button>`).join('') || (Q.q.length >= 2 ? '<span class="bk-mu">Aucun produit ne correspond.</span>' : '<span class="bk-mu">Deux lettres au moins.</span>')}</div></div></td></tr>`;
 }
 
