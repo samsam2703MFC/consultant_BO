@@ -912,6 +912,12 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
+    // Un compte ADMINISTRATEUR du panel (14/11/2026) : connecté par la personne dans le formulaire du prix ou dans le cadre
+    // des tâches (POST /task/connexion), son jeton voyage dans l'en-tête X-Panel-Jeton, le temps de la requête — jamais gardé.
+    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/produits/parametrage'], true)) {
+        $jAdmin = trim((string) ($_SERVER['HTTP_X_PANEL_JETON'] ?? ''));
+        if ($jAdmin !== '' && preg_match('/^[\w.\-]{20,4000}$/', $jAdmin)) { PanelApi::$jetonImpose = $jAdmin; }
+    }
     if ($method === 'POST' && $path === '/verification/recettes/corriger') { return wr_verification_corriger(); }
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }

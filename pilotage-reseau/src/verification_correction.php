@@ -309,6 +309,8 @@ function vrcTable(): void
 /** Note une correction ; rend son numéro. */
 function vrcNoter(array $r): int
 {
+    // Le compte qui a écrit : celui du cockpit, ou un compte administrateur du panel connecté par la personne.
+    if (property_exists(PanelApi::class, 'jetonImpose') && PanelApi::$jetonImpose !== null) { $r['message'] = trim((string) ($r['message'] ?? '') . ' [compte administrateur du panel]'); }
     try {
         vrcTable();
         $j = static fn ($v) => $v === null ? null : json_encode($v, JSON_UNESCAPED_UNICODE);
@@ -395,6 +397,9 @@ function vrcEcrireObjet(array $e): array
 /** Une ligne du registre telle que l'écran la lit. */
 function vrcLigneRegistre(array $r): array
 {
+    if (property_exists(PanelApi::class, 'jetonImpose') && PanelApi::$jetonImpose !== null && !isset($r['fait_le']) && !str_contains((string) ($r['message'] ?? ''), '[compte administrateur du panel]')) {
+        $r['message'] = trim((string) ($r['message'] ?? '') . ' [compte administrateur du panel]');
+    }
     return ['id' => (int) ($r['id'] ?? 0), 'le' => (string) ($r['fait_le'] ?? date('Y-m-d H:i:s')), 'geste' => (string) $r['geste'], 'pid' => isset($r['product_id']) ? (int) $r['product_id'] : ($r['pid'] ?? null),
         'nom' => (string) ($r['nom'] ?? ''), 'objet' => $r['objet'] ?? null, 'objetId' => isset($r['objet_id']) ? (int) $r['objet_id'] : ($r['objetId'] ?? null),
         'methode' => $r['methode'] ?? null, 'route' => $r['route'] ?? null, 'resume' => (string) ($r['resume'] ?? ''), 'http' => isset($r['http']) ? (int) $r['http'] : null,
