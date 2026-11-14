@@ -50,7 +50,9 @@ function vmpOptions(string $uniteBase, array $liens, array $listes, ?float $cons
         if ($ligne === null) {
             foreach ((array) $pl['c'] as $x) { if (($x['nomMatiere'] ?? '') !== '' && mb_strtolower($x['nomMatiere']) === mb_strtolower($nomMatiere)) { $ligne = $x; break; } }
         }
-        $o = ['type' => 'fournisseur', 'id' => 'f' . $l['fid'], 'nom' => $l['nom'], 'centrale' => $l['type'] === 'CENTRAL', 'listeLue' => (bool) ($pl['lu'] ?? false), 'enVigueur' => $ligne !== null];
+        // Une option par référence (fournisseur + SKU) : un même fournisseur peut lier deux colis à la matière (mesuré le 14/11 :
+        // Quiche saumon & épinard, SLFood, 70,92 € et 102,86 € les 8) ; les fondre mêlait le colis de l'une au prix de l'autre.
+        $o = ['type' => 'fournisseur', 'id' => 'f' . $l['fid'] . ($l['sku'] !== '' ? '-' . $l['sku'] : ''), 'nom' => $l['nom'] . (count(array_filter($liens, static fn ($x) => $x['fid'] === $l['fid'])) > 1 && $l['sku'] !== '' ? ' · réf. ' . $l['sku'] : ''), 'centrale' => $l['type'] === 'CENTRAL', 'listeLue' => (bool) ($pl['lu'] ?? false), 'enVigueur' => $ligne !== null];
         if ($ligne === null || !($ligne['prix'] > 0)) { $out[] = $o + ['prix' => null]; continue; }
         $taille = $ligne['taille'] ?? $l['taille']; $tu = ($ligne['tailleUnite'] ?? '') !== '' ? $ligne['tailleUnite'] : $l['tailleUnite'];
         $parColisU = $l['parColis'] !== null && $l['parColis'] > 0 ? $l['parColis'] : 1.0;

@@ -197,13 +197,16 @@ function mfFournisseurs(bool $frais): array
         'm' => ['521' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'BL5', 'taille' => 5.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
                 '503' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'MAYO4', 'taille' => 4.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]],
                 '504' => [['fid' => '8', 'via' => 'catalogue', 'sku' => 'PARM1', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
+                // Deux références SLFood pour le thon : les magasins sont alignés sur l'une (16 €), l'autre est plus récente (24 €).
+                '560' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'TH1', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0], ['fid' => '7', 'via' => 'catalogue', 'sku' => 'TH2', 'taille' => 1.0, 'tailleUnite' => 'kg', 'parColis' => 1.0]],
                 '570' => [['fid' => '7', 'via' => 'catalogue', 'sku' => 'PT8', 'taille' => 8.0, 'tailleUnite' => 'pcs', 'parColis' => 1.0]]]];
 }
 function mfListePrix(string $fid, int $sid, bool $frais): array
 {
     // SLFood : les blancs d'œufs (pas à Corbais) et la tarte aux pommes, 61,70 € les 8 depuis le 09/10 (l'audit du 14/11).
     $c = $fid === '7' ? ($sid === 2 ? [] : ['BL5' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09', 'nomMatiere' => '']])
-        + ['PT8' => ['prix' => 61.7, 'taille' => 8.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-10-09', 'nomMatiere' => '']]
+        + ['PT8' => ['prix' => 61.7, 'taille' => 8.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-10-09', 'nomMatiere' => ''],
+           'TH1' => ['prix' => 16.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-08-01', 'nomMatiere' => ''], 'TH2' => ['prix' => 24.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-11-09', 'nomMatiere' => '']]
         : ['MAYO4' => ['prix' => 10.0, 'taille' => 4.0, 'tailleUnite' => 'pcs', 'depuis' => '2026-08-21', 'nomMatiere' => ''],
            // Un colis mal décrit : 2 700 € « le kg » de parmesan (le magasin paie 27 €) — un écart ×100, pas un retard.
            'PARM1' => ['prix' => 2700.0, 'taille' => 1.0, 'tailleUnite' => 'kg', 'depuis' => '2026-08-21', 'nomMatiere' => '']];
@@ -333,6 +336,9 @@ verifie('tarif : le coût de la pièce, avant → après', abs(($par['tarif:109'
 verifie('tarif : sous le seuil de 10 %, pas de signalement (blancs d’œufs 6,20 face à 6,50 : 4,6 %)', !isset($par['tarif:102']));
 verifie('tarif : un écart ×100 est un colis à vérifier, il ne corrige pas le coût', ($par['tarif:103']['corr']['matieres'][0]['suspect'] ?? false) === true
     && str_contains($par['tarif:103']['detail'], 'colis') && abs(($par['tarif:103']['corr']['coutApres'] ?? 0) - $par['tarif:103']['corr']['coutAvant']) < 1e-9, json_encode($par['tarif:103'] ?? null));
+verifie('tarif : deux références, le magasin aligné sur l’une n’est pas en retard (thon à 16 € face à 16 € et 24 €)', !isset($par['tarif:107']));
+$th = null; foreach ($t0 = vmpOptions('kg', [['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'TH1', 'parColis' => 1.0, 'taille' => 1.0, 'tailleUnite' => 'kg'], ['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'TH2', 'parColis' => 1.0, 'taille' => 1.0, 'tailleUnite' => 'kg']], ['7' => mfListePrix('7', 4, false)], null, null, null, 'Thon') as $x) { $th[] = $x['id']; }
+verifie('options : une par référence, pas fondues', $th === ['f7-TH1', 'f7-TH2'], json_encode($th));
 verifie('la liste porte les adresses du panel', ($a['liens']['produit'] ?? '') !== '' && str_contains((string) ($a['liens']['recette'] ?? ''), '/panel/recipes'));
 
 // --- 3. Les gestes de bout en bout ---------------------------------------------------------------------------------
@@ -462,7 +468,7 @@ $o = vmpOptions('g', [['fid' => '8', 'nom' => 'Berdiff s.a.', 'type' => 'CENTRAL
 verifie('options : colis de pièces pour une matière en g → conversion, prix par pièce', $o[0]['prix'] === null && $o[0]['conversion'] === 'g' && abs($o[0]['parPiece'] - 2.7075) < 1e-9);
 $o = vmpOptions('g', [['fid' => '7', 'nom' => 'SLFood', 'type' => 'CENTRAL', 'sku' => 'B', 'parColis' => 1.0, 'taille' => 5.0, 'tailleUnite' => 'kg']],
     ['7' => ['c' => ['B' => ['prix' => 32.5, 'taille' => 5.0, 'tailleUnite' => 'kg', 'depuis' => '2026-10-09']], 'lu' => true]], null, null, 6.0, 'Blancs');
-verifie('options : colis en kg pour une matière en g → prix par g (÷1000), puis la médiane', abs($o[0]['prix'] - 0.0065) < 1e-12 && $o[1]['type'] === 'mediane' && vmpReference($o)['id'] === 'f7');
+verifie('options : colis en kg pour une matière en g → prix par g (÷1000), puis la médiane', abs($o[0]['prix'] - 0.0065) < 1e-12 && $o[1]['type'] === 'mediane' && vmpReference($o)['id'] === 'f7-B');
 unset(Panel::$prix[3][521]);
 vrcOublier('matieresApi:3');
 $_GET = [];
@@ -471,7 +477,7 @@ fixture('matieres', $t);
 $bl = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 521) { $bl = $l; } }
 verifie('tableau : les blancs d’œufs, employés par le Merveilleux', $bl !== null && $bl['recettes'][0]['nom'] === 'Merveilleux' && $bl['nRecettes'] === 1, json_encode(array_column($t['lignes'], 'nom')));
 verifie('tableau : sans prix à Gosselies seulement', $bl['drapeaux']['sansPrix'] === 1 && $bl['magasins'][1]['prix'] === null && $bl['magasins'][0]['prix'] === 6.2);
-$f7 = null; foreach ($bl['options'] as $op) { if ($op['id'] === 'f7') { $f7 = $op; } }
+$f7 = null; foreach ($bl['options'] as $op) { if (str_starts_with($op['id'], 'f7')) { $f7 = $op; } }
 verifie('tableau : SLFood en vigueur à Halle et Gosselies, pas à Corbais (liste vide)', $f7 !== null && $f7['enVigueur'] && $f7['prixMagasins']['4'] === 6.5 && $f7['prixMagasins']['2'] === null);
 verifie('tableau : écart de plus de 10 % à la référence (6,20 face à 6,50 = −4,6 %, non)', $bl['drapeaux']['ecart'] === 0);
 $mayo = null; foreach ($t['lignes'] as $l) { if ($l['mid'] === 503) { $mayo = $l; } }
