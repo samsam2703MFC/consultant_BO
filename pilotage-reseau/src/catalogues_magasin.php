@@ -17,7 +17,8 @@ declare(strict_types=1);
  * regardé par `?shop=`, comme pour tous les écrans du dashboard.
  *
  * Toutes les contraintes (produits vendus par la boutique, ses prix, couverture et dernière page de la charte, 8 à 16
- * pages par 2, cinq mises en page dont les présentations de gamme, gabarits A · B · C, place libre — photo de la
+ * pages par 2, six mises en page dont les présentations de gamme et les grandes vignettes 2 × 2, gabarits A · B · C,
+ * en-tête titre · bandeau · grande illustration, une page par catégorie ajoutée, place libre — photo de la
  * médiathèque du réseau ou de la boutique, ou illustration —, source gamme ou choix) sont appliquées par le Marketing : ses réponses — succès ou erreurs
  * `{success:false, error:{code, message, details}}` — repartent telles quelles, avec leur code HTTP.
  *
@@ -122,9 +123,9 @@ function cmAppel(string $url, string $methode, ?array $corps, string $jeton): ar
 
 /**
  * Ne garde du corps que les champs que le Marketing accepte d'une boutique (jamais une boutique, jamais un prix). Les
- * pages intérieures (`pages`) partent telles quelles — {layout, category, template, gamme, text, textNl, filler,
+ * pages intérieures (`pages`) partent telles quelles — {layout, category, template, gamme, text, textNl, filler, header, script,
  * fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique. Les
- * promotions cochées (`offers` : [{type, id, on}]) et `showAvailability` aussi : une promotion que TFBuddy ne rend pas
+ * promotions cochées (`offers` : [{type, id, on, mediaId}] — `mediaId` : l'image de la médiathèque de la vignette) et `showAvailability` aussi : une promotion que TFBuddy ne rend pas
  * pour la boutique (celle d'une autre, finie, inconnue) est refusée par le Marketing (422 `offers[i].id`).
  */
 function cmCorps(array $champs): array

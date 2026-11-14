@@ -5711,5 +5711,37 @@ période, où elle va, prix — et son interrupteur) puis « Afficher la disponi
 Étapes 3-4 et PDF : vignette d'offre (badge bordeaux, photos de ses produits, prix et ancien prix barré, période), prix
 barré et disponibilité sous le prix — le rendu de `CataloguePages.tsx` (`offreCarte`, `prixHtml`).
 
+**Une catégorie = sa page, en-têtes illustrés, grandes vignettes** (14/11/2026, client : « quand je rajoute une
+catégorie, la catégorie est sur une page avec son illustration (2 ou 3 possibilités de montrer le titre et
+l'illustration) et 3-4 possibilités de montrer les produits », puis « pas de scroll bar latérale » ; contrat du Marketing
+v1.4) : l'étape 2 enregistre `products` **sans** `pages` (plus de `pages: []`) — le Marketing garde la mise en page et
+donne SA page à une catégorie ajoutée (interrupteur « toute la catégorie » d'une catégorie sans produit coché, ou
+produits cochés un à un) : une page vide reprise, sinon `pageCount` + 2 (16 au plus ; l'écran dit « N pages
+ajoutées »), sinon rien ne bouge (au document `CATEGORY_NO_PAGE`, « plus de place : 16 pages » ; à l'étape 3, la
+catégorie sans page est nommée). Une catégorie retirée laisse sa page vide (jamais retirée en silence). « Répartir
+automatiquement » (`pages: []`) donne une page à chaque catégorie. Une page de produits porte `header` ∈ `titre`
+(défaut, absent) · `bandeau` · `grande` (`headers` de `…/catalogue-products` ; autre valeur → 422 `pages[i].header`)
+et `layout` peut valoir `mosaique` (grandes vignettes 2 × 2, 4 produits). Au document, `header` et `drawingUrl` =
+l'illustration de la catégorie (dessin de sa famille, sinon de la gamme, sinon `null`). Étape 3 : par page de produits,
+« Titre + pictogramme · Bandeau illustré · Grande illustration » (3 vignettes) à côté du gabarit, type parmi 6
+vignettes ; étape 4 et PDF : le rendu de `CataloguePages.tsx` (`Heading`, `cat-grid--mosaique`). Plus de défilement
+interne (liste des photos de la médiathèque) : la page entière défile.
+
+**Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
+disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le
+nom de la gamme et son illustration, ensuite catégorie produit (possibilité ou pas en lettres manuscrites), ensuite les
+produits ») : au document, chaque page de produits (et présentation avec liste) porte `availabilityFooter` — une ligne
+composée par le Marketing, imprimée en pied de page ; la disponibilité n'est plus imprimée sous le prix (les vignettes
+de promotions gardent leur période) ; « Afficher la disponibilité » (`showAvailability`) commande ce pied. `offers[i]`
+accepte `mediaId` (une image de `/medias` : réseau ou ma boutique ; une autre → 422 `offers[i].mediaId` ; `null` la
+retire ; rendu `{type, id, on, mediaId}`) ; au document la vignette porte `imageUrl`, qui remplace les photos de ses
+produits. Étape 2 : « Image · Changer · Retirer » sur chaque offre (la grille de la médiathèque sous la ligne). Une page de
+produits porte `gammeTitle` (la gamme de la page, sinon celle du catalogue que portent ses produits ; `null` sans gamme),
+`gammeImageUrl`, `drawingUrl` (son illustration ; sans gamme, le dessin de la famille), `title` (la catégorie, en
+sous-titre), `script` (catégorie en lettres manuscrites : `pages[i].script` booléen, 422 sinon) et `familyDrawingUrl`
+(dessin de la famille, pour les vignettes sans photo — plus de cercle vide). Étape 3 : « Catégorie manuscrite Non · Oui »
+par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design system (`assets/ds/fonts`), déclarée
+`CmScript` dans `catalogue.css`.
+
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).
