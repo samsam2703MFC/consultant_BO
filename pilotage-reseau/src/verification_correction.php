@@ -1029,7 +1029,7 @@ function ep_verification_sonde_prix(): array
 const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material-suppliers/\d+/raw-materials/\d+/price-history$#',
     '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#',
     // Les commandes fournisseur et leurs livraisons (14/11/2026, « comment valider les marchandises dans le stock ») : lecture.
-    '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
+    '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/orders/ORD-[\w-]{4,60}$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
     '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
 
 /**
@@ -1090,7 +1090,9 @@ function wr_verification_reception(): array
     $avant = vrcDeballer(PanelApi::get('/deliveries/' . $id));
     if ($avant === null) { return ['ok' => false, 'error' => 'La livraison ' . $id . ' n’a pas pu être lue (/deliveries/' . $id . ') : rien n’est envoyé.']; }
     $sid = (int) ($avant['id_shop'] ?? 0);
-    $route = '/orders/' . $id . '/delivery';
+    // `cle: true` : la commande se désigne par sa clé (order_key, « ORD-… ») — 404 ORDER_NOT_FOUND par son numéro (mesuré).
+    $cleCmd = (string) ($avant['order_key'] ?? '');
+    $route = !empty($b['cle']) && preg_match('/^ORD-[\w-]{4,60}$/', $cleCmd) ? '/orders/' . $cleCmd . '/delivery' : '/orders/' . $id . '/delivery';
     $etat = static fn (?array $d): array => $d === null ? [] : array_intersect_key($d, array_flip(['status', 'delivered_on', 'supplier_fulfillment_status', 'expected_date', 'in_transit_sent_at']));
     if (!empty($b['apercu'])) { return ['apercu' => true, 'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'magasin' => $sid, 'livraison' => $etat($avant)]; }
     $stockAvant = $sid > 0 ? vrcStockMagasin($sid) : [];
