@@ -66,6 +66,8 @@ SEMAINES_HALLE = ICI / 'semaines-halle.json'
 # Le coût d'une heure de planning (14/11/2026) : le personnel du P&L du jour ÷ les heures du planning du panel, jour par
 # jour, GET /api/cockpit/exploitation/jour?date=… ; le fichier ne garde que les totaux du jour (heures, personnel, CA).
 HEURES_EQUIPE = ICI / 'heures-equipe.json'
+COUT_HEURE = 24.0                        # € de l'heure, charges comprises : le taux du réseau (cockpit, réglage production,
+                                         # tauxHoraire), retenu le 14/11/2026 (Sam) pour les heures à récupérer
 SEMAINES_MOI = ICI / 'semaines-sombreffe.json'
 
 MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
@@ -376,7 +378,7 @@ def main():
 
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
-        'heuresEquipe': heuresEquipe,
+        'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
         'repere': repere,
         'personnel': personnel, 'personnelReseau': personnelReseau, 'theorique': theorique, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches, 'panierAutres': panierAutres,

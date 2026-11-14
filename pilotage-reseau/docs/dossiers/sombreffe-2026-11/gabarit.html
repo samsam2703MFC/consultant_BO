@@ -1185,10 +1185,10 @@ if (D.pourquoi) {
 if (D.plan) {
   const depart = {
     personnel: PE6 ? `aujourd’hui ${dec(PE6.n.pct)} % du CA (mai → oct. 26) ; seuil ${dec(D.seuilPersonnel, 0)} %` : '',
-    personnelHeures: PE6 && D.heuresEquipe ? (() => {   // 14/11/2026 (Sam) : le nombre d'heures à récupérer par mois
-      const HE = D.heuresEquipe, trop = (PE6.n.lab - PE6.n.ca * D.seuilPersonnel / 100) / PE6.n.n, h = trop / HE.coutHeure;
+    personnelHeures: PE6 && D.coutHeure ? (() => {   // 14/11/2026 (Sam) : le nombre d'heures à récupérer par mois, à 24 € l'heure
+      const trop = (PE6.n.lab - PE6.n.ca * D.seuilPersonnel / 100) / PE6.n.n, h = trop / D.coutHeure;
       return { fort: `≈ ${grp(h)} heures à récupérer par mois, ≈ ${dec(h / (365 / 12), 0)} h par jour, à CA égal`,
-        base: `${dec(PE6.n.pct)} % du CA (mai → oct. 26), seuil ${dec(D.seuilPersonnel, 0)} % : ${eur(trop)} de trop par mois ; une heure de planning ≈ ${eur2(HE.coutHeure)} (P&L ÷ planning, ${dateC(HE.du)} → ${dateC(HE.au)})` };
+        base: `${dec(PE6.n.pct)} % du CA (mai → oct. 26), seuil ${dec(D.seuilPersonnel, 0)} % : ${eur(trop)} de trop par mois ; à ${dec(D.coutHeure, 0)} € l’heure, charges comprises (taux du réseau)` };
     })() : null,
     ventes: `${dec(N.cliJour, 0)} clients par jour au départ ; ${objectif} à court terme, puis ${normalise}`,
     prix: `panier ${eur2(moiPA.panier)}, le plus bas des quatre magasins (${perPA})`,
