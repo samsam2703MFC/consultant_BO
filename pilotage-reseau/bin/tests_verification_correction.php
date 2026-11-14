@@ -444,6 +444,16 @@ $t = $par['tarif:109']['corr']['matieres'][0];
 $r = $geste(['geste' => 'prix', 'mid' => $t['mid'], 'prix' => $t['ref'], 'shops' => $t['shops'], 'matiere' => $t['nom'], 'rid' => 19, 'pid' => 109, 'cle' => 'tarif:109', 'nom' => 'Pommes Tranches']);
 verifie('tarif : aligné en un geste, la ligne part, l’ancien prix s’annule', $r['ok'] && Panel::$prix[2][570] === 7.7125 && !in_array('tarif:109', $cles($r['liste']), true) && $r['ecritures'][0]['annulable'], json_encode($r['ecritures'] ?? $r));
 
+// Le formulaire de prix (14/11/2026) : la route et les champs saisis, la réponse brute du panel, « garder ce format ».
+$n0 = count(Panel::$ecrits);
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'format' => ['methode' => 'POST', 'route' => '/products/1', 'corps' => ['price' => '{prix}']]]);
+verifie('formulaire : une route hors des routes de prix ne part pas', !$r['ok'] && count(Panel::$ecrits) === $n0 && str_contains($r['ecritures'][0]['message'], 'Route refusée'));
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'format' => ['methode' => 'PATCH', 'route' => '/shops/{sid}/materials/avg-price', 'corps' => ['id_material' => '{mid}', 'avg_price' => '{prix}', 'valid_from' => '{date}']]]);
+verifie('formulaire : refus du panel, sa réponse brute est rendue', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'refuse' && str_contains((string) $r['ecritures'][0]['reponse'], 'route inconnue') && $r['ecritures'][0]['corps']['id_material'] === 560 && $r['ecritures'][0]['corps']['valid_from'] === date('Y-m-d'), json_encode($r['ecritures'][0]));
+$r = $geste(['geste' => 'prix', 'mid' => 560, 'prix' => 17.5, 'shops' => [3], 'matiere' => 'Thon', 'garder' => true, 'format' => ['methode' => 'POST', 'route' => '/materials/{mid}/manual-price', 'corps' => ['id_shop' => '{sid}', 'price' => '{prix}']]]);
+verifie('formulaire : le format qui prend est gardé pour tous les prix', $r['ok'] && Panel::$prix[3][560] === 17.5 && setting('vrcFormatPrix')['route'] === '/materials/{mid}/manual-price');
+Panel::$prix[3][560] = 16.0;
+
 // Les garde-fous.
 verifie('geste inconnu : 400', isset($geste(['geste' => 'supprimer'])['error']));
 verifie('quantité nulle : refusée avant le panel', !$geste(['geste' => 'quantite', 'rid' => 14, 'mid' => 511, 'q' => 0])['ok']);
