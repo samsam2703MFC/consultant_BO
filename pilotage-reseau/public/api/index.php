@@ -136,6 +136,7 @@ require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
 require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
@@ -475,6 +476,10 @@ function route(string $method, string $path): mixed
             $path === '/benchmarks/cron'               => ep_benchmark_cron(),
             $path === '/benchmarks/verification'       => ep_benchmark_verification(),
             $path === '/benchmarks/magasin'            => ep_benchmark_magasin(),
+            // Benchmark (rail) : les relevés importés, leurs zones, le classement par code postal (14/11/2026).
+            $path === '/benchmarks/import'             => ep_bench_import(),
+            (bool) preg_match('#^/benchmarks/import/(\d+)$#', $path, $mbi) => ep_bench_import_fiche((int) $mbi[1]),
+            $path === '/benchmarks/classement'         => ep_bench_classement(),
             (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
@@ -984,6 +989,13 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|top10|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
     if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
     if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
+    // Benchmark › Import : lire un PDF ou chercher sur internet (IA), rapprocher, encoder ; les zones par code postal.
+    if ($method === 'POST' && $path === '/benchmarks/import/pdf') { return wr_bench_import_pdf(); }
+    if ($method === 'POST' && $path === '/benchmarks/import/web') { return wr_bench_import_web(); }
+    if ($method === 'PUT' && $path === '/benchmarks/import') { return wr_bench_import_maj(); }
+    if ($method === 'POST' && $path === '/benchmarks/import/encoder') { return wr_bench_import_encoder(); }
+    if ($method === 'DELETE' && preg_match('#^/benchmarks/import/(\d+)$#', $path, $m)) { return wr_bench_import_suppr((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/benchmarks/zones') { return wr_bench_zones(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)
