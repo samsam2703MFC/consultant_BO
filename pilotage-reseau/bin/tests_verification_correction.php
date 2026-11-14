@@ -80,6 +80,7 @@ final class Panel
     public static array $refus = [];      // chemin => message (422)
     public static array $ignore = [];     // chemin => true : 200 sans rien changer
     public static array $ecrits = [];     // [méthode, chemin, corps]
+    public static array $materiaux = [];  // mid => objet (comme GET /materials/{id})
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
@@ -125,6 +126,11 @@ final class Panel
         }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m)) { return self::$recettes[(int) $m[1]] ?? null; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m)) { return isset(self::$sous[(int) $m[1]]) ? ['data' => self::$sous[(int) $m[1]]] : null; }
+        if (preg_match('#^/materials/(\d+)$#', $c, $m)) { return isset(self::$materiaux[(int) $m[1]]) ? ['data' => self::$materiaux[(int) $m[1]]] : null; }
+        if ($c === '/allergens') { return [['id' => 1, 'code' => 'cereals_gluten'], ['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']]; }
+        if ($c === '/units') { return [['id' => 1, 'name' => 'g'], ['id' => 5, 'name' => 'pcs'], ['id' => 2, 'name' => 'kg']]; }
+        if ($c === '/material-categories') { return [['id' => 30, 'name' => 'Matières premières (boulangerie)'], ['id' => 31, 'name' => 'Matières premières (traiteur)']]; }
+        if ($c === '/countries/BE/materials/vat-rates') { return [['rate' => 6], ['rate' => 21]]; }
         if ($c === '/recipes') { return array_map(static fn ($o) => ['id' => $o['id'], 'name' => $o['name']], array_values(self::$recettes)); }
         if (preg_match('#^/products/(\d+)/portions$#', $c, $m)) { return array_values(array_filter(self::$portions, static fn ($x) => $x['product_id'] === (int) $m[1])); }
         if (preg_match('#^/products/(\d+)$#', $c, $m)) { $p = self::$produits[(int) $m[1]] ?? null; return $p === null ? null : ['product' => ['id' => (int) $m[1], 'name' => $p['nom'], 'id_recipe' => $p['id_recipe']]]; }
@@ -140,6 +146,7 @@ final class Panel
         self::$ecrits[] = [$meth, $c, $b];
         if (isset(self::$refus[$c])) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422 : ' . self::$refus[$c]; return [false, ['description' => self::$refus[$c]]]; }
         if (isset(self::$ignore[$c])) { return [true, ['status' => 'ok']]; }
+        if (preg_match('#^/materials/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$materiaux[(int) $m[1]] = array_merge(self::$materiaux[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$recettes[(int) $m[1]] = array_merge(self::$recettes[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$sous[(int) $m[1]] = array_merge(self::$sous[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/products/(\d+)$#', $c, $m) && $meth === 'PATCH') { if (array_key_exists('id_recipe', $b)) { self::$produits[(int) $m[1]]['id_recipe'] = $b['id_recipe']; } return [true, []]; }
@@ -190,6 +197,7 @@ function mfListePrix(string $fid, int $sid, bool $frais): array
 require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_correction.php';
 require __DIR__ . '/../src/verification_matieres_prix.php';
+require __DIR__ . '/../src/verification_matiere_edition.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -450,6 +458,44 @@ verifie('prix remplacé : annulable, premier prix : non', $r['ecritures'][1]['an
 $BODY = ['id' => $idH];
 $u = wr_verification_annuler();
 verifie('annuler un prix : l’ancien prix repart, relu', $u['ok'] && Panel::$prix[4][521] === 6.2 && Panel::$prix[3][521] === 6.5, json_encode($u));
+
+// --- 5. La fiche d'une matière, modifiable (14/11/2026) ----------------------------------------------------------
+echo "La fiche d'une matière\n";
+Panel::$materiaux[521] = ['id' => 521, 'name' => 'Blancs d’œufs', 'id_category' => 31, 'id_unit' => 2, 'unit_name' => 'kg', 'material_type' => 'RAW', 'source_type' => 'CENTRAL',
+    'waste_amount_perc' => '0.00', 'vat_rate' => '6.00', 'is_part_of_package' => 0, 'can_be_product_addon' => 0, 'allergens' => [['id' => 3, 'code' => 'eggs']],
+    'reference_unit_price_net' => null, 'suggested_base_unit_price_net' => null];
+$ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'waste_amount_perc' => 5, 'allergens' => ['eggs', 'milk'], 'is_part_of_package' => true, 'kind' => 'simple'], vmxAllergenesRef());
+verifie('matière : une clé absente du panel ne s’écrit pas', count($ch['erreurs']) === 1 && str_contains($ch['erreurs'][0], 'Genre'));
+$ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'waste_amount_perc' => 5, 'allergens' => ['eggs', 'milk'], 'is_part_of_package' => true], vmxAllergenesRef());
+$cc = array_keys($ch['corps']); sort($cc);
+verifie('matière : seules les clés changées partent, dans la forme lue', $cc === ['allergens', 'is_part_of_package', 'waste_amount_perc'] && $ch['corps']['waste_amount_perc'] === 5.0 && $ch['corps']['is_part_of_package'] === 1
+    && $ch['corps']['allergens'] === [['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']], json_encode($ch));
+verifie('matière : les allergènes en texte gardent leur forme', vmxAllergenesPour('eggs', ['eggs', 'milk'], vmxAllergenesRef()) === 'eggs, milk');
+$_GET = ['mid' => '521'];
+$f = ep_verification_matiere();
+fixture('matiere-521', $f);
+$parCle = array_column($f['champs'], null, 'cle');
+verifie('fiche : les champs rendus sont modifiables, les autres non', $parCle['name']['modifiable'] && !$parCle['kind']['modifiable'] && $parCle['allergens']['valeur'] === ['eggs']);
+verifie('fiche : listes de référence et ligne du tableau', count($f['refs']['categories']) === 2 && $f['refs']['tva'] === [6.0, 21.0] && ($f['ligne']['mid'] ?? 0) === 521 && $f['par'] === 'kg');
+$n0 = count(Panel::$ecrits);
+$BODY = ['mid' => 521, 'apercu' => true, 'champs' => ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => 6.5], 'magasins' => ['2' => 6.5]];
+$ap = wr_verification_matiere();
+fixture('apercu-matiere', $ap);
+verifie('fiche : l’aperçu n’écrit rien, montre le PATCH et le prix du magasin', count(Panel::$ecrits) === $n0 && count($ap['ecritures']) === 2 && $ap['ecritures'][0]['route'] === '/materials/521');
+$BODY['apercu'] = false;
+$r = wr_verification_matiere();
+fixture('ecrire-matiere', $r);
+verifie('fiche : paramètres écrits et relus, puis le prix de Corbais', $r['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs frais' && Panel::$materiaux[521]['reference_unit_price_net'] === 6.5 && Panel::$prix[2][521] === 6.5, json_encode($r));
+$pm = array_values(array_filter(Panel::$ecrits, static fn ($e) => $e[1] === '/materials/521'));
+verifie('fiche : le PATCH ne porte que les deux clés changées', end($pm)[2] === ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => 6.5]);
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('fiche : « Annuler » remet le nom et le prix général', $u['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs' && Panel::$materiaux[521]['reference_unit_price_net'] === null, json_encode($u));
+Panel::$ignore['/materials/521'] = true;
+$BODY = ['mid' => 521, 'champs' => ['waste_amount_perc' => 3], 'magasins' => ['3' => 7.0]];
+$r = wr_verification_matiere();
+verifie('fiche : paramètres sans effet → les prix ne partent pas', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'sans_effet' && count($r['ecritures']) === 1 && Panel::$prix[3][521] === 6.5);
+unset(Panel::$ignore['/materials/521']);
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
