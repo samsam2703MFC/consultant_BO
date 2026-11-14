@@ -11,6 +11,7 @@
  * Corriger d'ici (13/11/2026, « tout, CEO seul ») : chaque ligne porte son geste — corrigé en place, dans le volet de la
  * recette, ou au panel par un lien direct — et le registre garde ce qui a été écrit (verification-correction-vals.js). */
 import { readOne } from './api.js';
+import { valsMatieres } from './verification-prix-vals.js';
 import { gesteDe, valsLigneOuverte, valsRecentes, valsRegistre, valsEdition, ouvrirEnCorrection, chargerEdition, lienPanel } from './verification-correction-vals.js';
 
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
@@ -120,6 +121,13 @@ export function valsVerification(app, common){
     fiche: valsFiche(app),
   };
   common.vr = v;
+  // La bascule (14/11/2026) : les recettes à corriger, ou les matières premières de ces recettes et leur prix de référence.
+  const vue = S.vrVue === 'matieres' ? 'matieres' : 'recettes';
+  const nMat = (((S.vmData || {}).d || {}).compteurs || {}).matieres;
+  v.vue = vue;
+  v.bascule = [['recettes', 'Recettes à corriger', brut && brut.total != null ? brut.total : null], ['matieres', 'Matières premières', nMat == null ? null : nMat]]
+    .map(([id, nom, n]) => ({ nom, n, on: vue === id, choisir: () => app.setState({ vrVue: id }) }));
+  if (vue === 'matieres') { v.prix = valsMatieres(app); }
   if (!d) { return; }
 
   // Les formules et promotions (décision du 31/10/2026) : gardées, un interrupteur devant la liste les masque ;

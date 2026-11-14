@@ -322,3 +322,43 @@
 .rc-barre>div:first-child{flex:1 1 360px}
 .rc-barre b{font-weight:400}
 .rc-barre small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.4}
+
+/* --- Matières premières et prix de référence (14/11/2026, préfixe vm-), maquette docs/maquettes/matieres-reference -- */
+.vm-bascule{display:inline-flex;gap:2px;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:11px;padding:3px;margin-right:6px}
+.vm-bascule button{font:400 12.5px var(--font-ui);padding:7px 16px;border-radius:8px;border:none;background:transparent;color:var(--color-text);cursor:pointer;display:inline-flex;gap:8px;align-items:center}
+.vm-bascule button b{font-weight:400;font-size:11px;padding:1px 7px;border-radius:6px;background:var(--chip)}
+.vm-bascule button.on{background:var(--color-text);color:#fff}.vm-bascule button.on b{background:rgba(255,255,255,.18);color:#fff}
+.vm-kpis{display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--vr-trait)}
+.vm-kpi{padding:14px 18px;border-right:1px solid var(--vr-trait)}.vm-kpi:last-child{border-right:none}
+.vm-kpi .k{font:400 10px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-text-muted)}
+.vm-kpi .v{font:400 24px var(--font-display);margin-top:6px;line-height:1}
+.vm-kpi .s{font-size:11.5px;color:var(--color-text-muted);margin-top:6px;line-height:1.35}
+.vm-kpi.ko .v{color:var(--vr-ko)}.vm-kpi.att .v{color:var(--vr-att)}.vm-kpi.ok .v{color:var(--vr-ok)}
+.vm-q{font:400 12px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 10px;background:var(--color-surface);width:260px}
+.vm-t td.vm-px{white-space:nowrap}
+.vm-p{display:inline-block;min-width:62px;padding:2px 7px;border-radius:6px;text-align:right}
+.vm-p.ok{color:var(--vr-ok)}.vm-p.ok::after{content:' ✓';font-size:10px}
+.vm-p.att{color:var(--vr-att);background:var(--prize-soft)}
+.vm-p.ko{color:var(--vr-ko);background:var(--stop-soft);font-size:11px}
+.vm-p.new{color:#245f33;background:#e9f1ea}
+.vm-p small{display:block;font-size:9.5px;color:var(--color-text-muted)}
+.vm-src{display:inline-block;font:400 9.5px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;padding:1px 6px;border-radius:4px;background:var(--chip);color:#5d554d;margin-left:6px;vertical-align:1px}
+.vm-src.c{background:#e4ecf5;color:#2F5D8A}
+.vm-t td.vm-emploi{white-space:normal;max-width:240px;min-width:170px;font-size:11.5px;line-height:1.4}
+.vm-t td.vm-ref{white-space:normal;min-width:240px;max-width:330px}
+.vm-sel{font:400 12px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:7px;background:#fff;padding:6px 8px;width:100%;max-width:330px;color:var(--color-text)}
+.vm-sel.choisi{border-color:var(--vr-ok);box-shadow:0 0 0 2px rgba(45,122,62,.15)}
+.vm-sous{display:block;font-size:10.5px;color:var(--color-text-muted);margin-top:3px;line-height:1.35;white-space:normal}
+.vm-x{display:flex;align-items:center;gap:6px;margin-top:5px;font-size:11.5px;color:var(--color-text-muted);flex-wrap:wrap}
+.vm-a{font:400 11.5px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:6px;padding:4px 6px;background:#fff;max-width:150px}
+.vr-t tr.vm-on>td{background:#fbf6ef}
+.vr-t tr.vm-imp>td{background:#fbf6ef;padding:2px 14px 14px 44px;white-space:normal;text-align:left}
+.vm-bloc{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:10px;overflow:hidden;max-width:820px}
+.vm-bloc h4{margin:0;font:400 10.5px var(--font-ui);letter-spacing:.07em;text-transform:uppercase;color:var(--color-primary);padding:10px 12px 6px}
+.vm-bloc .vr-t td,.vm-bloc .vr-t th{padding:7px 10px}
+.vm-barre{position:sticky;bottom:0;z-index:2;background:#fff;border-top:1px solid var(--vr-trait);box-shadow:0 -6px 18px rgba(34,30,26,.06);padding:12px 18px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12px}
+.vm-barre>div:first-child{flex:1 1 420px}
+.vm-barre b{font-weight:400}
+.vm-barre small{display:block;font-size:11px;color:var(--color-text-muted);margin-top:2px;line-height:1.4}
+.vm-barre .rc-apercu{margin-top:8px;max-height:220px;overflow:auto}
+@media (max-width:1100px){.vm-kpis{grid-template-columns:repeat(3,1fr)}}
