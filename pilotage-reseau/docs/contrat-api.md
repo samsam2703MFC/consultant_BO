@@ -3937,7 +3937,7 @@ panel. Une ligne reprise d'une autre recette (ajout, copie) part **sans son `con
 
 **Règle `tarif`** (14/11/2026) : « prix en retard sur le fournisseur ». `vfRefFournisseurs` lit, pour chaque magasin, la liste
 de prix EN VIGUEUR du premier fournisseur lié qui chiffre la matière (même lecture que `vmpOptions`) ; un écart de plus de
-`VF_ECART_TARIF` (2 %) au prix du magasin signale le produit, avec `corr {sid, magasin, matieres[{mid, nom, u, prix, ref,
+`VF_ECART_TARIF` (10 %, décidé le 14/11 ; 2 % au départ) au prix du magasin signale le produit, avec `corr {sid, magasin, matieres[{mid, nom, u, prix, ref,
 fournisseur, depuis, shops (les magasins en retard au même prix de référence), alignes}], coutAvant, coutApres}`. Le geste
 proposé est `prix` (les magasins en retard, au prix du fournisseur). Le coût qui entre dans la médiane du réseau (règle
 `reseau`) est le coût au prix du fournisseur : un magasin à jour n'est plus « hors norme » parce que d'autres sont en retard.

@@ -330,7 +330,7 @@ verifie('tarif : Corbais en retard sur SLFood, Halle et Gosselies alignés', ($p
     && ($par['tarif:109']['corr']['matieres'][0]['ref'] ?? 0) === 7.7125 && $par['tarif:109']['corr']['matieres'][0]['alignes'] === ['Halle', 'Gosselies'], json_encode($par['tarif:109'] ?? array_keys($par)));
 verifie('tarif : Halle n’est plus « hors norme » parce que Corbais est en retard', !isset($par['reseau:109']) && $par['tarif:109']['magasins'] === ['Corbais']);
 verifie('tarif : le coût de la pièce, avant → après', abs(($par['tarif:109']['corr']['coutAvant'] ?? 0) - 5.335) < 1e-6 && abs($par['tarif:109']['corr']['coutApres'] - 7.9525) < 1e-6, json_encode($par['tarif:109']['corr'] ?? null));
-verifie('tarif : les blancs d’œufs (6,20 face à 6,50 chez SLFood) à Halle et Gosselies', isset($par['tarif:102']) && $par['tarif:102']['corr']['matieres'][0]['shops'] === [4, 3]);
+verifie('tarif : sous le seuil de 10 %, pas de signalement (blancs d’œufs 6,20 face à 6,50 : 4,6 %)', !isset($par['tarif:102']));
 verifie('tarif : un écart ×100 est un colis à vérifier, il ne corrige pas le coût', ($par['tarif:103']['corr']['matieres'][0]['suspect'] ?? false) === true
     && str_contains($par['tarif:103']['detail'], 'colis') && abs(($par['tarif:103']['corr']['coutApres'] ?? 0) - $par['tarif:103']['corr']['coutAvant']) < 1e-9, json_encode($par['tarif:103'] ?? null));
 verifie('la liste porte les adresses du panel', ($a['liens']['produit'] ?? '') !== '' && str_contains((string) ($a['liens']['recette'] ?? ''), '/panel/recipes'));

@@ -54,7 +54,7 @@ const VF_ECART_RESEAU = 40.0;       // % d'écart à la médiane des autres maga
 const VF_PART_UNITE = 0.5;          // une ligne qui pèse plus de la moitié du coût
 const VF_PROFONDEUR = 4;            // sous-recettes dépliées au plus
 const VF_RELUES_ORPH = 0.95;
-const VF_ECART_TARIF = 2.0;
+const VF_ECART_TARIF = 10.0;        // % d'écart entre le prix d'un magasin et la liste de prix du fournisseur en vigueur (14/11/2026 : 2 % le matin, 10 % décidé le jour même — seuls les vrais retards comptent)
 const VF_TARIF_SUSPECT = 2.0;       // au-delà de ×2 ou ÷2, c'est le colis ou l'unité qu'il faut vérifier, pas un retard de prix         // % d'écart entre le prix d'un magasin et la liste de prix du fournisseur en vigueur (14/11/2026)        // part des recettes relues pour juger les matières orphelines
 
 /** Les règles : code => [nom, explication]. L'ordre est celui des pastilles à l'écran. */
