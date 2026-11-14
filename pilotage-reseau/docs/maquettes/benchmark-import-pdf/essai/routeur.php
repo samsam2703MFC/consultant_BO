@@ -143,6 +143,8 @@ header('Content-Type: application/json; charset=utf-8');
 try {
     $rep = match (true) {
         $path === '/auth/status' => ['setup' => true, 'authed' => true, 'disabled' => true],
+        // La garde des pages (public/assets/js/garde.js, 13/11/2026) : une session du siège.
+        $path === '/acces/moi' => ['connecte' => true, 'role' => 'siege', 'nom' => 'Siège (banc d’essai)', 'shops' => []],
         $path === '/meta' => $META,
         $method === 'GET' && $path === '/benchmarks/import' => ep_bench_import(),
         $method === 'GET' && (bool) preg_match('#^/benchmarks/import/(\d+)$#', $path, $m1) => ep_bench_import_fiche((int) $m1[1]),

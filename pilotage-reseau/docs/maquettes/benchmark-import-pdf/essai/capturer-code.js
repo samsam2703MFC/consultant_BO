@@ -19,7 +19,8 @@ const PDF = Buffer.from('%PDF-1.4\n% exemple de tarif (banc d’essai)\n1 0 obj<
   const p = await b.newPage({ viewport: { width: 1600, height: 1000 }, deviceScaleFactor: 2 });
   const err = []; p.on('pageerror', e => err.push(e.message)); p.on('console', m => { if (m.type() === 'error') { err.push(m.text()); } });
   p.on('dialog', d => d.accept());
-  const pleine = async nom => { await p.addStyleTag({ content: DEPLIER }); await p.waitForTimeout(250); await p.screenshot({ path: path.join(D, nom), fullPage: true }); };
+  // La liste des relevés est collante : la page remonte en haut avant chaque capture.
+  const pleine = async nom => { await p.addStyleTag({ content: DEPLIER }); await p.evaluate(() => { window.scrollTo(0, 0); document.querySelectorAll('#main-scroll,.app__body').forEach(e => { e.scrollTop = 0; }); }); await p.waitForTimeout(250); await p.screenshot({ path: path.join(D, nom), fullPage: true }); };
   const clic = async (texte, dans) => { await p.locator((dans || '[data-screen="benchmark"]') + ' button', { hasText: texte }).first().click(); await p.waitForTimeout(500); };
 
   await p.goto(BASE + 'public/index.html#/benchmark', { waitUntil: 'networkidle' });
