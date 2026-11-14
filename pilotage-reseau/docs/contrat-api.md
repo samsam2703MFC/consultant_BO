@@ -5650,8 +5650,8 @@ jamais de boutique (champs filtrés).
     GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
     GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
     GET    /dashboard/catalogues/medias?shop=&page=&q= → …/catalogue-media?perPage=24&page=&filter[name][like]=q
-    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages}
-    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty)
+    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages, offers, showAvailability}
+    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty, offers, showAvailability)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
     POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
 
@@ -5689,6 +5689,26 @@ l'en-tête), `room`, `fillable` (une rangée entière libre), `filler` `{kind, i
 de l'écran : par page, type (5 vignettes), gabarit (3 vignettes), gamme, catégorie, texte FR / NL d'une présentation,
 « Place libre : Rien · Photo · Illustration » quand il reste une rangée libre (photo choisie dans la médiathèque,
 `/medias`) ; étape 4 et PDF : le même rendu que le Marketing (`catalogue.js` reprend `CataloguePages.tsx`).
+
+**Promotions, bundles et disponibilité** (14/11/2026, client : « rajouter les bundles et promotions (via API) et les
+appliquer dans une vignette dans la catégorie », puis « rajouter aussi les données de disponibilité » ; contrat du
+Marketing v1.3) : `…/catalogue-products` rend `offers` (les promotions ACTIVES de TFBuddy qui valent pour la boutique —
+bundles, « X achetés = Y », promotions de quantité, remises programmées que TFBuddy dit actives pour elle —, chacune
+`{id: « bundle-12 », type, erpId, name, badge « Bundle » · « 2+1 » · « 3 pour 2 » · « −20 % », deal, period,
+categoryId, productIds, categoryIds, priceCents, oldPriceCents, products[{id, name, imageUrl, quantity}],
+moreProducts}`), `offersError` (TFBuddy illisible : la raison) et, sur chaque produit, `availability {periods[{id,
+from, to}] (JJ/MM), leadHours}`. Le relais laisse passer deux champs de plus à la création et au PUT : `offers`
+(`[{type, id, on}]`, `type` ∈ `bundle · buyXGetY · quantity · scheduledDiscount` — les choix explicites ; une offre
+absente est cochée d'office si elle touche un produit coché ; une offre que TFBuddy ne rend pas pour la boutique → 422
+`offers[i].id`) et `showAvailability` (booléen, vrai par défaut). Au document, une page de produits porte des produits
+ET des vignettes `kind: offer` (une case de la page de la catégorie de leur premier produit, comptée dans la capacité
+du gabarit) ; un produit porte `oldPriceCents` + `promo {label, period}` (remise programmée : prix barré) et
+`availability` (« du 1/12 au 6/12 · sur commande 48 h », NL « van 1/12 tot 6/12 · op bestelling 48 u » ; `null` :
+rien de connu ou éteint) ; alerte `PROMOTIONS_UNREADABLE` quand TFBuddy ne rend pas ses promotions (rien n'est alors
+inventé). Écran, étape 2 : sous les produits, « Promotions et bundles » (une ligne par offre — badge, nom, produits,
+période, où elle va, prix — et son interrupteur) puis « Afficher la disponibilité » ; enregistrés avec les produits.
+Étapes 3-4 et PDF : vignette d'offre (badge bordeaux, photos de ses produits, prix et ancien prix barré, période), prix
+barré et disponibilité sous le prix — le rendu de `CataloguePages.tsx` (`offreCarte`, `prixHtml`).
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).

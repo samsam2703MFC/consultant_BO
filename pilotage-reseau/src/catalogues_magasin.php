@@ -39,8 +39,9 @@ declare(strict_types=1);
  *   - le jeton de service : `erp_jeton_service` d'erp_cles (le même que pour le Recrutement).
  */
 
-const CM_CHAMPS_CREER = ['title', 'source', 'format', 'pageCount', 'langs', 'products', 'pages'];
-const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty'];
+/** `offers` ({type, id, on} : les promotions de TFBuddy cochées) et `showAvailability` (booléen) : 14/11/2026. */
+const CM_CHAMPS_CREER = ['title', 'source', 'format', 'pageCount', 'langs', 'products', 'pages', 'offers', 'showAvailability'];
+const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty', 'offers', 'showAvailability'];
 
 /** Une erreur au format du standard (celui du Marketing), pour ce que le cockpit dit lui-même. */
 function cmErreur(int $http, string $code, string $message): array
@@ -122,7 +123,9 @@ function cmAppel(string $url, string $methode, ?array $corps, string $jeton): ar
 /**
  * Ne garde du corps que les champs que le Marketing accepte d'une boutique (jamais une boutique, jamais un prix). Les
  * pages intérieures (`pages`) partent telles quelles — {layout, category, template, gamme, text, textNl, filler,
- * fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique.
+ * fillerMediaId} : le Marketing les valide champ par champ (422 nommé), y compris la photo d'une autre boutique. Les
+ * promotions cochées (`offers` : [{type, id, on}]) et `showAvailability` aussi : une promotion que TFBuddy ne rend pas
+ * pour la boutique (celle d'une autre, finie, inconnue) est refusée par le Marketing (422 `offers[i].id`).
  */
 function cmCorps(array $champs): array
 {
