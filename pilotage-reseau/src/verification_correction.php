@@ -1027,7 +1027,10 @@ function ep_verification_sonde_prix(): array
 
 /** Les lectures permises à la sonde du circuit des prix (14/11/2026) : GET seulement, ces routes-là seulement. */
 const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material-suppliers/\d+/raw-materials/\d+/price-history$#',
-    '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#'];
+    '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#',
+    // Les commandes fournisseur et leurs livraisons (14/11/2026, « comment valider les marchandises dans le stock ») : lecture.
+    '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
+    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
 
 /**
  * GET /verification/recettes/sonde-chemin?chemin=&q= — lecture seule : une route du circuit des prix fournisseur
@@ -1039,6 +1042,12 @@ function ep_verification_sonde_chemin(): array
     $c = (string) ($_GET['chemin'] ?? ''); $q = (string) ($_GET['q'] ?? '');
     $ok = false; foreach (VRC_SONDE_CHEMINS as $re) { if (preg_match($re, $c)) { $ok = true; } }
     if (!$ok) { http_response_code(400); return ['error' => 'chemin non permis']; }
+    // `compte=admin` : la même lecture avec le compte administrateur du cockpit (Paramètres › ERP).
+    if (($_GET['compte'] ?? '') === 'admin' && class_exists('ErpApi')) {
+        $t = ErpApi::jetonSonde();
+        if ($t === null) { return ['error' => 'compte administrateur du cockpit indisponible : ' . (ErpApi::$lastError ?? '')]; }
+        PanelApi::$jetonImpose = $t;
+    }
     $d = PanelApi::getParalleleDetail(['x' => $c], 1, 40, false)['x'] ?? [];
     $r = $d['data'] ?? null;
     if (is_array($r)) {
