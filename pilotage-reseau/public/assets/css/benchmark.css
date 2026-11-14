@@ -112,3 +112,12 @@
 .bk-t td.bk-base{white-space:normal;min-width:150px}
 .bk-sel{width:270px;min-width:0;max-width:none}
 .bk-ec.indicatif{background:none;color:var(--color-text-muted);border:1px dashed #cfc6bb}
+/* La confiance et l'état dans une même colonne ; le choix du produit un peu plus étroit (le tableau tient sans défiler). */
+.bk-t td.bk-cf .bk-conf{margin-bottom:3px}
+.bk-sel{width:240px}
+/* Sur la largeur du cockpit : une liste plus étroite, des colonnes plus serrées. */
+.bk-cols{grid-template-columns:250px minmax(0,1fr)}
+.bk-t th,.bk-t td{padding-left:6px;padding-right:6px}
+.bk-t td.nom{min-width:150px;max-width:220px}
+.bk-t td.bk-base{min-width:120px;max-width:170px}
+.bk-sel{width:215px}
