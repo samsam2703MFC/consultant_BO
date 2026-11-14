@@ -475,7 +475,7 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | social | `mar_sa_resultat` | = |  |
 | social | `mar_variable` | = |  |
 
-### Pilotage — 110 table(s)
+### Pilotage — 111 table(s)
 
 `ceo_parcours` et `ceo_parcours_etape` (parcours de chaque personne) : retirées du registre le 06/11/2026 — le parcours est
 supprimé et ses tables sont effacées à la mise en ligne (pilotage-reseau/docs/formation.md, « Parcours retiré »).
@@ -576,6 +576,7 @@ supprimé et ses tables sont effacées à la mise en ligne (pilotage-reseau/docs
 | consultant_BO | `pla_placement` | `pil_pla_placement` | planogramme |
 | consultant_BO | `pla_slot` | `pil_pla_slot` | planogramme |
 | consultant_BO | `pla_zone` | `pil_pla_zone` | planogramme |
+| consultant_BO | `pil_tresorerie_plan` | = | dashboard magasin › Trésorerie, créée sous son nom cible (14/11/2026) |
 | pwa_consultant | `mac_checklist_day_snapshot` | `pil_mac_checklist_day_snapshot` | PWA consultant |
 | pwa_consultant | `mac_consultant_lever_action` | `pil_mac_consultant_lever_action` | PWA consultant |
 | pwa_consultant | `mac_consultant_param` | `pil_mac_consultant_param` | PWA consultant |
