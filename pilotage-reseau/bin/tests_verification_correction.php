@@ -85,6 +85,7 @@ final class Panel
     public static array $champsProduit = []; // pid => les autres champs de GET /products/{id} (paramétrage des produits)
     public static array $gammes = [];     // id => [objet de la gamme, [pid]] (/product-availability-periods)
     public static array $prixProduit = []; // sid => [pid => prix TTC]
+    public static array $refusChamp = []; // chemin => [clé => réponse 422] : le panel refuse ce champ, nommément
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
@@ -156,6 +157,7 @@ final class Panel
         self::$ecrits[] = [$meth, $c, $b];
         if (isset(self::$refus[$c])) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422 : ' . self::$refus[$c]; return [false, ['description' => self::$refus[$c]]]; }
         if (isset(self::$ignore[$c])) { return [true, ['status' => 'ok']]; }
+        foreach (self::$refusChamp[$c] ?? [] as $k => $rep) { if (array_key_exists($k, $b)) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422'; return [false, $rep]; } }
         if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m) && $meth === 'POST') {
             $mid = (int) $m[1]; $fait = false;
             foreach (self::$tva[$mid] as &$l) { if ($l['country_code'] === ($b['country_code'] ?? '')) { $l['vat_rate'] = number_format((float) $b['vat_rate'], 2, '.', ''); $fait = true; } }
@@ -587,7 +589,7 @@ verifie('TVA : une valeur invalide ne part pas', !wr_verification_matiere()['ok'
 
 // --- Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) ---------------------------------------------
 Panel::$champsProduit[100] = ['tax_val_perc' => 6, 'is_active' => 1, 'webshop_active' => 0, 'suggested_sale_price' => '21.90', 'shelf_life_minutes' => 2880, 'id_storage' => 30,
-    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null];
+    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null, 'min_coefficient' => null, 'storage_temperature' => 0];
 Panel::$gammes = [14 => [['id' => 14, 'name' => 'Gamme Standard', 'from_md' => 101, 'to_md' => 1231, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 0], [100]],
     6 => [['id' => 6, 'name' => 'Automnale', 'from_md' => 901, 'to_md' => 1101, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 1], []]];
 foreach (array_keys(Db::$reglages) as $k) { if (str_starts_with($k, 'ppm')) { unset(Db::$reglages[$k]); } }
@@ -619,6 +621,18 @@ $BODY = ['pid' => 100, 'prix' => ['3' => '20,90'], 'garder' => true, 'formats' =
 $r = wr_produits_parametrage();
 verifie('paramétrage : prix d’un magasin écrit et relu, format gardé', $r['ok'] && Panel::$prixProduit[3][100] === 20.9 && ppmFormat('prix')['corps'] === ['portion_price_gross' => '{prix}'], json_encode($r));
 verifie('paramétrage : gammes d’une forme quelconque', ppmIdsProduits(['data' => [['id_product' => 5], ['product_id' => 6], 7]]) === [5, 6, 7] || ppmIdsProduits([['id_product' => 5], ['product_id' => 6]]) === [5, 6]);
+
+
+// Un champ refusé nommément (mesuré le 14/11 : coefficient minimum contredit par une promotion active) n'emporte pas les autres.
+Panel::$refusChamp['/products/100'] = ['min_coefficient' => ['code' => null, 'description' => 'Nie można zapisać minimalnego współczynnika.', 'errors' => ['min_coefficient' => 'Update rejected by active promotion #2 (4 Quarts + 1 Gratuit).',
+    'promotion_id' => 2, 'promotion_name' => '4 Quarts + 1 Gratuit', 'reason' => 'INVALID_PROMOTION_DATA', 'min_coefficient_details' => ['contexts' => [['shop_id' => 3, 'sales_channel' => 'POS', 'status' => 'VIOLATED'], ['shop_id' => 4, 'sales_channel' => 'POS', 'status' => 'OK']]]]]];
+$BODY = ['pid' => 100, 'champs' => ['min_coefficient' => '2,5', 'storage_temperature' => '4']];
+$r = wr_produits_parametrage();
+$e0 = $r['ecritures'][0] ?? []; $e1 = $r['ecritures'][1] ?? [];
+verifie('paramétrage : le champ refusé est nommé, en français, avec la promotion et le magasin', count($r['ecritures']) === 2 && $e0['resultat'] === 'refuse' && str_contains($e0['message'], '« 4 Quarts + 1 Gratuit »')
+    && str_contains($e0['message'], 'Coefficient minimum') && !str_contains($e0['message'], 'Halle') && str_contains($e0['reponse'], 'INVALID_PROMOTION_DATA'), json_encode($r));
+verifie('paramétrage : les autres champs repartent seuls, écrits et relus', $e1['resultat'] === 'ok' && Panel::$champsProduit[100]['storage_temperature'] === 4 && Panel::$champsProduit[100]['min_coefficient'] === null && end(Panel::$ecrits)[2] === ['storage_temperature' => 4], json_encode($r));
+unset(Panel::$refusChamp['/products/100']);
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);

@@ -331,7 +331,7 @@ function ppmCorps(array $f, array $vals): array
 /** Les changements des champs du produit : seules les clés que le panel rend, et qui changent. Fonction pure. */
 function ppmChangements(array $o, array $champs): array
 {
-    $corps = []; $inverse = []; $lisible = []; $erreurs = [];
+    $corps = []; $inverse = []; $lisible = []; $erreurs = []; $parCle = [];
     foreach ($champs as $k => $v) {
         if (!isset(PPM_CHAMPS[$k])) { $erreurs[] = 'Champ inconnu : ' . $k . '.'; continue; }
         [$lib, $type] = PPM_CHAMPS[$k];
@@ -374,8 +374,81 @@ function ppmChangements(array $o, array $champs): array
             $lisible[] = $lib . ' : « ' . ($avant ?? '') . ' » → « ' . $corps[$k] . ' »';
         }
         $inverse[$k] = $avant;
+        $parCle[$k] = (string) end($lisible);
     }
-    return ['corps' => $corps, 'inverse' => $inverse, 'lisible' => $lisible, 'erreurs' => $erreurs];
+    return ['corps' => $corps, 'inverse' => $inverse, 'lisible' => $lisible, 'erreurs' => $erreurs, 'parCle' => $parCle];
+}
+
+/**
+ * Les champs que le panel refuse nommément (`errors.{clé}`), et pourquoi, en français : [clé => raison]. Mesuré le
+ * 14/11/2026 : un coefficient minimum que contredit une promotion active revient en 422 avec errors.min_coefficient,
+ * promotion_id, promotion_name et, par magasin et canal, le contexte vérifié. Fonction pure (les noms des magasins en plus).
+ */
+function ppmChampsRefuses(mixed $res, array $corps, array $mags = []): array
+{
+    if (!is_array($res)) { return []; }
+    $err = is_array($res['errors'] ?? null) ? $res['errors'] : (is_array($res['data']['errors'] ?? null) ? $res['data']['errors'] : null);
+    if ($err === null) { return []; }
+    $out = [];
+    foreach (array_keys($corps) as $k) {
+        if (!array_key_exists($k, $err)) { continue; }
+        $lib = PPM_CHAMPS[$k][0] ?? $k;
+        if (isset($err['promotion_id']) || isset($err['promotion_name'])) {
+            $t = '« ' . $lib . ' » refusé : la promotion active n° ' . ($err['promotion_id'] ?? '?') . (isset($err['promotion_name']) ? ' « ' . $err['promotion_name'] . ' »' : '') . ' ne respecte pas cette valeur';
+            // Les magasins et canaux où la promotion casse le seuil (statut autre que valide), où qu'ils soient rangés.
+            $ctx = [];
+            $cherche = static function ($x) use (&$cherche, &$ctx): void {
+                if (!is_array($x)) { return; }
+                if (isset($x['contexts']) && is_array($x['contexts'])) { foreach ($x['contexts'] as $c) { if (is_array($c)) { $ctx[] = $c; } } }
+                foreach ($x as $v) { if (is_array($v)) { $cherche($v); } }
+            };
+            $cherche($err);
+            $ou = [];
+            foreach ($ctx as $c) {
+                $st = strtoupper((string) ($c['status'] ?? ''));
+                if ($st === '' || in_array($st, ['OK', 'VALID', 'PASSED', 'SATISFIED', 'COMPLIANT'], true)) { continue; }
+                $sid = (int) ($c['shop_id'] ?? 0);
+                $ou[] = ($sid > 0 ? preg_replace('/^.* - /', '', (string) ($mags[$sid] ?? ('magasin ' . $sid))) : 'réseau') . (isset($c['sales_channel']) ? ' (' . $c['sales_channel'] . ')' : '');
+            }
+            $ou = array_values(array_unique($ou));
+            $out[$k] = $t . ($ou !== [] ? ' — ' . implode(', ', array_slice($ou, 0, 8)) . (count($ou) > 8 ? '…' : '') : '') . '. Changer la promotion au panel, ou garder la valeur.';
+        } else {
+            $v = $err[$k];
+            $out[$k] = '« ' . $lib . ' » refusé : ' . (is_string($v) ? $v : mb_substr((string) json_encode($v, JSON_UNESCAPED_UNICODE), 0, 300)) . '.';
+        }
+    }
+    return $out;
+}
+
+/**
+ * Écrit les champs d'un produit : PATCH /products/{id}, relu, constaté, au registre. Si le panel refuse en nommant des
+ * champs, eux seuls sont notés refusés et le reste repart seul : un champ refusé n'emporte pas les autres.
+ */
+function ppmEcrireChamps(array $base, int $pid, array $m, array $mags): array
+{
+    $route = vrcChemin('produit', $pid);
+    $corps = $m['corps']; $out = [];
+    $de = static fn (array $c): string => implode(' · ', array_values(array_intersect_key($m['parCle'] ?? [], $c)));
+    [$ok, $http, $rep, $res] = ppmEnvoi('PATCH', $route, $corps);
+    if (!$ok) {
+        $refus = ppmChampsRefuses($res, $corps, $mags);
+        $reste = array_diff_key($corps, $refus);
+        $cles = $refus !== [] && $reste !== [] ? $refus : $corps;
+        $r = $base + ['objet' => 'produit', 'objetId' => $pid, 'methode' => 'PATCH', 'route' => $route, 'corps' => array_intersect_key($corps, $cles), 'http' => $http,
+            'resume' => $de(array_intersect_key($corps, $cles)), 'inverse' => null, 'resultat' => 'refuse', 'message' => $refus !== [] ? implode(' ', $refus) : vrcMessage($res)];
+        $r['id'] = vrcNoter($r);
+        $out[] = vrcLigneRegistre($r + ['reponse' => $rep, 'httpPanel' => $http]);
+        if ($refus === [] || $reste === []) { return $out; }
+        $e = $base + ['objet' => 'produit', 'id' => $pid, 'objetId' => $pid, 'corps' => $reste, 'inverse' => array_intersect_key($m['inverse'], $reste), 'resume' => $de($reste)];
+        $out[] = vrcLigneRegistre(vrcEcrireObjet($e));
+        return $out;
+    }
+    $ecarts = vrcConstater($corps, vrcObjet('produit', $pid));
+    $r = $base + ['objet' => 'produit', 'objetId' => $pid, 'methode' => 'PATCH', 'route' => $route, 'corps' => $corps, 'http' => $http, 'resume' => $de($corps), 'inverse' => $m['inverse'],
+        'resultat' => $ecarts === [] ? 'ok' : 'sans_effet', 'message' => $ecarts === [] ? '' : 'Le panel a répondu 2xx, mais à la relecture ' . implode(', ', $ecarts) . ' n’a pas changé : le format attendu par le panel diffère.'];
+    $r['id'] = vrcNoter($r);
+    $out[] = vrcLigneRegistre($r);
+    return $out;
 }
 
 /** Les envois des gammes : un seul (route du produit) ou un par gamme changée (route de la gamme). Fonction pure. */
@@ -461,10 +534,7 @@ function wr_produits_parametrage(): array
     }
     $base = ['geste' => 'produit', 'cle' => 'prod:' . $pid, 'pid' => $pid, 'nom' => $nom, 'shop' => null];
     $faites = [];
-    if ($m['corps'] !== []) {
-        $r = vrcEcrireObjet($base + ['objet' => 'produit', 'id' => $pid, 'objetId' => $pid, 'corps' => $m['corps'], 'inverse' => $m['inverse'], 'resume' => implode(' · ', $m['lisible'])]);
-        $faites[] = vrcLigneRegistre($r);
-    }
+    if ($m['corps'] !== []) { $faites = ppmEcrireChamps($base, $pid, $m, $mags); }
     if ($plansG !== []) {
         $okG = true; $rep = []; $http = 0;
         foreach ($plansG as $pl) { [$ok, $http, $rep[]] = ppmEnvoi($pl['methode'], $pl['route'], $pl['corps']); $okG = $okG && $ok; if (!$ok) { break; } }
