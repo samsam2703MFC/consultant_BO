@@ -429,7 +429,9 @@ def main():
             {'k': 'additionnelles', 'titre': 'Les ventes additionnelles.', 'fort': 'Très important'}]},
         # GUEST (Global University for Environment and Safety Training), dicté le 14/11/2026 : un bon client, à cadrer.
         'cadreB2b': {'le': '14/11/2026', 'client': 'GUEST', 'motif': 'GLOBAL UNIVERSITY FOR ENVIRONMENT AND SAFETY TRAINING',
-                     'points': ['À cadrer : ses commandes passent par le webshop développé, avec les options dont il a besoin.',
+                     # Le point 1, dicté le 14/11/2026 (Sam) : ce que GUEST rapporte, établi exactement.
+                     'points': ['Établir exactement ce qu’il rapporte (développement spécifique), sauf s’il commande via le webshop.',
+                                'À cadrer : ses commandes passent par le webshop développé, avec les options dont il a besoin.',
                                 'Avec les bonnes barrières et les blocages.']},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
