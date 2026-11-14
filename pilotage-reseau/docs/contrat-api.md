@@ -5508,3 +5508,28 @@ demain, la clôture.
 
 Table `ceo_revue_soir` (id_shop, jour, par, reponses JSON, statut encours|cloturee, maj_le, cloture_le), créée à la
 première lecture. La clôture s'inscrit au journal (« Revue du soir »).
+
+### Dashboard › Mon catalogue — relayé au portail Marketing (14/11/2026)
+
+Onglet « Mon catalogue » du dashboard magasin (`public/dashboard/catalogue.js`, `catalogue.css`) : le franchisé crée
+ses catalogues imprimés (assistant en quatre étapes : point de départ, produits, mise en page, aperçu et PDF). Les
+catalogues vivent dans le **Marketing** ; le cockpit n'en garde rien et ne lit aucune table `mar_` : il relaie à
+l'API d'intégration du Marketing (`src/catalogues_magasin.php`), en ajoutant le jeton de service, que le navigateur
+ne voit jamais. La boutique est celle de la session (`src/acces.php`) : un magasin ou un franchisé n'a que les
+siens (`?shop=` choisit parmi eux, sinon 403) ; le siège désigne le magasin regardé par `?shop=`. Le corps ne porte
+jamais de boutique (champs filtrés).
+
+    GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
+    GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
+    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, langs, products, pages}
+    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, langs, products, pages, status, printQty)
+    GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
+    POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
+
+Réponses du Marketing relayées telles quelles (`{success, data, meta}` ou `{success:false, error:{code, message,
+details}}`, même code HTTP) — sauf un 401 du Marketing (jeton refusé), rendu en 502 avec un message qui le dit, et un
+204, rendu en 200 `{success:true, data:null}`. Le cockpit répond lui-même, au même format : 503 `DEPENDENCY_UNAVAILABLE`
+(adresse ou jeton non réglés), 502 (Marketing injoignable ou réponse illisible), 422 (magasin absent).
+
+Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
+`…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).
