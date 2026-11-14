@@ -12,6 +12,7 @@
  * recette, ou au panel par un lien direct — et le registre garde ce qui a été écrit (verification-correction-vals.js). */
 import { readOne } from './api.js';
 import { valsMatieres } from './verification-prix-vals.js';
+import { valsFicheMat } from './verification-fichemat-vals.js';
 import { gesteDe, valsLigneOuverte, valsRecentes, valsRegistre, valsEdition, ouvrirEnCorrection, chargerEdition, lienPanel } from './verification-correction-vals.js';
 
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
@@ -127,7 +128,7 @@ export function valsVerification(app, common){
   v.vue = vue;
   v.bascule = [['recettes', 'Recettes à corriger', brut && brut.total != null ? brut.total : null], ['matieres', 'Matières premières', nMat == null ? null : nMat]]
     .map(([id, nom, n]) => ({ nom, n, on: vue === id, choisir: () => app.setState({ vrVue: id }) }));
-  if (vue === 'matieres') { v.prix = valsMatieres(app); }
+  if (vue === 'matieres') { v.prix = valsMatieres(app); v.ficheMat = valsFicheMat(app); }
   if (!d) { return; }
 
   // Les formules et promotions (décision du 31/10/2026) : gardées, un interrupteur devant la liste les masque ;

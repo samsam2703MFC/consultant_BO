@@ -5,6 +5,7 @@
  * geste et les liens directs de chaque ligne, la correction en place, le volet en correction, le registre. */
 
 import { tplPrix } from './verification-prix-tpl.js';
+import { tplFicheMat } from './verification-fichemat-tpl.js';
 import { tplCellule, tplProp, tplOuverte, tplRecentes, tplRegistre, tplEdition } from './verification-correction-tpl.js';
 
 export function tplVerification(c, x){
@@ -12,7 +13,7 @@ export function tplVerification(c, x){
   if (!v) { return ''; }
   const bascule = (v.bascule || []).length ? `<div class="vm-bascule">${v.bascule.map(b => `<button class="${b.on ? 'on' : ''}" ${x.A(b.choisir)}>${esc(b.nom)}${b.n != null ? ` <b>${b.n}</b>` : ''}</button>`).join('')}</div>` : '';
   if (v.vue === 'matieres') {
-    return `<div data-screen="verification-recettes" class="vr"><div class="vr-haut">${bascule}<span class="vr-sp"></span></div>${tplPrix(v.prix, x)}${tplRegistre(v.registre, x)}</div>`;
+    return `<div data-screen="verification-recettes" class="vr"><div class="vr-haut">${bascule}<span class="vr-sp"></span></div>${tplPrix(v.prix, x)}${tplRegistre(v.registre, x)}${tplFicheMat(v.ficheMat, x)}</div>`;
   }
   const relire = `<button class="vr-btn" ${x.A(v.rafraichir)}${v.relecture || v.chargement ? ' disabled' : ''}>${v.relecture || v.chargement ? 'Lecture…' : 'Relire'}</button>`;
   if (v.chargement) {
