@@ -11,16 +11,24 @@ declare(strict_types=1);
  *   POST /assistant/magasin  {shop, question, ton, fil:[{q, r}]}   une réponse, avec le coach choisi (AM_COACHS)
  *   GET  /assistant/coachs  ·  POST /assistant/coachs {coachs, qui}   le réglage des coachs, au cockpit
  *
- * Trois règles :
- *  1. l'assistant ne lit QUE la fiche de faits du magasin, assemblée ici par l'API du panel (ventes, P&L, contrôles,
- *     pertes, commandes, fidélité, rang dans le réseau) — pas d'accès libre, pas de base. La fiche de la société
- *     (que la route des pertes renvoie avec des secrets) n'en fait jamais partie ;
- *  2. il ne calcule rien qu'il ne cite : chaque chiffre de la réponse vient de la fiche ; ce qui n'y est pas, il le dit ;
- *  3. la clé reste sur le serveur (src/anthropic.php) ; le navigateur ne reçoit que la réponse.
+ * Quatre règles :
+ *  1. l'assistant lit la fiche de faits du magasin, assemblée ici par l'API du panel (ventes, P&L, contrôles, pertes,
+ *     commandes, fidélité, rang dans le réseau), et trois outils en lecture seule sur l'historique des ventes
+ *     (14/11/2026, Sam : « l'agent doit avoir accès à tous les 18 mois de data » ; src/historique_ventes.php) : le
+ *     classement du réseau, les ventes heure par heure, les produits vendus — 18 mois en arrière et la journée en
+ *     cours. Pas d'accès libre, pas de SQL écrit par le modèle : des filtres validés ici. La fiche de la société (que
+ *     la route des pertes renvoie avec des secrets) n'en fait jamais partie ;
+ *  2. il ne calcule rien qu'il ne cite : chaque chiffre de la réponse vient de la fiche ou d'un outil ; ce qui n'y est
+ *     pas, il le dit ;
+ *  3. les autres magasins sont anonymes (Sam, 14/11/2026 : « un des magasins, ou le magasin en position n° x ») : les
+ *     outils ne rendent jamais leur nom ni leur identifiant, seulement une référence opaque (amRef), stable pour la
+ *     journée et propre au magasin qui demande ;
+ *  4. la clé reste sur le serveur (src/anthropic.php) ; le navigateur ne reçoit que la réponse.
  *
  * Modèle : réglage `assistantMagasin.modele` (défaut claude-opus-5-5), effort `assistantMagasin.effort` (défaut
  * medium). Réponse contrainte par un schéma (`output_config.format`) ; un refus de sécurité passe au modèle de repli
- * côté serveur (`fallbacks: "default"`).
+ * côté serveur (`fallbacks: "default"`). Les outils tournent en boucle : AM_TOURS appels au plus, AM_SECONDES avant
+ * le dernier, qui se fait sans outil (`tool_choice: none`) pour rendre une réponse quoi qu'il arrive.
  */
 
 const AM_MODELE = 'claude-opus-5-5';
@@ -38,6 +46,7 @@ const AM_QUESTIONS = [
         ['Mon équipe', ['Mes salaires collent-ils à mes ventes ?', 'Où en sont mes contrôles ?']],
         ['Mes clients', ['Qui sont mes clients fidèles ?', 'Combien de clients sont reconnus en caisse ?']],
         ['Ma production', ['Qu’est-ce que je jette le plus ?', 'Quelles commandes clients arrivent ?']],
+        ['Le réseau', ['Qui fait le meilleur panier aujourd’hui, et avec quoi ?', 'Qu’est-ce que je vends le plus le matin ?', 'Comment ont évolué mes samedis sur un an ?']],
     ],
 ];
 
@@ -48,7 +57,9 @@ const AM_QUESTIONS = [
  * qu'il vérifie. Le réglage `assistantCoachs` (ceo_app_setting) recouvre les valeurs ci-dessous, champ par champ.
  * Le personnage ne change que la manière de dire : les chiffres, les règles et le schéma restent les mêmes. Le Coach
  * porte un nom inventé (il ne parle au nom d'aucune personne réelle) et il est rude sans insulter : cette limite-là
- * n'est pas réglable, elle est écrite dans AM_SYSTEME. */
+ * n'est pas réglable, elle est écrite dans AM_SYSTEME.
+ * Le Coach Vente (14/11/2026, Sam : « rajouter un coach expert en vente ») : le panier, les produits et les heures
+ * fortes, appuyés sur l'historique des ventes (les outils) ; il ne parle des contrôles que si on le lui demande. */
 const AM_AXES = ['budget' => 'Budget', 'trafic' => 'Trafic', 'controles' => 'Contrôles qualité'];
 const AM_NIVEAUX = ['fort' => 'Accent fort', 'suivi' => 'Suivi', 'non' => 'N’en parle pas'];
 const AM_COACHS = [
@@ -72,14 +83,28 @@ const AM_COACHS = [
             'controles' => ['niveau' => 'fort', 'verifie' => "Les contrôles en retard à l'heure qu'il est, en gros (pas checklist par checklist) ; le contrôle qualité pâtisserie du jour fait ou pas ; zéro tolérance sur l'hygiène et la fermeture."],
         ],
     ],
+    'vente' => [
+        'nom' => 'Coach Vente',
+        'dit' => 'expert en vente : panier, produits, heures fortes',
+        'ton' => "Coach business de pointe, expert de la vente au comptoir en boulangerie-pâtisserie. Tu vouvoies le franchisé. Direct et concret, sans dureté : un chef des ventes qui a ouvert cent magasins. Tu ramènes tout à trois leviers : faire venir des clients, faire monter le panier (la vente additionnelle : la boisson avec la viennoiserie, la tarte du week-end, le plateau à commander), et avoir le bon produit à la bonne heure. Chaque conseil est un geste de vente à faire au comptoir dès aujourd'hui, avec le chiffre qui le justifie. Va chercher les ventes par heure et les produits avec les outils plutôt que de t'arrêter à la fiche.",
+        'accents' => [
+            'budget' => ['niveau' => 'suivi', 'verifie' => "Le mois face au budget, traduit en clients ou en euros de panier à trouver par jour restant."],
+            'trafic' => ['niveau' => 'fort', 'verifie' => "Le panier moyen face au réseau et à la même période passée ; les heures et les jours où il décroche ; les produits qui le portent et ceux qui manquent face au magasin le mieux classé ; une vente additionnelle précise à pousser."],
+            'controles' => ['niveau' => 'non', 'verifie' => "Ce qui touche la vente : la vitrine pleine à l'heure de pointe, les produits en rayon."],
+        ],
+    ],
 ];
 const AM_TON_DEFAUT = 'pierre';
 
 const AM_SYSTEME = <<<'TXT'
 Tu es l'assistant du dashboard d'un magasin franchisé L'Atelier by (boulangerie, pâtisserie, traiteur ; Belgique). Tu réponds au franchisé, en français, sur SON magasin, avec le ton du personnage décrit à la fin de ces consignes (il décide du tutoiement ou du vouvoiement).
 
-Tu ne connais du magasin que la fiche de faits jointe (JSON, lue dans l'ERP au moment indiqué). Règles :
-- Chaque chiffre que tu donnes vient de la fiche, tel quel ou par un calcul simple que tu peux montrer (somme, écart, pourcentage). N'invente aucun chiffre, aucun objectif, aucune cause. Si la fiche ne permet pas de répondre, dis-le en une phrase et indique ce qu'il faudrait lire.
+Tu connais le magasin par la fiche de faits jointe (JSON, lue dans l'ERP au moment indiqué) et par trois outils qui lisent les ventes jusqu'à 18 mois en arrière et la journée en cours : classement_reseau, ventes_par_heure, produits_vendus. Règles :
+- Chaque chiffre que tu donnes vient de la fiche ou d'un outil, tel quel ou par un calcul simple que tu peux montrer (somme, écart, pourcentage). N'invente aucun chiffre, aucun objectif, aucune cause. Si ni la fiche ni les outils ne permettent de répondre, dis-le en une phrase et indique ce qu'il faudrait lire.
+- Une question sur une heure de la journée, un produit, un jour de semaine, une période passée ou un autre magasin se règle avec les outils, pas par « la fiche ne le dit pas ». Appelle-les en parallèle quand c'est possible. Si un outil dit que l'historique n'est pas encore lu en entier (couverture), réponds avec ce qui est lu et dis-le en une phrase.
+- Les autres magasins du réseau sont anonymes. Ne les nomme jamais, ni par leur nom ni par leur ville, même si le franchisé les nomme : dis « un des magasins » ou « le magasin classé 1er au panier ce matin » (sa place dans le classement que tu cites). Les outils les désignent par une référence (ref) : elle sert à rappeler un outil, ne l'écris jamais dans la réponse.
+- Un chiffre montre une cause (« les plateaux de fromage font un cinquième de son chiffre ») ; ce que les chiffres ne disent pas (une commande, un client pro), présente-le comme une piste, pas comme un fait.
+- Le panier moyen se compare hors clients pro quand l'outil le donne, comme au dashboard.
 - Tu es un coach qui PARLE au franchisé, pas un tableur (Sam, 12/11/2026 : « plus parlé, moins de détails : c'est un coach, pas une feuille Excel »). Écris comme tu le dirais à voix haute dans le magasin : phrases simples, verbes d'action, une idée par phrase.
 - Peu de chiffres : trois ou quatre dans toute la réponse, les plus parlants, et un seul par phrase au plus. Arrondis-les comme à l'oral : « environ 1 100 € », « un peu plus de 40 % », « un ticket sur six », « 14 contrôles sur 75 ». Pas de centimes sauf pour le panier moyen (« 13 € », pas « 13,13 € » ; « 9 € de panier »). Pas de liste de produits, de jours ou de checklists : nomme le principal, résume le reste (« surtout les viennoiseries », « tout l'après-midi »).
 - Écris les montants à la belge (« 1 100 € », « 4 % ») et les jours en clair (« mercredi », « samedi dernier »), sans date chiffrée quand le jour suffit.
@@ -94,7 +119,7 @@ Tu ne connais du magasin que la fiche de faits jointe (JSON, lue dans l'ERP au m
 - La fiche porte le budget du magasin (objectif de CA du mois, du jour et de la semaine, saisi au cockpit) : l'écart au budget se calcule depuis ces valeurs ; sans budget saisi, dis-le.
 - Quand c'est utile, propose deux priorités, trois au plus, de la plus rentable à la plus simple ; chacune : un titre d'action, un constat d'une phrase parlée avec un chiffre arrondi, le gain s'il se calcule simplement (« environ 1 000 € par semaine », sinon vide), et l'écran du dashboard où agir.
 - Les écrans possibles : produits (ventes par produit), taches (contrôles et checklists), semaine, mois, fidelite (profils et clients), ops (la journée : commandes, pertes, stock), promos, aucun.
-- Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche doit permettre d'y répondre.
+- Les questions de suite sont courtes (moins de 60 caractères), posées par le franchisé, et la fiche ou les outils doivent permettre d'y répondre.
 - Le coût matière n'est souvent pas renseigné : sans lui, ne parle ni de marge ni de résultat.
 TXT;
 
@@ -262,9 +287,271 @@ function amJour(string $d): string
 }
 
 /* ---------------------------------------------------------------------------
+ * Les outils : l'historique des ventes, 18 mois (14/11/2026)
+ * ------------------------------------------------------------------------- */
+const AM_TOURS = 6;          // appels au modèle au plus pour une question (le dernier sans outil)
+const AM_SECONDES = 100;     // au-delà, le tour suivant est le dernier
+
+/** Les trois outils, tels que le modèle les voit. Ordre et texte fixes : ils font partie du préfixe mis en cache. */
+function amOutils(): array
+{
+    $date = static fn (string $quoi) => ['type' => 'string', 'description' => $quoi . ' (AAAA-MM-JJ) : au plus 18 mois en arrière, au plus aujourd’hui.'];
+    $magasin = ['type' => 'string', 'description' => '« moi » (le magasin du franchisé), « reseau » (tous les magasins ensemble) ou la ref d’un autre magasin, rendue par classement_reseau.'];
+    $jours = ['type' => 'array', 'items' => ['type' => 'integer', 'enum' => [1, 2, 3, 4, 5, 6, 7]], 'description' => 'Les jours de semaine gardés : 1 = lundi … 7 = dimanche. Absent : tous les jours.'];
+    $hDebut = ['type' => 'integer', 'description' => 'Première heure comprise, de 0 à 23 (6 = depuis 6 h). Absent : depuis l’ouverture.'];
+    $hFin = ['type' => 'integer', 'description' => 'Heure de fin NON comprise, de 1 à 24 (8 = avant 8 h ; 12 = toute la matinée). Absent : jusqu’à la fermeture.'];
+    return [
+        ['name' => 'classement_reseau',
+         'description' => 'Le classement des magasins du réseau sur une période (un jour, une semaine, des mois), arrêté à une heure si on le demande. '
+            . 'À appeler dès que le franchisé se compare aux autres (« qui est premier ? », « j’étais 1er jusqu’à 8 h »), ou avant de regarder les ventes d’un autre magasin : '
+            . 'chaque magasin y reçoit sa ref, « moi » pour celui du franchisé. Avec heure_par_heure, rend aussi le classement cumulé à la fin de chaque heure (qui menait à 7 h, à 8 h…).',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'du' => $date('Premier jour'), 'au' => $date('Dernier jour, compris'),
+             'indicateur' => ['type' => 'string', 'enum' => ['panier', 'ca', 'tickets'], 'description' => 'panier = panier moyen, ca = chiffre d’affaires, tickets = nombre de clients.'],
+             'heure_fin' => $hFin, 'jours_semaine' => $jours,
+             'hors_pro' => ['type' => 'boolean', 'description' => 'Sans les tickets des clients professionnels, comme le dashboard. Vrai par défaut.'],
+             'heure_par_heure' => ['type' => 'boolean', 'description' => 'Ajouter le classement cumulé heure par heure. Faux par défaut.'],
+         ], 'required' => ['du', 'au', 'indicateur']]],
+        ['name' => 'ventes_par_heure',
+         'description' => 'Les clients (tickets), le chiffre d’affaires et le panier moyen heure par heure d’un magasin, ou du réseau entier, sommés sur une période, avec la moyenne par jour ouvert. '
+            . 'À appeler pour une question sur un moment de la journée, un jour de semaine, une tendance passée ou toute période que la fiche ne couvre pas.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'magasin' => $magasin, 'du' => $date('Premier jour'), 'au' => $date('Dernier jour, compris'),
+             'jours_semaine' => $jours, 'heure_debut' => $hDebut, 'heure_fin' => $hFin,
+         ], 'required' => ['magasin', 'du', 'au']]],
+        ['name' => 'produits_vendus',
+         'description' => 'Les produits vendus par un magasin, ou par le réseau entier, sur une période, filtrables par heures et par jours de semaine : quantités, ventes, part du chiffre d’affaires, et les catégories qui pèsent. '
+            . 'À appeler pour « qu’est-ce qui se vend le matin, le samedi… », pour comparer ses ventes à celles d’un autre magasin, ou pour expliquer un panier moyen.',
+         'input_schema' => ['type' => 'object', 'properties' => [
+             'magasin' => $magasin, 'du' => $date('Premier jour'), 'au' => $date('Dernier jour, compris'),
+             'jours_semaine' => $jours, 'heure_debut' => $hDebut, 'heure_fin' => $hFin,
+             'categorie' => ['type' => 'string', 'description' => 'Ne garder qu’une catégorie (un mot de son nom suffit : « viennoiserie », « fromage »). Absent : toutes.'],
+             'limite' => ['type' => 'integer', 'description' => 'Combien de produits rendre, les plus vendus d’abord : de 1 à 40, 12 par défaut.'],
+         ], 'required' => ['magasin', 'du', 'au']]],
+    ];
+}
+
+/** Le sel des références anonymes : tiré une fois, gardé en base, jamais montré. */
+function amSel(): string
+{
+    $s = setting('assistantSel');
+    if (is_string($s) && strlen($s) >= 32) { return $s; }
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = value', ['assistantSel', json_encode(bin2hex(random_bytes(16)))]);
+    return (string) setting('assistantSel');
+}
+
+/** Les magasins actifs du réseau. */
+function amMagasinsActifs(): array
+{
+    static $memo = null;
+    return $memo ??= array_map(static fn ($r) => (int) $r['id'], Db::rows('SELECT id FROM shops WHERE active = 1 ORDER BY id'));
+}
+
+/**
+ * La référence d'un magasin vue par le magasin qui demande : « moi » pour lui-même ; pour un autre, six caractères
+ * tirés d'un HMAC (le magasin, celui qui demande, le jour) — stable le temps d'une conversation, différente d'un
+ * magasin demandeur à l'autre et d'un jour à l'autre, impossible à ramener à un nom.
+ */
+function amRef(int $demandeur, int $sid): string
+{
+    return $sid === $demandeur ? 'moi' : 'M' . strtoupper(substr(hash_hmac('sha256', $sid . '|' . $demandeur . '|' . date('Y-m-d'), amSel()), 0, 6));
+}
+
+/** Les magasins que désigne le paramètre `magasin` d'un outil ; null si la référence est inconnue. */
+function amResoudre(int $demandeur, string $m): ?array
+{
+    $m = trim($m);
+    if ($m === 'moi' || $m === '') { return [$demandeur]; }
+    if ($m === 'reseau') { return amMagasinsActifs(); }
+    foreach (amMagasinsActifs() as $sid) { if (amRef($demandeur, $sid) === $m) { return [$sid]; } }
+    return null;
+}
+
+/** La période et les filtres d'un appel d'outil, validés ; une chaîne quand l'entrée est illisible. */
+function amPeriode(array $in): array|string
+{
+    $auj = date('Y-m-d');
+    $min = hvDebut();
+    $du = (string) ($in['du'] ?? '');
+    $au = (string) ($in['au'] ?? '') ?: $du;
+    foreach ([$du, $au] as $d) { if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $d) || strtotime($d) === false) { return 'date illisible : AAAA-MM-JJ attendu'; } }
+    if ($du > $au) { [$du, $au] = [$au, $du]; }
+    if ($du > $auj) { return 'la période est dans le futur'; }
+    $note = null;
+    if ($au > $auj) { $au = $auj; }
+    if ($du < $min) { $note = 'l’historique commence le ' . $min . ' : la période est coupée là.'; $du = $min; }
+    if ($au < $du) { return 'la période est avant le début de l’historique (' . $min . ')'; }
+    $jours = array_values(array_unique(array_filter(array_map('intval', is_array($in['jours_semaine'] ?? null) ? $in['jours_semaine'] : []), static fn ($x) => $x >= 1 && $x <= 7)));
+    sort($jours);
+    $hd = isset($in['heure_debut']) && is_numeric($in['heure_debut']) ? max(0, min(23, (int) $in['heure_debut'])) : null;
+    $hf = isset($in['heure_fin']) && is_numeric($in['heure_fin']) ? max(1, min(24, (int) $in['heure_fin'])) : null;
+    if ($hd !== null && $hf !== null && $hf <= $hd) { return 'heure_fin doit venir après heure_debut'; }
+    return ['du' => $du, 'au' => $au, 'jours' => $jours, 'hd' => $hd, 'hf' => $hf, 'note' => $note];
+}
+
+/** La période, dite comme l'outil l'a lue. */
+function amPeriodeTexte(array $P): array
+{
+    $noms = ['', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi', 'dimanche'];
+    return array_filter(['du' => $P['du'], 'au' => $P['au'],
+        'jours' => $P['jours'] !== [] ? implode(', ', array_map(static fn ($j) => $noms[$j], $P['jours'])) : null,
+        'heures' => $P['hd'] !== null || $P['hf'] !== null ? 'de ' . ($P['hd'] ?? 'l’ouverture') . ($P['hd'] !== null ? ' h' : '') . ' à ' . ($P['hf'] !== null ? $P['hf'] . ' h' : 'la fermeture') : null,
+        'note' => $P['note']], static fn ($v) => $v !== null);
+}
+
+/** Ce qui a été lu de la période, en clair, quand il en manque. */
+function amCouverture(array $cov, ?array $direct): ?string
+{
+    $t = [];
+    if ($cov['attendus'] > 0 && $cov['lus'] < $cov['attendus']) {
+        $t[] = 'historique lu sur ' . $cov['lus'] . ' jours-magasins des ' . $cov['attendus'] . ' de la période (la lecture des 18 mois se poursuit chaque nuit)';
+    }
+    if ($direct !== null && $direct['illisibles'] > 0) { $t[] = 'la journée en cours n’a pas pu être lue pour ' . $direct['illisibles'] . ' magasin(s)'; }
+    return $t === [] ? null : implode(' ; ', $t);
+}
+
+/** Tickets, CA et panier d'un total [tickets, ca, tickets_pro, ca_pro], hors pro si demandé. */
+function amChiffres(array $x, bool $horsPro = true): array
+{
+    $t = $horsPro ? $x[0] - $x[2] : $x[0];
+    $ca = $horsPro ? $x[1] - $x[3] : $x[1];
+    return ['tickets' => $t, 'ca' => round($ca, 2), 'panier' => $t > 0 ? round($ca / $t, 2) : null];
+}
+
+/** La somme des heures [h => [t, ca, tp, cp]], celles avant $avant seulement si donné. */
+function amSomme(array $heures, ?int $avant = null): array
+{
+    $s = [0, 0.0, 0, 0.0];
+    foreach ($heures as $h => $x) {
+        if ($avant !== null && $h >= $avant) { continue; }
+        $s = [$s[0] + $x[0], $s[1] + $x[1], $s[2] + $x[2], $s[3] + $x[3]];
+    }
+    return $s;
+}
+
+/** L'outil classement_reseau. */
+function amOutilClassement(int $demandeur, array $in): array
+{
+    $P = amPeriode($in);
+    if (is_string($P)) { return ['erreur' => $P]; }
+    $ind = in_array($in['indicateur'] ?? '', ['panier', 'ca', 'tickets'], true) ? (string) $in['indicateur'] : 'panier';
+    $horsPro = !array_key_exists('hors_pro', $in) || !empty($in['hors_pro']);
+    $M = []; $cov = ['lus' => 0, 'ouverts' => 0, 'attendus' => 0]; $direct = null;
+    foreach (amMagasinsActifs() as $sid) {
+        $H = hvHeures([$sid], $P['du'], $P['au'], $P['jours'], null, $P['hf']);
+        $M[$sid] = $H['heures'];
+        foreach ($cov as $k => $v) { $cov[$k] = $v + $H['couverture'][$k]; }
+        if ($H['aujourdhui'] !== null) { $direct = ['illisibles' => ($direct['illisibles'] ?? 0) + $H['aujourdhui']['illisibles']]; }
+    }
+    // Le classement à une heure donnée (null = toute la période) : les magasins qui ont au moins un ticket, du meilleur au moins bon.
+    $classer = static function (?int $avant) use ($M, $ind, $horsPro, $demandeur): array {
+        $L = [];
+        foreach ($M as $sid => $heures) {
+            $c = amChiffres(amSomme($heures, $avant), $horsPro);
+            if ($c['tickets'] <= 0) { continue; }
+            $L[] = ['ref' => amRef($demandeur, $sid)] + $c + ['valeur' => $c[$ind]];
+        }
+        usort($L, static fn ($a, $b) => $b['valeur'] <=> $a['valeur']);
+        foreach ($L as $i => $x) { $L[$i] = ['rang' => $i + 1] + $x; unset($L[$i]['valeur']); }
+        return $L;
+    };
+    $L = $classer(null);
+    $out = ['periode' => amPeriodeTexte($P) + ($P['hf'] !== null ? ['arrete' => 'avant ' . $P['hf'] . ' h'] : []),
+        'indicateur' => $ind, 'base' => $horsPro ? 'hors clients pro' : 'clients pro compris',
+        'magasins' => $L, 'sansTicket' => count($M) - count($L)];
+    if (!empty($in['heure_par_heure'])) {
+        $hs = [];
+        foreach ($M as $heures) { foreach (array_keys($heures) as $h) { $hs[$h] = true; } }
+        ksort($hs);
+        $suite = [];
+        foreach (array_keys($hs) as $h) {
+            $C = $classer($h + 1);
+            if ($C === []) { continue; }
+            $moi = null;
+            foreach ($C as $x) { if ($x['ref'] === 'moi') { $moi = $x; } }
+            $suite[] = ['a' => ($h + 1) . ' h', 'premier' => $C[0]['ref'], 'valeurPremier' => $C[0][$ind],
+                'monRang' => $moi['rang'] ?? null, 'maValeur' => $moi[$ind] ?? null, 'magasins' => count($C)];
+        }
+        $out['heureParHeure'] = $suite;
+    }
+    if (($c = amCouverture($cov, $direct)) !== null) { $out['couverture'] = $c; }
+    return $out;
+}
+
+/** L'outil ventes_par_heure. */
+function amOutilHeures(int $demandeur, array $in): array
+{
+    $P = amPeriode($in);
+    if (is_string($P)) { return ['erreur' => $P]; }
+    $shops = amResoudre($demandeur, (string) ($in['magasin'] ?? 'moi'));
+    if ($shops === null) { return ['erreur' => 'référence de magasin inconnue : appelle d’abord classement_reseau pour obtenir les ref du jour']; }
+    $H = hvHeures($shops, $P['du'], $P['au'], $P['jours'], $P['hd'], $P['hf']);
+    $jo = max(1, $H['couverture']['ouverts'] + (int) ($H['aujourdhui']['ouverts'] ?? 0));
+    $lignes = [];
+    foreach ($H['heures'] as $h => $x) {
+        $tout = amChiffres($x, false);
+        $lignes[] = ['heure' => $h . ' h', 'tickets' => $tout['tickets'], 'ca' => $tout['ca'], 'panier' => $tout['panier'],
+            'panierHorsPro' => amChiffres($x)['panier'], 'ticketsParJour' => round($tout['tickets'] / $jo, 1), 'caParJour' => round($tout['ca'] / $jo, 2)];
+    }
+    $s = amSomme($H['heures']);
+    $out = ['magasin' => (string) ($in['magasin'] ?? 'moi'), 'periode' => amPeriodeTexte($P), 'joursOuverts' => $jo,
+        'total' => amChiffres($s, false) + ['panierHorsPro' => amChiffres($s)['panier'], 'ticketsPro' => $s[2], 'caPro' => round($s[3], 2)],
+        'heures' => $lignes];
+    if (($c = amCouverture($H['couverture'], $H['aujourdhui'])) !== null) { $out['couverture'] = $c; }
+    return $out;
+}
+
+/** L'outil produits_vendus. */
+function amOutilProduits(int $demandeur, array $in): array
+{
+    $P = amPeriode($in);
+    if (is_string($P)) { return ['erreur' => $P]; }
+    $shops = amResoudre($demandeur, (string) ($in['magasin'] ?? 'moi'));
+    if ($shops === null) { return ['erreur' => 'référence de magasin inconnue : appelle d’abord classement_reseau pour obtenir les ref du jour']; }
+    $lim = max(1, min(40, (int) ($in['limite'] ?? 12)));
+    $filtre = mb_strtolower(trim((string) ($in['categorie'] ?? '')));
+    $R = hvProduits($shops, $P['du'], $P['au'], $P['jours'], $P['hd'], $P['hf']);
+    $cat = function_exists('svCatalogue') ? svCatalogue() : [];
+    $total = 0.0; $cats = []; $L = [];
+    foreach ($R['produits'] as $x) {
+        [$pid, , $nom, $q, $v, , $vp] = $x;
+        $c = trim((string) ($cat[$pid]['cat'] ?? '')) ?: 'sans catégorie';
+        $total += $v;
+        $cats[$c] = ($cats[$c] ?? 0.0) + $v;
+        if ($filtre !== '' && !str_contains(mb_strtolower($c), $filtre)) { continue; }
+        $L[] = ['produit' => $nom, 'categorie' => $c, 'quantite' => round($q, 1), 'ventes' => round($v, 2), 'ventesPro' => round($vp, 2)];
+    }
+    usort($L, static fn ($a, $b) => $b['ventes'] <=> $a['ventes']);
+    arsort($cats);
+    $part = static fn (float $v) => $total > 0 ? round(100 * $v / $total, 1) : null;
+    $out = ['magasin' => (string) ($in['magasin'] ?? 'moi'), 'periode' => amPeriodeTexte($P), 'ventesTotales' => round($total, 2),
+        'produits' => array_map(static fn ($p) => $p + ['partDesVentes' => $part($p['ventes'])], array_slice($L, 0, $lim)),
+        'produitsVendus' => count($L),
+        'categories' => array_map(static fn ($c, $v) => ['categorie' => $c, 'ventes' => round($v, 2), 'partDesVentes' => $part($v)], array_keys(array_slice($cats, 0, 8, true)), array_slice($cats, 0, 8, true))];
+    if ($R['aujourdhui'] !== null) { $out['aujourdhuiPro'] = 'pour aujourd’hui, la part des clients pro n’est pas séparée'; }
+    if (($c = amCouverture($R['couverture'], $R['aujourdhui'])) !== null) { $out['couverture'] = $c; }
+    return $out;
+}
+
+/** Exécute un appel d'outil. Une erreur revient au modèle (is_error), jamais au franchisé. */
+function amOutil(string $nom, array $in, int $demandeur): array
+{
+    try {
+        return match ($nom) {
+            'classement_reseau' => amOutilClassement($demandeur, $in),
+            'ventes_par_heure' => amOutilHeures($demandeur, $in),
+            'produits_vendus' => amOutilProduits($demandeur, $in),
+            default => ['erreur' => 'outil inconnu : ' . $nom],
+        };
+    } catch (Throwable $e) {
+        error_log('assistant, outil ' . $nom . ' : ' . $e->getMessage());
+        return ['erreur' => 'lecture impossible pour le moment'];
+    }
+}
+
+/* ---------------------------------------------------------------------------
  * L'appel
  * ------------------------------------------------------------------------- */
-/** POST /v1/messages : la fiche (en cache), le fil, la question ; la réponse contrainte au schéma. */
 /** Les coachs tels que le cockpit les a réglés : le réglage `assistantCoachs` sur les valeurs d'AM_COACHS, champ par champ. */
 function amCoachs(): array
 {
@@ -306,8 +593,37 @@ function amPersona(string $k): string
     return $t . "\nCes accents orientent tes priorités et ton résumé ; ils ne t'autorisent aucun chiffre absent de la fiche.";
 }
 
-function amDemander(array $faits, string $question, array $fil, string $ton = AM_TON_DEFAUT): array
+/** Un appel à POST /v1/messages. [la réponse décodée en tableaux, la même en objets (pour la rejouer telle quelle), l'erreur]. */
+function amAppel(array $corps, array $c): array
 {
+    $ch = curl_init('https://api.anthropic.com/v1/messages');
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01', 'anthropic-beta: server-side-fallback-2026-07-01'],
+            ($c['espace'] ?? '') !== '' ? ['anthropic-workspace-id: ' . $c['espace']] : []),
+        CURLOPT_POSTFIELDS => json_encode($corps, JSON_UNESCAPED_UNICODE), CURLOPT_TIMEOUT => 120, CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+    $raw = curl_exec($ch);
+    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
+    curl_close($ch);
+    if ($raw === false) { return [null, null, 'API Anthropic injoignable : ' . $err]; }
+    $rep = json_decode((string) $raw, true);
+    if ($code < 200 || $code >= 300) { return [null, null, 'API Anthropic → HTTP ' . $code . ' : ' . mb_substr((string) ($rep['error']['message'] ?? ''), 0, 240)]; }
+    return [is_array($rep) ? $rep : [], json_decode((string) $raw), null];
+}
+
+/**
+ * POST /v1/messages : la fiche (en cache), le fil, la question ; la réponse contrainte au schéma. Quand le modèle
+ * appelle des outils (l'historique des ventes, 14/11/2026), on les exécute ici et on lui rend leurs résultats, tous
+ * dans un seul message, jusqu'à sa réponse : AM_TOURS appels au plus, le dernier sans outil. Le tour du modèle est
+ * rejoué TEL QUEL (ses blocs de réflexion et d'outil, inchangés, décodés en objets pour garder « {} ») : l'API refuse
+ * un historique retouché. $sid : le magasin qui demande — c'est lui qui est « moi » pour les outils. $appel : l'appel
+ * au modèle (amAppel ; un faux dans bin/tests_historique.php).
+ */
+function amDemander(array $faits, string $question, array $fil, string $ton, int $sid, ?callable $appel = null): array
+{
+    $appel ??= 'amAppel';
     $c = Anthropic::config();
     if ($c['cle'] === '') { return ['erreur' => 'L’assistant n’est pas branché : aucune clé Anthropic dans les Paramètres du cockpit.']; }
     $r = setting('assistantMagasin', []);
@@ -325,40 +641,51 @@ function amDemander(array $faits, string $question, array $fil, string $ton = AM
         $messages[] = ['role' => 'user', 'content' => []];
     }
     $dernier = count($messages) - 1;
-    $messages[$dernier]['content'][] = ['type' => 'text', 'text' => 'Question : ' . $question];
+    $messages[$dernier]['content'][] = ['type' => 'text', 'text' => 'Question : ' . $question . "\n(Aujourd’hui : " . $faits['aujourdhui'] . ', il est ' . date('H:i') . '.)'];
     $corps = [
         'model' => $modele,
         'max_tokens' => 16000,
-        // Le personnage vient après le bloc commun mis en cache : il est court, et changer d'assistant ne repaie que lui.
+        // Les outils et le bloc commun viennent avant le personnage : changer d'assistant ne repaie que lui.
+        'tools' => amOutils(),
         'system' => [['type' => 'text', 'text' => AM_SYSTEME, 'cache_control' => ['type' => 'ephemeral']],
             ['type' => 'text', 'text' => "Ton personnage :\n" . amPersona($ton)]],
-        'messages' => $messages,
         'output_config' => ['effort' => $effort, 'format' => ['type' => 'json_schema', 'schema' => amSchema()]],
         'fallbacks' => 'default',
     ];
-    $ch = curl_init('https://api.anthropic.com/v1/messages');
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json', 'x-api-key: ' . $c['cle'], 'anthropic-version: 2023-06-01', 'anthropic-beta: server-side-fallback-2026-07-01'],
-            ($c['espace'] ?? '') !== '' ? ['anthropic-workspace-id: ' . $c['espace']] : []),
-        CURLOPT_POSTFIELDS => json_encode($corps, JSON_UNESCAPED_UNICODE), CURLOPT_TIMEOUT => 120, CURLOPT_CONNECTTIMEOUT => 10,
-    ]);
-    $raw = curl_exec($ch);
-    $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    $err = curl_error($ch);
-    curl_close($ch);
-    if ($raw === false) { return ['erreur' => 'API Anthropic injoignable : ' . $err]; }
-    $rep = json_decode((string) $raw, true);
-    if ($code < 200 || $code >= 300) { return ['erreur' => 'API Anthropic → HTTP ' . $code . ' : ' . mb_substr((string) ($rep['error']['message'] ?? ''), 0, 240)]; }
-    if (($rep['stop_reason'] ?? '') === 'refusal') { return ['erreur' => 'L’assistant a décliné cette question. Reformulez-la sur les chiffres du magasin.']; }
-    if (($rep['stop_reason'] ?? '') === 'max_tokens') { return ['erreur' => 'La réponse a été coupée : posez une question plus précise.']; }
-    foreach ((array) ($rep['content'] ?? []) as $b) {
-        if (($b['type'] ?? '') === 'text') {
-            $j = json_decode((string) $b['text'], true);
-            if (is_array($j)) { return ['reponse' => $j, 'modele' => (string) ($rep['model'] ?? $modele), 'usage' => $rep['usage'] ?? null]; }
+    $t0 = microtime(true);
+    $usage = ['input_tokens' => 0, 'cache_creation_input_tokens' => 0, 'cache_read_input_tokens' => 0, 'output_tokens' => 0];
+    $outils = [];
+    for ($tour = 1; ; $tour++) {
+        $fin = $tour >= AM_TOURS || microtime(true) - $t0 > AM_SECONDES;
+        if ($fin) { $corps['tool_choice'] = ['type' => 'none']; }   // le dernier tour répond avec ce qu'il a
+        $corps['messages'] = $messages;
+        [$rep, $obj, $err] = $appel($corps, $c);
+        if ($err !== null) { return ['erreur' => $err]; }
+        foreach ($usage as $k => $v) { $usage[$k] = $v + (int) ($rep['usage'][$k] ?? 0); }
+        $stop = (string) ($rep['stop_reason'] ?? '');
+        if ($stop === 'refusal') { return ['erreur' => 'L’assistant a décliné cette question. Reformulez-la sur les chiffres du magasin.']; }
+        if ($stop === 'max_tokens') { return ['erreur' => 'La réponse a été coupée : posez une question plus précise.']; }
+        if ($stop === 'tool_use' && !$fin) {
+            $messages[] = ['role' => 'assistant', 'content' => $obj->content ?? []];
+            $resultats = [];
+            foreach ((array) ($rep['content'] ?? []) as $b) {
+                if (($b['type'] ?? '') !== 'tool_use') { continue; }
+                $res = amOutil((string) ($b['name'] ?? ''), is_array($b['input'] ?? null) ? $b['input'] : [], $sid);
+                $outils[] = (string) ($b['name'] ?? '?');
+                $resultats[] = ['type' => 'tool_result', 'tool_use_id' => (string) $b['id'], 'content' => json_encode($res, JSON_UNESCAPED_UNICODE)]
+                    + (isset($res['erreur']) ? ['is_error' => true] : []);
+            }
+            $messages[] = ['role' => 'user', 'content' => $resultats];
+            continue;
         }
+        foreach ((array) ($rep['content'] ?? []) as $b) {
+            if (($b['type'] ?? '') === 'text') {
+                $j = json_decode((string) $b['text'], true);
+                if (is_array($j)) { return ['reponse' => $j, 'modele' => (string) ($rep['model'] ?? $modele), 'usage' => $usage, 'outils' => $outils]; }
+            }
+        }
+        return ['erreur' => 'Réponse illisible de l’assistant.'];
     }
-    return ['erreur' => 'Réponse illisible de l’assistant.'];
 }
 
 /* ---------------------------------------------------------------------------
@@ -389,10 +716,11 @@ function wr_assistant_magasin(): array
     $fil = is_array($b['fil'] ?? null) ? $b['fil'] : [];
     $orig = in_array($b['origine'] ?? '', AM_ORIGINES, true) ? (string) $b['origine'] : 'libre';
     $t0 = microtime(true);
-    $r = amDemander($faits, $q, $fil, $ton);
+    $r = amDemander($faits, $q, $fil, $ton, $sid);
     amGarder($sid, $ton, $orig, $q, count($fil), $r, (int) round((microtime(true) - $t0) * 1000));
     if (isset($r['erreur'])) { http_response_code(502); return ['error' => $r['erreur']]; }
-    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' (' . amCoachs()[$ton]['nom'] . ') : « ' . mb_substr($q, 0, 120) . ' »'); }
+    $avec = !empty($r['outils']) ? ' · outils : ' . implode(', ', array_unique($r['outils'])) : '';
+    if (function_exists('journalAdd')) { journalAdd('Dashboard', 'Assistant', null, 'Magasin ' . $sid . ' (' . amCoachs()[$ton]['nom'] . ') : « ' . mb_substr($q, 0, 120) . ' »' . $avec); }
     return ['reponse' => $r['reponse'], 'luLe' => $faits['luLe'] ?? null, 'modele' => $r['modele'], 'ton' => $ton];
 }
 
