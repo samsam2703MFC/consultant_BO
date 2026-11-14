@@ -63,6 +63,9 @@ PNL_RESEAU = ICI / 'pnl-reseau.json'     # GET /api/cockpit/analyse/pnl/mois?tou
 # face à Sombreffe sur les mêmes semaines. GET /api/cockpit/ventes/semaines?shop=4 (Halle) puis 5, vue=semaine,
 # date=2026-11-14, n=13, pro=1 (le comptoir de chaque semaine), articles=1.
 SEMAINES_HALLE = ICI / 'semaines-halle.json'
+# Le coût d'une heure de planning (14/11/2026) : le personnel du P&L du jour ÷ les heures du planning du panel, jour par
+# jour, GET /api/cockpit/exploitation/jour?date=… ; le fichier ne garde que les totaux du jour (heures, personnel, CA).
+HEURES_EQUIPE = ICI / 'heures-equipe.json'
 SEMAINES_MOI = ICI / 'semaines-sombreffe.json'
 
 MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.']
@@ -362,8 +365,18 @@ def main():
     if SEMAINES_HALLE.exists() and SEMAINES_MOI.exists():
         repere = {'nom': 'Halle', 'ouverture': '2026-02-20', 'halle': huitSemaines(SEMAINES_HALLE), 'moi': huitSemaines(SEMAINES_MOI)}
 
+    # Le coût d'une heure de planning : la somme du personnel mesuré au P&L ÷ la somme des heures du planning (hors franchisé).
+    heuresEquipe = None
+    if HEURES_EQUIPE.exists():
+        J = [j for j in json.loads(HEURES_EQUIPE.read_text(encoding='utf-8'))['jours']
+             if j['heures'] and j['personnel'] and j['personnelSource'] == 'mesure']
+        h_ = sum(j['heures'] - j['heuresFranchise'] for j in J); c_ = sum(j['personnel'] for j in J)
+        heuresEquipe = {'du': J[0]['date'], 'au': J[-1]['date'], 'jours': len(J), 'heures': h_, 'personnel': c_,
+                        'coutHeure': c_ / h_, 'heuresJour': h_ / len(J), 'pct': c_ / sum(j['ca'] for j in J) * 100}
+
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
+        'heuresEquipe': heuresEquipe,
         'repere': repere,
         'personnel': personnel, 'personnelReseau': personnelReseau, 'theorique': theorique, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches, 'panierAutres': panierAutres,
