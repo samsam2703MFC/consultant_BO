@@ -17,7 +17,8 @@ Une question : est-ce que le magasin peut payer tout le monde dans les semaines 
   décision des 4 semaines à venir, les repères (point bas, semaines sous le coussin, marchandises et personnel en % des
   ventes), le cash de fin de semaine en barres, la grille semaine par semaine (8, 13 semaines ou tout), le pilotage
   (cash de départ, coussin) et les dettes hors plan.
-- **Fournisseurs** : un montant par fournisseur et par semaine ; une case vide vaut ventes prévues × % du fournisseur.
+- **Fournisseurs** : un montant par fournisseur et par semaine ; une case vide vaut l'estimation du fournisseur, au
+  choix un % des ventes prévues ou un montant fixe par semaine (« % » / « € » sur sa ligne, 14/11/2026).
 - **Paiements** : les paiements récurrents (chaque semaine, chaque mois la semaine 1 à 4, chaque trimestre), avec dates
   de début et de fin, rangés dans les lignes du plan par leur catégorie.
 - **Mode d'emploi** et les mêmes couleurs (abricot = un chiffre réel que toi seul connais, cadre = une

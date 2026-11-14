@@ -2201,13 +2201,14 @@ le format `v: 2` de `tresorerie.js` :
 ```json
 { "v": 2, "debut": "2026-11-16", "base": "budget", "croissance": 0, "startCash": 8250, "coussin": 5000, "plafond": 0.4,
   "ventes": { "2026-11-23": 16000 }, "ponct": {}, "reel": { "2026-11-16": 9120 },
-  "fournisseurs": [ { "id": "k…", "nom": "Fournisseur A", "pct": 0.35, "montants": { "2026-11-16": 4800 } } ],
+  "fournisseurs": [ { "id": "k…", "nom": "Fournisseur A", "mode": "pct", "pct": 0.35, "fixe": 0, "montants": { "2026-11-16": 4800 } } ],
   "paiements": [ { "id": "k…", "libelle": "Loyer", "cat": "Frais fixes", "montant": 4600, "freq": "Chaque mois", "sem": 2,
                    "debut": "", "fin": "", "note": "" } ],
   "hors": [ { "id": "k…", "libelle": "Factures fournisseurs impayées", "montant": 12000, "note": "" } ] }
 ```
 
-Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). `forces` = les montants saisis
+Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). Un fournisseur
+s'estime, les semaines sans montant tapé, en `pct` des ventes prévues ou en montant `fixe` par semaine (`mode`, 14/11/2026). `forces` = les montants saisis
 au double-clic dans le plan pour UNE semaine (`{ "Personnel": { "2026-12-07": 20500 }, "march": { … } }` — une catégorie
 ou `march` pour les marchandises) : ils remplacent le calcul de cette semaine-là seulement ; une case vidée revient au
 calcul. `base` = `budget`
