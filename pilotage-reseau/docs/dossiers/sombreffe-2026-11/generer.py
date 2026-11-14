@@ -66,6 +66,8 @@ SEMAINES_HALLE = ICI / 'semaines-halle.json'
 # Le coût d'une heure de planning (14/11/2026) : le personnel du P&L du jour ÷ les heures du planning du panel, jour par
 # jour, GET /api/cockpit/exploitation/jour?date=… ; le fichier ne garde que les totaux du jour (heures, personnel, CA).
 HEURES_EQUIPE = ICI / 'heures-equipe.json'
+# GUEST en novembre 2026, du 1er au 14 (14/11/2026) : ses tickets relus jour par jour (/exploitation/pro/detail).
+GUEST_NOV = ICI / 'guest-novembre.json'
 # Les pièces vendues par mois (14/11/2026, Sam) : GET /api/cockpit/ventes/semaines?shop=5&vue=mois&date=2026-10-31&n=6
 # &articles=1 — chaque mois et son N-1 portent `articles`, les pièces vendues.
 PIECES_MOIS = ICI / 'pieces-mois.json'
@@ -432,7 +434,11 @@ def main():
                      # Le point 1, dicté le 14/11/2026 (Sam) : ce que GUEST rapporte, établi exactement.
                      'points': ['Établir exactement ce qu’il rapporte (développement spécifique), sauf s’il commande via le webshop.',
                                 'À cadrer : ses commandes passent par le webshop développé, avec les options dont il a besoin.',
-                                'Avec les bonnes barrières et les blocages.']},
+                                'Avec les bonnes barrières et les blocages.'],
+                     # Ce qu'il rapporte (14/11/2026, Sam) : le CA par jour livrable (4 jours par semaine × 4,3 semaines
+                     # = 17,2 jours par mois), un food cost à 45 %, la marge brute qui reste.
+                     'foodCost': 45.0, 'joursSemaine': 4, 'semainesMois': 4.3,
+                     'novembre': json.loads(GUEST_NOV.read_text(encoding='utf-8')) if GUEST_NOV.exists() else None},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B, 'plafondClient': PLAFOND_CLIENT_B2B,

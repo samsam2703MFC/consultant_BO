@@ -287,7 +287,8 @@ body { margin: 0; background: var(--paper); }
         <div class="rp-part" id="question-panier" hidden>   <!-- retiré le 13/11/2026 (Sam) --><h3 class="rp-h3">D’où vient la hausse de septembre et octobre ?</h3><p class="rp-p" id="question-texte"></p></div>
         <div class="rp-part" id="b2b-top" hidden><h3 class="rp-h3" id="b2b-top-titre"></h3>
           <div class="rp-table-zone"><table class="rp-table" id="b2b-top-table"></table></div>
-          <div class="rp-alerte" id="b2b-cadre" hidden></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
+          <div class="rp-alerte" id="b2b-cadre" hidden></div>
+          <div class="rp-table-zone" id="guest-marge-zone" hidden><table class="rp-table rp-serre" id="guest-marge"></table></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
       </div>
       <div class="rp-deux">
         <div class="rp-part" id="panier" hidden>   <!-- simplifié le 14/11/2026 (Sam) : une ligne dans la liste --><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
@@ -1285,6 +1286,18 @@ if (D.b2bDetail && D.b2bDetail.societes.length) {
       + CB.points   // ses chiffres sont dans le tableau juste au-dessus (simplifié le 14/11/2026)
         .map(t => `<li>${esc(insec(t))}</li>`).join('') + '</ul>';
     $('b2b-cadre').hidden = false;
+    // Ce que GUEST rapporte (14/11/2026, Sam) : CA, CA par jour livrable, food cost à 45 %, marge brute.
+    const jl = CB.joursSemaine * CB.semainesMois, fc = CB.foodCost / 100, G = D.b2bDetail.societes.find(c => c.nom.toUpperCase().includes(CB.motif));
+    const lignesG = ['2026-09', '2026-10'].filter(ym => G && G.mois[ym]).map(ym => ({ nom: lab(ym), ca: G.mois[ym].ca, j: jl }));
+    if (CB.novembre) {   // le mois en cours : ses jours livrables écoulés (2 semaines au 14/11)
+      const sem = Math.floor((new Date(CB.novembre.au + 'T12:00:00') - new Date(CB.novembre.du + 'T12:00:00')) / 864e5 + 1) / 7;
+      lignesG.push({ nom: `nov. 26, au ${dateC(CB.novembre.au)}`, ca: CB.novembre.ca, j: Math.round(sem * CB.joursSemaine) });
+    }
+    $('guest-marge').innerHTML = `<thead><tr><th>GUEST</th><th class="num">CA</th><th class="num">Jours livrables</th><th class="num">CA par jour livrable</th>`
+      + `<th class="num">Food cost ${dec(CB.foodCost, 0)} %</th><th class="num">Marge brute</th><th class="num">Marge brute par jour livrable</th></tr></thead><tbody>`
+      + lignesG.map(l => `<tr><td>${esc(l.nom)}</td><td class="num">${eur(l.ca)}</td><td class="num">${dec(l.j, l.j % 1 ? 1 : 0)}</td><td class="num">${eur(l.ca / l.j)}</td>`
+        + `<td class="num">${eur(l.ca * fc)}</td><td class="num">${eur(l.ca * (1 - fc))}</td><td class="num">${eur(l.ca * (1 - fc) / l.j)}</td></tr>`).join('') + '</tbody>';
+    $('guest-marge-zone').hidden = false;
   }
 }
 
