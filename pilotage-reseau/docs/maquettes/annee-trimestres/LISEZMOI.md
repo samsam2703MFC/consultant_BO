@@ -1,6 +1,13 @@
 # Dashboard magasin : Trimestre et Année dans un seul onglet, l'année simplifiée
 
-**Statut : maquette à valider. Rien n'est codé dans `public/dashboard/`.**
+**Statut : validée et codée le 14/11/2026**, avec les choix proposés :
+- le trimestre en cours est ouvert par défaut ;
+- la pastille d'un trimestre compare le réalisé à l'attendu à ce jour ;
+- le mois en cours n'a pas d'évolution sur N-1 dans la bande.
+
+Le code est dans `public/dashboard/dashboard.js` (`rendAnnee` et les fonctions `an…`) et dans
+`public/dashboard/dashboard.css` (bloc « L'année »). Un clic sur un trimestre l'ouvre sans changer la date.
+Les flèches ‹ › de l'année gardent le trimestre regardé. Les plis restent ouverts d'un rendu à l'autre.
 
 Demande du 14/11/2026 : « dans le dashboard, peut-on grouper Trimestre et Année (et en même temps simplifier
 Année) ». Précision du même jour : « laisser le graphique avec le trafic client et N-1 ».
