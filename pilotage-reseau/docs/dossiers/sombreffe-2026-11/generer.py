@@ -438,6 +438,12 @@ def main():
                      # Ce qu'il rapporte (14/11/2026, Sam) : le CA par jour livrable (4 jours par semaine × 4,3 semaines
                      # = 17,2 jours par mois), un food cost à 45 %, la marge brute qui reste.
                      'foodCost': 45.0, 'joursSemaine': 4, 'semainesMois': 4.3,
+                     # Les questions, dictées le 14/11/2026 (Sam) : reprises telles quelles, l'orthographe seule corrigée.
+                     'questions': ['Est-ce que quelqu’un est là spécialement pour ce client ?',
+                                   'Est-ce que les clients du magasin ont été délaissés pour ce client ?',
+                                   'Est-ce que ± 300 € de marge brute par jour livrable couvrent le personnel et les frais de livraison impliqués ?',
+                                   'Que me coûte exactement le financement de ce client ?',
+                                   'Qu’est-ce qu’on va faire pour transformer ce client en bon client ?'],
                      'novembre': json.loads(GUEST_NOV.read_text(encoding='utf-8')) if GUEST_NOV.exists() else None},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},

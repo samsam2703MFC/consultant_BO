@@ -288,7 +288,8 @@ body { margin: 0; background: var(--paper); }
         <div class="rp-part" id="b2b-top" hidden><h3 class="rp-h3" id="b2b-top-titre"></h3>
           <div class="rp-table-zone"><table class="rp-table" id="b2b-top-table"></table></div>
           <div class="rp-alerte" id="b2b-cadre" hidden></div>
-          <div class="rp-table-zone" id="guest-marge-zone" hidden><table class="rp-table rp-serre" id="guest-marge"></table></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
+          <div class="rp-table-zone" id="guest-marge-zone" hidden><table class="rp-table rp-serre" id="guest-marge"></table></div>
+          <div class="rp-part" id="guest-questions-zone" hidden><h3 class="rp-h3">GUEST : les questions</h3><ol class="rp-pistes" id="guest-questions"></ol></div></div>   <!-- GUEST, à cadrer : 14/11/2026 (Sam) -->
       </div>
       <div class="rp-deux">
         <div class="rp-part" id="panier" hidden>   <!-- simplifié le 14/11/2026 (Sam) : une ligne dans la liste --><h3 class="rp-h3" id="panier-mag-titre"></h3><ul class="rp-points" id="panier-points"></ul>
@@ -1298,6 +1299,10 @@ if (D.b2bDetail && D.b2bDetail.societes.length) {
       + lignesG.map(l => `<tr><td>${esc(l.nom)}</td><td class="num">${eur(l.ca)}</td><td class="num">${dec(l.j, l.j % 1 ? 1 : 0)}</td><td class="num">${eur(l.ca / l.j)}</td>`
         + `<td class="num">${eur(l.ca * fc)}</td><td class="num">${eur(l.ca * (1 - fc))}</td><td class="num">${eur(l.ca * (1 - fc) / l.j)}</td></tr>`).join('') + '</tbody>';
     $('guest-marge-zone').hidden = false;
+    if (CB.questions) {   // 14/11/2026 (Sam)
+      $('guest-questions').innerHTML = CB.questions.map(q => `<li>${esc(insec(q))}</li>`).join('');
+      $('guest-questions-zone').hidden = false;
+    }
   }
 }
 
