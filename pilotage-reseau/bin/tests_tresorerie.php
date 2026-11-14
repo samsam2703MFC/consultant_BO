@@ -179,6 +179,10 @@ verifie('un premier jour qui n’est pas un lundi est refusé', trPlanInvalide([
 verifie('16 fournisseurs, c’est trop', trPlanInvalide(['fournisseurs' => array_fill(0, 16, $plan['fournisseurs'][0])] + $plan) !== null);
 $j = json_encode(trPlanTables($plan));
 verifie('les tables vides restent des objets JSON', str_contains($j, '"ventes":{}') && str_contains($j, '"montants":{}'), $j);
+$jf = json_encode(trPlanTables(['forces' => ['Personnel' => ['2026-12-07' => 20500], 'march' => []]] + $plan));
+verifie('les montants saisis d’une semaine restent des objets', str_contains($jf, '"forces":{"Personnel":{"2026-12-07":20500},"march":{}}'), $jf);
+verifie('sans montant saisi : un objet vide', str_contains($j, '"forces":{}'), $j);
+verifie('des montants saisis mal formés sont refusés', trPlanInvalide(['forces' => ['Personnel' => 5]] + $plan) !== null && trPlanInvalide(['forces' => 'x'] + $plan) !== null);
 
 fwrite(STDOUT, "Le plan : écriture et version\n");
 $_GET = ['shop' => '4'];
