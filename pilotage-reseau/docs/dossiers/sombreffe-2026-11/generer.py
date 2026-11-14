@@ -391,7 +391,7 @@ def main():
         # Le mot d'ouverture, tel que le bureau l'a écrit le 13/11/2026 (texte fourni, repris à l'identique).
         'ouverture': 'Nous sommes 110 dans ce groupe. Parmi nous, 67 chefs et responsables de famille, avec des crédits '
                      'et des engagements à tenir. Ce que chacun fait, ou ne fait pas, pèse sur les 109 autres. Pour que '
-                     'ça tienne, chacun doit faire sa part. C’est pour eux qu’on remet les choses en place, aujourd’hui et maintenant.',
+                     'ça tienne, chacun doit faire sa part.',   # la dernière phrase retirée le 14/11/2026 (Sam)
         # Les objectifs de clients par jour fixés par le bureau le 13/11/2026 : la base (départ + 5), l'objectif court terme,
         # puis l'objectif normalisé, le plan normal d'évolution du magasin.
         'objectifs': {'palier': 5, 'courtTerme': 156, 'normalise': 165, 'le': '13/11/2026'},
