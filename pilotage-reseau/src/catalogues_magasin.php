@@ -36,8 +36,8 @@ declare(strict_types=1);
  *   - le jeton de service : `erp_jeton_service` d'erp_cles (le même que pour le Recrutement).
  */
 
-const CM_CHAMPS_CREER = ['title', 'source', 'format', 'langs', 'products', 'pages'];
-const CM_CHAMPS_MODIFIER = ['title', 'format', 'langs', 'products', 'pages', 'status', 'printQty'];
+const CM_CHAMPS_CREER = ['title', 'source', 'format', 'pageCount', 'langs', 'products', 'pages'];
+const CM_CHAMPS_MODIFIER = ['title', 'format', 'pageCount', 'langs', 'products', 'pages', 'status', 'printQty'];
 
 /** Une erreur au format du standard (celui du Marketing), pour ce que le cockpit dit lui-même. */
 function cmErreur(int $http, string $code, string $message): array
