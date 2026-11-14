@@ -412,6 +412,11 @@ function trPlanInvalide(mixed $d): ?string
     foreach (['ventes', 'ponct', 'reel'] as $k) {
         if (isset($d[$k]) && !is_array($d[$k])) { return "« $k » doit être une table par semaine"; }
     }
+    // Les montants saisis pour une semaine (double-clic) : { ligne : { lundi : montant } }.
+    if (isset($d['forces'])) {
+        if (!is_array($d['forces'])) { return '« forces » doit être une table par ligne'; }
+        foreach ($d['forces'] as $m) { if (!is_array($m)) { return '« forces » : une table par semaine pour chaque ligne'; } }
+    }
     foreach (['fournisseurs' => 15, 'paiements' => 50, 'hors' => 50] as $k => $max) {
         if (isset($d[$k]) && (!is_array($d[$k]) || !array_is_list($d[$k]))) { return "« $k » doit être une liste"; }
         if (isset($d[$k]) && count($d[$k]) > $max) { return "« $k » : $max lignes au plus"; }
@@ -426,6 +431,7 @@ function trPlanInvalide(mixed $d): ?string
 function trPlanTables(array $d): array
 {
     foreach (['ventes', 'ponct', 'reel'] as $k) { $d[$k] = (object) (is_array($d[$k] ?? null) ? $d[$k] : []); }
+    $d['forces'] = (object) array_map(static fn ($m) => (object) $m, is_array($d['forces'] ?? null) ? $d['forces'] : []);
     foreach ((array) ($d['fournisseurs'] ?? []) as $i => $f) {
         if (is_array($f)) { $d['fournisseurs'][$i]['montants'] = (object) (is_array($f['montants'] ?? null) ? $f['montants'] : []); }
     }

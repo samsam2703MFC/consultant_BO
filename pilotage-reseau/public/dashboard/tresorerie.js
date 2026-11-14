@@ -105,6 +105,12 @@
     const supTot = d.fournisseurs.map(s => { let fixe = 0, es = 0; W.forEach((w, i) => { if (s.montants[w.du] == null) { es += ventes[i]; } else { fixe += +s.montants[w.du]; } }); return fixe + Math.round((+s.pct || 0) * es); });
     const ponct = W.map(w => +d.ponct[w.du] || 0);
     const reel = W.map(w => d.reel[w.du] == null ? null : +d.reel[w.du]);
+    // Un montant saisi dans le plan pour UNE semaine (double-clic, 14/11/2026) remplace le calcul de cette semaine-là
+    // seulement ; le paiement récurrent et les fournisseurs restent ce qu'ils sont pour les autres semaines.
+    const forces = objet(d.forces), force = (ligne, i) => { const m = forces[ligne]; return m && m[W[i].du] != null ? +m[W[i].du] : null; };
+    const marchCalc = march.slice(), catsCalc = {};
+    CATS.forEach(k => { catsCalc[k] = cats[k].slice(); W.forEach((w, i) => { const f = force(k, i); if (f != null) { cats[k][i] = f; } }); });
+    W.forEach((w, i) => { const f = force('march', i); if (f != null) { march[i] = f; } });
     const totdec = W.map((w, i) => march[i] + CATS.reduce((t, k) => t + cats[k][i], 0) + ponct[i]);
     const solde = W.map((w, i) => ventes[i] - totdec[i]);
     const debut = [], fin = [], ecart = [];
@@ -125,7 +131,7 @@
     const nbA = W.filter(w => w.ms >= deT).length;
     const budA = tAn(W.map(w => w.ref.budget), i => W[i].ref.budget != null), vBud = tAn(ventes, i => W[i].ref.budget != null);
     const n1A = tAn(W.map(w => w.ref.n1), i => W[i].ref.n1 != null), vN1 = tAn(ventes, i => W[i].ref.n1 != null);
-    return { W, N, anT, deT, ventes, genre, base, cats, payTot, supEst, march, supReel, supTot, ponct, reel, totdec, solde, debut, fin, ecart,
+    return { W, N, anT, deT, ventes, genre, base, cats, catsCalc, payTot, supEst, march, marchCalc, force, supReel, supTot, ponct, reel, totdec, solde, debut, fin, ecart,
       tA, bas, basIdx, sous, cur, dernierDim, oublies, coussin, nbA,
       budA: budA.k ? budA.s : null, budK: budA.k, vBud: vBud.s, n1A: n1A.k ? n1A.s : null, n1K: n1A.k, vN1: vN1.s,
       matPct: sA ? tA(march) / sA : 0, persPct: sA ? (tA(cats['Gérant']) + tA(cats['Personnel'])) / sA : 0,
@@ -203,6 +209,10 @@
     d.hors = liste(d.hors).map(h => ({ id: h.id || uid(), libelle: h.libelle || '', montant: h.montant == null ? null : +h.montant, note: h.note || '' }));
     if (d.base !== 'n1') { d.base = 'budget'; }
     d.croissance = +d.croissance || 0;
+    // Les montants saisis semaine par semaine : { ligne (« march » ou une catégorie) : { lundi : montant } }.
+    const fo = {};
+    Object.entries(objet(d.forces)).forEach(([k, m]) => { if (k === 'march' || CATS.includes(k)) { const x = {}; Object.entries(objet(m)).forEach(([du, v]) => { if (v != null && isFinite(+v)) { x[du] = +v; } }); if (Object.keys(x).length) { fo[k] = x; } } });
+    d.forces = fo;
     return d;
   }
 
@@ -463,12 +473,21 @@
     ligne('Repère · réalisé en caisse', 'Les ventes réellement encaissées (panel). La semaine en cours : à ce jour.', i => { const r = W[i].ref, passe = W[i].ms <= auj; return T(r.realise, { cls: 'ref', vide: passe ? '–' : '', titre: r.complet ? (r.realise != null ? 'Semaine close' : 'Aucune vente lue cette semaine') : (r.realise != null ? 'À ce jour, semaine en cours' : (passe ? 'Aucune vente lue à ce jour' : 'Semaine à venir')) }); }, { total: C.tA(W.map(w => w.ref.realise)), ref: true, note: W.some(w => w.ms <= auj) ? '' : 'semaines à venir' });
     ligne('Repère · budget validé', 'Le budget du mois réparti sur ses jours au profil de l’an passé. Vide : pas de budget pour ce mois.', i => { const r = W[i].ref; return T(r.budget, { cls: 'ref', vide: '–', titre: r.budget == null ? 'Pas de budget pour ce mois (cockpit › Budget), ni de CA théorique de l’étude' : [r.budgetSource === 'theorique' ? 'CA théorique de l’étude (pas de budget encodé)' : '', r.budget != null && r.budgetJours < 7 ? `Extrapolé de ${r.budgetJours} jours budgétés sur 7` : ''].filter(Boolean).join(' · ') }); }, { total: C.budA, ref: true });
     ligne('Repère · même semaine N-1', 'Les ventes de la même semaine un an plus tôt (décalée de 364 jours : un lundi face à un lundi).', i => T(W[i].ref.n1, { cls: 'ref', vide: '–', titre: W[i].ref.n1 == null ? motifN1(W[i]) : '' }), { total: C.n1A, ref: true, note: noteN1 });
-    ligne('Marchandises (fournisseurs)', 'Calcul automatique : total de l’onglet Fournisseurs.', i => T(C.march[i]), { total: C.tA(C.march), sous: 'Onglet Fournisseurs', versOnglet: 'fournisseurs', bord: 'fort' });
+    // Une case calculée se saisit au double-clic, pour cette semaine seulement ; vidée, elle revient au calcul.
+    const forcable = (ligne, i, src, tiret) => {
+      const w = W[i], cle = 'f:' + ligne + ':' + w.du, f = C.force(ligne, i), calc = ligne === 'march' ? C.marchCalc[i] : C.catsCalc[ligne][i];
+      if (E.edition === cle) { return champ(cle, f != null ? f : calc, { cls: 'tr-in', titre: 'Le montant de cette semaine seulement. Vide la case pour revenir au calcul (' + n(calc) + ').' }); }
+      const v = f != null ? f : calc, zero = tiret && !v && f == null;
+      const titre = f != null ? `Saisi pour cette semaine seulement (le calcul de ${src} donnait ${n(calc)}). Double-clic pour modifier ; vide la case pour revenir au calcul.`
+        : `Calculé depuis ${src}. Double-clic pour saisir le montant de cette semaine seulement.`;
+      return `<div class="tr-v dbl${f != null ? ' force' : ''}${zero ? ' mu' : ''}" data-trdbl="${esc(cle)}" title="${esc(titre)}">${zero ? '–' : n(v)}</div>`;
+    };
+    ligne('Marchandises (fournisseurs)', 'Calcul automatique : total de l’onglet Fournisseurs. Double-clic sur une case : le montant de cette semaine seulement.', i => forcable('march', i, 'l’onglet Fournisseurs', false), { total: C.tA(C.march), sous: 'Onglet Fournisseurs', versOnglet: 'fournisseurs', bord: 'fort' });
     const aideCat = {
       'Gérant': 'Ce que tu te verses : ligne « Gérant » de l’onglet Paiements. Quand le cash est court, c’est la première ligne qui s’ajuste.',
       'TVA & ONSS': 'Rien n’est prérempli. Demande montants et échéances à ton comptable et encode-les dans Paiements, catégorie « TVA & ONSS ». Tant que c’est vide, ton plan est trop optimiste.'
     };
-    CATS.forEach(k => ligne(k, aideCat[k] || `Calcul automatique : somme des lignes « ${k} » de l’onglet Paiements.`, i => T(C.cats[k][i], { tiret: true }), { total: C.tA(C.cats[k]), sous: 'Onglet Paiements', versOnglet: 'paiements' }));
+    CATS.forEach(k => ligne(k, (aideCat[k] || `Calcul automatique : somme des lignes « ${k} » de l’onglet Paiements.`) + ' Double-clic sur une case : le montant de cette semaine seulement.', i => forcable(k, i, 'l’onglet Paiements', true), { total: C.tA(C.cats[k]), sous: 'Onglet Paiements', versOnglet: 'paiements' }));
     ligne('Ponctuels / imprévus', 'Tout ce qui n’est pas récurrent : réparation, prime de fin d’année, pécule de vacances, régularisation d’énergie, matériel. Dans la semaine où l’argent sort.', i => champ('p:' + W[i].du, d.ponct[W[i].du], { aff: v => v ? n(v) : '' }), { total: C.tA(C.ponct) });
     ligne('Total décaissements', '', i => T(C.totdec[i], { cls: 'g6' }), { total: C.tA(C.totdec), gras: 600, bord: 'fort' });
     ligne('Solde de la semaine', '', i => T(C.solde[i], { cls: C.solde[i] < 0 ? 'neg-t' : '' }), { total: C.tA(C.solde) });
@@ -609,7 +628,7 @@
       <div class="tr-k">La routine du dimanche soir</div>
       ${etape(1, 'Le solde réel', 'Tu ouvres ta banque et tu tapes le solde du compte dans « Routine du dimanche » (ou la ligne « Cash réel en banque (dimanche) » du plan). Le vrai chiffre, pas une estimation.')}
       ${etape(2, 'L’écart', `Juste en dessous, l’écart entre le réel et le prévu. Plus de ${n(SEUIL_ECART)} € : tu trouves la cause avant lundi. Un écart qu’on n’explique pas revient toujours, en plus gros.`)}
-      ${etape(3, 'Les 4 semaines à venir', 'Tu corriges tes ventes prévues (onglet Plan), les montants à payer à chaque fournisseur (onglet Fournisseurs) et les paiements exceptionnels.')}
+      ${etape(3, 'Les 4 semaines à venir', 'Tu corriges tes ventes prévues (onglet Plan), les montants à payer à chaque fournisseur (onglet Fournisseurs) et les paiements exceptionnels. Un montant calculé (marchandises, gérant, personnel, frais…) qui n’est pas le bon cette semaine-là : double-clic sur la case et tu tapes le vrai montant, pour cette semaine seulement. Vider la case revient au calcul.')}
       ${etape(4, 'La décision', 'Tu lis la ligne « Cash fin de semaine (prévu) ». Orange : tu passes sous ton coussin. Rouge : tu ne peux pas tout payer. Tu décides tout de suite quoi décaler et tu préviens avant l’échéance, pas après.')}
       <div class="tr-k">Ce qui est repris tout seul</div>
       <div class="tr-def"><b>Ce qui a été fait</b><span>Une semaine close prend les ventes réelles de la caisse : tu n’as plus à les taper. Le mois en cours et les mois passés sont dans l’onglet « N-1, budget, réalisé ».</span>
@@ -620,7 +639,8 @@
       <span class="tr-ex">14 000</span><span>Une prévision que tu modifies : ventes, montants fournisseurs, paiements ponctuels.</span>
       <span class="tr-ex est">≈ 14 000</span><span>Une estimation : la base (budget ou N-1) ou le % du fournisseur, tant que tu n’as rien tapé.</span>
       <span class="tr-ex reel">12 840</span><span>Le réel de la caisse : une semaine close.</span>
-      <span class="tr-ex nu">8 500</span><span>Un calcul automatique. Si un chiffre calculé te paraît faux, c’est une case saisie qu’il faut corriger.</span>
+      <span class="tr-ex nu">8 500</span><span>Un calcul automatique. Double-clic dessus pour le remplacer, cette semaine seulement ; les totaux, eux, se corrigent par les cases saisies.</span>
+      <span class="tr-ex force">8 200</span><span>Un montant saisi au double-clic pour cette semaine seulement, à la place du calcul.</span>
       <span class="tr-ex bas">4 210</span><span>Orange : tu passes sous ton coussin de sécurité.</span>
       <span class="tr-ex neg">−1 250</span><span>Rouge : le compte est à découvert, tu ne peux pas tout payer.</span></div>
       <div class="tr-savoir"><div class="tr-k">À savoir</div>
@@ -648,6 +668,13 @@
     if (k === 'fa') { return maj(d => { const s = d.fournisseurs.find(x => x.id === a); if (s) { if (v == null) { delete s.montants[b]; } else { s.montants[b] = v; } } }); }
     if (k === 'pa') { return maj(d => { const p = d.paiements.find(x => x.id === a); if (p) { p.montant = v == null ? 0 : v; } }); }
     if (k === 'h') { return maj(d => { const x = d.hors.find(y => y.id === a); if (x) { x.montant = v; } }); }
+    if (k === 'f') {
+      return maj(d => {
+        const F = d.forces = objet(d.forces), m = F[a] = objet(F[a]);
+        if (v == null) { delete m[b]; } else { m[b] = v; }
+        if (!Object.keys(m).length) { delete F[a]; }
+      });
+    }
   }
 
   function action(cmd) {
@@ -737,6 +764,14 @@
     if (el.dataset.trBranche) { return; }
     el.dataset.trBranche = '1';
     el.addEventListener('click', e => { const b = e.target.closest('[data-tra]'); if (b && el.contains(b) && !b.disabled) { action(b.dataset.tra); } });
+    el.addEventListener('dblclick', e => {
+      const c = e.target.closest('[data-trdbl]'); if (!c || !el.contains(c) || !E) { return; }
+      e.preventDefault();
+      E.edition = c.dataset.trdbl; E.brouillon = null;
+      rendre();
+      const i = racine.querySelector(`[data-trn="${CSS.escape(E.edition)}"]`);
+      if (i) { i.focus(); }
+    });
     el.addEventListener('focusin', e => {
       const t = e.target; if (!E || !t.dataset || t.dataset.trn == null) { return; }
       const k = t.dataset.trn; if (E.brouillon && E.brouillon.cle === k) { return; }
@@ -764,6 +799,8 @@
       setTimeout(() => {
         if (!t.isConnected && S.brouillon === b && racine && racine.querySelector(`[data-trn="${CSS.escape(k)}"]`)) { return; }
         if (S.brouillon === b) { S.brouillon = null; }
+        // La case saisie au double-clic redevient une case calculée (ou « saisie ») une fois quittée.
+        if (S.edition === k) { S.edition = null; }
         if (S.annule) { S.annule = false; return planifierRendu(); }
         const v = lireNombre(b.texte);
         if (v === undefined || b.texte === S.fmt[k]) { return planifierRendu(); }

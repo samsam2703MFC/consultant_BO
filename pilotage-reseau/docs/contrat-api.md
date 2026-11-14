@@ -2208,7 +2208,10 @@ le format `v: 2` de `tresorerie.js` :
   "hors": [ { "id": "k…", "libelle": "Factures fournisseurs impayées", "montant": 12000, "note": "" } ] }
 ```
 
-Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). `base` = `budget`
+Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). `forces` = les montants saisis
+au double-clic dans le plan pour UNE semaine (`{ "Personnel": { "2026-12-07": 20500 }, "march": { … } }` — une catégorie
+ou `march` pour les marchandises) : ils remplacent le calcul de cette semaine-là seulement ; une case vidée revient au
+calcul. `base` = `budget`
 ou `n1` ; `croissance` en % appliqué à l'année passée. Facultatifs, gardés tels quels : `magasin` (pour quel magasin le
 plan a été fait : l'import dans un autre demande confirmation), `source` (d'où il vient, affiché après l'import),
 `startCashNote` (l'aide du cash de départ, effacée dès qu'un solde est tapé). L'écran importe un plan à ce format
