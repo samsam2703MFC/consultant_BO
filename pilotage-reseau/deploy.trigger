@@ -1462,3 +1462,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T10:28:59Z Prix en retard sur le fournisseur : seuil à 10 %
 2026-11-14T10:36:09Z Prix en retard : chaque référence fournisseur compte
 2026-11-14T10:42:12Z Corrections : réponse entière du panel au registre
+2026-11-14T10:53:54Z Matières par fournisseur ou catégorie, formulaire du prix
