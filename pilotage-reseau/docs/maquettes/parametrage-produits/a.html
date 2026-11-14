@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Paramétrage des produits — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="pp.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg><span class="sidebar__item-label">Paramétrage produits</span></button>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Vue Réseau</p>
+        <h1>Paramétrage des produits</h1>
+      </div>
+      <div class="topbar__actions"><span class="pp-pill">Maquette · champs et listes lus au panel le 14/11 · rien n’est écrit</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="pp"><div class="pp-cols"><aside class="pp-liste"><input class="vm-q" placeholder="Chercher un produit…" value="">
+  <div class="pp-filtres"><select class="vr-sel"><option>Toutes les gammes</option><option>🥖 Gamme Standard</option><option>Gamme Bureau</option><option>🎉 Gamme Saint-Valentin (14 Février)</option><option>🌸 Gamme Printanière (Mars à Mai)</option><option>🐣 Gamme Pascale (Mars-Avril)</option><option>🌷 Gamme Fête des Mères (2e dimanche de Mai)</option><option>test</option><option>Automnale</option><option>Noël &amp; Nouvel An</option><option>Épiphanie</option><option>❄️ Gamme Hivernale (Décembre à Février)</option><option>🍦 Icône - Gamme Glace (Avril - Septembre)</option><option>🥞 Chandeleur – Fête des crêpes</option><option>📦 Gamme B.-2-B. </option><option>Saint-Nicolas</option></select>
+  <select class="vr-sel"><option>Toutes les catégories (81)</option></select>
+  <div class="vr-chips pp-chips"><button class="on">Actifs <b>471</b></button><button>Webshop <b>128</b></button><button><i class="vr-pt pb-prix"></i>Champs manquants <b>37</b></button><button>Sans gamme <b>12</b></button></div></div>
+  <div class="pp-items"><div class="pp-it on"><i class="pp-dot ok"></i><div><b>Pommes Tranches</b><small>Tartes – Ø 28 cm · 2 396 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot att"></i><div><b>Frangipane &amp; Pommes</b><small>Tartes – Ø 28 cm · 1 874 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot ok"></i><div><b>Baguette Tradition</b><small>Boulangerie · 43 275 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot ok"></i><div><b>Croissant au beurre</b><small>Viennoiserie · 21 940 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot att"></i><div><b>Bûche Praliné 6 p.</b><small>Fêtes &amp; Occasions · 3 120 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot mu"></i><div><b>Couronne des Rois</b><small>Fêtes &amp; Occasions · hors saison</small></div></div><div class="pp-it"><i class="pp-dot ok"></i><div><b>Sandwich Poulet Curry</b><small>Sandwichs · 9 802 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot ko"></i><div><b>Tarte au riz 28 Ø</b><small>Tartes – Ø 28 cm · 1 630 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot mu"></i><div><b>Galette Frangipane 6 p.</b><small>Fêtes &amp; Occasions · hors saison</small></div></div><div class="pp-it"><i class="pp-dot ok"></i><div><b>Quiche Lorraine</b><small>Quiches · 5 410 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot ok"></i><div><b>Cookie chocolat lait</b><small>Cookies · 7 330 € / 30 j</small></div></div><div class="pp-it"><i class="pp-dot att"></i><div><b>Flip-Flap &amp; Boisson</b><small>Anti-Gaspi · hors saison</small></div></div></div></aside><section class="vr-card pp-fiche"><div class="pp-tete"><div class="pp-id"><h2>Pommes Tranches</h2><div class="pp-sous">produit 6700228 · Tartes – Ø 28 cm · recette 524 · <span class="pp-ok">actif</span> · 4 magasins sur 4
+    <a class="vr-lien" href="#">Ouvrir au panel ↗</a></div></div><span class="vr-sp"></span>
+  <div class="pp-score"><b>38 / 44</b><small>champs remplis</small></div><button class="rc-btn gris">Annuler</button><button class="rc-btn">Vérifier ce qui sera écrit</button></div>
+  <div class="pp-onglets"><button class="on">Général</button><button class="">Saisons &amp; gammes <b>3</b></button><button class="">Vente &amp; canaux</button><button class="">Fabrication</button><button class="">Conservation &amp; vitrine</button><button class="">Étiquette &amp; allergènes</button><button class="">Par magasin</button><button class="">Liaisons <b>28</b></button></div><div class="pp-corps"><div class="vx-sec pp-sec"><h3>Général <span>— pour tout le réseau</span><code class="pp-route">PATCH /products/{id}</code></h3><div class="pp-grille"><label class="pp-ch"><span>Nom <code>name</code></span><input class="pp-in" value="Pommes Tranches"></label><label class="pp-ch"><span>Nom de base <code>base_name</code></span><input class="pp-in" value="Pommes Tranches"><small>les traductions : /products/{id}/aliases</small></label><label class="pp-ch"><span>Catégorie <code>id_category</code></span><select class="pp-in"><option>Tartes – Ø 28 cm</option></select><small>coefficient 2,7 · Production Boulangerie · groupe Tartes</small></label><label class="pp-ch"><span>Secteur <code>sector_id</code></span><select class="pp-in ex"><option>Sucré</option></select><small>/consultant/product-sectors</small></label><label class="pp-ch"><span>TVA <code>tax_val_perc</code></span><select class="pp-in"><option>6 %</option></select></label><label class="pp-ch"><span>Marque <code>id_brand</code></span><select class="pp-in"><option>L’Atelier by</option></select></label><label class="pp-ch oui"><span>Actif <code>is_active</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch oui"><span>Produit du mois <code>is_pdm</code></span><button class="vx-tog"><i></i>non</button></label><label class="pp-ch oui"><span>Assortiment obligatoire <code>is_mandatory_assortment</code></span><button class="vx-tog on"><i></i>oui</button><small>chaque magasin doit le proposer</small></label></div></div><div class="vx-sec pp-sec"><h3>Saisons & gammes <span>— quand il est en vente</span><code class="pp-route">PATCH /products/{id}/availability-periods</code></h3>
+  <div class="pp-gch"><button class="on">🥖 Gamme Standard</button><button class="">Gamme Bureau</button><button class="">🎉 Gamme Saint-Valentin (14 Février)</button><button class="">🌸 Gamme Printanière (Mars à Mai)</button><button class="">🐣 Gamme Pascale (Mars-Avril)</button><button class="">🌷 Gamme Fête des Mères (2e dimanche de Mai)</button><button class="">test</button><button class="on">Automnale</button><button class="">Noël &amp; Nouvel An</button><button class="">Épiphanie</button><button class="on">❄️ Gamme Hivernale (Décembre à Février)</button><button class="">🍦 Icône - Gamme Glace (Avril - Septembre)</button><button class="">🥞 Chandeleur – Fête des crêpes</button><button class="">📦 Gamme B.-2-B. </button><button class="">Saint-Nicolas</button></div></div><div class="vx-sec pp-sec"><h3>Vente &amp; canaux <span>— le prix conseillé, la marge, où il se vend</span><code class="pp-route">PATCH /products/{id}</code></h3><div class="pp-grille"><label class="pp-ch"><span>Prix de vente conseillé <code>suggested_sale_price</code></span><input class="pp-in ex" value="21,90 €"><small>TTC</small></label><label class="pp-ch"><span>Prix max. d’une portion <code>max_portion_price</code></span><input class="pp-in" value="—"></label><label class="pp-ch"><span>Marge attendue <code>expected_margin</code></span><input class="pp-in ex" value="70 %"><small>aussi par catégorie : /product-categories/{id}/products/expected-margin</small></label><label class="pp-ch"><span>Coefficient minimum <code>min_coefficient</code></span><input class="pp-in ex" value="2,70"><small>celui de la catégorie : 2,70</small></label><label class="pp-ch oui"><span>Webshop <code>webshop_active</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch oui"><span>Vente au volume (webshop) <code>webshop_bulk_quantity_enabled</code></span><button class="vx-tog"><i></i>non</button></label><label class="pp-ch oui"><span>Click &amp; collect <code>click_and_collect</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch oui"><span>Livraison bureaux <code>office_delivery</code></span><button class="vx-tog on mod"><i></i>oui</button></label><label class="pp-ch oui"><span>Supplément personnalisable <code>is_personalization_addon</code></span><button class="vx-tog"><i></i>non</button></label></div></div><div class="vx-sec pp-sec"><h3>Fabrication <span>— la recette, la pièce, la production</span><code class="pp-route">PATCH /products/{id} · /products/{id}/portions · /products/{id}/competences</code></h3><div class="pp-grille"><label class="pp-ch"><span>Recette <code>id_recipe</code></span><select class="pp-in"><option>524 — Pommes Tranches · 2 lignes · 5,37 € la pièce (Corbais)</option></select></label><label class="pp-ch oui"><span>Vendu à la pièce <code>is_piece_based</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch oui"><span>Poids unique <code>single_weight</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch oui"><span>Divisible en portions <code>is_divisible</code></span><button class="vx-tog on"><i></i>oui</button><small>8 portions : /products/{id}/portions</small></label><label class="pp-ch oui"><span>Préparé avant la vente <code>is_prepared_before_sales</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch"><span>Délai de préparation <code>preparation_lead_time_hours</code></span><input class="pp-in ex" value="24 h"></label><label class="pp-ch oui"><span>Planning de production <code>production_planning_enabled</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch"><span>Compétences requises <code>required_competences</code></span><select class="pp-in ex"><option>Tartes — montage</option></select><small>/product-competences</small></label></div></div><div class="vx-sec pp-sec"><h3>Conservation &amp; vitrine <span>— où il se range, combien de temps il tient</span><code class="pp-route">PATCH /products/{id}</code></h3><div class="pp-grille"><label class="pp-ch"><span>Lieu de stockage <code>id_storage</code></span><select class="pp-in"><option>Comptoir Tartes</option></select><small>8 lieux : /product-storage-locations</small></label><label class="pp-ch"><span>Température de stockage <code>storage_temperature</code></span><input class="pp-in ex" value="4 °C"></label><label class="pp-ch"><span>Durée de vie <code>shelf_life_minutes</code></span><input class="pp-in ex" value="2 jours"><small>en minutes au panel : 2 880</small></label><label class="pp-ch"><span>Catégorie de durée <code>shelf_life_category</code></span><select class="pp-in"><option>SSL</option></select><small>SSL · ESL · LSL</small></label><label class="pp-ch"><span>Position en vitrine <code>id_positioning</code></span><select class="pp-in ex"><option>En longueur face à la vitrine</option></select><small>/product-display-positions</small></label><label class="pp-ch"><span>Emballage <code>id_package</code></span><select class="pp-in ex"><option>Boîte tarte 28</option></select><small>/product-packages</small></label><label class="pp-ch"><span>Réchauffage — durée <code>reheating_time_minutes</code></span><input class="pp-in" value="—"></label><label class="pp-ch"><span>Réchauffage — température <code>reheating_temperature_celsius</code></span><input class="pp-in" value="—"></label></div></div><div class="vx-sec pp-sec"><h3>Étiquette &amp; allergènes <span>— ce qui s’imprime</span><code class="pp-route">PATCH /products/{id} · /recipes/product-labels/reload</code></h3><div class="pp-grille"><label class="pp-ch"><span>Allergènes <code>grouped_allergens</code></span><input class="pp-in ex" value="gluten, œufs, lait"><small>calculés depuis la recette</small></label><label class="pp-ch"><span>Ingrédients de l’étiquette <code>label_ingredients</code></span><input class="pp-in ex" value="Pâte (farine de blé, beurre, œufs), pommes 45 %, abricotage…"></label><label class="pp-ch"><span>Nutri-Score <code>nutriscore</code></span><select class="pp-in ex"><option>C</option></select></label><label class="pp-ch oui"><span>Végétarien <code>is_vegetarian</code></span><button class="vx-tog on"><i></i>oui</button></label><label class="pp-ch"><span>Taille de l’étiquette <code>label_size</code></span><select class="pp-in"><option>small</option></select></label><label class="pp-ch"><span>Pièces par étiquette <code>quantity_per_label</code></span><input class="pp-in" value="1"></label><label class="pp-ch"><span>Fiche technique <code>technical-sheet</code></span><input class="pp-in" value="PDF — /products/{id}/technical-sheet"></label></div></div><div class="vx-sec pp-sec"><h3>Par magasin <span>— le prix, la disponibilité, le coût</span><code class="pp-route">PATCH /shops/{id}/products/{p}/price · GET /shops/{id}/products/available</code></h3>
+  <table class="vr-t"><thead><tr><th class="g">Magasin</th><th>Proposé</th><th>Prix HT<small>de la pièce</small></th><th>Prix TTC</th><th>Coût<small>recette</small></th><th>Coefficient</th><th>Matière<small>% du prix</small></th><th>Portion<small>prix</small></th><th>Promotion<small>en cours</small></th></tr></thead><tbody>
+  <tr><td class="g nom"><b>Corbais</b></td><td><button class="vx-tog on"><i></i></button></td><td><input class="pp-in n" value="18,77"></td><td>19,90 €</td><td>5,37 €</td><td>×3,50</td><td><span class="vx-p ok">28,6 %</span></td><td class="pp-ex">2,49 €</td><td class="vr-mu">—</td></tr><tr><td class="g nom"><b>Gosselies</b></td><td><button class="vx-tog on"><i></i></button></td><td><input class="pp-in n" value="20,66"></td><td>21,90 €</td><td>7,99 €</td><td>×2,59</td><td><span class="vx-p att">38,7 %</span></td><td class="pp-ex">2,74 €</td><td class="vr-mu"><span class="pp-ex">−20 % le samedi</span></td></tr><tr><td class="g nom"><b>Sombreffe</b></td><td><button class="vx-tog on"><i></i></button></td><td><input class="pp-in n" value="20,66"></td><td>21,90 €</td><td>5,37 €</td><td>×3,85</td><td><span class="vx-p ok">26,0 %</span></td><td class="pp-ex">2,74 €</td><td class="vr-mu">—</td></tr><tr><td class="g nom"><b>Halle</b></td><td><button class="vx-tog on"><i></i></button></td><td><input class="pp-in n" value="19,72"></td><td>20,90 €</td><td>7,99 €</td><td>×2,47</td><td><span class="vx-p att">40,5 %</span></td><td class="pp-ex">2,61 €</td><td class="vr-mu">—</td></tr></tbody></table></div>
+  <div class="pp-pied"><b>Les 44 champs du produit</b> tels que le panel les rend, rangés en sections ; une valeur changée se souligne en vert, « Vérifier » montre l’envoi exact (route, champs), « Écrire » l’écrit avec le compte consultant, le relit et le note au registre (« Annuler » remet l’avant). <span class="pp-ex">En italique pointillé</span> : valeur d’exemple de la maquette.</div></div></section></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>
