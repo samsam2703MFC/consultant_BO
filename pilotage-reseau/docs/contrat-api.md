@@ -5521,8 +5521,8 @@ jamais de boutique (champs filtrés).
 
     GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
     GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
-    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, langs, products, pages}
-    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, langs, products, pages, status, printQty)
+    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages}
+    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
     POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
 
@@ -5530,6 +5530,17 @@ Réponses du Marketing relayées telles quelles (`{success, data, meta}` ou `{su
 details}}`, même code HTTP) — sauf un 401 du Marketing (jeton refusé), rendu en 502 avec un message qui le dit, et un
 204, rendu en 200 `{success:true, data:null}`. Le cockpit répond lui-même, au même format : 503 `DEPENDENCY_UNAVAILABLE`
 (adresse ou jeton non réglés), 502 (Marketing injoignable ou réponse illisible), 422 (magasin absent).
+
+**8, 12 ou 16 pages** (14/11/2026, client : « 8, 12 ou 16 pages, dont les pages 1-2, l'avant-dernière et la dernière
+sont du template du catalogue fait par le franchiseur » ; contrat du Marketing, `docs/openapi/catalogues.yaml` v1.1) :
+`pageCount` ∈ {8, 12, 16} (défaut 8 ; autre valeur → 422) à la création et au PUT. Quatre pages viennent de la Charte des
+catalogues de la marque, verrouillées : couverture (1), page 2, avant-dernière, dernière — aucun champ pour elles. `pages`
+= exactement `pageCount − 4` pages intérieures `{layout, category}` : plus courte, complétée de pages vides ; plus longue,
+422 ; `[]` = répartition automatique sur ce nombre. Changer `pageCount` sans `pages` ajoute des pages vides ou retire
+celles de la fin si elles sont vides — sinon 422 `CATALOGUE_PAGES_NOT_EMPTY` (rien n'est écrit ; l'écran propose alors de
+répartir automatiquement). `…/catalogue-products` rend aussi `pageCounts: [8, 12, 16]`. Le document rend `pageCount`
+pages : `cover`, `brand` (`slot: page2` : titre, texte, image), pages intérieures, `brand` (`slot: penultimate`), `back`.
+Étape 2 de l'écran : produits par catégorie en accordéons, chaque produit par un interrupteur.
 
 Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
 `…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).
