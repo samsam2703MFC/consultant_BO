@@ -5141,7 +5141,7 @@
     if (S.bmMsg) { h += `<div class="db-alerte bm-msg">${S.bmMsg}</div>`; }
     if (S.bmForm) { h += bmFormulaire(); }
     if (S.err[k] && !D) { return h + `<div class="db-err">Concurrence : ${esc(S.err[k])}</div>`; }
-    if (S.bmF === 'top') { return h + rendTop10(); }
+    if (S.bmF === 'top') { return h + rendTop10() + bmParCp(D); }
     if (!D) { return h + squelette(3); }
     const X = bmSujet();
     if (!X) { return h + `<div class="db-alerte">Ce produit n’est pas dans le catalogue du magasin.</div>`; }
@@ -5183,7 +5183,7 @@
     const lignes = L.slice().sort((a, b) => (a.v ?? 1e9) - (b.v ?? 1e9)).map(r => {
       const e = ec(r.v), pos = r.v == null ? `<span class="mu">${r.unite === 'g' && X.mesure === 'diametre' ? 'vendu au poids' : 'taille non publiée'}</span>` : (Math.abs(e) < .5 ? '<span class="mu">même prix</span>' : `<span class="${e > 0 ? 'ko' : 'ok'}">nous ${pct(e)}</span>`);
       const lien = r.lien || ((r.notes || '').match(/https?:\/\/\S+/) || [])[0];
-      return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
+      return `<tr><td>${esc(r.concurrent)}<div class="db-mini">${esc(typeDe(r))}${r.cp ? ' · <span class="bm-cp">CP ' + esc(r.cp) + '</span>' : ''}${r.distance != null ? ' · ' + nf(r.distance, 0) + ' km' : ''} · ${r.source === 'api' ? 'TFBuddy' : 'relevé web'}${r.vuLe ? ' · ' + fD(r.vuLe) + '/' + r.vuLe.slice(2, 4) : ''}</div></td>
         <td>${esc(r.produit)}${r.monProduit ? '' : ' <span class="db-mini">non rattaché</span>'}</td><td class="n">${r.unite === 'piece' || !r.taille ? (r.unite === 'piece' ? '<span class="mu">à la pièce</span>' : '—') : nf(+r.taille, 0) + ' ' + esc(r.unite)}</td>
         <td class="n">${fU(r.prix)}${r.promo ? `<div class="db-mini">promo ${fU(r.promo)}</div>` : ''}</td><td class="n"><b>${r.v == null ? '—' : fU(r.v)}</b></td><td class="n">${pos}</td><td class="n">${lien ? `<a class="db-lien" href="${esc(lien)}" target="_blank" rel="noopener">source ↗</a>` : ''}</td></tr>`;
     }).join('');
@@ -5201,18 +5201,39 @@
       h += `<div class="bm-bas"><div class="db-card"><div class="ct"><span class="db-lab">Visibilité web — atelierby.be</span><span class="db-mini">${X.web ? 'lu le ' + esc(X.web.lu_le) : ''}</span></div>${ctrl}</div>
         <div class="db-card"><div class="ct"><span class="db-lab">À faire</span><span class="db-mini">tiré du benchmark</span></div>${X.constats.map((c, i) => `<div class="bm-l"><span class="mu bm-st">${i + 1}</span><span>${esc(c)}</span></div>`).join('')}</div></div>`;
     }
+    h += bmParCp(D);
     h += `<div class="db-mini bm-pied">Lu le ${esc(D.lu || '')}${D.kpi ? ' · TFBuddy : ' + (D.kpi.comparisons_count || 0) + ' comparaison(s) rattachée(s) sur 90 jours' : ''}${D.erreur ? ' · <span class="ko">' + esc(D.erreur) + '</span>' : ''}</div>`;
     return h;
+  }
+  /**
+   * Les concurrents du magasin rangés par code postal (14/11/2026, « rajouter dans Concurrence les codes postaux avec les
+   * concurrents ») : le classement du cockpit (Benchmark › Classement) — dans la zone du magasin, zone d'un autre magasin,
+   * hors zone, national, code postal inconnu. La zone se règle dans le cockpit, Benchmark › Zones.
+   */
+  function bmParCp(D) {
+    const P = D && D.parCp;
+    if (!P || !(P.concurrents || []).length) { return ''; }
+    const LIB = { zone: ['ok', 'dans la zone'], ailleurs: ['wa', 'zone d’un autre magasin'], hors: ['ko', 'hors zone'], inconnu: ['mu', 'code postal inconnu'], national: ['mu', 'national'] };
+    const n = k => P.concurrents.filter(c => c.classement === k).length;
+    const lignes = P.concurrents.map(c => {
+      const k = LIB[c.classement] || ['mu', c.classement];
+      const quoi = c.classement === 'ailleurs' ? 'zone de ' + (c.aussi || []).join(', ') : (c.classement === 'zone' && (c.aussi || []).length ? 'dans la zone · aussi ' + c.aussi.join(', ') : k[1]);
+      return `<tr><td>${esc(c.nom)}<div class="db-mini">${esc(c.type || '—')} · ${c.source === 'tfbuddy' ? 'TFBuddy' : (c.source === 'import' ? 'relevé importé, à encoder' : 'relevé web du cockpit')}</div></td>
+        <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-cl ${k[0]}">${esc(quoi)}</span></td></tr>`;
+    }).join('');
+    return `<div class="db-card"><div class="ct"><span class="db-lab">Les concurrents du magasin, par code postal</span><span class="db-mini">franchisé ${esc(P.franchise || '—')} · CP ${esc(P.cp || '?')} · zone de ${P.zone.n} codes postaux · ${n('zone')} dans la zone, ${n('hors') + n('ailleurs')} hors zone, ${n('national')} nationaux, ${n('inconnu')} sans code postal · zones réglées dans le cockpit, Benchmark</span></div>
+      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Code postal</th><th>Classement</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
   }
   /** Le formulaire d'un prix vu en magasin — posé dans TFBuddy, rattaché au produit affiché. */
   function bmFormulaire() {
     const D = S.aux[cleBM()] || {}, F = S.bmForm, X = bmSujet() || {}, p = X.produit || null;
-    const opts = (D.concurrents || []).slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(c => `<option value="${c.id}" ${String(F.cid) === String(c.id) ? 'selected' : ''}>${esc(c.nom)}${c.ville ? ' · ' + esc(c.ville) : ''}</option>`).join('');
+    const opts = (D.concurrents || []).slice().sort((a, b) => a.nom.localeCompare(b.nom)).map(c => `<option value="${c.id}" ${String(F.cid) === String(c.id) ? 'selected' : ''}>${esc(c.nom)}${c.cp ? ' · ' + esc(c.cp) : ''}${c.ville ? ' ' + esc(c.ville) : ''}</option>`).join('');
     const nousOpts = (X.cle === 'produit' ? [p] : (X.nous || []).filter(n => n.id)).filter(Boolean).map(n => `<option value="${n.id}">${esc(n.nom)}</option>`).join('');
     return `<div class="db-card bm-form"><div class="ct"><span class="db-lab">Relevé terrain — un prix vu chez un concurrent</span><span class="db-mini">posé dans le module Benchmark de TFBuddy, daté d’aujourd’hui</span><button class="db-btn" data-bmferme="1">Fermer</button></div>
       <div class="bm-grille">
         <label>Concurrent<select data-bmc="cid"><option value="">— nouveau concurrent —</option>${opts}</select></label>
         <label>Nouveau : nom<input data-bmc="cnom" value="${esc(F.cnom || '')}" placeholder="Boulangerie Dupont"></label>
+        <label>Nouveau : code postal<input data-bmc="ccp" inputmode="numeric" maxlength="4" value="${esc(F.ccp || '')}" placeholder="5140"></label>
         <label>Type<select data-bmc="ctype">${['Artisan', 'GMS', 'Chaîne'].map(x => `<option ${F.ctype === x ? 'selected' : ''}>${x}</option>`).join('')}</select></label>
         <label>Notre produit<select data-bmc="pid">${nousOpts || '<option value="">—</option>'}</select></label>
         <label class="lg">Produit vu<input data-bmc="nom" value="${esc(F.nom || '')}" placeholder="Cougnou sucre 250 g"></label>
@@ -5247,7 +5268,7 @@
     $.querySelectorAll('[data-bmenv]').forEach(b => b.addEventListener('click', () => {
       bmLireForm(); const F = S.bmForm || {};
       const corps = { shop: +S.shop, nom: F.nom, prix: F.prix, promo: F.promo || null, unite: F.unite, taille: F.taille || null, produitId: F.pid ? +F.pid : (($.querySelector('[data-bmc="pid"]') || {}).value || null) };
-      if (F.cid) { corps.concurrentId = +F.cid; } else { corps.concurrent = { nom: F.cnom, type: F.ctype }; }
+      if (F.cid) { corps.concurrentId = +F.cid; } else { corps.concurrent = { nom: F.cnom, type: F.ctype, cp: F.ccp || '' }; }
       if (!corps.nom || !(+String(corps.prix).replace(',', '.') > 0) || (!F.cid && !F.cnom)) { S.bmMsg = 'Indiquez le concurrent, le produit vu et son prix.'; rendre(); return; }
       S.bmEnvoi = true; rendre();
       ecrire('/benchmarks/releve', corps).then(() => { S.bmForm = null; S.bmMsg = 'Relevé posé dans TFBuddy : ' + esc(corps.nom) + ' à ' + esc(String(corps.prix)) + ' €.'; lireAux(cleBM(), cheminBM() + '&rafraichir=1', true); })

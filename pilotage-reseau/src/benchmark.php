@@ -351,6 +351,13 @@ function benchmarkVerifier(int $shop = 4, bool $ecrire = false): array
     return ['ok' => $ok, 'magasin' => $shop, 'ecrire' => $ecrire, 'etapes' => $etapes, 'alertes' => $alertes, 'resume' => $resume];
 }
 
+/** « · CP 5030 [cp:5030] » pour un concurrent dont la ville a un code postal connu (src/benchmark_import.php), sinon rien. */
+function benchmarkCpNote(string $ville, string $cp = ''): string
+{
+    if ($cp === '' && function_exists('biCpConcurrent')) { $cp = (string) (biCpConcurrent(['city' => $ville]) ?? ''); }
+    return preg_match('/^[1-9]\d{3}$/', $cp) ? ' · CP ' . $cp . ' [cp:' . $cp . ']' : '';
+}
+
 /** Écrit une clé du réglage `benchmark` sans toucher aux autres. */
 function benchmarkReglage(string $cle, mixed $valeur): void
 {
@@ -477,7 +484,7 @@ function benchmarkSemer(string $famille, bool $simuler = true, array $magasins =
             $fiche = array_filter([
                 'name' => (string) $c['nom'], 'type' => (string) ($c['type'] ?? ''), 'city' => (string) ($c['ville'][(string) $shop] ?? ($c['ville']['*'] ?? '')),
                 'distance_km' => $dist !== null ? (float) $dist : null,
-                'notes' => trim('Benchmark saisonnier — ' . ($c['note'] ?? '') . ' ' . ($c['site'] ?? '')), 'is_active' => true,
+                'notes' => trim('Benchmark saisonnier — ' . ($c['note'] ?? '') . ' ' . ($c['site'] ?? '') . benchmarkCpNote((string) ($c['ville'][(string) $shop] ?? ($c['ville']['*'] ?? '')))), 'is_active' => true,
             ], fn ($v) => $v !== null && $v !== '');
             $cid = $existants[$cle] ?? 0;
             if ($simuler) {
@@ -1025,12 +1032,14 @@ function ep_benchmark_magasin(): array
         if ($liste === null) { $erreur = BenchmarkApi::$lastError; }
         foreach ((array) $liste as $c) {
             $concurrents[] = ['id' => (int) $c['id'], 'nom' => (string) ($c['name'] ?? ''), 'type' => (string) ($c['type'] ?? ''), 'ville' => (string) ($c['city'] ?? ''),
+                'cp' => function_exists('biCpConcurrent') ? biCpConcurrent($c) : null,
                 'distance' => isset($c['distance_km']) ? (float) $c['distance_km'] : null, 'actif' => !isset($c['is_active']) || (bool) $c['is_active']];
             foreach ((array) ($c['observations'] ?? []) as $o) {
                 foreach ((array) BenchmarkApi::items($shop, (int) $o['id']) as $i) {
                     $u = (string) ($i['unit_type'] ?? ''); $t = isset($i['unit_size']) ? (float) $i['unit_size'] : null;
                     if (preg_match('/\[(\d+(?:[.,]\d+)?)\s*(g|kg|cm)\]/u', (string) ($i['name_raw'] ?? ''), $mt) && !in_array($u, ['g', 'kg', 'cm'], true)) { $u = $mt[2]; $t = (float) str_replace(',', '.', $mt[1]); }
                     $releves[] = ['id' => (int) $i['id'], 'observation' => (int) $o['id'], 'concurrentId' => (int) $c['id'], 'concurrent' => (string) $c['name'], 'type' => (string) ($c['type'] ?? ''),
+                        'cp' => function_exists('biCpConcurrent') ? biCpConcurrent($c) : null,
                         'distance' => isset($c['distance_km']) ? (float) $c['distance_km'] : null, 'produit' => trim((string) preg_replace('/\s*\[[^\]]*\]\s*$/u', '', (string) ($i['name_raw'] ?? ''))),
                         'monProduit' => isset($i['my_product_id']) ? (int) $i['my_product_id'] : null, 'monProduitNom' => $i['my_product_name'] ?? null,
                         'prix' => (float) ($i['price'] ?? 0), 'promo' => !empty($i['is_promo']) ? (float) ($i['promo_price'] ?? 0) : null,
@@ -1048,7 +1057,9 @@ function ep_benchmark_magasin(): array
         foreach ($d['concurrents'] as $c) {
             if (!in_array($shop, array_map('intval', (array) ($c['magasins'] ?? [])), true)) { continue; }
             foreach ((array) $c['items'] as $i) {
+                $vRef = (string) (($c['ville'] ?? [])[(string) $shop] ?? (($c['ville'] ?? [])['*'] ?? ''));
                 $referentiel[] = ['concurrent' => $c['nom'], 'type' => $c['type'] ?? '', 'distance' => $c['distance_km'][(string) $shop] ?? null, 'produit' => $i['name_raw'],
+                    'cp' => function_exists('biCpConcurrent') ? biCpConcurrent(['city' => $vRef]) : null,
                     'monProduit' => isset($i['comparer_a']) ? ($d['nous']['correspondance'][$i['comparer_a']] ?? null) : null, 'prix' => (float) $i['price'],
                     'promo' => isset($i['promo_price']) ? (float) $i['promo_price'] : null, 'unite' => (string) ($i['unit_type'] ?? ''), 'taille' => $i['unit_size'] ?? null,
                     'vuLe' => (string) $d['releve'], 'notes' => trim(($i['vu_le'] ?? '') . ' ' . ($i['source'] ?? '')), 'lien' => $i['source'] ?? null, 'famille' => $f, 'source' => 'referentiel'];
@@ -1056,7 +1067,12 @@ function ep_benchmark_magasin(): array
         }
     }
     $a = BenchmarkApi::disponible() ? BenchmarkApi::analyse($shop, date('Y-m-d', strtotime('-90 days')), date('Y-m-d')) : null;
-    return ['shop' => $shop, 'lu' => date('Y-m-d H:i'), 'releves' => $releves, 'referentiel' => $referentiel, 'concurrents' => $concurrents,
+    // Les concurrents du magasin rangés par code postal (Benchmark › Classement), et la zone du magasin.
+    $parCp = null;
+    if (function_exists('biClassement')) {
+        try { $parCp = biClassement($shop)['magasins'][0] ?? null; } catch (Throwable $e) { $parCp = null; }
+    }
+    return ['shop' => $shop, 'lu' => date('Y-m-d H:i'), 'releves' => $releves, 'referentiel' => $referentiel, 'concurrents' => $concurrents, 'parCp' => $parCp,
         'familles' => $familles, 'kpi' => $a['kpi'] ?? null, 'produits' => $a['products'] ?? [], 'erreur' => $erreur];
 }
 
@@ -1082,7 +1098,8 @@ function wr_benchmark_releve(): array
         foreach ((array) BenchmarkApi::concurrents($shop) as $x) { if (benchmarkNomCle((string) ($x['name'] ?? '')) === benchmarkNomCle($cn)) { $cid = (int) $x['id']; } }
         if ($cid <= 0) {
             $cid = (int) BenchmarkApi::creerConcurrent($shop, array_filter(['name' => mb_substr($cn, 0, 120), 'type' => mb_substr((string) ($c['type'] ?? 'Artisan'), 0, 40),
-                'city' => mb_substr((string) ($c['ville'] ?? ''), 0, 80), 'distance_km' => isset($c['distance']) && $c['distance'] !== '' ? (float) $c['distance'] : null, 'is_active' => true], fn ($v) => $v !== null && $v !== ''));
+                'city' => mb_substr((string) ($c['ville'] ?? ''), 0, 80), 'distance_km' => isset($c['distance']) && $c['distance'] !== '' ? (float) $c['distance'] : null,
+                'notes' => trim(benchmarkCpNote((string) ($c['ville'] ?? ''), (string) ($c['cp'] ?? '')), ' ·'), 'is_active' => true], fn ($v) => $v !== null && $v !== ''));
             if ($cid <= 1) { foreach ((array) BenchmarkApi::concurrents($shop) as $x) { if (benchmarkNomCle((string) ($x['name'] ?? '')) === benchmarkNomCle($cn)) { $cid = (int) $x['id']; } } }
             if ($cid <= 1) { http_response_code(502); return ['ok' => false, 'error' => 'TFBuddy n’a pas créé le concurrent : ' . (BenchmarkApi::$lastError ?? '?')]; }
         }

@@ -2817,3 +2817,7 @@ button.rv-x:hover{background:rgba(0,0,0,.06)}
   .pd-prods td:nth-child(2),.pd-prods th:nth-child(2),.pd-prods td:last-child,.pd-prods th:last-child{display:none}
   .pd-ddb{grid-template-columns:1fr 1fr;margin-left:0}.pd-ddb>div:nth-child(3){border-left:none}
 }
+/* Concurrence : le code postal d'un concurrent et son classement de zone (14/11/2026). */
+.bm-cp{display:inline-block;font-size:10.5px;background:#fff;border:1px solid var(--color-border-secondary,#d8d0c6);border-radius:999px;padding:0 7px;color:var(--color-text,#222);white-space:nowrap}
+.bm-cl{font-size:10px;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 7px;white-space:nowrap}
+.bm-cl.ok{background:#e6f1e8;color:#1f5c2c}.bm-cl.wa{background:#fbeede;color:#8a4b00}.bm-cl.ko{background:#f6e3e5;color:#8D1D2C}.bm-cl.mu{background:#f1ece5;color:#8a8076}
