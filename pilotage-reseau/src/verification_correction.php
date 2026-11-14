@@ -52,7 +52,7 @@ const VRC_GESTES = ['quantite', 'recette', 'rendement', 'copier', 'rattacher', '
  * ------------------------------------------------------------------------------------------- */
 
 /** Un objet du panel débarrassé de son enveloppe (`data`, `recipe`…) ; null pour une liste ou une réponse vide. */
-function vrcDeballer(mixed $d, array $cles = ['data', 'recipe', 'subrecipe', 'product', 'portion']): ?array
+function vrcDeballer(mixed $d, array $cles = ['data', 'recipe', 'subrecipe', 'product', 'portion', 'material']): ?array
 {
     if (!is_array($d) || $d === []) { return null; }
     foreach ($cles as $k) { if (isset($d[$k]) && is_array($d[$k]) && $d[$k] !== [] && !array_is_list($d[$k])) { $d = $d[$k]; } }
@@ -222,6 +222,9 @@ function vrcProjection(string $cle, mixed $v): mixed
         ksort($o);
         return $o;
     }
+    // Les allergènes d'une matière (14/11/2026) : leurs codes, quelle que soit la forme (objets, identifiants, texte).
+    if ($cle === 'allergens' && function_exists('vmxAllergenesDe')) { return vmxAllergenesDe($v, vmxAllergenesRef()); }
+    if (is_bool($v)) { return $v ? 1.0 : 0.0; }
     return is_numeric($v) ? (float) $v : $v;
 }
 
@@ -348,6 +351,7 @@ function vrcChemin(string $objet, int $id): string
         'sousRecette' => '/subrecipes/' . $id,
         'produit' => '/products/' . $id,
         'portion' => '/product-portions/' . $id,
+        'matiere' => '/materials/' . $id,
         default => '',
     };
 }
