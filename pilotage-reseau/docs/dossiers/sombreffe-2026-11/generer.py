@@ -66,6 +66,9 @@ SEMAINES_HALLE = ICI / 'semaines-halle.json'
 # Le coût d'une heure de planning (14/11/2026) : le personnel du P&L du jour ÷ les heures du planning du panel, jour par
 # jour, GET /api/cockpit/exploitation/jour?date=… ; le fichier ne garde que les totaux du jour (heures, personnel, CA).
 HEURES_EQUIPE = ICI / 'heures-equipe.json'
+# Les pièces vendues par mois (14/11/2026, Sam) : GET /api/cockpit/ventes/semaines?shop=5&vue=mois&date=2026-10-31&n=6
+# &articles=1 — chaque mois et son N-1 portent `articles`, les pièces vendues.
+PIECES_MOIS = ICI / 'pieces-mois.json'
 COUT_HEURE = 24.0                        # € de l'heure, charges comprises : le taux du réseau (cockpit, réglage production,
                                          # tauxHoraire), retenu le 14/11/2026 (Sam) pour les heures à récupérer
 SEMAINES_MOI = ICI / 'semaines-sombreffe.json'
@@ -379,6 +382,9 @@ def main():
     oct25, oct26 = mois['2025-10'], mois['2026-10']
     donnees = {
         'heuresEquipe': heuresEquipe, 'coutHeure': COUT_HEURE,
+        'pieces': ([{'k': w['du'][:7], 'jours': w['jours'], 'clients': w['tickets'], 'ca': w['ca'], 'pieces': w['articles'],
+                     'n1': ({'jours': w['n1']['jours'], 'clients': w['n1']['tickets'], 'pieces': w['n1']['articles']} if w.get('n1') else None)}
+                    for w in json.loads(PIECES_MOIS.read_text(encoding='utf-8'))['semaines']] if PIECES_MOIS.exists() else None),
         'repere': repere,
         'personnel': personnel, 'personnelReseau': personnelReseau, 'theorique': theorique, 'b2bClients': b2bClients, 'proLu': bool(pro), 'b2bDetail': detail, 'seuilPersonnel': SEUIL_PERSONNEL,
         'taches': taches, 'panierAutres': panierAutres,

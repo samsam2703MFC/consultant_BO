@@ -410,6 +410,10 @@ body { margin: 0; background: var(--paper); }
     </div>
     <h3 class="rp-h3">Mai → octobre 2026, face au N-1</h3>   <!-- les six mois seuls, 14/11/2026 (Sam) -->
     <div class="rp-table-zone"><table class="rp-table rp-serre" id="oo-table"></table></div>
+    <div id="pieces" hidden>   <!-- 14/11/2026 (Sam) -->
+      <h3 class="rp-h3">Pièces vendues, mai → octobre 2026, face au N-1</h3>
+      <div class="rp-table-zone"><table class="rp-table rp-serre" id="pieces-table"></table></div>
+    </div>
     <p class="rp-aide" id="oo-note"></p>
     <div class="rp-deux">
       <div class="rp-part"><h3 class="rp-h3">Trimestre par trimestre</h3><div class="rp-table-zone"><table class="rp-table" id="trim-table"></table></div></div>
@@ -742,6 +746,24 @@ $('oo-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th
     + `<td class="num ${cls(l.vsCa)}">${pct(l.vsCa)}${l.n1Fermes ? '*' : ''}</td><td class="num ${cls(l.vsCli)}">${pct(l.vsCli)}</td><td class="num ${cls(l.vsPanier)}">${pct(l.vsPanier)}</td></tr>`).join('')
   + `</tbody><tfoot><tr><td>Mai → oct. 26</td><td class="num">${C.n.jours}</td><td class="num">${grp(C.n.clients)}</td><td class="num">${dec(C.n.cliJour, 0)}</td><td class="num">${eur(C.n.ca)}</td><td class="num">${eur(C.n.caJour)}</td><td class="num">${eur2(C.n.panier)}</td>`
   + `<td class="num ${cls(ecC('ca'))}">${pct(ecC('ca'))}</td><td class="num ${cls(ecC('clients'))}">${pct(ecC('clients'))}</td><td class="num ${cls(ecC('panier'))}">${pct(ecC('panier'))}</td></tr></tfoot>`;
+/* --- Les pièces vendues par mois, face au N-1 (14/11/2026, Sam) --- */
+if (D.pieces && D.pieces.length) {
+  const PI = D.pieces, lab = k => (L.find(l => l.k === k) || { lab: k }).lab;
+  const som = (f) => PI.reduce((a, m) => a + f(m), 0);
+  const tot = { jours: som(m => m.jours), clients: som(m => m.clients), ca: som(m => m.ca), pieces: som(m => m.pieces),
+    n1: PI.every(m => m.n1) ? { jours: som(m => m.n1.jours), clients: som(m => m.n1.clients), pieces: som(m => m.n1.pieces) } : null };
+  const ligne = (nom, m, pied) => {
+    const e = m.n1 ? (m.pieces / m.n1.pieces - 1) * 100 : null, court = !pied && m.n1 && m.n1.jours < m.jours - 2;
+    const t = pied ? 'td' : 'td';
+    return `<tr><${t}>${esc(nom)}</${t}><td class="num">${m.jours}</td><td class="num">${grp(m.pieces)}</td><td class="num">${grp(m.pieces / m.jours)}</td>`
+      + `<td class="num">${m.n1 ? grp(m.n1.pieces) : '—'}</td><td class="num ${cls(e)}">${pct(e)}${court ? '*' : ''}</td>`
+      + `<td class="num">${dec(m.pieces / m.clients, 2)}</td><td class="num">${m.n1 ? dec(m.n1.pieces / m.n1.clients, 2) : '—'}</td><td class="num">${eur2(m.ca / m.pieces)}</td></tr>`;
+  };
+  $('pieces-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Pièces</th><th class="num">Pièces / jour</th><th class="num">Pièces N-1</th><th class="num">Pièces vs N-1</th>'
+    + '<th class="num">Pièces par client</th><th class="num">Par client N-1</th><th class="num">Prix d’une pièce</th></tr></thead><tbody>'
+    + PI.map(m => ligne(lab(m.k), m, false)).join('') + '</tbody><tfoot>' + ligne('Mai → oct. 26', tot, true) + '</tfoot>';
+  $('pieces').hidden = false;
+}
 const courts = L.filter(l => l.n1Fermes), juil = L.find(l => l.k === '2026-07');
 $('oo-note').textContent = courts.map(l => `* ${l.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(l.vsCaJour)}.`).join(' ');
 
