@@ -81,6 +81,7 @@ final class Panel
     public static array $ignore = [];     // chemin => true : 200 sans rien changer
     public static array $ecrits = [];     // [méthode, chemin, corps]
     public static array $materiaux = [];  // mid => objet (comme GET /materials/{id})
+    public static array $tva = [];        // mid => lignes (comme GET /materials/{id}/vat-rates)
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
@@ -126,6 +127,7 @@ final class Panel
         }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m)) { return self::$recettes[(int) $m[1]] ?? null; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m)) { return isset(self::$sous[(int) $m[1]]) ? ['data' => self::$sous[(int) $m[1]]] : null; }
+        if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m)) { return isset(self::$tva[(int) $m[1]]) ? ['data' => self::$tva[(int) $m[1]]] : null; }
         if (preg_match('#^/materials/(\d+)$#', $c, $m)) { return isset(self::$materiaux[(int) $m[1]]) ? ['data' => self::$materiaux[(int) $m[1]]] : null; }
         if ($c === '/allergens') { return [['id' => 1, 'code' => 'cereals_gluten'], ['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']]; }
         if ($c === '/units') { return [['id' => 1, 'name' => 'g'], ['id' => 5, 'name' => 'pcs'], ['id' => 2, 'name' => 'kg']]; }
@@ -146,6 +148,13 @@ final class Panel
         self::$ecrits[] = [$meth, $c, $b];
         if (isset(self::$refus[$c])) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422 : ' . self::$refus[$c]; return [false, ['description' => self::$refus[$c]]]; }
         if (isset(self::$ignore[$c])) { return [true, ['status' => 'ok']]; }
+        if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m) && $meth === 'POST') {
+            $mid = (int) $m[1]; $fait = false;
+            foreach (self::$tva[$mid] as &$l) { if ($l['country_code'] === ($b['country_code'] ?? '')) { $l['vat_rate'] = number_format((float) $b['vat_rate'], 2, '.', ''); $fait = true; } }
+            unset($l);
+            if (!$fait) { self::$tva[$mid][] = ['country_code' => $b['country_code'], 'vat_rate' => number_format((float) $b['vat_rate'], 2, '.', '')]; }
+            return [true, []];
+        }
         if (preg_match('#^/materials/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$materiaux[(int) $m[1]] = array_merge(self::$materiaux[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$recettes[(int) $m[1]] = array_merge(self::$recettes[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$sous[(int) $m[1]] = array_merge(self::$sous[(int) $m[1]], $b); return [true, []]; }
@@ -496,6 +505,23 @@ $BODY = ['mid' => 521, 'champs' => ['waste_amount_perc' => 3], 'magasins' => ['3
 $r = wr_verification_matiere();
 verifie('fiche : paramètres sans effet → les prix ne partent pas', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'sans_effet' && count($r['ecritures']) === 1 && Panel::$prix[3][521] === 6.5);
 unset(Panel::$ignore['/materials/521']);
+
+// La TVA, sur sa route (/materials/{id}/vat-rates : elle n'est pas dans la matière, mesuré le 14/11).
+Panel::$tva[521] = [['id' => 9, 'country_code' => 'BE', 'vat_rate' => '6.00']];
+unset(Panel::$materiaux[521]['vat_rate']);
+$_GET = ['mid' => '521'];
+$f = ep_verification_matiere();
+$cT = array_column($f['champs'], null, 'cle')['vat_rate'];
+verifie('TVA : lue sur sa route, modifiable', $cT['modifiable'] && $cT['valeur'] === 6.0);
+verifie('TVA : le corps reprend la ligne lue, taux changé (sans son id)', vmxTvaCorps(Panel::$tva[521][0], 21.0) === ['country_code' => 'BE', 'vat_rate' => 21.0]);
+$BODY = ['mid' => 521, 'champs' => ['vat_rate' => 21]];
+$r = wr_verification_matiere();
+verifie('TVA : posée, relue', $r['ok'] && Panel::$tva[521][0]['vat_rate'] === '21.00' && end(Panel::$ecrits)[1] === '/materials/521/vat-rates', json_encode($r));
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('TVA : « Annuler » remet 6 %', $u['ok'] && Panel::$tva[521][0]['vat_rate'] === '6.00', json_encode($u));
+$BODY = ['mid' => 521, 'champs' => ['vat_rate' => 'abc']];
+verifie('TVA : une valeur invalide ne part pas', !wr_verification_matiere()['ok']);
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);

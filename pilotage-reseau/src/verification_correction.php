@@ -751,7 +751,13 @@ function wr_verification_annuler(): array
     $inv = json_decode((string) $r['inverse'], true);
     $base = ['geste' => (string) $r['geste'], 'cle' => $r['cle'], 'pid' => $r['product_id'] !== null ? (int) $r['product_id'] : null, 'nom' => (string) $r['nom'],
         'shop' => $r['shop_id'] !== null ? (int) $r['shop_id'] : null, 'annuleDe' => $id, 'coutAvant' => $r['cout_apres'], 'coutApres' => $r['cout_avant']];
-    if ((string) $r['objet'] === 'prixMagasin') {
+    if ((string) $r['objet'] === 'tvaMatiere' && function_exists('vmxEcrireTva')) {
+        if (!is_array($inv) || !isset($inv['taux'])) { return ['ok' => false, 'error' => 'L’ancienne TVA n’a pas été gardée.']; }
+        [, $tauxLu, $ligneLue] = vmxTvaLue(PanelApi::get('/materials/' . (int) $inv['mid'] . '/vat-rates'));
+        $n = vmxEcrireTva($base + ['objetId' => (int) $inv['mid']], (int) $inv['mid'], (float) $inv['taux'], $tauxLu, $ligneLue);
+        $n['resume'] = 'Annulation de la correction n° ' . $id . ' : ' . $n['resume'];
+        if ($n['resultat'] !== 'ok') { return ['ok' => false, 'ecritures' => [vrcLigneRegistre($n)], 'error' => 'L’annulation n’a pas pris : ' . ($n['message'] ?? '')]; }
+    } elseif ((string) $r['objet'] === 'prixMagasin') {
         if (!is_array($inv) || !isset($inv['prix'])) { return ['ok' => false, 'error' => 'L’ancien prix n’a pas été gardé.']; }
         $n = vrcEcrirePrix($base + ['objetId' => (int) $inv['mid']], (int) $inv['sid'], (int) $inv['mid'], (float) $inv['prix'], (string) ($inv['matiere'] ?? ''), null);
         $n['resume'] = 'Annulation de la correction n° ' . $id . ' : ' . $n['resume'];
