@@ -363,13 +363,14 @@ body { margin: 0; background: var(--paper); }
     <h2 class="rp-annexe-titre">Annexe</h2>
   </header>
   <section class="rp-carte" id="annexe-a">
-    <h2 class="rp-h2">Les 18 mois, mois par mois</h2>
+    <h2 class="rp-h2">Mois par mois</h2>
     <p class="rp-p" id="oo-intro"></p>
     <div class="rp-deux">
       <div class="rp-part" id="trafic"><h3 class="rp-h3">Clients par jour ouvert</h3><div class="rp-graphe" id="graphe-trafic"><div class="rp-bulle"></div></div></div>
       <div class="rp-part" id="comparable"><h3 class="rp-h3">Mai → octobre : 2026 face à 2025</h3>
         <div class="rp-table-zone"><table class="rp-table" id="comp-table"></table></div><p class="rp-aide" id="comp-note"></p></div>
     </div>
+    <h3 class="rp-h3">Mai → octobre 2026, face au N-1</h3>   <!-- les six mois seuls, 14/11/2026 (Sam) -->
     <div class="rp-table-zone"><table class="rp-table rp-serre" id="oo-table"></table></div>
     <p class="rp-aide" id="oo-note"></p>
     <div class="rp-deux">
@@ -697,9 +698,10 @@ if (D.proLu) {
 $('oo-intro').textContent = `Les dix-huit mois pleins depuis l’ouverture : ${k1(T.ca)} de CA, ${grp(T.clients)} clients, ${eur(T.caJour)} de CA par jour ouvert. Le N-1 commence en mai 2026 : le magasin a ouvert fin avril 2025.`;
 const L = D.lignes;
 $('oo-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Clients</th><th class="num">Clients / jour</th><th class="num">CA</th><th class="num">CA / jour</th><th class="num">Panier</th><th class="num">CA vs N-1</th><th class="num">Clients vs N-1</th><th class="num">Panier vs N-1</th></tr></thead><tbody>'
-  + L.map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${l.jours}</td><td class="num">${grp(l.clients)}</td><td class="num">${dec(l.cliJour, 0)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caJour)}</td><td class="num">${eur2(l.panier)}</td>`
+  + L.filter(l => l.k >= '2026-05' && l.k <= '2026-10').map(l => `<tr><td>${esc(l.lab)}</td><td class="num">${l.jours}</td><td class="num">${grp(l.clients)}</td><td class="num">${dec(l.cliJour, 0)}</td><td class="num">${eur(l.ca)}</td><td class="num">${eur(l.caJour)}</td><td class="num">${eur2(l.panier)}</td>`
     + `<td class="num ${cls(l.vsCa)}">${pct(l.vsCa)}${l.n1Fermes ? '*' : ''}</td><td class="num ${cls(l.vsCli)}">${pct(l.vsCli)}</td><td class="num ${cls(l.vsPanier)}">${pct(l.vsPanier)}</td></tr>`).join('')
-  + `</tbody><tfoot><tr><td>18 mois</td><td class="num">${T.jours}</td><td class="num">${grp(T.clients)}</td><td class="num">${dec(T.cliJour, 0)}</td><td class="num">${eur(T.ca)}</td><td class="num">${eur(T.caJour)}</td><td class="num">${eur2(T.panier)}</td><td></td><td></td><td></td></tr></tfoot>`;
+  + `</tbody><tfoot><tr><td>Mai → oct. 26</td><td class="num">${C.n.jours}</td><td class="num">${grp(C.n.clients)}</td><td class="num">${dec(C.n.cliJour, 0)}</td><td class="num">${eur(C.n.ca)}</td><td class="num">${eur(C.n.caJour)}</td><td class="num">${eur2(C.n.panier)}</td>`
+  + `<td class="num ${cls(ecC('ca'))}">${pct(ecC('ca'))}</td><td class="num ${cls(ecC('clients'))}">${pct(ecC('clients'))}</td><td class="num ${cls(ecC('panier'))}">${pct(ecC('panier'))}</td></tr></tfoot>`;
 const courts = L.filter(l => l.n1Fermes), juil = L.find(l => l.k === '2026-07');
 $('oo-note').textContent = courts.map(l => `* ${l.lab} : le N-1 a eu des jours fermés. Par jour ouvert, l’écart est de ${pct(l.vsCaJour)}.`).join(' ');
 
