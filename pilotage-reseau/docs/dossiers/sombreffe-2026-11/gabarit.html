@@ -510,8 +510,10 @@ const B2BX = (() => {
 
 /* --- En-tête et bandeau --- */
 $('sous-titre').textContent = 'Atelier by Harmonie, Sombreffe · mai 2025 → octobre 2026 · rapport du 13 novembre 2026';
-$('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>Le magasin passe en soins intensifs le lundi ' +
-  esc(dateL(D.soinsIntensifs)) + '. Ce rapport en est le point de départ : l’état du magasin à l’entrée, les repères à battre et ce qu’on suit chaque semaine.</span>';
+// 6 semaines de suivi intensif (14/11/2026, Sam) : du lundi d'entrée au dimanche de la sixième semaine.
+const finSoins = (() => { const d = new Date(D.soinsIntensifs + 'T12:00:00'); d.setDate(d.getDate() + 6 * 7 - 1); return d.toISOString().slice(0, 10); })();
+$('soins-intensifs').innerHTML = '<span class="rp-alerte-k">Soins intensifs</span><span>' + esc(insec(
+  `6 semaines de suivi intensif, du lundi ${dateL(D.soinsIntensifs)} au dimanche ${dateL(finSoins)}.`)) + '</span>';
 
 $('ouverture-texte').textContent = insec(D.ouverture);
 $('note-redacteur-texte').textContent = insec(D.noteRedacteur);
