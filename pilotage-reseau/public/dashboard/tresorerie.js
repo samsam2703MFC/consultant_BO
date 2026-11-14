@@ -604,7 +604,9 @@
     }
     if (!Array.isArray(B.annees) || !B.annees.length) { return h + `<div class="db-err">Budget et étude : réponse incomplète du serveur. <button type="button" class="tr-lien" data-tra="relireB">Relire</button></div>`; }
     const anAuj = new Date(auj).getUTCFullYear();
-    const ans = B.annees;
+    // Une année à venir sans budget encodé ne se montre pas (14/11/2026, « pour le moment retire 2027 ») : elle revient
+    // d'elle-même quand son budget est encodé au cockpit, ou quand elle commence.
+    const ans = anneesVisibles(B, anAuj);
     if (!ans.includes(S.anB)) { S.anB = ans.includes(anAuj) ? anAuj : ans[0]; }
     const an = S.anB, ex = (B.exercices || []).find(x => x.annee === an) || { mois: [], moisBudget: 0, moisTheorique: 0 };
     const statut = x => x.valideLe ? 'validé le ' + x.valideLe.split('-').reverse().join('/') : (x.moisBudget ? 'encodé, pas encore validé' : (x.moisTheorique ? 'pas de budget encodé : l’étude' : 'ni budget ni étude'));
@@ -678,7 +680,7 @@
     h += `<div class="tr-carte tr-carte-t"><div class="tr-cbar"><div class="tr-h3">Le budget, mois par mois</div><div class="tr-ctl">${ans.map(y => { const x = (B.exercices || []).find(e => e.annee === y) || {}; return `<button type="button" class="tr-pil${y === an ? ' on' : ''}" data-tra="anb:${y}">${y} · ${court(x)}</button>`; }).join('')}</div></div>
       <div class="tr-defil"><table class="tr-tab tr-tab-b"><thead><tr><th></th>${MO.map((m, i) => `<th class="${ymI(i) === cur ? 'cur' : ''}">${m}</th>`).join('')}<th>Total</th></tr></thead><tbody>${lignes.join('')}</tbody></table></div>
       <div class="tr-note tr-p">€ TTC. * mois en cours, à ce jour. ‡ mois N-1 incomplet (le magasin n’était pas encore ouvert tout le mois) : hors de l’évolution. Atteinte et évolution : les mois clos. Atterrissage : le réalisé des jours d’avant le plan, puis les ventes du plan (réel des semaines closes compris) ; son total quand toute l’année est couverte. Vert : dans le budget, rouge : au-delà. Le réel vient du P&amp;L du panel ; personnel et frais généraux se comparent aux repères de la table KPI${ch.length ? ', le compte de résultat du CRM n’ayant pas de poste personnel' : ''}.</div></div>`;
-    h += `<div class="tr-g2">${carteEtude(ex, an)}${carteExercices(B, R)}</div>`;
+    h += `<div class="tr-g2">${carteEtude(ex, an)}${carteExercices(B, R, ans)}</div>`;
     const src = liste(R.sources);
     h += `<p class="tr-mu tr-p">Ventes : ${src.length ? src.map(x => x === 'panel' ? 'le panel (jour par jour)' : 'la copie de caisse').join(' et ') : 'aucune vente lue'}${R.premiereVente ? ', depuis le ' + R.premiereVente.split('-').reverse().join('/') : ''}.</p>`;
     return h;
@@ -704,10 +706,15 @@
   }
 
   /** Les exercices du plan : la fiche du budget, sa validation, le réalisé à date face à lui ; les charges en résumé. */
-  function carteExercices(B, R) {
+  /** Les exercices montrés : ceux qui ont commencé, et ceux à venir dont le budget est déjà encodé. */
+  function anneesVisibles(B, anAuj) {
+    const v = B.annees.filter(y => y <= anAuj || ((B.exercices || []).find(e => e.annee === y) || {}).moisBudget > 0);
+    return v.length ? v : [B.annees[0]];
+  }
+  function carteExercices(B, R, ans) {
     const ch = (B.charges || []).map(c => c.pctValide > 0 ? c.pctValide : c.pctReseau).filter(x => x > 0), tot = ch.reduce((a, b) => a + b, 0);
     const mat = (B.charges || []).filter(c => c.matiere).reduce((t, c) => t + (c.pctValide > 0 ? c.pctValide : c.pctReseau), 0);
-    const ex = (B.exercices || []).map(x => {
+    const ex = (B.exercices || []).filter(x => ans.includes(x.annee)).map(x => {
       const M = (R.mois || []).filter(m => +m.ym.slice(0, 4) === x.annee && m.complet && m.realise != null && m.budget);
       const re = M.reduce((t, m) => t + m.realise, 0), bu = M.reduce((t, m) => t + m.budget, 0);
       const chip = x.valideLe ? `<span class="tr-chip ok">Validé le ${x.valideLe.split('-').reverse().join('/')}</span>` : (x.moisBudget ? '<span class="tr-chip wa">Encodé, pas encore validé</span>' : '<span class="tr-chip wa">Pas de budget encodé</span>');
