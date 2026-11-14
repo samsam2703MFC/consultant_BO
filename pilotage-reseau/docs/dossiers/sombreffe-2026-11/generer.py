@@ -385,6 +385,14 @@ def main():
             {'quoi': 'Les tâches et les checklists', 'comment': 'faites chaque jour, photos comprises', 'ou': 'dashboard magasin, onglet Tâches'},
             {'quoi': 'L’encodage des produits', 'comment': 'tous les produits encodés', 'ou': 'au panel'},
             {'quoi': 'Le suivi des règles du réseau', 'comment': 'appliquées et vérifiées', 'ou': 'en visite'}]},
+        # Pourquoi les contrôles qualité et la structure, dicté par le bureau le 14/11/2026 : repris tel quel, au tutoiement,
+        # l'orthographe seule corrigée ; « remplaçable » est précisé (quelqu'un peut tenir le magasin), pour ne pas se lire
+        # comme une menace.
+        'pourquoi': {'le': '14/11/2026', 'titre': 'Les contrôles qualité et la structure',
+                     'avec': ['Ta gestion va s’améliorer.', 'Tu seras plus calme et reposée.',
+                              'Tu es remplaçable : quelqu’un peut tenir ton magasin si tu ne peux pas.',
+                              'Ton magasin vaut quelque chose.'],
+                     'sans': 'Si tu as un problème et que je ne trouve personne pour te remplacer, tu te retrouves à la rue avec tes enfants.'},
         # Le constat de terrain du bureau (13/11/2026) : ce que les chiffres ne disent pas, noté tel quel.
         'constat': {'le': '13/11/2026', 'texte': 'Le magasin crée lui-même son creux de l’après-midi : il ne cuit plus l’après-midi.'},
         'cockpit': COCKPIT, 'plafond': PLAFOND_B2B,
