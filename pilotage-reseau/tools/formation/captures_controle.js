@@ -63,6 +63,12 @@ async function entourer(p, sel) {
           try { const res = await ctx.request.get(PROD + u.slice(i + 13), { timeout: 60000 }); return r.fulfill({ status: res.status(), headers: res.headers(), body: await res.body() }); }
           catch (e) { return r.abort(); }
         }
+        // Les photos de la visite (uploads/…) vivent sur le serveur de production : prises là, en GET (14/11/2026).
+        const j = u.indexOf('/uploads/');
+        if (u.startsWith(new URL(BASE).origin + '/') && j >= 0) {
+          try { const res = await ctx.request.get(new URL('../../', PROD).href + u.slice(j + 1), { timeout: 60000 }); return r.fulfill({ status: res.status(), headers: res.headers(), body: await res.body() }); }
+          catch (e) { return r.abort(); }
+        }
         return r.continue();
       });
       const p = await ctx.newPage();

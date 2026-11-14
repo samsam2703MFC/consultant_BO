@@ -500,10 +500,10 @@
  "remarques": [
   "Les étapes sont celles des visites Régulière en cours en production (Corbais, Sombreffe, Halle) ; un autre type de visite a d’autres modules (Production, Hygiène et qualité…), et une visite Suivi du plan d’action ou Revisite construit sa checklist des plans ouverts ou des non-conformes.",
   "Captures : pour afficher chaque étape d’une visite pas remplie, l’outil coupe le blocage des étapes sur l’appareil de capture seulement (rien n’est écrit) ; « Reste : … » y apparaît donc en gris au lieu du rouge d’une étape bloquante.",
-  "Captures datées du 26/10/2026 (jour où les visites ont commencé) pour Corbais (photos du jour, équipe en poste) ; Halle est capturée au 14/11/2026 (contrôles en photo du jour, chiffres). Aucune photo du jour n’existe pour ces visites : les cases « Façade », « Arrière », « Intérieur » sont vides, l’annotation d’une photo (« Annoter la photo ») n’a pas pu être montrée.",
+  "Captures (14/11/2026) : la visite de Sombreffe au 27/10/2026, la plus remplie en production (photos du jour façade, arrière et intérieur, 7 points notés dont un écart) ; Halle au 14/11/2026 pour les contrôles en photo du jour et « Le CA sous le budget » ; la visite terminée de Gosselies (visite 3) pour la Review. Les photos de cette visite sont des images de test déposées pendant la mise en route.",
   "Aucun point ouvert sur les quatre boutiques : « Les points décidés aux visites précédentes » est capturé vide ; « Dossier du bureau » n’apparaît sur aucune visite en cours (pas de dossier envoyé) ; « Checklist du consultant » est vide (panel) : pas de capture propre.",
   "Les points à travailler : la capture montre une action ajoutée à l’écran (« + Ajouter une action »), jamais enregistrée.",
   "Sur la tablette, une photo de contrôle du jour ne se note qu’à 4 ou 5 (les notes au seuil et au-dessus) ; le code ne dit pas où le consultant note une photo non conforme pendant la visite : à préciser.",
-  "La visite terminée (« Review ») des visites 2 et 3 est presque vide (aucun écart, aucune action) : la capture montre l’écran, pas un vrai rapport."
+  "La visite terminée (« Review ») de Gosselies (visite 3) n’a aucun écart ni action : la capture montre l’écran, pas un vrai rapport. À refaire après la première visite terminée avec des écarts."
  ]
 }

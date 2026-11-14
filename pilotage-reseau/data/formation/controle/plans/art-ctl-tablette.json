@@ -28,8 +28,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-entete",
   "etape": "L’extérieur en photo",
@@ -46,8 +46,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-barre",
   "etape": "L’extérieur",
@@ -62,8 +62,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-photos-ext",
   "etape": "L’extérieur en photo",
@@ -76,8 +76,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-charte",
   "etape": "Charte de communication · dehors",
@@ -91,8 +91,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-experience",
   "etape": "Expérience client",
@@ -105,8 +105,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-equipe",
   "etape": "L’équipe en poste",
@@ -122,8 +122,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-produit",
   "etape": "Produit",
@@ -136,8 +136,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-t-planogramme",
   "etape": "Planogramme",
@@ -150,7 +150,7 @@
   ]
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-controles",
   "etape": "Les contrôles en photo du jour",
@@ -164,10 +164,11 @@
    ".cq-res",
    ".db-cqc .m"
   ],
-  "pauseEtape": 8000
+  "pauseEtape": 8000,
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-suivi",
   "etape": "Les points décidés",
@@ -177,10 +178,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-kpi",
   "etape": "KPI et santé",
@@ -191,10 +193,11 @@
   "flou": [
    ".tb-av"
   ],
-  "pauseEtape": 10000
+  "pauseEtape": 10000,
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-leviers",
   "etape": "Les leviers",
@@ -205,10 +208,11 @@
   "flou": [
    ".tb-av"
   ],
-  "pauseEtape": 10000
+  "pauseEtape": 10000,
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-taches",
   "etape": "Les tâches des derniers mois",
@@ -219,7 +223,8 @@
   "flou": [
    ".tb-av"
   ],
-  "pauseEtape": 10000
+  "pauseEtape": 10000,
+  "date": "2026-10-27"
  },
  {
   "route": "controle/6",
@@ -236,7 +241,7 @@
   "pauseEtape": 8000
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-constat",
   "etape": "Vu sur place",
@@ -246,10 +251,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-points",
   "etape": "Points à travailler",
@@ -262,10 +268,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-meteo",
   "etape": "Météo du franchisé",
@@ -276,10 +283,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-evaluation",
   "etape": "Évaluation rapide",
@@ -290,10 +298,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-t-fin",
   "etape": "Fin de visite",
@@ -311,11 +320,12 @@
     "sel": ".sigs .cap",
     "rx": "·.*$"
    }
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
   "nom": "ctl-t-review",
-  "route": "controle/2",
+  "route": "controle/3",
   "cibles": [
    ".tb-main .card",
    ".tb-main .card >> nth=1"

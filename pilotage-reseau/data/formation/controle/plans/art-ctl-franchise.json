@@ -15,7 +15,7 @@
   ]
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-f-controles",
   "etape": "Les contrôles en photo du jour",
@@ -28,11 +28,12 @@
    ".cq-res",
    ".db-cqc .m"
   ],
-  "pauseEtape": 8000
+  "pauseEtape": 8000,
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-f-exterieur",
   "etape": "Charte de communication · dehors",
@@ -45,8 +46,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-f-produit",
   "etape": "Produit",
@@ -59,8 +60,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-f-equipe",
   "etape": "L’équipe en poste",
@@ -76,8 +77,8 @@
   ]
  },
  {
-  "route": "controle/5",
-  "date": "2026-10-26",
+  "route": "controle/4",
+  "date": "2026-10-27",
   "debloquer": true,
   "nom": "ctl-f-hygiene",
   "etape": "Hygiène",
@@ -108,7 +109,7 @@
   "pauseEtape": 8000
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-f-suivi",
   "etape": "Les points décidés aux visites précédentes",
@@ -118,10 +119,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-f-kpi",
   "etape": "KPI et santé du magasin",
@@ -132,7 +134,8 @@
   "flou": [
    ".tb-av"
   ],
-  "pauseEtape": 12000
+  "pauseEtape": 12000,
+  "date": "2026-10-27"
  },
  {
   "route": "controle/6",
@@ -149,7 +152,7 @@
   "pauseEtape": 8000
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-f-evaluation",
   "etape": "Évaluation rapide",
@@ -159,10 +162,11 @@
   "cadre": "haut",
   "flou": [
    ".tb-av"
-  ]
+  ],
+  "date": "2026-10-27"
  },
  {
-  "route": "controle/6",
+  "route": "controle/4",
   "debloquer": true,
   "nom": "ctl-f-fin",
   "etape": "Fin de visite",
@@ -179,6 +183,7 @@
     "sel": ".sigs .cap",
     "rx": "·.*$"
    }
-  ]
+  ],
+  "date": "2026-10-27"
  }
 ]

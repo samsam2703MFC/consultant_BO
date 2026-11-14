@@ -383,7 +383,7 @@
  ],
  "remarques": [
   "Écrit d’après le code de l’application des contrôles (controle/, visites.js), docs/suivi-franchises.md et les réglages livrés (src/visites_cadre.php, src/suivi.php) ; il complète 0.0.32 (la visite) et 0.0.33 (les contrôles) sans les contredire.",
-  "Captures : visites Régulière en cours en production (Corbais au 26/10/2026, Halle au 14/11/2026), lues en lecture seule ; les noms de l’équipe, du consultant et des personnes qui ont rendu les photos sont floutés.",
+  "Captures (14/11/2026) : la visite Régulière de Sombreffe, au 27/10/2026 (photos du jour, points notés, un écart), la plus remplie en production ; Halle au 14/11/2026 pour les contrôles en photo du jour et les pistes « CA sous le budget » ; lues en lecture seule ; les noms des personnes sont floutés. Aucune visite n’a encore été terminée avec des écarts : à refaire après la première.",
   "Pas de capture pour le rapport, les délais des points et la page du franchisé : ils ne sont pas sur la tablette (cockpit et page du franchisé, déjà montrés dans 0.0.32).",
   "Le SMS du rapport part au GSM de Qui fait quoi, sinon celui des alertes de leads ; sans GSM ou SMS coupés, rien ne part : à confirmer pour chaque magasin.",
   "« Aucun point ouvert » : les quatre boutiques n’ont aucun point ouvert ; la capture de « Ce qui avait été décidé » montre cet état vide."
