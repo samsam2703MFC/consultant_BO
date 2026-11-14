@@ -82,6 +82,9 @@ final class Panel
     public static array $ecrits = [];     // [méthode, chemin, corps]
     public static array $materiaux = [];  // mid => objet (comme GET /materials/{id})
     public static array $tva = [];        // mid => lignes (comme GET /materials/{id}/vat-rates)
+    public static array $champsProduit = []; // pid => les autres champs de GET /products/{id} (paramétrage des produits)
+    public static array $gammes = [];     // id => [objet de la gamme, [pid]] (/product-availability-periods)
+    public static array $prixProduit = []; // sid => [pid => prix TTC]
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
@@ -135,7 +138,12 @@ final class Panel
         if ($c === '/countries/BE/materials/vat-rates') { return [['rate' => 6], ['rate' => 21]]; }
         if ($c === '/recipes') { return array_map(static fn ($o) => ['id' => $o['id'], 'name' => $o['name']], array_values(self::$recettes)); }
         if (preg_match('#^/products/(\d+)/portions$#', $c, $m)) { return array_values(array_filter(self::$portions, static fn ($x) => $x['product_id'] === (int) $m[1])); }
-        if (preg_match('#^/products/(\d+)$#', $c, $m)) { $p = self::$produits[(int) $m[1]] ?? null; return $p === null ? null : ['product' => ['id' => (int) $m[1], 'name' => $p['nom'], 'id_recipe' => $p['id_recipe']]]; }
+        if (preg_match('#^/products/(\d+)$#', $c, $m)) { $p = self::$produits[(int) $m[1]] ?? null; return $p === null ? null : ['product' => ['id' => (int) $m[1], 'name' => $p['nom'], 'id_recipe' => $p['id_recipe']] + (self::$champsProduit[(int) $m[1]] ?? [])]; }
+        if ($c === '/product-availability-periods') { return array_map(static fn ($g) => $g[0], array_values(self::$gammes)); }
+        if (preg_match('#^/product-availability-periods/(\d+)/products$#', $c, $m)) { return isset(self::$gammes[(int) $m[1]]) ? ['data' => array_map(static fn ($pid) => ['id' => $pid, 'name' => 'p' . $pid], self::$gammes[(int) $m[1]][1])] : null; }
+        if (preg_match('#^/shops/(\d+)/products/(\d+)$#', $c, $m)) { return isset(self::$prixProduit[(int) $m[1]][(int) $m[2]]) ? ['data' => ['id' => (int) $m[2], 'portion_price_gross' => number_format(self::$prixProduit[(int) $m[1]][(int) $m[2]], 2, '.', '')]] : null; }
+        if ($c === '/product-categories') { return [['id' => 81125, 'name' => 'Tartes – Ø 28 cm', 'price_coefficient' => '2.7000', 'production_area_name' => 'Production Boulangerie'], ['id' => 51000, 'name' => 'Anti-Gaspi', 'price_coefficient' => '2.1500']]; }
+        if ($c === '/product-storage-locations') { return [['id' => 30, 'name' => 'Comptoir Frigo - 1'], ['id' => 32, 'name' => 'Comptoir Tartes']]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m)) { return self::$portions[(int) $m[1]] ?? null; }
         if (preg_match('#^/shops/(\d+)/material-inventory$#', $c, $m)) {
             return array_map(static fn ($x) => ['id_material' => $x[0], 'material_name' => $x[1], 'current_quantity' => $x[2], 'unit_name' => $x[3], 'exist_in_inventory' => 1, 'category_name' => 'Sucres'], self::$stock[(int) $m[1]] ?? []);
@@ -158,7 +166,19 @@ final class Panel
         if (preg_match('#^/materials/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$materiaux[(int) $m[1]] = array_merge(self::$materiaux[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/recipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$recettes[(int) $m[1]] = array_merge(self::$recettes[(int) $m[1]], $b); return [true, []]; }
         if (preg_match('#^/subrecipes/(\d+)$#', $c, $m) && $meth === 'PATCH') { self::$sous[(int) $m[1]] = array_merge(self::$sous[(int) $m[1]], $b); return [true, []]; }
-        if (preg_match('#^/products/(\d+)$#', $c, $m) && $meth === 'PATCH') { if (array_key_exists('id_recipe', $b)) { self::$produits[(int) $m[1]]['id_recipe'] = $b['id_recipe']; } return [true, []]; }
+        if (preg_match('#^/products/(\d+)$#', $c, $m) && $meth === 'PATCH') {
+            $pid = (int) $m[1];
+            if (array_key_exists('id_recipe', $b)) { self::$produits[$pid]['id_recipe'] = $b['id_recipe']; }
+            if (array_key_exists('name', $b)) { self::$produits[$pid]['nom'] = $b['name']; }
+            foreach ($b as $k => $v) { if (!in_array($k, ['id_recipe', 'name'], true) && array_key_exists($k, self::$champsProduit[$pid] ?? [])) { self::$champsProduit[$pid][$k] = $v; } }
+            return [true, []];
+        }
+        if (preg_match('#^/products/(\d+)/availability-periods$#', $c, $m) && $meth === 'PATCH') {
+            if (!isset($b['availability_period_ids'])) { PanelApi::$lastError = 'PATCH ' . $c . ' → HTTP 422 : MISSING_REQUIRED_FIELDS'; return [false, ['code' => 'MISSING_REQUIRED_FIELDS']]; }
+            foreach (self::$gammes as $id => $g) { $l = array_values(array_diff($g[1], [(int) $m[1]])); if (in_array($id, $b['availability_period_ids'], true)) { $l[] = (int) $m[1]; } self::$gammes[$id][1] = $l; }
+            return [true, []];
+        }
+        if (preg_match('#^/shops/(\d+)/products/(\d+)/price$#', $c, $m) && $meth === 'PATCH') { self::$prixProduit[(int) $m[1]][(int) $m[2]] = (float) ($b['portion_price_gross'] ?? ($b['price'] ?? 0)); return [true, []]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m) && $meth === 'PATCH') {
             $id = (int) $m[1]; self::$portions[$id] = array_merge(self::$portions[$id], $b);
             self::$produits[self::$portions[$id]['product_id']]['part'] = self::$portions[$id]['portion_size'];
@@ -180,6 +200,8 @@ final class PanelApi
     public static function get(string $c): mixed { $r = Panel::get($c); return is_array($r) ? ($r['data'] ?? $r) : $r; }
     public static function getParallele(array $chemins, int $front = 4, int $timeout = 25): array { $o = []; foreach ($chemins as $k => $c) { $o[$k] = Panel::get($c); } return $o; }
     public static function envoi(string $m, string $c, array $b): array { return Panel::envoi($m, $c, $b); }
+    public static function getParalleleDetail(array $chemins, int $front = 4, int $timeout = 25, bool $r = true): array { $o = []; foreach ($chemins as $k => $c) { $d = Panel::get($c); $o[$k] = ['code' => $d === null ? 401 : 200, 'data' => $d, 'ms' => 0, 'erreur' => null]; } return $o; }
+    public static function liste(array $d): array { return array_is_list($d) ? array_values(array_filter($d, 'is_array')) : (isset($d['data']) && is_array($d['data']) ? self::liste($d['data']) : []); }
 }
 function mfMatieresApi(array $sids, bool $frais): array
 {
@@ -217,6 +239,7 @@ require __DIR__ . '/../src/verification.php';
 require __DIR__ . '/../src/verification_correction.php';
 require __DIR__ . '/../src/verification_matieres_prix.php';
 require __DIR__ . '/../src/verification_matiere_edition.php';
+require __DIR__ . '/../src/produit_parametrage.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -560,6 +583,42 @@ $u = wr_verification_annuler();
 verifie('TVA : « Annuler » remet 6 %', $u['ok'] && Panel::$tva[521][0]['vat_rate'] === '6.00', json_encode($u));
 $BODY = ['mid' => 521, 'champs' => ['vat_rate' => 'abc']];
 verifie('TVA : une valeur invalide ne part pas', !wr_verification_matiere()['ok']);
+
+
+// --- Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) ---------------------------------------------
+Panel::$champsProduit[100] = ['tax_val_perc' => 6, 'is_active' => 1, 'webshop_active' => 0, 'suggested_sale_price' => '21.90', 'shelf_life_minutes' => 2880, 'id_storage' => 30,
+    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null];
+Panel::$gammes = [14 => [['id' => 14, 'name' => 'Gamme Standard', 'from_md' => 101, 'to_md' => 1231, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 0], [100]],
+    6 => [['id' => 6, 'name' => 'Automnale', 'from_md' => 901, 'to_md' => 1101, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 1], []]];
+foreach (array_keys(Db::$reglages) as $k) { if (str_starts_with($k, 'ppm')) { unset(Db::$reglages[$k]); } }
+$_GET = ['pid' => '100'];
+$f = ep_produits_parametrage();
+$cP = array_column($f['champs'] ?? [], null, 'cle');
+verifie('paramétrage : la fiche lit le produit, ses champs rendus sont modifiables, les autres non', ($f['ok'] ?? false) && $cP['suggested_sale_price']['modifiable'] && !$cP['nutriscore']['modifiable'] && $f['gammesProduit'] === [14], json_encode($f['ok'] ?? $f));
+verifie('paramétrage : listes de référence et liaisons mesurées', isset($f['refs']['categories']['81125']) && count($f['liaisons']) === count(PPM_LIAISONS) && $f['liaisons'][0]['etat'] === 'lisible');
+$ch = ppmChangements(Panel::$champsProduit[100] + ['name' => 'Wrapps'], ['suggested_sale_price' => '22,5', 'webshop_active' => true, 'tax_val_perc' => '6', 'id_storage' => '32']);
+verifie('paramétrage : seules les clés changées, dans la forme lue (texte décimal, entier, 0/1)', $ch['corps'] === ['suggested_sale_price' => '22.50', 'webshop_active' => 1, 'id_storage' => 32] && $ch['inverse']['suggested_sale_price'] === '21.90', json_encode($ch));
+verifie('paramétrage : un champ que le panel ne rend pas ne s’écrit pas', ppmChangements(Panel::$champsProduit[100], ['nutriscore' => 'A'])['erreurs'] !== []);
+$BODY = ['pid' => 100, 'apercu' => true, 'champs' => ['suggested_sale_price' => '22,50', 'webshop_active' => 1], 'gammes' => [14, 6], 'prix' => []];
+$a = wr_produits_parametrage();
+verifie('paramétrage : l’aperçu montre le PATCH du produit et l’envoi des gammes', ($a['apercu'] ?? false) && count($a['ecritures']) === 2 && $a['ecritures'][0]['route'] === '/products/100'
+    && $a['ecritures'][1]['route'] === '/products/100/availability-periods' && $a['ecritures'][1]['corps'] === ['availability_period_ids' => [6, 14]], json_encode($a));
+$BODY['apercu'] = false;
+$r = wr_produits_parametrage();
+verifie('paramétrage : écrit, relu, gammes posées', $r['ok'] && Panel::$champsProduit[100]['suggested_sale_price'] === '22.50' && in_array(100, Panel::$gammes[6][1], true), json_encode($r));
+$BODY = ['id' => $r['ecritures'][0]['id']];
+$u = wr_verification_annuler();
+verifie('paramétrage : « Annuler » remet le prix conseillé', $u['ok'] && Panel::$champsProduit[100]['suggested_sale_price'] === '21.90', json_encode($u));
+$BODY = ['pid' => 100, 'gammes' => [14], 'formats' => ['gammes' => ['methode' => 'PATCH', 'route' => '/products/{pid}/availability-periods', 'corps' => ['periods' => '{gammes}']]]];
+$r = wr_produits_parametrage();
+verifie('paramétrage : un format de gammes refusé rend la réponse brute du panel', !$r['ok'] && $r['ecritures'][0]['resultat'] === 'refuse' && str_contains($r['ecritures'][0]['reponse'], 'MISSING_REQUIRED_FIELDS'), json_encode($r));
+$BODY = ['pid' => 100, 'gammes' => [14], 'formats' => ['gammes' => ['methode' => 'PATCH', 'route' => '/recipes/1', 'corps' => ['x' => 1]]]];
+verifie('paramétrage : une route hors des gammes est refusée avant tout envoi', !wr_produits_parametrage()['ok'] && end(Panel::$ecrits)[1] !== '/recipes/1');
+Panel::$prixProduit[3][100] = 19.9;
+$BODY = ['pid' => 100, 'prix' => ['3' => '20,90'], 'garder' => true, 'formats' => ['prix' => ['methode' => 'PATCH', 'route' => '/shops/{sid}/products/{pid}/price', 'corps' => ['portion_price_gross' => '{prix}']]]];
+$r = wr_produits_parametrage();
+verifie('paramétrage : prix d’un magasin écrit et relu, format gardé', $r['ok'] && Panel::$prixProduit[3][100] === 20.9 && ppmFormat('prix')['corps'] === ['portion_price_gross' => '{prix}'], json_encode($r));
+verifie('paramétrage : gammes d’une forme quelconque', ppmIdsProduits(['data' => [['id_product' => 5], ['product_id' => 6], 7]]) === [5, 6, 7] || ppmIdsProduits([['id_product' => 5], ['product_id' => 6]]) === [5, 6]);
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
