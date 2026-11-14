@@ -1016,3 +1016,29 @@ function ep_verification_sonde_prix(): array
     foreach (PanelApi::getParalleleDetail($chemins, 4, 30, false) as $k => $d) { $out['lu'][$k] = ['code' => $d['code'] ?? null, 'route' => $chemins[$k], 'data' => $garde($d['data'] ?? null)]; }
     return $out;
 }
+
+/** Les lectures permises à la sonde du circuit des prix (14/11/2026) : GET seulement, ces routes-là seulement. */
+const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material-suppliers/\d+/raw-materials/\d+/price-history$#',
+    '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#'];
+
+/**
+ * GET /verification/recettes/sonde-chemin?chemin=&q= — lecture seule : une route du circuit des prix fournisseur
+ * (VRC_SONDE_CHEMINS), réduite aux éléments qui contiennent `q` s'il est donné, coupée à 30 éléments.
+ */
+function ep_verification_sonde_chemin(): array
+{
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $c = (string) ($_GET['chemin'] ?? ''); $q = (string) ($_GET['q'] ?? '');
+    $ok = false; foreach (VRC_SONDE_CHEMINS as $re) { if (preg_match($re, $c)) { $ok = true; } }
+    if (!$ok) { http_response_code(400); return ['error' => 'chemin non permis']; }
+    $d = PanelApi::getParalleleDetail(['x' => $c], 1, 40, false)['x'] ?? [];
+    $r = $d['data'] ?? null;
+    if (is_array($r)) {
+        $l = PanelApi::liste($r);
+        if ($l !== []) {
+            $f = $q === '' ? $l : array_values(array_filter($l, static fn ($x) => str_contains(mb_strtolower((string) json_encode($x, JSON_UNESCAPED_UNICODE)), mb_strtolower($q))));
+            $r = ['n' => count($l), 'nFiltre' => count($f), 'lignes' => array_slice($f, 0, 30), 'cles' => array_keys(array_diff_key($r, ['data' => 1, 'items' => 1]))];
+        }
+    }
+    return ['chemin' => $c, 'code' => $d['code'] ?? null, 'data' => $r];
+}
