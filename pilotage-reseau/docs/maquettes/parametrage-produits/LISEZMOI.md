@@ -1,6 +1,6 @@
 # Paramétrage des produits : la fiche, les saisons, les liaisons
 
-**Statut : maquette, à décider.** Demande du 14/11/2026 : « un onglet qui serait une page de paramétrage des produits
+**Statut : « tout sur une page » retenu le 14/11/2026, et codé** (onglet Produits › Paramétrage produits, `#/produits/parametrage` ; serveur `src/produit_parametrage.php`, routes `GET /produits/parametrage/liste`, `GET|POST /produits/parametrage`). Demande du 14/11/2026 : « un onglet qui serait une page de paramétrage des produits
 (saison, toutes les options, tout ce que contiennent les API) et toutes les liaisons possibles entre les API reliées aux
 produits ».
 
