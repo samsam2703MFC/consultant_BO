@@ -634,6 +634,9 @@ verifie('paramétrage : le champ refusé est nommé, en français, avec la promo
 verifie('paramétrage : les autres champs repartent seuls, écrits et relus', $e1['resultat'] === 'ok' && Panel::$champsProduit[100]['storage_temperature'] === 4 && Panel::$champsProduit[100]['min_coefficient'] === null && end(Panel::$ecrits)[2] === ['storage_temperature' => 4], json_encode($r));
 unset(Panel::$refusChamp['/products/100']);
 
+verifie('prix : la route de la centrale (tarif du fournisseur pour un magasin) est permise', vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70', 'valid_from' => '{date}']])['permise']
+    && vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70']])['corps'] === ['price_net' => 61.7]);
+
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
 $_GET = ['pid' => '104'];
