@@ -769,22 +769,22 @@ if (D.pieces && D.pieces.length) {
   $('pieces-table').innerHTML = '<thead><tr><th>Mois</th><th class="num">Jours</th><th class="num">Pièces</th><th class="num">Pièces / jour</th><th class="num">Pièces N-1</th><th class="num">Pièces vs N-1</th>'
     + '<th class="num">Pièces par client</th><th class="num">Par client N-1</th><th class="num">Prix d’une pièce</th></tr></thead><tbody>'
     + PI.map(m => ligne(lab(m.k), m, false)).join('') + '</tbody><tfoot>' + ligne('Mai → oct. 26', tot, true) + '</tfoot>';
-  // La simulation (14/11/2026, Sam) : 2, 4 et 6 % de pièces en plus, à clients et prix d'une pièce égaux. Le résultat en
-  // plus : le CA en plus moins la matière (taux budget du réseau) ; personnel et frais généraux inchangés.
-  const nM = PI.length, pM = tot.pieces / nM, cM = tot.clients / nM, caM = tot.ca / nM, prix = tot.ca / tot.pieces;
-  const tm = (D.theorique ? D.theorique.tauxMatiere : 40) / 100, persP = PE6 ? PE6.n.pct : null;   // la part du P&L, mai → oct. 26
-  $('pieces-sim-titre').textContent = 'Simulation : 2 %, 4 % et 6 % de pièces en plus, sur le CA d’un mois';
-  $('pieces-sim').innerHTML = '<thead><tr><th>Pièces</th><th class="num">Pièces / mois</th><th class="num">Par client</th><th class="num">CA / mois</th>'
+  // La simulation (14/11/2026, Sam) : 2, 4 et 6 % sur le PRIX, pas sur le volume. Pièces et clients égaux : la matière ne
+  // bouge pas, tout le CA en plus va au résultat ; personnel et frais généraux inchangés.
+  const nM = PI.length, pM = tot.pieces / nM, caM = tot.ca / nM, prix = tot.ca / tot.pieces;
+  const persP = PE6 ? PE6.n.pct : null;   // la part du P&L, mai → oct. 26
+  $('pieces-sim-titre').textContent = 'Simulation : 2 %, 4 % et 6 % sur le prix, à volume égal, sur le CA d’un mois';
+  $('pieces-sim').innerHTML = '<thead><tr><th>Prix</th><th class="num">Prix d’une pièce</th><th class="num">Pièces / mois</th><th class="num">CA / mois</th>'
     + '<th class="num">CA en plus / mois</th><th class="num">par an</th><th class="num">Résultat en plus / mois</th>' + (persP ? '<th class="num">Personnel</th>' : '') + '</tr></thead><tbody>'
     + [0, 2, 4, 6].map(x => {
       const k = 1 + x / 100, ca = caM * k, plus = ca - caM;
-      return `<tr class="${x ? '' : 'moi'}"><td>${x ? '+' + x + INS + '%' : 'Aujourd’hui'}</td><td class="num">${grp(pM * k)}</td><td class="num">${dec(pM * k / cM, 2)}</td><td class="num">${eur(ca)}</td>`
-        + `<td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + k1(plus * 12) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus * (1 - tm)) : '—'}</td>`
+      return `<tr class="${x ? '' : 'moi'}"><td>${x ? '+' + x + INS + '%' : 'Aujourd’hui'}</td><td class="num">${eur2(prix * k)}</td><td class="num">${grp(pM)}</td><td class="num">${eur(ca)}</td>`
+        + `<td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + k1(plus * 12) : '—'}</td><td class="num ${x ? 'up' : ''}">${x ? '+' + eur(plus) : '—'}</td>`
         + (persP ? `<td class="num">${dec(persP / k)} % du CA</td>` : '') + '</tr>';
     }).join('') + '</tbody>';
   $('pieces-points').innerHTML = [
-    `En magasin : +2 %, c’est ≈ ${dec(pM * 0.02 / cM * 100, 0)} pièces de plus pour 100 clients ; +6 %, ≈ ${dec(pM * 0.06 / cM * 100, 0)}.`,
-    `Base : le mois moyen de mai à octobre 2026, à clients et prix d’une pièce égaux (${eur2(prix)}) ; résultat en plus : le CA en plus moins la matière (${dec(tm * 100, 0)} %), personnel et frais généraux inchangés.`,
+    `En magasin : +2 %, c’est ≈ ${dec(prix * 0.02 * 100, 0)} centimes de plus par pièce ; +6 %, ≈ ${dec(prix * 0.06 * 100, 0)} centimes.`,
+    `À volume égal, la matière ne change pas : tout le CA en plus va au résultat. Base : le mois moyen de mai à octobre 2026, ${grp(pM)} pièces à ${eur2(prix)}.`,
   ].map(t => `<li>${esc(insec(t))}</li>`).join('');
   $('pieces').hidden = false;
 }
