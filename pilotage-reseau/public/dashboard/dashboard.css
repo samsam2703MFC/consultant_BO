@@ -236,14 +236,62 @@ table.db-t{width:100%;border-collapse:collapse;font-size:12px}
 .db-tg{font:400 10px var(--font-ui);letter-spacing:.05em;text-transform:uppercase;border-radius:5px;padding:2px 6px;background:var(--color-background-secondary);color:var(--color-text-muted);margin-left:6px;vertical-align:1px}
 .db-tg.enc{background:var(--prize-soft);color:var(--prize-ink)}.db-tg.fut{background:var(--color-surface);border:1px solid var(--color-border-tertiary)}
 .db-pill{display:inline-block;border-radius:8px;padding:1px 7px;font:400 10px var(--font-ui);color:#fff}
-.db-tq td{vertical-align:top}
-.db-tq td.l{text-align:left}.db-tq th.l{text-align:left}
-.db-tq td.an{text-align:left;white-space:normal;min-width:320px;max-width:560px;font-size:10.5px;line-height:1.4}
-.db-tq td.an .v{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px;vertical-align:-1px;background:var(--line)}
-.db-tq td.an .v.fr{background:var(--color-primary)}.db-tq td.an .v.co{background:#1f4e8c}.db-tq td.an .v.ma{background:var(--prize)}
-.db-tq tr[data-trimq]{cursor:pointer}.db-tq tr[data-trimq]:hover td{background:rgba(34,34,34,.03)}
-.db-tq tr.tot td{font-weight:400;border-top:1px solid var(--color-text);border-bottom:none}
-.db-tq .mu{color:var(--color-text-muted);font-weight:400}
+/* L'année (14/11/2026, maquette annee-trimestres) : l'objectif en une carte, les quatre trimestres, le détail du
+   trimestre ouvert, les douze mois en une bande face à l'an passé, les plis. */
+.db-an-obj{padding:16px 20px 18px}
+.db-an-obj .hd{display:flex;align-items:flex-end;justify-content:space-between;gap:12px}
+.db-an-obj .hd .v{font:400 30px/1.1 var(--font-display);margin-top:4px;font-variant-numeric:tabular-nums}
+.db-an-barre{position:relative;height:16px;border-radius:8px;background:var(--color-background-secondary);margin:14px 0 26px}
+.db-an-barre i{position:absolute;left:0;top:0;bottom:0;border-radius:8px;background:var(--color-primary)}
+.db-an-barre s{position:absolute;top:0;bottom:0;background:repeating-linear-gradient(135deg,rgba(141,29,44,.28) 0 3px,transparent 3px 7px)}
+.db-an-barre b{position:absolute;top:-4px;bottom:-4px;width:2px;margin-left:-1px;background:var(--color-text)}
+.db-an-barre b em{position:absolute;top:23px;left:50%;transform:translateX(-50%);white-space:nowrap;font:400 10.5px var(--font-ui);font-style:normal;color:var(--color-text-muted)}
+.db-an-barre b.fin em{left:auto;right:0;transform:none}.db-an-barre b.deb em{left:0;transform:none}
+.db-an-3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.db-an-3>div{border:1px solid var(--color-border-tertiary);border-radius:11px;padding:10px 14px;min-width:0}
+.db-an-3 .v{font:400 22px/1.15 var(--font-display);margin:3px 0 2px;font-variant-numeric:tabular-nums}
+.db-an-3 .s{font:400 11px var(--font-ui);color:var(--color-text-muted)}
+.db-an-3>.vif{border-color:var(--color-primary);background:rgba(141,29,44,.05)}.db-an-3>.vif .v{color:var(--color-primary)}
+.db-an-3>.bon{border-color:rgba(63,122,82,.3);background:#f0f7f2}.db-an-3>.bon .v{color:var(--green)}
+.db-an-q{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:12px}
+.db-an-qc{appearance:none;-webkit-appearance:none;text-align:left;cursor:pointer;background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font:400 12px var(--font-ui);color:var(--color-text);min-width:0}
+.db-an-qc:hover{border-color:var(--color-border-secondary)}
+.db-an-qc.on{border-color:var(--color-primary);box-shadow:inset 0 0 0 1px var(--color-primary);background:rgba(141,29,44,.03)}
+.db-an-qc:focus-visible{outline:2px solid var(--color-primary);outline-offset:2px}
+.db-an-qc .hd{display:flex;align-items:center}.db-an-qc .hd .t{font:400 16px var(--font-display)}.db-an-qc .hd .db-pill{margin-left:auto;font-size:11px;padding:2px 8px;border-radius:6px}
+.db-an-qc .v{font:400 20px var(--font-display);font-variant-numeric:tabular-nums}.db-an-qc .v small{font:400 12px var(--font-ui);color:var(--color-text-muted)}
+.db-an-qc .mi{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.db-an-qc .mi>span{text-align:center;font-size:10px;color:var(--color-text-muted)}
+.db-an-qc .bb{height:48px;display:flex;align-items:flex-end;justify-content:center;gap:3px;border-bottom:1px solid var(--color-border-tertiary);margin-bottom:3px}
+.db-an-qc .bb i{display:block;width:12px;border-radius:3px 3px 0 0;min-height:1px}.db-an-qc .bb i.b{background:#e9e2d8}
+.db-an-qc .s{font-size:11px;color:var(--color-text-muted)}
+.db-an-det .g{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr) minmax(0,1.1fr);align-items:start}
+.db-an-det .kv{margin:0;padding:14px 16px;display:flex;flex-direction:column;gap:9px;border-left:1px solid var(--color-border-tertiary);border-right:1px solid var(--color-border-tertiary)}
+.db-an-det .kv>div{display:flex;justify-content:space-between;gap:8px;font:400 12.5px var(--font-ui)}
+.db-an-det .kv dt{color:var(--color-text-muted)}.db-an-det .kv dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+.db-an-det .kv dd small{display:block;font-size:10.5px;color:var(--color-text-muted)}
+.db-an-det .an{padding:12px 16px;min-width:0}
+.db-an-det .an>.db-lab{display:block;margin:0 0 6px}.db-an-det .an>.db-lab~.db-lab{margin-top:10px}
+.db-an-det .an .vide{font-style:italic;margin:2px 0 4px}
+.db-an-12{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 16px 14px}
+.db-an-12 .tq{border-radius:10px;padding:6px 6px 4px;background:var(--color-background-secondary)}
+.db-an-12 .tq.on{background:rgba(141,29,44,.06);box-shadow:inset 0 0 0 1px rgba(141,29,44,.25)}
+.db-an-12 .tq>.db-lab{display:block;padding:0 4px 4px}
+.db-an-12 .ms{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.db-an-12 .m{text-align:center;min-width:0}
+.db-an-12 .bb{position:relative;height:120px;display:flex;align-items:flex-end;justify-content:center;border-bottom:1px solid var(--color-border-tertiary)}
+.db-an-12 .bb i{display:block;width:60%;max-width:34px;border-radius:4px 4px 0 0;min-height:1px}
+.db-an-12 .bb u{position:absolute;left:12%;right:12%;height:0;border-top:2px solid #8a847c;opacity:.55}
+.db-an-12 .n{font:400 11.5px var(--font-ui);margin-top:5px}
+.db-an-12 .d{font:400 10.5px var(--font-ui);color:var(--color-text-muted);font-variant-numeric:tabular-nums;min-height:1.3em}
+.db-an-pli{background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px;margin-bottom:10px}
+.db-an-pli>summary{cursor:pointer;list-style:none;padding:12px 16px;display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;font:400 14px var(--font-display)}
+.db-an-pli>summary::-webkit-details-marker{display:none}
+.db-an-pli>summary::before{content:'▸';font-size:11px;color:var(--color-text-muted)}.db-an-pli[open]>summary::before{content:'▾'}
+.db-an-pli>summary small{font:400 11.5px var(--font-ui);color:var(--color-text-muted)}
+.db-an-pli>.in{padding:0 12px 2px;overflow-x:auto}.db-an-pli>.in>.db-card{margin-bottom:10px}
+@media (max-width:1100px){.db-an-q,.db-an-12{grid-template-columns:repeat(2,minmax(0,1fr))}.db-an-det .g{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.db-an-det .kv{border-right:none}.db-an-det .an{grid-column:1 / -1;border-top:1px solid var(--color-border-tertiary)}}
+@media (max-width:700px){.db-an-q,.db-an-12,.db-an-3,.db-an-det .g{grid-template-columns:minmax(0,1fr)}.db-an-det .kv{border-left:none;border-top:1px solid var(--color-border-tertiary)}.db-an-obj .hd{flex-wrap:wrap}}
 /* La tendance dans les tuiles : mini-courbe des 7 derniers mêmes jours, écart avec le dernier. */
 .db-tui{position:relative}
 .db-spk{position:absolute;right:10px;top:10px;width:70px;height:26px}
@@ -1888,7 +1936,6 @@ html.db-fiche-ouverte{overflow:hidden}
 .fr-c.sk{cursor:default;gap:6px}
 .db-frise.sept .fr-c{padding:8px 12px}.db-frise.sept .fr-c b{font-size:21px}.db-frise.sept .fr-c .n{font-size:12px}.db-frise.sept .fr-c small{font-size:11px}
 .fr-fl[disabled]{opacity:.3;cursor:default}
-.db-frise.quatre .fr-c{padding:9px 12px}.db-frise.quatre .fr-c b{font-size:22px}.db-frise.quatre .fr-c .n{font-size:12px}.db-frise.quatre .fr-c small{font-size:11px}.db-frise.quatre .fr-c .jg{height:6px}
 /* Modale produit, Recette & marge (10/10/2026) : la marge brute en %, seule, à côté de la recette. */
 .fi-rdeux.mb{grid-template-columns:minmax(0,1fr) 220px}
 .fi-rmb{display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:14px 16px}

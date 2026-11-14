@@ -22,9 +22,10 @@
   // Promotions se lit (la liste, où elles sont utilisées, le coefficient). ?ouvrir= : nouvelle (défaut), bon, p21
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue'].includes(q.get('vue')) ? q.get('vue') : (q.get('vue') ? 'jour' : 'ops')),
+  // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
-    heure: null, mode: 'moy', hmMetric: 'pct', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
+    heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
     auxLu: {}, cqFiltre: 'tout', cqVoir: null, cqTente: {}, cqRaz: false,
     rc: null, rcFiltre: 'tout', rcFait: null, rcHaut: false, rcMode: null,
@@ -35,6 +36,7 @@
     ppOnglet: ['plan', 'suivi', 'params'].includes(q.get('onglet')) ? q.get('onglet') : 'plan', ppEdit: null, ppOuvert: {}, ppMsg: null, ppEnvoi: false,
     noteOuvert: false, noteBrouillon: null, noteEtat: null, objOuvert: false, promoOuvert: false, proOuvert: false, coCanal: null,
     a4: null, a4Vise: false,
+    anQ: null, anPli: {},
     mo: ['exp', 'ctrl'].includes(q.get('mo')) ? q.get('mo') : 'exp', rgOuvert: false,
     opVitTout: false, opVie: 'S', opOuv: {}, fiche: null,
     bmF: ['top', 'cougnou', 'galette', 'produit'].includes(q.get('bmf')) ? q.get('bmf') : 'top', bmP: q.get('bmp') || null, bmQ: '', bmForm: null, bmMsg: null, bmEnvoi: false,
@@ -157,12 +159,12 @@
     if (S.vue === 'concurrence') { lireAux(cleBM(), cheminBM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux('bmTop', '/analyse/produits?mois=3', force); rendre(); return; }
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
-    if (S.vue === 'annee' || S.vue === 'trimestre') {
+    if (S.vue === 'annee') {
       lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
       lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
-      // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles — une lecture, vue Année seulement.
-      if (S.vue === 'annee') { lireAux(cleAn12(), cheminAn12(), force); }
+      // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles.
+      lireAux(cleAn12(), cheminAn12(), force);
       rendre(); return;
     }
     // Le Résultat et les ventes d'abord : le navigateur n'ouvre que six connexions vers le serveur
@@ -252,7 +254,6 @@
     if (S.vue === 'ops') { return (S.date === AUJ ? 'la journée en cours · ' : 'la journée · ') + fDL(S.date); }
     if (S.vue === 'production') { return 'production · ' + fDL(S.date); }
     if (S.vue === 'annee') { return 'année ' + annee(); }
-    if (S.vue === 'trimestre') { return 'T' + trimestre() + ' ' + annee(); }
     const d = S.res[cleRes()];
     if (S.vue === 'semaine') { return d && d.du ? 'semaine du ' + fD(d.du) + ' au ' + fD(d.au) : 'semaine'; }
     const t = new Date(S.date + 'T12:00:00');
@@ -6451,10 +6452,10 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['trimestre', 'Trimestre'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}${false ? `<div class="db-ong">${[1, 2, 3, 4].map(q => { const deb = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; const auj = q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4); return `<button data-trim="${q}" class="${trimestre() === q ? 'on' : ''}" ${deb > AUJ ? 'disabled' : ''}>T${q}${auj ? ' · en cours' : ''}</button>`; }).join('')}</div>` : ''}
-      ${['ops', 'semaine', 'mois', 'trimestre', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'trimestre' ? (annee() !== +AUJ.slice(0, 4) || trimestre() !== Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'trimestre' ? 'Ce trimestre' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
@@ -6470,7 +6471,6 @@
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
     h += rendValeur();
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
-    if (S.vue === 'trimestre') { h += rendTrimestre(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'jour') {
       if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
       else if (d && !m) { h += `<div class="db-alerte">Ce magasin n’est pas dans la réponse de Résultat pour cette période.</div>`; }
@@ -7980,7 +7980,7 @@
   // La semaine active seulement, du lundi au dimanche (10/10/2026) : quatorze cases ne se lisaient pas sur tablette.
   function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; t.setDate(t.getDate() - (t.getDay() + 6) % 7); for (let i = 0; i < 7; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
   function friseHtml() {
-    if (EMBED || !['ops', 'semaine', 'mois', 'trimestre'].includes(S.vue)) { return ''; }
+    if (EMBED || !['ops', 'semaine', 'mois'].includes(S.vue)) { return ''; }
     const fdC = s => { const d = new Date(s + 'T12:00:00'); return d.getDate() + ' ' + MOIS_C[d.getMonth()]; };
     const col = p => p == null ? '#cfc6ba' : (p >= 100 ? '#3f7a52' : (p >= 90 ? '#F6E7CE' : (p >= 75 ? '#F5B26B' : '#F08A2C')));
     const fl = n => S.vue === 'ops' || S.vue === 'semaine'
@@ -8012,22 +8012,6 @@
         const p = j.objectif && j.ca != null ? 100 * j.ca / j.objectif : null, auj = d === AUJ;
         return `<button type="button" class="fr-c${on ? ' on' : ''}" ${ops ? 'data-fdate' : 'data-fops'}="${d}" title="${esc(fDL(d))}${ops ? '' : ' · ouvrir en Opérationnel'}"><span class="n">${lib}<i class="dot" style="background:${auj ? '#1d1d1b' : col(p)}"></i></span><b>${j.ca != null ? fN(j.ca) + '<i class="eu"> €</i>' : '—'}</b><small>${auj ? 'en cours' : (p != null ? fN(p) + ' %<i class="eu"> obj.</i>' : (j.ca != null ? 'sans objectif' : 'pas de vente'))}</small></button>`;
       }).join('');
-    } else if (S.vue === 'trimestre') {
-      // Les 4 trimestres de l'année (10/10/2026) : le CA des mois lus, face à l'objectif des trois mois.
-      const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
-      const qAuj = +AUJ.slice(0, 4) === Y ? Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 : (+AUJ.slice(0, 4) > Y ? 5 : 0);
-      tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
-      chips = !L ? sk(4) : [1, 2, 3, 4].map(q => {
-        const ms = L.filter(r => Math.ceil(+r.mois / 3) === q);
-        const lus = ms.filter(r => r.ca != null), ca = lus.reduce((a, r) => a + (+r.ca), 0), obj = ms.reduce((a, r) => a + (r.caBudget != null ? +r.caBudget : 0), 0);
-        // La part : le CA des mois qui ont un objectif, face à cet objectif (un mois sans objectif ne compte pas).
-        const caO = lus.filter(r => r.caBudget != null).reduce((a, r) => a + (+r.ca), 0);
-        const p = lus.length && obj ? 100 * caO / obj : null, on = trimestre() === q, cours = q === qAuj;
-        const lib = 'T' + q + ' · ' + MOIS_C[(q - 1) * 3] + ' – ' + MOIS_C[(q - 1) * 3 + 2];
-        if (q > qAuj) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${obj ? 'objectif ' + fK(obj) : 'à venir'}</small></div>`; }
-        if (!lus.length) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>pas de vente</small></div>`; }
-        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-trim="${q}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' + (obj ? ' ' + fK(obj) : '') : 'sans objectif'}</small></button>`;
-      }).join('');
     } else {
       const Y = annee(), P = S.aux[clePerf()], L = Array.isArray(P) ? P.filter(x => String(x.storeId) === String(S.shop) && +x.annee === Y) : null;
       tete = `<button type="button" class="fr-an" data-fan="-1">‹</button>${Y}<button type="button" class="fr-an" data-fan="1"${Y >= +AUJ.slice(0, 4) ? ' disabled' : ''}>›</button>`;
@@ -8039,8 +8023,8 @@
         return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${finMois(ym)}"><span class="n">${MOIS_C[i]}${cours ? '<em>en cours</em>' : ''}</span><b>${fK(ca)}</b><i class="jg"><em style="width:${Math.min(100, p || 0).toFixed(0)}%;background:${on ? 'var(--color-primary)' : col(p)}"></em></i><small>${p != null ? fN(p) + ' % de l’objectif' : 'sans objectif'}</small></button>`;
       }).join('');
     }
-    const annuel = S.vue === 'mois' || S.vue === 'trimestre';
-    return `<div class="db-frise${S.vue === 'trimestre' ? ' quatre' : (S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : '')}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
+    const annuel = S.vue === 'mois';
+    return `<div class="db-frise${S.vue === 'ops' || S.vue === 'semaine' ? ' sept' : ''}"><div class="fr-t">${tete}</div><div class="fr-r">${annuel ? '' : fl(-1)}${chips}${annuel ? '' : fl(1)}</div></div>`;
   }
 
   function rendBench(m, d) {
@@ -8185,7 +8169,7 @@
   }
 
   function rendNC() {
-    if (S.vue === 'annee' || S.vue === 'trimestre') { return ''; }
+    if (S.vue === 'annee') { return ''; }
     const cle = cleNC(), D = S.aux[cle], f = ncFenetre();
     // « hier », « cette semaine », « ce mois » : le bandeau nomme la fenêtre
     // qu'il résume, sinon on ne sait pas de quoi il parle.
@@ -9257,141 +9241,162 @@
     rcForm().livraison = e.target.value; rendre();
   });
 
-  /* L'année : la heatmap des 12 mois (deux années) et l'objectif — 1 an, 3 ans, 5 ans. */
-  /* --- Trimestre : l'objectif du plan, les 3 mois, les annotations ---------- */
+  /* --- L'année (14/11/2026, maquette docs/maquettes/annee-trimestres, validée par Sam) ---------------------------
+   * Trimestre et Année ne font plus qu'un onglet : l'objectif en une carte, les quatre trimestres côte à côte, le
+   * détail du trimestre choisi (l'ex-onglet Trimestre), les douze mois en une bande face à l'an passé, le trafic face
+   * à N-1. Le tableau des mois et la rampe à 5 ans sont repliés. Une adresse vue=trimestre ouvre l'Année sur le
+   * trimestre de sa date. */
   const VOIX = [['franchise', 'Franchisé', 'fr'], ['consultant', 'Consultant', 'co'], ['marque', 'Marque', 'ma']];
   const nomVoix = (plan, v) => (plan && plan.voix && plan.voix[v[0]]) || v[1];
   const actionsDe = (plan, q) => (plan && Array.isArray(plan.actions) ? plan.actions : []).filter(a => +a.trimestre === q);
   const stAct = a => a.statut === 'fait' || a.statut === 'faite' || a.statut === 'termine' ? 'ok' : (a.statut === 'en_cours' || a.statut === 'encours' || a.statut === 'lancee' ? 'enc' : '');
   const libAct = a => stAct(a) === 'ok' ? 'fait' : (stAct(a) === 'enc' ? 'en cours' : (a.statut ? String(a.statut).replace(/_/g, ' ') : 'à faire'));
+  const MO3 = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
+  // L'atteinte : rouge < 80 %, orange 80–95, vert 95–105, doré > 105 (orange ≠ doré, 13/11/2026).
+  const colAtt = p => p == null ? '#B9B2A8' : p < 80 ? '#8D1D2C' : p < 95 ? '#D98A0B' : p < 105 ? '#7CB342' : '#B0792A';
+  /** Le trimestre ouvert : celui qu'on a cliqué, sinon celui de la date regardée (le trimestre en cours, aujourd'hui). */
+  function anQ() { return S.anQ || trimestre(); }
+  /** Les mois du magasin (/stores/perf, deux années), ou null tant qu'ils ne sont pas lus. */
+  function anCellules() { const P = S.aux[clePerf()]; return Array.isArray(P) ? P.filter(c => String(c.storeId) === String(S.shop)) : null; }
+  const anCel = (cells, an, m) => (cells || []).find(c => +c.annee === an && +c.mois === m) || null;
+  // Le budget du mois : le budget validé, sinon le CA théorique de l'étude — la règle du plan.
+  const anBud = c => c ? (+c.caBudget || +c.caTheorique || 0) : 0;
+  const anFutur = (an, m) => an > +AUJ.slice(0, 4) || (an === +AUJ.slice(0, 4) && m > +AUJ.slice(5, 7));
+  const anEnCours = (an, m) => an === +AUJ.slice(0, 4) && m === +AUJ.slice(5, 7);
+  const anTag = t => t.enCours ? '<span class="db-tg enc">en cours</span>' : (t.clos ? '<span class="db-tg">clos</span>' : '<span class="db-tg fut">à venir</span>');
+
+  /** Les annotations des trois voix (celles qui ont écrit), les actions et le rituel du trimestre. */
   function blocNotes(plan, t) {
-    const q = t.t, acts = actionsDe(plan, q), notes = t.notes || {};
-    return VOIX.map(v => { const n = notes[v[0]]; return `<div class="db-nv ${v[2]}${n ? '' : ' vide'}"><div class="q"><span>${esc(nomVoix(plan, v))}</span><span>${n && n.le ? 'maj ' + fD(String(n.le).slice(0, 10)) + (n.par ? ' · ' + esc(n.par) : '') : ''}</span></div><p>${n ? esc(n.texte) : 'pas encore d’annotation'}</p></div>`; }).join('')
-      + (acts.length ? `<div class="db-lab" style="margin:8px 0 4px">Actions du trimestre</div>` + acts.map(a => `<div class="db-act"><span>${esc(a.libelle)}${a.responsable ? ' <span class="mu">· ' + esc(a.responsable) + '</span>' : ''}${a.effetAn ? ' <span class="mu">· effet ' + fK(a.effetAn) + ' / an</span>' : ''}</span><span class="st ${stAct(a)}">${esc(libAct(a))}</span></div>`).join('') : `<div class="db-mini" style="margin-top:8px">aucune action posée sur ce trimestre</div>`)
-      + `<div class="db-rit">Rituel du trimestre : ${[1, 2, 3, 4, 5].map(i => `<i class="${i <= ((t.revue && t.revue.etape) || 1) ? 'on' : ''}"></i>`).join('')} étape ${(t.revue && t.revue.etape) || 1} / 5${t.revue && t.revue.valideLe ? ' · validé le ' + fD(String(t.revue.valideLe).slice(0, 10)) + (t.revue.validePar ? ' par ' + esc(t.revue.validePar) : '') : ' · non validé'}</div>`;
-  }
-  function rendTrimestre() {
-    const Y = annee(), q = trimestre();
-    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
-    let h = '';
-    if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
-    if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Plan : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
-    h += `<div class="db-sec">Résultat — le trimestre T${q} ${Y}<small>objectif du plan de développement, attendu au rythme des budgets mensuels</small></div>`;
-    if (!plan && !S.err['plan|' + S.shop + '|' + Y]) { return h + squelette(3); }
-    const t = plan && Array.isArray(plan.trimestres) ? plan.trimestres.find(x => +x.t === q) : null;
-    if (!t) { return h + `<div class="db-alerte">${esc((plan && plan.error) || 'Pas de plan pour ce trimestre.')}</div>`; }
-    const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
-    const att = t.objectif ? 100 * (t.realise || 0) / t.objectif : null;
-    h += `<div class="db-tuiles">
-      ${tuile('Objectif ' + t.label, fK(t.objectif), 'plan de développement · ' + t.mois.map(m => MO[m - 1]).join(' · '))}
-      ${tuile('Réalisé', fK(t.realise), (att != null ? fP(att) + ' de l’objectif · ' : '') + (t.moisRealises || 0) + ' mois lu(s)')}
-      ${tuile('Attendu à ce jour', fK(t.attendu), 'au rythme des budgets mensuels')}
-      ${tuile('Écart', t.ecart == null ? '—' : fSK(t.ecart), t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : fP(t.ecartPct) + ' · ' + (t.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', t.ecart == null ? '' : (t.ecart >= 0 ? 'bon' : 'vif'))}
-      ${tuile('Clients manquants', t.clients == null ? '—' : fN(t.clients), t.panier ? 'au panier moyen ' + fU(t.panier) : '')}
-      ${tuile('Marge nette', fP(t.netPct), (t.food != null ? 'food ' + fP(t.food) : '') + (t.labour != null ? ' · labour ' + fP(t.labour) : ''), t.netPct == null ? '' : (t.netPct >= 10 ? 'bon' : 'vif'))}
-    </div>`;
-    // les 3 mois : budget et réalisé
-    const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop) && +c.annee === Y);
-    const M = t.mois.map(m => cells.find(c => +c.mois === m) || { mois: m });
-    const mx = Math.max(...M.map(x => Math.max((x.caBudget || x.caTheorique || 0), x.ca || 0)), 1);
-    const moisAuj = +AUJ.slice(5, 7), anAuj = +AUJ.slice(0, 4);
-    h += `<div class="db-g2" style="grid-template-columns:1.4fr 1fr;margin-bottom:12px">
-      <div class="db-card"><div class="ct"><span class="db-lab">Les 3 mois du trimestre</span><span class="db-mini">gris : budget du mois · couleur : réalisé (vert ≥ 95 %, bordeaux sinon, or = mois en cours)</span></div>
-        ${!perf && !S.err[clePerf()] ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = x.caBudget || x.caTheorique || 0, ca = x.ca || 0, pct = bud ? 100 * ca / bud : null; const enc = Y === anAuj && +x.mois === moisAuj, futur = Y > anAuj || (Y === anAuj && +x.mois > moisAuj);
-          return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i><i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i></div><div class="n">${MO[x.mois - 1]} · ${futur ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !futur ? ' · ' + fP(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`}
-      </div>
-      <div class="db-card"><div class="ct"><span class="db-lab">Les annotations du trimestre</span><span class="db-mini">plan de développement</span></div><div style="padding:10px 16px 12px">${blocNotes(plan, t)}</div></div>
-    </div>`;
-    return h;
+    const acts = actionsDe(plan, t.t), notes = t.notes || {}, et = (t.revue && t.revue.etape) || 1;
+    const nv = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte);
+    return `<span class="db-lab">Annotations</span>${nv.length ? nv.map(v => { const n = notes[v[0]]; return `<div class="db-nv ${v[2]}"><div class="q"><span>${esc(nomVoix(plan, v))}</span><span>${n.le ? 'maj ' + fD(String(n.le).slice(0, 10)) + (n.par ? ' · ' + esc(n.par) : '') : ''}</span></div><p>${esc(n.texte)}</p></div>`; }).join('') : '<div class="db-mini vide">pas encore d’annotation</div>'}
+      <span class="db-lab">Actions</span>${acts.length ? acts.map(a => `<div class="db-act"><span>${esc(a.libelle)}${a.responsable ? ' <span class="mu">· ' + esc(a.responsable) + '</span>' : ''}${a.effetAn ? ' <span class="mu">· effet ' + fK(a.effetAn) + ' / an</span>' : ''}</span><span class="st ${stAct(a)}">${esc(libAct(a))}</span></div>`).join('') : '<div class="db-mini vide">aucune action posée sur ce trimestre</div>'}
+      <div class="db-rit">Rituel du trimestre : ${[1, 2, 3, 4, 5].map(i => `<i class="${i <= et ? 'on' : ''}"></i>`).join('')} étape ${et} / 5${t.revue && t.revue.valideLe ? ' · validé le ' + fD(String(t.revue.valideLe).slice(0, 10)) + (t.revue.validePar ? ' par ' + esc(t.revue.validePar) : '') : ' · non validé'}</div>`;
   }
 
-  /** Le tableau des trimestres de l'année, avec les annotations. */
-  function tableauTrimestres(plan, Y) {
+  /** L'objectif de l'année en une carte : la barre (réalisé, projection hachurée, repère de l'attendu) et trois chiffres. */
+  function anObjectif(plan, Y) {
+    const A = plan.annee || {}, src = A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : 'engagement du franchisé';
+    const pc = v => A.objectif && v != null ? Math.max(0, Math.min(100, 100 * v / A.objectif)) : null;
+    const pR = pc(A.realise || 0), pA = pc(A.attendu), pP = pc(A.projection);
+    const barre = A.objectif ? `<div class="db-an-barre" title="${esc('réalisé ' + fK(A.realise) + (A.attendu != null ? ' · attendu à ce jour ' + fK(A.attendu) : '') + (A.projection != null ? ' · projection ' + fK(A.projection) : ''))}"><i style="width:${pR.toFixed(1)}%"></i>${pP != null && pP > pR ? `<s style="left:${pR.toFixed(1)}%;width:${(pP - pR).toFixed(1)}%"></s>` : ''}${pA != null ? `<b class="${pA > 88 ? 'fin' : (pA < 12 ? 'deb' : '')}" style="left:${pA.toFixed(1)}%"><em>attendu à ce jour</em></b>` : ''}</div>` : '';
+    const proj = A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '';
+    return `<div class="db-card db-an-obj">
+      <div class="hd"><div><span class="db-lab">Objectif ${Y} · ${src}</span><div class="v">${fK(A.objectif)}</div></div>${A.partEcoulee != null ? `<span class="db-mini">${fP0(A.partEcoulee)} de l’année écoulée</span>` : ''}</div>
+      ${barre}
+      <div class="db-an-3">
+        <div><span class="db-lab">Réalisé</span><div class="v">${fK(A.realise)}</div><span class="s">${pR != null ? fP0(100 * (A.realise || 0) / A.objectif) + ' de l’objectif' : ''}</span></div>
+        <div class="${A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif')}"><span class="db-lab">Écart à ce jour</span><div class="v">${fSK(A.ecart)}</div><span class="s">${A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’attendu (' + fK(A.attendu) + ')'}</span></div>
+        <div class="${proj}"><span class="db-lab">Projection fin d’année</span><div class="v">${fK(A.projection)}</div><span class="s">${A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel'}</span></div>
+      </div></div>`;
+  }
+
+  /** Les quatre trimestres côte à côte : un clic ouvre le détail. La pastille compare le réalisé à l'attendu à ce jour. */
+  function anTrimestres(plan, Y, cells) {
     const T = Array.isArray(plan.trimestres) ? plan.trimestres : [];
     if (!T.length) { return ''; }
-    const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
-    const col = p => p == null ? '#B9B2A8' : p < 80 ? '#8D1D2C' : p < 95 ? '#D98A0B' : p < 105 ? '#7CB342' : '#B0792A';   // orange ≠ doré (13/11/2026)
-    const tag = t => t.enCours ? '<span class="db-tg enc">en cours</span>' : (t.clos ? '<span class="db-tg clos">clos</span>' : '<span class="db-tg fut">à venir</span>');
-    const tot = { o: 0, r: 0, a: 0 };
-    const rows = T.map(t => { const att = t.attendu ? 100 * (t.realise || 0) / t.attendu : null; tot.o += t.objectif || 0; tot.r += t.realise || 0; tot.a += t.attendu || 0;
-      const notes = t.notes || {}, acts = actionsDe(plan, t.t), et = (t.revue && t.revue.etape) || 1;
-      const an = VOIX.filter(v => notes[v[0]] && notes[v[0]].texte).map(v => `<div><i class="v ${v[2]}"></i><b>${esc(nomVoix(plan, v))}</b> — ${esc(notes[v[0]].texte.length > 140 ? notes[v[0]].texte.slice(0, 140) + '…' : notes[v[0]].texte)}</div>`).join('');
-      const pied = `${acts.length ? acts.length + ' action(s) · ' + acts.filter(a => stAct(a) === 'ok').length + ' faite(s) · ' : ''}rituel ${et}/5${t.revue && t.revue.valideLe ? ' validé' : ''}`;
-      return `<tr data-trimq="${t.t}"><td class="l"><b>${esc(t.label)}</b>${tag(t)}<br><span class="mu">${t.mois.map(m => MO[m - 1]).join(' · ')}</span></td><td>${fK(t.objectif)}</td><td>${fK(t.realise)}</td><td>${fK(t.attendu)}</td><td style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}</td><td>${att == null ? '—' : `<span class="db-pill" style="background:${col(att)}">${fP(att)}</span>`}</td><td>${t.clients == null ? '—' : '− ' + fN(t.clients)}</td>${panTd(panDe(t))}<td>${fP(t.food)}</td><td>${fP(t.labour)}</td><td>${fP(t.netPct)}</td><td class="an">${an || '<span class="mu" style="font-style:italic">pas encore d’annotation</span>'}<div class="mu" style="margin-top:2px">${pied}</div></td></tr>`; }).join('');
-    const A = plan.annee || {};
-    return `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, trimestre par trimestre</span><span class="db-mini">objectif du plan · réalisé · les annotations des trois voix, et les actions · cliquer un trimestre pour l’ouvrir</span></div>
-      <div style="padding:4px 16px 12px;overflow-x:auto"><table class="db-t db-tq"><tr><th>Trimestre</th><th>Objectif</th><th>Réalisé</th><th>Attendu</th><th>Écart</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food</th><th>Labour</th><th>Marge nette</th><th class="l">Annotations</th></tr>${rows}
-      <tr class="tot"><td class="l">${Y}</td><td>${fK(tot.o)}</td><td>${fK(tot.r)}</td><td>${fK(tot.a)}</td><td style="color:${tot.r - tot.a >= 0 ? 'var(--color-success,#2d7a3e)' : 'var(--color-primary)'}">${fSK(tot.r - tot.a)}</td><td>${tot.a ? `<span class="db-pill" style="background:${col(100 * tot.r / tot.a)}">${fP(100 * tot.r / tot.a)}</span>` : '—'}</td><td colspan="5"></td><td class="an mu">${A.objectif ? 'objectif de l’année ' + fK(A.objectif) : ''}${A.projection ? ' · projection ' + fK(A.projection) : ''}</td></tr></table></div></div>`;
+    const q0 = anQ();
+    return `<div class="db-an-q">${T.map(t => {
+      const att = t.attendu ? 100 * (t.realise || 0) / t.attendu : null, on = +t.t === q0;
+      const ms = t.mois.map(m => { const c = anCel(cells, Y, m); return { m, b: anBud(c), ca: c && c.ca ? +c.ca : 0 }; });
+      const mx = Math.max(...ms.map(x => Math.max(x.b, x.ca)), 1);
+      return `<button type="button" class="db-an-qc${on ? ' on' : ''}" data-anq="${t.t}" aria-pressed="${on}">
+        <span class="hd"><span class="t">T${t.t}</span>${anTag(t)}${att != null && !t.futur ? `<span class="db-pill" style="background:${colAtt(att)}" title="réalisé face à l’attendu à ce jour">${fP0(att)}</span>` : ''}</span>
+        <span class="v">${t.futur ? '—' : fK(t.realise)}<small> / ${fK(t.objectif)}</small></span>
+        <span class="mi">${ms.map(x => `<span><span class="bb"><i class="b" style="height:${(44 * x.b / mx).toFixed(0)}px"></i>${anFutur(Y, x.m) ? '' : `<i style="height:${(44 * x.ca / mx).toFixed(0)}px;background:${anEnCours(Y, x.m) ? 'var(--prize)' : colAtt(x.b ? 100 * x.ca / x.b : null)}"></i>`}</span>${MO3[x.m - 1]}</span>`).join('')}</span>
+        <span class="s">${t.ecart == null ? (t.futur ? 'trimestre à venir' : '') : `<span style="color:${t.ecart >= 0 ? 'var(--green)' : 'var(--color-primary)'}">${fSK(t.ecart)}</span> sur l’attendu`}${t.netPct != null && !t.futur ? ' · marge nette ' + fP0(t.netPct) : ''}</span>
+      </button>`; }).join('')}</div>`;
   }
 
+  /** Le détail du trimestre ouvert : ses trois mois, ses chiffres, les annotations, les actions et le rituel. */
+  function anDetail(plan, Y, cells) {
+    const T = Array.isArray(plan.trimestres) ? plan.trimestres : [];
+    const t = T.find(x => +x.t === anQ()) || T.find(x => x.enCours) || T[0];
+    if (!t) { return ''; }
+    const att = t.attendu ? 100 * (t.realise || 0) / t.attendu : null;
+    const M = t.mois.map(m => anCel(cells, Y, m) || { mois: m });
+    const mx = Math.max(...M.map(x => Math.max(anBud(x), +x.ca || 0)), 1);
+    const mois = cells == null ? squelette(1) : `<div class="db-mo">${M.map(x => { const bud = anBud(x), ca = +x.ca || 0, pct = bud ? 100 * ca / bud : null, enc = anEnCours(Y, +x.mois), fut = anFutur(Y, +x.mois);
+      return `<div><div class="bars"><i class="b" style="height:${(140 * bud / mx).toFixed(0)}px" title="budget ${fE(bud)}"></i>${fut ? '' : `<i class="r ${enc ? 'enc' : (pct != null && pct >= 95 ? 'ok' : '')}" style="height:${(140 * ca / mx).toFixed(0)}px" title="réalisé ${fE(ca)}"></i>`}</div><div class="n">${MO3[x.mois - 1]} · ${fut || x.ca == null ? '—' : fK(ca)}</div><div class="d">budget ${fK(bud)}${pct != null && !fut && x.ca != null ? ' · ' + fP0(pct) : ''}${enc ? ' · en cours' : ''}${x.tickets ? ' · ' + fN(x.tickets) + ' clients' : ''}</div></div>`; }).join('')}</div>`;
+    const cli = t.clients == null ? '—' : (t.clients > 0 ? fN(t.clients) : 'aucun');
+    const cliS = (t.clients != null && t.clients < 0 ? fN(-t.clients) + ' clients d’avance · ' : '') + (t.panier ? 'au panier moyen ' + fU(t.panier) : '');
+    return `<div class="db-card db-an-det"><div class="ct"><span class="db-lab">Le trimestre ${esc(t.label || 'T' + t.t + ' ' + Y)} — ${t.enCours ? 'en cours' : (t.clos ? 'clos' : 'à venir')}</span><span class="db-mini">${t.mois.map(m => MO3[m - 1]).join(' · ')} · objectif du plan de développement, attendu au rythme des budgets mensuels</span></div>
+      <div class="g">
+        ${mois}
+        <dl class="kv">
+          <div><dt>Objectif</dt><dd>${fK(t.objectif)}</dd></div>
+          <div><dt>Réalisé</dt><dd>${fK(t.realise)}<small>${att != null && !t.futur ? fP0(att) + ' de l’attendu · ' : ''}${t.moisRealises || 0} mois lu(s)</small></dd></div>
+          <div><dt>Attendu à ce jour</dt><dd>${fK(t.attendu)}</dd></div>
+          <div><dt>Écart</dt><dd style="color:${t.ecart == null ? 'inherit' : (t.ecart >= 0 ? 'var(--green)' : 'var(--color-primary)')}">${t.ecart == null ? '—' : fSK(t.ecart)}${t.ecartPct != null ? `<small>${fP(t.ecartPct)}</small>` : ''}</dd></div>
+          <div><dt>Clients manquants</dt><dd>${cli}${cliS ? `<small>${cliS}</small>` : ''}</dd></div>
+          <div><dt>Marge nette</dt><dd>${fP(t.netPct)}<small>${t.food != null ? 'food ' + fP(t.food) : ''}${t.labour != null ? ' · labour ' + fP(t.labour) : ''}</small></dd></div>
+        </dl>
+        <div class="an">${blocNotes(plan, t)}</div>
+      </div></div>`;
+  }
+
+  /** Les douze mois en une bande rangée par trimestre : le CA, coloré par l'atteinte du budget, et le même mois de
+   * l'an passé en trait gris. Le mois en cours n'a pas d'évolution : un mois incomplet ne se compare pas à un mois
+   * entier (la comparaison aux mêmes jours est dans le trafic). */
+  function anBande(Y, cells) {
+    const tete = l => `<div class="db-card"><div class="ct"><span class="db-lab">Les 12 mois · ${Y} face à ${Y - 1}</span><span class="db-mini">${l}</span></div>`;
+    if (cells == null) { return tete('') + `<div style="padding:12px 16px">${squelette(1)}</div></div>`; }
+    const aN1 = cells.some(c => +c.annee === Y - 1 && c.ca);
+    const m1 = cells.filter(c => +c.annee === Y && c.ca).map(c => +c.mois).sort((a, b) => a - b)[0];
+    const mx = Math.max(...cells.filter(c => +c.annee >= Y - 1).map(c => Math.max(+c.ca || 0, anBud(c))), 1);
+    const q0 = anQ();
+    const leg = `barre : CA ${Y}, couleur = atteinte du budget · or : mois en cours · ${aN1 ? 'trait gris : ' + (Y - 1) + ', même mois' : 'pas de ' + (Y - 1) + (m1 ? ' : premier mois vendu en ' + MO3[m1 - 1] + ' ' + Y : '')}`;
+    return tete(leg) + `<div class="db-an-12">${[1, 2, 3, 4].map(q => `<div class="tq${q === q0 ? ' on' : ''}"><span class="db-lab">T${q}</span><div class="ms">${[0, 1, 2].map(k => {
+      const m = (q - 1) * 3 + k + 1, c = anCel(cells, Y, m), p = anCel(cells, Y - 1, m), b = anBud(c), fut = anFutur(Y, m), enc = anEnCours(Y, m);
+      const lu = !fut && c && c.ca != null, ca = lu ? +c.ca : 0, pct = lu && b ? 100 * ca / b : null, pca = p && p.ca ? +p.ca : null;
+      const evo = pca && lu && !enc ? `${ca >= pca ? '+' : '−'} ${nf(Math.abs(Math.round(100 * (ca / pca - 1))), 0)} % sur ${Y - 1}` : (pca && enc ? 'mois en cours' : '');
+      const tit = MOIS[m - 1] + ' ' + Y + (lu ? ' · CA ' + fE(ca) : '') + (b ? ' · budget ' + fE(b) : '') + (pct != null ? ' · ' + fP(pct) : '') + (lu && c.tickets ? ' · ' + fN(c.tickets) + ' clients' : '') + (pca ? ' · ' + (Y - 1) + ' : ' + fE(pca) : '');
+      return `<div class="m" title="${esc(tit)}"><div class="bb">${pca ? `<u style="bottom:${(100 * pca / mx).toFixed(1)}%"></u>` : ''}${lu ? `<i style="height:${(100 * ca / mx).toFixed(1)}%;background:${enc ? 'var(--prize)' : colAtt(pct)}"></i>` : ''}</div>
+        <div class="n">${MO3[m - 1]}</div><div class="d">${fut ? '' : (lu ? fK(ca) : '—')}</div><div class="d">${pct == null ? '' : `<span style="color:${enc ? 'var(--prize-ink)' : colAtt(pct)}">${fP0(pct)}</span>`}</div><div class="d">${evo}</div></div>`; }).join('')}</div></div>`).join('')}</div></div>`;
+  }
+
+  /** La rampe à 5 ans de l'étude de marché, et les engagements du franchisé. */
+  function anRampe(plan, Y) {
+    const R = (plan.rampe && plan.rampe.annees) || [], A = plan.annee || {};
+    if (!R.length) { return ''; }
+    const mx = Math.max(...R.map(a => a.ca || 0), 1), engs = plan.engagements || {};
+    return `<div class="db-card"><div class="ct"><span class="db-lab">La rampe à 5 ans</span><span class="db-mini">${plan.rampe.potentiel ? 'potentiel à maturité ' + fK(plan.rampe.potentiel) + ' · année ' + plan.rampe.anneeExploitation + ' d’exploitation en ' + Y : 'sans étude de marché'}</span></div>
+      <div class="db-jours" style="grid-template-columns:repeat(${R.length},1fr);height:190px">${R.map(a => { const en = engs[String(a.an)]; const cur = a.an === Y;
+        return `<div><em>${fK(a.ca)}${en && en.objectif ? '<br><span class="mu" style="font-weight:400">engagé ' + fK(en.objectif) + '</span>' : ''}</em><div class="bb"><i class="${cur ? '' : 'ferme'}" style="height:${(100 * (a.ca || 0) / mx).toFixed(1)}%;${cur ? '' : 'background:#e5d9cc'}"></i>${cur && A.realise ? `<b style="bottom:${(100 * A.realise / mx).toFixed(1)}%;background:var(--prize)"></b>` : ''}</div><span>${a.an} · ${a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %'}</span></div>`; }).join('')}</div>
+      <div class="db-note">Barres : la rampe de l’étude (potentiel × montée en régime) ; trait orange sur ${Y} : le réalisé à ce jour.</div></div>`;
+  }
+
+  /** Le tableau des mois de l'année : CA, budget, clients, panier, ratios, marge nette. */
+  function anTableMois(cells, Y) {
+    const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
+    if (!an.length) { return ''; }
+    return `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span></div>
+      <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
+      ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
+        return `<tr><td>${MO3[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
+  }
+
+  /** Un pli : fermé par défaut, il se souvient d'être ouvert d'un rendu à l'autre (S.anPli). */
+  const anPli = (k, titre, sous, corps) => `<details class="db-an-pli" data-anpli="${k}"${S.anPli[k] ? ' open' : ''}><summary><span>${titre}</span><small>${sous}</small></summary><div class="in">${corps}</div></details>`;
+
   function rendAnnee() {
-    const Y = annee();
-    const perf = S.aux[clePerf()], plan = S.aux['plan|' + S.shop + '|' + Y];
+    const Y = annee(), kP = 'plan|' + S.shop + '|' + Y;
+    const plan = S.aux[kP], cells = anCellules();
     let h = '';
     if (S.err[clePerf()]) { h += `<div class="db-err">Mois : ${esc(S.err[clePerf()])}</div>`; }
-    if (S.err['plan|' + S.shop + '|' + Y]) { h += `<div class="db-err">Objectif : ${esc(S.err['plan|' + S.shop + '|' + Y])}</div>`; }
-    // --- l'objectif de l'année, et la rampe
-    h += `<div class="db-sec">L’objectif — ${Y}, 3 ans, 5 ans<small>engagement du franchisé, sinon la rampe de l’étude de marché</small></div>`;
-    if (!plan && !S.err['plan|' + S.shop + '|' + Y]) { h += squelette(2); }
-    else if (plan && plan.annee) {
-      const A = plan.annee, src = A.objectifSource === 'rampe' ? 'rampe de l’étude, à engager' : 'engagement du franchisé';
-      const att = A.objectif ? Math.min(100, 100 * A.realise / A.objectif) : 0, wAtt = A.objectif && A.attendu != null ? Math.min(100, 100 * A.attendu / A.objectif) : null;
-      h += `<div class="db-tuiles">
-        ${tuile('Objectif ' + Y, fK(A.objectif), src)}
-        ${tuile('Réalisé', fK(A.realise), A.partEcoulee != null ? fP(A.partEcoulee) + ' de l’année écoulée' : '')}
-        ${tuile('Attendu à ce jour', fK(A.attendu), 'au rythme des budgets mensuels')}
-        ${tuile('Écart', fSK(A.ecart), A.ecart == null ? '' : (A.ecart >= 0 ? 'en avance' : 'en retard') + ' sur l’objectif', A.ecart == null ? '' : (A.ecart >= 0 ? 'bon' : 'vif'))}
-        ${tuile('Projection fin d’année', fK(A.projection), A.projection != null && A.objectif ? fSK(A.projection - A.objectif) + ' sur l’objectif' : 'au rythme actuel', A.projection != null && A.objectif ? (A.projection >= A.objectif ? 'bon' : 'vif') : '')}
-        ${tuile('Rampe à 5 ans', plan.rampe && plan.rampe.potentiel ? fK(plan.rampe.potentiel) : '—', plan.rampe && plan.rampe.potentiel ? 'potentiel à maturité · ' + (function () { const n = (plan.rampe.annees || []).find(a => a.an === Y + 1); return n ? 'l’an prochain ' + fK(n.ca) : ''; })() : 'sans étude de marché')}
-      </div>
-      ${A.objectif ? `<div class="db-card"><div style="padding:12px 16px"><div class="db-lab">Objectif ${Y} — ${fK(A.objectif)}</div><div class="db-bar"><i style="width:${att.toFixed(1)}%"></i>${wAtt != null ? `<b style="left:${wAtt.toFixed(1)}%"></b>` : ''}</div><div class="db-mini" style="margin-top:5px">${fP(att)} réalisé${wAtt != null ? ' · le repère noir est l’attendu à ce jour (' + fP(wAtt) + ')' : ''}</div></div></div>` : ''}`;
-      const R = (plan.rampe && plan.rampe.annees) || [];
-      if (R.length) {
-        const mx = Math.max(...R.map(a => a.ca || 0), 1);
-        const engs = plan.engagements || {};
-        h += `<div class="db-card"><div class="ct"><span class="db-lab">La rampe à 5 ans</span><span class="db-mini">${plan.rampe.potentiel ? 'potentiel à maturité ' + fK(plan.rampe.potentiel) + ' · année ' + plan.rampe.anneeExploitation + ' d’exploitation en ' + Y : 'sans étude de marché'}</span></div>
-          <div class="db-jours" style="grid-template-columns:repeat(${R.length},1fr);height:190px">${R.map(a => { const en = engs[String(a.an)]; const cur = a.an === Y;
-            return `<div><em>${fK(a.ca)}${en && en.objectif ? '<br><span class="mu" style="font-weight:400">engagé ' + fK(en.objectif) + '</span>' : ''}</em><div class="bb"><i class="${cur ? '' : 'ferme'}" style="height:${(100 * (a.ca || 0) / mx).toFixed(1)}%;${cur ? '' : 'background:#e5d9cc'}"></i>${cur && A.realise ? `<b style="bottom:${(100 * A.realise / mx).toFixed(1)}%;background:var(--prize)"></b>` : ''}</div><span>${a.an} · ${a.maturite ? 'maturité' : 'année ' + a.anneeExploitation + ' · ' + a.coef + ' %'}</span></div>`; }).join('')}</div>
-          <div class="db-note">Barres : la rampe de l’étude (potentiel × montée en régime) ; trait orange sur ${Y} : le réalisé à ce jour.</div></div>`;
-      }
-      h += tableauTrimestres(plan, Y);
-    } else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
-    // --- le trafic de l'année face à l'an passé (24/10/2026)
+    if (S.err[kP]) { h += `<div class="db-err">Objectif : ${esc(S.err[kP])}</div>`; }
+    h += `<div class="db-sec">L’année ${Y}<small>l’objectif, les quatre trimestres, les douze mois — un clic sur un trimestre l’ouvre</small></div>`;
+    if (!plan && !S.err[kP]) { h += squelette(3); }
+    else if (plan && plan.annee) { h += anObjectif(plan, Y) + anTrimestres(plan, Y, cells) + anDetail(plan, Y, cells); }
+    else if (plan) { h += `<div class="db-alerte">${esc(plan.error || 'Pas de plan pour ce magasin.')}</div>`; }
+    if (cells || !S.err[clePerf()]) { h += anBande(Y, cells); }
+    // Le trafic de l'année face à l'an passé (24/10/2026) : il reste visible (14/11/2026, Sam).
     h += `<div class="db-sec">Le trafic — ${Y} face à ${Y - 1}<small>clients, panier moyen, articles par client, mois par mois</small></div>`;
     h += rendAnneeMesures();
-    // --- la heatmap des mois
-    h += `<div class="db-sec">Les mois — ${Y - 1} et ${Y}<small>CA du mois et atteinte du budget, magasin seul</small></div>`;
-    if (!perf && !S.err[clePerf()]) { h += squelette(2); }
-    else if (perf) {
-      const cells = (Array.isArray(perf) ? perf : []).filter(c => String(c.storeId) === String(S.shop));
-      const MO = ['jan', 'fév', 'mar', 'avr', 'mai', 'juin', 'juil', 'août', 'sep', 'oct', 'nov', 'déc'];
-      const tPct = p => p == null ? 'background:var(--color-background-secondary);color:var(--color-text-muted)'
-        : p < 80 ? 'background:var(--accent);color:#fff' : p < 95 ? 'background:#D98A0B;color:#fff' : p < 105 ? 'background:#7CB342;color:#fff' : 'background:var(--prize);color:#fff';
-      const mxCa = Math.max(...cells.map(c => c.ca || 0), 1);
-      const tCa = ca => ca == null || !ca ? 'background:var(--color-background-secondary);color:var(--color-text-muted)' : `background:rgba(141,29,44,${(0.15 + 0.75 * ca / mxCa).toFixed(2)});color:${ca / mxCa > 0.45 ? '#fff' : '#1c1a17'}`;
-      const auj = new Date();
-      h += `<div class="db-card"><div class="ct"><span class="db-lab">Heatmap mensuelle</span>
-        <div class="db-ong" style="margin-left:8px"><button data-hm="pct" class="${S.hmMetric === 'pct' ? 'on' : ''}">% d’atteinte du budget</button><button data-hm="ca" class="${S.hmMetric === 'ca' ? 'on' : ''}">CA du mois</button></div>
-        <span class="db-mini">budget validé, sinon CA théorique de l’étude · le mois en cours est en cours</span></div>
-        <div style="padding:12px 16px;overflow-x:auto"><div style="display:grid;grid-template-columns:70px repeat(12,minmax(64px,1fr));gap:4px;min-width:900px">
-          <div></div>${MO.map(x => `<div class="db-lab" style="text-align:center">${x}</div>`).join('')}
-          ${[Y - 1, Y].map(an => `<div style="font-weight:400;font-size:12px;display:flex;align-items:center">${an}</div>` + MO.map((x, i) => {
-            const c = cells.find(z => +z.annee === an && +z.mois === i + 1); const bud = c ? (c.caBudget || c.caTheorique) : null;
-            const pct = c && bud ? 100 * c.ca / bud : null; const futur = an > auj.getFullYear() || (an === auj.getFullYear() && i > auj.getMonth());
-            const enCours = an === auj.getFullYear() && i === auj.getMonth();
-            if (!c || futur || !c.ca) { return `<div style="${tPct(null)};border-radius:6px;min-height:46px;display:flex;align-items:center;justify-content:center;font-size:10.5px">${futur ? '' : '—'}</div>`; }
-            return `<div title="${an}-${String(i + 1).padStart(2, '0')} · CA ${fE(c.ca)}${bud ? ' · budget ' + fE(bud) + ' · ' + fP(pct) : ''} · ${fN(c.tickets)} tickets · ${esc(panTxt(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen })))}" style="${S.hmMetric === 'pct' ? tPct(pct) : tCa(c.ca)};border-radius:6px;min-height:46px;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.2;${enCours ? 'outline:2px dashed var(--ink);outline-offset:-2px' : ''}"><b>${S.hmMetric === 'pct' ? (pct == null ? '—' : Math.round(pct) + ' %') : fK(c.ca)}</b><span style="font-size:10px;opacity:.85">${S.hmMetric === 'pct' ? fK(c.ca) : (pct == null ? '' : Math.round(pct) + ' %')}</span></div>`; }).join('')).join('')}
-        </div></div>
-        <div class="db-note">Atteinte : rouge &lt; 80 % · orange 80–95 · vert 95–105 · doré &gt; 105 %. Survolez une case : CA, budget, tickets, panier.</div></div>`;
-      // Le tableau des mois de l'année : tickets, panier, marge, ratios.
-      const an = cells.filter(c => +c.annee === Y && c.ca).sort((a, b) => a.mois - b.mois);
-      if (an.length) {
-        h += `<div class="db-card"><div class="ct"><span class="db-lab">${Y}, mois par mois</span></div>
-          <table class="db-t"><tr><th>Mois</th><th>CA</th><th>Budget</th><th>Atteinte</th><th>Clients</th><th title="${esc(PAN_TH)}">Panier</th><th>Food cost</th><th>Labour</th><th>Overhead</th><th>Marge nette</th></tr>
-          ${an.map(c => { const bud = c.caBudget || c.caTheorique; const pct = bud ? 100 * c.ca / bud : null;
-            return `<tr><td>${MO[c.mois - 1]} ${Y}</td><td>${fK(c.ca)}</td><td class="mu">${fK(bud)}</td><td class="${pct == null ? 'mu' : (pct >= 100 ? 'ok' : (pct >= 90 ? 'wa' : 'ko'))}">${fP(pct)}</td><td>${fN(c.tickets)}</td>${panTd(panDe({ panierBase: c.panierBase, panierRetenu: c.panierRetenu, panier: c.panierMoyen }))}<td>${fP(c.foodCostPct)}</td><td>${c.coutsManque ? '<span class="mu" title="le P&L mensuel du panel ne répond pas pour ce mois">…</span>' : fP(c.labourCostPct)}${c.sansPlanning ? ` <b class="ko" title="${c.sansPlanning} jour${c.sansPlanning > 1 ? 's' : ''} vendu${c.sansPlanning > 1 ? 's' : ''} sans planning au panel : la main-d’œuvre du mois est incomplète">!</b>` : ''}</td><td>${c.coutsManque ? '<span class="mu">…</span>' : fP(c.overheadPct)}</td><td class="${c.margePct == null ? 'mu' : (c.margePct >= 0.15 ? 'ok' : (c.margePct >= 0.05 ? 'wa' : 'ko'))}">${c.margePct == null ? '—' : fP(100 * c.margePct)}${c.margeNette != null ? ' <span class="mu">· ' + fK(c.margeNette) + '</span>' : ''}</td></tr>`; }).join('')}</table></div>`;
-      }
-    }
+    const tab = cells ? anTableMois(cells, Y) : '';
+    if (tab) { h += anPli('mois', 'Le détail des mois', 'CA, budget, clients, panier, food, labour, overhead, marge nette', tab); }
+    const rampe = plan && plan.annee ? anRampe(plan, Y) : '';
+    if (rampe) { h += anPli('rampe', 'Le long terme', 'la rampe à 5 ans de l’étude de marché, et les engagements', rampe); }
     return h;
   }
 
@@ -9586,16 +9591,18 @@
     cmdmRendre();
     $.querySelectorAll('[data-rvouvrir]').forEach(b => b.addEventListener('click', rvOuvrir));
     $.querySelectorAll('[data-iaouvrir]').forEach(b => b.addEventListener('click', iaOuvrir));
-    $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    $.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
     const dt = document.getElementById('db-date'); if (dt) { dt.addEventListener('change', () => { if (dt.value && dt.value <= AUJ) { S.date = dt.value; S.heure = null; S.jourH = null; urlMaj(); charger(false); } }); }
     $.querySelectorAll('[data-pas]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); const n = +b.dataset.pas;
-      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else if (S.vue === 'trimestre') { t.setMonth(t.getMonth() + 3 * n, 1); } else { t.setFullYear(t.getFullYear() + n, 0, 1); }
-      const d = t.toISOString().slice(0, 10); if (d > AUJ) { return; }
+      if (S.vue === 'jour' || S.vue === 'ops' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches') { t.setDate(t.getDate() + n); } else if (S.vue === 'semaine') { t.setDate(t.getDate() + 7 * n); } else if (S.vue === 'mois') { t.setMonth(t.getMonth() + n, 1); } else { t.setFullYear(t.getFullYear() + n); }
+      // L'année garde le trimestre regardé ; vers l'année en cours, au plus tard aujourd'hui.
+      let d = t.toISOString().slice(0, 10); if (d > AUJ && S.vue === 'annee' && d.slice(0, 4) === AUJ.slice(0, 4)) { d = AUJ; } if (d > AUJ) { return; }
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-trimq]').forEach(r => r.addEventListener('click', () => { const q = +r.dataset.trimq; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4)) { d = AUJ; } S.vue = 'trimestre'; S.date = d; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-trim]').forEach(b => b.addEventListener('click', () => { const q = +b.dataset.trim; let d = annee() + '-' + String((q - 1) * 3 + 1).padStart(2, '0') + '-01'; if (d > AUJ) { return; } if (d.slice(0, 7) === AUJ.slice(0, 7) || (q === Math.floor((+AUJ.slice(5, 7) - 1) / 3) + 1 && annee() === +AUJ.slice(0, 4))) { d = AUJ; } S.date = d; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
+    // L'année : un trimestre cliqué s'ouvre dessous ; un pli ouvert le reste d'un rendu à l'autre.
+    $.querySelectorAll('[data-anq]').forEach(b => b.addEventListener('click', () => { S.anQ = +b.dataset.anq; rendre(); }));
+    $.querySelectorAll('details[data-anpli]').forEach(d => d.addEventListener('toggle', () => { S.anPli[d.dataset.anpli] = d.open; }));
+    $.querySelectorAll('[data-auj]').forEach(b => b.addEventListener('click', () => { S.date = AUJ; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fops]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fops; if (!d || d > AUJ) { return; } S.vue = 'ops'; S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-frsem]').forEach(b => b.addEventListener('click', () => {
       const t = new Date(S.date + 'T12:00:00'); t.setDate(t.getDate() + 7 * +b.dataset.frsem);
@@ -9614,7 +9621,6 @@
     $.querySelectorAll('[data-prouv]').forEach(b => b.addEventListener('click', () => { const id = b.dataset.prouv; S.prOuv[id] = !S.prOuv[id]; rendre(); }));
     $.querySelectorAll('[data-prtri]').forEach(b => b.addEventListener('click', () => { S[b.dataset.prtab === 'an' ? 'prTriAn' : 'prTri'] = { col: b.dataset.prtri, sens: +b.dataset.prsens }; rendre(); }));
     $.querySelectorAll('[data-mode]').forEach(b => b.addEventListener('click', () => { S.mode = b.dataset.mode; rendre(); }));
-    $.querySelectorAll('[data-hm]').forEach(b => b.addEventListener('click', () => { S.hmMetric = b.dataset.hm; rendre(); }));
     $.querySelectorAll('[data-tdrop]').forEach(b => b.addEventListener('click', () => { S.tOuvert = !S.tOuvert; rendre(); }));
     $.querySelectorAll('[data-opvit]').forEach(b => b.addEventListener('click', () => { S.opVitTout = !S.opVitTout; rendre(); }));
     $.querySelectorAll('[data-opvie]').forEach(b => b.addEventListener('click', () => { S.opVie = b.dataset.opvie; S.opVitTout = false; rendre(); }));
