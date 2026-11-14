@@ -1,0 +1,328 @@
+[
+ {
+  "nom": "ctl-t-accueil",
+  "route": "",
+  "cibles": [
+   ".tb-shop.cours",
+   ".tb-shop:not(.cours)"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-top .d",
+   ".tb-av"
+  ]
+ },
+ {
+  "nom": "ctl-t-agenda",
+  "route": "",
+  "clics": [
+   "[data-a=\"tab-vue\"][data-v=\"agenda\"]"
+  ],
+  "cibles": [
+   ".tb-cal"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-top .d",
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-entete",
+  "etape": "L’extérieur en photo",
+  "cibles": [
+   ".tb-ret",
+   ".tb-top .t",
+   ".tb-pr",
+   ".tb-top .lng",
+   ".tb-ch"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-barre",
+  "etape": "L’extérieur",
+  "cibles": [
+   ".tb-sous",
+   ".tb-nav",
+   ".tb-bar"
+  ],
+  "cadre": "ecran",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-photos-ext",
+  "etape": "L’extérieur en photo",
+  "cibles": [
+   ".tb-step"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-charte",
+  "etape": "Charte de communication · dehors",
+  "cibles": [
+   ".ch-intro",
+   ".tb-step .pt"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-experience",
+  "etape": "Expérience client",
+  "cibles": [
+   ".tb-step"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-equipe",
+  "etape": "L’équipe en poste",
+  "cibles": [
+   ".eq-som",
+   ".eq-p"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av",
+   ".eq-p .h b",
+   ".eq-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-produit",
+  "etape": "Produit",
+  "cibles": [
+   ".card.obl"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-t-planogramme",
+  "etape": "Planogramme",
+  "cibles": [
+   ".tb-step .pt"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-controles",
+  "etape": "Les contrôles en photo du jour",
+  "cibles": [
+   ".cq-fs",
+   ".cq-piste"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av",
+   ".cq-res",
+   ".db-cqc .m"
+  ],
+  "pauseEtape": 8000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-suivi",
+  "etape": "Les points décidés",
+  "cibles": [
+   ".tb-step .card"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-kpi",
+  "etape": "KPI et santé",
+  "cibles": [
+   ".kpi"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 10000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-leviers",
+  "etape": "Les leviers",
+  "cibles": [
+   ".tb-step .cm"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 10000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-taches",
+  "etape": "Les tâches des derniers mois",
+  "cibles": [
+   ".tm-t"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 10000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-pistes",
+  "etape": "Le CA sous le budget",
+  "cibles": [
+   ".vb-f"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 8000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-constat",
+  "etape": "Vu sur place",
+  "cibles": [
+   ".tb-step .card"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-points",
+  "etape": "Points à travailler",
+  "clics": [
+   "[data-a=\"pa-add\"]"
+  ],
+  "cibles": [
+   ".tb-step .plan"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-meteo",
+  "etape": "Météo du franchisé",
+  "cibles": [
+   ".tb-step .meteo",
+   ".card.fin"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-evaluation",
+  "etape": "Évaluation rapide",
+  "cibles": [
+   ".ev-radar",
+   ".ev-ax"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-t-fin",
+  "etape": "Fin de visite",
+  "cibles": [
+   ".tb-step .stat",
+   ".sigs"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 6000,
+  "flouTexte": [
+   {
+    "sel": ".sigs .cap",
+    "rx": "·.*$"
+   }
+  ]
+ },
+ {
+  "nom": "ctl-t-review",
+  "route": "controle/2",
+  "cibles": [
+   ".tb-main .card",
+   ".tb-main .card >> nth=1"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ }
+]

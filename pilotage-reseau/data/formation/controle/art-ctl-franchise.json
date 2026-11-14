@@ -1,0 +1,392 @@
+{
+ "id": "art-ctl-franchise",
+ "code": "0.0.50",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "responsable",
+ "duree": "15 min de lecture",
+ "titre": {
+  "fr": "Le contrôle du consultant : ce qui vous attend",
+  "nl": "De controle van de consultant: wat u te wachten staat"
+ },
+ "objectif": {
+  "fr": "Savoir comment se passe un contrôle du consultant dans votre magasin, ce qu’il regarde sur sa tablette, ce que vous signez et ce qui suit.",
+  "nl": "Weten hoe een controle van de consultant in uw winkel verloopt, wat hij op zijn tablet bekijkt, wat u tekent en wat er volgt."
+ },
+ "pour": {
+  "fr": "Franchisé, manager, adjoint manager et responsable du magasin (P4, P7 à P12). À lire avant le premier contrôle ; le détail de la visite est dans « La visite du consultant en magasin » (0.0.32).",
+  "nl": "Franchisenemer, manager, adjunct-manager en verantwoordelijke van de winkel (P4, P7 tot P12). Te lezen vóór de eerste controle; het detail van het bezoek staat in « Het bezoek van de consultant in de winkel » (0.0.32)."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "Les types de visite et quand ils arrivent",
+    "nl": "De soorten bezoek en wanneer ze plaatsvinden"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Annoncée ou inopinée",
+      "nl": "Aangekondigd of onaangekondigd"
+     },
+     "texte": {
+      "fr": "Une visite est annoncée ou inopinée ; c’est le type de visite qui le décide.\nAnnoncées : Régulière (1 h 30), Production (3 h), Bilan trimestriel (2 h), Ouverture et lancement (4 h), Suivi du plan d’action (45 min).\nInopinées : Hygiène et qualité (1 h), Client mystère (45 min), Revisite (1 h).\nLe consultant suit toutes ses visites dans l’agenda de sa tablette : le jour, l’heure, la boutique, planifiée, confirmée, en cours ou faite.\nUne visite inopinée n’est pas une sanction : elle vérifie le magasin tel qu’il tourne un jour ordinaire.\nSi le consultant arrive sans prévenir : l’accueillir comme pour une visite annoncée, l’équipe continue son service.",
+      "nl": "Een bezoek is aangekondigd of onaangekondigd; het soort bezoek beslist dat.\nAangekondigd: Regelmatig (1 u 30), Productie (3 u), Kwartaalbalans (2 u), Opening en lancering (4 u), Opvolging van het actieplan (45 min).\nOnaangekondigd: Hygiëne en kwaliteit (1 u), Mystery shopper (45 min), Herbezoek (1 u).\nDe consultant volgt al zijn bezoeken in de agenda van zijn tablet: de dag, het uur, de winkel, gepland, bevestigd, bezig of gedaan.\nEen onaangekondigd bezoek is geen sanctie: het controleert de winkel zoals hij op een gewone dag draait.\nKomt de consultant zonder te verwittigen: ontvang hem zoals bij een aangekondigd bezoek, het team zet zijn dienst voort."
+     },
+     "critique": false,
+     "photo": "ctl-f-agenda.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "Combien de visites, et comment vous êtes prévenu",
+      "nl": "Hoeveel bezoeken, en hoe u verwittigd wordt"
+     },
+     "texte": {
+      "fr": "Le nombre de visites de chaque type est fixé pour votre magasin, par mois ou par trimestre ; sans ce cadre, une visite par semaine.\nVisite annoncée : l’ordre du jour part par e-mail deux jours avant, dans la langue du magasin ; la visite figure sur votre page du franchisé.\nL’ordre du jour dit le jour, l’heure, le consultant et les sujets demandés par le bureau.\nUne visite annoncée déplacée ou annulée après l’envoi de l’ordre du jour : un e-mail vous le dit.\nVisite inopinée : rien n’est envoyé, rien n’apparaît sur votre page.\nSi un sujet de l’ordre du jour vous concerne (un chiffre, un point ouvert) : le préparer avant la visite.",
+      "nl": "Het aantal bezoeken van elk soort ligt vast voor uw winkel, per maand of per kwartaal; zonder dat kader, één bezoek per week.\nAangekondigd bezoek: de agenda vertrekt twee dagen vooraf per e-mail, in de taal van de winkel; het bezoek staat op uw pagina van de franchisenemer.\nDe agenda vermeldt de dag, het uur, de consultant en de onderwerpen die het kantoor vraagt.\nWordt een aangekondigd bezoek verplaatst of geannuleerd nadat de agenda vertrokken is: een e-mail meldt het u.\nOnaangekondigd bezoek: er wordt niets verstuurd, niets verschijnt op uw pagina.\nGaat een onderwerp van de agenda over u (een cijfer, een open punt): bereid het vóór het bezoek voor."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Avant : ce qu’il faut préparer",
+    "nl": "Vooraf: wat u moet voorbereiden"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "Ce que le consultant a déjà en main",
+      "nl": "Wat de consultant al in handen heeft"
+     },
+     "texte": {
+      "fr": "Le consultant arrive avec le dossier du bureau et les chiffres du magasin : CA face au budget, mini P&L, leviers, note Google, client mystère, tâches des derniers mois.\nIl voit aussi, photo par photo, les contrôles que votre équipe a rendus le jour même dans ses checklists, et ceux qui ne sont pas rendus.\nCe qu’il faut préparer : les checklists du jour faites, à l’heure, avec leurs photos ; les comptoirs comme sur leur photo type.\nLa façade, la vitrine et tous les supports de communication à jour : chacun sera photographié.\nLes points ouverts des visites précédentes : corrigés, avec la photo de la correction envoyée.\nSi une checklist n’a pas pu être faite : le dire au consultant, avec la raison.",
+      "nl": "De consultant komt met het dossier van het kantoor en de cijfers van de winkel: omzet t.o.v. het budget, mini-W&V, hefbomen, Google-score, mystery shopper, taken van de laatste maanden.\nHij ziet ook, foto per foto, de controles die uw team dezelfde dag in zijn checklists heeft ingediend, en die welke niet ingediend zijn.\nVoor te bereiden: de checklists van de dag gedaan, op tijd, met hun foto’s; de toonbanken zoals op hun modelfoto.\nDe gevel, het etalage en alle communicatiedragers actueel: elk wordt gefotografeerd.\nDe open punten van de vorige bezoeken: gecorrigeerd, met de foto van de correctie verstuurd.\nKon een checklist niet gedaan worden: zeg het aan de consultant, met de reden."
+     },
+     "critique": true,
+     "photo": "ctl-f-controles.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Pendant : ce que le consultant regarde",
+    "nl": "Tijdens: wat de consultant bekijkt"
+   },
+   "etapes": [
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Le tour dehors",
+      "nl": "De ronde buiten"
+     },
+     "texte": {
+      "fr": "La visite commence dehors : une photo de la façade et une de l’arrière, chacune notée OK, Écart ou N/A.\nPuis les points de l’extérieur (façade, enseigne, vitrine) et la charte de communication dehors : billboard, bâches et kakémonos, vitrophanie et vitrine, affiches, chevalet.\nChaque support est photographié, puis noté Oui (conforme) ou Non (manquant, abîmé, périmé ou hors charte) ; un support que le magasin n’a pas est noté « Pas ce support ici ».\nUn Non est toujours expliqué par le consultant.\nSi une affiche est périmée ou un support abîmé : le remplacer avant la visite, pas pendant.",
+      "nl": "Het bezoek begint buiten: een foto van de gevel en een van de achterkant, elk gescoord OK, Afwijking of N/A.\nDaarna de punten van de buitenkant (gevel, uithangbord, etalage) en de huisstijl buiten: billboard, spandoeken en roll-ups, raamstickers en etalage, affiches, stoepbord.\nElke drager wordt gefotografeerd, dan gescoord Ja (conform) of Nee (ontbreekt, beschadigd, verouderd of buiten de huisstijl); een drager die de winkel niet heeft wordt « Pas ce support ici ».\nEen Nee wordt altijd door de consultant uitgelegd.\nIs een affiche verouderd of een drager beschadigd: vervang hem vóór het bezoek, niet tijdens."
+     },
+     "critique": false,
+     "photo": "ctl-f-exterieur.jpg",
+     "video": null
+    },
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "Le tour dedans",
+      "nl": "De ronde binnen"
+     },
+     "texte": {
+      "fr": "Une photo de l’intérieur, puis l’expérience client : est-elle présente en entrant, la cuisson (produits chauds, bien cuits, au bon moment), l’accueil (bonjour, sourire, conseil).\nPuis les modules de la checklist : Produit, Hygiène, Visuel, Planogramme, Assortiment, et la charte de communication dedans (leaflets, PLV, menu board, emballages, tenues).\nProduit commence par les produits obligatoires, un par un en rayon : présent ou non. La caisse dit lesquels se sont vendus, mais c’est le rayon qui compte.\nLe planogramme se note en pourcentage, comptoir par comptoir, avec sa cause : produits déplacés, emplacements vides, surstock, promo en cours, rupture.\nSi un obligatoire manque : le dire au consultant et donner la raison (rupture, livraison).",
+      "nl": "Een foto van binnen, dan de klantbeleving: is ze aanwezig bij het binnenkomen, het bakken (warme producten, goed gebakken, op het juiste moment), het onthaal (goeiedag, glimlach, advies).\nDaarna de modules van de checklist: Produit, Hygiène, Visuel, Planogramme, Assortiment, en de huisstijl binnen (folders, POS-materiaal, menubord, verpakkingen, kledij).\nProduit begint met de verplichte producten, één voor één in het rek: aanwezig of niet. De kassa zegt welke verkocht werden, maar het rek telt.\nHet planogram wordt gescoord in procent, toonbank per toonbank, met de oorzaak: verplaatste producten, lege plaatsen, overstock, lopende promo, tekort.\nOntbreekt een verplicht product: zeg het aan de consultant en geef de reden (tekort, levering)."
+     },
+     "critique": false,
+     "photo": "ctl-f-produit.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "L’équipe en poste",
+      "nl": "Het team van dienst"
+     },
+     "texte": {
+      "fr": "Le consultant lit le planning du jour : il sait qui est en poste et à quelle heure.\nIl observe chaque personne en poste, sans le dire à voix haute : une note rapide de 1 à 5 et trois contrôles éclair.\nLes contrôles éclair : en tenue de travail (tablier, tenue de la marque, cheveux attachés), SBAM (sourire, bonjour, au revoir, merci), expérience client (conseil, dégustation, mise en avant).\nCes notes restent au bureau : elles ne sont jamais dans votre rapport.\nCe qu’il faut faire : rien de spécial, l’équipe travaille comme chaque jour, en tenue.",
+      "nl": "De consultant leest de planning van de dag: hij weet wie van dienst is en op welk uur.\nHij observeert elke persoon van dienst, zonder het luidop te zeggen: een snelle score van 1 tot 5 en drie snelle controles.\nDe snelle controles: in werkkledij (schort, kledij van het merk, haar samengebonden), SBAM (glimlach, goeiedag, tot ziens, dank u), klantbeleving (advies, proeverij, in de kijker zetten).\nDeze scores blijven op het kantoor: ze staan nooit in uw rapport.\nWat te doen: niets bijzonders, het team werkt zoals elke dag, in werkkledij."
+     },
+     "critique": false,
+     "photo": "ctl-f-equipe.jpg",
+     "video": null
+    },
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "Comment chaque point est noté",
+      "nl": "Hoe elk punt gescoord wordt"
+     },
+     "texte": {
+      "fr": "La plupart des points se notent OK, Écart ou N/A ; d’autres Oui / Non, une note de 1 à 5, un pourcentage ou un nombre.\nUn point peut demander une photo (par exemple le thermomètre du frigo vitrine) ; le consultant peut y tracer des repères numérotés, chacun avec sa gravité et sa remarque.\nChaque Écart reçoit une remarque : ce qui a été vu.\nLes écarts deviennent des points à travailler proposés : une action pour vous, avec une priorité et une échéance.\nSi vous n’êtes pas d’accord avec un écart : le dire tout de suite au consultant, pendant la visite.",
+      "nl": "De meeste punten worden gescoord OK, Afwijking of N/A; andere Ja / Nee, een score van 1 tot 5, een percentage of een getal.\nEen punt kan een foto vragen (bijvoorbeeld de thermometer van de koelvitrine); de consultant kan er genummerde markeringen op tekenen, elk met haar ernst en opmerking.\nElke Afwijking krijgt een opmerking: wat gezien werd.\nDe afwijkingen worden voorgestelde werkpunten: een actie voor u, met een prioriteit en een termijn.\nBent u het niet eens met een afwijking: zeg het meteen aan de consultant, tijdens het bezoek."
+     },
+     "critique": false,
+     "photo": "ctl-f-hygiene.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "Les contrôles en photo du jour",
+      "nl": "De fotocontroles van de dag"
+     },
+     "texte": {
+      "fr": "Le consultant relit les photos que votre équipe a rendues aujourd’hui dans ses checklists, avec leur heure.\nUne photo qui attend sa note se note 4 (Conforme) ou 5 (Exemplaire) d’un toucher ; une photo de comptoir se compare à la photo type du comptoir.\nLes tâches non rendues se voient : « pas encore rendue ».\nSi une checklist est en retard : la terminer, photos comprises, avant l’arrivée du consultant.",
+      "nl": "De consultant herleest de foto’s die uw team vandaag in zijn checklists heeft ingediend, met hun uur.\nEen foto die op haar score wacht krijgt met één tik 4 (Conforme) of 5 (Exemplaire); een foto van een toonbank wordt vergeleken met de modelfoto van die toonbank.\nDe taken die niet ingediend zijn, zijn zichtbaar: « pas encore rendue ».\nLoopt een checklist achter: werk ze af, foto’s inbegrepen, vóór de consultant aankomt."
+     },
+     "critique": false,
+     "photo": "ctl-f-controle.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Ce qui avait été décidé",
+      "nl": "Wat afgesproken was"
+     },
+     "texte": {
+      "fr": "Le consultant reprend les points envoyés après les visites précédentes et pas encore fermés, le plus en retard d’abord.\nSur place, il photographie la correction, confirme ce qui est fait, escalade ce qui bloque.\nIl reprend aussi les points demandés par le bureau pour cette visite.\nSi un point est corrigé : montrer la correction au consultant ; il peut fermer le point sur place.",
+      "nl": "De consultant neemt de punten door die na de vorige bezoeken verstuurd werden en nog niet gesloten zijn, het meest laattijdige eerst.\nTer plaatse fotografeert hij de correctie, bevestigt hij wat gedaan is, escaleert hij wat blokkeert.\nHij neemt ook de punten door die het kantoor voor dit bezoek vraagt.\nIs een punt gecorrigeerd: toon de correctie aan de consultant; hij kan het punt ter plaatse sluiten."
+     },
+     "critique": false,
+     "photo": "ctl-f-suivi.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Assis ensemble : les chiffres",
+      "nl": "Samen aan tafel: de cijfers"
+     },
+     "texte": {
+      "fr": "Le consultant s’assoit avec vous pour les chiffres : CA de la semaine face à l’objectif, CA face au budget (mois, trimestre, année), mini P&L face aux seuils.\nPuis les six leviers (trafic, récurrence, expérience client, food cost, labour cost, overhead cost), la note Google et les derniers avis, les tâches des derniers mois, le client mystère.\nLes chiffres viennent de la caisse, du panel et du cockpit : ils ne se discutent pas sur la tablette ; un chiffre faux se corrige à la source.\nSi un chiffre vous étonne : le dire, le consultant le note et le bureau vérifie.",
+      "nl": "De consultant gaat met u aan tafel voor de cijfers: omzet van de week t.o.v. de doelstelling, omzet t.o.v. het budget (maand, kwartaal, jaar), mini-W&V t.o.v. de drempels.\nDaarna de zes hefbomen (traffic, terugkeer, klantbeleving, food cost, labour cost, overhead cost), de Google-score en de laatste reviews, de taken van de laatste maanden, de mystery shopper.\nDe cijfers komen van de kassa, het panel en de cockpit: ze worden niet op de tablet besproken; een fout cijfer wordt aan de bron gecorrigeerd.\nVerrast een cijfer u: zeg het, de consultant noteert het en het kantoor kijkt het na."
+     },
+     "critique": false,
+     "photo": "ctl-f-kpi.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Le CA sous le budget : vos trois pistes",
+      "nl": "De omzet onder het budget: uw drie pistes"
+     },
+     "texte": {
+      "fr": "Quand le CA est à plus de 10 % sous le budget, la visite ne se termine pas sans en parler.\nLe consultant note avec vous pourquoi : trafic, panier, ruptures, équipe, travaux, météo…\nVous donnez trois pistes de développement, et l’horizon : le mois prochain ou la fin du trimestre.\nVos pistes deviennent des points à travailler, à cette échéance.\nCe qu’il faut faire : venir à la visite avec vos idées pour relancer le chiffre.",
+      "nl": "Ligt de omzet meer dan 10 % onder het budget, dan eindigt het bezoek niet zonder erover te spreken.\nDe consultant noteert samen met u waarom: traffic, gemiddeld ticket, tekorten, team, werken, weer…\nU geeft drie ontwikkelingspistes, en de horizon: de volgende maand of het einde van het kwartaal.\nUw pistes worden werkpunten, op die termijn.\nWat te doen: kom naar het bezoek met uw ideeën om de omzet terug op te trekken."
+     },
+     "critique": false,
+     "photo": "ctl-f-pistes.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "La fin de visite : ce que vous signez",
+    "nl": "Het einde van het bezoek: wat u tekent"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "L’évaluation rapide",
+      "nl": "De snelle evaluatie"
+     },
+     "texte": {
+      "fr": "Le consultant note avec vous six axes, de 1 (Insuffisant) à 5 (Très bien) : propreté, capacité métier, management, développement commercial, contact client, respect des normes.\nChaque note a son commentaire ; le radar se dessine, la dernière évaluation de votre magasin en pointillé.\nAvant, il vous demande aussi comment vous allez, et si tout est payé à temps : cela reste entre le consultant et le bureau, jamais dans le rapport.\nL’évaluation, elle, part dans votre rapport : le radar, chaque note et son commentaire.\nSi un axe baisse face à la dernière fois : demander au consultant ce qu’il a vu.",
+      "nl": "De consultant scoort samen met u zes assen, van 1 (Insuffisant) tot 5 (Très bien): netheid, vakkennis, management, commerciële ontwikkeling, klantcontact, naleving van de normen.\nElke score heeft haar commentaar; de radar tekent zich, de laatste evaluatie van uw winkel in stippellijn.\nVooraf vraagt hij ook hoe het met u gaat, en of alles op tijd betaald is: dat blijft tussen de consultant en het kantoor, nooit in het rapport.\nDe evaluatie gaat wel mee in uw rapport: de radar, elke score en haar commentaar.\nDaalt een as t.o.v. de vorige keer: vraag de consultant wat hij zag."
+     },
+     "critique": false,
+     "photo": "ctl-f-evaluation.jpg",
+     "video": null
+    },
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "Le résumé et les deux signatures",
+      "nl": "De samenvatting en de twee handtekeningen"
+     },
+     "texte": {
+      "fr": "Le consultant vous montre le résumé : points vus, non conformes, points proposés (dont P0), photos.\nEt le score de la visite sur 100, face à la visite précédente du même type, module par module ; il est figé à la fin de la visite.\nDeux signatures au doigt : le consultant, puis vous, « Le franchisé a vu le résumé ».\nSigner dit que vous avez vu le résumé ; rien ne vous est encore envoyé : le brouillon part au bureau.\nSi un point du résumé vous semble faux : le dire avant de signer.",
+      "nl": "De consultant toont u de samenvatting: geziene punten, niet conforme, voorgestelde punten (waarvan P0), foto’s.\nEn de score van het bezoek op 100, t.o.v. het vorige bezoek van hetzelfde soort, module per module; hij wordt vastgezet op het einde van het bezoek.\nTwee handtekeningen met de vinger: de consultant, daarna u, « Le franchisé a vu le résumé ».\nTekenen zegt dat u de samenvatting gezien hebt; er wordt u nog niets verstuurd: het ontwerp gaat naar het kantoor.\nLijkt een punt van de samenvatting u fout: zeg het vóór u tekent."
+     },
+     "critique": true,
+     "photo": "ctl-f-fin.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Après la visite",
+    "nl": "Na het bezoek"
+   },
+   "etapes": [
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Le rapport",
+      "nl": "Het rapport"
+     },
+     "texte": {
+      "fr": "Le bureau relit le brouillon, choisit les points et les photos qui partent, puis vous envoie le rapport dans les 48 heures.\nVous le recevez par e-mail (avec le PDF du rapport), sur votre page du franchisé, et par SMS au GSM connu du bureau : la date de la visite, le nombre de points à travailler, le lien de votre page.\nDans le rapport : les points à travailler, les photos choisies avec leurs repères, l’évaluation rapide, le score, la recommandation et ce qui va bien.\nJamais dans le rapport : la météo, vos finances, les notes de l’équipe.\nUn rapport pas lu après 3 jours vous est rappelé.\nSi vous ne trouvez pas le rapport : l’ouvrir depuis votre page du franchisé.",
+      "nl": "Het kantoor herleest het ontwerp, kiest de punten en foto’s die vertrekken, en stuurt u het rapport binnen 48 uur.\nU ontvangt het per e-mail (met de pdf van het rapport), op uw pagina van de franchisenemer, en per sms op de gsm die het kantoor kent: de datum van het bezoek, het aantal werkpunten, de link naar uw pagina.\nIn het rapport: de werkpunten, de gekozen foto’s met hun markeringen, de snelle evaluatie, de score, de aanbeveling en wat goed gaat.\nNooit in het rapport: het weerbericht, uw financiën, de scores van het team.\nEen rapport dat na 3 dagen niet gelezen is, wordt u herinnerd.\nVindt u het rapport niet: open het vanaf uw pagina van de franchisenemer."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "Les points P0, P1, P2 et leurs délais",
+      "nl": "De punten P0, P1, P2 en hun termijnen"
+     },
+     "texte": {
+      "fr": "Chaque point à travailler a une priorité : P0 le plus urgent, puis P1, puis P2, et une échéance.\nDélais du réseau : P0 en 2 jours, P1 en 7 jours, P2 en 14 jours.\nPour chaque point, vous envoyez la photo de la correction depuis votre page ; le point passe « En attente de validation ».\nLe bureau l’accepte (« Validé ») ou le renvoie « À reprendre » avec un mot et un nouveau délai ; le consultant peut aussi le fermer sur place.\nUn point en retard de 2 jours remonte au responsable du réseau (« Escaladé ») ; un P0 ouvert plus de 3 jours fait passer le magasin au rouge.\nSi un point ne peut pas être corrigé à temps : le dire au bureau avant l’échéance.",
+      "nl": "Elk werkpunt heeft een prioriteit: P0 het dringendste, dan P1, dan P2, en een termijn.\nTermijnen van het netwerk: P0 binnen 2 dagen, P1 binnen 7 dagen, P2 binnen 14 dagen.\nVoor elk punt stuurt u de foto van de correctie vanaf uw pagina; het punt gaat naar « En attente de validation ».\nHet kantoor aanvaardt het (« Validé ») of stuurt het terug « À reprendre » met een woord en een nieuwe termijn; de consultant kan het ook ter plaatse sluiten.\nEen punt dat 2 dagen te laat is, gaat naar de verantwoordelijke van het netwerk (« Escaladé »); een P0 dat meer dan 3 dagen openstaat, zet de winkel op rood.\nKan een punt niet op tijd gecorrigeerd worden: zeg het aan het kantoor vóór de termijn."
+     },
+     "critique": true,
+     "photo": null,
+     "video": null
+    },
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "Votre page et la revisite",
+      "nl": "Uw pagina en het herbezoek"
+     },
+     "texte": {
+      "fr": "Votre page du franchisé s’ouvre par un lien personnel, sans mot de passe.\nOn y trouve la prochaine visite annoncée, les points à travailler avec l’envoi de la photo de correction, les rapports de visite, le client mystère montré, le scoring et le journal des 60 derniers jours.\nLes brouillons, les visites inopinées, les notes du bureau et la météo n’y apparaissent jamais.\nLa revisite est inopinée : elle reprend les points non conformes de la dernière visite et vérifie qu’ils sont corrigés.\nLe suivi du plan d’action, lui, est annoncé : il reprend les points encore ouverts.\nÀ la revisite, le consultant ferme les points corrigés et renvoie les autres.",
+      "nl": "Uw pagina van de franchisenemer opent via een persoonlijke link, zonder wachtwoord.\nU vindt er het volgende aangekondigde bezoek, de werkpunten met het versturen van de correctiefoto, de bezoekrapporten, de getoonde mystery shopper, de scoring en het logboek van de laatste 60 dagen.\nDe ontwerpen, de onaangekondigde bezoeken, de notities van het kantoor en het weerbericht verschijnen er nooit.\nHet herbezoek is onaangekondigd: het neemt de niet-conforme punten van het laatste bezoek terug en controleert of ze gecorrigeerd zijn.\nDe opvolging van het actieplan is wel aangekondigd: ze neemt de nog open punten door.\nBij het herbezoek sluit de consultant de gecorrigeerde punten en stuurt hij de andere terug."
+     },
+     "critique": false,
+     "photo": null,
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Les checklists du jour faites, photos comprises, avant l’arrivée du consultant : il les voit toutes.",
+   "nl": "De checklists van de dag gedaan, foto’s inbegrepen, vóór de consultant aankomt: hij ziet ze allemaal."
+  },
+  {
+   "fr": "Un point P0 se corrige en 2 jours, avec la photo de la correction.",
+   "nl": "Een P0-punt wordt binnen 2 dagen gecorrigeerd, met de foto van de correctie."
+  },
+  {
+   "fr": "Signer dit que vous avez vu le résumé : un désaccord se dit avant de signer.",
+   "nl": "Tekenen zegt dat u de samenvatting gezien hebt: een onenigheid zegt u vóór u tekent."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "Le consultant note votre équipe pendant la visite. Ces notes sont-elles dans votre rapport ?",
+    "nl": "De consultant scoort uw team tijdens het bezoek. Staan die scores in uw rapport?"
+   },
+   "choix": {
+    "fr": [
+     "Oui, avec le nom de chaque personne",
+     "Non : elles restent au bureau",
+     "Seulement les notes sous 3"
+    ],
+    "nl": [
+     "Ja, met de naam van elke persoon",
+     "Nee: ze blijven op het kantoor",
+     "Alleen de scores onder 3"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Le CA est à 15 % sous le budget. Que vous demande-t-on à la visite ?",
+    "nl": "De omzet ligt 15 % onder het budget. Wat wordt u gevraagd tijdens het bezoek?"
+   },
+   "choix": {
+    "fr": [
+     "Rien, c’est le travail du bureau",
+     "Corriger le chiffre sur la tablette",
+     "Dire pourquoi avec le consultant et donner trois pistes"
+    ],
+    "nl": [
+     "Niets, dat is het werk van het kantoor",
+     "Het cijfer op de tablet corrigeren",
+     "Met de consultant zeggen waarom en drie pistes geven"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Vous venez de signer la fin de visite. Quand recevez-vous le rapport ?",
+    "nl": "U hebt net het einde van het bezoek getekend. Wanneer ontvangt u het rapport?"
+   },
+   "choix": {
+    "fr": [
+     "Quand le bureau l’envoie, dans les 48 heures",
+     "Tout de suite, par e-mail",
+     "À la visite suivante"
+    ],
+    "nl": [
+     "Wanneer het kantoor het verstuurt, binnen 48 uur",
+     "Meteen, per e-mail",
+     "Bij het volgende bezoek"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "Écrit d’après le code de l’application des contrôles (controle/, visites.js), docs/suivi-franchises.md et les réglages livrés (src/visites_cadre.php, src/suivi.php) ; il complète 0.0.32 (la visite) et 0.0.33 (les contrôles) sans les contredire.",
+  "Captures : visites Régulière en cours en production (Corbais au 26/10/2026, Halle au 14/11/2026), lues en lecture seule ; les noms de l’équipe, du consultant et des personnes qui ont rendu les photos sont floutés.",
+  "Pas de capture pour le rapport, les délais des points et la page du franchisé : ils ne sont pas sur la tablette (cockpit et page du franchisé, déjà montrés dans 0.0.32).",
+  "À vérifier : la tablette propose d’office une échéance J+1 (P0) ou J+3 (P1) pour un point, les délais du réseau sont P0 2 j, P1 7 j, P2 14 j : quelle échéance le franchisé voit-il dans le rapport ?",
+  "Le SMS du rapport part au GSM de Qui fait quoi, sinon celui des alertes de leads ; sans GSM ou SMS coupés, rien ne part : à confirmer pour chaque magasin.",
+  "« Aucun point ouvert » : les quatre boutiques n’ont aucun point ouvert ; la capture de « Ce qui avait été décidé » montre cet état vide."
+ ]
+}

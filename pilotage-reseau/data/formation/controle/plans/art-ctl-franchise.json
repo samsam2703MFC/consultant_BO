@@ -1,0 +1,184 @@
+[
+ {
+  "nom": "ctl-f-agenda",
+  "route": "",
+  "clics": [
+   "[data-a=\"tab-vue\"][data-v=\"agenda\"]"
+  ],
+  "cibles": [
+   ".tb-cal .j:has(.v)"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-top .d",
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-controles",
+  "etape": "Les contrôles en photo du jour",
+  "cibles": [
+   ".cq-piste"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av",
+   ".cq-res",
+   ".db-cqc .m"
+  ],
+  "pauseEtape": 8000
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-f-exterieur",
+  "etape": "Charte de communication · dehors",
+  "cibles": [
+   ".tb-step .mod"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-f-produit",
+  "etape": "Produit",
+  "cibles": [
+   ".card.obl .obs"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-f-equipe",
+  "etape": "L’équipe en poste",
+  "cibles": [
+   ".eq-p .ev-notes",
+   ".eq-p .eq-ck"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av",
+   ".eq-p .h b",
+   ".eq-av"
+  ]
+ },
+ {
+  "route": "controle/5",
+  "date": "2026-10-26",
+  "debloquer": true,
+  "nom": "ctl-f-hygiene",
+  "etape": "Hygiène",
+  "cibles": [
+   ".tb-step .pt:has-text(\"Frigo vitrine\")"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-controle",
+  "etape": "Les contrôles en photo du jour",
+  "clics": [
+   ".cq-ouvrir"
+  ],
+  "cibles": [
+   ".cq-l .cq-acts"
+  ],
+  "cadre": "ecran",
+  "flou": [
+   ".tb-av",
+   ".cq-l .fi .q[style]"
+  ],
+  "pauseEtape": 8000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-suivi",
+  "etape": "Les points décidés aux visites précédentes",
+  "cibles": [
+   ".tb-step .card"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-kpi",
+  "etape": "KPI et santé du magasin",
+  "cibles": [
+   ".vb-tabs"
+  ],
+  "cadre": "debut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 12000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-pistes",
+  "etape": "Le CA sous le budget : pourquoi et trois pistes",
+  "cibles": [
+   ".vb-f"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 8000
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-evaluation",
+  "etape": "Évaluation rapide",
+  "cibles": [
+   ".ev-radar"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ]
+ },
+ {
+  "route": "controle/6",
+  "debloquer": true,
+  "nom": "ctl-f-fin",
+  "etape": "Fin de visite",
+  "cibles": [
+   ".sigs"
+  ],
+  "cadre": "haut",
+  "flou": [
+   ".tb-av"
+  ],
+  "pauseEtape": 6000,
+  "flouTexte": [
+   {
+    "sel": ".sigs .cap",
+    "rx": "·.*$"
+   }
+  ]
+ }
+]

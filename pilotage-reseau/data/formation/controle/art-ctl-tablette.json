@@ -1,0 +1,510 @@
+{
+ "id": "art-ctl-tablette",
+ "code": "0.0.51",
+ "type": "Article",
+ "dossier": "04",
+ "version": "1.0",
+ "statut": "a_valider",
+ "langue_origine": "FR",
+ "poste": "vente",
+ "moment": null,
+ "acces": "consultant",
+ "duree": "20 min de lecture",
+ "titre": {
+  "fr": "Le contrôle sur la tablette, écran par écran",
+  "nl": "De controle op de tablet, scherm per scherm"
+ },
+ "objectif": {
+  "fr": "Mener un contrôle de magasin sur la tablette, de l’accueil à la signature, en sachant ce que montre chaque écran et ce qui part dans le rapport.",
+  "nl": "Een winkelcontrole op de tablet uitvoeren, van het startscherm tot de handtekening, en weten wat elk scherm toont en wat in het rapport vertrekt."
+ },
+ "pour": {
+  "fr": "Consultants du réseau qui contrôlent les magasins. À lire avec « La visite du consultant en magasin » (0.0.32) et « Le contrôle du consultant : ce qui vous attend » (0.0.50).",
+  "nl": "Consultants van het netwerk die de winkels controleren. Te lezen met « Het bezoek van de consultant in de winkel » (0.0.32) en « De controle van de consultant: wat u te wachten staat » (0.0.50)."
+ },
+ "classement": {
+  "souscat": "D7.1",
+  "phases": [
+   "preouverture"
+  ],
+  "postes": [
+   "P4",
+   "P7",
+   "P8",
+   "P9",
+   "P10",
+   "P11",
+   "P12"
+  ],
+  "competences": [],
+  "formations": [
+   "FO-05"
+  ],
+  "checklists": []
+ },
+ "sections": [
+  {
+   "titre": {
+    "fr": "L’accueil de l’application",
+    "nl": "Het startscherm van de app"
+   },
+   "etapes": [
+    {
+     "numero": "1",
+     "titre": {
+      "fr": "Les boutiques",
+      "nl": "De winkels"
+     },
+     "texte": {
+      "fr": "L’application s’ouvre sur « Les boutiques » : une carte par magasin, avec son feu (vert, orange, rouge) et la date du contrôle dans un petit calendrier.\nEn tête : le nombre de boutiques, combien de contrôles sont « en cours » et combien sont prévus cette semaine.\nUn contrôle en cours : « Contrôle en cours », commencé le … à …, le type de visite, et le bouton « Reprendre le contrôle › ».\nUn contrôle planifié : le jour et l’heure, « planifié » ou « confirmé », les boutons « Fiche » et « Démarrer le contrôle › ».\nRien de planifié : « à fixer », « Pas de contrôle planifié », depuis quand la visite est due, et « Planifier » ou « Démarrer maintenant › ».\nSous la date : dernier contrôle, actions ouvertes (P0 en rouge), note Google, météo du dernier contrôle.\nSi une boutique affiche « visite due depuis … » : planifier la visite, ou la démarrer sur place.",
+      "nl": "De app opent op « Les boutiques »: een kaart per winkel, met haar kleur (groen, oranje, rood) en de datum van de controle in een kleine kalender.\nBovenaan: het aantal winkels, hoeveel controles « en cours » (bezig) zijn en hoeveel er deze week gepland zijn.\nEen lopende controle: « Contrôle en cours », gestart op … om …, het soort bezoek, en de knop « Reprendre le contrôle › ».\nEen geplande controle: de dag en het uur, « planifié » of « confirmé », de knoppen « Fiche » en « Démarrer le contrôle › ».\nNiets gepland: « à fixer », « Pas de contrôle planifié », sinds wanneer het bezoek verschuldigd is, en « Planifier » of « Démarrer maintenant › ».\nOnder de datum: laatste controle, open acties (P0 in het rood), Google-score, weerbericht van de laatste controle.\nToont een winkel « visite due depuis … »: plan het bezoek, of start het ter plaatse."
+     },
+     "critique": false,
+     "photo": "ctl-t-accueil.jpg",
+     "video": null
+    },
+    {
+     "numero": "2",
+     "titre": {
+      "fr": "L’agenda et la planification",
+      "nl": "De agenda en de planning"
+     },
+     "texte": {
+      "fr": "« Agenda », en haut à droite : le mois en calendrier, ‹ › pour changer de mois, « Aujourd’hui » pour revenir.\nChaque contrôle porte son heure, la boutique et son état : planifié, confirmé, en cours, fait.\nToucher un contrôle : en cours, il s’ouvre ; fait, l’historique de la boutique ; à venir, sa fiche.\nSous le calendrier, « Sans contrôle planifié » : les boutiques à planifier.\n« Planifier » ouvre « Planifier une visite » : boutique, type de visite (sa durée, sa checklist, ses tâches), date, heure, durée, motif (régulière, ASAP, due, revisite).\nUne visite planifiée se démarre depuis sa fiche, ou depuis le QR code de sa fiche dans le cockpit.\nSi une boutique reste dans « Sans contrôle planifié » : lui donner une date.",
+      "nl": "« Agenda », rechtsboven: de maand als kalender, ‹ › om van maand te veranderen, « Aujourd’hui » om terug te keren.\nElke controle toont haar uur, de winkel en haar status: gepland, bevestigd, bezig, gedaan.\nTik op een controle: is ze bezig, dan opent ze; is ze gedaan, de geschiedenis van de winkel; komt ze nog, haar fiche.\nOnder de kalender, « Sans contrôle planifié »: de winkels die nog gepland moeten worden.\n« Planifier » opent « Planifier une visite »: winkel, soort bezoek (duur, checklist, taken), datum, uur, duur, reden (régulière, ASAP, due, revisite).\nEen gepland bezoek start je vanuit zijn fiche, of via de QR-code van de fiche in de cockpit.\nBlijft een winkel in « Sans contrôle planifié »: geef hem een datum."
+     },
+     "critique": false,
+     "photo": "ctl-t-agenda.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "L’écran d’un contrôle",
+    "nl": "Het scherm van een controle"
+   },
+   "etapes": [
+    {
+     "numero": "3",
+     "titre": {
+      "fr": "L’en-tête",
+      "nl": "De kop"
+     },
+     "texte": {
+      "fr": "« ‹ Contrôles » ramène à l’accueil ; le contrôle reste en cours.\nLe titre « Contrôle · <boutique> », puis le jour, l’heure de début et le type de visite.\n« n / N étapes » et sa barre : les étapes remplies sur le total de la visite.\nFR | NL : la langue de cette visite (au départ, celle du magasin) ; les réponses enregistrées ne changent pas.\n« en ligne » ou « hors ligne » : sans réseau, tout est gardé sur la tablette ; « … à envoyer » compte ce qui attend, un toucher relance l’envoi.\nSi « à envoyer » ne descend pas : rester sur l’écran jusqu’au retour du réseau avant de fermer la tablette.",
+      "nl": "« ‹ Contrôles » brengt je terug naar het startscherm; de controle blijft bezig.\nDe titel « Contrôle · <winkel> », daarna de dag, het startuur en het soort bezoek.\n« n / N étapes » en de balk: de ingevulde stappen op het totaal van het bezoek.\nFR | NL: de taal van dit bezoek (eerst die van de winkel); de bewaarde antwoorden veranderen niet.\n« en ligne » of « hors ligne »: zonder netwerk wordt alles op de tablet bewaard; « … à envoyer » telt wat wacht, één tik verstuurt opnieuw.\nDaalt « à envoyer » niet: blijf op het scherm tot het netwerk terug is, vóór je de tablet afsluit."
+     },
+     "critique": false,
+     "photo": "ctl-t-entete.jpg",
+     "video": null
+    },
+    {
+     "numero": "4",
+     "titre": {
+      "fr": "Les étapes et la barre du bas",
+      "nl": "De stappen en de onderste balk"
+     },
+     "texte": {
+      "fr": "En bas, les six temps : 1 Extérieur, 2 Intérieur, 3 Suivi de projet, 4 Analyse, 5 Développement, 6 Météo et fin ; sous chacun, étapes faites sur le total.\nUn ✓ quand le temps est complet ; un chiffre rouge compte ses écarts, « ! » signale ce qui reste à noter.\nEn haut, les étapes du temps en cours, numérotées et reliées : la faite en vert, l’ouverte en bordeaux ; un toucher ouvre une étape.\nEn bas à droite, « Suivant » et le nom de l’étape suivante ; au-dessus, « Reste : … » dit ce qui manque.\nUne étape bloquante pas remplie refuse « Suivant » (« Avant de continuer : … ») ; revenir en arrière reste libre.\nUne étape de photos ou de checklist remplie passe seule à la suivante après une seconde (« Étape remplie : la suite. »).\nSi « Suivant » refuse : lire « Reste : … » et compléter ce qui est indiqué.",
+      "nl": "Onderaan de zes delen: 1 Extérieur, 2 Intérieur, 3 Suivi de projet, 4 Analyse, 5 Développement, 6 Météo et fin; onder elk de gedane stappen op het totaal.\nEen ✓ wanneer het deel volledig is; een rood cijfer telt de afwijkingen, « ! » wijst op wat nog genoteerd moet worden.\nBovenaan de stappen van het lopende deel, genummerd en verbonden: de gedane in het groen, de open in bordeaux; één tik opent een stap.\nRechtsonder « Suivant » en de naam van de volgende stap; erboven zegt « Reste : … » wat ontbreekt.\nEen blokkerende stap die niet ingevuld is weigert « Suivant » (« Avant de continuer : … »); teruggaan blijft vrij.\nEen ingevulde foto- of checkliststap gaat na een seconde vanzelf naar de volgende (« Étape remplie : la suite. »).\nWeigert « Suivant »: lees « Reste : … » en vul aan wat er staat."
+     },
+     "critique": true,
+     "photo": "ctl-t-barre.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "1 · Extérieur",
+    "nl": "1 · Buiten"
+   },
+   "etapes": [
+    {
+     "numero": "5",
+     "titre": {
+      "fr": "L’extérieur en photo",
+      "nl": "De buitenkant in beeld"
+     },
+     "texte": {
+      "fr": "Deux cases : « Façade » et « Arrière ». Un toucher ouvre l’appareil photo ; la photo est réduite sur la tablette, horodatée, sans données EXIF.\nSous chaque photo, sa question (« Façade (photo du jour) ») : OK, Écart ou N/A, et une remarque.\nUne photo prise s’ouvre en grand d’un toucher ; « Annoter la photo » y trace des cadres numérotés, chacun avec sa gravité et sa remarque.\nL’étape n’est remplie que photos prises et réponses données (« Reste : 2 photos à prendre »).\nSi la façade a un défaut : Écart, une remarque, et un repère sur la photo.",
+      "nl": "Twee vakken: « Façade » en « Arrière ». Eén tik opent de camera; de foto wordt op de tablet verkleind, met datum en uur, zonder EXIF-gegevens.\nOnder elke foto haar vraag (« Façade (photo du jour) »): OK, Afwijking of N/A, en een opmerking.\nEen genomen foto opent groot met één tik; « Annoter la photo » tekent er genummerde kaders op, elk met zijn ernst en opmerking.\nDe stap is pas ingevuld als de foto’s genomen en de antwoorden gegeven zijn (« Reste : 2 photos à prendre »).\nHeeft de gevel een gebrek: Afwijking, een opmerking, en een markering op de foto."
+     },
+     "critique": false,
+     "photo": "ctl-t-photos-ext.jpg",
+     "video": null
+    },
+    {
+     "numero": "6",
+     "titre": {
+      "fr": "L’extérieur et la charte dehors",
+      "nl": "De buitenkant en de huisstijl buiten"
+     },
+     "texte": {
+      "fr": "« L’extérieur » : les points de la checklist qui se regardent dehors (par exemple « Façade, enseigne, vitrine »), OK, Écart ou N/A, photo et remarque.\n« Charte de communication · dehors » : un support par ligne, billboard, bâches et kakémonos, vitrophanie et vitrine, affiches, chevalet et stop-trottoir.\nPour chacun : la photo (« Photo à prendre »), puis Oui (conforme), Non, ou « Pas ce support ici » (sans photo, hors score).\nUn Non demande sa raison : « Pourquoi Non ? (obligatoire) ».\nSans photo, le support n’est pas vu : l’étape reste incomplète.\nSi un support est abîmé ou périmé : Non, la photo et la raison.",
+      "nl": "« L’extérieur »: de punten van de checklist die je buiten bekijkt (bijvoorbeeld « Façade, enseigne, vitrine »), OK, Afwijking of N/A, foto en opmerking.\n« Charte de communication · dehors »: één drager per lijn, billboard, spandoeken en roll-ups, raamstickers en etalage, affiches, stoepbord.\nVoor elk: de foto (« Photo à prendre »), dan Ja (conform), Nee, of « Pas ce support ici » (zonder foto, buiten de score).\nEen Nee vraagt zijn reden: « Pourquoi Non ? (obligatoire) ».\nZonder foto is de drager niet gezien: de stap blijft onvolledig.\nIs een drager beschadigd of verouderd: Nee, de foto en de reden."
+     },
+     "critique": false,
+     "photo": "ctl-t-charte.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "2 · Intérieur",
+    "nl": "2 · Binnen"
+   },
+   "etapes": [
+    {
+     "numero": "7",
+     "titre": {
+      "fr": "La photo de l’intérieur et l’expérience client",
+      "nl": "De foto van binnen en de klantbeleving"
+     },
+     "texte": {
+      "fr": "« L’intérieur en photo » : la case « Intérieur », sa question et sa remarque, comme dehors.\n« Expérience client » : trois points, elle est présente (on la vit en entrant), la cuisson (produits chauds, bien cuits, au bon moment), l’accueil (bonjour, sourire, conseil).\nChacun : OK, Écart ou N/A ; une photo pour la présence et la cuisson ; une remarque.\nEn tête de l’étape : « n / N vus », les écarts en rouge, « … à voir ».\nSi l’accueil n’est pas au niveau : Écart et une remarque factuelle (ce qui a été vu).",
+      "nl": "« L’intérieur en photo »: het vak « Intérieur », zijn vraag en opmerking, zoals buiten.\n« Expérience client »: drie punten, ze is aanwezig (je voelt het bij het binnenkomen), het bakken (warme producten, goed gebakken, op het juiste moment), het onthaal (goeiedag, glimlach, advies).\nElk: OK, Afwijking of N/A; een foto voor de aanwezigheid en het bakken; een opmerking.\nBovenaan de stap: « n / N vus », de afwijkingen in het rood, « … à voir ».\nIs het onthaal niet op niveau: Afwijking en een feitelijke opmerking (wat je zag)."
+     },
+     "critique": false,
+     "photo": "ctl-t-experience.jpg",
+     "video": null
+    },
+    {
+     "numero": "8",
+     "titre": {
+      "fr": "L’équipe en poste",
+      "nl": "Het team van dienst"
+     },
+     "texte": {
+      "fr": "Le planning du jour, lu au panel : « n en poste », et les autres du jour repliés dessous (« Noter quand même »).\nChaque personne en poste : ses heures, une « Note rapide » de 1 (Insuffisant) à 5 (Très bien), et un « Contrôle éclair » Oui / Non.\nLe contrôle éclair : en tenue de travail, SBAM (sourire, bonjour, au revoir, merci), expérience client (conseil, dégustation, mise en avant).\n« Pas vue » si la personne n’a pas été observée ; une remarque par personne.\nNotée sans le dire à voix haute ; interne : jamais dans le rapport du franchisé. L’étape ne bloque pas.\nSi le planning ne se lit pas : l’écran le dit, passer à l’étape suivante.",
+      "nl": "De planning van de dag, gelezen in het panel: « n en poste », en de anderen van de dag ingeklapt eronder (« Noter quand même »).\nElke persoon van dienst: haar uren, een « Note rapide » van 1 (Insuffisant) tot 5 (Très bien), en een « Contrôle éclair » Ja / Nee.\nDe snelle controle: in werkkledij, SBAM (glimlach, goeiedag, tot ziens, dank u), klantbeleving (advies, proeverij, in de kijker zetten).\n« Pas vue » als de persoon niet geobserveerd werd; één opmerking per persoon.\nGescoord zonder het luidop te zeggen; intern: nooit in het rapport van de franchisenemer. De stap blokkeert niet.\nLeest de planning niet: het scherm zegt het, ga naar de volgende stap."
+     },
+     "critique": false,
+     "photo": "ctl-t-equipe.jpg",
+     "video": null
+    },
+    {
+     "numero": "9",
+     "titre": {
+      "fr": "Les modules de la checklist",
+      "nl": "De modules van de checklist"
+     },
+     "texte": {
+      "fr": "Un module par étape : Produit, Hygiène, Visuel, Planogramme, Assortiment, puis « Charte de communication · dedans ».\nProduit commence par « Les produits obligatoires sont là ? » : un par un, en rayon, Oui ou Non ; « vue en caisse » dit ce que la caisse en sait, « pas vendue sur la période » en rouge.\n« Toutes les autres sont là » coche d’un toucher les obligatoires qui restent ; puis les points du produit (pain, croissants, tartes…).\nChaque point : OK, Écart ou N/A, « Photo » quand elle est attendue, une remarque ; FR | NL change la langue des points.\nLa charte dedans : leaflets et flyers, PLV et présentoirs, menu board et écrans, sacs et emballages, tenues, aucun support hors charte.\nSi un obligatoire manque en rayon : Non, même s’il est « vue en caisse ».",
+      "nl": "Eén module per stap: Produit, Hygiène, Visuel, Planogramme, Assortiment, daarna « Charte de communication · dedans ».\nProduit begint met « Les produits obligatoires sont là ? »: één voor één, in het rek, Ja of Nee; « vue en caisse » zegt wat de kassa ervan weet, « pas vendue sur la période » in het rood.\n« Toutes les autres sont là » vinkt met één tik de overige verplichte producten aan; daarna de productpunten (brood, croissants, taarten…).\nElk punt: OK, Afwijking of N/A, « Photo » als ze verwacht wordt, een opmerking; FR | NL verandert de taal van de punten.\nDe huisstijl binnen: folders en flyers, POS-materiaal en displays, menubord en schermen, zakken en verpakkingen, kledij, geen dragers buiten de huisstijl.\nOntbreekt een verplicht product in het rek: Nee, ook als het « vue en caisse » is."
+     },
+     "critique": false,
+     "photo": "ctl-t-produit.jpg",
+     "video": null
+    },
+    {
+     "numero": "10",
+     "titre": {
+      "fr": "Le planogramme",
+      "nl": "Het planogram"
+     },
+     "texte": {
+      "fr": "Un point par comptoir (pains, viennoiserie, tartes et sablés…) : le pourcentage de conformité, puis OK, Écart ou N/A.\nSous le pourcentage, les causes à toucher : Produits déplacés, Emplacements vides, Surstock, Promo en cours, Rupture.\nSous 80 %, le comptoir devient un écart proposé au franchisé ; sous 60 %, il est proposé en P0.\nLa photo du comptoir prouve ce qui a été vu.\nSi un comptoir est sous 80 % : noter le pourcentage, la cause et prendre la photo.",
+      "nl": "Eén punt per toonbank (brood, viennoiserie, taarten en koekjes…): het percentage conformiteit, dan OK, Afwijking of N/A.\nOnder het percentage de oorzaken om aan te tikken: Produits déplacés, Emplacements vides, Surstock, Promo en cours, Rupture.\nOnder 80 % wordt de toonbank een afwijking die aan de franchisenemer wordt voorgesteld; onder 60 % wordt ze voorgesteld als P0.\nDe foto van de toonbank bewijst wat gezien werd.\nStaat een toonbank onder 80 %: noteer het percentage, de oorzaak en neem de foto."
+     },
+     "critique": false,
+     "photo": "ctl-t-planogramme.jpg",
+     "video": null
+    },
+    {
+     "numero": "11",
+     "titre": {
+      "fr": "Les contrôles en photo du jour",
+      "nl": "De fotocontroles van de dag"
+     },
+     "texte": {
+      "fr": "La bande des photos que l’équipe a rendues aujourd’hui dans ses checklists : « n photos rendues de … à … », combien sont notées, combien ne sont pas rendues.\nFiltres : Tout, Écarts, À contrôler, Conformes, Non rendues, Sans photo ; les écarts d’abord.\n« Les comptoirs attendus » ouvre les photos types de chaque comptoir, avec leur consigne.\nSous une photo « à contrôler », 4 et 5 notent d’un toucher, sans commentaire ; toucher la photo l’ouvre en grand, avec ‹ Précédente et Suivante ›.\nL’étape est faite quand plus aucune photo n’attend de note ; elle ne bloque pas.\nSi une photo n’est pas conforme : ne pas la noter 4 ou 5, ces notes valent conforme.",
+      "nl": "De strook met de foto’s die het team vandaag in zijn checklists heeft ingediend: « n photos rendues de … à … », hoeveel er gescoord zijn, hoeveel niet ingediend.\nFilters: Tout, Écarts, À contrôler, Conformes, Non rendues, Sans photo; de afwijkingen eerst.\n« Les comptoirs attendus » opent de modelfoto’s van elke toonbank, met hun richtlijn.\nOnder een foto « à contrôler » scoren 4 en 5 met één tik, zonder commentaar; een tik op de foto opent ze groot, met ‹ Précédente en Suivante ›.\nDe stap is gedaan als geen enkele foto nog op een score wacht; ze blokkeert niet.\nIs een foto niet conform: geef geen 4 of 5, die scores betekenen conform."
+     },
+     "critique": false,
+     "photo": "ctl-t-controles.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "3 · Suivi de projet",
+    "nl": "3 · Projectopvolging"
+   },
+   "etapes": [
+    {
+     "numero": "12",
+     "titre": {
+      "fr": "Dossier du bureau, points décidés, checklist du consultant",
+      "nl": "Dossier van het kantoor, afgesproken punten, checklist van de consultant"
+     },
+     "texte": {
+      "fr": "« Dossier du bureau » (s’il a été envoyé) : les points demandés par le bureau, ses notes, annoncée ou inopinée.\n« Les points décidés aux visites précédentes » : ce qui a été envoyé au franchisé et n’est pas fermé, le plus en retard d’abord ; sinon « Aucun point ouvert chez ce franchisé ».\nSur place : photographier la correction, confirmer ce qui est fait, escalader ce qui bloque.\n« Checklist du consultant » : ses tâches lues au panel, Fait, Pas fait ou N/A, un commentaire, puis « Enregistrer la checklist ».\nCes étapes à lire ne bloquent jamais.\nSi un point est corrigé : prendre la photo de la correction avant de le confirmer.",
+      "nl": "« Dossier du bureau » (als het verstuurd werd): de punten gevraagd door het kantoor, zijn notities, aangekondigd of onaangekondigd.\n« Les points décidés aux visites précédentes »: wat naar de franchisenemer werd gestuurd en niet gesloten is, het meest laattijdige eerst; anders « Aucun point ouvert chez ce franchisé ».\nTer plaatse: fotografeer de correctie, bevestig wat gedaan is, escaleer wat blokkeert.\n« Checklist du consultant »: zijn taken gelezen in het panel, Fait, Pas fait of N/A, een commentaar, dan « Enregistrer la checklist ».\nDeze stappen om te lezen blokkeren nooit.\nIs een punt gecorrigeerd: neem de foto van de correctie vóór je het bevestigt."
+     },
+     "critique": false,
+     "photo": "ctl-t-suivi.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "4 · Analyse",
+    "nl": "4 · Analyse"
+   },
+   "etapes": [
+    {
+     "numero": "13",
+     "titre": {
+      "fr": "KPI et santé du magasin",
+      "nl": "KPI’s en gezondheid van de winkel"
+     },
+     "texte": {
+      "fr": "Quatre tuiles : CA semaine face à l’objectif, Clients (Google, client mystère), Actions ouvertes (P0), Équipe.\n« Le CA face au budget » : le mois, le trimestre et l’année en jauges (réalisé, attendu à date, au rythme actuel), puis les onglets Jour, Semaine, Mois, Trimestre, Année, arrêtés à la veille.\nChaque onglet a son mini P&L : CA, coût matière, marge brute, personnel, frais généraux, résultat net, face aux seuils.\nPlus bas : CA par ETP, l’année face à l’an passé, la structure des ventes face au réseau, la structure du CA par canal (B2B au plus 40 %), le comptoir, les alertes.\n« ↻ Relire » relit les chiffres ; ils viennent de la caisse et du panel, rien ne se corrige ici.\nSi le CA est à plus de 10 % sous le budget : l’écran le dit et « Y aller » mène aux pistes du développement.",
+      "nl": "Vier tegels: omzet van de week t.o.v. de doelstelling, Klanten (Google, mystery shopper), Open acties (P0), Team.\n« Le CA face au budget »: de maand, het kwartaal en het jaar als meters (gerealiseerd, verwacht op datum, aan het huidige ritme), daarna de tabbladen Dag, Week, Maand, Kwartaal, Jaar, afgesloten op gisteren.\nElk tabblad heeft zijn mini-W&V: omzet, grondstofkost, brutomarge, personeel, algemene kosten, nettoresultaat, t.o.v. de drempels.\nLager: omzet per VTE, het jaar t.o.v. vorig jaar, de verkoopstructuur t.o.v. het netwerk, de omzetstructuur per kanaal (B2B maximaal 40 %), de toonbank, de alarmen.\n« ↻ Relire » leest de cijfers opnieuw; ze komen van de kassa en het panel, hier wordt niets gecorrigeerd.\nLigt de omzet meer dan 10 % onder het budget: het scherm zegt het en « Y aller » leidt naar de pistes van de ontwikkeling."
+     },
+     "critique": true,
+     "photo": "ctl-t-kpi.jpg",
+     "video": null
+    },
+    {
+     "numero": "14",
+     "titre": {
+      "fr": "Les leviers",
+      "nl": "De hefbomen"
+     },
+     "texte": {
+      "fr": "Les six leviers du mois, face à l’an passé et au réseau : Trafic, Récurrence, Expérience client, Food cost, Labour cost, Overhead cost.\n« Le mois » ou « L’évolution de l’année » ; la pastille suit les seuils de la Table KPI : vert sous l’alerte, orange entre alerte et critique, rouge au-delà.\nDessous, la note Google et les derniers avis.\nDeux points à noter avec le franchisé : Trafic (clients par jour face au N-1 et au réseau) et Note Google, OK, Écart ou N/A.\nSi un levier est rouge : le dire au franchisé et le reprendre dans le constat.",
+      "nl": "De zes hefbomen van de maand, t.o.v. vorig jaar en het netwerk: Trafic, Récurrence, Expérience client, Food cost, Labour cost, Overhead cost.\n« Le mois » of « L’évolution de l’année »; het bolletje volgt de drempels van de KPI-tabel: groen onder het alarm, oranje tussen alarm en kritiek, rood erboven.\nEronder de Google-score en de laatste reviews.\nTwee punten om met de franchisenemer te noteren: Trafic (klanten per dag t.o.v. vorig jaar en het netwerk) en Note Google, OK, Afwijking of N/A.\nStaat een hefboom op rood: zeg het aan de franchisenemer en neem het op in de vaststelling."
+     },
+     "critique": false,
+     "photo": "ctl-t-leviers.jpg",
+     "video": null
+    },
+    {
+     "numero": "15",
+     "titre": {
+      "fr": "Les tâches des derniers mois et le client mystère",
+      "nl": "De taken van de laatste maanden en de mystery shopper"
+     },
+     "texte": {
+      "fr": "Un tableau par mois : faites / demandées, notées, sous 4, moyenne ; « 6 mois » ou « 12 mois ».\nToucher un mois montre ses tâches notées sous 4 : la photo, la note, le commentaire du contrôleur, re-notée ou pas.\n« Mystery shopper » : le dernier rapport (sur 20), puis les points à vérifier sur place, par exemple ce que le rapport a relevé en hygiène est corrigé.\n« à hier » : le mois en cours, jusqu’à la veille ; les chiffres viennent du panel.\nSi une tâche revient sous 4 plusieurs fois : en faire un point à travailler.",
+      "nl": "Een tabel per maand: gedaan / gevraagd, gescoord, onder 4, gemiddelde; « 6 mois » of « 12 mois ».\nTik op een maand om haar taken met een score onder 4 te zien: de foto, de score, het commentaar van de controleur, opnieuw gescoord of niet.\n« Mystery shopper »: het laatste rapport (op 20), dan de punten om ter plaatse na te kijken, bijvoorbeeld of wat het rapport over hygiëne vaststelde gecorrigeerd is.\n« à hier »: de lopende maand, tot gisteren; de cijfers komen van het panel.\nKomt een taak meermaals onder 4: maak er een werkpunt van."
+     },
+     "critique": false,
+     "photo": "ctl-t-taches.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "5 · Développement",
+    "nl": "5 · Ontwikkeling"
+   },
+   "etapes": [
+    {
+     "numero": "16",
+     "titre": {
+      "fr": "Le CA sous le budget : pourquoi et trois pistes",
+      "nl": "De omzet onder het budget: waarom en drie pistes"
+     },
+     "texte": {
+      "fr": "L’étape n’apparaît que si le CA est à plus de 10 % sous le budget ; elle montre sur quelle période et ce qui manque.\n« Pourquoi ? » : noté par le consultant avec le franchisé (trafic, panier, ruptures, équipe, travaux, météo…).\n« Trois pistes de développement » : données par le franchisé.\n« À mener pour… » : le mois prochain ou la fin du trimestre.\n« Enregistrer · les pistes passent dans « Points à travailler » ».\nTant que ce n’est pas noté, l’étape reste marquée « ! » et « Terminer » y ramène.",
+      "nl": "De stap verschijnt alleen als de omzet meer dan 10 % onder het budget ligt; ze toont over welke periode en wat ontbreekt.\n« Pourquoi ? »: genoteerd door de consultant samen met de franchisenemer (traffic, gemiddeld ticket, tekorten, team, werken, weer…).\n« Trois pistes de développement »: gegeven door de franchisenemer.\n« À mener pour… »: de volgende maand of het einde van het kwartaal.\n« Enregistrer · les pistes passent dans « Points à travailler » ».\nZolang het niet genoteerd is, blijft de stap gemarkeerd met « ! » en brengt « Terminer » je ernaar terug."
+     },
+     "critique": false,
+     "photo": "ctl-t-pistes.jpg",
+     "video": null
+    },
+    {
+     "numero": "17",
+     "titre": {
+      "fr": "Vu sur place et recommandation",
+      "nl": "Ter plaatse gezien en aanbeveling"
+     },
+     "texte": {
+      "fr": "« Énergie de l’équipe » en étoiles ; « Exécution face au protocole » : Standards appliqués, Quelques raccourcis, Écarts fréquents.\n« Les clients sortent… » : Satisfaits, Mitigés, Insatisfaits ; des notes du consultant.\n« Le vrai problème » : la cause en un toucher et le pourquoi, ce qui a été vu, mesuré, touché.\n« Recommandation » : ce qui ne marche pas, pourquoi, ce qu’on fait ; le franchisé la lit.\n« Observé positif » : ce qui va bien, dit au franchisé aussi.\nL’étape bloque tant que le constat et la recommandation ne sont pas écrits.",
+      "nl": "« Énergie de l’équipe » in sterren; « Exécution face au protocole »: Standards appliqués, Quelques raccourcis, Écarts fréquents.\n« Les clients sortent… »: Satisfaits, Mitigés, Insatisfaits; notities van de consultant.\n« Le vrai problème »: de oorzaak met één tik en het waarom, wat gezien, gemeten, aangeraakt werd.\n« Recommandation »: wat niet werkt, waarom, wat we doen; de franchisenemer leest ze.\n« Observé positif »: wat goed gaat, ook aan de franchisenemer gezegd.\nDe stap blokkeert zolang de vaststelling en de aanbeveling niet geschreven zijn."
+     },
+     "critique": false,
+     "photo": "ctl-t-constat.jpg",
+     "video": null
+    },
+    {
+     "numero": "18",
+     "titre": {
+      "fr": "Les points à travailler",
+      "nl": "De werkpunten"
+     },
+     "texte": {
+      "fr": "Proposés d’après les non-conformes et les pistes du franchisé ; « + Ajouter une action » en ajoute un.\nChaque point : l’action, un détail pour le franchisé, la priorité P0, P1 ou P2, à qui (Franchisé, Équipe, Consultant, Admin), l’échéance (24 h, 48 h, 1 sem., 2 sem. ou une date).\nUn écart d’hygiène, une note de 1 ou un comptoir sous 60 % est proposé en P0, les autres en P1 ; à corriger si besoin.\nLe point part dans la langue de la visite ; « retirer » l’enlève.\nIls partent chez le franchisé avec le rapport, si le bureau les garde.\nSi un point est flou : réécrire l’action pour qu’elle se prouve par une photo.",
+      "nl": "Voorgesteld op basis van de niet-conforme punten en de pistes van de franchisenemer; « + Ajouter une action » voegt er een toe.\nElk punt: de actie, een detail voor de franchisenemer, de prioriteit P0, P1 of P2, voor wie (Franchisé, Équipe, Consultant, Admin), de termijn (24 u, 48 u, 1 week, 2 weken of een datum).\nEen afwijking in hygiëne, een score 1 of een toonbank onder 60 % wordt voorgesteld als P0, de andere als P1; pas aan indien nodig.\nHet punt vertrekt in de taal van het bezoek; « retirer » haalt het weg.\nZe vertrekken naar de franchisenemer met het rapport, als het kantoor ze behoudt.\nIs een punt vaag: herschrijf de actie zodat ze met een foto bewezen kan worden."
+     },
+     "critique": true,
+     "photo": "ctl-t-points.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "6 · Météo et fin",
+    "nl": "6 · Weerbericht en afsluiting"
+   },
+   "etapes": [
+    {
+     "numero": "19",
+     "titre": {
+      "fr": "La météo du franchisé",
+      "nl": "Het weerbericht van de franchisenemer"
+     },
+     "texte": {
+      "fr": "Le temps en un toucher : Grand soleil, Éclaircies, Nuageux, Pluie, Orage.\n« Finances » : comment il se sent financièrement (À l’aise, Ça va, Juste, Tendu, Très inquiet) et « Tout est payé à temps ? » Oui / Non.\nSi Non : ce qui est en retard (factures L’Atelier, autres fournisseurs, loyer, salaires et ONSS, TVA et impôts, banque et leasing, autre) et le détail, obligatoire.\n« Le détail, si besoin » : moral, envie, climat de l’équipe, relation avec le réseau, ses demandes (chacune devient une tâche du consultant à J+7), ses envies, ses inquiétudes.\nInterne : reste entre le consultant et le bureau, jamais dans le rapport.\nSi des paiements sont en retard : noter quoi, combien, depuis quand, sinon « Terminer » y ramène.",
+      "nl": "Het weer met één tik: Grand soleil, Éclaircies, Nuageux, Pluie, Orage.\n« Finances »: hoe hij zich financieel voelt (À l’aise, Ça va, Juste, Tendu, Très inquiet) en « Tout est payé à temps ? » Ja / Nee.\nBij Nee: wat achterstaat (facturen L’Atelier, andere leveranciers, huur, lonen en RSZ, btw en belastingen, bank en leasing, andere) en het detail, verplicht.\n« Le détail, si besoin »: moraal, zin, sfeer in het team, relatie met het netwerk, zijn vragen (elke vraag wordt een taak van de consultant op D+7), zijn wensen, zijn zorgen.\nIntern: blijft tussen de consultant en het kantoor, nooit in het rapport.\nStaan betalingen achter: noteer wat, hoeveel, sinds wanneer, anders brengt « Terminer » je ernaar terug."
+     },
+     "critique": false,
+     "photo": "ctl-t-meteo.jpg",
+     "video": null
+    },
+    {
+     "numero": "20",
+     "titre": {
+      "fr": "L’évaluation rapide",
+      "nl": "De snelle evaluatie"
+     },
+     "texte": {
+      "fr": "Six axes notés avec le franchisé : Propreté, Capacité métier, Management, Développement commercial, Contact client, Respect des normes.\nChaque axe : 1 Insuffisant, 2 À améliorer, 3 Correct, 4 Bien, 5 Très bien, et un commentaire.\nLe radar se dessine à chaque note, avec la moyenne sur 5 ; la dernière évaluation du magasin en pointillé.\nElle part dans le rapport : le radar, chaque note et son commentaire.\nSi un axe tombe à 1 ou 2 : écrire le commentaire, le franchisé le lira.",
+      "nl": "Zes assen gescoord samen met de franchisenemer: Propreté, Capacité métier, Management, Développement commercial, Contact client, Respect des normes.\nElke as: 1 Insuffisant, 2 À améliorer, 3 Correct, 4 Bien, 5 Très bien, en een commentaar.\nDe radar tekent zich bij elke score, met het gemiddelde op 5; de laatste evaluatie van de winkel in stippellijn.\nZe vertrekt in het rapport: de radar, elke score en zijn commentaar.\nValt een as op 1 of 2: schrijf het commentaar, de franchisenemer zal het lezen."
+     },
+     "critique": false,
+     "photo": "ctl-t-evaluation.jpg",
+     "video": null
+    },
+    {
+     "numero": "21",
+     "titre": {
+      "fr": "Fin de visite et signatures",
+      "nl": "Einde van het bezoek en handtekeningen"
+     },
+     "texte": {
+      "fr": "Trois chiffres : Checklist (vus sur le total, non conformes), Points proposés (dont P0), Photos (en attente d’envoi).\nLe score de la visite sur 100, face à la visite précédente du même type, module par module : c’est le seul endroit de la tablette où il se montre.\nDeux signatures au doigt : « Le consultant », puis « Le franchisé a vu le résumé » ; « effacer » recommence.\n« Terminer · le brouillon part au bureau » : rien ne part au franchisé ; le bureau relit et envoie sous 48 h.\nAprès « Terminer », l’application revient à l’accueil : « Visite terminée · le brouillon part au bureau ».\nSi l’écran signale le CA sous le budget ou des paiements en retard : « Y aller », compléter, puis terminer.",
+      "nl": "Drie cijfers: Checklist (gezien op het totaal, niet conform), Points proposés (waarvan P0), Photos (wachtend op verzending).\nDe score van het bezoek op 100, t.o.v. het vorige bezoek van hetzelfde soort, module per module: de enige plaats op de tablet waar hij getoond wordt.\nTwee handtekeningen met de vinger: « Le consultant », daarna « Le franchisé a vu le résumé »; « effacer » begint opnieuw.\n« Terminer · le brouillon part au bureau »: niets vertrekt naar de franchisenemer; het kantoor herleest en verstuurt binnen 48 u.\nNa « Terminer » keert de app terug naar het startscherm: « Visite terminée · le brouillon part au bureau ».\nMeldt het scherm de omzet onder het budget of laattijdige betalingen: « Y aller », aanvullen, dan afsluiten."
+     },
+     "critique": false,
+     "photo": "ctl-t-fin.jpg",
+     "video": null
+    }
+   ]
+  },
+  {
+   "titre": {
+    "fr": "Après la visite",
+    "nl": "Na het bezoek"
+   },
+   "etapes": [
+    {
+     "numero": "22",
+     "titre": {
+      "fr": "Une visite terminée",
+      "nl": "Een afgesloten bezoek"
+     },
+     "texte": {
+      "fr": "Une visite terminée ne se modifie plus sur la tablette : elle s’ouvre en lecture, « Review — <boutique> », le jour et les heures.\n« Écarts relevés » : chaque point non conforme ; « Plan d’action de cette visite » : les points proposés et leur statut.\nStatuts d’un point : Proposé · rapport au bureau, Interne, Ouvert, En attente de validation, Validé, À reprendre, Fermé, Escaladé.\nDans l’agenda, une visite faite ouvre l’historique de la boutique : photos du jour, CA de la semaine, plans d’action, ce qui a été vu visite après visite.\nLe rapport, lui, est adapté et envoyé par le bureau, depuis le cockpit.\nSi un point doit changer après la visite : le dire au bureau, qui adapte le rapport avant l’envoi.",
+      "nl": "Een afgesloten bezoek wordt niet meer gewijzigd op de tablet: het opent om te lezen, « Review — <winkel> », de dag en de uren.\n« Écarts relevés »: elk niet-conform punt; « Plan d’action de cette visite »: de voorgestelde punten en hun status.\nStatus van een punt: Proposé · rapport au bureau, Interne, Ouvert, En attente de validation, Validé, À reprendre, Fermé, Escaladé.\nIn de agenda opent een gedaan bezoek de geschiedenis van de winkel: foto’s van de dag, omzet van de week, actieplannen, wat bezoek na bezoek gezien werd.\nHet rapport zelf wordt door het kantoor aangepast en verstuurd, vanuit de cockpit.\nMoet een punt na het bezoek veranderen: zeg het aan het kantoor, dat het rapport vóór verzending aanpast."
+     },
+     "critique": false,
+     "photo": "ctl-t-review.jpg",
+     "video": null
+    }
+   ]
+  }
+ ],
+ "points_critiques": [
+  {
+   "fr": "Un support de la charte ou une photo du jour n’est vu qu’avec sa photo : sans photo, l’étape reste incomplète.",
+   "nl": "Een drager van de huisstijl of een foto van de dag is pas gezien met zijn foto: zonder foto blijft de stap onvolledig."
+  },
+  {
+   "fr": "La météo, les finances et la note de l’équipe sont internes : jamais dans le rapport du franchisé.",
+   "nl": "Het weerbericht, de financiën en de score van het team zijn intern: nooit in het rapport van de franchisenemer."
+  },
+  {
+   "fr": "« Terminer » n’envoie rien au franchisé : le brouillon part au bureau, qui l’envoie sous 48 h.",
+   "nl": "« Terminer » stuurt niets naar de franchisenemer: het ontwerp gaat naar het kantoor, dat het binnen 48 u verstuurt."
+  }
+ ],
+ "quiz": [
+  {
+   "question": {
+    "fr": "« Suivant » refuse de passer. Que faire ?",
+    "nl": "« Suivant » weigert verder te gaan. Wat doe je?"
+   },
+   "choix": {
+    "fr": [
+     "Quitter le contrôle et le recommencer",
+     "Lire « Reste : … » et compléter ce qui manque",
+     "Passer par la barre du bas pour sauter l’étape"
+    ],
+    "nl": [
+     "De controle verlaten en opnieuw beginnen",
+     "« Reste : … » lezen en aanvullen wat ontbreekt",
+     "Via de onderste balk de stap overslaan"
+    ]
+   },
+   "bonne": 1
+  },
+  {
+   "question": {
+    "fr": "Un comptoir est noté à 55 % au planogramme. Comment le point est-il proposé ?",
+    "nl": "Een toonbank krijgt 55 % op het planogram. Hoe wordt het punt voorgesteld?"
+   },
+   "choix": {
+    "fr": [
+     "En P2",
+     "Il n’est pas proposé",
+     "En P0"
+    ],
+    "nl": [
+     "Als P2",
+     "Het wordt niet voorgesteld",
+     "Als P0"
+    ]
+   },
+   "bonne": 2
+  },
+  {
+   "question": {
+    "fr": "Où le score de la visite se montre-t-il sur la tablette ?",
+    "nl": "Waar wordt de score van het bezoek op de tablet getoond?"
+   },
+   "choix": {
+    "fr": [
+     "À la fin de visite, avant les signatures",
+     "En tête de chaque étape",
+     "Jamais"
+    ],
+    "nl": [
+     "Op het einde van het bezoek, vóór de handtekeningen",
+     "Bovenaan elke stap",
+     "Nooit"
+    ]
+   },
+   "bonne": 0
+  }
+ ],
+ "remarques": [
+  "Les étapes sont celles des visites Régulière en cours en production (Corbais, Sombreffe, Halle) ; un autre type de visite a d’autres modules (Production, Hygiène et qualité…), et une visite Suivi du plan d’action ou Revisite construit sa checklist des plans ouverts ou des non-conformes.",
+  "Captures : pour afficher chaque étape d’une visite pas remplie, l’outil coupe le blocage des étapes sur l’appareil de capture seulement (rien n’est écrit) ; « Reste : … » y apparaît donc en gris au lieu du rouge d’une étape bloquante.",
+  "Captures datées du 26/10/2026 (jour où les visites ont commencé) pour Corbais (photos du jour, équipe en poste) ; Halle est capturée au 14/11/2026 (contrôles en photo du jour, chiffres). Aucune photo du jour n’existe pour ces visites : les cases « Façade », « Arrière », « Intérieur » sont vides, l’annotation d’une photo (« Annoter la photo ») n’a pas pu être montrée.",
+  "Aucun point ouvert sur les quatre boutiques : « Les points décidés aux visites précédentes » est capturé vide ; « Dossier du bureau » n’apparaît sur aucune visite en cours (pas de dossier envoyé) ; « Checklist du consultant » est vide (panel) : pas de capture propre.",
+  "Les points à travailler : la capture montre une action ajoutée à l’écran (« + Ajouter une action »), jamais enregistrée.",
+  "À vérifier : sur la tablette, un point proposé reçoit d’office l’échéance J+1 (P0) ou J+3 (P1), alors que les délais du réseau (Qui fait quoi) sont P0 2 j, P1 7 j, P2 14 j : quelle échéance reste dans le rapport ?",
+  "Sur la tablette, une photo de contrôle du jour ne se note qu’à 4 ou 5 (les notes au seuil et au-dessus) ; le code ne dit pas où le consultant note une photo non conforme pendant la visite : à préciser.",
+  "La visite terminée (« Review ») des visites 2 et 3 est presque vide (aucun écart, aucune action) : la capture montre l’écran, pas un vrai rapport."
+ ]
+}
