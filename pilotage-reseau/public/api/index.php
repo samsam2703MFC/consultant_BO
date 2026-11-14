@@ -49,6 +49,7 @@ require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../src/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
@@ -589,6 +590,8 @@ function route(string $method, string $path): mixed
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/tresorerie/references'        => ep_tresorerie_references(),
+            $path === '/tresorerie/plan'              => ep_tresorerie_plan(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
             // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.
@@ -751,6 +754,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
+    if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
