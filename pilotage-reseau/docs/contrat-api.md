@@ -3959,6 +3959,24 @@ en pièces pour une matière en grammes ne donne pas de prix : l'écran demande 
 `POST /verification/recettes/corriger {geste: prix, mid, prix (par unité de base), shops: [...]}` : une écriture par
 magasin, relue ; un prix qui en remplace un autre s'annule (l'ancien repart), un premier prix non.
 
+### `/verification/recettes/matiere` — la fiche d'une matière, modifiable (14/11/2026)
+
+Code : `src/verification_matiere_edition.php` (préfixe `vmx`) ; écran : `verification-fichemat-vals.js`,
+`verification-fichemat-tpl.js` (style `vx-`), ouvert au clic sur une matière de la bascule « Matières premières » ;
+maquette `docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable, pour tout le réseau**.
+
+- `GET ?mid=` : `{ok, mid, nom, champs[{cle, lib, type (texte|categorie|unite|valeurs|nombre|tva|oui|allergenes|prix),
+  valeur, modifiable, valeurs}], cles, unite, par, facteur, refs {categories, unites, allergenes, tva}, ligne (la ligne de
+  /verification/recettes/matieres : magasins, fournisseurs, recettes), liens}`. Un champ n'est `modifiable` que si
+  `GET /materials/{id}` le rend : on n'écrit pas une clé devinée. Les valeurs proposées pour type et source sont celles
+  vues dans les matières des magasins. Références : `/material-categories`, `/units`, `/allergens`,
+  `/countries/BE/materials/vat-rates` (gardées 24 h).
+- `POST {mid, apercu?, champs: {clé: valeur}, magasins: {magasin: prix par unité de base}}` : les champs changés partent
+  en `PATCH /materials/{id}` (seules les clés changées, dans la forme lue : allergènes en objets, en identifiants ou en
+  texte ; booléens en 0/1 si le panel les rend ainsi), relus et constatés ; puis les prix des magasins (geste `prix`).
+  Si les paramètres ne prennent pas, les prix ne partent pas. Le prix général est `reference_unit_price_net`, le prix
+  conseillé `suggested_base_unit_price_net` (par unité de base). « Annuler » remet l'avant (même route).
+
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 
 Code : `src/verification_flux.php` ; écrans `#/verification/flux` et `#/verification/fuites`

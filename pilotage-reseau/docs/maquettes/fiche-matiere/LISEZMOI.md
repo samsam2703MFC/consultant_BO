@@ -1,6 +1,9 @@
 # Recettes à corriger › Matières premières › la fiche d'une matière, modifiable (maquette)
 
-**Statut : maquette du 14/11/2026, à valider.** Rien n'est codé.
+**Statut : codé le 14/11/2026** (« code-le et mets en ligne »). Serveur : `src/verification_matiere_edition.php`
+(`GET` / `POST /verification/recettes/matiere`) ; écran : `verification-fichemat-vals.js`, `verification-fichemat-tpl.js`
+(style `vx-`), au clic sur une matière de « Matières premières » ; tests : `php bin/tests_verification_correction.php`
+(partie « la fiche d'une matière »). Un champ n'est modifiable que si le panel le rend dans `GET /materials/{id}`.
 
 Demande du 14/11/2026 : « ça doit être un outil pour encoder les prix, tous les paramètres de la matière (material,
 voir swagger) ; les matières sont reliées à des fournisseurs ou à un prix général : faire la comparaison ». Décision :
