@@ -1,7 +1,10 @@
 /* Cockpit CEO — gabarit de Vérification › Recettes à corriger (#/verification/recettes, lot 1, 31/10/2026).
  * Les valeurs viennent de verification-vals.js (`c.vr`) ; le style de verification.css (préfixe vr-).
  * Maquette retenue : docs/maquettes/verification/e.png — la couverture vers 100 %, les règles en pastilles,
- * la liste classée par chiffre d'affaires concerné. */
+ * la liste classée par chiffre d'affaires concerné. Corriger d'ici (13/11/2026) : docs/maquettes/recettes-correction — le
+ * geste et les liens directs de chaque ligne, la correction en place, le volet en correction, le registre. */
+
+import { tplCellule, tplProp, tplOuverte, tplRecentes, tplRegistre, tplEdition } from './verification-correction-tpl.js';
 
 export function tplVerification(c, x){
   const { esc } = x, v = c.vr;
@@ -36,19 +39,19 @@ export function tplVerification(c, x){
   } else if (v.videFiltre) {
     corps = `<div class="vr-vide">Rien pour ce filtre.</div>`;
   } else {
-    corps = `<div class="vr-tw"><table class="vr-t"><thead><tr><th class="g" style="width:34px">#</th><th class="g">Produit</th><th class="g">Problème</th><th class="g">Ce qui cloche</th><th>CA concerné<small>30 jours</small></th><th class="g">Magasins</th><th>Repérée<small>depuis</small></th><th></th></tr></thead><tbody>
+    corps = `<div class="vr-tw"><table class="vr-t"><thead><tr><th class="g" style="width:34px">#</th><th class="g">Produit</th><th class="g">Problème</th><th class="g">Ce qui cloche</th><th>CA concerné<small>30 jours</small></th><th class="g">Magasins</th><th>Repérée<small>depuis</small></th><th>Corriger<small>ici, ou au bon écran du panel</small></th></tr></thead><tbody>
       ${v.lignes.map(l => `<tr><td class="g"><span class="vr-rang${l.haut ? ' h' : ''}">${l.rang}</span></td>
         <td class="g nom${l.ouvrir ? ' vr-ouvre' : ''}"${l.ouvrir ? ` ${x.A(l.ouvrir)} title="Ouvrir la recette"` : ''}><b>${esc(l.nom)}</b>${l.cat || l.formule ? `<small>${esc(l.cat)}${l.formule ? `${l.cat ? ' · ' : ''}<span class="vr-tag">formule</span>` : ''}</small>` : ''}</td>
         <td class="g"><span class="vr-pb ${l.classe}">${esc(l.nomRegle)}</span></td>
-        <td class="g vr-det">${esc(l.detail)}</td>
+        <td class="g vr-det">${esc(l.detail)}${tplProp(l, x)}</td>
         <td>${l.ca ? `<b>${esc(l.ca)}</b>` : (l.valeur ? `<span class="vr-mu">${esc(l.valeur)}</span>` : '<span class="vr-mu">—</span>')}</td>
         <td class="g vr-mu">${esc(l.magasinsTxt)}</td>
         <td title="${esc(l.depuisTitre)}">${esc(l.depuis)}</td>
-        <td>${l.lien ? `<a class="vr-lien" href="${esc(l.lien)}" target="_blank" rel="noopener">Ouvrir au panel ↗</a>` : (l.rid ? `<span class="vr-mu" title="Le numéro de la recette au panel">recette ${l.rid}</span>` : '')}</td></tr>`).join('')}
+        <td>${l.geste || (l.liens || []).length ? tplCellule(l, x) : (l.rid ? `<span class="vr-mu" title="Le numéro de la recette au panel">recette ${l.rid}</span>` : '')}</td></tr>${l.ouverte ? tplOuverte(l.ouverte, 8, x) : ''}`).join('')}
       </tbody></table></div>`;
   }
-  const pied = `<div class="vr-pied"><b>Les règles</b>, magasin par magasin, sur les produits vendus ces trente jours : <b>pas de recette</b> (produit vendu sans recette au panel) · <b>formule sans ses produits</b> (une formule ou une promotion vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit — promotion « bundle » du panel) · <b>recette vide</b> (aucune ligne) · <b>matière sans prix</b> (dans un magasin qui vend le produit) · <b>coût invraisemblable</b> (coût de la pièce sous ${esc(v.seuilMin)} ou au-dessus du prix HT) · <b>hors norme du réseau</b> (plus de 40 % d’écart à la médiane des autres magasins) · <b>unité suspecte</b> (une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans un coût plausible) · <b>rendement à zéro</b> · <b>portion sans fraction</b> · <b>matière jamais en recette</b> (en stock, employée par aucune recette vendue). Une même pièce ne porte que l’explication la plus précise. « Repérée depuis » : le premier jour où le cockpit l’a vue ; une ligne disparaît d’elle-même quand la recette est corrigée au panel. Lecture seule : rien n’est écrit au panel. <span class="vr-mu">${esc(v.source)}</span></div>`;
-  return `<div data-screen="verification-recettes" class="vr">${haut}<div class="vr-card">${couverture}${chips}${filtres}${corps}${pied}</div>${tplFiche(v.fiche, x)}</div>`;
+  const pied = `<div class="vr-pied"><b>Les règles</b>, magasin par magasin, sur les produits vendus ces trente jours : <b>pas de recette</b> (produit vendu sans recette au panel) · <b>formule sans ses produits</b> (une formule ou une promotion vendue comme un seul article : ses produits doivent sortir sur le ticket, chacun à prix réduit — promotion « bundle » du panel) · <b>recette vide</b> (aucune ligne) · <b>matière sans prix</b> (dans un magasin qui vend le produit) · <b>coût invraisemblable</b> (coût de la pièce sous ${esc(v.seuilMin)} ou au-dessus du prix HT) · <b>hors norme du réseau</b> (plus de 40 % d’écart à la médiane des autres magasins) · <b>unité suspecte</b> (une ligne pèse plus de la moitié du coût, et ×1000 ou ÷1000 la ramène dans un coût plausible) · <b>rendement à zéro</b> · <b>portion sans fraction</b> · <b>matière jamais en recette</b> (en stock, employée par aucune recette vendue). Une même pièce ne porte que l’explication la plus précise. « Repérée depuis » : le premier jour où le cockpit l’a vue ; une ligne disparaît d’elle-même quand la recette est corrigée. <b>Corriger d’ici</b> : chaque geste montre d’abord ce qui sera écrit, puis l’écrit au panel avec le compte consultant, le relit et le note au registre (« Annuler » remet l’avant). Les liens ↗ ouvrent l’écran du panel ; leurs adresses se règlent dans le registre. <span class="vr-mu">${esc(v.source)}</span></div>`;
+  return `<div data-screen="verification-recettes" class="vr">${haut}<div class="vr-card">${couverture}${chips}${filtres}${tplRecentes(v.recentes, x)}${corps}${pied}</div>${tplRegistre(v.registre, x)}${tplFiche(v.fiche, x)}</div>`;
 }
 
 /** Le volet de la recette d'un produit, ouvert au clic sur son nom. */
@@ -61,8 +64,15 @@ function tplFiche(F, x){
   else if (F.erreur) { corps = tete('Fiche indisponible', '') + `<div class="vr-etat ko">${esc(F.erreur)}</div>`; }
   else {
     const R = F.recette;
+    const bascule = F.corriger ? `<div class="rc-seg"><button class="${F.mode === 'lire' ? 'on' : ''}" ${x.A(F.lire)}>Lire</button><button class="${F.mode === 'corriger' ? 'on' : ''}" ${x.A(F.corriger)}>Corriger</button></div>` : '';
+    const liens = (F.liens || []).map(l => `<a class="rc-ln" href="${esc(l.url)}" target="_blank" rel="noopener">${esc(l.txt)} ↗</a>`).join('');
+    const sig = F.signalements.length ? `<div class="vr-fi-s">${F.signalements.map(s => `<div><span class="vr-pb ${s.classe}">${esc(s.nom)}</span> ${esc(s.detail)} <span class="vr-mu">${esc(s.magasins)}</span></div>`).join('')}</div>` : '';
+    if (F.mode === 'corriger') {
+      corps = tete(esc(F.nom), esc(F.cat) + ' · recette ' + F.rid) + `<div class="vr-fi-act">${bascule}</div>` + sig + tplEdition(F.edition, x);
+      return `<div class="vr-voile" ${x.A(F.fermer)}></div><div class="vr-fiche">${corps}</div>`;
+    }
     corps = tete(esc(F.nom), esc(F.cat) + (F.rid ? ' · recette ' + F.rid : ' · aucune recette au panel'))
-      + `<div class="vr-fi-act">${F.lien ? `<a class="vr-lien" href="${esc(F.lien)}" target="_blank" rel="noopener">Ouvrir au panel pour corriger ↗</a>` : ''}<span class="vr-mu">La correction se fait au panel ; l’écriture depuis le cockpit viendra une fois son format mesuré.</span></div>`
+      + `<div class="vr-fi-act">${bascule}${liens ? `<span class="vr-mu">Au panel :</span>${liens}` : (F.lien ? `<a class="vr-lien" href="${esc(F.lien)}" target="_blank" rel="noopener">Ouvrir au panel ↗</a>` : '')}${F.corriger ? '' : '<span class="vr-mu">Sans recette : « Rattacher une recette » dans la liste, ou la créer au panel.</span>'}</div>`
       + (F.signalements.length ? `<div class="vr-fi-s">${F.signalements.map(s => `<div><span class="vr-pb ${s.classe}">${esc(s.nom)}</span> ${esc(s.detail)} <span class="vr-mu">${esc(s.magasins)}</span></div>`).join('')}</div>` : '')
       + `<div class="vr-fi-h">Dans chaque magasin</div><table class="vr-t"><thead><tr><th class="g">Magasin</th><th>Coût<small>de la pièce</small></th><th>Prix HT<small>de la pièce</small></th><th>Coefficient</th><th>Matière<small>% du prix</small></th><th class="g"></th></tr></thead><tbody>
         ${F.magasins.map(m => `<tr><td class="g nom"><b>${esc(m.nom)}</b></td>${m.present ? `<td>${m.cout}</td><td>${m.prix}</td><td>${m.coef}</td><td><span class="vx-p ${m.ton}">${m.food}</span></td><td class="g vr-mu">${esc(m.portion)}</td>` : '<td colspan="5" class="g vr-mu">pas proposé dans ce magasin</td>'}</tr>`).join('')}</tbody></table>`
