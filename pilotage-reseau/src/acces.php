@@ -41,7 +41,9 @@ const ACCES_TTL_MAGASIN = 7776000;   // 90 jours
  */
 const ACCES_FRANCHISE = ['/exploitation', '/ventes', '/fidelite', '/analyse', '/fournisseurs', '/push',
     '/production', '/soir', '/assistant/magasin', '/stores', '/benchmarks/magasin', '/benchmarks/releve', '/plan',
-    '/leviers', '/equipe', '/caisse', '/planogramme', '/pwa', '/formation/sop/photo', '/uploads', '/dashboard', '/tablette'];
+    '/leviers', '/equipe', '/caisse', '/planogramme', '/pwa', '/formation/sop/photo', '/uploads', '/dashboard', '/tablette',
+    // Le plan de trésorerie (14/11/2026) : chaque franchisé a le sien — le `shop` de la requête et du corps est vérifié.
+    '/tresorerie'];
 
 /** Les paramètres qui désignent un magasin, dans l'adresse ou dans le corps JSON. */
 const ACCES_CLES_MAGASIN = ['shop', 'shops', 'shopId', 'shop_id', 'magasin', 'magasins', 'magasinId'];

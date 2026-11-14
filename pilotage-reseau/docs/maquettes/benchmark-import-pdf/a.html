@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Benchmark concurrents · import PDF — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="bi.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M4 7h16M4 7l-2.5 6a2.5 2.5 0 0 0 5 0zM20 7l-2.5 6a2.5 2.5 0 0 0 5 0z"></path></svg><span class="sidebar__item-label">Benchmark concurrents</span></button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Pilotage</p>
+        <h1>Benchmark concurrents</h1>
+      </div>
+      <div class="topbar__actions"><span class="bi-pill">Maquette · nos produits et prix : Sombreffe, lus le 14/11 · lignes Dumont : exemple, PDF pas encore reçus · rien n’est écrit</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="bi"><div class="bi-modes"><button class="">Vue d’ensemble</button><button class="">Relevés</button><button class="on">Import PDF<b>nouveau</b></button><button class="">Vérification de l’API</button><span class="vr-sp"></span>
+  <span class="bi-mag">Magasin <select class="vr-sel"><option>Sombreffe</option></select> Concurrent <select class="vr-sel"><option>Dumont et Partners</option></select></span></div><ol class="bi-etapes"><li class="on"><i>1</i>Déposer les PDF</li><li class=""><i>2</i>Rapprocher avec nos produits</li><li class=""><i>3</i>Encoder dans le benchmark</li></ol><div class="bi-cols"><aside class="bi-card bi-zone"><div class="bi-sec" style="margin-top:0">Sombreffe et alentours</div>
+  <select class="vr-sel"><option>Sombreffe — Chaussée de Nivelles 136/D, 5140 Sombreffe</option></select>
+  <div class="bi-conc"><div class="bi-gr">À moins de 15 km</div><div class="bi-co on"><i class="bi-dot Artisan"></i><div><b>Dumont et Partners</b><small>Tongrinne · ≈ 4 km · artisan<br>jamais relevé</small></div><span class="vr-sp"></span><span class="bi-tag neuf">nouveau</span></div>
+  <div class="bi-co"><i class="bi-dot Chaîne"></i><div><b>Le Pain d'Antan</b><small>Gembloux · 12 km · chaîne · relevé 07/11 · 11 prix (top 10 du réseau)</small></div></div>
+  <div class="bi-gr">Plus loin</div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Pâtisserie Dumont (Bouge)</b><small>Namur · 25 km · artisan · relevé 07/11 · 1 prix (cougnou)</small></div><span class="vr-sp"></span><span class="bi-tag homo">homonyme</span></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Gerlache (Ciney)</b><small>Ciney · artisan · relevé 07/11 · 3 prix (cougnou, top 10 du réseau)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Chacolathé (Andenne)</b><small>Andenne · artisan · relevé 07/11 · 2 prix (galette des rois)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>B'YO &amp; Circomedie (Soleilmont)</b><small>Gilly · artisan · relevé 07/11 · 1 prix (cougnou)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Cocoricoop / Fournil du Loup</b><small>Ciney · artisan · relevé 07/11 · 1 prix (cougnou)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>eFarmz (Fernelmont)</b><small>Fernelmont · artisan · relevé 07/11 · 1 prix (cougnou)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Paysans-Artisans (Le pain de François)</b><small>Namur · artisan · relevé 07/11 · 1 prix (galette des rois)</small></div></div><div class="bi-co"><i class="bi-dot Artisan"></i><div><b>Boulangerie Lefevre (Marche)</b><small>Marche-en-Famenne · artisan · relevé 07/11 · 1 prix (galette des rois)</small></div></div><div class="bi-co"><i class="bi-dot Chaîne"></i><div><b>Panos</b><small>national · chaîne · relevé 07/11 · 2 prix (top 10 du réseau)</small></div></div>
+  <div class="bi-gr">Supermarchés</div><div class="bi-co"><i class="bi-dot GMS"></i><div><b>Carrefour, Colruyt, Aldi, Delhaize, Albert Heijn, Lidl, Match, Intermarché</b><small>prix nationaux · relevé 07/11 · 42 prix</small></div></div></div>
+  <div class="bi-note">18 concurrents relevés pour Sombreffe (benchmarks du 07/11), <b>aucun artisan à moins de 10 km</b> : Dumont et Partners sera le premier.</div></aside><div class="bi-cols d" style="grid-template-columns:1fr 360px">
+ <section class="bi-card"><h2 class="bi-h">Nouveau relevé par PDF <small>tarifs, folders, cartes de fêtes d’un concurrent</small></h2>
+  <div class="bi-sec">Le concurrent <span>— créé chez TFBuddy à l’encodage</span><code>POST /shops/{id}/benchmarks/competitors</code></div>
+  <div class="bi-grille"><label class="bi-ch">Nom<input class="bi-in" value="Dumont et Partners"></label><label class="bi-ch">Type<select class="bi-in"><option>Artisan</option></select></label><label class="bi-ch">Distance de Sombreffe<input class="bi-in" value="≈ 4 km"></label>
+   <label class="bi-ch l2">Adresse<input class="bi-in" value="Chaussée de Gembloux 37, 5140 Tongrinne (Sombreffe)"></label><label class="bi-ch">N° d’entreprise<input class="bi-in" value="BE 0465.380.462"></label>
+   <div class="bi-ch l2">Magasins qui le comparent<div class="bi-gch"><button class="on">Sombreffe</button><button>Gosselies</button><button>Corbais</button><button>Halle</button></div></div></div>
+  <div class="bi-info"><b>Homonyme :</b> « Pâtisserie Dumont (Bouge) », déjà suivie pour Sombreffe à 25 km, est une autre société (Namur). Le cockpit ne les fusionne pas : il retrouve un concurrent par son nom exact, et le n° d’entreprise départage.</div>
+  <div class="bi-sec">Les documents <span>— un PDF ou plusieurs ; un scan est lu comme une image</span></div>
+  <div class="bi-drop"><svg viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg><div><b>Glisser les PDF ici</b><small>ou <a href="#" style="color:var(--color-primary)">parcourir</a> · 20 Mo au plus par fichier · gardés dans le dossier privé du serveur, jamais servis sur le web</small></div></div>
+  <div class="bi-fics"><div class="bi-fic"><span class="ico-pdf">PDF</span><div><b class="bi-ex">dumont-tarif-2026.pdf</b><small>4 pages · 312 Ko · date lue : <span class="bi-ex">Tarif au 1er octobre 2026 (p. 1)</span></small></div>
+  <div class="bi-lu"><span class="ok">texte lu</span><span class="ok">33 lignes de prix</span><span>2 sans produit</span></div></div><div class="bi-fic"><span class="ico-pdf">PDF</span><div><b class="bi-ex">dumont-fetes-fin-annee.pdf</b><small>2 pages · 1 840 Ko · date lue : <span class="bi-ex">Commandes jusqu’au 20/12 (p. 1)</span></small></div>
+  <div class="bi-lu"><span class="ok">texte lu</span><span class="ok">6 lignes de prix</span></div></div><div class="bi-fic"><span class="ico-pdf">PDF</span><div><b class="bi-ex">folder-novembre-scan.pdf</b><small>1 page · 2 210 Ko · date lue : <span class="bi-ex">Novembre 2026 (p. 1)</span></small></div>
+  <div class="bi-lu"><span class="img">scan · lu par image</span><span class="ok">2 lignes de prix</span><span class="att">1 illisible</span></div></div></div>
+  <div class="bi-sec">Le relevé <span>— une observation datée, avec ses lignes</span><code>POST …/competitors/{id}/observations</code></div>
+  <div class="bi-grille"><label class="bi-ch">Date du relevé<input class="bi-in" value="10/11/2026"></label><label class="bi-ch">Prix lus<select class="bi-in"><option>TTC, tels qu’affichés</option></select></label><label class="bi-ch">Promotions<select class="bi-in"><option>prix promo + prix normal</option></select></label></div>
+  <div class="bi-pied"><span class="bi-note">44 lignes lues dans 3 PDF. Le même PDF déposé deux fois n’ajoute rien : il est reconnu à son empreinte.</span><span class="vr-sp" style="flex:1"></span><button class="rc-btn gris">Annuler</button><button class="rc-btn">Rapprocher avec nos produits →</button></div>
+ </section>
+ <aside class="bi-colle"><div class="bi-sec" style="margin:0">Ce que le cockpit a lu <span>— dumont-tarif-2026.pdf, p. 2</span></div><div class="bi-page"><h5>DUMONT & PARTNERS</h5><div class="s">Boulangerie – Pâtisserie · Tongrinne · Tarif au 1er octobre 2026</div>
+    <h6>Viennoiseries</h6><div class="ln vu"><span>Croissant pur beurre</span><i></i><span>1,40 €</span></div><div class="ln vu"><span>Pain au chocolat</span><i></i><span>1,60 €</span></div><div class="ln vu"><span>Couque suisse</span><i></i><span>1,90 €</span></div><div class="ln vu"><span>Couque au beurre</span><i></i><span>1,50 €</span></div><div class="ln vu"><span>Croissant aux amandes</span><i></i><span>2,30 €</span></div><div class="ln vu"><span>Escargot aux raisins</span><i></i><span>1,90 €</span></div><div class="ln vu"><span>Mini-viennoiseries (pièce)</span><i></i><span>0,80 €</span></div>
+    <div class="pd">dumont-tarif-2026.pdf · page 2 / 4</div></div>
+  <div class="bi-legende"><i style="background:rgba(47,93,138,.25)"></i>ligne de prix reconnue : libellé, format, prix, promo.</div>
+  <section class="bi-card"><div class="bi-sec" style="margin-top:0">Formats reconnus <span>— la base de comparaison</span></div><div class="bi-fmts">
+   <div><code>800 g</code><span>au kilo, face au poids de notre produit</span></div><div><code>Ø 26 cm</code><span>à surface égale, ramené à notre Ø</span></div>
+   <div><code>les 6</code><span>ramené à la pièce</span></div><div><code>6 pers.</code><span>à la part</span></div>
+   <div><code>4 + 1 offert</code><span>promo : prix promo et prix normal</span></div><div><code>−20 % le mercredi</code><span>promo datée</span></div>
+   <div><code>sans format</code><span>à la pièce</span></div></div></section></aside></div></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

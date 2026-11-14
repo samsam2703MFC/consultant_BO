@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="fr"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#faf7f2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Visite">
+<link rel="apple-touch-icon" href="../../../public/assets/img/logo.png">
+<title>Benchmark concurrents · import PDF — Cockpit CEO (maquette)</title>
+<!-- Chemins RELATIFS : l'application fonctionne à la racine d'un domaine
+     comme sous un sous-répertoire (ex. /consulant_bo/). -->
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/app.css">
+<link rel="stylesheet" href="../../../public/assets/css/verification.css">
+<link rel="stylesheet" href="bi.css">
+
+
+</head>
+<body>
+<div id="app">
+<div class="shell workspace" data-ecran="resultatJour">
+
+  <nav class="shell-rail sidebar" aria-label="Navigation principale">
+    <div class="sidebar__head">
+      <img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By">
+      
+    </div>
+    
+    <!-- Recherche globale. Elle cherche dans les DONNÉES, pas seulement dans le
+         nom des écrans : savoir quel écran porte « Citron Meringué » ou
+         « Vitrine 1 » supposait sinon de connaître le rangement. Chaque
+         résultat ouvre son écran ET y pose le filtre qui isole la ligne. -->
+    <div class="sidebar__search">
+      <input id="rail-q" type="search" value="" data-i="0" placeholder="Rechercher partout…" aria-label="Rechercher partout">
+      
+      
+    </div>
+
+    <div class="sidebar__groups">
+      
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Pilotage</div>
+          
+    <button data-h="1" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Résultat</span>
+      
+    </button>
+    <button data-h="2" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Performance</span>
+      
+    </button>
+    <button data-h="3" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Dashboard magasin ↗</span>
+      
+    </button><button class="sidebar__item is-active" aria-current="page"><svg class="ico" viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M4 7h16M4 7l-2.5 6a2.5 2.5 0 0 0 5 0zM20 7l-2.5 6a2.5 2.5 0 0 0 5 0z"></path></svg><span class="sidebar__item-label">Benchmark concurrents</span></button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Franchisés</div>
+          
+    <button data-h="4" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Fiche franchisé</span>
+      
+    </button>
+    <button data-h="5" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Scoring du trimestre</span>
+      
+    </button>
+      <button data-h="6" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Suivi journalier</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+      <button data-h="7" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Suivi de terrain</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Magasins</div>
+          
+    <button data-h="8" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse magasin</span>
+      
+    </button>
+    <button data-h="9" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Budget</span>
+      
+    </button>
+    <button data-h="10" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Jours creux</span>
+      
+    </button>
+    <button data-h="11" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Invendus et poubelle</span>
+      
+    </button>
+    <button data-h="12" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Plan de développement</span>
+      
+    </button>
+    <button data-h="13" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span class="sidebar__item-label">Scouting — où ouvrir</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Produits</div>
+          
+    <button data-h="14" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Catalogue</span>
+      
+    </button>
+    <button data-h="15" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Gamme · scoring</span>
+      
+    </button>
+    <button data-h="16" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Où ça se vend</span>
+      
+    </button>
+    <button data-h="17" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Dans le temps</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Centrale d’achat</div>
+          
+    <button data-h="18" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16v13H4zM9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2M3 12h18"></path></svg><span class="sidebar__item-label">Achats</span>
+      
+    </button>
+    <button data-h="19" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Facturation magasins</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Marque &amp; marketing</div>
+          
+    <button data-h="20" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagnes</span>
+      
+    </button>
+    <button data-h="21" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Offres et canaux</span>
+      
+    </button>
+    <button data-h="22" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Projets</span>
+      
+    </button>
+    <button data-h="23" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Fonds &amp; Royalties</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">ERP franchisé</div>
+          
+    <button data-h="24" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Démarchage</span>
+      
+    </button>
+    <button data-h="25" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection</span>
+      
+    </button>
+    <button data-h="26" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 22s7-6.2 7-12a7 7 0 1 0-14 0c0 5.8 7 12 7 12zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z"></path></svg><span class="sidebar__item-label">Prospection mobile</span>
+      
+    </button>
+    <button data-h="27" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h18v12H3zM8 20h8M12 16v4"></path></svg><span class="sidebar__item-label">Tablette vendeuses</span>
+      
+    </button>
+    <button data-h="28" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21v-1a6 6 0 0 1 12 0v1M19 8v6M22 11h-6"></path></svg><span class="sidebar__item-label">App employés ↗</span>
+      
+    </button>
+    <button data-h="29" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter</span>
+      
+    </button>
+    <button data-h="30" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H5.17L4 17.17V4zM22 2H2v22l4-4h16V2z"></path></svg><span class="sidebar__item-label">Newsletter magasin</span>
+      
+    </button>
+      <button data-h="31" class="sidebar__item" aria-expanded="false">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Gestion de production</span>
+        <span class="sidebar__chevron" aria-hidden="true">▸</span>
+      </button>
+      
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Contrôle</div>
+          
+    <button data-h="32" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Contrôle posts Facebook</span>
+      
+    </button>
+        </div>
+        <div class="sidebar__group">
+          <div class="sidebar__group-label">Administration</div>
+          
+    <button data-h="33" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11V7a5 5 0 0 1 10 0v4M5 11h14v10H5zM12 15v2"></path></svg><span class="sidebar__item-label">Paramètres</span>
+      
+    </button>
+    <button data-h="34" class="sidebar__item">
+      <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Journal &amp; diagnostic</span>
+      
+    </button>
+        </div>
+    </div>
+    <div class="sidebar__account">
+      <div class="sidebar__account-row">
+        <button data-h="35" title="Mon compte et le compte consultant" class="sidebar__account-open">
+          <span class="sidebar__account-who"></span>
+          <span class="sidebar__account-role"> · compte API à configurer</span>
+        </button>
+        
+      </div>
+      
+    </div>
+  </nav>
+  
+
+  <div class="workspace__main">
+    <header class="topbar shell-head">
+      <div>
+        <p class="topbar__kicker">Pilotage</p>
+        <h1>Benchmark concurrents</h1>
+      </div>
+      <div class="topbar__actions"><span class="bi-pill">Maquette · nos produits et prix : Sombreffe, lus le 14/11 · lignes Dumont : exemple, PDF pas encore reçus · rien n’est écrit</span>
+        
+        
+        
+      </div>
+    </header>
+  <main id="main-scroll" class="app__body app__body--wide">
+    <div class="shell-page">
+      
+
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+  <div class="bi"><div class="bi-modes"><button class="">Vue d’ensemble</button><button class="">Relevés</button><button class="on">Import PDF<b>nouveau</b></button><button class="">Vérification de l’API</button><span class="vr-sp"></span>
+  <span class="bi-mag">Magasin <select class="vr-sel"><option>Sombreffe</option></select> Concurrent <select class="vr-sel"><option>Dumont et Partners</option></select></span></div><ol class="bi-etapes"><li class="fait"><i>✓</i>Déposer les PDF</li><li class="on"><i>2</i>Rapprocher avec nos produits</li><li class=""><i>3</i>Encoder dans le benchmark</li></ol><div class="bi-cols d">
+ <section class="bi-card p0"><div class="bi-tete"><div><h2 class="bi-h" style="margin:0">Dumont et Partners → nos produits de Sombreffe <small>44 lignes lues dans 3 PDF · catalogue de Sombreffe : 482 produits actifs, prix lus le 14/11/2026</small></h2></div><span class="vr-sp" style="flex:1"></span>
+   <button class="rc-btn gris">← Documents</button><button class="rc-btn sec">Accepter les 25 sûres</button><button class="rc-btn">Encoder →</button></div>
+  <div class="vr-chips"><button class="on">Tout <b>44</b></button><button><i style="background:var(--vr-ok)"></i>Sûres <b>25</b></button><button><i style="background:#E8A33D"></i>À confirmer <b>13</b></button><button><i style="background:#7a5aa6"></i>Sans équivalent <b>3</b></button><button>Ignorées <b>2</b></button><button><i style="background:var(--vr-ko)"></i>Illisibles <b>1</b></button><button>Promos <b>2</b></button><span class="vr-sp" style="flex:1"></span><input class="vm-q" placeholder="Chercher une ligne ou un produit…"></div>
+  <table class="bi-t"><thead><tr><th class="g"></th><th class="g">Ligne du PDF<small>libellé tel quel</small></th><th>Prix Dumont<small>format lu</small></th><th class="g">Notre produit à Sombreffe<small>proposé · à changer d’un clic</small></th><th>Notre prix<small>TTC au panel</small></th><th class="g">Comparé<small>sur la même base</small></th><th>Écart<small>nous face à eux</small></th><th>Confiance<small>et état</small></th></tr></thead><tbody><tr class="grp"><td colspan="8">Pains<span>6 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain blanc 800 g</b><small>p. 1</small><small class="bi-nt">« blanc » ≈ Pain Doré ?</small></td>
+    <td><span class="bi-ex">3,30 €</span><small>800 g</small></td><td class="g"><div class="bi-choix conf"><div><b>Pain Doré</b><small>1200003 · Pain · 2 candidats</small></div></div></td><td>2,90 €<small>4,83 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 800 g / 600 g<small>eux 4,12 €/kg</small></td><td><span class="bi-ec plus">+17 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:74%"></i></span>74 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain gris 800 g</b><small>p. 1</small><small class="bi-nt">« gris » ≠ « demi-gris »</small></td>
+    <td><span class="bi-ex">3,40 €</span><small>800 g</small></td><td class="g"><div class="bi-choix conf"><div><b>Pain Demi-Gris</b><small>1200001 · Pain · 2 candidats</small></div></div></td><td>2,90 €<small>4,83 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 800 g / 600 g<small>eux 4,25 €/kg</small></td><td><span class="bi-ec plus">+14 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:81%"></i></span>81 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain 10 céréales 800 g</b><small>p. 1</small></td>
+    <td><span class="bi-ex">3,90 €</span><small>800 g</small></td><td class="g"><div class="bi-choix "><div><b>Pain 10 Céréales</b><small>1200002 · Pain</small></div></div></td><td>2,90 €<small>4,83 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 800 g / 600 g<small>eux 4,88 €/kg</small></td><td><span class="bi-ec egal">−1 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:95%"></i></span>95 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain aux noix 500 g</b><small>p. 1</small><small class="bi-nt">noix &amp; sésame chez nous</small></td>
+    <td><span class="bi-ex">4,60 €</span><small>500 g</small></td><td class="g"><div class="bi-choix conf"><div><b>Pain au Noix &amp; Sésame</b><small>1210001 · Pain Tradition</small></div></div></td><td>4,50 €<small>7,50 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 500 g / 600 g<small>eux 9,20 €/kg</small></td><td><span class="bi-ec moins">−18 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:78%"></i></span>78 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sans"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain de mie sans croûte</b><small>p. 1</small></td>
+    <td><span class="bi-ex">3,60 €</span><small></small></td><td class="g"><div class="bi-choix sans"><div><b>sans équivalent chez nous</b><small>écrit avec la catégorie seule</small></div></div></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st sans">Sans équivalent</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Baguette</b><small>p. 1</small></td>
+    <td><span class="bi-ex">1,90 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Baguette Tradition</b><small>1300003 · Petite Boulangerie</small></div></div></td><td>2,30 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+21 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:91%"></i></span>91 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="grp"><td colspan="8">Petits pains<span>4 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pistolets — les 6</b><small>p. 1</small></td>
+    <td><span class="bi-ex">4,20 €</span><small>les 6</small></td><td class="g"><div class="bi-choix "><div><b>Pistolet à l'Ancienne</b><small>1300001 · Petite Boulangerie</small></div></div></td><td>0,90 €</td><td class="g w" style="max-width:150px">les 6 → 0,70 € pièce</td><td><span class="bi-ec plus">+29 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:92%"></i></span>92 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Sandwichs mous — les 6</b><small>p. 1</small></td>
+    <td><span class="bi-ex">3,60 €</span><small>les 6</small></td><td class="g"><div class="bi-choix "><div><b>Sandwich</b><small>1300012 · Petite Boulangerie</small></div></div></td><td>1,00 €</td><td class="g w" style="max-width:150px">les 6 → 0,60 € pièce</td><td><span class="bi-ec plus">+67 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:90%"></i></span>90 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Cramique 500 g</b><small>p. 1</small></td>
+    <td><span class="bi-ex">5,90 €</span><small>500 g</small></td><td class="g"><div class="bi-choix "><div><b>Cramique</b><small>1300007 · Petite Boulangerie</small></div></div></td><td>5,10 €<small>14,57 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 500 g / 350 g<small>eux 11,80 €/kg</small></td><td><span class="bi-ec plus">+23 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:94%"></i></span>94 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Craquelin 500 g</b><small>p. 1</small></td>
+    <td><span class="bi-ex">6,50 €</span><small>500 g</small></td><td class="g"><div class="bi-choix "><div><b>Craquelin</b><small>1300008 · Petite Boulangerie</small></div></div></td><td>5,10 €<small>14,57 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 500 g / 350 g<small>eux 13,00 €/kg</small></td><td><span class="bi-ec plus">+12 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:94%"></i></span>94 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="grp"><td colspan="8">Viennoiseries<span>7 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Croissant pur beurre</b><small>p. 2</small></td>
+    <td><span class="bi-ex">1,40 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Croissant</b><small>1610006 · Viennoiserie Ind.</small></div></div></td><td>1,70 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+21 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:97%"></i></span>97 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pain au chocolat</b><small>p. 2</small></td>
+    <td><span class="bi-ex">1,60 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Pain au Chocolat</b><small>1610004 · Viennoiserie Ind.</small></div></div></td><td>1,80 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+13 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:99%"></i></span>99 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Couque suisse</b><small>p. 2</small></td>
+    <td><span class="bi-ex">1,90 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Suisse<span class="bi-appris">appris</span></b><small>1610002 · Viennoiserie Ind.</small></div></div></td><td>1,80 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec moins">−5 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:93%"></i></span>93 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Couque au beurre</b><small>p. 2</small></td>
+    <td><span class="bi-ex">1,50 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Couque au Beurre</b><small>6700170 · Viennoiserie Ind.</small></div></div></td><td>1,70 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+13 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:98%"></i></span>98 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Croissant aux amandes</b><small>p. 2</small></td>
+    <td><span class="bi-ex">2,30 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Croissant Amandes</b><small>1610001 · Viennoiserie Ind.</small></div></div></td><td>2,20 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec moins">−4 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:96%"></i></span>96 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf ouvert"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Escargot aux raisins</b><small>p. 2</small><small class="bi-nt">aucun escargot chez nous : le plus proche ?</small></td>
+    <td><span class="bi-ex">1,90 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Huit</b><small>1610005 · Viennoiserie Ind. · 2 candidats</small></div></div></td><td>1,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec egal">0 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:58%"></i></span>58 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="ouvert"><td></td><td colspan="7"><div class="bi-cands"><div class="bi-cand on"><span class="r"></span><div><b>Huit</b><small>1610005 · Viennoiserie Ind. · 1,90 € · écart 0 %</small></div></div><div class="bi-cand "><span class="r"></span><div><b>Tortillon</b><small>1610003 · Viennoiserie Ind. · <span style="color:var(--vr-ko)">sans prix au panel</span></small></div></div><div class="bi-cand"><span class="r"></span><div><b>Sans équivalent chez nous</b><small>la ligne entre au benchmark avec la catégorie Viennoiserie, sans comparaison</small></div></div>
+    <div class="bi-cand cherche"><input class="bi-in" placeholder="Chercher dans les 482 produits de Sombreffe…"><div class="bi-retenir"><span class="bi-cb on"></span>Retenir pour Dumont et Partners : « escargot aux raisins » = Huit</div></div></div></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Mini-viennoiseries (pièce)</b><small>p. 2</small><small class="bi-nt">assortiment : comparé au mini-croissant</small></td>
+    <td><span class="bi-ex">0,80 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Mini - Croissant</b><small>1620005 · Viennoiserie réduction</small></div></div></td><td>0,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+13 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:70%"></i></span>70 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="grp"><td colspan="8">Tartes Ø 26 cm (6-8 p.)<span>6 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte au riz</b><small>p. 3</small></td>
+    <td><span class="bi-ex">19,50 €</span><small>Ø 26 cm</small></td><td class="g"><div class="bi-choix "><div><b>Riz</b><small>6700246 · Tartes – Ø 28 cm</small></div></div></td><td>21,90 €</td><td class="g w" style="max-width:150px">Ø 26 → Ø 28 : 22,62 €</td><td><span class="bi-ec moins">−3 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:92%"></i></span>92 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte aux pommes</b><small>p. 3</small><small class="bi-nt">3 tartes aux pommes chez nous</small></td>
+    <td><span class="bi-ex">17,50 €</span><small>Ø 26 cm</small></td><td class="g"><div class="bi-choix conf"><div><b>Pommes Tranches</b><small>6700228 · Tartes – Ø 28 cm · 3 candidats</small></div></div></td><td>21,90 €</td><td class="g w" style="max-width:150px">Ø 26 → Ø 28 : 20,30 €</td><td><span class="bi-ec plus">+8 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:66%"></i></span>66 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte au fromage</b><small>p. 3</small></td>
+    <td><span class="bi-ex">18,50 €</span><small>Ø 26 cm</small></td><td class="g"><div class="bi-choix "><div><b>Fromage</b><small>6700233 · Tartes – Ø 28 cm</small></div></div></td><td>21,90 €</td><td class="g w" style="max-width:150px">Ø 26 → Ø 28 : 21,46 €</td><td><span class="bi-ec plus">+2 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:90%"></i></span>90 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte au sucre</b><small>p. 3</small><small class="bi-nt">notre Ø n’est pas au panel : à la pièce</small></td>
+    <td><span class="bi-ex">14,00 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Tarte Sucre Blanc</b><small>1131001 · Tartes au sucre</small></div></div></td><td>15,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+14 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:76%"></i></span>76 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte aux fruits frais (saison)</b><small>p. 3</small><small class="bi-nt">croûte ou tarte « plusieurs fruits » ?</small></td>
+    <td><span class="bi-ex">22,50 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Croûte aux fruits</b><small>1122001 · Croutes Fruits Frais · 2 candidats</small></div></div></td><td>21,50 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec moins">−4 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:61%"></i></span>61 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte frangipane</b><small>p. 3</small></td>
+    <td><span class="bi-ex">19,00 €</span><small>Ø 26 cm</small></td><td class="g"><div class="bi-choix "><div><b>Frangipane</b><small>6700285 · Tartes – Ø 28 cm</small></div></div></td><td>24,90 €</td><td class="g w" style="max-width:150px">Ø 26 → Ø 28 : 22,04 €</td><td><span class="bi-ec plus">+13 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:95%"></i></span>95 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="grp"><td colspan="8">Pâtisseries<span>8 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Éclair au chocolat</b><small>p. 4</small></td>
+    <td><span class="bi-ex">2,80 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>éclair chocolat</b><small>1540001 · Pâtisserie individuelle</small></div></div></td><td>3,30 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+18 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:98%"></i></span>98 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Javanais</b><small>p. 4</small></td>
+    <td><span class="bi-ex">4,20 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Javanais Ind.</b><small>1530001 · Entremets - Individuel</small></div></div></td><td>4,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+17 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:95%"></i></span>95 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Merveilleux</b><small>p. 4</small></td>
+    <td><span class="bi-ex">4,50 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Merveilleux</b><small>1530006 · Entremets - Individuel</small></div></div></td><td>4,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+9 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:97%"></i></span>97 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Misérable</b><small>p. 4</small></td>
+    <td><span class="bi-ex">4,20 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Misérable Ind.</b><small>1530002 · Entremets - Individuel</small></div></div></td><td>4,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+17 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:95%"></i></span>95 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Mousse au chocolat</b><small>p. 4</small></td>
+    <td><span class="bi-ex">3,20 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Mousse au chocolat</b><small>1540009 · Pâtisserie individuelle</small></div></div></td><td>3,50 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+9 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:94%"></i></span>94 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tiramisu</b><small>p. 4</small></td>
+    <td><span class="bi-ex">3,80 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Tiramisu</b><small>1540010 · Pâtisserie individuelle</small></div></div></td><td>3,50 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec moins">−8 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:99%"></i></span>99 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Gâteau d’anniversaire — la part</b><small>p. 4</small><small class="bi-nt">chocolat ou fruits ?</small></td>
+    <td><span class="bi-ex">4,80 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Gâteaux Anniversaire | Chocolat /personnes</b><small>1500005 · Pâtisserie · 2 candidats</small></div></div></td><td>5,50 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+15 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:72%"></i></span>72 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sans"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Pralines maison — le kg</b><small>p. 4</small><small class="bi-nt">pas de pralines au kilo chez nous</small></td>
+    <td><span class="bi-ex">58,00 €</span><small></small></td><td class="g"><div class="bi-choix sans"><div><b>sans équivalent chez nous</b><small>écrit sans produit</small></div></div></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st sans">Sans équivalent</span></td></tr><tr class="grp"><td colspan="8">Traiteur<span>2 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Sandwich jambon-fromage</b><small>p. 4</small><small class="bi-nt">notre baguette garnie est plus grande</small></td>
+    <td><span class="bi-ex">4,20 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Club</b><small>2300016 · Sandwiches garnis · 2 candidats</small></div></div></td><td>5,80 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+38 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:64%"></i></span>64 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Quiche lorraine (6 p.)</b><small>p. 4</small></td>
+    <td><span class="bi-ex">15,50 €</span><small></small></td><td class="g"><div class="bi-choix "><div><b>Quiche Lorraine</b><small>1410003 · Quiches</small></div></div></td><td>13,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec moins">−10 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:97%"></i></span>97 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="grp"><td colspan="8">Conditions<span>2 lignes · dumont-tarif-2026.pdf</span></td></tr><tr class="ign"><td class="g"><span class="bi-cb" style="opacity:.4"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Commandes 48 h à l’avance</b><small>p. 4</small></td>
+    <td>—<small></small></td><td class="g"><span class="bi-mu">pas un produit</span></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st ign">Ignorée</span></td></tr><tr class="ign"><td class="g"><span class="bi-cb" style="opacity:.4"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Livraison à domicile</b><small>p. 4</small></td>
+    <td><span class="bi-ex">5,00 €</span><small></small></td><td class="g"><span class="bi-mu">un service, pas un produit</span></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st ign">Ignorée</span></td></tr><tr class="grp"><td colspan="8">Saint-Nicolas<span>1 ligne · dumont-fetes-fin-annee.pdf</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Saint-Nicolas en chocolat 150 g</b><small>p. 1</small><small class="bi-nt">notre poids n’est pas au panel : à la pièce</small></td>
+    <td><span class="bi-ex">6,50 €</span><small></small></td><td class="g"><div class="bi-choix conf"><div><b>Saint Nicolas - Lait</b><small>4100017 · Noël</small></div></div></td><td>7,90 €</td><td class="g w" style="max-width:150px">à la pièce</td><td><span class="bi-ec plus">+22 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:80%"></i></span>80 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="grp"><td colspan="8">Noël &amp; Nouvel An<span>5 lignes · dumont-fetes-fin-annee.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Cougnou 250 g</b><small>p. 2</small></td>
+    <td><span class="bi-ex">4,50 €</span><small>250 g</small></td><td class="g"><div class="bi-choix "><div><b>Cougnou - Sucre</b><small>4100001 · Cougnou</small></div></div></td><td>2,90 €<small>13,18 €/kg</small></td><td class="g w" style="max-width:150px">au kg · 250 g / 220 g (estimé)<small>eux 18,00 €/kg</small></td><td><span class="bi-ec moins">−27 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:91%"></i></span>91 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Cougnou 500 g</b><small>p. 2</small><small class="bi-nt">notre prix : 0 € au panel</small></td>
+    <td><span class="bi-ex">8,50 €</span><small>500 g</small></td><td class="g"><div class="bi-choix conf"><div><b>Cougnou Nature - 400 g.</b><small>6700139 · Cougnou</small></div></div></td><td><span style="color:var(--vr-ko)">0,00 €</span><small>prix manquant au panel</small></td><td class="g w" style="max-width:150px">pas de comparaison</td><td></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:88%"></i></span>88 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="conf"><td class="g"><span class="bi-cb"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Bûche moka 6 pers.</b><small>p. 2</small><small class="bi-nt">pas de bûche moka : chocolat ou praliné ?</small></td>
+    <td><span class="bi-ex">28,00 €</span><small>6 parts</small></td><td class="g"><div class="bi-choix conf"><div><b>Bûche Chocolat - 4/6 personnes</b><small>4100007 · Noël · 2 candidats</small></div></div></td><td>19,90 €<small>3,98 €/part</small></td><td class="g w" style="max-width:150px">à la part · 6 p. / 5 p.<small>eux 4,67 €/part</small></td><td><span class="bi-ec moins">−15 %</span></td><td class="bi-cf"><div class="bi-conf conf"><span><i style="width:69%"></i></span>69 %</div><span class="bi-st conf">À confirmer</span></td></tr><tr class="sans"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Bûche glacée 6 pers.</b><small>p. 2</small><small class="bi-nt">nos glaces Rawette n’ont pas de bûche</small></td>
+    <td><span class="bi-ex">32,00 €</span><small></small></td><td class="g"><div class="bi-choix sans"><div><b>sans équivalent chez nous</b><small>écrit sans produit</small></div></div></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st sans">Sans équivalent</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Galette des rois frangipane Ø 22 cm</b><small>p. 2</small></td>
+    <td><span class="bi-ex">17,50 €</span><small>Ø 22 cm</small></td><td class="g"><div class="bi-choix "><div><b>Galette Frangipane</b><small>4100013 · Noël</small></div></div></td><td>19,90 €</td><td class="g w" style="max-width:150px">Ø 22 → Ø 24 : 20,83 €</td><td><span class="bi-ec moins">−4 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:92%"></i></span>92 %</div><span class="bi-st sur">Sûre</span></td></tr><tr class="grp"><td colspan="8">Promos de novembre<span>3 lignes · folder-novembre-scan.pdf</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">4 croissants + 1 offert</b><small>p. 1</small></td>
+    <td><span class="bi-ex">5,60 €</span><small>les 5</small></td><td class="g"><div class="bi-choix "><div><b>Croissant</b><small>1610006 · Viennoiserie Ind.</small></div></div></td><td>1,70 €</td><td class="g w" style="max-width:150px">promo · 1,12 € pièce</td><td><span class="bi-ec plus">+52 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:89%"></i></span>89 %</div><span class="bi-st sur">Sûre</span><span class="bi-st promo">promo</span></td></tr><tr class="sur"><td class="g"><span class="bi-cb on"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">Tarte au riz −20 % le mercredi</b><small>p. 1</small></td>
+    <td><span class="bi-ex">15,60 €</span><small>Ø 26 cm</small></td><td class="g"><div class="bi-choix "><div><b>Riz</b><small>6700246 · Tartes – Ø 28 cm</small></div></div></td><td>21,90 €</td><td class="g w" style="max-width:150px">promo · normal 19,50 €</td><td><span class="bi-ec plus">+21 %</span></td><td class="bi-cf"><div class="bi-conf sur"><span><i style="width:90%"></i></span>90 %</div><span class="bi-st sur">Sûre</span><span class="bi-st promo">promo</span></td></tr><tr class="illi"><td class="g"><span class="bi-cb" style="opacity:.4"></span></td><td class="g nom w" style="min-width:170px"><b class="bi-ex">C?uque … 1,?0 €</b><small>p. 1</small></td>
+    <td>—<small></small></td><td class="g"><span class="bi-mu">scan flou : à relire sur le PDF</span></td><td></td><td class="g w" style="max-width:150px"></td><td></td><td class="bi-cf"><span class="bi-st illi">Illisible</span></td></tr></tbody></table>
+ </section>
+ <aside class="bi-colle"><div class="bi-sec" style="margin:0">La ligne ouverte, dans son PDF</div><div class="bi-page"><h5>DUMONT & PARTNERS</h5><div class="s">Boulangerie – Pâtisserie · Tongrinne · Tarif au 1er octobre 2026</div>
+    <h6>Viennoiseries</h6><div class="ln vu"><span>Croissant pur beurre</span><i></i><span>1,40 €</span></div><div class="ln vu"><span>Pain au chocolat</span><i></i><span>1,60 €</span></div><div class="ln vu"><span>Couque suisse</span><i></i><span>1,90 €</span></div><div class="ln vu"><span>Couque au beurre</span><i></i><span>1,50 €</span></div><div class="ln vu"><span>Croissant aux amandes</span><i></i><span>2,30 €</span></div><div class="ln hl"><span>Escargot aux raisins</span><i></i><span>1,90 €</span></div><div class="ln vu"><span>Mini-viennoiseries (pièce)</span><i></i><span>0,80 €</span></div>
+    <div class="pd">dumont-tarif-2026.pdf · page 2 / 4</div></div>
+  <section class="bi-card"><div class="bi-sec" style="margin-top:0">Comment le cockpit rapproche</div><div class="bi-algo">
+   <div><i>1</i><span><b>Mémoire.</b> Une correspondance déjà confirmée pour ce concurrent, puis pour le réseau, passe d’office (« couque suisse » = Suisse).</span></div>
+   <div><i>2</i><span><b>Libellé.</b> Mots normalisés (accents, pluriels, « couque », « ind. », « pur beurre ») comparés aux 482 produits actifs de Sombreffe.</span></div>
+   <div><i>3</i><span><b>Format.</b> Poids, Ø, pièces ou parts lus dans la ligne : la comparaison se fait au kilo, à surface égale, à la pièce ou à la part.</span></div>
+   <div><i>4</i><span><b>Rubrique.</b> La catégorie de notre produit doit coller à la rubrique du PDF (« Tartes », « Viennoiseries »).</span></div>
+   <div><i>✓</i><span><b>Sûre</b> à partir de 90 % : cochée d’office. En dessous : <b>à confirmer</b>. Rien n’est écrit sans votre clic sur « Encoder ».</span></div></div></section></aside></div></div>
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+      
+    </div>
+  </main>
+  </div>
+
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  
+</div></div>
+
+
+
+
+
+</body></html>

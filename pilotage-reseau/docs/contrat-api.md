@@ -2144,6 +2144,100 @@ par des noms français). Dans la catégorie Tartes, les anciennes références p
 nouvelles « nouvelles ». Le total de la catégorie, lui, est juste. Pour les relier, il faudrait une table de
 correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`).
 
+### `/tresorerie/*` — l'onglet Trésorerie du dashboard magasin : le plan de trésorerie semaine par semaine (14/11/2026)
+
+    GET  /tresorerie/references?shop=4&debut=2026-11-16
+    GET  /tresorerie/plan?shop=4
+    POST /tresorerie/plan  { "shop": "4", "version": 3, "donnees": { … } | null }
+
+Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
+L'Atelier By » (Sombreffe, tiré de son fichier Excel), avec la reprise des chiffres de l'année passée, du budget
+validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/tresorerie.php`,
+`public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
+
+**Les repères** (`GET /tresorerie/references`, lourd : le dashboard le demande avec `_cache=600`, `rafraichir=1` sur
+« ↻ Relire »). `debut` est le premier lundi du plan (un autre jour est ramené à son lundi ; absent : le lundi proposé,
+voir plus bas). Le plan va jusqu'au dernier lundi de l'année où tombe `debut` + 26 semaines (ouvert le 16/11/2026 :
+jusqu'au 27/12/2027, dimanche 02/01/2028, 59 semaines comme le modèle).
+
+```json
+{ "shop": "4", "aujourdhui": "2026-11-14", "debut": "2026-11-16", "fin": "2027-12-27", "dernierJour": "2028-01-02",
+  "semaines": [ { "du": "2026-11-16", "n1": 12469.65, "budget": 13791.04, "budgetSource": "budget", "budgetProfil": "n1",
+                  "budgetJours": 7, "realise": null, "complet": false } ],
+  "mois": [ { "ym": "2026-11", "realise": 28863.07, "complet": false, "avantPlan": 28863.07, "n1": 58303.6,
+              "budget": 60900, "budgetSource": "budget" } ],
+  "tendance": { "semaines": 13, "ca": 168091.6, "n1": 154896.55, "pct": 8.5 },
+  "budgets": [ { "annee": 2026, "fiche": true, "valideLe": "2026-01-20", "moisBudget": 12, "moisTheorique": 0, "total": 684400 } ],
+  "taux": { "matiere": 40, "personnel": 33, "fraisGeneraux": 13.5, "matiereDuBudget": true },
+  "charges": [ { "categorie": "Frais d’occupation", "poste": "Loyer", "pct": 7, "matiere": false } ],
+  "sources": ["panel"], "premiereVente": "2024-11-03" }
+```
+
+- **Ventes** : CA TTC encaissé de chaque jour, le panel (`margin-heatmap`, `vsPanelJours`, mois clos gravés), la copie
+  de caisse pour un mois que le panel n'a pas. Une lecture couvre tout : de janvier de l'année d'avant le plan (ou deux
+  ans avant son premier mois) à aujourd'hui.
+- **`semaines`** : une par lundi du plan. `n1` = la même semaine décalée de 364 jours (un lundi face à un lundi),
+  entière et passée, sinon null. `realise` = le CA de la semaine à ce jour (null si elle n'a pas commencé) ; `complet`
+  = la semaine est close : l'écran prend alors le réalisé à la place de la prévision. `budget` = la somme des budgets
+  de ses jours (voir ci-dessous), extrapolée à sept jours quand quatre au moins sont budgétés (`budgetJours`), null
+  sinon ; `budgetProfil` = `n1`, `n2` ou `egal`.
+- **Budget d'un jour** : le budget du mois (`ceo_shop_month_perf.revenue_budget`, à défaut `ca_theorique`, comme
+  `/visites/budget`) réparti au profil des mêmes jours 364 jours plus tôt, à défaut 728, à défaut à parts égales. Un
+  profil ne sert que s'il est entièrement passé et qu'au moins dix de ses jours ont vendu ; un jour fermé l'an passé
+  reçoit zéro.
+- **`mois`** : de janvier de l'année du premier lundi à décembre de celle du dernier. `n1` = le mois civil entier un an
+  plus tôt (passé, sinon null) ; `avantPlan` = le réalisé des jours du mois qui précèdent le premier lundi (l'écran y
+  ajoute les ventes du plan : l'atterrissage du mois).
+- **`tendance`** : les 13 dernières semaines closes face à leur N-1 (celles qui ont les deux, 4 au moins), le repère de
+  la croissance à appliquer à l'année passée.
+- **`budgets`** : chaque exercice du plan, sa fiche (`ceo_shop_budget`), sa date de validation, ses mois budgétés ou au
+  CA théorique. **`taux`** : `seuilsCharges()` (matière de Budget › Paramètres, personnel et frais généraux de la table
+  KPI). **`charges`** : les postes de `budgetCharges` à taux non nul (le % validé, à défaut le % réseau ; `matiere` =
+  la catégorie que la marge brute retranche).
+
+**Le plan** (`GET /tresorerie/plan`) : `{ shop, plan, version, majLe, debutPropose }`. `plan` = null tant que rien n'est
+enregistré (version 0) ; `debutPropose` = le lundi de la semaine, ou le suivant le samedi et le dimanche. Le plan est
+le format `v: 2` de `tresorerie.js` :
+
+```json
+{ "v": 2, "debut": "2026-11-16", "base": "budget", "croissance": 0, "startCash": 8250, "coussin": 5000, "plafond": 0.4,
+  "ventes": { "2026-11-23": 16000 }, "ponct": {}, "reel": { "2026-11-16": 9120 },
+  "fournisseurs": [ { "id": "k…", "nom": "Fournisseur A", "pct": 0.35, "montants": { "2026-11-16": 4800 } } ],
+  "paiements": [ { "id": "k…", "libelle": "Loyer", "cat": "Frais fixes", "montant": 4600, "freq": "Chaque mois", "sem": 2,
+                   "debut": "", "fin": "", "note": "" } ],
+  "hors": [ { "id": "k…", "libelle": "Factures fournisseurs impayées", "montant": 12000, "note": "" } ] }
+```
+
+Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). `base` = `budget`
+ou `n1` ; `croissance` en % appliqué à l'année passée. Facultatifs, gardés tels quels : `magasin` (pour quel magasin le
+plan a été fait : l'import dans un autre demande confirmation), `source` (d'où il vient, affiché après l'import),
+`startCashNote` (l'aide du cash de départ, effacée dès qu'un solde est tapé). L'écran importe un plan à ce format
+(« Importer un plan ») : les chiffres de l'ancien fichier de Sombreffe, tirés du modèle, passent par là — le dépôt
+étant public, ils n'y sont pas versés.
+
+**L'écriture** (`POST /tresorerie/plan`) : `version` = celle qu'on a lue. Le plan change (`version` + 1, `majLe`), ou
+**409** sans rien écrire si un autre écran l'a enregistré entre-temps — la réponse porte alors le plan tel qu'il est
+(`{ error, plan, version, majLe }`) ; l'écran le dit et propose de le reprendre. `donnees: null` efface le plan
+(« Repartir de zéro »). 422 : format autre que `v: 2`, premier jour qui n'est pas un lundi, plus de 15 fournisseurs, 50
+paiements ou 50 dettes, plus de 600 000 octets. Table : `pil_tresorerie_plan` (`shop_id`, `donnees` JSON, `version`,
+`maj_le`), créée au premier appel, au préfixe du portail Pilotage.
+
+**Accès** (src/acces.php) : `/tresorerie` est un écran de magasin (`ACCES_FRANCHISE`). Chaque franchisé a son propre
+plan : connecté par le code de son magasin ou par la console, il ne lit et n'écrit que le plan de **ses** magasins
+(`shop` de l'adresse et du corps vérifiés, 403 sinon) ; le siège les voit tous.
+
+**L'écran** (onglet Trésorerie, après Année) : le modèle, onglet pour onglet — Plan (routine du dimanche, décision des
+4 semaines à venir, repères, cash de fin de semaine, la grille semaine par semaine, pilotage, dettes hors plan),
+Fournisseurs, Paiements, Mode d'emploi — plus « N-1, budget, réalisé » : la base des ventes prévues (budget validé ou
+année passée + croissance), l'état du budget de chaque exercice, et chaque mois le réalisé, le budget, l'atteinte,
+le N-1, l'évolution et l'atterrissage (réalisé avant le plan, puis plan). Dans la grille, sous « Encaissements », trois
+lignes de repère : réalisé en caisse, budget validé, même semaine N-1. Un plan neuf est proposé sans être enregistré :
+base des ventes (le budget s'il couvre au moins la moitié des semaines que couvre l'année passée), coussin de 40 % d'une
+semaine de ventes, un fournisseur au taux matière du budget, un paiement mensuel par poste de charges du budget (hors
+matière et amortissements) et la paie au taux personnel si le budget n'en a pas ; le solde de départ, la TVA, l'ONSS et
+les dettes restent à saisir. Chaque saisie s'enregistre 0,7 s plus tard. Au téléphone, `?vue=tresorerie` retombe sur le
+jour, comme les autres onglets du bureau.
+
 ### `/analyse/produits/magasin` — la fiche d'un produit dans le dashboard d'un magasin
 
     GET /analyse/produits/magasin?pid=3210004&shop=4&mois=1|3|12
