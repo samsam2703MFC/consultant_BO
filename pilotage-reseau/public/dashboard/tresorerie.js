@@ -100,10 +100,12 @@
     });
     const cats = {}; CATS.forEach(k => { cats[k] = Array(N).fill(0); });
     const payTot = d.paiements.map(p => { let t = 0; if (!cats[p.cat]) { return 0; } W.forEach((w, i) => { const a = paieLaSemaine(p, w); cats[p.cat][i] += a; t += a; }); return t; });
-    const supEst = d.fournisseurs.map(s => W.map((w, i) => s.montants[w.du] == null ? (+s.pct || 0) * ventes[i] : null));
-    const march = W.map((w, i) => { let fixe = 0, p = 0; d.fournisseurs.forEach(s => { const a = s.montants[w.du]; if (a == null) { p += (+s.pct || 0); } else { fixe += +a; } }); return fixe + Math.round(p * ventes[i]); });
+    // L'estimation d'une semaine sans montant tapé (14/11/2026) : un % des ventes prévues, ou un montant fixe par semaine.
+    const estime = (s, i) => s.mode === 'fixe' ? (+s.fixe || 0) : (+s.pct || 0) * ventes[i];
+    const supEst = d.fournisseurs.map(s => W.map((w, i) => s.montants[w.du] == null ? estime(s, i) : null));
+    const march = W.map((w, i) => { let fixe = 0, p = 0; d.fournisseurs.forEach(s => { const a = s.montants[w.du]; if (a != null) { fixe += +a; } else if (s.mode === 'fixe') { fixe += +s.fixe || 0; } else { p += (+s.pct || 0); } }); return fixe + Math.round(p * ventes[i]); });
     const supReel = W.map(w => d.fournisseurs.reduce((t, s) => t + (s.montants[w.du] == null ? 0 : +s.montants[w.du]), 0));
-    const supTot = d.fournisseurs.map(s => { let fixe = 0, es = 0; W.forEach((w, i) => { if (s.montants[w.du] == null) { es += ventes[i]; } else { fixe += +s.montants[w.du]; } }); return fixe + Math.round((+s.pct || 0) * es); });
+    const supTot = d.fournisseurs.map(s => { let fixe = 0, es = 0; W.forEach((w, i) => { if (s.montants[w.du] != null) { fixe += +s.montants[w.du]; } else if (s.mode === 'fixe') { fixe += +s.fixe || 0; } else { es += ventes[i]; } }); return fixe + Math.round((+s.pct || 0) * es); });
     const ponct = W.map(w => +d.ponct[w.du] || 0);
     const reel = W.map(w => d.reel[w.du] == null ? null : +d.reel[w.du]);
     // Un montant saisi dans le plan pour UNE semaine (double-clic, 14/11/2026) remplace le calcul de cette semaine-là
@@ -175,7 +177,7 @@
     const T = R.taux || {};
     const mat = T.matiere > 0 ? T.matiere / 100 : 0.4;
     d.plafond = +mat.toFixed(3);
-    d.fournisseurs = [{ id: uid(), nom: 'Tous fournisseurs', pct: +mat.toFixed(3), montants: {} }];
+    d.fournisseurs = [{ id: uid(), nom: 'Tous fournisseurs', mode: 'pct', pct: +mat.toFixed(3), fixe: 0, montants: {} }];
     const moisCA = moy * 52 / 12;
     const src = d.base === 'budget' ? 'budget validé' : 'année passée';
     if (moisCA > 0) {
@@ -204,7 +206,7 @@
     const d = clone(objet(p));
     d.v = 2;
     ['ventes', 'ponct', 'reel'].forEach(k => { d[k] = objet(d[k]); });
-    d.fournisseurs = liste(d.fournisseurs).map(s => ({ id: s.id || uid(), nom: s.nom || '', pct: +s.pct || 0, montants: objet(s.montants) }));
+    d.fournisseurs = liste(d.fournisseurs).map(s => ({ id: s.id || uid(), nom: s.nom || '', mode: s.mode === 'fixe' ? 'fixe' : 'pct', pct: +s.pct || 0, fixe: +s.fixe || 0, montants: objet(s.montants) }));
     d.paiements = liste(d.paiements).map(p2 => ({ id: p2.id || uid(), libelle: p2.libelle || '', cat: CATS.includes(p2.cat) ? p2.cat : 'Frais fixes', montant: +p2.montant || 0,
       freq: FREQS.includes(p2.freq) ? p2.freq : 'Chaque mois', sem: p2.sem == null ? null : +p2.sem, debut: p2.debut || '', fin: p2.fin || '', note: p2.note || '' }));
     d.hors = liste(d.hors).map(h => ({ id: h.id || uid(), libelle: h.libelle || '', montant: h.montant == null ? null : +h.montant, note: h.note || '' }));
@@ -530,19 +532,21 @@
   }
 
   function rendFournisseurs(C, d) {
-    const W = C.W, F = fenetre(C), LARG = 304, plaf = +d.plafond || 0;
-    let h = `<p class="tr-intro">Montant à PAYER à chaque fournisseur, semaine par semaine (€ TTC). Case vide = le plan compte ventes prévues × % du fournisseur. Dès que tu connais le montant réel, tape-le dans la case (0 si tu ne paies rien). Le total alimente la ligne Marchandises du plan.</p>`;
+    const W = C.W, F = fenetre(C), LARG = 380, plaf = +d.plafond || 0;
+    let h = `<p class="tr-intro">Montant à PAYER à chaque fournisseur, semaine par semaine (€ TTC). Case vide = l’estimation du fournisseur : un % des ventes prévues, ou un montant fixe par semaine. Dès que tu connais le montant réel, tape-le dans la case (0 si tu ne paies rien). Le total alimente la ligne Marchandises du plan.</p>`;
     h += `<div class="tr-carte tr-carte-t">${barreFenetre(C, F, 'Achats fournisseurs par semaine')}<div class="tr-defil"><div class="tr-grille">`;
-    h += entete(C, F, LARG, '<span class="tr-fl"><span title="Un fournisseur par ligne, 15 au plus.">Fournisseur</span><span title="La part de tes ventes TTC que tu paies en moyenne à ce fournisseur. Elle estime les semaines sans montant réel.">% ventes</span></span>', 'Total période');
+    h += entete(C, F, LARG, '<span class="tr-fl"><span title="Un fournisseur par ligne, 15 au plus.">Fournisseur</span><span title="Ce que tu paies à ce fournisseur les semaines sans montant tapé : un % de tes ventes TTC, ou un montant fixe par semaine. Choisis % ou € sur la ligne.">Estimation</span></span>', 'Total période');
     d.fournisseurs.forEach(s => {
       const si = d.fournisseurs.indexOf(s);
-      h += `<div class="tr-r"><div class="tr-lab tr-lab-f" style="width:${LARG}px"><button type="button" class="tr-x" data-tra="delF:${esc(s.id)}" title="Supprimer ce fournisseur">×</button><input class="tr-txt" data-trtxt="f:${esc(s.id)}:nom" value="${esc(s.nom)}" placeholder="Nom du fournisseur">${champ('fp:' + s.id, s.pct, { cls: 'tr-in tr-in-pct', edit: v => v == null ? '' : String(+(v * 100).toFixed(2)).replace('.', ','), aff: v => pct(+v || 0) })}</div>`;
+      h += `<div class="tr-r"><div class="tr-lab tr-lab-f" style="width:${LARG}px"><button type="button" class="tr-x" data-tra="delF:${esc(s.id)}" title="Supprimer ce fournisseur">×</button><input class="tr-txt" data-trtxt="f:${esc(s.id)}:nom" value="${esc(s.nom)}" placeholder="Nom du fournisseur"><span class="tr-mode" role="group" aria-label="Estimation en % des ventes ou en montant fixe">${[['pct', '%', 'Un % des ventes prévues de la semaine'], ['fixe', '€', 'Un montant fixe chaque semaine']].map(([m, l, t]) => `<button type="button" class="${(m === 'fixe') === (s.mode === 'fixe') ? 'on' : ''}" data-tra="fmode:${esc(s.id)}:${m}" title="${t}">${l}</button>`).join('')}</span>${s.mode === 'fixe'
+        ? champ('ff:' + s.id, s.fixe, { cls: 'tr-in tr-in-pct', aff: v => n(+v || 0) + ' €', titre: 'Montant fixe payé chaque semaine (€ TTC)' })
+        : champ('fp:' + s.id, s.pct, { cls: 'tr-in tr-in-pct', edit: v => v == null ? '' : String(+(v * 100).toFixed(2)).replace('.', ','), aff: v => pct(+v || 0), titre: 'Part des ventes TTC de la semaine' })}</div>`;
       F.vis.forEach(i => { const du = W[i].du, a = s.montants[du], est = C.supEst[si][i]; h += `<div class="tr-c${i === C.cur ? ' cur' : ''}">${champ('fa:' + s.id + ':' + du, a, { cls: 'tr-in' + (a == null ? ' est' : ''), aff: v => v == null ? '≈ ' + n(est) : n(v) })}</div>`; });
       h += `<div class="tr-tot">${n(C.supTot[si])}</div></div>`;
     });
     const sV = C.ventes.reduce((a, b) => a + b, 0), sM = C.march.reduce((a, b) => a + b, 0);
     const som = [
-      { l: 'Total achats', s: pct(d.fournisseurs.reduce((t, x) => t + (+x.pct || 0), 0)), cls: 'g6', bord: 'b-fort', t: n(sM), c: i => `<div class="tr-v g6">${n(C.march[i])}</div>` },
+      { l: 'Total achats', s: [d.fournisseurs.some(x => x.mode !== 'fixe') ? pct(d.fournisseurs.filter(x => x.mode !== 'fixe').reduce((t, x) => t + (+x.pct || 0), 0)) : '', d.fournisseurs.some(x => x.mode === 'fixe') ? n(d.fournisseurs.filter(x => x.mode === 'fixe').reduce((t, x) => t + (+x.fixe || 0), 0)) + ' €/sem.' : ''].filter(Boolean).join(' + '), cls: 'g6', bord: 'b-fort', t: n(sM), c: i => `<div class="tr-v g6">${n(C.march[i])}</div>` },
       { l: 'En % des ventes', s: '', cls: '', bord: '', t: pct(sV ? sM / sV : 0), c: i => { const p = C.ventes[i] ? C.march[i] / C.ventes[i] : 0; return `<div class="tr-v${audela(p, plaf) ? ' bas' : ''}">${pct(p)}</div>`; } },
       { l: 'dont montants réels saisis', s: '', cls: '', bord: '', t: n(C.supReel.reduce((a, b) => a + b, 0)), c: i => `<div class="tr-v mu">${C.supReel[i] ? n(C.supReel[i]) : '–'}</div>` }
     ];
@@ -726,7 +730,7 @@
       <div class="tr-k">Les couleurs</div>
       <div class="tr-def tr-def-c"><span class="tr-ex abr">6 200</span><span>Un chiffre réel que toi seul connais : solde bancaire du dimanche, cash de départ, coussin de sécurité.</span>
       <span class="tr-ex">14 000</span><span>Une prévision que tu modifies : ventes, montants fournisseurs, paiements ponctuels.</span>
-      <span class="tr-ex est">≈ 14 000</span><span>Une estimation : la base (budget ou N-1) ou le % du fournisseur, tant que tu n’as rien tapé.</span>
+      <span class="tr-ex est">≈ 14 000</span><span>Une estimation : la base (budget ou N-1) ou l’estimation du fournisseur (un % des ventes ou un montant fixe par semaine), tant que tu n’as rien tapé.</span>
       <span class="tr-ex reel">12 840</span><span>Le réel de la caisse : une semaine close.</span>
       <span class="tr-ex nu">8 500</span><span>Un calcul automatique. Double-clic dessus pour le remplacer, cette semaine seulement ; les totaux, eux, se corrigent par les cases saisies.</span>
       <span class="tr-ex force">8 200</span><span>Un montant saisi au double-clic pour cette semaine seulement, à la place du calcul.</span>
@@ -753,6 +757,7 @@
     if (k === 'p') { return maj(d => { if (!v) { delete d.ponct[a]; } else { d.ponct[a] = v; } }); }
     if (k === 'r') { return maj(d => { if (v == null) { delete d.reel[a]; } else { d.reel[a] = v; } }); }
     if (k === 'fp') { return maj(d => { const s = d.fournisseurs.find(x => x.id === a); if (s) { s.pct = v == null ? 0 : v / 100; } }); }
+    if (k === 'ff') { return maj(d => { const s = d.fournisseurs.find(x => x.id === a); if (s) { s.fixe = v == null ? 0 : v; } }); }
     if (k === 'fa') { return maj(d => { const s = d.fournisseurs.find(x => x.id === a); if (s) { if (v == null) { delete s.montants[b]; } else { s.montants[b] = v; } } }); }
     if (k === 'pa') { return maj(d => { const p = d.paiements.find(x => x.id === a); if (p) { p.montant = v == null ? 0 : v; } }); }
     if (k === 'h') { return maj(d => { const x = d.hors.find(y => y.id === a); if (x) { x.montant = v; } }); }
@@ -778,7 +783,8 @@
     if (k === 'fen') { S.fen = a; S.decal = null; return rendre(); }
     if (k === 'nav') { S.decal = +a === 0 ? null : F.borne(F.decal + (+a) * F.nW); return rendre(); }
     if (k === 'barre') { S.decal = F.borne(+a - (F.nW >= C.N ? 0 : 1)); return rendre(); }
-    if (k === 'addF') { return maj(d => { if (d.fournisseurs.length < 15) { d.fournisseurs.push({ id: uid(), nom: '', pct: 0, montants: {} }); } }); }
+    if (k === 'fmode') { const [id, m] = a.split(':'); return maj(d => { const s = d.fournisseurs.find(x => x.id === id); if (s) { s.mode = m === 'fixe' ? 'fixe' : 'pct'; } }); }
+    if (k === 'addF') { return maj(d => { if (d.fournisseurs.length < 15) { d.fournisseurs.push({ id: uid(), nom: '', mode: 'pct', pct: 0, fixe: 0, montants: {} }); } }); }
     if (k === 'delF') { return maj(d => { d.fournisseurs = d.fournisseurs.filter(x => x.id !== a); }); }
     if (k === 'addP') { return maj(d => { if (d.paiements.length < 50) { d.paiements.push({ id: uid(), libelle: '', cat: 'Frais fixes', montant: 0, freq: 'Chaque mois', sem: 1, debut: '', fin: '', note: '' }); } }); }
     if (k === 'delP') { return maj(d => { d.paiements = d.paiements.filter(x => x.id !== a); }); }
