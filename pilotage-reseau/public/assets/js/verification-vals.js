@@ -18,7 +18,7 @@ import { gesteDe, valsLigneOuverte, valsRecentes, valsRegistre, valsEdition, ouv
 const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 }).replace(/[\u202f\u00a0]/g, '\u00a0');
 const fE = (n, d) => n == null ? '—' : nf(n, d) + ' €';
 const pc = (n, d) => n == null ? '—' : nf(n, d == null ? 1 : d) + ' %';
-const CLASSES = { sans: 'pb-sans', form: 'pb-form', vide: 'pb-vide', prix: 'pb-prix', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
+const CLASSES = { sans: 'pb-sans', form: 'pb-form', vide: 'pb-vide', prix: 'pb-prix', tarif: 'pb-tarif', inv: 'pb-inv', reseau: 'pb-reseau', unite: 'pb-unite', rend: 'pb-rend', port: 'pb-port', orph: 'pb-orph' };
 const jour = s => { const d = new Date(String(s || '').slice(0, 10) + 'T12:00:00'); return isNaN(d) ? null : d; };
 const jjmm = s => { const d = jour(s); return d ? String(d.getDate()).padStart(2, '0') + '/' + String(d.getMonth() + 1).padStart(2, '0') : ''; };
 const heure = s => { const d = new Date(s || ''); return isNaN(d) ? '' : String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
