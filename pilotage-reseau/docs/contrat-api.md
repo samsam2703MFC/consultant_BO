@@ -3976,6 +3976,9 @@ maquette `docs/maquettes/fiche-matiere`. Décision du 14/11 : **tout modifiable,
   texte ; booléens en 0/1 si le panel les rend ainsi), relus et constatés ; puis les prix des magasins (geste `prix`).
   Si les paramètres ne prennent pas, les prix ne partent pas. Le prix général est `reference_unit_price_net`, le prix
   conseillé `suggested_base_unit_price_net` (par unité de base). « Annuler » remet l'avant (même route).
+- **La TVA** (14/11/2026) : mesuré en ligne, `GET /materials/{id}` ne la rend pas. Elle se lit et s'écrit sur
+  `/materials/{id}/vat-rates` (ligne du pays `BE` : `country_code`, `vat_rate`) : `POST` avec la ligne lue, son seul taux
+  changé, puis relue ; « Annuler » repose l'ancien taux. Si la route ne répond pas, la TVA reste en lecture.
 
 ### `/verification/flux` et `/verification/fuites` — l'audit des flux et les fuites par magasin (Vérification, lot 2, 31/10/2026)
 

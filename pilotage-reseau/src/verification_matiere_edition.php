@@ -149,6 +149,54 @@ function vmxChangements(array $o, array $champs, array $refAllergenes): array
     return ['corps' => $corps, 'inverse' => $inverse, 'lisible' => $lisible, 'erreurs' => $erreurs];
 }
 
+/**
+ * La TVA d'une matière (14/11/2026) : elle n'est pas dans GET /materials/{id} (mesuré en ligne) mais sur sa route,
+ * GET / POST /materials/{id}/vat-rates. Rend [lisible, taux du pays (ou null), ligne du pays telle que lue (ou null)].
+ * Une ligne se reconnaît à son pays (`country_code`, `country`, `code`), et son taux à `vat_rate`, `rate` ou `value`.
+ */
+function vmxTvaLue(mixed $r): array
+{
+    if (!is_array($r)) { return [false, null, null]; }
+    $l = method_exists(PanelApi::class, 'liste') ? PanelApi::liste($r) : analyseListe($r);
+    if ($l === [] && !array_is_list($r) && vfNum($r, ['vat_rate', 'rate', 'value']) !== null) { $l = [$r]; }
+    $ligne = null;
+    foreach ($l as $x) {
+        if (!is_array($x)) { continue; }
+        $pays = strtoupper((string) ($x['country_code'] ?? ($x['country'] ?? ($x['code'] ?? ''))));
+        if ($pays === VMX_PAYS || ($pays === '' && $ligne === null)) { $ligne = $x; if ($pays === VMX_PAYS) { break; } }
+    }
+    return [true, $ligne !== null ? vfNum($ligne, ['vat_rate', 'rate', 'value']) : null, $ligne];
+}
+
+/** Le corps qui pose un taux : la ligne lue, son seul taux changé ; sans ligne, {country_code, vat_rate}. Fonction pure. */
+function vmxTvaCorps(?array $ligne, float $taux): array
+{
+    if ($ligne === null) { return ['country_code' => VMX_PAYS, 'vat_rate' => $taux]; }
+    $c = array_intersect_key($ligne, array_flip(['country_code', 'country', 'code', 'id_country', 'country_id', 'vat_rate', 'rate', 'value']));
+    foreach (['vat_rate', 'rate', 'value'] as $k) { if (array_key_exists($k, $c)) { $c[$k] = $taux; return $c; } }
+    return $c + ['vat_rate' => $taux];
+}
+
+/** Pose la TVA d'une matière, la relit, la note. L'inverse (l'ancien taux) n'existe que s'il y avait un taux. */
+function vmxEcrireTva(array $base, int $mid, float $taux, ?float $avant, ?array $ligne): array
+{
+    $route = '/materials/' . $mid . '/vat-rates';
+    $corps = vmxTvaCorps($ligne, $taux);
+    PanelApi::$lastError = null;
+    [$ok, $res] = PanelApi::envoi('POST', $route, $corps);
+    $r = $base + ['objet' => 'tvaMatiere', 'objetId' => $mid, 'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'http' => $ok ? 200 : 0,
+        'resume' => 'TVA : ' . ($avant === null ? '—' : vrcQte($avant) . ' %') . ' → ' . vrcQte($taux) . ' %',
+        'inverse' => $avant !== null ? ['taux' => $avant, 'mid' => $mid] : null];
+    if (!$ok) { $r['resultat'] = 'refuse'; $r['message'] = vrcMessage($res); $r['inverse'] = null; }
+    else {
+        [, $lu] = vmxTvaLue(PanelApi::get($route));
+        $r['resultat'] = $lu !== null && abs($lu - $taux) < 1e-6 ? 'ok' : 'sans_effet';
+        $r['message'] = $r['resultat'] === 'ok' ? '' : 'Le panel a accepté, mais la TVA relue vaut ' . ($lu === null ? 'toujours rien' : vrcQte($lu) . ' %') . ' : le format attendu diffère.';
+    }
+    $r['id'] = vrcNoter($r);
+    return $r;
+}
+
 /** La ligne d'une matière dans le tableau des matières (prix des magasins, fournisseurs, recettes) ; null si elle n'y est pas. */
 function vmxLigne(int $mid): ?array
 {
@@ -169,10 +217,11 @@ function ep_verification_matiere(): array
     // Les valeurs vues pour type, source et genre : celles des matières des magasins (jamais une liste devinée).
     $vues = ['material_type' => [], 'source_type' => [], 'kind' => []];
     foreach (mfMatieresApi(array_keys(vfMagasins()), false) as $ms) { foreach ((array) $ms as $m) { if (($m['type'] ?? '') !== '') { $vues['material_type'][$m['type']] = $m['type']; } if (($m['source'] ?? '') !== '') { $vues['source_type'][$m['source']] = $m['source']; } } }
+    [$tvaLue, $tvaTaux] = vmxTvaLue(PanelApi::get('/materials/' . $mid . '/vat-rates'));
     $champs = [];
     foreach (VMX_CHAMPS as $k => [$lib, $type]) {
-        $present = array_key_exists($k, $o);
-        $v = $o[$k] ?? null;
+        $present = array_key_exists($k, $o) || ($k === 'vat_rate' && $tvaLue);
+        $v = $k === 'vat_rate' && !array_key_exists($k, $o) ? $tvaTaux : ($o[$k] ?? null);
         if ($type === 'allergenes') { $v = vmxAllergenesDe($v, $al); }
         if ($type === 'valeurs' && $present && is_scalar($v) && (string) $v !== '') { $vues[$k][(string) $v] = (string) $v; }
         $champs[] = ['cle' => $k, 'lib' => $lib, 'type' => $type, 'valeur' => $v, 'modifiable' => $present, 'valeurs' => $type === 'valeurs' ? array_values($vues[$k] ?? []) : null];
@@ -202,15 +251,26 @@ function wr_verification_matiere(): array
     $o = vrcObjet('matiere', $mid);
     if ($o === null) { return ['ok' => false, 'error' => 'La matière ' . $mid . ' n’a pas pu être lue au panel (' . (PanelApi::$lastError ?? 'pas de réponse') . ').']; }
     $nom = vfTxt($o, ['name']) ?: ('matière ' . $mid);
-    $m = vmxChangements($o, is_array($b['champs'] ?? null) ? $b['champs'] : [], vmxAllergenesRef());
+    $champs = is_array($b['champs'] ?? null) ? $b['champs'] : [];
+    // La TVA ne vit pas dans la matière (mesuré) : elle part sur /materials/{id}/vat-rates, après les paramètres.
+    $tva = null;
+    if (array_key_exists('vat_rate', $champs) && !array_key_exists('vat_rate', $o)) {
+        $t = $champs['vat_rate']; unset($champs['vat_rate']);
+        if (!is_numeric($t) || (float) $t < 0 || (float) $t > 100) { return ['ok' => false, 'error' => '« TVA (%) » : valeur invalide.']; }
+        [$lue, $avantT, $ligneT] = vmxTvaLue(PanelApi::get('/materials/' . $mid . '/vat-rates'));
+        if (!$lue) { return ['ok' => false, 'error' => 'La TVA de la matière n’a pas pu être lue au panel (/materials/' . $mid . '/vat-rates) : elle ne s’écrit pas d’ici.']; }
+        if ($avantT === null || abs($avantT - (float) $t) > 1e-6) { $tva = ['taux' => (float) $t, 'avant' => $avantT, 'ligne' => $ligneT]; }
+    }
+    $m = vmxChangements($o, $champs, vmxAllergenesRef());
     if ($m['erreurs'] !== []) { return ['ok' => false, 'error' => implode(' ', $m['erreurs'])]; }
     $prix = [];
     foreach ((array) ($b['magasins'] ?? []) as $sid => $p) { if ((int) $sid > 0 && is_numeric($p) && (float) $p > 0) { $prix[(int) $sid] = (float) $p; } }
-    if ($m['corps'] === [] && $prix === []) { return ['ok' => false, 'error' => 'Rien à changer.']; }
+    if ($m['corps'] === [] && $prix === [] && $tva === null) { return ['ok' => false, 'error' => 'Rien à changer.']; }
     $avants = $prix !== [] ? mfMatieresApi(array_keys($prix), true) : [];
     if ($apercu) {
         $ec = [];
         if ($m['corps'] !== []) { $ec[] = ['methode' => 'PATCH', 'route' => vrcChemin('matiere', $mid), 'corps' => $m['corps'], 'annulable' => true, 'resume' => implode(' · ', $m['lisible'])]; }
+        if ($tva !== null) { $ec[] = ['methode' => 'POST', 'route' => '/materials/' . $mid . '/vat-rates', 'corps' => vmxTvaCorps($tva['ligne'], $tva['taux']), 'annulable' => $tva['avant'] !== null, 'resume' => 'TVA : ' . ($tva['avant'] === null ? '—' : vrcQte($tva['avant']) . ' %') . ' → ' . vrcQte($tva['taux']) . ' %']; }
         foreach ($prix as $s => $p) { $ec[] = vrcPrixPlan($s, $mid, $p) + ['annulable' => ($avants[$s][(string) $mid]['prix'] ?? null) > 0, 'resume' => vrcPrixResume($nom, $s, $p, $avants[$s][(string) $mid]['prix'] ?? null)]; }
         return ['apercu' => true, 'resume' => $nom . ' : ' . count($ec) . ' écriture(s)', 'ecritures' => $ec];
     }
@@ -220,6 +280,11 @@ function wr_verification_matiere(): array
             'corps' => $m['corps'], 'inverse' => $m['inverse'], 'resume' => implode(' · ', $m['lisible'])]);
         $faites[] = vrcLigneRegistre($r);
         $okP = $r['resultat'] === 'ok';
+    }
+    if ($okP && $tva !== null) {
+        $rt = vmxEcrireTva(['geste' => 'matiere', 'cle' => 'mat:' . $mid, 'pid' => null, 'nom' => $nom, 'shop' => null], $mid, $tva['taux'], $tva['avant'], $tva['ligne']);
+        $faites[] = vrcLigneRegistre($rt);
+        $okP = $rt['resultat'] === 'ok';
     }
     if ($okP) {
         foreach ($prix as $s => $p) { $faites[] = vrcLigneRegistre(vrcEcrirePrix(['geste' => 'prix', 'cle' => 'mat:' . $mid, 'pid' => null, 'nom' => $nom, 'shop' => $s], $s, $mid, $p, $nom, $avants[$s][(string) $mid]['prix'] ?? null)); }
