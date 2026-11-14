@@ -1468,3 +1468,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T12:07:26Z Sonde du prix d'une matière (lecture seule)
 2026-11-14T12:12:30Z Sonde du circuit des prix (lecture seule)
 2026-11-14T12:18:19Z Route du tarif fournisseur par magasin permise
+2026-11-14T12:29:51Z Formulaire du prix : compte administrateur du panel
