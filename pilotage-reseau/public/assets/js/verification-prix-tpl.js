@@ -1,11 +1,17 @@
 /* Cockpit CEO — Recettes à corriger › Matières premières (14/11/2026) : le gabarit. Valeurs : verification-prix-vals.js ;
  * style : verification.css (vm-). Maquette : docs/maquettes/matieres-reference. */
 
+import { tplTableau } from './verification-tableau-tpl.js';
+
 export function tplPrix(P, x){
   const { esc } = x;
   if (!P) { return ''; }
   if (P.chargement) { return `<div class="vr-card vr-etat"><span class="vr-roue"></span>Lecture des matières des recettes, de leur prix dans chaque magasin et des listes de prix des fournisseurs…</div>`; }
   if (P.erreur) { return `<div class="vr-card vr-etat ko">${esc(P.erreur)}</div>`; }
+  const aff = `<div class="vt-aff"><div class="rc-seg">${(P.affichages || []).map(a => `<button class="${a.on ? 'on' : ''}" ${x.A(a.choisir)}>${esc(a.nom)}</button>`).join('')}</div><span class="vr-sp"></span><span class="vr-lu">${esc(P.lu || '')}</span><button class="vr-btn" ${x.A(P.rafraichir)}${P.relecture ? ' disabled' : ''}>${P.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
+  if (P.tableau) {
+    return `<div class="vr-card">${aff}${tplTableau(P.tableau, x)}<div class="vr-pied"><b>Le prix fournisseur</b> : la liste de prix en vigueur du fournisseur (prix du colis ÷ sa taille), sinon le prix général du panel. Chaque magasin : son prix et son écart (✓ à 10 % près ; orange au-delà ; rouge sans prix ou au-delà de ×2). Un clic sur un prix, ou « Prix… », ouvre <b>le formulaire du prix</b> : le prix, les magasins, la route du panel et chaque donnée envoyée, modifiables ; « Vérifier » montre l’envoi exact, « Envoyer » l’écrit avec le compte consultant, le relit, le note au registre et montre la réponse brute du panel. <span class="vr-mu">${esc(P.source)}</span></div></div>`;
+  }
   const kpis = `<div class="vm-kpis">${P.kpis.map(k => `<div class="vm-kpi ${k[3]}"><div class="k">${esc(k[0])}</div><div class="v">${k[1] == null ? '—' : k[1]}</div><div class="s">${esc(k[2])}</div></div>`).join('')}</div>`;
   const chips = `<div class="vr-chips">${P.chips.map(c => `<button class="${c.on ? 'on' : ''}" ${x.A(c.choisir)}>${c.classe ? `<i class="vr-pt ${c.classe}"></i>` : ''}${esc(c.nom)} <b>${c.n}</b></button>`).join('')}</div>`;
   const fil = `<div class="vr-fil"><input id="vm-q" class="vm-q" type="search" placeholder="Chercher une matière…" value="${esc(P.q)}" ${x.I(P.poserQ)}><span class="vr-sp"></span><span class="vr-lu">${P.n} matière${P.n > 1 ? 's' : ''}${P.n !== P.total ? ' sur ' + P.total : ''}${P.lu ? ' · ' + esc(P.lu) : ''}</span><button class="vr-btn" ${x.A(P.rafraichir)}${P.relecture ? ' disabled' : ''}>${P.relecture ? 'Lecture…' : 'Relire'}</button></div>`;
@@ -34,5 +40,5 @@ export function tplPrix(P, x){
       : `<button class="rc-btn" ${x.A(B.verifier)}${!B.verifier || B.enCours ? ' disabled' : ''}>${B.enCours ? 'Préparation…' : 'Vérifier ce qui sera écrit'}</button>`}</div>` : '';
   const res = P.resultat ? `<div class="rc-res ${P.resultat.ok ? 'ok' : 'ko'}" style="padding:10px 18px">${P.resultat.lignes.map(t => esc(t)).join('<br>')} <button class="rc-btn gris" ${x.A(P.resultat.fermer)}>OK</button></div>` : '';
   const pied = `<div class="vr-pied"><b>Le prix de référence</b>, au choix pour chaque matière : la liste de prix <b>en vigueur</b> d’un fournisseur lié à la matière au panel (prix du colis ÷ taille, pour le magasin), le prix conseillé ou de référence du panel, la médiane des autres magasins, ou un prix saisi. Un colis en pièces pour une matière en grammes demande le poids d’une pièce. <b>Appliquer à</b> : les magasins sans prix, tous, ou un seul. Un clic sur une matière ouvre sa fiche : tous ses paramètres et ses prix, modifiables ; « voir l’effet » montre le coût de ses recettes. <span class="vr-mu">${esc(P.source)}</span></div>`;
-  return `<div class="vr-card">${kpis}${chips}${fil}${res}${table}${barre}${pied}</div>`;
+  return `<div class="vr-card">${aff}${kpis}${chips}${fil}${res}${table}${barre}${pied}</div>`;
 }
