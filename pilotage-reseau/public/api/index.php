@@ -146,6 +146,7 @@ require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : 
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
+require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -365,6 +366,8 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
+    if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
