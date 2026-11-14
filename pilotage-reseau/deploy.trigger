@@ -1454,3 +1454,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-14T07:38:32Z Assistant : historique des ventes 18 mois (moisson de nuit), outils, magasins anonymes, Coach Vente
 2026-11-14T07:40:14Z Pointages suspects : le compte de caisse nommé (relecture du personnel au panel, reconnexion sur 401) au lieu d'« Employé 145 »
 2026-11-14T07:47:59Z Matières premières : la fiche d'une matière, modifiable (paramètres, prix général, comparaison)
+2026-11-14T07:51:06Z Fiche matière : liste des allergènes
