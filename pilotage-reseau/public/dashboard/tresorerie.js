@@ -422,6 +422,7 @@
       { l: `Personnel + gérant en % des ventes (${C.anT})`, v: pct(C.persPct), s: tauxP ? 'Budget : ' + pct(tauxP) : 'Paie + rémunération du gérant', c: tauxP && audela(C.persPct, tauxP) ? 'bas-t' : '' }
     ];
     h += `<div class="tr-kpis">${kpis.map(k => `<div class="tr-kpi"${k.t ? ` title="${esc(k.t)}"` : ''}><span>${esc(k.l)}</span><b class="${k.c}">${esc(k.v)}</b><small>${esc(k.s)}</small></div>`).join('')}</div>`;
+    if (!liste(R.sources).length) { h += `<div class="db-alerte">Aucune vente lue pour ce magasin, ni au panel ni dans la copie de caisse : ni réalisé, ni année passée.${R.budgets && R.budgets.some(b => b.moisBudget + b.moisTheorique) ? ' Les ventes prévues partent du budget.' : ' Pas de budget non plus : tape tes ventes prévues dans le plan.'}</div>`; }
     if (C.sansBase) { h += `<div class="db-alerte">${C.sansBase} semaine${C.sansBase > 1 ? 's' : ''} à venir sans budget ni année passée : leurs ventes sont à 0 tant que tu ne les tapes pas.</div>`; }
 
     // Le graphique du cash de fin de semaine.
@@ -437,7 +438,19 @@
     const LARG = 264;
     const lignes = [];
     const ligne = (lab, aide, cellule, o) => { o = o || {}; lignes.push({ lab, aide, cellule, o }); };
-    const T = (v, o) => { o = o || {}; const zero = o.tiret && !v; return `<div class="tr-v${o.cls ? ' ' + o.cls : ''}${zero ? ' mu' : ''}"${o.titre ? ` title="${esc(o.titre)}"` : ''}>${v == null ? '' : (zero ? '–' : n(v))}</div>`; };
+    const T = (v, o) => { o = o || {}; const zero = o.tiret && !v; return `<div class="tr-v${o.cls ? ' ' + o.cls : ''}${zero ? ' mu' : ''}"${o.titre ? ` title="${esc(o.titre)}"` : ''}>${v == null ? (o.vide || '') : (zero ? '–' : n(v))}</div>`; };
+    // Un repère absent n'est pas une case blanche : un tiret, et pourquoi au survol (14/11/2026, Halle : « je ne vois pas
+    // de donnée » — le magasin vend depuis février 2026, il n'a pas d'année passée sur l'hiver).
+    const pv = R.premiereVente || null, frD = x => x.split('-').reverse().join('/');
+    const motifN1 = w => {
+      const fin1 = w.ms - 358 * DAY;
+      if (fin1 >= auj) { return 'La même semaine un an plus tôt n’est pas encore passée'; }
+      if (!pv) { return 'Aucune vente lue pour ce magasin'; }
+      if (isoDe(fin1) < pv) { return 'Un an plus tôt, le magasin ne vendait pas encore (première vente lue le ' + frD(pv) + ')'; }
+      return 'Aucune vente lue la même semaine un an plus tôt';
+    };
+    const visN1 = F.vis.filter(i => W[i].ref.n1 != null).length;
+    const noteN1 = visN1 ? '' : (!pv ? 'aucune vente lue pour ce magasin' : (F.vis.some(i => isoDe(W[i].ms - 358 * DAY) < pv) ? 'pas d’année passée : première vente le ' + frD(pv) : 'pas encore passée'));
     const nTape = C.genre.filter(g => g === 'saisi').length;
     const srcLib = { budget: 'budget validé', n1: 'année passée' + (d.croissance ? ' ' + (d.croissance > 0 ? '+ ' : '− ') + String(Math.abs(d.croissance)).replace('.', ',') + ' %' : '') };
     ligne('Cash début de semaine', 'Ce que tu as sur le compte le lundi matin. Calculé tout seul : le solde réel du dimanche précédent s’il est saisi, sinon le cash prévu.', i => T(C.debut[i], { cls: 'mu' }), { bord: 'aucun' });
@@ -447,9 +460,9 @@
       const b = C.base[i], saisi = d.ventes[w.du];
       return champ('s:' + w.du, saisi, { cls: 'tr-in' + (saisi == null ? ' est' : ''), aff: v => v == null ? (b ? '≈ ' + n(b.v) : '') : n(v), ph: b ? '' : 'à saisir', titre: b ? 'Base : ' + srcLib[b.src] + ' ' + eur(b.v) : 'Ni budget ni année passée pour cette semaine' });
     }, { total: C.tA(C.ventes), gras: 600, sous: 'Base : ' + (d.base === 'budget' ? 'budget validé' : srcLib.n1) + (nTape ? ` · ${nTape} sem. tapée${nTape > 1 ? 's' : ''}` : ''), versOnglet: 'reperes' });
-    ligne('Repère · réalisé en caisse', 'Les ventes réellement encaissées (panel). La semaine en cours : à ce jour.', i => { const r = W[i].ref; return T(r.realise, { cls: 'ref', titre: r.complet ? 'Semaine close' : (r.realise != null ? 'À ce jour, semaine en cours' : '') }); }, { total: C.tA(W.map(w => w.ref.realise)), ref: true });
-    ligne('Repère · budget validé', 'Le budget du mois réparti sur ses jours au profil de l’an passé. Vide : pas de budget pour ce mois.', i => { const r = W[i].ref; return T(r.budget, { cls: 'ref', titre: [r.budgetSource === 'theorique' ? 'CA théorique de l’étude (pas de budget encodé)' : '', r.budget != null && r.budgetJours < 7 ? `Extrapolé de ${r.budgetJours} jours budgétés sur 7` : ''].filter(Boolean).join(' · ') }); }, { total: C.budA, ref: true });
-    ligne('Repère · même semaine N-1', 'Les ventes de la même semaine un an plus tôt (décalée de 364 jours : un lundi face à un lundi).', i => T(W[i].ref.n1, { cls: 'ref' }), { total: C.n1A, ref: true });
+    ligne('Repère · réalisé en caisse', 'Les ventes réellement encaissées (panel). La semaine en cours : à ce jour.', i => { const r = W[i].ref, passe = W[i].ms <= auj; return T(r.realise, { cls: 'ref', vide: passe ? '–' : '', titre: r.complet ? (r.realise != null ? 'Semaine close' : 'Aucune vente lue cette semaine') : (r.realise != null ? 'À ce jour, semaine en cours' : (passe ? 'Aucune vente lue à ce jour' : 'Semaine à venir')) }); }, { total: C.tA(W.map(w => w.ref.realise)), ref: true, note: W.some(w => w.ms <= auj) ? '' : 'semaines à venir' });
+    ligne('Repère · budget validé', 'Le budget du mois réparti sur ses jours au profil de l’an passé. Vide : pas de budget pour ce mois.', i => { const r = W[i].ref; return T(r.budget, { cls: 'ref', vide: '–', titre: r.budget == null ? 'Pas de budget pour ce mois (cockpit › Budget), ni de CA théorique de l’étude' : [r.budgetSource === 'theorique' ? 'CA théorique de l’étude (pas de budget encodé)' : '', r.budget != null && r.budgetJours < 7 ? `Extrapolé de ${r.budgetJours} jours budgétés sur 7` : ''].filter(Boolean).join(' · ') }); }, { total: C.budA, ref: true });
+    ligne('Repère · même semaine N-1', 'Les ventes de la même semaine un an plus tôt (décalée de 364 jours : un lundi face à un lundi).', i => T(W[i].ref.n1, { cls: 'ref', vide: '–', titre: W[i].ref.n1 == null ? motifN1(W[i]) : '' }), { total: C.n1A, ref: true, note: noteN1 });
     ligne('Marchandises (fournisseurs)', 'Calcul automatique : total de l’onglet Fournisseurs.', i => T(C.march[i]), { total: C.tA(C.march), sous: 'Onglet Fournisseurs', versOnglet: 'fournisseurs', bord: 'fort' });
     const aideCat = {
       'Gérant': 'Ce que tu te verses : ligne « Gérant » de l’onglet Paiements. Quand le cash est court, c’est la première ligne qui s’ajuste.',
@@ -470,7 +483,7 @@
     h += entete(C, F, LARG, 'Lundi du', 'Total ' + C.anT);
     lignes.forEach(L => {
       const o = L.o;
-      h += `<div class="tr-r${o.ref ? ' tr-r-ref' : ''} ${o.bord === 'fort' ? 'b-fort' : (o.bord === 'aucun' ? 'b-aucun' : '')}"><div class="tr-lab" style="width:${LARG}px"><div class="tr-lab-t"><span style="font-weight:${o.gras || 400}">${esc(L.lab)}</span>${o.sous ? `<button type="button" class="tr-sous-l" data-tra="onglet:${o.versOnglet}">${esc(o.sous)}</button>` : ''}</div>${L.aide ? `<span class="tr-aide" title="${esc(L.aide)}">?</span>` : ''}</div>`;
+      h += `<div class="tr-r${o.ref ? ' tr-r-ref' : ''} ${o.bord === 'fort' ? 'b-fort' : (o.bord === 'aucun' ? 'b-aucun' : '')}"><div class="tr-lab" style="width:${LARG}px"><div class="tr-lab-t"><span style="font-weight:${o.gras || 400}">${esc(L.lab)}</span>${o.note ? `<small class="tr-lab-note">${esc(o.note)}</small>` : ''}${o.sous ? `<button type="button" class="tr-sous-l" data-tra="onglet:${o.versOnglet}">${esc(o.sous)}</button>` : ''}</div>${L.aide ? `<span class="tr-aide" title="${esc(L.aide)}">?</span>` : ''}</div>`;
       F.vis.forEach(i => { h += `<div class="tr-c${i === C.cur ? ' cur' : ''}">${L.cellule(i)}</div>`; });
       h += `<div class="tr-tot" style="font-weight:${o.gras || 400}">${o.total == null ? '' : n(o.total)}</div></div>`;
     });
