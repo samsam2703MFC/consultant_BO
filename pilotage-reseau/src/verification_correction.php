@@ -338,9 +338,16 @@ function vrcResultatNom(string $r): string
 function vrcMessage(mixed $res): string
 {
     if (!is_array($res)) { return (string) (PanelApi::$lastError ?? 'pas de réponse'); }
-    foreach (['description', 'message', 'detail', 'error'] as $k) { if (!empty($res[$k]) && is_string($res[$k])) { return $res[$k]; } }
-    if (!empty($res['errors'])) { return (string) json_encode($res['errors'], JSON_UNESCAPED_UNICODE); }
-    return (string) (PanelApi::$lastError ?? '');
+    $msg = '';
+    foreach (['description', 'message', 'detail', 'error'] as $k) { if (!empty($res[$k]) && is_string($res[$k])) { $msg = $res[$k]; break; } }
+    // Mesuré le 14/11 : un refus « MISSING_REQUIRED_FIELDS » ne dit rien seul ; le reste de la réponse (champs attendus,
+    // erreurs par champ) est gardé au registre, pour régler le corps sans deviner.
+    $reste = array_diff_key($res, array_flip(['description', 'message', 'status', 'code']));
+    if ($reste !== [] || (isset($res['code']) && $msg !== (string) $res['code'])) {
+        $j = json_encode(['code' => $res['code'] ?? null] + $reste, JSON_UNESCAPED_UNICODE);
+        if ($j !== false && $j !== '{"code":null}') { $msg .= ($msg !== '' ? ' — ' : '') . mb_substr($j, 0, 480); }
+    }
+    return $msg !== '' ? $msg : (string) (PanelApi::$lastError ?? '');
 }
 
 /** Le chemin de lecture d'un objet du panel. */
