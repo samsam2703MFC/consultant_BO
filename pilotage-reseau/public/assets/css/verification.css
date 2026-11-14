@@ -399,3 +399,5 @@
 .vx-etat{white-space:normal!important;font-size:11.5px;color:var(--color-text-muted);max-width:280px}
 .vx-lien{font:400 11px var(--font-ui);border:1px solid var(--color-border-secondary);border-radius:6px;padding:3px 9px;background:#fff;white-space:nowrap;color:var(--color-text);cursor:pointer}
 .vx-synthese{margin:10px 0 0;padding:10px 12px;border-radius:8px;background:var(--table-head);font-size:12px;line-height:1.5}
+/* La règle « prix en retard sur le fournisseur » (14/11/2026) */
+.pb-tarif{background:#e0f0ef;color:#1f6b66}.vr-pt.pb-tarif{background:#3f9a93}
