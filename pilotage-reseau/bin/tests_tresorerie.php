@@ -169,6 +169,33 @@ verifie('le % validé d’abord', $C[0] === ['categorie' => 'Matière', 'poste' 
 verifie('à défaut, le % réseau', $C[1]['pct'] === 2.0 && $C[3]['pct'] === 5.0);
 verifie('la matière est la catégorie que retranche la marge brute', $C[1]['matiere'] === true && $C[2]['matiere'] === false);
 
+fwrite(STDOUT, "L’onglet Budget & étude (lecture seule)\n");
+$D = trChargesDetail();
+verifie('le détail garde le % validé et le % réseau', $D['lignes'][1] === ['categorie' => 'Matière', 'poste' => 'Emballages', 'pctValide' => 0.0, 'pctReseau' => 2.0, 'matiere' => true], json_encode($D['lignes'][1]));
+verifie('les étapes du compte de résultat', $D['paliers'] === [['nom' => 'Marge brute', 'droite' => 'cat:Matière']], json_encode($D['paliers']));
+$fiches = [['fiscal_year' => 2026, 'validated_on' => '2026-01-20', 'basket_target' => null, 'ca_theorique_an' => '684000.00', 'etude_date' => '2024-06-01',
+    'etude_source' => null, 'etude_potentiel_menages' => null, 'etude_potentiel_maturite' => '900000.00', 'annee_exploitation' => 2,
+    'montee_regime' => '{"a1":65,"a2":76,"a3":88}', 'saisonnalite' => '[7,7,8,9,8,8,7,7,8,9,9,13]', 'etude_annexe' => null]];
+$mois = [['year' => 2026, 'month' => 1, 'revenue_budget' => '52200.00', 'ca_theorique' => '51300.00'],
+    ['year' => 2027, 'month' => 1, 'revenue_budget' => null, 'ca_theorique' => '61000.00'], ['year' => 2027, 'month' => 2, 'revenue_budget' => '0.00', 'ca_theorique' => '57000.00']];
+$X = trExercices([2026, 2027], $fiches, $mois, array_fill(0, 12, 8.33));
+verifie('2026 : fiche validée le 20/01/2026, étude lue', $X[0]['fiche'] && $X[0]['valideLe'] === '2026-01-20' && $X[0]['etude']['potentielMaturite'] === 900000.0 && $X[0]['etude']['monteeEnRegime'] === ['a1' => 65, 'a2' => 76, 'a3' => 88], json_encode($X[0]));
+verifie('2026 : la saisonnalité de l’étude', $X[0]['saisonnalite'][11] === 13 && $X[0]['saisonnaliteSource'] === 'etude');
+verifie('2026 : janvier au budget et au théorique', $X[0]['mois'][0] === ['mois' => 1, 'budget' => 52200.0, 'theorique' => 51300.0] && $X[0]['moisBudget'] === 1);
+verifie('2027 : pas de fiche, la courbe du réseau en repli', !$X[1]['fiche'] && $X[1]['etude'] === null && $X[1]['saisonnaliteSource'] === 'reseau', json_encode($X[1]));
+verifie('2027 : un budget à zéro n’en est pas un, le théorique reste', $X[1]['mois'][1] === ['mois' => 2, 'budget' => null, 'theorique' => 57000.0] && $X[1]['moisBudget'] === 0 && $X[1]['totalTheorique'] === 118000.0);
+verifie('2027 : le CA théorique de l’année se déduit des mois', $X[1]['caTheoriqueAn'] === 118000.0);
+function ep_perf(): array { return [
+    ['storeId' => '5', 'annee' => 2026, 'mois' => 2, 'ca' => 48200.25, 'foodCostPct' => 39.2, 'labourCostPct' => 30.4, 'overheadPct' => 14.1, 'margePct' => 0.0455],
+    ['storeId' => '5', 'annee' => 2026, 'mois' => 1, 'ca' => 50100.5, 'foodCostPct' => 38.4, 'labourCostPct' => 29.1, 'overheadPct' => 12.9, 'margePct' => 0.0815],
+    ['storeId' => '4', 'annee' => 2026, 'mois' => 1, 'ca' => 1.0, 'foodCostPct' => 1, 'labourCostPct' => 1, 'overheadPct' => 1, 'margePct' => 0.5],
+    ['storeId' => '5', 'annee' => 2026, 'mois' => 12, 'ca' => null, 'foodCostPct' => null, 'labourCostPct' => null, 'overheadPct' => null, 'margePct' => null]]; }
+$_GET = ['shop' => '5', 'pro' => '9'];
+$P = trPnlReel('5', [2026, 2027]);
+verifie('le P&L réel : ce magasin seul, les mois vendus, dans l’ordre', count($P) === 2 && $P[0]['ym'] === '2026-01' && $P[1]['ym'] === '2026-02', json_encode($P));
+verifie('la marge nette en %', $P[0]['marge'] === 8.2 && $P[0]['matiere'] === 38.4);
+verifie('la requête est rendue telle qu’elle était', $_GET === ['shop' => '5', 'pro' => '9']);
+
 fwrite(STDOUT, "Le plan : validation\n");
 $plan = ['v' => 2, 'debut' => '2026-11-16', 'ventes' => [], 'ponct' => [], 'reel' => ['2026-11-16' => 4200],
     'fournisseurs' => [['id' => 'a', 'nom' => 'Fournisseur A', 'pct' => 0.35, 'montants' => []]], 'paiements' => [], 'hors' => []];

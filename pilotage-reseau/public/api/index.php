@@ -592,6 +592,7 @@ function route(string $method, string $path): mixed
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
             $path === '/tresorerie/references'        => ep_tresorerie_references(),
             $path === '/tresorerie/plan'              => ep_tresorerie_plan(),
+            $path === '/tresorerie/budget'            => ep_tresorerie_budget(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
             // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.

@@ -27,6 +27,7 @@ declare(strict_types=1);
  *
  *   GET  /tresorerie/references?shop=4&debut=2026-11-16   les repères (lourd : gardé par `_cache`)
  *   GET  /tresorerie/plan?shop=4                          le plan enregistré (léger, jamais gardé)
+ *   GET  /tresorerie/budget?shop=4&debut=2026-11-16       l'onglet « Budget & étude » : budget, étude, charges, P&L réel
  *   POST /tresorerie/plan {shop, version, donnees}        l'enregistrer ; `donnees: null` l'efface
  *
  * Table : `pil_tresorerie_plan`, au préfixe du portail Pilotage (docs/PORTAILS.md) — une table neuve n'a pas à
@@ -313,12 +314,29 @@ function trBudgetsExercices(string $shop, array $annees, array $budgetMois): arr
  */
 function trChargesBudget(): array
 {
-    try { $m = function_exists('setting') ? setting('budgetCharges') : null; } catch (Throwable $e) { return []; }
-    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return []; }
-    $nomMat = null;
+    $out = [];
+    foreach (trChargesDetail()['lignes'] as $l) {
+        $pct = $l['pctValide'] > 0 ? $l['pctValide'] : $l['pctReseau'];
+        if ($pct <= 0 || $pct >= 100) { continue; }
+        $out[] = ['categorie' => $l['categorie'], 'poste' => $l['poste'], 'pct' => round($pct, 2), 'matiere' => $l['matiere']];
+    }
+    return $out;
+}
+
+/**
+ * Le détail des postes du budget : chaque ligne avec son « % validé » (le taux du Cockpit) et son « % réseau » (celui
+ * du CRM), la catégorie que la marge brute retranche (`matiere`) et les étapes (paliers) du compte de résultat.
+ */
+function trChargesDetail(): array
+{
+    try { $m = function_exists('setting') ? setting('budgetCharges') : null; } catch (Throwable $e) { return ['lignes' => [], 'paliers' => []]; }
+    if (!is_array($m) || !is_array($m['categories'] ?? null)) { return ['lignes' => [], 'paliers' => []]; }
+    $nomMat = null; $paliers = [];
     foreach ((array) ($m['paliers'] ?? []) as $p) {
-        $d = is_array($p) ? (string) ($p['droite'] ?? '') : '';
-        if (str_starts_with($d, 'cat:')) { $nomMat = substr($d, 4); break; }
+        if (!is_array($p)) { continue; }
+        $d = (string) ($p['droite'] ?? '');
+        if ($nomMat === null && str_starts_with($d, 'cat:')) { $nomMat = substr($d, 4); }
+        $paliers[] = ['nom' => (string) ($p['nom'] ?? ''), 'droite' => $d];
     }
     $out = [];
     foreach ($m['categories'] as $c) {
@@ -327,12 +345,106 @@ function trChargesBudget(): array
         $mat = $nomMat !== null ? $cat === $nomMat : preg_match('/^mati[eè]re/iu', $cat) === 1;
         foreach ((array) ($c['lignes'] ?? []) as $l) {
             if (!is_array($l)) { continue; }
-            $pct = is_numeric($l['pct'] ?? null) && (float) $l['pct'] > 0 ? (float) $l['pct'] : (is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0);
-            if ($pct <= 0 || $pct >= 100) { continue; }
-            $out[] = ['categorie' => $cat, 'poste' => (string) ($l['poste'] ?? ''), 'pct' => round($pct, 2), 'matiere' => $mat];
+            $v = is_numeric($l['pct'] ?? null) ? (float) $l['pct'] : 0.0;
+            $r = is_numeric($l['pctTheo'] ?? null) ? (float) $l['pctTheo'] : 0.0;
+            if ($v <= 0 && $r <= 0) { continue; }
+            $out[] = ['categorie' => $cat, 'poste' => (string) ($l['poste'] ?? ''), 'pctValide' => round($v, 2), 'pctReseau' => round($r, 2), 'matiere' => $mat];
         }
     }
+    return ['lignes' => $out, 'paliers' => $paliers];
+}
+
+/**
+ * Les exercices du plan, tels que le cockpit les tient (lecture seule) : la fiche du budget (validée ou non, quand),
+ * l'étude de marché (date, source, potentiel, année d'exploitation, montée en régime, saisonnalité, annexe), et chaque
+ * mois son CA au budget et son CA théorique. Pur : les lignes de `ceo_shop_budget` et de `ceo_shop_month_perf` en entrée.
+ */
+function trExercices(array $annees, array $fiches, array $mois, array $saisReseau = []): array
+{
+    $jsonOu = static function ($v): mixed { if ($v === null || $v === '') { return null; } $d = is_string($v) ? json_decode($v, true) : $v; return is_array($d) ? $d : null; };
+    $fi = []; foreach ($fiches as $f) { $fi[(int) $f['fiscal_year']] = $f; }
+    $mm = []; foreach ($mois as $r) { $mm[(int) $r['year']][(int) $r['month']] = $r; }
+    $out = [];
+    foreach ($annees as $y) {
+        $f = $fi[$y] ?? null;
+        $sais = $f !== null ? $jsonOu($f['saisonnalite'] ?? null) : null;
+        $saisSrc = 'etude';
+        if (!is_array($sais) || count($sais) !== 12) { $sais = count($saisReseau) === 12 ? array_values($saisReseau) : null; $saisSrc = $sais !== null ? 'reseau' : null; }
+        $lm = []; $tb = 0.0; $tt = 0.0; $nb = 0; $nt = 0;
+        for ($m = 1; $m <= 12; $m++) {
+            $r = $mm[$y][$m] ?? null;
+            $b = $r !== null && $r['revenue_budget'] !== null && (float) $r['revenue_budget'] > 0 ? round((float) $r['revenue_budget'], 2) : null;
+            $t = $r !== null && $r['ca_theorique'] !== null && (float) $r['ca_theorique'] > 0 ? round((float) $r['ca_theorique'], 2) : null;
+            if ($b !== null) { $tb += $b; $nb++; }
+            if ($t !== null) { $tt += $t; $nt++; }
+            $lm[] = ['mois' => $m, 'budget' => $b, 'theorique' => $t];
+        }
+        $out[] = [
+            'annee' => $y, 'fiche' => $f !== null,
+            'valideLe' => $f !== null && !empty($f['validated_on']) ? substr((string) $f['validated_on'], 0, 10) : null,
+            'panierEngagement' => $f !== null && $f['basket_target'] !== null ? (float) $f['basket_target'] : null,
+            'caTheoriqueAn' => $f !== null && $f['ca_theorique_an'] !== null ? (float) $f['ca_theorique_an'] : ($nt ? round($tt, 2) : null),
+            'etude' => $f === null ? null : [
+                'date' => $f['etude_date'] ?? null, 'source' => $f['etude_source'] ?? null,
+                'potentielMenages' => isset($f['etude_potentiel_menages']) ? (int) $f['etude_potentiel_menages'] : null,
+                'potentielMaturite' => isset($f['etude_potentiel_maturite']) ? (float) $f['etude_potentiel_maturite'] : null,
+                'anneeExploitation' => isset($f['annee_exploitation']) ? (int) $f['annee_exploitation'] : null,
+                'monteeEnRegime' => $jsonOu($f['montee_regime'] ?? null), 'annexe' => $jsonOu($f['etude_annexe'] ?? null),
+            ],
+            'saisonnalite' => $sais, 'saisonnaliteSource' => $saisSrc,
+            'mois' => $lm, 'moisBudget' => $nb, 'moisTheorique' => $nt,
+            'totalBudget' => $nb ? round($tb, 2) : null, 'totalTheorique' => $nt ? round($tt, 2) : null,
+        ];
+    }
     return $out;
+}
+
+/**
+ * Le P&L réel du magasin, mois par mois (matière, personnel, frais généraux, marge nette) : le calcul de Résultat
+ * (ep_perf, /stores/perf), relu pour ce seul magasin — de janvier de l'année d'avant le plan au mois en cours.
+ */
+function trPnlReel(string $shop, array $annees): array
+{
+    if (!function_exists('ep_perf') || $annees === []) { return []; }
+    $ans = range(min($annees) - 1, min(max($annees), (int) date('Y')));
+    $garde = $_GET;
+    $_GET = ['granularite' => 'mois', 'annees' => implode(',', $ans)];
+    try { $cells = ep_perf(); } catch (Throwable $e) { $cells = []; } finally { $_GET = $garde; }
+    $out = [];
+    foreach ((array) $cells as $c) {
+        if ((string) ($c['storeId'] ?? '') !== $shop || ($c['ca'] ?? null) === null) { continue; }
+        $out[] = ['ym' => sprintf('%04d-%02d', (int) $c['annee'], (int) $c['mois']), 'ca' => (float) $c['ca'],
+            'matiere' => $c['foodCostPct'] ?? null, 'personnel' => $c['labourCostPct'] ?? null, 'fraisGeneraux' => $c['overheadPct'] ?? null,
+            'marge' => isset($c['margePct']) && $c['margePct'] !== null ? round(100 * (float) $c['margePct'], 1) : null];
+    }
+    usort($out, static fn ($a, $b) => strcmp($a['ym'], $b['ym']));
+    return $out;
+}
+
+/**
+ * GET /tresorerie/budget?shop=4&debut=AAAA-MM-JJ — l'onglet « Budget & étude » (lecture seule) : les exercices du
+ * plan (fiche du budget, étude de marché, CA au budget et théorique de chaque mois), les postes de charges et les
+ * étapes du compte de résultat, le P&L réel du magasin, les liens pour modifier (cockpit, CRM). Ce magasin seulement.
+ */
+function ep_tresorerie_budget(): array
+{
+    $shop = trShop($_GET['shop'] ?? null);
+    if ($shop === null) { http_response_code(400); return ['error' => 'magasin manquant']; }
+    $debut = (string) ($_GET['debut'] ?? '');
+    $debut = trDateValide($debut) ? trLundi($debut) : trDebutDefaut(date('Y-m-d'));
+    $annees = range((int) substr($debut, 0, 4), (int) substr(trFin($debut), 0, 4));
+    $in = implode(',', array_fill(0, count($annees), '?'));
+    $fiches = []; $mois = [];
+    try { $fiches = Db::rows("SELECT * FROM ceo_shop_budget WHERE shop_id = ? AND fiscal_year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de fiche */ }
+    try { $mois = Db::rows("SELECT year, month, revenue_budget, ca_theorique FROM ceo_shop_month_perf WHERE shop_id = ? AND year IN ($in)", array_merge([$shop], $annees)); } catch (PDOException $e) { /* pas de mois */ }
+    $sr = function_exists('setting') ? setting('saisonnaliteReseau', []) : [];
+    $sr = is_array($sr) && count($sr) === 12 ? array_map('floatval', array_values($sr)) : [];
+    $ch = trChargesDetail();
+    $etat = function_exists('bcEtat') ? bcEtat() : [];
+    return ['shop' => $shop, 'annees' => $annees, 'exercices' => trExercices($annees, $fiches, $mois, $sr),
+        'charges' => $ch['lignes'], 'paliers' => $ch['paliers'], 'reel' => trPnlReel($shop, $annees),
+        'taux' => function_exists('seuilsCharges') ? seuilsCharges() : null,
+        'liens' => ['crm' => is_string($etat['modifier'] ?? null) ? $etat['modifier'] : null]];
 }
 
 /** Le magasin de la requête : un identifiant du panel, rien d'autre. */
