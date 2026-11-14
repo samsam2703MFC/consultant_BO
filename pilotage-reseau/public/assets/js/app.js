@@ -1978,7 +1978,8 @@ class App {
     if (common.isBrandGuard) this.valsBrandGuard(common);
     if (common.isInvendus) this.valsInvendus(common);
     if (common.isInventaires) this.valsInventaires(common);
-    if (common.isVerifR) { valsVerification(this, common); }
+    // Recettes à corriger : une surface de travail, toute la largeur de l'écran (14/11/2026, « utiliser toute la largeur »).
+    if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
     if (common.isVerifEvol) { valsVerifEvol(this, common); }
