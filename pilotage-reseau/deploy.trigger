@@ -1449,3 +1449,4 @@ accès : l'API demande une session (siège ou code magasin) — 2026-11-13T13:26
 2026-11-13T21:08:09Z Fidélité, page de test à part : liste déroulante des clients pour la carte du client
 2026-11-13T21:58:30Z Recettes à corriger : corriger d'ici (geste par ligne, volet en correction, registre et Annuler, liens directs au panel)
 2026-11-13T22:07:14Z Recettes à corriger : forme réelle des recettes (connection_id, rendement au panel)
+2026-11-14T07:09:35Z Recettes à corriger : toute la largeur de l'écran
