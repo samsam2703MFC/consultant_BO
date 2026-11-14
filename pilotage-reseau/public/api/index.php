@@ -595,6 +595,7 @@ function route(string $method, string $path): mixed
             $path === '/verification/recettes'        => ep_verification_recettes(),
             $path === '/verification/recettes/sonde'  => ep_verification_sonde(),
             $path === '/verification/recettes/sonde-prix' => ep_verification_sonde_prix(),
+            $path === '/verification/recettes/sonde-chemin' => ep_verification_sonde_chemin(),
             $path === '/verification/recettes/fiche'  => ep_verification_fiche(),
             $path === '/verification/recettes/edition' => ep_verification_edition(),
             $path === '/verification/recettes/candidats' => ep_verification_candidats(),
