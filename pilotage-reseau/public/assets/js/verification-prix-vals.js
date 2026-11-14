@@ -4,6 +4,7 @@
  * la liste déroulante de la matière, s'applique à un magasin, aux magasins sans prix ou à tous, se vérifie puis s'écrit
  * au panel par le geste `prix` des corrections (relu, au registre, « Annuler »). Gabarit : verification-prix-tpl.js. */
 import { readOne, write } from './api.js';
+import { ouvrirFiche } from './verification-fichemat-vals.js';
 
 const nf = (n, d) => n == null || isNaN(n) ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d }).replace(/[  ]/g, ' ');
 const num = s => { const t = String(s == null ? '' : s).trim().replace(/\s/g, '').replace(',', '.'); if (t === '') { return null; } const n = Number(t); return isFinite(n) ? n : NaN; };
@@ -129,7 +130,7 @@ export function valsMatieres(app){
       appliquerA: [{ id: 'sansPrix', nom: 'Magasins sans prix' }, { id: 'tous', nom: 'Tous les magasins' }].concat(mags.map(m => ({ id: m.id, nom: m.nom.replace(/^.* - /, '') })))
         .map(o => Object.assign(o, { on: (c.a || 'sansPrix') === o.id })),
       poserA: e => majChoix(l.mid, { a: e.target.value }),
-      ouvrir: () => app.setState({ vmOuvert: ouvert ? null : l.mid }), ouvert, impact, impactMagasin: sid0 ? ((mags.find(m => m.id === sid0) || {}).nom || '').replace(/^.* - /, '') : '',
+      ouvrir: () => app.setState({ vmOuvert: ouvert ? null : l.mid }), fiche: () => ouvrirFiche(app, l.mid), ouvert, impact, impactMagasin: sid0 ? ((mags.find(m => m.id === sid0) || {}).nom || '').replace(/^.* - /, '') : '',
       drapeaux: l.drapeaux,
     };
   });
