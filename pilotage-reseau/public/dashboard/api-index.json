@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-15T14:10:58Z",
+ "genere": "2026-11-15T14:20:26Z",
  "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -267,7 +267,7 @@
     "GET"
    ],
    "fichiers": [
-    "marketing.js:53"
+    "marketing.js:47"
    ],
    "magasin": true,
    "routes": [
@@ -277,51 +277,8 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/dashboard_marketing.php:62",
-     "resume": "Les écritures du magasin, par-dessus celles du marketing (src/writes.php, src/social_publication.php), qui ne regardent pas le magasin : ici, le post est TOUJOURS celui du magasin de la requête (vérifié par l'accès), jamais un post de la marque (sans magasin),"
-    }
-   ]
-  },
-  {
-   "chemin": "/dashboard/marketing/media",
-   "methodes": [
-    "POST"
-   ],
-   "fichiers": [
-    "marketing.js:239"
-   ],
-   "magasin": true,
-   "routes": [
-    {
-     "methodes": [
-      "POST"
-     ],
-     "chemin": "/dashboard/marketing…",
-     "handler": "dmRoute",
-     "source": "src/dashboard_marketing.php:62",
-     "resume": "Les écritures du magasin, par-dessus celles du marketing (src/writes.php, src/social_publication.php), qui ne regardent pas le magasin : ici, le post est TOUJOURS celui du magasin de la requête (vérifié par l'accès), jamais un post de la marque (sans magasin),"
-    }
-   ]
-  },
-  {
-   "chemin": "/dashboard/marketing/posts",
-   "methodes": [
-    "POST"
-   ],
-   "fichiers": [
-    "marketing.js:222",
-    "marketing.js:271"
-   ],
-   "magasin": true,
-   "routes": [
-    {
-     "methodes": [
-      "POST"
-     ],
-     "chemin": "/dashboard/marketing…",
-     "handler": "dmRoute",
-     "source": "src/dashboard_marketing.php:62",
-     "resume": "Les écritures du magasin, par-dessus celles du marketing (src/writes.php, src/social_publication.php), qui ne regardent pas le magasin : ici, le post est TOUJOURS celui du magasin de la requête (vérifié par l'accès), jamais un post de la marque (sans magasin),"
+     "source": "src/dashboard_marketing.php:59",
+     "resume": "Les routes du marketing du magasin."
     }
    ]
   },
@@ -577,7 +534,7 @@
    ],
    "fichiers": [
     "dashboard.js:1429",
-    "marketing.js:58"
+    "marketing.js:52"
    ],
    "magasin": true,
    "routes": [
