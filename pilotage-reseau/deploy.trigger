@@ -31,3 +31,4 @@
 2026-11-15T19:57:05Z Saisons : repli sur cette année quand l'an dernier est vide
 2026-11-15 marge des portions au taux de la recette ; barre de défilement 3 px
 2026-11-15T20:09:08Z Entraînement de l'IA : planogramme, photos d'exemple, assistant d'entraînement
+2026-11-15T20:34:34Z Vendre › Analyse : entrée, produit, famille
