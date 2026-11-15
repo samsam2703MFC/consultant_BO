@@ -117,3 +117,16 @@ svg.rf-mini { display: block; width: 100%; height: 28px; margin-top: 5px; }
 /* La planche de la carte de l'objectif : le haut gauche de chaque capture (rail et onglets), 600 × 560 px. */
 .rf-planche--haut .rf-haut { overflow: hidden; aspect-ratio: 600 / 560; border: 1px solid var(--line); border-radius: 8px; }
 .rf-planche--haut .rf-haut img { width: 240%; max-width: none; border: 0; border-radius: 0; }
+
+/* Les avatars du haut à droite (B) : trois cercles identiques, 36 px, bordés du filet ; le texte à côté prend sa largeur. */
+.rf-avs { display: flex; align-items: center; gap: 22px; margin-left: 6px; padding-left: 16px; border-left: 1px solid var(--line); }
+.rf-av { display: flex; align-items: center; gap: 9px; padding: 0; border: 0; background: none; font: inherit; text-align: left; cursor: pointer; }
+.rf-av__o { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--line);
+  border-radius: 50%; background: #fff; color: var(--muted-2); }
+.rf-av__o .ico { width: 18px; height: 18px; flex-basis: 18px; }
+.rf-av:hover .rf-av__o { background: var(--paper); }
+.rf-av:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.rf-av.vif .rf-av__o { border-color: rgba(141, 29, 44, 0.45); background: rgba(141, 29, 44, 0.05); color: var(--accent); }
+.rf-av__k { display: block; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+.rf-av__v { display: block; margin-top: 2px; font-size: 13px; color: var(--ink); white-space: nowrap; }
+.rf-av.vif .rf-av__v { color: var(--accent); }

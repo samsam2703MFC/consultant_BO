@@ -38,6 +38,8 @@ const I = {
   etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
   modeles: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
   retour: 'M19 12H5M12 19l-7-7 7-7',
+  euro: 'M17.5 6.5A7 7 0 1 0 17.5 17.5M4 10h10M4 14h10',
+  personne: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21v-1a7 7 0 0 1 14 0v1',
 };
 const ico = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
 
@@ -61,11 +63,12 @@ function courbe(vals) {
 
 /* ── Le contenu à droite : la barre supérieure, puis la page esquissée (elle ne change pas) ── */
 const JOURS = [['L 9', 'pas de vente'], ['Ma 10', ''], ['Me 11', ''], ['J 12', ''], ['V 13', ''], ['S 14', ''], ['D 15', 'en cours']];
-function contenu(titre, avant) {
+function contenu(titre, avant, avatars) {
+  const pill = '<span class="rf-pill">Maquette · contenu inchangé · chiffres du rail : exemples</span>';
   return `<header class="topbar"><div><p class="topbar__kicker">Vue Franchisé</p><h1>${titre}</h1></div>
-    <div class="topbar__actions"><span class="rf-pill">Maquette · contenu inchangé · chiffres du rail : exemples</span>
-      <button class="btn btn--icon">‹</button><input class="btn" style="font:inherit;font-size:13px;width:118px" value="15/11/2026"><button class="btn btn--icon">›</button><button class="btn">↻ Relire</button></div></header>
-  <main class="app__body"><div class="rf-esq">${avant || ''}
+    <div class="topbar__actions">${avatars ? '' : pill}
+      <button class="btn btn--icon">‹</button><input class="btn" style="font:inherit;font-size:13px;width:118px" value="15/11/2026"><button class="btn btn--icon">›</button><button class="btn">↻ Relire</button>${avatars || ''}</div></header>
+  <main class="app__body"><div class="rf-esq">${avatars ? `<div>${pill.replace('chiffres du rail', 'chiffres du rail et des avatars')}</div>` : ''}${avant || ''}
     <div class="rf-frise">${JOURS.map(([j, s], i) => `<div class="rf-jour${i === 6 ? ' on' : ''}">${j}<small>${s || '<span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span>'}</small></div>`).join('')}</div>
     <div class="rf-tuiles">${['Ventes', 'Objectif du jour', 'Vitrine', 'Équipe en poste'].map(t => `<div class="rf-bloc"><h2>${t}</h2><div class="rf-sk" style="width:45%;height:20px"></div><div class="rf-sk" style="width:85%"></div></div>`).join('')}</div>
     <div class="rf-deux"><div class="rf-bloc"><h2>Ventes par catégorie</h2>${[92, 80, 86, 70, 76, 62, 74].map(w => `<div class="rf-sk" style="width:${w}%"></div>`).join('')}</div>
@@ -73,7 +76,7 @@ function contenu(titre, avant) {
     <div class="rf-bloc"><h2>La journée</h2>${[96, 90, 94].map(w => `<div class="rf-sk" style="width:${w}%"></div>`).join('')}</div>
   </div></main>`;
 }
-function page(lettre, titreDoc, rail, titre, avant) {
+function page(lettre, titreDoc, rail, titre, avant, avatars) {
   return `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rail du dashboard franchisé — ${titreDoc} (maquette ${lettre.toUpperCase()})</title>
@@ -85,7 +88,7 @@ function page(lettre, titreDoc, rail, titre, avant) {
 <nav class="sidebar" aria-label="Navigation du dashboard">
 ${rail}
 </nav>
-<div class="workspace__main">${contenu(titre, avant)}</div>
+<div class="workspace__main">${contenu(titre, avant, avatars)}</div>
 </div>
 </body></html>
 `;
@@ -135,7 +138,6 @@ function carteObjectif(per) {
 const railB = per => `${tete('Dashboard magasin')}
   <div class="rf-rep"><div class="rf-rep__t">Atelier by – Halle<small>au 15/11</small></div>
     <div class="rf-cartes">
-      <button class="rf-carte"><div class="k">Valeur<em>six trimestres</em></div><div class="v ex">100 328 €</div>${courbe([94.1, 95.8, 97.2, 98.0, 99.6, 100.3])}<div class="s"><span class="ex">+ 2,4 %</span> en trois mois</div></button>
       <button class="rf-carte"><div class="k">Note Google<em class="ex">287 avis</em></div><div class="v"><span class="ex">4,6</span>${etoiles(4.6)}<small class="ex">+ 9 ce mois</small></div>
         <div class="rf-echelle"><i style="width:60%"></i><b style="left:50%"></b></div><div class="rf-echelle-l"><span>4,0</span><span>cible 4,5</span><span>5,0</span></div></button>
       ${carteObjectif(per)}
@@ -143,8 +145,15 @@ const railB = per => `${tete('Dashboard magasin')}
   <div class="sidebar__groups">
     ${groupe('Le magasin', [['Opérationnel', I.tdb, '', per === 'jour'], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', per !== 'jour'], ['Temps morts', I.journal]])}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
-    ${groupe('Assistants', [['Revue du soir', I.revue, '<span class="ex">à faire</span>'], ['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
+    ${groupe('Assistants', [['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
   </div>`;
+/* Les trois avatars du haut à droite (retouche du 15/11/2026 : « la valeur doit être en haut à droite avec l'avatar
+ * coach et l'avatar revue du jour ; les trois avatars de taille et de forme identiques ») : un cercle de 36 px, le même
+ * pour les trois, une icône au trait ; à côté, ce qu'il dit. Bordeaux quand il attend un geste (la revue à faire).
+ * Un clic ouvre : la valeur, son tiroir (la formule, six trimestres) ; le coach, la prochaine visite et le plan
+ * d'action ; la revue, l'assistant du soir, une question à la fois. */
+const avatar = (d, k, v, vif) => `<button class="rf-av${vif ? ' vif' : ''}"><span class="rf-av__o">${ico(d)}</span><span><span class="rf-av__k">${k}</span><span class="rf-av__v">${v}</span></span></button>`;
+const AVATARS = `<div class="rf-avs">${avatar(I.euro, 'Valeur', '<span class="ex">100 328 €</span>')}${avatar(I.personne, 'Coach', 'visite <span class="ex">le 19/11</span>')}${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', true)}</div>`;
 const ONGLET = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
 const ongletsB = per => `<div class="page-tabs" style="margin:0">${['Semaine', 'Mois', 'Trimestre', 'Année'].map(o => `<button class="page-tabs__tab${o === ONGLET[per] ? ' is-on' : ''}">${o}</button>`).join('')}</div>`;
 
@@ -240,9 +249,9 @@ fs.writeFileSync(path.join(D, 'b2.html'), page('b2', 'les primes en jeu', railB2
 fs.writeFileSync(path.join(D, 'b3.html'), page('b3', 'le verdict', railB3, 'Opérationnel'));
 
 fs.writeFileSync(path.join(D, 'a.html'), page('a', 'les repères en liste', railA, 'Opérationnel'));
-fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB('jour'), 'Opérationnel'));
+fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB('jour'), 'Opérationnel', '', AVATARS));
 // La carte de l'objectif dans chaque onglet de Résultat.
-['semaine', 'mois', 'trimestre', 'annee'].forEach(per => fs.writeFileSync(path.join(D, 'b-' + per + '.html'), page('b', 'objectif ' + ONGLET[per].toLowerCase(), railB(per), 'Résultat', ongletsB(per))));
+['semaine', 'mois', 'trimestre', 'annee'].forEach(per => fs.writeFileSync(path.join(D, 'b-' + per + '.html'), page('b', 'objectif ' + ONGLET[per].toLowerCase(), railB(per), 'Résultat', ongletsB(per), AVATARS)));
 fs.writeFileSync(path.join(D, 'c.html'), page('c', 'les assistants d’abord', railC, 'Opérationnel'));
 
 /* Les planches : les captures côte à côte (A, B, C ; puis B et ses trois variantes). */
@@ -253,7 +262,7 @@ function planche(nom, titre, L) {
 <body><div class="rf-planche" style="grid-template-columns:repeat(${L.length}, 1fr)">${L.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><img src="${l}.png" alt="${t}"></figure>`).join('')}</div></body></html>
 `);
 }
-const PB = ['b', 'B — Le tableau de bord dans le rail', 'chaque repère a sa forme ; l’objectif du jour, celui de la période dans les onglets de Résultat'];
+const PB = ['b', 'B — Le tableau de bord dans le rail', 'la note Google et l’objectif dans le rail ; la valeur, le coach et la revue en avatars, en haut à droite'];
 planche('planche', 'planche', [['a', 'A — Les repères en liste', 'le rail du Marketing tel quel ; les onze onglets rangés en trois groupes, les assistants en bas'],
   PB, ['c', 'C — Les assistants d’abord', 'quatre cases, la revue du soir en tête, puis ce qu’il reste à faire']]);
 planche('planche-b', 'B et ses variantes', [PB,

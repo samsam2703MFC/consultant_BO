@@ -19,10 +19,28 @@ contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 | | forme | ce qu'elle apporte | ce qu'elle coûte |
 |---|---|---|---|
 | **A** | `a.png` — **les repères en liste**. En haut, cinq lignes : valeur, note Google, objectif du mois, résultat du mois, place au réseau. Les onze onglets deviennent onze entrées en trois groupes (La journée, Les chiffres, Vendre), les assistants en un quatrième groupe, en bas. | le moins de changement : chaque onglet garde son nom et sa place | **1 103 px de haut** : à 1 000 px, les assistants passent sous le pli ; onze entrées à lire |
-| **B** | `b.png` — **le tableau de bord dans le rail**. Trois cartes en haut, chacune avec sa forme : la valeur et sa courbe sur six trimestres, la note Google sur son échelle (4,0 → 5,0, trait de la cible), l'objectif en jauge — **celui du jour**, celui de la période dans les onglets de Résultat (voir plus bas). **Résultat** réunit Semaine, Mois, Trimestre et Année en onglets de page. | les repères se lisent sans lire ; huit entrées au lieu de onze ; tient dans 1 000 px | un onglet de plus à cliquer pour passer du mois à l'année ; trois repères seulement (la place au réseau reste dans la page) |
+| **B** | `b.png` — **le tableau de bord dans le rail**. Deux cartes en haut du rail, chacune avec sa forme : la note Google sur son échelle (4,0 → 5,0, trait de la cible), l'objectif en jauge — **celui du jour**, celui de la période dans les onglets de Résultat. **La valeur, le coach et la revue du soir** sont trois avatars identiques en haut à droite (voir plus bas). **Résultat** réunit Semaine, Mois, Trimestre et Année en onglets de page. | les repères se lisent sans lire ; sept entrées au lieu de onze ; tient dans 1 000 px | un onglet de plus à cliquer pour passer du mois à l'année ; la place au réseau reste dans la page |
 | **C** | `c.png` — **les assistants d'abord**. Quatre cases en haut (valeur, Google, objectif, résultat), puis la **revue du soir** en carte, avec son état et « Commencer la revue », puis un groupe **À faire** (tâches du jour, plan d'action, note du jour, réclamation fournisseur), puis le magasin et la vente. | le rail répond d'abord à « qu'est-ce que je dois faire ? » ; la revue ne s'oublie plus ; tient dans 1 000 px | la carte de la revue prend la place de deux entrées ; elle n'a de sens que le soir (le matin, elle dirait « faite hier ») |
 
 `planche.jpg` met les trois côte à côte. `mesures.json` : la hauteur de chaque rail.
+
+## B retouchée : la valeur, le coach et la revue en avatars
+
+Demande du 15/11/2026 : « la valeur doit être en haut à droite avec l'avatar coach et l'avatar revue du jour ; les
+trois avatars de taille et de forme identiques ». En haut à droite de la barre, après la date et « Relire », un filet,
+puis trois avatars : **le même cercle de 36 px** pour les trois (fond blanc, filet `--line`, icône au trait de 18 px),
+et à côté, en deux lignes, ce qu'il dit.
+
+| avatar | icône | à côté | un clic ouvre | lecture |
+|---|---|---|---|---|
+| Valeur | l'euro | « Valeur · 100 328 € » | le tiroir de la valeur (la formule, six trimestres), comme la pastille d'aujourd'hui | `/ventes/mensuel?shop=&mois=30` |
+| Coach | une personne | « Coach · visite le 19/11 » | le coach du magasin (le consultant, « business coach » des SOP) : sa prochaine visite, le plan d'action | le module des visites (rôle franchisé) |
+| Revue du soir | la planchette et la lune | « Revue du soir · à faire » | l'assistant du soir, une question à la fois | `/soir/revue` (`?leger=1` pour l'état) |
+
+L'avatar qui attend un geste se teinte de bordeaux (la revue à faire) ; il redevient comme les deux autres une fois la
+revue faite (« faite à 19 h 40 »). Chaque donnée à une seule place : la carte de la valeur et l'entrée « Revue du
+soir » quittent le rail. Le coach n'affiche pas de nom dans la maquette : il viendra du module des visites. Le nom
+« Revue du soir » est celui de l'écran d'aujourd'hui ; « revue du jour » si on le renomme.
 
 ## B retouchée : l'objectif du jour
 
@@ -83,7 +101,7 @@ Ceux que le dashboard a déjà, aucun inventé :
 
 | assistant | où il vit aujourd'hui | dans le rail |
 |---|---|---|
-| Revue du soir | bouton de la barre ; `/soir/revue`, une question à la fois | entrée avec son état (A, B) ou carte en tête (C) |
+| Revue du soir | bouton de la barre ; `/soir/revue`, une question à la fois | entrée avec son état (A, variantes de B), carte en tête (C), avatar en haut à droite (B) |
 | Plan d'action | vue `actions`, le module des visites (`CockpitVisites`, rôle franchisé) — **sans onglet** | entrée, avec les points ouverts |
 | Campagne | vue `campagne`, même module — **sans onglet** | entrée |
 | Réclamation fournisseur | **au téléphone seulement** | entrée : l'ouvrir au bureau est **à décider** |
@@ -98,6 +116,7 @@ L'assistant des promotions reste au cockpit (Promotions › Édition) : l'onglet
 - **Les compteurs et états** des entrées (« 4 », « 3 », « à faire ») : la forme du §8.3, un nombre en 11 px `--accent`
   poussé à droite, sans pastille. « à faire » est un mot, pas un nombre.
 - **La carte de la revue du soir** (C) : le bouton d'action du §8 (« au plus un par rail ») posé dans un cadre teinté.
+- **Les avatars du haut à droite** (B) : un composant que le Marketing n'a pas ; le cercle est permis (§2 : même largeur et même hauteur). Deux tracés hors catalogue du §8.4 : l'euro (`M17.5 6.5A7 7 0 1 0 17.5 17.5M4 10h10M4 14h10`) et la personne seule (celle de « Droits » sans le plus).
 - **L'icône de la revue du soir** : la planchette et la lune du logo L2 du dashboard, redessinées au trait ; elle n'est
   pas au catalogue du §8.4.
 - **Résultat** (B, C) : une entrée pour quatre périodes, en onglets de page — c'est la règle du §2 (« un écran à
