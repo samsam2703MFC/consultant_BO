@@ -14,6 +14,21 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
+## Tâches : chercher une tâche, à la place des retours du contrôle qualité (`taches-recherche.png`) — codé, pas en ligne
+
+Demande du 15/11/2026 : « retirer Retours du contrôle qualité, ce sont des anciens ; seulement une search bar de la
+tâche, et montrer toutes les photos ou tâches reliées à la recherche ». Codé sur le **vrai dashboard** (branche locale
+`recherche-taches`, sur la branche de déploiement ; le changement est aussi dans `recherche-taches.patch`), **pas encore
+déployé** : la capture est la maquette.
+
+- La carte « Retours du contrôle qualité » quitte l'onglet Tâches (et son code).
+- **Chercher une tâche**, avant les checklists du jour : un mot (« comptoir », « biscuiterie », « chambre froide »,
+  « 1.1.02 ») montre chaque tâche de la semaine qui le contient (son nom ou sa checklist) ; pour chacune, ses sept jours
+  — l'heure, **la photo**, le statut (faite, à contrôler, sans photo, pas faite), **la note** du contrôle avec sa couleur —
+  et ses notes des 30 derniers jours. Un clic sur une photo l'ouvre.
+- Capture : Halle, dimanche 15/11, « comptoir » : 17 tâches, 54 photos de la semaine, lues au cockpit en lecture seule ;
+  aucun nom de personne n'est affiché.
+
 ## Réseaux sociaux dans le dashboard, sans redirection (`rs-*.png`, `planche-reseaux.jpg`) — maquette, à valider
 
 Demande du 15/11/2026 : « dans Marketing, une page Réseaux sociaux, sans redirection, avec le calendrier, le calendrier

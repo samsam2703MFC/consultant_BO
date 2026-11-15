@@ -51,6 +51,7 @@
   <p class="intro">Le dashboard magasin, au bureau, avec un rail à gauche. La proposition en cours montre les chiffres réels de
     Halle, lus au cockpit le dimanche 15 novembre 2026 à 09:46 ; les autres maquettes, des exemples. Un clic sur une capture l’ouvre en grand.</p>
   <nav id="onglets">
+    <a href="#taches">Tâches : recherche</a>
     <a href="#reseaux">Réseaux sociaux</a>
     <a href="#marketing">Calendrier des posts</a>
     <a href="#reel">Le vrai dashboard + rail</a>
@@ -60,6 +61,14 @@
   </nav>
 </header>
 <main>
+  <section id="s-taches">
+    <h2>Tâches : chercher une tâche <span class="etat cours">codé, à valider avant la mise en ligne</span></h2>
+    <p class="sous">« Retours du contrôle qualité » (des retours anciens) quitte l’onglet Tâches. À sa place, « Chercher une tâche » : un mot montre
+      chaque tâche de la semaine qui le contient, ses sept jours avec la photo, le statut et la note du contrôle, et ses notes des 30 derniers jours.</p>
+    <p class="note">Le vrai dashboard, chiffres réels de Halle (dimanche 15/11), recherche « comptoir » : 17 tâches, 54 photos. Aucun nom de personne affiché.</p>
+    <figure><figcaption>Tâches · Chercher une tâche · « comptoir »</figcaption><img src="taches-recherche.png" alt="La recherche des tâches"></figure>
+  </section>
+
   <section id="s-reseaux">
     <h2>Réseaux sociaux dans le dashboard <span class="etat cours">maquette à valider</span></h2>
     <p class="sous">Une entrée Réseaux sociaux dans le groupe Marketing du rail ; la page s’ouvre dans le dashboard, sans redirection, en onglets :
@@ -127,9 +136,9 @@
 <div class="loupe" id="loupe" role="dialog" aria-label="Capture en grand"><button class="fermer" type="button">Fermer</button><img alt=""></div>
 <script>
   // Les vues se nomment dans l'adresse (#marketing, #reel, #b, #propre, #propositions) ; sans nom, la demande en cours.
-  const VUES = ['reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
+  const VUES = ['taches', 'reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
   function montrer() {
-    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'reseaux';
+    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'taches';
     VUES.forEach(n => document.getElementById('s-' + n).classList.toggle('on', n === v));
     document.querySelectorAll('#onglets a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
   }
