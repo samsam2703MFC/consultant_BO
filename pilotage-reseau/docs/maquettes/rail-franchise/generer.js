@@ -76,7 +76,7 @@ function contenu(titre, avant, avatars) {
     <div class="rf-bloc"><h2>La journée</h2>${[96, 90, 94].map(w => `<div class="rf-sk" style="width:${w}%"></div>`).join('')}</div>
   </div></main>`;
 }
-function page(lettre, titreDoc, rail, titre, avant, avatars) {
+function page(lettre, titreDoc, rail, titre, avant, avatars, tiroir) {
   return `<!DOCTYPE html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Rail du dashboard franchisé — ${titreDoc} (maquette ${lettre.toUpperCase()})</title>
@@ -88,7 +88,7 @@ function page(lettre, titreDoc, rail, titre, avant, avatars) {
 <nav class="sidebar" aria-label="Navigation du dashboard">
 ${rail}
 </nav>
-<div class="workspace__main">${contenu(titre, avant, avatars)}</div>
+<div class="workspace__main">${contenu(titre, avant, avatars)}${tiroir || ''}</div>
 </div>
 </body></html>
 `;
@@ -145,22 +145,37 @@ const railB = per => `${tete('Dashboard magasin')}
   <div class="sidebar__groups">
     ${groupe('Le magasin', [['Opérationnel', I.tdb, '', per === 'jour'], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', per !== 'jour'], ['Temps morts', I.journal]])}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
+    ${groupe('Assistants', [['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
   </div>`;
 /* Les trois avatars du haut à droite (retouche du 15/11/2026 : « la valeur doit être en haut à droite avec l'avatar
  * coach et l'avatar revue du jour ; les trois avatars de taille et de forme identiques ») : un cercle de 36 px, le même
  * pour les trois, une icône au trait ; à côté, ce qu'il dit. Bordeaux quand il attend un geste (la revue à faire).
- * Un clic ouvre : la valeur, son tiroir (la formule, six trimestres) ; le coach, les assistants ; la revue, l'assistant
+ * Un clic ouvre : la valeur, son tiroir (la formule, six trimestres) ; le coach, l'assistant IA ; la revue, l'assistant
  * du soir, une question à la fois.
- * « Coach, c'est l'assistant » (15/11/2026) : l'avatar Coach réunit les assistants du magasin — le groupe « Assistants »
- * quitte le rail (une donnée, une place). Son panneau s'ouvre sous les avatars : bordé, sans ombre (§2). */
+ * « Le coach, c'est l'assistant IA » (15/11/2026) : une conversation dans un tiroir à droite, sous la barre. Il lit les
+ * chiffres du dashboard (les mêmes lectures), cite d'où vient chaque chiffre, PROPOSE et n'écrit rien : un geste qu'il
+ * suggère ouvre l'assistant concerné, pré-rempli, et le franchisé valide (la règle de src/anthropic.php). */
 const avatar = (d, k, v, vif, on) => `<button class="rf-av${vif ? ' vif' : ''}${on ? ' on' : ''}"${on ? ' aria-expanded="true"' : ''}><span class="rf-av__o">${ico(d)}</span><span><span class="rf-av__k">${k}</span><span class="rf-av__v">${v}</span></span></button>`;
-const COACH = [['Plan d’action', I.formulaires, '<span class="ex">3 points ouverts</span>', 'les points notés à la dernière visite'],
-  ['Campagne', I.campagnes, '<span class="ex">en cours</span>', 'l’objectif produits du mois, où l’on en est'],
-  ['Note du jour', I.ecrire, 'à écrire', 'ce qui explique la journée'],
-  ['Réclamation fournisseur', I.commentaires, '', 'une livraison, un produit, une photo']];
-const panneauCoach = `<div class="rf-pop" role="dialog" aria-label="Coach"><div class="rf-pop__t">Coach<small>vos assistants</small></div>
-  ${COACH.map(([l, d, e, s]) => `<a class="rf-pop__l" href="#">${ico(d)}<span class="rf-pop__x"><span>${l}</span><small>${s}</small></span>${e ? `<span class="rf-etat">${e}</span>` : ''}</a>`).join('')}</div>`;
-const avatars = coachOuvert => `<div class="rf-avs">${avatar(I.euro, 'Valeur', '<span class="ex">100 328 €</span>')}${avatar(I.personne, 'Coach', '<span class="ex">3 à faire</span>', false, coachOuvert)}${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', true)}${coachOuvert ? panneauCoach : ''}</div>`;
+const avatars = coachOuvert => `<div class="rf-avs">${avatar(I.euro, 'Valeur', '<span class="ex">100 328 €</span>')}${avatar(I.personne, 'Coach', '<span class="ex">2 à regarder</span>', false, coachOuvert)}${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', true)}</div>`;
+const src = l => `<a class="rf-ia__src" href="#">${l} ›</a>`;
+const TIROIR_COACH = `<aside class="rf-ia" aria-label="Coach, l’assistant IA">
+  <div class="rf-ia__h"><span class="rf-av__o">${ico(I.personne)}</span><div><div class="rf-ia__t">Coach</div><div class="rf-ia__st">l’assistant IA · lit les chiffres de Halle, n’écrit rien</div></div>
+    <button class="btn btn--icon btn--ghost" aria-label="Fermer">×</button></div>
+  <div class="rf-ia__fil">
+    <div class="rf-pill" style="align-self:center">Conversation : exemple</div>
+    <div class="rf-ia__m">Bonjour. À 13 h 05, Halle est à 68 % de l’objectif du jour (2 380 €), 4 points devant dimanche dernier à la même heure.
+      <br><br>Deux choses à regarder :<br>1. la matière du mois est à 39,6 %, au-dessus du seuil de 35 % ;<br>2. 12 commandes clients sont en retard.
+      <div class="rf-ia__srcs">${src('Opérationnel')}${src('Résultat › Mois')}</div></div>
+    <div class="rf-ia__moi">Comment rattraper les 2 690 € du mois ?</div>
+    <div class="rf-ia__m">Il reste 15 jours d’ouverture : 180 € de plus par jour suffisent. Un dimanche à 110 % de son objectif en rapporte 240 € à lui seul.
+      <br><br>Je peux en faire un point du plan d’action&nbsp;: «&nbsp;vitrine pleine jusqu’à 17 h le dimanche&nbsp;». Vous le relisez avant qu’il soit noté.
+      <div class="rf-ia__srcs">${src('Résultat › Mois')}${src('Résultat › Semaine')}</div>
+      <div class="rf-ia__gestes"><button class="btn btn--sm">Préparer ce point du plan d’action</button></div></div>
+  </div>
+  <div class="rf-ia__sugg">${['Pourquoi la matière est-elle haute ?', 'Quelles commandes sont en retard ?', 'Prépare ma revue du soir'].map(t => `<button class="btn btn--sm">${t}</button>`).join('')}</div>
+  <div class="rf-ia__saisie"><input class="rf-ia__champ" placeholder="Poser une question au coach…"><button class="btn btn--primary">Envoyer</button></div>
+  <div class="rf-ia__pied">Le coach propose, vous décidez. Il ne lit que ce magasin et cite chaque chiffre.</div>
+</aside>`;
 const AVATARS = avatars(false);
 const ONGLET = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
 const ongletsB = per => `<div class="page-tabs" style="margin:0">${['Semaine', 'Mois', 'Trimestre', 'Année'].map(o => `<button class="page-tabs__tab${o === ONGLET[per] ? ' is-on' : ''}">${o}</button>`).join('')}</div>`;
@@ -258,7 +273,7 @@ fs.writeFileSync(path.join(D, 'b3.html'), page('b3', 'le verdict', railB3, 'Opé
 
 fs.writeFileSync(path.join(D, 'a.html'), page('a', 'les repères en liste', railA, 'Opérationnel'));
 fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB('jour'), 'Opérationnel', '', AVATARS));
-fs.writeFileSync(path.join(D, 'b-coach.html'), page('b', 'le coach ouvert', railB('jour'), 'Opérationnel', '', avatars(true)));
+fs.writeFileSync(path.join(D, 'b-coach.html'), page('b', 'le coach ouvert', railB('jour'), 'Opérationnel', '', avatars(true), TIROIR_COACH));
 // La carte de l'objectif dans chaque onglet de Résultat.
 ['semaine', 'mois', 'trimestre', 'annee'].forEach(per => fs.writeFileSync(path.join(D, 'b-' + per + '.html'), page('b', 'objectif ' + ONGLET[per].toLowerCase(), railB(per), 'Résultat', ongletsB(per), AVATARS)));
 fs.writeFileSync(path.join(D, 'c.html'), page('c', 'les assistants d’abord', railC, 'Opérationnel'));

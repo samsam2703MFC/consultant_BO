@@ -34,14 +34,31 @@ et à côté, en deux lignes, ce qu'il dit.
 | avatar | icône | à côté | un clic ouvre | lecture |
 |---|---|---|---|---|
 | Valeur | l'euro | « Valeur · 100 328 € » | le tiroir de la valeur (la formule, six trimestres), comme la pastille d'aujourd'hui | `/ventes/mensuel?shop=&mois=30` |
-| Coach | une personne | « Coach · 3 à faire » | **les assistants** du magasin, dans un panneau sous les avatars (`b-coach.png`) : plan d'action (3 points ouverts), campagne (en cours), note du jour (à écrire), réclamation fournisseur | le module des visites (plan d'action, campagne), `/exploitation/notes` |
+| Coach | une personne | « Coach · 2 à regarder » | **l'assistant IA** : une conversation dans un tiroir à droite, sous la barre (`b-coach.png`) | les lectures du dashboard ; le modèle par le client du cockpit (`src/anthropic.php`), la clé IA commune côté serveur |
 | Revue du soir | la planchette et la lune | « Revue du soir · à faire » | l'assistant du soir, une question à la fois | `/soir/revue` (`?leger=1` pour l'état) |
 
 L'avatar qui attend un geste se teinte de bordeaux (la revue à faire) ; il redevient comme les deux autres une fois la
-revue faite (« faite à 19 h 40 »). Chaque donnée à une seule place : la carte de la valeur et tout le groupe « Assistants » quittent le rail ; la revue
-a son avatar, les autres assistants passent dans le coach (« coach, c'est l'assistant », 15/11/2026). Le panneau du
-coach est bordé, sans ombre (§2). « 3 à faire » compte les points ouverts du plan d'action. Le nom « Revue du soir » est
+revue faite (« faite à 19 h 40 »). Chaque donnée à une seule place : la carte de la valeur et l'entrée « Revue du soir » quittent le rail ; le plan
+d'action, la campagne et la réclamation fournisseur y restent, dans le groupe Assistants. Le nom « Revue du soir » est
 celui de l'écran d'aujourd'hui ; « revue du jour » si on le renomme.
+
+### Le coach, l'assistant IA
+
+Demande du 15/11/2026 : « le coach, c'est l'assistant IA ». Un clic sur l'avatar ouvre une conversation dans un tiroir
+de 420 px à droite, sous la barre, bordé, sans ombre (§2) ; le contenu de l'onglet reste derrière. `b-coach.png` montre
+une conversation **d'exemple** :
+
+- en ouvrant, le coach dit où en est la journée et ce qui est à regarder (« 2 à regarder » sous l'avatar) ;
+- chaque chiffre cite l'écran d'où il vient (« Opérationnel › », « Résultat › Mois › ») : un clic l'ouvre ;
+- il **propose et n'écrit rien** : « Préparer ce point du plan d'action » ouvre le plan d'action pré-rempli, le
+  franchisé le relit et le note — la règle déjà tenue par l'IA du cockpit (`src/anthropic.php` : « Claude peut
+  PROPOSER ; il ne note jamais ») ;
+- trois questions toutes prêtes, puis le champ libre et « Envoyer ».
+
+Ce qu'il faut pour le coder : un point d'API serveur (la clé ne quitte jamais le serveur ; elle est dans la table des
+clés commune, portail `commun`), qui passe au modèle les lectures du magasin déjà servies au dashboard, et seulement
+celles de ce magasin ; une réponse contrainte à citer ses chiffres ; un journal des conversations. Rien de cela n'existe
+aujourd'hui : l'IA du cockpit ne sert qu'à proposer une note de photo et à relire la charte.
 
 ## B retouchée : l'objectif du jour
 
@@ -103,7 +120,7 @@ Ceux que le dashboard a déjà, aucun inventé :
 | assistant | où il vit aujourd'hui | dans le rail |
 |---|---|---|
 | Revue du soir | bouton de la barre ; `/soir/revue`, une question à la fois | entrée avec son état (A, variantes de B), carte en tête (C), avatar en haut à droite (B) |
-| Plan d'action | vue `actions`, le module des visites (`CockpitVisites`, rôle franchisé) — **sans onglet** | entrée, avec les points ouverts |
+| Plan d'action | vue `actions`, le module des visites (`CockpitVisites`, rôle franchisé) — **sans onglet** | entrée, avec les points ouverts ; le coach IA peut y préparer un point (B) |
 | Campagne | vue `campagne`, même module — **sans onglet** | entrée |
 | Réclamation fournisseur | **au téléphone seulement** | entrée : l'ouvrir au bureau est **à décider** |
 | Note du jour (C) | tiroir de l'Opérationnel ; `/exploitation/notes` | entrée du groupe À faire |

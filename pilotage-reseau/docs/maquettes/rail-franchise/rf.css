@@ -131,17 +131,23 @@ svg.rf-mini { display: block; width: 100%; height: 28px; margin-top: 5px; }
 .rf-av__v { display: block; margin-top: 2px; font-size: 13px; color: var(--ink); white-space: nowrap; }
 .rf-av.vif .rf-av__v { color: var(--accent); }
 
-/* Le coach ouvert : l'avatar cerclé de bordeaux, son panneau sous les avatars (bordé, sans ombre). */
-.rf-avs { position: relative; }
+/* Le coach ouvert : l'avatar cerclé de bordeaux ; l'assistant IA dans un tiroir à droite, sous la barre (bordé, sans ombre). */
 .rf-av.on .rf-av__o { border-color: var(--accent); color: var(--accent); }
-.rf-pop { position: absolute; top: calc(100% + 16px); right: 0; z-index: 5; width: 320px; padding: 8px; border: 1px solid var(--line);
-  border-radius: 10px; background: #fff; }
-.rf-pop__t { display: flex; align-items: baseline; justify-content: space-between; padding: 4px 8px 8px; font-size: 10px;
-  letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
-.rf-pop__t small { font-size: 11px; letter-spacing: normal; text-transform: none; color: var(--muted); }
-.rf-pop__l { display: flex; align-items: center; gap: 10px; padding: 9px 8px; border-radius: 9px; color: var(--muted-2); text-decoration: none; }
-.rf-pop__l + .rf-pop__l { border-top: 1px solid var(--row-line); }
-.rf-pop__l:hover { background: var(--paper); }
-.rf-pop__x { display: grid; gap: 2px; min-width: 0; font-size: 13px; color: var(--ink); }
-.rf-pop__x small { font-size: 11px; color: var(--muted); }
-.rf-pop__l .rf-etat { align-self: flex-start; margin-top: 2px; }
+.workspace__main { position: relative; }
+.rf-ia { position: absolute; top: 85px; right: 0; bottom: 0; z-index: 5; display: flex; flex-direction: column; width: 420px;
+  border-left: 1px solid var(--line); background: #fff; }
+.rf-ia__h { display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.rf-ia__h .btn { margin-left: auto; }
+.rf-ia__h .rf-av__o { border-color: var(--accent); color: var(--accent); }
+.rf-ia__t { font-size: 15px; color: var(--ink); }
+.rf-ia__st { margin-top: 2px; font-size: 11px; color: var(--muted); }
+.rf-ia__fil { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 16px; }
+.rf-ia__m { max-width: 340px; padding: 11px 13px; border-radius: 10px; background: var(--paper); font-size: 13px; line-height: 1.5; color: var(--ink); }
+.rf-ia__moi { align-self: flex-end; max-width: 300px; padding: 9px 12px; border-radius: 10px; background: var(--chip); font-size: 13px; line-height: 1.45; color: var(--ink); }
+.rf-ia__srcs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+.rf-ia__src { font-size: 11px; color: var(--accent); text-decoration: none; }
+.rf-ia__gestes { margin-top: 10px; }
+.rf-ia__sugg { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 16px 0; border-top: 1px solid var(--line); }
+.rf-ia__saisie { display: flex; gap: 8px; padding: 10px 16px 6px; }
+.rf-ia__champ { flex: 1; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--ink); }
+.rf-ia__pied { padding: 0 16px 14px; font-size: 10.5px; color: var(--muted); }
