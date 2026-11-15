@@ -43,7 +43,9 @@ const ACCES_FRANCHISE = ['/exploitation', '/ventes', '/fidelite', '/analyse', '/
     '/production', '/soir', '/assistant/magasin', '/stores', '/benchmarks/magasin', '/benchmarks/releve', '/plan',
     '/leviers', '/equipe', '/caisse', '/planogramme', '/pwa', '/formation/sop/photo', '/uploads', '/dashboard', '/tablette',
     // Le plan de trésorerie (14/11/2026) : chaque franchisé a le sien — le `shop` de la requête et du corps est vérifié.
-    '/tresorerie'];
+    '/tresorerie',
+    // Le helpdesk (15/11/2026) : le franchisé lit et envoie SES demandes au bureau ; le reste du helpdesk est au siège.
+    '/helpdesk/magasin'];
 
 /** Les paramètres qui désignent un magasin, dans l'adresse ou dans le corps JSON. */
 const ACCES_CLES_MAGASIN = ['shop', 'shops', 'shopId', 'shop_id', 'magasin', 'magasins', 'magasinId'];

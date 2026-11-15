@@ -62,6 +62,7 @@ require __DIR__ . '/../../src/verification_correction.php';   // Recettes à cor
 require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
 require __DIR__ . '/../../src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
 require __DIR__ . '/../../src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
+require __DIR__ . '/../../src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -634,6 +635,10 @@ function route(string $method, string $path): mixed
             // Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) : la liste, la fiche d'un produit.
             $path === '/produits/parametrage/liste'   => ep_produits_parametrage_liste(),
             $path === '/produits/parametrage'         => ep_produits_parametrage(),
+            // Le helpdesk des franchisés (15/11/2026, src/helpdesk.php).
+            $path === '/helpdesk/demandes'            => ep_helpdesk_demandes(),
+            $path === '/helpdesk/magasin'             => ep_helpdesk_magasin(),
+            (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
             $path === '/verification/fuites'          => ep_verification_fuites(),
@@ -972,6 +977,11 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
+    if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
+    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite)$#', $path, $m)) {
+        return match ($m[2]) { 'repondre' => wr_helpdesk_repondre((int) $m[1]), 'statut' => wr_helpdesk_statut((int) $m[1]), 'consultant' => wr_helpdesk_consultant((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
+    }
+    if ($method === 'POST' && preg_match('#^/helpdesk/missions/(\d+)$#', $path, $m)) { return wr_helpdesk_mission((int) $m[1]); }
     if ($method === 'PUT' && $path === '/verification/recettes/liens') { return wr_verification_liens(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
     if ($method === 'POST' && $path === '/visibilite/sync') { return wr_visibilite_sync(); }
