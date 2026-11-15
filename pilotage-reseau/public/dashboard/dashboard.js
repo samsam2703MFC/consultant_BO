@@ -6156,6 +6156,7 @@
     lireAux(cleCQ(), cheminCQ(), force);
     lireAux(cleTJR(), cheminTJR(), force);
     tjSemaine().filter(d => d !== S.date && d <= AUJ).forEach(d => lireAux(cleTJ(d), cheminTJ(d), force && d === AUJ));
+    tjRechercheCharger();
   }
   /** Faite : rendue — et, quand la tâche demande une photo, rendue AVEC la photo (la règle du 06/10/2026). Cochée sans la
    * photo demandée, elle ne compte pas : elle se montre à part, « cochée sans photo ». */
@@ -6261,28 +6262,53 @@
         <span class="tj-p"><span class="tj-prog"><i style="width:${Math.max(p || 0, 2)}%;background:${coul}"></i></span><span><b>${c.faites}</b> / ${c.total}</span></span>${st}<span class="tj-repli">${ouv ? 'replier ▴' : 'voir ▾'}</span></div>
       ${ouv ? `<div class="tj-ts">${T.map(t => tjTache(t, X, niveaux)).join('')}</div>` : ''}</div>`;
   }
-  function tjRetours(R, niveaux) {
-    const k = cleTJR();
-    let h = `<div class="db-card tj-ret" id="tj-retours"><div class="ct"><span class="db-lab">Retours du contrôle qualité</span><span class="db-mini">les notes et les commentaires du contrôleur, des 30 derniers jours · cliquez une ligne pour voir la photo et ses remarques</span></div>`;
-    if (S.err[k]) { return h + `<div class="db-mini" style="padding:14px 16px">Retours : ${esc(S.err[k])}</div></div>`; }
-    if (!R) { return h + '<div style="padding:12px 16px">' + squelette(3) + '</div></div>'; }
-    const L = Array.isArray(R.retours) ? R.retours : [];
-    if (!L.length) { return h + `<div class="db-mini" style="padding:14px 16px">Aucune photo notée ces 30 derniers jours.</div></div>`; }
-    const suite = {}; (R.nc || []).forEach(n => { suite[n.taskId + '|' + n.jour] = n.suite; });
-    // Un nom que le serveur ne connaît pas (« Tâche #1207 ») se reprend des journées déjà lues.
-    const noms = {}; Object.keys(S.aux).filter(c => c.indexOf('tj|' + S.shop + '|') === 0).forEach(c => tachesJour(S.aux[c]).forEach(t => { noms[String(t.taskId)] = t.tache; }));
-    const nomDe = r => (/^Tâche #/.test(String(r.tache || '')) && noms[String(r.taskId)]) || r.tache;
-    const V = S.tjRetTout ? L : L.slice(0, 12);
-    h += `<div class="tj-rl">${V.map(r => {
-      const n = r.note != null ? tjNiveau(r.note, niveaux) : null, su = r.nc ? suite[r.taskId + '|' + r.jour] : null;
-      const rep = r.nc ? (su ? (su.conforme ? `<span class="tj-st ok">reprise le ${esc(fD(su.jour))} · ${su.note}/5</span>` : `<span class="tj-st ko">encore non conforme le ${esc(fD(su.jour))}</span>`) : '<span class="tj-st wa">reprise pas encore notée</span>') : '';
-      const t = new Date(r.jour + 'T12:00:00');
-      return `<div class="tj-r${r.nc ? ' nc' : ''}" data-tjretour="${esc(r.jour)}|${esc(r.taskId)}" role="button" tabindex="0">
-        <span class="tj-rj">${esc(JOURS_C[t.getDay()])} ${esc(fD(r.jour))}</span>${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b>${esc(n.nom)}</span>` : '<span></span>'}
-        <span class="tj-rn">${esc(nomDe(r))}${r.comment ? `<q>${esc(r.comment)}</q>` : ''}<small>${r.consultant ? 'noté par ' + esc(r.consultant) : ''}${r.le ? (r.consultant ? ' ' : 'noté ') + 'le ' + esc(fD(String(r.le).slice(0, 10))) + ' à ' + esc(hhmm(r.le)) : ''}</small></span>${rep}</div>`;
-    }).join('')}</div>`;
-    if (L.length > 12) { h += `<div style="padding:8px 16px 12px"><button type="button" class="db-btn" data-tjrettout="1">${S.tjRetTout ? 'Montrer les 12 derniers' : 'Voir les ' + L.length + ' retours'}</button></div>`; }
-    return h + '</div>';
+  /* --- Chercher une tâche (15/11/2026, à la place des « Retours du contrôle qualité », des retours anciens) ------------
+   * Un mot (« biscuiterie », « chambre froide », « 1.1.02 ») : chaque tâche de la semaine qui le contient, dans son nom ou
+   * celui de sa checklist ; ses sept jours (statut, photo, note du contrôle) ; et ses notes des 30 derniers jours.
+   * Lectures : /pwa/tasks (les jours, déjà lus par l'onglet), /pwa/tasks/photos (les photos de chaque jour, lues à la
+   * première recherche ; les liens sont signés, ils vieillissent), /pwa/tasks/nc?retours=1 (les notes des 30 jours). */
+  const tjNorm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const cleCQd = d => 'cqph|' + S.shop + '|' + d;
+  const cheminCQd = d => '/pwa/tasks/photos?shop=' + encodeURIComponent(S.shop) + '&date=' + d;
+  function tjRechercheCharger() { if (tjNorm(S.tjQ).length >= 2) { tjSemaine().filter(d => d <= AUJ).forEach(d => lireAux(cleCQd(d), cheminCQd(d))); } }
+  function tjResultats(niveaux) {
+    const q = tjNorm(S.tjQ);
+    if (q.length < 2) { return '<div class="db-mini tj-q-vide">Tapez au moins deux lettres : chaque tâche qui les contient, ses sept jours, ses photos et ses notes.</div>'; }
+    const J = tjSemaine(), R = S.aux[cleTJR()], T = {};
+    J.forEach(d => {
+      tachesJour(S.aux[cleTJ(d)]).forEach(t => {
+        const k = String(t.taskId), x = T[k] || (T[k] = { tache: t.tache, checklist: t.checklist || '', jours: {}, notes: [] });
+        x.jours[d] = { t };
+      });
+      const P = S.aux[cleCQd(d)];
+      ((P && P.photos) || []).forEach(p => { const x = T[String(p.taskId)]; if (x && x.jours[d] && p.photo) { x.jours[d].photo = p.photo; } });
+    });
+    ((R && R.retours) || []).forEach(r => { const x = T[String(r.taskId)]; if (x && !J.includes(r.jour)) { x.notes.push(r); } });
+    const L = Object.values(T).filter(x => tjNorm(x.tache + ' ' + x.checklist).includes(q)).sort((a, b) => a.checklist.localeCompare(b.checklist) || a.tache.localeCompare(b.tache));
+    if (!L.length) { return `<div class="db-mini tj-q-vide">Aucune tâche de la semaine ne contient « ${esc(String(S.tjQ).trim())} ».</div>`; }
+    const nPh = L.reduce((a, x) => a + Object.values(x.jours).filter(j => j.photo).length, 0);
+    const attente = J.filter(d => d <= AUJ).some(d => !S.aux[cleCQd(d)] && !S.err[cleCQd(d)]);
+    return `<div class="tj-q-som">${L.length} tâche${L.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} cette semaine${attente ? ' · lecture des photos…' : ''}</div>` + L.map(x => {
+      const c = tjCode(x.checklist), zc = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852';
+      const cases = J.map(d => {
+        const j = x.jours[d], t = new Date(d + 'T12:00:00'), lib = JOURS_C[t.getDay()] + ' ' + t.getDate();
+        if (!j) { return `<div class="tj-q-c rien"><span class="tj-q-d">${esc(lib)}</span><span class="tj-q-ph vide"></span><span class="tj-q-v">${d > AUJ ? 'à venir' : 'pas prévue'}</span></div>`; }
+        const tt = j.t, ok = tjFaite(tt), sp = tjSansPhoto(tt), n = tt.note != null ? tjNiveau(tt.note, niveaux) : null;
+        const st = ok ? (tt.statut === 'aControler' || tt.statut === 'aValider' ? 'à contrôler' : 'faite') : (sp ? 'sans photo' : (d === AUJ ? 'pas encore faite' : 'pas faite'));
+        const img = j.photo ? `<a class="tj-q-ph" href="${esc(j.photo)}" target="_blank" rel="noopener" title="ouvrir la photo"><img src="${esc(j.photo)}" alt="" loading="lazy"></a>` : `<span class="tj-q-ph vide">${tt.photoRequise ? TJ_CAM : ''}</span>`;
+        return `<div class="tj-q-c${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-q-d">${esc(lib)}${tt.faitLe ? ' · ' + esc(String(tt.faitLe).slice(11, 16)) : ''}</span>${img}<span class="tj-q-v">${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${tt.note}</b>${esc(n.nom)}</span>` : esc(st)}</span></div>`;
+      }).join('');
+      const anc = x.notes.slice(0, 10).map(r => { const n = r.note != null ? tjNiveau(r.note, niveaux) : null; return `<span class="tj-q-n">${esc(fD(r.jour))}${n ? ` <span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b></span>` : ''}</span>`; }).join('');
+      return `<div class="tj-q-t"><div class="tj-q-h"><span class="tj-code" style="background:${zc}">${esc(c.code || '—')}</span><span class="tj-nom">${esc(x.tache)}<small>${esc(c.titre)}</small></span></div>
+        <div class="tj-q-j">${cases}</div>${anc ? `<div class="tj-q-anc"><span class="db-mini">notes des 30 derniers jours</span>${anc}</div>` : ''}</div>`;
+    }).join('');
+  }
+  function tjRecherche(niveaux) {
+    S.tjNiv = niveaux;
+    const J = tjSemaine();
+    return `<div class="db-card tj-q" id="tj-recherche"><div class="ct"><span class="db-lab">Chercher une tâche</span><span class="db-mini">la semaine du ${esc(fD(J[0]))} au ${esc(fD(J[6]))}, jour par jour, avec ses photos et ses notes · et les notes du contrôle des 30 derniers jours</span></div>
+      <div class="tj-q-b"><input class="tj-q-in" type="search" data-tjq="1" value="${esc(S.tjQ || '')}" placeholder="Une tâche, une checklist, un comptoir : « biscuiterie », « chambre froide », « 1.1.02 »…" aria-label="Chercher une tâche"></div>
+      <div id="tj-q-res">${tjResultats(niveaux)}</div></div>`;
   }
   function rendTachesMag() {
     const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
@@ -6304,7 +6330,8 @@
       <div class="db-tui"><div class="k">Contrôle qualité du jour</div><div class="v">${moy != null ? nf(moy, 1) + ' / 5' : ctl.length + ' à contrôler'}</div><div class="s">${notees.length ? notees.length + ' photo' + (notees.length > 1 ? 's' : '') + ' notée' + (notees.length > 1 ? 's' : '') + (ctl.length ? ' · ' + ctl.length + ' à contrôler' : '') : (dern ? 'dernier passage du contrôleur : le ' + esc(fD(dern.jour)) + (dern.consultant ? ' (' + esc(dern.consultant) + ')' : '') : 'aucune photo notée ce jour')}</div></div>
       <div class="db-tui${ncL && ncL.length ? '' : ' bon'}" data-tjallerret="1" role="button" tabindex="0"><div class="k">Non-conformités · 30 jours</div><div class="v">${ncL ? ncL.length : '…'}</div><div class="s">${!ncL ? 'lecture…' : (ncL.length ? ncRep + ' reprise' + (ncRep > 1 ? 's' : '') + ' depuis · voir les retours ↓' : 'aucune note sous 4 · voir les retours ↓')}</div></div></div>`;
     h += tjGuide(CL);
-    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>` + tjRetours(R, niveaux); }
+    h += tjRecherche(niveaux);
+    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>`; }
     const n = { pas: CL.filter(c => c.etat === 'pas').length, partie: CL.filter(c => c.etat === 'partie').length, faite: CL.filter(c => c.etat === 'faite').length };
     const F = S.tjF === 'tout' ? CL : CL.filter(c => c.etat === S.tjF);
     const filtre = (v, lib, cls) => `<button type="button" class="tj-f ${cls}${S.tjF === v ? ' on' : ''}" data-tjf="${v}">${lib}</button>`;
@@ -6314,7 +6341,7 @@
         <span class="tj-filtres">${filtre('tout', 'Toutes ' + CL.length, 'mu')}${filtre('pas', (S.date === AUJ ? 'Pas commencées ' : 'Pas faites ') + n.pas, 'ko')}${filtre('partie', 'En partie ' + n.partie, 'wa')}${filtre('faite', 'Faites ' + n.faite, 'ok')}</span>
         <button type="button" class="db-btn" data-tjtout="${F.every(c => S.tjOuv[c.cle]) ? '0' : '1'}">${F.length && F.every(c => S.tjOuv[c.cle]) ? 'Tout replier' : 'Tout déplier'}</button></div>
       ${F.length ? F.map(c => tjLigne(c, X, niveaux)).join('') : '<div class="db-mini" style="padding:14px 16px">Aucune checklist dans ce filtre.</div>'}</div>`;
-    return h + tjRetours(R, niveaux);
+    return h;
   }
   /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
   function rendTachesMobile() {
@@ -6338,9 +6365,15 @@
     $.querySelectorAll('[data-tjtout]').forEach(el => el.addEventListener('click', () => { const o = el.dataset.tjtout === '1', D = S.aux[cleTJ(S.date)];
       tjChecklists(D).filter(c => S.tjF === 'tout' || c.etat === S.tjF).forEach(c => { S.tjOuv[c.cle] = o; }); rendre(); }));
     $.querySelectorAll('[data-tjguide]').forEach(el => cle(el, () => { S.tjGuide = !S.tjGuide; try { localStorage.setItem('db.tjGuide', S.tjGuide ? '1' : '0'); } catch (e) { /* rien */ } rendre(); }));
-    $.querySelectorAll('[data-tjrettout]').forEach(el => el.addEventListener('click', () => { S.tjRetTout = !S.tjRetTout; rendre(); }));
-    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-retours'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
-    $.querySelectorAll('[data-tjretour]').forEach(el => cle(el, () => { const [d, t] = el.dataset.tjretour.split('|'); if (d === S.date) { S.cqVoir = t; rendre(); } else { tjAller(d, t); } }));
+    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-recherche'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+    const qi = $.querySelector('[data-tjq]');
+    if (qi) {
+      qi.addEventListener('input', () => { S.tjQ = qi.value; S.tjQPos = qi.selectionStart; const r = document.getElementById('tj-q-res'); if (r) { r.innerHTML = tjResultats(S.tjNiv || []); } tjRechercheCharger(); });
+      qi.addEventListener('focus', () => { S.tjQFocus = true; });
+      // Quitter le champ, c'est cliquer ailleurs : un champ retiré par un nouveau rendu (les photos arrivent) garde la main.
+      qi.addEventListener('blur', () => setTimeout(() => { if (document.contains(qi) && document.activeElement !== qi) { S.tjQFocus = false; } }, 0));
+      if (S.tjQFocus) { qi.focus(); const p = S.tjQPos != null ? S.tjQPos : qi.value.length; qi.setSelectionRange(p, p); }
+    }
   }
 
   /* --- La revue du soir (08/11/2026, maquette M3 : une question à la fois) ------------------------------------------------

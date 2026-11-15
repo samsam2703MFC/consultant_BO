@@ -3193,3 +3193,25 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-vign:focus-visible,.db-av:focus-visible,.db-rcarte:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 @media print{.db-rail{display:none}body.db-rail-on #dash{margin-left:0}}
 .bm-cp-t{cursor:pointer}.bm-cp-t:hover{background:var(--paper)}.bm-cp-dr{margin-left:auto;font-size:12px;color:var(--color-primary,#8D1D2C);white-space:nowrap}
+
+/* Chercher une tâche (15/11/2026) : le champ, puis chaque tâche trouvée et ses sept jours. */
+.tj-q-b{padding:4px 16px 10px}
+.tj-q-in{width:100%;box-sizing:border-box;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:400 13px var(--font-ui,'Gotham',system-ui,sans-serif);color:var(--ink)}
+.tj-q-in:focus{outline:2px solid var(--accent);outline-offset:1px}
+.tj-q-vide{padding:2px 16px 14px}
+.tj-q-som{padding:0 16px 8px;font-size:12px;color:var(--muted-2)}
+.tj-q-t{margin:0 16px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--table-head)}
+.tj-q-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tj-q-j{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.tj-q-c{display:grid;gap:4px;align-content:start;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
+.tj-q-c.non{background:var(--stop-soft)}
+.tj-q-c.sp{background:var(--prize-soft)}
+.tj-q-c.rien{background:transparent;border-style:dashed}
+.tj-q-d{font-size:11px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-q-ph{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:var(--chip);color:var(--muted)}
+.tj-q-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.tj-q-ph.vide{background:repeating-linear-gradient(135deg,var(--chip) 0 6px,transparent 6px 12px)}
+.tj-q-v{font-size:11px;color:var(--muted-2);min-height:18px}
+.tj-q-v .tj-note{font-size:10.5px}
+.tj-q-anc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.tj-q-n{font-size:11px;color:var(--muted-2)}
