@@ -5641,7 +5641,7 @@ première lecture. La clôture s'inscrit au journal (« Revue du soir »).
 ### Dashboard › Mon catalogue — relayé au portail Marketing (14/11/2026)
 
 Onglet « Mon catalogue » du dashboard magasin (`public/dashboard/catalogue.js`, `catalogue.css`) : le franchisé crée
-ses catalogues imprimés (assistant en quatre étapes : point de départ, produits, mise en page, aperçu et PDF). Les
+ses catalogues imprimés (assistant en cinq étapes depuis le 15/11/2026 : catalogue, gammes, présentation, validation, export PDF — voir plus bas). Les
 catalogues vivent dans le **Marketing** ; le cockpit n'en garde rien et ne lit aucune table `mar_` : il relaie à
 l'API d'intégration du Marketing (`src/catalogues_magasin.php`), en ajoutant le jeton de service, que le navigateur
 ne voit jamais. La boutique est celle de la session (`src/acces.php`) : un magasin ou un franchisé n'a que les
@@ -5655,6 +5655,30 @@ jamais de boutique (champs filtrés).
     GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty, offers, showAvailability)
     GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
     POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
+
+**L'assistant du franchisé** (15/11/2026, client : « côté franchisé c'est un assistant : choix du catalogue, ensuite les
+gammes, la présentation, validation et exportation PDF » ; maquettes B1-B4 ; contrat du Marketing v1.4) — cinq étapes :
+1 · **Catalogue** (un catalogue de la marque reçu — « Le prendre tel quel » ou « L'adapter à ma boutique » —, un des miens,
+ou « ＋ Nouveau catalogue ») · 2 · **Gammes** (gammes, puis produits par catégorie, promotions, disponibilité) ·
+3 · **Présentation** (pages, en-têtes, gabarits, place libre) · 4 · **Validation** (les points calculés par le Marketing,
+« x sur n vus », leurs gestes, « Valider mon catalogue ») · 5 · **Export PDF** (chez un imprimeur : PDF imprimeur ; sur
+mon imprimante : livret A4 ; format, langue FR / NL / FR + NL, quantité, « Marquer imprimé · N ex. » ; puis Diffuser :
+QR du catalogue en ligne, PDF léger, affiche A4 / A3). Un catalogue de la marque pris tel quel saute les étapes 2 et 3
+(verrouillées). Pas de commande groupée « par la marque » (pas décidée).
+
+    GET    /dashboard/catalogues/marque?shop=                    → …/brand-catalogues?perPage=50 (prêts ou imprimés, préparés pour ma boutique)
+    GET    /dashboard/catalogues/marque/{id}[/document?lang=]    → …/brand-catalogues/{id}[/document] (MA version : mes produits, mes prix, mon QR)
+    PUT    /dashboard/catalogues/marque/{id}/reception {status: pris}  → …/reception (« Le prendre tel quel », idempotent ; 409 s'il est déjà adapté)
+    POST   /dashboard/catalogues/marque/{id}/adaptation          → …/adaptations (une copie à moi ; 201 puis 200 la même)
+    POST   /dashboard/catalogues/marque/{id}/impression {lang}   → …/print-links (lien signé 48 h de MA version)
+    GET    /dashboard/catalogues[/marque]/{id}/verifications?lang=      → …/checks
+    PUT    /dashboard/catalogues[/marque]/{id}/verifications/{code} {seen} → …/checks/{code}
+    POST   /dashboard/catalogues[/marque]/{id}/imprime {quantity}       → …/prints (la charte publiée est figée pour ce catalogue)
+    GET|POST /dashboard/catalogues[/marque]/{id}/lien                   → …/public-links (POST : nouveau lien, l'ancien révoqué)
+
+Le lien d'impression s'ouvre avec `&mode=printer` (PDF imprimeur), `&mode=livret` (livret A4, catalogue A5), `&mode=proof`
+(PDF léger) ou `&affiche=A4|A3&l={jeton du lien permanent}` (affiche), ajoutés par l'écran. Le QR et l'affiche mènent au
+catalogue en ligne du Marketing (`{public}/catalogue/?l=…`), qui suit la dernière version du catalogue.
 
 Réponses du Marketing relayées telles quelles (`{success, data, meta}` ou `{success:false, error:{code, message,
 details}}`, même code HTTP) — sauf un 401 du Marketing (jeton refusé), rendu en 502 avec un message qui le dit, et un

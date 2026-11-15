@@ -49,11 +49,15 @@
   const FORMAT_MM = { A5: { w: 148, h: 210 }, A4: { w: 210, h: 297 } };
   const BLEED = 3;
   const PX_MM = 96 / 25.4;
+  /** L'assistant (15/11/2026, client : « côté franchisé c'est un assistant : choix du catalogue, ensuite les gammes, la
+   * présentation, validation et exportation PDF ») : cinq étapes ; un catalogue de la marque pris « tel quel » saute
+   * les étapes 2 et 3 (verrouillées, « L'adapter à ma boutique » les ouvre). */
   const ETAPES = [
-    ['Point de départ', 'mes gammes, ou tous mes produits'],
-    ['Je clique mes produits', 'ceux de MA boutique, à mes prix'],
-    ['Mise en page', 'pages par 2, gabarits, présentations'],
-    ['Aperçu et PDF', 'FR ou NL'],
+    ['Catalogue', 'reçu de la marque, le mien, ou nouveau'],
+    ['Gammes', 'mes gammes, mes produits, à mes prix'],
+    ['Présentation', 'pages par 2, gabarits, en-têtes'],
+    ['Validation', 'ce qui s’imprimera'],
+    ['Export PDF', 'imprimer, QR, affiche'],
   ];
   const CADENAS = '<svg viewBox="0 0 12 12" aria-hidden="true"><rect x="2" y="5.2" width="8" height="5.8" rx="1.2" fill="currentColor"/><path d="M4 5.4V3.8a2 2 0 0 1 4 0v1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>';
 
@@ -85,7 +89,8 @@
     if (!etats[shop]) {
       const el = document.createElement('div');
       el.className = 'cm';
-      etats[shop] = { shop, el, vue: 'liste', liste: null, listeErr: null, prod: null, prodErr: null, cat: null, etape: 1,
+      etats[shop] = { shop, el, vue: 'assistant', liste: null, recus: null, recusErr: null, verif: {}, verifErr: {}, lien: undefined, lienErr: null,
+        imp: { mode: 'imprimeur', langue: 'fr', qte: 250 }, affiche: { taille: 'A4', titre: '' }, grand: null, creation: false, listeErr: null, prod: null, prodErr: null, cat: null, etape: 1,
         src: null, titre: '', choix: null, pages: null, format: 'A5', langs: ['fr'], lang: 'fr', doc: {}, docErr: {}, msg: null,
         occupe: false, rech: '', modifie: false, nbPages: 8, ouverts: null, proposer: null,
         medias: null, mediasErr: null, mediasQ: '', choixPhoto: null };
@@ -98,8 +103,36 @@
   const qs = S => '?shop=' + encodeURIComponent(S.shop);
 
   function chargerListe(S) {
-    S.listeErr = null;
-    return appel('GET', qs(S)).then(j => { S.liste = j.data || []; }).catch(e => { S.listeErr = e; }).finally(() => rendre(S));
+    S.listeErr = null; S.recusErr = null;
+    // Mes catalogues et ceux que la marque a préparés pour ma boutique (le Marketing ne rend que les siens).
+    const recus = appel('GET', '/marque' + qs(S)).then(j => { S.recus = j.data || []; chargerApercuRecu(S); }).catch(e => { S.recus = []; S.recusErr = e; });
+    return Promise.all([appel('GET', qs(S)).then(j => { S.liste = j.data || []; }).catch(e => { S.listeErr = e; }), recus]).finally(() => rendre(S));
+  }
+  /** Le chemin d'un catalogue au cockpit : le mien (`/{id}`) ou celui de la marque reçu (`/marque/{id}`). */
+  const chemin = (S, c) => ((c || S.cat).owner === 'marque' ? '/marque/' : '/') + (c || S.cat).id;
+  const estRecu = S => !!(S.cat && S.cat.owner === 'marque');
+  /** L'aperçu (deux pages) du premier catalogue de la marque à regarder, pour sa carte « Nouveau · de la marque ». */
+  function chargerApercuRecu(S) {
+    const c = (S.recus || []).find(x => x.reception && x.reception.status === 'nouveau');
+    if (!c || S.doc['r' + c.id]) { return; }
+    S.doc['r' + c.id] = null;
+    appel('GET', '/marque/' + c.id + '/document' + qs(S) + '&lang=fr').then(j => { S.doc['r' + c.id] = j.data; }).catch(() => { delete S.doc['r' + c.id]; }).finally(() => rendre(S));
+  }
+  function chargerVerif(S, force) {
+    const c = S.cat; if (!c) { return; }
+    const k = c.owner + c.id + '|' + S.lang;
+    if (S.verif[k] && !force) { return; }
+    delete S.verifErr[k];
+    S.verif[k] = null;
+    appel('GET', chemin(S) + '/verifications' + qs(S) + '&lang=' + S.lang).then(j => { S.verif[k] = j.data; })
+      .catch(e => { delete S.verif[k]; S.verifErr[k] = e; }).finally(() => rendre(S));
+  }
+  const verifDe = S => S.cat ? S.verif[S.cat.owner + S.cat.id + '|' + S.lang] : null;
+  function chargerLien(S) {
+    S.lienErr = null;
+    // Pas encore de lien : il se crée (le catalogue en ligne fait partie de l'export) ; « Nouveau lien » le remplace.
+    appel('GET', chemin(S) + '/lien' + qs(S)).then(j => { const l = (j.data || [])[0] || null; return l || appel('POST', chemin(S) + '/lien' + qs(S), {}).then(k => k.data); })
+      .then(l => { S.lien = l; }).catch(e => { S.lien = null; S.lienErr = e; }).finally(() => rendre(S));
   }
   function chargerProduits(S, force) {
     if (S.prod && !force) { return Promise.resolve(); }
@@ -108,11 +141,11 @@
   }
   function chargerDoc(S, force) {
     const c = S.cat; if (!c) { return; }
-    const k = c.id + '|' + S.lang;
+    const k = c.owner + c.id + '|' + S.lang;
     if (S.doc[k] && !force) { return; }
     delete S.docErr[k];
     S.doc[k] = null;
-    appel('GET', '/' + c.id + '/document' + qs(S) + '&lang=' + S.lang)
+    appel('GET', chemin(S) + '/document' + qs(S) + '&lang=' + S.lang)
       .then(j => { S.doc[k] = j.data; }).catch(e => { delete S.doc[k]; S.docErr[k] = e; }).finally(() => rendre(S));
   }
   function oublierDocs(S) { S.doc = {}; S.docErr = {}; }
@@ -234,16 +267,39 @@
     });
   }
   function nouveau(S) {
-    S.vue = 'assistant'; S.etape = 1; S.cat = null; S.src = null; S.titre = ''; S.titreAuto = ''; S.choix = null; S.pages = null;
+    S.vue = 'assistant'; S.etape = 2; S.creation = true; S.cat = null; S.src = null; S.titre = ''; S.titreAuto = ''; S.choix = null; S.pages = null;
     S.format = 'A5'; S.nbPages = 8; S.ouverts = null; S.langs = ['fr']; S.lang = 'fr'; S.msg = null; S.rech = ''; oublierDocs(S);
     chargerProduits(S); rendre(S);
   }
-  function ouvrir(S, id, etape) {
-    S.vue = 'assistant'; S.msg = null; S.rech = ''; S.ouverts = null; oublierDocs(S);
+  function ouvrir(S, id, etape, marque) {
+    S.vue = 'assistant'; S.msg = null; S.rech = ''; S.ouverts = null; S.creation = false; S.grand = null; oublierDocs(S);
     chargerProduits(S);
-    const c = (S.liste || []).find(x => +x.id === +id);
+    const c = (marque ? S.recus : S.liste || []).find(x => +x.id === +id);
     if (c) { adopter(S, c); S.etape = etape || 2; }
-    occupe(S, appel('GET', '/' + id + qs(S)).then(j => { adopter(S, j.data); S.etape = etape || 2; if (S.etape === 4) { chargerDoc(S); } }), 'Lecture du catalogue');
+    occupe(S, appel('GET', (marque ? '/marque/' : '/') + id + qs(S)).then(j => { adopter(S, j.data); S.etape = etape || 2; entrer(S); }), 'Lecture du catalogue');
+  }
+  /** Ce qu'une étape lit en arrivant. */
+  function entrer(S) {
+    if (S.etape >= 4) { chargerDoc(S); chargerVerif(S); }
+    if (S.etape === 5) { S.lien = undefined; chargerLien(S); if (!S.imp.langue || (S.imp.langue !== 'fr+nl' && !S.langs.includes(S.imp.langue))) { S.imp.langue = S.langs.length > 1 ? 'fr+nl' : S.langs[0]; } }
+    if (S.etape === 1 && !S.liste) { chargerListe(S); }
+  }
+  /** « Le prendre tel quel » : il devient le mien à regarder, vérifier, imprimer, diffuser (étapes 2 et 3 verrouillées). */
+  function prendre(S, id) {
+    occupe(S, appel('PUT', '/marque/' + id + '/reception' + qs(S), { status: 'pris' }).then(j => {
+      S.liste = null; S.recus = null; chargerListe(S);
+      adopter(S, j.data); S.creation = false; S.etape = 4; oublierDocs(S); entrer(S);
+    }), 'Le prendre tel quel');
+  }
+  /** « L'adapter à ma boutique » : une copie à moi, que la marque ne modifie plus ; je reprends à l'étape 2. */
+  function adapter(S, id) {
+    if (!window.confirm('Faire une copie à moi de ce catalogue ? La marque ne la modifiera plus : ses mises à jour ne m’arriveront plus.')) { return; }
+    occupe(S, appel('POST', '/marque/' + id + '/adaptation' + qs(S), {}).then(j => {
+      const retires = (j.meta && j.meta.removedProducts) || [];
+      S.liste = null; S.recus = null; chargerListe(S);
+      adopter(S, j.data); S.creation = false; S.etape = 2; oublierDocs(S); chargerProduits(S);
+      S.msg = { type: 'ok', titre: 'Le catalogue est à moi : je le change comme je veux.' + (retires.length ? ' ' + retires.length + ' produit' + (retires.length > 1 ? 's' : '') + ' que ma boutique ne vend pas ' + (retires.length > 1 ? 'ont été retirés' : 'a été retiré') + '.' : '') };
+    }), 'L’adapter à ma boutique');
   }
   function creer(S) {
     const titre = S.titre.trim();
@@ -257,7 +313,7 @@
       // Une gamme : un entier ; plusieurs (8 au plus) : la liste, produits cumulés par le Marketing.
       corps.source = { kind: 'gamme', ref: S.src.length === 1 ? +S.src[0] : S.src.map(Number) };
     }
-    occupe(S, appel('POST', qs(S), corps).then(j => { adopter(S, j.data); S.etape = 2; S.liste = null; }), 'Création du catalogue');
+    occupe(S, appel('POST', qs(S), corps).then(j => { adopter(S, j.data); S.creation = false; S.etape = 2; S.liste = null; }), 'Création du catalogue');
   }
   function majTitre(S) {
     const titre = S.titre.trim();
@@ -282,14 +338,14 @@
     if (JSON.stringify(offresApres.map(o => [o.type, o.id, o.on, o.mediaId]).sort()) !== offresAvant) { corps = Object.assign(corps || {}, { offers: offresApres }); }
     if (S.dispo !== (S.cat.showAvailability !== false)) { corps = Object.assign(corps || {}, { showAvailability: S.dispo }); }
     const p = majTitre(S).then(() => corps ? appel('PUT', '/' + S.cat.id + qs(S), corps).then(j => { adopter(S, j.data); oublierDocs(S); }) : null)
-      .then(() => { S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
+      .then(() => { S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement des produits').then(() => {
       if (!S.msg && S.nbPages > nbAvant) { S.msg = { type: 'inf', titre: 'Chaque catégorie a sa page : ' + (S.nbPages - nbAvant) + ' pages ajoutées (' + S.nbPages + ' pages).' }; rendre(S); }
     });
   }
   function enregistrerPages(S, suite) {
     const corps = { format: S.format, langs: S.langs.slice(), pages: pagesCorps(S) };
-    const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; if (suite === 4) { chargerDoc(S); } });
+    const p = majTitre(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), corps)).then(j => { adopter(S, j.data); oublierDocs(S); S.etape = suite; S.liste = null; entrer(S); });
     occupe(S, p, 'Enregistrement de la mise en page');
   }
   function repartir(S, nb) {
@@ -327,28 +383,98 @@
   const nomGamme = (S, id) => { const g = gammes(S).find(x => +x.id === +id); return g ? g.name : 'Gamme ' + id; };
   function aller(S, n) {
     if (S.occupe || n === S.etape) { return; }
-    if (!S.cat && n > 1) { return; }
-    if (S.etape === 2 && n > 2) { enregistrerProduits(S, n); return; }
-    if (S.etape === 3 && S.modifie) { enregistrerPages(S, n); return; }
-    S.msg = null; S.etape = n;
-    if (n === 4) { chargerDoc(S); }
+    if (n === 1) { S.msg = null; S.etape = 1; S.grand = null; entrer(S); rendre(S); return; }
+    if (!S.cat && !(n === 2 && S.creation)) { return; }
+    if (S.cat && !estRecu(S) && S.etape === 2 && n > 2) { enregistrerProduits(S, n); return; }
+    if (S.cat && !estRecu(S) && S.etape === 3 && S.modifie) { enregistrerPages(S, n); return; }
+    S.msg = null; S.etape = n; S.grand = null;
+    entrer(S);
     rendre(S);
   }
-  function telecharger(S) {
-    // La fenêtre s'ouvre pendant le clic (sinon le navigateur la bloque), puis reçoit l'adresse signée du Marketing.
-    const w = window.open('', '_blank');
-    if (w) { try { w.document.write('<p style="font:15px system-ui;padding:24px;color:#5c5852">Préparation du catalogue…</p>'); } catch (e) { /* rien */ } }
+  /**
+   * Un PDF : la page d'impression du Marketing (lien signé de 48 h), dans une ou deux langues. `suite` s'ajoute à
+   * l'adresse : `&mode=printer` (PDF imprimeur : fond perdu, traits de coupe), `&mode=livret` (sur mon imprimante,
+   * livret A4), `&mode=proof` (PDF léger à partager), `&affiche=A4&l=…` (l'affiche du magasin).
+   */
+  function telecharger(S, langs, suite, quoi) {
+    // Les fenêtres s'ouvrent pendant le clic (sinon le navigateur les bloque), puis reçoivent l'adresse signée.
+    const fenetres = langs.map(() => window.open('', '_blank'));
+    fenetres.forEach(w => { if (w) { try { w.document.write('<p style="font:15px system-ui;padding:24px;color:#5c5852">Préparation du catalogue…</p>'); } catch (e) { /* rien */ } } });
     const c = S.cat;
-    const p = appel('POST', '/' + c.id + '/impression' + qs(S), { lang: S.lang }).then(j => {
+    const p = Promise.all(langs.map((lang, i) => appel('POST', chemin(S) + '/impression' + qs(S), { lang }).then(j => {
       const url = j.data && j.data.url;
       if (!url) { throw new ErreurApi(502, { error: { message: 'Le Marketing n’a pas rendu d’adresse d’impression.' } }); }
-      if (w) { w.location.href = url; } else { window.open(url, '_blank'); }
-      S.msg = { type: 'ok', titre: 'La page d’impression du catalogue s’ouvre dans un nouvel onglet : choisissez « Enregistrer au format PDF ». Le lien vaut 48 heures.' };
-      if (c.status === 'brouillon') {
+      const w = fenetres[i];
+      if (w) { w.location.href = url + (suite || ''); } else { window.open(url + (suite || ''), '_blank'); }
+    }))).then(() => {
+      S.msg = { type: 'ok', titre: (quoi || 'Le PDF') + ' s’ouvre dans un nouvel onglet' + (langs.length > 1 ? ' (un par langue)' : '') + ' : choisissez « Enregistrer au format PDF ». Le lien vaut 48 heures.' };
+      if (c.owner !== 'marque' && c.status === 'brouillon') {
         return appel('PUT', '/' + c.id + qs(S), { status: 'pret' }).then(k => { adopter(S, k.data); S.liste = null; }).catch(() => {});
       }
-    }).catch(e => { if (w) { w.close(); } throw e; });
-    occupe(S, p, 'Téléchargement du PDF');
+    }).catch(e => { fenetres.forEach(w => { if (w) { w.close(); } }); throw e; });
+    occupe(S, p, quoi || 'Téléchargement du PDF');
+  }
+  /** Un point de vérification vu (retenu par le Marketing). */
+  function vu(S, code) {
+    const v = verifDe(S); if (!v) { return; }
+    const it = v.items.find(x => x.code === code); if (!it || it.seen) { return; }
+    it.seen = true; v.seen += 1; rendre(S);
+    appel('PUT', chemin(S) + '/verifications/' + encodeURIComponent(code) + qs(S), { seen: true }).catch(e => { it.seen = false; v.seen -= 1; S.msg = erreurMsg(S, e, 'Point vu'); rendre(S); });
+  }
+  /** « La retirer » : la promotion ne s'imprime plus (son choix enregistré, comme à l'étape 2). */
+  function retirerPromo(S, code) {
+    const v = verifDe(S); const it = v && v.items.find(x => x.code === code);
+    if (!it || !it.offer) { return; }
+    const k = it.offer.type + '-' + it.offer.id;
+    S.offres[k] = false;
+    occupe(S, chargerProduits(S).then(() => appel('PUT', '/' + S.cat.id + qs(S), { offers: offresCorps(S) })).then(j => { adopter(S, j.data); oublierDocs(S); S.verif = {}; entrer(S); }), 'Retrait de la promotion');
+  }
+  /** « Valider mon catalogue » : prêt à imprimer (le mien), puis l'export. */
+  function valider(S) {
+    const c = S.cat;
+    const p = c.owner !== 'marque' && c.status === 'brouillon'
+      ? appel('PUT', '/' + c.id + qs(S), { status: 'pret' }).then(j => { adopter(S, j.data); S.liste = null; })
+      : Promise.resolve();
+    occupe(S, p.then(() => { S.etape = 5; entrer(S); }), 'Validation');
+  }
+  function marquerImprime(S) {
+    const q = Math.max(0, parseInt(S.imp.qte, 10) || 0);
+    if (!q) { S.msg = { type: 'err', titre: 'Donnez le nombre d’exemplaires imprimés.' }; rendre(S); return; }
+    occupe(S, appel('POST', chemin(S) + '/imprime' + qs(S), { quantity: q }).then(j => {
+      adopter(S, j.data); S.liste = null;
+      S.msg = { type: 'ok', titre: 'Imprimé · ' + q + ' ex. — ce catalogue garde ses pages de la marque telles qu’imprimées.' };
+    }), 'Marquer imprimé');
+  }
+  function nouveauLien(S, confirmer) {
+    if (confirmer && !window.confirm('Faire un nouveau lien ? L’ancien QR (affiches, catalogues déjà distribués) ne mènera plus au catalogue.')) { return; }
+    occupe(S, appel('POST', chemin(S) + '/lien' + qs(S), {}).then(j => { S.lien = j.data; }), 'Lien du catalogue en ligne');
+  }
+  /** Le lien permanent, créé s'il n'existe pas encore, puis l'action. */
+  function avecLien(S, faire) {
+    if (S.lien) { faire(S.lien); return; }
+    occupe(S, appel('POST', chemin(S) + '/lien' + qs(S), {}).then(j => { S.lien = j.data; faire(S.lien); }), 'Lien du catalogue en ligne');
+  }
+  /** Le QR du catalogue en ligne en image PNG (1000 px). */
+  function qrPng(S) {
+    if (!S.lien) { return; }
+    const svg = qr(S.lien.url, 60).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ').replace(/width="[^"]*" height="[^"]*"/, 'width="1000" height="1000"');
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas'); c.width = 1000; c.height = 1000;
+      c.getContext('2d').drawImage(img, 0, 0, 1000, 1000);
+      const a = document.createElement('a'); a.href = c.toDataURL('image/png'); a.download = 'QR catalogue — ' + (S.cat.title || '') + '.png'; a.click();
+    };
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  }
+  function copierLien(S) {
+    if (!S.lien) { return; }
+    const ok = () => { S.msg = { type: 'ok', titre: 'Lien copié : ' + S.lien.url }; rendre(S); };
+    if (navigator.clipboard) { navigator.clipboard.writeText(S.lien.url).then(ok, () => window.prompt('Le lien du catalogue en ligne', S.lien.url)); } else { window.prompt('Le lien du catalogue en ligne', S.lien.url); }
+  }
+  function partager(S) {
+    avecLien(S, l => {
+      if (navigator.share) { navigator.share({ title: S.cat.title, url: l.url }).catch(() => {}); } else { copierLien(S); }
+    });
   }
   function statut(S, id, st) {
     occupe(S, appel('PUT', '/' + id + qs(S), { status: st }).then(j => { if (S.cat && +S.cat.id === +id) { adopter(S, j.data); } return chargerListe(S); }), 'Changement d’état');
@@ -386,10 +512,36 @@
     if (!b || b.disabled || !S.el.contains(b)) { return; }
     const a = b.dataset.cm, v = b.dataset.v;
     if (a === 'nouveau') { nouveau(S); }
-    else if (a === 'liste') { S.vue = 'liste'; S.msg = null; if (!S.liste) { chargerListe(S); } rendre(S); }
-    else if (a === 'relire') { S.liste = null; S.prod = null; chargerListe(S); rendre(S); }
-    else if (a === 'ouvrir') { ouvrir(S, v); }
+    else if (a === 'liste') { aller(S, 1); }
+    else if (a === 'relire') { S.liste = null; S.recus = null; S.prod = null; chargerListe(S); rendre(S); }
+    else if (a === 'ouvrir') { ouvrir(S, v, +(b.dataset.e || 2)); }
     else if (a === 'apercu') { ouvrir(S, v, 4); }
+    else if (a === 'ouvrirM') { ev.stopPropagation(); ouvrir(S, v, +(b.dataset.e || 4), true); }
+    else if (a === 'prendre') { ev.stopPropagation(); prendre(S, v); }
+    else if (a === 'adapter') { ev.stopPropagation(); adapter(S, v || S.cat.id); }
+    else if (a === 'valider') { valider(S); }
+    else if (a === 'vu') { vu(S, v); }
+    else if (a === 'geste') {
+      const code = b.dataset.code;
+      if (v === 'ouvrir-page') { S.grand = +b.dataset.p - 1; rendre(S); }
+      else if (v === 'moins-de-pages') { changerNbPages(S, Math.max(8, S.nbPages - 2)); }
+      else if (v === 'modifier') { aller(S, 3); }
+      else if (v === 'retirer-promo') { retirerPromo(S, code); }
+      else { vu(S, code); }
+    }
+    else if (a === 'grand') { S.grand = S.grand === +v ? null : +v; rendre(S); }
+    else if (a === 'impmode') { S.imp.mode = v; rendre(S); }
+    else if (a === 'implang') { S.imp.langue = v; rendre(S); }
+    else if (a === 'impfmt') {
+      if (S.cat.owner === 'marque' || v === S.format) { return; }
+      occupe(S, appel('PUT', '/' + S.cat.id + qs(S), { format: v }).then(j => { adopter(S, j.data); oublierDocs(S); entrer(S); }), 'Format ' + v);
+    }
+    else if (a === 'imprime') { marquerImprime(S); }
+    else if (a === 'afficheTaille') { S.affiche.taille = v; rendre(S); }
+    else if (a === 'lienNouveau') { nouveauLien(S, true); }
+    else if (a === 'qrPng') { qrPng(S); }
+    else if (a === 'copier') { copierLien(S); }
+    else if (a === 'partager') { partager(S); }
     else if (a === 'suppr') { ev.stopPropagation(); supprimer(S, v); }
     else if (a === 'statut') { ev.stopPropagation(); statut(S, v, b.dataset.st); }
     else if (a === 'src') { choisirSource(S, v); }
@@ -420,9 +572,19 @@
     else if (a === 'monter' || a === 'descendre') { const i = +v, j = a === 'monter' ? i - 1 : i + 1; if (j >= 0 && j < S.pages.length) { const t = S.pages[i]; S.pages[i] = S.pages[j]; S.pages[j] = t; S.modifie = true; rendre(S); } }
     else if (a === 'repartir') { repartir(S); }
     else if (a === 'format') { S.format = v; S.modifie = true; rendre(S); }
-    else if (a === 'lang') { S.lang = v; chargerDoc(S); rendre(S); }
-    else if (a === 'pdf') { telecharger(S); }
-    else if (a === 'reessayer') { chargerDoc(S, true); }
+    else if (a === 'lang') { S.lang = v; chargerDoc(S); if (S.etape === 4) { chargerVerif(S); } rendre(S); }
+    else if (a === 'pdf') {
+      const langs = S.imp.langue === 'fr+nl' ? ['fr', 'nl'] : [S.imp.langue || S.lang];
+      if (v === 'leger') { telecharger(S, [S.lang], '&mode=proof', 'Le PDF à partager'); }
+      else if (v === 'affiche') {
+        if (!S.lien) { return; }
+        telecharger(S, [S.lang], '&affiche=' + S.affiche.taille + '&l=' + encodeURIComponent(S.lien.token) + (S.affiche.titre.trim() ? '&titre=' + encodeURIComponent(S.affiche.titre.trim()) : ''), 'L’affiche');
+      } else {
+        const livret = S.imp.mode === 'livret';
+        telecharger(S, langs, livret ? (S.cat.format === 'A5' ? '&mode=livret' : '&mode=proof') : '&mode=printer', livret ? 'Le livret à imprimer' : 'Le PDF imprimeur');
+      }
+    }
+    else if (a === 'reessayer') { chargerDoc(S, true); chargerVerif(S, true); }
   }
   function saisie(S, ev) {
     const t = ev.target;
@@ -430,6 +592,8 @@
     if (t.dataset.cm === 'rech') { S.rech = t.value; rendreGarde(S, t); }
     if (t.dataset.cm === 'ptexte' || t.dataset.cm === 'ptexteNl') { S.pages[+t.dataset.i][t.dataset.cm === 'ptexte' ? 'text' : 'textNl'] = t.value.slice(0, 400); S.modifie = true; }
     if (t.dataset.cm === 'mediasQ') { S.mediasQ = t.value; }
+    if (t.dataset.cm === 'qte') { S.imp.qte = t.value.replace(/\D/g, '').slice(0, 7); }
+    if (t.dataset.cm === 'afficheTitre') { S.affiche.titre = t.value.slice(0, 80); }
   }
   function changement(S, ev) {
     const t = ev.target;
@@ -474,49 +638,37 @@
     return '<div class="cm-msg err" role="alert"><b>' + esc(quoi) + '</b> — ' + esc(e.message) + '</div>';
   }
 
-  function rendreListe(S) {
-    let h = '<div class="cm-hd"><div><div class="k">Espace boutique</div><h2>Mon catalogue</h2></div><span class="sp"></span>'
-      + '<button class="cm-btn" data-cm="relire">↻ Relire</button><button class="cm-btn pri" data-cm="nouveau">＋ Nouveau catalogue</button></div>';
-    h += message(S);
-    if (S.listeErr) { return h + bandeauErreur(S.listeErr, 'Mes catalogues n’ont pas pu être lus'); }
-    if (!S.liste) { return h + '<div class="db-card"><div class="cm-vide">Lecture de mes catalogues…</div></div>'; }
-    if (!S.liste.length) {
-      return h + '<div class="db-card"><div class="cm-vide">Aucun catalogue pour l’instant.<br><br><button class="cm-btn pri" data-cm="nouveau">＋ Créer mon premier catalogue</button></div></div>';
-    }
-    h += '<div class="db-card" style="overflow:hidden"><table class="cm-tab"><thead><tr><th>Catalogue</th><th style="width:110px">État</th><th class="s-col" style="width:90px">Pages</th><th class="s-col" style="width:90px">Produits</th><th style="width:120px">Mis à jour</th><th></th></tr></thead><tbody>';
-    S.liste.forEach(c => {
-      const ng = c.source && c.source.kind === 'gamme' ? gammesDe(S, c) : null;
-      const src = ng ? (ng.length > 1 ? 'Gammes ' : 'Gamme ') + ng.join(' + ') : 'Mes produits';
-      h += '<tr class="cl" data-cm="ouvrir" data-v="' + c.id + '"><td><div class="t">' + esc(c.title) + '</div><div class="s">' + esc(src) + ' · ' + esc(c.format) + ' · ' + esc((c.langs || ['fr']).join(' + ').toUpperCase()) + '</div></td>'
-        + '<td><span class="cm-et ' + esc(c.status) + '">' + esc(STATUTS[c.status] || c.status) + '</span></td>'
-        + '<td class="n s-col">' + (c.pageCount || 0) + '</td><td class="n s-col">' + (c.productCount || 0) + '</td>'
-        + '<td class="n">' + esc(date(c.updatedAt)) + '</td>'
-        + '<td class="act"><button class="cm-btn" data-cm="apercu" data-v="' + c.id + '">Aperçu</button> '
-        + (c.status === 'pret' ? '<button class="cm-btn" data-cm="statut" data-st="imprime" data-v="' + c.id + '">Marquer imprimé</button> ' : '')
-        + '<button class="cm-btn dis" data-cm="suppr" data-v="' + c.id + '" aria-label="Supprimer">Supprimer</button></td></tr>';
-    });
-    return h + '</tbody></table></div>';
-  }
-
   function rendreEtapes(S) {
-    return '<div class="cm-et4">' + ETAPES.map((e, i) => {
-      const n = i + 1, fait = S.cat && n < S.etape, on = n === S.etape;
-      return '<button class="cm-st' + (on ? ' on' : '') + (fait ? ' fait' : '') + '" data-cm="etape" data-v="' + n + '"' + (!S.cat && n > 1 ? ' disabled' : '') + '>'
-        + '<span class="no">' + (fait ? '✓' : n) + '</span><span style="min-width:0"><div class="l">' + n + ' · ' + esc(e[0]) + '</div><div class="d">' + esc(e[1]) + '</div></span></button>';
+    const recu = estRecu(S);
+    return '<div class="cm-et4 cm-et5">' + ETAPES.map((e, i) => {
+      const n = i + 1, verrou = recu && (n === 2 || n === 3), fait = (S.cat && n < S.etape && !verrou) || (n === 1 && S.creation && S.etape > 1), on = n === S.etape;
+      const off = n > 1 && !S.cat && !(n === 2 && S.creation);
+      const d = verrou ? 'tel quel · « L’adapter » pour changer' : n === 1 && S.cat ? (recu ? 'de la marque, pris tel quel' : 'le mien · ' + (S.cat.title || '')) : e[1];
+      return '<button class="cm-st' + (on ? ' on' : '') + (fait ? ' fait' : '') + (verrou ? ' verrou' : '') + '" data-cm="etape" data-v="' + n + '"' + (off ? ' disabled' : '') + '>'
+        + '<span class="no">' + (verrou ? CADENAS : fait ? '✓' : n) + '</span><span style="min-width:0"><div class="l">' + n + ' · ' + esc(e[0]) + '</div><div class="d">' + esc(d) + '</div></span></button>';
     }).join('') + '</div>';
   }
 
   function rendreAssistant(S) {
-    const titre = S.cat ? 'Mon catalogue — « ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
-    let h = '<div class="cm-hd"><div><div class="k">Espace boutique · ' + esc(S.nom || '') + '</div><h2>' + titre + '</h2></div><span class="sp"></span>'
-      + '<button class="cm-btn" data-cm="liste">‹ Mes catalogues</button>'
-      + (S.cat ? '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>Aperçu et PDF ›</button>' : '') + '</div>';
+    const titre = S.etape === 1 ? 'Mon catalogue' : S.cat ? 'Mon catalogue — « ' + esc(S.cat.title) + ' »' : 'Nouveau catalogue';
+    const suivant = { 2: ['3', 'Présentation ›'], 3: ['4', 'Validation ›'], 4: null, 5: null }[S.etape];
+    let h = '<div class="cm-hd"><div><div class="k">Espace boutique · ' + esc(S.nom || '') + '</div><h2>' + titre + '</h2></div><span class="sp"></span>';
+    if (S.etape === 1) {
+      h += '<button class="cm-btn" data-cm="relire">↻ Relire</button><button class="cm-btn" data-cm="nouveau">＋ Nouveau catalogue</button></div>';
+    } else {
+      h += '<button class="cm-btn" data-cm="liste">‹ Mes catalogues</button>'
+        + (S.etape === 4 && S.cat ? '<button class="cm-btn pri" data-cm="valider"' + (S.occupe ? ' disabled' : '') + '>Valider mon catalogue ›</button>' : '')
+        + (suivant && S.cat && !estRecu(S) ? '<button class="cm-btn pri" data-cm="etape" data-v="' + suivant[0] + '"' + (S.occupe ? ' disabled' : '') + '>' + suivant[1] + '</button>' : '')
+        + (suivant && estRecu(S) ? '<button class="cm-btn pri" data-cm="etape" data-v="4">Validation ›</button>' : '') + '</div>';
+    }
     h += rendreEtapes(S) + message(S);
-    if (S.prodErr) { h += bandeauErreur(S.prodErr, 'Les produits de ma boutique n’ont pas pu être lus'); }
-    if (S.etape === 1) { h += rendreE1(S); }
-    else if (S.etape === 2) { h += rendreE2(S); }
+    if (S.prodErr && (S.etape === 2 || S.etape === 3)) { h += bandeauErreur(S.prodErr, 'Les produits de ma boutique n’ont pas pu être lus'); }
+    if (S.etape === 1) { h += rendreCatalogues(S); }
+    else if ((S.etape === 2 || S.etape === 3) && estRecu(S)) { h += rendreVerrou(S); }
+    else if (S.etape === 2) { h += S.cat ? rendreE2(S) : rendreE1(S); }
     else if (S.etape === 3) { h += rendreE3(S); }
-    else { h += rendreE4(S); }
+    else if (S.etape === 4) { h += rendreValidation(S); }
+    else { h += rendreExport(S); }
     return h;
   }
 
@@ -617,7 +769,7 @@
     h += sectionOffres(S);
     if (plus.length) { h += '<div class="cm-msg inf" style="margin-top:12px">' + plus.length + ' produit(s) de ce catalogue ne sont plus vendus au webshop de ma boutique : ils sortiront du catalogue à l’enregistrement.</div>'; }
     h += '<div class="cm-msg inf" style="margin-top:12px">Seuls les produits de MON webshop sont proposés, à MES prix. Une catégorie ajoutée a sa page (une page vide, sinon 2 pages de plus, 16 au plus) ; une catégorie retirée laisse sa page vide.</div>';
-    h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="1">‹ Point de départ</button><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="3"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Mise en page ›') + '</button></div>';
+    h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="1">‹ Catalogue</button><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="3"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Présentation ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
   }
 
@@ -728,8 +880,8 @@
     const sansPage = cats.filter(c => c != null && !(S.pages || []).some(p => !estPres(p.layout) && p.category != null && +p.category === +c));
     if (sansPage.length) { h += '<div class="cm-msg inf" style="margin-top:12px">' + sansPage.map(c => '« ' + esc(nomCat(S, c)) + ' »').join(', ') + (sansPage.length > 1 ? ' n’ont' : ' n’a') + ' pas de page à elle' + (sansPage.length > 1 ? 's' : '') + ' : ' + (S.nbPages >= 16 ? 'plus de place (16 pages) — ' : '') + 'ses produits vont en « Notre sélection » s’il y en a une. Choisissez sa catégorie sur une page' + (S.nbPages < 16 ? ' ou ajoutez 2 pages' : '') + '.</div>'; }
     if (portes.sansPlace) { h += '<div class="cm-msg inf" style="margin-top:12px">' + portes.sansPlace + ' produit' + (portes.sansPlace > 1 ? 's' : '') + ' choisi' + (portes.sansPlace > 1 ? 's' : '') + ' sans place dans les pages. ' + (S.nbPages < 16 ? 'Ajoutez 2 pages, choisissez' : 'Choisissez') + ' une mise en page plus dense, une page « Notre sélection », ou « Répartir automatiquement ».</div>'; }
-    h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Mes produits</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
-      + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Aperçu et PDF ›') + '</button></div>';
+    h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="2">‹ Gammes</button><span class="sp"></span>' + (S.modifie ? '<span class="cm-cpt">modifications non enregistrées</span>' : '')
+      + '<button class="cm-btn pri" data-cm="etape" data-v="4"' + (S.occupe ? ' disabled' : '') + '>' + (S.occupe ? 'Enregistrement…' : 'Validation ›') + '</button></div>';
     return h + '</section>' + cote(S, resume(S)) + '</div>';
   }
   /** Le choix de l'image d'une vignette d'offre : les images de la médiathèque du réseau et de ma boutique. */
@@ -751,26 +903,176 @@
     return h + '<div class="cm-grille">' + S.medias.map(m => '<button data-cm="photo" data-i="' + i + '" data-v="' + m.id + '" class="' + (+S.pages[i].fillerMediaId === +m.id ? 'on' : '') + '" title="' + esc(m.name) + '"><img src="' + esc(m.thumbnailUrl || m.url) + '" alt="" loading="lazy"><span>' + esc(m.name) + '</span></button>').join('') + '</div></div>';
   }
 
-  function rendreE4(S) {
-    const k = S.cat.id + '|' + S.lang, doc = S.doc[k], err = S.docErr[k];
-    let h = '<section class="cm-pan"><div class="h"><span class="k">Aperçu · ' + (S.cat.pageCount || '') + ' pages ' + esc(S.cat.format) + '</span>'
-      + '<span class="cm-et ' + esc(S.cat.status) + '">' + esc(STATUTS[S.cat.status] || S.cat.status) + '</span><span class="sp"></span>'
-      + '<div class="cm-seg">' + [['fr', 'FR'], ['nl', 'NL']].map(l => '<button data-cm="lang" data-v="' + l[0] + '" class="' + (S.lang === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div>'
-      + (S.cat.status === 'pret' ? '<button class="cm-btn" data-cm="statut" data-st="imprime" data-v="' + S.cat.id + '">Marquer imprimé</button>' : '')
-      + '<button class="cm-btn pri" data-cm="pdf"' + (S.occupe || !doc ? ' disabled' : '') + '>' + (S.occupe ? 'Préparation…' : 'Télécharger le PDF') + '</button></div>';
-    if (!S.langs.includes(S.lang)) { h += '<div class="cm-msg inf">Ce catalogue est réglé en ' + S.langs.map(l => l.toUpperCase()).join(' + ') + ' : la version ' + S.lang.toUpperCase() + ' se regarde, ajoutez la langue à l’étape 3 pour la garder.</div>'; }
-    if (err) { return h + bandeauErreur(err, 'L’aperçu n’a pas pu être composé') + '<button class="cm-btn" data-cm="reessayer">Réessayer</button></section>'; }
-    if (!doc) { return h + '<div class="cm-vide">Composition des pages par le Marketing…</div></section>'; }
-    if (doc.warnings && doc.warnings.length) {
-      h += '<div class="cm-msg inf"><b>À savoir avant d’imprimer</b><ul>' + doc.warnings.map(w => '<li>' + esc(w.message) + '</li>').join('') + '</ul></div>';
+  /* --- Étape 1 · Catalogue : reçu de la marque, le mien, ou nouveau (maquette B4) ------------------------------- */
+  function rendreCatalogues(S) {
+    let h = '';
+    if (S.listeErr) { h += bandeauErreur(S.listeErr, 'Mes catalogues n’ont pas pu être lus'); }
+    if (S.recusErr) { h += bandeauErreur(S.recusErr, 'Les catalogues de la marque n’ont pas pu être lus'); }
+    if (!S.liste && !S.listeErr) { return h + '<div class="db-card"><div class="cm-vide">Lecture de mes catalogues…</div></div>'; }
+    (S.recus || []).filter(c => c.reception && c.reception.status === 'nouveau').forEach(c => { h += carteRecu(S, c); });
+    const lignes = [];
+    (S.recus || []).filter(c => c.reception && c.reception.status !== 'adapte').forEach(c => lignes.push({ c, marque: true }));
+    (S.liste || []).forEach(c => lignes.push({ c, marque: false }));
+    if (!lignes.length) {
+      return h + '<div class="db-card"><div class="cm-vide">Aucun catalogue pour l’instant.<br><br><button class="cm-btn pri" data-cm="nouveau">＋ Créer mon premier catalogue</button></div></div>';
     }
-    h += '<div class="cm-apercu" data-cm-apercu="1">' + doc.pages.map((p, i) => feuille(doc, i, 300)).join('') + '</div>';
-    h += '<div class="cm-pied"><button class="cm-btn" data-cm="etape" data-v="3">‹ Mise en page</button><span class="sp"></span><span class="cm-cpt">Le PDF s’ouvre sur la page d’impression du Marketing (lien valable 48 h) : « Enregistrer au format PDF ».</span></div>';
-    return h + '</section>';
+    h += '<div class="db-card" style="overflow:hidden"><table class="cm-tab"><thead><tr><th>Catalogue</th><th style="width:130px">De</th><th style="width:120px">État</th><th class="s-col" style="width:70px">Pages</th><th style="width:280px">Ensuite</th><th style="width:110px"></th></tr></thead><tbody>';
+    lignes.forEach(({ c, marque }) => {
+      const ng = c.source && c.source.kind === 'gamme' ? gammesDe(S, c) : null;
+      const src = (ng ? (/^gamme/i.test(ng[0]) ? '' : ng.length > 1 ? 'Gammes ' : 'Gamme ') + ng.join(' + ') : 'Mes produits') + ' · ' + c.format + ' · ' + (c.langs || ['fr']).join(' + ').toUpperCase();
+      const recu = marque && c.reception;
+      const imp = c.print && c.print.quantity ? 'Imprimé · ' + c.print.quantity + ' ex.' : null;
+      const etat = recu ? (recu.status === 'nouveau' ? ['vif', 'À regarder'] : imp ? ['imprime', imp] : ['pret', 'Pris tel quel']) : [c.status, c.status === 'imprime' && c.printQty ? 'Imprimé · ' + c.printQty + ' ex.' : (STATUTS[c.status] || c.status)];
+      const ensuite = recu ? (recu.status === 'nouveau' ? ['4', 'Le feuilleter ›'] : ['5', imp ? 'Diffuser ›' : 'Imprimer ›'])
+        : c.status === 'brouillon' ? ['2', 'Continuer ›'] : c.status === 'pret' ? ['4', 'Vérifier et imprimer ›'] : ['5', 'Diffuser ›'];
+      h += '<tr class="cl" data-cm="' + (marque ? 'ouvrirM' : 'ouvrir') + '" data-v="' + c.id + '" data-e="' + ensuite[0] + '"><td><div class="t">' + esc(c.title) + '</div><div class="s">' + esc(src) + '</div></td>'
+        + '<td>' + (marque ? 'La marque' : 'Ma boutique') + '</td>'
+        + '<td><span class="cm-et ' + esc(etat[0]) + '">' + esc(etat[1]) + '</span></td>'
+        + '<td class="n s-col">' + (c.pageCount || 0) + '</td>'
+        + '<td><button class="cm-lien" data-cm="' + (marque ? 'ouvrirM' : 'ouvrir') + '" data-v="' + c.id + '" data-e="' + ensuite[0] + '">' + esc(ensuite[1]) + '</button></td>'
+        + '<td class="act">' + (marque ? '' : '<button class="cm-btn dis" data-cm="suppr" data-v="' + c.id + '" aria-label="Supprimer">Supprimer</button>') + '</td></tr>';
+    });
+    return h + '</tbody></table></div>';
+  }
+  /** « Nouveau · de la marque » : la proposition, ses deux pages, « Le prendre tel quel » ou « L'adapter ». */
+  function carteRecu(S, c) {
+    const doc = S.doc['r' + c.id];
+    const vign = doc ? [0, Math.min(2, doc.pages.length - 1)].map(i => feuille(doc, i, 128, true)).join('') : '<div class="cm-vide" style="padding:20px">Lecture…</div>';
+    const n = c.pageCount || 0;
+    return '<section class="cm-recu"><div class="cm-recu__pages">' + vign + '</div><div class="cm-recu__txt">'
+      + '<div class="cm-lig"><span class="cm-tag vif">Nouveau · de la marque</span><span class="cm-cpt">reçu le ' + esc(date(c.reception.receivedAt)) + '</span></div>'
+      + '<h3>La marque a préparé votre catalogue « ' + esc(c.title) + ' »</h3>'
+      + '<p>Déjà à vos prix, avec votre adresse, vos horaires et votre QR. Vous le prenez tel quel ou vous l’adaptez.</p>'
+      + '<div class="cm-recu__pas">'
+      + '<button class="cm-pas" data-cm="ouvrirM" data-v="' + c.id + '" data-e="4"><span class="no">1</span><span><b>Le feuilleter</b><i>' + n + ' pages · ' + esc(c.format) + ' · ' + esc((c.langs || ['fr']).join(' + ').toUpperCase()) + '</i></span></button>'
+      + '<div class="cm-pas"><span class="no">2</span><span><b>Retirer ce que je ne fais pas</b><i>produits pas à mon webshop : déjà retirés</i></span></div>'
+      + '<div class="cm-pas"><span class="no">3</span><span><b>Vérifier, imprimer, diffuser</b><i>les mêmes étapes que mes catalogues</i></span></div>'
+      + '</div></div><div class="cm-recu__act"><button class="cm-btn pri" data-cm="prendre" data-v="' + c.id + '"' + (S.occupe ? ' disabled' : '') + '>Le prendre tel quel ›</button>'
+      + '<button class="cm-btn" data-cm="adapter" data-v="' + c.id + '"' + (S.occupe ? ' disabled' : '') + '>L’adapter à ma boutique</button>'
+      + '<p>« L’adapter » en fait une copie à moi : la marque ne la change plus.</p></div></section>';
+  }
+  /** Étapes 2 et 3 d'un catalogue de la marque pris tel quel : verrouillées. */
+  function rendreVerrou(S) {
+    return '<section class="cm-pan cm-verrou"><div class="h"><span class="k">' + (S.etape === 2 ? 'Gammes et produits' : 'Présentation') + '</span></div>'
+      + '<p>' + CADENAS.replace('<svg', '<svg style="width:12px;height:12px;vertical-align:-1px"') + ' Ce catalogue est celui de la marque, pris tel quel : ses gammes et sa mise en page sont les siennes, à mes prix, avec mon adresse et mon QR. Les produits que ma boutique ne vend pas n’y sont pas.</p>'
+      + '<p>Pour changer les produits ou la présentation, je l’adapte : il devient une copie à moi, que la marque ne modifie plus.</p>'
+      + '<div class="cm-pied"><button class="cm-btn" data-cm="adapter" data-v="' + S.cat.id + '"' + (S.occupe ? ' disabled' : '') + '>L’adapter à ma boutique</button><span class="sp"></span><button class="cm-btn pri" data-cm="etape" data-v="4">Validation ›</button></div></section>';
+  }
+
+  /* --- Étape 4 · Validation : ce qui s'imprimera (maquette B1) --------------------------------------------------- */
+  const GESTES = {
+    'ouvrir-page': p => 'Ouvrir la page ' + p + ' ›', 'moins-de-pages': () => null, 'imprimer-ainsi': () => 'Imprimer ainsi', 'c-est-juste': () => '✓ C’est juste',
+    modifier: () => 'Modifier', 'dates-vues': () => '✓ Dates vues', 'retirer-promo': () => 'La retirer', 'regle-par-la-marque': () => null,
+  };
+  function rendreValidation(S) {
+    const k = S.cat.owner + S.cat.id + '|' + S.lang, doc = S.doc[k], v = verifDe(S), err = S.verifErr[k] || S.docErr[k];
+    let h = '<div class="cm-corps cm-corps--valid"><section class="cm-pan"><div class="h"><span class="k">Je vérifie avant d’imprimer</span><span class="sp"></span>'
+      + '<div class="cm-seg">' + [['fr', 'FR'], ['nl', 'NL']].map(l => '<button data-cm="lang" data-v="' + l[0] + '" class="' + (S.lang === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div>'
+      + (v ? '<span class="cm-cpt">' + v.seen + ' sur ' + v.total + ' vus</span><span class="cm-jauge"><i style="width:' + Math.round(100 * v.seen / Math.max(1, v.total)) + '%"></i></span>' : '') + '</div>';
+    if (err) { h += bandeauErreur(err, 'La vérification n’a pas pu être faite') + '<button class="cm-btn" data-cm="reessayer">Réessayer</button>'; }
+    else if (!v) { h += '<div class="cm-vide">Le Marketing compose le catalogue et le vérifie…</div>'; }
+    else {
+      h += '<ul class="cm-verifs">' + v.items.map(it => {
+        const icone = it.level === 'ok' ? '✓' : it.level === 'question' ? '?' : '!';
+        const gestes = (it.actions || []).map(a => {
+          if (a === 'moins-de-pages') { return S.nbPages > 8 ? '<button class="cm-btn" data-cm="geste" data-v="' + a + '" data-code="' + esc(it.code) + '">Passer à ' + (S.nbPages - 2) + ' pages</button>' : ''; }
+          if (a === 'regle-par-la-marque') { return '<span class="cm-tag">Réglé par la marque</span>'; }
+          const l = (GESTES[a] || (() => a))(it.page);
+          const lien = a === 'imprimer-ainsi' || a === 'modifier' || a === 'retirer-promo';
+          return '<button class="' + (lien ? 'cm-lien' : 'cm-btn') + '" data-cm="geste" data-v="' + a + '" data-code="' + esc(it.code) + '" data-p="' + (it.page || '') + '">' + esc(l) + '</button>';
+        }).join('');
+        return '<li class="cm-verif ' + esc(it.level) + (it.seen ? ' vu' : '') + '"><span class="ic">' + icone + '</span><div class="tx"><b>' + esc(it.title) + '</b><p>' + esc(it.text) + '</p></div>'
+          + '<div class="ge">' + (it.level === 'ok' || (it.seen && it.level !== 'alerte') ? '<span class="cm-tag ok">Vu</span>' : gestes || '<button class="cm-btn" data-cm="vu" data-v="' + esc(it.code) + '">Vu</button>') + '</div></li>';
+      }).join('') + '</ul>';
+    }
+    h += '<div class="cm-pied">' + (estRecu(S) ? '<button class="cm-btn" data-cm="liste">‹ Catalogue</button>' : '<button class="cm-btn" data-cm="etape" data-v="3">‹ Présentation</button>') + '<span class="sp"></span>'
+      + '<span class="cm-cpt">Imprimer reste possible avec des points ouverts : ils sont rappelés au moment du PDF.</span>'
+      + '<button class="cm-btn pri" data-cm="valider"' + (S.occupe ? ' disabled' : '') + '>Valider mon catalogue ›</button></div></section>';
+    // Les pages, les points marqués ; un clic ouvre la page en grand.
+    h += '<aside class="cm-cote cm-mes-pages"><div class="k">Mes ' + (doc ? doc.pages.length : '') + ' pages · les points à voir</div>';
+    if (doc) {
+      const marques = {}; ((v && v.pages) || []).forEach(p => { marques[p.no] = p.mark; });
+      if (S.grand != null && doc.pages[S.grand]) {
+        h += '<div class="cm-grand">' + feuille(doc, S.grand, 300) + '<button class="cm-btn" data-cm="grand" data-v="' + S.grand + '">Fermer la page</button></div>';
+      }
+      h += '<div class="cm-vign">' + doc.pages.map((p, i) => '<button class="cm-vg' + (S.grand === i ? ' on' : '') + '" data-cm="grand" data-v="' + i + '">' + feuille(doc, i, 76, true)
+        + (marques[i + 1] ? '<span class="mk ' + esc(marques[i + 1]) + '">' + (marques[i + 1] === 'question' ? '?' : '!') + '</span>' : '') + '<span class="no">' + (i + 1) + '</span></button>').join('') + '</div>';
+      h += '<div class="note">Un clic sur une page l’ouvre en grand. Les pages de la marque sont celles de sa charte publiée' + (doc.charter && doc.charter.version ? ' (version ' + doc.charter.version + ')' : '') + '.</div>';
+    } else { h += '<div class="cm-vide">Composition…</div>'; }
+    return h + '</aside></div>';
+  }
+
+  /* --- Étape 5 · Export PDF : imprimer (B2), puis diffuser (B3) --------------------------------------------------- */
+  function rendreExport(S) {
+    const c = S.cat, k = c.owner + c.id + '|' + S.lang, doc = S.doc[k], v = verifDe(S);
+    const ouverts = v ? v.items.filter(it => !it.seen && it.level !== 'ok') : [];
+    const livret = S.imp.mode === 'livret';
+    const langs = S.imp.langue === 'fr+nl' ? ['FR', 'NL'] : [String(S.imp.langue || 'fr').toUpperCase()];
+    const imp = c.print && c.print.quantity ? c.print : (c.status === 'imprime' && c.printQty ? { quantity: c.printQty } : null);
+    let h = '<div class="cm-corps"><div class="cm-col">';
+    h += '<section class="cm-pan"><div class="h"><span class="k">Comment je l’imprime ?</span></div><div class="cm-modes">'
+      + '<button class="cm-mode' + (!livret ? ' on' : '') + '" data-cm="impmode" data-v="imprimeur"><span class="il il-imp" aria-hidden="true"><i></i><i></i></span><b>Chez un imprimeur</b><ul><li>PDF imprimeur : fond perdu 3 mm, traits de coupe</li><li>pages dans l’ordre, couleurs pour l’impression</li><li>à envoyer à mon imprimeur</li></ul></button>'
+      + '<button class="cm-mode' + (livret ? ' on' : '') + '" data-cm="impmode" data-v="livret"><span class="il il-livret" aria-hidden="true"><i></i><i></i></span><b>Sur mon imprimante</b><ul><li>feuilles A4 recto verso, 2 pages par face</li><li>plier au milieu : un livret A5</li><li>pour une petite quantité</li></ul></button>'
+      + '</div>' + (livret && c.format !== 'A5' ? '<div class="cm-msg inf" style="margin-top:10px">Le livret plié se fait avec un catalogue A5 : en A4, le PDF garde une page par feuille.</div>' : '') + '</section>';
+    h += '<section class="cm-pan"><div class="h"><span class="k">Mon impression</span></div><div class="cm-imp3">'
+      + '<div><span class="lb">Format</span><div class="cm-seg">' + ['A5', 'A4'].map(f => '<button data-cm="impfmt" data-v="' + f + '" class="' + (c.format === f ? 'on' : '') + '"' + (estRecu(S) && c.format !== f ? ' disabled title="Le format du catalogue de la marque"' : '') + '>' + f + '</button>').join('') + '</div></div>'
+      + '<div><span class="lb">Langue</span><div class="cm-seg">' + [['fr', 'FR'], ['nl', 'NL'], ['fr+nl', 'FR + NL']].map(l => '<button data-cm="implang" data-v="' + l[0] + '" class="' + (S.imp.langue === l[0] ? 'on' : '') + '">' + l[1] + '</button>').join('') + '</div></div>'
+      + '<div><span class="lb">Quantité</span><div class="cm-lig"><input type="text" inputmode="numeric" class="cm-qte" data-cm="qte" value="' + esc(S.imp.qte) + '"><span>exemplaires</span></div></div></div>'
+      + '<p class="cm-cpt" style="margin:10px 0 0">FR + NL : deux fichiers, un par langue. La quantité est notée sur le catalogue (« Imprimé · ' + esc(S.imp.qte || 'N') + ' ex. ») pour savoir combien il en reste à distribuer.</p></section>';
+    h += '</div><aside class="cm-cote cm-fichier"><div class="k">Mon fichier</div><dl>'
+      + '<dt>Fichier</dt><dd>' + esc('Catalogue ' + c.title + ' — ' + (S.nom || '') + ' — ' + c.format + ' — ' + langs.join(' + ')) + '.pdf</dd>'
+      + '<dt>Pages</dt><dd>' + (c.pageCount || '') + ' pages ' + esc(c.format) + ', dont 4 de la marque</dd>'
+      + '<dt>Pour</dt><dd>' + (livret ? 'mon imprimante · livret A4 recto verso, plié' : 'imprimeur · fond perdu 3 mm, traits de coupe') + '</dd>'
+      + '<dt>Prix</dt><dd>ceux du webshop de ma boutique, lus maintenant</dd></dl>'
+      + (ouverts.length ? '<div class="cm-msg warn">' + ouverts.length + ' point' + (ouverts.length > 1 ? 's' : '') + ' resté' + (ouverts.length > 1 ? 's' : '') + ' ouvert' + (ouverts.length > 1 ? 's' : '') + ' : ' + Array.from(new Set(ouverts.map(it => it.title.toLowerCase()))).slice(0, 3).map(esc).join(' · ') + '. <button class="cm-lien" data-cm="etape" data-v="4">Revenir à la validation</button></div>' : '')
+      + '<button class="cm-btn pri cm-large" data-cm="pdf" data-v="imprimeur"' + (S.occupe ? ' disabled' : '') + '>' + (livret ? 'Télécharger le livret à imprimer' : 'Télécharger le PDF imprimeur') + '</button>'
+      + '<div class="cm-lig cm-marq"><span>Quand c’est imprimé :</span><button class="cm-btn" data-cm="imprime"' + (S.occupe ? ' disabled' : '') + '>Marquer imprimé · ' + esc(S.imp.qte || '0') + ' ex.</button></div>'
+      + (imp ? '<div class="cm-cpt">Déjà noté : imprimé · ' + imp.quantity + ' ex.' + (imp.printedAt ? ' le ' + esc(date(imp.printedAt)) : '') + '</div>' : '')
+      + '</aside></div>';
+    h += rendreDiffuser(S, doc);
+    return h;
+  }
+  function rendreDiffuser(S, doc) {
+    const l = S.lien;
+    const cover = doc && doc.pages[0];
+    const titreAffiche = S.affiche.titre || (cover && cover.kind === 'cover' ? (S.lang === 'nl' ? 'Onze catalogus · ' : 'Notre catalogue de ') + cover.title : S.cat.title);
+    let h = '<div class="cm-diff">';
+    h += '<section class="cm-pan"><h3>QR code du catalogue</h3><p class="cm-cpt">Scanné, il ouvre le catalogue en ligne, toujours la dernière version.</p>'
+      + '<div class="cm-qrbox">' + (l ? qr(l.url, 46) : S.lienErr ? bandeauErreur(S.lienErr, 'Le lien n’a pas pu être créé') : '<div class="cm-vide">Création du lien…</div>') + '</div>'
+      + (l ? '<div class="cm-cpt">Lien du catalogue en ligne</div><div class="cm-url">' + esc(l.url) + '</div>' : '')
+      + '<div class="cm-lig"><button class="cm-btn" data-cm="qrPng"' + (l ? '' : ' disabled') + '>Télécharger le QR (PNG)</button><button class="cm-btn" data-cm="copier"' + (l ? '' : ' disabled') + '>Copier le lien</button>'
+      + '<button class="cm-lien" data-cm="lienNouveau"' + (l && !S.occupe ? '' : ' disabled') + ' title="L’ancien QR ne mènera plus au catalogue">Nouveau lien</button></div></section>';
+    h += '<section class="cm-pan"><h3>PDF à partager</h3><p class="cm-cpt">Un PDF pour WhatsApp, un e-mail ou Facebook (sans traits de coupe).</p>'
+      + '<div class="cm-leger">' + (doc ? [0, 1, 2].filter(i => i < doc.pages.length).map(i => feuille(doc, i, 104, true)).join('') : '<div class="cm-vide">Composition…</div>') + '</div>'
+      + '<div class="cm-cpt">' + (S.cat.pageCount || '') + ' pages · ' + S.lang.toUpperCase() + ' · prix de ma boutique</div>'
+      + '<div class="cm-lig"><button class="cm-btn" data-cm="pdf" data-v="leger"' + (S.occupe ? ' disabled' : '') + '>Télécharger le PDF léger</button><button class="cm-btn" data-cm="partager"' + (l ? '' : ' disabled') + '>Partager…</button></div></section>';
+    h += '<section class="cm-pan cm-affiche"><h3>Affiche en magasin</h3><p class="cm-cpt">À mettre en vitrine ou au comptoir : le client scanne et feuillette le catalogue.</p>'
+      + '<div class="cm-aff"><div class="cm-aff__pg">' + affiche(S, doc, l, titreAffiche) + '</div><div class="cm-aff__opt">'
+      + '<span class="lb">Format</span><div class="cm-seg">' + ['A4', 'A3'].map(t => '<button data-cm="afficheTaille" data-v="' + t + '" class="' + (S.affiche.taille === t ? 'on' : '') + '">' + t + '</button>').join('') + '</div>'
+      + '<label class="lb" for="cm-aff-t">Titre</label><input id="cm-aff-t" type="text" class="cm-qte cm-afft" data-cm="afficheTitre" maxlength="80" placeholder="' + esc(titreAffiche) + '" value="' + esc(S.affiche.titre) + '">'
+      + '<span class="lb">Illustration</span><div>celle de la couverture</div></div></div>'
+      + '<button class="cm-btn pri" data-cm="pdf" data-v="affiche"' + (l && !S.occupe ? '' : ' disabled') + '>Télécharger l’affiche (PDF)</button></section>';
+    h += '</div>';
+    const recu = estRecu(S);
+    const imp = S.cat.print && S.cat.print.quantity ? S.cat.print.quantity : S.cat.printQty;
+    h += '<section class="cm-pan cm-reprendre"><div class="h"><span class="k">Reprendre mon catalogue</span><span class="sp"></span>' + (imp ? '<span class="cm-tag ok">Imprimé · ' + imp + ' ex.</span>' : '') + '</div><div class="cm-rep">'
+      + (recu
+        ? '<button data-cm="adapter" data-v="' + S.cat.id + '"><b>L’adapter à ma boutique ›</b><i>une copie à moi : produits et mise en page</i></button>'
+        : '<button data-cm="etape" data-v="2"><b>Mes produits ›</b><i>étape 2 · ajouter, retirer, mes prix</i></button><button data-cm="etape" data-v="3"><b>Mise en page ›</b><i>étape 3 · pages, gabarits, photos</i></button>')
+      + '<button data-cm="nouveau"><b>Nouveau catalogue ›</b><i>une autre gamme, une autre saison</i></button>'
+      + '<button data-cm="etape" data-v="4"><b>Les prix ont changé ?</b><i>le prochain PDF reprend les prix du webshop · « Validation » les montre</i></button></div></section>';
+    return h;
+  }
+  /** L'aperçu de l'affiche (le PDF est composé par la page d'impression du Marketing, `&affiche=`). */
+  function affiche(S, doc, l, titre) {
+    const p = doc && doc.pages[0];
+    const img = p && p.kind === 'cover' ? (p.imageUrl ? '<img class="ph" src="' + esc(p.imageUrl) + '" alt="">' : p.drawingUrl ? '<img src="' + esc(p.drawingUrl) + '" alt="">' : '') : '';
+    return '<div class="cm-aff__in"><img class="lg" src="' + esc(doc ? logo(doc) : '../assets/img/logo.png') + '" alt=""><div class="art">' + img + '</div><div class="ti">' + esc(titre) + '</div><div class="sc">'
+      + (S.lang === 'nl' ? 'Scan om te bladeren' : 'Scannez pour le feuilleter') + '</div>' + (l ? qr(l.url, 15) : '') + '<div class="sh">L’Atelier by · ' + esc(S.nom || '') + '</div></div>';
   }
 
   /* --- les pages (rendu du Marketing, src/views/catalogue/CataloguePages.tsx) ----------------------------------- */
-  function feuille(doc, i, largeurPx) {
+  function feuille(doc, i, largeurPx, nu) {
     const p = doc.pages[i];
     const f = FORMAT_MM[doc.catalogue.format] || FORMAT_MM.A5;
     const z = largeurPx / (f.w * PX_MM);
@@ -778,9 +1080,9 @@
       : p.kind === 'presentation' ? 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · gabarit ' + (p.template || 'A')
       : 'Page ' + (i + 1) + ' · ' + (LAYOUTS[p.layout] ? LAYOUTS[p.layout].label : '') + ' · ' + (ENTETES[p.header] ? ENTETES[p.header][0] : ENTETES.titre[0]).toLowerCase() + ' · gabarit ' + (p.template || 'A') + ((p.products || []).length ? '' : ' · vide') + (p.filler ? ' · ' + (p.filler.kind === 'photo' ? 'photo' : 'illustration') + ' à la place libre' : '');
     return '<div><div class="cm-feuille" style="width:' + largeurPx + 'px;height:' + Math.round(f.h * PX_MM * z) + 'px">'
-      + (p.locked ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
+      + (p.locked && !nu ? '<span class="cad cm-lock">' + CADENAS + ' Marque</span>' : '')
       + '<div class="pz" style="transform:scale(' + z + ');width:' + f.w + 'mm;height:' + f.h + 'mm"><div style="position:absolute;left:-' + BLEED + 'mm;top:-' + BLEED + 'mm">' + page(doc, i) + '</div></div></div>'
-      + '<div class="cm-leg">' + esc(leg) + '</div></div>';
+      + (nu ? '' : '<div class="cm-leg">' + esc(leg) + '</div>') + '</div>';
   }
   function page(doc, i) {
     const p = doc.pages[i];
@@ -793,25 +1095,46 @@
     else if (p.kind === 'brand') { corps = marquePage(doc, p); }
     else if (p.kind === 'presentation') { corps = presentation(doc, p); }
     else { corps = interieur(doc, p); }
-    const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
+    const tpl = p.kind === 'products' || p.kind === 'presentation' ? ' cat-face--t' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : p.kind === 'cover' ? ' cat-face--cover' + esc(/^[ABC]$/.test(p.template || '') ? p.template : 'A') : '';
     return '<div class="cat-face cat-face--' + esc(p.kind) + tpl + '" style="' + st + '" lang="' + esc(doc.version.lang) + '"><div class="cat-trim">' + corps + '</div></div>';
   }
   const css = (v, d) => /^#[0-9a-f]{3,8}$/i.test(String(v || '')) ? v : d;
   const logo = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
+  /** Le logo sur le papier (couverture B) : celui de la charte, sinon le logo officiel en couleur. */
+  const logoSombre = doc => doc.charter && doc.charter.logoUrl ? doc.charter.logoUrl : '../assets/img/logo.png';
+  /** La couverture dans son gabarit (charte publiée, maquette A1) : A Pleine couleur · B Illustration · C Photo. */
   function couverture(doc, p) {
+    const dessin = p.imageUrl || p.noVisual ? null : (p.drawingUrl || null);
+    const boutique = p.eyebrow ? '<div class="cat-cover__' + (p.template === 'B' ? 'shopB' : 'shop') + '">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '';
+    const kicker = p.kicker ? '<div class="cat-cover__kicker">' + esc(p.kicker) + '</div>' : '';
+    if (p.template === 'B') {
+      return '<div class="cat-cover cat-cover--B"><img class="cat-logo cat-logo--dark cat-cover__logoB" src="' + esc(logoSombre(doc)) + '" alt=""><div class="cat-cover__art">'
+        + (p.imageUrl ? '<img class="cat-cover__photoB" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawB" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
+        + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div><div class="cat-cover__rule"></div>'
+        + (p.subtitle ? '<div class="cat-cover__subB">' + esc(p.subtitle) + '</div>' : '') + boutique + '</div>';
+    }
+    if (p.template === 'C') {
+      return '<div class="cat-cover cat-cover--C"><div class="cat-cover__top">'
+        + (p.imageUrl ? '<img class="cat-cover__photoC" src="' + esc(p.imageUrl) + '" alt="">' : dessin ? '<img class="cat-cover__drawC" src="' + esc(dessin) + '" alt="">' : '') + '</div>'
+        + '<div class="cat-cover__band"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">' + kicker + '<div class="cat-cover__title">' + esc(p.title) + '</div>'
+        + (p.subtitle ? '<div class="cat-cover__sub">' + esc(p.subtitle) + '</div>' : '') + boutique + '</div></div>';
+    }
     return '<div class="cat-cover"><img class="cat-logo cat-logo--white" src="' + esc(logo(doc)) + '" alt="">'
       + '<div class="cat-cover__title">' + esc(p.title) + '</div>'
       + (p.subtitle ? '<div class="cat-cover__sub">' + esc(p.subtitle) + '</div>' : '')
       + (p.eyebrow ? '<div class="cat-cover__shop">L’Atelier By · ' + esc(p.eyebrow) + '</div>' : '')
-      + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
+      + (p.imageUrl ? '<div class="cat-cover__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : dessin ? '<img class="cat-cover__drawing" src="' + esc(dessin) + '" alt="">' : '') + '</div>';
   }
   /** Page 2 et avant-dernière (charte) : image ou logo, titre, texte ; un paragraphe de plusieurs lignes = une liste. */
   function marquePage(doc, p) {
     const blocs = String(p.text || '').split(/\n\s*\n/).map(b => b.split('\n').map(l => l.trim()).filter(Boolean)).filter(l => l.length);
-    return '<div class="cat-brand' + (p.imageUrl ? ' cat-brand--image' : '') + '">'
-      + (p.imageUrl ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
+    // Gabarits (maquette A2) : A texte seul · B image en haut · C image en bas ; sans gabarit : B avec une image.
+    const t = p.template || (p.imageUrl ? 'B' : 'A'), haut = t === 'B' && p.imageUrl, bas = t === 'C' && p.imageUrl;
+    return '<div class="cat-brand cat-brand--t' + t + (haut ? ' cat-brand--image' : '') + '">'
+      + (haut ? '<div class="cat-brand__visual"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '<img class="cat-logo cat-brand__logo" src="' + esc(logo(doc)) + '" alt="">')
       + '<div class="cat-brand__title">' + esc(p.title) + '</div><div class="cat-brand__rule"></div><div class="cat-brand__text">'
-      + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div></div>';
+      + blocs.map(l => l.length > 1 ? '<ul>' + l.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '<p>' + esc(l[0]) + '</p>').join('') + '</div>'
+      + (bas ? '<div class="cat-brand__visual cat-brand__visual--bottom"><img src="' + esc(p.imageUrl) + '" alt=""></div>' : '') + '</div>';
   }
   /** La photo du webshop ; sans elle, le dessin de la famille de la page (sinon l'illustration de l'en-tête) — rendu de
    * `Photo`, CataloguePages.tsx ; un cercle vide seulement sans aucun dessin. */
@@ -905,6 +1228,15 @@
   }
   function dos(doc, p) {
     const lang = doc.version.lang, s = p.shop;
+    if (p.template === 'B') {
+      // Boutique en avant (maquette A3, gabarit B) : l'adresse et les horaires en grand, le QR plus petit en bas.
+      const lignes = s ? [s.address, s.hours ? (lang === 'nl' ? 'Open ' + s.hours : 'Ouvert ' + s.hours) : '', s.phone].filter(Boolean) : [];
+      return '<div class="cat-back cat-back--B"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
+        + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '')
+        + '<div class="cat-back__shopB"><div class="cat-back__who">' + esc(s ? 'L’Atelier By — ' + s.name : 'L’Atelier By') + '</div>' + lignes.map(x => '<p>' + esc(x) + '</p>').join('') + '</div>'
+        + (p.qrUrl ? '<div class="cat-back__qr cat-back__qr--small">' + qr(p.qrUrl, 20) + '<div><div class="cat-back__host">' + esc(p.host || '') + '</div><div class="cat-back__hint">'
+          + esc(s ? (lang === 'nl' ? 'De webshop van ' + s.name : 'Le webshop de ' + s.name) : (lang === 'nl' ? 'Al onze winkels' : 'Toutes nos boutiques')) + '</div></div></div>' : '') + '</div>';
+    }
     let h = '<div class="cat-back"><img class="cat-logo" src="' + esc(logo(doc)) + '" alt=""><div class="cat-back__title">' + esc(p.title) + '</div>'
       + (p.text ? '<div class="cat-back__text">' + esc(p.text) + '</div>' : '');
     if (p.qrUrl) {
@@ -922,7 +1254,7 @@
   }
 
   function rendre(S) {
-    S.el.innerHTML = S.vue === 'liste' ? rendreListe(S) : rendreAssistant(S);
+    S.el.innerHTML = rendreAssistant(S);
   }
 
   window.DbCatalogue = {
@@ -932,7 +1264,7 @@
       S.nom = nom || '';
       if (!S.el.childNodes.length) {
         rendre(S);
-        if (S.vue === 'liste' && !S.liste) { chargerListe(S); }
+        if (!S.liste) { chargerListe(S); }
       }
       return S.el;
     },
