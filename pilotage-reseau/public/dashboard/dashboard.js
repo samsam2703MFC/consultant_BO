@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'marketing', 'social', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -148,6 +148,8 @@
     // Mon marketing (15/11/2026) : le module lit lui-même (marketing.js) ; /meta pour le lien du calendrier des posts.
     if (S.vue === 'marketing') { lireAux('meta', '/meta', false); rendre(); if (force && window.DashMarketing) { window.DashMarketing.relire(); } return; }
     if (S.vue === 'social') { rendre(); if (force && window.DashReseaux) { window.DashReseaux.relire(); } return; }
+    // Boîte mail (15/11/2026) : le module lit et écrit lui-même (boite.js) ; « ↻ Relire » relit la boîte.
+    if (S.vue === 'boite') { rendre(); if (force && window.DashBoite) { window.DashBoite.relire(); } return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
@@ -240,6 +242,11 @@
     lireAux(cleNC(), urlNC(ncFenetre()), force);
     rendre();
   }
+  /** Une page du dashboard, avec ce qu'elle doit faire en s'ouvrant (la boîte mail ↔ les offres, 15/11/2026). */
+  function allerVers(vue, intention) { S.vue = vue; S.intention = intention || null; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); window.scrollTo(0, 0); }
+  /** Les non-lus de la boîte mail du magasin, sur l'entrée du rail (null : boîte non reliée ou fermée sur cet appareil). */
+  function bmCompte(n) { if (S.bmN !== n) { S.bmN = n; railMaj(avecRail()); } }
+  function bmCompter() { if (window.DashBoite && !document.hidden && S.vue !== 'boite') { window.DashBoite.compter(S.shop, API, bmCompte); } }
   function urlMaj() {
     const u = new URL(location.href);
     u.searchParams.set('shop', S.shop); u.searchParams.set('vue', S.vue); u.searchParams.set('date', S.date);
@@ -6712,6 +6719,8 @@
     pub: 'M4 4h16v12H4zM2 20h20M9 8l4 2-4 2z',
     // Réseaux sociaux (15/11/2026) : le tracé « Grille Instagram » du §8.4.
     reseaux: 'M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18',
+    // Boîte mail (15/11/2026) : l'enveloppe du §8.4.
+    mail: 'M3 5h18v14H3zM3 6l9 7 9-7',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
@@ -6729,7 +6738,7 @@
     // Réseaux sociaux (15/11/2026) : l'espace boutique du Marketing, dans le cockpit (reseaux.js).
     ['Marketing', [['marketing', 'Mon marketing', 'pub'], ['social', 'Réseaux sociaux', 'reseaux'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
   ];
-  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : v === 'boite' ? 'Boîte mail' : 'Dashboard'; };
   /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
   function postsUrl() {
     const b = String((S.aux.meta || {}).espaceBoutiqueUrl || '');
@@ -6775,16 +6784,16 @@
     return `
       <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
-      <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
+      <div class="sidebar__groups"><div class="sidebar__group db-rail-boite"><button type="button" class="sidebar__item${S.vue === 'boite' ? ' is-active' : ''}" data-vue="boite"${S.vue === 'boite' ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO.mail)}<span class="sidebar__item-label">Boîte mail</span>${S.bmN ? `<span class="sidebar__count">${S.bmN}</span>` : ''}</button></div>${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
         : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}</button>`).join('')}</div>`).join('')}</div>`;
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'offres', 'marketing', 'social', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
@@ -6872,8 +6881,8 @@
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['marketing', 'Mon marketing'], ['social', 'Réseaux sociaux'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'marketing', 'social', 'boite', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'offres' && S.vue !== 'marketing' && S.vue !== 'social' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
@@ -6886,7 +6895,9 @@
     if (S.vue === 'catalogue') { h += '<div id="db-cat"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-cat'); if (p && window.DbCatalogue) { p.replaceWith(window.DbCatalogue.racine(S.shop, nomShop())); } else if (p) { p.innerHTML = '<div class="db-err">Le module du catalogue n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'tresorerie') { h += '<div id="db-tresorerie"></div>'; $.innerHTML = h; brancher(); monterTresorerie(); return; }
     // Offres : l'élément du module, gardé d'un rendu à l'autre comme Mon catalogue.
-    if (S.vue === 'offres') { h += '<div id="db-offres"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-offres'); if (p && window.DashOffres) { p.replaceWith(window.DashOffres.racine(S.shop, { apiBase: API, nomShop: nomShop(), onCompte: n => { if (S.ofN !== n) { S.ofN = n; railMaj(avecRail()); } } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module des offres n’a pas été chargé.</div>'; } return; }
+    if (S.vue === 'offres') { h += '<div id="db-offres"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-offres'); if (p && window.DashOffres) { p.replaceWith(window.DashOffres.racine(S.shop, { apiBase: API, nomShop: nomShop(), aller: allerVers, onCompte: n => { if (S.ofN !== n) { S.ofN = n; railMaj(avecRail()); } } })); if (S.intention) { const i = S.intention; S.intention = null; if (i.offre && window.DashOffres.nouvelle) { window.DashOffres.nouvelle(i.offre); } if (i.voir && window.DashOffres.voir) { window.DashOffres.voir(i.voir); } } } else if (p) { p.innerHTML = '<div class="db-err">Le module des offres n’a pas été chargé.</div>'; } return; }
+    // Boîte mail : l'élément du module, gardé d'un rendu à l'autre ; ses allers-retours avec les Offres passent par allerVers.
+    if (S.vue === 'boite') { h += '<div id="db-boite"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-boite'); if (p && window.DashBoite) { const i = S.intention; S.intention = null; p.replaceWith(window.DashBoite.racine(S.shop, { apiBase: API, nomShop: nomShop(), onNonLus: bmCompte, aller: allerVers, intention: i })); } else if (p) { p.innerHTML = '<div class="db-err">Le module de la boîte mail n’a pas été chargé.</div>'; } return; }
     // Réseaux sociaux : la barre seule dans #dash ; le cadre de l'espace boutique vit à côté (reseauxMaj).
     if (S.vue === 'social') { h += window.DashReseaux ? '' : '<div class="db-err">Le module des réseaux sociaux n’a pas été chargé.</div>'; $.innerHTML = h; brancher(); reseauxMaj(true); return; }
     if (S.vue === 'marketing') { h += '<div id="db-marketing"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-marketing'); if (p && window.DashMarketing) { p.replaceWith(window.DashMarketing.racine(S.shop, { apiBase: API, aller: v => { S.vue = v; urlMaj(); charger(false); } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module du marketing n’a pas été chargé.</div>'; } return; }
@@ -10229,6 +10240,8 @@
   urlMaj();
   S.luA = Date.now();
   charger(false);
+  // La boîte mail : ses non-lus sur le rail, à l'ouverture puis toutes les deux minutes.
+  setTimeout(bmCompter, 1500); setInterval(bmCompter, 120000);
   // La journée en cours se relit toutes les dix minutes.
   setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
   // L'onglet Opérationnel suit la journée de plus près : toutes les deux minutes.

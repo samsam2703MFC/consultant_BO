@@ -17,8 +17,11 @@
  * La mise en page suit le geste (15/11/2026) : on consulte → « mes offres » sur 2/3, l'offre choisie sur 1/3 ; on fait
  * une offre → le formulaire sur 2/3, la liste sur 1/3. Chaque offre dit sa marge, ligne par ligne (ci-dessous).
  *
- * Une page autonome, sans compilation : `window.DashOffres.racine(shop, {apiBase, nomShop, onCompte})` rend l'élément
+ * Une page autonome, sans compilation : `window.DashOffres.racine(shop, {apiBase, nomShop, onCompte, aller})` rend l'élément
  * du module, gardé d'un rendu du dashboard à l'autre (son état et ses champs ne se perdent pas).
+ * La boîte mail (15/11/2026) : `nouvelle(brouillon)` ouvre une offre pré-remplie depuis un e-mail (le client, le jour, les
+ * produits repérés — à vérifier) ; une fois créée, la réponse à l'e-mail part avec son PDF (`aller('boite', …)`) ;
+ * `voir(id)` ouvre une offre citée dans un e-mail ; « Envoyer par e-mail » écrit au client, l'offre jointe.
  */
 (function () {
   'use strict';
@@ -51,6 +54,8 @@
     seuils: { ko: 1.67, att: 2.5, food: 32 },   // ceux de « Recette & marge », relus avec les produits
     cli: { type: 'particulier', q: '', l: null, err: null, enCours: false },
     nl: null,             // l'hôte de l'écran newsletter, gardé d'un rendu à l'autre (sa saisie ne se perd pas)
+    aller: null,          // le dashboard : aller('boite', intention)
+    source: null,         // l'e-mail d'où vient l'offre en cours d'écriture {dossier, uid, de}
   };
 
   /* --- lectures et écritures ------------------------------------------------------------------------------------ */
@@ -228,6 +233,7 @@
         <button type="button" class="db-btn" data-ofgeste="modifier"${conv ? ' disabled title="Une offre convertie en commande ne se modifie plus."' : dis}>Modifier</button>
         ${pdfOk ? `<span class="of-pdf">${ico(I.pdf)}PDF <a href="${pdf('fr')}" target="_blank" rel="noopener">FR</a><a href="${pdf('nl')}" target="_blank" rel="noopener">NL</a><a href="${pdf('en')}" target="_blank" rel="noopener">EN</a></span>`
           : `<button type="button" class="db-btn" disabled title="TF Buddy ne rend le PDF qu’avec un client et au moins un produit.">${ico(I.pdf)}PDF</button>`}
+        ${st.aller && o.client && o.client.email && pdfOk ? `<button type="button" class="db-btn" data-ofmail="1">Envoyer par e-mail</button>` : ''}
         <button type="button" class="db-btn" data-ofgeste="convertir"${conv || !(o.lignes || []).length ? ' disabled' : dis}>${ico(I.panier)}Convertir en commande</button>
         ${o.etat === 'arch' ? `<button type="button" class="db-btn" data-ofgeste="reactiver"${dis}>Remettre en cours</button>` : `<button type="button" class="db-btn" data-ofgeste="archiver"${dis}>Archiver</button>`}
         <button type="button" class="db-btn" data-ofgeste="supprimer"${conv ? ' disabled title="Une offre convertie en commande s’archive, elle ne se supprime pas."' : dis}>Supprimer</button>
@@ -323,9 +329,10 @@
       <span style="flex:1"></span>${news ? '' : `<button type="button" class="db-btn${st.mode ? '' : ' prim'}" data-ofnouvelle="1">${ico(I.plus)}Nouvelle offre</button>`}</div>`;
     // La newsletter : l'écran du module, monté dans sa place après le rendu (monterNewsletter).
     if (news) { return enTete + '<div class="of-nl-place"></div>'; }
-    const msg = st.msg ? `<div class="${st.msg.ok ? 'of-ok' : 'db-err'}">${esc(st.msg.texte)}</div>` : '';
-    if (st.err && !st.liste) { return enTete + msg + `<div class="db-err">Les offres ne se lisent pas : ${esc(st.err)}</div>`; }
-    if (!st.liste) { return enTete + '<div class="of-charge"><div class="db-sk" style="height:60px;margin-bottom:12px"></div><div class="db-sk" style="height:320px"></div></div>'; }
+    const msg = st.msg ? `<div class="${st.msg.ok ? 'of-ok' : 'db-err'}">${esc(st.msg.texte)}${st.msg.repondre ? ` <button type="button" class="db-btn prim of-msg-b" data-ofrepondre="1">Répondre à l’e-mail avec l’offre n° ${st.msg.repondre.offre} (PDF)</button>` : ''}</div>` : '';
+    // Une offre en cours d'écriture (née d'un e-mail, par exemple) s'affiche même si la liste n'est pas encore lue.
+    if (st.err && !st.liste && !edition) { return enTete + msg + `<div class="db-err">Les offres ne se lisent pas : ${esc(st.err)}</div>`; }
+    if (!st.liste && !edition) { return enTete + '<div class="of-charge"><div class="db-sk" style="height:60px;margin-bottom:12px"></div><div class="db-sk" style="height:320px"></div></div>'; }
     // On consulte : « mes offres » sur 2/3. On fait une offre : le formulaire sur 2/3, la liste se resserre sur 1/3.
     return enTete + msg + kpis() + `<div class="of${edition ? ' of--edition' : ''}">${liste()}${edition ? formulaire() : detail(offre(st.sel))}</div>`;
   }
@@ -351,7 +358,13 @@
     const nouveau = f.id == null;
     finir(ecrire(nouveau ? { action: 'creer', offre: corps } : { action: 'modifier', id: f.id, offre: corps }),
       nouveau ? 'Offre créée dans TF Buddy.' : 'Offre enregistrée dans TF Buddy.',
-      r => { st.mode = null; st.form = null; if (r && r.id) { st.sel = r.id; st.onglet = 'cours'; } });
+      r => {
+        st.mode = null; st.form = null;
+        if (r && r.id) { st.sel = r.id; st.onglet = 'cours'; }
+        // Née d'un e-mail : la réponse, l'offre en PDF, est à un geste.
+        if (r && r.id && st.source && st.aller) { const s = st.source; setTimeout(() => { st.msg = { ok: true, texte: 'Offre n° ' + r.id + ' créée dans TF Buddy.', repondre: { dossier: s.dossier, uid: s.uid, offre: r.id } }; rendre(); }, 0); }
+        st.source = null;
+      });
   }
 
   function brancher() {
@@ -360,8 +373,10 @@
     on('[data-ofong]', 'click', e => { st.onglet = e.currentTarget.dataset.ofong; if (st.onglet === 'news') { st.msg = null; return rendre(); } const v = visibles(); if (!v.some(o => o.id === st.sel)) { st.sel = v.length ? v[0].id : null; } if (st.mode !== 'edit') { st.mode = null; } rendre(); });
     on('[data-ofsel]', 'click', e => { if (st.mode === 'edit') { return; } st.sel = +e.currentTarget.dataset.ofsel; st.mode = null; st.msg = null; rendre(); });
     on('[data-ofrelire]', 'click', () => charger(true));
+    on('[data-ofrepondre]', 'click', () => { const r = st.msg && st.msg.repondre; if (r && st.aller) { st.msg = null; st.aller('boite', { repondre: r }); } });
+    on('[data-ofmail]', 'click', () => { const o = offre(st.sel); if (o && o.client && st.aller) { st.aller('boite', { ecrire: { a: o.client.email, nom: o.client.contact || o.client.nom, objet: 'Notre offre n° ' + o.id, offre: o.id } }); } });
     on('[data-ofnouvelle]', 'click', () => { st.form = brouillon(null); st.mode = 'edit'; st.msg = null; st.cli = { type: 'particulier', q: '', l: null, err: null, enCours: false }; rendre(); });
-    on('[data-ofannuler]', 'click', () => { st.mode = null; st.form = null; st.conv = null; rendre(); });
+    on('[data-ofannuler]', 'click', () => { st.mode = null; st.form = null; st.conv = null; st.source = null; rendre(); });
     on('[data-ofgeste]', 'click', e => {
       const g = e.currentTarget.dataset.ofgeste, o = offre(st.sel);
       if (!o) { return; }
@@ -453,6 +468,7 @@
       // Le nom du magasin arrive avec la liste des magasins : l'aperçu (l'émetteur) se redessine quand il change.
       if (o.nomShop && o.nomShop !== st.nomShop) { st.nomShop = o.nomShop; if (st.el && st.mode !== 'edit') { setTimeout(rendre, 0); } }
       if (o.onCompte) { st.onCompte = o.onCompte; }
+      if (o.aller) { st.aller = o.aller; }
       if (!st.el || String(st.shop) !== String(shop)) {
         st.shop = String(shop); st.el = document.createElement('div'); st.el.className = 'of-racine';
         Object.assign(st, { liste: null, n: null, sel: null, mode: null, form: null, msg: null, produits: null, prodErr: null, employes: null, empErr: null, nl: null });
@@ -461,5 +477,24 @@
       return st.el;
     },
     relire() { if (st.el) { charger(true); } },
+    /** Une offre pré-remplie depuis un e-mail (boite.js) : {nom, description, jour, retrait, client, clientQ, lignes, note, source}. */
+    nouvelle(p) {
+      if (!st.el || !p) { return; }
+      const f = brouillon(null);
+      Object.assign(f, { nom: p.nom || '', description: p.description || '', jour: p.jour || '', retrait: p.retrait !== false, client: p.client || null,
+        lignes: (p.lignes || []).map(l => ({ idProduit: l.idProduit, nom: l.nom, qte: l.qte, pu: l.pu, remiseValeur: null, remiseMontant: 0, remiseType: null })) });
+      st.form = f; st.mode = 'edit'; st.source = p.source || null;
+      st.msg = p.note ? { ok: true, texte: p.note } : null;
+      st.cli = { type: 'particulier', q: p.clientQ || '', l: null, err: null, enCours: false };
+      if (!p.client && p.clientQ) { chercherClients(); }
+      rendre();
+    },
+    /** Ouvre une offre (citée dans un e-mail) : l'onglet « Toutes », l'offre choisie. */
+    voir(id) {
+      if (!st.el) { return; }
+      st.onglet = 'tout'; st.sel = +id; st.mode = null; st.form = null;
+      if (st.liste && !st.liste.some(o => o.id === +id)) { st.msg = { ok: false, texte: 'L’offre n° ' + id + ' n’est pas une offre de ce magasin dans TF Buddy.' }; }
+      rendre();
+    },
   };
 })();

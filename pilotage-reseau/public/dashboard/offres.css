@@ -163,3 +163,6 @@ textarea.of-in { resize: vertical; line-height: 1.45; }
 .of-mz.att { color: #9A5E0C; }
 .of-mz.ko { color: #A61E1E; }
 .of-lignes small.of-mz { font-size: 10.5px; }
+
+/* La boîte mail (15/11/2026) : le geste qui suit une offre née d'un e-mail. */
+.of-msg-b { margin-left: 8px; }
