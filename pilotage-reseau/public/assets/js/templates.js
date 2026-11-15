@@ -11,6 +11,7 @@ import { tplFidelite } from './fidelite-tpl.js';
 import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
+import { tplHelpdesk } from './helpdesk-tpl.js';
 import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
@@ -62,7 +63,7 @@ const ICO_ECRAN = {
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
   verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
-  paramProduits: 'reglages', benchmark: 'balance', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
+  paramProduits: 'reglages', demandesFranchises: 'messages', benchmark: 'balance', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
   promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
@@ -225,7 +226,7 @@ export function render(c, x){
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
       ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
