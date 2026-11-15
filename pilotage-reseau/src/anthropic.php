@@ -111,7 +111,7 @@ final class Anthropic
         if ($ref === null && $locale !== '' && is_file($locale) && filesize($locale) <= 5 * 1024 * 1024) {
             $ref = (string) file_get_contents($locale);
             $refMime = self::mimeImage((string) (function_exists('mime_content_type') ? mime_content_type($locale) : ''));
-            $refLib = "Photo TYPE du rayon (le comptoir tel qu'il doit être) :";
+            $refLib = trim((string) ($regles['refLib'] ?? '')) ?: "Photo TYPE du rayon (le comptoir tel qu'il doit être) :";
         }
 
         $bareme = [];
