@@ -7,3 +7,4 @@
 2026-11-15T11:52:49Z Dashboard franchisé : un seul titre sur les onglets qui ont leur en-tête
 2026-11-15T12:25:47Z Dashboard franchisé : titres, semaines, concurrents repliés, rail sans Assistants
 2026-11-15T12:43:51Z Dashboard franchisé, Tâches : chercher une tâche (sans les retours du contrôle qualité)
+2026-11-15T12:56:48Z Dashboard franchisé : plus de lien Cockpit › Résultat
