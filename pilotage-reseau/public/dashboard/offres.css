@@ -15,8 +15,11 @@
 .of-kpis .v { font-size: 20px; color: var(--ink); letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
 .of-kpis .s { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-.of { display: grid; grid-template-columns: minmax(0, 1fr) 540px; gap: 16px; align-items: start; }
-@media (max-width: 1360px) { .of { grid-template-columns: minmax(0, 1fr); } }
+/* La grille suit le geste (15/11/2026) : on consulte → mes offres sur 2/3 ; on fait une offre → le formulaire sur 2/3. */
+.of { display: grid; grid-template-columns: minmax(0, 2fr) minmax(360px, 1fr); gap: 16px; align-items: start; }
+.of--edition { grid-template-columns: minmax(300px, 1fr) minmax(0, 2fr); }
+.of--edition .c-ev { display: none; }
+@media (max-width: 1100px) { .of, .of--edition { grid-template-columns: minmax(0, 1fr); } }
 .of-g { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
 .of-outils { padding: 10px 12px; border-bottom: 1px solid var(--line); }
 .of-q { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
@@ -57,7 +60,7 @@
 .of-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .of-apercu { padding: 12px 14px 14px; background: var(--paper); border-top: 1px solid var(--row-line); margin-top: 12px; }
 .of-apercu-l { margin-bottom: 8px; font-size: 11.5px; color: var(--muted-2); }
-.of-apercu-c { width: calc(794px * 0.64); height: calc(1123px * 0.64); overflow: hidden; }
+.of-apercu-c { width: calc(794px * 0.64); height: calc(1123px * 0.64); overflow: hidden; }   /* réduit à la colonne par offres.js */
 .of-apercu-c .doc-a4 { transform: scale(0.64); transform-origin: top left; border: 1px solid var(--line); }
 
 /* Le formulaire : les champs de OfferInput. */
@@ -125,5 +128,38 @@ textarea.of-in { resize: vertical; line-height: 1.45; }
 .of-lignes th:nth-child(3), .of-lignes td:nth-child(3) { width: 86px; }
 .of-lignes th:nth-child(4), .of-lignes td:nth-child(4) { width: 70px; }
 .of-lignes th:nth-child(5), .of-lignes td:nth-child(5) { width: 84px; }
-.of-lignes th:nth-child(6), .of-lignes td:nth-child(6) { width: 34px; }
+.of-lignes th:nth-child(6), .of-lignes td:nth-child(6) { width: 96px; }
+.of-lignes th:nth-child(7), .of-lignes td:nth-child(7) { width: 34px; }
 .of-lignes .of-in--n { width: 100%; }
+
+/* La marge de l'offre (15/11/2026) : prix HT, coût matière, marge brute ; couleurs de « Recette & marge ». */
+.of-marge-p { padding: 12px 16px 0; }
+.of-form .of-marge { margin-top: 14px; }
+.of-marge { border: 1px solid var(--line); border-left: 3px solid var(--muted); border-radius: 10px; padding: 10px 14px 10px; background: #fff; }
+.of-marge--ok { border-left-color: var(--green); }
+.of-marge--att { border-left-color: #C77D16; }
+.of-marge--ko { border-left-color: #A61E1E; }
+.of-marge-h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 6px; }
+.of-marge-h .of-eyebrow { margin: 0; }
+.of-marge-z { font-size: 11px; color: var(--muted-2); }
+.of-marge--ok .of-marge-z { color: var(--green); }
+.of-marge--att .of-marge-z { color: #9A5E0C; }
+.of-marge--ko .of-marge-z { color: #A61E1E; }
+.of-marge-k { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px 14px; }
+.of-marge-k > div { display: grid; gap: 1px; min-width: 0; }
+.of-marge-k .k { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.of-marge-k .v { font-size: 17px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.of-marge-k .du .v { color: var(--accent); }
+.of-marge-k .s { font-size: 11px; color: var(--muted-2); }
+.of-marge-o { margin: 8px 0 0; font-size: 12px; color: var(--ink); }
+.of-marge-n { margin: 6px 0 0; font-size: 11px; color: var(--muted); }
+.of-marge-t { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+.of-marge-t th { padding: 5px 6px; text-align: left; font-weight: 400; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.of-marge-t td { padding: 5px 6px; border-top: 1px solid var(--row-line); color: var(--ink); }
+.of-marge-t .n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.of-marge-t small { color: var(--muted); font-size: 10.5px; }
+.of-mz { font-variant-numeric: tabular-nums; }
+.of-mz.ok { color: var(--green); }
+.of-mz.att { color: #9A5E0C; }
+.of-mz.ko { color: #A61E1E; }
+.of-lignes small.of-mz { font-size: 10.5px; }
