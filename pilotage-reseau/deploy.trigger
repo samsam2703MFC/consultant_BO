@@ -15,3 +15,4 @@
 2026-11-15T13:40:40Z Dashboard franchisé : valeur = (marge brute réelle − charges normatives) × 3,5
 2026-11-15T13:55:17Z Dashboard franchisé : valeur, charges de Budget › Paramètres
 2026-11-15T13:57:39Z Dashboard franchisé : valeur, personnel 20 %
+2026-11-15T14:00:31Z Dashboard franchisé : Marketing › Mon marketing
