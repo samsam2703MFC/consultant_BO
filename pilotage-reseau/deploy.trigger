@@ -4,3 +4,4 @@
 2026-11-15T08:11:16Z Helpdesk des franchisés : cockpit et dashboard (assistant)
 2026-11-15T09:01:04Z Dashboard franchisé : un rail à gauche, au bureau
 2026-11-15T09:14:10Z Dashboard franchisé : le groupe Marketing du rail (calendrier des posts)
+2026-11-15T11:52:49Z Dashboard franchisé : un seul titre sur les onglets qui ont leur en-tête
