@@ -1,5 +1,8 @@
 /* Dashboard › Mon catalogue (14/11/2026, Sam : « dans le dashboard, un module où les franchisés peuvent créer leur
- * catalogue, sous contrainte » ; maquette validée : liste, puis un assistant en quatre étapes).
+ * catalogue, sous contrainte » ; maquette validée : liste, puis un assistant en quatre étapes). Depuis le 15/11/2026
+ * (« côté franchisé c'est un assistant : choix du catalogue, ensuite les gammes, la présentation, validation et
+ * exportation PDF ») : UN assistant en cinq étapes — Catalogue (reçu de la marque, le mien, nouveau), Gammes,
+ * Présentation, Validation (points calculés par le Marketing), Export PDF (imprimer, puis diffuser : QR, PDF léger, affiche).
  *
  * Les catalogues vivent dans le portail Marketing ; ce module parle à l'API du cockpit à côté de lui
  * (../api/cockpit/dashboard/catalogues…), qui lit la boutique dans la session, ajoute le jeton de service et relaie
