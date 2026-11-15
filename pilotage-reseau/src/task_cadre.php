@@ -281,7 +281,7 @@ function tkCadre(): array
         usort($lignes, fn ($a, $b) => $a['ordre'] <=> $b['ordre']);
         $checklists[] = ['id' => $cid, 'nom' => tkTxt($c['name'] ?? $c['base_name'] ?? ('Checklist ' . $cid)),
             'description' => tkTxt($c['description'] ?? ''), 'poste' => tkTxt($c['workstation_name'] ?? ''),
-            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'taches' => $lignes, 'brut' => $c];
+            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'actif' => tkClActif($c), 'taches' => $lignes, 'brut' => $c];
     }
     usort($checklists, fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
 
@@ -574,10 +574,22 @@ function tkQuiLot(array $b): array
         'error' => $refus ? $refus . ' changement' . ($refus > 1 ? 's' : '') . ' sur ' . count($ops) . ' refusé' . ($refus > 1 ? 's' : '') . ' par le panel' . ($premier ? ' : ' . $premier : '') : null];
 }
 
+/** Active ou en pause, comme la checklist du panel le dit (`is_active`) ; null s'il ne le dit pas. */
+function tkClActif(array $c): ?bool
+{
+    foreach (['is_active', 'active', 'enabled'] as $k) {
+        if (array_key_exists($k, $c)) { return tkVrai($c[$k]); }
+    }
+    return null;
+}
+
 /**
- * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?} — modifie une checklist du panel.
+ * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?, actif?} — modifie une checklist du panel.
  * Le corps reprend les champs actuels de la checklist (le panel remet à zéro un champ absent) ; PATCH,
  * et PUT si le panel ne connaît pas PATCH sur cette route.
+ * `actif` (15/11/2026, l'interrupteur de la checklist dans la vue Document) passe en `is_active` ; la liste du
+ * panel est relue après l'envoi et la réponse porte `relu` {actif, absente} : ce que le panel a vraiment retenu,
+ * et s'il liste encore la checklist une fois en pause (rien ne le dit dans sa documentation).
  */
 function tkChecklistModifier(int $id, array $b): array
 {
@@ -601,14 +613,26 @@ function tkChecklistModifier(int $id, array $b): array
         if ($h !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h)) { http_response_code(422); return ['error' => 'heure attendue au format HH:MM']; }
         $corps['execution_time'] = $h === '' ? null : tkHeure($h, $c['execution_time'] ?? null);
     }
-    $op = ['quoi' => 'Modifier la checklist', 'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
+    $actif = array_key_exists('actif', $b) ? (bool) $b['actif'] : null;
+    if ($actif !== null) { $corps['is_active'] = tkMemeType($c['is_active'] ?? null, $actif); }
+    $op = ['quoi' => $actif === null ? 'Modifier la checklist' : ($actif ? 'Activer la checklist' : 'Mettre la checklist en pause'),
+        'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
     if (!empty($b['apercu'])) { return ['id' => $id, 'operations' => [$op]]; }
     $r = tkReq('PATCH', $op['chemin'], $corps);
     if ($r['erreur'] !== null && in_array($r['code'], [404, 405], true)) { $op['methode'] = 'PUT'; $r = tkReq('PUT', $op['chemin'], $corps); }
     $op += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
-    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») modifiée au panel' . ($op['ok'] ? '' : ' — refusé'));
+    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») '
+        . ($actif === null ? 'modifiée' : ($actif ? 'activée' : 'mise en pause')) . ' au panel' . ($op['ok'] ? '' : ' — refusé'));
     if (!$op['ok']) { http_response_code(502); return ['error' => $op['erreur'], 'operations' => [$op]]; }
-    return ['id' => $id, 'ok' => true, 'operations' => [$op]];
+    $rep = ['id' => $id, 'ok' => true, 'operations' => [$op]];
+    if ($actif !== null) {
+        // Relire : un panel qui ignore `is_active`, ou qui ne liste plus une checklist en pause, se voit ici.
+        [$apres] = tkLireListe('/operational-framework/checklists');
+        $lu = null;
+        foreach ((array) $apres as $x) { if ((int) ($x['id'] ?? 0) === $id) { $lu = $x; break; } }
+        $rep['relu'] = ['actif' => $lu === null ? null : tkClActif($lu), 'absente' => $apres !== null && $lu === null];
+    }
+    return $rep;
 }
 
 /* ─────────── structure (pour l'assistant) ─────────── */

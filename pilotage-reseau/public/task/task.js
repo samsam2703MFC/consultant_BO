@@ -1166,6 +1166,44 @@
     S.dcActif.delete(id);
     rendre();
   }
+  /** L'interrupteur d'une checklist, dans son titre, au-dessus de ceux de ses tâches (15/11/2026). */
+  function dcClInterrupteur(c) {
+    const on = c.actif !== false, envoi = !!(S.dcActif && S.dcActif.has('c' + c.id));
+    return `<button class="dc-on dc-on-cl" role="switch" aria-checked="${on}" data-a="dcClActif" data-id="${c.id}"${envoi ? ' disabled aria-busy="true"' : ''}
+      title="${on ? 'Checklist active · cliquer pour la mettre en pause (ses tâches gardent leur propre état)' : 'Checklist en pause · cliquer pour la réactiver'}" aria-label="${esc((on ? 'Checklist active : ' : 'Checklist en pause : ') + c.nom)}"></button>`;
+  }
+  /**
+   * Un clic sur l'interrupteur d'une checklist : PATCH /task/checklists/{id} {actif} (au panel, `is_active` de la
+   * checklist ; ses tâches ne changent pas). Le serveur relit la liste du panel : la réponse `relu` dit ce qu'il a
+   * retenu, et s'il liste encore une checklist en pause — sinon elle quitterait cet écran au prochain rechargement.
+   */
+  async function dcClActif(id) {
+    const c = checklist(id);
+    S.dcActif = S.dcActif || new Set();
+    if (!c || S.dcActif.has('c' + id)) { return; }
+    const avant = c.actif, oui = c.actif === false;
+    S.dcActif.add('c' + id); c.actif = oui; S.dcClFlash = null; clearTimeout(S.dcClFlashT); rendre();
+    let fl;
+    try {
+      const r = await api('PATCH', '/task/checklists/' + id, { actif: oui });
+      const lu = (r && r.relu) || {};
+      if (lu.absente) {
+        fl = { k: 'wa', t: 'En pause au panel, mais le panel ne liste plus cette checklist : elle quittera cet écran au prochain rechargement. Réactivez-la maintenant pour la garder ici.' };
+      } else if (lu.actif == null) {
+        fl = { k: 'wa', t: 'Envoyé au panel, mais sa liste ne dit pas si la checklist est active : vérifiez-le dans le panel.' };
+      } else if (lu.actif !== oui) {
+        c.actif = lu.actif;
+        fl = { k: 'ko', t: 'Le panel a répondu sans changer l’état : la checklist est toujours ' + (lu.actif ? 'active' : 'en pause') + '.' };
+      } else { fl = { k: 'ok', t: oui ? '✓ réactivée' : '✓ en pause' }; }
+    } catch (e) {
+      c.actif = avant;
+      fl = { k: 'ko', t: e.message + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : '') };
+    }
+    S.dcActif.delete('c' + id);
+    S.dcClFlash = Object.assign({ id }, fl);
+    if (fl.k === 'ok') { S.dcClFlashT = setTimeout(() => { if (S.dcClFlash && S.dcClFlash.id === id) { S.dcClFlash = null; if (S.vue === 'doc') { rendre(); } } }, 2600); }
+    rendre();
+  }
   /* --- filtre par poste (10/11/2026, « dans Document, un filtre par poste ») : la zone de la checklist, et la fonction
    * qui fait la tâche (« Fait par »). Les deux se combinent ; une checklist sans tâche visible disparaît. --- */
   const dcFctOk = t => { if (!S.dcFct) { return true; } const q = S.qui && S.qui[t.id]; return !!q && q.fait.some(n => (n.poste || n.nom) === S.dcFct); };
@@ -1189,9 +1227,11 @@
     const js = [...new Set(ts.flatMap(dcJoursDe))];
     const nPh = ts.filter(t => t.photo).length, nPz = ts.filter(t => t.actif === false).length;
     const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection(c) : '';
-    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}" id="dc-${c.id}">
+    const fl = S.dcClFlash && S.dcClFlash.id === c.id ? S.dcClFlash : null;
+    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}${c.actif === false ? ' pause' : ''}" id="dc-${c.id}">
       <h2 class="dc-h2">${code ? `<span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(code)}</span>` : ''}<span>${esc(titre)}</span>
-        <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button></h2>
+        <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button>${fl && fl.k === 'ok' ? `<span class="dc-flash">${esc(fl.t)}</span>` : ''}${dcClInterrupteur(c)}</h2>
+      ${fl && fl.k !== 'ok' ? `<div class="tk-msg ${fl.k}">${esc(fl.t)}</div>` : ''}
       <div class="dc-meta"><span>🕘 ${esc(c.heure || 'sans heure')}</span>${c.poste ? `<span><i class="dc-pd" style="background:${dcCouleur(c.poste)}"></i>${esc(posteAff(c.poste))}</span>` : ''}${ts.length ? dcPoints(js) : ''}
         <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}${nPz ? ` <span class="mu">· ${nPz} en pause</span>` : ''}</span></div>
       ${dcQuiChecklist(c)}
@@ -1204,7 +1244,7 @@
     const hors = S.dcZone ? [] : dcHors().filter(dcFctOk);
     const groupes = DC_MOMENTS.map(m => [m, ordre.filter(c => dcMoment(c.heure) === m)]).filter(g => g[1].length);
     const sommaire = `<nav class="tk-card dc-som" aria-label="Sommaire"><div class="tk-k dc-som-t">Sommaire · ${ordre.length} checklists</div>
-      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
+      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}${c.actif === false ? ' pz' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
       ${hors.length ? `<div class="dc-som-g">À ranger</div><button class="dc-som-i wa${S.cl === 'hors' ? ' on' : ''}" data-a="dcAller" data-id="hors">Dans aucune checklist<em>${hors.length}</em></button>` : ''}</nav>`;
     const q = S.dcQui;
     const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';
@@ -2088,6 +2128,7 @@
       case 'ddRanger': return dcRangerEnvoyer();
       case 'ddDeplacer': return dcDeplacerEnvoyer();
       case 'dcActif': return dcActif(+id);
+      case 'dcClActif': return dcClActif(+id);
       case 'dcZone': S.dcZone = el.dataset.v || null; S.dd = null; return rendre();
       case 'dcFiltreRaz': S.dcZone = null; S.dcFct = null; S.dd = null; return rendre();
       case 'tlJour': tlEtat().jour = el.dataset.v; tlEtat().sel = null; return rendre();
