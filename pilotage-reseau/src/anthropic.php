@@ -58,15 +58,38 @@ final class Anthropic
     }
 
     /**
+     * Comment le modèle juge une photo de tâche (15/11/2026). Le premier passage sur 27 photos
+     * réelles notait la PHOTO (angle, reflets, lumière, arrière-boutique) et exigeait des prix
+     * partout : une seule conforme, quand les consultants mettent 4 en moyenne aux mêmes tâches.
+     * D'où ces règles : on juge ce que la tâche contrôle, le cadrage ne baisse que la confiance.
+     */
+    private const NOTE_REGLES = "Comment juger :\n"
+        . "1. Tu notes ce que la tâche contrôle (le comptoir, le rayon, le magasin), pas la photo. L'angle, le cadrage,"
+        . " la lumière, les reflets ou l'arrière-boutique visible ne font jamais baisser le niveau. S'ils empêchent de voir"
+        . " le sujet, baisse la confiance et dis-le dans un constat.\n"
+        . "2. Un sujet garni, rangé et propre, sans objet étranger à la vente, est au moins Conforme. Ne descends sous"
+        . " Conforme que pour un écart VISIBLE sur ce que la tâche contrôle : vide ou trou dans la présentation, désordre,"
+        . " saleté, objet étranger (outil, ventilateur, carton, sac…), produit abîmé, mauvais produit.\n"
+        . "3. Les étiquettes et les prix ne comptent que si la tâche ou les critères les demandent. Sinon, n'en parle pas.\n"
+        . "4. Si le sujet de la tâche n'apparaît pas sur la photo (photo du sol, autre rayon, trop loin pour juger), mets"
+        . " la confiance à « faible » et dis-le : ne devine pas.\n"
+        . "5. Les constats (quatre au plus) décrivent ce qui est visible, l'écart d'abord s'il y en a un. Le commentaire"
+        . " (deux phrases au plus) s'adresse au magasin : ce qu'il doit corriger, ou qu'il n'y a rien à corriger. Ne"
+        . " demande de reprendre la photo que si le sujet n'y est pas.\n"
+        . "N'invente aucun niveau hors barème.";
+
+    /**
      * Propose un niveau pour une photo de tâche.
      *
      * @param string      $imageUrl  URL signée de la photo prise en boutique
      * @param string|null $refUrl    photo de référence (fiche technique), si elle existe
      * @param array       $niveaux   barème réel : [['n'=>5,'nom'=>…,'aide'=>…], …]
+     * @param array       $regles    `criteres` : ce qu'est un sujet conforme (src/rayons_photos.php, rvCriteresIa) ;
+     *                               `refLocale` : chemin de la photo TYPE du rayon, quand il n'y a pas de fiche technique
      * @return array{niveau:?int,nom:?string,commentaire:?string,constats:array,confiance:?string,erreur:?string}
      */
     public static function noterPhoto(string $tache, string $imageUrl, ?string $refUrl,
-                                      array $niveaux, string $contexte = ''): array
+                                      array $niveaux, string $contexte = '', array $regles = []): array
     {
         $vide = ['niveau' => null, 'nom' => null, 'commentaire' => null,
             'constats' => [], 'confiance' => null, 'erreur' => null, 'modele' => null];
@@ -78,18 +101,26 @@ final class Anthropic
             $vide['erreur'] = 'photo illisible : ' . (self::$lastError ?? 'téléchargement impossible');
             return $vide;
         }
-        $ref = null; $refMime = null;
+        // La référence : la fiche technique du produit, sinon la photo type du rayon posée dans le cockpit.
+        $ref = null; $refMime = null; $refLib = "Photo de RÉFÉRENCE du produit (fiche technique, l'attendu) :";
         if ($refUrl !== null && $refUrl !== '') { [$ref, $refMime] = self::telecharger($refUrl); }
+        $locale = (string) ($regles['refLocale'] ?? '');
+        if ($ref === null && $locale !== '' && is_file($locale) && filesize($locale) <= 5 * 1024 * 1024) {
+            $ref = (string) file_get_contents($locale);
+            $refMime = self::mimeImage((string) (function_exists('mime_content_type') ? mime_content_type($locale) : ''));
+            $refLib = "Photo TYPE du rayon (le comptoir tel qu'il doit être) :";
+        }
 
         $bareme = [];
         foreach ($niveaux as $n) {
             $bareme[] = '- ' . (int) $n['n'] . ' = ' . (string) $n['nom']
                 . (!empty($n['aide']) ? ' (' . $n['aide'] . ')' : '');
         }
+        $criteres = trim((string) ($regles['criteres'] ?? ''));
 
         $contenu = [];
         if ($ref !== null) {
-            $contenu[] = ['type' => 'text', 'text' => "Photo de RÉFÉRENCE (l'attendu) :"];
+            $contenu[] = ['type' => 'text', 'text' => $refLib];
             $contenu[] = ['type' => 'image', 'source' => ['type' => 'base64',
                 'media_type' => $refMime, 'data' => base64_encode($ref)]];
         }
@@ -99,31 +130,39 @@ final class Anthropic
         $contenu[] = ['type' => 'text', 'text' =>
             "Tâche contrôlée : « " . $tache . " »."
             . ($contexte !== '' ? "\nContexte : " . $contexte : '')
+            . ($criteres !== '' ? "\n\nCe que le réseau attend :\n" . $criteres : '')
             . "\n\nBarème du réseau, à utiliser TEL QUEL :\n" . implode("\n", $bareme)
-            . "\n\nRéponds en JSON strict, sans texte autour :\n"
-            . '{"niveau": <entier du barème>, "constats": ["…", "…"], '
-            . '"commentaire": "<deux phrases maximum, à l\'attention du magasin>", '
-            . '"confiance": "haute|moyenne|faible"}'
-            . "\n\nRègles : ne juge que ce qui est VISIBLE sur la photo. Si la photo ne permet pas"
-            . " de conclure (cadrage, flou, sujet absent), mets \"confiance\": \"faible\" et dis-le"
-            . " dans les constats plutôt que de deviner. N'invente aucun niveau hors barème."];
+            . "\n\n" . self::NOTE_REGLES];
 
+        // La réponse est CONTRAINTE par un schéma : un JSON toujours lisible (une guillemet dans un commentaire
+        // cassait l'ancien JSON libre), un niveau pris dans le barème. La limite laisse la place à la réflexion du
+        // modèle, qui compte dans max_tokens : à 700, une réponse pouvait être coupée avant son JSON.
+        $schema = ['type' => 'object', 'additionalProperties' => false,
+            'required' => ['niveau', 'constats', 'commentaire', 'confiance'],
+            'properties' => [
+                'niveau' => ['type' => 'integer', 'enum' => array_values(array_map(fn ($n) => (int) $n['n'], $niveaux))],
+                'constats' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'commentaire' => ['type' => 'string'],
+                'confiance' => ['type' => 'string', 'enum' => ['haute', 'moyenne', 'faible']],
+            ]];
         $corps = [
             'model' => $c['modele'],
-            'max_tokens' => 700,
+            'max_tokens' => 8000,
             'system' => "Tu assistes un consultant de réseau de boulangeries qui contrôle la qualité"
-                . " en boutique. Tu PROPOSES une évaluation, tu ne la valides pas : un humain relit"
-                . " et corrige. Sois factuel et bref, en français. Aucune flatterie, aucun préambule.",
+                . " en boutique à partir des photos que les équipes prennent chaque jour. Tu PROPOSES une"
+                . " évaluation, tu ne la valides pas : un humain relit et corrige. Sois factuel et bref, en"
+                . " français. Aucune flatterie, aucun préambule.",
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
             'messages' => [['role' => 'user', 'content' => $contenu]],
         ];
 
         [$code, $rep] = self::http($corps, $c['cle']);
-        if ($code < 200 || $code >= 300) {
-            $det = '';
-            if (is_array($rep)) {
-                $det = (string) ($rep['error']['message'] ?? json_encode($rep, JSON_UNESCAPED_UNICODE));
-            }
-            $vide['erreur'] = 'API Anthropic → HTTP ' . $code . ($det !== '' ? ' : ' . substr($det, 0, 240) : '');
+        if ($code >= 200 && $code < 300 && is_array($rep) && ($rep['stop_reason'] ?? '') === 'max_tokens') {
+            $vide['erreur'] = 'réponse coupée par la limite de jetons';
+            return $vide;
+        }
+        if (($err = self::erreurReponse($code, $rep)) !== null) {
+            $vide['erreur'] = $err;
             return $vide;
         }
 
@@ -131,7 +170,7 @@ final class Anthropic
         foreach (($rep['content'] ?? []) as $b) {
             if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); }
         }
-        // Le modèle peut encadrer son JSON de ```json … ``` : on prend le bloc.
+        // Filet : un modèle sans sortie contrainte peut encadrer son JSON de ```json … ``` : on prend le bloc.
         if (preg_match('/\{.*\}/s', $txt, $m)) { $txt = $m[0]; }
         $j = json_decode($txt, true);
         if (!is_array($j)) {
@@ -416,6 +455,18 @@ final class Anthropic
         return [$code, json_decode((string) $raw, true)];
     }
 
+    /**
+     * L'API n'accepte qu'une courte liste de types d'image : on normalise plutôt que d'envoyer un
+     * « application/octet-stream » qui serait refusé.
+     */
+    private static function mimeImage(string $ct): string
+    {
+        foreach (['image/png', 'image/webp', 'image/gif', 'image/jpeg'] as $t) {
+            if (stripos($ct, $t) !== false) { return $t; }
+        }
+        return 'image/jpeg';
+    }
+
     /** Télécharge une image et rend [octets, type MIME]. */
     private static function telecharger(string $url): array
     {
@@ -430,13 +481,7 @@ final class Anthropic
             self::$lastError = 'HTTP ' . $code;
             return [null, null];
         }
-        // L'API n'accepte qu'une courte liste de types : on normalise plutôt que
-        // d'envoyer un « application/octet-stream » qui serait refusé.
-        $mime = 'image/jpeg';
-        foreach (['image/png' => 'image/png', 'image/webp' => 'image/webp',
-                  'image/gif' => 'image/gif', 'image/jpeg' => 'image/jpeg'] as $k => $v) {
-            if (stripos($ct, $k) !== false) { $mime = $v; break; }
-        }
+        $mime = self::mimeImage($ct);
         // 5 Mo : au-delà l'appel échouerait côté API, autant le dire ici.
         if (strlen((string) $raw) > 5 * 1024 * 1024) {
             self::$lastError = 'photo trop lourde (' . round(strlen((string) $raw) / 1048576, 1) . ' Mo)';

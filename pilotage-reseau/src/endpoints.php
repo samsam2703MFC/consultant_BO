@@ -8182,8 +8182,13 @@ function ep_ia_note(): array
     $ctx = trim(($d['checklist'] ? 'checklist « ' . $d['checklist'] . ' »' : '')
         . (!empty($d['obligatoire']) ? ', tâche obligatoire' : '')
         . ($d['produit'] ? ', produit attendu : ' . $d['produit'] : ''));
+    // Ce que le réseau attend du rayon (consigne du back office, sinon critères par défaut), et sa photo type
+    // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
+    $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
+    $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];
+    if (empty($d['photoRef']) && $rv !== null && !empty($rv['photo'])) { $regles['refLocale'] = __DIR__ . '/../public/' . $rv['photo']; }
     $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
-        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx);
+        (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx, $regles);
 
     $out['modele'] = $r['modele'];
     // L'état du connecteur : une proposition rendue est un succès, un refus du
