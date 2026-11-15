@@ -35,3 +35,4 @@
 2026-11-15T20:37:53Z Analyse : carte du réseau, recherche
 2026-11-15T20:49:41Z Vignettes identiques en rangée ; la photo d'une tâche notée reste
 2026-11-15T20:59:37Z Analyse : la période au choix (serveur)
+2026-11-15T21:04:50Z Analyse : la période au choix (écran)
