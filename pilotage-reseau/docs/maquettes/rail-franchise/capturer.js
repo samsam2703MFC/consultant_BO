@@ -11,7 +11,7 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/rail-franchise/';
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
   const err = []; p.on('pageerror', e => err.push(e.message)); p.on('requestfailed', r => err.push('échec ' + r.url()));
   const mesures = {};
-  for (const m of ['a', 'b', 'c']) {
+  for (const m of ['a', 'b', 'c', 'b1', 'b2', 'b3']) {
     await p.setViewportSize({ width: 1440, height: 1000 });
     await p.goto(BASE + m + '.html', { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
@@ -22,8 +22,11 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/rail-franchise/';
   }
   await p.setViewportSize({ width: 2400, height: 900 });
   const q = await b.newPage({ viewport: { width: 2400, height: 900 }, deviceScaleFactor: 1 });
-  await q.goto(BASE + 'planche.html', { waitUntil: 'networkidle' });
-  await q.screenshot({ path: path.join(__dirname, 'planche.jpg'), fullPage: true, type: 'jpeg', quality: 86 });
+  for (const [nom, l] of [['planche', 2400], ['planche-b', 3000]]) {
+    await q.setViewportSize({ width: l, height: 900 });
+    await q.goto(BASE + nom + '.html', { waitUntil: 'networkidle' });
+    await q.screenshot({ path: path.join(__dirname, nom + '.jpg'), fullPage: true, type: 'jpeg', quality: 86 });
+  }
   fs.writeFileSync(path.join(__dirname, 'mesures.json'), JSON.stringify(mesures, null, 1) + '\n');
   console.log('mesures', mesures, 'erreurs', err.length ? err : 'aucune');
   await b.close();

@@ -24,6 +24,23 @@ contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
 `planche.jpg` met les trois côte à côte. `mesures.json` : la hauteur de chaque rail.
 
+## Trois variantes de B
+
+Demande du 15/11/2026 : « donne-moi trois autres propositions comme la B ». Même rail que B — les repères en cartes,
+chacun avec sa forme ; **Résultat** réunit les quatre périodes ; les assistants en entrées, avec leur état. Ce qui
+change : la question à laquelle le haut répond. Les trois tiennent dans 1 000 px. `planche-b.jpg` met B et ses trois
+variantes côte à côte.
+
+| | forme | ce qu'elle apporte | ce qu'elle coûte |
+|---|---|---|---|
+| **B1** | `b1.png` — **douze mois**. Quatre cartes en grille : la valeur et sa courbe, la note Google par trimestre face à la cible, l'objectif atteint mois par mois (barres, trait des 100 %), le résultat mois par mois (vert positif, rouge négatif). Le mois en cours est pâle. | d'où vient le magasin, d'un coup d'œil : « 4 mois sur 11 à 100 % », « positif 10 mois sur 11 » | des graphiques de 90 px de large : une tendance, pas des chiffres ; la note Google n'a d'historique que par trimestre (`con_scoring_google`, figée en fin de trimestre) |
+| **B2** | `b2.png` — **les primes en jeu**. L'objectif du mois et la note Google disent ce qu'ils rapportent à l'équipe : « Prime à 100 % · 40 € chacune · + 180 € par jour d'ici le 30/11 », « Prime gagnée · 25 € chacune ». La valeur tient en une ligne. L'entrée Primes compte les primes d'équipe gagnées (1 / 2). | relie les repères à ce que l'équipe y gagne ; le franchisé sait quoi pousser ce mois-ci | ne parle que des deux primes d'équipe (objectif, Google) ; sans prime réglée pour le magasin, les cartes redeviennent celles de B |
+| **B3** | `b3.png` — **le verdict**. Chaque carte commence par une phrase : « Il manque 2 690 € pour l'objectif », « Google tient la cible », « La valeur monte ». Une carte **À regarder** liste ce qui dépasse un seuil (matière au-dessus de 35 %, commandes en retard, contrôle sans photo) et mène à l'onglet qui l'explique. | répond à « qu'est-ce qui cloche ? » sans rien lire d'autre | les phrases et la liste doivent être écrites par des règles (les seuils `MA` du dashboard) ; une liste vide doit le dire (« Rien à signaler ») |
+
+Les montants des primes (40 €, 25 €), les douze mois et les alertes sont des exemples, comme les autres chiffres du
+rail. Les primes d'équipe se lisent par `/ventes/primes-equipe?shop=&m=` ; les alertes, dans les lectures que
+l'Opérationnel fait déjà (`/exploitation/jour`, `/ventes/commandes`, `/pwa/tasks`).
+
 ## La partie du haut : les repères
 
 Les chiffres des maquettes sont des **exemples** (italique pointillé) : la valeur demande le compte consultant du

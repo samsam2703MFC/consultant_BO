@@ -10,5 +10,17 @@
  "c": {
   "rail": 1000,
   "tientDans1000": true
+ },
+ "b1": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "b2": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "b3": {
+  "rail": 1000,
+  "tientDans1000": true
  }
 }

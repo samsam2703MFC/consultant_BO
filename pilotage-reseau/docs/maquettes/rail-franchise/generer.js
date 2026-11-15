@@ -142,17 +142,97 @@ const railC = `${tete('Dashboard magasin')}${enseigne}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Campagne', I.campagnes], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
   </div>`;
 
+/* ══ Trois variantes de B (demande du 15/11/2026 : « donne-moi trois autres propositions comme la B ») ═══════════════
+ * Le même rail que B — les repères en cartes, chacun avec sa forme ; Résultat réunit les quatre périodes ; les
+ * assistants en entrées — mais chaque variante pose une autre question en haut : B1 « d'où vient-on ? » (douze mois),
+ * B2 « qu'est-ce que l'équipe gagne ? » (les primes en jeu), B3 « qu'est-ce qui cloche ? » (le verdict en phrases). */
+const navB = (actif, primes) => `<div class="sidebar__groups">
+    ${groupe('Le magasin', [['Opérationnel', I.tdb, '', actif === 'Opérationnel'], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', actif === 'Résultat'], ['Temps morts', I.journal]])}
+    ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds, primes || '']])}
+    ${groupe('Assistants', [['Revue du soir', I.revue, '<span class="ex">à faire</span>'], ['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
+  </div>`;
+const C = { vert: '#3f7a52', or: '#B0792A', stop: '#A32014', trait: '#5c5852', filet: '#e6e0d8', accent: '#8D1D2C' };
+/* Une courbe sur une échelle donnée, avec un trait de référence pointillé (la cible) ; le dernier point en bordeaux. */
+function ligne(vals, lo, hi, ref) {
+  const w = 100, h = 28, y = v => h - 3 - (v - lo) / (hi - lo) * (h - 6);
+  const pts = vals.map((v, i) => [3 + i * (w - 6) / (vals.length - 1), y(v)]), last = pts[pts.length - 1];
+  return `<svg class="rf-mini" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${ref != null ? `<line x1="0" x2="${w}" y1="${y(ref).toFixed(1)}" y2="${y(ref).toFixed(1)}" stroke="${C.trait}" stroke-width="1" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>` : ''}<polyline points="${pts.map(p => p.map(x => x.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="${C.trait}" stroke-width="1.5" vector-effect="non-scaling-stroke"/><circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.4" fill="${C.accent}"/></svg>`;
+}
+/* Des barres mois par mois. `ref` : la barre est verte au-dessus, or en dessous (objectif) ; sans `ref`, verte si
+ * positive, rouge d'arrêt si négative (résultat). Le dernier mois, en cours, est pâle. */
+function barres(vals, lo, hi, ref) {
+  const w = 100, h = 28, n = vals.length, pas = w / n, bw = pas * 0.62, y = v => h - 2 - (v - lo) / (hi - lo) * (h - 4), base = ref != null ? h - 2 : y(0);
+  const b = vals.map((v, i) => { const c = ref != null ? (v >= ref ? C.vert : C.or) : (v >= 0 ? C.vert : C.stop); const t = Math.min(base, y(v)), hh = Math.max(1, Math.abs(base - y(v)));
+    return `<rect x="${(i * pas + (pas - bw) / 2).toFixed(1)}" y="${t.toFixed(1)}" width="${bw.toFixed(1)}" height="${hh.toFixed(1)}" fill="${c}"${i === n - 1 ? ' opacity="0.45"' : ''}/>`; }).join('');
+  const r = ref != null ? `<line x1="0" x2="${w}" y1="${y(ref).toFixed(1)}" y2="${y(ref).toFixed(1)}" stroke="${C.trait}" stroke-width="1" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>` : `<line x1="0" x2="${w}" y1="${base.toFixed(1)}" y2="${base.toFixed(1)}" stroke="${C.filet}" stroke-width="1" vector-effect="non-scaling-stroke"/>`;
+  return `<svg class="rf-mini" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${b}${r}</svg>`;
+}
+// Douze mois, de décembre 2025 à novembre 2026 (en cours) — exemples.
+const OBJ12 = [96, 104, 88, 93, 101, 107, 99, 95, 102, 98, 97, 92];
+const RES12 = [2.1, 3.4, -0.6, 1.2, 3.9, 5.1, 4.4, 2.8, 4.0, 3.1, 4.6, 3.98];
+const VAL12 = [96.0, 96.4, 96.9, 97.3, 97.6, 98.0, 98.4, 98.9, 99.3, 99.6, 100.0, 100.3];
+
+/* ── B1 — Douze mois : quatre cartes en grille, chacune sa courbe ou ses barres sur un an ─────────────────────────── */
+const railB1 = `${tete('Dashboard magasin')}
+  <div class="rf-rep"><div class="rf-rep__t">Atelier by – Halle<small>12 mois</small></div>
+    <div class="rf-g4">
+      <button class="rf-carte"><div class="k">Valeur</div><div class="v ex">100,3 k€</div>${ligne(VAL12, 95.5, 100.6)}<div class="s"><span class="ex">+ 4,5 %</span> en un an</div></button>
+      <button class="rf-carte"><div class="k">Google</div><div class="v"><span class="ex">4,6</span><small>★</small></div>${ligne([4.4, 4.5, 4.5, 4.6], 4.3, 4.7, 4.5)}<div class="s">cible 4,5</div></button>
+      <button class="rf-carte"><div class="k">Objectif</div><div class="v ex">92 %</div>${barres(OBJ12, 80, 110, 100)}<div class="s"><span class="ex">4 mois</span> sur 11 à 100 %</div></button>
+      <button class="rf-carte"><div class="k">Résultat</div><div class="v ex">+ 3 980 €</div>${barres(RES12, -1.5, 5.5)}<div class="s">positif <span class="ex">10 mois</span> sur 11</div></button>
+    </div></div>
+  ${navB('Opérationnel')}`;
+
+/* ── B2 — Les primes en jeu : chaque repère dit ce qu'il rapporte à l'équipe ─────────────────────────────────────── */
+const railB2 = `${tete('Dashboard magasin')}
+  <div class="rf-rep"><div class="rf-rep__t">Primes d’équipe<small>novembre</small></div>
+    <div class="rf-cartes">
+      <button class="rf-carte"><div class="k">Objectif du mois<em>au 15/11</em></div><div class="v"><span class="ex">92 %</span><small class="ex">− 2 690 €</small></div>
+        <div class="rf-echelle"><i class="att" style="width:83.6%"></i><b style="left:90.9%"></b></div>
+        <div class="rf-prime"><span>Prime à 100 %</span><span class="m ex">40 € chacune</span></div><div class="s"><span class="ex">+ 180 € par jour</span> d’ici le 30/11</div></button>
+      <button class="rf-carte"><div class="k">Note Google<em class="ex">287 avis</em></div><div class="v"><span class="ex">4,6</span>${etoiles(4.6)}</div>
+        <div class="rf-echelle"><i style="width:60%"></i><b style="left:50%"></b></div><div class="rf-echelle-l"><span>4,0</span><span>cible 4,5</span><span>5,0</span></div>
+        <div class="rf-prime ok"><span>Prime gagnée</span><span class="m ex">25 € chacune</span></div></button>
+      <button class="rf-carte rf-carte--ligne"><div><div class="k">Valeur</div><div class="v ex">100 328 €</div></div>${courbe([94.1, 95.8, 97.2, 98.0, 99.6, 100.3])}</button>
+    </div></div>
+  ${navB('Opérationnel', '<span class="ex">1 / 2</span>')}`;
+
+/* ── B3 — Le verdict : chaque carte commence par une phrase ; une carte « À regarder » mène où ça cloche ──────────── */
+const railB3 = `${tete('Dashboard magasin')}
+  <div class="rf-rep"><div class="rf-rep__t">Atelier by – Halle<small>au 15/11</small></div>
+    <div class="rf-cartes">
+      <button class="rf-carte"><div class="k">Objectif du mois<em class="ex">92 %</em></div><div class="rf-phrase ex">Il manque 2 690 € pour l’objectif.</div>
+        <div class="rf-echelle"><i class="att" style="width:92%"></i><b style="left:100%;margin-left:-2px"></b></div><div class="s ex">+ 180 € par jour, 15 jours</div></button>
+      <button class="rf-carte"><div class="rf-duo"><span class="rf-dot ok"></span><span class="t ex">Google tient la cible.</span><span class="n ex">4,6 ★</span></div>
+        <div class="rf-duo"><span class="rf-dot ok"></span><span class="t ex">La valeur monte.</span><span class="n ex">100,3 k€</span></div></button>
+      <div class="rf-carte rf-regarder"><div class="k">À regarder</div>
+        <a class="rf-alerte" href="#"><i class="rf-dot ko"></i><span class="ex">Matière 39,6 % (seuil 35)</span><span class="fl">›</span></a>
+        <a class="rf-alerte" href="#"><i class="rf-dot att"></i><span class="ex">12 commandes en retard</span><span class="fl">›</span></a>
+        <a class="rf-alerte" href="#"><i class="rf-dot att"></i><span class="ex">Biscuiterie : 3 j sans photo</span><span class="fl">›</span></a></div>
+    </div></div>
+  ${navB('Opérationnel')}`;
+
+fs.writeFileSync(path.join(D, 'b1.html'), page('b1', 'douze mois', railB1, 'Opérationnel'));
+fs.writeFileSync(path.join(D, 'b2.html'), page('b2', 'les primes en jeu', railB2, 'Opérationnel'));
+fs.writeFileSync(path.join(D, 'b3.html'), page('b3', 'le verdict', railB3, 'Opérationnel'));
+
 fs.writeFileSync(path.join(D, 'a.html'), page('a', 'les repères en liste', railA, 'Opérationnel'));
 fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB, 'Résultat', ongletsB));
 fs.writeFileSync(path.join(D, 'c.html'), page('c', 'les assistants d’abord', railC, 'Opérationnel'));
 
-/* La planche : les trois captures côte à côte. */
-const PL = [['a', 'A — Les repères en liste', 'le rail du Marketing tel quel ; les onze onglets rangés en trois groupes, les assistants en bas'],
-  ['b', 'B — Le tableau de bord dans le rail', 'chaque repère a sa forme ; Résultat réunit Semaine, Mois, Trimestre et Année en onglets'],
-  ['c', 'C — Les assistants d’abord', 'quatre cases, la revue du soir en tête, puis ce qu’il reste à faire']];
-fs.writeFileSync(path.join(D, 'planche.html'), `<!DOCTYPE html>
-<html lang="fr"><head><meta charset="utf-8"><title>Rail du dashboard franchisé — planche</title>
+/* Les planches : les captures côte à côte (A, B, C ; puis B et ses trois variantes). */
+function planche(nom, titre, L) {
+  fs.writeFileSync(path.join(D, nom + '.html'), `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Rail du dashboard franchisé — ${titre}</title>
 <link rel="stylesheet" href="${R}assets/ds/global.css"><link rel="stylesheet" href="rf.css"></head>
-<body><div class="rf-planche">${PL.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><img src="${l}.png" alt="${t}"></figure>`).join('')}</div></body></html>
+<body><div class="rf-planche" style="grid-template-columns:repeat(${L.length}, 1fr)">${L.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><img src="${l}.png" alt="${t}"></figure>`).join('')}</div></body></html>
 `);
-console.log('a.html, b.html, c.html, planche.html');
+}
+const PB = ['b', 'B — Le tableau de bord dans le rail', 'chaque repère a sa forme ; Résultat réunit Semaine, Mois, Trimestre et Année en onglets'];
+planche('planche', 'planche', [['a', 'A — Les repères en liste', 'le rail du Marketing tel quel ; les onze onglets rangés en trois groupes, les assistants en bas'],
+  PB, ['c', 'C — Les assistants d’abord', 'quatre cases, la revue du soir en tête, puis ce qu’il reste à faire']]);
+planche('planche-b', 'B et ses variantes', [PB,
+  ['b1', 'B1 — Douze mois', 'quatre cartes en grille : la valeur, la note Google, l’objectif et le résultat sur un an'],
+  ['b2', 'B2 — Les primes en jeu', 'l’objectif et la note Google disent ce qu’ils rapportent à l’équipe ; la valeur en une ligne'],
+  ['b3', 'B3 — Le verdict', 'chaque carte commence par une phrase ; « À regarder » mène où ça cloche']]);
+console.log('a, b, c, b1, b2, b3 (.html), planche.html, planche-b.html');

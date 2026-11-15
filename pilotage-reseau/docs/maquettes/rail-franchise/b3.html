@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Rail du dashboard franchisé — le verdict (maquette B3)</title>
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="rf.css">
+</head><body>
+<div class="workspace">
+<nav class="sidebar" aria-label="Navigation du dashboard">
+<div class="sidebar__head"><img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
+  <div class="sidebar__back"><a href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>Retour à l’ERP</a></div>
+  <div class="rf-rep"><div class="rf-rep__t">Atelier by – Halle<small>au 15/11</small></div>
+    <div class="rf-cartes">
+      <button class="rf-carte"><div class="k">Objectif du mois<em class="ex">92 %</em></div><div class="rf-phrase ex">Il manque 2 690 € pour l’objectif.</div>
+        <div class="rf-echelle"><i class="att" style="width:92%"></i><b style="left:100%;margin-left:-2px"></b></div><div class="s ex">+ 180 € par jour, 15 jours</div></button>
+      <button class="rf-carte"><div class="rf-duo"><span class="rf-dot ok"></span><span class="t ex">Google tient la cible.</span><span class="n ex">4,6 ★</span></div>
+        <div class="rf-duo"><span class="rf-dot ok"></span><span class="t ex">La valeur monte.</span><span class="n ex">100,3 k€</span></div></button>
+      <div class="rf-carte rf-regarder"><div class="k">À regarder</div>
+        <a class="rf-alerte" href="#"><i class="rf-dot ko"></i><span class="ex">Matière 39,6 % (seuil 35)</span><span class="fl">›</span></a>
+        <a class="rf-alerte" href="#"><i class="rf-dot att"></i><span class="ex">12 commandes en retard</span><span class="fl">›</span></a>
+        <a class="rf-alerte" href="#"><i class="rf-dot att"></i><span class="ex">Biscuiterie : 3 j sans photo</span><span class="fl">›</span></a></div>
+    </div></div>
+  <div class="sidebar__groups">
+    <div class="sidebar__group"><div class="sidebar__group-label">Le magasin</div><a class="sidebar__item is-active" href="#" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Opérationnel</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Tâches</span><span class="rf-etat"><span class="ex">4</span></span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Résultat</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Temps morts</span></a></div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Vendre</div><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Produits</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Promotions</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Concurrence</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Primes</span></a></div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Assistants</div><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v3H9zM9 4.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-3M15.5 15.5a3.2 3.2 0 1 1-3.7-4.4 2.6 2.6 0 0 0 3.7 4.4z"></path></svg><span class="sidebar__item-label">Revue du soir</span><span class="rf-etat"><span class="ex">à faire</span></span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Plan d’action</span><span class="rf-etat"><span class="ex">3</span></span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagne</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5"></path></svg><span class="sidebar__item-label">Réclamation fournisseur</span></a></div>
+  </div>
+</nav>
+<div class="workspace__main"><header class="topbar"><div><p class="topbar__kicker">Vue Franchisé</p><h1>Opérationnel</h1></div>
+    <div class="topbar__actions"><span class="rf-pill">Maquette · contenu inchangé · chiffres du rail : exemples</span>
+      <button class="btn btn--icon">‹</button><input class="btn" style="font:inherit;font-size:13px;width:118px" value="15/11/2026"><button class="btn btn--icon">›</button><button class="btn">↻ Relire</button></div></header>
+  <main class="app__body"><div class="rf-esq">
+    <div class="rf-frise"><div class="rf-jour">L 9<small>pas de vente</small></div><div class="rf-jour">Ma 10<small><span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span></small></div><div class="rf-jour">Me 11<small><span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span></small></div><div class="rf-jour">J 12<small><span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span></small></div><div class="rf-jour">V 13<small><span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span></small></div><div class="rf-jour">S 14<small><span class="rf-sk" style="display:block;width:70%;margin:4px 0 0"></span></small></div><div class="rf-jour on">D 15<small>en cours</small></div></div>
+    <div class="rf-tuiles"><div class="rf-bloc"><h2>Ventes</h2><div class="rf-sk" style="width:45%;height:20px"></div><div class="rf-sk" style="width:85%"></div></div><div class="rf-bloc"><h2>Objectif du jour</h2><div class="rf-sk" style="width:45%;height:20px"></div><div class="rf-sk" style="width:85%"></div></div><div class="rf-bloc"><h2>Vitrine</h2><div class="rf-sk" style="width:45%;height:20px"></div><div class="rf-sk" style="width:85%"></div></div><div class="rf-bloc"><h2>Équipe en poste</h2><div class="rf-sk" style="width:45%;height:20px"></div><div class="rf-sk" style="width:85%"></div></div></div>
+    <div class="rf-deux"><div class="rf-bloc"><h2>Ventes par catégorie</h2><div class="rf-sk" style="width:92%"></div><div class="rf-sk" style="width:80%"></div><div class="rf-sk" style="width:86%"></div><div class="rf-sk" style="width:70%"></div><div class="rf-sk" style="width:76%"></div><div class="rf-sk" style="width:62%"></div><div class="rf-sk" style="width:74%"></div></div>
+      <div class="rf-bloc"><h2>Le P&amp;L court de la journée</h2><div class="rf-sk" style="width:88%"></div><div class="rf-sk" style="width:72%"></div><div class="rf-sk" style="width:80%"></div><div class="rf-sk" style="width:66%"></div><div class="rf-sk" style="width:84%"></div><div class="rf-sk" style="width:60%"></div></div></div>
+    <div class="rf-bloc"><h2>La journée</h2><div class="rf-sk" style="width:96%"></div><div class="rf-sk" style="width:90%"></div><div class="rf-sk" style="width:94%"></div></div>
+  </div></main></div>
+</div>
+</body></html>
