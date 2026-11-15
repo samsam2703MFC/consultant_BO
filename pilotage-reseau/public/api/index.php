@@ -151,6 +151,7 @@ require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des ch
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
 require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
 require __DIR__ . '/../../src/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
+require __DIR__ . '/../../src/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -377,6 +378,8 @@ function route(string $method, string $path): mixed
 {
     // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
     if (($c = cmRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Mon marketing (15/11/2026) : le hub du marketing, pour le magasin de la requête (src/dashboard_marketing.php).
+    if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
