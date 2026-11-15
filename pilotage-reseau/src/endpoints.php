@@ -8187,6 +8187,11 @@ function ep_ia_note(): array
     $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
     $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];
     if (empty($d['photoRef']) && $rv !== null && !empty($rv['photo'])) { $regles['refLocale'] = __DIR__ . '/../public/' . $rv['photo']; }
+    // Les corrections du consultant sur ce rayon (src/ia_assistant.php) : l'IA s'aligne sur ses décisions.
+    $regles['exemples'] = function_exists('iaLeconsPour') ? iaLeconsPour($rv['cle'] ?? null, (string) ($d['tache'] ?? '')) : [];
+    $out['tache'] = $d['tache'] ?? null;
+    $out['rayon'] = $rv['cle'] ?? null;
+    $out['leconsVues'] = count($regles['exemples']);
     $r = Anthropic::noterPhoto((string) ($d['tache'] ?? ('Tâche #' . $taskId)),
         (string) $d['photo'], $d['photoRef'] ?? null, $niveaux, $ctx, $regles);
 

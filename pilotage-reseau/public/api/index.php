@@ -76,6 +76,7 @@ require __DIR__ . '/../../src/ventes_pro.php';
 require __DIR__ . '/../../src/franchise/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
+require __DIR__ . '/../../src/ia_assistant.php';          // L'assistant de notation : propositions gardées, leçons (15/11/2026)
 require __DIR__ . '/../../src/assortiment.php';
 require __DIR__ . '/../../src/structure_gamme.php';
 require __DIR__ . '/../../src/plano_proposition.php';
@@ -744,6 +745,8 @@ function route(string $method, string $path): mixed
             $path === '/pwa/tasks/sonde'               => ep_pwa_tasks_sonde(),
             $path === '/ia/note'                       => ep_ia_note(),
             $path === '/ia/statut'                     => ep_ia_statut(),
+            $path === '/ia/propositions'               => ep_ia_propositions(),
+            $path === '/ia/lecons'                     => ep_ia_lecons(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
             // Le Scouting est parti dans le CRM (Étude de faisabilité) ; restent
@@ -1052,6 +1055,8 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && $path === '/fonds/royalties') { return wr_fonds_royalties(); }
     if ($method === 'POST' && $path === '/fonds/royalties/generer') { return wr_fonds_royalties_generer(); }
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
+    if ($method === 'POST' && $path === '/ia/proposer') { return wr_ia_proposer(); }
+    if ($method === 'POST' && $path === '/ia/lecons') { return wr_ia_lecons(); }
     if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
