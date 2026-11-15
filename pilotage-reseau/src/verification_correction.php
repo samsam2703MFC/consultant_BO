@@ -1051,7 +1051,10 @@ const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material
     '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#',
     // Les commandes fournisseur et leurs livraisons (14/11/2026, « comment valider les marchandises dans le stock ») : lecture.
     '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/orders/ORD-[\w-]{4,60}$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
-    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/consultant/shops/\d+/material-orders(/\d+)?$#', '#^/shops/\d+/kitchen-deliveries(/\d+)?$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
+    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/consultant/shops/\d+/material-orders(/\d+)?$#', '#^/shops/\d+/kitchen-deliveries(/\d+)?$#',
+    // Le helpdesk des franchisés et leurs notifications (15/11/2026) : lecture.
+    '#^/cases$#', '#^/cases/stats$#', '#^/cases/\d+$#', '#^/shops/\d+/cases(/stats)?$#', '#^/consultant/tasks/helpdesk$#',
+    '#^/franchisee-notifications(/active)?$#', '#^/franchisee-notification/(types|\d+)$#', '#^/shops/\d+/notifications(/read)?$#', '#^/notifications$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
 
 /**
  * GET /verification/recettes/sonde-chemin?chemin=&q= — lecture seule : une route du circuit des prix fournisseur
