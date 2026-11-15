@@ -10,23 +10,17 @@ declare(strict_types=1);
  *   /analyse/categories/magasin      les semaines d'une famille (F)
  *   /analyse/categories/journee      une journée d'une famille, heure par heure, face aux 6 mêmes jours d'avant (F)
  *   /exploitation/invendus/detail    les pièces jetées, produit par produit (E et F)
- * Ce module ajoute les trois lectures qui leur manquaient :
- *   GET /dashboard/analyse/reseau?shop=4&pid=1610006 | &groupe=Viennoiserie
+ * Ce module ajoute les lectures qui leur manquaient :
+ *   GET /dashboard/analyse/periode?shop=4&du=…&au=…[&prec=…]   le magasin sur la période choisie (15/11/2026)
+ *   GET /dashboard/analyse/reseau?shop=4&du=…&au=…&pid=1610006 | &groupe=Viennoiserie
  *   GET /dashboard/analyse/mois?shop=4&pids=1610006,1610004
- *   GET /dashboard/analyse/jours?shop=4&pid=1610006
+ *   GET /dashboard/analyse/jours?shop=4&pid=1610006[&au=…]
+ * La période : semaine, mois, trimestre, année, 13 semaines ou du … au ; elle se compare à la période d'avant (prec), au jour.
  *
  * Les autres magasins n'y ont ni nom, ni identifiant, ni volume ni chiffre : seulement des pièces rapportées à leur
  * chiffre (« pour 10 k€ ») et des évolutions. De quoi se comparer à taille égale, pas de quoi lire le chiffre d'un voisin.
  * Lecture seule ; les tranches closes viennent du cache des ventes (apTranches2), les invendus de celui de invLignes.
  */
-
-/** Les semaines comparées pour une évolution : celles de l'onglet Produits (AD_AVANT, AD_APRES), sans la semaine en cours. */
-function daEvo(array $q): ?float
-{
-    $avant = array_sum(array_slice($q, AD_AVANT[0], AD_AVANT[1] - AD_AVANT[0] + 1));
-    $apres = array_sum(array_slice($q, AD_APRES[0], AD_APRES[1] - AD_APRES[0] + 1));
-    return $avant > 0 ? round(100 * ($apres / $avant - 1), 1) : null;
-}
 
 /**
  * La marge réalisée d'un produit sur une période, à partir des pièces, du chiffre TTC et du prix du catalogue
@@ -56,15 +50,158 @@ function daGroupeDe(string $cat, array $grpDe): string
     return explode(' · ', (string) ($grpDe[$cat] ?? 'Autres'))[0];
 }
 
+/* --- La période (15/11/2026, « on doit pouvoir choisir mois, semaine, trimestre, année et range ») ------------------- */
+
+/** Les jours de du à au, bornes comprises. */
+function daJours(string $du, string $au): int
+{
+    return (int) round((strtotime($au . ' 12:00:00') - strtotime($du . ' 12:00:00')) / 86400) + 1;
+}
+
 /**
- * GET /dashboard/analyse/reseau?shop=4&pid=… | &groupe=… — le magasin face aux autres magasins du réseau, à taille égale,
- * sur les 13 semaines de l'onglet Produits (12 closes et l'en cours).
- *   taille        le chiffre TTC du magasin sur les 13 semaines (le sien)
+ * La découpe d'une période pour ses courbes : des jours jusqu'à 31 jours, des semaines (lundi → dimanche, coupées aux bornes)
+ * jusqu'à 190 jours, des mois au-delà. → [pas, [[du, au], …]]
+ */
+function daDecoupe(string $du, string $au): array
+{
+    $n = daJours($du, $au); $out = [];
+    if ($n <= 31) {
+        for ($d = $du; $d <= $au; $d = date('Y-m-d', strtotime($d . ' 12:00:00 +1 day'))) { $out[] = [$d, $d]; }
+        return ['jour', $out];
+    }
+    if ($n <= 190) {
+        $d = $du;
+        while ($d <= $au) {
+            $dim = date('Y-m-d', strtotime($d . ' 12:00:00 sunday this week'));
+            $f = min($dim, $au); $out[] = [$d, $f]; $d = date('Y-m-d', strtotime($f . ' 12:00:00 +1 day'));
+        }
+        return ['semaine', $out];
+    }
+    $d = $du;
+    while ($d <= $au) { $f = min(date('Y-m-t', strtotime($d . ' 12:00:00')), $au); $out[] = [$d, $f]; $d = date('Y-m-d', strtotime($f . ' 12:00:00 +1 day')); }
+    return ['mois', $out];
+}
+
+/**
+ * La période demandée (du, au ; prec : le début de la période d'avant, sinon la même longueur juste avant), arrêtée à
+ * aujourd'hui. La période d'avant compte autant de jours que la période lue (une période entamée se compare à date), sans
+ * jamais chevaucher la période. → [du, au, prevDu, prevAu] ou un message d'erreur.
+ */
+function daPeriode(): array|string
+{
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? ''); $prec = (string) ($_GET['prec'] ?? '');
+    $auj = date('Y-m-d');
+    if ($du === '' && $au === '') { $t = array_slice(apTranches(3), -13); $du = $t[0][0]; $au = $auj; }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $au < $du) { return 'du et au (AAAA-MM-JJ) attendus, du avant au'; }
+    if ($du > $auj) { return 'la période commence après aujourd’hui'; }
+    $au = min($au, $auj);
+    if (daJours($du, $au) > 400) { return 'une période de 400 jours au plus'; }
+    $len = daJours($du, $au);
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $prec) || $prec >= $du) { $prec = date('Y-m-d', strtotime($du . ' 12:00:00 -' . $len . ' day')); }
+    $pAu = min(date('Y-m-d', strtotime($prec . ' 12:00:00 +' . ($len - 1) . ' day')), date('Y-m-d', strtotime($du . ' 12:00:00 -1 day')));
+    return [$du, $au, $prec, $pAu];
+}
+
+/**
+ * L'évolution d'une série sur la période face à la période d'avant, au jour (des mois de 30 et 31 jours se comparent) :
+ * nouveau, arrêté, peu vendu, en hausse (≥ + 8 %), en baisse (≤ − 8 %), stable — les seuils de l'onglet Produits.
+ */
+function daEvoPeriode(float $v, float $q, int $j, float $vp, float $qp, int $jp, array $vt): array
+{
+    $r = $j > 0 ? $v / $j : 0.0; $rp = $jp > 0 ? $vp / $jp : 0.0;
+    $pct = $rp > 0 ? round(100 * ($r / $rp - 1), 1) : null;
+    $depuis = null;
+    if ($r > 0 && $rp < 0.15 * $r) {
+        $verdict = 'nouveau';
+        $moy = $v / max(1, count($vt));
+        foreach ($vt as $i => $x) { if ($x >= 0.25 * $moy) { $depuis = $i; break; } }
+    } elseif ($rp > 0 && $r < 0.15 * $rp) { $verdict = 'arrete'; }
+    elseif ($q + $qp < max(4.0, 2.0 * ($j + $jp) / 7)) { $verdict = 'peu'; }
+    elseif ($pct !== null && $pct >= 8.0) { $verdict = 'monte'; }
+    elseif ($pct !== null && $pct <= -8.0) { $verdict = 'baisse'; }
+    else { $verdict = 'stable'; }
+    return ['pct' => $pct, 'verdict' => $verdict, 'depuisI' => $depuis];
+}
+
+/**
+ * GET /dashboard/analyse/periode?shop=4&du=2026-10-01&au=2026-10-31[&prec=2026-09-01] — le magasin sur une période :
+ * chaque produit vendu (sa catégorie, sa famille), ses pièces et son chiffre tranche par tranche (des jours, des semaines
+ * ou des mois, daDecoupe), ses totaux sur la période d'avant, son évolution (daEvoPeriode), son prix et sa recette du
+ * catalogue ; les familles et le magasin entier de même. Aucun autre magasin n'est lu.
+ */
+function ep_dashboard_analyse_periode(): array
+{
+    $sid = (int) ($_GET['shop'] ?? 0);
+    if ($sid <= 0) { http_response_code(400); return ['error' => 'shop attendu']; }
+    if (!function_exists('apTranches2') || !function_exists('adPrixCatalogue') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'les ventes du panel ne se lisent pas']; }
+    $P = daPeriode();
+    if (is_string($P)) { http_response_code(422); return ['error' => $P]; }
+    [$du, $au, $pDu, $pAu] = $P;
+    @set_time_limit(120);
+    [$pas, $T] = daDecoupe($du, $au);
+    $n = count($T);
+    $lu = apTranches2(array_merge(array_map(static fn ($t) => [$sid, $t[0], $t[1]], $T), [[$sid, $pDu, $pAu]]));
+    $prec = $lu[$sid . ':' . $pDu] ?? null;
+    $catDe = function_exists('svCategories') ? svCategories() : [];
+    $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    $prix = adPrixCatalogue($sid);
+    $j = daJours($du, $au); $jp = daJours($pDu, $pAu);
+    $X = []; $muettes = [];
+    $ajoute = static function (int $id, array $x) use (&$X, $catDe, $grpDe, $n): void {
+        if (isset($X[$id])) { return; }
+        $c = (string) ($catDe[$id] ?? ($x[1] ?? ''));
+        $X[$id] = ['id' => $id, 'nom' => (string) ($x[0] ?? ('Produit ' . $id)), 'cat' => $c, 'groupe' => daGroupeDe($c, $grpDe),
+            'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
+    };
+    foreach ($T as $i => $t) {
+        $p = $lu[$sid . ':' . $t[0]] ?? null;
+        if (!is_array($p)) { $muettes[] = $i; continue; }
+        foreach ($p as $id => $x) { $id = (int) $id; $ajoute($id, $x); $X[$id]['v'][$i] += (float) ($x[3] ?? 0); $X[$id]['q'][$i] += (float) ($x[2] ?? 0); }
+    }
+    foreach (is_array($prec) ? $prec : [] as $id => $x) { $id = (int) $id; $ajoute($id, $x); $X[$id]['vp'] += (float) ($x[3] ?? 0); $X[$id]['qp'] += (float) ($x[2] ?? 0); }
+    $produits = []; $G = []; $tot = ['v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
+    foreach ($X as $id => $x) {
+        $v = array_sum($x['v']); $q = array_sum($x['q']);
+        $g = $x['groupe'];
+        $G[$g] = $G[$g] ?? ['nom' => $g, 'n' => 0, 'v' => array_fill(0, $n, 0.0), 'q' => array_fill(0, $n, 0.0), 'vp' => 0.0, 'qp' => 0.0];
+        if ($v > 0 || $q > 0) { $G[$g]['n']++; }
+        for ($i = 0; $i < $n; $i++) { $G[$g]['v'][$i] += $x['v'][$i]; $G[$g]['q'][$i] += $x['q'][$i]; $tot['v'][$i] += $x['v'][$i]; $tot['q'][$i] += $x['q'][$i]; }
+        $G[$g]['vp'] += $x['vp']; $G[$g]['qp'] += $x['qp']; $tot['vp'] += $x['vp']; $tot['qp'] += $x['qp'];
+        if ($v <= 0 && $q <= 0) { continue; }
+        $c = $prix[$id] ?? null;
+        $produits[] = ['id' => $id, 'nom' => $x['nom'], 'cat' => $x['cat'], 'groupe' => $g,
+            'v' => array_map(static fn ($a) => round($a, 2), $x['v']), 'q' => array_map(static fn ($a) => round($a, 1), $x['q']),
+            'vp' => round($x['vp'], 2), 'qp' => round($x['qp'], 1), 'evo' => daEvoPeriode($v, $q, $j, $x['vp'], $x['qp'], $jp, $x['v']),
+            'prix' => $c !== null && $c['ttc'] !== null ? round($c['ttc'], 2) : null, 'prixHt' => $c !== null && $c['ht'] !== null ? round($c['ht'], 2) : null,
+            'cout' => $c !== null && $c['cout'] !== null ? round($c['cout'], 3) : null];
+    }
+    usort($produits, static fn ($a, $b) => array_sum($b['v']) <=> array_sum($a['v']));
+    $groupes = [];
+    foreach ($G as $g) {
+        if (array_sum($g['v']) <= 0) { continue; }
+        $groupes[] = ['nom' => $g['nom'], 'n' => $g['n'], 'v' => array_map(static fn ($a) => round($a, 2), $g['v']), 'q' => array_map(static fn ($a) => round($a, 1), $g['q']),
+            'vp' => round($g['vp'], 2), 'qp' => round($g['qp'], 1), 'evo' => daEvoPeriode(array_sum($g['v']), array_sum($g['q']), $j, $g['vp'], $g['qp'], $jp, $g['v'])];
+    }
+    usort($groupes, static fn ($a, $b) => array_sum($b['v']) <=> array_sum($a['v']));
+    return ['shop' => $sid, 'du' => $du, 'au' => $au, 'jours' => $j, 'pas' => $pas, 'enCours' => $au === date('Y-m-d'),
+        'tranches' => array_map(static fn ($t) => [$t[0], $t[1]], $T), 'muettes' => $muettes,
+        'precedent' => ['du' => $pDu, 'au' => $pAu, 'jours' => $jp, 'lu' => is_array($prec)],
+        'total' => ['v' => array_map(static fn ($a) => round($a, 2), $tot['v']), 'q' => array_map(static fn ($a) => round($a, 1), $tot['q']), 'vp' => round($tot['vp'], 2), 'qp' => round($tot['qp'], 1),
+            'evo' => daEvoPeriode(array_sum($tot['v']), array_sum($tot['q']), $j, $tot['vp'], $tot['qp'], $jp, $tot['v'])],
+        'groupes' => $groupes, 'produits' => $produits,
+        'regle' => 'évolution : la période face à la période d’avant, au jour ; en hausse à + 8 % et plus, en baisse à − 8 % et moins',
+        'source' => 'ventes du panel (product-category-groups) du magasin, tranche par tranche ; prix et recette : products/available'];
+}
+
+/**
+ * GET /dashboard/analyse/reseau?shop=4&du=…&au=…[&prec=…]&pid=… | &groupe=… — le magasin face aux autres magasins du
+ * réseau, à taille égale, sur la période (daPeriode ; sans du ni au, les 13 dernières semaines).
+ *   taille        le chiffre TTC du magasin sur la période (le sien)
  *   produits      pour le produit, ou chaque produit de la famille vendu quelque part : ses pièces semaine par semaine chez
  *                 le magasin, ses pièces pour 10 k€ de chiffre, son évolution, et pour chaque autre magasin qui le vend
- *                 ses pièces pour 10 k€ et son évolution (sans nom, du plus vendeur au moins vendeur)
- *   reseau        la sélection (le produit ou la famille) chez les autres magasins, ramenée à la taille du magasin, semaine
- *                 par semaine : (Σ pièces des autres) ÷ (Σ chiffre des autres) × chiffre du magasin — idem en chiffre TTC
+ *                 ses pièces pour 10 k€ et son évolution face à la période d'avant (sans nom, du plus vendeur au moins vendeur)
+ *   reseau        la sélection (le produit ou la famille) chez les autres magasins, ramenée à la taille du magasin, tranche
+ *                 par tranche : (Σ pièces des autres) ÷ (Σ chiffre des autres) × chiffre du magasin — idem en chiffre TTC
  *   absents       (famille) les produits que d'autres magasins vendent et pas celui-ci : combien de magasins, et ce que
  *                 cela ferait par semaine à sa taille
  */
@@ -75,18 +212,33 @@ function ep_dashboard_analyse_reseau(): array
     $groupe = trim((string) ($_GET['groupe'] ?? ''));
     if ($sid <= 0 || ($pid <= 0 && $groupe === '')) { http_response_code(400); return ['error' => 'shop et pid, ou shop et groupe, attendus']; }
     if (!function_exists('apTranches2') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'les ventes du panel ne se lisent pas']; }
+    $per = daPeriode();
+    if (is_string($per)) { http_response_code(422); return ['error' => $per]; }
+    [$du, $au, $pDu, $pAu] = $per;
     @set_time_limit(120);
-    $tranches = array_slice(apTranches(3), -13);
+    $tranches = daDecoupe($du, $au)[1];
     $n = count($tranches);
     $shops = array_map('intval', array_column(Db::rows('SELECT id FROM shops WHERE active = 1 ORDER BY id'), 'id'));
     if (!in_array($sid, $shops, true)) { $shops[] = $sid; }
+    // Chaque magasin : la période tranche par tranche (la courbe), et la période d'avant d'un seul relevé (l'évolution).
     $couples = [];
-    foreach ($shops as $s) { foreach ($tranches as $t) { $couples[] = [$s, $t[0], $t[1]]; } }
+    foreach ($shops as $s) { foreach ($tranches as $t) { $couples[] = [$s, $t[0], $t[1]]; } $couples[] = [$s, $pDu, $pAu]; }
     $lu = apTranches2($couples);
     $catDe = function_exists('svCategories') ? svCategories() : [];
     $grpDe = function_exists('svGroupes') ? svGroupes() : [];
+    $j = daJours($du, $au); $jp = daJours($pDu, $pAu);
+    // La période d'avant : les pièces de chaque produit retenu, par magasin.
+    $QP = [];
+    foreach ($shops as $s) {
+        foreach ((array) ($lu[$s . ':' . $pDu] ?? []) as $id => $x) {
+            $id = (int) $id; $cat = (string) ($catDe[$id] ?? ($x[1] ?? ''));
+            if ($pid > 0 ? $id !== $pid : daGroupeDe($cat, $grpDe) !== $groupe) { continue; }
+            $QP[$s][$id] = ($QP[$s][$id] ?? 0.0) + (float) ($x[2] ?? 0);
+        }
+    }
+    $evoP = static fn (float $q, float $qp): ?float => $qp > 0 && $jp > 0 && $j > 0 ? round(100 * (($q / $j) / ($qp / $jp) - 1), 1) : null;
 
-    // Par magasin : le chiffre des 13 semaines (sa taille), et les pièces / le chiffre de chaque produit retenu.
+    // Par magasin : le chiffre de la période (sa taille), et les pièces / le chiffre de chaque produit retenu.
     $taille = []; $Q = []; $V = []; $noms = []; $lus = [];
     foreach ($shops as $s) {
         $taille[$s] = 0.0; $vide = true;
@@ -120,19 +272,19 @@ function ep_dashboard_analyse_reseau(): array
         foreach ($autres as $s) {
             $q = $Q[$s][$id] ?? null;
             if ($q === null || array_sum($q) <= 0) { continue; }
-            $ailleurs[] = ['p10k' => $p10k(array_sum($q), $taille[$s]), 'evo' => daEvo($q)];
+            $ailleurs[] = ['p10k' => $p10k(array_sum($q), $taille[$s]), 'evo' => $evoP(array_sum($q), (float) ($QP[$s][$id] ?? 0))];
         }
         usort($ailleurs, static fn ($a, $b) => $b['p10k'] <=> $a['p10k']);
         if (array_sum($qMoi) <= 0) {
             if ($ailleurs !== [] && $pid <= 0) {
                 $moy = array_sum(array_column($ailleurs, 'p10k')) / count($ailleurs);
                 $absents[] = ['pid' => $id, 'nom' => $nm['nom'], 'cat' => $nm['cat'], 'magasins' => count($ailleurs),
-                    'aVotreTaille' => round($moy / 10000 * $moi / $n, 1)];
+                    'aVotreTaille' => round($moy / 10000 * $moi / $j * 7, 1)];
             }
             continue;
         }
         $produits[] = ['pid' => $id, 'nom' => $nm['nom'], 'cat' => $nm['cat'], 'q' => array_map(static fn ($v) => round($v, 1), $qMoi),
-            'p10k' => $p10k(array_sum($qMoi), $moi), 'evo' => daEvo($qMoi), 'autres' => $ailleurs];
+            'p10k' => $p10k(array_sum($qMoi), $moi), 'evo' => $evoP(array_sum($qMoi), (float) ($QP[$sid][$id] ?? 0)), 'autres' => $ailleurs];
     }
     usort($produits, static fn ($a, $b) => array_sum($b['q']) <=> array_sum($a['q']));
     usort($absents, static fn ($a, $b) => [$b['magasins'], $b['aVotreTaille']] <=> [$a['magasins'], $a['aVotreTaille']]);
@@ -144,12 +296,15 @@ function ep_dashboard_analyse_reseau(): array
         foreach ($Q[$s] ?? [] as $id => $q) { for ($i = 0; $i < $n; $i++) { $rq[$i] += $q[$i]; $rv[$i] += $V[$s][$id][$i]; } }
     }
     $k = $tA > 0 ? $moi / $tA : null;
-    return ['shop' => $sid, 'pid' => $pid ?: null, 'groupe' => $pid > 0 ? null : $groupe,
-        'semaines' => ['tranches' => array_map(static fn ($t) => (string) $t[2], $tranches), 'bornes' => array_map(static fn ($t) => [$t[0], $t[1]], $tranches)],
+    // L'évolution de la sélection chez les autres magasins, ensemble : la période face à la période d'avant, au jour.
+    $qA = 0.0; $qAp = 0.0;
+    foreach ($autres as $s) { $qA += array_sum(array_map('array_sum', $Q[$s] ?? [])); $qAp += array_sum($QP[$s] ?? []); }
+    return ['shop' => $sid, 'pid' => $pid ?: null, 'groupe' => $pid > 0 ? null : $groupe, 'du' => $du, 'au' => $au, 'jours' => $j,
+        'precedent' => ['du' => $pDu, 'au' => $pAu, 'jours' => $jp], 'tranches' => array_map(static fn ($t) => [$t[0], $t[1]], $tranches),
         'taille' => round($moi, 2), 'autresMagasins' => count($autres), 'produits' => $produits, 'absents' => $absents,
-        'reseau' => $k === null ? null : ['q' => array_map(static fn ($v) => round($v * $k, 1), $rq), 'v' => array_map(static fn ($v) => round($v * $k, 2), $rv)],
-        'regle' => ['evolution' => 'semaines ' . (AD_APRES[0] + 1) . ' à ' . (AD_APRES[1] + 1) . ' face aux semaines ' . (AD_AVANT[0] + 1) . ' à ' . (AD_AVANT[1] + 1) . ', sans la semaine en cours',
-            'p10k' => 'pièces vendues pour 10 000 € de chiffre TTC du magasin, sur les 13 semaines'],
+        'reseau' => $k === null ? null : ['q' => array_map(static fn ($v) => round($v * $k, 1), $rq), 'v' => array_map(static fn ($v) => round($v * $k, 2), $rv), 'evo' => $evoP($qA, $qAp)],
+        'regle' => ['evolution' => 'la période face à la période d’avant, au jour',
+            'p10k' => 'pièces vendues pour 10 000 € de chiffre TTC du magasin, sur la période', 'aVotreTaille' => 'par semaine'],
         'source' => 'ventes du panel (product-category-groups), chaque magasin actif du réseau ; les autres magasins sans nom ni volume'];
 }
 
@@ -211,8 +366,11 @@ function ep_dashboard_analyse_jours(): array
     if ($sid <= 0 || $pid <= 0) { http_response_code(400); return ['error' => 'shop et pid attendus']; }
     if (!function_exists('apTranches2') || !function_exists('invLignes') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'les ventes du panel ne se lisent pas']; }
     @set_time_limit(120);
+    // Les 28 jours qui finissent à la fin de la période choisie (au), au plus tard hier : 4 de chaque jour de la semaine.
+    $hier = date('Y-m-d', strtotime('-1 day'));
+    $fin = (string) ($_GET['au'] ?? ''); $fin = preg_match('/^\d{4}-\d{2}-\d{2}$/', $fin) ? min($fin, $hier) : $hier;
     $dates = [];
-    for ($i = 28; $i >= 1; $i--) { $dates[] = date('Y-m-d', strtotime("-$i day")); }
+    for ($i = 27; $i >= 0; $i--) { $dates[] = date('Y-m-d', strtotime($fin . " 12:00:00 -$i day")); }
     $lu = apTranches2(array_map(static fn ($d) => [$sid, $d, $d], $dates));
     $jetes = daInvendusJours($sid, $dates);
     $ventes = []; $jet = [];
@@ -254,6 +412,7 @@ function daInvendusJours(int $sid, array $dates): array
 function daRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/analyse' && !str_starts_with($path, '/dashboard/analyse/')) { return null; }
+    if ($method === 'GET' && $path === '/dashboard/analyse/periode') { return ep_dashboard_analyse_periode(); }
     if ($method === 'GET' && $path === '/dashboard/analyse/reseau') { return ep_dashboard_analyse_reseau(); }
     if ($method === 'GET' && $path === '/dashboard/analyse/mois') { return ep_dashboard_analyse_mois(); }
     if ($method === 'GET' && $path === '/dashboard/analyse/jours') { return ep_dashboard_analyse_jours(); }

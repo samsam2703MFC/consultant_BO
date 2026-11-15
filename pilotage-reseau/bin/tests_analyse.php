@@ -6,12 +6,10 @@ declare(strict_types=1);
  * Tests des règles de Vendre › Analyse (src/franchise/dashboard_analyse.php), sans base ni panel :
  *   php bin/tests_analyse.php
  * la marge réalisée (à la pièce, au taux de la recette pour un produit vendu en portions, recette invraisemblable),
- * l'évolution sur les semaines de l'onglet Produits, la famille d'une catégorie.
+ * la découpe d'une période, l'évolution face à la période d'avant (au jour), la famille d'une catégorie.
  * Les nombres sont des cas de calcul, pas des données du réseau.
  */
 
-const AD_AVANT = [0, 5];
-const AD_APRES = [6, 11];
 require __DIR__ . '/../src/franchise/dashboard_analyse.php';
 
 $ok = 0; $ko = 0;
@@ -38,9 +36,24 @@ verifie('rien vendu : marge nulle', $m === 0.0);
 [, $m, $motif] = daMarge(5, 9.0, null);
 verifie('hors catalogue : pas de marge', $m === null && $motif === 'prix du catalogue inconnu');
 
+echo "Période\n";
+[$pas, $T] = daDecoupe('2026-11-09', '2026-11-15');
+verifie('une semaine : 7 jours', $pas === 'jour' && count($T) === 7 && $T[6] === ['2026-11-15', '2026-11-15']);
+[$pas, $T] = daDecoupe('2026-10-01', '2026-12-31');
+verifie('un trimestre : des semaines coupées aux bornes', $pas === 'semaine' && $T[0] === ['2026-10-01', '2026-10-04'] && end($T) === ['2026-12-28', '2026-12-31'], json_encode([$T[0], end($T)]));
+[$pas, $T] = daDecoupe('2026-01-01', '2026-12-31');
+verifie('une année : 12 mois', $pas === 'mois' && count($T) === 12 && $T[1] === ['2026-02-01', '2026-02-28']);
+verifie('les jours, bornes comprises', daJours('2026-10-01', '2026-10-31') === 31);
+
 echo "Évolution\n";
-verifie('6 semaines face aux 6 d’avant, sans la semaine en cours', $proche(daEvo([10, 10, 10, 10, 10, 10, 12, 12, 12, 12, 12, 12, 999]), 20.0));
-verifie('rien avant : pas d’évolution', daEvo([0, 0, 0, 0, 0, 0, 5, 5, 5, 5, 5, 5, 5]) === null);
+$e = daEvoPeriode(310.0, 100.0, 31, 300.0, 95.0, 30, array_fill(0, 31, 10.0));
+verifie('au jour : 310 € sur 31 j face à 300 € sur 30 j, stable', $e['verdict'] === 'stable' && abs($e['pct'] - 0.0) < 0.05, json_encode($e));
+$e = daEvoPeriode(120.0, 60.0, 7, 100.0, 50.0, 7, array_fill(0, 7, 1.0));
+verifie('+20 % : en hausse', $e['verdict'] === 'monte' && abs($e['pct'] - 20.0) < 0.05);
+$e = daEvoPeriode(100.0, 50.0, 7, 0.0, 0.0, 7, [0, 0, 0, 20, 30, 25, 25]);
+verifie('rien avant : nouveau, depuis la 4e tranche', $e['verdict'] === 'nouveau' && $e['depuisI'] === 3, json_encode($e));
+$e = daEvoPeriode(0.0, 0.0, 7, 100.0, 50.0, 7, array_fill(0, 7, 0.0));
+verifie('plus rien : arrêté', $e['verdict'] === 'arrete');
 
 echo "Famille\n";
 verifie('premier segment du groupe', daGroupeDe('Viennoiserie Ind.', ['Viennoiserie Ind.' => 'Viennoiserie · Individuelle']) === 'Viennoiserie');
