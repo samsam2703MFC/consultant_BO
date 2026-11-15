@@ -53,6 +53,7 @@ function psImage(string $data, string $rel): array
 }
 function psAuteur(): string { return 'Sam'; }
 require __DIR__ . '/../src/rayons_photos.php';
+require __DIR__ . '/../src/anthropic.php';
 require __DIR__ . '/../src/ia_assistant.php';
 
 $IA_OK =static fn (int $n, string $conf = 'haute', string $rayon = 'tartes', string $constat = 'Comptoir garni') => ['etat' => 'ok', 'niveau' => $n,
@@ -226,6 +227,48 @@ verifie('une photo notée Exemplaire est candidate', count($cand) === 1 && $e['n
 $GLOBALS['DETAIL'] = $DET(['rayon' => ['cle' => 'viennoiseries', 'nom' => 'Viennoiseries', 'photo' => null, 'consigne' => null]]);
 $modeles(['shopId' => 4, 'taskId' => 1207, 'date' => $J, 'portee' => 'exemple']);
 verifie('prise en exemple, elle n’est plus candidate', !array_filter(ep_ia_entrainement()['candidates'], fn ($c) => $c['taskId'] === '1207' && $c['shopId'] === '4'));
+
+echo "L'assistant d'entraînement\n";
+putenv('ANTHROPIC_API_KEY=sk-ant-essai');
+$envoisIa = []; $repIa = null;
+Anthropic::$transport = function (array $corps, array $entetes) use (&$envoisIa, &$repIa) { $envoisIa[] = $corps; return $repIa; };
+$analyse = ['synthese' => 'Comptoir souvent bien garni ; l’assistant est trop sévère sur les objets.', 'ce_qui_va' => ['Comptoir garni'],
+    'ce_qui_ne_va_pas' => [['constat' => 'Ventilateur sur le comptoir', 'frequence' => 'parfois', 'magasins' => ['Gosselies']]],
+    'desaccords' => [['sujet' => 'Objet étranger', 'a_retenir' => 'Un objet seul reste mineur']],
+    'consigne_proposee' => str_repeat('Huit tartes. ', 80), 'conseils_magasins' => ['Retirer le ventilateur'],
+    'exemples_suggeres' => [['ref' => 'p1', 'pourquoi' => 'Comptoir plein'], ['ref' => 'P99', 'pourquoi' => 'inconnue']]];
+$repIa = [200, ['stop_reason' => 'end_turn', 'model' => 'modele-essai', 'content' => [['type' => 'text', 'text' => json_encode($analyse, JSON_UNESCAPED_UNICODE)]]]];
+$analyser = static function (array $b) { $GLOBALS['BODY'] = $b; http_response_code(200); return wr_ia_analyser(); };
+$r = $analyser(['sujet' => 'tartes', 'jours' => 30]);
+$t = $envoisIa ? $envoisIa[0]['messages'][0]['content'][0]['text'] : '';
+verifie('une analyse rendue et gardée', ($r['ok'] ?? false) && ($r['analyse']['synthese'] ?? '') !== '' && $r['analyse']['nb'] >= IA_ANALYSE_MIN_PHOTOS, json_encode($r['error'] ?? null, JSON_UNESCAPED_UNICODE));
+verifie('le dossier : le rayon, sa consigne, une ligne par photo', str_contains($t, 'Rayon « Tartes »') && str_contains($t, 'Consigne actuelle du rayon : Huit tartes minimum') && str_contains($t, "\nP1 · "));
+verifie('le dossier : la note du consultant et sa raison', str_contains($t, 'consultant : 3/5 Non conforme — mineur') && str_contains($t, 'sa raison : « Un objet étranger seul reste mineur »'));
+verifie('du texte seul, réponse au schéma', !str_contains(json_encode($envoisIa[0]), '"type":"image"') && ($envoisIa[0]['output_config']['format']['type'] ?? '') === 'json_schema');
+$ex = $r['analyse']['exemples_suggeres'] ?? [];
+verifie('les photos suggérées reliées à leur tâche, un repère inconnu écarté', count($ex) === 1 && $ex[0]['ref'] === 'P1' && $ex[0]['taskId'] !== '' && $ex[0]['date'] !== '');
+verifie('la consigne proposée tient en 600 caractères', mb_strlen($r['analyse']['consigne_proposee']) <= 600);
+$liste = ep_ia_analyses();
+$sTartes = array_values(array_filter($liste['sujets'], fn ($s) => $s['cle'] === 'tartes'))[0] ?? [];
+verifie('la liste des sujets et la dernière analyse', ($sTartes['n'] ?? 0) >= IA_ANALYSE_MIN_PHOTOS && isset(((array) $liste['analyses'])['tartes']));
+// Une tâche qui n'est pas une photo de comptoir.
+foreach (['2026-11-12', '2026-11-13', '2026-11-14'] as $i => $jj) {
+    Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_le, lecon) VALUES (4, 1216, ?, ?, NULL, 4, ?, ?, ?, ?, ?, 1)',
+        [$jj, 'Vérifier si le magasin est propre.', 'haute', '["Sol propre"]', $jj . ' 07:00:00', $i === 2 ? 3 : 4, $jj . ' 09:00:00']);
+}
+$sujets = array_column(ep_ia_analyses()['sujets'], 'cle');
+verifie('les autres tâches évaluées sont des sujets', in_array('tache:Vérifier si le magasin est propre.', $sujets, true));
+$envoisIa = [];
+$r = $analyser(['sujet' => 'tache:Vérifier si le magasin est propre.', 'jours' => 30]);
+verifie('une tâche s’analyse aussi', ($r['ok'] ?? false) && str_contains($envoisIa[0]['messages'][0]['content'][0]['text'] ?? '', 'Tâche « Vérifier si le magasin est propre. »'));
+$r = $analyser(['sujet' => 'biscuiterie', 'jours' => 30]);
+verifie('trop peu de photos : 422, rien d’appelé', http_response_code() === 422 && str_contains((string) ($r['error'] ?? ''), 'il en faut'));
+$r = $analyser(['sujet' => 'inconnu', 'jours' => 30]);
+verifie('sujet inconnu : 400', http_response_code() === 400);
+$repIa = [200, ['stop_reason' => 'refusal', 'stop_details' => ['explanation' => 'catégorie'], 'content' => []]];
+$r = $analyser(['sujet' => 'tartes', 'jours' => 30]);
+verifie('refus du modèle : 502, l’analyse précédente gardée', http_response_code() === 502 && str_contains((string) ($r['error'] ?? ''), 'refusé') && isset(((array) ep_ia_analyses()['analyses'])['tartes']));
+Anthropic::$transport = null;
 
 echo "\n$ok ok, $ko KO\n";
 ob_end_flush();
