@@ -13023,11 +13023,20 @@ class App {
   /* Ouvre le détail d'une tâche : photo de réalisation + notation. Le détail
      vient de l'API du panel (la base ne porte ni le nom ni la photo). */
   ctrlOpenTask(shopId, taskId, date, tacheNom){
-    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, note: null, comment: '', envoi: false, rep: [] } });
+    // En mode assisté, la proposition de l'IA est déjà là : elle s'affiche et
+    // pré-remplit le niveau et le commentaire (un avis déjà posé prime).
+    const jIa = this.iaMode() === 'assiste' && this._iaJ ? this._iaJ[date] : null;
+    const pr = jIa ? jIa.map[String(shopId) + '|' + String(taskId)] : null;
+    const pre = pr && pr.niveau != null && pr.etat === 'propose' ? pr : null;
+    this.setState({ ctrlDet: { shopId, taskId, date, nom: tacheNom, chargement: true, d: null, envoi: false, rep: [],
+      note: pre ? pre.niveau : null, comment: pre ? (pre.commentaire || '') : '',
+      ia: pre ? this.iaVersVolet(pre) : null, iaPre: !!pre, raisonIa: '' } });
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
       .then(d => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === taskId)
         ? { ctrlDet: Object.assign({}, s.ctrlDet, { chargement: false, d: d || null,
-            note: (d && d.avis && d.avis.note) || null, comment: (d && d.avis && d.avis.comment) || '',
+            // Un avis déjà posé prime ; sinon ce qui est à l'écran (la proposition, ou ce que le consultant a déjà changé).
+            note: (d && d.avis && d.avis.note) || s.ctrlDet.note || null,
+            comment: (d && d.avis && d.avis.comment) || s.ctrlDet.comment || '',
             // Repères déjà posés : ils reviennent avec le détail, on ne les
             // relit pas dans un second appel.
             rep: ((d && d.reperes) || {}).liste || [] }) }
@@ -13271,9 +13280,12 @@ class App {
     }
     const d = dt.d || {};
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { envoi: true }) }));
+    // Une note qui s'écarte de la proposition de l'IA emporte la raison du consultant : c'est la leçon.
+    const raisonIa = dt.ia && dt.ia.niveau != null && note !== dt.ia.niveau ? String(dt.raisonIa || '').trim() : '';
     write(this.source, 'POST', '/pwa/tasks/review', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date,
-      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null })
+      note, comment: dt.comment, checklistId: d.checklistId || null, completionId: d.completionId || null, raisonIa })
       .then(() => {
+        this.iaApresNote(dt.shopId, dt.taskId, dt.date, note);
         // La modale RESTE ouverte : on la fermait d'office, et comme la
         // fermeture attendait le rechargement complet de la journée (4 à 5 s
         // sur /pwa/tasks), l'écran semblait se fermer tout seul, longtemps
@@ -13358,7 +13370,8 @@ class App {
   /** Le rayon d'un libellé : au pluriel près, sinon par le début du nom, à la frontière d'un mot. */
   rvDe(libelle){
     const norm = x => String(x || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae').replace(/[^a-z0-9]+/g, ' ').trim();
-    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*/, ''); if (!reste) { return null; }
+    // « Photo du comptoir après-midi - Pâtisseries » : le moment de la journée n'est pas le rayon.
+    const reste = norm(libelle).replace(/^(photo du )?comptoirs?\s*(?:(?:apres midi|matin|midi|soir)\s+)?/, ''); if (!reste) { return null; }
     const sing = x => x.replace(/s\b/g, '');
     let pre = null, long = 0;
     for (const r of this._rv || []) {
@@ -13411,19 +13424,23 @@ class App {
    * repère — au-dessus du seuil, le barème n'en exige pas. Le même chemin
    * que le volet : le détail de la tâche pour les identifiants du panel
    * (checklist, completion), puis la note ; la carte prend la note tout de
-   * suite, la journée se recharge derrière.
+   * suite, la journée se recharge derrière. En mode assisté, la même voie
+   * valide la proposition de l'IA : sa note et son commentaire (exigé sous
+   * le seuil).
    */
-  ctrlNoteRapide(shopId, taskId, date, nom, note){
+  ctrlNoteRapide(shopId, taskId, date, nom, note, comment){
     const k = shopId + '|' + taskId;
     const marque = on => this.setState(s => ({ ctrlRapide: Object.assign({}, s.ctrlRapide, { [k]: on }) }));
     if ((this.state.ctrlRapide || {})[k]) { return; }
     marque(true);
+    const texte = String(comment || '');
     readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
-      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: '',
+      .then(d => write(this.source, 'POST', '/pwa/tasks/review', { shopId, taskId, date, note, comment: texte,
         checklistId: (d && d.checklistId) || null, completionId: (d && d.completionId) || null }))
       .then(r => {
         if (r && r.error) { throw new Error(r.error); }
-        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: '' });
+        this.ctrlPatchLigne({ shopId, taskId, date, note, comment: texte });
+        this.iaApresNote(shopId, taskId, date, note);
         marque(false);
         this.notify('Note ' + note + '/5 enregistrée — ' + nom);
         readOne('/pwa/tasks?date=' + encodeURIComponent(date))
@@ -13472,10 +13489,20 @@ class App {
     const resume = (!P ? 'lecture des photos…'
       : avec.length ? avec.length + ' photo' + (avec.length > 1 ? 's' : '') + ' rendue' + (avec.length > 1 ? 's' : '') + plage + (qui ? ' par ' + qui : '')
       : (P.erreur ? 'photos indisponibles' : 'aucune photo rendue'))
-      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '');
+      + ' · ' + notees + ' / ' + L.length + ' notée' + (notees > 1 ? 's' : '')
+      + (this.iaMode() === 'assiste' && this._iaJ && this._iaJ[pt.date] ? (() => {
+        const n = L.filter(t => t.e.c === 'ctl' && ((this._iaJ[pt.date].map[String(s.shopId) + '|' + String(t.taskId)] || {}).etat === 'propose')).length;
+        return n ? ' · ' + n + ' note' + (n > 1 ? 's' : '') + ' proposée' + (n > 1 ? 's' : '') + ' par l’IA' : ''; })() : '');
     // La note rapide : les niveaux au-dessus du seuil, ceux qui n'exigent ni
     // commentaire ni repère — 4 et 5 dans le barème partagé.
     const rapides = this.zNiveaux().filter(lv => lv.n >= seuil).sort((a, b) => a.n - b.n);
+    // L'assistant (mode assisté) : chaque photo à contrôler porte la note proposée par l'IA ; celles qui n'en ont
+    // pas encore partent en file. Les gestes manuels restent sur les cartes sans proposition.
+    const IA = this.iaMode() === 'assiste' ? this.iaPropsLire(pt.date) : null;
+    const prDe = t => IA ? IA.map[String(s.shopId) + '|' + String(t.taskId)] || null : null;
+    const enFile = t => { const k = pt.date + '|' + s.shopId + '|' + t.taskId;
+      return !!((this._iaEnCours || {})[k] || (this._iaFile || []).some(q => q.k === k)); };
+    if (IA) { this.iaDemander(pt.date, L.filter(t => t.e.c === 'ctl' && t.p && !prDe(t)).map(t => ({ shopId: s.shopId, taskId: t.taskId }))); }
     const cartes = F.map(t => {
       const reps = t.p && Array.isArray(t.p.reperes) ? t.p.reperes : [];
       const rp = reps.map(r => ({ st: 'left:' + (r.x * 100).toFixed(1) + '%;top:' + (r.y * 100).toFixed(1) + '%;width:' + (r.l * 100).toFixed(1) + '%;height:' + (r.h * 100).toFixed(1) + '%;border-color:' + ((this.zNiveau(r.niveau || t.note || 3) || {}).couleur || '#B0792A') }));
@@ -13489,12 +13516,14 @@ class App {
       return { e: t.e.c, badge: t.e.bd, nom: nom(t), heure: hh(t.faitLe), type: ry && ry.photo ? ry.photo : null,
         meta: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'clôturée ' + hh(t.faitLe) : hh(t.faitLe) + (t.faitePar ? ' · ' + t.faitePar : '')),
         constat, photo: t.p ? t.p.photo : null, reperes: rp,
+        ponct: t.e.c !== 'ko' && t.e.c !== 'mu' ? this.ponctualite(t.heure, t.faitLe) : null,
         attente: !t.p && !P && t.e.c !== 'ko' && t.e.c !== 'mu',
         videTxt: t.e.c === 'ko' ? 'pas encore rendue' : (t.e.c === 'mu' ? 'sans photo' : 'photo indisponible'),
         bouton: t.e.c === 'ctl' ? 'Noter…' : (t.note != null ? 'Renoter' : ''),
         envoi: !!((S.ctrlRapide || {})[s.shopId + '|' + t.taskId]),
         rapides: t.e.c === 'ctl' ? rapides.map(lv => ({ n: lv.n, nom: lv.nom || (lv.n + '/5'), coul: lv.couleur || '#3f7a52',
           pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, lv.n) })) : [],
+        ia: IA && t.e.c === 'ctl' && t.p ? this.iaCarte(prDe(t), s, t, seuil, enFile(t)) : null,
         open: () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache) };
     });
     // Les flèches font défiler le rail d'une largeur, sans rendu : le DOM reste.
@@ -13609,6 +13638,13 @@ class App {
       const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
       shops.forEach(s2 => { s2.cq = this.ctrlCartes(brut[String(s2.shopId)] || { shopId: s2.shopId, taches: [] }, pt, garde, seuilC, nomNiveau); });
     }
+    // --- L'assistant de notation : le mode (manuel / assisté), la bande, la validation finale, les leçons.
+    common.iaMode = this.iaMode();
+    common.iaManuel = () => this.iaSetMode('manuel');
+    common.iaAssiste = () => this.iaSetMode('assiste');
+    common.ia = common.ctrlVue === 'photos' && common.iaMode === 'assiste' && S.screen === 'controle' && this.source === 'api'
+      ? this.valsIaBande(pt, shops, garde, seuilC) : null;
+    common.iaRecap = common.ia && S.iaRecap ? this.valsIaRecap(common.ia, seuilC) : null;
 
     // --- Photos types des rayons : le back office du comptoir attendu. Les
     // rayons que le panel photographie aujourd'hui sans photo type connue
@@ -13688,6 +13724,8 @@ class App {
           ? ('Prise' + (d.faitLe ? ' le ' + this.fDA(String(d.faitLe).slice(0, 10)) + ' à ' + String(d.faitLe).slice(11, 16) : '')
              + (d.faitPar ? ' par ' + d.faitPar : ''))
           : '',
+        // La photo contre l'heure standard de sa checklist : l'heure fait partie du contrôle.
+        ponct: this.ponctualite(d.heure, d.faitLe),
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',
@@ -13871,6 +13909,12 @@ class App {
         iaModele: (dt.ia && dt.ia.modele) || '',
         iaConstats: (dt.ia && dt.ia.constats) || [],
         iaAvert: (dt.ia && dt.ia.avertissement) || '',
+        iaPre: !!dt.iaPre,
+        iaLecons: (dt.ia && dt.ia.leconsVues) || 0,
+        // Le consultant note autrement que l'IA : il peut dire pourquoi, l'assistant en fera une leçon.
+        iaChange: !!(dt.ia && dt.ia.niveau != null && dt.note != null && dt.note !== dt.ia.niveau),
+        raisonIa: dt.raisonIa || '',
+        setRaisonIa: e => { const v = e.target.value; this.setState(s2 => ({ ctrlDet: Object.assign({}, s2.ctrlDet, { raisonIa: v }) })); },
         iaGo: () => this.ctrlIaProposer(),
         // Reprendre ne valide pas : cela remplit le formulaire, l'envoi reste
         // un geste distinct. Le commentaire proposé complète le vôtre sans
@@ -14340,16 +14384,336 @@ class App {
     readOne('/ia/statut').then(st => { this._iaStEnCours = false;
       this.D.iaStatut = st || { configure: false }; this.setState({}); });
   }
-  /** Demande une proposition d'évaluation sur la photo ouverte. */
+  /**
+   * Demande une proposition d'évaluation sur la photo ouverte. Elle passe par
+   * l'assistant (POST /ia/proposer) : gardée au serveur, elle rejoint ensuite
+   * la note posée — c'est ainsi que l'assistant apprend, même en mode manuel.
+   * « Réanalyser » la refait.
+   */
   ctrlIaProposer(){
     const dt = this.state.ctrlDet;
     if (!dt || dt.iaBusy) { return; }
+    const refaire = !!dt.ia;
     this.setState(s => ({ ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: true, ia: null }) }));
-    readOne('/ia/note?shop=' + encodeURIComponent(dt.shopId) + '&task=' + encodeURIComponent(dt.taskId)
-      + '&date=' + encodeURIComponent(dt.date))
-      .then(r => this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
-        ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
-            ia: r || { motif: 'assistance injoignable' } }) } : {}));
+    write(this.source, 'POST', '/ia/proposer', { shopId: dt.shopId, taskId: dt.taskId, date: dt.date, refaire })
+      .then(r => {
+        const pr = r && r.ok !== false && r.proposition ? r.proposition : null;
+        if (pr) { this.iaRetenir(pr); }
+        this.setState(s => (s.ctrlDet && s.ctrlDet.taskId === dt.taskId)
+          ? { ctrlDet: Object.assign({}, s.ctrlDet, { iaBusy: false,
+              ia: pr ? this.iaVersVolet(pr, r.avertissement) : { motif: (r && r.error) || 'assistance injoignable' } }) } : {});
+      });
+  }
+  /* --- L'assistant de notation (src/ia_assistant.php) ------------------------
+   *
+   * Deux modes, au choix et gardés dans ce navigateur : MANUEL, la page telle
+   * qu'elle était ; ASSISTÉ, où l'IA propose une note pour chaque photo à
+   * contrôler. Le consultant valide ou corrige — sur la carte, dans le volet,
+   * ou toutes à la fin dans « Valider ce que l'IA a proposé ». Rien ne part au
+   * panel sans son geste. Les propositions sont gardées au serveur (payées une
+   * fois, relues au rechargement) ; quand le consultant note autrement, la
+   * correction devient une leçon que l'IA reçoit avec les photos suivantes du
+   * même rayon. */
+  iaMode(){
+    if (this._iaMode === undefined) {
+      let m = ''; try { m = localStorage.getItem('cockpit.ctrlMode') || ''; } catch (e) { /* navigation privée */ }
+      this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    }
+    return this._iaMode;
+  }
+  iaSetMode(m){
+    this._iaMode = m === 'assiste' ? 'assiste' : 'manuel';
+    try { localStorage.setItem('cockpit.ctrlMode', this._iaMode); } catch (e) { /* navigation privée */ }
+    this.setState({});
+  }
+  /** Les propositions d'une journée, lues une fois puis tenues à jour ici : { map, accord, lecons, configure }. */
+  iaPropsLire(date){
+    if (!date || this.source !== 'api') { return null; }
+    this._iaJ = this._iaJ || {}; this._iaJLu = this._iaJLu || {};
+    if (this._iaJ[date]) { return this._iaJ[date]; }
+    if (!this._iaJLu[date]) {
+      this._iaJLu[date] = true;
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        delete this._iaJLu[date];
+        const map = {}; ((r && r.propositions) || []).forEach(p => { map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date] = { map, accord: (r && r.accord) || null, lecons: (r && r.lecons) || 0, configure: !!(r && r.configure), indispo: !r };
+        this.setState({});
+      });
+    }
+    return null;
+  }
+  /** Une proposition reçue rejoint la journée chargée. */
+  iaRetenir(pr){
+    const j = this._iaJ && this._iaJ[pr.date];
+    if (j) { j.map[pr.shopId + '|' + pr.taskId] = pr; }
+  }
+  /** Les propositions manquantes partent en file, trois à la fois ; une photo n'est demandée qu'une fois par visite. */
+  iaDemander(date, cles){
+    const j = this._iaJ && this._iaJ[date];
+    if (!j || j.configure === false) { return; }
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {}; this._iaTente = this._iaTente || {};
+    cles.forEach(c => {
+      const k = date + '|' + c.shopId + '|' + c.taskId;
+      if (j.map[c.shopId + '|' + c.taskId] || this._iaEnCours[k] || this._iaTente[k]) { return; }
+      this._iaTente[k] = true; this._iaFile.push({ date, shopId: String(c.shopId), taskId: String(c.taskId), k });
+    });
+    this.iaPomper();
+  }
+  iaPomper(){
+    this._iaFile = this._iaFile || []; this._iaEnCours = this._iaEnCours || {};
+    while (Object.keys(this._iaEnCours).length < 3 && this._iaFile.length) {
+      const q = this._iaFile.shift();
+      this._iaEnCours[q.k] = true;
+      write(this.source, 'POST', '/ia/proposer', { shopId: q.shopId, taskId: q.taskId, date: q.date }).then(r => {
+        delete this._iaEnCours[q.k];
+        const j = this._iaJ && this._iaJ[q.date];
+        if (r && r.ok !== false && r.proposition) { this.iaRetenir(r.proposition); }
+        else if (j) {
+          j.map[q.shopId + '|' + q.taskId] = { shopId: q.shopId, taskId: q.taskId, date: q.date, etat: 'echec', niveau: null,
+            motif: (r && r.error) || 'assistance injoignable' };
+          // Sans clé, inutile de vider la file photo par photo.
+          if (r && r.status === 503) { j.configure = false; this._iaFile = this._iaFile.filter(x => x.date !== q.date); }
+        }
+        this.setState({});
+        this.iaPomper();
+      });
+    }
+  }
+  /** Combien de propositions restent à venir pour une journée (file + en cours). */
+  iaAttente(date){
+    return (this._iaFile || []).filter(q => q.date === date).length
+      + Object.keys(this._iaEnCours || {}).filter(k => k.startsWith(date + '|')).length;
+  }
+  /** Redemander une proposition (échec, ou « Réanalyser » depuis la carte). */
+  iaRefaire(date, shopId, taskId){
+    const j = this._iaJ && this._iaJ[date]; const k = date + '|' + shopId + '|' + taskId;
+    if (j) { delete j.map[shopId + '|' + taskId]; j.configure = true; }
+    if (this._iaTente) { delete this._iaTente[k]; }
+    this.iaDemander(date, [{ shopId, taskId }]);
+    this.setState({});
+  }
+  /** La note du consultant posée : la proposition passe « validée » ou « corrigée », les leçons se relisent. */
+  iaApresNote(shopId, taskId, date, note){
+    const j = this._iaJ && this._iaJ[date];
+    const pr = j ? j.map[String(shopId) + '|' + String(taskId)] : null;
+    if (pr && pr.niveau != null) {
+      pr.noteFinale = note; pr.etat = note === pr.niveau ? 'valide' : 'corrige';
+      // Le taux d'accord et le compte des leçons se relisent au serveur.
+      readOne('/ia/propositions?date=' + encodeURIComponent(date)).then(r => {
+        if (!r || !this._iaJ || !this._iaJ[date]) { return; }
+        (r.propositions || []).forEach(p => { this._iaJ[date].map[p.shopId + '|' + p.taskId] = p; });
+        this._iaJ[date].accord = r.accord || this._iaJ[date].accord; this._iaJ[date].lecons = r.lecons || 0;
+        this.setState({});
+      });
+    }
+    this._iaLecons = undefined;
+  }
+  /**
+   * La ponctualité d'une photo : son heure contre l'heure STANDARD de sa
+   * checklist. Les mêmes seuils que le serveur (src/ia_assistant.php,
+   * iaPonctualite) : à l'heure jusqu'à 15 min de retard, en retard au-delà,
+   * « très en avance » plus d'une heure avant. Rend { etat, txt, long } ou null.
+   */
+  ponctualite(heure, faitLe){
+    const hm = v => { const m = /(\d{2}):(\d{2})(?::\d{2})?$/.exec(String(v || '').trim()); return m ? +m[1] * 60 + +m[2] : null; };
+    const prevue = hm(heure); const prise = hm(String(faitLe || '').length > 5 ? String(faitLe).slice(11, 16) : faitLe);
+    if (prevue == null || prise == null) { return null; }
+    const ecart = prise - prevue;
+    const duree = m => { m = Math.abs(m); return m >= 60 ? Math.floor(m / 60) + ' h ' + String(m % 60).padStart(2, '0') : m + ' min'; };
+    const etat = ecart > 15 ? 'retard' : (ecart < -60 ? 'avance' : 'heure');
+    const std = String(heure).slice(0, 5);
+    return { etat, ecart,
+      txt: etat === 'retard' ? '+' + duree(ecart) + ' sur ' + std : (etat === 'avance' ? 'très tôt (std ' + std + ')' : 'à l’heure (std ' + std + ')'),
+      long: 'heure standard de la checklist ' + std + ' : ' + (etat === 'retard' ? 'en retard de ' + duree(ecart)
+        : etat === 'avance' ? 'très en avance (' + duree(ecart) + ' avant) — le comptoir était-il prêt ?'
+        : 'à l’heure' + (ecart < 0 ? ' (' + duree(ecart) + ' avant)' : ecart > 0 ? ' (' + duree(ecart) + ' après, toléré)' : '')) };
+  }
+  /** La forme que le volet lit (bloc « Assistance à la notation »). */
+  iaVersVolet(pr, avert){
+    return { niveau: pr.niveau, nom: pr.nom, constats: pr.constats || [], commentaire: pr.commentaire || '',
+      confiance: pr.confiance || '', modele: pr.modele || '', motif: pr.niveau == null ? (pr.motif || 'pas de proposition') : '',
+      avertissement: avert || (pr.confiance === 'faible' ? 'Confiance faible : la photo ne permet peut-être pas de conclure. Jugez par vous-même.' : ''),
+      leconsVues: pr.leconsVues || 0 };
+  }
+  /**
+   * Ce que la carte d'une photo à contrôler montre en mode assisté : la note
+   * proposée en clair (« IA · 4/5 Conforme »), le premier constat, la
+   * confiance, et deux gestes — valider la note proposée, ou corriger dans le
+   * volet. Confiance faible : pas de validation en un clic.
+   */
+  iaCarte(pr, s, t, seuil, attente){
+    const open = () => this.ctrlOpenTask(s.shopId, t.taskId, t.date, t.tache);
+    if (!pr || attente) {
+      return { cls: 'iaatt', badge: 'IA · …', constat: attente ? 'note en cours de proposition…' : 'en attente de l’assistant', constatCls: 'ia rv', conf: '', manuel: true };
+    }
+    if (pr.niveau == null) {
+      return { cls: 'iarv', badge: 'IA · —', constat: 'pas de proposition — ' + (pr.motif || 'motif inconnu'), constatCls: 'ia rv', conf: '', manuel: true,
+        refaire: () => this.iaRefaire(t.date, s.shopId, t.taskId) };
+    }
+    const lv = this.zNiveaux().find(v => v.n === pr.niveau) || { nom: pr.nom || (pr.niveau + '/5'), couleur: '#7a736a' };
+    const faible = pr.confiance === 'faible';
+    const nomCourt = pr.niveau >= seuil ? String(lv.nom) : String(lv.nom).split(/[—–-]/).pop().trim();
+    const comment = String(pr.commentaire || '');
+    // Sous le seuil, une note exige un commentaire : sans commentaire proposé, on corrige dans le volet.
+    const direct = !faible && (pr.niveau >= seuil || comment.trim() !== '');
+    return { cls: faible ? 'iarv' : 'ia' + pr.niveau, badge: 'IA · ' + pr.niveau + '/5 ' + nomCourt,
+      constat: (pr.constats || [])[0] || comment || nomCourt, constatCls: 'ia ' + (faible ? 'rv' : (pr.niveau < seuil ? 'nc' : 'ok')),
+      conf: faible ? 'confiance faible — à juger vous-même' : 'confiance ' + (pr.confiance || '?') + (pr.leconsVues ? ' · ' + pr.leconsVues + ' leçon' + (pr.leconsVues > 1 ? 's' : '') : ''),
+      valider: direct ? { lib: 'Valider ' + pr.niveau + '/5', coul: lv.couleur || '#3f7a52',
+        titre: 'Valider la note proposée : ' + lv.nom + (comment ? ' — « ' + comment + ' »' : ''),
+        pick: () => this.ctrlNoteRapide(s.shopId, t.taskId, t.date, t.tache, pr.niveau, comment) } : null,
+      corriger: { lib: faible || !direct ? 'Noter…' : 'Corriger…', pick: open } };
+  }
+  /**
+   * La bande de l'assistant : où en est l'IA sur les photos à contrôler des
+   * boutiques affichées, ce qu'elle propose (écarts, à revoir, conformes), le
+   * taux d'accord avec les notes du consultant, la validation finale et les
+   * leçons.
+   */
+  valsIaBande(pt, shops, garde, seuil){
+    const S = this.state;
+    const dispo = (this.D.iaStatut || {}).configure === true;
+    const J = this.iaPropsLire(pt.date);
+    const brut = {}; (pt.shops || []).forEach(s2 => { brut[String(s2.shopId)] = s2; });
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
+    const items = [];
+    shops.forEach(sh => {
+      const s = brut[String(sh.shopId)]; if (!s) { return; }
+      const P = this.ctrlPhotosLire(s.shopId, pt.date);
+      const ph = {}; ((P && P.photos) || []).forEach(p => { if (/^https:\/\//.test(String(p.photo || ''))) { ph[String(p.taskId)] = p; } });
+      (s.taches || []).filter(garde).forEach(t => {
+        if (t.note != null || !(t.statut === 'aControler' || t.statut === 'aValider')) { return; }
+        const p = ph[String(t.taskId)]; if (!p) { return; }
+        items.push({ k: s.shopId + '|' + t.taskId, shopId: String(s.shopId), taskId: String(t.taskId), date: t.date || pt.date,
+          shop: s.shop, tache: t.tache, nom: nomT(t.tache), heure: t.faitLe ? String(t.faitLe).slice(11, 16) : '', photo: p.photo,
+          checklistId: p.checklistId || null, completionId: p.completionId || null, ponct: this.ponctualite(t.heure, t.faitLe),
+          pr: J ? J.map[String(s.shopId) + '|' + String(t.taskId)] || null : null });
+      });
+    });
+    const prets = items.filter(i => i.pr && i.pr.etat === 'propose' && i.pr.niveau != null);
+    const faible = i => i.pr.confiance === 'faible';
+    const nConf = prets.filter(i => !faible(i) && i.pr.niveau >= seuil).length;
+    const nEcart = prets.filter(i => !faible(i) && i.pr.niveau < seuil).length;
+    const nRevoir = prets.filter(faible).length;
+    const nEchec = items.filter(i => i.pr && i.pr.niveau == null).length;
+    const attente = J ? this.iaAttente(pt.date) : 0;
+    const a = J && J.accord;
+    const accord = !a ? '' : a.notees
+      ? 'Accord avec vos notes (' + a.jours + ' j) : ' + a.pct + ' % sur ' + a.notees
+        + (a.tropSevere || a.tropIndulgente ? ' · plus sévère que vous ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '')
+      : 'Accord avec vos notes : mesuré dès vos premières validations';
+    const pl = (n, s1, s2) => n + ' ' + (n > 1 ? s2 : s1);
+    const etat = !dispo ? 'Aucune clé Anthropic au serveur (Paramètres › Assistance IA) : l’IA ne peut rien proposer.'
+      : !J ? 'Lecture des propositions…'
+      : J.configure === false ? 'La clé Anthropic du serveur est refusée ou absente : l’IA ne peut rien proposer.'
+      : !items.length ? 'Aucune photo à contrôler dans cette sélection.'
+      : attente ? 'L’IA note les photos… ' + (items.length - attente) + ' / ' + items.length
+      : pl(prets.length, 'note proposée', 'notes proposées') + ' sur ' + pl(items.length, 'photo à contrôler', 'photos à contrôler') + '.';
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomShop = id => ((pt.shops || []).find(x => String(x.shopId) === String(id)) || {}).shop || ('Boutique ' + id);
+    const Lc = S.iaLeconsOuvert ? this.iaLeconsLire() : null;
+    return { dispo: dispo && !!J && J.configure !== false, etat, attente: attente > 0,
+      pct: items.length ? Math.round(100 * (items.length - attente) / items.length) : 0, accord, items, prets,
+      tuiles: [{ cls: 'nc', n: nEcart, lib: nEcart > 1 ? 'écarts proposés' : 'écart proposé' },
+        { cls: 'rv', n: nRevoir, lib: 'à revoir · confiance faible' },
+        { cls: 'ok', n: nConf, lib: nConf > 1 ? 'conformes proposées' : 'conforme proposée' }]
+        .concat(nEchec ? [{ cls: 'rv', n: nEchec, lib: 'sans proposition' }] : [])
+        .concat((() => { const n = items.filter(i => i.ponct && i.ponct.etat === 'retard').length;
+          return n ? [{ cls: 'nc', n, lib: (n > 1 ? 'photos prises' : 'photo prise') + ' en retard sur l’heure standard' }] : []; })()),
+      peutValider: prets.length > 0,
+      valider: () => this.setState({ iaRecap: { edits: {}, envoi: false } }),
+      valiLib: 'Valider ce que l’IA a proposé (' + prets.length + ')',
+      leconsN: J ? J.lecons : 0,
+      leconsOuvert: !!S.iaLeconsOuvert,
+      leconsBasculer: () => this.setState({ iaLeconsOuvert: !S.iaLeconsOuvert }),
+      leconsChargement: !!S.iaLeconsOuvert && !Lc,
+      leconsMax: (Lc && Lc.max) || 6,
+      lecons: Lc ? (Lc.lecons || []).map(l => ({ date: this.fD(l.date), shop: nomShop(l.shopId), tache: nomT(l.tache),
+        ia: nomN(l.niveau), vous: nomN(l.noteFinale), raison: l.raison || '', constat: (l.constats || [])[0] || '',
+        retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })) : [] };
+  }
+  /** La validation finale : une ligne par note proposée, modifiable avant l'envoi. */
+  valsIaRecap(ia, seuil){
+    const R = this.state.iaRecap || {}; const E = R.edits || {};
+    const niv = this.zNiveaux().slice().sort((a, b) => b.n - a.n);
+    const maj = (k, champ) => e => {
+      const v = champ === 'inclus' ? !!e.target.checked : (champ === 'note' ? +e.target.value : String(e.target.value));
+      this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { edits: Object.assign({}, (s.iaRecap || {}).edits,
+        { [k]: Object.assign({}, ((s.iaRecap || {}).edits || {})[k], { [champ]: v }) }) }) }));
+    };
+    const tous = on => () => this.setState(s => { const ed = Object.assign({}, (s.iaRecap || {}).edits);
+      ia.prets.forEach(i => { ed[i.k] = Object.assign({}, ed[i.k], { inclus: on }); });
+      return { iaRecap: Object.assign({}, s.iaRecap, { edits: ed }) }; });
+    const lignes = ia.prets.map(i => {
+      const e = E[i.k] || {};
+      const note = e.note != null ? e.note : i.pr.niveau;
+      const comment = e.comment != null ? e.comment : (i.pr.commentaire || '');
+      const inclus = e.inclus != null ? e.inclus : i.pr.confiance !== 'faible';
+      const lv = niv.find(v => v.n === note) || {};
+      return { k: i.k, shopId: i.shopId, taskId: i.taskId, date: i.date, checklistId: i.checklistId, completionId: i.completionId,
+        shop: i.shop, nom: i.nom, heure: i.heure, photo: i.photo, note, comment, inclus, raison: e.raison || '', ponct: i.ponct,
+        change: note !== i.pr.niveau, propose: i.pr.niveau + '/5 · ' + (i.pr.nom || ''), confiance: i.pr.confiance || '',
+        faible: i.pr.confiance === 'faible', constats: (i.pr.constats || []).slice(0, 3), couleur: lv.couleur || '#7a736a',
+        sousSeuil: note < seuil, manqueComment: inclus && note < seuil && !String(comment).trim(), erreur: (R.erreurs || {})[i.k] || '',
+        niveaux: niv.map(v => ({ n: v.n, nom: v.n + '/5 · ' + v.nom, sel: v.n === note })),
+        setInclus: maj(i.k, 'inclus'), setNote: maj(i.k, 'note'), setComment: maj(i.k, 'comment'), setRaison: maj(i.k, 'raison'),
+        ouvrir: () => { if (!R.envoi) { this.setState({ iaRecap: null }); this.ctrlOpenTask(i.shopId, i.taskId, i.date, i.tache); } } };
+    });
+    const n = lignes.filter(l => l.inclus).length;
+    return { lignes, n, nCorr: lignes.filter(l => l.inclus && l.change).length, nManque: lignes.filter(l => l.manqueComment).length,
+      envoi: !!R.envoi, faits: R.faits || 0, total: R.total || 0,
+      tout: tous(true), aucun: tous(false),
+      fermer: () => { if (!R.envoi) { this.setState({ iaRecap: null }); } },
+      envoyer: () => this.iaRecapEnvoyer(lignes),
+      envoyerLib: R.envoi ? 'Envoi… ' + (R.faits || 0) + ' / ' + (R.total || 0) : 'Valider et envoyer (' + n + ')' };
+  }
+  /** Les leçons (GET /ia/lecons), lues à l'ouverture du panneau. */
+  iaLeconsLire(){
+    if (this._iaLecons !== undefined || this._iaLeconsLu) { return this._iaLecons || null; }
+    this._iaLeconsLu = true;
+    readOne('/ia/lecons').then(r => { this._iaLeconsLu = false; this._iaLecons = r || { lecons: [], indispo: true }; this.setState({}); });
+    return null;
+  }
+  iaLeconRetenir(l, retenir){
+    write(this.source, 'POST', '/ia/lecons', { shopId: l.shopId, taskId: l.taskId, date: l.date, retenir }).then(r => {
+      if (r && r.ok !== false && Array.isArray(r.lecons)) { this._iaLecons = r; }
+      else { this.notify('Échec — ' + ((r && r.error) || 'leçon inchangée')); }
+      const j = this._iaJ && this._iaJ[l.date]; if (j && r && r.retenues != null) { j.lecons = r.retenues; }
+      Object.keys(this._iaJ || {}).forEach(d => { if (r && r.retenues != null) { this._iaJ[d].lecons = r.retenues; } });
+      this.setState({});
+      this.notify(retenir ? 'Leçon reprise — l’IA la recevra de nouveau' : 'Leçon écartée — l’IA ne la recevra plus');
+    });
+  }
+  /**
+   * « Valider ce que l'IA a proposé » : chaque ligne cochée part au panel,
+   * une à une, avec la note et le commentaire tels que le consultant les a
+   * laissés ; une note changée emporte sa raison (la leçon). Une ligne
+   * refusée reste affichée avec son motif, les autres partent.
+   */
+  async iaRecapEnvoyer(lignes){
+    const R = this.state.iaRecap;
+    if (!R || R.envoi) { return; }
+    const sel = lignes.filter(l => l.inclus);
+    if (!sel.length) { this.notify('Aucune ligne cochée.'); return; }
+    if (sel.some(l => l.manqueComment)) { this.notify('Commentaire obligatoire sous le seuil — complétez les lignes signalées.'); return; }
+    this.setState(s => ({ iaRecap: Object.assign({}, s.iaRecap, { envoi: true, faits: 0, total: sel.length, erreurs: {} }) }));
+    let bons = 0, corriges = 0; const erreurs = {};
+    for (const l of sel) {
+      const r = await write(this.source, 'POST', '/pwa/tasks/review', { shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note,
+        comment: l.comment, checklistId: l.checklistId || null, completionId: l.completionId || null, raisonIa: l.change ? l.raison : '' });
+      if (r && r.ok !== false) {
+        bons++; if (l.change) { corriges++; }
+        this.ctrlPatchLigne({ shopId: l.shopId, taskId: l.taskId, date: l.date, note: l.note, comment: l.comment });
+        this.iaApresNote(l.shopId, l.taskId, l.date, l.note);
+      } else { erreurs[l.k] = (r && r.error) || 'note refusée'; }
+      this.setState(s => (s.iaRecap ? { iaRecap: Object.assign({}, s.iaRecap, { faits: bons + Object.keys(erreurs).length, erreurs: Object.assign({}, erreurs) }) } : {}));
+    }
+    const nErr = Object.keys(erreurs).length;
+    this.notify(bons + ' note' + (bons > 1 ? 's' : '') + ' envoyée' + (bons > 1 ? 's' : '') + (corriges ? ', dont ' + corriges + ' corrigée' + (corriges > 1 ? 's' : '') : '')
+      + (nErr ? ' — ' + nErr + ' refusée' + (nErr > 1 ? 's' : '') : ''));
+    this.setState(s => (nErr ? { iaRecap: Object.assign({}, s.iaRecap, { envoi: false }) } : { iaRecap: null }));
+    const date = sel[0].date;
+    readOne('/pwa/tasks?date=' + encodeURIComponent(date)).then(pt => { if (pt) { this.D.pwaTasks = pt; this.setState({}); } }).catch(() => {});
   }
   /* --- suivi des tâches ------------------------------------------------------------- */
   /**
