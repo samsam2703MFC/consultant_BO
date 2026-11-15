@@ -1,0 +1,52 @@
+/* Maquette « l'IA pré-note, le consultant valide » — par-dessus le CSS du
+ * cockpit, le carrousel partagé (controles-photo.css) et ct.css. */
+
+/* La bande de la pré-notation, au-dessus des boutiques. */
+.ia-band{background:var(--color-surface);border:0.5px solid var(--color-border-tertiary);border-radius:12px;padding:14px 18px 12px}
+.ia-band .t{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:11px}
+.ia-band .tag{font:600 10.5px var(--font-ui);letter-spacing:.08em;text-transform:uppercase;color:var(--color-primary)}
+.ia-band .s{font-size:12px;color:var(--color-text-muted)}
+.ia-band .acc{margin-left:auto;font-size:11.5px;color:var(--color-text-muted)}
+.ia-band .acc b{color:var(--color-text);font-weight:600}
+.ia-band .k{display:flex;gap:10px;align-items:stretch;flex-wrap:wrap}
+.ia-k{border:0.5px solid var(--color-border-tertiary);border-radius:10px;padding:7px 14px 8px;min-width:150px;background:var(--color-background-secondary)}
+.ia-k b{display:block;font:400 24px var(--font-display);line-height:1.1}
+.ia-k span{font-size:11.5px;color:var(--color-text-muted)}
+.ia-k.ok b{color:#2D7A3E}.ia-k.nc b{color:#C0182B}.ia-k.rv b{color:#6b645b}
+.ia-act{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:8px}
+.ia-btn{border:none;border-radius:999px;padding:9px 18px;background:var(--color-primary);color:#fff;font:500 12.5px var(--font-ui);cursor:pointer}
+.ia-sw{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--color-text-muted)}
+.ia-sw i{width:30px;height:17px;border-radius:999px;background:#d8d0c5;position:relative;flex:0 0 auto}
+.ia-sw i:after{content:'';position:absolute;left:2px;top:2px;width:13px;height:13px;border-radius:50%;background:#fff}
+.ia-band .note{font-size:11.5px;color:var(--color-text-muted);line-height:1.5;margin-top:10px}
+
+/* La proposition sur la photo : la pastille prend la couleur du niveau proposé. */
+.cqbd.ia5{background:#C9A227}.cqbd.ia4{background:#2D7A3E}.cqbd.ia3{background:#D97706}
+.cqbd.ia2{background:#C0182B}.cqbd.ia1{background:#8D1D2C}.cqbd.iarv{background:#6b645b}
+.db-cqph .ia-m{position:absolute;left:6px;bottom:6px;background:rgba(255,255,255,.92);color:#3a2f26;font:600 9.5px var(--font-ui);font-style:normal;padding:2px 6px;border-radius:5px;letter-spacing:.04em}
+.db-cqc .c.ia{color:var(--color-text);margin-bottom:2px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.db-cqc .c.ia.n3{color:#B45309}.db-cqc .c.ia.n2,.db-cqc .c.ia.n1{color:#C0182B}.db-cqc .c.ia.rv{color:#6b645b}
+.db-cqc .cf{font-size:10px;color:var(--color-text-muted);margin-bottom:6px}
+.cq-btns{display:flex;gap:6px;margin-top:auto}
+.cq-btns .cq-noter{margin:0}
+.db-cqf i.rv{background:#6b645b}
+
+/* Le volet : la proposition remplie, le niveau proposé coché. */
+.ia-prop{margin:20px 0 0;padding:13px 15px 14px;border:1px solid #E8C9A0;border-radius:10px;background:#FFF8EE}
+.ia-prop .hd{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.ia-prop .ti{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted);flex:1;min-width:150px}
+.ia-prop .pi{font-size:11px;font-weight:500;padding:2px 9px;border-radius:999px;background:#E7F2EA;color:#2D7A3E;border:1px solid #BFDCC8}
+.ia-prop .nv{display:flex;align-items:center;gap:9px;margin-top:10px;font-size:15px;font-weight:600}
+.ia-prop .nv i{width:11px;height:11px;border-radius:50%;flex:0 0 auto}
+.ia-prop .nv small{font-size:11.5px;font-weight:400;color:var(--color-text-muted)}
+.ia-prop ul{margin:9px 0 0;padding-left:18px;font-size:12.5px;line-height:1.5}
+.ia-prop ul li{margin-bottom:2px}
+.ia-prop .src{font-size:11px;color:var(--color-text-muted);margin-top:8px;line-height:1.5}
+.ia-rep{position:absolute;border:2.5px dashed #D97706;border-radius:50%;pointer-events:none;box-shadow:0 0 0 2px rgba(255,255,255,.55)}
+.ia-rep u{position:absolute;left:50%;top:-22px;transform:translateX(-50%);background:#D97706;color:#fff;font:600 10px var(--font-ui);text-decoration:none;padding:2px 7px;border-radius:5px;white-space:nowrap}
+.ia-sel{border:1.5px solid #D97706 !important;background:#FFF4E5 !important;font-weight:600}
+.ia-sel .ia-pp{font-size:10px;font-weight:600;color:#fff;background:#D97706;border-radius:5px;padding:2px 6px;margin-left:6px}
+.ia-pre{font-size:11px;color:var(--color-text-muted)}
+
+/* Planche : la troisième colonne « à construire ». */
+.pl .col .pl-c li::marker{content:"→  ";color:var(--color-primary);font-weight:700}

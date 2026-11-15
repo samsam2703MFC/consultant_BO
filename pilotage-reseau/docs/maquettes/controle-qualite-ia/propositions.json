@@ -1,0 +1,30 @@
+{
+  "_": "Propositions rédigées pour la maquette en regardant les photos du 01/10/2026, comme le modèle les rendrait (niveau du barème, confiance, constats, commentaire). Ce ne sont pas des réponses du modèle. Clé : {shopId}-{taskId}. Niveau null = confiance faible, à revoir par le consultant.",
+  "passage": "06:00",
+  "prochain": "07:00",
+  "accord": { "pct": 86, "photos": 214, "jours": 30, "_": "chiffre d'exemple" },
+  "p": {
+    "3-1206": { "n": 4, "conf": "moyenne", "c": "Pains en fond de photo ; le cadrage montre surtout les tartes" },
+    "3-1207": { "n": 4, "conf": "haute", "c": "Vitrine pleine sur toute la longueur, rangées alignées" },
+    "3-1209": { "n": 3, "conf": "haute", "c": "Un ventilateur posé au milieu des tartes",
+      "constats": ["Un ventilateur est posé sur le comptoir, au milieu des tartes, à portée des clients.", "Le plateau du haut est bien garni, les étiquettes de prix sont posées.", "La vitrine du bas est presque vide : deux gâteaux seulement."],
+      "commentaire": "Retirer le ventilateur du comptoir : il ne doit pas être posé à côté des produits ni visible des clients. Compléter la vitrine du bas avant l’ouverture.",
+      "repere": { "x": 12, "y": 53, "w": 27, "h": 34, "lib": "ventilateur" } },
+    "3-1210": { "n": 4, "conf": "haute", "c": "Bacs traiteur pleins et alignés, prix affichés" },
+    "3-1211": { "n": null, "conf": "faible", "c": "Le cadrage montre le traiteur ; les quiches sont dans un coin" },
+    "3-1213": { "n": null, "conf": "faible", "c": "Frigo des boissons au fond de la salle, trop loin pour juger" },
+    "3-1214": { "n": 4, "conf": "moyenne", "c": "Rayons garnis, vus de loin" },
+    "3-1216": { "n": 4, "conf": "haute", "c": "Sol propre et dégagé, tapis en place" },
+    "3-1259": { "n": null, "conf": "faible", "c": "Photo du sol : le plat n’apparaît pas" },
+    "3-1260": { "n": null, "conf": "faible", "c": "Photo du sol : le plat n’apparaît pas" },
+    "3-1267": { "n": 4, "conf": "moyenne", "c": "Étiquettes devant chaque tarte, illisibles à cette distance" },
+    "4-1206": { "n": 4, "conf": "haute", "c": "Pains alignés sous la vitre, comptoir garni" },
+    "4-1207": { "n": 5, "conf": "haute", "c": "Croissants et pains au chocolat en rangs serrés" },
+    "4-1209": { "n": 2, "conf": "haute", "c": "Comptoir presque vide : quelques tartes au fond" },
+    "4-1210": { "n": 3, "conf": "moyenne", "c": "Plateau traiteur vide sur les deux tiers" },
+    "4-1211": { "n": 4, "conf": "haute", "c": "Huit quiches sur la grille, vitrine propre" },
+    "4-1213": { "n": 4, "conf": "haute", "c": "Frigo rempli, un emplacement vide au milieu" },
+    "4-1214": { "n": 3, "conf": "moyenne", "c": "Une seule rangée de sachets de café, rayon clairsemé" },
+    "4-1216": { "n": 4, "conf": "moyenne", "c": "Sol dégagé ; photo sombre" }
+  }
+}
