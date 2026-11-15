@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard franchisé — le rail (maquettes)</title>
+<style>
+  /* Les couleurs et tailles du design system commun (docs/DESIGN_SYSTEM.md, §3-§7). La police Gotham n'est pas
+     chargée ici : les captures la portent déjà. */
+  :root { --ink: #1c1a17; --muted-2: #5c5852; --muted: #7a736a; --faint: #B8B2A8; --paper: #faf7f2; --line: #e6e0d8;
+    --accent: #8D1D2C; --chip: #EDE7DE; color-scheme: light; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 400 14px/1.55 system-ui, -apple-system, 'Segoe UI', sans-serif; }
+  header { padding: 28px 32px 22px; border-bottom: 1px solid var(--line); background: #fff; }
+  .kicker { margin: 0 0 6px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+  h1 { margin: 0; font-size: 26px; font-weight: 400; letter-spacing: -0.01em; }
+  .intro { max-width: 860px; margin: 10px 0 0; color: var(--muted-2); }
+  nav { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 18px; border-bottom: 1px solid var(--line); }
+  nav a { margin-bottom: -1px; padding: 8px 12px; border-bottom: 2px solid transparent; color: var(--muted-2); text-decoration: none; font-size: 13px; }
+  nav a:hover { color: var(--ink); }
+  nav a.on { color: var(--accent); border-bottom-color: var(--accent); }
+  main { padding: 24px 32px 60px; }
+  section { display: none; max-width: 1480px; }
+  section.on { display: block; }
+  h2 { margin: 0 0 6px; font-size: 13px; font-weight: 400; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .sous { margin: 0 0 16px; max-width: 880px; color: var(--muted-2); }
+  ul { margin: 0 0 18px; padding-left: 18px; max-width: 880px; color: var(--ink); }
+  li { margin: 3px 0; }
+  figure { margin: 0 0 26px; }
+  figcaption { margin: 0 0 8px; font-size: 13px; color: var(--ink); }
+  figcaption small { display: block; color: var(--muted); font-size: 12px; }
+  img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: #fff; cursor: zoom-in; }
+  .deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 22px; }
+  .note { display: inline-block; margin: 0 0 16px; padding: 5px 9px; border: 1px dashed var(--line); border-radius: 6px; font-size: 12px; color: var(--muted); }
+  .etat { display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 4px; font-size: 11px; vertical-align: 2px; }
+  .etat.cours { background: rgba(141, 29, 44, 0.08); color: var(--accent); }
+  .etat.ecarte { background: var(--chip); color: var(--muted-2); }
+  /* La loupe : l'image en grand, dans la page. */
+  .loupe { position: fixed; inset: 0; z-index: 10; display: none; align-items: flex-start; justify-content: center; overflow: auto;
+    padding: 24px; background: rgba(24, 18, 20, 0.42); cursor: zoom-out; }
+  .loupe.on { display: flex; }
+  .loupe img { width: auto; max-width: none; height: auto; max-height: none; cursor: zoom-out; }
+  .loupe .fermer { position: fixed; top: 14px; right: 18px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff;
+    color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+</style>
+</head>
+<body>
+<header>
+  <p class="kicker">Pilotage réseau · maquettes</p>
+  <h1>Le rail du dashboard franchisé</h1>
+  <p class="intro">Le dashboard magasin, au bureau, avec un rail à gauche. Les chiffres des maquettes sont des exemples, sauf
+    la «&nbsp;version propre&nbsp;», qui montre les chiffres réels de Halle le mardi 6 octobre 2026. Un clic sur une capture l’ouvre en grand.</p>
+  <nav id="onglets">
+    <a href="#reel">Le vrai dashboard + rail</a>
+    <a href="#b">B et ses écrans</a>
+    <a href="#propre">La version propre</a>
+    <a href="#propositions">Les propositions</a>
+  </nav>
+</header>
+<main>
+  <section id="s-reel">
+    <h2>Le vrai dashboard, avec un rail à côté <span class="etat cours">la demande en cours</span></h2>
+    <p class="sous">«&nbsp;Ne pas changer ce qui était dans le dashboard, je veux juste un rail à côté.&nbsp;» La page fait tourner le vrai
+      code du dashboard, sans une ligne changée.</p>
+    <ul>
+      <li>L’en-tête et la rangée d’onglets du dashboard laissent la place au rail : les mêmes onglets, dans le même ordre,
+        en groupes (La journée, Les chiffres, Vendre), plus les assistants.</li>
+      <li>La barre du haut reprend la date, «&nbsp;Relire&nbsp;», la valeur en vignette, la revue du soir, et le coach (l’assistant IA).</li>
+      <li>En haut du rail : l’objectif du jour et la note Google.</li>
+      <li>Tout le reste est le dashboard tel qu’il est.</li>
+    </ul>
+    <p class="note">Les blocs sont sur «&nbsp;lecture…&nbsp;» : la maquette ne lit pas le serveur du cockpit. Sur le serveur, la même page se remplit.</p>
+    <figure><figcaption>Opérationnel, au bureau (1 440 × 1 000)</figcaption><img src="reel.png" alt="Le dashboard magasin avec le rail à gauche"></figure>
+  </section>
+
+  <section id="s-b">
+    <h2>B : l’objectif selon l’onglet, et le coach</h2>
+    <p class="sous">L’objectif du jour partout ; celui de la semaine, du mois, du trimestre ou de l’année dans l’onglet correspondant.
+      Le coach est l’assistant IA : il lit les chiffres du magasin, cite d’où vient chacun, propose et n’écrit rien.</p>
+    <figure><figcaption>La carte de l’objectif, écran par écran</figcaption><img src="planche-objectif.jpg" alt="La carte de l’objectif dans cinq écrans"></figure>
+    <div class="deux">
+      <figure><figcaption>B, Opérationnel<small>la valeur en haut à droite, avec le coach et la revue du soir</small></figcaption><img src="b.png" alt="Maquette B"></figure>
+      <figure><figcaption>Le coach ouvert<small>une conversation d’exemple</small></figcaption><img src="b-coach.png" alt="Le coach, assistant IA"></figure>
+    </div>
+  </section>
+
+  <section id="s-propre">
+    <h2>La version propre <span class="etat ecarte">écartée : elle changeait le contenu</span></h2>
+    <p class="sous">Le contenu de l’Opérationnel redessiné, minimaliste, avec les chiffres réels de Halle (mardi 6 octobre 2026, 08:14).
+      Écartée le 15/11/2026 : le dashboard ne change pas, seul le rail s’ajoute.</p>
+    <figure><img src="final.png" alt="La version propre"></figure>
+  </section>
+
+  <section id="s-propositions">
+    <h2>Les propositions</h2>
+    <p class="sous">Les trois premières (A, B, C), puis trois variantes de B.</p>
+    <figure><figcaption>A, B, C<small>A : les repères en liste · B : le tableau de bord dans le rail · C : les assistants d’abord</small></figcaption><img src="planche.jpg" alt="Les propositions A, B et C"></figure>
+    <figure><figcaption>B et ses variantes<small>B1 : douze mois · B2 : les primes en jeu · B3 : le verdict</small></figcaption><img src="planche-b.jpg" alt="B et ses trois variantes"></figure>
+  </section>
+</main>
+<div class="loupe" id="loupe" role="dialog" aria-label="Capture en grand"><button class="fermer" type="button">Fermer</button><img alt=""></div>
+<script>
+  // Les vues se nomment dans l'adresse (#reel, #b, #propre, #propositions) ; sans nom, la demande en cours.
+  const VUES = ['reel', 'b', 'propre', 'propositions'];
+  function montrer() {
+    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'reel';
+    VUES.forEach(n => document.getElementById('s-' + n).classList.toggle('on', n === v));
+    document.querySelectorAll('#onglets a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
+  }
+  window.addEventListener('hashchange', montrer);
+  montrer();
+  // La loupe : un clic sur une capture l'ouvre à sa taille ; un clic ou Échap la ferme.
+  const L = document.getElementById('loupe'), LI = L.querySelector('img');
+  document.querySelectorAll('main img').forEach(i => i.addEventListener('click', () => { LI.src = i.src; LI.alt = i.alt; LI.style.width = Math.min(i.naturalWidth / 2, 2400) + 'px'; L.classList.add('on'); L.scrollTop = 0; }));
+  L.addEventListener('click', () => L.classList.remove('on'));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') { L.classList.remove('on'); } });
+</script>
+</body>
+</html>
