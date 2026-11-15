@@ -51,6 +51,7 @@
   <p class="intro">Le dashboard magasin, au bureau, avec un rail à gauche. La proposition en cours montre les chiffres réels de
     Halle, lus au cockpit le dimanche 15 novembre 2026 à 09:46 ; les autres maquettes, des exemples. Un clic sur une capture l’ouvre en grand.</p>
   <nav id="onglets">
+    <a href="#reseaux">Réseaux sociaux</a>
     <a href="#marketing">Calendrier des posts</a>
     <a href="#reel">Le vrai dashboard + rail</a>
     <a href="#b">B et ses écrans</a>
@@ -59,8 +60,23 @@
   </nav>
 </header>
 <main>
+  <section id="s-reseaux">
+    <h2>Réseaux sociaux dans le dashboard <span class="etat cours">maquette à valider</span></h2>
+    <p class="sous">Une entrée Réseaux sociaux dans le groupe Marketing du rail ; la page s’ouvre dans le dashboard, sans redirection, en onglets :
+      Calendrier, Calendrier Meta, Instagram, Campagnes (en cours et leurs objectifs produits) ; « Créer un post » ouvre l’écran de création.</p>
+    <p class="note">Rail et barre : chiffres du 15/11 à 09:57. Posts, campagnes, objectifs et statistiques : exemples.</p>
+    <figure><figcaption>Les cinq écrans</figcaption><img src="planche-reseaux.jpg" alt="Les cinq écrans de Réseaux sociaux"></figure>
+    <div class="deux">
+      <figure><figcaption>Calendrier</figcaption><img src="rs-calendrier.png" alt="Calendrier marketing"></figure>
+      <figure><figcaption>Calendrier Meta</figcaption><img src="rs-meta.png" alt="Calendrier Meta"></figure>
+      <figure><figcaption>Instagram</figcaption><img src="rs-instagram.png" alt="Instagram"></figure>
+      <figure><figcaption>Campagnes</figcaption><img src="rs-campagnes.png" alt="Campagnes"></figure>
+      <figure><figcaption>Créer un post</figcaption><img src="rs-creer.png" alt="Créer un post"></figure>
+    </div>
+  </section>
+
   <section id="s-marketing">
-    <h2>Le calendrier des posts dans le rail <span class="etat cours">maquette à valider</span></h2>
+    <h2>Le calendrier des posts dans le rail <span class="etat cours">en ligne : le lien ↗</span></h2>
     <p class="sous">Un groupe Marketing dans le rail : Calendrier des posts, Fidélité, Mon catalogue. Le calendrier ouvre, à droite,
       l’espace boutique du Marketing (/marketing/franchise/calendrier), incorporé sous la barre du dashboard.</p>
     <p class="note">Rail et barre : chiffres lus au cockpit le 15/11 à 09:57. Posts, abonnés, régularité et rang : exemples.</p>
@@ -111,9 +127,9 @@
 <div class="loupe" id="loupe" role="dialog" aria-label="Capture en grand"><button class="fermer" type="button">Fermer</button><img alt=""></div>
 <script>
   // Les vues se nomment dans l'adresse (#marketing, #reel, #b, #propre, #propositions) ; sans nom, la demande en cours.
-  const VUES = ['marketing', 'reel', 'b', 'propre', 'propositions'];
+  const VUES = ['reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
   function montrer() {
-    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'marketing';
+    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'reseaux';
     VUES.forEach(n => document.getElementById('s-' + n).classList.toggle('on', n === v));
     document.querySelectorAll('#onglets a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
   }

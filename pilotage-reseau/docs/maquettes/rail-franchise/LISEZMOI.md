@@ -14,6 +14,30 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
+## Réseaux sociaux dans le dashboard, sans redirection (`rs-*.png`, `planche-reseaux.jpg`) — maquette, à valider
+
+Demande du 15/11/2026 : « dans Marketing, une page Réseaux sociaux, sans redirection, avec le calendrier, le calendrier
+Meta, IG, un sous-menu Campagnes avec les campagnes en cours et les targets ; ensuite créer un post ». Une entrée
+**Réseaux sociaux** en tête du groupe Marketing du rail (elle remplacerait « Calendrier des posts ↗ ») ; la page s'ouvre
+dans le dashboard, en **onglets** (§2 du design system : un écran à plusieurs vues = des onglets, pas des entrées de
+menu), avec « Créer un post » en action principale :
+
+| écran | ce qu'il montre | ce que le Marketing a déjà |
+|---|---|---|
+| `rs-calendrier.png` · Calendrier | le calendrier marketing du magasin sur le mois : campagnes du réseau, promotions, newsletters, posts du réseau, événements, en ligne de temps ; le trait du jour | « Calendrier réseau » de l'espace franchisé |
+| `rs-meta.png` · Calendrier Meta | les posts Facebook et Instagram du mois, aux couleurs de leur statut ; « Ma semaine » | CalendrierFranchiseView |
+| `rs-instagram.png` · Instagram | la grille du compte (le post programmé en pâle, en tête), les 28 derniers jours, le conseil du réseau | InstagramView, onglet « Vues et abonnés » |
+| `rs-campagnes.png` · Campagnes | les campagnes en cours (En cours · À venir · Terminées) et leurs **objectifs produits** : fait / cible, attendu à ce jour, en avance · dans les clous · en retard · atteint | OperationsView ; les objectifs produits du dashboard (`/exploitation/objectifs-produits`, OBJ_ETATS) |
+| `rs-creer.png` · Créer un post | le modèle du réseau, la photo (médiathèque ou téléphone), le texte (la phrase du magasin dans le modèle), où (Facebook, Instagram), quand ; la validation du réseau ; l'aperçu Instagram et Facebook | PublierView |
+
+Chiffres : le rail et la barre, ceux du 15/11 à 09:57 ; posts, campagnes, objectifs, abonnés et statistiques : exemples
+(Halle n'a pas de campagne avec objectifs produits ce jour-là : la lecture rend une liste vide). Photos : les comptoirs de
+Halle, sans personne. Générer : `node generer-reseaux.js`.
+
+**Pour le coder sans redirection** : le Marketing doit servir ces écrans à une autre page — son API (les posts, la
+grille, les campagnes, la publication) lue par le dashboard, ou ses écrans en mode incorporé (sans leur rail, §9) ; le
+dashboard ne lit pas les tables du Marketing (PORTAILS.md). Les deux passent par le dépôt `marketing`.
+
 ## Le calendrier des posts dans le rail (`marketing.png`) — validé, en ligne en partie le 15/11/2026
 
 **En ligne** (branche de déploiement, commit `03f4731`, mis en ligne par `e196229`) : le groupe Marketing du rail

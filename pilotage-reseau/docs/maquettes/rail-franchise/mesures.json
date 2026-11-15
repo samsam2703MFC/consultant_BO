@@ -1,4 +1,24 @@
 {
+ "rs-calendrier": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "rs-meta": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "rs-instagram": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "rs-campagnes": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "rs-creer": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "marketing": {
   "rail": 1065,
   "tientDans1000": false

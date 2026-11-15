@@ -1,0 +1,101 @@
+/* Maquette « Réseaux sociaux » dans le dashboard : les onglets de la page et ses cinq écrans. Jetons du §3 ; les couleurs
+ * des statuts sont celles du Marketing (STATUS). Pas d'ombre, pas de pilule, pas de gras hors des chiffres clés. */
+.rs-page { padding: 4px 0 24px; }
+.rs-onglets { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 6px; }
+.rs-onglets .btn--primary .ico { stroke: #fff; }
+.rs-tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.rs-tete h2 { margin: 0; font-size: 22px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.rs-p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted-2); }
+.rs-st { display: inline-block; padding: 2px 7px; border-radius: 4px; font-size: 11px; white-space: nowrap; }
+
+/* 1. La ligne de temps du mois. */
+.rs-tl { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: #fff; }
+.rs-tl-l { display: grid; grid-template-columns: 300px 1fr; border-top: 1px solid var(--row-line); min-height: 44px; }
+.rs-tl-l:first-child { border-top: 0; }
+.rs-tl-h { min-height: 30px; background: var(--table-head); }
+.rs-tl-n { display: flex; align-items: center; gap: 9px; padding: 6px 12px; border-right: 1px solid var(--line); font-size: 12.5px; color: var(--ink); min-width: 0; }
+.rs-tl-n i { width: 10px; height: 10px; flex: 0 0 10px; border: 1px solid; border-radius: 3px; }
+.rs-tl-n small { display: block; font-size: 10.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rs-tl-n span { min-width: 0; }
+.rs-tl-j { position: relative; display: grid; grid-template-columns: repeat(30, minmax(0, 1fr)); align-items: center; padding: 0 4px;
+  background-image: linear-gradient(to right, transparent calc(4px + (100% - 8px) * 14.5 / 30 - 1px), rgba(141, 29, 44, 0.9) calc(4px + (100% - 8px) * 14.5 / 30 - 1px), rgba(141, 29, 44, 0.9) calc(4px + (100% - 8px) * 14.5 / 30 + 1px), transparent calc(4px + (100% - 8px) * 14.5 / 30 + 1px)); }
+.rs-tl-h .rs-tl-j span { text-align: center; font-size: 10.5px; color: var(--muted); }
+.rs-tl-h .rs-tl-j span.dim { color: var(--ink); }
+.rs-tl-h .rs-tl-j span.auj { color: var(--accent); }
+.rs-tl-b { grid-row: 1; height: 18px; margin: 0 1px; border: 1px solid; border-radius: 5px; }
+
+/* 3. Instagram. */
+.rs-ig { display: grid; grid-template-columns: 1fr 330px; gap: 16px; align-items: start; }
+.rs-ig-g { padding: 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.rs-ig-p { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.rs-ig-p img { width: 64px; height: 64px; object-fit: contain; border: 1px solid var(--line); border-radius: 50%; padding: 10px; background: var(--paper); }
+.rs-ig-p b { font-weight: 400; font-size: 15px; color: var(--ink); }
+.rs-ig-p small { display: block; margin-top: 3px; font-size: 12px; color: var(--muted-2); }
+.rs-ig-grille { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.rs-ig-c { position: relative; margin: 0; aspect-ratio: 1; overflow: hidden; background: var(--chip); }
+.rs-ig-c img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rs-ig-c.prog img { opacity: 0.45; }
+.rs-ig-c figcaption { position: absolute; left: 0; right: 0; bottom: 0; padding: 6px 8px; background: rgba(28, 26, 23, 0.55); color: #fff; font-size: 11px; }
+.rs-ig-c figcaption small { display: block; font-size: 10.5px; opacity: 0.9; }
+.rs-ig-c.prog figcaption { background: rgba(255, 255, 255, 0.85); color: var(--ink); }
+.rs-ig-a { display: grid; gap: 12px; }
+.rs-carte { padding: 14px 16px; }
+.rs-carte h2 { margin: 0 0 8px; font-size: 11px; }
+.rs-kv { display: grid; grid-template-columns: 1fr auto; gap: 1px 10px; padding: 7px 0; border-top: 1px solid var(--row-line); }
+.rs-kv:first-of-type { border-top: 0; }
+.rs-kv .k { font-size: 12px; color: var(--muted-2); }
+.rs-kv .v { font-size: 15px; color: var(--ink); text-align: right; }
+.rs-kv .v.bon { color: var(--green); }
+.rs-kv .s { grid-column: 1 / -1; font-size: 11px; color: var(--muted); }
+.rs-carte .rs-p + .rs-p { margin-top: 8px; }
+
+/* 4. Campagnes. */
+.rs-camp { margin-bottom: 12px; padding: 14px 16px; }
+.rs-camp-h { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.rs-camp h3 { margin: 2px 0 2px; font-size: 18px; font-weight: 400; color: var(--ink); }
+.rs-objs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 8px; }
+.rs-obj { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--table-head); }
+.rs-obj-h { display: flex; align-items: baseline; gap: 8px; font-size: 12.5px; color: var(--ink); }
+.rs-obj-v { margin-left: auto; font-size: 15px; white-space: nowrap; }
+.rs-obj-v small { font-size: 11px; color: var(--muted); }
+.rs-etat { padding: 1px 7px; border-radius: 4px; font-size: 10.5px; white-space: nowrap; }
+.rs-etat.ok { background: rgba(63, 122, 82, 0.12); color: var(--green); }
+.rs-etat.att { background: var(--prize-soft); color: var(--prize-ink); }
+.rs-etat.ko { background: var(--stop-soft); color: var(--stop); }
+.rs-jauge { position: relative; height: 6px; margin: 9px 0 5px; border-radius: 3px; background: var(--chip); }
+.rs-jauge i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--prize); }
+.rs-jauge i.ok { background: var(--green); }
+.rs-jauge i.ko { background: var(--stop); }
+.rs-jauge b { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--ink); font-weight: 400; }
+.rs-obj-s { font-size: 11px; color: var(--muted); }
+
+/* 5. Créer un post. */
+.rs-creer { display: grid; grid-template-columns: 1fr 360px; gap: 16px; align-items: start; }
+.rs-form { padding: 16px 18px; }
+.rs-form h2 { margin: 0 0 10px; font-size: 11px; }
+.rs-champ { margin-bottom: 14px; }
+.rs-champ .lab { display: block; margin-bottom: 6px; font-size: 12.5px; color: var(--ink); }
+.rs-champ small { display: block; margin-top: 5px; font-size: 11px; color: var(--muted); }
+.rs-puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.rs-puce { padding: 6px 11px; border: 1px solid rgba(34, 34, 34, 0.14); border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; color: var(--muted-2); }
+.rs-puce.on { border-color: var(--accent); background: rgba(141, 29, 44, 0.05); color: var(--accent); }
+.rs-photos { display: flex; gap: 8px; align-items: stretch; }
+.rs-photos figure { margin: 0; width: 86px; height: 86px; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.rs-photos figure.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.rs-photos img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rs-plus { padding: 0 12px; border: 1px dashed var(--line); border-radius: 8px; background: var(--paper); font: inherit; font-size: 12px; color: var(--muted-2); }
+.rs-texte { padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; font-size: 13px; line-height: 1.55; color: var(--ink); background: #fff; }
+.rs-ligne2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.rs-valid { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--table-head); }
+.rs-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+.rs-apercu { display: grid; gap: 6px; }
+.rs-ap { border: 1px solid var(--line); border-radius: 10px; background: #fff; overflow: hidden; }
+.rs-ap-h { display: flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: 12.5px; }
+.rs-ap-h img { width: 28px; height: 28px; object-fit: contain; border: 1px solid var(--line); border-radius: 50%; padding: 4px; }
+.rs-ap-h b { font-weight: 400; color: var(--ink); }
+.rs-ap-h small { margin-left: auto; color: var(--muted); font-size: 11px; }
+.rs-ap-img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+.rs-ap--fb .rs-ap-img { aspect-ratio: 16 / 10; }
+.rs-ap-t { padding: 8px 10px; font-size: 12px; line-height: 1.45; color: var(--ink); }
+.rs-ap-t b { font-weight: 400; color: var(--ink); }
+.rs-ap > small { display: block; padding: 0 10px 8px; }
