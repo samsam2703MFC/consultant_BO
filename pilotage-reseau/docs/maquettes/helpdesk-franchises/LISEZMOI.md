@@ -1,6 +1,6 @@
 # Helpdesk des franchisés : les demandes au cockpit, reprises en visite, et le formulaire du dashboard
 
-**Statut : maquettes, à valider.** Demande du 15/11/2026 : « dans le cockpit pilotage, il faut pouvoir lire les
+**Statut : validées le 15/11/2026 (« ok tout »), et codées** — cockpit `#/franchises/demandes` (Franchisés › Demandes des franchisés), dashboard franchisé : la demande au bureau dans la fenêtre de l’assistant (son avatar la transmet), ouverte depuis l’onglet Contrôle ou l’entête ; serveur `src/helpdesk.php`. Demande du 15/11/2026 : « dans le cockpit pilotage, il faut pouvoir lire les
 demandes et les reprendre dans les missions de visite (contrôle) + faire le formulaire dans le dashboard franchisé ».
 
 | Capture | Écran | Ce qu'il montre |
