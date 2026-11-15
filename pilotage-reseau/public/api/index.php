@@ -727,6 +727,7 @@ function route(string $method, string $path): mixed
             $path === '/ia/statut'                     => ep_ia_statut(),
             $path === '/ia/propositions'               => ep_ia_propositions(),
             $path === '/ia/lecons'                     => ep_ia_lecons(),
+            $path === '/ia/entrainement'               => ep_ia_entrainement(),
             $path === '/pwa/compte'                    => PanelApi::statut(),
             $path === '/erp/compte'                    => ErpApi::statut(),
             // Le Scouting est parti dans le CRM (Étude de faisabilité) ; restent
@@ -1036,6 +1037,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT'  && $path === '/ia/compte') { return wr_ia_compte(); }
     if ($method === 'POST' && $path === '/ia/proposer') { return wr_ia_proposer(); }
     if ($method === 'POST' && $path === '/ia/lecons') { return wr_ia_lecons(); }
+    if ($method === 'POST' && $path === '/ia/modeles') { return wr_ia_modeles(); }
     if ($method === 'POST' && $path === '/budget/charges/crm') { return wr_budget_crm(); }
     if ($method === 'PUT' && preg_match('#^/parametres/([\w.-]+)$#', $path, $m)) { return wr_param_put($m[1]); }
     // --- newsletter & campagnes (mode test : aucun envoi ne part)

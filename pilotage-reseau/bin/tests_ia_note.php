@@ -81,6 +81,10 @@ Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux);
 verifie('les anciens appels (cinq arguments) marchent toujours', count($envois) === 1);
 verifie('sans leçon : pas de bloc corrections', !str_contains($texte($envois[0]), 'Corrections récentes'));
 $envois = [];
+Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['refLocale' => $typeRayon, 'refLib' => 'Photo MODÈLE de ce rayon dans ce magasin (du 2026-11-14) :']);
+$t = $texte($envois[0]);
+verifie('la photo modèle du magasin, annoncée comme telle', str_contains($t, 'Photo MODÈLE de ce rayon dans ce magasin') && !str_contains($t, 'Photo TYPE') && substr_count($t, '[image]') === 2);
+$envois = [];
 Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['criteres' => rvCriteresIa(['cle' => 'tartes', 'nom' => 'Tartes']),
     'exemples' => ['Tu avais proposé « Non conforme — majeur » ; le consultant a noté « Non conforme — mineur » — sa raison : un objet seul reste mineur.', ' ']]);
 $t = $texte($envois[0]);
