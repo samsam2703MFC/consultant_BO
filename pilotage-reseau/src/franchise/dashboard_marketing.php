@@ -95,7 +95,9 @@ function dsRoute(string $method, string $path): ?array
     $jeton = function_exists('erpCle') ? erpCle('erp_jeton_service') : '';
     if ($base === '' || $jeton === '') {
         http_response_code(503);
-        return ['error' => 'Le lien avec le Marketing n’est pas réglé : l’adresse du Marketing (mar_api_url) et le jeton de service (erp_jeton_service) d’erp_cles, au siège.'];
+        return ['error' => 'Le lien avec le Marketing n’est pas réglé, au siège : ' . implode(' et ', array_filter([
+            $base === '' ? 'l’adresse de l’API du Marketing (mar_api_url d’erp_cles, ou marketingApi de config.php)' : '',
+            $jeton === '' ? 'le jeton de service (erp_jeton_service d’erp_cles)' : ''])) . '.'];
     }
     [$code, $j] = cmAppel($base . '/integration/franchise/sessions', 'POST', ['shop' => (string) $shop, 'page' => $page], $jeton);
     if ($code === 0) { http_response_code(502); return ['error' => 'Le Marketing ne répond pas : réessayez dans un instant.']; }

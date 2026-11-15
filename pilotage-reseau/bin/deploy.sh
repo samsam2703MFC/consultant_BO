@@ -33,6 +33,9 @@ COCKPIT_URL="${COCKPIT_URL:-${ALIAS_PATH}/}"
 # L'espace boutique du Marketing (dépôt marketing, servi à /marketing/franchise/ sur le même serveur) : l'entrée
 # « Calendrier des posts ↗ » du rail du dashboard franchisé, écrite dans config.php (espaceBoutiqueUrl), rendue par GET /meta.
 COCKPIT_ESPACE_BOUTIQUE_URL="${COCKPIT_ESPACE_BOUTIQUE_URL:-/marketing/franchise/}"
+# L'API du Marketing, appelée de serveur à serveur (Mon catalogue, Réseaux sociaux du dashboard franchisé, 15/11/2026) :
+# même serveur, donc en local par défaut. Écrite dans config.php (marketingApi) ; la clé mar_api_url d'erp_cles prime.
+COCKPIT_MARKETING_API="${COCKPIT_MARKETING_API:-http://127.0.0.1/marketing/api}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -279,7 +282,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
   COCKPIT_DB_HOST="$COCKPIT_DB_HOST" COCKPIT_DB_PORT="$COCKPIT_DB_PORT" \
   COCKPIT_DB_NAME="$COCKPIT_DB_NAME" COCKPIT_DB_USER="$COCKPIT_DB_USER" \
   COCKPIT_DB_PASSWORD="$COCKPIT_DB_PASSWORD" COCKPIT_PWA_BASE="$COCKPIT_PWA_BASE" \
-  COCKPIT_URL="$COCKPIT_URL" COCKPIT_ESPACE_BOUTIQUE_URL="$COCKPIT_ESPACE_BOUTIQUE_URL" \
+  COCKPIT_URL="$COCKPIT_URL" COCKPIT_ESPACE_BOUTIQUE_URL="$COCKPIT_ESPACE_BOUTIQUE_URL" COCKPIT_MARKETING_API="$COCKPIT_MARKETING_API" \
   php -r '
     $cfg = [
       "db" => [
@@ -295,6 +298,8 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "cockpitUrl" => getenv("COCKPIT_URL") ?: null,
       // Dashboard franchisé : l’espace boutique du Marketing, pour le « Calendrier des posts ↗ » du rail (GET /meta).
       "espaceBoutiqueUrl" => getenv("COCKPIT_ESPACE_BOUTIQUE_URL") ?: null,
+      // L’API du Marketing (Mon catalogue, Réseaux sociaux du dashboard franchisé), quand mar_api_url n’est pas dans erp_cles.
+      "marketingApi" => getenv("COCKPIT_MARKETING_API") ?: null,
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,
