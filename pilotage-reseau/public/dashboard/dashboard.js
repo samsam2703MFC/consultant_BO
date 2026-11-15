@@ -6802,6 +6802,11 @@
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
+  /** Les icônes des vignettes qui n'en avaient pas (15/11/2026) : la valeur du magasin (une boutique), l'API (le code). */
+  const VIGN_ICO = {
+    valeur: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-5h4v5"/></svg>',
+    api: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5M13.5 5l-3 14"/></svg>',
+  };
   const RELIRE_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4.5v4.2h-4.2"/></svg>';
   function railBarre() {
     const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
@@ -6812,14 +6817,16 @@
     // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
     const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
-    return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
-      ${navPeriode()}<span style="flex:1"></span>
+    // Les vignettes (15/11/2026, « identiques en taille et en hauteur », variante « rangée ») : une rangée à elles, sous le
+    // titre, six vignettes égales sur toute la largeur ; le titre et la date au-dessus, s'il y en a.
+    const haut = (propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`) + navPeriode();
+    return `<div class="db-nav db-nav--rail">${haut.trim() ? haut + '<span style="flex:1"></span>' : ''}
       <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
-      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button></span>
+      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="db-av__o">${VIGN_ICO.valeur}</span><span class="db-av__t"><span class="k">Valeur du magasin</span><span class="v">${val}</span></span></button></span>
       ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}
-      ${window.DashApi ? `<button type="button" class="db-av db-av--api" data-apiouvrir="1" title="Les appels de cette page à l’API (${window.DashApi.n()}) et l’index de l’API du cockpit franchisé" aria-label="API">API</button>` : ''}</span></div>`;
+      ${window.DashApi ? av('data-apiouvrir="1" title="Les appels de cette page à l’API et l’index de l’API du cockpit franchisé"', ' db-av--api', VIGN_ICO.api, 'API', window.DashApi.n() + ' appel' + (window.DashApi.n() > 1 ? 's' : '')) : ''}</span></div>`;
   }
   /** Réseaux sociaux (15/11/2026) : le cadre de l'espace boutique vit HORS de #dash, comme le rail — un cadre réinséré se
    * recharge, et le dashboard se redessine souvent : le post en cours d'écriture se perdrait. */
