@@ -7,6 +7,22 @@
   "rail": 1000,
   "tientDans1000": true
  },
+ "b-semaine": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "b-mois": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "b-trimestre": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "b-annee": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "c": {
   "rail": 1000,
   "tientDans1000": true

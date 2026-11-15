@@ -19,10 +19,28 @@ contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 | | forme | ce qu'elle apporte | ce qu'elle coûte |
 |---|---|---|---|
 | **A** | `a.png` — **les repères en liste**. En haut, cinq lignes : valeur, note Google, objectif du mois, résultat du mois, place au réseau. Les onze onglets deviennent onze entrées en trois groupes (La journée, Les chiffres, Vendre), les assistants en un quatrième groupe, en bas. | le moins de changement : chaque onglet garde son nom et sa place | **1 103 px de haut** : à 1 000 px, les assistants passent sous le pli ; onze entrées à lire |
-| **B** | `b.png` — **le tableau de bord dans le rail**. Trois cartes en haut, chacune avec sa forme : la valeur et sa courbe sur six trimestres, la note Google sur son échelle (4,0 → 5,0, trait de la cible), l'objectif du mois en jauge avec le résultat. **Résultat** réunit Semaine, Mois, Trimestre et Année en onglets de page. | les repères se lisent sans lire ; huit entrées au lieu de onze ; tient dans 1 000 px | un onglet de plus à cliquer pour passer du mois à l'année ; trois repères seulement (la place au réseau reste dans la page) |
+| **B** | `b.png` — **le tableau de bord dans le rail**. Trois cartes en haut, chacune avec sa forme : la valeur et sa courbe sur six trimestres, la note Google sur son échelle (4,0 → 5,0, trait de la cible), l'objectif en jauge — **celui du jour**, celui de la période dans les onglets de Résultat (voir plus bas). **Résultat** réunit Semaine, Mois, Trimestre et Année en onglets de page. | les repères se lisent sans lire ; huit entrées au lieu de onze ; tient dans 1 000 px | un onglet de plus à cliquer pour passer du mois à l'année ; trois repères seulement (la place au réseau reste dans la page) |
 | **C** | `c.png` — **les assistants d'abord**. Quatre cases en haut (valeur, Google, objectif, résultat), puis la **revue du soir** en carte, avec son état et « Commencer la revue », puis un groupe **À faire** (tâches du jour, plan d'action, note du jour, réclamation fournisseur), puis le magasin et la vente. | le rail répond d'abord à « qu'est-ce que je dois faire ? » ; la revue ne s'oublie plus ; tient dans 1 000 px | la carte de la revue prend la place de deux entrées ; elle n'a de sens que le soir (le matin, elle dirait « faite hier ») |
 
 `planche.jpg` met les trois côte à côte. `mesures.json` : la hauteur de chaque rail.
+
+## B retouchée : l'objectif du jour
+
+Demande du 15/11/2026 : « le premier B avec l'objectif du jour ; les objectifs de la semaine et de l'année ne se
+voient que sur les onglets Semaine, Mois et Année ». La carte de l'objectif suit l'écran ouvert :
+
+| écran ouvert | la carte | la jauge | le trait | capture |
+|---|---|---|---|---|
+| Opérationnel, Tâches, Produits, Promotions… (tout écran hors Résultat) | **Objectif du jour** : « 68 % de 2 380 € », à l'heure de la lecture | le CA de la journée face à son objectif entier | J−7 à la même heure ; verte en avance sur J−7, or en retard | `b.png` |
+| Résultat › Semaine | **Objectif semaine** : « 88 %, − 1 430 € », du lundi au dimanche | le CA face à l'objectif attendu à ce jour | 100 % ; verte atteint, or en dessous | `b-semaine.png` |
+| Résultat › Mois | **Objectif du mois** : « 92 %, − 2 690 € » | idem | idem | `b-mois.png` |
+| Résultat › Trimestre | **Objectif T4** : « 96 %, − 2 140 € » | idem | idem | `b-trimestre.png` |
+| Résultat › Année | **Objectif 2026** : « 97 %, − 9 870 € » | idem | idem | `b-annee.png` |
+
+La ligne sous la jauge : au jour, ce qui reste et J−7 à cette heure (la tuile « Objectif du jour » de
+l'Opérationnel) ; pour une période, son résultat. Le Trimestre suit la même règle que les trois onglets demandés.
+`planche-objectif.jpg` met le haut des cinq écrans côte à côte. Lectures : `/exploitation/jour` (le jour, J−7) ;
+`/exploitation/periode?vue=semaine|mois|trimestre|annee` (la période, son attendu, son P&L).
 
 ## Trois variantes de B
 
@@ -51,6 +69,7 @@ panel, la note Google la base du cockpit, ni l'un ni l'autre n'est lu ici. La va
 |---|---|---|
 | Valeur | `/ventes/mensuel?shop=&mois=30` : CA des 730 derniers jours ÷ 730 × 365 ÷ 6, deux mois de chiffre d'affaires (`valeurMagasin()`) | la pastille **Valeur** de la barre, et son tiroir (la formule, six trimestres) |
 | Note Google | `/marketing/avis` : la note de la fiche, le nombre d'avis, la cible (`reputationCible`, 4,5 par défaut) | **non lue** ; la même note sert déjà la prime d'équipe Google (`/ventes/primes-equipe`) |
+| Objectif du jour (B : celui de la période dans Résultat) | `/exploitation/jour` : le CA face à l'objectif du jour, J−7 à la même heure | tuile « Objectif du jour » de l'Opérationnel |
 | Objectif du mois | `/exploitation/periode?vue=mois` : le CA face à l'objectif réparti, attendu à ce jour | vue Mois |
 | Résultat du mois | la même lecture : le P&L du mois | vue Mois |
 | Place au réseau (A) | la même lecture : le rang au CA, sans nommer les autres (`rendBench`) | le bandeau des vues Semaine et Mois |

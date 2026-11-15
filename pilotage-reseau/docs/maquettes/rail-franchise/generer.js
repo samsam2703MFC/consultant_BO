@@ -108,22 +108,45 @@ const railA = `${tete('Dashboard magasin')}${enseigne}
     ${groupe('Assistants', [['Revue du soir', I.revue, '<span class="ex">à faire</span>'], ['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
   </div>`;
 
-/* ══ B — Le tableau de bord dans le rail : un repère, une forme ; Résultat réunit les quatre périodes ═══════════════ */
-const railB = `${tete('Dashboard magasin')}
+/* ══ B — Le tableau de bord dans le rail : un repère, une forme ; Résultat réunit les quatre périodes ═══════════════
+ * Retouche du 15/11/2026 : « le premier B avec l'objectif du jour ; les objectifs de la semaine et de l'année ne se
+ * voient que sur les onglets Semaine, Mois et Année ». La carte de l'objectif suit l'écran ouvert : l'objectif du jour
+ * partout (Opérationnel, Tâches, Produits…), celui de la période dans Résultat › Semaine, Mois, Trimestre, Année.
+ *   Jour : le CA de la journée face à son objectif entier ; le trait, J−7 à la même heure (comme la tuile « Objectif du
+ *   jour » de l'Opérationnel). Période : le CA face à l'objectif attendu à ce jour (réparti par la pondération réseau) ;
+ *   le trait, 100 %. Chiffres : exemples. */
+const OBJ = {
+  jour: { lib: 'Objectif du jour', quand: 'à 13 h 05', pct: 68, ecart: 'de 2 380 €', larg: 68, trait: 64,
+    s: 'reste <span class="ex">770 €</span> · J−7 à cette heure : <span class="ex">64 %</span>' },
+  semaine: { lib: 'Objectif semaine', quand: '9 → 15/11', pct: 88, ecart: '− 1 430 €', larg: 88, trait: 100,
+    s: 'résultat de la semaine <span class="ex">+ 1 120 €</span>' },
+  mois: { lib: 'Objectif du mois', quand: 'au 15/11', pct: 92, ecart: '− 2 690 €', larg: 92, trait: 100,
+    s: 'résultat du mois <span class="ex">+ 3 980 €</span>' },
+  trimestre: { lib: 'Objectif T4', quand: 'au 15/11', pct: 96, ecart: '− 2 140 €', larg: 96, trait: 100,
+    s: 'résultat du trimestre <span class="ex">+ 7 410 €</span>' },
+  annee: { lib: 'Objectif 2026', quand: 'au 15/11', pct: 97, ecart: '− 9 870 €', larg: 97, trait: 100,
+    s: 'résultat de l’année <span class="ex">+ 31 200 €</span>' },
+};
+function carteObjectif(per) {
+  const o = OBJ[per], ok = o.pct >= o.trait;
+  return `<button class="rf-carte"><div class="k">${o.lib}<em>${o.quand}</em></div><div class="v"><span class="ex">${o.pct} %</span><small class="ex">${o.ecart}</small></div>
+        <div class="rf-echelle"><i class="${ok ? '' : 'att'}" style="width:${o.larg}%"></i><b style="left:${o.trait}%;${o.trait >= 100 ? 'margin-left:-2px' : ''}"></b></div><div class="s">${o.s}</div></button>`;
+}
+const railB = per => `${tete('Dashboard magasin')}
   <div class="rf-rep"><div class="rf-rep__t">Atelier by – Halle<small>au 15/11</small></div>
     <div class="rf-cartes">
       <button class="rf-carte"><div class="k">Valeur<em>six trimestres</em></div><div class="v ex">100 328 €</div>${courbe([94.1, 95.8, 97.2, 98.0, 99.6, 100.3])}<div class="s"><span class="ex">+ 2,4 %</span> en trois mois</div></button>
       <button class="rf-carte"><div class="k">Note Google<em class="ex">287 avis</em></div><div class="v"><span class="ex">4,6</span>${etoiles(4.6)}<small class="ex">+ 9 ce mois</small></div>
         <div class="rf-echelle"><i style="width:60%"></i><b style="left:50%"></b></div><div class="rf-echelle-l"><span>4,0</span><span>cible 4,5</span><span>5,0</span></div></button>
-      <button class="rf-carte"><div class="k">Objectif du mois<em>au 15/11</em></div><div class="v"><span class="ex">92 %</span><small class="ex">− 2 690 €</small></div>
-        <div class="rf-echelle"><i class="att" style="width:92%"></i><b style="left:100%;margin-left:-2px"></b></div><div class="s ex">résultat du mois + 3 980 €</div></button>
+      ${carteObjectif(per)}
     </div></div>
   <div class="sidebar__groups">
-    ${groupe('Le magasin', [['Opérationnel', I.tdb], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', true], ['Temps morts', I.journal]])}
+    ${groupe('Le magasin', [['Opérationnel', I.tdb, '', per === 'jour'], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', per !== 'jour'], ['Temps morts', I.journal]])}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
     ${groupe('Assistants', [['Revue du soir', I.revue, '<span class="ex">à faire</span>'], ['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
   </div>`;
-const ongletsB = `<div class="page-tabs" style="margin:0">${['Semaine', 'Mois', 'Trimestre', 'Année'].map(o => `<button class="page-tabs__tab${o === 'Mois' ? ' is-on' : ''}">${o}</button>`).join('')}</div>`;
+const ONGLET = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
+const ongletsB = per => `<div class="page-tabs" style="margin:0">${['Semaine', 'Mois', 'Trimestre', 'Année'].map(o => `<button class="page-tabs__tab${o === ONGLET[per] ? ' is-on' : ''}">${o}</button>`).join('')}</div>`;
 
 /* ══ C — Les assistants d'abord : quatre cases, la revue du soir, puis ce qu'il reste à faire ═══════════════════════ */
 const railC = `${tete('Dashboard magasin')}${enseigne}
@@ -217,7 +240,9 @@ fs.writeFileSync(path.join(D, 'b2.html'), page('b2', 'les primes en jeu', railB2
 fs.writeFileSync(path.join(D, 'b3.html'), page('b3', 'le verdict', railB3, 'Opérationnel'));
 
 fs.writeFileSync(path.join(D, 'a.html'), page('a', 'les repères en liste', railA, 'Opérationnel'));
-fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB, 'Résultat', ongletsB));
+fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB('jour'), 'Opérationnel'));
+// La carte de l'objectif dans chaque onglet de Résultat.
+['semaine', 'mois', 'trimestre', 'annee'].forEach(per => fs.writeFileSync(path.join(D, 'b-' + per + '.html'), page('b', 'objectif ' + ONGLET[per].toLowerCase(), railB(per), 'Résultat', ongletsB(per))));
 fs.writeFileSync(path.join(D, 'c.html'), page('c', 'les assistants d’abord', railC, 'Opérationnel'));
 
 /* Les planches : les captures côte à côte (A, B, C ; puis B et ses trois variantes). */
@@ -228,11 +253,19 @@ function planche(nom, titre, L) {
 <body><div class="rf-planche" style="grid-template-columns:repeat(${L.length}, 1fr)">${L.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><img src="${l}.png" alt="${t}"></figure>`).join('')}</div></body></html>
 `);
 }
-const PB = ['b', 'B — Le tableau de bord dans le rail', 'chaque repère a sa forme ; Résultat réunit Semaine, Mois, Trimestre et Année en onglets'];
+const PB = ['b', 'B — Le tableau de bord dans le rail', 'chaque repère a sa forme ; l’objectif du jour, celui de la période dans les onglets de Résultat'];
 planche('planche', 'planche', [['a', 'A — Les repères en liste', 'le rail du Marketing tel quel ; les onze onglets rangés en trois groupes, les assistants en bas'],
   PB, ['c', 'C — Les assistants d’abord', 'quatre cases, la revue du soir en tête, puis ce qu’il reste à faire']]);
 planche('planche-b', 'B et ses variantes', [PB,
   ['b1', 'B1 — Douze mois', 'quatre cartes en grille : la valeur, la note Google, l’objectif et le résultat sur un an'],
   ['b2', 'B2 — Les primes en jeu', 'l’objectif et la note Google disent ce qu’ils rapportent à l’équipe ; la valeur en une ligne'],
   ['b3', 'B3 — Le verdict', 'chaque carte commence par une phrase ; « À regarder » mène où ça cloche']]);
-console.log('a, b, c, b1, b2, b3 (.html), planche.html, planche-b.html');
+// La carte de l'objectif écran par écran : le haut de chaque capture (le rail et les onglets de la page).
+const PO = [['b', 'Opérationnel (et tout écran hors Résultat)', 'l’objectif du jour'], ['b-semaine', 'Résultat › Semaine', 'l’objectif de la semaine'],
+  ['b-mois', 'Résultat › Mois', 'l’objectif du mois'], ['b-trimestre', 'Résultat › Trimestre', 'l’objectif du trimestre'], ['b-annee', 'Résultat › Année', 'l’objectif de l’année']];
+fs.writeFileSync(path.join(D, 'planche-objectif.html'), `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><title>Rail du dashboard franchisé — B, la carte de l’objectif</title>
+<link rel="stylesheet" href="${R}assets/ds/global.css"><link rel="stylesheet" href="rf.css"></head>
+<body><div class="rf-planche rf-planche--haut" style="grid-template-columns:repeat(${PO.length}, 1fr)">${PO.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><div class="rf-haut"><img src="${l}.png" alt="${t}"></div></figure>`).join('')}</div></body></html>
+`);
+console.log('a, b, b-semaine, b-mois, b-trimestre, b-annee, c, b1, b2, b3 (.html), planche.html, planche-b.html, planche-objectif.html');
