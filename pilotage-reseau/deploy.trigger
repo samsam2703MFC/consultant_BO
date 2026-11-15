@@ -24,3 +24,4 @@
 2026-11-15T14:39:59Z Adresse de l'API du Marketing dans config.php
 2026-11-15 15:39 — Offres (marge, 2/3, Newsletter), Mon marketing (campagnes en cours), Réseaux sociaux intégré
 2026-11-15T19:07:14Z Notation IA : juger le comptoir et non la photo, critères et photo type du rayon
+2026-11-15T19:12:01Z Boîte mail du magasin (IMAP/SMTP OVH, modèles, messages automatiques, créer une offre depuis un e-mail)
