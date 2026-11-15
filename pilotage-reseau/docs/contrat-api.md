@@ -2155,7 +2155,7 @@ correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`)
 
 Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
 L'Atelier By » (Sombreffe, tiré de son fichier Excel), avec la reprise des chiffres de l'année passée, du budget
-validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/tresorerie.php`,
+validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/franchise/tresorerie.php`,
 `public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
 
 **Les repères** (`GET /tresorerie/references`, lourd : le dashboard le demande avec `_cache=600`, `rafraichir=1` sur

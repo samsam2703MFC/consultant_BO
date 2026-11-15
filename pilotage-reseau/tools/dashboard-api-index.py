@@ -31,9 +31,9 @@ def lire(p):
 def fonctions_php():
     """Chaque fonction PHP de src/ : fichier, ligne, première phrase de son commentaire."""
     out = {}
-    for nom in sorted(os.listdir(SRC)):
-        if not nom.endswith('.php'):
-            continue
+    fichiers = [n for n in sorted(os.listdir(SRC)) if n.endswith('.php')]
+    fichiers += ['franchise/' + n for n in sorted(os.listdir(os.path.join(SRC, 'franchise'))) if n.endswith('.php')] if os.path.isdir(os.path.join(SRC, 'franchise')) else []
+    for nom in fichiers:
         texte = lire(os.path.join(SRC, nom))
         for m in re.finditer(r'(/\*\*(?:(?!\*/).)*\*/\s*)?\nfunction\s+(\w+)\s*\(', texte, re.S):
             doc, fn = m.group(1) or '', m.group(2)
@@ -81,9 +81,9 @@ def prefixes_routeurs(prefixes):
     for p in prefixes:
         if p['prefixe'] is not None:
             continue
-        for nom in os.listdir(SRC):
-            if not nom.endswith('.php'):
-                continue
+        noms = [n for n in os.listdir(SRC) if n.endswith('.php')]
+        noms += ['franchise/' + n for n in os.listdir(os.path.join(SRC, 'franchise')) if n.endswith('.php')] if os.path.isdir(os.path.join(SRC, 'franchise')) else []
+        for nom in noms:
             t = lire(os.path.join(SRC, nom))
             m = re.search(r'function\s+' + p['handler'] + r'\s*\([^)]*\)[^{]*\{\s*if \(\$path !== \'([^\']+)\'', t)
             if m:
@@ -165,7 +165,7 @@ def main():
                       'magasin': ouvert(ch), 'routes': handlers})
 
     sortie = {'genere': datetime.now(timezone.utc).strftime('%Y-%m-%dT%H:%M:%SZ'),
-              'source': 'tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/acces.php',
+              'source': 'tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php',
               'base': '/api/cockpit', 'accesMagasin': franchise, 'routes': liste}
     with open(os.path.join(DASH, 'api-index.json'), 'w', encoding='utf-8') as f:
         json.dump(sortie, f, ensure_ascii=False, indent=1)

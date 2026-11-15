@@ -35,7 +35,7 @@ $SOURCES = [
 
 /* --- découper les fichiers en fonctions -------------------------------------- */
 $fns = [];
-foreach (glob($RACINE . '/src/*.php') as $f) {
+foreach (array_merge(glob($RACINE . '/src/*.php'), glob($RACINE . '/src/franchise/*.php') ?: []) as $f) {
     $t = (string) file_get_contents($f);
     $nom = basename($f);
     if (!preg_match_all('/^function (ep_[a-z0-9_]+|wr_[a-z0-9_]+)\s*\(/m', $t, $m, PREG_OFFSET_CAPTURE)) { continue; }

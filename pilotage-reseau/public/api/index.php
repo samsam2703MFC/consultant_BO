@@ -55,7 +55,7 @@ require __DIR__ . '/../../src/stats_ventes.php';
 require __DIR__ . '/../../src/historique_ventes.php';   // L'historique des ventes, 18 mois, pour l'assistant (14/11/2026)
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
-require __DIR__ . '/../../src/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
+require __DIR__ . '/../../src/franchise/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
@@ -73,7 +73,7 @@ require __DIR__ . '/../../src/objectifs_produits.php';
 require __DIR__ . '/../../src/jours_creux.php';
 require __DIR__ . '/../../src/scoring.php';
 require __DIR__ . '/../../src/ventes_pro.php';
-require __DIR__ . '/../../src/temps_morts.php';
+require __DIR__ . '/../../src/franchise/temps_morts.php';
 require __DIR__ . '/../../src/plano_std.php';
 require __DIR__ . '/../../src/rayons_photos.php';
 require __DIR__ . '/../../src/assortiment.php';
@@ -102,7 +102,7 @@ require __DIR__ . '/../../src/commandes.php';
 require __DIR__ . '/../../src/canaux_offres.php';
 require __DIR__ . '/../../src/invendus.php';
 require __DIR__ . '/../../src/caisse.php';
-require __DIR__ . '/../../src/dashboard_semaine.php';
+require __DIR__ . '/../../src/franchise/dashboard_semaine.php';
 require __DIR__ . '/../../src/production_plan.php';
 require __DIR__ . '/../../src/production_flux.php';
 require __DIR__ . '/../../src/croisements.php';
@@ -149,9 +149,9 @@ require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : 
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
-require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
-require __DIR__ . '/../../src/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
-require __DIR__ . '/../../src/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
+require __DIR__ . '/../../src/franchise/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
+require __DIR__ . '/../../src/franchise/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
+require __DIR__ . '/../../src/franchise/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');

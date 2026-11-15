@@ -27,6 +27,11 @@ lit par son API : `src/panel_api.php` et `src/erp_api.php`, avec des identifiant
 - On écrit en français : code commenté, messages de commit, interface. Les commits sont atomiques.
 - Une page autonome appelle son API à côté d'elle, en chemin relatif, et l'alias Apache la sert à la racine.
 
+## Le cockpit franchisé (`/dashboard`)
+Le dashboard magasin : l'écran dans `public/dashboard/`, les modules serveur qui ne servent qu'à lui dans `src/franchise/`
+(lire `src/franchise/LISEZMOI.md`), le reste partagé avec le siège dans `src/`. L'index de son API :
+`public/dashboard/api-index.json`, régénéré par `python3 tools/dashboard-api-index.py` après chaque route ajoutée.
+
 ## Module RH · Dimona (`/hr`)
 Lire `docs/dimona.md`. En bref :
 - **Code** : `src/hr/` (namespace `Hr\`, autoload `src/hr/autoload.php`, assemblage `src/hr/bootstrap.php`).

@@ -1,6 +1,6 @@
 {
- "genere": "2026-11-15T14:33:47Z",
- "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/acces.php",
+ "genere": "2026-11-15T14:34:50Z",
+ "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
   "/exploitation",
@@ -277,7 +277,7 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/dashboard_marketing.php:59",
+     "source": "src/franchise/dashboard_marketing.php:59",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -298,7 +298,7 @@
      ],
      "chemin": "/dashboard/social/ouvrir…",
      "handler": "dsRoute",
-     "source": "src/dashboard_marketing.php:87",
+     "source": "src/franchise/dashboard_marketing.php:87",
      "resume": ""
     }
    ]
@@ -609,7 +609,7 @@
      ],
      "chemin": "/exploitation/offres-client",
      "handler": "ep_offres_client",
-     "source": "src/offres_client.php:107",
+     "source": "src/franchise/offres_client.php:107",
      "resume": "les offres du magasin, les plus récentes d'abord, et leurs comptes."
     },
     {
@@ -618,7 +618,7 @@
      ],
      "chemin": "/exploitation/offres-client",
      "handler": "wr_offres_client",
-     "source": "src/offres_client.php:242",
+     "source": "src/franchise/offres_client.php:242",
      "resume": "shop, action: creer | modifier | archiver | reactiver | supprimer | convertir, id?, offre?, …}"
     }
    ]
@@ -639,7 +639,7 @@
      ],
      "chemin": "/exploitation/offres-client/employes",
      "handler": "ep_offres_client_employes",
-     "source": "src/offres_client.php:143",
+     "source": "src/franchise/offres_client.php:143",
      "resume": "l'équipe du magasin (id, prénom et initiale), pour la conversion."
     }
    ]
@@ -660,7 +660,7 @@
      ],
      "chemin": "/exploitation/offres-client/pdf",
      "handler": "ep_offres_client_pdf",
-     "source": "src/offres_client.php:155",
+     "source": "src/franchise/offres_client.php:155",
      "resume": "le PDF de TF Buddy, tel quel (sort, puis exit)."
     }
    ]
@@ -930,7 +930,7 @@
      ],
      "chemin": "/exploitation/semaine-jours",
      "handler": "ep_exploitation_semaine_jours",
-     "source": "src/dashboard_semaine.php:78",
+     "source": "src/franchise/dashboard_semaine.php:78",
      "resume": "la semaine (lundi → dimanche) de la date, jour par jour : contrôles obligatoires et poubelle."
     }
    ]
@@ -951,7 +951,7 @@
      ],
      "chemin": "/exploitation/temps-morts",
      "handler": "ep_temps_morts",
-     "source": "src/temps_morts.php:185",
+     "source": "src/franchise/temps_morts.php:185",
      "resume": "l'onglet « Temps morts » du dashboard magasin : le jour (trous un par un, heure par heure), son habitude (les 4 mêmes jours de semaine d'avant), la semaine du lundi au dimanche jour par jour, et la semaine d'avant."
     }
    ]
@@ -1815,7 +1815,7 @@
      ],
      "chemin": "/tresorerie/budget",
      "handler": "ep_tresorerie_budget",
-     "source": "src/tresorerie.php:429",
+     "source": "src/franchise/tresorerie.php:429",
      "resume": "l'onglet « Budget & étude » (lecture seule) : les exercices du plan (fiche du budget, étude de marché, CA au budget et théorique de chaque mois), les postes de charges et les étapes du compte de résultat, le P&L réel du magasin, les liens pour modifier (cockpi"
     }
    ]
@@ -1839,7 +1839,7 @@
      ],
      "chemin": "/tresorerie/plan",
      "handler": "ep_tresorerie_plan",
-     "source": "src/tresorerie.php:507",
+     "source": "src/franchise/tresorerie.php:507",
      "resume": "le plan tel qu'il est enregistré, sa version, et le premier lundi proposé."
     },
     {
@@ -1848,7 +1848,7 @@
      ],
      "chemin": "/tresorerie/plan",
      "handler": "wr_tresorerie_plan",
-     "source": "src/tresorerie.php:557",
+     "source": "src/franchise/tresorerie.php:557",
      "resume": "{shop, version, donnees}. La version est celle qu'on a lue : si le plan a changé depuis (un autre écran), rien n'est écrit, 409 et le plan tel qu'il est."
     }
    ]
@@ -1869,7 +1869,7 @@
      ],
      "chemin": "/tresorerie/references",
      "handler": "ep_tresorerie_references",
-     "source": "src/tresorerie.php:461",
+     "source": "src/franchise/tresorerie.php:461",
      "resume": "l'année passée, le budget et le réalisé, semaine par semaine sur la fenêtre du plan et mois par mois de janvier de son année à décembre de sa dernière."
     }
    ]

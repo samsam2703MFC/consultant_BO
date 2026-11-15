@@ -118,7 +118,7 @@ const MS_MOTIFS_API = [
 function msIndex(string $racine): array
 {
     $fns = [];
-    foreach (glob($racine . '/src/*.php') ?: [] as $f) {
+    foreach (array_merge(glob($racine . '/src/*.php') ?: [], glob($racine . '/src/franchise/*.php') ?: []) as $f) {
         $t = (string) file_get_contents($f);
         if (!preg_match_all('/^(?:function ([a-zA-Z_]\w*)\s*\(|(?:final |abstract )?class \w+)/m', $t, $m, PREG_OFFSET_CAPTURE)) { continue; }
         foreach ($m[0] as $i => [, $pos]) {
@@ -189,7 +189,7 @@ function msSuivre(string $depart, array $index): array
 function msTablesCreees(string $racine): array
 {
     $out = [];
-    $fichiers = array_merge(glob($racine . '/src/*.php') ?: [], [$racine . '/sql/schema.sql']);
+    $fichiers = array_merge(glob($racine . '/src/*.php') ?: [], glob($racine . '/src/franchise/*.php') ?: [], [$racine . '/sql/schema.sql']);
     foreach ($fichiers as $f) {
         if (!is_file($f)) { continue; }
         if (preg_match_all('/CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?\s+`?([a-z][a-z0-9_]+)`?/i', (string) file_get_contents($f), $m)) {

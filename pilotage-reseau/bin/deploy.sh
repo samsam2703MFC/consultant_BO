@@ -161,7 +161,7 @@ if command -v node >/dev/null 2>&1; then
 else
   warn "node absent : syntaxe JS non vérifiée avant livraison."
 fi
-for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/public/api/*.php; do
+for f in "$REPO_SRC"/src/*.php "$REPO_SRC"/src/franchise/*.php "$REPO_SRC"/public/api/*.php; do
   php -l "$f" >/dev/null || { warn "SYNTAXE PHP : $f"; exit 1; }
 done
 
