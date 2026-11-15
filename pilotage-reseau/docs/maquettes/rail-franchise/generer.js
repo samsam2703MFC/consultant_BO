@@ -145,15 +145,23 @@ const railB = per => `${tete('Dashboard magasin')}
   <div class="sidebar__groups">
     ${groupe('Le magasin', [['Opérationnel', I.tdb, '', per === 'jour'], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Résultat', I.perf, '', per !== 'jour'], ['Temps morts', I.journal]])}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
-    ${groupe('Assistants', [['Plan d’action', I.formulaires, '<span class="ex">3</span>'], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
   </div>`;
 /* Les trois avatars du haut à droite (retouche du 15/11/2026 : « la valeur doit être en haut à droite avec l'avatar
  * coach et l'avatar revue du jour ; les trois avatars de taille et de forme identiques ») : un cercle de 36 px, le même
  * pour les trois, une icône au trait ; à côté, ce qu'il dit. Bordeaux quand il attend un geste (la revue à faire).
- * Un clic ouvre : la valeur, son tiroir (la formule, six trimestres) ; le coach, la prochaine visite et le plan
- * d'action ; la revue, l'assistant du soir, une question à la fois. */
-const avatar = (d, k, v, vif) => `<button class="rf-av${vif ? ' vif' : ''}"><span class="rf-av__o">${ico(d)}</span><span><span class="rf-av__k">${k}</span><span class="rf-av__v">${v}</span></span></button>`;
-const AVATARS = `<div class="rf-avs">${avatar(I.euro, 'Valeur', '<span class="ex">100 328 €</span>')}${avatar(I.personne, 'Coach', 'visite <span class="ex">le 19/11</span>')}${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', true)}</div>`;
+ * Un clic ouvre : la valeur, son tiroir (la formule, six trimestres) ; le coach, les assistants ; la revue, l'assistant
+ * du soir, une question à la fois.
+ * « Coach, c'est l'assistant » (15/11/2026) : l'avatar Coach réunit les assistants du magasin — le groupe « Assistants »
+ * quitte le rail (une donnée, une place). Son panneau s'ouvre sous les avatars : bordé, sans ombre (§2). */
+const avatar = (d, k, v, vif, on) => `<button class="rf-av${vif ? ' vif' : ''}${on ? ' on' : ''}"${on ? ' aria-expanded="true"' : ''}><span class="rf-av__o">${ico(d)}</span><span><span class="rf-av__k">${k}</span><span class="rf-av__v">${v}</span></span></button>`;
+const COACH = [['Plan d’action', I.formulaires, '<span class="ex">3 points ouverts</span>', 'les points notés à la dernière visite'],
+  ['Campagne', I.campagnes, '<span class="ex">en cours</span>', 'l’objectif produits du mois, où l’on en est'],
+  ['Note du jour', I.ecrire, 'à écrire', 'ce qui explique la journée'],
+  ['Réclamation fournisseur', I.commentaires, '', 'une livraison, un produit, une photo']];
+const panneauCoach = `<div class="rf-pop" role="dialog" aria-label="Coach"><div class="rf-pop__t">Coach<small>vos assistants</small></div>
+  ${COACH.map(([l, d, e, s]) => `<a class="rf-pop__l" href="#">${ico(d)}<span class="rf-pop__x"><span>${l}</span><small>${s}</small></span>${e ? `<span class="rf-etat">${e}</span>` : ''}</a>`).join('')}</div>`;
+const avatars = coachOuvert => `<div class="rf-avs">${avatar(I.euro, 'Valeur', '<span class="ex">100 328 €</span>')}${avatar(I.personne, 'Coach', '<span class="ex">3 à faire</span>', false, coachOuvert)}${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', true)}${coachOuvert ? panneauCoach : ''}</div>`;
+const AVATARS = avatars(false);
 const ONGLET = { semaine: 'Semaine', mois: 'Mois', trimestre: 'Trimestre', annee: 'Année' };
 const ongletsB = per => `<div class="page-tabs" style="margin:0">${['Semaine', 'Mois', 'Trimestre', 'Année'].map(o => `<button class="page-tabs__tab${o === ONGLET[per] ? ' is-on' : ''}">${o}</button>`).join('')}</div>`;
 
@@ -250,6 +258,7 @@ fs.writeFileSync(path.join(D, 'b3.html'), page('b3', 'le verdict', railB3, 'Opé
 
 fs.writeFileSync(path.join(D, 'a.html'), page('a', 'les repères en liste', railA, 'Opérationnel'));
 fs.writeFileSync(path.join(D, 'b.html'), page('b', 'le tableau de bord dans le rail', railB('jour'), 'Opérationnel', '', AVATARS));
+fs.writeFileSync(path.join(D, 'b-coach.html'), page('b', 'le coach ouvert', railB('jour'), 'Opérationnel', '', avatars(true)));
 // La carte de l'objectif dans chaque onglet de Résultat.
 ['semaine', 'mois', 'trimestre', 'annee'].forEach(per => fs.writeFileSync(path.join(D, 'b-' + per + '.html'), page('b', 'objectif ' + ONGLET[per].toLowerCase(), railB(per), 'Résultat', ongletsB(per), AVATARS)));
 fs.writeFileSync(path.join(D, 'c.html'), page('c', 'les assistants d’abord', railC, 'Opérationnel'));
@@ -277,4 +286,4 @@ fs.writeFileSync(path.join(D, 'planche-objectif.html'), `<!DOCTYPE html>
 <link rel="stylesheet" href="${R}assets/ds/global.css"><link rel="stylesheet" href="rf.css"></head>
 <body><div class="rf-planche rf-planche--haut" style="grid-template-columns:repeat(${PO.length}, 1fr)">${PO.map(([l, t, s]) => `<figure><figcaption>${t}<small>${s}</small></figcaption><div class="rf-haut"><img src="${l}.png" alt="${t}"></div></figure>`).join('')}</div></body></html>
 `);
-console.log('a, b, b-semaine, b-mois, b-trimestre, b-annee, c, b1, b2, b3 (.html), planche.html, planche-b.html, planche-objectif.html');
+console.log('a, b, b-coach, b-semaine, b-mois, b-trimestre, b-annee, c, b1, b2, b3 (.html), planche.html, planche-b.html, planche-objectif.html');

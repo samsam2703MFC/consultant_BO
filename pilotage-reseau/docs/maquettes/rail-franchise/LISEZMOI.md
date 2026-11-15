@@ -34,13 +34,14 @@ et à côté, en deux lignes, ce qu'il dit.
 | avatar | icône | à côté | un clic ouvre | lecture |
 |---|---|---|---|---|
 | Valeur | l'euro | « Valeur · 100 328 € » | le tiroir de la valeur (la formule, six trimestres), comme la pastille d'aujourd'hui | `/ventes/mensuel?shop=&mois=30` |
-| Coach | une personne | « Coach · visite le 19/11 » | le coach du magasin (le consultant, « business coach » des SOP) : sa prochaine visite, le plan d'action | le module des visites (rôle franchisé) |
+| Coach | une personne | « Coach · 3 à faire » | **les assistants** du magasin, dans un panneau sous les avatars (`b-coach.png`) : plan d'action (3 points ouverts), campagne (en cours), note du jour (à écrire), réclamation fournisseur | le module des visites (plan d'action, campagne), `/exploitation/notes` |
 | Revue du soir | la planchette et la lune | « Revue du soir · à faire » | l'assistant du soir, une question à la fois | `/soir/revue` (`?leger=1` pour l'état) |
 
 L'avatar qui attend un geste se teinte de bordeaux (la revue à faire) ; il redevient comme les deux autres une fois la
-revue faite (« faite à 19 h 40 »). Chaque donnée à une seule place : la carte de la valeur et l'entrée « Revue du
-soir » quittent le rail. Le coach n'affiche pas de nom dans la maquette : il viendra du module des visites. Le nom
-« Revue du soir » est celui de l'écran d'aujourd'hui ; « revue du jour » si on le renomme.
+revue faite (« faite à 19 h 40 »). Chaque donnée à une seule place : la carte de la valeur et tout le groupe « Assistants » quittent le rail ; la revue
+a son avatar, les autres assistants passent dans le coach (« coach, c'est l'assistant », 15/11/2026). Le panneau du
+coach est bordé, sans ombre (§2). « 3 à faire » compte les points ouverts du plan d'action. Le nom « Revue du soir » est
+celui de l'écran d'aujourd'hui ; « revue du jour » si on le renomme.
 
 ## B retouchée : l'objectif du jour
 

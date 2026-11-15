@@ -7,6 +7,10 @@
   "rail": 1000,
   "tientDans1000": true
  },
+ "b-coach": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "b-semaine": {
   "rail": 1000,
   "tientDans1000": true

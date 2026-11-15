@@ -11,7 +11,7 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/rail-franchise/';
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
   const err = []; p.on('pageerror', e => err.push(e.message)); p.on('requestfailed', r => err.push('échec ' + r.url()));
   const mesures = {};
-  for (const m of ['a', 'b', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
+  for (const m of ['a', 'b', 'b-coach', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
     await p.setViewportSize({ width: 1440, height: 1000 });
     await p.goto(BASE + m + '.html', { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
