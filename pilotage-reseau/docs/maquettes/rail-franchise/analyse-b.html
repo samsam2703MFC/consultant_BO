@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard magasin — Analyse — B · Le grand tableau (maquette)</title>
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="rf.css"><link rel="stylesheet" href="final.css"><link rel="stylesheet" href="marketing.css"><link rel="stylesheet" href="analyse.css">
+</head><body>
+<div class="workspace">
+<nav class="sidebar" aria-label="Navigation du dashboard"><div class="sidebar__head"><img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
+  <div class="sidebar__groups"><div class="sidebar__group"><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v14H3zM3 6l9 7 9-7"></path></svg><span class="sidebar__item-label">Boîte mail</span></button></div>
+  <div class="sidebar__group"><div class="sidebar__group-label">La journée</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Opérationnel</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Tâches</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Temps morts</span></button></div><div class="sidebar__group"><div class="sidebar__group-label">Les chiffres</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Semaine</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Mois</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Année</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Trésorerie</span></button></div><div class="sidebar__group"><div class="sidebar__group-label">Vendre</div><button class="sidebar__item is-active"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Analyse</span><span class="an-neuf">nouveau</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Produits</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Promotions</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5"></path></svg><span class="sidebar__item-label">Offres</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9"></path></svg><span class="sidebar__item-label">Primes</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Concurrence</span></button></div><div class="sidebar__group"><div class="sidebar__group-label">Marketing</div><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v12H4zM2 20h20M9 8l4 2-4 2z"></path></svg><span class="sidebar__item-label">Mon marketing</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"></path></svg><span class="sidebar__item-label">Réseaux sociaux</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg><span class="sidebar__item-label">Fidélité</span></button><button class="sidebar__item"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16"></path></svg><span class="sidebar__item-label">Mon catalogue</span></button></div></div></nav>
+<div class="workspace__main mk-main">
+  <div class="mk-barre"><div class="db-vt"><div class="kk">Atelier by – Halle</div><h1>Analyse <small class="an-st">· B le grand tableau</small></h1></div><span style="flex:1"></span>
+    <button class="btn">↻ Relire</button><span class="an-lu">chiffres lus le 15/11/2026 · S34 → S46 : du 17 août au 15 nov.</span></div>
+  <p class="mk-note"><span class="rf-pill">Proposition B — le grand tableau : chaque produit, toutes ses données, groupé par famille (chiffres réels de Halle)</span></p>
+  <div class="an-filtres"><div class="an-seg"><button class="">4 semaines</button><button class="on">13 semaines</button><button class="">Depuis l’ouverture</button><button class="">Un mois…</button><button class="">Une saison…</button><button class="">Du … au …</button></div>
+    <span class="an-k">comparé à</span><div class="an-seg an-seg--c"><button class="on">Période précédente</button><button class="">Moyenne du réseau</button><button class=" off">N-1 (dès février 2027)</button></div>
+    <span class="an-sp"></span><label class="an-sel">Famille <b>Toutes ▾</b></label><button class="an-btn"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M4 19h16"></path></svg>Exporter</button></div>
+  <section class="an-carte an-carte--t"><div class="an-outils"><label class="an-rech"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M11 4a7 7 0 1 0 0 14 7 7 0 0 0 0-14zM21 21l-5.2-5.2"></path></svg><span>Chercher un produit, une catégorie…</span></label>
+      <span class="an-chip on">Toutes</span><span class="an-chip">En hausse 50</span><span class="an-chip">En baisse 19</span><span class="an-chip">Nouveaux 72</span><span class="an-chip">Marge sous 40 %</span><span class="an-chip">Sans coût de recette 88</span>
+      <span class="an-sp"></span><span class="mu">Grouper par <b>famille ▾</b> · trier par <b>CA ▾</b> · colonnes <b>10 ▾</b></span></div>
+    <table class="an-t an-t--g"><thead><tr><th>Produit</th><th class="n">Prix TTC</th><th class="n">Coût recette</th><th class="n">Coefficient</th><th class="n">Pièces</th><th class="n">CA TTC</th><th class="n">Marge réalisée</th><th class="n">Marge %</th><th class="n">6 sem. / 6 d’avant</th><th class="n">Oct. / sept.</th></tr></thead>
+    <tbody><tr class="an-sous"><td colspan="10"><b>Viennoiserie</b> · 21 références · 49,8 k€ · marge 56,1 % · <span class="an-f up">▲ +14,5 %</span><span class="an-plus">+ 12 autres ▾</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Croissant</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,80 €</td><td class="n">0,68 €</td>
+      <td class="n"><span class="mz att">× 2,5</span><small>cible × 2,7</small></td>
+      <td class="n">5 291<small>407,0 / sem.</small></td><td class="n">9 413 €<small>5,6 % du CA</small></td>
+      <td class="n">5 272 €<small>sur 8 890 € HT</small></td><td class="n"><span class="mz att">59,3 %</span></td>
+      <td class="n"><span class="an-f up">▲ +5,5 %</span></td>
+      <td class="n"><span class="an-f up">▲ +12,3 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Pain au Chocolat</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,90 €</td><td class="n">0,80 €</td>
+      <td class="n"><span class="mz att">× 2,2</span><small>cible × 2,7</small></td>
+      <td class="n">4 772<small>367,1 / sem.</small></td><td class="n">8 969 €<small>5,3 % du CA</small></td>
+      <td class="n">4 610 €<small>sur 8 450 € HT</small></td><td class="n"><span class="mz att">54,6 %</span></td>
+      <td class="n"><span class="an-f up">▲ +7,4 %</span></td>
+      <td class="n"><span class="an-f up">▲ +10,5 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Pain au Chocolat Nappé</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">2,10 €</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span><small>cible × 2,7</small></td>
+      <td class="n">3 581<small>275,5 / sem.</small></td><td class="n">7 451 €<small>4,4 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-f up">▲ +12,8 %</span></td>
+      <td class="n"><span class="an-f up">▲ +13,7 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Couque au Beurre</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,80 €</td><td class="n">0,74 €</td>
+      <td class="n"><span class="mz att">× 2,3</span><small>cible × 2,7</small></td>
+      <td class="n">2 455<small>188,8 / sem.</small></td><td class="n">4 415 €<small>2,6 % du CA</small></td>
+      <td class="n">2 354 €<small>sur 4 170 € HT</small></td><td class="n"><span class="mz att">56,5 %</span></td>
+      <td class="n"><span class="an-f up">▲ +6,0 %</span></td>
+      <td class="n"><span class="an-f up">▲ +8,4 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Suisse</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,90 €</td><td class="n">0,79 €</td>
+      <td class="n"><span class="mz att">× 2,3</span><small>cible × 2,7</small></td>
+      <td class="n">2 143<small>164,8 / sem.</small></td><td class="n">4 070 €<small>2,4 % du CA</small></td>
+      <td class="n">2 145 €<small>sur 3 834 € HT</small></td><td class="n"><span class="mz att">55,9 %</span></td>
+      <td class="n"><span class="an-f up">▲ +16,7 %</span></td>
+      <td class="n"><span class="an-f up">▲ +15,1 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Huit</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">2,20 €</td><td class="n">0,97 €</td>
+      <td class="n"><span class="mz att">× 2,2</span><small>cible × 2,7</small></td>
+      <td class="n">1 818<small>139,8 / sem.</small></td><td class="n">3 791 €<small>2,2 % du CA</small></td>
+      <td class="n">1 828 €<small>sur 3 584 € HT</small></td><td class="n"><span class="mz att">51,0 %</span></td>
+      <td class="n"><span class="an-f up">▲ +15,1 %</span></td>
+      <td class="n"><span class="an-f up">▲ +11,5 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Baulus</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,80 €</td><td class="n">0,76 €</td>
+      <td class="n"><span class="mz att">× 2,2</span><small>cible × 2,7</small></td>
+      <td class="n">1 203<small>92,5 / sem.</small></td><td class="n">2 142 €<small>1,3 % du CA</small></td>
+      <td class="n">1 107 €<small>sur 2 023 € HT</small></td><td class="n"><span class="mz att">54,7 %</span></td>
+      <td class="n"><span class="an-f warn">▼ −11,4 %</span></td>
+      <td class="n"><span class="an-f flat">▶ −4,6 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Tortillon</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">1,70 €</td><td class="n">0,55 €</td>
+      <td class="n"><span class="mz ok">× 2,9</span><small>cible × 2,7</small></td>
+      <td class="n">1 123<small>86,4 / sem.</small></td><td class="n">1 909 €<small>1,1 % du CA</small></td>
+      <td class="n">1 175 €<small>sur 1 797 € HT</small></td><td class="n"><span class="mz ok">65,4 %</span></td>
+      <td class="n"><span class="an-f flat">▶ −0,8 %</span></td>
+      <td class="n"><span class="an-f up">▲ +6,8 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#8D1D2C"></span><span class="t">Couque à la Crème</span><small>Viennoiserie Ind.</small></td>
+      <td class="n">3,50 €</td><td class="n">0,68 €</td>
+      <td class="n"><span class="mz ok">× 4,8</span><small>cible × 2,7</small></td>
+      <td class="n">525<small>40,4 / sem.</small></td><td class="n">1 838 €<small>1,1 % du CA</small></td>
+      <td class="n">1 374 €<small>sur 1 733 € HT</small></td><td class="n"><span class="mz ok">79,3 %</span></td>
+      <td class="n"><span class="an-f warn">▼ −9,1 %</span></td>
+      <td class="n"><span class="an-f warn">▼ −8,8 %</span></td></tr><tr class="an-sous"><td colspan="10"><b>Tartes</b> · 76 références · 38,7 k€ · marge 58,1 % · <span class="an-f up">▲ +6,6 %</span><span class="an-plus">+ 72 autres ▾</span></td></tr><tr><td class="nm"><span class="pt" style="background:#C08A2B"></span><span class="t">Brownies</span><small>Tartes – Ø 28 cm</small></td>
+      <td class="n">24,90 €</td><td class="n">8,48 €</td>
+      <td class="n"><span class="mz ok">× 2,8</span><small>cible × 2,7</small></td>
+      <td class="n">209<small>16,1 / sem.</small></td><td class="n">2 979 €<small>1,8 % du CA</small></td>
+      <td class="n">1 796 €<small>au taux de la recette</small></td><td class="n"><span class="mz ok">63,9 %</span></td>
+      <td class="n"><span class="an-v att">nouveau</span></td>
+      <td class="n"><span class="an-f mu">—</span></td></tr><tr><td class="nm"><span class="pt" style="background:#C08A2B"></span><span class="t">1/4</span><small>Tartes</small></td>
+      <td class="n">—</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span></td>
+      <td class="n">466<small>35,8 / sem.</small></td><td class="n">2 749 €<small>1,6 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-v ko">arrêté</span></td>
+      <td class="n"><span class="an-f down">▼ −90,5 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#C08A2B"></span><span class="t">Fromage &amp; Spéculoos</span><small>Tartissières - 19Ø</small></td>
+      <td class="n">19,90 €</td><td class="n">9,23 €</td>
+      <td class="n"><span class="mz att">× 2</span><small>cible × 2,2</small></td>
+      <td class="n">145<small>11,2 / sem.</small></td><td class="n">2 581 €<small>1,5 % du CA</small></td>
+      <td class="n">1 095 €<small>sur 2 434 € HT</small></td><td class="n"><span class="mz att">45,0 %</span></td>
+      <td class="n"><span class="an-f down">▼ −19,6 %</span></td>
+      <td class="n"><span class="an-f down">▼ −15,4 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#C08A2B"></span><span class="t">1/2</span><small>Tartes</small></td>
+      <td class="n">—</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span></td>
+      <td class="n">223<small>17,2 / sem.</small></td><td class="n">2 431 €<small>1,4 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-v ko">arrêté</span></td>
+      <td class="n"><span class="an-f down">▼ −91,7 %</span></td></tr><tr class="an-sous"><td colspan="10"><b>Boulangerie</b> · 29 références · 37,1 k€ · marge 54,1 % · <span class="an-f up">▲ +8,6 %</span><span class="an-plus">+ 25 autres ▾</span></td></tr><tr><td class="nm"><span class="pt" style="background:#3F7A52"></span><span class="t">Pain Doré</span><small>Pain</small></td>
+      <td class="n">2,90 €</td><td class="n">1,27 €</td>
+      <td class="n"><span class="mz att">× 2,2</span><small>cible × 2,2</small></td>
+      <td class="n">2 167<small>166,7 / sem.</small></td><td class="n">6 221 €<small>3,7 % du CA</small></td>
+      <td class="n">3 120 €<small>sur 5 878 € HT</small></td><td class="n"><span class="mz att">53,1 %</span></td>
+      <td class="n"><span class="an-f up">▲ +11,1 %</span></td>
+      <td class="n"><span class="an-f up">▲ +5,1 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#3F7A52"></span><span class="t">Pain 10 Céréales</span><small>Pain</small></td>
+      <td class="n">3,20 €</td><td class="n">1,27 €</td>
+      <td class="n"><span class="mz att">× 2,4</span><small>cible × 2,2</small></td>
+      <td class="n">1 813<small>139,5 / sem.</small></td><td class="n">5 754 €<small>3,4 % du CA</small></td>
+      <td class="n">3 123 €<small>sur 5 430 € HT</small></td><td class="n"><span class="mz att">57,5 %</span></td>
+      <td class="n"><span class="an-f up">▲ +10,2 %</span></td>
+      <td class="n"><span class="an-f up">▲ +17,3 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#3F7A52"></span><span class="t">Pain Demi-Gris</span><small>Pain</small></td>
+      <td class="n">2,90 €</td><td class="n">1,27 €</td>
+      <td class="n"><span class="mz att">× 2,2</span><small>cible × 2,2</small></td>
+      <td class="n">1 897<small>145,9 / sem.</small></td><td class="n">5 458 €<small>3,2 % du CA</small></td>
+      <td class="n">2 742 €<small>sur 5 157 € HT</small></td><td class="n"><span class="mz att">53,2 %</span></td>
+      <td class="n"><span class="an-f flat">▶ −0,3 %</span></td>
+      <td class="n"><span class="an-f flat">▶ +2,7 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#3F7A52"></span><span class="t">Baguette Tradition 500 g.</span><small>Petite Boulangerie</small></td>
+      <td class="n">2,20 €</td><td class="n">1,47 €</td>
+      <td class="n"><span class="mz ko">× 1,4</span><small>cible × 2,2</small></td>
+      <td class="n">2 361<small>181,6 / sem.</small></td><td class="n">5 192 €<small>3,1 % du CA</small></td>
+      <td class="n">1 449 €<small>sur 4 909 € HT</small></td><td class="n"><span class="mz ko">29,5 %</span></td>
+      <td class="n"><span class="an-f up">▲ +12,6 %</span></td>
+      <td class="n"><span class="an-f up">▲ +21,4 %</span></td></tr><tr class="an-sous"><td colspan="10"><b>Pâtisserie</b> · 20 références · 13,6 k€ · marge 64,2 % · <span class="an-f flat">▶ +3,3 %</span><span class="an-plus">+ 16 autres ▾</span></td></tr><tr><td class="nm"><span class="pt" style="background:#5C6F91"></span><span class="t">Entremet 120Ø -  Duo Chocolat</span><small>Entremets - 4/6 personnes</small></td>
+      <td class="n">14,90 €</td><td class="n">4,96 €</td>
+      <td class="n"><span class="mz ok">× 2,8</span><small>cible × 2,2</small></td>
+      <td class="n">172<small>13,2 / sem.</small></td><td class="n">2 563 €<small>1,5 % du CA</small></td>
+      <td class="n">1 565 €<small>sur 2 418 € HT</small></td><td class="n"><span class="mz ok">64,7 %</span></td>
+      <td class="n"><span class="an-f up">▲ +25,0 %</span></td>
+      <td class="n"><span class="an-f up">▲ +16,0 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#5C6F91"></span><span class="t">éclair chocolat</span><small>Pâtisserie individuelle</small></td>
+      <td class="n">3,00 €</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span><small>cible × 2,2</small></td>
+      <td class="n">785<small>60,4 / sem.</small></td><td class="n">2 355 €<small>1,4 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-f up">▲ +15,2 %</span></td>
+      <td class="n"><span class="an-f up">▲ +12,4 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#5C6F91"></span><span class="t">Duo Chocolat - 180⌀</span><small>Entremets - 190Ø</small></td>
+      <td class="n">23,90 €</td><td class="n">8,06 €</td>
+      <td class="n"><span class="mz ok">× 2,8</span><small>cible × 2,2</small></td>
+      <td class="n">79<small>6,1 / sem.</small></td><td class="n">1 888 €<small>1,1 % du CA</small></td>
+      <td class="n">1 145 €<small>sur 1 781 € HT</small></td><td class="n"><span class="mz ok">64,3 %</span></td>
+      <td class="n"><span class="an-f down">▼ −16,7 %</span></td>
+      <td class="n"><span class="an-f warn">▼ −12,0 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#5C6F91"></span><span class="t">Entremet 120Ø -  Duo Framboise &amp; Passion</span><small>Entremets - 4/6 personnes</small></td>
+      <td class="n">14,90 €</td><td class="n">5,22 €</td>
+      <td class="n"><span class="mz ok">× 2,7</span><small>cible × 2,2</small></td>
+      <td class="n">98<small>7,5 / sem.</small></td><td class="n">1 460 €<small>0,9 % du CA</small></td>
+      <td class="n">867 €<small>sur 1 378 € HT</small></td><td class="n"><span class="mz ok">62,9 %</span></td>
+      <td class="n"><span class="an-f warn">▼ −13,0 %</span></td>
+      <td class="n"><span class="an-f down">▼ −23,1 %</span></td></tr><tr class="an-sous"><td colspan="10"><b>Quiches</b> · 16 références · 11,6 k€ · marge 59,2 % · <span class="an-f up">▲ +16,0 %</span><span class="an-plus">+ 12 autres ▾</span></td></tr><tr><td class="nm"><span class="pt" style="background:#B5654A"></span><span class="t">1/4 - Quiches</span><small>Quiches</small></td>
+      <td class="n">—</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span></td>
+      <td class="n">374<small>28,8 / sem.</small></td><td class="n">2 394 €<small>1,4 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-v ko">arrêté</span></td>
+      <td class="n"><span class="an-f down">▼ −90,3 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#B5654A"></span><span class="t">1/2 - Quiches</span><small>Quiches</small></td>
+      <td class="n">—</td><td class="n"><span class="mu">—</span></td>
+      <td class="n"><span class="mz mu">—</span></td>
+      <td class="n">170<small>13,1 / sem.</small></td><td class="n">2 023 €<small>1,2 % du CA</small></td>
+      <td class="n"><span class="mu">coût de recette manquant</span></td><td class="n"><span class="mz mu">—</span></td>
+      <td class="n"><span class="an-v ko">arrêté</span></td>
+      <td class="n"><span class="an-f down">▼ −91,8 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#B5654A"></span><span class="t">Quiche saumon &amp; épinards</span><small>Quiches</small></td>
+      <td class="n">21,90 €</td><td class="n">8,87 €</td>
+      <td class="n"><span class="mz att">× 2,3</span><small>cible × 2,5</small></td>
+      <td class="n">89<small>6,8 / sem.</small></td><td class="n">1 019 €<small>0,6 % du CA</small></td>
+      <td class="n">549 €<small>au taux de la recette</small></td><td class="n"><span class="mz att">57,1 %</span></td>
+      <td class="n"><span class="an-f up">▲ +294,5 %</span></td>
+      <td class="n"><span class="an-f up">▲ +435,5 %</span></td></tr><tr><td class="nm"><span class="pt" style="background:#B5654A"></span><span class="t">Quiche Grecque</span><small>Quiches</small></td>
+      <td class="n">24,90 €</td><td class="n">8,35 €</td>
+      <td class="n"><span class="mz ok">× 2,8</span><small>cible × 2,5</small></td>
+      <td class="n">87<small>6,7 / sem.</small></td><td class="n">1 001 €<small>0,6 % du CA</small></td>
+      <td class="n">608 €<small>au taux de la recette</small></td><td class="n"><span class="mz ok">64,4 %</span></td>
+      <td class="n"><span class="an-v att">nouveau</span></td>
+      <td class="n"><span class="an-f up">▲ +563,4 %</span></td></tr></tbody><tfoot><tr><td>Le magasin · 244 références</td><td></td><td></td><td></td><td class="n">59 662</td><td class="n">168 681 €</td><td class="n">69 232 €<small>sur 122 794 € HT</small></td><td class="n">56,4 %</td><td class="n"><span class="an-f up">▲ +11,3 %</span></td><td class="n"><span class="an-f up">▲ +15,7 %</span></td></tr></tfoot></table>
+    <p class="an-src"><span class="an-legf"><span class="an-f up">▲</span> +5 % et plus <span class="an-f flat">▶</span> stable <span class="an-f warn">▼</span> −5 à −15 % <span class="an-f down">▼</span> −15 % et moins</span> · Les 10 familles de Halle (244 références vendues en 13 semaines) ; 5 familles montrées ici. Marge connue sur 86 % du CA : un produit sans coût de recette au panel n’a pas de marge.</p></section>
+</div></div></body></html>
