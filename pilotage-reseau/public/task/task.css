@@ -336,7 +336,7 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-dd.rg{width:420px}
 /* Changer une tâche de checklist (09/11/2026) : « Checklist 2.1.01 ▾ » */
 .dc-dp-v,.dc-nom .dc-dp-v{display:inline-flex;align-items:center;gap:6px;font:400 11px var(--font-ui);border-radius:6px;padding:2px 6px 2px 8px;border:1px solid var(--tk-trait2);background:#fff;color:var(--muted);white-space:nowrap;cursor:pointer}
-.dc-dp{display:inline-block;vertical-align:1px;margin-left:4px}.dc-dp-v{opacity:.55}.dc-l:hover .dc-dp-v,.dc-dp-v.open,.dc-l.sel .dc-dp-v{opacity:1}.dc-dp-v{padding:2px 4px 2px 6px!important;gap:4px!important}
+.dc-dp{flex:0 0 132px}.dc-dp-v{opacity:.55}.dc-l:hover .dc-dp-v,.dc-dp-v.open,.dc-l.sel .dc-dp-v{opacity:1}.dc-dp-v{padding:2px 4px 2px 6px!important;gap:4px!important}
 .dc-dp-v .dc-code{font-size:10px;padding:2px 6px}
 .dc-dp-v:hover,.dc-nom .dc-dp-v:hover{text-decoration:none;border-color:var(--ink);color:var(--ink)}.dc-dp-v.open{border-color:var(--ink);box-shadow:0 0 0 3px rgba(43,38,34,.1)}
 .tk-selbar .dc-ancre{position:relative}

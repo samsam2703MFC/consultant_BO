@@ -1132,10 +1132,11 @@
     const dbl = !c ? dcSuggestions(t).dbl : null;
     const doublon = dbl ? ` <span class="dc-dbl" title="${esc('Ressemble à « ' + dbl.t.nom + ' », déjà dans ' + dbl.c.nom)}">≈ déjà dans ${esc(dcCode(dbl.c.nom).code || dbl.c.nom)}</span>` : '';
     // En pause : l'interrupteur en bout de ligne le dit (il remplace la pastille « en pause » du 09/11/2026).
+    // La checklist (« ⇄ 3.4.01 ▾ ») a sa colonne, celle de « Ranger → … » des tâches à ranger : alignée sur toutes les lignes (15/11/2026).
     return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
       <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
-      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
-      ${c ? '' : dcRanger(t)}<span class="dc-fin"><span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span>${dcInterrupteur(t)}</span></div>`;
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${doublon}${liens ? ' ' + liens : ''}${flash}</span>
+      ${c ? dcDeplacer(t, c) : dcRanger(t)}<span class="dc-fin"><span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span>${dcInterrupteur(t)}</span></div>`;
   }
   /** L'interrupteur active / en pause d'une ligne (15/11/2026, « un toggle active / non active, très minimaliste »). */
   function dcInterrupteur(t) {
