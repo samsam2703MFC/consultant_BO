@@ -14,12 +14,12 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Tâches : chercher une tâche, à la place des retours du contrôle qualité (`taches-recherche.png`) — codé, pas en ligne
+## Tâches : chercher une tâche, à la place des retours du contrôle qualité (`taches-recherche.png`) — en ligne le 15/11/2026
 
 Demande du 15/11/2026 : « retirer Retours du contrôle qualité, ce sont des anciens ; seulement une search bar de la
-tâche, et montrer toutes les photos ou tâches reliées à la recherche ». Codé sur le **vrai dashboard** (branche locale
-`recherche-taches`, sur la branche de déploiement ; le changement est aussi dans `recherche-taches.patch`), **pas encore
-déployé** : la capture est la maquette.
+tâche, et montrer toutes les photos ou tâches reliées à la recherche ». Codé sur le **vrai dashboard** et **mis en ligne**
+(branche de déploiement, commit du code puis `0ee2247`, déploiement n°2157 ; le changement est aussi dans
+`recherche-taches.patch`). « Les checklists du jour » ne change pas (« ça on garde », 15/11/2026).
 
 - La carte « Retours du contrôle qualité » quitte l'onglet Tâches (et son code).
 - **Chercher une tâche**, avant les checklists du jour : un mot (« comptoir », « biscuiterie », « chambre froide »,
