@@ -30,6 +30,9 @@ COCKPIT_PWA_BASE="${COCKPIT_PWA_BASE:-http://185.180.206.46/pwa_consultant}"
 # Le « Retour au cockpit » du rail du module Formation (/formation/, servi à la racine) : l'adresse du cockpit,
 # écrite dans config.php (cockpitUrl) et rendue par GET /formation/config.
 COCKPIT_URL="${COCKPIT_URL:-${ALIAS_PATH}/}"
+# L'espace boutique du Marketing (dépôt marketing, servi à /marketing/franchise/ sur le même serveur) : l'entrée
+# « Calendrier des posts ↗ » du rail du dashboard franchisé, écrite dans config.php (espaceBoutiqueUrl), rendue par GET /meta.
+COCKPIT_ESPACE_BOUTIQUE_URL="${COCKPIT_ESPACE_BOUTIQUE_URL:-/marketing/franchise/}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_SRC="$(cd "$SCRIPT_DIR/.." && pwd)"
@@ -276,7 +279,7 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
   COCKPIT_DB_HOST="$COCKPIT_DB_HOST" COCKPIT_DB_PORT="$COCKPIT_DB_PORT" \
   COCKPIT_DB_NAME="$COCKPIT_DB_NAME" COCKPIT_DB_USER="$COCKPIT_DB_USER" \
   COCKPIT_DB_PASSWORD="$COCKPIT_DB_PASSWORD" COCKPIT_PWA_BASE="$COCKPIT_PWA_BASE" \
-  COCKPIT_URL="$COCKPIT_URL" \
+  COCKPIT_URL="$COCKPIT_URL" COCKPIT_ESPACE_BOUTIQUE_URL="$COCKPIT_ESPACE_BOUTIQUE_URL" \
   php -r '
     $cfg = [
       "db" => [
@@ -290,6 +293,8 @@ if [[ -n "$COCKPIT_DB_USER" && -n "$COCKPIT_DB_PASSWORD" ]]; then
       "pwaBase" => getenv("COCKPIT_PWA_BASE") ?: null,
       // Module Formation : l’adresse du « Retour au cockpit » de son rail (GET /formation/config).
       "cockpitUrl" => getenv("COCKPIT_URL") ?: null,
+      // Dashboard franchisé : l’espace boutique du Marketing, pour le « Calendrier des posts ↗ » du rail (GET /meta).
+      "espaceBoutiqueUrl" => getenv("COCKPIT_ESPACE_BOUTIQUE_URL") ?: null,
       // Manuel du réseau › Tablettes : le code de gestion (null = gestion fermée), d’après TABLETTES_CODE.
       "tablettesCode" => getenv("TABLETTES_CODE") ?: null,
       "auth"    => false,

@@ -135,6 +135,8 @@
   function charger(force) {
     // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
     if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
+    // Le rail du bureau (15/11/2026) : l'objectif du jour et la note Google, en haut du rail, sur tous les onglets.
+    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux('meta', '/meta', force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
@@ -211,7 +213,7 @@
     if (S.vue === 'semaine') { lireAux('s12|' + S.shop + '|' + bornes()[0], '/ventes/semaines?shop=' + encodeURIComponent(S.shop) + '&date=' + S.date + '&n=13&articles=1&pro=1', force); }
     // La frise des périodes (10/10/2026), au bureau : les jours, les semaines ou les mois autour de la période regardée.
     if (!EMBED && !estMobile()) {
-      if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set(friseJours().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
+      if (S.vue === 'ops' || S.vue === 'semaine') { [...new Set((S.vue === 'semaine' ? friseSemaines().flat() : friseJours()).map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => lireAux('frJ|' + ym, '/exploitation/periode?vue=mois&date=' + finMois(ym), force)); }
       if (S.vue === 'mois') { lireAux(clePerf(), cheminPerf(), force); }
     }
     // Le stock est vivant : il se relit avec la page, et la page se relit
@@ -5243,8 +5245,10 @@
       return `<tr><td>${esc(c.nom)}<div class="db-mini">${esc(c.type || '—')} · ${c.source === 'tfbuddy' ? 'TFBuddy' : (c.source === 'import' ? 'relevé importé, à encoder' : 'relevé web du cockpit')}</div></td>
         <td>${c.cp ? '<span class="bm-cp">CP ' + esc(c.cp) + '</span> ' : ''}<span class="db-mini">${esc(c.commune || c.ville || '')}</span></td><td><span class="bm-cl ${k[0]}">${esc(quoi)}</span></td></tr>`;
     }).join('');
-    return `<div class="db-card"><div class="ct"><span class="db-lab">Les concurrents du magasin, par code postal</span><span class="db-mini">franchisé ${esc(P.franchise || '—')} · CP ${esc(P.cp || '?')} · zone de ${P.zone.n} codes postaux · ${n('zone')} dans la zone, ${n('hors') + n('ailleurs')} hors zone, ${n('national')} nationaux, ${n('inconnu')} sans code postal · zones réglées dans le cockpit, Benchmark</span></div>
-      <div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Code postal</th><th>Classement</th></tr></thead><tbody>${lignes}</tbody></table></div></div>`;
+    // Une liste déroulante, fermée par défaut (15/11/2026) : l'en-tête et ses compteurs ; un clic montre le tableau.
+    const ouvert = !!S.bmCpOuvert;
+    return `<div class="db-card"><div class="ct bm-cp-t" data-bmcp="1" role="button" tabindex="0" aria-expanded="${ouvert}"><span class="db-lab">Les concurrents du magasin, par code postal</span><span class="db-mini">franchisé ${esc(P.franchise || '—')} · CP ${esc(P.cp || '?')} · zone de ${P.zone.n} codes postaux · ${n('zone')} dans la zone, ${n('hors') + n('ailleurs')} hors zone, ${n('national')} nationaux, ${n('inconnu')} sans code postal · zones réglées dans le cockpit, Benchmark</span><span class="bm-cp-dr">${ouvert ? 'replier ▴' : 'voir les ' + P.concurrents.length + ' concurrents ▾'}</span></div>
+      ${ouvert ? `<div class="bm-defil"><table class="db-pro-tab bm-tab"><thead><tr><th>Concurrent</th><th>Code postal</th><th>Classement</th></tr></thead><tbody>${lignes}</tbody></table></div>` : ''}</div>`;
   }
   /** Le formulaire d'un prix vu en magasin — posé dans TFBuddy, rattaché au produit affiché. */
   function bmFormulaire() {
@@ -5279,6 +5283,11 @@
     box.querySelectorAll('[data-bmp]').forEach(b => b.addEventListener('mousedown', e => { e.preventDefault(); S.bmF = 'produit'; S.bmP = b.dataset.bmp; S.bmQ = ''; S.bmMsg = null; urlMaj(); rendre(); }));
   }
   function bmBrancher() {
+    $.querySelectorAll('[data-bmcp]').forEach(b => {
+      const basculer = () => { S.bmCpOuvert = !S.bmCpOuvert; rendre(); };
+      b.addEventListener('click', basculer);
+      b.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); basculer(); } });
+    });
     $.querySelectorAll('[data-bmtop]').forEach(tr => tr.addEventListener('click', () => { S.bmF = 'produit'; S.bmP = tr.dataset.bmtop; urlMaj(); rendre(); }));
     $.querySelectorAll('[data-bmf]').forEach(b => b.addEventListener('click', () => { S.bmF = b.dataset.bmf; S.bmP = null; S.bmMsg = null; urlMaj(); rendre(); }));
     const q = $.querySelector('[data-bmq]');
@@ -6149,6 +6158,7 @@
     lireAux(cleCQ(), cheminCQ(), force);
     lireAux(cleTJR(), cheminTJR(), force);
     tjSemaine().filter(d => d !== S.date && d <= AUJ).forEach(d => lireAux(cleTJ(d), cheminTJ(d), force && d === AUJ));
+    tjRechercheCharger();
   }
   /** Faite : rendue — et, quand la tâche demande une photo, rendue AVEC la photo (la règle du 06/10/2026). Cochée sans la
    * photo demandée, elle ne compte pas : elle se montre à part, « cochée sans photo ». */
@@ -6254,28 +6264,53 @@
         <span class="tj-p"><span class="tj-prog"><i style="width:${Math.max(p || 0, 2)}%;background:${coul}"></i></span><span><b>${c.faites}</b> / ${c.total}</span></span>${st}<span class="tj-repli">${ouv ? 'replier ▴' : 'voir ▾'}</span></div>
       ${ouv ? `<div class="tj-ts">${T.map(t => tjTache(t, X, niveaux)).join('')}</div>` : ''}</div>`;
   }
-  function tjRetours(R, niveaux) {
-    const k = cleTJR();
-    let h = `<div class="db-card tj-ret" id="tj-retours"><div class="ct"><span class="db-lab">Retours du contrôle qualité</span><span class="db-mini">les notes et les commentaires du contrôleur, des 30 derniers jours · cliquez une ligne pour voir la photo et ses remarques</span></div>`;
-    if (S.err[k]) { return h + `<div class="db-mini" style="padding:14px 16px">Retours : ${esc(S.err[k])}</div></div>`; }
-    if (!R) { return h + '<div style="padding:12px 16px">' + squelette(3) + '</div></div>'; }
-    const L = Array.isArray(R.retours) ? R.retours : [];
-    if (!L.length) { return h + `<div class="db-mini" style="padding:14px 16px">Aucune photo notée ces 30 derniers jours.</div></div>`; }
-    const suite = {}; (R.nc || []).forEach(n => { suite[n.taskId + '|' + n.jour] = n.suite; });
-    // Un nom que le serveur ne connaît pas (« Tâche #1207 ») se reprend des journées déjà lues.
-    const noms = {}; Object.keys(S.aux).filter(c => c.indexOf('tj|' + S.shop + '|') === 0).forEach(c => tachesJour(S.aux[c]).forEach(t => { noms[String(t.taskId)] = t.tache; }));
-    const nomDe = r => (/^Tâche #/.test(String(r.tache || '')) && noms[String(r.taskId)]) || r.tache;
-    const V = S.tjRetTout ? L : L.slice(0, 12);
-    h += `<div class="tj-rl">${V.map(r => {
-      const n = r.note != null ? tjNiveau(r.note, niveaux) : null, su = r.nc ? suite[r.taskId + '|' + r.jour] : null;
-      const rep = r.nc ? (su ? (su.conforme ? `<span class="tj-st ok">reprise le ${esc(fD(su.jour))} · ${su.note}/5</span>` : `<span class="tj-st ko">encore non conforme le ${esc(fD(su.jour))}</span>`) : '<span class="tj-st wa">reprise pas encore notée</span>') : '';
-      const t = new Date(r.jour + 'T12:00:00');
-      return `<div class="tj-r${r.nc ? ' nc' : ''}" data-tjretour="${esc(r.jour)}|${esc(r.taskId)}" role="button" tabindex="0">
-        <span class="tj-rj">${esc(JOURS_C[t.getDay()])} ${esc(fD(r.jour))}</span>${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b>${esc(n.nom)}</span>` : '<span></span>'}
-        <span class="tj-rn">${esc(nomDe(r))}${r.comment ? `<q>${esc(r.comment)}</q>` : ''}<small>${r.consultant ? 'noté par ' + esc(r.consultant) : ''}${r.le ? (r.consultant ? ' ' : 'noté ') + 'le ' + esc(fD(String(r.le).slice(0, 10))) + ' à ' + esc(hhmm(r.le)) : ''}</small></span>${rep}</div>`;
-    }).join('')}</div>`;
-    if (L.length > 12) { h += `<div style="padding:8px 16px 12px"><button type="button" class="db-btn" data-tjrettout="1">${S.tjRetTout ? 'Montrer les 12 derniers' : 'Voir les ' + L.length + ' retours'}</button></div>`; }
-    return h + '</div>';
+  /* --- Chercher une tâche (15/11/2026, à la place des « Retours du contrôle qualité », des retours anciens) ------------
+   * Un mot (« biscuiterie », « chambre froide », « 1.1.02 ») : chaque tâche de la semaine qui le contient, dans son nom ou
+   * celui de sa checklist ; ses sept jours (statut, photo, note du contrôle) ; et ses notes des 30 derniers jours.
+   * Lectures : /pwa/tasks (les jours, déjà lus par l'onglet), /pwa/tasks/photos (les photos de chaque jour, lues à la
+   * première recherche ; les liens sont signés, ils vieillissent), /pwa/tasks/nc?retours=1 (les notes des 30 jours). */
+  const tjNorm = s => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+  const cleCQd = d => 'cqph|' + S.shop + '|' + d;
+  const cheminCQd = d => '/pwa/tasks/photos?shop=' + encodeURIComponent(S.shop) + '&date=' + d;
+  function tjRechercheCharger() { if (tjNorm(S.tjQ).length >= 2) { tjSemaine().filter(d => d <= AUJ).forEach(d => lireAux(cleCQd(d), cheminCQd(d))); } }
+  function tjResultats(niveaux) {
+    const q = tjNorm(S.tjQ);
+    if (q.length < 2) { return '<div class="db-mini tj-q-vide">Tapez au moins deux lettres : chaque tâche qui les contient, ses sept jours, ses photos et ses notes.</div>'; }
+    const J = tjSemaine(), R = S.aux[cleTJR()], T = {};
+    J.forEach(d => {
+      tachesJour(S.aux[cleTJ(d)]).forEach(t => {
+        const k = String(t.taskId), x = T[k] || (T[k] = { tache: t.tache, checklist: t.checklist || '', jours: {}, notes: [] });
+        x.jours[d] = { t };
+      });
+      const P = S.aux[cleCQd(d)];
+      ((P && P.photos) || []).forEach(p => { const x = T[String(p.taskId)]; if (x && x.jours[d] && p.photo) { x.jours[d].photo = p.photo; } });
+    });
+    ((R && R.retours) || []).forEach(r => { const x = T[String(r.taskId)]; if (x && !J.includes(r.jour)) { x.notes.push(r); } });
+    const L = Object.values(T).filter(x => tjNorm(x.tache + ' ' + x.checklist).includes(q)).sort((a, b) => a.checklist.localeCompare(b.checklist) || a.tache.localeCompare(b.tache));
+    if (!L.length) { return `<div class="db-mini tj-q-vide">Aucune tâche de la semaine ne contient « ${esc(String(S.tjQ).trim())} ».</div>`; }
+    const nPh = L.reduce((a, x) => a + Object.values(x.jours).filter(j => j.photo).length, 0);
+    const attente = J.filter(d => d <= AUJ).some(d => !S.aux[cleCQd(d)] && !S.err[cleCQd(d)]);
+    return `<div class="tj-q-som">${L.length} tâche${L.length > 1 ? 's' : ''} · ${nPh} photo${nPh > 1 ? 's' : ''} cette semaine${attente ? ' · lecture des photos…' : ''}</div>` + L.map(x => {
+      const c = tjCode(x.checklist), zc = c.zone ? TJ_ZONES[c.zone][1] : '#5c5852';
+      const cases = J.map(d => {
+        const j = x.jours[d], t = new Date(d + 'T12:00:00'), lib = JOURS_C[t.getDay()] + ' ' + t.getDate();
+        if (!j) { return `<div class="tj-q-c rien"><span class="tj-q-d">${esc(lib)}</span><span class="tj-q-ph vide"></span><span class="tj-q-v">${d > AUJ ? 'à venir' : 'pas prévue'}</span></div>`; }
+        const tt = j.t, ok = tjFaite(tt), sp = tjSansPhoto(tt), n = tt.note != null ? tjNiveau(tt.note, niveaux) : null;
+        const st = ok ? (tt.statut === 'aControler' || tt.statut === 'aValider' ? 'à contrôler' : 'faite') : (sp ? 'sans photo' : (d === AUJ ? 'pas encore faite' : 'pas faite'));
+        const img = j.photo ? `<a class="tj-q-ph" href="${esc(j.photo)}" target="_blank" rel="noopener" title="ouvrir la photo"><img src="${esc(j.photo)}" alt="" loading="lazy"></a>` : `<span class="tj-q-ph vide">${tt.photoRequise ? TJ_CAM : ''}</span>`;
+        return `<div class="tj-q-c${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-q-d">${esc(lib)}${tt.faitLe ? ' · ' + esc(String(tt.faitLe).slice(11, 16)) : ''}</span>${img}<span class="tj-q-v">${n ? `<span class="tj-note" style="background:${n.couleur}"><b>${tt.note}</b>${esc(n.nom)}</span>` : esc(st)}</span></div>`;
+      }).join('');
+      const anc = x.notes.slice(0, 10).map(r => { const n = r.note != null ? tjNiveau(r.note, niveaux) : null; return `<span class="tj-q-n">${esc(fD(r.jour))}${n ? ` <span class="tj-note" style="background:${n.couleur}"><b>${r.note}</b></span>` : ''}</span>`; }).join('');
+      return `<div class="tj-q-t"><div class="tj-q-h"><span class="tj-code" style="background:${zc}">${esc(c.code || '—')}</span><span class="tj-nom">${esc(x.tache)}<small>${esc(c.titre)}</small></span></div>
+        <div class="tj-q-j">${cases}</div>${anc ? `<div class="tj-q-anc"><span class="db-mini">notes des 30 derniers jours</span>${anc}</div>` : ''}</div>`;
+    }).join('');
+  }
+  function tjRecherche(niveaux) {
+    S.tjNiv = niveaux;
+    const J = tjSemaine();
+    return `<div class="db-card tj-q" id="tj-recherche"><div class="ct"><span class="db-lab">Chercher une tâche</span><span class="db-mini">la semaine du ${esc(fD(J[0]))} au ${esc(fD(J[6]))}, jour par jour, avec ses photos et ses notes · et les notes du contrôle des 30 derniers jours</span></div>
+      <div class="tj-q-b"><input class="tj-q-in" type="search" data-tjq="1" value="${esc(S.tjQ || '')}" placeholder="Une tâche, une checklist, un comptoir : « biscuiterie », « chambre froide », « 1.1.02 »…" aria-label="Chercher une tâche"></div>
+      <div id="tj-q-res">${tjResultats(niveaux)}</div></div>`;
   }
   function rendTachesMag() {
     const k = cleTJ(S.date), D = S.aux[k], R = S.aux[cleTJR()];
@@ -6297,7 +6332,8 @@
       <div class="db-tui"><div class="k">Contrôle qualité du jour</div><div class="v">${moy != null ? nf(moy, 1) + ' / 5' : ctl.length + ' à contrôler'}</div><div class="s">${notees.length ? notees.length + ' photo' + (notees.length > 1 ? 's' : '') + ' notée' + (notees.length > 1 ? 's' : '') + (ctl.length ? ' · ' + ctl.length + ' à contrôler' : '') : (dern ? 'dernier passage du contrôleur : le ' + esc(fD(dern.jour)) + (dern.consultant ? ' (' + esc(dern.consultant) + ')' : '') : 'aucune photo notée ce jour')}</div></div>
       <div class="db-tui${ncL && ncL.length ? '' : ' bon'}" data-tjallerret="1" role="button" tabindex="0"><div class="k">Non-conformités · 30 jours</div><div class="v">${ncL ? ncL.length : '…'}</div><div class="s">${!ncL ? 'lecture…' : (ncL.length ? ncRep + ' reprise' + (ncRep > 1 ? 's' : '') + ' depuis · voir les retours ↓' : 'aucune note sous 4 · voir les retours ↓')}</div></div></div>`;
     h += tjGuide(CL);
-    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>` + tjRetours(R, niveaux); }
+    h += tjRecherche(niveaux);
+    if (!T.length) { return h + `<div class="db-card"><div class="db-mini" style="padding:16px">Aucune tâche obligatoire pour ce jour.</div></div>`; }
     const n = { pas: CL.filter(c => c.etat === 'pas').length, partie: CL.filter(c => c.etat === 'partie').length, faite: CL.filter(c => c.etat === 'faite').length };
     const F = S.tjF === 'tout' ? CL : CL.filter(c => c.etat === S.tjF);
     const filtre = (v, lib, cls) => `<button type="button" class="tj-f ${cls}${S.tjF === v ? ' on' : ''}" data-tjf="${v}">${lib}</button>`;
@@ -6307,7 +6343,7 @@
         <span class="tj-filtres">${filtre('tout', 'Toutes ' + CL.length, 'mu')}${filtre('pas', (S.date === AUJ ? 'Pas commencées ' : 'Pas faites ') + n.pas, 'ko')}${filtre('partie', 'En partie ' + n.partie, 'wa')}${filtre('faite', 'Faites ' + n.faite, 'ok')}</span>
         <button type="button" class="db-btn" data-tjtout="${F.every(c => S.tjOuv[c.cle]) ? '0' : '1'}">${F.length && F.every(c => S.tjOuv[c.cle]) ? 'Tout replier' : 'Tout déplier'}</button></div>
       ${F.length ? F.map(c => tjLigne(c, X, niveaux)).join('') : '<div class="db-mini" style="padding:14px 16px">Aucune checklist dans ce filtre.</div>'}</div>`;
-    return h + tjRetours(R, niveaux);
+    return h;
   }
   /** Au téléphone : l'entête et la date des autres pages, la page des tâches dans le défilement, les onglets du bas. */
   function rendTachesMobile() {
@@ -6331,9 +6367,15 @@
     $.querySelectorAll('[data-tjtout]').forEach(el => el.addEventListener('click', () => { const o = el.dataset.tjtout === '1', D = S.aux[cleTJ(S.date)];
       tjChecklists(D).filter(c => S.tjF === 'tout' || c.etat === S.tjF).forEach(c => { S.tjOuv[c.cle] = o; }); rendre(); }));
     $.querySelectorAll('[data-tjguide]').forEach(el => cle(el, () => { S.tjGuide = !S.tjGuide; try { localStorage.setItem('db.tjGuide', S.tjGuide ? '1' : '0'); } catch (e) { /* rien */ } rendre(); }));
-    $.querySelectorAll('[data-tjrettout]').forEach(el => el.addEventListener('click', () => { S.tjRetTout = !S.tjRetTout; rendre(); }));
-    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-retours'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
-    $.querySelectorAll('[data-tjretour]').forEach(el => cle(el, () => { const [d, t] = el.dataset.tjretour.split('|'); if (d === S.date) { S.cqVoir = t; rendre(); } else { tjAller(d, t); } }));
+    $.querySelectorAll('[data-tjallerret]').forEach(el => cle(el, () => { const r = document.getElementById('tj-recherche'); if (r) { r.scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+    const qi = $.querySelector('[data-tjq]');
+    if (qi) {
+      qi.addEventListener('input', () => { S.tjQ = qi.value; S.tjQPos = qi.selectionStart; const r = document.getElementById('tj-q-res'); if (r) { r.innerHTML = tjResultats(S.tjNiv || []); } tjRechercheCharger(); });
+      qi.addEventListener('focus', () => { S.tjQFocus = true; });
+      // Quitter le champ, c'est cliquer ailleurs : un champ retiré par un nouveau rendu (les photos arrivent) garde la main.
+      qi.addEventListener('blur', () => setTimeout(() => { if (document.contains(qi) && document.activeElement !== qi) { S.tjQFocus = false; } }, 0));
+      if (S.tjQFocus) { qi.focus(); const p = S.tjQPos != null ? S.tjQPos : qi.value.length; qi.setSelectionRange(p, p); }
+    }
   }
 
   /* --- La revue du soir (08/11/2026, maquette M3 : une question à la fois) ------------------------------------------------
@@ -6531,7 +6573,120 @@
   }
   document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
 
+  /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
+   * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8
+   * du design system commun, global.css) et à une barre du haut. Le contenu des onglets ne change pas.
+   * - le rail : les mêmes onglets, dans le même ordre, rangés en groupes ; le plan d'action et la campagne (des vues du
+   *   dashboard qui n'avaient pas d'onglet) ; en haut, l'objectif du jour (/exploitation/jour, la lecture jourM de la
+   *   page ; le trait : la projection de fin de journée) et la note Google (/marketing/avis, face à la cible du réseau) ;
+   *   pas de lien vers le cockpit (« Cockpit › Résultat », retiré le 15/11/2026) ;
+   * - la barre du haut : le magasin et l'onglet, la date, « Relire », puis la valeur en vignette, le coach (l'assistant) et
+   *   la revue du soir, deux avatars de même taille et de même forme. */
+  const RAIL_MIN = 1024;
+  function avecRail() { return !EMBED && !EMBED_PM && !estMobile() && window.innerWidth >= RAIL_MIN; }
+  const RAIL_ICO = {
+    tdb: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+    controle: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+    journal: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
+    cal: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    calEd: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01',
+    perf: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+    fonds: 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5',
+    bundles: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
+    offres: 'M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0',
+    analyse: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+    brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
+    personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
+  };
+  const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
+  // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
+  const RAIL = [
+    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
+    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
+    ['Vendre', [['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
+    // Le Marketing du magasin (15/11/2026, maquette docs/maquettes/rail-franchise/marketing.png) : le calendrier des posts
+    // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
+    // le catalogue, qui relèvent du Marketing.
+    ['Marketing', [['posts', 'Calendrier des posts', 'calEd'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
+  ];
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
+  /** Le calendrier des posts du magasin : l'espace boutique du Marketing (GET /meta → espaceBoutiqueUrl) ; '' : pas d'entrée. */
+  function postsUrl() {
+    const b = String((S.aux.meta || {}).espaceBoutiqueUrl || '');
+    return b ? b.replace(/\/?$/, '/') + 'calendrier?shop=' + encodeURIComponent(S.shop) : '';
+  }
+  /** L'objectif du jour : le CA face à l'objectif du jour ; aujourd'hui, le trait marque la projection de fin de journée. */
+  function railObjectif() {
+    const cle = 'jourM|' + S.date, D = S.aux[cle];
+    const tete = em => `<div class="k">Objectif du jour<em>${em}</em></div>`;
+    if (!D) { return `<div class="db-rcarte">${tete(S.err[cle] ? '' : 'lecture…')}${S.err[cle] ? `<div class="s">${esc(S.err[cle])}</div>` : '<div class="db-sk" style="height:18px;margin:6px 0 4px;width:55%"></div>'}</div>`; }
+    const m = magasin(D);
+    if (!m || !m.objectifJour) { return `<div class="db-rcarte">${tete('')}<div class="s">pas d’objectif pour ce jour</div></div>`; }
+    const auj = S.date === AUJ, pct = 100 * (m.ca || 0) / m.objectifJour;
+    const proj = auj && m.projection != null ? 100 * m.projection / m.objectifJour : null;
+    return `<button type="button" class="db-rcarte" data-vue="ops">${tete(auj ? 'en direct' : esc(fD(S.date)))}<div class="v">${fP0(pct)}<small>de ${fE(m.objectifJour)}</small></div>
+      <div class="db-rech"><i class="${pct >= 100 ? 'ok' : 'att'}" style="width:${Math.min(100, pct).toFixed(1)}%"></i>${proj != null ? `<b style="left:${Math.min(100, proj).toFixed(1)}%${proj >= 100 ? ';margin-left:-2px' : ''}"></b>` : ''}</div>
+      <div class="s">${fE(m.ca || 0)}${proj != null ? ' · trait : projection ' + fE(m.projection) : ''}</div></button>`;
+  }
+  /** La note Google de la fiche du magasin, sur l'échelle 4,0 → 5,0, le trait à la cible du réseau. */
+  function railGoogle() {
+    const D = S.aux.avis;
+    if (!D) { return `<div class="db-rcarte"><div class="k">Note Google<em>${S.err.avis ? '' : 'lecture…'}</em></div>${S.err.avis ? `<div class="s">${esc(S.err.avis)}</div>` : ''}</div>`; }
+    const m = (D.magasins || []).find(x => String(x.id) === String(S.shop));
+    if (!m || m.note == null) { return `<div class="db-rcarte"><div class="k">Note Google</div><div class="s">${D.indispo ? esc(D.raison || 'réputation indisponible') : 'pas de fiche Google raccordée'}</div></div>`; }
+    const cible = D.cible, pos = v => Math.max(0, Math.min(100, (v - 4) * 100)), plein = Math.round(m.note - 0.4);
+    const et = [1, 2, 3, 4, 5].map(i => `<svg viewBox="0 0 24 24" class="${i <= plein ? 'on' : ''}" aria-hidden="true"><path d="${RAIL_ICO.etoile}"/></svg>`).join('');
+    return `<div class="db-rcarte"><div class="k">Note Google<em>${fN(m.avis || 0)} avis</em></div><div class="v">${nf(m.note, 1)}<span class="db-retoiles">${et}</span>${cible != null ? `<small>cible ${nf(cible, 1)}</small>` : ''}</div>
+      <div class="db-rech"><i class="${cible == null || m.note >= cible ? 'ok' : 'att'}" style="width:${pos(m.note)}%"></i>${cible != null ? `<b style="left:${pos(cible)}%"></b>` : ''}</div></div>`;
+  }
+  /** Le rail, hors de #dash : il garde son défilement quand la page se redessine. */
+  function railMaj(on) {
+    let n = document.getElementById('db-rail');
+    if (!on) { if (n) { n.remove(); } return; }
+    if (!n) { n = document.createElement('nav'); n.id = 'db-rail'; n.className = 'sidebar db-rail'; n.setAttribute('aria-label', 'Navigation du dashboard'); document.body.insertBefore(n, document.body.firstChild); }
+    n.innerHTML = railHtml();
+    // Le même geste que les onglets d'avant (brancher : [data-vue]).
+    n.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
+    // L'entrée active reste visible quand l'onglet change (le rail défile seul).
+    const a = n.querySelector('.sidebar__item.is-active');
+    if (a && n.dataset.vu !== S.vue) { n.dataset.vu = S.vue; a.scrollIntoView({ block: 'nearest' }); }
+  }
+  function railHtml() {
+    return `
+      <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
+      <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
+      <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
+        ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
+        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span></button>`).join('')}</div>`).join('')}</div>`;
+  }
+  /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
+  function navPeriode() {
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${!['promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+  }
+  /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
+  function railBarre() {
+    const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
+    const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
+    const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
+    const ia = IA.questions && IA.questions.actif;
+    const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
+    // Les onglets qui ont leur propre titre (Tâches, Temps morts, Année, Concurrence, Promotions, Primes, Trésorerie, Mon
+    // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
+    const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
+    return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
+      ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
+      <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
+      ${av(`data-iaouvrir="${ia ? '1' : 'd'}"`, '', iaIcone(18), 'Coach', ia ? 'assistant' : 'demande au bureau')}
+      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
+  }
   function rendre() {
+    const surRail = avecRail();
+    document.body.classList.toggle('db-rail-on', surRail);
+    railMaj(surRail);
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
@@ -6572,15 +6727,19 @@
     if (EMBED_PM) { const g = pmGarder(); $.classList.remove('mob'); document.body.classList.add('pm-emb'); $.innerHTML = rendPmEmbed(); brancher(); pmRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
+    // Le rail (15/11/2026) : à 1 024 px et plus, il remplace l'en-tête et la rangée d'onglets.
+    if (surRail) { h += railBarre() + friseHtml(); }
+    else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button><a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
+    }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
@@ -8101,6 +8260,18 @@
    * Au bureau, sous les onglets : en Opérationnel les 14 jours autour du jour regardé, en Semaine les
    * 8 semaines, en Mois les 12 mois de l'année. Chaque période est un bouton qui montre déjà son chiffre. */
   const JOURS_FR = ['D', 'L', 'Ma', 'Me', 'J', 'V', 'S'];
+  /** Les sept semaines de la frise de la vue Semaine (15/11/2026) : les six d'avant et celle de la date, lundi → dimanche. */
+  function friseSemaines() {
+    const J = friseJours(), out = [];
+    for (let k = 6; k >= 0; k--) { out.push(J.map(d => { const t = new Date(d + 'T12:00:00'); t.setDate(t.getDate() - 7 * k); return iso(t); })); }
+    return out;
+  }
+  /** Le numéro de semaine ISO d'une date (le jeudi de la semaine fait foi). */
+  function semIso(s) {
+    const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + 3 - (d.getDay() + 6) % 7);
+    const j4 = new Date(d.getFullYear(), 0, 4, 12);
+    return 1 + Math.round(((d - j4) / 864e5 - 3 + (j4.getDay() + 6) % 7) / 7);
+  }
   function finMois(ym) { const f = new Date(+ym.slice(0, 4), +ym.slice(5, 7), 0, 12); const d = iso(f); return d > AUJ ? AUJ : d; }
   // La semaine active seulement, du lundi au dimanche (10/10/2026) : quatorze cases ne se lisaient pas sur tablette.
   function friseJours() { const t = new Date(S.date + 'T12:00:00'), out = []; t.setDate(t.getDate() - (t.getDay() + 6) % 7); for (let i = 0; i < 7; i++) { const d = new Date(t); d.setDate(t.getDate() + i); out.push(iso(d)); } return out; }
@@ -8113,8 +8284,28 @@
       : `<button type="button" class="fr-fl" data-pas="${n}" aria-label="${n < 0 ? 'période précédente' : 'période suivante'}">${n < 0 ? '‹' : '›'}</button>`;
     const sk = n => Array.from({ length: n }, () => '<div class="fr-c sk"><span class="db-sk" style="width:60%"></span><span class="db-sk" style="width:80%;height:14px"></span></div>').join('');
     let chips = '', tete = '';
-    if (S.vue === 'ops' || S.vue === 'semaine') {
-      // En Semaine aussi (10/10/2026) : les sept jours de la semaine choisie ; un clic ouvre le jour en Opérationnel.
+    if (S.vue === 'semaine') {
+      // Les semaines (15/11/2026, « dans Semaine, ça doit être les semaines ») : les six d'avant et celle choisie ; un clic
+      // ouvre la semaine. Le chiffre et l'objectif d'une semaine : la somme de ses jours (la même lecture, frJ, que les jours).
+      const W = friseSemaines(), J = W[W.length - 1], lus = {};
+      let attente = false;
+      [...new Set(W.flat().map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
+        const P = S.aux['frJ|' + ym]; if (!P) { attente = true; return; }
+        const mg = (P.magasins || []).find(x => String(x.shopId) === String(S.shop));
+        ((mg && mg.jours) || []).forEach(j => { lus[j.date] = j; });
+      });
+      const totS = J.reduce((t, d) => t + (lus[d] && lus[d].ca != null && d <= AUJ ? +lus[d].ca : 0), 0);
+      tete = 'semaine du ' + fdC(J[0]) + ' au ' + fdC(J[6]) + (totS ? ' · ' + fE(totS) : '');
+      chips = attente && !Object.keys(lus).length ? sk(7) : W.map(w => {
+        const vus = w.filter(d => d <= AUJ && lus[d] && lus[d].ca != null), cours = w[0] <= AUJ && AUJ <= w[6], on = w[0] === J[0];
+        const lib = 'S' + semIso(w[0]);
+        if (!vus.length) { return `<div class="fr-c fut"><span class="n">${lib}</span><b>—</b><small>${esc(fdC(w[0]))} · ${w[0] > AUJ ? 'à venir' : 'pas de vente'}</small></div>`; }
+        const ca = vus.reduce((t, d) => t + +lus[d].ca, 0), obj = vus.reduce((t, d) => t + (+lus[d].objectif || 0), 0);
+        const p = obj ? 100 * ca / obj : null;
+        return `<button type="button" class="fr-c${on ? ' on' : ''}" data-fdate="${w[6] > AUJ ? AUJ : w[6]}" title="semaine du ${esc(fdC(w[0]))} au ${esc(fdC(w[6]))}"><span class="n">${lib}${cours ? '<em>en cours</em>' : ''}<i class="dot" style="background:${cours ? '#1d1d1b' : col(p)}"></i></span><b>${fK(ca)}</b><small>${esc(fdC(w[0]))}${p != null ? ' · ' + fP0(p) + ' obj.' : ''}</small></button>`;
+      }).join('');
+    } else if (S.vue === 'ops') {
+      // Les sept jours de la semaine choisie, en Opérationnel.
       const ops = S.vue === 'ops', J = friseJours(), lus = {};
       let attente = false;
       [...new Set(J.map(d => d.slice(0, 7)))].filter(ym => ym <= AUJ.slice(0, 7)).forEach(ym => {
@@ -9864,13 +10055,13 @@
 
   // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
   // rendu : on ne recharge rien, on redessine.
-  let _mob = estMobile(), _rt = null;
+  let _mob = estMobile(), _rail = avecRail(), _rt = null;
   window.addEventListener('resize', () => {
     clearTimeout(_rt);
     // En passant au téléphone, le mur demande deux lectures que le bureau ne
     // fait pas (la semaine sous le jour, les commandes) : on les déclenche,
     // sinon les cellules resteraient à « lecture en cours » pour toujours.
-    _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; if (n) { charger(false); } else { rendre(); } } }, 160);
+    _rt = setTimeout(() => { const n = estMobile(), r = avecRail(); if (n !== _mob || r !== _rail) { _mob = n; _rail = r; charger(false); } }, 160);
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.

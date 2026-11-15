@@ -3151,5 +3151,69 @@ tr.moi td{background:rgba(141,29,44,.05)}
   .ia-b{flex:1;min-height:0;overflow:auto;padding:12px 14px 18px}
   .hd-qui{gap:10px}.hd-av,.hd-av img{width:44px;height:44px}
 }
+
+/* --- Le rail (15/11/2026, docs/maquettes/rail-franchise) : au bureau, 1 024 px et plus. Le rail est le §8 du design
+   system commun (global.css : .sidebar…) ; il remplace l'en-tête et la rangée d'onglets, le contenu ne change pas. --- */
+body.db-rail-on #dash{max-width:none;margin:0 0 0 246px;padding:0 24px 40px}
+.db-rail{position:fixed;top:0;left:0;bottom:0;z-index:30;width:246px}
+.db-rail-rep{display:grid;gap:6px;margin:12px 12px 0}
+.db-rcarte{display:block;width:100%;box-sizing:border-box;padding:9px 11px 10px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;text-align:left;color:var(--ink)}
+button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
+.db-rcarte .k{display:flex;justify-content:space-between;gap:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.db-rcarte .k em{font-style:normal;letter-spacing:normal;text-transform:none;font-size:10.5px;color:var(--muted)}
+.db-rcarte .v{display:flex;align-items:baseline;gap:6px;margin-top:3px;font-size:20px;letter-spacing:-.01em;color:var(--ink);font-variant-numeric:tabular-nums}
+.db-rcarte .v small{font-size:11px;letter-spacing:normal;color:var(--muted)}
+.db-rcarte .s{margin-top:2px;font-size:10.5px;color:var(--muted)}
+.db-rech{position:relative;height:6px;margin:8px 0 4px;border-radius:3px;background:var(--chip)}
+.db-rech i{position:absolute;left:0;top:0;bottom:0;border-radius:3px;background:var(--green)}
+.db-rech i.att{background:var(--prize)}
+.db-rech b{position:absolute;top:-3px;width:2px;height:12px;background:var(--ink)}
+.db-rail-ext{margin-left:auto;font-size:11px;color:var(--faint)}
+.db-retoiles{display:inline-flex;gap:1px;color:var(--prize)}
+.db-retoiles svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.db-retoiles svg.on{fill:currentColor}
+/* La barre du haut : le magasin et l'onglet, la date, Relire, puis la valeur en vignette et deux avatars identiques. */
+.db-nav--rail{margin:0 0 16px;padding:16px 0 14px;border-bottom:1px solid var(--line)}
+.db-vt{margin-right:14px}
+.db-vt .kk{margin:0 0 3px;font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.db-vt h1{margin:0;font-size:24px;font-weight:400;line-height:1.15;letter-spacing:-.01em;color:var(--ink)}
+.db-avs{display:flex;align-items:center;gap:20px;margin-left:6px;padding-left:16px;border-left:1px solid var(--line)}
+.db-vign{display:flex;flex-direction:column;justify-content:center;gap:1px;height:36px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.db-vign:hover,.db-vign.ouv{background:var(--paper)}
+.db-vign .k{font-size:9.5px;line-height:1.1;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.db-vign .v{font-size:15px;line-height:1.2;white-space:nowrap;font-variant-numeric:tabular-nums}
+.db-av{display:flex;align-items:center;gap:9px;padding:0;border:0;background:none;font:inherit;text-align:left;cursor:pointer;color:var(--ink)}
+.db-av__o{display:flex;align-items:center;justify-content:center;width:36px;height:36px;flex:0 0 36px;box-sizing:border-box;border:1px solid var(--line);border-radius:50%;background:#fff;color:var(--muted-2)}
+.db-av__o svg{width:18px;height:18px}
+.db-av:hover .db-av__o{background:var(--paper)}
+.db-av.vif .db-av__o{border-color:rgba(141,29,44,.45);background:rgba(141,29,44,.05);color:var(--accent)}
+.db-av__t .k{display:block;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
+.db-av__t .v{display:block;margin-top:2px;font-size:13px;white-space:nowrap}
+.db-av.vif .db-av__t .v{color:var(--accent)}
+.db-vign:focus-visible,.db-av:focus-visible,.db-rcarte:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+@media print{.db-rail{display:none}body.db-rail-on #dash{margin-left:0}}
+.bm-cp-t{cursor:pointer}.bm-cp-t:hover{background:var(--paper)}.bm-cp-dr{margin-left:auto;font-size:12px;color:var(--color-primary,#8D1D2C);white-space:nowrap}
+
+/* Chercher une tâche (15/11/2026) : le champ, puis chaque tâche trouvée et ses sept jours. */
+.tj-q-b{padding:4px 16px 10px}
+.tj-q-in{width:100%;box-sizing:border-box;height:38px;padding:0 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font:400 13px var(--font-ui,'Gotham',system-ui,sans-serif);color:var(--ink)}
+.tj-q-in:focus{outline:2px solid var(--accent);outline-offset:1px}
+.tj-q-vide{padding:2px 16px 14px}
+.tj-q-som{padding:0 16px 8px;font-size:12px;color:var(--muted-2)}
+.tj-q-t{margin:0 16px 12px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--table-head)}
+.tj-q-h{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.tj-q-j{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.tj-q-c{display:grid;gap:4px;align-content:start;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;min-width:0}
+.tj-q-c.non{background:var(--stop-soft)}
+.tj-q-c.sp{background:var(--prize-soft)}
+.tj-q-c.rien{background:transparent;border-style:dashed}
+.tj-q-d{font-size:11px;color:var(--muted-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tj-q-ph{display:flex;align-items:center;justify-content:center;aspect-ratio:4/3;border-radius:6px;overflow:hidden;background:var(--chip);color:var(--muted)}
+.tj-q-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.tj-q-ph.vide{background:repeating-linear-gradient(135deg,var(--chip) 0 6px,transparent 6px 12px)}
+.tj-q-v{font-size:11px;color:var(--muted-2);min-height:18px}
+.tj-q-v .tj-note{font-size:10.5px}
+.tj-q-anc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
+.tj-q-n{font-size:11px;color:var(--muted-2)}
 /* Le bouton « Demande au bureau » de l'entête (15/11/2026) : à côté de l'assistant, toujours visible. */
 .db-btn.hd-btn{border-color:var(--color-primary);color:var(--color-primary)}.db-btn.hd-btn .hd-b{margin-left:4px}
