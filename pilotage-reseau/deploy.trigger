@@ -26,3 +26,4 @@
 2026-11-15T19:07:14Z Notation IA : juger le comptoir et non la photo, critères et photo type du rayon
 2026-11-15T19:12:01Z Boîte mail du magasin (IMAP/SMTP OVH, modèles, messages automatiques, créer une offre depuis un e-mail)
 2026-11-15T19:25:32Z Mon marketing : calendrier de l'année ; Mon catalogue : importer une photo (promotions, bundles, pages)
+2026-11-15T19:36:28Z Contrôle des tâches : assistant de notation (manuelle ou assistée), ponctualité, leçons
