@@ -3238,7 +3238,7 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 /* La valeur du magasin, au clic sur la vignette du rail (15/11/2026) : le calcul pas à pas et la courbe des six
  * derniers trimestres. Un panneau bordé, sans ombre (§2), ancré sous la vignette. */
 .db-avs{position:relative}
-.db-vpop{position:absolute;z-index:40;top:calc(100% + 8px);left:16px;width:380px;padding:12px 14px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;cursor:default}
+.db-vpop{position:absolute;z-index:40;top:calc(100% + 8px);left:0;width:380px;padding:12px 14px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;text-align:left;cursor:default}
 .db-vpop-h{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
 .db-vpop-x{width:24px;height:24px;border:1px solid var(--line);border-radius:6px;background:#fff;color:var(--muted-2);font-size:15px;line-height:1;cursor:pointer}
 .db-vpop-calc{display:grid}
@@ -3260,3 +3260,8 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-vpop-c .vl{font-size:10.5px;fill:var(--ink)}
 .db-vpop-c .vl.mu{fill:var(--muted)}
 .db-vpop .mu{margin:6px 0 0;font-size:11px;color:var(--muted)}
+/* « Relire » dans le format des autres vignettes (15/11/2026) ; pendant la lecture, l'icône tourne. */
+.db-vwrap{position:relative;display:flex}
+.db-av.lit .db-av__o svg{animation:db-tourne 1s linear infinite}
+@keyframes db-tourne{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.db-av.lit .db-av__o svg{animation:none}}

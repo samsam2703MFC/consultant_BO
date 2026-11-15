@@ -6727,6 +6727,8 @@
       ${!['promos', 'offres', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
+  /** L'icône de « Relire » (15/11/2026, « soigner l'icône ») : un cercle ouvert et sa flèche, au trait des autres vignettes. */
+  const RELIRE_ICO = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4.5v4.2h-4.2"/></svg>';
   function railBarre() {
     const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
     const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
@@ -6737,8 +6739,9 @@
     // catalogue, le module des visites) : pas de second titre dans la barre (15/11/2026, « éviter les doubles titres »).
     const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
-      ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
-      <span class="db-avs">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
+      ${navPeriode()}<span style="flex:1"></span>
+      <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
+      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button></span>
       ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
@@ -9989,7 +9992,7 @@
       S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
-    $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => charger(true)));
+    $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => { S.luA = Date.now(); charger(true); }));
     $.querySelectorAll('[data-tmseuil]').forEach(b => b.addEventListener('click', () => { S.tmSeuil = +b.dataset.tmseuil; try { localStorage.setItem('db.tmSeuil', String(S.tmSeuil)); } catch (e) { /* navigation privée */ } charger(false); }));
     $.querySelectorAll('[data-tmjour]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.tmjour; if (!d || d > AUJ || d === S.date) { return; } S.date = d; urlMaj(); charger(false); }));
     // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
@@ -10146,6 +10149,7 @@
   if (!EMBED_PM) { pushEtatLire().then(() => rendre()).catch(() => {}); }
   lire('/stores?statut=tous').then(l => { S.stores = (Array.isArray(l) ? l : []).filter(s => !s.status || /ouvert/i.test(s.status)).map(s => ({ id: s.id, nom: s.nom || s.name })); rendre(); }).catch(() => {});
   urlMaj();
+  S.luA = Date.now();
   charger(false);
   // La journée en cours se relit toutes les dix minutes.
   setInterval(() => { if ((S.vue === 'jour' || S.vue === 'morts' || S.vue === 'taches') && S.date === AUJ) { charger(true); } }, 600000);
