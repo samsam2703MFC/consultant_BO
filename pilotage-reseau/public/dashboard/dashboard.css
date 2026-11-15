@@ -3215,3 +3215,5 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .tj-q-v .tj-note{font-size:10.5px}
 .tj-q-anc{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:8px}
 .tj-q-n{font-size:11px;color:var(--muted-2)}
+/* Le bouton « Demande au bureau » de l'entête (15/11/2026) : à côté de l'assistant, toujours visible. */
+.db-btn.hd-btn{border-color:var(--color-primary);color:var(--color-primary)}.db-btn.hd-btn .hd-b{margin-left:4px}

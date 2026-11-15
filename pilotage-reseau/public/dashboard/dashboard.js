@@ -5599,7 +5599,9 @@
     lire('/helpdesk/magasin?shop=' + encodeURIComponent(S.shop)).then(d => { HLP.d = d; HLP.err = d && d.erreur ? d.erreur : null; })
       .catch(e => { HLP.err = e.message; }).then(() => { HLP.chargement = false; if (IA.ouvert) { iaRendre(); } else { rendre(); } });
   }
-  function hdOuvertes() { return HLP.d && HLP.shop === S.shop ? (HLP.d.demandes || []).filter(x => x.ouverte).length : 0; }
+  function hdOuvertes() { if (!EMBED && !EMBED_PM && !HLP.d && !HLP.chargement && HLP.tente !== S.shop) { HLP.tente = S.shop; setTimeout(() => hdLire(false), 0); }
+    return hdOuvertesN(); }
+  function hdOuvertesN() { return HLP.d && HLP.shop === S.shop ? (HLP.d.demandes || []).filter(x => x.ouverte).length : 0; }
   const HD_ETAT = { NEW: ['att', 'Envoyée'], IN_PROGRESS: ['sans', 'En cours'], RESOLVED: ['ok', 'Résolue'], CLOSED: ['ok', 'Fermée'], CANCELLED: ['ko', 'Annulée'] };
   function hdCarte(x) {
     const e = HD_ETAT[x.statut] || ['att', x.statutNom];
@@ -6730,7 +6732,7 @@
     else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
-      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : `<button class="db-btn-ia" data-iaouvrir="d">${iaIcone(17)}Demande au bureau</button>`}</div>`;
+      <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
       <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
