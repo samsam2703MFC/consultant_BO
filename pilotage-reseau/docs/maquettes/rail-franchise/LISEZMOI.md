@@ -14,7 +14,61 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Boîte mail dans le dashboard (`mail.png`) — maquette, à valider
+## Vendre › Offres, et la boîte mail qui vend (`offres.png`, `offre-edition.png`, `offre-a4.png`, `mail.png`, `mail-offre.png`) — maquette, à valider
+
+Demandes du 15/11/2026 : « rajouter dans Vendre : Offres — Client offers [les sept routes ci-dessous], avec le gabarit
+fait précédemment » ; « dans le mail, le bouton assistant Créer une offre (corriger le mail), toutes les possibilités
+fonctionnelles pour une boîte mail efficace, orientée réponse rapide et développement des ventes » ; puis « only api ».
+
+**Seulement l'API Client offers de TF Buddy** : pas de table du cockpit, pas de PDF fabriqué par le cockpit, pas de
+chiffre venu d'ailleurs. Dans les maquettes, l'appel est écrit sous chaque geste.
+
+| Geste | Appel |
+|---|---|
+| La liste, les onglets, les chiffres du haut | `GET /api/v1/shops/{shopId}/offers?include=products,client` |
+| L'offre ouverte, son aperçu au gabarit A4 version A (§13.4) | `GET /api/v1/offers/{offerId}?include=products,client` |
+| Nouvelle offre ; « Créer une offre » de la boîte mail | `POST /api/v1/offers` (corps : `OfferInput`) |
+| Modifier ; Archiver (`active` 0) | `PATCH /api/v1/offers/{offerId}` |
+| Supprimer | `DELETE /api/v1/offers/{offerId}` |
+| Convertir en commande (`pick_up_datetime`, `id_employee`) | `POST /api/v1/offers/{offerId}/convert-to-order` |
+| Le PDF, en FR, NL ou EN | `GET /api/v1/offers/{offerId}/document?lang=…` |
+
+- **Offres** (`offres.png`) entre dans Vendre, entre Promotions et Primes, avec le nombre d'offres en cours. Onglets
+  déduits des champs de l'offre : En cours (`active` 1, `status` 0), Converties (`status` 1 : c'est ce que pose
+  convert-to-order, `OfferService::convertToOrder`), Archivées (`active` 0), Toutes. Chiffres du haut, calculés sur la liste : en cours, converties du mois, taux de conversion du mois,
+  prochain événement (`event_day`). À droite, l'offre choisie, ses six gestes et l'aperçu au gabarit A4 version A.
+- **Modifier** (`offre-edition.png`) : exactement les champs de `OfferInput` (name, id_client, event_day,
+  in_store_pickup, delivery_street/zip/city, delivery_cost, conditions, description, products) ; à côté, la conversion
+  en commande et le PDF.
+- **Le document** (`offre-a4.png`) : gabarit A4 version A, rempli des seuls champs de l'offre (`OfferRecord`,
+  `OfferProductRecord` : product_name, quantity, unit_price, tax_val_perc, final_total_price, final_total_price_net ;
+  `ClientRecord` pour le destinataire). Le Ruby à trois endroits. Ce que l'API ne donne pas est dit, pas inventé :
+  l'adresse, le n° d'entreprise et les mentions légales de l'émetteur (la fiche du magasin, hors de ces routes), une
+  date de validité (pas de champ : elle va dans `conditions`).
+- **La boîte mail corrigée** : les chiffres du haut viennent de la liste des offres ; sous chaque e-mail, le geste que
+  l'assistant propose quand il passe par l'API — « Créer une offre » (une demande), « Convertir en commande » (un client
+  qui accepte), l'état de l'offre déjà créée. `mail.png` : le client accepte l'offre n° 409 ; l'assistant a lu la date
+  de retrait (`pick_up_datetime`), on choisit qui la prépare, « Convertir en commande ». `mail-offre.png` : « Créer une
+  offre » a rempli `OfferInput` depuis l'e-mail et créé l'offre n° 412 ; son PDF part en pièce jointe de la réponse
+  rédigée par l'assistant ; « Modifier » (PATCH) et « Supprimer » (DELETE) restent à portée. Réponses rapides et
+  « Rédiger avec l'assistant » pour le reste.
+
+Offres, clients, produits et montants sont des **exemples** ; aucun nom de personne (le personnel : « Personne A »).
+**Pour la coder** : le cockpit appelle ces routes côté serveur, avec le jeton TF Buddy du magasin (dans `erp_cles`) ;
+aujourd'hui `GET /shops/{shopId}/offers` répond 401 (`INVALID_TOKEN`) au cockpit : aucune offre réelle n'a été lue.
+Le PDF est celui que TF Buddy rend : `OfferService::getPDF` (fichier envoyé le 15/11) appelle la classe
+`App\Api\Repositories\Utils\OfferPdf`, « le devis aux couleurs de L'Atelier by (version C2, une colonne) » ; c'est
+elle qui dessine la page, pas `OfferService` (le bloc TCPDF en commentaire est l'ancienne mise en page). `OfferPdf.php`
+n'est pas dans ce dépôt : à comparer avec le gabarit A du §13.4 quand on l'aura. Ce que `OfferService` impose : le PDF
+exige des produits et un **client** (`id_client`, sinon 404 `MISSING_OFFER_CLIENT`) — « Créer une offre » crée donc le
+nouveau client (`POST /api/v1/clients`, hors des sept routes) avant l'offre ; convert-to-order exige
+`pick_up_datetime` (`MISSING_PICKUP_DATETIME`) et pose `status` = 1 ; le fichier s'appelle « Offre_{id}_{client} »
+(`generateFileName`). Les erreurs de l'API rendent 401 même quand ce n'est pas une affaire de droits (par exemple
+`FAILED_DELETE_OFFER`) : à ne pas lire comme un jeton refusé. L'envoi de l'offre passe par la boîte mail (le PDF joint) ;
+`POST /offers/{offerId}/email` existe dans TF Buddy mais n'était pas dans la liste. Icône ajoutée (§8.4) : « Modèles »
+pour Offres. Générer : `node generer-offres.js` et `node generer-mail.js` (partagent `commun-maquettes.js`).
+
+## Boîte mail dans le dashboard (première version, remplacée par la section ci-dessus)
 
 Demande du 15/11/2026 : « au-dessus, mettre dans le rail : boîte mail » ; choix : une maquette d'une boîte dans le
 dashboard. **Boîte mail** au-dessus des groupes du rail, avec le nombre de non lus ; la page dans le dashboard : les

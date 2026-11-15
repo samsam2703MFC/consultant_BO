@@ -3,7 +3,7 @@
 .ml-rail { margin-top: 6px; }
 .ml-adr { font-size: 12px; margin-right: 6px; }
 .rs-onglets .btn--primary .ico { stroke: #fff; }
-.ml { display: grid; grid-template-columns: 430px 1fr; gap: 16px; align-items: start; }
+.ml { display: grid; grid-template-columns: 430px minmax(0, 1fr); gap: 16px; align-items: start; }
 .ml-g { border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
 .ml-q-b { display: flex; align-items: center; gap: 8px; margin: 12px 12px 8px; padding: 0 10px; height: 36px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
 .ml-q-in { flex: 1; border: 0; outline: 0; font: inherit; font-size: 13px; color: var(--ink); background: transparent; }
@@ -39,3 +39,38 @@
 .ml-pj > span { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .ml-pj small { display: block; font-size: 10.5px; color: var(--muted); }
 .ml-rep { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; padding: 12px 14px; border: 1px dashed var(--line); border-radius: 8px; font-size: 13px; }
+/* L'assistant « Créer une offre » : le bandeau, puis l'offre préparée. */
+.ml-ia { display: flex; align-items: center; gap: 12px; margin: 14px 0 12px; padding: 10px 12px; border: 1px solid rgba(141, 29, 44, 0.3); border-radius: 10px; background: rgba(141, 29, 44, 0.04); }
+.ml-ia-o { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; flex: 0 0 36px; border: 1px solid var(--accent); border-radius: 50%; background: #fff; color: var(--accent); }
+.ml-ia-t { flex: 1; display: grid; gap: 2px; font-size: 12.5px; color: var(--ink); }
+.ml-ia-k { font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.ml-ia-b { border-color: var(--accent); color: var(--accent); }
+.ml-ia-b .ico, .ml-ia-o .ico { width: 16px; height: 16px; }
+.ml-off { padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; background: var(--table-head); }
+.ml-off-h { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+.ml-off-h h3 { margin: 2px 0 0; font-size: 17px; font-weight: 400; color: var(--ink); }
+.ml-off-v { font-size: 12px; color: var(--muted-2); }
+.ml-off-t { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 8px; font-size: 12.5px; }
+.ml-off-t th { padding: 7px 10px; text-align: left; font-weight: 400; font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--table-head); }
+.ml-off-t td { padding: 7px 10px; border-top: 1px solid var(--row-line); color: var(--ink); }
+.ml-off-t .num { text-align: right; }
+.ml-off-t small { display: block; font-size: 10.5px; color: var(--muted); }
+.ml-off-tot td { background: var(--total-line); }
+.ml-off-g { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 10px 0; }
+.ml-off-g div { display: grid; gap: 2px; font-size: 12px; color: var(--ink); }
+.ml-off-g .k { font-size: 10.5px; color: var(--muted); }
+.ml-off-rep { display: grid; gap: 6px; }
+/* La boîte, version « réponse rapide et ventes » (15/11) : le geste proposé sous chaque e-mail, les réponses rapides,
+ * l'offre créée par l'assistant (API Client offers). */
+.ml-geste { display: flex; align-items: center; gap: 5px; margin-top: 5px; font-size: 11.5px; color: var(--accent); }
+.ml-geste .ico { width: 14px; height: 14px; flex: 0 0 14px; }
+.ml-geste.etat { color: var(--muted-2); }
+.ml-rapides { display: grid; gap: 6px; margin-top: 14px; }
+.ml-rapides .rs-puce { padding: 5px 10px; font-size: 12px; }
+.ml-puce-ia { display: inline-flex; align-items: center; gap: 5px; border-color: rgba(141, 29, 44, 0.35); color: var(--accent); }
+.ml-puce-ia .ico { width: 14px; height: 14px; }
+.ml-ia.fait { border-color: var(--line); background: var(--table-head); }
+.ml-lien-off { flex: none; color: var(--accent); text-decoration: none; font-size: 12.5px; }
+.ml-off .of-api { display: inline; margin: 0 0 0 6px; }
+.ml-gestes { align-items: flex-start; }
+.ml-pj-off .of-api { white-space: normal; }

@@ -51,6 +51,7 @@
   <p class="intro">Le dashboard magasin, au bureau, avec un rail à gauche. La proposition en cours montre les chiffres réels de
     Halle, lus au cockpit le dimanche 15 novembre 2026 à 09:46 ; les autres maquettes, des exemples. Un clic sur une capture l’ouvre en grand.</p>
   <nav id="onglets">
+    <a href="#offres">Offres</a>
     <a href="#mail">Boîte mail</a>
     <a href="#taches">Tâches : recherche</a>
     <a href="#reseaux">Réseaux sociaux</a>
@@ -62,12 +63,27 @@
   </nav>
 </header>
 <main>
+  <section id="s-offres">
+    <h2>Vendre › Offres <span class="etat cours">maquette à valider</span></h2>
+    <p class="sous">Offres entre dans Vendre, avec le nombre d’offres en cours. Seulement l’API Client offers de TF Buddy : la liste
+      (GET /shops/{shopId}/offers), l’offre (GET /offers/{id}), Nouvelle offre (POST), Modifier et Archiver (PATCH), Supprimer (DELETE),
+      Convertir en commande (POST …/convert-to-order), le PDF (GET …/document). L’appel est écrit sous chaque geste.</p>
+    <p class="note">Offres, clients et montants sont des exemples : l’API des offres répond 401 au cockpit aujourd’hui, aucune offre réelle n’a été lue.
+      Ce que l’API ne donne pas (mentions légales de l’émetteur, date de validité) est signalé, pas inventé. Le PDF réel est dessiné par
+      la classe OfferPdf de TF Buddy (« version C2, une colonne ») : à comparer avec le gabarit A quand on aura son fichier.</p>
+    <figure><figcaption>Offres · la liste, l’offre choisie et son aperçu au gabarit A4 version A</figcaption><img src="offres.png" alt="La page Offres"></figure>
+    <figure><figcaption>Une offre ouverte · les champs de OfferInput, la conversion en commande, le PDF</figcaption><img src="offre-edition.png" alt="Modifier une offre"></figure>
+    <figure><figcaption>Le document · gabarit A4 version A</figcaption><img src="offre-a4.png" alt="L’offre de prix au gabarit A4" style="max-width:794px"></figure>
+  </section>
+
   <section id="s-mail">
-    <h2>Boîte mail dans le dashboard <span class="etat cours">maquette à valider</span></h2>
-    <p class="sous">« Boîte mail » au-dessus des groupes du rail, avec le nombre de non lus. La page : Réception, Envoyés, Brouillons, Archives ;
-      la recherche et les filtres ; la liste ; l’e-mail ouvert avec ses pièces jointes, et un lien vers ce que le dashboard connaît (ici, la campagne).</p>
+    <h2>Boîte mail : répondre vite, vendre plus <span class="etat cours">maquette à valider</span></h2>
+    <p class="sous">« Boîte mail » au-dessus des groupes du rail. En haut, les chiffres des offres ; sous chaque e-mail, le geste de l’assistant
+      quand il passe par l’API : « Créer une offre » sur une demande, « Convertir en commande » quand un client accepte. Réponses rapides et
+      réponse rédigée par l’assistant.</p>
     <p class="note">Les e-mails sont des exemples. Le cockpit envoie des e-mails aujourd’hui, il n’en lit pas : le coder demande une lecture de la boîte côté serveur.</p>
-    <figure><figcaption>Boîte mail · Réception</figcaption><img src="mail.png" alt="La boîte mail dans le dashboard"></figure>
+    <figure><figcaption>Le client accepte l’offre n° 409 · la convertir en commande sans quitter l’e-mail</figcaption><img src="mail.png" alt="La boîte mail : convertir une offre en commande"></figure>
+    <figure><figcaption>« Créer une offre » · l’offre n° 412 créée dans TF Buddy, son PDF joint à la réponse</figcaption><img src="mail-offre.png" alt="La boîte mail : créer une offre"></figure>
   </section>
 
   <section id="s-taches">
@@ -145,9 +161,9 @@
 <div class="loupe" id="loupe" role="dialog" aria-label="Capture en grand"><button class="fermer" type="button">Fermer</button><img alt=""></div>
 <script>
   // Les vues se nomment dans l'adresse (#marketing, #reel, #b, #propre, #propositions) ; sans nom, la demande en cours.
-  const VUES = ['mail', 'taches', 'reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
+  const VUES = ['offres', 'mail', 'taches', 'reseaux', 'marketing', 'reel', 'b', 'propre', 'propositions'];
   function montrer() {
-    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'mail';
+    const v = VUES.includes(location.hash.slice(1)) ? location.hash.slice(1) : 'offres';
     VUES.forEach(n => document.getElementById('s-' + n).classList.toggle('on', n === v));
     document.querySelectorAll('#onglets a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#' + v));
   }

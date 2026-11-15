@@ -1,5 +1,17 @@
 {
+ "offres": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "offre-edition": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "mail": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "mail-offre": {
   "rail": 1000,
   "tientDans1000": true
  },
