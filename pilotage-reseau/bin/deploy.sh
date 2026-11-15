@@ -677,6 +677,7 @@ chmod +x "$TARGET_DIR/bin/visites_cron.sh"
 chmod +x "$TARGET_DIR/bin/metadonnee_cron.sh"
 chmod +x "$TARGET_DIR/bin/stock_cron.sh"
 chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
+chmod +x "$TARGET_DIR/bin/boite_cron.sh"
 # /etc/cron.d plutôt qu'un crontab édité à la main : le fichier se réécrit à
 # chaque livraison, sans jamais empiler de doublon. Minute 5 pour laisser
 # passer les tâches de l'heure pile.
@@ -696,6 +697,9 @@ chmod +x "$TARGET_DIR/bin/hr_dimona_cron.sh"
   # Le stock matière des magasins : relu toutes les 5 minutes pour garder chaque inventaire et chaque
   # livraison du panel au moment où ils passent (l'API ne rend que le stock courant).
   echo "*/5 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/stock_cron.sh >/dev/null 2>&1"
+  # La boîte mail des magasins : les messages automatiques (accusé, relance d'une offre, rappel la veille), toutes les
+  # 10 minutes ; rien tant qu'aucun magasin n'en a allumé un (src/franchise/boite_mail.php).
+  echo "*/10 * * * * root ALIAS_PATH=${ALIAS_PATH} ${TARGET_DIR}/bin/boite_cron.sh >/dev/null 2>&1"
   # Module RH / Dimona : chaque minute, la relecture des déclarations en attente (5 s, 15 s, 30 s… : le
   # script tourne 55 s) et l'alerte des certificats à moins de 60 jours. Sous www-data : c'est lui qui
   # possède le dossier privé et la clé maître du module.

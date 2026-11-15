@@ -153,6 +153,7 @@ require __DIR__ . '/../../src/franchise/catalogues_magasin.php'; // Mon catalogu
 require __DIR__ . '/../../src/franchise/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
 require __DIR__ . '/../../src/franchise/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
 require __DIR__ . '/../../src/franchise/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
+require __DIR__ . '/../../src/franchise/boite_mail.php';         // Boîte mail du magasin : IMAP/SMTP de sa boîte OVH, modèles, messages automatiques (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -363,7 +364,9 @@ function tempsServeur(float $tCharge, float $tInstall): void
 function routeGardee(string $method, string $path): mixed
 {
     $n = $method === 'GET' ? min(900, max(0, (int) ($_GET['_cache'] ?? 0))) : 0;
-    if ($n <= 0 || !function_exists('rcServi') || in_array($path, ['/exploitation/jour', '/exploitation/periode'], true)) { return route($method, $path); }
+    // La boîte mail ne passe JAMAIS par ce cache commun : sa réponse est celle d'une session (le mot de passe de la boîte).
+    if ($n <= 0 || !function_exists('rcServi') || in_array($path, ['/exploitation/jour', '/exploitation/periode'], true)
+        || str_starts_with($path, '/dashboard/boite')) { return route($method, $path); }
     $q = $_GET; unset($q['_cache'], $q['fond'], $q['rafraichir']); ksort($q);
     $cle = 'rcG:' . md5($path . '?' . http_build_query($q));
     rcFondDemande();
@@ -383,6 +386,8 @@ function route(string $method, string $path): mixed
     if (($c = dmRoute($method, $path)) !== null) { return $c; }
     // Dashboard › Réseaux sociaux (15/11/2026) : l'espace boutique du Marketing, ouvert pour le magasin de la session.
     if (($c = dsRoute($method, $path)) !== null) { return $c; }
+    // Dashboard › Boîte mail (15/11/2026) : la boîte du magasin, verrouillée par son propre mot de passe (src/franchise/boite_mail.php).
+    if (($c = bmRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
