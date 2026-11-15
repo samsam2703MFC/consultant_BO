@@ -4,7 +4,17 @@
 .an-racine .ico { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 /* la barre : retour, titre, recherche, période */
-.an-racine .an-barre { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; margin: 0 0 14px; }
+.an-racine .an-barre { display: grid; gap: 10px; margin: 0 0 14px; }
+.an-racine .an-ligne { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 14px; }
+.an-racine .an-pers { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.an-racine .an-seg--p { margin: 0; }
+.an-racine .an-seg--p button { padding: 6px 12px; font-size: 12.5px; }
+.an-racine .an-nav { display: inline-flex; align-items: center; gap: 8px; }
+.an-racine .an-nav b { min-width: 150px; font-weight: 500; font-size: 14px; color: var(--ink); text-align: center; }
+.an-racine .an-btn--p { padding: 4px 10px; font-size: 15px; line-height: 1; }
+.an-racine .an-btn--p:disabled { opacity: 0.35; cursor: default; }
+.an-racine .an-date { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted-2); }
+.an-racine .an-date input { height: 30px; padding: 0 8px; border: 1px solid var(--line); border-radius: 8px; font: inherit; font-size: 12.5px; color: var(--ink); background: #fff; }
 .an-racine .an-barre:empty { display: none; }
 .an-racine .an-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid var(--line); border-radius: 8px; background: #fff; font: inherit; font-size: 12.5px; color: var(--ink); cursor: pointer; }
 .an-racine .an-btn:hover { border-color: var(--accent); color: var(--accent); }

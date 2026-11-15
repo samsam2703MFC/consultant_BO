@@ -31,7 +31,9 @@ Les autres routes du dashboard (Opérationnel, Tâches, Semaine, Mois, Année, P
 Fidélité, l'assistant, la revue du soir…) restent dans `src/`, parce que le cockpit du siège les sert aussi. L'index de
 l'API dit, route par route, le fichier et la fonction qui la servent.
 
-- `dashboard_analyse.php` — Vendre › Analyse (15/11/2026, maquettes A, E et F) : le magasin face aux autres magasins à taille
+- `dashboard_analyse.php` — Vendre › Analyse (15/11/2026, maquettes A, E et F) : le magasin sur la période choisie — semaine,
+  mois, trimestre, année, 13 semaines ou du … au, face à la période d'avant au jour (`/dashboard/analyse/periode`) ; face aux
+  autres magasins à taille
   égale, sans nom ni volume (`/dashboard/analyse/reseau`), les produits mois par mois depuis l'ouverture (`/mois`), un produit
   jour par jour avec ses invendus (`/jours`) ; la règle de marge commune (`daMarge`). Écran : `public/dashboard/analyse.js`.
   Tests : `php bin/tests_analyse.php`.
