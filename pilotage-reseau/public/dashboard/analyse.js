@@ -77,6 +77,26 @@
     else { p.ancre = plus(a, 91 * sens); }
   }
   const PER = () => bornesPer(st.per);
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  /** L'adresse de la page garde la période (15/11/2026, « garde la période dans l'adresse de la page ») et la page ouverte :
+   * per (le type), a (la date repère) ou du et au (une plage), produit ou famille. Un rechargement rouvre la même vue. */
+  function urlEcrire() {
+    const u = new URL(location.href), q = u.searchParams, p = st.per;
+    q.set('per', p.type);
+    if (p.type === 'plage') { q.set('du', p.du); q.set('au', p.au); q.delete('a'); } else { q.set('a', p.ancre); q.delete('du'); q.delete('au'); }
+    if (st.vue === 'produit' && st.pid) { q.set('produit', st.pid); } else { q.delete('produit'); }
+    if (st.vue === 'famille' && st.groupe) { q.set('famille', st.groupe); } else { q.delete('famille'); }
+    history.replaceState(history.state, '', u.toString());
+  }
+  function urlLire() {
+    const q = new URLSearchParams(location.search), t = q.get('per'), auj = iso(new Date());
+    if (TYPES.some(x => x[0] === t)) {
+      const a = q.get('a'), du = q.get('du'), au = q.get('au');
+      if (t === 'plage' && DATE_RE.test(du || '') && DATE_RE.test(au || '') && du <= au && du <= auj) { st.per = { type: t, ancre: au, du, au: au > auj ? auj : au }; }
+      else if (t !== 'plage') { st.per = { type: t, ancre: DATE_RE.test(a || '') && a <= auj ? a : auj, du: null, au: null }; }
+    }
+    if (q.get('produit')) { st.vue = 'produit'; st.pid = q.get('produit'); } else if (q.get('famille')) { st.vue = 'famille'; st.groupe = q.get('famille'); }
+  }
   const PK = () => { const b = PER(); return b.du + '|' + b.au; };
   const PQ = () => { const b = PER(); return '&du=' + b.du + '&au=' + b.au + '&prec=' + b.prec; };
 
@@ -518,10 +538,10 @@
     corps.innerHTML = st.vue === 'produit' ? vueProduit(P) : st.vue === 'famille' ? vueFamille(P) : vueAccueil(P);
   }
   /** Une autre période : on garde la page (l'entrée, le produit, la famille) et on relit. */
-  function changerPeriode() { st.prep = null; st.cleBarre = null; charger(); rendre(); }
+  function changerPeriode() { st.prep = null; st.cleBarre = null; urlEcrire(); charger(); rendre(); }
   function ouvrir(vue, cle) {
     st.vue = vue; st.pid = vue === 'produit' ? String(cle) : null; st.groupe = vue === 'famille' ? String(cle) : null; st.frais = false;
-    charger(); rendre();
+    urlEcrire(); charger(); rendre();
     st.el.scrollIntoView({ block: 'start' });
   }
   function brancher(el) {
@@ -564,13 +584,14 @@
     racine(shop, o) {
       o = o || {};
       if (o.apiBase) { st.api = o.apiBase; }
-      if (st.el && st.shop === String(shop)) { st.cleBarre = null; charger(); rendre(); return st.el; }
+      if (st.el && st.shop === String(shop)) { st.cleBarre = null; urlEcrire(); charger(); rendre(); return st.el; }
       st.shop = String(shop); st.d = {}; st.err = {}; st.enCours = {}; st.prep = null; st.dernier = null; st.vue = 'accueil'; st.pid = null; st.groupe = null; st.frais = false; st.cleBarre = null;
       st.per = { type: 'sem13', ancre: iso(new Date()), du: null, au: null };
+      urlLire();
       st.el = document.createElement('div'); st.el.className = 'an-racine'; st.el.id = 'db-analyse';
       st.el.innerHTML = '<div class="an-barre"></div><div class="an-corps"></div>';
       brancher(st.el);
-      charger(); rendre();
+      urlEcrire(); charger(); rendre();
       return st.el;
     },
     /** « ↻ Relire » : tout relire une fois, sans le cache partagé. */

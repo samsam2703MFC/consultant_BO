@@ -256,6 +256,8 @@
     if (EMBED_PM) { u.searchParams.delete('date'); u.searchParams.delete('ouvrir'); }
     if (estMobile() && S.vue === 'jour') { u.searchParams.set('mo', S.mo); } else { u.searchParams.delete('mo'); }
     if (S.vue === 'fidelite' && S.fdClient) { u.searchParams.set('client', S.fdClient); } else { u.searchParams.delete('client'); }
+    // Vendre › Analyse garde sa période et sa page dans l'adresse (analyse.js) ; hors de l'onglet, elles s'effacent.
+    if (S.vue !== 'analyse') { ['per', 'a', 'du', 'au', 'produit', 'famille'].forEach(k => u.searchParams.delete(k)); }
     if (S.vue === 'concurrence') { u.searchParams.set('bmf', S.bmF); if (S.bmF === 'produit' && S.bmP) { u.searchParams.set('bmp', S.bmP); } else { u.searchParams.delete('bmp'); } } else { u.searchParams.delete('bmf'); u.searchParams.delete('bmp'); }
     history.replaceState(null, '', u.toString());
   }
