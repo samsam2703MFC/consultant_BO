@@ -19,3 +19,4 @@
 2026-11-15T14:06:19Z Dashboard franchisé : calendrier des posts et nouveau post dans Mon marketing
 2026-11-15T14:10:58Z Dashboard franchisé : bouton API (index et appels)
 2026-11-15T14:20:27Z Dashboard franchisé : Nouveau post retiré (attente de Publier du Marketing)
+2026-11-15T14:30:40Z Valeur du magasin : personnel du compte de résultat (20 % réseau)
