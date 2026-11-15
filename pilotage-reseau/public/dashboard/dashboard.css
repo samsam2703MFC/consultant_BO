@@ -3265,3 +3265,10 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-av.lit .db-av__o svg{animation:db-tourne 1s linear infinite}
 @keyframes db-tourne{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.db-av.lit .db-av__o svg{animation:none}}
+/* Le bouton « API » de la barre (15/11/2026) : la même vignette, réduite à son mot — la barre tient sur une ligne
+   jusqu'à 1 280 px ; le nombre d'appels est dans l'info-bulle. */
+.db-avs{gap:5px;padding-left:10px}
+@media (max-width:1400px){.db-av{padding:0 9px 0 6px;gap:6px}.db-vign{padding:0 9px}.db-nav--rail .db-btn[data-recharger]{padding:0 10px}}
+.db-av.db-av--api{justify-content:center;min-width:42px;padding:0 10px;font-size:11px;letter-spacing:.12em;color:var(--muted-2)}
+.db-av.db-av--api:hover{color:var(--accent)}
+@media (max-width:1300px){.db-nav--rail .db-vt h1{font-size:20px}.db-nav--rail .db-vt{margin-right:8px}}

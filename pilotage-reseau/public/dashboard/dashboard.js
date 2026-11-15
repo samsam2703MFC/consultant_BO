@@ -516,7 +516,7 @@
       <div class="db-vpop-calc">
         ${ligne('Chiffre d’affaires annuel', fE(v.annuel), fE(v.total) + ' sur ' + fN(v.jours) + ' jours d’activité' + (v.jours < VALO_JOURS ? ' (' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture)' : ' (du ' + esc(v.du) + ' au ' + esc(v.au) + ')') + ', ramenés à ' + VALO_AN + ' jours')}
         ${ligne('Marge brute réelle', fE(v.mbAnnuel), fPc(100 - v.fc) + ' du CA · food cost ' + fPc(v.fc) + (v.sansFc ? ' · ' + v.sansFc + ' mois sans mesure : ' + esc(v.repli.src) + ' (' + fPc(v.repli.pct) + ')' : ', mesuré mois par mois'))}
-        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', ') + (v.normes.source === 'Budget › Paramètres' ? ' (Budget › Paramètres' + (v.normes.personnelAjoute ? ', personnel ajouté à ' + fPc(VALO_PERSONNEL) : '') + ')' : ''))}
+        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', '))}
         ${ligne('= résultat normatif', fE(v.resultat), 'ce que le magasin gagne aux normes du réseau, sur un an')}
         ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'la valeur du magasin')}
       </div>
@@ -6800,7 +6800,8 @@
       <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button></span>
       ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
-      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
+      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}
+      ${window.DashApi ? `<button type="button" class="db-av db-av--api" data-apiouvrir="1" title="Les appels de cette page à l’API (${window.DashApi.n()}) et l’index de l’API du cockpit franchisé" aria-label="API">API</button>` : ''}</span></div>`;
   }
   function rendre() {
     const surRail = avecRail();
@@ -10050,6 +10051,7 @@
     $.querySelectorAll('[data-fdate]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.fdate; if (!d || d > AUJ) { return; } S.date = d; S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-fan]').forEach(b => b.addEventListener('click', () => { const y = annee() + (+b.dataset.fan); const d = y + S.date.slice(4, 7) + '-01'; S.date = d > AUJ ? AUJ : finMois(d.slice(0, 7)); S.heure = null; S.jourH = null; urlMaj(); charger(false); }));
     $.querySelectorAll('[data-recharger]').forEach(b => b.addEventListener('click', () => { S.luA = Date.now(); charger(true); }));
+    $.querySelectorAll('[data-apiouvrir]').forEach(b => b.addEventListener('click', () => { if (window.DashApi) { window.DashApi.ouvrir(); } }));
     $.querySelectorAll('[data-tmseuil]').forEach(b => b.addEventListener('click', () => { S.tmSeuil = +b.dataset.tmseuil; try { localStorage.setItem('db.tmSeuil', String(S.tmSeuil)); } catch (e) { /* navigation privée */ } charger(false); }));
     $.querySelectorAll('[data-tmjour]').forEach(b => b.addEventListener('click', () => { const d = b.dataset.tmjour; if (!d || d > AUJ || d === S.date) { return; } S.date = d; urlMaj(); charger(false); }));
     // Primes : le filtre, le mois ou l'année, le pas de période, le tri — de la lecture, rien ne s'écrit.
