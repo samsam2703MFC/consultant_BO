@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -135,6 +135,8 @@
   function charger(force) {
     // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
     if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
+    // Le rail du bureau (15/11/2026) : l'objectif du jour et la note Google, en haut du rail, sur tous les onglets.
+    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
@@ -6529,7 +6531,111 @@
   }
   document.addEventListener('keydown', e => { if (S.rv && e.key === 'Escape') { rvFermer(); } });
 
+  /* --- Le rail (15/11/2026, maquette docs/maquettes/rail-franchise, « le vrai dashboard avec un rail à côté ») ------------
+   * Au bureau (1 024 px et plus), hors cadre : l'en-tête et la rangée d'onglets cèdent la place à un rail à gauche (le §8
+   * du design system commun, global.css) et à une barre du haut. Le contenu des onglets ne change pas.
+   * - le rail : les mêmes onglets, dans le même ordre, rangés en groupes ; le plan d'action et la campagne (des vues du
+   *   dashboard qui n'avaient pas d'onglet) ; en haut, l'objectif du jour (/exploitation/jour, la lecture jourM de la
+   *   page ; le trait : la projection de fin de journée) et la note Google (/marketing/avis, face à la cible du réseau) ;
+   *   « Cockpit › Résultat » en lien de retour ;
+   * - la barre du haut : le magasin et l'onglet, la date, « Relire », puis la valeur en vignette, le coach (l'assistant) et
+   *   la revue du soir, deux avatars de même taille et de même forme. */
+  const RAIL_MIN = 1024;
+  function avecRail() { return !EMBED && !EMBED_PM && !estMobile() && window.innerWidth >= RAIL_MIN; }
+  const RAIL_ICO = {
+    tdb: 'M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z',
+    controle: 'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11',
+    journal: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
+    cal: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+    calEd: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01',
+    perf: 'M3 17l6-6 4 4 8-8M15 7h6v6',
+    fonds: 'M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5',
+    bundles: 'M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8',
+    offres: 'M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0',
+    analyse: 'M4 20V10M10 20V4M16 20v-7M22 20H2',
+    etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
+    brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
+    personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
+    formulaires: 'M4 4h16v16H4zM8 8h8M8 12h8M8 16h5',
+    campagnes: 'M3 11l14-7v16L3 13zM7 14v5',
+    retour: 'M19 12H5M12 19l-7-7 7-7',
+  };
+  const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
+  // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, les assistants).
+  const RAIL = [
+    ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
+    ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
+    ['Vendre', [['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse'], ['fidelite', 'Fidélité', 'etoile'], ['catalogue', 'Mon catalogue', 'brochures']]],
+    ['Assistants', [['actions', 'Plan d’action', 'formulaires'], ['campagne', 'Campagne', 'campagnes']]],
+  ];
+  const railLib = v => { for (const g of RAIL) { const e = g[1].find(x => x[0] === v); if (e) { return e[1]; } } return v === 'trimestre' ? 'Trimestre' : 'Dashboard'; };
+  /** L'objectif du jour : le CA face à l'objectif du jour ; aujourd'hui, le trait marque la projection de fin de journée. */
+  function railObjectif() {
+    const cle = 'jourM|' + S.date, D = S.aux[cle];
+    const tete = em => `<div class="k">Objectif du jour<em>${em}</em></div>`;
+    if (!D) { return `<div class="db-rcarte">${tete(S.err[cle] ? '' : 'lecture…')}${S.err[cle] ? `<div class="s">${esc(S.err[cle])}</div>` : '<div class="db-sk" style="height:18px;margin:6px 0 4px;width:55%"></div>'}</div>`; }
+    const m = magasin(D);
+    if (!m || !m.objectifJour) { return `<div class="db-rcarte">${tete('')}<div class="s">pas d’objectif pour ce jour</div></div>`; }
+    const auj = S.date === AUJ, pct = 100 * (m.ca || 0) / m.objectifJour;
+    const proj = auj && m.projection != null ? 100 * m.projection / m.objectifJour : null;
+    return `<button type="button" class="db-rcarte" data-vue="ops">${tete(auj ? 'en direct' : esc(fD(S.date)))}<div class="v">${fP0(pct)}<small>de ${fE(m.objectifJour)}</small></div>
+      <div class="db-rech"><i class="${pct >= 100 ? 'ok' : 'att'}" style="width:${Math.min(100, pct).toFixed(1)}%"></i>${proj != null ? `<b style="left:${Math.min(100, proj).toFixed(1)}%${proj >= 100 ? ';margin-left:-2px' : ''}"></b>` : ''}</div>
+      <div class="s">${fE(m.ca || 0)}${proj != null ? ' · trait : projection ' + fE(m.projection) : ''}</div></button>`;
+  }
+  /** La note Google de la fiche du magasin, sur l'échelle 4,0 → 5,0, le trait à la cible du réseau. */
+  function railGoogle() {
+    const D = S.aux.avis;
+    if (!D) { return `<div class="db-rcarte"><div class="k">Note Google<em>${S.err.avis ? '' : 'lecture…'}</em></div>${S.err.avis ? `<div class="s">${esc(S.err.avis)}</div>` : ''}</div>`; }
+    const m = (D.magasins || []).find(x => String(x.id) === String(S.shop));
+    if (!m || m.note == null) { return `<div class="db-rcarte"><div class="k">Note Google</div><div class="s">${D.indispo ? esc(D.raison || 'réputation indisponible') : 'pas de fiche Google raccordée'}</div></div>`; }
+    const cible = D.cible, pos = v => Math.max(0, Math.min(100, (v - 4) * 100)), plein = Math.round(m.note - 0.4);
+    const et = [1, 2, 3, 4, 5].map(i => `<svg viewBox="0 0 24 24" class="${i <= plein ? 'on' : ''}" aria-hidden="true"><path d="${RAIL_ICO.etoile}"/></svg>`).join('');
+    return `<div class="db-rcarte"><div class="k">Note Google<em>${fN(m.avis || 0)} avis</em></div><div class="v">${nf(m.note, 1)}<span class="db-retoiles">${et}</span>${cible != null ? `<small>cible ${nf(cible, 1)}</small>` : ''}</div>
+      <div class="db-rech"><i class="${cible == null || m.note >= cible ? 'ok' : 'att'}" style="width:${pos(m.note)}%"></i>${cible != null ? `<b style="left:${pos(cible)}%"></b>` : ''}</div></div>`;
+  }
+  /** Le rail, hors de #dash : il garde son défilement quand la page se redessine. */
+  function railMaj(on) {
+    let n = document.getElementById('db-rail');
+    if (!on) { if (n) { n.remove(); } return; }
+    if (!n) { n = document.createElement('nav'); n.id = 'db-rail'; n.className = 'sidebar db-rail'; n.setAttribute('aria-label', 'Navigation du dashboard'); document.body.insertBefore(n, document.body.firstChild); }
+    n.innerHTML = railHtml();
+    // Le même geste que les onglets d'avant (brancher : [data-vue]).
+    n.querySelectorAll('[data-vue]').forEach(b => b.addEventListener('click', () => { S.vue = b.dataset.vue; S.heure = null; S.jourH = null; S.anQ = null; urlMaj(); charger(false); }));
+    // L'entrée active reste visible quand l'onglet change (le rail défile seul).
+    const a = n.querySelector('.sidebar__item.is-active');
+    if (a && n.dataset.vu !== S.vue) { n.dataset.vu = S.vue; a.scrollIntoView({ block: 'nearest' }); }
+  }
+  function railHtml() {
+    return `
+      <div class="sidebar__head"><img class="sidebar__logo" src="../assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard magasin</div></div>
+      <div class="sidebar__back"><a href="../#/resultat">${railIco(RAIL_ICO.retour)}Cockpit › Résultat</a></div>
+      <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
+      <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.map(([v, l, i]) => `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span></button>`).join('')}</div>`).join('')}</div>`;
+  }
+  /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
+  function navPeriode() {
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${!['promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+  }
+  /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
+  function railBarre() {
+    const v = valeurMagasin(), val = !v ? '…' : (!v.n ? '—' : fE(v.valeur));
+    const L = S.aux[cleRVL()], e = rvEtat(), vif = e === 'afaire' || e === 'encours';
+    const rv = !L ? '…' : ({ faite: 'faite', encours: 'en cours', afaire: 'à faire', pasfaite: 'pas faite' }[e] || 'à ' + String(L.heure || '18:00').replace(/:00$/, ' h').replace(':', ' h '));
+    const ia = IA.questions && IA.questions.actif;
+    const av = (attr, cl, o, k, x) => `<button type="button" class="db-av${cl}" ${attr}><span class="db-av__o">${o}</span><span class="db-av__t"><span class="k">${k}</span><span class="v">${x}</span></span></button>`;
+    return `<div class="db-nav db-nav--rail"><div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>
+      ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
+      <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
+      ${av(`data-iaouvrir="${ia ? '1' : 'd'}"`, '', iaIcone(18), 'Coach', ia ? 'assistant' : 'demande au bureau')}
+      ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
+  }
   function rendre() {
+    const surRail = avecRail();
+    document.body.classList.toggle('db-rail-on', surRail);
+    railMaj(surRail);
     const kr = cleRes(), ks = cleSt();
     const d = S.res[kr], st = S.st[ks];
     const m = magasin(d);
@@ -6570,6 +6676,9 @@
     if (EMBED_PM) { const g = pmGarder(); $.classList.remove('mob'); document.body.classList.add('pm-emb'); $.innerHTML = rendPmEmbed(); brancher(); pmRestaurer(g); return; }
     $.classList.remove('mob');
     let h = '';
+    // Le rail (15/11/2026) : à 1 024 px et plus, il remplace l'en-tête et la rangée d'onglets.
+    if (surRail) { h += railBarre() + friseHtml(); }
+    else {
     // La ligne du haut (12/11/2026, Sam) : la Revue du soir et « ↻ Relire » à côté de l'Assistant.
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : `<button class="db-btn-ia" data-iaouvrir="d">${iaIcone(17)}Demande au bureau</button>`}<a class="db-lien" href="../#/resultat">Cockpit › Résultat ›</a></div>`;
@@ -6579,6 +6688,7 @@
       ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
       ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
+    }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
     if (S.vue === 'production') { const g = ppGarder(); h += rendProduction(); $.innerHTML = h; brancher(); ppRestaurer(g); return; }
     if (S.vue === 'ops') { h += rendOps() + cqLoupe(false); $.innerHTML = h; brancher(); cqRestaurer(cqPos); return; }
@@ -9862,13 +9972,13 @@
 
   // Tourner le téléphone, ou ouvrir la page sur un écran étroit, change de
   // rendu : on ne recharge rien, on redessine.
-  let _mob = estMobile(), _rt = null;
+  let _mob = estMobile(), _rail = avecRail(), _rt = null;
   window.addEventListener('resize', () => {
     clearTimeout(_rt);
     // En passant au téléphone, le mur demande deux lectures que le bureau ne
     // fait pas (la semaine sous le jour, les commandes) : on les déclenche,
     // sinon les cellules resteraient à « lecture en cours » pour toujours.
-    _rt = setTimeout(() => { const n = estMobile(); if (n !== _mob) { _mob = n; if (n) { charger(false); } else { rendre(); } } }, 160);
+    _rt = setTimeout(() => { const n = estMobile(), r = avecRail(); if (n !== _mob || r !== _rail) { _mob = n; _rail = r; charger(false); } }, 160);
   });
 
   // La loupe se ferme à Échap et se feuillette aux flèches du clavier.
