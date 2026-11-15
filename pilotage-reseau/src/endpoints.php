@@ -106,6 +106,10 @@ function ep_meta(): array
         // system §8.3) : jamais écrite en dur. config/config.php ('erpUrl'),
         // sinon COCKPIT_ERP_URL, sinon le réglage erpUrl ; absente = pas de lien.
         'erpUrl'           => (string) (Db::config()['erpUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ERP_URL') ?: '') ?: (string) setting('erpUrl', '')),
+        // L'espace boutique du Marketing (/marketing/franchise/) : l'entrée « Calendrier des posts ↗ » du rail du
+        // dashboard franchisé (15/11/2026). config.php ('espaceBoutiqueUrl', écrit par bin/deploy.sh), sinon
+        // COCKPIT_ESPACE_BOUTIQUE_URL, sinon le réglage espaceBoutiqueUrl ; absente = pas d'entrée.
+        'espaceBoutiqueUrl' => (string) (Db::config()['espaceBoutiqueUrl'] ?? '') ?: ((string) (getenv('COCKPIT_ESPACE_BOUTIQUE_URL') ?: '') ?: (string) setting('espaceBoutiqueUrl', '')),
         // L'utilisateur, et — quand le compte API en est un — l'identifiant
         // consultant qui lui correspond : c'est lui qui dit « mes tâches ».
         'utilisateur'      => setting('utilisateur', ['initiales' => '', 'nom' => '', 'role' => ''])
