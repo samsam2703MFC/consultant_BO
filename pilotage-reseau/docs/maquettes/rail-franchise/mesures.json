@@ -1,0 +1,14 @@
+{
+ "a": {
+  "rail": 1103,
+  "tientDans1000": false
+ },
+ "b": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
+ "c": {
+  "rail": 1000,
+  "tientDans1000": true
+ }
+}

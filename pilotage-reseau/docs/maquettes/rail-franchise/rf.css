@@ -1,0 +1,92 @@
+/* Maquette « Le rail du dashboard franchisé » — ce qui s'ajoute au design system commun
+ * (public/assets/ds/global.css, §8 du DESIGN_SYSTEM). Aucune couleur, taille ou graisse nouvelle :
+ * les jetons du §3, le trait 400 partout dans le rail sauf l'entrée active. */
+
+/* Exemples : une valeur que la maquette n'a pas lue (convention des maquettes du dépôt). */
+.ex { width: fit-content; font-style: italic; border-bottom: 1px dotted currentColor; }
+.rf-pill { font-size: 11px; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 5px 9px; }
+
+/* ── Les repères du haut ─────────────────────────────────────────────────── */
+.rf-rep { margin: 12px 12px 0; }
+.rf-rep__t { display: flex; align-items: baseline; justify-content: space-between; font-size: 10px; letter-spacing: 0.14em;
+  text-transform: uppercase; color: var(--faint); padding: 0 10px 6px; }
+.rf-rep__t small { font-size: 10.5px; letter-spacing: normal; text-transform: none; color: var(--muted); }
+.rf-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; flex: 0 0 8px; }
+.rf-dot.ok { background: var(--green); }
+.rf-dot.att { background: var(--prize); }
+.rf-dot.ko { background: var(--stop); }
+.rf-dot.mu { background: var(--chip); }
+
+/* A — en liste : une ligne par repère, le libellé à gauche, la valeur à droite. */
+.rf-liste { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.rf-ligne { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 8px; width: 100%; padding: 8px 10px;
+  border: 0; border-top: 1px solid var(--row-line); background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.rf-ligne:first-child { border-top: 0; }
+.rf-ligne:hover { background: var(--paper); }
+.rf-ligne .k { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--muted-2); }
+.rf-ligne .v { font-size: 13px; color: var(--ink); white-space: nowrap; }
+.rf-ligne .s { grid-column: 1 / -1; padding-left: 15px; font-size: 10.5px; color: var(--muted); }
+.rf-ligne .v.ok { color: var(--green); }
+
+/* B — en cartes : chaque repère a sa forme (courbe, échelle, jauge). */
+.rf-cartes { display: grid; gap: 6px; }
+.rf-carte { display: block; width: 100%; padding: 8px 11px 9px; border: 1px solid var(--line); border-radius: 10px; background: #fff;
+  font: inherit; text-align: left; cursor: pointer; }
+.rf-carte:hover { background: var(--paper); }
+.rf-carte .k { display: flex; justify-content: space-between; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+.rf-carte .k em { font-style: normal; letter-spacing: normal; text-transform: none; font-size: 10.5px; color: var(--muted); }
+.rf-carte .v { display: flex; align-items: baseline; gap: 6px; margin-top: 3px; font-size: 20px; letter-spacing: -0.01em; color: var(--ink); }
+.rf-carte .v small { font-size: 11px; letter-spacing: normal; color: var(--muted); }
+.rf-carte .s { margin-top: 2px; font-size: 10.5px; color: var(--muted); }
+.rf-carte svg.rf-courbe { display: block; width: 100%; height: 26px; margin-top: 4px; }
+.rf-echelle { position: relative; height: 6px; margin: 8px 0 4px; border-radius: 3px; background: var(--chip); }
+.rf-echelle i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--green); }
+.rf-echelle i.att { background: var(--prize); }
+.rf-echelle b { position: absolute; top: -3px; width: 2px; height: 12px; background: var(--ink); font-weight: 400; }
+.rf-echelle-l { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); }
+.rf-etoiles { display: inline-flex; gap: 1px; color: var(--prize); }
+.rf-etoiles svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linejoin: round; }
+.rf-etoiles svg.on { fill: currentColor; }
+
+/* C — en grille : quatre cases, deux par ligne, puis la revue du soir. */
+.rf-grille { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.rf-case { padding: 8px 10px 9px; border: 0; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.rf-case:hover { background: var(--paper); }
+.rf-case:nth-child(2n) { border-left: 1px solid var(--line); }
+.rf-case:nth-child(n+3) { border-top: 1px solid var(--line); }
+.rf-case .k { display: flex; align-items: center; gap: 6px; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+.rf-case .v { margin-top: 3px; font-size: 17px; letter-spacing: -0.01em; color: var(--ink); white-space: nowrap; }
+.rf-case .s { margin-top: 1px; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+
+.rf-revue { margin: 10px 12px 0; padding: 10px 11px 11px; border: 1px solid rgba(141, 29, 44, 0.45); border-radius: 10px;
+  background: rgba(141, 29, 44, 0.04); }
+.rf-revue__h { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--accent); }
+.rf-revue__h span { margin-left: auto; font-size: 11px; color: var(--accent); }
+.rf-revue__s { margin: 5px 0 9px; font-size: 11.5px; line-height: 1.45; color: var(--muted-2); }
+.rf-revue .sidebar__action { margin: 0; }
+
+/* Le compteur et l'état d'une entrée (§8.3 : un nombre en 11 px --accent, poussé à droite, sans pastille). */
+.rf-etat { margin-left: auto; font-size: 11px; color: var(--accent); white-space: nowrap; }
+.rf-etat.mu { color: var(--muted); }
+.rf-ext { margin-left: auto; font-size: 11px; color: var(--faint); }
+.sidebar__action .ico { stroke: #fff; }
+
+/* ── Le contenu, esquissé (il ne change pas) ──────────────────────────────── */
+.rf-esq { display: grid; gap: 16px; }
+.rf-frise { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+.rf-jour { padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: #fff; font-size: 12px; color: var(--muted-2); }
+.rf-jour.on { border-color: var(--accent); background: rgba(141, 29, 44, 0.05); color: var(--accent); }
+.rf-jour small { display: block; margin-top: 6px; font-size: 10.5px; color: var(--muted); }
+.rf-tuiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.rf-bloc { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.rf-bloc h2 { margin: 0 0 12px; font-size: 11px; }
+.rf-sk { height: 10px; margin: 0 0 10px; border-radius: 4px; background: var(--chip); opacity: 0.7; }
+.rf-deux { display: grid; grid-template-columns: 1.4fr 1fr; gap: 16px; }
+.rf-note { font-size: 11.5px; color: var(--muted); margin: 0; }
+
+/* ── La planche ───────────────────────────────────────────────────────────── */
+.rf-planche { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; padding: 28px; background: var(--paper); }
+.rf-planche figure { margin: 0; }
+.rf-planche img { display: block; width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+.rf-planche figcaption { margin: 0 0 10px; font-size: 13px; color: var(--ink); }
+.rf-planche figcaption small { display: block; margin-top: 3px; font-size: 11.5px; color: var(--muted); }
