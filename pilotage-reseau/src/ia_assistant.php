@@ -444,3 +444,177 @@ function ep_ia_entrainement(): array
         'communs' => defined('RV_CRITERES_COMMUNS') ? RV_CRITERES_COMMUNS : '', 'leconsMax' => IA_LECONS_MAX, 'exemplesEnvoyes' => IA_EXEMPLES_ENVOYES,
         'niveauModele' => iaNiveauMax(), 'nomNiveauModele' => iaNomNiveau(iaNiveauMax())];
 }
+
+/* --- L'ASSISTANT D'ENTRAÎNEMENT (15/11/2026) -------------------------------------------------------------------------
+ *
+ * Pour un rayon (ou une tâche qui n'est pas une photo de comptoir) et une période, il relit les évaluations gardées
+ * (pil_cq_ia) : ce que l'IA a vu et proposé sur chaque photo, la note que le consultant a posée et pourquoi. Un seul
+ * appel au modèle, en TEXTE (Anthropic::analyserSujet), rend ce qui va, ce qui ne va pas (fréquence, magasins), les
+ * désaccords à enseigner, une consigne proposée, des conseils aux magasins et les photos à prendre en exemple. La
+ * dernière analyse de chaque sujet est gardée (pil_cq_analyse) : on la relit sans repayer.
+ *
+ * Routes : GET /ia/analyses, POST /ia/analyser.
+ */
+
+const IA_ANALYSE_MAX_PHOTOS = 120;   // lignes du dossier au plus (les plus récentes)
+const IA_ANALYSE_MIN_PHOTOS = 3;     // en dessous, rien de sérieux à tirer
+
+function ensureIaAnalyses(): void
+{
+    static $fait = false;
+    if ($fait) { return; }
+    $fait = true;
+    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_analyse ('
+        . 'sujet VARCHAR(200) NOT NULL PRIMARY KEY,'   // clé du rayon, ou « tache:<nom> »
+        . 'jours INT NOT NULL,'
+        . 'nb INT NOT NULL,'                          // photos relues
+        . 'notees INT NOT NULL,'                      // dont notées par le consultant
+        . 'resultat MEDIUMTEXT NOT NULL,'             // l'analyse, en JSON
+        . 'modele VARCHAR(80) NULL,'
+        . 'par VARCHAR(120) NULL,'
+        . 'le DATETIME NOT NULL'
+        . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
+}
+
+/** Les noms courts des magasins (« Halle ») : [id => nom]. */
+function iaNomsMagasins(): array
+{
+    static $noms = null;
+    if ($noms !== null) { return $noms; }
+    $noms = [];
+    try {
+        foreach (function_exists('ep_stores') ? ep_stores() : [] as $s) {
+            $n = (string) ($s['nom'] ?? '');
+            if ($n !== '') { $noms[(int) ($s['id'] ?? 0)] = str_contains($n, ' - ') ? trim(substr($n, strrpos($n, ' - ') + 3)) : $n; }
+        }
+    } catch (Throwable $e) { /* sans référentiel : les numéros */ }
+    return $noms;
+}
+
+function iaNomMagasin(int $id): string
+{
+    return iaNomsMagasins()[$id] ?? ('magasin #' . $id);
+}
+
+/** Un sujet : ['type' => 'rayon'|'tache', 'cle' => …, 'nom' => …, 'rayon' => ?array]. */
+function iaSujet(string $sujet): ?array
+{
+    if (str_starts_with($sujet, 'tache:')) {
+        $t = trim(substr($sujet, 6));
+        return $t !== '' ? ['type' => 'tache', 'cle' => $sujet, 'nom' => $t, 'rayon' => null] : null;
+    }
+    foreach ((function_exists('rvListe') ? rvListe() : []) as $rv) {
+        if ((string) $rv['cle'] === $sujet) { return ['type' => 'rayon', 'cle' => $sujet, 'nom' => (string) $rv['nom'], 'rayon' => $rv]; }
+    }
+    return null;
+}
+
+/** Les évaluations d'un sujet sur la période, les plus récentes d'abord. */
+function iaEvaluations(array $s, int $jours): array
+{
+    ensureIaAssistant();
+    $depuis = date('Y-m-d', strtotime('-' . max(1, $jours) . ' days'));
+    return $s['type'] === 'rayon'
+        ? Db::rows('SELECT * FROM pil_cq_ia WHERE rayon = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['cle'], $depuis])
+        : Db::rows('SELECT * FROM pil_cq_ia WHERE rayon IS NULL AND tache = ? AND niveau IS NOT NULL AND jour >= ? ORDER BY jour DESC, shop_id LIMIT ' . IA_ANALYSE_MAX_PHOTOS, [$s['nom'], $depuis]);
+}
+
+/**
+ * Le dossier que lit le modèle : le contexte du sujet, puis une ligne par photo (P1, P2…). Rend [texte, refs] où refs
+ * relie chaque repère à sa photo.
+ */
+function iaDossier(array $s, array $rows, int $jours): array
+{
+    $rv = $s['rayon'];
+    $tete = $s['type'] === 'rayon' ? 'Rayon « ' . $s['nom'] . ' »' : 'Tâche « ' . $s['nom'] . ' »';
+    if ($rv !== null) {
+        $consigne = trim((string) ($rv['consigne'] ?? ''));
+        $defaut = defined('RV_CRITERES_IA') ? (RV_CRITERES_IA[$s['cle']] ?? '') : '';
+        $tete .= "\nConsigne actuelle du rayon : " . ($consigne !== '' ? $consigne : '(aucune — critères par défaut : ' . ($defaut !== '' ? $defaut : 'aucun') . ')')
+            . "\nPhoto du planogramme : " . (!empty($rv['photo']) ? 'posée' : 'absente')
+            . ' ; photos d’exemple : ' . (function_exists('iaExemplesPour') ? count(iaExemplesPour($s['cle'], 0, 50)) : 0) . '.';
+    }
+    $notees = count(array_filter($rows, fn ($r) => $r['note_finale'] !== null));
+    $tete .= "\nPériode : " . $jours . ' jours, ' . count($rows) . ' photos évaluées par l’assistant, dont ' . $notees . ' notées par le consultant.';
+    $lignes = []; $refs = [];
+    foreach (array_values($rows) as $i => $r) {
+        $id = 'P' . ($i + 1);
+        $refs[$id] = ['shopId' => (string) $r['shop_id'], 'taskId' => (string) $r['task_id'], 'date' => (string) $r['jour'], 'magasin' => iaNomMagasin((int) $r['shop_id']), 'tache' => $r['tache']];
+        $constats = json_decode((string) ($r['constats'] ?? '[]'), true);
+        $ia = 'assistant : ' . (int) $r['niveau'] . '/5 ' . iaNomNiveau((int) $r['niveau']) . ' (confiance ' . ($r['confiance'] ?? '?') . ')'
+            . (is_array($constats) && $constats ? ' ; vu : ' . implode(' / ', array_map(fn ($c) => mb_substr((string) $c, 0, 180), array_slice($constats, 0, 4))) : '');
+        $humain = $r['note_finale'] === null ? 'consultant : pas encore noté'
+            : 'consultant : ' . (int) $r['note_finale'] . '/5 ' . iaNomNiveau((int) $r['note_finale'])
+              . (trim((string) ($r['raison'] ?? '')) !== '' ? ' — sa raison : « ' . mb_substr((string) $r['raison'], 0, 300) . ' »' : '')
+              . (trim((string) ($r['commentaire_final'] ?? '')) !== '' ? ' — commentaire au magasin : « ' . mb_substr((string) $r['commentaire_final'], 0, 240) . ' »' : '');
+        $heure = function_exists('iaPonctualite') ? iaPonctualite($r['heure_prevue'] ?? null, $r['heure_prise'] ?? null) : null;
+        $lignes[] = $id . ' · ' . $r['jour'] . ' · ' . iaNomMagasin((int) $r['shop_id'])
+            . ($heure !== null ? ' · photo ' . $heure['verdict'] : '') . "\n  " . $ia . "\n  " . $humain;
+    }
+    return [$tete . "\n\nLes évaluations :\n" . implode("\n", $lignes), $refs];
+}
+
+/** Une analyse gardée, telle que l'écran la lit. */
+function iaAnalyseLigne(array $r): array
+{
+    $res = json_decode((string) $r['resultat'], true);
+    return ['sujet' => $r['sujet'], 'jours' => (int) $r['jours'], 'nb' => (int) $r['nb'], 'notees' => (int) $r['notees'],
+        'modele' => $r['modele'], 'par' => $r['par'], 'le' => $r['le']] + (is_array($res) ? $res : []);
+}
+
+/**
+ * GET /ia/analyses — les sujets qu'on peut analyser (les rayons, puis les autres tâches évaluées), le nombre de photos
+ * évaluées sur 90 jours, et la dernière analyse de chacun.
+ */
+function ep_ia_analyses(): array
+{
+    ensureIaAssistant(); ensureIaAnalyses();
+    $depuis = date('Y-m-d', strtotime('-90 days'));
+    $parRayon = []; $parTache = [];
+    foreach (Db::rows('SELECT rayon, tache, COUNT(*) AS n FROM pil_cq_ia WHERE niveau IS NOT NULL AND jour >= ? GROUP BY rayon, tache', [$depuis]) as $r) {
+        if ($r['rayon'] !== null) { $parRayon[(string) $r['rayon']] = ($parRayon[(string) $r['rayon']] ?? 0) + (int) $r['n']; }
+        elseif ($r['tache'] !== null) { $parTache[(string) $r['tache']] = (int) $r['n']; }
+    }
+    $analyses = [];
+    foreach (Db::rows('SELECT * FROM pil_cq_analyse ORDER BY le DESC') as $r) { $analyses[(string) $r['sujet']] = iaAnalyseLigne($r); }
+    $sujets = [];
+    foreach ((function_exists('rvListe') ? rvListe() : []) as $rv) {
+        $sujets[] = ['cle' => (string) $rv['cle'], 'nom' => (string) $rv['nom'], 'type' => 'rayon', 'n' => $parRayon[(string) $rv['cle']] ?? 0];
+    }
+    ksort($parTache);
+    foreach ($parTache as $t => $n) { $sujets[] = ['cle' => 'tache:' . $t, 'nom' => $t, 'type' => 'tache', 'n' => $n]; }
+    return ['sujets' => $sujets, 'analyses' => (object) $analyses, 'min' => IA_ANALYSE_MIN_PHOTOS];
+}
+
+/** POST /ia/analyser {sujet, jours} — relit les évaluations du sujet et garde l'analyse. */
+function wr_ia_analyser(): array
+{
+    $b = body();
+    $s = iaSujet((string) ($b['sujet'] ?? ''));
+    $jours = in_array((int) ($b['jours'] ?? 30), [7, 14, 30, 90], true) ? (int) $b['jours'] : 30;
+    if ($s === null) { http_response_code(400); return ['error' => 'sujet inconnu : un rayon, ou « tache:<nom> »']; }
+    $rows = iaEvaluations($s, $jours);
+    if (count($rows) < IA_ANALYSE_MIN_PHOTOS) {
+        http_response_code(422);
+        return ['error' => count($rows) . ' photo' . (count($rows) > 1 ? 's' : '') . ' évaluée' . (count($rows) > 1 ? 's' : '') . ' sur ' . $jours
+            . ' jours pour « ' . $s['nom'] . ' » : il en faut ' . IA_ANALYSE_MIN_PHOTOS . ' au moins. Passez des photos en mode assisté, ou allongez la période.'];
+    }
+    [$texte, $refs] = iaDossier($s, $rows, $jours);
+    $r = Anthropic::analyserSujet($texte);
+    if ($r['analyse'] === null) { http_response_code(str_contains((string) $r['erreur'], 'clé') ? 503 : 502); return ['error' => (string) $r['erreur']]; }
+    $a = $r['analyse'];
+    // Les photos suggérées en exemple : le repère P… relié à sa photo ; un repère inconnu est écarté.
+    $a['exemples_suggeres'] = array_values(array_filter(array_map(static function ($e) use ($refs) {
+        $ref = strtoupper(trim((string) ($e['ref'] ?? '')));
+        return isset($refs[$ref]) ? $refs[$ref] + ['ref' => $ref, 'pourquoi' => (string) ($e['pourquoi'] ?? '')] : null;
+    }, (array) ($a['exemples_suggeres'] ?? []))));
+    $a['consigne_proposee'] = mb_substr(trim((string) ($a['consigne_proposee'] ?? '')), 0, 600);
+    $a['type'] = $s['type']; $a['nom'] = $s['nom'];
+    ensureIaAnalyses();
+    $notees = count(array_filter($rows, fn ($x) => $x['note_finale'] !== null));
+    $auteur = function_exists('psAuteur') ? psAuteur() : 'CEO';
+    Db::exec('REPLACE INTO pil_cq_analyse (sujet, jours, nb, notees, resultat, modele, par, le) VALUES (?,?,?,?,?,?,?,?)',
+        [$s['cle'], $jours, count($rows), $notees, json_encode($a, JSON_UNESCAPED_UNICODE), $r['modele'], $auteur, date('Y-m-d H:i:s')]);
+    if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', null, 'Analyse « ' . $s['nom'] . ' » : ' . count($rows) . ' photos sur ' . $jours . ' jours'); }
+    return ['ok' => true, 'analyse' => iaAnalyseLigne(Db::row('SELECT * FROM pil_cq_analyse WHERE sujet = ?', [$s['cle']]) ?? [])];
+}

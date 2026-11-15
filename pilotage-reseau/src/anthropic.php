@@ -214,6 +214,64 @@ final class Anthropic
     }
 
     /**
+     * L'ASSISTANT D'ENTRAÎNEMENT (src/ia_assistant.php, wr_ia_analyser) : relit les évaluations d'un rayon ou d'une
+     * tâche sur une période — les constats de l'IA, les notes du consultant et ses corrections — et en tire ce qui va,
+     * ce qui ne va pas, les désaccords à enseigner, une consigne, des conseils aux magasins et les photos à prendre en
+     * exemple. Du TEXTE seul : les constats décrivent déjà les photos, on ne les renvoie pas.
+     *
+     * @param string $texte   le dossier (contexte du rayon, puis une ligne par photo, repérée P1, P2…)
+     * @return array{analyse:?array, erreur:?string, modele:string, usage:?array}
+     */
+    public static function analyserSujet(string $texte): array
+    {
+        $c = self::config();
+        if ($c['cle'] === '') { return ['analyse' => null, 'erreur' => 'clé Anthropic absente (Paramètres › Assistance IA)', 'modele' => $c['modele'], 'usage' => null]; }
+        $liste = static fn (array $props, array $req) => ['type' => 'array', 'items' => ['type' => 'object', 'additionalProperties' => false, 'required' => $req, 'properties' => $props]];
+        $schema = ['type' => 'object', 'additionalProperties' => false,
+            'required' => ['synthese', 'ce_qui_va', 'ce_qui_ne_va_pas', 'desaccords', 'consigne_proposee', 'conseils_magasins', 'exemples_suggeres'],
+            'properties' => [
+                'synthese' => ['type' => 'string'],
+                'ce_qui_va' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'ce_qui_ne_va_pas' => $liste(['constat' => ['type' => 'string'], 'frequence' => ['type' => 'string', 'enum' => ['souvent', 'parfois', 'rare']],
+                    'magasins' => ['type' => 'array', 'items' => ['type' => 'string']]], ['constat', 'frequence', 'magasins']),
+                'desaccords' => $liste(['sujet' => ['type' => 'string'], 'a_retenir' => ['type' => 'string']], ['sujet', 'a_retenir']),
+                'consigne_proposee' => ['type' => 'string'],
+                'conseils_magasins' => ['type' => 'array', 'items' => ['type' => 'string']],
+                'exemples_suggeres' => $liste(['ref' => ['type' => 'string'], 'pourquoi' => ['type' => 'string']], ['ref', 'pourquoi']),
+            ]];
+        $corps = [
+            'model' => $c['modele'],
+            'max_tokens' => 8000,
+            'system' => "Tu aides la direction d'un réseau de boulangeries à entraîner l'assistant qui note les photos de"
+                . " contrôle prises chaque jour en boutique. On te donne, pour un rayon ou une tâche, les évaluations d'une"
+                . " période : ce que l'assistant a vu sur chaque photo, la note qu'il a proposée, et la note que le consultant"
+                . " a finalement posée (avec sa raison quand il a corrigé). Tu en tires ce qui revient, sans rien inventer :"
+                . " ne cite que ce que les évaluations disent. En français, factuel, phrases courtes.",
+            'output_config' => ['format' => ['type' => 'json_schema', 'schema' => $schema]],
+            'messages' => [['role' => 'user', 'content' => [['type' => 'text', 'text' => $texte
+                . "\n\nRends :\n"
+                . "- synthese : deux ou trois phrases sur l'état du rayon et la fiabilité de l'assistant ;\n"
+                . "- ce_qui_va : ce qui est régulièrement bien sur les photos (cinq au plus) ;\n"
+                . "- ce_qui_ne_va_pas : les écarts qui reviennent, leur fréquence et les magasins concernés (cinq au plus, les plus fréquents d'abord) ;\n"
+                . "- desaccords : là où l'assistant et le consultant ne notent pas pareil, et la règle à retenir pour s'aligner sur le consultant ;\n"
+                . "- consigne_proposee : la consigne du rayon (600 caractères au plus) qui dit ce qu'est un comptoir conforme, en reprenant les décisions du consultant ;\n"
+                . "- conseils_magasins : ce qu'il faut dire aux équipes (présentation, et prise de la photo si elle empêche de juger) — quatre au plus ;\n"
+                . "- exemples_suggeres : les photos (leur repère P…) qui feraient de bonnes photos d'exemple, notées au plus haut par le consultant — trois au plus, aucune si rien ne s'y prête."]]]],
+        ];
+        [$code, $rep] = self::http($corps, $c['cle'], [], 120);
+        if ($code >= 200 && $code < 300 && is_array($rep) && ($rep['stop_reason'] ?? '') === 'max_tokens') {
+            return ['analyse' => null, 'erreur' => 'réponse coupée par la limite de jetons', 'modele' => $c['modele'], 'usage' => $rep['usage'] ?? null];
+        }
+        if (($err = self::erreurReponse($code, $rep)) !== null) { return ['analyse' => null, 'erreur' => $err, 'modele' => $c['modele'], 'usage' => is_array($rep) ? ($rep['usage'] ?? null) : null]; }
+        $txt = '';
+        foreach ((array) ($rep['content'] ?? []) as $b) { if (($b['type'] ?? '') === 'text') { $txt .= (string) ($b['text'] ?? ''); } }
+        if (preg_match('/\{.*\}/s', $txt, $m)) { $txt = $m[0]; }
+        $j = json_decode($txt, true);
+        return is_array($j) ? ['analyse' => $j, 'erreur' => null, 'modele' => (string) ($rep['model'] ?? $c['modele']), 'usage' => $rep['usage'] ?? null]
+            : ['analyse' => null, 'erreur' => 'réponse non exploitable du modèle', 'modele' => $c['modele'], 'usage' => $rep['usage'] ?? null];
+    }
+
+    /**
      * Le verdict Brand Guard : un post (texte + jusqu'à dix images) jugé
      * contre la charte, en sortie STRUCTURÉE.
      *
