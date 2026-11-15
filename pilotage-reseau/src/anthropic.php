@@ -104,14 +104,26 @@ final class Anthropic
             $vide['erreur'] = 'photo illisible : ' . (self::$lastError ?? 'téléchargement impossible');
             return $vide;
         }
-        // La référence : la fiche technique du produit, sinon la photo type du rayon posée dans le cockpit.
-        $ref = null; $refMime = null; $refLib = "Photo de RÉFÉRENCE du produit (fiche technique, l'attendu) :";
-        if ($refUrl !== null && $refUrl !== '') { [$ref, $refMime] = self::telecharger($refUrl); }
-        $locale = (string) ($regles['refLocale'] ?? '');
-        if ($ref === null && $locale !== '' && is_file($locale) && filesize($locale) <= 5 * 1024 * 1024) {
-            $ref = (string) file_get_contents($locale);
-            $refMime = self::mimeImage((string) (function_exists('mime_content_type') ? mime_content_type($locale) : ''));
-            $refLib = trim((string) ($regles['refLib'] ?? '')) ?: "Photo TYPE du rayon (le comptoir tel qu'il doit être) :";
+        // Les références, dans l'ordre : la fiche technique du produit ; sinon le planogramme du rayon puis ses photos
+        // d'exemple (`refs`, fichiers du cockpit : [['chemin' => …, 'lib' => …], …], trois au plus). `refLocale` /
+        // `refLib` : une seule référence locale, la forme d'avant.
+        $refs = [];
+        if ($refUrl !== null && $refUrl !== '') {
+            [$o, $m] = self::telecharger($refUrl);
+            if ($o !== null) { $refs[] = [$o, $m, "Photo de RÉFÉRENCE du produit (fiche technique, l'attendu) :"]; }
+        }
+        $locales = (array) ($regles['refs'] ?? []);
+        if (!empty($regles['refLocale'])) {
+            $locales[] = ['chemin' => (string) $regles['refLocale'], 'lib' => trim((string) ($regles['refLib'] ?? '')) ?: "Photo TYPE du rayon (le comptoir tel qu'il doit être) :"];
+        }
+        if ($refs === []) {
+            foreach ($locales as $l) {
+                if (count($refs) >= 3) { break; }
+                $chemin = (string) ($l['chemin'] ?? '');
+                if ($chemin === '' || !is_file($chemin) || filesize($chemin) > 5 * 1024 * 1024) { continue; }
+                $refs[] = [(string) file_get_contents($chemin), self::mimeImage((string) (function_exists('mime_content_type') ? mime_content_type($chemin) : '')),
+                    trim((string) ($l['lib'] ?? '')) ?: 'Photo de référence :'];
+            }
         }
 
         $bareme = [];
@@ -125,10 +137,9 @@ final class Anthropic
         $exemples = array_values(array_filter(array_map(fn ($e) => trim((string) $e), (array) ($regles['exemples'] ?? []))));
 
         $contenu = [];
-        if ($ref !== null) {
-            $contenu[] = ['type' => 'text', 'text' => $refLib];
-            $contenu[] = ['type' => 'image', 'source' => ['type' => 'base64',
-                'media_type' => $refMime, 'data' => base64_encode($ref)]];
+        foreach ($refs as [$o, $m, $lib]) {
+            $contenu[] = ['type' => 'text', 'text' => $lib];
+            $contenu[] = ['type' => 'image', 'source' => ['type' => 'base64', 'media_type' => $m, 'data' => base64_encode($o)]];
         }
         $contenu[] = ['type' => 'text', 'text' => 'Photo PRISE EN BOUTIQUE (à évaluer) :'];
         $contenu[] = ['type' => 'image', 'source' => ['type' => 'base64',
