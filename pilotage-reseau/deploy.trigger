@@ -33,3 +33,4 @@
 2026-11-15T20:09:08Z Entraînement de l'IA : planogramme, photos d'exemple, assistant d'entraînement
 2026-11-15T20:34:34Z Vendre › Analyse : entrée, produit, famille
 2026-11-15T20:37:53Z Analyse : carte du réseau, recherche
+2026-11-15T20:49:41Z Vignettes identiques en rangée ; la photo d'une tâche notée reste
