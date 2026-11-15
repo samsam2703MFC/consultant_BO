@@ -85,10 +85,14 @@ function vmxAllergenesDe(mixed $v, array $ref): array
     return $out;
 }
 
-/** Les allergènes choisis (codes), dans la forme où le panel les rend. Fonction pure. */
+/**
+ * Les allergènes choisis (codes), dans la forme que PATCH /materials/{id} attend : une liste d'identifiants (contrat lu
+ * le 15/11/2026, swagger test.tfbuddy.com). Sans liste de référence lisible, la forme lue (repli d'avant). Fonction pure.
+ */
 function vmxAllergenesPour(mixed $forme, array $codes, array $ref): mixed
 {
     $ids = array_flip($ref);   // code => id
+    if ($ref !== []) { return array_values(array_filter(array_map(static fn ($c) => isset($ids[$c]) ? (int) $ids[$c] : null, $codes), static fn ($x) => $x !== null)); }
     if (is_string($forme)) { return implode(', ', $codes); }
     $l = (array) $forme;
     $premier = $l[0] ?? null;
@@ -119,7 +123,7 @@ function vmxChangements(array $o, array $champs, array $refAllergenes): array
         } elseif ($type === 'oui') {
             $b = $v === true || $v === 1 || $v === '1' || $v === 'true';
             if ((bool) (int) $avant === $b) { continue; }
-            $corps[$k] = is_bool($avant) ? $b : ($b ? 1 : 0);
+            $corps[$k] = $b;   // le contrat : un booléen
             $lisible[] = $lib . ' : ' . ($b ? 'oui' : 'non');
         } elseif (in_array($type, ['nombre', 'tva', 'prix'], true)) {
             if ($v === null || $v === '') {
@@ -129,7 +133,8 @@ function vmxChangements(array $o, array $champs, array $refAllergenes): array
             } else {
                 if (!is_numeric($v) || (float) $v < 0 || ($type === 'nombre' && (float) $v > 100)) { $erreurs[] = '« ' . $lib . ' » : valeur invalide.'; continue; }
                 if ($avant !== null && is_numeric($avant) && abs((float) $avant - (float) $v) <= 1e-9 * max(1.0, abs((float) $v))) { continue; }
-                $corps[$k] = (float) $v;
+                // Le contrat : la perte en entier, le prix général en texte décimal.
+                $corps[$k] = $k === 'waste_amount_perc' ? (int) round((float) $v) : ($k === 'reference_unit_price_net' ? rtrim(rtrim(number_format((float) $v, 8, '.', ''), '0'), '.') : (float) $v);
                 $lisible[] = $lib . ' : ' . ($avant === null || $avant === '' ? '—' : vrcQte((float) $avant)) . ' → ' . vrcQte((float) $v);
             }
         } elseif (in_array($type, ['categorie', 'unite'], true)) {
@@ -171,6 +176,9 @@ function vmxTvaLue(mixed $r): array
 /** Le corps qui pose un taux : la ligne lue, son seul taux changé ; sans ligne, {country_code, vat_rate}. Fonction pure. */
 function vmxTvaCorps(?array $ligne, float $taux): array
 {
+    // Le contrat de POST /materials/{id}/vat-rates : {country_code, vat_rate}, rien d'autre (15/11/2026).
+    $pays = $ligne !== null ? strtoupper((string) ($ligne['country_code'] ?? ($ligne['country'] ?? ($ligne['code'] ?? VMX_PAYS)))) : VMX_PAYS;
+    return ['country_code' => $pays !== '' ? $pays : VMX_PAYS, 'vat_rate' => $taux];
     if ($ligne === null) { return ['country_code' => VMX_PAYS, 'vat_rate' => $taux]; }
     $c = array_intersect_key($ligne, array_flip(['country_code', 'country', 'code', 'id_country', 'country_id', 'vat_rate', 'rate', 'value']));
     foreach (['vat_rate', 'rate', 'value'] as $k) { if (array_key_exists($k, $c)) { $c[$k] = $taux; return $c; } }

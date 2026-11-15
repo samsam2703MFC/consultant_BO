@@ -133,6 +133,24 @@ function vrcSansLien(array $e): array
     return $e;
 }
 
+/**
+ * Une ligne de recette dans la forme du contrat de PATCH /recipes/{id} (swagger test.tfbuddy.com, lu le 15/11/2026) :
+ * {id (la matière ou la sous-recette), quantity (nombre), connection_id (la ligne existante, absente d'une ligne
+ * copiée), waste_amount_perc}. Les autres clés lues (nom, unité, catégorie) ne repartent pas. Null si illisible.
+ */
+function vrcLigneContrat(array $e, string $liste): ?array
+{
+    $id = vrcIdLigne($e, $liste);
+    $q = vrcCle($e, VRC_CLES_QTE)[1];
+    if ($id === '' || $q === null) { return null; }
+    $o = ['id' => (int) substr($id, 1), 'quantity' => (float) $q];
+    $lien = $e['connection_id'] ?? ($e['pivot']['id'] ?? null);
+    if (is_numeric($lien)) { $o['connection_id'] = (int) $lien; }
+    $perte = $e['waste_amount_perc'] ?? ($e['pivot']['waste_amount_perc'] ?? null);
+    if (is_numeric($perte)) { $o['waste_amount_perc'] = (float) $perte; }
+    return $o;
+}
+
 /** Pose une quantité dans une entrée, là où le panel la met (à plat ou dans son pivot). */
 function vrcPoserQte(array $e, float $q): array
 {
@@ -207,7 +225,8 @@ function vrcModifier(array $o, array $changements): array
         $listes[$liste][$i] = vrcPoserQte($e, $q); $touche[$liste] = true;
         $lisible[] = $nom . ' : ' . vrcQte($qAvant, vrcUnite($e)) . ' → ' . vrcQte($q, vrcUnite($e));
     }
-    foreach ($touche as $l => $_) { $corps[$l] = $listes[$l]; }
+    // La forme du contrat (swagger test.tfbuddy.com, 15/11/2026) : {id, quantity, connection_id?, waste_amount_perc?} par ligne.
+    foreach ($touche as $l => $_) { $corps[$l] = array_values(array_filter(array_map(static fn ($e) => vrcLigneContrat($e, $l), $listes[$l]))); }
     $inverse = [];
     foreach ($corps as $k => $_) { $inverse[$k] = $o[$k] ?? (in_array($k, VRC_CLES_LISTES, true) ? [] : null); }
     return ['corps' => $corps, 'inverse' => $inverse, 'lisible' => $lisible, 'erreurs' => $erreurs];
@@ -712,6 +731,7 @@ function vrcPrixPlan(int $sid, int $mid, float $prix, ?array $format = null, int
     $corps = [];
     foreach ($f['corps'] as $k => $v) {
         if ($v === '{prix}') { $corps[$k] = $prix; }
+        elseif ($v === '{shops}') { $corps[$k] = [$sid]; }
         elseif (is_string($v) && isset($subst[$v])) { $corps[$k] = in_array($v, ['{sid}', '{mid}', '{fid}'], true) ? (int) $subst[$v] : $subst[$v]; }
         elseif (is_string($v) && is_numeric($v) && !preg_match('/^0\d/', $v)) { $corps[$k] = $v + 0; }
         else { $corps[$k] = $v; }
@@ -778,7 +798,8 @@ function vrcFormatPrix(): array
 {
     $f = []; try { $f = setting('vrcFormatPrix', []); } catch (Throwable $e) { $f = []; }
     $f = is_array($f) ? $f : [];
-    $corps = isset($f['corps']) && is_array($f['corps']) && $f['corps'] !== [] ? $f['corps'] : ['id_shop' => '{sid}', 'price' => '{prix}'];
+    // Le contrat de POST /materials/{id}/manual-price (swagger test.tfbuddy.com, 15/11/2026) : {shop_ids, pack_price, package_size}.
+    $corps = isset($f['corps']) && is_array($f['corps']) && $f['corps'] !== [] && !isset($f['corps']['id_shop']) ? $f['corps'] : ['shop_ids' => '{shops}', 'pack_price' => '{prix}', 'package_size' => '1'];
     return ['methode' => in_array(strtoupper((string) ($f['methode'] ?? 'POST')), ['POST', 'PATCH', 'PUT'], true) ? strtoupper((string) ($f['methode'] ?? 'POST')) : 'POST',
         'route' => is_string($f['route'] ?? null) && str_starts_with($f['route'], '/') ? $f['route'] : '/materials/{mid}/manual-price', 'corps' => $corps];
 }
@@ -1030,7 +1051,7 @@ const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material
     '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#',
     // Les commandes fournisseur et leurs livraisons (14/11/2026, « comment valider les marchandises dans le stock ») : lecture.
     '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/orders/ORD-[\w-]{4,60}$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
-    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
+    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/consultant/shops/\d+/material-orders(/\d+)?$#', '#^/shops/\d+/kitchen-deliveries(/\d+)?$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
 
 /**
  * GET /verification/recettes/sonde-chemin?chemin=&q= — lecture seule : une route du circuit des prix fournisseur

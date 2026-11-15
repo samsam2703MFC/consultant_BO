@@ -34,15 +34,15 @@ const PPM_CHAMPS = [
     'tax_val_perc' => ['TVA (%)', 'tva', 'general', ''],
     'is_active' => ['Actif', 'oui', 'general', ''],
     'is_pdm' => ['Produit du mois', 'oui', 'general', ''],
-    'is_mandatory_assortment' => ['Assortiment obligatoire', 'oui', 'general', 'chaque magasin doit le proposer'],
+    'is_mandatory_assortment' => ['Assortiment obligatoire', 'oui', 'general', 'hors du contrat de PATCH /products/{id} : en lecture'],
     'suggested_sale_price' => ['Prix de vente conseillé (TTC)', 'prix', 'vente', ''],
-    'expected_margin' => ['Marge attendue', 'nombre', 'vente', 'telle que le panel la tient (coefficient)'],
+    'expected_margin' => ['Marge nette attendue (%)', 'nombre', 'vente', 'pourcentage, de 0 à moins de 100'],
     'min_coefficient' => ['Coefficient minimum', 'nombre', 'vente', ''],
     'webshop_active' => ['Webshop', 'oui', 'vente', ''],
-    'webshop_bulk_quantity_enabled' => ['Vente au volume (webshop)', 'oui', 'vente', ''],
+    'webshop_bulk_quantity_enabled' => ['Vente au volume (webshop)', 'oui', 'vente', 'hors du contrat de PATCH /products/{id} : en lecture'],
     'click_and_collect' => ['Click & collect', 'oui', 'vente', ''],
     'office_delivery' => ['Livraison bureaux', 'oui', 'vente', ''],
-    'is_personalization_addon' => ['Supplément personnalisable', 'oui', 'vente', ''],
+    'is_personalization_addon' => ['Supplément personnalisable', 'oui', 'vente', 'hors du contrat de PATCH /products/{id} : en lecture'],
     'id_recipe' => ['Recette', 'recette', 'fabrication', 'numéro de la recette au panel'],
     'is_piece_based' => ['Vendu à la pièce', 'oui', 'fabrication', ''],
     'single_weight' => ['Poids d’une pièce (g)', 'nombre', 'fabrication', ''],
@@ -64,6 +64,13 @@ const PPM_CHAMPS = [
     'label_size' => ['Taille de l’étiquette', 'valeurs', 'etiquette', ''],
     'quantity_per_label' => ['Pièces par étiquette', 'nombre', 'etiquette', ''],
 ];
+/** Les champs que PATCH /products/{id} n'accepte pas (contrat lu le 15/11/2026, swagger test.tfbuddy.com) : en lecture. */
+const PPM_HORS_CONTRAT = ['is_mandatory_assortment', 'webshop_bulk_quantity_enabled', 'is_personalization_addon'];
+/** Les valeurs permises par le contrat pour les champs à valeurs. */
+const PPM_ENUMS = ['label_size' => ['small', 'large', 'none'], 'shelf_life_category' => ['SSL', 'MSL', 'LSL'], 'nutriscore' => ['', 'A', 'B', 'C', 'D', 'E']];
+/** Les champs que le contrat veut en texte (« null ou vide efface »). */
+const PPM_TEXTE = ['min_coefficient'];
+
 const PPM_SECTIONS = ['general' => 'Général', 'vente' => 'Vente & canaux', 'fabrication' => 'Fabrication', 'conservation' => 'Conservation & vitrine', 'etiquette' => 'Étiquette & allergènes'];
 
 /** Les liaisons d'un produit dans l'API : [famille, nom, route lue pour la mesurer (ou null), routes]. */
@@ -270,8 +277,8 @@ function ep_produits_parametrage(): array
     if (is_scalar($o['id_package'] ?? null) && !isset($refs['emballages'][(string) $o['id_package']])) { $refs['emballages'][(string) $o['id_package']] = ['nom' => 'n° ' . $o['id_package']]; }
     $champs = [];
     foreach (PPM_CHAMPS as $k => [$lib, $type, $sec, $aide]) {
-        $champs[] = ['cle' => $k, 'lib' => $lib, 'type' => $type, 'section' => $sec, 'aide' => $aide, 'valeur' => $o[$k] ?? null, 'modifiable' => array_key_exists($k, $o),
-            'valeurs' => $type === 'valeurs' ? array_values(array_unique(array_merge($vues[$k] ?? [], is_scalar($o[$k] ?? null) ? [(string) $o[$k]] : []))) : null];
+        $champs[] = ['cle' => $k, 'lib' => $lib, 'type' => $type, 'section' => $sec, 'aide' => $aide, 'valeur' => $o[$k] ?? null, 'modifiable' => array_key_exists($k, $o) && !in_array($k, PPM_HORS_CONTRAT, true),
+            'valeurs' => $type === 'valeurs' ? array_values(array_unique(array_merge(PPM_ENUMS[$k] ?? ($vues[$k] ?? []), is_scalar($o[$k] ?? null) ? [(string) $o[$k]] : []))) : null];
     }
     $G = ppmGammes();
     $dispo = null;
@@ -296,8 +303,8 @@ function ep_produits_parametrage(): array
 function ppmFormat(string $quoi): array
 {
     $def = $quoi === 'gammes'
-        ? ['methode' => 'PATCH', 'route' => '/products/{pid}/availability-periods', 'corps' => ['availability_period_ids' => '{gammes}']]
-        : ['methode' => 'PATCH', 'route' => '/shops/{sid}/products/{pid}/price', 'corps' => ['price' => '{prix}']];
+        ? ['methode' => 'PATCH', 'route' => '/products/{pid}/availability-periods', 'corps' => ['availability_periods' => '{gammes}']]
+        : ['methode' => 'PATCH', 'route' => '/shops/{sid}/products/{pid}/price', 'corps' => ['portion_price' => '{prix}']];
     $f = []; try { $f = setting('ppmFormat_' . $quoi, []); } catch (Throwable $e) { $f = []; }
     return is_array($f) && ppmFormatValable($f, $quoi) !== null ? ppmFormatValable($f, $quoi) : $def;
 }
@@ -336,6 +343,8 @@ function ppmChangements(array $o, array $champs): array
         if (!isset(PPM_CHAMPS[$k])) { $erreurs[] = 'Champ inconnu : ' . $k . '.'; continue; }
         [$lib, $type] = PPM_CHAMPS[$k];
         if (!array_key_exists($k, $o)) { $erreurs[] = '« ' . $lib . ' » : le panel ne le rend pas pour ce produit, il ne s’écrit pas d’ici.'; continue; }
+        if (in_array($k, PPM_HORS_CONTRAT, true)) { $erreurs[] = '« ' . $lib . ' » : PATCH /products/{id} ne l’accepte pas (contrat du panel), il ne s’écrit pas d’ici.'; continue; }
+        if (isset(PPM_ENUMS[$k]) && !in_array((string) $v, PPM_ENUMS[$k], true)) { $erreurs[] = '« ' . $lib . ' » : valeur hors du contrat (' . implode(', ', array_map(static fn ($x) => $x === '' ? '—' : $x, PPM_ENUMS[$k])) . ').'; continue; }
         $avant = $o[$k];
         if ($type === 'oui') {
             $b = $v === true || $v === 1 || $v === '1' || $v === 'true';
@@ -353,6 +362,7 @@ function ppmChangements(array $o, array $champs): array
                 // La forme lue : un texte décimal reste un texte (« 21.90 »), un entier reste un entier.
                 $corps[$k] = is_string($avant) ? (string) (float) $t : ((float) $t == (int) $t && (is_int($avant) || $avant === null) ? (int) $t : (float) $t);
                 if (is_string($avant) && preg_match('/^-?\d+\.(\d+)$/', $avant, $mm)) { $corps[$k] = number_format((float) $t, strlen($mm[1]), '.', ''); }
+                if (in_array($k, PPM_TEXTE, true)) { $corps[$k] = rtrim(rtrim(number_format((float) $t, 6, '.', ''), '0'), '.'); }
                 $lisible[] = $lib . ' : ' . ($avant === null || $avant === '' ? '—' : $avant) . ' → ' . $corps[$k];
             }
         } elseif (in_array($type, ['categorie', 'secteur', 'stockage', 'position', 'emballage', 'recette'], true)) {
