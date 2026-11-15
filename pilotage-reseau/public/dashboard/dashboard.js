@@ -277,8 +277,9 @@
    *    magasin, à défaut la norme du réseau (seuil `food`) — le panneau le dit ;
    *  - les charges NORMATIVES du réseau, en % du CA : le modèle de Budget › Paramètres (15/11/2026, « prendre les données
    *    de budget/parametres »), rendu par /ventes/mensuel (`normes`) — toutes ses lignes sauf la catégorie de la marge brute
-   *    (la matière, remplacée par le coût réel). Le modèle n'a pas de ligne de personnel : ce qui reste est son palier
-   *    « Disponible pour rémunération ». Sans modèle, les seuils du réseau (/meta) en repli ;
+   *    (la matière, remplacée par le coût réel). Le modèle n'a pas de ligne de personnel : le personnel s'y ajoute à
+   *    20 % du CA (15/11/2026, Sam : « niveau staff on peut mettre 20 % »), sauf si le modèle en porte un jour une. Sans
+   *    modèle, les seuils du réseau (/meta) en repli ;
    *  - la valeur : (marge brute réelle − charges normatives) × 3,5.
    * (Avant le 15/11/2026 : le CA annuel ÷ 6.)
    * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
@@ -302,6 +303,8 @@
   const VALO_REGLE = '(marge brute réelle − charges normatives du réseau) × ' + VALO_MULT_T;
   // Les charges normatives : les seuils du réseau (GET /meta → seuils), en % du CA ; par défaut, ceux du serveur.
   const VALO_NORMES = [['labour', 'main-d’œuvre', 33], ['overhead', 'frais généraux', 13.5], ['royalties', 'redevances', 3], ['financieres', 'charges financières', 2.2]];
+  // Le personnel de la valeur quand le modèle de Budget › Paramètres n'en a pas (décision du 15/11/2026).
+  const VALO_PERSONNEL = 20;
   const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
   function valoNormes() {
     const s = (S.aux.meta && S.aux.meta.seuils) || {};
@@ -312,8 +315,9 @@
       const cats = [];
       M.lignes.filter(l => !l.matiere && isFinite(+l.pct)).forEach(l => { let c = cats.find(x => x.lib === l.categorie); if (!c) { c = { k: l.categorie, lib: l.categorie, pct: 0 }; cats.push(c); } c.pct += +l.pct; });
       const mat = M.lignes.filter(l => l.matiere).reduce((t, l) => t + (+l.pct || 0), 0);
-      const pal = (M.paliers || []).find(p => p.droite === 'tout');
-      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food: mat || food, source: 'Budget › Paramètres', reste: pal && pal.nom ? pal.nom : 'Disponible pour rémunération' };
+      const aPersonnel = M.lignes.some(l => !l.matiere && /personnel|salaire|r[ée]mun|main.d|staff/i.test(l.categorie + ' ' + l.poste));
+      if (!aPersonnel) { cats.push({ k: 'personnel', lib: 'Personnel', pct: VALO_PERSONNEL, ajoute: true }); }
+      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food: mat || food, source: 'Budget › Paramètres', personnelAjoute: !aPersonnel, reste: 'Résultat normatif' };
     }
     const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
     return { L, total: L.reduce((t, x) => t + x.pct, 0), food, source: 'les seuils du réseau', reste: 'Résultat normatif' };
@@ -510,12 +514,11 @@
       <div class="db-vpop-calc">
         ${ligne('Chiffre d’affaires annuel', fE(v.annuel), fE(v.total) + ' sur ' + fN(v.jours) + ' jours d’activité' + (v.jours < VALO_JOURS ? ' (' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture)' : ' (du ' + esc(v.du) + ' au ' + esc(v.au) + ')') + ', ramenés à ' + VALO_AN + ' jours')}
         ${ligne('Marge brute réelle', fE(v.mbAnnuel), fPc(100 - v.fc) + ' du CA · food cost ' + fPc(v.fc) + (v.sansFc ? ' · ' + v.sansFc + ' mois sans mesure : ' + esc(v.repli.src) + ' (' + fPc(v.repli.pct) + ')' : ', mesuré mois par mois'))}
-        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA (' + esc(v.normes.source) + ') : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', '))}
-        ${ligne('= ' + esc(v.normes.reste.charAt(0).toLowerCase() + v.normes.reste.slice(1)), fE(v.resultat), v.normes.source === 'Budget › Paramètres' ? 'sur un an, avant le personnel et le gérant : le modèle du budget n’a pas de ligne de personnel' : 'ce que le magasin gagne aux normes du réseau, sur un an')}
+        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', ') + (v.normes.source === 'Budget › Paramètres' ? ' (Budget › Paramètres' + (v.normes.personnelAjoute ? ', personnel ajouté à ' + fPc(VALO_PERSONNEL) : '') + ')' : ''))}
+        ${ligne('= résultat normatif', fE(v.resultat), 'ce que le magasin gagne aux normes du réseau, sur un an')}
         ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'la valeur du magasin')}
       </div>
-      ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}
-        ${T.some(o => o.n < 3) ? `<p class="mu">${T.filter(o => o.n < 3).map(o => esc(o.lib) + ' : ' + o.n + ' mois').join(' · ')} — le mois en cours n’est pas compté.</p>` : ''}</div>` : ''}
+      ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}</div>` : ''}
     </div>`;
   }
 
