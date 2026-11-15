@@ -10,3 +10,4 @@
 2026-11-15T12:56:48Z Dashboard franchisé : plus de lien Cockpit › Résultat
 2026-11-15T13:14:31Z Dashboard : bouton Demande au bureau dans l'entête
 2026-11-15T13:17:50Z Dashboard : vignettes de même hauteur, Demande au bureau
+2026-11-15T13:29:25Z Dashboard franchisé : Vendre › Offres (TF Buddy), détail de la valeur, Relire en vignette
