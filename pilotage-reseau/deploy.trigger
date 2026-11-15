@@ -17,3 +17,4 @@
 2026-11-15T13:57:39Z Dashboard franchisé : valeur, personnel 20 %
 2026-11-15T14:00:31Z Dashboard franchisé : Marketing › Mon marketing
 2026-11-15T14:06:19Z Dashboard franchisé : calendrier des posts et nouveau post dans Mon marketing
+2026-11-15T14:10:58Z Dashboard franchisé : bouton API (index et appels)
