@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard magasin — le vrai, avec un rail à côté (maquette)</title>
+<link rel="icon" href="../../../public/assets/img/logo.png">
+<link rel="stylesheet" href="../../../public/assets/ds/global.css">
+<link rel="stylesheet" href="../../../public/assets/css/controles-photo.css">
+<link rel="stylesheet" href="../../../public/dashboard/dashboard.css">
+<link rel="stylesheet" href="rf.css">
+<link rel="stylesheet" href="final.css">
+<style>
+  /* Le dashboard tel qu'il est, dans la colonne de droite. Seuls son en-tête et sa rangée d'onglets sont masqués :
+     le rail et la barre du haut les remplacent. Rien d'autre n'est touché. */
+  html, body { height: 100%; }
+  .rl-main { flex: 1; overflow-y: auto; background: var(--paper); }
+  .rl-main #dash { max-width: none; padding: 16px 24px 40px; }
+  .rl-main #dash > .db-hd, .rl-main #dash > .db-nav { display: none; }
+  .rf-rep { margin-top: 6px; }
+</style>
+</head><body>
+<div class="workspace">
+<nav class="sidebar" aria-label="Navigation du dashboard">
+<div class="sidebar__head"><img class="sidebar__logo" src="../../../public/assets/img/logo.png" alt="L’Atelier By"><div class="sidebar__kicker">Dashboard · Halle</div></div>
+  <div class="sidebar__back"><a href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>Retour à l’ERP</a></div>
+  <div class="rf-rep">
+    <div class="rf-cartes">
+      <button class="rf-carte"><div class="k">Objectif du jour<em class="ex">à 13 h 05</em></div><div class="v"><span class="ex">68 %</span><small class="ex">de 2 380 €</small></div>
+        <div class="rf-echelle"><i style="width:68%"></i><b style="left:64%"></b></div></button>
+      <button class="rf-carte"><div class="k">Note Google<em class="ex">287 avis</em></div><div class="v"><span class="ex">4,6</span><span class="rf-etoiles"><svg viewBox="0 0 24 24" class="on"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24" class="on"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24" class="on"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24" class="on"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><svg viewBox="0 0 24 24" class=""><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span><small>cible 4,5</small></div></button>
+    </div></div>
+  <div class="sidebar__groups">
+    <div class="sidebar__group"><div class="sidebar__group-label">La journée</div><a class="sidebar__item is-active" href="#" aria-current="page"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3h7v7H3zM14 3h7v7h-7zM14 14h7v7h-7zM3 14h7v7H3z"></path></svg><span class="sidebar__item-label">Opérationnel</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg><span class="sidebar__item-label">Tâches</span><span class="rf-etat"><span class="ex">4</span></span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9"></path></svg><span class="sidebar__item-label">Temps morts</span></a></div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Les chiffres</div><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path></svg><span class="sidebar__item-label">Semaine</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zM8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"></path></svg><span class="sidebar__item-label">Mois</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v18h18M7 15l4-4 3 3 5-6"></path></svg><span class="sidebar__item-label">Trimestre</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17l6-6 4 4 8-8M15 7h6v6"></path></svg><span class="sidebar__item-label">Année</span></a></div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Vendre</div><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 8l-9-5-9 5 9 5 9-5zM3 8v8l9 5 9-5V8M12 13v8"></path></svg><span class="sidebar__item-label">Produits</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M19 5L5 19M7 7a1.5 1.5 0 1 0 .01 0M17 17a1.5 1.5 0 1 0 .01 0"></path></svg><span class="sidebar__item-label">Promotions</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"></path></svg><span class="sidebar__item-label">Concurrence</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18v12H3zM3 7l3-4h12l3 4M16 13h.5"></path></svg><span class="sidebar__item-label">Primes</span></a></div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Assistants</div><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16v16H4zM8 8h8M8 12h8M8 16h5"></path></svg><span class="sidebar__item-label">Plan d’action</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l14-7v16L3 13zM7 14v5"></path></svg><span class="sidebar__item-label">Campagne</span></a><a class="sidebar__item" href="#"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2zM8 9h8M8 13h5"></path></svg><span class="sidebar__item-label">Réclamation fournisseur</span></a></div>
+  </div>
+</nav>
+<div class="workspace__main"><header class="topbar"><div><p class="topbar__kicker">Vue Franchisé</p><h1>Opérationnel</h1></div>
+  <div class="topbar__actions">
+    <button class="btn btn--icon" aria-label="Jour précédent">‹</button><span class="fn-date">dimanche 15 novembre</span><button class="btn btn--icon" aria-label="Jour suivant">›</button>
+    <button class="btn">↻ Relire</button>
+    <div class="rf-avs">
+      <button class="fn-vignette"><span class="k">Valeur du magasin</span><span class="v ex">100 328 €</span></button>
+      <button class="rf-av"><span class="rf-av__o"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM5 21v-1a7 7 0 0 1 14 0v1"></path></svg></span><span><span class="rf-av__k">Coach</span><span class="rf-av__v">assistant IA</span></span></button>
+      <button class="rf-av vif"><span class="rf-av__o"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3h6v3H9zM9 4.5H6a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-3M15.5 15.5a3.2 3.2 0 1 1-3.7-4.4 2.6 2.6 0 0 0 3.7 4.4z"></path></svg></span><span><span class="rf-av__k">Revue du soir</span><span class="rf-av__v"><span class="ex">à faire</span></span></span></button>
+    </div></div></header>
+<main class="rl-main"><div id="dash"><div class="db-attente">Lecture du magasin…</div></div></main>
+</div>
+</div>
+<script src="../../../public/assets/js/visites.js"></script>
+<script src="../../../public/assets/js/cartes-magasin.js"></script>
+<script src="../../../public/dashboard/dashboard.js"></script>
+</body></html>

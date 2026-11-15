@@ -14,6 +14,29 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
+## Le vrai dashboard, avec un rail à côté (`reel.png`) — la demande en cours
+
+Demande du 15/11/2026 : « ne pas changer ce qui était dans le dashboard, je veux juste un rail à côté ». `reel.html`
+charge le **vrai code du dashboard** (`public/dashboard/dashboard.js` et `dashboard.css`, sans une ligne changée) dans
+son conteneur `#dash`, à droite du rail. Ce qui change, et seulement ça :
+
+- **l'en-tête du dashboard** (logo, nom du magasin) et **sa rangée d'onglets** sont masqués : le rail les remplace,
+  entrée pour entrée, dans le même ordre — La journée (Opérationnel, Tâches, Temps morts), Les chiffres (Semaine, Mois,
+  Trimestre, Année), Vendre (Produits, Promotions, Concurrence, Primes). Aucun écran fusionné ni ajouté ; le groupe
+  Assistants ouvre le plan d'action et la campagne (déjà des vues du dashboard, sans onglet) et la réclamation
+  fournisseur (au téléphone aujourd'hui) ;
+- **la barre du haut** reprend ce qui était sur la rangée d'onglets : la date, « Relire », la valeur (en vignette),
+  la revue du soir (en avatar), plus le coach (l'assistant IA) ;
+- en haut du rail : l'objectif du jour et la note Google.
+
+Tout le reste — la frise de la semaine, l'objectif du jour, le P&L court, les ventes par catégorie, la journée, la
+vitrine, les contrôles en photo… — est le dashboard tel qu'il est. La capture montre ses blocs sur « lecture… » : la
+maquette ne lit pas l'API du cockpit (le serveur de production n'est pas interrogé d'ici). Ouverte sur le serveur, à
+côté de `public/dashboard`, la même page se remplirait. Les chiffres du rail et de la barre sont des exemples.
+
+Pour le coder : dans `dashboard.js`, au bureau, l'en-tête et la rangée d'onglets laissent la place au rail ; chaque
+entrée du rail pose `?vue=` comme l'onglet le faisait.
+
 ## La version propre, sur la base de B (`final.png`)
 
 Demande du 15/11/2026 : « la valeur doit être un montant dans une vignette ; refais le design complet, que ce soit

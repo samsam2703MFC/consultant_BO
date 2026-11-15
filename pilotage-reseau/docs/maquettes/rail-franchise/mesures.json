@@ -1,4 +1,8 @@
 {
+ "reel": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "final": {
   "rail": 1000,
   "tientDans1000": true
