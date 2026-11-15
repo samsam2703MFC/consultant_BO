@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-15T14:34:50Z",
+ "genere": "2026-11-15T15:05:36Z",
  "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -298,7 +298,7 @@
      ],
      "chemin": "/dashboard/social/ouvrir…",
      "handler": "dsRoute",
-     "source": "src/franchise/dashboard_marketing.php:87",
+     "source": "src/franchise/dashboard_marketing.php:89",
      "resume": ""
     }
    ]
@@ -598,8 +598,8 @@
     "POST"
    ],
    "fichiers": [
-    "offres.js:56",
-    "offres.js:61"
+    "offres.js:63",
+    "offres.js:68"
    ],
    "magasin": true,
    "routes": [
@@ -629,7 +629,7 @@
     "GET"
    ],
    "fichiers": [
-    "offres.js:77"
+    "offres.js:84"
    ],
    "magasin": true,
    "routes": [
@@ -650,7 +650,7 @@
     "GET"
    ],
    "fichiers": [
-    "offres.js:156"
+    "offres.js:222"
    ],
    "magasin": true,
    "routes": [
@@ -771,7 +771,7 @@
      ],
      "chemin": "/exploitation/promos-magasin",
      "handler": "ep_promos_magasin_demandes",
-     "source": "src/promos_magasin.php:1202",
+     "source": "src/promos_magasin.php:1204",
      "resume": "les promotions du magasin (lues au panel : celles réservées à lui seul), les autres promotions du panel qui le touchent (la marque), les règles."
     },
     {
@@ -780,7 +780,7 @@
      ],
      "chemin": "/exploitation/promos-magasin",
      "handler": "wr_promos_magasin",
-     "source": "src/promos_magasin.php:1249",
+     "source": "src/promos_magasin.php:1251",
      "resume": "shop, id? (« p21 » : la promotion n° 21 du panel), action: brouillon|envoyer, nom, description, x, y, du, au, creneaux, repetable, maxParTicket, bon?, tous?} — écrit au panel, et rien ailleurs (18/10/2026)."
     },
     {
@@ -789,7 +789,7 @@
      ],
      "chemin": "/exploitation/promos-magasin",
      "handler": "wr_promos_magasin_retirer",
-     "source": "src/promos_magasin.php:1323",
+     "source": "src/promos_magasin.php:1325",
      "resume": "un brouillon du magasin (inactif au panel) se supprime au panel."
     }
    ]
@@ -843,7 +843,7 @@
      ],
      "chemin": "/exploitation/promos-magasin/canaux",
      "handler": "ep_promos_magasin_canaux",
-     "source": "src/promos_magasin.php:292",
+     "source": "src/promos_magasin.php:294",
      "resume": "7 | 30) — où les promotions s'appliquent : au comptoir, en click & collect, en livraison, promotion par promotion et jour par jour."
     }
    ]
@@ -856,7 +856,7 @@
    "fichiers": [
     "dashboard.js:4427",
     "dashboard.js:4447",
-    "offres.js:88"
+    "offres.js:95"
    ],
    "magasin": true,
    "routes": [
@@ -878,7 +878,7 @@
    ],
    "fichiers": [
     "dashboard.js:3590",
-    "offres.js:71"
+    "offres.js:78"
    ],
    "magasin": true,
    "routes": [

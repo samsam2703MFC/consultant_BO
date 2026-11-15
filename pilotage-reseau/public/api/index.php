@@ -152,6 +152,7 @@ require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : ré
 require __DIR__ . '/../../src/franchise/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
 require __DIR__ . '/../../src/franchise/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
 require __DIR__ . '/../../src/franchise/dashboard_marketing.php'; // Marketing › Mon marketing : le hub du marketing d'un magasin (15/11/2026)
+require __DIR__ . '/../../src/franchise/offres_newsletter.php';  // Vendre › Offres › Newsletter : le module newsletter, au rôle du magasin (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');

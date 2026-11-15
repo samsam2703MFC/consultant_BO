@@ -60,6 +60,8 @@ function dmRoute(string $method, string $path): ?array
 {
     if ($path !== '/dashboard/marketing' && !str_starts_with($path, '/dashboard/marketing/')) { return null; }
     if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
+    // Vendre › Offres › Newsletter : le module newsletter du cockpit, au rôle du magasin (src/franchise/offres_newsletter.php).
+    if (($n = dnRoute($method, $path)) !== null) { return $n; }
     http_response_code(404);
     return ['error' => 'route inconnue'];
 }
