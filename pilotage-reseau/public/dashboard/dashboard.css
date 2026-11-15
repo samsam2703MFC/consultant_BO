@@ -3290,6 +3290,7 @@ body.db-vue-social{overflow:hidden}
 .rx-racine .db-err{margin-right:24px}
 .rx-cadre{display:block;width:100%;min-height:480px;border:0;background:transparent;color-scheme:light}
 @media print{#db-reseaux{display:none}}
-/* La barre de défilement (15/11/2026, « une fine ligne ruby ») : 6 px, ruby, sans fond — la page et ses panneaux. */
-html,html *{scrollbar-width:thin;scrollbar-color:#8D1D2C transparent}
-::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#8D1D2C;border-radius:3px}::-webkit-scrollbar-track{background:transparent}
+/* Barre de défilement : un fil ruby de 3 px. Chrome et Safari prennent ::-webkit-scrollbar ; Chrome l'ignore dès que
+   scrollbar-width est posé, d'où le @supports : seul Firefox, qui ne connaît pas ce sélecteur, reçoit « thin ». */
+::-webkit-scrollbar{width:3px;height:3px}::-webkit-scrollbar-thumb{background:#8D1D2C;border-radius:3px}::-webkit-scrollbar-track,::-webkit-scrollbar-corner{background:transparent}
+@supports not selector(::-webkit-scrollbar){html,html *{scrollbar-width:thin;scrollbar-color:#8D1D2C transparent}}
