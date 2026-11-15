@@ -265,43 +265,48 @@ function wr_ia_lecons(): array
     return ep_ia_lecons() + ['ok' => true];
 }
 
-/* --- Les photos MODÈLES et l'entraînement par rayon (15/11/2026) ----------------------------------------------------
+/* --- Le PLANOGRAMME et les photos d'EXEMPLE, l'entraînement par rayon (15/11/2026) --------------------------------
  *
- * Une photo rendue que le consultant juge parfaite devient le modèle de son rayon : pour son MAGASIN (pil_cq_modele,
- * une par rayon et par magasin — les comptoirs ne se ressemblent pas d'un magasin à l'autre), ou pour le RÉSEAU (la
- * photo type du rayon, con_rayon_photo). L'IA juge ensuite chaque photo contre le modèle de son magasin, à défaut
- * contre la photo type du réseau. Le consultant choisit le modèle ; l'IA ne choisit jamais les siens, elle
- * renforcerait ses propres erreurs. La photo est COPIÉE sur le serveur : l'adresse signée du panel expire en 20 min.
+ * Pour chaque rayon, l'IA juge une photo contre :
+ *  1. la PHOTO DU PLANOGRAMME — la présentation attendue par le réseau, une par rayon (con_rayon_photo.photo, la
+ *     « photo type » d'avant) : déposée comme fichier, ou prise parmi les vraies photos ;
+ *  2. des PHOTOS D'EXEMPLE — de vraies photos que le consultant a jugées parfaites (pil_cq_exemple, plusieurs par
+ *     rayon, chacune de son magasin). Avec chaque photo à noter partent les deux plus récentes, celles du même magasin
+ *     d'abord : les comptoirs ne se ressemblent pas d'un magasin à l'autre.
+ * Le consultant choisit ; l'IA ne choisit jamais ses propres exemples, elle renforcerait ses propres erreurs. Une
+ * photo prise est COPIÉE sur le serveur : l'adresse signée du panel expire en 20 min.
  *
  * Routes : GET /ia/entrainement, POST /ia/modeles.
  */
+
+const IA_EXEMPLES_ENVOYES = 2;   // photos d'exemple envoyées avec une photo à noter, en plus du planogramme
 
 function ensureIaModeles(): void
 {
     static $fait = false;
     if ($fait) { return; }
     $fait = true;
-    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_modele ('
+    Db::exec('CREATE TABLE IF NOT EXISTS pil_cq_exemple ('
         . 'rayon VARCHAR(80) NOT NULL,'             // clé du rayon (src/rayons_photos.php)
-        . 'shop_id INT NOT NULL,'
-        . 'photo VARCHAR(255) NOT NULL,'            // chemin sous public/ (uploads/rayons/modeles/…)
-        . 'source_task INT NULL,'                   // la tâche et le jour d'où vient la photo
-        . 'source_jour DATE NULL,'
+        . 'shop_id INT NOT NULL,'                   // le magasin de la photo
+        . 'source_task INT NOT NULL,'               // la tâche et le jour d'où vient la photo
+        . 'source_jour DATE NOT NULL,'
+        . 'photo VARCHAR(255) NOT NULL,'            // chemin sous public/ (uploads/rayons/exemples/…)
         . 'tache VARCHAR(190) NULL,'
         . 'par VARCHAR(120) NULL,'
         . 'le DATETIME NOT NULL,'
-        . 'PRIMARY KEY (rayon, shop_id)'
+        . 'PRIMARY KEY (rayon, shop_id, source_task, source_jour)'
         . ') ENGINE=InnoDB DEFAULT CHARSET=utf8mb4');
 }
 
-/** Le modèle d'un rayon pour un magasin, ou null. */
-function iaModelePour(?string $rayon, int $shopId): ?array
+/** Les photos d'exemple d'un rayon, celles du magasin d'abord, les plus récentes ensuite. */
+function iaExemplesPour(?string $rayon, int $shopId, int $max = IA_EXEMPLES_ENVOYES): array
 {
-    if ($rayon === null || $rayon === '' || $shopId <= 0) { return null; }
+    if ($rayon === null || $rayon === '') { return []; }
     try {
         ensureIaModeles();
-        return Db::row('SELECT * FROM pil_cq_modele WHERE rayon = ? AND shop_id = ?', [$rayon, $shopId]);
-    } catch (PDOException $e) { return null; }
+        return Db::rows('SELECT * FROM pil_cq_exemple WHERE rayon = ? ORDER BY CASE WHEN shop_id = ? THEN 0 ELSE 1 END, le DESC LIMIT ' . max(1, $max), [$rayon, $shopId]);
+    } catch (PDOException $e) { return []; }
 }
 
 /** Télécharge une photo (adresse signée du panel) : [octets, erreur]. Les essais posent $GLOBALS['IA_TELECHARGER']. */
@@ -317,7 +322,7 @@ function iaTelecharger(string $url): array
     return [(string) $raw, null];
 }
 
-/** Le niveau le plus haut du barème (Exemplaire) : une photo notée ainsi est candidate au modèle. */
+/** Le niveau le plus haut du barème (Exemplaire) : une photo notée ainsi est candidate à l'exemple. */
 function iaNiveauMax(): int
 {
     $b = iaBareme();
@@ -325,26 +330,28 @@ function iaNiveauMax(): int
 }
 
 /**
- * POST /ia/modeles — {shopId, taskId, date, portee: "magasin"|"reseau"} : la photo de cette tâche devient le modèle
- * de son rayon, pour son magasin ou pour le réseau ; {rayon, shopId, retirer: true} : retirer le modèle d'un magasin.
+ * POST /ia/modeles —
+ *  {shopId, taskId, date, portee: "exemple"}     la photo de cette tâche devient une photo d'exemple de son rayon ;
+ *  {shopId, taskId, date, portee: "planogramme"} elle devient la photo du planogramme du rayon (la consigne reste) ;
+ *  {rayon, shopId, taskId, date, retirer: true}  retirer une photo d'exemple.
  */
 function wr_ia_modeles(): array
 {
     $b = body();
     ensureIaModeles();
     $auteur = function_exists('psAuteur') ? psAuteur() : 'CEO';
+    $shopId = (int) ($b['shopId'] ?? 0); $taskId = (int) ($b['taskId'] ?? 0); $date = (string) ($b['date'] ?? '');
     if (!empty($b['retirer'])) {
-        $rayon = (string) ($b['rayon'] ?? ''); $shopId = (int) ($b['shopId'] ?? 0);
-        $m = iaModelePour($rayon, $shopId);
-        if ($m === null) { http_response_code(404); return ['error' => 'pas de modèle pour ce rayon dans ce magasin']; }
-        $f = __DIR__ . '/../public/' . $m['photo'];
+        $rayon = (string) ($b['rayon'] ?? '');
+        $e = Db::row('SELECT * FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
+        if ($e === null) { http_response_code(404); return ['error' => 'photo d’exemple introuvable']; }
+        $f = __DIR__ . '/../public/' . $e['photo'];
         if (is_file($f)) { @unlink($f); }
-        Db::exec('DELETE FROM pil_cq_modele WHERE rayon = ? AND shop_id = ?', [$rayon, $shopId]);
-        if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', 'Rayon ' . $rayon, 'Photo modèle retirée — boutique #' . $shopId); }
+        Db::exec('DELETE FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$rayon, $shopId, $taskId, $date]);
+        if (function_exists('journalAdd')) { journalAdd('CEO', 'Assistant de notation', 'Rayon ' . $rayon, 'Photo d’exemple retirée — boutique #' . $shopId . ', ' . $date); }
         return ep_ia_entrainement() + ['ok' => true];
     }
-    $shopId = (int) ($b['shopId'] ?? 0); $taskId = (int) ($b['taskId'] ?? 0); $date = (string) ($b['date'] ?? '');
-    $portee = (string) ($b['portee'] ?? 'magasin') === 'reseau' ? 'reseau' : 'magasin';
+    $portee = (string) ($b['portee'] ?? 'exemple') === 'planogramme' ? 'planogramme' : 'exemple';
     if ($shopId <= 0 || $taskId <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
         http_response_code(400);
         return ['error' => 'shopId, taskId et date (YYYY-MM-DD) sont requis'];
@@ -353,22 +360,22 @@ function wr_ia_modeles(): array
     $_GET['shop'] = (string) $shopId; $_GET['task'] = (string) $taskId; $_GET['date'] = $date;
     $d = ep_pwa_task_detail();
     $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
-    if ($rv === null) { http_response_code(422); return ['error' => 'seule une « Photo du comptoir » a un rayon : cette tâche ne peut pas servir de modèle']; }
+    if ($rv === null) { http_response_code(422); return ['error' => 'seule une « Photo du comptoir » a un rayon : cette tâche ne peut pas servir d’exemple']; }
     if (empty($d['photo'])) { http_response_code(422); return ['error' => 'aucune photo sur cette tâche']; }
     [$octets, $err] = iaTelecharger((string) $d['photo']);
     if ($octets === null) { http_response_code(502); return ['error' => (string) $err]; }
     $info = @getimagesizefromstring($octets);
     $data = 'data:' . ((string) ($info['mime'] ?? 'image/jpeg')) . ';base64,' . base64_encode($octets);
     $cle = (string) $rv['cle'];
-    if ($portee === 'magasin') {
-        $f = psImage($data, 'uploads/rayons/modeles/' . $cle . '-' . $shopId . '-' . date('YmdHis'));
+    if ($portee === 'exemple') {
+        $f = psImage($data, 'uploads/rayons/exemples/' . $cle . '-' . $shopId . '-' . $taskId . '-' . str_replace('-', '', $date) . '-' . date('His'));
         if (isset($f['error'])) { http_response_code((int) $f['code']); return ['error' => $f['error']]; }
-        $avant = iaModelePour($cle, $shopId);
+        $avant = Db::row('SELECT photo FROM pil_cq_exemple WHERE rayon = ? AND shop_id = ? AND source_task = ? AND source_jour = ?', [$cle, $shopId, $taskId, $date]);
         if ($avant !== null && is_file(__DIR__ . '/../public/' . $avant['photo'])) { @unlink(__DIR__ . '/../public/' . $avant['photo']); }
-        Db::exec('REPLACE INTO pil_cq_modele (rayon, shop_id, photo, source_task, source_jour, tache, par, le) VALUES (?,?,?,?,?,?,?,?)',
-            [$cle, $shopId, $f['chemin'], $taskId, $date, $d['tache'] ?? null, $auteur, date('Y-m-d H:i:s')]);
+        Db::exec('REPLACE INTO pil_cq_exemple (rayon, shop_id, source_task, source_jour, photo, tache, par, le) VALUES (?,?,?,?,?,?,?,?)',
+            [$cle, $shopId, $taskId, $date, $f['chemin'], $d['tache'] ?? null, $auteur, date('Y-m-d H:i:s')]);
     } else {
-        // Le réseau : la photo type du rayon (la consigne reste).
+        // Le planogramme du rayon : la photo de référence du réseau (con_rayon_photo.photo ; la consigne reste).
         ensureRayonsPhotos();
         $f = psImage($data, 'uploads/rayons/' . $cle . '-' . date('YmdHis'));
         if (isset($f['error'])) { http_response_code((int) $f['code']); return ['error' => $f['error']]; }
@@ -381,24 +388,24 @@ function wr_ia_modeles(): array
         }
     }
     if (function_exists('journalAdd')) {
-        journalAdd('CEO', 'Assistant de notation', 'Rayon ' . (string) $rv['nom'], 'Photo modèle ' . ($portee === 'magasin' ? 'du magasin #' . $shopId : 'du réseau')
-            . ' : tâche #' . $taskId . ' du ' . $date);
+        journalAdd('CEO', 'Assistant de notation', 'Rayon ' . (string) $rv['nom'], ($portee === 'exemple' ? 'Photo d’exemple ajoutée' : 'Photo du planogramme posée')
+            . ' : boutique #' . $shopId . ', tâche #' . $taskId . ' du ' . $date);
     }
     return ep_ia_entrainement() + ['ok' => true, 'portee' => $portee, 'rayon' => $cle];
 }
 
 /**
- * GET /ia/entrainement — rayon par rayon : la consigne (et les critères par défaut quand elle est vide), la photo type
- * du réseau, les modèles des magasins, l'accord de l'IA avec le consultant, les leçons ; et les photos notées
- * Exemplaire ces 30 derniers jours, candidates au modèle.
+ * GET /ia/entrainement — rayon par rayon : la photo du planogramme, les photos d'exemple, la consigne (et les critères
+ * par défaut quand elle est vide), l'accord de l'IA avec le consultant, les leçons ; et les photos notées Exemplaire
+ * ces 30 derniers jours, candidates à l'exemple.
  */
 function ep_ia_entrainement(): array
 {
     ensureIaAssistant(); ensureIaModeles();
     $depuis = date('Y-m-d', strtotime('-' . IA_ACCORD_JOURS . ' days'));
-    $modeles = [];
-    foreach (Db::rows('SELECT * FROM pil_cq_modele ORDER BY le DESC') as $m) {
-        $modeles[(string) $m['rayon']][] = ['shopId' => (string) $m['shop_id'], 'photo' => $m['photo'], 'taskId' => $m['source_task'] !== null ? (string) $m['source_task'] : null,
+    $exemples = [];
+    foreach (Db::rows('SELECT * FROM pil_cq_exemple ORDER BY le DESC') as $m) {
+        $exemples[(string) $m['rayon']][] = ['shopId' => (string) $m['shop_id'], 'photo' => $m['photo'], 'taskId' => (string) $m['source_task'],
             'date' => $m['source_jour'], 'par' => $m['par'], 'le' => $m['le']];
     }
     $accord = [];
@@ -415,9 +422,9 @@ function ep_ia_entrainement(): array
         . " AND (note_finale <> niveau OR (raison IS NOT NULL AND raison <> '')) ORDER BY valide_le DESC LIMIT 300") as $r) {
         $lecons[(string) $r['rayon']][] = iaPropositionLigne($r);
     }
-    // Les candidates : notées Exemplaire par le consultant, pas encore modèles.
+    // Les candidates : notées Exemplaire par le consultant, pas encore prises en exemple.
     $pris = [];
-    foreach ($modeles as $l) { foreach ($l as $m) { $pris[$m['shopId'] . '|' . $m['taskId'] . '|' . $m['date']] = true; } }
+    foreach ($exemples as $l) { foreach ($l as $m) { $pris[$m['shopId'] . '|' . $m['taskId'] . '|' . $m['date']] = true; } }
     $candidates = [];
     foreach (Db::rows('SELECT * FROM pil_cq_ia WHERE rayon IS NOT NULL AND note_finale = ? AND jour >= ? ORDER BY jour DESC, valide_le DESC LIMIT 60', [iaNiveauMax(), $depuis]) as $r) {
         $l = iaPropositionLigne($r);
@@ -428,12 +435,12 @@ function ep_ia_entrainement(): array
         $cle = (string) $rv['cle'];
         $a = $accord[$cle] ?? ['notees' => 0, 'pareil' => 0, 'tropSevere' => 0, 'tropIndulgente' => 0];
         $a['pct'] = $a['notees'] > 0 ? (int) round(100 * $a['pareil'] / $a['notees']) : null;
-        $rayons[] = ['cle' => $cle, 'nom' => $rv['nom'], 'consigne' => $rv['consigne'], 'photo' => $rv['photo'], 'defaut' => (bool) ($rv['defaut'] ?? false),
+        $rayons[] = ['cle' => $cle, 'nom' => $rv['nom'], 'consigne' => $rv['consigne'], 'planogramme' => $rv['photo'], 'defaut' => (bool) ($rv['defaut'] ?? false),
             'criteresDefaut' => defined('RV_CRITERES_IA') ? (RV_CRITERES_IA[$cle] ?? null) : null,
-            'modeles' => $modeles[$cle] ?? [], 'accord' => $a + ['jours' => IA_ACCORD_JOURS],
+            'exemples' => $exemples[$cle] ?? [], 'accord' => $a + ['jours' => IA_ACCORD_JOURS],
             'lecons' => array_slice($lecons[$cle] ?? [], 0, 20)];
     }
     return ['rayons' => $rayons, 'candidates' => array_slice($candidates, 0, 24), 'accord' => iaAccord(),
-        'communs' => defined('RV_CRITERES_COMMUNS') ? RV_CRITERES_COMMUNS : '', 'leconsMax' => IA_LECONS_MAX,
+        'communs' => defined('RV_CRITERES_COMMUNS') ? RV_CRITERES_COMMUNS : '', 'leconsMax' => IA_LECONS_MAX, 'exemplesEnvoyes' => IA_EXEMPLES_ENVOYES,
         'niveauModele' => iaNiveauMax(), 'nomNiveauModele' => iaNomNiveau(iaNiveauMax())];
 }

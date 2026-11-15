@@ -81,9 +81,16 @@ Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux);
 verifie('les anciens appels (cinq arguments) marchent toujours', count($envois) === 1);
 verifie('sans leçon : pas de bloc corrections', !str_contains($texte($envois[0]), 'Corrections récentes'));
 $envois = [];
-Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['refLocale' => $typeRayon, 'refLib' => 'Photo MODÈLE de ce rayon dans ce magasin (du 2026-11-14) :']);
+$exemple = $racine . '/docs/maquettes/controle-taches-photos/photos/4-1206.jpg';
+Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['refs' => [
+    ['chemin' => $typeRayon, 'lib' => 'Photo du PLANOGRAMME du rayon « Tartes » :'],
+    ['chemin' => $exemple, 'lib' => 'Photo d’EXEMPLE jugée parfaite par le consultant (ce magasin, 2026-11-14) :'],
+    ['chemin' => '/nulle/part.jpg', 'lib' => 'absente'],
+    ['chemin' => $exemple, 'lib' => 'Photo d’EXEMPLE (un autre magasin) :'],
+    ['chemin' => $exemple, 'lib' => 'une de trop']]]);
 $t = $texte($envois[0]);
-verifie('la photo modèle du magasin, annoncée comme telle', str_contains($t, 'Photo MODÈLE de ce rayon dans ce magasin') && !str_contains($t, 'Photo TYPE') && substr_count($t, '[image]') === 2);
+verifie('le planogramme, puis les exemples, puis la photo du magasin', strpos($t, 'PLANOGRAMME') < strpos($t, 'EXEMPLE jugée parfaite') && strpos($t, 'EXEMPLE jugée parfaite') < strpos($t, 'PRISE EN BOUTIQUE'));
+verifie('trois références au plus, une absente remplacée par la suivante', substr_count($t, '[image]') === 4 && !str_contains($t, 'absente') && str_contains($t, 'un autre magasin') && !str_contains($t, 'une de trop'));
 $envois = [];
 Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['criteres' => rvCriteresIa(['cle' => 'tartes', 'nom' => 'Tartes']),
     'exemples' => ['Tu avais proposé « Non conforme — majeur » ; le consultant a noté « Non conforme — mineur » — sa raison : un objet seul reste mineur.', ' ']]);

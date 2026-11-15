@@ -161,32 +161,39 @@ $_GET['date'] = 'hier';
 $r = ep_ia_propositions();
 verifie('date illisible : 400', http_response_code() === 400 && isset($r['error']));
 
-echo "Les photos modèles\n";
+echo "Le planogramme et les photos d'exemple\n";
 $JPEG = (string) file_get_contents(__DIR__ . '/../docs/maquettes/controle-taches-photos/photos/4-1207.jpg');
 $GLOBALS['IA_TELECHARGER'] = static function (string $url) use ($JPEG) { $GLOBALS['TELECHARGES'][] = $url; return str_contains($url, 'perdue') ? [null, 'photo illisible (HTTP 403)'] : [$JPEG, null]; };
 $DET = static fn (array $plus = []) => array_merge(['photo' => 'https://r2.exemple/signee.jpg?X-Amz-Expires=1200', 'tache' => 'Photo du comptoir - Tartes',
     'rayon' => ['cle' => 'tartes', 'nom' => 'Tartes', 'photo' => null, 'consigne' => null]], $plus);
 $modeles = static function (array $b) { $GLOBALS['BODY'] = $b; http_response_code(200); return wr_ia_modeles(); };
-// Une consigne déjà posée sur les tartes : prendre une photo modèle du réseau ne doit pas l'effacer.
+$nEx = static fn (string $rayon) => (int) Db::row('SELECT COUNT(*) AS n FROM pil_cq_exemple WHERE rayon = ?', [$rayon])['n'];
+// Une consigne déjà posée sur les tartes : poser la photo du planogramme ne doit pas l'effacer.
 ensureRayonsPhotos();
 Db::exec('INSERT INTO con_rayon_photo (cle, nom, photo, consigne, par, le) VALUES (?,?,?,?,?,?)', ['tartes', 'Tartes', null, 'Huit tartes minimum', 'Sam', '2026-11-01 08:00:00']);
 $GLOBALS['DETAIL'] = $DET(); $GLOBALS['IMAGES'] = []; $GLOBALS['TELECHARGES'] = [];
-$r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-14', 'portee' => 'magasin']);
-$m = iaModelePour('tartes', 4);
-verifie('la photo devient le modèle du rayon pour ce magasin', ($r['ok'] ?? false) && $m !== null && $m['source_task'] == 1209 && $m['source_jour'] === '2026-11-14' && $m['par'] === 'Sam', json_encode($r['error'] ?? null));
-verifie('copiée sur le serveur, pas l’adresse signée', str_starts_with((string) $m['photo'], 'uploads/rayons/modeles/tartes-4-') && $GLOBALS['TELECHARGES'] === ['https://r2.exemple/signee.jpg?X-Amz-Expires=1200'] && $GLOBALS['IMAGES'][0][1] === 'data:image/jpeg;base64,');
+$r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-14', 'portee' => 'exemple']);
+$ex = Db::row('SELECT * FROM pil_cq_exemple WHERE rayon = ?', ['tartes']);
+verifie('la photo devient une photo d’exemple du rayon', ($r['ok'] ?? false) && $ex !== null && (int) $ex['shop_id'] === 4 && (int) $ex['source_task'] === 1209 && $ex['source_jour'] === '2026-11-14' && $ex['par'] === 'Sam', json_encode($r['error'] ?? null));
+verifie('copiée sur le serveur, pas l’adresse signée', str_starts_with((string) $ex['photo'], 'uploads/rayons/exemples/tartes-4-1209-20261114-') && $GLOBALS['TELECHARGES'] === ['https://r2.exemple/signee.jpg?X-Amz-Expires=1200'] && $GLOBALS['IMAGES'][0][1] === 'data:image/jpeg;base64,');
 $tartes = array_values(array_filter($r['rayons'], fn ($x) => $x['cle'] === 'tartes'))[0] ?? [];
-verifie('la page d’entraînement la montre au rayon', count($tartes['modeles'] ?? []) === 1 && $tartes['modeles'][0]['shopId'] === '4');
-$r = $modeles(['shopId' => 4, 'taskId' => 1210, 'date' => '2026-11-15', 'portee' => 'magasin']);
-verifie('une nouvelle photo remplace le modèle du magasin', (int) Db::row('SELECT COUNT(*) AS n FROM pil_cq_modele WHERE rayon = ? AND shop_id = 4', ['tartes'])['n'] === 1 && iaModelePour('tartes', 4)['source_task'] == 1210);
-$r = $modeles(['shopId' => 3, 'taskId' => 1209, 'date' => '2026-11-15', 'portee' => 'magasin']);
-verifie('chaque magasin a le sien', iaModelePour('tartes', 3) !== null && iaModelePour('tartes', 4) !== null && iaModelePour('tartes', 5) === null);
-$r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-14', 'portee' => 'reseau']);
+verifie('la page d’entraînement la montre au rayon', count($tartes['exemples'] ?? []) === 1 && $tartes['exemples'][0]['shopId'] === '4');
+$modeles(['shopId' => 4, 'taskId' => 1210, 'date' => '2026-11-15', 'portee' => 'exemple']);
+$modeles(['shopId' => 3, 'taskId' => 1209, 'date' => '2026-11-15', 'portee' => 'exemple']);
+verifie('plusieurs exemples par rayon, de plusieurs magasins', $nEx('tartes') === 3);
+$modeles(['shopId' => 4, 'taskId' => 1210, 'date' => '2026-11-15', 'portee' => 'exemple']);
+verifie('la même photo reprise ne se double pas', $nEx('tartes') === 3);
+$pour3 = iaExemplesPour('tartes', 3);
+verifie('pour une photo, deux exemples : ceux du magasin d’abord', count($pour3) === IA_EXEMPLES_ENVOYES && (int) $pour3[0]['shop_id'] === 3 && (int) $pour3[1]['shop_id'] === 4);
+verifie('un magasin sans exemple reçoit ceux des autres', count(iaExemplesPour('tartes', 5)) === IA_EXEMPLES_ENVOYES && iaExemplesPour('quiches', 4) === []);
+$r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-14', 'portee' => 'planogramme']);
 $rv = Db::row('SELECT * FROM con_rayon_photo WHERE cle = ?', ['tartes']);
-verifie('portée réseau : la photo type du rayon, la consigne gardée', ($r['portee'] ?? '') === 'reseau' && str_starts_with((string) $rv['photo'], 'uploads/rayons/tartes-') && $rv['consigne'] === 'Huit tartes minimum');
+verifie('portée planogramme : la photo du planogramme du rayon, la consigne gardée', ($r['portee'] ?? '') === 'planogramme' && str_starts_with((string) $rv['photo'], 'uploads/rayons/tartes-') && $rv['consigne'] === 'Huit tartes minimum');
+$tartes = array_values(array_filter($r['rayons'], fn ($x) => $x['cle'] === 'tartes'))[0] ?? [];
+verifie('la page la montre comme planogramme', ($tartes['planogramme'] ?? '') === $rv['photo']);
 $GLOBALS['DETAIL'] = $DET(['rayon' => ['cle' => 'quiches', 'nom' => 'Quiches', 'photo' => null, 'consigne' => null]]);
-$modeles(['shopId' => 4, 'taskId' => 1211, 'date' => '2026-11-15', 'portee' => 'reseau']);
-verifie('portée réseau sur un rayon sans ligne : la ligne se crée', (string) (Db::row('SELECT photo FROM con_rayon_photo WHERE cle = ?', ['quiches'])['photo'] ?? '') !== '');
+$modeles(['shopId' => 4, 'taskId' => 1211, 'date' => '2026-11-15', 'portee' => 'planogramme']);
+verifie('planogramme d’un rayon sans ligne : la ligne se crée', (string) (Db::row('SELECT photo FROM con_rayon_photo WHERE cle = ?', ['quiches'])['photo'] ?? '') !== '');
 $GLOBALS['DETAIL'] = $DET(['rayon' => null, 'tache' => 'Vérifier si le magasin est propre.']);
 $r = $modeles(['shopId' => 4, 'taskId' => 1216, 'date' => '2026-11-15']);
 verifie('pas une photo de comptoir : 422', http_response_code() === 422 && str_contains((string) ($r['error'] ?? ''), 'rayon'));
@@ -198,13 +205,13 @@ $r = $modeles(['shopId' => 4, 'taskId' => 1209, 'date' => '2026-11-15']);
 verifie('photo expirée : 502 avec le motif', http_response_code() === 502 && str_contains((string) ($r['error'] ?? ''), '403'));
 $r = $modeles(['shopId' => 0, 'taskId' => 1209, 'date' => '2026-11-15']);
 verifie('requête incomplète : 400', http_response_code() === 400);
-$r = $modeles(['rayon' => 'tartes', 'shopId' => 3, 'retirer' => true]);
-verifie('retirer le modèle d’un magasin', ($r['ok'] ?? false) && iaModelePour('tartes', 3) === null && iaModelePour('tartes', 4) !== null);
-$r = $modeles(['rayon' => 'tartes', 'shopId' => 3, 'retirer' => true]);
-verifie('retirer un modèle absent : 404', http_response_code() === 404);
+$r = $modeles(['rayon' => 'tartes', 'shopId' => 3, 'taskId' => 1209, 'date' => '2026-11-15', 'retirer' => true]);
+verifie('retirer une photo d’exemple', ($r['ok'] ?? false) && $nEx('tartes') === 2 && (int) iaExemplesPour('tartes', 3)[0]['shop_id'] === 4);
+$r = $modeles(['rayon' => 'tartes', 'shopId' => 3, 'taskId' => 1209, 'date' => '2026-11-15', 'retirer' => true]);
+verifie('retirer un exemple absent : 404', http_response_code() === 404);
 
 echo "La page d'entraînement\n";
-// Une photo notée Exemplaire par le consultant : candidate au modèle.
+// Une photo notée Exemplaire par le consultant : candidate à l'exemple.
 Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, valide_par, valide_le, lecon)'
     . ' VALUES (4, 1207, ?, ?, ?, 4, ?, ?, ?, 5, ?, ?, 1)', [$J, 'Photo du comptoir - Viennoiseries', 'viennoiseries', 'haute', '[]', $J . ' 07:00:00', 'Sam', $J . ' 09:00:00']);
 $e = ep_ia_entrainement();
@@ -215,10 +222,10 @@ verifie('la consigne et les critères par défaut du rayon', $t['consigne'] === 
 verifie('l’accord du rayon', $t['accord']['notees'] >= 1 && $t['accord']['jours'] === IA_ACCORD_JOURS, json_encode($t['accord']));
 verifie('les leçons du rayon', count($t['lecons']) >= 3 && $t['lecons'][0]['rayon'] === 'tartes');
 $cand = array_values(array_filter($e['candidates'], fn ($c) => $c['taskId'] === '1207' && $c['shopId'] === '4'));
-verifie('une photo notée Exemplaire est candidate au modèle', count($cand) === 1 && $e['nomNiveauModele'] === 'Exemplaire');
+verifie('une photo notée Exemplaire est candidate', count($cand) === 1 && $e['nomNiveauModele'] === 'Exemplaire' && $e['exemplesEnvoyes'] === IA_EXEMPLES_ENVOYES);
 $GLOBALS['DETAIL'] = $DET(['rayon' => ['cle' => 'viennoiseries', 'nom' => 'Viennoiseries', 'photo' => null, 'consigne' => null]]);
-$modeles(['shopId' => 4, 'taskId' => 1207, 'date' => $J, 'portee' => 'magasin']);
-verifie('prise comme modèle, elle n’est plus candidate', !array_filter(ep_ia_entrainement()['candidates'], fn ($c) => $c['taskId'] === '1207' && $c['shopId'] === '4'));
+$modeles(['shopId' => 4, 'taskId' => 1207, 'date' => $J, 'portee' => 'exemple']);
+verifie('prise en exemple, elle n’est plus candidate', !array_filter(ep_ia_entrainement()['candidates'], fn ($c) => $c['taskId'] === '1207' && $c['shopId'] === '4'));
 
 echo "\n$ok ok, $ko KO\n";
 ob_end_flush();

@@ -4702,8 +4702,8 @@ function ep_pwa_task_detail(): array
         // TYPE du rayon, posée dans le cockpit (src/rayons_photos.php). Chemin
         // local, à part de photoRef que le rapport PDF et l'IA téléchargent.
         'rayon' => null,
-        // La photo MODÈLE du rayon pour ce magasin, choisie parfaite par le consultant (src/ia_assistant.php).
-        'modele' => null,
+        // Les photos d'EXEMPLE du rayon, jugées parfaites par le consultant (src/ia_assistant.php), ce magasin d'abord.
+        'exemples' => [],
         // Repères posés sur la photo. Lus AVANT l'API : ils sont locaux, ils
         // doivent revenir même si le panel ne répond pas.
         'reperes' => annotationLire($shopId, $taskId, $date),
@@ -4764,9 +4764,12 @@ function ep_pwa_task_detail(): array
     }
     if ($out['tache'] !== null && function_exists('rvRayonDeTache') && ($rv = rvRayonDeTache($out['tache'])) !== null) {
         $out['rayon'] = ['cle' => $rv['cle'], 'nom' => $rv['nom'], 'photo' => $rv['photo'], 'consigne' => $rv['consigne']];
-        // La photo modèle du rayon pour ce magasin (src/ia_assistant.php) : elle passe devant la photo type du réseau.
-        $m = function_exists('iaModelePour') ? iaModelePour((string) $rv['cle'], $shopId) : null;
-        if ($m !== null) { $out['modele'] = ['photo' => $m['photo'], 'date' => $m['source_jour'], 'taskId' => $m['source_task'] !== null ? (string) $m['source_task'] : null, 'par' => $m['par']]; }
+        // Les photos d'exemple du rayon (src/ia_assistant.php), celles de ce magasin d'abord : le volet les montre,
+        // la proposition de l'IA les reçoit après le planogramme.
+        foreach (function_exists('iaExemplesPour') ? iaExemplesPour((string) $rv['cle'], $shopId, 6) : [] as $ex) {
+            $out['exemples'][] = ['photo' => $ex['photo'], 'date' => $ex['source_jour'], 'taskId' => (string) $ex['source_task'],
+                'shopId' => (string) $ex['shop_id'], 'memeMagasin' => (int) $ex['shop_id'] === $shopId, 'par' => $ex['par']];
+        }
     }
     $out['api']['erreur'] = PanelApi::$lastError;
     return $out;
@@ -8199,17 +8202,20 @@ function ep_ia_note(): array
     // quand le produit n'a pas de fiche technique : l'IA juge par comparaison, comme le consultant.
     $rv = is_array($d['rayon'] ?? null) ? $d['rayon'] : null;
     $regles = ['criteres' => function_exists('rvCriteresIa') ? rvCriteresIa($rv) : ''];
-    // La référence : la photo MODÈLE du rayon dans ce magasin (choisie parfaite par le consultant), sinon la photo
-    // type du réseau. Les comptoirs ne se ressemblent pas d'un magasin à l'autre.
-    $modele = is_array($d['modele'] ?? null) ? $d['modele'] : null;
-    if (empty($d['photoRef']) && $modele !== null) {
-        $regles['refLocale'] = __DIR__ . '/../public/' . $modele['photo'];
-        $regles['refLib'] = 'Photo MODÈLE de ce rayon dans ce magasin (choisie par le consultant comme parfaite, du ' . ($modele['date'] ?? '?') . ') :';
-        $out['reference'] = 'modele-magasin';
-    } elseif (empty($d['photoRef']) && $rv !== null && !empty($rv['photo'])) {
-        $regles['refLocale'] = __DIR__ . '/../public/' . $rv['photo'];
-        $out['reference'] = 'type-reseau';
+    // Les références d'une photo de comptoir (src/ia_assistant.php) : la photo du PLANOGRAMME du rayon, puis ses
+    // photos d'EXEMPLE jugées parfaites par le consultant — celles de ce magasin d'abord.
+    $regles['refs'] = [];
+    if (empty($d['photoRef']) && $rv !== null) {
+        if (!empty($rv['photo'])) {
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $rv['photo'], 'lib' => 'Photo du PLANOGRAMME du rayon « ' . $rv['nom'] . ' » (la présentation attendue par le réseau) :'];
+        }
+        foreach ((array) ($d['exemples'] ?? []) as $i => $ex) {
+            if ($i >= (defined('IA_EXEMPLES_ENVOYES') ? IA_EXEMPLES_ENVOYES : 2)) { break; }
+            $regles['refs'][] = ['chemin' => __DIR__ . '/../public/' . $ex['photo'], 'lib' => 'Photo d’EXEMPLE jugée parfaite par le consultant ('
+                . (!empty($ex['memeMagasin']) ? 'ce magasin' : 'un autre magasin') . ', ' . ($ex['date'] ?? '?') . ') :'];
+        }
     }
+    $out['references'] = count($regles['refs']);
     // Les corrections du consultant sur ce rayon (src/ia_assistant.php) : l'IA s'aligne sur ses décisions.
     $regles['exemples'] = function_exists('iaLeconsPour') ? iaLeconsPour($rv['cle'] ?? null, (string) ($d['tache'] ?? '')) : [];
     $out['tache'] = $d['tache'] ?? null;
