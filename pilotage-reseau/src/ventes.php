@@ -408,6 +408,15 @@ function ep_ventes_mensuel(): array
             $mois[] = ['mois' => $k, 'ca' => null, 'source' => null, 'tickets' => 0, 'jours' => 0];
         }
     }
+    // Le food cost RÉEL de chaque mois (15/11/2026, la valeur du magasin : marge brute réelle − charges normatives du
+    // réseau) : celui que /stores/perf mesure et garde (ceo_app_setting `foodCostApi`, clé « magasin-année-mois »). Une
+    // lecture, pas un calcul ; un mois jamais mesuré reste à null.
+    $fcCache = setting('foodCostApi', []);
+    foreach ($mois as &$m3) {
+        $cle = $shop . '-' . (int) substr((string) $m3['mois'], 0, 4) . '-' . (int) substr((string) $m3['mois'], 5, 2);
+        $m3['fc'] = is_array($fcCache) && isset($fcCache[$cle]) && is_numeric($fcCache[$cle]) ? (float) $fcCache[$cle] : null;
+    }
+    unset($m3);
     // Le jour où la caisse a sonné pour la première fois. Un mois d'ouverture
     // ne se répartit pas sur ses 31 jours : Corbais a ouvert le 21 juillet
     // 2024, son juillet ne vaut que onze jours. Sans cette date, l'année

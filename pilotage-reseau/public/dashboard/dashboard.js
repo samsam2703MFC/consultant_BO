@@ -135,8 +135,10 @@
   function charger(force) {
     // La revue du soir (08/11/2026) : l'état de la revue du jour, pour le bouton — une lecture légère, sans sonde.
     if (!EMBED && !EMBED_PM) { lireAux(cleRVL(), cheminRVL(), force); }
+    // Les seuils du réseau (la valeur du magasin : ses charges normatives, 15/11/2026) : lus une fois.
+    if (!EMBED && !EMBED_PM) { lireAux('meta', '/meta', false); }
     // Le rail du bureau (15/11/2026) : l'objectif du jour et la note Google, en haut du rail, sur tous les onglets.
-    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux('meta', '/meta', force); }
+    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux('meta', '/meta', force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
@@ -153,10 +155,10 @@
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
     if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
-    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
+    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
-    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
-    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
+    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
+    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
@@ -166,7 +168,7 @@
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee') {
-      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
+      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force);
       lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles.
@@ -207,7 +209,7 @@
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
     // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
-    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30', force);
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
     // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
@@ -268,8 +270,14 @@
 
   /* --- rendu -------------------------------------------------------------- */
   /* --- La valeur du magasin ------------------------------------------------
-   * La règle du réseau (15/11/2026, Sam : « marge nette annuelle = 10 % × 3,5 ») : le CA des 730 derniers jours,
-   * ramené au jour, puis à l'année (× 365) ; la marge nette annuelle en est 10 % ; la valeur, 3,5 fois cette marge.
+   * La règle du réseau (15/11/2026, Sam : « Valeur = (marge brute réelle − charges normatives du réseau) × 3,5 ») :
+   *  - le CA des 730 derniers jours, ramené au jour, puis à l'année (× 365) ;
+   *  - la marge brute RÉELLE : ce CA moins son coût matière, mois par mois, au food cost que le cockpit mesure (calculé
+   *    et gardé par /stores/perf, rendu par /ventes/mensuel : `fc`). Un mois sans mesure prend la moyenne mesurée du
+   *    magasin, à défaut la norme du réseau (seuil `food`) — le panneau le dit ;
+   *  - les charges NORMATIVES du réseau, en % du CA : main-d'œuvre, frais généraux, redevances, charges financières (les
+   *    seuils du réseau, /meta) ;
+   *  - la valeur : (marge brute réelle − charges normatives) × 3,5.
    * (Avant le 15/11/2026 : le CA annuel ÷ 6.)
    * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
    * 28 jours ne pèse pas comme un mois de 31, et une fenêtre en jours ne se
@@ -288,11 +296,29 @@
    * Les ventes arrivent par mois ; chaque mois est donc réparti sur ses jours
    * et seuls les jours qui tombent dans la fenêtre comptent — c'est ce qui
    * permet de couper à 730 jours au milieu d'un mois sans le fausser. */
-  const VALO_JOURS = 730, VALO_AN = 365, VALO_MARGE = 0.10, VALO_MULT = 3.5;
-  const VALO_MARGE_T = '10 %', VALO_MULT_T = '3,5';
-  /** La valeur d'un CA annuel : sa marge nette (10 %), trois fois et demie. */
-  const valoDe = annuel => annuel * VALO_MARGE * VALO_MULT;
-  const VALO_REGLE = 'CA annuel × ' + VALO_MARGE_T + ' de marge nette × ' + VALO_MULT_T;
+  const VALO_JOURS = 730, VALO_AN = 365, VALO_MULT = 3.5, VALO_MULT_T = '3,5';
+  const VALO_REGLE = '(marge brute réelle − charges normatives du réseau) × ' + VALO_MULT_T;
+  // Les charges normatives : les seuils du réseau (GET /meta → seuils), en % du CA ; par défaut, ceux du serveur.
+  const VALO_NORMES = [['labour', 'main-d’œuvre', 33], ['overhead', 'frais généraux', 13.5], ['royalties', 'redevances', 3], ['financieres', 'charges financières', 2.2]];
+  const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
+  function valoNormes() {
+    const s = (S.aux.meta && S.aux.meta.seuils) || {};
+    const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
+    return { L, total: L.reduce((t, x) => t + x.pct, 0), food: s.food != null && isFinite(+s.food) ? +s.food : 32 };
+  }
+  /** Le food cost d'un mois sans mesure : la moyenne mesurée du magasin (pondérée par le CA), sinon la norme du réseau. */
+  function valoFcRepli() {
+    let ca = 0, mat = 0;
+    (valoMois() || []).forEach(c => { if (c.ca > 0 && c.fc != null) { ca += c.ca; mat += c.ca * c.fc / 100; } });
+    return ca > 0 ? { pct: 100 * mat / ca, src: 'la moyenne mesurée du magasin' } : { pct: valoNormes().food, src: 'la norme du réseau' };
+  }
+  /** La marge brute réelle d'un CA de mois : le CA moins son coût matière (food cost mesuré, sinon le repli). */
+  const valoMb = (c, ca, R) => ca * (1 - (c.fc != null ? c.fc : R.pct) / 100);
+  /** La valeur d'une période : sa marge brute réelle moins les charges normatives, ramenée à l'année, × 3,5. */
+  function valoDe(ca, mb, jours) {
+    if (!jours) { return null; }
+    return (mb - ca * valoNormes().total / 100) / jours * VALO_AN * VALO_MULT;
+  }
   /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
   function valoMois() {
     const d = S.aux['valo|' + S.shop];
@@ -330,8 +356,8 @@
     const dernier = avec[avec.length - 1].mois;
     const fin = new Date(Date.UTC(+dernier.slice(0, 4), +dernier.slice(5, 7) - 1, joursDuMois(dernier)));
     const deb = new Date(fin.getTime() - (VALO_JOURS - 1) * 86400000);
-    const ouv = valoOuverture();
-    let total = 0, jours = 0, mois = 0, creux = 0, premier = null;
+    const ouv = valoOuverture(), R = valoFcRepli();
+    let total = 0, mb = 0, jours = 0, mois = 0, creux = 0, premier = null, sansFc = 0;
     l.forEach(c => {
       const A = joursActifs(c.mois, ouv);
       if (A.n <= 0) { return; }
@@ -345,23 +371,27 @@
       if (c.ca == null) { creux += cv; return; }
       // Le taux journalier du mois se calcule sur ses jours ACTIFS.
       total += c.ca * cv / A.n;
+      mb += valoMb(c, c.ca * cv / A.n, R);
+      if (c.fc == null) { sansFc++; }
       jours += cv; mois++;
       if (premier === null) { premier = c.mois; }
     });
     if (!jours) return { n: 0 };
-    const quotidien = total / jours;
+    const quotidien = total / jours, N = valoNormes();
+    const annuel = quotidien * VALO_AN, mbAnnuel = mb / jours * VALO_AN, charges = annuel * N.total / 100;
     return {
       // `jours` EST le diviseur : les jours d'activité de la fenêtre, donc au
       // plus 730. `creux` dit ce qui manque, pour qui veut la différence.
       n: mois, jours: jours, creux: creux,
       total: total, quotidien: quotidien,
-      annuel: quotidien * VALO_AN, marge: quotidien * VALO_AN * VALO_MARGE, valeur: valoDe(quotidien * VALO_AN),
+      annuel, mb, mbAnnuel, normes: N, charges, resultat: mbAnnuel - charges, valeur: valoDe(total, mb, jours),
+      fc: total > 0 ? 100 * (1 - mb / total) : null, sansFc, repli: R,
       du: fD(iso(deb)) + '/' + iso(deb).slice(0, 4), au: fD(iso(fin)) + '/' + iso(fin).slice(0, 4),
       duMois: premier ? libMois(premier) : '', auMois: libMois(dernier)
     };
   }
-  /* Année par année, à la même règle : le CA de l'année ramené au jour, puis à
-   * l'année, puis divisé par six. Seules les années qui ont des ventes sont
+  /* Année par année, à la même règle : la marge brute réelle de l'année moins les
+   * charges normatives, ramenée au jour, puis à l'année, × 3,5. Seules les années qui ont des ventes sont
    * rendues — une colonne vide n'apprend rien. L'année en cours y figure : le
    * diviseur étant ses jours vécus, elle dit le rythme du moment, pas un
    * demi-exercice. */
@@ -375,15 +405,15 @@
     });
     const cles = Object.keys(par).sort();
     if (!cles.length) return null;
-    const ouv = valoOuverture();
+    const ouv = valoOuverture(), R = valoFcRepli();
     return cles.map(k => {
       const m = par[k];
-      let ca = 0, jours = 0;
-      m.forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
+      let ca = 0, mb = 0, jours = 0;
+      m.forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; mb += valoMb(c, c.ca, R); jours += A.n; });
       const quot = jours ? ca / jours : null;
       return { lib: k, n: m.length, ca: ca, jours: jours,
         ouverte: !!(ouv && ouv.slice(0, 4) === k),
-        quotidien: quot, valeur: quot == null ? null : valoDe(quot * VALO_AN) };
+        quotidien: quot, valeur: valoDe(ca, mb, jours) };
     });
   }
   /** La courbe des années : les trous ne sont pas reliés, ils se voient. */
@@ -426,18 +456,17 @@
 
   /* La valeur, trimestre par trimestre (15/11/2026, demande : « au clic, le détail du calcul et un mini graphique
    * linéaire des 6 derniers trimestres ») : la même règle que l'année — le CA du trimestre ramené à ses jours actifs,
-   * puis à l'année (× 365), puis × 10 % × 3,5. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
+   * marge brute réelle moins charges normatives, ramenée à l'année (× 365), × 3,5. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
   function valoTrimestres(n) {
     const l = valoMois();
     if (!l) { return null; }
-    const ouv = valoOuverture(), par = {};
+    const ouv = valoOuverture(), R = valoFcRepli(), par = {};
     l.filter(c => c.ca != null).forEach(c => { const k = c.mois.slice(0, 4) + '-T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1); (par[k] = par[k] || []).push(c); });
     const cles = Object.keys(par).sort().slice(-n);
     return cles.map(k => {
-      let ca = 0, jours = 0;
-      par[k].forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
-      const quot = jours ? ca / jours : null;
-      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: quot == null ? null : valoDe(quot * VALO_AN) };
+      let ca = 0, mb = 0, jours = 0;
+      par[k].forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; mb += valoMb(c, c.ca, R); jours += A.n; });
+      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: valoDe(ca, mb, jours) };
     });
   }
   /** La petite courbe des trimestres : un trait, un point par trimestre, la valeur du dernier écrite. */
@@ -467,12 +496,11 @@
     return `<div class="db-vpop" role="dialog" aria-label="Valeur du magasin">
       <div class="db-vpop-h"><span>Valeur du magasin</span><button type="button" class="db-vpop-x" data-vdrop="1" aria-label="Fermer">×</button></div>
       <div class="db-vpop-calc">
-        ${ligne('Chiffre d’affaires', fE(v.total), v.jours < VALO_JOURS ? 'de ' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture' : 'du ' + esc(v.du) + ' au ' + esc(v.au))}
-        ${ligne('÷ jours d’activité', fN(v.jours), v.jours < VALO_JOURS ? 'le magasin n’a pas encore ' + VALO_JOURS + ' jours de ventes' : 'les ' + VALO_JOURS + ' derniers jours, mois en cours exclu')}
-        ${ligne('= par jour', fU(v.quotidien))}
-        ${ligne('× ' + VALO_AN + ' jours', fE(v.annuel), 'le chiffre d’affaires d’une année à ce rythme')}
-        ${ligne('× ' + VALO_MARGE_T, fE(v.marge), 'la marge nette annuelle')}
-        ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'trois fois et demie la marge nette : la valeur du magasin')}
+        ${ligne('Chiffre d’affaires annuel', fE(v.annuel), fE(v.total) + ' sur ' + fN(v.jours) + ' jours d’activité' + (v.jours < VALO_JOURS ? ' (' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture)' : ' (du ' + esc(v.du) + ' au ' + esc(v.au) + ')') + ', ramenés à ' + VALO_AN + ' jours')}
+        ${ligne('Marge brute réelle', fE(v.mbAnnuel), fPc(100 - v.fc) + ' du CA · food cost ' + fPc(v.fc) + (v.sansFc ? ' · ' + v.sansFc + ' mois sans mesure : ' + esc(v.repli.src) + ' (' + fPc(v.repli.pct) + ')' : ', mesuré mois par mois'))}
+        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib) + ' ' + fPc(x.pct)).join(', '))}
+        ${ligne('= résultat normatif', fE(v.resultat), 'ce que le magasin gagne aux normes du réseau, sur un an')}
+        ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'la valeur du magasin')}
       </div>
       ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}
         ${T.some(o => o.n < 3) ? `<p class="mu">${T.filter(o => o.n < 3).map(o => esc(o.lib) + ' : ' + o.n + ' mois').join(' · ')} — le mois en cours n’est pas compté.</p>` : ''}</div>` : ''}
@@ -499,7 +527,7 @@
     }
     return `<div class="db-vdl seul">
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
-        soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année ; ${VALO_MARGE_T} de marge nette, ${fE(v.marge)}, × ${VALO_MULT_T}.
+        soit ${fE(v.annuel)} sur l’année ; marge brute réelle ${fE(v.mbAnnuel)} (food cost ${fPc(v.fc)}), moins les charges normatives du réseau (${fPc(v.normes.total)} du CA, ${fE(v.charges)}) : ${fE(v.resultat)}, × ${VALO_MULT_T}.
         La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
         ${v.jours < VALO_JOURS ? '<em class="att">' + fN(v.jours) + ' jours d’activité</em> dans la fenêtre — le diviseur est le nombre de jours vécus, pas ' + VALO_JOURS + ' : il le deviendra quand le magasin les aura.' : ''}</div>
       ${valoTiroir()}
@@ -1319,7 +1347,7 @@
       + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
     h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
-    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? 'marge nette ' + VALO_MARGE_T + ' × ' + VALO_MULT_T : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
+    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? 'marge brute − normes × ' + VALO_MULT_T : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     return h;
   }
