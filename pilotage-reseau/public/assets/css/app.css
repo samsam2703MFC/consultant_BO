@@ -747,7 +747,19 @@ svg.pxv-nuage .lab .mu{font-weight:400;fill:var(--color-text-muted)}
 .ia-ent-rayon .lc span{color:var(--color-text-muted)}
 .ia-ent-rayon .lc.off{opacity:.5}
 .ia-ent-rayon .lc .ia-lien{font-size:11px}
+.ia-ent-rayon .plano img,.ia-ent-rayon .plano .ph{width:100%;max-width:240px;aspect-ratio:3/4;height:auto;object-fit:cover;border-radius:10px;display:block;border:1px solid var(--color-border-tertiary)}
+.ia-ent-rayon .plano .depot{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;cursor:pointer;font-size:11.5px;padding:12px;text-align:center}
+.ia-ent-rayon .plano .depot b{font-weight:500;color:var(--color-primary)}
+.ia-ent-rayon .act{font-size:11px;margin-top:5px;color:var(--color-text-muted)}
+.ia-ent-rayon .act .ia-lien{font-size:11px;cursor:pointer}
 @media (max-width:1100px){.ia-ent-rayon .cols{grid-template-columns:1fr}}
+/* Les photos d'exemple, dans le volet, sous le planogramme. */
+.ia-vex{margin-top:9px}
+.ia-vex .lb{font-size:10.5px;text-transform:uppercase;letter-spacing:.07em;color:var(--color-text-muted);margin-bottom:5px}
+.ia-vex .g{display:flex;gap:6px}
+.ia-vex .g a{display:flex;flex-direction:column;gap:2px;width:31%;text-decoration:none;color:var(--color-text-muted);font-size:10px}
+.ia-vex .g img{width:100%;aspect-ratio:3/4;object-fit:cover;border-radius:7px;border:1px solid var(--color-border-tertiary);display:block}
+.ia-vex .v{font-size:10.5px;color:var(--color-text-muted);line-height:1.45}
 /* La validation finale. */
 .ia-recap{position:fixed;top:4vh;left:50%;transform:translateX(-50%);width:min(1080px,94vw);max-height:92vh;display:flex;flex-direction:column;background:var(--color-surface);border-radius:14px;z-index:61;box-shadow:0 18px 60px rgba(0,0,0,.25);animation:fadeIn 160ms ease}
 .ia-recap .hd{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:20px 24px 8px}
