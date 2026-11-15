@@ -1,0 +1,384 @@
+{
+  "date": "2026-10-01",
+  "source": "cockpit en ligne, GET /ia/note (bouton « Proposer »), clé et réglage du serveur",
+  "lance": "2026-11-15",
+  "p": {
+    "3-1216": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Vérifier si le magasin est propre.",
+      "etat": "attente",
+      "n": null,
+      "nom": null,
+      "conf": null,
+      "constats": [],
+      "commentaire": null,
+      "motif": "aucune photo sur cette tâche — il n'y a rien à évaluer",
+      "modele": null,
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1213": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Boissons",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Vitrine réfrigérée avec boissons visible mais cadrage large incluant toute la boutique, pas de gros plan sur le comptoir boissons",
+        "Éclairage faible/sombre rendant difficile la lecture des étiquettes et du rangement",
+        "Présence de deux frigos supplémentaires à droite non identifiables clairement (contenu flou)"
+      ],
+      "commentaire": "Le cadrage et la luminosité ne permettent pas de vérifier precisément l'état et le rangement du rayon boissons. Reprendre la photo avec un cadrage resserré sur le comptoir boissons et un meilleur éclairage.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1214": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Épicerie",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": null,
+      "constats": [
+        "Cadrage large de la boutique plutôt que gros plan sur le comptoir épicerie demandé",
+        "Étagères d'épicerie (bocaux, bouteilles, paquets) visibles mais éloignées, détails peu lisibles",
+        "Éclairage inégal, zone gauche sombre",
+        "Comptoir du pain visible à droite mais partiellement hors cadre"
+      ],
+      "commentaire": "La photo montre l'ensemble du magasin mais ne cadre pas précisément le comptoir épicerie comme demandé. Reprendre un plan plus rapproché et mieux éclairé du rayon épicerie pour respecter l'intitulé de la tâche.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4.4,
+        "nb": 5
+      }
+    },
+    "3-1211": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Quiches",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "La photo montre une vue large du comptoir (salades, sandwichs, viennoiseries) mais aucune quiche n'est clairement identifiable ou mise en avant",
+        "Cadrage en angle, peu lisible, ne permet pas d'évaluer un produit spécifique",
+        "La tâche demande une photo ciblée sur les quiches, non respectée"
+      ],
+      "commentaire": "La photo ne répond pas à la consigne qui demandait un cliché centré sur les quiches. Merci de reprendre la photo avec un cadrage net et rapproché sur le produit demandé.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1209": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Tartes",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "haute",
+      "constats": [
+        "Cadrage en angle/diagonale, pas de vue frontale du comptoir",
+        "Ventilateur posé au milieu de la vitrine, visible et non esthétique",
+        "Étiquettes/prix absents ou illisibles sur la plupart des tartes",
+        "Éclairage inégal avec reflets sur la vitre, qualité photo moyenne",
+        "Zone basse (vitrine réfrigérée) cadrée partiellement, composition confuse"
+      ],
+      "commentaire": "Le cadrage et la présence du ventilateur nuisent à la présentation professionnelle du comptoir. Reprendre la photo de face, sans objet parasite, avec étiquetage visible sur chaque tarte.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1210": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Traiteur",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Comptoir traiteur bien garni, sandwichs et salades rangés en rangées régulières",
+        "Prix affiché visible uniquement en partie (5€), pas d'étiquetage produit/prix complet visible sur la vitrine",
+        "Photo prise en angle/plongée, cadrage incliné, reflets sur la vitre gênant la lecture globale",
+        "Câbles et éléments techniques visibles en bas de l'image, nuisent au rendu visuel"
+      ],
+      "commentaire": "Le présentoir traiteur est correctement approvisionné mais le cadrage en angle et l'absence d'étiquetage prix/produit lisible nuisent à la qualité de la preuve photo. Reprendre la photo bien droite, sans reflet, en incluant l'étiquetage complet des produits.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 3.8,
+        "nb": 5
+      }
+    },
+    "3-1207": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Viennoiseries",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "haute",
+      "constats": [
+        "Cadrage en angle/diagonale, pas de vue frontale du comptoir viennoiseries",
+        "Viennoiseries visibles mais au second plan, mal centrées dans le cadre",
+        "Premier plan occupé par pains, plats salés et quiches plutôt que par le sujet attendu",
+        "Étiquettes/prix non lisibles sur la zone viennoiseries"
+      ],
+      "commentaire": "La photo doit être recadrée pour montrer le rayon viennoiseries de face et au centre de l'image. Reprendre la prise de vue avec un angle plus droit et un focus sur le produit demandé.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1206": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Photo du comptoir - Pains & Boulangerie",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Cadrage large incluant plafond/luminaire et chariot inox en arrière-plan, peu centré sur le comptoir pains",
+        "Éclairage inégal : zone basse assez sombre, contraste fort avec le spot du luminaire",
+        "Tartes/quiches bien visibles et étiquetées, mais rayon pains (fonds de gondole gauche) peu mis en valeur et partiellement coupé",
+        "Angle de prise de vue en plongée/diagonale qui déforme la lecture du comptoir"
+      ],
+      "commentaire": "Le produit est identifiable mais le cadrage et la lumière ne mettent pas en valeur le rayon pains comme attendu pour une photo de comptoir. Reprendre la photo avec un angle plus frontal, un cadrage centré sur le pain, et un éclairage plus homogène.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "3-1267": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "étiquetage des prix et allergènes",
+      "etat": "ok",
+      "n": 1,
+      "nom": "Non conforme — critique",
+      "conf": "moyenne",
+      "constats": [
+        "Étiquettes présentes uniquement sous forme de petites ardoises portant un nom de produit, sans prix visible",
+        "Aucune mention d'allergènes visible sur les étiquettes présentes",
+        "Plusieurs pains et tartes en haut de l'étal n'ont aucune étiquette identifiable"
+      ],
+      "commentaire": "L'étiquetage visible ne comporte ni prix ni information allergènes, ce qui est non conforme à la checklist. À corriger immédiatement avant contrôle réseau.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 3.6,
+        "nb": 5
+      }
+    },
+    "3-1259": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Contrôle Qualité – Pâtes à l'Amatriciana",
+      "etat": "attente",
+      "n": null,
+      "nom": null,
+      "conf": null,
+      "constats": [],
+      "commentaire": null,
+      "motif": "aucune photo sur cette tâche — il n'y a rien à évaluer",
+      "modele": null,
+      "consultants": {
+        "moyenne": 4.2,
+        "nb": 5
+      }
+    },
+    "3-1260": {
+      "shop": "Atelier by Max & Sandra - Gosselies",
+      "tache": "Contrôle Qualité – Spaghetti Bolognaise",
+      "etat": "attente",
+      "n": null,
+      "nom": null,
+      "conf": null,
+      "constats": [],
+      "commentaire": null,
+      "motif": "aucune photo sur cette tâche — il n'y a rien à évaluer",
+      "modele": null,
+      "consultants": {
+        "moyenne": 4.2,
+        "nb": 5
+      }
+    },
+    "4-1216": {
+      "shop": "Atelier by - Halle",
+      "tache": "Vérifier si le magasin est propre.",
+      "etat": "attente",
+      "n": null,
+      "nom": null,
+      "conf": null,
+      "constats": [],
+      "commentaire": null,
+      "motif": "aucune photo sur cette tâche — il n'y a rien à évaluer",
+      "modele": null,
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "4-1213": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Boissons",
+      "etat": "ok",
+      "n": 4,
+      "nom": "Conforme",
+      "conf": "moyenne",
+      "constats": [
+        "Vitrine réfrigérée bien garnie et organisée par type de boisson (eaux, sodas, jus, canettes)",
+        "Rangement propre, étiquettes visibles, pas de vide notable",
+        "Éclairage correct, photo nette",
+        "Léger désordre sur l'étagère du bas (packs mélangés, alignement imparfait)",
+        "Reflet sur la vitre gênant légèrement la lisibilité du rayon du milieu"
+      ],
+      "commentaire": "Présentation globalement conforme et soignée. Améliorer l'alignement des packs en bas et limiter les reflets pour une photo plus lisible.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4.2,
+        "nb": 5
+      }
+    },
+    "4-1214": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Épicerie",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "Sachets de café disposés en vrac sur le comptoir, sans mise en scène ni présentoir",
+        "Pas d'étiquetage prix visible",
+        "Cadrage de biais, angle bas, comptoir et arrière-plan (sanitaires/extincteur) inclus dans le champ",
+        "Espace de vente semble en cours d'installation ou peu valorisé"
+      ],
+      "commentaire": "La présentation des produits ne reflète pas un comptoir d'épicerie soigné : sachets posés sans ordre ni signalétique prix, cadrage incluant des éléments parasites (extincteur, porte). Reprendre la photo avec un comptoir rangé, produits alignés/présentés et cadrage centré sur l'espace de vente.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "4-1211": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Quiches",
+      "etat": "ok",
+      "n": 1,
+      "nom": "Non conforme — critique",
+      "conf": "haute",
+      "constats": [
+        "Les produits visibles sont des pizzas, pas des quiches",
+        "Aucune quiche identifiable sur la photo",
+        "Étiquetage/prix non visibles sur les produits"
+      ],
+      "commentaire": "La photo ne correspond pas au sujet attendu (quiches) mais montre des pizzas. Merci de reprendre la photo du comptoir des quiches.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "4-1209": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Tartes",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "Vitrine très peu garnie : seulement 5-6 tartes visibles réparties sur toute la longueur du comptoir",
+        "Cadrage en angle très prononcé, prise de loin, ne permet pas de détailler l'aspect des produits",
+        "Éclairage insuffisant sur la marchandise, étiquetage produits non visible",
+        "Agencement des tartes peu travaillé (espacement irrégulier, présentation sommaire)"
+      ],
+      "commentaire": "Le comptoir apparaît sous-approvisionné et la photo ne met pas en valeur les produits. Reprendre la prise de vue de face/plus proche avec une vitrine mieux garnie et un éclairage adapté.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 3.8,
+        "nb": 5
+      }
+    },
+    "4-1210": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Traiteur",
+      "etat": "ok",
+      "n": 2,
+      "nom": "Non conforme — majeur",
+      "conf": "moyenne",
+      "constats": [
+        "Vitrine centrale du comptoir en grande partie vide, pas de produits traiteur visibles à l'emplacement principal",
+        "Seulement quelques plateaux clairsemés visibles à droite, mal identifiables",
+        "Pas d'étiquetage produit/prix visible sur les articles présentés",
+        "Partie basse gauche montre des viennoiseries, pas du traiteur"
+      ],
+      "commentaire": "La vitrine traiteur apparaît largement vide ou mal remplie au moment de la photo, ce qui ne reflète pas une offre traiteur complète. Merci de reprendre la photo après réassort du comptoir avec un étiquetage visible.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 3.8,
+        "nb": 5
+      }
+    },
+    "4-1207": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Viennoiseries",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Photo prise en angle, cadrage incliné, non frontal",
+        "Vitrine bien garnie et variée (croissants, pains au chocolat, chaussons)",
+        "Étiquettes de prix/noms absentes ou non visibles",
+        "Arrière-plan (zone de travail, machines) visible dans le cadre, peu valorisant"
+      ],
+      "commentaire": "Le remplissage et la présentation des viennoiseries sont corrects, mais le cadrage en angle et l'absence d'étiquetage visible nuisent à la qualité du rendu. Reprendre la photo de face, en excluant l'arrière-boutique du cadre.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4,
+        "nb": 5
+      }
+    },
+    "4-1206": {
+      "shop": "Atelier by - Halle",
+      "tache": "Photo du comptoir - Pains & Boulangerie",
+      "etat": "ok",
+      "n": 3,
+      "nom": "Non conforme — mineur",
+      "conf": "moyenne",
+      "constats": [
+        "Cadrage en angle/diagonal, pas de vue frontale du comptoir",
+        "Reflets marqués sur la vitre gênant la lisibilité des produits",
+        "Éclairage general sombre à l'arrière-plan, contraste fort avec le comptoir éclairé",
+        "Présentation des pains elle-même correcte (rangement, étiquetage visible à minima)"
+      ],
+      "commentaire": "Reprendre la photo avec un cadrage frontal et stable face au comptoir, en limitant les reflets sur la vitre. L'agencement des produits semble correct mais n'est pas valorisé par l'angle de prise de vue.",
+      "motif": null,
+      "modele": "claude-sonnet-5",
+      "consultants": {
+        "moyenne": 4.2,
+        "nb": 5
+      }
+    }
+  }
+}
