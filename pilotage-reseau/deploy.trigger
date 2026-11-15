@@ -9,3 +9,4 @@
 2026-11-15T12:43:51Z Dashboard franchisé, Tâches : chercher une tâche (sans les retours du contrôle qualité)
 2026-11-15T12:56:48Z Dashboard franchisé : plus de lien Cockpit › Résultat
 2026-11-15T13:14:31Z Dashboard : bouton Demande au bureau dans l'entête
+2026-11-15T13:17:50Z Dashboard : vignettes de même hauteur, Demande au bureau
