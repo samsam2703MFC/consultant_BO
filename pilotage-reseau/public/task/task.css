@@ -262,12 +262,12 @@ html.tk-emb .dc-som{position:relative;max-height:none;transition:transform .15s 
 .dc-on:hover{box-shadow:0 0 0 3px rgba(176,121,42,.18)}
 .dc-on:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .dc-on:disabled{opacity:.55;cursor:progress}
-/* La checklist en pause : son titre en gris, ses lignes estompées (leurs interrupteurs restent à portée). L'interrupteur
+/* La checklist en pause (toutes ses tâches en pause) : son titre en gris ; ses lignes le sont déjà. L'interrupteur
  * du titre s'aligne sur la colonne de ceux des tâches (le retrait de 8 px des lignes). */
 .dc-on-cl{margin-left:auto;margin-right:8px}
 .dc-s.pause .dc-h2>span:not(.dc-code):not(.dc-flash),.dc-s.pause .dc-meta,.dc-s.pause .dc-desc{color:var(--muted)}
 .dc-s.pause .dc-h2 .dc-code{opacity:.45}
-.dc-s.pause .dc-qui,.dc-s.pause .dc-ls{opacity:.55}
+.dc-s.pause .dc-qui{opacity:.55}
 .dc-s>.tk-msg{margin:0 0 8px;font-size:12px;padding:8px 12px}
 .dc-som-i.pz{color:var(--faint)}
 .dc-cb{margin:0;flex:0 0 auto;accent-color:var(--accent)}

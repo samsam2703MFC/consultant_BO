@@ -1145,9 +1145,10 @@
       title="${on ? 'Active · cliquer pour la mettre en pause : les équipes ne la verront plus' : 'En pause · cliquer pour la réactiver'}" aria-label="${esc((on ? 'Active : ' : 'En pause : ') + t.nom)}"></button>`;
   }
   /**
-   * Un clic sur l'interrupteur : PATCH /task/taches/{id} {actif} (au panel, PATCH /tasks/{id}/active seul : le
-   * planning et les exigences de la tâche ne sont pas renvoyés). L'écran bascule tout de suite et revient en
-   * arrière si le panel refuse. Pas de confirmation : un second clic défait.
+   * Un clic sur l'interrupteur : PATCH /task/taches/{id} {actif}. Au panel, PATCH /tasks/{id}/active INVERSE l'état et
+   * répond 500 même quand il l'a changé (son openapi, 15/11/2026) : le serveur ne l'appelle que si l'état diffère, une
+   * seule fois, puis relit GET /tasks et rend `actif`, l'état où la tâche est vraiment. L'écran bascule tout de suite et
+   * se cale sur cet état relu, même après une erreur. Pas de confirmation : un second clic défait.
    */
   async function dcActif(id) {
     const t = tache(id);
@@ -1156,49 +1157,55 @@
     const avant = t.actif, oui = t.actif === false;
     S.dcActif.add(id); t.actif = oui; rendre();
     try {
-      await api('PATCH', '/task/taches/' + id, { actif: oui });
+      const r = await api('PATCH', '/task/taches/' + id, { actif: oui });
+      if (r && typeof r.actif === 'boolean') { t.actif = r.actif; }
       dcFlash([id], oui ? '✓ réactivée' : '✓ en pause');
-      // Réactivée depuis « En pause · checklist inconnue » : le panel la remontre dans sa checklist, on relit le cadre.
+      // Réactivée depuis « En pause · checklist inconnue » (dans aucune checklist) : on relit le cadre, elle passe « à ranger ».
       if (oui && ((S.cadre && S.cadre.enPause) || []).includes(id)) { S.dcActif.delete(id); return charger(true); }
     } catch (e) {
-      t.actif = avant;
-      dcFlash([id], '✗ ' + e.message + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : ''), true);
+      t.actif = e.data && typeof e.data.actif === 'boolean' ? e.data.actif : avant;
+      const op = ((e.data && e.data.operations) || []).find(o => /\/active$/.test(o.chemin || '') && o.erreur);
+      dcFlash([id], '✗ ' + ((op && op.erreur) || e.message) + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : ''), true);
     }
     S.dcActif.delete(id);
     rendre();
   }
-  /** L'interrupteur d'une checklist, dans son titre, au-dessus de ceux de ses tâches (15/11/2026). */
+  /**
+   * Une checklist du panel n'a pas d'état actif à elle (ni champ, ni route : son openapi, 15/11/2026). Elle est « en
+   * pause » quand toutes ses tâches le sont : c'est ce que les équipes voient.
+   */
+  const dcClPause = c => { const ts = dcTachesDe(c); return ts.length > 0 && ts.every(t => t.actif === false); };
+  /** L'interrupteur d'une checklist, dans son titre, au-dessus de ceux de ses tâches (15/11/2026) ; aucun sans tâche. */
   function dcClInterrupteur(c) {
-    const on = c.actif !== false, envoi = !!(S.dcActif && S.dcActif.has('c' + c.id));
+    if (!dcTachesDe(c).length) { return ''; }
+    const on = !dcClPause(c), envoi = !!(S.dcActif && S.dcActif.has('c' + c.id));
     return `<button class="dc-on dc-on-cl" role="switch" aria-checked="${on}" data-a="dcClActif" data-id="${c.id}"${envoi ? ' disabled aria-busy="true"' : ''}
-      title="${on ? 'Checklist active · cliquer pour la mettre en pause (ses tâches gardent leur propre état)' : 'Checklist en pause · cliquer pour la réactiver'}" aria-label="${esc((on ? 'Checklist active : ' : 'Checklist en pause : ') + c.nom)}"></button>`;
+      title="${on ? 'Checklist active · cliquer pour mettre en pause toutes ses tâches' : 'Toutes ses tâches sont en pause · cliquer pour les réactiver toutes'}" aria-label="${esc((on ? 'Checklist active : ' : 'Checklist en pause : ') + c.nom)}"></button>`;
   }
   /**
-   * Un clic sur l'interrupteur d'une checklist : PATCH /task/checklists/{id} {actif} (au panel, `is_active` de la
-   * checklist ; ses tâches ne changent pas). Le serveur relit la liste du panel : la réponse `relu` dit ce qu'il a
-   * retenu, et s'il liste encore une checklist en pause — sinon elle quitterait cet écran au prochain rechargement.
+   * Un clic sur l'interrupteur d'une checklist : PATCH /task/checklists/{id}/actif {actif}. Le serveur bascule les
+   * seules tâches dans l'autre état, puis relit GET /tasks : la réponse `taches` [{id, actif, ok, erreur}] dit l'état
+   * relu de chacune, et l'écran s'y cale (en cas d'erreur aussi). Une tâche aussi rangée ailleurs change partout.
    */
   async function dcClActif(id) {
     const c = checklist(id);
     S.dcActif = S.dcActif || new Set();
     if (!c || S.dcActif.has('c' + id)) { return; }
-    const avant = c.actif, oui = c.actif === false;
-    S.dcActif.add('c' + id); c.actif = oui; S.dcClFlash = null; clearTimeout(S.dcClFlashT); rendre();
+    const ts = dcTachesDe(c), oui = dcClPause(c);
+    const avant = new Map(ts.map(t => [t.id, t.actif]));
+    S.dcActif.add('c' + id); ts.forEach(t => { t.actif = oui; }); S.dcClFlash = null; clearTimeout(S.dcClFlashT); rendre();
+    const caler = L => (L || []).forEach(x => { const t = tache(x.id); if (t) { t.actif = typeof x.actif === 'boolean' ? x.actif : avant.get(x.id); } });
     let fl;
     try {
-      const r = await api('PATCH', '/task/checklists/' + id, { actif: oui });
-      const lu = (r && r.relu) || {};
-      if (lu.absente) {
-        fl = { k: 'wa', t: 'En pause au panel, mais le panel ne liste plus cette checklist : elle quittera cet écran au prochain rechargement. Réactivez-la maintenant pour la garder ici.' };
-      } else if (lu.actif == null) {
-        fl = { k: 'wa', t: 'Envoyé au panel, mais sa liste ne dit pas si la checklist est active : vérifiez-le dans le panel.' };
-      } else if (lu.actif !== oui) {
-        c.actif = lu.actif;
-        fl = { k: 'ko', t: 'Le panel a répondu sans changer l’état : la checklist est toujours ' + (lu.actif ? 'active' : 'en pause') + '.' };
-      } else { fl = { k: 'ok', t: oui ? '✓ réactivée' : '✓ en pause' }; }
+      const r = await api('PATCH', '/task/checklists/' + id + '/actif', { actif: oui });
+      caler(r && r.taches);
+      const n = ((r && r.taches) || []).filter(x => x.bascule).length;
+      fl = { k: 'ok', t: (oui ? '✓ réactivée' : '✓ en pause') + (n ? ' · ' + n + ' tâche' + (n > 1 ? 's' : '') : '') };
     } catch (e) {
-      c.actif = avant;
-      fl = { k: 'ko', t: e.message + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : '') };
+      if (e.data && e.data.taches) { caler(e.data.taches); } else { ts.forEach(t => { t.actif = avant.get(t.id); }); }
+      const ko = ((e.data && e.data.taches) || []).filter(x => !x.ok);
+      fl = { k: 'ko', t: e.message + (ko.length ? ' : ' + ko.slice(0, 3).map(x => '« ' + ((tache(x.id) || {}).nom || '#' + x.id) + ' » (' + x.erreur + ')').join(', ') : '')
+        + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : '') };
     }
     S.dcActif.delete('c' + id);
     S.dcClFlash = Object.assign({ id }, fl);
@@ -1229,7 +1236,7 @@
     const nPh = ts.filter(t => t.photo).length, nPz = ts.filter(t => t.actif === false).length;
     const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection(c) : '';
     const fl = S.dcClFlash && S.dcClFlash.id === c.id ? S.dcClFlash : null;
-    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}${c.actif === false ? ' pause' : ''}" id="dc-${c.id}">
+    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}${dcClPause(c) ? ' pause' : ''}" id="dc-${c.id}">
       <h2 class="dc-h2">${code ? `<span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(code)}</span>` : ''}<span>${esc(titre)}</span>
         <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button>${fl && fl.k === 'ok' ? `<span class="dc-flash">${esc(fl.t)}</span>` : ''}${dcClInterrupteur(c)}</h2>
       ${fl && fl.k !== 'ok' ? `<div class="tk-msg ${fl.k}">${esc(fl.t)}</div>` : ''}
@@ -1245,7 +1252,7 @@
     const hors = S.dcZone ? [] : dcHors().filter(dcFctOk);
     const groupes = DC_MOMENTS.map(m => [m, ordre.filter(c => dcMoment(c.heure) === m)]).filter(g => g[1].length);
     const sommaire = `<nav class="tk-card dc-som" aria-label="Sommaire"><div class="tk-k dc-som-t">Sommaire · ${ordre.length} checklists</div>
-      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}${c.actif === false ? ' pz' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
+      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}${dcClPause(c) ? ' pz' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
       ${hors.length ? `<div class="dc-som-g">À ranger</div><button class="dc-som-i wa${S.cl === 'hors' ? ' on' : ''}" data-a="dcAller" data-id="hors">Dans aucune checklist<em>${hors.length}</em></button>` : ''}</nav>`;
     const q = S.dcQui;
     const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';

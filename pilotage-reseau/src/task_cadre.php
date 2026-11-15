@@ -66,6 +66,7 @@ function tkRoute(string $method, string $path): array
     if ($method === 'POST' && $path === '/task/ranger') { return tkRanger(body()); }
     if ($method === 'POST' && $path === '/task/scinder') { return tkScinder(body()); }
     if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})$#', $path, $m)) { return tkChecklistModifier((int) $m[1], body()); }
+    if ($method === 'PATCH' && preg_match('#^/task/checklists/(\d{1,10})/actif$#', $path, $m)) { return tkChecklistActif((int) $m[1], body()); }
     if ($method === 'POST' && $path === '/task/apercu') { return tkPlan(body(), false); }
     if ($method === 'POST' && $path === '/task/creer') { return tkPlan(body(), true); }
     if ($method === 'POST' && $path === '/task/assistant/apercu') { return tkConstruire(body(), false, false); }
@@ -240,7 +241,9 @@ function tkCadre(): array
     $erreurs = [];
     [$brutes, $e] = tkLireListe('/tasks');
     if ($brutes === null) { $erreurs['taches'] = $e; $brutes = []; }
-    [$cls, $e] = tkLireListe('/operational-framework/checklists');
+    // include=tasks : les tâches de chaque checklist, EN PAUSE comprises (openapi du panel, 15/11/2026) ; GET …/{id}/tasks,
+    // lu plus bas pour les notes, ne rend que les actives — une tâche en pause semblait n'être dans aucune checklist.
+    [$cls, $e] = tkLireListe('/operational-framework/checklists?include=tasks');
     if ($cls === null) { $erreurs['checklists'] = $e; $cls = []; }
     [$nivs, $e] = tkLireListe('/position-levels');
     if ($nivs === null) { $erreurs['niveaux'] = $e; $nivs = []; }
@@ -278,10 +281,21 @@ function tkCadre(): array
                 $taches[$tid] = $n;
             }
         }
+        // Les tâches en pause, que GET …/{id}/tasks ne rend pas : à leur place (sort_order), sans note (include=tasks n'en a pas).
+        $vues = array_flip(array_column($lignes, 'taskId'));
+        foreach ((array) ($c['tasks'] ?? []) as $x) {
+            $tid = (int) ($x['task_id'] ?? 0);
+            if ($tid <= 0 || isset($vues[$tid])) { continue; }
+            $vues[$tid] = true;
+            $lignes[] = ['taskId' => $tid, 'ordre' => (int) ($x['sort_order'] ?? 999), 'note' => ''];
+            $dans[$tid] = true;
+            if (!isset($taches[$tid])) { $n = tkNormTache(['id' => $tid] + $x); $n['horsListe'] = true; $taches[$tid] = $n; }
+        }
         usort($lignes, fn ($a, $b) => $a['ordre'] <=> $b['ordre']);
+        $brut = $c; unset($brut['tasks']);
         $checklists[] = ['id' => $cid, 'nom' => tkTxt($c['name'] ?? $c['base_name'] ?? ('Checklist ' . $cid)),
             'description' => tkTxt($c['description'] ?? ''), 'poste' => tkTxt($c['workstation_name'] ?? ''),
-            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'actif' => tkClActif($c), 'taches' => $lignes, 'brut' => $c];
+            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'taches' => $lignes, 'brut' => $brut];
     }
     usort($checklists, fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
 
@@ -574,22 +588,10 @@ function tkQuiLot(array $b): array
         'error' => $refus ? $refus . ' changement' . ($refus > 1 ? 's' : '') . ' sur ' . count($ops) . ' refusé' . ($refus > 1 ? 's' : '') . ' par le panel' . ($premier ? ' : ' . $premier : '') : null];
 }
 
-/** Active ou en pause, comme la checklist du panel le dit (`is_active`) ; null s'il ne le dit pas. */
-function tkClActif(array $c): ?bool
-{
-    foreach (['is_active', 'active', 'enabled'] as $k) {
-        if (array_key_exists($k, $c)) { return tkVrai($c[$k]); }
-    }
-    return null;
-}
-
 /**
- * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?, actif?} — modifie une checklist du panel.
+ * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?} — modifie une checklist du panel.
  * Le corps reprend les champs actuels de la checklist (le panel remet à zéro un champ absent) ; PATCH,
- * et PUT si le panel ne connaît pas PATCH sur cette route.
- * `actif` (15/11/2026, l'interrupteur de la checklist dans la vue Document) passe en `is_active` ; la liste du
- * panel est relue après l'envoi et la réponse porte `relu` {actif, absente} : ce que le panel a vraiment retenu,
- * et s'il liste encore la checklist une fois en pause (rien ne le dit dans sa documentation).
+ * et PUT si le panel ne connaît pas PATCH sur cette route. Active ou en pause : tkChecklistActif.
  */
 function tkChecklistModifier(int $id, array $b): array
 {
@@ -613,26 +615,14 @@ function tkChecklistModifier(int $id, array $b): array
         if ($h !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h)) { http_response_code(422); return ['error' => 'heure attendue au format HH:MM']; }
         $corps['execution_time'] = $h === '' ? null : tkHeure($h, $c['execution_time'] ?? null);
     }
-    $actif = array_key_exists('actif', $b) ? (bool) $b['actif'] : null;
-    if ($actif !== null) { $corps['is_active'] = tkMemeType($c['is_active'] ?? null, $actif); }
-    $op = ['quoi' => $actif === null ? 'Modifier la checklist' : ($actif ? 'Activer la checklist' : 'Mettre la checklist en pause'),
-        'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
+    $op = ['quoi' => 'Modifier la checklist', 'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
     if (!empty($b['apercu'])) { return ['id' => $id, 'operations' => [$op]]; }
     $r = tkReq('PATCH', $op['chemin'], $corps);
     if ($r['erreur'] !== null && in_array($r['code'], [404, 405], true)) { $op['methode'] = 'PUT'; $r = tkReq('PUT', $op['chemin'], $corps); }
     $op += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
-    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») '
-        . ($actif === null ? 'modifiée' : ($actif ? 'activée' : 'mise en pause')) . ' au panel' . ($op['ok'] ? '' : ' — refusé'));
+    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») modifiée au panel' . ($op['ok'] ? '' : ' — refusé'));
     if (!$op['ok']) { http_response_code(502); return ['error' => $op['erreur'], 'operations' => [$op]]; }
-    $rep = ['id' => $id, 'ok' => true, 'operations' => [$op]];
-    if ($actif !== null) {
-        // Relire : un panel qui ignore `is_active`, ou qui ne liste plus une checklist en pause, se voit ici.
-        [$apres] = tkLireListe('/operational-framework/checklists');
-        $lu = null;
-        foreach ((array) $apres as $x) { if ((int) ($x['id'] ?? 0) === $id) { $lu = $x; break; } }
-        $rep['relu'] = ['actif' => $lu === null ? null : tkClActif($lu), 'absente' => $apres !== null && $lu === null];
-    }
-    return $rep;
+    return ['id' => $id, 'ok' => true, 'operations' => [$op]];
 }
 
 /* ─────────── structure (pour l'assistant) ─────────── */
@@ -1533,11 +1523,16 @@ function tkModifier(int $id, array $b, ?array $brutes = null): array
     }
     $ops = [];
     if ($corps) { $ops[] = ['quoi' => 'Modifier la tâche', 'methode' => 'PATCH', 'chemin' => '/tasks/' . $id, 'corps' => $corps]; }
-    if (array_key_exists('actif', $b)) {
-        $mod = $m['is_active'] ?? ($m['active'] ?? null);
-        $ops[] = ['quoi' => $b['actif'] ? 'Activer' : 'Mettre en pause', 'methode' => 'PATCH', 'chemin' => '/tasks/' . $id . '/active',
-            'corps' => ['is_active' => tkMemeType($mod, (bool) $b['actif'])]];
+    // PATCH /tasks/{id}/active INVERSE l'état et ne lit pas de corps (openapi du panel, lu le 15/11/2026) : on ne l'appelle
+    // que pour une tâche dans l'autre état. Il répond 500 même quand il a changé l'état : seule la relecture le dit.
+    $actif = array_key_exists('actif', $b) ? (bool) $b['actif'] : null;
+    $avant = tkNormTache($m)['actif'];
+    $kActif = null;
+    if ($actif !== null && $avant !== $actif) {
+        $kActif = count($ops);
+        $ops[] = ['quoi' => $actif ? 'Activer' : 'Mettre en pause', 'methode' => 'PATCH', 'chemin' => '/tasks/' . $id . '/active', 'corps' => null];
     }
+    if (!$ops && $actif !== null) { return ['id' => $id, 'ok' => true, 'operations' => [], 'actif' => $avant]; }
     if (!$ops) { http_response_code(422); return ['error' => 'rien à changer']; }
     if (!empty($b['apercu'])) { return ['id' => $id, 'operations' => $ops]; }
 
@@ -1545,12 +1540,95 @@ function tkModifier(int $id, array $b, ?array $brutes = null): array
         $r = tkReq($op['methode'], $op['chemin'], $op['corps']);
         $ops[$k] += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
     }
+    $apres = $avant;
+    if ($kActif !== null) {
+        // Jamais de second essai : il rebasculerait. GET /tasks dit l'état où la tâche est vraiment.
+        $apres = tkEtatsActifs([$id])[$id] ?? null;
+        $ops[$kActif]['relu'] = $apres;
+        $ops[$kActif]['ok'] = $apres === $actif;
+        $ops[$kActif]['erreur'] = $apres === $actif ? null
+            : ($apres === null ? 'état non relu après la bascule (' . ($ops[$kActif]['erreur'] ?? 'GET /tasks') . ')' : 'le panel n’a pas changé l’état : la tâche est toujours ' . ($apres ? 'active' : 'en pause'));
+    }
     $ok = !array_filter($ops, fn ($o) => !$o['ok']);
     journalAdd('CEO', 'Cadre des tâches', null, 'Tâche #' . $id . ' (« ' . tkNormTache($m)['nom'] . ' ») modifiée au panel : '
-        . implode(', ', array_keys($corps)) . (array_key_exists('actif', $b) ? ($corps ? ', ' : '') . ($b['actif'] ? 'activée' : 'mise en pause') : '')
+        . implode(', ', array_keys($corps)) . ($kActif !== null ? ($corps ? ', ' : '') . ($actif ? 'activée' : 'mise en pause') : '')
         . ($ok ? '' : ' — refusé en partie'));
     if (!$ok) { http_response_code(502); }
-    return ['id' => $id, 'ok' => $ok, 'operations' => $ops];
+    return ['id' => $id, 'ok' => $ok, 'operations' => $ops, 'actif' => $apres];
+}
+
+/**
+ * L'état actif des tâches demandées, relu au panel (GET /tasks rend les actives ET les en pause) : id → vrai, faux,
+ * ou null si le panel ne la rend pas ou ne dit pas son état. Un tableau vide si la lecture échoue.
+ *
+ * @param int[] $ids
+ * @return array<int, ?bool>
+ */
+function tkEtatsActifs(array $ids): array
+{
+    [$brutes] = tkLireListe('/tasks');
+    if ($brutes === null) { return []; }
+    $voulu = array_flip($ids);
+    $etat = array_fill_keys($ids, null);
+    foreach ($brutes as $x) {
+        $tid = (int) ($x['id'] ?? $x['task_id'] ?? 0);
+        if (isset($voulu[$tid])) { $etat[$tid] = tkNormTache($x)['actif']; }
+    }
+    return $etat;
+}
+
+/**
+ * PATCH /task/checklists/{id}/actif {actif} — mettre en pause ou réactiver une checklist (vue Document, 15/11/2026).
+ * Une checklist du panel n'a pas d'état actif (openapi : id, name, description, workstation_id, execution_time, et PATCH
+ * ignore is_active) : la mettre en pause, c'est mettre en pause ses tâches ; la réactiver, les réactiver toutes. Ses
+ * tâches viennent de GET …/checklists/{id}?include=tasks, qui rend aussi celles en pause. PATCH /tasks/{id}/active
+ * inverse l'état et répond 500 même quand il l'a changé : on ne l'appelle qu'une fois, pour les seules tâches dans
+ * l'autre état, puis GET /tasks dit ce que chacune est devenue. Une tâche aussi rangée dans une autre checklist y change
+ * aussi : l'état est celui de la tâche.
+ */
+function tkChecklistActif(int $id, array $b): array
+{
+    if (!array_key_exists('actif', $b)) { http_response_code(422); return ['error' => 'actif attendu (vrai ou faux)']; }
+    $actif = (bool) $b['actif'];
+    $r = tkReq('GET', '/operational-framework/checklists/' . $id . '?include=tasks');
+    if ($r['code'] === 404) { http_response_code(404); return ['error' => 'checklist #' . $id . ' absente du panel']; }
+    $c = is_array($r['corps']) ? $r['corps'] : null;
+    if (is_array($c['data'] ?? null) && !array_is_list($c['data'])) { $c = $c['data']; }
+    if ($r['erreur'] !== null || $c === null) { http_response_code(502); return ['error' => 'lecture de la checklist #' . $id . ' : ' . ($r['erreur'] ?? 'réponse illisible')]; }
+    $ids = [];
+    foreach ((array) ($c['tasks'] ?? []) as $x) { $tid = (int) ($x['task_id'] ?? 0); if ($tid > 0) { $ids[$tid] = $tid; } }
+    $ids = array_slice(array_values($ids), 0, 200);
+    if (!$ids) { http_response_code(422); return ['error' => 'aucune tâche dans cette checklist']; }
+
+    $avant = tkEtatsActifs($ids);
+    if (!$avant) { http_response_code(502); return ['error' => 'GET /tasks : lecture impossible, rien n’a été changé']; }
+    $res = [];
+    foreach ($ids as $tid) {
+        $x = ['id' => $tid, 'avant' => $avant[$tid], 'bascule' => false, 'code' => null];
+        // Un état inconnu ne se bascule pas : la bascule pourrait le mettre dans le mauvais sens.
+        if ($avant[$tid] === !$actif) {
+            $q = tkReq('PATCH', '/tasks/' . $tid . '/active', null);
+            $x['bascule'] = true; $x['code'] = $q['code'];
+        }
+        $res[$tid] = $x;
+    }
+    $apres = array_filter($res, fn ($x) => $x['bascule']) ? tkEtatsActifs($ids) : $avant;
+    $refus = 0;
+    foreach ($res as $tid => $x) {
+        $res[$tid]['actif'] = $apres[$tid] ?? null;
+        $res[$tid]['ok'] = $res[$tid]['actif'] === $actif;
+        if (!$res[$tid]['ok']) {
+            $refus++;
+            $res[$tid]['erreur'] = $x['avant'] === null ? 'état inconnu : la tâche n’est pas dans GET /tasks'
+                : ($res[$tid]['actif'] === null ? 'état non relu après la bascule' : 'le panel n’a pas changé l’état');
+        }
+    }
+    $n = count(array_filter($res, fn ($x) => $x['bascule']));
+    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . tkTxt($c['name'] ?? '') . ' ») ' . ($actif ? 'réactivée' : 'mise en pause')
+        . ' : ' . $n . ' tâche' . ($n > 1 ? 's' : '') . ' basculée' . ($n > 1 ? 's' : '') . ' sur ' . count($ids) . ($refus ? ' — ' . $refus . ' sans le bon état' : ''));
+    if ($refus) { http_response_code(502); }
+    return ['id' => $id, 'ok' => $refus === 0, 'actif' => $actif, 'taches' => array_values($res), 'refus' => $refus,
+        'error' => $refus ? $refus . ' tâche' . ($refus > 1 ? 's' : '') . ' sur ' . count($ids) . ' n’' . ($refus > 1 ? 'ont' : 'a') . ' pas l’état voulu' : null];
 }
 
 /**
