@@ -28,3 +28,10 @@ Les courriels des demandeurs ne sont pas repris. La demande « tarte 22 Ø » du
 vit au cockpit (`con_consultant_tache`, source `helpdesk`, liée à la visite).
 
 Générer : `node generer.js` ; capturer (serveur `php -S 127.0.0.1:8099 -t .` depuis `pilotage-reseau/`) : `node capturer.js`.
+
+## Captures du code (15/11/2026)
+
+Le dashboard franchisé tel qu'il est codé, avec les demandes de Sombreffe lues en ligne (envois simulés, rien
+n'est écrit) : `code-dashboard-bureau.png` (la fenêtre de l'assistant, mode « Demande au bureau », Mr. Pierre),
+`code-dashboard-tel-controle.png` (l'onglet Contrôle et son bouton), `code-dashboard-tel-formulaire.png`,
+`code-dashboard-tel-mes-demandes.png`.
