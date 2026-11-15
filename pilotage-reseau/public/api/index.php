@@ -150,6 +150,7 @@ require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
 require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
+require __DIR__ . '/../../src/offres_client.php';     // Vendre › Offres : les offres de prix aux clients, par l'API de TF Buddy (15/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -185,6 +186,11 @@ try {
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
         if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
+    }
+    // Le PDF d'une offre client (15/11/2026) : celui que TF Buddy rend, tel quel (src/offres_client.php).
+    if ($method === 'GET' && $path === '/exploitation/offres-client/pdf') {
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); echo json_encode($r[1], JSON_UNESCAPED_UNICODE); exit; }
+        ep_offres_client_pdf();   // sort le PDF, puis exit
     }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
     // ouvert au monde : c'est le client, depuis sa boîte mail, qui l'appelle.
@@ -431,6 +437,9 @@ function route(string $method, string $path): mixed
             // Le Tableau d'analyse (26/10/2026) : toutes les promotions de tous les magasins, et ce qu'elles ont fait.
             $path === '/promotions/reseau'             => ep_promotions_reseau(),
             $path === '/exploitation/offres'           => ep_exploitation_offres(),
+            // Vendre › Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy.
+            $path === '/exploitation/offres-client'    => ep_offres_client(),
+            $path === '/exploitation/offres-client/employes' => ep_offres_client_employes(),
             $path === '/exploitation/bundles/sonde'    => ep_bundles_sonde(),
             $path === '/exploitation/pro'              => ep_exploitation_pro(),
             $path === '/exploitation/temps-morts'      => ep_temps_morts(),
@@ -812,6 +821,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin(); }
     if ($method === 'DELETE' && $path === '/exploitation/promos-magasin') { return wr_promos_magasin_retirer(); }
     if ($method === 'POST' && $path === '/exploitation/promos-magasin/bon') { return wr_promos_magasin_bon(); }
+    if ($method === 'POST' && $path === '/exploitation/offres-client') { return wr_offres_client(); }
     if ($method === 'POST' && $path === '/plan/engagement') { return wr_plan_engagement(); }
     if ($method === 'POST' && $path === '/plan/action') { return wr_plan_action(); }
     if ($method === 'POST' && $path === '/plan/trimestre') { return wr_plan_trimestre(); }

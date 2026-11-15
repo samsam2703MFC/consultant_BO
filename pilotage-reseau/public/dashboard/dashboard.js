@@ -23,7 +23,7 @@
   // (reprendre ou modifier), dup:mag:p21 ou dup:panel:12 (dupliquer), codes:p21 (les codes de son bon).
   const EMBED_PM = q.get('embed') === 'promos';
   // vue=trimestre (14/11/2026) : l'onglet Trimestre est dans l'Année, qui s'ouvre sur le trimestre de la date.
-  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
+  const S = { shop: q.get('shop') || '4', vue: EMBED ? 'production' : EMBED_PM ? 'promos' : (['ops', 'taches', 'jour', 'semaine', 'mois', 'trimestre', 'annee', 'reclamation', 'promos', 'offres', 'primes', 'concurrence', 'morts', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(q.get('vue')) ? (q.get('vue') === 'trimestre' ? 'annee' : q.get('vue')) : (q.get('vue') ? 'jour' : 'ops')),
     date: /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : new Date().toISOString().slice(0, 10),
     heure: null, mode: 'moy', tOuvert: false, nOuvert: false, perOuvert: false, perCol: 'ca', cOuv: {}, cVue: (function () { try { const v = localStorage.getItem('db.cVue'); return ['treemap', 'promo', 'portion'].includes(v) ? v : 'liste'; } catch (e) { return 'liste'; } })(), jourH: null, pOuvert: false, stores: [], res: {}, st: {}, enCours: {}, err: {}, relances: {}, aux: {}, relus: {},
     ncOuvert: false, ncPhotos: {}, ncLigne: null, ncGrav: {}, valoOuvert: false,
@@ -141,6 +141,8 @@
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
     if (S.vue === 'catalogue') { rendre(); return; }
+    // Vendre › Offres (15/11/2026) : le module lit et écrit lui-même (offres.js) ; « ↻ Relire » relit la liste.
+    if (S.vue === 'offres') { rendre(); if (force && window.DashOffres) { window.DashOffres.relire(); } return; }
     // La réclamation fournisseur (téléphone) : la liste du magasin, et ce
     // qu'il faut pour en écrire une — produits, livraisons, motifs.
     if (S.vue === 'reclamation') { lireAux(cleRC(), cheminRC(), force); lireAux(cleRCR(), cheminRCR(), force); rendre(); return; }
@@ -414,6 +416,60 @@
         <span class="v">${o.valeur == null ? '—' : fE(o.valeur)}</span>
         <span class="s">${fE(o.ca)} de CA${o.ouverte ? ' · ouvert le ' + esc(fD(valoOuverture())) : (o.n < 12 ? ' · ' + o.n + ' mois sur 12' : '')}</span>
       </div>`).join('')}</div>
+    </div>`;
+  }
+
+  /* La valeur, trimestre par trimestre (15/11/2026, demande : « au clic, le détail du calcul et un mini graphique
+   * linéaire des 6 derniers trimestres ») : la même règle que l'année — le CA du trimestre ramené à ses jours actifs,
+   * puis à l'année (× 365), puis ÷ 6. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
+  function valoTrimestres(n) {
+    const l = valoMois();
+    if (!l) { return null; }
+    const ouv = valoOuverture(), par = {};
+    l.filter(c => c.ca != null).forEach(c => { const k = c.mois.slice(0, 4) + '-T' + (Math.floor((+c.mois.slice(5, 7) - 1) / 3) + 1); (par[k] = par[k] || []).push(c); });
+    const cles = Object.keys(par).sort().slice(-n);
+    return cles.map(k => {
+      let ca = 0, jours = 0;
+      par[k].forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
+      const quot = jours ? ca / jours : null;
+      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
+    });
+  }
+  /** La petite courbe des trimestres : un trait, un point par trimestre, la valeur du dernier écrite. */
+  function valoMiniCourbe(T) {
+    const vs = T.map(o => o.valeur).filter(v => v != null);
+    if (vs.length < 2) { return ''; }
+    const W = 340, H = 92, G = 26, D = 26, mn = Math.min(...vs), mx = Math.max(...vs);
+    const x = i => (G + i * (W - G - D) / Math.max(1, T.length - 1)).toFixed(1);
+    const y = v => (H - 22 - (H - 40) * (v - mn) / ((mx - mn) || 1)).toFixed(1);
+    const pts = T.map((o, i) => o.valeur == null ? null : x(i) + ',' + y(o.valeur)).filter(Boolean);
+    return `<svg class="db-vpop-c" viewBox="0 0 ${W} ${H}" role="img" aria-label="La valeur du magasin, trimestre par trimestre">
+      <line class="gr" x1="${G}" y1="${H - 16}" x2="${W - D}" y2="${H - 16}"></line>
+      <polyline points="${pts.join(' ')}"></polyline>
+      ${T.map((o, i) => o.valeur == null ? '' : `<circle cx="${x(i)}" cy="${y(o.valeur)}" r="${i === T.length - 1 ? 3.6 : 2.8}"><title>${esc(o.lib)} : ${fE(o.valeur)}${o.n < 3 ? ' (' + o.n + ' mois)' : ''}</title></circle>`).join('')}
+      ${T.map((o, i) => `<text class="lb" x="${x(i)}" y="${H - 3}" text-anchor="middle">${esc(o.lib)}</text>`).join('')}
+      <text class="vl" x="${x(T.length - 1)}" y="${Math.max(10, +y(T[T.length - 1].valeur || mn) - 8)}" text-anchor="end">${fE(T[T.length - 1].valeur)}</text>
+      <text class="vl mu" x="${x(0)}" y="${Math.max(10, +y(T[0].valeur || mn) - 8)}" text-anchor="start">${fE(T[0].valeur)}</text>
+    </svg>`;
+  }
+  /** Le panneau de la vignette, sous la barre du rail : le calcul pas à pas, puis les six derniers trimestres. */
+  function valoPanneau() {
+    if (!S.valoOuvert) { return ''; }
+    const v = valeurMagasin();
+    if (!v || !v.n) { return `<div class="db-vpop" role="dialog" aria-label="Valeur du magasin"><div class="db-vpop-h"><span>Valeur du magasin</span><button type="button" class="db-vpop-x" data-vdrop="1" aria-label="Fermer">×</button></div><p class="mu">${v ? 'Aucun mois complet de chiffre d’affaires relevé pour ce magasin.' : 'Lecture du chiffre d’affaires…'}</p></div>`; }
+    const T = valoTrimestres(6) || [];
+    const ligne = (k, val, s) => `<div class="db-vpop-l"><span class="k">${k}${s ? `<small>${s}</small>` : ''}</span><span class="v">${val}</span></div>`;
+    return `<div class="db-vpop" role="dialog" aria-label="Valeur du magasin">
+      <div class="db-vpop-h"><span>Valeur du magasin</span><button type="button" class="db-vpop-x" data-vdrop="1" aria-label="Fermer">×</button></div>
+      <div class="db-vpop-calc">
+        ${ligne('Chiffre d’affaires', fE(v.total), v.jours < VALO_JOURS ? 'de ' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture' : 'du ' + esc(v.du) + ' au ' + esc(v.au))}
+        ${ligne('÷ jours d’activité', fN(v.jours), v.jours < VALO_JOURS ? 'le magasin n’a pas encore ' + VALO_JOURS + ' jours de ventes' : 'les ' + VALO_JOURS + ' derniers jours, mois en cours exclu')}
+        ${ligne('= par jour', fU(v.quotidien))}
+        ${ligne('× ' + VALO_AN + ' jours', fE(v.annuel), 'le chiffre d’affaires d’une année à ce rythme')}
+        ${ligne('÷ ' + VALO_DIV, '<b>' + fE(v.valeur) + '</b>', 'deux mois de chiffre d’affaires : la valeur du magasin')}
+      </div>
+      ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}
+        ${T.some(o => o.n < 3) ? `<p class="mu">${T.filter(o => o.n < 3).map(o => esc(o.lib) + ' : ' + o.n + ' mois').join(' · ')} — le mois en cours n’est pas compté.</p>` : ''}</div>` : ''}
     </div>`;
   }
 
@@ -6598,13 +6654,16 @@
     etoile: 'M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z',
     brochures: 'M3 5l6-2 6 2 6-2v16l-6 2-6-2-6 2zM9 3v16M15 5v16',
     personnes: 'M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.9',
+    // Offres (15/11/2026) : le tracé « Modèles » du §8.4, une pièce.
+    offre: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
   };
   const railIco = d => `<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="${d}"></path></svg>`;
   // Les onglets d'avant, dans leur ordre, rangés en groupes (le §8.3 : la journée, les chiffres, la vente, le marketing).
   const RAIL = [
     ['La journée', [['ops', 'Opérationnel', 'tdb'], ['taches', 'Tâches', 'controle'], ['morts', 'Temps morts', 'journal']]],
     ['Les chiffres', [['semaine', 'Semaine', 'cal'], ['mois', 'Mois', 'calEd'], ['annee', 'Année', 'perf'], ['tresorerie', 'Trésorerie', 'fonds']]],
-    ['Vendre', [['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
+    // Offres (15/11/2026) : les offres de prix du magasin à ses clients, dans TF Buddy (offres.js).
+    ['Vendre', [['produits', 'Produits', 'bundles'], ['promos', 'Promotions', 'offres'], ['offres', 'Offres', 'offre'], ['primes', 'Primes', 'personnes'], ['concurrence', 'Concurrence', 'analyse']]],
     // Le Marketing du magasin (15/11/2026, maquette docs/maquettes/rail-franchise/marketing.png) : le calendrier des posts
     // (l'espace boutique du Marketing, dans un nouvel onglet tant qu'il ne sait pas s'afficher incorporé), la fidélité et
     // le catalogue, qui relèvent du Marketing.
@@ -6658,14 +6717,14 @@
       <div class="db-rail-rep">${railObjectif()}${railGoogle()}</div>
       <div class="sidebar__groups">${RAIL.map(([g, L]) => `<div class="sidebar__group"><div class="sidebar__group-label">${g}</div>${L.filter(([v]) => v !== 'posts' || postsUrl()).map(([v, l, i]) => v === 'posts'
         ? `<a class="sidebar__item" href="${esc(postsUrl())}" target="_blank" rel="noopener">${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span><span class="db-rail-ext" aria-hidden="true">↗</span></a>`
-        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span></button>`).join('')}</div>`).join('')}</div>`;
+        : `<button type="button" class="sidebar__item${S.vue === v ? ' is-active' : ''}" data-vue="${v}"${S.vue === v ? ' aria-current="page"' : ''}>${railIco(RAIL_ICO[i])}<span class="sidebar__item-label">${l}</span>${v === 'offres' && S.ofN ? `<span class="sidebar__count">${S.ofN}</span>` : ''}</button>`).join('')}</div>`).join('')}</div>`;
   }
   /** La date et ses boutons, comme dans la rangée d'onglets (les mêmes règles, par onglet). */
   function navPeriode() {
-    const sans = ['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
+    const sans = ['ops', 'semaine', 'mois', 'promos', 'offres', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'];
     return `${sans.includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
       ${sans.includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${!['promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
+      ${!['promos', 'offres', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie', 'actions', 'campagne'].includes(S.vue) && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}`;
   }
   /** La barre du haut du rail : le magasin et l'onglet, la date, Relire, la valeur en vignette, le coach et la revue du soir. */
   function railBarre() {
@@ -6679,7 +6738,7 @@
     const propre = ['taches', 'morts', 'annee', 'concurrence', 'promos', 'primes', 'tresorerie', 'catalogue', 'actions', 'campagne'].includes(S.vue);
     return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
       ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
-      <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
+      <span class="db-avs">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
       ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
@@ -6735,10 +6794,10 @@
     h += `<div class="db-hd"><img src="../assets/img/logo.png" alt=""><div><div class="db-titre">${esc(nomShop())}</div></div>
       <span style="flex:1"></span>${rvBouton(false)}<button class="db-btn" data-recharger="1">↻ Relire</button>${IA.questions && IA.questions.actif ? `<button class="db-btn-ia" data-iaouvrir="1">${iaIcone(17)}Assistant</button>` : ''}<button class="db-btn hd-btn" data-iaouvrir="d" title="Une demande au bureau : la poser, suivre la réponse">✉ Demande au bureau${hdOuvertes() ? ` <span class="hd-b">${hdOuvertes()}</span>` : ''}</button></div>`;
     h += `<div class="db-nav">
-      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
-      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
-      ${['ops', 'semaine', 'mois', 'promos', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
-      ${S.vue !== 'promos' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
+      <div class="db-ong">${[['ops', 'Opérationnel'], ['taches', 'Tâches'], ['semaine', 'Semaine'], ['mois', 'Mois'], ['annee', 'Année'], ['tresorerie', 'Trésorerie'], ['produits', 'Produits'], ['promos', 'Promotions'], ['offres', 'Offres'], ['primes', 'Primes'], ['concurrence', 'Concurrence'], ['morts', 'Temps morts'], ['fidelite', 'Fidélité'], ['catalogue', 'Mon catalogue']].map(o => `<button data-vue="${o[0]}" class="${S.vue === o[0] ? 'on' : ''}">${o[1]}</button>`).join('')}</div>
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<span class="db-lab">${S.vue === 'jour' || S.vue === 'production' || S.vue === 'morts' || S.vue === 'taches' ? 'Date' : 'Année de'}</span>`}
+      ${['ops', 'semaine', 'mois', 'promos', 'offres', 'primes', 'concurrence', 'produits', 'fidelite', 'catalogue', 'tresorerie'].includes(S.vue) ? '' : `<button class="db-btn" data-pas="-1">‹</button><input class="db-sel" type="date" id="db-date" value="${S.date}" max="${AUJ}"><button class="db-btn" data-pas="1">›</button>`}
+      ${S.vue !== 'promos' && S.vue !== 'offres' && S.vue !== 'primes' && S.vue !== 'concurrence' && S.vue !== 'produits' && S.vue !== 'fidelite' && S.vue !== 'catalogue' && S.vue !== 'tresorerie' && (S.vue === 'semaine' ? bornes()[1] < AUJ : (S.vue === 'mois' ? S.date.slice(0, 7) !== AUJ.slice(0, 7) : (S.vue === 'annee' ? annee() !== +AUJ.slice(0, 4) : S.date !== AUJ))) ? `<button class="db-btn" data-auj="1">${S.vue === 'semaine' ? 'Cette semaine' : (S.vue === 'mois' ? 'Ce mois-ci' : (S.vue === 'annee' ? 'Cette année' : 'Aujourd’hui'))}</button>` : ''}
       <span style="flex:1"></span>${valoPastille()}</div>${friseHtml()}`;
     }
     if (S.vue === 'actions' || S.vue === 'campagne') { h += rendActions(false); $.innerHTML = h; brancher(); monterActions(); return; }
@@ -6749,12 +6808,15 @@
     // Mon catalogue : l'élément du module, gardé d'un rendu à l'autre (son état et ses champs ne se perdent pas).
     if (S.vue === 'catalogue') { h += '<div id="db-cat"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-cat'); if (p && window.DbCatalogue) { p.replaceWith(window.DbCatalogue.racine(S.shop, nomShop())); } else if (p) { p.innerHTML = '<div class="db-err">Le module du catalogue n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'tresorerie') { h += '<div id="db-tresorerie"></div>'; $.innerHTML = h; brancher(); monterTresorerie(); return; }
+    // Offres : l'élément du module, gardé d'un rendu à l'autre comme Mon catalogue.
+    if (S.vue === 'offres') { h += '<div id="db-offres"></div>'; $.innerHTML = h; brancher(); const p = document.getElementById('db-offres'); if (p && window.DashOffres) { p.replaceWith(window.DashOffres.racine(S.shop, { apiBase: API, nomShop: nomShop(), onCompte: n => { if (S.ofN !== n) { S.ofN = n; railMaj(avecRail()); } } })); } else if (p) { p.innerHTML = '<div class="db-err">Le module des offres n’a pas été chargé.</div>'; } return; }
     if (S.vue === 'produits') { h += rendProduits(); $.innerHTML = h; brancher(); $.querySelectorAll('[data-pdg]').forEach(b => b.addEventListener('click', () => pdOuvrir(b.dataset.pdg))); pdRendre(); return; }
     if (S.vue === 'taches') { h += rendTachesMag() + cqLoupe(false); $.innerHTML = h; brancher(); tjBrancher(); cqRestaurer(cqPos); return; }
     if (S.vue === 'promos') { const g = pmGarder(); h += rendPromos(); $.innerHTML = h; brancher(); pmRestaurer(g); return; }
     if (S.vue === 'concurrence') { const g = bmGarder(); h += rendConcurrence(); $.innerHTML = h; brancher(); bmBrancher(); bmRestaurer(g); return; }
     if (S.vue === 'primes') { const x = $.querySelector('.pr-defil'), sl = x ? x.scrollLeft : 0; h += rendPrimes(); $.innerHTML = h; brancher(); const y = $.querySelector('.pr-defil'); if (y) { y.scrollLeft = sl; } return; }
-    h += rendValeur();
+    // Sur le rail, le détail de la valeur est le panneau de la vignette (15/11/2026) ; sans rail, le tiroir d'avant.
+    if (!surRail) { h += rendValeur(); }
     if (S.vue === 'annee') { h += rendAnnee(); $.innerHTML = h; brancher(); return; }
     if (S.vue === 'jour') {
       if (S.err[kr]) { h += `<div class="db-err">Résultat : ${esc(S.err[kr])}</div>`; }
