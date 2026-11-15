@@ -14762,6 +14762,77 @@ class App {
         .catch(() => this.notify('Image illisible — essayez un autre fichier'));
     };
   }
+  /* --- L'assistant d'entraînement (POST /ia/analyser) ---------------------------------------------
+   * Pour un rayon (ou une tâche) et une période : ce qui va, ce qui ne va pas, les désaccords, une
+   * consigne proposée, les conseils aux magasins, les photos à prendre en exemple. La dernière
+   * analyse de chaque sujet est gardée au serveur. */
+  iaAnaLire(forcer){
+    if (!forcer && (this._iaAna !== undefined || this._iaAnaLu)) { return this._iaAna || null; }
+    this._iaAnaLu = true;
+    readOne('/ia/analyses').then(r => { this._iaAnaLu = false; this._iaAna = r || { sujets: [], analyses: {}, indispo: true }; this.setState({}); });
+    return this._iaAna || null;
+  }
+  iaAnalyser(sujet, jours){
+    if (!sujet || this.state.iaAnaBusy) { return; }
+    this.setState({ iaAnaBusy: sujet, iaAnaSujet: sujet, iaAnaErreur: '' });
+    write(this.source, 'POST', '/ia/analyser', { sujet, jours }).then(r => {
+      if (r && r.ok !== false && r.analyse) {
+        this._iaAna = this._iaAna || { sujets: [], analyses: {} };
+        this._iaAna.analyses = Object.assign({}, this._iaAna.analyses, { [sujet]: r.analyse });
+        this.setState({ iaAnaBusy: '' });
+        this.notify('Analyse prête — ' + (r.analyse.nom || sujet) + ' : ' + r.analyse.nb + ' photos relues');
+      } else {
+        this.setState({ iaAnaBusy: '', iaAnaErreur: (r && r.error) || 'analyse impossible — serveur injoignable' });
+      }
+    });
+  }
+  /** Le panneau de l'assistant d'entraînement, sur la page Entraînement de l'IA. */
+  valsIaAnalyse(E){
+    const S = this.state;
+    const A = this.iaAnaLire();
+    if (!A) { return { chargement: true }; }
+    const sujets = A.sujets || [];
+    const parDefaut = (sujets.slice().sort((a, b) => b.n - a.n)[0] || {}).cle || '';
+    const cle = S.iaAnaSujet || parDefaut;
+    const jours = S.iaAnaJours || 30;
+    const su = sujets.find(x => x.cle === cle) || {};
+    const an = ((A.analyses || {})[cle]) || null;
+    const rv = (E.rayons || []).find(r => r.cle === cle) || null;
+    const groupe = (t, lib) => ({ lib, opts: sujets.filter(x => x.type === t).map(x => ({ val: x.cle, nom: x.nom + ' — ' + x.n + ' photo' + (x.n > 1 ? 's' : '') + ' évaluée' + (x.n > 1 ? 's' : ''), sel: x.cle === cle })) });
+    const FREQ = { souvent: 'souvent', parfois: 'parfois', rare: 'rare' };
+    return { chargement: false,
+      groupes: [groupe('rayon', 'Rayons'), groupe('tache', 'Autres tâches')].filter(g => g.opts.length),
+      setSujet: e => this.setState({ iaAnaSujet: e.target.value, iaAnaErreur: '' }),
+      periodes: [7, 14, 30, 90].map(n => ({ val: n, nom: n + ' jours', sel: n === jours })),
+      setJours: e => this.setState({ iaAnaJours: +e.target.value }),
+      busy: S.iaAnaBusy === cle, autreBusy: !!S.iaAnaBusy && S.iaAnaBusy !== cle,
+      peut: (su.n || 0) >= (A.min || 3),
+      manque: (su.n || 0) < (A.min || 3) ? 'Il faut ' + (A.min || 3) + ' photos évaluées au moins sur ce sujet : passez des photos en mode assisté.' : '',
+      erreur: S.iaAnaErreur || '',
+      lancer: () => this.iaAnalyser(cle, jours),
+      lib: an ? 'Relancer l’analyse' : 'Analyser les photos',
+      an: !an ? null : {
+        meta: 'Analyse du ' + this.fD(String(an.le || '').slice(0, 10)) + ' ' + String(an.le || '').slice(11, 16) + ' · ' + an.nb + ' photo' + (an.nb > 1 ? 's' : '') + ' sur ' + an.jours + ' jours (' + an.notees + ' notée' + (an.notees > 1 ? 's' : '') + ' par le consultant)',
+        synthese: an.synthese || '',
+        va: an.ce_qui_va || [],
+        vaPas: (an.ce_qui_ne_va_pas || []).map(v => ({ constat: v.constat, freq: FREQ[v.frequence] || v.frequence, freqCls: v.frequence, magasins: (v.magasins || []).join(', ') })),
+        desaccords: an.desaccords || [],
+        consigne: an.consigne_proposee || '',
+        reprendre: rv && an.consigne_proposee ? () => {
+          if (rv.consigne && !window.confirm('Remplacer la consigne actuelle du rayon « ' + rv.nom + ' » par la consigne proposée ?')) { return; }
+          this.rvEcrire(rv.nom, { consigne: an.consigne_proposee }, 'Consigne reprise — ' + rv.nom).then(() => this.iaEntLire(true));
+        } : null,
+        dejaReprise: !!(rv && rv.consigne && rv.consigne.trim() === String(an.consigne_proposee || '').trim()),
+        conseils: an.conseils_magasins || [],
+        exemples: (an.exemples_suggeres || []).map(x => {
+          const P = this.ctrlPhotosLire(x.shopId, x.date);
+          const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(x.taskId));
+          const dejaEx = !!(rv && (rv.exemples || []).some(m => String(m.shopId) === String(x.shopId) && String(m.taskId) === String(x.taskId) && m.date === x.date));
+          return { photo: ph ? ph.photo : null, attente: !P, magasin: x.magasin, date: this.fD(x.date), pourquoi: x.pourquoi, deja: dejaEx,
+            busy: ((S.iaModeleBusy || {})[x.shopId + '|' + x.taskId + '|' + x.date]) || '',
+            prendre: () => this.iaPrendreModele(x.shopId, x.taskId, x.date, 'exemple') };
+        }) } };
+  }
   valsIaEntrainement(common){
     const S = this.state;
     const E = this.iaEntLire();
@@ -14802,7 +14873,10 @@ class App {
           par: m.par || '', retirer: () => this.iaRetirerExemple(r.cle, r.nom, m) })),
         lecons: lec.slice(0, 5).map(l => ({ date: this.fD(l.date), shop: this.iaNomMagasin(l.shopId), ia: nomN(l.niveau), vous: nomN(l.noteFinale),
           raison: l.raison || '', retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })),
-        leconsPlus: Math.max(0, lec.length - 5) };
+        leconsPlus: Math.max(0, lec.length - 5),
+        // L'assistant d'entraînement sur ce rayon : le choisir et remonter au panneau (l'analyse se lance d'un clic, là-haut).
+        versAnalyse: () => { this.setState({ iaAnaSujet: r.cle, iaAnaErreur: '' });
+          setTimeout(() => { const el = document.querySelector('.ia-ana'); if (el) { el.scrollIntoView({ block: 'start', behavior: 'smooth' }); } }, 60); } };
     });
     common.iaEnt = { chargement: false, indispo: !!E.indispo, dispo: (this.D.iaStatut || {}).configure === true,
       kpis: [
@@ -14811,6 +14885,7 @@ class App {
         { k: 'Planogrammes · exemples', v: nPlanos + ' / ' + (E.rayons || []).length + ' · ' + nExemples, s: 'rayons avec leur photo du planogramme · photos d’exemple (' + (E.exemplesEnvoyes || 2) + ' envoyées avec chaque photo)' },
         { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
       communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
+      ana: this.valsIaAnalyse(E),
       versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
   }
   /**

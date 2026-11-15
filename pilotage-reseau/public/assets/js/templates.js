@@ -2486,6 +2486,7 @@ function tplIaEntrainement(e, x){
       </ol>
       ${e.communs ? `<div class="c">Règle commune à tous les rayons : ${esc(e.communs)}</div>` : ''}
     </div>
+    ${tplIaAnalyse(e.ana, x, card)}
     <div style="${card}" class="ia-ent-cand">
       <div class="h">Photos parfaites à prendre comme exemple <span>notées « ${esc(e.nomNiveau)} » ces 30 jours</span></div>
       ${e.candidates.length ? `<div class="g">${e.candidates.map(c => `
@@ -2500,7 +2501,7 @@ function tplIaEntrainement(e, x){
     </div>
     ${e.rayons.map(r => `
     <div style="${card}" class="ia-ent-rayon">
-      <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}</div>
+      <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}<button type="button" ${x.A(r.versAnalyse)} class="ia-lien ana">✦ Ce qui va, ce qui ne va pas</button></div>
       <div class="cols">
         <div>
           <div class="lb">1 · La photo du planogramme</div>
@@ -2527,6 +2528,43 @@ function tplIaEntrainement(e, x){
       </div>
     </div>`).join('')}
   </div>`;
+}
+
+/* L'assistant d'entraînement : un rayon (ou une tâche), une période, et ce
+   que disent les photos reçues — ce qui va, ce qui ne va pas, les désaccords,
+   la consigne proposée, les conseils aux magasins, les exemples suggérés. */
+function tplIaAnalyse(a, x, card){
+  const { esc } = x;
+  if (!a || a.chargement) { return `<div style="${card}" class="ia-ana"><div class="h">✦ Assistant d’entraînement</div><div class="v">Lecture…</div></div>`; }
+  const an = a.an;
+  return `
+    <div style="${card}" class="ia-ana">
+      <div class="h">✦ Assistant d’entraînement <span>ce qui est bon, ce qui ne l’est pas, sur les photos reçues</span></div>
+      <div class="ctl">
+        <select ${x.C(a.setSujet)}>${a.groupes.map(g => `<optgroup label="${esc(g.lib)}">${g.opts.map(o => `<option value="${esc(o.val)}"${o.sel ? ' selected' : ''}>${esc(o.nom)}</option>`).join('')}</optgroup>`).join('')}</select>
+        <select ${x.C(a.setJours)}>${a.periodes.map(p => `<option value="${p.val}"${p.sel ? ' selected' : ''}>${esc(p.nom)}</option>`).join('')}</select>
+        <button type="button" ${x.A(a.peut && !a.busy && !a.autreBusy ? a.lancer : null)} class="ia-btn" ${a.peut && !a.busy && !a.autreBusy ? '' : 'disabled'}>${a.busy ? 'Analyse en cours…' : esc(a.lib)}</button>
+        <span class="cout">un appel à l’IA, sur le texte des évaluations (sans renvoyer les photos)</span>
+      </div>
+      ${a.manque ? `<div class="v">${esc(a.manque)}</div>` : ''}
+      ${a.erreur ? `<div class="err">${esc(a.erreur)}</div>` : ''}
+      ${an ? `
+      <div class="meta">${esc(an.meta)}</div>
+      ${an.synthese ? `<p class="syn">${esc(an.synthese)}</p>` : ''}
+      <div class="g2">
+        <div class="b ok"><div class="lb">✓ Ce qui va</div>${an.va.length ? `<ul>${an.va.map(v => `<li>${esc(v)}</li>`).join('')}</ul>` : '<div class="v">Rien de régulier à signaler.</div>'}</div>
+        <div class="b nc"><div class="lb">✗ Ce qui ne va pas</div>${an.vaPas.length ? `<ul>${an.vaPas.map(v => `<li>${esc(v.constat)} <span class="fq ${esc(v.freqCls)}">${esc(v.freq)}</span>${v.magasins ? `<small>${esc(v.magasins)}</small>` : ''}</li>`).join('')}</ul>` : '<div class="v">Aucun écart récurrent.</div>'}</div>
+      </div>
+      ${an.desaccords.length ? `<div class="b"><div class="lb">Où l’IA et vous ne notez pas pareil — à lui apprendre</div><ul>${an.desaccords.map(d => `<li><b>${esc(d.sujet)}</b> — ${esc(d.a_retenir)}</li>`).join('')}</ul></div>` : ''}
+      ${an.consigne ? `<div class="b cons"><div class="lb">Consigne proposée</div><div class="txt">${esc(an.consigne)}</div>
+        ${an.dejaReprise ? '<div class="v">C’est la consigne actuelle du rayon.</div>' : an.reprendre ? `<button type="button" ${x.A(an.reprendre)} class="ia-sec">Reprendre comme consigne du rayon</button>` : '<div class="v">Une tâche hors rayon n’a pas de consigne : à reprendre dans sa checklist.</div>'}</div>` : ''}
+      ${an.conseils.length ? `<div class="b"><div class="lb">À dire aux magasins</div><ul>${an.conseils.map(c => `<li>${esc(c)}</li>`).join('')}</ul></div>` : ''}
+      ${an.exemples.length ? `<div class="b"><div class="lb">Photos à prendre en exemple</div><div class="exs">${an.exemples.map(ex => `
+        <div class="ex">${ex.photo ? `<span class="ph"><img src="${esc(ex.photo)}" alt="" loading="lazy"></span>` : `<span class="ph vide">${ex.attente ? 'lecture…' : 'photo expirée'}</span>`}
+          <div class="m">${esc(ex.magasin)} · ${esc(ex.date)}</div><div class="p">${esc(ex.pourquoi)}</div>
+          ${ex.deja ? '<div class="v">★ déjà photo d’exemple</div>' : `<button type="button" ${x.A(ex.prendre)} class="ia-valider-mod">${ex.busy ? 'copie…' : '★ Photo d’exemple'}</button>`}</div>`).join('')}</div></div>` : ''}
+      ` : (!a.manque && !a.busy ? '<div class="v">Pas encore d’analyse pour ce sujet.</div>' : '')}
+    </div>`;
 }
 
 /* La heatmap « suivi mensuel » : magasin × mois, faites / pas faites, et le
