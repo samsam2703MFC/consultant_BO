@@ -180,6 +180,7 @@ final class Panel
             foreach (self::$gammes as $id => $g) { $l = array_values(array_diff($g[1], [(int) $m[1]])); if (in_array($id, $b['availability_periods'], true)) { $l[] = (int) $m[1]; } self::$gammes[$id][1] = $l; }
             return [true, []];
         }
+        if ($c === '/cases' && $meth === 'POST') { if (!isset($b['area_key'], $b['title'], $b['description'])) { PanelApi::$lastError = 'POST /cases → HTTP 422'; return [false, ['description' => 'MISSING_REQUIRED_FIELDS']]; } return [true, ['data' => ['id' => 99, 'ref' => 'CASE-20261115-TEST1']]]; }
         if (preg_match('#^/shops/(\d+)/products/(\d+)/price$#', $c, $m) && $meth === 'PATCH') { self::$prixProduit[(int) $m[1]][(int) $m[2]] = (float) ($b['portion_price'] ?? ($b['portion_price_gross'] ?? ($b['price'] ?? 0))); return [true, []]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m) && $meth === 'PATCH') {
             $id = (int) $m[1]; self::$portions[$id] = array_merge(self::$portions[$id], $b);
@@ -250,6 +251,7 @@ require __DIR__ . '/../src/verification_correction.php';
 require __DIR__ . '/../src/verification_matieres_prix.php';
 require __DIR__ . '/../src/verification_matiere_edition.php';
 require __DIR__ . '/../src/produit_parametrage.php';
+require __DIR__ . '/../src/helpdesk.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -649,6 +651,20 @@ verifie('compte admin : l’écriture le note au registre', str_contains((string
 PanelApi::$jetonImpose = null;
 verifie('prix : la route de la centrale (tarif du fournisseur pour un magasin) est permise', vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70', 'valid_from' => '{date}']])['permise']
     && vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70']])['corps'] === ['price_net' => 61.7]);
+
+
+// --- Le helpdesk des franchisés (15/11/2026, src/helpdesk.php) ----------------------------------------------------
+$d = hdkDemande(['id' => 5, 'ref' => 'CASE-1', 'area_key' => 'operational_activities', 'status' => 'IN_PROGRESS', 'title' => ' Verrière ', 'description' => 'x', 'shop_id' => 5,
+    'shop_name' => 'Atelier by Harmonie - Sombreffe', 'requester_name' => 'H.', 'requester_email' => 'h@example.com', 'admin_reply' => null, 'created_at' => '2026-05-19 10:00:00', 'consultant_name' => 'Loic V.']);
+verifie('helpdesk : une demande lue, sans le courriel du demandeur', $d['titre'] === 'Verrière' && $d['domaineNom'] === 'Activités opérationnelles' && $d['ouverte'] && !in_array('h@example.com', $d, true) && $d['statutNom'] === 'En cours');
+$t = hdkConstat([['nom' => 'Verrière', 'etat' => 'a_suivre', 'constat' => 'devis bardage seulement'], ['nom' => 'Affichage', 'etat' => 'conforme', 'constat' => '']], '2026-10-26', 'Loic V.');
+verifie('helpdesk : le constat de la mission, en texte pour le franchisé', str_contains($t, '26/10/2026 (Loic V.)') && str_contains($t, '• Verrière — à suivre : devis bardage seulement') && str_contains($t, '• Affichage — conforme'));
+$BODY = ['shop' => 5, 'domaine' => 'xx', 'titre' => 'T', 'description' => 'D'];
+verifie('helpdesk : un sujet inconnu ne part pas', !wr_helpdesk_magasin()['ok']);
+$BODY = ['shop' => 5, 'domaine' => 'product', 'titre' => 'Tarte 22', 'description' => 'Une plus petite', 'passage' => true];
+$r = wr_helpdesk_magasin();
+verifie('helpdesk : la demande part au panel (POST /cases, contrat), le passage noté dans la description', $r['ok'] && $r['id'] === 99 && end(Panel::$ecrits)[1] === '/cases'
+    && end(Panel::$ecrits)[2]['area_key'] === 'product' && end(Panel::$ecrits)[2]['shop_id'] === 5 && str_contains(end(Panel::$ecrits)[2]['description'], 'Passage du consultant souhaité'), json_encode($r));
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);
