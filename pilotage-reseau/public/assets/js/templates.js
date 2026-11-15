@@ -2311,7 +2311,7 @@ function tplRayonsPhotos(r, x, card){
   return `
     <div data-rv="1" style="${card};overflow:hidden">
       <button ${x.A(r.basculer)} style="width:100%;text-align:left;border:none;background:none;cursor:pointer;font-family:var(--font-ui);padding:13px 18px;display:flex;align-items:center;gap:12px;color:var(--color-text)">
-        <span style="font-size:13px;font-weight:400">Photos types des rayons</span>
+        <span style="font-size:13px;font-weight:400">Photos du planogramme des rayons</span>
         <span style="font-size:11.5px;color:var(--color-text-muted)">${esc(etat)} — le comptoir tel qu’il doit être, en face de chaque « Photo du comptoir »</span>
         <span style="margin-left:auto;font-size:11.5px;font-weight:400;color:var(--color-primary)">${r.ouvert ? 'Replier ▴' : 'Gérer ▾'}</span>
       </button>
@@ -2479,43 +2479,47 @@ function tplIaEntrainement(e, x){
     <div style="${card}" class="ia-ent-comment">
       <div class="h">Comment l’IA apprend</div>
       <ol>
+        <li><b>La photo du planogramme</b> : la présentation attendue du rayon, la même pour tout le réseau. L’IA la reçoit en premier avec chaque photo.</li>
+        <li><b>Les photos d’exemple</b> : de vraies photos jugées parfaites, de chaque magasin. L’IA en reçoit deux après le planogramme, celles du même magasin d’abord. Prenez-les parmi les photos notées « ${esc(e.nomNiveau)} », ou depuis le volet de notation (★ Photo parfaite).</li>
         <li><b>La consigne du rayon</b> dit ce qu’est un comptoir conforme ; elle prime sur tout. Vide, l’IA suit des critères par défaut.</li>
-        <li><b>La photo modèle</b> montre le comptoir parfait <i>de ce magasin</i> : l’IA juge chaque photo contre elle (à défaut, contre la photo type du réseau). Prenez-la parmi les photos notées « ${esc(e.nomNiveau)} », ou depuis le volet de notation (★ Photo modèle).</li>
         <li><b>Vos corrections</b> deviennent des leçons : quand vous notez autrement que l’IA, elle reçoit la correction (et votre raison) avec les photos suivantes du même rayon.</li>
       </ol>
       ${e.communs ? `<div class="c">Règle commune à tous les rayons : ${esc(e.communs)}</div>` : ''}
     </div>
     <div style="${card}" class="ia-ent-cand">
-      <div class="h">Photos parfaites à prendre comme modèle <span>notées « ${esc(e.nomNiveau)} » ces 30 jours</span></div>
+      <div class="h">Photos parfaites à prendre comme exemple <span>notées « ${esc(e.nomNiveau)} » ces 30 jours</span></div>
       ${e.candidates.length ? `<div class="g">${e.candidates.map(c => `
         <div class="t">
           ${c.photo ? `<span class="ph"><img src="${esc(c.photo)}" alt="" loading="lazy"></span>` : `<span class="ph vide">${c.attente ? 'lecture…' : 'photo indisponible'}</span>`}
           <div class="n">${esc(c.shop)} · ${esc(c.rayon)}</div>
           <div class="m">${esc(c.date)} · ${esc(c.note)}${c.par ? ' par ' + esc(c.par) : ''}</div>
-          <div class="b"><button type="button" ${x.A(c.magasin)} class="ia-valider-mod">${c.busy === 'magasin' ? 'copie…' : '★ Modèle de ' + esc(c.shop)}</button>
-            <button type="button" ${x.A(c.reseau)} class="ia-lien">${c.busy === 'reseau' ? 'copie…' : 'du réseau'}</button></div>
+          <div class="b"><button type="button" ${x.A(c.exemple)} class="ia-valider-mod">${c.busy === 'exemple' ? 'copie…' : '★ Photo d’exemple'}</button>
+            <button type="button" ${x.A(c.planogramme)} class="ia-lien">${c.busy === 'planogramme' ? 'copie…' : 'comme planogramme'}</button></div>
         </div>`).join('')}</div>`
-      : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo modèle du rayon ».</div>`}
+      : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo parfaite ».</div>`}
     </div>
     ${e.rayons.map(r => `
     <div style="${card}" class="ia-ent-rayon">
       <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}</div>
       <div class="cols">
         <div>
-          <div class="lb">Ce que l’IA doit voir — la consigne</div>
-          <textarea rows="4" maxlength="600" ${x.C(r.setConsigne)} placeholder="Ex. : comptoir garni sur toute sa longueur, six quiches entières minimum, prix sur chaque produit">${esc(r.consigne)}</textarea>
-          ${!r.consigne && r.defaut ? `<div class="df">Vide : l’IA suit les critères par défaut — « ${esc(r.defaut)} »</div>` : ''}
+          <div class="lb">1 · La photo du planogramme</div>
+          <div class="plano">${r.planogramme ? img(r.planogramme, 'Photo du planogramme ' + r.nom)
+            : `<label class="ph vide depot">${r.planoBusy ? 'envoi…' : 'Pas encore de photo du planogramme'}<b>${r.planoBusy ? '' : 'Déposer la photo'}</b><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.planoFichier)} hidden></label>`}</div>
+          ${r.planogramme ? `<div class="act"><label class="ia-lien">${r.planoBusy ? 'envoi…' : 'remplacer'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(r.planoFichier)} hidden></label> · <button type="button" ${x.A(r.planoRetirer)} class="ia-lien">retirer</button></div>` : ''}
         </div>
         <div>
-          <div class="lb">Le comptoir modèle</div>
+          <div class="lb">2 · Les photos d’exemple${r.exemples.length ? ' (' + r.exemples.length + ')' : ''}</div>
           <div class="mods">
-            <div class="mod">${r.reseau ? img(r.reseau, 'Photo type ' + r.nom) : '<span class="ph vide">pas de photo type</span>'}<div class="m">Réseau (photo type)</div></div>
-            ${r.modeles.map(m => `<div class="mod">${img(m.photo, 'Photo modèle ' + r.nom + ' ' + m.shop)}<div class="m">★ ${esc(m.shop)}${m.date ? ' · ' + esc(m.date) : ''}</div><button type="button" ${x.A(m.retirer)} class="ia-lien">retirer</button></div>`).join('')}
+            ${r.exemples.map(m => `<div class="mod">${img(m.photo, 'Photo d’exemple ' + r.nom + ' ' + m.shop)}<div class="m">★ ${esc(m.shop)}${m.date ? ' · ' + esc(m.date) : ''}</div><button type="button" ${x.A(m.retirer)} class="ia-lien">retirer</button></div>`).join('')}
           </div>
-          ${!r.modeles.length ? '<div class="df">Pas encore de photo modèle de magasin : prenez une photo notée parfaite.</div>' : ''}
+          ${!r.exemples.length ? '<div class="df">Pas encore de photo d’exemple : prenez des photos notées parfaites, de chaque magasin.</div>' : ''}
         </div>
         <div>
-          <div class="lb">Ce qu’elle a appris de vous</div>
+          <div class="lb">3 · La consigne</div>
+          <textarea rows="3" maxlength="600" ${x.C(r.setConsigne)} placeholder="Ex. : comptoir garni sur toute sa longueur, six quiches entières minimum, prix sur chaque produit">${esc(r.consigne)}</textarea>
+          ${!r.consigne && r.defaut ? `<div class="df">Vide : l’IA suit les critères par défaut — « ${esc(r.defaut)} »</div>` : ''}
+          <div class="lb" style="margin-top:12px">Ce qu’elle a appris de vous</div>
           ${r.lecons.length ? r.lecons.map(l => `<div class="lc${l.retenue ? '' : ' off'}"><span>${esc(l.date)} · ${esc(l.shop)}</span> IA : ${esc(l.ia)} → vous : <b>${esc(l.vous)}</b>${l.raison ? ` — « ${esc(l.raison)} »` : ''} <button type="button" ${x.A(l.basculer)} class="ia-lien">${l.retenue ? 'écarter' : 'reprendre'}</button></div>`).join('')
             + (r.leconsPlus ? `<div class="df">et ${r.leconsPlus} de plus</div>` : '')
             : '<div class="df">Pas encore de correction sur ce rayon.</div>'}
@@ -5795,31 +5799,31 @@ function tplCtrlDetail(c, x){
                 <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;padding:3px 9px;border-radius:8px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
                ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
                ${d.ponct ? `<div class="pt ${esc(d.ponct.etat)}" style="margin-top:3px;font-size:11px;white-space:normal">${d.ponct.etat === 'heure' ? '✓' : '⏱'} ${esc(d.ponct.long)}</div>` : ''}
-               ${d.modeleEstCelleCi ? `<div class="ia-mod-ok">★ Cette photo est le modèle de ${esc(d.shopNom)}</div>`
-                 : d.modeleMagasin ? `<div class="ia-mod" title="Une photo parfaite devient la référence de l’IA pour ce rayon">★ Photo modèle du rayon :
-                   <button type="button" ${x.A(d.modeleMagasin)} class="ia-lien">${d.modeleBusy === 'magasin' ? 'copie…' : 'pour ' + esc(d.shopNom)}</button> ·
-                   <button type="button" ${x.A(d.modeleReseau)} class="ia-lien">${d.modeleBusy === 'reseau' ? 'copie…' : 'pour le réseau'}</button></div>` : ''}
+               ${d.estExemple ? `<div class="ia-mod-ok">★ Cette photo est une photo d’exemple du rayon</div>`
+                 : d.prendreExemple ? `<div class="ia-mod" title="Une photo parfaite devient une référence de l’IA pour ce rayon">★ Photo parfaite :
+                   <button type="button" ${x.A(d.prendreExemple)} class="ia-lien">${d.modeleBusy === 'exemple' ? 'copie…' : 'en faire une photo d’exemple'}</button> ·
+                   <button type="button" ${x.A(d.prendrePlano)} class="ia-lien">${d.modeleBusy === 'planogramme' ? 'copie…' : 'la photo du planogramme'}</button></div>` : ''}
                <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>
         <div>
-          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.modele && !d.photoRef ? 'Photo modèle · ' + esc(d.rayon ? d.rayon.nom : '') + ' · ' + esc(d.shopNom) : d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Planogramme · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
           ${d.photoRef
             ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>`
-            : d.modele
-            ? `<a href="${esc(d.modele.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.modele.photo)}" alt="Photo modèle du rayon pour ce magasin" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
-               <div style="margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">★ modèle de ${esc(d.shopNom)}${d.modele.date ? ' — photo du ' + esc(d.modele.date) : ''} · l’IA juge contre elle</div>`
             : d.rayon && d.rayon.photo
-            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo type du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
-               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo type'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo du planogramme du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
+               <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo du planogramme'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
             : d.rayon
-            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo type pour ce rayon.</span><span style="font-weight:400;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo type'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
+            ? `<label style="background:var(--color-background-secondary);border:1px dashed var(--color-border-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5;cursor:pointer"><span>Pas encore de photo du planogramme pour ce rayon.</span><span style="font-weight:400;color:var(--color-primary)">${d.rayon.busy ? 'Envoi…' : 'Poser la photo du planogramme'}</span><input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoRefTxt)}</div>`}
+          ${d.rayon && !d.photoRef ? `<div class="ia-vex"><div class="lb">Photos d’exemple${d.nExemples ? ' (' + d.nExemples + ')' : ''}</div>
+            ${d.exemples.length ? `<div class="g">${d.exemples.map(ex => `<a href="${esc(ex.photo)}" target="_blank" rel="noopener" title="${esc(ex.shop + (ex.date ? ' · ' + ex.date : ''))}"><img src="${esc(ex.photo)}" alt="Photo d’exemple ${esc(ex.shop)}" loading="lazy"><span>${esc(ex.shop)}</span></a>`).join('')}</div>`
+              : '<div class="v">Aucune encore : une photo parfaite peut en devenir une (★ sous la photo).</div>'}</div>` : ''}
         </div>
       </div>
       ${d.rayon && d.rayon.consigne ? `<div style="font-size:12px;margin-top:8px;line-height:1.5"><span style="font-weight:400">Attendu :</span> ${esc(d.rayon.consigne)}</div>` : ''}
       <div style="font-size:11px;color:var(--color-text-muted);margin-top:6px">${d.rayon
-        ? 'Une photo de comptoir se juge contre la photo type de son rayon, posée dans « Photos types des rayons » en haut de l\u2019écran — la même s\u2019affiche dans le contrôle guidé des visites.'
+        ? 'Une photo de comptoir se juge contre la photo du planogramme de son rayon, puis ses photos d\u2019exemple — elles se gèrent dans « Entraînement de l\u2019IA ». La photo du planogramme s\u2019affiche aussi dans le contrôle guidé des visites.'
         : 'Un contrôle qualité se juge par comparaison : la photo produit (products/available \u2192 recipes/{id_recipe}, le même API que le webshop) s\u2019affiche en face de la photo prise en boutique. Sans chemin : « Pas de photo. »'}</div>
 
       <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin:22px 0 6px">Avis du consultant</div>

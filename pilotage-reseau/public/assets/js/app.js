@@ -13730,13 +13730,14 @@ class App {
           : '',
         // La photo contre l'heure standard de sa checklist : l'heure fait partie du contrôle.
         ponct: this.ponctualite(d.heure, d.faitLe),
-        // La photo modèle du rayon pour ce magasin (choisie parfaite) passe devant la photo type du réseau ;
-        // une photo de comptoir peut devenir le modèle, du magasin ou du réseau.
-        modele: d.modele ? { photo: d.modele.photo, date: d.modele.date ? this.fD(d.modele.date) : '' } : null,
-        modeleEstCelleCi: !!(d.modele && String(d.modele.taskId) === String(dt.taskId) && d.modele.date === dt.date),
+        // Les références d'une photo de comptoir : le planogramme du rayon, puis ses photos d'exemple (ce magasin
+        // d'abord). Une photo de comptoir peut devenir une photo d'exemple, ou la photo du planogramme.
+        exemples: (d.exemples || []).slice(0, 3).map(ex => ({ photo: ex.photo, shop: this.iaNomMagasin(ex.shopId), date: ex.date ? this.fD(ex.date) : '' })),
+        nExemples: (d.exemples || []).length,
+        estExemple: (d.exemples || []).some(ex => String(ex.taskId) === String(dt.taskId) && ex.date === dt.date && String(ex.shopId) === String(dt.shopId)),
         shopNom: this.iaNomMagasin(dt.shopId),
-        modeleMagasin: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'magasin') : null,
-        modeleReseau: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'reseau') : null,
+        prendreExemple: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'exemple') : null,
+        prendrePlano: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'planogramme') : null,
         modeleBusy: (this.state.iaModeleBusy || {})[dt.shopId + '|' + dt.taskId + '|' + dt.date] || '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
@@ -14715,20 +14716,25 @@ class App {
     const nom = (s && s.shop) || (st && st.nom) || ('Magasin ' + id);
     return nom.indexOf(' - ') >= 0 ? nom.slice(nom.lastIndexOf(' - ') + 3).trim() : nom;
   }
-  /** Prendre la photo d'une tâche comme modèle de son rayon : pour son magasin, ou pour le réseau. */
+  /**
+   * Prendre la photo d'une tâche pour son rayon : comme photo d'EXEMPLE
+   * (portée « exemple », plusieurs par rayon), ou comme photo du PLANOGRAMME
+   * (portée « planogramme », une par rayon).
+   */
   iaPrendreModele(shopId, taskId, date, portee){
     const k = shopId + '|' + taskId + '|' + date;
     if ((this.state.iaModeleBusy || {})[k]) { return; }
     this.setState(s => ({ iaModeleBusy: Object.assign({}, s.iaModeleBusy, { [k]: portee }) }));
     write(this.source, 'POST', '/ia/modeles', { shopId, taskId, date, portee }).then(r => {
       this.setState(s => { const b = Object.assign({}, s.iaModeleBusy); delete b[k]; return { iaModeleBusy: b }; });
-      if (!r || r.ok === false) { this.notify('Photo modèle refusée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (!r || r.ok === false) { this.notify('Photo refusée — ' + ((r && r.error) || 'serveur injoignable')); return; }
       if (Array.isArray(r.rayons)) { this._iaEnt = r; }
-      // La photo type du réseau a pu changer : la liste des rayons se relit.
-      if (portee === 'reseau') { this._rv = undefined; }
+      // La photo du planogramme a pu changer : la liste des rayons se relit.
+      if (portee === 'planogramme') { this._rv = undefined; }
       const ry = (r.rayons || []).find(x => x.cle === r.rayon) || {};
-      this.notify('Photo modèle ' + (ry.nom ? '« ' + ry.nom + ' » ' : '') + (portee === 'reseau' ? 'du réseau' : 'pour ' + this.iaNomMagasin(shopId)) + ' — l’IA juge désormais contre elle');
-      // Le volet ouvert sur cette tâche montre le nouveau modèle.
+      this.notify((portee === 'planogramme' ? 'Photo du planogramme' : 'Photo d’exemple') + (ry.nom ? ' « ' + ry.nom + ' »' : '')
+        + (portee === 'planogramme' ? '' : ' (' + this.iaNomMagasin(shopId) + ')') + ' — l’IA la reçoit désormais avec chaque photo du rayon');
+      // Le volet ouvert sur cette tâche montre la nouvelle référence.
       const dt = this.state.ctrlDet;
       if (dt && String(dt.shopId) === String(shopId) && String(dt.taskId) === String(taskId) && dt.date === date) {
         readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
@@ -14737,14 +14743,24 @@ class App {
       this.setState({});
     });
   }
-  iaRetirerModele(rayon, nomRayon, shopId){
-    if (!window.confirm('Retirer la photo modèle « ' + nomRayon + ' » de ' + this.iaNomMagasin(shopId) + ' ? L’IA reprendra la photo type du réseau.')) { return; }
-    write(this.source, 'POST', '/ia/modeles', { rayon, shopId, retirer: true }).then(r => {
-      if (!r || r.ok === false) { this.notify('Échec — ' + ((r && r.error) || 'modèle inchangé')); return; }
+  iaRetirerExemple(rayon, nomRayon, ex){
+    if (!window.confirm('Retirer cette photo d’exemple « ' + nomRayon + ' » (' + this.iaNomMagasin(ex.shopId) + ', ' + this.fD(ex.date) + ') ?')) { return; }
+    write(this.source, 'POST', '/ia/modeles', { rayon, shopId: ex.shopId, taskId: ex.taskId, date: ex.date, retirer: true }).then(r => {
+      if (!r || r.ok === false) { this.notify('Échec — ' + ((r && r.error) || 'exemple inchangé')); return; }
       if (Array.isArray(r.rayons)) { this._iaEnt = r; }
-      this.notify('Photo modèle retirée — ' + nomRayon + ', ' + this.iaNomMagasin(shopId));
+      this.notify('Photo d’exemple retirée — ' + nomRayon + ', ' + this.iaNomMagasin(ex.shopId));
       this.setState({});
     });
+  }
+  /** Déposer (ou retirer) la photo du planogramme d'un rayon depuis l'entraînement : la page se relit ensuite. */
+  iaPlanoFichier(nom){
+    return e => {
+      const f = e.target.files && e.target.files[0]; e.target.value = '';
+      if (!f) { return; }
+      if (!/^image\/(jpeg|png|webp)$/.test(f.type)) { this.notify('Photo en JPEG, PNG ou WebP'); return; }
+      this.rvReduire(f).then(data => this.rvEcrire(nom, { data }, 'Photo du planogramme posée — ' + nom)).then(() => this.iaEntLire(true))
+        .catch(() => this.notify('Image illisible — essayez un autre fichier'));
+    };
   }
   valsIaEntrainement(common){
     const S = this.state;
@@ -14755,7 +14771,8 @@ class App {
     const busy = S.iaModeleBusy || {};
     if (!E) { common.iaEnt = { chargement: true }; return; }
     const A = E.accord || {};
-    const nModeles = (E.rayons || []).reduce((a, r) => a + (r.modeles || []).length + (r.photo ? 1 : 0), 0);
+    const nPlanos = (E.rayons || []).filter(r => r.planogramme).length;
+    const nExemples = (E.rayons || []).reduce((a, r) => a + (r.exemples || []).length, 0);
     const nLecons = (E.rayons || []).reduce((a, r) => a + (r.lecons || []).filter(l => l.lecon).length, 0);
     const candidates = (E.candidates || []).map(c => {
       const P = this.ctrlPhotosLire(c.shopId, c.date);
@@ -14763,8 +14780,8 @@ class App {
       const k = c.shopId + '|' + c.taskId + '|' + c.date;
       return { photo: ph ? ph.photo : null, attente: !P, shop: this.iaNomMagasin(c.shopId), rayon: nomT(c.tache), date: this.fD(c.date),
         note: (c.nomFinal || nomN(c.noteFinale)), par: c.validePar || '', busy: busy[k] || '',
-        magasin: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'magasin'),
-        reseau: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'reseau') };
+        exemple: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'exemple'),
+        planogramme: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'planogramme') };
     });
     const rayons = (E.rayons || []).map(r => {
       const a = r.accord || {};
@@ -14775,9 +14792,14 @@ class App {
         accord: a.notees ? a.pct + ' % d’accord sur ' + a.notees + ' photo' + (a.notees > 1 ? 's' : '') : 'pas encore de note comparée',
         accordCls: !a.notees ? '' : a.pct >= 80 ? 'ok' : a.pct >= 60 ? 'moy' : 'nc',
         ecarts: a.notees && (a.tropSevere || a.tropIndulgente) ? 'IA plus sévère ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '',
-        reseau: r.photo || null,
-        modeles: (r.modeles || []).map(m => ({ photo: m.photo, shop: this.iaNomMagasin(m.shopId), date: m.date ? this.fD(m.date) : '',
-          par: m.par || '', retirer: () => this.iaRetirerModele(r.cle, r.nom, m.shopId) })),
+        // 1. La photo du planogramme (une par rayon), 2. les photos d'exemple (plusieurs, chacune de son magasin).
+        planogramme: r.planogramme || null,
+        planoFichier: this.iaPlanoFichier(r.nom),
+        planoBusy: !!(S.rvBusy || {})[r.nom],
+        planoRetirer: r.planogramme ? () => { if (window.confirm('Retirer la photo du planogramme « ' + r.nom + ' » ?')) {
+          this.rvEcrire(r.nom, { data: '' }, 'Photo du planogramme retirée — ' + r.nom).then(() => this.iaEntLire(true)); } } : null,
+        exemples: (r.exemples || []).map(m => ({ photo: m.photo, shop: this.iaNomMagasin(m.shopId), date: m.date ? this.fD(m.date) : '',
+          par: m.par || '', retirer: () => this.iaRetirerExemple(r.cle, r.nom, m) })),
         lecons: lec.slice(0, 5).map(l => ({ date: this.fD(l.date), shop: this.iaNomMagasin(l.shopId), ia: nomN(l.niveau), vous: nomN(l.noteFinale),
           raison: l.raison || '', retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })),
         leconsPlus: Math.max(0, lec.length - 5) };
@@ -14786,7 +14808,7 @@ class App {
       kpis: [
         { k: 'Accord avec vos notes', v: A.notees ? A.pct + ' %' : '—', s: A.notees ? 'sur ' + A.notees + ' photos notées en ' + A.jours + ' jours' : 'mesuré dès vos premières notes en mode assisté' },
         { k: 'Leçons retenues', v: String(nLecons), s: 'vos corrections, envoyées à l’IA (les ' + (E.leconsMax || 6) + ' dernières par rayon)' },
-        { k: 'Photos modèles', v: String(nModeles), s: 'photos types du réseau et modèles des magasins' },
+        { k: 'Planogrammes · exemples', v: nPlanos + ' / ' + (E.rayons || []).length + ' · ' + nExemples, s: 'rayons avec leur photo du planogramme · photos d’exemple (' + (E.exemplesEnvoyes || 2) + ' envoyées avec chaque photo)' },
         { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
       communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
       versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
