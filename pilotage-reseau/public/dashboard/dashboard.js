@@ -268,8 +268,9 @@
 
   /* --- rendu -------------------------------------------------------------- */
   /* --- La valeur du magasin ------------------------------------------------
-   * La règle du réseau : le CA des 730 derniers jours, ramené au jour, puis à
-   * l'année (× 365), divisé par 6 — soit deux mois de chiffre d'affaires.
+   * La règle du réseau (15/11/2026, Sam : « marge nette annuelle = 10 % × 3,5 ») : le CA des 730 derniers jours,
+   * ramené au jour, puis à l'année (× 365) ; la marge nette annuelle en est 10 % ; la valeur, 3,5 fois cette marge.
+   * (Avant le 15/11/2026 : le CA annuel ÷ 6.)
    * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
    * 28 jours ne pèse pas comme un mois de 31, et une fenêtre en jours ne se
    * déforme pas selon le mois où on la pose.
@@ -287,7 +288,11 @@
    * Les ventes arrivent par mois ; chaque mois est donc réparti sur ses jours
    * et seuls les jours qui tombent dans la fenêtre comptent — c'est ce qui
    * permet de couper à 730 jours au milieu d'un mois sans le fausser. */
-  const VALO_JOURS = 730, VALO_DIV = 6, VALO_AN = 365;
+  const VALO_JOURS = 730, VALO_AN = 365, VALO_MARGE = 0.10, VALO_MULT = 3.5;
+  const VALO_MARGE_T = '10 %', VALO_MULT_T = '3,5';
+  /** La valeur d'un CA annuel : sa marge nette (10 %), trois fois et demie. */
+  const valoDe = annuel => annuel * VALO_MARGE * VALO_MULT;
+  const VALO_REGLE = 'CA annuel × ' + VALO_MARGE_T + ' de marge nette × ' + VALO_MULT_T;
   /** Les mois rendus par /ventes/mensuel — le mois en cours en est déjà exclu. */
   function valoMois() {
     const d = S.aux['valo|' + S.shop];
@@ -350,7 +355,7 @@
       // plus 730. `creux` dit ce qui manque, pour qui veut la différence.
       n: mois, jours: jours, creux: creux,
       total: total, quotidien: quotidien,
-      annuel: quotidien * VALO_AN, valeur: quotidien * VALO_AN / VALO_DIV,
+      annuel: quotidien * VALO_AN, marge: quotidien * VALO_AN * VALO_MARGE, valeur: valoDe(quotidien * VALO_AN),
       du: fD(iso(deb)) + '/' + iso(deb).slice(0, 4), au: fD(iso(fin)) + '/' + iso(fin).slice(0, 4),
       duMois: premier ? libMois(premier) : '', auMois: libMois(dernier)
     };
@@ -378,7 +383,7 @@
       const quot = jours ? ca / jours : null;
       return { lib: k, n: m.length, ca: ca, jours: jours,
         ouverte: !!(ouv && ouv.slice(0, 4) === k),
-        quotidien: quot, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
+        quotidien: quot, valeur: quot == null ? null : valoDe(quot * VALO_AN) };
     });
   }
   /** La courbe des années : les trous ne sont pas reliés, ils se voient. */
@@ -421,7 +426,7 @@
 
   /* La valeur, trimestre par trimestre (15/11/2026, demande : « au clic, le détail du calcul et un mini graphique
    * linéaire des 6 derniers trimestres ») : la même règle que l'année — le CA du trimestre ramené à ses jours actifs,
-   * puis à l'année (× 365), puis ÷ 6. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
+   * puis à l'année (× 365), puis × 10 % × 3,5. Le trimestre en cours n'a que ses mois clos (le mois en cours est exclu). */
   function valoTrimestres(n) {
     const l = valoMois();
     if (!l) { return null; }
@@ -432,7 +437,7 @@
       let ca = 0, jours = 0;
       par[k].forEach(c => { const A = joursActifs(c.mois, ouv); if (A.n <= 0) { return; } ca += c.ca; jours += A.n; });
       const quot = jours ? ca / jours : null;
-      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: quot == null ? null : quot * VALO_AN / VALO_DIV };
+      return { lib: k.slice(5) + ' ' + k.slice(2, 4), n: par[k].length, ca, jours, valeur: quot == null ? null : valoDe(quot * VALO_AN) };
     });
   }
   /** La petite courbe des trimestres : un trait, un point par trimestre, la valeur du dernier écrite. */
@@ -466,7 +471,8 @@
         ${ligne('÷ jours d’activité', fN(v.jours), v.jours < VALO_JOURS ? 'le magasin n’a pas encore ' + VALO_JOURS + ' jours de ventes' : 'les ' + VALO_JOURS + ' derniers jours, mois en cours exclu')}
         ${ligne('= par jour', fU(v.quotidien))}
         ${ligne('× ' + VALO_AN + ' jours', fE(v.annuel), 'le chiffre d’affaires d’une année à ce rythme')}
-        ${ligne('÷ ' + VALO_DIV, '<b>' + fE(v.valeur) + '</b>', 'deux mois de chiffre d’affaires : la valeur du magasin')}
+        ${ligne('× ' + VALO_MARGE_T, fE(v.marge), 'la marge nette annuelle')}
+        ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'trois fois et demie la marge nette : la valeur du magasin')}
       </div>
       ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}
         ${T.some(o => o.n < 3) ? `<p class="mu">${T.filter(o => o.n < 3).map(o => esc(o.lib) + ' : ' + o.n + ' mois').join(' · ')} — le mois en cours n’est pas compté.</p>` : ''}</div>` : ''}
@@ -481,7 +487,7 @@
     if (!v) return '<span class="db-valoc att">Valeur du magasin…</span>';
     const dr = S.valoOuvert ? '\u25b4' : '\u25be';
     if (!v.n) return `<button class="db-valoc" data-vdrop="1"><span class="k">Valeur</span><span class="v">—</span><span class="dr">${dr}</span></button>`;
-    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}">
+    return `<button class="db-valoc${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="${VALO_REGLE}">
       <span class="k">Valeur</span><span class="v">${fE(v.valeur)}</span><span class="dr">${dr}</span></button>`;
   }
   /* Le tiroir : la formule en toutes lettres, puis les six trimestres. */
@@ -493,7 +499,7 @@
     }
     return `<div class="db-vdl seul">
       <div class="hd"><b>${fE(v.valeur)}</b> — ${fE(v.total)} de chiffre d’affaires sur ${fN(v.jours)} jours,
-        soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année, ÷ ${VALO_DIV} : deux mois de chiffre d’affaires.
+        soit ${fU(v.quotidien)} par jour, ${fE(v.annuel)} sur l’année ; ${VALO_MARGE_T} de marge nette, ${fE(v.marge)}, × ${VALO_MULT_T}.
         La fenêtre va du ${esc(v.du)} au ${esc(v.au)} — ${esc(v.duMois)} à ${esc(v.auMois)}.
         ${v.jours < VALO_JOURS ? '<em class="att">' + fN(v.jours) + ' jours d’activité</em> dans la fenêtre — le diviseur est le nombre de jours vécus, pas ' + VALO_JOURS + ' : il le deviendra quand le magasin les aura.' : ''}</div>
       ${valoTiroir()}
@@ -1313,7 +1319,7 @@
       + `<span class="dots">${R.J.filter(j => j.passe && !j.ferme && j.ca != null && j.objectif).map(j => `<i class="${maJourCA(j)}"></i>`).join('')}</span></div>`;
     h += maGrille([ca]) + maDamier(Object.assign({ sansChiffre: true }, R)) + maGrille(reste);
     const v = valeurMagasin();
-    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? VALO_JOURS + ' jours · ÷ ' + VALO_JOURS + ' × ' + VALO_AN + ' ÷ ' + VALO_DIV : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
+    h += `<div class="mb-mur ma-ext">${murR([murC('Valeur', v && v.n ? fK(v.valeur) : '…', v && v.n ? 'marge nette ' + VALO_MARGE_T + ' × ' + VALO_MULT_T : 'lecture des ventes…', 'or', 'vdrop')], true)}</div>`;
     if (S.valoOuvert) { h += `<div class="mb-tir">${rendValeur()}</div>`; }
     return h;
   }
@@ -6741,7 +6747,7 @@
     return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
       ${navPeriode()}<span style="flex:1"></span>
       <span class="db-avs">${av('data-recharger="1" title="Relire les chiffres de la page"', Object.values(S.enCours).some(Boolean) ? ' lit' : '', RELIRE_ICO, 'Relire', Object.values(S.enCours).some(Boolean) ? 'lecture…' : (S.luA ? 'lu à ' + new Date(S.luA).toTimeString().slice(0, 5).replace(':', ' h ') : 'les chiffres'))}
-      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button></span>
+      <span class="db-vwrap">${valoPanneau()}<button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" aria-expanded="${S.valoOuvert ? 'true' : 'false'}" data-vdrop="1" title="${VALO_REGLE}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button></span>
       ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
       ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
