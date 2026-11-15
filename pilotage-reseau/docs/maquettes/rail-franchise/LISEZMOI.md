@@ -14,7 +14,27 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Le vrai dashboard, avec un rail à côté (`reel.png`) — la demande en cours
+## Le vrai dashboard, avec un rail à côté (`reel.png`) — retenu, codé et déployé le 15/11/2026
+
+**Codé** dans `public/dashboard/dashboard.js` et `dashboard.css` de la branche de déploiement
+(`claude/deploiement-application-serveur-lmz1bm`, commit `ba40ef3`, mis en ligne par `ae68fcb`), sur le dashboard tel qu'il
+est en production (13 onglets : Trésorerie, Fidélité et Mon catalogue compris ; Trimestre n'y est plus). Différences avec
+la maquette :
+
+- le coach est **l'Assistant** du dashboard (`data-iaouvrir`) : « assistant », ou « demande au bureau » quand l'assistant
+  IA n'est pas actif ;
+- le rail : La journée (Opérationnel, Tâches, Temps morts), Les chiffres (Semaine, Mois, Année, Trésorerie), Vendre
+  (Produits, Promotions, Primes, Concurrence, Fidélité, Mon catalogue), Assistants (Plan d'action, Campagne) ; la
+  réclamation fournisseur n'y est pas (elle n'existe qu'au téléphone) ;
+- « Cockpit › Résultat » devient le lien de retour du rail ; le nom du magasin passe au-dessus du titre de la barre ;
+- le rail ne s'affiche qu'à 1 024 px et plus ; en dessous, l'en-tête et les onglets d'avant ; le téléphone ne change
+  pas ; le rail vit hors de `#dash` et garde son défilement d'un rendu à l'autre ; il ne s'imprime pas.
+
+Testé avant la mise en ligne, sur les données du cockpit en lecture seule : Opérationnel, Semaine, Mois, Trésorerie, Mon
+catalogue, Primes, Plan d'action à 1 440 px ; 900 px (l'en-tête d'avant) ; 390 px (le téléphone) ; un clic dans le rail
+défilé, puis un rétrécissement et un élargissement de la fenêtre. Aucune erreur. Mon catalogue montre une erreur qui
+existait déjà : l'adresse du Marketing (`mar_api_url` dans `erp_cles`) n'est pas réglée sur le serveur.
+
 
 Demande du 15/11/2026 : « ne pas changer ce qui était dans le dashboard, je veux juste un rail à côté ». `reel.html`
 charge le **vrai code du dashboard** (`public/dashboard/dashboard.js` et `dashboard.css`, sans une ligne changée) dans
