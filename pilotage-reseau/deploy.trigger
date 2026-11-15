@@ -32,3 +32,4 @@
 2026-11-15 marge des portions au taux de la recette ; barre de défilement 3 px
 2026-11-15T20:09:08Z Entraînement de l'IA : planogramme, photos d'exemple, assistant d'entraînement
 2026-11-15T20:34:34Z Vendre › Analyse : entrée, produit, famille
+2026-11-15T20:37:53Z Analyse : carte du réseau, recherche
