@@ -114,7 +114,7 @@
    * quelques secondes (`_cache`, 06/10/2026) et refait le calcul en arrière-plan. Pas les photos
    * (leurs liens expirent), ni les notes, objectifs, promotions et pro (lus vite, écrits ici).
    */
-  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60 };
+  const CACHE_AUX = { 'pd': 900, 'bm': 900, 'bmTop': 900, 'opSuivi': 90, 'valo': 600, 'notif': 120, 's6': 600, 's12': 600, 'an12': 600, 'stock': 120, 'taches': 120, 'tj': 120, 'record': 600, 'tend': 300, 'tachesP': 600, 'cmd': 120, 'rentab': 600, 'canaux': 300, 'offres': 300, 'inv': 300, 'invd': 120, 'nc': 300, 'fiche': 900, 'pmProd': 600, 'pmCan': 300, 'lev': 900, 'b2bd': 120, 'cmdd': 60, 'cqph': 300 };
   const avecCache = (cle, path) => { const n = CACHE_AUX[String(cle).split('|')[0]]; return n ? path + (path.includes('?') ? '&' : '?') + '_cache=' + n : path; };
   function lireAux(cle, path, force) {
     if ((force || !S.aux[cle]) && !S.enCours[cle]) {
@@ -6364,8 +6364,11 @@
     const meta = ok ? (t.faitLe ? 'faite à ' + quand(t.faitLe) + qui : 'faite' + qui)
       : (sp ? 'cochée sans photo' + (t.faitLe ? ' à ' + quand(t.faitLe) : '') + qui : (S.date === AUJ ? 'pas encore faite' : 'pas faite') + (t.heure ? ' · prévue à ' + esc(t.heure) : ''));
     const com = t.note != null && t.comment && !/^auto/i.test(t.comment) ? `<q>${esc(t.comment)}</q>` : '';
+    // La photo reste à sa place, notée ou non (15/11/2026, « même après notation, laisse la photo ») : une tâche faite ou
+    // notée garde sa case photo pendant que les photos se lisent (elle palpite), puis la photo s'y pose.
+    const lit = !S.aux[cleCQ()] && !S.err[cleCQ()], aPhoto = t.photoRequise || !!t.photo || t.note != null;
     const ph = x && x.ph ? `<button type="button" class="tj-ph" data-cqvoir="${esc(t.taskId)}" title="voir la photo${x.reperes.length ? ' et les remarques du contrôleur' : ''}">${cqPhoto(x, { mini: true, heure: false, badge: false })}${x.reperes.length ? `<em>${x.reperes.length}</em>` : ''}</button>`
-      : (t.photoRequise ? `<span class="tj-ph vide" title="${ok ? 'photo pas encore lue' : 'pas de photo'}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
+      : (aPhoto ? `<span class="tj-ph vide${lit && (ok || t.note != null) ? ' lit' : ''}" title="${lit && (ok || t.note != null) ? 'photo en lecture…' : (ok || t.note != null ? 'photo pas encore lue' : 'pas de photo')}">${TJ_CAM}</span>` : '<span class="tj-ph rien"></span>');
     return `<div class="tj-t${ok ? '' : (sp ? ' sp' : ' non')}"><span class="tj-ok">${ok ? '✓' : (sp ? '!' : '✗')}</span>
       <span class="tj-n">${esc(t.tache)}${t.photoRequise ? ` <span class="tj-cam" title="photo demandée">${TJ_CAM}</span>` : ''}<small>${meta}</small>${com}</span>${ph}<span class="tj-c">${tjCtl(t, niveaux)}</span></div>`;
   }
@@ -8851,7 +8854,8 @@
     const k = cleCQ();
     if (S.enCours[k] || Date.now() - (S.cqTente[k] || 0) < 60000) { return; }
     S.cqTente[k] = Date.now();
-    lireAux(k, cheminCQ(), true);
+    // Des URL neuves : sans le cache partagé (rafraichir), qui les servirait déjà vieilles.
+    lireAux(k, cheminCQ() + '&rafraichir=1', true);
   }
   const cqNom = t => String(t.tache || '').replace(/^Photo du comptoir\s*(?:après-midi\s*)?-\s*/i, 'Comptoir · ').replace(/^Contrôle Qualité\s*[–-]\s*/i, 'CQ · ');
   const cqCl = c => String(c || '').replace(/\.$/, '');

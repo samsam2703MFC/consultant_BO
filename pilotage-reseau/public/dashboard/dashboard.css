@@ -3307,3 +3307,8 @@ body.db-vue-social{overflow:hidden}
 .db-nav--rail .db-avs .k{font-size:9.5px;line-height:1.15;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-nav--rail .db-avs .v{margin-top:1px;font-size:13.5px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .db-nav--rail .db-avs .db-av--api:hover .v{color:var(--accent)}
+
+/* La case photo d'une tâche faite ou notée, pendant que les photos se lisent (15/11/2026) : elle palpite, la photo s'y pose. */
+.tj-ph.vide.lit{animation:tj-lit 1.1s ease-in-out infinite alternate}
+@keyframes tj-lit{from{opacity:.5}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.tj-ph.vide.lit{animation:none}}
