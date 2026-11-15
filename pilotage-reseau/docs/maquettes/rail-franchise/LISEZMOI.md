@@ -14,7 +14,17 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Vendre › Offres, et la boîte mail qui vend (`offres.png`, `offre-edition.png`, `offre-a4.png`, `mail.png`, `mail-offre.png`) — maquette, à valider
+## Vendre › Offres, et la boîte mail qui vend (`offres.png`, `offre-edition.png`, `offre-a4.png`, `mail.png`, `mail-offre.png`) — Offres en ligne le 15/11/2026 ; la boîte mail reste une maquette
+
+**En ligne (15/11/2026, branche de déploiement)** : `public/dashboard/offres.js` et `offres.css`, `src/offres_client.php`
+(routes `/exploitation/offres-client`, `…/employes`, `…/pdf`), `ErpApi::brut`. Vérifié en production : la liste de
+Halle se lit (12 offres, toutes converties), le PDF de TF Buddy sort (76 Ko), une offre d'un autre magasin répond 404.
+La boîte mail n'est pas codée : le cockpit ne lit pas encore de boîte (IMAP et accès par magasin à prévoir).
+Le même jour : la vignette « Valeur du magasin » ouvre le calcul pas à pas et la courbe des six derniers trimestres ;
+la règle devient (marge brute réelle − charges normatives du réseau) × 3,5 — marge brute au food cost mesuré mois par
+mois, charges aux seuils du réseau (main-d'œuvre 33 %, frais généraux 13,5 %, redevances 3 %, financières 2,2 %) ;
+Halle : 225 391 €. « Relire » prend le format des autres vignettes.
+
 
 Demandes du 15/11/2026 : « rajouter dans Vendre : Offres — Client offers [les sept routes ci-dessous], avec le gabarit
 fait précédemment » ; « dans le mail, le bouton assistant Créer une offre (corriger le mail), toutes les possibilités
