@@ -12,3 +12,4 @@
 2026-11-15T13:17:50Z Dashboard : vignettes de même hauteur, Demande au bureau
 2026-11-15T13:29:25Z Dashboard franchisé : Vendre › Offres (TF Buddy), détail de la valeur, Relire en vignette
 2026-11-15T13:33:15Z Dashboard franchisé : valeur du magasin = marge nette 10 % × 3,5
+2026-11-15T13:40:40Z Dashboard franchisé : valeur = (marge brute réelle − charges normatives) × 3,5
