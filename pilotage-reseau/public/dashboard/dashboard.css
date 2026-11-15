@@ -3151,3 +3151,5 @@ tr.moi td{background:rgba(141,29,44,.05)}
   .ia-b{flex:1;min-height:0;overflow:auto;padding:12px 14px 18px}
   .hd-qui{gap:10px}.hd-av,.hd-av img{width:44px;height:44px}
 }
+/* Le bouton « Demande au bureau » de l'entête (15/11/2026) : à côté de l'assistant, toujours visible. */
+.db-btn.hd-btn{border-color:var(--color-primary);color:var(--color-primary)}.db-btn.hd-btn .hd-b{margin-left:4px}
