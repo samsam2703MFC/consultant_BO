@@ -27,9 +27,9 @@ function envoyerPanel(app, corps){
 const apiBase = app => (typeof app.apiBase === 'function' ? app.apiBase() : 'api/cockpit');
 /** Les trois routes de prix du panel (swagger), et leurs champs de départ. {sid} {mid} {prix} {fid} {date} se remplacent à l'envoi. */
 const PRESETS = [
-  { id: 'manual', nom: 'Prix du magasin (manual-price)', methode: 'POST', route: '/materials/{mid}/manual-price', champs: [['id_shop', '{sid}'], ['price', '{prix}']] },
-  { id: 'avg', nom: 'Prix moyen du magasin (avg-price)', methode: 'PATCH', route: '/shops/{sid}/materials/avg-price', champs: [['id_material', '{mid}'], ['avg_price', '{prix}']] },
-  { id: 'fourn', nom: 'Prix chez le fournisseur', methode: 'POST', route: '/shops/{sid}/suppliers/{fid}/materials/price', champs: [['id_material', '{mid}'], ['price', '{prix}'], ['valid_from', '{date}']] },
+  // Les contrats du swagger test.tfbuddy.com (lus le 15/11/2026).
+  { id: 'manual', nom: 'Prix manuel (manual-price)', methode: 'POST', route: '/materials/{mid}/manual-price', champs: [['shop_ids', '{shops}'], ['pack_price', '{prix}'], ['package_size', '1']] },
+  { id: 'avg', nom: 'Recalculer le prix moyen (avg-price)', methode: 'PATCH', route: '/shops/{sid}/materials/avg-price', champs: [] },
 ];
 
 /** Le prix de référence d'une matière : la liste en vigueur (du fournisseur choisi), sinon le prix général du panel. */
@@ -121,7 +121,7 @@ function valsForm(app){
   const format = { methode: F.methode, route: F.route, corps };
   // L'aperçu local : le premier magasin coché, placeholders remplacés (le serveur refait le même calcul).
   const s0 = shops[0];
-  const sub = v => v === '{prix}' ? prixBase : (v === '{sid}' ? s0 : (v === '{mid}' ? F.mid : (v === '{fid}' ? F.fid : (v === '{date}' ? new Date().toISOString().slice(0, 10) : (v !== '' && !isNaN(Number(v)) && !/^0\d/.test(v) ? Number(v) : v)))));
+  const sub = v => v === '{prix}' ? prixBase : (v === '{shops}' ? [s0] : v === '{sid}' ? s0 : (v === '{mid}' ? F.mid : (v === '{fid}' ? F.fid : (v === '{date}' ? new Date().toISOString().slice(0, 10) : (v !== '' && !isNaN(Number(v)) && !/^0\d/.test(v) ? Number(v) : v)))));
   const local = {}; Object.keys(corps).forEach(k => { local[k] = sub(corps[k]); });
   const routeLocale = F.route.replace('{sid}', s0 == null ? '{sid}' : s0).replace('{mid}', F.mid).replace('{fid}', F.fid || '{fid}');
   const corpsEnvoi = Object.assign({ geste: 'prix', mid: F.mid, prix: prixBase, shops, fid: F.fid, matiere: F.nom, format, garder: !!F.garder }, app.state.vtCompteAdmin && !admin() ? { compte: 'admin' } : {});
