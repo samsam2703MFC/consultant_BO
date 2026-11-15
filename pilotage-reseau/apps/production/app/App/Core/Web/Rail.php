@@ -19,7 +19,11 @@ final class Rail
      * licznik (data-count : /ajax/rail-counters) albo null]. Zakładki pozycji : PageTabs::GROUPS[klucz].
      */
     public const ITEMS = [
-        'today' => ['Dzisiaj', 'bi-sun', '', '/today', ['/my-tasks', '/my-card'], null],
+        // [281] Kontrola (profil CEO) : administrator i konta CEO.
+        'control' => ['Kontrola', 'bi-binoculars', '', '/control', [], null],
+        // [286] Dzisiaj i zadania (jedna pozycja) : Dzisiaj (Mój tydzień) i Moje zadania w zakładkach — w railu każdego profilu.
+        // [290] Dzisiaj i zadania : jedna strona (makieta 51) — /my-tasks przenosi na /today#zadania.
+        'today' => ['Dzisiaj i zadania', 'bi-sun', '', '/today', ['/my-tasks', '/my-card', '/tasks'], null],
         'mail' => ['Poczta', 'bi-envelope', '', '/mail', [], 'mail'],
         'team_tasks' => ['Zadania zespołu', 'bi-people', '', '/organization/team-tasks', [], null],
         'profitability' => ['Rentowność', 'bi-graph-up', 'Analiza', '/dashboard', [], null],
@@ -30,6 +34,7 @@ final class Rail
         'team' => ['Zespół', 'bi-person-badge', 'Produkcja', '/production-employees', ['/staff'], null],
         // [262] Czas pracy (moduł Pointages) : dzień do zatwierdzenia, miesiąc, urlopy, nadgodziny ; licznik = dni do zatwierdzenia.
         'time' => ['Czas pracy', 'bi-clock-history', 'Produkcja', '/time', [], 'time'],
+        'hr' => ['HR', 'bi-person-vcard', 'Produkcja', '/hr', [], null],
         'tablets' => ['Tablety', 'bi-tablet', 'Produkcja', '/workshop/execution', ['/workshop/timesheet'], null],
         'purchasing' => ['Zakupy', 'bi-cart3', 'Zakupy', '/workshop/buy', ['/settings/ksef/purchase-invoices', '/purchases'], null],
         'materials' => ['Surowce i ceny', 'bi-basket', 'Zakupy', '/purchasing', ['/material-categories', '/materials'], null],
@@ -50,8 +55,13 @@ final class Rail
         // [256] Płace i premie (tylko administrator) : budżet personelu, premie zespołów i moduł kierownika produkcji
         // (karta, cele, raport, premia, rozmowa, audyt) — przeniesione z Produkcja › Zespół : płace i premie ustala administrator.
         'bonuses' => ['Płace i premie', 'bi-wallet2', 'Administracja', '/staff/team-bonus', [], null],
+        // [277] Lista płac : administrator i Administracja i fakturowanie (finanse).
+        'payroll' => ['Lista płac', 'bi-calculator', 'Administracja', '/payroll', [], null],
         'activity' => ['Aktywność', 'bi-activity', 'Administracja', '/organization/activity', [], null],
     ];
+
+    /** [283] Pozycje zawsze w menu (każdy profil, także stanowisko z własnym menu). */
+    public const ALWAYS = ['today'];
 
     /** Grupy zakładek bez własnej pozycji w railu : należą do pozycji (podświetlenie, wyszukiwarka). */
     public const GROUP_PARENT = ['communication' => 'settings', 'templates' => 'settings', 'production_settings' => 'settings'];
@@ -133,7 +143,7 @@ final class Rail
         $sections = [];
         foreach (self::SECTIONS as $s) $sections[$s] = ['title' => $s, 'items' => []];
         foreach (self::ITEMS as $key => [$label, $icon, $section, $path, , $count]) {
-            if ($only !== null && !array_key_exists($key, $only)) continue;
+            if ($only !== null && !array_key_exists($key, $only) && !in_array($key, self::ALWAYS, true)) continue;
             $href = $only[$key] ?? $path;
             $sections[$section]['items'][] = ['key' => $key, 'label' => $label, 'icon' => $icon, 'href' => $href,
                 'also' => array_values(array_diff(self::paths($key), [$href])), 'count' => $count];

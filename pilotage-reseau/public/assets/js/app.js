@@ -10,8 +10,11 @@ import { valsFF, valsCQM } from './franchises-vals.js';
 import { valsSvTableau, valsSvTablette, valsSvMsp, valsSvFranchise, valsSvAdmin, valsSvSources } from './suivi-vals.js';
 import { valsClientsAnnee } from './clients-annee-vals.js';
 import { valsFidelite } from './fidelite-vals.js';
+import { valsAssistantCoachs } from './assistant-coachs-vals.js';
 import { valsVerification } from './verification-vals.js';
 import { valsParamProduits } from './produit-parametrage-vals.js';
+import { valsHelpdesk, nbDemandesOuvertes } from './helpdesk-vals.js';
+import { valsBenchmark } from './benchmark-vals.js';
 import { valsVerifFlux, valsVerifFuites } from './verification-flux-vals.js';
 import { valsVerifEvol } from './verification-evol-vals.js';
 import { valsVerifMatieres } from './verification-matieres-vals.js';
@@ -360,11 +363,17 @@ class App {
       resultatJour: 'resultat',
       // Le cadre des tâches du panel (07/11/2026) : la page task/ dans l'écran, « ?checklist=43 ».
       cadreTaches: 'checklists',
+      // L'audit des fournisseurs (12/11/2026) : la page audits/ dans l'écran (formulaire, campagnes, résultats, copies).
+      audits: 'audits',
       magasins: 'magasins', objectifs: 'objectifs', marge: 'marge',
       reputation: 'reputation', visibilite: 'visibilite', budget: 'budget', encodage: 'budget/encodage',
       budgetparam: 'budget/parametres', catalogue: 'catalogue', assortiment: 'assortiment', structure: 'structure-gamme',
       // Produits › Paramétrage (14/11/2026) : la fiche d'un produit, tous ses champs, ses gammes, ses prix, ses liaisons.
       paramProduits: 'produits/parametrage',
+      // Le helpdesk des franchisés (15/11/2026) : les demandes au bureau, reprises en mission de visite.
+      demandesFranchises: 'franchises/demandes',
+      // Benchmark (14/11/2026) : importer un concurrent (PDF ou internet par l'IA), le classer par code postal.
+      benchmark: 'benchmark',
       planogramme: 'planogramme', analyse: 'analyse',
       anaprod: 'catalogue/analyse', prixvolume: 'catalogue/prix',
       manque: 'catalogue/manque',
@@ -388,6 +397,8 @@ class App {
       tablette: 'tablette',
       // La fidélité du client (24/10/2026) : le programme et l'analyse des clients.
       fidelite: 'fidelity',
+      // Les coachs de l'assistant du dashboard magasin (12/11/2026).
+      assistantCoachs: 'assistant',
       // Les primes de l'app worker (16/10/2026) : la page admin, et celle d'un magasin avec « ?shop=4 ».
       primesApp: 'primes',
       // L'API du module (24/10/2026) : « #/api », et une source avec « ?source=panel ».
@@ -1136,6 +1147,8 @@ class App {
       analyse: ['Analyse dans le temps', 'Trois niveaux : le groupe, la catégorie, la référence. Seuls les groupes sont ventil\u00e9s en chiffre d\u2019affaires et détaillables magasin par magasin ; en dessous l\u2019API ne rend qu\u2019un volume réseau. Chaque point est comparé à la même étendue un an plus tôt.'],
       catalogue: ['Catalogue', 'Quatre questions, une liste, une fiche : ce qu’il faut retirer de la gamme, où l’on vend moins que le réseau, si les prix sont tenus, ce qui décroche. Un clic sur une référence ouvre sa fiche.'],
       assortiment: ['Assortiment obligatoire', 'Les références qu\u2019une boutique doit proposer en permanence, et la quantité minimale à tenir. Cochez une référence pour l\u2019imposer au réseau.'],
+      benchmark: ['Benchmark concurrents', 'Les prix d’un concurrent, lus dans son PDF ou cherchés sur internet par l’IA, rapprochés de nos produits et encodés dans le benchmark de TFBuddy ; chaque concurrent rangé sur le magasin et le franchisé que son code postal désigne.'],
+      demandesFranchises: ['Demandes des franchisés', 'Le helpdesk du panel : les demandes que les franchisés adressent au bureau. Les lire, les attribuer, y répondre — le franchisé lit la réponse dans son dashboard — et les reprendre en mission d’une visite du magasin, à contrôler sur place.'],
       paramProduits: ['Paramétrage des produits', 'Tout ce que le panel tient d’un produit, sur une page : ses champs, ses saisons et gammes, son prix dans chaque magasin, et les liaisons de l’API qui le touchent. Chaque changement se vérifie, s’écrit au panel avec le compte consultant, se relit et se note au registre.'],
       structure: ['Structure de gamme', 'Par catégorie, sur les ventes réseau de douze mois : le standard (80 % du CA, 6 au plus), les quatre saisons et trois périodes (4 au plus), et ce qui sort — moins de 3 % de sa catégorie. Ce qui est retenu devient l’assortiment obligatoire.'],
       promoTableau: ['Tableau d’analyse', 'Quelle promotion est utilisée dans quel magasin, et ce qu’elle pèse dans le CA du magasin et dans le CA général — lues au panel et dans les tickets.'],
@@ -1144,8 +1157,10 @@ class App {
       pointages: ['Pointages', 'Les arrivées et les départs que les vendeuses pointent dans l’app, en scannant le QR code de la borne du magasin, face à leur planning. Les départs oubliés, déclarés par la vendeuse, se valident ici ; la borne s’ouvre sur la tablette du magasin avec son lien.'],
       primesApp: ['Primes de l’app worker', 'Ce que gagnent les vendeuses dans l’app : les primes de la marque et des sponsors, visibles de chaque franchisé, et les primes que chaque franchisé pose pour son magasin. Les promotions du panel, et les moyennes par magasin pour régler les seuils.'],
       fidelite: ['Fidélité', 'Les points, les cartes à tampons, les bons et les cadeaux du client : ce qui les déclenche, quand les points comptent double, ce que le programme coûte. Et ce que les clients en font : qui revient, à quel rythme, pour quel type d’achat.'],
+      assistantCoachs: ['Assistant · coachs', 'Les deux coachs de l’assistant du dashboard magasin, Pierre et le Coach : leur ton, ce sur quoi chacun met l’accent et ce qu’il vérifie — budget, trafic, contrôles qualité. Et les questions que les franchisés leur posent.'],
       // Sans phrase d'introduction : l'écran est un outil, toute la hauteur lui revient (07/11/2026).
       cadreTaches: ['Cadre des tâches', ''],
+      audits: ['Audit fournisseurs', ''],
       tablette: ['Tablette vendeuses', 'Le book des vendeuses tel qu\u2019il tourne en magasin : gamme, photos, prix, saisons. La vue de test en ligne, le lien de chaque magasin et l\u2019état des données que le BO lui envoie.'],
       resultatJour: ['Résultat', 'La journée, la semaine et le mois — puis l’année, les horizons à 3 et 5 ans et la marge. Où en est-on, et comment évolue-t-on.'],
       reputation: ['Réputation digitale', 'Ce que Google dit de chaque magasin : note, nombre d\u2019avis, les cinq derniers reçus, et le nombre d\u2019avis 5 étoiles qu\u2019il faudrait pour revenir à la cible.'],
@@ -1358,9 +1373,15 @@ class App {
         // La page la plus regardée du réseau n'avait pas d'entrée : on
         // l'atteignait par son adresse. Elle vit hors du cockpit, d'où l'onglet.
         ['ext:dashboard/', 'Dashboard magasin ↗', 0],
+        // Benchmark (14/11/2026, Sam : « dans le rail Benchmark ») : importer les prix d'un concurrent (PDF ou internet
+        // par l'IA), les rapprocher de nos produits, classer chaque concurrent sur son magasin et son franchisé par code postal.
+        ['benchmark', 'Benchmark', 0],
         // Le cadre des tâches du panel (07/11/2026, demande de Sam : « intégrer dans le rail du cockpit,
         // Pilotage ») : la page task/ dans l'écran du cockpit, en mode intégré.
         ['cadreTaches', 'Cadre des tâches', 0],
+        // L'audit des fournisseurs et prestataires (12/11/2026, Sam : « dans le cockpit consultant, Pilotage ») :
+        // les franchisés notent chaque fournisseur référencé ; résultats et copie au fournisseur.
+        ['audits', 'Audit fournisseurs', 0],
         // Ouvertures, fermetures et reports de caisse, par magasin et par
         // semaine (TFBuddy : daily-shifts et export comptable). Page à part.
         ['ext:caisse/', 'Caisse ↗', 0]]],
@@ -1371,6 +1392,7 @@ class App {
       // la fiche, et le classement du réseau en est un onglet — une seule entrée.
       // Libellé du rail sur une ligne (design system §8.1).
       ['Franchisés', [
+        ['demandesFranchises', 'Demandes des franchisés', nbDemandesOuvertes(this)],
         ['ficheFranchise', 'Fiche & scoring', 0, ['scoringTri']],
         // Suivi des franchisés (24/10/2026) : le contrôle sur le terrain par tablette, réuni — le tableau
         // de bord du bureau (préparer, adapter et envoyer les rapports, valider les corrections), l'application
@@ -1462,7 +1484,9 @@ class App {
         // donne ses liens, un aperçu et l'état des données que le BO lui sert.
         ['tablette', 'Tablette vendeuses', 0],
         // La fidélité du client (24/10/2026, maquettes docs/maquettes/fidelite : le Programme de C, les Clients de B).
-        ['fidelite', 'Fidélité', 0]]],
+        ['fidelite', 'Fidélité', 0],
+        // L'assistant du dashboard magasin (12/11/2026) : les deux coachs (ton, accents, vérifications) et les questions posées.
+        ['assistantCoachs', 'Assistant · coachs', 0]]],
       // L'application employé (23/10/2026, Sam) : le rail est le bac à sable du dev, qui prend d'ici les trois
       // pièces pour les intégrer à l'ERP — la page admin (les primes de la marque et des sponsors, les promotions,
       // les moyennes), la page du franchisé (les primes qu'il pose pour son magasin) et l'application elle-même
@@ -1527,12 +1551,12 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isVisib', 'isStruct', 'isParamProd'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
-      assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', planogramme: 'isPlano', fonds: 'isFonds',
+      assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
-      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', visibilite: 'isVisib' }[S.screen];
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
     if (key) { common[key] = true; }
@@ -1945,6 +1969,7 @@ class App {
     if (common.isBudgetParam) { this.pjCharge(false); this.valsPonderation(common); }
     if (common.isTablette) { this.tbCharge(false); this.tbSonde(false); this.valsTablette(common); }
     if (common.isCadreT) { this.valsCadreTaches(common); } else { this._ctSrc = null; }
+    if (common.isAudits) { this.valsAudits(common); }
     if (common.isMktObj) this.valsMktObj(common);
     if (common.isScoringTri) this.valsScoring(common);
     // Le client mystère s'encode ici, dans Paramètres (16/10/2026) : le formulaire de l'ancien écran Scoring.
@@ -1955,6 +1980,7 @@ class App {
     if (common.isApiModule) { this.valsApiModule(common); }
     if (common.isPointages) { this.valsPointages(common); }
     if (common.isFid) { valsFidelite(this, common); }
+    if (common.isAsc) { valsAssistantCoachs(this, common); }
     if (common.isPromoTab) { valsPromoTableau(this, common); }
     if (common.isPromoEd) { valsPromoEdition(this, common); }
     if (common.isCrois) { this.croisCharge(); this.valsCrois(common); }
@@ -1972,6 +1998,8 @@ class App {
     // Recettes à corriger : une surface de travail, toute la largeur de l'écran (14/11/2026, « utiliser toute la largeur »).
     if (common.isVerifR) { valsVerification(this, common); common.large = true; }
     if (common.isParamProd) { valsParamProduits(this, common); common.large = true; }
+    if (common.isHelpdesk) { valsHelpdesk(this, common); common.large = true; }
+    if (common.isBench) { valsBenchmark(this, common); common.large = true; }
     if (common.isVerifFlux) { valsVerifFlux(this, common); }
     if (common.isVerifFuites) { valsVerifFuites(this, common); }
     if (common.isVerifEvol) { valsVerifEvol(this, common); }
@@ -9314,6 +9342,24 @@ class App {
     // use the whole screen ») — la classe app__body--wide du design system.
     common.large = true;
   }
+  /**
+   * L'audit des fournisseurs (12/11/2026) : la page audits/ en mode intégré (?embed=1), comme le cadre des tâches.
+   * La source ne change pas d'un rendu à l'autre (la saisie de la page ne se perd pas) ; la page dit sa hauteur
+   * (postMessage auHauteur) et le cadre la prend : une seule barre de défilement, celle du cockpit.
+   */
+  valsAudits(common){
+    if (!this._auEcoute) {
+      this._auEcoute = true;
+      window.addEventListener('message', ev => {
+        if (ev.origin !== location.origin || !ev.data || typeof ev.data.auHauteur !== 'number' || this.state.screen !== 'audits') { return; }
+        this._auHaut = Math.max(480, Math.min(30000, Math.round(ev.data.auHauteur)));
+        const cadre = document.querySelector('iframe[data-au]');
+        if (cadre) { cadre.style.height = this._auHaut + 'px'; }
+      });
+    }
+    common.au = { src: 'audits/?embed=1', haut: this._auHaut || 900 };
+    common.large = true;
+  }
   valsTablette(common){
     const S = this.state;
     const ms = this.open();
@@ -14621,9 +14667,28 @@ class App {
           this.setState({ caNet: Object.assign({}, c1, { envoi: false, msg: r.ok ? { ok: true, txt: 'Envoyé à ' + r.a + ' : « ' + r.sujet + ' ».' } : { ok: false, txt: 'Pas envoyé : ' + (r.error || 'HTTP ' + r.status) } }) });
         });
       } };
+    // L'interrupteur général (14/11/2026, Sam : « inactive tous les rapports ») : suspendus, aucun rapport ne part de
+    // l'horloge ; chaque ligne garde sa case « actif », la reprise remet tout comme avant.
+    const susp = (rd && rd.suspension) || null;
     common.rapGen = {
       chargement: !rz || rz.chargement,
       cronUrl: (rd && rd.cronUrl) || '',
+      suspension: susp ? {
+        suspendu: !!susp.suspendu,
+        txt: susp.suspendu
+          ? 'Envois automatiques suspendus' + (susp.depuis ? ' depuis le ' + dateRun(susp.depuis) : '') + ' — aucun rapport ne part, ni aux magasins ni au réseau. Chaque rapport garde son réglage ; les envois à la main restent possibles.'
+          : 'Envois automatiques en marche : chaque rapport actif part à son heure.',
+        bouton: susp.suspendu ? 'Reprendre les envois' : 'Tout suspendre',
+        occupe: !!S.rapSuspOccupe,
+        basculer: () => {
+          if (this.state.rapSuspOccupe) { return; }
+          this.setState({ rapSuspOccupe: true });
+          this.api('POST', '/rapports/suspension', { suspendu: !susp.suspendu }).then(r => {
+            this.setState({ rapSuspOccupe: false });
+            this.notify(r && r.ok ? (susp.suspendu ? 'Envois repris' : 'Tous les rapports sont suspendus') : 'Pas enregistré : ' + ((r && r.error) || 'erreur'));
+            this.rapCharge(true);
+          });
+        } } : null,
       indispo: rz && !rz.chargement && !rd ? 'La lecture de /rapports a échoué — voir Diagnostic API.' : '',
       lignes: ((rd && rd.rapports) || []).map(r => {
         const defs = (rd && rd.blocs) || {}, levs = (rd && rd.leviers) || {};

@@ -22,6 +22,7 @@ require __DIR__ . '/../../src/installer.php';
 require __DIR__ . '/../../src/marketing_tables.php';
 require __DIR__ . '/../../src/con_tables.php';
 require __DIR__ . '/../../src/auth.php';
+require __DIR__ . '/../../src/acces.php';   // L'accès : les comptes de la console franchisé (13/11/2026)
 require __DIR__ . '/../../src/panel_api.php';
 require __DIR__ . '/../../src/erp_api.php';
 require __DIR__ . '/../../src/anthropic.php';
@@ -30,6 +31,9 @@ require __DIR__ . '/../../src/scouting_osm.php';
 require __DIR__ . '/../../src/newsletter.php';
 require __DIR__ . '/../../src/newsletter_envoi.php';
 require __DIR__ . '/../../src/fidelite.php';
+require __DIR__ . '/../../src/fidelite_profils.php';   // Fidélité › Profils clients (12/11/2026)
+require __DIR__ . '/../../src/assistant_magasin.php';   // L'assistant du dashboard magasin (12/11/2026)
+require __DIR__ . '/../../src/fidelite_cartes.php';     // Les cartes de fidélité, lues dans l'ERP (13/11/2026)
 require __DIR__ . '/../../src/prospection.php';
 require __DIR__ . '/../../src/visites_questions.php';
 require __DIR__ . '/../../src/visites.php';
@@ -38,6 +42,7 @@ require __DIR__ . '/../../src/visites_conformite.php';
 require __DIR__ . '/../../src/visites_cadre.php';
 require __DIR__ . '/../../src/franchises.php';
 require __DIR__ . '/../../src/suivi.php';
+require __DIR__ . '/../../src/audits.php';          // Pilotage › Audit fournisseurs (12/11/2026)
 require __DIR__ . '/../../src/suivi_sources.php';
 require __DIR__ . '/../../src/smtp.php';
 require __DIR__ . '/../../src/ponderation.php';
@@ -47,14 +52,17 @@ require __DIR__ . '/../../src/resultat_pdf.php';
 require __DIR__ . '/../../src/plan.php';
 require __DIR__ . '/../../src/plan_pdf.php';
 require __DIR__ . '/../../src/stats_ventes.php';
+require __DIR__ . '/../../src/historique_ventes.php';   // L'historique des ventes, 18 mois, pour l'assistant (14/11/2026)
 require __DIR__ . '/../../src/promos_ventes.php';
 require __DIR__ . '/../../src/ventes_semaines.php';
+require __DIR__ . '/../../src/tresorerie.php';            // Dashboard magasin › Trésorerie : le plan semaine par semaine (14/11/2026)
 require __DIR__ . '/../../src/inventaires.php';
 require __DIR__ . '/../../src/verification.php';
 require __DIR__ . '/../../src/verification_correction.php';   // Recettes à corriger : corriger d'ici (13/11/2026)
 require __DIR__ . '/../../src/verification_matieres_prix.php';   // Recettes à corriger › Matières premières (14/11/2026)
 require __DIR__ . '/../../src/verification_matiere_edition.php';   // … › la fiche d'une matière, modifiable (14/11/2026)
 require __DIR__ . '/../../src/produit_parametrage.php';         // Produits › Paramétrage : la fiche d'un produit, modifiable (14/11/2026)
+require __DIR__ . '/../../src/helpdesk.php';                  // Le helpdesk des franchisés : demandes, missions de visite (15/11/2026)
 require __DIR__ . '/../../src/verification_flux.php';
 require __DIR__ . '/../../src/verification_base.php';
 require __DIR__ . '/../../src/verification_matieres.php';
@@ -136,10 +144,12 @@ require __DIR__ . '/../../src/tablettes.php';
 require __DIR__ . '/../../src/referentiel_guides.php';
 require __DIR__ . '/../../src/formation_postes.php';
 require __DIR__ . '/../../src/benchmark.php';
+require __DIR__ . '/../../src/benchmark_import.php';   // Benchmark : import PDF ou internet (IA), classement par code postal (14/11/2026)
 require __DIR__ . '/../../src/visibilite_google.php';   // Visibilité Google : fiches et rang local (09/11/2026)
 require __DIR__ . '/../../src/task_cadre.php';
 require __DIR__ . '/../../src/checklists_codes.php';   // la nomenclature des checklists (08/11/2026)
 require __DIR__ . '/../../src/revue_soir.php';         // la revue du soir : réglage et sondes (08/11/2026)
+require __DIR__ . '/../../src/catalogues_magasin.php'; // Mon catalogue du dashboard magasin, relayé au Marketing (14/11/2026)
 $tCharge = microtime(true);
 
 header('Content-Type: application/json; charset=utf-8');
@@ -160,20 +170,20 @@ try {
     // L'aperçu du courrier fournisseur sort en HTML : il s'affiche dans un
     // cadre, il ne se lit pas en JSON.
     if ($method === 'GET' && preg_match('#^/benchmarks/(cougnou|galette)/rapport\.html$#', $path, $m)) {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         header('Content-Type: text/html; charset=utf-8');
         echo benchmarkHtml([benchmarkRapport($m[1], ($_GET['web'] ?? '1') !== '0')]);
         exit;
     }
     if ($method === 'GET' && $path === '/centrale/commandes/mail/apercu') {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         header('Content-Type: text/html; charset=utf-8');
         echo ep_ca_mail_apercu();
         exit;
     }                      // tables + seed + secret au premier appel
     // Un document d'un franchisé (22/10/2026) sort tel quel (PDF, image, Word…), pas en JSON.
     if ($method === 'GET' && $path === '/franchises/documents/fichier') {
-        if (authEnabled() && !authOk()) { http_response_code(401); exit; }
+        if (($r = accesRefus($method, $path)) !== null) { http_response_code($r[0]); exit; }
         ep_franchises_document_fichier();   // sort le fichier, puis exit
     }
     // Le suivi des newsletters (pixel d'ouverture, clic, désinscription) est
@@ -275,6 +285,13 @@ try {
         exit;
     }
 
+    // L'audit des fournisseurs (audit/) : le franchisé répond par son lien personnel, sans session (src/audits.php).
+    if (str_starts_with($path, '/audits/public') && ($pub = auRoutePublique($method, $path)) !== null) {
+        tempsServeur($tCharge, $tInstall);
+        echo json_encode($pub, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+
     // La tablette du poste (Formation › Standards, SOP) : ouverte sans session cockpit — chaque écriture porte
     // le PIN d'un employé, vérifié au panel, ou un jeton signé (src/sop.php). Depuis le lot 5 (06/11/2026), le PIN
     // du MAGASIN ouvre d'abord l'appareil (src/tablettes.php : état, ouvrir, fermer) ; les autres routes l'exigent.
@@ -287,16 +304,17 @@ try {
         }
     }
 
-    $out = authRoute($method, $path);       // /auth/* : toujours accessibles
+    $out = authRoute($method, $path) ?? accesRoute($method, $path);   // /auth/* et /acces/* : toujours accessibles
     if ($out === null) {
         // Les autres portails lisent quelques routes avec le jeton de service d'erp_cles (X-Service-Token).
         $service = erpRouteIntegration($method, $path) && erpJetonServiceOk();
-        if (authEnabled() && !authOk() && !$service) {   // session exigée seulement si l'auth intégrée est activée
-            http_response_code(401);
-            $out = ['error' => 'auth', 'setup' => authIsSetup()];
+        // La session de la console franchisé (src/acces.php) : le siège ouvre tout, un franchisé ses magasins.
+        if (($refus = accesRefus($method, $path, $service)) !== null) {
+            http_response_code($refus[0]);
+            $out = $refus[1];
         } else {
             // L'adresse https par nom de domaine de cette API, publiée pour les autres portails (pil_api_url).
-            if (!authEnabled() || authOk()) { erpPublierAdresse(); }
+            if (!$service) { erpPublierAdresse(); }
             $out = routeGardee($method, $path);
         }
     }
@@ -351,10 +369,14 @@ function routeGardee(string $method, string $path): mixed
 
 function route(string $method, string $path): mixed
 {
+    // Dashboard › Mon catalogue : relayé à l'API d'intégration du Marketing (src/catalogues_magasin.php).
+    if (($c = cmRoute($method, $path)) !== null) { return $c; }
     // L'écran à part /task : le cadre des tâches du panel (lire, assistant, dupliquer, modifier).
     if (str_starts_with($path, '/task/')) { return tkRoute($method, $path); }
     // La revue du soir : le réglage édité au cockpit (Checklists › Revue du soir) et ses sondes.
     if (str_starts_with($path, '/soir/')) { return rsRoute($method, $path); }
+    // Pilotage › Audit fournisseurs : le formulaire, les campagnes, les résultats, les copies (src/audits.php).
+    if (str_starts_with($path, '/audits/')) { return auRoute($method, $path); }
     // --- Formation › Standards (SOP) : src/sop.php
     if (str_starts_with($path, '/formation/sop/')) {
         $f = sopRoute($method, $path);
@@ -475,6 +497,10 @@ function route(string $method, string $path): mixed
             $path === '/benchmarks/cron'               => ep_benchmark_cron(),
             $path === '/benchmarks/verification'       => ep_benchmark_verification(),
             $path === '/benchmarks/magasin'            => ep_benchmark_magasin(),
+            // Benchmark (rail) : les relevés importés, leurs zones, le classement par code postal (14/11/2026).
+            $path === '/benchmarks/import'             => ep_bench_import(),
+            (bool) preg_match('#^/benchmarks/import/(\d+)$#', $path, $mbi) => ep_bench_import_fiche((int) $mbi[1]),
+            $path === '/benchmarks/classement'         => ep_bench_classement(),
             (bool) preg_match('#^/benchmarks/(cougnou|galette)/rapport$#', $path, $mb) => ep_benchmark_rapport($mb[1]),
             preg_match('#^/rapports/run/(\d+)$#', $path, $m) === 1 => ep_rapport_run((int) $m[1]),
             preg_match('#^/rapports/run/(\d+)/pdf$#', $path, $m) === 1 => ep_rapport_run_pdf((int) $m[1]),
@@ -587,13 +613,19 @@ function route(string $method, string $path): mixed
             $path === '/push/cle'                    => ep_push_cle(),
             $path === '/ventes/stats'                 => ep_stats_ventes(),
             $path === '/ventes/stats/reseau'          => ep_stats_ventes_reseau(),
+            $path === '/historique/ventes'            => ep_historique_etat(),
             $path === '/ventes/periodes'              => ep_ventes_periodes(),
             $path === '/ventes/semaines'              => ep_ventes_semaines(),
+            $path === '/tresorerie/references'        => ep_tresorerie_references(),
+            $path === '/tresorerie/plan'              => ep_tresorerie_plan(),
+            $path === '/tresorerie/budget'            => ep_tresorerie_budget(),
             $path === '/stock/inventaires/sonde'      => ep_stock_inventaires_sonde(),
             $path === '/stock/inventaires'            => ep_stock_inventaires(),
             // Vérification, lot 1 (31/10/2026) : les recettes douteuses ou manquantes.
             $path === '/verification/recettes'        => ep_verification_recettes(),
             $path === '/verification/recettes/sonde'  => ep_verification_sonde(),
+            $path === '/verification/recettes/sonde-prix' => ep_verification_sonde_prix(),
+            $path === '/verification/recettes/sonde-chemin' => ep_verification_sonde_chemin(),
             $path === '/verification/recettes/fiche'  => ep_verification_fiche(),
             $path === '/verification/recettes/edition' => ep_verification_edition(),
             $path === '/verification/recettes/candidats' => ep_verification_candidats(),
@@ -603,6 +635,10 @@ function route(string $method, string $path): mixed
             // Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) : la liste, la fiche d'un produit.
             $path === '/produits/parametrage/liste'   => ep_produits_parametrage_liste(),
             $path === '/produits/parametrage'         => ep_produits_parametrage(),
+            // Le helpdesk des franchisés (15/11/2026, src/helpdesk.php).
+            $path === '/helpdesk/demandes'            => ep_helpdesk_demandes(),
+            $path === '/helpdesk/magasin'             => ep_helpdesk_magasin(),
+            (bool) preg_match('#^/helpdesk/demandes/(\d+)/consultants$#', $path, $mh) => ep_helpdesk_consultants((int) $mh[1]),
             // Vérification, lot 2 (31/10/2026) : l'audit des flux et les fuites par magasin.
             $path === '/verification/flux'            => ep_verification_flux(),
             $path === '/verification/fuites'          => ep_verification_fuites(),
@@ -698,6 +734,17 @@ function route(string $method, string $path): mixed
             $path === '/marketing/newsletter'                    => ep_newsletter(),
             $path === '/fidelite'                      => ep_fidelite(),
             $path === '/fidelite/clients'              => ep_fidelite_clients(),
+            $path === '/fidelite/profils'              => ep_fidelite_profils(),
+            $path === '/fidelite/profils/tendance'     => ep_fidelite_profils_tendance(),
+            $path === '/fidelite/scan'                 => ep_fidelite_scan(),
+            $path === '/fidelite/cartes'               => ep_fidelite_cartes(),
+            $path === '/fidelite/carte-client'         => ep_fidelite_carte_client(),
+            $path === '/fidelite/carte'                => ep_fidelite_carte(),
+            $path === '/fidelite/profils/magasin'      => ep_fidelite_profils_magasin(),
+            $path === '/fidelite/client'               => ep_fidelite_client(),
+            $path === '/assistant/magasin/questions'    => ep_assistant_questions(),
+            $path === '/assistant/coachs'               => ep_assistant_coachs(),
+            $path === '/assistant/questions-posees'     => ep_assistant_questions_posees(),
             $path === '/marketing/newsletter/cron'               => ep_newsletter_cron(),
             $path === '/marketing/newsletter/contacts/lots'      => ep_newsletter_lots(),
             $path === '/prospection/offres'            => ep_prospection_offres(),
@@ -751,6 +798,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/journal') { return wr_journal(); }
     if ($method === 'POST' && $path === '/stores/budget-note') { return wr_budget_note(); }
     if ($method === 'POST' && $path === '/exploitation/note') { return wr_note_jour(); }
+    if ($method === 'POST' && $path === '/tresorerie/plan') { return wr_tresorerie_plan(); }
     if ($method === 'POST' && $path === '/production/plan/params') { return wr_production_params(); }
     if ($method === 'POST' && $path === '/production/plan/fait') { return wr_production_fait(); }
     if ($method === 'POST' && $path === '/production/flux/params') { return wr_production_flux_params(); }
@@ -776,6 +824,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/planning/sync') { return wr_planning_sync(); }
     if ($method === 'POST' && $path === '/ventes/lignes-moisson') { return wr_pv_lignes_moisson(); }
     if ($method === 'POST' && $path === '/ventes/stats-moisson') { return wr_stats_ventes_moisson(); }
+    if ($method === 'POST' && $path === '/historique/ventes/moisson') { return wr_historique_moisson(); }
     if ($method === 'POST' && $path === '/ventes/crois-moisson') { return wr_pv_crois_moisson(); }
     if ($method === 'PUT' && preg_match('#^/products/([\w.-]+)/revue$#', $path, $m)) { return wr_prod_revue($m[1]); }
     if ($method === 'POST' && $path === '/products/arbitrage.pdf') { return wr_prod_arbitrage_pdf(); }
@@ -895,6 +944,7 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && $path === '/centrale/commandes/mail/envoyer') { return wr_ca_mail_envoyer(); }
     if ($method === 'POST' && $path === '/centrale/achats/relance') { return wr_ca_relance(); }
     // --- générateur de rapports (par levier, à seuils) + compositeur
+    if ($method === 'POST' && $path === '/rapports/suspension') { return wr_rapports_suspension(); }
     if ($method === 'POST' && $path === '/rapports') { return wr_rapport_creer(); }
     if ($method === 'POST' && $path === '/rapports/apercu') { return wr_rapport_apercu(); }
     if ($method === 'PUT' && preg_match('#^/rapports/(\d+)$#', $path, $m)) { return wr_rapport_patch((int) $m[1]); }
@@ -910,10 +960,28 @@ function route(string $method, string $path): mixed
     if ($method === 'DELETE' && $path === '/franchises/documents') { return wr_franchises_document_suppr(); }
     if ($method === 'POST' && $path === '/franchises/documents/mail-materiel') { return wr_franchises_mail_materiel(); }
     // Recettes à corriger : corriger d'ici, annuler, les adresses du panel (13/11/2026, src/verification_correction.php).
+    // Un compte ADMINISTRATEUR du panel (14/11/2026) : connecté par la personne dans le formulaire du prix ou dans le cadre
+    // des tâches (POST /task/connexion), son jeton voyage dans l'en-tête X-Panel-Jeton, le temps de la requête — jamais gardé.
+    if ($method === 'POST' && in_array($path, ['/verification/recettes/corriger', '/verification/recettes/matiere', '/produits/parametrage', '/verification/recettes/reception'], true)) {
+        $jAdmin = trim((string) ($_SERVER['HTTP_X_PANEL_JETON'] ?? ''));
+        if ($jAdmin !== '' && preg_match('/^[\w.\-]{20,4000}$/', $jAdmin)) { PanelApi::$jetonImpose = $jAdmin; }
+        // Ou le compte administrateur du cockpit lui-même (Paramètres › ERP, src/erp_api.php) : {compte: "admin"}.
+        if (PanelApi::$jetonImpose === null && (body()['compte'] ?? '') === 'admin') {
+            $tAdmin = ErpApi::jetonSonde();
+            if ($tAdmin === null) { return ['ok' => false, 'error' => 'Le compte administrateur du cockpit (Paramètres › ERP) ne se connecte pas : ' . (ErpApi::$lastError ?? 'pas de réponse')]; }
+            PanelApi::$jetonImpose = $tAdmin;
+        }
+    }
     if ($method === 'POST' && $path === '/verification/recettes/corriger') { return wr_verification_corriger(); }
+    if ($method === 'POST' && $path === '/verification/recettes/reception') { return wr_verification_reception(); }
     if ($method === 'POST' && $path === '/verification/recettes/annuler') { return wr_verification_annuler(); }
     if ($method === 'POST' && $path === '/verification/recettes/matiere') { return wr_verification_matiere(); }
     if ($method === 'POST' && $path === '/produits/parametrage') { return wr_produits_parametrage(); }
+    if ($method === 'POST' && $path === '/helpdesk/magasin') { return wr_helpdesk_magasin(); }
+    if ($method === 'POST' && preg_match('#^/helpdesk/demandes/(\d+)/(repondre|statut|consultant|visite)$#', $path, $m)) {
+        return match ($m[2]) { 'repondre' => wr_helpdesk_repondre((int) $m[1]), 'statut' => wr_helpdesk_statut((int) $m[1]), 'consultant' => wr_helpdesk_consultant((int) $m[1]), default => wr_helpdesk_visite((int) $m[1]) };
+    }
+    if ($method === 'POST' && preg_match('#^/helpdesk/missions/(\d+)$#', $path, $m)) { return wr_helpdesk_mission((int) $m[1]); }
     if ($method === 'PUT' && $path === '/verification/recettes/liens') { return wr_verification_liens(); }
     if ($method === 'POST' && $path === '/marketing/avis/sync') { return wr_reputation_sync(); }
     if ($method === 'POST' && $path === '/visibilite/sync') { return wr_visibilite_sync(); }
@@ -968,6 +1036,9 @@ function route(string $method, string $path): mixed
     // --- newsletter & campagnes (mode test : aucun envoi ne part)
     // --- fidélité : les règles du programme, publiées en un envoi
     if ($method === 'POST' && $path === '/fidelite/regles') { return wr_fidelite_regles_post(); }
+    if ($method === 'POST' && $path === '/fidelite/profils') { return wr_fidelite_profils_post(); }
+    if ($method === 'POST' && $path === '/assistant/magasin') { return wr_assistant_magasin(); }
+    if ($method === 'POST' && $path === '/assistant/coachs') { return wr_assistant_coachs(); }
     if ($method === 'POST' && $path === '/marketing/newsletter/campagnes') { return wr_newsletter_campagne_post(); }
     if ($method === 'DELETE' && preg_match('#^/marketing/newsletter/campagnes/(\d+)$#', $path, $m)) { return wr_newsletter_campagne_delete((int) $m[1]); }
     if ($method === 'POST' && $path === '/marketing/newsletter/segments') { return wr_newsletter_segment_post(); }
@@ -984,6 +1055,13 @@ function route(string $method, string $path): mixed
     if ($method === 'POST' && preg_match('#^/benchmarks/(cougnou|galette|top10|tout)/semer$#', $path, $m)) { return wr_benchmark_semer($m[1]); }
     if ($method === 'PUT' && $path === '/benchmarks/reglages') { return wr_benchmark_reglages(); }
     if ($method === 'POST' && $path === '/benchmarks/releve') { return wr_benchmark_releve(); }
+    // Benchmark › Import : lire un PDF ou chercher sur internet (IA), rapprocher, encoder ; les zones par code postal.
+    if ($method === 'POST' && $path === '/benchmarks/import/pdf') { return wr_bench_import_pdf(); }
+    if ($method === 'POST' && $path === '/benchmarks/import/web') { return wr_bench_import_web(); }
+    if ($method === 'PUT' && $path === '/benchmarks/import') { return wr_bench_import_maj(); }
+    if ($method === 'POST' && $path === '/benchmarks/import/encoder') { return wr_bench_import_encoder(); }
+    if ($method === 'DELETE' && preg_match('#^/benchmarks/import/(\d+)$#', $path, $m)) { return wr_bench_import_suppr((int) $m[1]); }
+    if ($method === 'PUT' && $path === '/benchmarks/zones') { return wr_bench_zones(); }
     if ($method === 'PUT' && $path === '/prospection/offres') { return wr_prospection_offres_put(); }
     if ($method === 'PUT' && preg_match('#^/prospection/(\d{1,10})$#', $path, $m)) { return wr_prospection_put($m[1]); }
     // --- visites terrain (application consultant, franchisé, admin)
@@ -999,6 +1077,7 @@ function route(string $method, string $path): mixed
     if ($method === 'PUT' && preg_match('#^/visites/photos/([\w-]{1,40})/reperes$#', $path, $m)) { return wr_visites_photo_reperes($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})/points$#', $path, $m)) { return wr_visites_points_put($m[1]); }
     if ($method === 'PUT' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_put($m[1]); }
+    if ($method === 'DELETE' && preg_match('#^/visites/([\w-]{1,40})$#', $path, $m)) { return wr_visites_delete($m[1]); }
     if ($method === 'PUT' && preg_match('#^/suivi/preparation/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_preparation($m[1]); }
     if ($method === 'PUT' && preg_match('#^/suivi/rapport/([\w-]{1,40})$#', $path, $m)) { return wr_suivi_rapport($m[1]); }
     if ($method === 'POST' && preg_match('#^/suivi/rapport/([\w-]{1,40})/envoyer$#', $path, $m)) { return wr_suivi_rapport_envoyer($m[1]); }

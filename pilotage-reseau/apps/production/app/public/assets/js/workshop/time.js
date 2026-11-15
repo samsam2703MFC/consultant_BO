@@ -6,7 +6,8 @@
  *   Miesiąc    : wszyscy × dni (godziny, nadgodziny, U / L4 / WN, ?), sumy, bank, karty A4 (PDF), zamknięcie miesiąca ;
  *                [266] e-maile pracowników i karta miesiąca e-mailem (PDF w załączniku, kolejka wysyłki) ;
  *   Urlopy     : kalendarz zespołu (paski), pozostały urlop (26 dni), dodaj / usuń wpis, wymiar urlopu osoby ;
- *   Nadgodziny : bank (FIFO, odbiór w 3 miesiące), dzień wolny : propozycja → podpis pracownika (tu albo tablet biurowy).
+ *   Nadgodziny : bank (FIFO, odbiór w 3 miesiące), dzień wolny : propozycja → podpis pracownika (tu albo tablet biurowy) ;
+ *   Koszty i premie [267] : do odczytu — koszt pracodawcy grup i osób, progi i premie, brakująca sprzedaż, premia kierownika.
  */
 (function () {
     'use strict';
@@ -63,7 +64,7 @@
 
     async function refresh() {
         const url = tab === 'day' ? `/ajax/time/day?date=${D.day}` : tab === 'month' ? `/ajax/time/month?month=${D.month}`
-            : tab === 'leave' ? `/ajax/time/leave?from=${D.from}&days=${D.days.length}` : '/ajax/time/overtime';
+            : tab === 'leave' ? `/ajax/time/leave?from=${D.from}&days=${D.days.length}` : tab === 'costs' ? '/ajax/time/costs' : '/ajax/time/overtime';
         D = (await call('GET', url)).data;
     }
 
@@ -72,7 +73,7 @@
         form.innerHTML = `<header class="tm-dialog-head"><h4 id="tmDialogTitle">${esc(title)}</h4>
                 <button type="button" class="btn-close" data-close aria-label="Zamknij"></button></header>
             <div class="tm-dialog-body">${html}</div><p class="tm-dialog-error" data-error></p>
-            <footer class="tm-dialog-foot">${extra || ''}<button type="button" class="btn btn-light" data-close>Anuluj</button>
+            <footer class="tm-dialog-foot">${extra || ''}<button type="button" class="btn btn-light" data-close>${submitLabel ? 'Anuluj' : 'Zamknij'}</button>
                 ${submitLabel ? `<button type="submit" class="btn btn-primary" data-submit>${esc(submitLabel)}</button>` : ''}</footer>`;
         form.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => dialog.close()));
         form.onsubmit = async (e) => {
@@ -179,7 +180,7 @@
             need_absence: '<span class="at-pill at-pill-danger">Powód ?</span>', ok: '<span class="at-pill at-pill-ok">OK</span>'}[p.status];
         const comp = p.comp_proposed.length ? `<span class="tm-sub"><i class="bi bi-pen"></i> dzień wolny ${dm(p.comp_proposed[0].day)} do podpisu</span>` : '';
         return `<tr class="${p.status !== 'ok' ? 'tm-need' : ''}" data-row="${p.employee_id}">
-            <td><b>${esc(p.name)}</b>${comp}${p.took ? `<span class="tm-sub tm-took" title="Odpowiedź przy wyjściu (tablet / telefon)"><i class="bi bi-bag"></i> zabiera : ${esc(p.took)}</span>` : ''}</td>
+            <td><b>${esc(p.name)}</b>${p.took ? ` ${basket(p.employee_id, D.day, p.took)}` : ''}${comp}</td>
             <td>${p.group ? `<span class="tm-group" style="--g:${esc(p.group_color || '#B8B2A8')}">${esc(p.group)}</span>` : '—'}</td>
             <td class="text-center">${inCell}</td><td class="text-center">${outCell}</td>
             <td class="text-end tm-num">${p.open ? '—' : (p.clocks.length ? hm(p.worked) : '—')}</td>
@@ -262,7 +263,7 @@
         const head = days.map(d => `<th class="${d.workday ? '' : 'tm-we'} ${d.validated ? 'tm-v' : ''}" title="${esc(d.holiday || '')}${d.validated ? ' zatwierdzony' : ''}">
             <a href="${root}/time?date=${d.date}">${d.n}<small>${d.dow}</small></a></th>`).join('');
         const rows = D.people.map(p => `<tr><td class="tm-name"><b>${esc(p.name)}</b><span class="tm-sub">${esc(p.group || '')}</span></td>
-            ${days.map(d => monthCell(p.cells[d.date], d)).join('')}
+            ${days.map(d => monthCell(p.cells[d.date], d, p.employee_id)).join('')}
             <td class="text-end tm-num"><b>${hm(p.worked)}</b></td><td class="text-end tm-num ${p.overtime ? 'tm-ot' : ''}">${p.overtime ? hm(p.overtime, true) : '0'}</td>
             <td class="text-end tm-num">${p.leave ? p.leave + ' d' : '0'}</td><td class="text-end tm-num">${hm(p.bank)}</td>
             <td class="tm-acts"><a class="btn btn-light btn-sm" href="${root}/time/sheet.pdf?month=${D.month}&employee=${p.employee_id}" target="_blank" rel="noopener">PDF</a>${mailCell(p)}</td></tr>`).join('');
@@ -286,6 +287,26 @@
             <div class="tm-legend"><span><i class="tm-ot">9:10</i> nadgodziny (tylko dni zatwierdzone liczą się do sumy i banku)</span><span><i class="tm-a-U">U</i> urlop</span><span><i class="tm-a-L4">L4</i> chorobowe</span>
                 <span><i class="tm-a-WN">WN</i> wolne za nadgodziny</span><span><i class="tm-q">?</i> brak wyjścia / brak powodu</span><span><i class="tm-v-dot">3</i> dzień zatwierdzony</span></div>
             <p class="tm-note">« Zamknij miesiąc » : po ostatnim dniu, gdy wszystkie dni są zatwierdzone ; potem bez zmian (karty A4 do podpisu). Bank nadgodzin = nadgodziny jeszcze nieodebrane.</p>`;
+    }
+
+    // [269] Towar zabrany przy wyjściu : mała ikona koszyka w tabeli (Dzień, Miesiąc) → okno z tym, co zostało zaznaczone.
+    function basket(empId, day, title, small) {
+        return `<button type="button" class="tm-basket ${small ? 'is-small' : ''}" data-goods="${empId}" data-goods-day="${day}" title="${esc(title)}" aria-label="Towar zabrany przy wyjściu : ${esc(title)}"><i class="bi bi-basket2"></i></button>`;
+    }
+
+    async function goodsDialog(empId, day) {
+        let g;
+        try { g = (await call('GET', `/ajax/time/goods?employee=${empId}&day=${day}`)).data; } catch (e) { fail(e); return; }
+        const qty = (n) => String(Math.round(n * 100) / 100).replace('.', ',');
+        const exits = g.exits.map(x => {
+            const lines = x.lines.length ? `<table class="table tm-table tm-goods"><thead><tr><th>Produkt</th><th class="text-end">Sztuki</th><th></th></tr></thead><tbody>${x.lines.map(l => l.other
+                ? `<tr><td colspan="2"><span class="tm-sub">inne :</span> ${esc(l.product)}</td><td></td></tr>`
+                : `<tr><td>${esc(l.product)}</td><td class="text-end tm-num"><b>${qty(l.quantity)}</b></td><td>${l.waste ? '<span class="tm-tag tm-tag-warn">z braków</span>' : ''}</td></tr>`).join('')}</tbody></table>`
+                : `<p class="tm-goods-note">${esc(x.note || 'Tak (bez szczegółów)')}</p>`;
+            return `<div class="tm-goods-exit"><div class="tm-sub">Wyjście ${x.clock_out ? time(x.clock_out) : '—'} · ${esc({kiosk: 'tablet / telefon', manual: 'ręcznie'}[x.source] || '')}</div>${lines}</div>`;
+        }).join('') || '<p class="at-empty">Brak deklaracji tego dnia.</p>';
+        openDialog(`Towar zabrany — ${g.employee.name}, ${full(g.day)}`, `${exits}
+            ${g.pieces ? `<p class="tm-note">Razem : <b>${qty(g.pieces)} szt.</b> produktów. Braki (odpady) trzeba wpisać ; prośby na imprezę — przez biuro.</p>` : ''}`, null, null);
     }
 
     // [266] Karta e-mailem : adres pracownika (zapis zaszyfrowany) i wysyłka karty miesiąca (PDF w załączniku).
@@ -340,8 +361,14 @@
         } catch (e) { fail(e); } finally { if (btn) btn.disabled = false; }
     }
 
-    function monthCell(c, d) {
+    function monthCell(c, d, empId) {
         if (!c) return `<td class="${d.workday ? '' : 'tm-we'}"></td>`;
+        const g = c.g ? basket(empId, d.date, 'Towar zabrany przy wyjściu', true) : '';
+        const inner = monthCellInner(c, d);
+        return g ? inner.replace(/<\/td>$/, `${g}</td>`) : inner;
+    }
+
+    function monthCellInner(c, d) {
         if (c.a) return `<td class="${d.workday ? '' : 'tm-we'}"><i class="tm-a-${esc(c.a)}">${esc(c.a)}</i></td>`;
         if (c.st === 'open' || c.st === 'need_overtime' || c.st === 'need_absence') return `<td class="tm-q" title="${c.st === 'open' ? 'brak wyjścia' : 'brak powodu'}">${c.w ? hm(c.w) : '?'}</td>`;
         if (c.st === 'none') return `<td class="${d.workday ? '' : 'tm-we'}"></td>`;
@@ -351,68 +378,171 @@
     // =====================================================================================================
     // Makieta 3 · Urlopy i dni wolne
     // =====================================================================================================
+    // [288] Makieta 48 : klik w pustą komórkę → « Dodaj urlop » (start = kliknięty dzień) ; klik w urlop → szczegóły ;
+    // klik w wniosek z telefonu (kreskowany) → Zatwierdź / Odrzuć (powód). Saldo : przysługuje (+ zaległy do 01.06), wzięte, zostało.
+    const workdays = (from, to) => {
+        if (!from || !to || to < from) return 0;
+        const off = new Set(D.holiday_dates || []);
+        let n = 0;
+        for (let d = from; d <= to; d = addDays(d, 1)) { const w = new Date(d + 'T12:00:00').getDay(); if (w !== 0 && w !== 6 && !off.has(d)) n++; }
+        return n;
+    };
+    const leaveSub = (p) => {
+        const bits = [`urlop : zostało ${p.remaining} z ${p.right + (p.adjust || 0)}`];
+        if (p.carry_left) bits.push(`zaległy ${D.year - 1} : ${p.carry_left} (do ${dm(p.carry_deadline)})`);
+        else if (p.carry_lapsed) bits.push(`zaległy ${D.year - 1} : przepadło ${p.carry_lapsed} (${dm(p.carry_deadline)})`);
+        if (p.pending_days) bits.push(`wnioski ${p.pending_days} d`);
+        if (p.bank) bits.push(`bank ${hm(p.bank)}`);
+        return bits.join(' · ');
+    };
+
     function renderLeave() {
         const days = D.days;
         const head = days.map(d => `<th class="${d.workday ? '' : 'tm-we'} ${d.today ? 'tm-today' : ''}" title="${esc(d.holiday || '')}">${d.n}<small>${d.dow}</small></th>`).join('');
         const rows = D.people.map(p => {
             const cells = [];
+            const items = p.absences.map(a => ({...a, kind: 'abs'})).concat((p.requests || []).map(r => ({...r, kind: 'req'})));
             for (let i = 0; i < days.length; i++) {
                 const d = days[i].date;
-                const a = p.absences.find(x => x.from <= d && x.to >= d);
-                if (!a) { cells.push(`<td class="${days[i].workday ? '' : 'tm-we'}"></td>`); continue; }
+                const a = items.find(x => x.from <= d && x.to >= d);
+                if (!a) { cells.push(`<td class="tm-cell-add ${days[i].workday ? '' : 'tm-we'}" data-add-day="${d}" data-add-emp="${p.employee_id}" title="Dodaj urlop : ${esc(p.name)} ${dm(d)}"></td>`); continue; }
                 let span = 1;
                 while (i + span < days.length && days[i + span].date <= a.to) span++;
-                cells.push(`<td colspan="${span}" class="tm-bar-cell"><button type="button" class="tm-abs tm-t-${esc(a.type)}" data-absence="${a.id}" title="${esc(a.label)} ${dm(a.from)}–${dm(a.to)}${a.note ? ' — ' + esc(a.note) : ''}">${esc(span > 2 ? `${a.label} ${dm(a.from)}–${dm(a.to)}` : a.short)}</button></td>`);
+                const label = span > 2 ? `${a.kind === 'req' ? 'Wniosek · ' : ''}${a.label} ${dm(a.from)}–${dm(a.to)}` : a.short;
+                cells.push(a.kind === 'req'
+                    ? `<td colspan="${span}" class="tm-bar-cell"><button type="button" class="tm-abs tm-req" data-request="${a.id}" title="Wniosek z telefonu — do zatwierdzenia : ${esc(a.label)} ${dm(a.from)}–${dm(a.to)}">${esc(label)}</button></td>`
+                    : `<td colspan="${span}" class="tm-bar-cell"><button type="button" class="tm-abs tm-t-${esc(a.type)}" data-absence="${a.id}" title="${esc(a.label)} ${dm(a.from)}–${dm(a.to)}${a.note ? ' — ' + esc(a.note) : ''}">${esc(label)}</button></td>`);
                 i += span - 1;
             }
-            const left = p.remaining;
-            return `<tr><td class="tm-name"><b>${esc(p.name)}</b><button type="button" class="tm-sub tm-link" data-leave-right="${p.employee_id}" title="Zmień wymiar urlopu">urlop : zostało ${left} z ${p.right} dni${p.planned ? ` (zaplan. ${p.planned})` : ''}${p.bank ? ` · bank ${hm(p.bank)}` : ''}</button></td>${cells.join('')}</tr>`;
+            return `<tr><td class="tm-name"><b>${esc(p.name)}</b><button type="button" class="tm-sub tm-link" data-leave-right="${p.employee_id}" title="Wymiar urlopu i saldo">${esc(leaveSub(p))}</button></td>${cells.join('')}</tr>`;
         }).join('');
         const counts = days.map(d => `<td class="${d.workday ? '' : 'tm-we'} text-center">${d.workday ? (D.absent[d.date] || 0) : ''}</td>`).join('');
         const warn = D.warnings.length ? `<div class="tm-warn"><i class="bi bi-exclamation-triangle"></i> ${D.warnings.slice(0, 6).map(w => `${dm(w.date)} : ${esc(w.group)} — ${w.count} osoby nieobecne`).join(' · ')}${D.warnings.length > 6 ? ' …' : ''}</div>` : '';
+        const pend = (D.pending || []).length;
         body.innerHTML = `<div class="tm-bar">
                 <div class="tm-nav"><a class="btn btn-light btn-sm" href="?from=${D.prev}&days=${days.length}" aria-label="Wcześniej">‹</a><span class="tm-date"><span>${full(D.from)} – ${full(D.to)}</span></span>
                     <a class="btn btn-light btn-sm" href="?from=${D.next}&days=${days.length}" aria-label="Później">›</a></div>
                 <span class="tm-spacer"></span>
+                <button type="button" class="btn btn-sm ${pend ? 'btn-outline-warning tm-pending-on' : 'btn-light'}" data-pending-list ${pend ? '' : 'disabled'}><i class="bi bi-phone"></i> Wnioski z telefonu : <b>${pend}</b> do zatwierdzenia</button>
                 <button type="button" class="btn btn-primary btn-sm" data-add-absence><i class="bi bi-plus-lg"></i> Dodaj urlop / dzień wolny</button></div>
             ${warn}
             <div class="tm-card tm-scroll"><table class="table tm-cal"><thead><tr><th class="tm-name">Pracownik · pozostało (${D.year})</th>${head}</tr></thead>
                 <tbody>${rows}</tbody><tfoot><tr><td class="tm-name">Nieobecni danego dnia</td>${counts}</tr></tfoot></table></div>
             <div class="tm-legend"><span><i class="tm-abs tm-t-urlop">U</i> urlop wypoczynkowy</span><span><i class="tm-abs tm-t-na_zadanie">UŻ</i> urlop na żądanie (4 dni w roku)</span>
+                <span><i class="tm-abs tm-req">W</i> wniosek z telefonu — do zatwierdzenia</span>
                 <span><i class="tm-abs tm-t-l4">L4</i> chorobowe</span><span><i class="tm-abs tm-t-wn">WN</i> wolne za nadgodziny (z podpisem)</span><span><i class="tm-abs tm-t-inna">N</i> inna nieobecność</span><span><i class="tm-we-dot"></i> weekend i święta PL</span></div>
-            <p class="tm-note">Wpis z kalendarza = nieobecność usprawiedliwiona w zakładce Dzień (bez pytania). Ostrzeżenie, gdy w grupie brakuje więcej niż 1 osoby tego samego dnia.</p>`;
+            <p class="tm-note">Klik w pustą komórkę osoby → « Dodaj urlop » od tego dnia. Klik w urlop → szczegóły. Wnioski z telefonu (po odbiciu QR) zatwierdza kierownik produkcji.
+                Zaległy urlop z ${D.year - 1} : do wykorzystania do ${dm(D.carry_deadline)} (urlop od 1.01 najpierw zmniejsza zaległy, reszta potem przepada — Ustawienia › Parametry).
+                Ostrzeżenie, gdy w grupie brakuje więcej niż 1 osoby tego samego dnia.</p>`;
     }
 
-    function absenceDialog() {
-        const sel = D.people.map(p => `<option value="${p.employee_id}">${esc(p.name)}${p.group ? ' — ' + esc(p.group) : ''}</option>`).join('');
-        const types = Object.entries(D.types).map(([k, v]) => `<option value="${k}">${esc(v)}</option>`).join('');
-        const start = D.days.find(d => d.today) ? D.days.find(d => d.today).date : D.from;
-        openDialog('Dodaj urlop / dzień wolny', `<label>Pracownik<select class="form-select" name="emp" required><option value="">—</option>${sel}</select></label>
-            <label>Rodzaj<select class="form-select" name="type">${types}</select></label>
-            <div class="tm-grid2"><label>Od<input type="date" class="form-control" name="from" value="${start}" required></label><label>Do<input type="date" class="form-control" name="to" value="${start}" required></label></div>
-            <label>Uwagi<input class="form-control" name="note" maxlength="255" placeholder="np. wniosek z 10.11"></label>
+    /** Kafelki salda : przysługuje / wzięte / ten wniosek / zostanie (+ zaległy). */
+    function balanceTiles(p, days, typeOnDemand) {
+        const entitled = (p.right + (p.adjust || 0)) + (p.carry || 0) - (p.carry_lapsed || 0);
+        const after = p.remaining - days;
+        const od = typeOnDemand ? `<p class="tm-sub">Na żądanie : wykorzystane ${p.on_demand} z 4.</p>` : '';
+        const carry = p.carry_left ? `<p class="tm-sub tm-carry">Najpierw zaległy z ${D.year - 1} : ${p.carry_left} d — do wykorzystania do ${full(p.carry_deadline)}, potem przepada.</p>`
+            : (p.carry_lapsed ? `<p class="tm-sub">Zaległy z ${D.year - 1} (${p.carry_lapsed} d) przepadł ${full(p.carry_deadline)}.</p>` : '');
+        return `<div class="tm-bal"><div><small>Przysługuje</small><b>${entitled}</b></div><div><small>Wzięte</small><b>${p.used + p.planned}</b></div>
+            <div><small>Ten wniosek</small><b data-bal-days>${days}</b></div><div class="${after < 0 ? 'is-bad' : ''}"><small>Zostanie</small><b data-bal-after>${after}</b></div></div>${carry}${od}`;
+    }
+
+    function absenceDialog(empId, day) {
+        const sel = D.people.map(p => `<option value="${p.employee_id}" ${p.employee_id === empId ? 'selected' : ''}>${esc(p.name)}${p.group ? ' — ' + esc(p.group) : ''}</option>`).join('');
+        const types = Object.entries(D.types).map(([k, v], i) => `<label class="tm-chip"><input type="radio" name="type" value="${k}" ${i === 0 ? 'checked' : ''}><span>${esc(v)}</span></label>`).join('');
+        const start = day || (D.days.find(d => d.today) ? D.days.find(d => d.today).date : D.from);
+        const end = day && D.days.find(d => d.date === day) ? start : start;
+        const who = empId ? D.people.find(x => x.employee_id === empId) : null;
+        openDialog(who ? `Dodaj urlop · ${who.name}` : 'Dodaj urlop / dzień wolny', `${who ? `<p class="tm-sub">klik : ${full(start)}</p><input type="hidden" name="emp" value="${empId}">` : `<label>Pracownik<select class="form-select" name="emp" required><option value="">—</option>${sel}</select></label>`}
+            <div class="tm-chips">${types}</div>
+            <div class="tm-grid2"><label>Od<input type="date" class="form-control" name="from" value="${start}" required></label><label>Do<input type="date" class="form-control" name="to" value="${end}" required></label></div>
+            <div data-bal></div>
+            <label>Uwagi<input class="form-control" name="note" maxlength="255" placeholder="Uwaga (opcjonalnie)"></label>
             <p class="tm-sub">Dni wolne za nadgodziny : zakładka Nadgodziny (z podpisem pracownika).</p>`,
             async () => {
                 const f = new FormData(form);
                 if (!f.get('emp')) throw new Error('Wybierz pracownika.');
                 return act(null, 'POST', '/ajax/time/absences', {employee_id: Number(f.get('emp')), type: f.get('type'), from: f.get('from'), to: f.get('to'), note: f.get('note')}, 'fetch');
-            }, 'Dodaj do kalendarza');
+            }, 'Dodaj urlop');
+        const upd = () => {
+            const f = new FormData(form);
+            const p = D.people.find(x => x.employee_id === Number(f.get('emp')));
+            const box = form.querySelector('[data-bal]');
+            if (!p) { box.innerHTML = ''; return; }
+            if (form.to.value < form.from.value) form.to.value = form.from.value;
+            const type = f.get('type');
+            const n = ['urlop', 'na_zadanie'].includes(type) ? workdays(form.from.value, form.to.value) : 0;
+            box.innerHTML = ['urlop', 'na_zadanie'].includes(type) ? balanceTiles(p, n, type === 'na_zadanie') : `<p class="tm-sub">${workdays(form.from.value, form.to.value)} dni roboczych — nie zmniejsza urlopu.</p>`;
+        };
+        form.addEventListener('input', upd);
+        form.addEventListener('change', upd);
+        upd();
     }
 
     function absenceDetail(id) {
         let a = null, who = null;
         for (const p of D.people) { const x = p.absences.find(y => y.id === id); if (x) { a = x; who = p; break; } }
         if (!a) return;
-        openDialog(`${a.label} — ${who.name}`, `<p><b>${full(a.from)}${a.to !== a.from ? ' – ' + full(a.to) : ''}</b>${a.minutes ? ` · ${hm(a.minutes)}` : ''}</p>
-            ${a.note ? `<p class="tm-sub">${esc(a.note)}</p>` : ''}${a.comp ? '<p class="tm-sub">Dzień wolny za nadgodziny (podpisany) : anulować można w zakładce Nadgodziny.</p>' : ''}`,
+        const n = workdays(a.from, a.to);
+        openDialog(`${a.label} — ${who.name}`, `<p><b>${full(a.from)}${a.to !== a.from ? ' – ' + full(a.to) : ''}</b>${a.minutes ? ` · ${hm(a.minutes)}` : ` · ${n} ${pl(n, 'dzień roboczy', 'dni robocze', 'dni roboczych')}`}</p>
+            ${a.note ? `<p class="tm-sub">${esc(a.note)}</p>` : ''}${a.comp ? '<p class="tm-sub">Dzień wolny za nadgodziny (podpisany) : anulować można w zakładce Nadgodziny.</p>' : ''}
+            ${['urlop', 'na_zadanie'].includes(a.type) ? `<p class="tm-sub">Saldo ${D.year} : ${esc(leaveSub(who))}</p>` : ''}`,
             async () => act(null, 'DELETE', `/ajax/time/absences/${id}`, null, 'fetch'), a.comp ? null : 'Usuń z kalendarza');
+    }
+
+    /** Wniosek z telefonu : saldo osoby, ostrzeżenie o zaległym, Odrzuć (powód) / Zatwierdź. */
+    function requestDetail(id) {
+        const r = (D.pending || []).find(x => x.id === id) || D.people.flatMap(p => p.requests || []).find(x => x.id === id);
+        if (!r) return;
+        const p = D.people.find(x => x.employee_id === r.employee_id);
+        const others = p ? Math.max(0, (p.pending_days || 0) - r.days) : 0;
+        const bal = p ? {...p, remaining: p.remaining - others} : null;
+        openDialog(`Wniosek z telefonu · ${r.name || (p && p.name) || ''}`, `<p><b>${full(r.from)}${r.to !== r.from ? ' – ' + full(r.to) : ''}</b> · ${r.days} ${pl(r.days, 'dzień roboczy', 'dni robocze', 'dni roboczych')} · ${esc(r.label)}</p>
+            <p class="tm-sub">złożony ${full(String(r.created_at).slice(0, 10))}, ${String(r.created_at).slice(11, 16)} (telefon po QR)${r.note ? ' — « ' + esc(r.note) + ' »' : ''}</p>
+            ${bal ? balanceTiles(bal, r.days, r.type === 'na_zadanie') : ''}${others ? `<p class="tm-sub">Inne wnioski tej osoby do zatwierdzenia : ${others} d (już odjęte).</p>` : ''}
+            <label>Powód odrzucenia (pracownik zobaczy go w telefonie)<input class="form-control" name="reason" maxlength="255" placeholder="np. za dużo osób w grupie tego dnia"></label>`,
+            async (which) => {
+                if (which === 'reject') {
+                    const reason = form.reason.value.trim();
+                    if (reason.length < 3) throw new Error('Podaj powód odrzucenia.');
+                    return act(null, 'POST', `/ajax/time/leave-requests/${id}/reject`, {reason}, 'fetch');
+                }
+                return act(null, 'POST', `/ajax/time/leave-requests/${id}/approve`, {}, 'fetch');
+            }, 'Zatwierdź', '<button type="submit" class="btn btn-outline-danger me-auto" data-alt="reject">Odrzuć (powód)</button>');
+    }
+
+    function pendingList() {
+        const list = D.pending || [];
+        openDialog(`Wnioski z telefonu (${list.length})`, list.length ? `<table class="table tm-table"><tbody>${list.map(r => `<tr><td><b>${esc(r.name)}</b><div class="tm-sub">${esc(r.label)}${r.note ? ' — ' + esc(r.note) : ''}</div></td>
+                <td class="text-end tm-num">${dm(r.from)}${r.to !== r.from ? '–' + dm(r.to) : ''}<div class="tm-sub">${r.days} d</div></td>
+                <td class="text-end"><button type="button" class="btn btn-sm btn-primary" data-open-request="${r.id}" data-from="${r.from}">Otwórz</button></td></tr>`).join('')}</tbody></table>` : '<p class="tm-sub">Brak wniosków.</p>', null, null);
+        form.querySelectorAll('[data-open-request]').forEach(b => b.addEventListener('click', () => {
+            const id = Number(b.dataset.openRequest);
+            if (D.people.some(p => (p.requests || []).some(x => x.id === id))) { dialog.close(); requestDetail(id); return; }
+            const from = b.dataset.from;
+            const monday = addDays(from, -((new Date(from + 'T12:00:00').getDay() + 6) % 7));
+            location.href = `?from=${monday}&days=${D.days.length}&request=${id}`;
+        }));
     }
 
     function leaveRightDialog(empId) {
         const p = D.people.find(x => x.employee_id === empId);
-        openDialog(`Wymiar urlopu — ${p.name}`, `<label>Dni urlopu w roku<input type="number" class="form-control" name="days" min="0" max="40" value="${p.right}" required></label>
-            <p class="tm-sub">Domyślnie ${D.rules.leave_days} dni dla każdej osoby. Wykorzystane w ${D.year} : ${p.used} d, zaplanowane : ${p.planned} d, na żądanie : ${p.on_demand} z 4.</p>`,
-            async () => act(null, 'PUT', `/ajax/time/leave/${empId}`, {days: Number(new FormData(form).get('days'))}, 'fetch'), 'Zapisz');
+        openDialog(`Urlop ${D.year} — ${p.name}`, `<div class="tm-grid2"><label>Dni urlopu w roku (wymiar)<input type="number" class="form-control" name="days" min="0" max="40" value="${p.right}" required></label>
+                <label>Zostało w ${D.year} (saldo)<input type="number" class="form-control" name="remaining" min="0" max="80" value="${p.remaining}" required></label></div>
+            ${balanceTiles(p, 0, false)}
+            <p class="tm-sub">Domyślnie ${D.rules.leave_days} dni dla każdej osoby. Wzięte w ${D.year} : ${p.used} d, zaplanowane : ${p.planned} d, na żądanie : ${p.on_demand} z 4${p.adjust ? `, korekta salda ${p.adjust > 0 ? '+' : ''}${p.adjust} d` : ''}.
+                « Zostało » : wpisz saldo z kadr, ERP zapisze korektę (to samo pole co w HR).</p>`,
+            async () => {
+                const f = new FormData(form);
+                const days = Number(f.get('days'));
+                const remaining = Number(f.get('remaining'));
+                if (days !== p.right) await call('PUT', `/ajax/time/leave/${empId}`, {days});
+                if (remaining !== p.remaining || days !== p.right) {
+                    if (days !== p.right && remaining === p.remaining) { await refresh(); render(); ok('Zapisano wymiar urlopu.'); return true; }
+                    return act(null, 'PUT', `/ajax/time/leave/${empId}/remaining`, {remaining}, 'fetch');
+                }
+                return true;
+            }, 'Zapisz');
     }
 
     // =====================================================================================================
@@ -494,8 +624,55 @@
     }
 
     // =====================================================================================================
+    // =====================================================================================================
+    // [267] Koszty i premie (makieta 35) — do odczytu : koszt pracodawcy grup i osób, próg i premia, brakująca sprzedaż,
+    // premia kierownika produkcji (% sprzedaży firmy w miesiącu). Premie tylko, gdy administrator je pokazuje.
+    // =====================================================================================================
+    const zl = (n) => n === null || n === undefined ? '—' : `${String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00a0')} zł`;
+    const pct = (n) => n === null || n === undefined ? '—' : `${String(Math.round(n * 10) / 10).replace('.', ',')} %`;
+    const openGroups = new Set();
+    function renderCosts() {
+        const c = D.company;
+        const B = D.show_bonuses;
+        const cols = B ? 7 : 5;
+        const rows = D.groups.map(g => {
+            const open = openGroups.has(g.id);
+            const tier = !B ? '' : g.tier ? `<span class="tm-tag tm-tag-ok">próg ${g.tier.index} · ${zl(g.tier.from)}</span>`
+                : g.below_min ? `<span class="tm-tag tm-tag-warn">poniżej minimum ${zl(D.min)}</span>` : '<span class="tm-sub">—</span>';
+            const next = !B ? '' : g.next ? `<b class="${g.tier ? '' : 'tm-late'}">${zl(g.next.missing)}</b>${g.tier ? ' (następny próg)' : ''}` : (g.tier ? 'najwyższy próg' : '');
+            const head = `<tr class="tm-grp" data-group="${g.id}"><td><button type="button" class="tm-grp-btn" data-toggle-group="${g.id}" aria-expanded="${open}">
+                    <i class="tm-dot" style="background:${esc(g.color || '#999')}"></i><b>${esc(g.name)}</b><i class="bi bi-chevron-${open ? 'down' : 'right'}" aria-hidden="true"></i></button></td>
+                <td class="text-end tm-num">${g.people}</td><td class="text-end tm-num"><b>${zl(g.cost)}</b></td>
+                <td class="text-end tm-num">${zl(g.revenue_projection)}<span class="tm-sub">dziś : ${zl(g.revenue)} · na osobę : ${zl(g.per_person_projection)}</span></td>
+                <td class="text-end tm-num">${g.missing_target ? `<span class="tm-late">${zl(g.missing_target)}</span>` : g.missing_target === 0 ? '<span class="tm-tag tm-tag-ok">cel osiągnięty</span>' : '—'}${g.staff_target !== null ? `<span class="tm-sub">cel ${pct(g.staff_target)} kosztu personelu</span>` : ''}</td>
+                ${B ? `<td>${tier}<span class="tm-sub">${g.next ? 'do progu brakuje : ' : ''}${next}</span></td><td class="text-end tm-num"><b>${zl(g.bonus_person)}</b><span class="tm-sub">grupa : ${zl(g.bonus_group)}</span></td>` : ''}</tr>`;
+            const people = !open ? '' : g.persons.map(p => `<tr class="tm-per"><td>${esc(p.name)}</td><td></td><td class="text-end tm-num">${zl(p.cost)}</td>
+                <td colspan="2"><span class="tm-sub">${g.group_days ? `obecność ${p.days} / ${g.group_days} dni` : 'brak odbić w tym miesiącu'}</span></td>
+                ${B ? `<td></td><td class="text-end tm-num">${zl(p.bonus)}</td>` : ''}</tr>`).join('');
+            return head + people;
+        }).join('');
+        body.innerHTML = `<div class="tm-bar"><span class="tm-date"><span>${esc(D.label)}</span></span>
+                <span class="tm-prev">stan na dziś (${D.day}. dzień z ${D.days}) i prognoza w obecnym tempie · tylko do odczytu : płace i progi ustala administrator</span></div>
+            <div class="tm-kpis">
+                <div class="tm-kpi"><small>Sprzedaż firmy</small><b>${zl(c.revenue)}</b><span>prognoza miesiąca : ${zl(c.projection)}</span></div>
+                <div class="tm-kpi"><small>Koszt personelu / mies.</small><b>${zl(c.staff)}</b><span>${c.staff_pct !== null ? `${pct(c.staff_pct)} prognozy sprzedaży · ` : ''}cel ${pct(c.staff_target)}</span></div>
+                <div class="tm-kpi ${c.missing ? 'is-danger' : 'is-ok'}"><small>Brakuje sprzedaży do celu</small><b>${zl(c.missing)}</b><span>żeby koszt personelu = ${pct(c.staff_target)} sprzedaży</span></div>
+                ${B && D.manager ? `<div class="tm-kpi tm-kpi-me"><small>Twoja premia · ${String(D.manager.pct).replace('.', ',')} % sprzedaży firmy</small><b>${zl(D.manager.projection)}</b><span>prognoza miesiąca ; stan na dziś : ${zl(D.manager.now)}</span></div>` : ''}
+            </div>
+            <div class="tm-card tm-scroll"><table class="table tm-table tm-costs"><thead><tr><th>Grupa / osoba</th><th class="text-end">Osoby</th><th class="text-end">Koszt pracodawcy / mies.</th>
+                <th class="text-end">Sprzedaż grupy (prognoza)</th><th class="text-end">Brakuje sprzedaży do celu</th>
+                ${B ? '<th>Próg premii</th><th class="text-end">Premia / osobę</th>' : ''}</tr></thead>
+                <tbody>${rows || `<tr><td colspan="${cols}" class="at-empty">Brak grup.</td></tr>`}</tbody>
+                <tfoot><tr><td>Razem</td><td class="text-end tm-num">${D.totals.people}</td><td class="text-end tm-num">${zl(D.totals.cost)}</td>
+                    <td class="text-end tm-num">${zl(c.projection)}</td><td class="text-end tm-num">${zl(c.missing)}</td>
+                    ${B ? `<td></td><td class="text-end tm-num">${zl(D.totals.bonus)}</td>` : ''}</tr></tfoot></table></div>
+            <p class="tm-note">Koszt pracodawcy = miesięczny koszt osoby z karty płac. « Brakuje sprzedaży do celu » = ile sprzedaży grupy brakuje, żeby jej koszt personelu nie przekraczał celu (strona Rentowność).
+                ${B ? `Premia osoby = premia progu × dni obecności ÷ dni pracy grupy (odbicia z tabletu biurowego) ; « Brakuje do progu » = sprzedaż grupy potrzebna do końca miesiąca (${D.remaining_days} dni roboczych), żeby osiągnąć próg.` : 'Premie pokazuje administrator (Premie zespołów › Kierownik produkcji).'}</p>
+            ${(D.warnings || []).map(w => `<p class="tm-note">${esc(w)}</p>`).join('')}`;
+    }
+
     function render() {
-        ({day: renderDay, month: renderMonth, leave: renderLeave, overtime: renderOvertime})[tab]();
+        ({day: renderDay, month: renderMonth, leave: renderLeave, overtime: renderOvertime, costs: renderCosts})[tab]();
     }
 
     body.addEventListener('change', (e) => {
@@ -526,11 +703,15 @@
             if (await confirmBox(`Zamknąć ${D.label} ? Po zamknięciu nie można zmieniać odbić, powodów ani urlopów tego miesiąca. Karty A4 do podpisu : « Drukuj wszystkich (PDF) ».`)) act(b, 'POST', `/ajax/time/months/${D.month}/close`);
             return;
         }
+        if (b.matches('[data-goods]')) { goodsDialog(Number(b.dataset.goods), b.dataset.goodsDay); return; }
+        if (b.matches('[data-toggle-group]')) { const id = Number(b.dataset.toggleGroup); if (openGroups.has(id)) openGroups.delete(id); else openGroups.add(id); render(); return; }
         if (b.matches('[data-contacts]')) { contactsDialog(b.dataset.contacts || null); return; }
         if (b.matches('[data-mail-all]')) { mailSheets(b, null); return; }
         if (b.matches('[data-mail-one]')) { mailSheets(b, [Number(b.dataset.mailOne)]); return; }
         if (b.matches('[data-reopen-month]')) { if (await confirmBox('Otworzyć ponownie zamknięty miesiąc ?')) act(b, 'DELETE', `/ajax/time/months/${D.month}/close`); return; }
-        if (b.matches('[data-add-absence]')) { absenceDialog(); return; }
+        if (b.matches('[data-add-absence]')) { absenceDialog(null, null); return; }
+        if (b.matches('[data-request]')) { requestDetail(Number(b.dataset.request)); return; }
+        if (b.matches('[data-pending-list]')) { pendingList(); return; }
         if (b.matches('[data-absence]')) { absenceDetail(Number(b.dataset.absence)); return; }
         if (b.matches('[data-leave-right]')) { leaveRightDialog(Number(b.dataset.leaveRight)); return; }
         if (b.matches('[data-comp]')) { compDialog(Number(b.dataset.comp)); return; }
@@ -538,5 +719,14 @@
         if (b.matches('[data-cancel-comp]')) { if (await confirmBox('Anulować dzień wolny ?')) act(b, 'DELETE', `/ajax/time/comps/${b.dataset.cancelComp}`, null, 'fetch'); }
     });
 
+    // [288] Klik w pustą komórkę kalendarza urlopów → « Dodaj urlop » dla tej osoby od tego dnia.
+    body.addEventListener('click', (e) => {
+        const td = e.target.closest('td[data-add-day]');
+        if (td && tab === 'leave') absenceDialog(Number(td.dataset.addEmp), td.dataset.addDay);
+    });
+
     render();
+    // Link z dzwonka / listy wniosków : ?request=ID otwiera wniosek.
+    const want = Number(new URLSearchParams(location.search).get('request'));
+    if (tab === 'leave' && want) requestDetail(want);
 })();

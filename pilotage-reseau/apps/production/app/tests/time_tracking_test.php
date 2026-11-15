@@ -16,7 +16,7 @@ declare(strict_types=1);
  *   - [263] migration 163 : question de sortie « marchandise » Tak / Nie avec (i), « Tak » → quoi (obligatoire), visible au jour ;
  *   - [264] migration 165 : choix rapide catégorie → produit → pièces (catalogue des produits actifs, lignes additionnées,
  *     « z braków », « Inne », produit inconnu ou quantité hors 1–999 refusés), lignes gardées (n_clock_goods), résumé au jour ;
- *   - [265] karta : colonnes « Dzień » et « Data » séparées ;
+ *   - [265] karta : colonnes « Dzień » et « Data » séparées ; [269] fenêtre du panier (ce qui est pris, par jour) ;
  *   - [266] migration 164 : adresse e-mail du salarié chiffrée (jamais en clair en base), adresse invalide refusée, karta du
  *     mois mise en file d'envoi avec le PDF en pièce jointe (aucun envoi réel), personnes sans adresse listées, envoi noté.
  *
@@ -42,6 +42,8 @@ function expectTm(bool $condition, string $message): void
 }
 
 /** Code HTTP (CustomException) ou code d'erreur (ApiException) d'un appel qui doit échouer. */
+function expectTc_goods(bool $c, string $m): void { expectTm($c, $m); }
+
 function refusal(callable $fn): string
 {
     try { $fn(); } catch (CustomException $e) { return $e->getCode() . ' ' . $e->getMessage(); } catch (ApiException $e) { return $e->errorCode(); }
@@ -95,6 +97,8 @@ try {
     $migrations = (string) file_get_contents(__DIR__ . '/../migrations/tfb/161_time_tracking.sql') . "\n" . file_get_contents(__DIR__ . '/../migrations/tfb/162_production_manager_time_only.sql')
         . "\n" . file_get_contents(__DIR__ . '/../migrations/tfb/163_clock_goods_question.sql');
     foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements($migrations) as $sql) $pdo->exec($sql);
+    // 169 après 162 (comme le runner : chaque migration une fois, dans l'ordre), rejouée deux fois.
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/169_manager_time_tasks.sql')) as $sql) $pdo->exec($sql);
     $count = fn(string $sql) => (int) $pdo->query($sql)->fetchColumn();
     expectTm($count("SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME LIKE 'n_time_%'") === 6, 'migration 161: 6 tables');
     expectTm(str_contains((string) $pdo->query("SELECT COLUMN_TYPE FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'n_prod_signature' AND COLUMN_NAME = 'purpose'")->fetchColumn(), "'comp_day'"), 'migration 161: signature purpose comp_day');
@@ -104,7 +108,14 @@ try {
         && $pdo->query('SELECT home_page FROM n_position_home WHERE id_position = 3')->fetchColumn() === '/time', 'migration 162: Kierownik menu, access and home = Czas pracy only');
     expectTm($count('SELECT active FROM n_position_task WHERE id = 50') === 0 && $count("SELECT COUNT(*) FROM n_position_task WHERE id_position = 3 AND auto_code = 'time_day_validated' AND active = 1 AND sort_order = 1") === 1,
         'migration 162 (replayed twice): other tasks paused, one task n°1 « Czas pracy dnia »');
+    expectTm($count("SELECT COUNT(*) FROM n_position_task WHERE id_position = 3 AND auto_code = 'time_month_closed' AND frequency = 'monthly' AND month_day = 'wd3' AND active = 1") === 1
+        && str_starts_with((string) $pdo->query("SELECT title_pl FROM n_position_task WHERE id_position = 3 AND auto_code = 'time_day_validated'")->fetchColumn(), 'Weryfikacja odbić dnia'),
+        'migration 169 (replayed twice): daily check of the clockings + monthly closing of the month');
     expectTm(\App\Core\Web\PageAccess::keyFor('/time/month') === 'time' && \App\Core\Web\Rail::itemFor('/time/overtime') === 'time' && isset(\App\Core\Web\PageAccess::HOME_PAGES['/time']), 'page access key, rail item and home page');
+
+    // [288] Wnioski o urlop, korekta salda, zaległy do 01.06 (rejouée deux fois).
+    foreach ([1, 2] as $run) foreach (MigrationRunner::splitStatements((string) file_get_contents(__DIR__ . '/../migrations/tfb/178_leave_requests.sql')) as $sql) $pdo->exec($sql);
+    expectTm($pdo->query("SELECT value FROM n_prod_param WHERE code = 'time.leave_carry_until'")->fetchColumn() === '01.06', 'migration 178: carry-over deadline 01.06');
 
     // --- Personnes, pointages (semaine 2.11–8.11.2026 ; 11.11 férié PL)
     $pdo->exec("INSERT INTO n_prod_group (id, code, name_pl, name_fr, color, sort_order, active) VALUES (1, 'PIEKARNIA', 'Piekarnia', 'Boulangerie', '#C17A2A', 1, 1)");
@@ -262,6 +273,8 @@ try {
     expectTm(str_contains(refusal(fn() => $time->closeMonth('2026-11', 3, $now)), 'Miesiąc jeszcze trwa'), 'month not finished: no closing');
     expectTm(str_contains(refusal(fn() => $time->closeMonth('2026-10', 3, $now)), 'Najpierw zatwierdź'), 'closing needs every day validated');
     $pdo->exec("INSERT INTO n_time_month (month, closed_by) VALUES ('2026-11', 1)");
+    expectTm($wizards->state('time_month_closed', '2026-12-01 00:00:00', '2027-01-01 00:00:00', '2026-12-03')['done']
+        && !$wizards->state('time_month_closed', '2026-11-01 00:00:00', '2026-12-01 00:00:00', '2026-11-04')['done'], 'monthly task done by the closing of the previous month (November closed, October not)');
     expectTm(str_starts_with(refusal(fn() => $time->setOvertimeReason(11, '2026-11-05', 'pilne', null, 3)), '409') && str_starts_with(refusal(fn() => $time->reopenDay('2026-11-03', 3)), '409'), 'closed month: no more changes');
     $time->reopenMonth('2026-11', 1);
 
@@ -322,6 +335,13 @@ try {
         && $pdo->query("SELECT product FROM n_clock_goods WHERE id_clock = {$thursday} AND id_final_product IS NULL")->fetchColumn() === '1 kg mąki', 'goods lines kept with the clock-out');
     $thu = array_column($time->day('2026-11-05', $now)['people'], null, 'employee_id');
     expectTm($thu[11]['took'] === '3 × Tarte pommes · 1 × Quiche lorraine (braki) · inne : 1 kg mąki', 'Czas pracy › Dzień shows the picked products');
+    // [269] Okno koszyka : pozycje dnia, sztuki, « inne » ; znacznik w tabeli miesiąca.
+    $gw = $time->goods(11, '2026-11-05');
+    expectTc_goods($gw['employee']['name'] === 'Adam Testowy' && count($gw['exits']) === 1 && count($gw['exits'][0]['lines']) === 3 && $gw['pieces'] === 4.0
+        && $gw['exits'][0]['lines'][1]['waste'] === true && $gw['exits'][0]['lines'][2]['other'] === true, 'basket window: lines of the day, pieces (other excluded)');
+    $mx = array_column($time->month('2026-11', $now)['people'], null, 'employee_id');
+    expectTc_goods($mx[11]['cells']['2026-11-05']['g'] === true && $mx[11]['cells']['2026-11-04']['g'] === false, 'month matrix: basket flag on the day with goods');
+    expectTc_goods($time->goods(12, '2026-11-05')['exits'] === [], 'nothing declared: empty window');
     $cq->save($thursday, 'out', $cq->check('out', [['question_id' => $gid, 'yes' => true, 'items' => [['product_id' => 2, 'quantity' => 4]]]], false));
     expectTm($count("SELECT COUNT(*) FROM n_clock_goods WHERE id_clock = {$thursday}") === 1 && $pdo->query("SELECT note FROM n_clock_answer WHERE id_clock = {$thursday}")->fetchColumn() === '4 × Tarte poires', 'same clock answered again: lines replaced');
     $only = $cq->check('out', [['question_id' => $gid, 'yes' => true, 'note' => 'karton po jajkach']], false);

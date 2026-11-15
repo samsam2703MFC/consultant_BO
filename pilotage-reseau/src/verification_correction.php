@@ -133,6 +133,24 @@ function vrcSansLien(array $e): array
     return $e;
 }
 
+/**
+ * Une ligne de recette dans la forme du contrat de PATCH /recipes/{id} (swagger test.tfbuddy.com, lu le 15/11/2026) :
+ * {id (la matière ou la sous-recette), quantity (nombre), connection_id (la ligne existante, absente d'une ligne
+ * copiée), waste_amount_perc}. Les autres clés lues (nom, unité, catégorie) ne repartent pas. Null si illisible.
+ */
+function vrcLigneContrat(array $e, string $liste): ?array
+{
+    $id = vrcIdLigne($e, $liste);
+    $q = vrcCle($e, VRC_CLES_QTE)[1];
+    if ($id === '' || $q === null) { return null; }
+    $o = ['id' => (int) substr($id, 1), 'quantity' => (float) $q];
+    $lien = $e['connection_id'] ?? ($e['pivot']['id'] ?? null);
+    if (is_numeric($lien)) { $o['connection_id'] = (int) $lien; }
+    $perte = $e['waste_amount_perc'] ?? ($e['pivot']['waste_amount_perc'] ?? null);
+    if (is_numeric($perte)) { $o['waste_amount_perc'] = (float) $perte; }
+    return $o;
+}
+
 /** Pose une quantité dans une entrée, là où le panel la met (à plat ou dans son pivot). */
 function vrcPoserQte(array $e, float $q): array
 {
@@ -207,7 +225,8 @@ function vrcModifier(array $o, array $changements): array
         $listes[$liste][$i] = vrcPoserQte($e, $q); $touche[$liste] = true;
         $lisible[] = $nom . ' : ' . vrcQte($qAvant, vrcUnite($e)) . ' → ' . vrcQte($q, vrcUnite($e));
     }
-    foreach ($touche as $l => $_) { $corps[$l] = $listes[$l]; }
+    // La forme du contrat (swagger test.tfbuddy.com, 15/11/2026) : {id, quantity, connection_id?, waste_amount_perc?} par ligne.
+    foreach ($touche as $l => $_) { $corps[$l] = array_values(array_filter(array_map(static fn ($e) => vrcLigneContrat($e, $l), $listes[$l]))); }
     $inverse = [];
     foreach ($corps as $k => $_) { $inverse[$k] = $o[$k] ?? (in_array($k, VRC_CLES_LISTES, true) ? [] : null); }
     return ['corps' => $corps, 'inverse' => $inverse, 'lisible' => $lisible, 'erreurs' => $erreurs];
@@ -309,6 +328,8 @@ function vrcTable(): void
 /** Note une correction ; rend son numéro. */
 function vrcNoter(array $r): int
 {
+    // Le compte qui a écrit : celui du cockpit, ou un compte administrateur du panel connecté par la personne.
+    if (property_exists(PanelApi::class, 'jetonImpose') && PanelApi::$jetonImpose !== null) { $r['message'] = trim((string) ($r['message'] ?? '') . ' [compte administrateur du panel]'); }
     try {
         vrcTable();
         $j = static fn ($v) => $v === null ? null : json_encode($v, JSON_UNESCAPED_UNICODE);
@@ -395,6 +416,9 @@ function vrcEcrireObjet(array $e): array
 /** Une ligne du registre telle que l'écran la lit. */
 function vrcLigneRegistre(array $r): array
 {
+    if (property_exists(PanelApi::class, 'jetonImpose') && PanelApi::$jetonImpose !== null && !isset($r['fait_le']) && !str_contains((string) ($r['message'] ?? ''), '[compte administrateur du panel]')) {
+        $r['message'] = trim((string) ($r['message'] ?? '') . ' [compte administrateur du panel]');
+    }
     return ['id' => (int) ($r['id'] ?? 0), 'le' => (string) ($r['fait_le'] ?? date('Y-m-d H:i:s')), 'geste' => (string) $r['geste'], 'pid' => isset($r['product_id']) ? (int) $r['product_id'] : ($r['pid'] ?? null),
         'nom' => (string) ($r['nom'] ?? ''), 'objet' => $r['objet'] ?? null, 'objetId' => isset($r['objet_id']) ? (int) $r['objet_id'] : ($r['objetId'] ?? null),
         'methode' => $r['methode'] ?? null, 'route' => $r['route'] ?? null, 'resume' => (string) ($r['resume'] ?? ''), 'http' => isset($r['http']) ? (int) $r['http'] : null,
@@ -679,7 +703,10 @@ function vrcGeste(array $b): array
 }
 
 /** Les routes de prix que le formulaire peut viser (swagger du panel) : rien d'autre ne part d'ici. */
-const VRC_ROUTES_PRIX = ['#^/materials/\d+/manual-price$#', '#^/shops/\d+/materials/avg-price$#', '#^/shops/\d+/suppliers/\d+/materials/price$#'];
+// Le 14/11/2026 : le prix d'une matière de centrale est « géré par le fournisseur » (403 SUPPLIER_MANAGED_PRICE au
+// magasin) ; on repasse alors le tarif du fournisseur pour le magasin, par la route de la centrale.
+const VRC_ROUTES_PRIX = ['#^/materials/\d+/manual-price$#', '#^/shops/\d+/materials/avg-price$#', '#^/shops/\d+/suppliers/\d+/materials/price$#',
+    '#^/material-suppliers/\d+/shops/\d+/products/\d+/price$#'];
 
 /**
  * Un format de prix saisi dans le formulaire (14/11/2026 : « je dois pouvoir avoir le formulaire avec le prix et toutes les
@@ -704,6 +731,7 @@ function vrcPrixPlan(int $sid, int $mid, float $prix, ?array $format = null, int
     $corps = [];
     foreach ($f['corps'] as $k => $v) {
         if ($v === '{prix}') { $corps[$k] = $prix; }
+        elseif ($v === '{shops}') { $corps[$k] = [$sid]; }
         elseif (is_string($v) && isset($subst[$v])) { $corps[$k] = in_array($v, ['{sid}', '{mid}', '{fid}'], true) ? (int) $subst[$v] : $subst[$v]; }
         elseif (is_string($v) && is_numeric($v) && !preg_match('/^0\d/', $v)) { $corps[$k] = $v + 0; }
         else { $corps[$k] = $v; }
@@ -770,7 +798,8 @@ function vrcFormatPrix(): array
 {
     $f = []; try { $f = setting('vrcFormatPrix', []); } catch (Throwable $e) { $f = []; }
     $f = is_array($f) ? $f : [];
-    $corps = isset($f['corps']) && is_array($f['corps']) && $f['corps'] !== [] ? $f['corps'] : ['id_shop' => '{sid}', 'price' => '{prix}'];
+    // Le contrat de POST /materials/{id}/manual-price (swagger test.tfbuddy.com, 15/11/2026) : {shop_ids, pack_price, package_size}.
+    $corps = isset($f['corps']) && is_array($f['corps']) && $f['corps'] !== [] && !isset($f['corps']['id_shop']) ? $f['corps'] : ['shop_ids' => '{shops}', 'pack_price' => '{prix}', 'package_size' => '1'];
     return ['methode' => in_array(strtoupper((string) ($f['methode'] ?? 'POST')), ['POST', 'PATCH', 'PUT'], true) ? strtoupper((string) ($f['methode'] ?? 'POST')) : 'POST',
         'route' => is_string($f['route'] ?? null) && str_starts_with($f['route'], '/') ? $f['route'] : '/materials/{mid}/manual-price', 'corps' => $corps];
 }
@@ -977,4 +1006,137 @@ function wr_verification_liens(): array
     }
     vrcOublier('vfAnalyse');
     return ['ok' => true, 'liens' => vrcLiens(), 'formatPrix' => vrcFormatPrix()];
+}
+
+/**
+ * GET /verification/recettes/sonde-prix?mid=&fid=[&shops=2,5][&sku=] — lecture seule (14/11/2026, « d'où vient le
+ * prix ? ») : le prix d'une matière vu de toutes les routes du panel qui le portent, pour choisir le format d'écriture
+ * sans deviner. Par magasin : la ligne de /shops/{id}/materials, la ligne de la liste du fournisseur (courante,
+ * dernière, programmée), la liste vue du magasin et les notifications de changement de prix. Les listes sont réduites
+ * aux lignes de la matière (ou aux trois premières) : jamais une réponse entière.
+ */
+function ep_verification_sonde_prix(): array
+{
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $mid = (int) ($_GET['mid'] ?? 0); $fid = (int) ($_GET['fid'] ?? 0);
+    if ($mid <= 0) { http_response_code(400); return ['error' => 'mid requis']; }
+    $shops = array_values(array_filter(array_map('intval', explode(',', (string) ($_GET['shops'] ?? implode(',', array_keys(vfMagasins())))))));
+    $sku = (string) ($_GET['sku'] ?? '');
+    $garde = static function ($r) use ($mid, $sku): mixed {
+        if (!is_array($r)) { return $r; }
+        $l = PanelApi::liste($r);
+        if ($l === []) { return array_is_list($r) ? $r : array_map(static fn ($v) => is_array($v) && count($v) > 5 ? '[' . count($v) . ' éléments]' : $v, $r); }
+        $a = array_values(array_filter($l, static function ($x) use ($mid, $sku) {
+            $j = (string) json_encode($x);
+            return preg_match('/"(id_material|material_id|id)":"?' . $mid . '"?[,}]/', $j) === 1 || ($sku !== '' && str_contains($j, '"' . $sku . '"'));
+        }));
+        return ['n' => count($l), 'lignes' => $a !== [] ? array_slice($a, 0, 5) : array_slice($l, 0, 3), 'filtre' => $a !== []];
+    };
+    $out = ['mid' => $mid, 'fid' => $fid, 'materiau' => vrcObjet('matiere', $mid), 'lu' => []];
+    $chemins = [];
+    foreach ($shops as $s) {
+        $chemins[$s . ':materials'] = '/shops/' . $s . '/materials';
+        if ($fid > 0) {
+            foreach (['current', 'latest', 'schedule'] as $q) { $chemins[$s . ':liste-' . $q] = '/material-suppliers/' . $fid . '/shops/' . $s . '/price-lists/' . $q; }
+            $chemins[$s . ':liste-magasin'] = '/shops/' . $s . '/suppliers/' . $fid . '/price-list';
+            $chemins[$s . ':notifications'] = '/material-suppliers/' . $fid . '/shops/' . $s . '/price-change-notifications';
+        }
+    }
+    foreach (PanelApi::getParalleleDetail($chemins, 4, 30, false) as $k => $d) { $out['lu'][$k] = ['code' => $d['code'] ?? null, 'route' => $chemins[$k], 'data' => $garde($d['data'] ?? null)]; }
+    return $out;
+}
+
+/** Les lectures permises à la sonde du circuit des prix (14/11/2026) : GET seulement, ces routes-là seulement. */
+const VRC_SONDE_CHEMINS = ['#^/price-change-batches/\d+/details$#', '#^/material-suppliers/\d+/raw-materials/\d+/price-history$#',
+    '#^/material-suppliers/\d+/shops/\d+/price-change-notifications$#', '#^/material-suppliers/\d+/catalog/products$#', '#^/material-suppliers/\d+/price-lists/global/schedule$#',
+    // Les commandes fournisseur et leurs livraisons (14/11/2026, « comment valider les marchandises dans le stock ») : lecture.
+    '#^/shops/\d+/orders$#', '#^/shops/\d+/orders/materials$#', '#^/orders/\d+$#', '#^/orders/ORD-[\w-]{4,60}$#', '#^/deliveries/\d+$#', '#^/shops/\d+/orders/\d+/supplier-fulfillment$#',
+    '#^/shops/\d+/supplement-orders$#', '#^/consultant/shops/\d+/deliveries$#', '#^/consultant/shops/\d+/material-orders(/\d+)?$#', '#^/shops/\d+/kitchen-deliveries(/\d+)?$#',
+    // Le helpdesk des franchisés et leurs notifications (15/11/2026) : lecture.
+    '#^/cases$#', '#^/cases/stats$#', '#^/cases/\d+$#', '#^/shops/\d+/cases(/stats)?$#', '#^/consultant/tasks/helpdesk$#',
+    '#^/franchisee-notifications(/active)?$#', '#^/franchisee-notification/(types|\d+)$#', '#^/shops/\d+/notifications(/read)?$#', '#^/notifications$#', '#^/shops/\d+/materials/purchase-readiness$#', '#^/material-suppliers/\d+/upcoming-deliveries$#'];
+
+/**
+ * GET /verification/recettes/sonde-chemin?chemin=&q= — lecture seule : une route du circuit des prix fournisseur
+ * (VRC_SONDE_CHEMINS), réduite aux éléments qui contiennent `q` s'il est donné, coupée à 30 éléments.
+ */
+function ep_verification_sonde_chemin(): array
+{
+    if (!PanelApi::configured()) { return ['error' => 'compte panel non configuré']; }
+    $c = (string) ($_GET['chemin'] ?? ''); $q = (string) ($_GET['q'] ?? '');
+    $ok = false; foreach (VRC_SONDE_CHEMINS as $re) { if (preg_match($re, $c)) { $ok = true; } }
+    if (!$ok) { http_response_code(400); return ['error' => 'chemin non permis']; }
+    // `compte=admin` : la même lecture avec le compte administrateur du cockpit (Paramètres › ERP).
+    if (($_GET['compte'] ?? '') === 'admin' && class_exists('ErpApi')) {
+        $t = ErpApi::jetonSonde();
+        if ($t === null) { return ['error' => 'compte administrateur du cockpit indisponible : ' . (ErpApi::$lastError ?? '')]; }
+        PanelApi::$jetonImpose = $t;
+    }
+    $d = PanelApi::getParalleleDetail(['x' => $c], 1, 40, false)['x'] ?? [];
+    $r = $d['data'] ?? null;
+    if (is_array($r)) {
+        $l = PanelApi::liste($r);
+        if ($l !== []) {
+            $f = $q === '' ? $l : array_values(array_filter($l, static fn ($x) => str_contains(mb_strtolower((string) json_encode($x, JSON_UNESCAPED_UNICODE)), mb_strtolower($q))));
+            $r = ['n' => count($l), 'nFiltre' => count($f), 'lignes' => array_slice($f, 0, 30), 'cles' => array_keys(array_diff_key($r, ['data' => 1, 'items' => 1]))];
+        }
+    }
+    return ['chemin' => $c, 'code' => $d['code'] ?? null, 'data' => $r];
+}
+
+/** Le stock d'un magasin tel que /shops/{id}/material-inventory le rend : [mid => [nom, quantité, unité]]. */
+function vrcStockMagasin(int $sid): array
+{
+    $out = [];
+    foreach (PanelApi::liste((array) PanelApi::get('/shops/' . $sid . '/material-inventory')) as $l) {
+        $mid = (int) ($l['id_material'] ?? 0);
+        if ($mid > 0) { $out[$mid] = [trim((string) ($l['material_name'] ?? '')), (float) ($l['current_quantity'] ?? 0), (string) ($l['unit_name'] ?? '')]; }
+    }
+    return $out;
+}
+
+/**
+ * POST /verification/recettes/reception {commande, corps?, apercu?, compte?} — réceptionner UNE livraison fournisseur
+ * (14/11/2026, « comment valider les marchandises dans le stock des shops ? ») : POST /orders/{commande}/delivery. La route
+ * n'a pas de contrat : le corps est celui donné (vide par défaut) et la réponse brute du panel revient. Avant et après :
+ * l'état de la livraison (/deliveries/{id}) et le stock du magasin ; la différence est rendue, le tout noté au registre.
+ * Rien n'est annulable d'ici (une réception ne se défait pas par l'API).
+ */
+function wr_verification_reception(): array
+{
+    if (!PanelApi::configured()) { return ['ok' => false, 'error' => 'Le compte du panel n’est pas configuré (Paramètres).']; }
+    @set_time_limit(120);
+    $b = body();
+    $id = (int) ($b['commande'] ?? 0);
+    if ($id <= 0) { http_response_code(400); return ['error' => 'commande requise']; }
+    $corps = [];
+    foreach ((array) ($b['corps'] ?? []) as $k => $v) { if (preg_match('/^[A-Za-z_]\w{0,60}$/', (string) $k) && (is_scalar($v) || $v === null)) { $corps[(string) $k] = $v; } }
+    $avant = vrcDeballer(PanelApi::get('/deliveries/' . $id));
+    if ($avant === null) { return ['ok' => false, 'error' => 'La livraison ' . $id . ' n’a pas pu être lue (/deliveries/' . $id . ') : rien n’est envoyé.']; }
+    $sid = (int) ($avant['id_shop'] ?? 0);
+    // `cle: true` : la commande se désigne par sa clé (order_key, « ORD-… ») — 404 ORDER_NOT_FOUND par son numéro (mesuré).
+    $cleCmd = (string) ($avant['order_key'] ?? '');
+    $route = !empty($b['cle']) && preg_match('/^ORD-[\w-]{4,60}$/', $cleCmd) ? '/orders/' . $cleCmd . '/delivery' : '/orders/' . $id . '/delivery';
+    $etat = static fn (?array $d): array => $d === null ? [] : array_intersect_key($d, array_flip(['status', 'delivered_on', 'supplier_fulfillment_status', 'expected_date', 'in_transit_sent_at']));
+    if (!empty($b['apercu'])) { return ['apercu' => true, 'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'magasin' => $sid, 'livraison' => $etat($avant)]; }
+    $stockAvant = $sid > 0 ? vrcStockMagasin($sid) : [];
+    PanelApi::$lastError = null;
+    [$ok, $res] = PanelApi::envoi('POST', $route, $corps);
+    $http = preg_match('/HTTP (\d{3})/', (string) PanelApi::$lastError, $m) ? (int) $m[1] : ($ok ? 200 : 0);
+    $apres = vrcDeballer(PanelApi::get('/deliveries/' . $id));
+    $stockApres = $ok && $sid > 0 ? vrcStockMagasin($sid) : $stockAvant;
+    $diff = [];
+    foreach ($stockApres as $mid => [$nom, $q, $u]) {
+        $q0 = $stockAvant[$mid][1] ?? 0.0;
+        if (abs($q - $q0) > 1e-9) { $diff[] = ['mid' => $mid, 'nom' => $nom, 'avant' => $q0, 'apres' => $q, 'unite' => $u]; }
+    }
+    usort($diff, static fn ($x, $y) => abs($y['apres'] - $y['avant']) <=> abs($x['apres'] - $x['avant']));
+    $r = ['geste' => 'reception', 'cle' => 'cmd:' . $id, 'pid' => null, 'nom' => 'Livraison ' . ($avant['order_key'] ?? $id), 'shop' => $sid, 'objet' => 'livraison', 'objetId' => $id,
+        'methode' => 'POST', 'route' => $route, 'corps' => $corps, 'http' => $http, 'inverse' => null,
+        'resume' => 'Réception de la livraison ' . $id . ' : ' . ($avant['status'] ?? '?') . ' → ' . ($apres['status'] ?? '?') . ' · ' . count($diff) . ' matière(s) au stock changée(s)',
+        'resultat' => !$ok ? 'refuse' : (($apres['status'] ?? '') !== ($avant['status'] ?? '') || $diff !== [] ? 'ok' : 'sans_effet'),
+        'message' => !$ok ? vrcMessage($res) : ''];
+    $r['id'] = vrcNoter($r);
+    return ['ok' => $r['resultat'] === 'ok', 'ecritures' => [vrcLigneRegistre($r + ['reponse' => mb_substr((string) json_encode($res, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES), 0, 3000), 'httpPanel' => $http])],
+        'livraison' => ['avant' => $etat($avant), 'apres' => $etat($apres)], 'stock' => array_slice($diff, 0, 80), 'nStock' => count($diff)];
 }

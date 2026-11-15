@@ -20,7 +20,7 @@
     {% import _self as wk %}
     <div class="mt-row{{ it.done ? ' done' : '' }}"{% if it.id %} data-wt="{{ it.id }}"{% endif %} data-min="{{ it.minutes ?? 0 }}">
         <span class="mt-d {{ it.done ? 'ok' : kind }}">{% if it.done %}<i class="bi bi-check-lg"></i>{% endif %}</span>
-        <div class="mt-t" title="{{ it.title }}">{{ it.short }}<small>{{ wk.sub(it) }}</small></div>
+        <div class="mt-t" title="{{ it.title }}{{ it.mandatory is defined and it.mandatory ? ' — obowiązkowe, blokuje ERP ' ~ it.block : '' }}">{% if it.mandatory is defined and it.mandatory %}<i class="bi bi-lock-fill mt-lock" aria-label="obowiązkowe"></i>{% endif %}{{ it.short }}<small>{{ wk.sub(it) }}</small></div>
         <span class="mt-w{{ kind == 'late' and not it.done ? ' late' : '' }}">{{ wk.when(it, kind) }}</span>
         <span class="mt-m">{{ it.minutes ? wk.dur(it.minutes) : '' }}</span>
         <span class="mt-p">{{ wk.dots(it) }}</span>
@@ -29,13 +29,22 @@
 {% endmacro %}
 {% import _self as wk %}
 
-{% block title %}Dzisiaj{% endblock %}
+{% block title %}Dzisiaj i zadania{% endblock %}
 
 {% block page_heading %}
-    <div class="page-heading">
+    {# [290] Dzisiaj i zadania : jedna strona (makieta 51) — zadania na górze, bez zakładek ; liczniki i Protokoły w nagłówku. #}
+    <div class="page-heading at-profit-head at-today-head">
         <div class="page-title">
-            <h3>Dzisiaj</h3>
-            <p class="text-subtitle text-muted">{{ today|day_pl }}</p>
+            <h3>Dzisiaj i zadania</h3>
+            <p class="text-subtitle text-muted">{{ today|day_pl }}{% if member and member.position_name %} · {{ member.position_name }}{% endif %}</p>
+        </div>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            {% if week and week.flow is defined and member and member.id_position %}{% set f0 = week.flow %}
+            <span class="at-count is-todo">do zrobienia {{ (f0.today|length) + (f0.now and not f0.now.late ? 1 : 0) }}</span>
+            {% if f0.late|length %}<span class="at-count is-late">zaległe {{ f0.late|length }}</span>{% endif %}
+            <span class="at-count is-done">zrobione {{ week.totals.done }}</span>
+            {% endif %}
+            <a class="btn btn-sm btn-outline-primary" href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły</a>
         </div>
     </div>
 {% endblock %}
@@ -43,52 +52,9 @@
 {% block content %}
 <section class="section at-today">
 
-    {# --- Cztery liczby dnia -------------------------------------------------- #}
-    <div class="at-tiles">
-        <a class="at-tile" href="{{ root }}/client-orders">
-            <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
-            {% if next %}
-                <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
-                <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
-            {% else %}
-                <strong class="at-tile-value">—</strong>
-                <span class="at-tile-meta">Brak otwartych zamówień</span>
-            {% endif %}
-        </a>
-
-        <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/workshop/team-sheet">
-            <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
-            {% if not next %}
-                <strong class="at-tile-value">—</strong>
-                <span class="at-tile-meta">Nic nie jest zamówione</span>
-            {% elseif missing.products %}
-                <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
-                <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
-            {% else %}
-                <strong class="at-tile-value">Wszystko na stanie</strong>
-                <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
-            {% endif %}
-        </a>
-
-        {% set open_complaints = complaints.new + complaints.review %}
-        <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
-            <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
-            <strong class="at-tile-value">{{ open_complaints }}</strong>
-            <span class="at-tile-meta">
-                {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
-            </span>
-        </a>
-
-        <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
-            <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
-            <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
-            <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
-        </a>
-    </div>
-
     <div class="row">
         {# --- Mój tydzień : zadania stałe stanowiska dzień po dniu (plan ustala administrator) --- #}
-        <div class="col-12">
+        <div class="col-12" id="zadania">
             {% if not member or not member.id_position %}
             <div class="card at-mytasks">
                 <div class="card-header"><h4 class="card-title mb-0">Mój tydzień</h4><span class="at-sub">bez stanowiska</span></div>
@@ -100,7 +66,10 @@
             {% else %}
             {% set t = week.totals %}
             {% set f = week.flow %}
-            <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes }}" data-done-min="{{ t.done_minutes }}">
+            {# [289] Zastępstwo urlopowe (makieta 50) : zadania osoby na urlopie są u zastępcy (oznaczone « zastępstwo : … »). #}
+            {% if week.on_leave %}<div class="at-leave-banner"><i class="bi bi-airplane"></i> <b>Jesteś na urlopie</b> do {{ week.on_leave.to|date('d.m.Y') }}{% if week.on_leave.substitute %} — Twoje zadania przejmuje {{ week.on_leave.substitute_position ? week.on_leave.substitute_position ~ ' — ' : '' }}{{ week.on_leave.substitute }}{% else %} — bez zastępcy, zadania czekają{% endif %}. <a href="{{ root }}/my-leave">Mój urlop</a></div>{% endif %}
+            {% for d in week.delegations ?? [] %}<div class="at-leave-banner"><i class="bi bi-person-check"></i> <b>Zastępstwo za {{ d.position }} — {{ d.name }}</b> · urlop {{ d.from|date('d.m') }}–{{ d.to|date('d.m') }} · {{ d.tasks }} {{ d.tasks == 1 ? 'zadanie' : (d.tasks in [2, 3, 4] ? 'zadania' : 'zadań') }} w Twojej liście (« zastępstwo »)</div>{% endfor %}
+            <div class="kw-card mt-card-root" id="myWeek" data-done="{{ t.done }}" data-total="{{ t.total }}" data-min="{{ t.minutes ?? 0 }}" data-done-min="{{ t.done_minutes ?? 0 }}">
               <div class="mt-wrap">
                 <div class="mt-main">
                     {% if f.now %}{% set n = f.now %}
@@ -126,12 +95,17 @@
                     <div class="mt-box">
                         <h6>Mój tydzień <small>tydz. {{ week.week.number }} · {{ week.week.from|date('d.m') }} – {{ week.week.to|date('d.m') }}</small></h6>
                         <div class="mt-big"><span data-wk="done">{{ t.done }} z {{ t.total }}</span></div>
+                        {% if show_minutes %}
                         <div class="wk-bar mt-bar"><i data-wk="bar" style="width: {{ t.minutes ? (t.done_minutes * 100 / t.minutes)|round : 0 }}%"></i></div>
                         <span class="at-sub" data-wk="done-min">zadań zrobionych · {{ wk.dur(t.done_minutes) }} z {{ wk.dur(t.minutes) }}</span>
+                        {% else %}{# [285] bez minut : pasek wg liczby zadań #}
+                        <div class="wk-bar mt-bar"><i data-wk="bar" style="width: {{ t.total ? (t.done * 100 / t.total)|round : 0 }}%"></i></div>
+                        <span class="at-sub" data-wk="done-min">zadań zrobionych</span>
+                        {% endif %}
                         <p class="mt-who">{{ member.position_name }} · {{ member.displayed_name ?: member.login }}</p>
                     </div>
                     <div class="mt-box mt-links">
-                        <a href="{{ root }}/my-tasks"><i class="bi bi-list-check"></i> Wszystkie moje zadania</a>
+                        <a href="{{ root }}/task-forms"><i class="bi bi-journal-text"></i> Protokoły zadań</a>
                         {% if can_see('/organization/execution') %}<a href="{{ root }}/organization/execution"><i class="bi bi-people"></i> Kto co zrobił</a>{% endif %}
                         {% if can_see('/organization/week-plan/' ~ member.id_position) %}<a href="{{ root }}/organization/week-plan/{{ member.id_position }}"><i class="bi bi-sliders"></i> Zadania stanowiska</a>{% endif %}
                     </div>
@@ -154,6 +128,54 @@
         </div>
         {% endif %}
 
+        {# [284] Sesja / stanowisko Produkcja (kierownik produkcji) : tylko zadania — bez wskaźników, rentowności grup,
+           planu wysyłek, « Do zrobienia » i ostatnich zamówień. #}
+        {% if not tasks_focus %}
+        {# [290] Liczby dnia : pod zadaniami (makieta 51) ; sesja Produkcja — bez nich. #}
+        <div class="col-12">
+    {# --- Cztery liczby dnia -------------------------------------------------- #}
+        <div class="at-tiles">
+            <a class="at-tile" href="{{ root }}/client-orders">
+                <span class="at-tile-label"><i class="bi bi-calendar-event"></i> Najbliższa wysyłka</span>
+                {% if next %}
+                    <strong class="at-tile-value">{{ next.day|day_pl|split(',')|first }}, {{ next.day|date('d.m') }}</strong>
+                    <span class="at-tile-meta">{{ next.orders|plural_pl('zamówienie', 'zamówienia', 'zamówień') }} · {{ next.cartons|plural_pl('karton', 'kartony', 'kartonów') }}</span>
+                {% else %}
+                    <strong class="at-tile-value">—</strong>
+                    <span class="at-tile-meta">Brak otwartych zamówień</span>
+                {% endif %}
+            </a>
+
+            <a class="at-tile {{ missing.products ? 'at-tile-warn' : 'at-tile-ok' }}" href="{{ root }}/workshop/team-sheet">
+                <span class="at-tile-label"><i class="bi bi-gear"></i> Do wyprodukowania</span>
+                {% if not next %}
+                    <strong class="at-tile-value">—</strong>
+                    <span class="at-tile-meta">Nic nie jest zamówione</span>
+                {% elseif missing.products %}
+                    <strong class="at-tile-value">{{ missing.products|plural_pl('produkt', 'produkty', 'produktów') }}</strong>
+                    <span class="at-tile-meta">{{ missing.cartons|plural_pl('karton', 'kartony', 'kartonów') }} na {{ next.day|date('d.m') }}</span>
+                {% else %}
+                    <strong class="at-tile-value">Wszystko na stanie</strong>
+                    <span class="at-tile-meta">na {{ next.day|date('d.m') }}</span>
+                {% endif %}
+            </a>
+
+            {% set open_complaints = complaints.new + complaints.review %}
+            <a class="at-tile {{ open_complaints ? (complaints.oldest_days is not null and complaints.oldest_days > 7 ? 'at-tile-danger' : 'at-tile-warn') : 'at-tile-ok' }}" href="{{ root }}/franchise-complaints">
+                <span class="at-tile-label"><i class="bi bi-exclamation-triangle"></i> Reklamacje do decyzji</span>
+                <strong class="at-tile-value">{{ open_complaints }}</strong>
+                <span class="at-tile-meta">
+                    {% if complaints.oldest_days is not null %}najstarsza czeka {{ complaints.oldest_days }} {{ complaints.oldest_days == 1 ? 'dzień' : 'dni' }}{% else %}Nic nie czeka{% endif %}
+                </span>
+            </a>
+
+            <a class="at-tile {{ proformas.unpaid ? '' : 'at-tile-ok' }}" href="{{ root }}/proforma-documents">
+                <span class="at-tile-label"><i class="bi bi-receipt"></i> Proformy nieopłacone</span>
+                <strong class="at-tile-value">{{ proformas.unpaid }}</strong>
+                <span class="at-tile-meta">z {{ proformas.orders|plural_pl('otwartego zamówienia', 'otwartych zamówień', 'otwartych zamówień') }}</span>
+            </a>
+        </div>
+        </div>
         {# --- Wskaźniki kierownika produkcji (dyrekcja) : cele i wyniki z modułu --- #}
         {% if manager_kpis %}
         <div class="col-12">
@@ -261,7 +283,10 @@
                 </div>
             </div>
         </div>
+        {% endif %}
     </div>
+
+    {% if not tasks_focus %}
 
     <div class="row">
         {# --- Plan wysyłek ------------------------------------------------------ #}
@@ -381,6 +406,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 </section>
 {% endblock %}
 
@@ -397,8 +423,13 @@
         d.done = Number(d.done) + delta;
         d.doneMin = Number(d.doneMin) + delta * min;
         week.querySelector('[data-wk=done]').textContent = `${d.done} z ${d.total}`;
-        week.querySelector('[data-wk=done-min]').textContent = `zadań zrobionych · ${dur(Number(d.doneMin))} z ${dur(Number(d.min))}`;
-        week.querySelector('[data-wk=bar]').style.width = (Number(d.min) ? Math.round(Number(d.doneMin) * 100 / Number(d.min)) : 0) + '%';
+        if (Number(d.min)) {
+            week.querySelector('[data-wk=done-min]').textContent = `zadań zrobionych · ${dur(Number(d.doneMin))} z ${dur(Number(d.min))}`;
+            week.querySelector('[data-wk=bar]').style.width = Math.round(Number(d.doneMin) * 100 / Number(d.min)) + '%';
+        } else {
+            // [285] Bez minut (nie administrator) : pasek wg liczby zadań.
+            week.querySelector('[data-wk=bar]').style.width = (Number(d.total) ? Math.round(Number(d.done) * 100 / Number(d.total)) : 0) + '%';
+        }
     }
     document.querySelectorAll('[data-wk-toggle]').forEach(button => button.addEventListener('click', () => {
         const id = button.dataset.wkToggle, row = button.closest('.mt-row, .mt-now');

@@ -89,7 +89,7 @@ final class TeamBonusService
             $now = $this->figures($current, $section, $rate, $settings);
             $groups[] = [
                 'id' => (int) $g['id'], 'name' => $g['name_pl'], 'color' => $g['color'], 'visible' => (bool) $g['bonus_visible'],
-                'section' => $section !== null,
+                'section' => $section !== null, 'section_id' => $section,
                 'current' => $now,
                 'previous' => $this->figures($previous, $section, $rate, $settings),
                 'last_year' => $this->lastYear($lastYear, $section, $rate, $settings, $now),
@@ -119,24 +119,14 @@ final class TeamBonusService
         $section = $group['id_section'] !== null ? (int) $group['id_section'] : null;
         $now = $this->figures($current, $section, $rate, $settings);
         $before = $this->figures($previous, $section, $rate, $settings);
-        $first = $today->modify('first day of this month');
         $remaining = self::workingDaysAfter($today);
 
-        $next = $now['available'] ? self::nextTier($now['projection'], $settings['min'], $settings['tiers']) : null;
-        if ($next !== null) {
-            // Ile sprzedaży grupy jeszcze do końca miesiąca, żeby na koniec mieć próg (od stanu na dziś).
-            $missing = max(0.0, $next['from'] * $now['people'] - $now['revenue_pln']);
-            $next += ['missing_group' => round($missing), 'missing_per_person' => round($missing / $now['people']),
-                'per_day' => $remaining > 0 ? round($missing / $remaining) : null];
-        }
-
-        $presence = $this->repo->presence($groupId, $first->format('Y-m-d'), $today->format('Y-m-d'));
-        $amount = $now['bonus_projection'] ?? 0.0;
+        $next = self::nextStep($now, $settings, $remaining);
+        $team = $this->persons($groupId, $now['bonus_projection'] ?? 0.0, $settings, $today);
+        $presence = ['group_days' => $team['group_days']];
         $persons = [];
-        foreach ($presence['people'] as $p) {
-            $share = $settings['prorata'] && $presence['group_days'] > 0 ? min(1.0, $p['days'] / $presence['group_days']) : 1.0;
-            $row = ['id' => $p['id'], 'name' => $p['name'], 'days' => $p['days'], 'share' => round($share, 3),
-                'amount' => round($amount * $share), 'me' => $p['id'] === $employeeId];
+        foreach ($team['persons'] as $row) {
+            $row['me'] = $row['id'] === $employeeId;
             if ($settings['show_people'] || $row['me']) $persons[] = $row;
         }
 
@@ -164,6 +154,35 @@ final class TeamBonusService
             'persons' => $persons,
             'rate' => $rate,
         ];
+    }
+
+    /**
+     * Następny próg grupy (od prognozy) i ile sprzedaży grupy jeszcze do końca miesiąca, żeby go mieć (od stanu na dziś).
+     * @return ?array{index:int, from:float, amount:float, missing_group:float, missing_per_person:float, per_day:?float}
+     */
+    public static function nextStep(array $now, array $settings, int $remainingDays): ?array
+    {
+        $next = $now['available'] ? self::nextTier($now['projection'], $settings['min'], $settings['tiers']) : null;
+        if ($next === null) return null;
+        $missing = max(0.0, $next['from'] * $now['people'] - $now['revenue_pln']);
+        return $next + ['missing_group' => round($missing), 'missing_per_person' => round($missing / $now['people']),
+            'per_day' => $remainingDays > 0 ? round($missing / $remainingDays) : null];
+    }
+
+    /**
+     * Osoby grupy z dniami obecności w miesiącu i premią osoby : premia progu × dni obecności ÷ dni pracy grupy
+     * (bonus.presence_prorata ; grupa bez odbić : cała premia).
+     * @return array{persons:list<array{id:int, name:string, days:int, share:float, amount:float}>, group_days:int}
+     */
+    public function persons(int $groupId, float $amount, array $settings, DateTimeImmutable $today): array
+    {
+        $presence = $this->repo->presence($groupId, $today->modify('first day of this month')->format('Y-m-d'), $today->format('Y-m-d'));
+        $persons = [];
+        foreach ($presence['people'] as $p) {
+            $share = $settings['prorata'] && $presence['group_days'] > 0 ? min(1.0, $p['days'] / $presence['group_days']) : 1.0;
+            $persons[] = ['id' => $p['id'], 'name' => $p['name'], 'days' => $p['days'], 'share' => round($share, 3), 'amount' => round($amount * $share)];
+        }
+        return ['persons' => $persons, 'group_days' => $presence['group_days']];
     }
 
     public function saveSettings(array $input, ?int $userId): void

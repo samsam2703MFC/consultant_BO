@@ -1022,3 +1022,45 @@ où, comment, pourquoi, comment c'est validé, le code, un exemple. Les nombres 
 et SOP de `GET /formation/sop/liste`) ; chaque en-tête mène à son écran (la checklist : le Cadre des tâches, onglet
 Checklists) ; les exemples ouvrent leur document (vue tablette pour l'article 0.0.14 et la SOP 0.1.01).
 
+
+## Manuel : la section « Pour les consultants » (12/11/2026)
+
+- Client : « rajouter dans le manuel opératoire une section pour les consultants » ; choix : un 3e groupe dans l'onglet
+  Manuel de la tablette, ouvert à tous (pas de PIN), avec la visite et les contrôles.
+- Troisième valeur d'accès **`consultant`** (`FO_ACCES`, `foAcces`, `src/sop.php`) : ouverte comme « tous », posée par
+  `PATCH /formation/sop/fiche/{id}` {acces} (ou le champ `acces` du fichier source de l'encodeur). Sur la tablette
+  (`sop/tablette.js`) un document « consultant » se range dans l'onglet Manuel, groupe **« Pour les consultants »** (NL
+  « Voor de consultants »), entre « Réservé au franchisé et au responsable » et « Articles du manuel opératoire ».
+- Rangés là : 0.0.32 « La visite du consultant en magasin » (`art-visite`) et 0.0.33 « Les contrôles en magasin »
+  (`art-controles`), tous deux v1.0 « à valider » (11 et 9 parties, captures des écrans réels).
+- **Blocage retiré** (12/11/2026, client : « retirer le blocage sur franchisé et responsable ») : `foAccesOuvert` rend
+  toujours vrai ; les documents « responsable » restent groupés en tête de l'onglet Manuel (« Pour le franchisé et le
+  responsable », NL « Voor de franchisenemer en de verantwoordelijke »), sans cadenas ni PIN. L'écran du PIN et la route
+  `/formation/sop/tablette/acces` restent dans le code, plus appelés.
+
+## Le Manuel de la tablette en trois boutons (maquette B, 13/11/2026)
+
+- Client : « on click de Manuel il faut 3 boutons : Franchisé · Consultant · Manuel opératoire » (maquettes A, B, C ;
+  **B retenue**). Sous les quatre cartes, trois cartes plus petites (`.tb-sousman`, `S.manSous` 'fr' · 'co' · 'ma', retenu
+  sur l'appareil `foManSous`, Franchisé d'office), chacune avec son nombre et une ligne (« et responsable », « visites et
+  contrôles », « le métier, pour tous ») ; seule la liste du bouton choisi s'affiche. Franchisé = accès « responsable » ;
+  Consultant = accès « consultant » ; Manuel opératoire = le reste (rangé par formation).
+- Nouveau dossier **05 « Le dashboard magasin, onglet par onglet »** (`FO_DOSSIERS`) : sous Franchisé, ses documents ont
+  leur propre groupe, rangés par code (0.0.34 → 0.0.49).
+
+## Dashboard magasin : cinq corrections relevées en écrivant le manuel (13/11/2026)
+
+- Client : « oui corrige 1 à 5 » (points relevés en rédigeant la section « Le dashboard magasin, onglet par onglet »).
+  1. Téléphone › Exploitation : sans aucun point jugé (chiffres du jour pas lus), le verdict ne dit plus ✓ « tout est
+     au vert » mais « … pas encore jugé · N points en attente des chiffres du jour » ; avec des points jugés au vert et
+     d'autres pas encore : « rien à signaler pour l'instant » (`maVerdict`).
+  2. Couleurs : orange (#D98A0B) ≠ doré (#B0792A) comme le disent les légendes — heatmap de l'Année (80–95 %), colonne
+     Atteinte du tableau des trimestres, rentabilité jour par jour du Mois (0–5 %) ; la légende des « 3 mois du
+     trimestre » dit « bordeaux » et « or », les couleurs des barres.
+  3. Fidélité › fiche client : « Ses passages » prend les couleurs de « Comment il achète » (commande bordeaux,
+     comptoir or).
+  4. Promotions : la fenêtre du coefficient n'a plus « Dupliquer » sur le dashboard (il reste au cockpit, `EMBED_PM`) ;
+     sous × 2 : « À revoir au cockpit (Promotions › Édition) ». « Réclamer au fournisseur » et « Remarque à
+     l'opérateur » (invendus) restent : les articles 0.0.37 et 0.0.39 les expliquent.
+  5. Produits › « Fiche complète ↗ » : la fiche reçoit le prix HT du catalogue (`prixHt`, `analyse_produits.php` ;
+     `data-fp`) — marge, coefficient et simulateur s'affichent ; la jauge dit « catalogue » au lieu de « encaissé ».

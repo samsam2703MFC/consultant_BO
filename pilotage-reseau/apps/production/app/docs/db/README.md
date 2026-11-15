@@ -70,7 +70,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 - Dzisiaj « Mój tydzień » (maquette 219-1) : les tâches fixes du poste de l'utilisateur, jour par jour pour la semaine ISO en
   cours (jours ouvrés `tasks.workdays`), chaque carte avec la catégorie (couleur), les minutes, le lien direct vers la page
-  ERP (« Kreator faktur → », « Kreator cen → »…) et la case « Zrobione » (PATCH `/ajax/my-tasks/{id}`, sans rechargement,
+  ERP (« Asystent faktur → », « Asystent cen → »…) et la case « Zrobione » (PATCH `/ajax/my-tasks/{id}`, sans rechargement,
   « Cofnij » remet à faire). Tâches quotidiennes de tous les jours dans un bandeau au-dessus (pastilles Pn…Pt) ; tuiles
   zrobione / total et minutes, aujourd'hui (tâches, minutes, liens), en retard, part des 40 h, mois et trimestre ; en dessous
   « Zaległe » (ouvertes des semaines passées) et « Miesiąc i kwartał ». Les jours passés sans occurrence restent grisés
@@ -84,7 +84,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Plan de la semaine du poste (maquette 219-2, administrateur seul : catalogue d'accès `week_plan`,
   `/organization/week-plan/{id}`, bouton « Plan tygodnia » sur chaque poste de Funkcje i zadania) : tâche, catégorie, jours
   (1 jour = hebdomadaire ce jour-là, tous les jours ouvrés = quotidienne, 2 à 4 jours = quotidienne ces jours-là
-  `weekdays`, ou « Mies. » / « Kw. »), minutes (0–480), lien (liste des pages : kreator faktur, faktury, kreator cen étapes
+  `weekdays`, ou « Mies. » / « Kw. »), minutes (0–480), lien (liste des pages : asystent faktur, faktury, asystent cen étapes
   1 / 2 / 3, zakupy tygodnia, dostawcy, oferty, NC… ou autre adresse), « zalicza się samo » ; colonne « Rzeczywiście » :
   temps actif moyen par exécution des personnes du poste sur la page du lien (`n_activity_view`, 4 dernières semaines,
   préfixe le plus long, partagé au prorata du plan entre tâches d'une même page ; rouge au-delà de 125 % du plan) ; charge
@@ -95,8 +95,8 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   d'un autre poste, sauf celles du même nom. `GET /ajax/organization/week-plan/{id}` relit le plan.
 - Colonnes ajoutées à `n_position_task` : `minutes` (SMALLINT, durée d'une exécution), `weekdays` (ex. « 1,4 »),
   `auto_code`. Migration : plan du poste ZAKUPY (minutes et jours des tâches existantes laissées vides ; tâche du mercredi
-  « Zaimportować ceny z faktur » → lien kreator faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
-  kreator cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
+  « Zaimportować ceny z faktur » → lien asystent faktur + `inv_checked` ; « Zakupy tygodnia » → `buy_sent` ; nouvelles tâches
+  asystent cen : coûts et marges mercredi 20 min `costs_recalc`, nouveaux prix jeudi 30 min `prices_planned`, contrôle de
   la publication vendredi 10 min). Total : 4 h 15 par semaine.
 - Migration 140 (décision du 30/10/2026 : pas d'acheteur, les achats sont faits par la production) : toutes les tâches du poste
   ZAKUPY passent au poste KIEROWNIK_PRODUKCJI (Anna Szeremeta ; occurrences conservées, ordre après ses tâches), poste ZAKUPY
@@ -139,7 +139,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   « przełożony powiadomiony ». Semaine en pastilles (assistant, en cours, fait, automatique, en retard).
 - Tâches du poste (maquette 227-2, `/organization/week-plan/{id}`, administrateur) : tableau par fréquence, panneau
   d'édition (assistant, fréquence Dzień / Tydzień / Mies. / Kw. + jours ou règle du mois + heure, minutes, « Automatycznie
-  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Kreatory do przypięcia »
+  (cron) » Tak / Nie → quand, jour, heure, quoi, ensuite, dernières exécutions ; rappels), « Asystenci do przypięcia »
   (libre / épinglé). Enregistrement : mêmes PUT + champs ci-dessus, validés (HH:MM, `wdN` / `dN`, 1–30 jours, cron complet).
 - « Kto co zrobił » (maquette 227-3, `/organization/execution`, catalogue d'accès `execution` : administrateur + postes
   supérieurs d'un autre poste — Kierownik produkcji, Logistyka, Brygadzista) : postes × jours (Dziś / Tydzień / Miesiąc), une
@@ -151,9 +151,9 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 - Une tâche = un assistant : les tâches du Kierownik produkcji qui étaient des étapes d'un assistant existant sont fusionnées
   dans la tâche de l'assistant (21 → 13 tâches actives ; tâches fusionnées `active = 0`, historique des occurrences conservé) :
-  Zakupy tygodnia (lundi, 85 min) ← offres reçues + articles à moins de 3 fournisseurs ; Faktury tygodnia (mercredi, kreator
+  Zakupy tygodnia (lundi, 85 min) ← offres reçues + articles à moins de 3 fournisseurs ; Faktury tygodnia (mercredi, asystent
   faktur, 60 min) ← import des factures + nouveaux prix matières (factures et listes de prix) ; Koszty i marże (mercredi,
-  kreator cen étape 1) ← coût des recettes + marges des catégories (mensuels) ; Nowe ceny i publikacja (jeudi, étapes 2–3,
+  asystent cen étape 1) ← coût des recettes + marges des catégories (mensuels) ; Nowe ceny i publikacja (jeudi, étapes 2–3,
   40 min) ← vérification de la publication ; trimestre : évaluation des fournisseurs + appel d'offres matières clés = une tâche.
   Correspondance par poste, page et fréquence (pas par id), seulement si la tâche cible est active ; rejouable. Les achats
   restent au Kierownik produkcji (décision du 30/10 : pas d'acheteur). Doublon connu : contrôle des réceptions / NC chez
@@ -259,7 +259,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 ### Nouvelle machine et machine partagée (migration 156, 01/11/2026)
 
-- Kreator maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
+- Asystent maszyny : nouvelle première étape **« 1 · Maszyna »** (4 étapes : Maszyna › Produkty › Wsad i tempo › Gotowe).
   Bouton « Nowa maszyna » (en haut, « + maszyna w grupie … » sous chaque groupe, « Dodaj maszynę » dans un groupe sans
   machine) : nom, rodzaj (piec, maszyna, robot / linia + tryb sam / z operatorem / cobot avec part d'une personne,
   stanowisko ręczne, komora rozrostu, chłodnia, mrożenie — pour les komory : nombre de wózków), groupe propriétaire,
@@ -267,7 +267,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   depuis les étapes 2–3 (bouton crayon). Écriture via `WorkstationService` (code généré depuis le nom, unique ;
   journal `workstation`) ; noms en double refusés.
 - `n_prod_workstation_share` (id_workstation, id_group — PK, CASCADE) : groupes qui utilisent la machine d'un autre groupe
-  (journal `workstation_share`, source « kreator maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
+  (journal `workstation_share`, source « asystent maszyny »). Effets : la machine apparaît dans chaque groupe (Dane maszyn :
   « wspólna — maszyna grupy … », comptée une seule fois ; Wykorzystanie : « + Tarty » et filtre de groupe ; tablette TRS
   du groupe) ; elle travaille sur les shifts des équipes de chacun de ces groupes ; le temps de travail d'un produit sur
   la machine est compté à l'équipe du groupe du produit si ce groupe partage la machine, sinon au groupe de la machine.
@@ -275,7 +275,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 - Routes : `POST /ajax/production/capacity/machine-data` (nouvelle), `PUT /ajax/production/capacity/machine-data/{id}/machine`.
   Tests : `tests/machine_data_test.php`, `tests/capacity_test.php`.
 
-### Dane maszyn : kreator maszyny (01/11/2026, sans migration)
+### Dane maszyn : asystent maszyny (01/11/2026, sans migration)
 
 - Page : Produkcja › Moce produkcyjne › onglet « Dane maszyn » (maquettes 12 et 13). Pour le Kierownik produkcji (droit de
   la page Produkty `/workshop/products`) et l'administrateur. Trois compteurs : maszyny z kompletem danych, produkty z
@@ -291,7 +291,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   nouvelle étape en fin de karta (`step_no` = max + 1, nom = nom de la machine). `capacity_per_pass` = sztuk w wsadzie,
   `fixed_time_s` = 3600 ÷ wsadów na godzinę (arrondi), `variable_time_s` = 0, `operators_required` = osób (1 par défaut
   pour une nouvelle étape ; vide = inchangé). Lignes vides ou inchangées ignorées. Journal `n_prod_audit_log`
-  (`source` « kreator maszyny »). Limites : wsad 0–1 000 000 szt., 0–600 wsadów/h, 0–50 osób ; produit inconnu → 422,
+  (`source` « asystent maszyny »). Limites : wsad 0–1 000 000 szt., 0–600 wsadów/h, 0–50 osób ; produit inconnu → 422,
   machine inactive → 404.
 - Routes : `GET /ajax/production/capacity/machine-data`, `GET|PUT /ajax/production/capacity/machine-data/{id}`
   (`MachineDataService`, `MachineDataRepository`). Test : `tests/machine_data_test.php`. Formulaire A4 à imprimer
@@ -462,12 +462,12 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
   `forecast.trend_max` 2, `forecast.capacity_hours` 0, `forecast.lead_days` 7, `forecast.cost_months` 3 ; `logistics.plan_weeks` 12 → 13 (plan
   logistique sur les mêmes 13 semaines, seulement s'il valait encore 12).
 
-### Assistant prix « Kreator cen » (migration 138, 30/10/2026)
+### Assistant prix « Asystent cen » (migration 138, 30/10/2026)
 
-- Page : Analiza › Marże i koszty › « Kreator cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
-  kategorii et à la fin du kreator faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
+- Page : Analiza › Marże i koszty › « Asystent cen » (`/finances/price-wizard`, maquette 218 validée ; aussi depuis Marża
+  kategorii et à la fin du asystent faktur, après « Zatwierdź faktury »). `PriceWizardService`, `PricePublicationService`,
   `price-wizard.js`. Trois étapes :
-  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le kreator faktur), « Przelicz koszty i marże »
+  1. « Koszty i marże » : factures ouvertes et lignes à vérifier (lien vers le asystent faktur), « Przelicz koszty i marże »
      (coût matières de toutes les recettes aux prix actuels, le même calcul que « Przelicz wszystkie marże »), marge par
      catégorie avant → après, écart à la marge de base, effet € / mois, produits dont le coût a changé avec leurs causes
      (matières de la recette dont le prix a changé : `raw_material_price_changelog`), matières qui ont changé ;
@@ -502,7 +502,7 @@ Avant d'appliquer des migrations en attente, `deploy/server.sh` sauvegarde toute
 
 ### Factures d'achat — assistant « toutes les lignes » (migration 137, 30/10/2026)
 
-- Page : Zaopatrzenie › Faktury › « Kreator : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
+- Page : Zaopatrzenie › Faktury › « Asystent : wszystkie pozycje » (`/workshop/supply#tab=invoices&inv=wizard`, maquettes 217
   1–3, `invoice-wizard.js`). Toutes les factures ouvertes de matières et emballages (KSeF, fichiers) :
   1. « Pobierz z KSeF » : un tableau des factures (lignes vérifiées n / m, remarques : nouveaux noms, prix, quantité /
      commande, litigieuses, fournisseur ERP manquant) ; le bouton KSeF ne fait que lire (aucun envoi) ;
@@ -938,7 +938,7 @@ et chauffeurs.
 - `n_recipe_producer.lead_days` : délai de commande de la composition (jours avant le besoin, 0 = le jour même ; NULL = sans
   délai). Le groupe qui fait la composition et ce délai se règlent au même endroit partout (une seule règle,
   `CompositionProducerService`) : formulaire de recette (onglet Skład, colonne « Robi grupa »), Kalkulacja › Kompozycje i
-  półprodukty, kreator produktu (étape Receptura), Karta produktu (étape Receptura : `PUT /produits/items/{id}/bom-losses`
+  półprodukty, asystent produktu (étape Receptura), Karta produktu (étape Receptura : `PUT /produits/items/{id}/bom-losses`
   avec `producer_group_id` / `lead_days`). Choisir un groupe crée la fiche « półprodukt » de ce groupe (`n_prod_item` semi,
   groupe principal = groupe qui fait) ; retirer le groupe supprime cette fiche si elle n'a encore aucun historique.
 - `n_group_order` : commande d'une composition par un groupe au groupe qui la fait (quantité, jour et heure) — `ordered`,
@@ -1694,6 +1694,251 @@ Demande du 11/11/2026 (« plus minimaliste et discret »). Sous la barre du haut
 titre, « +N »), qui se déplie en liste compacte (« Przejdź », ✓ = lu) ; une seule notification = sa ligne avec ses
 actions. État replié / déplié gardé pour la session du navigateur. `assets/js/notifications.js`, styles `.at-urgent-*`
 (`atelier.css`). La cloche ne change pas.
+
+### Koszty i premie (session Kierownik produkcji) — 267 (migration 166)
+
+Demande du 11/11/2026. Onglet « Koszty i premie » de Czas pracy (`/time/costs`, droit `team_costs`, donné au Kierownik
+produkcji par la migration ; l'administrateur peut le retirer dans Uprawnienia i menu). Lecture seule :
+- par groupe et par personne : coût employeur du mois (`production_employee.cost`), ventes du groupe (état à ce jour et
+  prévision au rythme actuel), ventes par personne, chiffre d'affaires manquant pour l'objectif de coût du personnel
+  (Rentowność) ; une personne de deux groupes compte une fois dans le total ;
+- primes : palier atteint, ce qui manque jusqu'au palier suivant, prime par personne (présence) et par groupe — mêmes
+  calculs que l'onglet « Premia » des tablettes (`TeamBonusService::nextStep`, `persons`) ;
+- prime du Kierownik : `manager.sales_bonus_pct` % du chiffre d'affaires général du mois (0,3 %, chaque mois) ; pas de
+  prime trimestrielle (`manager.quarterly_bonus` = 0 : le calcul trimestriel du module Kierownik est affiché pour
+  information, sans versement).
+Option de l'administrateur (Premie zespołów) : `manager.show_bonuses` — sans elle, aucune prime ne sort du serveur pour
+le Kierownik (les coûts restent). Le taux se règle au même endroit (0 à 5 %). Service `App\Services\Staff\TeamCostsService`,
+route `GET /ajax/time/costs`. Test : `tests/team_costs_test.php`.
+Migration 167 (même jour, « retirer pour le moment ») : droit `team_costs` retiré au Kierownik produkcji ; à rendre dans
+Uprawnienia i menu quand ce sera voulu.
+
+### Panier : marchandise reprise dans Czas pracy — 269
+
+Demande du 11/11/2026. Dans Czas pracy › Dzień (à côté du nom) et › Miesiąc (dans la case du jour), une petite icône
+panier marque une sortie avec « Tak » à la question marchandise ; un clic ouvre la fenêtre de ce qui a été pointé :
+heure de sortie, produits et pièces, « z braków », « inne », total des pièces. `TimeService::goods`, route
+`GET /ajax/time/goods?employee=&day=` (droit « time ») ; drapeau `g` des cases du mois.
+
+### Tablette bureau épurée — 272
+
+Demande du 11/11/2026. L'accueil de la tablette bureau (`/tablet/office`) n'a plus de barre de recherche, plus de texte
+« Znajdź swoje nazwisko i dotknij go », plus de compteur « Obecni : n / total » ni de lien vers la tablette de
+production : l'heure, la date, les boutons de groupes (avec leurs présents) et les personnes. Aucune table touchée.
+
+### Poczta du Kierownik produkcji, réglée et arrêtée par l'administrateur — 270
+
+Demande du 11/11/2026. Migration 168 : « Poczta » dans le menu du Kierownik produkcji (`n_position_menu`, avec Czas
+pracy) ; table `n_user_mail_admin` (par utilisateur, gardée quand la boîte est déconnectée) :
+- `managed` : la boîte est réglée seulement par l'administrateur — l'utilisateur lit, répond, écrit, mais ne change ni
+  ne déconnecte l'adresse, les serveurs ou le mot de passe (403) ; mis à 1 pour les utilisateurs du poste Kierownik ;
+- `stopped` (+ `stopped_at`) : poczta arrêtée — ni réception, ni liste, ni envoi, ni lecture (423), compteur à 0,
+  recherche vide, boîte sautée par le cron `Bin/user_mail_sync.php` ; les messages restent dans l'ERP et reviennent à la
+  reprise.
+Page `/mail/admin` (clé `mail_admin`, administrateur seul, onglet « Skrzynki użytkowników » de Poczta) : tous les
+utilisateurs avec poste, adresse, dernière synchronisation, erreur, non lus ; boutons rapides « Ustaw skrzynkę » (même
+formulaire et test de connexion que l'utilisateur, mot de passe chiffré, jamais renvoyé), « tylko administrator »,
+« Wstrzymaj » / « Wznów ». Routes `/ajax/mail/admin/users…` (GET liste et état, PUT réglages et `policy`, DELETE, POST
+test), refusées sans droit d'administrateur. Test : `tests/mail_admin_test.php`.
+
+### Kierownik produkcji : pointages du jour et clôture du mois — 273
+
+Demande du 11/11/2026. Migration 169 (`n_position_task`, `n_position_sheet`, poste KIEROWNIK_PRODUKCJI) :
+- chaque jour : « Weryfikacja odbić dnia » (tâche de la migration 162, intitulé précisé) — validée seule quand le jour
+  est validé dans Czas pracy (`time_day_validated`) ;
+- chaque mois : « Czas pracy miesiąca » (30 min, échéance 3e jour ouvré, `/time/month`) — validée seule quand le mois
+  précédent est clôturé dans Czas pracy › Miesiąc (`n_time_month`, `TaskWizards::time_month_closed`) ;
+- fiche de poste : responsabilité « Czas pracy zespołu : jour (chaque jour), mois (chaque mois) » ajoutée en tête.
+
+### Rail « HR » : employés, documents, notes — 271
+
+Demande du 11/11/2026 (maquettes 36–38). Migration 170 :
+- `n_hr_employee` (une ligne par `n_prod_employee`) : téléphone, date de naissance et contact d'urgence **chiffrés**
+  (`App\Services\Hr\HrCipher`, AES-256-GCM, clé dérivée du secret du serveur), sexe (âge de la retraite), date
+  d'embauche, contrat (type, fin), temps de travail, visite médicale ; l'e-mail reste dans `n_time_contact` (Czas pracy) ;
+- `n_hr_document` : contrat, avenant, visite médicale, note, autre — PDF, JPG, PNG ou DOCX jusqu'à 8 Mo, contenu chiffré ;
+- `n_hr_note` : texte chiffré, `public` (Kierownik produkcji et finances) ou `private` (auteur et administrateur),
+  `to_admin` (cloche de l'administrateur, sans le texte) ;
+- `n_hr_log` : chaque lecture et écriture (liste, fiche, document, note, bilan) ; `n_hr_summary` : bilans envoyés ;
+- paramètres `hr.retire_age_k` 60, `hr.retire_age_m` 65, `hr.alert_days` 30 ; droit et menu « hr » pour
+  KIEROWNIK_PRODUKCJI et ADMINISTRACJA (menu seulement aux postes qui ont un menu propre).
+Pages `/hr` (Pracownicy), `/hr/documents`, `/hr/notes` (Notatki miesiąca), `/hr/settings` ; téléchargement
+`/hr/document/{id}`. Bilan du mois : `Bin/hr_month_summary.php` (cron 18:05, envoi le dernier jour, une fois) et bouton
+de l'administrateur — l'e-mail ne contient que qui et combien, le texte reste dans l'ERP. Test : `tests/hr_test.php`.
+
+### Lista płac (paie) et modèles de contrats — 277, 276
+
+Demande du 12/11/2026 (maquettes 41 et 42 validées ; fichier banque : salaires seuls, ZUS et impôt payés à part).
+Migration 171 :
+- `n_hr_employee` + champs de paie : `pay_type` (mensuel / horaire), `pay_amount` (brut), compte bancaire, adresse et
+  PESEL **chiffrés** (`HrCipher`), `pit2`, `kup_raised`, `young_relief` (ulga dla młodych < 26 ans), `student`
+  (zlecenie : sans ZUS), `sick_insurance` (zlecenie : chorobowa volontaire). Visibles et modifiables seulement avec
+  l'accès « payroll » (administrateur, Administracja i fakturowanie) — le Kierownik voit la fiche HR sans ces champs ;
+- `n_pay_rate` : barèmes par année, **chacun avec sa source** (2026 : płaca minimalna 4 806 zł, 31,40 zł/h, limit
+  30-krotności 282 600 zł, ZUS 9,76 / 1,5 / 2,45 %, employeur 9,76 / 6,5 / wypadkowa 1,67 / FP 2,45 / FGŚP 0,10 %,
+  zdrowotna 9 %, KUP 250 / 300 / 20 %, PIT 12 / 32 % au-delà de 120 000 zł, kwota zmniejszająca 300 zł, ulga dla
+  młodych 85 528 zł, chorobowe 80 % jusqu'à 33 jours) ; copie sur l'année suivante en un clic (Ustawienia płac) ;
+- `n_pay_run` (mois : brouillon / approuvé, fichier XML pris, date d'exécution), `n_pay_line` (ligne figée + cumuls de
+  l'année : base emerytalna/rentowa, base PIT, revenu exonéré, jours de L4), `n_pay_adjust` (heures sup. payées 50 /
+  100 %, prime, retenue nette) ;
+- `n_hr_template` : 9 modèles (umowa o pracę nieokreślony / określony / próbny, zlecenie, o dzieło, aneks,
+  wypowiedzenie, świadectwo pracy, informacja o warunkach zatrudnienia), champs `{pracownik}`, `{wynagrodzenie}`… ;
+- paramètres `pay.debtor_iban` (vide = compte WZ de `erp_company_data`), `pay.company_city`, `pay.company_rep`,
+  `pay.workplace` ; droit et menu « payroll » pour ADMINISTRACJA.
+Calcul : `App\Domain\Payroll\PayrollCalculator` (pur, testé sur les chiffres de la maquette au grosz près) — salaire
+au prorata des jours ouvrés sous contrat (fériés PL), L4 (− 1/30 par jour, wynagrodzenie chorobowe 80 % sur la moyenne
+brute de 12 mois), absence non justifiée, heures sup. au taux horaire du mois × 150 / 200 %, plafond annuel ZUS, seuil
+de 32 %, ulga dla młodych, FP / FGŚP exonérés à 55 ans (K) / 60 ans (M). Heures des zlecenie : Czas pracy du mois.
+Pages `/payroll` (Lista płac : 5 étapes — Czas pracy clôturé, HR complet, approbation, fichier XML, CSV) et
+`/payroll/settings` ; sorties `/payroll/payslips` (paski PDF, « projekt » tant que non approuvé), `/payroll/bank-file`
+(ISO 20022 pain.001.001.03, catégorie SALA, caractères refusés par ING retirés, à importer dans la banque — l'ERP
+n'envoie rien), `/payroll/csv` (bureau comptable). HR › Szablony umów (`/hr/templates`) : aperçu avec champs manquants
+en rouge, DOCX (`/hr/templates/{code}/docx`) ou PDF rangé chiffré dans les documents de la personne. Tests :
+`tests/payroll_test.php`, `tests/hr_test.php`.
+
+### HR › Szybka notatka et follow-ups — 279
+
+Demande du 12/11/2026 (maquette 44 validée). Migration 172 : `n_hr_note` + `kind` (ocena, pochwała, uwaga, rozmowa,
+szkolenie, BHP, nieobecność, inne), `topic_enc` (sujet **chiffré**), `audience` (« dla kogo » : `admin` + codes de postes
+ADMINISTRACJA, KIEROWNIK_PRODUKCJI, LOGISTYKA, JAKOSC ; vide + `private` = « tylko ja »), `channels` (bell, email, sms,
+task), follow-up (`followup_due`, `followup_user`, `followup_done_at`, `followup_done_by`, `followup_done_note`).
+Bouton « ＋ Szybka notatka » sur HR › Pracownicy, HR › Notatki miesiąca et dans la fiche (personne déjà choisie) :
+fenêtre en une page avec le résumé « Co się stanie » et l'aperçu de l'e-mail (`App\Services\Hr\HrQuickNoteService`).
+Visibilité : une note publique avec destinataires n'est visible que par leurs postes, l'auteur, le responsable du
+follow-up et l'administrateur. Alertes : cloche, e-mail (file d'envoi), SMS (`SmsTransport` ; sans passerelle : seulement
+noté) — qui, type, sujet et lien, **jamais le texte**. Follow-up : cloche du responsable, ligne dans « Mój tydzień »
+(canal « zadanie »), liste « Follow-upy otwarte » (Notatki), rappel chaque jour à partir du terme
+(`Bin/hr_followups.php`, cron 07:10, rouge après le terme), « Zrobione » avec une courte remarque. Routes
+`/ajax/hr/quick-note` (GET options, POST), `/ajax/hr/followups` (GET), `/ajax/hr/followups/{id}/done` (POST). Test :
+`tests/hr_quick_note_test.php`.
+
+### HR › Sukcesja (relève des départs) — 278
+
+Demande du 12/11/2026 (maquette 43 validée). Migration 173 : `n_hr_succession` (personne qui part, motif emerytura /
+wypowiedzenie / urlop / inne, date de départ, successeur ou remarque, responsable, statut active / done / cancelled,
+`auto`), `n_hr_succession_step` (5 étapes datées), `n_hr_succession_item` (cases à cocher ; `code = successor` = choix du
+successeur), `n_hr_succession_agenda` (passage progressif : 80 / 60 / 40 / 0 % du temps sur le poste) ; paramètre
+`hr.succession_months` (24, réglable 6–60 dans Ustawienia HR). Toute personne active dont la retraite (date de naissance +
+âge HR) tombe dans ce délai a un plan : montré à la volée sans écriture, enregistré par le cron du matin
+(`Bin/hr_followups.php`) ou dès la première action ; un plan annulé n'est pas recréé. Étapes à rebours sur les 12 mois
+avant le départ (comprimées s'il en reste moins) : 1. audit du poste et des savoirs, 2. recrutement / choix du successeur
+(choisir le successeur coche la case et ouvre l'étape 3), 3. formation en binôme, 4. passage progressif (aneks : seulement
+avec l'accord de la personne), 5. dernière passation et entretien final. Étape terminée quand toutes ses cases sont
+cochées ; plan terminé quand les 5 le sont. Responsable par défaut : le Kierownik produkcji ; ses étapes ouvertes
+apparaissent dans « Mój tydzień » 7 jours avant leur début ; étape en retard → cloche, une fois par semaine. Autres départs
+(« ＋ Dodaj odejście ») ajoutés à la main. Page `/hr/succession` (KPI, Gantt par personne, étapes et agenda) ; routes
+`/ajax/hr/succession` (GET, POST), `/ajax/hr/succession/{id}` (PUT : successeur, responsable, date de départ, statut),
+`/ajax/hr/succession/items/{id}` (POST). Test : `tests/hr_succession_test.php`.
+
+### Wejście do ERP przez QR (czas pracy) — 275
+
+Demande du 12/11/2026 (maquette 40 validée). Migration 174 : `n_user_employee` (compte ERP ↔ personne de Czas pracy, une
+liaison par compte et par personne, réglée dans la fiche de l'utilisateur), `n_position.erp_qr` (activé pour
+Administracja i fakturowanie et Kierownik produkcji ; réglable dans « Uprawnienia i menu › Wejście przez QR »), appareil
+interne `ERP — wejście przez QR` (mode office, caché de la liste des tablettes ; paramètre `erp.qr_device_id`), `erp.qr_ttl_s`
+(180 s). Verrou (`App\Core\App`, `App\Services\Organization\ErpEntryService::locked`) : compte non administrateur, poste
+avec l'option, lié à une personne active, sans entrée pointée → page `/erp-entry` (QR personnel personne + jour, renouvelé
+tout seul ; AJAX : 423). Le téléphone appairé valide l'entrée comme pour la tablette de bureau (questions, signature ;
+premier scan : PIN) → l'ERP s'ouvre. Entrée déjà pointée à la tablette : ERP ouvert. Le soir, barre du haut « W pracy od …
+· Zakończ dzień » → même QR → sortie (question marchandise) → déconnexion. Sans liaison : pas de verrou. Routes
+`/ajax/erp-entry/state|qr|status` (GET), `/ajax/organization/erp-qr/{id}` (PUT, administrateur). Test : `tests/erp_entry_test.php`.
+
+### Zadania obowiązkowe (blokują ERP) + każde zadanie = asystent — 280
+
+Demande du 12/11/2026 (maquette 46 validée). Migration 175 : `n_position_task` + `mandatory`, `block_mode` (due = jour du
+terme, next_day = lendemain), `block_time`, `block_tolerance` (0–120 min), `wizard_steps` (JSON `[{title, hint, link}]`) ;
+`n_task_unblock` (déblocage du jour : compte, tâche, jour, motif, par qui). Aucune tâche obligatoire par défaut : l'administrateur
+coche « Obowiązkowe » dans Funkcje i zadania › Zadania stanowisk (encadré, avec les étapes de l'assistant). Blocage
+(`App\Services\Organization\TaskLockService::blocking`, appelé par `App\Core\App` pour les pages) : occurrence ouverte des
+7 derniers jours après l'heure de blocage (sans heure : heure du terme, sinon fin de journée ; lendemain : 09:00) ; une tâche
+reliée à un assistant qui se valide seul est vérifiée d'abord ; jamais l'administrateur. ERP bloqué → `/tasks/required`
+(« Najpierw to zadanie ») ; seules la page de l'assistant de la tâche, `/tasks/*` et le protocole restent ouverts. Chaque tâche
+ouvre toujours un assistant : le sien, le protocole, sinon l'assistant à étapes `/tasks/wizard/{id}` (« Zakończ zadanie » →
+occurrence faite avec la remarque). Déblocage : « Poproś o odblokowanie » → cloche du supérieur du poste et des
+administrateurs → `/tasks/unblock/{user}/{task}` (motif obligatoire, pour la journée). Mój tydzień : 🔒 sur les tâches
+obligatoires. Test : `tests/task_lock_test.php`.
+
+### [282] « Asystent » partout dans l'ERP (migration 176)
+
+Le mot polonais « kreator » devient « asystent » dans toute l'interface (vues, scripts, messages, menu caché de la
+recherche, OpenAPI) : Asystent cen, Asystent faktur, Asystent produktu, asystent maszyny… Formes : kreatora →
+asystenta, kreatorze → asystencie, kreatory → asystenci. La migration 176 renomme aussi les textes en base (titres des
+tâches de poste `n_position_task.title_pl`, descriptions des paramètres `n_prod_param.description_pl`) ; l'historique
+(notes, rappels envoyés, journal) reste tel quel. Les adresses (`/finances/price-wizard`…) ne changent pas. Recherche :
+« kreator » reste un alias de « asystent ».
+
+### [281] Profil CEO — « Kontrola » (makieta 47, migration 177) et [283] « Zadania » dans chaque rail
+
+- **Deux profils pour le même compte administrateur** (sous l'avatar, au-dessus de « Sesja ») : *Administrator* (travail et
+  réglages, comme avant) et *CEO · kontrola* (session `ceo_profile`) : page d'accueil `/control`, menu sans les réglages
+  (`PageAccess::CEO_HIDDEN`), accès inchangé. Choisir une session de poste quitte le profil CEO et inversement.
+- **Compte CEO seul** (`n_user_ceo`, case « Profil CEO » dans la fiche utilisateur, réglée par l'administrateur) : voit tout
+  sauf les réglages (`PageAccess::ceoSees`, + Kontrola, Aktywność, module Kierownik), page d'accueil Kontrola, jamais de
+  verrou (QR d'entrée, tâches obligatoires). **Écriture refusée (403) sauf les décisions** (`PageAccess::CEO_WRITES` :
+  déblocage, « Przypomnij », profil, cloche, activité) — contrôle dans `App.php`.
+- **Kontrola** (`ControlService::overview`, lecture seule) : tuiles (présents / attendus, tâches du jour, obligatoires en
+  retard et ERP bloqués, demandes de déblocage, remplissage = minutes des tâches faites ÷ temps de travail) ; 1. tout le
+  monde aujourd'hui (comptes ERP avec poste, hors administrateurs et CEO) : entrée (QR = appareil `erp.qr_device_id`,
+  tablette, à la main), sortie, absence (`n_time_absence`), tâches du jour, obligatoire (🔒 bloqué → « Odblokuj », à faire
+  « do HH:MM », ✓), remplissage, activité ERP (`n_activity_view`) ; ligne « Zespoły pracowni » (personnes sans compte) ;
+  2. semaine poste × jour (`PositionTaskService::execution('week')` : à temps / en retard / partiel / rien, clic → tâches du
+  jour) ; 3. décisions : demandes de déblocage du jour encore bloquantes (cloche `task_unblock:{compte}:{tâche}:{jour}:{destinataire}`),
+  tâches en retard par poste (« Przypomnij » = `/ajax/organization/execution/remind/{id}`), sorties oubliées (7 jours),
+  résultats du mois (`ProfitabilityService::snapshot`).
+- Correctif : la demande de déblocage n'arrivait qu'au premier destinataire (clé de cloche unique) ; la clé contient
+  maintenant le destinataire — supérieur, administrateurs et comptes CEO reçoivent chacun la leur.
+- **[283] « Zadania »** (`/my-tasks`) : nouvelle entrée du rail, toujours présente (`Rail::ALWAYS`, avec Dzisiaj), même pour
+  un poste avec son propre menu ; « Uprawnienia i menu » l'affiche « w menu » sans pouvoir la retirer.
+
+### [285] Raport stanowisk (makieta 39) et [284] Dzisiaj « Produkcja » = tâches seulement
+
+- **Raport stanowisk** (`/organization/position-report`, onglet de « Zadania zespołu », administrateur et profil CEO ;
+  clé d'accès `position_report`) — `PositionReportService::report` : pour chaque poste ERP avec personnes, minutes des tâches
+  du jour, de la semaine et du mois et remplissage (÷ 8 h × personnes ; semaine et mois : jours ouvrés `tasks.workdays` hors
+  fériés PL × 8 h), fait / dû (échéances passées), en retard ; clic sur le poste → tâches du mois (fréquence, minutes, × n
+  dans le mois, total, fait / dû, « do 30.11 »). Postes de l'atelier (tablettes) sur une ligne. Tuiles : postes, fait dans le
+  mois (cible `tasks.done_target_pct`, 90 %), en retard, poste le plus rempli. Échéances des jours fériés ignorées. PDF =
+  impression du navigateur.
+- **Zadania stanowiska** : bandeau de remplissage jour · semaine · mois du poste (`positionFill`) + lien vers le rapport.
+- **Minutes réservées à l'administrateur** (et au profil CEO) : « Mój tydzień » (Dzisiaj) sans minutes ni durée (barre au
+  nombre de tâches) et « Kto co zrobił » sans tuile « Czas » ni minutes pour les autres comptes.
+- **[284] Dzisiaj, poste ou session Kierownik produkcji** : seulement les tâches (plus de « Wskaźniki kierownika »,
+  « Rentowność grup », « Plan wysyłek », « Do zrobienia », « Ostatnie zamówienia » — ils restent dans leurs modules).
+
+### [286] Profil = sesja (une seule liste) et « Dzisiaj i zadania » (une seule entrée du rail)
+
+- Sous l'avatar, une seule liste « Profil » : Administrator, CEO, puis les postes ERP (Finanse, Produkcja, Logistyka, puis les
+  autres) — `PageAccessService::sessionMenu` (`sessions` : `profile` admin / ceo, ou `id` du poste). Sous le nom : le profil
+  choisi (Administrator, CEO, Finanse, Produkcja…). Plus d'entrée « Pełny widok » (= Administrator).
+- Rail : « Dzisiaj » et « Zadania » fusionnés en « Dzisiaj i zadania » (`today`, toujours présent) avec deux onglets
+  (`PageTabs::GROUPS['today']`) : Dzisiaj (`/today`) et Zadania (`/my-tasks`).
+
+## [288] Urlopy : wnioski z telefonu, zaległy do 01.06, « zostało » w HR (migrations 178, 179)
+
+- `n_time_leave_request` : demande de congé faite au téléphone après le scan du QR (`/kiosk/phone/leave`, maquette 49) —
+  `type` (urlop, na_zadanie), `date_from` / `date_to` (une seule année), `days` (jours ouvrés hors fériés PL), `note`,
+  `status` (pending → approved / rejected / cancelled), `decision_note` (motif du refus, vu au téléphone), `id_absence`
+  (n_time_absence créé à la validation). Le kierownik produkcji (sinon l'administrateur) reçoit la cloche « Nowy wniosek
+  o urlop » ; il valide ou refuse dans Czas pracy › Urlopy i dni wolne (demande hachurée, maquette 48). Pas d'e-mail.
+- `n_time_leave_adjust` : korekta du solde d'une année (`id_employee`, `year`, `days` ±). HR saisit « zostało » dans le
+  tableau des employés actifs (ou dans le calendrier) ; l'ERP enregistre la différence avec le reste calculé.
+- Paramètres : `time.leave_carry_until` (« 01.06 ») — le reste de l'année précédente (zaległy) se prend jusqu'à cette date,
+  le congé pris dès le 1.01 le consomme d'abord, le solde est perdu après ; `time.leave_since_year` (2026) — première
+  année suivie (pas de zaległy calculé avant). Calcul : `TimeService::leaveBalances` (right + adjust + zaległy − pris − prévu).
+- `n_hr_employee.clothing_size` : rozmiar odzieży roboczej, liste XXS–XXXL (fiche HR). « Wymiar czasu pracy » (`work_time`)
+  reste le temps de travail utilisé par les modèles de contrat.
+
+## [289] Mój urlop : urlop osoby z kontem ERP z zastępcą (migration 180)
+
+- `n_user_leave` : congé d'un compte ERP (Administrator / IT, CEO, Finanse, Logistyka, Produkcja, Jakość…) — `type` (urlop,
+  na_zadanie, inna), `date_from` / `date_to`, `days` (jours ouvrés hors fériés PL), `id_substitute` (remplaçant),
+  `status` (pending → approved / rejected / cancelled), `decision_note`. Page `/my-leave` (avatar › Mój urlop).
+- Validation : le CEO (sinon l'administrateur) — cloche « Urlop do zatwierdzenia », décision dans Mój urlop (aussi listée dans
+  Kontrola › Do decyzji). Le transfert des tâches n'est pas validé (décision du 12/11/2026) : remplaçant modifiable à tout moment.
+- Pendant un congé validé : les tâches du poste de la personne apparaissent dans « Dzisiaj i zadania » du remplaçant
+  (« zastępstwo : Finanse — Ewa F. (urlop do 20.11) ») ; tâches obligatoires : le remplaçant est bloqué, jamais la personne en
+  congé ; rappels : « (urlop — zastępuje …) ». Après le congé, plus rien à faire : le calcul se fait au jour (`UserLeaveRepository::delegations`).
+- Solde : `time.leave_days` (26) moins les congés de l'année (demandés + validés, urlop et na żądanie).
 
 ## Conventions
 

@@ -157,7 +157,7 @@
         <div class="card" id="new-product-params">
             <div class="card-header">
                 <h4 class="card-title mb-0">Ceny nowych produktów</h4>
-                <p class="text-muted small mb-0">Kreator « Nowy produkt testowy », krok « Koszt i cena » : cena fabryczna = koszt surowców na sztukę × współczynnik ;
+                <p class="text-muted small mb-0">Asystent « Nowy produkt testowy », krok « Koszt i cena » : cena fabryczna = koszt surowców na sztukę × współczynnik ;
                     cena w sklepie (netto) = cena fabryczna × mnożnik. Operator wybiera wartość z listy ; domyślna jest zaznaczona.</p>
             </div>
             <div class="card-body">

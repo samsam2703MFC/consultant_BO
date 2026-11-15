@@ -1,0 +1,18 @@
+/* Captures des maquettes « Helpdesk des franchisés ».
+ *   php -S 127.0.0.1:8099 -t .   (depuis pilotage-reseau/) ;   node docs/maquettes/helpdesk-franchises/capturer.js */
+const path = require('path');
+let pw; try { pw = require('playwright'); } catch (e) { pw = require('/opt/node22/lib/node_modules/playwright'); }
+(async () => {
+  const b = await pw.chromium.launch({ args: ['--proxy-bypass-list=127.0.0.1;localhost', '--no-proxy-server'] });
+  const p = await b.newPage({ viewport: { width: 1700, height: 1100 }, deviceScaleFactor: 2 });
+  const err = []; p.on('pageerror', e => err.push(e.message)); p.on('requestfailed', r => err.push('échec ' + r.url()));
+  for (const m of ['a', 'b', 'c']) {
+    await p.goto('http://127.0.0.1:8099/docs/maquettes/helpdesk-franchises/' + m + '.html', { waitUntil: 'networkidle' });
+    await p.evaluate(() => document.fonts.ready);
+    if (m !== 'c') { await p.addStyleTag({ content: 'html,body,#app,.shell,.workspace,.workspace__main,.app__body{height:auto!important;max-height:none!important;overflow:visible!important}' }); }
+    await p.waitForTimeout(200);
+    await p.screenshot({ path: path.join(__dirname, m + '.png'), fullPage: true });
+  }
+  console.log('erreurs', err.length ? err : 'aucune');
+  await b.close();
+})();

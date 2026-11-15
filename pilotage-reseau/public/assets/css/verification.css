@@ -434,3 +434,5 @@
 .vt-bloc{padding:12px 0;border-top:1px solid var(--vr-trait)}
 .vt-env{margin-bottom:8px;font-size:12px}.vt-env>div{margin-bottom:4px}.vt-env.ko>div{color:var(--vr-ko)}.vt-env.ok>div{color:var(--vr-ok)}
 .vt-pied{display:flex;align-items:center;gap:8px;padding:12px 20px;border-top:1px solid var(--vr-trait)}
+.vt-cpt{font-size:12.5px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.vt-cpt b{font-weight:400}.vt-cpt.on{color:var(--vr-ok)}
+.vt-cnx{display:flex;gap:8px;margin-top:8px}.vt-cnx .rc-in{width:200px;text-align:left}

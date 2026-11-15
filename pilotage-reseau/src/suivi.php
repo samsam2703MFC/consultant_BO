@@ -110,6 +110,8 @@ function suReglesDefaut(): array
         'delais' => ['prepJours' => 2, 'odjAuto' => true, 'odjJours' => 2, 'rapportHeures' => 48, 'rapportTard' => 'rappel',
             'p0' => 2, 'p1' => 7, 'p2' => 14, 'validationHeures' => 24, 'relanceLuJours' => 3],
         'voit' => ['rapports' => true, 'points' => true, 'prochaine' => true, 'msp' => true, 'scoring' => true, 'journalier' => true, 'journal' => true],
+        // Le SMS au franchisé quand son rapport part (11/11/2026), et sa copie à chaque numéro listé ici : [{nom, tel}].
+        'sms' => ['actif' => true, 'copie' => []],
     ];
 }
 
@@ -130,7 +132,20 @@ function suRegles(): array
     }
     if (!in_array($out['delais']['rapportTard'], ['rappel', 'tel_quel'], true)) { $out['delais']['rapportTard'] = 'rappel'; }
     foreach ($d['voit'] as $k => $v) { if (is_array($s['voit'] ?? null) && array_key_exists($k, $s['voit'])) { $out['voit'][$k] = (bool) $s['voit'][$k]; } }
+    $sms = is_array($s['sms'] ?? null) ? $s['sms'] : [];
+    $out['sms'] = ['actif' => array_key_exists('actif', $sms) ? (bool) $sms['actif'] : $d['sms']['actif'], 'copie' => suSmsCopies($sms['copie'] ?? [])];
     $out['delais']['escaladeJours'] = (int) viSeuils()['escaladeJours'];
+    return $out;
+}
+
+/** Les numéros en copie des SMS, nettoyés : un nom, un numéro lisible ; sans numéro, la ligne tombe. */
+function suSmsCopies(mixed $liste): array
+{
+    $out = [];
+    foreach (is_array($liste) ? $liste : [] as $c) {
+        if (!is_array($c) || trim((string) ($c['tel'] ?? '')) === '') { continue; }
+        $out[] = ['nom' => mb_substr(trim((string) ($c['nom'] ?? '')), 0, 80), 'tel' => mb_substr(trim((string) $c['tel']), 0, 32)];
+    }
     return $out;
 }
 
@@ -151,6 +166,7 @@ function suMagasinRegle(string $shop, ?array $regles = null): array
         'corrections' => (string) ($m['corrections'] ?? 'admin'),
         'copie' => array_values(array_filter(array_map('strval', is_array($m['copie'] ?? null) ? $m['copie'] : []))),
         'email' => (string) ($m['email'] ?? ''),
+        'tel' => (string) ($m['tel'] ?? ''),
         'langue' => $langue,
         'responsable' => $resp, 'responsableNom' => $respNom,
     ];
@@ -248,6 +264,19 @@ function suAdresse(string $shop, ?array $regle = null): array
         } catch (Throwable $e) { /* pas de reporting ici */ }
     }
     return ['email' => null, 'source' => null];
+}
+
+/** Le GSM du franchisé : celui de « Qui fait quoi », sinon celui des alertes SMS des leads (MétaDonnée › Alertes SMS). */
+function suTel(string $shop, ?array $regle = null): array
+{
+    $regle = $regle ?? suMagasinRegle($shop);
+    $norme = static fn (string $t): ?string => function_exists('smsNorme') ? smsNorme($t) : null;
+    if (($t = $norme($regle['tel'])) !== null) { return ['tel' => $t, 'source' => 'Qui fait quoi']; }
+    try {
+        $r = Db::row('SELECT sms_tel FROM ceo_md_shop WHERE shop_id = ?', [$shop]);
+        if ($r !== null && ($t = $norme((string) $r['sms_tel'])) !== null) { return ['tel' => $t, 'source' => 'alertes SMS des leads']; }
+    } catch (Throwable $e) { /* pas de réglage des leads ici */ }
+    return ['tel' => null, 'source' => null];
 }
 
 /* --- la page du franchisé : un jeton par magasin ------------------------------- */
@@ -522,6 +551,52 @@ function suEnvoyerFranchise(string $shop, string $code, array $vars, array $piec
     try { $ok = Smtp::envoyer($ad['email'], $r['sujet'], $r['html'], $pieces, '', $cc); }
     catch (Throwable $e) { return ['envoye' => false, 'motif' => $e->getMessage(), 'a' => $ad['email'], 'langue' => $l]; }
     return ['envoye' => $ok, 'motif' => $ok ? null : (Smtp::$lastError ?? 'envoi refusé'), 'a' => $ad['email'], 'copies' => $cc, 'langue' => $l, 'sujet' => $r['sujet']];
+}
+
+/*
+ * Le SMS au franchisé quand son rapport part (11/11/2026, demande de Sam : « lors de la validation de la visite, le
+ * franchisé reçoit un SMS, et Sam reçoit une copie »). Dans sa langue, avec le lien de sa page. Sans apostrophe
+ * typographique ni accent hors de l'alphabet GSM : 160 caractères par SMS, pas 70.
+ */
+const SU_SMS_RAPPORT = [
+    'fr' => "L'Atelier by - Le rapport de la visite du {date} ({magasin}) est arrivé : {points}. Lisez-le sur votre page : {lien}",
+    'nl' => "L'Atelier by - Het verslag van het bezoek van {date} ({magasin}) is er: {points}. Lees het op uw pagina: {lien}",
+    'en' => "L'Atelier by - The report of the visit of {date} ({magasin}) is ready: {points}. Read it on your page: {lien}",
+    'de' => "L'Atelier by - Der Bericht zum Besuch vom {date} ({magasin}) ist da: {points}. Lesen Sie ihn auf Ihrer Seite: {lien}",
+];
+const SU_SMS_POINTS = ['fr' => ['aucun point à travailler', '1 point à travailler', '%d points à travailler'], 'nl' => ['geen werkpunten', '1 werkpunt', '%d werkpunten'],
+    'en' => ['no points to work on', '1 point to work on', '%d points to work on'], 'de' => ['keine Arbeitspunkte', '1 Arbeitspunkt', '%d Arbeitspunkte']];
+
+/** Le texte du SMS « rapport » d'une visite, dans la langue donnée. */
+function suSmsTexte(array $v, int $ouverts, string $l): string
+{
+    $l = isset(SU_SMS_RAPPORT[$l]) ? $l : 'fr'; $shop = (string) $v['shop_id'];
+    $pts = SU_SMS_POINTS[$l][min($ouverts, 2)];
+    return strtr(SU_SMS_RAPPORT[$l], ['{date}' => date('d/m', strtotime((string) $v['prevu_le'])), '{magasin}' => suCourt($shop),
+        '{points}' => sprintf($pts, $ouverts), '{lien}' => suLien($shop)]);
+}
+
+/**
+ * Le SMS au franchisé, puis sa copie à chaque numéro de « Qui fait quoi › Les SMS ». La copie ne part que si le SMS du
+ * franchisé est parti : elle dit à qui. Rend {envoye, motif, a, lisible, source, langue, via, copies: [{nom, envoye, motif}]}.
+ */
+function suSmsRapport(array $v, int $ouverts): array
+{
+    $regles = suRegles(); $shop = (string) $v['shop_id']; $regle = suMagasinRegle($shop, $regles);
+    if (empty($regles['sms']['actif'])) { return ['envoye' => false, 'motif' => 'SMS coupés dans Qui fait quoi', 'copies' => []]; }
+    if (!function_exists('smsPartir')) { return ['envoye' => false, 'motif' => 'module SMS absent', 'copies' => []]; }
+    $t = suTel($shop, $regle);
+    if ($t['tel'] === null) { return ['envoye' => false, 'motif' => 'GSM du franchisé inconnu (Qui fait quoi)', 'copies' => []]; }
+    $l = suLangue($shop, $regle); $texte = suSmsTexte($v, $ouverts, $l);
+    $r = smsPartir($t['tel'], $texte);
+    $out = ['envoye' => $r['ok'], 'motif' => $r['erreur'], 'a' => $r['a'], 'lisible' => smsLisible($r['a']), 'source' => $t['source'], 'langue' => $l, 'via' => $r['via'], 'copies' => []];
+    if (!$r['ok']) { return $out; }
+    $tete = 'Copie du SMS envoyé à ' . suCourt($shop) . ' (' . smsLisible($r['a']) . ') : ';
+    foreach ($regles['sms']['copie'] as $c) {
+        $rc = smsPartir($c['tel'], $tete . $texte);
+        $out['copies'][] = ['nom' => $c['nom'] !== '' ? $c['nom'] : smsLisible(smsNorme($c['tel'])), 'envoye' => $rc['ok'], 'motif' => $rc['erreur']];
+    }
+    return $out;
 }
 
 /* --- la préparation ------------------------------------------------------------- */
@@ -844,6 +919,7 @@ function suRapportVue(array $v): array
 {
     $shop = (string) $v['shop_id']; $r = suJson($v['rapport'] ?? null);
     $roles = suRoles($v); $l = suLangue($shop); $ad = suAdresse($shop);
+    $regles = suRegles(); $tel = suTel($shop, suMagasinRegle($shop, $regles));
     $contenu = suRapportContenu($v); $ck = suChecklistBilan($v);
     $plans = suRapportPlans($v, $r);
     if ($contenu['phrase'] === '') {
@@ -868,7 +944,11 @@ function suRapportVue(array $v): array
         'causesDiag' => viCausesDiag(), 'roles' => $roles,
         'envoi' => ['a' => $ad['email'], 'source' => $ad['source'], 'langue' => $l, 'langueNom' => SU_LANGUES[$l], 'copies' => $copies,
             'envoyeLe' => $v['rapport_envoye_le'] ?? null, 'envoyePar' => $v['rapport_envoye_par'] ?? null, 'luLe' => $v['rapport_lu_le'] ?? null,
-            'smtp' => class_exists('Smtp') && Smtp::configured(), 'dernier' => $r['envoi'] ?? null],
+            'smtp' => class_exists('Smtp') && Smtp::configured(), 'dernier' => $r['envoi'] ?? null,
+            // Le SMS de la validation : à quel numéro, la copie à qui, ce qui est parti.
+            'sms' => ['actif' => (bool) $regles['sms']['actif'], 'tel' => $tel['tel'] !== null && function_exists('smsLisible') ? smsLisible($tel['tel']) : $tel['tel'], 'source' => $tel['source'],
+                'copies' => array_map(static fn ($c) => $c['nom'] !== '' ? $c['nom'] : $c['tel'], $regles['sms']['copie']),
+                'fournisseur' => function_exists('smsFournisseur') && smsFournisseur() !== null, 'dernier' => $r['sms'] ?? null]],
         'apercu' => ['sujet' => $apercu['sujet'], 'texte' => $apercu['texte']], 'adapteLe' => $r['adapte_le'] ?? null, 'adaptePar' => $r['adapte_par'] ?? null];
 }
 
@@ -969,12 +1049,16 @@ function suRapportEnvoyer(array $v, string $qui, bool $renvoyer = false): array
     $envoi = suEnvoyerFranchise($shop, 'rapport', ['piece' => $pdf !== null ? suL('piece_pdf', $l) : ''] + suVarsRapport($v, $contenu, $plans, $l), $pieces, $cc);
     $envoi['pdf'] = $pdf !== null; $envoi['le'] = $now;
     $r['envoi'] = $envoi;
+    // La validation : le SMS au franchisé et sa copie (Sam), une fois — « Renvoyer le courriel » ne renvoie que le courriel.
+    $sms = null;
+    if (!$deja) { $sms = suSmsRapport($v, $ouverts) + ['le' => $now]; $r['sms'] = $sms; }
     Db::exec('UPDATE con_visite SET rapport = ? WHERE id = ?', [json_encode($r, JSON_UNESCAPED_UNICODE), (int) $v['id']]);
     viNotifier($shop, 'Rapport de visite — ' . $court, 'Visite du ' . date('d/m', strtotime((string) $v['prevu_le'])) . ($ouverts ? ' · ' . $ouverts . ' point(s) à travailler' : ''), 'suivi/?shop=' . rawurlencode($shop) . '&jeton=' . suJeton($shop), 'rapport-' . $v['id']);
     journalAdd($qui, 'Visite', null, 'Rapport de visite ' . ($deja ? 'renvoyé' : 'envoyé') . ' : ' . $court . ' (visite du ' . $v['prevu_le'] . ')'
         . ($deja ? '' : ' · ' . $ouverts . ' point(s) ouvert(s), ' . $internes . ' gardé(s) en interne')
-        . ($envoi['envoye'] ? ' · courriel à ' . $envoi['a'] : ' · pas de courriel : ' . $envoi['motif']));
-    return ['ok' => true, 'ouverts' => $ouverts, 'internes' => $internes, 'envoi' => $envoi] + suRapportVue($v);
+        . ($envoi['envoye'] ? ' · courriel à ' . $envoi['a'] : ' · pas de courriel : ' . $envoi['motif'])
+        . ($sms === null ? '' : ($sms['envoye'] ? ' · SMS au ' . $sms['lisible'] . ($sms['copies'] ? ', copie à ' . implode(', ', array_map(static fn ($c) => $c['nom'] . ($c['envoye'] ? '' : ' (non partie : ' . $c['motif'] . ')'), $sms['copies'])) : '') : ' · pas de SMS : ' . $sms['motif'])));
+    return ['ok' => true, 'ouverts' => $ouverts, 'internes' => $internes, 'envoi' => $envoi, 'sms' => $sms] + suRapportVue($v);
 }
 
 /** GET /suivi/rapport/apercu?visite=&langue= — le rapport tel que le PDF le rend. */
@@ -1816,7 +1900,10 @@ function ep_suivi_regles(): array
         $sid = (string) $sid; $mr = suMagasinRegle($sid, $regles); $ad = suAdresse($sid, $mr);
         $cad = [];
         foreach (function_exists('vcCadreDe') ? vcCadreDe($sid) : [] as $l) { $cad[] = ($types[$l['type']]['nom'] ?? $l['type']) . ' ' . $l['nb'] . ' / ' . ($l['par'] === 'mois' ? 'mois' : 'trim.') . ($l['auto'] ? ' (fréquence)' : ''); }
-        $magasins[] = ['id' => $sid, 'court' => $m['court'], 'nom' => $m['nom'], 'regle' => $mr, 'adresse' => $ad, 'langueDefaut' => suLangueDefaut($sid), 'langue' => suLangue($sid, $mr), 'cadre' => $cad];
+        $tel = suTel($sid, ['tel' => ''] + $mr);
+        $magasins[] = ['id' => $sid, 'court' => $m['court'], 'nom' => $m['nom'], 'regle' => $mr, 'adresse' => $ad, 'langueDefaut' => suLangueDefaut($sid), 'langue' => suLangue($sid, $mr), 'cadre' => $cad,
+            // Le GSM des alertes de leads, quand « Qui fait quoi » n'en donne pas : c'est lui qui recevra le SMS.
+            'telephone' => ['tel' => $tel['tel'] !== null && function_exists('smsLisible') ? smsLisible($tel['tel']) : $tel['tel'], 'source' => $tel['source']]];
     }
     // Ce que les délais donnent : l'envoi des rapports et la validation des corrections sur 60 jours.
     $env = Db::rows('SELECT termine_a, rapport_envoye_le FROM con_visite WHERE rapport_statut = \'envoye\' AND rapport_envoye_le >= ? AND termine_a IS NOT NULL', [date('Y-m-d', strtotime('-60 days'))]);
@@ -1831,13 +1918,14 @@ function ep_suivi_regles(): array
     $couverts = count(array_filter($magasins, static fn ($m) => $m['regle']['responsable'] !== ''));
     return ['regles' => $regles, 'magasins' => $magasins, 'personnes' => suPersonnes($regles), 'consultants' => viConsultants(), 'droits' => SU_DROITS,
         'langues' => SU_LANGUES, 'modeles' => suModeles(), 'smtp' => class_exists('Smtp') && Smtp::configured(),
+        'smsFournisseur' => function_exists('smsFournisseur') ? smsFournisseur() : null,
         'types' => array_values(array_map(static fn ($t) => ['code' => $t['code'], 'nom' => $t['nom'], 'annoncee' => !array_key_exists('annoncee', $t) || (bool) $t['annoncee'], 'actif' => $t['actif']], $types)),
         'kpis' => ['magasins' => count($magasins), 'couverts' => $couverts, 'cadre' => ['faites' => $faites, 'attendu' => $att, 'planifiees' => $pla],
             'envoiMoyenH' => $hs ? round(array_sum($hs) / count($hs), 1) : null, 'envois' => count($hs), 'horsDelai' => $horsDelai,
             'validationMoyenneH' => $hv ? round(array_sum($hv) / count($hv), 1) : null, 'validations' => count($hv)]];
 }
 
-/** PUT /suivi/regles — { magasins, droits, admins, delais, voit, modeles: {code: {langue: {sujet, corps}}}, types: {code: annoncee} }. */
+/** PUT /suivi/regles — { magasins, droits, admins, delais, voit, sms: {actif, copie: [{nom, tel}]}, modeles: {code: {langue: {sujet, corps}}}, types: {code: annoncee} }. */
 function wr_suivi_regles(): array
 {
     ensureSuivi();
@@ -1863,9 +1951,11 @@ function wr_suivi_regles(): array
             $prep = (string) ($m['prepare'] ?? ''); $ada = (string) ($m['adapte'] ?? 'visite'); $env = (string) ($m['envoie'] ?? 'visite'); $cor = (string) ($m['corrections'] ?? 'admin');
             $email = trim((string) ($m['email'] ?? ''));
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) { http_response_code(422); return ['error' => 'adresse invalide pour ' . $mags[$sid]['court'] . ' : ' . $email]; }
+            $tel = trim((string) ($m['tel'] ?? ''));
+            if ($tel !== '' && (!function_exists('smsNorme') || smsNorme($tel) === null)) { http_response_code(422); return ['error' => 'GSM illisible pour ' . $mags[$sid]['court'] . ' : ' . $tel]; }
             $out[$sid] = ['prepare' => $prep === '' || $okPers($prep) ? $prep : '', 'adapte' => $ada === 'visite' || $ada === 'responsable' || $okPers($ada) ? $ada : 'visite',
                 'envoie' => $env === 'visite' || $env === 'responsable' || $okPers($env) ? $env : 'visite', 'corrections' => in_array($cor, ['admin', 'responsable'], true) || $okPers($cor) ? $cor : 'admin',
-                'copie' => array_values(array_filter(array_map('strval', is_array($m['copie'] ?? null) ? $m['copie'] : []), $okPers)), 'email' => $email,
+                'copie' => array_values(array_filter(array_map('strval', is_array($m['copie'] ?? null) ? $m['copie'] : []), $okPers)), 'email' => $email, 'tel' => mb_substr($tel, 0, 32),
                 'langue' => in_array($m['langue'] ?? '', array_keys(SU_LANGUES), true) ? (string) $m['langue'] : ''];
         }
         $s['magasins'] = $out;
@@ -1895,6 +1985,13 @@ function wr_suivi_regles(): array
         $out = suReglesDefaut()['voit'];
         foreach ($out as $k => $v) { $out[$k] = array_key_exists($k, $b['voit']) ? (bool) $b['voit'][$k] : ($cur['voit'][$k] ?? $v); }
         $s['voit'] = $out;
+    }
+    if (isset($b['sms']) && is_array($b['sms'])) {
+        $copie = suSmsCopies($b['sms']['copie'] ?? []);
+        foreach ($copie as $c) {
+            if (!function_exists('smsNorme') || smsNorme($c['tel']) === null) { http_response_code(422); return ['error' => 'numéro illisible pour la copie des SMS' . ($c['nom'] !== '' ? ' (' . $c['nom'] . ')' : '') . ' : ' . $c['tel']]; }
+        }
+        $s['sms'] = ['actif' => array_key_exists('actif', $b['sms']) ? (bool) $b['sms']['actif'] : $cur['sms']['actif'], 'copie' => $copie];
     }
     viSettingSet('suiviRegles', $s);
     if (isset($b['modeles']) && is_array($b['modeles'])) {

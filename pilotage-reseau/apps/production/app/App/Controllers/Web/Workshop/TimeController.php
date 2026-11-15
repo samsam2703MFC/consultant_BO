@@ -7,6 +7,7 @@ use App\Core\Web\BaseController;
 use App\Core\Web\JsonErrors;
 use App\Exceptions\CustomException;
 use App\Services\Organization\PageAccessService;
+use App\Services\Staff\TeamCostsService;
 use App\Services\Workshop\Time\TimeService;
 use App\Services\Workshop\Time\TimeSheetMailService;
 use App\Services\Workshop\Time\TimeSheetPdf;
@@ -21,7 +22,8 @@ final class TimeController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail)
+    public function __construct(private TimeService $time, private TimeSheetPdf $pdf, private PageAccessService $access, private TimeSheetMailService $mail,
+        private TeamCostsService $teamCosts, private \App\Services\Workshop\Time\LeaveRequestService $leaveRequests)
     {
     }
 
@@ -50,6 +52,22 @@ final class TimeController extends BaseController
         $this->page('overtime', $this->time->overtime());
     }
 
+    /** [267] Koszty i premie : do odczytu (prawo « team_costs » — bramka uprawnień App). */
+    public function costs()
+    {
+        $this->page('costs', $this->teamCosts->view($this->seesAllBonuses()) + ['rules' => $this->time->rules()]);
+    }
+
+    public function costsData()
+    {
+        try {
+            if (!$this->access->canSee($this->userId(), '/time/costs')) throw new CustomException('Brak dostępu do kosztów i premii.', 'errors', 403);
+            return $this->json(['data' => $this->teamCosts->view($this->seesAllBonuses())]);
+        } catch (\Throwable $e) {
+            return $this->jsonError($e);
+        }
+    }
+
     /** Karta A4 : ?employee=ID (jedna osoba) albo bez — wszyscy z miesiąca. */
     public function sheetPdf()
     {
@@ -75,7 +93,7 @@ final class TimeController extends BaseController
     {
         $this->view('workshop/time', [
             'tab' => $tab, 'data' => $data, 'is_admin' => $this->access->isAdmin($this->userId()),
-            'page_title' => ['day' => 'Czas pracy — dzień', 'month' => 'Czas pracy — miesiąc', 'leave' => 'Urlopy i dni wolne', 'overtime' => 'Nadgodziny'][$tab],
+            'page_title' => ['day' => 'Czas pracy — dzień', 'month' => 'Czas pracy — miesiąc', 'leave' => 'Urlopy i dni wolne', 'overtime' => 'Nadgodziny', 'costs' => 'Koszty i premie'][$tab],
         ]);
     }
 
@@ -94,6 +112,12 @@ final class TimeController extends BaseController
     public function leaveData()
     {
         return $this->guarded(fn() => $this->time->calendar(self::date($_GET['from'] ?? null) ?? date('Y-m-d', strtotime('monday this week')), (int) ($_GET['days'] ?? 28)));
+    }
+
+    /** [269] Towar zabrany przy wyjściu : ?employee=ID&day=YYYY-MM-DD. */
+    public function goodsData()
+    {
+        return $this->guarded(fn() => $this->time->goods((int) ($_GET['employee'] ?? 0), self::date($_GET['day'] ?? null) ?? ''));
     }
 
     public function overtimeData()
@@ -200,6 +224,33 @@ final class TimeController extends BaseController
         });
     }
 
+    /** [288] Wniosek z telefonu → urlop w kalendarzu. */
+    public function approveLeave($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->leaveRequests->approve((int) $id, $this->userId());
+            return ['message' => 'Zatwierdzono — urlop jest w kalendarzu.'];
+        });
+    }
+
+    public function rejectLeave($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $this->leaveRequests->reject((int) $id, (string) ($this->input()['reason'] ?? ''), $this->userId());
+            return ['message' => 'Wniosek odrzucony — pracownik zobaczy powód w telefonie.'];
+        });
+    }
+
+    /** [288] « Zostało » wpisane ręcznie (korekta salda roku). */
+    public function saveLeaveRemaining($id)
+    {
+        return $this->guarded(function () use ($id) {
+            $in = $this->input();
+            $this->time->setLeaveRemaining((int) $id, (int) ($in['remaining'] ?? -1), $this->userId(), isset($in['year']) ? (int) $in['year'] : null);
+            return ['message' => 'Zapisano saldo urlopu.'];
+        });
+    }
+
     public function proposeComp()
     {
         return $this->guarded(function () {
@@ -276,6 +327,12 @@ final class TimeController extends BaseController
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }
+    }
+
+    /** [267] Administrator widzi premie zawsze ; w sesji « jako stanowisko » — tak jak to stanowisko (podgląd). */
+    private function seesAllBonuses(): bool
+    {
+        return $this->access->isAdmin($this->userId()) && $this->access->viewPosition($this->userId()) === null;
     }
 
     private function monthWithMail(string $month): array

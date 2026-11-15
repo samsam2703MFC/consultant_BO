@@ -164,9 +164,13 @@ try {
     // 149 [230] : « Kontrola przyjęć dnia » zalicza się sama w dzień bez dostaw (kreator) — nie jest zaległa.
     $dailyTue = array_values(array_filter($items, fn($it) => $it['task']['frequency'] === 'daily' && ($it['task']['auto_code'] ?? null) !== 'receiving_checked'));
     $wedBoard = $tasks->myTasks($userId, $wed);
-    expectPurch(count($wedBoard['overdue']) === count($dailyTue) && array_unique(array_column($wedBoard['overdue'], 'period_key')) === ['2026-10-20'], "yesterday's open tasks are overdue");
+    // [287] Bez powtórzeń : zaległe terminy przy zadaniu (item['late']), nie w osobnej liście.
+    $lateOf = fn(array $board) => array_merge(...array_map(fn($it) => $it['late'] ?? [], array_merge(...array_map(fn($g) => $g['items'], array_values($board['groups'])))));
+    $wedLate = $lateOf($wedBoard);
+    expectPurch($wedBoard['overdue'] === [] && $wedBoard['counts']['overdue'] === count($dailyTue) && count($wedLate) === count($dailyTue)
+        && array_unique(array_column($wedLate, 'period_key')) === ['2026-10-20'], "yesterday's open tasks are overdue (shown on the task)");
     foreach ($dailyTue as $it) $tasks->setStatus((int) $it['occurrence']['id'], ['status' => 'done'], $userId);
-    expectPurch($tasks->myTasks($userId, $wed)['overdue'] === [], 'done → no longer overdue');
+    expectPurch($lateOf($tasks->myTasks($userId, $wed)) === [], 'done → no longer overdue');
     $weekly = $first(array_merge(...array_map(fn($g) => $g['items'], array_values($wedBoard['groups']))), 'weekly')['occurrence'];
     $needsNote = false;
     try { $tasks->setStatus((int) $weekly['id'], ['status' => 'skipped'], $userId); } catch (CustomException) { $needsNote = true; }

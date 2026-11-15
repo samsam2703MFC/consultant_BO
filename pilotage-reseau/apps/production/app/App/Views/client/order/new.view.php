@@ -25,7 +25,7 @@
             </div>
             <div class="card-body">
                 <?php $wizard = !empty($prefill['wizard']); if ($wizard) { $wizardStep = 2; require __DIR__ . '/_wizard_steps.view.php'; } ?>
-                <?php /* P7 : domówienie pré-remplie depuis un écart d'expédition (?issue=) — mêmes champs que le kreator. */
+                <?php /* P7 : domówienie pré-remplie depuis un écart d'expédition (?issue=) — mêmes champs que le asystent. */
                 $apply = $wizard || !empty($prefill['apply']); ?>
                 <?php if (!empty($prefill['issue'])): ?>
                     <div class="alert alert-info"><i class="bi bi-arrow-repeat"></i> Domówienie ze sprawy różnic / dostawy #<?= (int) $prefill['issue'] ?> : produkty i ilości wpisane, <strong>GRATIS</strong> (towar już opłacony). Sprawdź i zapisz — sprawa zamknie się sama, gdy domówienie dostanie WDT.</div>

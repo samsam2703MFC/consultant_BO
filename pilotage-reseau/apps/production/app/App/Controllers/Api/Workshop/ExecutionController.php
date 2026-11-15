@@ -50,6 +50,7 @@ final class ExecutionController
         private DayEfficiencyService $efficiency,
         private GroupOrderService $groupOrders,
         private KioskComplaintService $complaints,
+        private \App\Services\Workshop\Time\LeaveRequestService $leave,
     ) {
     }
 
@@ -128,6 +129,35 @@ final class ExecutionController
         } catch (\App\Exceptions\CustomException $e) {
             $status = in_array((int) $e->getCode(), [403, 404, 409], true) ? (int) $e->getCode() : 422;
             throw new ApiException('COMP_DAY_REFUSED', $status, [], ['detail' => $e->getMessage()]);
+        }
+    }
+
+    /** [288] Urlop z telefonu : saldo i wnioski osoby zidentyfikowanej telefonem. */
+    public function phoneLeave(ApiRequest $request): ApiResult
+    {
+        return $this->leaveCall(fn() => $this->leave->phone((int) $request->context->employeeId));
+    }
+
+    public function requestLeave(ApiRequest $request): ApiResult
+    {
+        return $this->leaveCall(fn() => $this->leave->create((int) $request->context->employeeId, $request->body(), $request->context->deviceId), 201);
+    }
+
+    public function cancelLeave(ApiRequest $request): ApiResult
+    {
+        return $this->leaveCall(function () use ($request) {
+            $this->leave->cancel($request->id(), (int) $request->context->employeeId);
+            return ['message' => 'Wniosek anulowany.'];
+        });
+    }
+
+    private function leaveCall(callable $fn, int $status = 200): ApiResult
+    {
+        try {
+            return new ApiResult($fn(), $status);
+        } catch (\App\Exceptions\CustomException $e) {
+            $code = in_array((int) $e->getCode(), [403, 404, 409], true) ? (int) $e->getCode() : 422;
+            throw new ApiException('LEAVE_REQUEST_REFUSED', $code, [], ['detail' => $e->getMessage()]);
         }
     }
 

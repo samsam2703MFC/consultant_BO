@@ -100,7 +100,7 @@
             if (state.tab === 'stock') data.materials = await api.get('/supply/materials');
             if (state.tab === 'prices') data.prices = await api.get(`/supply/prices?months=${state.pmonths}`);
             if (state.tab === 'invoices') {
-                if (state.inv === 'wizard') { /* kreator wczytuje się sam */ }
+                if (state.inv === 'wizard') { /* asystent wczytuje się sam */ }
                 else if (state.inv === 'map') data.mappings = await api.get('/supply/mappings');
                 else if (state.inv === 'rules') data.rules = await api.get('/supply/supplier-rules');
                 else if (state.inv) {

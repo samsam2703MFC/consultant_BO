@@ -109,6 +109,7 @@
     "DEVICE_NOT_DRIVER": "Ten tablet nie jest tabletem kierowcy — zmień tryb tabletu w zarządzaniu tabletami.",
     "QR_OTHER_PERSON": "Ten kod QR jest dla: {name}. Ten telefon jest zarejestrowany na inną osobę — zeskanuj kod swoim telefonem.",
     "DEVICE_NOT_OFFICE": "Tablet kierowcy nie otwiera ekranu biurowego — w zarządzaniu tabletami zmień rodzaj na « Tablet biurowy ».",
+    "LEAVE_REQUEST_REFUSED": "Urlop : {detail}",
     "COMP_DAY_REFUSED": "Dzień wolny za nadgodziny : {detail}",
     "DEV_TRIAL_NOT_ALLOWED": "Na etapie „{stage}” nie robi się już testu — produkt jest wprowadzany w biurze.",
     "DEV_RECIPE_NOT_READY": "Recepturę zatwierdza się po udanym teście 2 (etap teraz: „{stage}”).",

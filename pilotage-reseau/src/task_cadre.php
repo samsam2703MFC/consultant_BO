@@ -26,7 +26,8 @@ declare(strict_types=1);
  *   1. l'aperçu montre chaque appel et son corps exact, sans rien envoyer ;
  *   2. la création s'arrête au premier refus du panel ; une tâche identique (même nom, même
  *      jour, même heure) n'est jamais recréée — elle est seulement ajoutée à la checklist ;
- *   3. seul ce qui a été créé depuis cet écran (table ceo_cadre_cree) peut y être supprimé.
+ *   3. seul ce qui a été créé depuis cet écran (table ceo_cadre_cree) s'y supprime d'un clic ; une tâche ou une
+ *      checklist créée dans le panel, seulement avec son nom exact (?confirmer=).
  *
  * Compte : celui du cockpit (compte consultant, PanelApi) ; ou, si le panel le refuse sur ces
  * routes, un compte administrateur du panel connecté depuis l'écran — son jeton voyage dans
@@ -280,7 +281,7 @@ function tkCadre(): array
         usort($lignes, fn ($a, $b) => $a['ordre'] <=> $b['ordre']);
         $checklists[] = ['id' => $cid, 'nom' => tkTxt($c['name'] ?? $c['base_name'] ?? ('Checklist ' . $cid)),
             'description' => tkTxt($c['description'] ?? ''), 'poste' => tkTxt($c['workstation_name'] ?? ''),
-            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'taches' => $lignes, 'brut' => $c];
+            'heure' => substr(tkTxt($c['execution_time'] ?? ''), 0, 5), 'actif' => tkClActif($c), 'taches' => $lignes, 'brut' => $c];
     }
     usort($checklists, fn ($a, $b) => strnatcasecmp($a['nom'], $b['nom']));
 
@@ -573,10 +574,22 @@ function tkQuiLot(array $b): array
         'error' => $refus ? $refus . ' changement' . ($refus > 1 ? 's' : '') . ' sur ' . count($ops) . ' refusé' . ($refus > 1 ? 's' : '') . ' par le panel' . ($premier ? ' : ' . $premier : '') : null];
 }
 
+/** Active ou en pause, comme la checklist du panel le dit (`is_active`) ; null s'il ne le dit pas. */
+function tkClActif(array $c): ?bool
+{
+    foreach (['is_active', 'active', 'enabled'] as $k) {
+        if (array_key_exists($k, $c)) { return tkVrai($c[$k]); }
+    }
+    return null;
+}
+
 /**
- * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?} — modifie une checklist du panel.
+ * PATCH /task/checklists/{id} {nom?, description?, posteId?, heure?, actif?} — modifie une checklist du panel.
  * Le corps reprend les champs actuels de la checklist (le panel remet à zéro un champ absent) ; PATCH,
  * et PUT si le panel ne connaît pas PATCH sur cette route.
+ * `actif` (15/11/2026, l'interrupteur de la checklist dans la vue Document) passe en `is_active` ; la liste du
+ * panel est relue après l'envoi et la réponse porte `relu` {actif, absente} : ce que le panel a vraiment retenu,
+ * et s'il liste encore la checklist une fois en pause (rien ne le dit dans sa documentation).
  */
 function tkChecklistModifier(int $id, array $b): array
 {
@@ -600,14 +613,26 @@ function tkChecklistModifier(int $id, array $b): array
         if ($h !== '' && !preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $h)) { http_response_code(422); return ['error' => 'heure attendue au format HH:MM']; }
         $corps['execution_time'] = $h === '' ? null : tkHeure($h, $c['execution_time'] ?? null);
     }
-    $op = ['quoi' => 'Modifier la checklist', 'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
+    $actif = array_key_exists('actif', $b) ? (bool) $b['actif'] : null;
+    if ($actif !== null) { $corps['is_active'] = tkMemeType($c['is_active'] ?? null, $actif); }
+    $op = ['quoi' => $actif === null ? 'Modifier la checklist' : ($actif ? 'Activer la checklist' : 'Mettre la checklist en pause'),
+        'methode' => 'PATCH', 'chemin' => '/operational-framework/checklists/' . $id, 'corps' => $corps];
     if (!empty($b['apercu'])) { return ['id' => $id, 'operations' => [$op]]; }
     $r = tkReq('PATCH', $op['chemin'], $corps);
     if ($r['erreur'] !== null && in_array($r['code'], [404, 405], true)) { $op['methode'] = 'PUT'; $r = tkReq('PUT', $op['chemin'], $corps); }
     $op += ['ok' => $r['erreur'] === null, 'code' => $r['code'], 'reponse' => $r['corps'], 'erreur' => $r['erreur']];
-    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») modifiée au panel' . ($op['ok'] ? '' : ' — refusé'));
+    journalAdd('CEO', 'Cadre des tâches', null, 'Checklist #' . $id . ' (« ' . $corps['name'] . ' ») '
+        . ($actif === null ? 'modifiée' : ($actif ? 'activée' : 'mise en pause')) . ' au panel' . ($op['ok'] ? '' : ' — refusé'));
     if (!$op['ok']) { http_response_code(502); return ['error' => $op['erreur'], 'operations' => [$op]]; }
-    return ['id' => $id, 'ok' => true, 'operations' => [$op]];
+    $rep = ['id' => $id, 'ok' => true, 'operations' => [$op]];
+    if ($actif !== null) {
+        // Relire : un panel qui ignore `is_active`, ou qui ne liste plus une checklist en pause, se voit ici.
+        [$apres] = tkLireListe('/operational-framework/checklists');
+        $lu = null;
+        foreach ((array) $apres as $x) { if ((int) ($x['id'] ?? 0) === $id) { $lu = $x; break; } }
+        $rep['relu'] = ['actif' => $lu === null ? null : tkClActif($lu), 'absente' => $apres !== null && $lu === null];
+    }
+    return $rep;
 }
 
 /* ─────────── structure (pour l'assistant) ─────────── */
@@ -1615,28 +1640,46 @@ function tkModifierLot(array $b): array
 }
 
 /**
- * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — seulement ce qui a été créé depuis
- * cet écran (ceo_cadre_cree). Supprimer une checklist laisse ses tâches dans le panel.
+ * DELETE /task/taches/{id} et DELETE /task/checklists/{id} — ce qui a été créé depuis cet écran (ceo_cadre_cree), ou ce
+ * dont ?confirmer= porte le nom exact au panel. Supprimer une checklist laisse ses tâches dans le panel.
+ * Pour une tâche, ?checklists=43,12 (les checklists où l'écran la voit) : son nom s'y lit quand GET /tasks ne la rend
+ * pas (une tâche en pause, que l'écran lit par sa ligne de checklist).
  */
 function tkSupprimer(string $genre, int $id): array
 {
     ensureCadreCree();
     $r = Db::row('SELECT * FROM ceo_cadre_cree WHERE genre = ? AND panel_id = ? AND supprime_le IS NULL', [$genre, $id]);
     $quoi = $genre === 'checklist' ? 'checklist' : 'tâche';
-    // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant ») : supprimée seulement si
-    // ?confirmer= porte son NOM EXACT tel que le panel le donne — la suppression est voulue, pas un clic de travers.
+    // Une checklist ou une tâche créée dans le panel (08/11/2026, « Checklist Test Consultant » ; 13/11/2026, « je dois
+    // pouvoir effacer une tâche ») : supprimée seulement si ?confirmer= porte son NOM EXACT tel que le panel le donne — la
+    // suppression est voulue, pas un clic de travers.
     $confirmer = trim((string) ($_GET['confirmer'] ?? ''));
     if ($r === null && $confirmer !== '') {
-        $L = PanelApi::liste((array) (tkReq('GET', $genre === 'checklist' ? '/operational-framework/checklists' : '/tasks')['corps'] ?? []));
+        // Toutes les pages : une seule ne rendait pas les tâches au-delà de la première, « introuvables au panel ».
+        [$L, $e] = tkLireListe($genre === 'checklist' ? '/operational-framework/checklists' : '/tasks');
         $nom = null;
-        foreach ($L as $x) { if ((int) ($x['id'] ?? 0) === $id) { $nom = trim((string) ($x['name'] ?? $x['base_name'] ?? '')); } }
-        if ($nom === null) { http_response_code(404); return ['error' => ucfirst($quoi) . ' #' . $id . ' introuvable au panel']; }
+        foreach ((array) $L as $x) {
+            if ((int) ($x['id'] ?? $x['task_id'] ?? 0) === $id) { $nom = tkTxt($x['name'] ?? $x['base_name'] ?? ''); break; }
+        }
+        if ($nom === null && $genre === 'tache') {
+            $cids = array_slice(array_values(array_unique(array_filter(array_map('intval', explode(',', (string) ($_GET['checklists'] ?? '')))))), 0, 10);
+            foreach ($cids as $cid) {
+                [$Lc] = tkLireListe('/operational-framework/checklists/' . $cid . '/tasks');
+                foreach ((array) $Lc as $x) {
+                    if ((int) ($x['task_id'] ?? $x['id'] ?? 0) === $id) { $nom = tkTxt($x['name'] ?? $x['base_name'] ?? ''); break 2; }
+                }
+            }
+        }
+        if ($nom === null) {
+            http_response_code($L === null ? 502 : 404);
+            return ['error' => $L === null ? 'lecture du panel impossible : ' . $e : ucfirst($quoi) . ' #' . $id . ' introuvable au panel'];
+        }
         if ($nom !== $confirmer) { http_response_code(409); return ['error' => 'le nom ne correspond pas : le panel dit « ' . $nom . ' »']; }
         $r = ['nom' => $nom, 'horsCockpit' => true];
     }
     if ($r === null) {
         http_response_code(403);
-        return ['error' => 'seule une ' . $quoi . ' créée depuis cet écran se supprime ici ; les autres se suppriment dans le panel'];
+        return ['error' => 'sans son nom exact (?confirmer=), seule une ' . $quoi . ' créée depuis cet écran se supprime ici'];
     }
     $chemin = $genre === 'checklist' ? '/operational-framework/checklists/' . $id : '/tasks/' . $id;
     $rep = tkReq('DELETE', $chemin);

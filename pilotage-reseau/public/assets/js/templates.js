@@ -8,8 +8,11 @@ import { tplSvTableau, tplSvTablette, tplSvMsp, tplSvFranchise, tplSvAdmin, tplS
 import { tplFF, tplCQM } from './franchises-tpl.js';
 import { tplClientsAnnee, tplClientsCellule } from './clients-annee-tpl.js';
 import { tplFidelite } from './fidelite-tpl.js';
+import { tplAssistantCoachs } from './assistant-coachs-tpl.js';
 import { tplVerification } from './verification-tpl.js';
 import { tplParamProduits } from './produit-parametrage-tpl.js';
+import { tplHelpdesk } from './helpdesk-tpl.js';
+import { tplBenchmark } from './benchmark-tpl.js';
 import { tplVerifFlux, tplVerifFuites } from './verification-flux-tpl.js';
 import { tplVerifEvol } from './verification-evol-tpl.js';
 import { tplVerifMatieres } from './verification-matieres-tpl.js';
@@ -50,16 +53,17 @@ const ICO = {
   journal: 'M12 8v4l3 3M3 12a9 9 0 1 0 9-9 9 9 0 0 0-9 9',
   modeles: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M8 13h8M8 17h5',
   retour: 'M19 12H5M12 19l-7-7 7-7',
-  reglages: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4'
+  reglages: 'M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4',
+  balance: 'M12 3v18M7 21h10M4 7h16M4 7l-2.5 6a2.5 2.5 0 0 0 5 0zM20 7l-2.5 6a2.5 2.5 0 0 0 5 0z'
 };
 /* Écran → notion du catalogue. */
 const ICO_ECRAN = {
-  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle',
+  resultatJour: 'bilan', performance: 'perf', 'ext:dashboard/': 'board', 'ext:caisse/': 'fonds', cadreTaches: 'controle', audits: 'form',
   ficheFranchise: 'crm', 'Suivi des franchisés': 'adresse', 'Budget': 'fonds', 'Suivi journalier': 'controle',
   ventes: 'analyse', invendus: 'form',
   verifFlux: 'liens', verifFuites: 'recherche', inventaires: 'form', verifMatieres: 'modeles', verifCa: 'fonds',
   verifMouv: 'journal', verifRecettes: 'creer', verifEvol: 'perf',
-  paramProduits: 'reglages', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
+  paramProduits: 'reglages', demandesFranchises: 'messages', benchmark: 'balance', catalogue: 'bundles', anaprod: 'adresse', planogramme: 'ecran',
   promoEdition: 'offres', promoTableau: 'analyse', fonds: 'fonds', visibilite: 'recherche',
   'ext:prospection/': 'adresse', 'MétaDonnée': 'liens', tablette: 'ecran', fidelite: 'avis',
   primesApp: 'droits', 'ext:employee/auth': 'droits', pointages: 'journal', 'API du module': 'liens',
@@ -204,7 +208,9 @@ export function render(c, x){
       ${c.isBudgetParam ? tplBudgetParam(c, x) : ''}
       ${c.isTablette ? tplTablette(c, x) : ''}
       ${c.isCadreT ? tplCadreTaches(c, x) : ''}
+      ${c.isAudits ? tplAudits(c, x) : ''}
       ${c.isFid ? tplFidelite(c, x) : ''}
+      ${c.isAsc ? tplAssistantCoachs(c, x) : ''}
       ${c.isMD ? tplMetaDonnee(c, x) : ''}
       ${c.isPrimesApp ? tplPrimesApp(c, x) : ''}
       ${c.isApiModule ? tplApiModule(c, x) : ''}
@@ -220,7 +226,7 @@ export function render(c, x){
       ${c.isInvendus ? tplInvendus(c, x) : ''}
       ${c.isSvTableau ? tplSvTableau(c, x) : ''}${c.isSvTablette ? tplSvTablette(c, x) : ''}${c.isSvMsp ? tplSvMsp(c, x) : ''}${c.isSvFranchise ? tplSvFranchise(c, x) : ''}${c.isSvAdmin ? tplSvAdmin(c, x) : ''}${c.isSvSources ? tplSvSources(c, x) : ''}
       ${c.isInventaires ? tplInventaires(c, x) : ''}
-      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}
+      ${c.isVerifR ? tplVerification(c, x) : ''}${c.isParamProd ? tplParamProduits(c, x) : ''}${c.isHelpdesk ? tplHelpdesk(c, x) : ''}${c.isBench ? tplBenchmark(c, x) : ''}
       ${c.isVerifFlux ? tplVerifFlux(c, x) : ''}${c.isVerifFuites ? tplVerifFuites(c, x) : ''}${c.isVerifEvol ? tplVerifEvol(c, x) : ''}${c.isVerifMat ? tplVerifMatieres(c, x) : ''}${c.isVerifCa ? tplVerifCa(c, x) : ''}${c.isVerifMouv ? tplVerifMouvements(c, x) : ''}
       ${c.isFF ? tplFF(c, Object.assign({}, x, { sqSt, sqCartes: tplSqCartes, sqMsp: tplSqMsp })) : ''}${c.isCQM ? tplCQM(c, x) : ''}
       ${c.isReporting ? tplReporting(c, x) : ''}
@@ -4591,6 +4597,11 @@ function tplReporting(c, x){
           ? `<button ${x.A(c.rapComposeFermer)} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:8px 15px;background:transparent;color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">← Retour à la liste</button>`
           : `<button ${x.A(c.rapComposeOuvrir)} style="border:none;border-radius:8px;padding:8px 16px;background:var(--color-primary);color:#fff;font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">+ Nouveau rapport</button>`}
       </div>
+      ${c.rapGen.suspension ? `
+      <div style="padding:10px 18px;border-bottom:1px solid var(--color-border-tertiary);display:flex;align-items:center;gap:12px;flex-wrap:wrap;${c.rapGen.suspension.suspendu ? 'background:rgba(141,29,44,0.08)' : ''}">
+        <span style="flex:1;min-width:240px;font-size:12px;${c.rapGen.suspension.suspendu ? 'color:var(--accent)' : 'color:var(--color-text-muted)'}">${esc(c.rapGen.suspension.txt)}</span>
+        <button ${x.A(c.rapGen.suspension.basculer)}${c.rapGen.suspension.occupe ? ' disabled' : ''} style="border:1px solid var(--color-border-secondary);border-radius:8px;padding:7px 14px;background:var(--color-surface);color:var(--color-text);font-family:var(--font-ui);font-size:12px;font-weight:400;cursor:pointer">${esc(c.rapGen.suspension.bouton)}</button>
+      </div>` : ''}
       ${c.rapComposeOn ? `
       <div style="padding:16px 18px;display:flex;flex-direction:column;gap:14px">
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -7939,6 +7950,11 @@ function tplManque(c, x){
 /* --- Cadre des tâches (07/11/2026) : la page task/ intégrée --------------------
  * Un seul nœud, toujours au même endroit : la fusion du rendu le garde d'un rendu à
  * l'autre, et la page (son assistant, sa saisie) ne se recharge pas. */
+/** Pilotage › Audit fournisseurs (12/11/2026) : la page audits/ intégrée ; même principe que le cadre des tâches. */
+function tplAudits(c, x){
+  const { esc } = x;
+  return `<div data-screen="audits"><iframe data-au src="${esc(c.au.src)}" title="Audit fournisseurs" scrolling="no" style="width:100%;height:${c.au.haut}px;min-height:calc(100vh - 110px);border:none;background:transparent;display:block"></iframe></div>`;
+}
 function tplCadreTaches(c, x){
   const { esc } = x;
   // La hauteur suit le contenu de la page (postMessage tkHauteur) : pas de barre de défilement dans le cadre.

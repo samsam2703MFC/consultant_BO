@@ -154,6 +154,12 @@ final class TaskWizardRepository extends WorkshopRepository
         return $this->all('SELECT validated_at, summary FROM n_time_day WHERE day = ?', [$day])[0] ?? null;
     }
 
+    /** [273] Miesiąc czasu pracy zamknięty (Czas pracy › Miesiąc). */
+    public function timeMonth(string $month): ?array
+    {
+        return $this->all('SELECT closed_at FROM n_time_month WHERE month = ?', [$month])[0] ?? null;
+    }
+
     public function paymentsRecorded(string $day): int
     {
         return (int) ($this->all('SELECT COUNT(*) AS n FROM n_proforma_payment WHERE recorded_at >= ? AND recorded_at < DATE_ADD(?, INTERVAL 1 DAY)', [$day, $day])[0]['n'] ?? 0);
@@ -246,7 +252,18 @@ final class TaskWizardRepository extends WorkshopRepository
     /** Nazwy osób na stanowisku (przypomnienie, przełożony). @return list<string> */
     public function positionPeople(int $positionId): array
     {
-        return array_map(fn($r) => (string) $r['name'], $this->all("SELECT COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS name FROM n_user_position up JOIN user u ON u.id = up.id_user WHERE up.id_position = ? ORDER BY name", [$positionId]));
+        $rows = $this->all("SELECT u.id, COALESCE(NULLIF(TRIM(u.displayed_name), ''), u.login) AS name FROM n_user_position up JOIN user u ON u.id = up.id_user WHERE up.id_position = ? ORDER BY name", [$positionId]);
+        // [289] Osoba na zatwierdzonym urlopie : przypomnienie wskazuje zastępcę.
+        $day = date('Y-m-d');
+        return array_map(function ($r) use ($day) {
+            try {
+                $l = $this->all("SELECT COALESCE(NULLIF(TRIM(s.displayed_name), ''), s.login) AS sub FROM n_user_leave l LEFT JOIN user s ON s.id = l.id_substitute
+                    WHERE l.id_user = ? AND l.status = 'approved' AND l.date_from <= ? AND l.date_to >= ? LIMIT 1", [(int) $r['id'], $day, $day])[0] ?? null;
+            } catch (\PDOException) {
+                $l = null;
+            }
+            return (string) $r['name'] . ($l ? ' (urlop' . ($l['sub'] ? ' — zastępuje ' . $l['sub'] : '') . ')' : '');
+        }, $rows);
     }
 
     public function positionName(?int $positionId): ?string

@@ -34,6 +34,8 @@ class AppExtension extends AbstractExtension
             new TwigFunction('can_see', fn(string $path) => \App\Core\Web\PageAccess::visible($path)),
             new TwigFunction('rail_access', fn() => (object) \App\Core\Web\PageAccess::$rail),
             new TwigFunction('view_session', fn() => \App\Core\Web\ViewSession::menu()),
+            // [275] Wejście do ERP przez QR : « W pracy od … · Zakończ dzień » w pasku u góry.
+            new TwigFunction('erp_day', fn() => \App\Core\Web\ErpDay::state()),
             new TwigFunction('can', function(string $perm, array $perms = null) {
                 $perms = $perms ?? (GlobalRegistry::get('user')['permissions'] ?? []);
                 return in_array($perm, $perms, true);

@@ -62,7 +62,8 @@ pour vivre avec l'ERP), le site public `landing` (`lp_`, **à décider**), et le
   lectures `/stores` (avec `franchise` et `cp`), `/stores/perf`, `/exploitation/pro`, `/marketing/avis`,
   `/formation/ref`… et publie son adresse https dans `pil_api_url` ; le Recrutement sert
   `/crm/api/v1/integration/recrutement/scouting-reseau` (positions et données d'étude des magasins, lues
-  par le Cockpit) ; Social sert `…/social/integration/formulaires`. Exemples :
+  par le Cockpit) ; Social sert `…/social/integration/formulaires` ; le dashboard magasin du Cockpit relaie « Mon catalogue » au Marketing
+  (`…/integration/marketing/shops/{shopId}/catalogues`, adresse `mar_api_url` d'`erp_cles`, 14 nov. 2026). Exemples :
   Pilotage lit les campagnes de Marketing ; Recrutement pousse un franchisé signé vers Pilotage ;
   Recrutement lit les chiffres des magasins chez Pilotage (déjà le cas, `GET /stores`) ; Social lit
   les avis et la réputation des boutiques chez Pilotage au lieu de `ceo_shop_review`.
@@ -474,7 +475,7 @@ propriétaire. `ceo_app_setting` et `crm_settings` du CRM se fondent dans `rec_v
 | social | `mar_sa_resultat` | = |  |
 | social | `mar_variable` | = |  |
 
-### Pilotage — 110 table(s)
+### Pilotage — 111 table(s)
 
 `ceo_parcours` et `ceo_parcours_etape` (parcours de chaque personne) : retirées du registre le 06/11/2026 — le parcours est
 supprimé et ses tables sont effacées à la mise en ligne (pilotage-reseau/docs/formation.md, « Parcours retiré »).
@@ -575,6 +576,7 @@ supprimé et ses tables sont effacées à la mise en ligne (pilotage-reseau/docs
 | consultant_BO | `pla_placement` | `pil_pla_placement` | planogramme |
 | consultant_BO | `pla_slot` | `pil_pla_slot` | planogramme |
 | consultant_BO | `pla_zone` | `pil_pla_zone` | planogramme |
+| consultant_BO | `pil_tresorerie_plan` | = | dashboard magasin › Trésorerie, créée sous son nom cible (14/11/2026) |
 | pwa_consultant | `mac_checklist_day_snapshot` | `pil_mac_checklist_day_snapshot` | PWA consultant |
 | pwa_consultant | `mac_consultant_lever_action` | `pil_mac_consultant_lever_action` | PWA consultant |
 | pwa_consultant | `mac_consultant_param` | `pil_mac_consultant_param` | PWA consultant |

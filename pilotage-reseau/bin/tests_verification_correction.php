@@ -85,13 +85,14 @@ final class Panel
     public static array $champsProduit = []; // pid => les autres champs de GET /products/{id} (paramétrage des produits)
     public static array $gammes = [];     // id => [objet de la gamme, [pid]] (/product-availability-periods)
     public static array $prixProduit = []; // sid => [pid => prix TTC]
+    public static array $refusChamp = []; // chemin => [clé => réponse 422] : le panel refuse ce champ, nommément
 
     /** Le coût d'une recette entière dans un magasin, et ses éléments comme /cost les rend. */
     public static function cout(int $sid, array $o, float $fac = 1.0, int $prof = 0): array
     {
         $els = []; $t = 0.0; $complet = true;
         foreach ((array) ($o['materials'] ?? []) as $m) {
-            $mid = (int) $m['id_material']; $q = (float) $m['quantity'] * $fac;
+            $mid = (int) ($m['id_material'] ?? $m['id']); $q = (float) $m['quantity'] * $fac;
             $px = self::$prix[$sid][$mid] ?? null;
             if ($px === null) { $complet = false; }
             $c = $px === null ? 0.0 : $q * $px; $t += $c;
@@ -99,7 +100,7 @@ final class Panel
                 'price_net' => $px, 'price_source' => $px === null ? 'MISSING' : 'SUPPLIER', 'calculated_req_price_net' => $c];
         }
         foreach ((array) ($o['subrecipes'] ?? []) as $s) {
-            $so = self::$sous[(int) $s['id_subrecipe']];
+            $so = self::$sous[(int) ($s['id_subrecipe'] ?? $s['id'])];
             $y = (float) ($so['yield_quantity'] ?: 1);
             [$st, $sel, $sc] = self::cout($sid, $so, $fac * (float) $s['quantity'] / $y, $prof + 1);
             $t += $st; $complet = $complet && $sc;
@@ -156,6 +157,7 @@ final class Panel
         self::$ecrits[] = [$meth, $c, $b];
         if (isset(self::$refus[$c])) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422 : ' . self::$refus[$c]; return [false, ['description' => self::$refus[$c]]]; }
         if (isset(self::$ignore[$c])) { return [true, ['status' => 'ok']]; }
+        foreach (self::$refusChamp[$c] ?? [] as $k => $rep) { if (array_key_exists($k, $b)) { PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 422'; return [false, $rep]; } }
         if (preg_match('#^/materials/(\d+)/vat-rates$#', $c, $m) && $meth === 'POST') {
             $mid = (int) $m[1]; $fait = false;
             foreach (self::$tva[$mid] as &$l) { if ($l['country_code'] === ($b['country_code'] ?? '')) { $l['vat_rate'] = number_format((float) $b['vat_rate'], 2, '.', ''); $fait = true; } }
@@ -174,17 +176,25 @@ final class Panel
             return [true, []];
         }
         if (preg_match('#^/products/(\d+)/availability-periods$#', $c, $m) && $meth === 'PATCH') {
-            if (!isset($b['availability_period_ids'])) { PanelApi::$lastError = 'PATCH ' . $c . ' → HTTP 422 : MISSING_REQUIRED_FIELDS'; return [false, ['code' => 'MISSING_REQUIRED_FIELDS']]; }
-            foreach (self::$gammes as $id => $g) { $l = array_values(array_diff($g[1], [(int) $m[1]])); if (in_array($id, $b['availability_period_ids'], true)) { $l[] = (int) $m[1]; } self::$gammes[$id][1] = $l; }
+            if (!isset($b['availability_periods'])) { PanelApi::$lastError = 'PATCH ' . $c . ' → HTTP 422 : MISSING_REQUIRED_FIELDS'; return [false, ['code' => 'MISSING_REQUIRED_FIELDS']]; }
+            foreach (self::$gammes as $id => $g) { $l = array_values(array_diff($g[1], [(int) $m[1]])); if (in_array($id, $b['availability_periods'], true)) { $l[] = (int) $m[1]; } self::$gammes[$id][1] = $l; }
             return [true, []];
         }
-        if (preg_match('#^/shops/(\d+)/products/(\d+)/price$#', $c, $m) && $meth === 'PATCH') { self::$prixProduit[(int) $m[1]][(int) $m[2]] = (float) ($b['portion_price_gross'] ?? ($b['price'] ?? 0)); return [true, []]; }
+        if ($c === '/cases' && $meth === 'POST') { if (!isset($b['area_key'], $b['title'], $b['description'])) { PanelApi::$lastError = 'POST /cases → HTTP 422'; return [false, ['description' => 'MISSING_REQUIRED_FIELDS']]; } return [true, ['data' => ['id' => 99, 'ref' => 'CASE-20261115-TEST1']]]; }
+        if (preg_match('#^/shops/(\d+)/products/(\d+)/price$#', $c, $m) && $meth === 'PATCH') { self::$prixProduit[(int) $m[1]][(int) $m[2]] = (float) ($b['portion_price'] ?? ($b['portion_price_gross'] ?? ($b['price'] ?? 0))); return [true, []]; }
         if (preg_match('#^/product-portions/(\d+)$#', $c, $m) && $meth === 'PATCH') {
             $id = (int) $m[1]; self::$portions[$id] = array_merge(self::$portions[$id], $b);
             self::$produits[self::$portions[$id]['product_id']]['part'] = self::$portions[$id]['portion_size'];
             return [true, []];
         }
-        if (preg_match('#^/materials/(\d+)/manual-price$#', $c, $m) && $meth === 'POST') { self::$prix[(int) $b['id_shop']][(int) $m[1]] = (float) $b['price']; return [true, []]; }
+        if (preg_match('#^/materials/(\d+)/manual-price$#', $c, $m) && $meth === 'POST') {
+            if (isset($b['shop_ids'])) {   // le contrat : {shop_ids, pack_price, package_size}
+                if (!isset($b['pack_price'], $b['package_size'])) { PanelApi::$lastError = 'POST ' . $c . ' → HTTP 422'; return [false, ['description' => 'MISSING_REQUIRED_FIELDS']]; }
+                foreach ($b['shop_ids'] as $sh) { self::$prix[(int) $sh][(int) $m[1]] = (float) $b['pack_price'] / (float) $b['package_size']; }
+                return [true, []];
+            }
+            self::$prix[(int) $b['id_shop']][(int) $m[1]] = (float) $b['price']; return [true, []];
+        }
         if (preg_match('#^/shops/(\d+)/recipes/recalculate$#', $c) && $meth === 'POST') { return [true, []]; }
         PanelApi::$lastError = $meth . ' ' . $c . ' → HTTP 404'; return [false, ['description' => 'route inconnue']];
     }
@@ -193,6 +203,7 @@ final class PanelApi
 {
     public static ?string $lastError = null;
     public static ?array $dispo = null;
+    public static ?string $jetonImpose = null;
     public static function configured(): bool { return true; }
     public static function config(): array { return ['base' => 'https://atelierby.tfbuddy.com/api/v1']; }
     public static function coutsMatiere(): array { return []; }
@@ -240,6 +251,7 @@ require __DIR__ . '/../src/verification_correction.php';
 require __DIR__ . '/../src/verification_matieres_prix.php';
 require __DIR__ . '/../src/verification_matiere_edition.php';
 require __DIR__ . '/../src/produit_parametrage.php';
+require __DIR__ . '/../src/helpdesk.php';
 
 ob_start();   // les routes posent un code HTTP : rien ne part avant la fin
 $ok = 0; $ko = 0;
@@ -313,7 +325,7 @@ $o = ['name' => 'R', 'yield_quantity' => 1, 'materials' => [['id_material' => 1,
 $m = vrcModifier($o, [['type' => 'facteur', 'cle' => 'm1', 'f' => 0.001], ['type' => 'qte', 'cle' => 'm2', 'q' => 0.25], ['type' => 'retirer', 'cle' => 's9'], ['type' => 'rendement', 'n' => 12]]);
 verifie('vrcModifier : seules les clés touchées partent', array_keys($m['corps']) === ['yield_quantity', 'materials', 'subrecipes'], implode(',', array_keys($m['corps'])));
 verifie('vrcModifier : ×0,001 posé à plat', $m['corps']['materials'][0]['quantity'] === 0.002);
-verifie('vrcModifier : quantité posée dans le pivot', $m['corps']['materials'][1]['pivot']['required_quantity'] === 0.25 && !isset($m['corps']['materials'][1]['quantity']));
+verifie('vrcModifier : lignes dans la forme du contrat {id, quantity}, la quantité lue dans le pivot', $m['corps']['materials'][1] === ['id' => 2, 'quantity' => 0.25], json_encode($m['corps']['materials']));
 verifie('vrcModifier : sous-recette retirée', $m['corps']['subrecipes'] === []);
 verifie('vrcModifier : l’inverse garde l’avant', $m['inverse']['materials'] === $o['materials'] && $m['inverse']['yield_quantity'] === 1);
 verifie('vrcModifier : ligne inconnue = erreur', vrcModifier($o, [['type' => 'qte', 'cle' => 'm77', 'q' => 1]])['erreurs'] !== []);
@@ -399,7 +411,7 @@ verifie('volet : le Wrapps quitte la liste', !in_array('unite:103', $cles($r['li
 
 // Ajouter une matière reprise d'une autre recette (dans sa forme), retirer une ligne.
 $r = $geste(['geste' => 'recette', 'rid' => 14, 'pid' => 104, 'nom' => 'Pain au Chocolat Nappé', 'changements' => [['type' => 'ajouter', 'objet' => 'recette', 'id' => 14, 'mid' => 530, 'source' => 18, 'q' => 0.01], ['type' => 'retirer', 'objet' => 'recette', 'id' => 14, 'cle' => 'm512']]]);
-$mids = array_column(Panel::$recettes[14]['materials'], 'id_material');
+$mids = array_map(static fn ($x) => (int) ($x['id_material'] ?? $x['id']), Panel::$recettes[14]['materials']);
 verifie('volet : matière ajoutée, ligne retirée', $r['ok'] && in_array(530, $mids, true) && !in_array(512, $mids, true), json_encode($mids));
 
 // Rendement, puis son annulation.
@@ -432,7 +444,7 @@ verifie('portion : la ligne part', !in_array('port:106', $cles($r['liste']), tru
 // Le prix d'une matière.
 $r = $geste(['geste' => 'prix', 'shop' => 4, 'mid' => 520, 'prix' => 1.85, 'matiere' => 'Sucre glace', 'rid' => 12, 'pid' => 102, 'cle' => 'prix:102', 'nom' => 'Merveilleux']);
 fixture('corriger-prix', $r);
-verifie('prix : POST /materials/520/manual-price {id_shop, price}, relu', $r['ok'] && end(Panel::$ecrits)[2] === ['id_shop' => 4, 'price' => 1.85], json_encode(end(Panel::$ecrits)));
+verifie('prix : POST /materials/520/manual-price {shop_ids, pack_price, package_size} (contrat), relu', $r['ok'] && end(Panel::$ecrits)[2] === ['shop_ids' => [4], 'pack_price' => 1.85, 'package_size' => 1], json_encode(end(Panel::$ecrits)));
 verifie('prix : la ligne part', !in_array('prix:102', $cles($r['liste']), true));
 verifie('prix : sans retour possible (l’avant était « aucun prix »)', !$r['ecritures'][0]['annulable']);
 
@@ -538,9 +550,9 @@ $ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'was
 verifie('matière : une clé absente du panel ne s’écrit pas', count($ch['erreurs']) === 1 && str_contains($ch['erreurs'][0], 'Genre'));
 $ch = vmxChangements(Panel::$materiaux[521], ['name' => 'Blancs d’œufs', 'waste_amount_perc' => 5, 'allergens' => ['eggs', 'milk'], 'is_part_of_package' => true], vmxAllergenesRef());
 $cc = array_keys($ch['corps']); sort($cc);
-verifie('matière : seules les clés changées partent, dans la forme lue', $cc === ['allergens', 'is_part_of_package', 'waste_amount_perc'] && $ch['corps']['waste_amount_perc'] === 5.0 && $ch['corps']['is_part_of_package'] === 1
-    && $ch['corps']['allergens'] === [['id' => 3, 'code' => 'eggs'], ['id' => 7, 'code' => 'milk']], json_encode($ch));
-verifie('matière : les allergènes en texte gardent leur forme', vmxAllergenesPour('eggs', ['eggs', 'milk'], vmxAllergenesRef()) === 'eggs, milk');
+verifie('matière : seules les clés changées partent, dans la forme lue', $cc === ['allergens', 'is_part_of_package', 'waste_amount_perc'] && $ch['corps']['waste_amount_perc'] === 5 && $ch['corps']['is_part_of_package'] === true
+    && $ch['corps']['allergens'] === [3, 7], json_encode($ch));
+verifie('matière : les allergènes partent en identifiants (contrat), quelle que soit la forme lue', vmxAllergenesPour('eggs', ['eggs', 'milk'], vmxAllergenesRef()) === [3, 7] && vmxAllergenesPour('eggs', ['eggs', 'milk'], []) === 'eggs, milk');
 $_GET = ['mid' => '521'];
 $f = ep_verification_matiere();
 fixture('matiere-521', $f);
@@ -555,9 +567,9 @@ verifie('fiche : l’aperçu n’écrit rien, montre le PATCH et le prix du maga
 $BODY['apercu'] = false;
 $r = wr_verification_matiere();
 fixture('ecrire-matiere', $r);
-verifie('fiche : paramètres écrits et relus, puis le prix de Corbais', $r['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs frais' && Panel::$materiaux[521]['reference_unit_price_net'] === 6.5 && Panel::$prix[2][521] === 6.5, json_encode($r));
+verifie('fiche : paramètres écrits et relus, puis le prix de Corbais', $r['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs frais' && Panel::$materiaux[521]['reference_unit_price_net'] === '6.5' && Panel::$prix[2][521] === 6.5, json_encode($r));
 $pm = array_values(array_filter(Panel::$ecrits, static fn ($e) => $e[1] === '/materials/521'));
-verifie('fiche : le PATCH ne porte que les deux clés changées', end($pm)[2] === ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => 6.5]);
+verifie('fiche : le PATCH ne porte que les deux clés changées', end($pm)[2] === ['name' => 'Blancs d’œufs frais', 'reference_unit_price_net' => '6.5']);
 $BODY = ['id' => $r['ecritures'][0]['id']];
 $u = wr_verification_annuler();
 verifie('fiche : « Annuler » remet le nom et le prix général', $u['ok'] && Panel::$materiaux[521]['name'] === 'Blancs d’œufs' && Panel::$materiaux[521]['reference_unit_price_net'] === null, json_encode($u));
@@ -587,7 +599,7 @@ verifie('TVA : une valeur invalide ne part pas', !wr_verification_matiere()['ok'
 
 // --- Produits › Paramétrage (14/11/2026, src/produit_parametrage.php) ---------------------------------------------
 Panel::$champsProduit[100] = ['tax_val_perc' => 6, 'is_active' => 1, 'webshop_active' => 0, 'suggested_sale_price' => '21.90', 'shelf_life_minutes' => 2880, 'id_storage' => 30,
-    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null];
+    'id_category' => 81125, 'shelf_life_category' => 'SSL', 'sector_id' => null, 'min_coefficient' => null, 'storage_temperature' => 0];
 Panel::$gammes = [14 => [['id' => 14, 'name' => 'Gamme Standard', 'from_md' => 101, 'to_md' => 1231, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 0], [100]],
     6 => [['id' => 6, 'name' => 'Automnale', 'from_md' => 901, 'to_md' => 1101, 'is_recurring' => 1, 'is_active' => 1, 'webshop_active' => 1], []]];
 foreach (array_keys(Db::$reglages) as $k) { if (str_starts_with($k, 'ppm')) { unset(Db::$reglages[$k]); } }
@@ -602,7 +614,7 @@ verifie('paramétrage : un champ que le panel ne rend pas ne s’écrit pas', pp
 $BODY = ['pid' => 100, 'apercu' => true, 'champs' => ['suggested_sale_price' => '22,50', 'webshop_active' => 1], 'gammes' => [14, 6], 'prix' => []];
 $a = wr_produits_parametrage();
 verifie('paramétrage : l’aperçu montre le PATCH du produit et l’envoi des gammes', ($a['apercu'] ?? false) && count($a['ecritures']) === 2 && $a['ecritures'][0]['route'] === '/products/100'
-    && $a['ecritures'][1]['route'] === '/products/100/availability-periods' && $a['ecritures'][1]['corps'] === ['availability_period_ids' => [6, 14]], json_encode($a));
+    && $a['ecritures'][1]['route'] === '/products/100/availability-periods' && $a['ecritures'][1]['corps'] === ['availability_periods' => [6, 14]], json_encode($a));
 $BODY['apercu'] = false;
 $r = wr_produits_parametrage();
 verifie('paramétrage : écrit, relu, gammes posées', $r['ok'] && Panel::$champsProduit[100]['suggested_sale_price'] === '22.50' && in_array(100, Panel::$gammes[6][1], true), json_encode($r));
@@ -619,6 +631,40 @@ $BODY = ['pid' => 100, 'prix' => ['3' => '20,90'], 'garder' => true, 'formats' =
 $r = wr_produits_parametrage();
 verifie('paramétrage : prix d’un magasin écrit et relu, format gardé', $r['ok'] && Panel::$prixProduit[3][100] === 20.9 && ppmFormat('prix')['corps'] === ['portion_price_gross' => '{prix}'], json_encode($r));
 verifie('paramétrage : gammes d’une forme quelconque', ppmIdsProduits(['data' => [['id_product' => 5], ['product_id' => 6], 7]]) === [5, 6, 7] || ppmIdsProduits([['id_product' => 5], ['product_id' => 6]]) === [5, 6]);
+
+
+// Un champ refusé nommément (mesuré le 14/11 : coefficient minimum contredit par une promotion active) n'emporte pas les autres.
+Panel::$refusChamp['/products/100'] = ['min_coefficient' => ['code' => null, 'description' => 'Nie można zapisać minimalnego współczynnika.', 'errors' => ['min_coefficient' => 'Update rejected by active promotion #2 (4 Quarts + 1 Gratuit).',
+    'promotion_id' => 2, 'promotion_name' => '4 Quarts + 1 Gratuit', 'reason' => 'INVALID_PROMOTION_DATA', 'min_coefficient_details' => ['contexts' => [['shop_id' => 3, 'sales_channel' => 'POS', 'status' => 'VIOLATED'], ['shop_id' => 4, 'sales_channel' => 'POS', 'status' => 'OK']]]]]];
+$BODY = ['pid' => 100, 'champs' => ['min_coefficient' => '2,5', 'storage_temperature' => '4']];
+$r = wr_produits_parametrage();
+$e0 = $r['ecritures'][0] ?? []; $e1 = $r['ecritures'][1] ?? [];
+verifie('paramétrage : le champ refusé est nommé, en français, avec la promotion et le magasin', count($r['ecritures']) === 2 && $e0['resultat'] === 'refuse' && str_contains($e0['message'], '« 4 Quarts + 1 Gratuit »')
+    && str_contains($e0['message'], 'Coefficient minimum') && !str_contains($e0['message'], 'Halle') && str_contains($e0['reponse'], 'INVALID_PROMOTION_DATA'), json_encode($r));
+verifie('paramétrage : les autres champs repartent seuls, écrits et relus', $e1['resultat'] === 'ok' && Panel::$champsProduit[100]['storage_temperature'] === 4 && Panel::$champsProduit[100]['min_coefficient'] === null && end(Panel::$ecrits)[2] === ['storage_temperature' => 4], json_encode($r));
+unset(Panel::$refusChamp['/products/100']);
+
+PanelApi::$jetonImpose = 'jeton-admin-de-test';
+$BODY = ['geste' => 'prix', 'mid' => 560, 'prix' => 17.0, 'shops' => [3], 'matiere' => 'Thon'];
+$r = wr_verification_corriger();
+verifie('compte admin : l’écriture le note au registre', str_contains((string) ($r['ecritures'][0]['message'] ?? ''), 'compte administrateur du panel'), json_encode($r));
+PanelApi::$jetonImpose = null;
+verifie('prix : la route de la centrale (tarif du fournisseur pour un magasin) est permise', vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70', 'valid_from' => '{date}']])['permise']
+    && vrcPrixPlan(2, 659, 7.7125, ['methode' => 'POST', 'route' => '/material-suppliers/1/shops/{sid}/products/422/price', 'corps' => ['price_net' => '61.70']])['corps'] === ['price_net' => 61.7]);
+
+
+// --- Le helpdesk des franchisés (15/11/2026, src/helpdesk.php) ----------------------------------------------------
+$d = hdkDemande(['id' => 5, 'ref' => 'CASE-1', 'area_key' => 'operational_activities', 'status' => 'IN_PROGRESS', 'title' => ' Verrière ', 'description' => 'x', 'shop_id' => 5,
+    'shop_name' => 'Atelier by Harmonie - Sombreffe', 'requester_name' => 'H.', 'requester_email' => 'h@example.com', 'admin_reply' => null, 'created_at' => '2026-05-19 10:00:00', 'consultant_name' => 'Loic V.']);
+verifie('helpdesk : une demande lue, sans le courriel du demandeur', $d['titre'] === 'Verrière' && $d['domaineNom'] === 'Activités opérationnelles' && $d['ouverte'] && !in_array('h@example.com', $d, true) && $d['statutNom'] === 'En cours');
+$t = hdkConstat([['nom' => 'Verrière', 'etat' => 'a_suivre', 'constat' => 'devis bardage seulement'], ['nom' => 'Affichage', 'etat' => 'conforme', 'constat' => '']], '2026-10-26', 'Loic V.');
+verifie('helpdesk : le constat de la mission, en texte pour le franchisé', str_contains($t, '26/10/2026 (Loic V.)') && str_contains($t, '• Verrière — à suivre : devis bardage seulement') && str_contains($t, '• Affichage — conforme'));
+$BODY = ['shop' => 5, 'domaine' => 'xx', 'titre' => 'T', 'description' => 'D'];
+verifie('helpdesk : un sujet inconnu ne part pas', !wr_helpdesk_magasin()['ok']);
+$BODY = ['shop' => 5, 'domaine' => 'product', 'titre' => 'Tarte 22', 'description' => 'Une plus petite', 'passage' => true];
+$r = wr_helpdesk_magasin();
+verifie('helpdesk : la demande part au panel (POST /cases, contrat), le passage noté dans la description', $r['ok'] && $r['id'] === 99 && end(Panel::$ecrits)[1] === '/cases'
+    && end(Panel::$ecrits)[2]['area_key'] === 'product' && end(Panel::$ecrits)[2]['shop_id'] === 5 && str_contains(end(Panel::$ecrits)[2]['description'], 'Passage du consultant souhaité'), json_encode($r));
 
 // Les réponses pour la capture de l'écran (la liste après corrections, la fiche du Wrapps).
 fixture('recettes-apres', vfAnalyse(0) + ['cache' => null]);

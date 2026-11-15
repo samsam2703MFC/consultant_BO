@@ -472,6 +472,8 @@ acquis et relié, sinon l'ancienne compétence du panel de la SOP en repli).
 | — | `GET /scouting/reseau` | Magasins du réseau (Développement commercial, Prospection) : position (fiche Google, ou pointée dans l'Étude de faisabilité du CRM) et CA réel des douze derniers mois clos ; `panier` : panier moyen TTC du réseau et par magasin (même source que l'écran Exploitation, mois en cours, gardé un jour) |
 | — | `GET /ventes/stats?shop=&vue=&date=` | Les heures de la période, le top de chaque heure, et `categories[]` : CA, coût matière, marge brute, taux, part, `groupe`, et `produits[]` de chaque catégorie (id, nom, q, v, c, m, taux, part dans la catégorie) — la liste groupe › catégorie › produit du dashboard magasin. `bundles` (10/10/2026) : les produits de la catégorie « Bundle », groupe « Bundle & Promotion », vendus sur la période. Il donne `{n, pieces, ca, taux, part, lignes[{id, nom, cat, q, v, prix, c, m, taux, heures{h: q}, premiere, derniere}]}`, trié par quantité. Le dashboard opérationnel l'affiche à côté des ventes par catégorie, sans colonne d'heures, avec la composition lue dans la recette du bundle (`/analyse/produits/recette`). `GET /exploitation/bundles/sonde` lit en lecture seule les promotions bundle et buy X get Y du panel (`/admin/promotions/...`) : au 10/10/2026, le compte API reçoit 403. |
 | — | `GET /ventes/stats/reseau?vue=jour\|semaine\|mois&date=` | Les ventes de produits de tout le réseau (04/11/2026), sous le tableau des magasins du Résultat. `produits[]` : `{id, pid, nom, cat, groupe, portion, q, v, prix, m, taux, vChiffre, vSans, nSans, part, magasins[{s, q, v, m}]}` — une portion (½, ¼) est une ligne à part (`id` = « produit:portion », `portion: true`), `m` et `taux` sur les ventes chiffrées, `nSans` = magasins où le produit est vendu sans coût. `magasins[]` : `{shop, nom, jours, joursLus, instantanes, joursManquants, ca, refs, sansCout[{id, nom, cat, q, v}], nSansCout, caSansCout}`. `totaux` : `{refs, portions, q, ca, m, taux, vChiffre, nSansCout, caSansCout}` ; `lecture` : `{complet, ticketsLus, rechiffres, secondes}`. Relevés gravés lus tels quels ; les autres jours relus dans un budget commun (1 500 tickets, 45 s), le plus récent d'abord et magasin par magasin ; un relevé périmé sert quand le budget est épuisé (`instantanes`). Ventes sans coût rechiffrées à la recette du moment (`svRechiffrer`). Les bundles restent dans leur catégorie. |
+| — | `GET /historique/ventes` | (siège seul) L'historique des ventes sur 18 mois, que lit l'assistant du dashboard (14/11/2026, `src/historique_ventes.php`) : `{depuis, jusqua, joursParMagasin, avancement (%), complet, magasins[{magasin, joursLus, depuis, jusqua, tickets, ticketsSansLignes}]}`. Tables `ceo_hist_jour` (un jour-magasin lu : tickets, CA, part pro), `ceo_hist_heure` (le même, heure par heure) et `ceo_hist_produit` (produits vendus heure par heure : quantité, ventes TTC, part pro), remplies depuis les tickets du panel (`/shops/{id}/transactions?date=` puis `/transactions/{id}?include=products`). Moisson de nuit : `bin/historique_moisson.php` (cron `/etc/cron.d/cockpit-historique`, toutes les dix minutes de 20 h à 6 h, 4 000 appels et 8 minutes au plus par passe), d'hier vers le passé. |
+| — | `POST /historique/ventes/moisson {budget?}` | (siège seul) Une passe forcée : 1 500 appels et 50 s au plus. Rend `{ok, joursFaits, appels, echecs, joursRestants, plusAncienLu, secondes, etat}`. |
 | — | (relevé des tickets `svP{shop}:{date}`) | Lu une fois par jour et par magasin, la journée en cours relue toutes les dix minutes. Depuis le 05/10/2026, la relecture est **incrémentale** : le relevé garde ses tickets (`ids`), la liste du jour se relit (un appel) et seuls les tickets nouveaux se lisent (un appel chacun) ; mesuré avant, 298 tickets relus à Corbais, 8 s. Un ticket déjà lu qui a disparu de la liste (annulé) fait tout relire. `produits.ticketsLus` compte les tickets lus pendant l'appel. |
 | `fbRegles` | `GET /referentiels/facebook-regles` | Contrôle posts Facebook — pack de règles |
 | `fbPosts` | `GET /facebook/posts` | Contrôle posts Facebook — posts, écarts, décisions |
@@ -1212,7 +1214,7 @@ fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/ta
 
 | Route | Rôle |
 |---|---|
-| `GET /task/cadre` | `sopLiens` {taskId: [{sopId, code, titre, etape}]} (les tâches reliées à une étape de standard) ; `checklists[]` {id, nom, description, poste, heure, taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
+| `GET /task/cadre` | `sopLiens` {taskId: [{sopId, code, titre, etape}]} (les tâches reliées à une étape de standard) ; `checklists[]` {id, nom, description, poste, heure, actif (`is_active` du panel, null s'il ne le porte pas), taches[] {taskId, ordre, note}, brut} ; `taches[]` {id, nom, description, jour, heure, frequence, obligatoire, photo, priorite, actif, section, categorie, sousCategorie, brut} ; `horsChecklist[]` ; `niveaux[]` {id, nom, poste} ; `options` {jours[], frequences[]} ({valeur, nb}) ; `creees[]` (créées depuis cet écran) ; `erreurs` ; `api` {compte: cockpit\|admin, base, configure}. Lit `/tasks`, `/operational-framework/checklists` et `…/{id}/tasks`, `/position-levels`. |
 | `GET /task/taches/{id}` | la tâche brute, ses contrôleurs (`/tasks/{id}/controllers`) et les niveaux de poste qui la portent (`/levels/{id}/tasks`, `/position-levels/{id}/tasks`). |
 | `POST /task/apercu` | rien n'est envoyé : la liste des copies et, pour chacune, les appels exacts au panel. Corps : `{modeles: [taskId], checklistId, nom: {remplacer, par, ajouter}, jours: [valeur], unParJour, heure: "HH:MM", frequence, obligatoire, photo, niveaux, controleurs, extra: {}}` — un champ `null` ou absent garde la valeur du modèle. Rend `items[]` {modeleId, nom, jour, heure, existe (id d'une tâche identique : même nom, jour, heure), operations[] {quoi, methode, chemin, corps}}, `aCreer`, `avertissements[]` (modèle quotidien auquel on impose un jour sans changer la fréquence, modèle sans niveau de poste). |
 | `POST /task/creer` | même corps (+ `seulementPremiere` pour un essai) : pour chaque copie, `POST /tasks`, puis `POST /operational-framework/checklists/{id}/tasks {task_id, sort_order}` (après la dernière tâche), `POST /levels/{niveau}/tasks {task_id}` (ou `/position-levels/…`, là où le modèle est rattaché), `POST /tasks/{id}/controllers` (les identifiants du contrôleur du modèle). S'arrête au premier refus de `POST /tasks` ; une tâche qui existe déjà n'est pas recréée. Chaque appel rend `ok`, `code`, `reponse`, `erreur`. Trace dans `ceo_cadre_cree` et au journal. |
@@ -1221,9 +1223,10 @@ fréquence se choisissent parmi les valeurs que le panel emploie déjà. `src/ta
 | `POST /task/assistant/creer` | même corps (+ `seulementPremiere` : la checklist et la première tâche) : la checklist d'abord, puis chaque tâche (création, checklist, niveaux, contrôleurs) ; arrêt au premier refus. Rend aussi `creees`, `ajoutees`, `arret`. |
 | `GET /task/sop/{id}/proposition` | **checklist depuis un standard** (Formation › fiche SOP › « Créer les contrôles de ce standard », qui ouvre `#/checklists?sop={id}`) : rien n'est écrit. `sop` {id, code, titre, poste, moment, objectif, version, codesChecklists} ; `checklist` : la checklist du panel dont le code (en tête de nom, « CP-07 — … ») est au classement de la SOP, sinon une nouvelle « code — titre » avec l'objectif, le poste de travail (par le nom du poste de la SOP) et la première heure citée par ses sections ; `lignes[]` : une par étape **critique** (repli : les points critiques) {nom (titre de l'étape, sans son heure), description (texte + « (Standard …, étape …) »), etape, section, photo (l'étape a une photo de référence), photoRef, heure (celle de l'étape, sinon de sa phase)} ; `reference` {id, nom, checklist} : la tâche dont viennent `sousCategorieId`, `niveaux` et `controleursDe` (la première de la checklist, ou d'une checklist du même poste de travail, sinon de la première checklist qui porte des tâches — signalé) ; `avertissements[]`. L'assistant s'ouvre avec ces lignes ; chaque ligne porte `sop: {id, etape}` et le corps `sopId` : à la création, le lien tâche ↔ étape entre dans `ceo_sop_tache`, et le code d'une checklist nouvelle dans le classement de la SOP. |
 | `GET /task/sop/{id}/controles` | **les contrôles d'un standard** (la carte « Contrôles au panel » de la fiche SOP) : `checklists[]` {id, code, nom, heure, nbTaches} dont le code est au classement (ou est celui de la SOP) ; `codesSansChecklist[]` (cités, pas encore au panel) ; `taches[]` {id, nom, jour, heure, frequence, photo, obligatoire, actif, absente, checklist, checklistId, etape, stats {notes, moyenne, nc, conformite, derniere, dernierNc {date, shopId, magasin, note, commentaire}}} — les tâches de ces checklists et celles reliées à une étape (`ceo_sop_tache`), avec les avis des 30 derniers jours (`mac_task_review`, non-conformité = note sous le seuil `signalement`) ; `totaux` {taches, notes, conformes, nc, conformite} ; `seuil`, `depuis`, `erreurs[]`. |
-| `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}`, seulement pour une checklist créée depuis cet écran ; ses tâches restent. |
+| `PATCH /task/checklists/{id}` | `{nom?, description?, posteId?, heure?, actif?, apercu?}` → `PATCH /operational-framework/checklists/{id}` (PUT si le panel ne connaît pas PATCH), le corps reprenant les champs actuels de la checklist ; `actif` passe en `is_active` (vue Document, l'interrupteur du titre d'une checklist ; ses tâches ne changent pas). Avec `actif`, la liste du panel est relue : la réponse porte `relu` {actif, absente} — ce que le panel a retenu, et `absente: true` s'il ne liste plus la checklist une fois en pause. |
+| `DELETE /task/checklists/{id}` | `DELETE /operational-framework/checklists/{id}` ; ses tâches restent. Une checklist créée depuis cet écran part telle quelle ; une autre seulement avec `?confirmer=` = son nom exact au panel. |
 | `PATCH /task/taches/{id}` | `{nom?, description?, jour?, heure?, frequence?, obligatoire?, photo?, priorite?, actif?, apercu?}` → `PATCH /tasks/{id}` avec les seuls champs changés, `PATCH /tasks/{id}/active {is_active}` pour `actif`. `apercu: true` rend les appels sans les envoyer. |
-| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}`, **seulement** pour une tâche créée depuis cet écran (`ceo_cadre_cree`) ; 403 sinon. |
+| `DELETE /task/taches/{id}` | `DELETE /tasks/{id}` (vue Document : « Modifier la tâche » › « Supprimer la tâche… », 13/11/2026). Une tâche créée depuis cet écran (`ceo_cadre_cree`) part telle quelle ; une autre seulement avec `?confirmer=` = son nom exact au panel (409 s'il diffère, 404 si elle est introuvable, 403 sans `confirmer`). `?checklists=43,12` (10 au plus) : les checklists où l'écran la voit — son nom s'y lit quand `GET /tasks` (toutes pages) ne la rend pas, une tâche en pause. L'écran relit le cadre ensuite et dit si le panel la montre encore dans une checklist. |
 | `PATCH /task/taches` | **le même réglage sur plusieurs tâches** (vue Document, « toute la checklist ») : `{ids: [taskId] (200 au plus), champs: {jour?, heure?, frequence?, obligatoire?, photo?}}`. `/tasks` est lu une fois, puis chaque tâche part comme `PATCH /task/taches/{id}` ; on continue après un refus. Rend `ok`, `refus`, `resultats[]` {id, ok, erreur} (HTTP 502 et `error` s'il y a un refus). |
 | `POST /task/qui` | `{ids: [taskId]}` (200 au plus) : pour chaque tâche, `fait[]` {id, nom, poste, route} (les niveaux de poste qui la portent) et `controle[]` {id, type: self\|position, positionId, nom} (`GET /tasks/{id}/controllers`) ; `choix` {niveaux[] {id, nom, poste, posteId}, postes[] {id, nom, type}} (`/position-levels`, `/positions`). Lecture seule. |
 | `POST /task/qui/modifier` | une opération : `{taskId, ajouterNiveau}` → `POST /{route}/{niveau}/tasks {task_id}` (la route que le panel emploie le plus) ; `{taskId, retirerNiveau, route}` → `DELETE /{route}/{niveau}/tasks/{taskId}` ; `{taskId, ajouterControleur: {type: self\|position, positionId}}` → `POST /tasks/{id}/controllers {controller_type, position_id}` ; `{taskId, retirerControleur}` → `DELETE /tasks/{id}/controllers/{id}`. Rend la ligne `qui` relue. |
@@ -2141,6 +2144,135 @@ Limite connue : en S40, la caisse a renommé les tartes (« Tartes » → « Tar
 par des noms français). Dans la catégorie Tartes, les anciennes références paraissent donc « arrêtées » et les
 nouvelles « nouvelles ». Le total de la catégorie, lui, est juste. Pour les relier, il faudrait une table de
 correspondance (voir `docs/maquettes/onglet-produits-developpement/LISEZMOI.md`).
+
+### `/tresorerie/*` — l'onglet Trésorerie du dashboard magasin : le plan de trésorerie semaine par semaine (14/11/2026)
+
+    GET  /tresorerie/references?shop=4&debut=2026-11-16
+    GET  /tresorerie/plan?shop=4
+    GET  /tresorerie/budget?shop=4&debut=2026-11-16
+    POST /tresorerie/plan  { "shop": "4", "version": 3, "donnees": { … } | null }
+
+Demande du 14/11/2026 : un module **Trésorerie** dans le dashboard magasin, sur le modèle « Plan de trésorerie —
+L'Atelier By » (Sombreffe, tiré de son fichier Excel), avec la reprise des chiffres de l'année passée, du budget
+validé et de ce qui a été fait. Fiche : `docs/maquettes/tresorerie/LISEZMOI.md`. Code : `src/tresorerie.php`,
+`public/dashboard/tresorerie.js` et `tresorerie.css`. Tests : `php bin/tests_tresorerie.php`.
+
+**Les repères** (`GET /tresorerie/references`, lourd : le dashboard le demande avec `_cache=600`, `rafraichir=1` sur
+« ↻ Relire »). `debut` est le premier lundi du plan (un autre jour est ramené à son lundi ; absent : le lundi proposé,
+voir plus bas). Le plan va jusqu'au dernier lundi de l'année où tombe `debut` + 26 semaines (ouvert le 16/11/2026 :
+jusqu'au 27/12/2027, dimanche 02/01/2028, 59 semaines comme le modèle).
+
+```json
+{ "shop": "4", "aujourdhui": "2026-11-14", "debut": "2026-11-16", "fin": "2027-12-27", "dernierJour": "2028-01-02",
+  "semaines": [ { "du": "2026-11-16", "n1": 12469.65, "budget": 13791.04, "budgetSource": "budget", "budgetProfil": "n1",
+                  "budgetJours": 7, "realise": null, "complet": false } ],
+  "mois": [ { "ym": "2026-11", "realise": 28863.07, "complet": false, "avantPlan": 28863.07, "n1": 58303.6,
+              "budget": 60900, "budgetSource": "budget" } ],
+  "tendance": { "semaines": 13, "ca": 168091.6, "n1": 154896.55, "pct": 8.5 },
+  "budgets": [ { "annee": 2026, "fiche": true, "valideLe": "2026-01-20", "moisBudget": 12, "moisTheorique": 0, "total": 684400 } ],
+  "taux": { "matiere": 40, "personnel": 33, "fraisGeneraux": 13.5, "matiereDuBudget": true },
+  "charges": [ { "categorie": "Frais d’occupation", "poste": "Loyer", "pct": 7, "matiere": false } ],
+  "sources": ["panel"], "premiereVente": "2024-11-03" }
+```
+
+- **Ventes** : CA TTC encaissé de chaque jour, le panel (`margin-heatmap`, `vsPanelJours`, mois clos gravés), la copie
+  de caisse pour un mois que le panel n'a pas. Une lecture couvre tout : de janvier de l'année d'avant le plan (ou deux
+  ans avant son premier mois) à aujourd'hui.
+- **`semaines`** : une par lundi du plan. `n1` = la même semaine décalée de 364 jours (un lundi face à un lundi),
+  entière et passée, sinon null. `realise` = le CA de la semaine à ce jour (null si elle n'a pas commencé) ; `complet`
+  = la semaine est close : l'écran prend alors le réalisé à la place de la prévision. `budget` = la somme des budgets
+  de ses jours (voir ci-dessous), extrapolée à sept jours quand quatre au moins sont budgétés (`budgetJours`), null
+  sinon ; `budgetProfil` = `n1`, `n2` ou `egal`.
+- **Budget d'un jour** : le budget du mois (`ceo_shop_month_perf.revenue_budget`, à défaut `ca_theorique`, comme
+  `/visites/budget`) réparti au profil des mêmes jours 364 jours plus tôt, à défaut 728, à défaut à parts égales. Un
+  profil ne sert que s'il est entièrement passé et qu'au moins dix de ses jours ont vendu ; un jour fermé l'an passé
+  reçoit zéro.
+- **`mois`** : de janvier de l'année du premier lundi à décembre de celle du dernier. `n1` = le mois civil entier un an
+  plus tôt (passé, sinon null) ; `avantPlan` = le réalisé des jours du mois qui précèdent le premier lundi (l'écran y
+  ajoute les ventes du plan : l'atterrissage du mois).
+- **`tendance`** : les 13 dernières semaines closes face à leur N-1 (celles qui ont les deux, 4 au moins), le repère de
+  la croissance à appliquer à l'année passée.
+- **`budgets`** : chaque exercice du plan, sa fiche (`ceo_shop_budget`), sa date de validation, ses mois budgétés ou au
+  CA théorique. **`taux`** : `seuilsCharges()` (matière de Budget › Paramètres, personnel et frais généraux de la table
+  KPI). **`charges`** : les postes de `budgetCharges` à taux non nul (le % validé, à défaut le % réseau ; `matiere` =
+  la catégorie que la marge brute retranche).
+
+**Le plan** (`GET /tresorerie/plan`) : `{ shop, plan, version, majLe, debutPropose }`. `plan` = null tant que rien n'est
+enregistré (version 0) ; `debutPropose` = le lundi de la semaine, ou le suivant le samedi et le dimanche. Le plan est
+le format `v: 2` de `tresorerie.js` :
+
+```json
+{ "v": 2, "debut": "2026-11-16", "base": "budget", "croissance": 0, "startCash": 8250, "coussin": 5000, "plafond": 0.4,
+  "ventes": { "2026-11-23": 16000 }, "ponct": {}, "reel": { "2026-11-16": 9120 },
+  "fournisseurs": [ { "id": "k…", "nom": "Fournisseur A", "mode": "pct", "pct": 0.35, "fixe": 0, "montants": { "2026-11-16": 4800 } } ],
+  "paiements": [ { "id": "k…", "libelle": "Loyer", "cat": "Frais fixes", "montant": 4600, "freq": "Chaque mois", "sem": 2,
+                   "debut": "", "fin": "", "note": "" } ],
+  "hors": [ { "id": "k…", "libelle": "Factures fournisseurs impayées", "montant": 12000, "note": "" } ] }
+```
+
+Les tables par semaine sont indexées par le lundi (`reel` : le solde du dimanche de cette semaine). Un fournisseur
+s'estime, les semaines sans montant tapé, en `pct` des ventes prévues ou en montant `fixe` par semaine (`mode`, 14/11/2026). `forces` = les montants saisis
+au double-clic dans le plan pour UNE semaine (`{ "Personnel": { "2026-12-07": 20500 }, "march": { … } }` — une catégorie
+ou `march` pour les marchandises) : ils remplacent le calcul de cette semaine-là seulement ; une case vidée revient au
+calcul. `base` = `budget`
+ou `n1` ; `croissance` en % appliqué à l'année passée. Facultatifs, gardés tels quels : `magasin` (pour quel magasin le
+plan a été fait : l'import dans un autre demande confirmation), `source` (d'où il vient, affiché après l'import),
+`startCashNote` (l'aide du cash de départ, effacée dès qu'un solde est tapé). L'écran ne propose plus d'import (14/11/2026) ; les
+chiffres de l'ancien fichier de Sombreffe, tirés du modèle, ne sont pas versés dans ce dépôt public.
+
+**L'écriture** (`POST /tresorerie/plan`) : `version` = celle qu'on a lue. Le plan change (`version` + 1, `majLe`), ou
+**409** sans rien écrire si un autre écran l'a enregistré entre-temps — la réponse porte alors le plan tel qu'il est
+(`{ error, plan, version, majLe }`) ; l'écran le dit et propose de le reprendre. `donnees: null` efface le plan
+(« Repartir de zéro »). 422 : format autre que `v: 2`, premier jour qui n'est pas un lundi, plus de 15 fournisseurs, 50
+paiements ou 50 dettes, plus de 600 000 octets. Table : `pil_tresorerie_plan` (`shop_id`, `donnees` JSON, `version`,
+`maj_le`), créée au premier appel, au préfixe du portail Pilotage.
+
+**Accès** (src/acces.php) : `/tresorerie` est un écran de magasin (`ACCES_FRANCHISE`). Chaque franchisé a son propre
+plan : connecté par le code de son magasin ou par la console, il ne lit et n'écrit que le plan de **ses** magasins
+(`shop` de l'adresse et du corps vérifiés, 403 sinon) ; le siège les voit tous.
+
+**Budget & étude** (`GET /tresorerie/budget`, lecture seule, gardé par `_cache=600` ; 14/11/2026, maquette B
+retenue) : pour les exercices du plan, ce que le cockpit tient sur CE magasin seulement — rien ne s'y modifie.
+
+```json
+{ "shop": "4", "annees": [2026, 2027],
+  "exercices": [ { "annee": 2026, "fiche": true, "valideLe": "2026-01-20", "panierEngagement": 11.5, "caTheoriqueAn": 684000,
+                   "etude": { "date": "2024-06-01", "source": "Étude d’implantation", "potentielMenages": 5200, "potentielMaturite": 900000,
+                              "anneeExploitation": 2, "monteeEnRegime": { "a1": 65, "a2": 76, "a3": 88 }, "annexe": null },
+                   "saisonnalite": [7, 7, 8, 9, 8, 8, 7, 7, 8, 9, 9, 13], "saisonnaliteSource": "etude",
+                   "mois": [ { "mois": 1, "budget": 52200, "theorique": 51300 } ], "moisBudget": 12, "moisTheorique": 12,
+                   "totalBudget": 684000, "totalTheorique": 672600 } ],
+  "charges": [ { "categorie": "Occupation", "poste": "Loyer", "pctValide": 7, "pctReseau": 6, "matiere": false } ],
+  "paliers": [ { "nom": "Marge brute", "droite": "cat:Matière" }, { "nom": "Disponible pour rémunération", "droite": "tout" } ],
+  "reel": [ { "ym": "2026-01", "ca": 50100.5, "matiere": 38.4, "personnel": 29.1, "fraisGeneraux": 12.9, "marge": 8.2 } ],
+  "taux": { "food": 40, "labour": 33, "overhead": 13.5 }, "liens": { "crm": "https://…" } }
+```
+
+- **`exercices`** : `ceo_shop_budget` (fiche, `validated_on`, étude de marché) et `ceo_shop_month_perf` (chaque mois
+  `revenue_budget` et `ca_theorique`, un zéro n'étant pas un budget). Sans saisonnalité d'étude, la courbe du réseau
+  (`saisonnaliteReseau`, `saisonnaliteSource: "reseau"`).
+- **`charges`** et **`paliers`** : `budgetCharges` (Budget › Paramètres, aligné sur le Compte de résultat du CRM), le
+  « % validé » et le « % réseau » de chaque poste ; `liens.crm` : où les modifier (`bcEtat().modifier`).
+- **`reel`** : le P&L mensuel de Résultat (`ep_perf`, comme `/stores/perf`) relu pour ce seul magasin, de janvier de
+  l'année d'avant le plan au mois en cours ; marge nette en %.
+
+**L'écran** (onglet Trésorerie, après Année) : le modèle, onglet pour onglet — Plan (routine du dimanche, décision des
+4 semaines à venir, repères, cash de fin de semaine, la grille semaine par semaine, pilotage, dettes hors plan),
+Fournisseurs, Paiements, Mode d'emploi — plus **Budget & étude** (14/11/2026, il remplace « N-1, budget, réalisé ») :
+pour l'exercice choisi, mois par mois : l'étude (saisonnalité, CA théorique), le budget (CA, réalisé, atteinte, N-1,
+évolution, atterrissage), les charges du budget en euros (taux × CA au budget, à défaut l'étude) jusqu'à la marge brute
+et au disponible pour la rémunération, le P&L réel face aux taux (matière du budget, repères de la table KPI) ; enfin
+l'étude (potentiel, montée en régime, saisonnalité) en carte ; la validation du budget se lit dans la section budget et sur le bouton de l'année (la carte des exercices et la note sous le tableau sont retirées le 14/11/2026). Un mois N-1
+où le magasin n'était pas encore ouvert tout le mois est marqué ‡ et sort de l'évolution. Dans la grille du plan, sous
+« Encaissements », trois lignes de repère (un repère absent : un tiret et son motif) ; une case calculée se saisit au
+double-clic pour sa seule semaine (`forces`). Un plan neuf est proposé sans être enregistré : base des ventes (le budget
+s'il couvre au moins la moitié des semaines que couvre l'année passée), coussin de 40 % d'une semaine de ventes, un
+fournisseur au taux matière du budget, un paiement mensuel par poste de charges du budget (hors matière et
+amortissements) et la paie au taux personnel si le budget n'en a pas ; le solde de départ, la TVA, l'ONSS et les dettes
+restent à saisir. Chaque saisie s'enregistre 0,7 s plus tard ; l'entête ne montre ni l'état d'enregistrement ni de
+bouton (14/11/2026 : « enlève Enregistré, Repartir de zéro, Importer un plan, Exporter CSV ») — seul un échec
+d'enregistrement s'affiche, avec « Réessayer ». Au téléphone, `?vue=tresorerie` retombe sur le jour, comme les autres
+onglets du bureau.
 
 ### `/analyse/produits/magasin` — la fiche d'un produit dans le dashboard d'un magasin
 
@@ -3768,6 +3900,7 @@ rapport mystery shopper, l'effectif. Rôle par lien : `?role=consultant&id=u8`,
 | `GET /visites/cron?jeton=` | cron | l'horloge : escalade auto des P0 dépassés, rappels J-1 (18 h) et jour J (7 h), synthèse (7 h). Une fois par jour chacune (`visitesCron`). |
 | `POST /visites` | consultant, admin | planifier : `client_id`, `shop`, `consultant`, `prevu_le`, `debut_h`, `duree_min`, `motif` (reguliere, asap, due, revisite). Rejouable : même `client_id`, même visite. |
 | `PUT /visites/{id}` | consultant, admin | `statut` (planifiee, confirmee, en_cours, terminee, annulee), créneau, et la review : `sentiment` 1..5 (énergie de l'équipe), `execution` (standards, raccourcis, ecarts), `clients` (satisfaits, mitiges, insatisfaits), `causes[]` (production, equipe, decor, prix, appro, accueil, hygiene, autre), `diagnostic` (pourquoi, vu et mesuré), `reco` (lue par le franchisé, reprise dans la synthèse), `positif`, `notes`, `budgetCa` (26/10/2026 : le CA sous le budget, noté avec le franchisé — `{pourquoi, pistes[3], horizon: mois|trimestre, echeance, ecarts{étendue: %}, arrete}` ; le serveur ajoute `qui`, `le`, `complet` ; null efface ; colonne `con_visite.budget_ca`, relu dans la visite et dans le rapport, section « Le chiffre face au budget »). `{id}` est l'identifiant ou le `client_id`. |
+| `DELETE /visites/{id}` | admin | effacer une visite (11/11/2026, demande de Sam), à n'importe quelle étape : la visite, ses réponses (`con_visite_point`), ses photos (`con_visite_photo` et leurs fichiers sous `uploads/visites/`, y compris les photos de correction des points nés pendant elle), ses points et leur historique (`con_visite_action`, `con_visite_action_evt`), les tâches de son type (`con_consultant_tache`). Une photo de cette visite qui servait de preuve à un point d'une autre visite est détachée (`photo_id` à NULL), le point reste. Une visite à venir (planifiée ou confirmée, aujourd'hui ou plus tard) est d'abord annulée comme par `PUT statut annulee` : l'agenda du consultant reçoit l'annulation, le franchisé d'une visite annoncée qui avait reçu l'ordre du jour est prévenu. → `{ ok, efface {id, shop, court, reponses, photos, points, taches}, suite }` ; 404 si inconnue. Journalisé. Sans retour possible : l'écran demande confirmation. |
 | Le score de la visite (26/10/2026, maquette A) | — | `viScore` (src/visites_questions.php) et `scoreDe` (visites.js), la même règle : sur 100, Σ poids × réussite / Σ poids sur les questions qui comptent et ont une réponse (conforme 1, écart 0, une note au prorata (note − 1) / 4, un pourcentage pour sa valeur ; hors score le texte libre, « ne compte pas », N/A, sans réponse ; les obligatoires `oblig_…` comptent ensemble pour une question). Pas de score pour un suivi ou une revisite. Figé dans `con_visite.score` (JSON : score, n, modules[] {id, nom, nom_nl, score, n}, le) quand la visite se termine, et recalculé si une réponse arrive ensuite ; `viVisiteLigne` le rend. Comparé à la dernière visite terminée **du même type**. `GET /suivi/rapport` rend `score` {actuel, precedent {id, le, score}} ; le rapport au franchisé (4 langues) porte le bloc « Score de la visite » sous l'en-tête. La tablette ne le montre qu'à l'étape Fin, avant les signatures (visite précédente → cette visite, module par module, FR ou NL). |
 | `PUT /visites/{id}/points` | consultant | `points[]` : `ref`, `module`, `libelle`, `etat` (ok, ko, na), `note` 1..5, `valeur` (% planogramme), `commentaire`, `causes[]`, `reponse` (26/10/2026 : le code d'un choix unique, la liste des codes d'un choix multiple, un nombre, un texte — colonne `con_visite_point.reponse`, JSON). La tablette pose aussi `etat` d'après la réponse (un choix marqué écart, un nombre hors des bornes : ko), si bien que les points faits, les écarts, les revisites et les points à travailler se lisent comme avant. Idempotent par (visite, ref). |
 | `POST /visites/photos` | tous | `client_id`, `shop` ou `visite_id`, `ref`, `plan_id`, `genre` (jour_facade, jour_interieur, jour_arriere, point, avant, apres, correction, msp, signature — le franchisé, sig_consultant — le consultant (26/10/2026) ; les deux signatures vont côte à côte dans le rapport, jamais dans ses photos), `data` (data-URL ≤ 2 Mo, JPEG/PNG/WebP), `prise_a`, `lat`, `lng`. Fichier sous `uploads/visites/{shop}/`. |
@@ -5291,14 +5424,14 @@ courriels, par code et par langue fr, nl, en, de). Les types de visite (`visites
 | `GET /suivi/tableau?consultant=&semaine=` | `kpis` {visitesSemaine, aPreparer, surTablette, aAdapter, urgent, urgentTxt, envoyesMois, lusMois, points, p0, retard, corrections} ; `cartes` {preparer, tablette, adapter, envoye} — une carte par visite {id, shop, court, feu, type, typeNom, annoncee, le, h, consultant, consultantNom, statut, dossier {points, blocs}, prepDu, prepRetard, prepEnvoyeeLe, odjEnvoyeLe, nonFaite, proposes, ouverts, termineLe, delai {limite, resteH, depasse}, envoyeLe, luLe, relanceLe} ; `franchises[]` (feu, responsable, `responsableId` et `langue` / `langueNom` des courriels — proposés d'office par l'assistant Visites, derniere, rapport, points, prochaine, cadre du mois, scoring) ; `points[]` les plans ouverts ; `corrections[]` les photos à valider (avant, apres, commentaire, recuLe, attenteH, horsDelai, valide) ; `delais`, `consultants`, `semaine` {du, au, decalage}. |
 | `GET /suivi/preparation?visite=` | `visite`, `magasin`, `type`, `types` (avec `annoncee`), `dossier[]` {cle, titre, lignes[], motif, alerte, interne, inclus} assemblé tout seul (santé, points ouverts, tâches et contrôles photo, scoring, client mystère et comptoir, météo interne), `prep` {blocs, points[] {ref, libelle, odj, source}, note, figeLe}, `annoncee`, `roles`, `prepDu`, `tablette` {envoyeeLe}, `odj` {auto, prevuLe, envoyeLe, adresse, source, langue, langueNom, sujet, texte}. |
 | `PUT /suivi/preparation/{id}` | `{ blocs: {cle: bool}, points: [{libelle, odj}], annoncee, type, note, envoyer, odj }`. `envoyer: true` fige le dossier et le pousse sur la tablette (notification) ; `odj: true` envoie l'ordre du jour maintenant (visite annoncée seulement) → `odjEnvoi` {envoye, a, motif}. 409 si la visite est terminée ou annulée. |
-| `GET /suivi/rapport?visite=` | le brouillon de la tablette, relu au bureau : `contenu` {phrase, positif, sentiment, execution, clients, causes[], diagnostic, reco}, `checklist` {ok, total, na, ecarts[]}, `plans[]` {id, titre, detail, priorite, echeance, statut, inclus, modifiable}, `photos[]` {id, chemin, genre, inclus}, `delai`, `roles`, `envoi` {a, source, langue, copies[], envoyeLe, envoyePar, luLe, smtp, dernier}, `apercu` {sujet, texte}. |
+| `GET /suivi/rapport?visite=` | le brouillon de la tablette, relu au bureau : `contenu` {phrase, positif, sentiment, execution, clients, causes[], diagnostic, reco}, `checklist` {ok, total, na, ecarts[]}, `plans[]` {id, titre, detail, priorite, echeance, statut, inclus, modifiable}, `photos[]` {id, chemin, genre, inclus}, `delai`, `roles`, `envoi` {a, source, langue, copies[], envoyeLe, envoyePar, luLe, smtp, dernier, sms {actif, tel, source, copies[], fournisseur, dernier}}, `apercu` {sujet, texte}. |
 | `PUT /suivi/rapport/{id}` | `{ phrase, positif, sentiment, execution, clients, causes, diagnostic, reco, plans: [{id, inclus, titre, detail, priorite, echeance}], photos: {id: bool} }` : le bureau adapte. |
-| `POST /suivi/rapport/{id}/envoyer` | `{ renvoyer? }` : les plans cochés passent `propose → ouvert`, les autres `interne` ; le PDF (si le moteur répond), le courriel dans la langue du magasin avec les copies, la notification au magasin, le journal → `{ ok, ouverts, internes, envoi {envoye, a, copies, pdf, motif} }` + la vue du rapport. 409 si déjà envoyé (sauf `renvoyer`). |
+| `POST /suivi/rapport/{id}/envoyer` | `{ renvoyer? }` : les plans cochés passent `propose → ouvert`, les autres `interne` ; le PDF (si le moteur répond), le courriel dans la langue du magasin avec les copies, la notification au magasin, le journal, et au premier envoi seulement (11/11/2026) le SMS au franchisé dans sa langue avec le lien de sa page, puis sa copie à chaque numéro de `regles.sms.copie` (si le SMS du franchisé est parti) → `{ ok, ouverts, internes, envoi {envoye, a, copies, pdf, motif}, sms {envoye, motif, a, lisible, source, langue, via, copies[] {nom, envoye, motif}, le} | null }` + la vue du rapport. 409 si déjà envoyé (sauf `renvoyer`, qui ne renvoie que le courriel). |
 | `GET /suivi/rapport/apercu?visite=` | `{ html, langue }` : le rapport tel que le franchisé le reçoit (signature comprise). |
 | `GET /suivi/msp` | les passages du client mystère (`con_scoring_msp`, un par passage, rangé dans son trimestre) : `magasins[]` {dernier, precedent, historique, plans, suiteVisite, prochaine}, `rubriques`, `seuil`, `kpis` {moyenne, sur, sur5, moyennePrec, alertes[], points, p0, releves, corriges}. |
 | `POST /suivi/msp` | `{ shop, passage_le, obtenu, maximum, rubriques: {nom: note}, commentaire, fichier (data:application/pdf…), montrer, suites: { points: [{titre, priorite}], controle, tache } }` : un seul encodage ; ses suites ouvrent des points chez le franchisé (échéance selon P0 / P1 / P2), ajoutent le contrôle à la visite suivante, donnent une tâche au responsable → `{ ok, msp, suites }`. Les notes se lisent « 17 / 20 », « 8,5/10 » ou 17. |
-| `GET /suivi/regles` | `regles`, `magasins[]` {regle {prepare, adapte, envoie, corrections, copie[], email, langue, responsable}, adresse, langueDefaut, cadre}, `personnes[]` {droits {preparer, visiter, adapter, envoyer, valider, regler}}, `types[]` {code, nom, annoncee}, `modeles` {code: {nom, quand, vars, textes {langue: {sujet, corps}}, modifie {langue: bool}}}, `langues`, `smtp`, `kpis`. |
-| `PUT /suivi/regles` | `{ magasins, droits, admins, delais, voit, types: {code: annoncee}, modeles: {code: {langue: {sujet, corps} ou {reset: true}}} }` : chaque clé est facultative. |
+| `GET /suivi/regles` | `regles`, `magasins[]` {regle {prepare, adapte, envoie, corrections, copie[], email, tel, langue, responsable}, adresse, telephone {tel, source} (le GSM des alertes de leads quand `regle.tel` est vide), langueDefaut, cadre}, `personnes[]` {droits {preparer, visiter, adapter, envoyer, valider, regler}}, `types[]` {code, nom, annoncee}, `modeles` {code: {nom, quand, vars, textes {langue: {sujet, corps}}, modifie {langue: bool}}}, `langues`, `smtp`, `smsFournisseur` (smsapi, twilio ou null), `kpis`. `regles.sms` {actif, copie[] {nom, tel}}. |
+| `PUT /suivi/regles` | `{ magasins (dont `tel`, le GSM du franchisé), droits, admins, delais, voit, sms: {actif, copie: [{nom, tel}]}, types: {code: annoncee}, modeles: {code: {langue: {sujet, corps} ou {reset: true}}} }` : chaque clé est facultative. Un GSM illisible : 422. |
 | `POST /suivi/modeles/apercu` | `{ code, langue, sujet, corps }` → `{ sujet, html, texte }` avec des valeurs d'exemple. |
 | `POST /suivi/modeles/essai` | `{ code, langue, a }` : le modèle enregistré part à l'adresse d'essai. |
 | `GET /suivi/lien?shop=` | le lien de la page du franchisé (`url`, `chemin`), son adresse, sa langue, le courriel qui l'envoie, ce qu'il voit. |
@@ -5505,3 +5638,135 @@ demain, la clôture.
 
 Table `ceo_revue_soir` (id_shop, jour, par, reponses JSON, statut encours|cloturee, maj_le, cloture_le), créée à la
 première lecture. La clôture s'inscrit au journal (« Revue du soir »).
+
+### Dashboard › Mon catalogue — relayé au portail Marketing (14/11/2026)
+
+Onglet « Mon catalogue » du dashboard magasin (`public/dashboard/catalogue.js`, `catalogue.css`) : le franchisé crée
+ses catalogues imprimés (assistant en cinq étapes depuis le 15/11/2026 : catalogue, gammes, présentation, validation, export PDF — voir plus bas). Les
+catalogues vivent dans le **Marketing** ; le cockpit n'en garde rien et ne lit aucune table `mar_` : il relaie à
+l'API d'intégration du Marketing (`src/catalogues_magasin.php`), en ajoutant le jeton de service, que le navigateur
+ne voit jamais. La boutique est celle de la session (`src/acces.php`) : un magasin ou un franchisé n'a que les
+siens (`?shop=` choisit parmi eux, sinon 403) ; le siège désigne le magasin regardé par `?shop=`. Le corps ne porte
+jamais de boutique (champs filtrés).
+
+    GET    /dashboard/catalogues?shop=                 → {mar}/v1/integration/marketing/shops/{shop}/catalogues?perPage=100&sort=-updatedAt
+    GET    /dashboard/catalogues/produits?shop=        → …/catalogue-products
+    GET    /dashboard/catalogues/medias?shop=&page=&q= → …/catalogue-media?perPage=24&page=&filter[name][like]=q
+    POST   /dashboard/catalogues?shop=                 → …/catalogues      {title, source{kind gamme|choix, ref : une gamme ou 1 à 8 gammes}, format, pageCount, langs, products, pages, offers, showAvailability}
+    GET|PUT|DELETE /dashboard/catalogues/{id}?shop=    → …/catalogues/{id} (PUT : title, format, pageCount, langs, products, pages, status, printQty, offers, showAvailability)
+    GET    /dashboard/catalogues/{id}/document?shop=&lang=fr|nl
+    POST   /dashboard/catalogues/{id}/impression?shop= {lang} → …/print-links (lien signé 48 h vers la page d'impression du Marketing)
+
+**L'assistant du franchisé** (15/11/2026, client : « côté franchisé c'est un assistant : choix du catalogue, ensuite les
+gammes, la présentation, validation et exportation PDF » ; maquettes B1-B4 ; contrat du Marketing v1.4) — cinq étapes :
+1 · **Catalogue** (un catalogue de la marque reçu — « Le prendre tel quel » ou « L'adapter à ma boutique » —, un des miens,
+ou « ＋ Nouveau catalogue ») · 2 · **Gammes** (gammes, puis produits par catégorie, promotions, disponibilité) ·
+3 · **Présentation** (pages, en-têtes, gabarits, place libre) · 4 · **Validation** (les points calculés par le Marketing,
+« x sur n vus », leurs gestes, « Valider mon catalogue ») · 5 · **Export PDF** (chez un imprimeur : PDF imprimeur ; sur
+mon imprimante : livret A4 ; format, langue FR / NL / FR + NL, quantité, « Marquer imprimé · N ex. » ; puis Diffuser :
+QR du catalogue en ligne, PDF léger, affiche A4 / A3). Un catalogue de la marque pris tel quel saute les étapes 2 et 3
+(verrouillées). Pas de commande groupée « par la marque » (pas décidée).
+
+    GET    /dashboard/catalogues/marque?shop=                    → …/brand-catalogues?perPage=50 (prêts ou imprimés, préparés pour ma boutique)
+    GET    /dashboard/catalogues/marque/{id}[/document?lang=]    → …/brand-catalogues/{id}[/document] (MA version : mes produits, mes prix, mon QR)
+    PUT    /dashboard/catalogues/marque/{id}/reception {status: pris}  → …/reception (« Le prendre tel quel », idempotent ; 409 s'il est déjà adapté)
+    POST   /dashboard/catalogues/marque/{id}/adaptation          → …/adaptations (une copie à moi ; 201 puis 200 la même)
+    POST   /dashboard/catalogues/marque/{id}/impression {lang}   → …/print-links (lien signé 48 h de MA version)
+    GET    /dashboard/catalogues[/marque]/{id}/verifications?lang=      → …/checks
+    PUT    /dashboard/catalogues[/marque]/{id}/verifications/{code} {seen} → …/checks/{code}
+    POST   /dashboard/catalogues[/marque]/{id}/imprime {quantity}       → …/prints (la charte publiée est figée pour ce catalogue)
+    GET|POST /dashboard/catalogues[/marque]/{id}/lien                   → …/public-links (POST : nouveau lien, l'ancien révoqué)
+
+Le lien d'impression s'ouvre avec `&mode=printer` (PDF imprimeur), `&mode=livret` (livret A4, catalogue A5), `&mode=proof`
+(PDF léger) ou `&affiche=A4|A3&l={jeton du lien permanent}` (affiche), ajoutés par l'écran. Le QR et l'affiche mènent au
+catalogue en ligne du Marketing (`{public}/catalogue/?l=…`), qui suit la dernière version du catalogue.
+
+Réponses du Marketing relayées telles quelles (`{success, data, meta}` ou `{success:false, error:{code, message,
+details}}`, même code HTTP) — sauf un 401 du Marketing (jeton refusé), rendu en 502 avec un message qui le dit, et un
+204, rendu en 200 `{success:true, data:null}`. Le cockpit répond lui-même, au même format : 503 `DEPENDENCY_UNAVAILABLE`
+(adresse ou jeton non réglés), 502 (Marketing injoignable ou réponse illisible), 422 (magasin absent).
+
+**8, 12 ou 16 pages** (14/11/2026, client : « 8, 12 ou 16 pages, dont les pages 1-2, l'avant-dernière et la dernière
+sont du template du catalogue fait par le franchiseur » ; contrat du Marketing, `docs/openapi/catalogues.yaml` v1.1) :
+`pageCount` ∈ {8, 12, 16} (défaut 8 ; autre valeur → 422 — élargi ensuite à tout nombre pair de 8 à 16, voir plus
+bas) à la création et au PUT. Quatre pages viennent de la Charte des
+catalogues de la marque, verrouillées : couverture (1), page 2, avant-dernière, dernière — aucun champ pour elles. `pages`
+= exactement `pageCount − 4` pages intérieures `{layout, category}` : plus courte, complétée de pages vides ; plus longue,
+422 ; `[]` = répartition automatique sur ce nombre. Changer `pageCount` sans `pages` ajoute des pages vides ou retire
+celles de la fin si elles sont vides — sinon 422 `CATALOGUE_PAGES_NOT_EMPTY` (rien n'est écrit ; l'écran propose alors de
+répartir automatiquement). `…/catalogue-products` rend aussi `pageCounts: [8, 12, 16]`. Le document rend `pageCount`
+pages : `cover`, `brand` (`slot: page2` : titre, texte, image), pages intérieures, `brand` (`slot: penultimate`), `back`.
+Étape 2 de l'écran : produits par catégorie en accordéons, chaque produit par un interrupteur.
+
+**Pages par 2, présentations de gamme, gabarits, place libre** (14/11/2026, client : « rajouter une page, c'est
+toujours par 2 », « une page de présentation (seule ou avec liste de produits), templates et layout ; chaque gamme doit
+avoir son illustration », « choisir à chaque fois 2-3 possibilités », « s'il y a de la place, une photo (de la
+médiathèque) ou une illustration » ; contrat du Marketing v1.2) : `pageCount` = tout nombre **pair** de 8 à 16
+(`pageCounts: [8, 10, 12, 14, 16]` ; 9, 11, 18… → 422) ; l'écran : « − 2 pages · N pages · ＋ 2 pages » (+ 2 = deux pages
+intérieures vides en fin ; − 2 = la règle ci-dessus, refus `CATALOGUE_PAGES_NOT_EMPTY` et « Répartir automatiquement »).
+Une page intérieure est `{layout, category, template?, gamme?, text?, textNl?, filler?, fillerMediaId?}` — `layout` ∈
+`vedette · grille · liste · presentation · presentation_liste` (`layouts`), `template` ∈ `A · B · C` (`templates`,
+absent = A), `gamme` obligatoire pour une présentation (une de `gammes`), `text` / `textNl` 400 caractères,
+`filler` ∈ `photo · illustration` (`fillers`) avec `fillerMediaId` pour une photo (une de `/medias`). Le relais ne
+filtre que le premier niveau du corps : `pages` part tel quel, le Marketing valide (422 `VALIDATION_FAILED`, champ
+nommé, `pages[i].template`…). Le document rend des pages `presentation` (`title`, `text`, `imageUrl`, `drawing`,
+`drawingUrl`, `products`) et, sur les pages `products`, `template`, `gamme`, `drawingUrl` (dessin de la gamme dans
+l'en-tête), `room`, `fillable` (une rangée entière libre), `filler` `{kind, imageUrl, drawing, drawingUrl}`. Étape 3
+de l'écran : par page, type (5 vignettes), gabarit (3 vignettes), gamme, catégorie, texte FR / NL d'une présentation,
+« Place libre : Rien · Photo · Illustration » quand il reste une rangée libre (photo choisie dans la médiathèque,
+`/medias`) ; étape 4 et PDF : le même rendu que le Marketing (`catalogue.js` reprend `CataloguePages.tsx`).
+
+**Promotions, bundles et disponibilité** (14/11/2026, client : « rajouter les bundles et promotions (via API) et les
+appliquer dans une vignette dans la catégorie », puis « rajouter aussi les données de disponibilité » ; contrat du
+Marketing v1.3) : `…/catalogue-products` rend `offers` (les promotions ACTIVES de TFBuddy qui valent pour la boutique —
+bundles, « X achetés = Y », promotions de quantité, remises programmées que TFBuddy dit actives pour elle —, chacune
+`{id: « bundle-12 », type, erpId, name, badge « Bundle » · « 2+1 » · « 3 pour 2 » · « −20 % », deal, period,
+categoryId, productIds, categoryIds, priceCents, oldPriceCents, products[{id, name, imageUrl, quantity}],
+moreProducts}`), `offersError` (TFBuddy illisible : la raison) et, sur chaque produit, `availability {periods[{id,
+from, to}] (JJ/MM), leadHours}`. Le relais laisse passer deux champs de plus à la création et au PUT : `offers`
+(`[{type, id, on}]`, `type` ∈ `bundle · buyXGetY · quantity · scheduledDiscount` — les choix explicites ; une offre
+absente est cochée d'office si elle touche un produit coché ; une offre que TFBuddy ne rend pas pour la boutique → 422
+`offers[i].id`) et `showAvailability` (booléen, vrai par défaut). Au document, une page de produits porte des produits
+ET des vignettes `kind: offer` (une case de la page de la catégorie de leur premier produit, comptée dans la capacité
+du gabarit) ; un produit porte `oldPriceCents` + `promo {label, period}` (remise programmée : prix barré) et
+`availability` (« du 1/12 au 6/12 · sur commande 48 h », NL « van 1/12 tot 6/12 · op bestelling 48 u » ; `null` :
+rien de connu ou éteint) ; alerte `PROMOTIONS_UNREADABLE` quand TFBuddy ne rend pas ses promotions (rien n'est alors
+inventé). Écran, étape 2 : sous les produits, « Promotions et bundles » (une ligne par offre — badge, nom, produits,
+période, où elle va, prix — et son interrupteur) puis « Afficher la disponibilité » ; enregistrés avec les produits.
+Étapes 3-4 et PDF : vignette d'offre (badge bordeaux, photos de ses produits, prix et ancien prix barré, période), prix
+barré et disponibilité sous le prix — le rendu de `CataloguePages.tsx` (`offreCarte`, `prixHtml`).
+
+**Une catégorie = sa page, en-têtes illustrés, grandes vignettes** (14/11/2026, client : « quand je rajoute une
+catégorie, la catégorie est sur une page avec son illustration (2 ou 3 possibilités de montrer le titre et
+l'illustration) et 3-4 possibilités de montrer les produits », puis « pas de scroll bar latérale » ; contrat du Marketing
+v1.4) : l'étape 2 enregistre `products` **sans** `pages` (plus de `pages: []`) — le Marketing garde la mise en page et
+donne SA page à une catégorie ajoutée (interrupteur « toute la catégorie » d'une catégorie sans produit coché, ou
+produits cochés un à un) : une page vide reprise, sinon `pageCount` + 2 (16 au plus ; l'écran dit « N pages
+ajoutées »), sinon rien ne bouge (au document `CATEGORY_NO_PAGE`, « plus de place : 16 pages » ; à l'étape 3, la
+catégorie sans page est nommée). Une catégorie retirée laisse sa page vide (jamais retirée en silence). « Répartir
+automatiquement » (`pages: []`) donne une page à chaque catégorie. Une page de produits porte `header` ∈ `titre`
+(défaut, absent) · `bandeau` · `grande` (`headers` de `…/catalogue-products` ; autre valeur → 422 `pages[i].header`)
+et `layout` peut valoir `mosaique` (grandes vignettes 2 × 2, 4 produits). Au document, `header` et `drawingUrl` =
+l'illustration de la catégorie (dessin de sa famille, sinon de la gamme, sinon `null`). Étape 3 : par page de produits,
+« Titre + pictogramme · Bandeau illustré · Grande illustration » (3 vignettes) à côté du gabarit, type parmi 6
+vignettes ; étape 4 et PDF : le rendu de `CataloguePages.tsx` (`Heading`, `cat-grid--mosaique`). Plus de défilement
+interne (liste des photos de la médiathèque) : la page entière défile.
+
+**Disponibilité en pied de page, image d'une vignette, en-tête gamme puis catégorie** (14/11/2026, client : « la
+disponibilité en dessous de page en footer (par catégorie) » ; « insert picture from médiathèque » ; « commencer avec le
+nom de la gamme et son illustration, ensuite catégorie produit (possibilité ou pas en lettres manuscrites), ensuite les
+produits ») : au document, chaque page de produits (et présentation avec liste) porte `availabilityFooter` — une ligne
+composée par le Marketing, imprimée en pied de page ; la disponibilité n'est plus imprimée sous le prix (les vignettes
+de promotions gardent leur période) ; « Afficher la disponibilité » (`showAvailability`) commande ce pied. `offers[i]`
+accepte `mediaId` (une image de `/medias` : réseau ou ma boutique ; une autre → 422 `offers[i].mediaId` ; `null` la
+retire ; rendu `{type, id, on, mediaId}`) ; au document la vignette porte `imageUrl`, qui remplace les photos de ses
+produits. Étape 2 : « Image · Changer · Retirer » sur chaque offre (la grille de la médiathèque sous la ligne). Une page de
+produits porte `gammeTitle` (la gamme de la page, sinon celle du catalogue que portent ses produits ; `null` sans gamme),
+`gammeImageUrl`, `drawingUrl` (son illustration ; sans gamme, le dessin de la famille), `title` (la catégorie, en
+sous-titre), `script` (catégorie en lettres manuscrites : `pages[i].script` booléen, 422 sinon) et `familyDrawingUrl`
+(dessin de la famille, pour les vignettes sans photo — plus de cercle vide). Étape 3 : « Catégorie manuscrite Non · Oui »
+par page. Police manuscrite : Playwrite DE VA, déjà livrée avec le design system (`assets/ds/fonts`), déclarée
+`CmScript` dans `catalogue.css`.
+
+Réglages : `mar_api_url` (erp_cles, portail `commun` ; ex. `https://<hôte>/marketing/api`, l'adresse du module
+`…/marketing` est acceptée), à défaut `marketingApi` de `config/config.php` ; jeton `erp_jeton_service` (erp_cles).

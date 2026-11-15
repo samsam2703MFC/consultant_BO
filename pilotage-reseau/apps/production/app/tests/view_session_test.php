@@ -71,8 +71,9 @@ try {
     expectVs($a->railPrefixes(1) === [] && $a->homePath(1) === '/dashboard', 'administrator : pełny widok, start Rentowność');
     $m = $a->sessionMenu(1);
     expectVs($m['can_switch'] && $m['label'] === 'Administrator' && $m['current'] === null, 'menu : administrator, bez sesji');
-    expectVs(array_column($m['sessions'], 'name') === ['Pełny widok', 'Produkcja', 'Administracja i finanse'], 'sesje : pełny widok + stanowiska ERP aktywne (bez pracowni i nieaktywnych) ' . json_encode(array_column($m['sessions'], 'name'), JSON_UNESCAPED_UNICODE));
+    expectVs(array_column($m['sessions'], 'name') === ['Administrator', 'CEO', 'Finanse', 'Produkcja'], '[286] profil = sesja : Administrator, CEO, Finanse, Produkcja (stanowiska ERP aktywne, bez pracowni i nieaktywnych) ' . json_encode(array_column($m['sessions'], 'name'), JSON_UNESCAPED_UNICODE));
     $adm = $m['sessions'][2];
+    expectVs($m['sessions'][0]['profile'] === 'admin' && $m['sessions'][0]['current'] && $m['sessions'][1]['profile'] === 'ceo' && $adm['profile'] === null, 'profile Administrator / CEO, potem stanowiska');
     expectVs($adm['id'] === 5 && str_contains($adm['sub'], 'Administracja i fakturowanie') && str_contains($adm['sub'], '2 strony') && str_contains($adm['sub'], 'start : Faktury i koszty'), 'opis sesji : ' . $adm['sub']);
 
     // --- Sesja Administracja i finanse ---------------------------------------------------------------------------------------
@@ -84,7 +85,7 @@ try {
     expectVs($a->menuSees(1, $invPath) && !$a->menuSees(1, $capPath) && $a->menuSees(1, '/today'), 'menu : jak stanowisko (wspólne strony widoczne)');
     expectVs($a->canSee(1, $capPath) && $a->isAdmin(1), 'uprawnienia bez zmian (administrator)');
     $m = $a->sessionMenu(1);
-    expectVs($m['label'] === 'Sesja : Administracja i finanse' && $m['current'] === 5 && $m['sessions'][2]['current'] && !$m['sessions'][0]['current'], 'menu : sesja zaznaczona');
+    expectVs($m['label'] === 'Finanse' && $m['current'] === 5 && $m['sessions'][2]['current'] && !$m['sessions'][0]['current'], 'menu : sesja zaznaczona');
     $tasks = $container->make(PositionTaskService::class);
     $my = $tasks->myTasks(1, new DateTimeImmutable('2026-11-04'));
     $titles = [];
@@ -95,7 +96,7 @@ try {
 
     // Autre administrateur (même session PHP simulée) : sesja Produkcja, start Dzisiaj.
     expectVs($access()->switchSession(3, 3) === '/today', 'sesja Produkcja : start Dzisiaj (brak ustawienia)');
-    expectVs($access()->sessionMenu(3)['label'] === 'Sesja : Produkcja', 'etykieta : Produkcja');
+    expectVs($access()->sessionMenu(3)['label'] === 'Produkcja', 'etykieta : Produkcja');
 
     // --- Refus -----------------------------------------------------------------------------------------------------------------
     foreach ([[2, 5, 403], [1, 7, 422], [1, 1, 422], [1, 99, 422], [1, 'x', 422]] as [$u, $pos, $code]) {

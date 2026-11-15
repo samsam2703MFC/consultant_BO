@@ -1131,10 +1131,79 @@
     const flash = S.dcFlash && S.dcFlash.ids.includes(t.id) ? `<span class="dc-flash${S.dcFlash.ko ? ' ko' : ''}">${esc(S.dcFlash.t)}</span>` : '';
     const dbl = !c ? dcSuggestions(t).dbl : null;
     const doublon = dbl ? ` <span class="dc-dbl" title="${esc('Ressemble à « ' + dbl.t.nom + ' », déjà dans ' + dbl.c.nom)}">≈ déjà dans ${esc(dcCode(dbl.c.nom).code || dbl.c.nom)}</span>` : '';
+    // En pause : l'interrupteur en bout de ligne le dit (il remplace la pastille « en pause » du 09/11/2026).
+    // La checklist (« ⇄ 3.4.01 ▾ ») a sa colonne, celle de « Ranger → … » des tâches à ranger : alignée sur toutes les lignes (15/11/2026).
     return `<div class="dc-l${S.sel.has(t.id) ? ' sel' : ''}${t.actif === false ? ' pause' : ''}${ici ? ' ici' : ''}">
       <input type="checkbox" class="dc-cb" data-a="coche" data-id="${t.id}" ${S.sel.has(t.id) ? 'checked' : ''} aria-label="Cocher ${esc(t.nom)}">
-      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier le nom, la description… (tâche #${t.id})">${esc(dcSansCode(t.nom, code))}</button>${c ? ' ' + dcDeplacer(t, c) : ''}${t.actif === false ? ' <span class="tk-pas att">en pause</span>' : ''}${doublon}${liens ? ' ' + liens : ''}${flash}</span>
-      ${c ? '' : dcRanger(t)}<span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span></div>`;
+      <span class="dc-nom"><button data-a="modifier" data-id="${t.id}" title="Modifier ou supprimer la tâche #${t.id} : nom, description, active…">${esc(dcSansCode(t.nom, code))}</button>${doublon}${liens ? ' ' + liens : ''}${flash}</span>
+      ${c ? dcDeplacer(t, c) : dcRanger(t)}<span class="dc-fin"><span class="dc-props">${['heure', 'jours', 'photo', 'oblig', 'fait', 'ctrl'].map(k => `<span class="dc-ancre">${dcVignette(k, t, c)}${ici && S.dd.k === k ? dcListe() : ''}</span>`).join('')}</span>${dcInterrupteur(t)}</span></div>`;
+  }
+  /** L'interrupteur active / en pause d'une ligne (15/11/2026, « un toggle active / non active, très minimaliste »). */
+  function dcInterrupteur(t) {
+    const on = t.actif !== false, envoi = !!(S.dcActif && S.dcActif.has(t.id));
+    return `<button class="dc-on" role="switch" aria-checked="${on}" data-a="dcActif" data-id="${t.id}"${envoi ? ' disabled aria-busy="true"' : ''}
+      title="${on ? 'Active · cliquer pour la mettre en pause : les équipes ne la verront plus' : 'En pause · cliquer pour la réactiver'}" aria-label="${esc((on ? 'Active : ' : 'En pause : ') + t.nom)}"></button>`;
+  }
+  /**
+   * Un clic sur l'interrupteur : PATCH /task/taches/{id} {actif} (au panel, PATCH /tasks/{id}/active seul : le
+   * planning et les exigences de la tâche ne sont pas renvoyés). L'écran bascule tout de suite et revient en
+   * arrière si le panel refuse. Pas de confirmation : un second clic défait.
+   */
+  async function dcActif(id) {
+    const t = tache(id);
+    S.dcActif = S.dcActif || new Set();
+    if (!t || S.dcActif.has(id)) { return; }
+    const avant = t.actif, oui = t.actif === false;
+    S.dcActif.add(id); t.actif = oui; rendre();
+    try {
+      await api('PATCH', '/task/taches/' + id, { actif: oui });
+      dcFlash([id], oui ? '✓ réactivée' : '✓ en pause');
+      // Réactivée depuis « En pause · checklist inconnue » : le panel la remontre dans sa checklist, on relit le cadre.
+      if (oui && ((S.cadre && S.cadre.enPause) || []).includes(id)) { S.dcActif.delete(id); return charger(true); }
+    } catch (e) {
+      t.actif = avant;
+      dcFlash([id], '✗ ' + e.message + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : ''), true);
+    }
+    S.dcActif.delete(id);
+    rendre();
+  }
+  /** L'interrupteur d'une checklist, dans son titre, au-dessus de ceux de ses tâches (15/11/2026). */
+  function dcClInterrupteur(c) {
+    const on = c.actif !== false, envoi = !!(S.dcActif && S.dcActif.has('c' + c.id));
+    return `<button class="dc-on dc-on-cl" role="switch" aria-checked="${on}" data-a="dcClActif" data-id="${c.id}"${envoi ? ' disabled aria-busy="true"' : ''}
+      title="${on ? 'Checklist active · cliquer pour la mettre en pause (ses tâches gardent leur propre état)' : 'Checklist en pause · cliquer pour la réactiver'}" aria-label="${esc((on ? 'Checklist active : ' : 'Checklist en pause : ') + c.nom)}"></button>`;
+  }
+  /**
+   * Un clic sur l'interrupteur d'une checklist : PATCH /task/checklists/{id} {actif} (au panel, `is_active` de la
+   * checklist ; ses tâches ne changent pas). Le serveur relit la liste du panel : la réponse `relu` dit ce qu'il a
+   * retenu, et s'il liste encore une checklist en pause — sinon elle quitterait cet écran au prochain rechargement.
+   */
+  async function dcClActif(id) {
+    const c = checklist(id);
+    S.dcActif = S.dcActif || new Set();
+    if (!c || S.dcActif.has('c' + id)) { return; }
+    const avant = c.actif, oui = c.actif === false;
+    S.dcActif.add('c' + id); c.actif = oui; S.dcClFlash = null; clearTimeout(S.dcClFlashT); rendre();
+    let fl;
+    try {
+      const r = await api('PATCH', '/task/checklists/' + id, { actif: oui });
+      const lu = (r && r.relu) || {};
+      if (lu.absente) {
+        fl = { k: 'wa', t: 'En pause au panel, mais le panel ne liste plus cette checklist : elle quittera cet écran au prochain rechargement. Réactivez-la maintenant pour la garder ici.' };
+      } else if (lu.actif == null) {
+        fl = { k: 'wa', t: 'Envoyé au panel, mais sa liste ne dit pas si la checklist est active : vérifiez-le dans le panel.' };
+      } else if (lu.actif !== oui) {
+        c.actif = lu.actif;
+        fl = { k: 'ko', t: 'Le panel a répondu sans changer l’état : la checklist est toujours ' + (lu.actif ? 'active' : 'en pause') + '.' };
+      } else { fl = { k: 'ok', t: oui ? '✓ réactivée' : '✓ en pause' }; }
+    } catch (e) {
+      c.actif = avant;
+      fl = { k: 'ko', t: e.message + (e.status === 403 && !admin() ? ' — essayez avec un compte administrateur du panel (en haut).' : '') };
+    }
+    S.dcActif.delete('c' + id);
+    S.dcClFlash = Object.assign({ id }, fl);
+    if (fl.k === 'ok') { S.dcClFlashT = setTimeout(() => { if (S.dcClFlash && S.dcClFlash.id === id) { S.dcClFlash = null; if (S.vue === 'doc') { rendre(); } } }, 2600); }
+    rendre();
   }
   /* --- filtre par poste (10/11/2026, « dans Document, un filtre par poste ») : la zone de la checklist, et la fonction
    * qui fait la tâche (« Fait par »). Les deux se combinent ; une checklist sans tâche visible disparaît. --- */
@@ -1157,13 +1226,15 @@
     const { code, titre } = dcCode(c.nom);
     const ts = dcTachesVues(c);
     const js = [...new Set(ts.flatMap(dcJoursDe))];
-    const nPh = ts.filter(t => t.photo).length;
+    const nPh = ts.filter(t => t.photo).length, nPz = ts.filter(t => t.actif === false).length;
     const sel = ts.some(t => S.sel.has(t.id)) ? barreSelection(c) : '';
-    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}" id="dc-${c.id}">
+    const fl = S.dcClFlash && S.dcClFlash.id === c.id ? S.dcClFlash : null;
+    return `<section class="dc-s${String(S.cl) === String(c.id) ? ' vise' : ''}${c.actif === false ? ' pause' : ''}" id="dc-${c.id}">
       <h2 class="dc-h2">${code ? `<span class="dc-code" style="background:${dcCouleur(c.poste)}">${esc(code)}</span>` : ''}<span>${esc(titre)}</span>
-        <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button></h2>
+        <button class="tk-btn ghost mini" data-a="clModifier" data-id="${c.id}" title="Nom, description, zone de production, heure de la checklist">✎ Modifier</button>${fl && fl.k === 'ok' ? `<span class="dc-flash">${esc(fl.t)}</span>` : ''}${dcClInterrupteur(c)}</h2>
+      ${fl && fl.k !== 'ok' ? `<div class="tk-msg ${fl.k}">${esc(fl.t)}</div>` : ''}
       <div class="dc-meta"><span>🕘 ${esc(c.heure || 'sans heure')}</span>${c.poste ? `<span><i class="dc-pd" style="background:${dcCouleur(c.poste)}"></i>${esc(posteAff(c.poste))}</span>` : ''}${ts.length ? dcPoints(js) : ''}
-        <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}</span></div>
+        <span>${ts.length} tâche${ts.length > 1 ? 's' : ''}${nPh ? ` · ${CAM} ${nPh}` : ''}${nPz ? ` <span class="mu">· ${nPz} en pause</span>` : ''}</span></div>
       ${dcQuiChecklist(c)}
       ${c.description && c.description.trim() !== 'Array' ? `<div class="dc-desc">${esc(c.description)}</div>` : ''}${sel}
       <div class="dc-ls">${ts.map(t => dcLigne(t, c, code)).join('') || '<div class="dc-vide">Aucune tâche dans cette checklist.</div>'}</div>
@@ -1174,7 +1245,7 @@
     const hors = S.dcZone ? [] : dcHors().filter(dcFctOk);
     const groupes = DC_MOMENTS.map(m => [m, ordre.filter(c => dcMoment(c.heure) === m)]).filter(g => g[1].length);
     const sommaire = `<nav class="tk-card dc-som" aria-label="Sommaire"><div class="tk-k dc-som-t">Sommaire · ${ordre.length} checklists</div>
-      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
+      ${groupes.map(([m, L]) => `<div class="dc-som-g">${m}</div>${L.map(c => { const { code, titre } = dcCode(c.nom); return `<button class="dc-som-i${String(S.cl) === String(c.id) ? ' on' : ''}${c.actif === false ? ' pz' : ''}" data-a="dcAller" data-id="${c.id}">${code ? `<span>${esc(code)}</span>` : ''}${esc(titre)}<em>${dcTachesVues(c).length}</em></button>`; }).join('')}`).join('')}
       ${hors.length ? `<div class="dc-som-g">À ranger</div><button class="dc-som-i wa${S.cl === 'hors' ? ' on' : ''}" data-a="dcAller" data-id="hors">Dans aucune checklist<em>${hors.length}</em></button>` : ''}</nav>`;
     const q = S.dcQui;
     const etat = q && q.enCours ? ` · lecture de qui fait / qui contrôle… ${q.lu} / ${q.total}` : '';
@@ -1684,7 +1755,7 @@
         </div>
         ${m.err ? `<div class="tk-err" style="margin:0 16px 12px">${esc(m.err)}</div>` : ''}
         ${m.plan ? `<div class="tk-cb" style="padding-top:0"><div class="tk-k" style="margin-bottom:4px">${m.plan.fait ? 'Résultat' : 'Ce qui partira au panel'}</div>${appels(m.plan.operations, !!m.plan.fait)}</div>` : ''}
-        <div class="tk-pied"><button class="tk-btn ghost" data-a="brut" data-id="${m.id}" title="Ce que le panel renvoie pour cette tâche : niveaux, contrôleurs, champs bruts">Détails du panel</button><span class="sp"></span><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
+        <div class="tk-pied"><button class="tk-btn ghost danger" data-a="supprimer" data-id="${m.id}" ${m.envoi ? 'disabled' : ''}>${m.envoi === 'suppr' ? 'Suppression…' : 'Supprimer la tâche…'}</button><button class="tk-btn ghost" data-a="brut" data-id="${m.id}" title="Ce que le panel renvoie pour cette tâche : niveaux, contrôleurs, champs bruts">Détails du panel</button><span class="sp"></span><button class="tk-btn" data-a="modifApercu" ${m.envoi ? 'disabled' : ''}>Voir l’appel</button>
           ${m.plan && !m.plan.fait ? `<button class="tk-btn prim" data-a="modifEnvoyer" ${m.envoi ? 'disabled' : ''}>${m.envoi ? 'Envoi…' : 'Enregistrer dans le panel'}</button>` : ''}
           <button class="tk-btn" data-a="fermer">${m.plan && m.plan.fait ? 'Fermer' : 'Annuler'}</button></div>`;
     }
@@ -2057,6 +2128,8 @@
       case 'ddOpt': if (S.dd) { S.dd[el.dataset.v] = !S.dd[el.dataset.v]; } return rendre();
       case 'ddRanger': return dcRangerEnvoyer();
       case 'ddDeplacer': return dcDeplacerEnvoyer();
+      case 'dcActif': return dcActif(+id);
+      case 'dcClActif': return dcClActif(+id);
       case 'dcZone': S.dcZone = el.dataset.v || null; S.dd = null; return rendre();
       case 'dcFiltreRaz': S.dcZone = null; S.dcFct = null; S.dd = null; return rendre();
       case 'tlJour': tlEtat().jour = el.dataset.v; tlEtat().sel = null; return rendre();
@@ -2132,11 +2205,44 @@
         return charger(true);
       }
       case 'supprimer': {
-        const c = ((S.cadre && S.cadre.creees) || []).find(x => x.id === +id);
-        if (!confirm(`Supprimer du panel la tâche « ${c ? c.nom : '#' + id} » (#${id}) ?`)) { return; }
-        try { await api('DELETE', '/task/taches/' + id); S.msg = { k: 'ok', t: 'Tâche #' + esc(id) + ' supprimée du panel.' }; S.sel.delete(+id); }
-        catch (e) { S.msg = { k: 'ko', t: 'Suppression refusée : ' + esc(e.message) }; }
-        return charger(true);
+        // Toute tâche se supprime (13/11/2026, « je dois pouvoir effacer une tâche », depuis ?checklist=43) : la fenêtre
+        // « Modifier la tâche » a « Supprimer la tâche… ». Celles créées ici partent telles quelles ; les autres avec leur
+        // nom exact (?confirmer=), que le serveur compare à celui du panel, comme pour une checklist.
+        const cc = ((S.cadre && S.cadre.creees) || []).find(x => x.id === +id);
+        const t = tache(id);
+        const nom = t ? String(t.nom || '').trim() : (cc ? cc.nom : '');
+        const cls = checklistsParTache()[+id] || [];
+        const ou = cls.map(c => '« ' + c.nom + ' »').join(', ');
+        if (!confirm('Supprimer du panel la tâche « ' + (nom || '#' + id) + ' » (#' + id + ') ?\n\n'
+          + (cls.length ? 'Elle disparaît de ' + (cls.length > 1 ? 'ses ' + cls.length + ' checklists : ' : 'la checklist ') + ou + ' : les équipes ne la verront plus.' : 'Elle n’est dans aucune checklist.')
+          + (t && t.actif != null ? '\n\nPour seulement l’arrêter, décochez plutôt « Active » : elle est mise en pause et se reprend.' : '')
+          + '\n\nOn ne peut pas annuler.')) { return; }
+        const m = S.modale && S.modale.type === 'modif' && S.modale.id === +id ? S.modale : null;
+        if (m) { m.envoi = 'suppr'; m.err = null; rendre(); }
+        const p = new URLSearchParams();
+        if (!cc && nom) { p.set('confirmer', nom); }
+        if (cls.length) { p.set('checklists', cls.map(c => c.id).join(',')); }
+        const qs = p.toString();
+        try { await api('DELETE', '/task/taches/' + id + (qs ? '?' + qs : '')); }
+        catch (e) {
+          const droits = e.status === 401 || e.status === 403 || /\b40[13]\b/.test(e.message)
+            ? (admin() ? ' — la session administrateur du panel a peut-être expiré : reconnectez-vous (en haut).' : ' — essayez avec un compte administrateur du panel (en haut).') : '';
+          // Dans la fenêtre, l'erreur reste sous les yeux ; ailleurs, en tête de page.
+          if (m && S.modale === m) { m.envoi = false; m.err = 'Suppression refusée : ' + e.message + droits; return rendre(); }
+          S.msg = { k: 'ko', t: 'Suppression refusée : ' + esc(e.message + droits) };
+          return charger(true);
+        }
+        if (m && S.modale === m) { S.modale = null; }
+        S.sel.delete(+id);
+        S.msg = { k: 'ok', t: 'Tâche « ' + esc(nom || '#' + id) + ' » supprimée du panel.' };
+        await charger(true);
+        // Le panel a dit oui, mais la montre encore dans une checklist : on le dit plutôt que de laisser croire qu'elle est partie.
+        const reste = S.err ? [] : checklistsParTache()[+id] || [];
+        if (reste.length) {
+          S.msg = { k: 'wa', t: 'Le panel a accepté la suppression de « ' + esc(nom || '#' + id) + ' », mais la montre encore dans ' + reste.map(c => '« ' + esc(c.nom) + ' »').join(', ') + '. Rechargez dans un moment ; si elle y reste, retirez-la de la checklist au panel.' };
+          rendre();
+        }
+        return;
       }
       case 'brut': {
         S.modale = { type: 'brut', id: +id, data: null, y: el.getBoundingClientRect().top + window.scrollY }; rendre();

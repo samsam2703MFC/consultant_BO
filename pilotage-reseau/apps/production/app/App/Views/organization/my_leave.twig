@@ -1,0 +1,25 @@
+{% extends "layouts/base.twig" %}
+
+{% block title %}Mój urlop{% endblock %}
+
+{% block page_heading %}
+    <div class="page-heading at-profit-head">
+        <div class="page-title">
+            <h3>Mój urlop</h3>
+            <p class="text-subtitle text-muted mb-0">Urlop z zastępcą : w dni urlopu Twoje zadania (Dzisiaj i zadania, obowiązkowe, przypomnienia) przejmuje zastępca, po urlopie wracają same.
+                Urlop zatwierdza CEO ; przekazanie zadań — bez zatwierdzenia, zastępcę możesz zmienić w każdej chwili.</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block content %}
+{# [289] Mój urlop (makieta 50) : App\Services\Organization\UserLeaveService::page. #}
+<section class="section ul-wrap" id="leaveApp" data-root="{{ root }}">
+    <script type="application/json" id="leaveBoot">{{ l|json_encode|raw }}</script>
+    <div data-ul-body></div>
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ root }}/assets/js/organization/my-leave.js?v={{ asset_v() }}"></script>
+{% endblock %}

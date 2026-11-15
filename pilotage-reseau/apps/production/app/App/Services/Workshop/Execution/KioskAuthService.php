@@ -361,6 +361,16 @@ final class KioskAuthService
             + ['refresh_s' => max(10, $ttl - 15)];
     }
 
+    /**
+     * [275] QR personnel affiché par l'ERP lui-même (entrée / sortie de la journée) : signé au nom de l'appareil interne de
+     * l'ERP (erp.qr_device_id, mode office) ; le téléphone le valide exactement comme celui de la tablette de bureau.
+     */
+    public function erpQr(int $deviceId, int $employeeId, string $base, int $ttl): array
+    {
+        $ttl = max(30, min(600, $ttl));
+        return $this->qrPayload(['dev' => $deviceId, 'emp' => $employeeId, 'day' => date('Y-m-d')], $base, $ttl) + ['refresh_s' => max(10, $ttl - 15)];
+    }
+
     /** Jeton signé, adresse {base}/kiosk/scan#t=… (le fragment n'est jamais envoyé au serveur) et matrice du QR. */
     private function qrPayload(array $claims, string $base, int $ttl): array
     {

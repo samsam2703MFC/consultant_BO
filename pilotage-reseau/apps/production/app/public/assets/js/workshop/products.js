@@ -654,7 +654,7 @@
         let item = found.data[0];
         // Karta założona przy tworzeniu produktu : kreator wraca do logistyki (step), jak przy nowej karcie
         if (item && step > 1 && (item.settings?.wizard_step ?? 1) < step) {
-            try { await api.patch(`/produits/items/${item.id}/settings`, {wizard_step: Math.min(STEPS, step)}); } catch (err) { /* sam postęp kreatora */ }
+            try { await api.patch(`/produits/items/${item.id}/settings`, {wizard_step: Math.min(STEPS, step)}); } catch (err) { /* sam postęp asystenta */ }
         }
         if (!item) {
             try {

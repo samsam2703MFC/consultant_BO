@@ -1,9 +1,9 @@
-<?php /** Półprodukt utworzony w oknie kreatora produktu : przekazanie do kreatora (postMessage) i zamknięcie okna. */ ?>
+<?php /** Półprodukt utworzony w oknie asystenta produktu : przekazanie do asystenta (postMessage) i zamknięcie okna. */ ?>
 <!doctype html>
 <html lang="pl">
 <head><meta charset="utf-8"><title>Półprodukt utworzony</title></head>
 <body style="font-family: system-ui, sans-serif; padding: 24px;">
-<p>Półprodukt « <?= htmlspecialchars($semi['name']) ?> » utworzony — wraca do kreatora produktu.</p>
+<p>Półprodukt « <?= htmlspecialchars($semi['name']) ?> » utworzony — wraca do asystenta produktu.</p>
 <script>
     (function () {
         const semi = <?= json_encode($semi, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG | JSON_HEX_AMP) ?>;

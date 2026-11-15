@@ -245,7 +245,7 @@ final class MachineDataService
                 sort($after);
                 if ($before !== $after) {
                     $this->repo->replaceShares($wid, $sharedIds);
-                    $this->audit->record($ctx, 'update', 'workstation_share', $wid, ['groups' => $before], ['groups' => $after, 'source' => 'kreator maszyny']);
+                    $this->audit->record($ctx, 'update', 'workstation_share', $wid, ['groups' => $before], ['groups' => $after, 'source' => 'asystent maszyny']);
                 }
                 return $wid;
             });
@@ -315,13 +315,13 @@ final class MachineDataService
                         && abs($before['operators_required'] - $new['operators_required']) < 0.005;
                     if ($same) { $unchanged++; continue; }
                     $this->repo->updateStep((int) $cur['id'], $new);
-                    $this->audit->record($ctx, 'update', 'item_routing_step', (int) $cur['id'], $before, $new + ['source' => 'kreator maszyny']);
+                    $this->audit->record($ctx, 'update', 'item_routing_step', (int) $cur['id'], $before, $new + ['source' => 'asystent maszyny']);
                     $updated++;
                 } else {
                     $row = $new + ['id_item' => $itemId, 'step_no' => $this->repo->nextStepNo($itemId), 'name_pl' => mb_substr((string) $w['name_pl'], 0, 100),
                         'name_fr' => mb_substr((string) ($w['name_fr'] ?: $w['name_pl']), 0, 100), 'id_workstation' => $id];
                     $stepId = $this->repo->insertStep($row);
-                    $this->audit->record($ctx, 'create', 'item_routing_step', $stepId, null, $row + ['source' => 'kreator maszyny']);
+                    $this->audit->record($ctx, 'create', 'item_routing_step', $stepId, null, $row + ['source' => 'asystent maszyny']);
                     $created++;
                 }
             }

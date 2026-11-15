@@ -134,7 +134,7 @@
             </tbody></table></div>` : '<p class="at-empty">Brak zmian cen surowców w tym okresie.</p>';
         }
         return `<div class="kw-card"><h5>Koszty i marże po fakturach ${gate}${run ? `<span class="kw-badge">ostatnie przeliczenie ${dmy(run.run_at)} ${hm(run.run_at)}${run.by_name ? ' · ' + esc(run.by_name) : ''}</span>` : '<span class="kw-badge warn">jeszcze nie przeliczono</span>'}</h5>
-            <p class="kw-lead">Najpierw zatwierdź faktury (kreator faktur) — nowe ceny surowców trafiają do kartoteki. Potem jedno kliknięcie : koszt surowców wszystkich receptur po bieżących cenach (najwyższa zatwierdzona cena), koszt pełny (działy + logistyka) i marża przy obecnych cenach sprzedaży. Ceny sprzedaży jeszcze się nie zmieniają.</p>
+            <p class="kw-lead">Najpierw zatwierdź faktury (asystent faktur) — nowe ceny surowców trafiają do kartoteki. Potem jedno kliknięcie : koszt surowców wszystkich receptur po bieżących cenach (najwyższa zatwierdzona cena), koszt pełny (działy + logistyka) i marża przy obecnych cenach sprzedaży. Ceny sprzedaży jeszcze się nie zmieniają.</p>
             ${c.window.pending ? `<div class="kw-note warn">${surowce(c.materials.up + c.materials.down)} po ostatnim przeliczeniu (${c.materials.up} w górę, ${c.materials.down} w dół) — przelicz koszty, zanim ustalisz nowe ceny.</div>` : ''}
             <div class="kw-tiles"><div><span>Faktury z cenami ${esc(winTxt)}</span><b>${c.invoices_with_prices}</b><small>ceny surowców : ${c.materials.up} w górę · ${c.materials.down} w dół</small></div>
                 <div><span>Receptury przeliczone</span><b>${run ? f(run.recipes) : '—'}</b><small>${run ? dmy(run.run_at) + ' ' + hm(run.run_at) : 'brak przeliczenia'}</small></div>
@@ -291,7 +291,7 @@
                 <div class="kw-note ${lead < P.notice_days ? 'warn' : ''}">Wyprzedzenie ${lead} ${lead === 1 ? 'dzień' : 'dni'}${lead < P.notice_days ? ` — krócej niż ${P.notice_days} dni : e-mail wyjdzie od razu` : ` (minimum ${P.notice_days})`}.</div>
                 <label class="kw-check"><input type="checkbox" data-notify ${S.notify ? 'checked' : ''}> E-mail z cennikiem od tej daty do klientów (PDF w języku klienta, adres z Dystrybucji dokumentów)</label>
                 <ul class="pw-time">
-                    <li class="done"><b>${day(min)}</b><i></i><span>Zatwierdzenie kreatora<small>ceny zaplanowane, jeszcze nie w cenniku — można anulować do ${dmy(isoAdd(date, -1))}</small></span></li>
+                    <li class="done"><b>${day(min)}</b><i></i><span>Zatwierdzenie asystenta<small>ceny zaplanowane, jeszcze nie w cenniku — można anulować do ${dmy(isoAdd(date, -1))}</small></span></li>
                     ${S.notify ? `<li><b>${day(notice)}</b><i></i><span>E-mail do klientów z cennikiem PDF (od ${dm(date)})<small>${klientow(emails)} · w języku klienta · kopia w Poczcie / Stan wysyłek</small></span></li>` : ''}
                     <li><b>${day(date)} 00:05</b><i></i><span>Nowe ceny w ERP + cennik na stronę franczyzy<small>ceny standardowe, ceny klientów, historia zmian cen produktu</small></span></li>
                     <li><b>${day(date)}</b><i></i><span>Potwierdzenie ze strony (wersja cennika)<small>błąd → ponowienie co 5 min, stan w publikacjach poniżej</small></span></li></ul></div>
