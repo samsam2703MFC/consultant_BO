@@ -3273,10 +3273,20 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .db-av.db-av--api:hover{color:var(--accent)}
 @media (max-width:1300px){.db-nav--rail .db-vt h1{font-size:20px}.db-nav--rail .db-vt{margin-right:8px}}
 /* Réseaux sociaux (15/11/2026) : le cadre de l'espace boutique, sous la barre, hors de #dash (il ne se recharge pas). */
-#db-reseaux{max-width:1440px;margin:0 auto;padding:0 22px 16px}
-body.db-rail-on #db-reseaux{max-width:none;margin:0 0 0 246px;padding:0 24px 16px}
+/* Réseaux sociaux (reseaux.js) : l'espace boutique du Marketing fondu dans la page — une barre d'onglets (le menu de
+   l'espace et le quota de la semaine), puis le cadre, sans bordure, qui va jusqu'au bord droit et défile seul : la page
+   ne défile plus, la barre de défilement du cadre est celle de l'écran. */
+#db-reseaux{max-width:1440px;margin:0 auto;padding:0 0 0 22px}
+body.db-rail-on #db-reseaux{max-width:none;margin:0 0 0 246px;padding:0 0 0 24px}
 body.db-vue-social #dash{padding-bottom:0}
-.rx-onglets{margin:2px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
-.rx-onglets .page-tabs{margin:0;border:0}
-.rx-cadre{display:block;width:100%;min-height:520px;border:1px solid var(--line);border-radius:12px;background:#faf7f2}
+body.db-vue-social{overflow:hidden}
+.rx-barre{display:flex;align-items:center;gap:16px;margin:0 24px 14px 0;border-bottom:1px solid var(--line)}
+.rx-tabs{flex:1;min-width:0;margin:0;border:0;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
+.rx-tabs .page-tabs__tab{white-space:nowrap;padding:8px 9px;font-size:13px}
+.rx-tabs .rx-groupe{margin-left:4px}
+.rx-quota{display:inline-block;margin-left:2px;padding:0 5px;border-radius:4px;background:var(--chip);color:var(--muted-2);font-size:10.5px;font-variant-numeric:tabular-nums;vertical-align:1px}
+.rx-quota.plein{background:var(--prize-soft);color:var(--prize-ink)}
+.rx-attente{margin-right:24px}
+.rx-racine .db-err{margin-right:24px}
+.rx-cadre{display:block;width:100%;min-height:480px;border:0;background:transparent;color-scheme:light}
 @media print{#db-reseaux{display:none}}
