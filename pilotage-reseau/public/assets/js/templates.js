@@ -221,6 +221,7 @@ export function render(c, x){
       ${c.isCltMyst ? tplCltMyst(c, x) : ''}
       ${c.isControle ? tplControle(c, x) : ''}
       ${c.isSuiviM ? tplSuiviM(c, x) : ''}
+      ${c.isIaEnt ? tplIaEntrainement(c.iaEnt, x) : ''}
       ${c.isKpiT ? tplKpiT(c, x) : ''}
       ${c.isBrandGuard ? tplBrandGuard(c, x) : ''}
       ${c.isInvendus ? tplInvendus(c, x) : ''}
@@ -2461,6 +2462,66 @@ function tplIaRecap(r, x){
       <button type="button" ${x.A(r.fermer)} class="ia-sec">Fermer</button>
       <button type="button" ${x.A(r.envoyer)} class="ia-btn" ${r.envoi || !r.n ? 'disabled' : ''}>${esc(r.envoyerLib)}</button>
     </div>
+  </div>`;
+}
+
+/* L'entraînement de l'IA : les chiffres, les photos parfaites à prendre comme
+   modèle, puis une carte par rayon — la consigne, les modèles, les leçons. */
+function tplIaEntrainement(e, x){
+  const { esc } = x;
+  const card = 'background:var(--color-surface);border:1px solid var(--color-border-tertiary);border-radius:12px';
+  if (!e || e.chargement) { return `<div data-screen="ia-entrainement"><div style="${card};padding:16px 18px;font-size:12.5px;color:var(--color-text-muted)">Entraînement de l’IA — lecture…</div></div>`; }
+  const img = (src, alt) => src ? `<a href="${esc(src)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(src)}" alt="${esc(alt)}" loading="lazy"></a>` : '';
+  return `
+  <div data-screen="ia-entrainement" class="ia-ent">
+    ${!e.dispo ? `<div class="ia-ent-alerte">Aucune clé Anthropic au serveur (Paramètres › Assistance IA) : l’IA ne propose rien tant qu’elle manque. L’entraînement, lui, se prépare déjà.</div>` : ''}
+    <div class="ia-ent-kpis">${e.kpis.map(k => `<div style="${card}" class="kp"><div class="k">${esc(k.k)}</div><div class="v">${esc(k.v)}</div><div class="s">${esc(k.s)}</div></div>`).join('')}</div>
+    <div style="${card}" class="ia-ent-comment">
+      <div class="h">Comment l’IA apprend</div>
+      <ol>
+        <li><b>La consigne du rayon</b> dit ce qu’est un comptoir conforme ; elle prime sur tout. Vide, l’IA suit des critères par défaut.</li>
+        <li><b>La photo modèle</b> montre le comptoir parfait <i>de ce magasin</i> : l’IA juge chaque photo contre elle (à défaut, contre la photo type du réseau). Prenez-la parmi les photos notées « ${esc(e.nomNiveau)} », ou depuis le volet de notation (★ Photo modèle).</li>
+        <li><b>Vos corrections</b> deviennent des leçons : quand vous notez autrement que l’IA, elle reçoit la correction (et votre raison) avec les photos suivantes du même rayon.</li>
+      </ol>
+      ${e.communs ? `<div class="c">Règle commune à tous les rayons : ${esc(e.communs)}</div>` : ''}
+    </div>
+    <div style="${card}" class="ia-ent-cand">
+      <div class="h">Photos parfaites à prendre comme modèle <span>notées « ${esc(e.nomNiveau)} » ces 30 jours</span></div>
+      ${e.candidates.length ? `<div class="g">${e.candidates.map(c => `
+        <div class="t">
+          ${c.photo ? `<span class="ph"><img src="${esc(c.photo)}" alt="" loading="lazy"></span>` : `<span class="ph vide">${c.attente ? 'lecture…' : 'photo indisponible'}</span>`}
+          <div class="n">${esc(c.shop)} · ${esc(c.rayon)}</div>
+          <div class="m">${esc(c.date)} · ${esc(c.note)}${c.par ? ' par ' + esc(c.par) : ''}</div>
+          <div class="b"><button type="button" ${x.A(c.magasin)} class="ia-valider-mod">${c.busy === 'magasin' ? 'copie…' : '★ Modèle de ' + esc(c.shop)}</button>
+            <button type="button" ${x.A(c.reseau)} class="ia-lien">${c.busy === 'reseau' ? 'copie…' : 'du réseau'}</button></div>
+        </div>`).join('')}</div>`
+      : `<div class="v">Aucune photo notée « ${esc(e.nomNiveau)} » ces 30 jours. Notez 5/5 une photo parfaite dans <button type="button" ${x.A(e.versControle)} class="ia-lien">Contrôle</button>, ou ouvrez-la et choisissez « ★ Photo modèle du rayon ».</div>`}
+    </div>
+    ${e.rayons.map(r => `
+    <div style="${card}" class="ia-ent-rayon">
+      <div class="hd"><span class="nom">${esc(r.nom)}</span><span class="acc ${esc(r.accordCls)}">${esc(r.accord)}</span>${r.ecarts ? `<span class="ec">${esc(r.ecarts)}</span>` : ''}</div>
+      <div class="cols">
+        <div>
+          <div class="lb">Ce que l’IA doit voir — la consigne</div>
+          <textarea rows="4" maxlength="600" ${x.C(r.setConsigne)} placeholder="Ex. : comptoir garni sur toute sa longueur, six quiches entières minimum, prix sur chaque produit">${esc(r.consigne)}</textarea>
+          ${!r.consigne && r.defaut ? `<div class="df">Vide : l’IA suit les critères par défaut — « ${esc(r.defaut)} »</div>` : ''}
+        </div>
+        <div>
+          <div class="lb">Le comptoir modèle</div>
+          <div class="mods">
+            <div class="mod">${r.reseau ? img(r.reseau, 'Photo type ' + r.nom) : '<span class="ph vide">pas de photo type</span>'}<div class="m">Réseau (photo type)</div></div>
+            ${r.modeles.map(m => `<div class="mod">${img(m.photo, 'Photo modèle ' + r.nom + ' ' + m.shop)}<div class="m">★ ${esc(m.shop)}${m.date ? ' · ' + esc(m.date) : ''}</div><button type="button" ${x.A(m.retirer)} class="ia-lien">retirer</button></div>`).join('')}
+          </div>
+          ${!r.modeles.length ? '<div class="df">Pas encore de photo modèle de magasin : prenez une photo notée parfaite.</div>' : ''}
+        </div>
+        <div>
+          <div class="lb">Ce qu’elle a appris de vous</div>
+          ${r.lecons.length ? r.lecons.map(l => `<div class="lc${l.retenue ? '' : ' off'}"><span>${esc(l.date)} · ${esc(l.shop)}</span> IA : ${esc(l.ia)} → vous : <b>${esc(l.vous)}</b>${l.raison ? ` — « ${esc(l.raison)} »` : ''} <button type="button" ${x.A(l.basculer)} class="ia-lien">${l.retenue ? 'écarter' : 'reprendre'}</button></div>`).join('')
+            + (r.leconsPlus ? `<div class="df">et ${r.leconsPlus} de plus</div>` : '')
+            : '<div class="df">Pas encore de correction sur ce rayon.</div>'}
+        </div>
+      </div>
+    </div>`).join('')}
   </div>`;
 }
 
@@ -5726,21 +5787,28 @@ function tplCtrlDetail(c, x){
         <button ${x.A(d.close)} style="border:none;background:var(--color-background-secondary);border-radius:50%;width:30px;height:30px;font-size:14px;cursor:pointer;color:var(--color-text-muted);flex:0 0 auto">✕</button>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+      <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;margin-top:20px">
         <div>
           <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">Photo en boutique</div>
           ${d.photo
             ? `<button ${x.A(d.zoomGo)} title="Agrandir et poser des repères" style="border:none;background:none;padding:0;display:block;width:100%;cursor:zoom-in;position:relative"><img src="${d.photo}" alt="Photo de réalisation" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block">
                 <span style="position:absolute;left:7px;bottom:7px;font-family:var(--font-ui);font-size:10.5px;font-weight:400;padding:3px 9px;border-radius:8px;background:rgba(20,16,14,0.72);color:#fff">${d.nRep ? d.nRep + ' repère' + (d.nRep > 1 ? 's' : '') : 'annoter'}</span></button>
                ${d.faitMeta ? `<div style="margin-top:5px;font-size:11px;color:var(--color-text)">${esc(d.faitMeta)}</div>` : ''}
-               ${d.ponct ? `<div class="pt ${esc(d.ponct.etat)}" style="margin-top:3px;font-size:11px">${d.ponct.etat === 'heure' ? '✓' : '⏱'} ${esc(d.ponct.long)}</div>` : ''}
+               ${d.ponct ? `<div class="pt ${esc(d.ponct.etat)}" style="margin-top:3px;font-size:11px;white-space:normal">${d.ponct.etat === 'heure' ? '✓' : '⏱'} ${esc(d.ponct.long)}</div>` : ''}
+               ${d.modeleEstCelleCi ? `<div class="ia-mod-ok">★ Cette photo est le modèle de ${esc(d.shopNom)}</div>`
+                 : d.modeleMagasin ? `<div class="ia-mod" title="Une photo parfaite devient la référence de l’IA pour ce rayon">★ Photo modèle du rayon :
+                   <button type="button" ${x.A(d.modeleMagasin)} class="ia-lien">${d.modeleBusy === 'magasin' ? 'copie…' : 'pour ' + esc(d.shopNom)}</button> ·
+                   <button type="button" ${x.A(d.modeleReseau)} class="ia-lien">${d.modeleBusy === 'reseau' ? 'copie…' : 'pour le réseau'}</button></div>` : ''}
                <a href="${d.photo}" target="_blank" rel="noopener" style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">fichier d’origine</a>`
             : `<div style="background:var(--color-background-secondary);border-radius:10px;aspect-ratio:1/1;display:flex;align-items:center;justify-content:center;padding:12px;text-align:center;font-size:12px;color:var(--color-text-muted);line-height:1.5">${esc(d.photoTxt)}</div>`}
         </div>
         <div>
-          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
+          <div style="${'font-size:11px;font-weight:400;text-transform:uppercase;letter-spacing:0.08em;color:var(--color-text-muted)'};margin-bottom:6px">${d.modele && !d.photoRef ? 'Photo modèle · ' + esc(d.rayon ? d.rayon.nom : '') + ' · ' + esc(d.shopNom) : d.rayon ? 'Photo type · ' + esc(d.rayon.nom) : 'Référence attendue'}</div>
           ${d.photoRef
             ? `<a href="${d.photoRef}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${d.photoRef}" alt="Photo de référence du produit" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>`
+            : d.modele
+            ? `<a href="${esc(d.modele.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.modele.photo)}" alt="Photo modèle du rayon pour ce magasin" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
+               <div style="margin-top:5px;font-size:10.5px;color:var(--color-text-muted)">★ modèle de ${esc(d.shopNom)}${d.modele.date ? ' — photo du ' + esc(d.modele.date) : ''} · l’IA juge contre elle</div>`
             : d.rayon && d.rayon.photo
             ? `<a href="${esc(d.rayon.photo)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(d.rayon.photo)}" alt="Photo type du rayon ${esc(d.rayon.nom)}" style="width:100%;aspect-ratio:1/1;object-fit:cover;object-position:center;border-radius:10px;border:1px solid var(--color-border-tertiary);display:block"></a>
                <label style="display:inline-block;margin-top:5px;font-size:10.5px;color:var(--color-text-muted);cursor:pointer;text-decoration:underline">${d.rayon.busy ? 'envoi…' : 'remplacer la photo type'}<input type="file" accept="image/jpeg,image/png,image/webp" ${x.C(d.rayon.fichier)} hidden></label>`
