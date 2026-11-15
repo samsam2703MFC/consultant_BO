@@ -1,4 +1,8 @@
 {
+ "final": {
+  "rail": 1000,
+  "tientDans1000": true
+ },
  "a": {
   "rail": 1103,
   "tientDans1000": false

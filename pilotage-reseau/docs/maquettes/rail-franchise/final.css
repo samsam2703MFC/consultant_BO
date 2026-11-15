@@ -1,0 +1,55 @@
+/* Maquette « Dashboard franchisé — la version propre » : ce qui s'ajoute au design system commun (global.css) et au
+ * rail de la maquette (rf.css). Jetons du §3 seulement ; trait 400 partout, 700 pour la valeur des chiffres clés (§4.3). */
+.fn { display: grid; gap: 16px; }
+.fn-lu { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 12px; color: var(--muted); }
+.fn-lu .rf-pill { margin-left: auto; }
+
+/* La barre du haut : la date en clair, la valeur en vignette (même hauteur que les avatars). */
+.fn-date { display: inline-flex; align-items: center; height: 36px; padding: 0 12px; border: 1px solid var(--line); border-radius: 8px;
+  background: #fff; font-size: 13px; color: var(--ink); }
+.fn-vignette { display: flex; flex-direction: column; justify-content: center; gap: 1px; height: 36px; padding: 0 12px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff; font: inherit; text-align: left; cursor: pointer; }
+.fn-vignette:hover { background: var(--paper); }
+.fn-vignette:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fn-vignette .k { font-size: 9.5px; line-height: 1.1; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); white-space: nowrap; }
+.fn-vignette .v { font-size: 15px; line-height: 1.2; color: var(--ink); white-space: nowrap; }
+
+/* Le bandeau des chiffres clés. */
+.fn-bande { padding: 4px 0; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.fn-bande .kpi { border-left-color: var(--line); }
+.fn-bande .kpi:first-child { border-left-color: transparent; }
+.fn-bande .kpi.is-att { border-left-color: var(--prize); }
+
+/* Les blocs. */
+.fn-deux { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+.fn-deux--b { grid-template-columns: 1.15fr 1fr; }
+.fn-bloc { padding: 16px 18px; }
+.fn-bloc h2 { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0 0 8px; font-size: 11px; letter-spacing: 0.08em; }
+.fn-aside { font-size: 11px; letter-spacing: normal; text-transform: none; color: var(--muted); }
+
+/* À faire maintenant : une ligne, un geste, l'écran où le faire. */
+.fn-geste { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid var(--row-line); color: var(--ink); text-decoration: none; }
+.fn-geste:first-of-type { border-top: 0; }
+.fn-geste__t { flex: 1; min-width: 0; font-size: 13px; }
+.fn-geste__t small { display: block; margin-top: 2px; overflow: hidden; font-size: 11px; color: var(--muted); white-space: nowrap; text-overflow: ellipsis; }
+.fn-geste__ou { font-size: 11.5px; color: var(--accent); white-space: nowrap; }
+.fn-geste:hover .fn-geste__t { color: var(--accent); }
+
+/* Le graphique des heures. */
+.fn-graphe { display: block; width: 100%; height: auto; font-family: 'Gotham', system-ui, sans-serif; }
+.fn-legende { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 4px; font-size: 11px; color: var(--muted-2); }
+.fn-legende i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 2px; vertical-align: -1px; }
+.fn-legende .muted { margin-left: auto; }
+
+/* La vitrine. */
+.fn-table { min-width: 0 !important; }
+.fn-table thead th { padding: 8px 10px; }
+.fn-table tbody td { padding: 6px 10px; }
+.fn-plus { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--accent); text-decoration: none; }
+
+/* Les contrôles du matin. */
+.fn-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.fn-photos figure { margin: 0; min-width: 0; }
+.fn-photos img { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid var(--line); border-radius: 8px; }
+.fn-photos figcaption { margin-top: 4px; overflow: hidden; font-size: 11px; color: var(--muted-2); white-space: nowrap; text-overflow: ellipsis; }
+.fn-manque { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 12px; font-size: 12px; color: var(--muted-2); }

@@ -14,6 +14,36 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
+## La version propre, sur la base de B (`final.png`)
+
+Demande du 15/11/2026 : « la valeur doit être un montant dans une vignette ; refais le design complet, que ce soit
+propre ; même design system, mais un dashboard minimaliste, rapide et fonctionnel, sur la base du B ».
+
+`final.html` est l'écran **Opérationnel complet**, plus une esquisse : **chiffres réels** d'Atelier by - Halle, mardi
+6 octobre 2026 à 08:14 (`../dashboard-operationnel/reel-halle-0610.json`, lu ce jour-là), et la valeur du même jour,
+100 328 €, celle de la capture `../dashboard-operationnel/code-bureau.png`. Seule la note Google est un exemple. Tout
+tient dans 1 440 × 1 000, sans défiler. Générer : `node generer-final.js`.
+
+- **Le rail** (B) : l'objectif du jour (14 % de 1 814 €, le trait sur J−7 à la même heure : 420 €) et la note Google ;
+  Le magasin, Vendre, Assistants.
+- **La barre du haut** : la date, « Relire », puis **la valeur en vignette** — un montant, « Valeur du magasin ·
+  100 328 € », dans un rectangle de la hauteur des avatars — et les deux avatars ronds, identiques : **Coach**
+  (l'assistant IA, `b-coach.png`) et **Revue du soir** (« ce soir » : le matin, elle n'attend rien).
+- **Le bandeau** : cinq chiffres clés — ventes (253 €, 28 clients, J−7 à 08:05 : 420 €), panier moyen (9,05 €, J−7 :
+  15,56 €), vitrine (235 pièces, 9 ruptures, 2 vont manquer ; filet or : il y a à faire), équipe (19,5 h au planning,
+  343 €), prochaine cuisson (Midi, four à 10 h 15, 77 pièces).
+- **À faire maintenant** : ce qui demande un geste, une ligne chacun, et l'écran où le faire — 9 commandes en retard,
+  9 produits en rupture (dont 6 cookies sortis à 10 et jamais réassortis), 4 contrôles pas rendus, la cuisson du matin
+  pas validée.
+- **Les ventes, heure par heure** : aujourd'hui face à la moyenne des 6 derniers mardis ; 8 h en cours, pâle.
+- **La vitrine** : seulement ce qui s'écarte (18 produits sur 69) — les ruptures, ce qui va manquer et à quelle heure ;
+  « Toute la vitrine › ».
+- **Les contrôles du matin** : trois photos rendues, les quatre pas rendues en étiquettes, « Les 8 photos › ».
+
+**Ce qui sort de l'Opérationnel** pour rester minimal : les ventes par catégorie, le P&L court de la journée et la
+frise de la journée (équipe, four, vitrine, commandes heure par heure). **À décider** : un onglet Jour dans Résultat
+pour les y ranger, ou un lien « Le P&L de la journée › » sous les ventes.
+
 ## Les trois
 
 | | forme | ce qu'elle apporte | ce qu'elle coûte |
