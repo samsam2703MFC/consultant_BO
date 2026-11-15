@@ -12,7 +12,7 @@
 .an-racine .an-titre b { font-weight: 500; font-size: 20px; color: var(--ink); line-height: 1.2; }
 .an-racine .an-titre span { font-size: 12px; color: var(--muted-2); }
 .an-racine .an-lien-t { padding: 0; border: 0; background: none; font: inherit; color: var(--accent); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
-.an-racine .an-rech { display: flex; align-items: center; gap: 8px; width: 300px; max-width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
+.an-racine .an-rech { display: flex; align-items: center; gap: 8px; width: 340px; max-width: 100%; height: 34px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
 .an-racine .an-rech input { flex: 1; min-width: 0; border: 0; outline: 0; background: none; font: inherit; font-size: 13px; color: var(--ink); }
 .an-racine .an-per { margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
@@ -121,6 +121,9 @@
 .an-racine .an-lst li span { flex: 1 1 auto; min-width: 0; color: var(--ink); }
 .an-racine .an-lst li small { color: var(--muted); font-size: 11.5px; }
 .an-racine .an-g2--l { gap: 18px; }
+.an-racine .an-g2--l > div { min-width: 0; overflow-x: auto; }
+.an-racine .an-g2--q7 { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 28px; }
+.an-racine .an-g2--q7 .an-t--g th { white-space: nowrap; }
 .an-racine .an-seg { display: inline-flex; gap: 2px; margin: 0 10px 8px 0; padding: 3px; border-radius: 9px; background: var(--chip); vertical-align: middle; }
 .an-racine .an-seg button { border: 0; background: none; padding: 4px 9px; border-radius: 7px; font: inherit; font-size: 12px; color: var(--muted-2); cursor: pointer; }
 .an-racine .an-seg button.on { background: #fff; color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
