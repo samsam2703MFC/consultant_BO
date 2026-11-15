@@ -129,6 +129,54 @@ function ep_dashboard_marketing_annee(): array
 }
 
 /**
+ * GET /dashboard/marketing/ventes-periode?shop=4&du=2025-11-01&au=2026-01-15&pids=4100011,4100007 — ce que les produits
+ * d'une gamme ont fait chez le magasin sur une période (15/11/2026, la liste d'une saison du calendrier : « la catégorie,
+ * le produit, la quantité vendue en N-1 sur la période, le CA et la marge effectuée »). Les ventes : les tranches du panel
+ * (apTranches2, product-category-groups, gravées une fois closes). La marge réalisée : le CA HT encaissé (le CA TTC au
+ * rapport HT/TTC du produit) moins la quantité × le coût de la recette du jour (adPrixCatalogue, products/available) —
+ * la règle de « Développement » : une recette qui coûte plus que le prix, ou moins de 5 % de celui-ci, n'est pas crue.
+ */
+function ep_dashboard_marketing_ventes_periode(): array
+{
+    $shop = (int) ($_GET['shop'] ?? 0);
+    $du = (string) ($_GET['du'] ?? ''); $au = (string) ($_GET['au'] ?? '');
+    if ($shop <= 0 || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $du) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $au) || $au < $du) {
+        http_response_code(400); return ['error' => 'shop, du et au (AAAA-MM-JJ) attendus'];
+    }
+    if ((strtotime($au) - strtotime($du)) / 86400 > 400) { http_response_code(422); return ['error' => 'une période de 400 jours au plus'];
+    }
+    $pids = array_values(array_unique(array_filter(array_map('intval', explode(',', (string) ($_GET['pids'] ?? ''))), static fn ($x) => $x > 0)));
+    if (!$pids || count($pids) > 200) { http_response_code(422); return ['error' => 'de 1 à 200 produits (pids)']; }
+    if (!function_exists('apTranches2') || !function_exists('adPrixCatalogue') || !PanelApi::configured()) { http_response_code(503); return ['error' => 'les ventes du panel ne se lisent pas'];
+    }
+    $auLu = min($au, date('Y-m-d'));
+    $lu = apTranches2([[$shop, $du, $auLu]]);
+    $p = $lu[$shop . ':' . $du] ?? null;
+    if (!is_array($p)) { http_response_code(502); return ['error' => 'le panel n’a pas rendu les ventes de la période']; }
+    $prix = adPrixCatalogue($shop);
+    $out = []; $tot = ['q' => 0.0, 'ca' => 0.0, 'caHt' => 0.0, 'marge' => 0.0, 'sansMarge' => 0];
+    foreach ($pids as $pid) {
+        $x = $p[$pid] ?? null; $c = $prix[$pid] ?? null;
+        $q = $x !== null ? (float) $x[2] : 0.0; $ca = $x !== null ? (float) $x[3] : 0.0;
+        $caHt = null; $marge = null; $motif = null;
+        if ($c !== null && $c['ht'] !== null && $c['ttc'] !== null && $c['ttc'] > 0) { $caHt = $ca * $c['ht'] / $c['ttc']; }
+        if ($q <= 0) { $marge = 0.0; }
+        elseif ($c === null || $c['ht'] === null) { $motif = 'prix du catalogue inconnu'; }
+        elseif ($c['cout'] === null) { $motif = 'coût de la recette manquant'; }
+        elseif ($c['cout'] >= $c['ht'] || $c['cout'] < 0.05 * $c['ht']) { $motif = 'recette à vérifier'; }
+        elseif ($caHt !== null) { $marge = $caHt - $q * $c['cout']; }
+        $out[(string) $pid] = ['q' => round($q, 1), 'ca' => round($ca, 2), 'caHt' => $caHt !== null ? round($caHt, 2) : null,
+            'marge' => $marge !== null ? round($marge, 2) : null, 'margePct' => $marge !== null && $caHt ? round(100 * $marge / $caHt, 1) : null, 'motif' => $motif];
+        $tot['q'] += $q; $tot['ca'] += $ca; $tot['caHt'] += (float) ($caHt ?? 0);
+        if ($marge !== null) { $tot['marge'] += $marge; } elseif ($q > 0) { $tot['sansMarge']++; }
+    }
+    return ['shop' => (string) $shop, 'du' => $du, 'au' => $au, 'auLu' => $auLu, 'produits' => $out,
+        'total' => ['q' => round($tot['q'], 1), 'ca' => round($tot['ca'], 2), 'caHt' => round($tot['caHt'], 2), 'marge' => round($tot['marge'], 2),
+            'margePct' => $tot['caHt'] > 0 ? round(100 * $tot['marge'] / $tot['caHt'], 1) : null, 'sansMarge' => $tot['sansMarge']],
+        'source' => 'ventes du panel (product-category-groups) ; marge : CA HT encaissé − quantité × coût de la recette du jour (products/available)'];
+}
+
+/**
  * GET /dashboard/marketing/campagnes/annexe?shop=4&id=12 — un document joint à la note d'une campagne en cours du magasin
  * (le PDF, servi par ep_mkt_annexe_fichier). Seuls les documents qui partent avec la note du franchisé s'ouvrent ici.
  */
@@ -158,6 +206,7 @@ function dmRoute(string $method, string $path): ?array
     if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
     if ($method === 'GET' && $path === '/dashboard/marketing/campagnes') { return ep_dashboard_marketing_campagnes(); }
     if ($method === 'GET' && $path === '/dashboard/marketing/annee') { return ep_dashboard_marketing_annee(); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/ventes-periode') { return ep_dashboard_marketing_ventes_periode(); }
     if ($method === 'GET' && $path === '/dashboard/marketing/campagnes/annexe') { return ep_dashboard_marketing_annexe(); }
     // Vendre › Offres › Newsletter : le module newsletter du cockpit, au rôle du magasin (src/franchise/offres_newsletter.php).
     if (($n = dnRoute($method, $path)) !== null) { return $n; }

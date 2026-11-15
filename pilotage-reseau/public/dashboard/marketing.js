@@ -37,7 +37,7 @@
   const ETATS_OBJ = { atteint: ['ok', 'atteint'], avance: ['ok', 'en avance'], clous: ['att', 'dans les clous'], retard: ['ko', 'en retard'], sans: ['mu', 'sans vente'] };
 
   const st = { shop: null, api: '../api/cockpit', el: null, d: null, err: null, obj: null, objErr: null,
-    an: new Date().getFullYear(), cal: {}, calErr: null, saisons: null, catalogue: null, saisonOuverte: null };
+    an: new Date().getFullYear(), cal: {}, calErr: null, saisons: null, catalogue: null, saisonOuverte: null, ventes: {} };
 
   function lire(p) {
     return fetch(st.api + p, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
@@ -74,29 +74,103 @@
     if (!/^\d{2}-\d{2}$/.test(s.debut || '') || !/^\d{2}-\d{2}$/.test(s.fin || '')) { return []; }
     return s.debut <= s.fin ? [[an + '-' + s.debut, an + '-' + s.fin]] : [[an + '-01-01', an + '-' + s.fin], [an + '-' + s.debut, an + '-12-31']];
   }
+  /** L'illustration d'une gamme, celle du design system (public/assets/img/saisons, reprises du Marketing), au mot-clé de son nom. */
+  function saisonImage(nom) {
+    const f = String(nom || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+    const m = [['printan', 'printemps'], ['estival', 'ete'], ['automn', 'automne'], ['hivern', 'hiver'], ['noel', 'noel'], ['nicolas', 'saint-nicolas'],
+      ['epiphanie', 'epiphanie'], ['mere', 'fete-des-meres'], ['pascal', 'paques'], ['paque', 'paques'], ['valentin', 'saint-valentin'], ['chandeleur', 'chandeleur'],
+      ['glace', 'glace'], ['b2b', 'b2b']].find(([k]) => f.includes(k));
+    return '../assets/img/saisons/' + (m ? m[1] : 'standard') + '.png';
+  }
+  /** La saison l'an dernier, pour l'année regardée : [du, au] (à cheval sur deux années : de N-1 à N). */
+  function fenetreN1(s, an) {
+    if (!/^\d{2}-\d{2}$/.test(s.debut || '') || !/^\d{2}-\d{2}$/.test(s.fin || '')) { return null; }
+    return s.debut <= s.fin ? [(an - 1) + '-' + s.debut, (an - 1) + '-' + s.fin] : [(an - 1) + '-' + s.debut, an + '-' + s.fin];
+  }
+  /** Le panel connaît un produit par son identifiant (pwaId), le catalogue par sa référence. */
+  const pidDe = r => { const p = st.catalogue && st.catalogue[String(r)]; return p && p.pwaId ? +p.pwaId : +r; };
+  function chargerVentes(s) {
+    const f = fenetreN1(s, st.an); if (!f || !(s.produits || []).length) { return; }
+    const cle = s.id + ':' + f[0];
+    if (st.ventes[cle]) { return; }
+    st.ventes[cle] = { du: f[0], au: f[1] };
+    lire('/dashboard/marketing/ventes-periode?shop=' + encodeURIComponent(st.shop) + '&du=' + f[0] + '&au=' + f[1] + '&pids=' + s.produits.map(pidDe).join(','))
+      .then(d => { st.ventes[cle].d = d; }).catch(e => { st.ventes[cle].err = e.message; }).finally(rendre);
+  }
+  const eur2 = v => v == null || isNaN(v) ? '—' : new Intl.NumberFormat('fr-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v).replace(/[  ]/g, ' ') + ' €';
+  const dLongue = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? (+iso.slice(8, 10)) + ' ' + MOIS_C[+iso.slice(5, 7) - 1] + ' ' + iso.slice(0, 4) : '—';
+  /** La liste d'une saison, sur toute la largeur : catégorie, produit, et ce qu'il a fait l'an dernier sur la saison. */
+  function listeSaison(s, img) {
+    const n = (s.produits || []).length, f = fenetreN1(s, st.an), V = f ? st.ventes[s.id + ':' + f[0]] : null;
+    const tete = `<div class="cal-drop-h"><img src="${esc(img)}" alt=""><div><b>${esc(s.nom)}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)} · ${n} produit${n > 1 ? 's' : ''} au panel${f ? ` · les chiffres : l’an dernier, du ${dLongue(f[0])} au ${dLongue(f[1])}` : ''}</small></div>
+      <button type="button" class="cal-x" data-calsaison="${s.id}" aria-label="Fermer">×</button></div>${s.alerte ? `<p class="cal-alerte">⚠ ${esc(s.alerte)}</p>` : ''}`;
+    if (!n) { return `<div class="cal-drop">${tete}<p class="mc-mu">Pas de produit rattaché à cette gamme au panel.</p></div>`; }
+    const D = V && V.d, P = D ? D.produits : {};
+    const lignes = (s.produits || []).map(r => {
+      const c = (st.catalogue && st.catalogue[String(r)]) || {}, v = P[String(pidDe(r))] || null;
+      return { cat: c.categorie || '—', nom: c.nom || 'référence ' + r, prix: c.prix, v };
+    }).sort((a, b) => ((b.v && b.v.ca) || 0) - ((a.v && a.v.ca) || 0) || a.cat.localeCompare(b.cat, 'fr') || a.nom.localeCompare(b.nom, 'fr'));
+    const nf1 = v => v == null ? '—' : new Intl.NumberFormat('fr-BE', { maximumFractionDigits: 1 }).format(v).replace(/[  ]/g, ' ');
+    const cell = (v, k) => !D ? `<td class="n">${V && V.err ? '—' : '<span class="db-sk cal-sk"></span>'}</td>` : `<td class="n">${k(v)}</td>`;
+    const corps = lignes.map(l => `<tr><td class="cat">${esc(l.cat)}</td><td>${esc(l.nom)}${l.prix != null ? `<small>${eur2(l.prix)} TTC aujourd’hui</small>` : ''}</td>
+      ${cell(l.v, v => v ? nf1(v.q) : '0')}${cell(l.v, v => v ? eur2(v.ca) : eur2(0))}${cell(l.v, v => v && v.caHt != null ? eur2(v.caHt) : '—')}
+      ${cell(l.v, v => !v ? eur2(0) : v.marge != null ? eur2(v.marge) : `<span class="cal-motif" title="${esc(v.motif || '')}">${esc(v.motif || '—')}</span>`)}${cell(l.v, v => v && v.margePct != null ? nf1(v.margePct) + ' %' : '—')}</tr>`).join('');
+    const T = D && D.total;
+    return `<div class="cal-drop">${tete}
+      ${V && V.err ? `<p class="cal-alerte">Les ventes de l’an dernier ne se lisent pas : ${esc(V.err)}.</p>` : ''}
+      <table class="cal-t"><thead><tr><th>Catégorie</th><th>Produit</th><th class="n">Qté vendue N-1</th><th class="n">CA TTC N-1</th><th class="n">CA HT N-1</th><th class="n">Marge réalisée</th><th class="n">Marge %</th></tr></thead>
+        <tbody>${corps}</tbody>
+        ${T ? `<tfoot><tr><td colspan="2">La gamme, l’an dernier sur la saison${T.sansMarge ? ` <small>${T.sansMarge} produit${T.sansMarge > 1 ? 's' : ''} sans marge calculable (recette ou prix à vérifier) : hors total de la marge</small>` : ''}</td>
+          <td class="n">${nf1(T.q)}</td><td class="n">${eur2(T.ca)}</td><td class="n">${eur2(T.caHt)}</td><td class="n">${eur2(T.marge)}</td><td class="n">${T.margePct != null ? nf1(T.margePct) + ' %' : '—'}</td></tr></tfoot>` : ''}</table>
+      <p class="cal-src">Ventes du magasin au panel ; marge réalisée = CA HT encaissé − quantité × coût de la recette du jour.</p></div>`;
+  }
+  const jourMois = mmjj => /^\d{2}-\d{2}$/.test(mmjj || '') ? (+mmjj.slice(3)) + ' ' + MOIS_C[+mmjj.slice(0, 2) - 1] : '—';
+  const isoCourt = iso => /^\d{4}-\d{2}-\d{2}/.test(iso || '') ? jourMois(iso.slice(5, 10)) : '—';
+  const PHASES_C = { en_cours: 'en cours', a_venir: 'à venir', terminee: 'terminée', sans_date: 'sans date' };
+
+  /**
+   * Le calendrier de l'année (15/11/2026 ; « quelque chose de plus lisible, avec les illustrations du design system ; au
+   * clic, une liste déroulante des produits ») : les campagnes, puis les saisons des produits dans l'ordre de l'année,
+   * chacune avec son illustration, ses dates en clair et ce qui est en cours aujourd'hui ; un clic ouvre la liste de ses
+   * produits et de leur prix.
+   */
   function calAnnee() {
-    const an = st.an, C = st.cal[an], S = st.saisons;
-    const grille = `<div class="cal-grille" aria-hidden="true">${MOIS_C.map(() => '<i></i>').join('')}</div>`;
-    const ajd = auj(), trait = +ajd.slice(0, 4) === an ? `<b class="cal-auj" style="left:${(100 * jourAn(ajd, an) / joursAn(an)).toFixed(2)}%" title="aujourd’hui"></b>` : '';
-    const ligne = (lib, sous, barres, attr) => `<div class="cal-l"${attr || ''}><div class="cal-lib"><span>${lib}</span>${sous ? `<small>${sous}</small>` : ''}</div><div class="cal-piste">${grille}${trait}${barres}</div></div>`;
-    const campagnes = C == null ? '<div class="db-sk" style="height:60px;margin:6px 0"></div>' : C.length ? C.map(c => {
-      const b = barre(c.debut, c.fin, an);
-      return ligne(esc(c.nom), esc(c.type || ''), b ? `<span class="cal-b${c.phase === 'en_cours' ? ' on' : ''}" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%;background:${esc(c.typeCouleur || 'var(--accent)')}" title="${esc(c.nom + ' · du ' + dCourt(c.debut) + ' au ' + dCourt(c.fin))}"></span>` : '');
+    const an = st.an, C = st.cal[an], ajd = auj(), cetteAnnee = +ajd.slice(0, 4) === an;
+    const moisAuj = cetteAnnee ? +ajd.slice(5, 7) - 1 : -1;
+    const fond = `<div class="cal-fond" aria-hidden="true">${MOIS_C.map((m, i) => `<i class="${i % 2 ? 'p' : ''}${i === moisAuj ? ' auj' : ''}"></i>`).join('')}</div>`;
+    const trait = cetteAnnee ? `<b class="cal-auj" style="left:${(100 * jourAn(ajd, an) / joursAn(an)).toFixed(2)}%"></b>` : '';
+    const piste = barres => `<div class="cal-piste">${fond}${trait}${barres}</div>`;
+
+    // Les campagnes : le nom dans la barre quand elle est assez longue, sinon à côté.
+    const campagnes = C == null ? '<div class="db-sk" style="height:56px;margin:6px 0"></div>' : C.length ? C.map(c => {
+      const b = barre(c.debut, c.fin, an), on = c.phase === 'en_cours';
+      return `<div class="cal-l cal-l--c${on ? ' on' : ''}"><div class="cal-lib"><span class="cal-pt" style="background:${esc(c.typeCouleur || 'var(--accent)')}"></span><div><b>${esc(c.nom)}</b>
+          <small>${isoCourt(c.debut)} → ${isoCourt(c.fin)} · ${esc(c.type || 'Campagne')}</small></div><span class="cal-etat${on ? ' on' : ''}">${PHASES_C[c.phase] || ''}</span></div>
+        ${piste(b ? `<span class="cal-b" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%;background:${esc(c.typeCouleur || 'var(--accent)')}" title="${esc(c.nom)} · ${isoCourt(c.debut)} → ${isoCourt(c.fin)}">${b[1] > 9 ? `<em>${esc(c.nom)}</em>` : ''}</span>` : '')}</div>`;
     }).join('') : `<p class="mc-mu cal-vide">Pas de campagne pour le magasin en ${an}.</p>`;
+
+    // Les saisons, dans l'ordre de l'année (leur début), celles d'aujourd'hui en avant.
+    const S = st.saisons == null ? null : st.saisons.slice().sort((x, y) => String(x.debut).localeCompare(String(y.debut)));
     const nomRef = r => (st.catalogue && st.catalogue[String(r)]) || null;
-    const saisons = S == null ? '<div class="db-sk" style="height:90px;margin:6px 0"></div>' : S.map(s => {
+    const enCours = s => cetteAnnee && fenetres(s, an).some(([d, f]) => d <= ajd && ajd <= f);
+    const saisons = S == null ? '<div class="db-sk" style="height:120px;margin:6px 0"></div>' : S.map(s => {
       const bs = fenetres(s, an).map(([d, f]) => barre(d, f, an)).filter(Boolean);
-      const ouv = st.saisonOuverte === s.id, n = (s.produits || []).length;
-      const titre = (s.emoji ? s.emoji + ' ' : '') + s.nom;
-      return ligne(`<button type="button" class="cal-s" data-calsaison="${s.id}">${esc(titre)}</button>`, `${n} produit${n > 1 ? 's' : ''} · du ${s.debut.slice(3)}/${s.debut.slice(0, 2)} au ${s.fin.slice(3)}/${s.fin.slice(0, 2)}${s.alerte ? ' ⚠' : ''}`,
-        bs.map(b => `<span class="cal-b cal-b--s" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%" title="${esc(titre + (s.alerte ? ' — ' + s.alerte : ''))}"></span>`).join(''), ouv ? ' data-ouverte="1"' : '')
-        + (ouv ? `<div class="cal-prod">${s.alerte ? `<p class="mc-mu">⚠ ${esc(s.alerte)}</p>` : ''}${n ? (s.produits || []).map(r => { const p = nomRef(r); return `<span class="cal-p">${esc(p ? p.nom : 'réf. ' + r)}${p && p.prix != null ? `<small>${esc(String(p.prix).replace('.', ','))} €</small>` : ''}</span>`; }).join('') : '<p class="mc-mu">Pas de produit rattaché à cette gamme au panel.</p>'}</div>` : '');
+      const ouv = st.saisonOuverte === s.id, n = (s.produits || []).length, on = enCours(s), img = saisonImage(s.nom);
+      const liste = ouv ? listeSaison(s, img) : '';
+      return `<div class="cal-l cal-l--s${on ? ' on' : ''}${ouv ? ' ouv' : ''}">
+          <button type="button" class="cal-lib cal-lib--s" data-calsaison="${s.id}" aria-expanded="${ouv}"><img class="cal-ill" src="${esc(img)}" alt="" loading="lazy">
+            <div><b>${esc(s.nom)}${s.alerte ? ' <span class="cal-w" title="' + esc(s.alerte) + '">⚠</span>' : ''}</b><small>${jourMois(s.debut)} → ${jourMois(s.fin)}${on ? ' · <span class="cal-maint">en ce moment</span>' : ''}</small></div>
+            <span class="cal-nb">${n} produit${n > 1 ? 's' : ''} <i class="cal-chev" aria-hidden="true">▾</i></span></button>
+          ${piste(bs.map(b => `<span class="cal-b cal-b--s" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%" title="${esc(s.nom)} · ${jourMois(s.debut)} → ${jourMois(s.fin)}"></span>`).join(''))}
+        </div>${liste}`;
     }).join('');
+
     return `<section class="cal">
-      <div class="cal-h"><h3>Le calendrier de l’année</h3><span class="cal-an"><button type="button" class="db-btn" data-calan="-1" aria-label="Année précédente">‹</button><b>${an}</b><button type="button" class="db-btn" data-calan="1" aria-label="Année suivante">›</button></span></div>
-      <div class="cal-mois"><div></div><div>${MOIS_C.map(m => `<span>${m}</span>`).join('')}</div></div>
-      <div class="cal-sec">Les campagnes</div>${campagnes}
-      <div class="cal-sec">Les saisons des produits <small>— les gammes du panel ; un clic montre leurs produits</small></div>${saisons}
+      <div class="cal-h"><h3>Le calendrier de l’année</h3>${cetteAnnee ? '<span class="cal-leg"><b class="cal-leg-auj"></b>aujourd’hui</span>' : ''}<span class="sp"></span>
+        <span class="cal-an"><button type="button" class="db-btn" data-calan="-1" aria-label="Année précédente">‹</button><b>${an}</b><button type="button" class="db-btn" data-calan="1" aria-label="Année suivante">›</button></span></div>
+      <div class="cal-tete"><div class="cal-tete-l"></div><div class="cal-mois">${MOIS_C.map((m, i) => `<span class="${i === moisAuj ? 'auj' : ''}">${m}</span>`).join('')}</div></div>
+      <div class="cal-sec">Les campagnes du magasin</div>${campagnes}
+      <div class="cal-sec">Les saisons des produits <small>les gammes du panel, dans l’ordre de l’année · un clic ouvre la liste de leurs produits</small></div>${saisons}
       ${st.calErr ? `<p class="mc-mu">Une partie du calendrier ne se lit pas : ${esc(st.calErr)}.</p>` : ''}
     </section>`;
   }
@@ -212,7 +286,11 @@
     st.el.innerHTML = html();
     st.el.querySelectorAll('[data-mmrelire]').forEach(b => b.addEventListener('click', () => charger(true)));
     st.el.querySelectorAll('[data-calan]').forEach(b => b.addEventListener('click', () => { st.an += +b.dataset.calan; st.saisonOuverte = null; chargerAnnee(false); rendre(); }));
-    st.el.querySelectorAll('[data-calsaison]').forEach(b => b.addEventListener('click', () => { const id = +b.dataset.calsaison; st.saisonOuverte = st.saisonOuverte === id ? null : id; rendre(); }));
+    st.el.querySelectorAll('[data-calsaison]').forEach(b => b.addEventListener('click', () => {
+      const id = +b.dataset.calsaison; st.saisonOuverte = st.saisonOuverte === id ? null : id;
+      const s = st.saisonOuverte != null && (st.saisons || []).find(x => x.id === id); if (s) { chargerVentes(s); }
+      rendre();
+    }));
   }
 
   window.DashMarketing = {

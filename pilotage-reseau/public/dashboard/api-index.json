@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-15T19:20:38Z",
+ "genere": "2026-11-15T19:52:43Z",
  "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -497,7 +497,7 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/franchise/dashboard_marketing.php:155",
+     "source": "src/franchise/dashboard_marketing.php:203",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -518,7 +518,7 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/franchise/dashboard_marketing.php:155",
+     "source": "src/franchise/dashboard_marketing.php:203",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -529,7 +529,7 @@
     "GET"
    ],
    "fichiers": [
-    "marketing.js:182"
+    "marketing.js:256"
    ],
    "magasin": true,
    "routes": [
@@ -539,7 +539,28 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/franchise/dashboard_marketing.php:155",
+     "source": "src/franchise/dashboard_marketing.php:203",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/ventes-periode",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:97"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:203",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -560,7 +581,7 @@
      ],
      "chemin": "/dashboard/social/ouvrir…",
      "handler": "dsRoute",
-     "source": "src/franchise/dashboard_marketing.php:188",
+     "source": "src/franchise/dashboard_marketing.php:237",
      "resume": ""
     }
    ]
