@@ -47,12 +47,13 @@ const rail = `<div class="sidebar__head"><img class="sidebar__logo" src="${R}ass
   <div class="sidebar__back"><a href="#">${ico(I.retour)}Retour à l’ERP</a></div>
   <div class="rf-rep">
     <div class="rf-cartes">
-      <button class="rf-carte"><div class="k">Objectif du jour<em class="ex">à 13 h 05</em></div><div class="v"><span class="ex">68 %</span><small class="ex">de 2 380 €</small></div>
-        <div class="rf-echelle"><i style="width:68%"></i><b style="left:64%"></b></div></button>
-      <button class="rf-carte"><div class="k">Note Google<em class="ex">287 avis</em></div><div class="v"><span class="ex">4,6</span>${etoiles(4.6)}<small>cible 4,5</small></div></button>
+      <button class="rf-carte"><div class="k">Objectif du jour<em id="rl-obj-h">lecture…</em></div><div class="v"><span id="rl-obj-pct">—</span><small id="rl-obj-de"></small></div>
+        <div class="rf-echelle"><i id="rl-obj-fill" class="att" style="width:0"></i><b id="rl-obj-trait" style="display:none"></b></div><div class="s" id="rl-obj-s"></div></button>
+      <button class="rf-carte"><div class="k">Note Google<em id="rl-gg-avis">lecture…</em></div><div class="v"><span id="rl-gg-note">—</span><span id="rl-gg-et"></span><small id="rl-gg-cible"></small></div>
+        <div class="rf-echelle"><i id="rl-gg-fill" style="width:0"></i><b id="rl-gg-trait" style="display:none"></b></div></button>
     </div></div>
   <div class="sidebar__groups">
-    ${groupe('La journée', [['Opérationnel', I.tdb, '', true], ['Tâches', I.controle, '<span class="ex">4</span>'], ['Temps morts', I.journal]])}
+    ${groupe('La journée', [['Opérationnel', I.tdb, '', true], ['Tâches', I.controle], ['Temps morts', I.journal]])}
     ${groupe('Les chiffres', [['Semaine', I.cal], ['Mois', I.calEd], ['Trimestre', I.bilan], ['Année', I.perf]])}
     ${groupe('Vendre', [['Produits', I.bundles], ['Promotions', I.offres], ['Concurrence', I.analyse], ['Primes', I.fonds]])}
     ${groupe('Assistants', [['Plan d’action', I.formulaires], ['Campagne', I.campagnes], ['Réclamation fournisseur', I.commentaires]])}
@@ -61,12 +62,12 @@ const rail = `<div class="sidebar__head"><img class="sidebar__logo" src="${R}ass
 const avatar = (d, k, v, cl) => `<button class="rf-av${cl ? ' ' + cl : ''}"><span class="rf-av__o">${ico(d)}</span><span><span class="rf-av__k">${k}</span><span class="rf-av__v">${v}</span></span></button>`;
 const topbar = `<header class="topbar"><div><p class="topbar__kicker">Vue Franchisé</p><h1>Opérationnel</h1></div>
   <div class="topbar__actions">
-    <button class="btn btn--icon" aria-label="Jour précédent">‹</button><span class="fn-date">dimanche 15 novembre</span><button class="btn btn--icon" aria-label="Jour suivant">›</button>
+    <button class="btn btn--icon" aria-label="Jour précédent">‹</button><span class="fn-date" id="rl-date">—</span><button class="btn btn--icon" aria-label="Jour suivant">›</button>
     <button class="btn">↻ Relire</button>
     <div class="rf-avs">
-      <button class="fn-vignette"><span class="k">Valeur du magasin</span><span class="v ex">100 328 €</span></button>
+      <button class="fn-vignette"><span class="k">Valeur du magasin</span><span class="v" id="rl-valeur">…</span></button>
       ${avatar(I.personne, 'Coach', 'assistant IA')}
-      ${avatar(I.revue, 'Revue du soir', '<span class="ex">à faire</span>', 'vif')}
+      ${avatar(I.revue, 'Revue du soir', '<span id="rl-revue">…</span>').replace('class="rf-av"', 'class="rf-av" id="rl-revue-av"')}
     </div></div></header>`;
 
 const html = `<!DOCTYPE html>
@@ -99,6 +100,60 @@ ${rail}
 <script src="${R}assets/js/visites.js"></script>
 <script src="${R}assets/js/cartes-magasin.js"></script>
 <script src="${R}dashboard/dashboard.js"></script>
+<script>
+/* Le rail et la barre du haut lisent leurs chiffres dans l'API du cockpit, comme le dashboard (mêmes routes, même
+ * magasin, même date) ; la valeur est reprise telle que le dashboard la calcule (sa pastille, masquée avec ses onglets). */
+(function () {
+  const API = '../api/cockpit', q = new URLSearchParams(location.search), shop = q.get('shop') || '4';
+  const auj = new Date().toISOString().slice(0, 10);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(q.get('date') || '') ? q.get('date') : auj;
+  const nf = (n, d) => Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d, maximumFractionDigits: d });
+  const fE = n => nf(Math.round(n), 0) + ' €';
+  const $ = id => document.getElementById(id);
+  const lire = p => fetch(API + p, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+    .then(r => r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status)));
+  $('rl-date').textContent = new Date(date + 'T12:00:00').toLocaleDateString('fr-BE', { weekday: 'long', day: 'numeric', month: 'long' });
+  // L'objectif du jour : le CA face à l'objectif du jour ; le trait, la projection de fin de journée.
+  lire('/exploitation/jour?date=' + date).then(d => {
+    const m = (d.magasins || []).find(x => String(x.shopId) === shop);
+    $('rl-obj-h').textContent = d.estAujourdhui ? 'en direct' : 'journée';
+    if (!m || !m.objectifJour) { $('rl-obj-s').textContent = 'pas d’objectif pour ce jour'; return; }
+    const pct = 100 * m.ca / m.objectifJour, proj = m.projection != null ? 100 * m.projection / m.objectifJour : null;
+    $('rl-obj-pct').textContent = nf(pct, 0) + ' %';
+    $('rl-obj-de').textContent = 'de ' + fE(m.objectifJour);
+    const f = $('rl-obj-fill'); f.style.width = Math.min(100, pct).toFixed(1) + '%'; f.className = pct >= 100 ? '' : 'att';
+    if (proj != null && d.estAujourdhui) { const b = $('rl-obj-trait'); b.style.display = ''; b.style.left = Math.min(100, proj).toFixed(1) + '%'; if (proj >= 100) { b.style.marginLeft = '-2px'; } }
+    $('rl-obj-s').textContent = fE(m.ca) + (proj != null && d.estAujourdhui ? ' · trait : projection ' + fE(m.projection) : '');
+  }).catch(e => { $('rl-obj-h').textContent = ''; $('rl-obj-s').textContent = 'lecture impossible (' + e.message + ')'; });
+  // La note Google : la fiche du magasin, sur l'échelle 4,0 → 5,0, le trait à la cible du réseau.
+  lire('/marketing/avis').then(d => {
+    const m = (d.magasins || []).find(x => String(x.id) === shop);
+    if (!m || m.note == null) { $('rl-gg-avis').textContent = 'pas de fiche'; return; }
+    const cible = d.cible, pos = v => Math.max(0, Math.min(100, (v - 4) * 100));
+    $('rl-gg-note').textContent = nf(m.note, 1);
+    $('rl-gg-avis').textContent = nf(m.avis, 0) + ' avis';
+    $('rl-gg-et').innerHTML = '<span class="rf-etoiles">' + [1, 2, 3, 4, 5].map(i => '<svg viewBox="0 0 24 24" class="' + (i <= Math.round(m.note - 0.4) ? 'on' : '') + '"><path d="${I.etoile}"/></svg>').join('') + '</span>';
+    if (cible != null) { $('rl-gg-cible').textContent = 'cible ' + nf(cible, 1); const b = $('rl-gg-trait'); b.style.display = ''; b.style.left = pos(cible) + '%'; }
+    const f = $('rl-gg-fill'); f.style.width = pos(m.note) + '%'; f.className = cible == null || m.note >= cible ? '' : 'att';
+  }).catch(e => { $('rl-gg-avis').textContent = 'lecture impossible'; });
+  // La revue du soir : la même règle que le bouton du dashboard (rvEtat).
+  lire('/soir/revue?shop=' + encodeURIComponent(shop) + '&date=' + date + '&leger=1').then(L => {
+    const h = L.heure || '18:00', r = L.revue;
+    let t, vif = false;
+    if (r && r.statut === 'cloturee') { t = 'faite'; }
+    else if (r) { t = 'en cours'; vif = true; }
+    else if (date < auj) { t = 'pas faite'; }
+    else if (new Date().toTimeString().slice(0, 5) >= h) { t = 'à faire'; vif = true; }
+    else { t = 'à ' + h.replace(':00', ' h').replace(':', ' h '); }
+    $('rl-revue').textContent = t; $('rl-revue-av').classList.toggle('vif', vif);
+  }).catch(() => { $('rl-revue').textContent = '—'; });
+  // La valeur : celle que le dashboard calcule (/ventes/mensuel), lue dans sa pastille.
+  const t0 = Date.now(), v = setInterval(() => {
+    const e = document.querySelector('#dash .db-valoc .v'), x = e && e.textContent.trim();
+    if (x && x !== '—') { $('rl-valeur').textContent = x; clearInterval(v); } else if (Date.now() - t0 > 60000) { clearInterval(v); }
+  }, 300);
+})();
+</script>
 </body></html>
 `;
 fs.writeFileSync(path.join(D, 'reel.html'), html);

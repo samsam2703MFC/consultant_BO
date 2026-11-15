@@ -11,13 +11,12 @@ const BASE = 'http://127.0.0.1:8099/docs/maquettes/rail-franchise/';
   const p = await b.newPage({ viewport: { width: 1440, height: 1000 }, deviceScaleFactor: 2 });
   const err = []; p.on('pageerror', e => err.push(e.message)); p.on('requestfailed', r => { if (!/\/api\/cockpit\//.test(r.url())) { err.push('échec ' + r.url()); } });
   const mesures = {};
-  // reel.html charge le vrai dashboard : ses lectures de l'API du cockpit restent en attente (le serveur n'est pas lu
-  // d'ici), ses blocs restent sur « lecture… » — l'état que montre le dashboard pendant qu'il lit.
+  // reel.html se capture avec capturer-reel.js (le cockpit en ligne, en lecture). Ici, ses lectures resteraient en attente
+  // ; la route ne sert plus qu'à ne rien lire par erreur.
   await p.route('**/api/cockpit/**', () => {});
-  for (const m of ['reel', 'final', 'a', 'b', 'b-coach', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
+  for (const m of ['final', 'a', 'b', 'b-coach', 'b-semaine', 'b-mois', 'b-trimestre', 'b-annee', 'c', 'b1', 'b2', 'b3']) {
     await p.setViewportSize({ width: 1440, height: 1000 });
-    await p.goto(BASE + m + '.html', { waitUntil: m === 'reel' ? 'load' : 'networkidle' });
-    if (m === 'reel') { await p.waitForTimeout(2500); }
+    await p.goto(BASE + m + '.html', { waitUntil: 'networkidle' });
     await p.evaluate(() => document.fonts.ready);
     const h = await p.evaluate(() => document.querySelector('.sidebar').scrollHeight);
     mesures[m] = { rail: h, tientDans1000: h <= 1000 };

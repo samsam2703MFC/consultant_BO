@@ -29,10 +29,21 @@ son conteneur `#dash`, à droite du rail. Ce qui change, et seulement ça :
   la revue du soir (en avatar), plus le coach (l'assistant IA) ;
 - en haut du rail : l'objectif du jour et la note Google.
 
-Tout le reste — la frise de la semaine, l'objectif du jour, le P&L court, les ventes par catégorie, la journée, la
-vitrine, les contrôles en photo… — est le dashboard tel qu'il est. La capture montre ses blocs sur « lecture… » : la
-maquette ne lit pas l'API du cockpit (le serveur de production n'est pas interrogé d'ici). Ouverte sur le serveur, à
-côté de `public/dashboard`, la même page se remplirait. Les chiffres du rail et de la barre sont des exemples.
+Tout le reste — la frise de la semaine, ta place dans le réseau, l'objectif comptoir et B2B, l'heure par heure, le P&L
+court, les ventes par catégorie, la journée, la vitrine, les contrôles en photo, le stock — est le dashboard tel qu'il
+est.
+
+**Chiffres réels** (lecture de l'API du cockpit autorisée le 15/11/2026) : Halle, dimanche 15 novembre 2026 à 09:46 —
+`reel.png` (1 440 × 1 000) et `reel-entier.png` (toute la page). Le rail et la barre lisent leurs chiffres dans la même
+API que le dashboard, rien n'est écrit en dur : l'objectif du jour (`/exploitation/jour` : 868 € sur 2 480 €, 35 % ; le
+trait, la projection de fin de journée, 2 517 €), la note Google (`/marketing/avis` : 4,5 sur 55 avis, face à la cible
+du réseau, 4,6), la revue du soir (`/soir/revue?leger=1` : « à 18 h », la règle du bouton du dashboard), la valeur
+(celle que le dashboard calcule, 102 172 €).
+
+Capturer : `COCKPIT=<adresse du cockpit, jusqu'à /consulant_bo> node capturer-reel.js` (serveur local `php -S
+127.0.0.1:8099 -t .` depuis `pilotage-reseau/`). **Lecture seule** : seules les requêtes GET partent vers le cockpit,
+toute écriture est bloquée. Les captures se partagent : les prénoms des personnes (planning, vendeurs, qui a fait ou
+contrôlé une tâche, consultant) sont remplacés à la lecture par « Personne A », « Personne B »…
 
 Pour le coder : dans `dashboard.js`, au bureau, l'en-tête et la rangée d'onglets laissent la place au rail ; chaque
 entrée du rail pose `?vue=` comme l'onglet le faisait.
