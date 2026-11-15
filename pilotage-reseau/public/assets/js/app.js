@@ -384,6 +384,8 @@ class App {
       fonds: 'fonds',
       mktTypes: 'parametres/campagnes', mktObjectifs: 'objectifs/produits', scoringTri: 'fiche/scoring', clientMystere: 'parametres/mystere',
       suivi: 'suivi/taches', controle: 'suivi/controles', suiviMensuel: 'suivi/mois', kpiTable: 'parametres/kpi', reporting: 'reporting',
+      // L'entraînement de l'IA (15/11/2026) : rayon par rayon, consigne, photos modèles, leçons.
+      iaEntrainement: 'suivi/entrainement',
       // La clé est l'IDENTIFIANT de l'écran, pas son adresse : « params »
       // n'existe nulle part ailleurs dans l'application, si bien que rouvrir
       // #/parametres depuis un signet résolvait vers un écran inconnu et
@@ -1192,7 +1194,7 @@ class App {
       mktObjectifs: ['Objectifs produits', 'Les produits d’une campagne et ce que chaque magasin doit en vendre sur la période : l’objectif en pièces, posé avec ses clients du mois en regard, et la jauge qui dit où il en est — la même que dans son dashboard.'],
       fonds: ['Fonds & Royalties', 'Le fonds marketing du réseau — ce qui l\u2019alimente, ce qu\u2019il finance — et les redevances par magasin. Tout se saisit ici : le module marketing tient le grand livre, le cockpit y écrit sans qu\u2019on change d\u2019application.'],
       planogramme: ['Planogramme — comptoir standard', 'Le même comptoir pour tous les magasins : 25 sections, trois étages, un produit du catalogue et sa quantité par emplacement. Et les rotations, magasin par magasin, section par section, jour par jour.'],
-      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
+      magasins: ['Tableau des magasins', 'Marge, valeur, CA, tickets et panier moyen par magasin — dernier mois encodé, vs N-1 et vs cibles.'], budget: ['Suivi budget — magasin', 'Budget validé par le consultant contre réel encodé chaque mois, poste par poste.'], encodage: ['Encodage du budget', 'Saisie du mois : chiffre d’affaires budgété et charges réellement encodées, magasin par magasin.'], budgetparam: ['Paramètres du budget', 'Ce qui se décide une fois par an : l’étude de marché d’un magasin (potentiel, montée en régime, saisonnalité) et les taux de charges du réseau.'], objectifs: ['Objectifs de CA', 'Cibles par magasin et consolidées réseau, sur 3 horizons : 1 an, 3 ans et 5 ans.'], marge: ['Marge & maîtrise des coûts', 'Marge nette des franchisés et ratios food / labour / overhead, avec alertes par levier.'], suivi: ['Suivi des tâches', 'Ce qui a été validé sur la période, et les signalements à traiter — semaine ou mois.'], kpiTable: ['Table KPI', 'Le magasin de valeurs du réseau : chaque indicateur encodé avec sa source (endpoint, champ, période), collecté chaque heure, historisé — et repris tel quel dans les rapports.'], suiviMensuel: ['Suivi mensuel des tâches', 'Faites / pas faites, magasin par magasin : la semaine, le mois en cours ou l\u2019ann\u00e9e — et le d\u00e9tail jour par jour au clic.'], controle: ['Contrôle des tâches', 'Tâches et checklists du panel, par boutique : une tâche notée est validée. Ouvrez une tâche pour voir la photo et poser (ou revoir) la note.'], iaEntrainement: ['Entraînement de l’IA', 'Rayon par rayon : ce que l’IA doit voir (la consigne), le comptoir parfait de chaque magasin (la photo modèle), ce qu’elle a appris de vos corrections — et à quel point elle est d’accord avec vous.'], reporting: ['Reporting automatisé', 'Rapports récurrents générés et envoyés par email (PDF), alertes push paramétrables.'], journal: ['Journal', 'Traçabilité intégrale : chaque action est horodatée avec son auteur. Filtrable et exportable.'], produits: ['Scoring produits', 'Volume, marge nette, taux de perte et présence au comptoir : un score unique par référence pour arbitrer la gamme. Cliquez un taux de perte pour le détail magasin par magasin.'], parametres: ['Paramètres', 'Leviers, seuils, modèles d’email, utilisateurs, magasins, zones et intégration TFB.'], usageConsole: ['Usage de la console', 'Ce qui sert et ce qui ne sert pas : écrans ouverts, boutons affichés et cliqués. De quoi retirer ce qui dort et fusionner ce qui fait double emploi.'], scoring: ['Scoring produits — réglages', 'Pondération des quatre critères, seuils de verdict et échelle de la marge nette. Ces réglages pilotent directement l’écran Scoring produits.'] };
     common.screenTitle = titles[S.screen][0]; common.screenSub = titles[S.screen][1];
     // La page du franchisé (?shop=) : rien de la marque ni des sponsors, pas même dans l'en-tête.
     if (S.screen === 'primesApp' && S.prSection === 'franchise') { common.screenTitle = 'Primes du magasin'; common.screenSub = 'Ce que tes vendeuses gagnent dans l’app : les primes de la marque et des sponsors qui tournent chez toi, et celles que tu poses pour ton magasin.'; }
@@ -1200,7 +1202,7 @@ class App {
     // Les écrans produits regroupés : un titre commun, des onglets qui changent d'écran sans changer de question.
     const GROUPES = {
       suivi: ['Tâches', 'La même checklist à trois moments : ce qui est ouvert, ce qui attend une validation, et ce que le mois a donné.',
-        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel']]],
+        [['suivi', 'Suivi'], ['controle', 'Contrôle'], ['suiviMensuel', 'Mensuel'], ['iaEntrainement', 'Entraînement de l’IA']]],
       parametres: ['Paramètres', 'Les référentiels de la console : les réglages généraux, le barème du scoring produits, le moteur de marge de la centrale, les types de campagne, la table des KPI et la charte Brand Guard.',
         [['parametres', 'Général'], ['scoring', 'Scoring produits'], ['clientMystere', 'Client mystère'], ['mktTypes', 'Types de campagne'], ['kpiTable', 'Table KPI'], ['brandGuard', 'Brand Guard']]],
       journal: ['Journal & diagnostic', 'Ce qui sert à comprendre la console elle-même : le journal des écritures, l’usage réel des écrans, et ce que les API ne rendent pas.',
@@ -1412,6 +1414,7 @@ class App {
           ['budgetparam', 'Paramètres du budget', 0]] },
         { sub: 'Suivi journalier', children: [
           ['suivi', 'Tâches et contrôles photo', (S.suiviData ? S.suiviData.ouverts : 0) + (((D.pwaTasks || {}).totals || {}).aValider || 0), ['controle', 'suiviMensuel']],
+          ['iaEntrainement', 'Entraînement de l’IA', 0],
           ['controlesQualite', 'Contrôles qualité du mois', 0],
           ['mktObjectifs', 'Objectifs', 0],
           ['reputation', 'Note Google et avis', 0],
@@ -1551,11 +1554,11 @@ class App {
     common.erpUrl = (this.meta && this.meta.erpUrl) || '';
     common.embed = typeof document !== 'undefined' && document.documentElement.classList.contains('is-embedded');
 
-    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench'].forEach(k => common[k] = false);
+    ['isBudget', 'isEncodage', 'isMagasins', 'isObjectifs', 'isMarge', 'isReporting', 'isJournal', 'isParams', 'isProduits', 'isSuivi', 'isControle', 'isScoring', 'isCat', 'isAsso', 'isPlano', 'isAnalyse', 'isDiag', 'isSeuil', 'isFonds', 'isMktTypes', 'isReput', 'isRJour', 'isBudgetParam', 'isMktObj', 'isScoringTri', 'isCltMyst', 'isUsage', 'isUsageC', 'isManque', 'isVentes', 'isCrois', 'isSuiviM', 'isKpiT', 'isAnaprod', 'isPxv', 'isTablette', 'isFid', 'isAsc', 'isBrandGuard', 'isInvendus', 'isInventaires', 'isVerifR', 'isVerifFlux', 'isVerifFuites', 'isVerifEvol', 'isVerifMat', 'isVerifCa', 'isVerifMouv', 'isGC', 'isFF', 'isCQM', 'isPrimesApp', 'isApiModule', 'isPointages', 'isSvTableau', 'isSvTablette', 'isSvMsp', 'isSvFranchise', 'isSvAdmin', 'isMD', 'isCadreT', 'isAudits', 'isVisib', 'isStruct', 'isParamProd', 'isBench', 'isIaEnt'].forEach(k => common[k] = false);
     const key = { brandGuard: 'isBrandGuard', invendus: 'isInvendus', inventaires: 'isInventaires', verifRecettes: 'isVerifR', verifFlux: 'isVerifFlux', verifFuites: 'isVerifFuites', verifEvol: 'isVerifEvol', verifMatieres: 'isVerifMat', verifCa: 'isVerifCa', verifMouv: 'isVerifMouv', ficheFranchise: 'isFF', controlesQualite: 'isCQM', suiviTableau: 'isSvTableau', suiviTablette: 'isSvTablette', suiviMsp: 'isSvMsp', suiviFranchise: 'isSvFranchise', suiviAdmin: 'isSvAdmin', suiviSources: 'isSvSources', budget: 'isBudget', encodage: 'isEncodage', budgetparam: 'isBudgetParam', magasins: 'isMagasins', objectifs: 'isObjectifs', marge: 'isMarge', produits: 'isProduits', suivi: 'isSuivi', controle: 'isControle', reporting: 'isReporting', journal: 'isJournal', parametres: 'isParams', scoring: 'isScoring', catalogue: 'isCat',
       assortiment: 'isAsso', structure: 'isStruct', paramProduits: 'isParamProd', demandesFranchises: 'isHelpdesk', benchmark: 'isBench', planogramme: 'isPlano', fonds: 'isFonds',
       mktTypes: 'isMktTypes', mktObjectifs: 'isMktObj', scoringTri: 'isScoringTri', clientMystere: 'isCltMyst', reputation: 'isReput', resultatJour: 'isRJour',
-      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
+      analyse: 'isAnalyse', anaprod: 'isAnaprod', prixvolume: 'isPxv', diagnostic: 'isDiag', seuil: 'isSeuil', usage: 'isUsage', usageConsole: 'isUsageC', manque: 'isManque', ventes: 'isVentes', croisements: 'isCrois', suiviMensuel: 'isSuiviM', iaEntrainement: 'isIaEnt', kpiTable: 'isKpiT', tablette: 'isTablette', fidelite: 'isFid', assistantCoachs: 'isAsc', primesApp: 'isPrimesApp', apiModule: 'isApiModule', pointages: 'isPointages', promoTableau: 'isPromoTab', promoEdition: 'isPromoEd',
       mdFormulaires: 'isMD', mdMapping: 'isMD', mdLeads: 'isMD', mdSms: 'isMD', cadreTaches: 'isCadreT', audits: 'isAudits', visibilite: 'isVisib' }[S.screen];
     // Les dix écrans de la centrale partagent un même gabarit : un seul drapeau
     // et une seule fonction de valeurs, l'écran courant étant porté par S.screen.
@@ -1990,6 +1993,7 @@ class App {
     // --- contrôle des tâches (checklists consultants du panel)
     if (common.isControle) { this.iaStatut(); this.valsControle(common); }
     if (common.isSuiviM) this.valsSuiviM(common);
+    if (common.isIaEnt) { this.iaStatut(); this.valsIaEntrainement(common); }
     if (common.isKpiT) this.valsKpiT(common);
     // --- contrôle des posts Facebook
     if (common.isBrandGuard) this.valsBrandGuard(common);
@@ -13726,6 +13730,14 @@ class App {
           : '',
         // La photo contre l'heure standard de sa checklist : l'heure fait partie du contrôle.
         ponct: this.ponctualite(d.heure, d.faitLe),
+        // La photo modèle du rayon pour ce magasin (choisie parfaite) passe devant la photo type du réseau ;
+        // une photo de comptoir peut devenir le modèle, du magasin ou du réseau.
+        modele: d.modele ? { photo: d.modele.photo, date: d.modele.date ? this.fD(d.modele.date) : '' } : null,
+        modeleEstCelleCi: !!(d.modele && String(d.modele.taskId) === String(dt.taskId) && d.modele.date === dt.date),
+        shopNom: this.iaNomMagasin(dt.shopId),
+        modeleMagasin: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'magasin') : null,
+        modeleReseau: d.rayon && d.photo ? () => this.iaPrendreModele(dt.shopId, dt.taskId, dt.date, 'reseau') : null,
+        modeleBusy: (this.state.iaModeleBusy || {})[dt.shopId + '|' + dt.taskId + '|' + dt.date] || '',
         avisTxt: a.note != null ? (a.note + '/5 · ' + (a.accepte ? 'conforme' : 'non conforme')
           + (a.consultant ? ' — ' + a.consultant : '')) : 'Pas encore d’avis consultant',
         avisComment: a.comment || '',
@@ -14683,6 +14695,101 @@ class App {
       this.setState({});
       this.notify(retenir ? 'Leçon reprise — l’IA la recevra de nouveau' : 'Leçon écartée — l’IA ne la recevra plus');
     });
+  }
+  /* --- L'entraînement de l'IA (écran « Entraînement de l'IA », GET /ia/entrainement) -----------------
+   *
+   * Rayon par rayon : la consigne (ce que l'IA doit voir), la photo modèle de
+   * chaque magasin et la photo type du réseau, les leçons, l'accord. Une
+   * photo notée Exemplaire est candidate au modèle ; c'est le consultant qui
+   * la prend, jamais l'IA. */
+  iaEntLire(forcer){
+    if (!forcer && (this._iaEnt !== undefined || this._iaEntLu)) { return this._iaEnt || null; }
+    this._iaEntLu = true;
+    readOne('/ia/entrainement').then(r => { this._iaEntLu = false; this._iaEnt = r || { indispo: true, rayons: [], candidates: [] }; this.setState({}); });
+    return this._iaEnt || null;
+  }
+  /** Le nom court d'un magasin (« Halle ») : la journée chargée, sinon le référentiel. */
+  iaNomMagasin(id){
+    const s = ((this.D.pwaTasks || {}).shops || []).find(x => String(x.shopId) === String(id));
+    const st = (this.D.stores || []).find(x => String(x.id) === String(id));
+    const nom = (s && s.shop) || (st && st.nom) || ('Magasin ' + id);
+    return nom.indexOf(' - ') >= 0 ? nom.slice(nom.lastIndexOf(' - ') + 3).trim() : nom;
+  }
+  /** Prendre la photo d'une tâche comme modèle de son rayon : pour son magasin, ou pour le réseau. */
+  iaPrendreModele(shopId, taskId, date, portee){
+    const k = shopId + '|' + taskId + '|' + date;
+    if ((this.state.iaModeleBusy || {})[k]) { return; }
+    this.setState(s => ({ iaModeleBusy: Object.assign({}, s.iaModeleBusy, { [k]: portee }) }));
+    write(this.source, 'POST', '/ia/modeles', { shopId, taskId, date, portee }).then(r => {
+      this.setState(s => { const b = Object.assign({}, s.iaModeleBusy); delete b[k]; return { iaModeleBusy: b }; });
+      if (!r || r.ok === false) { this.notify('Photo modèle refusée — ' + ((r && r.error) || 'serveur injoignable')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      // La photo type du réseau a pu changer : la liste des rayons se relit.
+      if (portee === 'reseau') { this._rv = undefined; }
+      const ry = (r.rayons || []).find(x => x.cle === r.rayon) || {};
+      this.notify('Photo modèle ' + (ry.nom ? '« ' + ry.nom + ' » ' : '') + (portee === 'reseau' ? 'du réseau' : 'pour ' + this.iaNomMagasin(shopId)) + ' — l’IA juge désormais contre elle');
+      // Le volet ouvert sur cette tâche montre le nouveau modèle.
+      const dt = this.state.ctrlDet;
+      if (dt && String(dt.shopId) === String(shopId) && String(dt.taskId) === String(taskId) && dt.date === date) {
+        readOne('/pwa/tasks/detail?shop=' + encodeURIComponent(shopId) + '&task=' + encodeURIComponent(taskId) + '&date=' + encodeURIComponent(date))
+          .then(d => this.setState(s => (s.ctrlDet && String(s.ctrlDet.taskId) === String(taskId) && d ? { ctrlDet: Object.assign({}, s.ctrlDet, { d }) } : {})));
+      }
+      this.setState({});
+    });
+  }
+  iaRetirerModele(rayon, nomRayon, shopId){
+    if (!window.confirm('Retirer la photo modèle « ' + nomRayon + ' » de ' + this.iaNomMagasin(shopId) + ' ? L’IA reprendra la photo type du réseau.')) { return; }
+    write(this.source, 'POST', '/ia/modeles', { rayon, shopId, retirer: true }).then(r => {
+      if (!r || r.ok === false) { this.notify('Échec — ' + ((r && r.error) || 'modèle inchangé')); return; }
+      if (Array.isArray(r.rayons)) { this._iaEnt = r; }
+      this.notify('Photo modèle retirée — ' + nomRayon + ', ' + this.iaNomMagasin(shopId));
+      this.setState({});
+    });
+  }
+  valsIaEntrainement(common){
+    const S = this.state;
+    const E = this.iaEntLire();
+    this.rvLire();
+    const nomN = n => ((this.zNiveaux().find(v => v.n === n) || {}).nom) || (n + '/5');
+    const nomT = x => String(x || '').replace(/^Photo du comptoir\s*-\s*/i, '');
+    const busy = S.iaModeleBusy || {};
+    if (!E) { common.iaEnt = { chargement: true }; return; }
+    const A = E.accord || {};
+    const nModeles = (E.rayons || []).reduce((a, r) => a + (r.modeles || []).length + (r.photo ? 1 : 0), 0);
+    const nLecons = (E.rayons || []).reduce((a, r) => a + (r.lecons || []).filter(l => l.lecon).length, 0);
+    const candidates = (E.candidates || []).map(c => {
+      const P = this.ctrlPhotosLire(c.shopId, c.date);
+      const ph = ((P && P.photos) || []).find(p => String(p.taskId) === String(c.taskId));
+      const k = c.shopId + '|' + c.taskId + '|' + c.date;
+      return { photo: ph ? ph.photo : null, attente: !P, shop: this.iaNomMagasin(c.shopId), rayon: nomT(c.tache), date: this.fD(c.date),
+        note: (c.nomFinal || nomN(c.noteFinale)), par: c.validePar || '', busy: busy[k] || '',
+        magasin: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'magasin'),
+        reseau: () => this.iaPrendreModele(c.shopId, c.taskId, c.date, 'reseau') };
+    });
+    const rayons = (E.rayons || []).map(r => {
+      const a = r.accord || {};
+      const lec = (r.lecons || []);
+      return { cle: r.cle, nom: r.nom, consigne: r.consigne || '', defaut: r.criteresDefaut || '',
+        setConsigne: e => { const v = String(e.target.value).trim(); if (v !== (r.consigne || '')) {
+          this.rvEcrire(r.nom, { consigne: v }, v ? 'Consigne enregistrée — ' + r.nom : 'Consigne retirée — ' + r.nom).then(() => this.iaEntLire(true)); } },
+        accord: a.notees ? a.pct + ' % d’accord sur ' + a.notees + ' photo' + (a.notees > 1 ? 's' : '') : 'pas encore de note comparée',
+        accordCls: !a.notees ? '' : a.pct >= 80 ? 'ok' : a.pct >= 60 ? 'moy' : 'nc',
+        ecarts: a.notees && (a.tropSevere || a.tropIndulgente) ? 'IA plus sévère ' + a.tropSevere + ' fois, plus indulgente ' + a.tropIndulgente : '',
+        reseau: r.photo || null,
+        modeles: (r.modeles || []).map(m => ({ photo: m.photo, shop: this.iaNomMagasin(m.shopId), date: m.date ? this.fD(m.date) : '',
+          par: m.par || '', retirer: () => this.iaRetirerModele(r.cle, r.nom, m.shopId) })),
+        lecons: lec.slice(0, 5).map(l => ({ date: this.fD(l.date), shop: this.iaNomMagasin(l.shopId), ia: nomN(l.niveau), vous: nomN(l.noteFinale),
+          raison: l.raison || '', retenue: !!l.lecon, basculer: () => this.iaLeconRetenir(l, !l.lecon) })),
+        leconsPlus: Math.max(0, lec.length - 5) };
+    });
+    common.iaEnt = { chargement: false, indispo: !!E.indispo, dispo: (this.D.iaStatut || {}).configure === true,
+      kpis: [
+        { k: 'Accord avec vos notes', v: A.notees ? A.pct + ' %' : '—', s: A.notees ? 'sur ' + A.notees + ' photos notées en ' + A.jours + ' jours' : 'mesuré dès vos premières notes en mode assisté' },
+        { k: 'Leçons retenues', v: String(nLecons), s: 'vos corrections, envoyées à l’IA (les ' + (E.leconsMax || 6) + ' dernières par rayon)' },
+        { k: 'Photos modèles', v: String(nModeles), s: 'photos types du réseau et modèles des magasins' },
+        { k: 'Photos parfaites à trier', v: String(candidates.length), s: 'notées « ' + (E.nomNiveauModele || 'Exemplaire') + ' » ces 30 jours' }],
+      communs: E.communs || '', nomNiveau: E.nomNiveauModele || 'Exemplaire', candidates, rayons,
+      versControle: () => this.setState({ screen: 'controle', railOuvert: false }) };
   }
   /**
    * « Valider ce que l'IA a proposé » : chaque ligne cochée part au panel,
