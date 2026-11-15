@@ -117,6 +117,9 @@ final class Anthropic
                 . (!empty($n['aide']) ? ' (' . $n['aide'] . ')' : '');
         }
         $criteres = trim((string) ($regles['criteres'] ?? ''));
+        // Les corrections du consultant sur des photos semblables (src/ia_assistant.php, iaLeconsPour) : c'est par
+        // elles que l'assistant évolue, sans réentraînement. Elles passent après les critères du rayon.
+        $exemples = array_values(array_filter(array_map(fn ($e) => trim((string) $e), (array) ($regles['exemples'] ?? []))));
 
         $contenu = [];
         if ($ref !== null) {
@@ -131,6 +134,8 @@ final class Anthropic
             "Tâche contrôlée : « " . $tache . " »."
             . ($contexte !== '' ? "\nContexte : " . $contexte : '')
             . ($criteres !== '' ? "\n\nCe que le réseau attend :\n" . $criteres : '')
+            . ($exemples !== [] ? "\n\nCorrections récentes du consultant sur des photos semblables (aligne-toi sur ses"
+                . " décisions, sans contredire les critères ci-dessus) :\n- " . implode("\n- ", $exemples) : '')
             . "\n\nBarème du réseau, à utiliser TEL QUEL :\n" . implode("\n", $bareme)
             . "\n\n" . self::NOTE_REGLES];
 

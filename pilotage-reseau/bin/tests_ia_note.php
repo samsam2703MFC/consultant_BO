@@ -78,6 +78,13 @@ verifie('sans critères ni photo type : une seule image, pas de bloc critères',
 $envois = [];
 Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux);
 verifie('les anciens appels (cinq arguments) marchent toujours', count($envois) === 1);
+verifie('sans leçon : pas de bloc corrections', !str_contains($texte($envois[0]), 'Corrections récentes'));
+$envois = [];
+Anthropic::noterPhoto('Photo du comptoir - Tartes', $photo, null, $niveaux, '', ['criteres' => rvCriteresIa(['cle' => 'tartes', 'nom' => 'Tartes']),
+    'exemples' => ['Tu avais proposé « Non conforme — majeur » ; le consultant a noté « Non conforme — mineur » — sa raison : un objet seul reste mineur.', ' ']]);
+$t = $texte($envois[0]);
+verifie('les leçons du consultant partent avec la photo, après les critères', str_contains($t, 'Corrections récentes du consultant')
+    && str_contains($t, 'un objet seul reste mineur') && strpos($t, 'Ce que le réseau attend') < strpos($t, 'Corrections récentes') && substr_count($t, "\n- Tu avais") === 1);
 
 echo "Les réponses\n";
 $reponse = [200, ['stop_reason' => 'max_tokens', 'content' => [['type' => 'text', 'text' => '{"niveau": 4, "const']]]];

@@ -1,0 +1,143 @@
+#!/usr/bin/env php
+<?php
+declare(strict_types=1);
+
+/**
+ * Tests de l'assistant de notation (src/ia_assistant.php) — base SQLite en mémoire, la proposition de l'IA
+ * (ep_ia_note) en doublure.
+ *
+ *   php bin/tests_ia_assistant.php
+ *
+ * Une proposition se calcule une fois puis se relit ; un échec se retente, une clé absente ne s'enregistre pas ;
+ * une photo déjà notée ne se repropose pas ; la note du consultant rejoint la proposition (validée telle quelle ou
+ * corrigée, avec sa raison) ; les corrections deviennent des leçons, par rayon, les plus récentes d'abord, et
+ * s'écartent d'un clic ; le taux d'accord compte les notes identiques et le sens des écarts.
+ */
+// La sortie en tampon : sans quoi le premier echo envoie les en-têtes et http_response_code() ne change plus rien.
+ob_start();
+$ok = 0; $ko = 0;
+function verifie(string $nom, bool $cond, string $detail = ''): void
+{
+    global $ok, $ko;
+    if ($cond) { $ok++; echo "  ok  $nom\n"; }
+    else { $ko++; echo "  KO  $nom" . ($detail !== '' ? " — $detail" : '') . "\n"; }
+}
+
+final class Db {
+  static ?PDO $p = null;
+  static function pdo(): PDO { if (!self::$p) { self::$p = new PDO('sqlite::memory:'); self::$p->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION); } return self::$p; }
+  static function fx(string $q): string { return (string) preg_replace('/\)\s*ENGINE=InnoDB[^;]*$/', ')', $q); }
+  static function exec(string $q, array $a = []): int { $s = self::pdo()->prepare(self::fx($q)); $s->execute($a); return $s->rowCount(); }
+  static function rows(string $q, array $a = []): array { $s = self::pdo()->prepare($q); $s->execute($a); return $s->fetchAll(PDO::FETCH_ASSOC); }
+  static function row(string $q, array $a = []): ?array { $r = self::rows($q, $a); return $r[0] ?? null; }
+}
+function setting(string $k, $d = null) {
+    return $k === 'signalement' ? ['seuil' => 4, 'niveaux' => [['n' => 5, 'nom' => 'Exemplaire'], ['n' => 4, 'nom' => 'Conforme'],
+        ['n' => 3, 'nom' => 'Non conforme — mineur'], ['n' => 2, 'nom' => 'Non conforme — majeur'], ['n' => 1, 'nom' => 'Non conforme — critique']]] : $d;
+}
+function body(): array { return $GLOBALS['BODY'] ?? []; }
+function journalAdd(...$a): void { $GLOBALS['JOURNAL'][] = $a; }
+/** La doublure de la proposition du cockpit : rend ce que le test prépare, compte les appels. */
+function ep_ia_note(): array
+{
+    $GLOBALS['APPELS'][] = [$_GET['shop'] ?? null, $_GET['task'] ?? null, $_GET['date'] ?? null];
+    return $GLOBALS['IA'];
+}
+require __DIR__ . '/../src/ia_assistant.php';
+
+$IA_OK = static fn (int $n, string $conf = 'haute', string $rayon = 'tartes', string $constat = 'Comptoir garni') => ['etat' => 'ok', 'niveau' => $n,
+    'nom' => 'x', 'confiance' => $conf, 'constats' => [$constat], 'commentaire' => 'Commentaire ' . $n, 'motif' => null, 'modele' => 'modele-essai',
+    'tache' => 'Photo du comptoir - Tartes', 'rayon' => $rayon, 'leconsVues' => 2];
+$proposer = static function (array $b) { $GLOBALS['BODY'] = $b; http_response_code(200); return wr_ia_proposer(); };
+$J = date('Y-m-d');
+
+echo "Proposer\n";
+$GLOBALS['APPELS'] = []; $GLOBALS['IA'] = $IA_OK(3);
+$r = $proposer(['shopId' => 4, 'taskId' => 1209, 'date' => $J]);
+$p = $r['proposition'] ?? [];
+verifie('une proposition calculée et rendue', ($r['ok'] ?? false) && $p['niveau'] === 3 && $p['nom'] === 'Non conforme — mineur' && $p['etat'] === 'propose' && $r['cache'] === false, json_encode($r, JSON_UNESCAPED_UNICODE));
+verifie('la photo demandée au cockpit', $GLOBALS['APPELS'] === [['4', '1209', $J]]);
+verifie('constats, commentaire, rayon, leçons vues gardés', $p['constats'] === ['Comptoir garni'] && $p['commentaire'] === 'Commentaire 3' && $p['rayon'] === 'tartes' && $p['leconsVues'] === 2);
+$r = $proposer(['shopId' => 4, 'taskId' => 1209, 'date' => $J]);
+verifie('déjà proposée : relue, pas repayée', $r['cache'] === true && count($GLOBALS['APPELS']) === 1);
+$GLOBALS['IA'] = $IA_OK(4);
+$r = $proposer(['shopId' => 4, 'taskId' => 1209, 'date' => $J, 'refaire' => true]);
+verifie('« refaire » relance le modèle', count($GLOBALS['APPELS']) === 2 && $r['proposition']['niveau'] === 4);
+
+$GLOBALS['IA'] = ['etat' => 'attente', 'niveau' => null, 'motif' => 'réponse coupée par la limite de jetons', 'modele' => 'modele-essai', 'tache' => 'Photo du comptoir - Quiches', 'rayon' => 'quiches'];
+$r = $proposer(['shopId' => 4, 'taskId' => 1211, 'date' => $J]);
+verifie('un échec s’enregistre avec son motif', $r['proposition']['etat'] === 'echec' && str_contains((string) $r['proposition']['motif'], 'coupée'));
+$GLOBALS['IA'] = $IA_OK(4, 'haute', 'quiches');
+$r = $proposer(['shopId' => 4, 'taskId' => 1211, 'date' => $J]);
+verifie('un échec se retente au prochain appel', $r['proposition']['etat'] === 'propose' && $r['proposition']['niveau'] === 4);
+
+$GLOBALS['IA'] = ['etat' => 'attente', 'niveau' => null, 'motif' => 'manque API — aucune clé Anthropic enregistrée'];
+$r = $proposer(['shopId' => 4, 'taskId' => 1212, 'date' => $J]);
+verifie('sans clé : 503, rien d’enregistré', http_response_code() === 503 && Db::row('SELECT 1 AS x FROM pil_cq_ia WHERE task_id = 1212') === null);
+$r = $proposer(['shopId' => 4, 'taskId' => 0, 'date' => $J]);
+verifie('requête incomplète : 400', http_response_code() === 400 && isset($r['error']));
+
+echo "La note du consultant\n";
+iaNoteHumaine(4, 1211, $J, 4, '', null, 'Sam');
+$l = iaPropositionLigne(Db::row('SELECT * FROM pil_cq_ia WHERE task_id = 1211'));
+verifie('notée au niveau proposé : validée', $l['etat'] === 'valide' && $l['noteFinale'] === 4 && $l['validePar'] === 'Sam');
+iaNoteHumaine(4, 1209, $J, 3, 'Ventilateur à retirer', 'Un objet étranger seul reste mineur', 'Sam');
+$l = iaPropositionLigne(Db::row('SELECT * FROM pil_cq_ia WHERE task_id = 1209'));
+verifie('notée autrement : corrigée, raison et commentaire gardés', $l['etat'] === 'corrige' && $l['nomFinal'] === 'Non conforme — mineur' && $l['raison'] === 'Un objet étranger seul reste mineur' && $l['commentaireFinal'] === 'Ventilateur à retirer');
+$GLOBALS['APPELS'] = [];
+$r = $proposer(['shopId' => 4, 'taskId' => 1209, 'date' => $J, 'refaire' => true]);
+verifie('déjà notée : jamais reproposée, même « refaire »', $GLOBALS['APPELS'] === [] && $r['proposition']['etat'] === 'corrige');
+iaNoteHumaine(9, 9999, $J, 4, '', null, 'Sam');
+verifie('une note sans proposition ne crée rien', Db::row('SELECT 1 AS x FROM pil_cq_ia WHERE task_id = 9999') === null);
+
+echo "Les leçons\n";
+// Des corrections plus anciennes sur les tartes, et une sur un autre rayon.
+$ins = static function (int $task, string $jour, int $niveau, int $finale, ?string $raison, string $rayon = 'tartes', string $tache = 'Photo du comptoir - Tartes', string $le = '') {
+    Db::exec('INSERT INTO pil_cq_ia (shop_id, task_id, jour, tache, rayon, niveau, confiance, constats, propose_le, note_finale, raison, valide_par, valide_le, lecon)'
+        . ' VALUES (3, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)', [$task, $jour, $tache, $rayon, $niveau, 'moyenne', json_encode(['Tarte entamée au premier plan']),
+        $jour . ' 06:00:00', $finale, $raison, 'Sam', $le ?: $jour . ' 09:00:00']);
+};
+$ins(100, '2026-11-01', 2, 4, 'Vendues au quart');
+$ins(101, '2026-11-02', 3, 3, null);                                       // même note, sans raison : pas une leçon
+$ins(102, '2026-11-03', 4, 4, 'Bien vu le comptoir plein');                // même note, avec raison : une leçon
+$ins(103, '2026-11-04', 3, 4, null, 'quiches', 'Photo du comptoir - Quiches');
+$L = iaLeconsPour('tartes', 'Photo du comptoir - Tartes');
+verifie('les corrections du rayon, les plus récentes d’abord', count($L) === 3 && str_contains($L[0], 'Un objet étranger seul reste mineur') && str_contains($L[1], 'Bien vu') && str_contains($L[2], 'Vendues au quart'), json_encode($L, JSON_UNESCAPED_UNICODE));
+verifie('une leçon dit la proposition, le constat et la note', str_contains($L[2], '« Non conforme — majeur »') && str_contains($L[2], 'Tarte entamée') && str_contains($L[2], 'a noté « Conforme »'));
+verifie('pas les leçons d’un autre rayon', !array_filter($L, fn ($x) => str_contains($x, 'quiches')) && count(iaLeconsPour('quiches', '')) === 1);
+verifie('sans rayon : par le nom de la tâche', count(iaLeconsPour(null, 'Photo du comptoir - Quiches')) === 1);
+for ($i = 0; $i < 8; $i++) { $ins(200 + $i, '2026-10-' . sprintf('%02d', 10 + $i), 2, 3, 'raison ' . $i); }
+verifie('six leçons au plus', count(iaLeconsPour('tartes', '')) === IA_LECONS_MAX);
+
+$GLOBALS['BODY'] = ['shopId' => 3, 'taskId' => 100, 'date' => '2026-11-01', 'retenir' => false];
+$r = wr_ia_lecons();
+verifie('une leçon écartée ne sert plus', ($r['ok'] ?? false) && !array_filter(iaLeconsPour('tartes', ''), fn ($x) => str_contains($x, 'Vendues au quart')) && ($JOURNAL[0][1] ?? '') === 'Assistant de notation');
+$liste = ep_ia_lecons();
+$ecartee = array_values(array_filter($liste['lecons'], fn ($x) => $x['taskId'] === '100'))[0] ?? [];
+verifie('elle reste listée, marquée écartée', $ecartee !== [] && $ecartee['lecon'] === false);
+$GLOBALS['BODY'] = ['shopId' => 3, 'taskId' => 100, 'date' => '2026-11-01', 'retenir' => true];
+wr_ia_lecons();
+verifie('et se reprend', (bool) array_filter(iaLeconsPour('tartes', '', 20), fn ($x) => str_contains($x, 'Vendues au quart')));
+$GLOBALS['BODY'] = ['shopId' => 3, 'taskId' => 100, 'date' => '2026-11-01', 'retenir' => true];
+$r = wr_ia_lecons();
+verifie('reprendre une leçon déjà retenue n’est pas une erreur', ($r['ok'] ?? false) === true);
+$GLOBALS['BODY'] = ['shopId' => 3, 'taskId' => 777, 'date' => '2026-11-01', 'retenir' => true];
+$r = wr_ia_lecons();
+verifie('correction inconnue : 404', http_response_code() === 404 && isset($r['error']));
+
+echo "La journée et l'accord\n";
+$_GET['date'] = $J;
+$j = ep_ia_propositions();
+verifie('les propositions de la journée', count($j['propositions']) === 2 && $j['date'] === $J);
+$a = $j['accord'];
+// Dans la fenêtre : 1211 (4→4), 1209 (4→3, proposée 4 après « refaire ») et les leçons d'octobre et novembre.
+verifie('le taux d’accord compte les notes identiques', $a['notees'] >= 2 && $a['pareil'] >= 1 && $a['pct'] !== null, json_encode($a));
+verifie('le sens des écarts', $a['tropIndulgente'] >= 1 && $a['tropSevere'] >= 1, json_encode($a));
+verifie('le nombre de leçons retenues', $j['lecons'] === count(array_filter(ep_ia_lecons()['lecons'], fn ($x) => $x['lecon'])));
+$_GET['date'] = 'hier';
+$r = ep_ia_propositions();
+verifie('date illisible : 400', http_response_code() === 400 && isset($r['error']));
+
+echo "\n$ok ok, $ko KO\n";
+ob_end_flush();
+exit($ko > 0 ? 1 : 0);
