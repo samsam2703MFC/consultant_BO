@@ -29,3 +29,4 @@
 2026-11-15T19:36:28Z Contrôle des tâches : assistant de notation (manuelle ou assistée), ponctualité, leçons
 2026-11-15T19:52:44Z Calendrier lisible et illustré, liste des saisons chiffrée N-1, barre de défilement ruby
 2026-11-15T19:57:05Z Saisons : repli sur cette année quand l'an dernier est vide
+2026-11-15 marge des portions au taux de la recette ; barre de défilement 3 px
