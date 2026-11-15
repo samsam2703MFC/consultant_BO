@@ -132,6 +132,34 @@
                                                    placeholder="Pozostaw puste, aby nie zmieniać">
                                         </div>
                                     </div>
+                                    <?php if (!empty($erp)): ?>
+                                    <div class="form-group row align-items-center">
+                                        <div class="col-3">
+                                            <label class="col-form-label" for="employee_id">Pracownik (Czas pracy)</label>
+                                        </div>
+                                        <div class="col-9">
+                                            <select id="employee_id" name="employee_id" class="form-select">
+                                                <option value="">— brak powiązania —</option>
+                                                <?php foreach ($erp['employees'] as $e): ?>
+                                                    <option value="<?= (int) $e['id'] ?>" <?= $erp['employee_id'] === $e['id'] ? 'selected' : '' ?> <?= $e['taken'] ? 'disabled' : '' ?>><?= htmlspecialchars($e['name']) ?><?= $e['taken'] ? ' (inne konto)' : '' ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <small class="text-muted">Jedno powiązanie : odbicia wejścia i wyjścia tej osoby.<?= $erp['requires_qr'] ? ' Stanowisko wchodzi do ERP przez kod QR — po powiązaniu ERP otwiera się po odbiciu wejścia telefonem.' : '' ?></small>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
+                                    <?php if (isset($ceo)): ?>
+                                    <?php /* [281] Profil CEO : kontrola (strona Kontrola), widzi wszystko, nic nie ustawia — tylko decyzje. */ ?>
+                                    <div class="form-group row align-items-center">
+                                        <div class="col-3"><label class="col-form-label" for="ceo_profile">Profil CEO</label></div>
+                                        <div class="col-9">
+                                            <input type="hidden" name="ceo_profile_sent" value="1">
+                                            <label class="form-check-label"><input type="checkbox" class="form-check-input me-2" id="ceo_profile" name="ceo_profile" value="1" <?= $ceo ? 'checked' : '' ?>>
+                                                Kontrola — widzi wszystkich i wszystko, bez ustawień (tylko decyzje : odblokuj, przypomnij)</label>
+                                            <small class="text-muted d-block">Np. wspólnik. Bez blokad (QR, zadania obowiązkowe). Administrator ma ten profil pod awatarem.</small>
+                                        </div>
+                                    </div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                             <div class="row mt-4">

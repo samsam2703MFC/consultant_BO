@@ -176,7 +176,7 @@
                         </form>
                         {% if not product.recipe_id and card_lines > 0 %}
                             <a class="btn btn-outline-primary mt-2" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-plus-lg"></i> Utwórz z karty technologicznej ({{ card_lines }} składników)</a>
-                            <p class="at-sub mt-1 mb-2">Kreator produktu ze składnikami kroku « Koszt i cena » karty, przeliczonymi na 1 karton — po zapisie test jest « Wprowadzony », a receptura powiązana.</p>
+                            <p class="at-sub mt-1 mb-2">Asystent produktu ze składnikami kroku « Koszt i cena » karty, przeliczonymi na 1 karton — po zapisie test jest « Wprowadzony », a receptura powiązana.</p>
                         {% elseif not product.recipe_id %}
                             <p class="at-sub mt-2 mb-2">Tablet pokaże składniki wybranej receptury, a zespół ją zatwierdzi.</p>
                         {% endif %}
@@ -197,7 +197,7 @@
                         <p class="mb-0"><i class="bi bi-check2-circle text-success"></i> Produkt ERP : {% if product.final_product_id %}<a href="{{ root }}/products/{{ product.final_product_id }}/edit">{{ product.final_product_name }}</a>{% else %}—{% endif %}. Data wprowadzenia w module kierownika produkcji i w raporcie miesięcznym.</p>
                     {% else %}
                         <a class="btn btn-primary" href="{{ root }}/products/new-with-recipe?from_test={{ product.id }}"><i class="bi bi-rocket-takeoff"></i> Wprowadź : utwórz produkt z tego testu</a>
-                        <p class="at-sub mt-2">Kreator produktu z nazwą, kategorią, działem, etykietą i recepturą testu — bez ponownego wpisywania. Po zapisie test jest « Wprowadzony » i powiązany z produktem, znika z tabletu.</p>
+                        <p class="at-sub mt-2">Asystent produktu z nazwą, kategorią, działem, etykietą i recepturą testu — bez ponownego wpisywania. Po zapisie test jest « Wprowadzony » i powiązany z produktem, znika z tabletu.</p>
                         <details class="mt-2">
                             <summary class="at-sub">Produkt już istnieje w ERP ? Powiąż test z nim</summary>
                             <form id="launchForm" class="d-flex gap-2 flex-wrap align-items-end mt-2">

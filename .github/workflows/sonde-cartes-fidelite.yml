@@ -1,0 +1,74 @@
+name: Sonde — cartes de fidélité de l’ERP, quatre magasins (lecture seule)
+
+# Sam, 13/11/2026 : « quel client a quelle carte de fidélité, et où on en est au niveau général ». Les routes
+# /loyalty/statistics et /loyalty/customers de l'ERP, pour les quatre magasins. Rien n'est écrit, aucun nom n'est affiché.
+#
+# Déclenchement : pousser un changement sur le script ou ce fichier dans la branche ci-dessous.
+# Ne déploie rien : le déploiement du cockpit reste dans deploy.yml.
+
+on:
+  push:
+    branches: [claude/elegant-cray-9i8enx]
+    paths: ['pilotage-reseau/tools/sonde_cartes_fidelite.php', '.github/workflows/sonde-cartes-fidelite.yml']
+  # Lancement à la main : `client` (identifiant numérique) ajoute les cartes de ce seul client à Halle, sans nom.
+  workflow_dispatch:
+    inputs:
+      client:
+        description: "Identifiant du client (chiffres), facultatif"
+        required: false
+        default: ""
+      compte:
+        description: "Compte des lectures : consultant (par défaut) ou admin (compte admin ERP du cockpit)"
+        required: false
+        default: "consultant"
+
+concurrency:
+  group: sonde-cartes-fidelite
+  cancel-in-progress: true
+
+env:
+  SSH_HOST: "185.180.206.46"
+  SSH_PORT: "22"
+  SSH_USER: "root"
+  SSH_OPTS: "-o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ServerAliveInterval=15"
+  TARGET_DIR: "/var/www/consulant_bo"
+
+# Le portail Pilotage réseau vit dans pilotage-reseau/ (dépôt des quatre portails) :
+# chaque commande s'exécute depuis ce dossier, comme avant depuis la racine.
+defaults:
+  run:
+    working-directory: pilotage-reseau
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Contrôler la syntaxe du script
+        run: php -l tools/sonde_cartes_fidelite.php
+
+      - name: Installer sshpass
+        timeout-minutes: 4
+        run: |
+          sudo timeout 90 apt-get update -qq || true
+          sudo timeout 90 apt-get install -y -qq sshpass || {
+            deb="$(mktemp -d)/sshpass.deb"
+            curl -fsSL --retry 3 --max-time 60 \
+              "http://archive.ubuntu.com/ubuntu/pool/universe/s/sshpass/sshpass_1.09-1_amd64.deb" -o "$deb"
+            sudo dpkg -i "$deb"
+          }
+          sshpass -V | head -1
+
+      - name: Lire les cartes, les statistiques et les clients de fidélité
+        env:
+          SSHPASS: ${{ secrets.DEPLOY_SSH_PASSWORD }}
+          CLIENT: ${{ inputs.client }}
+          COMPTE: ${{ inputs.compte }}
+        run: |
+          if [ -n "${CLIENT}" ] && ! [[ "${CLIENT}" =~ ^[0-9]{1,10}$ ]]; then echo "client refusé : chiffres attendus"; exit 1; fi
+          if [ -n "${COMPTE}" ] && ! [[ "${COMPTE}" =~ ^(consultant|admin)$ ]]; then echo "compte refusé"; exit 1; fi
+          sshpass -e ssh ${SSH_OPTS} -p "${SSH_PORT}" "${SSH_USER}@${SSH_HOST}" \
+            "php -- '${TARGET_DIR}' '${CLIENT}' '${COMPTE}'" < tools/sonde_cartes_fidelite.php

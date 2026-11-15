@@ -71,7 +71,7 @@ try {
     $pdo->exec("INSERT INTO product_recipe_connection (parent_recipe_id, child_ingredient_id, child_recipe_id, quantity) VALUES (10, 1, NULL, 50), (10, 2, NULL, 10), (10, NULL, 14, 1), (11, 1, NULL, 900)");
     $pdo->exec("INSERT INTO final_product (id, name, active, ppc, weight, id_recipe, pre_calculated_raw_price_per_carton, standard_price, create_timestamp) VALUES
         (1, 'Bułka sztuka', 1, 10, 80, 10, 0.55, 0, '2026-10-01 10:00:00'), (2, 'Bułka karton', 1, 10, 80, 11, 6.60, 0, '2026-10-01 10:00:00'),
-        (3, 'Z kreatora', 1, 12, 100, 12, 0.40, 0, '2026-10-20 13:00:30'), (4, 'Wspólna A', 1, 10, 80, 13, 0.50, 0, '2026-10-01 10:00:00'),
+        (3, 'Z asystenta', 1, 12, 100, 12, 0.40, 0, '2026-10-20 13:00:30'), (4, 'Wspólna A', 1, 10, 80, 13, 0.50, 0, '2026-10-01 10:00:00'),
         (5, 'Wspólna B', 1, 10, 80, 13, 0.50, 0, '2026-10-01 10:00:00'), (6, 'Sprawdzony', 1, 10, 80, 10, 0.55, 0, '2026-10-01 10:00:00')");
     $pdo->exec("INSERT INTO n_activity_view (id_session, id_user, route, path, started_at, last_seen_at) VALUES (1, 1, '/products/new-with-recipe', '/products/new-with-recipe', '2026-10-20 12:58:00', '2026-10-20 13:00:00')");
     $pdo->exec("INSERT INTO n_recipe_unit_check (id_product, id_recipe, decision) VALUES (6, 10, 'kept')");
@@ -84,10 +84,10 @@ try {
     $check = $c->get(RecipeUnitCheckService::class);
     $rows = [];
     foreach ($check->list() as $r) $rows[$r['id']] = $r;
-    expect201(array_keys($rows) == [3, 1, 4, 5] || (isset($rows[1], $rows[3], $rows[4], $rows[5]) && count($rows) === 4), 'lista : 1 (masa ≈ sztuka), 3 (kreator), 4 i 5 (wspólna) — ' . implode(',', array_keys($rows)));
+    expect201(array_keys($rows) == [3, 1, 4, 5] || (isset($rows[1], $rows[3], $rows[4], $rows[5]) && count($rows) === 4), 'lista : 1 (masa ≈ sztuka), 3 (asystent), 4 i 5 (wspólna) — ' . implode(',', array_keys($rows)));
     expect201(!isset($rows[2]) && !isset($rows[6]), 'lista : bez receptury na karton (2) i bez sprawdzonego (6)');
     expect201($rows[1]['mass'] == 60 && $rows[1]['carton_weight'] == 800 && $rows[1]['cost_scaled'] == 5.5 && !$rows[1]['from_wizard'], 'produkt 1 : masa 60 g (bez szt.), karton 800 g, koszt × 10 = 5,50');
-    expect201($rows[3]['from_wizard'] && str_starts_with($rows[3]['reason'], 'utworzony w kreatorze'), 'produkt 3 : utworzony w kreatorze (rejestr aktywności)');
+    expect201($rows[3]['from_wizard'] && str_starts_with($rows[3]['reason'], 'utworzony w asystencie'), 'produkt 3 : utworzony w asystencie (rejestr aktywności)');
     expect201($rows[4]['blocked'] !== null && str_contains($rows[4]['blocked'], 'wspólna dla 2'), 'produkt 4 : receptura wspólna — bez automatycznego × szt.');
     expectFail201(fn() => $check->decide(4, 'scale', 7), 422, 'receptura wspólna : × szt. odrzucone');
     expectFail201(fn() => $check->decide(1, 'delete', 7), 422, 'nieznana decyzja');

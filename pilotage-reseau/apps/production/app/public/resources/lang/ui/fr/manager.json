@@ -333,6 +333,7 @@
   "bonus.haccp_ok": "Condition HACCP remplie : aucun contrôle défavorable, aucune rupture non traitée, aucun audit sous le seuil.",
   "bonus.sections": "Détail par section",
   "bonus.total": "Montant total à verser",
+  "bonus.disabled": "La prime trimestrielle est désactivée (décision du 11/11/2026) : prime du Kierownik produkcji = {pct} % du chiffre d'affaires général, chaque mois — Czas pracy › Koszty i premie. Le calcul ci-dessous est donné à titre d'information, sans versement.",
   "bonus.rule": "Sections trimestrielles sur le trimestre, développement produits sur le semestre (versé en Q2 et Q4). Pas de compensation entre sections, pas d'arrondi pour passer un seuil.",
   "bonus.period": "Trimestre",
   "bonus.period_help": "Objectifs validés avant le début de chaque période.",

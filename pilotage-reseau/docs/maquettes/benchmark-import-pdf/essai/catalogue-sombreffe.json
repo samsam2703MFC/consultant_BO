@@ -1,0 +1,2891 @@
+[
+{
+"id": 3200006,
+"name": "Amandes & Cannelles - 100 g",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3200001,
+"name": "Damier - 100 g.",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3200004,
+"name": "Leopard - 100 g.",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700145,
+"name": "Mini Fondant",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "0.00",
+"single_weight": 20,
+"is_active": 1
+},
+{
+"id": 6700024,
+"name": "Part de Tarte ",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "3.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 3200003,
+"name": "Pecan - 100 g.",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3200007,
+"name": "Rocher Coco - pièces",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "1.00",
+"single_weight": 50,
+"is_active": 1
+},
+{
+"id": 6700086,
+"name": "Sablé breton",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "1.60",
+"single_weight": 90,
+"is_active": 1
+},
+{
+"id": 3200002,
+"name": "Swirl - 100g.",
+"category_name": "Biscuiterie",
+"id_category": 32000,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700166,
+"name": "BananaBread",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 300,
+"is_active": 1
+},
+{
+"id": 6700167,
+"name": "BananaBread & Chocolat",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 300,
+"is_active": 1
+},
+{
+"id": 1561110,
+"name": "Cake Chocolat - 300 g.",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 300,
+"is_active": 1
+},
+{
+"id": 1561001,
+"name": "Cake Citron - 350 g.",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1561106,
+"name": "Cake Marbré - 300 g.",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1561104,
+"name": "Cake Nature - 300 g.",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1561102,
+"name": "Cake Pomme & Pralin - 300 g.",
+"category_name": "Cake",
+"id_category": 15611,
+"portion_price_gross": "8.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700271,
+"name": "Amandes grillées & salées - Lait",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "6.90",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700272,
+"name": "Amandes grillées & salées - Noir",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "6.90",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700276,
+"name": "Cuiller Chocolat chaud Nature",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "6.90",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700263,
+"name": "Melocake – Boîte de 10 ",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 300,
+"is_active": 1
+},
+{
+"id": 6700264,
+"name": "Melocake – Boîte de 6",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 150,
+"is_active": 1
+},
+{
+"id": 6700268,
+"name": "Melocake Blanc – Boîte de 3",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 5,
+"is_active": 1
+},
+{
+"id": 6700269,
+"name": "Melocake Caramel Salé – Boîte de 3",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700262,
+"name": "Melocake Lait – Boîte de 3",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 90,
+"is_active": 1
+},
+{
+"id": 6700265,
+"name": "Melocake Noir – Boîte de 3 ",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 10,
+"is_active": 1
+},
+{
+"id": 6700267,
+"name": "Melocake Pistache – Boîte de 3 ",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 30,
+"is_active": 1
+},
+{
+"id": 6700266,
+"name": "Melocake Spéculoos – Boîte de 3",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "1.00",
+"single_weight": 50,
+"is_active": 1
+},
+{
+"id": 6700273,
+"name": "Noisettes du Piémont IGP – Lait",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "0.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700274,
+"name": "Noisettes du Piémont IGP – Noir",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "0.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700275,
+"name": "Nounours Guimauve Chocolat Lait",
+"category_name": "Chocolaterie",
+"id_category": 33000,
+"portion_price_gross": "5.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 3210006,
+"name": "Cookie Avoine Raisins et Noisette",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3210001,
+"name": "Cookie Chocolat Blanc",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.80",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 3210004,
+"name": "Cookie Chocolat Lait",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.80",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 3210002,
+"name": "Cookie Chocolat Noir",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.80",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 3210003,
+"name": "Cookie Double Chocolat",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.80",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700127,
+"name": "Cookie Noix & Caramel",
+"category_name": "Cookies",
+"id_category": 32100,
+"portion_price_gross": "2.90",
+"single_weight": 90,
+"is_active": 1
+},
+{
+"id": 4100001,
+"name": "Cougnou - Sucre",
+"category_name": "Cougnou",
+"id_category": 81126,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 4100016,
+"name": "Cougnou - Sucre & Canelle\t\t\t\t",
+"category_name": "Cougnou",
+"id_category": 81126,
+"portion_price_gross": "2.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 4100003,
+"name": "Cougnou - Sucre & Chocolat",
+"category_name": "Cougnou",
+"id_category": 81126,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 4100002,
+"name": "Cougnou - Sucre & Raisin",
+"category_name": "Cougnou",
+"id_category": 81126,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700139,
+"name": "Cougnou Nature - 400 g.",
+"category_name": "Cougnou",
+"id_category": 81126,
+"portion_price_gross": "0.00",
+"single_weight": 400,
+"is_active": 1
+},
+{
+"id": 1122002,
+"name": "Croûte aux fraises",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "21.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1122001,
+"name": "Croûte aux fruits",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "21.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700236,
+"name": "Croûte aux fruits - 8 Pers",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "0.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 1122003,
+"name": "Croûte Banane",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "21.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1122007,
+"name": "Croûte Framboise",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "21.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1122006,
+"name": "Croûtes aux bananes individuelle",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "5.10",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1122004,
+"name": "Croûtes aux fraises individuelle",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "5.10",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1122005,
+"name": "Croûtes Tutti individuelle",
+"category_name": "Croutes Fruits Frais",
+"id_category": 11220,
+"portion_price_gross": "5.10",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1520002,
+"name": "Duo Chocolat - 180⌀",
+"category_name": "Entremets - 190Ø",
+"id_category": 15200,
+"portion_price_gross": "23.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1520001,
+"name": "Duo Framboise & Passion - 180⌀",
+"category_name": "Entremets - 190Ø",
+"id_category": 15200,
+"portion_price_gross": "23.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1520005,
+"name": "Framboise & Chocolat - 180⌀",
+"category_name": "Entremets - 190Ø",
+"id_category": 15200,
+"portion_price_gross": "23.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1520007,
+"name": "Saint-Honoré - Classique",
+"category_name": "Entremets - 190Ø",
+"id_category": 15200,
+"portion_price_gross": "23.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510012,
+"name": "Bombe Chocolat ",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "14.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510018,
+"name": "Bombe Praliné",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510004,
+"name": "Entremet 120Ø -  Duo Chocolat",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510003,
+"name": "Entremet 120Ø -  Duo Framboise & Passion",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510015,
+"name": "Entremet 120Ø - Bombe Chocolat",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510016,
+"name": "Entremet 120Ø - Bombe Citron",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510008,
+"name": "Entremet 120Ø - Caramel & Noisette",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510006,
+"name": "Entremet 120Ø - Chambord",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510017,
+"name": "Entremet 120Ø - Foret Noire",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "14.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510013,
+"name": "Entremet 120Ø - Framboise & Chocolat",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "14.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510014,
+"name": "Entremet 120Ø - Passion & Chocolat",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510009,
+"name": "Entremet 120Ø - Petit Louis",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "14.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1510005,
+"name": "Entremet 120Ø - Tiramisu",
+"category_name": "Entremets - 4/6 personnes",
+"id_category": 15100,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530017,
+"name": "Bagatelle Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530007,
+"name": "Bombe Chocolat Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530003,
+"name": "Chambord Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530005,
+"name": "Choco & Noisette Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530010,
+"name": "Choux Nappe",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "1.30",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530009,
+"name": "Duo Chocolat & Passion Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530011,
+"name": "Duo Chocolat Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530012,
+"name": "Duo Framboise & Passion Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530004,
+"name": "Foret Noire Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530001,
+"name": "Javanais Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530006,
+"name": "Merveilleux",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530002,
+"name": "Misérable Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530024,
+"name": "Mousse Chocolat",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1530016,
+"name": "Opéra Ind.",
+"category_name": "Entremets - Individuel",
+"id_category": 15300,
+"portion_price_gross": "4.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3220002,
+"name": "Financier au Chocolat",
+"category_name": "Financier",
+"id_category": 32200,
+"portion_price_gross": "1.60",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3220003,
+"name": "Financier aux Amandes",
+"category_name": "Financier",
+"id_category": 32200,
+"portion_price_gross": "1.60",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3220004,
+"name": "Tendresse au Chocolat",
+"category_name": "Financier",
+"id_category": 32200,
+"portion_price_gross": "1.60",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 3220001,
+"name": "Tendresse aux Framboises",
+"category_name": "Financier",
+"id_category": 32200,
+"portion_price_gross": "1.60",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700260,
+"name": "Crème Glacée Café 200ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 20,
+"is_active": 1
+},
+{
+"id": 6700261,
+"name": "Crème Glacée Café 600ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700251,
+"name": "Crème Glacée Chocolat 200ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700216,
+"name": "Crème Glacée Chocolat 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700290,
+"name": "Crème Glacée Noisette - 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700259,
+"name": "Crème Glacée Noisette 200ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700289,
+"name": "Crème Glacée Noisette 600ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700291,
+"name": "Crème Glacée Pistache - 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700292,
+"name": "Crème Glacée Pistache - 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700252,
+"name": "Crème Glacée Spéculoos - 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700217,
+"name": "Crème Glacée Spéculoos - 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700253,
+"name": "Crème Glacée Stratiatella - 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700218,
+"name": "Crème Glacée Stratiatella - 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700254,
+"name": "Crème Glacée Vanille - 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700215,
+"name": "Crème Glacée Vanille 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700255,
+"name": "Sorbet Citron 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700222,
+"name": "Sorbet Citron 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700256,
+"name": "Sorbet Fraise 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700220,
+"name": "Sorbet Fraise 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700257,
+"name": "Sorbet Framboise 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700221,
+"name": "Sorbet Framboise 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 6700258,
+"name": "Sorbet Passion & Mangue 200 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "0.00",
+"single_weight": 200,
+"is_active": 1
+},
+{
+"id": 6700219,
+"name": "Sorbet Passion & Mangue 600 ml",
+"category_name": "Glace by Rawette",
+"id_category": 81123,
+"portion_price_gross": "11.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1550006,
+"name": "Bavarois Chocolat - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "1.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550005,
+"name": "Bavarois Framboise - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "1.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550004,
+"name": "Bavarois Passion - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550017,
+"name": "Brownies & Framboise - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550009,
+"name": "Chocolat & Caramel - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "1.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550011,
+"name": "Framboise & Épinard - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550016,
+"name": "Fromage & Framboise - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550012,
+"name": "Javanais - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "1.45",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550014,
+"name": "Miel - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "1.45",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550002,
+"name": "Mignardises - 4+1",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "6.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550013,
+"name": "Misérable - Mignardises",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550010,
+"name": "Noix - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550003,
+"name": "Petit Louis - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550015,
+"name": "Pommes Caramel - Miganrdises",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1550008,
+"name": "Tiramisu - Mignardise",
+"category_name": "Mignardise",
+"id_category": 15500,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700151,
+"name": "Bûche Cheesecake & Framboise - Ind.",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "4.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 4100011,
+"name": "Bûche Cheesecake & Fruits des Bois - Passion - 4/6 personnes",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "19.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 4100007,
+"name": "Bûche Chocolat - 4/6 personnes",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "19.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700152,
+"name": "Bûche Chocolat - Ind.",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "4.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700147,
+"name": "Bûche Praliné & Noisettes – 4/6 personnes",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "19.90",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 6700153,
+"name": "Bûche Praliné & Noisettes – Ind.",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "4.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700144,
+"name": "Cougnou 100 g. - Sucre & Chocolat",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "1.50",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700143,
+"name": "Cougnou 100 g. - Sucre & Raisins",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "1.50",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 6700148,
+"name": "Entremet 120Ø - Cheesecake & Framboise",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "15.90",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 6700150,
+"name": "Entremet 120Ø - Chocolat ",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "15.90",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 6700149,
+"name": "Entremet 120Ø - Praliné & Noisettes",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "15.90",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 6700076,
+"name": "Étoiles ",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "0.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 4100013,
+"name": "Galette Frangipane",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "19.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700154,
+"name": "Gâteau du Réveillon – 6 à 8 personnes",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "0.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700077,
+"name": "Saint Nicolas - Blanc",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "7.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 4100017,
+"name": "Saint Nicolas - Lait",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "7.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 4100019,
+"name": "Saint Nicolas - Noir",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "7.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 4100015,
+"name": "Sapin de Noel en pain d'épice",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "8.00",
+"single_weight": 500,
+"is_active": 1
+},
+{
+"id": 1561111,
+"name": "Spéculoos de Noel",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "2.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700140,
+"name": "Spéculoos de Noël (Pièce)",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "0.50",
+"single_weight": 20,
+"is_active": 1
+},
+{
+"id": 4100020,
+"name": "Spéculoos Saint-Nicolas - 100g.",
+"category_name": "Noël",
+"id_category": 41000,
+"portion_price_gross": "1.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1200005,
+"name": "Fermier Seigle & Levain ",
+"category_name": "Pain",
+"id_category": 12000,
+"portion_price_gross": "0.00",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1200002,
+"name": "Pain 10 Céréales",
+"category_name": "Pain",
+"id_category": 12000,
+"portion_price_gross": "2.90",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1200001,
+"name": "Pain Demi-Gris",
+"category_name": "Pain",
+"id_category": 12000,
+"portion_price_gross": "2.90",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1200003,
+"name": "Pain Doré",
+"category_name": "Pain",
+"id_category": 12000,
+"portion_price_gross": "2.90",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1200006,
+"name": "Pavé Seigle & Froment",
+"category_name": "Pain",
+"id_category": 12000,
+"portion_price_gross": "4.50",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1210009,
+"name": "Blanc (Pauvre en Gluten) - 600 g.",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "4.50",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1210010,
+"name": "Ciabatta",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.80",
+"single_weight": 400,
+"is_active": 1
+},
+{
+"id": 1210002,
+"name": "Focaccia - Aromates",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "4.50",
+"single_weight": 400,
+"is_active": 1
+},
+{
+"id": 6700129,
+"name": "Focaccia - Olives",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "0.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700128,
+"name": "Focaccia - Pesto Rosso",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "0.00",
+"single_weight": 400,
+"is_active": 1
+},
+{
+"id": 1210001,
+"name": "Pain au Noix & Sésame",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "4.50",
+"single_weight": 600,
+"is_active": 1
+},
+{
+"id": 1210005,
+"name": "Pain Tradition - 4 Céréales",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.90",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1210003,
+"name": "Pain Tradition - Noisettes ",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.90",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1210011,
+"name": "Pain Tradition - Noix et Raisins",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1210004,
+"name": "Pain Tradition - Oignons et Lardons ",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.90",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1210006,
+"name": "Pain Tradition - Olives",
+"category_name": "Pain Tradition",
+"id_category": 12100,
+"portion_price_gross": "3.90",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700126,
+"name": "Extra",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "0.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 1500007,
+"name": "Feu de Bengale",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "3.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500005,
+"name": "Gâteaux Anniversaire | Chocolat /personnes",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "5.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500001,
+"name": "Gâteaux Anniversaire | Chocolat 10 personnes",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500006,
+"name": "Gâteaux Anniversaire | Fruits  /personnes",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "5.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500002,
+"name": "Gâteaux Anniversaire | Fruits 10 personnes",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500003,
+"name": "Gâteaux d'Anniversaire - Chocolat \"Chiffre\" ",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "5.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1500004,
+"name": "Gâteaux d'Anniversaire - Fruits \"Chiffre\" ",
+"category_name": "Pâtisserie",
+"id_category": 15000,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540002,
+"name": "2x Merveilleux",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "6.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540012,
+"name": "Crèmes Dessert Chocolat Liégeois",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540001,
+"name": "éclair chocolat",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "3.30",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540015,
+"name": "Glacé",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540014,
+"name": "Kanel",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540009,
+"name": "Mousse au chocolat",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "3.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540011,
+"name": "Mousse café liégeois",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540013,
+"name": "Mousse Passion & Coulis de Framboise",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "2.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1540016,
+"name": "Ravier de chouquette - 15 pièces",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "4.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 1540017,
+"name": "Sablé Plougastel - Fraise",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700085,
+"name": "Tartelette Ind.",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "2.90",
+"single_weight": 90,
+"is_active": 1
+},
+{
+"id": 1540010,
+"name": "Tiramisu",
+"category_name": "Pâtisserie individuelle",
+"id_category": 15400,
+"portion_price_gross": "3.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300023,
+"name": "Baguette Poivre & Sel ",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "2.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300003,
+"name": "Baguette Tradition",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "2.30",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1300016,
+"name": "Baguettes (x2)",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "3.99",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300019,
+"name": "Brioche 400g.",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "3.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300006,
+"name": "Brioche tressée au chocolat",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "5.10",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 1300005,
+"name": "Brioche tressée au sucre perlé",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "5.10",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 6700171,
+"name": "Brioche tressée Raisin",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.00",
+"single_weight": 500,
+"is_active": 1
+},
+{
+"id": 1300009,
+"name": "Briochette Chocolat",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.90",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 1300011,
+"name": "Briochette Sucre",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.90",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 1300022,
+"name": "Bun à Hamburger",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "1.70",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300018,
+"name": "Cinnamon rolls",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "3.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 1300007,
+"name": "Cramique",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "5.10",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1300008,
+"name": "Craquelin",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "5.10",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 1000001,
+"name": "Hamburger - Maxi",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "1.70",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1000002,
+"name": "Hotdog - Maxi",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "2.50",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300002,
+"name": "Mini ciabatta",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.50",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 1300015,
+"name": "Mini-Sandwich",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.50",
+"single_weight": 35,
+"is_active": 1
+},
+{
+"id": 1300021,
+"name": "Pain à Hot Dog",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "1.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300020,
+"name": "Pain à partager 'Label Rouge'",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1300001,
+"name": "Pistolet à l'Ancienne",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "0.90",
+"single_weight": 60,
+"is_active": 1
+},
+{
+"id": 1300012,
+"name": "Sandwich",
+"category_name": "Petite Boulangerie",
+"id_category": 13000,
+"portion_price_gross": "1.00",
+"single_weight": 65,
+"is_active": 1
+},
+{
+"id": 1410001,
+"name": "Quiche au Fromage Fumé, Tomate & Basilic",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410015,
+"name": "Quiche aux champignons",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410013,
+"name": "Quiche boeufs & curry de légumes",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "15.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410010,
+"name": "Quiche feta, aubergines & citron",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410005,
+"name": "Quiche Grecque",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "13.90",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 1410004,
+"name": "Quiche Jambon & Chicons",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "15.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410011,
+"name": "Quiche lardons, chèvre & tomates",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "15.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410003,
+"name": "Quiche Lorraine",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "13.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410012,
+"name": "Quiche Montagnarde",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410016,
+"name": "Quiche Poulet & Gorgonzola",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "15.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410007,
+"name": "Quiche roquette, chèvre & miel",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410006,
+"name": "Quiche saumon & épinards",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "15.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1410008,
+"name": "Tian de Legumes ",
+"category_name": "Quiches",
+"id_category": 14100,
+"portion_price_gross": "14.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 2300004,
+"name": "Américain Maison",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.30",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700022,
+"name": "Betterave, feta & noix",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300007,
+"name": "Boulette Liégoise",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300013,
+"name": "Brie, Pommes & Miel",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300016,
+"name": "Club",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.80",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700102,
+"name": "Falafell",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.80",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300020,
+"name": "Figues & Fromage Frais",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 2300014,
+"name": "Fromage Gouda Jeune",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.80",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300003,
+"name": "Italien",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300015,
+"name": " Jambon alle erbe",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700100,
+"name": "Jambon aux herbes, tomates confites & burrata",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300009,
+"name": "Légumes Grillés & Jambon Cru",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700101,
+"name": "Mortadella, ricotta & pistache",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300002,
+"name": "Omelette & Lardons",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300017,
+"name": "Omelette & Saumons",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300001,
+"name": " Poulet César",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300005,
+"name": "Poulet Curry",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700099,
+"name": "Poulet guacamole",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700122,
+"name": " Poulet Pané",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "0.00",
+"single_weight": 100,
+"is_active": 1
+},
+{
+"id": 2300019,
+"name": "Poulet Piquant",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 2300006,
+"name": "Salade de Viande Maison",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700020,
+"name": "Sandwich Garnis Individuel",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "2.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300012,
+"name": "Saumons & CreamCheese",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.50",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300018,
+"name": " SuperClub (Comté & Jambon de Pays)",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700008,
+"name": "Tartare à l'italienne",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.30",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700021,
+"name": "Tartare de Saumon",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "6.50",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 2300010,
+"name": "Thon",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.80",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 2300011,
+"name": "Tomates & Mozzarella",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.80",
+"single_weight": 350,
+"is_active": 1
+},
+{
+"id": 6700097,
+"name": "Vitello tonato",
+"category_name": "Sandwiches garnis",
+"id_category": 23000,
+"portion_price_gross": "5.00",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 1150033,
+"name": "1/2 - Fruits Frais",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1150035,
+"name": "1/4 - Fruis Frais",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1121004,
+"name": "Tarte Banane",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "29.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1121005,
+"name": "Tarte Banane - Fraises",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "29.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1121001,
+"name": "Tarte Fraises",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "29.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1121003,
+"name": "Tarte TuttiFrutti",
+"category_name": "Tarte Fruits Frais",
+"id_category": 11210,
+"portion_price_gross": "29.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700237,
+"name": "Abricot",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700238,
+"name": "Abricot & Cerise",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 6700239,
+"name": "Abricot & Rhubarbe",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1500,
+"is_active": 1
+},
+{
+"id": 1150023,
+"name": "Bleuet",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "15.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 6700279,
+"name": "Bréslienne",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700231,
+"name": "Brookie",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700230,
+"name": "Brownies",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 1400,
+"is_active": 1
+},
+{
+"id": 6700234,
+"name": "Cerise",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700282,
+"name": "Flan Brésilienne",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700280,
+"name": "Flan Breton",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700281,
+"name": "Flan Framboise",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "23.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700285,
+"name": "Frangipane",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700240,
+"name": "Frangipane & Abricots",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700286,
+"name": "Frangipane & Cerises",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700241,
+"name": "Frangipane & Poire",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700284,
+"name": "Frangipane & Pommes",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "0.00",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700233,
+"name": "Fromage",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700242,
+"name": "Groseille",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700243,
+"name": "Moelleux au chocolat",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "24.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700283,
+"name": "Plusieurs Fruits",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 2500,
+"is_active": 1
+},
+{
+"id": 6700244,
+"name": "Poires & Chocolat",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700229,
+"name": "Pommes Amandes",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1400,
+"is_active": 1
+},
+{
+"id": 6700232,
+"name": "Pommes Parisienne",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700228,
+"name": "Pommes Tranches",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1500,
+"is_active": 1
+},
+{
+"id": 6700235,
+"name": "Rhubarbe",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700245,
+"name": "Rhubarbe & Fraises",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700248,
+"name": "Rhubarbe Parisienne",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 6700246,
+"name": "Riz",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "21.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 6700247,
+"name": "Riz Croustillant ",
+"category_name": "Tartes – Ø 28 cm",
+"id_category": 81125,
+"portion_price_gross": "22.90",
+"single_weight": 1600,
+"is_active": 1
+},
+{
+"id": 1131002,
+"name": "Tarte Cassonade",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1131004,
+"name": "Tarte Sucre & Chocolat",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1131003,
+"name": "Tarte Sucre & Framboise",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700010,
+"name": "Tarte Sucre & Fruits Rouges",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 1131006,
+"name": "Tarte Sucre & Myrtilles",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1131005,
+"name": "Tarte Sucre & Pommes",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700009,
+"name": "Tarte Sucre & Speculoos",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 1,
+"is_active": 1
+},
+{
+"id": 1131001,
+"name": "Tarte Sucre Blanc",
+"category_name": "Tartes au sucre",
+"id_category": 11310,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110105,
+"name": "Citron Meringué - 120⌀",
+"category_name": "Tartissières - 12Ø",
+"id_category": 11101,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110103,
+"name": "Fromage & Spéculoos - 120⌀",
+"category_name": "Tartissières - 12Ø",
+"id_category": 11101,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110107,
+"name": "Fromage Citron & Coulis Framboise - 120⌀",
+"category_name": "Tartissières - 12Ø",
+"id_category": 11101,
+"portion_price_gross": "9.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110104,
+"name": "Mousse Chocolat & Caramel - 120⌀",
+"category_name": "Tartissières - 12Ø",
+"id_category": 11101,
+"portion_price_gross": "12.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110106,
+"name": "Passion Sauvage - 120⌀",
+"category_name": "Tartissières - 12Ø",
+"id_category": 11101,
+"portion_price_gross": "15.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1110208,
+"name": "Citron Meringué",
+"category_name": "Tartissières - 19Ø",
+"id_category": 11102,
+"portion_price_gross": "23.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 1110203,
+"name": "Fromage & Spéculoos",
+"category_name": "Tartissières - 19Ø",
+"id_category": 11102,
+"portion_price_gross": "23.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 1110205,
+"name": "Fromage citronné & coulis de framboises",
+"category_name": "Tartissières - 19Ø",
+"id_category": 11102,
+"portion_price_gross": "23.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 1110207,
+"name": "Mousse chocolat & caramel beurre salé",
+"category_name": "Tartissières - 19Ø",
+"id_category": 11102,
+"portion_price_gross": "23.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 1110202,
+"name": "Passion Sauvage",
+"category_name": "Tartissières - 19Ø",
+"id_category": 11102,
+"portion_price_gross": "23.90",
+"single_weight": 1200,
+"is_active": 1
+},
+{
+"id": 6700124,
+"name": "TartoCake - Cerise & Pistache",
+"category_name": "Tartocake - 22Ø",
+"id_category": 11400,
+"portion_price_gross": "0.00",
+"single_weight": 900,
+"is_active": 1
+},
+{
+"id": 1140003,
+"name": "TartoCake - Pommes & Groseilles",
+"category_name": "Tartocake - 22Ø",
+"id_category": 11400,
+"portion_price_gross": "15.90",
+"single_weight": 650,
+"is_active": 1
+},
+{
+"id": 1140007,
+"name": "TartoCake - Prunes Crumble",
+"category_name": "Tartocake - 22Ø",
+"id_category": 11400,
+"portion_price_gross": "11.80",
+"single_weight": 650,
+"is_active": 1
+},
+{
+"id": 1610008,
+"name": "Baulus",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610010,
+"name": "Couque à la Crème",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "3.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700170,
+"name": "Couque au Beurre",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.70",
+"single_weight": 90,
+"is_active": 1
+},
+{
+"id": 1610006,
+"name": "Croissant",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.70",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610001,
+"name": "Croissant Amandes",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "2.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1600001,
+"name": "Croissant Sucré",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610011,
+"name": "Crookie",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "2.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610007,
+"name": "Gosette Pomme",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610005,
+"name": "Huit",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610004,
+"name": "Pain au Chocolat",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610009,
+"name": "Pain au Chocolat Nappé",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "2.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 6700172,
+"name": "Pain au chocolat nappé & crème",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "0.00",
+"single_weight": 130,
+"is_active": 1
+},
+{
+"id": 1610002,
+"name": "Suisse",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "1.80",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1610003,
+"name": "Tortillon",
+"category_name": "Viennoiserie Ind.",
+"id_category": 16100,
+"portion_price_gross": "0.00",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620002,
+"name": "Mini - Baulus",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620003,
+"name": "Mini - Chocolat",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620010,
+"name": "Mini - Chocolat Nappé",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "1.20",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620005,
+"name": "Mini - Croissant",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620007,
+"name": "Mini - Frangipane",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620001,
+"name": "Mini - Huit",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620006,
+"name": "Mini - Pomme",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620004,
+"name": "Mini - Rhubarbe",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+},
+{
+"id": 1620009,
+"name": "Mini - Tortillon Orange & Chocolat",
+"category_name": "Viennoiserie réduction ",
+"id_category": 16200,
+"portion_price_gross": "0.90",
+"single_weight": 0,
+"is_active": 1
+}
+]

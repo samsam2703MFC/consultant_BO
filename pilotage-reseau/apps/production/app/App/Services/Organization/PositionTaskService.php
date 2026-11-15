@@ -35,17 +35,17 @@ final class PositionTaskService
     /** Strony ERP do wyboru w planie tygodnia : ścieżka => [etykieta listy, przycisk na karcie zadania]. Inny adres zostaje. */
     public const LINKS = [
         '/production/forecast' => ['Prognoza 13 tygodni (sezony z panelu, zakupy)', 'Prognoza'],
-        '/production/plan-wizard' => ['Plan produkcji tygodnia (kreator)', 'Plan tygodnia'],
-        '/shipping/wizard' => ['Wysyłka dnia (kreator : WZ, CMR, WDT)', 'Wysyłka'],
+        '/production/plan-wizard' => ['Plan produkcji tygodnia (asystent)', 'Plan tygodnia'],
+        '/shipping/wizard' => ['Wysyłka dnia (asystent : WZ, CMR, WDT)', 'Wysyłka'],
         '/logistics/live' => ['Pakowanie i paletyzacja na żywo (tablet pakowania)', 'Pakowanie'],
         '/logistics/deliveries' => ['Potwierdzenia dostaw (tablet kierowcy)', 'Dostawy'],
         '/logistics/plan' => ['Plan logistyki 13 tygodni', 'Plan logistyki'],
         '/finances/costs' => ['Finanse : koszty usług miesiąca', 'Koszty usług'],
-        '/workshop/supply#tab=invoices&inv=wizard' => ['Kreator faktur (zatwierdzanie pozycji)', 'Kreator faktur'],
+        '/workshop/supply#tab=invoices&inv=wizard' => ['Asystent faktur (zatwierdzanie pozycji)', 'Asystent faktur'],
         '/workshop/supply#tab=invoices' => ['Faktury zakupowe (wgraj PDF / zdjęcia, KSeF)', 'Faktury'],
-        '/finances/price-wizard' => ['Kreator cen — krok 1 : koszty i marże', 'Kreator cen'],
-        '/finances/price-wizard#step=2' => ['Kreator cen — krok 2 : nowe ceny', 'Kreator cen'],
-        '/finances/price-wizard#step=3' => ['Kreator cen — krok 3 : publikacja', 'Publikacje'],
+        '/finances/price-wizard' => ['Asystent cen — krok 1 : koszty i marże', 'Asystent cen'],
+        '/finances/price-wizard#step=2' => ['Asystent cen — krok 2 : nowe ceny', 'Asystent cen'],
+        '/finances/price-wizard#step=3' => ['Asystent cen — krok 3 : publikacja', 'Publikacje'],
         '/workshop/buy' => ['Zakupy tygodnia', 'Zakupy tygodnia'],
         '/workshop/buy#tab=suppliers' => ['Zakupy tygodnia › Dostawcy pozycji', 'Dostawcy'],
         '/purchasing/offers' => ['Oferty dostawców', 'Oferty'],
@@ -65,12 +65,12 @@ final class PositionTaskService
         '/communication/messages' => ['Wiadomości', 'Wiadomości'],
         '/communication/automations' => ['E-maile automatyczne', 'E-maile'],
         // [247] Lot « lżej » : kreatory zadań bez wcześniejszego kreatora.
-        '/production/tomorrow' => ['Plan na jutro (kreator : obciążenie grup, ludzie i surowce, tablety)', 'Plan na jutro'],
-        '/purchasing/nc-review' => ['Niezgodności miesiąca (kreator : przyczyna i działanie, dostawcy, audyt)', 'Niezgodności miesiąca'],
-        '/purchasing/cost-review' => ['Koszty surowców i oszczędności (kreator)', 'Koszty surowców'],
-        '/production/yield-review' => ['Wydajność i straty kwartału (kreator)', 'Wydajność i straty'],
+        '/production/tomorrow' => ['Plan na jutro (asystent : obciążenie grup, ludzie i surowce, tablety)', 'Plan na jutro'],
+        '/purchasing/nc-review' => ['Niezgodności miesiąca (asystent : przyczyna i działanie, dostawcy, audyt)', 'Niezgodności miesiąca'],
+        '/purchasing/cost-review' => ['Koszty surowców i oszczędności (asystent)', 'Koszty surowców'],
+        '/production/yield-review' => ['Wydajność i straty kwartału (asystent)', 'Wydajność i straty'],
         '/workshop/gantt' => ['Tablica tygodnia (przeciągnij i upuść)', 'Tablica tygodnia'],
-        '/purchasing/supplier-review' => ['Ocena dostawców (kreator kwartału)', 'Ocena dostawców'],
+        '/purchasing/supplier-review' => ['Ocena dostawców (asystent kwartału)', 'Ocena dostawców'],
     ];
 
     /** Zadanie zalicza się samo, gdy kreator jest zakończony w okresie zadania (katalog : TaskWizards). */
@@ -94,6 +94,7 @@ final class PositionTaskService
         '/purchasing/cost-review' => 'material_costs_reviewed',
         '/production/yield-review' => 'yield_reviewed',
         '/time' => 'time_day_validated',
+        '/time/month' => 'time_month_closed',
     ];
 
     /** Kolor kategorii na kartach tygodnia (pasek z lewej). */
@@ -103,7 +104,9 @@ final class PositionTaskService
 
     public function __construct(private PositionRepository $positions, private ParamRepository $params, private PageAccessService $access,
         private TaskWizards $wizards, private TaskWizardRepository $runs, private \App\Services\Notification\AppNotificationService $notifier,
-        private \App\Repositories\Workshop\DevProductRepository $devProducts)
+        private \App\Repositories\Workshop\DevProductRepository $devProducts, private \App\Repositories\Hr\HrRepository $hrNotes,
+        private \App\Services\Hr\HrCipher $hrCipher, private \App\Repositories\Hr\HrSuccessionRepository $succession,
+        private \App\Repositories\Organization\UserLeaveRepository $leaves)
     {
     }
 
@@ -173,6 +176,33 @@ final class PositionTaskService
         return $user;
     }
 
+    /**
+     * [289] Zadania stanowisk osób na zatwierdzonym urlopie, których zastępcą jest użytkownik (dziś) ; podgląd « jako
+     * stanowisko » (sesja administratora) — bez zastępstw. @return array{0: array, 1: list<array>, 2: ?array}
+     */
+    private function withDelegations(int $userId, ?array $user, array $tasks, DateTimeImmutable $today): array
+    {
+        if (!$user || !empty($user['view_session'])) return [$tasks, [], null];
+        $day = $today->format('Y-m-d');
+        $own = array_flip(array_map(fn($t) => (int) $t['id'], $tasks));
+        $delegations = [];
+        foreach ($this->leaves->delegations($userId, $day) as $l) {
+            if ((int) $l['position_id'] === (int) ($user['id_position'] ?? 0)) continue;
+            $label = $l['position_name'] . ' — ' . $l['name'] . ' (urlop do ' . date('d.m', strtotime($l['date_to'])) . ')';
+            $n = 0;
+            foreach ($this->positions->tasks((int) $l['position_id'], true, true) as $task) {
+                if (isset($own[(int) $task['id']])) continue;
+                $own[(int) $task['id']] = true;
+                $tasks[] = ['backup_for' => $label] + $task;
+                $n++;
+            }
+            $delegations[] = ['position' => $l['position_name'], 'name' => $l['name'], 'from' => $l['date_from'], 'to' => $l['date_to'], 'tasks' => $n];
+        }
+        $mine = $this->leaves->onLeave($userId, $day);
+        $onLeave = $mine ? ['from' => $mine['date_from'], 'to' => $mine['date_to'], 'substitute' => $mine['substitute_name'], 'substitute_position' => $mine['substitute_position']] : null;
+        return [$tasks, $delegations, $onLeave];
+    }
+
     /** Liste « Moje zadania » d'un utilisateur : tâches de son poste pour la période en cours, plus les retards. */
     public function myTasks(int $userId, ?DateTimeImmutable $today = null): array
     {
@@ -218,9 +248,13 @@ final class PositionTaskService
             $groups[$key]['icon'] ??= $task['category_icon'] ?? null ?: 'bi-check2-square';
             $groups[$key]['sort'] ??= isset($task['category_sort']) ? (int) $task['category_sort'] : PHP_INT_MAX;
             $groups[$key]['open'] = ($groups[$key]['open'] ?? 0) + ($occurrence && $occurrence['status'] === 'open' ? 1 : 0);
-            $groups[$key]['items'][] = ['task' => $task, 'occurrence' => $occurrence, 'frequency' => self::FREQUENCY_LABELS[$task['frequency']] ?? $task['frequency']];
+            // [287] Bez powtórzeń : zaległe terminy zadania przy samym zadaniu (nie drugi raz w « Zaległe »).
+            $late = array_values(array_filter($overdue, fn($o) => (int) $o['id_task'] === $id));
+            $groups[$key]['items'][] = ['task' => $task, 'occurrence' => $occurrence, 'frequency' => self::FREQUENCY_LABELS[$task['frequency']] ?? $task['frequency'], 'late' => $late];
         }
         uasort($groups, fn($a, $b) => [$a['sort'], $a['label']] <=> [$b['sort'], $b['label']]);
+        $listed = array_keys($byId);
+        $overdue = array_values(array_filter($overdue, fn($o) => !in_array((int) $o['id_task'], $listed, true)));
         return ['groups' => $groups, 'overdue' => $overdue, 'counts' => $counts];
     }
 
@@ -410,6 +444,9 @@ final class PositionTaskService
         $view = ['user' => $user, 'week' => ['number' => (int) $today->format('W'), 'from' => $monday->format('Y-m-d'), 'to' => $monday->modify('+' . (max($workdays) - 1) . ' days')->format('Y-m-d')],
             'days' => $days, 'strip' => [], 'overdue' => [], 'later' => [], 'totals' => null];
         $tasks = $user && $user['id_position'] ? $this->positions->tasks((int) $user['id_position'], true, true) : [];
+        // [289] Zastępstwo urlopowe (makieta 50) : w dni zatwierdzonego urlopu zadania stanowiska osoby są u zastępcy
+        // (« za Finanse — Osoba A ») ; osoba na urlopie widzi pasek z zastępcą.
+        [$tasks, $view['delegations'], $view['on_leave']] = $this->withDelegations($userId, $user, $tasks, $today);
         $byId = [];
         $current = [];
         try {
@@ -461,8 +498,62 @@ final class PositionTaskService
         usort($view['later'], fn($a, $b) => [$a['done'], $a['due']] <=> [$b['done'], $b['due']]);
         $view['totals'] = $this->weekTotals($view, $today);
         $view['today'] = $this->todayList($view, $today);
-        $view['flow'] = $this->flow($view, $today, $this->devItems($user, $today));
+        $view['flow'] = $this->flow($view, $today, array_merge($this->devItems($user, $today), $this->hrItems($userId, $today), $this->successionItems($userId, $today)));
         return $view;
+    }
+
+    /**
+     * [279] Follow-upy HR z « Zadanie w Mój tydzień » : jeden wiersz na notatkę (rodzaj, pracownik, temat), termin,
+     * link do notatki ; zamknięcie : HR › Notatki miesiąca (« Zrobione »).
+     */
+    private function hrItems(int $userId, DateTimeImmutable $today): array
+    {
+        try {
+            $rows = $this->hrNotes->taskFollowups($userId);
+        } catch (\Throwable) {
+            return [];
+        }
+        $date = $today->format('Y-m-d');
+        $items = [];
+        foreach ($rows as $r) {
+            $due = (string) $r['followup_due'];
+            $late = $due < $date ? (int) floor((strtotime($date) - strtotime($due)) / 86400) : 0;
+            $kind = \App\Services\Hr\HrQuickNoteService::KINDS[$r['kind']][0] ?? 'Notatka';
+            $topic = $this->hrCipher->decrypt($r['topic_enc']) ?? '';
+            $items[] = ['id' => null, 'task_id' => -1000000 - (int) $r['id'], 'title' => 'Follow-up HR : ' . $r['name'] . ' — ' . $topic, 'short' => 'Follow-up HR : ' . $r['name'],
+                'frequency' => 'Follow-up HR', 'freq' => 'hr', 'status' => 'open', 'done' => false, 'late' => $late > 0, 'late_days' => $late, 'due' => $due, 'due_time' => null,
+                'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
+                'minutes' => null, 'link' => '/hr/notes?note=' . (int) $r['id'], 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
+                'backup_for' => null, 'summary' => $kind . ' : ' . $topic, 'color' => '#8D1D2C', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
+                'stage' => null, 'dev' => null];
+        }
+        return $items;
+    }
+
+    /**
+     * [278] Sukcesja : étapes ouvertes des plans dont la personne est responsable, dès 7 jours avant leur début ;
+     * une ligne par étape (personne qui part, étape, terme), lien vers le plan ; terminée quand tout est coché.
+     */
+    private function successionItems(int $userId, DateTimeImmutable $today): array
+    {
+        try {
+            $rows = $this->succession->openSteps($userId, $today->modify('+7 days')->format('Y-m-d'));
+        } catch (\Throwable) {
+            return [];
+        }
+        $date = $today->format('Y-m-d');
+        $items = [];
+        foreach ($rows as $r) {
+            $due = (string) $r['due_date'];
+            $late = $due < $date ? (int) floor((strtotime($date) - strtotime($due)) / 86400) : 0;
+            $items[] = ['id' => null, 'task_id' => -2000000 - (int) $r['id'], 'title' => 'Sukcesja : ' . $r['name'] . ' — ' . $r['step_no'] . '. ' . $r['title'], 'short' => 'Sukcesja : ' . $r['name'],
+                'frequency' => 'Sukcesja', 'freq' => 'hr', 'status' => 'open', 'done' => false, 'late' => $late > 0, 'late_days' => $late, 'due' => $due, 'due_time' => null,
+                'due_label' => self::DAY_ABBR[(int) date('N', strtotime($due))] . ' ' . date('j.m', strtotime($due)),
+                'minutes' => null, 'link' => '/hr/succession?plan=' . (int) $r['id_plan'], 'wizard' => null, 'progress' => null, 'form' => null, 'cron' => null, 'prepared' => null,
+                'backup_for' => null, 'summary' => 'Etap ' . $r['step_no'] . ' : ' . $r['title'], 'color' => '#8D1D2C', 'extra' => [], 'auto_done' => false, 'done_at' => null, 'done_by' => null,
+                'stage' => null, 'dev' => null];
+        }
+        return $items;
     }
 
     /**
@@ -689,6 +780,8 @@ final class PositionTaskService
         $state = $o['wizard_state'] ?? null;
         $late = $status === 'open' && $due !== null && $due < $today->format('Y-m-d') ? (int) floor((strtotime($today->format('Y-m-d')) - strtotime($due)) / 86400) : 0;
         $cronOn = (int) ($task['cron_on'] ?? 0) === 1 && ($task['cron_action'] ?? null) !== null;
+        // [280] Kreator kroków : zadanie bez własnego kreatora i bez protokołu (nie : zadanie w całości automatyczne).
+        $generic = $wizard === null && empty($task['form_code']) && !($cronOn && ($task['cron_then'] ?? 'wait') === 'done');
         // Cron « czeka na osobę » : uruchomienie udane w okresie wystąpienia = przygotowane przez system.
         $prepared = null;
         if ($cronOn && $o && $lastRun && (int) ($lastRun['ok'] ?? 0) === 1 && ($task['cron_then'] ?? 'wait') === 'wait') {
@@ -717,13 +810,17 @@ final class PositionTaskService
             'when' => $this->whenLabel($task, $due),
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
             'prepared' => $prepared,
-            'link' => $wizard['link'] ?? $link,
+            // [280] Zadanie zawsze otwiera kreator : własny, protokół albo kreator kroków (/tasks/wizard/{id}).
+            'link' => $wizard['link'] ?? ($generic ? '/tasks/wizard/' . (int) $task['id'] : $link),
+            'mandatory' => (bool) (int) ($task['mandatory'] ?? 0),
+            'block' => (int) ($task['mandatory'] ?? 0) ? TaskLockService::blockLabel($task) : null,
             'extra' => array_map(fn($l) => ['link' => $l, 'label' => self::LINKS[$l][1] ?? $l], self::extraLinks($task['extra_links'] ?? null)),
             'button' => $link !== null ? (self::LINKS[$link][1] ?? 'Otwórz') : null,
             'auto' => ($task['auto_code'] ?? null) ? (self::AUTO[$task['auto_code']] ?? null) : null,
             'auto_done' => $o !== null && $status === 'done' && $o['done_by'] === null && (($task['auto_code'] ?? null) !== null || $cronOn),
             'wizard' => $wizard ? ['label' => $wizard['label'], 'steps' => $wizard['steps'], 'event' => $wizard['event']]
-                : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany'] : null),
+                : (($task['form_code'] ?? null) === 'production_meeting' ? ['label' => 'Zebranie produkcyjne', 'steps' => 3, 'event' => 'gdy protokół jest zapisany']
+                : ($generic ? ['label' => 'Asystent kroków', 'steps' => count(TaskLockService::steps($task)) + 1, 'event' => 'gdy « Zakończ zadanie »'] : null)),
             'progress' => $state && !$state['done'] && $state['step'] !== null ? ['step' => (int) $state['step'], 'steps' => (int) $state['steps'], 'label' => $state['step_label']] : null,
             'summary' => $o['summary'] ?? ($state['summary'] ?? null),
             'cron' => $cronOn ? ['time' => substr((string) $task['cron_time'], 0, 5), 'then' => $task['cron_then'] ?? 'wait', 'label' => TaskCronService::ACTIONS[$task['cron_action']] ?? $task['cron_action'],
@@ -769,6 +866,12 @@ final class PositionTaskService
         if ($rule && preg_match('/^wd(\d+)$/', $rule, $m)) return $m[1] . '. dzień roboczy';
         if ($rule && preg_match('/^d(\d+)$/', $rule, $m)) return $m[1] . '. dzień';
         return 'ostatni dzień';
+    }
+
+    /** [280] Blokada ERP : wystąpienie po sprawdzeniu kreatora, który zalicza się sam (status może zmienić się na « done »). */
+    public function closeIfWizardDone(array $o, array $task, DateTimeImmutable $today): array
+    {
+        return $this->autoClose($o, $task, $today);
     }
 
     /**
@@ -1004,6 +1107,14 @@ final class PositionTaskService
         $lateList = array_values($byTask);
         usort($lateList, fn($a, $b) => $b['late_days'] <=> $a['late_days']);
         $runsOk = count(array_filter($runs, fn($r) => (int) ($r['ok'] ?? 0) === 1));
+        // [285] Minuty zadań widzi administrator (i profil CEO) — inni : bez minut (makieta 39).
+        if (!$this->access->isAdmin($actorId) && !$this->access->isCeo($actorId)) {
+            $tiles['minutes'] = $tiles['done_minutes'] = null;
+            $strip = fn(array $items) => array_map(fn($it) => array_key_exists('minutes', $it) ? ['minutes' => null] + $it : $it, $items);
+            foreach ($rows as &$row) $row['cells'] = array_map($strip, $row['cells']);
+            unset($row);
+            $lateList = $strip($lateList);
+        }
         return ['view' => $view, 'today' => $todayStr, 'columns' => array_map(fn($c) => $c + ['today' => $todayStr >= $c['from'] && $todayStr <= $c['to']], $cols),
             'rows' => $rows, 'system' => $system, 'tablets' => $tablets, 'late' => array_slice($lateList, 0, 30),
             'tiles' => $tiles + ['runs' => count($runs), 'runs_ok' => $runsOk, 'runs_failed' => count(array_filter($runs, fn($r) => $r['ok'] !== null && !(int) $r['ok']))]];
@@ -1255,6 +1366,13 @@ final class PositionTaskService
             'remind_time' => !empty($task['remind_time']) ? substr((string) $task['remind_time'], 0, 5) : null,
             'escalate_days' => isset($task['escalate_days']) ? (int) $task['escalate_days'] : null,
             'backup_position_id' => isset($task['id_backup_position']) ? (int) $task['id_backup_position'] : null,
+            // [280] obowiązkowe (blokada ERP) i kroki kreatora zadania bez własnego kreatora
+            'mandatory' => (bool) (int) ($task['mandatory'] ?? 0),
+            'block_mode' => $task['block_mode'] ?? 'due',
+            'block_time' => !empty($task['block_time']) ? substr((string) $task['block_time'], 0, 5) : null,
+            'block_tolerance' => (int) ($task['block_tolerance'] ?? 0),
+            'block_label' => TaskLockService::blockLabel($task),
+            'wizard_steps' => json_decode((string) ($task['wizard_steps'] ?? ''), true) ?: [],
             'sort_order' => (int) ($task['sort_order'] ?? 0),
             // wykonania w 4 tygodniach (podział czasu rzeczywistego)
             'per_4w' => $period === 'week' ? 4 * count($days) : ($period === 'monthly' ? 1 : 1 / 3),
@@ -1347,6 +1465,26 @@ final class PositionTaskService
                 $backup = $row['backup_position_id'] === null || $row['backup_position_id'] === '' ? null : (int) $row['backup_position_id'];
                 if ($backup !== null && ($backup === $positionId || !$this->positions->exists($backup))) throw new CustomException("Wiersz {$n} : zastępstwo — wybierz inne stanowisko.", 'errors', 422);
                 $extra['id_backup_position'] = $backup;
+            }
+            // [280] Zadanie obowiązkowe : tryb blokady, godzina, tolerancja ; kroki kreatora (zadanie bez własnego kreatora).
+            if (array_key_exists('mandatory', $row)) {
+                $extra['mandatory'] = !empty($row['mandatory']) ? 1 : 0;
+                $mode = (string) ($row['block_mode'] ?? 'due');
+                if (!in_array($mode, ['due', 'next_day'], true)) throw new CustomException("Wiersz {$n} : nieznany tryb blokady.", 'errors', 422);
+                $extra['block_mode'] = $mode;
+                $bt = $row['block_time'] ?? null;
+                if ($bt !== null && $bt !== '' && !preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', (string) $bt)) throw new CustomException("Wiersz {$n} : godzina blokady w formacie GG:MM.", 'errors', 422);
+                $extra['block_time'] = $bt === '' ? null : $bt;
+                $tol = (int) ($row['block_tolerance'] ?? 0);
+                if ($tol < 0 || $tol > 120) throw new CustomException("Wiersz {$n} : tolerancja od 0 do 120 min.", 'errors', 422);
+                $extra['block_tolerance'] = $tol;
+            }
+            if (array_key_exists('wizard_steps', $row)) {
+                try {
+                    $extra['wizard_steps'] = TaskLockService::cleanSteps($row['wizard_steps']);
+                } catch (CustomException $e) {
+                    throw new CustomException("Wiersz {$n} : " . $e->getMessage(), 'errors', 422);
+                }
             }
             $plan[] = ['id' => $id, 'data' => ['title_pl' => $title, 'id_category' => $category, 'minutes' => $minutes, 'link_path' => $link, 'auto_code' => $auto] + $schedule + $extra];
         }

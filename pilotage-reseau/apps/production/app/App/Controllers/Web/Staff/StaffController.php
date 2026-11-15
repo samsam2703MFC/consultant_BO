@@ -20,6 +20,7 @@ class StaffController extends BaseController
         private ProfitabilityService $profitability,
         private TeamBonusService $teamBonus,
         private PageAccessService $access,
+        private \App\Services\Staff\TeamCostsService $teamCosts,
     ) {}
 
     /** [256] Premie zespołów : zapis tylko dla administratora (strona poza uprawnieniami stanowisk). */
@@ -72,15 +73,18 @@ class StaffController extends BaseController
     /** Premie zespołów : minimum i progi (sprzedaż na osobę → premia), zakładka « Premia » tabletu dla wybranych grup. */
     public function teamBonus()
     {
-        $this->view('staff/team_bonus', $this->teamBonus->overview() + ['info_max' => TeamBonusService::INFO_MAX]);
+        $this->view('staff/team_bonus', $this->teamBonus->overview() + ['info_max' => TeamBonusService::INFO_MAX, 'manager' => $this->teamCosts->settings()]);
     }
 
     public function saveTeamBonus()
     {
         try {
             $this->guardTeamBonus();
-            $this->teamBonus->saveSettings($this->getJson(Request::createFromGlobals()), $this->userId());
-            return $this->json(['message' => 'Zapisano minimum i progi premii.']);
+            $input = $this->getJson(Request::createFromGlobals());
+            // [267] Najpierw kontrola ustawień kierownika (błąd niczego nie zapisuje), potem progi.
+            $this->teamCosts->saveSettings($input, $this->userId());
+            $this->teamBonus->saveSettings($input, $this->userId());
+            return $this->json(['message' => 'Zapisano minimum, progi premii i ustawienia kierownika produkcji.']);
         } catch (\Throwable $e) {
             return $this->jsonError($e);
         }

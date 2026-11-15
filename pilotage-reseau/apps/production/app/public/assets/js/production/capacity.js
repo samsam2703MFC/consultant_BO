@@ -428,7 +428,7 @@
         if (modal.step === 0) body = wizStep0();
         else if (!modal.data) body = '<p class="at-sub m-3"><span class="spinner-border spinner-border-sm"></span> Ładowanie…</p>';
         else body = modal.step === 1 ? wizStep1() : (modal.step === 2 ? wizStep2() : wizStep3());
-        return `<div class="fc-modal" data-modal><div class="fc-modal-box mc-modal-box mw-box" role="dialog" aria-modal="true" aria-label="Kreator maszyny">${body}</div></div>`;
+        return `<div class="fc-modal" data-modal><div class="fc-modal-box mc-modal-box mw-box" role="dialog" aria-modal="true" aria-label="Asystent maszyny">${body}</div></div>`;
     }
 
     function wizUpdateRow(id) {

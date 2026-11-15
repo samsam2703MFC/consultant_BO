@@ -340,6 +340,10 @@ final class WorkshopApiRoutes
             ['POST', '/kiosk/phone/clock', ExecutionController::class, 'clock', 'phone'],
             ['POST', '/kiosk/phone/signatures', ExecutionController::class, 'sign', 'phone'],
             ['POST', '/kiosk/phone/comps/{id:\d+}/sign', ExecutionController::class, 'signComp', 'phone'],
+            // [288] Urlop z telefonu (makieta 49) : saldo, wniosek od–do, « Moje urlopy », anulowanie wniosku do zatwierdzenia.
+            ['GET', '/kiosk/phone/leave', ExecutionController::class, 'phoneLeave', 'phone'],
+            ['POST', '/kiosk/phone/leave', ExecutionController::class, 'requestLeave', 'phone'],
+            ['DELETE', '/kiosk/phone/leave/{id:\d+}', ExecutionController::class, 'cancelLeave', 'phone'],
             ['DELETE', '/kiosk/employees/{id:\d+}/phones', ExecutionController::class, 'revokePhones', 'prod.employees.write'],
             // Pytania przy wejściu / wyjściu (« OK, zatwierdzam »)
             ['GET', '/kiosk/clock-questions', ExecutionController::class, 'clockQuestions', 'prod.employees.write'],

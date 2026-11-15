@@ -2035,6 +2035,8 @@ function ep_rapports(): array
     $parRun = [];
     foreach ($runs as $r) { $parRun[(int) $r['id']] = $r; }
     return [
+        // L'interrupteur général : l'écran le montre en tête, avec le bouton pour reprendre ou suspendre.
+        'suspension' => rapSuspension(),
         'rapports' => array_map(function ($r) use ($dernier, $parRun) {
             $mid = $dernier[(int) $r['id']] ?? null;
             $d = $mid !== null ? ($parRun[$mid] ?? Db::row('SELECT id, genere_le, statut, resume FROM ceo_rapport_run WHERE id = ?', [$mid])) : null;
@@ -2239,6 +2241,42 @@ function ep_rapport_run(int $id): array
 }
 
 /**
+ * L'interrupteur général des rapports (14/11/2026, Sam : « arrête, inactive tous les rapports »). Suspendus, AUCUN
+ * rapport ne part plus de l'horloge (/rapports/cron) : ni e-mail aux magasins ni au réseau. Chaque ligne garde sa case
+ * « actif » : la reprise remet tout comme avant, d'un clic. Le reste du battement horaire (relevés, planning,
+ * moissons) continue. Les envois à la main depuis l'écran Rapports restent possibles : c'est un geste, pas l'horloge.
+ *
+ * Réglage `rapportsSuspension` : {suspendu, depuis, motif}. Livré suspendu : jamais posé, il l'est à la première
+ * lecture ; une fois repris, il ne se repose plus.
+ */
+function rapSuspension(): array
+{
+    $s = setting('rapportsSuspension');
+    if (!is_array($s) || !array_key_exists('suspendu', $s)) {
+        $s = ['suspendu' => true, 'depuis' => date('Y-m-d H:i'), 'motif' => 'livré suspendu le 14/11/2026, à la demande de Sam'];
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['rapportsSuspension', json_encode($s, JSON_UNESCAPED_UNICODE)]);
+    }
+    return ['suspendu' => !empty($s['suspendu']), 'depuis' => (string) ($s['depuis'] ?? ''), 'motif' => (string) ($s['motif'] ?? '')];
+}
+
+/** POST /rapports/suspension {suspendu: bool} — suspendre ou reprendre tous les envois automatiques. */
+function wr_rapports_suspension(): array
+{
+    ensureRapports();
+    $b = body();
+    if (!array_key_exists('suspendu', $b)) { http_response_code(422); return ['error' => 'suspendu (vrai ou faux) attendu']; }
+    $s = ['suspendu' => !empty($b['suspendu']), 'depuis' => date('Y-m-d H:i'),
+        'motif' => !empty($b['suspendu']) ? 'suspendus depuis l’écran Rapports' : 'repris depuis l’écran Rapports'];
+    Db::exec('INSERT INTO ceo_app_setting VALUES (?, ?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+        ['rapportsSuspension', json_encode($s, JSON_UNESCAPED_UNICODE)]);
+    journalAdd('CEO', 'Rapport', 'Tous les rapports', $s['suspendu']
+        ? 'Envois automatiques suspendus — aucun rapport ne part plus de l’horloge'
+        : 'Envois automatiques repris — chaque rapport actif repart à son heure');
+    return ['ok' => true, 'suspension' => rapSuspension()];
+}
+
+/**
  * GET /rapports/cron — à appeler chaque heure (cron serveur). Génère et envoie
  * ce qui est dû à l'heure courante ; un rapport déjà généré aujourd'hui ne
  * repart pas. Protégé par le réglage `rapportsJeton` (Paramètres → à créer) ;
@@ -2254,7 +2292,9 @@ function ep_rapports_cron(): array
     }
     $h = (int) date('G'); $dow = (int) date('N'); $dom = (int) date('j');
     $faits = [];
-    foreach (Db::rows('SELECT * FROM ceo_rapport WHERE actif = 1') as $rep) {
+    // L'interrupteur général (rapSuspension) : suspendus, aucun rapport n'est dû ; le reste du battement continue.
+    $suspension = rapSuspension();
+    foreach ($suspension['suspendu'] ? [] : Db::rows('SELECT * FROM ceo_rapport WHERE actif = 1') as $rep) {
         $jrs = json_decode((string) ($rep['jours'] ?? ''), true);
         if (is_array($jrs)) {
             // Planification par jours cochés (compositeur) : jours de semaine
@@ -2364,7 +2404,7 @@ function ep_rapports_cron(): array
     $resultat = 'module absent';
     try { if (function_exists('exPrechauffer')) { $resultat = exPrechauffer(); } }
     catch (Throwable $eR) { $resultat = 'échec — ' . $eR->getMessage(); }
-    return ['ok' => true, 'heure' => $h, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'verification' => $verification, 'resultat' => $resultat];
+    return ['ok' => true, 'heure' => $h, 'suspendus' => $suspension['suspendu'] ? 'depuis le ' . $suspension['depuis'] : false, 'faits' => $faits, 'cadence' => $cadence, 'taches' => $taches, 'kpiTable' => $kpiT, 'planning' => $plan, 'moisson' => $moisson, 'moissonHeures' => $moissonH, 'recurrence' => $recurrence, 'verification' => $verification, 'resultat' => $resultat];
 }
 
 /**

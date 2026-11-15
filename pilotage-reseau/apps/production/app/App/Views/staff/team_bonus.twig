@@ -57,6 +57,20 @@
                         <textarea id="bonusInfoFr" class="form-control" name="info_fr" rows="3" maxlength="{{ info_max }}">{{ info_fr }}</textarea>
                         <div class="form-text">Pusta = brak informacji na tablecie. Najwyżej {{ info_max }} znaków.</div>
                     </div>
+                    {# [267] Sesja kierownika produkcji : zakładka « Koszty i premie » (Czas pracy) — czy widzi premie, jego premia miesięczna. #}
+                    <div class="at-bonus-info mt-3">
+                        <span class="form-label d-block"><i class="bi bi-person-badge"></i> Kierownik produkcji — « Koszty i premie »</span>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" id="managerShowBonuses" name="manager_show_bonuses" {{ manager.show_bonuses ? 'checked' : '' }}>
+                            <label class="form-check-label" for="managerShowBonuses">Pokaż premie (grupy, osoby i własną) w sesji kierownika produkcji</label>
+                        </div>
+                        <label class="form-label mt-2" for="managerBonusPct">Premia kierownika produkcji : % sprzedaży firmy w miesiącu</label>
+                        <span class="input-group at-bonus-input">
+                            <input id="managerBonusPct" class="form-control text-end" name="manager_bonus_pct" inputmode="decimal" value="{{ manager.bonus_pct|number_format(2, ',', ' ') }}">
+                            <span class="input-group-text">%</span>
+                        </span>
+                        <div class="form-text">Wypłata co miesiąc, bez premii kwartalnej. 0 = brak premii. Koszt pracodawcy grup i osób kierownik widzi zawsze (prawo « Koszty i premie » w Uprawnieniach i menu).</div>
+                    </div>
                     <div class="mt-3"><button class="btn btn-primary">Zapisz</button></div>
                 </div>
             </form>
@@ -146,7 +160,8 @@
         e.preventDefault();
         const tiers = [...body.querySelectorAll('tr[data-tier]')].map(tr => ({from: tr.querySelector('[data-from]').value, amount: tr.querySelector('[data-amount]').value}));
         at.send('/ajax/staff/team-bonus', 'PUT', {min: form.min.value, prorata: form.prorata.checked, show_people: form.show_people.checked,
-            info_pl: form.info_pl.value, info_fr: form.info_fr.value, tiers}).then((res) => {
+            info_pl: form.info_pl.value, info_fr: form.info_fr.value, tiers,
+            manager_show_bonuses: form.manager_show_bonuses.checked, manager_bonus_pct: form.manager_bonus_pct.value}).then((res) => {
             at.notify(res.ok, res.message || (res.ok ? 'Zapisano' : 'Błąd'));
             if (res.ok) window.setTimeout(() => window.location.reload(), 600);
         });

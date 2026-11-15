@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Fidélité — page de test (bingo + points)</title>
+<!-- Page de test de la fidélité, À PART du dashboard (13/11/2026, Sam : « c'est une page à part, ne touche pas au
+     dashboard »). Trois vues, puis le diagnostic de l'API :
+       A. l'admin : la création du programme (carte à points, saison, campagnes), en aperçu — rien n'est envoyé ;
+       B. un magasin test, Halle, et ses clients ;
+       C. la carte d'un client : ses points, sa semaine, sa grille de bingo, ses bons.
+     LECTURE SEULE. Elle appelle son API à côté d'elle (api.php), jamais celle du cockpit. -->
+<style>
+@font-face{font-family:'Gotham';src:url('../assets/ds/fonts/Gotham_Medium.otf') format('opentype');font-weight:400}
+@font-face{font-family:'Gotham';src:url('../assets/ds/fonts/Gotham_Regular.otf') format('opentype');font-weight:700}
+@font-face{font-family:'Vank';src:url('../assets/ds/fonts/GC_Vank.ttf') format('truetype');unicode-range:U+0020-007E}
+:root{--ink:#1c1a17;--muted-2:#5c5852;--muted:#7a736a;--faint:#B8B2A8;--paper:#faf7f2;--table-head:#FBF9F5;--chip:#EDE7DE;--line:#e6e0d8;--row-line:rgba(34,34,34,.06);
+  --accent:#8D1D2C;--accent-f:#6f1622;--abricot:#F2C9A0;--abricot-d:#F8E2CB;--green:#3f7a52;--danger:#b3261e;--prize:#B0792A;--prize-soft:#F6E7CE;--prize-ink:#7A5207}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 13px/1.45 'Gotham',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+b{font-weight:400}
+main{max-width:1180px;margin:0 auto;padding:26px 24px 60px}
+h1{font-size:24px;font-weight:400;margin:4px 0}
+h2{font-size:12px;font-weight:400;letter-spacing:.07em;text-transform:uppercase;color:var(--muted-2);margin:0;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h3{font-size:11px;font-weight:400;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px}
+.k{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.intro{color:var(--muted-2);max-width:860px;margin:0 0 14px}
+nav.ancres{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+nav.ancres a{background:#fff;border:1px solid var(--line);border-radius:6px;padding:5px 11px;color:var(--muted-2);text-decoration:none}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
+button{font:inherit;border:1px solid var(--line);background:#fff;color:var(--muted-2);border-radius:6px;padding:7px 14px;cursor:pointer}
+button.p{background:var(--accent);border-color:var(--accent);color:#fff}
+button[disabled]{opacity:.45;cursor:default}
+button.x{border:none;background:none;color:var(--faint);padding:0 4px;font-size:15px}
+input,select{font:inherit;color:var(--ink);background:rgba(118,118,128,.09);border:none;border-radius:6px;padding:4px 8px}
+input.n{width:62px;text-align:right;color:var(--accent)}
+label{font-size:12px;color:var(--muted-2);display:inline-flex;gap:6px;align-items:center}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;font-variant-numeric:tabular-nums}
+th{font-weight:400;text-align:left;color:var(--muted);background:var(--table-head);padding:6px 8px;font-size:11px}
+td{padding:6px 8px;border-top:1px solid var(--row-line);vertical-align:top}
+tr.clic{cursor:pointer}tr.clic:hover td{background:var(--paper)}tr.on td{background:rgba(141,29,44,.05)}
+code{font:11px ui-monospace,Menlo,monospace;color:var(--muted-2);background:var(--table-head);border:1px solid var(--line);border-radius:4px;padding:0 4px;word-break:break-all}
+.ok{color:var(--green)}.ko{color:var(--danger)}.mu{color:var(--muted)}.acc{color:var(--accent)}
+.etat{display:inline-block;font-size:10px;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 6px}
+.etat.ok{background:rgba(63,122,82,.12)}.etat.ko{background:rgba(179,38,30,.08)}.etat.neu{background:var(--chip);color:var(--muted-2)}.etat.av{background:var(--prize-soft);color:var(--prize-ink)}
+.gap{background:var(--prize-soft);color:var(--prize-ink);border-radius:8px;padding:8px 11px;font-size:12px;margin-top:10px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin-top:10px}
+.kpis div{background:var(--table-head);border-radius:8px;padding:8px 10px}
+.kpis b{display:block;font-weight:700;font-size:20px}
+.kpis span{font-size:11px;color:var(--muted)}
+details{margin-top:10px}summary{cursor:pointer;color:var(--muted);font-size:12px}
+pre{background:var(--table-head);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-word;margin:6px 0 0}
+.cases{display:inline-flex;gap:2px}.cases i{width:9px;height:9px;border-radius:2px;background:var(--chip)}.cases i.on{background:var(--accent)}.cases i.m{background:repeating-linear-gradient(135deg,#e3ddd4 0 2px,#fff 2px 4px)}
+a{color:var(--accent)}
+.ill{display:block;width:100%;height:100%;object-fit:contain;filter:drop-shadow(.35px 0 0 #8D1D2C) drop-shadow(-.35px 0 0 #8D1D2C)}
+.blanc .ill{filter:brightness(0) invert(1)}
+.g2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start}
+.g2b{display:grid;grid-template-columns:380px minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:900px){.g2,.g2b{grid-template-columns:minmax(0,1fr)}}
+/* L'admin */
+.saisons{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:10px}
+.sa{position:relative;text-align:left;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;align-items:flex-start;cursor:pointer}
+.sa.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.sa .si{position:absolute;right:8px;top:8px;width:34px;height:34px}
+.sa b{font-size:13.5px;padding-right:36px}.sa small{font-size:11px;color:var(--muted)}
+.req{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px}
+.req .h{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.sem{display:grid;grid-template-columns:repeat(13,minmax(0,1fr));gap:4px;margin-top:6px}
+.sem div{text-align:center}.sem span{display:block;width:30px;height:30px;margin:0 auto;border-radius:6px;background:#fff;padding:2px}.sem .f span{background:var(--abricot-d)}
+.sem em{font-style:normal;font-size:9.5px;color:var(--muted)}
+.jours{display:inline-flex;gap:2px;vertical-align:1px}
+.jours button{width:20px;height:20px;border-radius:4px;border:none;background:var(--chip);color:var(--faint);font-size:10px;padding:0}
+.jours button.on{background:var(--accent);color:#fff}
+/* La carte du client : l'app */
+.tel{width:360px;border:10px solid var(--ink);border-radius:42px;background:#F4EFE8;overflow:hidden}
+.tel .bar{display:flex;justify-content:space-between;padding:10px 22px 2px;font-size:11px}
+.tel .sc{padding:6px 14px 16px;display:flex;flex-direction:column;gap:10px}
+.tel .tt{display:flex;justify-content:space-between;align-items:baseline;font-size:16px}
+.tel .tt small{font-size:11px;color:var(--muted)}
+.pc{background:var(--accent);color:#fff;border-radius:14px;padding:12px 14px}
+.pc .h{display:flex;justify-content:space-between;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;opacity:.85}
+.pc .n{font:400 30px/1 'Vank','Gotham';margin:10px 0 2px}
+.pc .n small{font:400 12px 'Gotham';opacity:.85}
+.pc .j{height:6px;border-radius:3px;background:rgba(255,255,255,.25);margin:8px 0 6px;overflow:hidden}.pc .j i{display:block;height:100%;background:var(--abricot)}
+.pc .m{font-size:11px;opacity:.95}
+.blk{background:#fff;border-radius:14px;padding:10px 12px;font-size:12px}
+.blk .l{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.jg{height:6px;border-radius:3px;background:var(--chip);margin-top:6px;overflow:hidden}.jg i{display:block;height:100%;background:var(--accent)}
+.badge{font-size:10px;border-radius:4px;padding:2px 6px;background:var(--chip);color:var(--muted-2)}.badge.on{background:var(--accent);color:#fff}
+.btit{display:flex;justify-content:space-between;align-items:baseline}
+.btit b{font:400 26px/1 'Vank','Gotham';color:var(--accent)}.btit span{font-size:10.5px;color:var(--muted)}
+.bingo{display:grid;border:1.4px solid var(--accent);border-radius:8px;overflow:hidden;background:#fff}
+.bc{position:relative;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;box-shadow:inset -1px -1px 0 var(--accent);padding:4px 3px;text-align:center}
+.bc .w{width:28px;height:28px}
+.bc span{font-size:7.5px;line-height:1.1}
+.bc em{position:absolute;top:2px;left:4px;font-style:normal;font-size:7px;color:var(--muted)}
+.bc.f{background:var(--abricot-d)}
+.bc.coch::after{content:'✓';position:absolute;top:6px;left:50%;width:34px;height:34px;margin-left:-17px;border:2px solid var(--accent);border-radius:999px;transform:rotate(-14deg);color:var(--accent);font-size:10px;display:flex;align-items:flex-end;justify-content:flex-end;opacity:.85}
+.bc.manq{background:repeating-linear-gradient(135deg,#f3efe9 0 5px,#fff 5px 10px)}.bc.manq .w{filter:grayscale(1);opacity:.35}
+.bc.cours{box-shadow:inset 0 0 0 2px var(--accent);outline:1.5px dashed var(--accent);outline-offset:-5px}
+.bc.avenir{opacity:.42}
+.bc .pg{width:80%;height:4px;border-radius:2px;background:var(--chip);margin-top:2px;overflow:hidden}.bc .pg i{display:block;height:100%;background:var(--accent)}
+.bc.b{background:color-mix(in srgb,var(--accent) 12%,#fff)}.bc.b span{color:var(--accent)}
+.bc.b.g{background:var(--accent)}.bc.b.g span{color:#fff}
+.bc.b.perdu{opacity:.4}
+.bc.sup{flex-direction:row;gap:9px;background:var(--accent-f)}.bc.sup span{color:#fff;font-size:9px;text-align:left}.bc.sup b{display:block;font:400 14px/1 'Vank','Gotham';color:#fff}
+.bc.sup.perdu{opacity:.45}
+.bon{display:grid;grid-template-columns:38px minmax(0,1fr) auto;gap:10px;align-items:center;border-radius:10px;padding:6px 8px;border:1px solid var(--line);margin-top:6px;background:#fff}
+.bon .w{width:34px;height:34px;border-radius:8px;background:var(--accent);padding:4px}
+.bon.non .w{background:var(--chip)}.bon.non .w .ill{filter:none;opacity:.5}
+.bon small{display:block;font-size:10.5px;color:var(--muted)}
+</style>
+</head>
+<body>
+<main>
+  <div class="k">Fidélité · bingo + points · page de test à part</div>
+  <h1>Le programme, de l’admin à la carte du client</h1>
+  <p class="intro">Une carte à points permanente et quatre cartes de bingo par an, lues dans l’ERP par son API. Lecture seule : rien n’est créé, publié ni émis.
+    Page à part : elle ne touche ni au dashboard ni au cockpit, et a sa propre API (<code>fidelite-test/api.php</code>).</p>
+  <nav class="ancres"><a href="#admin">A · L’admin : créer</a><a href="#magasin">B · Magasin test : Halle</a><a href="#carte">C · La carte du client</a><a href="#diag">Diagnostic de l’API</a></nav>
+  <div id="auth" class="gap" hidden></div>
+
+  <!-- A. L'admin -->
+  <section class="card" id="admin"><h2>A · L’admin : créer le programme <span class="mu" style="text-transform:none;letter-spacing:0">aperçu : rien n’est envoyé</span></h2>
+    <div class="mu" style="margin-top:6px">Ce que l’admin règle, et ce que le cockpit enverrait à l’ERP pour créer la carte à points et les campagnes de bons de la saison. <code>api.php?r=/fidelite/creation</code></div>
+    <div id="admin-c"><p class="mu">Lecture…</p></div></section>
+
+  <!-- B. Le magasin test -->
+  <section class="card" id="magasin"><h2><span>B · Magasin test : <span id="mag-nom">Halle</span></span>
+      <span class="row" style="margin:0"><input id="mag-q" placeholder="prénom" style="width:110px"><button id="b-mag">Lire</button></span></h2>
+    <div class="mu" style="margin-top:6px">Les clients de la carte à Halle, leurs points et leur bingo de la saison. Cliquez un client pour voir sa carte. La première lecture d’une saison peut prendre une minute. <code>api.php?r=/fidelite/clients&amp;shop=…&amp;tous=1</code></div>
+    <div id="mag-c"></div></section>
+
+  <!-- C. La carte du client -->
+  <section class="card" id="carte"><h2>C · La carte du client <span class="row" style="margin:0"><label>Client <select id="cl-liste" style="max-width:340px"><option value="">— la liste se charge avec Halle (B) —</option></select></label>
+      <label>ou n° <input id="cl-id" class="n" style="width:90px"></label><button id="b-cl">Voir</button></span></h2>
+    <div class="mu" style="margin-top:6px">Telle que l’app la montrerait : ses points, sa semaine, sa grille de bingo et ses bons — et, à côté, d’où vient chaque case. <code>api.php?r=/fidelite/client&amp;id=…</code></div>
+    <div id="cl-c"><p class="mu">Choisissez un client dans la liste déroulante (les clients de Halle), cliquez-en un dans la partie B, ou tapez son numéro.</p></div></section>
+
+  <!-- Le diagnostic -->
+  <section class="card" id="diag"><h2>Diagnostic de l’API</h2>
+    <div class="row"><button class="p" id="b-verif">Vérifier l’API de l’ERP</button><button id="b-prog">Lire le programme</button><button id="b-bons">Calculer les bons dus</button></div>
+    <div class="row"><label>Simuler : magasin <select id="s-shop"></select></label><label>montant <input id="s-montant" value="22,40" style="width:70px"> €</label>
+      <label>le <input id="s-quand" type="datetime-local"></label><button id="b-sim">Simuler</button></div>
+    <div id="diag-c"></div></section>
+</main>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const nf = (n, d) => n == null ? '—' : Number(n).toLocaleString('fr-BE', { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
+  const eur = v => v == null ? '—' : nf(v, v % 1 ? 2 : 0) + ' €';
+  const ddmm = iso => iso ? iso.slice(8, 10) + '/' + iso.slice(5, 7) : '';
+  const ill = (n, cls) => n ? `<img class="ill ${cls || ''}" src="ill/${esc(n)}.png" alt="" loading="lazy">` : '';
+  const brut = d => `<details><summary>réponse brute</summary><pre>${esc(JSON.stringify(d, null, 2))}</pre></details>`;
+  const JOURS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const url = route => { const [p, q] = route.split('?'); return 'api.php?r=' + encodeURIComponent(p) + (q ? '&' + q : ''); };
+  async function appel(methode, route, corps){
+    const t = performance.now();
+    try {
+      const r = await fetch(url(route), { method: methode, credentials: 'same-origin', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: corps ? JSON.stringify(corps) : undefined });
+      let d = null; try { d = await r.json(); } catch (e) { d = null; }
+      if (r.status === 401) { $('auth').hidden = false; $('auth').innerHTML = 'Accès refusé : <a href="../index.html">connectez-vous au cockpit</a> (mot de passe du siège), puis revenez sur cette page.'; }
+      return { code: r.status, d, ms: Math.round(performance.now() - t) };
+    } catch (e) { return { code: 0, d: { error: e.message }, ms: 0 }; }
+  }
+  const echec = (el, r) => { $(el).innerHTML = `<p class="ko">HTTP ${r.code} · ${esc((r.d && (r.d.error || (r.d.erp && r.d.erp.erreur))) || 'sans réponse')}</p>` + brut(r.d); };
+  let MAGS = [], HALLE = null;
+
+  /* ---------- A. L'admin : la création, en aperçu --------------------------------------------------------- */
+  let CR = null, P = null, CODE = '', REC = 0;   // la réponse, et le barème en cours d'écriture (local)
+  async function admin(saison){
+    $('admin-c').innerHTML = '<p class="mu">Lecture…</p>';
+    const r = await appel('GET', '/fidelite/creation' + (saison ? '?saison=' + encodeURIComponent(saison) : ''));
+    if (r.code !== 200 || !r.d || !r.d.erp) { return echec('admin-c', r); }
+    CR = r.d; P = JSON.parse(JSON.stringify(CR.envois[0].corps.points_config));
+    CODE = CR.envois[0].corps.code; REC = CR.recompense;
+    if (!Array.isArray(P.shop_coefficients) && typeof P.shop_coefficients !== 'object') { P.shop_coefficients = {}; }
+    MAGS = CR.magasins || []; trouverHalle(); remplirMagasins();
+    adminRendu();
+  }
+  function corpsCarte(){ const c = JSON.parse(JSON.stringify(CR.envois[0].corps)); c.points_config = P; c.code = CODE; if (REC) { c.reward_product_ids = [REC]; } return c; }
+  function adminRendu(){
+    const d = CR, sa = d.saison, C = d.carteEnPlace;
+    const sais = `<div class="saisons">${(d.annee || []).map(a => `<button class="sa${sa && a.id === sa.id ? ' on' : ''}" data-saison="${esc(a.id)}"><span class="si">${ill(a.ill)}</span><b>${esc(a.nom)}</b>
+      <small>${ddmm(a.du)} → ${ddmm(a.au)}</small><span class="etat ${a.etat === 'cours' ? 'ok' : 'neu'}">${a.etat === 'cours' ? 'en cours · S' + a.enCours : (a.etat === 'passee' ? 'terminée' : 'à venir')}</span>${a.aValider ? '<span class="etat av">thèmes à valider</span>' : ''}</button>`).join('')}</div>`;
+    const bon = P.bonuses.map((b, i) => `<div class="row" style="margin-top:6px">×<select data-b="${i}" data-k="coefficient">${[1.5, 2, 3].map(v => `<option value="${v}"${+b.coefficient === v ? ' selected' : ''}>${String(v).replace('.', ',')}</option>`).join('')}</select>
+      <span class="jours">${JOURS.map((l, k) => `<button data-b="${i}" data-jour="${k}" class="${b.days.includes(k) ? 'on' : ''}">${l}</button>`).join('')}</span>
+      de <input data-b="${i}" data-k="from" value="${esc(b.from)}" style="width:58px"> à <input data-b="${i}" data-k="to" value="${esc(b.to)}" style="width:58px">
+      <input data-b="${i}" data-k="name" value="${esc(b.name)}" style="width:130px"><button class="x" data-retirer="${i}" title="Retirer">×</button></div>`).join('');
+    const reglages = `<h3>La carte à points ${C ? '· en place : ' + esc(C.nom) + ' (' + esc(C.code) + ', v' + C.version + (C.verrou ? ', barème figé' : '') + ')' : '· aucune dans l’ERP'}</h3>
+      <div class="row"><label>Code <input id="cr-code" value="${esc(CODE)}" style="width:120px" title="lettres, chiffres, tiret, soulignement"></label>
+        <label>Produit de récompense <select id="cr-rec" style="max-width:260px">${(d.produits || []).map(p => `<option value="${p.id}"${p.id === REC ? ' selected' : ''}>${esc(p.nom)}</option>`).join('') || '<option value="">aucun produit lu</option>'}</select></label></div>
+      <div class="mu" style="margin-top:4px">L’ERP exige un produit de récompense même pour une carte à points. Il ne dit pas le format du code : s’il le refuse, la page essaie d’elle-même ses variantes (minuscules, tiret, soulignement…). ${(d.codesExistants || []).length ? 'Cartes déjà dans l’ERP : ' + d.codesExistants.map(c => '<code>' + esc(c.code) + '</code> ' + esc(c.nom) + ' v' + c.version + (c.actif ? '' : ' (arrêtée)') + (c.points ? ' · points' : '')).join(' · ') : 'Aucune carte dans l’ERP.'}</div>
+      <div class="row"><label>Chaque <input class="n" data-p="slice_eur" value="${nf(P.slice_cents / 100, 2)}"> € =</label><label><input class="n" data-p="points_per_slice" value="${P.points_per_slice}"> point(s)</label>
+        <label>· palier <input class="n" data-t="points" value="${P.tiers[0].points}"> points →</label><label><input class="n" data-t="eur" value="${nf(P.tiers[0].voucher_cents / 100, 2)}"> €</label></div>
+      <div class="row"><label>Bon valable <input class="n" data-p="voucher_validity_days" value="${P.voucher_validity_days}"> jours</label><label>· chaque point <input class="n" data-p="points_validity_days" value="${P.points_validity_days}"> jours</label></div>
+      <div class="row">${MAGS.map(m => `<label>${esc(m.nom)} ×<input class="n" style="width:50px" data-coef="${esc(m.id)}" value="${nf(+(P.shop_coefficients[m.id] ?? 1), 2)}"></label>`).join(' ')}</div>
+      <div class="mu" style="margin-top:8px">Les jours et les heures (le plus fort l’emporte) :</div>${bon}<div class="row"><button id="b-ajbon">+ un créneau</button></div>
+      <h3>Le bingo de la saison · ${esc(sa ? sa.nom : '')}</h3>
+      <div class="mu">Une case par semaine dès ${eur(d.regles.seuil)} d’achats · un bon toutes les ${d.regles.tousLes} cases (${d.regles.bons.map(b => eur(b.valeur) + ' à la ' + b.k + 'e').join(', ')}) · le super bon de ${eur(d.regles.superBon)} à 13/13 · bons valables ${d.regles.validite} jours. Calendrier : <code>src/data/fidelite_bingo.json</code></div>`;
+    const env = d.envois[0];
+    const sortie = `<h3>Ce qui serait envoyé à l’ERP</h3>
+      <div class="req"><div class="h"><span>1. ${esc(env.quoi)}</span><span><code>${esc(env.methode + ' ' + env.route)}</code> <span class="mu">· ${esc(env.permission)}</span></span></div>
+        <details open><summary>corps de la requête</summary><pre id="corps-carte">${esc(JSON.stringify(corpsCarte(), null, 2))}</pre></details></div>
+      ${d.campagnes.map((c, i) => `<div class="req"><div class="h"><span>${i + 2}. Campagne « ${esc(c.corps.name)} »</span><span>${c.existe ? '<span class="etat ok">existe déjà · ' + esc(c.existe.statut) + '</span>' : '<span class="etat av">à créer</span>'} <code>POST /admin/voucher-campaigns</code> <span class="mu">· MENU.BUNDLE.MANAGE</span></span></div>
+        <details><summary>corps de la requête</summary><pre>${esc(JSON.stringify(c.corps, null, 2))}</pre></details></div>`).join('')}
+      <div class="req"><div class="h"><span>Puis, chaque lundi : un code par bon gagné, au nom du client</span><code>${esc(d.codeExemple.methode + ' ' + d.codeExemple.route)}</code></div>
+        <details><summary>exemple</summary><pre>${esc(JSON.stringify(d.codeExemple.corps, null, 2))}</pre></details></div>
+      <div class="req" style="border-color:var(--accent)"><div class="h"><span>${C ? 'Une carte est déjà en place : créer la v' + env.corps.version + ' (même code), active dès le' : 'Créer la carte à points dans l’ERP, active dès le'}</span>
+          <input type="date" id="cr-debut" value="${esc(d.aujourdhui)}" min="${esc(d.aujourdhui)}"></div>
+        <div class="row"><button class="p" id="b-creer">Créer la carte dans l’ERP</button><button id="b-creer-camp"${d.campagnes.every(c => c.existe) ? ' disabled' : ''}>Créer les campagnes manquantes (en brouillon)</button></div>
+        <div class="mu" style="margin-top:6px">Écriture réelle dans l’ERP, après confirmation, et notée au journal du cockpit. Ce qui rapporte des points : ${env.corps.earning_category_ids ? 'toutes les catégories (' + env.corps.earning_category_ids.length + ')' : (env.corps.earning_category_group_ids ? 'tous les groupes de catégories (' + env.corps.earning_category_group_ids.length + ')' : 'le mot-clé « tout » (aucune catégorie lue)')}. Les campagnes naissent en brouillon : aucun bon ne part avant de les activer dans l’ERP.</div>
+        <div id="cr-res"></div></div>`;
+    $('admin-c').innerHTML = (d.erp.ok ? '' : `<div class="gap">ERP injoignable : ${esc(d.erp.erreur)} — l’aperçu part des valeurs du handoff.</div>`) + sais
+      + `<div class="g2" style="margin-top:6px"><div>${reglages}<h3>Les 13 semaines</h3><div id="sem-a" class="mu">…</div></div><div>${sortie}</div></div>`;
+    semainesSaison(sa ? sa.id : '');
+  }
+  async function semainesSaison(id){
+    const r = await appel('GET', '/fidelite' + (id ? '?saison=' + encodeURIComponent(id) : ''));
+    const s = r.d && r.d.bingo && r.d.bingo.saison;
+    if (!s) { $('sem-a').textContent = '—'; return; }
+    $('sem-a').innerHTML = `<div class="sem">${s.semaines.map(w => `<div class="${w.fete ? 'f' : ''}" title="S${w.n} · ${esc(w.titre)} · ${ddmm(w.du)}"><span>${ill(w.ill)}</span><em>S${w.n}</em></div>`).join('')}</div>
+      <div class="mu" style="margin-top:4px">${s.semaines.map(w => 'S' + w.n + ' ' + esc(w.titre)).join(' · ')}</div>`;
+  }
+  // Les gestes de l'admin : tout reste local, l'aperçu de la requête suit.
+  $('admin-c').addEventListener('click', e => {
+    const t = e.target.closest('button'); if (!t || !CR) { return; }
+    if (t.dataset.saison) { return admin(t.dataset.saison); }
+    if (t.dataset.jour != null) { const b = P.bonuses[+t.dataset.b], k = +t.dataset.jour; b.days = b.days.includes(k) ? (b.days.length > 1 ? b.days.filter(x => x !== k) : b.days) : b.days.concat([k]).sort((x, y) => x - y); return adminRendu(); }
+    if (t.dataset.retirer != null) { P.bonuses.splice(+t.dataset.retirer, 1); return adminRendu(); }
+    if (t.id === 'b-ajbon') { P.bonuses.push({ name: 'Nouveau créneau', days: [1, 2, 3], from: '14:00', to: '17:00', coefficient: 2 }); return adminRendu(); }
+  });
+  // Les deux écritures : la carte, les campagnes. Confirmées, puis tout se relit.
+  $('admin-c').addEventListener('click', async e => {
+    const t = e.target.closest('button'); if (!t || !CR || (t.id !== 'b-creer' && t.id !== 'b-creer-camp')) { return; }
+    const camp = t.id === 'b-creer-camp', env = CR.envois[0];
+    const q = camp ? 'Créer dans l’ERP, en brouillon, les campagnes : ' + CR.campagnes.filter(c => !c.existe).map(c => c.corps.name).join(', ') + ' ?'
+      : 'Créer dans l’ERP la carte « ' + env.corps.name + ' » (' + CODE + '), récompense « ' + (((CR.produits || []).find(p => p.id === REC) || {}).nom || '—') + ' », ' + nf(P.slice_cents / 100, 2) + ' € = ' + P.points_per_slice + ' point, palier ' + P.tiers[0].points + ' → ' + nf(P.tiers[0].voucher_cents / 100, 2) + ' €, sur ' + env.corps.shop_ids.length + ' magasins, active dès le ' + $('cr-debut').value.split('-').reverse().join('/') + ' ?';
+    if (!window.confirm(q)) { return; }
+    t.disabled = true; $('cr-res').innerHTML = '<p class="mu">Envoi à l’ERP…</p>';
+    const r = camp ? await appel('POST', '/fidelite/creer-campagnes', { saison: CR.saison ? CR.saison.id : '', confirmer: true, qui: 'Page de test' })
+      : await appel('POST', '/fidelite/creer', { points: P, debut: $('cr-debut').value, code: CODE, recompense: REC, confirmer: true, qui: 'Page de test' });
+    const ok = r.code >= 200 && r.code < 300 && r.d && r.d.ok;
+    const html = ok ? (camp ? `<p class="ok">${r.d.creees} campagne(s) créée(s) en brouillon.</p>` : `<p class="ok">Carte créée dans l’ERP${r.d.carte && r.d.carte.id ? ' : id ' + r.d.carte.id : ''}, code « ${esc(r.d.codeCarte)} » (HTTP ${r.code}).</p>${(r.d.essais || []).length > 1 ? '<p class="mu">Codes essayés : ' + r.d.essais.map(x => esc(x.code) + (x.ok ? ' ✓' : ' (refusé)')).join(' · ') + '</p>' : ''}`)
+      : `<p class="ko">Refusé : HTTP ${r.code} · ${esc((r.d && r.d.error) || 'sans réponse')}</p>${r.d && (r.d.essais || []).length ? '<p class="mu">Codes essayés : ' + r.d.essais.map(x => esc(x.code)).join(' · ') + (r.d.codesExistants && r.d.codesExistants.length ? ' — codes déjà dans l’ERP : ' + r.d.codesExistants.map(esc).join(', ') : '') + '</p>' : ''}${r.d && r.d.etapes ? '<p class="mu">' + r.d.etapes.map(x => esc(x.campagne) + ' : ' + (x.ok ? (x.deja ? 'existait' : 'créée') : esc(x.erreur))).join(' · ') + '</p>' : ''}`;
+    if (ok) { await admin(CR.saison ? CR.saison.id : ''); magasin(); }
+    $('cr-res').innerHTML = html + brut(r.d);
+  });
+  $('admin-c').addEventListener('change', e => {
+    const t = e.target, v = String(t.value).replace(',', '.');
+    if (t.dataset.p === 'slice_eur') { if (+v > 0) { P.slice_cents = Math.round(+v * 100); } }
+    else if (t.dataset.p) { if (+v >= 0) { P[t.dataset.p] = Math.round(+v); } }
+    else if (t.dataset.t === 'points') { if (+v > 0) { P.tiers[0].points = Math.round(+v); } }
+    else if (t.dataset.t === 'eur') { if (+v > 0) { P.tiers[0].voucher_cents = Math.round(+v * 100); } }
+    else if (t.dataset.coef) { if (Array.isArray(P.shop_coefficients)) { P.shop_coefficients = {}; } if (+v >= 0) { P.shop_coefficients[t.dataset.coef] = +v; } }
+    else if (t.dataset.b != null) { const b = P.bonuses[+t.dataset.b]; b[t.dataset.k] = t.dataset.k === 'coefficient' ? +v : t.value; }
+    else if (t.id === 'cr-code') { CODE = t.value.trim().replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^[-_]+|[-_]+$/g, '').slice(0, 40) || CODE; }
+    else if (t.id === 'cr-rec') { REC = +t.value; return; }
+    else if (t.id === 'cr-debut') { return; }
+    adminRendu();
+  });
+
+  /* ---------- B. Le magasin test : Halle --------------------------------------------------------------- */
+  function trouverHalle(){ HALLE = MAGS.find(m => /halle/i.test(m.nom)) || MAGS[0] || null; $('mag-nom').textContent = HALLE ? HALLE.nom : '—'; }
+  function remplirMagasins(){ $('s-shop').innerHTML = MAGS.map(m => `<option value="${esc(m.id)}"${HALLE && m.id === HALLE.id ? ' selected' : ''}>${esc(m.nom)}</option>`).join(''); if (!$('s-quand').value && CR) { $('s-quand').value = CR.aujourdhui + 'T15:10'; } }
+  async function magasin(){
+    if (!HALLE) { $('mag-c').innerHTML = '<p class="ko">Aucun magasin lu dans l’ERP (GET /admin/loyalty/options).</p>'; return; }
+    $('mag-c').innerHTML = '<p class="mu">Lecture des clients de ' + esc(HALLE.nom) + ', semaine par semaine…</p>';
+    const q = $('mag-q').value.trim();
+    const r = await appel('GET', '/fidelite/clients?shop=' + encodeURIComponent(HALLE.id) + '&tous=1' + (q ? '&q=' + encodeURIComponent(q) : ''));
+    if (r.d && r.d.erp && !r.d.erp.ok && /aucune carte/.test(r.d.erp.erreur || '')) { MAG = null; remplirClients(); $('cl-liste').innerHTML = '<option value="">pas encore de carte à points (A)</option>'; $('mag-c').innerHTML = '<div class="gap">Aucune carte à points active dans l’ERP : créez-la plus haut (A · L’admin, « Créer la carte dans l’ERP »), puis relisez Halle.</div>'; return; }
+    if (r.code !== 200 || !r.d || !r.d.erp || !r.d.erp.ok) { return echec('mag-c', r); }
+    MAG = r.d; MAG.ms = r.ms; MAGVUE = { tri: 'cases', filtre: 'tous', n: 30 };
+    remplirClients();
+    magRendu();
+  }
+  let MAG = null, MAGVUE = null;
+  /** La liste déroulante de la carte (C) : tous les clients lus pour Halle, par prénom. */
+  function remplirClients(){
+    const L = (MAG && MAG.membres ? MAG.membres.slice() : []).sort((a, b) => a.nom.localeCompare(b.nom, 'fr') || a.id - b.id);
+    const choisi = $('cl-liste').value;
+    $('cl-liste').innerHTML = (L.length ? `<option value="">— ${L.length} client(s) de ${esc(HALLE ? HALLE.nom : '')} —</option>` : '<option value="">aucun client lu</option>')
+      + L.map(m => `<option value="${m.id}"${String(m.id) === choisi ? ' selected' : ''}>${esc(m.nom)} · n° ${m.id} · ${m.cases} case(s) · ${nf(m.solde)} pts</option>`).join('');
+  }
+  function magRendu(){
+    const d = MAG, K = d.kpis, V = MAGVUE, nS = d.saison.closes + (d.saison.enCours ? 1 : 0);
+    const F = { tous: () => true, plein: m => m.cases >= nS && nS > 0, bien: m => m.cases > 0 && m.cases < nS && m.cases >= nS / 2, peu: m => m.cases > 0 && m.cases < nS / 2, zero: m => m.cases === 0 };
+    const T = { cases: (a, b) => b.cases - a.cases || b.solde - a.solde, casesAsc: (a, b) => a.cases - b.cases || b.solde - a.solde, points: (a, b) => b.solde - a.solde, semaine: (a, b) => b.semaine - a.semaine };
+    const L = d.membres.filter(F[V.filtre]).sort(T[V.tri]);
+    const nb = k => d.membres.filter(F[k]).length;
+    const puce = (k, t) => `<button data-filtre="${k}" class="${V.filtre === k ? 'p' : ''}">${t} · ${nb(k)}</button>`;
+    $('mag-c').innerHTML = `<div class="kpis"><div><b>${nf(K.membres)}</b><span>clients de la carte à ${esc(HALLE.nom)}</span></div><div><b>${K.partJoueurs ?? '—'} %</b><span>ont au moins une case</span></div>
+        <div><b>${K.semaine ?? '—'} %</b><span>case cochée cette semaine</span></div><div><b>${nf(K.points)}</b><span>points gagnés · ${nf(K.transactions)} tickets</span></div>
+        <div><b>${eur(K.ventes)}</b><span>achats des membres dans la saison</span></div></div>
+      <div class="row">${puce('tous', 'Tous')}${puce('plein', 'Toutes les cases')}${puce('bien', 'La moitié et plus')}${puce('peu', 'Moins de la moitié')}${puce('zero', 'Aucune case')}
+        <label style="margin-left:auto">Trier <select id="mag-tri">${[['cases', 'cases, du plus au moins'], ['casesAsc', 'cases, du moins au plus'], ['points', 'points'], ['semaine', 'achats de la semaine']].map(([k, t]) => `<option value="${k}"${V.tri === k ? ' selected' : ''}>${t}</option>`).join('')}</select></label></div>
+      <table><tr><th>Client</th><th>Points</th><th>Bingo · ${esc(d.saison.nom)}</th><th>Cette semaine</th><th>Dernier passage</th><th>À faire</th></tr>
+      ${L.slice(0, V.n).map(m => `<tr class="clic" data-id="${m.id}"><td>${esc(m.nom)} <span class="mu">n° ${m.id}</span></td><td>${nf(m.solde)}${m.atteint ? ' <span class="ok">· ' + m.atteint + ' atteint</span>' : ''}</td>
+        <td><span class="cases">${m.coches.map((c, i) => `<i class="${c ? 'on' : (i < m.coches.length - 1 ? 'm' : '')}"></i>`).join('')}</span> ${m.cases}</td><td class="${m.semaine >= d.seuil ? 'ok' : ''}">${eur(m.semaine)} · ${nf(m.pointsSemaine)} pts</td>
+        <td class="mu">${m.dernier ? ddmm(m.dernier.slice(0, 10)) + ' ' + m.dernier.slice(11, 16) : '—'}</td><td class="mu">${esc(m.afaire)}</td></tr>`).join('') || '<tr><td colspan="6" class="mu">Aucun client.</td></tr>'}</table>
+      <div class="row">${L.length > V.n ? `<button id="mag-plus">Voir ${Math.min(30, L.length - V.n)} de plus (${L.length - V.n} restants)</button>` : ''}
+        <span class="mu">${nf(L.length)} client(s) affiché(s) sur ${nf(d.nbMembres)} · ${nf(d.appels)} appel(s) à l’ERP · ${nf(d.ms)} ms</span></div>`;
+  }
+  $('b-mag').onclick = magasin;
+  $('mag-c').addEventListener('change', e => { if (e.target.id === 'mag-tri') { MAGVUE.tri = e.target.value; MAGVUE.n = 30; magRendu(); } });
+  $('mag-c').addEventListener('click', e => {
+    const b = e.target.closest('button');
+    if (b && b.dataset.filtre) { MAGVUE.filtre = b.dataset.filtre; MAGVUE.n = 30; return magRendu(); }
+    if (b && b.id === 'mag-plus') { MAGVUE.n += 30; return magRendu(); }
+  });
+  $('mag-c').addEventListener('click', e => { const tr = e.target.closest('tr[data-id]'); if (!tr) { return; } document.querySelectorAll('#mag-c tr.on').forEach(x => x.classList.remove('on')); tr.classList.add('on'); $('cl-id').value = tr.dataset.id; $('cl-liste').value = tr.dataset.id; carte(+tr.dataset.id); });
+
+  /* ---------- C. La carte du client --------------------------------------------------------------------- */
+  async function carte(id){
+    if (!id) { return; }
+    $('cl-c').innerHTML = '<p class="mu">Lecture de la carte du client n° ' + id + '…</p>';
+    $('carte').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const r = await appel('GET', '/fidelite/client?id=' + id);
+    if (r.code !== 200 || !r.d || !r.d.client) { return echec('cl-c', r); }
+    const d = r.d, c = d.client, x = d.tousLes, S = d.semaines, sem = c.semaine;
+    const pro = c.prochain, palPct = pro ? Math.round(100 * (pro.points - pro.reste) / pro.points) : 100;
+    const cells = [];
+    S.forEach(w => {
+      const cl = ['bc', w.fete ? 'f' : '', w.coche ? 'coch' : '', w.manquee ? 'manq' : '', w.etat === 'cours' ? 'cours' : '', w.etat === 'avenir' ? 'avenir' : ''].join(' ');
+      const pied = w.etat === 'cours' ? `<div class="pg"><i style="width:${Math.min(100, Math.round(100 * (w.euros || 0) / d.seuil))}%"></i></div>` : '';
+      cells.push(`<div class="${cl}" title="S${w.n} · ${esc(w.titre)} · ${eur(w.euros)} · ${w.points ?? '—'} pts"><em>S${w.n}</em><div class="w">${ill(w.ill)}</div><span>${w.manquee ? 'manquée' : esc(w.titre)}</span>${pied}</div>`);
+      const b = d.bons.find(v => v.k === w.n && !v.super);
+      if (b) { cells.push(`<div class="bc b${b.gagne ? ' g blanc' : ''}${!b.possible && !b.gagne ? ' perdu' : ''}"><div class="w">${ill(b.motif)}</div><span>${eur(b.valeur)}${b.gagne ? (b.code ? ' · émis' : ' · gagné') : ' · encore ' + b.reste}</span></div>`); }
+    });
+    const sup = d.bons.find(v => v.super), r13 = S.length % x, span = r13 ? x + 1 - r13 : x + 1;
+    if (sup) { cells.push(`<div class="bc sup blanc${!sup.possible ? ' perdu' : ''}" style="grid-column:span ${span}"><div class="w">${ill('cake')}</div><div><span>13 / 13 · ${eur(sup.valeur)}</span><b>SUPER BON</b><span>${sup.gagne ? 'gagné' : (sup.possible ? 'encore ' + sup.reste + ' cases' : 'une semaine manquée : au printemps')}</span></div></div>`); }
+    const tel = `<div class="tel"><div class="bar"><span>${esc(d.aujourdhui.split('-').reverse().join('/'))}</span><span>Fidélité</span></div><div class="sc">
+      <div class="tt">Bonjour ${esc(c.nom.split(' ')[0])} <small>${c.magasins.map(id => esc((MAGS.find(m => String(m.id) === String(id)) || {}).nom || id)).join(', ')}</small></div>
+      <div class="pc"><div class="h"><span>Mes points</span><span>${pro ? 'palier ' + pro.points : 'palier atteint'}</span></div>
+        <div class="n">${nf(c.solde)} <small>points</small></div><div class="j"><i style="width:${palPct}%"></i></div>
+        <div class="m">${c.atteint ? c.atteint.points + ' points atteints : un bon de ' + eur(c.atteint.valeur) + ' à échanger. ' : ''}${pro ? 'Encore ' + pro.reste + ' points pour un bon de ' + eur(pro.valeur) + '.' : ''}</div></div>
+      <div class="blk"><div class="l"><span>Cette semaine${sem.n ? ' · S' + sem.n + ' ' + esc((S[sem.n - 1] || {}).titre || '') : ''}</span><span>${eur(sem.euros)} / ${eur(d.seuil)}</span></div>
+        <div class="jg"><i style="width:${Math.min(100, Math.round(100 * sem.euros / d.seuil))}%"></i></div>
+        <div class="l" style="margin-top:6px"><span class="mu" style="font-size:10.5px">${sem.coche ? 'Case cochée.' : 'Encore ' + eur(sem.reste) + ' d’ici dimanche pour cocher la case.'}</span>
+          <span class="badge${sem.coche ? ' on' : ''}" title="Le ×${nf(d.multiplicateur)} après la case n’est pas encore dans l’ERP">${sem.coche ? '×' + nf(d.multiplicateur) + ' jusqu’à dimanche*' : '×1 · cochez pour ×' + nf(d.multiplicateur) + '*'}</span></div></div>
+      <div class="btit"><b>BINGO</b><span>${esc(d.saison.nom)} · ${c.cases} / ${S.length}</span></div>
+      <div class="bingo" style="grid-template-columns:repeat(${x + 1},minmax(0,1fr))">${cells.join('')}</div>
+      <div><div class="mu" style="font-size:10px;letter-spacing:.08em;text-transform:uppercase">Mes bons du bingo</div>
+        ${d.bons.filter(b => b.gagne).map(b => `<div class="bon"><span class="w blanc">${ill(b.motif)}</span><div>${eur(b.valeur)} · ${esc(b.nom)}<small>${b.code ? esc(b.code) + (b.jusquau ? ' · jusqu’au ' + ddmm(String(b.jusquau).slice(0, 10)) : '') : 'gagné, pas encore émis (le lundi)'}</small></div><span class="etat ${b.code ? 'ok' : 'av'}">${b.code ? 'émis' : 'à émettre'}</span></div>`).join('') || '<p class="mu" style="font-size:11px;margin:6px 0 0">Pas encore de bon : le premier à la ' + x + 'e case.</p>'}</div>
+      <p class="mu" style="font-size:10px;margin:0">* Le ×${nf(d.multiplicateur)} une fois la case cochée n’est pas encore dans l’API de l’ERP (DEMANDE-ERP.md).</p>
+    </div></div>`;
+    const detail = `<table><tr><th>Semaine</th><th>Du → au</th><th>Achats</th><th>Points</th><th>Case</th></tr>
+      ${S.map(w => `<tr><td>S${w.n} · ${esc(w.titre)}${w.fete ? ' <span class="mu">· fête ' + esc(w.fete) + '</span>' : ''}</td><td class="mu">${ddmm(w.du)} → ${ddmm(w.au)}</td><td>${w.euros == null ? '—' : eur(w.euros)}</td><td>${w.points == null ? '—' : nf(w.points)}</td>
+        <td>${w.coche ? '<span class="ok">cochée</span>' : (w.manquee ? '<span class="ko">manquée</span>' : (w.etat === 'cours' ? 'en cours' : '<span class="mu">à venir</span>'))}</td></tr>`).join('')}</table>
+      <table><tr><th>Bon</th><th>Case</th><th>Valeur</th><th>État</th></tr>${d.bons.map(b => `<tr><td>${esc(b.nom)}</td><td>${b.k}e</td><td>${eur(b.valeur)}</td>
+        <td>${b.gagne ? (b.code ? '<span class="ok">émis</span> <code>' + esc(b.code) + '</code>' : '<span class="acc">gagné · à émettre</span>') : (b.possible ? 'encore ' + b.reste + ' case(s)' : '<span class="mu">plus possible cette saison</span>')}</td></tr>`).join('')}</table>
+      <p class="mu">${esc(c.nom)} · n° ${c.id} · ${c.cases} case(s), ${c.manquees} semaine(s) manquée(s) · dernier passage ${c.dernier ? ddmm(c.dernier.slice(0, 10)) + ' ' + c.dernier.slice(11, 16) : '—'} · ${nf(d.appels)} appel(s) à l’ERP</p>`;
+    $('cl-c').innerHTML = `<div class="g2b" style="margin-top:12px">${tel}<div>${detail}${brut(d)}</div></div>`;
+  }
+  $('b-cl').onclick = () => carte(+$('cl-id').value || +$('cl-liste').value);
+  $('cl-liste').addEventListener('change', e => { if (e.target.value) { $('cl-id').value = e.target.value; carte(+e.target.value); } });
+
+  /* ---------- Le diagnostic ------------------------------------------------------------------------------ */
+  $('b-verif').onclick = async () => {
+    $('diag-c').innerHTML = '<p class="mu">Vérification de chaque route…</p>';
+    const r = await appel('GET', '/fidelite/verification');
+    if (r.code !== 200 || !r.d || !r.d.etapes) { return echec('diag-c', r); }
+    const d = r.d;
+    $('diag-c').innerHTML = `<p class="${d.ok ? 'ok' : 'ko'}" style="margin:10px 0 0">${esc(d.resume)}</p><p class="mu" style="margin:4px 0 0">ERP : <code>${esc(d.compte.base)}</code>${d.compte.configure ? '' : ' · <span class="ko">compte admin non configuré</span>'}</p>
+      <table><tr><th>Étape</th><th>Route</th><th>Réponse</th><th>Ce qu’elle dit</th></tr>${d.etapes.map(e => `<tr><td>${esc(e.etape)}</td><td><code>${esc(e.methode + ' ' + e.route)}</code></td>
+        <td><span class="etat ${e.ok ? 'ok' : 'ko'}">${e.ok ? 'ok' : 'échec'}</span> ${e.code} · ${e.ms} ms</td><td class="${e.ok ? '' : 'ko'}">${esc(e.note)}</td></tr>`).join('')}</table>` + brut(d);
+  };
+  $('b-prog').onclick = async () => { const r = await appel('GET', '/fidelite'); $('diag-c').innerHTML = (r.code === 200 ? '<p class="ok">GET /fidelite : ' + r.ms + ' ms</p>' : '<p class="ko">HTTP ' + r.code + '</p>') + brut(r.d); };
+  $('b-bons').onclick = async () => {
+    $('diag-c').innerHTML = '<p class="mu">Calcul des bons dus…</p>';
+    const r = await appel('POST', '/fidelite/bingo/bons', { ecrire: false });
+    if (r.code !== 200 || !r.d || !r.d.bons) { return echec('diag-c', r); }
+    $('diag-c').innerHTML = `<table><tr><th>Bon</th><th>Y ont droit</th><th>Déjà émis</th><th>À émettre</th><th>Campagne</th></tr>${r.d.bons.map(b => `<tr><td>${esc(b.nom)} · ${eur(b.valeur)} · ${b.k}e case</td><td>${nf(b.ayants)}</td><td>${nf(b.emis)}</td><td>${nf(b.aEmettre)}</td>
+      <td>${b.campagne ? esc(b.campagne.nom) + ' · ' + esc(b.campagne.statut) : '<span class="ko">absente</span>'}</td></tr>`).join('')}</table><p class="mu">Simulation : cette page n’émet jamais de bon.</p>` + brut(r.d);
+  };
+  $('b-sim').onclick = async () => {
+    const r = await appel('POST', '/fidelite/simuler', { shop: +$('s-shop').value, montant: $('s-montant').value, quand: $('s-quand').value });
+    if (r.code !== 200 || !r.d || r.d.error) { return echec('diag-c', r); }
+    const d = r.d;
+    $('diag-c').innerHTML = `<div class="kpis"><div><b>${nf(d.points)} points</b><span>${nf(d.tranches)} tranches · magasin ×${esc(d.coefMagasin)} · bonus ×${esc(d.coefBonus)}</span></div>
+      <div><b class="${d.coche ? 'ok' : ''}">${d.coche ? 'case cochée' : 'pas de case'}</b><span>${eur(d.montant)} ${d.coche ? '≥' : '<'} ${eur(d.seuil)} (ce ticket seul)</span></div></div>` + brut(d);
+  };
+
+  // À l'ouverture : l'aperçu de l'admin (il lit aussi les magasins), puis Halle.
+  admin('').then(() => magasin());
+})();
+</script>
+</body>
+</html>

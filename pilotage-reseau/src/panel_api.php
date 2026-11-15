@@ -142,8 +142,14 @@ final class PanelApi
      * `$timeout` : secondes accordées à chaque requête (25 par défaut) — un
      * appelant tenu par un budget de temps (le book de la tablette) le réduit.
      * `$texte` : rendre le corps brut au lieu du JSON décodé (exports CSV).
+     *
+     * Si TOUTE la volée revient en 401 (le panel a lâché le jeton avant la
+     * fin de notre cache de 30 min), une reconnexion et un second passage,
+     * une seule fois — comme `get()` et `getParalleleDetail()` (14/11/2026 :
+     * sans cela, un jeton refusé vidait toute la volée, la liste du personnel
+     * comprise, et les tickets restaient au nom d'« Employé 145 »).
      */
-    public static function getParallele(array $paths, int $front = 4, int $timeout = 25, bool $texte = false): array
+    public static function getParallele(array $paths, int $front = 4, int $timeout = 25, bool $texte = false, bool $reessai = true): array
     {
         if (!$paths) { return []; }
         $tok = self::token();
@@ -158,6 +164,7 @@ final class PanelApi
         $file = array_keys($paths);
         $cle = [];      // spl_object_id du handle => clé du chemin
         $actifs = 0;
+        $refus = 0;     // les réponses 401 : toutes, et le jeton est à refaire
         $lancer = static function () use (&$file, &$cle, &$actifs, $multi, $paths, $base, $tok, $timeout): void {
             $k = array_shift($file);
             $ch = curl_init($base . $paths[$k]);
@@ -184,6 +191,7 @@ final class PanelApi
                 curl_close($ch);
                 $actifs--;
                 $res = !$texte && is_string($raw) ? json_decode($raw, true) : null;
+                if ($code === 401) { $refus++; }
                 if ($code < 200 || $code >= 300) {
                     self::$lastError = 'GET ' . $paths[$k] . ' → HTTP ' . $code;
                     $out[$k] = null;
@@ -198,6 +206,9 @@ final class PanelApi
             if ($actifs > 0 && curl_multi_select($multi, 1.0) === -1) { usleep(2000); }
         } while ($actifs > 0 && $st === CURLM_OK);
         curl_multi_close($multi);
+        if ($reessai && $refus === count($paths) && self::$jetonImpose === null && self::token(true) !== null) {
+            return self::getParallele($paths, $front, $timeout, $texte, false);
+        }
         // L'ordre des chemins fournis, comme avant.
         $rang = [];
         foreach (array_keys($paths) as $k) { $rang[$k] = array_key_exists($k, $out) ? $out[$k] : null; }

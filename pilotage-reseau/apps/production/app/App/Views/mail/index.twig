@@ -1,17 +1,19 @@
 {% extends "layouts/base.twig" %}
 
-{% block title %}{{ mail_page == 'settings' ? 'Moja skrzynka' : 'Poczta' }}{% endblock %}
+{% set mail_title = {'settings': 'Moja skrzynka', 'admin': 'Skrzynki użytkowników', 'denied': 'Skrzynki użytkowników'}[mail_page] ?? 'Poczta' %}
+{% block title %}{{ mail_title }}{% endblock %}
 
 {% block page_heading %}
     <div class="page-heading">
         <div class="page-title d-flex flex-wrap align-items-end gap-3">
             <div class="me-auto">
-                <h3>{{ mail_page == 'settings' ? 'Moja skrzynka' : 'Poczta' }}</h3>
-                <p class="text-subtitle text-muted mb-0">{{ mail_page == 'settings'
-                    ? 'Twoja własna skrzynka w ERP : odbiór (IMAP) i wysyłka (SMTP) z Twojego adresu. Hasło jest zaszyfrowane i nie jest nigdzie pokazywane.'
-                    : 'Twoja skrzynka w ERP : odebrane, wysłane, odpowiedzi do klientów i dostawców.' }}</p>
+                <h3>{{ mail_title }}</h3>
+                <p class="text-subtitle text-muted mb-0">{{ {
+                    'settings': 'Twoja własna skrzynka w ERP : odbiór (IMAP) i wysyłka (SMTP) z Twojego adresu. Hasło jest zaszyfrowane i nie jest nigdzie pokazywane.',
+                    'admin': 'Administrator : skrzynka każdego użytkownika ERP — ustaw ją za niego, zostaw ustawienia tylko sobie albo wstrzymaj pocztę jednym przyciskiem.',
+                    'denied': 'Tylko administrator.'}[mail_page] ?? 'Twoja skrzynka w ERP : odebrane, wysłane, odpowiedzi do klientów i dostawców.' }}</p>
             </div>
-            {% if mail_page == 'settings' %}
+            {% if mail_page in ['settings', 'admin', 'denied'] %}
                 <a class="btn btn-outline-secondary btn-sm" href="{{ root }}/mail"><i class="bi bi-envelope"></i> Poczta</a>
             {% else %}
                 <button type="button" class="btn btn-outline-secondary btn-sm" data-sync hidden><i class="bi bi-arrow-repeat"></i> Odśwież</button>

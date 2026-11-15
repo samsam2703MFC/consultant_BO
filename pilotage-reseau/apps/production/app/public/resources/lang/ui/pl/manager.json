@@ -333,6 +333,7 @@
   "bonus.haccp_ok": "Warunek HACCP spełniony : brak niekorzystnej kontroli, nieobsłużonego przerwania i audytu poniżej progu.",
   "bonus.sections": "Szczegóły według sekcji",
   "bonus.total": "Kwota do wypłaty",
+  "bonus.disabled": "Premia kwartalna jest wyłączona (decyzja z 11.11.2026) : premia kierownika produkcji = {pct} % sprzedaży firmy, co miesiąc — Czas pracy › Koszty i premie. Poniższe obliczenie jest tylko informacyjne, bez wypłaty.",
   "bonus.rule": "Sekcje kwartalne za kwartał, rozwój produktów za półrocze (wypłata w Q2 i Q4). Sekcje nie kompensują się, wynik nie jest zaokrąglany, żeby przekroczyć próg.",
   "bonus.period": "Kwartał",
   "bonus.period_help": "Cele zatwierdzone przed początkiem każdego okresu.",

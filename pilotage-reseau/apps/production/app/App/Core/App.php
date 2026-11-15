@@ -93,6 +93,7 @@ class App
                 // Uprawnienia stanowisk : strona spoza uprawnień użytkownika → 403 (strona startowa Rentowność → Dzisiaj).
                 // Błąd bazy (np. migracja 050 jeszcze nie wykonana) : zapis w logu, strona bez sprawdzenia — zamiast błędu na każdej stronie.
                 $denied = false;
+                $ceoReadOnly = false;
                 if (!empty($_SESSION['USER'])) {
                     try {
                         $access = $container->get(\App\Services\Organization\PageAccessService::class);
@@ -101,14 +102,23 @@ class App
                         // Menu (rail, linki) : w sesji administratora [239] — jak u wybranego stanowiska ; dostęp bez zmian.
                         \App\Core\Web\PageAccess::$checker = fn(string $path) => $access->menuSees($userId, $path);
                         \App\Core\Web\ViewSession::$menu = fn() => $access->sessionMenu($userId);
+                        \App\Core\Web\ErpDay::$state = fn() => $container->get(\App\Services\Organization\ErpEntryService::class)->state($userId);
                         // [253] Menu stanowiska (rail) : pozycje i strony otwierane ; null = całe menu.
                         \App\Core\Web\Rail::$only = $access->railMenu($userId);
                         $denied = !str_starts_with($uri, '/ajax/') && !$access->canSee($userId, $uri);
+                        // [281] Konto CEO : widzi wszystko, zapisuje tylko decyzje (odblokuj, przypomnij), profil i powiadomienia.
+                        $ceoReadOnly = $method !== 'GET' && $access->isCeo($userId) && !\App\Core\Web\PageAccess::ceoMayWrite($uri);
                     } catch (\Throwable $e) {
                         error_log('[page-access] ' . $e->getMessage());
                         \App\Core\Web\PageAccess::$checker = null;
                         \App\Core\Web\PageAccess::$rail = [];
                         \App\Core\Web\Rail::$only = null;
+                    }
+                    if ($ceoReadOnly ?? false) {
+                        http_response_code(403);
+                        header('Content-Type: application/json; charset=utf-8');
+                        echo json_encode(['message' => 'Profil CEO : tylko podgląd i decyzje (odblokuj, przypomnij). Zmiany wprowadza administrator.'], JSON_UNESCAPED_UNICODE);
+                        return;
                     }
                     if ($denied) {
                         if ($uri === '/dashboard' && $method === 'GET') {
@@ -122,6 +132,53 @@ class App
                             echo 'Brak dostępu do tej strony.';
                         }
                         return;
+                    }
+
+                    // [275] Wejście do ERP przez QR : stanowisko z opcją, konto powiązane z pracownikiem, wejście jeszcze nie
+                    // odbite → tylko ekran kodu QR (i wylogowanie). Błąd (np. migracja 174 jeszcze nie wykonana) : bez blokady.
+                    $free = $uri === '/erp-entry' || $uri === '/logout' || str_starts_with($uri, '/ajax/erp-entry/') || str_starts_with($uri, '/ajax/activity/')
+                        // strona skanu telefonu i tablety : nigdy nie blokowane
+                        || preg_match('#^/(kiosk|tablet|office|driver)(/|$)#', $uri) === 1;
+                    if (!$free) {
+                        try {
+                            $locked = $container->get(\App\Services\Organization\ErpEntryService::class)->locked((int) (user('id') ?? 0));
+                        } catch (\Throwable $e) {
+                            error_log('[erp-entry] ' . $e->getMessage());
+                            $locked = false;
+                        }
+                        if ($locked) {
+                            if ($method === 'GET' && !str_starts_with($uri, '/ajax/')) {
+                                $query = $_GET;
+                                unset($query['url']);
+                                $next = \App\Controllers\Web\Organization\ErpEntryController::safeNext($uri . ($query ? '?' . http_build_query($query) : ''));
+                                header('Location: ' . ROOT . '/erp-entry' . ($next !== '' ? '?next=' . rawurlencode($next) : ''), true, 302);
+                                return;
+                            }
+                            http_response_code(423);
+                            header('Content-Type: application/json; charset=utf-8');
+                            echo json_encode(['message' => 'Najpierw odbij wejście kodem QR (Czas pracy).', 'erp_entry' => ROOT . '/erp-entry'], JSON_UNESCAPED_UNICODE);
+                            return;
+                        }
+                    }
+
+                    // [280] Zadania obowiązkowe : zadanie po terminie blokady → tylko ekran « Najpierw to zadanie » i kreator
+                    // zadania (strony ; wywołania AJAX stron kreatora działają). Błąd (np. migracja 175) : bez blokady.
+                    if (!$free && $method === 'GET' && !str_starts_with($uri, '/ajax/') && !preg_match('#^/(tasks/|my-tasks/\d+/form)#', $uri)) {
+                        try {
+                            $blocking = $container->get(\App\Services\Organization\TaskLockService::class)->blocking((int) (user('id') ?? 0));
+                        } catch (\Throwable $e) {
+                            error_log('[task-lock] ' . $e->getMessage());
+                            $blocking = [];
+                        }
+                        $open = false;
+                        foreach ($blocking as $b) {
+                            $path = (string) parse_url($b['link'], PHP_URL_PATH);
+                            if ($path !== '' && ($uri === $path || str_starts_with($uri, rtrim($path, '/') . '/'))) $open = true;
+                        }
+                        if ($blocking && !$open) {
+                            header('Location: ' . ROOT . '/tasks/required', true, 302);
+                            return;
+                        }
                     }
                 }
 

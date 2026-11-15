@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — Espace franchisé · Tableau de bord, tout sur une page (Halle)</title>
+<style>
+:root{--ink:#1c1a17;--muted-2:#5c5852;--muted:#7a736a;--faint:#B8B2A8;--paper:#faf7f2;--table-head:#FBF9F5;--total-line:#F8F4EE;--chip:#EDE7DE;--line:#e6e0d8;--row-line:rgba(34,34,34,.06);--accent:#8D1D2C;--danger:#b3261e;--green:#3f7a52;--prize:#B0792A;--prize-soft:#F6E7CE;--prize-ink:#7A5207;--stop:#A32014;--stop-soft:#F7E0DC;color-scheme:light;font-family:'Gotham',system-ui,sans-serif;color:var(--ink);background:var(--paper)}
+*{box-sizing:border-box}body{margin:0;min-height:100vh}
+h1,h2,h3,h4,th,b,strong{font-weight:400}
+.workspace{display:flex;height:100vh;overflow:hidden}.workspace__main{flex:1;display:flex;flex-direction:column;min-width:0}
+.app__body{flex:1;overflow-y:auto;padding:22px 24px 40px}.app__body>*{max-width:1180px}
+.sidebar{flex:0 0 246px;background:#fff;border-right:1px solid var(--line);overflow-y:auto;padding-bottom:24px}
+.sidebar__head{padding:20px 16px 8px}.sidebar__logo{font-size:17px;letter-spacing:.02em;color:var(--ink)}
+.sidebar__kicker{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:9px}
+.sidebar__back{padding:6px 12px 4px}.sidebar__back a{display:flex;align-items:center;gap:9px;background:var(--paper);border-radius:10px;padding:11px 13px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__brand{margin:10px 12px 0;padding:8px 10px;font-size:13px;background:var(--table-head);border-radius:9px}
+.sidebar__groups{padding:2px 12px 0}.sidebar__group{margin-top:18px}
+.sidebar__group-label{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint);padding:0 10px 8px}
+.sidebar__item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;color:var(--muted-2);text-decoration:none}
+.sidebar__item.is-active{background:rgba(141,29,44,.08);color:var(--accent);font-weight:700}
+svg.i{width:16px;height:16px;flex:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:18px 24px;border-bottom:1px solid var(--line);background:#fff}
+.topbar__kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);margin:0 0 4px}
+.topbar h1{font-size:26px;letter-spacing:-.01em;margin:0}.topbar__actions{display:flex;align-items:center;gap:10px}
+.btn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:7px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:400 13px/1.2 'Gotham',system-ui,sans-serif;cursor:pointer;text-decoration:none}
+.btn--primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn--sm{min-height:30px;padding:5px 11px;font-size:12px}
+.seg{display:inline-flex;gap:2px;padding:3px;border-radius:9px;background:var(--chip)}
+.seg button{padding:6px 11px;border:0;border-radius:7px;background:transparent;color:var(--muted-2);font:400 12.5px 'Gotham',system-ui,sans-serif}
+.seg button.is-on{background:#fff;color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.page-tabs{display:flex;gap:4px;margin:0 0 16px;border-bottom:1px solid var(--line)}
+.page-tabs__tab{margin:0 0 -1px;padding:8px 12px;border:none;border-bottom:2px solid transparent;background:none;color:var(--muted-2);font:inherit;font-size:13px}
+.page-tabs__tab.is-on{color:var(--accent);border-bottom-color:var(--accent)}
+.card{background:#fff;border:1px solid var(--line);border-radius:12px;padding:1.25rem}
+h2{font-size:.95rem;margin:0 0 .5rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.section-label__aside{float:right;font-size:11.5px;text-transform:none;letter-spacing:normal;color:var(--muted)}
+.kpi-row{display:flex;flex-wrap:wrap;padding:4px 0}
+.kpi{flex:1;min-width:176px;padding:13px 18px;border-left:3px solid var(--line)}
+.kpi.is-stop{border-left-color:var(--stop)}.kpi.is-warn{border-left-color:var(--prize)}
+.kpi__value{font-size:24px;font-weight:700;letter-spacing:-.02em;line-height:1.15}
+.kpi__label{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);margin-top:5px}
+.kpi__note{font-size:12px;color:var(--muted);margin-top:3px}
+.grid{display:grid;grid-template-columns:1.55fr 1fr;gap:16px;margin-top:16px}
+.verdict{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border:1px solid var(--line);border-left:3px solid var(--stop);border-radius:12px;background:#fff}
+.verdict p{margin:0;font-size:15px;line-height:1.45}.verdict .muted{font-size:12.5px;margin-top:6px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+thead th{text-align:left;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:var(--table-head);padding:10px 14px}
+tbody td{padding:11px 14px;border-top:1px solid var(--row-line)}
+.num{text-align:right}.sub{display:block;margin-top:2px;font-size:10.5px;color:var(--muted)}
+tr.total td{background:var(--total-line)}tr.is-me td{background:rgba(141,29,44,.04)}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:6px;font-size:11.5px;white-space:nowrap}
+.chip--neutral{background:var(--chip);color:var(--muted-2)}
+.badge--ok{background:rgba(63,122,82,.12);color:var(--green)}
+.tag-warn,.tag-stop{display:inline-flex;font-size:11px;padding:2px 8px;border-radius:4px;white-space:nowrap}
+.tag-warn{background:var(--prize-soft);color:var(--prize-ink)}.tag-stop{background:var(--stop-soft);color:var(--stop)}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.split{display:flex;height:14px;border-radius:4px;overflow:hidden;margin:10px 0 12px;background:var(--chip)}
+.split span{display:block;height:100%}
+.legend{display:grid;gap:9px;font-size:13px}.legend div{display:flex;align-items:center;gap:8px}.legend .num{margin-left:auto}
+.steps{list-style:none;margin:0;padding:0;display:grid;gap:0}
+.steps li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--row-line);font-size:13px;line-height:1.45}
+.steps li:first-child{border-top:0;padding-top:2px}
+.step-n{flex:none;width:22px;height:22px;border-radius:50%;background:var(--chip);color:var(--muted-2);display:flex;align-items:center;justify-content:center;font-size:11.5px}
+.step-n.is-stop{background:var(--stop-soft);color:var(--stop)}
+.steps .sub{font-size:12px}
+.foot{margin-top:18px;font-size:11.5px;color:var(--muted);line-height:1.6}
+.legend-chart{display:flex;gap:16px;font-size:11.5px;color:var(--muted);margin-top:6px}
+.legend-chart span{display:inline-flex;align-items:center;gap:6px}
+
+.app__body>*{max-width:1320px}
+.badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:6px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase}
+.section-label{margin:1.5rem 0 0;font-size:.72rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.mini td,.mini th{white-space:nowrap}
+code{font-size:11px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:16px}
+.g2{display:grid;grid-template-columns:1.5fr 1fr;gap:16px;margin-top:16px}
+.todo{display:grid;grid-template-columns:repeat(5,1fr);gap:0;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.todo div{padding:12px 14px;border-left:1px solid var(--line);font-size:12.5px;line-height:1.4;color:var(--muted-2)}
+.todo div:first-child{border-left:0}
+.todo b{display:block;font-weight:400;font-size:13px;color:var(--ink);margin:6px 0 2px}
+.hb{display:grid;grid-template-columns:118px 1fr 112px;align-items:center;gap:10px;font-size:13px;padding:5px 0}
+.hb__l.is-me{color:var(--accent)}
+.hb__t{height:10px;background:var(--table-head);border-radius:3px;overflow:hidden}.hb__t span{display:block;height:100%;border-radius:3px}
+.hb__v .sub{display:block;margin:1px 0 0}.pct{display:inline-block;width:42px;color:var(--muted);font-size:11.5px}
+.ratio{display:grid;grid-template-columns:1fr auto auto;gap:6px 12px;align-items:center;font-size:13px}
+.ratio .lbl{color:var(--muted-2)}.ratio .sub{grid-column:1/-1;margin:-4px 0 6px}
+.mini td,.mini th{padding:8px 10px}.mini{font-size:12.5px}
+.cl{display:grid;grid-template-columns:44px 1fr auto;gap:8px;align-items:center;font-size:12.5px;padding:6px 0;border-top:1px solid var(--row-line)}
+.cl:first-of-type{border-top:0}.cl .h{color:var(--muted)}
+.trend{display:flex;gap:6px;align-items:flex-end;height:54px;margin:8px 0 4px}
+.trend span{flex:1;background:#EBD3D8;border-radius:2px 2px 0 0;position:relative}
+.trend span.is-now{background:#B03048}
+.trend-l{display:flex;gap:6px;font-size:10.5px;color:var(--muted)}.trend-l span{flex:1;text-align:center}
+.k2{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.k2 .kpi{min-width:0}
+.ok{color:var(--green)}
+.reseau .hb{grid-template-columns:90px 1fr 150px;padding:7px 0}
+</style>
+</head>
+<body>
+<div class="workspace">
+<nav class="sidebar" aria-label="Navigation principale">
+  <div class="sidebar__head"><div class="sidebar__logo">L’Atelier By</div><div class="sidebar__kicker">Espace franchisé</div></div>
+  <div class="sidebar__back"><a href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Retour à l’ERP</a></div>
+  <div class="sidebar__brand">L’Atelier by Halle</div>
+  <div class="sidebar__groups">
+    <div class="sidebar__group"><div class="sidebar__group-label">Pilotage</div>
+      <a class="sidebar__item is-active" aria-current="page" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Tableau de bord</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>Ventes</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2h12l2 5H4z"/><path d="M4 7v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V7"/></svg>Commandes</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Clients</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-4.4-9.5-9A5.5 5.5 0 0 1 12 6a5.5 5.5 0 0 1 9.5 6c-2.5 4.6-9.5 9-9.5 9z"/></svg>Fidélité</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0"/><path d="M17 11a3 3 0 1 0 0-6M22 21a6 6 0 0 0-4-5.6"/></svg>Clients</a>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 12v8H4v-8"/><path d="M2 7h20v5H2z"/><path d="M12 22V7M12 7H7.5a2.5 2.5 0 1 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 1 0 0-5C13 2 12 7 12 7z"/></svg>Bons et promotions</a>
+    </div>
+    <div class="sidebar__group"><div class="sidebar__group-label">Paramètres</div>
+      <a class="sidebar__item" href="#"><svg class="i" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Réglages du magasin</a>
+    </div>
+  </div>
+</nav>
+<div class="workspace__main">
+  <header class="topbar">
+    <div><p class="topbar__kicker">Vue Franchisé · jeudi 12 novembre, midi</p><h1>Tableau de bord</h1></div>
+    <div class="topbar__actions">
+      <div class="seg"><button class="is-on">Hier</button><button>Semaine</button><button>Mois</button></div>
+      <a class="btn btn--primary" href="#">Ouvrir les contrôles du jour</a>
+    </div>
+  </header>
+  <main class="app__body">
+
+    <p class="section-label" style="margin-top:0">Ce qui demande un geste aujourd’hui</p>
+    <div class="todo" style="margin-top:8px">
+      <div><span class="tag-stop">contrôles</span><b>0 tâche faite sur 75</b>Il est midi : l’ouverture (6 h – 9 h) n’est pas cochée.</div>
+      <div><span class="tag-warn">commande</span><b>1 retrait aujourd’hui, 87,60 €</b>Au comptoir, à préparer, pas encore encaissée.</div>
+      <div><span class="tag-warn">pertes</span><b>Croissant : 12 % jeté</b>30 pièces sur 219 vendues depuis lundi, toutes périmées.</div>
+      <div><span class="tag-warn">planning</span><b>72 h prévues pour 3 postes</b>Aujourd’hui : un horaire est sans doute mal saisi.</div>
+      <div><span class="tag-stop">fidélité</span><b>0 client membre actif</b>2 ventes au comptoir identifiées cette semaine.</div>
+    </div>
+
+    <section class="card" style="margin-top:16px;padding:6px 4px">
+      <div class="kpi-row">
+        <div class="kpi" style="border-left-color:var(--accent)"><div class="kpi__value">3 492,50 €</div><div class="kpi__label">CA d’hier</div><div class="kpi__note">mercredi 11, férié · 2e du réseau</div></div>
+        <div class="kpi"><div class="kpi__value">226</div><div class="kpi__label">Tickets hier</div><div class="kpi__note">4,96 articles par ticket</div></div>
+        <div class="kpi is-warn"><div class="kpi__value">15,45 €</div><div class="kpi__label">Panier moyen hier</div><div class="kpi__note">13,50 € sur le mois · seuil bas 18 €</div></div>
+        <div class="kpi"><div class="kpi__value">6 754,64 €</div><div class="kpi__label">Semaine, lun. → mer.</div><div class="kpi__note">513 tickets · 13,17 € de panier</div></div>
+        <div class="kpi"><div class="kpi__value">24 343,94 €</div><div class="kpi__label">Mois, 1er → 11</div><div class="kpi__note">1 803 tickets</div></div>
+      </div>
+    </section>
+
+    <div class="g2">
+      <section class="card">
+        <h2>Le mois jour par jour <span class="section-label__aside">la semaine en cours en couleur</span></h2>
+        <svg viewBox="0 0 600 190" width="100%" role="img" aria-label="Chiffre d’affaires du mois, jour par jour" style="display:block;margin-top:10px"><line x1="0" x2="600" y1="128.0" y2="128.0" stroke="rgba(34,34,34,.06)"/><line x1="0" x2="600" y1="90.0" y2="90.0" stroke="rgba(34,34,34,.06)"/><line x1="0" x2="600" y1="52.0" y2="52.0" stroke="rgba(34,34,34,.06)"/><rect x="10.9" y="39.3" width="32.7" height="126.7" rx="2" fill="#EBD3D8"><title>di 1 nov. : 3 334,60 €</title></rect><text x="27.3" y="34.3" font-size="10.5" text-anchor="middle" fill="#5c5852">3 335</text><text x="27.3" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">di 1</text><rect x="65.5" y="103.3" width="32.7" height="62.7" rx="2" fill="#EBD3D8"><title>lu 2 nov. : 1 649,32 €</title></rect><text x="81.8" y="98.3" font-size="10.5" text-anchor="middle" fill="#5c5852">1 649</text><text x="81.8" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">lu 2</text><rect x="120.0" y="115.5" width="32.7" height="50.5" rx="2" fill="#EBD3D8"><title>ma 3 nov. : 1 328,60 €</title></rect><text x="136.4" y="110.5" font-size="10.5" text-anchor="middle" fill="#5c5852">1 329</text><text x="136.4" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">ma 3</text><rect x="174.5" y="107.6" width="32.7" height="58.4" rx="2" fill="#EBD3D8"><title>me 4 nov. : 1 537,40 €</title></rect><text x="190.9" y="102.6" font-size="10.5" text-anchor="middle" fill="#5c5852">1 537</text><text x="190.9" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">me 4</text><rect x="229.1" y="113.5" width="32.7" height="52.5" rx="2" fill="#EBD3D8"><title>je 5 nov. : 1 381,90 €</title></rect><text x="245.5" y="108.5" font-size="10.5" text-anchor="middle" fill="#5c5852">1 382</text><text x="245.5" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">je 5</text><rect x="283.6" y="99.4" width="32.7" height="66.6" rx="2" fill="#EBD3D8"><title>ve 6 nov. : 1 752,50 €</title></rect><text x="300.0" y="94.4" font-size="10.5" text-anchor="middle" fill="#5c5852">1 752</text><text x="300.0" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">ve 6</text><rect x="338.2" y="38.2" width="32.7" height="127.8" rx="2" fill="#EBD3D8"><title>sa 7 nov. : 3 362,40 €</title></rect><text x="354.5" y="33.2" font-size="10.5" text-anchor="middle" fill="#5c5852">3 362</text><text x="354.5" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">sa 7</text><rect x="392.7" y="42.8" width="32.7" height="123.2" rx="2" fill="#EBD3D8"><title>di 8 nov. : 3 242,58 €</title></rect><text x="409.1" y="37.8" font-size="10.5" text-anchor="middle" fill="#5c5852">3 243</text><text x="409.1" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">di 8</text><rect x="447.3" y="109.2" width="32.7" height="56.8" rx="2" fill="#B03048"><title>lu 9 nov. : 1 493,84 €</title></rect><text x="463.6" y="104.2" font-size="10.5" text-anchor="middle" fill="#5c5852">1 494</text><text x="463.6" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">lu 9</text><rect x="501.8" y="98.8" width="32.7" height="67.2" rx="2" fill="#B03048"><title>ma 10 nov. : 1 768,30 €</title></rect><text x="518.2" y="93.8" font-size="10.5" text-anchor="middle" fill="#5c5852">1 768</text><text x="518.2" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">ma 10</text><rect x="556.4" y="33.3" width="32.7" height="132.7" rx="2" fill="#B03048"><title>me 11 nov. : 3 492,50 €</title></rect><text x="572.7" y="28.3" font-size="10.5" text-anchor="middle" fill="#5c5852">3 492</text><text x="572.7" y="183" font-size="10.5" text-anchor="middle" fill="#7a736a">me 11</text><line x1="0" x2="600" y1="166" y2="166" stroke="#e6e0d8"/></svg>
+        <p class="foot" style="margin-top:8px">Les week-ends et le 11 novembre font chacun plus de 3 200 € ; les jours de semaine tournent entre 1 300 et 1 800 €.</p>
+      </section>
+      <section class="card">
+        <h2>Le réseau, hier <span class="section-label__aside">CA · tickets · panier</span></h2>
+        <div class="reseau" style="margin-top:12px"><div class="hb"><span class="hb__l">Corbais</span><span class="hb__t"><span style="width:100.0%;background:#EBD3D8"></span></span><span class="hb__v num">6 487 €<span class="sub">308 tickets · 21,06 €</span></span></div><div class="hb"><span class="hb__l is-me">Halle</span><span class="hb__t"><span style="width:53.8%;background:#B03048"></span></span><span class="hb__v num">3 492 €<span class="sub">226 tickets · 15,45 €</span></span></div><div class="hb"><span class="hb__l">Gosselies</span><span class="hb__t"><span style="width:28.1%;background:#EBD3D8"></span></span><span class="hb__v num">1 821 €<span class="sub">112 tickets · 16,26 €</span></span></div><div class="hb"><span class="hb__l">Sombreffe</span><span class="hb__t"><span style="width:21.6%;background:#EBD3D8"></span></span><span class="hb__v num">1 401 €<span class="sub">120 tickets · 11,68 €</span></span></div></div>
+        <p class="foot">Halle fait le 2e CA du réseau avec un panier dans la moyenne basse : 5,61 € de moins qu’à Corbais.</p>
+      </section>
+    </div>
+
+    <div class="g3">
+      <section class="card">
+        <h2>Les ratios du mois <span class="section-label__aside">face aux cibles du réseau</span></h2>
+        <div class="ratio" style="margin-top:12px">
+          <span class="lbl">Trafic</span><span class="num">1 803 tickets</span><span class="badge badge--ok">au-dessus</span>
+          <span class="sub">cible 1 500 par mois, déjà dépassée le 11</span>
+          <span class="lbl">Panier moyen</span><span class="num">13,50 €</span><span class="tag-stop">sous le seuil</span>
+          <span class="sub">cible 35 €, seuil bas 18 €</span>
+          <span class="lbl">Personnel</span><span class="num">16,9 %</span><span class="badge badge--ok">dans la cible</span>
+          <span class="sub">4 110 € de salaires pour 24 344 € · cible 25 % au plus</span>
+          <span class="lbl">Frais fixes</span><span class="num">20,2 %</span><span class="tag-stop">au seuil haut</span>
+          <span class="sub">446,76 € par jour · cible 10 %, seuil 20 %</span>
+          <span class="lbl">Matière</span><span class="num">—</span><span class="tag-warn">non mesurée</span>
+          <span class="sub">le coût matière n’est pas renseigné : ni marge ni résultat ce mois</span>
+        </div>
+      </section>
+      <section class="card">
+        <h2>Ce qui se vend <span class="section-label__aside">semaine, lun. → mer.</span></h2>
+        <div style="margin-top:12px"><div class="hb"><span class="hb__l">Tartes</span><span class="hb__t"><span style="width:100.0%;background:#B03048"></span></span><span class="hb__v num">1 887 €<span class="pct">27 %</span></span></div><div class="hb"><span class="hb__l">Viennoiserie</span><span class="hb__t"><span style="width:91.7%;background:#B03048"></span></span><span class="hb__v num">1 731 €<span class="pct">25 %</span></span></div><div class="hb"><span class="hb__l">Boulangerie</span><span class="hb__t"><span style="width:76.7%;background:#B03048"></span></span><span class="hb__v num">1 448 €<span class="pct">21 %</span></span></div><div class="hb"><span class="hb__l">Quiches</span><span class="hb__t"><span style="width:29.2%;background:#B03048"></span></span><span class="hb__v num">551 €<span class="pct">8 %</span></span></div><div class="hb"><span class="hb__l">Pâtisserie</span><span class="hb__t"><span style="width:20.4%;background:#B03048"></span></span><span class="hb__v num">385 €<span class="pct">6 %</span></span></div><div class="hb"><span class="hb__l">Traiteur</span><span class="hb__t"><span style="width:13.7%;background:#B03048"></span></span><span class="hb__v num">259 €<span class="pct">4 %</span></span></div><div class="hb"><span class="hb__l">Biscuiterie</span><span class="hb__t"><span style="width:13.5%;background:#B03048"></span></span><span class="hb__v num">255 €<span class="pct">4 %</span></span></div><div class="hb"><span class="hb__l">Fêtes & Occasions</span><span class="hb__t"><span style="width:8.8%;background:#B03048"></span></span><span class="hb__v num">165 €<span class="pct">2 %</span></span></div><div class="hb"><span class="hb__l">Boissons</span><span class="hb__t"><span style="width:7.8%;background:#B03048"></span></span><span class="hb__v num">148 €<span class="pct">2 %</span></span></div><div class="hb"><span class="hb__l">Épicerie</span><span class="hb__t"><span style="width:4.0%;background:#B03048"></span></span><span class="hb__v num">75 €<span class="pct">1 %</span></span></div></div>
+      </section>
+      <section class="card" style="padding:0;overflow:hidden">
+        <div style="padding:1.25rem 1.25rem .25rem"><h2>Pertes de la semaine <span class="section-label__aside">146 pièces · 264,53 € de ventes</span></h2></div>
+        <table class="mini">
+          <thead><tr><th>Produit</th><th class="num">Jeté</th><th class="num">Part</th><th class="num">Valeur</th></tr></thead>
+          <tbody>
+            <tr><td>Croissant</td><td class="num">30</td><td class="num"><span class="tag-warn">12,1 %</span></td><td class="num">50,75 €</td></tr>
+            <tr><td>Cougnou sucre</td><td class="num">21</td><td class="num"><span class="tag-warn">10,1 %</span></td><td class="num">52,94 €</td></tr>
+            <tr><td>Baulus</td><td class="num">14</td><td class="num"><span class="tag-stop">24,6 %</span></td><td class="num">23,69 €</td></tr>
+            <tr><td>Sandwich</td><td class="num">16</td><td class="num">5,2 %</td><td class="num">13,53 €</td></tr>
+            <tr><td>Cougnou sucre &amp; chocolat</td><td class="num">8</td><td class="num">5,0 %</td><td class="num">21,87 €</td></tr>
+            <tr><td>Tortillon</td><td class="num">6</td><td class="num"><span class="tag-warn">14,6 %</span></td><td class="num">9,60 €</td></tr>
+          </tbody>
+        </table>
+        <p class="foot" style="padding:0 1.25rem 1rem;margin-top:8px">Motif principal : la date dépassée. Le reste : 15 produits, moins de 6 pièces chacun.</p>
+      </section>
+    </div>
+
+    <div class="g3">
+      <section class="card">
+        <h2>Contrôles d’aujourd’hui <span class="section-label__aside">0 / 75 · midi</span></h2>
+        <div style="margin-top:8px">
+          <div class="cl"><span class="h">06:00</span><span>Ouverture du poste cuisson</span><span class="tag-stop">0 / 7</span></div>
+          <div class="cl"><span class="h">06:30</span><span>Ouverture de la boutique</span><span class="tag-stop">0 / 6</span></div>
+          <div class="cl"><span class="h">07:00</span><span>Photos des comptoirs</span><span class="tag-stop">0 / 9</span></div>
+          <div class="cl"><span class="h">09:00</span><span>Contrôle qualité pâtisserie</span><span class="tag-stop">0 / 2</span></div>
+          <div class="cl"><span class="h">11:00</span><span>Routine du dashboard magasin</span><span class="tag-stop">0 / 4</span></div>
+          <div class="cl"><span class="h">12:00</span><span>Fin de poste cuisson · facing et FIFO</span><span class="chip chip--neutral">0 / 12</span></div>
+          <div class="cl"><span class="h">14:00</span><span>Hygiène · recuisson et réassort</span><span class="chip chip--neutral">0 / 9</span></div>
+          <div class="cl"><span class="h">18:00</span><span>Fermeture boutique et traiteur</span><span class="chip chip--neutral">0 / 25</span></div>
+        </div>
+        <p class="section-label">Les 7 derniers jours</p>
+        <div class="trend"><span style="height:31%"></span><span style="height:2%"></span><span style="height:32%"></span><span style="height:2%"></span><span style="height:51%"></span><span style="height:100%"></span><span class="is-now" style="height:29%"></span></div>
+        <div class="trend-l"><span>11 %</span><span>0 %</span><span>11 %</span><span>0 %</span><span>18 %</span><span>34 %</span><span>10 %</span></div>
+        <div class="trend-l"><span>jeu.</span><span>ven.</span><span>sam.</span><span>dim.</span><span>lun.</span><span>mar.</span><span>mer.</span></div>
+      </section>
+
+      <section class="card" style="padding:0;overflow:hidden">
+        <div style="padding:1.25rem 1.25rem .25rem"><h2>Commandes clients</h2></div>
+        <table class="mini">
+          <thead><tr><th>Retrait</th><th>Canal</th><th>État</th><th class="num">Montant</th></tr></thead>
+          <tbody>
+            <tr><td>Aujourd’hui</td><td>Comptoir</td><td><span class="tag-warn">à préparer</span></td><td class="num">87,60 €</td></tr>
+            <tr><td>Aujourd’hui</td><td>Webshop</td><td><span class="badge badge--ok">remise</span></td><td class="num">5,80 €</td></tr>
+            <tr><td>Samedi 14</td><td>Comptoir</td><td><span class="chip chip--neutral">à venir</span></td><td class="num">101,60 €</td></tr>
+            <tr><td>Samedi 14</td><td>Webshop</td><td><span class="chip chip--neutral">payée en ligne</span></td><td class="num">75,90 €</td></tr>
+            <tr class="total"><td>Hier</td><td>5 + 2 web</td><td><span class="badge badge--ok">7 remises</span></td><td class="num">347,98 €</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section class="card">
+        <h2>L’équipe <span class="section-label__aside">planning et coût du personnel</span></h2>
+        <table class="mini" style="margin-top:8px">
+          <thead><tr><th>Jour</th><th class="num">Pers.</th><th class="num">Heures</th><th class="num">Salaires</th><th class="num">% CA</th></tr></thead>
+          <tbody>
+            <tr><td>Lundi 9</td><td class="num">3</td><td class="num">20,5 h</td><td class="num">273,70 €</td><td class="num">18,3 %</td></tr>
+            <tr><td>Mardi 10</td><td class="num">3</td><td class="num">19,5 h</td><td class="num">248,70 €</td><td class="num">14,1 %</td></tr>
+            <tr><td>Mercredi 11</td><td class="num">5</td><td class="num">32,5 h</td><td class="num">434,50 €</td><td class="num ok">12,4 %</td></tr>
+            <tr><td>Aujourd’hui</td><td class="num">3</td><td class="num"><span class="tag-warn">72,0 h</span></td><td class="num">—</td><td class="num">—</td></tr>
+          </tbody>
+        </table>
+        <p class="foot">Mercredi férié : 5 personnes pour 3 492 € et le meilleur ratio de la semaine.</p>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:16px;padding:6px 4px">
+      <div style="padding:12px 18px 0"><h2>Fidélité, cette semaine <span class="section-label__aside"><a class="linklike" href="#">Ouvrir la fidélité</a></span></h2></div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="kpi__value">587</div><div class="kpi__label">Tickets particuliers</div></div>
+        <div class="kpi is-warn"><div class="kpi__value">14 · 2,4 %</div><div class="kpi__label">Rattachés à un client</div><div class="kpi__note">12 sont des commandes</div></div>
+        <div class="kpi is-stop"><div class="kpi__value">2</div><div class="kpi__label">Ventes comptoir identifiées</div><div class="kpi__note">8, 5, 12, 10 les semaines d’avant</div></div>
+        <div class="kpi is-stop"><div class="kpi__value">0 / 638</div><div class="kpi__label">Membres actifs</div><div class="kpi__note">9 clients ont un code de scan</div></div>
+        <div class="kpi"><div class="kpi__value">0</div><div class="kpi__label">Bons fidélité utilisés</div></div>
+      </div>
+    </section>
+
+    <p class="foot">Maquette du 12/11/2026. Chiffres réels de L’Atelier by Halle, lus le jour même par l’API du panel, sans aucune table locale : ventes (<code>/shops/4/statistics/sales/kpis</code>, <code>/consultant/shops/sales-kpis</code>), cibles et P&amp;L (<code>/consultant/shops/4/targets</code>, <code>/pnl/daily</code>), catégories (<code>/consultant/shops/category-sales</code>), pertes (<code>/shops/4/products/waste</code>), commandes (<code>/shops/4/client-orders</code>), contrôles (<code>/consultant/shops/4/tasks</code>), planning (<code>/shops/4/schedule</code>), tickets et fiches clients pour la fidélité. Les cibles affichées sont celles du réseau par défaut : aucune cible propre à Halle n’est réglée.</p>
+  </main>
+</div>
+</div>
+</body>
+</html>

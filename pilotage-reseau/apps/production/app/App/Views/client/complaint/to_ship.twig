@@ -51,7 +51,7 @@
     <div class="card" id="zw-ship">
         <div class="card-header d-flex flex-wrap justify-content-between gap-2"><h4 class="card-title mb-0">3. Zamienniki do wysłania</h4><a class="at-link" href="{{ root }}/shipping/wizard">Wyślij dzień <i class="bi bi-arrow-right"></i></a></div>
         <div class="card-body">
-            <p class="at-note"><i class="bi bi-info-circle"></i>Spakowany zamiennik wychodzi z najbliższym WZ klienta (kreator « Wyślij dzień » pokazuje go przy kliencie) i dostaje status « Wysłane » automatycznie. Ręczne « Wysłane » — tylko gdy wyszedł inaczej.</p>
+            <p class="at-note"><i class="bi bi-info-circle"></i>Spakowany zamiennik wychodzi z najbliższym WZ klienta (asystent « Wyślij dzień » pokazuje go przy kliencie) i dostaje status « Wysłane » automatycznie. Ręczne « Wysłane » — tylko gdy wyszedł inaczej.</p>
             {% if to_ship %}
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Wysyłka</th><th>Klient</th><th>Produkt</th><th class="text-end">Kartony</th><th>Status</th><th></th></tr></thead><tbody>
                 {% for t in to_ship %}

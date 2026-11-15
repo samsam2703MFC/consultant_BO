@@ -252,7 +252,7 @@
                                                                 <?php endif; ?>
                                                             </button>
                                                         <?php endif; ?>
-                                                        <?php /* Wyślij dzień oznacza zamówienia dnia jako wysłane i powiadamia sklep ; tu : wysyłka poza kreatorem (bez WDT). */ ?>
+                                                        <?php /* Wyślij dzień oznacza zamówienia dnia jako wysłane i powiadamia sklep ; tu : wysyłka poza asystentem (bez WDT). */ ?>
                                                         <button type="button" role="menuitem" onclick="updateStatus(<?= $pending[$i]['id'] ?>, this)"
                                                                 data-at-confirm="<?= $pending[$i]['integrated_customer'] == 1 ? 'Oznaczyć zamówienie jako wysłane bez dokumentów? Sklep klienta dostaje powiadomienie tylko z Wyślij dzień (WDT).' : 'Oznaczyć zamówienie jako wysłane?' ?>" data-at-confirm-ok="Oznacz">
                                                             <i class="bi bi-check2-circle"></i>Oznacz jako wysłane

@@ -380,6 +380,10 @@ final class ManagerService
             'period' => $quarter, 'from' => $quarterPeriod['from'], 'to' => $quarterPeriod['to'], 'extracted_at' => date('Y-m-d H:i'),
             'plan' => $p, 'haccp' => $haccp + ['blocked' => $blockedAll], 'sections' => $sections, 'total' => round($total, 2),
             'missing' => array_map(fn($c) => ['code' => $c], $this->planGaps($plan)),
+            // [267] Décision du 11/11/2026 : pas de prime trimestrielle — prime mensuelle = % du chiffre d'affaires général
+            // (Czas pracy › Koszty i premie). Le calcul par objectifs reste affiché à titre d'information, sans versement.
+            'enabled' => $this->params->get('manager.quarterly_bonus', '0') === '1',
+            'monthly_pct' => (float) $this->params->get('manager.sales_bonus_pct', '0.3'),
         ];
     }
 

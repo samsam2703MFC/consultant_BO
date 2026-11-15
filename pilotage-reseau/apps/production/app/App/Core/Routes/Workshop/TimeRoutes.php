@@ -10,11 +10,15 @@ return function (RouteCollector $r) {
     $r->addRoute('GET', '/time/leave', ['controller' => $c, 'method' => 'leave']);
     $r->addRoute('GET', '/time/overtime', ['controller' => $c, 'method' => 'overtime']);
     $r->addRoute('GET', '/time/sheet.pdf', ['controller' => $c, 'method' => 'sheetPdf']);
+    // [267] Koszty i premie (do odczytu, prawo « team_costs »).
+    $r->addRoute('GET', '/time/costs', ['controller' => $c, 'method' => 'costs']);
+    $r->addRoute('GET', '/ajax/time/costs', ['controller' => $c, 'method' => 'costsData']);
 
     $r->addRoute('GET', '/ajax/time/day', ['controller' => $c, 'method' => 'dayData']);
     $r->addRoute('GET', '/ajax/time/month', ['controller' => $c, 'method' => 'monthData']);
     $r->addRoute('GET', '/ajax/time/leave', ['controller' => $c, 'method' => 'leaveData']);
     $r->addRoute('GET', '/ajax/time/overtime', ['controller' => $c, 'method' => 'overtimeData']);
+    $r->addRoute('GET', '/ajax/time/goods', ['controller' => $c, 'method' => 'goodsData']);
     $r->addRoute('PUT', '/ajax/time/reasons', ['controller' => $c, 'method' => 'saveReason']);
     $r->addRoute('POST', '/ajax/time/days/{day:\d{4}-\d{2}-\d{2}}/validate', ['controller' => $c, 'method' => 'validateDay']);
     $r->addRoute('DELETE', '/ajax/time/days/{day:\d{4}-\d{2}-\d{2}}/validate', ['controller' => $c, 'method' => 'reopenDay']);
@@ -29,6 +33,10 @@ return function (RouteCollector $r) {
     $r->addRoute('POST', '/ajax/time/absences', ['controller' => $c, 'method' => 'addAbsence']);
     $r->addRoute('DELETE', '/ajax/time/absences/{id:\d+}', ['controller' => $c, 'method' => 'deleteAbsence']);
     $r->addRoute('PUT', '/ajax/time/leave/{id:\d+}', ['controller' => $c, 'method' => 'saveLeaveRight']);
+    // [288] Wnioski o urlop z telefonu : zatwierdza / odrzuca kierownik produkcji ; « zostało » (korekta salda).
+    $r->addRoute('POST', '/ajax/time/leave-requests/{id:\d+}/approve', ['controller' => $c, 'method' => 'approveLeave']);
+    $r->addRoute('POST', '/ajax/time/leave-requests/{id:\d+}/reject', ['controller' => $c, 'method' => 'rejectLeave']);
+    $r->addRoute('PUT', '/ajax/time/leave/{id:\d+}/remaining', ['controller' => $c, 'method' => 'saveLeaveRemaining']);
     $r->addRoute('POST', '/ajax/time/comps', ['controller' => $c, 'method' => 'proposeComp']);
     $r->addRoute('POST', '/ajax/time/comps/{id:\d+}/sign', ['controller' => $c, 'method' => 'signComp']);
     $r->addRoute('DELETE', '/ajax/time/comps/{id:\d+}', ['controller' => $c, 'method' => 'cancelComp']);

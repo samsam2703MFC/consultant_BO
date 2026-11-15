@@ -1,14 +1,20 @@
 {# Tablica zadań stanowiska : zaległe, potem okres bieżący według kategorii (częstotliwość przy zadaniu). #}
-{% macro item(task, o, root, overdue = false, frequency = null) %}
-    <li class="at-task {{ o ? 'is-' ~ o.status : '' }} {{ overdue ? 'is-overdue' : '' }}" {% if o %}data-occurrence="{{ o.id }}"{% endif %}>
+{% macro item(task, o, root, overdue = false, frequency = null, late = []) %}
+    <li class="at-task {{ o ? 'is-' ~ o.status : '' }} {{ overdue or late ? 'is-overdue' : '' }}" {% if o %}data-occurrence="{{ o.id }}"{% endif %}>
         <div class="at-task-main">
             <strong>{{ task.title_pl }}</strong>{% if task.backup_for %} <span class="badge bg-light text-dark border" title="Na tym stanowisku nikogo nie ma — zadanie robi Twoje stanowisko"><i class="bi bi-person-check"></i> zastępstwo : {{ task.backup_for }}</span>{% endif %}{% if task.form_code %} <span class="badge bg-light text-dark border"><i class="bi bi-journal-text"></i> protokół</span>{% endif %}
             <div class="at-sub">
                 {% if frequency %}{{ frequency }}{% if task.frequency == 'weekly' and task.due_weekday %} ({{ ['', 'pon.', 'wt.', 'śr.', 'czw.', 'pt.', 'sob.', 'niedz.'][task.due_weekday] }}){% endif %} · {% endif %}
-                {% if overdue %}zaległe · termin {{ o.due_date|date('d.m.Y') }} ({{ o.period_key }}){% elseif o %}termin {{ o.due_date|date('d.m') }}{% else %}dziś dzień wolny{% endif %}
+                {% if overdue %}zaległe · termin {{ o.due_date|date('d.m.Y') }}{% elseif o %}termin {{ o.due_date|date('d.m') }}{% else %}dziś dzień wolny{% endif %}
                 {% if o and o.status != 'open' %} · {{ o.status == 'done' ? 'zrobione' : 'pominięte' }}{{ o.done_by_name ? ' przez ' ~ o.done_by_name : '' }}{{ o.done_at ? ', ' ~ o.done_at|date('d.m H:i') : '' }}{% endif %}
                 {% if o and o.note %} · „{{ o.note }}”{% endif %}
             </div>
+            {% if late %}{# [287] zaległe terminy tego samego zadania — bez osobnej pozycji #}
+            <div class="at-task-late">
+                {% for l in late %}<span class="at-task-late-row" data-occurrence="{{ l.id }}"><span class="badge bg-danger">zaległe {{ l.due_date|date('d.m') }}</span>
+                    {% if not task.form_code %}<button class="btn btn-sm btn-link p-0" data-status="done">zrobione</button> · <button class="btn btn-sm btn-link p-0 text-muted" data-status="skipped">pomiń</button>{% endif %}</span>{% endfor %}
+            </div>
+            {% endif %}
         </div>
         <div class="at-task-actions">
             {% if task.link_path %}<a class="btn btn-sm btn-outline-primary" href="{{ root }}{{ task.link_path }}">Otwórz</a>{% endif %}
@@ -41,7 +47,7 @@
     <div class="card at-task-card" data-category="{{ code }}">
         <div class="card-header d-flex justify-content-between align-items-center gap-2"><h4 class="card-title mb-0"><i class="bi {{ g.icon }}"></i> {{ g.label }}</h4>
             {% if g.open %}<span class="badge bg-info">do zrobienia {{ g.open }}</span>{% else %}<span class="badge bg-success"><i class="bi bi-check"></i></span>{% endif %}</div>
-        <div class="card-body pt-0"><ul class="at-tasks">{% for it in g.items %}{{ _self.item(it.task, it.occurrence, root, false, it.frequency) }}{% endfor %}</ul></div>
+        <div class="card-body pt-0"><ul class="at-tasks">{% for it in g.items %}{{ _self.item(it.task, it.occurrence, root, false, it.frequency, it.late ?? []) }}{% endfor %}</ul></div>
     </div>
 {% endfor %}
 

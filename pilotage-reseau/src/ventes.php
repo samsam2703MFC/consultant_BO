@@ -537,12 +537,92 @@ function venteEmployes(): array
     // Les personnes que la table locale ne connaît pas encore (une embauche récente) viennent du
     // panel, magasin par magasin, une fois par heure : sans cela, leurs ventes resteraient « sans
     // vendeur » et leurs primes n'existeraient pas (l'app worker, 06/10/2026). Le statut de franchisé
-    // ne vit qu'au panel : il se reporte aussi sur les personnes de la table locale.
+    // ne vit qu'au panel : il se reporte aussi sur les personnes de la table locale. Une fiche locale
+    // sans nom (« Employé 145 ») prend celui du panel quand il en a un (14/11/2026).
     foreach (venteEmployesPanel() as $id => $e) {
-        if (!isset($out[$id])) { $out[$id] = $e; }
-        elseif (!empty($e['franchise'])) { $out[$id]['franchise'] = true; }
+        if (!isset($out[$id])) { $out[$id] = $e; continue; }
+        if (venteSansNom($out[$id], (int) $id) && !venteSansNom($e, (int) $id)) { $out[$id]['nom'] = $e['nom']; }
+        if (!empty($e['franchise'])) { $out[$id]['franchise'] = true; }
+    }
+    // Les fiches lues une à une (venteEmployesConnus) : les personnes que ni la table ni la liste du
+    // panel ne nomment — un compte supprimé, ou rattaché à un magasin que la liste ne couvre pas.
+    foreach (venteEmployesFiches()['e'] as $id => $e) {
+        if (!isset($out[$id])) { $out[$id] = ['nom' => (string) $e['nom'], 'shop' => (string) ($e['shop'] ?? '')]; }
+        elseif (venteSansNom($out[$id], (int) $id)) { $out[$id]['nom'] = (string) $e['nom']; }
     }
     return $out;
+}
+
+/** Vrai quand la personne n'a pour nom que son numéro (« Employé 145 ») : ni la table ni le panel ne l'ont nommée. */
+function venteSansNom(array $e, int $id): bool
+{
+    $nom = trim((string) ($e['nom'] ?? ''));
+    return $nom === '' || $nom === 'Employé ' . $id;
+}
+
+/** Les fiches lues une à une : {e: {id: {nom, shop}}, rate: {id: quand}} (`pvEmployesFiches`). */
+function venteEmployesFiches(): array
+{
+    $c = function_exists('setting') ? setting('pvEmployesFiches') : null;
+    return ['e' => is_array($c) && is_array($c['e'] ?? null) ? $c['e'] : [],
+        'rate' => is_array($c) && is_array($c['rate'] ?? null) ? $c['rate'] : []];
+}
+
+/**
+ * Le personnel, avec un nom pour chacun des vendeurs donnés (14/11/2026, Sam : « Employé 145 » dans l'e-mail des
+ * pointages suspects de Halle, « faire en sorte que le cockpit relise »). Un vendeur de ticket que ni la table locale
+ * ni la liste du panel (gardée une heure) ne nomment se relit, au lieu de rester un numéro :
+ *  1. la liste du personnel de chaque magasin, sans attendre la fin de l'heure (une embauche du jour) ;
+ *  2. pour ceux qui manquent encore, la fiche de la personne (/employees/{id}) : un compte supprimé, ou rattaché à un
+ *     magasin hors liste, n'est plus dans la liste de son magasin mais garde sa fiche.
+ * Une fois par requête, et la liste pas plus d'une fois toutes les cinq minutes. Les fiches lues sont gardées (`pvEmployesFiches`, le nom et le magasin, rien d'autre : la fiche
+ * porte aussi des secrets) ; une fiche que le panel ne rend pas se redemande six heures plus tard, pas à chaque lecture.
+ *
+ * @param list<int> $ids les vendeurs des tickets (0 = sans vendeur, ignoré)
+ */
+function venteEmployesConnus(array $ids): array
+{
+    static $relu = false;
+    $emp = venteEmployes();
+    $manque = static fn (array $emp) => array_values(array_filter(array_unique(array_map('intval', $ids)),
+        static fn (int $id) => $id > 0 && (!isset($emp[$id]) || venteSansNom($emp[$id], $id))));
+    if ($relu || $manque($emp) === [] || !class_exists('PanelApi') || !PanelApi::configured()) { return $emp; }
+    $relu = true;
+    // 1. La liste de chaque magasin, relue maintenant — sauf si elle l'a été il y a moins de cinq minutes : un compte
+    //    qui reste inconnu ne la fait pas relire à chaque écran.
+    $g = function_exists('setting') ? setting('pvEmployes') : null;
+    if (!is_array($g) || (int) ($g['quand'] ?? 0) < time() - 300) {
+        venteEmployesPanel(true);
+        $emp = venteEmployes();
+    }
+    $reste = $manque($emp);
+    if ($reste === [] || !method_exists('PanelApi', 'getParalleleDetail')) { return $emp; }
+    // 2. La fiche de chacun : pas plus de vingt d'un coup, et pas une fiche déjà demandée en vain il y a moins de six heures.
+    $F = venteEmployesFiches();
+    $reste = array_slice(array_values(array_filter($reste, static fn (int $id) => (int) ($F['rate'][$id] ?? 0) < time() - 6 * 3600)), 0, 20);
+    if ($reste === []) { return $emp; }
+    $chemins = [];
+    foreach ($reste as $id) { $chemins[(string) $id] = '/employees/' . $id; }
+    foreach (PanelApi::getParalleleDetail($chemins, 4, 12) as $id => $r) {
+        $id = (int) $id;
+        $d = is_array($r['data'] ?? null) ? $r['data'] : [];
+        if (isset($d['employee']) && is_array($d['employee'])) { $d = $d['employee']; }
+        $nom = trim((string) ($d['display_name'] ?? ''));
+        if ($nom === '') { $nom = trim(((string) ($d['name'] ?? '')) . ' ' . ((string) ($d['surname'] ?? ''))); }
+        if ($nom === '' || (int) ($d['id'] ?? $id) !== $id) { $F['rate'][$id] = time(); continue; }
+        $F['e'][$id] = ['nom' => $nom, 'shop' => (string) ($d['id_shop'] ?? '')];
+        unset($F['rate'][$id]);
+    }
+    try {
+        Db::exec('INSERT INTO ceo_app_setting VALUES (?,?) ON DUPLICATE KEY UPDATE value = VALUES(value)',
+            ['pvEmployesFiches', json_encode($F, JSON_UNESCAPED_UNICODE)]);
+    } catch (Throwable $e) { /* sans mémo : relu à la prochaine requête */ }
+    // Ce qui vient d'être lu sert tout de suite, même si l'écriture a échoué.
+    foreach ($F['e'] as $id => $e) {
+        if (!isset($emp[$id])) { $emp[$id] = ['nom' => (string) $e['nom'], 'shop' => (string) ($e['shop'] ?? '')]; }
+        elseif (venteSansNom($emp[$id], (int) $id)) { $emp[$id]['nom'] = (string) $e['nom']; }
+    }
+    return $emp;
 }
 
 /**
@@ -557,15 +637,21 @@ function venteEstFranchise(int $id): bool
     return !empty(venteEmployesPanel()[$id]['franchise']);
 }
 
-/** Le personnel vu par le panel (/shops/{id}/employees), id → identité, gravé une heure. */
-function venteEmployesPanel(): array
+/**
+ * Le personnel vu par le panel (/shops/{id}/employees), id → identité, gravé une heure. `$relire` : la liste se relit
+ * maintenant, sans attendre la fin de l'heure (un vendeur de ticket inconnu, venteEmployesConnus) ; si un magasin ne
+ * répond pas, ce qui était gravé reste servi.
+ */
+function venteEmployesPanel(bool $relire = false): array
 {
     static $memo = null;
-    if ($memo !== null) { return $memo; }
+    if ($memo !== null && !$relire) { return $memo; }
     $c = function_exists('setting') ? setting('pvEmployes') : null;
     // « v » : 2 depuis que la fiche garde le statut de franchisé (07/11/2026) — une fiche d'avant se relit.
-    if (is_array($c) && isset($c['e']) && (int) ($c['v'] ?? 0) === 2 && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = (array) $c['e']; }
-    $memo = [];
+    $grave = is_array($c) && isset($c['e']) && (int) ($c['v'] ?? 0) === 2 ? (array) $c['e'] : null;
+    if (!$relire && $grave !== null && (int) ($c['quand'] ?? 0) > time() - 3600) { return $memo = $grave; }
+    // Relu à la demande : ce qui était gravé sert de fond, la lecture du panel le complète et le corrige.
+    $memo = $relire && $grave !== null ? $grave : [];
     if (!class_exists('PanelApi') || !PanelApi::configured()) { return $memo; }
     try { $shops = Db::rows('SELECT id FROM shops WHERE active = 1'); } catch (PDOException $e) { return $memo; }
     $chemins = [];

@@ -45,6 +45,32 @@ final class PageAccessRepository extends WorkshopRepository
         return (bool) $this->all("SELECT 1 FROM n_prod_user_role WHERE id_user = ? AND role_code = 'prod_admin' AND id_group IS NULL", [$userId]);
     }
 
+    /** [281] Konto z samym profilem CEO (kontrola, bez ustawień) — tabela z migracji 177 ; brak tabeli = nikt. */
+    public function isCeo(int $userId): bool
+    {
+        try {
+            return (bool) $this->all('SELECT 1 FROM n_user_ceo WHERE id_user = ?', [$userId]);
+        } catch (\PDOException) {
+            return false;
+        }
+    }
+
+    /** @return list<int> konta z profilem CEO */
+    public function ceoUsers(): array
+    {
+        try {
+            return array_map('intval', array_column($this->all('SELECT id_user FROM n_user_ceo'), 'id_user'));
+        } catch (\PDOException) {
+            return [];
+        }
+    }
+
+    public function setCeo(int $userId, bool $on, ?int $by): void
+    {
+        if ($on) $this->db->prepare('INSERT IGNORE INTO n_user_ceo (id_user, granted_by) VALUES (?, ?)')->execute([$userId, $by]);
+        else $this->db->prepare('DELETE FROM n_user_ceo WHERE id_user = ?')->execute([$userId]);
+    }
+
     /** Czy ktokolwiek ma rolę administratora (bez tego konto « admin » zostaje administratorem — bez blokady dostępu). */
     public function anyProdAdmin(): bool
     {

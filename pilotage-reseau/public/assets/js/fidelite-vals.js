@@ -10,6 +10,9 @@
  * d'un mois à l'autre, ce qu'achète chaque segment. Sans visite carte en base, le serveur calcule sur un jeu
  * d'essai et le dit (`test`) : l'écran l'affiche.
  *
+ * Profils clients (12/11/2026) : GET /fidelite/profils — les profils de fréquence, réglés pour tout le réseau ; le
+ * dashboard du magasin les lit. Publiés d'un envoi : POST /fidelite/profils.
+ *
  * Remplit `common.fid` ; le gabarit est tplFidelite (fidelite-tpl.js). */
 import { readOne } from './api.js';
 
@@ -344,22 +347,104 @@ function valsClients(app, f){
   f.resume = nf(K.tickets30) + ' tickets carte et ' + fE(K.ca30) + ' sur 30 jours · panier ' + fE(K.panier, 2);
 }
 
+/* --- Profils clients (12/11/2026, maquette A de docs/maquettes/fidelite-v3) -------------------------------------
+ * Les profils rangent chaque client scanné selon le rythme de ses passages (Fanbase 3 fois par semaine … Découverte).
+ * Ils se règlent ici pour tout le réseau ; le dashboard du magasin les lit (onglet Fidélité). Un brouillon reste un
+ * brouillon jusqu'à « Publier » (POST /fidelite/profils, tout ou rien). La colonne « Aujourd'hui » applique les
+ * profils publiés à la portée choisie (le réseau ou un magasin) : GET /fidelite/profils?shop=. */
+const COULEURS_PF = ['#8D1D2C', '#B03048', '#B0792A', '#3f7a52', '#1B6FA8', '#6250d6', '#5c4033', '#9a948b'];
+function fpCharge(app, force){
+  const S = app.state, shop = S.fidShop || '', cle = 'pf|' + shop, b = S.fidPF;
+  if (!force && b && b.cle === cle && (b.d || b.chargement)) { return; }
+  if (app._fidPF === cle && !force) { return; }
+  app._fidPF = cle;
+  app.setState({ fidPF: { cle, chargement: true, d: b && b.cle === cle ? b.d : null } });
+  readOne('/fidelite/profils' + (shop ? '?shop=' + encodeURIComponent(shop) : '')).then(d => {
+    app._fidPF = null;
+    app.setState({ fidPF: { cle, chargement: false, d: d || { error: 'injoignable' } } });
+  });
+}
+/** Les profils tels qu'ils seront publiés : ceux du serveur, les brouillons par-dessus, les nouveaux à la fin. */
+function profilsVus(app, d){
+  const B = app.state.fidPFB || {};
+  const L = (d.profils || []).map(p => B[p.id] ? Object.assign({}, p, B[p.id], { modifie: true }) : Object.assign({}, p, { modifie: false }));
+  (app.state.fidPFN || []).forEach(n => L.push(Object.assign({}, n, { nouveau: true, modifie: true })));
+  const seuil = p => p.unite === 'semaine' ? 4 * p.n : (p.unite === 'mois' ? +p.n : 0);
+  L.forEach(p => { p.seuil = seuil(p); });
+  return L.sort((a, b) => (b.seuil - a.seuil) || ((a.id > b.id) ? 1 : -1));
+}
+function pfBrouillon(app, p, patch){
+  if (p.nouveau) { app.setState({ fidPFN: (app.state.fidPFN || []).map(n => n.id === p.id ? Object.assign({}, n, patch) : n) }); return; }
+  const B = Object.assign({}, app.state.fidPFB || {});
+  B[p.id] = Object.assign({ nom: p.nom, n: p.n, unite: p.unite, couleur: p.couleur, actif: p.actif, supprimer: false }, B[p.id] || {}, patch);
+  app.setState({ fidPFB: B });
+}
+function pfPublier(app, d){
+  const S = app.state;
+  if (S.fidEnvoi) { return; }
+  const B = S.fidPFB || {};
+  const profils = Object.keys(B).map(id => Object.assign({ id: +id }, B[id]))
+    .concat((S.fidPFN || []).map(n => ({ nom: n.nom, n: n.n, unite: n.unite, couleur: n.couleur, actif: n.actif })));
+  const R = S.fidPFR || {};
+  app.setState({ fidEnvoi: true, fidMsg: null });
+  app.api('POST', '/fidelite/profils', { profils, fenetre: R.fenetre != null ? R.fenetre : d.fenetre, memoire: R.memoire != null ? R.memoire : d.memoire, qui: 'Cockpit' }).then(r => {
+    const ok = r && r.ok !== false && !r.error;
+    app.setState({ fidEnvoi: false, fidMsg: ok ? { txt: 'Profils publiés dans les magasins : ' + r.n + ' modification' + (r.n > 1 ? 's' : '') + '.', ko: false } : { txt: 'Publication refusée : ' + ((r && r.error) || 'sans réponse'), ko: true } });
+    if (ok) { app.setState({ fidPFB: {}, fidPFN: [], fidPFR: {} }); fpCharge(app, true); }
+  });
+}
+function valsProfils(app, f){
+  const S = app.state, b = S.fidPF || {}, d = b.d && !b.d.error ? b.d : null;
+  f.chargementF = !!b.chargement && !d;
+  f.indispoF = !b.chargement && b.d && !d ? 'Lecture impossible — ' + (b.d.error || 'API injoignable') + ' (GET /fidelite/profils).' : '';
+  if (!d) { return; }
+  const L = profilsVus(app, d), A = d.apercu || {}, N = A.scannes || 0;
+  const R = Object.assign({ fenetre: d.fenetre, memoire: d.memoire }, S.fidPFR || {});
+  const actifs = L.filter(p => p.actif && !p.supprimer);
+  f.pf = {
+    intro: 'Les profils rangent chaque client reconnu en caisse selon le rythme de ses passages. Ils se règlent ici pour tout le réseau ; le dashboard de chaque magasin les lit tels quels.',
+    echelle: actifs.slice().reverse().map((p, i, T) => ({ nom: p.nom, couleur: p.couleur, borne: p.unite === 'base' ? '0' : (p.unite === 'semaine' ? p.n + ' par semaine' : p.n + ' par mois') })),
+    lignes: L.map(p => {
+      const base = p.unite === 'base', n = A.parProfil && p.id != null ? A.parProfil[p.id] : null;
+      return { id: p.id, nom: p.nom, couleur: p.couleur, n: p.n, unite: p.unite, base, actif: p.actif, supprimer: !!p.supprimer, modifie: p.modifie, nouveau: !!p.nouveau,
+        equivalent: !p.modifie && p.equivalent ? p.equivalent : base ? 'moins d’1 passage par mois' : (p.unite === 'semaine' ? (4 * p.n) + ' passages par mois et plus' : p.n + ' passage' + (p.n > 1 ? 's' : '') + ' par mois et plus'),
+        aujourdhui: n == null ? (p.nouveau ? 'après publication' : '—') : nf(n), part: n == null || !N ? '' : nf(100 * n / N, 1) + ' %',
+        setNom: e => pfBrouillon(app, p, { nom: e.target.value }),
+        setN: e => pfBrouillon(app, p, { n: Math.max(1, Math.min(p.unite === 'semaine' ? 7 : 30, parseInt(e.target.value, 10) || 1)) }),
+        setUnite: e => pfBrouillon(app, p, { unite: e.target.value === 'semaine' ? 'semaine' : 'mois' }),
+        setCouleur: e => pfBrouillon(app, p, { couleur: e.target.value }),
+        basculer: base ? null : () => pfBrouillon(app, p, { actif: !p.actif }),
+        retirer: base ? null : () => (p.nouveau ? app.setState({ fidPFN: (S.fidPFN || []).filter(x => x.id !== p.id) }) : pfBrouillon(app, p, { supprimer: !p.supprimer })) };
+    }),
+    ajouter: () => { const k = (S.fidPFK || 0) + 1; app.setState({ fidPFK: k, fidPFN: (S.fidPFN || []).concat([{ id: 'n' + k, nom: 'Nouveau profil', n: 4, unite: 'semaine', couleur: COULEURS_PF[(L.length + k) % COULEURS_PF.length], actif: true }]) }); },
+    fenetre: R.fenetre, memoire: R.memoire,
+    setFenetre: e => app.setState({ fidPFR: Object.assign({}, S.fidPFR || {}, { fenetre: Math.max(7, Math.min(120, parseInt(e.target.value, 10) || 30)) }) }),
+    setMemoire: e => app.setState({ fidPFR: Object.assign({}, S.fidPFR || {}, { memoire: Math.max(30, Math.min(365, parseInt(e.target.value, 10) || 90)) }) }),
+    apercu: (A.shop ? 'à ' + ((d.magasins || []).find(m => m.id === A.shop) || {}).nom : 'dans le réseau') + ' · ' + nf(N) + ' clients scannés sur ' + d.memoire + ' jours' + (A.aLire ? ' · lecture en cours : ' + nf(A.aLire) + ' journées à lire' : ''),
+  };
+  f.nbModifsF = Object.keys(S.fidPFB || {}).length + (S.fidPFN || []).length + Object.keys(S.fidPFR || {}).filter(k => S.fidPFR[k] !== d[k]).length;
+  f.publierF = () => pfPublier(app, d);
+  f.annulerF = () => app.setState({ fidPFB: {}, fidPFN: [], fidPFR: {}, fidMsg: null });
+}
+
 /* --- Point d'entrée --------------------------------------------------------------------------------- */
 export function valsFidelite(app, common){
   const S = app.state;
   const onglet = S.fidOnglet || 'p';
   fidCharge(app, 'p', false);
   if (onglet === 'c') { fidCharge(app, 'c', false); }
+  if (onglet === 'f') { fpCharge(app, false); }
   const dP = S.fidP && S.fidP.d && !S.fidP.d.error ? S.fidP.d : null;
   const dC = S.fidC && S.fidC.d && !S.fidC.d.error ? S.fidC.d : null;
   const mags = (dP || dC || {}).magasins || [];
   const shop = S.fidShop || '';
   const f = { onglet, blocs: [], profils: [], msg: S.fidMsg || null, fermerMsg: () => app.setState({ fidMsg: null }),
-    ongletP: () => app.setState({ fidOnglet: 'p' }), ongletC: () => app.setState({ fidOnglet: 'c' }),
+    ongletP: () => app.setState({ fidOnglet: 'p' }), ongletC: () => app.setState({ fidOnglet: 'c' }), ongletF: () => app.setState({ fidOnglet: 'f' }),
     nbRegles: dP ? (dP.regles || []).length : null, nbActifs: dC ? nf((dC.kpis || {}).actifs) : null,
     portees: [{ id: '', nom: 'Réseau', on: !shop }].concat(mags.map(m => ({ id: m.id, nom: m.nom, on: m.id === shop }))).map(m => Object.assign(m, { choisir: () => app.setState({ fidShop: m.id }) })),
-    rafraichir: () => { fidCharge(app, 'p', true); if (onglet === 'c') { fidCharge(app, 'c', true); } } };
+    rafraichir: () => { fidCharge(app, 'p', true); if (onglet === 'c') { fidCharge(app, 'c', true); } if (onglet === 'f') { fpCharge(app, true); } } };
   common.fid = f;
   valsProgramme(app, f);
   if (onglet === 'c') { valsClients(app, f); }
+  if (onglet === 'f') { valsProfils(app, f); }
 }

@@ -61,6 +61,7 @@ final class UserMailService
         $policy = new MailDeliveryPolicy();
         return [
             'configured' => $box !== null,
+            'admin_policy' => $this->repo->adminPolicy($userId),
             'mailbox' => $box === null ? null : self::publicBox($box),
             'providers' => array_map(fn($p) => ['label' => $p['label'], 'imap' => $p['imap'], 'smtp' => $p['smtp'], 'help' => $p['help']], self::PROVIDERS),
             'folders' => self::FOLDERS,
@@ -72,8 +73,10 @@ final class UserMailService
         ];
     }
 
-    public function saveMailbox(int $userId, array $in): array
+    /** @param bool $byAdmin zapis przez administratora (Poczta › Skrzynki użytkowników) — także skrzynki, którą ustawia tylko on */
+    public function saveMailbox(int $userId, array $in, bool $byAdmin = false): array
     {
+        if (!$byAdmin) $this->assertSelfManaged($userId);
         $old = $this->repo->mailbox($userId);
         $errors = [];
         $email = strtolower(trim((string) ($in['email'] ?? '')));
@@ -111,15 +114,16 @@ final class UserMailService
         return $this->state($userId);
     }
 
-    public function deleteMailbox(int $userId): void
+    public function deleteMailbox(int $userId, bool $byAdmin = false): void
     {
+        if (!$byAdmin) $this->assertSelfManaged($userId);
         $this->repo->deleteMailbox($userId);
     }
 
-    /** Sprawdza IMAP (logowanie, foldery) i SMTP (połączenie i logowanie, nic nie jest wysyłane). */
-    public function test(int $userId): array
+    /** Sprawdza IMAP (logowanie, foldery) i SMTP (połączenie i logowanie, nic nie jest wysyłane). Administrator : także skrzynkę wstrzymaną. */
+    public function test(int $userId, bool $byAdmin = false): array
     {
-        $box = $this->box($userId);
+        $box = $byAdmin ? ($this->repo->mailbox($userId) ?? throw new CustomException('Ten użytkownik nie ma jeszcze skrzynki.', 'errors', 409)) : $this->box($userId);
         $out = ['imap' => ['ok' => false, 'message' => ''], 'smtp' => ['ok' => false, 'message' => '']];
         try {
             $client = $this->imap($box);
@@ -456,17 +460,51 @@ final class UserMailService
 
     public function unread(int $userId): int
     {
-        return $this->repo->unread($userId);
+        return $this->repo->adminPolicy($userId)['stopped'] ? 0 : $this->repo->unread($userId);
     }
 
     /** Wyszukiwarka z górnego paska. */
     public function search(int $userId, string $q, int $limit): array
     {
-        return $this->repo->search($userId, $q, $limit);
+        return $this->repo->adminPolicy($userId)['stopped'] ? [] : $this->repo->search($userId, $q, $limit);
+    }
+
+    // --- [270] administrator : skrzynki użytkowników ----------------------------------------------------------
+
+    /** Lista użytkowników ERP : skrzynka (adres, synchronizacja, błąd, nieprzeczytane), ustawiana przez administratora, wstrzymana. */
+    public function adminUsers(): array
+    {
+        return array_map(fn($u) => [
+            'id' => (int) $u['id'], 'name' => $u['name'], 'login' => $u['login'], 'position' => $u['position'], 'email' => $u['email'],
+            'last_sync_at' => $u['last_sync_at'], 'last_error' => $u['last_error'], 'unread' => (int) $u['unread'],
+            'managed' => (bool) $u['managed'], 'stopped' => (bool) $u['stopped'], 'stopped_at' => $u['stopped_at'],
+        ], $this->repo->adminUsers());
+    }
+
+    /** Ustawia tylko administrator (managed) i / albo wstrzymana (stopped). */
+    public function saveAdminPolicy(int $userId, array $in, int $actorId): array
+    {
+        if (!$this->repo->userExists($userId)) throw new CustomException('Nie ma takiego użytkownika.', 'errors', 404);
+        $old = $this->repo->adminPolicy($userId);
+        $this->repo->saveAdminPolicy($userId, array_key_exists('managed', $in) ? !empty($in['managed']) : $old['managed'],
+            array_key_exists('stopped', $in) ? !empty($in['stopped']) : $old['stopped'], $actorId);
+        return $this->repo->adminPolicy($userId);
+    }
+
+    public function adminTarget(int $userId): int
+    {
+        if (!$this->repo->userExists($userId)) throw new CustomException('Nie ma takiego użytkownika.', 'errors', 404);
+        return $userId;
+    }
+
+    private function assertSelfManaged(int $userId): void
+    {
+        if ($this->repo->adminPolicy($userId)['managed']) throw new CustomException('Twoją skrzynkę ustawia administrator.', 'errors', 403);
     }
 
     private function box(int $userId): array
     {
+        if ($this->repo->adminPolicy($userId)['stopped']) throw new CustomException('Poczta wstrzymana przez administratora.', 'errors', 423);
         return $this->repo->mailbox($userId) ?? throw new CustomException('Najpierw podłącz swoją skrzynkę : Ustawienia › Moja skrzynka e-mail.', 'errors', 409);
     }
 

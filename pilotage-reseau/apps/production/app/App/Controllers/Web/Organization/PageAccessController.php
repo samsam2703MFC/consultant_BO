@@ -12,14 +12,15 @@ class PageAccessController extends BaseController
 {
     use JsonErrors;
 
-    public function __construct(private PageAccessService $access)
+    public function __construct(private PageAccessService $access, private \App\Services\Organization\ErpEntryService $erpEntry)
     {
     }
 
     public function index()
     {
         // [253] « Uprawnienia i menu » : menu stanowisk (pozycje railu) i strony szczegółowo.
-        $this->view('organization/access', $this->access->matrix() + ['menu' => $this->access->menuMatrix()]);
+        // [275] Wejście do ERP przez QR : stanowiska ERP i konta (powiązanie z Czasem pracy).
+        $this->view('organization/access', $this->access->matrix() + ['menu' => $this->access->menuMatrix(), 'erp_qr' => $this->erpEntry->matrix()]);
     }
 
     public function save($id)
@@ -65,7 +66,8 @@ class PageAccessController extends BaseController
     public function session()
     {
         try {
-            $home = $this->access->switchSession($this->userId(), $this->getJson(Request::createFromGlobals())['position_id'] ?? null);
+            $in = $this->getJson(Request::createFromGlobals());
+            $home = $this->access->switchSession($this->userId(), $in['position_id'] ?? null, $in['profile'] ?? null);
             return $this->json(['data' => ['home' => $home]]);
         } catch (\Throwable $e) {
             return $this->jsonError($e);

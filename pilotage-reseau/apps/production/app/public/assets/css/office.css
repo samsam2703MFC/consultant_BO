@@ -1,8 +1,6 @@
 /* Tablette de bureau : mise en page de la tablette de l'atelier (kiosk.css) — services en grandes tuiles, noms en
    avatars, QR personnel en grand avec le nom, le jour et l'action attendue, confirmation plein écran. */
 .office-home { padding-bottom: 32px; }
-.office-present { margin: 6px 0 0; font-size: 16px; color: var(--k-muted); font-variant-numeric: tabular-nums; }
-.office-search { max-width: 520px; margin: 0 auto; display: block; background: var(--k-surface); border-radius: 14px; min-height: 52px; }
 .office-sections { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
 .office-section { border: 1px solid var(--k-line); background: var(--k-surface); border-radius: 20px; padding: 22px 20px 18px; min-height: 150px;
   display: flex; flex-direction: column; align-items: flex-start; gap: 6px; text-align: left; color: var(--k-text); box-shadow: 0 8px 24px rgba(34, 34, 34, .05); }

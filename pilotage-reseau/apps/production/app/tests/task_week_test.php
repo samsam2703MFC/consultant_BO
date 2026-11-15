@@ -100,8 +100,8 @@ try {
     expectTw($mon['Zakupy tygodnia']['status'] === 'open' && $mon['Zakupy tygodnia']['late'] && $mon['Zakupy tygodnia']['button'] === 'Zakupy tygodnia'
         && $mon['Oferty cenowe']['status'] === 'none' && !$mon['Oferty cenowe']['late'], 'poniedziałek : zakupy tygodnia zaległe, oferty bez wystąpienia');
     $wedItems = array_column($w['days'][3]['items'], null, 'title');
-    expectTw($wedItems['Zatwierdź faktury tygodnia']['link'] === '/workshop/supply#tab=invoices&inv=wizard' && $wedItems['Zatwierdź faktury tygodnia']['button'] === 'Kreator faktur'
-        && $wedItems['Zatwierdź faktury tygodnia']['color'] === '#8e1f2f' && $wedItems['Zatwierdź faktury tygodnia']['auto'] !== null, 'karta : link do kreatora faktur, przycisk, kolor kategorii, zalicza się samo');
+    expectTw($wedItems['Zatwierdź faktury tygodnia']['link'] === '/workshop/supply#tab=invoices&inv=wizard' && $wedItems['Zatwierdź faktury tygodnia']['button'] === 'Asystent faktur'
+        && $wedItems['Zatwierdź faktury tygodnia']['color'] === '#8e1f2f' && $wedItems['Zatwierdź faktury tygodnia']['auto'] !== null, 'karta : link do asystenta faktur, przycisk, kolor kategorii, zalicza się samo');
     expectTw(count($w['overdue']) === 1 && $w['overdue'][0]['due'] === '2026-10-26' && $w['overdue'][0]['title'] === 'Zakupy tygodnia', 'zaległe z tygodnia 44');
     expectTw(count($w['later']) === 1 && $w['later'][0]['due'] === '2026-11-30' && $w['later'][0]['button'] === 'Koszty surowców', 'miesiąc : przegląd kosztów do 30.11');
     $t = $w['totals'];
@@ -117,7 +117,7 @@ try {
     expectTw(!in_array('Zakupy tygodnia', array_map(fn($i) => $i['title'], [...$fl['late'], ...$fl['today']]), true) && $fl['done'] === [], 'zaległe i dziś bez « Teraz », nic zrobionego');
     expectTw(App\Services\Organization\PositionTaskService::shortTitle('Faktury tygodnia : wgraj (PDF / KSeF), sprawdź pozycje') === 'Faktury tygodnia'
         && App\Services\Organization\PositionTaskService::shortTitle('Zebranie produkcyjne — protokół') === 'Zebranie produkcyjne'
-        && App\Services\Organization\PositionTaskService::shortTitle('Plan produkcji tygodnia (kreator : zatwierdź plan)') === 'Plan produkcji tygodnia', 'krótkie tytuły');
+        && App\Services\Organization\PositionTaskService::shortTitle('Plan produkcji tygodnia (asystent : zatwierdź plan)') === 'Plan produkcji tygodnia', 'krótkie tytuły');
 
     // Zrobione ręcznie.
     $s->setStatus((int) $wedItems['Zatwierdź faktury tygodnia']['id'], ['status' => 'done'], 2);
@@ -182,7 +182,7 @@ try {
     expectTw($plan['load']['days'] === [1 => 65, 2 => 10, 3 => 55, 4 => 55, 5 => 10] && $plan['load']['week'] === 195 && $plan['load']['share'] === 8, 'obciążenie dni i tygodnia');
     expectTw($rows[3]['real'] === 8 && $rows[3]['real_state'] === 'ok', 'oferty : 3600 s ÷ 8 wykonań = 7,5 → 8 min (plan 15) ; poza 28 dniami i inne stanowisko pominięte');
     expectTw($rows[4]['real'] === 60 && $rows[4]['real_state'] === 'over', 'zakupy tygodnia : 60 min na 40 planu → ponad 125 %');
-    expectTw($rows[6]['real'] === 3 && $rows[7]['real'] === 2 && $rows[6]['shared'] && $rows[7]['shared'], 'kreator cen : 1200 s dzielone 30 : 20 (ta sama strona), ÷ 4');
+    expectTw($rows[6]['real'] === 3 && $rows[7]['real'] === 2 && $rows[6]['shared'] && $rows[7]['shared'], 'asystent cen : 1200 s dzielone 30 : 20 (ta sama strona), ÷ 4');
     expectTw($rows[2]['real'] === 2 && $rows[5]['real'] === null, '/purchasing/nc/12 → zadanie NC (najdłuższy prefiks), nie koszty surowców');
     expectTw($rows[1]['real'] === null && $plan['users'][0]['login'] === 'anna' && count($plan['users']) === 1, 'brak czasu : — ; osoby stanowiska');
     expectTw(count($plan['others']) === 1 && $plan['others'][0]['name'] === 'Logistyka' && isset($plan['links']['/finances/price-wizard#step=2']) && $plan['link_auto']['/workshop/buy'] === 'buy_sent', 'inne stanowiska, katalog linków, zaliczenie wg linku');

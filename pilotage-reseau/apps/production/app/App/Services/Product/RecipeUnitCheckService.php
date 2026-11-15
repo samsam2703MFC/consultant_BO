@@ -77,7 +77,7 @@ final class RecipeUnitCheckService
         return ['id' => (int) $r['id'], 'name' => (string) $r['name'], 'id_recipe' => (int) $r['id_recipe'], 'ppc' => $ppc, 'weight' => $weight,
             'mass' => round($mass), 'carton_weight' => round($weight * $ppc), 'piece_ratio' => $weight > 0 ? round($mass / $weight, 2) : null,
             'from_wizard' => (bool) $r['from_wizard'], 'created' => (string) $r['create_timestamp'],
-            'reason' => ((bool) $r['from_wizard'] ? 'utworzony w kreatorze · ' : '') . 'masa składników ' . number_format($mass, 0, ',', ' ') . ' g ≈ '
+            'reason' => ((bool) $r['from_wizard'] ? 'utworzony w asystencie · ' : '') . 'masa składników ' . number_format($mass, 0, ',', ' ') . ' g ≈ '
                 . ($weight > 0 && abs($mass / $weight - 1) < abs($mass / ($weight * $ppc) - 1) ? '1 szt.' : 'mniej niż karton') . ' (karton : ' . number_format($weight * $ppc, 0, ',', ' ') . ' g)',
             'cost' => round($cost, 2), 'cost_scaled' => round($cost * $ppc, 2), 'blocked' => $blocked];
     }

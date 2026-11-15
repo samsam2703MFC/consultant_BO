@@ -1,0 +1,40 @@
+/* Cockpit CEO — Assistant · coachs (12/11/2026). S'appuie sur les listes groupées de fidelite.css (fi-) ; préfixe ac-. */
+.ac-grille{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:22px}
+.ac-coach{display:flex;flex-direction:column;gap:12px;min-width:0}
+.ac-tete{display:flex;align-items:center;gap:14px}
+.ac-tete img,.ac-sans{width:56px;height:56px;border-radius:14px;flex:none;background:var(--fi-fill)}
+.ac-tete>div{display:flex;flex-direction:column;gap:3px;flex:1;min-width:0}
+.ac-tete .fi-lien{align-self:flex-start}
+.ac-nom{font-size:16px;padding:3px 8px;width:100%;max-width:260px}
+.ac-dit{font-size:12.5px;color:var(--fi-2);width:100%;max-width:360px}
+.ac-def{font-size:11.5px;color:var(--fi-3);padding-left:8px}
+.ac-bloc{padding:12px 16px 14px;display:flex;flex-direction:column;gap:8px}
+.ac-bloc h4{margin:0;font-size:12px;font-weight:400;text-transform:uppercase;letter-spacing:.04em;color:var(--fi-2)}
+.ac-axe-h{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.ac-axe.fort{box-shadow:inset 3px 0 0 var(--color-primary)}
+.ac-axe.non{opacity:.75}
+.ac-seg{display:inline-flex;background:var(--fi-fill);border-radius:8px;padding:2px}
+.ac-seg button{border:none;background:transparent;font:400 12px var(--font-ui);padding:4px 10px;border-radius:6px;color:var(--fi-2);cursor:pointer}
+.ac-seg button.on{background:#fff;color:var(--fi-txt)}
+.ac-axe.fort .ac-seg button.on{color:var(--color-primary)}
+.ac-lab{font-size:11.5px;color:var(--fi-3)}
+.ac-txt{font:400 13px/1.5 var(--font-ui);color:var(--fi-txt);border:none;border-radius:8px;background:var(--fi-fill2);padding:8px 10px;resize:vertical;outline:none;width:100%;box-sizing:border-box}
+.ac-txt:focus{background:#fff;box-shadow:0 0 0 1px var(--fi-fill)}
+.ac-non{margin:0;font-size:12.5px;color:var(--fi-3)}
+.ac-pad{padding:12px 16px}
+.ac-per{display:flex;align-items:center;gap:6px}
+.ac-per button:not(.fi-lien){border:1px solid var(--fi-fill);background:#fff;border-radius:8px;font:400 12.5px var(--font-ui);padding:5px 12px;cursor:pointer}
+.ac-per button.on{border-color:var(--color-primary);color:var(--color-primary)}
+.ac-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.ac-kpis>div{background:#fff;border-radius:var(--fi-r);padding:14px 16px;display:flex;flex-direction:column;gap:2px}
+.ac-kpis b{font-size:22px;font-variant-numeric:tabular-nums}.ac-kpis span{font-size:12px;color:var(--fi-3)}
+.ac-trois{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}
+.ac-bar{display:flex;justify-content:space-between;gap:10px;font-size:13px;padding:4px 0}
+.ac-bar b{font-variant-numeric:tabular-nums}
+.ac-ligne{display:grid;grid-template-columns:auto 1fr auto;gap:14px;align-items:baseline;padding:9px 16px;font-size:13px;border-top:1px solid var(--fi-fill)}
+.ac-ligne:first-child{border-top:none}
+.ac-ligne>span:last-child,.ac-quand{font-size:12px;color:var(--fi-3);white-space:nowrap}
+.ac-ligne .ac-q{min-width:0}
+.ac-ligne em{font-style:normal;font-size:11.5px;margin-left:6px}
+.ac-ligne:has(.ac-q:first-child){grid-template-columns:1fr auto auto}
+@media (max-width:900px){.ac-grille{grid-template-columns:1fr}.ac-trois,.ac-kpis{grid-template-columns:1fr 1fr}}

@@ -20,11 +20,14 @@ final class PageTabs
         'mail' => ['label' => 'Poczta', 'section' => 'Start', 'icon' => 'bi-envelope', 'tabs' => [
             ['/mail', 'Skrzynka', 'bi-inbox'],
             ['/mail/settings', 'Ustawienia skrzynki', 'bi-envelope-at'],
+            ['/mail/admin', 'Skrzynki użytkowników', 'bi-people'],
         ]],
         // Zadania zespołu i « Kto co zrobił » (wykonanie zadań stanowisk) : jedna pozycja.
         'team_tasks' => ['label' => 'Zadania zespołu', 'section' => 'Start', 'icon' => 'bi-people', 'tabs' => [
             ['/organization/team-tasks', 'Zadania zespołu', 'bi-people'],
             ['/organization/execution', 'Kto co zrobił', 'bi-clipboard-check'],
+            // [285] Raport stanowisk (makieta 39) — tylko administrator (zakładka ukryta innym przez uprawnienia).
+            ['/organization/position-report', 'Raport stanowisk', 'bi-bar-chart-line'],
         ]],
         // --- Analiza
         // Rentowność : pulpit, wynik grup (miesiąc), rentowność grup (tydzień), raport miesięczny, analiza sprzedaży.
@@ -38,7 +41,7 @@ final class PageTabs
         'margins' => ['label' => 'Marże i ceny', 'section' => 'Analiza', 'icon' => 'bi-percent', 'tabs' => [
             ['/finances/product-margin', 'Marża produktów', 'bi-percent'],
             ['/finances/category-margin', 'Marża kategorii', 'bi-bar-chart-line'],
-            ['/finances/price-wizard', 'Kreator cen', 'bi-magic'],
+            ['/finances/price-wizard', 'Asystent cen', 'bi-magic'],
         ]],
         // Koszty : produktu i działów, kalkulator, faktury i koszty (przypisania, zatwierdzenie), usługi miesiąca, zamknięcie miesiąca.
         'costs' => ['label' => 'Koszty', 'section' => 'Analiza', 'icon' => 'bi-cash-coin', 'tabs' => [
@@ -80,11 +83,21 @@ final class PageTabs
         ]],
         // [262] Czas pracy : zatwierdzenie dnia (makieta 1), miesiąc i karty A4 (2), urlopy i dni wolne (3), nadgodziny (4) ;
         // tablet biurowy (odbicia, podpis dnia wolnego) otwierany w nowej karcie.
+        // [271] HR (makiety 36–38).
+        'hr' => ['label' => 'HR', 'section' => 'Produkcja', 'icon' => 'bi-person-vcard', 'tabs' => [
+            ['/hr', 'Pracownicy', 'bi-people', true],
+            ['/hr/documents', 'Dokumenty', 'bi-folder2'],
+            ['/hr/templates', 'Szablony umów', 'bi-file-earmark-text'],
+            ['/hr/succession', 'Sukcesja', 'bi-arrow-left-right'],
+            ['/hr/notes', 'Notatki miesiąca', 'bi-journal-text'],
+            ['/hr/settings', 'Ustawienia HR', 'bi-sliders'],
+        ]],
         'time' => ['label' => 'Czas pracy', 'section' => 'Produkcja', 'icon' => 'bi-clock-history', 'tabs' => [
             ['/time', 'Dzień', 'bi-calendar-check', true],
             ['/time/month', 'Miesiąc', 'bi-calendar3'],
             ['/time/leave', 'Urlopy i dni wolne', 'bi-calendar-heart'],
             ['/time/overtime', 'Nadgodziny', 'bi-hourglass-split'],
+            ['/time/costs', 'Koszty i premie', 'bi-cash-coin'],
             ['/tablet/office', 'Otwórz tablet biurowy', 'bi-box-arrow-up-right', false, 'blank'],
         ]],
         // Tablety : zarządzanie (tablety, PIN, czas pracy), zatwierdzenia produkcji, zamówienia między grupami ;
@@ -198,6 +211,10 @@ final class PageTabs
         'bonuses' => ['label' => 'Płace i premie', 'section' => 'Administracja', 'icon' => 'bi-wallet2', 'tabs' => [
             ['/staff/team-bonus', 'Premie zespołów', 'bi-trophy'],
             ['/workshop/manager', 'Kierownik produkcji', 'bi-person-workspace'],
+        ]],
+        'payroll' => ['label' => 'Lista płac', 'section' => 'Administracja', 'icon' => 'bi-calculator', 'tabs' => [
+            ['/payroll', 'Lista płac', 'bi-calculator', true],
+            ['/payroll/settings', 'Ustawienia płac', 'bi-sliders'],
         ]],
         'activity' => ['label' => 'Aktywność', 'section' => 'Administracja', 'icon' => 'bi-activity', 'tabs' => [
             ['/organization/activity', 'Aktywność w ERP', 'bi-activity'],

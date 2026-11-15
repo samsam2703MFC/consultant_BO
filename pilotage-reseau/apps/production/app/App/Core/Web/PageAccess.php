@@ -35,6 +35,9 @@ final class PageAccess
         'employees' => ['Zespół : pracownicy produkcji', 'Produkcja', ['/production-employees'], false],
         // [262] Czas pracy : zatwierdzanie odbić dnia (zadanie nr 1 kierownika produkcji), miesiąc i karty A4, urlopy, nadgodziny.
         'time' => ['Czas pracy (zatwierdzanie odbić dnia, powody nadgodzin i nieobecności, miesiąc i karta A4, urlopy i dni wolne, nadgodziny i dni wolne za nie)', 'Produkcja', ['/time'], false],
+        // [267] Koszty i premie (zakładka Czas pracy, do odczytu) : koszt pracodawcy grup i osób, progi i premie, brakująca
+        // sprzedaż, premia kierownika produkcji. Osobne prawo : administrator przyznaje je stanowisku (kierownik produkcji).
+        'team_costs' => ['Czas pracy › Koszty i premie (do odczytu : koszt pracodawcy grup i osób, premie, brakująca sprzedaż)', 'Produkcja', ['/time/costs'], false],
         // [256] Płace (koszt pracodawcy, minimum, % premii) : decyduje administrator, nie kierownik produkcji.
         'budget' => ['Płace : budżet personelu (koszt pracodawcy, minimum, % premii)', 'Administracja', ['/staff'], true],
         // [256] Premie zespołów (progi, minimum, zakładka « Premia » tabletów) : decyduje administrator, nie kierownik produkcji.
@@ -63,12 +66,49 @@ final class PageAccess
         'devices' => ['Urządzenia (dostęp API)', 'Administracja', ['/devices'], false],
         'manager' => ['Kierownik produkcji : stanowisko, cele, raport, premia, rozmowa, audyt', 'Administracja', ['/workshop/manager'], true],
         'access' => ['Uprawnienia i menu (stanowiska)', 'Administracja', ['/organization/access'], true],
-        'week_plan' => ['Zadania stanowisk (kreator, kiedy, minuty, automatycznie — cron, przypomnienia)', 'Administracja', ['/organization/week-plan'], true],
+        'week_plan' => ['Zadania stanowisk (asystent, kiedy, minuty, automatycznie — cron, przypomnienia)', 'Administracja', ['/organization/week-plan'], true],
         'execution' => ['Kto co zrobił i Zadania zespołu (wykonanie zadań stanowisk i grup, filtry, spóźnione, przypomnij osobie albo grupie)', 'Administracja', ['/organization/execution', '/organization/team-tasks'], false],
         'activity' => ['Aktywność w ERP (sesje, strony, kliknięcia, koszt czasu)', 'Administracja', ['/organization/activity'], true],
         'panel_api' => ['API cen w sklepach (konto panelu franczyzy)', 'Administracja', ['/settings/panel-api'], true],
+        // [271] HR : pracownicy, dokumenty, notatki — administrator, kierownik produkcji, administracja i fakturowanie.
+        'hr' => ['HR (pracownicy : kontakt, staż, umowy, emerytura ; dokumenty ; notatki i podsumowanie miesiąca)', 'Administracja', ['/hr'], false],
+        // [277] Lista płac (makieta 41) : wynagrodzenia miesiąca, paski, plik XML do banku ; dane płacowe w karcie HR i szablony umów.
+        'payroll' => ['Lista płac (wynagrodzenia, paski, przelewy XML, stawki ZUS / PIT ; wynagrodzenie i rachunek w karcie HR, szablony umów)', 'Administracja', ['/payroll'], false],
+        'mail_admin' => ['Skrzynki pocztowe użytkowników (ustawienia skrzynki za użytkownika, « tylko administrator », wstrzymanie poczty)', 'Administracja', ['/mail/admin'], true],
         'ai' => ['Asystent AI (klucz Anthropic, model, prompt karty technologicznej)', 'Administracja', ['/settings/ai'], true],
+        // [285] Raport stanowisk (makieta 39) : minuty zadań, wypełnienie stanowisk — tylko administrator (i profil CEO).
+        'position_report' => ['Raport stanowisk (minuty zadań, wypełnienie dnia / tygodnia / miesiąca, zrobione)', 'Administracja', ['/organization/position-report'], true],
+        // [281] Kontrola (profil CEO, makieta 47) : wszyscy dziś, tydzień stanowisk, decyzje — administrator i konta CEO.
+        'control' => ['Kontrola (profil CEO : wszyscy dziś, tydzień stanowisk, decyzje — odblokuj, przypomnij)', 'Administracja', ['/control'], true],
     ];
+
+    /**
+     * [281] Profil CEO : strony « tylko administrator », które konto CEO widzi (kontrola, aktywność, moduł kierownika — do
+     * odczytu) i strony ustawień, których nie widzi (ustawia administrator). Reszta jak u administratora ; zapis zablokowany
+     * w App poza decyzjami (CEO_WRITES).
+     */
+    public const CEO_ADMIN_PAGES = ['control', 'activity', 'manager', 'position_report'];
+    public const CEO_HIDDEN = ['settings', 'devices'];
+
+    /** [281] Zapisy dozwolone kontu CEO (prefiksy) : decyzje (odblokuj, przypomnij), profil pod awatarem, powiadomienia, aktywność. */
+    public const CEO_WRITES = ['/logout', '/ajax/view-session', '/ajax/activity/', '/ajax/app-notifications', '/ajax/notifications', '/ajax/tasks/unblock/',
+        '/ajax/organization/execution/remind/', '/ajax/organization/team-tasks/remind', '/ajax/control/', '/ajax/search',
+        // [289] Urlopy : CEO zatwierdza urlopy osób z biura (i składa własny).
+        '/ajax/my-leave'];
+
+    /** [281] Czy konto CEO widzi pozycję katalogu. */
+    public static function ceoSees(string $key): bool
+    {
+        if (in_array($key, self::CEO_HIDDEN, true)) return false;
+        return !self::adminOnly($key) || in_array($key, self::CEO_ADMIN_PAGES, true);
+    }
+
+    /** [281] Czy zapis (POST…) jest dozwolony kontu CEO. */
+    public static function ceoMayWrite(string $uri): bool
+    {
+        foreach (self::CEO_WRITES as $p) if ($uri === rtrim($p, '/') || str_starts_with($uri, $p)) return true;
+        return false;
+    }
 
     /** Strony startowe do wyboru dla stanowiska (logo, logowanie) : Dzisiaj dla produkcji, Rentowność dla kierownictwa. */
     public const HOME_PAGES = ['/today' => 'Dzisiaj', '/dashboard' => 'Rentowność', '/finances/invoices' => 'Faktury i koszty', '/time' => 'Czas pracy'];

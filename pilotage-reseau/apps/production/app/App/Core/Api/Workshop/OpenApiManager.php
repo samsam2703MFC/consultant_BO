@@ -138,6 +138,8 @@ final class OpenApiManager
                 ]]],
             ]],
             'ManagerBonus' => ['type' => 'object', 'properties' => [
+                'enabled' => ['type' => 'boolean', 'description' => 'false : prime trimestrielle désactivée (manager.quarterly_bonus), calcul affiché à titre d\'information'],
+                'monthly_pct' => ['type' => 'number', 'description' => 'Prime mensuelle du Kierownik : % du chiffre d\'affaires général (manager.sales_bonus_pct)'],
                 'period' => ['type' => 'string'], 'from' => $date, 'to' => $date, 'extracted_at' => ['type' => 'string'], 'plan' => $plan, 'total' => $num,
                 'haccp' => ['type' => 'object', 'properties' => ['blocked' => ['type' => 'boolean'], 'blocking' => ['type' => 'array', 'items' => $obj], 'events' => ['type' => 'array', 'items' => ['$ref' => '#/components/schemas/HaccpEvent']]]],
                 'sections' => ['type' => 'array', 'items' => ['type' => 'object', 'properties' => [

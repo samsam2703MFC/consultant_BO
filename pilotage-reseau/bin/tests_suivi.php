@@ -20,7 +20,8 @@ declare(strict_types=1);
 final class Db
 {
     public static function rows(string $sql, array $a = []): array { return []; }
-    public static function row(string $sql, array $a = []): ?array { return null; }
+    // Une ligne lue en base : null, sauf si un test pose sa doublure dans $GLOBALS['DB_ROW'].
+    public static function row(string $sql, array $a = []): ?array { return isset($GLOBALS['DB_ROW']) ? ($GLOBALS['DB_ROW'])($sql, $a) : null; }
     public static function exec(string $sql, array $a = []): void {}
 }
 $REGLAGES = ['visitesJeton' => 'jeton-de-test'];
@@ -300,6 +301,58 @@ verifie('« pas vue » : ni note, ni contrôle, ni remarque ; sans nom : écart�
     && count($pe['personnes']) === 3 && $pe['personnes'][2]['note'] === null);
 verifie('rien de noté pour personne : pas de note d’équipe', viPersonnel([['nom' => 'Emma D.']], 'x') === null && viPersonnel('?', 'x') === null);
 verifie('trois contrôles éclair : tenue, SBAM, expérience client', array_column(VI_EQUIPE_CHECKS, 'k') === ['tenue', 'sbam', 'xp']);
+
+echo "\nLe SMS de la validation : au franchisé, copie à Sam (11/11/2026)\n";
+require_once __DIR__ . '/../src/sms.php';
+// Doublures : les seuils des visites, l'adresse du cockpit, le fournisseur SMSAPI qui note ce qu'il envoie.
+function viSeuils(): array { return ['escaladeJours' => 3]; }
+function rapBaseUrl(): string { return 'https://cockpit.test/'; }
+final class MdSms
+{
+    public static array $envois = [];
+    public static bool $ok = true;
+    public static function configured(): bool { return true; }
+    public static function envoyer(string $tel, string $texte, string $from = ''): array { self::$envois[] = [$tel, $texte]; return self::$ok ? [true, 'sms-1'] : [false, 'pays bloqué']; }
+}
+$REGLAGES['visitesJeton'] = 'jeton-de-test';
+$gsm7 = "@£\$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞÆæßÉ !\"#¤%&'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà";
+$horsGsm = [];
+foreach (array_keys(SU_LANGUES) as $l) {
+    foreach ([0, 1, 3] as $n) {
+        $t = suSmsTexte(['shop_id' => '4', 'prevu_le' => '2026-10-24'], $n, $l);
+        foreach (mb_str_split($t) as $c) { if (!str_contains($gsm7, $c)) { $horsGsm[] = "$l:$c"; } }
+    }
+}
+verifie('le SMS dans les quatre langues : sans caractère hors de l’alphabet GSM (160 par SMS)', $horsGsm === [], implode(' ', array_unique($horsGsm)));
+$t = suSmsTexte(['shop_id' => '4', 'prevu_le' => '2026-10-24'], 3, 'fr');
+verifie('le SMS dit la visite, le magasin, les points et le lien de sa page', str_contains($t, '24/10') && str_contains($t, '(Halle)') && str_contains($t, '3 points à travailler') && str_contains($t, 'https://cockpit.test/suivi/?shop=4&jeton=' . suJeton('4')), $t);
+verifie('aucun point, un point : la phrase suit', str_contains(suSmsTexte(['shop_id' => '4', 'prevu_le' => '2026-10-24'], 0, 'nl'), 'geen werkpunten') && str_contains(suSmsTexte(['shop_id' => '4', 'prevu_le' => '2026-10-24'], 1, 'de'), ': 1 Arbeitspunkt.'));
+verifie('un numéro belge tapé à la main se lit, un texte non', smsNorme('0476 12 34 56') === '+32476123456' && smsNorme('+32 476/12.34.56') === '+32476123456' && smsNorme('pas de numéro') === null && smsNorme('') === null);
+verifie('le fournisseur des alertes de leads sert d’abord', smsFournisseur() === 'smsapi');
+
+$GLOBALS['DB_ROW'] = static fn (string $sql, array $a): ?array => str_contains($sql, 'ceo_md_shop') && $a === ['2'] ? ['sms_tel' => '0470 11 22 33'] : null;
+$REGLAGES['suiviRegles'] = ['magasins' => ['4' => ['tel' => '0476 12 34 56']], 'sms' => ['actif' => true, 'copie' => [['nom' => 'Sam', 'tel' => '0470 00 00 01'], ['nom' => 'sans numéro', 'tel' => ' ']]]];
+verifie('le GSM de Qui fait quoi d’abord, puis celui des alertes de leads, sinon aucun', suTel('4') === ['tel' => '+32476123456', 'source' => 'Qui fait quoi'] && suTel('2') === ['tel' => '+32470112233', 'source' => 'alertes SMS des leads'] && suTel('9')['tel'] === null);
+verifie('une copie sans numéro tombe', suRegles()['sms']['copie'] === [['nom' => 'Sam', 'tel' => '0470 00 00 01']]);
+
+$v = ['id' => 7, 'shop_id' => '4', 'prevu_le' => '2026-10-24'];
+MdSms::$envois = [];
+$r = suSmsRapport($v, 2);
+verifie('le franchisé reçoit le SMS dans sa langue, Sam la copie qui dit à qui il est parti', $r['envoye'] && $r['langue'] === 'nl' && count(MdSms::$envois) === 2
+    && MdSms::$envois[0][0] === '+32476123456' && str_contains(MdSms::$envois[0][1], '2 werkpunten')
+    && MdSms::$envois[1][0] === '+32470000001' && MdSms::$envois[1][1] === 'Copie du SMS envoyé à Halle (+32476123456) : ' . MdSms::$envois[0][1]
+    && $r['copies'] === [['nom' => 'Sam', 'envoye' => true, 'motif' => null]], json_encode([$r, MdSms::$envois], JSON_UNESCAPED_UNICODE));
+MdSms::$envois = []; MdSms::$ok = false;
+$r = suSmsRapport($v, 2);
+verifie('le SMS du franchisé ne part pas : pas de copie, le motif remonte', !$r['envoye'] && $r['motif'] === 'pays bloqué' && count(MdSms::$envois) === 1 && $r['copies'] === []);
+MdSms::$envois = []; MdSms::$ok = true;
+$r = suSmsRapport(['shop_id' => '9'] + $v, 2);
+verifie('sans GSM : rien ne part, l’écran dit où le régler', !$r['envoye'] && str_contains($r['motif'], 'Qui fait quoi') && MdSms::$envois === []);
+$REGLAGES['suiviRegles']['sms']['actif'] = false;
+$r = suSmsRapport($v, 2);
+verifie('SMS coupés dans Qui fait quoi : rien ne part', !$r['envoye'] && MdSms::$envois === []);
+unset($REGLAGES['suiviRegles'], $GLOBALS['DB_ROW']);
+verifie('par défaut : le SMS part, sans copie tant qu’aucun numéro n’est donné', suRegles()['sms'] === ['actif' => true, 'copie' => []]);
 
 echo "\n$ok réussi(s), $ko en échec\n";
 exit($ko === 0 ? 0 : 1);
