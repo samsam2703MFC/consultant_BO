@@ -3217,3 +3217,20 @@ button.db-rcarte{cursor:pointer}button.db-rcarte:hover{background:var(--paper)}
 .tj-q-n{font-size:11px;color:var(--muted-2)}
 /* Le bouton « Demande au bureau » de l'entête (15/11/2026) : à côté de l'assistant, toujours visible. */
 .db-btn.hd-btn{border-color:var(--color-primary);color:var(--color-primary)}.db-btn.hd-btn .hd-b{margin-left:4px}
+/* Les boutons de l'entête (15/11/2026, « toute la même hauteur, rectangle arrondi ») : Revue du soir, Relire, Assistant,
+   Demande au bureau — une seule hauteur, un seul arrondi, le même texte. */
+.db-hd .db-btn,.db-hd .db-btn-ia{box-sizing:border-box;height:38px;padding:0 14px;border-radius:10px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font:400 12.5px var(--font-ui);line-height:1;white-space:nowrap}
+.db-hd .rv-btn .rv-logo{width:18px;height:18px}.db-hd .db-btn-ia .ia-icone{width:17px;height:17px}
+.db-hd .hd-btn .hd-b{display:inline-flex;align-items:center;height:18px;margin-left:2px}
+/* La barre du haut (15/11/2026, « des vignettes rectangle arrondi, toutes la même hauteur ») : Relire, Valeur du magasin,
+   Coach, Demande au bureau, Revue du soir — un seul gabarit, 38 px, coins de 8 px. */
+.db-nav--rail .db-btn[data-recharger]{box-sizing:border-box;height:38px;padding:0 13px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;font-size:12.5px}
+.db-avs{gap:10px}
+.db-vign,.db-av{box-sizing:border-box;height:38px;border:1px solid var(--line);border-radius:8px;background:#fff}
+.db-av{gap:8px;padding:0 12px 0 8px}
+.db-av:hover,.db-vign:hover{background:var(--paper)}
+.db-av__o{width:24px;height:24px;flex:0 0 24px;border:0;border-radius:6px;background:none}
+.db-av:hover .db-av__o{background:none}
+.db-av__t .k{font-size:9.5px;line-height:1.1}.db-av__t .v{margin-top:1px;font-size:13px;line-height:1.2}
+.db-av.vif{border-color:rgba(141,29,44,.45);background:rgba(141,29,44,.04)}.db-av.vif .db-av__o{background:none;border:0}
+.db-av.hd{border-color:rgba(141,29,44,.45)}.db-av.hd .db-av__o,.db-av.hd .db-av__t .v{color:var(--accent)}

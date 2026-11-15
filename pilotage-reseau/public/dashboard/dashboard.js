@@ -6680,7 +6680,8 @@
     return `<div class="db-nav db-nav--rail">${propre ? '' : `<div class="db-vt"><div class="kk">${esc(nomShop())}</div><h1>${esc(railLib(S.vue))}</h1></div>`}
       ${navPeriode()}<span style="flex:1"></span><button class="db-btn" data-recharger="1">↻ Relire</button>
       <span class="db-avs"><button type="button" class="db-vign${S.valoOuvert ? ' ouv' : ''}" data-vdrop="1" title="CA des ${VALO_JOURS} derniers jours ÷ ${VALO_JOURS} × ${VALO_AN} ÷ ${VALO_DIV}"><span class="k">Valeur du magasin</span><span class="v">${val}</span></button>
-      ${av(`data-iaouvrir="${ia ? '1' : 'd'}"`, '', iaIcone(18), 'Coach', ia ? 'assistant' : 'demande au bureau')}
+      ${ia ? av('data-iaouvrir="1"', '', iaIcone(18), 'Coach', 'assistant') : ''}
+      ${av('data-iaouvrir="d"', hdOuvertes() ? ' hd' : '', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3.5 6.5 8.5 6.5 8.5-6.5"/></svg>', 'Demande au bureau', hdOuvertes() ? hdOuvertes() + ' ouverte' + (hdOuvertes() > 1 ? 's' : '') : 'nouvelle')}
       ${av('data-rvouvrir="1"', vif ? ' vif' : '', rvLogo('#8D1D2C', vif ? '#8D1D2C' : '#5c5852'), 'Revue du soir', rv)}</span></div>`;
   }
   function rendre() {
