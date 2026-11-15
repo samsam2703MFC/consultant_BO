@@ -417,6 +417,31 @@ function ep_ventes_mensuel(): array
         $m3['fc'] = is_array($fcCache) && isset($fcCache[$cle]) && is_numeric($fcCache[$cle]) ? (float) $fcCache[$cle] : null;
     }
     unset($m3);
+    // Les charges du réseau, en % du CA (15/11/2026, la valeur du magasin) : le modèle de Budget › Paramètres (réglage
+    // `budgetCharges`), le « % validé », à défaut le « % réseau ». La catégorie que le palier « Marge brute » retranche
+    // (la matière) est marquée : la valeur la remplace par le coût matière réel du magasin.
+    $normes = null;
+    $modele = setting('budgetCharges');
+    if (is_array($modele) && is_array($modele['categories'] ?? null)) {
+        $catMatiere = null;
+        foreach ((array) ($modele['paliers'] ?? []) as $pa) {
+            $d = is_array($pa) ? (string) ($pa['droite'] ?? '') : '';
+            if (str_starts_with($d, 'cat:')) { $catMatiere = substr($d, 4); break; }
+        }
+        $lignes = [];
+        foreach ($modele['categories'] as $cat) {
+            $nomCat = (string) ($cat['nom'] ?? '');
+            foreach ((array) ($cat['lignes'] ?? []) as $l) {
+                $pct = isset($l['pct']) && is_numeric($l['pct']) ? (float) $l['pct'] : (isset($l['pctTheo']) && is_numeric($l['pctTheo']) ? (float) $l['pctTheo'] : null);
+                if ($pct === null) { continue; }
+                $lignes[] = ['categorie' => $nomCat, 'poste' => (string) ($l['poste'] ?? ''), 'pct' => $pct, 'matiere' => $catMatiere !== null && $nomCat === $catMatiere];
+            }
+        }
+        $paliers = [];
+        foreach ((array) ($modele['paliers'] ?? []) as $pa) { if (is_array($pa)) { $paliers[] = ['nom' => (string) ($pa['nom'] ?? ''), 'droite' => (string) ($pa['droite'] ?? '')]; } }
+        if ($lignes) { $normes = ['source' => 'Budget › Paramètres', 'lignes' => $lignes, 'paliers' => $paliers]; }
+    }
+
     // Le jour où la caisse a sonné pour la première fois. Un mois d'ouverture
     // ne se répartit pas sur ses 31 jours : Corbais a ouvert le 21 juillet
     // 2024, son juillet ne vaut que onze jours. Sans cette date, l'année
@@ -456,6 +481,7 @@ function ep_ventes_mensuel(): array
         'ouverture' => $premiere === null ? null : substr((string) $premiere, 0, 10),
         'source' => 'route vivante du panel (' . $nVivant . ' mois), copie du P&L quand le panel n’a pas le mois (' . $nPnl . '), ventes de caisse sinon (' . $nCaisse . ') — mois en cours exclu',
         'mois'   => $mois,
+        'normes' => $normes,
     ];
 }
 

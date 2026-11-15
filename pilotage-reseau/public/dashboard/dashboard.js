@@ -138,7 +138,7 @@
     // Les seuils du réseau (la valeur du magasin : ses charges normatives, 15/11/2026) : lus une fois.
     if (!EMBED && !EMBED_PM) { lireAux('meta', '/meta', false); }
     // Le rail du bureau (15/11/2026) : l'objectif du jour et la note Google, en haut du rail, sur tous les onglets.
-    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux('meta', '/meta', force); }
+    if (avecRail()) { lireAux('jourM|' + S.date, '/exploitation/jour?date=' + S.date, force); lireAux('avis', '/marketing/avis', force); lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force); lireAux('meta', '/meta', force); }
     // Le plan d'action n'est pas une période : le module des visites lit lui-même.
     if (S.vue === 'actions' || S.vue === 'campagne') { rendre(); return; }
     // Mon catalogue (14/11/2026) : le module lit lui-même ses catalogues, relayés au Marketing (catalogue.js).
@@ -155,10 +155,10 @@
     // La fidélité du magasin (12/11/2026) : ses profils de fréquence, ou la fiche d'un client.
     if (S.vue === 'fidelite') { if (S.fdClient) { lireAux(cleFDC(), cheminFDC(), force); lireAux(cleFDK(), cheminFDK(), force); } else if (S.fdOnglet === 'c') { lireAux(cleFDCA(), cheminFDCA(), force); if (S.fdCarte) { lireAux(cleFDCD(), cheminFDCD(), force); } } else { lireAux(cleFD(), cheminFD(), force); lireAux(cleFDT(), cheminFDT(), force); lireAux(cleFDS(), cheminFDS(), force); } rendre(); return; }
     // La trésorerie (14/11/2026) : le module lit et écrit lui-même (tresorerie.js) ; « ↻ Relire » relit ses repères.
-    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
+    if (S.vue === 'tresorerie') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force); rendre(); if (force && window.DashTresorerie) { window.DashTresorerie.relire(); } return; }
     // L'onglet Produits (11/11/2026) : une lecture, les 13 dernières semaines du magasin.
-    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
-    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
+    if (S.vue === 'produits') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force); lireAux(clePD(), cheminPD(), force); rendre(); return; }
+    if (S.vue === 'morts') { lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force); lireAux(cleTM(), cheminTM(), force); rendre(); return; }
     // Les primes de l'équipe (30/10/2026) : le mois ou l'année, rien d'autre.
     if (S.vue === 'primes') { if (S.prVue === 'annee') { lireAux(clePrAn(), cheminPrAn(), force); } else { lireAux(clePrEq(), cheminPrEq(), force); } rendre(); return; }
     // Les promotions du magasin : la liste, et les prix et coûts de recette pour le coefficient du lot.
@@ -168,7 +168,7 @@
     if (S.vue === 'promos') { S.pmRelu = null; lireAux(clePM(), cheminPM(), force); lireAux(clePMP(), cheminPMP(), force); lireAux(clePMC(), cheminPMC(), force); rendre(); return; }
     const kr = cleRes(), ks = cleSt();
     if (S.vue === 'annee') {
-      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force);
+      lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force);
       lireAux(clePerf(), cheminPerf(), force);
       lireAux('plan|' + S.shop + '|' + annee(), '/plan?shop=' + encodeURIComponent(S.shop) + '&exercice=' + annee(), force);
       // L'année mois par mois face à l'an passé (24/10/2026) : clients, panier, articles.
@@ -209,7 +209,7 @@
     // toujours à partir d'aujourd'hui. Trente mois demandés parce que la
     // fenêtre de 730 jours s'arrête au dernier mois qui a des ventes, pas à
     // aujourd'hui : si ce mois est ancien, la fenêtre recule d'autant.
-    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=1', force);
+    lireAux('valo|' + S.shop, '/ventes/mensuel?shop=' + encodeURIComponent(S.shop) + '&mois=30&fc=2', force);
     if (S.vue === 'mois' && S.date.slice(0, 7) === AUJ.slice(0, 7)) { lireAux('rentab', '/exploitation/rentabilite?periode=mois', force); }
     // Les douze dernières semaines face au N-1 (19/10/2026, avant six) : sur la vue Semaine seulement. Treize lues : douze
     // closes et, si la semaine choisie est en cours, celle-ci à part. `pro=1` : le comptoir de chaque semaine, pour le panier hors
@@ -275,8 +275,10 @@
    *  - la marge brute RÉELLE : ce CA moins son coût matière, mois par mois, au food cost que le cockpit mesure (calculé
    *    et gardé par /stores/perf, rendu par /ventes/mensuel : `fc`). Un mois sans mesure prend la moyenne mesurée du
    *    magasin, à défaut la norme du réseau (seuil `food`) — le panneau le dit ;
-   *  - les charges NORMATIVES du réseau, en % du CA : main-d'œuvre, frais généraux, redevances, charges financières (les
-   *    seuils du réseau, /meta) ;
+   *  - les charges NORMATIVES du réseau, en % du CA : le modèle de Budget › Paramètres (15/11/2026, « prendre les données
+   *    de budget/parametres »), rendu par /ventes/mensuel (`normes`) — toutes ses lignes sauf la catégorie de la marge brute
+   *    (la matière, remplacée par le coût réel). Le modèle n'a pas de ligne de personnel : ce qui reste est son palier
+   *    « Disponible pour rémunération ». Sans modèle, les seuils du réseau (/meta) en repli ;
    *  - la valeur : (marge brute réelle − charges normatives) × 3,5.
    * (Avant le 15/11/2026 : le CA annuel ÷ 6.)
    * Deux ans de recul, et un compte en JOURS plutôt qu'en mois : un mois de
@@ -303,8 +305,18 @@
   const fPc = p => nf(p, Math.abs(p - Math.round(p)) < 0.05 ? 0 : 1) + ' %';
   function valoNormes() {
     const s = (S.aux.meta && S.aux.meta.seuils) || {};
+    const food = s.food != null && isFinite(+s.food) ? +s.food : 32;
+    // Le modèle de Budget › Paramètres : les catégories (somme de leurs postes), hors la matière.
+    const M = (S.aux['valo|' + S.shop] || {}).normes;
+    if (M && Array.isArray(M.lignes) && M.lignes.length) {
+      const cats = [];
+      M.lignes.filter(l => !l.matiere && isFinite(+l.pct)).forEach(l => { let c = cats.find(x => x.lib === l.categorie); if (!c) { c = { k: l.categorie, lib: l.categorie, pct: 0 }; cats.push(c); } c.pct += +l.pct; });
+      const mat = M.lignes.filter(l => l.matiere).reduce((t, l) => t + (+l.pct || 0), 0);
+      const pal = (M.paliers || []).find(p => p.droite === 'tout');
+      return { L: cats, total: cats.reduce((t, x) => t + x.pct, 0), food: mat || food, source: 'Budget › Paramètres', reste: pal && pal.nom ? pal.nom : 'Disponible pour rémunération' };
+    }
     const L = VALO_NORMES.map(([k, lib, d]) => ({ k, lib, pct: s[k] != null && isFinite(+s[k]) ? +s[k] : d }));
-    return { L, total: L.reduce((t, x) => t + x.pct, 0), food: s.food != null && isFinite(+s.food) ? +s.food : 32 };
+    return { L, total: L.reduce((t, x) => t + x.pct, 0), food, source: 'les seuils du réseau', reste: 'Résultat normatif' };
   }
   /** Le food cost d'un mois sans mesure : la moyenne mesurée du magasin (pondérée par le CA), sinon la norme du réseau. */
   function valoFcRepli() {
@@ -498,8 +510,8 @@
       <div class="db-vpop-calc">
         ${ligne('Chiffre d’affaires annuel', fE(v.annuel), fE(v.total) + ' sur ' + fN(v.jours) + ' jours d’activité' + (v.jours < VALO_JOURS ? ' (' + esc(v.duMois) + ' à ' + esc(v.auMois) + ', depuis l’ouverture)' : ' (du ' + esc(v.du) + ' au ' + esc(v.au) + ')') + ', ramenés à ' + VALO_AN + ' jours')}
         ${ligne('Marge brute réelle', fE(v.mbAnnuel), fPc(100 - v.fc) + ' du CA · food cost ' + fPc(v.fc) + (v.sansFc ? ' · ' + v.sansFc + ' mois sans mesure : ' + esc(v.repli.src) + ' (' + fPc(v.repli.pct) + ')' : ', mesuré mois par mois'))}
-        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA : ' + v.normes.L.map(x => esc(x.lib) + ' ' + fPc(x.pct)).join(', '))}
-        ${ligne('= résultat normatif', fE(v.resultat), 'ce que le magasin gagne aux normes du réseau, sur un an')}
+        ${ligne('− charges normatives du réseau', '− ' + fE(v.charges), fPc(v.normes.total) + ' du CA (' + esc(v.normes.source) + ') : ' + v.normes.L.map(x => esc(x.lib.toLowerCase()) + ' ' + fPc(x.pct)).join(', '))}
+        ${ligne('= ' + esc(v.normes.reste.charAt(0).toLowerCase() + v.normes.reste.slice(1)), fE(v.resultat), v.normes.source === 'Budget › Paramètres' ? 'sur un an, avant le personnel et le gérant : le modèle du budget n’a pas de ligne de personnel' : 'ce que le magasin gagne aux normes du réseau, sur un an')}
         ${ligne('× ' + VALO_MULT_T, '<b>' + fE(v.valeur) + '</b>', 'la valeur du magasin')}
       </div>
       ${T.length >= 2 ? `<div class="db-vpop-t"><div class="k">Les ${T.length} derniers trimestres<small>la même règle, au rythme de chaque trimestre</small></div>${valoMiniCourbe(T)}
