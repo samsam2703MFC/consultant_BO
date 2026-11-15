@@ -8,6 +8,12 @@
  *                                                          (src/franchise/dashboard_marketing.php)
  *   GET …/exploitation/objectifs-produits?shop=&date=      les objectifs produits des campagnes en cours
  *   GET …/dashboard/marketing/campagnes/annexe?shop=&id=   un document joint (PDF)
+ * En tête (15/11/2026, « il faut un calendrier annuel avec les campagnes + les produits et saisons des produits ») : le
+ * calendrier de l'année — les campagnes du magasin et les saisons des produits (les gammes saisonnières du panel, leurs
+ * fenêtres de chaque année ; un clic montre leurs produits et leur prix), le jour d'aujourd'hui en trait.
+ *   GET …/dashboard/marketing/annee?shop=&annee=           les campagnes de l'année (toutes phases)
+ *   GET …/production/saisons?date=AAAA-01-01                les gammes saisonnières et leurs produits (références)
+ *   GET …/production/catalogue                              le nom et le prix de chaque référence
  * Les posts, les avis et la newsletter ont leur page : Réseaux sociaux, Fidélité, Vendre › Offres › Newsletter.
  * Rien n'est inventé : une partie sans donnée ne s'affiche pas, ou dit pourquoi.
  *
@@ -30,7 +36,8 @@
   const I = { doc: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6', ok: 'M20 6L9 17l-5-5' };
   const ETATS_OBJ = { atteint: ['ok', 'atteint'], avance: ['ok', 'en avance'], clous: ['att', 'dans les clous'], retard: ['ko', 'en retard'], sans: ['mu', 'sans vente'] };
 
-  const st = { shop: null, api: '../api/cockpit', el: null, d: null, err: null, obj: null, objErr: null };
+  const st = { shop: null, api: '../api/cockpit', el: null, d: null, err: null, obj: null, objErr: null,
+    an: new Date().getFullYear(), cal: {}, calErr: null, saisons: null, catalogue: null, saisonOuverte: null };
 
   function lire(p) {
     return fetch(st.api + p, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
@@ -43,6 +50,55 @@
       .catch(e => { st.err = e.message; }).finally(rendre);
     lire('/exploitation/objectifs-produits?shop=' + s + '&date=' + auj()).then(d => { st.obj = d.campagnes || []; st.objErr = null; })
       .catch(e => { st.objErr = e.message; }).finally(rendre);
+    chargerAnnee(frais);
+    if (!st.saisons || frais) { lire('/production/saisons?date=' + st.an + '-01-01').then(d => { st.saisons = d.saisons || []; }).catch(e => { st.calErr = e.message; }).finally(rendre); }
+    if (!st.catalogue) { lire('/production/catalogue').then(d => { st.catalogue = {}; (Array.isArray(d) ? d : []).forEach(p => { st.catalogue[String(p.ref)] = p; }); }).catch(() => { st.catalogue = {}; }).finally(rendre); }
+  }
+  function chargerAnnee(frais) {
+    const an = st.an;
+    if (st.cal[an] && !frais) { return; }
+    lire('/dashboard/marketing/annee?shop=' + encodeURIComponent(st.shop) + '&annee=' + an).then(d => { st.cal[an] = d.campagnes || []; }).catch(e => { st.calErr = e.message; }).finally(rendre);
+  }
+
+  /* --- le calendrier de l'année --------------------------------------------------------------------------------- */
+  const MOIS_C = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+  const jourAn = (iso, an) => { const d = new Date(iso + 'T00:00:00'), o = new Date(an, 0, 1); return Math.round((d - o) / 864e5); };
+  const joursAn = an => (new Date(an + 1, 0, 1) - new Date(an, 0, 1)) / 864e5;
+  /** Une barre entre deux dates, rognée à l'année : [gauche %, largeur %] ou null. */
+  function barre(du, au, an) {
+    const n = joursAn(an), a = Math.max(0, jourAn(du, an)), b = Math.min(n - 1, jourAn(au, an));
+    return b < a ? null : [100 * a / n, Math.max(0.6, 100 * (b - a + 1) / n)];
+  }
+  /** Les fenêtres d'une gamme saisonnière dans l'année (MM-JJ → MM-JJ ; à cheval sur deux années : deux morceaux). */
+  function fenetres(s, an) {
+    if (!/^\d{2}-\d{2}$/.test(s.debut || '') || !/^\d{2}-\d{2}$/.test(s.fin || '')) { return []; }
+    return s.debut <= s.fin ? [[an + '-' + s.debut, an + '-' + s.fin]] : [[an + '-01-01', an + '-' + s.fin], [an + '-' + s.debut, an + '-12-31']];
+  }
+  function calAnnee() {
+    const an = st.an, C = st.cal[an], S = st.saisons;
+    const grille = `<div class="cal-grille" aria-hidden="true">${MOIS_C.map(() => '<i></i>').join('')}</div>`;
+    const ajd = auj(), trait = +ajd.slice(0, 4) === an ? `<b class="cal-auj" style="left:${(100 * jourAn(ajd, an) / joursAn(an)).toFixed(2)}%" title="aujourd’hui"></b>` : '';
+    const ligne = (lib, sous, barres, attr) => `<div class="cal-l"${attr || ''}><div class="cal-lib"><span>${lib}</span>${sous ? `<small>${sous}</small>` : ''}</div><div class="cal-piste">${grille}${trait}${barres}</div></div>`;
+    const campagnes = C == null ? '<div class="db-sk" style="height:60px;margin:6px 0"></div>' : C.length ? C.map(c => {
+      const b = barre(c.debut, c.fin, an);
+      return ligne(esc(c.nom), esc(c.type || ''), b ? `<span class="cal-b${c.phase === 'en_cours' ? ' on' : ''}" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%;background:${esc(c.typeCouleur || 'var(--accent)')}" title="${esc(c.nom + ' · du ' + dCourt(c.debut) + ' au ' + dCourt(c.fin))}"></span>` : '');
+    }).join('') : `<p class="mc-mu cal-vide">Pas de campagne pour le magasin en ${an}.</p>`;
+    const nomRef = r => (st.catalogue && st.catalogue[String(r)]) || null;
+    const saisons = S == null ? '<div class="db-sk" style="height:90px;margin:6px 0"></div>' : S.map(s => {
+      const bs = fenetres(s, an).map(([d, f]) => barre(d, f, an)).filter(Boolean);
+      const ouv = st.saisonOuverte === s.id, n = (s.produits || []).length;
+      const titre = (s.emoji ? s.emoji + ' ' : '') + s.nom;
+      return ligne(`<button type="button" class="cal-s" data-calsaison="${s.id}">${esc(titre)}</button>`, `${n} produit${n > 1 ? 's' : ''} · du ${s.debut.slice(3)}/${s.debut.slice(0, 2)} au ${s.fin.slice(3)}/${s.fin.slice(0, 2)}${s.alerte ? ' ⚠' : ''}`,
+        bs.map(b => `<span class="cal-b cal-b--s" style="left:${b[0].toFixed(2)}%;width:${b[1].toFixed(2)}%" title="${esc(titre + (s.alerte ? ' — ' + s.alerte : ''))}"></span>`).join(''), ouv ? ' data-ouverte="1"' : '')
+        + (ouv ? `<div class="cal-prod">${s.alerte ? `<p class="mc-mu">⚠ ${esc(s.alerte)}</p>` : ''}${n ? (s.produits || []).map(r => { const p = nomRef(r); return `<span class="cal-p">${esc(p ? p.nom : 'réf. ' + r)}${p && p.prix != null ? `<small>${esc(String(p.prix).replace('.', ','))} €</small>` : ''}</span>`; }).join('') : '<p class="mc-mu">Pas de produit rattaché à cette gamme au panel.</p>'}</div>` : '');
+    }).join('');
+    return `<section class="cal">
+      <div class="cal-h"><h3>Le calendrier de l’année</h3><span class="cal-an"><button type="button" class="db-btn" data-calan="-1" aria-label="Année précédente">‹</button><b>${an}</b><button type="button" class="db-btn" data-calan="1" aria-label="Année suivante">›</button></span></div>
+      <div class="cal-mois"><div></div><div>${MOIS_C.map(m => `<span>${m}</span>`).join('')}</div></div>
+      <div class="cal-sec">Les campagnes</div>${campagnes}
+      <div class="cal-sec">Les saisons des produits <small>— les gammes du panel ; un clic montre leurs produits</small></div>${saisons}
+      ${st.calErr ? `<p class="mc-mu">Une partie du calendrier ne se lit pas : ${esc(st.calErr)}.</p>` : ''}
+    </section>`;
   }
 
   /* --- une campagne --------------------------------------------------------------------------------------------- */
@@ -146,7 +202,7 @@
     if (st.err && !st.d) { return `<div class="db-err">Les campagnes ne se lisent pas : ${esc(st.err)} <button type="button" class="db-btn" data-mmrelire="1">Relire</button></div>`; }
     if (!st.d) { return '<div class="db-sk" style="height:120px;margin-bottom:12px"></div><div class="db-sk" style="height:360px"></div>'; }
     const L = st.d.campagnes || [];
-    return `${L.length ? L.map(campagne).join('') : '<div class="mc-vide">Aucune campagne en cours pour le magasin aujourd’hui.</div>'}
+    return `${calAnnee()}<h3 class="mc-titre">Les campagnes en cours</h3>${L.length ? L.map(campagne).join('') : '<div class="mc-vide">Aucune campagne en cours pour le magasin aujourd’hui.</div>'}
       ${st.objErr ? `<p class="mc-mu">Les objectifs produits ne se lisent pas : ${esc(st.objErr)}.</p>` : ''}
       <p class="mm-pied">${L.length ? L.length + ' campagne' + (L.length > 1 ? 's' : '') + ' en cours · ' : ''}lu à ${esc(String(st.d.genere || '').slice(11, 16) || '—')} · <button type="button" class="mm-lienb" data-mmrelire="1">relire</button></p>`;
   }
@@ -155,6 +211,8 @@
     if (!st.el) { return; }
     st.el.innerHTML = html();
     st.el.querySelectorAll('[data-mmrelire]').forEach(b => b.addEventListener('click', () => charger(true)));
+    st.el.querySelectorAll('[data-calan]').forEach(b => b.addEventListener('click', () => { st.an += +b.dataset.calan; st.saisonOuverte = null; chargerAnnee(false); rendre(); }));
+    st.el.querySelectorAll('[data-calsaison]').forEach(b => b.addEventListener('click', () => { const id = +b.dataset.calsaison; st.saisonOuverte = st.saisonOuverte === id ? null : id; rendre(); }));
   }
 
   window.DashMarketing = {

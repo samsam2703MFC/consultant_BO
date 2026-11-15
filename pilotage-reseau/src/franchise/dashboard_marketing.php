@@ -105,6 +105,30 @@ function ep_dashboard_marketing_campagnes(): array
 }
 
 /**
+ * GET /dashboard/marketing/annee?shop=4&annee=2026 — le calendrier de l'année de Mon marketing (15/11/2026, « il faut un
+ * calendrier annuel avec les campagnes + les produits et saisons des produits ») : les campagnes du magasin qui touchent
+ * l'année (celles du hub : réseau ou désignant le magasin, hors brouillons), toutes phases. Les saisons des produits
+ * se lisent à côté (/production/saisons, les gammes du panel), leurs produits dans /production/catalogue.
+ */
+function ep_dashboard_marketing_annee(): array
+{
+    $shop = trim((string) ($_GET['shop'] ?? ''));
+    if (!preg_match('/^\d{1,6}$/', $shop)) { http_response_code(400); return ['error' => 'shop manquant']; }
+    if (!function_exists('mhCampagnes')) { http_response_code(503); return ['error' => 'les campagnes ne sont pas chargées']; }
+    $an = max(2020, min(2100, (int) ($_GET['annee'] ?? date('Y'))));
+    $du = $an . '-01-01'; $au = $an . '-12-31';
+    $out = [];
+    foreach ((array) (mhCampagnes($shop, date('Y-m-d'))['liste'] ?? []) as $c) {
+        $d = (string) ($c['debut'] ?? ''); $f = (string) ($c['fin'] ?? '') ?: $d;
+        if ($d === '' || $d > $au || $f < $du) { continue; }
+        $out[] = ['id' => (int) $c['id'], 'nom' => (string) $c['nom'], 'type' => (string) ($c['type'] ?? ''), 'typeCouleur' => (string) ($c['typeCouleur'] ?? ''),
+            'debut' => $d, 'fin' => $f, 'phase' => (string) ($c['phase'] ?? ''), 'reseau' => (bool) ($c['reseau'] ?? false)];
+    }
+    usort($out, static fn ($a, $b) => [$a['debut'], $a['fin']] <=> [$b['debut'], $b['fin']]);
+    return ['shop' => $shop, 'annee' => $an, 'campagnes' => $out];
+}
+
+/**
  * GET /dashboard/marketing/campagnes/annexe?shop=4&id=12 — un document joint à la note d'une campagne en cours du magasin
  * (le PDF, servi par ep_mkt_annexe_fichier). Seuls les documents qui partent avec la note du franchisé s'ouvrent ici.
  */
@@ -133,6 +157,7 @@ function dmRoute(string $method, string $path): ?array
     if ($path !== '/dashboard/marketing' && !str_starts_with($path, '/dashboard/marketing/')) { return null; }
     if ($method === 'GET' && $path === '/dashboard/marketing') { return ep_dashboard_marketing(); }
     if ($method === 'GET' && $path === '/dashboard/marketing/campagnes') { return ep_dashboard_marketing_campagnes(); }
+    if ($method === 'GET' && $path === '/dashboard/marketing/annee') { return ep_dashboard_marketing_annee(); }
     if ($method === 'GET' && $path === '/dashboard/marketing/campagnes/annexe') { return ep_dashboard_marketing_annexe(); }
     // Vendre › Offres › Newsletter : le module newsletter du cockpit, au rôle du magasin (src/franchise/offres_newsletter.php).
     if (($n = dnRoute($method, $path)) !== null) { return $n; }

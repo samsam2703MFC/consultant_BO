@@ -1,5 +1,5 @@
 {
- "genere": "2026-11-15T19:11:15Z",
+ "genere": "2026-11-15T19:20:38Z",
  "source": "tools/dashboard-api-index.py — lu dans public/dashboard/*.js, public/api/index.php, src/*.php, src/franchise/*.php, src/acces.php",
  "base": "/api/cockpit",
  "accesMagasin": [
@@ -482,12 +482,12 @@
    ]
   },
   {
-   "chemin": "/dashboard/marketing/campagnes",
+   "chemin": "/dashboard/marketing/annee",
    "methodes": [
     "GET"
    ],
    "fichiers": [
-    "marketing.js:42"
+    "marketing.js:60"
    ],
    "magasin": true,
    "routes": [
@@ -497,7 +497,28 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/franchise/dashboard_marketing.php:131",
+     "source": "src/franchise/dashboard_marketing.php:155",
+     "resume": "Les routes du marketing du magasin."
+    }
+   ]
+  },
+  {
+   "chemin": "/dashboard/marketing/campagnes",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:49"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/dashboard/marketing…",
+     "handler": "dmRoute",
+     "source": "src/franchise/dashboard_marketing.php:155",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -508,7 +529,7 @@
     "GET"
    ],
    "fichiers": [
-    "marketing.js:126"
+    "marketing.js:182"
    ],
    "magasin": true,
    "routes": [
@@ -518,7 +539,7 @@
      ],
      "chemin": "/dashboard/marketing…",
      "handler": "dmRoute",
-     "source": "src/franchise/dashboard_marketing.php:131",
+     "source": "src/franchise/dashboard_marketing.php:155",
      "resume": "Les routes du marketing du magasin."
     }
    ]
@@ -539,7 +560,7 @@
      ],
      "chemin": "/dashboard/social/ouvrir…",
      "handler": "dsRoute",
-     "source": "src/franchise/dashboard_marketing.php:163",
+     "source": "src/franchise/dashboard_marketing.php:188",
      "resume": ""
     }
    ]
@@ -796,7 +817,7 @@
    ],
    "fichiers": [
     "dashboard.js:1437",
-    "marketing.js:44"
+    "marketing.js:51"
    ],
    "magasin": true,
    "routes": [
@@ -1501,7 +1522,7 @@
      ],
      "chemin": "/marketing/avis",
      "handler": "ep_reputation",
-     "source": "src/endpoints.php:8332",
+     "source": "src/endpoints.php:8337",
      "resume": "la réputation digitale du réseau, magasin par magasin."
     }
    ]
@@ -1547,6 +1568,27 @@
      "handler": "ep_plan",
      "source": "src/plan.php:89",
      "resume": ""
+    }
+   ]
+  },
+  {
+   "chemin": "/production/catalogue",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:55"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/catalogue",
+     "handler": "ep_prod_catalogue",
+     "source": "src/endpoints.php:895",
+     "resume": "Catalogue produit du réseau."
     }
    ]
   },
@@ -1631,6 +1673,27 @@
      "handler": "wr_production_params",
      "source": "src/production_plan.php:864",
      "resume": "{ shop, params: { cuissons, categories, regles } }."
+    }
+   ]
+  },
+  {
+   "chemin": "/production/saisons",
+   "methodes": [
+    "GET"
+   ],
+   "fichiers": [
+    "marketing.js:54"
+   ],
+   "magasin": true,
+   "routes": [
+    {
+     "methodes": [
+      "GET"
+     ],
+     "chemin": "/production/saisons",
+     "handler": "ep_prod_saisons",
+     "source": "src/assortiment.php:337",
+     "resume": "Les gammes saisonnières du panel, leur fenêtre autour du jour, leurs produits (références du catalogue) et les obligatoires qui s'y rattachent."
     }
    ]
   },
