@@ -3130,3 +3130,24 @@ tr.moi td{background:rgba(141,29,44,.05)}
 .bm-cp{display:inline-block;font-size:10.5px;background:#fff;border:1px solid var(--color-border-secondary,#d8d0c6);border-radius:999px;padding:0 7px;color:var(--color-text,#222);white-space:nowrap}
 .bm-cl{font-size:10px;letter-spacing:.04em;text-transform:uppercase;border-radius:4px;padding:2px 7px;white-space:nowrap}
 .bm-cl.ok{background:#e6f1e8;color:#1f5c2c}.bm-cl.wa{background:#fbeede;color:#8a4b00}.bm-cl.ko{background:#f6e3e5;color:#8D1D2C}.bm-cl.mu{background:#f1ece5;color:#8a8076}
+/* Le helpdesk dans l'assistant (15/11/2026, maquette C de docs/maquettes/helpdesk-franchises) */
+.hd-qui{display:flex;align-items:center;gap:12px;margin:0 0 12px}.hd-qui p{margin:0;font-size:13px;line-height:1.5;color:var(--color-text-muted)}.hd-qui b{font-weight:400;color:var(--color-text)}
+.hd-av{width:56px;height:56px;border-radius:12px;overflow:hidden}.hd-av img{width:56px;height:56px;object-fit:cover}
+.hd-cols2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.hd-form{border:1px solid var(--color-border-tertiary);margin-bottom:0}
+.hd-hist{max-height:62vh;overflow:auto}
+.hd-envoi{height:52px!important}
+.hd-ok{font-size:12.5px;line-height:1.45;padding:9px 11px;border-radius:9px;background:rgba(63,122,82,.1);color:var(--green);margin:0 0 10px}
+.ma-rc.hd-rc{border-color:var(--color-primary);color:var(--color-primary)}
+.hd-b{margin-left:6px;font-size:10.5px;background:var(--color-primary);color:#fff;border-radius:9px;padding:1px 7px}
+.rc-carte .rep.att{background:#e3eef8;color:#0b4a7a}.rc-carte .rep.sans{background:#fbe6d4;color:#8a3d0b}
+@media (max-width:760px){.hd-cols2{grid-template-columns:1fr}.hd-hist{max-height:none}.ia-modale .ia-b{max-height:calc(100vh - 140px)}}
+.ma-rc+.ma-rc{margin-top:8px}
+/* La fenêtre de l'assistant au téléphone (15/11/2026) : plein écran, les modes sous le titre. */
+@media (max-width:760px){
+  .ia-modale.mb,.ia-modale.ma{width:100vw;height:100dvh;max-height:100dvh;left:0;top:0;transform:none;border-radius:0;flex-direction:column}
+  .ia-h{flex-wrap:wrap;gap:8px 10px;padding:10px 14px}.ia-h>div>span{display:none}
+  .ia-modes{order:3;width:100%;margin-left:0;display:flex}.ia-modes button{flex:1;padding:7px 4px}
+  .ia-b{flex:1;min-height:0;overflow:auto;padding:12px 14px 18px}
+  .hd-qui{gap:10px}.hd-av,.hd-av img{width:44px;height:44px}
+}
