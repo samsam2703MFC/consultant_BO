@@ -1,0 +1,41 @@
+/* Maquette « le calendrier des posts dans le rail » : la barre du dashboard en ligne et le cadre de l'espace boutique
+ * du Marketing. Jetons du §3 ; les couleurs des statuts sont celles du Marketing (STATUS, src/lib/franchise/store.ts). */
+.mk-main { overflow-y: auto; padding: 0 24px 32px; background: var(--paper); }
+.mk-barre { display: flex; align-items: center; gap: 10px; padding: 16px 0 14px; border-bottom: 1px solid var(--line); }
+.mk-barre .db-vt { margin-right: 14px; }
+.mk-barre .db-vt .kk { margin: 0 0 3px; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+.mk-barre .db-vt h1 { margin: 0; font-size: 24px; font-weight: 400; line-height: 1.15; letter-spacing: -0.01em; color: var(--ink); }
+.mk-note { margin: 12px 0 10px; }
+/* Le cadre incorporé : une page du Marketing, sans son en-tête (§9). */
+.mk-cadre { padding: 16px 18px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.mk-onglets { margin-bottom: 12px; }
+.mk-tete { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 12px; }
+.mk-eyebrow { display: block; margin-bottom: 4px; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mk-tete h2 { margin: 0; font-size: 22px; font-weight: 400; letter-spacing: -0.01em; color: var(--ink); text-transform: none; }
+.mk-outils { display: flex; align-items: center; gap: 6px; }
+.mk-outils .btn--primary { margin-left: 8px; }
+.mk-semaine { margin-bottom: 12px; padding: 10px 14px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--table-head); }
+.mk-st { display: flex; justify-content: space-between; font-size: 10.5px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+.mk-rang { letter-spacing: normal; text-transform: none; font-size: 11.5px; color: var(--accent); }
+.mk-tuiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 8px 0 6px; }
+.mk-tuile { display: grid; gap: 1px; }
+.mk-tuile .lab { font-size: 10.5px; color: var(--muted); }
+.mk-tuile .val { font-size: 18px; color: var(--ink); }
+.mk-tuile .val.bon { color: var(--green); }
+.mk-tuile .sub { font-size: 11px; color: var(--muted-2); }
+.mk-conseil { font-size: 12px; color: var(--muted-2); }
+/* Le mois. */
+.mk-mois { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.mk-jours, .mk-cases { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.mk-jours span { padding: 6px 8px; background: var(--table-head); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+.mk-case { display: flex; flex-direction: column; gap: 3px; min-height: 76px; padding: 5px 6px 6px; border-right: 1px solid var(--row-line); border-bottom: 1px solid var(--row-line); min-width: 0; }
+.mk-case:nth-child(7n) { border-right: 0; }
+.mk-case .n { font-size: 11.5px; color: var(--ink); }
+.mk-case.hors { background: var(--paper); }
+.mk-case.hors .n { color: var(--faint); }
+.mk-case.auj { outline: 2px solid var(--accent); outline-offset: -2px; }
+.mk-case.auj .n { color: var(--accent); }
+.mk-post { display: block; padding: 3px 6px; border-radius: 5px; font-size: 11px; line-height: 1.25; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mk-post small { display: block; font-size: 9.5px; opacity: 0.85; }
+.mk-legende { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 11px; color: var(--muted-2); }
+.mk-legende i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border: 1px solid; border-radius: 3px; vertical-align: -1px; }

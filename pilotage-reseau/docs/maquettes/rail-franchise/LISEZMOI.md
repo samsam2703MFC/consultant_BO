@@ -14,7 +14,29 @@ Les trois maquettes posent le rail du §8 du design system commun (`docs/DESIGN_
 trait normal, seule l'entrée active en gras, une seule active. La barre du haut garde la date et **Relire**. **Le
 contenu des onglets ne change pas** : il est esquissé, gris, à droite.
 
-## Le vrai dashboard, avec un rail à côté (`reel.png`) — retenu, codé et déployé le 15/11/2026
+## Le calendrier des posts dans le rail (`marketing.png`) — maquette, à valider
+
+Demande du 15/11/2026 : « rajouter dans le rail le marketing franchisé, post calendar ». Le rail en ligne gagne un
+groupe **Marketing** : **Calendrier des posts**, Fidélité et Mon catalogue (ces deux-là quittent Vendre : ils relèvent
+du Marketing, PORTAILS.md). Un clic sur Calendrier des posts ouvre, à droite du rail et sous la barre du dashboard,
+**l'espace boutique du Marketing** (dépôt `marketing`, `/marketing/franchise/calendrier?shop=<magasin>`,
+CalendrierFranchiseView) : ses onglets Calendrier · Vues et abonnés · Suivi de ma boutique, le mois (ou la semaine, la
+liste), « Ma semaine » et « Publier un post ». Le dashboard ne lit aucune table du Marketing : il affiche sa page.
+
+Chiffres : le rail et la barre sont ceux lus au cockpit le 15/11 à 09:57 ; la note Google aussi (4,5, 55 avis, cible
+4,6) ; les posts, les abonnés, la régularité et le rang sont des exemples. Les couleurs des statuts sont celles du
+Marketing (`STATUS`, `src/lib/franchise/store.ts`). Générer : `node generer-marketing.js`.
+
+**Ce qu'il faut pour le coder** :
+1. au Marketing (dépôt `marketing`) : un mode incorporé de l'espace boutique (`embed=1` dans un cadre : sans son
+   en-tête ni son choix de boutique, liens qui gardent `embed=1`, §9 du design system) — l'espace n'en a pas
+   aujourd'hui ;
+2. vérifier que la session du dashboard (console franchisé) ouvre l'espace boutique (« ouvert depuis l'ERP, session de
+   l'ERP ») ; sinon l'espace dit « Ouvrez votre espace boutique depuis l'ERP » ;
+3. au dashboard : l'entrée du rail et le cadre (une vue `posts`), l'adresse de l'espace lue dans la configuration.
+
+En attendant 1 et 2, l'entrée peut ouvrir l'espace boutique dans un nouvel onglet (« Calendrier des posts ↗ »).
+
 
 **Codé** dans `public/dashboard/dashboard.js` et `dashboard.css` de la branche de déploiement
 (`claude/deploiement-application-serveur-lmz1bm`, commit `ba40ef3`, mis en ligne par `ae68fcb`), sur le dashboard tel qu'il
